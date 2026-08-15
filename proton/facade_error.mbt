@@ -39,6 +39,9 @@ impl Show for AppConfigurationError with fn output(self, logger) {
 }
 
 ///|
+pub extend AppConfigurationError with Show::{to_string, output}
+
+///|
 pub fn AppEntryError::message(self : AppEntryError) -> String {
   match self {
     ReadFailed(path~, detail~) =>
@@ -52,6 +55,9 @@ pub fn AppEntryError::message(self : AppEntryError) -> String {
 impl Show for AppEntryError with fn output(self, logger) {
   logger.write_string(self.message())
 }
+
+///|
+pub extend AppEntryError with Show::{to_string, output}
 
 ///|
 pub fn CommandExtensionLifecycleError::message(
@@ -73,6 +79,9 @@ impl Show for CommandExtensionLifecycleError with fn output(self, logger) {
 }
 
 ///|
+pub extend CommandExtensionLifecycleError with Show::{to_string, output}
+
+///|
 pub fn LifecycleHookError::message(self : LifecycleHookError) -> String {
   match self {
     ApplicationStart(index~, detail~) =>
@@ -92,6 +101,9 @@ impl Show for LifecycleHookError with fn output(self, logger) {
 }
 
 ///|
+pub extend LifecycleHookError with Show::{to_string, output}
+
+///|
 pub fn AppCleanupError::message(self : AppCleanupError) -> String {
   match self {
     CommandExtension(error) => error.message()
@@ -105,6 +117,9 @@ pub fn AppCleanupError::message(self : AppCleanupError) -> String {
 impl Show for AppCleanupError with fn output(self, logger) {
   logger.write_string(self.message())
 }
+
+///|
+pub extend AppCleanupError with Show::{to_string, output}
 
 ///|
 pub fn WindowSessionError::message(self : WindowSessionError) -> String {
@@ -126,6 +141,9 @@ pub fn WindowSessionError::message(self : WindowSessionError) -> String {
 impl Show for WindowSessionError with fn output(self, logger) {
   logger.write_string(self.message())
 }
+
+///|
+pub extend WindowSessionError with Show::{to_string, output}
 
 ///|
 fn cleanup_failure_message(
@@ -189,3 +207,6 @@ pub fn AppRunError::message(self : AppRunError) -> String {
 impl Show for AppRunError with fn output(self, logger) {
   logger.write_string(self.message())
 }
+
+///|
+pub extend AppRunError with Show::{to_string, output}

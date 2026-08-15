@@ -12,6 +12,12 @@ pub(all) struct EmulationDevicePosture {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationDevicePosture with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationDevicePosture with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode EmulationDevicePosture as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -44,6 +50,14 @@ pub fn EmulationDevicePosture::from_json(
 pub(all) struct EmulationDisabledImageType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationDisabledImageType with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationDisabledImageType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationDisabledImageType as CDP JSON.
@@ -82,6 +96,12 @@ pub(all) struct EmulationDisplayFeature {
   offset : Int
   mask_length : Int
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationDisplayFeature with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationDisplayFeature with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode EmulationDisplayFeature as CDP JSON.
@@ -129,6 +149,12 @@ pub(all) struct EmulationMediaFeature {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationMediaFeature with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationMediaFeature with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode EmulationMediaFeature as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -165,6 +191,14 @@ pub fn EmulationMediaFeature::from_json(
 pub(all) struct EmulationPressureMetadata {
   available : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationPressureMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationPressureMetadata with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationPressureMetadata as CDP JSON.
@@ -207,6 +241,12 @@ pub(all) struct EmulationPressureSource {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationPressureSource with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationPressureSource with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode EmulationPressureSource as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -239,6 +279,12 @@ pub fn EmulationPressureSource::from_json(
 pub(all) struct EmulationPressureState {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationPressureState with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationPressureState with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode EmulationPressureState as CDP JSON.
@@ -280,6 +326,12 @@ pub(all) struct EmulationSafeAreaInsets {
   right : Int?
   right_max : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSafeAreaInsets with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSafeAreaInsets with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode EmulationSafeAreaInsets as CDP JSON.
@@ -348,6 +400,12 @@ pub(all) struct EmulationScreenId {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationScreenId with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationScreenId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode EmulationScreenId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -395,6 +453,12 @@ pub(all) struct EmulationScreenInfo {
   label : String
   id : EmulationScreenId
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationScreenInfo with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationScreenInfo with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode EmulationScreenInfo as CDP JSON.
@@ -480,6 +544,14 @@ pub(all) struct EmulationScreenOrientation {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationScreenOrientation with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationScreenOrientation with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationScreenOrientation as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -520,6 +592,12 @@ pub(all) struct EmulationSensorMetadata {
   minimum_frequency : Double?
   maximum_frequency : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSensorMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSensorMetadata with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode EmulationSensorMetadata as CDP JSON.
@@ -572,6 +650,12 @@ pub(all) struct EmulationSensorReading {
   xyz : EmulationSensorReadingXYZ?
   quaternion : EmulationSensorReadingQuaternion?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSensorReading with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSensorReading with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode EmulationSensorReading as CDP JSON.
@@ -632,6 +716,14 @@ pub(all) struct EmulationSensorReadingQuaternion {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSensorReadingQuaternion with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSensorReadingQuaternion with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSensorReadingQuaternion as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -676,6 +768,14 @@ pub(all) struct EmulationSensorReadingSingle {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSensorReadingSingle with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSensorReadingSingle with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSensorReadingSingle as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -712,6 +812,14 @@ pub(all) struct EmulationSensorReadingXYZ {
   y : Double
   z : Double
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSensorReadingXYZ with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSensorReadingXYZ with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSensorReadingXYZ as CDP JSON.
@@ -756,6 +864,12 @@ pub(all) struct EmulationSensorType {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSensorType with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSensorType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode EmulationSensorType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -789,6 +903,14 @@ pub(all) struct EmulationUserAgentBrandVersion {
   brand : String
   version : String
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationUserAgentBrandVersion with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationUserAgentBrandVersion with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationUserAgentBrandVersion as CDP JSON.
@@ -839,6 +961,14 @@ pub(all) struct EmulationUserAgentMetadata {
   wow64 : Bool?
   form_factors : Array[String]?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationUserAgentMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationUserAgentMetadata with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationUserAgentMetadata as CDP JSON.
@@ -944,6 +1074,14 @@ pub(all) struct EmulationVirtualTimePolicy {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationVirtualTimePolicy with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationVirtualTimePolicy with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationVirtualTimePolicy as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -981,6 +1119,12 @@ pub(all) struct EmulationWorkAreaInsets {
   bottom : Int?
   right : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationWorkAreaInsets with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationWorkAreaInsets with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode EmulationWorkAreaInsets as CDP JSON.
@@ -1042,6 +1186,14 @@ pub(all) struct EmulationAddScreenParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationAddScreenParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationAddScreenParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationAddScreenParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1084,6 +1236,14 @@ pub fn EmulationAddScreenParams::to_json(
 pub(all) struct EmulationAddScreenResult {
   screen_info : EmulationScreenInfo
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationAddScreenResult with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationAddScreenResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Emulation.addScreen.
@@ -1143,6 +1303,14 @@ pub fn emulation_add_screen_command(
 pub(all) struct EmulationCanEmulateResult {
   result : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationCanEmulateResult with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationCanEmulateResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Emulation.canEmulate.
@@ -1322,6 +1490,17 @@ pub(all) struct EmulationGetOverriddenSensorInformationParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationGetOverriddenSensorInformationParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend EmulationGetOverriddenSensorInformationParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationGetOverriddenSensorInformationParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1343,6 +1522,17 @@ pub fn EmulationGetOverriddenSensorInformationParams::to_json(
 pub(all) struct EmulationGetOverriddenSensorInformationResult {
   requested_sampling_frequency : Double
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationGetOverriddenSensorInformationResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend EmulationGetOverriddenSensorInformationResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Emulation.getOverriddenSensorInformation.
@@ -1408,6 +1598,14 @@ pub(all) struct EmulationGetScreenInfosResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationGetScreenInfosResult with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationGetScreenInfosResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Emulation.getScreenInfos.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -1466,6 +1664,14 @@ pub fn emulation_get_screen_infos_command(
 pub(all) struct EmulationRemoveScreenParams {
   screen_id : EmulationScreenId
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationRemoveScreenParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationRemoveScreenParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationRemoveScreenParams as CDP JSON.
@@ -1537,6 +1743,14 @@ pub(all) struct EmulationSetAutoDarkModeOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetAutoDarkModeOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetAutoDarkModeOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetAutoDarkModeOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1590,6 +1804,14 @@ pub(all) struct EmulationSetAutomationOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetAutomationOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetAutomationOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetAutomationOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1639,6 +1861,14 @@ pub fn emulation_set_automation_override_command(
 pub(all) struct EmulationSetCPUThrottlingRateParams {
   rate : Double
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetCPUThrottlingRateParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetCPUThrottlingRateParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetCPUThrottlingRateParams as CDP JSON.
@@ -1692,6 +1922,14 @@ pub(all) struct EmulationSetDataSaverOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetDataSaverOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetDataSaverOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetDataSaverOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1743,6 +1981,17 @@ pub fn emulation_set_data_saver_override_command(
 pub(all) struct EmulationSetDefaultBackgroundColorOverrideParams {
   color : DOMRGBA?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetDefaultBackgroundColorOverrideParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend EmulationSetDefaultBackgroundColorOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetDefaultBackgroundColorOverrideParams as CDP JSON.
@@ -1810,6 +2059,14 @@ pub(all) struct EmulationSetDeviceMetricsOverrideParams {
   device_posture : EmulationDevicePosture?
   scrollbar_type : String?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetDeviceMetricsOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetDeviceMetricsOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetDeviceMetricsOverrideParams as CDP JSON.
@@ -1899,6 +2156,14 @@ pub(all) struct EmulationSetDevicePostureOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetDevicePostureOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetDevicePostureOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetDevicePostureOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1948,6 +2213,14 @@ pub fn emulation_set_device_posture_override_command(
 pub(all) struct EmulationSetDisabledImageTypesParams {
   image_types : Array[EmulationDisabledImageType]
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetDisabledImageTypesParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetDisabledImageTypesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetDisabledImageTypesParams as CDP JSON.
@@ -2003,6 +2276,14 @@ pub(all) struct EmulationSetDisplayFeaturesOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetDisplayFeaturesOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetDisplayFeaturesOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetDisplayFeaturesOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2052,6 +2333,14 @@ pub fn emulation_set_display_features_override_command(
 pub(all) struct EmulationSetDocumentCookieDisabledParams {
   disabled : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetDocumentCookieDisabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetDocumentCookieDisabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetDocumentCookieDisabledParams as CDP JSON.
@@ -2104,6 +2393,14 @@ pub(all) struct EmulationSetEmitTouchEventsForMouseParams {
   enabled : Bool
   configuration : String?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetEmitTouchEventsForMouseParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetEmitTouchEventsForMouseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetEmitTouchEventsForMouseParams as CDP JSON.
@@ -2159,6 +2456,14 @@ pub(all) struct EmulationSetEmulatedMediaParams {
   media : String?
   features : Array[EmulationMediaFeature]?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetEmulatedMediaParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetEmulatedMediaParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetEmulatedMediaParams as CDP JSON.
@@ -2217,6 +2522,14 @@ pub(all) struct EmulationSetEmulatedOSTextScaleParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetEmulatedOSTextScaleParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetEmulatedOSTextScaleParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetEmulatedOSTextScaleParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2270,6 +2583,17 @@ pub(all) struct EmulationSetEmulatedVisionDeficiencyParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetEmulatedVisionDeficiencyParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend EmulationSetEmulatedVisionDeficiencyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetEmulatedVisionDeficiencyParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2319,6 +2643,14 @@ pub fn emulation_set_emulated_vision_deficiency_command(
 pub(all) struct EmulationSetFocusEmulationEnabledParams {
   enabled : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetFocusEmulationEnabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetFocusEmulationEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetFocusEmulationEnabledParams as CDP JSON.
@@ -2376,6 +2708,14 @@ pub(all) struct EmulationSetGeolocationOverrideParams {
   heading : Double?
   speed : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetGeolocationOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetGeolocationOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetGeolocationOverrideParams as CDP JSON.
@@ -2449,6 +2789,17 @@ pub(all) struct EmulationSetHardwareConcurrencyOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetHardwareConcurrencyOverrideParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend EmulationSetHardwareConcurrencyOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetHardwareConcurrencyOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2503,6 +2854,14 @@ pub(all) struct EmulationSetIdleOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetIdleOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetIdleOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetIdleOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2549,6 +2908,14 @@ pub fn emulation_set_idle_override_command(
 pub(all) struct EmulationSetLocaleOverrideParams {
   locale : String?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetLocaleOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetLocaleOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetLocaleOverrideParams as CDP JSON.
@@ -2604,6 +2971,14 @@ pub(all) struct EmulationSetNavigatorOverridesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetNavigatorOverridesParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetNavigatorOverridesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetNavigatorOverridesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2653,6 +3028,14 @@ pub fn emulation_set_navigator_overrides_command(
 pub(all) struct EmulationSetPageScaleFactorParams {
   page_scale_factor : Double
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetPageScaleFactorParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetPageScaleFactorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetPageScaleFactorParams as CDP JSON.
@@ -2706,6 +3089,14 @@ pub(all) struct EmulationSetPressureDataOverrideParams {
   state : EmulationPressureState
   own_contribution_estimate : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetPressureDataOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetPressureDataOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetPressureDataOverrideParams as CDP JSON.
@@ -2765,6 +3156,17 @@ pub(all) struct EmulationSetPressureSourceOverrideEnabledParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetPressureSourceOverrideEnabledParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend EmulationSetPressureSourceOverrideEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetPressureSourceOverrideEnabledParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2821,6 +3223,14 @@ pub(all) struct EmulationSetPressureStateOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetPressureStateOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetPressureStateOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetPressureStateOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2871,6 +3281,14 @@ pub fn emulation_set_pressure_state_override_command(
 pub(all) struct EmulationSetPrimaryScreenParams {
   screen_id : EmulationScreenId
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetPrimaryScreenParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetPrimaryScreenParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetPrimaryScreenParams as CDP JSON.
@@ -2924,6 +3342,14 @@ pub(all) struct EmulationSetSafeAreaInsetsOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetSafeAreaInsetsOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetSafeAreaInsetsOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetSafeAreaInsetsOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2973,6 +3399,14 @@ pub fn emulation_set_safe_area_insets_override_command(
 pub(all) struct EmulationSetScriptExecutionDisabledParams {
   value : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetScriptExecutionDisabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetScriptExecutionDisabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetScriptExecutionDisabledParams as CDP JSON.
@@ -3026,6 +3460,14 @@ pub(all) struct EmulationSetScrollbarsHiddenParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetScrollbarsHiddenParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetScrollbarsHiddenParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetScrollbarsHiddenParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3077,6 +3519,14 @@ pub(all) struct EmulationSetSensorOverrideEnabledParams {
   type_ : EmulationSensorType
   metadata : EmulationSensorMetadata?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetSensorOverrideEnabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetSensorOverrideEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetSensorOverrideEnabledParams as CDP JSON.
@@ -3135,6 +3585,14 @@ pub(all) struct EmulationSetSensorOverrideReadingsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetSensorOverrideReadingsParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetSensorOverrideReadingsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetSensorOverrideReadingsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3185,6 +3643,17 @@ pub fn emulation_set_sensor_override_readings_command(
 pub(all) struct EmulationSetSmallViewportHeightDifferenceOverrideParams {
   difference : Int
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetSmallViewportHeightDifferenceOverrideParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend EmulationSetSmallViewportHeightDifferenceOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetSmallViewportHeightDifferenceOverrideParams as CDP JSON.
@@ -3238,6 +3707,14 @@ pub(all) struct EmulationSetTimezoneOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetTimezoneOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetTimezoneOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetTimezoneOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3288,6 +3765,14 @@ pub(all) struct EmulationSetTouchEmulationEnabledParams {
   enabled : Bool
   max_touch_points : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetTouchEmulationEnabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetTouchEmulationEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetTouchEmulationEnabledParams as CDP JSON.
@@ -3345,6 +3830,14 @@ pub(all) struct EmulationSetUserAgentOverrideParams {
   platform : String?
   user_agent_metadata : EmulationUserAgentMetadata?
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetUserAgentOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetUserAgentOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetUserAgentOverrideParams as CDP JSON.
@@ -3410,6 +3903,14 @@ pub(all) struct EmulationSetVirtualTimePolicyParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend EmulationSetVirtualTimePolicyParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetVirtualTimePolicyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode EmulationSetVirtualTimePolicyParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3442,6 +3943,14 @@ pub fn EmulationSetVirtualTimePolicyParams::to_json(
 pub(all) struct EmulationSetVirtualTimePolicyResult {
   virtual_time_ticks_base : Double
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetVirtualTimePolicyResult with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetVirtualTimePolicyResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Emulation.setVirtualTimePolicy.
@@ -3506,6 +4015,14 @@ pub(all) struct EmulationSetVisibleSizeParams {
   width : Int
   height : Int
 } derive(Eq, Debug)
+
+///|
+pub extend EmulationSetVisibleSizeParams with Eq::{not_equal, equal}
+
+///|
+pub extend EmulationSetVisibleSizeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode EmulationSetVisibleSizeParams as CDP JSON.

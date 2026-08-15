@@ -19,6 +19,12 @@ pub struct ExtensionDescriptor {
 } derive(Eq, Debug)
 
 ///|
+pub extend ExtensionDescriptor with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionDescriptor with Debug::{to_repr}
+
+///|
 /// Builds one typed extension metadata descriptor.
 /// Most callers load descriptors from disk, but this constructor keeps tests and
 /// tooling code simple when fixtures are assembled in memory.

@@ -11,6 +11,15 @@ pub(all) suberror ClientFailure {
 } derive(Debug, Eq)
 
 ///|
+pub extend ClientFailure with Eq::{not_equal, equal}
+
+///|
+pub extend ClientFailure with Debug::{to_repr}
+
+///|
+pub extend ClientFailure with Show::{to_string, output}
+
+///|
 /// Returns a user-facing description of this client failure.
 pub fn ClientFailure::message(self : ClientFailure) -> String {
   match self {

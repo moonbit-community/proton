@@ -12,6 +12,14 @@ pub(all) struct NetworkAlternateProtocolUsage {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkAlternateProtocolUsage with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkAlternateProtocolUsage with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkAlternateProtocolUsage as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -48,6 +56,12 @@ pub(all) struct NetworkAssociatedCookie {
   blocked_reasons : Array[NetworkCookieBlockedReason]
   exemption_reason : NetworkCookieExemptionReason?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkAssociatedCookie with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkAssociatedCookie with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkAssociatedCookie as CDP JSON.
@@ -107,6 +121,12 @@ pub(all) struct NetworkAuthChallenge {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkAuthChallenge with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkAuthChallenge with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkAuthChallenge as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -151,6 +171,14 @@ pub(all) struct NetworkAuthChallengeResponse {
   username : String?
   password : String?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkAuthChallengeResponse with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkAuthChallengeResponse with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkAuthChallengeResponse as CDP JSON.
@@ -199,6 +227,12 @@ pub(all) struct NetworkBlockedReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkBlockedReason with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkBlockedReason with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkBlockedReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -233,6 +267,14 @@ pub(all) struct NetworkBlockedSetCookieWithReason {
   cookie_line : String
   cookie : NetworkCookie?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkBlockedSetCookieWithReason with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkBlockedSetCookieWithReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkBlockedSetCookieWithReason as CDP JSON.
@@ -292,6 +334,12 @@ pub(all) struct NetworkBlockPattern {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkBlockPattern with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkBlockPattern with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkBlockPattern as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -333,6 +381,12 @@ pub(all) struct NetworkCachedResource {
   response : NetworkResponse?
   body_size : Double
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkCachedResource with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCachedResource with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkCachedResource as CDP JSON.
@@ -384,6 +438,14 @@ pub(all) struct NetworkCertificateTransparencyCompliance {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCertificateTransparencyCompliance with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCertificateTransparencyCompliance with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkCertificateTransparencyCompliance as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -419,6 +481,14 @@ pub(all) struct NetworkChallengeEventDetails {
   challenge_result : String
   challenge : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkChallengeEventDetails with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkChallengeEventDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkChallengeEventDetails as CDP JSON.
@@ -463,6 +533,14 @@ pub(all) struct NetworkClientSecurityState {
   initiator_ipaddress_space : NetworkIPAddressSpace
   local_network_access_request_policy : NetworkLocalNetworkAccessRequestPolicy
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkClientSecurityState with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkClientSecurityState with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkClientSecurityState as CDP JSON.
@@ -517,6 +595,12 @@ pub(all) struct NetworkConnectionType {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkConnectionType with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkConnectionType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkConnectionType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -549,6 +633,12 @@ pub fn NetworkConnectionType::from_json(
 pub(all) struct NetworkConnectTiming {
   request_time : Double
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkConnectTiming with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkConnectTiming with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkConnectTiming as CDP JSON.
@@ -589,6 +679,12 @@ pub(all) struct NetworkContentEncoding {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkContentEncoding with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkContentEncoding with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkContentEncoding as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -621,6 +717,14 @@ pub fn NetworkContentEncoding::from_json(
 pub(all) struct NetworkContentSecurityPolicySource {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkContentSecurityPolicySource with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkContentSecurityPolicySource with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkContentSecurityPolicySource as CDP JSON.
@@ -659,6 +763,14 @@ pub(all) struct NetworkContentSecurityPolicyStatus {
   is_enforced : Bool
   source : NetworkContentSecurityPolicySource
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkContentSecurityPolicyStatus with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkContentSecurityPolicyStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkContentSecurityPolicyStatus as CDP JSON.
@@ -721,6 +833,12 @@ pub(all) struct NetworkCookie {
   partition_key : NetworkCookiePartitionKey?
   partition_key_opaque : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkCookie with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCookie with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkCookie as CDP JSON.
@@ -807,6 +925,14 @@ pub(all) struct NetworkCookieBlockedReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCookieBlockedReason with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCookieBlockedReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkCookieBlockedReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -841,6 +967,14 @@ pub fn NetworkCookieBlockedReason::from_json(
 pub(all) struct NetworkCookieExemptionReason {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkCookieExemptionReason with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCookieExemptionReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkCookieExemptionReason as CDP JSON.
@@ -889,6 +1023,12 @@ pub(all) struct NetworkCookieParam {
   source_port : Int?
   partition_key : NetworkCookiePartitionKey?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkCookieParam with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCookieParam with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkCookieParam as CDP JSON.
@@ -991,6 +1131,14 @@ pub(all) struct NetworkCookiePartitionKey {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCookiePartitionKey with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCookiePartitionKey with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkCookiePartitionKey as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1035,6 +1183,12 @@ pub(all) struct NetworkCookiePriority {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCookiePriority with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCookiePriority with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkCookiePriority as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1069,6 +1223,12 @@ pub(all) struct NetworkCookieSameSite {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCookieSameSite with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCookieSameSite with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkCookieSameSite as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1101,6 +1261,14 @@ pub fn NetworkCookieSameSite::from_json(
 pub(all) struct NetworkCookieSourceScheme {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkCookieSourceScheme with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCookieSourceScheme with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkCookieSourceScheme as CDP JSON.
@@ -1139,6 +1307,12 @@ pub(all) struct NetworkCorsError {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCorsError with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCorsError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkCorsError as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1172,6 +1346,12 @@ pub(all) struct NetworkCorsErrorStatus {
   cors_error : NetworkCorsError
   failed_parameter : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkCorsErrorStatus with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCorsErrorStatus with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkCorsErrorStatus as CDP JSON.
@@ -1216,6 +1396,14 @@ pub(all) struct NetworkCreationEventDetails {
   new_session : NetworkDeviceBoundSession?
   failed_request : NetworkDeviceBoundSessionFailedRequest?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkCreationEventDetails with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCreationEventDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkCreationEventDetails as CDP JSON.
@@ -1276,6 +1464,14 @@ pub(all) struct NetworkCrossOriginEmbedderPolicyStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCrossOriginEmbedderPolicyStatus with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCrossOriginEmbedderPolicyStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkCrossOriginEmbedderPolicyStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1332,6 +1528,14 @@ pub(all) struct NetworkCrossOriginEmbedderPolicyValue {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCrossOriginEmbedderPolicyValue with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCrossOriginEmbedderPolicyValue with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkCrossOriginEmbedderPolicyValue as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1369,6 +1573,14 @@ pub(all) struct NetworkCrossOriginOpenerPolicyStatus {
   reporting_endpoint : String?
   report_only_reporting_endpoint : String?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkCrossOriginOpenerPolicyStatus with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCrossOriginOpenerPolicyStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkCrossOriginOpenerPolicyStatus as CDP JSON.
@@ -1427,6 +1639,14 @@ pub(all) struct NetworkCrossOriginOpenerPolicyValue {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCrossOriginOpenerPolicyValue with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCrossOriginOpenerPolicyValue with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkCrossOriginOpenerPolicyValue as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1467,6 +1687,14 @@ pub(all) struct NetworkDeviceBoundSession {
   cached_challenge : String?
   allowed_refresh_initiators : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDeviceBoundSession with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeviceBoundSession with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDeviceBoundSession as CDP JSON.
@@ -1554,6 +1782,14 @@ pub(all) struct NetworkDeviceBoundSessionCookieCraving {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDeviceBoundSessionCookieCraving with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeviceBoundSessionCookieCraving with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDeviceBoundSessionCookieCraving as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1607,6 +1843,14 @@ pub(all) struct NetworkDeviceBoundSessionEventId {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDeviceBoundSessionEventId with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeviceBoundSessionEventId with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDeviceBoundSessionEventId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1644,6 +1888,14 @@ pub(all) struct NetworkDeviceBoundSessionFailedRequest {
   response_error : Int?
   response_error_body : String?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDeviceBoundSessionFailedRequest with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeviceBoundSessionFailedRequest with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDeviceBoundSessionFailedRequest as CDP JSON.
@@ -1702,6 +1954,14 @@ pub(all) struct NetworkDeviceBoundSessionFetchResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDeviceBoundSessionFetchResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeviceBoundSessionFetchResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDeviceBoundSessionFetchResult as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1738,6 +1998,14 @@ pub(all) struct NetworkDeviceBoundSessionInclusionRules {
   include_site : Bool
   url_rules : Array[NetworkDeviceBoundSessionUrlRule]
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDeviceBoundSessionInclusionRules with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeviceBoundSessionInclusionRules with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDeviceBoundSessionInclusionRules as CDP JSON.
@@ -1790,6 +2058,14 @@ pub(all) struct NetworkDeviceBoundSessionKey {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDeviceBoundSessionKey with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeviceBoundSessionKey with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDeviceBoundSessionKey as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1830,6 +2106,14 @@ pub(all) struct NetworkDeviceBoundSessionUrlRule {
   host_pattern : String
   path_prefix : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDeviceBoundSessionUrlRule with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeviceBoundSessionUrlRule with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDeviceBoundSessionUrlRule as CDP JSON.
@@ -1879,6 +2163,14 @@ pub(all) struct NetworkDeviceBoundSessionWithUsage {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDeviceBoundSessionWithUsage with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeviceBoundSessionWithUsage with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDeviceBoundSessionWithUsage as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1921,6 +2213,14 @@ pub(all) struct NetworkDirectSocketDnsQueryType {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDirectSocketDnsQueryType with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectSocketDnsQueryType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDirectSocketDnsQueryType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1959,6 +2259,14 @@ pub(all) struct NetworkDirectTCPSocketOptions {
   receive_buffer_size : Double?
   dns_query_type : NetworkDirectSocketDnsQueryType?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectTCPSocketOptions with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectTCPSocketOptions with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectTCPSocketOptions as CDP JSON.
@@ -2026,6 +2334,12 @@ pub(all) struct NetworkDirectUDPMessage {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDirectUDPMessage with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectUDPMessage with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkDirectUDPMessage as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2081,6 +2395,14 @@ pub(all) struct NetworkDirectUDPSocketOptions {
   multicast_time_to_live : Int?
   multicast_allow_address_sharing : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectUDPSocketOptions with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectUDPSocketOptions with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectUDPSocketOptions as CDP JSON.
@@ -2178,6 +2500,12 @@ pub(all) struct NetworkErrorReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkErrorReason with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkErrorReason with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkErrorReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2212,6 +2540,14 @@ pub(all) struct NetworkExemptedSetCookieWithReason {
   cookie_line : String
   cookie : NetworkCookie
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkExemptedSetCookieWithReason with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkExemptedSetCookieWithReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkExemptedSetCookieWithReason as CDP JSON.
@@ -2262,6 +2598,12 @@ pub(all) struct NetworkHeaders {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkHeaders with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkHeaders with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkHeaders as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2293,6 +2635,12 @@ pub(all) struct NetworkInitiator {
   column_number : Double?
   request_id : NetworkRequestId?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkInitiator with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkInitiator with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkInitiator as CDP JSON.
@@ -2361,6 +2709,12 @@ pub(all) struct NetworkInterceptionId {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkInterceptionId with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkInterceptionId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkInterceptionId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2393,6 +2747,14 @@ pub fn NetworkInterceptionId::from_json(
 pub(all) struct NetworkInterceptionStage {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkInterceptionStage with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkInterceptionStage with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkInterceptionStage as CDP JSON.
@@ -2431,6 +2793,12 @@ pub(all) struct NetworkIPAddressSpace {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkIPAddressSpace with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkIPAddressSpace with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkIPAddressSpace as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2463,6 +2831,12 @@ pub fn NetworkIPAddressSpace::from_json(
 pub(all) struct NetworkLoaderId {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkLoaderId with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkLoaderId with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkLoaderId as CDP JSON.
@@ -2498,6 +2872,14 @@ pub(all) struct NetworkLoadNetworkResourceOptions {
   disable_cache : Bool
   include_credentials : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkLoadNetworkResourceOptions with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkLoadNetworkResourceOptions with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkLoadNetworkResourceOptions as CDP JSON.
@@ -2547,6 +2929,14 @@ pub(all) struct NetworkLoadNetworkResourcePageResult {
   stream : IOStreamHandle?
   headers : NetworkHeaders?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkLoadNetworkResourcePageResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkLoadNetworkResourcePageResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkLoadNetworkResourcePageResult as CDP JSON.
@@ -2617,6 +3007,14 @@ pub(all) struct NetworkLocalNetworkAccessRequestPolicy {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkLocalNetworkAccessRequestPolicy with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkLocalNetworkAccessRequestPolicy with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkLocalNetworkAccessRequestPolicy as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2651,6 +3049,12 @@ pub fn NetworkLocalNetworkAccessRequestPolicy::from_json(
 pub(all) struct NetworkMonotonicTime {
   value : Double
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkMonotonicTime with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkMonotonicTime with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkMonotonicTime as CDP JSON.
@@ -2692,6 +3096,14 @@ pub(all) struct NetworkNetworkConditions {
   packet_queue_length : Int?
   packet_reordering : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkNetworkConditions with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkNetworkConditions with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkNetworkConditions as CDP JSON.
@@ -2769,6 +3181,12 @@ pub(all) struct NetworkPostDataEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkPostDataEntry with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkPostDataEntry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkPostDataEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2807,6 +3225,14 @@ pub(all) struct NetworkRefreshEventDetails {
   was_fully_proactive_refresh : Bool
   failed_request : NetworkDeviceBoundSessionFailedRequest?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkRefreshEventDetails with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkRefreshEventDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkRefreshEventDetails as CDP JSON.
@@ -2878,6 +3304,14 @@ pub(all) struct NetworkRenderBlockingBehavior {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkRenderBlockingBehavior with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkRenderBlockingBehavior with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkRenderBlockingBehavior as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2914,6 +3348,12 @@ pub(all) struct NetworkReportId {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkReportId with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkReportId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkReportId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2947,6 +3387,14 @@ pub(all) struct NetworkReportingApiEndpoint {
   url : String
   group_name : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkReportingApiEndpoint with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkReportingApiEndpoint with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkReportingApiEndpoint as CDP JSON.
@@ -2997,6 +3445,14 @@ pub(all) struct NetworkReportingApiReport {
   body : Json
   status : NetworkReportStatus
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkReportingApiReport with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkReportingApiReport with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkReportingApiReport as CDP JSON.
@@ -3067,6 +3523,12 @@ pub(all) struct NetworkReportStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkReportStatus with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkReportStatus with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkReportStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3112,6 +3574,12 @@ pub(all) struct NetworkRequest {
   is_same_site : Bool?
   is_ad_related : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkRequest with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkRequest with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkRequest as CDP JSON.
@@ -3224,6 +3692,12 @@ pub(all) struct NetworkRequestId {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkRequestId with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkRequestId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkRequestId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3258,6 +3732,12 @@ pub(all) struct NetworkRequestPattern {
   resource_type : NetworkResourceType?
   interception_stage : NetworkInterceptionStage?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkRequestPattern with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkRequestPattern with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkRequestPattern as CDP JSON.
@@ -3314,6 +3794,12 @@ pub(all) struct NetworkResourcePriority {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkResourcePriority with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkResourcePriority with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkResourcePriority as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3366,6 +3852,12 @@ pub(all) struct NetworkResourceTiming {
   receive_headers_start : Double
   receive_headers_end : Double
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkResourceTiming with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkResourceTiming with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkResourceTiming as CDP JSON.
@@ -3478,6 +3970,12 @@ pub(all) struct NetworkResourceType {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkResourceType with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkResourceType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkResourceType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3536,6 +4034,12 @@ pub(all) struct NetworkResponse {
   security_state : SecuritySecurityState
   security_details : NetworkSecurityDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkResponse with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkResponse with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkResponse as CDP JSON.
@@ -3728,6 +4232,12 @@ pub(all) struct NetworkSecurityDetails {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSecurityDetails with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSecurityDetails with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkSecurityDetails as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3834,6 +4344,14 @@ pub(all) struct NetworkSecurityIsolationStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSecurityIsolationStatus with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSecurityIsolationStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSecurityIsolationStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3898,6 +4416,14 @@ pub(all) struct NetworkServiceWorkerResponseSource {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkServiceWorkerResponseSource with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkServiceWorkerResponseSource with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkServiceWorkerResponseSource as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3934,6 +4460,14 @@ pub(all) struct NetworkServiceWorkerRouterInfo {
   matched_source_type : NetworkServiceWorkerRouterSource?
   actual_source_type : NetworkServiceWorkerRouterSource?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkServiceWorkerRouterInfo with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkServiceWorkerRouterInfo with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkServiceWorkerRouterInfo as CDP JSON.
@@ -3993,6 +4527,14 @@ pub(all) struct NetworkServiceWorkerRouterSource {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkServiceWorkerRouterSource with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkServiceWorkerRouterSource with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkServiceWorkerRouterSource as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4027,6 +4569,14 @@ pub fn NetworkServiceWorkerRouterSource::from_json(
 pub(all) struct NetworkSetCookieBlockedReason {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSetCookieBlockedReason with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetCookieBlockedReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkSetCookieBlockedReason as CDP JSON.
@@ -4070,6 +4620,14 @@ pub(all) struct NetworkSignedCertificateTimestamp {
   signature_algorithm : String
   signature_data : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSignedCertificateTimestamp with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSignedCertificateTimestamp with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkSignedCertificateTimestamp as CDP JSON.
@@ -4134,6 +4692,14 @@ pub(all) struct NetworkSignedExchangeError {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSignedExchangeError with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSignedExchangeError with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSignedExchangeError as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4185,6 +4751,14 @@ pub(all) struct NetworkSignedExchangeErrorField {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSignedExchangeErrorField with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSignedExchangeErrorField with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSignedExchangeErrorField as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4223,6 +4797,14 @@ pub(all) struct NetworkSignedExchangeHeader {
   signatures : Array[NetworkSignedExchangeSignature]
   header_integrity : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSignedExchangeHeader with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSignedExchangeHeader with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkSignedExchangeHeader as CDP JSON.
@@ -4288,6 +4870,14 @@ pub(all) struct NetworkSignedExchangeInfo {
   security_details : NetworkSecurityDetails?
   errors : Array[NetworkSignedExchangeError]?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSignedExchangeInfo with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSignedExchangeInfo with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkSignedExchangeInfo as CDP JSON.
@@ -4368,6 +4958,14 @@ pub(all) struct NetworkSignedExchangeSignature {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSignedExchangeSignature with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSignedExchangeSignature with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSignedExchangeSignature as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4443,6 +5041,14 @@ pub(all) struct NetworkTerminationEventDetails {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkTerminationEventDetails with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkTerminationEventDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkTerminationEventDetails as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4483,6 +5089,12 @@ pub(all) struct NetworkTimeSinceEpoch {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkTimeSinceEpoch with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkTimeSinceEpoch with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkTimeSinceEpoch as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4515,6 +5127,14 @@ pub fn NetworkTimeSinceEpoch::from_json(
 pub(all) struct NetworkTrustTokenOperationType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkTrustTokenOperationType with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkTrustTokenOperationType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkTrustTokenOperationType as CDP JSON.
@@ -4553,6 +5173,12 @@ pub(all) struct NetworkTrustTokenParams {
   refresh_policy : String
   issuers : Array[String]?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkTrustTokenParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkTrustTokenParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkTrustTokenParams as CDP JSON.
@@ -4612,6 +5238,12 @@ pub(all) struct NetworkWebSocketFrame {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkWebSocketFrame with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebSocketFrame with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkWebSocketFrame as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4652,6 +5284,12 @@ pub fn NetworkWebSocketFrame::from_json(
 pub(all) struct NetworkWebSocketRequest {
   headers : NetworkHeaders
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkWebSocketRequest with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebSocketRequest with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode NetworkWebSocketRequest as CDP JSON.
@@ -4695,6 +5333,14 @@ pub(all) struct NetworkWebSocketResponse {
   request_headers : NetworkHeaders?
   request_headers_text : String?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkWebSocketResponse with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebSocketResponse with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkWebSocketResponse as CDP JSON.
@@ -4762,6 +5408,14 @@ pub(all) struct NetworkCanClearBrowserCacheResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCanClearBrowserCacheResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCanClearBrowserCacheResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Network.canClearBrowserCache.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -4817,6 +5471,14 @@ pub(all) struct NetworkCanClearBrowserCookiesResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkCanClearBrowserCookiesResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCanClearBrowserCookiesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Network.canClearBrowserCookies.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -4870,6 +5532,14 @@ pub fn network_can_clear_browser_cookies_command(
 pub(all) struct NetworkCanEmulateNetworkConditionsResult {
   result : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkCanEmulateNetworkConditionsResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkCanEmulateNetworkConditionsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.canEmulateNetworkConditions.
@@ -5000,6 +5670,14 @@ pub(all) struct NetworkConfigureDurableMessagesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkConfigureDurableMessagesParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkConfigureDurableMessagesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkConfigureDurableMessagesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5061,6 +5739,14 @@ pub(all) struct NetworkContinueInterceptedRequestParams {
   headers : NetworkHeaders?
   auth_challenge_response : NetworkAuthChallengeResponse?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkContinueInterceptedRequestParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkContinueInterceptedRequestParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkContinueInterceptedRequestParams as CDP JSON.
@@ -5137,6 +5823,14 @@ pub(all) struct NetworkDeleteCookiesParams {
   path : String?
   partition_key : NetworkCookiePartitionKey?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDeleteCookiesParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDeleteCookiesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDeleteCookiesParams as CDP JSON.
@@ -5223,6 +5917,14 @@ pub(all) struct NetworkEmulateNetworkConditionsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkEmulateNetworkConditionsParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkEmulateNetworkConditionsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkEmulateNetworkConditionsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5290,6 +5992,17 @@ pub(all) struct NetworkEmulateNetworkConditionsByRuleParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkEmulateNetworkConditionsByRuleParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkEmulateNetworkConditionsByRuleParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkEmulateNetworkConditionsByRuleParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5314,6 +6027,17 @@ pub fn NetworkEmulateNetworkConditionsByRuleParams::to_json(
 pub(all) struct NetworkEmulateNetworkConditionsByRuleResult {
   rule_ids : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkEmulateNetworkConditionsByRuleResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkEmulateNetworkConditionsByRuleResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.emulateNetworkConditionsByRule.
@@ -5388,6 +6112,12 @@ pub(all) struct NetworkEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkEnableParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5447,6 +6177,14 @@ pub(all) struct NetworkEnableDeviceBoundSessionsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkEnableDeviceBoundSessionsParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkEnableDeviceBoundSessionsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkEnableDeviceBoundSessionsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5496,6 +6234,14 @@ pub fn network_enable_device_bound_sessions_command(
 pub(all) struct NetworkEnableReportingApiParams {
   enable : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkEnableReportingApiParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkEnableReportingApiParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkEnableReportingApiParams as CDP JSON.
@@ -5549,6 +6295,14 @@ pub(all) struct NetworkFetchSchemefulSiteParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkFetchSchemefulSiteParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkFetchSchemefulSiteParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkFetchSchemefulSiteParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5570,6 +6324,14 @@ pub fn NetworkFetchSchemefulSiteParams::to_json(
 pub(all) struct NetworkFetchSchemefulSiteResult {
   schemeful_site : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkFetchSchemefulSiteResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkFetchSchemefulSiteResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.fetchSchemefulSite.
@@ -5635,6 +6397,14 @@ pub(all) struct NetworkGetAllCookiesResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkGetAllCookiesResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetAllCookiesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Network.getAllCookies.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -5695,6 +6465,14 @@ pub(all) struct NetworkGetCertificateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkGetCertificateParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetCertificateParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkGetCertificateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5716,6 +6494,14 @@ pub fn NetworkGetCertificateParams::to_json(
 pub(all) struct NetworkGetCertificateResult {
   table_names : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkGetCertificateResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetCertificateResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.getCertificate.
@@ -5784,6 +6570,12 @@ pub(all) struct NetworkGetCookiesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkGetCookiesParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetCookiesParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkGetCookiesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5805,6 +6597,12 @@ pub fn NetworkGetCookiesParams::to_json(self : NetworkGetCookiesParams) -> Json 
 pub(all) struct NetworkGetCookiesResult {
   cookies : Array[NetworkCookie]
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkGetCookiesResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetCookiesResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Network.getCookies.
@@ -5869,6 +6667,14 @@ pub(all) struct NetworkGetRequestPostDataParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkGetRequestPostDataParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetRequestPostDataParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkGetRequestPostDataParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5891,6 +6697,14 @@ pub(all) struct NetworkGetRequestPostDataResult {
   post_data : String
   base64_encoded : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkGetRequestPostDataResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetRequestPostDataResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.getRequestPostData.
@@ -5959,6 +6773,14 @@ pub(all) struct NetworkGetResponseBodyParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkGetResponseBodyParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetResponseBodyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkGetResponseBodyParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5981,6 +6803,14 @@ pub(all) struct NetworkGetResponseBodyResult {
   body : String
   base64_encoded : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkGetResponseBodyResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetResponseBodyResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.getResponseBody.
@@ -6043,6 +6873,17 @@ pub(all) struct NetworkGetResponseBodyForInterceptionParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkGetResponseBodyForInterceptionParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkGetResponseBodyForInterceptionParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkGetResponseBodyForInterceptionParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6065,6 +6906,17 @@ pub(all) struct NetworkGetResponseBodyForInterceptionResult {
   body : String
   base64_encoded : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkGetResponseBodyForInterceptionResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkGetResponseBodyForInterceptionResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.getResponseBodyForInterception.
@@ -6131,6 +6983,14 @@ pub(all) struct NetworkGetSecurityIsolationStatusParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkGetSecurityIsolationStatusParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetSecurityIsolationStatusParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkGetSecurityIsolationStatusParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6154,6 +7014,14 @@ pub fn NetworkGetSecurityIsolationStatusParams::to_json(
 pub(all) struct NetworkGetSecurityIsolationStatusResult {
   status : NetworkSecurityIsolationStatus
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkGetSecurityIsolationStatusResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkGetSecurityIsolationStatusResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.getSecurityIsolationStatus.
@@ -6221,6 +7089,14 @@ pub(all) struct NetworkLoadNetworkResourceParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkLoadNetworkResourceParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkLoadNetworkResourceParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkLoadNetworkResourceParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6246,6 +7122,14 @@ pub fn NetworkLoadNetworkResourceParams::to_json(
 pub(all) struct NetworkLoadNetworkResourceResult {
   resource : NetworkLoadNetworkResourcePageResult
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkLoadNetworkResourceResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkLoadNetworkResourceResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.loadNetworkResource.
@@ -6315,6 +7199,14 @@ pub(all) struct NetworkOverrideNetworkStateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkOverrideNetworkStateParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkOverrideNetworkStateParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkOverrideNetworkStateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6372,6 +7264,12 @@ pub(all) struct NetworkReplayXHRParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkReplayXHRParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkReplayXHRParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkReplayXHRParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6420,6 +7318,14 @@ pub(all) struct NetworkSearchInResponseBodyParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSearchInResponseBodyParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSearchInResponseBodyParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSearchInResponseBodyParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6448,6 +7354,14 @@ pub fn NetworkSearchInResponseBodyParams::to_json(
 pub(all) struct NetworkSearchInResponseBodyResult {
   result : Array[DebuggerSearchMatch]
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSearchInResponseBodyResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSearchInResponseBodyResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.searchInResponseBody.
@@ -6516,6 +7430,14 @@ pub(all) struct NetworkSetAcceptedEncodingsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSetAcceptedEncodingsParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetAcceptedEncodingsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSetAcceptedEncodingsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6565,6 +7487,14 @@ pub fn network_set_accepted_encodings_command(
 pub(all) struct NetworkSetAttachDebugStackParams {
   enabled : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSetAttachDebugStackParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetAttachDebugStackParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkSetAttachDebugStackParams as CDP JSON.
@@ -6619,6 +7549,14 @@ pub(all) struct NetworkSetBlockedURLsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSetBlockedURLsParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetBlockedURLsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSetBlockedURLsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6671,6 +7609,14 @@ pub(all) struct NetworkSetBypassServiceWorkerParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSetBypassServiceWorkerParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetBypassServiceWorkerParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSetBypassServiceWorkerParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6720,6 +7666,14 @@ pub fn network_set_bypass_service_worker_command(
 pub(all) struct NetworkSetCacheDisabledParams {
   cache_disabled : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSetCacheDisabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetCacheDisabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkSetCacheDisabledParams as CDP JSON.
@@ -6781,6 +7735,12 @@ pub(all) struct NetworkSetCookieParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSetCookieParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetCookieParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkSetCookieParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6834,6 +7794,12 @@ pub fn NetworkSetCookieParams::to_json(self : NetworkSetCookieParams) -> Json {
 pub(all) struct NetworkSetCookieResult {
   success : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSetCookieResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetCookieResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Network.setCookie.
@@ -6897,6 +7863,14 @@ pub(all) struct NetworkSetCookieControlsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSetCookieControlsParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetCookieControlsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSetCookieControlsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6952,6 +7926,12 @@ pub(all) struct NetworkSetCookiesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSetCookiesParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetCookiesParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode NetworkSetCookiesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6995,6 +7975,14 @@ pub fn network_set_cookies_command(
 pub(all) struct NetworkSetExtraHTTPHeadersParams {
   headers : NetworkHeaders
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSetExtraHTTPHeadersParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetExtraHTTPHeadersParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkSetExtraHTTPHeadersParams as CDP JSON.
@@ -7046,6 +8034,14 @@ pub fn network_set_extra_httpheaders_command(
 pub(all) struct NetworkSetRequestInterceptionParams {
   patterns : Array[NetworkRequestPattern]
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSetRequestInterceptionParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetRequestInterceptionParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkSetRequestInterceptionParams as CDP JSON.
@@ -7100,6 +8096,14 @@ pub(all) struct NetworkSetUserAgentOverrideParams {
   platform : String?
   user_agent_metadata : EmulationUserAgentMetadata?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkSetUserAgentOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSetUserAgentOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkSetUserAgentOverrideParams as CDP JSON.
@@ -7162,6 +8166,14 @@ pub(all) struct NetworkStreamResourceContentParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkStreamResourceContentParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkStreamResourceContentParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkStreamResourceContentParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7183,6 +8195,14 @@ pub fn NetworkStreamResourceContentParams::to_json(
 pub(all) struct NetworkStreamResourceContentResult {
   buffered_data : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkStreamResourceContentResult with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkStreamResourceContentResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.streamResourceContent.
@@ -7248,6 +8268,17 @@ pub(all) struct NetworkTakeResponseBodyForInterceptionAsStreamParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkTakeResponseBodyForInterceptionAsStreamParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkTakeResponseBodyForInterceptionAsStreamParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkTakeResponseBodyForInterceptionAsStreamParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7269,6 +8300,17 @@ pub fn NetworkTakeResponseBodyForInterceptionAsStreamParams::to_json(
 pub(all) struct NetworkTakeResponseBodyForInterceptionAsStreamResult {
   stream : IOStreamHandle
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkTakeResponseBodyForInterceptionAsStreamResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkTakeResponseBodyForInterceptionAsStreamResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Network.takeResponseBodyForInterceptionAsStream.
@@ -7336,6 +8378,14 @@ pub(all) struct NetworkDataReceivedEventParams {
   encoded_data_length : Int
   data : String?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDataReceivedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDataReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDataReceivedEventParams as CDP JSON.
@@ -7425,6 +8475,17 @@ pub(all) struct NetworkDeviceBoundSessionEventOccurredEventParams {
   termination_event_details : NetworkTerminationEventDetails?
   challenge_event_details : NetworkChallengeEventDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDeviceBoundSessionEventOccurredEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkDeviceBoundSessionEventOccurredEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDeviceBoundSessionEventOccurredEventParams as CDP JSON.
@@ -7536,6 +8597,17 @@ pub(all) struct NetworkDeviceBoundSessionsAddedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDeviceBoundSessionsAddedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkDeviceBoundSessionsAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDeviceBoundSessionsAddedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7603,6 +8675,14 @@ pub(all) struct NetworkDirectTCPSocketAbortedEventParams {
   error_message : String
   timestamp : NetworkMonotonicTime
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectTCPSocketAbortedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectTCPSocketAbortedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectTCPSocketAbortedEventParams as CDP JSON.
@@ -7677,6 +8757,17 @@ pub(all) struct NetworkDirectTCPSocketChunkReceivedEventParams {
   data : String
   timestamp : NetworkMonotonicTime
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectTCPSocketChunkReceivedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkDirectTCPSocketChunkReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectTCPSocketChunkReceivedEventParams as CDP JSON.
@@ -7754,6 +8845,17 @@ pub(all) struct NetworkDirectTCPSocketChunkSentEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDirectTCPSocketChunkSentEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkDirectTCPSocketChunkSentEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDirectTCPSocketChunkSentEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7823,6 +8925,14 @@ pub(all) struct NetworkDirectTCPSocketClosedEventParams {
   identifier : NetworkRequestId
   timestamp : NetworkMonotonicTime
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectTCPSocketClosedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectTCPSocketClosedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectTCPSocketClosedEventParams as CDP JSON.
@@ -7896,6 +9006,14 @@ pub(all) struct NetworkDirectTCPSocketCreatedEventParams {
   timestamp : NetworkMonotonicTime
   initiator : NetworkInitiator?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectTCPSocketCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectTCPSocketCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectTCPSocketCreatedEventParams as CDP JSON.
@@ -7990,6 +9108,14 @@ pub(all) struct NetworkDirectTCPSocketOpenedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDirectTCPSocketOpenedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectTCPSocketOpenedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDirectTCPSocketOpenedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8078,6 +9204,14 @@ pub(all) struct NetworkDirectUDPSocketAbortedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDirectUDPSocketAbortedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectUDPSocketAbortedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDirectUDPSocketAbortedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8150,6 +9284,17 @@ pub(all) struct NetworkDirectUDPSocketChunkReceivedEventParams {
   message : NetworkDirectUDPMessage
   timestamp : NetworkMonotonicTime
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectUDPSocketChunkReceivedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkDirectUDPSocketChunkReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectUDPSocketChunkReceivedEventParams as CDP JSON.
@@ -8229,6 +9374,17 @@ pub(all) struct NetworkDirectUDPSocketChunkSentEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDirectUDPSocketChunkSentEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkDirectUDPSocketChunkSentEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDirectUDPSocketChunkSentEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8302,6 +9458,14 @@ pub(all) struct NetworkDirectUDPSocketClosedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDirectUDPSocketClosedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectUDPSocketClosedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDirectUDPSocketClosedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8371,6 +9535,14 @@ pub(all) struct NetworkDirectUDPSocketCreatedEventParams {
   timestamp : NetworkMonotonicTime
   initiator : NetworkInitiator?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectUDPSocketCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectUDPSocketCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectUDPSocketCreatedEventParams as CDP JSON.
@@ -8453,6 +9625,17 @@ pub(all) struct NetworkDirectUDPSocketJoinedMulticastGroupEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkDirectUDPSocketJoinedMulticastGroupEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkDirectUDPSocketJoinedMulticastGroupEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkDirectUDPSocketJoinedMulticastGroupEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8521,6 +9704,17 @@ pub(all) struct NetworkDirectUDPSocketLeftMulticastGroupEventParams {
   identifier : NetworkRequestId
   ipaddress : String
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectUDPSocketLeftMulticastGroupEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkDirectUDPSocketLeftMulticastGroupEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectUDPSocketLeftMulticastGroupEventParams as CDP JSON.
@@ -8595,6 +9789,14 @@ pub(all) struct NetworkDirectUDPSocketOpenedEventParams {
   remote_addr : String?
   remote_port : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkDirectUDPSocketOpenedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkDirectUDPSocketOpenedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkDirectUDPSocketOpenedEventParams as CDP JSON.
@@ -8687,6 +9889,17 @@ pub(all) struct NetworkEventSourceMessageReceivedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkEventSourceMessageReceivedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkEventSourceMessageReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkEventSourceMessageReceivedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8767,6 +9980,14 @@ pub(all) struct NetworkLoadingFailedEventParams {
   blocked_reason : NetworkBlockedReason?
   cors_error_status : NetworkCorsErrorStatus?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkLoadingFailedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkLoadingFailedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkLoadingFailedEventParams as CDP JSON.
@@ -8865,6 +10086,14 @@ pub(all) struct NetworkLoadingFinishedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkLoadingFinishedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkLoadingFinishedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkLoadingFinishedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8954,6 +10183,17 @@ pub(all) struct NetworkReportingApiEndpointsChangedForOriginEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkReportingApiEndpointsChangedForOriginEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkReportingApiEndpointsChangedForOriginEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkReportingApiEndpointsChangedForOriginEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -9026,6 +10266,14 @@ pub(all) struct NetworkReportingApiReportAddedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkReportingApiReportAddedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkReportingApiReportAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkReportingApiReportAddedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -9088,6 +10336,17 @@ pub fn network_reporting_api_report_added_event(
 pub(all) struct NetworkReportingApiReportUpdatedEventParams {
   report : NetworkReportingApiReport
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkReportingApiReportUpdatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkReportingApiReportUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkReportingApiReportUpdatedEventParams as CDP JSON.
@@ -9163,6 +10422,14 @@ pub(all) struct NetworkRequestInterceptedEventParams {
   response_headers : NetworkHeaders?
   request_id : NetworkRequestId?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkRequestInterceptedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkRequestInterceptedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkRequestInterceptedEventParams as CDP JSON.
@@ -9292,6 +10559,14 @@ pub(all) struct NetworkRequestServedFromCacheEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkRequestServedFromCacheEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkRequestServedFromCacheEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkRequestServedFromCacheEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -9366,6 +10641,14 @@ pub(all) struct NetworkRequestWillBeSentEventParams {
   has_user_gesture : Bool?
   render_blocking_behavior : NetworkRenderBlockingBehavior?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkRequestWillBeSentEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkRequestWillBeSentEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkRequestWillBeSentEventParams as CDP JSON.
@@ -9502,6 +10785,17 @@ pub(all) struct NetworkRequestWillBeSentExtraInfoEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkRequestWillBeSentExtraInfoEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkRequestWillBeSentExtraInfoEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkRequestWillBeSentExtraInfoEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -9623,6 +10917,14 @@ pub(all) struct NetworkResourceChangedPriorityEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkResourceChangedPriorityEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkResourceChangedPriorityEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkResourceChangedPriorityEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -9699,6 +11001,14 @@ pub(all) struct NetworkResponseReceivedEventParams {
   has_extra_info : Bool
   frame_id : PageFrameId?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkResponseReceivedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkResponseReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkResponseReceivedEventParams as CDP JSON.
@@ -9793,6 +11103,17 @@ pub(all) struct NetworkResponseReceivedEarlyHintsEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkResponseReceivedEarlyHintsEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkResponseReceivedEarlyHintsEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkResponseReceivedEarlyHintsEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -9867,6 +11188,17 @@ pub(all) struct NetworkResponseReceivedExtraInfoEventParams {
   cookie_partition_key_opaque : Bool?
   exempted_cookies : Array[NetworkExemptedSetCookieWithReason]?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkResponseReceivedExtraInfoEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkResponseReceivedExtraInfoEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkResponseReceivedExtraInfoEventParams as CDP JSON.
@@ -9987,6 +11319,14 @@ pub(all) struct NetworkSignedExchangeReceivedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkSignedExchangeReceivedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkSignedExchangeReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkSignedExchangeReceivedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -10058,6 +11398,14 @@ pub(all) struct NetworkTrustTokenOperationDoneEventParams {
   issuer_origin : String?
   issued_token_count : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkTrustTokenOperationDoneEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkTrustTokenOperationDoneEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkTrustTokenOperationDoneEventParams as CDP JSON.
@@ -10149,6 +11497,14 @@ pub(all) struct NetworkWebSocketClosedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkWebSocketClosedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebSocketClosedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkWebSocketClosedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -10217,6 +11573,14 @@ pub(all) struct NetworkWebSocketCreatedEventParams {
   url : String
   initiator : NetworkInitiator?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkWebSocketCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebSocketCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkWebSocketCreatedEventParams as CDP JSON.
@@ -10294,6 +11658,14 @@ pub(all) struct NetworkWebSocketFrameErrorEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkWebSocketFrameErrorEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebSocketFrameErrorEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkWebSocketFrameErrorEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -10366,6 +11738,14 @@ pub(all) struct NetworkWebSocketFrameReceivedEventParams {
   timestamp : NetworkMonotonicTime
   response : NetworkWebSocketFrame
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkWebSocketFrameReceivedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebSocketFrameReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkWebSocketFrameReceivedEventParams as CDP JSON.
@@ -10442,6 +11822,14 @@ pub(all) struct NetworkWebSocketFrameSentEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkWebSocketFrameSentEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebSocketFrameSentEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkWebSocketFrameSentEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -10514,6 +11902,17 @@ pub(all) struct NetworkWebSocketHandshakeResponseReceivedEventParams {
   timestamp : NetworkMonotonicTime
   response : NetworkWebSocketResponse
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkWebSocketHandshakeResponseReceivedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkWebSocketHandshakeResponseReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkWebSocketHandshakeResponseReceivedEventParams as CDP JSON.
@@ -10592,6 +11991,17 @@ pub(all) struct NetworkWebSocketWillSendHandshakeRequestEventParams {
   wall_time : NetworkTimeSinceEpoch
   request : NetworkWebSocketRequest
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkWebSocketWillSendHandshakeRequestEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkWebSocketWillSendHandshakeRequestEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkWebSocketWillSendHandshakeRequestEventParams as CDP JSON.
@@ -10674,6 +12084,14 @@ pub(all) struct NetworkWebTransportClosedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend NetworkWebTransportClosedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebTransportClosedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode NetworkWebTransportClosedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -10741,6 +12159,17 @@ pub(all) struct NetworkWebTransportConnectionEstablishedEventParams {
   transport_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkWebTransportConnectionEstablishedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend NetworkWebTransportConnectionEstablishedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkWebTransportConnectionEstablishedEventParams as CDP JSON.
@@ -10815,6 +12244,14 @@ pub(all) struct NetworkWebTransportCreatedEventParams {
   timestamp : NetworkMonotonicTime
   initiator : NetworkInitiator?
 } derive(Eq, Debug)
+
+///|
+pub extend NetworkWebTransportCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend NetworkWebTransportCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode NetworkWebTransportCreatedEventParams as CDP JSON.

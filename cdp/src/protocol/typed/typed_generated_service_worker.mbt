@@ -12,6 +12,14 @@ pub(all) struct ServiceWorkerRegistrationID {
 } derive(Eq, Debug)
 
 ///|
+pub extend ServiceWorkerRegistrationID with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerRegistrationID with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ServiceWorkerRegistrationID as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -51,6 +59,14 @@ pub(all) struct ServiceWorkerServiceWorkerErrorMessage {
   line_number : Int
   column_number : Int
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerServiceWorkerErrorMessage with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerServiceWorkerErrorMessage with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerServiceWorkerErrorMessage as CDP JSON.
@@ -115,6 +131,14 @@ pub(all) struct ServiceWorkerServiceWorkerRegistration {
 } derive(Eq, Debug)
 
 ///|
+pub extend ServiceWorkerServiceWorkerRegistration with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerServiceWorkerRegistration with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ServiceWorkerServiceWorkerRegistration as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -166,6 +190,14 @@ pub(all) struct ServiceWorkerServiceWorkerVersion {
   target_id : TargetTargetID?
   router_rules : String?
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerServiceWorkerVersion with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerServiceWorkerVersion with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerServiceWorkerVersion as CDP JSON.
@@ -261,6 +293,17 @@ pub(all) struct ServiceWorkerServiceWorkerVersionRunningStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend ServiceWorkerServiceWorkerVersionRunningStatus with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend ServiceWorkerServiceWorkerVersionRunningStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ServiceWorkerServiceWorkerVersionRunningStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -295,6 +338,14 @@ pub fn ServiceWorkerServiceWorkerVersionRunningStatus::from_json(
 pub(all) struct ServiceWorkerServiceWorkerVersionStatus {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerServiceWorkerVersionStatus with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerServiceWorkerVersionStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerServiceWorkerVersionStatus as CDP JSON.
@@ -333,6 +384,14 @@ pub(all) struct ServiceWorkerDeliverPushMessageParams {
   registration_id : ServiceWorkerRegistrationID
   data : String
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerDeliverPushMessageParams with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerDeliverPushMessageParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerDeliverPushMessageParams as CDP JSON.
@@ -412,6 +471,17 @@ pub(all) struct ServiceWorkerDispatchPeriodicSyncEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ServiceWorkerDispatchPeriodicSyncEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend ServiceWorkerDispatchPeriodicSyncEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ServiceWorkerDispatchPeriodicSyncEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -466,6 +536,14 @@ pub(all) struct ServiceWorkerDispatchSyncEventParams {
   tag : String
   last_chance : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerDispatchSyncEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerDispatchSyncEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerDispatchSyncEventParams as CDP JSON.
@@ -544,6 +622,17 @@ pub(all) struct ServiceWorkerSetForceUpdateOnPageLoadParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ServiceWorkerSetForceUpdateOnPageLoadParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend ServiceWorkerSetForceUpdateOnPageLoadParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ServiceWorkerSetForceUpdateOnPageLoadParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -597,6 +686,14 @@ pub(all) struct ServiceWorkerSkipWaitingParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ServiceWorkerSkipWaitingParams with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerSkipWaitingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ServiceWorkerSkipWaitingParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -642,6 +739,14 @@ pub fn service_worker_skip_waiting_command(
 pub(all) struct ServiceWorkerStartWorkerParams {
   scope_url : String
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerStartWorkerParams with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerStartWorkerParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerStartWorkerParams as CDP JSON.
@@ -713,6 +818,14 @@ pub(all) struct ServiceWorkerStopWorkerParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ServiceWorkerStopWorkerParams with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerStopWorkerParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ServiceWorkerStopWorkerParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -760,6 +873,14 @@ pub(all) struct ServiceWorkerUnregisterParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend ServiceWorkerUnregisterParams with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerUnregisterParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode ServiceWorkerUnregisterParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -805,6 +926,14 @@ pub fn service_worker_unregister_command(
 pub(all) struct ServiceWorkerUpdateRegistrationParams {
   scope_url : String
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerUpdateRegistrationParams with Eq::{not_equal, equal}
+
+///|
+pub extend ServiceWorkerUpdateRegistrationParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerUpdateRegistrationParams as CDP JSON.
@@ -856,6 +985,17 @@ pub fn service_worker_update_registration_command(
 pub(all) struct ServiceWorkerWorkerErrorReportedEventParams {
   error_message : ServiceWorkerServiceWorkerErrorMessage
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerWorkerErrorReportedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend ServiceWorkerWorkerErrorReportedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerWorkerErrorReportedEventParams as CDP JSON.
@@ -920,6 +1060,17 @@ pub fn service_worker_worker_error_reported_event(
 pub(all) struct ServiceWorkerWorkerRegistrationUpdatedEventParams {
   registrations : Array[ServiceWorkerServiceWorkerRegistration]
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerWorkerRegistrationUpdatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend ServiceWorkerWorkerRegistrationUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerWorkerRegistrationUpdatedEventParams as CDP JSON.
@@ -992,6 +1143,17 @@ pub fn service_worker_worker_registration_updated_event(
 pub(all) struct ServiceWorkerWorkerVersionUpdatedEventParams {
   versions : Array[ServiceWorkerServiceWorkerVersion]
 } derive(Eq, Debug)
+
+///|
+pub extend ServiceWorkerWorkerVersionUpdatedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend ServiceWorkerWorkerVersionUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode ServiceWorkerWorkerVersionUpdatedEventParams as CDP JSON.

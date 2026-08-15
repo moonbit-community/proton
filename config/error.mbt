@@ -14,6 +14,15 @@ pub(all) suberror ProjectConfigError {
 } derive(Debug, Eq)
 
 ///|
+pub extend ProjectConfigError with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectConfigError with Debug::{to_repr}
+
+///|
+pub extend ProjectConfigError with Show::{to_string, output}
+
+///|
 pub fn ProjectConfigError::message(self : ProjectConfigError) -> String {
   match self {
     FileRead(path~, detail~) => "failed to read " + path + ": " + detail

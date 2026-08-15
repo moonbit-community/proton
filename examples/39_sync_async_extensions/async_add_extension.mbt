@@ -6,11 +6,23 @@ struct SlowAddPayload {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend SlowAddPayload with ToJson::{to_json}
+
+///|
+pub extend SlowAddPayload with FromJson::{from_json}
+
+///|
 struct SlowAddReply {
   total : Int
   waited_ms : Int
   source : String
 } derive(ToJson, FromJson)
+
+///|
+pub extend SlowAddReply with ToJson::{to_json}
+
+///|
+pub extend SlowAddReply with FromJson::{from_json}
 
 ///|
 let async_add_contract : @proton_contract.ExtensionContract = @proton_contract.extension(

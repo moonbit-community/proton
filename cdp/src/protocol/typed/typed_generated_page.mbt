@@ -12,6 +12,12 @@ pub(all) struct PageAdFrameExplanation {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageAdFrameExplanation with Eq::{not_equal, equal}
+
+///|
+pub extend PageAdFrameExplanation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageAdFrameExplanation as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -45,6 +51,12 @@ pub(all) struct PageAdFrameStatus {
   ad_frame_type : PageAdFrameType
   explanations : Array[PageAdFrameExplanation]?
 } derive(Eq, Debug)
+
+///|
+pub extend PageAdFrameStatus with Eq::{not_equal, equal}
+
+///|
+pub extend PageAdFrameStatus with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageAdFrameStatus as CDP JSON.
@@ -97,6 +109,12 @@ pub(all) struct PageAdFrameType {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageAdFrameType with Eq::{not_equal, equal}
+
+///|
+pub extend PageAdFrameType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageAdFrameType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -130,6 +148,12 @@ pub(all) struct PageAdScriptAncestry {
   ancestry_chain : Array[PageAdScriptId]
   root_script_filterlist_rule : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PageAdScriptAncestry with Eq::{not_equal, equal}
+
+///|
+pub extend PageAdScriptAncestry with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageAdScriptAncestry as CDP JSON.
@@ -182,6 +206,12 @@ pub(all) struct PageAdScriptId {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageAdScriptId with Eq::{not_equal, equal}
+
+///|
+pub extend PageAdScriptId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageAdScriptId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -227,6 +257,12 @@ pub(all) struct PageAppManifestError {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageAppManifestError with Eq::{not_equal, equal}
+
+///|
+pub extend PageAppManifestError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageAppManifestError as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -269,6 +305,14 @@ pub(all) struct PageAppManifestParsedProperties {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageAppManifestParsedProperties with Eq::{not_equal, equal}
+
+///|
+pub extend PageAppManifestParsedProperties with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageAppManifestParsedProperties as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -306,6 +350,14 @@ pub(all) struct PageBackForwardCacheBlockingDetails {
   line_number : Int
   column_number : Int
 } derive(Eq, Debug)
+
+///|
+pub extend PageBackForwardCacheBlockingDetails with Eq::{not_equal, equal}
+
+///|
+pub extend PageBackForwardCacheBlockingDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageBackForwardCacheBlockingDetails as CDP JSON.
@@ -361,6 +413,17 @@ pub(all) struct PageBackForwardCacheNotRestoredExplanation {
   context : String?
   details : Array[PageBackForwardCacheBlockingDetails]?
 } derive(Eq, Debug)
+
+///|
+pub extend PageBackForwardCacheNotRestoredExplanation with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PageBackForwardCacheNotRestoredExplanation with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageBackForwardCacheNotRestoredExplanation as CDP JSON.
@@ -425,6 +488,17 @@ pub(all) struct PageBackForwardCacheNotRestoredExplanationTree {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageBackForwardCacheNotRestoredExplanationTree with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PageBackForwardCacheNotRestoredExplanationTree with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageBackForwardCacheNotRestoredExplanationTree as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -481,6 +555,14 @@ pub(all) struct PageBackForwardCacheNotRestoredReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageBackForwardCacheNotRestoredReason with Eq::{not_equal, equal}
+
+///|
+pub extend PageBackForwardCacheNotRestoredReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageBackForwardCacheNotRestoredReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -515,6 +597,14 @@ pub fn PageBackForwardCacheNotRestoredReason::from_json(
 pub(all) struct PageBackForwardCacheNotRestoredReasonType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageBackForwardCacheNotRestoredReasonType with Eq::{not_equal, equal}
+
+///|
+pub extend PageBackForwardCacheNotRestoredReasonType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageBackForwardCacheNotRestoredReasonType as CDP JSON.
@@ -553,6 +643,14 @@ pub(all) struct PageClientNavigationDisposition {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageClientNavigationDisposition with Eq::{not_equal, equal}
+
+///|
+pub extend PageClientNavigationDisposition with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageClientNavigationDisposition as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -587,6 +685,14 @@ pub fn PageClientNavigationDisposition::from_json(
 pub(all) struct PageClientNavigationReason {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageClientNavigationReason with Eq::{not_equal, equal}
+
+///|
+pub extend PageClientNavigationReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageClientNavigationReason as CDP JSON.
@@ -624,6 +730,14 @@ pub(all) struct PageCompilationCacheParams {
   url : String
   eager : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend PageCompilationCacheParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageCompilationCacheParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageCompilationCacheParams as CDP JSON.
@@ -668,6 +782,14 @@ pub(all) struct PageCrossOriginIsolatedContextType {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageCrossOriginIsolatedContextType with Eq::{not_equal, equal}
+
+///|
+pub extend PageCrossOriginIsolatedContextType with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageCrossOriginIsolatedContextType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -704,6 +826,12 @@ pub(all) struct PageDialogType {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageDialogType with Eq::{not_equal, equal}
+
+///|
+pub extend PageDialogType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageDialogType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -737,6 +865,12 @@ pub(all) struct PageFileFilter {
   name : String?
   accepts : Array[String]?
 } derive(Eq, Debug)
+
+///|
+pub extend PageFileFilter with Eq::{not_equal, equal}
+
+///|
+pub extend PageFileFilter with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageFileFilter as CDP JSON.
@@ -792,6 +926,12 @@ pub(all) struct PageFileHandler {
   accepts : Array[PageFileFilter]?
   launch_type : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageFileHandler with Eq::{not_equal, equal}
+
+///|
+pub extend PageFileHandler with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageFileHandler as CDP JSON.
@@ -868,6 +1008,12 @@ pub(all) struct PageFontFamilies {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFontFamilies with Eq::{not_equal, equal}
+
+///|
+pub extend PageFontFamilies with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageFontFamilies as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -933,6 +1079,12 @@ pub(all) struct PageFontSizes {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFontSizes with Eq::{not_equal, equal}
+
+///|
+pub extend PageFontSizes with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageFontSizes as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -987,6 +1139,12 @@ pub(all) struct PageFrame {
   cross_origin_isolated_context_type : PageCrossOriginIsolatedContextType
   gated_apifeatures : Array[PageGatedAPIFeatures]
 } derive(Eq, Debug)
+
+///|
+pub extend PageFrame with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrame with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageFrame as CDP JSON.
@@ -1096,6 +1254,12 @@ pub(all) struct PageFrameId {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFrameId with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageFrameId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1134,6 +1298,12 @@ pub(all) struct PageFrameResource {
   failed : Bool?
   canceled : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend PageFrameResource with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameResource with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageFrameResource as CDP JSON.
@@ -1201,6 +1371,12 @@ pub(all) struct PageFrameResourceTree {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFrameResourceTree with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameResourceTree with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageFrameResourceTree as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1259,6 +1435,12 @@ pub(all) struct PageFrameTree {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFrameTree with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameTree with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageFrameTree as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1309,6 +1491,12 @@ pub(all) struct PageGatedAPIFeatures {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGatedAPIFeatures with Eq::{not_equal, equal}
+
+///|
+pub extend PageGatedAPIFeatures with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageGatedAPIFeatures as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1343,6 +1531,12 @@ pub(all) struct PageImageResource {
   sizes : String?
   type_ : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PageImageResource with Eq::{not_equal, equal}
+
+///|
+pub extend PageImageResource with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageImageResource as CDP JSON.
@@ -1388,6 +1582,12 @@ pub(all) struct PageInstallabilityError {
   error_id : String
   error_arguments : Array[PageInstallabilityErrorArgument]
 } derive(Eq, Debug)
+
+///|
+pub extend PageInstallabilityError with Eq::{not_equal, equal}
+
+///|
+pub extend PageInstallabilityError with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageInstallabilityError as CDP JSON.
@@ -1436,6 +1636,14 @@ pub(all) struct PageInstallabilityErrorArgument {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageInstallabilityErrorArgument with Eq::{not_equal, equal}
+
+///|
+pub extend PageInstallabilityErrorArgument with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageInstallabilityErrorArgument as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1474,6 +1682,12 @@ pub fn PageInstallabilityErrorArgument::from_json(
 pub(all) struct PageLaunchHandler {
   client_mode : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageLaunchHandler with Eq::{not_equal, equal}
+
+///|
+pub extend PageLaunchHandler with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageLaunchHandler as CDP JSON.
@@ -1515,6 +1729,12 @@ pub(all) struct PageLayoutViewport {
   client_width : Int
   client_height : Int
 } derive(Eq, Debug)
+
+///|
+pub extend PageLayoutViewport with Eq::{not_equal, equal}
+
+///|
+pub extend PageLayoutViewport with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageLayoutViewport as CDP JSON.
@@ -1567,6 +1787,12 @@ pub(all) struct PageNavigationEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageNavigationEntry with Eq::{not_equal, equal}
+
+///|
+pub extend PageNavigationEntry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageNavigationEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1615,6 +1841,12 @@ pub(all) struct PageNavigationType {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageNavigationType with Eq::{not_equal, equal}
+
+///|
+pub extend PageNavigationType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageNavigationType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1649,6 +1881,12 @@ pub(all) struct PageOriginTrial {
   status : PageOriginTrialStatus
   tokens_with_status : Array[PageOriginTrialTokenWithStatus]
 } derive(Eq, Debug)
+
+///|
+pub extend PageOriginTrial with Eq::{not_equal, equal}
+
+///|
+pub extend PageOriginTrial with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageOriginTrial as CDP JSON.
@@ -1702,6 +1940,12 @@ pub(all) struct PageOriginTrialStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageOriginTrialStatus with Eq::{not_equal, equal}
+
+///|
+pub extend PageOriginTrialStatus with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageOriginTrialStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1739,6 +1983,12 @@ pub(all) struct PageOriginTrialToken {
   is_third_party : Bool
   usage_restriction : PageOriginTrialUsageRestriction
 } derive(Eq, Debug)
+
+///|
+pub extend PageOriginTrialToken with Eq::{not_equal, equal}
+
+///|
+pub extend PageOriginTrialToken with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageOriginTrialToken as CDP JSON.
@@ -1797,6 +2047,14 @@ pub(all) struct PageOriginTrialTokenStatus {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageOriginTrialTokenStatus with Eq::{not_equal, equal}
+
+///|
+pub extend PageOriginTrialTokenStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageOriginTrialTokenStatus as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1833,6 +2091,14 @@ pub(all) struct PageOriginTrialTokenWithStatus {
   parsed_token : PageOriginTrialToken?
   status : PageOriginTrialTokenStatus
 } derive(Eq, Debug)
+
+///|
+pub extend PageOriginTrialTokenWithStatus with Eq::{not_equal, equal}
+
+///|
+pub extend PageOriginTrialTokenWithStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageOriginTrialTokenWithStatus as CDP JSON.
@@ -1886,6 +2152,14 @@ pub(all) struct PageOriginTrialUsageRestriction {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageOriginTrialUsageRestriction with Eq::{not_equal, equal}
+
+///|
+pub extend PageOriginTrialUsageRestriction with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageOriginTrialUsageRestriction as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1921,6 +2195,14 @@ pub(all) struct PagePermissionsPolicyBlockLocator {
   frame_id : PageFrameId
   block_reason : PagePermissionsPolicyBlockReason
 } derive(Eq, Debug)
+
+///|
+pub extend PagePermissionsPolicyBlockLocator with Eq::{not_equal, equal}
+
+///|
+pub extend PagePermissionsPolicyBlockLocator with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PagePermissionsPolicyBlockLocator as CDP JSON.
@@ -1967,6 +2249,14 @@ pub(all) struct PagePermissionsPolicyBlockReason {
 } derive(Eq, Debug)
 
 ///|
+pub extend PagePermissionsPolicyBlockReason with Eq::{not_equal, equal}
+
+///|
+pub extend PagePermissionsPolicyBlockReason with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PagePermissionsPolicyBlockReason as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2001,6 +2291,14 @@ pub fn PagePermissionsPolicyBlockReason::from_json(
 pub(all) struct PagePermissionsPolicyFeature {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend PagePermissionsPolicyFeature with Eq::{not_equal, equal}
+
+///|
+pub extend PagePermissionsPolicyFeature with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PagePermissionsPolicyFeature as CDP JSON.
@@ -2039,6 +2337,14 @@ pub(all) struct PagePermissionsPolicyFeatureState {
   allowed : Bool
   locator : PagePermissionsPolicyBlockLocator?
 } derive(Eq, Debug)
+
+///|
+pub extend PagePermissionsPolicyFeatureState with Eq::{not_equal, equal}
+
+///|
+pub extend PagePermissionsPolicyFeatureState with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PagePermissionsPolicyFeatureState as CDP JSON.
@@ -2091,6 +2397,12 @@ pub(all) struct PageProtocolHandler {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageProtocolHandler with Eq::{not_equal, equal}
+
+///|
+pub extend PageProtocolHandler with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageProtocolHandler as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2129,6 +2441,12 @@ pub(all) struct PageReferrerPolicy {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageReferrerPolicy with Eq::{not_equal, equal}
+
+///|
+pub extend PageReferrerPolicy with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageReferrerPolicy as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2162,6 +2480,12 @@ pub(all) struct PageRelatedApplication {
   id : String?
   url : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageRelatedApplication with Eq::{not_equal, equal}
+
+///|
+pub extend PageRelatedApplication with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageRelatedApplication as CDP JSON.
@@ -2203,6 +2527,12 @@ pub(all) struct PageScopeExtension {
   origin : String
   has_origin_wildcard : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend PageScopeExtension with Eq::{not_equal, equal}
+
+///|
+pub extend PageScopeExtension with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageScopeExtension as CDP JSON.
@@ -2249,6 +2579,14 @@ pub(all) struct PageScreencastFrameMetadata {
   scroll_offset_y : Double
   timestamp : NetworkTimeSinceEpoch?
 } derive(Eq, Debug)
+
+///|
+pub extend PageScreencastFrameMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend PageScreencastFrameMetadata with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageScreencastFrameMetadata as CDP JSON.
@@ -2320,6 +2658,12 @@ pub(all) struct PageScreenshot {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageScreenshot with Eq::{not_equal, equal}
+
+///|
+pub extend PageScreenshot with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageScreenshot as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2367,6 +2711,12 @@ pub(all) struct PageScriptFontFamilies {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageScriptFontFamilies with Eq::{not_equal, equal}
+
+///|
+pub extend PageScriptFontFamilies with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageScriptFontFamilies as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2407,6 +2757,12 @@ pub(all) struct PageScriptIdentifier {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageScriptIdentifier with Eq::{not_equal, equal}
+
+///|
+pub extend PageScriptIdentifier with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageScriptIdentifier as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2441,6 +2797,12 @@ pub(all) struct PageSecureContextType {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSecureContextType with Eq::{not_equal, equal}
+
+///|
+pub extend PageSecureContextType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageSecureContextType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2473,6 +2835,14 @@ pub fn PageSecureContextType::from_json(
 pub(all) struct PageSecurityOriginDetails {
   is_localhost : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend PageSecurityOriginDetails with Eq::{not_equal, equal}
+
+///|
+pub extend PageSecurityOriginDetails with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageSecurityOriginDetails as CDP JSON.
@@ -2519,6 +2889,12 @@ pub(all) struct PageShareTarget {
   url : String?
   files : Array[PageFileFilter]?
 } derive(Eq, Debug)
+
+///|
+pub extend PageShareTarget with Eq::{not_equal, equal}
+
+///|
+pub extend PageShareTarget with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageShareTarget as CDP JSON.
@@ -2587,6 +2963,12 @@ pub(all) struct PageShortcut {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageShortcut with Eq::{not_equal, equal}
+
+///|
+pub extend PageShortcut with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageShortcut as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2625,6 +3007,12 @@ pub(all) struct PageTransitionType {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageTransitionType with Eq::{not_equal, equal}
+
+///|
+pub extend PageTransitionType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageTransitionType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2661,6 +3049,12 @@ pub(all) struct PageViewport {
   height : Double
   scale : Double
 } derive(Eq, Debug)
+
+///|
+pub extend PageViewport with Eq::{not_equal, equal}
+
+///|
+pub extend PageViewport with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageViewport as CDP JSON.
@@ -2712,6 +3106,12 @@ pub(all) struct PageVisualViewport {
   scale : Double
   zoom : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend PageVisualViewport with Eq::{not_equal, equal}
+
+///|
+pub extend PageVisualViewport with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageVisualViewport as CDP JSON.
@@ -2790,6 +3190,12 @@ pub(all) struct PageWebAppManifest {
   start_url : String?
   theme_color : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PageWebAppManifest with Eq::{not_equal, equal}
+
+///|
+pub extend PageWebAppManifest with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageWebAppManifest as CDP JSON.
@@ -3012,6 +3418,14 @@ pub(all) struct PageAddCompilationCacheParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageAddCompilationCacheParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageAddCompilationCacheParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageAddCompilationCacheParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3060,6 +3474,14 @@ pub(all) struct PageAddScriptToEvaluateOnLoadParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageAddScriptToEvaluateOnLoadParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageAddScriptToEvaluateOnLoadParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageAddScriptToEvaluateOnLoadParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3081,6 +3503,14 @@ pub fn PageAddScriptToEvaluateOnLoadParams::to_json(
 pub(all) struct PageAddScriptToEvaluateOnLoadResult {
   identifier : PageScriptIdentifier
 } derive(Eq, Debug)
+
+///|
+pub extend PageAddScriptToEvaluateOnLoadResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageAddScriptToEvaluateOnLoadResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.addScriptToEvaluateOnLoad.
@@ -3149,6 +3579,17 @@ pub(all) struct PageAddScriptToEvaluateOnNewDocumentParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageAddScriptToEvaluateOnNewDocumentParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PageAddScriptToEvaluateOnNewDocumentParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageAddScriptToEvaluateOnNewDocumentParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3179,6 +3620,17 @@ pub fn PageAddScriptToEvaluateOnNewDocumentParams::to_json(
 pub(all) struct PageAddScriptToEvaluateOnNewDocumentResult {
   identifier : PageScriptIdentifier
 } derive(Eq, Debug)
+
+///|
+pub extend PageAddScriptToEvaluateOnNewDocumentResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PageAddScriptToEvaluateOnNewDocumentResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.addScriptToEvaluateOnNewDocument.
@@ -3271,6 +3723,14 @@ pub(all) struct PageCaptureScreenshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageCaptureScreenshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageCaptureScreenshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageCaptureScreenshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3309,6 +3769,14 @@ pub fn PageCaptureScreenshotParams::to_json(
 pub(all) struct PageCaptureScreenshotResult {
   data : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageCaptureScreenshotResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageCaptureScreenshotResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.captureScreenshot.
@@ -3366,6 +3834,14 @@ pub(all) struct PageCaptureSnapshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageCaptureSnapshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageCaptureSnapshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageCaptureSnapshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3389,6 +3865,14 @@ pub fn PageCaptureSnapshotParams::to_json(
 pub(all) struct PageCaptureSnapshotResult {
   data : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageCaptureSnapshotResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageCaptureSnapshotResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.captureSnapshot.
@@ -3575,6 +4059,14 @@ pub(all) struct PageCreateIsolatedWorldParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageCreateIsolatedWorldParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageCreateIsolatedWorldParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageCreateIsolatedWorldParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3602,6 +4094,14 @@ pub fn PageCreateIsolatedWorldParams::to_json(
 pub(all) struct PageCreateIsolatedWorldResult {
   execution_context_id : RuntimeExecutionContextId
 } derive(Eq, Debug)
+
+///|
+pub extend PageCreateIsolatedWorldResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageCreateIsolatedWorldResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.createIsolatedWorld.
@@ -3662,6 +4162,12 @@ pub(all) struct PageDeleteCookieParams {
   cookie_name : String
   url : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageDeleteCookieParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageDeleteCookieParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageDeleteCookieParams as CDP JSON.
@@ -3728,6 +4234,12 @@ pub(all) struct PageEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageEnableParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3774,6 +4286,14 @@ pub(all) struct PageGenerateTestReportParams {
   message : String
   group : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PageGenerateTestReportParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageGenerateTestReportParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageGenerateTestReportParams as CDP JSON.
@@ -3826,6 +4346,14 @@ pub(all) struct PageGetAdScriptAncestryParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetAdScriptAncestryParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetAdScriptAncestryParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageGetAdScriptAncestryParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3847,6 +4375,14 @@ pub fn PageGetAdScriptAncestryParams::to_json(
 pub(all) struct PageGetAdScriptAncestryResult {
   ad_script_ancestry : PageAdScriptAncestry?
 } derive(Eq, Debug)
+
+///|
+pub extend PageGetAdScriptAncestryResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetAdScriptAncestryResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.getAdScriptAncestry.
@@ -3910,6 +4446,14 @@ pub(all) struct PageGetAnnotatedPageContentParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetAnnotatedPageContentParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetAnnotatedPageContentParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageGetAnnotatedPageContentParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3933,6 +4477,14 @@ pub fn PageGetAnnotatedPageContentParams::to_json(
 pub(all) struct PageGetAnnotatedPageContentResult {
   content : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageGetAnnotatedPageContentResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetAnnotatedPageContentResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.getAnnotatedPageContent.
@@ -3999,6 +4551,12 @@ pub(all) struct PageGetAppIdResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetAppIdResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetAppIdResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Decode and validate the result object for Page.getAppId.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -4053,6 +4611,14 @@ pub(all) struct PageGetAppManifestParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetAppManifestParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetAppManifestParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageGetAppManifestParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4080,6 +4646,14 @@ pub(all) struct PageGetAppManifestResult {
   parsed : PageAppManifestParsedProperties?
   manifest : PageWebAppManifest
 } derive(Eq, Debug)
+
+///|
+pub extend PageGetAppManifestResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetAppManifestResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.getAppManifest.
@@ -4153,6 +4727,12 @@ pub(all) struct PageGetFrameTreeResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetFrameTreeResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetFrameTreeResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Decode and validate the result object for Page.getFrameTree.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -4208,6 +4788,14 @@ pub fn page_get_frame_tree_command(
 pub(all) struct PageGetInstallabilityErrorsResult {
   installability_errors : Array[PageInstallabilityError]
 } derive(Eq, Debug)
+
+///|
+pub extend PageGetInstallabilityErrorsResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetInstallabilityErrorsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.getInstallabilityErrors.
@@ -4273,6 +4861,14 @@ pub(all) struct PageGetLayoutMetricsResult {
   css_visual_viewport : PageVisualViewport
   css_content_size : DOMRect
 } derive(Eq, Debug)
+
+///|
+pub extend PageGetLayoutMetricsResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetLayoutMetricsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.getLayoutMetrics.
@@ -4347,6 +4943,14 @@ pub(all) struct PageGetManifestIconsResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetManifestIconsResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetManifestIconsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Page.getManifestIcons.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -4403,6 +5007,14 @@ pub(all) struct PageGetNavigationHistoryResult {
   current_index : Int
   entries : Array[PageNavigationEntry]
 } derive(Eq, Debug)
+
+///|
+pub extend PageGetNavigationHistoryResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetNavigationHistoryResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.getNavigationHistory.
@@ -4468,6 +5080,14 @@ pub(all) struct PageGetOriginTrialsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetOriginTrialsParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetOriginTrialsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageGetOriginTrialsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4489,6 +5109,14 @@ pub fn PageGetOriginTrialsParams::to_json(
 pub(all) struct PageGetOriginTrialsResult {
   origin_trials : Array[PageOriginTrial]
 } derive(Eq, Debug)
+
+///|
+pub extend PageGetOriginTrialsResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetOriginTrialsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.getOriginTrials.
@@ -4553,6 +5181,14 @@ pub(all) struct PageGetPermissionsPolicyStateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetPermissionsPolicyStateParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetPermissionsPolicyStateParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageGetPermissionsPolicyStateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4574,6 +5210,14 @@ pub fn PageGetPermissionsPolicyStateParams::to_json(
 pub(all) struct PageGetPermissionsPolicyStateResult {
   states : Array[PagePermissionsPolicyFeatureState]
 } derive(Eq, Debug)
+
+///|
+pub extend PageGetPermissionsPolicyStateResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetPermissionsPolicyStateResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.getPermissionsPolicyState.
@@ -4643,6 +5287,14 @@ pub(all) struct PageGetResourceContentParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetResourceContentParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetResourceContentParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageGetResourceContentParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4666,6 +5318,14 @@ pub(all) struct PageGetResourceContentResult {
   content : String
   base64_encoded : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend PageGetResourceContentResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetResourceContentResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.getResourceContent.
@@ -4730,6 +5390,14 @@ pub(all) struct PageGetResourceTreeResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageGetResourceTreeResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageGetResourceTreeResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Page.getResourceTree.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -4786,6 +5454,14 @@ pub(all) struct PageHandleJavaScriptDialogParams {
   accept : Bool
   prompt_text : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PageHandleJavaScriptDialogParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageHandleJavaScriptDialogParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageHandleJavaScriptDialogParams as CDP JSON.
@@ -4846,6 +5522,12 @@ pub(all) struct PageNavigateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageNavigateParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageNavigateParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageNavigateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -4880,6 +5562,12 @@ pub(all) struct PageNavigateResult {
   error_text : String?
   is_download : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend PageNavigateResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageNavigateResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Page.navigate.
@@ -4951,6 +5639,14 @@ pub(all) struct PageNavigateToHistoryEntryParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageNavigateToHistoryEntryParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageNavigateToHistoryEntryParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageNavigateToHistoryEntryParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5016,6 +5712,12 @@ pub(all) struct PagePrintToPDFParams {
   generate_tagged_pdf : Bool?
   generate_document_outline : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend PagePrintToPDFParams with Eq::{not_equal, equal}
+
+///|
+pub extend PagePrintToPDFParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PagePrintToPDFParams as CDP JSON.
@@ -5090,6 +5792,12 @@ pub(all) struct PagePrintToPDFResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend PagePrintToPDFResult with Eq::{not_equal, equal}
+
+///|
+pub extend PagePrintToPDFResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Decode and validate the result object for Page.printToPDF.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -5151,6 +5859,14 @@ pub(all) struct PageProduceCompilationCacheParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageProduceCompilationCacheParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageProduceCompilationCacheParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageProduceCompilationCacheParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5202,6 +5918,12 @@ pub(all) struct PageReloadParams {
   script_to_evaluate_on_load : String?
   loader_id : NetworkLoaderId?
 } derive(Eq, Debug)
+
+///|
+pub extend PageReloadParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageReloadParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageReloadParams as CDP JSON.
@@ -5257,6 +5979,14 @@ pub(all) struct PageRemoveScriptToEvaluateOnLoadParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageRemoveScriptToEvaluateOnLoadParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageRemoveScriptToEvaluateOnLoadParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageRemoveScriptToEvaluateOnLoadParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5306,6 +6036,17 @@ pub fn page_remove_script_to_evaluate_on_load_command(
 pub(all) struct PageRemoveScriptToEvaluateOnNewDocumentParams {
   identifier : PageScriptIdentifier
 } derive(Eq, Debug)
+
+///|
+pub extend PageRemoveScriptToEvaluateOnNewDocumentParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PageRemoveScriptToEvaluateOnNewDocumentParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageRemoveScriptToEvaluateOnNewDocumentParams as CDP JSON.
@@ -5381,6 +6122,14 @@ pub(all) struct PageScreencastFrameAckParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageScreencastFrameAckParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageScreencastFrameAckParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageScreencastFrameAckParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5432,6 +6181,14 @@ pub(all) struct PageSearchInResourceParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSearchInResourceParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSearchInResourceParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageSearchInResourceParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5461,6 +6218,14 @@ pub fn PageSearchInResourceParams::to_json(
 pub(all) struct PageSearchInResourceResult {
   result : Array[DebuggerSearchMatch]
 } derive(Eq, Debug)
+
+///|
+pub extend PageSearchInResourceResult with Eq::{not_equal, equal}
+
+///|
+pub extend PageSearchInResourceResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Page.searchInResource.
@@ -5525,6 +6290,14 @@ pub(all) struct PageSetAdBlockingEnabledParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSetAdBlockingEnabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetAdBlockingEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageSetAdBlockingEnabledParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5574,6 +6347,12 @@ pub fn page_set_ad_blocking_enabled_command(
 pub(all) struct PageSetBypassCSPParams {
   enabled : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend PageSetBypassCSPParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetBypassCSPParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PageSetBypassCSPParams as CDP JSON.
@@ -5630,6 +6409,14 @@ pub(all) struct PageSetDeviceMetricsOverrideParams {
   screen_orientation : EmulationScreenOrientation?
   viewport : PageViewport?
 } derive(Eq, Debug)
+
+///|
+pub extend PageSetDeviceMetricsOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetDeviceMetricsOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageSetDeviceMetricsOverrideParams as CDP JSON.
@@ -5712,6 +6499,14 @@ pub(all) struct PageSetDeviceOrientationOverrideParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSetDeviceOrientationOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetDeviceOrientationOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageSetDeviceOrientationOverrideParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5766,6 +6561,14 @@ pub(all) struct PageSetDocumentContentParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSetDocumentContentParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetDocumentContentParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageSetDocumentContentParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5813,6 +6616,14 @@ pub(all) struct PageSetDownloadBehaviorParams {
   behavior : String
   download_path : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PageSetDownloadBehaviorParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetDownloadBehaviorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageSetDownloadBehaviorParams as CDP JSON.
@@ -5866,6 +6677,14 @@ pub(all) struct PageSetFontFamiliesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSetFontFamiliesParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetFontFamiliesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageSetFontFamiliesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5916,6 +6735,12 @@ pub(all) struct PageSetFontSizesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSetFontSizesParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetFontSizesParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PageSetFontSizesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -5961,6 +6786,14 @@ pub(all) struct PageSetGeolocationOverrideParams {
   longitude : Double?
   accuracy : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend PageSetGeolocationOverrideParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetGeolocationOverrideParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageSetGeolocationOverrideParams as CDP JSON.
@@ -6023,6 +6856,14 @@ pub(all) struct PageSetInterceptFileChooserDialogParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSetInterceptFileChooserDialogParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetInterceptFileChooserDialogParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageSetInterceptFileChooserDialogParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6077,6 +6918,14 @@ pub(all) struct PageSetLifecycleEventsEnabledParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSetLifecycleEventsEnabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetLifecycleEventsEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageSetLifecycleEventsEnabledParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6126,6 +6975,14 @@ pub fn page_set_lifecycle_events_enabled_command(
 pub(all) struct PageSetPrerenderingAllowedParams {
   is_allowed : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend PageSetPrerenderingAllowedParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetPrerenderingAllowedParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageSetPrerenderingAllowedParams as CDP JSON.
@@ -6179,6 +7036,14 @@ pub(all) struct PageSetRPHRegistrationModeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSetRPHRegistrationModeParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetRPHRegistrationModeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageSetRPHRegistrationModeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6228,6 +7093,14 @@ pub fn page_set_rphregistration_mode_command(
 pub(all) struct PageSetSPCTransactionModeParams {
   mode : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageSetSPCTransactionModeParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetSPCTransactionModeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageSetSPCTransactionModeParams as CDP JSON.
@@ -6280,6 +7153,14 @@ pub(all) struct PageSetTouchEmulationEnabledParams {
   enabled : Bool
   configuration : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PageSetTouchEmulationEnabledParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetTouchEmulationEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageSetTouchEmulationEnabledParams as CDP JSON.
@@ -6336,6 +7217,14 @@ pub(all) struct PageSetWebLifecycleStateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageSetWebLifecycleStateParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageSetWebLifecycleStateParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageSetWebLifecycleStateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6389,6 +7278,14 @@ pub(all) struct PageStartScreencastParams {
   max_height : Int?
   every_nth_frame : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend PageStartScreencastParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageStartScreencastParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageStartScreencastParams as CDP JSON.
@@ -6517,6 +7414,14 @@ pub(all) struct PageBackForwardCacheNotUsedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageBackForwardCacheNotUsedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageBackForwardCacheNotUsedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageBackForwardCacheNotUsedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6604,6 +7509,14 @@ pub(all) struct PageCompilationCacheProducedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageCompilationCacheProducedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageCompilationCacheProducedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageCompilationCacheProducedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6668,6 +7581,14 @@ pub(all) struct PageDocumentOpenedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageDocumentOpenedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageDocumentOpenedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageDocumentOpenedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6730,6 +7651,14 @@ pub fn page_document_opened_event(
 pub(all) struct PageDomContentEventFiredEventParams {
   timestamp : NetworkMonotonicTime
 } derive(Eq, Debug)
+
+///|
+pub extend PageDomContentEventFiredEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageDomContentEventFiredEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageDomContentEventFiredEventParams as CDP JSON.
@@ -6797,6 +7726,14 @@ pub(all) struct PageDownloadProgressEventParams {
   received_bytes : Double
   state : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageDownloadProgressEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageDownloadProgressEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageDownloadProgressEventParams as CDP JSON.
@@ -6874,6 +7811,14 @@ pub(all) struct PageDownloadWillBeginEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageDownloadWillBeginEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageDownloadWillBeginEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageDownloadWillBeginEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -6946,6 +7891,14 @@ pub(all) struct PageFileChooserOpenedEventParams {
   mode : String
   backend_node_id : DOMBackendNodeId?
 } derive(Eq, Debug)
+
+///|
+pub extend PageFileChooserOpenedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFileChooserOpenedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageFileChooserOpenedEventParams as CDP JSON.
@@ -7023,6 +7976,14 @@ pub(all) struct PageFrameAttachedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFrameAttachedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameAttachedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageFrameAttachedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7098,6 +8059,17 @@ pub(all) struct PageFrameClearedScheduledNavigationEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFrameClearedScheduledNavigationEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PageFrameClearedScheduledNavigationEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageFrameClearedScheduledNavigationEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7166,6 +8138,14 @@ pub(all) struct PageFrameDetachedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFrameDetachedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameDetachedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageFrameDetachedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7231,6 +8211,14 @@ pub(all) struct PageFrameNavigatedEventParams {
   frame : PageFrame
   type_ : PageNavigationType
 } derive(Eq, Debug)
+
+///|
+pub extend PageFrameNavigatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameNavigatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageFrameNavigatedEventParams as CDP JSON.
@@ -7302,6 +8290,14 @@ pub(all) struct PageFrameRequestedNavigationEventParams {
   url : String
   disposition : PageClientNavigationDisposition
 } derive(Eq, Debug)
+
+///|
+pub extend PageFrameRequestedNavigationEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameRequestedNavigationEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageFrameRequestedNavigationEventParams as CDP JSON.
@@ -7397,6 +8393,14 @@ pub(all) struct PageFrameScheduledNavigationEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFrameScheduledNavigationEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameScheduledNavigationEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageFrameScheduledNavigationEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7469,6 +8473,14 @@ pub(all) struct PageFrameStartedLoadingEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFrameStartedLoadingEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameStartedLoadingEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageFrameStartedLoadingEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7534,6 +8546,14 @@ pub(all) struct PageFrameStartedNavigatingEventParams {
   loader_id : NetworkLoaderId
   navigation_type : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageFrameStartedNavigatingEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameStartedNavigatingEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageFrameStartedNavigatingEventParams as CDP JSON.
@@ -7610,6 +8630,14 @@ pub(all) struct PageFrameStoppedLoadingEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageFrameStoppedLoadingEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameStoppedLoadingEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageFrameStoppedLoadingEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7672,6 +8700,14 @@ pub fn page_frame_stopped_loading_event(
 pub(all) struct PageFrameSubtreeWillBeDetachedEventParams {
   frame_id : PageFrameId
 } derive(Eq, Debug)
+
+///|
+pub extend PageFrameSubtreeWillBeDetachedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageFrameSubtreeWillBeDetachedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageFrameSubtreeWillBeDetachedEventParams as CDP JSON.
@@ -7772,6 +8808,14 @@ pub(all) struct PageJavascriptDialogClosedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageJavascriptDialogClosedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageJavascriptDialogClosedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageJavascriptDialogClosedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -7845,6 +8889,14 @@ pub(all) struct PageJavascriptDialogOpeningEventParams {
   has_browser_handler : Bool
   default_prompt : String?
 } derive(Eq, Debug)
+
+///|
+pub extend PageJavascriptDialogOpeningEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageJavascriptDialogOpeningEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageJavascriptDialogOpeningEventParams as CDP JSON.
@@ -7932,6 +8984,14 @@ pub(all) struct PageLifecycleEventEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageLifecycleEventEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageLifecycleEventEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageLifecycleEventEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8006,6 +9066,14 @@ pub(all) struct PageLoadEventFiredEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageLoadEventFiredEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageLoadEventFiredEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageLoadEventFiredEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8070,6 +9138,14 @@ pub(all) struct PageNavigatedWithinDocumentEventParams {
   url : String
   navigation_type : String
 } derive(Eq, Debug)
+
+///|
+pub extend PageNavigatedWithinDocumentEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageNavigatedWithinDocumentEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageNavigatedWithinDocumentEventParams as CDP JSON.
@@ -8144,6 +9220,14 @@ pub(all) struct PageScreencastFrameEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageScreencastFrameEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageScreencastFrameEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageScreencastFrameEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8212,6 +9296,17 @@ pub(all) struct PageScreencastVisibilityChangedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PageScreencastVisibilityChangedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend PageScreencastVisibilityChangedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PageScreencastVisibilityChangedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -8273,6 +9368,14 @@ pub(all) struct PageWindowOpenEventParams {
   window_features : Array[String]
   user_gesture : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend PageWindowOpenEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PageWindowOpenEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PageWindowOpenEventParams as CDP JSON.

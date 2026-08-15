@@ -8,11 +8,23 @@ struct WindowsSignTool {
 } derive(Debug, Eq)
 
 ///|
+pub extend WindowsSignTool with Eq::{not_equal, equal}
+
+///|
+pub extend WindowsSignTool with Debug::{to_repr}
+
+///|
 struct WindowsSigningConfig {
   certificate : String
   password : String
   timestamp : String?
 } derive(Debug, Eq)
+
+///|
+pub extend WindowsSigningConfig with Eq::{not_equal, equal}
+
+///|
+pub extend WindowsSigningConfig with Debug::{to_repr}
 
 ///|
 fn default_windows_sign_tool() -> WindowsSignTool {

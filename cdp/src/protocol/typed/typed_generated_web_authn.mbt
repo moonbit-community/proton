@@ -12,6 +12,12 @@ pub(all) struct WebAuthnAuthenticatorId {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnAuthenticatorId with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnAuthenticatorId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode WebAuthnAuthenticatorId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -44,6 +50,14 @@ pub fn WebAuthnAuthenticatorId::from_json(
 pub(all) struct WebAuthnAuthenticatorProtocol {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnAuthenticatorProtocol with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnAuthenticatorProtocol with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAuthnAuthenticatorProtocol as CDP JSON.
@@ -80,6 +94,14 @@ pub fn WebAuthnAuthenticatorProtocol::from_json(
 pub(all) struct WebAuthnAuthenticatorTransport {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnAuthenticatorTransport with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnAuthenticatorTransport with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAuthnAuthenticatorTransport as CDP JSON.
@@ -126,6 +148,12 @@ pub(all) struct WebAuthnCredential {
   user_name : String?
   user_display_name : String?
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnCredential with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnCredential with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode WebAuthnCredential as CDP JSON.
@@ -214,6 +242,12 @@ pub(all) struct WebAuthnCtap2Version {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnCtap2Version with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnCtap2Version with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode WebAuthnCtap2Version as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -258,6 +292,14 @@ pub(all) struct WebAuthnVirtualAuthenticatorOptions {
   default_backup_eligibility : Bool?
   default_backup_state : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnVirtualAuthenticatorOptions with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnVirtualAuthenticatorOptions with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAuthnVirtualAuthenticatorOptions as CDP JSON.
@@ -370,6 +412,14 @@ pub(all) struct WebAuthnAddCredentialParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnAddCredentialParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnAddCredentialParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAuthnAddCredentialParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -418,6 +468,14 @@ pub(all) struct WebAuthnAddVirtualAuthenticatorParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnAddVirtualAuthenticatorParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnAddVirtualAuthenticatorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAuthnAddVirtualAuthenticatorParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -439,6 +497,14 @@ pub fn WebAuthnAddVirtualAuthenticatorParams::to_json(
 pub(all) struct WebAuthnAddVirtualAuthenticatorResult {
   authenticator_id : WebAuthnAuthenticatorId
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnAddVirtualAuthenticatorResult with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnAddVirtualAuthenticatorResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for WebAuthn.addVirtualAuthenticator.
@@ -502,6 +568,14 @@ pub fn web_authn_add_virtual_authenticator_command(
 pub(all) struct WebAuthnClearCredentialsParams {
   authenticator_id : WebAuthnAuthenticatorId
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnClearCredentialsParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnClearCredentialsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAuthnClearCredentialsParams as CDP JSON.
@@ -569,6 +643,12 @@ pub(all) struct WebAuthnEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnEnableParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode WebAuthnEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -617,6 +697,14 @@ pub(all) struct WebAuthnGetCredentialParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnGetCredentialParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnGetCredentialParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAuthnGetCredentialParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -639,6 +727,14 @@ pub fn WebAuthnGetCredentialParams::to_json(
 pub(all) struct WebAuthnGetCredentialResult {
   credential : WebAuthnCredential
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnGetCredentialResult with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnGetCredentialResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for WebAuthn.getCredential.
@@ -700,6 +796,14 @@ pub(all) struct WebAuthnGetCredentialsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnGetCredentialsParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnGetCredentialsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAuthnGetCredentialsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -721,6 +825,14 @@ pub fn WebAuthnGetCredentialsParams::to_json(
 pub(all) struct WebAuthnGetCredentialsResult {
   credentials : Array[WebAuthnCredential]
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnGetCredentialsResult with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnGetCredentialsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for WebAuthn.getCredentials.
@@ -786,6 +898,14 @@ pub(all) struct WebAuthnRemoveCredentialParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnRemoveCredentialParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnRemoveCredentialParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAuthnRemoveCredentialParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -832,6 +952,14 @@ pub fn web_authn_remove_credential_command(
 pub(all) struct WebAuthnRemoveVirtualAuthenticatorParams {
   authenticator_id : WebAuthnAuthenticatorId
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnRemoveVirtualAuthenticatorParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnRemoveVirtualAuthenticatorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAuthnRemoveVirtualAuthenticatorParams as CDP JSON.
@@ -884,6 +1012,17 @@ pub(all) struct WebAuthnSetAutomaticPresenceSimulationParams {
   authenticator_id : WebAuthnAuthenticatorId
   enabled : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnSetAutomaticPresenceSimulationParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend WebAuthnSetAutomaticPresenceSimulationParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAuthnSetAutomaticPresenceSimulationParams as CDP JSON.
@@ -939,6 +1078,14 @@ pub(all) struct WebAuthnSetCredentialPropertiesParams {
   backup_eligibility : Bool?
   backup_state : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnSetCredentialPropertiesParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnSetCredentialPropertiesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAuthnSetCredentialPropertiesParams as CDP JSON.
@@ -1002,6 +1149,14 @@ pub(all) struct WebAuthnSetResponseOverrideBitsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnSetResponseOverrideBitsParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnSetResponseOverrideBitsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAuthnSetResponseOverrideBitsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1063,6 +1218,14 @@ pub(all) struct WebAuthnSetUserVerifiedParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnSetUserVerifiedParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnSetUserVerifiedParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAuthnSetUserVerifiedParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1110,6 +1273,14 @@ pub(all) struct WebAuthnCredentialAddedEventParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential : WebAuthnCredential
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnCredentialAddedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnCredentialAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAuthnCredentialAddedEventParams as CDP JSON.
@@ -1181,6 +1352,14 @@ pub(all) struct WebAuthnCredentialAssertedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnCredentialAssertedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnCredentialAssertedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAuthnCredentialAssertedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1250,6 +1429,14 @@ pub(all) struct WebAuthnCredentialDeletedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAuthnCredentialDeletedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnCredentialDeletedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAuthnCredentialDeletedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1317,6 +1504,14 @@ pub(all) struct WebAuthnCredentialUpdatedEventParams {
   authenticator_id : WebAuthnAuthenticatorId
   credential : WebAuthnCredential
 } derive(Eq, Debug)
+
+///|
+pub extend WebAuthnCredentialUpdatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAuthnCredentialUpdatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAuthnCredentialUpdatedEventParams as CDP JSON.

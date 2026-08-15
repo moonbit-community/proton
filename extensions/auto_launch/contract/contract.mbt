@@ -9,6 +9,18 @@ pub(all) struct AutoLaunchRequest {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+pub extend AutoLaunchRequest with Eq::{not_equal, equal}
+
+///|
+pub extend AutoLaunchRequest with Debug::{to_repr}
+
+///|
+pub extend AutoLaunchRequest with ToJson::{to_json}
+
+///|
+pub extend AutoLaunchRequest with FromJson::{from_json}
+
+///|
 pub(all) struct AutoLaunchReply {
   name : String
   path : String
@@ -16,9 +28,33 @@ pub(all) struct AutoLaunchReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+pub extend AutoLaunchReply with Eq::{not_equal, equal}
+
+///|
+pub extend AutoLaunchReply with Debug::{to_repr}
+
+///|
+pub extend AutoLaunchReply with ToJson::{to_json}
+
+///|
+pub extend AutoLaunchReply with FromJson::{from_json}
+
+///|
 pub(all) struct EnabledReply {
   enabled : Bool
 } derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend EnabledReply with Eq::{not_equal, equal}
+
+///|
+pub extend EnabledReply with Debug::{to_repr}
+
+///|
+pub extend EnabledReply with ToJson::{to_json}
+
+///|
+pub extend EnabledReply with FromJson::{from_json}
 
 ///|
 pub(all) struct MutationReply {
@@ -26,10 +62,34 @@ pub(all) struct MutationReply {
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
+pub extend MutationReply with Eq::{not_equal, equal}
+
+///|
+pub extend MutationReply with Debug::{to_repr}
+
+///|
+pub extend MutationReply with ToJson::{to_json}
+
+///|
+pub extend MutationReply with FromJson::{from_json}
+
+///|
 pub(all) struct AutoLaunchActivity {
   operation : String
   identifier : String?
 } derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend AutoLaunchActivity with Eq::{not_equal, equal}
+
+///|
+pub extend AutoLaunchActivity with Debug::{to_repr}
+
+///|
+pub extend AutoLaunchActivity with ToJson::{to_json}
+
+///|
+pub extend AutoLaunchActivity with FromJson::{from_json}
 
 ///|
 pub let support : @proton_contract.Command[

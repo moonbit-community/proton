@@ -4,6 +4,9 @@ suberror CommandHostTestError {
 } derive(Debug)
 
 ///|
+pub extend CommandHostTestError with Debug::{to_repr}
+
+///|
 fn response_error_message(response : @ipc.IpcOpResponse) -> String raise {
   match response.body {
     String(message) => message

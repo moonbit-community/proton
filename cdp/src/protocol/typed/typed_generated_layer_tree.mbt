@@ -27,6 +27,12 @@ pub(all) struct LayerTreeLayer {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeLayer with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeLayer with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode LayerTreeLayer as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -146,6 +152,12 @@ pub(all) struct LayerTreeLayerId {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeLayerId with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeLayerId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode LayerTreeLayerId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -178,6 +190,12 @@ pub fn LayerTreeLayerId::from_json(
 pub(all) struct LayerTreePaintProfile {
   value : Array[Double]
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreePaintProfile with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreePaintProfile with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode LayerTreePaintProfile as CDP JSON.
@@ -215,6 +233,12 @@ pub(all) struct LayerTreePictureTile {
   y : Double
   picture : String
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreePictureTile with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreePictureTile with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode LayerTreePictureTile as CDP JSON.
@@ -258,6 +282,12 @@ pub(all) struct LayerTreeScrollRect {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeScrollRect with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeScrollRect with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode LayerTreeScrollRect as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -296,6 +326,12 @@ pub(all) struct LayerTreeSnapshotId {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeSnapshotId with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeSnapshotId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode LayerTreeSnapshotId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -331,6 +367,14 @@ pub(all) struct LayerTreeStickyPositionConstraint {
   nearest_layer_shifting_sticky_box : LayerTreeLayerId?
   nearest_layer_shifting_containing_block : LayerTreeLayerId?
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreeStickyPositionConstraint with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeStickyPositionConstraint with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode LayerTreeStickyPositionConstraint as CDP JSON.
@@ -393,6 +437,14 @@ pub(all) struct LayerTreeCompositingReasonsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeCompositingReasonsParams with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeCompositingReasonsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode LayerTreeCompositingReasonsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -415,6 +467,14 @@ pub(all) struct LayerTreeCompositingReasonsResult {
   compositing_reasons : Array[String]
   compositing_reason_ids : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreeCompositingReasonsResult with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeCompositingReasonsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for LayerTree.compositingReasons.
@@ -537,6 +597,14 @@ pub(all) struct LayerTreeLoadSnapshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeLoadSnapshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeLoadSnapshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode LayerTreeLoadSnapshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -558,6 +626,14 @@ pub fn LayerTreeLoadSnapshotParams::to_json(
 pub(all) struct LayerTreeLoadSnapshotResult {
   snapshot_id : LayerTreeSnapshotId
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreeLoadSnapshotResult with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeLoadSnapshotResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for LayerTree.loadSnapshot.
@@ -619,6 +695,14 @@ pub(all) struct LayerTreeMakeSnapshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeMakeSnapshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeMakeSnapshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode LayerTreeMakeSnapshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -640,6 +724,14 @@ pub fn LayerTreeMakeSnapshotParams::to_json(
 pub(all) struct LayerTreeMakeSnapshotResult {
   snapshot_id : LayerTreeSnapshotId
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreeMakeSnapshotResult with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeMakeSnapshotResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for LayerTree.makeSnapshot.
@@ -704,6 +796,14 @@ pub(all) struct LayerTreeProfileSnapshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeProfileSnapshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeProfileSnapshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode LayerTreeProfileSnapshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -734,6 +834,14 @@ pub fn LayerTreeProfileSnapshotParams::to_json(
 pub(all) struct LayerTreeProfileSnapshotResult {
   timings : Array[LayerTreePaintProfile]
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreeProfileSnapshotResult with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeProfileSnapshotResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for LayerTree.profileSnapshot.
@@ -798,6 +906,14 @@ pub(all) struct LayerTreeReleaseSnapshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeReleaseSnapshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeReleaseSnapshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode LayerTreeReleaseSnapshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -848,6 +964,14 @@ pub(all) struct LayerTreeReplaySnapshotParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeReplaySnapshotParams with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeReplaySnapshotParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode LayerTreeReplaySnapshotParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -878,6 +1002,14 @@ pub fn LayerTreeReplaySnapshotParams::to_json(
 pub(all) struct LayerTreeReplaySnapshotResult {
   data_url : String
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreeReplaySnapshotResult with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeReplaySnapshotResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for LayerTree.replaySnapshot.
@@ -939,6 +1071,14 @@ pub(all) struct LayerTreeSnapshotCommandLogParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeSnapshotCommandLogParams with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeSnapshotCommandLogParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode LayerTreeSnapshotCommandLogParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -959,6 +1099,17 @@ pub fn LayerTreeSnapshotCommandLogParams::to_json(
 pub(all) struct LayerTreeSnapshotCommandLogResultCommandLogItem {
   value : Json
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreeSnapshotCommandLogResultCommandLogItem with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend LayerTreeSnapshotCommandLogResultCommandLogItem with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Convert LayerTreeSnapshotCommandLogResultCommandLogItem back to the JSON value expected by CDP.
@@ -985,6 +1136,14 @@ pub fn LayerTreeSnapshotCommandLogResultCommandLogItem::from_json(
 pub(all) struct LayerTreeSnapshotCommandLogResult {
   command_log : Array[LayerTreeSnapshotCommandLogResultCommandLogItem]
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreeSnapshotCommandLogResult with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeSnapshotCommandLogResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for LayerTree.snapshotCommandLog.
@@ -1056,6 +1215,14 @@ pub(all) struct LayerTreeLayerPaintedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend LayerTreeLayerPaintedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeLayerPaintedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode LayerTreeLayerPaintedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1120,6 +1287,14 @@ pub fn layer_tree_layer_painted_event(
 pub(all) struct LayerTreeLayerTreeDidChangeEventParams {
   layers : Array[LayerTreeLayer]?
 } derive(Eq, Debug)
+
+///|
+pub extend LayerTreeLayerTreeDidChangeEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend LayerTreeLayerTreeDidChangeEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode LayerTreeLayerTreeDidChangeEventParams as CDP JSON.

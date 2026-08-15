@@ -11,6 +11,15 @@ pub(all) enum ExtensionSetting {
 } derive(Debug, Eq)
 
 ///|
+pub extend ExtensionSetting with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionSetting with Debug::{to_repr}
+
+///|
+pub extend ExtensionSetting with Show::{to_string, output}
+
+///|
 pub impl Show for ExtensionSetting with fn output(self, logger) {
   match self {
     Disabled => logger.write_string("Disabled")

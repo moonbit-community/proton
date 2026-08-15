@@ -14,6 +14,14 @@ pub(all) struct IndexedDBDatabaseWithObjectStores {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBDatabaseWithObjectStores with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBDatabaseWithObjectStores with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode IndexedDBDatabaseWithObjectStores as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -65,6 +73,12 @@ pub(all) struct IndexedDBDataEntry {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBDataEntry with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBDataEntry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode IndexedDBDataEntry as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -113,6 +127,12 @@ pub(all) struct IndexedDBKey {
   date : Double?
   array : Array[IndexedDBKey]?
 } derive(Eq, Debug)
+
+///|
+pub extend IndexedDBKey with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBKey with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode IndexedDBKey as CDP JSON.
@@ -177,6 +197,12 @@ pub(all) struct IndexedDBKeyPath {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBKeyPath with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBKeyPath with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode IndexedDBKeyPath as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -230,6 +256,12 @@ pub(all) struct IndexedDBKeyRange {
   lower_open : Bool
   upper_open : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend IndexedDBKeyRange with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBKeyRange with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode IndexedDBKeyRange as CDP JSON.
@@ -287,6 +319,12 @@ pub(all) struct IndexedDBObjectStore {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBObjectStore with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBObjectStore with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode IndexedDBObjectStore as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -341,6 +379,14 @@ pub(all) struct IndexedDBObjectStoreIndex {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBObjectStoreIndex with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBObjectStoreIndex with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode IndexedDBObjectStoreIndex as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -391,6 +437,14 @@ pub(all) struct IndexedDBClearObjectStoreParams {
   database_name : String
   object_store_name : String
 } derive(Eq, Debug)
+
+///|
+pub extend IndexedDBClearObjectStoreParams with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBClearObjectStoreParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode IndexedDBClearObjectStoreParams as CDP JSON.
@@ -457,6 +511,14 @@ pub(all) struct IndexedDBDeleteDatabaseParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBDeleteDatabaseParams with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBDeleteDatabaseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode IndexedDBDeleteDatabaseParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -516,6 +578,14 @@ pub(all) struct IndexedDBDeleteObjectStoreEntriesParams {
   object_store_name : String
   key_range : IndexedDBKeyRange
 } derive(Eq, Debug)
+
+///|
+pub extend IndexedDBDeleteObjectStoreEntriesParams with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBDeleteObjectStoreEntriesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode IndexedDBDeleteObjectStoreEntriesParams as CDP JSON.
@@ -624,6 +694,14 @@ pub(all) struct IndexedDBGetMetadataParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBGetMetadataParams with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBGetMetadataParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode IndexedDBGetMetadataParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -656,6 +734,14 @@ pub(all) struct IndexedDBGetMetadataResult {
   entries_count : Double
   key_generator_value : Double
 } derive(Eq, Debug)
+
+///|
+pub extend IndexedDBGetMetadataResult with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBGetMetadataResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for IndexedDB.getMetadata.
@@ -728,6 +814,14 @@ pub(all) struct IndexedDBRequestDataParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBRequestDataParams with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBRequestDataParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode IndexedDBRequestDataParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -768,6 +862,14 @@ pub(all) struct IndexedDBRequestDataResult {
   object_store_data_entries : Array[IndexedDBDataEntry]
   has_more : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend IndexedDBRequestDataResult with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBRequestDataResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for IndexedDB.requestData.
@@ -838,6 +940,14 @@ pub(all) struct IndexedDBRequestDatabaseParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBRequestDatabaseParams with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBRequestDatabaseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode IndexedDBRequestDatabaseParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -868,6 +978,14 @@ pub fn IndexedDBRequestDatabaseParams::to_json(
 pub(all) struct IndexedDBRequestDatabaseResult {
   database_with_object_stores : IndexedDBDatabaseWithObjectStores
 } derive(Eq, Debug)
+
+///|
+pub extend IndexedDBRequestDatabaseResult with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBRequestDatabaseResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for IndexedDB.requestDatabase.
@@ -933,6 +1051,14 @@ pub(all) struct IndexedDBRequestDatabaseNamesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend IndexedDBRequestDatabaseNamesParams with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBRequestDatabaseNamesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode IndexedDBRequestDatabaseNamesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -962,6 +1088,14 @@ pub fn IndexedDBRequestDatabaseNamesParams::to_json(
 pub(all) struct IndexedDBRequestDatabaseNamesResult {
   database_names : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend IndexedDBRequestDatabaseNamesResult with Eq::{not_equal, equal}
+
+///|
+pub extend IndexedDBRequestDatabaseNamesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for IndexedDB.requestDatabaseNames.

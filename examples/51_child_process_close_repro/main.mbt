@@ -2,9 +2,21 @@
 struct HoldRequest {} derive(ToJson, FromJson)
 
 ///|
+pub extend HoldRequest with ToJson::{to_json}
+
+///|
+pub extend HoldRequest with FromJson::{from_json}
+
+///|
 struct HoldResult {
   pid : Int
 } derive(ToJson, FromJson)
+
+///|
+pub extend HoldResult with ToJson::{to_json}
+
+///|
+pub extend HoldResult with FromJson::{from_json}
 
 ///|
 let child_contract : @proton_contract.ExtensionContract = @proton_contract.extension(

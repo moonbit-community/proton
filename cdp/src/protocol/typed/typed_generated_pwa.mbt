@@ -12,6 +12,12 @@ pub(all) struct PWADisplayMode {
 } derive(Eq, Debug)
 
 ///|
+pub extend PWADisplayMode with Eq::{not_equal, equal}
+
+///|
+pub extend PWADisplayMode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PWADisplayMode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -46,6 +52,12 @@ pub(all) struct PWAFileHandler {
   accepts : Array[PWAFileHandlerAccept]
   display_name : String
 } derive(Eq, Debug)
+
+///|
+pub extend PWAFileHandler with Eq::{not_equal, equal}
+
+///|
+pub extend PWAFileHandler with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PWAFileHandler as CDP JSON.
@@ -94,6 +106,12 @@ pub(all) struct PWAFileHandlerAccept {
   media_type : String
   file_extensions : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend PWAFileHandlerAccept with Eq::{not_equal, equal}
+
+///|
+pub extend PWAFileHandlerAccept with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PWAFileHandlerAccept as CDP JSON.
@@ -145,6 +163,14 @@ pub(all) struct PWAChangeAppUserSettingsParams {
   link_capturing : Bool?
   display_mode : PWADisplayMode?
 } derive(Eq, Debug)
+
+///|
+pub extend PWAChangeAppUserSettingsParams with Eq::{not_equal, equal}
+
+///|
+pub extend PWAChangeAppUserSettingsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PWAChangeAppUserSettingsParams as CDP JSON.
@@ -204,6 +230,12 @@ pub(all) struct PWAGetOsAppStateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PWAGetOsAppStateParams with Eq::{not_equal, equal}
+
+///|
+pub extend PWAGetOsAppStateParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PWAGetOsAppStateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -224,6 +256,12 @@ pub(all) struct PWAGetOsAppStateResult {
   badge_count : Int
   file_handlers : Array[PWAFileHandler]
 } derive(Eq, Debug)
+
+///|
+pub extend PWAGetOsAppStateResult with Eq::{not_equal, equal}
+
+///|
+pub extend PWAGetOsAppStateResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for PWA.getOsAppState.
@@ -292,6 +330,12 @@ pub(all) struct PWAInstallParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PWAInstallParams with Eq::{not_equal, equal}
+
+///|
+pub extend PWAInstallParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PWAInstallParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -341,6 +385,12 @@ pub(all) struct PWALaunchParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PWALaunchParams with Eq::{not_equal, equal}
+
+///|
+pub extend PWALaunchParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PWALaunchParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -363,6 +413,12 @@ pub fn PWALaunchParams::to_json(self : PWALaunchParams) -> Json {
 pub(all) struct PWALaunchResult {
   target_id : TargetTargetID
 } derive(Eq, Debug)
+
+///|
+pub extend PWALaunchResult with Eq::{not_equal, equal}
+
+///|
+pub extend PWALaunchResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for PWA.launch.
@@ -425,6 +481,14 @@ pub(all) struct PWALaunchFilesInAppParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PWALaunchFilesInAppParams with Eq::{not_equal, equal}
+
+///|
+pub extend PWALaunchFilesInAppParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PWALaunchFilesInAppParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -447,6 +511,14 @@ pub fn PWALaunchFilesInAppParams::to_json(
 pub(all) struct PWALaunchFilesInAppResult {
   target_ids : Array[TargetTargetID]
 } derive(Eq, Debug)
+
+///|
+pub extend PWALaunchFilesInAppResult with Eq::{not_equal, equal}
+
+///|
+pub extend PWALaunchFilesInAppResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for PWA.launchFilesInApp.
@@ -511,6 +583,14 @@ pub(all) struct PWAOpenCurrentPageInAppParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PWAOpenCurrentPageInAppParams with Eq::{not_equal, equal}
+
+///|
+pub extend PWAOpenCurrentPageInAppParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PWAOpenCurrentPageInAppParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -560,6 +640,12 @@ pub fn pwa_open_current_page_in_app_command(
 pub(all) struct PWAUninstallParams {
   manifest_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend PWAUninstallParams with Eq::{not_equal, equal}
+
+///|
+pub extend PWAUninstallParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode PWAUninstallParams as CDP JSON.

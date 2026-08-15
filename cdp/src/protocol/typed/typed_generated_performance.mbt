@@ -13,6 +13,12 @@ pub(all) struct PerformanceMetric {
 } derive(Eq, Debug)
 
 ///|
+pub extend PerformanceMetric with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceMetric with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PerformanceMetric as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -73,6 +79,12 @@ pub(all) struct PerformanceEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PerformanceEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceEnableParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode PerformanceEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -118,6 +130,14 @@ pub fn performance_enable_command(
 pub(all) struct PerformanceGetMetricsResult {
   metrics : Array[PerformanceMetric]
 } derive(Eq, Debug)
+
+///|
+pub extend PerformanceGetMetricsResult with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceGetMetricsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Performance.getMetrics.
@@ -180,6 +200,14 @@ pub(all) struct PerformanceSetTimeDomainParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend PerformanceSetTimeDomainParams with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceSetTimeDomainParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode PerformanceSetTimeDomainParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -226,6 +254,14 @@ pub(all) struct PerformanceMetricsEventParams {
   metrics : Array[PerformanceMetric]
   title : String
 } derive(Eq, Debug)
+
+///|
+pub extend PerformanceMetricsEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend PerformanceMetricsEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode PerformanceMetricsEventParams as CDP JSON.

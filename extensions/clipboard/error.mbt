@@ -7,6 +7,15 @@ suberror ClipboardError {
 } derive(Debug, Eq)
 
 ///|
+pub extend ClipboardError with Eq::{not_equal, equal}
+
+///|
+pub extend ClipboardError with Debug::{to_repr}
+
+///|
+pub extend ClipboardError with Show::{to_string, output}
+
+///|
 fn ClipboardError::message(self : ClipboardError) -> String {
   match self {
     Unsupported(detail~) => "clipboard is unavailable: " + detail

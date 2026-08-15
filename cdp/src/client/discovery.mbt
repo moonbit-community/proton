@@ -28,6 +28,15 @@ pub(all) suberror DiscoveryError {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend DiscoveryError with Eq::{not_equal, equal}
+
+///|
+pub extend DiscoveryError with Debug::{to_repr}
+
+///|
+pub extend DiscoveryError with ToJson::{to_json}
+
+///|
 /// Structured details for a `DiscoveryError`.
 ///
 /// The `path` field points at the target string, HTTP request, or JSON field
@@ -43,6 +52,15 @@ pub(all) struct DiscoveryErrorDiagnostic {
   path : String
   message : String
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend DiscoveryErrorDiagnostic with Eq::{not_equal, equal}
+
+///|
+pub extend DiscoveryErrorDiagnostic with Debug::{to_repr}
+
+///|
+pub extend DiscoveryErrorDiagnostic with ToJson::{to_json}
 
 ///|
 /// Convert a discovery error into stable structured diagnostic data.
@@ -174,6 +192,15 @@ pub(all) enum CdpTarget {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend CdpTarget with Eq::{not_equal, equal}
+
+///|
+pub extend CdpTarget with Debug::{to_repr}
+
+///|
+pub extend CdpTarget with ToJson::{to_json}
+
+///|
 /// Metadata returned by Chrome's `/json/version` discovery endpoint.
 ///
 /// `web_socket_debugger_url` is normalized for local `127.0.0.1` endpoints so
@@ -192,6 +219,15 @@ pub(all) struct CdpVersionInfo {
   web_socket_debugger_url : String
   raw : Json
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend CdpVersionInfo with Eq::{not_equal, equal}
+
+///|
+pub extend CdpVersionInfo with Debug::{to_repr}
+
+///|
+pub extend CdpVersionInfo with ToJson::{to_json}
 
 ///|
 /// A single target returned by Chrome's `/json/list` endpoint.
@@ -214,6 +250,15 @@ pub(all) struct CdpDiscoveredTarget {
   web_socket_debugger_url : String?
   raw : Json
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend CdpDiscoveredTarget with Eq::{not_equal, equal}
+
+///|
+pub extend CdpDiscoveredTarget with Debug::{to_repr}
+
+///|
+pub extend CdpDiscoveredTarget with ToJson::{to_json}
 
 ///|
 /// Parse a user-supplied target string into a CDP target.

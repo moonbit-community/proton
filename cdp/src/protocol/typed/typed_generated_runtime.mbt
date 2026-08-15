@@ -14,6 +14,12 @@ pub(all) struct RuntimeCallArgument {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeCallArgument with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeCallArgument with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeCallArgument as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -71,6 +77,12 @@ pub(all) struct RuntimeCallFrame {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeCallFrame with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeCallFrame with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeCallFrame as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -124,6 +136,12 @@ pub(all) struct RuntimeCustomPreview {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeCustomPreview with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeCustomPreview with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeCustomPreview as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -168,6 +186,14 @@ pub(all) struct RuntimeDeepSerializedValue {
   object_id : String?
   weak_local_object_reference : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeDeepSerializedValue with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeDeepSerializedValue with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeDeepSerializedValue as CDP JSON.
@@ -223,6 +249,12 @@ pub(all) struct RuntimeEntryPreview {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeEntryPreview with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeEntryPreview with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeEntryPreview as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -275,6 +307,12 @@ pub(all) struct RuntimeExceptionDetails {
   execution_context_id : RuntimeExecutionContextId?
   exception_meta_data : Json?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeExceptionDetails with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeExceptionDetails with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode RuntimeExceptionDetails as CDP JSON.
@@ -366,6 +404,14 @@ pub(all) struct RuntimeExecutionContextDescription {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeExecutionContextDescription with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeExecutionContextDescription with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeExecutionContextDescription as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -416,6 +462,14 @@ pub(all) struct RuntimeExecutionContextId {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeExecutionContextId with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeExecutionContextId with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeExecutionContextId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -458,6 +512,14 @@ pub(all) struct RuntimeInternalPropertyDescriptor {
   name : String
   value : RuntimeRemoteObject?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeInternalPropertyDescriptor with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeInternalPropertyDescriptor with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeInternalPropertyDescriptor as CDP JSON.
@@ -508,6 +570,12 @@ pub(all) struct RuntimeObjectPreview {
   properties : Array[RuntimePropertyPreview]
   entries : Array[RuntimeEntryPreview]?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeObjectPreview with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeObjectPreview with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode RuntimeObjectPreview as CDP JSON.
@@ -582,6 +650,14 @@ pub(all) struct RuntimePrivatePropertyDescriptor {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimePrivatePropertyDescriptor with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimePrivatePropertyDescriptor with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimePrivatePropertyDescriptor as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -648,6 +724,14 @@ pub(all) struct RuntimePropertyDescriptor {
   is_own : Bool?
   symbol : RuntimeRemoteObject?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimePropertyDescriptor with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimePropertyDescriptor with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimePropertyDescriptor as CDP JSON.
@@ -740,6 +824,12 @@ pub(all) struct RuntimePropertyPreview {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimePropertyPreview with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimePropertyPreview with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimePropertyPreview as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -800,6 +890,12 @@ pub(all) struct RuntimeRemoteObject {
   preview : RuntimeObjectPreview?
   custom_preview : RuntimeCustomPreview?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeRemoteObject with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeRemoteObject with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode RuntimeRemoteObject as CDP JSON.
@@ -895,6 +991,12 @@ pub(all) struct RuntimeRemoteObjectId {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeRemoteObjectId with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeRemoteObjectId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeRemoteObjectId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -927,6 +1029,12 @@ pub fn RuntimeRemoteObjectId::from_json(
 pub(all) struct RuntimeScriptId {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeScriptId with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeScriptId with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode RuntimeScriptId as CDP JSON.
@@ -963,6 +1071,14 @@ pub(all) struct RuntimeSerializationOptions {
   max_depth : Int?
   additional_parameters : Json?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeSerializationOptions with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeSerializationOptions with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeSerializationOptions as CDP JSON.
@@ -1014,6 +1130,12 @@ pub(all) struct RuntimeStackTrace {
   parent : RuntimeStackTrace?
   parent_id : RuntimeStackTraceId?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeStackTrace with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeStackTrace with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode RuntimeStackTrace as CDP JSON.
@@ -1080,6 +1202,12 @@ pub(all) struct RuntimeStackTraceId {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeStackTraceId with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeStackTraceId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeStackTraceId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1123,6 +1251,12 @@ pub(all) struct RuntimeTimeDelta {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeTimeDelta with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeTimeDelta with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeTimeDelta as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1155,6 +1289,12 @@ pub fn RuntimeTimeDelta::from_json(
 pub(all) struct RuntimeTimestamp {
   value : Double
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeTimestamp with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeTimestamp with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode RuntimeTimestamp as CDP JSON.
@@ -1191,6 +1331,12 @@ pub(all) struct RuntimeUniqueDebuggerId {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeUniqueDebuggerId with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeUniqueDebuggerId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeUniqueDebuggerId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1223,6 +1369,14 @@ pub fn RuntimeUniqueDebuggerId::from_json(
 pub(all) struct RuntimeUnserializableValue {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeUnserializableValue with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeUnserializableValue with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeUnserializableValue as CDP JSON.
@@ -1261,6 +1415,12 @@ pub(all) struct RuntimeAddBindingParams {
   execution_context_id : RuntimeExecutionContextId?
   execution_context_name : String?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeAddBindingParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeAddBindingParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode RuntimeAddBindingParams as CDP JSON.
@@ -1316,6 +1476,14 @@ pub(all) struct RuntimeAwaitPromiseParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeAwaitPromiseParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeAwaitPromiseParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeAwaitPromiseParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1344,6 +1512,14 @@ pub(all) struct RuntimeAwaitPromiseResult {
   result : RuntimeRemoteObject
   exception_details : RuntimeExceptionDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeAwaitPromiseResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeAwaitPromiseResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Runtime.awaitPromise.
@@ -1422,6 +1598,14 @@ pub(all) struct RuntimeCallFunctionOnParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeCallFunctionOnParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeCallFunctionOnParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeCallFunctionOnParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1480,6 +1664,14 @@ pub(all) struct RuntimeCallFunctionOnResult {
   result : RuntimeRemoteObject
   exception_details : RuntimeExceptionDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeCallFunctionOnResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeCallFunctionOnResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Runtime.callFunctionOn.
@@ -1549,6 +1741,14 @@ pub(all) struct RuntimeCompileScriptParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeCompileScriptParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeCompileScriptParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeCompileScriptParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1576,6 +1776,14 @@ pub(all) struct RuntimeCompileScriptResult {
   script_id : RuntimeScriptId?
   exception_details : RuntimeExceptionDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeCompileScriptResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeCompileScriptResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Runtime.compileScript.
@@ -1716,6 +1924,12 @@ pub(all) struct RuntimeEvaluateParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeEvaluateParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeEvaluateParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeEvaluateParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1783,6 +1997,12 @@ pub(all) struct RuntimeEvaluateResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeEvaluateResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeEvaluateResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Decode and validate the result object for Runtime.evaluate.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -1847,6 +2067,14 @@ pub(all) struct RuntimeGetExceptionDetailsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeGetExceptionDetailsParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeGetExceptionDetailsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeGetExceptionDetailsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1868,6 +2096,14 @@ pub fn RuntimeGetExceptionDetailsParams::to_json(
 pub(all) struct RuntimeGetExceptionDetailsResult {
   exception_details : RuntimeExceptionDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeGetExceptionDetailsResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeGetExceptionDetailsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Runtime.getExceptionDetails.
@@ -1938,6 +2174,14 @@ pub(all) struct RuntimeGetHeapUsageResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeGetHeapUsageResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeGetHeapUsageResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Runtime.getHeapUsage.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -2004,6 +2248,14 @@ pub(all) struct RuntimeGetIsolateIdResult {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeGetIsolateIdResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeGetIsolateIdResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Decode and validate the result object for Runtime.getIsolateId.
 ///
 /// Pass the `result` object from a successful CDP response. The decoder checks
@@ -2061,6 +2313,14 @@ pub(all) struct RuntimeGetPropertiesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeGetPropertiesParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeGetPropertiesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeGetPropertiesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2097,6 +2357,14 @@ pub(all) struct RuntimeGetPropertiesResult {
   private_properties : Array[RuntimePrivatePropertyDescriptor]?
   exception_details : RuntimeExceptionDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeGetPropertiesResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeGetPropertiesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Runtime.getProperties.
@@ -2186,6 +2454,14 @@ pub(all) struct RuntimeGlobalLexicalScopeNamesParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeGlobalLexicalScopeNamesParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeGlobalLexicalScopeNamesParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeGlobalLexicalScopeNamesParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2209,6 +2485,14 @@ pub fn RuntimeGlobalLexicalScopeNamesParams::to_json(
 pub(all) struct RuntimeGlobalLexicalScopeNamesResult {
   names : Array[String]
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeGlobalLexicalScopeNamesResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeGlobalLexicalScopeNamesResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Runtime.globalLexicalScopeNames.
@@ -2280,6 +2564,14 @@ pub(all) struct RuntimeQueryObjectsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeQueryObjectsParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeQueryObjectsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeQueryObjectsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2304,6 +2596,14 @@ pub fn RuntimeQueryObjectsParams::to_json(
 pub(all) struct RuntimeQueryObjectsResult {
   objects : RuntimeRemoteObject
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeQueryObjectsResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeQueryObjectsResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Runtime.queryObjects.
@@ -2365,6 +2665,14 @@ pub(all) struct RuntimeReleaseObjectParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeReleaseObjectParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeReleaseObjectParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeReleaseObjectParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2410,6 +2718,14 @@ pub fn runtime_release_object_command(
 pub(all) struct RuntimeReleaseObjectGroupParams {
   object_group : String
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeReleaseObjectGroupParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeReleaseObjectGroupParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeReleaseObjectGroupParams as CDP JSON.
@@ -2461,6 +2777,14 @@ pub fn runtime_release_object_group_command(
 pub(all) struct RuntimeRemoveBindingParams {
   name : String
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeRemoveBindingParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeRemoveBindingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeRemoveBindingParams as CDP JSON.
@@ -2539,6 +2863,12 @@ pub(all) struct RuntimeRunScriptParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeRunScriptParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeRunScriptParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode RuntimeRunScriptParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2580,6 +2910,12 @@ pub(all) struct RuntimeRunScriptResult {
   result : RuntimeRemoteObject
   exception_details : RuntimeExceptionDetails?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeRunScriptResult with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeRunScriptResult with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Decode and validate the result object for Runtime.runScript.
@@ -2646,6 +2982,14 @@ pub(all) struct RuntimeSetAsyncCallStackDepthParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeSetAsyncCallStackDepthParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeSetAsyncCallStackDepthParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeSetAsyncCallStackDepthParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2697,6 +3041,17 @@ pub(all) struct RuntimeSetCustomObjectFormatterEnabledParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeSetCustomObjectFormatterEnabledParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend RuntimeSetCustomObjectFormatterEnabledParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeSetCustomObjectFormatterEnabledParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2746,6 +3101,14 @@ pub fn runtime_set_custom_object_formatter_enabled_command(
 pub(all) struct RuntimeSetMaxCallStackSizeToCaptureParams {
   size : Int
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeSetMaxCallStackSizeToCaptureParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeSetMaxCallStackSizeToCaptureParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeSetMaxCallStackSizeToCaptureParams as CDP JSON.
@@ -2823,6 +3186,14 @@ pub(all) struct RuntimeBindingCalledEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeBindingCalledEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeBindingCalledEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeBindingCalledEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2894,6 +3265,14 @@ pub(all) struct RuntimeConsoleAPICalledEventParams {
   stack_trace : RuntimeStackTrace?
   context : String?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeConsoleAPICalledEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeConsoleAPICalledEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeConsoleAPICalledEventParams as CDP JSON.
@@ -2985,6 +3364,14 @@ pub(all) struct RuntimeExceptionRevokedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeExceptionRevokedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeExceptionRevokedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeExceptionRevokedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3050,6 +3437,14 @@ pub(all) struct RuntimeExceptionThrownEventParams {
   timestamp : RuntimeTimestamp
   exception_details : RuntimeExceptionDetails
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeExceptionThrownEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeExceptionThrownEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeExceptionThrownEventParams as CDP JSON.
@@ -3120,6 +3515,14 @@ pub(all) struct RuntimeExecutionContextCreatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeExecutionContextCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeExecutionContextCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode RuntimeExecutionContextCreatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3183,6 +3586,17 @@ pub(all) struct RuntimeExecutionContextDestroyedEventParams {
   execution_context_id : RuntimeExecutionContextId
   execution_context_unique_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeExecutionContextDestroyedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend RuntimeExecutionContextDestroyedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeExecutionContextDestroyedEventParams as CDP JSON.
@@ -3274,6 +3688,14 @@ pub(all) struct RuntimeInspectRequestedEventParams {
   hints : Json
   execution_context_id : RuntimeExecutionContextId?
 } derive(Eq, Debug)
+
+///|
+pub extend RuntimeInspectRequestedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeInspectRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode RuntimeInspectRequestedEventParams as CDP JSON.

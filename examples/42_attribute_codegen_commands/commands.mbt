@@ -5,6 +5,12 @@ struct AddReply {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend AddReply with ToJson::{to_json}
+
+///|
+pub extend AddReply with FromJson::{from_json}
+
+///|
 struct AddRequest {
   left : Int
   right : Int
@@ -12,9 +18,21 @@ struct AddRequest {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend AddRequest with ToJson::{to_json}
+
+///|
+pub extend AddRequest with FromJson::{from_json}
+
+///|
 struct AddFinished {
   total : Int
 } derive(ToJson, FromJson)
+
+///|
+pub extend AddFinished with ToJson::{to_json}
+
+///|
+pub extend AddFinished with FromJson::{from_json}
 
 ///|
 let slow_add_command : @proton_contract.Command[AddRequest, AddReply] = generated_extension_contract.command(

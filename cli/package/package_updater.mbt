@@ -12,6 +12,12 @@ pub(all) suberror UpdaterMetadataError {
 } derive(Eq)
 
 ///|
+pub extend UpdaterMetadataError with Eq::{not_equal, equal}
+
+///|
+pub extend UpdaterMetadataError with Show::{to_string, output}
+
+///|
 pub fn UpdaterMetadataError::message(self : UpdaterMetadataError) -> String {
   match self {
     NoDistributableArtifact =>

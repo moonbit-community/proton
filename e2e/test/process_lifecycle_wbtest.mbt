@@ -14,12 +14,27 @@ struct ProcessRow {
 } derive(Eq, Debug)
 
 ///|
+pub extend ProcessRow with Eq::{not_equal, equal}
+
+///|
+pub extend ProcessRow with Debug::{to_repr}
+
+///|
 struct ProcessRowJson {
   pid : Int
   parent_pid : Int
   created_at : Int
   command : String
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend ProcessRowJson with Eq::{not_equal, equal}
+
+///|
+pub extend ProcessRowJson with Debug::{to_repr}
+
+///|
+pub extend ProcessRowJson with FromJson::{from_json}
 
 ///|
 struct ProcessSnapshot {
@@ -33,6 +48,12 @@ struct ProcessSnapshot {
 struct ShutdownProbeResult {
   helper_processes : Int
 } derive(Eq, Debug)
+
+///|
+pub extend ShutdownProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend ShutdownProbeResult with Debug::{to_repr}
 
 ///|
 async fn finish_scenario_app(

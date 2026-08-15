@@ -14,6 +14,15 @@ pub(all) suberror ExtensionMetadataError {
 } derive(Debug, Eq)
 
 ///|
+pub extend ExtensionMetadataError with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionMetadataError with Debug::{to_repr}
+
+///|
+pub extend ExtensionMetadataError with Show::{to_string, output}
+
+///|
 pub fn ExtensionMetadataError::message(self : ExtensionMetadataError) -> String {
   match self {
     UnknownField(field~) => "unknown proton.ext.json field: " + field
@@ -53,6 +62,15 @@ pub(all) suberror ExtensionDescriptorError {
 } derive(Debug, Eq)
 
 ///|
+pub extend ExtensionDescriptorError with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionDescriptorError with Debug::{to_repr}
+
+///|
+pub extend ExtensionDescriptorError with Show::{to_string, output}
+
+///|
 pub fn ExtensionDescriptorError::message(
   self : ExtensionDescriptorError,
 ) -> String {
@@ -84,6 +102,15 @@ pub(all) suberror ExtensionCatalogError {
   InvalidSearchRoot(path~ : String)
   DirectoryReadFailed(path~ : String, detail~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend ExtensionCatalogError with Eq::{not_equal, equal}
+
+///|
+pub extend ExtensionCatalogError with Debug::{to_repr}
+
+///|
+pub extend ExtensionCatalogError with Show::{to_string, output}
 
 ///|
 pub fn ExtensionCatalogError::message(self : ExtensionCatalogError) -> String {

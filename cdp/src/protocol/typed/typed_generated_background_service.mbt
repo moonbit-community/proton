@@ -19,6 +19,14 @@ pub(all) struct BackgroundServiceBackgroundServiceEvent {
 } derive(Eq, Debug)
 
 ///|
+pub extend BackgroundServiceBackgroundServiceEvent with Eq::{not_equal, equal}
+
+///|
+pub extend BackgroundServiceBackgroundServiceEvent with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BackgroundServiceBackgroundServiceEvent as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -91,6 +99,14 @@ pub(all) struct BackgroundServiceEventMetadata {
 } derive(Eq, Debug)
 
 ///|
+pub extend BackgroundServiceEventMetadata with Eq::{not_equal, equal}
+
+///|
+pub extend BackgroundServiceEventMetadata with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BackgroundServiceEventMetadata as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -131,6 +147,14 @@ pub(all) struct BackgroundServiceServiceName {
 } derive(Eq, Debug)
 
 ///|
+pub extend BackgroundServiceServiceName with Eq::{not_equal, equal}
+
+///|
+pub extend BackgroundServiceServiceName with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BackgroundServiceServiceName as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -165,6 +189,14 @@ pub fn BackgroundServiceServiceName::from_json(
 pub(all) struct BackgroundServiceClearEventsParams {
   service : BackgroundServiceServiceName
 } derive(Eq, Debug)
+
+///|
+pub extend BackgroundServiceClearEventsParams with Eq::{not_equal, equal}
+
+///|
+pub extend BackgroundServiceClearEventsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BackgroundServiceClearEventsParams as CDP JSON.
@@ -219,6 +251,14 @@ pub(all) struct BackgroundServiceSetRecordingParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BackgroundServiceSetRecordingParams with Eq::{not_equal, equal}
+
+///|
+pub extend BackgroundServiceSetRecordingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BackgroundServiceSetRecordingParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -269,6 +309,14 @@ pub fn background_service_set_recording_command(
 pub(all) struct BackgroundServiceStartObservingParams {
   service : BackgroundServiceServiceName
 } derive(Eq, Debug)
+
+///|
+pub extend BackgroundServiceStartObservingParams with Eq::{not_equal, equal}
+
+///|
+pub extend BackgroundServiceStartObservingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BackgroundServiceStartObservingParams as CDP JSON.
@@ -322,6 +370,14 @@ pub(all) struct BackgroundServiceStopObservingParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend BackgroundServiceStopObservingParams with Eq::{not_equal, equal}
+
+///|
+pub extend BackgroundServiceStopObservingParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode BackgroundServiceStopObservingParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -371,6 +427,17 @@ pub fn background_service_stop_observing_command(
 pub(all) struct BackgroundServiceBackgroundServiceEventReceivedEventParams {
   background_service_event : BackgroundServiceBackgroundServiceEvent
 } derive(Eq, Debug)
+
+///|
+pub extend BackgroundServiceBackgroundServiceEventReceivedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BackgroundServiceBackgroundServiceEventReceivedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BackgroundServiceBackgroundServiceEventReceivedEventParams as CDP JSON.
@@ -439,6 +506,17 @@ pub(all) struct BackgroundServiceRecordingStateChangedEventParams {
   is_recording : Bool
   service : BackgroundServiceServiceName
 } derive(Eq, Debug)
+
+///|
+pub extend BackgroundServiceRecordingStateChangedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend BackgroundServiceRecordingStateChangedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode BackgroundServiceRecordingStateChangedEventParams as CDP JSON.

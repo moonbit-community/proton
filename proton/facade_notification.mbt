@@ -56,6 +56,12 @@ pub(all) suberror NotificationDeliveryError {
 } derive(Debug, Eq)
 
 ///|
+pub extend NotificationDeliveryError with Eq::{not_equal, equal}
+
+///|
+pub extend NotificationDeliveryError with Debug::{to_repr}
+
+///|
 pub fn NotificationDeliveryError::message(
   self : NotificationDeliveryError,
 ) -> String {

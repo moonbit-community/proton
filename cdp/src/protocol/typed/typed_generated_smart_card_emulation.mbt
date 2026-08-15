@@ -12,6 +12,14 @@ pub(all) struct SmartCardEmulationConnectionState {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationConnectionState with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationConnectionState with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationConnectionState as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -46,6 +54,14 @@ pub fn SmartCardEmulationConnectionState::from_json(
 pub(all) struct SmartCardEmulationDisposition {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationDisposition with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationDisposition with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationDisposition as CDP JSON.
@@ -84,6 +100,14 @@ pub(all) struct SmartCardEmulationProtocol {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationProtocol with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationProtocol with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationProtocol as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -120,6 +144,14 @@ pub(all) struct SmartCardEmulationProtocolSet {
   t1 : Bool?
   raw : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationProtocolSet with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationProtocolSet with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationProtocolSet as CDP JSON.
@@ -178,6 +210,14 @@ pub(all) struct SmartCardEmulationReaderStateFlags {
   mute : Bool?
   unpowered : Bool?
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationReaderStateFlags with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationReaderStateFlags with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationReaderStateFlags as CDP JSON.
@@ -264,6 +304,14 @@ pub(all) struct SmartCardEmulationReaderStateIn {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationReaderStateIn with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationReaderStateIn with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationReaderStateIn as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -315,6 +363,14 @@ pub(all) struct SmartCardEmulationReaderStateOut {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationReaderStateOut with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationReaderStateOut with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationReaderStateOut as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -363,6 +419,14 @@ pub(all) struct SmartCardEmulationResultCode {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationResultCode with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationResultCode with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationResultCode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -397,6 +461,14 @@ pub fn SmartCardEmulationResultCode::from_json(
 pub(all) struct SmartCardEmulationShareMode {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationShareMode with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationShareMode with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationShareMode as CDP JSON.
@@ -480,6 +552,17 @@ pub(all) struct SmartCardEmulationReportBeginTransactionResultParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationReportBeginTransactionResultParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationReportBeginTransactionResultParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationReportBeginTransactionResultParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -532,6 +615,17 @@ pub(all) struct SmartCardEmulationReportConnectResultParams {
   handle : Int
   active_protocol : SmartCardEmulationProtocol?
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationReportConnectResultParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationReportConnectResultParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationReportConnectResultParams as CDP JSON.
@@ -590,6 +684,14 @@ pub(all) struct SmartCardEmulationReportDataResultParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationReportDataResultParams with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationReportDataResultParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationReportDataResultParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -641,6 +743,14 @@ pub(all) struct SmartCardEmulationReportErrorParams {
   request_id : String
   result_code : SmartCardEmulationResultCode
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationReportErrorParams with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationReportErrorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationReportErrorParams as CDP JSON.
@@ -696,6 +806,17 @@ pub(all) struct SmartCardEmulationReportEstablishContextResultParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationReportEstablishContextResultParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationReportEstablishContextResultParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationReportEstablishContextResultParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -747,6 +868,17 @@ pub(all) struct SmartCardEmulationReportGetStatusChangeResultParams {
   request_id : String
   reader_states : Array[SmartCardEmulationReaderStateOut]
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationReportGetStatusChangeResultParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationReportGetStatusChangeResultParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationReportGetStatusChangeResultParams as CDP JSON.
@@ -804,6 +936,17 @@ pub(all) struct SmartCardEmulationReportListReadersResultParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationReportListReadersResultParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationReportListReadersResultParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationReportListReadersResultParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -856,6 +999,14 @@ pub(all) struct SmartCardEmulationReportPlainResultParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationReportPlainResultParams with Eq::{not_equal, equal}
+
+///|
+pub extend SmartCardEmulationReportPlainResultParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationReportPlainResultParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -905,6 +1056,17 @@ pub fn smart_card_emulation_report_plain_result_command(
 pub(all) struct SmartCardEmulationReportReleaseContextResultParams {
   request_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationReportReleaseContextResultParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationReportReleaseContextResultParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationReportReleaseContextResultParams as CDP JSON.
@@ -960,6 +1122,17 @@ pub(all) struct SmartCardEmulationReportStatusResultParams {
   atr : String
   protocol : SmartCardEmulationProtocol?
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationReportStatusResultParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationReportStatusResultParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationReportStatusResultParams as CDP JSON.
@@ -1018,6 +1191,17 @@ pub(all) struct SmartCardEmulationBeginTransactionRequestedEventParams {
   request_id : String
   handle : Int
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationBeginTransactionRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationBeginTransactionRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationBeginTransactionRequestedEventParams as CDP JSON.
@@ -1090,6 +1274,17 @@ pub(all) struct SmartCardEmulationCancelRequestedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationCancelRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationCancelRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationCancelRequestedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1158,6 +1353,17 @@ pub(all) struct SmartCardEmulationConnectRequestedEventParams {
   share_mode : SmartCardEmulationShareMode
   preferred_protocols : SmartCardEmulationProtocolSet
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationConnectRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationConnectRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationConnectRequestedEventParams as CDP JSON.
@@ -1242,6 +1448,17 @@ pub(all) struct SmartCardEmulationControlRequestedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationControlRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationControlRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationControlRequestedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1319,6 +1536,17 @@ pub(all) struct SmartCardEmulationDisconnectRequestedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationDisconnectRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationDisconnectRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationDisconnectRequestedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1394,6 +1622,17 @@ pub(all) struct SmartCardEmulationEndTransactionRequestedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationEndTransactionRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationEndTransactionRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationEndTransactionRequestedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1467,6 +1706,17 @@ pub(all) struct SmartCardEmulationEstablishContextRequestedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationEstablishContextRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationEstablishContextRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationEstablishContextRequestedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1534,6 +1784,17 @@ pub(all) struct SmartCardEmulationGetAttribRequestedEventParams {
   handle : Int
   attrib_id : Int
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationGetAttribRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationGetAttribRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationGetAttribRequestedEventParams as CDP JSON.
@@ -1608,6 +1869,17 @@ pub(all) struct SmartCardEmulationGetStatusChangeRequestedEventParams {
   reader_states : Array[SmartCardEmulationReaderStateIn]
   timeout : Int?
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationGetStatusChangeRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationGetStatusChangeRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationGetStatusChangeRequestedEventParams as CDP JSON.
@@ -1693,6 +1965,17 @@ pub(all) struct SmartCardEmulationListReadersRequestedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationListReadersRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationListReadersRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationListReadersRequestedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1761,6 +2044,17 @@ pub(all) struct SmartCardEmulationReleaseContextRequestedEventParams {
   request_id : String
   context_id : Int
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationReleaseContextRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationReleaseContextRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationReleaseContextRequestedEventParams as CDP JSON.
@@ -1833,6 +2127,17 @@ pub(all) struct SmartCardEmulationSetAttribRequestedEventParams {
   attrib_id : Int
   data : String
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationSetAttribRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationSetAttribRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationSetAttribRequestedEventParams as CDP JSON.
@@ -1909,6 +2214,17 @@ pub(all) struct SmartCardEmulationStatusRequestedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend SmartCardEmulationStatusRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationStatusRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode SmartCardEmulationStatusRequestedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1976,6 +2292,17 @@ pub(all) struct SmartCardEmulationTransmitRequestedEventParams {
   data : String
   protocol : SmartCardEmulationProtocol?
 } derive(Eq, Debug)
+
+///|
+pub extend SmartCardEmulationTransmitRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend SmartCardEmulationTransmitRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode SmartCardEmulationTransmitRequestedEventParams as CDP JSON.

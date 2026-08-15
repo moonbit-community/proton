@@ -14,6 +14,18 @@ pub enum Platform {
 } derive(Debug, Eq, ToJson)
 
 ///|
+pub extend Platform with Eq::{not_equal, equal}
+
+///|
+pub extend Platform with Debug::{to_repr}
+
+///|
+pub extend Platform with ToJson::{to_json}
+
+///|
+pub extend Platform with Show::{to_string, output}
+
+///|
 /// Renders a `Platform` as its capitalized backend name.
 pub impl Show for Platform with fn output(self, logger) {
   logger.write_string(

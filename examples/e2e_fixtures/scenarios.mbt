@@ -11,6 +11,12 @@ struct AsyncAddPayload {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend AsyncAddPayload with ToJson::{to_json}
+
+///|
+pub extend AsyncAddPayload with FromJson::{from_json}
+
+///|
 let async_add_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
   id="examples/async-add",
   js_namespace="add",
@@ -59,11 +65,23 @@ struct SyncDoublePayload {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend SyncDoublePayload with ToJson::{to_json}
+
+///|
+pub extend SyncDoublePayload with FromJson::{from_json}
+
+///|
 struct SyncDoubleReply {
   value : Int
   doubled : Int
   source : String
 } derive(ToJson, FromJson)
+
+///|
+pub extend SyncDoubleReply with ToJson::{to_json}
+
+///|
+pub extend SyncDoubleReply with FromJson::{from_json}
 
 ///|
 struct AsyncSumPayload {
@@ -73,11 +91,23 @@ struct AsyncSumPayload {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend AsyncSumPayload with ToJson::{to_json}
+
+///|
+pub extend AsyncSumPayload with FromJson::{from_json}
+
+///|
 struct AsyncSumReply {
   total : Int
   waited_ms : Int
   source : String
 } derive(ToJson, FromJson)
+
+///|
+pub extend AsyncSumReply with ToJson::{to_json}
+
+///|
+pub extend AsyncSumReply with FromJson::{from_json}
 
 ///|
 let sync_math_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
@@ -182,6 +212,12 @@ struct EventStartPayload {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend EventStartPayload with ToJson::{to_json}
+
+///|
+pub extend EventStartPayload with FromJson::{from_json}
+
+///|
 struct EventTick {
   run_id : Int
   index : Int
@@ -190,16 +226,34 @@ struct EventTick {
 } derive(ToJson, FromJson)
 
 ///|
+pub extend EventTick with ToJson::{to_json}
+
+///|
+pub extend EventTick with FromJson::{from_json}
+
+///|
 struct EventDone {
   run_id : Int
   total : Int
 } derive(ToJson, FromJson)
 
 ///|
+pub extend EventDone with ToJson::{to_json}
+
+///|
+pub extend EventDone with FromJson::{from_json}
+
+///|
 struct EventTickerResult {
   ticks : Array[EventTick]
   done : EventDone
 } derive(ToJson, FromJson)
+
+///|
+pub extend EventTickerResult with ToJson::{to_json}
+
+///|
+pub extend EventTickerResult with FromJson::{from_json}
 
 ///|
 let event_ticker_contract : @proton_contract.ExtensionContract = @proton_contract.extension(

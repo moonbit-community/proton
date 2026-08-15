@@ -12,6 +12,15 @@ pub enum Platform {
 } derive(Debug, Eq)
 
 ///|
+pub extend Platform with Eq::{not_equal, equal}
+
+///|
+pub extend Platform with Debug::{to_repr}
+
+///|
+pub extend Platform with Show::{to_string, output}
+
+///|
 pub impl Show for Platform with fn output(self : Platform, logger) {
   logger.write_string(
     match self {
@@ -31,6 +40,12 @@ enum BackendKind {
   LinuxDesktopEntry
   UnsupportedBackend
 } derive(Debug, Eq)
+
+///|
+pub extend BackendKind with Eq::{not_equal, equal}
+
+///|
+pub extend BackendKind with Debug::{to_repr}
 
 ///|
 /// Decodes the numeric platform code returned by the native layer.

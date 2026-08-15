@@ -88,6 +88,12 @@ struct PlannedFile {
 } derive(Debug, Eq)
 
 ///|
+pub extend PlannedFile with Eq::{not_equal, equal}
+
+///|
+pub extend PlannedFile with Debug::{to_repr}
+
+///|
 fn template_context(
   title : String,
   author : String,

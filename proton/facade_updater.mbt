@@ -88,6 +88,12 @@ pub enum UpdateInstallOutcome {
 } derive(Debug, Eq)
 
 ///|
+pub extend UpdateInstallOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend UpdateInstallOutcome with Debug::{to_repr}
+
+///|
 /// Where the release notes for it live, when the manifest says.
 pub fn PendingUpdate::notes_url(self : PendingUpdate) -> String? {
   self.notes_url

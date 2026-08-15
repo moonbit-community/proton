@@ -4,7 +4,7 @@ version = "0.1.16"
 
 import {
   "moonbitlang/async@0.20.5",
-  "moonbitlang/x@0.4.49",
+  "moonbitlang/x@0.4.50",
   "moonbit-community/proton_cdp@0.1.16",
   "moonbit-community/proton@0.1.16",
   "moonbit-community/proton_updater@0.1.16",

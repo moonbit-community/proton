@@ -11,6 +11,15 @@ pub(all) suberror BootstrapError {
 } derive(Debug, Eq)
 
 ///|
+pub extend BootstrapError with Eq::{not_equal, equal}
+
+///|
+pub extend BootstrapError with Debug::{to_repr}
+
+///|
+pub extend BootstrapError with Show::{to_string, output}
+
+///|
 pub fn BootstrapError::message(self : BootstrapError) -> String {
   match self {
     ProjectConfig(error) => error.message()

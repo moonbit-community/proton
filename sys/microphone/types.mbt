@@ -13,6 +13,15 @@ pub(all) enum CaptureState {
 } derive(Debug, Eq)
 
 ///|
+pub extend CaptureState with Eq::{not_equal, equal}
+
+///|
+pub extend CaptureState with Debug::{to_repr}
+
+///|
+pub extend CaptureState with Show::{to_string, output}
+
+///|
 /// Sample representation requested from a microphone capture session.
 ///
 /// `I16` and `U16` are 16-bit integer formats that are common in lower-level
@@ -24,6 +33,15 @@ pub(all) enum SampleFormat {
   U16
   F32
 } derive(Debug, Eq)
+
+///|
+pub extend SampleFormat with Eq::{not_equal, equal}
+
+///|
+pub extend SampleFormat with Debug::{to_repr}
+
+///|
+pub extend SampleFormat with Show::{to_string, output}
 
 ///|
 /// Capture settings used when opening or describing a microphone stream.
@@ -42,6 +60,15 @@ pub(all) struct CaptureConfig {
 } derive(Debug, Eq)
 
 ///|
+pub extend CaptureConfig with Eq::{not_equal, equal}
+
+///|
+pub extend CaptureConfig with Debug::{to_repr}
+
+///|
+pub extend CaptureConfig with Show::{to_string, output}
+
+///|
 /// Microphone device descriptor returned by native discovery.
 ///
 /// `id` is a stable identifier for the parsed listing within one discovery
@@ -56,6 +83,15 @@ pub(all) struct MicrophoneDevice {
   default_config : CaptureConfig
   monitor_supported : Bool
 } derive(Debug, Eq)
+
+///|
+pub extend MicrophoneDevice with Eq::{not_equal, equal}
+
+///|
+pub extend MicrophoneDevice with Debug::{to_repr}
+
+///|
+pub extend MicrophoneDevice with Show::{to_string, output}
 
 ///|
 /// Write a derived debug representation to a `Show` logger.

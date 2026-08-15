@@ -21,6 +21,12 @@ pub(all) struct FedCmAccount {
 } derive(Eq, Debug)
 
 ///|
+pub extend FedCmAccount with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmAccount with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FedCmAccount as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -95,6 +101,12 @@ pub(all) struct FedCmAccountUrlType {
 } derive(Eq, Debug)
 
 ///|
+pub extend FedCmAccountUrlType with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmAccountUrlType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FedCmAccountUrlType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -127,6 +139,12 @@ pub fn FedCmAccountUrlType::from_json(
 pub(all) struct FedCmDialogButton {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend FedCmDialogButton with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmDialogButton with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode FedCmDialogButton as CDP JSON.
@@ -163,6 +181,12 @@ pub(all) struct FedCmDialogType {
 } derive(Eq, Debug)
 
 ///|
+pub extend FedCmDialogType with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmDialogType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FedCmDialogType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -195,6 +219,12 @@ pub fn FedCmDialogType::from_json(
 pub(all) struct FedCmLoginState {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend FedCmLoginState with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmLoginState with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode FedCmLoginState as CDP JSON.
@@ -230,6 +260,14 @@ pub(all) struct FedCmClickDialogButtonParams {
   dialog_id : String
   dialog_button : FedCmDialogButton
 } derive(Eq, Debug)
+
+///|
+pub extend FedCmClickDialogButtonParams with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmClickDialogButtonParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode FedCmClickDialogButtonParams as CDP JSON.
@@ -299,6 +337,14 @@ pub(all) struct FedCmDismissDialogParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend FedCmDismissDialogParams with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmDismissDialogParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode FedCmDismissDialogParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -349,6 +395,12 @@ pub(all) struct FedCmEnableParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend FedCmEnableParams with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmEnableParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FedCmEnableParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -396,6 +448,12 @@ pub(all) struct FedCmOpenUrlParams {
   account_index : Int
   account_url_type : FedCmAccountUrlType
 } derive(Eq, Debug)
+
+///|
+pub extend FedCmOpenUrlParams with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmOpenUrlParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode FedCmOpenUrlParams as CDP JSON.
@@ -468,6 +526,14 @@ pub(all) struct FedCmSelectAccountParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend FedCmSelectAccountParams with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmSelectAccountParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode FedCmSelectAccountParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -514,6 +580,14 @@ pub fn fed_cm_select_account_command(
 pub(all) struct FedCmDialogClosedEventParams {
   dialog_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend FedCmDialogClosedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmDialogClosedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode FedCmDialogClosedEventParams as CDP JSON.
@@ -580,6 +654,14 @@ pub(all) struct FedCmDialogShownEventParams {
   title : String
   subtitle : String?
 } derive(Eq, Debug)
+
+///|
+pub extend FedCmDialogShownEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend FedCmDialogShownEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode FedCmDialogShownEventParams as CDP JSON.

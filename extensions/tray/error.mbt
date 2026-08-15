@@ -15,6 +15,15 @@ suberror TrayError {
 } derive(Debug, Eq)
 
 ///|
+pub extend TrayError with Eq::{not_equal, equal}
+
+///|
+pub extend TrayError with Debug::{to_repr}
+
+///|
+pub extend TrayError with Show::{to_string, output}
+
+///|
 fn TrayError::message(self : TrayError) -> String {
   match self {
     MissingField(field~) => field + " is required"

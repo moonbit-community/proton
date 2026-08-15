@@ -320,6 +320,12 @@ pub(all) enum WindowEvent {
 } derive(Debug, Eq)
 
 ///|
+pub extend WindowEvent with Eq::{not_equal, equal}
+
+///|
+pub extend WindowEvent with Debug::{to_repr}
+
+///|
 /// An observed change to a running web contents view, following the Electron
 /// `webContents` lifecycle events.
 pub(all) enum ViewEvent {
@@ -330,11 +336,23 @@ pub(all) enum ViewEvent {
 } derive(Debug, Eq)
 
 ///|
+pub extend ViewEvent with Eq::{not_equal, equal}
+
+///|
+pub extend ViewEvent with Debug::{to_repr}
+
+///|
 /// The result of an asynchronous native close request.
 pub(all) enum WindowCloseDecision {
   Allow
   Deny
 } derive(Debug, Eq)
+
+///|
+pub extend WindowCloseDecision with Eq::{not_equal, equal}
+
+///|
+pub extend WindowCloseDecision with Debug::{to_repr}
 
 ///|
 pub(all) struct NavigationRequest {
@@ -345,10 +363,22 @@ pub(all) struct NavigationRequest {
 } derive(Debug, Eq)
 
 ///|
+pub extend NavigationRequest with Eq::{not_equal, equal}
+
+///|
+pub extend NavigationRequest with Debug::{to_repr}
+
+///|
 pub(all) enum NavigationDecision {
   Allow
   Deny
 } derive(Debug, Eq)
+
+///|
+pub extend NavigationDecision with Eq::{not_equal, equal}
+
+///|
+pub extend NavigationDecision with Debug::{to_repr}
 
 ///|
 pub(all) struct PopupRequest {
@@ -358,11 +388,23 @@ pub(all) struct PopupRequest {
 } derive(Debug, Eq)
 
 ///|
+pub extend PopupRequest with Eq::{not_equal, equal}
+
+///|
+pub extend PopupRequest with Debug::{to_repr}
+
+///|
 pub(all) enum PopupDecision {
   Deny
   OpenInCurrent
   OpenInWindow(String)
 } derive(Debug, Eq)
+
+///|
+pub extend PopupDecision with Eq::{not_equal, equal}
+
+///|
+pub extend PopupDecision with Debug::{to_repr}
 
 ///|
 pub(all) struct DownloadRequest {
@@ -372,11 +414,23 @@ pub(all) struct DownloadRequest {
 } derive(Debug, Eq)
 
 ///|
+pub extend DownloadRequest with Eq::{not_equal, equal}
+
+///|
+pub extend DownloadRequest with Debug::{to_repr}
+
+///|
 pub(all) enum DownloadDecision {
   Deny
   ShowSaveDialog
   SaveTo(String)
 } derive(Debug, Eq)
+
+///|
+pub extend DownloadDecision with Eq::{not_equal, equal}
+
+///|
+pub extend DownloadDecision with Debug::{to_repr}
 
 ///|
 pub(all) struct CertificateError {
@@ -385,16 +439,34 @@ pub(all) struct CertificateError {
 } derive(Debug, Eq)
 
 ///|
+pub extend CertificateError with Eq::{not_equal, equal}
+
+///|
+pub extend CertificateError with Debug::{to_repr}
+
+///|
 pub(all) struct MediaPermissionRequest {
   origin : String
   permissions : Int
 } derive(Debug, Eq)
 
 ///|
+pub extend MediaPermissionRequest with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPermissionRequest with Debug::{to_repr}
+
+///|
 pub(all) enum BrowserPermissionDecision {
   Allow
   Deny
 } derive(Debug, Eq)
+
+///|
+pub extend BrowserPermissionDecision with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserPermissionDecision with Debug::{to_repr}
 
 ///|
 pub(all) struct DownloadEvent {
@@ -404,6 +476,12 @@ pub(all) struct DownloadEvent {
   total_bytes : Int64
   percent : Int
 } derive(Debug, Eq)
+
+///|
+pub extend DownloadEvent with Eq::{not_equal, equal}
+
+///|
+pub extend DownloadEvent with Debug::{to_repr}
 
 ///|
 /// Failures from runtime window lookup, creation, or control.
@@ -418,6 +496,9 @@ pub(all) suberror WindowSessionError {
   OperationFailed(action~ : String, error~ : @native.NativeError)
   StartupFailed(id~ : String, error~ : AppRunError)
 } derive(Debug)
+
+///|
+pub extend WindowSessionError with Debug::{to_repr}
 
 ///|
 priv enum AppLifecycleState {
@@ -467,6 +548,9 @@ pub(all) suberror AppConfigurationError {
 } derive(Debug)
 
 ///|
+pub extend AppConfigurationError with Debug::{to_repr}
+
+///|
 /// Failures while loading the application's initial document.
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
@@ -475,12 +559,18 @@ pub(all) suberror AppEntryError {
 } derive(Debug)
 
 ///|
+pub extend AppEntryError with Debug::{to_repr}
+
+///|
 /// Failures while starting or stopping command extensions.
 pub(all) suberror CommandExtensionLifecycleError {
   ApplicationRegistrationFailed(detail~ : String)
   RegistrationFailed(extension_id~ : String, detail~ : String)
   DestroyFailed(extension_id~ : String, detail~ : String)
 } derive(Debug)
+
+///|
+pub extend CommandExtensionLifecycleError with Debug::{to_repr}
 
 ///|
 /// Failures produced by application or window lifecycle hooks.
@@ -492,6 +582,9 @@ pub(all) suberror LifecycleHookError {
 } derive(Debug)
 
 ///|
+pub extend LifecycleHookError with Debug::{to_repr}
+
+///|
 /// A failure from one stage of best-effort application teardown.
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
@@ -499,6 +592,9 @@ pub(all) suberror AppCleanupError {
   WindowDestroy(@native.NativeError)
   RuntimeDestroy(@native.NativeError)
 } derive(Debug)
+
+///|
+pub extend AppCleanupError with Debug::{to_repr}
 
 ///|
 /// Failures produced while configuring, starting, or running an application.
@@ -515,3 +611,6 @@ pub(all) suberror AppRunError {
   CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
 } derive(Debug)
+
+///|
+pub extend AppRunError with Debug::{to_repr}

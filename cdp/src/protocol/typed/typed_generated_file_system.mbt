@@ -14,6 +14,14 @@ pub(all) struct FileSystemBucketFileSystemLocator {
 } derive(Eq, Debug)
 
 ///|
+pub extend FileSystemBucketFileSystemLocator with Eq::{not_equal, equal}
+
+///|
+pub extend FileSystemBucketFileSystemLocator with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode FileSystemBucketFileSystemLocator as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -71,6 +79,12 @@ pub(all) struct FileSystemDirectory {
   nested_directories : Array[String]
   nested_files : Array[FileSystemFile]
 } derive(Eq, Debug)
+
+///|
+pub extend FileSystemDirectory with Eq::{not_equal, equal}
+
+///|
+pub extend FileSystemDirectory with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode FileSystemDirectory as CDP JSON.
@@ -134,6 +148,12 @@ pub(all) struct FileSystemFile {
 } derive(Eq, Debug)
 
 ///|
+pub extend FileSystemFile with Eq::{not_equal, equal}
+
+///|
+pub extend FileSystemFile with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode FileSystemFile as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -178,6 +198,14 @@ pub(all) struct FileSystemGetDirectoryParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend FileSystemGetDirectoryParams with Eq::{not_equal, equal}
+
+///|
+pub extend FileSystemGetDirectoryParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode FileSystemGetDirectoryParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -199,6 +227,14 @@ pub fn FileSystemGetDirectoryParams::to_json(
 pub(all) struct FileSystemGetDirectoryResult {
   directory : FileSystemDirectory
 } derive(Eq, Debug)
+
+///|
+pub extend FileSystemGetDirectoryResult with Eq::{not_equal, equal}
+
+///|
+pub extend FileSystemGetDirectoryResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for FileSystem.getDirectory.

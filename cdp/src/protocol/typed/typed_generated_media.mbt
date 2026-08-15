@@ -13,6 +13,12 @@ pub(all) struct MediaPlayer {
 } derive(Eq, Debug)
 
 ///|
+pub extend MediaPlayer with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayer with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode MediaPlayer as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -60,6 +66,12 @@ pub(all) struct MediaPlayerError {
   cause : Array[MediaPlayerError]
   data : Json
 } derive(Eq, Debug)
+
+///|
+pub extend MediaPlayerError with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerError with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode MediaPlayerError as CDP JSON.
@@ -119,6 +131,14 @@ pub(all) struct MediaPlayerErrorSourceLocation {
 } derive(Eq, Debug)
 
 ///|
+pub extend MediaPlayerErrorSourceLocation with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerErrorSourceLocation with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode MediaPlayerErrorSourceLocation as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -158,6 +178,12 @@ pub(all) struct MediaPlayerEvent {
   timestamp : MediaTimestamp
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend MediaPlayerEvent with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerEvent with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode MediaPlayerEvent as CDP JSON.
@@ -200,6 +226,12 @@ pub(all) struct MediaPlayerId {
 } derive(Eq, Debug)
 
 ///|
+pub extend MediaPlayerId with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode MediaPlayerId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -233,6 +265,12 @@ pub(all) struct MediaPlayerMessage {
   level : String
   message : String
 } derive(Eq, Debug)
+
+///|
+pub extend MediaPlayerMessage with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerMessage with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode MediaPlayerMessage as CDP JSON.
@@ -274,6 +312,12 @@ pub(all) struct MediaPlayerProperty {
 } derive(Eq, Debug)
 
 ///|
+pub extend MediaPlayerProperty with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerProperty with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode MediaPlayerProperty as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -310,6 +354,12 @@ pub fn MediaPlayerProperty::from_json(
 pub(all) struct MediaTimestamp {
   value : Double
 } derive(Eq, Debug)
+
+///|
+pub extend MediaTimestamp with Eq::{not_equal, equal}
+
+///|
+pub extend MediaTimestamp with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode MediaTimestamp as CDP JSON.
@@ -382,6 +432,14 @@ pub(all) struct MediaPlayerCreatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend MediaPlayerCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode MediaPlayerCreatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -445,6 +503,14 @@ pub(all) struct MediaPlayerErrorsRaisedEventParams {
   player_id : MediaPlayerId
   errors : Array[MediaPlayerError]
 } derive(Eq, Debug)
+
+///|
+pub extend MediaPlayerErrorsRaisedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerErrorsRaisedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode MediaPlayerErrorsRaisedEventParams as CDP JSON.
@@ -519,6 +585,14 @@ pub(all) struct MediaPlayerEventsAddedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend MediaPlayerEventsAddedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerEventsAddedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode MediaPlayerEventsAddedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -591,6 +665,14 @@ pub(all) struct MediaPlayerMessagesLoggedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend MediaPlayerMessagesLoggedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerMessagesLoggedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode MediaPlayerMessagesLoggedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -661,6 +743,14 @@ pub(all) struct MediaPlayerPropertiesChangedEventParams {
   player_id : MediaPlayerId
   properties : Array[MediaPlayerProperty]
 } derive(Eq, Debug)
+
+///|
+pub extend MediaPlayerPropertiesChangedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend MediaPlayerPropertiesChangedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode MediaPlayerPropertiesChangedEventParams as CDP JSON.

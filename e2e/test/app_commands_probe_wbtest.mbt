@@ -6,6 +6,18 @@ struct BridgeContractProbe {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend BridgeContractProbe with Eq::{not_equal, equal}
+
+///|
+pub extend BridgeContractProbe with Debug::{to_repr}
+
+///|
+pub extend BridgeContractProbe with ToJson::{to_json}
+
+///|
+pub extend BridgeContractProbe with FromJson::{from_json}
+
+///|
 struct AppCommandsProbeResult {
   url : String
   title : String
@@ -23,6 +35,18 @@ struct AppCommandsProbeResult {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend AppCommandsProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend AppCommandsProbeResult with Debug::{to_repr}
+
+///|
+pub extend AppCommandsProbeResult with ToJson::{to_json}
+
+///|
+pub extend AppCommandsProbeResult with FromJson::{from_json}
+
+///|
 struct QueueFullProbeResult {
   requested : Int
   fulfilled : Int
@@ -30,6 +54,18 @@ struct QueueFullProbeResult {
   full_rejected : Bool
   first_rejected_message : String
 } derive(ToJson, FromJson, Eq, Debug)
+
+///|
+pub extend QueueFullProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend QueueFullProbeResult with Debug::{to_repr}
+
+///|
+pub extend QueueFullProbeResult with ToJson::{to_json}
+
+///|
+pub extend QueueFullProbeResult with FromJson::{from_json}
 
 ///|
 struct ReloadProbeResult {
@@ -41,6 +77,18 @@ struct ReloadProbeResult {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend ReloadProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend ReloadProbeResult with Debug::{to_repr}
+
+///|
+pub extend ReloadProbeResult with ToJson::{to_json}
+
+///|
+pub extend ReloadProbeResult with FromJson::{from_json}
+
+///|
 struct OriginProbeResult {
   url : String
   title : String
@@ -49,11 +97,29 @@ struct OriginProbeResult {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend OriginProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend OriginProbeResult with Debug::{to_repr}
+
+///|
+pub extend OriginProbeResult with ToJson::{to_json}
+
+///|
+pub extend OriginProbeResult with FromJson::{from_json}
+
+///|
 struct ScreenshotProbeResult {
   bytes : Int
   width : Int
   height : Int
 } derive(Eq, Debug)
+
+///|
+pub extend ScreenshotProbeResult with Eq::{not_equal, equal}
+
+///|
+pub extend ScreenshotProbeResult with Debug::{to_repr}
 
 ///|
 async fn evaluate_json(

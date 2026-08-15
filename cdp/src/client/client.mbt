@@ -92,6 +92,15 @@ pub(all) struct CdpCommandFailure {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend CdpCommandFailure with Eq::{not_equal, equal}
+
+///|
+pub extend CdpCommandFailure with Debug::{to_repr}
+
+///|
+pub extend CdpCommandFailure with ToJson::{to_json}
+
+///|
 /// Metadata for a target currently attached through a flattened CDP session.
 ///
 /// The client updates this cache from `Target.attachedToTarget`,
@@ -113,6 +122,15 @@ pub(all) struct CdpAttachedTarget {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend CdpAttachedTarget with Eq::{not_equal, equal}
+
+///|
+pub extend CdpAttachedTarget with Debug::{to_repr}
+
+///|
+pub extend CdpAttachedTarget with ToJson::{to_json}
+
+///|
 /// Errors raised while opening a CDP WebSocket.
 ///
 /// `ConnectionTimeout` means the connection attempt did not finish before the
@@ -124,6 +142,15 @@ pub(all) suberror CdpConnectionError {
 } derive(Eq, ToJson, Debug)
 
 ///|
+pub extend CdpConnectionError with Eq::{not_equal, equal}
+
+///|
+pub extend CdpConnectionError with Debug::{to_repr}
+
+///|
+pub extend CdpConnectionError with ToJson::{to_json}
+
+///|
 /// Structured diagnostic data for `CdpConnectionError`.
 pub(all) struct CdpConnectionErrorDiagnostic {
   kind : String
@@ -133,6 +160,15 @@ pub(all) struct CdpConnectionErrorDiagnostic {
   path : String
   message : String
 } derive(Eq, ToJson, Debug)
+
+///|
+pub extend CdpConnectionErrorDiagnostic with Eq::{not_equal, equal}
+
+///|
+pub extend CdpConnectionErrorDiagnostic with Debug::{to_repr}
+
+///|
+pub extend CdpConnectionErrorDiagnostic with ToJson::{to_json}
 
 ///|
 /// Converts a connection error to structured diagnostic data.

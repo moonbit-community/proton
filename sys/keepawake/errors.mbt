@@ -25,6 +25,12 @@ pub(all) suberror KeepAwakeError {
 } derive(Eq)
 
 ///|
+pub extend KeepAwakeError with Eq::{not_equal, equal}
+
+///|
+pub extend KeepAwakeError with Show::{to_string, output}
+
+///|
 /// Formats a keep-awake error into a stable diagnostic string.
 ///
 /// The output is designed for logs, test assertions, and user-facing fallback

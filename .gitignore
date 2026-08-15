@@ -1,5 +1,6 @@
 # MoonBit build artifacts
 _build/
+target/
 .mooncakes/
 .repos/
 dist/

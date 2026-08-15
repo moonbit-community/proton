@@ -13,6 +13,12 @@ pub(all) struct WebAudioAudioListener {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioAudioListener with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioAudioListener with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode WebAudioAudioListener as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -60,6 +66,12 @@ pub(all) struct WebAudioAudioNode {
   channel_count_mode : WebAudioChannelCountMode
   channel_interpretation : WebAudioChannelInterpretation
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioAudioNode with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioAudioNode with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode WebAudioAudioNode as CDP JSON.
@@ -135,6 +147,12 @@ pub(all) struct WebAudioAudioParam {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioAudioParam with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioAudioParam with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode WebAudioAudioParam as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -197,6 +215,12 @@ pub(all) struct WebAudioAutomationRate {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioAutomationRate with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioAutomationRate with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode WebAudioAutomationRate as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -235,6 +259,14 @@ pub(all) struct WebAudioBaseAudioContext {
   max_output_channel_count : Double
   sample_rate : Double
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioBaseAudioContext with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioBaseAudioContext with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioBaseAudioContext as CDP JSON.
@@ -304,6 +336,14 @@ pub(all) struct WebAudioChannelCountMode {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioChannelCountMode with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioChannelCountMode with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAudioChannelCountMode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -338,6 +378,14 @@ pub fn WebAudioChannelCountMode::from_json(
 pub(all) struct WebAudioChannelInterpretation {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioChannelInterpretation with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioChannelInterpretation with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioChannelInterpretation as CDP JSON.
@@ -377,6 +425,14 @@ pub(all) struct WebAudioContextRealtimeData {
   callback_interval_mean : Double
   callback_interval_variance : Double
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioContextRealtimeData with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioContextRealtimeData with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioContextRealtimeData as CDP JSON.
@@ -433,6 +489,12 @@ pub(all) struct WebAudioContextState {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioContextState with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioContextState with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode WebAudioContextState as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -465,6 +527,12 @@ pub fn WebAudioContextState::from_json(
 pub(all) struct WebAudioContextType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioContextType with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioContextType with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode WebAudioContextType as CDP JSON.
@@ -501,6 +569,12 @@ pub(all) struct WebAudioGraphObjectId {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioGraphObjectId with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioGraphObjectId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode WebAudioGraphObjectId as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -535,6 +609,12 @@ pub(all) struct WebAudioNodeType {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioNodeType with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioNodeType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode WebAudioNodeType as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -567,6 +647,12 @@ pub fn WebAudioNodeType::from_json(
 pub(all) struct WebAudioParamType {
   value : String
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioParamType with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioParamType with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode WebAudioParamType as CDP JSON.
@@ -639,6 +725,14 @@ pub(all) struct WebAudioGetRealtimeDataParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioGetRealtimeDataParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioGetRealtimeDataParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAudioGetRealtimeDataParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -660,6 +754,14 @@ pub fn WebAudioGetRealtimeDataParams::to_json(
 pub(all) struct WebAudioGetRealtimeDataResult {
   realtime_data : WebAudioContextRealtimeData
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioGetRealtimeDataResult with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioGetRealtimeDataResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for WebAudio.getRealtimeData.
@@ -719,6 +821,14 @@ pub fn web_audio_get_realtime_data_command(
 pub(all) struct WebAudioAudioListenerCreatedEventParams {
   listener : WebAudioAudioListener
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioAudioListenerCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioAudioListenerCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioAudioListenerCreatedEventParams as CDP JSON.
@@ -784,6 +894,17 @@ pub(all) struct WebAudioAudioListenerWillBeDestroyedEventParams {
   context_id : WebAudioGraphObjectId
   listener_id : WebAudioGraphObjectId
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioAudioListenerWillBeDestroyedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend WebAudioAudioListenerWillBeDestroyedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioAudioListenerWillBeDestroyedEventParams as CDP JSON.
@@ -857,6 +978,14 @@ pub(all) struct WebAudioAudioNodeCreatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioAudioNodeCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioAudioNodeCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAudioAudioNodeCreatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -920,6 +1049,17 @@ pub(all) struct WebAudioAudioNodeWillBeDestroyedEventParams {
   context_id : WebAudioGraphObjectId
   node_id : WebAudioGraphObjectId
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioAudioNodeWillBeDestroyedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend WebAudioAudioNodeWillBeDestroyedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioAudioNodeWillBeDestroyedEventParams as CDP JSON.
@@ -993,6 +1133,14 @@ pub(all) struct WebAudioAudioParamCreatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioAudioParamCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioAudioParamCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAudioAudioParamCreatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1057,6 +1205,17 @@ pub(all) struct WebAudioAudioParamWillBeDestroyedEventParams {
   node_id : WebAudioGraphObjectId
   param_id : WebAudioGraphObjectId
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioAudioParamWillBeDestroyedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend WebAudioAudioParamWillBeDestroyedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioAudioParamWillBeDestroyedEventParams as CDP JSON.
@@ -1134,6 +1293,14 @@ pub(all) struct WebAudioContextChangedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioContextChangedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioContextChangedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAudioContextChangedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1198,6 +1365,14 @@ pub(all) struct WebAudioContextCreatedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioContextCreatedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioContextCreatedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAudioContextCreatedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1260,6 +1435,14 @@ pub fn web_audio_context_created_event(
 pub(all) struct WebAudioContextWillBeDestroyedEventParams {
   context_id : WebAudioGraphObjectId
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioContextWillBeDestroyedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioContextWillBeDestroyedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioContextWillBeDestroyedEventParams as CDP JSON.
@@ -1327,6 +1510,14 @@ pub(all) struct WebAudioNodeParamConnectedEventParams {
   destination_id : WebAudioGraphObjectId
   source_output_index : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioNodeParamConnectedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioNodeParamConnectedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioNodeParamConnectedEventParams as CDP JSON.
@@ -1410,6 +1601,14 @@ pub(all) struct WebAudioNodeParamDisconnectedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend WebAudioNodeParamDisconnectedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioNodeParamDisconnectedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode WebAudioNodeParamDisconnectedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1490,6 +1689,14 @@ pub(all) struct WebAudioNodesConnectedEventParams {
   source_output_index : Double?
   destination_input_index : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioNodesConnectedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioNodesConnectedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioNodesConnectedEventParams as CDP JSON.
@@ -1578,6 +1785,14 @@ pub(all) struct WebAudioNodesDisconnectedEventParams {
   source_output_index : Double?
   destination_input_index : Double?
 } derive(Eq, Debug)
+
+///|
+pub extend WebAudioNodesDisconnectedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend WebAudioNodesDisconnectedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode WebAudioNodesDisconnectedEventParams as CDP JSON.

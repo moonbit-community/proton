@@ -8,6 +8,15 @@ struct AsyncAddScenarioProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend AsyncAddScenarioProbe with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncAddScenarioProbe with Debug::{to_repr}
+
+///|
+pub extend AsyncAddScenarioProbe with FromJson::{from_json}
+
+///|
 struct SyncDoubleScenarioReply {
   value : Int
   doubled : Int
@@ -15,11 +24,29 @@ struct SyncDoubleScenarioReply {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend SyncDoubleScenarioReply with Eq::{not_equal, equal}
+
+///|
+pub extend SyncDoubleScenarioReply with Debug::{to_repr}
+
+///|
+pub extend SyncDoubleScenarioReply with FromJson::{from_json}
+
+///|
 struct AsyncSumScenarioReply {
   total : Int
   waited_ms : Int
   source : String
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend AsyncSumScenarioReply with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncSumScenarioReply with Debug::{to_repr}
+
+///|
+pub extend AsyncSumScenarioReply with FromJson::{from_json}
 
 ///|
 struct SyncAsyncScenarioProbe {
@@ -33,6 +60,15 @@ struct SyncAsyncScenarioProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend SyncAsyncScenarioProbe with Eq::{not_equal, equal}
+
+///|
+pub extend SyncAsyncScenarioProbe with Debug::{to_repr}
+
+///|
+pub extend SyncAsyncScenarioProbe with FromJson::{from_json}
+
+///|
 struct AttributeEventProbe {
   name : String
   extension : String
@@ -40,10 +76,28 @@ struct AttributeEventProbe {
 } derive(FromJson, Eq, Debug)
 
 ///|
+pub extend AttributeEventProbe with Eq::{not_equal, equal}
+
+///|
+pub extend AttributeEventProbe with Debug::{to_repr}
+
+///|
+pub extend AttributeEventProbe with FromJson::{from_json}
+
+///|
 struct AttributeReplyProbe {
   total : Int
   waited_ms : Int
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend AttributeReplyProbe with Eq::{not_equal, equal}
+
+///|
+pub extend AttributeReplyProbe with Debug::{to_repr}
+
+///|
+pub extend AttributeReplyProbe with FromJson::{from_json}
 
 ///|
 struct AttributeScenarioProbe {
@@ -55,6 +109,15 @@ struct AttributeScenarioProbe {
   reply : AttributeReplyProbe
   events : Array[AttributeEventProbe]
 } derive(FromJson, Eq, Debug)
+
+///|
+pub extend AttributeScenarioProbe with Eq::{not_equal, equal}
+
+///|
+pub extend AttributeScenarioProbe with Debug::{to_repr}
+
+///|
+pub extend AttributeScenarioProbe with FromJson::{from_json}
 
 ///|
 async fn run_extension_scenario_page_probe(

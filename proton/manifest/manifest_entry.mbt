@@ -8,6 +8,15 @@ pub(all) enum AppEntry {
 } derive(Debug, Eq)
 
 ///|
+pub extend AppEntry with Eq::{not_equal, equal}
+
+///|
+pub extend AppEntry with Debug::{to_repr}
+
+///|
+pub extend AppEntry with Show::{to_string, output}
+
+///|
 pub impl Show for AppEntry with fn output(self, logger) {
   match self {
     Html(value) => {

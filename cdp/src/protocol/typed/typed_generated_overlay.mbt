@@ -13,6 +13,12 @@ pub(all) struct OverlayBoxStyle {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayBoxStyle with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayBoxStyle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode OverlayBoxStyle as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -61,6 +67,12 @@ pub(all) struct OverlayColorFormat {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayColorFormat with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayColorFormat with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode OverlayColorFormat as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -94,6 +106,17 @@ pub(all) struct OverlayContainerQueryContainerHighlightConfig {
   container_border : OverlayLineStyle?
   descendant_border : OverlayLineStyle?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayContainerQueryContainerHighlightConfig with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend OverlayContainerQueryContainerHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayContainerQueryContainerHighlightConfig as CDP JSON.
@@ -147,6 +170,14 @@ pub(all) struct OverlayContainerQueryHighlightConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayContainerQueryHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayContainerQueryHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayContainerQueryHighlightConfig as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -193,6 +224,14 @@ pub(all) struct OverlayContrastAlgorithm {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayContrastAlgorithm with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayContrastAlgorithm with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayContrastAlgorithm as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -234,6 +273,14 @@ pub(all) struct OverlayFlexContainerHighlightConfig {
   column_gap_space : OverlayBoxStyle?
   cross_alignment : OverlayLineStyle?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayFlexContainerHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayFlexContainerHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayFlexContainerHighlightConfig as CDP JSON.
@@ -332,6 +379,14 @@ pub(all) struct OverlayFlexItemHighlightConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayFlexItemHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayFlexItemHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayFlexItemHighlightConfig as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -388,6 +443,14 @@ pub(all) struct OverlayFlexNodeHighlightConfig {
   flex_container_highlight_config : OverlayFlexContainerHighlightConfig
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayFlexNodeHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayFlexNodeHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayFlexNodeHighlightConfig as CDP JSON.
@@ -451,6 +514,14 @@ pub(all) struct OverlayGridHighlightConfig {
   area_border_color : DOMRGBA?
   grid_background_color : DOMRGBA?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayGridHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayGridHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayGridHighlightConfig as CDP JSON.
@@ -621,6 +692,14 @@ pub(all) struct OverlayGridNodeHighlightConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayGridNodeHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayGridNodeHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayGridNodeHighlightConfig as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -681,6 +760,12 @@ pub(all) struct OverlayHighlightConfig {
   contrast_algorithm : OverlayContrastAlgorithm?
   container_query_container_highlight_config : OverlayContainerQueryContainerHighlightConfig?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayHighlightConfig with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode OverlayHighlightConfig as CDP JSON.
@@ -850,6 +935,12 @@ pub(all) struct OverlayHingeConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayHingeConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayHingeConfig with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode OverlayHingeConfig as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -899,6 +990,14 @@ pub(all) struct OverlayInspectedElementAnchorConfig {
   node_id : DOMNodeId?
   backend_node_id : DOMBackendNodeId?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayInspectedElementAnchorConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayInspectedElementAnchorConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayInspectedElementAnchorConfig as CDP JSON.
@@ -951,6 +1050,12 @@ pub(all) struct OverlayInspectMode {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayInspectMode with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayInspectMode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode OverlayInspectMode as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -984,6 +1089,14 @@ pub(all) struct OverlayIsolatedElementHighlightConfig {
   isolation_mode_highlight_config : OverlayIsolationModeHighlightConfig
   node_id : DOMNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayIsolatedElementHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayIsolatedElementHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayIsolatedElementHighlightConfig as CDP JSON.
@@ -1030,6 +1143,14 @@ pub(all) struct OverlayIsolationModeHighlightConfig {
   resizer_handle_color : DOMRGBA?
   mask_color : DOMRGBA?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayIsolationModeHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayIsolationModeHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayIsolationModeHighlightConfig as CDP JSON.
@@ -1091,6 +1212,12 @@ pub(all) struct OverlayLineStyle {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayLineStyle with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayLineStyle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode OverlayLineStyle as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1137,6 +1264,14 @@ pub(all) struct OverlayScrollSnapContainerHighlightConfig {
   scroll_margin_color : DOMRGBA?
   scroll_padding_color : DOMRGBA?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayScrollSnapContainerHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayScrollSnapContainerHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayScrollSnapContainerHighlightConfig as CDP JSON.
@@ -1206,6 +1341,14 @@ pub(all) struct OverlayScrollSnapHighlightConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayScrollSnapHighlightConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayScrollSnapHighlightConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayScrollSnapHighlightConfig as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1253,6 +1396,14 @@ pub(all) struct OverlaySourceOrderConfig {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySourceOrderConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySourceOrderConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySourceOrderConfig as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1297,6 +1448,14 @@ pub(all) struct OverlayWindowControlsOverlayConfig {
   selected_platform : String
   theme_color : String
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayWindowControlsOverlayConfig with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayWindowControlsOverlayConfig with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayWindowControlsOverlayConfig as CDP JSON.
@@ -1381,6 +1540,17 @@ pub(all) struct OverlayGetGridHighlightObjectsForTestParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayGetGridHighlightObjectsForTestParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend OverlayGetGridHighlightObjectsForTestParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayGetGridHighlightObjectsForTestParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1402,6 +1572,17 @@ pub fn OverlayGetGridHighlightObjectsForTestParams::to_json(
 pub(all) struct OverlayGetGridHighlightObjectsForTestResult {
   highlights : Json
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayGetGridHighlightObjectsForTestResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend OverlayGetGridHighlightObjectsForTestResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Overlay.getGridHighlightObjectsForTest.
@@ -1467,6 +1648,14 @@ pub(all) struct OverlayGetHighlightObjectForTestParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayGetHighlightObjectForTestParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayGetHighlightObjectForTestParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayGetHighlightObjectForTestParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1500,6 +1689,14 @@ pub fn OverlayGetHighlightObjectForTestParams::to_json(
 pub(all) struct OverlayGetHighlightObjectForTestResult {
   highlight : Json
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayGetHighlightObjectForTestResult with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayGetHighlightObjectForTestResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Overlay.getHighlightObjectForTest.
@@ -1561,6 +1758,17 @@ pub(all) struct OverlayGetSourceOrderHighlightObjectForTestParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayGetSourceOrderHighlightObjectForTestParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend OverlayGetSourceOrderHighlightObjectForTestParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayGetSourceOrderHighlightObjectForTestParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1582,6 +1790,17 @@ pub fn OverlayGetSourceOrderHighlightObjectForTestParams::to_json(
 pub(all) struct OverlayGetSourceOrderHighlightObjectForTestResult {
   highlight : Json
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayGetSourceOrderHighlightObjectForTestResult with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend OverlayGetSourceOrderHighlightObjectForTestResult with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Decode and validate the result object for Overlay.getSourceOrderHighlightObjectForTest.
@@ -1667,6 +1886,14 @@ pub(all) struct OverlayHighlightFrameParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayHighlightFrameParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayHighlightFrameParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayHighlightFrameParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1722,6 +1949,14 @@ pub(all) struct OverlayHighlightNodeParams {
   object_id : RuntimeRemoteObjectId?
   selector : String?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayHighlightNodeParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayHighlightNodeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayHighlightNodeParams as CDP JSON.
@@ -1785,6 +2020,14 @@ pub(all) struct OverlayHighlightQuadParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayHighlightQuadParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayHighlightQuadParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayHighlightQuadParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -1841,6 +2084,14 @@ pub(all) struct OverlayHighlightRectParams {
   color : DOMRGBA?
   outline_color : DOMRGBA?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayHighlightRectParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayHighlightRectParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayHighlightRectParams as CDP JSON.
@@ -1900,6 +2151,14 @@ pub(all) struct OverlayHighlightSourceOrderParams {
   backend_node_id : DOMBackendNodeId?
   object_id : RuntimeRemoteObjectId?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayHighlightSourceOrderParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayHighlightSourceOrderParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayHighlightSourceOrderParams as CDP JSON.
@@ -1963,6 +2222,14 @@ pub(all) struct OverlaySetInspectModeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetInspectModeParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetInspectModeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetInspectModeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2011,6 +2278,14 @@ pub fn overlay_set_inspect_mode_command(
 pub(all) struct OverlaySetPausedInDebuggerMessageParams {
   message : String?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlaySetPausedInDebuggerMessageParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetPausedInDebuggerMessageParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlaySetPausedInDebuggerMessageParams as CDP JSON.
@@ -2066,6 +2341,14 @@ pub(all) struct OverlaySetShowAdHighlightsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetShowAdHighlightsParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowAdHighlightsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetShowAdHighlightsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2117,6 +2400,17 @@ pub(all) struct OverlaySetShowContainerQueryOverlaysParams {
     OverlayContainerQueryHighlightConfig,
   ]
 } derive(Eq, Debug)
+
+///|
+pub extend OverlaySetShowContainerQueryOverlaysParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend OverlaySetShowContainerQueryOverlaysParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlaySetShowContainerQueryOverlaysParams as CDP JSON.
@@ -2172,6 +2466,14 @@ pub(all) struct OverlaySetShowDebugBordersParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetShowDebugBordersParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowDebugBordersParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetShowDebugBordersParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2221,6 +2523,14 @@ pub fn overlay_set_show_debug_borders_command(
 pub(all) struct OverlaySetShowFlexOverlaysParams {
   flex_node_highlight_configs : Array[OverlayFlexNodeHighlightConfig]
 } derive(Eq, Debug)
+
+///|
+pub extend OverlaySetShowFlexOverlaysParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowFlexOverlaysParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlaySetShowFlexOverlaysParams as CDP JSON.
@@ -2276,6 +2586,14 @@ pub(all) struct OverlaySetShowFPSCounterParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetShowFPSCounterParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowFPSCounterParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetShowFPSCounterParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2321,6 +2639,14 @@ pub fn overlay_set_show_fpscounter_command(
 pub(all) struct OverlaySetShowGridOverlaysParams {
   grid_node_highlight_configs : Array[OverlayGridNodeHighlightConfig]
 } derive(Eq, Debug)
+
+///|
+pub extend OverlaySetShowGridOverlaysParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowGridOverlaysParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlaySetShowGridOverlaysParams as CDP JSON.
@@ -2376,6 +2702,14 @@ pub(all) struct OverlaySetShowHingeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetShowHingeParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowHingeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetShowHingeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2423,6 +2757,14 @@ pub fn overlay_set_show_hinge_command(
 pub(all) struct OverlaySetShowHitTestBordersParams {
   show : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend OverlaySetShowHitTestBordersParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowHitTestBordersParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlaySetShowHitTestBordersParams as CDP JSON.
@@ -2474,6 +2816,17 @@ pub fn overlay_set_show_hit_test_borders_command(
 pub(all) struct OverlaySetShowInspectedElementAnchorParams {
   inspected_element_anchor_config : OverlayInspectedElementAnchorConfig
 } derive(Eq, Debug)
+
+///|
+pub extend OverlaySetShowInspectedElementAnchorParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend OverlaySetShowInspectedElementAnchorParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlaySetShowInspectedElementAnchorParams as CDP JSON.
@@ -2529,6 +2882,14 @@ pub(all) struct OverlaySetShowIsolatedElementsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetShowIsolatedElementsParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowIsolatedElementsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetShowIsolatedElementsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2582,6 +2943,14 @@ pub(all) struct OverlaySetShowLayoutShiftRegionsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetShowLayoutShiftRegionsParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowLayoutShiftRegionsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetShowLayoutShiftRegionsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2631,6 +3000,14 @@ pub fn overlay_set_show_layout_shift_regions_command(
 pub(all) struct OverlaySetShowPaintRectsParams {
   result : Bool
 } derive(Eq, Debug)
+
+///|
+pub extend OverlaySetShowPaintRectsParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowPaintRectsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlaySetShowPaintRectsParams as CDP JSON.
@@ -2684,6 +3061,14 @@ pub(all) struct OverlaySetShowScrollBottleneckRectsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetShowScrollBottleneckRectsParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowScrollBottleneckRectsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetShowScrollBottleneckRectsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2733,6 +3118,14 @@ pub fn overlay_set_show_scroll_bottleneck_rects_command(
 pub(all) struct OverlaySetShowScrollSnapOverlaysParams {
   scroll_snap_highlight_configs : Array[OverlayScrollSnapHighlightConfig]
 } derive(Eq, Debug)
+
+///|
+pub extend OverlaySetShowScrollSnapOverlaysParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowScrollSnapOverlaysParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlaySetShowScrollSnapOverlaysParams as CDP JSON.
@@ -2788,6 +3181,14 @@ pub(all) struct OverlaySetShowViewportSizeOnResizeParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetShowViewportSizeOnResizeParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowViewportSizeOnResizeParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetShowViewportSizeOnResizeParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2839,6 +3240,14 @@ pub(all) struct OverlaySetShowWebVitalsParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlaySetShowWebVitalsParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowWebVitalsParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlaySetShowWebVitalsParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -2884,6 +3293,14 @@ pub fn overlay_set_show_web_vitals_command(
 pub(all) struct OverlaySetShowWindowControlsOverlayParams {
   window_controls_overlay_config : OverlayWindowControlsOverlayConfig?
 } derive(Eq, Debug)
+
+///|
+pub extend OverlaySetShowWindowControlsOverlayParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlaySetShowWindowControlsOverlayParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlaySetShowWindowControlsOverlayParams as CDP JSON.
@@ -2937,6 +3354,17 @@ pub fn overlay_set_show_window_controls_overlay_command(
 pub(all) struct OverlayInspectedElementWindowRestoredEventParams {
   backend_node_id : DOMBackendNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayInspectedElementWindowRestoredEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend OverlayInspectedElementWindowRestoredEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayInspectedElementWindowRestoredEventParams as CDP JSON.
@@ -3025,6 +3453,14 @@ pub(all) struct OverlayInspectNodeRequestedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayInspectNodeRequestedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayInspectNodeRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayInspectNodeRequestedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3087,6 +3523,17 @@ pub fn overlay_inspect_node_requested_event(
 pub(all) struct OverlayInspectPanelShowRequestedEventParams {
   backend_node_id : DOMBackendNodeId
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayInspectPanelShowRequestedEventParams with Eq::{
+  not_equal,
+  equal,
+}
+
+///|
+pub extend OverlayInspectPanelShowRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayInspectPanelShowRequestedEventParams as CDP JSON.
@@ -3153,6 +3600,14 @@ pub(all) struct OverlayNodeHighlightRequestedEventParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend OverlayNodeHighlightRequestedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayNodeHighlightRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
 /// Encode OverlayNodeHighlightRequestedEventParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -3215,6 +3670,14 @@ pub fn overlay_node_highlight_requested_event(
 pub(all) struct OverlayScreenshotRequestedEventParams {
   viewport : PageViewport
 } derive(Eq, Debug)
+
+///|
+pub extend OverlayScreenshotRequestedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend OverlayScreenshotRequestedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode OverlayScreenshotRequestedEventParams as CDP JSON.

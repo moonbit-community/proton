@@ -12,6 +12,12 @@ pub(all) struct TetheringBindParams {
 } derive(Eq, Debug)
 
 ///|
+pub extend TetheringBindParams with Eq::{not_equal, equal}
+
+///|
+pub extend TetheringBindParams with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
 /// Encode TetheringBindParams as CDP JSON.
 ///
 /// Use this when passing generated parameter objects to lower-level command
@@ -55,6 +61,12 @@ pub fn tethering_bind_command(
 pub(all) struct TetheringUnbindParams {
   port : Int
 } derive(Eq, Debug)
+
+///|
+pub extend TetheringUnbindParams with Eq::{not_equal, equal}
+
+///|
+pub extend TetheringUnbindParams with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// Encode TetheringUnbindParams as CDP JSON.
@@ -101,6 +113,14 @@ pub(all) struct TetheringAcceptedEventParams {
   port : Int
   connection_id : String
 } derive(Eq, Debug)
+
+///|
+pub extend TetheringAcceptedEventParams with Eq::{not_equal, equal}
+
+///|
+pub extend TetheringAcceptedEventParams with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
 
 ///|
 /// Encode TetheringAcceptedEventParams as CDP JSON.
