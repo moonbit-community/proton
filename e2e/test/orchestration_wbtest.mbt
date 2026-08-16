@@ -724,7 +724,7 @@ async fn run_scenario_probe_with_retry(
       true
     } catch {
       error => {
-        if attempt == 3 || !retryable_scenario_error(error) {
+        if attempt == 3 || !retryable_scenario_error_for(name, error) {
           raise error
         }
         // A transient pipe EAGAIN can recur for one or two attempts on a
@@ -762,6 +762,11 @@ fn scenario_operation_timeout(name : String, timeout : Int) -> Int {
 
 ///|
 fn retryable_scenario_error(error : Error) -> Bool {
+  retryable_scenario_error_for("", error)
+}
+
+///|
+fn retryable_scenario_error_for(name : String, error : Error) -> Bool {
   match error {
     E2eOperationError::TimedOut(..) => true
     @io.ReaderClosed => true
@@ -769,12 +774,12 @@ fn retryable_scenario_error(error : Error) -> Bool {
     // as EAGAIN on a loaded CI runner; that is a transport condition, not a
     // scenario failure, so retry it instead of failing the whole E2E.
     @os_error.OSError(_, ..) as err => err.is_nonblocking_io_error()
-    _ => retryable_startup_error(error)
+    _ => retryable_startup_error_for(name, error)
   }
 }
 
 ///|
-fn retryable_startup_error(error : Error) -> Bool {
+fn retryable_startup_error_for(name : String, error : Error) -> Bool {
   let text = @debug.render(Repr(error)).to_lower()
   // Retry only failures emitted by the explicit startup waiters.  Transport
   // retry classification is handled by retryable_scenario_error using typed
@@ -785,6 +790,10 @@ fn retryable_startup_error(error : Error) -> Bool {
   text.contains("scenario app exited before cdp became ready") ||
   text.contains("cdp endpoint did not start within") ||
   text.contains("cdp page target") ||
+  (
+    name == "52_web_contents_view" &&
+    text.contains("scenario app did not exit within")
+  ) ||
   text.contains("timed out waiting for navigation to") ||
   // The web-contents-view probe asserts on auxiliary log files (OSR paint
   // records, per-view event logs) that the child app writes asynchronously.

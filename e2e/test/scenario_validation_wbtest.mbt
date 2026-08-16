@@ -69,6 +69,18 @@ test "scenario retries only startup and closed CDP transports" {
       ),
     ),
   )
+  assert_true(
+    retryable_scenario_error_for(
+      "52_web_contents_view",
+      Failure::Failure("scenario app did not exit within 20000ms"),
+    ),
+  )
+  assert_false(
+    retryable_scenario_error_for(
+      "41_app_commands",
+      Failure::Failure("scenario app did not exit within 20000ms"),
+    ),
+  )
   assert_false(
     retryable_scenario_error(Failure::Failure("connected CDP probe failed")),
   )
