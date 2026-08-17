@@ -269,9 +269,8 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,
                                   size_t error_len);
-int32_t proton_engine_window_poll_browser_event_json(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len);
+proton_event_t *proton_engine_window_take_browser_event(
+    proton_engine_window_t *window);
 int32_t proton_engine_window_browser_command_json(
     proton_engine_window_t *window, const char *command_json,
     char *error, size_t error_len);
@@ -398,12 +397,7 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
                                                 const char *command_json,
                                                 char *error,
                                                 size_t error_len);
-int32_t proton_engine_view_poll_event_json(proton_engine_view_t *view,
-                                           char *buffer,
-                                           int32_t buffer_len,
-                                           int32_t *out_required_len,
-                                           char *error,
-                                           size_t error_len);
+proton_event_t *proton_engine_view_take_event(proton_engine_view_t *view);
 void proton_engine_view_bind_public_id(proton_engine_view_t *view,
                                        proton_view_id_t public_view);
 

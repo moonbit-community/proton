@@ -1,4 +1,5 @@
 #include "view_events.h"
+#include "../../proton_event.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,13 +12,12 @@
 #endif
 
 #define PROTON_VIEW_MAX_EVENTS 16
-#define PROTON_VIEW_EVENT_BYTES 4096
 
 struct proton_view_events {
   proton_view_id_t view;
   proton_window_id_t window;
   int bound;
-  char *queue[PROTON_VIEW_MAX_EVENTS];
+  proton_event_t *queue[PROTON_VIEW_MAX_EVENTS];
   size_t head;
   size_t count;
 #ifdef _WIN32
@@ -43,65 +43,6 @@ static void proton_view_events_unlock(proton_view_events_t *events) {
 #endif
 }
 
-static int proton_view_json_escape(const char *value,
-                                   char *out,
-                                   size_t out_len) {
-  size_t used = 0;
-  if (out == NULL || out_len == 0) {
-    return 0;
-  }
-  for (const unsigned char *cursor =
-           (const unsigned char *)(value != NULL ? value : "");
-       *cursor != '\0'; cursor++) {
-    const char *escape = NULL;
-    char unicode[7] = {0};
-    switch (*cursor) {
-    case '"':
-      escape = "\\\"";
-      break;
-    case '\\':
-      escape = "\\\\";
-      break;
-    case '\b':
-      escape = "\\b";
-      break;
-    case '\f':
-      escape = "\\f";
-      break;
-    case '\n':
-      escape = "\\n";
-      break;
-    case '\r':
-      escape = "\\r";
-      break;
-    case '\t':
-      escape = "\\t";
-      break;
-    default:
-      if (*cursor < 0x20) {
-        snprintf(unicode, sizeof(unicode), "\\u%04x", *cursor);
-        escape = unicode;
-      }
-      break;
-    }
-    if (escape != NULL) {
-      size_t length = strlen(escape);
-      if (used + length >= out_len) {
-        return 0;
-      }
-      memcpy(out + used, escape, length);
-      used += length;
-    } else {
-      if (used + 1 >= out_len) {
-        return 0;
-      }
-      out[used++] = (char)*cursor;
-    }
-  }
-  out[used] = '\0';
-  return 1;
-}
-
 proton_view_events_t *proton_view_events_create(void) {
   proton_view_events_t *events =
       (proton_view_events_t *)calloc(1, sizeof(*events));
@@ -121,7 +62,7 @@ void proton_view_events_destroy(proton_view_events_t *events) {
     return;
   }
   for (size_t i = 0; i < PROTON_VIEW_MAX_EVENTS; i++) {
-    free(events->queue[i]);
+    proton_event_destroy(events->queue[i]);
   }
 #ifdef _WIN32
   DeleteCriticalSection(&events->lock);
@@ -145,113 +86,86 @@ void proton_view_events_bind(proton_view_events_t *events,
 }
 
 static void proton_view_events_enqueue(proton_view_events_t *events,
-                                       const char *event_json) {
-  if (events == NULL || event_json == NULL) {
+                                       proton_event_t *event) {
+  if (events == NULL || event == NULL) {
+    proton_event_destroy(event);
     return;
   }
   proton_view_events_lock(events);
   if (!events->bound || events->count >= PROTON_VIEW_MAX_EVENTS) {
     proton_view_events_unlock(events);
+    proton_event_destroy(event);
     return;
   }
-  char *owned = (char *)malloc(strlen(event_json) + 1);
-  if (owned == NULL) {
-    proton_view_events_unlock(events);
-    return;
-  }
-  strcpy(owned, event_json);
+  event->view = events->view;
+  event->window = events->window;
   size_t index = (events->head + events->count) % PROTON_VIEW_MAX_EVENTS;
-  events->queue[index] = owned;
+  events->queue[index] = event;
   events->count++;
   proton_view_events_unlock(events);
 }
 
 void proton_view_events_loading_changed(proton_view_events_t *events,
                                         int32_t is_loading) {
-  char json[256];
-  snprintf(json, sizeof(json),
-           "{\"type\":\"view_loading_changed\",\"view\":\"%lld\","
-           "\"window\":\"%lld\",\"is_loading\":%s}",
-           (long long)events->view, (long long)events->window,
-           is_loading ? "true" : "false");
-  proton_view_events_enqueue(events, json);
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_VIEW_LOADING_CHANGED);
+  if (event != NULL) {
+    event->bool_a = is_loading;
+  }
+  proton_view_events_enqueue(events, event);
 }
 
 void proton_view_events_navigated(proton_view_events_t *events,
                                   const char *url) {
-  char escaped[2048];
-  if (!proton_view_json_escape(url, escaped, sizeof(escaped))) {
-    return;
+  proton_event_t *event = proton_event_create(PROTON_EVENT_VIEW_NAVIGATED);
+  if (event != NULL && !proton_event_set_text(&event->text_a, url)) {
+    proton_event_destroy(event);
+    event = NULL;
   }
-  char json[PROTON_VIEW_EVENT_BYTES];
-  snprintf(json, sizeof(json),
-           "{\"type\":\"view_navigated\",\"view\":\"%lld\","
-           "\"window\":\"%lld\",\"url\":\"%s\"}",
-           (long long)events->view, (long long)events->window, escaped);
-  proton_view_events_enqueue(events, json);
+  proton_view_events_enqueue(events, event);
 }
 
 void proton_view_events_title_updated(proton_view_events_t *events,
                                       const char *title) {
-  char escaped[2048];
-  if (!proton_view_json_escape(title, escaped, sizeof(escaped))) {
-    return;
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_VIEW_TITLE_UPDATED);
+  if (event != NULL && !proton_event_set_text(&event->text_a, title)) {
+    proton_event_destroy(event);
+    event = NULL;
   }
-  char json[PROTON_VIEW_EVENT_BYTES];
-  snprintf(json, sizeof(json),
-           "{\"type\":\"view_title_updated\",\"view\":\"%lld\","
-           "\"window\":\"%lld\",\"title\":\"%s\"}",
-           (long long)events->view, (long long)events->window, escaped);
-  proton_view_events_enqueue(events, json);
+  proton_view_events_enqueue(events, event);
 }
 
 void proton_view_events_load_failed(proton_view_events_t *events,
                                     const char *url,
                                     int32_t error_code,
                                     const char *error_text) {
-  char escaped_url[2048];
-  char escaped_text[2048];
-  if (!proton_view_json_escape(url, escaped_url, sizeof(escaped_url)) ||
-      !proton_view_json_escape(error_text, escaped_text,
-                               sizeof(escaped_text))) {
-    return;
+  proton_event_t *event = proton_event_create(PROTON_EVENT_VIEW_LOAD_FAILED);
+  if (event != NULL &&
+      (!proton_event_set_text(&event->text_a, url) ||
+       !proton_event_set_text(&event->text_b, error_text))) {
+    proton_event_destroy(event);
+    event = NULL;
   }
-  char json[PROTON_VIEW_EVENT_BYTES];
-  snprintf(json, sizeof(json),
-           "{\"type\":\"view_load_failed\",\"view\":\"%lld\","
-           "\"window\":\"%lld\",\"url\":\"%s\",\"error\":%d,"
-           "\"message\":\"%s\"}",
-           (long long)events->view, (long long)events->window, escaped_url,
-           (int)error_code, escaped_text);
-  proton_view_events_enqueue(events, json);
+  if (event != NULL) {
+    event->int_a = error_code;
+  }
+  proton_view_events_enqueue(events, event);
 }
 
-int32_t proton_view_events_poll_json(proton_view_events_t *events,
-                                     char *buffer,
-                                     int32_t buffer_len,
-                                     int32_t *out_required_len) {
-  if (events == NULL || out_required_len == NULL) {
-    return PROTON_ERR_INVALID_ARGUMENT;
+proton_event_t *proton_view_events_take(proton_view_events_t *events) {
+  if (events == NULL) {
+    return NULL;
   }
   proton_view_events_lock(events);
   if (events->count == 0) {
     proton_view_events_unlock(events);
-    *out_required_len = 0;
-    return PROTON_EVENT_NONE;
+    return NULL;
   }
-  char *event_json = events->queue[events->head];
-  int32_t required = (int32_t)strlen(event_json);
-  if (buffer == NULL || buffer_len <= required) {
-    proton_view_events_unlock(events);
-    *out_required_len = required;
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  memcpy(buffer, event_json, (size_t)required + 1);
-  free(event_json);
+  proton_event_t *event = events->queue[events->head];
   events->queue[events->head] = NULL;
   events->head = (events->head + 1) % PROTON_VIEW_MAX_EVENTS;
   events->count--;
   proton_view_events_unlock(events);
-  *out_required_len = required;
-  return PROTON_OK;
+  return event;
 }

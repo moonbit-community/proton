@@ -391,7 +391,30 @@ int32_t proton_runtime_sync_engine_window_states(
       return proton_set_error(PROTON_ERR_ENGINE,
                               "failed to allocate window state event");
     }
-    event->window_state = state;
+    int32_t fields[] = {
+        state.x,
+        state.y,
+        state.width,
+        state.height,
+        state.monitor_x,
+        state.monitor_y,
+        state.monitor_width,
+        state.monitor_height,
+        state.work_x,
+        state.work_y,
+        state.work_width,
+        state.work_height,
+        state.scale_factor_percent,
+        state.zoom_percent,
+        state.visible,
+        state.focused,
+        state.minimized,
+        state.maximized,
+        state.fullscreen,
+        state.always_on_top,
+        state.theme,
+    };
+    memcpy(event->window_state, fields, sizeof(fields));
     if (!proton_runtime_enqueue_event(runtime, event)) {
       return PROTON_OK;
     }
@@ -440,7 +463,6 @@ int32_t proton_runtime_sync_engine_close_requests(
 
 int32_t proton_runtime_sync_engine_browser_events(
     proton_runtime_slot_t *runtime) {
-  char event_json[PROTON_MAX_EVENT_BYTES];
   for (proton_window_slot_t *window = runtime->windows; window != NULL;
        window = window->next) {
     if (window->lifecycle == PROTON_WINDOW_DESTROYING ||
@@ -450,18 +472,12 @@ int32_t proton_runtime_sync_engine_browser_events(
     }
     while (proton_event_queue_count(&runtime->events) <
            PROTON_EVENT_QUEUE_CAPACITY) {
-      int32_t required = 0;
-      char error[512] = {0};
-      int32_t status = proton_engine_window_poll_browser_event_json(
-          window->engine_window, event_json, sizeof(event_json), &required,
-          error, sizeof(error));
-      if (status == PROTON_EVENT_NONE) {
+      proton_event_t *event =
+          proton_engine_window_take_browser_event(window->engine_window);
+      if (event == NULL) {
         break;
       }
-      if (status != PROTON_OK) {
-        return proton_set_engine_status(status, error);
-      }
-      if (!proton_runtime_enqueue_legacy_event(runtime, event_json)) {
+      if (!proton_runtime_enqueue_event(runtime, event)) {
         return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                                 "failed to queue browser event");
       }
@@ -472,7 +488,6 @@ int32_t proton_runtime_sync_engine_browser_events(
 
 int32_t proton_runtime_sync_engine_view_events(
     proton_runtime_slot_t *runtime) {
-  char event_json[PROTON_MAX_EVENT_BYTES];
   for (proton_view_slot_t *view = runtime->views; view != NULL;
        view = view->next) {
     if (view->lifecycle != PROTON_VIEW_LIVE || view->engine_view == NULL) {
@@ -480,18 +495,11 @@ int32_t proton_runtime_sync_engine_view_events(
     }
     while (proton_event_queue_count(&runtime->events) <
            PROTON_EVENT_QUEUE_CAPACITY) {
-      int32_t required = 0;
-      char error[512] = {0};
-      int32_t status = proton_engine_view_poll_event_json(
-          view->engine_view, event_json, sizeof(event_json), &required, error,
-          sizeof(error));
-      if (status == PROTON_EVENT_NONE) {
+      proton_event_t *event = proton_engine_view_take_event(view->engine_view);
+      if (event == NULL) {
         break;
       }
-      if (status != PROTON_OK) {
-        return proton_set_engine_status(status, error);
-      }
-      if (!proton_runtime_enqueue_legacy_event(runtime, event_json)) {
+      if (!proton_runtime_enqueue_event(runtime, event)) {
         return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                                 "failed to queue view event");
       }

@@ -868,31 +868,7 @@ int32_t proton_internal_event_window_state_field(const proton_event_t *event,
   if (event == NULL) {
     return 0;
   }
-  const proton_engine_window_state_t *state = &event->window_state;
-  switch (field) {
-  case 0: return state->x;
-  case 1: return state->y;
-  case 2: return state->width;
-  case 3: return state->height;
-  case 4: return state->monitor_x;
-  case 5: return state->monitor_y;
-  case 6: return state->monitor_width;
-  case 7: return state->monitor_height;
-  case 8: return state->work_x;
-  case 9: return state->work_y;
-  case 10: return state->work_width;
-  case 11: return state->work_height;
-  case 12: return state->scale_factor_percent;
-  case 13: return state->zoom_percent;
-  case 14: return state->visible;
-  case 15: return state->focused;
-  case 16: return state->minimized;
-  case 17: return state->maximized;
-  case 18: return state->fullscreen;
-  case 19: return state->always_on_top;
-  case 20: return state->theme;
-  default: return 0;
-  }
+  return field >= 0 && field < 21 ? event->window_state[field] : 0;
 }
 
 static int32_t proton_internal_copy_event_text(const char *text, char *buffer,

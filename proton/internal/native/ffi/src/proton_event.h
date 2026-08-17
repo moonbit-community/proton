@@ -1,8 +1,8 @@
 #ifndef PROTON_EVENT_H
 #define PROTON_EVENT_H
 
-#include "proton_engine.h"
 #include "proton_internal.h"
+#include "proton_native.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -56,7 +56,7 @@ typedef struct proton_event {
   int32_t int_c;
   int32_t bool_a;
   int32_t bool_b;
-  proton_engine_window_state_t window_state;
+  int32_t window_state[21];
   char *text_a;
   char *text_b;
   char *text_c;

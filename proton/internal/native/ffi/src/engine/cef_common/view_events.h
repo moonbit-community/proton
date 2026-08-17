@@ -12,6 +12,7 @@
    before binding are dropped. */
 
 typedef struct proton_view_events proton_view_events_t;
+typedef struct proton_event proton_event_t;
 
 proton_view_events_t *proton_view_events_create(void);
 void proton_view_events_destroy(proton_view_events_t *events);
@@ -30,9 +31,6 @@ void proton_view_events_load_failed(proton_view_events_t *events,
                                     int32_t error_code,
                                     const char *error_text);
 
-int32_t proton_view_events_poll_json(proton_view_events_t *events,
-                                     char *buffer,
-                                     int32_t buffer_len,
-                                     int32_t *out_required_len);
+proton_event_t *proton_view_events_take(proton_view_events_t *events);
 
 #endif

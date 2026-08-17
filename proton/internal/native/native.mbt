@@ -1124,6 +1124,18 @@ fn native_event_text(
 }
 
 ///|
+fn require_native_event_text(
+  event : @native_ffi.EventHandle,
+  field : Int,
+  label : String,
+) -> String raise NativeError {
+  guard native_event_text(event, field) is Some(text) else {
+    raise runtime_event_missing(label, "text")
+  }
+  text
+}
+
+///|
 fn native_window_state(event : @native_ffi.EventHandle) -> WindowState {
   let field = index => @native_ffi.event_window_state_field(event, index)
   let theme = match field(20) {
@@ -1171,9 +1183,7 @@ fn decode_native_runtime_event(
     5 => BridgeLifecycleChanged(window, @native_ffi.event_int64(event, 3))
     6 => BridgeRequestCancelled(@native_ffi.event_int64(event, 2))
     7 => {
-      guard native_event_text(event, 0) is Some(command_id) else {
-        raise runtime_event_missing("menu_command", "command_id")
-      }
+      let command_id = require_native_event_text(event, 0, "menu_command")
       MenuCommand(
         command_id,
         if window == proton_invalid_handle {
@@ -1183,6 +1193,95 @@ fn decode_native_runtime_event(
         },
       )
     }
+    12 =>
+      BrowserRequest(
+        window,
+        Navigation(
+          request_id=@native_ffi.event_int64(event, 2),
+          url=require_native_event_text(event, 0, "browser navigation"),
+          http_method=require_native_event_text(
+            event, 1, "browser navigation method",
+          ),
+          user_gesture=@native_ffi.event_int(event, 3) != 0,
+          redirect=@native_ffi.event_int(event, 4) != 0,
+        ),
+      )
+    13 =>
+      BrowserRequest(
+        window,
+        Popup(
+          request_id=@native_ffi.event_int64(event, 2),
+          url=require_native_event_text(event, 0, "browser popup"),
+          disposition=@native_ffi.event_int(event, 0),
+          user_gesture=@native_ffi.event_int(event, 3) != 0,
+        ),
+      )
+    14 =>
+      BrowserRequest(
+        window,
+        Download(
+          request_id=@native_ffi.event_int64(event, 2),
+          download_id=@native_ffi.event_int(event, 0),
+          url=require_native_event_text(event, 0, "browser download"),
+          suggested_name=require_native_event_text(
+            event, 1, "browser download name",
+          ),
+        ),
+      )
+    15 =>
+      BrowserRequest(
+        window,
+        Certificate(
+          request_id=@native_ffi.event_int64(event, 2),
+          url=require_native_event_text(event, 0, "browser certificate"),
+          error_code=@native_ffi.event_int(event, 0),
+        ),
+      )
+    16 =>
+      BrowserRequest(
+        window,
+        Media(
+          request_id=@native_ffi.event_int64(event, 2),
+          origin=require_native_event_text(event, 0, "browser media"),
+          permissions=@native_ffi.event_int(event, 0),
+        ),
+      )
+    17 =>
+      BrowserDownloadUpdated(window, {
+        download_id: @native_ffi.event_int(event, 0),
+        state: require_native_event_text(event, 0, "browser download update"),
+        received_bytes: @native_ffi.event_int64(event, 4),
+        total_bytes: @native_ffi.event_int64(event, 5),
+        percent: @native_ffi.event_int(event, 1),
+      })
+    18 =>
+      ViewEvent(
+        window,
+        @native_ffi.event_int64(event, 1),
+        LoadingChanged(@native_ffi.event_int(event, 3) != 0),
+      )
+    19 =>
+      ViewEvent(
+        window,
+        @native_ffi.event_int64(event, 1),
+        Navigated(require_native_event_text(event, 0, "view navigation")),
+      )
+    20 =>
+      ViewEvent(
+        window,
+        @native_ffi.event_int64(event, 1),
+        TitleUpdated(require_native_event_text(event, 0, "view title")),
+      )
+    21 =>
+      ViewEvent(
+        window,
+        @native_ffi.event_int64(event, 1),
+        LoadFailed(
+          require_native_event_text(event, 0, "view load URL"),
+          @native_ffi.event_int(event, 0),
+          require_native_event_text(event, 1, "view load error"),
+        ),
+      )
     255 => {
       guard native_event_text(event, 0) is Some(json) else {
         raise runtime_event_missing("legacy", "payload")

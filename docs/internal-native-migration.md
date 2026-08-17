@@ -63,6 +63,7 @@ native prebuilt, or compatibility package remains.
 
 - [x] Preserve the existing MoonBit async external event loop integration.
 - [x] Replace the central JSON runtime queue with owned typed event records.
+- [x] Emit browser-policy and web-contents-view events as typed records.
 - [ ] Replace native callback entry with one C-owned completion/event queue.
 - [ ] Convert true asynchronous operations to request/completion/cancel.
 - [ ] Remove subsystem polling loops, fixed sleeps, and timeout fallbacks.

@@ -4553,17 +4553,12 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_poll_browser_event_json(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len) {
+proton_event_t *proton_engine_window_take_browser_event(
+    proton_engine_window_t *window) {
   if (window == NULL || window->browser_session == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser session is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+    return NULL;
   }
-  return proton_browser_session_poll_event_json(
-      window->browser_session, buffer, buffer_len, out_required_len, error,
-      error_len);
+  return proton_browser_session_take_event(window->browser_session);
 }
 
 int32_t proton_engine_window_browser_command_json(
@@ -5776,21 +5771,13 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
                                              error, error_len);
 }
 
-int32_t proton_engine_view_poll_event_json(proton_engine_view_t *view,
-                                           char *buffer,
-                                           int32_t buffer_len,
-                                           int32_t *out_required_len,
-                                           char *error,
-                                           size_t error_len) {
-  (void)error;
-  (void)error_len;
+proton_event_t *proton_engine_view_take_event(proton_engine_view_t *view) {
   // The ABI event sweep calls this on the runtime owner thread; the event
   // queue carries its own lock, so no UI-thread marshal here.
   if (view == NULL || view->events == NULL) {
-    return PROTON_ERR_NOT_INITIALIZED;
+    return NULL;
   }
-  return proton_view_events_poll_json(view->events, buffer, buffer_len,
-                                      out_required_len);
+  return proton_view_events_take(view->events);
 }
 
 void proton_engine_view_bind_public_id(proton_engine_view_t *view,

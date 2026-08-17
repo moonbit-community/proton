@@ -28,6 +28,7 @@ typedef struct {
 } proton_browser_policy_t;
 
 typedef struct proton_browser_session proton_browser_session_t;
+typedef struct proton_event proton_event_t;
 
 typedef void (*proton_browser_signal_fn)(void *user_data);
 
@@ -38,9 +39,8 @@ void proton_browser_session_destroy(proton_browser_session_t *session);
 void proton_browser_session_bind_window(proton_browser_session_t *session,
                                          proton_window_id_t window);
 
-int32_t proton_browser_session_poll_event_json(
-    proton_browser_session_t *session, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len);
+proton_event_t *proton_browser_session_take_event(
+    proton_browser_session_t *session);
 int32_t proton_browser_session_respond_json(
     proton_browser_session_t *session, const char *response_json,
     char *error, size_t error_len);
