@@ -19,43 +19,47 @@ typedef pthread_t proton_thread_id_t;
 #define PROTON_MAX_EVENT_BYTES 65536
 #define PROTON_MAX_EVENTS 32
 
-typedef struct {
-  uint32_t generation;
-  bool occupied;
+typedef struct proton_runtime_slot proton_runtime_slot_t;
+typedef struct proton_window_slot proton_window_slot_t;
+typedef struct proton_view_slot proton_view_slot_t;
+typedef struct proton_image_slot proton_image_slot_t;
+
+struct proton_runtime_slot {
   bool destroyed;
-  bool engine_backed;
   proton_engine_runtime_t *engine_runtime;
   int64_t app_instance;
-  bool owner_thread_set;
   proton_thread_id_t owner_thread;
   char *events[PROTON_MAX_EVENTS];
   uint32_t event_head;
   uint32_t event_count;
   int64_t next_bridge_request_id;
-} proton_runtime_slot_t;
+  int64_t next_window_id;
+  int64_t next_view_id;
+  proton_window_slot_t *windows;
+  proton_view_slot_t *views;
+};
 
-typedef struct {
-  uint32_t generation;
-  bool occupied;
+struct proton_window_slot {
   bool destroyed;
   bool visible;
   bool closed_event_sent;
   bool state_valid;
   uint64_t bridge_notified_revision;
   uint64_t close_request_notified_revision;
-  proton_runtime_id_t runtime;
+  int64_t logical_id;
+  proton_runtime_slot_t *runtime;
   proton_engine_window_t *engine_window;
   int32_t width;
   int32_t height;
   proton_engine_window_state_t state;
-} proton_window_slot_t;
+  proton_window_slot_t *next;
+};
 
-typedef struct {
-  uint32_t generation;
-  bool occupied;
+struct proton_view_slot {
   bool destroyed;
-  proton_runtime_id_t runtime;
-  proton_window_id_t window;
+  int64_t logical_id;
+  proton_runtime_slot_t *runtime;
+  proton_window_slot_t *window;
   proton_engine_view_t *engine_view;
   int32_t x;
   int32_t y;
@@ -63,23 +67,20 @@ typedef struct {
   int32_t height;
   int32_t z_order;
   bool visible;
-} proton_view_slot_t;
+  proton_view_slot_t *next;
+};
 
-typedef struct {
-  uint32_t generation;
-  bool occupied;
+struct proton_image_slot {
   bool destroyed;
   proton_engine_image_t *engine_image;
-} proton_image_slot_t;
+};
 
 PROTON_INTERNAL int32_t proton_runtime_slot_create(
-    bool engine_backed, proton_engine_runtime_t *engine_runtime,
-    proton_runtime_id_t *out_runtime, proton_runtime_slot_t **out_slot);
-PROTON_INTERNAL void
-proton_runtime_slot_destroy(proton_runtime_slot_t *slot);
-PROTON_INTERNAL int32_t
-proton_get_runtime(proton_runtime_id_t handle,
-                   proton_runtime_slot_t **out_slot);
+    proton_engine_runtime_t *engine_runtime,
+    proton_runtime_slot_t **out_runtime);
+PROTON_INTERNAL void proton_runtime_slot_destroy(proton_runtime_slot_t *runtime);
+PROTON_INTERNAL int32_t proton_get_runtime(
+    proton_runtime_slot_t *runtime, proton_runtime_slot_t **out_runtime);
 PROTON_INTERNAL int32_t proton_require_runtime_owner_thread(
     const proton_runtime_slot_t *runtime);
 PROTON_INTERNAL bool proton_has_active_runtime(void);
@@ -87,68 +88,57 @@ PROTON_INTERNAL bool proton_has_active_runtime(void);
 PROTON_INTERNAL bool proton_runtime_enqueue_event(
     proton_runtime_slot_t *runtime, const char *event_json);
 PROTON_INTERNAL bool proton_runtime_enqueue_window_event(
-    proton_runtime_slot_t *runtime, const char *type,
-    proton_window_id_t window);
-PROTON_INTERNAL bool
-proton_runtime_has_events(const proton_runtime_slot_t *runtime);
+    proton_runtime_slot_t *runtime, const char *type, int64_t window_id);
+PROTON_INTERNAL bool proton_runtime_has_events(
+    const proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_runtime_poll_event(
     proton_runtime_slot_t *runtime, char *buffer, int32_t buffer_len,
     int32_t *out_required_len);
 
 PROTON_INTERNAL int32_t proton_window_slot_create(
-    proton_runtime_slot_t *runtime, proton_runtime_id_t runtime_handle,
-    proton_engine_window_t *engine_window, int32_t width, int32_t height,
-    proton_window_id_t *out_window, proton_window_slot_t **out_slot);
-PROTON_INTERNAL void
-proton_window_slot_destroy(proton_window_slot_t *slot);
-PROTON_INTERNAL void proton_window_slot_close(proton_window_slot_t *slot);
-PROTON_INTERNAL int32_t
-proton_get_window(proton_window_id_t handle, proton_window_slot_t **out_slot);
+    proton_runtime_slot_t *runtime, proton_engine_window_t *engine_window,
+    int32_t width, int32_t height, proton_window_slot_t **out_window);
+PROTON_INTERNAL void proton_window_slot_destroy(proton_window_slot_t *window);
+PROTON_INTERNAL void proton_window_slot_close(proton_window_slot_t *window);
+PROTON_INTERNAL int32_t proton_get_window(
+    proton_window_slot_t *window, proton_window_slot_t **out_window);
 PROTON_INTERNAL int32_t proton_window_enqueue_closed_once(
-    proton_runtime_slot_t *runtime, proton_window_slot_t *window,
-    proton_window_id_t window_handle);
+    proton_runtime_slot_t *runtime, proton_window_slot_t *window);
 PROTON_INTERNAL void proton_runtime_sync_engine_closed_windows(
-    proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_runtime_sync_engine_window_states(
-    proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_runtime_sync_engine_close_requests(
-    proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_runtime_sync_engine_browser_events(
-    proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_runtime_sync_engine_view_events(
-    proton_runtime_id_t runtime_handle,
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL void proton_runtime_sync_engine_bridge_lifecycle(
-    proton_runtime_id_t runtime_handle, proton_runtime_slot_t *runtime);
+    proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_format_window_state_json(
     const proton_engine_window_state_t *state, char *buffer,
     size_t buffer_len);
 PROTON_INTERNAL int32_t proton_format_screen_array_json(
     const proton_engine_screen_info_t *screens, int32_t count, char *buffer,
     size_t buffer_len);
-PROTON_INTERNAL int32_t
-proton_destroy_windows_for_runtime(proton_runtime_id_t runtime);
+PROTON_INTERNAL int32_t proton_destroy_windows_for_runtime(
+    proton_runtime_slot_t *runtime);
 
 PROTON_INTERNAL int32_t proton_view_slot_create(
-    proton_runtime_id_t runtime_handle,
-    proton_window_id_t window_handle, proton_engine_view_t *engine_view,
-    int32_t x, int32_t y, int32_t width, int32_t height, int32_t z_order,
-    bool visible, proton_view_id_t *out_view, proton_view_slot_t **out_slot);
-PROTON_INTERNAL void proton_view_slot_destroy(proton_view_slot_t *slot);
-PROTON_INTERNAL int32_t
-proton_get_view(proton_view_id_t handle, proton_view_slot_t **out_slot);
-PROTON_INTERNAL void
-proton_destroy_views_for_window(proton_window_id_t window);
+    proton_window_slot_t *window, proton_engine_view_t *engine_view, int32_t x,
+    int32_t y, int32_t width, int32_t height, int32_t z_order, bool visible,
+    proton_view_slot_t **out_view);
+PROTON_INTERNAL void proton_view_slot_destroy(proton_view_slot_t *view);
+PROTON_INTERNAL int32_t proton_get_view(
+    proton_view_slot_t *view, proton_view_slot_t **out_view);
+PROTON_INTERNAL void proton_destroy_views_for_window(
+    proton_window_slot_t *window);
 
 PROTON_INTERNAL int32_t proton_image_slot_create(
-    proton_engine_image_t *engine_image, proton_image_id_t *out_image,
-    proton_image_slot_t **out_slot);
-PROTON_INTERNAL void proton_image_slot_destroy(proton_image_slot_t *slot);
-PROTON_INTERNAL int32_t proton_get_image(proton_image_id_t handle,
-                                         proton_image_slot_t **out_slot);
+    proton_engine_image_t *engine_image, proton_image_slot_t **out_image);
+PROTON_INTERNAL void proton_image_slot_destroy(proton_image_slot_t *image);
+PROTON_INTERNAL int32_t proton_get_image(
+    proton_image_slot_t *image, proton_image_slot_t **out_image);
 
 #endif

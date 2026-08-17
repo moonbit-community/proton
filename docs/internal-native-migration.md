@@ -50,7 +50,7 @@ native prebuilt, or compatibility package remains.
 ### 2. Typed Internal Runtime
 
 - [ ] Replace config JSON parsing with MoonBit config validation and typed FFI.
-- [ ] Replace the global integer handle registry with private external pointers.
+- [x] Replace the global integer handle registry with private external pointers.
 - [ ] Add explicit host, runtime, window, and view lifecycle state.
 - [ ] Keep all CEF and UI operations on the owner thread.
 - [ ] Translate private FFI failures into subsystem-specific MoonBit errors.

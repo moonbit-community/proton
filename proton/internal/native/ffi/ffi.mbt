@@ -4,6 +4,40 @@ pub fn ensure_cef_loader_linked() -> Unit {
 }
 
 ///|
+#external
+pub type RuntimeHandle
+
+///|
+#external
+pub type WindowHandle
+
+///|
+#external
+pub type ViewHandle
+
+///|
+#external
+pub type ImageHandle
+
+///|
+pub extern "C" fn runtime_null() -> RuntimeHandle = "proton_runtime_null"
+
+///|
+pub extern "C" fn window_null() -> WindowHandle = "proton_window_null"
+
+///|
+pub extern "C" fn view_null() -> ViewHandle = "proton_view_null"
+
+///|
+pub extern "C" fn image_null() -> ImageHandle = "proton_image_null"
+
+///|
+pub extern "C" fn window_logical_id(window : WindowHandle) -> Int64 = "proton_window_logical_id"
+
+///|
+pub extern "C" fn view_logical_id(view : ViewHandle) -> Int64 = "proton_view_logical_id"
+
+///|
 pub extern "C" fn proton_abi_version_ffi() -> Int = "proton_abi_version"
 
 ///|
@@ -34,7 +68,7 @@ pub extern "C" fn proton_app_instance_acquire_ffi(
 ///|
 pub extern "C" fn proton_app_instance_attach_runtime_ffi(
   instance : Int64,
-  runtime : Int64,
+  runtime : RuntimeHandle,
 ) -> Int = "proton_app_instance_attach_runtime"
 
 ///|
@@ -55,15 +89,15 @@ pub extern "C" fn proton_runtime_probe_json_ffi(config_json : Bytes) -> Int = "p
 #borrow(config_json, out_runtime)
 pub extern "C" fn proton_runtime_create_json_ffi(
   config_json : Bytes,
-  out_runtime : Ref[Int64],
+  out_runtime : Ref[RuntimeHandle],
 ) -> Int = "proton_runtime_create_json"
 
 ///|
-pub extern "C" fn proton_runtime_destroy_ffi(runtime : Int64) -> Int = "proton_runtime_destroy"
+pub extern "C" fn proton_runtime_destroy_ffi(runtime : RuntimeHandle) -> Int = "proton_runtime_destroy"
 
 ///|
 pub extern "C" fn proton_runtime_do_message_loop_work_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
 ) -> Int = "proton_runtime_do_message_loop_work"
 
 ///|
@@ -71,7 +105,7 @@ pub extern "C" fn proton_runtime_do_message_loop_work_ffi(
 /// other negative value is rejected by the native side.
 #borrow(out_ready_mask)
 pub extern "C" fn proton_runtime_wait_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   interest_mask : Int,
   timeout_ms : Int,
   out_ready_mask : Ref[Int],
@@ -101,14 +135,14 @@ pub extern "C" fn proton_host_loop_end_ffi() -> Unit = "proton_host_loop_end"
 
 ///|
 pub extern "C" fn proton_runtime_set_wakeup_fd_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   wakeup_fd : Int,
 ) -> Int = "proton_runtime_set_wakeup_fd"
 
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_runtime_prepare_wakeup_source_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -116,27 +150,27 @@ pub extern "C" fn proton_runtime_prepare_wakeup_source_ffi(
 
 ///|
 pub extern "C" fn proton_runtime_activate_wakeup_source_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
 ) -> Int = "proton_runtime_activate_wakeup_source"
 
 ///|
 #borrow(out_delay_ms)
 pub extern "C" fn proton_runtime_next_wakeup_delay_ms_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   out_delay_ms : Ref[Int64],
 ) -> Int = "proton_runtime_next_wakeup_delay_ms"
 
 ///|
 #borrow(menu_json)
 pub extern "C" fn proton_runtime_set_menu_json_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   menu_json : Bytes,
 ) -> Int = "proton_runtime_set_menu_json"
 
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_runtime_poll_event_json_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -145,7 +179,7 @@ pub extern "C" fn proton_runtime_poll_event_json_ffi(
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_runtime_poll_bridge_request_json_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -154,14 +188,14 @@ pub extern "C" fn proton_runtime_poll_bridge_request_json_ffi(
 ///|
 #borrow(response_json)
 pub extern "C" fn proton_runtime_respond_bridge_request_json_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   response_json : Bytes,
 ) -> Int = "proton_runtime_respond_bridge_request_json"
 
 ///|
 #borrow(title, message, out_dialog)
 pub extern "C" fn proton_runtime_begin_message_dialog_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   title : Bytes,
   title_len : Int,
   message : Bytes,
@@ -173,7 +207,7 @@ pub extern "C" fn proton_runtime_begin_message_dialog_ffi(
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_runtime_poll_dialog_result_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   dialog : Int64,
   buffer : FixedArray[Byte],
   buffer_len : Int,
@@ -211,92 +245,92 @@ pub extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notificatio
 ///|
 #borrow(config_json, out_window)
 pub extern "C" fn proton_window_create_json_ffi(
-  runtime : Int64,
+  runtime : RuntimeHandle,
   config_json : Bytes,
-  out_window : Ref[Int64],
+  out_window : Ref[WindowHandle],
 ) -> Int = "proton_window_create_json"
 
 ///|
-pub extern "C" fn proton_window_destroy_ffi(window : Int64) -> Int = "proton_window_destroy"
+pub extern "C" fn proton_window_destroy_ffi(window : WindowHandle) -> Int = "proton_window_destroy"
 
 ///|
-pub extern "C" fn proton_window_show_ffi(window : Int64) -> Int = "proton_window_show"
+pub extern "C" fn proton_window_show_ffi(window : WindowHandle) -> Int = "proton_window_show"
 
 ///|
-pub extern "C" fn proton_window_hide_ffi(window : Int64) -> Int = "proton_window_hide"
+pub extern "C" fn proton_window_hide_ffi(window : WindowHandle) -> Int = "proton_window_hide"
 
 ///|
-pub extern "C" fn proton_window_close_ffi(window : Int64) -> Int = "proton_window_close"
+pub extern "C" fn proton_window_close_ffi(window : WindowHandle) -> Int = "proton_window_close"
 
 ///|
-pub extern "C" fn proton_window_focus_ffi(window : Int64) -> Int = "proton_window_focus"
+pub extern "C" fn proton_window_focus_ffi(window : WindowHandle) -> Int = "proton_window_focus"
 
 ///|
 #borrow(title)
 pub extern "C" fn proton_window_set_title_ffi(
-  window : Int64,
+  window : WindowHandle,
   title : Bytes,
 ) -> Int = "proton_window_set_title"
 
 ///|
 pub extern "C" fn proton_window_set_size_ffi(
-  window : Int64,
+  window : WindowHandle,
   width : Int,
   height : Int,
 ) -> Int = "proton_window_set_size"
 
 ///|
-pub extern "C" fn proton_window_minimize_ffi(window : Int64) -> Int = "proton_window_minimize"
+pub extern "C" fn proton_window_minimize_ffi(window : WindowHandle) -> Int = "proton_window_minimize"
 
 ///|
-pub extern "C" fn proton_window_maximize_ffi(window : Int64) -> Int = "proton_window_maximize"
+pub extern "C" fn proton_window_maximize_ffi(window : WindowHandle) -> Int = "proton_window_maximize"
 
 ///|
-pub extern "C" fn proton_window_restore_ffi(window : Int64) -> Int = "proton_window_restore"
+pub extern "C" fn proton_window_restore_ffi(window : WindowHandle) -> Int = "proton_window_restore"
 
 ///|
 pub extern "C" fn proton_window_set_fullscreen_ffi(
-  window : Int64,
+  window : WindowHandle,
   fullscreen : Int,
 ) -> Int = "proton_window_set_fullscreen"
 
 ///|
 pub extern "C" fn proton_window_set_position_ffi(
-  window : Int64,
+  window : WindowHandle,
   x : Int,
   y : Int,
 ) -> Int = "proton_window_set_position"
 
 ///|
 pub extern "C" fn proton_window_set_always_on_top_ffi(
-  window : Int64,
+  window : WindowHandle,
   always_on_top : Int,
 ) -> Int = "proton_window_set_always_on_top"
 
 ///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
-  window : Int64,
+  window : WindowHandle,
   zoom_percent : Int,
 ) -> Int = "proton_window_set_zoom_percent"
 
 ///|
 #borrow(command_json)
 pub extern "C" fn proton_window_browser_command_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   command_json : Bytes,
 ) -> Int = "proton_window_browser_command_json"
 
 ///|
 #borrow(response_json)
 pub extern "C" fn proton_window_respond_browser_request_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   response_json : Bytes,
 ) -> Int = "proton_window_respond_browser_request_json"
 
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_window_state_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -304,13 +338,13 @@ pub extern "C" fn proton_window_state_json_ffi(
 
 ///|
 pub extern "C" fn proton_window_set_close_interception_ffi(
-  window : Int64,
+  window : WindowHandle,
   enabled : Int,
 ) -> Int = "proton_window_set_close_interception"
 
 ///|
 pub extern "C" fn proton_window_respond_close_request_ffi(
-  window : Int64,
+  window : WindowHandle,
   request_id : Int64,
   allow : Int,
 ) -> Int = "proton_window_respond_close_request"
@@ -318,14 +352,14 @@ pub extern "C" fn proton_window_respond_close_request_ffi(
 ///|
 #borrow(url)
 pub extern "C" fn proton_window_load_url_ffi(
-  window : Int64,
+  window : WindowHandle,
   url : Bytes,
 ) -> Int = "proton_window_load_url"
 
 ///|
 #borrow(html, base_url)
 pub extern "C" fn proton_window_load_html_ffi(
-  window : Int64,
+  window : WindowHandle,
   html : Bytes,
   base_url : Bytes,
 ) -> Int = "proton_window_load_html"
@@ -333,7 +367,7 @@ pub extern "C" fn proton_window_load_html_ffi(
 ///|
 #borrow(html, document_url, asset_root)
 pub extern "C" fn proton_window_load_asset_ffi(
-  window : Int64,
+  window : WindowHandle,
   html : Bytes,
   document_url : Bytes,
   asset_root : Bytes,
@@ -341,19 +375,22 @@ pub extern "C" fn proton_window_load_asset_ffi(
 
 ///|
 #borrow(script)
-pub extern "C" fn proton_window_eval_ffi(window : Int64, script : Bytes) -> Int = "proton_window_eval"
+pub extern "C" fn proton_window_eval_ffi(
+  window : WindowHandle,
+  script : Bytes,
+) -> Int = "proton_window_eval"
 
 ///|
 #borrow(event_json)
 pub extern "C" fn proton_window_emit_bridge_event_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   event_json : Bytes,
 ) -> Int = "proton_window_emit_bridge_event_json"
 
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_window_bridge_state_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -362,7 +399,7 @@ pub extern "C" fn proton_window_bridge_state_json_ffi(
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_window_take_bridge_failure_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -371,7 +408,7 @@ pub extern "C" fn proton_window_take_bridge_failure_json_ffi(
 ///|
 #borrow(title, message, out_dialog)
 pub extern "C" fn proton_window_begin_message_dialog_ffi(
-  window : Int64,
+  window : WindowHandle,
   title : Bytes,
   title_len : Int,
   message : Bytes,
@@ -383,7 +420,7 @@ pub extern "C" fn proton_window_begin_message_dialog_ffi(
 ///|
 #borrow(title, message, out_dialog)
 pub extern "C" fn proton_window_begin_confirm_dialog_ffi(
-  window : Int64,
+  window : WindowHandle,
   title : Bytes,
   title_len : Int,
   message : Bytes,
@@ -395,7 +432,7 @@ pub extern "C" fn proton_window_begin_confirm_dialog_ffi(
 ///|
 #borrow(title, path, out_dialog)
 pub extern "C" fn proton_window_begin_open_file_dialog_ffi(
-  window : Int64,
+  window : WindowHandle,
   title : Bytes,
   title_len : Int,
   path : Bytes,
@@ -406,7 +443,7 @@ pub extern "C" fn proton_window_begin_open_file_dialog_ffi(
 ///|
 #borrow(title, path, out_dialog)
 pub extern "C" fn proton_window_begin_save_file_dialog_ffi(
-  window : Int64,
+  window : WindowHandle,
   title : Bytes,
   title_len : Int,
   path : Bytes,
@@ -417,7 +454,7 @@ pub extern "C" fn proton_window_begin_save_file_dialog_ffi(
 ///|
 #borrow(title, path, out_dialog)
 pub extern "C" fn proton_window_begin_choose_directory_dialog_ffi(
-  window : Int64,
+  window : WindowHandle,
   title : Bytes,
   title_len : Int,
   path : Bytes,
@@ -428,7 +465,7 @@ pub extern "C" fn proton_window_begin_choose_directory_dialog_ffi(
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_window_poll_dialog_result_ffi(
-  window : Int64,
+  window : WindowHandle,
   dialog : Int64,
   buffer : FixedArray[Byte],
   buffer_len : Int,
@@ -445,17 +482,17 @@ pub extern "C" fn proton_last_error_message_ffi(
 ///|
 #borrow(config_json, out_view)
 pub extern "C" fn proton_view_create_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   config_json : Bytes,
-  out_view : Ref[Int64],
+  out_view : Ref[ViewHandle],
 ) -> Int = "proton_view_create_json"
 
 ///|
-pub extern "C" fn proton_view_destroy_ffi(view : Int64) -> Int = "proton_view_destroy"
+pub extern "C" fn proton_view_destroy_ffi(view : ViewHandle) -> Int = "proton_view_destroy"
 
 ///|
 pub extern "C" fn proton_view_set_bounds_ffi(
-  view : Int64,
+  view : ViewHandle,
   x : Int,
   y : Int,
   width : Int,
@@ -464,24 +501,27 @@ pub extern "C" fn proton_view_set_bounds_ffi(
 
 ///|
 pub extern "C" fn proton_view_set_visible_ffi(
-  view : Int64,
+  view : ViewHandle,
   visible : Int,
 ) -> Int = "proton_view_set_visible"
 
 ///|
 pub extern "C" fn proton_view_set_z_order_ffi(
-  view : Int64,
+  view : ViewHandle,
   z_order : Int,
 ) -> Int = "proton_view_set_z_order"
 
 ///|
 #borrow(url)
-pub extern "C" fn proton_view_load_url_ffi(view : Int64, url : Bytes) -> Int = "proton_view_load_url"
+pub extern "C" fn proton_view_load_url_ffi(
+  view : ViewHandle,
+  url : Bytes,
+) -> Int = "proton_view_load_url"
 
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_view_state_json_ffi(
-  view : Int64,
+  view : ViewHandle,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -490,19 +530,22 @@ pub extern "C" fn proton_view_state_json_ffi(
 ///|
 #borrow(html, base_url)
 pub extern "C" fn proton_view_load_html_ffi(
-  view : Int64,
+  view : ViewHandle,
   html : Bytes,
   base_url : Bytes,
 ) -> Int = "proton_view_load_html"
 
 ///|
 #borrow(script)
-pub extern "C" fn proton_view_eval_ffi(view : Int64, script : Bytes) -> Int = "proton_view_eval"
+pub extern "C" fn proton_view_eval_ffi(
+  view : ViewHandle,
+  script : Bytes,
+) -> Int = "proton_view_eval"
 
 ///|
 #borrow(command_json)
 pub extern "C" fn proton_view_browser_command_json_ffi(
-  view : Int64,
+  view : ViewHandle,
   command_json : Bytes,
 ) -> Int = "proton_view_browser_command_json"
 
@@ -517,7 +560,7 @@ pub extern "C" fn proton_screen_enumerate_json_ffi(
 ///|
 #borrow(url_utf8)
 pub extern "C" fn proton_window_cookie_begin_get_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   url_utf8 : Bytes,
   include_http_only : Int,
 ) -> Int = "proton_window_cookie_begin_get_json"
@@ -525,7 +568,7 @@ pub extern "C" fn proton_window_cookie_begin_get_json_ffi(
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_window_cookie_poll_get_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -534,35 +577,37 @@ pub extern "C" fn proton_window_cookie_poll_get_json_ffi(
 ///|
 #borrow(cookie_json)
 pub extern "C" fn proton_window_cookie_set_json_ffi(
-  window : Int64,
+  window : WindowHandle,
   cookie_json : Bytes,
 ) -> Int = "proton_window_cookie_set_json"
 
 ///|
 #borrow(url_utf8, name_utf8)
 pub extern "C" fn proton_window_cookie_delete_ffi(
-  window : Int64,
+  window : WindowHandle,
   url_utf8 : Bytes,
   name_utf8 : Bytes,
 ) -> Int = "proton_window_cookie_delete"
 
 ///|
-pub extern "C" fn proton_window_cookie_flush_ffi(window : Int64) -> Int = "proton_window_cookie_flush"
+pub extern "C" fn proton_window_cookie_flush_ffi(window : WindowHandle) -> Int = "proton_window_cookie_flush"
 
 ///|
-pub extern "C" fn proton_window_clear_cache_ffi(window : Int64) -> Int = "proton_window_clear_cache"
+pub extern "C" fn proton_window_clear_cache_ffi(window : WindowHandle) -> Int = "proton_window_clear_cache"
 
 ///|
 #borrow(out_image)
-pub extern "C" fn proton_image_create_empty_ffi(out_image : Ref[Int64]) -> Int = "proton_image_create_empty"
+pub extern "C" fn proton_image_create_empty_ffi(
+  out_image : Ref[ImageHandle],
+) -> Int = "proton_image_create_empty"
 
 ///|
-pub extern "C" fn proton_image_destroy_ffi(image : Int64) -> Int = "proton_image_destroy"
+pub extern "C" fn proton_image_destroy_ffi(image : ImageHandle) -> Int = "proton_image_destroy"
 
 ///|
 #borrow(data)
 pub extern "C" fn proton_image_add_png_ffi(
-  image : Int64,
+  image : ImageHandle,
   data : Bytes,
   data_len : Int,
   scale_factor : Double,
@@ -571,7 +616,7 @@ pub extern "C" fn proton_image_add_png_ffi(
 ///|
 #borrow(data)
 pub extern "C" fn proton_image_add_jpeg_ffi(
-  image : Int64,
+  image : ImageHandle,
   data : Bytes,
   data_len : Int,
   scale_factor : Double,
@@ -580,7 +625,7 @@ pub extern "C" fn proton_image_add_jpeg_ffi(
 ///|
 #borrow(data)
 pub extern "C" fn proton_image_add_bitmap_ffi(
-  image : Int64,
+  image : ImageHandle,
   data : Bytes,
   data_len : Int,
   width : Int,
@@ -589,12 +634,12 @@ pub extern "C" fn proton_image_add_bitmap_ffi(
 ) -> Int = "proton_image_add_bitmap"
 
 ///|
-pub extern "C" fn proton_image_is_empty_ffi(image : Int64) -> Int = "proton_image_is_empty"
+pub extern "C" fn proton_image_is_empty_ffi(image : ImageHandle) -> Int = "proton_image_is_empty"
 
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_image_get_size_json_ffi(
-  image : Int64,
+  image : ImageHandle,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -603,7 +648,7 @@ pub extern "C" fn proton_image_get_size_json_ffi(
 ///|
 #borrow(buffer, out_required_len, out_width, out_height)
 pub extern "C" fn proton_image_to_png_ffi(
-  image : Int64,
+  image : ImageHandle,
   scale_factor : Double,
   with_transparency : Int,
   buffer : FixedArray[Byte],
@@ -616,7 +661,7 @@ pub extern "C" fn proton_image_to_png_ffi(
 ///|
 #borrow(buffer, out_required_len, out_width, out_height)
 pub extern "C" fn proton_image_to_jpeg_ffi(
-  image : Int64,
+  image : ImageHandle,
   scale_factor : Double,
   quality : Int,
   buffer : FixedArray[Byte],
@@ -629,7 +674,7 @@ pub extern "C" fn proton_image_to_jpeg_ffi(
 ///|
 #borrow(buffer, out_required_len, out_width, out_height)
 pub extern "C" fn proton_image_to_bitmap_ffi(
-  image : Int64,
+  image : ImageHandle,
   scale_factor : Double,
   buffer : FixedArray[Byte],
   buffer_len : Int,

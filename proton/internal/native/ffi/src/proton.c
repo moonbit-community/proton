@@ -271,6 +271,22 @@ static void proton_runtime_sync_bridge_cancellations(
 
 int32_t proton_abi_version(void) { return PROTON_ABI_VERSION; }
 
+proton_runtime_handle_t proton_runtime_null(void) { return NULL; }
+
+proton_window_handle_t proton_window_null(void) { return NULL; }
+
+proton_view_handle_t proton_view_null(void) { return NULL; }
+
+proton_image_handle_t proton_image_null(void) { return NULL; }
+
+int64_t proton_window_logical_id(proton_window_handle_t window) {
+  return window != NULL ? window->logical_id : 0;
+}
+
+int64_t proton_view_logical_id(proton_view_handle_t view) {
+  return view != NULL ? view->logical_id : 0;
+}
+
 int32_t proton_runtime_info_json(char *buffer,
                                  int32_t buffer_len,
                                  int32_t *out_required_len) {
@@ -325,7 +341,7 @@ int32_t proton_app_instance_acquire(
 }
 
 int32_t proton_app_instance_attach_runtime(
-    proton_app_instance_id_t instance, proton_runtime_id_t runtime) {
+    proton_app_instance_id_t instance, proton_runtime_handle_t runtime) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
   if (status != PROTON_OK) {
@@ -400,7 +416,7 @@ int32_t proton_runtime_probe_json(const char *config_json) {
 }
 
 int32_t proton_runtime_create_json(const char *config_json,
-                                   proton_runtime_id_t *out_runtime) {
+                                   proton_runtime_handle_t *out_runtime) {
   if (out_runtime == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_runtime is required");
@@ -434,8 +450,7 @@ int32_t proton_runtime_create_json(const char *config_json,
     }
   }
 
-  status = proton_runtime_slot_create(engine_backed, engine_runtime,
-                                      out_runtime, NULL);
+  status = proton_runtime_slot_create(engine_runtime, out_runtime);
   if (status != PROTON_OK) {
     if (engine_runtime != NULL) {
       char engine_error[512] = {0};
@@ -448,7 +463,7 @@ int32_t proton_runtime_create_json(const char *config_json,
   return PROTON_OK;
 }
 
-int32_t proton_runtime_destroy(proton_runtime_id_t runtime) {
+int32_t proton_runtime_destroy(proton_runtime_handle_t runtime) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
   if (status == PROTON_ERR_DESTROYED) {
@@ -462,7 +477,7 @@ int32_t proton_runtime_destroy(proton_runtime_id_t runtime) {
     proton_app_instance_detach_runtime_impl(slot->app_instance);
     slot->app_instance = PROTON_INVALID_HANDLE;
   }
-  status = proton_destroy_windows_for_runtime(runtime);
+  status = proton_destroy_windows_for_runtime(slot);
   if (status != PROTON_OK) {
     return status;
   }
@@ -480,7 +495,7 @@ int32_t proton_runtime_destroy(proton_runtime_id_t runtime) {
   return PROTON_OK;
 }
 
-int32_t proton_runtime_do_message_loop_work(proton_runtime_id_t runtime) {
+int32_t proton_runtime_do_message_loop_work(proton_runtime_handle_t runtime) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
   if (status != PROTON_OK) {
@@ -502,7 +517,7 @@ int32_t proton_runtime_do_message_loop_work(proton_runtime_id_t runtime) {
   return PROTON_OK;
 }
 
-int32_t proton_runtime_wait(proton_runtime_id_t runtime,
+int32_t proton_runtime_wait(proton_runtime_handle_t runtime,
                             uint32_t interest_mask,
                             int32_t timeout_ms,
                             uint32_t *out_ready_mask) {
@@ -539,7 +554,7 @@ int32_t proton_runtime_wait(proton_runtime_id_t runtime,
   }
   uint32_t ready_mask = PROTON_WAIT_NONE;
   if ((interest_mask & PROTON_WAIT_EVENT) != 0) {
-    proton_runtime_sync_engine_closed_windows(runtime, slot);
+    proton_runtime_sync_engine_closed_windows(slot);
     proton_runtime_sync_bridge_cancellations(slot);
     proton_runtime_sync_menu_commands(slot);
     if (proton_runtime_has_events(slot)) {
@@ -632,7 +647,7 @@ void proton_runtime_signal_wakeup(void) {
   proton_engine_runtime_signal_external_event(NULL);
 }
 
-int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
+int32_t proton_runtime_set_wakeup_fd(proton_runtime_handle_t runtime,
                                      int32_t wakeup_fd) {
   if (wakeup_fd < -1) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -658,7 +673,7 @@ int32_t proton_runtime_set_wakeup_fd(proton_runtime_id_t runtime,
 }
 
 int32_t proton_runtime_prepare_wakeup_source(
-    proton_runtime_id_t runtime, char *buffer, int32_t buffer_len,
+    proton_runtime_handle_t runtime, char *buffer, int32_t buffer_len,
     int32_t *out_required_len) {
   if (out_required_len == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -682,7 +697,7 @@ int32_t proton_runtime_prepare_wakeup_source(
 }
 
 int32_t
-proton_runtime_activate_wakeup_source(proton_runtime_id_t runtime) {
+proton_runtime_activate_wakeup_source(proton_runtime_handle_t runtime) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
   if (status != PROTON_OK) {
@@ -698,7 +713,7 @@ proton_runtime_activate_wakeup_source(proton_runtime_id_t runtime) {
   return proton_set_engine_status(status, engine_error);
 }
 
-int32_t proton_runtime_next_wakeup_delay_ms(proton_runtime_id_t runtime,
+int32_t proton_runtime_next_wakeup_delay_ms(proton_runtime_handle_t runtime,
                                             int64_t *out_delay_ms) {
   if (out_delay_ms == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -724,7 +739,7 @@ int32_t proton_runtime_next_wakeup_delay_ms(proton_runtime_id_t runtime,
   return proton_set_engine_status(status, engine_error);
 }
 
-int32_t proton_runtime_set_menu_json(proton_runtime_id_t runtime,
+int32_t proton_runtime_set_menu_json(proton_runtime_handle_t runtime,
                                      const char *menu_json) {
   int32_t status = proton_config_validate_menu(menu_json);
   if (status != PROTON_OK) {
@@ -754,7 +769,7 @@ int32_t proton_runtime_set_menu_json(proton_runtime_id_t runtime,
   return PROTON_OK;
 }
 
-int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
+int32_t proton_runtime_poll_event_json(proton_runtime_handle_t runtime,
                                        char *buffer, int32_t buffer_len,
                                        int32_t *out_required_len) {
   proton_runtime_slot_t *slot = NULL;
@@ -766,26 +781,26 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_required_len is required");
   }
-  proton_runtime_sync_engine_closed_windows(runtime, slot);
+  proton_runtime_sync_engine_closed_windows(slot);
   if (!proton_runtime_has_events(slot)) {
-    status = proton_runtime_sync_engine_browser_events(runtime, slot);
+    status = proton_runtime_sync_engine_browser_events(slot);
     if (status != PROTON_OK) {
       return status;
     }
-    status = proton_runtime_sync_engine_view_events(runtime, slot);
+    status = proton_runtime_sync_engine_view_events(slot);
     if (status != PROTON_OK) {
       return status;
     }
-    status = proton_runtime_sync_engine_window_states(runtime, slot);
+    status = proton_runtime_sync_engine_window_states(slot);
     if (status != PROTON_OK) {
       return status;
     }
-    status = proton_runtime_sync_engine_close_requests(runtime, slot);
+    status = proton_runtime_sync_engine_close_requests(slot);
     if (status != PROTON_OK) {
       return status;
     }
   }
-  proton_runtime_sync_engine_bridge_lifecycle(runtime, slot);
+  proton_runtime_sync_engine_bridge_lifecycle(slot);
   proton_runtime_sync_bridge_cancellations(slot);
   proton_runtime_sync_menu_commands(slot);
   proton_runtime_sync_platform_events(slot);
@@ -818,7 +833,7 @@ int32_t proton_runtime_poll_event_json(proton_runtime_id_t runtime,
   return status;
 }
 
-int32_t proton_runtime_poll_bridge_request_json(proton_runtime_id_t runtime,
+int32_t proton_runtime_poll_bridge_request_json(proton_runtime_handle_t runtime,
                                                 char *buffer,
                                                 int32_t buffer_len,
                                                 int32_t *out_required_len) {
@@ -851,7 +866,7 @@ int32_t proton_runtime_poll_bridge_request_json(proton_runtime_id_t runtime,
 }
 
 int32_t proton_runtime_respond_bridge_request_json(
-    proton_runtime_id_t runtime,
+    proton_runtime_handle_t runtime,
     const char *response_json) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
@@ -876,9 +891,9 @@ int32_t proton_runtime_respond_bridge_request_json(
   return PROTON_OK;
 }
 
-int32_t proton_window_create_json(proton_runtime_id_t runtime,
+int32_t proton_window_create_json(proton_runtime_handle_t runtime,
                                   const char *config_json,
-                                  proton_window_id_t *out_window) {
+                                  proton_window_handle_t *out_window) {
   proton_runtime_slot_t *runtime_slot = NULL;
   int32_t status = proton_get_runtime(runtime, &runtime_slot);
   if (status != PROTON_OK) {
@@ -911,8 +926,8 @@ int32_t proton_window_create_json(proton_runtime_id_t runtime,
     }
   }
 
-  status = proton_window_slot_create(runtime_slot, runtime, engine_window,
-                                    width, height, out_window, NULL);
+  status = proton_window_slot_create(runtime_slot, engine_window, width,
+                                    height, out_window);
   if (status != PROTON_OK) {
     if (engine_window != NULL) {
       char engine_error[512] = {0};
@@ -922,13 +937,14 @@ int32_t proton_window_create_json(proton_runtime_id_t runtime,
     return status;
   }
   if (engine_window != NULL) {
-    proton_engine_window_bind_public_id(engine_window, *out_window);
+    proton_engine_window_bind_public_id(engine_window,
+                                        (*out_window)->logical_id);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
 
-int32_t proton_window_destroy(proton_window_id_t window) {
+int32_t proton_window_destroy(proton_window_handle_t window) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status == PROTON_ERR_DESTROYED) {
@@ -948,7 +964,7 @@ int32_t proton_window_destroy(proton_window_id_t window) {
     return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                             "failed to queue window_closed event");
   }
-  proton_destroy_views_for_window(window);
+  proton_destroy_views_for_window(slot);
   if (slot->engine_window != NULL) {
     proton_engine_window_cookie_cleanup(slot->engine_window);
     char engine_error[512] = {0};
@@ -959,7 +975,7 @@ int32_t proton_window_destroy(proton_window_id_t window) {
     }
     slot->engine_window = NULL;
   }
-  status = proton_window_enqueue_closed_once(runtime, slot, window);
+  status = proton_window_enqueue_closed_once(runtime, slot);
   if (status != PROTON_OK) {
     return status;
   }
@@ -968,7 +984,7 @@ int32_t proton_window_destroy(proton_window_id_t window) {
   return PROTON_OK;
 }
 
-int32_t proton_window_show(proton_window_id_t window) {
+int32_t proton_window_show(proton_window_handle_t window) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -987,7 +1003,7 @@ int32_t proton_window_show(proton_window_id_t window) {
   return PROTON_OK;
 }
 
-int32_t proton_window_hide(proton_window_id_t window) {
+int32_t proton_window_hide(proton_window_handle_t window) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -1006,7 +1022,7 @@ int32_t proton_window_hide(proton_window_id_t window) {
   return PROTON_OK;
 }
 
-int32_t proton_window_close(proton_window_id_t window) {
+int32_t proton_window_close(proton_window_handle_t window) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status == PROTON_ERR_DESTROYED) {
@@ -1028,7 +1044,7 @@ int32_t proton_window_close(proton_window_id_t window) {
     if (status != PROTON_OK) {
       return status;
     }
-    status = proton_window_enqueue_closed_once(runtime, slot, window);
+    status = proton_window_enqueue_closed_once(runtime, slot);
     if (status != PROTON_OK) {
       return status;
     }
@@ -1038,7 +1054,7 @@ int32_t proton_window_close(proton_window_id_t window) {
   return PROTON_OK;
 }
 
-int32_t proton_window_focus(proton_window_id_t window) {
+int32_t proton_window_focus(proton_window_handle_t window) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -1056,7 +1072,7 @@ int32_t proton_window_focus(proton_window_id_t window) {
   return PROTON_OK;
 }
 
-int32_t proton_window_set_title(proton_window_id_t window, const char *title) {
+int32_t proton_window_set_title(proton_window_handle_t window, const char *title) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -1078,7 +1094,7 @@ int32_t proton_window_set_title(proton_window_id_t window, const char *title) {
   return PROTON_OK;
 }
 
-int32_t proton_window_set_size(proton_window_id_t window, int32_t width,
+int32_t proton_window_set_size(proton_window_handle_t window, int32_t width,
                                int32_t height) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -1105,7 +1121,7 @@ int32_t proton_window_set_size(proton_window_id_t window, int32_t width,
 }
 
 static int32_t
-proton_window_apply_action(proton_window_id_t window,
+proton_window_apply_action(proton_window_handle_t window,
                            const proton_engine_window_action_t *action) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -1126,28 +1142,28 @@ proton_window_apply_action(proton_window_id_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_minimize(proton_window_id_t window) {
+int32_t proton_window_minimize(proton_window_handle_t window) {
   const proton_engine_window_action_t action = {
       .kind = PROTON_ENGINE_WINDOW_MINIMIZE,
   };
   return proton_window_apply_action(window, &action);
 }
 
-int32_t proton_window_maximize(proton_window_id_t window) {
+int32_t proton_window_maximize(proton_window_handle_t window) {
   const proton_engine_window_action_t action = {
       .kind = PROTON_ENGINE_WINDOW_MAXIMIZE,
   };
   return proton_window_apply_action(window, &action);
 }
 
-int32_t proton_window_restore(proton_window_id_t window) {
+int32_t proton_window_restore(proton_window_handle_t window) {
   const proton_engine_window_action_t action = {
       .kind = PROTON_ENGINE_WINDOW_RESTORE,
   };
   return proton_window_apply_action(window, &action);
 }
 
-int32_t proton_window_set_fullscreen(proton_window_id_t window,
+int32_t proton_window_set_fullscreen(proton_window_handle_t window,
                                      int32_t fullscreen) {
   if (fullscreen != 0 && fullscreen != 1) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -1160,7 +1176,7 @@ int32_t proton_window_set_fullscreen(proton_window_id_t window,
   return proton_window_apply_action(window, &action);
 }
 
-int32_t proton_window_set_position(proton_window_id_t window,
+int32_t proton_window_set_position(proton_window_handle_t window,
                                    int32_t x,
                                    int32_t y) {
   const proton_engine_window_action_t action = {
@@ -1171,7 +1187,7 @@ int32_t proton_window_set_position(proton_window_id_t window,
   return proton_window_apply_action(window, &action);
 }
 
-int32_t proton_window_set_always_on_top(proton_window_id_t window,
+int32_t proton_window_set_always_on_top(proton_window_handle_t window,
                                         int32_t always_on_top) {
   if (always_on_top != 0 && always_on_top != 1) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -1184,7 +1200,7 @@ int32_t proton_window_set_always_on_top(proton_window_id_t window,
   return proton_window_apply_action(window, &action);
 }
 
-int32_t proton_window_set_zoom_percent(proton_window_id_t window,
+int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                        int32_t zoom_percent) {
   if (zoom_percent < 25 || zoom_percent > 500) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -1197,7 +1213,7 @@ int32_t proton_window_set_zoom_percent(proton_window_id_t window,
   return proton_window_apply_action(window, &action);
 }
 
-int32_t proton_window_state_json(proton_window_id_t window,
+int32_t proton_window_state_json(proton_window_handle_t window,
                                  char *buffer,
                                  int32_t buffer_len,
                                  int32_t *out_required_len) {
@@ -1278,7 +1294,7 @@ int32_t proton_screen_enumerate_json(char *buffer,
   return PROTON_OK;
 }
 
-int32_t proton_window_set_close_interception(proton_window_id_t window,
+int32_t proton_window_set_close_interception(proton_window_handle_t window,
                                              int32_t enabled) {
   if (enabled != 0 && enabled != 1) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -1306,7 +1322,7 @@ int32_t proton_window_set_close_interception(proton_window_id_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_respond_close_request(proton_window_id_t window,
+int32_t proton_window_respond_close_request(proton_window_handle_t window,
                                             int64_t request_id,
                                             int32_t allow) {
   if (request_id <= 0) {
@@ -1337,7 +1353,7 @@ int32_t proton_window_respond_close_request(proton_window_id_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_load_url(proton_window_id_t window, const char *url) {
+int32_t proton_window_load_url(proton_window_handle_t window, const char *url) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -1359,7 +1375,7 @@ int32_t proton_window_load_url(proton_window_id_t window, const char *url) {
   return PROTON_OK;
 }
 
-int32_t proton_window_load_html(proton_window_id_t window, const char *html,
+int32_t proton_window_load_html(proton_window_handle_t window, const char *html,
                                 const char *base_url) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -1383,7 +1399,7 @@ int32_t proton_window_load_html(proton_window_id_t window, const char *html,
   return PROTON_OK;
 }
 
-int32_t proton_window_load_asset(proton_window_id_t window, const char *html,
+int32_t proton_window_load_asset(proton_window_handle_t window, const char *html,
                                  const char *document_url,
                                  const char *asset_root) {
   proton_window_slot_t *slot = NULL;
@@ -1412,7 +1428,7 @@ int32_t proton_window_load_asset(proton_window_id_t window, const char *html,
 
 
 
-int32_t proton_window_eval(proton_window_id_t window, const char *script) {
+int32_t proton_window_eval(proton_window_handle_t window, const char *script) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -1434,7 +1450,7 @@ int32_t proton_window_eval(proton_window_id_t window, const char *script) {
   return PROTON_OK;
 }
 
-int32_t proton_window_browser_command_json(proton_window_id_t window,
+int32_t proton_window_browser_command_json(proton_window_handle_t window,
                                            const char *command_json) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -1460,7 +1476,7 @@ int32_t proton_window_browser_command_json(proton_window_id_t window,
 }
 
 int32_t proton_window_respond_browser_request_json(
-    proton_window_id_t window, const char *response_json) {
+    proton_window_handle_t window, const char *response_json) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -1484,7 +1500,7 @@ int32_t proton_window_respond_browser_request_json(
   return PROTON_OK;
 }
 
-int32_t proton_window_emit_bridge_event_json(proton_window_id_t window,
+int32_t proton_window_emit_bridge_event_json(proton_window_handle_t window,
                                               const char *event_json) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -1507,7 +1523,7 @@ int32_t proton_window_emit_bridge_event_json(proton_window_id_t window,
   return PROTON_OK;
 }
 
-static int32_t proton_require_dialog_window(proton_window_id_t window,
+static int32_t proton_require_dialog_window(proton_window_handle_t window,
                                             proton_window_slot_t **out_slot) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -1591,7 +1607,7 @@ static int32_t proton_validate_poll_dialog_result_args(
 }
 
 static int32_t proton_window_bridge_json(
-    proton_window_id_t window, char *buffer, int32_t buffer_len,
+    proton_window_handle_t window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len,
     int32_t (*query)(proton_engine_window_t *, char *, int32_t, int32_t *,
                      char *, size_t)) {
@@ -1623,7 +1639,7 @@ static int32_t proton_window_bridge_json(
   return status;
 }
 
-int32_t proton_window_bridge_state_json(proton_window_id_t window,
+int32_t proton_window_bridge_state_json(proton_window_handle_t window,
                                         char *buffer, int32_t buffer_len,
                                         int32_t *out_required_len) {
   return proton_window_bridge_json(window, buffer, buffer_len,
@@ -1632,7 +1648,7 @@ int32_t proton_window_bridge_state_json(proton_window_id_t window,
 }
 
 int32_t proton_window_take_bridge_failure_json(
-    proton_window_id_t window, char *buffer, int32_t buffer_len,
+    proton_window_handle_t window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len) {
   return proton_window_bridge_json(
       window, buffer, buffer_len, out_required_len,
@@ -1640,7 +1656,7 @@ int32_t proton_window_take_bridge_failure_json(
 }
 
 int32_t proton_runtime_begin_message_dialog(
-    proton_runtime_id_t runtime, const char *title_utf8, int32_t title_len,
+    proton_runtime_handle_t runtime, const char *title_utf8, int32_t title_len,
     const char *message_utf8, int32_t message_len, int32_t level,
     int64_t *out_dialog) {
   int32_t status = proton_validate_begin_dialog(out_dialog);
@@ -1673,7 +1689,7 @@ int32_t proton_runtime_begin_message_dialog(
 }
 
 int32_t proton_runtime_poll_dialog_result(
-    proton_runtime_id_t runtime, int64_t dialog, char *buffer,
+    proton_runtime_handle_t runtime, int64_t dialog, char *buffer,
     int32_t buffer_len, int32_t *out_required_len) {
   int32_t status = proton_validate_poll_dialog_result_args(
       dialog, buffer, buffer_len, out_required_len);
@@ -1760,7 +1776,7 @@ int32_t proton_notification_cleanup(void) {
 }
 
 int32_t proton_window_begin_message_dialog(
-    proton_window_id_t window,
+    proton_window_handle_t window,
     const char *title_utf8,
     int32_t title_len,
     const char *message_utf8,
@@ -1793,7 +1809,7 @@ int32_t proton_window_begin_message_dialog(
 }
 
 int32_t proton_window_begin_confirm_dialog(
-    proton_window_id_t window,
+    proton_window_handle_t window,
     const char *title_utf8,
     int32_t title_len,
     const char *message_utf8,
@@ -1826,7 +1842,7 @@ int32_t proton_window_begin_confirm_dialog(
 }
 
 int32_t proton_window_begin_open_file_dialog(
-    proton_window_id_t window,
+    proton_window_handle_t window,
     const char *title_utf8,
     int32_t title_len,
     const char *path_utf8,
@@ -1861,7 +1877,7 @@ int32_t proton_window_begin_open_file_dialog(
 }
 
 int32_t proton_window_begin_save_file_dialog(
-    proton_window_id_t window,
+    proton_window_handle_t window,
     const char *title_utf8,
     int32_t title_len,
     const char *path_utf8,
@@ -1896,7 +1912,7 @@ int32_t proton_window_begin_save_file_dialog(
 }
 
 int32_t proton_window_begin_choose_directory_dialog(
-    proton_window_id_t window,
+    proton_window_handle_t window,
     const char *title_utf8,
     int32_t title_len,
     const char *path_utf8,
@@ -1931,7 +1947,7 @@ int32_t proton_window_begin_choose_directory_dialog(
 }
 
 int32_t proton_window_poll_dialog_result(
-    proton_window_id_t window,
+    proton_window_handle_t window,
     int64_t dialog,
     char *buffer,
     int32_t buffer_len,
@@ -1957,7 +1973,7 @@ int32_t proton_window_poll_dialog_result(
   return status;
 }
 
-int32_t proton_window_cookie_begin_get_json(proton_window_id_t window,
+int32_t proton_window_cookie_begin_get_json(proton_window_handle_t window,
                                             const char *url_utf8,
                                             int32_t include_http_only) {
   proton_window_slot_t *slot = NULL;
@@ -1980,7 +1996,7 @@ int32_t proton_window_cookie_begin_get_json(proton_window_id_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_cookie_poll_get_json(proton_window_id_t window,
+int32_t proton_window_cookie_poll_get_json(proton_window_handle_t window,
                                            char *buffer,
                                            int32_t buffer_len,
                                            int32_t *out_required_len) {
@@ -2010,7 +2026,7 @@ int32_t proton_window_cookie_poll_get_json(proton_window_id_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_cookie_set_json(proton_window_id_t window,
+int32_t proton_window_cookie_set_json(proton_window_handle_t window,
                                       const char *cookie_json) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -2036,7 +2052,7 @@ int32_t proton_window_cookie_set_json(proton_window_id_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_cookie_delete(proton_window_id_t window,
+int32_t proton_window_cookie_delete(proton_window_handle_t window,
                                     const char *url_utf8,
                                     const char *name_utf8) {
   proton_window_slot_t *slot = NULL;
@@ -2059,7 +2075,7 @@ int32_t proton_window_cookie_delete(proton_window_id_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_cookie_flush(proton_window_id_t window) {
+int32_t proton_window_cookie_flush(proton_window_handle_t window) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -2079,7 +2095,7 @@ int32_t proton_window_cookie_flush(proton_window_id_t window) {
   return PROTON_OK;
 }
 
-int32_t proton_window_clear_cache(proton_window_id_t window) {
+int32_t proton_window_clear_cache(proton_window_handle_t window) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -2099,9 +2115,9 @@ int32_t proton_window_clear_cache(proton_window_id_t window) {
   return PROTON_OK;
 }
 
-int32_t proton_view_create_json(proton_window_id_t window,
+int32_t proton_view_create_json(proton_window_handle_t window,
                                 const char *config_json,
-                                proton_view_id_t *out_view) {
+                                proton_view_handle_t *out_view) {
   proton_window_slot_t *window_slot = NULL;
   int32_t status = proton_get_window(window, &window_slot);
   if (status != PROTON_OK) {
@@ -2139,9 +2155,8 @@ int32_t proton_view_create_json(proton_window_id_t window,
   }
 
   status = proton_view_slot_create(
-      window_slot->runtime, window, engine_view, values.x,
-      values.y, values.width, values.height, values.z_order,
-      values.visible != 0, out_view, NULL);
+      window_slot, engine_view, values.x, values.y, values.width,
+      values.height, values.z_order, values.visible != 0, out_view);
   if (status != PROTON_OK) {
     if (engine_view != NULL) {
       char engine_error[512] = {0};
@@ -2151,13 +2166,13 @@ int32_t proton_view_create_json(proton_window_id_t window,
     return status;
   }
   if (engine_view != NULL) {
-    proton_engine_view_bind_public_id(engine_view, *out_view);
+    proton_engine_view_bind_public_id(engine_view, (*out_view)->logical_id);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
 
-int32_t proton_view_destroy(proton_view_id_t view) {
+int32_t proton_view_destroy(proton_view_handle_t view) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
   if (status == PROTON_ERR_DESTROYED) {
@@ -2179,7 +2194,7 @@ int32_t proton_view_destroy(proton_view_id_t view) {
   return PROTON_OK;
 }
 
-int32_t proton_view_set_bounds(proton_view_id_t view, int32_t x, int32_t y,
+int32_t proton_view_set_bounds(proton_view_handle_t view, int32_t x, int32_t y,
                                int32_t width, int32_t height) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
@@ -2207,7 +2222,7 @@ int32_t proton_view_set_bounds(proton_view_id_t view, int32_t x, int32_t y,
   return PROTON_OK;
 }
 
-int32_t proton_view_set_visible(proton_view_id_t view, int32_t visible) {
+int32_t proton_view_set_visible(proton_view_handle_t view, int32_t visible) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
   if (status != PROTON_OK) {
@@ -2227,7 +2242,7 @@ int32_t proton_view_set_visible(proton_view_id_t view, int32_t visible) {
   return PROTON_OK;
 }
 
-int32_t proton_view_set_z_order(proton_view_id_t view, int32_t z_order) {
+int32_t proton_view_set_z_order(proton_view_handle_t view, int32_t z_order) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
   if (status != PROTON_OK) {
@@ -2247,7 +2262,7 @@ int32_t proton_view_set_z_order(proton_view_id_t view, int32_t z_order) {
   return PROTON_OK;
 }
 
-int32_t proton_view_load_url(proton_view_id_t view, const char *url) {
+int32_t proton_view_load_url(proton_view_handle_t view, const char *url) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
   if (status != PROTON_OK) {
@@ -2268,7 +2283,7 @@ int32_t proton_view_load_url(proton_view_id_t view, const char *url) {
   return PROTON_OK;
 }
 
-int32_t proton_view_load_html(proton_view_id_t view, const char *html,
+int32_t proton_view_load_html(proton_view_handle_t view, const char *html,
                               const char *base_url) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
@@ -2291,7 +2306,7 @@ int32_t proton_view_load_html(proton_view_id_t view, const char *html,
   return PROTON_OK;
 }
 
-int32_t proton_view_eval(proton_view_id_t view, const char *script) {
+int32_t proton_view_eval(proton_view_handle_t view, const char *script) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
   if (status != PROTON_OK) {
@@ -2312,7 +2327,7 @@ int32_t proton_view_eval(proton_view_id_t view, const char *script) {
   return PROTON_OK;
 }
 
-int32_t proton_view_browser_command_json(proton_view_id_t view,
+int32_t proton_view_browser_command_json(proton_view_handle_t view,
                                          const char *command_json) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
@@ -2337,7 +2352,7 @@ int32_t proton_view_browser_command_json(proton_view_id_t view,
   return PROTON_OK;
 }
 
-int32_t proton_view_state_json(proton_view_id_t view, char *buffer,
+int32_t proton_view_state_json(proton_view_handle_t view, char *buffer,
                                int32_t buffer_len,
                                int32_t *out_required_len) {
   if (out_required_len == NULL) {
@@ -2374,7 +2389,7 @@ int32_t proton_view_state_json(proton_view_id_t view, char *buffer,
 /* Native image ABI                                                   */
 /* ------------------------------------------------------------------ */
 
-int32_t proton_image_create_empty(proton_image_id_t *out_image) {
+int32_t proton_image_create_empty(proton_image_handle_t *out_image) {
   if (out_image == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_image is required");
@@ -2387,8 +2402,8 @@ int32_t proton_image_create_empty(proton_image_id_t *out_image) {
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
-  proton_image_id_t handle = PROTON_INVALID_HANDLE;
-  status = proton_image_slot_create(engine_image, &handle, NULL);
+  proton_image_handle_t handle = PROTON_INVALID_HANDLE;
+  status = proton_image_slot_create(engine_image, &handle);
   if (status != PROTON_OK) {
     proton_engine_image_release(engine_image);
     return status;
@@ -2398,7 +2413,7 @@ int32_t proton_image_create_empty(proton_image_id_t *out_image) {
   return PROTON_OK;
 }
 
-int32_t proton_image_destroy(proton_image_id_t image) {
+int32_t proton_image_destroy(proton_image_handle_t image) {
   proton_image_slot_t *slot = NULL;
   int32_t status = proton_get_image(image, &slot);
   if (status != PROTON_OK) {
@@ -2412,7 +2427,7 @@ int32_t proton_image_destroy(proton_image_id_t image) {
   return PROTON_OK;
 }
 
-int32_t proton_image_add_png(proton_image_id_t image, const uint8_t *data,
+int32_t proton_image_add_png(proton_image_handle_t image, const uint8_t *data,
                              int32_t data_len, float scale_factor) {
   proton_image_slot_t *slot = NULL;
   int32_t status = proton_get_image(image, &slot);
@@ -2432,7 +2447,7 @@ int32_t proton_image_add_png(proton_image_id_t image, const uint8_t *data,
              : proton_set_engine_status(status, engine_error);
 }
 
-int32_t proton_image_add_jpeg(proton_image_id_t image, const uint8_t *data,
+int32_t proton_image_add_jpeg(proton_image_handle_t image, const uint8_t *data,
                               int32_t data_len, float scale_factor) {
   proton_image_slot_t *slot = NULL;
   int32_t status = proton_get_image(image, &slot);
@@ -2452,7 +2467,7 @@ int32_t proton_image_add_jpeg(proton_image_id_t image, const uint8_t *data,
              : proton_set_engine_status(status, engine_error);
 }
 
-int32_t proton_image_add_bitmap(proton_image_id_t image, const uint8_t *data,
+int32_t proton_image_add_bitmap(proton_image_handle_t image, const uint8_t *data,
                                 int32_t data_len, int32_t width,
                                 int32_t height, float scale_factor) {
   proton_image_slot_t *slot = NULL;
@@ -2478,7 +2493,7 @@ int32_t proton_image_add_bitmap(proton_image_id_t image, const uint8_t *data,
              : proton_set_engine_status(status, engine_error);
 }
 
-int32_t proton_image_is_empty(proton_image_id_t image) {
+int32_t proton_image_is_empty(proton_image_handle_t image) {
   proton_image_slot_t *slot = NULL;
   int32_t status = proton_get_image(image, &slot);
   if (status != PROTON_OK) {
@@ -2495,7 +2510,7 @@ int32_t proton_image_is_empty(proton_image_id_t image) {
   return empty ? 1 : 0;
 }
 
-int32_t proton_image_get_size_json(proton_image_id_t image, char *buffer,
+int32_t proton_image_get_size_json(proton_image_handle_t image, char *buffer,
                                    int32_t buffer_len,
                                    int32_t *out_required_len) {
   proton_image_slot_t *slot = NULL;
@@ -2530,7 +2545,7 @@ int32_t proton_image_get_size_json(proton_image_id_t image, char *buffer,
   return PROTON_OK;
 }
 
-int32_t proton_image_to_png(proton_image_id_t image, float scale_factor,
+int32_t proton_image_to_png(proton_image_handle_t image, float scale_factor,
                             int32_t with_transparency, uint8_t *buffer,
                             int32_t buffer_len, int32_t *out_required_len,
                             int32_t *out_width, int32_t *out_height) {
@@ -2563,7 +2578,7 @@ int32_t proton_image_to_png(proton_image_id_t image, float scale_factor,
              : proton_set_engine_status(status, engine_error);
 }
 
-int32_t proton_image_to_jpeg(proton_image_id_t image, float scale_factor,
+int32_t proton_image_to_jpeg(proton_image_handle_t image, float scale_factor,
                              int32_t quality, uint8_t *buffer,
                              int32_t buffer_len, int32_t *out_required_len,
                              int32_t *out_width, int32_t *out_height) {
@@ -2594,7 +2609,7 @@ int32_t proton_image_to_jpeg(proton_image_id_t image, float scale_factor,
              : proton_set_engine_status(status, engine_error);
 }
 
-int32_t proton_image_to_bitmap(proton_image_id_t image, float scale_factor,
+int32_t proton_image_to_bitmap(proton_image_handle_t image, float scale_factor,
                                uint8_t *buffer, int32_t buffer_len,
                                int32_t *out_required_len,
                                int32_t *out_width, int32_t *out_height) {

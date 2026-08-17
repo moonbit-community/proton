@@ -866,20 +866,32 @@ priv enum WindowLifecycleState {
 
 ///|
 struct Runtime {
-  mut handle : Int64
+  mut handle : @native_ffi.RuntimeHandle
   mut lifecycle : RuntimeLifecycleState
 }
 
 ///|
 struct Window {
-  mut handle : Int64
+  mut handle : @native_ffi.WindowHandle
+  id : Int64
   mut lifecycle : WindowLifecycleState
 }
 
 ///|
 struct WindowRef {
-  handle : Int64
-} derive(Debug, Eq)
+  handle : @native_ffi.WindowHandle
+  id : Int64
+}
+
+///|
+pub impl Eq for WindowRef with fn equal(self : WindowRef, other : WindowRef) -> Bool {
+  self.id == other.id
+}
+
+///|
+pub impl Debug for WindowRef with fn to_repr(self : WindowRef) -> Repr {
+  Repr::literal("WindowRef(\{self.id})")
+}
 
 ///|
 priv enum ImageLifecycleState {
@@ -889,7 +901,7 @@ priv enum ImageLifecycleState {
 
 ///|
 struct NativeImage {
-  mut handle : Int64
+  mut handle : @native_ffi.ImageHandle
   mut lifecycle : ImageLifecycleState
 }
 
@@ -1327,8 +1339,10 @@ pub fn MenuItem::definition(
 }
 
 ///|
-pub fn WindowRef::unsafe_from_handle(handle : Int64) -> WindowRef {
-  WindowRef::{ handle, }
+pub fn WindowRef::unsafe_from_handle(
+  handle : @native_ffi.WindowHandle,
+) -> WindowRef {
+  WindowRef::{ handle, id: @native_ffi.window_logical_id(handle) }
 }
 
 ///|
@@ -1701,15 +1715,27 @@ priv enum ViewLifecycleState {
 ///|
 /// An owned native web contents view hosted inside a window's content area.
 struct View {
-  mut handle : Int64
+  mut handle : @native_ffi.ViewHandle
+  id : Int64
   mut lifecycle : ViewLifecycleState
 }
 
 ///|
 /// A borrowed view handle for APIs that must not destroy the view.
 struct ViewRef {
-  handle : Int64
-} derive(Debug, Eq)
+  handle : @native_ffi.ViewHandle
+  id : Int64
+}
+
+///|
+pub impl Eq for ViewRef with fn equal(self : ViewRef, other : ViewRef) -> Bool {
+  self.id == other.id
+}
+
+///|
+pub impl Debug for ViewRef with fn to_repr(self : ViewRef) -> Repr {
+  Repr::literal("ViewRef(\{self.id})")
+}
 
 ///|
 pub extend ViewRef with Eq::{not_equal, equal}
@@ -1843,6 +1869,6 @@ pub fn web_contents_view_supported() -> Bool {
 }
 
 ///|
-pub fn ViewRef::unsafe_from_handle(handle : Int64) -> ViewRef {
-  ViewRef::{ handle, }
+pub fn ViewRef::unsafe_from_handle(handle : @native_ffi.ViewHandle) -> ViewRef {
+  ViewRef::{ handle, id: @native_ffi.view_logical_id(handle) }
 }

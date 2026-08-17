@@ -541,7 +541,7 @@ pub fn Runtime::new(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> Runtime raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
-  let out_runtime = Ref(proton_invalid_handle)
+  let out_runtime = Ref(@native_ffi.runtime_null())
   let status = @native_ffi.proton_runtime_create_json_ffi(
     @ffi.to_cstr(config.to_json_string()),
     out_runtime,
@@ -563,13 +563,15 @@ pub fn Runtime::destroy(self : Runtime) -> Unit raise NativeError {
   if status < 0 {
     raise native_error(status)
   } else {
-    self.handle = proton_invalid_handle
+    self.handle = @native_ffi.runtime_null()
     self.lifecycle = RuntimeDestroyed
   }
 }
 
 ///|
-fn Runtime::active_handle(self : Runtime) -> Int64 raise NativeError {
+fn Runtime::active_handle(
+  self : Runtime,
+) -> @native_ffi.RuntimeHandle raise NativeError {
   match self.lifecycle {
     RuntimeActive => self.handle
     RuntimeDestroying | RuntimeDestroyed =>
@@ -826,7 +828,7 @@ pub fn Window::new(
   config? : WindowConfig = WindowConfig::new(),
 ) -> Window raise NativeError {
   validate_window_config(config)
-  let out_window = Ref(proton_invalid_handle)
+  let out_window = Ref(@native_ffi.window_null())
   let status = @native_ffi.proton_window_create_json_ffi(
     runtime.active_handle(),
     @ffi.to_cstr(config.to_json_string()),
@@ -835,7 +837,11 @@ pub fn Window::new(
   if status < 0 {
     raise native_error(status)
   } else {
-    Window::{ handle: out_window.val, lifecycle: WindowLive }
+    Window::{
+      handle: out_window.val,
+      id: @native_ffi.window_logical_id(out_window.val),
+      lifecycle: WindowLive,
+    }
   }
 }
 
@@ -850,13 +856,15 @@ pub fn Window::destroy(self : Window) -> Unit raise NativeError {
   if status < 0 {
     raise native_error(status)
   } else {
-    self.handle = proton_invalid_handle
+    self.handle = @native_ffi.window_null()
     self.lifecycle = WindowDestroyed
   }
 }
 
 ///|
-fn Window::live_handle(self : Window) -> Int64 raise NativeError {
+fn Window::live_handle(
+  self : Window,
+) -> @native_ffi.WindowHandle raise NativeError {
   match self.lifecycle {
     WindowLive => self.handle
     WindowCloseRequested | WindowDestroying | WindowDestroyed =>
@@ -879,7 +887,7 @@ pub fn Window::as_ref(self : Window) -> WindowRef {
     match self.lifecycle {
       WindowLive => self.handle
       WindowCloseRequested | WindowDestroying | WindowDestroyed =>
-        proton_invalid_handle
+        @native_ffi.window_null()
     },
   )
 }
@@ -888,7 +896,7 @@ pub fn Window::as_ref(self : Window) -> WindowRef {
 /// Returns the stable native handle used to correlate runtime events.
 pub fn Window::id(self : Window) -> Int64 {
   match self.lifecycle {
-    WindowLive | WindowCloseRequested => self.handle
+    WindowLive | WindowCloseRequested => self.id
     WindowDestroying | WindowDestroyed => proton_invalid_handle
   }
 }
@@ -1192,7 +1200,7 @@ pub fn Window::emit_bridge_event_json(
 fn window_bridge_json(
   window : Window,
   context : String,
-  query : (Int64, FixedArray[Byte], Int, Ref[Int]) -> Int,
+  query : (@native_ffi.WindowHandle, FixedArray[Byte], Int, Ref[Int]) -> Int,
 ) -> String? raise NativeError {
   let handle = window.live_handle()
   read_native_text(context, PayloadBytesExcludingTerminator, (
@@ -1375,13 +1383,15 @@ pub fn Window::clear_cache(self : Window) -> Unit raise NativeError {
 ///
 /// Raises `UnsupportedNativeFeature` when the native engine is not available.
 pub fn NativeImage::create_empty() -> NativeImage raise NativeError {
-  let out_image = Ref(proton_invalid_handle)
+  let out_image = Ref(@native_ffi.image_null())
   check_status(@native_ffi.proton_image_create_empty_ffi(out_image))
   NativeImage::{ handle: out_image.val, lifecycle: ImageLive }
 }
 
 ///|
-fn NativeImage::live_handle(self : NativeImage) -> Int64 raise NativeError {
+fn NativeImage::live_handle(
+  self : NativeImage,
+) -> @native_ffi.ImageHandle raise NativeError {
   match self.lifecycle {
     ImageLive => self.handle
     ImageDestroyed =>
@@ -1401,7 +1411,7 @@ pub fn NativeImage::destroy(self : NativeImage) -> Unit raise NativeError {
     ImageLive => self.lifecycle = ImageDestroyed
   }
   let status = @native_ffi.proton_image_destroy_ffi(self.handle)
-  self.handle = proton_invalid_handle
+  self.handle = @native_ffi.image_null()
   check_status(status)
 }
 
@@ -1685,7 +1695,7 @@ fn WindowRef::begin_file_dialog(
   window : WindowRef,
   title : String?,
   path : String?,
-  callback : (Int64, Bytes, Int, Bytes, Int, Ref[Int64]) -> Int,
+  callback : (@native_ffi.WindowHandle, Bytes, Int, Bytes, Int, Ref[Int64]) -> Int,
 ) -> Int64 raise NativeError {
   let title_buffer = optional_dialog_text_buffer(title)
   let path_buffer = optional_dialog_text_buffer(path)
@@ -1779,7 +1789,7 @@ pub fn View::new(
   config : ViewConfig,
 ) -> View raise NativeError {
   validate_view_config(config)
-  let out_view = Ref(proton_invalid_handle)
+  let out_view = Ref(@native_ffi.view_null())
   let status = @native_ffi.proton_view_create_json_ffi(
     window.live_handle(),
     @ffi.to_cstr(config.to_json_string()),
@@ -1788,7 +1798,11 @@ pub fn View::new(
   if status < 0 {
     raise native_error(status)
   } else {
-    View::{ handle: out_view.val, lifecycle: ViewLive }
+    View::{
+      handle: out_view.val,
+      id: @native_ffi.view_logical_id(out_view.val),
+      lifecycle: ViewLive,
+    }
   }
 }
 
@@ -1802,13 +1816,13 @@ pub fn View::destroy(self : View) -> Unit raise NativeError {
   if status < 0 {
     raise native_error(status)
   } else {
-    self.handle = proton_invalid_handle
+    self.handle = @native_ffi.view_null()
     self.lifecycle = ViewDestroyed
   }
 }
 
 ///|
-fn View::live_handle(self : View) -> Int64 raise NativeError {
+fn View::live_handle(self : View) -> @native_ffi.ViewHandle raise NativeError {
   match self.lifecycle {
     ViewLive => self.handle
     ViewDestroying | ViewDestroyed =>
@@ -1822,7 +1836,7 @@ pub fn View::as_ref(self : View) -> ViewRef {
   ViewRef::unsafe_from_handle(
     match self.lifecycle {
       ViewLive => self.handle
-      ViewDestroying | ViewDestroyed => proton_invalid_handle
+      ViewDestroying | ViewDestroyed => @native_ffi.view_null()
     },
   )
 }
@@ -1831,7 +1845,7 @@ pub fn View::as_ref(self : View) -> ViewRef {
 /// Returns the stable native handle used to correlate native calls.
 pub fn View::id(self : View) -> Int64 {
   match self.lifecycle {
-    ViewLive => self.handle
+    ViewLive => self.id
     ViewDestroying | ViewDestroyed => proton_invalid_handle
   }
 }
