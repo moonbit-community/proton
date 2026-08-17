@@ -1,6 +1,5 @@
 ///|
 fn runtime_manifest_json(
-  proton_version~ : String,
   platform~ : String,
   cef_name~ : String,
   cef_root~ : String,
@@ -9,7 +8,6 @@ fn runtime_manifest_json(
   let fields : Map[String, Json] = {
     "schema_version": Json::number(1.0, repr="1"),
     "platform": platform,
-    "proton_version": proton_version,
     "cef_version": cef_name,
     "cef": cef_root,
     "dist": dist,
@@ -20,14 +18,12 @@ fn runtime_manifest_json(
 ///|
 async fn write_active_runtime_manifest(
   root~ : String,
-  proton_version~ : String,
   platform~ : String,
   cef_name~ : String,
   cef_root~ : String,
   runtime_dir~ : String,
 ) -> Unit raise CefFileSystemError {
   let manifest = runtime_manifest_json(
-    proton_version~,
     platform~,
     cef_name~,
     cef_root~,
@@ -55,7 +51,6 @@ async fn write_active_runtime_manifest(
 async fn validate_active_runtime_manifest(
   root~ : String,
   platform~ : String,
-  proton_version~ : String,
   cef_root~ : String,
   runtime_dir~ : String,
 ) -> Unit raise CefRuntimeError {
@@ -67,10 +62,6 @@ async fn validate_active_runtime_manifest(
   let actual_platform = json_string_field(json, "platform", manifest_path)
   if actual_platform != platform {
     raise ActivePlatformMismatch(expected=platform, actual=actual_platform)
-  }
-  let actual_version = json_string_field(json, "proton_version", manifest_path)
-  if actual_version != proton_version {
-    raise ActiveVersionMismatch(expected=proton_version, actual=actual_version)
   }
   let actual_cef = json_string_field(json, "cef", manifest_path)
   if actual_cef != cef_root {

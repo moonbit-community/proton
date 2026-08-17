@@ -36,7 +36,6 @@ pub(all) suberror CefFileSystemError {
   Copy(source~ : String, destination~ : String, detail~ : String)
   Write(path~ : String, detail~ : String)
   Remove(path~ : String, detail~ : String)
-  MakeExecutable(path~ : String, detail~ : String)
   InvalidSource(path~ : String)
 } derive(Debug, Eq)
 
@@ -75,15 +74,12 @@ pub extend CefDownloadError with Show::{to_string, output}
 pub(all) suberror CefRuntimeError {
   InvalidCefRoot(path~ : String, missing~ : Array[String])
   InvalidRuntime(path~ : String, missing~ : Array[String])
-  PrebuiltNotFound(platform~ : String, searched~ : Array[String])
   ManifestRead(path~ : String, detail~ : String)
   ManifestSyntax(path~ : String, detail~ : String)
   ManifestShape(path~ : String, detail~ : String)
   ManifestField(path~ : String, field~ : String)
   ManifestFieldValue(path~ : String, field~ : String, detail~ : String)
-  PrebuiltVersionMismatch(expected~ : String, actual~ : String)
   ActivePlatformMismatch(expected~ : String, actual~ : String)
-  ActiveVersionMismatch(expected~ : String, actual~ : String)
   ActiveDistMismatch(expected~ : String, actual~ : String)
   UnsafeGeneratedDirectory(path~ : String)
   UnsafeInstallDirectory(path~ : String)
@@ -128,8 +124,6 @@ pub fn CefFileSystemError::message(self : CefFileSystemError) -> String {
       "Failed to copy " + source + " to " + destination + ": " + detail
     Write(path~, detail~) => "Failed to write " + path + ": " + detail
     Remove(path~, detail~) => "Failed to remove " + path + ": " + detail
-    MakeExecutable(path~, detail~) =>
-      "Failed to make executable " + path + ": " + detail
     InvalidSource(path~) => "Source path is not a file or directory: " + path
   }
 }
@@ -168,13 +162,6 @@ pub fn CefRuntimeError::message(self : CefRuntimeError) -> String {
       "Invalid CEF root: " + path + "\nMissing:\n" + missing.join("\n")
     InvalidRuntime(path~, missing~) =>
       "Invalid Proton runtime: " + path + "\nMissing:\n" + missing.join("\n")
-    PrebuiltNotFound(platform~, searched~) =>
-      "Could not find Proton prebuilt artifacts for " +
-      platform +
-      ".\nSearched:\n" +
-      searched.map(path => "  - " + path).join("\n") +
-      "\nEnsure moonbit-community/proton is a resolved dependency" +
-      " (moon install / moon update), or run inside a Proton project."
     ManifestRead(path~, detail~) =>
       "Failed to read manifest " + path + ": " + detail
     ManifestSyntax(path~, detail~) =>
@@ -184,18 +171,8 @@ pub fn CefRuntimeError::message(self : CefRuntimeError) -> String {
       "Manifest " + path + " missing string field: " + field
     ManifestFieldValue(path~, field~, detail~) =>
       "Invalid manifest " + path + " field " + field + ": " + detail
-    PrebuiltVersionMismatch(expected~, actual~) =>
-      "Proton prebuilt version mismatch: expected " +
-      expected +
-      ", got " +
-      actual
     ActivePlatformMismatch(expected~, actual~) =>
       "Active runtime platform mismatch: expected " +
-      expected +
-      ", got " +
-      actual
-    ActiveVersionMismatch(expected~, actual~) =>
-      "Active runtime Proton version mismatch: expected " +
       expected +
       ", got " +
       actual

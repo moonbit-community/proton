@@ -37,24 +37,6 @@ async fn copy_file(src : String, dest : String) -> Unit {
 }
 
 ///|
-#cfg(not(platform="windows"))
-async fn make_executable(path : String) -> Unit {
-  @async_fs.chmod(path, 0o755) catch {
-    err =>
-      raise CefFileSystemError::MakeExecutable(
-        path~,
-        detail=@debug.render(Repr(err)),
-      )
-  }
-}
-
-///|
-#cfg(platform="windows")
-fn make_executable(_path : String) -> Unit {
-
-}
-
-///|
 async fn copy_file_if_exists(src : String, dest : String) -> Unit {
   guard @fsutil.path_exists(src) else { return }
   copy_file(src, dest)

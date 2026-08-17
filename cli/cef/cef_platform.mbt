@@ -151,18 +151,8 @@ fn unsupported_platform(id : String) -> ProtonPlatform {
 }
 
 ///|
-fn proton_runtime_id(
-  proton_version : String,
-  proton_source_hash : String,
-  cef_sha256 : String,
-) -> String {
-  let identity = proton_source_hash + "\n" + cef_sha256
-  let hasher = @crypto.SHA256::new()
-  hasher.update(@utf8.encode(identity))
-  "proton-" +
-  proton_version +
-  "-" +
-  @crypto.bytes_to_hex_string(hasher.finalize())
+fn cef_runtime_id(cef_sha256 : String) -> String {
+  "cef-" + cef_sha256
 }
 
 ///|
@@ -225,45 +215,19 @@ fn installed_cef_relative_files(platform : ProtonPlatform) -> Array[String] {
 }
 
 ///|
-fn proton_prebuilt_relative_files(platform : ProtonPlatform) -> Array[String] {
-  if platform.id == "win32-x64" {
-    ["bin\\proton.dll", "bin\\cef_process.exe", "lib\\proton.lib"]
-  } else if platform.id == "linux-x64" {
-    ["bin/cef_process", "lib/libproton.so", "include/proton_native.h"]
-  } else if platform.id == "darwin-arm64" {
-    ["bin/cef_process", "lib/libproton.dylib", "include/proton_native.h"]
-  } else {
-    []
-  }
-}
-
-///|
-/// Returns the Proton-only prebuilt artifact list for a stable platform id.
-pub fn proton_prebuilt_relative_files_for_platform(
-  platform_id : String,
-) -> Array[String] {
-  match platform_from_override(Some(platform_id)) {
-    Some(platform) => proton_prebuilt_relative_files(platform)
-    None => []
-  }
-}
-
-///|
 fn runtime_required_relative_files(platform : ProtonPlatform) -> Array[String] {
   if platform.id == "win32-x64" {
     [
-      "bin\\proton.dll", "bin\\cef_process.exe", "lib\\proton.lib", "bin\\libcef.dll",
-      "bin\\icudtl.dat", "Resources\\icudtl.dat", "Resources\\locales",
+      "bin\\libcef.dll", "bin\\icudtl.dat", "Resources\\icudtl.dat", "Resources\\locales",
     ]
   } else if platform.id == "linux-x64" {
     [
-      "bin/cef_process", "lib/libproton.so", "bin/libcef.so", "bin/icudtl.dat", "bin/v8_context_snapshot.bin",
-      "Resources/icudtl.dat", "Resources/locales",
+      "bin/libcef.so", "bin/icudtl.dat", "bin/v8_context_snapshot.bin", "Resources/icudtl.dat",
+      "Resources/locales",
     ]
   } else if platform.id == "darwin-arm64" {
     [
-      "bin/cef_process", "lib/libproton.dylib", "bin/libEGL.dylib", "bin/libGLESv2.dylib",
-      "bin/libvk_swiftshader.dylib", "Frameworks/Chromium Embedded Framework.framework/Chromium Embedded Framework",
+      "bin/libEGL.dylib", "bin/libGLESv2.dylib", "bin/libvk_swiftshader.dylib", "Frameworks/Chromium Embedded Framework.framework/Chromium Embedded Framework",
       "Frameworks/Chromium Embedded Framework.framework/Libraries/libcef_sandbox.dylib",
       "Resources/icudtl.dat",
     ]

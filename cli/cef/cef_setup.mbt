@@ -81,14 +81,10 @@ async fn setup(
   validate_cef_name(name)
   let sha256 = resolve_cef_archive_sha256(platform, name, url, requested_sha256)
   let root = project_root(cwd)
-  let prebuilt_root = find_prebuilt_root(root, platform)
-  let (proton_version, proton_source_hash) = prebuilt_manifest_identity(
-    prebuilt_root,
-  )
   let cef_cache = ensure_cef_cache(root~, platform~, name~, url~, sha256~)
   defer cef_cache.release()
   let cef_root = cef_cache.root
-  let runtime_id = proton_runtime_id(proton_version, proton_source_hash, sha256)
+  let runtime_id = cef_runtime_id(sha256)
   let global_cache_root = resolve_global_runtime_cache_root(
     project_root=root,
     configured_root=@env.get_env_var("PROTON_RUNTIME_CACHE"),
@@ -101,17 +97,10 @@ async fn setup(
     runtime_id,
   )
   validate_cef_root(cef_root, platform)
-  assemble_runtime(
-    cache_root~,
-    platform~,
-    cef_root~,
-    prebuilt_root~,
-    runtime_dir~,
-  )
+  assemble_runtime(cache_root~, platform~, cef_root~, runtime_dir~)
   ensure_dir(@fsutil.resolve_path(root, ".proton"))
   write_active_runtime_manifest(
     root~,
-    proton_version~,
     platform=platform.id,
     cef_name=name,
     cef_root~,
@@ -120,7 +109,6 @@ async fn setup(
   validate_active_runtime_manifest(
     root~,
     platform=platform.id,
-    proton_version~,
     cef_root~,
     runtime_dir~,
   )
