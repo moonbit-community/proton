@@ -629,57 +629,10 @@ static bool proton_engine_path_parent(char *path) {
   return path[0] != '\0';
 }
 
-static bool proton_engine_path_basename_equals(const char *path,
-                                               const char *name) {
-  if (path == NULL || name == NULL) {
-    return false;
-  }
-  const char *base = strrchr(path, '/');
-  base = base == NULL ? path : base + 1;
-  return strcmp(base, name) == 0;
-}
-
 static bool proton_engine_dir_exists(const char *path) {
   struct stat info;
   return path != NULL && path[0] != '\0' && stat(path, &info) == 0 &&
          S_ISDIR(info.st_mode);
-}
-
-static bool proton_engine_module_dir(char *out, size_t out_len) {
-  if (out == NULL || out_len == 0) {
-    return false;
-  }
-  Dl_info info;
-  if (dladdr((const void *)&proton_engine_module_dir, &info) == 0 ||
-      info.dli_fname == NULL || info.dli_fname[0] == '\0') {
-    return false;
-  }
-  int written = snprintf(out, out_len, "%s", info.dli_fname);
-  if (written < 0 || (size_t)written >= out_len) {
-    return false;
-  }
-  return proton_engine_path_parent(out);
-}
-
-static bool proton_engine_default_runtime_root(char *out, size_t out_len) {
-  // TODO: Resolve the bundled runtime root once in the public config layer and
-  // pass it into the engine, as is now done for helper discovery.
-  const char *env_root = getenv("PROTON_RUNTIME_ROOT");
-  if (env_root == NULL || env_root[0] == '\0') {
-    env_root = getenv("PROTON_NATIVE_DIST");
-  }
-  if (env_root != NULL && env_root[0] != '\0') {
-    int written = snprintf(out, out_len, "%s", env_root);
-    return written > 0 && (size_t)written < out_len;
-  }
-  if (!proton_engine_module_dir(out, out_len)) {
-    return false;
-  }
-  if (proton_engine_path_basename_equals(out, "bin") ||
-      proton_engine_path_basename_equals(out, "lib")) {
-    return proton_engine_path_parent(out);
-  }
-  return true;
 }
 
 static int proton_engine_load_cef_library(
@@ -2770,7 +2723,7 @@ static int32_t proton_engine_parse_runtime_config(
                                              config->runtime_root,
                                              sizeof(config->runtime_root)) &&
       !(use_bundled &&
-        proton_engine_default_runtime_root(config->runtime_root,
+        proton_config_default_runtime_root(config->runtime_root,
                                            sizeof(config->runtime_root)))) {
     proton_engine_set_message(error, error_len,
                               "runtime config requires runtime_root");
@@ -4167,6 +4120,12 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
       return PROTON_ERR_PLATFORM;
     }
     [window->window setReleasedWhenClosed:YES];
+    // Proton owns window restoration through its application manifest and
+    // runtime session. Letting AppKit persist the same windows creates a second
+    // lifecycle owner and can block startup on its crash-recovery UI before
+    // Proton has created a window of its own.
+    [window->window setRestorable:NO];
+    [window->window disableSnapshotRestoration];
     [window->window setTitle:title != nil ? title : @"Proton"];
     NSSize configured_size = NSMakeSize(config.width, config.height);
     if (config.size_hint == 2) {

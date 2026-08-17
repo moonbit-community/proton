@@ -52,12 +52,13 @@ native prebuilt, or compatibility package remains.
 - [ ] Replace config JSON parsing with MoonBit config validation and typed FFI.
 - [x] Replace the global integer handle registry with private external pointers.
 - [ ] Add explicit host, runtime, window, and view lifecycle state.
-- [ ] Keep all CEF and UI operations on the owner thread.
+- [x] Keep all CEF and UI operations on the owner thread.
+- [x] Isolate native callback allocations from MoonBit's thread-local allocator.
 - [ ] Translate private FFI failures into subsystem-specific MoonBit errors.
 
 ### 3. Events, Async Operations, and Shutdown
 
-- [ ] Preserve the existing MoonBit async external event loop integration.
+- [x] Preserve the existing MoonBit async external event loop integration.
 - [ ] Replace native callback entry with one C-owned completion/event queue.
 - [ ] Convert true asynchronous operations to request/completion/cancel.
 - [ ] Remove subsystem polling loops, fixed sleeps, and timeout fallbacks.
@@ -75,10 +76,10 @@ native prebuilt, or compatibility package remains.
 ### 5. CEF Process and CLI
 
 - [x] Add `proton/internal/cef_process` as a MoonBit executable.
-- [ ] Resolve helper source identity from the application's Proton dependency.
-- [ ] Build and cache helpers by Proton source, CEF version, and platform.
-- [ ] Update `cef setup`, `dev`, `build`, `package`, and `doctor`.
-- [ ] Package only the app executable, matching helper, and CEF runtime.
+- [x] Resolve helper source identity from the application's Proton dependency.
+- [x] Build the helper through the application's normal Moon build cache.
+- [ ] Update `doctor`; `cef setup`, `dev`, `build`, and `package` are complete.
+- [x] Package only the app executable, matching helper, and CEF runtime.
 
 ### 6. Remove the Dynamic-Library Product
 

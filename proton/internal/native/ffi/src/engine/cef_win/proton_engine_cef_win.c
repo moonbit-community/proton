@@ -1,6 +1,7 @@
 #if defined(_WIN32)
 
 #include "../../proton_engine.h"
+#include "../../proton_config.h"
 #include "../../proton_json.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -660,63 +661,6 @@ static bool proton_engine_path_parent(char *path) {
   }
   path[len - 1] = '\0';
   return path[0] != '\0';
-}
-
-static bool proton_engine_path_basename_equals(const char *path,
-                                               const char *name) {
-  if (path == NULL || name == NULL) {
-    return false;
-  }
-  const char *base = path;
-  for (const char *cursor = path; *cursor != '\0'; cursor++) {
-    if (*cursor == '/' || *cursor == '\\') {
-      base = cursor + 1;
-    }
-  }
-  return _stricmp(base, name) == 0;
-}
-
-static bool proton_engine_module_dir(char *out, size_t out_len) {
-  if (out == NULL || out_len == 0) {
-    return false;
-  }
-  HMODULE module = NULL;
-  if (!GetModuleHandleExW(
-          GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-              GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-          (LPCWSTR)&proton_engine_module_dir, &module)) {
-    return false;
-  }
-  wchar_t wide_path[4096] = {0};
-  DWORD wide_written = GetModuleFileNameW(
-      module, wide_path, (DWORD)(sizeof(wide_path) / sizeof(wide_path[0])));
-  if (wide_written == 0 ||
-      wide_written >= sizeof(wide_path) / sizeof(wide_path[0])) {
-    return false;
-  }
-  if (WideCharToMultiByte(CP_UTF8, 0, wide_path, -1, out, (int)out_len,
-                          NULL, NULL) <= 0) {
-    return false;
-  }
-  return proton_engine_path_parent(out);
-}
-
-static bool proton_engine_default_runtime_root(char *out, size_t out_len) {
-  if (!proton_engine_module_dir(out, out_len)) {
-    return false;
-  }
-  if (proton_engine_path_basename_equals(out, "bin")) {
-    return proton_engine_path_parent(out);
-  }
-  return true;
-}
-
-static bool proton_engine_default_helper_path(char *out, size_t out_len) {
-  char bin_dir[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
-  if (!proton_engine_module_dir(bin_dir, sizeof(bin_dir))) {
-    return false;
-  }
-  return proton_engine_join_path(out, out_len, bin_dir, "cef_process.exe");
 }
 
 #include "../cef_common/strings.h"
@@ -1936,7 +1880,7 @@ static int32_t proton_engine_parse_runtime_config(
                                              config->runtime_root,
                                              sizeof(config->runtime_root)) &&
       !(use_bundled &&
-        proton_engine_default_runtime_root(config->runtime_root,
+        proton_config_default_runtime_root(config->runtime_root,
                                            sizeof(config->runtime_root)))) {
     proton_engine_set_message(error, error_len,
                               "runtime config requires runtime_root");
@@ -1949,7 +1893,7 @@ static int32_t proton_engine_parse_runtime_config(
                                              config->helper_path,
                                              sizeof(config->helper_path)) &&
       !(use_bundled &&
-        proton_engine_default_helper_path(config->helper_path,
+        proton_config_default_helper_path(config->helper_path,
                                           sizeof(config->helper_path)))) {
     proton_engine_set_message(error, error_len,
                               "runtime config requires helper_path");

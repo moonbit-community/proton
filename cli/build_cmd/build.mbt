@@ -206,7 +206,6 @@ pub async fn build_executable(
   )
   ignore(
     build_cef_process(
-      invocation.workspace_root,
       invocation.backend_path,
       invocation.moon_target_dir?,
       release~,
@@ -226,7 +225,6 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
   )
   ignore(
     build_cef_process(
-      invocation.workspace_root,
       invocation.backend_path,
       invocation.moon_target_dir?,
       release=invocation.moon_args.contains("--release"),
@@ -236,7 +234,6 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
 
 ///|
 priv struct BuildInvocation {
-  workspace_root : String
   backend_path : String
   app_package : String
   moon_target_dir : String?
@@ -270,7 +267,6 @@ async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
     @fsutil.resolve_path(root, path)
   })
   BuildInvocation::{
-    workspace_root: root,
     backend_path,
     app_package,
     moon_target_dir,
@@ -327,11 +323,11 @@ fn cef_process_output_path(
 
 ///|
 pub async fn build_cef_process(
-  workspace_root : String,
   backend_path : String,
   moon_target_dir? : String,
   release? : Bool = false,
 ) -> String {
+  let workspace_root = @fsutil.find_workspace_root_from(backend_path)
   let source = resolve_proton_source(workspace_root, backend_path)
   let args : Array[String] = [
     "build",

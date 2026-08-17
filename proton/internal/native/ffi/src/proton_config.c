@@ -634,16 +634,49 @@ static bool proton_module_dir(char *out, size_t out_len) {
 #endif
 }
 
-static bool proton_default_runtime_root(char *out, size_t out_len) {
+bool proton_config_default_runtime_root(char *out, size_t out_len) {
   const char *env_root = getenv("PROTON_RUNTIME_ROOT");
-  if (env_root == NULL || env_root[0] == '\0') {
-    env_root = getenv("PROTON_NATIVE_DIST");
-  }
   if (env_root != NULL && env_root[0] != '\0') {
     int written = snprintf(out, out_len, "%s", env_root);
     return written > 0 && (size_t)written < out_len;
   }
   if (!proton_module_dir(out, out_len)) {
+    return false;
+  }
+  char module_dir[PROTON_MAX_PATH_BYTES] = {0};
+  int written = snprintf(module_dir, sizeof(module_dir), "%s", out);
+  if (written < 0 || (size_t)written >= sizeof(module_dir)) {
+    return false;
+  }
+  char search_dir[PROTON_MAX_PATH_BYTES] = {0};
+  written = snprintf(search_dir, sizeof(search_dir), "%s", module_dir);
+  if (written < 0 || (size_t)written >= sizeof(search_dir)) {
+    return false;
+  }
+  char resources_dir[PROTON_MAX_PATH_BYTES] = {0};
+  char bundled_runtime[PROTON_MAX_PATH_BYTES] = {0};
+  for (;;) {
+    if (proton_join_path(resources_dir, sizeof(resources_dir), search_dir,
+                         "Resources") &&
+        proton_join_path(bundled_runtime, sizeof(bundled_runtime),
+                         resources_dir, "proton") &&
+        proton_dir_exists(bundled_runtime)) {
+      written = snprintf(out, out_len, "%s", bundled_runtime);
+      return written >= 0 && (size_t)written < out_len;
+    }
+    char parent[PROTON_MAX_PATH_BYTES] = {0};
+    written = snprintf(parent, sizeof(parent), "%s", search_dir);
+    if (written < 0 || (size_t)written >= sizeof(parent) ||
+        !proton_path_parent(parent) || strcmp(parent, search_dir) == 0) {
+      break;
+    }
+    written = snprintf(search_dir, sizeof(search_dir), "%s", parent);
+    if (written < 0 || (size_t)written >= sizeof(search_dir)) {
+      break;
+    }
+  }
+  written = snprintf(out, out_len, "%s", module_dir);
+  if (written < 0 || (size_t)written >= out_len) {
     return false;
   }
   if (proton_path_basename_equals(out, "bin")
@@ -745,15 +778,34 @@ bool proton_config_default_helper_path(char *out, size_t out_len) {
 #ifdef __APPLE__
   char executable_path[PROTON_MAX_PATH_BYTES] = {0};
   if (proton_macos_current_executable_path(executable_path,
-                                           sizeof(executable_path)) &&
-      proton_config_macos_bundle_helper_path(executable_path, out, out_len) &&
-      proton_path_exists(out)) {
-    return true;
+                                           sizeof(executable_path))) {
+    if (strstr(executable_path, ".app/Contents/Frameworks/") != NULL) {
+      int written = snprintf(out, out_len, "%s", executable_path);
+      return written >= 0 && (size_t)written < out_len;
+    }
+    if (proton_config_macos_bundle_helper_path(executable_path, out, out_len) &&
+        proton_path_exists(out)) {
+      return true;
+    }
   }
 #endif
+  char executable_dir[PROTON_MAX_PATH_BYTES] = {0};
+  if (proton_module_dir(executable_dir, sizeof(executable_dir))) {
+#ifdef _WIN32
+    if (proton_join_path(out, out_len, executable_dir, "cef_process.exe") &&
+        proton_path_exists(out)) {
+      return true;
+    }
+#else
+    if (proton_join_path(out, out_len, executable_dir, "cef_process") &&
+        proton_path_exists(out)) {
+      return true;
+    }
+#endif
+  }
   char runtime_root[PROTON_MAX_PATH_BYTES] = {0};
   char bin_dir[PROTON_MAX_PATH_BYTES] = {0};
-  if (!proton_default_runtime_root(runtime_root, sizeof(runtime_root)) ||
+  if (!proton_config_default_runtime_root(runtime_root, sizeof(runtime_root)) ||
       !proton_join_path(bin_dir, sizeof(bin_dir), runtime_root, "bin")) {
     return false;
   }
@@ -868,7 +920,7 @@ int32_t proton_config_probe_runtime_layout(const char *config_json) {
   if (!proton_parse_json_string_field(config_json, "runtime_root",
                                       runtime_root, sizeof(runtime_root)) &&
       !(use_bundled &&
-        proton_default_runtime_root(runtime_root, sizeof(runtime_root)))) {
+        proton_config_default_runtime_root(runtime_root, sizeof(runtime_root)))) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime config requires runtime_root");
   }

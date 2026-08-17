@@ -71,6 +71,7 @@ function platformConfig(cefRoot, env) {
     "-DPROTON_BUILD=1",
     "-DPROTON_WITH_ENGINE=1",
     "-DCEF_API_VERSION=14700",
+    `-include ${quote(path.join(ffiRoot, "src", "proton_allocator.h"))}`,
     `-I${quote(path.join(ffiRoot, "include"))}`,
     `-I${quote(cefRoot)}`,
   );

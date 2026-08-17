@@ -102,3 +102,24 @@ pub async fn find_project_root_from(start : String) -> String {
   }
   start
 }
+
+///|
+/// Walks up from `start` to the enclosing Moon workspace. When no `moon.work`
+/// exists, returns the nearest module root instead.
+pub async fn find_workspace_root_from(start : String) -> String {
+  let mut module_root : String? = None
+  for dir = start; dir != ""; {
+    if path_exists(path_join(dir, "moon.work")) {
+      return dir
+    }
+    if module_root is None && path_exists(path_join(dir, "moon.mod")) {
+      module_root = Some(dir)
+    }
+    let parent = path_parent(dir)
+    if parent == dir {
+      return module_root.unwrap_or(start)
+    }
+    continue parent
+  }
+  module_root.unwrap_or(start)
+}

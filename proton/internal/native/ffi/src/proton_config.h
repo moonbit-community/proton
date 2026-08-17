@@ -12,6 +12,8 @@ PROTON_INTERNAL int32_t
 proton_config_probe_runtime_layout(const char *config_json);
 PROTON_INTERNAL bool
 proton_config_default_helper_path(char *out, size_t out_len);
+PROTON_INTERNAL bool
+proton_config_default_runtime_root(char *out, size_t out_len);
 #ifdef __APPLE__
 PROTON_INTERNAL bool proton_config_macos_bundle_helper_path(
     const char *executable_path, char *out, size_t out_len);

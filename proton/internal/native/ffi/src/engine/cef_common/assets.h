@@ -93,7 +93,50 @@ static char *proton_engine_asset_canonical_path(const char *path) {
     return NULL;
   }
 #ifdef _WIN32
-  return _fullpath(NULL, path, 0);
+  int wide_len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1,
+                                     NULL, 0);
+  if (wide_len <= 0) {
+    return NULL;
+  }
+  wchar_t *wide = (wchar_t *)malloc(
+      (size_t)wide_len * sizeof(wchar_t));
+  if (wide == NULL ||
+      MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide,
+                          wide_len) == 0) {
+    free(wide);
+    return NULL;
+  }
+  DWORD full_len = GetFullPathNameW(wide, 0, NULL, NULL);
+  if (full_len == 0) {
+    free(wide);
+    return NULL;
+  }
+  wchar_t *full = (wchar_t *)malloc(
+      (size_t)full_len * sizeof(wchar_t));
+  DWORD written = full == NULL
+                      ? 0
+                      : GetFullPathNameW(wide, full_len, full, NULL);
+  if (written == 0 || written >= full_len) {
+    free(wide);
+    free(full);
+    return NULL;
+  }
+  free(wide);
+  int utf8_len = WideCharToMultiByte(CP_UTF8, 0, full, -1, NULL, 0, NULL, NULL);
+  if (utf8_len <= 0) {
+    free(full);
+    return NULL;
+  }
+  char *result = (char *)malloc((size_t)utf8_len);
+  if (result == NULL ||
+      WideCharToMultiByte(CP_UTF8, 0, full, -1, result, utf8_len, NULL,
+                          NULL) == 0) {
+    free(full);
+    free(result);
+    return NULL;
+  }
+  free(full);
+  return result;
 #else
   return realpath(path, NULL);
 #endif

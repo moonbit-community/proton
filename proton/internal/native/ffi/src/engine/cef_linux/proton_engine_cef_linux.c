@@ -5,6 +5,7 @@
 #endif
 
 #include "../../proton_engine.h"
+#include "../../proton_config.h"
 #include "../../proton_json.h"
 #include "proton_linux_menu.h"
 #include "proton_linux_titlebar.h"
@@ -673,70 +674,10 @@ static bool proton_engine_path_parent(char *path) {
   return path[0] != '\0';
 }
 
-static bool proton_engine_path_basename_equals(const char *path,
-                                               const char *name) {
-  if (path == NULL || name == NULL) {
-    return false;
-  }
-  const char *base = strrchr(path, '/');
-  base = base == NULL ? path : base + 1;
-  return strcmp(base, name) == 0;
-}
-
 static bool proton_engine_dir_exists(const char *path) {
   struct stat info;
   return path != NULL && path[0] != '\0' && stat(path, &info) == 0 &&
          S_ISDIR(info.st_mode);
-}
-
-static bool proton_engine_module_dir(char *out, size_t out_len) {
-  if (out == NULL || out_len == 0) {
-    return false;
-  }
-  Dl_info info;
-  if (dladdr((const void *)&proton_engine_module_dir, &info) == 0 ||
-      info.dli_fname == NULL || info.dli_fname[0] == '\0') {
-    return false;
-  }
-  int written = snprintf(out, out_len, "%s", info.dli_fname);
-  if (written < 0 || (size_t)written >= out_len) {
-    return false;
-  }
-  return proton_engine_path_parent(out);
-}
-
-static bool proton_engine_default_runtime_root(char *out, size_t out_len) {
-  const char *env_root = getenv("PROTON_RUNTIME_ROOT");
-  if (env_root == NULL || env_root[0] == '\0') {
-    env_root = getenv("PROTON_NATIVE_DIST");
-  }
-  if (env_root != NULL && env_root[0] != '\0') {
-    int written = snprintf(out, out_len, "%s", env_root);
-    return written > 0 && (size_t)written < out_len;
-  }
-  if (!proton_engine_module_dir(out, out_len)) {
-    return false;
-  }
-  if (proton_engine_path_basename_equals(out, "bin") ||
-      proton_engine_path_basename_equals(out, "lib")) {
-    return proton_engine_path_parent(out);
-  }
-  return true;
-}
-
-static bool proton_engine_default_helper_path(char *out, size_t out_len) {
-  const char *env_helper = getenv("PROTON_HELPER_PATH");
-  if (env_helper != NULL && env_helper[0] != '\0') {
-    int written = snprintf(out, out_len, "%s", env_helper);
-    return written > 0 && (size_t)written < out_len;
-  }
-  char runtime_root[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
-  char bin_dir[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
-  if (!proton_engine_default_runtime_root(runtime_root, sizeof(runtime_root)) ||
-      !proton_engine_join_path(bin_dir, sizeof(bin_dir), runtime_root, "bin")) {
-    return false;
-  }
-  return proton_engine_join_path(out, out_len, bin_dir, "cef_process");
 }
 
 #include "../cef_common/strings.h"
@@ -2506,7 +2447,7 @@ static int32_t proton_engine_parse_runtime_config(
                                              config->runtime_root,
                                              sizeof(config->runtime_root)) &&
       !(use_bundled &&
-        proton_engine_default_runtime_root(config->runtime_root,
+        proton_config_default_runtime_root(config->runtime_root,
                                            sizeof(config->runtime_root)))) {
     proton_engine_set_message(error, error_len,
                               "runtime config requires runtime_root");
@@ -2519,7 +2460,7 @@ static int32_t proton_engine_parse_runtime_config(
                                              config->helper_path,
                                              sizeof(config->helper_path)) &&
       !(use_bundled &&
-        proton_engine_default_helper_path(config->helper_path,
+        proton_config_default_helper_path(config->helper_path,
                                           sizeof(config->helper_path)))) {
     proton_engine_set_message(error, error_len,
                               "runtime config requires helper_path");
