@@ -21,6 +21,10 @@ pub type ImageHandle
 
 ///|
 #external
+pub type EventHandle
+
+///|
+#external
 pub type MenuConfigHandle
 
 ///|
@@ -38,6 +42,9 @@ pub extern "C" fn view_null() -> ViewHandle = "proton_view_null"
 
 ///|
 pub extern "C" fn image_null() -> ImageHandle = "proton_image_null"
+
+///|
+pub extern "C" fn event_null() -> EventHandle = "proton_internal_event_null"
 
 ///|
 pub extern "C" fn menu_config_null() -> MenuConfigHandle = "proton_internal_menu_config_null"
@@ -247,13 +254,52 @@ pub extern "C" fn menu_config_add_item(
 pub extern "C" fn menu_config_destroy(menu : MenuConfigHandle) -> Unit = "proton_internal_menu_config_destroy"
 
 ///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_runtime_poll_event_json_ffi(
+#borrow(out_event)
+pub extern "C" fn runtime_poll_event(
   runtime : RuntimeHandle,
+  out_event : Ref[EventHandle],
+) -> Int = "proton_internal_runtime_poll_event"
+
+///|
+pub extern "C" fn event_kind(event : EventHandle) -> Int = "proton_internal_event_kind"
+
+///|
+pub extern "C" fn event_int64(event : EventHandle, field : Int) -> Int64 = "proton_internal_event_int64"
+
+///|
+pub extern "C" fn event_int(event : EventHandle, field : Int) -> Int = "proton_internal_event_int"
+
+///|
+pub extern "C" fn event_window_state_field(
+  event : EventHandle,
+  field : Int,
+) -> Int = "proton_internal_event_window_state_field"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn event_text(
+  event : EventHandle,
+  field : Int,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
-) -> Int = "proton_runtime_poll_event_json"
+) -> Int = "proton_internal_event_text"
+
+///|
+pub extern "C" fn event_item_count(event : EventHandle) -> Int = "proton_internal_event_item_count"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn event_item(
+  event : EventHandle,
+  index : Int,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_internal_event_item"
+
+///|
+pub extern "C" fn event_destroy(event : EventHandle) -> Unit = "proton_internal_event_destroy"
 
 ///|
 #borrow(buffer, out_required_len)

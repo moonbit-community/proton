@@ -153,9 +153,6 @@ PROTON_API int32_t
 proton_runtime_activate_wakeup_source(proton_runtime_handle_t runtime);
 PROTON_API int32_t proton_runtime_next_wakeup_delay_ms(
     proton_runtime_handle_t runtime, int64_t *out_delay_ms);
-PROTON_API int32_t proton_runtime_poll_event_json(
-    proton_runtime_handle_t runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len);
 PROTON_API int32_t proton_runtime_poll_bridge_request_json(
     proton_runtime_handle_t runtime, char *buffer, int32_t buffer_len,
     int32_t *out_required_len);

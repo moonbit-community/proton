@@ -143,64 +143,12 @@ static char *proton_strdup(const char *text) {
   return copy;
 }
 
-// Escape `value` as JSON string contents into `out` (without the quotes).
-// Returns false when the escaped text would not fit.
-static bool proton_json_escape_into(const char *value,
-                                    char *out,
-                                    size_t out_len) {
-  size_t written = 0;
-  for (const unsigned char *p = (const unsigned char *)value; *p; p++) {
-    char escaped[8];
-    size_t escaped_len;
-    switch (*p) {
-    case '"':
-      memcpy(escaped, "\\\"", 2);
-      escaped_len = 2;
-      break;
-    case '\\':
-      memcpy(escaped, "\\\\", 2);
-      escaped_len = 2;
-      break;
-    case '\n':
-      memcpy(escaped, "\\n", 2);
-      escaped_len = 2;
-      break;
-    case '\r':
-      memcpy(escaped, "\\r", 2);
-      escaped_len = 2;
-      break;
-    case '\t':
-      memcpy(escaped, "\\t", 2);
-      escaped_len = 2;
-      break;
-    default:
-      if (*p < 0x20) {
-        escaped_len = (size_t)snprintf(escaped, sizeof(escaped), "\\u%04x",
-                                       (unsigned)*p);
-      } else {
-        escaped[0] = (char)*p;
-        escaped_len = 1;
-      }
-      break;
-    }
-    if (written + escaped_len >= out_len) {
-      return false;
-    }
-    memcpy(out + written, escaped, escaped_len);
-    written += escaped_len;
-  }
-  if (written >= out_len) {
-    return false;
-  }
-  out[written] = '\0';
-  return true;
-}
-
 // Drain app-menu commands assigned to this runtime into its event queue.
 // Take from the engine queue only when the public queue has room, so a full
 // queue defers delivery instead of dropping commands.
 static void proton_runtime_sync_menu_commands(proton_runtime_slot_t *runtime) {
-  while (runtime->event_count < PROTON_MAX_EVENTS) {
+  while (proton_event_queue_count(&runtime->events) <
+         PROTON_EVENT_QUEUE_CAPACITY) {
     char command_id[PROTON_MAX_EVENT_BYTES];
     proton_window_id_t focused_window = PROTON_INVALID_HANDLE;
     int32_t present = 0;
@@ -210,24 +158,14 @@ static void proton_runtime_sync_menu_commands(proton_runtime_slot_t *runtime) {
         present == 0) {
       return;
     }
-    char escaped[PROTON_MAX_EVENT_BYTES];
-    if (!proton_json_escape_into(command_id, escaped, sizeof(escaped))) {
-      continue;
+    proton_event_t *event = proton_event_create(PROTON_EVENT_MENU_COMMAND);
+    if (event == NULL ||
+        !proton_event_set_text(&event->text_a, command_id)) {
+      proton_event_destroy(event);
+      return;
     }
-    char event_json[PROTON_MAX_EVENT_BYTES];
-    int written = focused_window == PROTON_INVALID_HANDLE
-                      ? snprintf(event_json, sizeof(event_json),
-                                 "{\"type\":\"menu_command\","
-                                 "\"command_id\":\"%s\"}",
-                                 escaped)
-                      : snprintf(event_json, sizeof(event_json),
-                                 "{\"type\":\"menu_command\","
-                                 "\"command_id\":\"%s\",\"window\":\"%lld\"}",
-                                 escaped, (long long)focused_window);
-    if (written < 0 || written >= (int)sizeof(event_json)) {
-      continue;
-    }
-    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+    event->window = focused_window;
+    if (!proton_runtime_enqueue_event(runtime, event)) {
       return;
     }
   }
@@ -237,7 +175,8 @@ static void proton_runtime_sync_menu_commands(proton_runtime_slot_t *runtime) {
 // Take from the engine queue only when the public queue has room, so a full
 // queue defers delivery instead of dropping events.
 static void proton_runtime_sync_platform_events(proton_runtime_slot_t *runtime) {
-  while (runtime->event_count < PROTON_MAX_EVENTS) {
+  while (proton_event_queue_count(&runtime->events) <
+         PROTON_EVENT_QUEUE_CAPACITY) {
     char event_json[PROTON_MAX_EVENT_BYTES];
     int32_t present = 0;
     if (proton_engine_take_platform_event(
@@ -246,7 +185,7 @@ static void proton_runtime_sync_platform_events(proton_runtime_slot_t *runtime) 
         present == 0) {
       return;
     }
-    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+    if (!proton_runtime_enqueue_legacy_event(runtime, event_json)) {
       return;
     }
   }
@@ -255,7 +194,8 @@ static void proton_runtime_sync_platform_events(proton_runtime_slot_t *runtime) 
 // Move renderer cancellations onto the owner-thread runtime event queue.
 static void proton_runtime_sync_bridge_cancellations(
     proton_runtime_slot_t *runtime) {
-  while (runtime->event_count < PROTON_MAX_EVENTS) {
+  while (proton_event_queue_count(&runtime->events) <
+         PROTON_EVENT_QUEUE_CAPACITY) {
     int64_t request_id = 0;
     int32_t present = 0;
     char engine_error[512] = {0};
@@ -265,13 +205,13 @@ static void proton_runtime_sync_bridge_cancellations(
         present == 0) {
       return;
     }
-    char event_json[128];
-    int written = snprintf(
-        event_json, sizeof(event_json),
-        "{\"type\":\"bridge_request_cancelled\",\"request_id\":\"%lld\"}",
-        (long long)request_id);
-    if (written < 0 || written >= (int)sizeof(event_json) ||
-        !proton_runtime_enqueue_event(runtime, event_json)) {
+    proton_event_t *event =
+        proton_event_create(PROTON_EVENT_BRIDGE_REQUEST_CANCELLED);
+    if (event == NULL) {
+      return;
+    }
+    event->request_id = request_id;
+    if (!proton_runtime_enqueue_event(runtime, event)) {
       return;
     }
   }
@@ -286,6 +226,8 @@ proton_window_handle_t proton_window_null(void) { return NULL; }
 proton_view_handle_t proton_view_null(void) { return NULL; }
 
 proton_image_handle_t proton_image_null(void) { return NULL; }
+
+proton_event_t *proton_internal_event_null(void) { return NULL; }
 
 int64_t proton_window_logical_id(proton_window_handle_t window) {
   return window != NULL ? window->logical_id : 0;
@@ -809,18 +751,18 @@ int32_t proton_internal_runtime_set_menu(proton_runtime_handle_t runtime,
   return PROTON_OK;
 }
 
-int32_t proton_runtime_poll_event_json(proton_runtime_handle_t runtime,
-                                       char *buffer, int32_t buffer_len,
-                                       int32_t *out_required_len) {
+int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
+                                           proton_event_t **out_event) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  if (out_required_len == NULL) {
+  if (out_event == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_required_len is required");
+                            "out_event is required");
   }
+  *out_event = NULL;
   proton_runtime_sync_engine_closed_windows(slot);
   if (!proton_runtime_has_events(slot)) {
     status = proton_runtime_sync_engine_browser_events(slot);
@@ -845,7 +787,8 @@ int32_t proton_runtime_poll_event_json(proton_runtime_handle_t runtime,
   proton_runtime_sync_menu_commands(slot);
   proton_runtime_sync_platform_events(slot);
   if (slot->app_instance != PROTON_INVALID_HANDLE) {
-    while (slot->event_count < PROTON_MAX_EVENTS) {
+    while (proton_event_queue_count(&slot->events) <
+           PROTON_EVENT_QUEUE_CAPACITY) {
       char event_json[PROTON_MAX_EVENT_BYTES];
       int32_t present = 0;
       char instance_error[512] = {0};
@@ -858,19 +801,153 @@ int32_t proton_runtime_poll_event_json(proton_runtime_handle_t runtime,
       if (!present) {
         break;
       }
-      if (!proton_runtime_enqueue_event(slot, event_json)) {
+      if (!proton_runtime_enqueue_legacy_event(slot, event_json)) {
         return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                                 "failed to queue app activation event");
       }
     }
   }
-  status = proton_runtime_poll_event(slot, buffer, buffer_len,
-                                     out_required_len);
-  if (status < 0) {
-    return status;
+  *out_event = proton_runtime_poll_event(slot);
+  if (*out_event == NULL) {
+    return PROTON_EVENT_NONE;
   }
   g_last_error[0] = '\0';
-  return status;
+  return PROTON_OK;
+}
+
+int32_t proton_internal_event_kind(const proton_event_t *event) {
+  return event == NULL ? 0 : (int32_t)event->kind;
+}
+
+int64_t proton_internal_event_int64(const proton_event_t *event,
+                                    int32_t field) {
+  if (event == NULL) {
+    return 0;
+  }
+  switch (field) {
+  case 0:
+    return event->window;
+  case 1:
+    return event->view;
+  case 2:
+    return event->request_id;
+  case 3:
+    return event->revision;
+  case 4:
+    return event->int64_a;
+  case 5:
+    return event->int64_b;
+  default:
+    return 0;
+  }
+}
+
+int32_t proton_internal_event_int(const proton_event_t *event,
+                                  int32_t field) {
+  if (event == NULL) {
+    return 0;
+  }
+  switch (field) {
+  case 0:
+    return event->int_a;
+  case 1:
+    return event->int_b;
+  case 2:
+    return event->int_c;
+  case 3:
+    return event->bool_a;
+  case 4:
+    return event->bool_b;
+  default:
+    return 0;
+  }
+}
+
+int32_t proton_internal_event_window_state_field(const proton_event_t *event,
+                                                 int32_t field) {
+  if (event == NULL) {
+    return 0;
+  }
+  const proton_engine_window_state_t *state = &event->window_state;
+  switch (field) {
+  case 0: return state->x;
+  case 1: return state->y;
+  case 2: return state->width;
+  case 3: return state->height;
+  case 4: return state->monitor_x;
+  case 5: return state->monitor_y;
+  case 6: return state->monitor_width;
+  case 7: return state->monitor_height;
+  case 8: return state->work_x;
+  case 9: return state->work_y;
+  case 10: return state->work_width;
+  case 11: return state->work_height;
+  case 12: return state->scale_factor_percent;
+  case 13: return state->zoom_percent;
+  case 14: return state->visible;
+  case 15: return state->focused;
+  case 16: return state->minimized;
+  case 17: return state->maximized;
+  case 18: return state->fullscreen;
+  case 19: return state->always_on_top;
+  case 20: return state->theme;
+  default: return 0;
+  }
+}
+
+static int32_t proton_internal_copy_event_text(const char *text, char *buffer,
+                                               int32_t buffer_len,
+                                               int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_required_len is required");
+  }
+  if (text == NULL) {
+    *out_required_len = 0;
+    return PROTON_EVENT_NONE;
+  }
+  int32_t required = (int32_t)strlen(text);
+  *out_required_len = required;
+  if (buffer == NULL || buffer_len <= required) {
+    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
+                            "event text buffer is too small");
+  }
+  memcpy(buffer, text, (size_t)required + 1);
+  return PROTON_OK;
+}
+
+int32_t proton_internal_event_text(const proton_event_t *event, int32_t field,
+                                   char *buffer, int32_t buffer_len,
+                                   int32_t *out_required_len) {
+  if (event == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "event is required");
+  }
+  const char *text = field == 0 ? event->text_a
+                     : field == 1 ? event->text_b
+                     : field == 2 ? event->text_c
+                                  : NULL;
+  return proton_internal_copy_event_text(text, buffer, buffer_len,
+                                         out_required_len);
+}
+
+int32_t proton_internal_event_item_count(const proton_event_t *event) {
+  return event == NULL ? 0 : event->item_count;
+}
+
+int32_t proton_internal_event_item(const proton_event_t *event, int32_t index,
+                                   char *buffer, int32_t buffer_len,
+                                   int32_t *out_required_len) {
+  if (event == NULL || index < 0 || index >= event->item_count) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "event item index is out of range");
+  }
+  return proton_internal_copy_event_text(event->items[index], buffer,
+                                         buffer_len, out_required_len);
+}
+
+void proton_internal_event_destroy(proton_event_t *event) {
+  proton_event_destroy(event);
 }
 
 int32_t proton_runtime_poll_bridge_request_json(proton_runtime_handle_t runtime,
@@ -1009,7 +1086,8 @@ int32_t proton_window_destroy(proton_window_handle_t window) {
     return status;
   }
   if (!slot->closed_event_sent &&
-      runtime->event_count >= PROTON_MAX_EVENTS) {
+      proton_event_queue_count(&runtime->events) >=
+          PROTON_EVENT_QUEUE_CAPACITY) {
     return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                             "failed to queue window_closed event");
   }

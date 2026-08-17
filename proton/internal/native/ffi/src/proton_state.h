@@ -2,6 +2,7 @@
 #define PROTON_STATE_H
 
 #include "proton_engine.h"
+#include "proton_event.h"
 #include "proton_internal.h"
 
 #include <stdbool.h>
@@ -17,7 +18,6 @@ typedef pthread_t proton_thread_id_t;
 #endif
 
 #define PROTON_MAX_EVENT_BYTES 65536
-#define PROTON_MAX_EVENTS 32
 
 typedef struct proton_runtime_slot proton_runtime_slot_t;
 typedef struct proton_window_slot proton_window_slot_t;
@@ -49,9 +49,7 @@ struct proton_runtime_slot {
   proton_engine_runtime_t *engine_runtime;
   int64_t app_instance;
   proton_thread_id_t owner_thread;
-  char *events[PROTON_MAX_EVENTS];
-  uint32_t event_head;
-  uint32_t event_count;
+  proton_event_queue_t events;
   int64_t next_bridge_request_id;
   int64_t next_window_id;
   int64_t next_view_id;
@@ -110,14 +108,16 @@ PROTON_INTERNAL int32_t proton_require_runtime_owner_thread(
 PROTON_INTERNAL bool proton_has_active_runtime(void);
 
 PROTON_INTERNAL bool proton_runtime_enqueue_event(
+    proton_runtime_slot_t *runtime, proton_event_t *event);
+PROTON_INTERNAL bool proton_runtime_enqueue_legacy_event(
     proton_runtime_slot_t *runtime, const char *event_json);
 PROTON_INTERNAL bool proton_runtime_enqueue_window_event(
-    proton_runtime_slot_t *runtime, const char *type, int64_t window_id);
+    proton_runtime_slot_t *runtime, proton_event_kind_t kind,
+    int64_t window_id);
 PROTON_INTERNAL bool proton_runtime_has_events(
-    const proton_runtime_slot_t *runtime);
-PROTON_INTERNAL int32_t proton_runtime_poll_event(
-    proton_runtime_slot_t *runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len);
+    proton_runtime_slot_t *runtime);
+PROTON_INTERNAL proton_event_t *proton_runtime_poll_event(
+    proton_runtime_slot_t *runtime);
 
 PROTON_INTERNAL int32_t proton_window_slot_create(
     proton_runtime_slot_t *runtime, proton_engine_window_t *engine_window,

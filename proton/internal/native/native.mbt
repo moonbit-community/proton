@@ -1112,25 +1112,103 @@ pub fn Runtime::set_menu(
 }
 
 ///|
-pub fn Runtime::poll_event_json(self : Runtime) -> String? raise NativeError {
-  let handle = self.active_handle()
+fn native_event_text(
+  event : @native_ffi.EventHandle,
+  field : Int,
+) -> String? raise NativeError {
   read_native_text("runtime event JSON", PayloadBytesExcludingTerminator, (
     buffer,
     buffer_len,
     required,
-  ) => {
-    @native_ffi.proton_runtime_poll_event_json_ffi(
-      handle, buffer, buffer_len, required,
-    )
-  })
+  ) => @native_ffi.event_text(event, field, buffer, buffer_len, required))
+}
+
+///|
+fn native_window_state(event : @native_ffi.EventHandle) -> WindowState {
+  let field = index => @native_ffi.event_window_state_field(event, index)
+  let theme = match field(20) {
+    1 => "light"
+    2 => "dark"
+    _ => "system"
+  }
+  {
+    x: field(0),
+    y: field(1),
+    width: field(2),
+    height: field(3),
+    monitor: {
+      x: field(4),
+      y: field(5),
+      width: field(6),
+      height: field(7),
+      work_x: field(8),
+      work_y: field(9),
+      work_width: field(10),
+      work_height: field(11),
+      scale_factor_percent: field(12),
+    },
+    zoom_percent: field(13),
+    visible: field(14) != 0,
+    focused: field(15) != 0,
+    minimized: field(16) != 0,
+    maximized: field(17) != 0,
+    fullscreen: field(18) != 0,
+    always_on_top: field(19) != 0,
+    theme,
+  }
+}
+
+///|
+fn decode_native_runtime_event(
+  event : @native_ffi.EventHandle,
+) -> RuntimeEvent raise NativeError {
+  let window = @native_ffi.event_int64(event, 0)
+  match @native_ffi.event_kind(event) {
+    1 => WindowCreated(window)
+    2 => WindowClosed(window)
+    3 => WindowStateChanged(window, native_window_state(event))
+    4 => WindowCloseRequested(window, @native_ffi.event_int64(event, 2))
+    5 => BridgeLifecycleChanged(window, @native_ffi.event_int64(event, 3))
+    6 => BridgeRequestCancelled(@native_ffi.event_int64(event, 2))
+    7 => {
+      guard native_event_text(event, 0) is Some(command_id) else {
+        raise runtime_event_missing("menu_command", "command_id")
+      }
+      MenuCommand(
+        command_id,
+        if window == proton_invalid_handle {
+          None
+        } else {
+          Some(window)
+        },
+      )
+    }
+    255 => {
+      guard native_event_text(event, 0) is Some(json) else {
+        raise runtime_event_missing("legacy", "payload")
+      }
+      decode_runtime_event_json(json)
+    }
+    kind =>
+      raise InvalidPayload(
+        context="runtime event",
+        message="unsupported native event kind " + kind.to_string(),
+      )
+  }
 }
 
 ///|
 pub fn Runtime::poll_event(self : Runtime) -> RuntimeEvent? raise NativeError {
-  match self.poll_event_json() {
-    Some(text) => Some(decode_runtime_event_json(text))
-    None => None
+  let out_event = Ref(@native_ffi.event_null())
+  let status = @native_ffi.runtime_poll_event(self.active_handle(), out_event)
+  if status == proton_event_none {
+    return None
   }
+  if status < 0 {
+    raise native_error(status)
+  }
+  defer @native_ffi.event_destroy(out_event.val)
+  Some(decode_native_runtime_event(out_event.val))
 }
 
 ///|

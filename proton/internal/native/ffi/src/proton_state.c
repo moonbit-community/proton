@@ -25,15 +25,6 @@ static bool proton_thread_equal(proton_thread_id_t left,
 #endif
 }
 
-static void proton_runtime_clear_events(proton_runtime_slot_t *runtime) {
-  for (uint32_t i = 0; i < PROTON_MAX_EVENTS; i++) {
-    free(runtime->events[i]);
-    runtime->events[i] = NULL;
-  }
-  runtime->event_head = 0;
-  runtime->event_count = 0;
-}
-
 int32_t proton_require_runtime_owner_thread(
     const proton_runtime_slot_t *runtime) {
   if (runtime != NULL &&
@@ -69,6 +60,11 @@ int32_t proton_runtime_slot_create(proton_engine_runtime_t *engine_runtime,
   runtime->next_bridge_request_id = 1;
   runtime->next_window_id = 1;
   runtime->next_view_id = 1;
+  if (!proton_event_queue_init(&runtime->events)) {
+    free(runtime);
+    return proton_set_error(PROTON_ERR_ENGINE,
+                            "failed to initialize runtime event queue");
+  }
   g_active_runtime = runtime;
   *out_runtime = runtime;
   return PROTON_OK;
@@ -78,7 +74,7 @@ void proton_runtime_slot_destroy(proton_runtime_slot_t *runtime) {
   if (runtime == NULL) {
     return;
   }
-  proton_runtime_clear_events(runtime);
+  proton_event_queue_destroy(&runtime->events);
   proton_view_slot_t *view = runtime->views;
   while (view != NULL) {
     proton_view_slot_t *next = view->next;
@@ -140,62 +136,42 @@ bool proton_has_active_runtime(void) {
 }
 
 bool proton_runtime_enqueue_event(proton_runtime_slot_t *runtime,
-                                  const char *event_json) {
-  if (runtime == NULL || event_json == NULL ||
-      runtime->event_count >= PROTON_MAX_EVENTS) {
+                                  proton_event_t *event) {
+  if (runtime == NULL || event == NULL ||
+      !proton_event_queue_push(&runtime->events, event)) {
+    proton_event_destroy(event);
     return false;
   }
-  size_t event_len = strlen(event_json);
-  if (event_len >= PROTON_MAX_EVENT_BYTES) {
-    return false;
-  }
-  char *owned_event = (char *)malloc(event_len + 1);
-  if (owned_event == NULL) {
-    return false;
-  }
-  memcpy(owned_event, event_json, event_len + 1);
-  uint32_t index = (runtime->event_head + runtime->event_count) %
-                   PROTON_MAX_EVENTS;
-  runtime->events[index] = owned_event;
-  runtime->event_count++;
   return true;
 }
 
+bool proton_runtime_enqueue_legacy_event(proton_runtime_slot_t *runtime,
+                                         const char *event_json) {
+  if (event_json == NULL || strlen(event_json) >= PROTON_MAX_EVENT_BYTES) {
+    return false;
+  }
+  proton_event_t *event = proton_event_create(PROTON_EVENT_LEGACY_JSON);
+  if (event == NULL || !proton_event_set_text(&event->text_a, event_json)) {
+    proton_event_destroy(event);
+    return false;
+  }
+  return proton_runtime_enqueue_event(runtime, event);
+}
+
 bool proton_runtime_enqueue_window_event(proton_runtime_slot_t *runtime,
-                                         const char *type,
+                                         proton_event_kind_t kind,
                                          int64_t window_id) {
-  char event_json[PROTON_MAX_EVENT_BYTES];
-  int written = snprintf(event_json, sizeof(event_json),
-                         "{\"type\":\"%s\",\"window\":\"%lld\"}", type,
-                         (long long)window_id);
-  return written >= 0 && written < (int)sizeof(event_json) &&
-         proton_runtime_enqueue_event(runtime, event_json);
+  return proton_runtime_enqueue_event(runtime,
+                                      proton_event_create_window(kind,
+                                                                 window_id));
 }
 
-bool proton_runtime_has_events(const proton_runtime_slot_t *runtime) {
-  return runtime != NULL && runtime->event_count > 0;
+bool proton_runtime_has_events(proton_runtime_slot_t *runtime) {
+  return runtime != NULL && proton_event_queue_count(&runtime->events) > 0;
 }
 
-int32_t proton_runtime_poll_event(proton_runtime_slot_t *runtime, char *buffer,
-                                  int32_t buffer_len,
-                                  int32_t *out_required_len) {
-  if (runtime->event_count == 0) {
-    *out_required_len = 0;
-    return PROTON_EVENT_NONE;
-  }
-  char *event_json = runtime->events[runtime->event_head];
-  int32_t required = (int32_t)strlen(event_json);
-  *out_required_len = required;
-  if (buffer == NULL || buffer_len <= required) {
-    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
-                            "event buffer is too small");
-  }
-  memcpy(buffer, event_json, (size_t)required + 1);
-  free(event_json);
-  runtime->events[runtime->event_head] = NULL;
-  runtime->event_head = (runtime->event_head + 1) % PROTON_MAX_EVENTS;
-  runtime->event_count--;
-  return PROTON_OK;
+proton_event_t *proton_runtime_poll_event(proton_runtime_slot_t *runtime) {
+  return runtime == NULL ? NULL : proton_event_queue_pop(&runtime->events);
 }
 
 int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
@@ -221,7 +197,7 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
   if (runtime->next_window_id <= 0) {
     runtime->next_window_id = 1;
   }
-  if (!proton_runtime_enqueue_window_event(runtime, "window_created",
+  if (!proton_runtime_enqueue_window_event(runtime, PROTON_EVENT_WINDOW_CREATED,
                                            window->logical_id)) {
     free(window);
     return proton_set_error(PROTON_ERR_QUEUE_FAILED,
@@ -298,7 +274,7 @@ int32_t proton_window_enqueue_closed_once(proton_runtime_slot_t *runtime,
   if (window == NULL || window->closed_event_sent) {
     return PROTON_OK;
   }
-  if (!proton_runtime_enqueue_window_event(runtime, "window_closed",
+  if (!proton_runtime_enqueue_window_event(runtime, PROTON_EVENT_WINDOW_CLOSED,
                                            window->logical_id)) {
     return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                             "failed to queue window_closed event");
@@ -409,24 +385,14 @@ int32_t proton_runtime_sync_engine_window_states(
         memcmp(&window->state, &state, sizeof(state)) == 0) {
       continue;
     }
-    char state_json[1024];
-    int state_written =
-        proton_format_window_state_json(&state, state_json, sizeof(state_json));
-    if (state_written < 0 || state_written >= (int)sizeof(state_json)) {
+    proton_event_t *event = proton_event_create_window(
+        PROTON_EVENT_WINDOW_STATE_CHANGED, window->logical_id);
+    if (event == NULL) {
       return proton_set_error(PROTON_ERR_ENGINE,
-                              "window state payload is too large");
+                              "failed to allocate window state event");
     }
-    char event_json[PROTON_MAX_EVENT_BYTES];
-    int event_written = snprintf(
-        event_json, sizeof(event_json),
-        "{\"type\":\"window_state_changed\",\"window\":\"%lld\","
-        "\"state\":%s}",
-        (long long)window->logical_id, state_json);
-    if (event_written < 0 || event_written >= (int)sizeof(event_json)) {
-      return proton_set_error(PROTON_ERR_ENGINE,
-                              "window state event payload is too large");
-    }
-    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+    event->window_state = state;
+    if (!proton_runtime_enqueue_event(runtime, event)) {
       return PROTON_OK;
     }
     window->state = state;
@@ -457,17 +423,14 @@ int32_t proton_runtime_sync_engine_close_requests(
         request_id == window->close_request_notified_revision) {
       continue;
     }
-    char event_json[PROTON_MAX_EVENT_BYTES];
-    int written = snprintf(
-        event_json, sizeof(event_json),
-        "{\"type\":\"window_close_requested\",\"window\":\"%lld\","
-        "\"request_id\":\"%llu\"}",
-        (long long)window->logical_id, (unsigned long long)request_id);
-    if (written < 0 || written >= (int)sizeof(event_json)) {
+    proton_event_t *event = proton_event_create_window(
+        PROTON_EVENT_WINDOW_CLOSE_REQUESTED, window->logical_id);
+    if (event == NULL) {
       return proton_set_error(PROTON_ERR_ENGINE,
-                              "window close request payload is too large");
+                              "failed to allocate window close event");
     }
-    if (!proton_runtime_enqueue_event(runtime, event_json)) {
+    event->request_id = (int64_t)request_id;
+    if (!proton_runtime_enqueue_event(runtime, event)) {
       return PROTON_OK;
     }
     window->close_request_notified_revision = request_id;
@@ -485,7 +448,8 @@ int32_t proton_runtime_sync_engine_browser_events(
         window->engine_window == NULL) {
       continue;
     }
-    while (runtime->event_count < PROTON_MAX_EVENTS) {
+    while (proton_event_queue_count(&runtime->events) <
+           PROTON_EVENT_QUEUE_CAPACITY) {
       int32_t required = 0;
       char error[512] = {0};
       int32_t status = proton_engine_window_poll_browser_event_json(
@@ -497,7 +461,7 @@ int32_t proton_runtime_sync_engine_browser_events(
       if (status != PROTON_OK) {
         return proton_set_engine_status(status, error);
       }
-      if (!proton_runtime_enqueue_event(runtime, event_json)) {
+      if (!proton_runtime_enqueue_legacy_event(runtime, event_json)) {
         return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                                 "failed to queue browser event");
       }
@@ -514,7 +478,8 @@ int32_t proton_runtime_sync_engine_view_events(
     if (view->lifecycle != PROTON_VIEW_LIVE || view->engine_view == NULL) {
       continue;
     }
-    while (runtime->event_count < PROTON_MAX_EVENTS) {
+    while (proton_event_queue_count(&runtime->events) <
+           PROTON_EVENT_QUEUE_CAPACITY) {
       int32_t required = 0;
       char error[512] = {0};
       int32_t status = proton_engine_view_poll_event_json(
@@ -526,7 +491,7 @@ int32_t proton_runtime_sync_engine_view_events(
       if (status != PROTON_OK) {
         return proton_set_engine_status(status, error);
       }
-      if (!proton_runtime_enqueue_event(runtime, event_json)) {
+      if (!proton_runtime_enqueue_legacy_event(runtime, event_json)) {
         return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                                 "failed to queue view event");
       }
@@ -549,14 +514,12 @@ void proton_runtime_sync_engine_bridge_lifecycle(
     if (revision == 0 || revision == window->bridge_notified_revision) {
       continue;
     }
-    char event_json[PROTON_MAX_EVENT_BYTES];
-    int written = snprintf(
-        event_json, sizeof(event_json),
-        "{\"type\":\"bridge_lifecycle_changed\",\"window\":\"%lld\","
-        "\"revision\":\"%llu\"}",
-        (long long)window->logical_id, (unsigned long long)revision);
-    if (written > 0 && written < (int)sizeof(event_json) &&
-        proton_runtime_enqueue_event(runtime, event_json)) {
+    proton_event_t *event = proton_event_create_window(
+        PROTON_EVENT_BRIDGE_LIFECYCLE_CHANGED, window->logical_id);
+    if (event != NULL) {
+      event->revision = (int64_t)revision;
+    }
+    if (event != NULL && proton_runtime_enqueue_event(runtime, event)) {
       window->bridge_notified_revision = revision;
     }
   }
