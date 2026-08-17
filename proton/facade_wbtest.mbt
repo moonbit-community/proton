@@ -314,7 +314,7 @@ async test "headless mode rejects native menus before runtime startup" {
   )
   let menu = @native.MenuBar::new(menus=[
     @native.Menu::new("App", items=[
-      @native.MenuItem::role("close", label="Close"),
+      @native.MenuItem::role(@native.MenuItemRole::Close, label="Close"),
     ]),
   ])
   let mut rejected = false
@@ -1568,4 +1568,70 @@ test "with_view stores declarative views and rejects invalid ids" {
   let app = app.with_view("  ", @native.ViewConfig::new(width=1, height=1))
   inspect(app.planned_views.length(), content="1")
   inspect(app.validation_errors.length(), content="2")
+}
+
+///|
+test "standard menus resolve before reaching native code" {
+  let resolved = resolve_menu(
+    @native.MenuBar::new(menus=[
+      @native.Menu::role(@native.MenuRole::Edit),
+      @native.Menu::role(@native.MenuRole::Window),
+    ]),
+    "Proton Demo",
+  )
+  let definitions = resolved.definitions()
+  assert_eq(definitions.length(), 3)
+  let (application_role, application_label, application_items) = definitions[0].definition()
+  assert_eq(application_role, Some(@native.MenuRole::Application))
+  assert_eq(application_label, Some("Proton Demo"))
+  let application_items = application_items.unwrap()
+  let (_, _, quit_label, quit_key, quit_role) = application_items[application_items.length() -
+  1].definition()
+  assert_eq(quit_role, Some(@native.MenuItemRole::Quit))
+  assert_eq(quit_label, Some("Quit Proton Demo"))
+  assert_eq(quit_key, Some("q"))
+  let (edit_role, edit_label, edit_items) = definitions[1].definition()
+  assert_eq(edit_role, Some(@native.MenuRole::Edit))
+  assert_eq(edit_label, Some("Edit"))
+  let edit_items = edit_items.unwrap()
+  let (_, _, copy_label, copy_key, copy_role) = edit_items[4].definition()
+  assert_eq(copy_role, Some(@native.MenuItemRole::Copy))
+  assert_eq(copy_label, Some("Copy"))
+  assert_eq(copy_key, Some("c"))
+  let (window_role, window_label, _) = definitions[2].definition()
+  assert_eq(window_role, Some(@native.MenuRole::Window))
+  assert_eq(window_label, Some("Window"))
+}
+
+///|
+test "custom menu labels never imply a standard role" {
+  let resolved = resolve_menu(
+    @native.MenuBar::new(menus=[
+      @native.Menu::new("Edit", items=[
+        @native.MenuItem::command("custom.edit", "Custom Edit"),
+      ]),
+    ]),
+    "Proton Demo",
+  )
+  let definitions = resolved.definitions()
+  assert_eq(definitions.length(), 2)
+  let (role, label, items) = definitions[1].definition()
+  assert_eq(role, None)
+  assert_eq(label, Some("Edit"))
+  let (_, command_id, command_label, _, item_role) = items.unwrap()[0].definition()
+  assert_eq(command_id, Some("custom.edit"))
+  assert_eq(command_label, Some("Custom Edit"))
+  assert_eq(item_role, None)
+}
+
+///|
+test "explicit standard menu items replace role defaults" {
+  let resolved = resolve_menu(
+    @native.MenuBar::new(menus=[
+      @native.Menu::role(@native.MenuRole::Edit, items=[]),
+    ]),
+    "Proton Demo",
+  )
+  let (_, _, items) = resolved.definitions()[1].definition()
+  assert_eq(items.unwrap(), [])
 }

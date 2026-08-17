@@ -13,6 +13,8 @@ pub using @native {
   type Menu,
   type MenuBar,
   type MenuItem,
+  type MenuItemRole,
+  type MenuRole,
   type ProcessResult,
   type Runtime,
   type RuntimeConfig,

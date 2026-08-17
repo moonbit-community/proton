@@ -28,6 +28,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     self.bridge_startup_timeout_value_ms,
     self.resolved_headless(),
     browser_data_dir?,
+    application_name=resolved.application_name,
     app_instance~,
     launch_input_handlers=self.launch_input_handlers,
     planned_views=self.planned_views,
@@ -77,6 +78,7 @@ async fn run_manifest(
   bridge_startup_timeout_ms : Int,
   headless : Bool,
   browser_data_dir? : String,
+  application_name? : String = "Proton",
   app_instance? : @native.AppInstance? = None,
   planned_views? : Array[(String, @native.ViewConfig)] = [],
   launch_input_handlers? : Array[async (RuntimeLaunchInput) -> Unit noraise] = [],
@@ -153,7 +155,7 @@ async fn run_manifest(
   let lifecycle_failures : Array[AppCleanupError] = []
   let wakeup = RuntimeWakeup::new()
   try {
-    match menu {
+    match resolve_runtime_menu(menu, application_name) {
       Some(menu) =>
         runtime.set_menu(menu) catch {
           error => raise native_run_error("set menu", error)

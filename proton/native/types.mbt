@@ -438,7 +438,6 @@ pub extend NativeNotificationClick with Debug::{to_repr}
 ///|
 /// An application-level native menu bar.
 struct MenuBar {
-  raw_json : String?
   menus : Array[Menu]
 } derive(Debug, Eq)
 
@@ -451,8 +450,9 @@ pub extend MenuBar with Debug::{to_repr}
 ///|
 /// A top-level native menu and its items.
 struct Menu {
-  label : String
-  items : Array[MenuItem]
+  label : String?
+  role : MenuRole?
+  items : Array[MenuItem]?
 } derive(Debug, Eq)
 
 ///|
@@ -468,7 +468,7 @@ struct MenuItem {
   id : String?
   label : String?
   key : String?
-  role : String?
+  role : MenuItemRole?
 } derive(Debug, Eq)
 
 ///|
@@ -476,6 +476,47 @@ pub extend MenuItem with Eq::{not_equal, equal}
 
 ///|
 pub extend MenuItem with Debug::{to_repr}
+
+///|
+/// A standard top-level application menu role.
+pub(all) enum MenuRole {
+  Application
+  File
+  Edit
+  View
+  Window
+  Help
+} derive(Debug, Eq)
+
+///|
+pub extend MenuRole with Eq::{not_equal, equal}
+
+///|
+pub extend MenuRole with Debug::{to_repr}
+
+///|
+/// A standard native menu action.
+pub(all) enum MenuItemRole {
+  Quit
+  Hide
+  HideOthers
+  ShowAll
+  Close
+  Minimize
+  Zoom
+  Undo
+  Redo
+  Cut
+  Copy
+  Paste
+  SelectAll
+} derive(Debug, Eq)
+
+///|
+pub extend MenuItemRole with Eq::{not_equal, equal}
+
+///|
+pub extend MenuItemRole with Debug::{to_repr}
 
 ///|
 pub(all) struct BridgeConfig {
@@ -1117,19 +1158,24 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
 ///|
 /// Creates an application-level menu bar.
 pub fn MenuBar::new(menus~ : Array[Menu]) -> MenuBar {
-  { raw_json: None, menus }
-}
-
-///|
-/// Creates a menu bar from unchecked native ABI JSON.
-pub fn MenuBar::unsafe_from_json(raw_json : String) -> MenuBar {
-  { raw_json: Some(raw_json), menus: [] }
+  { menus: menus.copy() }
 }
 
 ///|
 /// Creates a top-level menu.
 pub fn Menu::new(label : String, items~ : Array[MenuItem]) -> Menu {
-  { label, items }
+  { label: Some(label), role: None, items: Some(items.copy()) }
+}
+
+///|
+/// Creates a standard top-level menu. Omitted items select the role defaults;
+/// an explicit item array replaces those defaults exactly.
+pub fn Menu::role(
+  role : MenuRole,
+  label? : String,
+  items? : Array[MenuItem],
+) -> Menu {
+  { label, role: Some(role), items: items.map(items => items.copy()) }
 }
 
 ///|
@@ -1151,11 +1197,31 @@ pub fn MenuItem::separator() -> MenuItem {
 ///|
 /// Creates an item backed by a platform menu role such as `close` or `quit`.
 pub fn MenuItem::role(
-  role : String,
+  role : MenuItemRole,
   label? : String,
   key? : String,
 ) -> MenuItem {
   { kind: "role", id: None, label, key, role: Some(role) }
+}
+
+///|
+#doc(hidden)
+pub fn MenuBar::definitions(self : MenuBar) -> Array[Menu] {
+  self.menus.copy()
+}
+
+///|
+#doc(hidden)
+pub fn Menu::definition(self : Menu) -> (MenuRole?, String?, Array[MenuItem]?) {
+  (self.role, self.label, self.items.map(items => items.copy()))
+}
+
+///|
+#doc(hidden)
+pub fn MenuItem::definition(
+  self : MenuItem,
+) -> (String, String?, String?, String?, MenuItemRole?) {
+  (self.kind, self.id, self.label, self.key, self.role)
 }
 
 ///|
@@ -1355,28 +1421,68 @@ fn MenuItem::to_json(self : MenuItem) -> Json {
   set_optional_string_field(fields, "id", self.id)
   set_optional_string_field(fields, "label", self.label)
   set_optional_string_field(fields, "key", self.key)
-  set_optional_string_field(fields, "role", self.role)
+  match self.role {
+    Some(role) => fields.set("role", Json(role.to_json_string()))
+    None => ()
+  }
   Json::object(fields)
 }
 
 ///|
 fn Menu::to_json(self : Menu) -> Json {
-  { "label": self.label, "items": self.items.map(fn(item) { item.to_json() }) }
+  let fields : Map[String, Json] = Map([])
+  set_optional_string_field(fields, "label", self.label)
+  match self.role {
+    Some(role) => fields.set("role", Json(role.to_json_string()))
+    None => ()
+  }
+  match self.items {
+    Some(items) =>
+      fields.set("items", Json::array(items.map(item => item.to_json())))
+    None => ()
+  }
+  Json::object(fields)
+}
+
+///|
+fn MenuRole::to_json_string(self : MenuRole) -> String {
+  match self {
+    Application => "application"
+    File => "file"
+    Edit => "edit"
+    View => "view"
+    Window => "window"
+    Help => "help"
+  }
+}
+
+///|
+fn MenuItemRole::to_json_string(self : MenuItemRole) -> String {
+  match self {
+    Quit => "quit"
+    Hide => "hide"
+    HideOthers => "hide_others"
+    ShowAll => "show_all"
+    Close => "close"
+    Minimize => "minimize"
+    Zoom => "zoom"
+    Undo => "undo"
+    Redo => "redo"
+    Cut => "cut"
+    Copy => "copy"
+    Paste => "paste"
+    SelectAll => "select_all"
+  }
 }
 
 ///|
 /// Encodes this menu bar for the native ABI.
 pub fn MenuBar::to_json_string(self : MenuBar) -> String {
-  match self.raw_json {
-    Some(raw) => raw
-    None => {
-      let json : Json = {
-        "abi_version": Json::number(1.0, repr="1"),
-        "menus": self.menus.map(fn(menu) { menu.to_json() }),
-      }
-      json.stringify()
-    }
+  let json : Json = {
+    "abi_version": Json::number(1.0, repr="1"),
+    "menus": self.menus.map(fn(menu) { menu.to_json() }),
   }
+  json.stringify()
 }
 
 ///|

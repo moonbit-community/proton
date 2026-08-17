@@ -437,7 +437,7 @@ test "typed configs generate stable JSON for native ABI" {
     Menu::new("Demo", items=[
       MenuItem::command("demo.refresh", "Refresh", key="r"),
       MenuItem::separator(),
-      MenuItem::role("close", label="Close Window", key="w"),
+      MenuItem::role(MenuItemRole::Close, label="Close Window", key="w"),
     ]),
   ]).to_json_string()
   assert_true(menu_json.contains("\"abi_version\":1"))

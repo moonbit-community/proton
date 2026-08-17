@@ -189,9 +189,10 @@ Linux application menu definitions are rendered as a GTK menu bar in every
 runtime window. Command items enqueue the same `menu_command` runtime events as
 macOS, including the window that owns the activated menu. Role items map to GTK
 window actions or the focused CEF frame's edit commands, and menu key
-equivalents are installed as GTK accelerators. The standard application menu is
-always present; Edit and Window menus are supplied when the definition does not
-replace them.
+equivalents are installed as GTK accelerators. MoonBit resolves standard menu
+roles, labels, keys, and default items before calling the native ABI. Native
+code neither infers roles from display labels nor synthesizes translated or
+English fallback menus.
 
 `proton_cli cef setup` runtime assembly is wired for Windows, macOS Apple
 Silicon, and Linux. The setup command verifies the pinned SHA-256 of the

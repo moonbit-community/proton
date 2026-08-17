@@ -3116,7 +3116,6 @@ static void proton_engine_ensure_appkit(void) {
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
   proton_engine_launch_input_install();
   [NSApp finishLaunching];
-  proton_engine_menu_install_default();
 }
 
 static char *proton_engine_data_url_for_html(const char *html) {
