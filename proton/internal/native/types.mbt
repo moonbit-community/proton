@@ -163,6 +163,7 @@ enum RuntimeEvent {
   BridgeRequestReceived(BridgeRequest)
   BridgeRequestCancelled(Int64)
   DialogCompleted(NativeDialogCompletion)
+  CookieGetCompleted(NativeCookieGetCompletion)
   MenuCommand(String, Int64?)
   LaunchInput(RuntimeLaunchInput)
   NotificationResult(NativeNotificationResult)
@@ -362,6 +363,19 @@ pub extend NativeDialogCompletion with Eq::{not_equal, equal}
 
 ///|
 pub extend NativeDialogCompletion with Debug::{to_repr}
+
+///|
+pub(all) struct NativeCookieGetCompletion {
+  request_id : Int64
+  window : Int64
+  result : Result[String, NativeError]
+} derive(Debug, Eq)
+
+///|
+pub extend NativeCookieGetCompletion with Eq::{not_equal, equal}
+
+///|
+pub extend NativeCookieGetCompletion with Debug::{to_repr}
 
 ///|
 /// Geometry and scaling information for the monitor containing a window.
@@ -606,6 +620,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     BridgeRequestReceived(_) => "bridge_request_received"
     BridgeRequestCancelled(_) => "bridge_request_cancelled"
     DialogCompleted(_) => "dialog_completed"
+    CookieGetCompleted(_) => "cookie_get_completed"
     MenuCommand(_, _) => "menu_command"
     LaunchInput(OpenUrls(_)) => "open_urls"
     LaunchInput(OpenFiles(_)) => "open_files"
@@ -644,6 +659,7 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | ViewEvent(window, _, _) => Some(window)
     MenuCommand(_, window) => window
     DialogCompleted(completion) => completion.window
+    CookieGetCompleted(completion) => Some(completion.window)
     BridgeRequestReceived(_)
     | BridgeRequestCancelled(_)
     | LaunchInput(_)
@@ -789,6 +805,16 @@ pub fn RuntimeEvent::dialog_completion(
 ) -> NativeDialogCompletion? {
   match self {
     DialogCompleted(completion) => Some(completion)
+    _ => None
+  }
+}
+
+///|
+pub fn RuntimeEvent::cookie_get_completion(
+  self : RuntimeEvent,
+) -> NativeCookieGetCompletion? {
+  match self {
+    CookieGetCompleted(completion) => Some(completion)
     _ => None
   }
 }

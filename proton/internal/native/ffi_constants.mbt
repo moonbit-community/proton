@@ -11,9 +11,6 @@ let proton_err_invalid_state = -3
 let proton_err_buffer_too_small = -11
 
 ///|
-let proton_err_pending = -18
-
-///|
 let proton_err_stale_bridge_response = -12
 
 ///|

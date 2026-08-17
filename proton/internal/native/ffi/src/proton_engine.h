@@ -320,8 +320,6 @@ int32_t proton_engine_window_begin_choose_directory_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len);
-proton_event_t *proton_engine_take_platform_event(
-    proton_engine_runtime_t *runtime);
 const char *proton_engine_name(void);
 
 int32_t proton_engine_view_create(
@@ -367,14 +365,12 @@ void proton_engine_view_bind_public_id(proton_engine_view_t *view,
 
 /* Session cookie and cache management. The engine implementation reaches the
    CEF cookie manager through the window's browser host request context. Cookie
-   get is begin/poll because the CEF visitor fires on the UI thread; set,
-   delete, flush, and clear_cache are fire-and-forget. */
+   get completion is published to the runtime event queue; set, delete, flush,
+   and clear_cache are fire-and-forget. */
 int32_t proton_engine_window_cookie_begin_get_json(
     proton_engine_window_t *window, const char *url_utf8,
-    int32_t include_http_only, char *error, size_t error_len);
-int32_t proton_engine_window_cookie_poll_get_json(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len);
+    int32_t include_http_only, int64_t *out_request_id, char *error,
+    size_t error_len);
 int32_t proton_engine_window_cookie_set_json(
     proton_engine_window_t *window, const char *cookie_json, char *error,
     size_t error_len);

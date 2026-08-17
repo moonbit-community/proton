@@ -10,6 +10,10 @@ static pthread_mutex_t g_event_sink_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 static proton_event_sink_fn g_event_sink = NULL;
 static void *g_event_sink_user_data = NULL;
+static proton_event_t *g_pending_event_head = NULL;
+static proton_event_t *g_pending_event_tail = NULL;
+static bool g_event_dispatch_active = false;
+static bool g_event_sink_was_bound = false;
 
 static void proton_event_sink_lock(void) {
 #ifdef _WIN32
@@ -145,11 +149,15 @@ void proton_event_queue_destroy(proton_event_queue_t *queue) {
     return;
   }
   proton_event_mutex_lock(&queue->mutex);
-  for (uint32_t i = 0; i < PROTON_EVENT_QUEUE_CAPACITY; i++) {
-    proton_event_destroy(queue->items[i]);
-    queue->items[i] = NULL;
+  proton_event_t *event = queue->head;
+  while (event != NULL) {
+    proton_event_t *next = event->next;
+    event->next = NULL;
+    proton_event_destroy(event);
+    event = next;
   }
-  queue->head = 0;
+  queue->head = NULL;
+  queue->tail = NULL;
   queue->count = 0;
   proton_event_mutex_unlock(&queue->mutex);
   proton_event_mutex_destroy(&queue->mutex);
@@ -161,12 +169,13 @@ bool proton_event_queue_push(proton_event_queue_t *queue,
     return false;
   }
   proton_event_mutex_lock(&queue->mutex);
-  if (queue->count >= PROTON_EVENT_QUEUE_CAPACITY) {
-    proton_event_mutex_unlock(&queue->mutex);
-    return false;
+  event->next = NULL;
+  if (queue->tail == NULL) {
+    queue->head = event;
+  } else {
+    queue->tail->next = event;
   }
-  uint32_t index = (queue->head + queue->count) % PROTON_EVENT_QUEUE_CAPACITY;
-  queue->items[index] = event;
+  queue->tail = event;
   queue->count++;
   proton_event_mutex_unlock(&queue->mutex);
   return true;
@@ -181,9 +190,12 @@ proton_event_t *proton_event_queue_pop(proton_event_queue_t *queue) {
     proton_event_mutex_unlock(&queue->mutex);
     return NULL;
   }
-  proton_event_t *event = queue->items[queue->head];
-  queue->items[queue->head] = NULL;
-  queue->head = (queue->head + 1) % PROTON_EVENT_QUEUE_CAPACITY;
+  proton_event_t *event = queue->head;
+  queue->head = event->next;
+  event->next = NULL;
+  if (queue->head == NULL) {
+    queue->tail = NULL;
+  }
   queue->count--;
   proton_event_mutex_unlock(&queue->mutex);
   return event;
@@ -199,10 +211,54 @@ uint32_t proton_event_queue_count(proton_event_queue_t *queue) {
   return count;
 }
 
+static void proton_event_destroy_pending_locked(void) {
+  proton_event_t *event = g_pending_event_head;
+  while (event != NULL) {
+    proton_event_t *next = event->next;
+    event->next = NULL;
+    proton_event_destroy(event);
+    event = next;
+  }
+  g_pending_event_head = NULL;
+  g_pending_event_tail = NULL;
+}
+
+void proton_event_dispatch_begin(void) {
+  proton_event_sink_lock();
+  proton_event_destroy_pending_locked();
+  g_event_dispatch_active = true;
+  g_event_sink_was_bound = false;
+  proton_event_sink_unlock();
+}
+
+void proton_event_dispatch_end(void) {
+  proton_event_sink_lock();
+  g_event_dispatch_active = false;
+  g_event_sink = NULL;
+  g_event_sink_user_data = NULL;
+  g_event_sink_was_bound = false;
+  proton_event_destroy_pending_locked();
+  proton_event_sink_unlock();
+}
+
 void proton_event_bind_sink(proton_event_sink_fn sink, void *user_data) {
   proton_event_sink_lock();
   g_event_sink = sink;
   g_event_sink_user_data = user_data;
+  g_event_sink_was_bound = true;
+  while (g_pending_event_head != NULL && g_event_sink != NULL) {
+    proton_event_t *event = g_pending_event_head;
+    proton_event_t *next = event->next;
+    event->next = NULL;
+    if (!g_event_sink(g_event_sink_user_data, event)) {
+      event->next = next;
+      break;
+    }
+    g_pending_event_head = next;
+    if (g_pending_event_head == NULL) {
+      g_pending_event_tail = NULL;
+    }
+  }
   proton_event_sink_unlock();
 }
 
@@ -227,9 +283,26 @@ bool proton_event_try_publish(proton_event_t *event) {
 }
 
 bool proton_event_publish(proton_event_t *event) {
-  bool published = proton_event_try_publish(event);
-  if (!published) {
-    proton_event_destroy(event);
+  if (event == NULL) {
+    return false;
   }
-  return published;
+  proton_event_sink_lock();
+  if (g_event_sink != NULL && g_event_sink(g_event_sink_user_data, event)) {
+    proton_event_sink_unlock();
+    return true;
+  }
+  if (g_event_dispatch_active && !g_event_sink_was_bound) {
+    event->next = NULL;
+    if (g_pending_event_tail == NULL) {
+      g_pending_event_head = event;
+    } else {
+      g_pending_event_tail->next = event;
+    }
+    g_pending_event_tail = event;
+    proton_event_sink_unlock();
+    return true;
+  }
+  proton_event_sink_unlock();
+  proton_event_destroy(event);
+  return false;
 }

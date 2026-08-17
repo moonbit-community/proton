@@ -731,21 +731,13 @@ pub extern "C" fn proton_screen_enumerate_json_ffi(
 ) -> Int = "proton_screen_enumerate_json"
 
 ///|
-#borrow(url_utf8)
+#borrow(url_utf8, out_request_id)
 pub extern "C" fn proton_window_cookie_begin_get_json_ffi(
   window : WindowHandle,
   url_utf8 : Bytes,
   include_http_only : Int,
+  out_request_id : Ref[Int64],
 ) -> Int = "proton_window_cookie_begin_get_json"
-
-///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_window_cookie_poll_get_json_ffi(
-  window : WindowHandle,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_window_cookie_poll_get_json"
 
 ///|
 #borrow(cookie_json)

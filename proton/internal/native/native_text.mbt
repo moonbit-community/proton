@@ -75,9 +75,6 @@ fn read_native_text(
     if status == proton_event_none {
       return None
     }
-    if status == proton_err_pending {
-      return None
-    }
     if status == proton_err_buffer_too_small {
       let next_len = native_text_buffer_length(context, required.val, length)
       if next_len <= buffer_len {

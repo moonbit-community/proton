@@ -1,7 +1,6 @@
 #if defined(__APPLE__)
 
 #include "launch_input.h"
-#include "platform_events.h"
 #include "../../proton_event.h"
 
 #import <AppKit/AppKit.h>
@@ -28,7 +27,7 @@ static void proton_engine_launch_input_enqueue(proton_event_kind_t kind,
     return;
   }
   free(values);
-  proton_engine_platform_event_enqueue(event);
+  (void)proton_event_publish(event);
 }
 
 @interface ProtonLaunchInputDelegate : NSObject <NSApplicationDelegate>

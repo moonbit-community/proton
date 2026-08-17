@@ -16,8 +16,6 @@ typedef CRITICAL_SECTION proton_event_mutex_t;
 typedef pthread_mutex_t proton_event_mutex_t;
 #endif
 
-#define PROTON_EVENT_QUEUE_CAPACITY 256
-
 typedef enum proton_event_kind {
   PROTON_EVENT_WINDOW_CREATED = 1,
   PROTON_EVENT_WINDOW_CLOSED = 2,
@@ -42,6 +40,7 @@ typedef enum proton_event_kind {
   PROTON_EVENT_VIEW_LOAD_FAILED = 21,
   PROTON_EVENT_BRIDGE_REQUEST = 22,
   PROTON_EVENT_DIALOG_COMPLETED = 23,
+  PROTON_EVENT_COOKIE_GET_COMPLETED = 24,
 } proton_event_kind_t;
 
 typedef struct proton_event {
@@ -63,11 +62,12 @@ typedef struct proton_event {
   char *text_c;
   char **items;
   int32_t item_count;
+  struct proton_event *next;
 } proton_event_t;
 
 typedef struct proton_event_queue {
-  proton_event_t *items[PROTON_EVENT_QUEUE_CAPACITY];
-  uint32_t head;
+  proton_event_t *head;
+  proton_event_t *tail;
   uint32_t count;
   proton_event_mutex_t mutex;
 } proton_event_queue_t;
@@ -91,6 +91,8 @@ PROTON_INTERNAL proton_event_t *proton_event_queue_pop(
     proton_event_queue_t *queue);
 PROTON_INTERNAL uint32_t proton_event_queue_count(
     proton_event_queue_t *queue);
+PROTON_INTERNAL void proton_event_dispatch_begin(void);
+PROTON_INTERNAL void proton_event_dispatch_end(void);
 PROTON_INTERNAL void proton_event_bind_sink(proton_event_sink_fn sink,
                                             void *user_data);
 PROTON_INTERNAL void proton_event_unbind_sink(void *user_data);

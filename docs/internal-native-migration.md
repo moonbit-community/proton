@@ -67,7 +67,7 @@ native prebuilt, or compatibility package remains.
 - [x] Emit launch-input and notification-result events as typed records.
 - [x] Publish browser and view callbacks directly to the runtime event sink.
 - [x] Publish menu, cancellation, and attached-instance callbacks directly.
-- [ ] Replace native callback entry with one C-owned completion/event queue.
+- [x] Replace native callback entry with one C-owned completion/event queue.
 - [ ] Convert true asynchronous operations to request/completion/cancel.
 - [ ] Remove subsystem polling loops, fixed sleeps, and timeout fallbacks.
 - [ ] Implement strict browser-close-before-CEF-shutdown sequencing.

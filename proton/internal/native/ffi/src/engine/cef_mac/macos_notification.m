@@ -2,7 +2,6 @@
 
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
-#include "platform_events.h"
 
 #import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
@@ -41,7 +40,7 @@ static void proton_notification_complete(BOOL delivered, NSError *error) {
     return;
   }
   event->bool_a = delivered;
-  proton_engine_platform_event_enqueue(event);
+  (void)proton_event_publish(event);
 }
 
 static void proton_notification_set_message(char *error,

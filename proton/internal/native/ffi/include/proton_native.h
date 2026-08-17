@@ -75,7 +75,6 @@ enum {
   PROTON_ERR_UPDATE_BUSY = -15,
   PROTON_ERR_UPDATE_ROLLBACK = -16,
   PROTON_ERR_UPDATE_REVISION_MISMATCH = -17,
-  PROTON_ERR_PENDING = -18,
   PROTON_ERR_BUSY = -19
 };
 
@@ -240,33 +239,19 @@ PROTON_API int32_t proton_window_begin_choose_directory_dialog(
     int64_t *out_dialog);
 /* Session cookie and cache management.
 
-   Cookie get uses a begin/poll pattern because the CEF cookie visitor fires
-   on the UI thread: call proton_window_cookie_begin_get_json to start the
-   visit, then call proton_window_cookie_poll_get_json on each message loop
-   iteration until it returns PROTON_OK. Cookie set, delete, flush, and cache
-   clear are fire-and-forget: they return once the request has been accepted
-   by the cookie manager or request context.
+   Cookie get completion is delivered through the runtime event queue. Cookie
+   set, delete, flush, and cache clear are fire-and-forget: they return once
+   the request has been accepted by the cookie manager or request context.
 
    All functions require a native engine window and return
    PROTON_ERR_UNSUPPORTED otherwise. */
 
-/* Begin retrieving cookies. If url_utf8 is NULL or empty, all cookies are
-   retrieved; otherwise only cookies matching the URL are returned. If
-   include_http_only is 1, HTTP-only cookies are included. Returns
-   PROTON_ERR_BUSY if a cookie get is already in progress for this window. */
+/* Begin retrieving cookies. Completion is delivered through the runtime event
+   queue with the returned request id. Returns PROTON_ERR_BUSY if a cookie get
+   is already in progress for this window. */
 PROTON_API int32_t proton_window_cookie_begin_get_json(
     proton_window_handle_t window, const char *url_utf8,
-    int32_t include_http_only);
-
-/* Poll for the result of a cookie get operation. Writes a JSON array of
-   cookie objects to buffer. Each cookie object has: name, value, domain,
-   path, secure, http_only, same_site, has_expires, expires (optional),
-   creation, last_access.
-   Returns PROTON_OK when the result is ready, PROTON_ERR_PENDING if the
-   operation is still in progress. */
-PROTON_API int32_t proton_window_cookie_poll_get_json(
-    proton_window_handle_t window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len);
+    int32_t include_http_only, int64_t *out_request_id);
 
 /* Set a cookie from a JSON object. The JSON must contain "url", "name",
    and "value", and may contain "domain", "path", "secure", "http_only",

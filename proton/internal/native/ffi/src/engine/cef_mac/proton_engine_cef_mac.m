@@ -7,7 +7,6 @@
 
 #include "dialog.h"
 #include "launch_input.h"
-#include "platform_events.h"
 #include "menu.h"
 #include "window.h"
 
@@ -1907,8 +1906,6 @@ static void proton_engine_init_handlers(void) {
       (cef_base_ref_counted_t *)&g_scheme_factory.factory.base,
       sizeof(g_scheme_factory.factory), &g_scheme_factory.refs);
   g_scheme_factory.factory.create = proton_engine_scheme_create;
-  proton_engine_platform_event_set_signal_callback(
-      proton_engine_signal_wait_source);
   initialized = 1;
 }
 

@@ -40,7 +40,7 @@ priv suberror FacadeLifecycleTestError {
 
 ///|
 async fn test_open_window(id : String) -> WindowHandle raise WindowSessionError {
-  @async.sleep(0) catch {
+  @async.pause() catch {
     _ => raise UnknownWindow(id~)
   }
   raise UnknownWindow(id~)
@@ -1103,7 +1103,7 @@ async test "dialog completion wakes only its registered waiter" {
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
     while completions.pending.is_empty() {
-      @async.sleep(0)
+      @async.pause()
     }
     completions.complete(
       Some(@native.NativeDialogCompletion::{
@@ -1140,7 +1140,7 @@ async test "dialog completion propagates native failure" {
       }
     })
     while completions.pending.is_empty() {
-      @async.sleep(0)
+      @async.pause()
     }
     completions.complete(
       Some(@native.NativeDialogCompletion::{

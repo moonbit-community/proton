@@ -32,7 +32,6 @@ options(
     "src/engine/cef_mac/launch_input.m",
     "src/engine/cef_mac/menu.m",
     "src/engine/cef_mac/macos_notification.m",
-    "src/engine/cef_mac/platform_events.m",
     "src/engine/cef_mac/proton_engine_cef_mac.m",
     "src/engine/cef_win/windows_notification.c",
     "src/engine/cef_win/proton_engine_cef_win.c",

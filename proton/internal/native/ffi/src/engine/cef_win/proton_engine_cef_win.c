@@ -4325,6 +4325,11 @@ void proton_engine_window_bind_public_id(proton_engine_window_t *window,
   }
 }
 
+proton_window_id_t
+proton_engine_window_public_id(proton_engine_window_t *window) {
+  return window != NULL ? window->public_window_id : PROTON_INVALID_HANDLE;
+}
+
 uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
   return window != NULL
              ? proton_engine_bridge_lifecycle_revision(&window->bridge_lifecycle)

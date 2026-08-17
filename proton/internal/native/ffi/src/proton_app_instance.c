@@ -1288,11 +1288,21 @@ int32_t proton_app_instance_attach_runtime_impl(
     return PROTON_ERR_ALREADY_INITIALIZED;
   }
   slot->runtime = runtime;
-  bool has_events = slot->event_count > 0;
-  proton_app_instance_unlock(slot);
-  if (has_events) {
-    proton_engine_runtime_signal_external_event(runtime);
+  while (slot->event_count > 0) {
+    proton_event_t *event = slot->events[slot->event_head];
+    slot->events[slot->event_head] = NULL;
+    slot->event_head =
+        (slot->event_head + 1) % PROTON_APP_INSTANCE_EVENT_CAPACITY;
+    slot->event_count--;
+    if (!proton_event_publish(event)) {
+      slot->runtime = NULL;
+      proton_app_instance_unlock(slot);
+      proton_app_instance_set_message(
+          error, error_len, "failed to publish queued app activation");
+      return PROTON_ERR_QUEUE_FAILED;
+    }
   }
+  proton_app_instance_unlock(slot);
   return PROTON_OK;
 }
 
@@ -1326,25 +1336,4 @@ int32_t proton_app_instance_destroy_impl(int64_t instance, char *error,
   }
   proton_app_instance_dispose_slot(slot);
   return PROTON_OK;
-}
-
-proton_event_t *proton_app_instance_take_event_impl(
-    int64_t instance, char *error, size_t error_len) {
-  proton_app_instance_slot_t *slot =
-      proton_app_instance_get(instance, error, error_len);
-  if (slot == NULL) {
-    return NULL;
-  }
-  proton_app_instance_lock(slot);
-  if (slot->event_count == 0) {
-    proton_app_instance_unlock(slot);
-    return NULL;
-  }
-  proton_event_t *event = slot->events[slot->event_head];
-  slot->events[slot->event_head] = NULL;
-  slot->event_head =
-      (slot->event_head + 1) % PROTON_APP_INSTANCE_EVENT_CAPACITY;
-  slot->event_count--;
-  proton_app_instance_unlock(slot);
-  return event;
 }

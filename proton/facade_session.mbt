@@ -1259,7 +1259,7 @@ async fn RuntimeSession::wait_for_bridge_startup(
         None => return
         Some(_) =>
           if did_work {
-            @async.sleep(0)
+            @async.pause()
           } else {
             self.wakeup.wait_after(revision)
           }
@@ -1291,7 +1291,7 @@ async fn RuntimeSession::run(self : RuntimeSession) -> Unit raise AppRunError {
     let revision = self.wakeup.revision()
     let did_work = self.pump_once(monitor_bridge=self.monitor_bridge)
     if did_work {
-      @async.sleep(0) catch {
+      @async.pause() catch {
         error => raise normalize_async_run_error(error)
       }
     } else {
@@ -1318,7 +1318,7 @@ async fn RuntimeSession::drive_until_complete(
       None => {
         let did_work = self.pump_once(monitor_bridge=self.monitor_bridge)
         if did_work {
-          @async.sleep(0) catch {
+          @async.pause() catch {
             error => raise normalize_async_run_error(error)
           }
         } else {

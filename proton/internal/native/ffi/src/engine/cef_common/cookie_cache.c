@@ -1,4 +1,5 @@
 #include "../../proton_engine.h"
+#include "../../proton_event.h"
 #include "../../proton_json.h"
 #include "cookie_state_lifetime.h"
 #include "message.h"
@@ -50,7 +51,12 @@ typedef struct proton_cookie_get_state {
   proton_engine_window_t *window;
   proton_cookie_state_ref_count_t refs; /* list owner plus visitor refs */
   proton_cookie_state_detached_t detached; /* no longer visible to callers */
-  int done;                 /* set when the visitor has finished          */
+  int64_t request_id;
+  int64_t event_window;
+  int accepted;
+  int completion_emitted;
+  int32_t status;
+  char error[256];
   char *json;               /* accumulated JSON array body                */
   size_t json_len;          /* bytes used in json                         */
   size_t json_cap;          /* allocated capacity of json                 */
@@ -58,6 +64,7 @@ typedef struct proton_cookie_get_state {
 } proton_cookie_get_state_t;
 
 static proton_cookie_get_state_t *g_cookie_get_states = NULL;
+static int64_t g_next_cookie_request_id = 1;
 
 static void proton_cookie_get_state_destroy(proton_cookie_get_state_t *state) {
   if (state == NULL) {
@@ -85,34 +92,100 @@ proton_cookie_get_state_find(proton_engine_window_t *window) {
   return NULL;
 }
 
-static proton_cookie_get_state_t *
-proton_cookie_get_state_acquire(proton_engine_window_t *window) {
-  proton_cookie_get_state_t *state = proton_cookie_get_state_find(window);
-  if (state != NULL) {
-    if (!state->done) {
-      return NULL; /* busy */
-    }
-    /* Reuse the slot: clear the previous result. */
-    state->json_len = 0;
-    if (state->json != NULL) {
-      state->json[0] = '\0';
-    }
-    state->done = 0;
-    return state;
+static proton_cookie_get_state_t *proton_cookie_get_state_create(
+    proton_engine_window_t *window) {
+  if (proton_cookie_get_state_find(window) != NULL) {
+    return NULL;
   }
-  state = (proton_cookie_get_state_t *)calloc(1, sizeof(*state));
+  proton_cookie_get_state_t *state =
+      (proton_cookie_get_state_t *)calloc(1, sizeof(*state));
   if (state == NULL) {
     return NULL;
   }
   proton_cookie_state_lifetime_init(&state->refs, &state->detached);
   state->window = window;
+  state->request_id = g_next_cookie_request_id++;
+  if (g_next_cookie_request_id <= 0) {
+    g_next_cookie_request_id = 1;
+  }
+  state->event_window = proton_engine_window_public_id(window);
+  state->status = PROTON_OK;
   state->next = g_cookie_get_states;
   g_cookie_get_states = state;
   return state;
 }
 
+static void proton_cookie_get_state_remove(proton_cookie_get_state_t *state) {
+  proton_cookie_get_state_t **cursor = &g_cookie_get_states;
+  while (*cursor != NULL) {
+    if (*cursor == state) {
+      *cursor = state->next;
+      state->next = NULL;
+      return;
+    }
+    cursor = &(*cursor)->next;
+  }
+}
+
+static void proton_cookie_get_state_fail(proton_cookie_get_state_t *state,
+                                         int32_t status,
+                                         const char *message) {
+  if (state == NULL || state->status != PROTON_OK) {
+    return;
+  }
+  state->status = status;
+  snprintf(state->error, sizeof(state->error), "%s",
+           message != NULL ? message : "cookie request failed");
+}
+
+static void proton_cookie_get_state_emit(proton_cookie_get_state_t *state) {
+  if (state == NULL || state->completion_emitted) {
+    return;
+  }
+  state->completion_emitted = 1;
+  proton_event_t *event = proton_event_create(PROTON_EVENT_COOKIE_GET_COMPLETED);
+  if (event != NULL) {
+    event->window = state->event_window;
+    event->request_id = state->request_id;
+    event->int_a = state->status;
+    if (state->status == PROTON_OK) {
+      size_t result_len = state->json_len + 3;
+      char *result = (char *)malloc(result_len);
+      if (result == NULL) {
+        event->int_a = PROTON_ERR_ENGINE;
+        (void)proton_event_set_text(&event->text_a, "");
+        (void)proton_event_set_text(&event->text_b,
+                                    "failed to allocate cookie result");
+      } else {
+        result[0] = '[';
+        if (state->json_len > 0) {
+          memcpy(result + 1, state->json, state->json_len);
+        }
+        result[state->json_len + 1] = ']';
+        result[state->json_len + 2] = '\0';
+        if (!proton_event_set_text(&event->text_a, result) ||
+            !proton_event_set_text(&event->text_b, "")) {
+          proton_event_destroy(event);
+          event = NULL;
+        }
+        free(result);
+      }
+    } else if (!proton_event_set_text(&event->text_a, "") ||
+               !proton_event_set_text(&event->text_b, state->error)) {
+      proton_event_destroy(event);
+      event = NULL;
+    }
+    if (event != NULL) {
+      (void)proton_event_publish(event);
+    }
+  }
+}
+
 static int proton_cookie_json_reserve(proton_cookie_get_state_t *state,
                                       size_t extra) {
+  if (state->status != PROTON_OK) {
+    return 0;
+  }
   if (state->json_len + extra + 1 <= state->json_cap) {
     return 1;
   }
@@ -122,6 +195,8 @@ static int proton_cookie_json_reserve(proton_cookie_get_state_t *state,
   }
   char *grown = (char *)realloc(state->json, need);
   if (grown == NULL) {
+    proton_cookie_get_state_fail(state, PROTON_ERR_ENGINE,
+                                 "failed to allocate cookie result");
     return 0;
   }
   state->json = grown;
@@ -131,6 +206,9 @@ static int proton_cookie_json_reserve(proton_cookie_get_state_t *state,
 
 static int proton_cookie_json_append(proton_cookie_get_state_t *state,
                                      const char *text, size_t len) {
+  if (state->status != PROTON_OK) {
+    return 0;
+  }
   if (!proton_cookie_json_reserve(state, len)) {
     return 0;
   }
@@ -226,13 +304,16 @@ static int CEF_CALLBACK proton_cookie_visitor_visit(
     *delete_cookie = 0;
   }
   if (self == NULL || cookie == NULL) {
-    return 1;
+    return 0;
   }
   proton_cookie_visitor_impl_t *impl =
       (proton_cookie_visitor_impl_t *)self;
   proton_cookie_get_state_t *state = impl->state;
   if (state == NULL ||
       proton_cookie_state_lifetime_is_detached(&state->detached)) {
+    return 0;
+  }
+  if (state->status != PROTON_OK) {
     return 0;
   }
 
@@ -308,7 +389,7 @@ static int CEF_CALLBACK proton_cookie_visitor_visit(
   free(value);
   free(domain);
   free(path);
-  return 1; /* continue visiting */
+  return state->status == PROTON_OK; /* continue visiting */
 }
 
 static int CEF_CALLBACK
@@ -325,13 +406,17 @@ proton_cookie_visitor_release(cef_base_ref_counted_t *base) {
                        memory_order_acq_rel) - 1);
 #endif
   if (value <= 0) {
-    /* All visitor refs are gone. Mark a live state done, then release the
-       visitor's state reference. Cleanup may have detached it already. */
+    /* The final release is the only reliable completion signal. Cleanup may
+       already have detached and removed the list-owned state reference. */
     if (impl->state != NULL) {
       proton_cookie_get_state_t *state = impl->state;
-      proton_cookie_state_lifetime_complete_if_last(
-          &state->detached, &state->done, value);
       impl->state = NULL;
+      if (state->accepted &&
+          !proton_cookie_state_lifetime_is_detached(&state->detached)) {
+        proton_cookie_get_state_emit(state);
+        proton_cookie_get_state_remove(state);
+        proton_cookie_get_state_release(state); /* list owner */
+      }
       proton_cookie_get_state_release(state);
     }
     free(impl);
@@ -396,19 +481,17 @@ proton_cookie_manager_from_window(proton_engine_window_t *window,
 
 int32_t proton_engine_window_cookie_begin_get_json(
     proton_engine_window_t *window, const char *url_utf8,
-    int32_t include_http_only, char *error, size_t error_len) {
+    int32_t include_http_only, int64_t *out_request_id, char *error,
+    size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-
-  proton_cookie_get_state_t *state =
-      proton_cookie_get_state_acquire(window);
-  if (state == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "a cookie get is already in progress");
-    return PROTON_ERR_BUSY;
+  if (out_request_id == NULL) {
+    proton_engine_set_message(error, error_len, "out_request_id is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
+  *out_request_id = PROTON_INVALID_HANDLE;
 
   cef_cookie_manager_t *manager =
       proton_cookie_manager_from_window(window, error, error_len);
@@ -416,10 +499,23 @@ int32_t proton_engine_window_cookie_begin_get_json(
     return PROTON_ERR_ENGINE;
   }
 
+  proton_cookie_get_state_t *state =
+      proton_cookie_get_state_create(window);
+  if (state == NULL) {
+    manager->base.release((cef_base_ref_counted_t *)manager);
+    proton_engine_set_message(error, error_len,
+                              "a cookie get is already in progress");
+    return PROTON_ERR_BUSY;
+  }
+  *out_request_id = state->request_id;
+
   cef_cookie_visitor_t *visitor = proton_cookie_visitor_create(state);
   if (visitor == NULL) {
     manager->base.release((cef_base_ref_counted_t *)manager);
-    state->done = 1;
+    proton_cookie_get_state_remove(state);
+    proton_cookie_state_lifetime_detach(&state->detached);
+    proton_cookie_get_state_release(state);
+    *out_request_id = PROTON_INVALID_HANDLE;
     proton_engine_set_message(error, error_len,
                               "failed to allocate cookie visitor");
     return PROTON_ERR_PLATFORM;
@@ -436,53 +532,23 @@ int32_t proton_engine_window_cookie_begin_get_json(
     ok = manager->visit_all_cookies(manager, visitor);
   }
 
-  /* Release our ref; CEF holds its own ref while the visit is in flight.
-     When CEF releases, the custom release callback sets state->done. */
-  visitor->base.release((cef_base_ref_counted_t *)visitor);
-  manager->base.release((cef_base_ref_counted_t *)manager);
-
   if (!ok) {
-    if (!proton_cookie_state_lifetime_is_detached(&state->detached)) {
-      state->done = 1;
-    }
+    visitor->base.release((cef_base_ref_counted_t *)visitor);
+    manager->base.release((cef_base_ref_counted_t *)manager);
+    proton_cookie_get_state_remove(state);
+    proton_cookie_state_lifetime_detach(&state->detached);
+    proton_cookie_get_state_release(state);
+    *out_request_id = PROTON_INVALID_HANDLE;
     proton_engine_set_message(error, error_len,
                               "cookie manager rejected the visit request");
     return PROTON_ERR_ENGINE;
   }
-  return PROTON_OK;
-}
-
-int32_t proton_engine_window_cookie_poll_get_json(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len) {
-  (void)error;
-  (void)error_len;
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  proton_cookie_get_state_t *state =
-      proton_cookie_get_state_find(window);
-  if (state == NULL) {
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!state->done) {
-    return PROTON_ERR_PENDING;
-  }
-  /* Wrap the accumulated body as a JSON array. */
-  size_t body_len = state->json_len;
-  size_t needed = body_len + 3; /* "[" + body + "]" + NUL */
-  if (out_required_len != NULL) {
-    *out_required_len = (int32_t)needed - 1;
-  }
-  if (buffer == NULL || buffer_len < (int32_t)needed) {
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  buffer[0] = '[';
-  if (body_len > 0) {
-    memcpy(buffer + 1, state->json, body_len);
-  }
-  buffer[body_len + 1] = ']';
-  buffer[body_len + 2] = '\0';
+  state->accepted = 1;
+  /* CEF owns its visitor reference until traversal is complete. Dropping the
+     caller reference here cannot complete the request while that CEF
+     reference still exists. */
+  visitor->base.release((cef_base_ref_counted_t *)visitor);
+  manager->base.release((cef_base_ref_counted_t *)manager);
   return PROTON_OK;
 }
 
@@ -716,7 +782,13 @@ void proton_engine_window_cookie_cleanup(proton_engine_window_t *window) {
     proton_cookie_get_state_t *state = *link;
     if (state->window == window) {
       *link = state->next;
+      state->next = NULL;
       state->window = NULL;
+      proton_cookie_get_state_fail(state, PROTON_ERR_DESTROYED,
+                                   "window closed before cookie request completed");
+      if (state->accepted) {
+        proton_cookie_get_state_emit(state);
+      }
       proton_cookie_state_lifetime_detach(&state->detached);
       proton_cookie_get_state_release(state);
       return;

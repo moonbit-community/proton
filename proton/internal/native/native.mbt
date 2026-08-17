@@ -1341,6 +1341,23 @@ fn decode_native_runtime_event(
         },
       })
     }
+    24 => {
+      let status = @native_ffi.event_int(event, 0)
+      CookieGetCompleted({
+        request_id: @native_ffi.event_int64(event, 2),
+        window,
+        result: if status == 0 {
+          Ok(require_native_event_text(event, 0, "cookie result"))
+        } else {
+          Err(
+            Status(
+              status~,
+              message=require_native_event_text(event, 1, "cookie error"),
+            ),
+          )
+        },
+      })
+    }
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -1930,20 +1947,18 @@ pub fn Window::take_bridge_failure(
 }
 
 ///|
-/// Begins retrieving cookies for the window's session. If `url` is `None`,
-/// all cookies are retrieved; otherwise only cookies matching the URL are
-/// returned. When `include_http_only` is `true`, HTTP-only cookies are
-/// included. Returns immediately; call `cookie_poll_get` on each message
-/// loop iteration until it returns `Some(json)`.
+/// Begins retrieving cookies for the window's session. Completion is delivered
+/// as a `cookie_get_completed` runtime event carrying the returned request id.
 pub fn Window::cookie_begin_get(
   self : Window,
   url : String?,
   include_http_only : Bool,
-) -> Unit raise NativeError {
+) -> Int64 raise NativeError {
   let url_bytes = match url {
     Some(u) => @ffi.to_cstr(u)
     None => @ffi.to_cstr("")
   }
+  let request_id = Ref(proton_invalid_handle)
   check_status(
     @native_ffi.proton_window_cookie_begin_get_json_ffi(
       self.live_handle(),
@@ -1953,29 +1968,10 @@ pub fn Window::cookie_begin_get(
       } else {
         0
       },
+      request_id,
     ),
   )
-}
-
-///|
-/// Polls for the result of a cookie get operation. Returns `None` if the
-/// operation is still in progress, or `Some(json)` with a JSON array of
-/// cookie objects when complete.
-pub fn Window::cookie_poll_get(self : Window) -> String? raise NativeError {
-  let handle = self.live_handle()
-  match
-    read_native_text("cookie get", BufferBytesIncludingTerminator, (
-      buffer,
-      buffer_len,
-      required,
-    ) => {
-      @native_ffi.proton_window_cookie_poll_get_json_ffi(
-        handle, buffer, buffer_len, required,
-      )
-    }) {
-    None => None
-    Some(text) => Some(text)
-  }
+  request_id.val
 }
 
 ///|

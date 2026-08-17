@@ -143,23 +143,6 @@ static char *proton_strdup(const char *text) {
   return copy;
 }
 
-// Drain platform-originated events into the ordered runtime event queue.
-// Take from the engine queue only when the public queue has room, so a full
-// queue defers delivery instead of dropping events.
-static void proton_runtime_sync_platform_events(proton_runtime_slot_t *runtime) {
-  while (proton_event_queue_count(&runtime->events) <
-         PROTON_EVENT_QUEUE_CAPACITY) {
-    proton_event_t *event =
-        proton_engine_take_platform_event(runtime->engine_runtime);
-    if (event == NULL) {
-      return;
-    }
-    if (!proton_runtime_enqueue_event(runtime, event)) {
-      return;
-    }
-  }
-}
-
 int32_t proton_abi_version(void) { return PROTON_ABI_VERSION; }
 
 proton_runtime_handle_t proton_runtime_null(void) { return NULL; }
@@ -514,10 +497,12 @@ int32_t proton_host_loop_begin(void) {
     return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
                             "host loop is already active");
   }
+  proton_event_dispatch_begin();
   char engine_error[512] = {0};
   int32_t status =
       proton_engine_host_loop_begin(engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
+    proton_event_dispatch_end();
     return proton_set_engine_status(status, engine_error);
   }
   g_host_lifecycle = PROTON_HOST_ACTIVE;
@@ -560,6 +545,7 @@ void proton_host_loop_end(void) {
   }
   g_host_lifecycle = PROTON_HOST_ENDING;
   proton_engine_host_loop_end();
+  proton_event_dispatch_end();
   g_host_lifecycle = PROTON_HOST_IDLE;
 }
 
@@ -714,22 +700,6 @@ int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
     }
   }
   proton_runtime_sync_engine_bridge_lifecycle(slot);
-  proton_runtime_sync_platform_events(slot);
-  if (slot->app_instance != PROTON_INVALID_HANDLE) {
-    while (proton_event_queue_count(&slot->events) <
-           PROTON_EVENT_QUEUE_CAPACITY) {
-      char instance_error[512] = {0};
-      proton_event_t *event = proton_app_instance_take_event_impl(
-          slot->app_instance, instance_error, sizeof(instance_error));
-      if (event == NULL) {
-        break;
-      }
-      if (!proton_runtime_enqueue_event(slot, event)) {
-        return proton_set_error(PROTON_ERR_QUEUE_FAILED,
-                                "failed to queue app activation event");
-      }
-    }
-  }
   *out_event = proton_runtime_poll_event(slot);
   if (*out_event == NULL) {
     return PROTON_EVENT_NONE;
@@ -951,12 +921,6 @@ int32_t proton_window_destroy(proton_window_handle_t window) {
   status = proton_get_runtime(slot->runtime, &runtime);
   if (status != PROTON_OK) {
     return status;
-  }
-  if (!slot->closed_event_sent &&
-      proton_event_queue_count(&runtime->events) >=
-          PROTON_EVENT_QUEUE_CAPACITY) {
-    return proton_set_error(PROTON_ERR_QUEUE_FAILED,
-                            "failed to queue window_closed event");
   }
   proton_window_slot_begin_destroy(slot);
   proton_destroy_views_for_window(slot);
@@ -1896,7 +1860,13 @@ int32_t proton_window_begin_choose_directory_dialog(
 
 int32_t proton_window_cookie_begin_get_json(proton_window_handle_t window,
                                             const char *url_utf8,
-                                            int32_t include_http_only) {
+                                            int32_t include_http_only,
+                                            int64_t *out_request_id) {
+  if (out_request_id == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_request_id is required");
+  }
+  *out_request_id = PROTON_INVALID_HANDLE;
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -1908,38 +1878,8 @@ int32_t proton_window_cookie_begin_get_json(proton_window_handle_t window,
   }
   char engine_error[512] = {0};
   status = proton_engine_window_cookie_begin_get_json(
-      slot->engine_window, url_utf8, include_http_only, engine_error,
-      sizeof(engine_error));
-  if (status != PROTON_OK) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_window_cookie_poll_get_json(proton_window_handle_t window,
-                                           char *buffer,
-                                           int32_t buffer_len,
-                                           int32_t *out_required_len) {
-  proton_window_slot_t *slot = NULL;
-  int32_t status = proton_get_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_window == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "cookie operations require native engine");
-  }
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_window_cookie_poll_get_json(
-      slot->engine_window, buffer, buffer_len, out_required_len, engine_error,
-      sizeof(engine_error));
-  if (status == PROTON_ERR_PENDING) {
-    return PROTON_ERR_PENDING;
-  }
+      slot->engine_window, url_utf8, include_http_only, out_request_id,
+      engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
