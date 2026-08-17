@@ -29,12 +29,22 @@ pub(all) struct AutoLaunchActivity {
   operation : String
   identifier : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn AutoLaunchActivity::equal(Self, Self) -> Bool
+pub fn AutoLaunchActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AutoLaunchActivity::not_equal(Self, Self) -> Bool
+pub fn AutoLaunchActivity::to_json(Self) -> Json
+pub fn AutoLaunchActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct AutoLaunchReply {
   name : String
   path : String
   identifier : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn AutoLaunchReply::equal(Self, Self) -> Bool
+pub fn AutoLaunchReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AutoLaunchReply::not_equal(Self, Self) -> Bool
+pub fn AutoLaunchReply::to_json(Self) -> Json
+pub fn AutoLaunchReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct AutoLaunchRequest {
   name : String
@@ -44,14 +54,29 @@ pub(all) struct AutoLaunchRequest {
   extra_arguments : Array[String]?
   identifier : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn AutoLaunchRequest::equal(Self, Self) -> Bool
+pub fn AutoLaunchRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AutoLaunchRequest::not_equal(Self, Self) -> Bool
+pub fn AutoLaunchRequest::to_json(Self) -> Json
+pub fn AutoLaunchRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct EnabledReply {
   enabled : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn EnabledReply::equal(Self, Self) -> Bool
+pub fn EnabledReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EnabledReply::not_equal(Self, Self) -> Bool
+pub fn EnabledReply::to_json(Self) -> Json
+pub fn EnabledReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MutationReply {
   changed : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn MutationReply::equal(Self, Self) -> Bool
+pub fn MutationReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MutationReply::not_equal(Self, Self) -> Bool
+pub fn MutationReply::to_json(Self) -> Json
+pub fn MutationReply::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

@@ -42,20 +42,40 @@ pub let support : @proton_contract.Command[@proton_contract.EmptyRequest, @proto
 pub(all) struct SetIconRequest {
   icon : Json?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn SetIconRequest::equal(Self, Self) -> Bool
+pub fn SetIconRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetIconRequest::not_equal(Self, Self) -> Bool
+pub fn SetIconRequest::to_json(Self) -> Json
+pub fn SetIconRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SetMenuRequest {
   items : Array[TrayMenuItem]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn SetMenuRequest::equal(Self, Self) -> Bool
+pub fn SetMenuRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetMenuRequest::not_equal(Self, Self) -> Bool
+pub fn SetMenuRequest::to_json(Self) -> Json
+pub fn SetMenuRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SetTooltipRequest {
   tooltip : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn SetTooltipRequest::equal(Self, Self) -> Bool
+pub fn SetTooltipRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetTooltipRequest::not_equal(Self, Self) -> Bool
+pub fn SetTooltipRequest::to_json(Self) -> Json
+pub fn SetTooltipRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ShowRequest {
   icon : Json?
   tooltip : String?
   menu : TrayMenu?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ShowRequest::equal(Self, Self) -> Bool
+pub fn ShowRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ShowRequest::not_equal(Self, Self) -> Bool
+pub fn ShowRequest::to_json(Self) -> Json
+pub fn ShowRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayActivity {
   operation : String
@@ -63,22 +83,47 @@ pub(all) struct TrayActivity {
   tooltip : String?
   icon : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrayActivity::equal(Self, Self) -> Bool
+pub fn TrayActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrayActivity::not_equal(Self, Self) -> Bool
+pub fn TrayActivity::to_json(Self) -> Json
+pub fn TrayActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayClick {
   visible : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrayClick::equal(Self, Self) -> Bool
+pub fn TrayClick::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrayClick::not_equal(Self, Self) -> Bool
+pub fn TrayClick::to_json(Self) -> Json
+pub fn TrayClick::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayDoubleClick {
   visible : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrayDoubleClick::equal(Self, Self) -> Bool
+pub fn TrayDoubleClick::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrayDoubleClick::not_equal(Self, Self) -> Bool
+pub fn TrayDoubleClick::to_json(Self) -> Json
+pub fn TrayDoubleClick::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayEventReply {
   count : Int
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrayEventReply::equal(Self, Self) -> Bool
+pub fn TrayEventReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrayEventReply::not_equal(Self, Self) -> Bool
+pub fn TrayEventReply::to_json(Self) -> Json
+pub fn TrayEventReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayMenu {
   items : Array[TrayMenuItem]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrayMenu::equal(Self, Self) -> Bool
+pub fn TrayMenu::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrayMenu::not_equal(Self, Self) -> Bool
+pub fn TrayMenu::to_json(Self) -> Json
+pub fn TrayMenu::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayMenuItem {
   id : String?
@@ -87,19 +132,39 @@ pub(all) struct TrayMenuItem {
   enabled : Bool?
   checked : Bool?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrayMenuItem::equal(Self, Self) -> Bool
+pub fn TrayMenuItem::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrayMenuItem::not_equal(Self, Self) -> Bool
+pub fn TrayMenuItem::to_json(Self) -> Json
+pub fn TrayMenuItem::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayMenuItemClick {
   item_id : String
   visible : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrayMenuItemClick::equal(Self, Self) -> Bool
+pub fn TrayMenuItemClick::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrayMenuItemClick::not_equal(Self, Self) -> Bool
+pub fn TrayMenuItemClick::to_json(Self) -> Json
+pub fn TrayMenuItemClick::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayReply {
   visible : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrayReply::equal(Self, Self) -> Bool
+pub fn TrayReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrayReply::not_equal(Self, Self) -> Bool
+pub fn TrayReply::to_json(Self) -> Json
+pub fn TrayReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayRightClick {
   visible : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrayRightClick::equal(Self, Self) -> Bool
+pub fn TrayRightClick::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrayRightClick::not_equal(Self, Self) -> Bool
+pub fn TrayRightClick::to_json(Self) -> Json
+pub fn TrayRightClick::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

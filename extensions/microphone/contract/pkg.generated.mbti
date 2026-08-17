@@ -31,6 +31,11 @@ pub(all) struct CaptureConfigReply {
   recommended_chunk_frames : Int
   uses_voice_processing : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn CaptureConfigReply::equal(Self, Self) -> Bool
+pub fn CaptureConfigReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn CaptureConfigReply::not_equal(Self, Self) -> Bool
+pub fn CaptureConfigReply::to_json(Self) -> Json
+pub fn CaptureConfigReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CaptureConfigRequest {
   channels : Int?
@@ -39,11 +44,21 @@ pub(all) struct CaptureConfigRequest {
   echo_cancellation : Bool?
   noise_suppression : Bool?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn CaptureConfigRequest::equal(Self, Self) -> Bool
+pub fn CaptureConfigRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn CaptureConfigRequest::not_equal(Self, Self) -> Bool
+pub fn CaptureConfigRequest::to_json(Self) -> Json
+pub fn CaptureConfigRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MicrophoneActivity {
   operation : String
   count : Int?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn MicrophoneActivity::equal(Self, Self) -> Bool
+pub fn MicrophoneActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MicrophoneActivity::not_equal(Self, Self) -> Bool
+pub fn MicrophoneActivity::to_json(Self) -> Json
+pub fn MicrophoneActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MicrophoneDeviceReply {
   id : String
@@ -54,14 +69,29 @@ pub(all) struct MicrophoneDeviceReply {
   live : Bool
   session_label : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn MicrophoneDeviceReply::equal(Self, Self) -> Bool
+pub fn MicrophoneDeviceReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MicrophoneDeviceReply::not_equal(Self, Self) -> Bool
+pub fn MicrophoneDeviceReply::to_json(Self) -> Json
+pub fn MicrophoneDeviceReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MicrophoneDevicesReply {
   devices : Array[MicrophoneDeviceReply]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn MicrophoneDevicesReply::equal(Self, Self) -> Bool
+pub fn MicrophoneDevicesReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MicrophoneDevicesReply::not_equal(Self, Self) -> Bool
+pub fn MicrophoneDevicesReply::to_json(Self) -> Json
+pub fn MicrophoneDevicesReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ParseListingRequest {
   listing : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ParseListingRequest::equal(Self, Self) -> Bool
+pub fn ParseListingRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ParseListingRequest::not_equal(Self, Self) -> Bool
+pub fn ParseListingRequest::to_json(Self) -> Json
+pub fn ParseListingRequest::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

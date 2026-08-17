@@ -18,8 +18,12 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Types and methods
 type AddRequest derive(ToJson, @json.FromJson)
+pub fn AddRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AddRequest::to_json(Self) -> Json
 
 type ReportProbeRequest derive(ToJson, @json.FromJson)
+pub fn ReportProbeRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReportProbeRequest::to_json(Self) -> Json
 
 // Type aliases
 

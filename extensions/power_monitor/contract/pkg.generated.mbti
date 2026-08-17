@@ -22,15 +22,30 @@ pub let get_power_source : @proton_contract.Command[@proton_contract.EmptyReques
 pub(all) struct IdleTimeReply {
   idle_seconds : Int
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn IdleTimeReply::equal(Self, Self) -> Bool
+pub fn IdleTimeReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IdleTimeReply::not_equal(Self, Self) -> Bool
+pub fn IdleTimeReply::to_json(Self) -> Json
+pub fn IdleTimeReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PowerMonitorActivity {
   operation : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PowerMonitorActivity::equal(Self, Self) -> Bool
+pub fn PowerMonitorActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PowerMonitorActivity::not_equal(Self, Self) -> Bool
+pub fn PowerMonitorActivity::to_json(Self) -> Json
+pub fn PowerMonitorActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PowerSourceReply {
   source : String
   battery_percent : Int?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PowerSourceReply::equal(Self, Self) -> Bool
+pub fn PowerSourceReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PowerSourceReply::not_equal(Self, Self) -> Bool
+pub fn PowerSourceReply::to_json(Self) -> Json
+pub fn PowerSourceReply::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

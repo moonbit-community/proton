@@ -11,12 +11,20 @@ import {
 
 // Types and methods
 type DoneEvent derive(ToJson, @json.FromJson)
+pub fn DoneEvent::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DoneEvent::to_json(Self) -> Json
 
 type StartPayload derive(ToJson, @json.FromJson)
+pub fn StartPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn StartPayload::to_json(Self) -> Json
 
 type TickEvent derive(ToJson, @json.FromJson)
+pub fn TickEvent::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TickEvent::to_json(Self) -> Json
 
 type TickerResult derive(ToJson, @json.FromJson)
+pub fn TickerResult::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TickerResult::to_json(Self) -> Json
 
 // Type aliases
 

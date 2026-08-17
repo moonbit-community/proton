@@ -14,7 +14,12 @@ pub(all) suberror DoctorError {
   WorkingDirectoryNotDirectory(path~ : String)
   OutputWrite(path~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn DoctorError::equal(Self, Self) -> Bool
 pub fn DoctorError::message(Self) -> String
+pub fn DoctorError::not_equal(Self, Self) -> Bool
+pub fn DoctorError::output(Self, &Logger) -> Unit
+pub fn DoctorError::to_repr(Self) -> @debug.Repr
+pub fn DoctorError::to_string(Self) -> String
 
 // Types and methods
 

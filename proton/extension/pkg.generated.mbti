@@ -19,6 +19,9 @@ pub(all) suberror ExtensionAdapterError {
   TypedSpecInvalid(extension_id~ : String, detail~ : String)
 } derive(@debug.Debug)
 pub fn ExtensionAdapterError::message(Self) -> String
+pub fn ExtensionAdapterError::output(Self, &Logger) -> Unit
+pub fn ExtensionAdapterError::to_repr(Self) -> @debug.Repr
+pub fn ExtensionAdapterError::to_string(Self) -> String
 
 // Types and methods
 type Extension

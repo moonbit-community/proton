@@ -11,12 +11,20 @@ import {
 
 // Types and methods
 type DoublePayload derive(ToJson, @json.FromJson)
+pub fn DoublePayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DoublePayload::to_json(Self) -> Json
 
 type DoubleReply derive(ToJson, @json.FromJson)
+pub fn DoubleReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DoubleReply::to_json(Self) -> Json
 
 type SlowAddPayload derive(ToJson, @json.FromJson)
+pub fn SlowAddPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SlowAddPayload::to_json(Self) -> Json
 
 type SlowAddReply derive(ToJson, @json.FromJson)
+pub fn SlowAddReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SlowAddReply::to_json(Self) -> Json
 
 // Type aliases
 

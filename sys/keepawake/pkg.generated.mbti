@@ -17,6 +17,10 @@ pub(all) suberror KeepAwakeError {
   BackendUnavailable(detail~ : String)
   OperationFailed(operation~ : String, detail~ : String)
 } derive(Eq)
+pub fn KeepAwakeError::equal(Self, Self) -> Bool
+pub fn KeepAwakeError::not_equal(Self, Self) -> Bool
+pub fn KeepAwakeError::output(Self, &Logger) -> Unit
+pub fn KeepAwakeError::to_string(Self) -> String
 pub impl Show for KeepAwakeError
 
 // Types and methods
@@ -30,6 +34,11 @@ pub(all) enum Scope {
   PreventDisplaySleep
   PreventSystemAndDisplaySleep
 } derive(Eq, @debug.Debug)
+pub fn Scope::equal(Self, Self) -> Bool
+pub fn Scope::not_equal(Self, Self) -> Bool
+pub fn Scope::output(Self, &Logger) -> Unit
+pub fn Scope::to_repr(Self) -> @debug.Repr
+pub fn Scope::to_string(Self) -> String
 pub impl Show for Scope
 
 // Type aliases

@@ -17,6 +17,11 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type ClipboardError derive(Eq, @debug.Debug)
+pub fn ClipboardError::equal(Self, Self) -> Bool
+pub fn ClipboardError::not_equal(Self, Self) -> Bool
+pub fn ClipboardError::output(Self, &Logger) -> Unit
+pub fn ClipboardError::to_repr(Self) -> @debug.Repr
+pub fn ClipboardError::to_string(Self) -> String
 
 // Types and methods
 

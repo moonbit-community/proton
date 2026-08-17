@@ -25,16 +25,31 @@ pub(all) struct AcquireRequest {
   reason : String?
   scope : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn AcquireRequest::equal(Self, Self) -> Bool
+pub fn AcquireRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AcquireRequest::not_equal(Self, Self) -> Bool
+pub fn AcquireRequest::to_json(Self) -> Json
+pub fn AcquireRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct KeepAwakeActivity {
   operation : String
   scope : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn KeepAwakeActivity::equal(Self, Self) -> Bool
+pub fn KeepAwakeActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn KeepAwakeActivity::not_equal(Self, Self) -> Bool
+pub fn KeepAwakeActivity::to_json(Self) -> Json
+pub fn KeepAwakeActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct KeepAwakeReply {
   active : Bool
   scope : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn KeepAwakeReply::equal(Self, Self) -> Bool
+pub fn KeepAwakeReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn KeepAwakeReply::not_equal(Self, Self) -> Bool
+pub fn KeepAwakeReply::to_json(Self) -> Json
+pub fn KeepAwakeReply::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
