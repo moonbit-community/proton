@@ -78,7 +78,6 @@ fn RuntimeSession::window_handle(
   WindowHandle::{
     id,
     native_id,
-    native_ref: window.window.as_ref(),
     show_window: () => {
       self.control_window(id, native_id, "show", window => window.show())
     },
@@ -152,7 +151,6 @@ fn RuntimeSession::view_handle(
   ViewHandle::{
     id,
     native_id,
-    native_ref: view.view.as_ref(),
     set_view_bounds: (x, y, width, height) => {
       self.control_view(
         window_id,
@@ -888,12 +886,6 @@ pub fn WindowHandle::id(self : WindowHandle) -> String {
 }
 
 ///|
-/// Returns a low-level non-owning reference for APIs such as dialogs.
-pub fn WindowHandle::as_native_ref(self : WindowHandle) -> @native.WindowRef {
-  self.native_ref
-}
-
-///|
 pub fn WindowHandle::show(self : WindowHandle) -> Unit raise WindowSessionError {
   (self.show_window)()
 }
@@ -1038,12 +1030,6 @@ pub fn WindowHandle::view(self : WindowHandle, id : String) -> ViewHandle? {
 /// Returns the declarative id of this view.
 pub fn ViewHandle::id(self : ViewHandle) -> String {
   self.id
-}
-
-///|
-/// Returns a low-level non-owning reference for native APIs.
-pub fn ViewHandle::as_native_ref(self : ViewHandle) -> @native.ViewRef {
-  self.native_ref
 }
 
 ///|
@@ -1822,7 +1808,14 @@ fn RuntimeSession::dispatch_launch_input_event(
   event : @native.RuntimeEvent,
 ) -> Unit raise AppRunError {
   match event.launch_input() {
-    Some(input) => {
+    Some(native_input) => {
+      let input = match native_input {
+        @native.RuntimeLaunchInput::OpenUrls(urls) =>
+          RuntimeLaunchInput::OpenUrls(urls)
+        @native.RuntimeLaunchInput::OpenFiles(files) =>
+          RuntimeLaunchInput::OpenFiles(files)
+        @native.RuntimeLaunchInput::Reopen => RuntimeLaunchInput::Reopen
+      }
       self.activate_for_launch_input()
       for handler in self.launch_input_handlers {
         ignore(self.window_tasks.spawn(() => handler(input), no_wait=true))

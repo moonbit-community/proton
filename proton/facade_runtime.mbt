@@ -840,7 +840,6 @@ async fn run_window_lifecycle_scope(
       hooks,
       WindowContext::new(
         running.id,
-        running.window.as_ref(),
         handle,
         windows,
         tasks,

@@ -1831,17 +1831,6 @@ fn View::live_handle(self : View) -> @native_ffi.ViewHandle raise NativeError {
 }
 
 ///|
-/// Borrows this view handle for APIs that must not destroy it.
-pub fn View::as_ref(self : View) -> ViewRef {
-  ViewRef::unsafe_from_handle(
-    match self.lifecycle {
-      ViewLive => self.handle
-      ViewDestroying | ViewDestroyed => @native_ffi.view_null()
-    },
-  )
-}
-
-///|
 /// Returns the stable native handle used to correlate native calls.
 pub fn View::id(self : View) -> Int64 {
   match self.lifecycle {

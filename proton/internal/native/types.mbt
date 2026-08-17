@@ -1727,29 +1727,6 @@ struct View {
 }
 
 ///|
-/// A borrowed view handle for APIs that must not destroy the view.
-struct ViewRef {
-  handle : @native_ffi.ViewHandle
-  id : Int64
-}
-
-///|
-pub impl Eq for ViewRef with fn equal(self : ViewRef, other : ViewRef) -> Bool {
-  self.id == other.id
-}
-
-///|
-pub impl Debug for ViewRef with fn to_repr(self : ViewRef) -> Repr {
-  Repr::literal("ViewRef(\{self.id})")
-}
-
-///|
-pub extend ViewRef with Eq::{not_equal, equal}
-
-///|
-pub extend ViewRef with Debug::{to_repr}
-
-///|
 /// A point-in-time web contents view state snapshot. Bounds use a top-left
 /// origin in the owning window's content coordinate space.
 pub(all) struct ViewState {
@@ -1875,12 +1852,3 @@ pub fn web_contents_view_supported() -> Bool {
 }
 
 ///|
-pub fn ViewRef::unsafe_from_handle(handle : @native_ffi.ViewHandle) -> ViewRef {
-  ViewRef::{ handle, id: @native_ffi.view_logical_id(handle) }
-}
-
-///|
-#doc(hidden)
-pub fn ViewRef::invalid() -> ViewRef {
-  ViewRef::unsafe_from_handle(@native_ffi.view_null())
-}

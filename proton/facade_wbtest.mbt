@@ -67,7 +67,6 @@ fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
   WindowHandle::{
     id,
     native_id,
-    native_ref: @native.WindowRef::invalid(),
     show_window: fn() {  },
     hide_window: fn() {  },
     close_window: fn() {  },
@@ -1176,7 +1175,6 @@ async test "window close joins owned tasks before close hooks" {
       configured.window_lifecycle_hooks,
       WindowContext::new(
         "main",
-        @native.WindowRef::invalid(),
         test_window_handle("main", 17L),
         test_window_manager(),
         group,
@@ -1440,7 +1438,6 @@ fn test_view_handle(
   ViewHandle::{
     id,
     native_id,
-    native_ref: @native.ViewRef::invalid(),
     set_view_bounds: fn(x, y, width, height) {
       calls.push("set_bounds:\{x},\{y},\{width},\{height}")
     },
@@ -1469,7 +1466,6 @@ test "view handle routes operations through its closures" {
   let state = view.state()
   inspect(state.width, content="300")
   inspect(state.z_order, content="1")
-  assert_eq(view.as_native_ref(), @native.ViewRef::invalid())
   view.close()
   debug_inspect(
     calls,
