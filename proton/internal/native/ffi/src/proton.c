@@ -760,14 +760,10 @@ int32_t proton_runtime_next_wakeup_delay_ms(proton_runtime_handle_t runtime,
   return proton_set_engine_status(status, engine_error);
 }
 
-int32_t proton_runtime_set_menu_json(proton_runtime_handle_t runtime,
-                                     const char *menu_json) {
-  int32_t status = proton_config_validate_menu(menu_json);
-  if (status != PROTON_OK) {
-    return status;
-  }
+int32_t proton_internal_runtime_set_menu(proton_runtime_handle_t runtime,
+                                         const proton_menu_bar_t *menu_bar) {
   proton_runtime_slot_t *slot = NULL;
-  status = proton_get_runtime(runtime, &slot);
+  int32_t status = proton_get_runtime(runtime, &slot);
   if (status != PROTON_OK) {
     return status;
   }
@@ -781,8 +777,8 @@ int32_t proton_runtime_set_menu_json(proton_runtime_handle_t runtime,
   }
 
   char engine_error[512] = {0};
-  status = proton_engine_runtime_set_menu_json(
-      slot->engine_runtime, menu_json, engine_error, sizeof(engine_error));
+  status = proton_engine_runtime_set_menu(
+      slot->engine_runtime, menu_bar, engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }

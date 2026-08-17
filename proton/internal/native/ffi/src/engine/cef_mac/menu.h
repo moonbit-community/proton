@@ -12,8 +12,7 @@ void proton_engine_menu_set_signal_callback(
     proton_engine_menu_signal_callback_t callback);
 void proton_engine_menu_set_runtime(proton_engine_runtime_t *runtime);
 void proton_engine_menu_clear_runtime(proton_engine_runtime_t *runtime);
-int32_t proton_engine_menu_set_json_on_main(const char *menu_json,
-                                            char *error,
-                                            size_t error_len);
+int32_t proton_engine_menu_set_on_main(const proton_menu_bar_t *menu_bar,
+                                       char *error, size_t error_len);
 
 #endif

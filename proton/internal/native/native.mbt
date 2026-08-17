@@ -858,17 +858,98 @@ pub fn Runtime::next_wakeup_delay_ms(self : Runtime) -> Int? raise NativeError {
 }
 
 ///|
+fn menu_item_kind_code(kind : MenuItemKind) -> Int {
+  match kind {
+    Command => 0
+    Separator => 1
+    Role => 2
+  }
+}
+
+///|
+fn menu_role_code(role : MenuRole?) -> Int {
+  match role {
+    None => 0
+    Some(Application) => 1
+    Some(File) => 2
+    Some(Edit) => 3
+    Some(View) => 4
+    Some(Window) => 5
+    Some(Help) => 6
+  }
+}
+
+///|
+fn menu_item_role_name(role : MenuItemRole?) -> String? {
+  match role {
+    None => None
+    Some(Quit) => Some("quit")
+    Some(Hide) => Some("hide")
+    Some(HideOthers) => Some("hide_others")
+    Some(ShowAll) => Some("show_all")
+    Some(Close) => Some("close")
+    Some(Minimize) => Some("minimize")
+    Some(Zoom) => Some("zoom")
+    Some(Undo) => Some("undo")
+    Some(Redo) => Some("redo")
+    Some(Cut) => Some("cut")
+    Some(Copy) => Some("copy")
+    Some(Paste) => Some("paste")
+    Some(SelectAll) => Some("select_all")
+  }
+}
+
+///|
+fn build_menu_config(
+  menu : MenuBar,
+) -> @native_ffi.MenuConfigHandle raise NativeError {
+  let out_menu = Ref(@native_ffi.menu_config_null())
+  let create_status = @native_ffi.menu_config_create(out_menu)
+  if create_status < 0 {
+    raise native_error(create_status)
+  }
+  let handle = out_menu.val
+  for definition in menu.menus {
+    let menu_index = Ref(0)
+    let menu_status = @native_ffi.menu_config_add_menu(
+      handle,
+      runtime_config_string(definition.label),
+      menu_role_code(definition.role),
+      menu_index,
+    )
+    if menu_status < 0 {
+      @native_ffi.menu_config_destroy(handle)
+      raise native_error(menu_status)
+    }
+    for item in definition.items.unwrap_or([]) {
+      let item_status = @native_ffi.menu_config_add_item(
+        handle,
+        menu_index.val,
+        menu_item_kind_code(item.kind),
+        runtime_config_string(item.id),
+        runtime_config_string(item.label),
+        runtime_config_string(item.key),
+        runtime_config_string(menu_item_role_name(item.role)),
+      )
+      if item_status < 0 {
+        @native_ffi.menu_config_destroy(handle)
+        raise native_error(item_status)
+      }
+    }
+  }
+  handle
+}
+
+///|
 /// Replaces the application-level native menu bar for this runtime.
 pub fn Runtime::set_menu(
   self : Runtime,
   menu : MenuBar,
 ) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_runtime_set_menu_json_ffi(
-      self.active_handle(),
-      @ffi.to_cstr(menu.to_json_string()),
-    ),
-  )
+  let config = build_menu_config(menu)
+  let status = @native_ffi.runtime_set_menu(self.active_handle(), config)
+  @native_ffi.menu_config_destroy(config)
+  check_status(status)
 }
 
 ///|

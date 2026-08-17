@@ -3604,10 +3604,9 @@ int32_t proton_engine_runtime_next_wakeup_delay_ms(
   return PROTON_OK;
 }
 
-int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
-                                            const char *menu_json,
-                                            char *error,
-                                            size_t error_len) {
+int32_t proton_engine_runtime_set_menu(
+    proton_engine_runtime_t *runtime, const proton_menu_bar_t *menu_bar,
+    char *error, size_t error_len) {
 
   if (runtime == NULL || !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
@@ -3618,8 +3617,8 @@ int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
                               "native menus are not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
-  if (menu_json == NULL) {
-    proton_engine_set_message(error, error_len, "menu_json is required");
+  if (menu_bar == NULL) {
+    proton_engine_set_message(error, error_len, "menu config is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
 
@@ -3627,8 +3626,8 @@ int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
   char main_error[512] = {0};
   char *main_error_buffer = main_error;
   void (^work)(void) = ^{
-    status = proton_engine_menu_set_json_on_main(
-        menu_json, main_error_buffer, sizeof(main_error));
+    status = proton_engine_menu_set_on_main(
+        menu_bar, main_error_buffer, sizeof(main_error));
   };
   if ([NSThread isMainThread]) {
     work();

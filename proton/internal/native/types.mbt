@@ -479,11 +479,18 @@ pub extend Menu with Debug::{to_repr}
 ///|
 /// A command, separator, or platform role in a native menu.
 struct MenuItem {
-  kind : String
+  kind : MenuItemKind
   id : String?
   label : String?
   key : String?
   role : MenuItemRole?
+} derive(Debug, Eq)
+
+///|
+priv enum MenuItemKind {
+  Command
+  Separator
+  Role
 } derive(Debug, Eq)
 
 ///|
@@ -1237,13 +1244,13 @@ pub fn MenuItem::command(
   label : String,
   key? : String,
 ) -> MenuItem {
-  { kind: "command", id: Some(id), label: Some(label), key, role: None }
+  { kind: Command, id: Some(id), label: Some(label), key, role: None }
 }
 
 ///|
 /// Creates a menu separator.
 pub fn MenuItem::separator() -> MenuItem {
-  { kind: "separator", id: None, label: None, key: None, role: None }
+  { kind: Separator, id: None, label: None, key: None, role: None }
 }
 
 ///|
@@ -1253,7 +1260,7 @@ pub fn MenuItem::role(
   label? : String,
   key? : String,
 ) -> MenuItem {
-  { kind: "role", id: None, label, key, role: Some(role) }
+  { kind: Role, id: None, label, key, role: Some(role) }
 }
 
 ///|
@@ -1273,7 +1280,12 @@ pub fn Menu::definition(self : Menu) -> (MenuRole?, String?, Array[MenuItem]?) {
 pub fn MenuItem::definition(
   self : MenuItem,
 ) -> (String, String?, String?, String?, MenuItemRole?) {
-  (self.kind, self.id, self.label, self.key, self.role)
+  let kind = match self.kind {
+    Command => "command"
+    Separator => "separator"
+    Role => "role"
+  }
+  (kind, self.id, self.label, self.key, self.role)
 }
 
 ///|
@@ -1365,90 +1377,6 @@ fn BridgeGrantConfig::copy(self : BridgeGrantConfig) -> BridgeGrantConfig {
 ///|
 fn copy_strings(values : Array[String]) -> Array[String] {
   values.map(fn(value) { value })
-}
-
-///|
-fn set_optional_string_field(
-  fields : Map[String, Json],
-  name : String,
-  value : String?,
-) -> Unit {
-  match value {
-    Some(text) => fields.set(name, Json(text))
-    None => ()
-  }
-}
-
-///|
-
-///|
-fn MenuItem::to_json(self : MenuItem) -> Json {
-  let fields : Map[String, Json] = { "kind": self.kind }
-  set_optional_string_field(fields, "id", self.id)
-  set_optional_string_field(fields, "label", self.label)
-  set_optional_string_field(fields, "key", self.key)
-  match self.role {
-    Some(role) => fields.set("role", Json(role.to_json_string()))
-    None => ()
-  }
-  Json::object(fields)
-}
-
-///|
-fn Menu::to_json(self : Menu) -> Json {
-  let fields : Map[String, Json] = Map([])
-  set_optional_string_field(fields, "label", self.label)
-  match self.role {
-    Some(role) => fields.set("role", Json(role.to_json_string()))
-    None => ()
-  }
-  match self.items {
-    Some(items) =>
-      fields.set("items", Json::array(items.map(item => item.to_json())))
-    None => ()
-  }
-  Json::object(fields)
-}
-
-///|
-fn MenuRole::to_json_string(self : MenuRole) -> String {
-  match self {
-    Application => "application"
-    File => "file"
-    Edit => "edit"
-    View => "view"
-    Window => "window"
-    Help => "help"
-  }
-}
-
-///|
-fn MenuItemRole::to_json_string(self : MenuItemRole) -> String {
-  match self {
-    Quit => "quit"
-    Hide => "hide"
-    HideOthers => "hide_others"
-    ShowAll => "show_all"
-    Close => "close"
-    Minimize => "minimize"
-    Zoom => "zoom"
-    Undo => "undo"
-    Redo => "redo"
-    Cut => "cut"
-    Copy => "copy"
-    Paste => "paste"
-    SelectAll => "select_all"
-  }
-}
-
-///|
-/// Encodes this menu bar for the native ABI.
-pub fn MenuBar::to_json_string(self : MenuBar) -> String {
-  let json : Json = {
-    "abi_version": Json::number(1.0, repr="1"),
-    "menus": self.menus.map(fn(menu) { menu.to_json() }),
-  }
-  json.stringify()
 }
 
 ///|

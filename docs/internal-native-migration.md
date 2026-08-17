@@ -51,7 +51,8 @@ native prebuilt, or compatibility package remains.
 
 - [x] Replace runtime config JSON with MoonBit validation and typed FFI.
 - [x] Replace window and view config JSON with typed FFI.
-- [ ] Replace bridge and menu config JSON with typed FFI.
+- [ ] Replace bridge config JSON with typed FFI.
+- [x] Replace menu config JSON with typed FFI.
 - [x] Replace the global integer handle registry with private external pointers.
 - [ ] Add explicit host, runtime, window, and view lifecycle state.
 - [x] Keep all CEF and UI operations on the owner thread.

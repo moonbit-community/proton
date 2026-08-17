@@ -3760,12 +3760,11 @@ int32_t proton_engine_runtime_next_wakeup_delay_ms(
 }
 
 // TODO: Implement app menu rendering and command events on Windows.
-int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
-                                            const char *menu_json,
-                                            char *error,
-                                            size_t error_len) {
+int32_t proton_engine_runtime_set_menu(
+    proton_engine_runtime_t *runtime, const proton_menu_bar_t *menu_bar,
+    char *error, size_t error_len) {
   (void)runtime;
-  (void)menu_json;
+  (void)menu_bar;
   proton_engine_set_message(error, error_len,
                             "native app menus are not implemented on Windows");
   return PROTON_ERR_UNSUPPORTED;

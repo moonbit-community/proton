@@ -3,6 +3,7 @@
 
 #include "proton_native.h"
 #include "engine/cef_common/browser_session.h"
+#include "proton_menu.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -153,10 +154,9 @@ int32_t proton_engine_runtime_next_wakeup_delay_ms(
     size_t error_len);
 void proton_engine_runtime_signal_external_event(
     proton_engine_runtime_t *runtime);
-int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
-                                            const char *menu_json,
-                                            char *error,
-                                            size_t error_len);
+int32_t proton_engine_runtime_set_menu(
+    proton_engine_runtime_t *runtime, const proton_menu_bar_t *menu_bar,
+    char *error, size_t error_len);
 int32_t proton_engine_runtime_poll_bridge_request_json(
     proton_engine_runtime_t *runtime,
     char *buffer,

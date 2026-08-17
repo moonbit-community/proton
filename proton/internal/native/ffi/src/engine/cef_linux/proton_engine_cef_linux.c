@@ -4158,10 +4158,9 @@ static int32_t proton_engine_window_install_menu(
   return PROTON_OK;
 }
 
-int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
-                                            const char *menu_json,
-                                            char *error,
-                                            size_t error_len) {
+int32_t proton_engine_runtime_set_menu(
+    proton_engine_runtime_t *runtime, const proton_menu_bar_t *menu_bar,
+    char *error, size_t error_len) {
   if (runtime == NULL || !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
@@ -4171,10 +4170,11 @@ int32_t proton_engine_runtime_set_menu_json(proton_engine_runtime_t *runtime,
                               "native menus are not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
-  proton_linux_menu_bar_t *menu_definition =
-      proton_linux_menu_bar_parse(menu_json, error, error_len);
+  proton_linux_menu_bar_t *menu_definition = proton_menu_bar_clone(menu_bar);
   if (menu_definition == NULL) {
-    return PROTON_ERR_INVALID_ARGUMENT;
+    proton_engine_set_message(error, error_len,
+                              "failed to copy menu definition");
+    return PROTON_ERR_ENGINE;
   }
   for (proton_engine_window_t *window = g_windows; window != NULL;
        window = window->next) {

@@ -40,7 +40,6 @@
 #define PROTON_MAX_BRIDGE_INITIALIZATION_UNITS 256
 #define PROTON_MAX_BRIDGE_GRANTS 32
 #define PROTON_MAX_BRIDGE_SOURCE_ORIGIN_BYTES 512
-#define PROTON_MAX_MENU_CONFIG_BYTES 65536
 #define PROTON_MAX_PATH_BYTES 4096
 #define PROTON_MAX_LABEL_BYTES 256
 
@@ -269,11 +268,6 @@ static const char *const proton_bridge_event_keys[] = {
     "name",
     "payload",
     "page_instance",
-};
-
-static const char *const proton_menu_config_keys[] = {
-    "abi_version",
-    "menus",
 };
 
 static bool proton_path_exists(const char *path) {
@@ -1575,41 +1569,6 @@ int32_t proton_config_validate_bridge(const char *bridge_json) {
 
   proton_json_dispose(&doc);
   return PROTON_OK;
-}
-
-int32_t proton_config_validate_menu(const char *menu_json) {
-  if (menu_json != NULL && strlen(menu_json) > PROTON_MAX_MENU_CONFIG_BYTES) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "menu config is too large");
-  }
-  int32_t status = proton_validate_abi_config(
-      menu_json, "menu", proton_menu_config_keys,
-      sizeof(proton_menu_config_keys) / sizeof(proton_menu_config_keys[0]),
-      PROTON_ABI_VERSION);
-  if (status != PROTON_OK) {
-    return status;
-  }
-
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  if (!proton_json_parse(&doc, menu_json) ||
-      !proton_json_root_object(&doc, &root)) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "menu config must be a JSON object");
-  }
-
-  proton_json_value_t menus;
-  if (!proton_json_object_get(&doc, root, "menus", &menus)) {
-    proton_json_dispose(&doc);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "menu config requires menus");
-  }
-  if (!proton_json_is_array(&doc, menus)) {
-    status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "menu config menus must be an array");
-  }
-  proton_json_dispose(&doc);
-  return status;
 }
 
 int32_t proton_config_validate_bridge_response(const char *response_json) {

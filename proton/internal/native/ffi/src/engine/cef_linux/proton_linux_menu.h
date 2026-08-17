@@ -1,20 +1,19 @@
 #ifndef PROTON_LINUX_MENU_H
 #define PROTON_LINUX_MENU_H
 
+#include "../../proton_menu.h"
+
 #include <gtk/gtk.h>
 
 #include <stddef.h>
 
-typedef struct proton_linux_menu_bar proton_linux_menu_bar_t;
+typedef proton_menu_bar_t proton_linux_menu_bar_t;
 
 typedef void (*proton_linux_menu_command_callback_t)(const char *command_id,
                                                      void *user_data);
 typedef void (*proton_linux_menu_role_callback_t)(const char *role,
                                                   void *user_data);
 
-proton_linux_menu_bar_t *proton_linux_menu_bar_parse(const char *menu_json,
-                                                     char *error,
-                                                     size_t error_len);
 void proton_linux_menu_bar_destroy(proton_linux_menu_bar_t *menu_bar);
 
 GtkWidget *proton_linux_menu_bar_create_widget(

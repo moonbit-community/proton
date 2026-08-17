@@ -20,6 +20,10 @@ pub type ViewHandle
 pub type ImageHandle
 
 ///|
+#external
+pub type MenuConfigHandle
+
+///|
 pub extern "C" fn runtime_null() -> RuntimeHandle = "proton_runtime_null"
 
 ///|
@@ -30,6 +34,9 @@ pub extern "C" fn view_null() -> ViewHandle = "proton_view_null"
 
 ///|
 pub extern "C" fn image_null() -> ImageHandle = "proton_image_null"
+
+///|
+pub extern "C" fn menu_config_null() -> MenuConfigHandle = "proton_internal_menu_config_null"
 
 ///|
 pub extern "C" fn window_logical_id(window : WindowHandle) -> Int64 = "proton_window_logical_id"
@@ -199,11 +206,38 @@ pub extern "C" fn proton_runtime_next_wakeup_delay_ms_ffi(
 ) -> Int = "proton_runtime_next_wakeup_delay_ms"
 
 ///|
-#borrow(menu_json)
-pub extern "C" fn proton_runtime_set_menu_json_ffi(
+pub extern "C" fn runtime_set_menu(
   runtime : RuntimeHandle,
-  menu_json : Bytes,
-) -> Int = "proton_runtime_set_menu_json"
+  menu : MenuConfigHandle,
+) -> Int = "proton_internal_runtime_set_menu"
+
+///|
+#borrow(out_menu)
+pub extern "C" fn menu_config_create(out_menu : Ref[MenuConfigHandle]) -> Int = "proton_internal_menu_config_create"
+
+///|
+#borrow(label, out_menu_index)
+pub extern "C" fn menu_config_add_menu(
+  menu : MenuConfigHandle,
+  label : Bytes,
+  role : Int,
+  out_menu_index : Ref[Int],
+) -> Int = "proton_internal_menu_config_add_menu"
+
+///|
+#borrow(id, label, key, role)
+pub extern "C" fn menu_config_add_item(
+  menu : MenuConfigHandle,
+  menu_index : Int,
+  kind : Int,
+  id : Bytes,
+  label : Bytes,
+  key : Bytes,
+  role : Bytes,
+) -> Int = "proton_internal_menu_config_add_item"
+
+///|
+pub extern "C" fn menu_config_destroy(menu : MenuConfigHandle) -> Unit = "proton_internal_menu_config_destroy"
 
 ///|
 #borrow(buffer, out_required_len)

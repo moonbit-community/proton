@@ -57,6 +57,18 @@ void proton_engine_menu_set_signal_callback(
 }
 @end
 
+static NSString *proton_engine_application_name(void) {
+  NSString *name =
+      [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleName"];
+  if (name == nil || [name length] == 0) {
+    name = [[NSProcessInfo processInfo] processName];
+  }
+  if (name == nil || [name length] == 0) {
+    name = @"Proton";
+  }
+  return name;
+}
+
 static NSMenuItem *proton_engine_add_menu_item(NSMenu *menu,
                                                NSString *title,
                                                SEL action,
@@ -78,13 +90,50 @@ static void proton_engine_add_top_level_menu(NSMenu *main_menu,
   [main_menu setSubmenu:submenu forItem:item];
 }
 
-static NSString *proton_engine_menu_string(NSDictionary *object,
-                                           NSString *key) {
-  id value = [object objectForKey:key];
-  if (![value isKindOfClass:[NSString class]]) {
-    return nil;
-  }
-  return (NSString *)value;
+static NSMenu *proton_engine_create_app_menu(NSString *app_name) {
+  NSMenu *app_menu = [[NSMenu alloc] initWithTitle:app_name];
+  proton_engine_add_menu_item(
+      app_menu, [NSString stringWithFormat:@"Hide %@", app_name],
+      @selector(hide:), @"h");
+  NSMenuItem *hide_others = proton_engine_add_menu_item(
+      app_menu, @"Hide Others", @selector(hideOtherApplications:), @"h");
+  [hide_others setKeyEquivalentModifierMask:
+                   NSEventModifierFlagOption | NSEventModifierFlagCommand];
+  proton_engine_add_menu_item(app_menu, @"Show All",
+                              @selector(unhideAllApplications:), @"");
+  [app_menu addItem:[NSMenuItem separatorItem]];
+  proton_engine_add_menu_item(
+      app_menu, [NSString stringWithFormat:@"Quit %@", app_name],
+      @selector(terminate:), @"q");
+  return app_menu;
+}
+
+static NSMenu *proton_engine_create_edit_menu(void) {
+  NSMenu *edit_menu = [[NSMenu alloc] initWithTitle:@"Edit"];
+  proton_engine_add_menu_item(edit_menu, @"Undo", @selector(undo:), @"z");
+  proton_engine_add_menu_item(edit_menu, @"Redo", @selector(redo:), @"Z");
+  [edit_menu addItem:[NSMenuItem separatorItem]];
+  proton_engine_add_menu_item(edit_menu, @"Cut", @selector(cut:), @"x");
+  proton_engine_add_menu_item(edit_menu, @"Copy", @selector(copy:), @"c");
+  proton_engine_add_menu_item(edit_menu, @"Paste", @selector(paste:), @"v");
+  proton_engine_add_menu_item(edit_menu, @"Select All", @selector(selectAll:),
+                              @"a");
+  return edit_menu;
+}
+
+static NSMenu *proton_engine_create_window_menu(void) {
+  NSMenu *window_menu = [[NSMenu alloc] initWithTitle:@"Window"];
+  proton_engine_add_menu_item(window_menu, @"Minimize",
+                              @selector(performMiniaturize:), @"m");
+  proton_engine_add_menu_item(window_menu, @"Zoom", @selector(performZoom:),
+                              @"");
+  proton_engine_add_menu_item(window_menu, @"Close", @selector(performClose:),
+                              @"w");
+  return window_menu;
+}
+
+static NSString *proton_engine_menu_text(const char *value) {
+  return value != NULL ? [NSString stringWithUTF8String:value] : nil;
 }
 
 static SEL proton_engine_menu_role_selector(NSString *role) {
@@ -130,19 +179,85 @@ static SEL proton_engine_menu_role_selector(NSString *role) {
   return NULL;
 }
 
+static NSString *proton_engine_menu_role_label(NSString *role,
+                                               NSString *app_name) {
+  if ([role isEqualToString:@"quit"]) {
+    return [NSString stringWithFormat:@"Quit %@", app_name];
+  }
+  if ([role isEqualToString:@"hide"]) {
+    return [NSString stringWithFormat:@"Hide %@", app_name];
+  }
+  if ([role isEqualToString:@"hide_others"]) {
+    return @"Hide Others";
+  }
+  if ([role isEqualToString:@"show_all"]) {
+    return @"Show All";
+  }
+  if ([role isEqualToString:@"close"]) {
+    return @"Close";
+  }
+  if ([role isEqualToString:@"minimize"]) {
+    return @"Minimize";
+  }
+  if ([role isEqualToString:@"zoom"]) {
+    return @"Zoom";
+  }
+  if ([role isEqualToString:@"select_all"]) {
+    return @"Select All";
+  }
+  NSString *first = [[role substringToIndex:1] uppercaseString];
+  NSString *rest = [[role substringFromIndex:1] stringByReplacingOccurrencesOfString:@"_"
+                                                                          withString:@" "];
+  return [first stringByAppendingString:rest];
+}
+
+static NSString *proton_engine_menu_role_key(NSString *role) {
+  if ([role isEqualToString:@"quit"]) {
+    return @"q";
+  }
+  if ([role isEqualToString:@"hide"] || [role isEqualToString:@"hide_others"]) {
+    return @"h";
+  }
+  if ([role isEqualToString:@"close"]) {
+    return @"w";
+  }
+  if ([role isEqualToString:@"minimize"]) {
+    return @"m";
+  }
+  if ([role isEqualToString:@"undo"]) {
+    return @"z";
+  }
+  if ([role isEqualToString:@"redo"]) {
+    return @"Z";
+  }
+  if ([role isEqualToString:@"cut"]) {
+    return @"x";
+  }
+  if ([role isEqualToString:@"copy"]) {
+    return @"c";
+  }
+  if ([role isEqualToString:@"paste"]) {
+    return @"v";
+  }
+  if ([role isEqualToString:@"select_all"]) {
+    return @"a";
+  }
+  return @"";
+}
+
 static int proton_engine_add_custom_menu_item(NSMenu *menu,
-                                              NSDictionary *item,
+                                              const proton_menu_item_t *item,
+                                              NSString *app_name,
                                               char *error,
                                               size_t error_len) {
-  NSString *kind = proton_engine_menu_string(item, @"kind");
-  if ([kind isEqualToString:@"separator"]) {
+  if (item->kind == PROTON_MENU_ITEM_SEPARATOR) {
     [menu addItem:[NSMenuItem separatorItem]];
     return 1;
   }
-  if ([kind isEqualToString:@"command"]) {
-    NSString *label = proton_engine_menu_string(item, @"label");
-    NSString *command_id = proton_engine_menu_string(item, @"id");
-    NSString *key = proton_engine_menu_string(item, @"key");
+  if (item->kind == PROTON_MENU_ITEM_COMMAND) {
+    NSString *label = proton_engine_menu_text(item->label);
+    NSString *command_id = proton_engine_menu_text(item->id);
+    NSString *key = proton_engine_menu_text(item->key);
     if (label == nil || command_id == nil) {
       proton_engine_set_message(error, error_len,
                                 "menu command requires label and id");
@@ -157,22 +272,18 @@ static int proton_engine_add_custom_menu_item(NSMenu *menu,
     [menu_item setRepresentedObject:command_id];
     return 1;
   }
-  if ([kind isEqualToString:@"role"]) {
-    NSString *role = proton_engine_menu_string(item, @"role");
+  if (item->kind == PROTON_MENU_ITEM_ROLE) {
+    NSString *role = proton_engine_menu_text(item->role);
     SEL selector = proton_engine_menu_role_selector(role);
     if (selector == NULL) {
       proton_engine_set_message(error, error_len, "menu role is unsupported");
       return 0;
     }
-    NSString *label = proton_engine_menu_string(item, @"label");
-    NSString *key = proton_engine_menu_string(item, @"key");
-    if (label == nil) {
-      proton_engine_set_message(error, error_len,
-                                "resolved menu role requires label");
-      return 0;
-    }
+    NSString *label = proton_engine_menu_text(item->label);
+    NSString *key = proton_engine_menu_text(item->key);
     NSMenuItem *menu_item = proton_engine_add_menu_item(
-        menu, label, selector, key != nil ? key : @"");
+        menu, label != nil ? label : proton_engine_menu_role_label(role, app_name),
+        selector, key != nil ? key : proton_engine_menu_role_key(role));
     if ([role isEqualToString:@"hide_others"]) {
       [menu_item setKeyEquivalentModifierMask:
                      NSEventModifierFlagOption | NSEventModifierFlagCommand];
@@ -183,82 +294,100 @@ static int proton_engine_add_custom_menu_item(NSMenu *menu,
   return 0;
 }
 
-static NSMenu *proton_engine_create_custom_menu(NSDictionary *definition,
+static NSMenu *proton_engine_create_custom_menu(const proton_menu_t *definition,
+                                                NSString *app_name,
                                                 char *error,
                                                 size_t error_len) {
-  NSString *label = proton_engine_menu_string(definition, @"label");
-  NSArray *items = [definition objectForKey:@"items"];
-  if (label == nil || ![items isKindOfClass:[NSArray class]]) {
+  NSString *label = proton_engine_menu_text(definition->label);
+  if (label == nil) {
     proton_engine_set_message(error, error_len,
                               "menu requires label and items");
     return nil;
   }
   NSMenu *menu = [[NSMenu alloc] initWithTitle:label];
-  for (id item in items) {
-    if (![item isKindOfClass:[NSDictionary class]] ||
-        !proton_engine_add_custom_menu_item(
-            menu, (NSDictionary *)item, error, error_len)) {
+  for (size_t index = 0; index < definition->item_count; index++) {
+    if (!proton_engine_add_custom_menu_item(
+            menu, &definition->items[index], app_name, error, error_len)) {
       return nil;
     }
   }
   return menu;
 }
 
-static int proton_engine_install_menu_definitions(NSArray *menus,
-                                                  char *error,
-                                                  size_t error_len) {
+static BOOL proton_engine_menu_definitions_include_role(
+    const proton_menu_bar_t *menu_bar, proton_menu_role_t role) {
+  for (size_t index = 0; index < menu_bar->menu_count; index++) {
+    if (menu_bar->menus[index].role == role) {
+      return YES;
+    }
+  }
+  return NO;
+}
+
+static int proton_engine_install_menu_definitions(
+    const proton_menu_bar_t *menu_bar, char *error, size_t error_len) {
+  NSString *app_name = proton_engine_application_name();
   NSMenu *main_menu = [[NSMenu alloc] initWithTitle:@""];
   NSMenu *window_menu = nil;
 
-  for (id definition in menus) {
-    if (![definition isKindOfClass:[NSDictionary class]]) {
-      proton_engine_set_message(error, error_len, "menu definition is invalid");
-      return 0;
-    }
-    NSDictionary *menu_definition = (NSDictionary *)definition;
-    NSString *label = proton_engine_menu_string(menu_definition, @"label");
-    NSString *role = proton_engine_menu_string(menu_definition, @"role");
+  for (size_t index = 0; index < menu_bar->menu_count; index++) {
+    const proton_menu_t *definition = &menu_bar->menus[index];
+    NSString *label = proton_engine_menu_text(definition->label);
     NSMenu *menu = proton_engine_create_custom_menu(
-        menu_definition, error, error_len);
+        definition, app_name, error, error_len);
     if (menu == nil || label == nil) {
       return 0;
     }
     proton_engine_add_top_level_menu(
-        main_menu, label, menu, [role isEqualToString:@"application"]);
-    if ([role isEqualToString:@"window"]) {
+        main_menu, label, menu,
+        definition->role == PROTON_MENU_ROLE_APPLICATION);
+    if (definition->role == PROTON_MENU_ROLE_WINDOW) {
       window_menu = menu;
     }
   }
 
+  if (!proton_engine_menu_definitions_include_role(
+          menu_bar, PROTON_MENU_ROLE_APPLICATION)) {
+    proton_engine_add_top_level_menu(
+        main_menu, app_name, proton_engine_create_app_menu(app_name), YES);
+  }
+  if (!proton_engine_menu_definitions_include_role(
+          menu_bar, PROTON_MENU_ROLE_EDIT)) {
+    proton_engine_add_top_level_menu(
+        main_menu, @"Edit", proton_engine_create_edit_menu(), NO);
+  }
+  if (!proton_engine_menu_definitions_include_role(
+          menu_bar, PROTON_MENU_ROLE_WINDOW)) {
+    window_menu = proton_engine_create_window_menu();
+    proton_engine_add_top_level_menu(
+        main_menu, @"Window", window_menu, NO);
+  }
+
   [NSApp setMainMenu:main_menu];
-  [NSApp setWindowsMenu:window_menu];
+  if (window_menu != nil) {
+    [NSApp setWindowsMenu:window_menu];
+  }
   g_proton_app_menu_installed = 1;
   return 1;
 }
 
-int32_t proton_engine_menu_set_json_on_main(
-    const char *menu_json,
-    char *error,
-    size_t error_len) {
-  NSData *data =
-      [NSData dataWithBytes:menu_json length:strlen(menu_json)];
-  NSError *json_error = nil;
-  id parsed = [NSJSONSerialization JSONObjectWithData:data
-                                             options:0
-                                               error:&json_error];
-  if (![parsed isKindOfClass:[NSDictionary class]]) {
-    proton_engine_set_message(error, error_len,
-                              "menu config must be a JSON object");
+void proton_engine_menu_install_default(void) {
+  if (g_proton_app_menu_installed) {
+    return;
+  }
+  char error[256] = {0};
+  const proton_menu_bar_t empty_menu = {0};
+  (void)proton_engine_install_menu_definitions(&empty_menu, error,
+                                               sizeof(error));
+}
+
+int32_t proton_engine_menu_set_on_main(const proton_menu_bar_t *menu_bar,
+                                       char *error, size_t error_len) {
+  if (menu_bar == NULL) {
+    proton_engine_set_message(error, error_len, "menu config is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  id menus = [(NSDictionary *)parsed objectForKey:@"menus"];
-  if (![menus isKindOfClass:[NSArray class]]) {
-    proton_engine_set_message(error, error_len,
-                              "menu config requires menus array");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_engine_install_menu_definitions(
-          (NSArray *)menus, error, error_len)) {
+  if (!proton_engine_install_menu_definitions(menu_bar, error, error_len)) {
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   return PROTON_OK;

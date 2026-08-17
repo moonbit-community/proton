@@ -261,7 +261,7 @@ test "window config preserves typed native ABI values" {
 }
 
 ///|
-test "bridge and menu configs generate native policy JSON" {
+test "bridge config generates native policy JSON" {
   let bridge_config = BridgeConfig::new(grants=[
     BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
   ])
@@ -280,18 +280,29 @@ test "bridge and menu configs generate native policy JSON" {
   assert_true(dev_bridge_json.contains("\"http://localhost:5173\""))
   assert_true(dev_bridge_json.contains("\"initialization_units\""))
   assert_true(dev_bridge_json.contains("window.__protonDev = true;"))
-  let menu_json = MenuBar::new(menus=[
+}
+
+///|
+test "menu config preserves typed native ABI values" {
+  let menu = MenuBar::new(menus=[
     Menu::new("Demo", items=[
       MenuItem::command("demo.refresh", "Refresh", key="r"),
       MenuItem::separator(),
       MenuItem::role(MenuItemRole::Close, label="Close Window", key="w"),
     ]),
-  ]).to_json_string()
-  assert_true(menu_json.contains("\"abi_version\":1"))
-  assert_true(menu_json.contains("\"menus\""))
-  assert_true(menu_json.contains("\"kind\":\"command\""))
-  assert_true(menu_json.contains("\"id\":\"demo.refresh\""))
-  assert_true(menu_json.contains("\"role\":\"close\""))
+  ])
+  let definitions = menu.definitions()
+  assert_eq(definitions.length(), 1)
+  let (_, label, items) = definitions[0].definition()
+  assert_eq(label, Some("Demo"))
+  let items = items.unwrap()
+  assert_eq(items.length(), 3)
+  let (_, id, _, _, _) = items[0].definition()
+  assert_eq(id, Some("demo.refresh"))
+  let (_, _, role_label, key, role) = items[2].definition()
+  assert_eq(role, Some(MenuItemRole::Close))
+  assert_eq(role_label, Some("Close Window"))
+  assert_eq(key, Some("w"))
 }
 
 ///|

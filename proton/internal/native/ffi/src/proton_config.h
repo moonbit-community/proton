@@ -40,7 +40,6 @@ PROTON_INTERNAL bool proton_config_macos_bundle_helper_path(
 #endif
 PROTON_INTERNAL int32_t
 proton_config_validate_bridge(const char *bridge_json);
-PROTON_INTERNAL int32_t proton_config_validate_menu(const char *menu_json);
 PROTON_INTERNAL int32_t
 proton_config_validate_bridge_response(const char *response_json);
 PROTON_INTERNAL int32_t
