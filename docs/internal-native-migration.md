@@ -86,11 +86,11 @@ native prebuilt, or compatibility package remains.
 
 ### 6. Remove the Dynamic-Library Product
 
-- [ ] Delete `proton/native` and all compatibility exports.
-- [ ] Delete the standalone `native` CMake project and public C header.
-- [ ] Delete `proton/prebuilt`, manifests, source hashes, and ABI checks.
-- [ ] Delete prebuilt build and synchronization workflows.
-- [ ] Update maintainer and application documentation.
+- [x] Delete `proton/native` and all compatibility exports.
+- [x] Delete the standalone `native` CMake project and public C header.
+- [x] Delete `proton/prebuilt`, manifests, source hashes, and ABI checks.
+- [x] Delete prebuilt build and synchronization workflows.
+- [x] Update maintainer and application documentation.
 
 ### 7. Validation
 

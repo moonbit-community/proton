@@ -5,15 +5,15 @@ repository itself. It defines the architecture boundaries, source layout,
 validation expectations, generated-file policy, and release procedure.
 
 Application developers should start with [README.md](README.md). Do not move
-repository build steps, native ABI internals, prebuilt synchronization, or
-package publication instructions into the root README unless an application
+repository build steps, native FFI internals, or package publication
+instructions into the root README unless an application
 developer must perform them.
 
 ## Maintainer Workflow
 
-- Read the nearest package README before changing a subsystem, but treat this
-  file and `native/CMakeLists.txt` as the repository-wide maintenance rules.
-- Preserve the single native DLL runtime route and the public root facade.
+- Read the nearest package README before changing a subsystem, and treat this
+  file as the repository-wide maintenance rules.
+- Preserve the single source-built native runtime route and the public root facade.
 - Use the smallest relevant checks while iterating, then expand validation in
   proportion to the affected runtime, platform, generated code, or release
   surface.
@@ -23,15 +23,14 @@ developer must perform them.
   overrides for the final release smoke test.
 
 ## Project Structure
-- `native/`: standalone CMake project for the Proton native runtime. It builds
-  `proton` as a dynamic library/import library, installs `proton_native.h`, and
-  installs the helper executable when the engine build is enabled.
 - `proton/`: root `moonbit-community/proton` MoonBit module. The public facade owns the
-  app API (`html`, `url`, `file`, `asset`), command-extension bridge
-  wiring, and selected low-level native re-exports.
-- `proton/native/`: safe MoonBit binding over the `proton_*` C ABI. MoonBit code
-  links only the native Proton library through `proton/native_link_config.mjs`.
-- `proton/manifest/`, `proton/catalog/`,
+  app API (`html`, `url`, `file`, `asset`, `config`), command-extension bridge
+  wiring, and application lifecycle.
+- `proton/internal/native/`: private MoonBit ownership, state, event, and error
+  layer over platform stubs in `proton/internal/native/ffi/`.
+- `proton/internal/cef_process/`: source-built MoonBit executable used as CEF's
+  subprocess helper. It is packaged beside the application executable.
+- `proton/manifest/`, `proton/bootstrap/`, `proton/catalog/`,
   `proton/core/`, `proton/command/`, `proton/ipc/`: supporting packages for
   metadata, tooling, command bridge wiring, and transport-neutral IPC protocol
   helpers. Do not reintroduce the old app runtime route without an explicit
@@ -69,38 +68,23 @@ developer must perform them.
   editing it by hand.
 - `examples/`: runnable demos. Keep [examples/Readme.md](examples/Readme.md)
   aligned with the actual examples.
-- `proton/prebuilt/<platform>/`: shipped Proton-only native artifacts. Do not
-  put CEF runtime files here.
-- `lib/`, `build/`, `_build/`, `native/build*`, `native/dist/`: generated or
-  vendored artifacts. Packaged application artifacts are written to `dist/`.
+- `lib/`, `build/`, and `_build/`: generated or vendored artifacts. Packaged
+  application artifacts are written to `dist/`.
 - `.proton/`: generated project runtime selection created by
   `proton_cli cef setup`; assembled runtimes are cached at user level.
 
 ## Build And Test
-- Native engine build:
-  `cmake -S native -B native\build-engine -DCMAKE_INSTALL_PREFIX=native\dist -DPROTON_WITH_ENGINE=ON -DPROTON_ENGINE_ROOT=.cef-cache`
-- `cmake --build native\build-engine --config Debug`
-- `cmake --install native\build-engine --config Debug`
-- `ctest --test-dir native\build-engine -C Debug --output-on-failure`
-- `node native\scripts\verify_link_config.mjs native\dist`
-- Sync release artifacts into `proton/prebuilt/<platform>/`; only include the
-  Proton DLL/shared library, import library if any, helper executable, public
-  header, and manifest.
-- Build release artifacts with the Release configuration and install or stage
-  stripped Proton binaries. On macOS, generate any required dSYMs from the
-  unstripped build outputs first, then strip and stage the final binaries before
-  code signing and notarization.
-- `node scripts/verify_prebuilt_abi.mjs <platform>`
 - `moon -C cli run . -- -C .. cef setup`
-- With `.proton\runtime.json` active runtime `bin` on `PATH`:
-  `moon -C proton test native --target native --diagnostic-limit 80`
-- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+- `moon build proton/internal/cef_process --target native`
+- With `.proton/runtime.json` selecting the active CEF runtime:
+  `moon -C proton test internal/native --target native --diagnostic-limit 80`
+- With `.proton/runtime.json` selecting the active CEF runtime:
   `moon -C proton check --target native --diagnostic-limit 80`
-- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+- With `.proton/runtime.json` selecting the active CEF runtime:
   `moon -C examples build --target native --diagnostic-limit 80`
-- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+- With `.proton/runtime.json` selecting the active CEF runtime:
   `moon -C codegen test lib --target wasm`
-- With `.proton\runtime.json` active runtime `bin` on `PATH`:
+- With `.proton/runtime.json` selecting the active CEF runtime:
   `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
 - `moon -C package test lib --target native --diagnostic-limit 80`
 - `moon check --target native`
@@ -111,17 +95,6 @@ developer must perform them.
 - `moon -C e2e build --target native`
 - `moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted`
 - `moon fmt` or `moon fmt --check`
-
-On Linux, an engine-linked process that is launched directly must also put the
-active runtime `bin` and `lib` directories on `LD_LIBRARY_PATH` and preload the
-basename `libcef.so`. Native CTest, `proton_cli dev`, and the self-hosted E2E
-runner apply this automatically. For direct MoonBit native tests, use:
-
-```sh
-LD_LIBRARY_PATH="$PROTON_NATIVE_DIST/bin:$PROTON_NATIVE_DIST/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-LD_PRELOAD="libcef.so${LD_PRELOAD:+:$LD_PRELOAD}" \
-  moon -C proton test native --target native --diagnostic-limit 80
-```
 
 Use the smallest relevant validation set while iterating, then run broader
 native checks before handing off larger refactors.
@@ -206,46 +179,35 @@ native checks before handing off larger refactors.
   methods, fields, and locals.
 - Prefer small JSON bridge structs deriving `ToJson`, `FromJson`, `Eq`, and
   `Show`.
-- Prefer the current public API shape:
-  - facade: `@proton.Runtime::new(...)`, `@proton.RuntimeConfig::bundled(...)`,
-    `@proton.Window::new(...)`
-  - low-level package: `moonbit-community/proton/native`
-  - C ABI: `proton_*`
+- Prefer the current public facade. Private native operations belong under
+  `moonbit-community/proton/internal/native`.
 - Do not add old low-level compatibility APIs.
 
 ## Architectural Rules
-- There is one runtime route: CMake builds the native Proton dynamic library and
-  helper executable; MoonBit links only the Proton library/import library.
-- Published packages ship `proton/prebuilt/<platform>/` Proton artifacts only.
-  `proton_cli cef setup` assembles immutable runtimes in the user-level cache
+- There is one runtime route: MoonBit builds Proton's private C, Objective-C, or
+  C++ stubs directly into the application and the matching `cef_process`
+  executable. CEF remains a dynamically loaded third-party runtime.
+- `proton_cli cef setup` assembles immutable CEF runtimes in the user-level cache
   and writes the selected absolute runtime path to `.proton/runtime.json`.
 - Keep platform-specific setup decisions centralized in the CLI/native platform
   helpers. Platform ids should stay predictable: `win32-x64`, `darwin-arm64`,
-  and `linux-x64` (the shipped prebuilt set); add `darwin-x64` only when it
-  actually ships.
-- CEF is the native implementation detail. Do not expose CEF in MoonBit package
-  names, C ABI prefixes, or public facade names.
-- `native/CMakeLists.txt` is the only native build source of truth. Do not add
-  duplicate native build entry points.
-- `proton/native_link_config.mjs` owns MoonBit link flags. Keep MoonBit FFI simple:
-  no loader shim unless a separate import-library/TCC spike proves it is needed.
-  Its resolution order is `PROTON_NATIVE_DIST`, active `.proton/runtime.json`,
-  development fallback `native/dist`, then the module's own
-  `prebuilt/<platform>` (the primary path for registry-installed consumers).
-- Keep `proton_*` ABI functions stable and MoonBit-facing: use status codes,
-  `Int64` handle ids, caller-owned buffers, and typed MoonBit wrappers.
-- Runtime/window configs must keep explicit `abi_version` JSON schemas and
-  reject unknown top-level fields.
-- `cef_process(.exe)` is a native packaged helper. It is built by CMake and
-  shipped beside the native runtime DLL; it is not a MoonBit package.
-- The root `proton` facade is the current public app surface. Keep it thin over
-  the native DLL route and avoid reintroducing a second runtime path.
+  and `linux-x64`; add `darwin-x64` only when it is supported.
+- CEF is a native implementation detail. Do not expose CEF in public facade names.
+- `proton/native_link_config.mjs` is the only MoonBit native-link integration
+  point. It reads `.proton/runtime.json` and supplies CEF include, compiler, and
+  linker configuration to the private source packages.
+- Keep private FFI functions MoonBit-friendly: status codes, external pointers,
+  UTF-8 strings, and typed MoonBit wrappers. Do not expose them publicly.
+- Runtime, window, view, bridge, and menu configuration crosses the private FFI
+  as typed values, not JSON.
+- The root `proton` facade is the only public app surface. Do not reintroduce a
+  second runtime path or a public native escape API.
 - Bridge and command-extension APIs may be documented only when implemented by
-  the native DLL route. Do not document old `window.__MoonBit__` flows that no
+  the source-built native route. Do not document old `window.__MoonBit__` flows that no
   longer match the current runtime.
 - Do not reintroduce local WebSocket IPC as an app runtime path. DevTools test
   automation may use WebSocket to talk to Chromium, but Proton app IPC belongs
-  to the native DLL bridge route.
+  to the source-built native bridge route.
 - Keep the root facade wake-driven through Proton's external event loop. The
   facade's `fn init` hands it to `moonbitlang/async` -- that is the only place
   guaranteed to run before async starts its loop, and installing afterwards
@@ -257,13 +219,11 @@ native checks before handing off larger refactors.
 - The `e2e/` module is a workspace member. Do not make scripts mutate
   `moon.work` at runtime to add it.
 
-## Native DLL And FFI Rules
-- Treat the native dynamic library as the product boundary. MoonBit packages
-  must bind to `proton.dll`, `libproton.dylib`, or `libproton.so`; they must not
-  link CEF, load CEF directly, or call platform browser APIs directly.
-- Keep the C ABI small, C-compatible, and MoonBit-friendly. Export only
-  `proton_*` functions, plain integer status codes, fixed-width integer types,
-  opaque `Int64` handles, UTF-8 strings, and caller-owned output buffers.
+## Native Source And FFI Rules
+- Treat `proton/internal/native` as the ownership boundary. Other MoonBit
+  packages must not link CEF, load CEF directly, or call platform browser APIs.
+- Keep the private C ABI small and MoonBit-friendly: plain status codes,
+  external pointers, UTF-8 strings, typed arguments, and caller-owned buffers.
 - Treat every `char*` string as UTF-8 end to end. On Windows, never call the
   ANSI (`...A`) Win32 variants: they reinterpret text through the process
   codepage and mangle non-ASCII paths and messages. Call the `...W` variant
@@ -272,31 +232,16 @@ native checks before handing off larger refactors.
   ...)`. The same rule covers ANSI CRT file calls: use `_wfopen`, `_wstat64`,
   and `_wremove` instead of `fopen`, `stat`, and `remove` for Windows paths.
 - Do not expose C++ types, CEF structs, Objective-C objects, Win32 handles, or
-  owned pointers across the public ABI. Platform details belong behind
+  owned pointers outside the private FFI package. Platform details belong behind
   `src/proton_engine.h` and the per-platform native implementation files.
-- Preserve ABI stability. Additive changes are preferred; changing existing
-  function signatures, handle semantics, status codes, or config schemas needs
-  an explicit migration decision and matching MoonBit binding updates.
-- Keep config exchange schema-driven. Runtime and window config JSON must keep
-  `"abi_version": 1`, reject unknown top-level fields, and be parsed through
-  existing structured helpers; do not add ad hoc handwritten JSON parsing in C.
 - Keep error reporting synchronous and explicit. Native functions return status
   codes, detailed diagnostics go through the existing last-error/probe/info JSON
   paths, and MoonBit wrappers translate status codes into typed errors.
-- `proton_runtime_wait` is a low-level pump primitive, not a separate app API.
-  It reports ready masks for event, bridge, and platform work; callers must
-  still drain via the existing poll APIs, and pump the platform themselves
-  through `proton_runtime_do_message_loop_work`. A host that does not hold a
-  runtime handle runs `proton_host_loop_begin`/`poll`/`end` instead, which does
-  both halves in one call; the facade is such a host.
-- Handle ownership must stay centralized in the native registry. Handles are
-  not raw pointers, must validate kind/generation/thread ownership, and must be
-  invalidated on destroy/close paths. Dialog handles are the documented
-  exception: sequential Int64 ids scoped to their owning runtime/window and
-  validated by list membership. View handles (`proton_view_*`) are
-  window-scoped children in the same registry: they validate against their
-  owning window's runtime thread and are destroyed when the owning window is
-  destroyed.
+- The facade installs Proton's external event loop before async starts. Native
+  callbacks enqueue records and wake that loop; they never enter MoonBit.
+- Runtime, window, and view objects are private external pointers. Their explicit
+  destroy operations validate owner-thread access and lifecycle state; GC
+  finalizers never destroy CEF or UI objects.
 - Web contents views follow the Electron `WebContentsView` model: child
   browsers hosted in a window's content area with top-left bounds, visibility,
   z-order, load-url/load-html/eval, browser commands, and lifecycle events,
@@ -306,31 +251,21 @@ native checks before handing off larger refactors.
   owns no top-level window, so each engine's `do_close` must cancel CEF's
   default top-level close and complete the teardown by destroying the browser
   host view (NSView/child HWND/X window) instead.
-- Respect the thread model. Runtime and window handles are owned by their
-  creating thread; native callbacks or future pumps must marshal work to the
-  owner thread instead of touching handles directly from arbitrary threads.
-- `proton/native_link_config.mjs` is the only MoonBit native-link integration point.
-  Keep its resolution order simple: `PROTON_NATIVE_DIST`, active
-  `.proton/runtime.json`, development fallback `native/dist`, then the
-  module's `prebuilt/<platform>`.
-- Published MoonBit packages ship Proton artifacts only under
-  `proton/prebuilt/<platform>/`: the dynamic library, import library when the
-  platform needs one, helper executable, public header, and manifest. Do not put
-  CEF runtime files in that directory.
-- `proton_cli cef setup` owns runtime assembly. It may download/reuse CEF and
-  combine it with Proton prebuilt artifacts under the user-level runtime cache,
-  then write `.proton/runtime.json` in the project.
-- Keep `cef_process.exe` or the platform equivalent as a native packaged helper
-  built by CMake. It is part of the runtime layout, not a MoonBit executable.
+- Respect the thread model. Runtime, window, and view objects are owned by their
+  creating thread; native callbacks only enqueue work for that owner thread.
+- `proton_cli cef setup` owns CEF runtime assembly and writes
+  `.proton/runtime.json` in the project.
+- Keep `cef_process.exe` or the platform equivalent as a MoonBit executable
+  built from the same Proton source revision as the application.
 - CEF internal logging is disabled by default. Use `PROTON_CEF_LOG` only as a
   temporary debugging switch; do not turn Chromium log noise back on by default.
 - When adding a platform, implement the same ABI behind the same exported
   function names and keep platform ids stable, for example `win32-x64`,
   `darwin-arm64`, and `linux-x64`.
-- Validate native changes at both layers: CMake/CTest for the DLL and MoonBit
-  native tests for the FFI binding. Engine or bridge changes should also run the
-  relevant examples and the MoonBit `e2e/` self-hosted scenarios (`moon -C e2e
-  run test --target native --diagnostic-limit 200 -- --self-hosted`).
+- Validate native changes with MoonBit tests for the internal package. Engine or
+  bridge changes should also run the relevant examples and the MoonBit `e2e/`
+  self-hosted scenarios (`moon -C e2e
+  test -p moonbit-community/proton/e2e/test --target native --no-parallelize`).
 
 ## Commit And PR Guidance
 - Use Conventional Commit style such as `feat(native):`, `fix(examples):`, or

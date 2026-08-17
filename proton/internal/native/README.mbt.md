@@ -31,9 +31,9 @@ session cookies without an expiry are stored alongside permanent cookies.
 For packaged Proton runtimes, `RuntimeConfig::bundled()` resolves CEF resources
 and the matching helper from the application bundle.
 
-The default no-engine build supports fake runtime/window handles for ABI and
-binding validation. Real runtime configs that include `runtime_root` or
-`helper_path`, or use `RuntimeConfig::bundled()`, are treated as engine configs and must pass
+The default configuration resolves the CEF runtime and matching helper from the
+packaged application or the environment installed by Proton tooling. Explicit
+runtime configs must include both `runtime_root` and `helper_path` and pass
 `RuntimeConfig::probe`.
 
 ```mbt check

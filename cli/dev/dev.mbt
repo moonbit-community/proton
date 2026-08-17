@@ -561,7 +561,7 @@ fn dev_frontend_process_env(
 /// environment block and keeps the *last* duplicate of each variable; the
 /// inherited original `Path` therefore shadows the prepended runtime `bin`
 /// directory and the app exits immediately with 0xC0000135 because
-/// `proton.dll` and the CEF libraries are not on its DLL search path.
+/// CEF libraries are not on its DLL search path.
 /// Returning a complete environment with the overrides applied and spawning
 /// with `inherit_env=false` keeps exactly one entry per variable, so the
 /// runtime `bin` directory survives the handoff.

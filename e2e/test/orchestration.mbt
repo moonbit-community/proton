@@ -70,21 +70,23 @@ fn e2e_host_path(path : String) -> @path.Path {
 
 ///|
 fn active_runtime_dist(root : String) -> String raise {
-  match @env.get_env_var("PROTON_NATIVE_DIST") {
-    Some(value) if value.trim() != "" =>
-      resolve_path(root, value.trim().to_owned())
-    _ => {
-      let manifest_path = join_path(root, ".proton/runtime.json")
-      if @mbfs.path_exists(manifest_path) {
-        match read_runtime_dist(manifest_path) {
-          Ok(dist) => resolve_path(root, dist)
-          Err(message) => fail(message)
-        }
-      } else {
-        join_path(root, "native/dist")
-      }
-    }
+  let manifest_path = join_path(root, ".proton/runtime.json")
+  guard @mbfs.path_exists(manifest_path) else {
+    fail("CEF runtime is not configured; run proton_cli cef setup")
   }
+  match read_runtime_dist(manifest_path) {
+    Ok(dist) => resolve_path(root, dist)
+    Err(message) => fail(message)
+  }
+}
+
+///|
+fn source_built_helper(root : String) -> String {
+  join_path(
+    root,
+    "_build/native/debug/build/moonbit-community/proton/internal/cef_process/" +
+    helper_executable_name(),
+  )
 }
 
 ///|
@@ -116,12 +118,12 @@ fn app_process_env(
   let runtime_dist = active_runtime_dist(root)
   let bin_dir = join_path(runtime_dist, "bin")
   let lib_dir = join_path(runtime_dist, "lib")
-  let helper_path = join_path(bin_dir, helper_executable_name())
+  let helper_path = source_built_helper(root)
   guard @mbfs.path_exists(bin_dir) else {
     fail(
       "native runtime bin directory does not exist: " +
       bin_dir +
-      "\nRun proton_cli cef setup or set PROTON_NATIVE_DIST.",
+      "\nRun proton_cli cef setup.",
     )
   }
   guard @mbfs.path_exists(helper_path) else {
@@ -130,7 +132,6 @@ fn app_process_env(
   let path_key = path_env_key()
   let current_path = @env.get_env_var(path_key).unwrap_or("")
   let result : Map[String, String] = {
-    "PROTON_NATIVE_DIST": runtime_dist,
     "PROTON_RUNTIME_ROOT": runtime_dist,
     "PROTON_HELPER_PATH": helper_path,
     "PROTON_NATIVE_LOG": scenario_native_log_path(output_root, cdp_port),

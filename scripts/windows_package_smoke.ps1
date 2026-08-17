@@ -305,7 +305,6 @@ try {
 
     $requiredFiles = @(
         "$ExecutableName.exe",
-        "proton.dll",
         "cef_process.exe",
         "chrome_elf.dll",
         "d3dcompiler_47.dll",
@@ -341,8 +340,7 @@ try {
 
     $ownedTargets = @(
         (Join-Path $PortableDir "$ExecutableName.exe"),
-        (Join-Path $PortableDir "cef_process.exe"),
-        (Join-Path $PortableDir "proton.dll")
+        (Join-Path $PortableDir "cef_process.exe")
     )
     foreach ($target in $ownedTargets) {
         Invoke-External $SignTool @("verify", "/pa", "/all", "/v", $target)

@@ -404,9 +404,10 @@ The native bridge E2E suite is implemented in MoonBit and owns its application
 processes, CDP connections, frontend servers, and cleanup:
 
 ```sh
-PROTON_NATIVE_DIST="$PWD/native/dist" \
-PATH="$PWD/native/dist/bin:$PATH" \
-moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
+moon -C cli run . -- -C .. cef setup
+moon build proton/internal/cef_process --target native
+moon -C e2e test -p moonbit-community/proton/e2e/test \
+  --target native --no-parallelize --diagnostic-limit 200
 ```
 
 For an application that is already running with CDP enabled, use the typed

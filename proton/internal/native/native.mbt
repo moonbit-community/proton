@@ -574,7 +574,7 @@ fn validate_runtime_config(config : RuntimeConfig) -> Unit raise NativeError {
 
 ///|
 pub fn execute_process(
-  config? : RuntimeConfig = RuntimeConfig::new(),
+  config? : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> ProcessResult raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
   validate_runtime_config(config)
@@ -606,7 +606,7 @@ pub fn execute_process(
 
 ///|
 pub fn probe_runtime(
-  config? : RuntimeConfig = RuntimeConfig::new(),
+  config? : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> Unit raise NativeError {
   validate_runtime_config(config)
   check_status(
@@ -635,7 +635,7 @@ pub fn RuntimeConfig::probe(self : RuntimeConfig) -> Unit raise NativeError {
 
 ///|
 pub fn Runtime::new(
-  config? : RuntimeConfig = RuntimeConfig::new(),
+  config? : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> Runtime raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
   validate_runtime_config(config)

@@ -55,29 +55,6 @@ function checkEqual(label, actual, expected) {
   }
 }
 
-function checkPrebuiltManifests(expectedVersion) {
-  const prebuiltRoot = path.join(repoRoot, "proton", "prebuilt");
-  for (const platform of fs.readdirSync(prebuiltRoot).sort()) {
-    const platformRoot = path.join(prebuiltRoot, platform);
-    if (!fs.statSync(platformRoot).isDirectory()) {
-      continue;
-    }
-    const manifestPath = path.join(platformRoot, "manifest.json");
-    if (!fs.existsSync(manifestPath)) {
-      failures.push(`proton/prebuilt/${platform}/manifest.json: missing`);
-      continue;
-    }
-    const relativeManifest = path.relative(repoRoot, manifestPath);
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-    checkEqual(`${relativeManifest} platform`, manifest.platform, platform);
-    checkEqual(
-      `${relativeManifest} proton_version`,
-      manifest.proton_version,
-      expectedVersion,
-    );
-  }
-}
-
 function templateDefault(text, name) {
   const match = text.match(
     new RegExp(`^let ${name}\\s*=\\s*"([^"]+)"`, "m"),
@@ -149,7 +126,6 @@ const clientVersion = moduleVersion("client/moon.mod");
 const rabbitaVersion = moduleVersion("rabbita/moon.mod");
 const cliVersion = moduleVersion("cli/moon.mod");
 checkLockstepVersions(protonVersion);
-checkPrebuiltManifests(protonVersion);
 checkTemplateDefaults({
   default_proton_version: protonVersion,
   default_proton_codegen_version: codegenVersion,
