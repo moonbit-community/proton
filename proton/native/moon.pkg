@@ -1,5 +1,6 @@
 import {
   "moonbit-community/proton_ffi" @ffi,
+  "moonbit-community/proton/internal/locale",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }

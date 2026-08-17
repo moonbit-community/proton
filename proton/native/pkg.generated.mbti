@@ -2,6 +2,7 @@
 package "moonbit-community/proton/native"
 
 import {
+  "moonbit-community/proton/internal/locale",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -48,6 +49,8 @@ pub let runtime_wait_platform : Int
 pub fn screens() -> Array[ScreenInfo] raise NativeError
 
 pub fn signal_wakeup() -> Unit
+
+pub fn system_preferred_language_tags() -> Array[String] raise NativeError
 
 pub fn update_cleanup_previous() -> Unit raise NativeError
 
@@ -377,9 +380,9 @@ pub fn Runtime::set_wakeup_fd(Self, Int) -> Unit raise NativeError
 pub fn Runtime::wait(Self, interest_mask~ : Int, timeout_ms? : Int) -> RuntimeWaitReady raise NativeError
 
 type RuntimeConfig derive(Eq, @debug.Debug)
-pub fn RuntimeConfig::bundled(helper_path? : String, cache_dir? : String, remote_debugging_port? : Int, headless? : Bool, persist_session_cookies? : Bool) -> Self
+pub fn RuntimeConfig::bundled(helper_path? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging_port? : Int, headless? : Bool, persist_session_cookies? : Bool) -> Self
 pub fn RuntimeConfig::equal(Self, Self) -> Bool
-pub fn RuntimeConfig::new(runtime_root? : String, helper_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, remote_debugging_port? : Int, headless? : Bool, persist_session_cookies? : Bool) -> Self
+pub fn RuntimeConfig::new(runtime_root? : String, helper_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging_port? : Int, headless? : Bool, persist_session_cookies? : Bool) -> Self
 pub fn RuntimeConfig::not_equal(Self, Self) -> Bool
 pub fn RuntimeConfig::probe(Self) -> Unit raise NativeError
 pub fn RuntimeConfig::to_json_string(Self) -> String

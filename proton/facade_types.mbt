@@ -9,6 +9,7 @@ struct App {
   mut debug_level_value : Int
   mut headless_value : Bool
   mut single_instance_identifier : String?
+  mut explicit_locale : @locale.Locale?
   mut title_overridden : Bool
   mut size_overridden : Bool
   mut titlebar_style_overridden : Bool
@@ -168,6 +169,7 @@ priv struct WindowPermissionPolicy {
 /// instead of duplicating native lifecycle state.
 priv struct RuntimeSession {
   runtime : @native.Runtime
+  locale_preferences : @locale.LocalePreferences
   definitions : Array[PreparedWindow]
   windows : Array[RunningWindow]
   command_host : CommandHostRuntime?

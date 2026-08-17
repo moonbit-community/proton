@@ -33,7 +33,7 @@ async test "production command errors hide backend diagnostics" {
   })
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
-      AppCommandRequestContext::new(7L, group),
+      AppCommandRequestContext::new(7L, group, detached_locale_preferences()),
       @ipc.IpcOpRequest::new("request-1", "app:fail", null),
     )
     assert_false(response.is_ok())
@@ -100,7 +100,12 @@ async test "runtime wake signal preserves notifications across wait races" {
 async test "request context observes its shared runtime wake signal" {
   let signal = RuntimeWakeSignal::new()
   @async.with_task_group(group => {
-    let context = AppCommandRequestContext::new(7L, group, wake_signal=signal)
+    let context = AppCommandRequestContext::new(
+      7L,
+      group,
+      detached_locale_preferences(),
+      wake_signal=signal,
+    )
     let revision = context.wake_revision()
     signal.notify()
     context.wait_for_wake(revision)
@@ -110,12 +115,73 @@ async test "request context observes its shared runtime wake signal" {
 }
 
 ///|
+async test "request context exposes the application locale snapshot" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("ja-JP")),
+    [@locale.Locale::parse("en-GB")],
+  )
+  @async.with_task_group(group => {
+    let context = AppCommandRequestContext::new(7L, group, preferences)
+    assert_eq(context.locale().to_string(), "ja-JP")
+    assert_eq(context.preferred_languages().map(locale => locale.to_string()), [
+      "ja-JP", "en-GB", "en-US",
+    ])
+    group.return_immediately(())
+  })
+}
+
+///|
+async test "context-aware handlers reject contextless dispatch" {
+  let host = AppCommandHost::new()
+  let called = Ref(false)
+  host.op_async_with_context("app:locale", fn(context, _payload : Unit) {
+    called.val = true
+    context.locale().to_string()
+  })
+  let response = host.dispatch_ipc(
+    @ipc.IpcOpRequest::new("request-contextless", "app:locale", null),
+  )
+  assert_false(response.is_ok())
+  assert_false(called.val)
+  assert_eq(
+    response_error_message(response),
+    "op app:locale requires request context",
+  )
+  host.close()
+}
+
+///|
+async test "context-aware handlers receive the supplied locale" {
+  let host = AppCommandHost::new()
+  host.op_async_with_context("app:locale", fn(context, _payload : Unit) {
+    context.locale().to_string()
+  })
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("ja-JP")),
+    [],
+  )
+  @async.with_task_group(group => {
+    let response = host.dispatch_ipc_with_context(
+      AppCommandRequestContext::new(7L, group, preferences),
+      @ipc.IpcOpRequest::new("request-context", "app:locale", null),
+    )
+    assert_true(response.is_ok())
+    match response.body {
+      String(locale) => assert_eq(locale, "ja-JP")
+      body => fail("expected locale string, got " + body.stringify())
+    }
+  })
+  host.close()
+}
+
+///|
 async test "request context exposes only its owning extension scope" {
   let original : Map[String, Json] = { "root": "./data" }
   @async.with_task_group(group => {
     let context = AppCommandRequestContext::new(
       7L,
       group,
+      detached_locale_preferences(),
       window_id="secondary",
       source_origin="https://example.test",
       permission_extension="examples/fs",
@@ -154,15 +220,16 @@ async test "request context emits through its page-scoped destination" {
     "changed",
   )
   @async.with_task_group(group => {
-    let context = AppCommandRequestContext::new(7L, group, emit_event=fn(
-      route,
-      name,
-      payload,
-    ) {
-      emitted_route.val = route.operation_name()
-      emitted_name.val = name
-      emitted_payload.val = payload
-    })
+    let context = AppCommandRequestContext::new(
+      7L,
+      group,
+      detached_locale_preferences(),
+      emit_event=fn(route, name, payload) {
+        emitted_route.val = route.operation_name()
+        emitted_name.val = name
+        emitted_payload.val = payload
+      },
+    )
     context.emit(changed, "ready")
   })
   inspect(emitted_route.val, content="app:changed")

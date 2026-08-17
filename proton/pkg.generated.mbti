@@ -6,6 +6,7 @@ import {
   "moonbit-community/proton/command",
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension",
+  "moonbit-community/proton/internal/locale",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/native",
   "moonbit-community/proton/updater",
@@ -42,6 +43,8 @@ pub fn runtime_info() -> @native.RuntimeInfo raise @native.NativeError
 pub fn runtime_info_json() -> String raise @native.NativeError
 
 pub fn screens() -> Array[@native.ScreenInfo] raise @native.NativeError
+
+pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError
 
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
@@ -144,6 +147,14 @@ pub fn NotificationDeliveryError::message(Self) -> String
 pub fn NotificationDeliveryError::not_equal(Self, Self) -> Bool
 pub fn NotificationDeliveryError::to_repr(Self) -> @debug.Repr
 
+pub(all) suberror SystemLocaleError {
+  NativeQuery(@native.NativeError)
+} derive(@debug.Debug)
+pub fn SystemLocaleError::message(Self) -> String
+pub fn SystemLocaleError::output(Self, &Logger) -> Unit
+pub fn SystemLocaleError::to_repr(Self) -> @debug.Repr
+pub fn SystemLocaleError::to_string(Self) -> String
+
 pub(all) suberror WindowSessionError {
   UnknownWindow(id~ : String)
   AlreadyOpen(id~ : String)
@@ -176,6 +187,7 @@ pub fn App::expose(Self, @extension.Extension, window? : String, origin? : @mani
 pub fn App::extension(Self, @extension.Extension) -> Self
 pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
+pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, @native.MenuBar) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
@@ -201,7 +213,10 @@ pub fn App::with_view(Self, String, @native.ViewConfig) -> Self
 pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
+  locale_preferences : @locale.LocalePreferences
 }
+pub fn ApplicationContext::locale(Self) -> @locale.Locale
+pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::windows(Self) -> WindowManager
 
@@ -398,10 +413,13 @@ pub struct WindowContext {
   windows : WindowManager
   tasks : @async.TaskGroup[Unit]
   events : WindowEventEmitter
+  locale_preferences : @locale.LocalePreferences
 }
 pub fn WindowContext::events(Self) -> WindowEventEmitter
 pub fn WindowContext::handle(Self) -> WindowHandle
 pub fn WindowContext::id(Self) -> String
+pub fn WindowContext::locale(Self) -> @locale.Locale
+pub fn WindowContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn WindowContext::window(Self) -> @native.WindowRef
 pub fn WindowContext::windows(Self) -> WindowManager
@@ -480,6 +498,10 @@ pub using @native {type BridgeLifecycleState}
 pub using @core {type AppCommandRequestContext as CommandContext}
 
 pub using @command {type CommandRegistrar}
+
+pub using @locale {type Locale}
+
+pub using @locale {type LocaleParseError}
 
 pub using @native {type Menu}
 

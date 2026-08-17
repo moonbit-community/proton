@@ -79,6 +79,7 @@ add_library(proton SHARED
   src/proton_app_instance.c
   src/proton_config.c
   src/proton_json.c
+  src/proton_locale.c
   src/proton_state.c
   src/proton_update.c
   src/proton.c

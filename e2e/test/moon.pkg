@@ -39,6 +39,7 @@ options(
     "devtools_scenario_wbtest.mbt": [ "native" ],
     "extension_scenarios_wbtest.mbt": [ "native" ],
     "event_scenario_wbtest.mbt": [ "native" ],
+    "i18n_scenario_wbtest.mbt": [ "native" ],
     "multi_window_scenario_wbtest.mbt": [ "native" ],
     "multi_window_driver.mbt": [ "native" ],
     "orchestration_wbtest.mbt": [ "native" ],

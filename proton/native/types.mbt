@@ -1014,6 +1014,10 @@ struct RuntimeConfig {
   resources_dir : String?
   locales_dir : String?
   cache_dir : String?
+  locale : String?
+  accept_languages : Array[String]
+  framework_dialog_ok_label : String?
+  framework_dialog_cancel_label : String?
   remote_debugging_port : Int
 } derive(Debug, Eq)
 
@@ -1034,6 +1038,10 @@ struct WindowConfig {
   titlebar_style : TitlebarStyle
   browser : BrowserPolicy
   bridge : BridgeConfig?
+  framework_titlebar_minimize_label : String?
+  framework_titlebar_maximize_label : String?
+  framework_titlebar_restore_label : String?
+  framework_titlebar_close_label : String?
 } derive(Debug, Eq)
 
 ///|
@@ -1055,6 +1063,8 @@ pub fn RuntimeConfig::new(
   resources_dir? : String,
   locales_dir? : String,
   cache_dir? : String,
+  locale? : @locale.Locale,
+  accept_languages? : Array[@locale.Locale] = [],
   remote_debugging_port? : Int = 0,
   headless? : Bool = false,
   persist_session_cookies? : Bool = true,
@@ -1069,11 +1079,19 @@ pub fn RuntimeConfig::new(
     resources_dir,
     locales_dir,
     cache_dir,
+    locale: locale.map(value => value.to_string()),
+    accept_languages: accept_languages.map(value => value.to_string()),
+    framework_dialog_ok_label: Some("OK"),
+    framework_dialog_cancel_label: Some("Cancel"),
     remote_debugging_port,
   }
 }
 
 ///|
+/// Builds a runtime configuration from unchecked ABI JSON.
+///
+/// This bypasses typed locale and schema construction and is intended only
+/// for low-level compatibility tests and native integration code.
 pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
   {
     raw_json: Some(raw_json),
@@ -1085,6 +1103,10 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
     resources_dir: None,
     locales_dir: None,
     cache_dir: None,
+    locale: None,
+    accept_languages: [],
+    framework_dialog_ok_label: None,
+    framework_dialog_cancel_label: None,
     remote_debugging_port: 0,
   }
 }
@@ -1098,6 +1120,8 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
 pub fn RuntimeConfig::bundled(
   helper_path? : String,
   cache_dir? : String,
+  locale? : @locale.Locale,
+  accept_languages? : Array[@locale.Locale] = [],
   remote_debugging_port? : Int = 0,
   headless? : Bool = false,
   persist_session_cookies? : Bool = true,
@@ -1112,6 +1136,10 @@ pub fn RuntimeConfig::bundled(
     resources_dir: None,
     locales_dir: None,
     cache_dir,
+    locale: locale.map(value => value.to_string()),
+    accept_languages: accept_languages.map(value => value.to_string()),
+    framework_dialog_ok_label: Some("OK"),
+    framework_dialog_cancel_label: Some("Cancel"),
     remote_debugging_port,
   }
 }
@@ -1137,6 +1165,10 @@ pub fn WindowConfig::new(
     titlebar_style,
     browser,
     bridge,
+    framework_titlebar_minimize_label: Some("Minimize"),
+    framework_titlebar_maximize_label: Some("Maximize"),
+    framework_titlebar_restore_label: Some("Restore"),
+    framework_titlebar_close_label: Some("Close"),
   }
 }
 
@@ -1152,6 +1184,61 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
     titlebar_style: TitlebarStyle::Default,
     browser: BrowserPolicy::new(),
     bridge: None,
+    framework_titlebar_minimize_label: None,
+    framework_titlebar_maximize_label: None,
+    framework_titlebar_restore_label: None,
+    framework_titlebar_close_label: None,
+  }
+}
+
+///|
+#doc(hidden)
+pub fn RuntimeConfig::with_framework_dialog_labels(
+  self : RuntimeConfig,
+  ok : String,
+  cancel : String,
+) -> RuntimeConfig {
+  {
+    raw_json: self.raw_json,
+    use_bundled: self.use_bundled,
+    headless: self.headless,
+    persist_session_cookies: self.persist_session_cookies,
+    runtime_root: self.runtime_root,
+    helper_path: self.helper_path,
+    resources_dir: self.resources_dir,
+    locales_dir: self.locales_dir,
+    cache_dir: self.cache_dir,
+    locale: self.locale,
+    accept_languages: self.accept_languages,
+    framework_dialog_ok_label: Some(ok),
+    framework_dialog_cancel_label: Some(cancel),
+    remote_debugging_port: self.remote_debugging_port,
+  }
+}
+
+///|
+#doc(hidden)
+pub fn WindowConfig::with_framework_titlebar_labels(
+  self : WindowConfig,
+  minimize : String,
+  maximize : String,
+  restore : String,
+  close : String,
+) -> WindowConfig {
+  {
+    raw_json: self.raw_json,
+    title: self.title,
+    width: self.width,
+    height: self.height,
+    initial_url: self.initial_url,
+    size_hint: self.size_hint,
+    titlebar_style: self.titlebar_style,
+    browser: self.browser,
+    bridge: self.bridge,
+    framework_titlebar_minimize_label: Some(minimize),
+    framework_titlebar_maximize_label: Some(maximize),
+    framework_titlebar_restore_label: Some(restore),
+    framework_titlebar_close_label: Some(close),
   }
 }
 
@@ -1346,6 +1433,23 @@ pub fn RuntimeConfig::to_json_string(self : RuntimeConfig) -> String {
       set_optional_string_field(fields, "resources_dir", self.resources_dir)
       set_optional_string_field(fields, "locales_dir", self.locales_dir)
       set_optional_string_field(fields, "cache_dir", self.cache_dir)
+      set_optional_string_field(fields, "locale", self.locale)
+      if !self.accept_languages.is_empty() {
+        fields.set(
+          "accept_languages",
+          Json::array(self.accept_languages.map(language => Json(language))),
+        )
+      }
+      set_optional_string_field(
+        fields,
+        "framework_dialog_ok_label",
+        self.framework_dialog_ok_label,
+      )
+      set_optional_string_field(
+        fields,
+        "framework_dialog_cancel_label",
+        self.framework_dialog_cancel_label,
+      )
       Json::object(fields).stringify()
     }
   }
@@ -1410,6 +1514,26 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
         None => ()
       }
       fields.set("browser", self.browser.to_json())
+      set_optional_string_field(
+        fields,
+        "framework_titlebar_minimize_label",
+        self.framework_titlebar_minimize_label,
+      )
+      set_optional_string_field(
+        fields,
+        "framework_titlebar_maximize_label",
+        self.framework_titlebar_maximize_label,
+      )
+      set_optional_string_field(
+        fields,
+        "framework_titlebar_restore_label",
+        self.framework_titlebar_restore_label,
+      )
+      set_optional_string_field(
+        fields,
+        "framework_titlebar_close_label",
+        self.framework_titlebar_close_label,
+      )
       Json::object(fields).stringify()
     }
   }

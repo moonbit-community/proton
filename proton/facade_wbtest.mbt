@@ -296,7 +296,18 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
   let mut rejected = false
-  run_manifest(manifest, ".", command_extensions, [], [], [], None, 30000, true) catch {
+  run_manifest(
+    manifest,
+    ".",
+    command_extensions,
+    [],
+    [],
+    [],
+    None,
+    30000,
+    true,
+    @locale.LocalePreferences::resolve(None, []),
+  ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "titlebar overlay is not supported in headless mode")
@@ -328,6 +339,7 @@ async test "headless mode rejects native menus before runtime startup" {
     Some(menu),
     30000,
     true,
+    @locale.LocalePreferences::resolve(None, []),
   ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
@@ -941,9 +953,12 @@ test "command host registration preserves cleanup failures" {
 test "application lifecycle advances through close and destroy" {
   let lifecycle = AppLifecycle::new()
   assert_true(lifecycle.state is Constructing)
+  assert_false(lifecycle.has_reached_running())
   lifecycle.begin_starting()
+  assert_false(lifecycle.has_reached_running())
   lifecycle.begin_running()
   assert_true(lifecycle.state is Running)
+  assert_true(lifecycle.has_reached_running())
   lifecycle.observe_window_closed()
   assert_true(lifecycle.state is Closing)
   lifecycle.begin_draining()
@@ -973,7 +988,11 @@ async test "application lifecycle hooks shut down in reverse order" {
   @async.with_task_group(group => {
     start_application_lifecycle_hooks(
       configured.application_lifecycle_hooks,
-      ApplicationContext::new(group, test_window_manager()),
+      ApplicationContext::new(
+        group,
+        test_window_manager(),
+        @locale.LocalePreferences::resolve(None, []),
+      ),
       group,
       [],
     )
@@ -1017,7 +1036,11 @@ async test "application lifecycle startup rolls back completed hooks" {
     @async.with_task_group(group => {
       start_application_lifecycle_hooks(
         configured.application_lifecycle_hooks,
-        ApplicationContext::new(group, test_window_manager()),
+        ApplicationContext::new(
+          group,
+          test_window_manager(),
+          @locale.LocalePreferences::resolve(None, []),
+        ),
         group,
         cleanup_failures,
       )
@@ -1066,6 +1089,7 @@ async test "window close joins owned tasks before close hooks" {
         test_window_manager(),
         group,
         WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+        @locale.LocalePreferences::resolve(None, []),
       ),
       group,
       [],
@@ -1571,12 +1595,49 @@ test "with_view stores declarative views and rejects invalid ids" {
 }
 
 ///|
-test "standard menus resolve before reaching native code" {
+async test "lifecycle contexts expose one immutable locale snapshot" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("zh-CN")),
+    [@locale.Locale::parse("en-GB")],
+  )
+  @async.with_task_group(group => {
+    let application = ApplicationContext::new(
+      group,
+      test_window_manager(),
+      preferences,
+    )
+    assert_eq(application.locale().to_string(), "zh-CN")
+    assert_eq(
+      application.preferred_languages().map(locale => locale.to_string()),
+      ["zh-CN", "en-GB", "en-US"],
+    )
+    let window = WindowContext::new(
+      "main",
+      @native.WindowRef::unsafe_from_handle(17L),
+      test_window_handle("main", 17L),
+      test_window_manager(),
+      group,
+      WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+      preferences,
+    )
+    assert_eq(window.locale(), application.locale())
+    assert_eq(window.preferred_languages(), application.preferred_languages())
+    group.return_immediately(())
+  })
+}
+
+///|
+test "standard menus resolve from the application locale" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("zh-CN")),
+    [],
+  )
   let resolved = resolve_menu(
     @native.MenuBar::new(menus=[
       @native.Menu::role(@native.MenuRole::Edit),
       @native.Menu::role(@native.MenuRole::Window),
     ]),
+    preferences,
     "Proton Demo",
   )
   let definitions = resolved.definitions()
@@ -1588,29 +1649,34 @@ test "standard menus resolve before reaching native code" {
   let (_, _, quit_label, quit_key, quit_role) = application_items[application_items.length() -
   1].definition()
   assert_eq(quit_role, Some(@native.MenuItemRole::Quit))
-  assert_eq(quit_label, Some("Quit Proton Demo"))
+  assert_eq(quit_label, Some("退出 Proton Demo"))
   assert_eq(quit_key, Some("q"))
   let (edit_role, edit_label, edit_items) = definitions[1].definition()
   assert_eq(edit_role, Some(@native.MenuRole::Edit))
-  assert_eq(edit_label, Some("Edit"))
+  assert_eq(edit_label, Some("编辑"))
   let edit_items = edit_items.unwrap()
   let (_, _, copy_label, copy_key, copy_role) = edit_items[4].definition()
   assert_eq(copy_role, Some(@native.MenuItemRole::Copy))
-  assert_eq(copy_label, Some("Copy"))
+  assert_eq(copy_label, Some("拷贝"))
   assert_eq(copy_key, Some("c"))
   let (window_role, window_label, _) = definitions[2].definition()
   assert_eq(window_role, Some(@native.MenuRole::Window))
-  assert_eq(window_label, Some("Window"))
+  assert_eq(window_label, Some("窗口"))
 }
 
 ///|
 test "custom menu labels never imply a standard role" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("en-US")),
+    [],
+  )
   let resolved = resolve_menu(
     @native.MenuBar::new(menus=[
       @native.Menu::new("Edit", items=[
         @native.MenuItem::command("custom.edit", "Custom Edit"),
       ]),
     ]),
+    preferences,
     "Proton Demo",
   )
   let definitions = resolved.definitions()
@@ -1626,12 +1692,57 @@ test "custom menu labels never imply a standard role" {
 
 ///|
 test "explicit standard menu items replace role defaults" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("en-US")),
+    [],
+  )
   let resolved = resolve_menu(
     @native.MenuBar::new(menus=[
       @native.Menu::role(@native.MenuRole::Edit, items=[]),
     ]),
+    preferences,
     "Proton Demo",
   )
   let (_, _, items) = resolved.definitions()[1].definition()
   assert_eq(items.unwrap(), [])
+}
+
+///|
+test "framework catalog localizes controls without changing technical details" {
+  let detail = "Error code: bridge_bootstrap_failed\nPath: /tmp/app"
+  let chinese = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("zh-CN")),
+    [],
+  )
+  let chinese_catalog = framework_catalog(chinese)
+  assert_eq(chinese_catalog.dialog_ok, "确定")
+  assert_eq(chinese_catalog.dialog_cancel, "取消")
+  assert_eq(chinese_catalog.titlebar_restore, "还原")
+  assert_eq(startup_failure_title(chinese), "应用启动失败")
+  assert_eq(
+    framework_failure_message(startup_failure_summary(chinese), detail),
+    "应用无法启动。\n\n" + detail,
+  )
+  assert_eq(application_error_title(chinese), "应用错误")
+  assert_eq(
+    framework_failure_message(application_error_summary(chinese), detail),
+    "应用遇到错误。\n\n" + detail,
+  )
+  let unsupported = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("fr-FR")),
+    [],
+  )
+  let fallback_catalog = framework_catalog(unsupported)
+  assert_eq(fallback_catalog.dialog_ok, "OK")
+  assert_eq(fallback_catalog.titlebar_close, "Close")
+  assert_eq(startup_failure_title(unsupported), "Application Startup Failed")
+  assert_eq(
+    framework_failure_message(startup_failure_summary(unsupported), detail),
+    "The application could not start.\n\n" + detail,
+  )
+  assert_eq(application_error_title(unsupported), "Application Error")
+  assert_eq(
+    framework_failure_message(application_error_summary(unsupported), detail),
+    "The application encountered an error.\n\n" + detail,
+  )
 }

@@ -1,6 +1,7 @@
 ///|
 fn RuntimeSession::new(
   runtime : @native.Runtime,
+  locale_preferences : @locale.LocalePreferences,
   definitions : Array[PreparedWindow],
   windows : Array[RunningWindow],
   command_host : CommandHostRuntime?,
@@ -28,6 +29,7 @@ fn RuntimeSession::new(
 ) -> RuntimeSession {
   RuntimeSession::{
     runtime,
+    locale_preferences,
     definitions,
     windows,
     command_host,
@@ -528,6 +530,7 @@ fn RuntimeSession::create_window(
       plan.window,
       definition.bridge,
       definition.browser_policy,
+      self.locale_preferences,
     ),
   ) catch {
     error => raise native_run_error("create window " + plan.id, error)
@@ -602,6 +605,7 @@ async fn RuntimeSession::activate_window(
           window_events,
           self.window_lifecycle_hooks,
           self.lifecycle_failures,
+          self.locale_preferences,
         )
       },
       no_wait=true,
@@ -1935,6 +1939,7 @@ fn RuntimeSession::start_bridge_request(
             host,
             request,
             self.wakeup.signal,
+            self.locale_preferences,
           )
         },
         no_wait=true,

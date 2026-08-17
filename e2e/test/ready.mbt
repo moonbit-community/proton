@@ -37,6 +37,8 @@ fn scenario_ready_expression(name : String) -> String raise {
       "['Web Contents View Host','WCV Left','WCV Right'].includes(document.title) && document.readyState === 'complete'"
     "54_devtools" =>
       "document.title === 'Proton DevTools API' && typeof window.__MoonBit__?.core?.invokeOp === 'function'"
+    "56_i18n" =>
+      "document.title === 'Proton I18n E2E' && document.readyState === 'complete'"
     _ => fail("unsupported E2E scenario: " + name)
   }
 }

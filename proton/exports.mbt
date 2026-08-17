@@ -38,6 +38,9 @@ pub using @proton_command {
 }
 
 ///|
+pub using @locale {type Locale, type LocaleParseError}
+
+///|
 pub type AppEntry = @manifest.AppEntry
 
 ///|

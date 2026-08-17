@@ -88,6 +88,9 @@ moon -C examples run 01_run --target native
   `BrowserHandle::open_devtools` and closes it with the window lifecycle.
 - `55_desktop_showcase`: presentation-ready macOS desktop capability console
   combining native dialogs, clipboard access, notifications, and tray menus.
+- `56_i18n`: one explicit application locale observed through MoonBit command
+  context, CEF `navigator.languages`, and localized typed native menus.
+
 All runnable examples should import `moonbit-community/proton`. `proton.project.json`
 configures app settings such as window, entry, debug, frontend, and bundle
 metadata.

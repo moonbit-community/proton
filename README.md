@@ -301,6 +301,33 @@ Use `@proton.app_data_dir("com.example.my-app")` to resolve the stable native
 data directory for an application identifier. The function does not create the
 directory.
 
+## Application locale
+
+Proton resolves one immutable locale snapshot before creating the native
+runtime. By default it uses the operating system's preferred language order
+and appends `en-US` as a fallback. Applications can select an explicit primary
+locale while retaining that system preference list:
+
+```moonbit
+let locale = @proton.Locale::parse("zh-CN") catch {
+  error => abort(error.message())
+}
+@proton.html("My App", html)
+.locale(locale)
+.run_or_abort()
+```
+
+`ApplicationContext`, `WindowContext`, and `CommandContext` expose `locale()`
+and `preferred_languages()`. CEF receives the same values for
+`navigator.language`, `navigator.languages`, and HTTP language negotiation.
+Standard native menu roles use Proton's built-in framework labels for `en-US`
+and `zh-CN`; explicit menu labels are preserved exactly.
+
+Proton does not provide application translation catalogs, message formatting,
+or runtime language switching. The application remains responsible for its
+page content, dialogs, notifications, and custom menu labels. See
+`examples/56_i18n`.
+
 ## Headless automation
 
 Code-driven applications can run with CEF off-screen rendering and no native

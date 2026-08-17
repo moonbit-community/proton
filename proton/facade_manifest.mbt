@@ -19,6 +19,7 @@ fn App::new(
     debug_level_value: debug,
     headless_value: false,
     single_instance_identifier: None,
+    explicit_locale: None,
     title_overridden: false,
     size_overridden: false,
     titlebar_style_overridden: false,

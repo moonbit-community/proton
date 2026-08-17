@@ -118,7 +118,7 @@ async test "fs permission scope allows only declared commands below its roots" {
     error => abort(error.message())
   }
   @async.with_task_group(group => {
-    let context = @proton_core.AppCommandRequestContext::new(
+    let context = @proton_core.AppCommandRequestContext::detached(
       7L,
       group,
       permission_extension=fs_extension_id,
@@ -178,7 +178,7 @@ async test "fs permission scope rejects paths outside the granted root" {
     error => abort(error.message())
   }
   @async.with_task_group(group => {
-    let context = @proton_core.AppCommandRequestContext::new(
+    let context = @proton_core.AppCommandRequestContext::detached(
       7L,
       group,
       permission_extension=fs_extension_id,
@@ -225,7 +225,7 @@ async test "fs permission scope rejects a symbolic-link escape" {
     error => abort(error.message())
   }
   @async.with_task_group(group => {
-    let context = @proton_core.AppCommandRequestContext::new(
+    let context = @proton_core.AppCommandRequestContext::detached(
       7L,
       group,
       permission_extension=fs_extension_id,

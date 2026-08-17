@@ -1,0 +1,4 @@
+options(
+  warn_list: "",
+  supported_targets: "all",
+)

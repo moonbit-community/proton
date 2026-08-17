@@ -2,20 +2,23 @@
 #cfg(platform="windows")
 fn resolve_runtime_menu(
   menu : @native.MenuBar?,
+  preferences : @locale.LocalePreferences,
   application_name : String,
 ) -> @native.MenuBar? {
-  menu.map(menu => resolve_menu(menu, application_name))
+  menu.map(menu => resolve_menu(menu, preferences, application_name))
 }
 
 ///|
 #cfg(not(platform="windows"))
 fn resolve_runtime_menu(
   menu : @native.MenuBar?,
+  preferences : @locale.LocalePreferences,
   application_name : String,
 ) -> @native.MenuBar? {
   Some(
     resolve_menu(
       menu.unwrap_or(@native.MenuBar::new(menus=[])),
+      preferences,
       application_name,
     ),
   )
@@ -24,8 +27,10 @@ fn resolve_runtime_menu(
 ///|
 fn resolve_menu(
   menu_bar : @native.MenuBar,
+  preferences : @locale.LocalePreferences,
   application_name : String,
 ) -> @native.MenuBar {
+  let catalog = framework_catalog(preferences)
   let definitions = menu_bar.definitions()
   let resolved : Array[@native.Menu] = []
   if !definitions.any(menu => {
@@ -36,6 +41,7 @@ fn resolve_menu(
         @native.MenuRole::Application,
         None,
         None,
+        catalog,
         application_name,
       ),
     )
@@ -45,13 +51,13 @@ fn resolve_menu(
     match role {
       Some(role) =>
         resolved.push(
-          resolve_standard_menu(role, label, items, application_name),
+          resolve_standard_menu(role, label, items, catalog, application_name),
         )
       None => {
         let final_label = label.unwrap_or("")
         let final_items = items
           .unwrap_or([])
-          .map(item => resolve_menu_item(item, application_name))
+          .map(item => resolve_menu_item(item, catalog, application_name))
         resolved.push(@native.Menu::new(final_label, items=final_items))
       }
     }
@@ -64,12 +70,15 @@ fn resolve_standard_menu(
   role : @native.MenuRole,
   label : String?,
   items : Array[@native.MenuItem]?,
+  catalog : FrameworkCatalog,
   application_name : String,
 ) -> @native.Menu {
-  let final_label = label.unwrap_or(standard_menu_label(role, application_name))
+  let final_label = label.unwrap_or(
+    standard_menu_label(role, catalog, application_name),
+  )
   let source_items = items.unwrap_or(default_menu_items(role))
   let final_items = source_items.map(item => {
-    resolve_menu_item(item, application_name)
+    resolve_menu_item(item, catalog, application_name)
   })
   @native.Menu::role(role, label=final_label, items=final_items)
 }
@@ -77,6 +86,7 @@ fn resolve_standard_menu(
 ///|
 fn resolve_menu_item(
   item : @native.MenuItem,
+  catalog : FrameworkCatalog,
   application_name : String,
 ) -> @native.MenuItem {
   let (kind, id, label, key, role) = item.definition()
@@ -88,7 +98,9 @@ fn resolve_menu_item(
       let role = role.unwrap()
       @native.MenuItem::role(
         role,
-        label=label.unwrap_or(standard_item_label(role, application_name)),
+        label=label.unwrap_or(
+          standard_item_label(role, catalog, application_name),
+        ),
         key=key.unwrap_or(standard_item_key(role)),
       )
     }
@@ -130,37 +142,39 @@ fn default_menu_items(role : @native.MenuRole) -> Array[@native.MenuItem] {
 ///|
 fn standard_menu_label(
   role : @native.MenuRole,
+  catalog : FrameworkCatalog,
   application_name : String,
 ) -> String {
   match role {
     Application => application_name
-    File => "File"
-    Edit => "Edit"
-    View => "View"
-    Window => "Window"
-    Help => "Help"
+    File => catalog.file_menu
+    Edit => catalog.edit_menu
+    View => catalog.view_menu
+    Window => catalog.window_menu
+    Help => catalog.help_menu
   }
 }
 
 ///|
 fn standard_item_label(
   role : @native.MenuItemRole,
+  catalog : FrameworkCatalog,
   application_name : String,
 ) -> String {
   match role {
-    Quit => "Quit " + application_name
-    Hide => "Hide " + application_name
-    HideOthers => "Hide Others"
-    ShowAll => "Show All"
-    Close => "Close"
-    Minimize => "Minimize"
-    Zoom => "Zoom"
-    Undo => "Undo"
-    Redo => "Redo"
-    Cut => "Cut"
-    Copy => "Copy"
-    Paste => "Paste"
-    SelectAll => "Select All"
+    Quit => catalog.quit_prefix + application_name
+    Hide => catalog.hide_prefix + application_name
+    HideOthers => catalog.hide_others
+    ShowAll => catalog.show_all
+    Close => catalog.close
+    Minimize => catalog.minimize
+    Zoom => catalog.zoom
+    Undo => catalog.undo
+    Redo => catalog.redo
+    Cut => catalog.cut
+    Copy => catalog.copy
+    Paste => catalog.paste
+    SelectAll => catalog.select_all
   }
 }
 

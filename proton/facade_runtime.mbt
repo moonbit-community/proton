@@ -12,6 +12,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
   let browser_data_dir = resolve_browser_data_dir(resolved) catch {
     error => raise ConfigurationError(error)
   }
+  let locale_preferences = resolve_locale_preferences(self.explicit_locale)
   let app_instance = match acquire_app_instance(resolved) {
     Some(@native.AppInstanceAcquire::Forwarded) => return
     Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
@@ -27,6 +28,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     self.menu,
     self.bridge_startup_timeout_value_ms,
     self.resolved_headless(),
+    locale_preferences,
     browser_data_dir?,
     application_name=resolved.application_name,
     app_instance~,
@@ -77,6 +79,7 @@ async fn run_manifest(
   menu : @native.MenuBar?,
   bridge_startup_timeout_ms : Int,
   headless : Bool,
+  locale_preferences : @locale.LocalePreferences,
   browser_data_dir? : String,
   application_name? : String = "Proton",
   app_instance? : @native.AppInstance? = None,
@@ -124,12 +127,15 @@ async fn run_manifest(
   let lifecycle = AppLifecycle::new()
   lifecycle.begin_starting()
   let forward_menu_events = menu is Some(_)
+  let catalog = framework_catalog(locale_preferences)
   let runtime = @native.Runtime::new(
     config=@native.RuntimeConfig::bundled(
       cache_dir?=browser_data_dir,
+      locale=locale_preferences.chromium_locale(),
+      accept_languages=locale_preferences.accept_languages(),
       remote_debugging_port=debug_port(manifest.debug),
       headless~,
-    ),
+    ).with_framework_dialog_labels(catalog.dialog_ok, catalog.dialog_cancel),
   ) catch {
     error => raise native_run_error("create runtime", error)
   }
@@ -155,12 +161,14 @@ async fn run_manifest(
   let lifecycle_failures : Array[AppCleanupError] = []
   let wakeup = RuntimeWakeup::new()
   try {
-    match resolve_runtime_menu(menu, application_name) {
-      Some(menu) =>
-        runtime.set_menu(menu) catch {
-          error => raise native_run_error("set menu", error)
-        }
-      None => ()
+    if !headless {
+      match resolve_runtime_menu(menu, locale_preferences, application_name) {
+        Some(menu) =>
+          runtime.set_menu(menu) catch {
+            error => raise native_run_error("set menu", error)
+          }
+        None => ()
+      }
     }
     command_host = build_command_host(
       manifest,
@@ -260,15 +268,16 @@ async fn run_manifest(
     @async.with_task_group(application_tasks => {
       @async.with_task_group(window_tasks => {
         let session = RuntimeSession::new(
-          runtime, definitions, windows, command_host, wakeup, forward_menu_events,
-          bridge_enabled, launch_input_handlers, window_event_handlers, window_tasks,
-          view_event_handlers, window_close_handler, window_lifecycle_hooks, lifecycle_failures,
-          bridge_startup_timeout_ms, navigation_handler, popup_handler, download_handler,
-          certificate_handler, media_handler, download_event_handlers,
+          runtime, locale_preferences, definitions, windows, command_host, wakeup,
+          forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
+          window_tasks, view_event_handlers, window_close_handler, window_lifecycle_hooks,
+          lifecycle_failures, bridge_startup_timeout_ms, navigation_handler, popup_handler,
+          download_handler, certificate_handler, media_handler, download_event_handlers,
         )
         let application_context = ApplicationContext::new(
           application_tasks,
           session.window_manager(),
+          locale_preferences,
         )
         let application_start = application_tasks.spawn(
           () => {
@@ -318,11 +327,23 @@ async fn run_manifest(
       if !headless {
         match windows.get(0) {
           Some(window) =>
-            show_app_run_failure(runtime, window.window, wakeup, primary) catch {
+            show_app_run_failure(
+              runtime,
+              window.window,
+              wakeup,
+              primary,
+              locale_preferences,
+              lifecycle.has_reached_running(),
+            ) catch {
               _ => ()
             }
           None =>
-            show_runtime_failure_dialog(runtime, wakeup, primary.message()) catch {
+            show_runtime_failure_dialog(
+              runtime,
+              wakeup,
+              primary.message(),
+              locale_preferences,
+            ) catch {
               _ => ()
             }
         }
@@ -419,7 +440,9 @@ fn native_window_config(
   window : @manifest.WindowManifest,
   bridge : @native.BridgeConfig?,
   browser : @native.BrowserPolicy,
+  preferences : @locale.LocalePreferences,
 ) -> @native.WindowConfig {
+  let catalog = framework_catalog(preferences)
   @native.WindowConfig::new(
     title=window.title,
     width=window.width,
@@ -437,6 +460,11 @@ fn native_window_config(
     },
     browser~,
     bridge?,
+  ).with_framework_titlebar_labels(
+    catalog.titlebar_minimize,
+    catalog.titlebar_maximize,
+    catalog.titlebar_restore,
+    catalog.titlebar_close,
   )
 }
 
@@ -657,10 +685,15 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
 async fn show_runtime_failure_dialog(
   runtime : @native.Runtime,
   wakeup : RuntimeWakeup,
-  message : String,
+  detail : String,
+  preferences : @locale.LocalePreferences,
 ) -> Unit {
+  let message = framework_failure_message(
+    startup_failure_summary(preferences),
+    detail,
+  )
   let dialog = runtime.begin_message_dialog(
-    Some("Application Startup Failed"),
+    Some(startup_failure_title(preferences)),
     message,
     @native.DialogLevel::Error,
   ) catch {
@@ -680,10 +713,15 @@ async fn show_runtime_failure_dialog(
 async fn show_window_failure_dialog(
   window : @native.WindowRef,
   wakeup : RuntimeWakeup,
-  message : String,
+  detail : String,
+  preferences : @locale.LocalePreferences,
 ) -> Unit {
+  let message = framework_failure_message(
+    application_error_summary(preferences),
+    detail,
+  )
   let dialog = window.begin_message_dialog(
-    Some("Application Error"),
+    Some(application_error_title(preferences)),
     message,
     @native.DialogLevel::Error,
   ) catch {
@@ -708,12 +746,14 @@ async fn show_app_run_failure(
   window : @native.Window,
   wakeup : RuntimeWakeup,
   error : AppRunError,
+  preferences : @locale.LocalePreferences,
+  application_started : Bool,
 ) -> Unit {
   let message = app_run_error_dialog_text(error)
-  match error {
-    BridgeRuntimeError(_) =>
-      show_window_failure_dialog(window.as_ref(), wakeup, message)
-    _ => show_runtime_failure_dialog(runtime, wakeup, message)
+  if application_started {
+    show_window_failure_dialog(window.as_ref(), wakeup, message, preferences)
+  } else {
+    show_runtime_failure_dialog(runtime, wakeup, message, preferences)
   }
 }
 
@@ -789,6 +829,7 @@ async fn run_window_lifecycle_scope(
   events : WindowEventEmitter,
   hooks : Array[WindowLifecycleHook],
   lifecycle_failures : Array[AppCleanupError],
+  locale_preferences : @locale.LocalePreferences,
 ) -> Unit {
   @async.with_task_group(tasks => {
     start_window_lifecycle_hooks(
@@ -800,6 +841,7 @@ async fn run_window_lifecycle_scope(
         windows,
         tasks,
         events,
+        locale_preferences,
       ),
       tasks,
       lifecycle_failures,

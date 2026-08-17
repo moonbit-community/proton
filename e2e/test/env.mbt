@@ -64,7 +64,8 @@ fn is_supported_scenario(name : String) -> Bool {
     | "46_asset_sidecar_resources"
     | "47_dev_extension_js"
     | "52_web_contents_view"
-    | "54_devtools" => true
+    | "54_devtools"
+    | "56_i18n" => true
     _ => false
   }
 }

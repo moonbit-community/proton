@@ -313,6 +313,7 @@ async fn dispatch_bridge_request(
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
   wake_signal : @core.RuntimeWakeSignal,
+  locale_preferences : @locale.LocalePreferences,
 ) -> @native.BridgeResponse {
   let grant = match
     permissions.grant_for_request(request.source_origin(), request.op()) {
@@ -328,7 +329,7 @@ async fn dispatch_bridge_request(
   @async.with_task_group(command_tasks => {
     result.val = Some(
       dispatch_bridge_request_in_command_scope(
-        window, window_id, grant, host, request, wake_signal, command_tasks,
+        window, window_id, grant, host, request, wake_signal, command_tasks, locale_preferences,
       ),
     )
     command_tasks.return_immediately(())
@@ -345,11 +346,13 @@ async fn dispatch_bridge_request_in_command_scope(
   request : @native.BridgeRequest,
   wake_signal : @core.RuntimeWakeSignal,
   command_tasks : @async.TaskGroup[Unit],
+  locale_preferences : @locale.LocalePreferences,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
   let request_context = @core.AppCommandRequestContext::new(
     window.id(),
     command_tasks,
+    locale_preferences,
     window_id~,
     source_origin=request.source_origin(),
     page_instance=request.page_instance(),

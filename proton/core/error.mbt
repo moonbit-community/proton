@@ -39,6 +39,7 @@ pub(all) suberror OpDispatchError {
   HandlerFailed(name~ : String, detail~ : String)
   HostClosed
   AsyncHandlerRequiresAsync(name~ : String)
+  RequestContextRequired(name~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -60,6 +61,7 @@ pub fn OpDispatchError::message(self : OpDispatchError) -> String {
     HostClosed => "MBT process host is closed"
     AsyncHandlerRequiresAsync(name~) =>
       "async op " + name + " requires dispatch_async()"
+    RequestContextRequired(name~) => "op " + name + " requires request context"
   }
 }
 

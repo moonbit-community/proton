@@ -661,6 +661,18 @@ async fn run_scenario_probe_once(
         None => ()
       }
       finish_scenario_app(app, target)
+    } else if name == "56_i18n" {
+      run_i18n_scenario_page_probe(app, target, timeout)
+      match app_exit_code(app.process) {
+        Some(code) =>
+          fail(
+            "scenario app exited before the probe completed: code=" +
+            code.to_string() +
+            app_output_suffix(app.output_path),
+          )
+        None => ()
+      }
+      finish_scenario_app(app, target)
     } else {
       if name == "41_app_commands" {
         run_app_commands_full_probe(
@@ -870,6 +882,13 @@ async test "headless 54_devtools preserves the page bridge" {
   scenario_run_mutex.acquire()
   defer scenario_run_mutex.release()
   run_scenario_probe_with_retry(repository_root(), "54_devtools", timeout_ms())
+}
+
+///|
+async test "headless 56_i18n configures Chromium language boundaries" {
+  scenario_run_mutex.acquire()
+  defer scenario_run_mutex.release()
+  run_scenario_probe_with_retry(repository_root(), "56_i18n", timeout_ms())
 }
 
 ///|

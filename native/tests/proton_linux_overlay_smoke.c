@@ -306,7 +306,11 @@ int main(void) {
               runtime,
               "{\"abi_version\":1,\"title\":\"Proton Linux Overlay "
               "Smoke\",\"width\":800,\"height\":520,"
-              "\"titlebar_style\":\"overlay\"}",
+              "\"titlebar_style\":\"overlay\","
+              "\"framework_titlebar_minimize_label\":\"Minimize\","
+              "\"framework_titlebar_maximize_label\":\"Maximize\","
+              "\"framework_titlebar_restore_label\":\"Restore\","
+              "\"framework_titlebar_close_label\":\"Close\"}",
               &window),
           PROTON_OK)) {
     proton_runtime_destroy(runtime);

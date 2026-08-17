@@ -22,6 +22,8 @@ pub async fn run_devtools() -> Unit
 
 pub async fn run_event_broadcast() -> Unit
 
+pub async fn run_i18n() -> Unit
+
 pub async fn run_multi_window() -> Unit
 
 pub async fn run_sync_async_extensions() -> Unit
@@ -32,34 +34,63 @@ pub async fn run_web_contents_view() -> Unit
 
 // Types and methods
 type AddFinished derive(ToJson, @json.FromJson)
+pub fn AddFinished::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AddFinished::to_json(Self) -> Json
 
 type AddReply derive(ToJson, @json.FromJson)
+pub fn AddReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AddReply::to_json(Self) -> Json
 
 type AddRequest derive(ToJson, @json.FromJson)
+pub fn AddRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AddRequest::to_json(Self) -> Json
 
 type AssetSidecarAddPayload derive(ToJson, @json.FromJson)
+pub fn AssetSidecarAddPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AssetSidecarAddPayload::to_json(Self) -> Json
 
 type AssetSidecarReportPayload derive(ToJson, @json.FromJson)
+pub fn AssetSidecarReportPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AssetSidecarReportPayload::to_json(Self) -> Json
 
 type AsyncAddPayload derive(ToJson, @json.FromJson)
+pub fn AsyncAddPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AsyncAddPayload::to_json(Self) -> Json
 
 type AsyncSumPayload derive(ToJson, @json.FromJson)
+pub fn AsyncSumPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AsyncSumPayload::to_json(Self) -> Json
 
 type AsyncSumReply derive(ToJson, @json.FromJson)
+pub fn AsyncSumReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AsyncSumReply::to_json(Self) -> Json
 
 type EventDone derive(ToJson, @json.FromJson)
+pub fn EventDone::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventDone::to_json(Self) -> Json
 
 type EventStartPayload derive(ToJson, @json.FromJson)
+pub fn EventStartPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventStartPayload::to_json(Self) -> Json
 
 type EventTick derive(ToJson, @json.FromJson)
+pub fn EventTick::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventTick::to_json(Self) -> Json
 
 type EventTickerResult derive(ToJson, @json.FromJson)
+pub fn EventTickerResult::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventTickerResult::to_json(Self) -> Json
 
 type MultiWindowIdentifyPayload derive(@json.FromJson)
+pub fn MultiWindowIdentifyPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
 type SyncDoublePayload derive(ToJson, @json.FromJson)
+pub fn SyncDoublePayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SyncDoublePayload::to_json(Self) -> Json
 
 type SyncDoubleReply derive(ToJson, @json.FromJson)
+pub fn SyncDoubleReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SyncDoubleReply::to_json(Self) -> Json
 
 // Type aliases
 

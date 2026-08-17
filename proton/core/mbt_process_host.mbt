@@ -186,6 +186,8 @@ fn MbtProcessHost::dispatch_error_message(
     OpDispatchError::HostClosed => OpDispatchError::HostClosed.message()
     AsyncHandlerRequiresAsync(name~) =>
       OpDispatchError::AsyncHandlerRequiresAsync(name~).message()
+    RequestContextRequired(name~) =>
+      OpDispatchError::RequestContextRequired(name~).message()
     _ => "command dispatch failed"
   }
   self.error_policy.response_message(error, safe_message)

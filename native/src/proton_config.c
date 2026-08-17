@@ -41,6 +41,7 @@
 #define PROTON_MAX_BRIDGE_SOURCE_ORIGIN_BYTES 512
 #define PROTON_MAX_MENU_CONFIG_BYTES 65536
 #define PROTON_MAX_PATH_BYTES 4096
+#define PROTON_MAX_LABEL_BYTES 256
 
 static bool proton_path_is_absolute(const char *path) {
   if (path == NULL || path[0] == '\0') {
@@ -140,6 +141,49 @@ static bool proton_validate_browser_policy(const proton_json_doc_t *doc,
   return iterated && validation.status == PROTON_OK;
 }
 
+typedef struct {
+  const proton_json_doc_t *doc;
+  size_t total_length;
+  bool valid;
+} proton_language_list_validation_t;
+
+static bool proton_validate_language_list_item(proton_json_value_t value,
+                                               void *user_data) {
+  proton_language_list_validation_t *validation =
+      (proton_language_list_validation_t *)user_data;
+  char text[PROTON_MAX_PATH_BYTES];
+  if (!proton_json_read_string(validation->doc, value, text, sizeof(text)) ||
+      text[0] == '\0' || strchr(text, ',') != NULL ||
+      strpbrk(text, " \t\r\n") != NULL) {
+    validation->valid = false;
+    return false;
+  }
+  size_t length = strlen(text);
+  size_t separator = validation->total_length == 0 ? 0 : 1;
+  if (validation->total_length + separator + length >= PROTON_MAX_PATH_BYTES) {
+    validation->valid = false;
+    return false;
+  }
+  validation->total_length += separator + length;
+  return true;
+}
+
+static bool proton_validate_language_list(const proton_json_doc_t *doc,
+                                          proton_json_value_t value) {
+  if (!proton_json_is_array(doc, value)) {
+    return false;
+  }
+  proton_language_list_validation_t validation = {
+      .doc = doc,
+      .total_length = 0,
+      .valid = true,
+  };
+  return proton_json_array_each(doc, value,
+                                proton_validate_language_list_item,
+                                &validation) &&
+         validation.valid;
+}
+
 static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
                                            const char *config_name,
                                            const char *key,
@@ -167,12 +211,22 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
                          "runtime cache_dir must be an absolute path");
         return false;
       }
+    } else if (strcmp(key, "accept_languages") == 0) {
+      valid = proton_validate_language_list(doc, value);
     } else if (strcmp(key, "runtime_root") == 0 ||
                strcmp(key, "helper_path") == 0 ||
                strcmp(key, "subprocess_path") == 0 ||
                strcmp(key, "resources_dir") == 0 ||
-               strcmp(key, "locales_dir") == 0) {
+               strcmp(key, "locales_dir") == 0 ||
+               strcmp(key, "locale") == 0 ||
+               strcmp(key, "framework_dialog_ok_label") == 0 ||
+               strcmp(key, "framework_dialog_cancel_label") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
+      if (valid &&
+          (strcmp(key, "framework_dialog_ok_label") == 0 ||
+           strcmp(key, "framework_dialog_cancel_label") == 0)) {
+        valid = text[0] != '\0' && strlen(text) < PROTON_MAX_LABEL_BYTES;
+      }
     }
   } else if (strcmp(config_name, "window") == 0) {
     if (strcmp(key, "width") == 0 || strcmp(key, "height") == 0) {
@@ -180,7 +234,11 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
     } else if (strcmp(key, "title") == 0 ||
                strcmp(key, "initial_url") == 0 ||
                strcmp(key, "size_hint") == 0 ||
-               strcmp(key, "titlebar_style") == 0) {
+               strcmp(key, "titlebar_style") == 0 ||
+               strcmp(key, "framework_titlebar_minimize_label") == 0 ||
+               strcmp(key, "framework_titlebar_maximize_label") == 0 ||
+               strcmp(key, "framework_titlebar_restore_label") == 0 ||
+               strcmp(key, "framework_titlebar_close_label") == 0) {
       valid = proton_json_read_string(doc, value, text, sizeof(text));
       if (valid) {
         if (strcmp(key, "size_hint") == 0) {
@@ -190,6 +248,8 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
         } else if (strcmp(key, "titlebar_style") == 0) {
           valid =
               strcmp(text, "default") == 0 || strcmp(text, "overlay") == 0;
+        } else if (strncmp(key, "framework_titlebar_", 19) == 0) {
+          valid = text[0] != '\0' && strlen(text) < PROTON_MAX_LABEL_BYTES;
         }
       }
     } else if (strcmp(key, "bridge") == 0) {
@@ -375,6 +435,10 @@ static const char *const proton_runtime_config_keys[] = {
     "use_bundled",
     "resources_dir",
     "locales_dir",
+    "locale",
+    "accept_languages",
+    "framework_dialog_ok_label",
+    "framework_dialog_cancel_label",
     "cache_dir",
     "remote_debugging_port",
     "headless",
@@ -389,6 +453,10 @@ static const char *const proton_window_config_keys[] = {
     "initial_url",
     "size_hint",
     "titlebar_style",
+    "framework_titlebar_minimize_label",
+    "framework_titlebar_maximize_label",
+    "framework_titlebar_restore_label",
+    "framework_titlebar_close_label",
     "bridge",
     "browser",
 };

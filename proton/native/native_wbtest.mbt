@@ -370,6 +370,11 @@ test "typed configs generate stable JSON for native ABI" {
   let runtime_config = RuntimeConfig::new(
     helper_path="cef_process.exe",
     cache_dir~,
+    locale=@locale.Locale::parse("zh-CN"),
+    accept_languages=[
+      @locale.Locale::parse("zh-CN"),
+      @locale.Locale::parse("en-US"),
+    ],
     headless=true,
   )
   let runtime_json = runtime_config.to_json_string()
@@ -380,6 +385,14 @@ test "typed configs generate stable JSON for native ABI" {
   )
   assert_true(runtime_json.contains("\"headless\":true"))
   assert_true(runtime_json.contains("\"persist_session_cookies\":true"))
+  assert_true(runtime_json.contains("\"locale\":\"zh-CN\""))
+  assert_true(
+    runtime_json.contains("\"accept_languages\":[\"zh-CN\",\"en-US\"]"),
+  )
+  assert_true(runtime_json.contains("\"framework_dialog_ok_label\":\"OK\""))
+  assert_true(
+    runtime_json.contains("\"framework_dialog_cancel_label\":\"Cancel\""),
+  )
   let bundled_json = RuntimeConfig::bundled(cache_dir~).to_json_string()
   assert_true(bundled_json.contains("\"use_bundled\":true"))
   assert_true(!bundled_json.contains("\"runtime_root\""))
@@ -415,6 +428,12 @@ test "typed configs generate stable JSON for native ABI" {
   assert_true(window_json.contains("\"popup\":\"ask\""))
   assert_true(window_json.contains("\"devtools\":true"))
   assert_true(window_json.contains("\"bridge\""))
+  assert_true(
+    window_json.contains("\"framework_titlebar_minimize_label\":\"Minimize\""),
+  )
+  assert_true(
+    window_json.contains("\"framework_titlebar_close_label\":\"Close\""),
+  )
   let bridge_config = BridgeConfig::new(grants=[
     BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
   ])
