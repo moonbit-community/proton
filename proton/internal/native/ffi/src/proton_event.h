@@ -40,7 +40,6 @@ typedef enum proton_event_kind {
   PROTON_EVENT_VIEW_NAVIGATED = 19,
   PROTON_EVENT_VIEW_TITLE_UPDATED = 20,
   PROTON_EVENT_VIEW_LOAD_FAILED = 21,
-  PROTON_EVENT_LEGACY_JSON = 255,
 } proton_event_kind_t;
 
 typedef struct proton_event {
@@ -75,6 +74,9 @@ PROTON_INTERNAL proton_event_t *proton_event_create(proton_event_kind_t kind);
 PROTON_INTERNAL proton_event_t *proton_event_create_window(
     proton_event_kind_t kind, int64_t window);
 PROTON_INTERNAL bool proton_event_set_text(char **field, const char *value);
+PROTON_INTERNAL bool proton_event_set_items(proton_event_t *event,
+                                            const char *const *items,
+                                            int32_t item_count);
 PROTON_INTERNAL void proton_event_destroy(proton_event_t *event);
 
 PROTON_INTERNAL bool proton_event_queue_init(proton_event_queue_t *queue);

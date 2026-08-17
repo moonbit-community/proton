@@ -2,34 +2,33 @@
 
 #include "launch_input.h"
 #include "platform_events.h"
+#include "../../proton_event.h"
 
 #import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
 
-#include <string.h>
-
-#define PROTON_LAUNCH_INPUT_MAX_BYTES 65536
-
-static void proton_engine_launch_input_enqueue(NSString *type,
+static void proton_engine_launch_input_enqueue(proton_event_kind_t kind,
                                                NSArray<NSString *> *items) {
-  NSMutableDictionary *event =
-      [NSMutableDictionary dictionaryWithObject:type forKey:@"type"];
-  if (items != nil) {
-    [event setObject:items forKey:@"items"];
-  }
-  NSError *error = nil;
-  NSData *data = [NSJSONSerialization dataWithJSONObject:event
-                                                 options:0
-                                                   error:&error];
-  if (data == nil || error != nil ||
-      [data length] >= PROTON_LAUNCH_INPUT_MAX_BYTES) {
+  proton_event_t *event = proton_event_create(kind);
+  if (event == NULL) {
     return;
   }
-
-  char event_json[PROTON_LAUNCH_INPUT_MAX_BYTES];
-  memcpy(event_json, [data bytes], [data length]);
-  event_json[[data length]] = '\0';
-  proton_engine_platform_event_enqueue_json(event_json);
+  NSUInteger count = items != nil ? [items count] : 0;
+  const char **values = count > 0 ? calloc(count, sizeof(char *)) : NULL;
+  if (count > 0 && values == NULL) {
+    proton_event_destroy(event);
+    return;
+  }
+  for (NSUInteger i = 0; i < count; i++) {
+    values[i] = [[items objectAtIndex:i] UTF8String];
+  }
+  if (!proton_event_set_items(event, values, (int32_t)count)) {
+    proton_event_destroy(event);
+    free(values);
+    return;
+  }
+  free(values);
+  proton_engine_platform_event_enqueue(event);
 }
 
 @interface ProtonLaunchInputDelegate : NSObject <NSApplicationDelegate>
@@ -48,13 +47,13 @@ static void proton_engine_launch_input_enqueue(NSString *type,
     }
   }
   if ([values count] > 0) {
-    proton_engine_launch_input_enqueue(@"open_urls", values);
+    proton_engine_launch_input_enqueue(PROTON_EVENT_OPEN_URLS, values);
   }
 }
 
 - (void)application:(NSApplication *)application
            openFiles:(NSArray<NSString *> *)filenames {
-  proton_engine_launch_input_enqueue(@"open_files", filenames);
+  proton_engine_launch_input_enqueue(PROTON_EVENT_OPEN_FILES, filenames);
   [application replyToOpenOrPrint:NSApplicationDelegateReplySuccess];
 }
 
@@ -62,7 +61,7 @@ static void proton_engine_launch_input_enqueue(NSString *type,
                     hasVisibleWindows:(BOOL)hasVisibleWindows {
   (void)application;
   (void)hasVisibleWindows;
-  proton_engine_launch_input_enqueue(@"reopen", nil);
+  proton_engine_launch_input_enqueue(PROTON_EVENT_REOPEN, nil);
   return YES;
 }
 

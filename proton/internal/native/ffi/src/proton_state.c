@@ -145,19 +145,6 @@ bool proton_runtime_enqueue_event(proton_runtime_slot_t *runtime,
   return true;
 }
 
-bool proton_runtime_enqueue_legacy_event(proton_runtime_slot_t *runtime,
-                                         const char *event_json) {
-  if (event_json == NULL || strlen(event_json) >= PROTON_MAX_EVENT_BYTES) {
-    return false;
-  }
-  proton_event_t *event = proton_event_create(PROTON_EVENT_LEGACY_JSON);
-  if (event == NULL || !proton_event_set_text(&event->text_a, event_json)) {
-    proton_event_destroy(event);
-    return false;
-  }
-  return proton_runtime_enqueue_event(runtime, event);
-}
-
 bool proton_runtime_enqueue_window_event(proton_runtime_slot_t *runtime,
                                          proton_event_kind_t kind,
                                          int64_t window_id) {

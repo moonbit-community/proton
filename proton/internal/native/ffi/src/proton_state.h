@@ -109,8 +109,6 @@ PROTON_INTERNAL bool proton_has_active_runtime(void);
 
 PROTON_INTERNAL bool proton_runtime_enqueue_event(
     proton_runtime_slot_t *runtime, proton_event_t *event);
-PROTON_INTERNAL bool proton_runtime_enqueue_legacy_event(
-    proton_runtime_slot_t *runtime, const char *event_json);
 PROTON_INTERNAL bool proton_runtime_enqueue_window_event(
     proton_runtime_slot_t *runtime, proton_event_kind_t kind,
     int64_t window_id);

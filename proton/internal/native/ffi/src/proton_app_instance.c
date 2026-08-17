@@ -5,6 +5,7 @@
 #include "proton_app_instance.h"
 
 #include "proton_internal.h"
+#include "proton_event.h"
 #include "proton_json.h"
 #include "proton_state.h"
 
@@ -48,7 +49,7 @@ typedef struct {
   bool occupied;
   bool destroyed;
   bool owns_endpoint;
-  char *events[PROTON_APP_INSTANCE_EVENT_CAPACITY];
+  proton_event_t *events[PROTON_APP_INSTANCE_EVENT_CAPACITY];
   uint32_t event_head;
   uint32_t event_count;
   proton_engine_runtime_t *runtime;
@@ -270,39 +271,79 @@ static void proton_app_instance_unlock(proton_app_instance_slot_t *slot) {
 }
 
 static bool proton_app_instance_enqueue_owned(
-    proton_app_instance_slot_t *slot, char *event_json) {
+    proton_app_instance_slot_t *slot, proton_event_t *event) {
   if (slot->event_count >= PROTON_APP_INSTANCE_EVENT_CAPACITY) {
     return false;
   }
   uint32_t index =
       (slot->event_head + slot->event_count) %
       PROTON_APP_INSTANCE_EVENT_CAPACITY;
-  slot->events[index] = event_json;
+  slot->events[index] = event;
   slot->event_count++;
   return true;
 }
 
-static char *proton_app_instance_create_event(const char *type,
-                                               const char *items_json) {
-  size_t required = strlen(type) + 32;
-  if (items_json != NULL) {
-    required += strlen(items_json);
+typedef struct {
+  const proton_json_doc_t *doc;
+  char **items;
+  int32_t count;
+  bool valid;
+} proton_app_instance_item_collector_t;
+
+static bool proton_app_instance_collect_item(proton_json_value_t value,
+                                             void *user_data) {
+  proton_app_instance_item_collector_t *collector =
+      (proton_app_instance_item_collector_t *)user_data;
+  char *item = proton_json_copy_string(collector->doc, value);
+  if (item == NULL) {
+    collector->valid = false;
+    return false;
   }
-  char *event_json = (char *)malloc(required);
-  if (event_json == NULL) {
-    return NULL;
+  char **items = (char **)realloc(
+      collector->items, (size_t)(collector->count + 1) * sizeof(char *));
+  if (items == NULL) {
+    free(item);
+    collector->valid = false;
+    return false;
   }
-  int written = items_json != NULL
-                    ? snprintf(event_json, required,
-                               "{\"type\":\"%s\",\"items\":%s}", type,
-                               items_json)
-                    : snprintf(event_json, required, "{\"type\":\"%s\"}",
-                               type);
-  if (written < 0 || (size_t)written >= required) {
-    free(event_json);
-    return NULL;
+  collector->items = items;
+  collector->items[collector->count++] = item;
+  return true;
+}
+
+static bool proton_app_instance_create_items_event(
+    const proton_json_doc_t *doc, proton_json_value_t value,
+    proton_event_kind_t kind, proton_event_t **out_event) {
+  *out_event = NULL;
+  proton_app_instance_item_collector_t collector = {
+      .doc = doc,
+      .valid = true,
+  };
+  if (!proton_json_array_each(doc, value, proton_app_instance_collect_item,
+                              &collector) ||
+      !collector.valid) {
+    for (int32_t i = 0; i < collector.count; i++) {
+      free(collector.items[i]);
+    }
+    free(collector.items);
+    return false;
   }
-  return event_json;
+  if (collector.count == 0) {
+    free(collector.items);
+    return true;
+  }
+  proton_event_t *event = proton_event_create(kind);
+  if (event == NULL) {
+    for (int32_t i = 0; i < collector.count; i++) {
+      free(collector.items[i]);
+    }
+    free(collector.items);
+    return false;
+  }
+  event->items = collector.items;
+  event->item_count = collector.count;
+  *out_event = event;
+  return true;
 }
 
 static bool proton_app_instance_enqueue_activation(
@@ -315,29 +356,24 @@ static bool proton_app_instance_enqueue_activation(
   }
   proton_json_value_t root;
   bool ok = proton_json_root_object(&doc, &root);
-  char *events[3] = {NULL, NULL, NULL};
+  proton_event_t *events[3] = {NULL, NULL, NULL};
   size_t event_count = 0;
   const char *field_names[] = {"urls", "files"};
-  const char *event_types[] = {"open_urls", "open_files"};
+  const proton_event_kind_t event_kinds[] = {
+      PROTON_EVENT_OPEN_URLS,
+      PROTON_EVENT_OPEN_FILES,
+  };
   for (size_t i = 0; ok && i < 2; i++) {
     proton_json_value_t value;
     if (!proton_json_object_get(&doc, root, field_names[i], &value)) {
       continue;
     }
-    char *raw = proton_json_copy_raw(&doc, value);
-    if (raw == NULL) {
-      ok = false;
-      break;
+    proton_event_t *event = NULL;
+    ok = proton_app_instance_create_items_event(
+        &doc, value, event_kinds[i], &event);
+    if (event != NULL) {
+      events[event_count++] = event;
     }
-    if (strcmp(raw, "[]") != 0) {
-      events[event_count] =
-          proton_app_instance_create_event(event_types[i], raw);
-      ok = events[event_count] != NULL;
-      if (ok) {
-        event_count++;
-      }
-    }
-    free(raw);
   }
   if (ok) {
     proton_json_value_t reopen_value;
@@ -346,7 +382,7 @@ static bool proton_app_instance_enqueue_activation(
       ok = proton_json_read_bool(&doc, reopen_value, &reopen);
     }
     if (ok && (reopen || (reopen_when_empty && event_count == 0))) {
-      events[event_count] = proton_app_instance_create_event("reopen", NULL);
+      events[event_count] = proton_event_create(PROTON_EVENT_REOPEN);
       ok = events[event_count] != NULL;
       if (ok) {
         event_count++;
@@ -356,7 +392,7 @@ static bool proton_app_instance_enqueue_activation(
   proton_json_dispose(&doc);
   if (!ok) {
     for (size_t i = 0; i < event_count; i++) {
-      free(events[i]);
+      proton_event_destroy(events[i]);
     }
     return false;
   }
@@ -376,7 +412,7 @@ static bool proton_app_instance_enqueue_activation(
   }
   proton_app_instance_unlock(slot);
   for (size_t i = 0; i < event_count; i++) {
-    free(events[i]);
+    proton_event_destroy(events[i]);
   }
   return ok;
 }
@@ -423,7 +459,7 @@ static proton_app_instance_slot_t *proton_app_instance_allocate(
 static void proton_app_instance_clear_events(
     proton_app_instance_slot_t *slot) {
   for (uint32_t i = 0; i < PROTON_APP_INSTANCE_EVENT_CAPACITY; i++) {
-    free(slot->events[i]);
+    proton_event_destroy(slot->events[i]);
     slot->events[i] = NULL;
   }
   slot->event_head = 0;
@@ -1286,40 +1322,23 @@ int32_t proton_app_instance_destroy_impl(int64_t instance, char *error,
   return PROTON_OK;
 }
 
-int32_t proton_app_instance_take_event_impl(
-    int64_t instance, char *buffer, size_t buffer_len, int32_t *out_present,
-    char *error, size_t error_len) {
-  if (out_present == NULL) {
-    proton_app_instance_set_message(error, error_len,
-                                    "out_present is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_present = 0;
+proton_event_t *proton_app_instance_take_event_impl(
+    int64_t instance, char *error, size_t error_len) {
   proton_app_instance_slot_t *slot =
       proton_app_instance_get(instance, error, error_len);
   if (slot == NULL) {
-    return PROTON_ERR_INVALID_HANDLE;
+    return NULL;
   }
   proton_app_instance_lock(slot);
   if (slot->event_count == 0) {
     proton_app_instance_unlock(slot);
-    return PROTON_OK;
+    return NULL;
   }
-  const char *event_json = slot->events[slot->event_head];
-  size_t required = strlen(event_json);
-  if (buffer == NULL || buffer_len <= required) {
-    proton_app_instance_unlock(slot);
-    proton_app_instance_set_message(error, error_len,
-                                    "app activation buffer is too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  memcpy(buffer, event_json, required + 1);
-  free(slot->events[slot->event_head]);
+  proton_event_t *event = slot->events[slot->event_head];
   slot->events[slot->event_head] = NULL;
   slot->event_head =
       (slot->event_head + 1) % PROTON_APP_INSTANCE_EVENT_CAPACITY;
   slot->event_count--;
-  *out_present = 1;
   proton_app_instance_unlock(slot);
-  return PROTON_OK;
+  return event;
 }

@@ -70,6 +70,29 @@ bool proton_event_set_text(char **field, const char *value) {
   return true;
 }
 
+bool proton_event_set_items(proton_event_t *event,
+                            const char *const *items,
+                            int32_t item_count) {
+  if (event == NULL || item_count < 0 ||
+      (item_count > 0 && items == NULL)) {
+    return false;
+  }
+  if (item_count == 0) {
+    return true;
+  }
+  event->items = (char **)calloc((size_t)item_count, sizeof(char *));
+  if (event->items == NULL) {
+    return false;
+  }
+  event->item_count = item_count;
+  for (int32_t i = 0; i < item_count; i++) {
+    if (!proton_event_set_text(&event->items[i], items[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void proton_event_destroy(proton_event_t *event) {
   if (event == NULL) {
     return;

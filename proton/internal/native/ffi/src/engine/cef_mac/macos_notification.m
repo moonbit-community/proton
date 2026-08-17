@@ -1,6 +1,7 @@
 #if defined(__APPLE__)
 
 #include "../../proton_engine.h"
+#include "../../proton_event.h"
 #include "platform_events.h"
 
 #import <AppKit/AppKit.h>
@@ -32,27 +33,15 @@ static void proton_notification_complete(BOOL delivered, NSError *error) {
   NSString *message =
       error != nil ? [error localizedDescription]
                    : (delivered ? @"" : @"notification permission denied");
-  NSDictionary *event = @{
-    @"type" : @"notification_result",
-    @"ok" : @(delivered),
-    @"message" : message != nil ? message : @"notification delivery failed"
-  };
-  NSData *data = [NSJSONSerialization dataWithJSONObject:event
-                                                 options:0
-                                                   error:nil];
-  if (data == nil) {
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_NOTIFICATION_RESULT);
+  const char *text = [message UTF8String];
+  if (event == NULL || !proton_event_set_text(&event->text_a, text)) {
+    proton_event_destroy(event);
     return;
   }
-  const char *json = (const char *)[data bytes];
-  size_t length = [data length];
-  char *terminated = (char *)malloc(length + 1);
-  if (terminated == NULL) {
-    return;
-  }
-  memcpy(terminated, json, length);
-  terminated[length] = '\0';
-  proton_engine_platform_event_enqueue_json(terminated);
-  free(terminated);
+  event->bool_a = delivered;
+  proton_engine_platform_event_enqueue(event);
 }
 
 static void proton_notification_set_message(char *error,

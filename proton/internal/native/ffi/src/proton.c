@@ -177,15 +177,12 @@ static void proton_runtime_sync_menu_commands(proton_runtime_slot_t *runtime) {
 static void proton_runtime_sync_platform_events(proton_runtime_slot_t *runtime) {
   while (proton_event_queue_count(&runtime->events) <
          PROTON_EVENT_QUEUE_CAPACITY) {
-    char event_json[PROTON_MAX_EVENT_BYTES];
-    int32_t present = 0;
-    if (proton_engine_take_platform_event(
-            runtime->engine_runtime, event_json, sizeof(event_json),
-            &present) != PROTON_OK ||
-        present == 0) {
+    proton_event_t *event =
+        proton_engine_take_platform_event(runtime->engine_runtime);
+    if (event == NULL) {
       return;
     }
-    if (!proton_runtime_enqueue_legacy_event(runtime, event_json)) {
+    if (!proton_runtime_enqueue_event(runtime, event)) {
       return;
     }
   }
@@ -789,19 +786,13 @@ int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
   if (slot->app_instance != PROTON_INVALID_HANDLE) {
     while (proton_event_queue_count(&slot->events) <
            PROTON_EVENT_QUEUE_CAPACITY) {
-      char event_json[PROTON_MAX_EVENT_BYTES];
-      int32_t present = 0;
       char instance_error[512] = {0};
-      status = proton_app_instance_take_event_impl(
-          slot->app_instance, event_json, sizeof(event_json), &present,
-          instance_error, sizeof(instance_error));
-      if (status != PROTON_OK) {
-        return proton_set_engine_status(status, instance_error);
-      }
-      if (!present) {
+      proton_event_t *event = proton_app_instance_take_event_impl(
+          slot->app_instance, instance_error, sizeof(instance_error));
+      if (event == NULL) {
         break;
       }
-      if (!proton_runtime_enqueue_legacy_event(slot, event_json)) {
+      if (!proton_runtime_enqueue_event(slot, event)) {
         return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                                 "failed to queue app activation event");
       }

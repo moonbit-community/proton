@@ -297,7 +297,9 @@ fn decode_optional_abi_version(
 }
 
 ///|
-fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
+pub fn decode_runtime_event_json(
+  text : String,
+) -> RuntimeEvent raise NativeError {
   let json = decode_native_json(text, "runtime event")
   let object = match json {
     Object(object) => object
@@ -1136,6 +1138,25 @@ fn require_native_event_text(
 }
 
 ///|
+fn native_event_items(
+  event : @native_ffi.EventHandle,
+) -> Array[String] raise NativeError {
+  let items : Array[String] = []
+  let count = @native_ffi.event_item_count(event)
+  for index = 0; index < count; index = index + 1 {
+    let item = require_native_text(
+      "runtime event item",
+      PayloadBytesExcludingTerminator,
+      (buffer, buffer_len, required) => {
+        @native_ffi.event_item(event, index, buffer, buffer_len, required)
+      },
+    )
+    items.push(item)
+  }
+  items
+}
+
+///|
 fn native_window_state(event : @native_ffi.EventHandle) -> WindowState {
   let field = index => @native_ffi.event_window_state_field(event, index)
   let theme = match field(20) {
@@ -1193,6 +1214,17 @@ fn decode_native_runtime_event(
         },
       )
     }
+    8 => LaunchInput(OpenUrls(native_event_items(event)))
+    9 => LaunchInput(OpenFiles(native_event_items(event)))
+    10 => LaunchInput(Reopen)
+    11 =>
+      NotificationResult(
+        if @native_ffi.event_int(event, 3) != 0 {
+          Delivered
+        } else {
+          Failed(require_native_event_text(event, 0, "notification result"))
+        },
+      )
     12 =>
       BrowserRequest(
         window,
@@ -1282,12 +1314,6 @@ fn decode_native_runtime_event(
           require_native_event_text(event, 1, "view load error"),
         ),
       )
-    255 => {
-      guard native_event_text(event, 0) is Some(json) else {
-        raise runtime_event_missing("legacy", "payload")
-      }
-      decode_runtime_event_json(json)
-    }
     kind =>
       raise InvalidPayload(
         context="runtime event",

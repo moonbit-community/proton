@@ -353,10 +353,8 @@ int32_t proton_engine_take_menu_command(proton_engine_runtime_t *runtime,
                                         size_t buffer_len,
                                         proton_window_id_t *out_focused_window,
                                         int32_t *out_present);
-int32_t proton_engine_take_platform_event(proton_engine_runtime_t *runtime,
-                                          char *buffer,
-                                          size_t buffer_len,
-                                          int32_t *out_present);
+proton_event_t *proton_engine_take_platform_event(
+    proton_engine_runtime_t *runtime);
 const char *proton_engine_name(void);
 
 int32_t proton_engine_view_create(

@@ -16,8 +16,7 @@ int32_t proton_app_instance_attach_runtime_impl(
 int32_t proton_app_instance_destroy_impl(int64_t instance, char *error,
                                          size_t error_len);
 void proton_app_instance_detach_runtime_impl(int64_t instance);
-int32_t proton_app_instance_take_event_impl(
-    int64_t instance, char *buffer, size_t buffer_len, int32_t *out_present,
-    char *error, size_t error_len);
+proton_event_t *proton_app_instance_take_event_impl(
+    int64_t instance, char *error, size_t error_len);
 
 #endif
