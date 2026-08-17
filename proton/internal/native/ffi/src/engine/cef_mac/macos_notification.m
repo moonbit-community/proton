@@ -1,3 +1,5 @@
+#if defined(__APPLE__)
+
 #include "../../proton_engine.h"
 #include "platform_events.h"
 
@@ -299,3 +301,5 @@ int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
   pthread_mutex_unlock(&g_notification_click_lock);
   return PROTON_OK;
 }
+
+#endif

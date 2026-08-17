@@ -41,11 +41,11 @@ native prebuilt, or compatibility package remains.
 
 ### 1. Source Build Foundation
 
-- [ ] Create `proton/internal/native/ffi` and `proton/internal/native`.
-- [ ] Move tracked native common and platform sources under the Proton module.
-- [ ] Compile the sources through MoonBit `native-stub` on all three platforms.
-- [ ] Restrict `native_link_config.mjs` to CEF include and link configuration.
-- [ ] Remove Proton library resolution and fallback paths.
+- [x] Create `proton/internal/native/ffi` and `proton/internal/native`.
+- [x] Move tracked native common and platform sources under the Proton module.
+- [x] Compile the sources through MoonBit `native-stub` on all three platforms.
+- [x] Restrict `native_link_config.mjs` to CEF include and link configuration.
+- [x] Remove Proton library resolution and fallback paths.
 
 ### 2. Typed Internal Runtime
 

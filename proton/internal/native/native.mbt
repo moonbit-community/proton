@@ -1,6 +1,6 @@
 ///|
 pub fn abi_version() -> Int {
-  proton_abi_version_ffi()
+  @native_ffi.proton_abi_version_ffi()
 }
 
 ///|
@@ -9,7 +9,7 @@ pub fn runtime_info_json() -> String raise NativeError {
     buffer,
     buffer_len,
     required,
-  ) => proton_runtime_info_json_ffi(buffer, buffer_len, required))
+  ) => @native_ffi.proton_runtime_info_json_ffi(buffer, buffer_len, required))
 }
 
 ///|
@@ -68,7 +68,7 @@ pub fn screens() -> Array[ScreenInfo] raise NativeError {
     "screen enumeration",
     PayloadBytesExcludingTerminator,
     (buffer, buffer_len, required) => {
-      proton_screen_enumerate_json_ffi(buffer, buffer_len, required)
+      @native_ffi.proton_screen_enumerate_json_ffi(buffer, buffer_len, required)
     },
   )
   let json = decode_native_json(text, "screen enumeration")
@@ -107,7 +107,7 @@ pub fn AppInstance::acquire(
   }
   let out_instance = Ref(proton_invalid_handle)
   let out_primary = Ref(0)
-  let status = proton_app_instance_acquire_ffi(
+  let status = @native_ffi.proton_app_instance_acquire_ffi(
     @ffi.to_cstr(identifier),
     @ffi.to_cstr(activation.to_json().stringify()),
     out_instance,
@@ -140,7 +140,10 @@ pub fn AppInstance::attach_runtime(
     raise invalid_argument("app instance is destroyed")
   }
   check_status(
-    proton_app_instance_attach_runtime_ffi(self.handle, runtime.active_handle()),
+    @native_ffi.proton_app_instance_attach_runtime_ffi(
+      self.handle,
+      runtime.active_handle(),
+    ),
   )
 }
 
@@ -149,19 +152,22 @@ pub fn AppInstance::destroy(self : AppInstance) -> Unit raise NativeError {
   if self.destroyed {
     return
   }
-  check_status(proton_app_instance_destroy_ffi(self.handle))
+  check_status(@native_ffi.proton_app_instance_destroy_ffi(self.handle))
   self.handle = proton_invalid_handle
   self.destroyed = true
 }
 
 ///|
 pub fn last_error_message() -> String {
-  let required = proton_last_error_message_ffi(FixedArray::make(1, b'\x00'), 0)
+  let required = @native_ffi.proton_last_error_message_ffi(
+    FixedArray::make(1, b'\x00'),
+    0,
+  )
   if required <= 0 {
     return ""
   }
   let buffer = FixedArray::make(required + 1, b'\x00')
-  let _ = proton_last_error_message_ffi(buffer, buffer.length())
+  let _ = @native_ffi.proton_last_error_message_ffi(buffer, buffer.length())
   @ffi.from_cstr(Bytes::from_array(buffer))
 }
 
@@ -499,8 +505,9 @@ fn decode_bridge_request_json(text : String) -> BridgeRequest raise NativeError 
 pub fn execute_process(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> ProcessResult raise NativeError {
+  @native_ffi.ensure_cef_loader_linked()
   let out_exit_code = Ref(0)
-  let status = proton_execute_process_ffi(
+  let status = @native_ffi.proton_execute_process_ffi(
     @ffi.to_cstr(config.to_json_string()),
     out_exit_code,
   )
@@ -518,7 +525,9 @@ pub fn probe_runtime(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> Unit raise NativeError {
   check_status(
-    proton_runtime_probe_json_ffi(@ffi.to_cstr(config.to_json_string())),
+    @native_ffi.proton_runtime_probe_json_ffi(
+      @ffi.to_cstr(config.to_json_string()),
+    ),
   )
 }
 
@@ -531,8 +540,9 @@ pub fn RuntimeConfig::probe(self : RuntimeConfig) -> Unit raise NativeError {
 pub fn Runtime::new(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> Runtime raise NativeError {
+  @native_ffi.ensure_cef_loader_linked()
   let out_runtime = Ref(proton_invalid_handle)
-  let status = proton_runtime_create_json_ffi(
+  let status = @native_ffi.proton_runtime_create_json_ffi(
     @ffi.to_cstr(config.to_json_string()),
     out_runtime,
   )
@@ -549,7 +559,7 @@ pub fn Runtime::destroy(self : Runtime) -> Unit raise NativeError {
     RuntimeDestroyed => return
     RuntimeActive | RuntimeDestroying => self.lifecycle = RuntimeDestroying
   }
-  let status = proton_runtime_destroy_ffi(self.handle)
+  let status = @native_ffi.proton_runtime_destroy_ffi(self.handle)
   if status < 0 {
     raise native_error(status)
   } else {
@@ -573,7 +583,9 @@ fn Runtime::active_handle(self : Runtime) -> Int64 raise NativeError {
 ///|
 /// Advances one external-message-pump iteration for a low-level host.
 pub fn Runtime::do_message_loop_work(self : Runtime) -> Unit raise NativeError {
-  check_status(proton_runtime_do_message_loop_work_ffi(self.active_handle()))
+  check_status(
+    @native_ffi.proton_runtime_do_message_loop_work_ffi(self.active_handle()),
+  )
 }
 
 ///|
@@ -590,7 +602,7 @@ pub fn Runtime::wait(
     raise invalid_argument("interest_mask contains unsupported bits")
   }
   let ready_mask = Ref(runtime_wait_none)
-  let status = proton_runtime_wait_ffi(
+  let status = @native_ffi.proton_runtime_wait_ffi(
     self.active_handle(),
     interest_mask,
     encode_wait_timeout(timeout_ms),
@@ -623,7 +635,7 @@ fn encode_wait_timeout(timeout_ms : Int?) -> Int {
 ///
 /// Must be called on the process's main thread.
 pub fn host_loop_begin() -> Unit raise NativeError {
-  check_status(proton_host_loop_begin_ffi())
+  check_status(@native_ffi.proton_host_loop_begin_ffi())
 }
 
 ///|
@@ -636,7 +648,7 @@ pub fn host_loop_begin() -> Unit raise NativeError {
 /// of work became ready; it is empty when nothing happened.
 pub fn host_loop_poll(timeout_ms? : Int) -> RuntimeWaitReady raise NativeError {
   let ready_mask = Ref(runtime_wait_none)
-  let status = proton_host_loop_poll_ffi(
+  let status = @native_ffi.proton_host_loop_poll_ffi(
     encode_wait_timeout(timeout_ms),
     ready_mask,
   )
@@ -650,7 +662,7 @@ pub fn host_loop_poll(timeout_ms? : Int) -> RuntimeWaitReady raise NativeError {
 ///|
 /// Releases the host loop. Safe to call when no loop is running.
 pub fn host_loop_end() -> Unit {
-  proton_host_loop_end_ffi()
+  @native_ffi.proton_host_loop_end_ffi()
 }
 
 ///|
@@ -662,7 +674,7 @@ pub fn host_loop_end() -> Unit {
 /// platform run loop. That is what lets a thread outside the runtime call it:
 /// handles validate thread ownership and such a thread owns none.
 pub fn signal_wakeup() -> Unit {
-  proton_runtime_signal_wakeup_ffi()
+  @native_ffi.proton_runtime_signal_wakeup_ffi()
 }
 
 ///|
@@ -677,7 +689,10 @@ pub fn Runtime::set_wakeup_fd(
     raise invalid_argument("wakeup_fd must be -1 or a valid descriptor")
   }
   check_status(
-    proton_runtime_set_wakeup_fd_ffi(self.active_handle(), wakeup_fd),
+    @native_ffi.proton_runtime_set_wakeup_fd_ffi(
+      self.active_handle(),
+      wakeup_fd,
+    ),
   )
 }
 
@@ -693,7 +708,7 @@ pub fn Runtime::prepare_wakeup_source(
     "runtime wakeup source",
     PayloadBytesExcludingTerminator,
     (buffer, buffer_len, required) => {
-      proton_runtime_prepare_wakeup_source_ffi(
+      @native_ffi.proton_runtime_prepare_wakeup_source_ffi(
         handle, buffer, buffer_len, required,
       )
     },
@@ -705,7 +720,9 @@ pub fn Runtime::prepare_wakeup_source(
 pub fn Runtime::activate_wakeup_source(
   self : Runtime,
 ) -> Unit raise NativeError {
-  check_status(proton_runtime_activate_wakeup_source_ffi(self.active_handle()))
+  check_status(
+    @native_ffi.proton_runtime_activate_wakeup_source_ffi(self.active_handle()),
+  )
 }
 
 ///|
@@ -713,7 +730,7 @@ pub fn Runtime::activate_wakeup_source(
 /// or `None` when no delayed pump is scheduled.
 pub fn Runtime::next_wakeup_delay_ms(self : Runtime) -> Int? raise NativeError {
   let delay = Ref(-1L)
-  let status = proton_runtime_next_wakeup_delay_ms_ffi(
+  let status = @native_ffi.proton_runtime_next_wakeup_delay_ms_ffi(
     self.active_handle(),
     delay,
   )
@@ -735,7 +752,7 @@ pub fn Runtime::set_menu(
   menu : MenuBar,
 ) -> Unit raise NativeError {
   check_status(
-    proton_runtime_set_menu_json_ffi(
+    @native_ffi.proton_runtime_set_menu_json_ffi(
       self.active_handle(),
       @ffi.to_cstr(menu.to_json_string()),
     ),
@@ -749,7 +766,11 @@ pub fn Runtime::poll_event_json(self : Runtime) -> String? raise NativeError {
     buffer,
     buffer_len,
     required,
-  ) => proton_runtime_poll_event_json_ffi(handle, buffer, buffer_len, required))
+  ) => {
+    @native_ffi.proton_runtime_poll_event_json_ffi(
+      handle, buffer, buffer_len, required,
+    )
+  })
 }
 
 ///|
@@ -770,7 +791,7 @@ pub fn Runtime::poll_bridge_request_json(
     buffer_len,
     required,
   ) => {
-    proton_runtime_poll_bridge_request_json_ffi(
+    @native_ffi.proton_runtime_poll_bridge_request_json_ffi(
       handle, buffer, buffer_len, required,
     )
   })
@@ -792,7 +813,7 @@ pub fn Runtime::respond_bridge_request(
   response : BridgeResponse,
 ) -> Unit raise NativeError {
   check_status(
-    proton_runtime_respond_bridge_request_json_ffi(
+    @native_ffi.proton_runtime_respond_bridge_request_json_ffi(
       self.active_handle(),
       @ffi.to_cstr(response.to_json_string()),
     ),
@@ -806,7 +827,7 @@ pub fn Window::new(
 ) -> Window raise NativeError {
   validate_window_config(config)
   let out_window = Ref(proton_invalid_handle)
-  let status = proton_window_create_json_ffi(
+  let status = @native_ffi.proton_window_create_json_ffi(
     runtime.active_handle(),
     @ffi.to_cstr(config.to_json_string()),
     out_window,
@@ -825,7 +846,7 @@ pub fn Window::destroy(self : Window) -> Unit raise NativeError {
     WindowLive | WindowCloseRequested | WindowDestroying =>
       self.lifecycle = WindowDestroying
   }
-  let status = proton_window_destroy_ffi(self.handle)
+  let status = @native_ffi.proton_window_destroy_ffi(self.handle)
   if status < 0 {
     raise native_error(status)
   } else {
@@ -848,7 +869,7 @@ fn Window::live_handle(self : Window) -> Int64 raise NativeError {
 
 ///|
 pub fn Window::show(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_show_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_show_ffi(self.live_handle()))
 }
 
 ///|
@@ -874,7 +895,7 @@ pub fn Window::id(self : Window) -> Int64 {
 
 ///|
 pub fn Window::hide(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_hide_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_hide_ffi(self.live_handle()))
 }
 
 ///|
@@ -883,7 +904,7 @@ pub fn Window::close(self : Window) -> Unit raise NativeError {
     WindowCloseRequested | WindowDestroying | WindowDestroyed => return
     WindowLive => ()
   }
-  let status = proton_window_close_ffi(self.handle)
+  let status = @native_ffi.proton_window_close_ffi(self.handle)
   if status < 0 {
     raise native_error(status)
   } else {
@@ -893,7 +914,7 @@ pub fn Window::close(self : Window) -> Unit raise NativeError {
 
 ///|
 pub fn Window::focus(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_focus_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_focus_ffi(self.live_handle()))
 }
 
 ///|
@@ -902,7 +923,10 @@ pub fn Window::set_title(
   title : String,
 ) -> Unit raise NativeError {
   check_status(
-    proton_window_set_title_ffi(self.live_handle(), @ffi.to_cstr(title)),
+    @native_ffi.proton_window_set_title_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(title),
+    ),
   )
 }
 
@@ -915,22 +939,24 @@ pub fn Window::set_size(
   if width <= 0 || height <= 0 {
     raise invalid_argument("width and height must be positive")
   }
-  check_status(proton_window_set_size_ffi(self.live_handle(), width, height))
+  check_status(
+    @native_ffi.proton_window_set_size_ffi(self.live_handle(), width, height),
+  )
 }
 
 ///|
 pub fn Window::minimize(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_minimize_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_minimize_ffi(self.live_handle()))
 }
 
 ///|
 pub fn Window::maximize(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_maximize_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_maximize_ffi(self.live_handle()))
 }
 
 ///|
 pub fn Window::restore(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_restore_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_restore_ffi(self.live_handle()))
 }
 
 ///|
@@ -939,7 +965,7 @@ pub fn Window::set_fullscreen(
   fullscreen : Bool,
 ) -> Unit raise NativeError {
   check_status(
-    proton_window_set_fullscreen_ffi(
+    @native_ffi.proton_window_set_fullscreen_ffi(
       self.live_handle(),
       if fullscreen {
         1
@@ -956,7 +982,9 @@ pub fn Window::set_position(
   x : Int,
   y : Int,
 ) -> Unit raise NativeError {
-  check_status(proton_window_set_position_ffi(self.live_handle(), x, y))
+  check_status(
+    @native_ffi.proton_window_set_position_ffi(self.live_handle(), x, y),
+  )
 }
 
 ///|
@@ -965,7 +993,7 @@ pub fn Window::set_always_on_top(
   always_on_top : Bool,
 ) -> Unit raise NativeError {
   check_status(
-    proton_window_set_always_on_top_ffi(
+    @native_ffi.proton_window_set_always_on_top_ffi(
       self.live_handle(),
       if always_on_top {
         1
@@ -985,7 +1013,10 @@ pub fn Window::set_zoom_percent(
     raise invalid_argument("zoom_percent must be between 25 and 500")
   }
   check_status(
-    proton_window_set_zoom_percent_ffi(self.live_handle(), zoom_percent),
+    @native_ffi.proton_window_set_zoom_percent_ffi(
+      self.live_handle(),
+      zoom_percent,
+    ),
   )
 }
 
@@ -997,7 +1028,11 @@ pub fn Window::state(self : Window) -> WindowState raise NativeError {
       buffer,
       buffer_len,
       required,
-    ) => proton_window_state_json_ffi(handle, buffer, buffer_len, required)) {
+    ) => {
+      @native_ffi.proton_window_state_json_ffi(
+        handle, buffer, buffer_len, required,
+      )
+    }) {
     Some(text) => text
     None =>
       raise InvalidPayload(context="window state", message="missing payload")
@@ -1014,7 +1049,7 @@ pub fn Window::set_close_interception(
   enabled : Bool,
 ) -> Unit raise NativeError {
   check_status(
-    proton_window_set_close_interception_ffi(
+    @native_ffi.proton_window_set_close_interception_ffi(
       self.live_handle(),
       if enabled {
         1
@@ -1032,7 +1067,7 @@ pub fn Window::respond_close_request(
   allow : Bool,
 ) -> Unit raise NativeError {
   check_status(
-    proton_window_respond_close_request_ffi(
+    @native_ffi.proton_window_respond_close_request_ffi(
       self.live_handle(),
       request_id,
       if allow {
@@ -1047,7 +1082,10 @@ pub fn Window::respond_close_request(
 ///|
 pub fn Window::load_url(self : Window, url : String) -> Unit raise NativeError {
   check_status(
-    proton_window_load_url_ffi(self.live_handle(), @ffi.to_cstr(url)),
+    @native_ffi.proton_window_load_url_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(url),
+    ),
   )
 }
 
@@ -1058,7 +1096,7 @@ pub fn Window::load_html(
   base_url : String,
 ) -> Unit raise NativeError {
   check_status(
-    proton_window_load_html_ffi(
+    @native_ffi.proton_window_load_html_ffi(
       self.live_handle(),
       @ffi.to_cstr(html),
       @ffi.to_cstr(base_url),
@@ -1075,7 +1113,7 @@ pub fn Window::load_asset(
   asset_root : String,
 ) -> Unit raise NativeError {
   check_status(
-    proton_window_load_asset_ffi(
+    @native_ffi.proton_window_load_asset_ffi(
       self.live_handle(),
       @ffi.to_cstr(html),
       @ffi.to_cstr(document_url),
@@ -1086,7 +1124,9 @@ pub fn Window::load_asset(
 
 ///|
 pub fn Window::eval(self : Window, script : String) -> Unit raise NativeError {
-  check_status(proton_window_eval_ffi(self.live_handle(), @ffi.to_cstr(script)))
+  check_status(
+    @native_ffi.proton_window_eval_ffi(self.live_handle(), @ffi.to_cstr(script)),
+  )
 }
 
 ///|
@@ -1105,7 +1145,7 @@ pub fn Window::browser_command(
     None => ()
   }
   check_status(
-    proton_window_browser_command_json_ffi(
+    @native_ffi.proton_window_browser_command_json_ffi(
       self.live_handle(),
       @ffi.to_cstr(Json::object(fields).stringify()),
     ),
@@ -1128,7 +1168,7 @@ pub fn Window::respond_browser_request(
     None => ()
   }
   check_status(
-    proton_window_respond_browser_request_json_ffi(
+    @native_ffi.proton_window_respond_browser_request_json_ffi(
       self.live_handle(),
       @ffi.to_cstr(Json::object(fields).stringify()),
     ),
@@ -1141,7 +1181,7 @@ pub fn Window::emit_bridge_event_json(
   event_json : String,
 ) -> Unit raise NativeError {
   check_status(
-    proton_window_emit_bridge_event_json_ffi(
+    @native_ffi.proton_window_emit_bridge_event_json_ffi(
       self.live_handle(),
       @ffi.to_cstr(event_json),
     ),
@@ -1184,7 +1224,7 @@ pub fn Window::bridge_lifecycle_state(
 ) -> BridgeLifecycleState raise NativeError {
   let text = match
     window_bridge_json(
-      self, "bridge lifecycle state", proton_window_bridge_state_json_ffi,
+      self, "bridge lifecycle state", @native_ffi.proton_window_bridge_state_json_ffi,
     ) {
     Some(text) => text
     None =>
@@ -1218,7 +1258,7 @@ pub fn Window::take_bridge_failure(
 ) -> BridgeDiagnostic? raise NativeError {
   match
     window_bridge_json(
-      self, "bridge diagnostic", proton_window_take_bridge_failure_json_ffi,
+      self, "bridge diagnostic", @native_ffi.proton_window_take_bridge_failure_json_ffi,
     ) {
     None => None
     Some(text) => Some(decode_bridge_diagnostic(text))
@@ -1241,7 +1281,7 @@ pub fn Window::cookie_begin_get(
     None => @ffi.to_cstr("")
   }
   check_status(
-    proton_window_cookie_begin_get_json_ffi(
+    @native_ffi.proton_window_cookie_begin_get_json_ffi(
       self.live_handle(),
       url_bytes,
       if include_http_only {
@@ -1265,7 +1305,7 @@ pub fn Window::cookie_poll_get(self : Window) -> String? raise NativeError {
       buffer_len,
       required,
     ) => {
-      proton_window_cookie_poll_get_json_ffi(
+      @native_ffi.proton_window_cookie_poll_get_json_ffi(
         handle, buffer, buffer_len, required,
       )
     }) {
@@ -1283,7 +1323,7 @@ pub fn Window::cookie_set(
   cookie_json : String,
 ) -> Unit raise NativeError {
   check_status(
-    proton_window_cookie_set_json_ffi(
+    @native_ffi.proton_window_cookie_set_json_ffi(
       self.live_handle(),
       @ffi.to_cstr(cookie_json),
     ),
@@ -1308,20 +1348,24 @@ pub fn Window::cookie_delete(
     None => @ffi.to_cstr("")
   }
   check_status(
-    proton_window_cookie_delete_ffi(self.live_handle(), url_bytes, name_bytes),
+    @native_ffi.proton_window_cookie_delete_ffi(
+      self.live_handle(),
+      url_bytes,
+      name_bytes,
+    ),
   )
 }
 
 ///|
 /// Flushes the cookie store to disk. Fire-and-forget.
 pub fn Window::cookie_flush(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_cookie_flush_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_cookie_flush_ffi(self.live_handle()))
 }
 
 ///|
 /// Clears the HTTP cache for the window's request context. Fire-and-forget.
 pub fn Window::clear_cache(self : Window) -> Unit raise NativeError {
-  check_status(proton_window_clear_cache_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_clear_cache_ffi(self.live_handle()))
 }
 
 ///|
@@ -1332,7 +1376,7 @@ pub fn Window::clear_cache(self : Window) -> Unit raise NativeError {
 /// Raises `UnsupportedNativeFeature` when the native engine is not available.
 pub fn NativeImage::create_empty() -> NativeImage raise NativeError {
   let out_image = Ref(proton_invalid_handle)
-  check_status(proton_image_create_empty_ffi(out_image))
+  check_status(@native_ffi.proton_image_create_empty_ffi(out_image))
   NativeImage::{ handle: out_image.val, lifecycle: ImageLive }
 }
 
@@ -1356,7 +1400,7 @@ pub fn NativeImage::destroy(self : NativeImage) -> Unit raise NativeError {
     ImageDestroyed => return
     ImageLive => self.lifecycle = ImageDestroyed
   }
-  let status = proton_image_destroy_ffi(self.handle)
+  let status = @native_ffi.proton_image_destroy_ffi(self.handle)
   self.handle = proton_invalid_handle
   check_status(status)
 }
@@ -1370,7 +1414,7 @@ pub fn NativeImage::add_png(
   scale_factor? : Double = 1.0,
 ) -> Unit raise NativeError {
   check_status(
-    proton_image_add_png_ffi(
+    @native_ffi.proton_image_add_png_ffi(
       self.live_handle(),
       data,
       data.length(),
@@ -1388,7 +1432,7 @@ pub fn NativeImage::add_jpeg(
   scale_factor? : Double = 1.0,
 ) -> Unit raise NativeError {
   check_status(
-    proton_image_add_jpeg_ffi(
+    @native_ffi.proton_image_add_jpeg_ffi(
       self.live_handle(),
       data,
       data.length(),
@@ -1408,7 +1452,7 @@ pub fn NativeImage::add_bitmap(
   scale_factor? : Double = 1.0,
 ) -> Unit raise NativeError {
   check_status(
-    proton_image_add_bitmap_ffi(
+    @native_ffi.proton_image_add_bitmap_ffi(
       self.live_handle(),
       data,
       data.length(),
@@ -1422,7 +1466,7 @@ pub fn NativeImage::add_bitmap(
 ///|
 /// Returns `true` if the image has no representations.
 pub fn NativeImage::is_empty(self : NativeImage) -> Bool raise NativeError {
-  let status = proton_image_is_empty_ffi(self.live_handle())
+  let status = @native_ffi.proton_image_is_empty_ffi(self.live_handle())
   if status < 0 {
     raise native_error(status)
   }
@@ -1437,7 +1481,9 @@ pub fn NativeImage::size(self : NativeImage) -> (Int, Int) raise NativeError {
     "image size",
     PayloadBytesExcludingTerminator,
     (buffer, buffer_len, required) => {
-      proton_image_get_size_json_ffi(handle, buffer, buffer_len, required)
+      @native_ffi.proton_image_get_size_json_ffi(
+        handle, buffer, buffer_len, required,
+      )
     },
   )
   let json = decode_native_json(text, "image size")
@@ -1461,7 +1507,7 @@ pub fn NativeImage::to_png(
   let out_width = Ref(0)
   let out_height = Ref(0)
   let data = read_native_bytes("image to_png", (buffer, buffer_len, req) => {
-    proton_image_to_png_ffi(
+    @native_ffi.proton_image_to_png_ffi(
       handle,
       scale_factor,
       if with_transparency {
@@ -1492,7 +1538,7 @@ pub fn NativeImage::to_jpeg(
   let out_width = Ref(0)
   let out_height = Ref(0)
   let data = read_native_bytes("image to_jpeg", (buffer, buffer_len, req) => {
-    proton_image_to_jpeg_ffi(
+    @native_ffi.proton_image_to_jpeg_ffi(
       handle, scale_factor, quality, buffer, buffer_len, req, out_width, out_height,
     )
   })
@@ -1510,7 +1556,7 @@ pub fn NativeImage::to_bitmap(
   let out_width = Ref(0)
   let out_height = Ref(0)
   let data = read_native_bytes("image to_bitmap", (buffer, buffer_len, req) => {
-    proton_image_to_bitmap_ffi(
+    @native_ffi.proton_image_to_bitmap_ffi(
       handle, scale_factor, buffer, buffer_len, req, out_width, out_height,
     )
   })
@@ -1545,13 +1591,13 @@ pub fn WindowRef::begin_message_dialog(
   let title_buffer = optional_dialog_text_buffer(title)
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
-  let status = proton_window_begin_message_dialog_ffi(
+  let status = @native_ffi.proton_window_begin_message_dialog_ffi(
     self.handle,
     title_buffer,
     dialog_text_payload_len(title_buffer),
     message_buffer,
     dialog_text_payload_len(message_buffer),
-    level,
+    level.native_value(),
     dialog,
   )
   if status < 0 {
@@ -1571,13 +1617,13 @@ pub fn Runtime::begin_message_dialog(
   let title_buffer = optional_dialog_text_buffer(title)
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
-  let status = proton_runtime_begin_message_dialog_ffi(
+  let status = @native_ffi.proton_runtime_begin_message_dialog_ffi(
     self.active_handle(),
     title_buffer,
     dialog_text_payload_len(title_buffer),
     message_buffer,
     dialog_text_payload_len(message_buffer),
-    level,
+    level.native_value(),
     dialog,
   )
   if status < 0 {
@@ -1599,7 +1645,7 @@ pub fn Runtime::poll_message_dialog(
       buffer_len,
       required,
     ) => {
-      proton_runtime_poll_dialog_result_ffi(
+      @native_ffi.proton_runtime_poll_dialog_result_ffi(
         handle, dialog, buffer, buffer_len, required,
       )
     }) {
@@ -1618,13 +1664,13 @@ pub fn WindowRef::begin_confirm_dialog(
   let title_buffer = optional_dialog_text_buffer(title)
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
-  let status = proton_window_begin_confirm_dialog_ffi(
+  let status = @native_ffi.proton_window_begin_confirm_dialog_ffi(
     self.handle,
     title_buffer,
     dialog_text_payload_len(title_buffer),
     message_buffer,
     dialog_text_payload_len(message_buffer),
-    level,
+    level.native_value(),
     dialog,
   )
   if status < 0 {
@@ -1665,7 +1711,9 @@ pub fn WindowRef::begin_open_file_dialog(
   title : String?,
   path : String?,
 ) -> Int64 raise NativeError {
-  self.begin_file_dialog(title, path, proton_window_begin_open_file_dialog_ffi)
+  self.begin_file_dialog(
+    title, path, @native_ffi.proton_window_begin_open_file_dialog_ffi,
+  )
 }
 
 ///|
@@ -1674,7 +1722,9 @@ pub fn WindowRef::begin_save_file_dialog(
   title : String?,
   path : String?,
 ) -> Int64 raise NativeError {
-  self.begin_file_dialog(title, path, proton_window_begin_save_file_dialog_ffi)
+  self.begin_file_dialog(
+    title, path, @native_ffi.proton_window_begin_save_file_dialog_ffi,
+  )
 }
 
 ///|
@@ -1684,7 +1734,7 @@ pub fn WindowRef::begin_choose_directory_dialog(
   path : String?,
 ) -> Int64 raise NativeError {
   self.begin_file_dialog(
-    title, path, proton_window_begin_choose_directory_dialog_ffi,
+    title, path, @native_ffi.proton_window_begin_choose_directory_dialog_ffi,
   )
 }
 
@@ -1700,7 +1750,7 @@ pub fn WindowRef::poll_dialog_result(
       buffer_len,
       required,
     ) => {
-      proton_window_poll_dialog_result_ffi(
+      @native_ffi.proton_window_poll_dialog_result_ffi(
         handle, dialog, buffer, buffer_len, required,
       )
     }) {
@@ -1730,7 +1780,7 @@ pub fn View::new(
 ) -> View raise NativeError {
   validate_view_config(config)
   let out_view = Ref(proton_invalid_handle)
-  let status = proton_view_create_json_ffi(
+  let status = @native_ffi.proton_view_create_json_ffi(
     window.live_handle(),
     @ffi.to_cstr(config.to_json_string()),
     out_view,
@@ -1748,7 +1798,7 @@ pub fn View::destroy(self : View) -> Unit raise NativeError {
     ViewDestroyed => return
     ViewLive | ViewDestroying => self.lifecycle = ViewDestroying
   }
-  let status = proton_view_destroy_ffi(self.handle)
+  let status = @native_ffi.proton_view_destroy_ffi(self.handle)
   if status < 0 {
     raise native_error(status)
   } else {
@@ -1800,14 +1850,27 @@ pub fn View::set_bounds(
     raise invalid_argument("view width and height must be positive")
   }
   check_status(
-    proton_view_set_bounds_ffi(self.live_handle(), x, y, width, height),
+    @native_ffi.proton_view_set_bounds_ffi(
+      self.live_handle(),
+      x,
+      y,
+      width,
+      height,
+    ),
   )
 }
 
 ///|
 pub fn View::set_visible(self : View, visible : Bool) -> Unit raise NativeError {
   check_status(
-    proton_view_set_visible_ffi(self.live_handle(), if visible { 1 } else { 0 }),
+    @native_ffi.proton_view_set_visible_ffi(
+      self.live_handle(),
+      if visible {
+        1
+      } else {
+        0
+      },
+    ),
   )
 }
 
@@ -1816,7 +1879,9 @@ pub fn View::set_visible(self : View, visible : Bool) -> Unit raise NativeError 
 /// renders above lower values, and views always render above the window's
 /// main browser content.
 pub fn View::set_z_order(self : View, z_order : Int) -> Unit raise NativeError {
-  check_status(proton_view_set_z_order_ffi(self.live_handle(), z_order))
+  check_status(
+    @native_ffi.proton_view_set_z_order_ffi(self.live_handle(), z_order),
+  )
 }
 
 ///|
@@ -1824,7 +1889,9 @@ pub fn View::load_url(self : View, url : String) -> Unit raise NativeError {
   if url.is_empty() {
     raise invalid_argument("url must not be empty")
   }
-  check_status(proton_view_load_url_ffi(self.live_handle(), @ffi.to_cstr(url)))
+  check_status(
+    @native_ffi.proton_view_load_url_ffi(self.live_handle(), @ffi.to_cstr(url)),
+  )
 }
 
 ///|
@@ -1836,7 +1903,11 @@ pub fn View::state(self : View) -> ViewState raise NativeError {
       buffer,
       buffer_len,
       required,
-    ) => proton_view_state_json_ffi(handle, buffer, buffer_len, required)) {
+    ) => {
+      @native_ffi.proton_view_state_json_ffi(
+        handle, buffer, buffer_len, required,
+      )
+    }) {
     Some(text) => text
     None =>
       raise InvalidPayload(context="view state", message="missing payload")
@@ -1856,7 +1927,7 @@ pub fn View::load_html(
   base_url : String,
 ) -> Unit raise NativeError {
   check_status(
-    proton_view_load_html_ffi(
+    @native_ffi.proton_view_load_html_ffi(
       self.live_handle(),
       @ffi.to_cstr(html),
       @ffi.to_cstr(base_url),
@@ -1867,7 +1938,9 @@ pub fn View::load_html(
 ///|
 /// Executes JavaScript in the view's main frame without awaiting a result.
 pub fn View::eval(self : View, script : String) -> Unit raise NativeError {
-  check_status(proton_view_eval_ffi(self.live_handle(), @ffi.to_cstr(script)))
+  check_status(
+    @native_ffi.proton_view_eval_ffi(self.live_handle(), @ffi.to_cstr(script)),
+  )
 }
 
 ///|
@@ -1888,7 +1961,7 @@ pub fn View::browser_command(
     None => ()
   }
   check_status(
-    proton_view_browser_command_json_ffi(
+    @native_ffi.proton_view_browser_command_json_ffi(
       self.live_handle(),
       @ffi.to_cstr(Json::object(fields).stringify()),
     ),

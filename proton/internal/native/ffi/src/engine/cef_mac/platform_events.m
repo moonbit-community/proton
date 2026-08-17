@@ -1,3 +1,5 @@
+#if defined(__APPLE__)
+
 #include "platform_events.h"
 
 #include "../../proton_engine.h"
@@ -76,3 +78,5 @@ int32_t proton_engine_take_platform_event(proton_engine_runtime_t *runtime,
   pthread_mutex_unlock(&g_platform_event_lock);
   return PROTON_OK;
 }
+
+#endif

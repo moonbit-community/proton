@@ -1,3 +1,5 @@
+#if defined(__APPLE__)
+
 #include "../../proton_engine.h"
 #include "../../proton_config.h"
 #include "../../proton_json.h"
@@ -5912,3 +5914,5 @@ int32_t proton_engine_screen_enumerate(
   }
   return PROTON_OK;
 }
+
+#endif

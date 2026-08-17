@@ -1,3 +1,5 @@
+#if defined(__APPLE__)
+
 #include "launch_input.h"
 #include "platform_events.h"
 
@@ -74,3 +76,5 @@ void proton_engine_launch_input_install(void) {
   }
   [NSApp setDelegate:g_launch_input_delegate];
 }
+
+#endif

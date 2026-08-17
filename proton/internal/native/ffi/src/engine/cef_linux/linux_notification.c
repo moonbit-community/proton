@@ -1,3 +1,5 @@
+#if defined(__linux__)
+
 #include "../../proton_engine.h"
 
 #include <dlfcn.h>
@@ -222,3 +224,5 @@ int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
   g_g_object_unref = NULL;
   return PROTON_OK;
 }
+
+#endif

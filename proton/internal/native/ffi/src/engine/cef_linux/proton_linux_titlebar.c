@@ -1,3 +1,5 @@
+#if defined(__linux__)
+
 #include "proton_linux_titlebar.h"
 
 #include <stdint.h>
@@ -121,3 +123,5 @@ proton_linux_titlebar_hit_t proton_linux_titlebar_hit_test(
   }
   return PROTON_LINUX_TITLEBAR_HIT_CLIENT;
 }
+
+#endif

@@ -1,3 +1,5 @@
+#if defined(_WIN32)
+
 #include "../../proton_engine.h"
 
 #define UNICODE 1
@@ -312,3 +314,5 @@ int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
   ReleaseSRWLockExclusive(&g_notification_click_lock);
   return PROTON_OK;
 }
+
+#endif

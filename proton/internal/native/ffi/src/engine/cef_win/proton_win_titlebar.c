@@ -1,3 +1,5 @@
+#if defined(_WIN32)
+
 #include "proton_win_titlebar.h"
 
 static int proton_win_is_caption_button_hit(LRESULT hit_test) {
@@ -121,3 +123,5 @@ LRESULT proton_win_titlebar_hit_test(
   }
   return HTCLIENT;
 }
+
+#endif

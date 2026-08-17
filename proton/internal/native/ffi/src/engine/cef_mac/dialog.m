@@ -1,3 +1,5 @@
+#if defined(__APPLE__)
+
 #include "dialog.h"
 
 #include "window.h"
@@ -942,3 +944,5 @@ int32_t proton_engine_window_poll_dialog_result(
   proton_engine_dialog_request_release(request);
   return PROTON_OK;
 }
+
+#endif

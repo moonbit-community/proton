@@ -1,3 +1,5 @@
+#if defined(__APPLE__)
+
 #include "menu.h"
 
 #include "../../proton_engine.h"
@@ -355,3 +357,5 @@ int32_t proton_engine_take_menu_command(proton_engine_runtime_t *runtime,
   pthread_mutex_unlock(&g_menu_command_lock);
   return PROTON_OK;
 }
+
+#endif

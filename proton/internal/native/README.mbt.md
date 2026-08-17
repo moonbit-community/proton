@@ -1,6 +1,6 @@
 # Proton Native
 
-`moonbit-community/proton/native` is the direct MoonBit FFI binding for the standalone
+`moonbit-community/proton/internal/native` is the direct MoonBit FFI binding for the standalone
 Proton native dynamic library.
 
 The public API uses Proton-owned `Runtime` and `Window` values. Raw native

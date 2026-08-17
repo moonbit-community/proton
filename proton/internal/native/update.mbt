@@ -8,76 +8,6 @@
 let update_message_capacity = 512
 
 ///|
-#borrow(parent_dir, out_stage, error)
-extern "C" fn proton_update_stage_begin_ffi(
-  parent_dir : Bytes,
-  expected_size : Int64,
-  target_revision : Int64,
-  out_stage : Ref[Int64],
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_stage_begin_revision"
-
-///|
-#borrow(chunk, error)
-extern "C" fn proton_update_stage_write_ffi(
-  stage : Int64,
-  chunk : Bytes,
-  chunk_len : Int,
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_stage_write"
-
-///|
-#borrow(out_outcome, error)
-extern "C" fn proton_update_stage_install_ffi(
-  stage : Int64,
-  out_outcome : Ref[Int],
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_stage_install_outcome"
-
-///|
-#borrow(out_revision, error)
-extern "C" fn proton_update_current_revision_ffi(
-  out_revision : Ref[Int64],
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_current_revision"
-
-///|
-#borrow(error)
-extern "C" fn proton_update_cleanup_previous_ffi(
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_cleanup_previous"
-
-///|
-#borrow(error)
-extern "C" fn proton_update_stage_abort_ffi(
-  stage : Int64,
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_stage_abort"
-
-///|
-#borrow(archive, parent_dir, error)
-extern "C" fn proton_update_install_ffi(
-  archive : Bytes,
-  archive_len : Int,
-  parent_dir : Bytes,
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_install"
-
-///|
-#borrow(error)
-extern "C" fn proton_update_relaunch_ffi(
-  error : FixedArray[Byte],
-  error_len : Int,
-) -> Int = "proton_update_relaunch"
-
-///|
 /// A private native file that receives one artifact stream while it is checked.
 ///
 /// The file path is deliberately not exposed. The native updater owns it from
@@ -150,7 +80,7 @@ pub fn update_stage_begin(
   let message = FixedArray::make(update_message_capacity, b'\x00')
   let handle = Ref(0L)
   update_check(
-    proton_update_stage_begin_ffi(
+    @native_ffi.proton_update_stage_begin_ffi(
       @ffi.to_cstr(parent_dir),
       expected_size,
       target_revision.reinterpret_as_int64(),
@@ -185,7 +115,11 @@ pub fn update_current_revision() -> UInt64 raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   let revision = Ref(0L)
   update_check(
-    proton_update_current_revision_ffi(revision, message, message.length()),
+    @native_ffi.proton_update_current_revision_ffi(
+      revision,
+      message,
+      message.length(),
+    ),
     message,
   )
   revision.val.reinterpret_as_uint64()
@@ -200,7 +134,7 @@ pub fn update_current_revision() -> UInt64 raise NativeError {
 pub fn update_cleanup_previous() -> Unit raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   update_check(
-    proton_update_cleanup_previous_ffi(message, message.length()),
+    @native_ffi.proton_update_cleanup_previous_ffi(message, message.length()),
     message,
   )
 }
@@ -213,7 +147,7 @@ pub fn UpdateStage::write(
 ) -> Unit raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   update_check(
-    proton_update_stage_write_ffi(
+    @native_ffi.proton_update_stage_write_ffi(
       self.handle,
       chunk,
       chunk.length(),
@@ -232,7 +166,7 @@ pub fn UpdateStage::install(
   let message = FixedArray::make(update_message_capacity, b'\x00')
   let outcome = Ref(0)
   update_check(
-    proton_update_stage_install_ffi(
+    @native_ffi.proton_update_stage_install_ffi(
       self.handle,
       outcome,
       message,
@@ -256,7 +190,11 @@ pub fn UpdateStage::install(
 pub fn UpdateStage::abort(self : UpdateStage) -> Unit raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   update_check(
-    proton_update_stage_abort_ffi(self.handle, message, message.length()),
+    @native_ffi.proton_update_stage_abort_ffi(
+      self.handle,
+      message,
+      message.length(),
+    ),
     message,
   )
 }
@@ -273,7 +211,7 @@ pub fn update_install(
 ) -> Unit raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   update_check(
-    proton_update_install_ffi(
+    @native_ffi.proton_update_install_ffi(
       archive,
       archive.length(),
       @ffi.to_cstr(parent_dir),
@@ -292,5 +230,8 @@ pub fn update_install(
 /// none.
 pub fn update_relaunch() -> Unit raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
-  update_check(proton_update_relaunch_ffi(message, message.length()), message)
+  update_check(
+    @native_ffi.proton_update_relaunch_ffi(message, message.length()),
+    message,
+  )
 }

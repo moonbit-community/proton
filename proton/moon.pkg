@@ -14,7 +14,7 @@ import {
   "moonbit-community/proton/ipc",
   "moonbit-community/proton/internal/locale",
   "moonbit-community/proton/manifest",
-  "moonbit-community/proton/native",
+  "moonbit-community/proton/internal/native",
   "moonbit-community/proton/updater",
   "moonbit-community/proton_updater",
   "moonbit-community/proton_contract",

@@ -1,3 +1,5 @@
+#if defined(__linux__)
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
 #endif
@@ -6636,3 +6638,5 @@ int32_t proton_engine_screen_enumerate(
   *out_count = idx;
   return PROTON_OK;
 }
+
+#endif

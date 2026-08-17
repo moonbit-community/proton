@@ -1,0 +1,13 @@
+supported_targets = "native"
+
+options(
+  "is-main": false,
+  "native-stub": [ "loader_stub.mm" ],
+  link: {
+    "native": {
+      "stub-cc": "${build.PROTON_CEF_LOADER_CC}",
+      "stub-cc-flags": "${build.PROTON_CEF_LOADER_CC_FLAGS}",
+    },
+  },
+  targets: { "loader.mbt": [ "native" ] },
+)

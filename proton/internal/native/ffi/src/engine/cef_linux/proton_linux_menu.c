@@ -1,3 +1,5 @@
+#if defined(__linux__)
+
 #include "proton_linux_menu.h"
 
 #include "../../proton_json.h"
@@ -531,3 +533,5 @@ GtkWidget *proton_linux_menu_bar_create_widget(
 
   return widget;
 }
+
+#endif

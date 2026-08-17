@@ -2,7 +2,7 @@
 /// Reports whether native notifications are available in the current process.
 pub fn notification_supported() -> Bool raise NativeError {
   let supported = Ref(0)
-  let status = proton_notification_is_supported_ffi(supported)
+  let status = @native_ffi.proton_notification_is_supported_ffi(supported)
   if status < 0 {
     raise native_error(status)
   } else {
@@ -22,7 +22,7 @@ pub fn notification_show(
     None => ("", 0)
   }
   check_status(
-    proton_notification_show_ffi(
+    @native_ffi.proton_notification_show_ffi(
       @ffi.to_cstr(title),
       @ffi.to_cstr(body),
       @ffi.to_cstr(payload_text),
@@ -42,7 +42,7 @@ pub fn notification_poll_click() -> NativeNotificationClick? raise NativeError {
       buffer_len,
       required,
     ) => {
-      let status = proton_notification_poll_click_ffi(
+      let status = @native_ffi.proton_notification_poll_click_ffi(
         buffer, buffer_len, required, has_payload, available,
       )
       if status == 0 && available.val == 0 {
@@ -62,5 +62,5 @@ pub fn notification_poll_click() -> NativeNotificationClick? raise NativeError {
 ///|
 /// Releases process-level notification hooks installed by Proton.
 pub fn notification_cleanup() -> Unit raise NativeError {
-  check_status(proton_notification_cleanup_ffi())
+  check_status(@native_ffi.proton_notification_cleanup_ffi())
 }

@@ -1,3 +1,5 @@
+#if defined(_WIN32)
+
 #include "../../proton_engine.h"
 #include "../../proton_json.h"
 
@@ -6196,3 +6198,5 @@ int32_t proton_engine_screen_enumerate(
   *out_count = ctx.count;
   return PROTON_OK;
 }
+
+#endif

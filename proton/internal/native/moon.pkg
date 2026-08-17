@@ -1,4 +1,5 @@
 import {
+  "moonbit-community/proton/internal/native/ffi" @native_ffi,
   "moonbit-community/proton_ffi" @ffi,
   "moonbit-community/proton/internal/locale",
   "moonbitlang/core/debug",
@@ -10,7 +11,7 @@ supported_targets = "native"
 options(
   "is-main": false,
   targets: {
-    "ffi.mbt": [ "native" ],
+    "ffi_constants.mbt": [ "native" ],
     "types.mbt": [ "native" ],
     "native.mbt": [ "native" ],
     "native_text.mbt": [ "native" ],

@@ -1,190 +1,155 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const moduleRoot = path.dirname(fileURLToPath(import.meta.url));
+const ffiRoot = path.join(moduleRoot, "internal", "native", "ffi");
 
 function readPayloadEnv() {
-  try {
-    const raw = fs.readFileSync(0, "utf8").trim();
-    if (raw.length === 0) {
-      return {};
-    }
-    return JSON.parse(raw).env ?? {};
-  } catch {
-    return {};
-  }
+  const raw = fs.readFileSync(0, "utf8").trim();
+  return raw.length === 0 ? {} : JSON.parse(raw).env ?? {};
 }
 
 function envValue(env, name) {
   return env[name] ?? process.env[name] ?? "";
 }
 
-function nativeLinkPath(filePath) {
-  return filePath.replace(/\\/g, "/");
-}
-
-function quote(filePath) {
-  return `"${nativeLinkPath(filePath)}"`;
-}
-
-function darwinWarningFlags(cc) {
-  if (!/^(?:.*\/)?(?:clang|cc)$/.test(cc)) {
-    return "";
-  }
-  // ld64 has a narrow switch for duplicate libraries, but duplicate rpaths
-  // only honor the general warning suppressor. Keep this Darwin-only.
-  return "-Wl,-no_warn_duplicate_libraries -Wl,-w";
-}
-
-function firstExistingDist(candidates) {
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return candidates[0];
-}
-
-function platformId() {
-  return `${process.platform}-${process.arch}`;
-}
-
-function packagePrebuiltDist() {
-  return path.resolve(moduleRoot, "prebuilt", platformId());
-}
-
-function findProjectRootWithRuntime(start) {
-  for (let current = path.resolve(start); ; current = path.dirname(current)) {
-    const manifest = path.join(current, ".proton", "runtime.json");
-    if (fs.existsSync(manifest)) {
-      return { root: current, manifest };
-    }
-    const parent = path.dirname(current);
-    if (parent === current) {
-      return null;
-    }
-  }
-}
-
-function activeRuntimeDist() {
-  const found = findProjectRootWithRuntime(process.cwd());
-  if (!found) {
-    return "";
-  }
-  try {
-    const manifest = JSON.parse(fs.readFileSync(found.manifest, "utf8"));
-    if (manifest.platform && manifest.platform !== platformId()) {
-      return "";
-    }
-    if (typeof manifest.dist !== "string" || manifest.dist.length === 0) {
-      return "";
-    }
-    const dist = path.isAbsolute(manifest.dist)
-      ? manifest.dist
-      : path.resolve(found.root, manifest.dist);
-    return fs.existsSync(dist) ? dist : "";
-  } catch {
-    return "";
-  }
-}
-
-function defaultDist() {
-  const activeDist = activeRuntimeDist();
-  if (activeDist.length > 0) {
-    return activeDist;
-  }
-  return firstExistingDist([
-    path.resolve(moduleRoot, "..", "native", "dist"),
-    packagePrebuiltDist(),
-  ]);
+function quote(value) {
+  return `"${value.replace(/\\/g, "/")}"`;
 }
 
 function appendFlags(...parts) {
   return parts.filter(part => part.length > 0).join(" ");
 }
 
-function linuxRpathLinkFlag(binDir, cc) {
-  return cc.length > 0 ? `-Wl,-rpath-link,${quote(binDir)}` : "";
+function findRuntimeManifest(start) {
+  for (let current = path.resolve(start); ; current = path.dirname(current)) {
+    const manifest = path.join(current, ".proton", "runtime.json");
+    if (fs.existsSync(manifest)) {
+      return manifest;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      throw new Error(
+        "Proton CEF runtime is not configured; run `proton_cli cef setup` in the project",
+      );
+    }
+  }
 }
 
-function linkFlags(dist, cc) {
-  const libDir = path.join(dist, "lib");
-  const binDir = path.join(dist, "bin");
-  if (process.platform === "win32") {
-    return quote(path.join(libDir, "proton.lib"));
-  }
-  if (process.platform === "darwin") {
-    return appendFlags(
-      `-L${quote(libDir)} -lproton -Wl,-rpath,${quote(libDir)}`,
-      darwinWarningFlags(cc),
+function activeCefRoot() {
+  const manifestPath = findRuntimeManifest(process.cwd());
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  const expectedPlatform = `${process.platform}-${process.arch}`;
+  if (manifest.platform !== expectedPlatform) {
+    throw new Error(
+      `Proton runtime platform is ${manifest.platform}; expected ${expectedPlatform}`,
     );
   }
-  return appendFlags(
-    `-L${quote(libDir)} -lproton -Wl,-rpath,${quote(libDir)}`,
-    linuxRpathLinkFlag(binDir, cc),
-  );
+  if (typeof manifest.cef !== "string" || !path.isAbsolute(manifest.cef)) {
+    throw new Error(`Invalid CEF path in ${manifestPath}`);
+  }
+  if (!fs.existsSync(manifest.cef)) {
+    throw new Error(`CEF SDK does not exist: ${manifest.cef}`);
+  }
+  return manifest.cef;
 }
 
-function linkConfig(dist, packageName, cc) {
-  const libDir = path.join(dist, "lib");
-  const binDir = path.join(dist, "bin");
-  if (process.platform === "win32") {
+function pkgConfig(args) {
+  const result = spawnSync("pkg-config", args, { encoding: "utf8" });
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || `pkg-config ${args.join(" ")} failed`);
+  }
+  return result.stdout.trim();
+}
+
+function platformConfig(cefRoot, env) {
+  const commonStubFlags = appendFlags(
+    "-DPROTON_BUILD=1",
+    "-DPROTON_WITH_ENGINE=1",
+    "-DCEF_API_VERSION=14700",
+    `-I${quote(path.join(ffiRoot, "include"))}`,
+    `-I${quote(cefRoot)}`,
+  );
+  const requestedCc = envValue(env, "MOON_CC").trim();
+
+  if (process.platform === "darwin") {
     return {
-      package: packageName,
-      link_libs: [nativeLinkPath(path.join(libDir, "proton"))],
+      stubCc: requestedCc || "clang",
+      stubFlags: appendFlags("-fblocks", commonStubFlags),
+      loaderCc: requestedCc || "clang++",
+      loaderFlags: appendFlags(
+        "-std=c++17 -DWRAPPING_CEF_SHARED=1",
+        `-I${quote(cefRoot)}`,
+      ),
+      linkFlags: [
+        "-framework Cocoa",
+        "-framework AppKit",
+        "-framework Foundation",
+        "-framework UserNotifications",
+        "-framework CoreFoundation",
+        "-framework Security",
+        "-lc++",
+      ].join(" "),
     };
   }
-  return {
-    package: packageName,
-    link_libs: ["proton"],
-    link_flags:
-      process.platform === "darwin"
-        ? appendFlags(
-          `-L${quote(libDir)} -Wl,-rpath,${quote(libDir)}`,
-          darwinWarningFlags(cc),
-        )
-        : appendFlags(
-          `-L${quote(libDir)} -Wl,-rpath,${quote(libDir)}`,
-          linuxRpathLinkFlag(binDir, cc),
-        ),
-  };
-}
 
-function helperPath(binDir) {
-  const exe = process.platform === "win32" ? "cef_process.exe" : "cef_process";
-  const candidate = path.join(binDir, exe);
-  return fs.existsSync(candidate) ? nativeLinkPath(candidate) : "";
+  if (process.platform === "win32") {
+    return {
+      stubCc: requestedCc || "clang",
+      stubFlags: commonStubFlags,
+      loaderCc: requestedCc || "clang++",
+      loaderFlags: "-std=c++17",
+      linkFlags: [
+        quote(path.join(cefRoot, "Release", "libcef.lib")),
+        "user32.lib shell32.lib shlwapi.lib ole32.lib comctl32.lib",
+        "dwmapi.lib shcore.lib gdi32.lib advapi32.lib",
+      ].join(" "),
+    };
+  }
+
+  if (process.platform === "linux") {
+    const cflags = pkgConfig(["--cflags", "gtk+-3.0", "x11"]);
+    const libs = pkgConfig(["--libs", "gtk+-3.0", "x11"]);
+    const releaseDir = path.join(cefRoot, "Release");
+    return {
+      stubCc: requestedCc || "cc",
+      stubFlags: appendFlags("-DOS_LINUX=1 -DCEF_X11=1", commonStubFlags, cflags),
+      loaderCc: envValue(env, "CXX").trim() || "c++",
+      loaderFlags: "-std=c++17",
+      linkFlags: appendFlags(
+        `-L${quote(releaseDir)} -lcef -Wl,-rpath,${quote(releaseDir)}`,
+        libs,
+        "-ldl -lpthread -lm",
+      ),
+    };
+  }
+
+  throw new Error(`Unsupported Proton platform: ${process.platform}`);
 }
 
 export function createNativeLinkConfig(env = readPayloadEnv()) {
-  const rawDist = envValue(env, "PROTON_NATIVE_DIST").trim();
-  const cc = envValue(env, "MOON_CC").trim();
-  const dist = path.resolve(rawDist.length === 0 ? defaultDist() : rawDist);
-  const binDir = path.join(dist, "bin");
+  const cefRoot = activeCefRoot();
+  const config = platformConfig(cefRoot, env);
   return {
     vars: {
-      PROTON_NATIVE_LINK_FLAGS: linkFlags(dist, cc),
-      PROTON_NATIVE_STUB_CC_FLAGS: "",
-      PROTON_NATIVE_RUNTIME_DIR: nativeLinkPath(binDir),
-      PROTON_RUNTIME_ROOT: nativeLinkPath(dist),
-      PROTON_HELPER_PATH: helperPath(binDir),
+      PROTON_NATIVE_STUB_CC: config.stubCc,
+      PROTON_NATIVE_STUB_CC_FLAGS: config.stubFlags,
+      PROTON_CEF_LOADER_CC: config.loaderCc,
+      PROTON_CEF_LOADER_CC_FLAGS: config.loaderFlags,
     },
     link_configs: [
-      linkConfig(dist, "moonbit-community/proton/native", cc),
+      {
+        package: "moonbit-community/proton/internal/native/ffi",
+        link_flags: config.linkFlags,
+      },
     ],
   };
 }
 
-function main() {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.stdout.write(JSON.stringify(createNativeLinkConfig()));
-}
-
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
-  main();
 }

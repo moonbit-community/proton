@@ -342,6 +342,15 @@ pub extend DialogLevel with Eq::{not_equal, equal}
 pub extend DialogLevel with Debug::{to_repr}
 
 ///|
+fn DialogLevel::native_value(self : DialogLevel) -> Int {
+  match self {
+    Info => 0
+    Warning => 1
+    Error => 2
+  }
+}
+
+///|
 pub(all) enum DialogPollResult {
   Pending
   Ready(String)
