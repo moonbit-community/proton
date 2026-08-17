@@ -36,7 +36,6 @@ pub extend DevConfigError with Show::{to_string, output}
 ///|
 /// Failures while locating and validating the native development runtime.
 pub(all) suberror DevRuntimeError {
-  NativeDistOverride(detail~ : String)
   Setup(detail~ : String)
   ManifestMissing(path~ : String)
   ManifestInvalid(path~ : String, detail~ : String)
@@ -122,9 +121,6 @@ pub fn DevConfigError::message(self : DevConfigError) -> String {
 ///|
 pub fn DevRuntimeError::message(self : DevRuntimeError) -> String {
   match self {
-    NativeDistOverride(detail~) =>
-      detail +
-      "\n\nPROTON_NATIVE_DIST is set; unset it or point it at a valid Proton runtime."
     Setup(detail~) => "failed to set up Proton runtime: " + detail
     ManifestMissing(path~) => "active Proton runtime is missing: " + path
     ManifestInvalid(path~, detail~) =>

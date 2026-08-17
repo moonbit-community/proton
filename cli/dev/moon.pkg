@@ -1,5 +1,6 @@
 import {
   "moonbit-community/proton_config",
+  "moonbit-community/proton_cli/build_cmd" @build,
   "moonbit-community/proton_cli/cef",
   "moonbit-community/proton_cli/fsutil",
   "moonbit-community/proton_cli/output",

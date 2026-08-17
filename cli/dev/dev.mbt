@@ -40,7 +40,6 @@ struct DevRuntime {
   root : String
   bin_dir : String
   lib_dir : String
-  helper_path : String
 } derive(Debug, Eq)
 
 ///|
@@ -176,7 +175,17 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
       }
   }
   let runtime = ensure_dev_runtime(root, raw.setup_runtime)
-  let app_env = dev_process_env(runtime, frontend_url, project_base)
+  let helper_path = @build.build_cef_process(
+    root,
+    backend_path,
+    moon_target_dir?,
+  )
+  let app_env = dev_process_env(
+    runtime,
+    helper_path,
+    frontend_url,
+    project_base,
+  )
   let frontend_env = dev_frontend_process_env(
     app_env,
     @env.get_env_var("LD_PRELOAD"),
@@ -398,30 +407,23 @@ async fn read_dev_project_config(
 
 ///|
 async fn ensure_dev_runtime(root : String, setup_runtime : Bool) -> DevRuntime {
-  let native_dist_override = dev_native_dist_override(root)
   read_dev_runtime(root) catch {
     error if @async.is_being_cancelled() => raise error
     error =>
-      match native_dist_override {
-        Some(_) => raise NativeDistOverride(detail=error.to_string())
-        None if setup_runtime => {
-          @cef.setup_default(root) catch {
-            error if @async.is_being_cancelled() => raise error
-            error => raise Setup(detail=error.to_string())
-          }
-          read_dev_runtime(root)
+      if setup_runtime {
+        @cef.setup_default(root) catch {
+          error if @async.is_being_cancelled() => raise error
+          error => raise Setup(detail=error.to_string())
         }
-        None => raise SetupRequired(detail=error.to_string())
+        read_dev_runtime(root)
+      } else {
+        raise SetupRequired(detail=error.to_string())
       }
   }
 }
 
 ///|
 async fn read_dev_runtime(root : String) -> DevRuntime {
-  match dev_native_dist_override(root) {
-    Some(path) => return dev_runtime_from_root(path, "PROTON_NATIVE_DIST")
-    None => ()
-  }
   let manifest_path = runtime_manifest_path(root)
   let text = @async_fs.read_file(manifest_path).text() catch {
     _ => raise ManifestMissing(path=manifest_path)
@@ -449,35 +451,16 @@ async fn read_dev_runtime(root : String) -> DevRuntime {
 }
 
 ///|
-fn dev_native_dist_override(root : String) -> String? {
-  match @env.get_env_var("PROTON_NATIVE_DIST") {
-    Some(value) => {
-      let value = value.trim().to_owned()
-      if value == "" {
-        None
-      } else {
-        Some(@fsutil.resolve_path(root, value))
-      }
-    }
-    None => None
-  }
-}
-
-///|
 async fn dev_runtime_from_root(
   runtime_root : String,
   label : String,
 ) -> DevRuntime {
   let bin_dir = @fsutil.path_join(runtime_root, "bin")
   let lib_dir = @fsutil.path_join(runtime_root, "lib")
-  let helper_path = @fsutil.path_join(bin_dir, helper_executable_name())
   if !@fsutil.path_exists(runtime_root) {
     raise DirectoryMissing(label~, path=runtime_root)
   }
-  if !@fsutil.path_exists(helper_path) {
-    raise HelperMissing(label~, path=helper_path)
-  }
-  DevRuntime::{ root: runtime_root, bin_dir, lib_dir, helper_path }
+  DevRuntime::{ root: runtime_root, bin_dir, lib_dir }
 }
 
 ///|
@@ -513,17 +496,9 @@ fn json_string_field(
 }
 
 ///|
-fn helper_executable_name() -> String {
-  if @path.sep == '\\' {
-    "cef_process.exe"
-  } else {
-    "cef_process"
-  }
-}
-
-///|
 async fn dev_process_env(
   runtime : DevRuntime,
+  helper_path : String,
   frontend_url : String?,
   resource_dir : String,
 ) -> Map[String, String] {
@@ -531,9 +506,8 @@ async fn dev_process_env(
     "PROTON_MODE": "dev",
     "PROTON_DEV": "1",
     "PROTON_HMR": "1",
-    "PROTON_NATIVE_DIST": runtime.root,
     "PROTON_RUNTIME_ROOT": runtime.root,
-    "PROTON_HELPER_PATH": runtime.helper_path,
+    "PROTON_HELPER_PATH": helper_path,
     "PROTON_RESOURCE_DIR": resource_dir,
   }
   match frontend_url {

@@ -119,6 +119,22 @@ test "moon build-only output identifies one executable" {
 }
 
 ///|
+test "CEF process helper uses the application build directory" {
+  let workspace = @fsutil.resolve_path(".", "fixtures/workspace")
+  assert_eq(
+    cef_process_output_path(workspace, None, false),
+    @fsutil.resolve_path(
+      workspace,
+      "_build/native/debug/build/moonbit-community/proton/internal/cef_process/cef_process.exe",
+    ),
+  )
+  assert_eq(
+    cef_process_output_path(workspace, Some("/tmp/proton-build"), true),
+    "/tmp/proton-build/native/release/build/moonbit-community/proton/internal/cef_process/cef_process.exe",
+  )
+}
+
+///|
 test "moon build-only output rejects missing or ambiguous artifacts" {
   for
     output in [

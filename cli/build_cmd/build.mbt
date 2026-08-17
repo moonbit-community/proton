@@ -199,7 +199,20 @@ pub async fn build_executable(
     run_frontend_build: true,
     moon_args: [],
   })
-  run_moon_build_only(invocation.backend_path, invocation.app_package, release)
+  let executable = run_moon_build_only(
+    invocation.backend_path,
+    invocation.app_package,
+    release,
+  )
+  ignore(
+    build_cef_process(
+      invocation.workspace_root,
+      invocation.backend_path,
+      invocation.moon_target_dir?,
+      release~,
+    ),
+  )
+  executable
 }
 
 ///|
@@ -211,10 +224,19 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
     invocation.moon_args,
     invocation.moon_target_dir,
   )
+  ignore(
+    build_cef_process(
+      invocation.workspace_root,
+      invocation.backend_path,
+      invocation.moon_target_dir?,
+      release=invocation.moon_args.contains("--release"),
+    ),
+  )
 }
 
 ///|
 priv struct BuildInvocation {
+  workspace_root : String
   backend_path : String
   app_package : String
   moon_target_dir : String?
@@ -248,11 +270,101 @@ async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
     @fsutil.resolve_path(root, path)
   })
   BuildInvocation::{
+    workspace_root: root,
     backend_path,
     app_package,
     moon_target_dir,
     moon_args: raw.moon_args,
   }
+}
+
+///|
+fn proton_source_candidates(
+  workspace_root : String,
+  backend_path : String,
+) -> Array[String] {
+  [
+    @fsutil.resolve_path(workspace_root, "proton"),
+    @fsutil.resolve_path(workspace_root, ".mooncakes/moonbit-community/proton"),
+    @fsutil.resolve_path(backend_path, ".mooncakes/moonbit-community/proton"),
+  ]
+}
+
+///|
+async fn resolve_proton_source(
+  workspace_root : String,
+  backend_path : String,
+) -> String {
+  for candidate in proton_source_candidates(workspace_root, backend_path) {
+    if @fsutil.path_is_file(@fsutil.path_join(candidate, "moon.mod")) &&
+      @fsutil.path_is_dir(@fsutil.path_join(candidate, "internal/cef_process")) {
+      return candidate
+    }
+  }
+  raise BuildPathError::Missing(
+    role="resolved Proton source containing internal/cef_process",
+    path=proton_source_candidates(workspace_root, backend_path).join(", "),
+  )
+}
+
+///|
+fn cef_process_output_path(
+  workspace_root : String,
+  moon_target_dir : String?,
+  release : Bool,
+) -> String {
+  let target_dir = moon_target_dir.unwrap_or(
+    @fsutil.path_join(workspace_root, "_build"),
+  )
+  let mode = if release { "release" } else { "debug" }
+  @fsutil.resolve_path(
+    target_dir,
+    "native/" +
+    mode +
+    "/build/moonbit-community/proton/internal/cef_process/cef_process.exe",
+  )
+}
+
+///|
+pub async fn build_cef_process(
+  workspace_root : String,
+  backend_path : String,
+  moon_target_dir? : String,
+  release? : Bool = false,
+) -> String {
+  let source = resolve_proton_source(workspace_root, backend_path)
+  let args : Array[String] = [
+    "build",
+    @fsutil.path_join(source, "internal/cef_process"),
+    "--target",
+    "native",
+  ]
+  match moon_target_dir {
+    Some(target_dir) => {
+      args.push("--target-dir")
+      args.push(target_dir)
+    }
+    None => ()
+  }
+  if release {
+    args.push("--release")
+  }
+  @output.info("Building CEF process helper: moon " + args.join(" "))
+  let code = @process.run("moon", args, cwd=backend_path) catch {
+    error =>
+      raise BuildProcessError::Start(
+        command="CEF process helper build",
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  if code != 0 {
+    raise BuildProcessError::Exit(command="CEF process helper build", code~)
+  }
+  let output = cef_process_output_path(workspace_root, moon_target_dir, release)
+  guard @fsutil.path_is_file(output) else {
+    raise BuildPathError::Missing(role="CEF process helper", path=output)
+  }
+  output
 }
 
 ///|
