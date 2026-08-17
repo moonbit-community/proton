@@ -4,9 +4,9 @@ version = "0.1.16"
 
 import {
   "moonbitlang/async@0.20.5",
-  "moonbitlang/lexer@0.3.13",
+  "moonbitlang/lexer@0.3.14",
   "moonbitlang/parser@0.3.13",
-  "moonbitlang/x@0.4.49",
+  "moonbitlang/x@0.4.50",
 }
 
 readme = "README.md"

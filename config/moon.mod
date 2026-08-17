@@ -4,7 +4,7 @@ version = "0.1.16"
 
 import {
   "moonbitlang/moon_config@0.3.13",
-  "moonbitlang/x@0.4.49",
+  "moonbitlang/x@0.4.50",
 }
 
 repository = "https://github.com/moonbit-community/proton"
