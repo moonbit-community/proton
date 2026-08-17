@@ -179,6 +179,7 @@ priv struct RuntimeSession {
   windows : Array[RunningWindow]
   command_host : CommandHostRuntime?
   pending_bridge : Array[BridgeDispatchTask]
+  dialog_completions : DialogCompletionStore
   wakeup : RuntimeWakeup
   forward_menu_events : Bool
   monitor_bridge : Bool
@@ -204,6 +205,24 @@ priv struct RuntimeSession {
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
+}
+
+///|
+priv enum DialogCompletionState {
+  Waiting
+  Completed(Result[String, @native.NativeError])
+}
+
+///|
+priv struct PendingDialogCompletion {
+  dialog : Int64
+  mut state : DialogCompletionState
+  changed : @async.CondVar
+}
+
+///|
+priv struct DialogCompletionStore {
+  pending : Array[PendingDialogCompletion]
 }
 
 ///|

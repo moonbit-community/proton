@@ -33,6 +33,7 @@ options(
     "facade_bridge.mbt": [ "native" ],
     "facade_builders.mbt": [ "native" ],
     "facade_context.mbt": [ "native" ],
+    "facade_dialog.mbt": [ "native" ],
     "facade_entry.mbt": [ "native" ],
     "facade_event_loop.mbt": [ "native" ],
     "facade_i18n.mbt": [ "native" ],

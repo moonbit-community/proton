@@ -1320,6 +1320,27 @@ fn decode_native_runtime_event(
           require_native_event_text(event, 0, "bridge request"),
         ),
       )
+    23 => {
+      let status = @native_ffi.event_int(event, 0)
+      DialogCompleted({
+        dialog: @native_ffi.event_int64(event, 2),
+        window: if window == proton_invalid_handle {
+          None
+        } else {
+          Some(window)
+        },
+        result: if status == 0 {
+          Ok(require_native_event_text(event, 0, "dialog result"))
+        } else {
+          Err(
+            Status(
+              status~,
+              message=require_native_event_text(event, 1, "dialog error"),
+            ),
+          )
+        },
+      })
+    }
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -2279,27 +2300,6 @@ pub fn Runtime::begin_message_dialog(
 }
 
 ///|
-pub fn Runtime::poll_message_dialog(
-  self : Runtime,
-  dialog : Int64,
-) -> Bool raise NativeError {
-  let handle = self.active_handle()
-  match
-    read_native_text("message dialog result", BufferBytesIncludingTerminator, (
-      buffer,
-      buffer_len,
-      required,
-    ) => {
-      @native_ffi.proton_runtime_poll_dialog_result_ffi(
-        handle, dialog, buffer, buffer_len, required,
-      )
-    }) {
-    None => false
-    Some(_) => true
-  }
-}
-
-///|
 pub fn WindowRef::begin_confirm_dialog(
   self : WindowRef,
   title : String?,
@@ -2381,27 +2381,6 @@ pub fn WindowRef::begin_choose_directory_dialog(
   self.begin_file_dialog(
     title, path, @native_ffi.proton_window_begin_choose_directory_dialog_ffi,
   )
-}
-
-///|
-pub fn WindowRef::poll_dialog_result(
-  self : WindowRef,
-  dialog : Int64,
-) -> DialogPollResult raise NativeError {
-  let handle = self.handle
-  match
-    read_native_text("window dialog result", BufferBytesIncludingTerminator, (
-      buffer,
-      buffer_len,
-      required,
-    ) => {
-      @native_ffi.proton_window_poll_dialog_result_ffi(
-        handle, dialog, buffer, buffer_len, required,
-      )
-    }) {
-    None => Pending
-    Some(result) => Ready(result)
-  }
 }
 
 ///|

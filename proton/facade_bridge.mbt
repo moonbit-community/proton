@@ -321,6 +321,7 @@ async fn dispatch_bridge_request(
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
   wake_signal : @core.RuntimeWakeSignal,
+  dialog_completions : DialogCompletionStore,
   locale_preferences : @locale.LocalePreferences,
 ) -> @native.BridgeResponse {
   let grant = match
@@ -337,7 +338,8 @@ async fn dispatch_bridge_request(
   @async.with_task_group(command_tasks => {
     result.val = Some(
       dispatch_bridge_request_in_command_scope(
-        window, window_id, grant, host, request, wake_signal, command_tasks, locale_preferences,
+        window, window_id, grant, host, request, wake_signal, dialog_completions,
+        command_tasks, locale_preferences,
       ),
     )
     command_tasks.return_immediately(())
@@ -353,6 +355,7 @@ async fn dispatch_bridge_request_in_command_scope(
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
   wake_signal : @core.RuntimeWakeSignal,
+  dialog_completions : DialogCompletionStore,
   command_tasks : @async.TaskGroup[Unit],
   locale_preferences : @locale.LocalePreferences,
 ) -> @native.BridgeResponse {
@@ -360,7 +363,7 @@ async fn dispatch_bridge_request_in_command_scope(
   let request_context = @core.AppCommandRequestContext::new(
     command_tasks,
     locale_preferences,
-    window=command_window_capability(window.as_ref(), wake_signal),
+    window=command_window_capability(window.as_ref(), dialog_completions),
     window_id~,
     source_origin=request.source_origin(),
     page_instance=request.page_instance(),
@@ -399,29 +402,16 @@ fn command_dialog_level(level : String) -> @native.DialogLevel {
 
 ///|
 async fn wait_for_command_dialog(
-  window : @native.WindowRef,
-  wake_signal : @core.RuntimeWakeSignal,
+  completions : DialogCompletionStore,
   dialog : Int64,
 ) -> String {
-  let mut completed = ""
-  let mut waiting = true
-  while waiting {
-    let revision = wake_signal.revision()
-    match window.poll_dialog_result(dialog) {
-      @native.DialogPollResult::Ready(result) => {
-        completed = result
-        waiting = false
-      }
-      @native.DialogPollResult::Pending => wake_signal.wait_for_change(revision)
-    }
-  }
-  completed
+  completions.wait(dialog)
 }
 
 ///|
 fn command_window_capability(
   window : @native.WindowRef,
-  wake_signal : @core.RuntimeWakeSignal,
+  dialog_completions : DialogCompletionStore,
 ) -> @core.CommandWindow {
   @core.CommandWindow::new(
     async fn(title, message, level) {
@@ -430,7 +420,7 @@ fn command_window_capability(
         message,
         command_dialog_level(level),
       )
-      ignore(wait_for_command_dialog(window, wake_signal, dialog))
+      ignore(wait_for_command_dialog(dialog_completions, dialog))
     },
     async fn(title, message, level) {
       let dialog = window.begin_confirm_dialog(
@@ -438,11 +428,11 @@ fn command_window_capability(
         message,
         command_dialog_level(level),
       )
-      wait_for_command_dialog(window, wake_signal, dialog) == "1"
+      wait_for_command_dialog(dialog_completions, dialog) == "1"
     },
     async fn(title, path) {
       let dialog = window.begin_open_file_dialog(title, path)
-      let result = wait_for_command_dialog(window, wake_signal, dialog)
+      let result = wait_for_command_dialog(dialog_completions, dialog)
       if result.is_empty() {
         None
       } else {
@@ -451,7 +441,7 @@ fn command_window_capability(
     },
     async fn(title, path) {
       let dialog = window.begin_save_file_dialog(title, path)
-      let result = wait_for_command_dialog(window, wake_signal, dialog)
+      let result = wait_for_command_dialog(dialog_completions, dialog)
       if result.is_empty() {
         None
       } else {
@@ -460,7 +450,7 @@ fn command_window_capability(
     },
     async fn(title, path) {
       let dialog = window.begin_choose_directory_dialog(title, path)
-      let result = wait_for_command_dialog(window, wake_signal, dialog)
+      let result = wait_for_command_dialog(dialog_completions, dialog)
       if result.is_empty() {
         None
       } else {

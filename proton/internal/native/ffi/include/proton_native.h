@@ -157,9 +157,6 @@ PROTON_API int32_t proton_runtime_begin_message_dialog(
     proton_runtime_handle_t runtime, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,
     int32_t level, int64_t *out_dialog);
-PROTON_API int32_t proton_runtime_poll_dialog_result(
-    proton_runtime_handle_t runtime, int64_t dialog, char *buffer,
-    int32_t buffer_len, int32_t *out_required_len);
 
 PROTON_API int32_t proton_notification_is_supported(int32_t *out_supported);
 PROTON_API int32_t proton_notification_show(const char *title,
@@ -241,10 +238,6 @@ PROTON_API int32_t proton_window_begin_choose_directory_dialog(
     proton_window_handle_t window, const char *title_utf8,
     int32_t title_len, const char *path_utf8, int32_t path_len,
     int64_t *out_dialog);
-PROTON_API int32_t proton_window_poll_dialog_result(
-    proton_window_handle_t window, int64_t dialog, char *buffer,
-    int32_t buffer_len, int32_t *out_required_len);
-
 /* Session cookie and cache management.
 
    Cookie get uses a begin/poll pattern because the CEF cookie visitor fires

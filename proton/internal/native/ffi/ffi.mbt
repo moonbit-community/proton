@@ -321,16 +321,6 @@ pub extern "C" fn proton_runtime_begin_message_dialog_ffi(
 ) -> Int = "proton_runtime_begin_message_dialog"
 
 ///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_runtime_poll_dialog_result_ffi(
-  runtime : RuntimeHandle,
-  dialog : Int64,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_runtime_poll_dialog_result"
-
-///|
 #borrow(out_supported)
 pub extern "C" fn proton_notification_is_supported_ffi(
   out_supported : Ref[Int],
@@ -647,16 +637,6 @@ pub extern "C" fn proton_window_begin_choose_directory_dialog_ffi(
   path_len : Int,
   out_dialog : Ref[Int64],
 ) -> Int = "proton_window_begin_choose_directory_dialog"
-
-///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_window_poll_dialog_result_ffi(
-  window : WindowHandle,
-  dialog : Int64,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_window_poll_dialog_result"
 
 ///|
 #borrow(buffer)

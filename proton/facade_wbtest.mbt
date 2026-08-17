@@ -1098,6 +1098,68 @@ async test "runtime wakeup preserves notification before suspension" {
 }
 
 ///|
+async test "dialog completion wakes only its registered waiter" {
+  let completions = DialogCompletionStore::new()
+  @async.with_task_group(group => {
+    let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
+    while completions.pending.is_empty() {
+      @async.sleep(0)
+    }
+    completions.complete(
+      Some(@native.NativeDialogCompletion::{
+        dialog: 42L,
+        window: Some(7L),
+        result: Ok("unrelated"),
+      }),
+    )
+    assert_true(waiting.try_wait() is None)
+    completions.complete(
+      Some(@native.NativeDialogCompletion::{
+        dialog: 41L,
+        window: Some(7L),
+        result: Ok("selected"),
+      }),
+    )
+    assert_eq(waiting.wait(), "selected")
+    group.return_immediately(())
+  })
+  assert_true(completions.pending.is_empty())
+}
+
+///|
+async test "dialog completion propagates native failure" {
+  let completions = DialogCompletionStore::new()
+  let observed : Ref[@native.NativeError?] = Ref(None)
+  @async.with_task_group(group => {
+    let waiting = group.spawn(no_wait=true, () => {
+      ignore(completions.wait(51L)) catch {
+        @native.Status(status~, message~) =>
+          observed.val = Some(@native.Status(status~, message~))
+        error =>
+          abort("unexpected dialog completion error: " + error.to_string())
+      }
+    })
+    while completions.pending.is_empty() {
+      @async.sleep(0)
+    }
+    completions.complete(
+      Some(@native.NativeDialogCompletion::{
+        dialog: 51L,
+        window: None,
+        result: Err(@native.Status(status=-7, message="dialog owner closed")),
+      }),
+    )
+    waiting.wait()
+    group.return_immediately(())
+  })
+  assert_eq(
+    observed.val,
+    Some(@native.Status(status=-7, message="dialog owner closed")),
+  )
+  assert_true(completions.pending.is_empty())
+}
+
+///|
 async test "application lifecycle startup rolls back completed hooks" {
   let calls : Array[String] = []
   let cleanup_failures : Array[AppCleanupError] = []

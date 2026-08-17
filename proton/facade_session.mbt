@@ -5,6 +5,7 @@ fn RuntimeSession::new(
   definitions : Array[PreparedWindow],
   windows : Array[RunningWindow],
   command_host : CommandHostRuntime?,
+  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   monitor_bridge : Bool,
@@ -34,6 +35,7 @@ fn RuntimeSession::new(
     windows,
     command_host,
     pending_bridge: [],
+    dialog_completions,
     wakeup,
     forward_menu_events,
     monitor_bridge,
@@ -1386,6 +1388,7 @@ fn RuntimeSession::dispatch_runtime_event(
   self.dispatch_notification_event(event)
   self.dispatch_launch_input_event(event)
   self.dispatch_menu_event(event)
+  self.dialog_completions.complete(event.dialog_completion())
   match event.bridge_request() {
     Some(request) => self.start_bridge_request(request)
     None => ()
@@ -1967,6 +1970,7 @@ fn RuntimeSession::start_bridge_request(
             host,
             request,
             self.wakeup.signal,
+            self.dialog_completions,
             self.locale_preferences,
           )
         },

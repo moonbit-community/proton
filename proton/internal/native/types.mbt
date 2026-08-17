@@ -162,6 +162,7 @@ enum RuntimeEvent {
   BridgeLifecycleChanged(Int64, Int64)
   BridgeRequestReceived(BridgeRequest)
   BridgeRequestCancelled(Int64)
+  DialogCompleted(NativeDialogCompletion)
   MenuCommand(String, Int64?)
   LaunchInput(RuntimeLaunchInput)
   NotificationResult(NativeNotificationResult)
@@ -350,16 +351,17 @@ fn DialogLevel::native_value(self : DialogLevel) -> Int {
 }
 
 ///|
-pub(all) enum DialogPollResult {
-  Pending
-  Ready(String)
+pub(all) struct NativeDialogCompletion {
+  dialog : Int64
+  window : Int64?
+  result : Result[String, NativeError]
 } derive(Debug, Eq)
 
 ///|
-pub extend DialogPollResult with Eq::{not_equal, equal}
+pub extend NativeDialogCompletion with Eq::{not_equal, equal}
 
 ///|
-pub extend DialogPollResult with Debug::{to_repr}
+pub extend NativeDialogCompletion with Debug::{to_repr}
 
 ///|
 /// Geometry and scaling information for the monitor containing a window.
@@ -603,6 +605,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     BridgeLifecycleChanged(_, _) => "bridge_lifecycle_changed"
     BridgeRequestReceived(_) => "bridge_request_received"
     BridgeRequestCancelled(_) => "bridge_request_cancelled"
+    DialogCompleted(_) => "dialog_completed"
     MenuCommand(_, _) => "menu_command"
     LaunchInput(OpenUrls(_)) => "open_urls"
     LaunchInput(OpenFiles(_)) => "open_files"
@@ -640,6 +643,7 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BrowserDownloadUpdated(window, _)
     | ViewEvent(window, _, _) => Some(window)
     MenuCommand(_, window) => window
+    DialogCompleted(completion) => completion.window
     BridgeRequestReceived(_)
     | BridgeRequestCancelled(_)
     | LaunchInput(_)
@@ -775,6 +779,16 @@ pub fn RuntimeEvent::bridge_request_cancellation(self : RuntimeEvent) -> Int64? 
 pub fn RuntimeEvent::bridge_request(self : RuntimeEvent) -> BridgeRequest? {
   match self {
     BridgeRequestReceived(request) => Some(request)
+    _ => None
+  }
+}
+
+///|
+pub fn RuntimeEvent::dialog_completion(
+  self : RuntimeEvent,
+) -> NativeDialogCompletion? {
+  match self {
+    DialogCompleted(completion) => Some(completion)
     _ => None
   }
 }

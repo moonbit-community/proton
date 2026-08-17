@@ -5162,15 +5162,6 @@ int32_t proton_engine_runtime_begin_message_dialog(
       out_dialog, error, error_len);
 }
 
-int32_t proton_engine_runtime_poll_dialog_result(
-    proton_engine_runtime_t *runtime, int64_t dialog, char *buffer,
-    int32_t buffer_len, int32_t *out_required_len, char *error,
-    size_t error_len) {
-  return proton_engine_poll_message_dialog(
-      runtime, NULL, dialog, buffer, buffer_len, out_required_len, error,
-      error_len);
-}
-
 int32_t proton_engine_window_begin_message_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,
@@ -5263,18 +5254,6 @@ int32_t proton_engine_window_begin_choose_directory_dialog(
       error, error_len);
 }
 
-int32_t proton_engine_window_poll_dialog_result(
-    proton_engine_window_t *window,
-    int64_t dialog,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-  return proton_engine_poll_message_dialog(
-      window != NULL ? window->runtime : NULL, window, dialog, buffer,
-      buffer_len, out_required_len, error, error_len);
-}
 // MARK: - Web contents views
 //
 // A view is an extra child browser hosted inside a window's browser host,

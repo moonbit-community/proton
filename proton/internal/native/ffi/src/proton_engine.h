@@ -167,10 +167,6 @@ int32_t proton_engine_runtime_begin_message_dialog(
     proton_engine_runtime_t *runtime, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,
     int32_t level, int64_t *out_dialog, char *error, size_t error_len);
-int32_t proton_engine_runtime_poll_dialog_result(
-    proton_engine_runtime_t *runtime, int64_t dialog, char *buffer,
-    int32_t buffer_len, int32_t *out_required_len, char *error,
-    size_t error_len);
 
 int32_t proton_engine_notification_is_supported(int32_t *out_supported,
                                                 char *error,
@@ -324,15 +320,6 @@ int32_t proton_engine_window_begin_choose_directory_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len);
-int32_t proton_engine_window_poll_dialog_result(
-    proton_engine_window_t *window,
-    int64_t dialog,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len);
-
 proton_event_t *proton_engine_take_platform_event(
     proton_engine_runtime_t *runtime);
 const char *proton_engine_name(void);

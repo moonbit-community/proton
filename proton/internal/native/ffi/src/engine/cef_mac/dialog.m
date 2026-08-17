@@ -4,6 +4,7 @@
 
 #include "window.h"
 #include "../../proton_engine.h"
+#include "../../proton_event.h"
 
 #import <Cocoa/Cocoa.h>
 
@@ -19,11 +20,9 @@ typedef struct proton_engine_dialog_request {
   int64_t id;
   int owner_kind;
   uintptr_t owner_id;
+  int64_t event_window;
   int refs;
   int completed;
-  int32_t status;
-  char *result;
-  char error[512];
   void *platform_state;
   struct proton_engine_dialog_request *next;
 } proton_engine_dialog_request_t;
@@ -31,7 +30,6 @@ typedef struct proton_engine_dialog_request {
 static int64_t g_next_dialog_id = 1;
 static proton_engine_dialog_request_t *g_dialog_requests = NULL;
 static pthread_mutex_t g_dialog_lock = PTHREAD_MUTEX_INITIALIZER;
-static proton_engine_dialog_signal_callback_t g_dialog_signal_callback = NULL;
 
 static void proton_engine_set_message(char *error,
                                       size_t error_len,
@@ -39,24 +37,6 @@ static void proton_engine_set_message(char *error,
   if (error != NULL && error_len > 0) {
     snprintf(error, error_len, "%s", message != NULL ? message : "");
   }
-}
-
-static char *proton_engine_strdup(const char *value) {
-  if (value == NULL) {
-    value = "";
-  }
-  size_t len = strlen(value);
-  char *copy = (char *)malloc(len + 1);
-  if (copy == NULL) {
-    return NULL;
-  }
-  memcpy(copy, value, len + 1);
-  return copy;
-}
-
-void proton_engine_dialog_set_signal_callback(
-    proton_engine_dialog_signal_callback_t callback) {
-  g_dialog_signal_callback = callback;
 }
 
 static NSString *proton_engine_string_from_utf8(
@@ -84,20 +64,6 @@ static void proton_engine_dialog_unlock(void) {
   pthread_mutex_unlock(&g_dialog_lock);
 }
 
-static proton_engine_dialog_request_t *proton_engine_dialog_request_find_locked(
-    int owner_kind,
-    uintptr_t owner_id,
-    int64_t id) {
-  for (proton_engine_dialog_request_t *request = g_dialog_requests;
-       request != NULL; request = request->next) {
-    if (request->id == id && request->owner_kind == owner_kind &&
-        request->owner_id == owner_id) {
-      return request;
-    }
-  }
-  return NULL;
-}
-
 static proton_engine_dialog_request_t *
 proton_engine_dialog_request_remove_locked(int owner_kind,
                                            uintptr_t owner_id,
@@ -121,7 +87,6 @@ static void proton_engine_dialog_request_free(
   if (request == NULL) {
     return;
   }
-  free(request->result);
   free(request);
 }
 
@@ -158,6 +123,7 @@ enum {
 static int32_t proton_engine_dialog_request_create_for_owner(
     int owner_kind,
     uintptr_t owner_id,
+    int64_t event_window,
     proton_engine_dialog_request_t **out_request,
     int64_t *out_dialog,
     char *error,
@@ -189,6 +155,7 @@ static int32_t proton_engine_dialog_request_create_for_owner(
   request->refs = 1;
   request->owner_kind = owner_kind;
   request->owner_id = owner_id;
+  request->event_window = event_window;
   request->next = g_dialog_requests;
   g_dialog_requests = request;
   proton_engine_dialog_unlock();
@@ -216,8 +183,9 @@ static int32_t proton_engine_dialog_request_create(
   }
   return proton_engine_dialog_request_create_for_owner(
       PROTON_ENGINE_DIALOG_OWNER_WINDOW,
-      (uintptr_t)proton_engine_window_native_id(window), out_request,
-      out_dialog, error, error_len);
+      (uintptr_t)proton_engine_window_native_id(window),
+      proton_engine_window_public_id(window), out_request, out_dialog, error,
+      error_len);
 }
 
 static void proton_engine_dialog_complete(
@@ -228,29 +196,34 @@ static void proton_engine_dialog_complete(
   if (request == NULL) {
     return;
   }
-  char *result_copy = NULL;
-  if (status == PROTON_OK) {
-    result_copy = proton_engine_strdup(result != NULL ? result : "");
-    if (result_copy == NULL) {
-      status = PROTON_ERR_ENGINE;
-      error_message = "failed to copy dialog result";
+  proton_engine_dialog_lock();
+  if (request->completed) {
+    proton_engine_dialog_unlock();
+    return;
+  }
+  request->completed = 1;
+  proton_engine_dialog_request_t *removed =
+      proton_engine_dialog_request_remove_locked(
+          request->owner_kind, request->owner_id, request->id);
+  proton_engine_dialog_unlock();
+
+  proton_event_t *event = proton_event_create(PROTON_EVENT_DIALOG_COMPLETED);
+  if (event != NULL) {
+    event->window = request->event_window;
+    event->request_id = request->id;
+    event->int_a = status;
+    if (!proton_event_set_text(&event->text_a,
+                               status == PROTON_OK && result != NULL
+                                   ? result
+                                   : "") ||
+        !proton_event_set_text(&event->text_b,
+                               error_message != NULL ? error_message : "")) {
+      proton_event_destroy(event);
+    } else {
+      (void)proton_event_publish(event);
     }
   }
-
-  proton_engine_dialog_lock();
-  if (!request->completed) {
-    request->completed = 1;
-    request->status = status;
-    request->result = result_copy;
-    result_copy = NULL;
-    snprintf(request->error, sizeof(request->error), "%s",
-             error_message != NULL ? error_message : "");
-  }
-  proton_engine_dialog_unlock();
-  free(result_copy);
-  if (g_dialog_signal_callback != NULL) {
-    g_dialog_signal_callback(PROTON_WAIT_PLATFORM);
-  }
+  proton_engine_dialog_request_release(removed);
 }
 
 static NSAlertStyle proton_engine_alert_style(int32_t level);
@@ -400,18 +373,26 @@ static void proton_engine_dialog_complete_string(
 }
 
 void proton_engine_dialog_complete_window_closed(uint64_t native_id) {
-  proton_engine_dialog_lock();
-  for (proton_engine_dialog_request_t *request = g_dialog_requests;
-       request != NULL; request = request->next) {
-    if (request->owner_kind == PROTON_ENGINE_DIALOG_OWNER_WINDOW &&
-        request->owner_id == (uintptr_t)native_id && !request->completed) {
-      request->completed = 1;
-      request->status = PROTON_ERR_DESTROYED;
-      snprintf(request->error, sizeof(request->error), "%s",
-               "window closed before dialog completed");
+  while (1) {
+    proton_engine_dialog_request_t *matched = NULL;
+    proton_engine_dialog_lock();
+    for (proton_engine_dialog_request_t *request = g_dialog_requests;
+         request != NULL; request = request->next) {
+      if (request->owner_kind == PROTON_ENGINE_DIALOG_OWNER_WINDOW &&
+          request->owner_id == (uintptr_t)native_id && !request->completed) {
+        request->refs++;
+        matched = request;
+        break;
+      }
     }
+    proton_engine_dialog_unlock();
+    if (matched == NULL) {
+      return;
+    }
+    proton_engine_dialog_complete(matched, PROTON_ERR_DESTROYED, NULL,
+                                  "window closed before dialog completed");
+    proton_engine_dialog_request_release(matched);
   }
-  proton_engine_dialog_unlock();
 }
 
 void proton_engine_dialog_dispose_runtime(void *runtime) {
@@ -516,8 +497,8 @@ int32_t proton_engine_runtime_begin_message_dialog(
   }
   proton_engine_dialog_request_t *request = NULL;
   int32_t status = proton_engine_dialog_request_create_for_owner(
-      PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, &request,
-      out_dialog, error, error_len);
+      PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime,
+      PROTON_INVALID_HANDLE, &request, out_dialog, error, error_len);
   if (status != PROTON_OK) {
     return status;
   }
@@ -541,82 +522,6 @@ int32_t proton_engine_runtime_begin_message_dialog(
     [controller show];
     [controller release];
   }
-  return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_poll_dialog_result(
-    proton_engine_runtime_t *runtime,
-    int64_t dialog,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  if (runtime == NULL) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (out_required_len == NULL) {
-    proton_engine_set_message(error, error_len, "out_required_len is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  proton_engine_dialog_lock();
-  proton_engine_dialog_request_t *request =
-      proton_engine_dialog_request_find_locked(
-          PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, dialog);
-  if (request == NULL) {
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, "dialog request is unknown");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  ProtonRuntimeAlertController *controller =
-      request->platform_state != NULL
-          ? (ProtonRuntimeAlertController *)request->platform_state
-          : nil;
-  [controller retain];
-  proton_engine_dialog_unlock();
-  [controller tick];
-  [controller release];
-  proton_engine_dialog_lock();
-  request = proton_engine_dialog_request_find_locked(
-      PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, dialog);
-  if (request == NULL) {
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, "dialog request is unknown");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (!request->completed) {
-    proton_engine_dialog_unlock();
-    return PROTON_EVENT_NONE;
-  }
-  if (request->status != PROTON_OK) {
-    int32_t request_status = request->status;
-    char request_error[sizeof(request->error)];
-    snprintf(request_error, sizeof(request_error), "%s", request->error);
-    request = proton_engine_dialog_request_remove_locked(
-        PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, dialog);
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, request_error);
-    proton_engine_dialog_request_release(request);
-    return request_status;
-  }
-  const char *result = request->result != NULL ? request->result : "";
-  int32_t required = (int32_t)strlen(result) + 1;
-  *out_required_len = required;
-  if (buffer == NULL || buffer_len < required) {
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, "dialog result buffer too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  memcpy(buffer, result, (size_t)required);
-  request = proton_engine_dialog_request_remove_locked(
-      PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, dialog);
-  proton_engine_dialog_unlock();
-  proton_engine_dialog_request_release(request);
   return PROTON_OK;
 }
 
@@ -879,70 +784,6 @@ int32_t proton_engine_window_begin_choose_directory_dialog(
       window, title_utf8, title_len, path_utf8, path_len,
       PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY, out_dialog, error,
       error_len);
-}
-
-int32_t proton_engine_window_poll_dialog_result(
-    proton_engine_window_t *window,
-    int64_t dialog,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len) {
-
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (out_required_len == NULL) {
-    proton_engine_set_message(error, error_len, "out_required_len is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-
-  proton_engine_dialog_lock();
-  proton_engine_dialog_request_t *request =
-      proton_engine_dialog_request_find_locked(
-          PROTON_ENGINE_DIALOG_OWNER_WINDOW,
-          (uintptr_t)proton_engine_window_native_id(window), dialog);
-  if (request == NULL) {
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, "dialog request is unknown");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (!request->completed) {
-    proton_engine_dialog_unlock();
-    return PROTON_EVENT_NONE;
-  }
-  if (request->status != PROTON_OK) {
-    int32_t status = request->status;
-    char request_error[sizeof(request->error)];
-    snprintf(request_error, sizeof(request_error), "%s", request->error);
-    request = proton_engine_dialog_request_remove_locked(
-        PROTON_ENGINE_DIALOG_OWNER_WINDOW,
-        (uintptr_t)proton_engine_window_native_id(window), dialog);
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, request_error);
-    proton_engine_dialog_request_release(request);
-    return status;
-  }
-  const char *result = request->result != NULL ? request->result : "";
-  int32_t required = (int32_t)strlen(result) + 1;
-  *out_required_len = required;
-  if (buffer == NULL || buffer_len < required) {
-    proton_engine_dialog_unlock();
-    proton_engine_set_message(error, error_len, "dialog result buffer too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  memcpy(buffer, result, (size_t)required);
-  request = proton_engine_dialog_request_remove_locked(
-      PROTON_ENGINE_DIALOG_OWNER_WINDOW,
-      (uintptr_t)proton_engine_window_native_id(window), dialog);
-  proton_engine_dialog_unlock();
-  proton_engine_dialog_request_release(request);
-  return PROTON_OK;
 }
 
 #endif

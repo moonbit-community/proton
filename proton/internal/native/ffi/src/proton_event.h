@@ -41,6 +41,7 @@ typedef enum proton_event_kind {
   PROTON_EVENT_VIEW_TITLE_UPDATED = 20,
   PROTON_EVENT_VIEW_LOAD_FAILED = 21,
   PROTON_EVENT_BRIDGE_REQUEST = 22,
+  PROTON_EVENT_DIALOG_COMPLETED = 23,
 } proton_event_kind_t;
 
 typedef struct proton_event {

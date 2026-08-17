@@ -1582,31 +1582,6 @@ static int32_t proton_validate_begin_dialog(int64_t *out_dialog) {
   return PROTON_OK;
 }
 
-static int32_t proton_validate_poll_dialog_result_args(
-    int64_t dialog,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len) {
-  if (dialog == PROTON_INVALID_HANDLE) {
-    return proton_set_error(PROTON_ERR_INVALID_HANDLE,
-                            "invalid dialog handle");
-  }
-  if (out_required_len == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_required_len is required");
-  }
-  *out_required_len = 0;
-  if (buffer_len < 0) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "dialog result buffer length must not be negative");
-  }
-  if (buffer_len > 0 && buffer == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "dialog result buffer is required");
-  }
-  return PROTON_OK;
-}
-
 static int32_t proton_window_bridge_json(
     proton_window_handle_t window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len,
@@ -1687,34 +1662,6 @@ int32_t proton_runtime_begin_message_dialog(
   }
   g_last_error[0] = '\0';
   return PROTON_OK;
-}
-
-int32_t proton_runtime_poll_dialog_result(
-    proton_runtime_handle_t runtime, int64_t dialog, char *buffer,
-    int32_t buffer_len, int32_t *out_required_len) {
-  int32_t status = proton_validate_poll_dialog_result_args(
-      dialog, buffer, buffer_len, out_required_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  proton_runtime_slot_t *slot = NULL;
-  status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "runtime dialog requires native engine");
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_runtime_poll_dialog_result(
-      slot->engine_runtime, dialog, buffer, buffer_len, out_required_len,
-      engine_error, sizeof(engine_error));
-  if (status < 0) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return status;
 }
 
 int32_t proton_notification_is_supported(int32_t *out_supported) {
@@ -1945,33 +1892,6 @@ int32_t proton_window_begin_choose_directory_dialog(
   }
   g_last_error[0] = '\0';
   return PROTON_OK;
-}
-
-int32_t proton_window_poll_dialog_result(
-    proton_window_handle_t window,
-    int64_t dialog,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len) {
-  int32_t status = proton_validate_poll_dialog_result_args(
-      dialog, buffer, buffer_len, out_required_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  proton_window_slot_t *slot = NULL;
-  status = proton_require_dialog_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_window_poll_dialog_result(
-      slot->engine_window, dialog, buffer, buffer_len, out_required_len,
-      engine_error, sizeof(engine_error));
-  if (status < 0) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return status;
 }
 
 int32_t proton_window_cookie_begin_get_json(proton_window_handle_t window,

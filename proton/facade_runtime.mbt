@@ -156,6 +156,7 @@ async fn run_manifest(
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []
   let wakeup = RuntimeWakeup::new()
+  let dialog_completions = DialogCompletionStore::new()
   try {
     if !headless {
       match resolve_runtime_menu(menu, locale_preferences, application_name) {
@@ -264,7 +265,8 @@ async fn run_manifest(
     @async.with_task_group(application_tasks => {
       @async.with_task_group(window_tasks => {
         let session = RuntimeSession::new(
-          runtime, locale_preferences, definitions, windows, command_host, wakeup,
+          runtime, locale_preferences, definitions, windows, command_host,
+          dialog_completions, wakeup,
           forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
           window_tasks, view_event_handlers, window_close_handler, window_lifecycle_hooks,
           lifecycle_failures, bridge_startup_timeout_ms, navigation_handler, popup_handler,
@@ -324,6 +326,7 @@ async fn run_manifest(
         show_app_run_failure(
           runtime,
           preferred_active_window(windows).map(window => window.window),
+          dialog_completions,
           wakeup,
           primary,
           locale_preferences,
@@ -668,6 +671,7 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
 ///|
 async fn show_runtime_failure_dialog(
   runtime : @native.Runtime,
+  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   detail : String,
   preferences : @locale.LocalePreferences,
@@ -689,19 +693,16 @@ async fn show_runtime_failure_dialog(
   ) catch {
     _ => return
   }
-  while true {
-    let revision = wakeup.revision()
-    let completed = runtime.poll_message_dialog(dialog) catch { _ => return }
-    match completed {
-      true => return
-      false => wakeup.wait_after(revision) catch { _ => return }
-    }
+  wait_for_failure_dialog(runtime, dialog_completions, wakeup, dialog) catch {
+    _ => return
   }
 }
 
 ///|
 async fn show_window_failure_dialog(
+  runtime : @native.Runtime,
   window : @native.WindowRef,
+  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   detail : String,
   preferences : @locale.LocalePreferences,
@@ -717,25 +718,17 @@ async fn show_window_failure_dialog(
   ) catch {
     _ => return false
   }
-  while true {
-    let revision = wakeup.revision()
-    let result = window.poll_dialog_result(dialog) catch { _ => return false }
-    match result {
-      @native.DialogPollResult::Ready(_) => return true
-      @native.DialogPollResult::Pending =>
-        wakeup.wait_after(revision) catch {
-          _ => return false
-        }
-    }
-  } nobreak {
-    false
+  wait_for_failure_dialog(runtime, dialog_completions, wakeup, dialog) catch {
+    _ => return false
   }
+  true
 }
 
 ///|
 async fn show_app_run_failure(
   runtime : @native.Runtime,
   window : @native.Window?,
+  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   error : AppRunError,
   preferences : @locale.LocalePreferences,
@@ -746,7 +739,9 @@ async fn show_app_run_failure(
     match window {
       Some(window) =>
         if show_window_failure_dialog(
+            runtime,
             window.as_ref(),
+            dialog_completions,
             wakeup,
             message,
             preferences,
@@ -757,7 +752,8 @@ async fn show_app_run_failure(
     }
   }
   show_runtime_failure_dialog(
-    runtime, wakeup, message, preferences, application_started,
+    runtime, dialog_completions, wakeup, message, preferences,
+    application_started,
   )
 }
 
