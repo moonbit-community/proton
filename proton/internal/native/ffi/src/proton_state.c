@@ -51,7 +51,8 @@ int32_t proton_runtime_slot_create(proton_engine_runtime_t *engine_runtime,
                             "out_runtime is required");
   }
   *out_runtime = NULL;
-  if (g_active_runtime != NULL && !g_active_runtime->destroyed) {
+  if (g_active_runtime != NULL &&
+      g_active_runtime->lifecycle != PROTON_RUNTIME_DESTROYED) {
     return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
                             "runtime is already initialized");
   }
@@ -62,6 +63,7 @@ int32_t proton_runtime_slot_create(proton_engine_runtime_t *engine_runtime,
                             "failed to allocate runtime state");
   }
   runtime->engine_runtime = engine_runtime;
+  runtime->lifecycle = PROTON_RUNTIME_ACTIVE;
   runtime->app_instance = PROTON_INVALID_HANDLE;
   runtime->owner_thread = proton_current_thread_id();
   runtime->next_bridge_request_id = 1;
@@ -89,7 +91,7 @@ void proton_runtime_slot_destroy(proton_runtime_slot_t *runtime) {
     free(window);
     window = next;
   }
-  runtime->destroyed = true;
+  runtime->lifecycle = PROTON_RUNTIME_DESTROYED;
   if (g_active_runtime == runtime) {
     g_active_runtime = NULL;
   }
@@ -98,11 +100,24 @@ void proton_runtime_slot_destroy(proton_runtime_slot_t *runtime) {
 
 int32_t proton_get_runtime(proton_runtime_slot_t *runtime,
                            proton_runtime_slot_t **out_runtime) {
+  int32_t status = proton_get_runtime_for_destroy(runtime, out_runtime);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (runtime->lifecycle != PROTON_RUNTIME_ACTIVE) {
+    return proton_set_error(PROTON_ERR_DESTROYED,
+                            "runtime is being destroyed");
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_get_runtime_for_destroy(proton_runtime_slot_t *runtime,
+                                       proton_runtime_slot_t **out_runtime) {
   if (runtime == NULL || out_runtime == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_HANDLE,
                             "invalid runtime handle");
   }
-  if (runtime->destroyed) {
+  if (runtime->lifecycle == PROTON_RUNTIME_DESTROYED) {
     return proton_set_error(PROTON_ERR_DESTROYED, "runtime is destroyed");
   }
   int32_t status = proton_require_runtime_owner_thread(runtime);
@@ -113,8 +128,15 @@ int32_t proton_get_runtime(proton_runtime_slot_t *runtime,
   return PROTON_OK;
 }
 
+void proton_runtime_slot_begin_destroy(proton_runtime_slot_t *runtime) {
+  if (runtime != NULL && runtime->lifecycle == PROTON_RUNTIME_ACTIVE) {
+    runtime->lifecycle = PROTON_RUNTIME_DESTROYING;
+  }
+}
+
 bool proton_has_active_runtime(void) {
-  return g_active_runtime != NULL && !g_active_runtime->destroyed;
+  return g_active_runtime != NULL &&
+         g_active_runtime->lifecycle != PROTON_RUNTIME_DESTROYED;
 }
 
 bool proton_runtime_enqueue_event(proton_runtime_slot_t *runtime,
@@ -191,6 +213,7 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
                             "failed to allocate window state");
   }
   window->runtime = runtime;
+  window->lifecycle = PROTON_WINDOW_LIVE;
   window->engine_window = engine_window;
   window->width = width;
   window->height = height;
@@ -211,28 +234,58 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
 }
 
 void proton_window_slot_destroy(proton_window_slot_t *window) {
-  proton_window_slot_close(window);
-}
-
-void proton_window_slot_close(proton_window_slot_t *window) {
   if (window != NULL) {
-    window->destroyed = true;
+    window->lifecycle = PROTON_WINDOW_DESTROYED;
     window->visible = false;
     window->engine_window = NULL;
   }
 }
 
+void proton_window_slot_request_close(proton_window_slot_t *window) {
+  if (window != NULL && window->lifecycle == PROTON_WINDOW_LIVE) {
+    window->lifecycle = PROTON_WINDOW_CLOSE_REQUESTED;
+  }
+}
+
+void proton_window_slot_mark_closed(proton_window_slot_t *window) {
+  if (window != NULL && window->lifecycle != PROTON_WINDOW_DESTROYING &&
+      window->lifecycle != PROTON_WINDOW_DESTROYED) {
+    window->lifecycle = PROTON_WINDOW_CLOSED;
+    window->visible = false;
+  }
+}
+
+void proton_window_slot_begin_destroy(proton_window_slot_t *window) {
+  if (window != NULL && window->lifecycle != PROTON_WINDOW_DESTROYED) {
+    window->lifecycle = PROTON_WINDOW_DESTROYING;
+  }
+}
+
 int32_t proton_get_window(proton_window_slot_t *window,
                           proton_window_slot_t **out_window) {
+  int32_t status = proton_get_window_for_destroy(window, out_window);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (window->lifecycle != PROTON_WINDOW_LIVE) {
+    return proton_set_error(PROTON_ERR_DESTROYED,
+                            "window is closing or closed");
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_get_window_for_destroy(proton_window_slot_t *window,
+                                      proton_window_slot_t **out_window) {
   if (window == NULL || out_window == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_HANDLE,
                             "invalid window handle");
   }
-  if (window->destroyed) {
+  if (window->lifecycle == PROTON_WINDOW_DESTROYED) {
     return proton_set_error(PROTON_ERR_DESTROYED, "window is destroyed");
   }
   proton_runtime_slot_t *runtime = NULL;
-  int32_t status = proton_get_runtime(window->runtime, &runtime);
+  int32_t status =
+      proton_get_runtime_for_destroy(window->runtime, &runtime);
   if (status != PROTON_OK) {
     return status;
   }
@@ -258,10 +311,12 @@ void proton_runtime_sync_engine_closed_windows(
     proton_runtime_slot_t *runtime) {
   for (proton_window_slot_t *window = runtime->windows; window != NULL;
        window = window->next) {
-    if (window->destroyed || window->engine_window == NULL ||
+    if (window->lifecycle == PROTON_WINDOW_DESTROYED ||
+        window->engine_window == NULL ||
         !proton_engine_window_is_closed(window->engine_window)) {
       continue;
     }
+    proton_window_slot_mark_closed(window);
     if (proton_window_enqueue_closed_once(runtime, window) == PROTON_OK) {
       window->visible = false;
     }
@@ -337,7 +392,9 @@ int32_t proton_runtime_sync_engine_window_states(
     proton_runtime_slot_t *runtime) {
   for (proton_window_slot_t *window = runtime->windows; window != NULL;
        window = window->next) {
-    if (window->destroyed || window->engine_window == NULL ||
+    if (window->lifecycle == PROTON_WINDOW_DESTROYING ||
+        window->lifecycle == PROTON_WINDOW_DESTROYED ||
+        window->engine_window == NULL ||
         proton_engine_window_is_closed(window->engine_window)) {
       continue;
     }
@@ -382,7 +439,9 @@ int32_t proton_runtime_sync_engine_close_requests(
     proton_runtime_slot_t *runtime) {
   for (proton_window_slot_t *window = runtime->windows; window != NULL;
        window = window->next) {
-    if (window->destroyed || window->engine_window == NULL) {
+    if (window->lifecycle == PROTON_WINDOW_DESTROYING ||
+        window->lifecycle == PROTON_WINDOW_DESTROYED ||
+        window->engine_window == NULL) {
       continue;
     }
     uint64_t request_id = 0;
@@ -421,7 +480,9 @@ int32_t proton_runtime_sync_engine_browser_events(
   char event_json[PROTON_MAX_EVENT_BYTES];
   for (proton_window_slot_t *window = runtime->windows; window != NULL;
        window = window->next) {
-    if (window->destroyed || window->engine_window == NULL) {
+    if (window->lifecycle == PROTON_WINDOW_DESTROYING ||
+        window->lifecycle == PROTON_WINDOW_DESTROYED ||
+        window->engine_window == NULL) {
       continue;
     }
     while (runtime->event_count < PROTON_MAX_EVENTS) {
@@ -450,7 +511,7 @@ int32_t proton_runtime_sync_engine_view_events(
   char event_json[PROTON_MAX_EVENT_BYTES];
   for (proton_view_slot_t *view = runtime->views; view != NULL;
        view = view->next) {
-    if (view->destroyed || view->engine_view == NULL) {
+    if (view->lifecycle != PROTON_VIEW_LIVE || view->engine_view == NULL) {
       continue;
     }
     while (runtime->event_count < PROTON_MAX_EVENTS) {
@@ -478,7 +539,9 @@ void proton_runtime_sync_engine_bridge_lifecycle(
     proton_runtime_slot_t *runtime) {
   for (proton_window_slot_t *window = runtime->windows; window != NULL;
        window = window->next) {
-    if (window->destroyed || window->engine_window == NULL) {
+    if (window->lifecycle == PROTON_WINDOW_DESTROYING ||
+        window->lifecycle == PROTON_WINDOW_DESTROYED ||
+        window->engine_window == NULL) {
       continue;
     }
     uint64_t revision =
@@ -502,9 +565,10 @@ void proton_runtime_sync_engine_bridge_lifecycle(
 int32_t proton_destroy_windows_for_runtime(proton_runtime_slot_t *runtime) {
   for (proton_window_slot_t *window = runtime->windows; window != NULL;
        window = window->next) {
-    if (window->destroyed) {
+    if (window->lifecycle == PROTON_WINDOW_DESTROYED) {
       continue;
     }
+    proton_window_slot_begin_destroy(window);
     proton_destroy_views_for_window(window);
     if (window->engine_window != NULL) {
       char engine_error[512] = {0};
@@ -535,6 +599,7 @@ int32_t proton_view_slot_create(proton_window_slot_t *window,
                             "failed to allocate view state");
   }
   view->runtime = window->runtime;
+  view->lifecycle = PROTON_VIEW_LIVE;
   view->window = window;
   view->engine_view = engine_view;
   view->x = x;
@@ -555,21 +620,41 @@ int32_t proton_view_slot_create(proton_window_slot_t *window,
 
 void proton_view_slot_destroy(proton_view_slot_t *view) {
   if (view != NULL) {
-    view->destroyed = true;
+    view->lifecycle = PROTON_VIEW_DESTROYED;
     view->engine_view = NULL;
+  }
+}
+
+void proton_view_slot_begin_destroy(proton_view_slot_t *view) {
+  if (view != NULL && view->lifecycle == PROTON_VIEW_LIVE) {
+    view->lifecycle = PROTON_VIEW_DESTROYING;
   }
 }
 
 int32_t proton_get_view(proton_view_slot_t *view,
                         proton_view_slot_t **out_view) {
+  int32_t status = proton_get_view_for_destroy(view, out_view);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (view->lifecycle != PROTON_VIEW_LIVE) {
+    return proton_set_error(PROTON_ERR_DESTROYED,
+                            "view is being destroyed");
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_get_view_for_destroy(proton_view_slot_t *view,
+                                    proton_view_slot_t **out_view) {
   if (view == NULL || out_view == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_HANDLE, "invalid view handle");
   }
-  if (view->destroyed) {
+  if (view->lifecycle == PROTON_VIEW_DESTROYED) {
     return proton_set_error(PROTON_ERR_DESTROYED, "view is destroyed");
   }
   proton_runtime_slot_t *runtime = NULL;
-  int32_t status = proton_get_runtime(view->runtime, &runtime);
+  int32_t status =
+      proton_get_runtime_for_destroy(view->runtime, &runtime);
   if (status != PROTON_OK) {
     return status;
   }
@@ -580,7 +665,8 @@ int32_t proton_get_view(proton_view_slot_t *view,
 void proton_destroy_views_for_window(proton_window_slot_t *window) {
   for (proton_view_slot_t *view = window->runtime->views; view != NULL;
        view = view->next) {
-    if (!view->destroyed && view->window == window) {
+    if (view->lifecycle != PROTON_VIEW_DESTROYED && view->window == window) {
+      proton_view_slot_begin_destroy(view);
       proton_view_slot_destroy(view);
     }
   }

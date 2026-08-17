@@ -101,6 +101,14 @@
 #endif
 
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
+
+typedef enum proton_host_lifecycle {
+  PROTON_HOST_IDLE = 0,
+  PROTON_HOST_ACTIVE = 1,
+  PROTON_HOST_ENDING = 2,
+} proton_host_lifecycle_t;
+
+static proton_host_lifecycle_t g_host_lifecycle = PROTON_HOST_IDLE;
 static PROTON_THREAD_LOCAL char g_last_error[512];
 
 int32_t proton_set_error(int32_t code, const char *message) {
@@ -486,13 +494,14 @@ int32_t proton_internal_runtime_create(
 
 int32_t proton_runtime_destroy(proton_runtime_handle_t runtime) {
   proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
+  int32_t status = proton_get_runtime_for_destroy(runtime, &slot);
   if (status == PROTON_ERR_DESTROYED) {
     return PROTON_OK;
   }
   if (status != PROTON_OK) {
     return status;
   }
+  proton_runtime_slot_begin_destroy(slot);
 
   if (slot->app_instance != PROTON_INVALID_HANDLE) {
     proton_app_instance_detach_runtime_impl(slot->app_instance);
@@ -620,12 +629,17 @@ int32_t proton_runtime_wait(proton_runtime_handle_t runtime,
 }
 
 int32_t proton_host_loop_begin(void) {
+  if (g_host_lifecycle != PROTON_HOST_IDLE) {
+    return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
+                            "host loop is already active");
+  }
   char engine_error[512] = {0};
   int32_t status =
       proton_engine_host_loop_begin(engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
+  g_host_lifecycle = PROTON_HOST_ACTIVE;
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
@@ -640,6 +654,10 @@ int32_t proton_host_loop_poll(int32_t timeout_ms, uint32_t *out_ready_mask) {
     return proton_set_error(
         PROTON_ERR_INVALID_ARGUMENT,
         "timeout_ms must be non-negative or PROTON_WAIT_TIMEOUT_INFINITE");
+  }
+  if (g_host_lifecycle != PROTON_HOST_ACTIVE) {
+    return proton_set_error(PROTON_ERR_NOT_INITIALIZED,
+                            "host loop is not active");
   }
   /* No runtime handle: the loop predates the first one, and the engine walks
      its own process-wide state to decide what to pump. */
@@ -656,7 +674,12 @@ int32_t proton_host_loop_poll(int32_t timeout_ms, uint32_t *out_ready_mask) {
 }
 
 void proton_host_loop_end(void) {
+  if (g_host_lifecycle != PROTON_HOST_ACTIVE) {
+    return;
+  }
+  g_host_lifecycle = PROTON_HOST_ENDING;
   proton_engine_host_loop_end();
+  g_host_lifecycle = PROTON_HOST_IDLE;
 }
 
 void proton_runtime_signal_wakeup(void) {
@@ -972,7 +995,7 @@ int32_t proton_internal_window_create(
 
 int32_t proton_window_destroy(proton_window_handle_t window) {
   proton_window_slot_t *slot = NULL;
-  int32_t status = proton_get_window(window, &slot);
+  int32_t status = proton_get_window_for_destroy(window, &slot);
   if (status == PROTON_ERR_DESTROYED) {
     return PROTON_OK;
   }
@@ -990,6 +1013,7 @@ int32_t proton_window_destroy(proton_window_handle_t window) {
     return proton_set_error(PROTON_ERR_QUEUE_FAILED,
                             "failed to queue window_closed event");
   }
+  proton_window_slot_begin_destroy(slot);
   proton_destroy_views_for_window(slot);
   if (slot->engine_window != NULL) {
     proton_engine_window_cookie_cleanup(slot->engine_window);
@@ -1050,12 +1074,16 @@ int32_t proton_window_hide(proton_window_handle_t window) {
 
 int32_t proton_window_close(proton_window_handle_t window) {
   proton_window_slot_t *slot = NULL;
-  int32_t status = proton_get_window(window, &slot);
+  int32_t status = proton_get_window_for_destroy(window, &slot);
   if (status == PROTON_ERR_DESTROYED) {
     return PROTON_OK;
   }
   if (status != PROTON_OK) {
     return status;
+  }
+  if (slot->lifecycle != PROTON_WINDOW_LIVE) {
+    g_last_error[0] = '\0';
+    return PROTON_OK;
   }
   if (slot->engine_window != NULL) {
     char engine_error[512] = {0};
@@ -1064,6 +1092,7 @@ int32_t proton_window_close(proton_window_handle_t window) {
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
     }
+    proton_window_slot_request_close(slot);
   } else {
     proton_runtime_slot_t *runtime = NULL;
     status = proton_get_runtime(slot->runtime, &runtime);
@@ -1074,7 +1103,8 @@ int32_t proton_window_close(proton_window_handle_t window) {
     if (status != PROTON_OK) {
       return status;
     }
-    proton_window_slot_close(slot);
+    proton_window_slot_request_close(slot);
+    proton_window_slot_mark_closed(slot);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;
@@ -2203,13 +2233,14 @@ int32_t proton_internal_view_create(
 
 int32_t proton_view_destroy(proton_view_handle_t view) {
   proton_view_slot_t *slot = NULL;
-  int32_t status = proton_get_view(view, &slot);
+  int32_t status = proton_get_view_for_destroy(view, &slot);
   if (status == PROTON_ERR_DESTROYED) {
     return PROTON_OK;
   }
   if (status != PROTON_OK) {
     return status;
   }
+  proton_view_slot_begin_destroy(slot);
   if (slot->engine_view != NULL) {
     char engine_error[512] = {0};
     status = proton_engine_view_destroy(slot->engine_view, engine_error,

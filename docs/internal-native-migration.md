@@ -54,7 +54,7 @@ native prebuilt, or compatibility package remains.
 - [x] Replace bridge config JSON with typed FFI.
 - [x] Replace menu config JSON with typed FFI.
 - [x] Replace the global integer handle registry with private external pointers.
-- [ ] Add explicit host, runtime, window, and view lifecycle state.
+- [x] Add explicit host, runtime, window, and view lifecycle state.
 - [x] Keep all CEF and UI operations on the owner thread.
 - [x] Isolate native callback allocations from MoonBit's thread-local allocator.
 - [ ] Translate private FFI failures into subsystem-specific MoonBit errors.
