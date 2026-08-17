@@ -369,8 +369,7 @@ int32_t proton_runtime_sync_engine_window_states(
     proton_runtime_slot_t *runtime) {
   for (proton_window_slot_t *window = runtime->windows; window != NULL;
        window = window->next) {
-    if (window->lifecycle == PROTON_WINDOW_DESTROYING ||
-        window->lifecycle == PROTON_WINDOW_DESTROYED ||
+    if (window->lifecycle != PROTON_WINDOW_LIVE ||
         window->engine_window == NULL ||
         proton_engine_window_is_closed(window->engine_window)) {
       continue;

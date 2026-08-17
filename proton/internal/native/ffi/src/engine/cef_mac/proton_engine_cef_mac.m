@@ -272,7 +272,6 @@ typedef struct proton_engine_bridge_pending {
 static int g_proton_cef_initialized = 0;
 static int g_proton_cef_library_loaded = 0;
 static int g_proton_cef_runtime_active = 0;
-static int g_proton_cef_shutdown_registered = 0;
 static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
 static int g_proton_app_terminating = 0;
 static proton_engine_app_t g_app;
@@ -1395,8 +1394,8 @@ static int32_t proton_engine_window_create_browser(proton_engine_window_t *windo
                                                    const char *initial_url,
                                                    char *error,
                                                    size_t error_len);
-static void proton_engine_drain_cef_close_work(void);
-static void proton_engine_free_deferred_finalizing_windows(void);
+static int32_t proton_engine_drain_browser_closes(
+    proton_engine_runtime_t *runtime, char *error, size_t error_len);
 static void proton_engine_view_on_after_created(proton_engine_view_t *view,
                                                 cef_browser_t *browser);
 static void proton_engine_view_on_before_close(proton_engine_view_t *view,
@@ -1571,7 +1570,6 @@ static void CEF_CALLBACK proton_engine_on_after_created(
   if (window->closed || window->finalize_after_browser_close) {
     window->initial_navigation_pending = 0;
     proton_engine_window_request_browser_close(window, 1);
-    proton_engine_window_release_browser(window);
     proton_engine_window_finalize_if_ready(window);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return;
@@ -2623,6 +2621,40 @@ static int proton_engine_request_all_windows_close(void) {
   return requested;
 }
 
+static void proton_engine_window_commit_appkit_close(
+    proton_engine_window_t *window, NSWindow *native_window) {
+  if (window == NULL || native_window == nil || window->window == nil) {
+    return;
+  }
+  proton_engine_debug_log("window_commit_close browser=%d", window->browser_id);
+  window->appkit_closing = 1;
+  proton_engine_window_close_views(window);
+  // Replacing the content view below releases the complete browser view tree.
+  // Clear these borrowed pointers first so deferred view close callbacks never
+  // message an AppKit object that the replacement has already deallocated.
+  for (proton_engine_view_t *view = window->views; view != NULL;
+       view = view->next) {
+    view->browser_view = nil;
+  }
+  if (window->browser != NULL) {
+    proton_engine_bridge_pending_remove_browser(window->runtime,
+                                                window->browser_id);
+  }
+  window->window = nil;
+  window->content_view = nil;
+  window->browser_view = nil;
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+
+  // CEF completes a windowed browser close when replacing the content view
+  // destroys its CefBrowserHostView child. Keep that hierarchy intact until
+  // the replacement so CefBrowserHostView::dealloc can call WindowDestroyed.
+  [native_window setDelegate:nil];
+  NSView *empty_content_view = [[NSView alloc] initWithFrame:NSZeroRect];
+  [native_window setContentView:empty_content_view];
+  [empty_content_view release];
+  [native_window autorelease];
+}
+
 @interface ProtonWindowDelegate : NSObject <NSWindowDelegate> {
 @public
   proton_engine_window_t *window;
@@ -2676,8 +2708,12 @@ static int proton_engine_request_all_windows_close(void) {
 }
 
 - (BOOL)windowShouldClose:(id)sender {
-  (void)sender;
-  if (window == NULL || window->closed) {
+  NSWindow *native_window = sender;
+  if (window == NULL) {
+    return YES;
+  }
+  if (window->closed) {
+    proton_engine_window_commit_appkit_close(window, native_window);
     return YES;
   }
   if (window->close_interception_enabled &&
@@ -2694,12 +2730,12 @@ static int proton_engine_request_all_windows_close(void) {
   }
   window->close_interception_bypass = 0;
   if (window->browser == NULL) {
-    window->appkit_closing = 1;
+    proton_engine_window_commit_appkit_close(window, native_window);
     return YES;
   }
   cef_browser_host_t *host = window->browser->get_host(window->browser);
   if (host == NULL) {
-    window->appkit_closing = 1;
+    proton_engine_window_commit_appkit_close(window, native_window);
     return YES;
   }
   int allow_close = 0;
@@ -2723,47 +2759,19 @@ static int proton_engine_request_all_windows_close(void) {
   proton_engine_debug_log("window_should_close browser=%d allow=%d",
                           window->browser_id, allow_close);
   host->base.release((cef_base_ref_counted_t *)host);
+  if (allow_close) {
+    proton_engine_window_commit_appkit_close(window, native_window);
+  }
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return allow_close ? YES : NO;
 }
 
 - (void)windowWillClose:(NSNotification *)notification {
-  (void)notification;
   if (window == NULL) {
     return;
   }
   proton_engine_debug_log("window_will_close browser=%d", window->browser_id);
-  window->appkit_closing = 1;
-  proton_engine_window_close_views(window);
-  // A deferred view close (beforeunload/unload still in flight) leaves the
-  // view's browser host view attached, and the NSWindow teardown that follows
-  // releases the whole view tree, dealloc'ing every CefBrowserHostView and
-  // firing its WindowDestroyed(). Clear each view's borrowed browser_view
-  // pointer now so view_on_before_close cannot message a dangling pointer
-  // afterwards. Do NOT removeFromSuperview here: the resulting dealloc would
-  // re-enter CEF (WindowDestroyed -> DestroyBrowser -> on_before_close ->
-  // finalize) and can free this window and its view structs while this loop
-  // and the code below still use them.
-  for (proton_engine_view_t *view = window->views; view != NULL;
-       view = view->next) {
-    view->browser_view = nil;
-  }
-  if (window->browser != NULL) {
-    // AppKit has already closed the user-visible window. Publish that lifecycle
-    // edge immediately; CEF on_before_close is only browser resource cleanup.
-    proton_engine_bridge_pending_remove_browser(window->runtime,
-                                                window->browser_id);
-    proton_engine_window_mark_closed(window);
-    if (window->browser_view != nil) {
-      [window->browser_view removeFromSuperview];
-    }
-  } else {
-    proton_engine_window_mark_closed(window);
-  }
-  window->window = nil;
-  window->content_view = nil;
-  window->browser_view = nil;
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  proton_engine_window_commit_appkit_close(window, notification.object);
 }
 @end
 
@@ -2997,6 +3005,7 @@ int32_t proton_engine_runtime_create(
     proton_engine_set_message(error, error_len, "cef_initialize failed");
     return PROTON_ERR_ENGINE;
   }
+  g_proton_cef_initialized = 1;
   proton_engine_debug_log("runtime_create remote_debugging_port=%d",
                           config.remote_debugging_port);
 
@@ -3026,7 +3035,6 @@ int32_t proton_engine_runtime_create(
   snprintf(runtime->dialog_cancel_label,
            sizeof(runtime->dialog_cancel_label), "%s",
            config.dialog_cancel_label);
-  g_proton_cef_initialized = 1;
   g_proton_cef_runtime_active = 1;
   if (!proton_engine_register_app_scheme_factory(&g_scheme_factory.factory)) {
     proton_engine_cef_shutdown();
@@ -3035,10 +3043,6 @@ int32_t proton_engine_runtime_create(
     proton_engine_set_message(error, error_len,
                               "failed to register proton scheme handler");
     return PROTON_ERR_ENGINE;
-  }
-  if (!g_proton_cef_shutdown_registered) {
-    atexit(proton_engine_cef_shutdown);
-    g_proton_cef_shutdown_registered = 1;
   }
   *out_runtime = runtime;
   return PROTON_OK;
@@ -3056,9 +3060,12 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   proton_engine_menu_clear_runtime(runtime);
   if (runtime->owns_cef_runtime) {
     proton_engine_bridge_pending_clear_all();
-    proton_engine_drain_cef_close_work();
+    int32_t status =
+        proton_engine_drain_browser_closes(runtime, error, error_len);
+    if (status != PROTON_OK) {
+      return status;
+    }
     proton_engine_cef_shutdown();
-    proton_engine_free_deferred_finalizing_windows();
     proton_engine_reset_external_message_pump();
     runtime->owns_cef_runtime = 0;
   }
@@ -3156,39 +3163,30 @@ static void proton_engine_pump_appkit_cef_once(void) {
   }
 }
 
-static void proton_engine_drain_cef_close_work(void) {
-  if (!g_proton_cef_initialized) {
-    return;
-  }
-  // CEF may schedule immediate cleanup work while closing the last browser.
-  // Drain only immediate external-message-pump work; do not sleep here.
-  for (int i = 0; i < 32; i++) {
-    proton_engine_reset_scheduled_pump();
-    proton_engine_pump_appkit_cef_once();
-    if (proton_engine_get_scheduled_pump_delay_ms() != 0) {
-      break;
-    }
-  }
+static void proton_engine_run_external_message_pump_once(void) {
+  atomic_store_explicit(&g_message_pump_active, true, memory_order_release);
+  proton_engine_reset_scheduled_pump();
+  proton_engine_pump_appkit_cef_once();
+  atomic_store_explicit(&g_message_pump_active, false, memory_order_release);
 }
 
-static void proton_engine_free_deferred_finalizing_windows(void) {
-  proton_engine_window_t *window = g_windows;
-  while (window != NULL) {
-    proton_engine_window_t *next = window->next;
-    if (window->finalize_after_browser_close) {
-      for (proton_engine_view_t *view = window->views; view != NULL;
-           view = view->next) {
-        view->browser_before_close_seen = 1;
-        view->finalize_after_browser_close = 1;
-        proton_engine_view_release_browser(view);
-        proton_engine_view_finalize_if_ready(view);
-      }
-      window->browser_before_close_seen = 1;
-      proton_engine_window_release_browser(window);
-      proton_engine_window_finalize_if_ready(window);
+static int32_t proton_engine_drain_browser_closes(
+    proton_engine_runtime_t *runtime, char *error, size_t error_len) {
+  while (g_windows != NULL) {
+    int32_t status = proton_engine_runtime_do_message_loop_work(
+        runtime, error, error_len);
+    if (status != PROTON_OK || g_windows == NULL) {
+      return status;
     }
-    window = next;
+    uint32_t ready_mask = PROTON_WAIT_NONE;
+    status = proton_engine_runtime_wait(
+        runtime, PROTON_WAIT_PLATFORM, PROTON_WAIT_TIMEOUT_INFINITE,
+        &ready_mask, error, error_len);
+    if (status != PROTON_OK) {
+      return status;
+    }
   }
+  return PROTON_OK;
 }
 
 int32_t proton_engine_runtime_do_message_loop_work(
@@ -3199,11 +3197,8 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  atomic_store_explicit(&g_message_pump_active, true, memory_order_release);
-  proton_engine_reset_scheduled_pump();
   proton_engine_runtime_create_pending_browsers(runtime);
-  proton_engine_pump_appkit_cef_once();
-  atomic_store_explicit(&g_message_pump_active, false, memory_order_release);
+  proton_engine_run_external_message_pump_once();
   return PROTON_OK;
 }
 
@@ -3262,10 +3257,7 @@ int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
   // only caller of cef_do_message_loop_work while the host loop owns the main
   // thread. Skipping it on a timed-out wait would strand work that arrived
   // through a path that does not signal the wait source.
-  atomic_store_explicit(&g_message_pump_active, true, memory_order_release);
-  proton_engine_reset_scheduled_pump();
-  proton_engine_pump_appkit_cef_once();
-  atomic_store_explicit(&g_message_pump_active, false, memory_order_release);
+  proton_engine_run_external_message_pump_once();
   return PROTON_OK;
 }
 
@@ -3308,17 +3300,17 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
 
   proton_engine_runtime_create_pending_browsers(runtime);
   uint32_t ready_mask = proton_engine_runtime_ready_mask(runtime, interest_mask);
-  if (ready_mask != PROTON_WAIT_NONE) {
-    proton_engine_log_runtime_wait_ready(ready_mask, interest_mask);
-    *out_ready_mask = ready_mask;
-    return PROTON_OK;
-  }
 
   // Negative means PROTON_WAIT_TIMEOUT_INFINITE; the ABI rejects every other
   // negative value before reaching here. -1 stays out of the arithmetic below
-  // so it cannot be mistaken for a duration.
-  int wait_forever = timeout_ms < 0;
-  int64_t wait_timeout = wait_forever ? 0 : (int64_t)timeout_ms;
+  // so it cannot be mistaken for a duration. Already-ready native work makes
+  // this a non-blocking turn, but does not skip CoreFoundation: an immediate
+  // CEF schedule can otherwise keep returning early forever and starve the
+  // AppKit sources that destroy a closing browser's view hierarchy.
+  int wait_forever = timeout_ms < 0 && ready_mask == PROTON_WAIT_NONE;
+  int64_t wait_timeout =
+      timeout_ms < 0 || ready_mask != PROTON_WAIT_NONE ? 0
+                                                       : (int64_t)timeout_ms;
   int waiting_for_platform_pump = 0;
   if ((interest_mask & PROTON_WAIT_PLATFORM) != 0 &&
       g_proton_cef_initialized) {
@@ -3341,18 +3333,16 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   // spurious poll, while dropping one costs it the notification entirely.
   CFRunLoopRunResult run_result = kCFRunLoopRunTimedOut;
   CFAbsoluteTime start_time = CFAbsoluteTimeGetCurrent();
-  if (wait_forever || wait_timeout > 0) {
-    // CFRunLoopRunInMode has no "forever", so an interval far beyond any
-    // process lifetime stands in for it. Unlike a sentinel this one is only
-    // ever reached by a run loop with no sources left to signal it, which is
-    // a hung host either way.
-    CFTimeInterval seconds =
-        wait_forever ? 1.0e9 : ((CFTimeInterval)wait_timeout) / 1000.0;
-    // Same reasoning as the pump: run-loop sources and timers autorelease,
-    // and no outer pool exists on the host's main thread.
-    @autoreleasepool {
-      run_result = CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, true);
-    }
+  // CFRunLoopRunInMode has no "forever", so an interval far beyond any
+  // process lifetime stands in for it. Unlike a sentinel this one is only
+  // ever reached by a run loop with no sources left to signal it, which is
+  // a hung host either way.
+  CFTimeInterval seconds =
+      wait_forever ? 1.0e9 : ((CFTimeInterval)wait_timeout) / 1000.0;
+  // Same reasoning as the pump: run-loop sources and timers autorelease,
+  // and no outer pool exists on the host's main thread.
+  @autoreleasepool {
+    run_result = CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, true);
   }
   CFAbsoluteTime elapsed = CFAbsoluteTimeGetCurrent() - start_time;
 
@@ -3699,7 +3689,11 @@ int32_t proton_engine_window_create(
       proton_engine_set_message(error, error_len, "window creation failed");
       return PROTON_ERR_PLATFORM;
     }
-    [window->window setReleasedWhenClosed:YES];
+    // The close delegate tears down the CEF view hierarchy before releasing
+    // the window from the message-pump autorelease pool. Releasing directly in
+    // AppKit's close callback can destroy CEF state while that callback is
+    // still on the stack.
+    [window->window setReleasedWhenClosed:NO];
     // Proton owns window restoration through its application manifest and
     // runtime session. Letting AppKit persist the same windows creates a second
     // lifecycle owner and can block startup on its crash-recovery UI before
@@ -3810,10 +3804,6 @@ static void proton_engine_window_defer_finalize(
   }
   window->finalize_after_browser_close = 1;
   window->browser_create_pending = 0;
-  window->runtime = NULL;
-  if (window->client != NULL && !window->browser_create_scheduled) {
-    window->client->window = NULL;
-  }
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 }
 
@@ -3853,14 +3843,14 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
   }
   proton_engine_window_close_views(window);
   if (window->browser != NULL) {
-    if (!proton_engine_window_request_browser_close(window, 1)) {
+    if (!window->browser_close_requested &&
+        !proton_engine_window_request_browser_close(window, 1)) {
       proton_engine_set_message(error, error_len,
                                 "browser host is not available for close");
       return PROTON_ERR_ENGINE;
     }
     proton_engine_window_mark_closed(window);
     proton_engine_window_defer_finalize(window);
-    proton_engine_window_release_browser(window);
     proton_engine_window_finalize_if_ready(window);
     return PROTON_OK;
   }

@@ -256,7 +256,6 @@ typedef struct proton_engine_bridge_pending {
 } proton_engine_bridge_pending_t;
 
 static int g_proton_cef_initialized = 0;
-static int g_proton_cef_shutdown_registered = 0;
 static int g_proton_cef_runtime_active = 0;
 static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
 static int g_proton_engine_multi_threaded_message_loop = 0;
@@ -3141,11 +3140,6 @@ int32_t proton_engine_runtime_create(
                               "failed to register proton scheme handler");
     return PROTON_ERR_ENGINE;
   }
-  if (!g_proton_cef_shutdown_registered) {
-    atexit(proton_engine_cef_shutdown);
-    g_proton_cef_shutdown_registered = 1;
-  }
-
   proton_engine_runtime_t *runtime =
       (proton_engine_runtime_t *)calloc(1, sizeof(proton_engine_runtime_t));
   if (runtime == NULL) {

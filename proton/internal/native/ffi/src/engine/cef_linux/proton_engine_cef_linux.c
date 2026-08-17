@@ -78,7 +78,6 @@
 #define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
 #define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
 #define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
-#define PROTON_ENGINE_CLOSE_DRAIN_LIMIT 5000
 
 enum {
   PROTON_X11_MOVERESIZE_SIZE_TOP_LEFT = 0,
@@ -292,7 +291,6 @@ typedef struct proton_engine_bridge_pending {
 
 static int g_proton_cef_initialized = 0;
 static int g_proton_cef_runtime_active = 0;
-static int g_proton_cef_shutdown_registered = 0;
 static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
 static char g_proton_engine_locale[PROTON_ENGINE_MAX_PATH_BYTES];
 static proton_engine_app_t g_app;
@@ -3469,10 +3467,6 @@ int32_t proton_engine_runtime_create(
                               "failed to register proton scheme handler");
     return PROTON_ERR_ENGINE;
   }
-  if (!g_proton_cef_shutdown_registered) {
-    atexit(proton_engine_cef_shutdown);
-    g_proton_cef_shutdown_registered = 1;
-  }
   *out_runtime = runtime;
   return PROTON_OK;
 }
@@ -3488,8 +3482,8 @@ static int proton_engine_runtime_has_windows(
   return 0;
 }
 
-static int proton_engine_runtime_close_windows(
-    proton_engine_runtime_t *runtime) {
+static int32_t proton_engine_runtime_close_windows(
+    proton_engine_runtime_t *runtime, char *error, size_t error_len) {
   for (proton_engine_window_t *window = g_windows; window != NULL;
        window = window->next) {
     if (window->runtime != runtime || window->browser == NULL) {
@@ -3504,20 +3498,21 @@ static int proton_engine_runtime_close_windows(
     }
   }
 
-  int iterations = 0;
-  while (proton_engine_runtime_has_windows(runtime) &&
-         iterations < PROTON_ENGINE_CLOSE_DRAIN_LIMIT) {
-    cef_do_message_loop_work();
-    while (gtk_events_pending()) {
-      gtk_main_iteration_do(FALSE);
+  while (proton_engine_runtime_has_windows(runtime)) {
+    int32_t status = proton_engine_runtime_do_message_loop_work(
+        runtime, error, error_len);
+    if (status != PROTON_OK || !proton_engine_runtime_has_windows(runtime)) {
+      return status;
     }
-    usleep(1000);
-    iterations++;
+    uint32_t ready_mask = PROTON_WAIT_NONE;
+    status = proton_engine_runtime_wait(
+        runtime, PROTON_WAIT_PLATFORM, PROTON_WAIT_TIMEOUT_INFINITE,
+        &ready_mask, error, error_len);
+    if (status != PROTON_OK) {
+      return status;
+    }
   }
-  proton_engine_debug_log("runtime_close_windows iterations=%d remaining=%d",
-                          iterations,
-                          proton_engine_runtime_has_windows(runtime));
-  return !proton_engine_runtime_has_windows(runtime);
+  return PROTON_OK;
 }
 
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
@@ -3531,11 +3526,10 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                           runtime->owns_cef_runtime);
   proton_engine_dialog_cancel_runtime(runtime);
   if (runtime->owns_cef_runtime) {
-    if (!proton_engine_runtime_close_windows(runtime)) {
-      proton_engine_set_message(
-          error, error_len,
-          "timed out waiting for browser windows to close");
-      return PROTON_ERR_ENGINE;
+    int32_t status =
+        proton_engine_runtime_close_windows(runtime, error, error_len);
+    if (status != PROTON_OK) {
+      return status;
     }
     proton_engine_bridge_pending_clear_all();
     proton_engine_cef_shutdown();
