@@ -2,13 +2,8 @@
 /// Failures while validating or delivering native notifications.
 suberror NotificationError {
   EmptyBody
-  NativeCapability(error~ : @proton_native.NativeError)
   UnsupportedPlatform
-  NativeShow(error~ : @proton_native.NativeError)
-  ShowWaitInterrupted(detail~ : String)
-  DeliveryFailed(message~ : String)
-  NativePoll(error~ : @proton_native.NativeError)
-  NativeCleanup(error~ : @proton_native.NativeError)
+  NativeOperation(detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -24,20 +19,10 @@ pub extend NotificationError with Show::{to_string, output}
 fn NotificationError::message(self : NotificationError) -> String {
   match self {
     EmptyBody => "notification body must not be empty"
-    NativeCapability(error~) =>
-      "failed to query native notification support: " + error.message()
     UnsupportedPlatform =>
       "native notifications are not implemented on this platform"
-    NativeShow(error~) =>
-      "failed to show native notification: " + error.message()
-    ShowWaitInterrupted(detail~) =>
-      "notification delivery wait was interrupted: " + detail
-    DeliveryFailed(message~) =>
-      "native notification was not delivered: " + message
-    NativePoll(error~) =>
-      "failed to poll native notification clicks: " + error.message()
-    NativeCleanup(error~) =>
-      "failed to clean up native notifications: " + error.message()
+    NativeOperation(detail~) =>
+      "native notification operation failed: " + detail
   }
 }
 

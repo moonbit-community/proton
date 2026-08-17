@@ -6,6 +6,9 @@
 pub type CommandContext = @core.AppCommandRequestContext
 
 ///|
+pub type CommandWindow = @core.CommandWindow
+
+///|
 /// Startup-only capability for binding typed command descriptors to handlers.
 pub struct CommandRegistrar {
   host : @core.AppCommandHost

@@ -68,9 +68,9 @@ native prebuilt, or compatibility package remains.
 - [ ] Make `App` and `@proton.run` the only public runtime entry.
 - [ ] Move user-facing menu, window, view, screen, and error types to the facade.
 - [ ] Remove public raw runtime, native handle, native error, and escape APIs.
-- [ ] Add an opaque command-window capability to `CommandContext`.
-- [ ] Migrate dialog and notification extensions to semantic capabilities.
-- [ ] Move native-only E2E coverage to facade black-box or internal tests.
+- [x] Add an opaque command-window capability to `CommandContext`.
+- [x] Migrate dialog and notification extensions to semantic capabilities.
+- [x] Move native-only E2E coverage to facade black-box or internal tests.
 
 ### 5. CEF Process and CLI
 

@@ -64,6 +64,7 @@ fn native_notification_result_supported() -> Bool raise @native.NativeError {
 pub(all) suberror NotificationDeliveryError {
   Native(@native.NativeError)
   WaitInterrupted(detail~ : String)
+  DeliveryFailed(message~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -80,6 +81,7 @@ pub fn NotificationDeliveryError::message(
     Native(error) => error.message()
     WaitInterrupted(detail~) =>
       "notification delivery wait was interrupted: " + detail
+    DeliveryFailed(message~) => "notification was not delivered: " + message
   }
 }
 
@@ -91,7 +93,7 @@ pub async fn notification_show_and_wait(
   title : String,
   body : String,
   payload? : String,
-) -> @native.NativeNotificationResult raise NotificationDeliveryError {
+) -> Unit raise NotificationDeliveryError {
   let waits_for_result = native_notification_result_supported() catch {
     error => raise Native(error)
   }
@@ -105,10 +107,41 @@ pub async fn notification_show_and_wait(
     error => raise Native(error)
   }
   if waits_for_result {
-    @async.protect_from_cancel(take_notification_result, resume_on_cancel=true) catch {
+    let result = @async.protect_from_cancel(
+      take_notification_result,
+      resume_on_cancel=true,
+    ) catch {
       error => raise WaitInterrupted(detail=@debug.render(Repr(error)))
     }
-  } else {
-    @native.NativeNotificationResult::Delivered
+    match result {
+      @native.NativeNotificationResult::Delivered => ()
+      @native.NativeNotificationResult::Failed(message) =>
+        raise DeliveryFailed(message~)
+    }
+  }
+}
+
+///|
+#doc(hidden)
+pub fn notification_supported() -> Bool raise NotificationDeliveryError {
+  @native.notification_supported() catch {
+    error => raise Native(error)
+  }
+}
+
+///|
+#doc(hidden)
+pub fn notification_poll_click_payload() -> String?? raise NotificationDeliveryError {
+  let click = @native.notification_poll_click() catch {
+    error => raise Native(error)
+  }
+  click.map(item => item.payload)
+}
+
+///|
+#doc(hidden)
+pub fn notification_cleanup() -> Unit raise NotificationDeliveryError {
+  @native.notification_cleanup() catch {
+    error => raise Native(error)
   }
 }

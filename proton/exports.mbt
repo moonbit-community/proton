@@ -33,6 +33,7 @@ pub using @native {
 ///|
 pub using @proton_command {
   type CommandContext,
+  type CommandWindow,
   type CommandRegistrar,
   type PermissionScopeValidationError,
 }

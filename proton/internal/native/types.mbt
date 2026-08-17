@@ -1346,6 +1346,12 @@ pub fn WindowRef::unsafe_from_handle(
 }
 
 ///|
+#doc(hidden)
+pub fn WindowRef::invalid() -> WindowRef {
+  WindowRef::unsafe_from_handle(@native_ffi.window_null())
+}
+
+///|
 pub fn BridgeConfig::new(
   grants~ : Array[BridgeGrantConfig],
   max_payload_bytes? : Int = 1048576,
@@ -1871,4 +1877,10 @@ pub fn web_contents_view_supported() -> Bool {
 ///|
 pub fn ViewRef::unsafe_from_handle(handle : @native_ffi.ViewHandle) -> ViewRef {
   ViewRef::{ handle, id: @native_ffi.view_logical_id(handle) }
+}
+
+///|
+#doc(hidden)
+pub fn ViewRef::invalid() -> ViewRef {
+  ViewRef::unsafe_from_handle(@native_ffi.view_null())
 }

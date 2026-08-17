@@ -78,6 +78,7 @@ fn RuntimeSession::window_handle(
   WindowHandle::{
     id,
     native_id,
+    native_ref: window.window.as_ref(),
     show_window: () => {
       self.control_window(id, native_id, "show", window => window.show())
     },
@@ -151,6 +152,7 @@ fn RuntimeSession::view_handle(
   ViewHandle::{
     id,
     native_id,
+    native_ref: view.view.as_ref(),
     set_view_bounds: (x, y, width, height) => {
       self.control_view(
         window_id,
@@ -888,7 +890,7 @@ pub fn WindowHandle::id(self : WindowHandle) -> String {
 ///|
 /// Returns a low-level non-owning reference for APIs such as dialogs.
 pub fn WindowHandle::as_native_ref(self : WindowHandle) -> @native.WindowRef {
-  @native.WindowRef::unsafe_from_handle(self.native_id)
+  self.native_ref
 }
 
 ///|
@@ -1041,7 +1043,7 @@ pub fn ViewHandle::id(self : ViewHandle) -> String {
 ///|
 /// Returns a low-level non-owning reference for native APIs.
 pub fn ViewHandle::as_native_ref(self : ViewHandle) -> @native.ViewRef {
-  @native.ViewRef::unsafe_from_handle(self.native_id)
+  self.native_ref
 }
 
 ///|

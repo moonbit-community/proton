@@ -358,9 +358,9 @@ async fn dispatch_bridge_request_in_command_scope(
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
   let request_context = @core.AppCommandRequestContext::new(
-    window.id(),
     command_tasks,
     locale_preferences,
+    window=command_window_capability(window.as_ref(), wake_signal),
     window_id~,
     source_origin=request.source_origin(),
     page_instance=request.page_instance(),
@@ -386,6 +386,88 @@ async fn dispatch_bridge_request_in_command_scope(
     }
     @native.BridgeResponse::Err(request_id~, code="op_failed", message~)
   }
+}
+
+///|
+fn command_dialog_level(level : String) -> @native.DialogLevel {
+  match level {
+    "warning" => @native.DialogLevel::Warning
+    "error" => @native.DialogLevel::Error
+    _ => @native.DialogLevel::Info
+  }
+}
+
+///|
+async fn wait_for_command_dialog(
+  window : @native.WindowRef,
+  wake_signal : @core.RuntimeWakeSignal,
+  dialog : Int64,
+) -> String {
+  let mut completed = ""
+  let mut waiting = true
+  while waiting {
+    let revision = wake_signal.revision()
+    match window.poll_dialog_result(dialog) {
+      @native.DialogPollResult::Ready(result) => {
+        completed = result
+        waiting = false
+      }
+      @native.DialogPollResult::Pending => wake_signal.wait_for_change(revision)
+    }
+  }
+  completed
+}
+
+///|
+fn command_window_capability(
+  window : @native.WindowRef,
+  wake_signal : @core.RuntimeWakeSignal,
+) -> @core.CommandWindow {
+  @core.CommandWindow::new(
+    async fn(title, message, level) {
+      let dialog = window.begin_message_dialog(
+        title,
+        message,
+        command_dialog_level(level),
+      )
+      ignore(wait_for_command_dialog(window, wake_signal, dialog))
+    },
+    async fn(title, message, level) {
+      let dialog = window.begin_confirm_dialog(
+        title,
+        message,
+        command_dialog_level(level),
+      )
+      wait_for_command_dialog(window, wake_signal, dialog) == "1"
+    },
+    async fn(title, path) {
+      let dialog = window.begin_open_file_dialog(title, path)
+      let result = wait_for_command_dialog(window, wake_signal, dialog)
+      if result.is_empty() {
+        None
+      } else {
+        Some(result)
+      }
+    },
+    async fn(title, path) {
+      let dialog = window.begin_save_file_dialog(title, path)
+      let result = wait_for_command_dialog(window, wake_signal, dialog)
+      if result.is_empty() {
+        None
+      } else {
+        Some(result)
+      }
+    },
+    async fn(title, path) {
+      let dialog = window.begin_choose_directory_dialog(title, path)
+      let result = wait_for_command_dialog(window, wake_signal, dialog)
+      if result.is_empty() {
+        None
+      } else {
+        Some(result)
+      }
+    },
+  )
 }
 
 ///|

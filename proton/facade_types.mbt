@@ -266,6 +266,7 @@ pub struct BrowserHandle {
 pub struct ViewHandle {
   id : String
   native_id : Int64
+  native_ref : @native.ViewRef
   set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
   set_view_visible : (Bool) -> Unit raise WindowSessionError
   set_view_z_order : (Int) -> Unit raise WindowSessionError
@@ -285,6 +286,7 @@ pub struct ViewHandle {
 pub struct WindowHandle {
   id : String
   native_id : Int64
+  native_ref : @native.WindowRef
   show_window : () -> Unit raise WindowSessionError
   hide_window : () -> Unit raise WindowSessionError
   close_window : () -> Unit raise WindowSessionError

@@ -33,13 +33,9 @@ async fn message(
   context : @proton.CommandContext,
   request : @dialog_contract.MessageRequest,
 ) -> @dialog_contract.MessageReply {
-  // The handle is sourced from `window.id()` in the dispatch path, which
-  // checks the window lifecycle and returns `proton_invalid_handle` for
-  // destroying/destroyed windows.
-  let window = @native.WindowRef::unsafe_from_handle(context.window())
   emit_command_result(
     context,
-    show_message_dialog(context, window, request),
+    show_message_dialog(context, request),
     "message",
     level=request.level,
   )
@@ -52,10 +48,9 @@ async fn confirm(
   context : @proton.CommandContext,
   request : @dialog_contract.MessageRequest,
 ) -> @dialog_contract.ConfirmReply {
-  let window = @native.WindowRef::unsafe_from_handle(context.window())
   emit_command_result(
     context,
-    confirm_message_dialog(context, window, request),
+    confirm_message_dialog(context, request),
     "confirm",
     level=request.level,
   )
@@ -68,8 +63,7 @@ async fn open_file(
   context : @proton.CommandContext,
   request : @dialog_contract.FileDialogRequest,
 ) -> @dialog_contract.FileDialogReply {
-  let window = @native.WindowRef::unsafe_from_handle(context.window())
-  let reply = open_file_dialog(context, window, request)
+  let reply = open_file_dialog(context, request)
   emit_command_result(context, reply, "openFile", path=reply.path)
 }
 
@@ -80,8 +74,7 @@ async fn save_file(
   context : @proton.CommandContext,
   request : @dialog_contract.FileDialogRequest,
 ) -> @dialog_contract.FileDialogReply {
-  let window = @native.WindowRef::unsafe_from_handle(context.window())
-  let reply = save_file_dialog(context, window, request)
+  let reply = save_file_dialog(context, request)
   emit_command_result(context, reply, "saveFile", path=reply.path)
 }
 

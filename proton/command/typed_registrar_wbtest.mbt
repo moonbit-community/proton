@@ -30,7 +30,7 @@ async test "typed registrar binds descriptor identity and codecs" {
   assert_eq(host.registered_ops(), ["app:add"])
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
-      @core.AppCommandRequestContext::detached(42L, group),
+      @core.AppCommandRequestContext::detached(group),
       @ipc.IpcOpRequest::new("request-1", "app:add", { "left": 20, "right": 22 }),
     )
     assert_true(response.is_ok())
@@ -88,7 +88,7 @@ async test "typed extension specs derive APIs from contract routes" {
   host.seal_registrations()
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
-      @core.AppCommandRequestContext::detached(42L, group),
+      @core.AppCommandRequestContext::detached(group),
       @ipc.IpcOpRequest::new("request-1", "ext:typed/add", {
         "left": 20,
         "right": 22,
