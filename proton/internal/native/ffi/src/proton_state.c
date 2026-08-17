@@ -8,6 +8,18 @@
 
 static proton_runtime_slot_t *g_active_runtime = NULL;
 
+static bool proton_runtime_event_sink(void *user_data, proton_event_t *event) {
+  proton_runtime_slot_t *runtime = (proton_runtime_slot_t *)user_data;
+  if (runtime == NULL || runtime->lifecycle != PROTON_RUNTIME_ACTIVE ||
+      !proton_event_queue_push(&runtime->events, event)) {
+    return false;
+  }
+  if (runtime->engine_runtime != NULL) {
+    proton_engine_runtime_signal_external_event(runtime->engine_runtime);
+  }
+  return true;
+}
+
 static proton_thread_id_t proton_current_thread_id(void) {
 #ifdef _WIN32
   return GetCurrentThreadId();
@@ -66,6 +78,7 @@ int32_t proton_runtime_slot_create(proton_engine_runtime_t *engine_runtime,
                             "failed to initialize runtime event queue");
   }
   g_active_runtime = runtime;
+  proton_event_bind_sink(proton_runtime_event_sink, runtime);
   *out_runtime = runtime;
   return PROTON_OK;
 }
@@ -74,6 +87,7 @@ void proton_runtime_slot_destroy(proton_runtime_slot_t *runtime) {
   if (runtime == NULL) {
     return;
   }
+  proton_event_unbind_sink(runtime);
   proton_event_queue_destroy(&runtime->events);
   proton_view_slot_t *view = runtime->views;
   while (view != NULL) {
@@ -444,53 +458,6 @@ int32_t proton_runtime_sync_engine_close_requests(
       return PROTON_OK;
     }
     window->close_request_notified_revision = request_id;
-  }
-  return PROTON_OK;
-}
-
-int32_t proton_runtime_sync_engine_browser_events(
-    proton_runtime_slot_t *runtime) {
-  for (proton_window_slot_t *window = runtime->windows; window != NULL;
-       window = window->next) {
-    if (window->lifecycle == PROTON_WINDOW_DESTROYING ||
-        window->lifecycle == PROTON_WINDOW_DESTROYED ||
-        window->engine_window == NULL) {
-      continue;
-    }
-    while (proton_event_queue_count(&runtime->events) <
-           PROTON_EVENT_QUEUE_CAPACITY) {
-      proton_event_t *event =
-          proton_engine_window_take_browser_event(window->engine_window);
-      if (event == NULL) {
-        break;
-      }
-      if (!proton_runtime_enqueue_event(runtime, event)) {
-        return proton_set_error(PROTON_ERR_QUEUE_FAILED,
-                                "failed to queue browser event");
-      }
-    }
-  }
-  return PROTON_OK;
-}
-
-int32_t proton_runtime_sync_engine_view_events(
-    proton_runtime_slot_t *runtime) {
-  for (proton_view_slot_t *view = runtime->views; view != NULL;
-       view = view->next) {
-    if (view->lifecycle != PROTON_VIEW_LIVE || view->engine_view == NULL) {
-      continue;
-    }
-    while (proton_event_queue_count(&runtime->events) <
-           PROTON_EVENT_QUEUE_CAPACITY) {
-      proton_event_t *event = proton_engine_view_take_event(view->engine_view);
-      if (event == NULL) {
-        break;
-      }
-      if (!proton_runtime_enqueue_event(runtime, event)) {
-        return proton_set_error(PROTON_ERR_QUEUE_FAILED,
-                                "failed to queue view event");
-      }
-    }
   }
   return PROTON_OK;
 }

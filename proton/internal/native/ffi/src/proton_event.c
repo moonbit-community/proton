@@ -3,6 +3,30 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+static SRWLOCK g_event_sink_mutex = SRWLOCK_INIT;
+#else
+static pthread_mutex_t g_event_sink_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
+static proton_event_sink_fn g_event_sink = NULL;
+static void *g_event_sink_user_data = NULL;
+
+static void proton_event_sink_lock(void) {
+#ifdef _WIN32
+  AcquireSRWLockExclusive(&g_event_sink_mutex);
+#else
+  (void)pthread_mutex_lock(&g_event_sink_mutex);
+#endif
+}
+
+static void proton_event_sink_unlock(void) {
+#ifdef _WIN32
+  ReleaseSRWLockExclusive(&g_event_sink_mutex);
+#else
+  (void)pthread_mutex_unlock(&g_event_sink_mutex);
+#endif
+}
+
 static void proton_event_mutex_init(proton_event_mutex_t *mutex) {
 #ifdef _WIN32
   InitializeCriticalSection(mutex);
@@ -173,4 +197,34 @@ uint32_t proton_event_queue_count(proton_event_queue_t *queue) {
   uint32_t count = queue->count;
   proton_event_mutex_unlock(&queue->mutex);
   return count;
+}
+
+void proton_event_bind_sink(proton_event_sink_fn sink, void *user_data) {
+  proton_event_sink_lock();
+  g_event_sink = sink;
+  g_event_sink_user_data = user_data;
+  proton_event_sink_unlock();
+}
+
+void proton_event_unbind_sink(void *user_data) {
+  proton_event_sink_lock();
+  if (g_event_sink_user_data == user_data) {
+    g_event_sink = NULL;
+    g_event_sink_user_data = NULL;
+  }
+  proton_event_sink_unlock();
+}
+
+bool proton_event_publish(proton_event_t *event) {
+  if (event == NULL) {
+    return false;
+  }
+  proton_event_sink_lock();
+  bool published = g_event_sink != NULL &&
+                   g_event_sink(g_event_sink_user_data, event);
+  proton_event_sink_unlock();
+  if (!published) {
+    proton_event_destroy(event);
+  }
+  return published;
 }

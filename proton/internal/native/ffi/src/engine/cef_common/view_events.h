@@ -31,6 +31,5 @@ void proton_view_events_load_failed(proton_view_events_t *events,
                                     int32_t error_code,
                                     const char *error_text);
 
-proton_event_t *proton_view_events_take(proton_view_events_t *events);
 
 #endif

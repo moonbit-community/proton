@@ -762,14 +762,6 @@ int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
   *out_event = NULL;
   proton_runtime_sync_engine_closed_windows(slot);
   if (!proton_runtime_has_events(slot)) {
-    status = proton_runtime_sync_engine_browser_events(slot);
-    if (status != PROTON_OK) {
-      return status;
-    }
-    status = proton_runtime_sync_engine_view_events(slot);
-    if (status != PROTON_OK) {
-      return status;
-    }
     status = proton_runtime_sync_engine_window_states(slot);
     if (status != PROTON_OK) {
       return status;

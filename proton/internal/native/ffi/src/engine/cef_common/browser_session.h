@@ -39,8 +39,6 @@ void proton_browser_session_destroy(proton_browser_session_t *session);
 void proton_browser_session_bind_window(proton_browser_session_t *session,
                                          proton_window_id_t window);
 
-proton_event_t *proton_browser_session_take_event(
-    proton_browser_session_t *session);
 int32_t proton_browser_session_respond_json(
     proton_browser_session_t *session, const char *response_json,
     char *error, size_t error_len);

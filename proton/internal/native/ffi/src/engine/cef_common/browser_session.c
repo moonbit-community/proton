@@ -10,50 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-typedef CRITICAL_SECTION proton_browser_mutex_t;
-
-static int proton_browser_mutex_init(proton_browser_mutex_t *mutex) {
-  InitializeCriticalSection(mutex);
-  return 1;
-}
-
-static void proton_browser_mutex_lock(proton_browser_mutex_t *mutex) {
-  EnterCriticalSection(mutex);
-}
-
-static void proton_browser_mutex_unlock(proton_browser_mutex_t *mutex) {
-  LeaveCriticalSection(mutex);
-}
-
-static void proton_browser_mutex_destroy(proton_browser_mutex_t *mutex) {
-  DeleteCriticalSection(mutex);
-}
-#else
-#include <pthread.h>
-typedef pthread_mutex_t proton_browser_mutex_t;
-
-static int proton_browser_mutex_init(proton_browser_mutex_t *mutex) {
-  return pthread_mutex_init(mutex, NULL) == 0;
-}
-
-static void proton_browser_mutex_lock(proton_browser_mutex_t *mutex) {
-  pthread_mutex_lock(mutex);
-}
-
-static void proton_browser_mutex_unlock(proton_browser_mutex_t *mutex) {
-  pthread_mutex_unlock(mutex);
-}
-
-static void proton_browser_mutex_destroy(proton_browser_mutex_t *mutex) {
-  pthread_mutex_destroy(mutex);
-}
-#endif
-
-#define PROTON_BROWSER_MAX_EVENTS 128
-
 typedef enum {
   PROTON_BROWSER_REQUEST_NAVIGATION = 1,
   PROTON_BROWSER_REQUEST_POPUP = 2,
@@ -91,10 +47,6 @@ struct proton_browser_session {
   proton_browser_policy_t policy;
   proton_window_id_t window;
   uint64_t next_request_id;
-  proton_event_t *events[PROTON_BROWSER_MAX_EVENTS];
-  size_t event_head;
-  size_t event_count;
-  proton_browser_mutex_t event_lock;
   proton_browser_pending_t *pending;
   proton_browser_download_t *downloads;
   proton_browser_navigation_bypass_t *navigation_bypasses;
@@ -153,21 +105,7 @@ static int proton_browser_enqueue_event(proton_browser_session_t *session,
     proton_event_destroy(event);
     return 0;
   }
-  proton_browser_mutex_lock(&session->event_lock);
-  if (session->event_count >= PROTON_BROWSER_MAX_EVENTS) {
-    proton_browser_mutex_unlock(&session->event_lock);
-    proton_event_destroy(event);
-    return 0;
-  }
-  size_t index =
-      (session->event_head + session->event_count) % PROTON_BROWSER_MAX_EVENTS;
-  session->events[index] = event;
-  session->event_count++;
-  proton_browser_mutex_unlock(&session->event_lock);
-  if (session->signal != NULL) {
-    session->signal(session->signal_user_data);
-  }
-  return 1;
+  return proton_event_publish(event);
 }
 
 proton_browser_session_t *proton_browser_session_create(
@@ -182,10 +120,6 @@ proton_browser_session_t *proton_browser_session_create(
   session->next_request_id = 1;
   session->signal = signal;
   session->signal_user_data = signal_user_data;
-  if (!proton_browser_mutex_init(&session->event_lock)) {
-    free(session);
-    return NULL;
-  }
   return session;
 }
 
@@ -240,9 +174,6 @@ void proton_browser_session_destroy(proton_browser_session_t *session) {
     free(download);
     download = next;
   }
-  for (size_t i = 0; i < PROTON_BROWSER_MAX_EVENTS; i++) {
-    proton_event_destroy(session->events[i]);
-  }
   proton_browser_navigation_bypass_t *bypass =
       session->navigation_bypasses;
   while (bypass != NULL) {
@@ -252,7 +183,6 @@ void proton_browser_session_destroy(proton_browser_session_t *session) {
     free(bypass);
     bypass = next;
   }
-  proton_browser_mutex_destroy(&session->event_lock);
   free(session);
 }
 
@@ -261,25 +191,6 @@ void proton_browser_session_bind_window(proton_browser_session_t *session,
   if (session != NULL) {
     session->window = window;
   }
-}
-
-proton_event_t *proton_browser_session_take_event(
-    proton_browser_session_t *session) {
-  if (session == NULL) {
-    return NULL;
-  }
-  proton_browser_mutex_lock(&session->event_lock);
-  if (session->event_count == 0) {
-    proton_browser_mutex_unlock(&session->event_lock);
-    return NULL;
-  }
-  proton_event_t *event = session->events[session->event_head];
-  session->events[session->event_head] = NULL;
-  session->event_head =
-      (session->event_head + 1) % PROTON_BROWSER_MAX_EVENTS;
-  session->event_count--;
-  proton_browser_mutex_unlock(&session->event_lock);
-  return event;
 }
 
 static proton_browser_pending_t *proton_browser_pending_new(

@@ -11,15 +11,10 @@
 #include <pthread.h>
 #endif
 
-#define PROTON_VIEW_MAX_EVENTS 16
-
 struct proton_view_events {
   proton_view_id_t view;
   proton_window_id_t window;
   int bound;
-  proton_event_t *queue[PROTON_VIEW_MAX_EVENTS];
-  size_t head;
-  size_t count;
 #ifdef _WIN32
   CRITICAL_SECTION lock;
 #else
@@ -61,9 +56,6 @@ void proton_view_events_destroy(proton_view_events_t *events) {
   if (events == NULL) {
     return;
   }
-  for (size_t i = 0; i < PROTON_VIEW_MAX_EVENTS; i++) {
-    proton_event_destroy(events->queue[i]);
-  }
 #ifdef _WIN32
   DeleteCriticalSection(&events->lock);
 #else
@@ -92,17 +84,15 @@ static void proton_view_events_enqueue(proton_view_events_t *events,
     return;
   }
   proton_view_events_lock(events);
-  if (!events->bound || events->count >= PROTON_VIEW_MAX_EVENTS) {
+  if (!events->bound) {
     proton_view_events_unlock(events);
     proton_event_destroy(event);
     return;
   }
   event->view = events->view;
   event->window = events->window;
-  size_t index = (events->head + events->count) % PROTON_VIEW_MAX_EVENTS;
-  events->queue[index] = event;
-  events->count++;
   proton_view_events_unlock(events);
+  (void)proton_event_publish(event);
 }
 
 void proton_view_events_loading_changed(proton_view_events_t *events,
@@ -151,21 +141,4 @@ void proton_view_events_load_failed(proton_view_events_t *events,
     event->int_a = error_code;
   }
   proton_view_events_enqueue(events, event);
-}
-
-proton_event_t *proton_view_events_take(proton_view_events_t *events) {
-  if (events == NULL) {
-    return NULL;
-  }
-  proton_view_events_lock(events);
-  if (events->count == 0) {
-    proton_view_events_unlock(events);
-    return NULL;
-  }
-  proton_event_t *event = events->queue[events->head];
-  events->queue[events->head] = NULL;
-  events->head = (events->head + 1) % PROTON_VIEW_MAX_EVENTS;
-  events->count--;
-  proton_view_events_unlock(events);
-  return event;
 }

@@ -70,6 +70,8 @@ typedef struct proton_event_queue {
   proton_event_mutex_t mutex;
 } proton_event_queue_t;
 
+typedef bool (*proton_event_sink_fn)(void *user_data, proton_event_t *event);
+
 PROTON_INTERNAL proton_event_t *proton_event_create(proton_event_kind_t kind);
 PROTON_INTERNAL proton_event_t *proton_event_create_window(
     proton_event_kind_t kind, int64_t window);
@@ -87,5 +89,9 @@ PROTON_INTERNAL proton_event_t *proton_event_queue_pop(
     proton_event_queue_t *queue);
 PROTON_INTERNAL uint32_t proton_event_queue_count(
     proton_event_queue_t *queue);
+PROTON_INTERNAL void proton_event_bind_sink(proton_event_sink_fn sink,
+                                            void *user_data);
+PROTON_INTERNAL void proton_event_unbind_sink(void *user_data);
+PROTON_INTERNAL bool proton_event_publish(proton_event_t *event);
 
 #endif

@@ -4599,14 +4599,6 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-proton_event_t *proton_engine_window_take_browser_event(
-    proton_engine_window_t *window) {
-  if (window == NULL || window->browser_session == NULL) {
-    return NULL;
-  }
-  return proton_browser_session_take_event(window->browser_session);
-}
-
 int32_t proton_engine_window_browser_command_json(
     proton_engine_window_t *window, const char *command_json,
     char *error, size_t error_len) {
@@ -5490,15 +5482,6 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
   return proton_browser_session_command_json(view->browser_session,
                                              view->browser, command_json,
                                              error, error_len);
-}
-
-proton_event_t *proton_engine_view_take_event(proton_engine_view_t *view) {
-  // The ABI event sweep calls this on the runtime owner thread; the event
-  // queue carries its own lock, so no main-thread marshal here.
-  if (view == NULL || view->events == NULL) {
-    return NULL;
-  }
-  return proton_view_events_take(view->events);
 }
 
 void proton_engine_view_bind_public_id(proton_engine_view_t *view,

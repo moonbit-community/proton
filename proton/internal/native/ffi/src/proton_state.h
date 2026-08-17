@@ -139,10 +139,6 @@ PROTON_INTERNAL int32_t proton_runtime_sync_engine_window_states(
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_runtime_sync_engine_close_requests(
     proton_runtime_slot_t *runtime);
-PROTON_INTERNAL int32_t proton_runtime_sync_engine_browser_events(
-    proton_runtime_slot_t *runtime);
-PROTON_INTERNAL int32_t proton_runtime_sync_engine_view_events(
-    proton_runtime_slot_t *runtime);
 PROTON_INTERNAL void proton_runtime_sync_engine_bridge_lifecycle(
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_format_window_state_json(
