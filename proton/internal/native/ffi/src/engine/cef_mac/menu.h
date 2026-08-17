@@ -6,10 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef void (*proton_engine_menu_signal_callback_t)(uint32_t ready_mask);
-
-void proton_engine_menu_set_signal_callback(
-    proton_engine_menu_signal_callback_t callback);
+void proton_engine_menu_install_default(void);
 void proton_engine_menu_set_runtime(proton_engine_runtime_t *runtime);
 void proton_engine_menu_clear_runtime(proton_engine_runtime_t *runtime);
 int32_t proton_engine_menu_set_on_main(const proton_menu_bar_t *menu_bar,

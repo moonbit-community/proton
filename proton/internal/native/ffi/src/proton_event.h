@@ -92,6 +92,7 @@ PROTON_INTERNAL uint32_t proton_event_queue_count(
 PROTON_INTERNAL void proton_event_bind_sink(proton_event_sink_fn sink,
                                             void *user_data);
 PROTON_INTERNAL void proton_event_unbind_sink(void *user_data);
+PROTON_INTERNAL bool proton_event_try_publish(proton_event_t *event);
 PROTON_INTERNAL bool proton_event_publish(proton_event_t *event);
 
 #endif

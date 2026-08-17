@@ -143,34 +143,6 @@ static char *proton_strdup(const char *text) {
   return copy;
 }
 
-// Drain app-menu commands assigned to this runtime into its event queue.
-// Take from the engine queue only when the public queue has room, so a full
-// queue defers delivery instead of dropping commands.
-static void proton_runtime_sync_menu_commands(proton_runtime_slot_t *runtime) {
-  while (proton_event_queue_count(&runtime->events) <
-         PROTON_EVENT_QUEUE_CAPACITY) {
-    char command_id[PROTON_MAX_EVENT_BYTES];
-    proton_window_id_t focused_window = PROTON_INVALID_HANDLE;
-    int32_t present = 0;
-    if (proton_engine_take_menu_command(
-            runtime->engine_runtime, command_id, sizeof(command_id),
-            &focused_window, &present) != PROTON_OK ||
-        present == 0) {
-      return;
-    }
-    proton_event_t *event = proton_event_create(PROTON_EVENT_MENU_COMMAND);
-    if (event == NULL ||
-        !proton_event_set_text(&event->text_a, command_id)) {
-      proton_event_destroy(event);
-      return;
-    }
-    event->window = focused_window;
-    if (!proton_runtime_enqueue_event(runtime, event)) {
-      return;
-    }
-  }
-}
-
 // Drain platform-originated events into the ordered runtime event queue.
 // Take from the engine queue only when the public queue has room, so a full
 // queue defers delivery instead of dropping events.
@@ -182,32 +154,6 @@ static void proton_runtime_sync_platform_events(proton_runtime_slot_t *runtime) 
     if (event == NULL) {
       return;
     }
-    if (!proton_runtime_enqueue_event(runtime, event)) {
-      return;
-    }
-  }
-}
-
-// Move renderer cancellations onto the owner-thread runtime event queue.
-static void proton_runtime_sync_bridge_cancellations(
-    proton_runtime_slot_t *runtime) {
-  while (proton_event_queue_count(&runtime->events) <
-         PROTON_EVENT_QUEUE_CAPACITY) {
-    int64_t request_id = 0;
-    int32_t present = 0;
-    char engine_error[512] = {0};
-    if (proton_engine_runtime_poll_bridge_cancellation(
-            runtime->engine_runtime, &request_id, &present, engine_error,
-            sizeof(engine_error)) != PROTON_OK ||
-        present == 0) {
-      return;
-    }
-    proton_event_t *event =
-        proton_event_create(PROTON_EVENT_BRIDGE_REQUEST_CANCELLED);
-    if (event == NULL) {
-      return;
-    }
-    event->request_id = request_id;
     if (!proton_runtime_enqueue_event(runtime, event)) {
       return;
     }
@@ -524,8 +470,6 @@ int32_t proton_runtime_wait(proton_runtime_handle_t runtime,
   uint32_t ready_mask = PROTON_WAIT_NONE;
   if ((interest_mask & PROTON_WAIT_EVENT) != 0) {
     proton_runtime_sync_engine_closed_windows(slot);
-    proton_runtime_sync_bridge_cancellations(slot);
-    proton_runtime_sync_menu_commands(slot);
     if (proton_runtime_has_events(slot)) {
       ready_mask |= PROTON_WAIT_EVENT;
     }
@@ -557,7 +501,6 @@ int32_t proton_runtime_wait(proton_runtime_handle_t runtime,
   }
   ready_mask = engine_ready & engine_interest;
   if ((interest_mask & PROTON_WAIT_EVENT) != 0) {
-    proton_runtime_sync_bridge_cancellations(slot);
     if (proton_runtime_has_events(slot)) {
       ready_mask |= PROTON_WAIT_EVENT;
     }
@@ -772,8 +715,6 @@ int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
     }
   }
   proton_runtime_sync_engine_bridge_lifecycle(slot);
-  proton_runtime_sync_bridge_cancellations(slot);
-  proton_runtime_sync_menu_commands(slot);
   proton_runtime_sync_platform_events(slot);
   if (slot->app_instance != PROTON_INVALID_HANDLE) {
     while (proton_event_queue_count(&slot->events) <

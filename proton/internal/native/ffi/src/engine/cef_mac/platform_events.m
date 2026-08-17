@@ -21,6 +21,9 @@ void proton_engine_platform_event_enqueue(proton_event_t *event) {
   if (event == NULL) {
     return;
   }
+  if (proton_event_try_publish(event)) {
+    return;
+  }
   pthread_mutex_lock(&g_platform_event_lock);
   if (g_platform_event_count == PROTON_PLATFORM_EVENT_CAPACITY) {
     proton_event_destroy(g_platform_events[g_platform_event_head]);

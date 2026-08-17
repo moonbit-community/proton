@@ -398,19 +398,25 @@ static bool proton_app_instance_enqueue_activation(
   }
 
   proton_app_instance_lock(slot);
-  if (event_count >
-      PROTON_APP_INSTANCE_EVENT_CAPACITY - slot->event_count) {
+  bool attached = slot->runtime != NULL;
+  if (!attached &&
+      event_count > PROTON_APP_INSTANCE_EVENT_CAPACITY - slot->event_count) {
     ok = false;
-  } else {
+  } else if (!attached) {
     for (size_t i = 0; i < event_count; i++) {
       (void)proton_app_instance_enqueue_owned(slot, events[i]);
       events[i] = NULL;
     }
-    if (event_count > 0 && slot->runtime != NULL) {
-      proton_engine_runtime_signal_external_event(slot->runtime);
-    }
   }
   proton_app_instance_unlock(slot);
+  if (ok && attached) {
+    for (size_t i = 0; i < event_count; i++) {
+      if (!proton_event_publish(events[i])) {
+        ok = false;
+      }
+      events[i] = NULL;
+    }
+  }
   for (size_t i = 0; i < event_count; i++) {
     proton_event_destroy(events[i]);
   }

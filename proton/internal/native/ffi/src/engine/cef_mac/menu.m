@@ -2,19 +2,18 @@
 
 #include "menu.h"
 
+#include "../../proton_event.h"
 #include "../../proton_engine.h"
 #include "window.h"
 
 #import <Cocoa/Cocoa.h>
 
-#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 static int g_proton_app_menu_installed = 0;
-static proton_engine_menu_signal_callback_t g_menu_signal_callback = NULL;
 static proton_engine_runtime_t *g_menu_runtime = NULL;
 
 @class ProtonMenuCommandTarget;
@@ -31,12 +30,6 @@ static void proton_engine_set_message(char *error,
 static void proton_engine_enqueue_menu_command(
     NSString *command_id,
     proton_window_id_t focused_window);
-static void proton_engine_reset_menu_commands(void);
-
-void proton_engine_menu_set_signal_callback(
-    proton_engine_menu_signal_callback_t callback) {
-  g_menu_signal_callback = callback;
-}
 
 @interface ProtonMenuCommandTarget : NSObject
 - (void)performMenuCommand:(id)sender;
@@ -393,21 +386,6 @@ int32_t proton_engine_menu_set_on_main(const proton_menu_bar_t *menu_bar,
   return PROTON_OK;
 }
 
-// App-menu command ids waiting for the host to poll them. Menu actions
-// arrive through AppKit while the host only speaks the runtime poll protocol,
-// so this queue bridges the two.
-#define PROTON_ENGINE_MAX_MENU_COMMANDS 32
-#define PROTON_ENGINE_MAX_MENU_COMMAND_BYTES 256
-typedef struct {
-  char command_id[PROTON_ENGINE_MAX_MENU_COMMAND_BYTES];
-  proton_window_id_t focused_window;
-} proton_engine_menu_command_t;
-static proton_engine_menu_command_t
-    g_menu_commands[PROTON_ENGINE_MAX_MENU_COMMANDS];
-static uint32_t g_menu_command_head = 0;
-static uint32_t g_menu_command_count = 0;
-static pthread_mutex_t g_menu_command_lock = PTHREAD_MUTEX_INITIALIZER;
-
 static void proton_engine_enqueue_menu_command(
     NSString *command_id,
     proton_window_id_t focused_window) {
@@ -415,76 +393,24 @@ static void proton_engine_enqueue_menu_command(
     return;
   }
   const char *utf8 = command_id != nil ? [command_id UTF8String] : "";
-  if (utf8 == NULL || strlen(utf8) >= PROTON_ENGINE_MAX_MENU_COMMAND_BYTES) {
+  proton_event_t *event = proton_event_create(PROTON_EVENT_MENU_COMMAND);
+  if (utf8 == NULL || event == NULL ||
+      !proton_event_set_text(&event->text_a, utf8)) {
+    proton_event_destroy(event);
     return;
   }
-  pthread_mutex_lock(&g_menu_command_lock);
-  if (g_menu_command_count < PROTON_ENGINE_MAX_MENU_COMMANDS) {
-    uint32_t index =
-        (g_menu_command_head + g_menu_command_count) %
-        PROTON_ENGINE_MAX_MENU_COMMANDS;
-    snprintf(g_menu_commands[index].command_id,
-             PROTON_ENGINE_MAX_MENU_COMMAND_BYTES, "%s", utf8);
-    g_menu_commands[index].focused_window = focused_window;
-    g_menu_command_count++;
-  }
-  pthread_mutex_unlock(&g_menu_command_lock);
-  if (g_menu_signal_callback != NULL) {
-    g_menu_signal_callback(PROTON_WAIT_PLATFORM);
-  }
-}
-
-static void proton_engine_reset_menu_commands(void) {
-  pthread_mutex_lock(&g_menu_command_lock);
-  g_menu_command_head = 0;
-  g_menu_command_count = 0;
-  pthread_mutex_unlock(&g_menu_command_lock);
+  event->window = focused_window;
+  (void)proton_event_publish(event);
 }
 
 void proton_engine_menu_set_runtime(proton_engine_runtime_t *runtime) {
   g_menu_runtime = runtime;
-  proton_engine_reset_menu_commands();
 }
 
 void proton_engine_menu_clear_runtime(proton_engine_runtime_t *runtime) {
   if (g_menu_runtime == runtime) {
     g_menu_runtime = NULL;
-    proton_engine_reset_menu_commands();
   }
-}
-
-int32_t proton_engine_take_menu_command(proton_engine_runtime_t *runtime,
-                                        char *buffer,
-                                        size_t buffer_len,
-                                        proton_window_id_t *out_focused_window,
-                                        int32_t *out_present) {
-  if (out_focused_window == NULL || out_present == NULL) {
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_focused_window = PROTON_INVALID_HANDLE;
-  *out_present = 0;
-  if (runtime == NULL || runtime != g_menu_runtime) {
-    return PROTON_OK;
-  }
-  pthread_mutex_lock(&g_menu_command_lock);
-  if (g_menu_command_count > 0) {
-    const proton_engine_menu_command_t *command =
-        &g_menu_commands[g_menu_command_head];
-    const char *command_id = command->command_id;
-    size_t command_len = strlen(command_id);
-    if (buffer == NULL || buffer_len <= command_len) {
-      pthread_mutex_unlock(&g_menu_command_lock);
-      return PROTON_ERR_BUFFER_TOO_SMALL;
-    }
-    memcpy(buffer, command_id, command_len + 1);
-    *out_focused_window = command->focused_window;
-    g_menu_command_head =
-        (g_menu_command_head + 1) % PROTON_ENGINE_MAX_MENU_COMMANDS;
-    g_menu_command_count--;
-    *out_present = 1;
-  }
-  pthread_mutex_unlock(&g_menu_command_lock);
-  return PROTON_OK;
 }
 
 #endif

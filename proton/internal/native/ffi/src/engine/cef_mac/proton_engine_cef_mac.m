@@ -2,6 +2,7 @@
 
 #include "../../proton_engine.h"
 #include "../../proton_config.h"
+#include "../../proton_event.h"
 #include "../../proton_json.h"
 
 #include "dialog.h"
@@ -94,9 +95,6 @@ struct proton_engine_runtime {
   char *bridge_queue[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
   size_t bridge_head;
   size_t bridge_count;
-  int64_t bridge_cancellations[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
-  size_t bridge_cancellation_head;
-  size_t bridge_cancellation_count;
   pthread_mutex_t bridge_lock;
   int bridge_lock_initialized;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
@@ -1061,8 +1059,7 @@ static int proton_engine_runtime_has_bridge_request(
     return 0;
   }
   proton_engine_runtime_bridge_lock(runtime);
-  int has_request =
-      runtime->bridge_count > 0 || runtime->bridge_cancellation_count > 0;
+  int has_request = runtime->bridge_count > 0;
   proton_engine_runtime_bridge_unlock(runtime);
   return has_request;
 }
@@ -1096,23 +1093,13 @@ static int proton_engine_runtime_enqueue_bridge_cancellation(
   if (runtime == NULL || request_id <= 0) {
     return 0;
   }
-  int ok = 0;
-  proton_engine_runtime_bridge_lock(runtime);
-  if (runtime->bridge_cancellation_count <
-      PROTON_ENGINE_MAX_BRIDGE_REQUESTS) {
-    size_t index =
-        (runtime->bridge_cancellation_head +
-         runtime->bridge_cancellation_count) %
-        PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
-    runtime->bridge_cancellations[index] = request_id;
-    runtime->bridge_cancellation_count++;
-    ok = 1;
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_BRIDGE_REQUEST_CANCELLED);
+  if (event == NULL) {
+    return 0;
   }
-  proton_engine_runtime_bridge_unlock(runtime);
-  if (ok) {
-    proton_engine_signal_wait_source(PROTON_WAIT_BRIDGE);
-  }
-  return ok;
+  event->request_id = request_id;
+  return proton_event_publish(event);
 }
 
 static size_t proton_engine_runtime_clear_bridge_queue(
@@ -1131,8 +1118,6 @@ static size_t proton_engine_runtime_clear_bridge_queue(
   }
   runtime->bridge_head = 0;
   runtime->bridge_count = 0;
-  runtime->bridge_cancellation_head = 0;
-  runtime->bridge_cancellation_count = 0;
   proton_engine_runtime_bridge_unlock(runtime);
   proton_engine_debug_log("bridge_queue_clear removed=%llu",
                           (unsigned long long)removed);
@@ -2026,7 +2011,6 @@ static void proton_engine_init_handlers(void) {
       (cef_base_ref_counted_t *)&g_scheme_factory.factory.base,
       sizeof(g_scheme_factory.factory), &g_scheme_factory.refs);
   g_scheme_factory.factory.create = proton_engine_scheme_create;
-  proton_engine_menu_set_signal_callback(proton_engine_signal_wait_source);
   proton_engine_dialog_set_signal_callback(proton_engine_signal_wait_source);
   proton_engine_platform_event_set_signal_callback(
       proton_engine_signal_wait_source);
@@ -3689,38 +3673,6 @@ int32_t proton_engine_runtime_poll_bridge_request_json(
   proton_engine_debug_log("bridge_dequeue request=%lld queued=%zu",
                           (long long)request_id, queued);
   free(request_json);
-  return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_poll_bridge_cancellation(
-    proton_engine_runtime_t *runtime,
-    int64_t *out_request_id,
-    int32_t *out_present,
-    char *error,
-    size_t error_len) {
-  if (out_request_id != NULL) {
-    *out_request_id = 0;
-  }
-  if (out_present != NULL) {
-    *out_present = 0;
-  }
-  if (runtime == NULL || out_request_id == NULL || out_present == NULL) {
-    proton_engine_set_message(
-        error, error_len,
-        "runtime, out_request_id and out_present are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  proton_engine_runtime_bridge_lock(runtime);
-  if (runtime->bridge_cancellation_count > 0) {
-    *out_request_id =
-        runtime->bridge_cancellations[runtime->bridge_cancellation_head];
-    runtime->bridge_cancellation_head =
-        (runtime->bridge_cancellation_head + 1) %
-        PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
-    runtime->bridge_cancellation_count--;
-    *out_present = 1;
-  }
-  proton_engine_runtime_bridge_unlock(runtime);
   return PROTON_OK;
 }
 

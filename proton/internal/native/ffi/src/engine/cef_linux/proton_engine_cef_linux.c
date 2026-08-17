@@ -6,6 +6,7 @@
 
 #include "../../proton_engine.h"
 #include "../../proton_config.h"
+#include "../../proton_event.h"
 #include "../../proton_json.h"
 #include "proton_linux_menu.h"
 #include "proton_linux_titlebar.h"
@@ -79,8 +80,6 @@
 #define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
 #define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
 #define PROTON_ENGINE_CLOSE_DRAIN_LIMIT 5000
-#define PROTON_ENGINE_MAX_MENU_COMMANDS 32
-#define PROTON_ENGINE_MAX_MENU_COMMAND_BYTES 256
 
 enum {
   PROTON_X11_MOVERESIZE_SIZE_TOP_LEFT = 0,
@@ -96,11 +95,6 @@ enum {
 
 typedef struct proton_engine_client proton_engine_client_t;
 
-typedef struct {
-  char command_id[PROTON_ENGINE_MAX_MENU_COMMAND_BYTES];
-  proton_window_id_t focused_window;
-} proton_engine_menu_command_t;
-
 struct proton_engine_runtime {
   int owns_cef_runtime;
   int headless;
@@ -111,17 +105,9 @@ struct proton_engine_runtime {
   char *bridge_queue[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
   size_t bridge_head;
   size_t bridge_count;
-  int64_t bridge_cancellations[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
-  size_t bridge_cancellation_head;
-  size_t bridge_cancellation_count;
   pthread_mutex_t bridge_lock;
   int bridge_lock_initialized;
   proton_linux_menu_bar_t *menu_definition;
-  proton_engine_menu_command_t menu_commands[PROTON_ENGINE_MAX_MENU_COMMANDS];
-  size_t menu_command_head;
-  size_t menu_command_count;
-  pthread_mutex_t menu_lock;
-  int menu_lock_initialized;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
 };
@@ -870,10 +856,6 @@ static void proton_engine_runtime_dispose_menu(
   }
   proton_linux_menu_bar_destroy(runtime->menu_definition);
   runtime->menu_definition = NULL;
-  if (runtime->menu_lock_initialized) {
-    pthread_mutex_destroy(&runtime->menu_lock);
-    runtime->menu_lock_initialized = 0;
-  }
 }
 
 static int proton_engine_runtime_has_bridge_request(
@@ -882,8 +864,7 @@ static int proton_engine_runtime_has_bridge_request(
     return 0;
   }
   proton_engine_runtime_bridge_lock(runtime);
-  int has_request =
-      runtime->bridge_count > 0 || runtime->bridge_cancellation_count > 0;
+  int has_request = runtime->bridge_count > 0;
   proton_engine_runtime_bridge_unlock(runtime);
   return has_request;
 }
@@ -917,23 +898,13 @@ static int proton_engine_runtime_enqueue_bridge_cancellation(
   if (runtime == NULL || request_id <= 0) {
     return 0;
   }
-  int ok = 0;
-  proton_engine_runtime_bridge_lock(runtime);
-  if (runtime->bridge_cancellation_count <
-      PROTON_ENGINE_MAX_BRIDGE_REQUESTS) {
-    size_t index =
-        (runtime->bridge_cancellation_head +
-         runtime->bridge_cancellation_count) %
-        PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
-    runtime->bridge_cancellations[index] = request_id;
-    runtime->bridge_cancellation_count++;
-    ok = 1;
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_BRIDGE_REQUEST_CANCELLED);
+  if (event == NULL) {
+    return 0;
   }
-  proton_engine_runtime_bridge_unlock(runtime);
-  if (ok) {
-    proton_engine_signal_wait_source(PROTON_WAIT_BRIDGE);
-  }
-  return ok;
+  event->request_id = request_id;
+  return proton_event_publish(event);
 }
 
 static size_t proton_engine_runtime_clear_bridge_queue(
@@ -952,8 +923,6 @@ static size_t proton_engine_runtime_clear_bridge_queue(
   }
   runtime->bridge_head = 0;
   runtime->bridge_count = 0;
-  runtime->bridge_cancellation_head = 0;
-  runtime->bridge_cancellation_count = 0;
   proton_engine_runtime_bridge_unlock(runtime);
   proton_engine_debug_log("bridge_queue_clear removed=%llu",
                           (unsigned long long)removed);
@@ -3528,9 +3497,6 @@ int32_t proton_engine_runtime_create(
   if (pthread_mutex_init(&runtime->bridge_lock, NULL) == 0) {
     runtime->bridge_lock_initialized = 1;
   }
-  if (pthread_mutex_init(&runtime->menu_lock, NULL) == 0) {
-    runtime->menu_lock_initialized = 1;
-  }
   if (!proton_engine_setup_wait_source(error, error_len)) {
     if (runtime->bridge_lock_initialized) {
       pthread_mutex_destroy(&runtime->bridge_lock);
@@ -3984,43 +3950,21 @@ int32_t proton_engine_runtime_next_wakeup_delay_ms(
   return PROTON_ERR_UNSUPPORTED;
 }
 
-static void proton_engine_menu_reset_commands(
-    proton_engine_runtime_t *runtime) {
-  if (runtime == NULL || !runtime->menu_lock_initialized) {
-    return;
-  }
-  pthread_mutex_lock(&runtime->menu_lock);
-  runtime->menu_command_head = 0;
-  runtime->menu_command_count = 0;
-  pthread_mutex_unlock(&runtime->menu_lock);
-}
-
 static void proton_engine_menu_enqueue_command(
     proton_engine_runtime_t *runtime,
     const char *command_id,
     proton_window_id_t focused_window) {
-  if (runtime == NULL || !runtime->menu_lock_initialized ||
-      command_id == NULL ||
-      strlen(command_id) >= PROTON_ENGINE_MAX_MENU_COMMAND_BYTES) {
+  if (runtime == NULL || command_id == NULL) {
     return;
   }
-  int inserted = 0;
-  pthread_mutex_lock(&runtime->menu_lock);
-  if (runtime->menu_command_count < PROTON_ENGINE_MAX_MENU_COMMANDS) {
-    const size_t index =
-        (runtime->menu_command_head + runtime->menu_command_count) %
-        PROTON_ENGINE_MAX_MENU_COMMANDS;
-    snprintf(runtime->menu_commands[index].command_id,
-             sizeof(runtime->menu_commands[index].command_id), "%s",
-             command_id);
-    runtime->menu_commands[index].focused_window = focused_window;
-    runtime->menu_command_count++;
-    inserted = 1;
+  proton_event_t *event = proton_event_create(PROTON_EVENT_MENU_COMMAND);
+  if (event == NULL ||
+      !proton_event_set_text(&event->text_a, command_id)) {
+    proton_event_destroy(event);
+    return;
   }
-  pthread_mutex_unlock(&runtime->menu_lock);
-  if (inserted) {
-    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  }
+  event->window = focused_window;
+  (void)proton_event_publish(event);
 }
 
 static void proton_engine_menu_command_activated(const char *command_id,
@@ -4190,7 +4134,6 @@ int32_t proton_engine_runtime_set_menu(
   }
   proton_linux_menu_bar_destroy(runtime->menu_definition);
   runtime->menu_definition = menu_definition;
-  proton_engine_menu_reset_commands(runtime);
   return PROTON_OK;
 }
 
@@ -4235,38 +4178,6 @@ int32_t proton_engine_runtime_poll_bridge_request_json(
   runtime->bridge_count--;
   proton_engine_runtime_bridge_unlock(runtime);
   free(request_json);
-  return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_poll_bridge_cancellation(
-    proton_engine_runtime_t *runtime,
-    int64_t *out_request_id,
-    int32_t *out_present,
-    char *error,
-    size_t error_len) {
-  if (out_request_id != NULL) {
-    *out_request_id = 0;
-  }
-  if (out_present != NULL) {
-    *out_present = 0;
-  }
-  if (runtime == NULL || out_request_id == NULL || out_present == NULL) {
-    proton_engine_set_message(
-        error, error_len,
-        "runtime, out_request_id and out_present are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  proton_engine_runtime_bridge_lock(runtime);
-  if (runtime->bridge_cancellation_count > 0) {
-    *out_request_id =
-        runtime->bridge_cancellations[runtime->bridge_cancellation_head];
-    runtime->bridge_cancellation_head =
-        (runtime->bridge_cancellation_head + 1) %
-        PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
-    runtime->bridge_cancellation_count--;
-    *out_present = 1;
-  }
-  proton_engine_runtime_bridge_unlock(runtime);
   return PROTON_OK;
 }
 
@@ -5539,41 +5450,6 @@ int32_t proton_engine_window_poll_dialog_result(
       window != NULL ? window->runtime : NULL, window, dialog, buffer,
       buffer_len, out_required_len, error, error_len);
 }
-int32_t proton_engine_take_menu_command(
-    proton_engine_runtime_t *runtime,
-    char *buffer,
-    size_t buffer_len,
-    proton_window_id_t *out_focused_window,
-    int32_t *out_present) {
-  if (out_focused_window == NULL || out_present == NULL) {
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_focused_window = PROTON_INVALID_HANDLE;
-  *out_present = 0;
-  if (runtime == NULL || !runtime->menu_lock_initialized) {
-    return PROTON_OK;
-  }
-  pthread_mutex_lock(&runtime->menu_lock);
-  if (runtime->menu_command_count > 0) {
-    const proton_engine_menu_command_t *command =
-        &runtime->menu_commands[runtime->menu_command_head];
-    const size_t command_len = strlen(command->command_id);
-    if (buffer == NULL || buffer_len <= command_len) {
-      pthread_mutex_unlock(&runtime->menu_lock);
-      return PROTON_ERR_BUFFER_TOO_SMALL;
-    }
-    memcpy(buffer, command->command_id, command_len + 1);
-    *out_focused_window = command->focused_window;
-    runtime->menu_command_head =
-        (runtime->menu_command_head + 1) % PROTON_ENGINE_MAX_MENU_COMMANDS;
-    runtime->menu_command_count--;
-    *out_present = 1;
-  }
-  pthread_mutex_unlock(&runtime->menu_lock);
-  return PROTON_OK;
-}
-
-
 // MARK: - Web contents views
 //
 // A view is an extra child browser hosted inside a window's browser host,

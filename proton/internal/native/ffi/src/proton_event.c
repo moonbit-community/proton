@@ -215,7 +215,7 @@ void proton_event_unbind_sink(void *user_data) {
   proton_event_sink_unlock();
 }
 
-bool proton_event_publish(proton_event_t *event) {
+bool proton_event_try_publish(proton_event_t *event) {
   if (event == NULL) {
     return false;
   }
@@ -223,6 +223,11 @@ bool proton_event_publish(proton_event_t *event) {
   bool published = g_event_sink != NULL &&
                    g_event_sink(g_event_sink_user_data, event);
   proton_event_sink_unlock();
+  return published;
+}
+
+bool proton_event_publish(proton_event_t *event) {
+  bool published = proton_event_try_publish(event);
   if (!published) {
     proton_event_destroy(event);
   }

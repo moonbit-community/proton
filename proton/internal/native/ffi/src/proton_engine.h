@@ -165,12 +165,6 @@ int32_t proton_engine_runtime_poll_bridge_request_json(
     int32_t *out_required_len,
     char *error,
     size_t error_len);
-int32_t proton_engine_runtime_poll_bridge_cancellation(
-    proton_engine_runtime_t *runtime,
-    int64_t *out_request_id,
-    int32_t *out_present,
-    char *error,
-    size_t error_len);
 int32_t proton_engine_runtime_respond_bridge_request_json(
     proton_engine_runtime_t *runtime,
     const char *response_json,
@@ -346,11 +340,6 @@ int32_t proton_engine_window_poll_dialog_result(
     char *error,
     size_t error_len);
 
-int32_t proton_engine_take_menu_command(proton_engine_runtime_t *runtime,
-                                        char *buffer,
-                                        size_t buffer_len,
-                                        proton_window_id_t *out_focused_window,
-                                        int32_t *out_present);
 proton_event_t *proton_engine_take_platform_event(
     proton_engine_runtime_t *runtime);
 const char *proton_engine_name(void);

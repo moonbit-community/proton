@@ -2,6 +2,7 @@
 
 #include "../../proton_engine.h"
 #include "../../proton_config.h"
+#include "../../proton_event.h"
 #include "../../proton_json.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -81,9 +82,6 @@ struct proton_engine_runtime {
   char *bridge_queue[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
   size_t bridge_head;
   size_t bridge_count;
-  int64_t bridge_cancellations[PROTON_ENGINE_MAX_BRIDGE_REQUESTS];
-  size_t bridge_cancellation_head;
-  size_t bridge_cancellation_count;
   CRITICAL_SECTION bridge_lock;
   int bridge_lock_initialized;
   HANDLE bridge_event;
@@ -713,7 +711,7 @@ static void proton_engine_runtime_sync_bridge_event_locked(
   if (runtime == NULL || runtime->bridge_event == NULL) {
     return;
   }
-  if (runtime->bridge_count > 0 || runtime->bridge_cancellation_count > 0) {
+  if (runtime->bridge_count > 0) {
     SetEvent(runtime->bridge_event);
   } else {
     ResetEvent(runtime->bridge_event);
@@ -727,8 +725,7 @@ static int proton_engine_runtime_has_bridge_request(
   }
   int has_request = 0;
   proton_engine_runtime_bridge_lock(runtime);
-  has_request =
-      runtime->bridge_count > 0 || runtime->bridge_cancellation_count > 0;
+  has_request = runtime->bridge_count > 0;
   proton_engine_runtime_sync_bridge_event_locked(runtime);
   proton_engine_runtime_bridge_unlock(runtime);
   return has_request;
@@ -761,24 +758,13 @@ static int proton_engine_runtime_enqueue_bridge_cancellation(
   if (runtime == NULL || request_id <= 0) {
     return 0;
   }
-  int ok = 0;
-  proton_engine_runtime_bridge_lock(runtime);
-  if (runtime->bridge_cancellation_count <
-      PROTON_ENGINE_MAX_BRIDGE_REQUESTS) {
-    size_t index =
-        (runtime->bridge_cancellation_head +
-         runtime->bridge_cancellation_count) %
-        PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
-    runtime->bridge_cancellations[index] = request_id;
-    runtime->bridge_cancellation_count++;
-    proton_engine_runtime_sync_bridge_event_locked(runtime);
-    ok = 1;
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_BRIDGE_REQUEST_CANCELLED);
+  if (event == NULL) {
+    return 0;
   }
-  proton_engine_runtime_bridge_unlock(runtime);
-  if (ok) {
-    proton_engine_signal_wait_source(runtime, PROTON_WAIT_BRIDGE);
-  }
-  return ok;
+  event->request_id = request_id;
+  return proton_event_publish(event);
 }
 
 static char *proton_engine_runtime_pop_bridge_request(
@@ -816,8 +802,6 @@ static size_t proton_engine_runtime_clear_bridge_queue(
   }
   runtime->bridge_head = 0;
   runtime->bridge_count = 0;
-  runtime->bridge_cancellation_head = 0;
-  runtime->bridge_cancellation_count = 0;
   proton_engine_runtime_sync_bridge_event_locked(runtime);
   proton_engine_runtime_bridge_unlock(runtime);
   proton_engine_debug_log("bridge_queue_clear removed=%llu",
@@ -3815,39 +3799,6 @@ int32_t proton_engine_runtime_poll_bridge_request_json(
   return PROTON_OK;
 }
 
-int32_t proton_engine_runtime_poll_bridge_cancellation(
-    proton_engine_runtime_t *runtime,
-    int64_t *out_request_id,
-    int32_t *out_present,
-    char *error,
-    size_t error_len) {
-  if (out_request_id != NULL) {
-    *out_request_id = 0;
-  }
-  if (out_present != NULL) {
-    *out_present = 0;
-  }
-  if (runtime == NULL || out_request_id == NULL || out_present == NULL) {
-    proton_engine_set_message(
-        error, error_len,
-        "runtime, out_request_id and out_present are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  proton_engine_runtime_bridge_lock(runtime);
-  if (runtime->bridge_cancellation_count > 0) {
-    *out_request_id =
-        runtime->bridge_cancellations[runtime->bridge_cancellation_head];
-    runtime->bridge_cancellation_head =
-        (runtime->bridge_cancellation_head + 1) %
-        PROTON_ENGINE_MAX_BRIDGE_REQUESTS;
-    runtime->bridge_cancellation_count--;
-    *out_present = 1;
-    proton_engine_runtime_sync_bridge_event_locked(runtime);
-  }
-  proton_engine_runtime_bridge_unlock(runtime);
-  return PROTON_OK;
-}
-
 int32_t proton_engine_runtime_respond_bridge_request_json(
     proton_engine_runtime_t *runtime,
     const char *response_json,
@@ -5145,25 +5096,6 @@ int32_t proton_engine_window_poll_dialog_result(
       window != NULL ? window->runtime : NULL, window, dialog, buffer,
       buffer_len, out_required_len, error, error_len);
 }
-// TODO: Drain Windows menu commands once the native menu backend is implemented.
-int32_t proton_engine_take_menu_command(
-    proton_engine_runtime_t *runtime,
-    char *buffer,
-    size_t buffer_len,
-    proton_window_id_t *out_focused_window,
-    int32_t *out_present) {
-  (void)runtime;
-  (void)buffer;
-  (void)buffer_len;
-  if (out_focused_window == NULL || out_present == NULL) {
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_focused_window = PROTON_INVALID_HANDLE;
-  *out_present = 0;
-  return PROTON_OK;
-}
-
-
 // MARK: - Web contents views
 //
 // A view is an extra child browser hosted inside a window's client area,
