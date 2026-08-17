@@ -154,32 +154,27 @@ struct AppInstance {
 }
 
 ///|
-struct RuntimeEvent {
-  event_type : String
-  window : Int64?
-  view : Int64?
-  title : String?
-  is_loading : Bool?
-  state : WindowState?
-  request_id : Int64?
-  url : String?
-  http_method : String?
-  user_gesture : Bool?
-  redirect : Bool?
-  disposition : Int?
-  download_id : Int?
-  suggested_name : String?
-  download_state : String?
-  received_bytes : Int64?
-  total_bytes : Int64?
-  percent : Int?
-  error_code : Int?
-  permissions : Int?
-  menu_command_id : String?
-  revision : Int64?
-  items : Array[String]
-  ok : Bool?
-  message : String?
+enum RuntimeEvent {
+  WindowCreated(Int64)
+  WindowClosed(Int64)
+  WindowStateChanged(Int64, WindowState)
+  WindowCloseRequested(Int64, Int64)
+  BridgeLifecycleChanged(Int64, Int64)
+  BridgeRequestCancelled(Int64)
+  MenuCommand(String, Int64?)
+  LaunchInput(RuntimeLaunchInput)
+  NotificationResult(NativeNotificationResult)
+  BrowserRequest(Int64, NativeBrowserRequest)
+  BrowserDownloadUpdated(Int64, NativeDownloadUpdate)
+  ViewEvent(Int64, Int64, NativeViewEvent)
+} derive(Debug, Eq)
+
+///|
+enum NativeViewEvent {
+  LoadingChanged(Bool)
+  Navigated(String)
+  TitleUpdated(String)
+  LoadFailed(String, Int, String)
 } derive(Debug, Eq)
 
 ///|
@@ -596,25 +591,61 @@ pub extend BridgeInitializationUnit with Debug::{to_repr}
 
 ///|
 pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
-  self.event_type
+  match self {
+    WindowCreated(_) => "window_created"
+    WindowClosed(_) => "window_closed"
+    WindowStateChanged(_, _) => "window_state_changed"
+    WindowCloseRequested(_, _) => "window_close_requested"
+    BridgeLifecycleChanged(_, _) => "bridge_lifecycle_changed"
+    BridgeRequestCancelled(_) => "bridge_request_cancelled"
+    MenuCommand(_, _) => "menu_command"
+    LaunchInput(OpenUrls(_)) => "open_urls"
+    LaunchInput(OpenFiles(_)) => "open_files"
+    LaunchInput(Reopen) => "reopen"
+    NotificationResult(_) => "notification_result"
+    BrowserRequest(_, Navigation(..)) => "browser_navigation_requested"
+    BrowserRequest(_, Popup(..)) => "browser_popup_requested"
+    BrowserRequest(_, Download(..)) => "browser_download_requested"
+    BrowserRequest(_, Certificate(..)) => "browser_certificate_error"
+    BrowserRequest(_, Media(..)) => "browser_media_permission_requested"
+    BrowserDownloadUpdated(_, _) => "browser_download_updated"
+    ViewEvent(_, _, LoadingChanged(_)) => "view_loading_changed"
+    ViewEvent(_, _, Navigated(_)) => "view_navigated"
+    ViewEvent(_, _, TitleUpdated(_)) => "view_title_updated"
+    ViewEvent(_, _, LoadFailed(_, _, _)) => "view_load_failed"
+  }
 }
 
 ///|
 pub fn RuntimeEvent::has_window(self : RuntimeEvent) -> Bool {
-  self.window is Some(_)
+  self.window_id() is Some(_)
 }
 
 ///|
 /// Returns the window associated with this event when one exists. For an app
 /// menu command this is the focused window at click time.
 pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
-  self.window
+  match self {
+    WindowCreated(window)
+    | WindowClosed(window)
+    | WindowStateChanged(window, _)
+    | WindowCloseRequested(window, _)
+    | BridgeLifecycleChanged(window, _)
+    | BrowserRequest(window, _)
+    | BrowserDownloadUpdated(window, _)
+    | ViewEvent(window, _, _) => Some(window)
+    MenuCommand(_, window) => window
+    BridgeRequestCancelled(_) | LaunchInput(_) | NotificationResult(_) => None
+  }
 }
 
 ///|
 /// Returns the web contents view associated with this event when one exists.
 pub fn RuntimeEvent::view_id(self : RuntimeEvent) -> Int64? {
-  self.view
+  match self {
+    ViewEvent(_, view, _) => Some(view)
+    _ => None
+  }
 }
 
 ///|
@@ -636,43 +667,66 @@ pub extend ViewEventInfo with Debug::{to_repr}
 ///|
 /// Returns the view event payload when this event carries one.
 pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
-  if !self.event_type.has_prefix("view_") {
-    return None
+  match self {
+    ViewEvent(_, _, LoadingChanged(is_loading)) =>
+      Some({
+        url: None,
+        title: None,
+        is_loading: Some(is_loading),
+        error_code: None,
+        error_text: None,
+      })
+    ViewEvent(_, _, Navigated(url)) =>
+      Some({
+        url: Some(url),
+        title: None,
+        is_loading: None,
+        error_code: None,
+        error_text: None,
+      })
+    ViewEvent(_, _, TitleUpdated(title)) =>
+      Some({
+        url: None,
+        title: Some(title),
+        is_loading: None,
+        error_code: None,
+        error_text: None,
+      })
+    ViewEvent(_, _, LoadFailed(url, error_code, error_text)) =>
+      Some({
+        url: Some(url),
+        title: None,
+        is_loading: None,
+        error_code: Some(error_code),
+        error_text: Some(error_text),
+      })
+    _ => None
   }
-  Some({
-    url: self.url,
-    title: self.title,
-    is_loading: self.is_loading,
-    error_code: self.error_code,
-    error_text: self.message,
-  })
 }
 
 ///|
 pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
-  self.event_type == "window_created"
+  self is WindowCreated(_)
 }
 
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
-  self.event_type == "window_closed"
+  self is WindowClosed(_)
 }
 
 ///|
 pub fn RuntimeEvent::window_state_change(self : RuntimeEvent) -> WindowState? {
-  if self.event_type == "window_state_changed" {
-    self.state
-  } else {
-    None
+  match self {
+    WindowStateChanged(_, state) => Some(state)
+    _ => None
   }
 }
 
 ///|
 pub fn RuntimeEvent::window_close_request(self : RuntimeEvent) -> Int64? {
-  if self.event_type == "window_close_requested" {
-    self.request_id
-  } else {
-    None
+  match self {
+    WindowCloseRequested(_, request_id) => Some(request_id)
+    _ => None
   }
 }
 
@@ -680,45 +734,8 @@ pub fn RuntimeEvent::window_close_request(self : RuntimeEvent) -> Int64? {
 pub fn RuntimeEvent::browser_request(
   self : RuntimeEvent,
 ) -> NativeBrowserRequest? {
-  let request_id = self.request_id
-  let url = self.url
-  match (self.event_type, request_id, url) {
-    ("browser_navigation_requested", Some(request_id), Some(url)) =>
-      Some(
-        Navigation(
-          request_id~,
-          url~,
-          http_method=self.http_method.unwrap_or("GET"),
-          user_gesture=self.user_gesture.unwrap_or(false),
-          redirect=self.redirect.unwrap_or(false),
-        ),
-      )
-    ("browser_popup_requested", Some(request_id), Some(url)) =>
-      Some(
-        Popup(
-          request_id~,
-          url~,
-          disposition=self.disposition.unwrap_or(0),
-          user_gesture=self.user_gesture.unwrap_or(false),
-        ),
-      )
-    ("browser_download_requested", Some(request_id), Some(url)) =>
-      Some(
-        Download(
-          request_id~,
-          download_id=self.download_id.unwrap_or(0),
-          url~,
-          suggested_name=self.suggested_name.unwrap_or(""),
-        ),
-      )
-    ("browser_certificate_error", Some(request_id), Some(url)) =>
-      Some(
-        Certificate(request_id~, url~, error_code=self.error_code.unwrap_or(0)),
-      )
-    ("browser_media_permission_requested", Some(request_id), Some(origin)) =>
-      Some(
-        Media(request_id~, origin~, permissions=self.permissions.unwrap_or(0)),
-      )
+  match self {
+    BrowserRequest(_, request) => Some(request)
     _ => None
   }
 }
@@ -727,37 +744,22 @@ pub fn RuntimeEvent::browser_request(
 pub fn RuntimeEvent::browser_download_update(
   self : RuntimeEvent,
 ) -> NativeDownloadUpdate? {
-  guard self.event_type == "browser_download_updated" else { return None }
-  match
-    (
-      self.download_id,
-      self.download_state,
-      self.received_bytes,
-      self.total_bytes,
-      self.percent,
-    ) {
-    (
-      Some(download_id),
-      Some(state),
-      Some(received_bytes),
-      Some(total_bytes),
-      Some(percent),
-    ) => Some({ download_id, state, received_bytes, total_bytes, percent })
+  match self {
+    BrowserDownloadUpdated(_, update) => Some(update)
     _ => None
   }
 }
 
 ///|
 pub fn RuntimeEvent::is_bridge_lifecycle_changed(self : RuntimeEvent) -> Bool {
-  self.event_type == "bridge_lifecycle_changed"
+  self is BridgeLifecycleChanged(_, _)
 }
 
 ///|
 pub fn RuntimeEvent::bridge_request_cancellation(self : RuntimeEvent) -> Int64? {
-  if self.event_type == "bridge_request_cancelled" {
-    self.request_id
-  } else {
-    None
+  match self {
+    BridgeRequestCancelled(request_id) => Some(request_id)
+    _ => None
   }
 }
 
@@ -765,20 +767,17 @@ pub fn RuntimeEvent::bridge_request_cancellation(self : RuntimeEvent) -> Int64? 
 /// The command id for an app-menu command item click, or `None` for every
 /// other event kind.
 pub fn RuntimeEvent::menu_command_id(self : RuntimeEvent) -> String? {
-  if self.event_type == "menu_command" {
-    self.menu_command_id
-  } else {
-    None
+  match self {
+    MenuCommand(command_id, _) => Some(command_id)
+    _ => None
   }
 }
 
 ///|
 /// Returns the typed application launch input carried by this event.
 pub fn RuntimeEvent::launch_input(self : RuntimeEvent) -> RuntimeLaunchInput? {
-  match self.event_type {
-    "open_urls" => Some(RuntimeLaunchInput::OpenUrls(self.items.copy()))
-    "open_files" => Some(RuntimeLaunchInput::OpenFiles(self.items.copy()))
-    "reopen" => Some(RuntimeLaunchInput::Reopen)
+  match self {
+    LaunchInput(input) => Some(input)
     _ => None
   }
 }
@@ -787,16 +786,9 @@ pub fn RuntimeEvent::launch_input(self : RuntimeEvent) -> RuntimeLaunchInput? {
 pub fn RuntimeEvent::notification_result(
   self : RuntimeEvent,
 ) -> NativeNotificationResult? {
-  guard self.event_type == "notification_result" else { return None }
-  match self.ok {
-    Some(true) => Some(NativeNotificationResult::Delivered)
-    Some(false) =>
-      Some(
-        NativeNotificationResult::Failed(
-          self.message.unwrap_or("notification delivery failed"),
-        ),
-      )
-    None => None
+  match self {
+    NotificationResult(result) => Some(result)
+    _ => None
   }
 }
 

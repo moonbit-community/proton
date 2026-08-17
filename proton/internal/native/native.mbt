@@ -436,33 +436,192 @@ fn decode_runtime_event_json(text : String) -> RuntimeEvent raise NativeError {
   let message = message_json.map(value => {
     decode_string_json(value, "runtime event message")
   })
-  RuntimeEvent::{
-    event_type,
-    window,
-    view,
-    title,
-    is_loading,
-    state,
-    request_id,
-    url,
-    http_method,
-    user_gesture,
-    redirect,
-    disposition,
-    download_id,
-    suggested_name,
-    download_state,
-    received_bytes,
-    total_bytes,
-    percent,
-    error_code,
-    permissions,
-    menu_command_id,
-    revision,
-    items,
-    ok,
-    message,
+  match event_type {
+    "window_created" => {
+      guard window is Some(window) else {
+        raise runtime_event_missing(event_type, "window")
+      }
+      WindowCreated(window)
+    }
+    "window_closed" => {
+      guard window is Some(window) else {
+        raise runtime_event_missing(event_type, "window")
+      }
+      WindowClosed(window)
+    }
+    "window_state_changed" => {
+      guard (window, state) is (Some(window), Some(state)) else {
+        raise runtime_event_missing(event_type, "window or state")
+      }
+      WindowStateChanged(window, state)
+    }
+    "window_close_requested" => {
+      guard (window, request_id) is (Some(window), Some(request_id)) else {
+        raise runtime_event_missing(event_type, "window or request_id")
+      }
+      WindowCloseRequested(window, request_id)
+    }
+    "bridge_lifecycle_changed" => {
+      guard (window, revision) is (Some(window), Some(revision)) else {
+        raise runtime_event_missing(event_type, "window or revision")
+      }
+      BridgeLifecycleChanged(window, revision)
+    }
+    "bridge_request_cancelled" => {
+      guard request_id is Some(request_id) else {
+        raise runtime_event_missing(event_type, "request_id")
+      }
+      BridgeRequestCancelled(request_id)
+    }
+    "menu_command" => {
+      guard menu_command_id is Some(command_id) else {
+        raise runtime_event_missing(event_type, "command_id")
+      }
+      MenuCommand(command_id, window)
+    }
+    "open_urls" => LaunchInput(OpenUrls(items))
+    "open_files" => LaunchInput(OpenFiles(items))
+    "reopen" => LaunchInput(Reopen)
+    "notification_result" =>
+      match ok {
+        Some(true) => NotificationResult(Delivered)
+        Some(false) =>
+          NotificationResult(
+            Failed(message.unwrap_or("notification delivery failed")),
+          )
+        None => raise runtime_event_missing(event_type, "ok")
+      }
+    "browser_navigation_requested" => {
+      guard (window, request_id, url)
+        is (Some(window), Some(request_id), Some(url)) else {
+        raise runtime_event_missing(event_type, "window, request_id, or url")
+      }
+      BrowserRequest(
+        window,
+        Navigation(
+          request_id~,
+          url~,
+          http_method=http_method.unwrap_or("GET"),
+          user_gesture=user_gesture.unwrap_or(false),
+          redirect=redirect.unwrap_or(false),
+        ),
+      )
+    }
+    "browser_popup_requested" => {
+      guard (window, request_id, url)
+        is (Some(window), Some(request_id), Some(url)) else {
+        raise runtime_event_missing(event_type, "window, request_id, or url")
+      }
+      BrowserRequest(
+        window,
+        Popup(
+          request_id~,
+          url~,
+          disposition=disposition.unwrap_or(0),
+          user_gesture=user_gesture.unwrap_or(false),
+        ),
+      )
+    }
+    "browser_download_requested" => {
+      guard (window, request_id, url, download_id)
+        is (Some(window), Some(request_id), Some(url), Some(download_id)) else {
+        raise runtime_event_missing(
+          event_type, "window, request_id, url, or download_id",
+        )
+      }
+      BrowserRequest(
+        window,
+        Download(
+          request_id~,
+          download_id~,
+          url~,
+          suggested_name=suggested_name.unwrap_or(""),
+        ),
+      )
+    }
+    "browser_certificate_error" => {
+      guard (window, request_id, url, error_code)
+        is (Some(window), Some(request_id), Some(url), Some(error_code)) else {
+        raise runtime_event_missing(
+          event_type, "window, request_id, url, or error",
+        )
+      }
+      BrowserRequest(window, Certificate(request_id~, url~, error_code~))
+    }
+    "browser_media_permission_requested" => {
+      guard (window, request_id, url, permissions)
+        is (Some(window), Some(request_id), Some(url), Some(permissions)) else {
+        raise runtime_event_missing(
+          event_type, "window, request_id, origin, or permissions",
+        )
+      }
+      BrowserRequest(window, Media(request_id~, origin=url, permissions~))
+    }
+    "browser_download_updated" => {
+      guard (
+          window, download_id, download_state, received_bytes, total_bytes, percent,
+        )
+        is (
+          Some(window),
+          Some(download_id),
+          Some(state),
+          Some(received_bytes),
+          Some(total_bytes),
+          Some(percent),
+        ) else {
+        raise runtime_event_missing(event_type, "download update fields")
+      }
+      BrowserDownloadUpdated(window, {
+        download_id,
+        state,
+        received_bytes,
+        total_bytes,
+        percent,
+      })
+    }
+    "view_loading_changed" => {
+      guard (window, view, is_loading)
+        is (Some(window), Some(view), Some(is_loading)) else {
+        raise runtime_event_missing(event_type, "window, view, or is_loading")
+      }
+      ViewEvent(window, view, LoadingChanged(is_loading))
+    }
+    "view_navigated" => {
+      guard (window, view, url) is (Some(window), Some(view), Some(url)) else {
+        raise runtime_event_missing(event_type, "window, view, or url")
+      }
+      ViewEvent(window, view, Navigated(url))
+    }
+    "view_title_updated" => {
+      guard (window, view, title) is (Some(window), Some(view), Some(title)) else {
+        raise runtime_event_missing(event_type, "window, view, or title")
+      }
+      ViewEvent(window, view, TitleUpdated(title))
+    }
+    "view_load_failed" => {
+      guard (window, view, url, error_code, message)
+        is (Some(window), Some(view), Some(url), Some(error_code), Some(message)
+        ) else {
+        raise runtime_event_missing(
+          event_type, "window, view, url, error, or message",
+        )
+      }
+      ViewEvent(window, view, LoadFailed(url, error_code, message))
+    }
+    _ =>
+      raise InvalidPayload(
+        context="runtime event",
+        message="unsupported event type " + event_type,
+      )
   }
+}
+
+///|
+fn runtime_event_missing(event_type : String, field : String) -> NativeError {
+  InvalidPayload(
+    context="runtime event " + event_type,
+    message="missing " + field,
+  )
 }
 
 ///|
