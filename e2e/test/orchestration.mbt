@@ -2,12 +2,6 @@
 let app_child_scenario_env = "MBT_PROTON_E2E_APP_CHILD"
 
 ///|
-let app_child_test_selector = "scenario_app_wbtest.mbt:0-1"
-
-///|
-let scenario_run_mutex : @async.Mutex = @async.Mutex::Mutex()
-
-///|
 priv suberror E2eOperationError {
   TimedOut(description~ : String, timeout_ms~ : Int)
 } derive(Debug)
@@ -234,7 +228,7 @@ async fn[X] spawn_scenario_app(
   scenario : String,
   cdp_port : Int,
 ) -> SpawnedScenarioApp {
-  let (program, args) = scenario_app_command(output_root)
+  let (program, args) = scenario_app_command()
   let output_path = join_path(
     output_root,
     "child-" + cdp_port.to_string() + ".log",
@@ -262,66 +256,13 @@ async fn[X] spawn_scenario_app(
 }
 
 ///|
-async fn build_scenario_app_executable(
-  root : String,
-  output_root : String,
-) -> Unit {
-  if @path.sep != '\\' {
-    // Redirect the build to a file instead of capturing it through a pipe:
-    // on a loaded macOS runner the async pipe read can surface a transient
-    // EAGAIN that the retry loop then has to absorb on every attempt.
-    let build_log = join_path(output_root, "scenario-app-build.log")
-    let output = @process.redirect_to_file(
-      build_log,
-      create_mode=@fs.CreateOrTruncate,
-    )
-    let code = @process.run(
-      "moon",
-      [
-        "--target-dir",
-        scenario_app_target_dir(output_root),
-        "-C",
-        root,
-        "test",
-        "e2e/test/scenario_app_wbtest.mbt",
-        "--target",
-        "native",
-        "--no-parallelize",
-        "--diagnostic-limit",
-        "80",
-        "--build-only",
-      ],
-      cwd=root,
-      extra_env={ "MOON_CC": "cc" },
-      stdout=output,
-      stderr=output,
-    )
-    guard code == 0 else { fail("failed to build the E2E scenario app") }
-  }
-}
-
-///|
-fn scenario_app_command(output_root : String) -> (String, Array[String]) raise {
+fn scenario_app_command() -> (String, Array[String]) raise {
+  let executable = current_test_executable()
   if @path.sep == '\\' {
-    (current_test_executable(), [app_child_test_selector])
+    (executable, [])
   } else {
-    isolated_app_command(scenario_app_executable(output_root), [
-      app_child_test_selector,
-    ])
+    isolated_app_command(executable, [])
   }
-}
-
-///|
-fn scenario_app_target_dir(output_root : String) -> String {
-  join_path(output_root, "app-build")
-}
-
-///|
-fn scenario_app_executable(output_root : String) -> String {
-  join_path(
-    scenario_app_target_dir(output_root),
-    "native/debug/test/moonbit-community/proton/e2e/test/test.whitebox_test.exe",
-  )
 }
 
 ///|
@@ -727,7 +668,6 @@ async fn run_scenario_probe_with_retry(
   let mut attempt = 0
   while attempt < 4 {
     let succeeded = try {
-      build_scenario_app_executable(root, output_root)
       run_e2e_operation_with_timeout(
         operation_timeout,
         "E2E scenario " + name,
@@ -818,104 +758,20 @@ fn retryable_startup_error_for(name : String, error : Error) -> Bool {
 }
 
 ///|
-async test "headless 41_app_commands runs as a self-hosted e2e" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
+async fn run_self_hosted_scenarios() -> Unit {
   let root = repository_root()
   let timeout = timeout_ms()
   run_scenario_probe_with_retry(root, "41_app_commands", timeout)
   run_pending_lifecycle_probe(root, timeout)
-}
-
-///|
-async test "headless 38_async_extension_add runs as a self-hosted e2e" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  run_scenario_probe_with_retry(
-    repository_root(),
-    "38_async_extension_add",
-    timeout_ms(),
-  )
-}
-
-///|
-async test "headless 39_sync_async_extensions runs as a self-hosted e2e" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  run_scenario_probe_with_retry(
-    repository_root(),
-    "39_sync_async_extensions",
-    timeout_ms(),
-  )
-}
-
-///|
-async test "headless 40_event_broadcast runs as a self-hosted e2e" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  let root = repository_root()
-  let timeout = timeout_ms()
+  run_scenario_probe_with_retry(root, "38_async_extension_add", timeout)
+  run_scenario_probe_with_retry(root, "39_sync_async_extensions", timeout)
   run_scenario_probe_with_retry(root, "40_event_broadcast", timeout)
   run_event_lifecycle_probe(root, timeout)
-}
-
-///|
-async test "headless 45_bridge_multi_window runs as a self-hosted e2e" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  let root = repository_root()
-  let timeout = timeout_ms()
   run_scenario_probe_with_retry(root, "45_bridge_multi_window", timeout)
-}
-
-///|
-async test "headless 52_web_contents_view runs as a self-hosted e2e" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  let root = repository_root()
-  let timeout = timeout_ms()
   run_scenario_probe_with_retry(root, "52_web_contents_view", timeout)
-}
-
-///|
-async test "headless 54_devtools preserves the page bridge" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  run_scenario_probe_with_retry(repository_root(), "54_devtools", timeout_ms())
-}
-
-///|
-async test "headless 56_i18n configures Chromium language boundaries" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  run_scenario_probe_with_retry(repository_root(), "56_i18n", timeout_ms())
-}
-
-///|
-async test "headless 46_asset_sidecar_resources runs as a self-hosted e2e" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  run_scenario_probe_with_retry(
-    repository_root(),
-    "46_asset_sidecar_resources",
-    timeout_ms(),
-  )
-}
-
-///|
-async test "headless 47_dev_extension_js runs as a self-hosted e2e" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  run_dev_extension_scenario_with_retry(repository_root(), timeout_ms())
-}
-
-///|
-async test "headless 42_attribute_codegen_commands runs as a self-hosted e2e" {
-  scenario_run_mutex.acquire()
-  defer scenario_run_mutex.release()
-  run_scenario_probe_with_retry(
-    repository_root(),
-    "42_attribute_codegen_commands",
-    timeout_ms(),
-  )
+  run_scenario_probe_with_retry(root, "54_devtools", timeout)
+  run_scenario_probe_with_retry(root, "56_i18n", timeout)
+  run_scenario_probe_with_retry(root, "46_asset_sidecar_resources", timeout)
+  run_dev_extension_scenario_with_retry(root, timeout)
+  run_scenario_probe_with_retry(root, "42_attribute_codegen_commands", timeout)
 }

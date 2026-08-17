@@ -22,7 +22,6 @@ import {
 }
 
 import {
-  "moonbitlang/async/fs" @async_fs,
   "moonbit-community/proton_contract",
 } for "wbtest"
 

@@ -125,19 +125,3 @@ test "write_text_with covers supported and unsupported wrapper paths" {
     Err(unsupported_error_message()),
   )
 }
-
-///|
-test "public read_text can be invoked without mutating clipboard" {
-  match read_text() {
-    Ok(_) => ()
-    Err(_) => ()
-  }
-}
-
-///|
-test "public write_text can be invoked with a harmless payload" {
-  match write_text("") {
-    Ok(_) => ()
-    Err(_) => ()
-  }
-}

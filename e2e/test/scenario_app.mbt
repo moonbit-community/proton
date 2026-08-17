@@ -17,8 +17,3 @@ async fn run_scenario_app_child() -> Unit {
     Some(child) => fail("unsupported E2E app child scenario: " + child)
   }
 }
-
-///|
-async test "scenario app child entry" {
-  run_scenario_app_child()
-}

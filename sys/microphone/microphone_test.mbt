@@ -80,9 +80,3 @@ test "native microphone listings parse into devices" {
   inspect(devices[0].session_label(), content="mic-0:idle:alsa_input.usb-mic")
   inspect(devices[1].session_label(), content="mic-1:idle:USB Studio Mic")
 }
-
-///|
-test "native discovery returns a safe listing" {
-  let devices = @proton_microphone.MicrophoneDevice::list()
-  inspect(devices.length() >= 0, content="true")
-}

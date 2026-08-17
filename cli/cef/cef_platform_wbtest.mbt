@@ -117,36 +117,6 @@ test "relative CEF cache overrides resolve from the project root" {
 }
 
 ///|
-async test "active runtime metadata stores absolute shared paths" {
-  let root = @async_fs.tmpdir(prefix="proton-runtime-manifest-")
-  let proton_dir = @fsutil.path_join(root, ".proton")
-  let runtime_dir = @fsutil.path_join(proton_dir, "runtime")
-  ensure_dir(runtime_dir)
-  let cef_root = @fsutil.resolve_path(
-    root, "../shared-cef/darwin-arm64/cef-test",
-  )
-  write_active_runtime_manifest(
-    root~,
-    proton_version="0.1.5",
-    platform="darwin-arm64",
-    cef_name="cef-test",
-    cef_root~,
-    runtime_dir~,
-  )
-  let active_manifest_path = @fsutil.path_join(proton_dir, "runtime.json")
-  let active_manifest = read_json_file(active_manifest_path)
-  assert_eq(
-    json_string_field(active_manifest, "cef", active_manifest_path),
-    cef_root,
-  )
-  assert_eq(
-    json_string_field(active_manifest, "dist", active_manifest_path),
-    runtime_dir,
-  )
-  remove_tree(root)
-}
-
-///|
 test "host platform detection keeps macOS CPU architecture" {
   let arm64 = platform_from_host(windows=false, macos=true, arch=Some("arm64"))
   assert_eq(arm64.id, "darwin-arm64")

@@ -404,8 +404,7 @@ processes, CDP connections, frontend servers, and cleanup:
 ```sh
 PROTON_NATIVE_DIST="$PWD/native/dist" \
 PATH="$PWD/native/dist/bin:$PATH" \
-moon -C e2e test -p moonbit-community/proton/e2e/test \
-  --target native --no-parallelize --diagnostic-limit 200
+moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```
 
 For an application that is already running with CDP enabled, use the typed

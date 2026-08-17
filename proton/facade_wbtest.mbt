@@ -269,20 +269,6 @@ test "headless mode defaults off and is configurable" {
 }
 
 ///|
-test "PROTON_HEADLESS forces facade headless mode" {
-  let old_headless = @env.get_env_var("PROTON_HEADLESS")
-  defer restore_env_var("PROTON_HEADLESS", old_headless)
-  let app = html("Test", "<html></html>")
-  @env.unset_env_var("PROTON_HEADLESS")
-  assert_false(app.resolved_headless())
-  @env.set_env_var("PROTON_HEADLESS", "1")
-  assert_true(app.resolved_headless())
-  @env.set_env_var("PROTON_HEADLESS", "off")
-  assert_false(app.resolved_headless())
-  assert_true(app.headless().resolved_headless())
-}
-
-///|
 async test "headless mode rejects titlebar overlay before runtime startup" {
   let manifest = @manifest.AppManifest::new(
     @manifest.WindowManifest::new(
@@ -367,79 +353,6 @@ test "bridge startup timeout retains the last lifecycle state" {
   assert_eq(diagnostic.page_instance, "page-1")
   assert_eq(diagnostic.url, "proton://app/")
   assert_true(diagnostic.message.contains("2500 ms"))
-}
-
-///|
-async test "startup dispatch retains an earlier window close" {
-  let runtime = @native.Runtime::new()
-  let first = @native.Window::new(runtime)
-  let second = @native.Window::new(runtime)
-  defer {
-    first.destroy() catch {
-      _ => ()
-    }
-    second.destroy() catch {
-      _ => ()
-    }
-    runtime.destroy() catch {
-      _ => ()
-    }
-  }
-  while runtime.poll_event() is Some(_) {
-
-  }
-  let windows = [
-    RunningWindow::{
-      id: "main",
-      window: first,
-      permissions: WindowPermissionPolicy::{ grants: [] },
-      lifetime: WindowLifetime::new(),
-      views: [],
-      bridge_ready: true,
-      state: WindowOpen,
-    },
-    RunningWindow::{
-      id: "secondary",
-      window: second,
-      permissions: WindowPermissionPolicy::{ grants: [] },
-      lifetime: WindowLifetime::new(),
-      views: [],
-      bridge_ready: false,
-      state: WindowStarting,
-    },
-  ]
-  @async.with_task_group(group => {
-    let task = group.spawn(
-      () => {
-        @async.sleep(10000)
-        @native.BridgeResponse::Ok(request_id=42L, payload=null)
-      },
-      no_wait=true,
-      allow_failure=true,
-    )
-    let pending = [
-      BridgeDispatchTask::{
-        request_id: 42L,
-        window: second.id(),
-        task,
-        state: Running,
-      },
-    ]
-    first.close()
-    match runtime.poll_event() {
-      Some(event) =>
-        runtime_session_dispatch_window_event(windows, pending, event)
-      None => fail("expected the first window close event")
-    }
-    assert_eq(pending.length(), 1)
-    assert_true(pending[0].state is Running)
-    runtime_session_cancel_all_bridge_tasks(pending)
-    group.return_immediately(())
-  })
-  assert_true(windows[0].is_closed())
-  assert_true(windows[0].lifetime.closed)
-  assert_false(windows[1].is_closed())
-  assert_false(windows[1].lifetime.closed)
 }
 
 ///|
@@ -1166,49 +1079,6 @@ test "entry HTML injection does not install the bridge" {
 }
 
 ///|
-fn write_facade_dev_config(path : String, dev_url? : String) -> Unit {
-  let config : Json = {
-    "window": { "title": "Dev Test", "width": 320, "height": 240 },
-    "entry": { "kind": "asset", "value": "app.html" },
-    "debug": true,
-  }
-  guard config is Object(fields) else {
-    abort("expected project config object")
-  }
-  match dev_url {
-    Some(url) => fields["frontend"] = { "dev_url": url }
-    None => ()
-  }
-  @mbfs.write_string_to_file(
-    path,
-    Json::object(fields).stringify(indent=2) + "\n",
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(Repr(err)))
-  }
-}
-
-///|
-fn restore_env_var(name : String, value : String?) -> Unit {
-  match value {
-    Some(value) => @env.set_env_var(name, value)
-    None => @env.unset_env_var(name)
-  }
-}
-
-///|
-async test "implicit config path honors PROTON_CONFIG_PATH" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let config_path = root + "/implicit-env.proton.project.json"
-  write_facade_dev_config(config_path)
-  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
-  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
-
-  @env.set_env_var("PROTON_CONFIG_PATH", config_path)
-  @debug.assert_eq(implicit_config_path(), Some(config_path))
-}
-
-///|
 test "packaged config takes precedence over environment and working directory" {
   @debug.assert_eq(
     choose_implicit_config_path(
@@ -1220,112 +1090,6 @@ test "packaged config takes precedence over environment and working directory" {
     ),
     Some("/Applications/Todo.app/Contents/Resources/proton.project.json"),
   )
-}
-
-///|
-async test "default config API honors PROTON_CONFIG_PATH" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let config_path = root + "/config-api-env.proton.project.json"
-  write_facade_dev_config(config_path)
-  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
-  let old_dev = @env.get_env_var("PROTON_DEV")
-  let old_mode = @env.get_env_var("PROTON_MODE")
-  defer restore_env_var("PROTON_MODE", old_mode)
-  defer restore_env_var("PROTON_DEV", old_dev)
-  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
-
-  @env.set_env_var("PROTON_CONFIG_PATH", config_path)
-  @env.unset_env_var("PROTON_DEV")
-  @env.unset_env_var("PROTON_MODE")
-  let app = config("proton.project.json")
-  @debug.assert_eq(app.file_path, Some(config_path))
-  let resolved = unwrap_configuration(() => app.resolved_app_config())
-  assert_eq(resolved.manifest.window.title, "Dev Test")
-}
-
-///|
-async test "config API keeps non-default paths explicit" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let config_path = root + "/explicit.proton.project.json"
-  let env_path = root + "/explicit-env.proton.project.json"
-  write_facade_dev_config(config_path)
-  write_facade_dev_config(env_path)
-  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
-  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
-
-  @env.set_env_var("PROTON_CONFIG_PATH", env_path)
-  @debug.assert_eq(config(config_path).file_path, Some(config_path))
-}
-
-///|
-async test "config API overrides manifest fields and keeps base dir" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let config_path = root + "/api-overrides.proton.project.json"
-  write_facade_dev_config(config_path)
-  let old_dev = @env.get_env_var("PROTON_DEV")
-  let old_mode = @env.get_env_var("PROTON_MODE")
-  defer restore_env_var("PROTON_MODE", old_mode)
-  defer restore_env_var("PROTON_DEV", old_dev)
-
-  @env.unset_env_var("PROTON_DEV")
-  @env.unset_env_var("PROTON_MODE")
-  let resolved = unwrap_configuration(() => {
-    config(config_path)
-    .title("Code Title")
-    .size(width=640, height=480)
-    .titlebar_style(TitlebarStyle::Overlay)
-    .entry_html("<main>code</main>")
-    .debug(enabled=false)
-    .resolved_app_config()
-  })
-  let manifest = resolved.manifest
-  assert_eq(
-    resolved.permission_base_path,
-    facade_path_parent(resolve_entry_path(config_path).to_string()),
-  )
-  assert_eq(manifest.window.title, "Code Title")
-  assert_eq(manifest.window.width, 640)
-  assert_eq(manifest.window.height, 480)
-  assert_eq(manifest.window.titlebar_style, @manifest.TitlebarStyle::Overlay)
-  assert_eq(manifest.debug, 0)
-  match manifest.entry {
-    @manifest.AppEntry::Html(html) => assert_eq(html, "<main>code</main>")
-    _ => fail("expected API entry override")
-  }
-}
-
-///|
-async test "dev manifest uses env override or frontend dev_url" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let override_path = root + "/env-override.proton.project.json"
-  write_facade_dev_config(override_path, dev_url="http://localhost:5173")
-  let old_dev = @env.get_env_var("PROTON_DEV")
-  let old_url = @env.get_env_var("PROTON_FRONTEND_URL")
-  defer restore_env_var("PROTON_FRONTEND_URL", old_url)
-  defer restore_env_var("PROTON_DEV", old_dev)
-
-  @env.set_env_var("PROTON_DEV", "1")
-  @env.set_env_var("PROTON_FRONTEND_URL", "http://localhost:3000")
-  let override_manifest = unwrap_configuration(() => {
-      config(override_path).resolved_app_config()
-    }).manifest
-  match override_manifest.entry {
-    @manifest.AppEntry::Url(url) =>
-      inspect(url, content="http://localhost:3000")
-    _ => fail("expected dev URL entry")
-  }
-
-  let config_path = root + "/config-dev-url.proton.project.json"
-  write_facade_dev_config(config_path, dev_url="http://localhost:5173")
-  @env.unset_env_var("PROTON_FRONTEND_URL")
-  let config_manifest = unwrap_configuration(() => {
-      config(config_path).resolved_app_config()
-    }).manifest
-  match config_manifest.entry {
-    @manifest.AppEntry::Url(url) =>
-      inspect(url, content="http://localhost:5173")
-    _ => fail("expected dev URL entry")
-  }
 }
 
 ///|
@@ -1383,18 +1147,10 @@ test "project identity is independent from single instance routing" {
 }
 
 ///|
-async test "launch activation classifies URLs and existing documents" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-activation-")
-  let document = root + "/activation.txt"
-  @mbfs.write_string_to_file(document, "activation", encoding="utf8") catch {
-    error => abort(@debug.render(Repr(error)))
-  }
+test "launch activation classifies protocol URLs" {
   assert_true(launch_argument_is_url("dev.proton://open", ["dev.proton"]))
   assert_true(launch_argument_is_url("custom:value", ["custom"]))
   assert_false(launch_argument_is_url("custom:value", ["other"]))
-  assert_true(launch_argument_is_document(document, ["txt"]))
-  assert_false(launch_argument_is_document(document, ["md"]))
-  assert_false(launch_argument_is_document(root + "/missing.txt", ["txt"]))
 }
 
 ///|

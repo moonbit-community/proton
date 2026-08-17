@@ -10,10 +10,4 @@ import {
   "moonbitlang/x/path",
 }
 
-import {
-  "moonbitlang/async",
-  "moonbitlang/core/json",
-  "moonbitlang/x/fs" @mbfs,
-} for "wbtest"
-
 supported_targets = "native+wasm"

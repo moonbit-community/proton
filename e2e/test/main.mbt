@@ -1,5 +1,14 @@
 ///|
 async fn main {
+  if @env.get_env_var(app_child_scenario_env) is Some(_) {
+    run_scenario_app_child()
+    return
+  }
+  if @env.args().contains("--self-hosted") {
+    run_self_hosted_scenarios()
+    println("Self-hosted Proton E2E passed")
+    return
+  }
   let name = scenario_name()
   run_cdp_scenario_probe(name, cdp_target_text(), timeout_ms())
   println("CDP e2e passed: " + name)

@@ -1,5 +1,0 @@
-supported_targets = "native"
-
-options(
-  "native-stub": [ "testsupport_native.c" ],
-)

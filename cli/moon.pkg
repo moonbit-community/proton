@@ -18,11 +18,6 @@ import {
   "moonbit-community/proton_cli/updater",
 }
 
-import {
-  "moonbitlang/moon_config",
-  "moonbitlang/x/fs" @mbfs,
-} for "wbtest"
-
 supported_targets = "native+wasm"
 
 pkgtype(kind: "executable")

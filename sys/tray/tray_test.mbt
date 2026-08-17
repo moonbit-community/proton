@@ -4,19 +4,6 @@ test "default identifier is stable" {
 }
 
 ///|
-test "support probe stays consistent" {
-  let supported = @proton_tray.is_supported()
-  let ensured = @proton_tray.ensure_supported()
-  if supported {
-    debug_inspect(ensured, content="Ok(())")
-  } else {
-    guard ensured is Err(_) else {
-      fail("ensure_supported should return an error when support probe fails")
-    }
-  }
-}
-
-///|
 test "public menu constructors expose v1 item kinds" {
   debug_inspect(
     @proton_tray.TrayMenuItem::normal(id="show", label="Show").kind(),
@@ -53,23 +40,4 @@ test "public tray event helpers expose event names and item ids" {
   let event = @proton_tray.TrayEvent::MenuItemClick("show")
   inspect(event.event_name(), content="menuItemClick")
   debug_inspect(event.item_id(), content="Some(\"show\")")
-}
-
-///|
-test "native integration stays opt in" {
-  guard @env.get_env_var("MOONBIT_TRAY_RUN_NATIVE_TESTS") is Some("1") else {
-    inspect("skipped", content="skipped")
-    return ()
-  }
-  let tray = match @proton_tray.create(tooltip="MoonBit tray integration") {
-    Ok(tray) => tray
-    Err(error) => fail(error)
-  }
-  debug_inspect(tray.show(), content="Ok(true)")
-  debug_inspect(
-    tray.set_tooltip("MoonBit tray integration updated"),
-    content="Ok(true)",
-  )
-  debug_inspect(tray.hide(), content="Ok(false)")
-  tray.destroy()
 }

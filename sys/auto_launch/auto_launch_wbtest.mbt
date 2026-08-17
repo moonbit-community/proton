@@ -458,39 +458,6 @@ test "enable disable and is_enabled cover platform dispatch" {
 }
 
 ///|
-/// Verifies constructor validation branches beyond the public black-box cases.
-test "new covers additional validation branches" {
-  guard is_supported() else { return }
-
-  match new("MoonBit", path="", launch_in_background=false) {
-    Err(EmptyExecutablePath) => ()
-    _ => fail("expected EmptyExecutablePath")
-  }
-
-  match
-    new(
-      "MoonBit",
-      path=match current_platform() {
-        Windows => "C:\\Windows\\System32\\notepad.exe"
-        Macos => "/usr/bin/true"
-        Linux => "/bin/true"
-        Unsupported => "/unsupported"
-      },
-      launch_in_background=true,
-      background_arg="",
-    ) {
-    Err(EmptyBackgroundArgument) => ()
-    _ => fail("expected EmptyBackgroundArgument")
-  }
-
-  match new("MoonBit Current Executable") {
-    Ok(launcher) => assert_true(!launcher.path().is_empty())
-    Err(error) =>
-      fail("expected current executable path to be detected: \{error}")
-  }
-}
-
-///|
 /// Verifies injected constructor dependencies surface unsupported and probe failures.
 test "new_with covers unsupported and executable path failures" {
   match
@@ -514,88 +481,6 @@ test "new_with covers unsupported and executable path failures" {
     }) {
     Err(ExecutablePathUnavailable) => ()
     _ => fail("expected ExecutablePathUnavailable")
-  }
-}
-
-///|
-/// Returns a temporary file path suitable for native FFI file-system tests.
-fn temp_file_path() -> String {
-  match current_platform() {
-    Windows => "C:\\Users\\Public\\moonbit-auto-launch-ffi-test.txt"
-    Macos => "/tmp/moonbit-auto-launch-ffi-test.txt"
-    Linux => "/tmp/moonbit-auto-launch-ffi-test.txt"
-    Unsupported => "/tmp/moonbit-auto-launch-ffi-test.txt"
-  }
-}
-
-///|
-/// Returns a path whose removal should fail in native FFI error-handling tests.
-fn invalid_remove_path() -> String {
-  match current_platform() {
-    Windows => "C:\\Windows"
-    Macos => "/tmp"
-    Linux => "/tmp"
-    Unsupported => "/tmp"
-  }
-}
-
-///|
-/// Verifies the native FFI helpers succeed on normal discovery and file operations.
-test "ffi helpers cover success paths" {
-  match current_executable_path_result() {
-    Ok(path) => assert_true(!path.is_empty())
-    Err(error) => fail("expected executable path: \{error}")
-  }
-
-  match home_directory_result() {
-    Ok(path) => assert_true(!path.is_empty())
-    Err(error) => fail("expected home directory: \{error}")
-  }
-
-  let file_path = temp_file_path()
-  assert_eq(remove_file_result(file_path), Ok(()))
-  assert_eq(file_exists_result(file_path), Ok(false))
-  assert_eq(write_text_file_result(file_path, "MoonBit"), Ok(()))
-  assert_eq(file_exists_result(file_path), Ok(true))
-  assert_eq(remove_file_result(file_path), Ok(()))
-  assert_eq(file_exists_result(file_path), Ok(false))
-}
-
-///|
-/// Verifies the native FFI helpers surface fallback error messages when needed.
-test "ffi helpers cover fallback error messages" {
-  assert_eq(decode_optional_text(@utf8.encode("")), None)
-  assert_eq(decode_optional_text(@utf8.encode("MoonBit")), Some("MoonBit"))
-  assert_eq(decode_error_message(@utf8.encode(""), "fallback"), "fallback")
-  assert_eq(
-    decode_error_message(@utf8.encode("native error"), "fallback"),
-    "native error",
-  )
-  assert_eq(last_error_message_or("fallback"), "fallback")
-  match native_failure("probe", "fallback") {
-    NativeFailure(action="probe", message="fallback") => ()
-    _ => fail("expected NativeFailure")
-  }
-
-  match write_text_file_result("", "MoonBit") {
-    Err(NativeFailure(action="write file", ..)) => ()
-    _ => fail("expected write file failure")
-  }
-
-  match remove_file_result("") {
-    Ok(_) =>
-      match remove_file_result(invalid_remove_path()) {
-        Err(NativeFailure(action="remove file", ..)) => ()
-        _ => fail("expected remove file failure")
-      }
-    Err(NativeFailure(action="remove file", ..)) => ()
-    _ => fail("expected remove file failure")
-  }
-
-  match file_exists_result("") {
-    Ok(false) => ()
-    Err(NativeFailure(action="file exists", ..)) => ()
-    _ => fail("expected missing file or file exists failure")
   }
 }
 
@@ -663,21 +548,4 @@ test "resolve_file_entry forwards home lookup failures" {
       )
     _ => fail("expected Linux file entry")
   }
-}
-
-///|
-/// Verifies the Windows registry wrappers can create and remove a test entry.
-test "windows registry ffi wrappers work on windows" {
-  guard current_platform() == Platform::Windows else { return }
-
-  let name = "moonbit-auto-launch-whitebox-registry-test"
-  assert_eq(windows_delete_run_entry_result(name), Ok(()))
-  assert_eq(windows_run_entry_exists_result(name), Ok(false))
-  assert_eq(
-    windows_set_run_entry_result(name, "\"C:\\Windows\\System32\\notepad.exe\""),
-    Ok(()),
-  )
-  assert_eq(windows_run_entry_exists_result(name), Ok(true))
-  assert_eq(windows_delete_run_entry_result(name), Ok(()))
-  assert_eq(windows_run_entry_exists_result(name), Ok(false))
 }

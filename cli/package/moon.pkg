@@ -17,10 +17,6 @@ import {
   "moonbitlang/x/path",
 }
 
-import {
-  "moonbitlang/x/fs" @mbfs,
-} for "wbtest"
-
 supported_targets = "native+wasm"
 
 options(

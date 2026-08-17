@@ -14,7 +14,7 @@ because it needs `codesign`, `openssl` and a real installed bundle. See
 
 ## Self-hosted MoonBit E2E
 
-`moon test` runs the complete self-hosted suite directly. Each scenario selects
+The E2E executable runs the complete self-hosted suite directly. Each scenario selects
 its own CDP port, starts the required application/runtime route in headless OSR
 mode, performs typed CDP probes, closes Chromium through `Browser.close`, and
 verifies that the application, helper process tree, and CDP endpoint stop:
@@ -22,11 +22,10 @@ verifies that the application, helper process tree, and CDP endpoint stop:
 ```sh
 PROTON_NATIVE_DIST="$PWD/native/dist" \
 PATH="$PWD/native/dist/bin:$PATH" \
-moon -C e2e test -p moonbit-community/proton/e2e/test \
-  --target native --no-parallelize --diagnostic-limit 200
+moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```
 
-Keep the package filter and `--no-parallelize`: E2E tests own native processes,
+The runner executes scenarios sequentially because they own native processes,
 CDP ports, frontend servers, and runtime logs. `PROTON_NATIVE_DIST` may point
 at a setup-managed runtime or a local engine install. On Linux, the self-hosted
 runner also supplies the required `libcef.so`
@@ -65,6 +64,5 @@ virtual X server when no display is available:
 
 ```sh
 xvfb-run -a env PROTON_NATIVE_DIST=native/dist \
-  moon -C e2e test -p moonbit-community/proton/e2e/test \
-  --target native --no-parallelize --diagnostic-limit 200
+  moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```

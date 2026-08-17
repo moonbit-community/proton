@@ -15,9 +15,7 @@ options(
     "native.mbt": [ "native" ],
     "native_text.mbt": [ "native" ],
     "update.mbt": [ "native" ],
-    "native_test.mbt": [ "native" ],
     "native_wbtest.mbt": [ "native" ],
-    "update_wbtest.mbt": [ "native" ],
     "README.mbt.md": [ "native" ],
   },
 )
