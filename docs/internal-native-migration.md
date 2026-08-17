@@ -74,7 +74,7 @@ native prebuilt, or compatibility package remains.
 
 ### 5. CEF Process and CLI
 
-- [ ] Add `proton/internal/cef_process` as a MoonBit executable.
+- [x] Add `proton/internal/cef_process` as a MoonBit executable.
 - [ ] Resolve helper source identity from the application's Proton dependency.
 - [ ] Build and cache helpers by Proton source, CEF version, and platform.
 - [ ] Update `cef setup`, `dev`, `build`, `package`, and `doctor`.
