@@ -1913,9 +1913,9 @@ int main(int argc, char **argv) {
 
   runtime = PROTON_INVALID_HANDLE;
   if (expect_status(
-          "runtime_create accepts language config",
+          "runtime_create accepts headless language config",
           proton_runtime_create_json(
-              "{\"abi_version\":1,\"locale\":\"zh-CN\","
+              "{\"abi_version\":1,\"headless\":true,\"locale\":\"zh-CN\","
               "\"accept_languages\":[\"zh-CN\",\"en-US\"],"
               "\"framework_dialog_ok_label\":\"Confirm\","
               "\"framework_dialog_cancel_label\":\"Dismiss\"}",
@@ -1940,19 +1940,6 @@ int main(int argc, char **argv) {
     return fail("invalid language list should leave runtime handle invalid");
   }
   if (expect_last_error_contains("accept_languages")) {
-    return 1;
-  }
-
-  runtime = PROTON_INVALID_HANDLE;
-  if (expect_status(
-          "runtime_create accepts boolean headless",
-          proton_runtime_create_json(
-              "{\"abi_version\":1,\"headless\":true}", &runtime),
-          PROTON_OK)) {
-    return 1;
-  }
-  if (expect_status("runtime_destroy after headless config",
-                    proton_runtime_destroy(runtime), PROTON_OK)) {
     return 1;
   }
 
