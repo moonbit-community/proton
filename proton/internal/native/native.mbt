@@ -1014,16 +1014,97 @@ pub fn Runtime::respond_bridge_request(
 }
 
 ///|
+fn bridge_config_check(
+  config : @native_ffi.BridgeConfigHandle,
+  status : Int,
+) -> Unit raise NativeError {
+  if status < 0 {
+    @native_ffi.bridge_config_destroy(config)
+    raise native_error(status)
+  }
+}
+
+///|
+fn build_bridge_config(
+  config : BridgeConfig?,
+) -> @native_ffi.BridgeConfigHandle raise NativeError {
+  guard config is Some(config) else { return @native_ffi.bridge_config_null() }
+  let out_config = Ref(@native_ffi.bridge_config_null())
+  let create_status = @native_ffi.bridge_config_create(
+    config.max_payload_bytes,
+    out_config,
+  )
+  if create_status < 0 {
+    raise native_error(create_status)
+  }
+  let handle = out_config.val
+  for grant in config.grants {
+    let grant_index = Ref(0)
+    bridge_config_check(
+      handle,
+      @native_ffi.bridge_config_add_grant(
+        handle,
+        @ffi.to_cstr(grant.source_origin),
+        grant_index,
+      ),
+    )
+    for op in grant.ops {
+      bridge_config_check(
+        handle,
+        @native_ffi.bridge_config_add_op(
+          handle,
+          grant_index.val,
+          @ffi.to_cstr(op),
+        ),
+      )
+    }
+    for extension in grant.extensions {
+      let extension_index = Ref(0)
+      bridge_config_check(
+        handle,
+        @native_ffi.bridge_config_add_extension(
+          handle,
+          grant_index.val,
+          @ffi.to_cstr(extension.js_namespace),
+          extension_index,
+        ),
+      )
+      for api in extension.apis {
+        bridge_config_check(
+          handle,
+          @native_ffi.bridge_config_add_extension_api(
+            handle,
+            grant_index.val,
+            extension_index.val,
+            @ffi.to_cstr(api),
+          ),
+        )
+      }
+    }
+    for unit in grant.initialization_units {
+      bridge_config_check(
+        handle,
+        @native_ffi.bridge_config_add_initialization_unit(
+          handle,
+          grant_index.val,
+          @ffi.to_cstr(unit.owner),
+          @ffi.to_cstr(unit.name),
+          @ffi.to_cstr(unit.source),
+        ),
+      )
+    }
+  }
+  handle
+}
+
+///|
 pub fn Window::new(
   runtime : Runtime,
   config? : WindowConfig = WindowConfig::new(),
 ) -> Window raise NativeError {
   validate_window_config(config)
   let out_window = Ref(@native_ffi.window_null())
-  let bridge_config_json = match config.bridge {
-    Some(bridge) => bridge.to_json_string()
-    None => ""
-  }
+  let bridge_config = build_bridge_config(config.bridge)
   let status = @native_ffi.window_create(
     runtime.active_handle(),
     @ffi.to_cstr(config.title),
@@ -1042,9 +1123,10 @@ pub fn Window::new(
     browser_policy_code(config.browser.certificate),
     browser_policy_code(config.browser.media),
     runtime_config_bool(config.browser.devtools),
-    @ffi.to_cstr(bridge_config_json),
+    bridge_config,
     out_window,
   )
+  @native_ffi.bridge_config_destroy(bridge_config)
   if status < 0 {
     raise native_error(status)
   } else {

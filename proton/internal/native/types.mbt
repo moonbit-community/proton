@@ -542,7 +542,6 @@ pub extend MenuItemRole with Debug::{to_repr}
 
 ///|
 pub(all) struct BridgeConfig {
-  raw_json : String?
   max_payload_bytes : Int
   grants : Array[BridgeGrantConfig]
 } derive(Debug, Eq)
@@ -1306,16 +1305,7 @@ pub fn BridgeConfig::new(
   grants~ : Array[BridgeGrantConfig],
   max_payload_bytes? : Int = 1048576,
 ) -> BridgeConfig {
-  {
-    raw_json: None,
-    max_payload_bytes,
-    grants: grants.map(fn(grant) { grant.copy() }),
-  }
-}
-
-///|
-pub fn BridgeConfig::unsafe_from_json(raw_json : String) -> BridgeConfig {
-  { raw_json: Some(raw_json), max_payload_bytes: 1048576, grants: [] }
+  { max_payload_bytes, grants: grants.map(fn(grant) { grant.copy() }) }
 }
 
 ///|
@@ -1377,43 +1367,6 @@ fn BridgeGrantConfig::copy(self : BridgeGrantConfig) -> BridgeGrantConfig {
 ///|
 fn copy_strings(values : Array[String]) -> Array[String] {
   values.map(fn(value) { value })
-}
-
-///|
-fn BridgeConfig::to_json(self : BridgeConfig) -> Json {
-  match self.raw_json {
-    Some(raw) => @json.parse(raw) catch { _ => null }
-    None => {
-      let fields : Map[String, Json] = {
-        "abi_version": Json::number(2.0, repr="2"),
-        "namespace": "__MoonBit__",
-        "grants": self.grants.map(fn(grant) -> Json {
-          {
-            "source_origin": grant.source_origin,
-            "ops": grant.ops.map(fn(name) -> Json { { "name": name } }),
-            "extensions": grant.extensions.map(fn(extension) -> Json {
-              { "namespace": extension.js_namespace, "apis": extension.apis }
-            }),
-            "initialization_units": grant.initialization_units.map(fn(
-              unit,
-            ) -> Json {
-              { "owner": unit.owner, "name": unit.name, "source": unit.source }
-            }),
-          }
-        }),
-        "max_payload_bytes": Json::number(
-          self.max_payload_bytes.to_double(),
-          repr=self.max_payload_bytes.to_string(),
-        ),
-      }
-      Json::object(fields)
-    }
-  }
-}
-
-///|
-pub fn BridgeConfig::to_json_string(self : BridgeConfig) -> String {
-  self.to_json().stringify()
 }
 
 ///|

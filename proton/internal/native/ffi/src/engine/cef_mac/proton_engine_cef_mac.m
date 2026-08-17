@@ -3874,11 +3874,7 @@ int32_t proton_engine_window_create(
       config.bridge_config_json != NULL
           ? proton_engine_strdup(config.bridge_config_json)
           : NULL;
-  window->max_bridge_payload_bytes = PROTON_ENGINE_MAX_BRIDGE_BYTES;
-  if (window->bridge_config_json != NULL) {
-    proton_engine_bridge_config_read_max_payload(
-        window->bridge_config_json, &window->max_bridge_payload_bytes);
-  }
+  window->max_bridge_payload_bytes = config.max_bridge_payload_bytes;
   window->browser_session = proton_browser_session_create(
       &config.browser_policy, proton_engine_browser_signal, NULL);
   if (window->browser_session == NULL) {

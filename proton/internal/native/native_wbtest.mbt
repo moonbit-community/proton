@@ -261,25 +261,21 @@ test "window config preserves typed native ABI values" {
 }
 
 ///|
-test "bridge config generates native policy JSON" {
+test "bridge config retains typed renderer policy" {
   let bridge_config = BridgeConfig::new(grants=[
     BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
   ])
-  let bridge_json = bridge_config.to_json_string()
-  assert_true(bridge_json.contains("\"abi_version\":2"))
-  assert_true(bridge_json.contains("\"namespace\":\"__MoonBit__\""))
-  assert_true(bridge_json.contains("\"source_origin\":\"app\""))
-  assert_true(bridge_json.contains("\"name\":\"ext:app/ping\""))
-  assert_true(!bridge_json.contains("\"dev_bootstrap_script\""))
-  let dev_bridge_json = BridgeConfig::new(grants=[
+  inspect(bridge_config.grants[0].source_origin, content="app")
+  assert_eq(bridge_config.grants[0].ops, ["ext:app/ping"])
+  let dev_bridge = BridgeConfig::new(grants=[
     BridgeGrantConfig::new("http://localhost:5173", ops=["ext:app/ping"], initialization_units=[
       BridgeInitializationUnit::new("test", "dev", "window.__protonDev = true;"),
     ]),
-  ]).to_json_string()
-  assert_true(dev_bridge_json.contains("\"grants\""))
-  assert_true(dev_bridge_json.contains("\"http://localhost:5173\""))
-  assert_true(dev_bridge_json.contains("\"initialization_units\""))
-  assert_true(dev_bridge_json.contains("window.__protonDev = true;"))
+  ])
+  inspect(
+    dev_bridge.grants[0].initialization_units[0].source,
+    content="window.__protonDev = true;",
+  )
 }
 
 ///|

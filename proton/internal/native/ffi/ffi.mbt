@@ -24,6 +24,10 @@ pub type ImageHandle
 pub type MenuConfigHandle
 
 ///|
+#external
+pub type BridgeConfigHandle
+
+///|
 pub extern "C" fn runtime_null() -> RuntimeHandle = "proton_runtime_null"
 
 ///|
@@ -37,6 +41,9 @@ pub extern "C" fn image_null() -> ImageHandle = "proton_image_null"
 
 ///|
 pub extern "C" fn menu_config_null() -> MenuConfigHandle = "proton_internal_menu_config_null"
+
+///|
+pub extern "C" fn bridge_config_null() -> BridgeConfigHandle = "proton_internal_bridge_config_null"
 
 ///|
 pub extern "C" fn window_logical_id(window : WindowHandle) -> Int64 = "proton_window_logical_id"
@@ -315,7 +322,7 @@ pub extern "C" fn proton_notification_poll_click_ffi(
 pub extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notification_cleanup"
 
 ///|
-#borrow(title, initial_url, titlebar_minimize_label, titlebar_maximize_label, titlebar_restore_label, titlebar_close_label, bridge_config_json, out_window)
+#borrow(title, initial_url, titlebar_minimize_label, titlebar_maximize_label, titlebar_restore_label, titlebar_close_label, out_window)
 pub extern "C" fn window_create(
   runtime : RuntimeHandle,
   title : Bytes,
@@ -334,9 +341,63 @@ pub extern "C" fn window_create(
   certificate_policy : Int,
   media_policy : Int,
   devtools : Int,
-  bridge_config_json : Bytes,
+  bridge_config : BridgeConfigHandle,
   out_window : Ref[WindowHandle],
 ) -> Int = "proton_internal_window_create"
+
+///|
+#borrow(out_config)
+pub extern "C" fn bridge_config_create(
+  max_payload_bytes : Int,
+  out_config : Ref[BridgeConfigHandle],
+) -> Int = "proton_internal_bridge_config_create"
+
+///|
+#borrow(source_origin, out_grant_index)
+pub extern "C" fn bridge_config_add_grant(
+  config : BridgeConfigHandle,
+  source_origin : Bytes,
+  out_grant_index : Ref[Int],
+) -> Int = "proton_internal_bridge_config_add_grant"
+
+///|
+#borrow(name)
+pub extern "C" fn bridge_config_add_op(
+  config : BridgeConfigHandle,
+  grant_index : Int,
+  name : Bytes,
+) -> Int = "proton_internal_bridge_config_add_op"
+
+///|
+#borrow(js_namespace, out_extension_index)
+pub extern "C" fn bridge_config_add_extension(
+  config : BridgeConfigHandle,
+  grant_index : Int,
+  js_namespace : Bytes,
+  out_extension_index : Ref[Int],
+) -> Int = "proton_internal_bridge_config_add_extension"
+
+///|
+#borrow(api)
+pub extern "C" fn bridge_config_add_extension_api(
+  config : BridgeConfigHandle,
+  grant_index : Int,
+  extension_index : Int,
+  api : Bytes,
+) -> Int = "proton_internal_bridge_config_add_extension_api"
+
+///|
+#borrow(owner, name, source)
+pub extern "C" fn bridge_config_add_initialization_unit(
+  config : BridgeConfigHandle,
+  grant_index : Int,
+  owner : Bytes,
+  name : Bytes,
+  source : Bytes,
+) -> Int = "proton_internal_bridge_config_add_initialization_unit"
+
+///|
+pub extern "C" fn bridge_config_destroy(config : BridgeConfigHandle) -> Unit = "proton_internal_bridge_config_destroy"
 
 ///|
 pub extern "C" fn proton_window_destroy_ffi(window : WindowHandle) -> Int = "proton_window_destroy"

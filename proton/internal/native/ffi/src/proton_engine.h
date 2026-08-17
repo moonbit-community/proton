@@ -45,6 +45,7 @@ typedef struct {
   char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_policy_t browser_policy;
   const char *bridge_config_json;
+  int32_t max_bridge_payload_bytes;
 } proton_engine_window_config_t;
 
 typedef struct {

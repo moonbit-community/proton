@@ -9,6 +9,7 @@ options(
   "native-stub": [
     "src/proton_allocator.c",
     "src/proton_app_instance.c",
+    "src/proton_bridge_config.c",
     "src/proton_config.c",
     "src/proton_json.c",
     "src/proton_menu.c",

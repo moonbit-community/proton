@@ -722,16 +722,12 @@ test "dev bridge page policy parses exact http origins" {
 test "native bridge config isolates each window entry origin" {
   let first = native_bridge_config([
     @native.BridgeGrantConfig::new("http://localhost:3000", ops=["app:ping"]),
-  ]).to_json_string()
+  ])
   let second = native_bridge_config([
     @native.BridgeGrantConfig::new("http://localhost:4000", ops=["app:ping"]),
-  ]).to_json_string()
-  assert_true(first.contains("http://localhost:3000"))
-  assert_false(first.contains("http://localhost:4000"))
-  assert_true(second.contains("http://localhost:4000"))
-  assert_false(second.contains("http://localhost:3000"))
-  assert_false(first.contains("request_timeout_ms"))
-  assert_false(second.contains("request_timeout_ms"))
+  ])
+  inspect(first.grants[0].source_origin, content="http://localhost:3000")
+  inspect(second.grants[0].source_origin, content="http://localhost:4000")
 }
 
 ///|

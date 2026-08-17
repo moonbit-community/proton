@@ -916,7 +916,7 @@ int32_t proton_internal_window_create(
     const char *titlebar_restore_label, const char *titlebar_close_label,
     int32_t popup_policy, int32_t download_policy,
     int32_t certificate_policy, int32_t media_policy, int32_t devtools,
-    const char *bridge_config_json, proton_window_handle_t *out_window) {
+    proton_bridge_config_t *bridge_config, proton_window_handle_t *out_window) {
   proton_runtime_slot_t *runtime_slot = NULL;
   int32_t status = proton_get_runtime(runtime, &runtime_slot);
   if (status != PROTON_OK) {
@@ -932,7 +932,7 @@ int32_t proton_internal_window_create(
       navigation_policy, titlebar_minimize_label, titlebar_maximize_label,
       titlebar_restore_label, titlebar_close_label, popup_policy,
       download_policy, certificate_policy, media_policy, devtools,
-      bridge_config_json, &config);
+      bridge_config, &config);
   if (status != PROTON_OK) {
     return status;
   }
