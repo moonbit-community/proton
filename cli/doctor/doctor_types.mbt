@@ -122,7 +122,6 @@ priv struct ProjectDoctorInfo {
 ///|
 priv struct DoctorRuntimeManifest {
   platform : String
-  proton_version : String
   cef_version : String
   dist : String
 }

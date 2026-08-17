@@ -150,65 +150,9 @@ async fn runtime_manifest_from_project(
   }
   Some({
     platform: runtime_manifest_string(object, "platform", path),
-    proton_version: runtime_manifest_string(object, "proton_version", path),
     cef_version: runtime_manifest_string(object, "cef_version", path),
     dist: runtime_manifest_string(object, "dist", path),
   })
-}
-
-///|
-fn resolve_native_dist_override(
-  project : ProjectDoctorInfo,
-  configured : String?,
-) -> String? {
-  match configured {
-    Some(value) if value.trim() != "" => {
-      let value = value.trim().to_owned()
-      let path = if @fsutil.path_is_absolute(value) {
-        value
-      } else {
-        @fsutil.path_join(project.root, value)
-      }
-      Some(@path.Path(path).resolve().to_string())
-    }
-    _ => None
-  }
-}
-
-///|
-async fn resolve_native_dist(
-  project : ProjectDoctorInfo,
-) -> (String, DoctorRuntimeManifest?) {
-  match
-    resolve_native_dist_override(
-      project,
-      @env.get_env_var("PROTON_NATIVE_DIST"),
-    ) {
-    Some(path) => (path, None)
-    None =>
-      match runtime_manifest_from_project(project) {
-        Some(manifest) => {
-          let path = if @fsutil.path_is_absolute(manifest.dist) {
-            manifest.dist
-          } else {
-            @fsutil.path_join(project.root, manifest.dist)
-          }
-          (@path.Path(path).resolve().to_string(), Some(manifest))
-        }
-        None =>
-          (
-            @path.Path(
-              @fsutil.path_join(
-                @fsutil.path_join(project.root, "native"),
-                "dist",
-              ),
-            )
-            .resolve()
-            .to_string(),
-            None,
-          )
-      }
-  }
 }
 
 ///|
@@ -218,7 +162,7 @@ async fn collect_runtime(
 ) -> DoctorSection {
   let lines : Array[DoctorLine] = []
   let platform_id = @cef.current_platform_id()
-  let (native_dist, manifest) = try resolve_native_dist(project) catch {
+  let manifest = try runtime_manifest_from_project(project) catch {
     error => {
       lines.push(
         DoctorLine::new(
@@ -233,49 +177,64 @@ async fn collect_runtime(
   } noraise {
     value => value
   }
-  match manifest {
-    Some(manifest) => {
-      if manifest.platform != platform_id {
-        lines.push(
-          DoctorLine::new(
-            "runtime.platform",
-            Error,
-            "runtime platform mismatch: expected " +
-            platform_id +
-            ", got " +
-            manifest.platform,
-            hint="run `proton_cli cef setup` for this platform",
-          ),
-        )
-      }
-      if verbose {
-        lines.push(
-          DoctorLine::new(
-            "runtime.versions",
-            Neutral,
-            "Proton " +
-            manifest.proton_version +
-            ", CEF " +
-            manifest.cef_version,
-          ),
-        )
-      }
-    }
-    None => ()
-  }
-  guard @fsutil.path_is_dir(native_dist) else {
+  guard manifest is Some(manifest) else {
     lines.push(
       DoctorLine::new(
         "runtime.missing",
         Error,
-        "Proton runtime is not installed",
-        hint="run `proton_cli cef setup`, or set PROTON_NATIVE_DIST",
+        "CEF runtime is not configured",
+        hint="run `proton_cli cef setup`",
+      ),
+    )
+    return DoctorSection::new("runtime", "Runtime", lines)
+  }
+  if manifest.platform != platform_id {
+    lines.push(
+      DoctorLine::new(
+        "runtime.platform",
+        Error,
+        "runtime platform mismatch: expected " +
+        platform_id +
+        ", got " +
+        manifest.platform,
+        hint="run `proton_cli cef setup` for this platform",
+      ),
+    )
+  }
+  if verbose {
+    lines.push(
+      DoctorLine::new(
+        "runtime.versions",
+        Neutral,
+        "CEF " + manifest.cef_version,
+      ),
+    )
+  }
+  guard @fsutil.path_is_absolute(manifest.dist) else {
+    lines.push(
+      DoctorLine::new(
+        "runtime.manifest",
+        Error,
+        "runtime manifest dist must be an absolute path",
+        hint="run `proton_cli cef setup` again",
+      ),
+    )
+    return DoctorSection::new("runtime", "Runtime", lines)
+  }
+  let runtime_dist = manifest.dist
+  guard @fsutil.path_is_dir(runtime_dist) else {
+    lines.push(
+      DoctorLine::new(
+        "runtime.missing",
+        Error,
+        "CEF runtime is not installed",
+        hint="run `proton_cli cef setup`",
       ),
     )
     return DoctorSection::new("runtime", "Runtime", lines)
   }
   if verbose {
-    lines.push(DoctorLine::new("runtime.path", Neutral, native_dist))
+    lines.push(DoctorLine::new("runtime.path", Neutral, runtime_dist))
   }
   let required = @cef.runtime_required_relative_files_for_platform(platform_id)
   guard required.length() > 0 else {
@@ -290,7 +249,7 @@ async fn collect_runtime(
   }
   let missing : Array[String] = []
   for relative in required {
-    if !@fsutil.path_exists(@fsutil.path_join(native_dist, relative)) {
+    if !@fsutil.path_exists(@fsutil.path_join(runtime_dist, relative)) {
       missing.push(relative)
     }
   }

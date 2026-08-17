@@ -81,7 +81,7 @@ native prebuilt, or compatibility package remains.
 - [x] Add `proton/internal/cef_process` as a MoonBit executable.
 - [x] Resolve helper source identity from the application's Proton dependency.
 - [x] Build the helper through the application's normal Moon build cache.
-- [ ] Update `doctor`; `cef setup`, `dev`, `build`, and `package` are complete.
+- [x] Update `doctor`; `cef setup`, `dev`, `build`, and `package` are complete.
 - [x] Package only the app executable, matching helper, and CEF runtime.
 
 ### 6. Remove the Dynamic-Library Product
