@@ -22,6 +22,7 @@ verifies that the application, helper process tree, and CDP endpoint stop:
 ```sh
 PROTON_NATIVE_DIST="$PWD/native/dist" \
 PATH="$PWD/native/dist/bin:$PATH" \
+MOON_CC=cc \
 moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```
 
@@ -63,6 +64,6 @@ The current Linux engine still initializes GTK/X11. Run the same probe under a
 virtual X server when no display is available:
 
 ```sh
-xvfb-run -a env PROTON_NATIVE_DIST=native/dist \
+xvfb-run -a env PROTON_NATIVE_DIST=native/dist MOON_CC=cc \
   moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```
