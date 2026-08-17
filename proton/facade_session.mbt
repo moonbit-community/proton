@@ -1339,9 +1339,6 @@ fn RuntimeSession::pump_once(
   if monitor_bridge {
     self.check_bridge_failures()
   }
-  if self.drain_bridge_requests() {
-    did_work = true
-  }
   if self.complete_bridge_requests() {
     did_work = true
   }
@@ -1389,6 +1386,10 @@ fn RuntimeSession::dispatch_runtime_event(
   self.dispatch_notification_event(event)
   self.dispatch_launch_input_event(event)
   self.dispatch_menu_event(event)
+  match event.bridge_request() {
+    Some(request) => self.start_bridge_request(request)
+    None => ()
+  }
   self.cancel_bridge_request(event.bridge_request_cancellation())
 }
 
@@ -1923,27 +1924,6 @@ fn RuntimeSession::check_bridge_failures(
       None => ()
     }
   }
-}
-
-///|
-fn RuntimeSession::drain_bridge_requests(
-  self : RuntimeSession,
-) -> Bool raise AppRunError {
-  let mut did_work = false
-  let mut polling = true
-  while polling {
-    let request = self.runtime.poll_bridge_request() catch {
-      error => raise native_run_error("poll bridge request", error)
-    }
-    match request {
-      None => polling = false
-      Some(request) => {
-        did_work = true
-        self.start_bridge_request(request)
-      }
-    }
-  }
-  did_work
 }
 
 ///|

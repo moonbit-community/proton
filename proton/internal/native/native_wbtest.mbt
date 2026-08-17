@@ -154,12 +154,11 @@ test "runtime events preserve bridge cancellation request ids" {
 ///|
 test "runtime wait ready mask helpers" {
   let ready = RuntimeWaitReady::{
-    mask: runtime_wait_event.lor(runtime_wait_bridge),
+    mask: runtime_wait_event.lor(runtime_wait_platform),
   }
-  inspect(ready.mask(), content="3")
+  inspect(ready.mask(), content="5")
   inspect(ready.has_event(), content="true")
-  inspect(ready.has_bridge(), content="true")
-  inspect(ready.has_platform(), content="false")
+  inspect(ready.has_platform(), content="true")
   inspect(ready.is_timeout(), content="false")
   inspect(
     RuntimeWaitReady::{ mask: runtime_wait_none }.is_timeout(),

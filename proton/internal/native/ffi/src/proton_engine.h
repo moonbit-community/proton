@@ -158,13 +158,6 @@ void proton_engine_runtime_signal_external_event(
 int32_t proton_engine_runtime_set_menu(
     proton_engine_runtime_t *runtime, const proton_menu_bar_t *menu_bar,
     char *error, size_t error_len);
-int32_t proton_engine_runtime_poll_bridge_request_json(
-    proton_engine_runtime_t *runtime,
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required_len,
-    char *error,
-    size_t error_len);
 int32_t proton_engine_runtime_respond_bridge_request_json(
     proton_engine_runtime_t *runtime,
     const char *response_json,

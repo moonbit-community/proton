@@ -160,6 +160,7 @@ enum RuntimeEvent {
   WindowStateChanged(Int64, WindowState)
   WindowCloseRequested(Int64, Int64)
   BridgeLifecycleChanged(Int64, Int64)
+  BridgeRequestReceived(BridgeRequest)
   BridgeRequestCancelled(Int64)
   MenuCommand(String, Int64?)
   LaunchInput(RuntimeLaunchInput)
@@ -309,10 +310,13 @@ pub(all) struct BridgeRequest {
   payload : Json
   page_instance : String?
   source_origin : String
-} derive(Debug)
+} derive(Debug, Eq)
 
 ///|
 pub extend BridgeRequest with Debug::{to_repr}
+
+///|
+pub extend BridgeRequest with Eq::{not_equal, equal}
 
 ///|
 pub(all) enum BridgeResponse {
@@ -597,6 +601,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     WindowStateChanged(_, _) => "window_state_changed"
     WindowCloseRequested(_, _) => "window_close_requested"
     BridgeLifecycleChanged(_, _) => "bridge_lifecycle_changed"
+    BridgeRequestReceived(_) => "bridge_request_received"
     BridgeRequestCancelled(_) => "bridge_request_cancelled"
     MenuCommand(_, _) => "menu_command"
     LaunchInput(OpenUrls(_)) => "open_urls"
@@ -635,7 +640,10 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BrowserDownloadUpdated(window, _)
     | ViewEvent(window, _, _) => Some(window)
     MenuCommand(_, window) => window
-    BridgeRequestCancelled(_) | LaunchInput(_) | NotificationResult(_) => None
+    BridgeRequestReceived(_)
+    | BridgeRequestCancelled(_)
+    | LaunchInput(_)
+    | NotificationResult(_) => None
   }
 }
 
@@ -764,6 +772,14 @@ pub fn RuntimeEvent::bridge_request_cancellation(self : RuntimeEvent) -> Int64? 
 }
 
 ///|
+pub fn RuntimeEvent::bridge_request(self : RuntimeEvent) -> BridgeRequest? {
+  match self {
+    BridgeRequestReceived(request) => Some(request)
+    _ => None
+  }
+}
+
+///|
 /// The command id for an app-menu command item click, or `None` for every
 /// other event kind.
 pub fn RuntimeEvent::menu_command_id(self : RuntimeEvent) -> String? {
@@ -800,11 +816,6 @@ pub fn RuntimeWaitReady::mask(self : RuntimeWaitReady) -> Int {
 ///|
 pub fn RuntimeWaitReady::has_event(self : RuntimeWaitReady) -> Bool {
   self.mask.land(runtime_wait_event) != 0
-}
-
-///|
-pub fn RuntimeWaitReady::has_bridge(self : RuntimeWaitReady) -> Bool {
-  self.mask.land(runtime_wait_bridge) != 0
 }
 
 ///|

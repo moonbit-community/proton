@@ -661,7 +661,6 @@ fn assert_pending_lifecycle_log(path : String) -> Unit raise {
   }
   let mut pending_cleanup = false
   let mut stale_response_handled = false
-  let mut queue_cleared = false
   let mut pending_cleared = false
   let mut window_closed = false
   let mut runtime_destroyed = false
@@ -669,8 +668,7 @@ fn assert_pending_lifecycle_log(path : String) -> Unit raise {
     let line = raw_line.to_owned()
     if line.contains("bridge_pending_remove_browser") {
       let pending = log_int_field(line, "pending=").unwrap_or(0)
-      let queued = log_int_field(line, "queued=").unwrap_or(0)
-      if pending > 0 || queued > 0 {
+      if pending > 0 {
         pending_cleanup = true
       }
     }
@@ -678,9 +676,6 @@ fn assert_pending_lifecycle_log(path : String) -> Unit raise {
       line.contains("bridge_response_no_pending request=") ||
       line.contains("bridge_response_send_failed request=") {
       stale_response_handled = true
-    }
-    if line.contains("bridge_queue_clear removed=") {
-      queue_cleared = true
     }
     if line.contains("bridge_pending_clear_all removed=") {
       pending_cleared = true
@@ -696,8 +691,8 @@ fn assert_pending_lifecycle_log(path : String) -> Unit raise {
   guard pending_cleanup || stale_response_handled else {
     fail("native log did not prove pending response state was handled")
   }
-  guard queue_cleared && pending_cleared else {
-    fail("native log did not prove runtime bridge state was cleared")
+  guard pending_cleared else {
+    fail("native log did not prove pending bridge state was cleared")
   }
   guard window_closed && runtime_destroyed else {
     fail("native log did not prove window and runtime shutdown completed")

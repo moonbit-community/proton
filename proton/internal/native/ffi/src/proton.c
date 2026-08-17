@@ -193,7 +193,7 @@ int32_t proton_runtime_info_json(char *buffer,
       "{\"abi_version\":%d,\"runtime_available\":%s,"
       "\"build_mode\":\"%s\",\"platform\":\"%s\","
       "\"platform_id\":\"%s\","
-      "\"features\":[\"base_abi\",\"event_polling\",\"bridge_polling\","
+      "\"features\":[\"base_abi\",\"event_polling\",\"bridge_events\","
       "\"bridge_permission_grants\""
       PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE
           PROTON_HEADLESS_OSR_FEATURE
@@ -480,8 +480,7 @@ int32_t proton_runtime_wait(proton_runtime_handle_t runtime,
     return PROTON_OK;
   }
 
-  uint32_t engine_interest =
-      interest_mask & (PROTON_WAIT_BRIDGE | PROTON_WAIT_PLATFORM);
+  uint32_t engine_interest = interest_mask & PROTON_WAIT_PLATFORM;
   if (engine_interest == PROTON_WAIT_NONE) {
     g_last_error[0] = '\0';
     return PROTON_OK;
@@ -848,38 +847,6 @@ int32_t proton_internal_event_item(const proton_event_t *event, int32_t index,
 
 void proton_internal_event_destroy(proton_event_t *event) {
   proton_event_destroy(event);
-}
-
-int32_t proton_runtime_poll_bridge_request_json(proton_runtime_handle_t runtime,
-                                                char *buffer,
-                                                int32_t buffer_len,
-                                                int32_t *out_required_len) {
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (out_required_len == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_required_len is required");
-  }
-  if (slot->engine_runtime == NULL) {
-    (void)buffer;
-    (void)buffer_len;
-    *out_required_len = 0;
-    g_last_error[0] = '\0';
-    return PROTON_EVENT_NONE;
-  }
-
-  char engine_error[512] = {0};
-  status = proton_engine_runtime_poll_bridge_request_json(
-      slot->engine_runtime, buffer, buffer_len, out_required_len, engine_error,
-      sizeof(engine_error));
-  if (status < 0) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return status;
 }
 
 int32_t proton_runtime_respond_bridge_request_json(

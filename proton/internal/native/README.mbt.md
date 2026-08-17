@@ -15,7 +15,7 @@ test "native ABI is loaded" {
   assert_true(info.build_mode == "abi-only" || info.build_mode == "runtime")
   assert_true(info.runtime_available == (info.build_mode == "runtime"))
   assert_true(info.features.contains("event_polling"))
-  assert_true(info.features.contains("bridge_polling"))
+  assert_true(info.features.contains("bridge_events"))
 }
 ```
 

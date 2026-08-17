@@ -1314,6 +1314,12 @@ fn decode_native_runtime_event(
           require_native_event_text(event, 1, "view load error"),
         ),
       )
+    22 =>
+      BridgeRequestReceived(
+        decode_bridge_request_json(
+          require_native_event_text(event, 0, "bridge request"),
+        ),
+      )
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -1334,32 +1340,6 @@ pub fn Runtime::poll_event(self : Runtime) -> RuntimeEvent? raise NativeError {
   }
   defer @native_ffi.event_destroy(out_event.val)
   Some(decode_native_runtime_event(out_event.val))
-}
-
-///|
-pub fn Runtime::poll_bridge_request_json(
-  self : Runtime,
-) -> String? raise NativeError {
-  let handle = self.active_handle()
-  read_native_text("bridge request JSON", PayloadBytesExcludingTerminator, (
-    buffer,
-    buffer_len,
-    required,
-  ) => {
-    @native_ffi.proton_runtime_poll_bridge_request_json_ffi(
-      handle, buffer, buffer_len, required,
-    )
-  })
-}
-
-///|
-pub fn Runtime::poll_bridge_request(
-  self : Runtime,
-) -> BridgeRequest? raise NativeError {
-  match self.poll_bridge_request_json() {
-    Some(text) => Some(decode_bridge_request_json(text))
-    None => None
-  }
 }
 
 ///|

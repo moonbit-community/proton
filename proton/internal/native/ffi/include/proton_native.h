@@ -22,10 +22,8 @@ extern "C" {
 
 #define PROTON_WAIT_NONE 0u
 #define PROTON_WAIT_EVENT (1u << 0)
-#define PROTON_WAIT_BRIDGE (1u << 1)
 #define PROTON_WAIT_PLATFORM (1u << 2)
-#define PROTON_WAIT_ALL \
-  (PROTON_WAIT_EVENT | PROTON_WAIT_BRIDGE | PROTON_WAIT_PLATFORM)
+#define PROTON_WAIT_ALL (PROTON_WAIT_EVENT | PROTON_WAIT_PLATFORM)
 
 /* Wait until an event arrives, however long that takes.
  *
@@ -153,9 +151,6 @@ PROTON_API int32_t
 proton_runtime_activate_wakeup_source(proton_runtime_handle_t runtime);
 PROTON_API int32_t proton_runtime_next_wakeup_delay_ms(
     proton_runtime_handle_t runtime, int64_t *out_delay_ms);
-PROTON_API int32_t proton_runtime_poll_bridge_request_json(
-    proton_runtime_handle_t runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len);
 PROTON_API int32_t proton_runtime_respond_bridge_request_json(
     proton_runtime_handle_t runtime, const char *response_json);
 PROTON_API int32_t proton_runtime_begin_message_dialog(

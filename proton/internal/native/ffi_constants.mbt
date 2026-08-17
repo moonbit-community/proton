@@ -38,15 +38,10 @@ pub let runtime_wait_none : Int = 0
 pub let runtime_wait_event : Int = 1
 
 ///|
-pub let runtime_wait_bridge : Int = 2
-
-///|
 pub let runtime_wait_platform : Int = 4
 
 ///|
-pub let runtime_wait_all : Int = runtime_wait_event
-  .lor(runtime_wait_bridge)
-  .lor(runtime_wait_platform)
+pub let runtime_wait_all : Int = runtime_wait_event.lor(runtime_wait_platform)
 
 ///|
 let runtime_wait_timeout_infinite : Int = -1

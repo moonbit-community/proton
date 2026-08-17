@@ -302,15 +302,6 @@ pub extern "C" fn event_item(
 pub extern "C" fn event_destroy(event : EventHandle) -> Unit = "proton_internal_event_destroy"
 
 ///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_runtime_poll_bridge_request_json_ffi(
-  runtime : RuntimeHandle,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_runtime_poll_bridge_request_json"
-
-///|
 #borrow(response_json)
 pub extern "C" fn proton_runtime_respond_bridge_request_json_ffi(
   runtime : RuntimeHandle,
