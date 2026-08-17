@@ -1,11 +1,15 @@
 ///|
 priv struct CommandErrorPolicy {
   expose_details : Bool
+  report_diagnostic : (String) -> Unit
 }
 
 ///|
-fn CommandErrorPolicy::new(expose_details : Bool) -> CommandErrorPolicy {
-  CommandErrorPolicy::{ expose_details, }
+fn CommandErrorPolicy::new(
+  expose_details : Bool,
+  report_diagnostic : (String) -> Unit,
+) -> CommandErrorPolicy {
+  CommandErrorPolicy::{ expose_details, report_diagnostic }
 }
 
 ///|
@@ -18,9 +22,14 @@ fn CommandErrorPolicy::response_message(
   if self.expose_details {
     diagnostic
   } else {
-    println("[proton] command dispatch failed: " + diagnostic)
+    (self.report_diagnostic)(diagnostic)
     safe_message
   }
+}
+
+///|
+fn report_command_diagnostic(diagnostic : String) -> Unit {
+  println("[proton] command dispatch failed: " + diagnostic)
 }
 
 ///|
@@ -45,10 +54,22 @@ struct MbtProcessHost {
 pub fn MbtProcessHost::new(
   expose_error_details? : Bool = false,
 ) -> MbtProcessHost {
+  MbtProcessHost::new_with_diagnostic_reporter(
+    expose_error_details, report_command_diagnostic,
+  )
+}
+
+///|
+fn MbtProcessHost::new_with_diagnostic_reporter(
+  expose_error_details : Bool,
+  report_diagnostic : (String) -> Unit,
+) -> MbtProcessHost {
   MbtProcessHost::{
     registry: OpRegistry::new(),
     op_names: [],
-    error_policy: CommandErrorPolicy::new(expose_error_details),
+    error_policy: CommandErrorPolicy::new(
+      expose_error_details, report_diagnostic,
+    ),
     registration_sealed: false,
     closed: false,
   }

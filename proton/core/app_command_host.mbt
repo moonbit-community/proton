@@ -262,8 +262,20 @@ pub async fn[Payload : ToJson] AppCommandRequestContext::emit(
 pub fn AppCommandHost::new(
   expose_error_details? : Bool = false,
 ) -> AppCommandHost {
+  AppCommandHost::new_with_diagnostic_reporter(
+    expose_error_details, report_command_diagnostic,
+  )
+}
+
+///|
+fn AppCommandHost::new_with_diagnostic_reporter(
+  expose_error_details : Bool,
+  report_diagnostic : (String) -> Unit,
+) -> AppCommandHost {
   AppCommandHost::{
-    host: MbtProcessHost::new(expose_error_details~),
+    host: MbtProcessHost::new_with_diagnostic_reporter(
+      expose_error_details, report_diagnostic,
+    ),
     closed: false,
   }
 }

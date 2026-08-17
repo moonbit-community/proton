@@ -15,6 +15,17 @@ fn response_error_message(response : @ipc.IpcOpResponse) -> String raise {
 }
 
 ///|
+fn quiet_app_command_host(
+  expose_error_details? : Bool = false,
+) -> AppCommandHost {
+  AppCommandHost::new_with_diagnostic_reporter(expose_error_details, fn(
+    _diagnostic,
+  ) {
+
+  })
+}
+
+///|
 test "app command host starts open and empty" {
   let host = AppCommandHost::new()
   @debug.assert_eq(host.registered_ops(), [])
@@ -25,7 +36,12 @@ test "app command host starts open and empty" {
 
 ///|
 async test "production command errors hide backend diagnostics" {
-  let host = AppCommandHost::new()
+  let diagnostics : Array[String] = []
+  let host = AppCommandHost::new_with_diagnostic_reporter(false, fn(
+    diagnostic,
+  ) {
+    diagnostics.push(diagnostic)
+  })
   host.op("app:fail", fn(_payload : Unit) -> String raise {
     raise CommandHostTestError::PrivateFailure(
       "/Users/example/private.mbt:42\nstack: internal_handler",
@@ -47,6 +63,9 @@ async test "production command errors hide backend diagnostics" {
   })
   assert_false(invalid_response.is_ok())
   assert_eq(response_error_message(invalid_response), "invalid command request")
+  assert_eq(diagnostics.length(), 2)
+  assert_true(diagnostics[0].contains("PrivateFailure"))
+  assert_true(diagnostics[1].contains("UnsupportedVersion"))
   host.close()
 }
 
@@ -132,7 +151,7 @@ async test "request context exposes the application locale snapshot" {
 
 ///|
 async test "context-aware handlers reject contextless dispatch" {
-  let host = AppCommandHost::new()
+  let host = quiet_app_command_host()
   let called = Ref(false)
   host.op_async_with_context("app:locale", fn(context, _payload : Unit) {
     called.val = true

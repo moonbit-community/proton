@@ -10,7 +10,7 @@ fn parse_arguments(arguments : Array[String]) -> @argparse.Matches raise {
 
 ///|
 fn key_for(arguments : Array[String]) -> String raise {
-  public_key(parse_arguments(arguments))
+  public_key(parse_arguments(arguments)).text
 }
 
 ///|
