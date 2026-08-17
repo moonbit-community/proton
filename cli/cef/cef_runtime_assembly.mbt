@@ -30,6 +30,7 @@ async fn copy_cef_runtime(
     )
     let bin_dir = @fsutil.path_join(runtime_dir, "bin")
     ensure_dir(@fsutil.path_join(runtime_dir, "Frameworks"))
+    ensure_dir(bin_dir)
     copy_tree(framework_src, framework_dst)
     copy_tree(
       @fsutil.path_join(framework_src, "Resources"),
