@@ -181,10 +181,6 @@ PROTON_API int32_t proton_notification_poll_click(
     int32_t *out_has_payload, int32_t *out_available);
 PROTON_API int32_t proton_notification_cleanup(void);
 
-PROTON_API int32_t proton_window_create_json(proton_runtime_handle_t runtime,
-                                             const char *config_json,
-                                             proton_window_handle_t *out_window);
-
 PROTON_API int32_t proton_window_destroy(proton_window_handle_t window);
 PROTON_API int32_t proton_window_show(proton_window_handle_t window);
 PROTON_API int32_t proton_window_hide(proton_window_handle_t window);
@@ -385,9 +381,6 @@ PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len);
    each backed by its own browser instance. Bounds use a top-left origin in
    the window's content coordinate space, matching the Electron
    WebContentsView model. Requires the "web_contents_view" runtime feature. */
-PROTON_API int32_t proton_view_create_json(proton_window_handle_t window,
-                                           const char *config_json,
-                                           proton_view_handle_t *out_view);
 PROTON_API int32_t proton_view_destroy(proton_view_handle_t view);
 PROTON_API int32_t proton_view_set_bounds(proton_view_handle_t view, int32_t x,
                                           int32_t y, int32_t width,

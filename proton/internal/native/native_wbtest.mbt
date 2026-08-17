@@ -232,7 +232,7 @@ test "runtime config preserves typed native ABI values" {
 }
 
 ///|
-test "window and bridge configs generate native policy JSON" {
+test "window config preserves typed native ABI values" {
   let window_config = WindowConfig::new(
     title="Typed",
     width=320,
@@ -249,21 +249,19 @@ test "window and bridge configs generate native policy JSON" {
       BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
     ]),
   )
-  let window_json = window_config.to_json_string()
-  assert_true(window_json.contains("\"abi_version\":1"))
-  assert_true(window_json.contains("\"title\":\"Typed\""))
-  assert_true(window_json.contains("\"width\":320"))
-  assert_true(window_json.contains("\"height\":240"))
-  assert_true(window_json.contains("\"navigation\":\"ask\""))
-  assert_true(window_json.contains("\"popup\":\"ask\""))
-  assert_true(window_json.contains("\"devtools\":true"))
-  assert_true(window_json.contains("\"bridge\""))
-  assert_true(
-    window_json.contains("\"framework_titlebar_minimize_label\":\"Minimize\""),
-  )
-  assert_true(
-    window_json.contains("\"framework_titlebar_close_label\":\"Close\""),
-  )
+  assert_eq(window_config.title, "Typed")
+  assert_eq(window_config.width, 320)
+  assert_eq(window_config.height, 240)
+  assert_eq(window_config.browser.navigation, BrowserPolicyMode::Ask)
+  assert_eq(window_config.browser.popup, BrowserPolicyMode::Ask)
+  assert_true(window_config.browser.devtools)
+  assert_true(window_config.bridge is Some(_))
+  assert_eq(window_config.framework_titlebar_minimize_label, Some("Minimize"))
+  assert_eq(window_config.framework_titlebar_close_label, Some("Close"))
+}
+
+///|
+test "bridge and menu configs generate native policy JSON" {
   let bridge_config = BridgeConfig::new(grants=[
     BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
   ])

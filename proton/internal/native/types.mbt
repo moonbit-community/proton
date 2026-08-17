@@ -957,12 +957,6 @@ fn cached_runtime_info() -> RuntimeInfo raise NativeError {
 }
 
 ///|
-fn titlebar_overlay_config_supported() -> Bool {
-  let info = cached_runtime_info() catch { _ => return false }
-  info.features.contains("titlebar_overlay")
-}
-
-///|
 /// Controls how the configured width and height constrain native resizing.
 pub(all) enum WindowSizeHint {
   Unconstrained
@@ -1019,12 +1013,6 @@ pub fn BrowserPolicy::new(
 }
 
 ///|
-fn window_size_hint_config_supported() -> Bool {
-  let info = cached_runtime_info() catch { _ => return false }
-  info.features.contains("window_size_hints")
-}
-
-///|
 pub fn bridge_permission_grants_supported() -> Bool {
   let info = cached_runtime_info() catch { _ => return false }
   info.features.contains("bridge_permission_grants")
@@ -1055,7 +1043,6 @@ pub extend RuntimeConfig with Debug::{to_repr}
 
 ///|
 struct WindowConfig {
-  raw_json : String?
   title : String
   width : Int
   height : Int
@@ -1156,7 +1143,6 @@ pub fn WindowConfig::new(
   bridge? : BridgeConfig,
 ) -> WindowConfig {
   {
-    raw_json: None,
     title,
     width,
     height,
@@ -1169,25 +1155,6 @@ pub fn WindowConfig::new(
     framework_titlebar_maximize_label: Some("Maximize"),
     framework_titlebar_restore_label: Some("Restore"),
     framework_titlebar_close_label: Some("Close"),
-  }
-}
-
-///|
-pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
-  {
-    raw_json: Some(raw_json),
-    title: "Proton",
-    width: 800,
-    height: 600,
-    initial_url: "about:blank",
-    size_hint: WindowSizeHint::Unconstrained,
-    titlebar_style: TitlebarStyle::Default,
-    browser: BrowserPolicy::new(),
-    bridge: None,
-    framework_titlebar_minimize_label: None,
-    framework_titlebar_maximize_label: None,
-    framework_titlebar_restore_label: None,
-    framework_titlebar_close_label: None,
   }
 }
 
@@ -1225,7 +1192,6 @@ pub fn WindowConfig::with_framework_titlebar_labels(
   close : String,
 ) -> WindowConfig {
   {
-    raw_json: self.raw_json,
     title: self.title,
     width: self.width,
     height: self.height,
@@ -1414,88 +1380,6 @@ fn set_optional_string_field(
 }
 
 ///|
-fn BrowserPolicyMode::to_json_string(self : BrowserPolicyMode) -> String {
-  match self {
-    Allow => "allow"
-    Deny => "deny"
-    Ask => "ask"
-  }
-}
-
-///|
-fn BrowserPolicy::to_json(self : BrowserPolicy) -> Json {
-  {
-    "navigation": self.navigation.to_json_string(),
-    "popup": self.popup.to_json_string(),
-    "download": self.download.to_json_string(),
-    "certificate": self.certificate.to_json_string(),
-    "media": self.media.to_json_string(),
-    "devtools": self.devtools,
-  }
-}
-
-///|
-pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
-  match self.raw_json {
-    Some(raw) => raw
-    None => {
-      let fields : Map[String, Json] = {
-        "abi_version": Json::number(1.0, repr="1"),
-        "title": self.title,
-        "width": Json::number(
-          self.width.to_double(),
-          repr=self.width.to_string(),
-        ),
-        "height": Json::number(
-          self.height.to_double(),
-          repr=self.height.to_string(),
-        ),
-        "initial_url": self.initial_url,
-      }
-      match self.titlebar_style {
-        TitlebarStyle::Default => ()
-        TitlebarStyle::Overlay =>
-          if titlebar_overlay_config_supported() {
-            fields["titlebar_style"] = Json("overlay")
-          }
-      }
-      if window_size_hint_config_supported() {
-        match self.size_hint {
-          WindowSizeHint::Unconstrained => ()
-          WindowSizeHint::Fixed => fields["size_hint"] = Json("fixed")
-          WindowSizeHint::Min => fields["size_hint"] = Json("min")
-          WindowSizeHint::Max => fields["size_hint"] = Json("max")
-        }
-      }
-      match self.bridge {
-        Some(bridge) => fields.set("bridge", bridge.to_json())
-        None => ()
-      }
-      fields.set("browser", self.browser.to_json())
-      set_optional_string_field(
-        fields,
-        "framework_titlebar_minimize_label",
-        self.framework_titlebar_minimize_label,
-      )
-      set_optional_string_field(
-        fields,
-        "framework_titlebar_maximize_label",
-        self.framework_titlebar_maximize_label,
-      )
-      set_optional_string_field(
-        fields,
-        "framework_titlebar_restore_label",
-        self.framework_titlebar_restore_label,
-      )
-      set_optional_string_field(
-        fields,
-        "framework_titlebar_close_label",
-        self.framework_titlebar_close_label,
-      )
-      Json::object(fields).stringify()
-    }
-  }
-}
 
 ///|
 fn MenuItem::to_json(self : MenuItem) -> Json {
@@ -1677,7 +1561,6 @@ pub extend ViewState with FromJson::{from_json}
 /// to `about:blank`. Views stack above the window's main browser, ordered by
 /// ascending `z_order`.
 struct ViewConfig {
-  raw_json : String?
   x : Int
   y : Int
   width : Int
@@ -1705,66 +1588,7 @@ pub fn ViewConfig::new(
   initial_url? : String = "about:blank",
   background_color? : String,
 ) -> ViewConfig {
-  {
-    raw_json: None,
-    x,
-    y,
-    width,
-    height,
-    visible,
-    z_order,
-    initial_url,
-    background_color,
-  }
-}
-
-///|
-/// Creates a view config from unchecked native ABI JSON.
-pub fn ViewConfig::unsafe_from_json(raw_json : String) -> ViewConfig {
-  {
-    raw_json: Some(raw_json),
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-    visible: true,
-    z_order: 0,
-    initial_url: "about:blank",
-    background_color: None,
-  }
-}
-
-///|
-pub fn ViewConfig::to_json_string(self : ViewConfig) -> String {
-  match self.raw_json {
-    Some(raw) => raw
-    None => {
-      let fields : Map[String, Json] = {
-        "abi_version": Json::number(1.0, repr="1"),
-        "x": Json::number(self.x.to_double(), repr=self.x.to_string()),
-        "y": Json::number(self.y.to_double(), repr=self.y.to_string()),
-        "width": Json::number(
-          self.width.to_double(),
-          repr=self.width.to_string(),
-        ),
-        "height": Json::number(
-          self.height.to_double(),
-          repr=self.height.to_string(),
-        ),
-        "visible": self.visible,
-        "z_order": Json::number(
-          self.z_order.to_double(),
-          repr=self.z_order.to_string(),
-        ),
-        "initial_url": self.initial_url,
-      }
-      match self.background_color {
-        Some(color) => fields.set("background_color", Json(color))
-        None => ()
-      }
-      Json::object(fields).stringify()
-    }
-  }
+  { x, y, width, height, visible, z_order, initial_url, background_color }
 }
 
 ///|

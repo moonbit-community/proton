@@ -310,20 +310,6 @@ typedef struct proton_engine_bridge_pending {
   struct proton_engine_bridge_pending *next;
 } proton_engine_bridge_pending_t;
 
-typedef struct {
-  char title[512];
-  char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
-  int32_t width;
-  int32_t height;
-  int size_hint;
-  int titlebar_overlay;
-  char titlebar_minimize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
-  char titlebar_maximize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
-  char titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
-  char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
-  proton_browser_policy_t browser_policy;
-} proton_engine_window_config_t;
-
 static int g_proton_cef_initialized = 0;
 static int g_proton_cef_runtime_active = 0;
 static int g_proton_cef_shutdown_registered = 0;
@@ -2409,87 +2395,6 @@ static proton_engine_client_t *proton_engine_client_create(
   return client;
 }
 
-static int32_t proton_engine_parse_window_config(
-    const char *config_json,
-    proton_engine_window_config_t *config,
-    char *error,
-    size_t error_len) {
-  if (config_json == NULL || config == NULL) {
-    proton_engine_set_message(error, error_len, "window config is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  memset(config, 0, sizeof(*config));
-  if (!proton_engine_parse_json_string_field(config_json, "title",
-                                             config->title,
-                                             sizeof(config->title))) {
-    snprintf(config->title, sizeof(config->title), "%s", "Proton");
-  }
-  if (!proton_engine_parse_json_int_field(config_json, "width",
-                                          &config->width)) {
-    config->width = 800;
-  }
-  if (!proton_engine_parse_json_int_field(config_json, "height",
-                                          &config->height)) {
-    config->height = 600;
-  }
-  proton_engine_parse_json_string_field(config_json, "initial_url",
-                                        config->initial_url,
-                                        sizeof(config->initial_url));
-  char size_hint[32] = {0};
-  if (proton_engine_parse_json_string_field(
-          config_json, "size_hint", size_hint, sizeof(size_hint))) {
-    if (strcmp(size_hint, "fixed") == 0) {
-      config->size_hint = 1;
-    } else if (strcmp(size_hint, "min") == 0) {
-      config->size_hint = 2;
-    } else if (strcmp(size_hint, "max") == 0) {
-      config->size_hint = 3;
-    } else if (strcmp(size_hint, "none") != 0) {
-      proton_engine_set_message(
-          error, error_len,
-          "window size_hint must be none, fixed, min, or max");
-      return PROTON_ERR_INVALID_ARGUMENT;
-    }
-  }
-  char titlebar_style[32] = {0};
-  if (proton_engine_parse_json_string_field(config_json, "titlebar_style",
-                                            titlebar_style,
-                                            sizeof(titlebar_style))) {
-    if (strcmp(titlebar_style, "overlay") == 0) {
-      config->titlebar_overlay = 1;
-    } else if (strcmp(titlebar_style, "default") != 0) {
-      proton_engine_set_message(
-          error, error_len,
-          "window titlebar_style must be default or overlay");
-      return PROTON_ERR_INVALID_ARGUMENT;
-    }
-  }
-  proton_engine_parse_json_string_field(
-      config_json, "framework_titlebar_minimize_label",
-      config->titlebar_minimize_label, sizeof(config->titlebar_minimize_label));
-  proton_engine_parse_json_string_field(
-      config_json, "framework_titlebar_maximize_label",
-      config->titlebar_maximize_label, sizeof(config->titlebar_maximize_label));
-  proton_engine_parse_json_string_field(
-      config_json, "framework_titlebar_restore_label",
-      config->titlebar_restore_label, sizeof(config->titlebar_restore_label));
-  proton_engine_parse_json_string_field(
-      config_json, "framework_titlebar_close_label",
-      config->titlebar_close_label, sizeof(config->titlebar_close_label));
-  if (config->titlebar_overlay &&
-      (config->titlebar_minimize_label[0] == '\0' ||
-       config->titlebar_maximize_label[0] == '\0' ||
-       config->titlebar_restore_label[0] == '\0' ||
-       config->titlebar_close_label[0] == '\0')) {
-    proton_engine_set_message(
-        error, error_len,
-        "window titlebar overlay requires framework control labels");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  return proton_browser_policy_parse_window_json(
-      config_json, &config->browser_policy, error, error_len);
-}
-
 static void proton_engine_browser_release(cef_browser_t *browser) {
   if (browser != NULL) {
     browser->base.release((cef_base_ref_counted_t *)browser);
@@ -4500,26 +4405,20 @@ static int32_t proton_engine_window_create_browser(
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
-                                         const char *config_json,
-                                         proton_engine_window_t **out_window,
-                                         char *error,
-                                         size_t error_len) {
+int32_t proton_engine_window_create(
+    proton_engine_runtime_t *runtime,
+    const proton_engine_window_config_t *input_config,
+    proton_engine_window_t **out_window, char *error, size_t error_len) {
   if (out_window == NULL) {
     proton_engine_set_message(error, error_len, "out_window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   *out_window = NULL;
-  if (runtime == NULL || !g_proton_cef_initialized) {
+  if (runtime == NULL || input_config == NULL || !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  proton_engine_window_config_t config;
-  int32_t status =
-      proton_engine_parse_window_config(config_json, &config, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
+  proton_engine_window_config_t config = *input_config;
   if (runtime->headless && config.titlebar_overlay) {
     proton_engine_set_message(
         error, error_len,
@@ -4554,7 +4453,9 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
            config.titlebar_close_label);
   window->zoom_percent = 100;
   window->bridge_config_json =
-      proton_engine_json_copy_raw_field(config_json, "bridge");
+      config.bridge_config_json != NULL
+          ? proton_engine_strdup(config.bridge_config_json)
+          : NULL;
   window->max_bridge_payload_bytes = PROTON_ENGINE_MAX_BRIDGE_BYTES;
   if (window->bridge_config_json != NULL) {
     proton_engine_bridge_config_read_max_payload(
@@ -5701,18 +5602,6 @@ int32_t proton_engine_take_menu_command(
 // engine: do_close takes over from CEF's default (which would post a delete
 // event to the frame window) and destroys the browser's X window instead.
 
-typedef struct {
-  char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
-  int32_t x;
-  int32_t y;
-  int32_t width;
-  int32_t height;
-  int32_t z_order;
-  int visible;
-  int has_background_color;
-  uint32_t background_color;
-} proton_engine_view_config_t;
-
 static proton_engine_view_t *proton_engine_view_from_browser(
     cef_browser_t *browser) {
   if (browser == NULL) {
@@ -5938,79 +5827,6 @@ static proton_engine_client_t *proton_engine_view_client_create(
   return client;
 }
 
-// Parses "#RRGGBB" or "#AARRGGBB" into a cef_color_t (0xAARRGGBB).
-static int proton_engine_parse_color_argb(const char *text,
-                                          uint32_t *out_color) {
-  if (text == NULL || text[0] != '#') {
-    return 0;
-  }
-  size_t len = strlen(text);
-  if (len != 7 && len != 9) {
-    return 0;
-  }
-  for (size_t i = 1; i < len; i++) {
-    if (!isxdigit((unsigned char)text[i])) {
-      return 0;
-    }
-  }
-  unsigned long value = strtoul(text + 1, NULL, 16);
-  if (len == 7) {
-    value |= 0xFF000000UL;
-  }
-  *out_color = (uint32_t)value;
-  return 1;
-}
-
-static int32_t proton_engine_parse_view_config(
-    const char *config_json,
-    proton_engine_view_config_t *config,
-    char *error,
-    size_t error_len) {
-  if (config_json == NULL || config == NULL) {
-    proton_engine_set_message(error, error_len, "view config is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  memset(config, 0, sizeof(*config));
-  config->visible = 1;
-  if (!proton_engine_parse_json_int_field(config_json, "width",
-                                          &config->width) ||
-      !proton_engine_parse_json_int_field(config_json, "height",
-                                          &config->height)) {
-    proton_engine_set_message(error, error_len,
-                              "view config requires numeric width and height");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (config->width <= 0 || config->height <= 0) {
-    proton_engine_set_message(error, error_len,
-                              "view width and height must be positive");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  proton_engine_parse_json_int_field(config_json, "x", &config->x);
-  proton_engine_parse_json_int_field(config_json, "y", &config->y);
-  proton_engine_parse_json_int_field(config_json, "z_order", &config->z_order);
-  bool visible = true;
-  if (proton_engine_parse_json_bool_field(config_json, "visible", &visible)) {
-    config->visible = visible ? 1 : 0;
-  }
-  proton_engine_parse_json_string_field(config_json, "initial_url",
-                                        config->initial_url,
-                                        sizeof(config->initial_url));
-  char background_color[16] = {0};
-  if (proton_engine_parse_json_string_field(
-          config_json, "background_color", background_color,
-          sizeof(background_color))) {
-    if (!proton_engine_parse_color_argb(background_color,
-                                        &config->background_color)) {
-      proton_engine_set_message(
-          error, error_len,
-          "view background_color must be #RRGGBB or #AARRGGBB");
-      return PROTON_ERR_INVALID_ARGUMENT;
-    }
-    config->has_background_color = 1;
-  }
-  return PROTON_OK;
-}
-
 static int32_t proton_engine_view_create_browser(
     proton_engine_view_t *view,
     char *error,
@@ -6090,17 +5906,16 @@ static int32_t proton_engine_view_create_browser(
   return PROTON_OK;
 }
 
-int32_t proton_engine_view_create_json(proton_engine_window_t *window,
-                                       const char *config_json,
-                                       proton_engine_view_t **out_view,
-                                       char *error,
-                                       size_t error_len) {
+int32_t proton_engine_view_create(
+    proton_engine_window_t *window,
+    const proton_engine_view_config_t *input_config,
+    proton_engine_view_t **out_view, char *error, size_t error_len) {
   if (out_view == NULL) {
     proton_engine_set_message(error, error_len, "out_view is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   *out_view = NULL;
-  if (window == NULL || config_json == NULL) {
+  if (window == NULL || input_config == NULL) {
     proton_engine_set_message(error, error_len,
                               "window and view config are required");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -6109,12 +5924,8 @@ int32_t proton_engine_view_create_json(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "window is closed");
     return PROTON_ERR_DESTROYED;
   }
-  proton_engine_view_config_t config;
-  int32_t status =
-      proton_engine_parse_view_config(config_json, &config, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
+  proton_engine_view_config_t config = *input_config;
+  int32_t status = PROTON_OK;
 
   proton_engine_view_t *view =
       (proton_engine_view_t *)calloc(1, sizeof(*view));

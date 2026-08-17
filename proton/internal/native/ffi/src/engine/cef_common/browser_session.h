@@ -31,10 +31,6 @@ typedef struct proton_browser_session proton_browser_session_t;
 
 typedef void (*proton_browser_signal_fn)(void *user_data);
 
-int32_t proton_browser_policy_parse_window_json(
-    const char *window_json, proton_browser_policy_t *out_policy,
-    char *error, size_t error_len);
-
 proton_browser_session_t *proton_browser_session_create(
     const proton_browser_policy_t *policy, proton_browser_signal_fn signal,
     void *signal_user_data);

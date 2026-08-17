@@ -2,6 +2,7 @@
 #define PROTON_ENGINE_H
 
 #include "proton_native.h"
+#include "engine/cef_common/browser_session.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -29,6 +30,33 @@ typedef struct {
   int32_t headless;
   int32_t persist_session_cookies;
 } proton_engine_runtime_config_t;
+
+typedef struct {
+  char title[512];
+  char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
+  int32_t width;
+  int32_t height;
+  int32_t size_hint;
+  int32_t titlebar_overlay;
+  char titlebar_minimize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char titlebar_maximize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  proton_browser_policy_t browser_policy;
+  const char *bridge_config_json;
+} proton_engine_window_config_t;
+
+typedef struct {
+  char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  int32_t z_order;
+  int32_t visible;
+  int32_t has_background_color;
+  uint32_t background_color;
+} proton_engine_view_config_t;
 
 /* CEF's external pump is not fully wake-driven. Match cefclient's maximum
    interval so browser work that emits no schedule callback cannot starve. */
@@ -173,11 +201,10 @@ int32_t proton_engine_notification_poll_click(
     size_t error_len);
 int32_t proton_engine_notification_cleanup(char *error, size_t error_len);
 
-int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
-                                         const char *config_json,
-                                         proton_engine_window_t **out_window,
-                                         char *error,
-                                         size_t error_len);
+int32_t proton_engine_window_create(
+    proton_engine_runtime_t *runtime,
+    const proton_engine_window_config_t *config,
+    proton_engine_window_t **out_window, char *error, size_t error_len);
 int32_t proton_engine_window_destroy(proton_engine_window_t *window,
                                      char *error,
                                      size_t error_len);
@@ -332,11 +359,9 @@ int32_t proton_engine_take_platform_event(proton_engine_runtime_t *runtime,
                                           int32_t *out_present);
 const char *proton_engine_name(void);
 
-int32_t proton_engine_view_create_json(proton_engine_window_t *window,
-                                       const char *config_json,
-                                       proton_engine_view_t **out_view,
-                                       char *error,
-                                       size_t error_len);
+int32_t proton_engine_view_create(
+    proton_engine_window_t *window, const proton_engine_view_config_t *config,
+    proton_engine_view_t **out_view, char *error, size_t error_len);
 int32_t proton_engine_view_destroy(proton_engine_view_t *view,
                                    char *error,
                                    size_t error_len);

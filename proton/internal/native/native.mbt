@@ -194,12 +194,34 @@ fn invalid_argument(message : String) -> NativeError {
 
 ///|
 fn validate_window_config(config : WindowConfig) -> Unit raise NativeError {
-  match config.raw_json {
-    Some(_) => ()
-    None =>
-      if config.width <= 0 || config.height <= 0 {
-        raise invalid_argument("width and height must be positive")
-      }
+  if config.width <= 0 || config.height <= 0 {
+    raise invalid_argument("width and height must be positive")
+  }
+  if config.browser.popup is BrowserPolicyMode::Allow ||
+    config.browser.certificate is BrowserPolicyMode::Allow ||
+    config.browser.media is BrowserPolicyMode::Allow {
+    raise invalid_argument(
+      "popup, certificate, and media policies cannot allow without review",
+    )
+  }
+}
+
+///|
+fn window_size_hint_code(value : WindowSizeHint) -> Int {
+  match value {
+    Unconstrained => 0
+    Fixed => 1
+    Min => 2
+    Max => 3
+  }
+}
+
+///|
+fn browser_policy_code(value : BrowserPolicyMode) -> Int {
+  match value {
+    Allow => 0
+    Deny => 1
+    Ask => 2
   }
 }
 
@@ -917,9 +939,29 @@ pub fn Window::new(
 ) -> Window raise NativeError {
   validate_window_config(config)
   let out_window = Ref(@native_ffi.window_null())
-  let status = @native_ffi.proton_window_create_json_ffi(
+  let bridge_config_json = match config.bridge {
+    Some(bridge) => bridge.to_json_string()
+    None => ""
+  }
+  let status = @native_ffi.window_create(
     runtime.active_handle(),
-    @ffi.to_cstr(config.to_json_string()),
+    @ffi.to_cstr(config.title),
+    config.width,
+    config.height,
+    @ffi.to_cstr(config.initial_url),
+    window_size_hint_code(config.size_hint),
+    runtime_config_bool(config.titlebar_style is TitlebarStyle::Overlay),
+    browser_policy_code(config.browser.navigation),
+    runtime_config_string(config.framework_titlebar_minimize_label),
+    runtime_config_string(config.framework_titlebar_maximize_label),
+    runtime_config_string(config.framework_titlebar_restore_label),
+    runtime_config_string(config.framework_titlebar_close_label),
+    browser_policy_code(config.browser.popup),
+    browser_policy_code(config.browser.download),
+    browser_policy_code(config.browser.certificate),
+    browser_policy_code(config.browser.media),
+    runtime_config_bool(config.browser.devtools),
+    @ffi.to_cstr(bridge_config_json),
     out_window,
   )
   if status < 0 {
@@ -1859,12 +1901,8 @@ pub fn WindowRef::poll_dialog_result(
 
 ///|
 fn validate_view_config(config : ViewConfig) -> Unit raise NativeError {
-  match config.raw_json {
-    Some(_) => ()
-    None =>
-      if config.width <= 0 || config.height <= 0 {
-        raise invalid_argument("view width and height must be positive")
-      }
+  if config.width <= 0 || config.height <= 0 {
+    raise invalid_argument("view width and height must be positive")
   }
 }
 
@@ -1878,9 +1916,16 @@ pub fn View::new(
 ) -> View raise NativeError {
   validate_view_config(config)
   let out_view = Ref(@native_ffi.view_null())
-  let status = @native_ffi.proton_view_create_json_ffi(
+  let status = @native_ffi.view_create(
     window.live_handle(),
-    @ffi.to_cstr(config.to_json_string()),
+    config.x,
+    config.y,
+    config.width,
+    config.height,
+    runtime_config_bool(config.visible),
+    config.z_order,
+    @ffi.to_cstr(config.initial_url),
+    runtime_config_string(config.background_color),
     out_view,
   )
   if status < 0 {

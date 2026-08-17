@@ -912,21 +912,31 @@ int32_t proton_runtime_respond_bridge_request_json(
   return PROTON_OK;
 }
 
-int32_t proton_window_create_json(proton_runtime_handle_t runtime,
-                                  const char *config_json,
-                                  proton_window_handle_t *out_window) {
+int32_t proton_internal_window_create(
+    proton_runtime_handle_t runtime, const char *title, int32_t width,
+    int32_t height, const char *initial_url, int32_t size_hint,
+    int32_t titlebar_overlay, int32_t navigation_policy,
+    const char *titlebar_minimize_label, const char *titlebar_maximize_label,
+    const char *titlebar_restore_label, const char *titlebar_close_label,
+    int32_t popup_policy, int32_t download_policy,
+    int32_t certificate_policy, int32_t media_policy, int32_t devtools,
+    const char *bridge_config_json, proton_window_handle_t *out_window) {
   proton_runtime_slot_t *runtime_slot = NULL;
   int32_t status = proton_get_runtime(runtime, &runtime_slot);
   if (status != PROTON_OK) {
     return status;
   }
-  if (config_json == NULL || out_window == NULL) {
+  if (out_window == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "config_json and out_window are required");
+                            "out_window is required");
   }
-  int32_t width = 0;
-  int32_t height = 0;
-  status = proton_config_validate_window(config_json, &width, &height);
+  proton_engine_window_config_t config;
+  status = proton_config_prepare_window(
+      title, width, height, initial_url, size_hint, titlebar_overlay,
+      navigation_policy, titlebar_minimize_label, titlebar_maximize_label,
+      titlebar_restore_label, titlebar_close_label, popup_policy,
+      download_policy, certificate_policy, media_policy, devtools,
+      bridge_config_json, &config);
   if (status != PROTON_OK) {
     return status;
   }
@@ -934,10 +944,9 @@ int32_t proton_window_create_json(proton_runtime_handle_t runtime,
   proton_engine_window_t *engine_window = NULL;
   if (runtime_slot->engine_runtime != NULL) {
     char engine_error[512] = {0};
-    status = proton_engine_window_create_json(runtime_slot->engine_runtime,
-                                              config_json, &engine_window,
-                                              engine_error,
-                                              sizeof(engine_error));
+    status = proton_engine_window_create(runtime_slot->engine_runtime, &config,
+                                         &engine_window, engine_error,
+                                         sizeof(engine_error));
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
     }
@@ -2136,20 +2145,23 @@ int32_t proton_window_clear_cache(proton_window_handle_t window) {
   return PROTON_OK;
 }
 
-int32_t proton_view_create_json(proton_window_handle_t window,
-                                const char *config_json,
-                                proton_view_handle_t *out_view) {
+int32_t proton_internal_view_create(
+    proton_window_handle_t window, int32_t x, int32_t y, int32_t width,
+    int32_t height, int32_t visible, int32_t z_order, const char *initial_url,
+    const char *background_color, proton_view_handle_t *out_view) {
   proton_window_slot_t *window_slot = NULL;
   int32_t status = proton_get_window(window, &window_slot);
   if (status != PROTON_OK) {
     return status;
   }
-  if (config_json == NULL || out_view == NULL) {
+  if (out_view == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "config_json and out_view are required");
+                            "out_view is required");
   }
-  proton_view_config_values_t values;
-  status = proton_config_validate_view(config_json, &values);
+  proton_engine_view_config_t config;
+  status = proton_config_prepare_view(
+      x, y, width, height, visible, z_order, initial_url, background_color,
+      &config);
   if (status != PROTON_OK) {
     return status;
   }
@@ -2163,8 +2175,8 @@ int32_t proton_view_create_json(proton_window_handle_t window,
   proton_engine_view_t *engine_view = NULL;
   if (window_slot->engine_window != NULL) {
     char engine_error[512] = {0};
-    status = proton_engine_view_create_json(
-        window_slot->engine_window, config_json, &engine_view, engine_error,
+    status = proton_engine_view_create(
+        window_slot->engine_window, &config, &engine_view, engine_error,
         sizeof(engine_error));
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
@@ -2176,8 +2188,8 @@ int32_t proton_view_create_json(proton_window_handle_t window,
   }
 
   status = proton_view_slot_create(
-      window_slot, engine_view, values.x, values.y, values.width,
-      values.height, values.z_order, values.visible != 0, out_view);
+      window_slot, engine_view, config.x, config.y, config.width,
+      config.height, config.z_order, config.visible != 0, out_view);
   if (status != PROTON_OK) {
     if (engine_view != NULL) {
       char engine_error[512] = {0};

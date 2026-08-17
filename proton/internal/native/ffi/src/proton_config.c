@@ -7,6 +7,7 @@
 #include "proton_internal.h"
 #include "proton_json.h"
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -81,109 +82,6 @@ typedef struct {
   int32_t status;
 } proton_abi_validation_t;
 
-typedef struct {
-  const proton_json_doc_t *doc;
-  int32_t status;
-} proton_browser_policy_validation_t;
-
-static bool proton_validate_browser_policy_field(
-    const char *key, proton_json_value_t value, void *user_data) {
-  proton_browser_policy_validation_t *validation =
-      (proton_browser_policy_validation_t *)user_data;
-  if (strcmp(key, "devtools") == 0) {
-    bool enabled = false;
-    if (!proton_json_read_bool(validation->doc, value, &enabled)) {
-      validation->status = proton_set_error(
-          PROTON_ERR_INVALID_ARGUMENT,
-          "window browser devtools field must be a boolean");
-      return false;
-    }
-    return true;
-  }
-  if (strcmp(key, "navigation") != 0 && strcmp(key, "popup") != 0 &&
-      strcmp(key, "download") != 0 && strcmp(key, "certificate") != 0 &&
-      strcmp(key, "media") != 0) {
-    char message[192];
-    snprintf(message, sizeof(message),
-             "window browser policy contains unknown field: %s", key);
-    validation->status =
-        proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-    return false;
-  }
-  char mode[16] = {0};
-  if (!proton_json_read_string(validation->doc, value, mode, sizeof(mode)) ||
-      (strcmp(mode, "allow") != 0 && strcmp(mode, "deny") != 0 &&
-       strcmp(mode, "ask") != 0)) {
-    validation->status = proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "window browser policy must be allow, deny, or ask");
-    return false;
-  }
-  if ((strcmp(key, "popup") == 0 || strcmp(key, "certificate") == 0 ||
-       strcmp(key, "media") == 0) &&
-      strcmp(mode, "allow") == 0) {
-    validation->status = proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "popup, certificate, and media policies cannot allow without review");
-    return false;
-  }
-  return true;
-}
-
-static bool proton_validate_browser_policy(const proton_json_doc_t *doc,
-                                           proton_json_value_t value) {
-  if (!proton_json_is_object(doc, value)) {
-    return false;
-  }
-  proton_browser_policy_validation_t validation = {doc, PROTON_OK};
-  bool iterated = proton_json_object_each(
-      doc, value, proton_validate_browser_policy_field, &validation);
-  return iterated && validation.status == PROTON_OK;
-}
-
-typedef struct {
-  const proton_json_doc_t *doc;
-  size_t total_length;
-  bool valid;
-} proton_language_list_validation_t;
-
-static bool proton_validate_language_list_item(proton_json_value_t value,
-                                               void *user_data) {
-  proton_language_list_validation_t *validation =
-      (proton_language_list_validation_t *)user_data;
-  char text[PROTON_MAX_PATH_BYTES];
-  if (!proton_json_read_string(validation->doc, value, text, sizeof(text)) ||
-      text[0] == '\0' || strchr(text, ',') != NULL ||
-      strpbrk(text, " \t\r\n") != NULL) {
-    validation->valid = false;
-    return false;
-  }
-  size_t length = strlen(text);
-  size_t separator = validation->total_length == 0 ? 0 : 1;
-  if (validation->total_length + separator + length >= PROTON_MAX_PATH_BYTES) {
-    validation->valid = false;
-    return false;
-  }
-  validation->total_length += separator + length;
-  return true;
-}
-
-static bool proton_validate_language_list(const proton_json_doc_t *doc,
-                                          proton_json_value_t value) {
-  if (!proton_json_is_array(doc, value)) {
-    return false;
-  }
-  proton_language_list_validation_t validation = {
-      .doc = doc,
-      .total_length = 0,
-      .valid = true,
-  };
-  return proton_json_array_each(doc, value,
-                                proton_validate_language_list_item,
-                                &validation) &&
-         validation.valid;
-}
-
 static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
                                            const char *config_name,
                                            const char *key,
@@ -227,35 +125,6 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
            strcmp(key, "framework_dialog_cancel_label") == 0)) {
         valid = text[0] != '\0' && strlen(text) < PROTON_MAX_LABEL_BYTES;
       }
-    }
-  } else if (strcmp(config_name, "window") == 0) {
-    if (strcmp(key, "width") == 0 || strcmp(key, "height") == 0) {
-      valid = proton_json_read_int32(doc, value, &integer);
-    } else if (strcmp(key, "title") == 0 ||
-               strcmp(key, "initial_url") == 0 ||
-               strcmp(key, "size_hint") == 0 ||
-               strcmp(key, "titlebar_style") == 0 ||
-               strcmp(key, "framework_titlebar_minimize_label") == 0 ||
-               strcmp(key, "framework_titlebar_maximize_label") == 0 ||
-               strcmp(key, "framework_titlebar_restore_label") == 0 ||
-               strcmp(key, "framework_titlebar_close_label") == 0) {
-      valid = proton_json_read_string(doc, value, text, sizeof(text));
-      if (valid) {
-        if (strcmp(key, "size_hint") == 0) {
-          valid = strcmp(text, "none") == 0 ||
-                  strcmp(text, "fixed") == 0 ||
-                  strcmp(text, "min") == 0 || strcmp(text, "max") == 0;
-        } else if (strcmp(key, "titlebar_style") == 0) {
-          valid =
-              strcmp(text, "default") == 0 || strcmp(text, "overlay") == 0;
-        } else if (strncmp(key, "framework_titlebar_", 19) == 0) {
-          valid = text[0] != '\0' && strlen(text) < PROTON_MAX_LABEL_BYTES;
-        }
-      }
-    } else if (strcmp(key, "bridge") == 0) {
-      valid = proton_json_is_object(doc, value);
-    } else if (strcmp(key, "browser") == 0) {
-      valid = proton_validate_browser_policy(doc, value);
     }
   } else if (strcmp(config_name, "bridge") == 0) {
     if (strcmp(key, "namespace") == 0) {
@@ -377,77 +246,6 @@ static int32_t proton_validate_abi_config(
   proton_json_dispose(&doc);
   return validation.status;
 }
-
-static bool proton_parse_json_int_field(const char *config_json,
-                                        const char *field_name,
-                                        int32_t *out_value) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, config_json)) {
-    return false;
-  }
-  bool ok = proton_json_root_object(&doc, &root) &&
-            proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_int32(&doc, value, out_value);
-  proton_json_dispose(&doc);
-  return ok;
-}
-
-static bool proton_parse_json_bool_field(const char *config_json,
-                                         const char *field_name,
-                                         bool *out_value) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, config_json)) {
-    return false;
-  }
-  bool ok = proton_json_root_object(&doc, &root) &&
-            proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_bool(&doc, value, out_value);
-  proton_json_dispose(&doc);
-  return ok;
-}
-
-static bool proton_parse_json_string_field(const char *config_json,
-                                           const char *field_name,
-                                           char *out_value,
-                                           size_t out_value_len) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, config_json)) {
-    return false;
-  }
-  bool ok = proton_json_root_object(&doc, &root) &&
-            proton_json_object_get(&doc, root, field_name, &value) &&
-            proton_json_read_string(&doc, value, out_value, out_value_len);
-  proton_json_dispose(&doc);
-  return ok;
-}
-
-static const char *const proton_window_config_keys[] = {
-    "abi_version",
-    "title",
-    "width",
-    "height",
-    "initial_url",
-    "size_hint",
-    "titlebar_style",
-    "framework_titlebar_minimize_label",
-    "framework_titlebar_maximize_label",
-    "framework_titlebar_restore_label",
-    "framework_titlebar_close_label",
-    "bridge",
-    "browser",
-};
-
-static const char *const proton_view_config_keys[] = {
-    "abi_version", "x",                "y",           "width",
-    "height",      "visible",          "z_order",     "initial_url",
-    "background_color",
-};
 
 static const char *const proton_bridge_config_keys[] = {
     "abi_version",
@@ -1053,28 +851,174 @@ int32_t proton_config_probe_runtime(
   return PROTON_OK;
 }
 
-static int32_t proton_validate_window_config(const char *config_json,
-                                             int32_t *out_width,
-                                             int32_t *out_height) {
-  if (config_json == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "window config_json is required");
+static bool proton_copy_config_text(char *out, size_t out_len,
+                                    const char *value) {
+  if (out == NULL || out_len == 0 || value == NULL) {
+    return false;
   }
+  int written = snprintf(out, out_len, "%s", value);
+  return written >= 0 && (size_t)written < out_len;
+}
 
-  int32_t width = 0;
-  int32_t height = 0;
-  if (!proton_parse_json_int_field(config_json, "width", &width) ||
-      !proton_parse_json_int_field(config_json, "height", &height)) {
+static bool proton_browser_policy_mode_valid(int32_t mode) {
+  return mode >= PROTON_BROWSER_POLICY_ALLOW &&
+         mode <= PROTON_BROWSER_POLICY_ASK;
+}
+
+int32_t proton_config_prepare_window(
+    const char *title, int32_t width, int32_t height, const char *initial_url,
+    int32_t size_hint, int32_t titlebar_overlay, int32_t navigation_policy,
+    const char *titlebar_minimize_label, const char *titlebar_maximize_label,
+    const char *titlebar_restore_label, const char *titlebar_close_label,
+    int32_t popup_policy, int32_t download_policy,
+    int32_t certificate_policy, int32_t media_policy, int32_t devtools,
+    const char *bridge_config_json,
+    proton_engine_window_config_t *out_config) {
+  if (out_config == NULL || title == NULL || initial_url == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "window config requires numeric width and height");
+                            "window config is required");
   }
   if (width <= 0 || height <= 0) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "window width and height must be positive");
   }
+  if (size_hint < 0 || size_hint > 3) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "window size hint is invalid");
+  }
+  if (!proton_browser_policy_mode_valid(navigation_policy) ||
+      !proton_browser_policy_mode_valid(popup_policy) ||
+      !proton_browser_policy_mode_valid(download_policy) ||
+      !proton_browser_policy_mode_valid(certificate_policy) ||
+      !proton_browser_policy_mode_valid(media_policy) ||
+      popup_policy == PROTON_BROWSER_POLICY_ALLOW ||
+      certificate_policy == PROTON_BROWSER_POLICY_ALLOW ||
+      media_policy == PROTON_BROWSER_POLICY_ALLOW) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "window browser policy is invalid");
+  }
+  if (bridge_config_json != NULL && bridge_config_json[0] != '\0') {
+    int32_t status = proton_config_validate_bridge(bridge_config_json);
+    if (status != PROTON_OK) {
+      return status;
+    }
+  }
+  proton_engine_window_config_t config;
+  memset(&config, 0, sizeof(config));
+  if (!proton_copy_config_text(config.title, sizeof(config.title), title) ||
+      !proton_copy_config_text(config.initial_url,
+                               sizeof(config.initial_url), initial_url)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "window title or initial_url is too long");
+  }
+  config.width = width;
+  config.height = height;
+  config.size_hint = size_hint;
+  config.titlebar_overlay = titlebar_overlay != 0;
+  if ((titlebar_minimize_label != NULL && titlebar_minimize_label[0] != '\0' &&
+       !proton_copy_config_text(config.titlebar_minimize_label,
+                                sizeof(config.titlebar_minimize_label),
+                                titlebar_minimize_label)) ||
+      (titlebar_maximize_label != NULL && titlebar_maximize_label[0] != '\0' &&
+       !proton_copy_config_text(config.titlebar_maximize_label,
+                                sizeof(config.titlebar_maximize_label),
+                                titlebar_maximize_label)) ||
+      (titlebar_restore_label != NULL && titlebar_restore_label[0] != '\0' &&
+       !proton_copy_config_text(config.titlebar_restore_label,
+                                sizeof(config.titlebar_restore_label),
+                                titlebar_restore_label)) ||
+      (titlebar_close_label != NULL && titlebar_close_label[0] != '\0' &&
+       !proton_copy_config_text(config.titlebar_close_label,
+                                sizeof(config.titlebar_close_label),
+                                titlebar_close_label))) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "window titlebar label is too long");
+  }
+  if (config.titlebar_overlay &&
+      (config.titlebar_minimize_label[0] == '\0' ||
+       config.titlebar_maximize_label[0] == '\0' ||
+       config.titlebar_restore_label[0] == '\0' ||
+       config.titlebar_close_label[0] == '\0')) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "window titlebar overlay requires framework control labels");
+  }
+  config.browser_policy.navigation =
+      (proton_browser_policy_mode_t)navigation_policy;
+  config.browser_policy.popup = (proton_browser_policy_mode_t)popup_policy;
+  config.browser_policy.download =
+      (proton_browser_policy_mode_t)download_policy;
+  config.browser_policy.certificate =
+      (proton_browser_policy_mode_t)certificate_policy;
+  config.browser_policy.media = (proton_browser_policy_mode_t)media_policy;
+  config.browser_policy.devtools = devtools != 0;
+  config.bridge_config_json =
+      bridge_config_json != NULL && bridge_config_json[0] != '\0'
+          ? bridge_config_json
+          : NULL;
+  *out_config = config;
+  return PROTON_OK;
+}
 
-  *out_width = width;
-  *out_height = height;
+static bool proton_parse_color_argb(const char *text, uint32_t *out_color) {
+  if (text == NULL || text[0] == '\0') {
+    return false;
+  }
+  if (text[0] != '#') {
+    return false;
+  }
+  size_t len = strlen(text);
+  if (len != 7 && len != 9) {
+    return false;
+  }
+  for (size_t index = 1; index < len; index++) {
+    if (!isxdigit((unsigned char)text[index])) {
+      return false;
+    }
+  }
+  unsigned long value = strtoul(text + 1, NULL, 16);
+  if (len == 7) {
+    value |= 0xFF000000UL;
+  }
+  *out_color = (uint32_t)value;
+  return true;
+}
+
+int32_t proton_config_prepare_view(
+    int32_t x, int32_t y, int32_t width, int32_t height, int32_t visible,
+    int32_t z_order, const char *initial_url, const char *background_color,
+    proton_engine_view_config_t *out_config) {
+  if (out_config == NULL || initial_url == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "view config is required");
+  }
+  if (width <= 0 || height <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "view width and height must be positive");
+  }
+  proton_engine_view_config_t config;
+  memset(&config, 0, sizeof(config));
+  if (!proton_copy_config_text(config.initial_url,
+                               sizeof(config.initial_url), initial_url)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "view initial_url is too long");
+  }
+  config.x = x;
+  config.y = y;
+  config.width = width;
+  config.height = height;
+  config.visible = visible != 0;
+  config.z_order = z_order;
+  if (background_color != NULL && background_color[0] != '\0') {
+    if (!proton_parse_color_argb(background_color,
+                                 &config.background_color)) {
+      return proton_set_error(
+          PROTON_ERR_INVALID_ARGUMENT,
+          "view background_color must be #RRGGBB or #AARRGGBB");
+    }
+    config.has_background_color = 1;
+  }
+  *out_config = config;
   return PROTON_OK;
 }
 
@@ -1748,78 +1692,5 @@ int32_t proton_config_validate_bridge_event(const char *event_json) {
     }
   }
   proton_json_dispose(&doc);
-  return PROTON_OK;
-}
-
-int32_t proton_config_validate_window(const char *config_json,
-                                      int32_t *out_width,
-                                      int32_t *out_height) {
-  int32_t status = proton_validate_abi_config(
-      config_json, "window", proton_window_config_keys,
-      sizeof(proton_window_config_keys) / sizeof(proton_window_config_keys[0]),
-      PROTON_ABI_VERSION);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_validate_window_config(config_json, out_width, out_height);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t bridge;
-  if (!proton_json_parse(&doc, config_json) ||
-      !proton_json_root_object(&doc, &root)) {
-    proton_json_dispose(&doc);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "window config must be a JSON object");
-  }
-  if (proton_json_object_get(&doc, root, "bridge", &bridge)) {
-    char *bridge_json = proton_json_copy_raw(&doc, bridge);
-    proton_json_dispose(&doc);
-    if (bridge_json == NULL) {
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "window bridge config is malformed");
-    }
-    status = proton_config_validate_bridge(bridge_json);
-    free(bridge_json);
-    return status;
-  }
-  proton_json_dispose(&doc);
-  return PROTON_OK;
-}
-
-int32_t proton_config_validate_view(const char *config_json,
-                                    proton_view_config_values_t *out_values) {
-  int32_t status = proton_validate_abi_config(
-      config_json, "view", proton_view_config_keys,
-      sizeof(proton_view_config_keys) / sizeof(proton_view_config_keys[0]),
-      PROTON_ABI_VERSION);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (out_values == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "view config values output is required");
-  }
-
-  proton_view_config_values_t values = {0, 0, 0, 0, 1, 0};
-  if (!proton_parse_json_int_field(config_json, "width", &values.width) ||
-      !proton_parse_json_int_field(config_json, "height", &values.height)) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "view config requires numeric width and height");
-  }
-  if (values.width <= 0 || values.height <= 0) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "view width and height must be positive");
-  }
-  proton_parse_json_int_field(config_json, "x", &values.x);
-  proton_parse_json_int_field(config_json, "y", &values.y);
-  proton_parse_json_int_field(config_json, "z_order", &values.z_order);
-  bool visible = true;
-  if (proton_parse_json_bool_field(config_json, "visible", &visible)) {
-    values.visible = visible ? 1 : 0;
-  }
-  *out_values = values;
   return PROTON_OK;
 }

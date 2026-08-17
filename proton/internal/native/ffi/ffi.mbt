@@ -281,12 +281,28 @@ pub extern "C" fn proton_notification_poll_click_ffi(
 pub extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notification_cleanup"
 
 ///|
-#borrow(config_json, out_window)
-pub extern "C" fn proton_window_create_json_ffi(
+#borrow(title, initial_url, titlebar_minimize_label, titlebar_maximize_label, titlebar_restore_label, titlebar_close_label, bridge_config_json, out_window)
+pub extern "C" fn window_create(
   runtime : RuntimeHandle,
-  config_json : Bytes,
+  title : Bytes,
+  width : Int,
+  height : Int,
+  initial_url : Bytes,
+  size_hint : Int,
+  titlebar_overlay : Int,
+  navigation_policy : Int,
+  titlebar_minimize_label : Bytes,
+  titlebar_maximize_label : Bytes,
+  titlebar_restore_label : Bytes,
+  titlebar_close_label : Bytes,
+  popup_policy : Int,
+  download_policy : Int,
+  certificate_policy : Int,
+  media_policy : Int,
+  devtools : Int,
+  bridge_config_json : Bytes,
   out_window : Ref[WindowHandle],
-) -> Int = "proton_window_create_json"
+) -> Int = "proton_internal_window_create"
 
 ///|
 pub extern "C" fn proton_window_destroy_ffi(window : WindowHandle) -> Int = "proton_window_destroy"
@@ -518,12 +534,19 @@ pub extern "C" fn proton_last_error_message_ffi(
 ) -> Int = "proton_last_error_message"
 
 ///|
-#borrow(config_json, out_view)
-pub extern "C" fn proton_view_create_json_ffi(
+#borrow(initial_url, background_color, out_view)
+pub extern "C" fn view_create(
   window : WindowHandle,
-  config_json : Bytes,
+  x : Int,
+  y : Int,
+  width : Int,
+  height : Int,
+  visible : Int,
+  z_order : Int,
+  initial_url : Bytes,
+  background_color : Bytes,
   out_view : Ref[ViewHandle],
-) -> Int = "proton_view_create_json"
+) -> Int = "proton_internal_view_create"
 
 ///|
 pub extern "C" fn proton_view_destroy_ffi(view : ViewHandle) -> Int = "proton_view_destroy"
