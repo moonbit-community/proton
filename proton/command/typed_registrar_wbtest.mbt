@@ -23,7 +23,7 @@ async test "typed registrar binds descriptor identity and codecs" {
     "add",
   )
   registrar.bind(add, (context, request) => {
-    assert_eq(context.window(), 42L)
+    assert_true(context.window() is None)
     AddResponse::{ total: request.left + request.right }
   })
   host.seal_registrations()

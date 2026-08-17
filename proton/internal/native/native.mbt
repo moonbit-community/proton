@@ -44,7 +44,11 @@ pub fn system_preferred_language_tags() -> Array[String] raise NativeError {
     "system preferred languages",
     PayloadBytesExcludingTerminator,
     (buffer, buffer_len, required) => {
-      proton_system_preferred_languages_json_ffi(buffer, buffer_len, required)
+      @native_ffi.proton_system_preferred_languages_json_ffi(
+        buffer,
+        buffer_len,
+        required,
+      )
     },
   )
   @json.from_json(decode_native_json(text, "system preferred languages")) catch {
@@ -502,13 +506,71 @@ fn decode_bridge_request_json(text : String) -> BridgeRequest raise NativeError 
 }
 
 ///|
+fn runtime_config_bool(value : Bool) -> Int {
+  if value {
+    1
+  } else {
+    0
+  }
+}
+
+///|
+fn runtime_config_string(value : String?) -> Bytes {
+  @ffi.to_cstr(value.unwrap_or(""))
+}
+
+///|
+fn runtime_config_languages(values : Array[String]) -> Bytes {
+  @ffi.to_cstr(values.join(","))
+}
+
+///|
+fn validate_runtime_config(config : RuntimeConfig) -> Unit raise NativeError {
+  if config.remote_debugging_port < 0 || config.remote_debugging_port > 65535 {
+    raise invalid_argument(
+      "runtime remote_debugging_port must be between 0 and 65535",
+    )
+  }
+  match config.cache_dir {
+    Some(cache_dir) => {
+      let path : @path.Path = cache_dir
+      if !path.is_absolute() {
+        raise invalid_argument("runtime cache_dir must be an absolute path")
+      }
+    }
+    None => ()
+  }
+  if !config.use_bundled {
+    if config.runtime_root is None {
+      raise invalid_argument("runtime config requires runtime_root")
+    }
+    if config.helper_path is None {
+      raise invalid_argument("runtime config requires helper_path")
+    }
+  }
+}
+
+///|
 pub fn execute_process(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> ProcessResult raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
+  validate_runtime_config(config)
   let out_exit_code = Ref(0)
-  let status = @native_ffi.proton_execute_process_ffi(
-    @ffi.to_cstr(config.to_json_string()),
+  let status = @native_ffi.execute_process(
+    runtime_config_bool(config.use_bundled),
+    runtime_config_string(config.runtime_root),
+    runtime_config_string(config.helper_path),
+    runtime_config_string(config.resources_dir),
+    runtime_config_string(config.locales_dir),
+    runtime_config_string(config.cache_dir),
+    runtime_config_string(config.locale),
+    runtime_config_languages(config.accept_languages),
+    runtime_config_string(config.framework_dialog_ok_label),
+    runtime_config_string(config.framework_dialog_cancel_label),
+    config.remote_debugging_port,
+    runtime_config_bool(config.headless),
+    runtime_config_bool(config.persist_session_cookies),
     out_exit_code,
   )
   if status < 0 {
@@ -524,9 +586,22 @@ pub fn execute_process(
 pub fn probe_runtime(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> Unit raise NativeError {
+  validate_runtime_config(config)
   check_status(
-    @native_ffi.proton_runtime_probe_json_ffi(
-      @ffi.to_cstr(config.to_json_string()),
+    @native_ffi.runtime_probe(
+      runtime_config_bool(config.use_bundled),
+      runtime_config_string(config.runtime_root),
+      runtime_config_string(config.helper_path),
+      runtime_config_string(config.resources_dir),
+      runtime_config_string(config.locales_dir),
+      runtime_config_string(config.cache_dir),
+      runtime_config_string(config.locale),
+      runtime_config_languages(config.accept_languages),
+      runtime_config_string(config.framework_dialog_ok_label),
+      runtime_config_string(config.framework_dialog_cancel_label),
+      config.remote_debugging_port,
+      runtime_config_bool(config.headless),
+      runtime_config_bool(config.persist_session_cookies),
     ),
   )
 }
@@ -541,9 +616,22 @@ pub fn Runtime::new(
   config? : RuntimeConfig = RuntimeConfig::new(),
 ) -> Runtime raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
+  validate_runtime_config(config)
   let out_runtime = Ref(@native_ffi.runtime_null())
-  let status = @native_ffi.proton_runtime_create_json_ffi(
-    @ffi.to_cstr(config.to_json_string()),
+  let status = @native_ffi.runtime_create(
+    runtime_config_bool(config.use_bundled),
+    runtime_config_string(config.runtime_root),
+    runtime_config_string(config.helper_path),
+    runtime_config_string(config.resources_dir),
+    runtime_config_string(config.locales_dir),
+    runtime_config_string(config.cache_dir),
+    runtime_config_string(config.locale),
+    runtime_config_languages(config.accept_languages),
+    runtime_config_string(config.framework_dialog_ok_label),
+    runtime_config_string(config.framework_dialog_cancel_label),
+    config.remote_debugging_port,
+    runtime_config_bool(config.headless),
+    runtime_config_bool(config.persist_session_cookies),
     out_runtime,
   )
   if status < 0 {

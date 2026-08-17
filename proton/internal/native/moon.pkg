@@ -4,6 +4,7 @@ import {
   "moonbit-community/proton/internal/locale",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
+  "moonbitlang/x/path",
 }
 
 supported_targets = "native"

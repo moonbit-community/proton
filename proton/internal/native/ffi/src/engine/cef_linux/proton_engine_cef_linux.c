@@ -74,9 +74,6 @@
 #include <unistd.h>
 
 #define PROTON_ENGINE_PATH_SEPARATOR '/'
-#define PROTON_ENGINE_MAX_PATH_BYTES 4096
-#define PROTON_ENGINE_MAX_URL_BYTES 131072
-#define PROTON_ENGINE_MAX_LABEL_BYTES 256
 #define PROTON_ENGINE_MAX_BRIDGE_REQUESTS 256
 #define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
 #define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
@@ -312,21 +309,6 @@ typedef struct proton_engine_bridge_pending {
   cef_frame_t *frame;
   struct proton_engine_bridge_pending *next;
 } proton_engine_bridge_pending_t;
-
-typedef struct {
-  char runtime_root[PROTON_ENGINE_MAX_PATH_BYTES];
-  char helper_path[PROTON_ENGINE_MAX_PATH_BYTES];
-  char resources_dir[PROTON_ENGINE_MAX_PATH_BYTES];
-  char locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
-  char cache_dir[PROTON_ENGINE_MAX_PATH_BYTES];
-  char locale[PROTON_ENGINE_MAX_PATH_BYTES];
-  char accept_languages[PROTON_ENGINE_MAX_PATH_BYTES];
-  char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
-  char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
-  int32_t remote_debugging_port;
-  int headless;
-  int persist_session_cookies;
-} proton_engine_runtime_config_t;
 
 typedef struct {
   char title[512];
@@ -2427,96 +2409,6 @@ static proton_engine_client_t *proton_engine_client_create(
   return client;
 }
 
-static int32_t proton_engine_parse_runtime_config(
-    const char *config_json,
-    proton_engine_runtime_config_t *config,
-    char *error,
-    size_t error_len) {
-  if (config_json == NULL || config == NULL) {
-    proton_engine_set_message(error, error_len, "runtime config is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  memset(config, 0, sizeof(*config));
-  bool use_bundled = false;
-  bool headless = false;
-  proton_engine_parse_json_bool_field(config_json, "use_bundled",
-                                      &use_bundled);
-  proton_engine_parse_json_bool_field(config_json, "headless", &headless);
-  config->headless = headless ? 1 : 0;
-  if (!proton_engine_parse_json_string_field(config_json, "runtime_root",
-                                             config->runtime_root,
-                                             sizeof(config->runtime_root)) &&
-      !(use_bundled &&
-        proton_config_default_runtime_root(config->runtime_root,
-                                           sizeof(config->runtime_root)))) {
-    proton_engine_set_message(error, error_len,
-                              "runtime config requires runtime_root");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_engine_parse_json_string_field(config_json, "helper_path",
-                                             config->helper_path,
-                                             sizeof(config->helper_path)) &&
-      !proton_engine_parse_json_string_field(config_json, "subprocess_path",
-                                             config->helper_path,
-                                             sizeof(config->helper_path)) &&
-      !(use_bundled &&
-        proton_config_default_helper_path(config->helper_path,
-                                          sizeof(config->helper_path)))) {
-    proton_engine_set_message(error, error_len,
-                              "runtime config requires helper_path");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_engine_parse_json_string_field(config_json, "resources_dir",
-                                             config->resources_dir,
-                                             sizeof(config->resources_dir)) &&
-      !proton_engine_join_path(config->resources_dir,
-                               sizeof(config->resources_dir),
-                               config->runtime_root, "Resources")) {
-    proton_engine_set_message(error, error_len,
-                              "runtime resources_dir is too long");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_engine_parse_json_string_field(config_json, "locales_dir",
-                                             config->locales_dir,
-                                             sizeof(config->locales_dir)) &&
-      !proton_engine_join_path(config->locales_dir, sizeof(config->locales_dir),
-                               config->resources_dir, "locales")) {
-    proton_engine_set_message(error, error_len,
-                              "runtime locales_dir is too long");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!proton_engine_dir_exists(config->locales_dir)) {
-    config->locales_dir[0] = '\0';
-  }
-  proton_engine_parse_json_string_field(config_json, "cache_dir",
-                                        config->cache_dir,
-                                        sizeof(config->cache_dir));
-  proton_engine_parse_json_string_field(config_json, "locale",
-                                        config->locale,
-                                        sizeof(config->locale));
-  proton_engine_parse_json_string_array_field(
-      config_json, "accept_languages", config->accept_languages,
-      sizeof(config->accept_languages));
-  proton_engine_parse_json_string_field(
-      config_json, "framework_dialog_ok_label", config->dialog_ok_label,
-      sizeof(config->dialog_ok_label));
-  proton_engine_parse_json_string_field(
-      config_json, "framework_dialog_cancel_label",
-      config->dialog_cancel_label, sizeof(config->dialog_cancel_label));
-  bool persist_session_cookies = false;
-  if (proton_engine_parse_json_bool_field(config_json,
-                                          "persist_session_cookies",
-                                          &persist_session_cookies)) {
-    config->persist_session_cookies =
-        config->cache_dir[0] != '\0' && persist_session_cookies ? 1 : 0;
-  } else {
-    config->persist_session_cookies = config->cache_dir[0] != '\0' ? 1 : 0;
-  }
-  proton_engine_parse_json_int_field(config_json, "remote_debugging_port",
-                                     &config->remote_debugging_port);
-  return PROTON_OK;
-}
-
 static int32_t proton_engine_parse_window_config(
     const char *config_json,
     proton_engine_window_config_t *config,
@@ -3655,15 +3547,12 @@ static void proton_engine_init_main_args(cef_main_args_t *cef_args,
   }
 }
 
-int32_t proton_engine_execute_process_json(const char *config_json,
-                                           int32_t *out_exit_code,
-                                           char *error,
-                                           size_t error_len) {
-  proton_engine_runtime_config_t config;
-  int32_t status =
-      proton_engine_parse_runtime_config(config_json, &config, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
+int32_t proton_engine_execute_process(
+    const proton_engine_runtime_config_t *config, int32_t *out_exit_code,
+    char *error, size_t error_len) {
+  if (config == NULL) {
+    proton_engine_set_message(error, error_len, "runtime config is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_engine_check_cef_api_hash();
   cef_main_args_t args;
@@ -3680,10 +3569,9 @@ int32_t proton_engine_execute_process_json(const char *config_json,
   return exit_code >= 0 ? PROTON_PROCESS_HANDLED : PROTON_OK;
 }
 
-int32_t proton_engine_runtime_create_json(const char *config_json,
-                                          proton_engine_runtime_t **out_runtime,
-                                          char *error,
-                                          size_t error_len) {
+int32_t proton_engine_runtime_create(
+    const proton_engine_runtime_config_t *input_config,
+    proton_engine_runtime_t **out_runtime, char *error, size_t error_len) {
   if (out_runtime == NULL) {
     proton_engine_set_message(error, error_len, "out_runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -3694,12 +3582,11 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     return PROTON_ERR_ALREADY_INITIALIZED;
   }
 
-  proton_engine_runtime_config_t config;
-  int32_t status =
-      proton_engine_parse_runtime_config(config_json, &config, error, error_len);
-  if (status != PROTON_OK) {
-    return status;
+  if (input_config == NULL) {
+    proton_engine_set_message(error, error_len, "runtime config is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
+  proton_engine_runtime_config_t config = *input_config;
 
   int temporary_profile = config.cache_dir[0] == '\0';
   if (temporary_profile) {

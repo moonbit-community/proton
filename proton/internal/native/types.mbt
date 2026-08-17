@@ -1032,7 +1032,6 @@ pub fn bridge_permission_grants_supported() -> Bool {
 
 ///|
 struct RuntimeConfig {
-  raw_json : String?
   use_bundled : Bool
   headless : Bool
   persist_session_cookies : Bool
@@ -1097,7 +1096,6 @@ pub fn RuntimeConfig::new(
   persist_session_cookies? : Bool = true,
 ) -> RuntimeConfig {
   {
-    raw_json: None,
     use_bundled: false,
     headless,
     persist_session_cookies,
@@ -1111,30 +1109,6 @@ pub fn RuntimeConfig::new(
     framework_dialog_ok_label: Some("OK"),
     framework_dialog_cancel_label: Some("Cancel"),
     remote_debugging_port,
-  }
-}
-
-///|
-/// Builds a runtime configuration from unchecked ABI JSON.
-///
-/// This bypasses typed locale and schema construction and is intended only
-/// for low-level compatibility tests and native integration code.
-pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
-  {
-    raw_json: Some(raw_json),
-    use_bundled: false,
-    headless: false,
-    persist_session_cookies: true,
-    runtime_root: None,
-    helper_path: None,
-    resources_dir: None,
-    locales_dir: None,
-    cache_dir: None,
-    locale: None,
-    accept_languages: [],
-    framework_dialog_ok_label: None,
-    framework_dialog_cancel_label: None,
-    remote_debugging_port: 0,
   }
 }
 
@@ -1154,7 +1128,6 @@ pub fn RuntimeConfig::bundled(
   persist_session_cookies? : Bool = true,
 ) -> RuntimeConfig {
   {
-    raw_json: None,
     use_bundled: true,
     headless,
     persist_session_cookies,
@@ -1226,7 +1199,6 @@ pub fn RuntimeConfig::with_framework_dialog_labels(
   cancel : String,
 ) -> RuntimeConfig {
   {
-    raw_json: self.raw_json,
     use_bundled: self.use_bundled,
     headless: self.headless,
     persist_session_cookies: self.persist_session_cookies,
@@ -1438,55 +1410,6 @@ fn set_optional_string_field(
   match value {
     Some(text) => fields.set(name, Json(text))
     None => ()
-  }
-}
-
-///|
-pub fn RuntimeConfig::to_json_string(self : RuntimeConfig) -> String {
-  match self.raw_json {
-    Some(raw) => raw
-    None => {
-      let fields : Map[String, Json] = {
-        "abi_version": Json::number(1.0, repr="1"),
-        "remote_debugging_port": Json::number(
-          self.remote_debugging_port.to_double(),
-          repr=self.remote_debugging_port.to_string(),
-        ),
-      }
-      if self.use_bundled {
-        fields.set("use_bundled", Json(true))
-      }
-      if self.headless {
-        fields.set("headless", Json(true))
-      }
-      fields.set(
-        "persist_session_cookies",
-        Json::boolean(self.persist_session_cookies),
-      )
-      set_optional_string_field(fields, "runtime_root", self.runtime_root)
-      set_optional_string_field(fields, "helper_path", self.helper_path)
-      set_optional_string_field(fields, "resources_dir", self.resources_dir)
-      set_optional_string_field(fields, "locales_dir", self.locales_dir)
-      set_optional_string_field(fields, "cache_dir", self.cache_dir)
-      set_optional_string_field(fields, "locale", self.locale)
-      if !self.accept_languages.is_empty() {
-        fields.set(
-          "accept_languages",
-          Json::array(self.accept_languages.map(language => Json(language))),
-        )
-      }
-      set_optional_string_field(
-        fields,
-        "framework_dialog_ok_label",
-        self.framework_dialog_ok_label,
-      )
-      set_optional_string_field(
-        fields,
-        "framework_dialog_cancel_label",
-        self.framework_dialog_cancel_label,
-      )
-      Json::object(fields).stringify()
-    }
   }
 }
 

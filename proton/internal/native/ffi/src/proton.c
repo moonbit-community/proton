@@ -376,53 +376,78 @@ int32_t proton_app_instance_destroy(proton_app_instance_id_t instance) {
   return proton_set_engine_status(status, instance_error);
 }
 
-int32_t proton_execute_process(const char *config_json,
-                               int32_t *out_exit_code) {
+int32_t proton_internal_execute_process(
+    int32_t use_bundled, const char *runtime_root, const char *helper_path,
+    const char *resources_dir, const char *locales_dir, const char *cache_dir,
+    const char *locale, const char *accept_languages,
+    const char *dialog_ok_label, const char *dialog_cancel_label,
+    int32_t remote_debugging_port, int32_t headless,
+    int32_t persist_session_cookies, int32_t *out_exit_code) {
   if (out_exit_code == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_exit_code is required");
   }
-  int32_t status = proton_config_validate_runtime(config_json);
+  proton_engine_runtime_config_t config;
+  int32_t status = proton_config_prepare_runtime(
+      use_bundled, runtime_root, helper_path, resources_dir, locales_dir,
+      cache_dir, locale, accept_languages, dialog_ok_label,
+      dialog_cancel_label, remote_debugging_port, headless,
+      persist_session_cookies, &config);
   if (status != PROTON_OK) {
     return status;
   }
-  if (proton_config_runtime_requests_engine(config_json)) {
-    char engine_error[512] = {0};
-    status = proton_config_probe_runtime_layout(config_json);
-    if (status != PROTON_OK) {
-      return status;
-    }
-    status = proton_engine_execute_process_json(config_json, out_exit_code,
-                                                engine_error,
-                                                sizeof(engine_error));
-    return proton_set_engine_status(status, engine_error);
+  status = proton_config_probe_runtime(&config);
+  if (status != PROTON_OK) {
+    return status;
   }
-  *out_exit_code = 0;
+  char engine_error[512] = {0};
+  status = proton_engine_execute_process(&config, out_exit_code, engine_error,
+                                         sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
+}
+
+int32_t proton_internal_runtime_probe(
+    int32_t use_bundled, const char *runtime_root, const char *helper_path,
+    const char *resources_dir, const char *locales_dir, const char *cache_dir,
+    const char *locale, const char *accept_languages,
+    const char *dialog_ok_label, const char *dialog_cancel_label,
+    int32_t remote_debugging_port, int32_t headless,
+    int32_t persist_session_cookies) {
+  proton_engine_runtime_config_t config;
+  int32_t status = proton_config_prepare_runtime(
+      use_bundled, runtime_root, helper_path, resources_dir, locales_dir,
+      cache_dir, locale, accept_languages, dialog_ok_label,
+      dialog_cancel_label, remote_debugging_port, headless,
+      persist_session_cookies, &config);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_config_probe_runtime(&config);
+  if (status != PROTON_OK) {
+    return status;
+  }
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
 
-int32_t proton_runtime_probe_json(const char *config_json) {
-  int32_t status = proton_config_validate_runtime(config_json);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_config_probe_runtime_layout(config_json);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_runtime_create_json(const char *config_json,
-                                   proton_runtime_handle_t *out_runtime) {
+int32_t proton_internal_runtime_create(
+    int32_t use_bundled, const char *runtime_root, const char *helper_path,
+    const char *resources_dir, const char *locales_dir, const char *cache_dir,
+    const char *locale, const char *accept_languages,
+    const char *dialog_ok_label, const char *dialog_cancel_label,
+    int32_t remote_debugging_port, int32_t headless,
+    int32_t persist_session_cookies, proton_runtime_handle_t *out_runtime) {
   if (out_runtime == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_runtime is required");
   }
   *out_runtime = PROTON_INVALID_HANDLE;
-  int32_t status = proton_config_validate_runtime(config_json);
+  proton_engine_runtime_config_t config;
+  int32_t status = proton_config_prepare_runtime(
+      use_bundled, runtime_root, helper_path, resources_dir, locales_dir,
+      cache_dir, locale, accept_languages, dialog_ok_label,
+      dialog_cancel_label, remote_debugging_port, headless,
+      persist_session_cookies, &config);
   if (status != PROTON_OK) {
     return status;
   }
@@ -430,24 +455,20 @@ int32_t proton_runtime_create_json(const char *config_json,
     return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
                             "runtime is already initialized");
   }
-  bool engine_backed = proton_config_runtime_requests_engine(config_json);
   proton_engine_runtime_t *engine_runtime = NULL;
-  if (engine_backed) {
-    char engine_error[512] = {0};
-    status = proton_config_probe_runtime_layout(config_json);
-    if (status != PROTON_OK) {
-      return status;
-    }
-    status = proton_engine_runtime_create_json(config_json, &engine_runtime,
-                                               engine_error,
-                                               sizeof(engine_error));
-    if (status != PROTON_OK) {
-      return proton_set_engine_status(status, engine_error);
-    }
-    if (engine_runtime == NULL) {
-      return proton_set_error(PROTON_ERR_ENGINE,
-                              "native engine returned no runtime state");
-    }
+  char engine_error[512] = {0};
+  status = proton_config_probe_runtime(&config);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_engine_runtime_create(&config, &engine_runtime, engine_error,
+                                        sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  if (engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_ENGINE,
+                            "native engine returned no runtime state");
   }
 
   status = proton_runtime_slot_create(engine_runtime, out_runtime);

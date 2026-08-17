@@ -10,6 +10,26 @@ typedef struct proton_engine_runtime proton_engine_runtime_t;
 typedef struct proton_engine_window proton_engine_window_t;
 typedef struct proton_engine_view proton_engine_view_t;
 
+#define PROTON_ENGINE_MAX_PATH_BYTES 4096
+#define PROTON_ENGINE_MAX_URL_BYTES 131072
+#define PROTON_ENGINE_MAX_LABEL_BYTES 256
+
+typedef struct {
+  char runtime_root[PROTON_ENGINE_MAX_PATH_BYTES];
+  char helper_path[PROTON_ENGINE_MAX_PATH_BYTES];
+  char resources_dir[PROTON_ENGINE_MAX_PATH_BYTES];
+  char locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
+  char cache_dir[PROTON_ENGINE_MAX_PATH_BYTES];
+  char framework_dir[PROTON_ENGINE_MAX_PATH_BYTES];
+  char locale[PROTON_ENGINE_MAX_PATH_BYTES];
+  char accept_languages[PROTON_ENGINE_MAX_PATH_BYTES];
+  char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  int32_t remote_debugging_port;
+  int32_t headless;
+  int32_t persist_session_cookies;
+} proton_engine_runtime_config_t;
+
 /* CEF's external pump is not fully wake-driven. Match cefclient's maximum
    interval so browser work that emits no schedule callback cannot starve. */
 enum { PROTON_ENGINE_MAX_MESSAGE_PUMP_DELAY_MS = 1000 / 30 };
@@ -55,15 +75,13 @@ typedef struct {
   int32_t theme;
 } proton_engine_window_state_t;
 
-int32_t proton_engine_execute_process_json(const char *config_json,
-                                           int32_t *out_exit_code,
-                                           char *error,
-                                           size_t error_len);
+int32_t proton_engine_execute_process(
+    const proton_engine_runtime_config_t *config, int32_t *out_exit_code,
+    char *error, size_t error_len);
 
-int32_t proton_engine_runtime_create_json(const char *config_json,
-                                           proton_engine_runtime_t **out_runtime,
-                                           char *error,
-                                           size_t error_len);
+int32_t proton_engine_runtime_create(
+    const proton_engine_runtime_config_t *config,
+    proton_engine_runtime_t **out_runtime, char *error, size_t error_len);
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                       char *error,
                                       size_t error_len);

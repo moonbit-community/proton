@@ -106,14 +106,6 @@ PROTON_API int32_t proton_app_instance_attach_runtime(
 PROTON_API int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
-PROTON_API int32_t proton_execute_process(const char *config_json,
-                                          int32_t *out_exit_code);
-
-PROTON_API int32_t proton_runtime_probe_json(const char *config_json);
-
-PROTON_API int32_t proton_runtime_create_json(
-    const char *config_json, proton_runtime_handle_t *out_runtime);
-
 PROTON_API int32_t proton_runtime_destroy(proton_runtime_handle_t runtime);
 PROTON_API int32_t proton_runtime_do_message_loop_work(
     proton_runtime_handle_t runtime);

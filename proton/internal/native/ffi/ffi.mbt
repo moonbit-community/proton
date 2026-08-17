@@ -50,7 +50,7 @@ pub extern "C" fn proton_runtime_info_json_ffi(
 
 ///|
 #borrow(buffer, out_required_len)
-extern "C" fn proton_system_preferred_languages_json_ffi(
+pub extern "C" fn proton_system_preferred_languages_json_ffi(
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
@@ -75,22 +75,60 @@ pub extern "C" fn proton_app_instance_attach_runtime_ffi(
 pub extern "C" fn proton_app_instance_destroy_ffi(instance : Int64) -> Int = "proton_app_instance_destroy"
 
 ///|
-#borrow(config_json, out_exit_code)
-pub extern "C" fn proton_execute_process_ffi(
-  config_json : Bytes,
+#borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label, out_exit_code)
+pub extern "C" fn execute_process(
+  use_bundled : Int,
+  runtime_root : Bytes,
+  helper_path : Bytes,
+  resources_dir : Bytes,
+  locales_dir : Bytes,
+  cache_dir : Bytes,
+  locale : Bytes,
+  accept_languages : Bytes,
+  dialog_ok_label : Bytes,
+  dialog_cancel_label : Bytes,
+  remote_debugging_port : Int,
+  headless : Int,
+  persist_session_cookies : Int,
   out_exit_code : Ref[Int],
-) -> Int = "proton_execute_process"
+) -> Int = "proton_internal_execute_process"
 
 ///|
-#borrow(config_json)
-pub extern "C" fn proton_runtime_probe_json_ffi(config_json : Bytes) -> Int = "proton_runtime_probe_json"
+#borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label)
+pub extern "C" fn runtime_probe(
+  use_bundled : Int,
+  runtime_root : Bytes,
+  helper_path : Bytes,
+  resources_dir : Bytes,
+  locales_dir : Bytes,
+  cache_dir : Bytes,
+  locale : Bytes,
+  accept_languages : Bytes,
+  dialog_ok_label : Bytes,
+  dialog_cancel_label : Bytes,
+  remote_debugging_port : Int,
+  headless : Int,
+  persist_session_cookies : Int,
+) -> Int = "proton_internal_runtime_probe"
 
 ///|
-#borrow(config_json, out_runtime)
-pub extern "C" fn proton_runtime_create_json_ffi(
-  config_json : Bytes,
+#borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label, out_runtime)
+pub extern "C" fn runtime_create(
+  use_bundled : Int,
+  runtime_root : Bytes,
+  helper_path : Bytes,
+  resources_dir : Bytes,
+  locales_dir : Bytes,
+  cache_dir : Bytes,
+  locale : Bytes,
+  accept_languages : Bytes,
+  dialog_ok_label : Bytes,
+  dialog_cancel_label : Bytes,
+  remote_debugging_port : Int,
+  headless : Int,
+  persist_session_cookies : Int,
   out_runtime : Ref[RuntimeHandle],
-) -> Int = "proton_runtime_create_json"
+) -> Int = "proton_internal_runtime_create"
 
 ///|
 pub extern "C" fn proton_runtime_destroy_ffi(runtime : RuntimeHandle) -> Int = "proton_runtime_destroy"

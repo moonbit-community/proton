@@ -201,7 +201,7 @@ test "runtime event decodes a sequenced window close request" {
 }
 
 ///|
-test "typed configs generate stable JSON for native ABI" {
+test "runtime config preserves typed native ABI values" {
   let cache_dir = test_absolute_cache_dir()
   let runtime_config = RuntimeConfig::new(
     helper_path="cef_process.exe",
@@ -213,32 +213,26 @@ test "typed configs generate stable JSON for native ABI" {
     ],
     headless=true,
   )
-  let runtime_json = runtime_config.to_json_string()
-  assert_true(runtime_json.contains("\"abi_version\":1"))
-  assert_true(runtime_json.contains("\"helper_path\":\"cef_process.exe\""))
-  assert_true(
-    runtime_json.contains("\"cache_dir\":" + cache_dir.to_json().stringify()),
-  )
-  assert_true(runtime_json.contains("\"headless\":true"))
-  assert_true(runtime_json.contains("\"persist_session_cookies\":true"))
-  assert_true(runtime_json.contains("\"locale\":\"zh-CN\""))
-  assert_true(
-    runtime_json.contains("\"accept_languages\":[\"zh-CN\",\"en-US\"]"),
-  )
-  assert_true(runtime_json.contains("\"framework_dialog_ok_label\":\"OK\""))
-  assert_true(
-    runtime_json.contains("\"framework_dialog_cancel_label\":\"Cancel\""),
-  )
-  let bundled_json = RuntimeConfig::bundled(cache_dir~).to_json_string()
-  assert_true(bundled_json.contains("\"use_bundled\":true"))
-  assert_true(!bundled_json.contains("\"runtime_root\""))
-  assert_true(!bundled_json.contains("\"helper_path\""))
-  assert_true(!bundled_json.contains("\"headless\""))
-  assert_true(bundled_json.contains("\"persist_session_cookies\":true"))
-  let headless_bundled_json = RuntimeConfig::bundled(headless=true).to_json_string()
-  assert_true(headless_bundled_json.contains("\"headless\":true"))
-  let no_persist_json = RuntimeConfig::new(persist_session_cookies=false).to_json_string()
-  assert_true(no_persist_json.contains("\"persist_session_cookies\":false"))
+  assert_eq(runtime_config.helper_path, Some("cef_process.exe"))
+  assert_eq(runtime_config.cache_dir, Some(cache_dir))
+  assert_true(runtime_config.headless)
+  assert_true(runtime_config.persist_session_cookies)
+  assert_eq(runtime_config.locale, Some("zh-CN"))
+  assert_eq(runtime_config.accept_languages, ["zh-CN", "en-US"])
+  assert_eq(runtime_config.framework_dialog_ok_label, Some("OK"))
+  assert_eq(runtime_config.framework_dialog_cancel_label, Some("Cancel"))
+  let bundled = RuntimeConfig::bundled(cache_dir~)
+  assert_true(bundled.use_bundled)
+  assert_eq(bundled.runtime_root, None)
+  assert_eq(bundled.helper_path, None)
+  assert_false(bundled.headless)
+  assert_true(bundled.persist_session_cookies)
+  assert_true(RuntimeConfig::bundled(headless=true).headless)
+  assert_false(RuntimeConfig::new(persist_session_cookies=false).persist_session_cookies)
+}
+
+///|
+test "window and bridge configs generate native policy JSON" {
   let window_config = WindowConfig::new(
     title="Typed",
     width=320,

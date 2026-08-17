@@ -1515,7 +1515,6 @@ async test "lifecycle contexts expose one immutable locale snapshot" {
     )
     let window = WindowContext::new(
       "main",
-      @native.WindowRef::unsafe_from_handle(17L),
       test_window_handle("main", 17L),
       test_window_manager(),
       group,

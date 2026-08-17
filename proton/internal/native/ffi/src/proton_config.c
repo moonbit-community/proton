@@ -427,24 +427,6 @@ static bool proton_parse_json_string_field(const char *config_json,
   return ok;
 }
 
-static const char *const proton_runtime_config_keys[] = {
-    "abi_version",
-    "runtime_root",
-    "helper_path",
-    "subprocess_path",
-    "use_bundled",
-    "resources_dir",
-    "locales_dir",
-    "locale",
-    "accept_languages",
-    "framework_dialog_ok_label",
-    "framework_dialog_cancel_label",
-    "cache_dir",
-    "remote_debugging_port",
-    "headless",
-    "persist_session_cookies",
-};
-
 static const char *const proton_window_config_keys[] = {
     "abi_version",
     "title",
@@ -906,55 +888,140 @@ static int32_t proton_find_engine_library(const char *runtime_root,
 #endif
 }
 
-int32_t proton_config_probe_runtime_layout(const char *config_json) {
-  char runtime_root[PROTON_MAX_PATH_BYTES] = {0};
-  char helper_path[PROTON_MAX_PATH_BYTES] = {0};
-  char resources_dir[PROTON_MAX_PATH_BYTES] = {0};
-  char locales_dir[PROTON_MAX_PATH_BYTES] = {0};
-  char engine_lib[PROTON_MAX_PATH_BYTES] = {0};
-  char icu_data[PROTON_MAX_PATH_BYTES] = {0};
+static bool proton_copy_runtime_path(char *out, size_t out_len,
+                                     const char *value) {
+  if (out == NULL || out_len == 0 || value == NULL || value[0] == '\0') {
+    return false;
+  }
+  int written = snprintf(out, out_len, "%s", value);
+  return written >= 0 && (size_t)written < out_len;
+}
 
-  bool use_bundled = false;
-  proton_parse_json_bool_field(config_json, "use_bundled", &use_bundled);
+int32_t proton_config_prepare_runtime(
+    int32_t use_bundled, const char *runtime_root, const char *helper_path,
+    const char *resources_dir, const char *locales_dir, const char *cache_dir,
+    const char *locale, const char *accept_languages,
+    const char *dialog_ok_label, const char *dialog_cancel_label,
+    int32_t remote_debugging_port, int32_t headless,
+    int32_t persist_session_cookies,
+    proton_engine_runtime_config_t *out_config) {
+  if (out_config == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime config output is required");
+  }
+  if (remote_debugging_port < 0 || remote_debugging_port > 65535) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "runtime remote_debugging_port must be between 0 and 65535");
+  }
+  if (cache_dir != NULL && cache_dir[0] != '\0' &&
+      !proton_path_is_absolute(cache_dir)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime cache_dir must be an absolute path");
+  }
 
-  if (!proton_parse_json_string_field(config_json, "runtime_root",
-                                      runtime_root, sizeof(runtime_root)) &&
-      !(use_bundled &&
-        proton_config_default_runtime_root(runtime_root, sizeof(runtime_root)))) {
+  proton_engine_runtime_config_t config;
+  memset(&config, 0, sizeof(config));
+  if (!proton_copy_runtime_path(config.runtime_root,
+                                sizeof(config.runtime_root), runtime_root) &&
+      !(use_bundled && proton_config_default_runtime_root(
+                            config.runtime_root,
+                            sizeof(config.runtime_root)))) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime config requires runtime_root");
   }
-  if (!proton_parse_json_string_field(config_json, "helper_path", helper_path,
-                                      sizeof(helper_path)) &&
-      !proton_parse_json_string_field(config_json, "subprocess_path",
-                                      helper_path, sizeof(helper_path)) &&
-      !(use_bundled &&
-        proton_config_default_helper_path(helper_path, sizeof(helper_path)))) {
+  if (!proton_copy_runtime_path(config.helper_path,
+                                sizeof(config.helper_path), helper_path) &&
+      !(use_bundled && proton_config_default_helper_path(
+                            config.helper_path,
+                            sizeof(config.helper_path)))) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime config requires helper_path");
   }
-
-  if (!proton_parse_json_string_field(config_json, "resources_dir",
-                                      resources_dir, sizeof(resources_dir)) &&
-      !proton_join_path(resources_dir, sizeof(resources_dir), runtime_root,
-                        "Resources")) {
+  if (!proton_copy_runtime_path(config.resources_dir,
+                                sizeof(config.resources_dir), resources_dir) &&
+      !proton_join_path(config.resources_dir, sizeof(config.resources_dir),
+                        config.runtime_root, "Resources")) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime resources_dir is too long");
   }
-  if (!proton_parse_json_string_field(config_json, "locales_dir", locales_dir,
-                                      sizeof(locales_dir)) &&
-      !proton_join_path(locales_dir, sizeof(locales_dir), resources_dir,
-                        "locales")) {
+  if (!proton_copy_runtime_path(config.locales_dir,
+                                sizeof(config.locales_dir), locales_dir) &&
+      !proton_join_path(config.locales_dir, sizeof(config.locales_dir),
+                        config.resources_dir, "locales")) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime locales_dir is too long");
   }
+#ifdef __APPLE__
+  if (!proton_dir_exists(config.locales_dir)) {
+    config.locales_dir[0] = '\0';
+  }
+#endif
+#ifdef __APPLE__
+  char frameworks_dir[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
+  if (!proton_join_path(frameworks_dir, sizeof(frameworks_dir),
+                        config.runtime_root, "Frameworks") ||
+      !proton_join_path(config.framework_dir, sizeof(config.framework_dir),
+                        frameworks_dir,
+                        "Chromium Embedded Framework.framework")) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime framework path is too long");
+  }
+#endif
+  if (cache_dir != NULL && cache_dir[0] != '\0' &&
+      !proton_copy_runtime_path(config.cache_dir, sizeof(config.cache_dir),
+                                cache_dir)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime cache_dir is too long");
+  }
+  if (locale != NULL && locale[0] != '\0' &&
+      !proton_copy_runtime_path(config.locale, sizeof(config.locale), locale)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime locale is too long");
+  }
+  if (accept_languages != NULL && accept_languages[0] != '\0' &&
+      !proton_copy_runtime_path(config.accept_languages,
+                                sizeof(config.accept_languages),
+                                accept_languages)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime accept_languages is too long");
+  }
+  if (dialog_ok_label != NULL && dialog_ok_label[0] != '\0' &&
+      !proton_copy_runtime_path(config.dialog_ok_label,
+                                sizeof(config.dialog_ok_label),
+                                dialog_ok_label)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime dialog OK label is too long");
+  }
+  if (dialog_cancel_label != NULL && dialog_cancel_label[0] != '\0' &&
+      !proton_copy_runtime_path(config.dialog_cancel_label,
+                                sizeof(config.dialog_cancel_label),
+                                dialog_cancel_label)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime dialog cancel label is too long");
+  }
+  config.remote_debugging_port = remote_debugging_port;
+  config.headless = headless != 0;
+  config.persist_session_cookies =
+      config.cache_dir[0] != '\0' && persist_session_cookies != 0;
+  *out_config = config;
+  return PROTON_OK;
+}
 
-  int32_t status =
-      proton_find_engine_library(runtime_root, engine_lib, sizeof(engine_lib));
+int32_t proton_config_probe_runtime(
+    const proton_engine_runtime_config_t *config) {
+  if (config == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime config is required");
+  }
+  char engine_lib[PROTON_MAX_PATH_BYTES] = {0};
+  char icu_data[PROTON_MAX_PATH_BYTES] = {0};
+  int32_t status = proton_find_engine_library(
+      config->runtime_root, engine_lib, sizeof(engine_lib));
   if (status != PROTON_OK) {
     return status;
   }
-  if (!proton_join_path(icu_data, sizeof(icu_data), resources_dir,
+  if (!proton_join_path(icu_data, sizeof(icu_data), config->resources_dir,
                         "icudtl.dat")) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime icu data path is too long");
@@ -964,16 +1031,17 @@ int32_t proton_config_probe_runtime_layout(const char *config_json) {
   if (status != PROTON_OK) {
     return status;
   }
-  status = proton_require_file(helper_path, "runtime helper executable");
+  status = proton_require_file(config->helper_path,
+                               "runtime helper executable");
   if (status != PROTON_OK) {
     return status;
   }
-  status = proton_require_dir(resources_dir, "runtime resources");
+  status = proton_require_dir(config->resources_dir, "runtime resources");
   if (status != PROTON_OK) {
     return status;
   }
 #ifndef __APPLE__
-  status = proton_require_dir(locales_dir, "runtime locales");
+  status = proton_require_dir(config->locales_dir, "runtime locales");
   if (status != PROTON_OK) {
     return status;
   }
@@ -983,20 +1051,6 @@ int32_t proton_config_probe_runtime_layout(const char *config_json) {
     return status;
   }
   return PROTON_OK;
-}
-
-bool proton_config_runtime_requests_engine(const char *config_json) {
-  char value[PROTON_MAX_PATH_BYTES] = {0};
-  bool use_bundled = false;
-  return proton_parse_json_string_field(config_json, "runtime_root", value,
-                                        sizeof(value)) ||
-         proton_parse_json_string_field(config_json, "helper_path", value,
-                                        sizeof(value)) ||
-         proton_parse_json_string_field(config_json, "subprocess_path", value,
-                                        sizeof(value)) ||
-         (proton_parse_json_bool_field(config_json, "use_bundled",
-                                       &use_bundled) &&
-          use_bundled);
 }
 
 static int32_t proton_validate_window_config(const char *config_json,
@@ -1695,13 +1749,6 @@ int32_t proton_config_validate_bridge_event(const char *event_json) {
   }
   proton_json_dispose(&doc);
   return PROTON_OK;
-}
-
-int32_t proton_config_validate_runtime(const char *config_json) {
-  return proton_validate_abi_config(
-      config_json, "runtime", proton_runtime_config_keys,
-      sizeof(proton_runtime_config_keys) / sizeof(proton_runtime_config_keys[0]),
-      PROTON_ABI_VERSION);
 }
 
 int32_t proton_config_validate_window(const char *config_json,

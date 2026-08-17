@@ -1,7 +1,7 @@
 # Proton Native
 
-`moonbit-community/proton/internal/native` is the direct MoonBit FFI binding for the standalone
-Proton native dynamic library.
+`moonbit-community/proton/internal/native` owns Proton's private MoonBit/native
+boundary. Applications use the root `moonbit-community/proton` facade instead.
 
 The public API uses Proton-owned `Runtime` and `Window` values. Raw native
 handles are intentionally not part of the public surface.
@@ -19,25 +19,8 @@ test "native ABI is loaded" {
 }
 ```
 
-Runtime configuration is typed on the MoonBit side and serialized to the stable
-`proton_*` C ABI JSON format.
-
-```mbt check
-///|
-test "typed runtime config JSON" {
-  let config = RuntimeConfig::new(
-    runtime_root="app-runtime",
-    helper_path="cef_process.exe",
-    cache_dir="/absolute/path/to/cache",
-  )
-  let json = config.to_json_string()
-  assert_true(json.contains("\"abi_version\":1"))
-  assert_true(json.contains("\"runtime_root\":\"app-runtime\""))
-  assert_true(json.contains("\"helper_path\":\"cef_process.exe\""))
-  assert_true(json.contains("\"cache_dir\":\"/absolute/path/to/cache\""))
-  assert_true(json.contains("\"persist_session_cookies\":true"))
-}
-```
+Runtime configuration is validated in MoonBit and passed to native code through
+a typed private FFI.
 
 Omitting `cache_dir` creates an isolated temporary browser profile that is
 removed after native runtime shutdown. A non-empty `cache_dir` must be an
@@ -45,19 +28,8 @@ absolute path owned by one running process; it enables persistent browser state.
 For persistent profiles, `persist_session_cookies` defaults to `true`, so
 session cookies without an expiry are stored alongside permanent cookies.
 
-For packaged Proton runtimes, prefer `RuntimeConfig::bundled()`. It asks
-`proton.dll` to use the install layout beside the loaded DLL, including
-`bin/cef_process.exe`, instead of requiring application code to hard-code paths.
-
-```mbt check
-///|
-test "bundled runtime config JSON" {
-  let json = RuntimeConfig::bundled(cache_dir="/absolute/path/to/cache").to_json_string()
-  assert_true(json.contains("\"use_bundled\":true"))
-  assert_true(json.contains("\"cache_dir\":\"/absolute/path/to/cache\""))
-  assert_true(json.contains("\"persist_session_cookies\":true"))
-}
-```
+For packaged Proton runtimes, `RuntimeConfig::bundled()` resolves CEF resources
+and the matching helper from the application bundle.
 
 The default no-engine build supports fake runtime/window handles for ABI and
 binding validation. Real runtime configs that include `runtime_root` or
