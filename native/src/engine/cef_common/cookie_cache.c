@@ -329,9 +329,8 @@ proton_cookie_visitor_release(cef_base_ref_counted_t *base) {
        visitor's state reference. Cleanup may have detached it already. */
     if (impl->state != NULL) {
       proton_cookie_get_state_t *state = impl->state;
-      if (!proton_cookie_state_lifetime_is_detached(&state->detached)) {
-        state->done = 1;
-      }
+      proton_cookie_state_lifetime_complete_if_last(
+          &state->detached, &state->done, value);
       impl->state = NULL;
       proton_cookie_get_state_release(state);
     }

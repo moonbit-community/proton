@@ -32,6 +32,15 @@ static inline int proton_cookie_state_lifetime_is_detached(
     proton_cookie_state_detached_t *detached) {
   return InterlockedCompareExchange(detached, 0, 0) != 0;
 }
+
+static inline void proton_cookie_state_lifetime_complete_if_last(
+    proton_cookie_state_detached_t *detached, int *done,
+    int visitor_refs_remaining) {
+  if (visitor_refs_remaining <= 0 &&
+      !proton_cookie_state_lifetime_is_detached(detached)) {
+    *done = 1;
+  }
+}
 #else
 #include <stdatomic.h>
 
@@ -63,6 +72,15 @@ static inline void proton_cookie_state_lifetime_detach(
 static inline int proton_cookie_state_lifetime_is_detached(
     proton_cookie_state_detached_t *detached) {
   return atomic_load_explicit(detached, memory_order_acquire) != 0;
+}
+
+static inline void proton_cookie_state_lifetime_complete_if_last(
+    proton_cookie_state_detached_t *detached, int *done,
+    int visitor_refs_remaining) {
+  if (visitor_refs_remaining <= 0 &&
+      !proton_cookie_state_lifetime_is_detached(detached)) {
+    *done = 1;
+  }
 }
 #endif
 
