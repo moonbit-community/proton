@@ -21,7 +21,12 @@ pub(all) suberror LinuxPackagingError {
   ToolFailure(stage~ : String, detail~ : String)
   Verification(detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn LinuxPackagingError::equal(Self, Self) -> Bool
 pub fn LinuxPackagingError::message(Self) -> String
+pub fn LinuxPackagingError::not_equal(Self, Self) -> Bool
+pub fn LinuxPackagingError::output(Self, &Logger) -> Unit
+pub fn LinuxPackagingError::to_repr(Self) -> @debug.Repr
+pub fn LinuxPackagingError::to_string(Self) -> String
 
 pub(all) suberror MacosSigningError {
   InvalidConfiguration(detail~ : String)
@@ -29,7 +34,12 @@ pub(all) suberror MacosSigningError {
   ToolFailure(stage~ : String, detail~ : String)
   Verification(detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn MacosSigningError::equal(Self, Self) -> Bool
 pub fn MacosSigningError::message(Self) -> String
+pub fn MacosSigningError::not_equal(Self, Self) -> Bool
+pub fn MacosSigningError::output(Self, &Logger) -> Unit
+pub fn MacosSigningError::to_repr(Self) -> @debug.Repr
+pub fn MacosSigningError::to_string(Self) -> String
 
 pub(all) suberror PackageConfigError {
   NotFound(path~ : String)
@@ -38,7 +48,12 @@ pub(all) suberror PackageConfigError {
   BundleMissing
   MissingField(field~ : String)
 } derive(Eq, @debug.Debug)
+pub fn PackageConfigError::equal(Self, Self) -> Bool
 pub fn PackageConfigError::message(Self) -> String
+pub fn PackageConfigError::not_equal(Self, Self) -> Bool
+pub fn PackageConfigError::output(Self, &Logger) -> Unit
+pub fn PackageConfigError::to_repr(Self) -> @debug.Repr
+pub fn PackageConfigError::to_string(Self) -> String
 
 pub(all) suberror PackageFileSystemError {
   CreateDirectory(path~ : String, detail~ : String)
@@ -48,7 +63,12 @@ pub(all) suberror PackageFileSystemError {
   Write(path~ : String, detail~ : String)
   InvalidSource(path~ : String)
 } derive(Eq, @debug.Debug)
+pub fn PackageFileSystemError::equal(Self, Self) -> Bool
 pub fn PackageFileSystemError::message(Self) -> String
+pub fn PackageFileSystemError::not_equal(Self, Self) -> Bool
+pub fn PackageFileSystemError::output(Self, &Logger) -> Unit
+pub fn PackageFileSystemError::to_repr(Self) -> @debug.Repr
+pub fn PackageFileSystemError::to_string(Self) -> String
 
 pub(all) suberror PackagePlanError {
   InvalidProductName(reason~ : String)
@@ -63,7 +83,12 @@ pub(all) suberror PackagePlanError {
   InputOutsideProject(path~ : String)
   MissingIcon(path~ : String)
 } derive(Eq, @debug.Debug)
+pub fn PackagePlanError::equal(Self, Self) -> Bool
 pub fn PackagePlanError::message(Self) -> String
+pub fn PackagePlanError::not_equal(Self, Self) -> Bool
+pub fn PackagePlanError::output(Self, &Logger) -> Unit
+pub fn PackagePlanError::to_repr(Self) -> @debug.Repr
+pub fn PackagePlanError::to_string(Self) -> String
 
 pub(all) suberror PackageRuntimeError {
   ManifestMissing(path~ : String)
@@ -73,18 +98,33 @@ pub(all) suberror PackageRuntimeError {
   DirectoryMissing(path~ : String)
   HelperMissing(path~ : String)
 } derive(Eq, @debug.Debug)
+pub fn PackageRuntimeError::equal(Self, Self) -> Bool
 pub fn PackageRuntimeError::message(Self) -> String
+pub fn PackageRuntimeError::not_equal(Self, Self) -> Bool
+pub fn PackageRuntimeError::output(Self, &Logger) -> Unit
+pub fn PackageRuntimeError::to_repr(Self) -> @debug.Repr
+pub fn PackageRuntimeError::to_string(Self) -> String
 
 pub(all) suberror PackageToolError {
   Start(tool~ : String, detail~ : String)
   Exit(tool~ : String, code~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn PackageToolError::equal(Self, Self) -> Bool
 pub fn PackageToolError::message(Self) -> String
+pub fn PackageToolError::not_equal(Self, Self) -> Bool
+pub fn PackageToolError::output(Self, &Logger) -> Unit
+pub fn PackageToolError::to_repr(Self) -> @debug.Repr
+pub fn PackageToolError::to_string(Self) -> String
 
 pub(all) suberror PackageUsageError {
   UnsupportedTarget(target~ : String)
 } derive(Eq, @debug.Debug)
+pub fn PackageUsageError::equal(Self, Self) -> Bool
 pub fn PackageUsageError::message(Self) -> String
+pub fn PackageUsageError::not_equal(Self, Self) -> Bool
+pub fn PackageUsageError::output(Self, &Logger) -> Unit
+pub fn PackageUsageError::to_repr(Self) -> @debug.Repr
+pub fn PackageUsageError::to_string(Self) -> String
 
 pub(all) suberror UpdaterMetadataError {
   NoDistributableArtifact
@@ -96,7 +136,11 @@ pub(all) suberror UpdaterMetadataError {
   InvalidRevision(value~ : String)
   UndecodableFragment(detail~ : String)
 } derive(Eq)
+pub fn UpdaterMetadataError::equal(Self, Self) -> Bool
 pub fn UpdaterMetadataError::message(Self) -> String
+pub fn UpdaterMetadataError::not_equal(Self, Self) -> Bool
+pub fn UpdaterMetadataError::output(Self, &Logger) -> Unit
+pub fn UpdaterMetadataError::to_string(Self) -> String
 
 pub(all) suberror WindowsPackagingError {
   InvalidConfiguration(detail~ : String)
@@ -104,24 +148,46 @@ pub(all) suberror WindowsPackagingError {
   ToolFailure(stage~ : String, detail~ : String)
   Verification(detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn WindowsPackagingError::equal(Self, Self) -> Bool
 pub fn WindowsPackagingError::message(Self) -> String
+pub fn WindowsPackagingError::not_equal(Self, Self) -> Bool
+pub fn WindowsPackagingError::output(Self, &Logger) -> Unit
+pub fn WindowsPackagingError::to_repr(Self) -> @debug.Repr
+pub fn WindowsPackagingError::to_string(Self) -> String
 
 // Types and methods
 type MacosCodeSignTarget derive(Eq, @debug.Debug)
+pub fn MacosCodeSignTarget::equal(Self, Self) -> Bool
+pub fn MacosCodeSignTarget::not_equal(Self, Self) -> Bool
+pub fn MacosCodeSignTarget::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PackageHost {
   Macos
   Windows
   Linux
 } derive(Eq)
+pub fn PackageHost::equal(Self, Self) -> Bool
+pub fn PackageHost::not_equal(Self, Self) -> Bool
 
 type PackagePlan derive(Eq, @debug.Debug)
+pub fn PackagePlan::equal(Self, Self) -> Bool
+pub fn PackagePlan::not_equal(Self, Self) -> Bool
+pub fn PackagePlan::to_repr(Self) -> @debug.Repr
 
 type RawPackageOptions derive(Eq, @debug.Debug)
+pub fn RawPackageOptions::equal(Self, Self) -> Bool
+pub fn RawPackageOptions::not_equal(Self, Self) -> Bool
+pub fn RawPackageOptions::to_repr(Self) -> @debug.Repr
 
 type WindowsSignTool derive(Eq, @debug.Debug)
+pub fn WindowsSignTool::equal(Self, Self) -> Bool
+pub fn WindowsSignTool::not_equal(Self, Self) -> Bool
+pub fn WindowsSignTool::to_repr(Self) -> @debug.Repr
 
 type WindowsSigningConfig derive(Eq, @debug.Debug)
+pub fn WindowsSigningConfig::equal(Self, Self) -> Bool
+pub fn WindowsSigningConfig::not_equal(Self, Self) -> Bool
+pub fn WindowsSigningConfig::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

@@ -36,41 +36,86 @@ pub let resolve_all : @proton_contract.Command[PathsRequest, PathReply]
 pub(all) struct BasenameReply {
   name : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn BasenameReply::equal(Self, Self) -> Bool
+pub fn BasenameReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn BasenameReply::not_equal(Self, Self) -> Bool
+pub fn BasenameReply::to_json(Self) -> Json
+pub fn BasenameReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BasenameRequest {
   path : String
   suffix : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn BasenameRequest::equal(Self, Self) -> Bool
+pub fn BasenameRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn BasenameRequest::not_equal(Self, Self) -> Bool
+pub fn BasenameRequest::to_json(Self) -> Json
+pub fn BasenameRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ExtnameReply {
   ext : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ExtnameReply::equal(Self, Self) -> Bool
+pub fn ExtnameReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ExtnameReply::not_equal(Self, Self) -> Bool
+pub fn ExtnameReply::to_json(Self) -> Json
+pub fn ExtnameReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct IsAbsoluteReply {
   is_absolute : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn IsAbsoluteReply::equal(Self, Self) -> Bool
+pub fn IsAbsoluteReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IsAbsoluteReply::not_equal(Self, Self) -> Bool
+pub fn IsAbsoluteReply::to_json(Self) -> Json
+pub fn IsAbsoluteReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct JoinRequest {
   left : String
   right : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn JoinRequest::equal(Self, Self) -> Bool
+pub fn JoinRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn JoinRequest::not_equal(Self, Self) -> Bool
+pub fn JoinRequest::to_json(Self) -> Json
+pub fn JoinRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PathReply {
   path : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PathReply::equal(Self, Self) -> Bool
+pub fn PathReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PathReply::not_equal(Self, Self) -> Bool
+pub fn PathReply::to_json(Self) -> Json
+pub fn PathReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PathRequest {
   path : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PathRequest::equal(Self, Self) -> Bool
+pub fn PathRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PathRequest::not_equal(Self, Self) -> Bool
+pub fn PathRequest::to_json(Self) -> Json
+pub fn PathRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PathsRequest {
   paths : Array[String]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PathsRequest::equal(Self, Self) -> Bool
+pub fn PathsRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PathsRequest::not_equal(Self, Self) -> Bool
+pub fn PathsRequest::to_json(Self) -> Json
+pub fn PathsRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RelativeRequest {
   path : String
   base : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn RelativeRequest::equal(Self, Self) -> Bool
+pub fn RelativeRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn RelativeRequest::not_equal(Self, Self) -> Bool
+pub fn RelativeRequest::to_json(Self) -> Json
+pub fn RelativeRequest::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

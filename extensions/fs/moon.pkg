@@ -11,12 +11,6 @@ import {
   "moonbit-community/proton_ext/fs/contract" @fs_contract,
 }
 
-import {
-  "moonbitlang/core/debug",
-  "moonbitlang/async",
-  "moonbit-community/proton/core" @proton_core,
-} for "wbtest"
-
 supported_targets = "native"
 
 formatter(ignore: [ "extension.g.mbt" ])

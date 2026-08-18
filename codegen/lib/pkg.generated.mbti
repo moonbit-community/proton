@@ -24,7 +24,12 @@ pub(all) suberror CodegenInputError {
   InputRead(path~ : String, detail~ : String)
   PackageRead(path~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn CodegenInputError::equal(Self, Self) -> Bool
 pub fn CodegenInputError::message(Self) -> String
+pub fn CodegenInputError::not_equal(Self, Self) -> Bool
+pub fn CodegenInputError::output(Self, &Logger) -> Unit
+pub fn CodegenInputError::to_repr(Self) -> @debug.Repr
+pub fn CodegenInputError::to_string(Self) -> String
 
 pub(all) suberror CodegenMetadataError {
   InvalidRoot
@@ -33,14 +38,24 @@ pub(all) suberror CodegenMetadataError {
   InvalidType(field~ : String, expected~ : String)
   InvalidPackageName(value~ : String, reason~ : String)
 } derive(Eq, @debug.Debug)
+pub fn CodegenMetadataError::equal(Self, Self) -> Bool
 pub fn CodegenMetadataError::message(Self) -> String
+pub fn CodegenMetadataError::not_equal(Self, Self) -> Bool
+pub fn CodegenMetadataError::output(Self, &Logger) -> Unit
+pub fn CodegenMetadataError::to_repr(Self) -> @debug.Repr
+pub fn CodegenMetadataError::to_string(Self) -> String
 
 pub(all) suberror CodegenMetadataFileError {
   MissingMetadata(path~ : String)
   Syntax(path~ : String, diagnostics~ : String)
   Invalid(path~ : String, error~ : CodegenMetadataError)
 } derive(Eq, @debug.Debug)
+pub fn CodegenMetadataFileError::equal(Self, Self) -> Bool
 pub fn CodegenMetadataFileError::message(Self) -> String
+pub fn CodegenMetadataFileError::not_equal(Self, Self) -> Bool
+pub fn CodegenMetadataFileError::output(Self, &Logger) -> Unit
+pub fn CodegenMetadataFileError::to_repr(Self) -> @debug.Repr
+pub fn CodegenMetadataFileError::to_string(Self) -> String
 
 pub(all) suberror CommandCodegenError {
   InvalidName(label~ : String, value~ : String, reason~ : String)
@@ -50,13 +65,22 @@ pub(all) suberror CommandCodegenError {
   Duplicate(kind~ : String, name~ : String)
   MissingCommand
 } derive(Eq, @debug.Debug)
+pub fn CommandCodegenError::equal(Self, Self) -> Bool
 pub fn CommandCodegenError::message(Self) -> String
+pub fn CommandCodegenError::not_equal(Self, Self) -> Bool
+pub fn CommandCodegenError::output(Self, &Logger) -> Unit
+pub fn CommandCodegenError::to_repr(Self) -> @debug.Repr
+pub fn CommandCodegenError::to_string(Self) -> String
 
 // Types and methods
 pub(all) struct ProtonCommandCodegenOutput {
   source : String
   warnings : Array[String]
 } derive(Eq, ToJson, @debug.Debug)
+pub fn ProtonCommandCodegenOutput::equal(Self, Self) -> Bool
+pub fn ProtonCommandCodegenOutput::not_equal(Self, Self) -> Bool
+pub fn ProtonCommandCodegenOutput::to_json(Self) -> Json
+pub fn ProtonCommandCodegenOutput::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

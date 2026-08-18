@@ -18,6 +18,8 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Types and methods
 type SlowAddRequest derive(ToJson, @json.FromJson)
+pub fn SlowAddRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SlowAddRequest::to_json(Self) -> Json
 
 // Type aliases
 

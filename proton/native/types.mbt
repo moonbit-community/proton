@@ -438,7 +438,6 @@ pub extend NativeNotificationClick with Debug::{to_repr}
 ///|
 /// An application-level native menu bar.
 struct MenuBar {
-  raw_json : String?
   menus : Array[Menu]
 } derive(Debug, Eq)
 
@@ -451,8 +450,9 @@ pub extend MenuBar with Debug::{to_repr}
 ///|
 /// A top-level native menu and its items.
 struct Menu {
-  label : String
-  items : Array[MenuItem]
+  label : String?
+  role : MenuRole?
+  items : Array[MenuItem]?
 } derive(Debug, Eq)
 
 ///|
@@ -468,7 +468,7 @@ struct MenuItem {
   id : String?
   label : String?
   key : String?
-  role : String?
+  role : MenuItemRole?
 } derive(Debug, Eq)
 
 ///|
@@ -476,6 +476,47 @@ pub extend MenuItem with Eq::{not_equal, equal}
 
 ///|
 pub extend MenuItem with Debug::{to_repr}
+
+///|
+/// A standard top-level application menu role.
+pub(all) enum MenuRole {
+  Application
+  File
+  Edit
+  View
+  Window
+  Help
+} derive(Debug, Eq)
+
+///|
+pub extend MenuRole with Eq::{not_equal, equal}
+
+///|
+pub extend MenuRole with Debug::{to_repr}
+
+///|
+/// A standard native menu action.
+pub(all) enum MenuItemRole {
+  Quit
+  Hide
+  HideOthers
+  ShowAll
+  Close
+  Minimize
+  Zoom
+  Undo
+  Redo
+  Cut
+  Copy
+  Paste
+  SelectAll
+} derive(Debug, Eq)
+
+///|
+pub extend MenuItemRole with Eq::{not_equal, equal}
+
+///|
+pub extend MenuItemRole with Debug::{to_repr}
 
 ///|
 pub(all) struct BridgeConfig {
@@ -973,6 +1014,10 @@ struct RuntimeConfig {
   resources_dir : String?
   locales_dir : String?
   cache_dir : String?
+  locale : String?
+  accept_languages : Array[String]
+  framework_dialog_ok_label : String?
+  framework_dialog_cancel_label : String?
   remote_debugging_port : Int
 } derive(Debug, Eq)
 
@@ -993,6 +1038,10 @@ struct WindowConfig {
   titlebar_style : TitlebarStyle
   browser : BrowserPolicy
   bridge : BridgeConfig?
+  framework_titlebar_minimize_label : String?
+  framework_titlebar_maximize_label : String?
+  framework_titlebar_restore_label : String?
+  framework_titlebar_close_label : String?
 } derive(Debug, Eq)
 
 ///|
@@ -1014,6 +1063,8 @@ pub fn RuntimeConfig::new(
   resources_dir? : String,
   locales_dir? : String,
   cache_dir? : String,
+  locale? : @locale.Locale,
+  accept_languages? : Array[@locale.Locale] = [],
   remote_debugging_port? : Int = 0,
   headless? : Bool = false,
   persist_session_cookies? : Bool = true,
@@ -1028,11 +1079,19 @@ pub fn RuntimeConfig::new(
     resources_dir,
     locales_dir,
     cache_dir,
+    locale: locale.map(value => value.to_string()),
+    accept_languages: accept_languages.map(value => value.to_string()),
+    framework_dialog_ok_label: Some("OK"),
+    framework_dialog_cancel_label: Some("Cancel"),
     remote_debugging_port,
   }
 }
 
 ///|
+/// Builds a runtime configuration from unchecked ABI JSON.
+///
+/// This bypasses typed locale and schema construction and is intended only
+/// for low-level compatibility tests and native integration code.
 pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
   {
     raw_json: Some(raw_json),
@@ -1044,6 +1103,10 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
     resources_dir: None,
     locales_dir: None,
     cache_dir: None,
+    locale: None,
+    accept_languages: [],
+    framework_dialog_ok_label: None,
+    framework_dialog_cancel_label: None,
     remote_debugging_port: 0,
   }
 }
@@ -1057,6 +1120,8 @@ pub fn RuntimeConfig::unsafe_from_json(raw_json : String) -> RuntimeConfig {
 pub fn RuntimeConfig::bundled(
   helper_path? : String,
   cache_dir? : String,
+  locale? : @locale.Locale,
+  accept_languages? : Array[@locale.Locale] = [],
   remote_debugging_port? : Int = 0,
   headless? : Bool = false,
   persist_session_cookies? : Bool = true,
@@ -1071,6 +1136,10 @@ pub fn RuntimeConfig::bundled(
     resources_dir: None,
     locales_dir: None,
     cache_dir,
+    locale: locale.map(value => value.to_string()),
+    accept_languages: accept_languages.map(value => value.to_string()),
+    framework_dialog_ok_label: Some("OK"),
+    framework_dialog_cancel_label: Some("Cancel"),
     remote_debugging_port,
   }
 }
@@ -1096,6 +1165,10 @@ pub fn WindowConfig::new(
     titlebar_style,
     browser,
     bridge,
+    framework_titlebar_minimize_label: Some("Minimize"),
+    framework_titlebar_maximize_label: Some("Maximize"),
+    framework_titlebar_restore_label: Some("Restore"),
+    framework_titlebar_close_label: Some("Close"),
   }
 }
 
@@ -1111,25 +1184,85 @@ pub fn WindowConfig::unsafe_from_json(raw_json : String) -> WindowConfig {
     titlebar_style: TitlebarStyle::Default,
     browser: BrowserPolicy::new(),
     bridge: None,
+    framework_titlebar_minimize_label: None,
+    framework_titlebar_maximize_label: None,
+    framework_titlebar_restore_label: None,
+    framework_titlebar_close_label: None,
+  }
+}
+
+///|
+#doc(hidden)
+pub fn RuntimeConfig::with_framework_dialog_labels(
+  self : RuntimeConfig,
+  ok : String,
+  cancel : String,
+) -> RuntimeConfig {
+  {
+    raw_json: self.raw_json,
+    use_bundled: self.use_bundled,
+    headless: self.headless,
+    persist_session_cookies: self.persist_session_cookies,
+    runtime_root: self.runtime_root,
+    helper_path: self.helper_path,
+    resources_dir: self.resources_dir,
+    locales_dir: self.locales_dir,
+    cache_dir: self.cache_dir,
+    locale: self.locale,
+    accept_languages: self.accept_languages,
+    framework_dialog_ok_label: Some(ok),
+    framework_dialog_cancel_label: Some(cancel),
+    remote_debugging_port: self.remote_debugging_port,
+  }
+}
+
+///|
+#doc(hidden)
+pub fn WindowConfig::with_framework_titlebar_labels(
+  self : WindowConfig,
+  minimize : String,
+  maximize : String,
+  restore : String,
+  close : String,
+) -> WindowConfig {
+  {
+    raw_json: self.raw_json,
+    title: self.title,
+    width: self.width,
+    height: self.height,
+    initial_url: self.initial_url,
+    size_hint: self.size_hint,
+    titlebar_style: self.titlebar_style,
+    browser: self.browser,
+    bridge: self.bridge,
+    framework_titlebar_minimize_label: Some(minimize),
+    framework_titlebar_maximize_label: Some(maximize),
+    framework_titlebar_restore_label: Some(restore),
+    framework_titlebar_close_label: Some(close),
   }
 }
 
 ///|
 /// Creates an application-level menu bar.
 pub fn MenuBar::new(menus~ : Array[Menu]) -> MenuBar {
-  { raw_json: None, menus }
-}
-
-///|
-/// Creates a menu bar from unchecked native ABI JSON.
-pub fn MenuBar::unsafe_from_json(raw_json : String) -> MenuBar {
-  { raw_json: Some(raw_json), menus: [] }
+  { menus: menus.copy() }
 }
 
 ///|
 /// Creates a top-level menu.
 pub fn Menu::new(label : String, items~ : Array[MenuItem]) -> Menu {
-  { label, items }
+  { label: Some(label), role: None, items: Some(items.copy()) }
+}
+
+///|
+/// Creates a standard top-level menu. Omitted items select the role defaults;
+/// an explicit item array replaces those defaults exactly.
+pub fn Menu::role(
+  role : MenuRole,
+  label? : String,
+  items? : Array[MenuItem],
+) -> Menu {
+  { label, role: Some(role), items: items.map(items => items.copy()) }
 }
 
 ///|
@@ -1151,11 +1284,31 @@ pub fn MenuItem::separator() -> MenuItem {
 ///|
 /// Creates an item backed by a platform menu role such as `close` or `quit`.
 pub fn MenuItem::role(
-  role : String,
+  role : MenuItemRole,
   label? : String,
   key? : String,
 ) -> MenuItem {
   { kind: "role", id: None, label, key, role: Some(role) }
+}
+
+///|
+#doc(hidden)
+pub fn MenuBar::definitions(self : MenuBar) -> Array[Menu] {
+  self.menus.copy()
+}
+
+///|
+#doc(hidden)
+pub fn Menu::definition(self : Menu) -> (MenuRole?, String?, Array[MenuItem]?) {
+  (self.role, self.label, self.items.map(items => items.copy()))
+}
+
+///|
+#doc(hidden)
+pub fn MenuItem::definition(
+  self : MenuItem,
+) -> (String, String?, String?, String?, MenuItemRole?) {
+  (self.kind, self.id, self.label, self.key, self.role)
 }
 
 ///|
@@ -1280,6 +1433,23 @@ pub fn RuntimeConfig::to_json_string(self : RuntimeConfig) -> String {
       set_optional_string_field(fields, "resources_dir", self.resources_dir)
       set_optional_string_field(fields, "locales_dir", self.locales_dir)
       set_optional_string_field(fields, "cache_dir", self.cache_dir)
+      set_optional_string_field(fields, "locale", self.locale)
+      if !self.accept_languages.is_empty() {
+        fields.set(
+          "accept_languages",
+          Json::array(self.accept_languages.map(language => Json(language))),
+        )
+      }
+      set_optional_string_field(
+        fields,
+        "framework_dialog_ok_label",
+        self.framework_dialog_ok_label,
+      )
+      set_optional_string_field(
+        fields,
+        "framework_dialog_cancel_label",
+        self.framework_dialog_cancel_label,
+      )
       Json::object(fields).stringify()
     }
   }
@@ -1344,6 +1514,26 @@ pub fn WindowConfig::to_json_string(self : WindowConfig) -> String {
         None => ()
       }
       fields.set("browser", self.browser.to_json())
+      set_optional_string_field(
+        fields,
+        "framework_titlebar_minimize_label",
+        self.framework_titlebar_minimize_label,
+      )
+      set_optional_string_field(
+        fields,
+        "framework_titlebar_maximize_label",
+        self.framework_titlebar_maximize_label,
+      )
+      set_optional_string_field(
+        fields,
+        "framework_titlebar_restore_label",
+        self.framework_titlebar_restore_label,
+      )
+      set_optional_string_field(
+        fields,
+        "framework_titlebar_close_label",
+        self.framework_titlebar_close_label,
+      )
       Json::object(fields).stringify()
     }
   }
@@ -1355,28 +1545,68 @@ fn MenuItem::to_json(self : MenuItem) -> Json {
   set_optional_string_field(fields, "id", self.id)
   set_optional_string_field(fields, "label", self.label)
   set_optional_string_field(fields, "key", self.key)
-  set_optional_string_field(fields, "role", self.role)
+  match self.role {
+    Some(role) => fields.set("role", Json(role.to_json_string()))
+    None => ()
+  }
   Json::object(fields)
 }
 
 ///|
 fn Menu::to_json(self : Menu) -> Json {
-  { "label": self.label, "items": self.items.map(fn(item) { item.to_json() }) }
+  let fields : Map[String, Json] = Map([])
+  set_optional_string_field(fields, "label", self.label)
+  match self.role {
+    Some(role) => fields.set("role", Json(role.to_json_string()))
+    None => ()
+  }
+  match self.items {
+    Some(items) =>
+      fields.set("items", Json::array(items.map(item => item.to_json())))
+    None => ()
+  }
+  Json::object(fields)
+}
+
+///|
+fn MenuRole::to_json_string(self : MenuRole) -> String {
+  match self {
+    Application => "application"
+    File => "file"
+    Edit => "edit"
+    View => "view"
+    Window => "window"
+    Help => "help"
+  }
+}
+
+///|
+fn MenuItemRole::to_json_string(self : MenuItemRole) -> String {
+  match self {
+    Quit => "quit"
+    Hide => "hide"
+    HideOthers => "hide_others"
+    ShowAll => "show_all"
+    Close => "close"
+    Minimize => "minimize"
+    Zoom => "zoom"
+    Undo => "undo"
+    Redo => "redo"
+    Cut => "cut"
+    Copy => "copy"
+    Paste => "paste"
+    SelectAll => "select_all"
+  }
 }
 
 ///|
 /// Encodes this menu bar for the native ABI.
 pub fn MenuBar::to_json_string(self : MenuBar) -> String {
-  match self.raw_json {
-    Some(raw) => raw
-    None => {
-      let json : Json = {
-        "abi_version": Json::number(1.0, repr="1"),
-        "menus": self.menus.map(fn(menu) { menu.to_json() }),
-      }
-      json.stringify()
-    }
+  let json : Json = {
+    "abi_version": Json::number(1.0, repr="1"),
+    "menus": self.menus.map(fn(menu) { menu.to_json() }),
   }
+  json.stringify()
 }
 
 ///|

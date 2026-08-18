@@ -20,6 +20,14 @@ fn AppLifecycle::begin_running(self : AppLifecycle) -> Unit {
 }
 
 ///|
+fn AppLifecycle::has_reached_running(self : AppLifecycle) -> Bool {
+  match self.state {
+    Running | Closing | Draining | Destroying | Closed => true
+    Constructing | Starting => false
+  }
+}
+
+///|
 fn AppLifecycle::observe_window_closed(self : AppLifecycle) -> Unit {
   self.begin_closing()
 }

@@ -25,6 +25,12 @@ pub enum Platform {
   Macos
   Unknown
 } derive(Eq, ToJson, @debug.Debug)
+pub fn Platform::equal(Self, Self) -> Bool
+pub fn Platform::not_equal(Self, Self) -> Bool
+pub fn Platform::output(Self, &Logger) -> Unit
+pub fn Platform::to_json(Self) -> Json
+pub fn Platform::to_repr(Self) -> @debug.Repr
+pub fn Platform::to_string(Self) -> String
 pub impl Show for Platform
 
 pub struct Tray {
@@ -52,8 +58,11 @@ pub(all) enum TrayEvent {
   DoubleClick
   MenuItemClick(String)
 } derive(Eq, @debug.Debug)
+pub fn TrayEvent::equal(Self, Self) -> Bool
 pub fn TrayEvent::event_name(Self) -> String
 pub fn TrayEvent::item_id(Self) -> String?
+pub fn TrayEvent::not_equal(Self, Self) -> Bool
+pub fn TrayEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TrayMenuItem {
   Normal(id~ : String, label~ : String, enabled~ : Bool)
@@ -62,10 +71,13 @@ pub(all) enum TrayMenuItem {
   Submenu(label~ : String, items~ : Array[TrayMenuItem], enabled~ : Bool)
 } derive(Eq, @debug.Debug)
 pub fn TrayMenuItem::checkbox(id~ : String, label~ : String, checked? : Bool, enabled? : Bool) -> Self
+pub fn TrayMenuItem::equal(Self, Self) -> Bool
 pub fn TrayMenuItem::kind(Self) -> TrayMenuItemKind
 pub fn TrayMenuItem::normal(id~ : String, label~ : String, enabled? : Bool) -> Self
+pub fn TrayMenuItem::not_equal(Self, Self) -> Bool
 pub fn TrayMenuItem::separator() -> Self
 pub fn TrayMenuItem::submenu(label~ : String, items~ : Array[Self], enabled? : Bool) -> Self
+pub fn TrayMenuItem::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TrayMenuItemKind {
   Normal
@@ -73,6 +85,9 @@ pub(all) enum TrayMenuItemKind {
   Checkbox
   Submenu
 } derive(Eq, @debug.Debug)
+pub fn TrayMenuItemKind::equal(Self, Self) -> Bool
+pub fn TrayMenuItemKind::not_equal(Self, Self) -> Bool
+pub fn TrayMenuItemKind::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

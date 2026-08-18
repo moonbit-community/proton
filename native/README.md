@@ -67,6 +67,20 @@ Runtime and window config JSON is treated as a stable v1 schema. The native ABI
 rejects unknown top-level fields and requires top-level `"abi_version": 1`, so
 typos do not silently fall back to defaults.
 
+Runtime config accepts a canonical `locale` and an ordered `accept_languages`
+array. macOS and Windows pass both values through CEF settings. Linux passes
+the language list through CEF settings and applies `locale` as Chromium's
+browser-process `--lang` switch. Native code does not discover fallback
+languages, mutate locale environment variables, or translate application
+content. `proton_system_preferred_languages_json` is the separate,
+runtime-independent platform query; the MoonBit facade validates and resolves
+its results before runtime creation.
+
+The facade also emits final `framework_dialog_*_label` and
+`framework_titlebar_*_label` strings for controls Proton draws itself. These
+fields carry resolved display text; platform engines must not translate or
+infer them. Operating-system-owned panels continue to use system localization.
+
 Only one runtime may be active in a process. A second
 `proton_runtime_create_json` call returns `PROTON_ERR_ALREADY_INITIALIZED` until
 the current runtime is destroyed. This process-local invariant is separate from
@@ -189,9 +203,10 @@ Linux application menu definitions are rendered as a GTK menu bar in every
 runtime window. Command items enqueue the same `menu_command` runtime events as
 macOS, including the window that owns the activated menu. Role items map to GTK
 window actions or the focused CEF frame's edit commands, and menu key
-equivalents are installed as GTK accelerators. The standard application menu is
-always present; Edit and Window menus are supplied when the definition does not
-replace them.
+equivalents are installed as GTK accelerators. MoonBit resolves standard menu
+roles, labels, keys, and default items before calling the native ABI. Native
+code neither infers roles from display labels nor synthesizes translated or
+English fallback menus.
 
 `proton_cli cef setup` runtime assembly is wired for Windows, macOS Apple
 Silicon, and Linux. The setup command verifies the pinned SHA-256 of the

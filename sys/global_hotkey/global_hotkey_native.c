@@ -519,9 +519,7 @@ static void *mb_macos_thread_main(void *raw_state) {
 
   event_tap = mb_macos_api.CGEventTapCreate(
       kCGSessionEventTap, kCGHeadInsertEventTap, kCGEventTapOptionListenOnly,
-      (((CGEventMask)1) << kCGEventKeyDown) |
-          (((CGEventMask)1) << kCGEventTapDisabledByTimeout) |
-          (((CGEventMask)1) << kCGEventTapDisabledByUserInput),
+      ((CGEventMask)1) << kCGEventKeyDown,
       mb_macos_event_callback, state);
   if (event_tap == NULL) {
     pthread_mutex_lock(&state->lock);

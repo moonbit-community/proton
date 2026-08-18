@@ -5,9 +5,15 @@ fn menu_bar() -> @proton.MenuBar {
       @proton.MenuItem::command("demo.refresh", "Refresh Status", key="r"),
       @proton.MenuItem::command("demo.settings", "Open Settings", key=","),
       @proton.MenuItem::separator(),
-      @proton.MenuItem::role("close", label="Close Window", key="w"),
+      @proton.MenuItem::role(
+        @proton.MenuItemRole::Close,
+        label="Close Window",
+        key="w",
+      ),
     ]),
-    @proton.Menu::new("Help", items=[
+    @proton.Menu::role(@proton.MenuRole::Edit),
+    @proton.Menu::role(@proton.MenuRole::Window),
+    @proton.Menu::role(@proton.MenuRole::Help, items=[
       @proton.MenuItem::command("help.about", "About Menu Example"),
     ]),
   ])

@@ -82,6 +82,15 @@ when all windows have closed.
 `.headless()` runs the app off-screen without creating a native window. Set
 `PROTON_HEADLESS=1` to force headless mode for automated test runs.
 
+## Application locale
+
+`App::locale` selects an immutable application locale before native runtime
+creation. The resolved locale and preferred language order are available from
+application, window, and command contexts and are also supplied to CEF.
+Applications own their translation catalogs and localized content; Proton only
+owns platform discovery, propagation, standard native menu labels, and its
+framework failure shell.
+
 ## Learn more
 
 - Runnable demos live in the repository's `examples/` directory.

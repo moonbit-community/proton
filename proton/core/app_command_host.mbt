@@ -24,6 +24,11 @@ pub fn RuntimeWakeSignal::new() -> RuntimeWakeSignal {
 }
 
 ///|
+fn detached_locale_preferences() -> @locale.LocalePreferences {
+  @locale.LocalePreferences::resolve(None, [])
+}
+
+///|
 pub fn RuntimeWakeSignal::revision(self : RuntimeWakeSignal) -> Int64 {
   self.revision
 }
@@ -56,6 +61,7 @@ pub struct AppCommandRequestContext {
   tasks : @async.TaskGroup[Unit]
   wake_signal : RuntimeWakeSignal
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
+  locale_preferences : @locale.LocalePreferences
 }
 
 ///|
@@ -63,6 +69,7 @@ pub struct AppCommandRequestContext {
 pub fn AppCommandRequestContext::new(
   window : Int64,
   tasks : @async.TaskGroup[Unit],
+  locale_preferences : @locale.LocalePreferences,
   window_id? : String = "main",
   source_origin? : String = "app",
   page_instance? : String? = None,
@@ -87,7 +94,58 @@ pub fn AppCommandRequestContext::new(
     tasks,
     wake_signal,
     emit_event,
+    locale_preferences,
   }
+}
+
+///|
+/// Builds a request context that is not attached to an application session.
+#doc(hidden)
+pub fn AppCommandRequestContext::detached(
+  window : Int64,
+  tasks : @async.TaskGroup[Unit],
+  window_id? : String = "main",
+  source_origin? : String = "app",
+  page_instance? : String? = None,
+  permission_extension? : String,
+  permission_scope? : Json,
+  wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal::new(),
+  emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise = fn(
+    _route,
+    _name,
+    _payload,
+  ) {
+
+  },
+) -> AppCommandRequestContext {
+  AppCommandRequestContext::new(
+    window,
+    tasks,
+    detached_locale_preferences(),
+    window_id~,
+    source_origin~,
+    page_instance~,
+    permission_extension?,
+    permission_scope?,
+    wake_signal~,
+    emit_event~,
+  )
+}
+
+///|
+/// Returns the immutable application locale selected at startup.
+pub fn AppCommandRequestContext::locale(
+  self : AppCommandRequestContext,
+) -> @locale.Locale {
+  self.locale_preferences.locale()
+}
+
+///|
+/// Returns the application's ordered language preferences.
+pub fn AppCommandRequestContext::preferred_languages(
+  self : AppCommandRequestContext,
+) -> Array[@locale.Locale] {
+  self.locale_preferences.preferred_languages()
 }
 
 ///|
@@ -204,8 +262,20 @@ pub async fn[Payload : ToJson] AppCommandRequestContext::emit(
 pub fn AppCommandHost::new(
   expose_error_details? : Bool = false,
 ) -> AppCommandHost {
+  AppCommandHost::new_with_diagnostic_reporter(
+    expose_error_details, report_command_diagnostic,
+  )
+}
+
+///|
+fn AppCommandHost::new_with_diagnostic_reporter(
+  expose_error_details : Bool,
+  report_diagnostic : (String) -> Unit,
+) -> AppCommandHost {
   AppCommandHost::{
-    host: MbtProcessHost::new(expose_error_details~),
+    host: MbtProcessHost::new_with_diagnostic_reporter(
+      expose_error_details, report_diagnostic,
+    ),
     closed: false,
   }
 }

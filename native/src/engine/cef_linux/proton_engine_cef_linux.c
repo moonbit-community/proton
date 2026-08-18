@@ -73,6 +73,7 @@
 #define PROTON_ENGINE_PATH_SEPARATOR '/'
 #define PROTON_ENGINE_MAX_PATH_BYTES 4096
 #define PROTON_ENGINE_MAX_URL_BYTES 131072
+#define PROTON_ENGINE_MAX_LABEL_BYTES 256
 #define PROTON_ENGINE_MAX_BRIDGE_REQUESTS 256
 #define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
 #define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
@@ -121,6 +122,8 @@ struct proton_engine_runtime {
   size_t menu_command_count;
   pthread_mutex_t menu_lock;
   int menu_lock_initialized;
+  char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
 };
 
 struct proton_engine_window {
@@ -136,6 +139,10 @@ struct proton_engine_window {
   GtkWidget *maximize_button;
   GtkWidget *maximize_image;
   GtkWidget *close_button;
+  char titlebar_minimize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char titlebar_maximize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_engine_client_t *client;
   cef_browser_t *browser;
   int browser_id;
@@ -177,6 +184,10 @@ struct proton_engine_window {
   struct proton_engine_view *views;
   struct proton_engine_window *next;
 };
+
+static void proton_engine_dialog_cancel_runtime(
+    proton_engine_runtime_t *runtime);
+static void proton_engine_dialog_cancel_window(proton_engine_window_t *window);
 
 typedef struct {
   atomic_int refs;
@@ -305,6 +316,10 @@ typedef struct {
   char resources_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   char locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   char cache_dir[PROTON_ENGINE_MAX_PATH_BYTES];
+  char locale[PROTON_ENGINE_MAX_PATH_BYTES];
+  char accept_languages[PROTON_ENGINE_MAX_PATH_BYTES];
+  char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   int32_t remote_debugging_port;
   int headless;
   int persist_session_cookies;
@@ -317,6 +332,10 @@ typedef struct {
   int32_t height;
   int size_hint;
   int titlebar_overlay;
+  char titlebar_minimize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char titlebar_maximize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_policy_t browser_policy;
 } proton_engine_window_config_t;
 
@@ -324,6 +343,7 @@ static int g_proton_cef_initialized = 0;
 static int g_proton_cef_runtime_active = 0;
 static int g_proton_cef_shutdown_registered = 0;
 static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
+static char g_proton_engine_locale[PROTON_ENGINE_MAX_PATH_BYTES];
 static proton_engine_app_t g_app;
 static proton_engine_browser_process_handler_t g_browser_process_handler;
 static proton_engine_render_process_handler_t g_render_process_handler;
@@ -1349,6 +1369,11 @@ static void CEF_CALLBACK proton_engine_on_before_command_line_processing(
    * proton_engine_ensure_gtk can apply its X11-only constraint. */
   proton_engine_append_switch_with_value(command_line, "ozone-platform",
                                          "x11");
+  if (proton_engine_process_type_is_browser(process_type) &&
+      g_proton_engine_locale[0] != '\0') {
+    proton_engine_append_switch_with_value(command_line, "lang",
+                                           g_proton_engine_locale);
+  }
   proton_engine_append_switch(command_line, "disable-gpu");
   proton_engine_append_switch(command_line, "in-process-gpu");
   // On Xvfb-based CI displays Chromium's occlusion tracking can mark the
@@ -2523,6 +2548,18 @@ static int32_t proton_engine_parse_runtime_config(
   proton_engine_parse_json_string_field(config_json, "cache_dir",
                                         config->cache_dir,
                                         sizeof(config->cache_dir));
+  proton_engine_parse_json_string_field(config_json, "locale",
+                                        config->locale,
+                                        sizeof(config->locale));
+  proton_engine_parse_json_string_array_field(
+      config_json, "accept_languages", config->accept_languages,
+      sizeof(config->accept_languages));
+  proton_engine_parse_json_string_field(
+      config_json, "framework_dialog_ok_label", config->dialog_ok_label,
+      sizeof(config->dialog_ok_label));
+  proton_engine_parse_json_string_field(
+      config_json, "framework_dialog_cancel_label",
+      config->dialog_cancel_label, sizeof(config->dialog_cancel_label));
   bool persist_session_cookies = false;
   if (proton_engine_parse_json_bool_field(config_json,
                                           "persist_session_cookies",
@@ -2591,6 +2628,28 @@ static int32_t proton_engine_parse_window_config(
           "window titlebar_style must be default or overlay");
       return PROTON_ERR_INVALID_ARGUMENT;
     }
+  }
+  proton_engine_parse_json_string_field(
+      config_json, "framework_titlebar_minimize_label",
+      config->titlebar_minimize_label, sizeof(config->titlebar_minimize_label));
+  proton_engine_parse_json_string_field(
+      config_json, "framework_titlebar_maximize_label",
+      config->titlebar_maximize_label, sizeof(config->titlebar_maximize_label));
+  proton_engine_parse_json_string_field(
+      config_json, "framework_titlebar_restore_label",
+      config->titlebar_restore_label, sizeof(config->titlebar_restore_label));
+  proton_engine_parse_json_string_field(
+      config_json, "framework_titlebar_close_label",
+      config->titlebar_close_label, sizeof(config->titlebar_close_label));
+  if (config->titlebar_overlay &&
+      (config->titlebar_minimize_label[0] == '\0' ||
+       config->titlebar_maximize_label[0] == '\0' ||
+       config->titlebar_restore_label[0] == '\0' ||
+       config->titlebar_close_label[0] == '\0')) {
+    proton_engine_set_message(
+        error, error_len,
+        "window titlebar overlay requires framework control labels");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
   return proton_browser_policy_parse_window_json(
       config_json, &config->browser_policy, error, error_len);
@@ -2714,8 +2773,11 @@ static void proton_engine_overlay_update_maximize_button(
       GTK_IMAGE(window->maximize_image),
       maximized ? "window-restore-symbolic" : "window-maximize-symbolic",
       GTK_ICON_SIZE_MENU);
-  gtk_widget_set_tooltip_text(window->maximize_button,
-                              maximized ? "Restore" : "Maximize");
+  const char *label = maximized ? window->titlebar_restore_label
+                                : window->titlebar_maximize_label;
+  gtk_widget_set_tooltip_text(window->maximize_button, label);
+  atk_object_set_name(gtk_widget_get_accessible(window->maximize_button),
+                      label);
 }
 
 static void proton_engine_overlay_toggle_maximize(
@@ -2967,8 +3029,8 @@ static void proton_engine_overlay_update_input_shape(
 
 static GtkWidget *proton_engine_overlay_button(
     const char *icon_name,
-    const char *tooltip,
     const char *style_class,
+    const char *label,
     GCallback callback,
     proton_engine_window_t *window,
     GtkWidget **out_image) {
@@ -2984,7 +3046,8 @@ static GtkWidget *proton_engine_overlay_button(
   gtk_button_set_image(GTK_BUTTON(button), image);
   gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_NONE);
   gtk_widget_set_can_focus(button, FALSE);
-  gtk_widget_set_tooltip_text(button, tooltip);
+  gtk_widget_set_tooltip_text(button, label);
+  atk_object_set_name(gtk_widget_get_accessible(button), label);
   GtkStyleContext *context = gtk_widget_get_style_context(button);
   gtk_style_context_add_class(context, GTK_STYLE_CLASS_FLAT);
   gtk_style_context_add_class(context, "titlebutton");
@@ -3014,14 +3077,14 @@ static int proton_engine_overlay_create_controls(
   }
 
   window->minimize_button = proton_engine_overlay_button(
-      "window-minimize-symbolic", "Minimize", "minimize",
+      "window-minimize-symbolic", "minimize", window->titlebar_minimize_label,
       G_CALLBACK(proton_engine_overlay_minimize), window, NULL);
   window->maximize_button = proton_engine_overlay_button(
-      "window-maximize-symbolic", "Maximize", "maximize",
+      "window-maximize-symbolic", "maximize", window->titlebar_maximize_label,
       G_CALLBACK(proton_engine_overlay_maximize), window,
       &window->maximize_image);
   window->close_button = proton_engine_overlay_button(
-      "window-close-symbolic", "Close", "close",
+      "window-close-symbolic", "close", window->titlebar_close_label,
       G_CALLBACK(proton_engine_overlay_close), window, NULL);
   if (window->minimize_button == NULL || window->maximize_button == NULL ||
       window->close_button == NULL) {
@@ -3664,6 +3727,8 @@ int32_t proton_engine_execute_process_json(const char *config_json,
   proton_engine_main_args_t main_args;
   proton_engine_init_main_args(&args, &main_args);
   proton_engine_init_handlers();
+  snprintf(g_proton_engine_locale, sizeof(g_proton_engine_locale), "%s",
+           config.locale);
   int exit_code = cef_execute_process(&args, &g_app.app, NULL);
   proton_engine_free_main_args(&main_args);
   if (out_exit_code != NULL) {
@@ -3705,6 +3770,8 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   }
 
   proton_engine_init_handlers();
+  snprintf(g_proton_engine_locale, sizeof(g_proton_engine_locale), "%s",
+           config.locale);
   proton_engine_check_cef_api_hash();
 
   proton_engine_runtime_t *runtime =
@@ -3718,6 +3785,11 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
   runtime->next_bridge_request_id = 1;
+  snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
+           config.dialog_ok_label);
+  snprintf(runtime->dialog_cancel_label,
+           sizeof(runtime->dialog_cancel_label), "%s",
+           config.dialog_cancel_label);
   if (pthread_mutex_init(&runtime->bridge_lock, NULL) == 0) {
     runtime->bridge_lock_initialized = 1;
   }
@@ -3754,6 +3826,8 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   if (config.locales_dir[0] != '\0') {
     proton_engine_set_string(&settings.locales_dir_path, config.locales_dir);
   }
+  proton_engine_set_string(&settings.accept_language_list,
+                           config.accept_languages);
   proton_engine_set_string(&settings.root_cache_path, config.cache_dir);
   if (!temporary_profile) {
     proton_engine_set_string(&settings.cache_path, config.cache_dir);
@@ -3764,6 +3838,7 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   cef_string_clear(&settings.browser_subprocess_path);
   cef_string_clear(&settings.resources_dir_path);
   cef_string_clear(&settings.locales_dir_path);
+  cef_string_clear(&settings.accept_language_list);
   cef_string_clear(&settings.cache_path);
   cef_string_clear(&settings.root_cache_path);
   proton_engine_free_main_args(&main_args);
@@ -3875,6 +3950,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   }
   proton_engine_debug_log("runtime_destroy_start owns_cef=%d",
                           runtime->owns_cef_runtime);
+  proton_engine_dialog_cancel_runtime(runtime);
   if (runtime->owns_cef_runtime) {
     if (!proton_engine_runtime_close_windows(runtime)) {
       proton_engine_set_message(
@@ -4634,6 +4710,18 @@ int32_t proton_engine_window_create_json(proton_engine_runtime_t *runtime,
   window->headless = runtime->headless;
   window->size_hint = config.size_hint;
   window->titlebar_overlay = config.titlebar_overlay;
+  snprintf(window->titlebar_minimize_label,
+           sizeof(window->titlebar_minimize_label), "%s",
+           config.titlebar_minimize_label);
+  snprintf(window->titlebar_maximize_label,
+           sizeof(window->titlebar_maximize_label), "%s",
+           config.titlebar_maximize_label);
+  snprintf(window->titlebar_restore_label,
+           sizeof(window->titlebar_restore_label), "%s",
+           config.titlebar_restore_label);
+  snprintf(window->titlebar_close_label,
+           sizeof(window->titlebar_close_label), "%s",
+           config.titlebar_close_label);
   window->zoom_percent = 100;
   window->bridge_config_json =
       proton_engine_json_copy_raw_field(config_json, "bridge");
@@ -4827,6 +4915,7 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  proton_engine_dialog_cancel_window(window);
   if (window->closed && window->browser == NULL) {
     proton_engine_debug_log("window_destroy_defer_closed browser=%d",
                             window->browser_id);
@@ -5395,39 +5484,241 @@ int32_t proton_engine_window_take_bridge_failure_json(
       &window->bridge_lifecycle, buffer, buffer_len, out_required_len);
 }
 
-// TODO: Implement non-blocking Linux dialogs. These exports are ABI stubs so
-// that Linux builds can link the async-only dialog ABI while macOS remains the
-// only supported async dialog backend for now.
+typedef struct proton_engine_linux_dialog_request {
+  int64_t id;
+  proton_engine_runtime_t *runtime;
+  proton_engine_window_t *window;
+  GtkWidget *dialog;
+  int completed;
+  struct proton_engine_linux_dialog_request *next;
+} proton_engine_linux_dialog_request_t;
+
+static int64_t g_next_dialog_id = 1;
+static proton_engine_linux_dialog_request_t *g_dialog_requests = NULL;
+
+static proton_engine_linux_dialog_request_t *
+proton_engine_dialog_find(proton_engine_runtime_t *runtime,
+                          proton_engine_window_t *window,
+                          int64_t id) {
+  for (proton_engine_linux_dialog_request_t *request = g_dialog_requests;
+       request != NULL; request = request->next) {
+    if (request->id == id && request->runtime == runtime &&
+        request->window == window) {
+      return request;
+    }
+  }
+  return NULL;
+}
+
+static void proton_engine_dialog_remove(
+    proton_engine_linux_dialog_request_t *request) {
+  proton_engine_linux_dialog_request_t **cursor = &g_dialog_requests;
+  while (*cursor != NULL) {
+    if (*cursor == request) {
+      *cursor = request->next;
+      free(request);
+      return;
+    }
+    cursor = &(*cursor)->next;
+  }
+}
+
+static void proton_engine_dialog_response(GtkDialog *dialog,
+                                          gint response_id,
+                                          gpointer user_data) {
+  (void)response_id;
+  proton_engine_linux_dialog_request_t *request =
+      (proton_engine_linux_dialog_request_t *)user_data;
+  if (request == NULL || request->completed) {
+    return;
+  }
+  request->completed = 1;
+  gtk_widget_destroy(GTK_WIDGET(dialog));
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+}
+
+static void proton_engine_dialog_destroyed(GtkWidget *dialog,
+                                           gpointer user_data) {
+  proton_engine_linux_dialog_request_t *request =
+      (proton_engine_linux_dialog_request_t *)user_data;
+  if (request == NULL) {
+    return;
+  }
+  request->dialog = NULL;
+  if (!request->completed) {
+    request->completed = 1;
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  }
+  (void)dialog;
+}
+
+static GtkMessageType proton_engine_dialog_message_type(int32_t level) {
+  switch (level) {
+  case 1:
+    return GTK_MESSAGE_WARNING;
+  case 2:
+    return GTK_MESSAGE_ERROR;
+  default:
+    return GTK_MESSAGE_INFO;
+  }
+}
+
+static int32_t proton_engine_begin_message_dialog(
+    proton_engine_runtime_t *runtime, proton_engine_window_t *window,
+    const char *title_utf8, int32_t title_len, const char *message_utf8,
+    int32_t message_len, int32_t level, int64_t *out_dialog, char *error,
+    size_t error_len) {
+  if (runtime == NULL || out_dialog == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "dialog runtime and output are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_dialog = PROTON_INVALID_HANDLE;
+  if (runtime->headless || (window != NULL && window->headless)) {
+    proton_engine_set_message(
+        error, error_len,
+        "native dialogs are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (window != NULL && window->window == NULL) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (runtime->dialog_ok_label[0] == '\0') {
+    proton_engine_set_message(error, error_len,
+                              "runtime dialog label is not configured");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  char *title = g_strndup(title_utf8 != NULL ? title_utf8 : "",
+                          title_len > 0 ? (gsize)title_len : 0);
+  char *message = g_strndup(message_utf8 != NULL ? message_utf8 : "",
+                            message_len > 0 ? (gsize)message_len : 0);
+  if (title == NULL || message == NULL) {
+    g_free(title);
+    g_free(message);
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate dialog text");
+    return PROTON_ERR_ENGINE;
+  }
+  GtkWidget *dialog = gtk_message_dialog_new(
+      window != NULL ? GTK_WINDOW(window->window) : NULL,
+      GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+      proton_engine_dialog_message_type(level), GTK_BUTTONS_NONE, "%s",
+      message);
+  g_free(message);
+  if (dialog == NULL) {
+    g_free(title);
+    proton_engine_set_message(error, error_len,
+                              "failed to create native message dialog");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (title[0] != '\0') {
+    gtk_window_set_title(GTK_WINDOW(dialog), title);
+  }
+  gtk_dialog_add_button(GTK_DIALOG(dialog), runtime->dialog_ok_label,
+                        GTK_RESPONSE_OK);
+  g_free(title);
+  proton_engine_linux_dialog_request_t *request =
+      (proton_engine_linux_dialog_request_t *)calloc(1, sizeof(*request));
+  if (request == NULL) {
+    gtk_widget_destroy(dialog);
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate dialog request");
+    return PROTON_ERR_ENGINE;
+  }
+  request->id = g_next_dialog_id++;
+  if (g_next_dialog_id <= 0) {
+    g_next_dialog_id = 1;
+  }
+  request->runtime = runtime;
+  request->window = window;
+  request->dialog = dialog;
+  request->next = g_dialog_requests;
+  g_dialog_requests = request;
+  g_signal_connect(dialog, "response", G_CALLBACK(proton_engine_dialog_response),
+                   request);
+  g_signal_connect(dialog, "destroy", G_CALLBACK(proton_engine_dialog_destroyed),
+                   request);
+  gtk_widget_show_all(dialog);
+  *out_dialog = request->id;
+  return PROTON_OK;
+}
+
+static int32_t proton_engine_poll_message_dialog(
+    proton_engine_runtime_t *runtime, proton_engine_window_t *window,
+    int64_t dialog, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len) {
+  if (out_required_len == NULL) {
+    proton_engine_set_message(error, error_len, "out_required_len is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_required_len = 0;
+  proton_engine_linux_dialog_request_t *request =
+      proton_engine_dialog_find(runtime, window, dialog);
+  if (request == NULL) {
+    proton_engine_set_message(error, error_len, "dialog request is unknown");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (!request->completed) {
+    return PROTON_EVENT_NONE;
+  }
+  *out_required_len = 1;
+  if (buffer == NULL || buffer_len < 1) {
+    proton_engine_set_message(error, error_len, "dialog result buffer too small");
+    return PROTON_ERR_BUFFER_TOO_SMALL;
+  }
+  buffer[0] = '\0';
+  proton_engine_dialog_remove(request);
+  return PROTON_OK;
+}
+
+static void proton_engine_dialog_cancel_matching(
+    proton_engine_runtime_t *runtime, proton_engine_window_t *window,
+    int match_window) {
+  proton_engine_linux_dialog_request_t **cursor = &g_dialog_requests;
+  while (*cursor != NULL) {
+    proton_engine_linux_dialog_request_t *request = *cursor;
+    if (request->runtime != runtime ||
+        (match_window && request->window != window)) {
+      cursor = &request->next;
+      continue;
+    }
+    *cursor = request->next;
+    if (request->dialog != NULL) {
+      g_signal_handlers_disconnect_by_data(request->dialog, request);
+      gtk_widget_destroy(request->dialog);
+    }
+    free(request);
+  }
+}
+
+static void proton_engine_dialog_cancel_runtime(
+    proton_engine_runtime_t *runtime) {
+  proton_engine_dialog_cancel_matching(runtime, NULL, 0);
+}
+
+static void proton_engine_dialog_cancel_window(proton_engine_window_t *window) {
+  if (window != NULL) {
+    proton_engine_dialog_cancel_matching(window->runtime, window, 1);
+  }
+}
+
 int32_t proton_engine_runtime_begin_message_dialog(
     proton_engine_runtime_t *runtime, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,
     int32_t level, int64_t *out_dialog, char *error, size_t error_len) {
-  (void)runtime;
-  (void)title_utf8;
-  (void)title_len;
-  (void)message_utf8;
-  (void)message_len;
-  (void)level;
-  if (out_dialog != NULL) {
-    *out_dialog = PROTON_INVALID_HANDLE;
-  }
-  proton_engine_set_message(error, error_len,
-                            "runtime dialogs are not implemented on Linux");
-  return PROTON_ERR_UNSUPPORTED;
+  return proton_engine_begin_message_dialog(
+      runtime, NULL, title_utf8, title_len, message_utf8, message_len, level,
+      out_dialog, error, error_len);
 }
 
 int32_t proton_engine_runtime_poll_dialog_result(
     proton_engine_runtime_t *runtime, int64_t dialog, char *buffer,
     int32_t buffer_len, int32_t *out_required_len, char *error,
     size_t error_len) {
-  (void)dialog;
-  (void)buffer;
-  (void)buffer_len;
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  return proton_engine_runtime_begin_message_dialog(
-      runtime, NULL, 0, NULL, 0, 0, NULL, error, error_len);
+  return proton_engine_poll_message_dialog(
+      runtime, NULL, dialog, buffer, buffer_len, out_required_len, error,
+      error_len);
 }
 
 int32_t proton_engine_window_begin_message_dialog(
@@ -5440,18 +5731,9 @@ int32_t proton_engine_window_begin_message_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  (void)window;
-  (void)title_utf8;
-  (void)title_len;
-  (void)message_utf8;
-  (void)message_len;
-  (void)level;
-  if (out_dialog != NULL) {
-    *out_dialog = PROTON_INVALID_HANDLE;
-  }
-  proton_engine_set_message(error, error_len,
-                            "async native dialog extension is not implemented on Linux");
-  return PROTON_ERR_UNSUPPORTED;
+  return proton_engine_begin_message_dialog(
+      window != NULL ? window->runtime : NULL, window, title_utf8, title_len,
+      message_utf8, message_len, level, out_dialog, error, error_len);
 }
 
 int32_t proton_engine_window_begin_confirm_dialog(
@@ -5464,9 +5746,21 @@ int32_t proton_engine_window_begin_confirm_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  return proton_engine_window_begin_message_dialog(
-      window, title_utf8, title_len, message_utf8, message_len, level,
-      out_dialog, error, error_len);
+  // TODO: Implement the remaining Linux dialog kinds on the same async
+  // request lifecycle instead of reintroducing synchronous native APIs.
+  (void)window;
+  (void)title_utf8;
+  (void)title_len;
+  (void)message_utf8;
+  (void)message_len;
+  (void)level;
+  if (out_dialog != NULL) {
+    *out_dialog = PROTON_INVALID_HANDLE;
+  }
+  proton_engine_set_message(
+      error, error_len,
+      "async confirm dialogs are not implemented on Linux");
+  return PROTON_ERR_UNSUPPORTED;
 }
 
 int32_t proton_engine_window_begin_open_file_dialog(
@@ -5527,16 +5821,9 @@ int32_t proton_engine_window_poll_dialog_result(
     int32_t *out_required_len,
     char *error,
     size_t error_len) {
-  (void)window;
-  (void)dialog;
-  (void)buffer;
-  (void)buffer_len;
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  proton_engine_set_message(error, error_len,
-                            "async native dialog extension is not implemented on Linux");
-  return PROTON_ERR_UNSUPPORTED;
+  return proton_engine_poll_message_dialog(
+      window != NULL ? window->runtime : NULL, window, dialog, buffer,
+      buffer_len, out_required_len, error, error_len);
 }
 int32_t proton_engine_take_menu_command(
     proton_engine_runtime_t *runtime,

@@ -1,13 +1,18 @@
 ///|
 priv struct OpRegistry {
   handlers : Map[String, (Json) -> Json raise OpDispatchError]
-  async_handlers : Map[String, async (AppCommandRequestContext, Json) -> Json]
+  async_handlers : Map[String, async (Json) -> Json]
+  context_handlers : Map[String, async (AppCommandRequestContext, Json) -> Json]
 }
 
 ///|
 /// Creates an empty op handler registry.
 fn OpRegistry::new() -> OpRegistry {
-  OpRegistry::{ handlers: Map([]), async_handlers: Map([]) }
+  OpRegistry::{
+    handlers: Map([]),
+    async_handlers: Map([]),
+    context_handlers: Map([]),
+  }
 }
 
 ///|
@@ -40,7 +45,7 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async(
 ) -> Unit raise OpRegistrationError {
   validate_op_name(name)
   guard self.handler_name_available(name) else { raise DuplicateName(name~) }
-  self.async_handlers.set(name, async fn(_context, payload_json) {
+  self.async_handlers.set(name, async fn(payload_json) {
     let payload : Payload = @json.from_json(payload_json) catch {
       err => raise InvalidPayload(name~, detail=err.to_string())
     }
@@ -61,7 +66,7 @@ fn[Payload : @json.FromJson, Reply : ToJson] OpRegistry::handle_async_with_conte
 ) -> Unit raise OpRegistrationError {
   validate_op_name(name)
   guard self.handler_name_available(name) else { raise DuplicateName(name~) }
-  self.async_handlers.set(name, async fn(context, payload_json) {
+  self.context_handlers.set(name, async fn(context, payload_json) {
     let payload : Payload = @json.from_json(payload_json) catch {
       err => raise InvalidPayload(name~, detail=err.to_string())
     }
@@ -80,17 +85,14 @@ async fn OpRegistry::call_async_direct(
   name : String,
   payload : Json,
 ) -> Json {
-  let result : Ref[Json?] = Ref(None)
-  @async.with_task_group(group => {
-    result.val = Some(
-      self.call_async_direct_with_context(
-        AppCommandRequestContext::new(0L, group),
-        name,
-        payload,
-      ),
-    )
-  })
-  result.val.unwrap()
+  match self.context_handlers.get(name) {
+    Some(_) => raise RequestContextRequired(name~)
+    None =>
+      match self.async_handlers.get(name) {
+        Some(handler) => handler(payload)
+        None => self.call(name, payload)
+      }
+  }
 }
 
 ///|
@@ -101,16 +103,21 @@ async fn OpRegistry::call_async_direct_with_context(
   name : String,
   payload : Json,
 ) -> Json {
-  match self.async_handlers.get(name) {
+  match self.context_handlers.get(name) {
     Some(handler) => handler(context, payload)
-    None => self.call(name, payload)
+    None =>
+      match self.async_handlers.get(name) {
+        Some(handler) => handler(payload)
+        None => self.call(name, payload)
+      }
   }
 }
 
 ///|
 /// Returns whether an op name has been registered as an async handler.
 fn OpRegistry::has_async(self : OpRegistry, name : String) -> Bool {
-  self.async_handlers.get(name) is Some(_)
+  self.async_handlers.get(name) is Some(_) ||
+  self.context_handlers.get(name) is Some(_)
 }
 
 ///|
@@ -128,7 +135,9 @@ fn OpRegistry::call(
 
 ///|
 fn OpRegistry::handler_name_available(self : OpRegistry, name : String) -> Bool {
-  self.handlers.get(name) is None && self.async_handlers.get(name) is None
+  self.handlers.get(name) is None &&
+  self.async_handlers.get(name) is None &&
+  self.context_handlers.get(name) is None
 }
 
 ///|

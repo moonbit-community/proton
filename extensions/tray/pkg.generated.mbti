@@ -17,6 +17,11 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type TrayError derive(Eq, @debug.Debug)
+pub fn TrayError::equal(Self, Self) -> Bool
+pub fn TrayError::not_equal(Self, Self) -> Bool
+pub fn TrayError::output(Self, &Logger) -> Unit
+pub fn TrayError::to_repr(Self) -> @debug.Repr
+pub fn TrayError::to_string(Self) -> String
 
 // Types and methods
 

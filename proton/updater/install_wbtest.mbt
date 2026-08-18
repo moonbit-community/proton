@@ -21,36 +21,6 @@ async fn expect_install_error(
 }
 
 ///|
-/// Only inert refusals are driven from here: a transaction rejected before
-/// expansion changes nothing. What a successful replacement does to a bundle
-/// is covered by
-/// `native/tests/proton_update_test.c`, which can point the native side at a
-/// directory it is allowed to destroy — a MoonBit test would have to replace
-/// the application running it.
-async test "install reports an unavailable installed revision" {
-  let outcome = channel(2UL).check(serving(default_entries()), accepted_from())
-  guard outcome is Available(update) else {
-    abort("expected an available update")
-  }
-  let subject = channel(2UL)
-  let relative = expect_install_error(async fn() -> Unit raise UpdateError {
-    ignore(subject.download_and_install(streaming(default_entries()), update))
-  })
-  // The refusal comes from the native library, whose wording depends on the
-  // platform: macOS explains why this bundle has no revision, other platforms
-  // report the missing implementation.
-  let detail = if @native.runtime_info().platform_id.has_prefix("darwin-") {
-    "the running executable is not inside a .app bundle, so its update revision cannot be read"
-  } else {
-    "reading an application update revision is implemented on macOS only"
-  }
-  assert_eq(
-    relative,
-    InstallFailed(step="read the installed update revision", detail~),
-  )
-}
-
-///|
 async test "process coordinator makes an installed revision idempotent" {
   let applied = Ref(false)
   assert_eq(

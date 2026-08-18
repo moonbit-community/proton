@@ -20,6 +20,11 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type FsError derive(Eq, @debug.Debug)
+pub fn FsError::equal(Self, Self) -> Bool
+pub fn FsError::not_equal(Self, Self) -> Bool
+pub fn FsError::output(Self, &Logger) -> Unit
+pub fn FsError::to_repr(Self) -> @debug.Repr
+pub fn FsError::to_string(Self) -> String
 
 // Types and methods
 pub struct PermissionRoot {

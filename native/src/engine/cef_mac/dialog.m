@@ -70,6 +70,10 @@ static NSString *proton_engine_string_from_utf8(
   return text != nil ? [text autorelease] : @"";
 }
 
+static NSString *proton_engine_dialog_label(const char *label) {
+  return proton_engine_string_from_utf8(label, (int32_t)strlen(label));
+}
+
 static void proton_engine_dialog_lock(void) {
   pthread_mutex_lock(&g_dialog_lock);
 }
@@ -260,7 +264,8 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
 - (instancetype)initWithRequest:(proton_engine_dialog_request_t *)request
                            title:(NSString *)title
                          message:(NSString *)message
-                           level:(int32_t)level;
+                           level:(int32_t)level
+                         okLabel:(NSString *)ok_label;
 - (void)show;
 - (void)tick;
 - (void)finish;
@@ -272,7 +277,8 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
 - (instancetype)initWithRequest:(proton_engine_dialog_request_t *)request
                            title:(NSString *)title
                          message:(NSString *)message
-                           level:(int32_t)level {
+                           level:(int32_t)level
+                         okLabel:(NSString *)ok_label {
   self = [super init];
   if (self != nil) {
     request_ = request;
@@ -280,7 +286,7 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
     [alert_ setMessageText:title];
     [alert_ setInformativeText:message];
     [alert_ setAlertStyle:proton_engine_alert_style(level)];
-    NSButton *button = [alert_ addButtonWithTitle:@"OK"];
+    NSButton *button = [alert_ addButtonWithTitle:ok_label];
     [button setTarget:self];
     [button setAction:@selector(dismiss:)];
     session_ = nil;
@@ -501,6 +507,11 @@ int32_t proton_engine_runtime_begin_message_dialog(
         "native dialogs are not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
+  if (proton_engine_runtime_dialog_ok_label(runtime)[0] == '\0') {
+    proton_engine_set_message(error, error_len,
+                              "runtime dialog label is not configured");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
   proton_engine_dialog_request_t *request = NULL;
   int32_t status = proton_engine_dialog_request_create_for_owner(
       PROTON_ENGINE_DIALOG_OWNER_RUNTIME, (uintptr_t)runtime, &request,
@@ -510,12 +521,15 @@ int32_t proton_engine_runtime_begin_message_dialog(
   }
   NSString *title = proton_engine_string_from_utf8(title_utf8, title_len);
   NSString *message = proton_engine_string_from_utf8(message_utf8, message_len);
+  NSString *ok_label = proton_engine_dialog_label(
+      proton_engine_runtime_dialog_ok_label(runtime));
   proton_engine_dialog_request_retain(request);
   ProtonRuntimeAlertController *controller =
       [[ProtonRuntimeAlertController alloc] initWithRequest:request
                                                      title:title
                                                    message:message
-                                                     level:level];
+                                                     level:level
+                                                   okLabel:ok_label];
   if (controller == nil) {
     proton_engine_dialog_complete(request, PROTON_ERR_PLATFORM, NULL,
                                   "failed to create runtime alert");
@@ -665,6 +679,12 @@ int32_t proton_engine_window_begin_message_dialog(
     char *error,
     size_t error_len) {
 
+  proton_engine_runtime_t *runtime = proton_engine_window_get_runtime(window);
+  if (proton_engine_runtime_dialog_ok_label(runtime)[0] == '\0') {
+    proton_engine_set_message(error, error_len,
+                              "runtime dialog label is not configured");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
   proton_engine_dialog_request_t *request = NULL;
   int32_t status = proton_engine_dialog_request_create(
       window, &request, out_dialog, error, error_len);
@@ -680,7 +700,9 @@ int32_t proton_engine_window_begin_message_dialog(
         [alert setMessageText:title];
         [alert setInformativeText:message];
         [alert setAlertStyle:proton_engine_alert_style(level)];
-        [alert addButtonWithTitle:@"OK"];
+        [alert addButtonWithTitle:proton_engine_dialog_label(
+                                      proton_engine_runtime_dialog_ok_label(
+                                          runtime))];
         [alert beginSheetModalForWindow:parent
                       completionHandler:^(NSModalResponse returnCode) {
                         (void)returnCode;
@@ -714,6 +736,13 @@ int32_t proton_engine_window_begin_confirm_dialog(
     char *error,
     size_t error_len) {
 
+  proton_engine_runtime_t *runtime = proton_engine_window_get_runtime(window);
+  if (proton_engine_runtime_dialog_ok_label(runtime)[0] == '\0' ||
+      proton_engine_runtime_dialog_cancel_label(runtime)[0] == '\0') {
+    proton_engine_set_message(error, error_len,
+                              "runtime dialog labels are not configured");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
   proton_engine_dialog_request_t *request = NULL;
   int32_t status = proton_engine_dialog_request_create(
       window, &request, out_dialog, error, error_len);
@@ -729,8 +758,12 @@ int32_t proton_engine_window_begin_confirm_dialog(
         [alert setMessageText:title];
         [alert setInformativeText:message];
         [alert setAlertStyle:proton_engine_alert_style(level)];
-        [alert addButtonWithTitle:@"OK"];
-        [alert addButtonWithTitle:@"Cancel"];
+        [alert addButtonWithTitle:proton_engine_dialog_label(
+                                      proton_engine_runtime_dialog_ok_label(
+                                          runtime))];
+        [alert addButtonWithTitle:proton_engine_dialog_label(
+                                      proton_engine_runtime_dialog_cancel_label(
+                                          runtime))];
         [alert beginSheetModalForWindow:parent
                       completionHandler:^(NSModalResponse returnCode) {
                         const char *result =

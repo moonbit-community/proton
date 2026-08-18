@@ -1,0 +1,56 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/internal/locale"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror LocaleParseError {
+  Empty
+  InvalidCharacter(position~ : Int, character~ : Char)
+  EmptySubtag(index~ : Int)
+  OverlongSubtag(index~ : Int, value~ : String)
+  InvalidSubtag(index~ : Int, value~ : String, expectation~ : String)
+  DuplicateVariant(variant~ : String)
+  DuplicateExtension(singleton~ : String)
+} derive(Eq, @debug.Debug)
+pub fn LocaleParseError::equal(Self, Self) -> Bool
+pub fn LocaleParseError::message(Self) -> String
+pub fn LocaleParseError::not_equal(Self, Self) -> Bool
+pub fn LocaleParseError::output(Self, &Logger) -> Unit
+pub fn LocaleParseError::to_repr(Self) -> @debug.Repr
+pub fn LocaleParseError::to_string(Self) -> String
+
+// Types and methods
+pub struct Locale {
+  canonical : String
+  language_value : String
+  script_value : String?
+  region_value : String?
+  matching_value : String?
+} derive(Eq, @debug.Debug)
+pub fn Locale::equal(Self, Self) -> Bool
+pub fn Locale::language(Self) -> String
+pub fn Locale::not_equal(Self, Self) -> Bool
+pub fn Locale::parse(String) -> Self raise LocaleParseError
+pub fn Locale::region(Self) -> String?
+pub fn Locale::script(Self) -> String?
+pub fn Locale::to_repr(Self) -> @debug.Repr
+pub fn Locale::to_string(Self) -> String
+
+pub struct LocalePreferences {
+  locale_value : Locale
+  preferred_values : Array[Locale]
+} derive(Eq, @debug.Debug)
+pub fn LocalePreferences::equal(Self, Self) -> Bool
+pub fn LocalePreferences::locale(Self) -> Locale
+pub fn LocalePreferences::not_equal(Self, Self) -> Bool
+pub fn LocalePreferences::preferred_languages(Self) -> Array[Locale]
+pub fn LocalePreferences::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

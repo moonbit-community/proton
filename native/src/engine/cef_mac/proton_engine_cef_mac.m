@@ -69,6 +69,7 @@
 
 #define PROTON_ENGINE_MAX_PATH_BYTES 4096
 #define PROTON_ENGINE_MAX_URL_BYTES 131072
+#define PROTON_ENGINE_MAX_LABEL_BYTES 256
 #define PROTON_ENGINE_MAX_BRIDGE_REQUESTS 256
 #define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
 #define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
@@ -99,6 +100,8 @@ struct proton_engine_runtime {
   size_t bridge_cancellation_count;
   pthread_mutex_t bridge_lock;
   int bridge_lock_initialized;
+  char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
 };
 
 struct proton_engine_window {
@@ -283,6 +286,10 @@ typedef struct {
   char locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   char cache_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   char framework_dir[PROTON_ENGINE_MAX_PATH_BYTES];
+  char locale[PROTON_ENGINE_MAX_PATH_BYTES];
+  char accept_languages[PROTON_ENGINE_MAX_PATH_BYTES];
+  char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   int32_t remote_debugging_port;
   int headless;
   int persist_session_cookies;
@@ -958,6 +965,21 @@ uint64_t proton_engine_window_native_id(proton_engine_window_t *window) {
 
 int proton_engine_runtime_is_headless(proton_engine_runtime_t *runtime) {
   return runtime != NULL && runtime->headless;
+}
+
+const char *proton_engine_runtime_dialog_ok_label(
+    proton_engine_runtime_t *runtime) {
+  return runtime != NULL ? runtime->dialog_ok_label : "";
+}
+
+const char *proton_engine_runtime_dialog_cancel_label(
+    proton_engine_runtime_t *runtime) {
+  return runtime != NULL ? runtime->dialog_cancel_label : "";
+}
+
+proton_engine_runtime_t *proton_engine_window_get_runtime(
+    proton_engine_window_t *window) {
+  return window != NULL ? window->runtime : NULL;
 }
 
 int proton_engine_window_is_headless(proton_engine_window_t *window) {
@@ -2773,6 +2795,18 @@ static int32_t proton_engine_parse_runtime_config(
   if (!proton_engine_dir_exists(config->locales_dir)) {
     config->locales_dir[0] = '\0';
   }
+  proton_engine_parse_json_string_field(config_json, "locale",
+                                        config->locale,
+                                        sizeof(config->locale));
+  proton_engine_parse_json_string_array_field(
+      config_json, "accept_languages", config->accept_languages,
+      sizeof(config->accept_languages));
+  proton_engine_parse_json_string_field(
+      config_json, "framework_dialog_ok_label", config->dialog_ok_label,
+      sizeof(config->dialog_ok_label));
+  proton_engine_parse_json_string_field(
+      config_json, "framework_dialog_cancel_label",
+      config->dialog_cancel_label, sizeof(config->dialog_cancel_label));
   char frameworks_dir[PROTON_ENGINE_MAX_PATH_BYTES] = {0};
   if (!proton_engine_join_path(frameworks_dir, sizeof(frameworks_dir),
                                config->runtime_root, "Frameworks") ||
@@ -3116,7 +3150,6 @@ static void proton_engine_ensure_appkit(void) {
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
   proton_engine_launch_input_install();
   [NSApp finishLaunching];
-  proton_engine_menu_install_default();
 }
 
 static char *proton_engine_data_url_for_html(const char *html) {
@@ -3276,6 +3309,9 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   if (config.locales_dir[0] != '\0') {
     proton_engine_set_string(&settings.locales_dir_path, config.locales_dir);
   }
+  proton_engine_set_string(&settings.locale, config.locale);
+  proton_engine_set_string(&settings.accept_language_list,
+                           config.accept_languages);
   proton_engine_set_string(&settings.root_cache_path, config.cache_dir);
   if (!temporary_profile) {
     proton_engine_set_string(&settings.cache_path, config.cache_dir);
@@ -3286,6 +3322,8 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
     cef_string_clear(&settings.framework_dir_path);
     cef_string_clear(&settings.resources_dir_path);
     cef_string_clear(&settings.locales_dir_path);
+    cef_string_clear(&settings.locale);
+    cef_string_clear(&settings.accept_language_list);
     cef_string_clear(&settings.cache_path);
     cef_string_clear(&settings.root_cache_path);
     proton_engine_reset_external_message_pump();
@@ -3301,6 +3339,8 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   cef_string_clear(&settings.framework_dir_path);
   cef_string_clear(&settings.resources_dir_path);
   cef_string_clear(&settings.locales_dir_path);
+  cef_string_clear(&settings.locale);
+  cef_string_clear(&settings.accept_language_list);
   cef_string_clear(&settings.cache_path);
   cef_string_clear(&settings.root_cache_path);
 
@@ -3316,6 +3356,11 @@ int32_t proton_engine_runtime_create_json(const char *config_json,
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
   runtime->next_bridge_request_id = 1;
+  snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
+           config.dialog_ok_label);
+  snprintf(runtime->dialog_cancel_label,
+           sizeof(runtime->dialog_cancel_label), "%s",
+           config.dialog_cancel_label);
   if (pthread_mutex_init(&runtime->bridge_lock, NULL) == 0) {
     runtime->bridge_lock_initialized = 1;
   }

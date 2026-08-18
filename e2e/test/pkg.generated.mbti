@@ -1,11 +1,221 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonbit-community/proton/e2e/test"
 
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
+type AppCommandsProbeResult derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn AppCommandsProbeResult::equal(Self, Self) -> Bool
+pub fn AppCommandsProbeResult::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AppCommandsProbeResult::not_equal(Self, Self) -> Bool
+pub fn AppCommandsProbeResult::to_json(Self) -> Json
+pub fn AppCommandsProbeResult::to_repr(Self) -> @debug.Repr
+
+type AssetSidecarScenarioProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn AssetSidecarScenarioProbe::equal(Self, Self) -> Bool
+pub fn AssetSidecarScenarioProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AssetSidecarScenarioProbe::not_equal(Self, Self) -> Bool
+pub fn AssetSidecarScenarioProbe::to_repr(Self) -> @debug.Repr
+
+type AsyncAddScenarioProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn AsyncAddScenarioProbe::equal(Self, Self) -> Bool
+pub fn AsyncAddScenarioProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AsyncAddScenarioProbe::not_equal(Self, Self) -> Bool
+pub fn AsyncAddScenarioProbe::to_repr(Self) -> @debug.Repr
+
+type AsyncSumScenarioReply derive(Eq, @debug.Debug, @json.FromJson)
+pub fn AsyncSumScenarioReply::equal(Self, Self) -> Bool
+pub fn AsyncSumScenarioReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AsyncSumScenarioReply::not_equal(Self, Self) -> Bool
+pub fn AsyncSumScenarioReply::to_repr(Self) -> @debug.Repr
+
+type AttributeEventProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn AttributeEventProbe::equal(Self, Self) -> Bool
+pub fn AttributeEventProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AttributeEventProbe::not_equal(Self, Self) -> Bool
+pub fn AttributeEventProbe::to_repr(Self) -> @debug.Repr
+
+type AttributeReplyProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn AttributeReplyProbe::equal(Self, Self) -> Bool
+pub fn AttributeReplyProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AttributeReplyProbe::not_equal(Self, Self) -> Bool
+pub fn AttributeReplyProbe::to_repr(Self) -> @debug.Repr
+
+type AttributeScenarioProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn AttributeScenarioProbe::equal(Self, Self) -> Bool
+pub fn AttributeScenarioProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AttributeScenarioProbe::not_equal(Self, Self) -> Bool
+pub fn AttributeScenarioProbe::to_repr(Self) -> @debug.Repr
+
+type BridgeContractProbe derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn BridgeContractProbe::equal(Self, Self) -> Bool
+pub fn BridgeContractProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn BridgeContractProbe::not_equal(Self, Self) -> Bool
+pub fn BridgeContractProbe::to_json(Self) -> Json
+pub fn BridgeContractProbe::to_repr(Self) -> @debug.Repr
+
+type DevDoneReplyProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn DevDoneReplyProbe::equal(Self, Self) -> Bool
+pub fn DevDoneReplyProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DevDoneReplyProbe::not_equal(Self, Self) -> Bool
+pub fn DevDoneReplyProbe::to_repr(Self) -> @debug.Repr
+
+type DevEventProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn DevEventProbe::equal(Self, Self) -> Bool
+pub fn DevEventProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DevEventProbe::not_equal(Self, Self) -> Bool
+pub fn DevEventProbe::to_repr(Self) -> @debug.Repr
+
+type DevExtensionFrontendState
+
+type DevExtensionProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn DevExtensionProbe::equal(Self, Self) -> Bool
+pub fn DevExtensionProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DevExtensionProbe::not_equal(Self, Self) -> Bool
+pub fn DevExtensionProbe::to_repr(Self) -> @debug.Repr
+
+type DevExtensionReloadProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn DevExtensionReloadProbe::equal(Self, Self) -> Bool
+pub fn DevExtensionReloadProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DevExtensionReloadProbe::not_equal(Self, Self) -> Bool
+pub fn DevExtensionReloadProbe::to_repr(Self) -> @debug.Repr
+
+type DevTickReplyProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn DevTickReplyProbe::equal(Self, Self) -> Bool
+pub fn DevTickReplyProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DevTickReplyProbe::not_equal(Self, Self) -> Bool
+pub fn DevTickReplyProbe::to_repr(Self) -> @debug.Repr
+
+type DevTickerReplyProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn DevTickerReplyProbe::equal(Self, Self) -> Bool
+pub fn DevTickerReplyProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DevTickerReplyProbe::not_equal(Self, Self) -> Bool
+pub fn DevTickerReplyProbe::to_repr(Self) -> @debug.Repr
+
+type EventCaptureProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn EventCaptureProbe::equal(Self, Self) -> Bool
+pub fn EventCaptureProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventCaptureProbe::not_equal(Self, Self) -> Bool
+pub fn EventCaptureProbe::to_repr(Self) -> @debug.Repr
+
+type EventDoneReplyProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn EventDoneReplyProbe::equal(Self, Self) -> Bool
+pub fn EventDoneReplyProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventDoneReplyProbe::not_equal(Self, Self) -> Bool
+pub fn EventDoneReplyProbe::to_repr(Self) -> @debug.Repr
+
+type EventReloadScenarioProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn EventReloadScenarioProbe::equal(Self, Self) -> Bool
+pub fn EventReloadScenarioProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventReloadScenarioProbe::not_equal(Self, Self) -> Bool
+pub fn EventReloadScenarioProbe::to_repr(Self) -> @debug.Repr
+
+type EventScenarioProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn EventScenarioProbe::equal(Self, Self) -> Bool
+pub fn EventScenarioProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventScenarioProbe::not_equal(Self, Self) -> Bool
+pub fn EventScenarioProbe::to_repr(Self) -> @debug.Repr
+
+type EventTickReplyProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn EventTickReplyProbe::equal(Self, Self) -> Bool
+pub fn EventTickReplyProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventTickReplyProbe::not_equal(Self, Self) -> Bool
+pub fn EventTickReplyProbe::to_repr(Self) -> @debug.Repr
+
+type EventTickerReplyProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn EventTickerReplyProbe::equal(Self, Self) -> Bool
+pub fn EventTickerReplyProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EventTickerReplyProbe::not_equal(Self, Self) -> Bool
+pub fn EventTickerReplyProbe::to_repr(Self) -> @debug.Repr
+
+type MultiWindowPageProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn MultiWindowPageProbe::equal(Self, Self) -> Bool
+pub fn MultiWindowPageProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MultiWindowPageProbe::not_equal(Self, Self) -> Bool
+pub fn MultiWindowPageProbe::to_repr(Self) -> @debug.Repr
+
+type MultiWindowProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn MultiWindowProbe::equal(Self, Self) -> Bool
+pub fn MultiWindowProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MultiWindowProbe::not_equal(Self, Self) -> Bool
+pub fn MultiWindowProbe::to_repr(Self) -> @debug.Repr
+
+type MultiWindowResponseProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn MultiWindowResponseProbe::equal(Self, Self) -> Bool
+pub fn MultiWindowResponseProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MultiWindowResponseProbe::not_equal(Self, Self) -> Bool
+pub fn MultiWindowResponseProbe::to_repr(Self) -> @debug.Repr
+
+type OriginProbeResult derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn OriginProbeResult::equal(Self, Self) -> Bool
+pub fn OriginProbeResult::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn OriginProbeResult::not_equal(Self, Self) -> Bool
+pub fn OriginProbeResult::to_json(Self) -> Json
+pub fn OriginProbeResult::to_repr(Self) -> @debug.Repr
+
+type ProcessRow derive(Eq, @debug.Debug)
+pub fn ProcessRow::equal(Self, Self) -> Bool
+pub fn ProcessRow::not_equal(Self, Self) -> Bool
+pub fn ProcessRow::to_repr(Self) -> @debug.Repr
+
+type ProcessRowJson derive(Eq, @debug.Debug, @json.FromJson)
+pub fn ProcessRowJson::equal(Self, Self) -> Bool
+pub fn ProcessRowJson::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ProcessRowJson::not_equal(Self, Self) -> Bool
+pub fn ProcessRowJson::to_repr(Self) -> @debug.Repr
+
+type ProcessSnapshot
+
+type QueueFullProbeResult derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn QueueFullProbeResult::equal(Self, Self) -> Bool
+pub fn QueueFullProbeResult::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn QueueFullProbeResult::not_equal(Self, Self) -> Bool
+pub fn QueueFullProbeResult::to_json(Self) -> Json
+pub fn QueueFullProbeResult::to_repr(Self) -> @debug.Repr
+
+type ReloadProbeResult derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ReloadProbeResult::equal(Self, Self) -> Bool
+pub fn ReloadProbeResult::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReloadProbeResult::not_equal(Self, Self) -> Bool
+pub fn ReloadProbeResult::to_json(Self) -> Json
+pub fn ReloadProbeResult::to_repr(Self) -> @debug.Repr
+
+type ScreenshotProbeResult derive(Eq, @debug.Debug)
+pub fn ScreenshotProbeResult::equal(Self, Self) -> Bool
+pub fn ScreenshotProbeResult::not_equal(Self, Self) -> Bool
+pub fn ScreenshotProbeResult::to_repr(Self) -> @debug.Repr
+
+type ShutdownProbeResult derive(Eq, @debug.Debug)
+pub fn ShutdownProbeResult::equal(Self, Self) -> Bool
+pub fn ShutdownProbeResult::not_equal(Self, Self) -> Bool
+pub fn ShutdownProbeResult::to_repr(Self) -> @debug.Repr
+
+type SpawnedScenarioApp
+
+type SyncAsyncScenarioProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn SyncAsyncScenarioProbe::equal(Self, Self) -> Bool
+pub fn SyncAsyncScenarioProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SyncAsyncScenarioProbe::not_equal(Self, Self) -> Bool
+pub fn SyncAsyncScenarioProbe::to_repr(Self) -> @debug.Repr
+
+type SyncDoubleScenarioReply derive(Eq, @debug.Debug, @json.FromJson)
+pub fn SyncDoubleScenarioReply::equal(Self, Self) -> Bool
+pub fn SyncDoubleScenarioReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SyncDoubleScenarioReply::not_equal(Self, Self) -> Bool
+pub fn SyncDoubleScenarioReply::to_repr(Self) -> @debug.Repr
+
+type WebContentsViewPageProbe derive(Eq, @debug.Debug, @json.FromJson)
+pub fn WebContentsViewPageProbe::equal(Self, Self) -> Bool
+pub fn WebContentsViewPageProbe::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn WebContentsViewPageProbe::not_equal(Self, Self) -> Bool
+pub fn WebContentsViewPageProbe::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

@@ -9,6 +9,10 @@ pub(all) suberror ProcessError {
   WaitFailed(detail~ : String)
   KillFailed(detail~ : String)
 } derive(Eq)
+pub fn ProcessError::equal(Self, Self) -> Bool
+pub fn ProcessError::not_equal(Self, Self) -> Bool
+pub fn ProcessError::output(Self, &Logger) -> Unit
+pub fn ProcessError::to_string(Self) -> String
 pub impl Show for ProcessError
 
 // Types and methods

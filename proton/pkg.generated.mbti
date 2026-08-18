@@ -6,6 +6,7 @@ import {
   "moonbit-community/proton/command",
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension",
+  "moonbit-community/proton/internal/locale",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/native",
   "moonbit-community/proton/updater",
@@ -43,6 +44,8 @@ pub fn runtime_info_json() -> String raise @native.NativeError
 
 pub fn screens() -> Array[@native.ScreenInfo] raise @native.NativeError
 
+pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError
+
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn view(String, width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, background_color? : String) -> @native.ViewConfig
@@ -55,6 +58,9 @@ pub(all) suberror AppCleanupError {
   RuntimeDestroy(@native.NativeError)
 } derive(@debug.Debug)
 pub fn AppCleanupError::message(Self) -> String
+pub fn AppCleanupError::output(Self, &Logger) -> Unit
+pub fn AppCleanupError::to_repr(Self) -> @debug.Repr
+pub fn AppCleanupError::to_string(Self) -> String
 
 pub(all) suberror AppConfigurationError {
   InvalidSetting(name~ : String, message~ : String)
@@ -69,6 +75,9 @@ pub(all) suberror AppConfigurationError {
   MissingPermissionGrant(extension_id~ : String)
 } derive(@debug.Debug)
 pub fn AppConfigurationError::message(Self) -> String
+pub fn AppConfigurationError::output(Self, &Logger) -> Unit
+pub fn AppConfigurationError::to_repr(Self) -> @debug.Repr
+pub fn AppConfigurationError::to_string(Self) -> String
 
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
@@ -76,13 +85,19 @@ pub(all) suberror AppEntryError {
   ClosedDuringStartup
 } derive(@debug.Debug)
 pub fn AppEntryError::message(Self) -> String
+pub fn AppEntryError::output(Self, &Logger) -> Unit
+pub fn AppEntryError::to_repr(Self) -> @debug.Repr
+pub fn AppEntryError::to_string(Self) -> String
 
 pub(all) suberror AppPathError {
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
   PlatformProbe(@native.NativeError)
 } derive(Eq, @debug.Debug)
+pub fn AppPathError::equal(Self, Self) -> Bool
 pub fn AppPathError::message(Self) -> String
+pub fn AppPathError::not_equal(Self, Self) -> Bool
+pub fn AppPathError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror AppRunError {
   EventLoopError(String)
@@ -98,6 +113,9 @@ pub(all) suberror AppRunError {
   UnexpectedTaskFailure(detail~ : String)
 } derive(@debug.Debug)
 pub fn AppRunError::message(Self) -> String
+pub fn AppRunError::output(Self, &Logger) -> Unit
+pub fn AppRunError::to_repr(Self) -> @debug.Repr
+pub fn AppRunError::to_string(Self) -> String
 
 pub(all) suberror CommandExtensionLifecycleError {
   ApplicationRegistrationFailed(detail~ : String)
@@ -105,6 +123,9 @@ pub(all) suberror CommandExtensionLifecycleError {
   DestroyFailed(extension_id~ : String, detail~ : String)
 } derive(@debug.Debug)
 pub fn CommandExtensionLifecycleError::message(Self) -> String
+pub fn CommandExtensionLifecycleError::output(Self, &Logger) -> Unit
+pub fn CommandExtensionLifecycleError::to_repr(Self) -> @debug.Repr
+pub fn CommandExtensionLifecycleError::to_string(Self) -> String
 
 pub(all) suberror LifecycleHookError {
   ApplicationStart(index~ : Int, detail~ : String)
@@ -113,12 +134,26 @@ pub(all) suberror LifecycleHookError {
   WindowClose(index~ : Int, detail~ : String)
 } derive(@debug.Debug)
 pub fn LifecycleHookError::message(Self) -> String
+pub fn LifecycleHookError::output(Self, &Logger) -> Unit
+pub fn LifecycleHookError::to_repr(Self) -> @debug.Repr
+pub fn LifecycleHookError::to_string(Self) -> String
 
 pub(all) suberror NotificationDeliveryError {
   Native(@native.NativeError)
   WaitInterrupted(detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn NotificationDeliveryError::equal(Self, Self) -> Bool
 pub fn NotificationDeliveryError::message(Self) -> String
+pub fn NotificationDeliveryError::not_equal(Self, Self) -> Bool
+pub fn NotificationDeliveryError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror SystemLocaleError {
+  NativeQuery(@native.NativeError)
+} derive(@debug.Debug)
+pub fn SystemLocaleError::message(Self) -> String
+pub fn SystemLocaleError::output(Self, &Logger) -> Unit
+pub fn SystemLocaleError::to_repr(Self) -> @debug.Repr
+pub fn SystemLocaleError::to_string(Self) -> String
 
 pub(all) suberror WindowSessionError {
   UnknownWindow(id~ : String)
@@ -132,6 +167,9 @@ pub(all) suberror WindowSessionError {
   StartupFailed(id~ : String, error~ : AppRunError)
 } derive(@debug.Debug)
 pub fn WindowSessionError::message(Self) -> String
+pub fn WindowSessionError::output(Self, &Logger) -> Unit
+pub fn WindowSessionError::to_repr(Self) -> @debug.Repr
+pub fn WindowSessionError::to_string(Self) -> String
 
 // Types and methods
 type App
@@ -149,6 +187,7 @@ pub fn App::expose(Self, @extension.Extension, window? : String, origin? : @mani
 pub fn App::extension(Self, @extension.Extension) -> Self
 pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
+pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, @native.MenuBar) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
@@ -174,7 +213,10 @@ pub fn App::with_view(Self, String, @native.ViewConfig) -> Self
 pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
+  locale_preferences : @locale.LocalePreferences
 }
+pub fn ApplicationContext::locale(Self) -> @locale.Locale
+pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::windows(Self) -> WindowManager
 
@@ -202,17 +244,26 @@ pub(all) enum BrowserPermissionDecision {
   Allow
   Deny
 } derive(Eq, @debug.Debug)
+pub fn BrowserPermissionDecision::equal(Self, Self) -> Bool
+pub fn BrowserPermissionDecision::not_equal(Self, Self) -> Bool
+pub fn BrowserPermissionDecision::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CertificateError {
   url : String
   error_code : Int
 } derive(Eq, @debug.Debug)
+pub fn CertificateError::equal(Self, Self) -> Bool
+pub fn CertificateError::not_equal(Self, Self) -> Bool
+pub fn CertificateError::to_repr(Self) -> @debug.Repr
 
 pub(all) enum DownloadDecision {
   Deny
   ShowSaveDialog
   SaveTo(String)
 } derive(Eq, @debug.Debug)
+pub fn DownloadDecision::equal(Self, Self) -> Bool
+pub fn DownloadDecision::not_equal(Self, Self) -> Bool
+pub fn DownloadDecision::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DownloadEvent {
   id : Int
@@ -221,22 +272,34 @@ pub(all) struct DownloadEvent {
   total_bytes : Int64
   percent : Int
 } derive(Eq, @debug.Debug)
+pub fn DownloadEvent::equal(Self, Self) -> Bool
+pub fn DownloadEvent::not_equal(Self, Self) -> Bool
+pub fn DownloadEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DownloadRequest {
   id : Int
   url : String
   suggested_name : String
 } derive(Eq, @debug.Debug)
+pub fn DownloadRequest::equal(Self, Self) -> Bool
+pub fn DownloadRequest::not_equal(Self, Self) -> Bool
+pub fn DownloadRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MediaPermissionRequest {
   origin : String
   permissions : Int
 } derive(Eq, @debug.Debug)
+pub fn MediaPermissionRequest::equal(Self, Self) -> Bool
+pub fn MediaPermissionRequest::not_equal(Self, Self) -> Bool
+pub fn MediaPermissionRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) enum NavigationDecision {
   Allow
   Deny
 } derive(Eq, @debug.Debug)
+pub fn NavigationDecision::equal(Self, Self) -> Bool
+pub fn NavigationDecision::not_equal(Self, Self) -> Bool
+pub fn NavigationDecision::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NavigationRequest {
   url : String
@@ -244,6 +307,9 @@ pub(all) struct NavigationRequest {
   user_gesture : Bool
   redirect : Bool
 } derive(Eq, @debug.Debug)
+pub fn NavigationRequest::equal(Self, Self) -> Bool
+pub fn NavigationRequest::not_equal(Self, Self) -> Bool
+pub fn NavigationRequest::to_repr(Self) -> @debug.Repr
 
 pub struct PendingUpdate {
   version : String
@@ -265,12 +331,18 @@ pub(all) enum PopupDecision {
   OpenInCurrent
   OpenInWindow(String)
 } derive(Eq, @debug.Debug)
+pub fn PopupDecision::equal(Self, Self) -> Bool
+pub fn PopupDecision::not_equal(Self, Self) -> Bool
+pub fn PopupDecision::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PopupRequest {
   url : String
   disposition : Int
   user_gesture : Bool
 } derive(Eq, @debug.Debug)
+pub fn PopupRequest::equal(Self, Self) -> Bool
+pub fn PopupRequest::not_equal(Self, Self) -> Bool
+pub fn PopupRequest::to_repr(Self) -> @debug.Repr
 
 pub enum UpdateCheck {
   NotConfigured
@@ -282,6 +354,9 @@ pub enum UpdateInstallOutcome {
   Installed
   AlreadyInstalled
 } derive(Eq, @debug.Debug)
+pub fn UpdateInstallOutcome::equal(Self, Self) -> Bool
+pub fn UpdateInstallOutcome::not_equal(Self, Self) -> Bool
+pub fn UpdateInstallOutcome::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ViewEvent {
   LoadingChanged(is_loading~ : Bool)
@@ -289,6 +364,9 @@ pub(all) enum ViewEvent {
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
 } derive(Eq, @debug.Debug)
+pub fn ViewEvent::equal(Self, Self) -> Bool
+pub fn ViewEvent::not_equal(Self, Self) -> Bool
+pub fn ViewEvent::to_repr(Self) -> @debug.Repr
 
 pub struct ViewHandle {
   id : String
@@ -324,6 +402,9 @@ pub(all) enum WindowCloseDecision {
   Allow
   Deny
 } derive(Eq, @debug.Debug)
+pub fn WindowCloseDecision::equal(Self, Self) -> Bool
+pub fn WindowCloseDecision::not_equal(Self, Self) -> Bool
+pub fn WindowCloseDecision::to_repr(Self) -> @debug.Repr
 
 pub struct WindowContext {
   id : String
@@ -332,10 +413,13 @@ pub struct WindowContext {
   windows : WindowManager
   tasks : @async.TaskGroup[Unit]
   events : WindowEventEmitter
+  locale_preferences : @locale.LocalePreferences
 }
 pub fn WindowContext::events(Self) -> WindowEventEmitter
 pub fn WindowContext::handle(Self) -> WindowHandle
 pub fn WindowContext::id(Self) -> String
+pub fn WindowContext::locale(Self) -> @locale.Locale
+pub fn WindowContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn WindowContext::window(Self) -> @native.WindowRef
 pub fn WindowContext::windows(Self) -> WindowManager
@@ -343,6 +427,9 @@ pub fn WindowContext::windows(Self) -> WindowManager
 pub(all) enum WindowEvent {
   StateChanged(@native.WindowState)
 } derive(Eq, @debug.Debug)
+pub fn WindowEvent::equal(Self, Self) -> Bool
+pub fn WindowEvent::not_equal(Self, Self) -> Bool
+pub fn WindowEvent::to_repr(Self) -> @debug.Repr
 
 pub struct WindowEventEmitter {
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
@@ -412,11 +499,19 @@ pub using @core {type AppCommandRequestContext as CommandContext}
 
 pub using @command {type CommandRegistrar}
 
+pub using @locale {type Locale}
+
+pub using @locale {type LocaleParseError}
+
 pub using @native {type Menu}
 
 pub using @native {type MenuBar}
 
 pub using @native {type MenuItem}
+
+pub using @native {type MenuItemRole}
+
+pub using @native {type MenuRole}
 
 pub using @native {type NativeError}
 

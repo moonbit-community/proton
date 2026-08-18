@@ -3,10 +3,6 @@ import {
   "moonbitlang/core/encoding/utf8",
 }
 
-import {
-  "moonbit-community/proton_keepawake/testsupport",
-} for "wbtest"
-
 supported_targets = "native"
 
 options(

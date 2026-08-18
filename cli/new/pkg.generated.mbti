@@ -25,7 +25,12 @@ pub(all) suberror NewProjectInputError {
   InvalidBundleIdentifier(identifier~ : String, reason~ : String)
   EmptyProjectDirectory
 } derive(Eq, @debug.Debug)
+pub fn NewProjectInputError::equal(Self, Self) -> Bool
 pub fn NewProjectInputError::message(Self) -> String
+pub fn NewProjectInputError::not_equal(Self, Self) -> Bool
+pub fn NewProjectInputError::output(Self, &Logger) -> Unit
+pub fn NewProjectInputError::to_repr(Self) -> @debug.Repr
+pub fn NewProjectInputError::to_string(Self) -> String
 
 pub(all) suberror NewProjectTargetError {
   NotDirectory(path~ : String)
@@ -33,12 +38,22 @@ pub(all) suberror NewProjectTargetError {
   ContainsMoonModule(path~ : String)
   NotEmpty(path~ : String)
 } derive(Eq, @debug.Debug)
+pub fn NewProjectTargetError::equal(Self, Self) -> Bool
 pub fn NewProjectTargetError::message(Self) -> String
+pub fn NewProjectTargetError::not_equal(Self, Self) -> Bool
+pub fn NewProjectTargetError::output(Self, &Logger) -> Unit
+pub fn NewProjectTargetError::to_repr(Self) -> @debug.Repr
+pub fn NewProjectTargetError::to_string(Self) -> String
 
 pub(all) suberror NewProjectTemplateError {
   UnresolvedPlaceholder(template~ : String)
 } derive(Eq, @debug.Debug)
+pub fn NewProjectTemplateError::equal(Self, Self) -> Bool
 pub fn NewProjectTemplateError::message(Self) -> String
+pub fn NewProjectTemplateError::not_equal(Self, Self) -> Bool
+pub fn NewProjectTemplateError::output(Self, &Logger) -> Unit
+pub fn NewProjectTemplateError::to_repr(Self) -> @debug.Repr
+pub fn NewProjectTemplateError::to_string(Self) -> String
 
 pub(all) suberror NewProjectToolError {
   Start(tool~ : String, detail~ : String)
@@ -46,7 +61,12 @@ pub(all) suberror NewProjectToolError {
   RegistryDependenciesUnavailable(code~ : Int, project~ : String)
   MoonCheckFailed(code~ : Int, project~ : String)
 } derive(Eq, @debug.Debug)
+pub fn NewProjectToolError::equal(Self, Self) -> Bool
 pub fn NewProjectToolError::message(Self) -> String
+pub fn NewProjectToolError::not_equal(Self, Self) -> Bool
+pub fn NewProjectToolError::output(Self, &Logger) -> Unit
+pub fn NewProjectToolError::to_repr(Self) -> @debug.Repr
+pub fn NewProjectToolError::to_string(Self) -> String
 
 pub(all) suberror NewProjectWriteError {
   CreateDirectory(path~ : String, detail~ : String)
@@ -54,14 +74,28 @@ pub(all) suberror NewProjectWriteError {
   Commit(target~ : String, detail~ : String)
   Rollback(primary~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn NewProjectWriteError::equal(Self, Self) -> Bool
 pub fn NewProjectWriteError::message(Self) -> String
+pub fn NewProjectWriteError::not_equal(Self, Self) -> Bool
+pub fn NewProjectWriteError::output(Self, &Logger) -> Unit
+pub fn NewProjectWriteError::to_repr(Self) -> @debug.Repr
+pub fn NewProjectWriteError::to_string(Self) -> String
 
 // Types and methods
 type NewProjectOptions derive(Eq, @debug.Debug)
+pub fn NewProjectOptions::equal(Self, Self) -> Bool
+pub fn NewProjectOptions::not_equal(Self, Self) -> Bool
+pub fn NewProjectOptions::to_repr(Self) -> @debug.Repr
 
 type PlannedFile derive(Eq, @debug.Debug)
+pub fn PlannedFile::equal(Self, Self) -> Bool
+pub fn PlannedFile::not_equal(Self, Self) -> Bool
+pub fn PlannedFile::to_repr(Self) -> @debug.Repr
 
 type RawNewProjectOptions derive(Eq, @debug.Debug)
+pub fn RawNewProjectOptions::equal(Self, Self) -> Bool
+pub fn RawNewProjectOptions::not_equal(Self, Self) -> Bool
+pub fn RawNewProjectOptions::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

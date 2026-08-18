@@ -5,10 +5,6 @@ import {
   "moonbitlang/core/json",
 }
 
-import {
-  "moonbit-community/proton_tray/testsupport",
-} for "wbtest"
-
 supported_targets = "native"
 
 options(

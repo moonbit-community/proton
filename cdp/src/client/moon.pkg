@@ -9,19 +9,4 @@ import {
   "moonbit-community/proton_cdp/protocol",
 }
 
-import {
-  "moonbitlang/core/json",
-  "moonbitlang/async",
-  "moonbitlang/async/http",
-  "moonbitlang/async/socket",
-  "moonbitlang/async/websocket",
-  "moonbitlang/core/env",
-  "moonbit-community/proton_cdp/protocol",
-  "moonbit-community/proton_cdp/protocol/typed",
-} for "test"
-
-import {
-  "moonbitlang/async/socket",
-} for "wbtest"
-
 supported_targets = "+native"

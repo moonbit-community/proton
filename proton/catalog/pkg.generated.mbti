@@ -27,7 +27,12 @@ pub(all) suberror ExtensionCatalogError {
   InvalidSearchRoot(path~ : String)
   DirectoryReadFailed(path~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn ExtensionCatalogError::equal(Self, Self) -> Bool
 pub fn ExtensionCatalogError::message(Self) -> String
+pub fn ExtensionCatalogError::not_equal(Self, Self) -> Bool
+pub fn ExtensionCatalogError::output(Self, &Logger) -> Unit
+pub fn ExtensionCatalogError::to_repr(Self) -> @debug.Repr
+pub fn ExtensionCatalogError::to_string(Self) -> String
 
 pub(all) suberror ExtensionDescriptorError {
   InvalidMetadataFile(path~ : String)
@@ -36,7 +41,12 @@ pub(all) suberror ExtensionDescriptorError {
   InvalidRoot(path~ : String)
   InvalidMetadata(path~ : String, error~ : ExtensionMetadataError)
 } derive(Eq, @debug.Debug)
+pub fn ExtensionDescriptorError::equal(Self, Self) -> Bool
 pub fn ExtensionDescriptorError::message(Self) -> String
+pub fn ExtensionDescriptorError::not_equal(Self, Self) -> Bool
+pub fn ExtensionDescriptorError::output(Self, &Logger) -> Unit
+pub fn ExtensionDescriptorError::to_repr(Self) -> @debug.Repr
+pub fn ExtensionDescriptorError::to_string(Self) -> String
 
 pub(all) suberror ExtensionMetadataError {
   UnknownField(field~ : String)
@@ -50,7 +60,12 @@ pub(all) suberror ExtensionMetadataError {
   InvalidImportPath(value~ : String, reason~ : String)
   InvalidPackageName(value~ : String, reason~ : String)
 } derive(Eq, @debug.Debug)
+pub fn ExtensionMetadataError::equal(Self, Self) -> Bool
 pub fn ExtensionMetadataError::message(Self) -> String
+pub fn ExtensionMetadataError::not_equal(Self, Self) -> Bool
+pub fn ExtensionMetadataError::output(Self, &Logger) -> Unit
+pub fn ExtensionMetadataError::to_repr(Self) -> @debug.Repr
+pub fn ExtensionMetadataError::to_string(Self) -> String
 
 // Types and methods
 pub struct ExtensionCatalog {
@@ -85,6 +100,7 @@ pub struct ExtensionDescriptor {
 pub fn ExtensionDescriptor::dependencies(Self) -> Array[String]
 pub fn ExtensionDescriptor::description(Self) -> String
 pub fn ExtensionDescriptor::display_name(Self) -> String
+pub fn ExtensionDescriptor::equal(Self, Self) -> Bool
 pub fn ExtensionDescriptor::id(Self) -> String
 pub fn ExtensionDescriptor::js_namespace(Self) -> String
 pub fn ExtensionDescriptor::keywords(Self) -> Array[String]
@@ -92,11 +108,13 @@ pub fn ExtensionDescriptor::license(Self) -> String?
 pub fn ExtensionDescriptor::metadata_path(Self) -> String
 pub fn ExtensionDescriptor::moonbit_import_path(Self) -> String
 pub fn ExtensionDescriptor::new(String, String, String, String, String, String, Array[String], Array[String], String, publish_package? : String?, license? : String?, repository? : String?, readme? : String?, keywords? : Array[String], metadata_path? : String?) -> Self
+pub fn ExtensionDescriptor::not_equal(Self, Self) -> Bool
 pub fn ExtensionDescriptor::platforms(Self) -> Array[String]
 pub fn ExtensionDescriptor::publish_package(Self) -> String?
 pub fn ExtensionDescriptor::readme(Self) -> String?
 pub fn ExtensionDescriptor::repository(Self) -> String?
 pub fn ExtensionDescriptor::root_dir(Self) -> String
+pub fn ExtensionDescriptor::to_repr(Self) -> @debug.Repr
 pub fn ExtensionDescriptor::version(Self) -> String
 
 // Type aliases

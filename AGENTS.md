@@ -98,10 +98,11 @@ developer must perform them.
   `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
 - `moon check --target native`
 - `node scripts/verify_generated.mjs`
-- `moon -C extensions test -p moonbit-community/proton_ext moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake moonbit-community/proton_ext/metadata_check moonbit-community/proton_ext/microphone moonbit-community/proton_ext/notification moonbit-community/proton_ext/path moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray --target native`
+- `moon -C extensions test -p moonbit-community/proton_ext moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake moonbit-community/proton_ext/microphone moonbit-community/proton_ext/notification moonbit-community/proton_ext/path moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray --target native`
 - `moon test -p moonbit-community/proton_ffi moonbit-community/proton_auto_launch moonbit-community/proton_clipboard moonbit-community/proton_global_hotkey moonbit-community/proton_keepawake moonbit-community/proton_microphone moonbit-community/proton_tray --target native`
 - `moon -C examples build --target native`
 - `moon -C e2e build --target native`
+- `moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted`
 - `moon fmt` or `moon fmt --check`
 
 On Linux, an engine-linked process that is launched directly must also put the
@@ -316,7 +317,7 @@ native checks before handing off larger refactors.
 - Validate native changes at both layers: CMake/CTest for the DLL and MoonBit
   native tests for the FFI binding. Engine or bridge changes should also run the
   relevant examples and the MoonBit `e2e/` self-hosted scenarios (`moon -C e2e
-  test -p moonbit-community/proton/e2e/test --target native --no-parallelize`).
+  run test --target native --diagnostic-limit 200 -- --self-hosted`).
 
 ## Commit And PR Guidance
 - Use Conventional Commit style such as `feat(native):`, `fix(examples):`, or

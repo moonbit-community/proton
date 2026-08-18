@@ -85,6 +85,8 @@ PROTON_API int32_t proton_abi_version(void);
 PROTON_API int32_t proton_runtime_info_json(char *buffer,
                                             int32_t buffer_len,
                                             int32_t *out_required_len);
+PROTON_API int32_t proton_system_preferred_languages_json(
+    char *buffer, int32_t buffer_len, int32_t *out_required_len);
 PROTON_API int32_t proton_app_instance_acquire(
     const char *identifier, const char *activation_json,
     proton_app_instance_id_t *out_instance, int32_t *out_primary);

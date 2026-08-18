@@ -11,8 +11,12 @@ import {
 
 // Types and methods
 type HoldRequest derive(ToJson, @json.FromJson)
+pub fn HoldRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn HoldRequest::to_json(Self) -> Json
 
 type HoldResult derive(ToJson, @json.FromJson)
+pub fn HoldResult::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn HoldResult::to_json(Self) -> Json
 
 // Type aliases
 

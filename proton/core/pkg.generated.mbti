@@ -2,6 +2,7 @@
 package "moonbit-community/proton/core"
 
 import {
+  "moonbit-community/proton/internal/locale",
   "moonbit-community/proton/ipc",
   "moonbit-community/proton_contract",
   "moonbitlang/async",
@@ -24,7 +25,10 @@ pub(all) suberror CommandPermissionError {
   Missing(extension_id~ : String)
   Foreign(expected~ : String, actual~ : String)
 } derive(Eq, @debug.Debug)
+pub fn CommandPermissionError::equal(Self, Self) -> Bool
 pub fn CommandPermissionError::message(Self) -> String
+pub fn CommandPermissionError::not_equal(Self, Self) -> Bool
+pub fn CommandPermissionError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror OpDispatchError {
   InvalidPayload(name~ : String, detail~ : String)
@@ -32,8 +36,14 @@ pub(all) suberror OpDispatchError {
   HandlerFailed(name~ : String, detail~ : String)
   HostClosed
   AsyncHandlerRequiresAsync(name~ : String)
+  RequestContextRequired(name~ : String)
 } derive(Eq, @debug.Debug)
+pub fn OpDispatchError::equal(Self, Self) -> Bool
 pub fn OpDispatchError::message(Self) -> String
+pub fn OpDispatchError::not_equal(Self, Self) -> Bool
+pub fn OpDispatchError::output(Self, &Logger) -> Unit
+pub fn OpDispatchError::to_repr(Self) -> @debug.Repr
+pub fn OpDispatchError::to_string(Self) -> String
 
 pub(all) suberror OpRegistrationError {
   EmptyName
@@ -41,7 +51,12 @@ pub(all) suberror OpRegistrationError {
   HostClosed
   RegistrationSealed
 } derive(Eq, @debug.Debug)
+pub fn OpRegistrationError::equal(Self, Self) -> Bool
 pub fn OpRegistrationError::message(Self) -> String
+pub fn OpRegistrationError::not_equal(Self, Self) -> Bool
+pub fn OpRegistrationError::output(Self, &Logger) -> Unit
+pub fn OpRegistrationError::to_repr(Self) -> @debug.Repr
+pub fn OpRegistrationError::to_string(Self) -> String
 
 // Types and methods
 type AppCommandHost
@@ -65,10 +80,13 @@ pub struct AppCommandRequestContext {
   tasks : @async.TaskGroup[Unit]
   wake_signal : RuntimeWakeSignal
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
+  locale_preferences : @locale.LocalePreferences
 }
 pub async fn[Payload : ToJson] AppCommandRequestContext::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
+pub fn AppCommandRequestContext::locale(Self) -> @locale.Locale
 pub fn AppCommandRequestContext::page_instance(Self) -> String?
 pub fn AppCommandRequestContext::permission_scope(Self, String) -> Json raise CommandPermissionError
+pub fn AppCommandRequestContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn AppCommandRequestContext::source_origin(Self) -> String
 pub fn AppCommandRequestContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub async fn AppCommandRequestContext::wait_for_wake(Self, Int64) -> Unit

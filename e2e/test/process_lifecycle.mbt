@@ -436,7 +436,6 @@ async fn run_pending_lifecycle_probe_once(
 async fn run_pending_lifecycle_probe(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
-  build_scenario_app_executable(root, output_root)
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {
@@ -537,7 +536,6 @@ async fn run_event_lifecycle_probe_once(
 async fn run_event_lifecycle_probe(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
-  build_scenario_app_executable(root, output_root)
   let mut attempt = 0
   while attempt < 2 {
     let succeeded = try {

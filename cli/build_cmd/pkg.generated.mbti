@@ -20,27 +20,50 @@ pub(all) suberror BuildConfigError {
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
   InvalidRelease(message~ : String)
 } derive(Eq, @debug.Debug)
+pub fn BuildConfigError::equal(Self, Self) -> Bool
 pub fn BuildConfigError::message(Self) -> String
+pub fn BuildConfigError::not_equal(Self, Self) -> Bool
+pub fn BuildConfigError::output(Self, &Logger) -> Unit
+pub fn BuildConfigError::to_repr(Self) -> @debug.Repr
+pub fn BuildConfigError::to_string(Self) -> String
 
 pub(all) suberror BuildPathError {
   Missing(role~ : String, path~ : String)
   WrongKind(role~ : String, path~ : String, expected~ : String)
 } derive(Eq, @debug.Debug)
+pub fn BuildPathError::equal(Self, Self) -> Bool
 pub fn BuildPathError::message(Self) -> String
+pub fn BuildPathError::not_equal(Self, Self) -> Bool
+pub fn BuildPathError::output(Self, &Logger) -> Unit
+pub fn BuildPathError::to_repr(Self) -> @debug.Repr
+pub fn BuildPathError::to_string(Self) -> String
 
 pub(all) suberror BuildProcessError {
   Start(command~ : String, detail~ : String)
   Exit(command~ : String, code~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn BuildProcessError::equal(Self, Self) -> Bool
 pub fn BuildProcessError::message(Self) -> String
+pub fn BuildProcessError::not_equal(Self, Self) -> Bool
+pub fn BuildProcessError::output(Self, &Logger) -> Unit
+pub fn BuildProcessError::to_repr(Self) -> @debug.Repr
+pub fn BuildProcessError::to_string(Self) -> String
 
 pub(all) suberror BuildUsageError {
   InvalidArguments(message~ : String)
 } derive(Eq, @debug.Debug)
+pub fn BuildUsageError::equal(Self, Self) -> Bool
 pub fn BuildUsageError::message(Self) -> String
+pub fn BuildUsageError::not_equal(Self, Self) -> Bool
+pub fn BuildUsageError::output(Self, &Logger) -> Unit
+pub fn BuildUsageError::to_repr(Self) -> @debug.Repr
+pub fn BuildUsageError::to_string(Self) -> String
 
 // Types and methods
 type RawBuildOptions derive(Eq, @debug.Debug)
+pub fn RawBuildOptions::equal(Self, Self) -> Bool
+pub fn RawBuildOptions::not_equal(Self, Self) -> Bool
+pub fn RawBuildOptions::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

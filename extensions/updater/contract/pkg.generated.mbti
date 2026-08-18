@@ -23,11 +23,21 @@ pub(all) struct UpdateInstalled {
   version : String
   changed : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn UpdateInstalled::equal(Self, Self) -> Bool
+pub fn UpdateInstalled::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn UpdateInstalled::not_equal(Self, Self) -> Bool
+pub fn UpdateInstalled::to_json(Self) -> Json
+pub fn UpdateInstalled::to_repr(Self) -> @debug.Repr
 
 pub(all) struct UpdateProgress {
   received : Int64
   total : Int64
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn UpdateProgress::equal(Self, Self) -> Bool
+pub fn UpdateProgress::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn UpdateProgress::not_equal(Self, Self) -> Bool
+pub fn UpdateProgress::to_json(Self) -> Json
+pub fn UpdateProgress::to_repr(Self) -> @debug.Repr
 
 pub(all) struct UpdateStatus {
   state : String
@@ -35,6 +45,11 @@ pub(all) struct UpdateStatus {
   notes_url : String?
   size : Int64?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn UpdateStatus::equal(Self, Self) -> Bool
+pub fn UpdateStatus::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn UpdateStatus::not_equal(Self, Self) -> Bool
+pub fn UpdateStatus::to_json(Self) -> Json
+pub fn UpdateStatus::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

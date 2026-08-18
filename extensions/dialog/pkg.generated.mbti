@@ -17,6 +17,11 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type DialogError derive(Eq, @debug.Debug)
+pub fn DialogError::equal(Self, Self) -> Bool
+pub fn DialogError::not_equal(Self, Self) -> Bool
+pub fn DialogError::output(Self, &Logger) -> Unit
+pub fn DialogError::to_repr(Self) -> @debug.Repr
+pub fn DialogError::to_string(Self) -> String
 
 // Types and methods
 

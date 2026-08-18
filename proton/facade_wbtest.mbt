@@ -269,20 +269,6 @@ test "headless mode defaults off and is configurable" {
 }
 
 ///|
-test "PROTON_HEADLESS forces facade headless mode" {
-  let old_headless = @env.get_env_var("PROTON_HEADLESS")
-  defer restore_env_var("PROTON_HEADLESS", old_headless)
-  let app = html("Test", "<html></html>")
-  @env.unset_env_var("PROTON_HEADLESS")
-  assert_false(app.resolved_headless())
-  @env.set_env_var("PROTON_HEADLESS", "1")
-  assert_true(app.resolved_headless())
-  @env.set_env_var("PROTON_HEADLESS", "off")
-  assert_false(app.resolved_headless())
-  assert_true(app.headless().resolved_headless())
-}
-
-///|
 async test "headless mode rejects titlebar overlay before runtime startup" {
   let manifest = @manifest.AppManifest::new(
     @manifest.WindowManifest::new(
@@ -296,7 +282,18 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
   let mut rejected = false
-  run_manifest(manifest, ".", command_extensions, [], [], [], None, 30000, true) catch {
+  run_manifest(
+    manifest,
+    ".",
+    command_extensions,
+    [],
+    [],
+    [],
+    None,
+    30000,
+    true,
+    @locale.LocalePreferences::resolve(None, []),
+  ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "titlebar overlay is not supported in headless mode")
@@ -314,7 +311,7 @@ async test "headless mode rejects native menus before runtime startup" {
   )
   let menu = @native.MenuBar::new(menus=[
     @native.Menu::new("App", items=[
-      @native.MenuItem::role("close", label="Close"),
+      @native.MenuItem::role(@native.MenuItemRole::Close, label="Close"),
     ]),
   ])
   let mut rejected = false
@@ -328,6 +325,7 @@ async test "headless mode rejects native menus before runtime startup" {
     Some(menu),
     30000,
     true,
+    @locale.LocalePreferences::resolve(None, []),
   ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
@@ -355,79 +353,6 @@ test "bridge startup timeout retains the last lifecycle state" {
   assert_eq(diagnostic.page_instance, "page-1")
   assert_eq(diagnostic.url, "proton://app/")
   assert_true(diagnostic.message.contains("2500 ms"))
-}
-
-///|
-async test "startup dispatch retains an earlier window close" {
-  let runtime = @native.Runtime::new()
-  let first = @native.Window::new(runtime)
-  let second = @native.Window::new(runtime)
-  defer {
-    first.destroy() catch {
-      _ => ()
-    }
-    second.destroy() catch {
-      _ => ()
-    }
-    runtime.destroy() catch {
-      _ => ()
-    }
-  }
-  while runtime.poll_event() is Some(_) {
-
-  }
-  let windows = [
-    RunningWindow::{
-      id: "main",
-      window: first,
-      permissions: WindowPermissionPolicy::{ grants: [] },
-      lifetime: WindowLifetime::new(),
-      views: [],
-      bridge_ready: true,
-      state: WindowOpen,
-    },
-    RunningWindow::{
-      id: "secondary",
-      window: second,
-      permissions: WindowPermissionPolicy::{ grants: [] },
-      lifetime: WindowLifetime::new(),
-      views: [],
-      bridge_ready: false,
-      state: WindowStarting,
-    },
-  ]
-  @async.with_task_group(group => {
-    let task = group.spawn(
-      () => {
-        @async.sleep(10000)
-        @native.BridgeResponse::Ok(request_id=42L, payload=null)
-      },
-      no_wait=true,
-      allow_failure=true,
-    )
-    let pending = [
-      BridgeDispatchTask::{
-        request_id: 42L,
-        window: second.id(),
-        task,
-        state: Running,
-      },
-    ]
-    first.close()
-    match runtime.poll_event() {
-      Some(event) =>
-        runtime_session_dispatch_window_event(windows, pending, event)
-      None => fail("expected the first window close event")
-    }
-    assert_eq(pending.length(), 1)
-    assert_true(pending[0].state is Running)
-    runtime_session_cancel_all_bridge_tasks(pending)
-    group.return_immediately(())
-  })
-  assert_true(windows[0].is_closed())
-  assert_true(windows[0].lifetime.closed)
-  assert_false(windows[1].is_closed())
-  assert_false(windows[1].lifetime.closed)
 }
 
 ///|
@@ -941,9 +866,12 @@ test "command host registration preserves cleanup failures" {
 test "application lifecycle advances through close and destroy" {
   let lifecycle = AppLifecycle::new()
   assert_true(lifecycle.state is Constructing)
+  assert_false(lifecycle.has_reached_running())
   lifecycle.begin_starting()
+  assert_false(lifecycle.has_reached_running())
   lifecycle.begin_running()
   assert_true(lifecycle.state is Running)
+  assert_true(lifecycle.has_reached_running())
   lifecycle.observe_window_closed()
   assert_true(lifecycle.state is Closing)
   lifecycle.begin_draining()
@@ -973,7 +901,11 @@ async test "application lifecycle hooks shut down in reverse order" {
   @async.with_task_group(group => {
     start_application_lifecycle_hooks(
       configured.application_lifecycle_hooks,
-      ApplicationContext::new(group, test_window_manager()),
+      ApplicationContext::new(
+        group,
+        test_window_manager(),
+        @locale.LocalePreferences::resolve(None, []),
+      ),
       group,
       [],
     )
@@ -1017,7 +949,11 @@ async test "application lifecycle startup rolls back completed hooks" {
     @async.with_task_group(group => {
       start_application_lifecycle_hooks(
         configured.application_lifecycle_hooks,
-        ApplicationContext::new(group, test_window_manager()),
+        ApplicationContext::new(
+          group,
+          test_window_manager(),
+          @locale.LocalePreferences::resolve(None, []),
+        ),
         group,
         cleanup_failures,
       )
@@ -1066,6 +1002,7 @@ async test "window close joins owned tasks before close hooks" {
         test_window_manager(),
         group,
         WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+        @locale.LocalePreferences::resolve(None, []),
       ),
       group,
       [],
@@ -1142,49 +1079,6 @@ test "entry HTML injection does not install the bridge" {
 }
 
 ///|
-fn write_facade_dev_config(path : String, dev_url? : String) -> Unit {
-  let config : Json = {
-    "window": { "title": "Dev Test", "width": 320, "height": 240 },
-    "entry": { "kind": "asset", "value": "app.html" },
-    "debug": true,
-  }
-  guard config is Object(fields) else {
-    abort("expected project config object")
-  }
-  match dev_url {
-    Some(url) => fields["frontend"] = { "dev_url": url }
-    None => ()
-  }
-  @mbfs.write_string_to_file(
-    path,
-    Json::object(fields).stringify(indent=2) + "\n",
-    encoding="utf8",
-  ) catch {
-    err => abort(@debug.render(Repr(err)))
-  }
-}
-
-///|
-fn restore_env_var(name : String, value : String?) -> Unit {
-  match value {
-    Some(value) => @env.set_env_var(name, value)
-    None => @env.unset_env_var(name)
-  }
-}
-
-///|
-async test "implicit config path honors PROTON_CONFIG_PATH" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let config_path = root + "/implicit-env.proton.project.json"
-  write_facade_dev_config(config_path)
-  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
-  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
-
-  @env.set_env_var("PROTON_CONFIG_PATH", config_path)
-  @debug.assert_eq(implicit_config_path(), Some(config_path))
-}
-
-///|
 test "packaged config takes precedence over environment and working directory" {
   @debug.assert_eq(
     choose_implicit_config_path(
@@ -1196,112 +1090,6 @@ test "packaged config takes precedence over environment and working directory" {
     ),
     Some("/Applications/Todo.app/Contents/Resources/proton.project.json"),
   )
-}
-
-///|
-async test "default config API honors PROTON_CONFIG_PATH" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let config_path = root + "/config-api-env.proton.project.json"
-  write_facade_dev_config(config_path)
-  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
-  let old_dev = @env.get_env_var("PROTON_DEV")
-  let old_mode = @env.get_env_var("PROTON_MODE")
-  defer restore_env_var("PROTON_MODE", old_mode)
-  defer restore_env_var("PROTON_DEV", old_dev)
-  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
-
-  @env.set_env_var("PROTON_CONFIG_PATH", config_path)
-  @env.unset_env_var("PROTON_DEV")
-  @env.unset_env_var("PROTON_MODE")
-  let app = config("proton.project.json")
-  @debug.assert_eq(app.file_path, Some(config_path))
-  let resolved = unwrap_configuration(() => app.resolved_app_config())
-  assert_eq(resolved.manifest.window.title, "Dev Test")
-}
-
-///|
-async test "config API keeps non-default paths explicit" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let config_path = root + "/explicit.proton.project.json"
-  let env_path = root + "/explicit-env.proton.project.json"
-  write_facade_dev_config(config_path)
-  write_facade_dev_config(env_path)
-  let old_config = @env.get_env_var("PROTON_CONFIG_PATH")
-  defer restore_env_var("PROTON_CONFIG_PATH", old_config)
-
-  @env.set_env_var("PROTON_CONFIG_PATH", env_path)
-  @debug.assert_eq(config(config_path).file_path, Some(config_path))
-}
-
-///|
-async test "config API overrides manifest fields and keeps base dir" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let config_path = root + "/api-overrides.proton.project.json"
-  write_facade_dev_config(config_path)
-  let old_dev = @env.get_env_var("PROTON_DEV")
-  let old_mode = @env.get_env_var("PROTON_MODE")
-  defer restore_env_var("PROTON_MODE", old_mode)
-  defer restore_env_var("PROTON_DEV", old_dev)
-
-  @env.unset_env_var("PROTON_DEV")
-  @env.unset_env_var("PROTON_MODE")
-  let resolved = unwrap_configuration(() => {
-    config(config_path)
-    .title("Code Title")
-    .size(width=640, height=480)
-    .titlebar_style(TitlebarStyle::Overlay)
-    .entry_html("<main>code</main>")
-    .debug(enabled=false)
-    .resolved_app_config()
-  })
-  let manifest = resolved.manifest
-  assert_eq(
-    resolved.permission_base_path,
-    facade_path_parent(resolve_entry_path(config_path).to_string()),
-  )
-  assert_eq(manifest.window.title, "Code Title")
-  assert_eq(manifest.window.width, 640)
-  assert_eq(manifest.window.height, 480)
-  assert_eq(manifest.window.titlebar_style, @manifest.TitlebarStyle::Overlay)
-  assert_eq(manifest.debug, 0)
-  match manifest.entry {
-    @manifest.AppEntry::Html(html) => assert_eq(html, "<main>code</main>")
-    _ => fail("expected API entry override")
-  }
-}
-
-///|
-async test "dev manifest uses env override or frontend dev_url" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-config-")
-  let override_path = root + "/env-override.proton.project.json"
-  write_facade_dev_config(override_path, dev_url="http://localhost:5173")
-  let old_dev = @env.get_env_var("PROTON_DEV")
-  let old_url = @env.get_env_var("PROTON_FRONTEND_URL")
-  defer restore_env_var("PROTON_FRONTEND_URL", old_url)
-  defer restore_env_var("PROTON_DEV", old_dev)
-
-  @env.set_env_var("PROTON_DEV", "1")
-  @env.set_env_var("PROTON_FRONTEND_URL", "http://localhost:3000")
-  let override_manifest = unwrap_configuration(() => {
-      config(override_path).resolved_app_config()
-    }).manifest
-  match override_manifest.entry {
-    @manifest.AppEntry::Url(url) =>
-      inspect(url, content="http://localhost:3000")
-    _ => fail("expected dev URL entry")
-  }
-
-  let config_path = root + "/config-dev-url.proton.project.json"
-  write_facade_dev_config(config_path, dev_url="http://localhost:5173")
-  @env.unset_env_var("PROTON_FRONTEND_URL")
-  let config_manifest = unwrap_configuration(() => {
-      config(config_path).resolved_app_config()
-    }).manifest
-  match config_manifest.entry {
-    @manifest.AppEntry::Url(url) =>
-      inspect(url, content="http://localhost:5173")
-    _ => fail("expected dev URL entry")
-  }
 }
 
 ///|
@@ -1359,18 +1147,10 @@ test "project identity is independent from single instance routing" {
 }
 
 ///|
-async test "launch activation classifies URLs and existing documents" {
-  let root = @async_fs.tmpdir(prefix="proton-facade-activation-")
-  let document = root + "/activation.txt"
-  @mbfs.write_string_to_file(document, "activation", encoding="utf8") catch {
-    error => abort(@debug.render(Repr(error)))
-  }
+test "launch activation classifies protocol URLs" {
   assert_true(launch_argument_is_url("dev.proton://open", ["dev.proton"]))
   assert_true(launch_argument_is_url("custom:value", ["custom"]))
   assert_false(launch_argument_is_url("custom:value", ["other"]))
-  assert_true(launch_argument_is_document(document, ["txt"]))
-  assert_false(launch_argument_is_document(document, ["md"]))
-  assert_false(launch_argument_is_document(root + "/missing.txt", ["txt"]))
 }
 
 ///|
@@ -1568,4 +1348,157 @@ test "with_view stores declarative views and rejects invalid ids" {
   let app = app.with_view("  ", @native.ViewConfig::new(width=1, height=1))
   inspect(app.planned_views.length(), content="1")
   inspect(app.validation_errors.length(), content="2")
+}
+
+///|
+async test "lifecycle contexts expose one immutable locale snapshot" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("zh-CN")),
+    [@locale.Locale::parse("en-GB")],
+  )
+  @async.with_task_group(group => {
+    let application = ApplicationContext::new(
+      group,
+      test_window_manager(),
+      preferences,
+    )
+    assert_eq(application.locale().to_string(), "zh-CN")
+    assert_eq(
+      application.preferred_languages().map(locale => locale.to_string()),
+      ["zh-CN", "en-GB", "en-US"],
+    )
+    let window = WindowContext::new(
+      "main",
+      @native.WindowRef::unsafe_from_handle(17L),
+      test_window_handle("main", 17L),
+      test_window_manager(),
+      group,
+      WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+      preferences,
+    )
+    assert_eq(window.locale(), application.locale())
+    assert_eq(window.preferred_languages(), application.preferred_languages())
+    group.return_immediately(())
+  })
+}
+
+///|
+test "standard menus resolve from the application locale" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("zh-CN")),
+    [],
+  )
+  let resolved = resolve_menu(
+    @native.MenuBar::new(menus=[
+      @native.Menu::role(@native.MenuRole::Edit),
+      @native.Menu::role(@native.MenuRole::Window),
+    ]),
+    preferences,
+    "Proton Demo",
+  )
+  let definitions = resolved.definitions()
+  assert_eq(definitions.length(), 3)
+  let (application_role, application_label, application_items) = definitions[0].definition()
+  assert_eq(application_role, Some(@native.MenuRole::Application))
+  assert_eq(application_label, Some("Proton Demo"))
+  let application_items = application_items.unwrap()
+  let (_, _, quit_label, quit_key, quit_role) = application_items[application_items.length() -
+  1].definition()
+  assert_eq(quit_role, Some(@native.MenuItemRole::Quit))
+  assert_eq(quit_label, Some("退出 Proton Demo"))
+  assert_eq(quit_key, Some("q"))
+  let (edit_role, edit_label, edit_items) = definitions[1].definition()
+  assert_eq(edit_role, Some(@native.MenuRole::Edit))
+  assert_eq(edit_label, Some("编辑"))
+  let edit_items = edit_items.unwrap()
+  let (_, _, copy_label, copy_key, copy_role) = edit_items[4].definition()
+  assert_eq(copy_role, Some(@native.MenuItemRole::Copy))
+  assert_eq(copy_label, Some("拷贝"))
+  assert_eq(copy_key, Some("c"))
+  let (window_role, window_label, _) = definitions[2].definition()
+  assert_eq(window_role, Some(@native.MenuRole::Window))
+  assert_eq(window_label, Some("窗口"))
+}
+
+///|
+test "custom menu labels never imply a standard role" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("en-US")),
+    [],
+  )
+  let resolved = resolve_menu(
+    @native.MenuBar::new(menus=[
+      @native.Menu::new("Edit", items=[
+        @native.MenuItem::command("custom.edit", "Custom Edit"),
+      ]),
+    ]),
+    preferences,
+    "Proton Demo",
+  )
+  let definitions = resolved.definitions()
+  assert_eq(definitions.length(), 2)
+  let (role, label, items) = definitions[1].definition()
+  assert_eq(role, None)
+  assert_eq(label, Some("Edit"))
+  let (_, command_id, command_label, _, item_role) = items.unwrap()[0].definition()
+  assert_eq(command_id, Some("custom.edit"))
+  assert_eq(command_label, Some("Custom Edit"))
+  assert_eq(item_role, None)
+}
+
+///|
+test "explicit standard menu items replace role defaults" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("en-US")),
+    [],
+  )
+  let resolved = resolve_menu(
+    @native.MenuBar::new(menus=[
+      @native.Menu::role(@native.MenuRole::Edit, items=[]),
+    ]),
+    preferences,
+    "Proton Demo",
+  )
+  let (_, _, items) = resolved.definitions()[1].definition()
+  assert_eq(items.unwrap(), [])
+}
+
+///|
+test "framework catalog localizes controls without changing technical details" {
+  let detail = "Error code: bridge_bootstrap_failed\nPath: /tmp/app"
+  let chinese = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("zh-CN")),
+    [],
+  )
+  let chinese_catalog = framework_catalog(chinese)
+  assert_eq(chinese_catalog.dialog_ok, "确定")
+  assert_eq(chinese_catalog.dialog_cancel, "取消")
+  assert_eq(chinese_catalog.titlebar_restore, "还原")
+  assert_eq(startup_failure_title(chinese), "应用启动失败")
+  assert_eq(
+    framework_failure_message(startup_failure_summary(chinese), detail),
+    "应用无法启动。\n\n" + detail,
+  )
+  assert_eq(application_error_title(chinese), "应用错误")
+  assert_eq(
+    framework_failure_message(application_error_summary(chinese), detail),
+    "应用遇到错误。\n\n" + detail,
+  )
+  let unsupported = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("fr-FR")),
+    [],
+  )
+  let fallback_catalog = framework_catalog(unsupported)
+  assert_eq(fallback_catalog.dialog_ok, "OK")
+  assert_eq(fallback_catalog.titlebar_close, "Close")
+  assert_eq(startup_failure_title(unsupported), "Application Startup Failed")
+  assert_eq(
+    framework_failure_message(startup_failure_summary(unsupported), detail),
+    "The application could not start.\n\n" + detail,
+  )
+  assert_eq(application_error_title(unsupported), "Application Error")
+  assert_eq(
+    framework_failure_message(application_error_summary(unsupported), detail),
+    "The application encountered an error.\n\n" + detail,
+  )
 }

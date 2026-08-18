@@ -62,22 +62,34 @@ pub(all) suberror BrowserError {
   InvalidField(String)
   WaitTimeout(String)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn BrowserError::equal(Self, Self) -> Bool
+pub fn BrowserError::not_equal(Self, Self) -> Bool
+pub fn BrowserError::to_json(Self) -> Json
+pub fn BrowserError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror BrowserLaunchError {
   BrowserNotFound
   BrowserNotReady(Int)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn BrowserLaunchError::equal(Self, Self) -> Bool
+pub fn BrowserLaunchError::not_equal(Self, Self) -> Bool
+pub fn BrowserLaunchError::to_json(Self) -> Json
+pub fn BrowserLaunchError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror CdpConnectionError {
   ConnectionTimeout(String, Int)
   WebSocketHandshakeFailed(String, String)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn CdpConnectionError::diagnostic(Self) -> CdpConnectionErrorDiagnostic
+pub fn CdpConnectionError::equal(Self, Self) -> Bool
 pub fn CdpConnectionError::kind(Self) -> String
 pub fn CdpConnectionError::message(Self) -> String
+pub fn CdpConnectionError::not_equal(Self, Self) -> Bool
 pub fn CdpConnectionError::path(Self) -> String
 pub fn CdpConnectionError::reason(Self) -> String?
 pub fn CdpConnectionError::timeout_ms(Self) -> Int?
+pub fn CdpConnectionError::to_json(Self) -> Json
+pub fn CdpConnectionError::to_repr(Self) -> @debug.Repr
 pub fn CdpConnectionError::web_socket_url(Self) -> String
 
 pub(all) suberror DiscoveryError {
@@ -89,14 +101,18 @@ pub(all) suberror DiscoveryError {
   InvalidVersionResponse
 } derive(Eq, ToJson, @debug.Debug)
 pub fn DiscoveryError::diagnostic(Self) -> DiscoveryErrorDiagnostic
+pub fn DiscoveryError::equal(Self, Self) -> Bool
 pub fn DiscoveryError::http_status(Self) -> Int?
 pub fn DiscoveryError::kind(Self) -> String
 pub fn DiscoveryError::message(Self) -> String
+pub fn DiscoveryError::not_equal(Self, Self) -> Bool
 pub fn DiscoveryError::path(Self) -> String
 pub fn DiscoveryError::reason(Self) -> String?
 pub fn DiscoveryError::selector(Self) -> String?
 pub fn DiscoveryError::target(Self) -> String?
 pub fn DiscoveryError::target_id(Self) -> String?
+pub fn DiscoveryError::to_json(Self) -> Json
+pub fn DiscoveryError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) struct CdpAttachedTarget {
@@ -109,6 +125,10 @@ pub(all) struct CdpAttachedTarget {
   browser_context_id : String?
   waiting_for_debugger : Bool
 } derive(Eq, ToJson, @debug.Debug)
+pub fn CdpAttachedTarget::equal(Self, Self) -> Bool
+pub fn CdpAttachedTarget::not_equal(Self, Self) -> Bool
+pub fn CdpAttachedTarget::to_json(Self) -> Json
+pub fn CdpAttachedTarget::to_repr(Self) -> @debug.Repr
 
 pub struct CdpClient {
   // private fields
@@ -147,6 +167,10 @@ pub(all) struct CdpCommandFailure {
   message : String
   data : Json?
 } derive(Eq, ToJson, @debug.Debug)
+pub fn CdpCommandFailure::equal(Self, Self) -> Bool
+pub fn CdpCommandFailure::not_equal(Self, Self) -> Bool
+pub fn CdpCommandFailure::to_json(Self) -> Json
+pub fn CdpCommandFailure::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CdpConnectionErrorDiagnostic {
   kind : String
@@ -156,6 +180,10 @@ pub(all) struct CdpConnectionErrorDiagnostic {
   path : String
   message : String
 } derive(Eq, ToJson, @debug.Debug)
+pub fn CdpConnectionErrorDiagnostic::equal(Self, Self) -> Bool
+pub fn CdpConnectionErrorDiagnostic::not_equal(Self, Self) -> Bool
+pub fn CdpConnectionErrorDiagnostic::to_json(Self) -> Json
+pub fn CdpConnectionErrorDiagnostic::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CdpDiscoveredTarget {
   target_id : String
@@ -167,6 +195,10 @@ pub(all) struct CdpDiscoveredTarget {
   web_socket_debugger_url : String?
   raw : Json
 } derive(Eq, ToJson, @debug.Debug)
+pub fn CdpDiscoveredTarget::equal(Self, Self) -> Bool
+pub fn CdpDiscoveredTarget::not_equal(Self, Self) -> Bool
+pub fn CdpDiscoveredTarget::to_json(Self) -> Json
+pub fn CdpDiscoveredTarget::to_repr(Self) -> @debug.Repr
 
 type CdpEventHandler
 
@@ -177,6 +209,10 @@ pub(all) struct CdpLaunchInfo {
   web_socket_url : String
   user_data_dir : String
 } derive(Eq, ToJson, @debug.Debug)
+pub fn CdpLaunchInfo::equal(Self, Self) -> Bool
+pub fn CdpLaunchInfo::not_equal(Self, Self) -> Bool
+pub fn CdpLaunchInfo::to_json(Self) -> Json
+pub fn CdpLaunchInfo::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CdpLaunchOptions {
   browser_path : String?
@@ -193,11 +229,19 @@ pub(all) struct CdpLaunchOptions {
   allow_file_access : Bool
   hide_scrollbars : Bool
 } derive(Eq, ToJson, @debug.Debug)
+pub fn CdpLaunchOptions::equal(Self, Self) -> Bool
+pub fn CdpLaunchOptions::not_equal(Self, Self) -> Bool
+pub fn CdpLaunchOptions::to_json(Self) -> Json
+pub fn CdpLaunchOptions::to_repr(Self) -> @debug.Repr
 
 pub(all) enum CdpTarget {
   WebSocket(String)
   Http(String)
 } derive(Eq, ToJson, @debug.Debug)
+pub fn CdpTarget::equal(Self, Self) -> Bool
+pub fn CdpTarget::not_equal(Self, Self) -> Bool
+pub fn CdpTarget::to_json(Self) -> Json
+pub fn CdpTarget::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CdpTargetInfo {
   target_id : String
@@ -207,6 +251,10 @@ pub(all) struct CdpTargetInfo {
   attached : Bool
   browser_context_id : String?
 } derive(Eq, ToJson, @debug.Debug)
+pub fn CdpTargetInfo::equal(Self, Self) -> Bool
+pub fn CdpTargetInfo::not_equal(Self, Self) -> Bool
+pub fn CdpTargetInfo::to_json(Self) -> Json
+pub fn CdpTargetInfo::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CdpVersionInfo {
   browser : String
@@ -217,6 +265,10 @@ pub(all) struct CdpVersionInfo {
   web_socket_debugger_url : String
   raw : Json
 } derive(Eq, ToJson, @debug.Debug)
+pub fn CdpVersionInfo::equal(Self, Self) -> Bool
+pub fn CdpVersionInfo::not_equal(Self, Self) -> Bool
+pub fn CdpVersionInfo::to_json(Self) -> Json
+pub fn CdpVersionInfo::to_repr(Self) -> @debug.Repr
 
 pub(all) struct DiscoveryErrorDiagnostic {
   kind : String
@@ -228,6 +280,10 @@ pub(all) struct DiscoveryErrorDiagnostic {
   path : String
   message : String
 } derive(Eq, ToJson, @debug.Debug)
+pub fn DiscoveryErrorDiagnostic::equal(Self, Self) -> Bool
+pub fn DiscoveryErrorDiagnostic::not_equal(Self, Self) -> Bool
+pub fn DiscoveryErrorDiagnostic::to_json(Self) -> Json
+pub fn DiscoveryErrorDiagnostic::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

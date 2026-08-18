@@ -3,6 +3,7 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbit-community/proton/ipc",
+  "moonbit-community/proton/internal/locale",
   "moonbit-community/proton_contract",
 }
 

@@ -26,18 +26,38 @@ pub(all) struct NotificationActivity {
   title : String?
   level : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn NotificationActivity::equal(Self, Self) -> Bool
+pub fn NotificationActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NotificationActivity::not_equal(Self, Self) -> Bool
+pub fn NotificationActivity::to_json(Self) -> Json
+pub fn NotificationActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NotificationClick {
   payload : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn NotificationClick::equal(Self, Self) -> Bool
+pub fn NotificationClick::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NotificationClick::not_equal(Self, Self) -> Bool
+pub fn NotificationClick::to_json(Self) -> Json
+pub fn NotificationClick::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NotificationDrainReply {
   count : Int
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn NotificationDrainReply::equal(Self, Self) -> Bool
+pub fn NotificationDrainReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NotificationDrainReply::not_equal(Self, Self) -> Bool
+pub fn NotificationDrainReply::to_json(Self) -> Json
+pub fn NotificationDrainReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NotificationReply {
   shown : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn NotificationReply::equal(Self, Self) -> Bool
+pub fn NotificationReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NotificationReply::not_equal(Self, Self) -> Bool
+pub fn NotificationReply::to_json(Self) -> Json
+pub fn NotificationReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NotificationRequest {
   title : String?
@@ -45,6 +65,11 @@ pub(all) struct NotificationRequest {
   level : String?
   payload : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn NotificationRequest::equal(Self, Self) -> Bool
+pub fn NotificationRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NotificationRequest::not_equal(Self, Self) -> Bool
+pub fn NotificationRequest::to_json(Self) -> Json
+pub fn NotificationRequest::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

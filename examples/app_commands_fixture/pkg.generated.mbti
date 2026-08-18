@@ -11,21 +11,36 @@ pub async fn run() -> Unit
 
 // Errors
 type AppCommandError derive(@debug.Debug)
+pub fn AppCommandError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 type FailPayload derive(ToJson, @json.FromJson)
+pub fn FailPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn FailPayload::to_json(Self) -> Json
 
 type PingPayload derive(ToJson, @json.FromJson)
+pub fn PingPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PingPayload::to_json(Self) -> Json
 
 type PingReply derive(ToJson, @json.FromJson)
+pub fn PingReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PingReply::to_json(Self) -> Json
 
 type ReportProbePayload derive(ToJson, @json.FromJson)
+pub fn ReportProbePayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReportProbePayload::to_json(Self) -> Json
 
 type ReportProbeReply derive(ToJson, @json.FromJson)
+pub fn ReportProbeReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReportProbeReply::to_json(Self) -> Json
 
 type SlowAddPayload derive(ToJson, @json.FromJson)
+pub fn SlowAddPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SlowAddPayload::to_json(Self) -> Json
 
 type SlowAddReply derive(ToJson, @json.FromJson)
+pub fn SlowAddReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SlowAddReply::to_json(Self) -> Json
 
 // Type aliases
 

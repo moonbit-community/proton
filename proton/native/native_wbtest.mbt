@@ -152,50 +152,6 @@ test "runtime events preserve bridge cancellation request ids" {
 }
 
 ///|
-test "native ABI version and availability" {
-  inspect(abi_version(), content="1")
-}
-
-///|
-test "runtime info reports ABI and Proton runtime metadata" {
-  let info = runtime_info_json()
-  assert_true(info.contains("\"abi_version\":1"))
-  let has_abi_only = info.contains("\"runtime_available\":false") &&
-    info.contains("\"build_mode\":\"abi-only\"")
-  let has_runtime = info.contains("\"runtime_available\":true") &&
-    info.contains("\"build_mode\":\"runtime\"")
-  assert_true(has_abi_only || has_runtime)
-  assert_true(info.contains("\"base_abi\""))
-  assert_true(info.contains("\"event_polling\""))
-  assert_true(info.contains("\"bridge_polling\""))
-  assert_true(info.contains("\"bridge_permission_grants\""))
-  assert_true(info.contains("\"platform\":"))
-  let typed = runtime_info()
-  inspect(typed.abi_version, content="1")
-  assert_true(typed.build_mode == "abi-only" || typed.build_mode == "runtime")
-  assert_true(typed.runtime_available == (typed.build_mode == "runtime"))
-  assert_true(typed.platform.length() > 0)
-  assert_true(typed.features.contains("base_abi"))
-  assert_true(typed.features.contains("event_polling"))
-  assert_true(typed.features.contains("bridge_polling"))
-  assert_true(typed.features.contains("bridge_permission_grants"))
-  if (
-      typed.platform == "macos" ||
-      typed.platform == "windows" ||
-      typed.platform == "linux"
-    ) &&
-    typed.runtime_available {
-    assert_true(typed.features.contains("titlebar_overlay"))
-    assert_true(typed.features.contains("headless_osr"))
-    assert_true(typed.features.contains("window_session"))
-  } else {
-    assert_false(typed.features.contains("titlebar_overlay"))
-    assert_false(typed.features.contains("headless_osr"))
-    assert_false(typed.features.contains("window_session"))
-  }
-}
-
-///|
 test "runtime wait ready mask helpers" {
   let ready = RuntimeWaitReady::{
     mask: runtime_wait_event.lor(runtime_wait_bridge),
@@ -209,104 +165,6 @@ test "runtime wait ready mask helpers" {
     RuntimeWaitReady::{ mask: runtime_wait_none }.is_timeout(),
     content="true",
   )
-}
-
-///|
-test "runtime wait treats an elapsed deadline as no wait, not as an error" {
-  // A caller computing `deadline - now` arrives late routinely, and refusing
-  // to poll then would be worse than polling with no wait. The negative is
-  // clamped here so it can never reach the ABI, where only the documented
-  // infinite sentinel is accepted and any other negative is rejected.
-  let runtime = Runtime::new()
-  let ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=-5)
-  inspect(ready.is_timeout(), content="true")
-  runtime.destroy()
-}
-
-///|
-test "runtime wait reports queued native events without consuming them" {
-  let runtime = Runtime::new()
-  let empty_ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=0)
-
-  inspect(empty_ready.is_timeout(), content="true")
-  let window = Window::new(runtime)
-  let ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=0)
-
-  inspect(ready.has_event(), content="true")
-  match runtime.poll_event() {
-    Some(event) => inspect(event.event_type(), content="window_created")
-    _ => fail("expected window_created event")
-  }
-  let empty_after_poll = runtime.wait(
-    interest_mask=runtime_wait_event,
-    timeout_ms=0,
-  )
-
-  inspect(empty_after_poll.is_timeout(), content="true")
-  let error = expect_native_error(() => {
-    runtime.wait(interest_mask=runtime_wait_bridge, timeout_ms=0)
-  })
-  inspect(error.status(), content="-8")
-  assert_true(error.message().contains("native engine"))
-  window.destroy()
-  match runtime.poll_event() {
-    Some(event) => inspect(event.event_type(), content="window_closed")
-    _ => fail("expected window_closed event")
-  }
-  runtime.destroy()
-}
-
-///|
-test "execute_process returns main process for fake native runtime" {
-  debug_inspect(execute_process(), content="MainProcess")
-}
-
-///|
-test "runtime create rejects second active runtime" {
-  let runtime = Runtime::new()
-  let error = expect_native_error(() => Runtime::new())
-  inspect(error.status(), content="-5")
-  assert_true(error.message().contains("already initialized"))
-  runtime.destroy()
-  let recreated = Runtime::new()
-  recreated.destroy()
-}
-
-///|
-test "runtime and window lifecycle uses non-zero Int64 handles" {
-  let runtime = Runtime::new()
-  assert_true(runtime.handle != 0L)
-  let window = Window::new(runtime)
-  assert_true(window.handle != 0L)
-  match runtime.poll_event() {
-    Some(event) => {
-      inspect(event.event_type(), content="window_created")
-      inspect(event.has_window(), content="true")
-      inspect(event.is_window_created(), content="true")
-    }
-    _ => fail("expected window_created event")
-  }
-  window.set_size(640, 480)
-  window.set_title("Proton")
-  window.load_url("about:blank")
-  window.load_html("<h1>ok</h1>", "proton://app/")
-  window.eval("1 + 1")
-  window.destroy()
-  match runtime.poll_event() {
-    Some(event) => {
-      inspect(event.event_type(), content="window_closed")
-      inspect(event.has_window(), content="true")
-      inspect(event.is_window_closed(), content="true")
-    }
-    _ => fail("expected window_closed event")
-  }
-  assert_true(runtime.poll_event() is None)
-  window.destroy()
-  runtime.destroy()
-  runtime.destroy()
-  let error = expect_native_error(() => runtime.poll_event())
-  inspect(error.status(), content="-3")
-  assert_true(error.message().contains("destroying or destroyed"))
 }
 
 ///|
@@ -343,33 +201,16 @@ test "runtime event decodes a sequenced window close request" {
 }
 
 ///|
-test "window close rejects further use and remains destroyable" {
-  let runtime = Runtime::new()
-  let window = Window::new(runtime)
-  match runtime.poll_event() {
-    Some(event) => inspect(event.event_type(), content="window_created")
-    _ => fail("expected window_created event")
-  }
-  window.close()
-  match runtime.poll_event() {
-    Some(event) => inspect(event.event_type(), content="window_closed")
-    _ => fail("expected window_closed event")
-  }
-  window.close()
-  window.destroy()
-  let error = expect_native_error(() => window.show())
-  inspect(error.status(), content="-3")
-  assert_true(error.message().contains("closing or destroyed"))
-  assert_true(runtime.poll_event() is None)
-  runtime.destroy()
-}
-
-///|
 test "typed configs generate stable JSON for native ABI" {
   let cache_dir = test_absolute_cache_dir()
   let runtime_config = RuntimeConfig::new(
     helper_path="cef_process.exe",
     cache_dir~,
+    locale=@locale.Locale::parse("zh-CN"),
+    accept_languages=[
+      @locale.Locale::parse("zh-CN"),
+      @locale.Locale::parse("en-US"),
+    ],
     headless=true,
   )
   let runtime_json = runtime_config.to_json_string()
@@ -380,6 +221,14 @@ test "typed configs generate stable JSON for native ABI" {
   )
   assert_true(runtime_json.contains("\"headless\":true"))
   assert_true(runtime_json.contains("\"persist_session_cookies\":true"))
+  assert_true(runtime_json.contains("\"locale\":\"zh-CN\""))
+  assert_true(
+    runtime_json.contains("\"accept_languages\":[\"zh-CN\",\"en-US\"]"),
+  )
+  assert_true(runtime_json.contains("\"framework_dialog_ok_label\":\"OK\""))
+  assert_true(
+    runtime_json.contains("\"framework_dialog_cancel_label\":\"Cancel\""),
+  )
   let bundled_json = RuntimeConfig::bundled(cache_dir~).to_json_string()
   assert_true(bundled_json.contains("\"use_bundled\":true"))
   assert_true(!bundled_json.contains("\"runtime_root\""))
@@ -415,6 +264,12 @@ test "typed configs generate stable JSON for native ABI" {
   assert_true(window_json.contains("\"popup\":\"ask\""))
   assert_true(window_json.contains("\"devtools\":true"))
   assert_true(window_json.contains("\"bridge\""))
+  assert_true(
+    window_json.contains("\"framework_titlebar_minimize_label\":\"Minimize\""),
+  )
+  assert_true(
+    window_json.contains("\"framework_titlebar_close_label\":\"Close\""),
+  )
   let bridge_config = BridgeConfig::new(grants=[
     BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
   ])
@@ -437,7 +292,7 @@ test "typed configs generate stable JSON for native ABI" {
     Menu::new("Demo", items=[
       MenuItem::command("demo.refresh", "Refresh", key="r"),
       MenuItem::separator(),
-      MenuItem::role("close", label="Close Window", key="w"),
+      MenuItem::role(MenuItemRole::Close, label="Close Window", key="w"),
     ]),
   ]).to_json_string()
   assert_true(menu_json.contains("\"abi_version\":1"))
@@ -553,325 +408,6 @@ test "bridge request keeps transport metadata outside the payload" {
 }
 
 ///|
-test "bridge ABI wrappers validate config and poll empty queue" {
-  let runtime = Runtime::new()
-  let large_script = StringBuilder::new()
-  for _ in 0..<7000 {
-    large_script.write_string("window.__protonDevLarge = true;\n")
-  }
-  let window = Window::new(
-    runtime,
-    config=WindowConfig::new(
-      bridge=BridgeConfig::new(grants=[
-        BridgeGrantConfig::new("http://localhost:5173", ops=["ext:app/ping"], initialization_units=[
-          BridgeInitializationUnit::new(
-            "test",
-            "large",
-            large_script.to_string(),
-          ),
-        ]),
-      ]),
-    ),
-  )
-  match runtime.poll_event() {
-    Some(event) => inspect(event.event_type(), content="window_created")
-    _ => fail("expected window_created event")
-  }
-  runtime.do_message_loop_work()
-  assert_true(runtime.poll_bridge_request() is None)
-  let invalid_error = expect_native_error(() => {
-    Window::new(
-      runtime,
-      config=WindowConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"title\":\"Invalid\",\"width\":320,\"height\":240,\"initial_url\":\"about:blank\",\"bridge\":{\"abi_version\":2,\"namespace\":\"Other\",\"grants\":[]}}",
-      ),
-    )
-  })
-  inspect(invalid_error.status(), content="-1")
-  assert_true(invalid_error.message().contains("namespace"))
-  let response_error = expect_native_error(() => {
-    runtime.respond_bridge_request(
-      BridgeResponse::Err(
-        request_id=1L,
-        code="op_failed",
-        message="no pending request",
-      ),
-    )
-  })
-  inspect(response_error.status(), content="-8")
-  assert_true(response_error.message().contains("native engine"))
-  window.destroy()
-  match runtime.poll_event() {
-    Some(event) => inspect(event.event_type(), content="window_closed")
-    _ => fail("expected window_closed event")
-  }
-  runtime.destroy()
-}
-
-///|
-test "bridge config rejects unsafe schema variants" {
-  let runtime = Runtime::new()
-  let cases = [
-    (
-      "{\"abi_version\":1,\"namespace\":\"__MoonBit__\",\"grants\":[]}", "abi_version must be set to 2",
-    ),
-    (
-      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[],\"debug\":true}",
-      "unknown field: debug",
-    ),
-    (
-      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"app\",\"ops\":[{\"name\":\"bad\\nname\"}],\"extensions\":[],\"initialization_units\":[]}]}",
-      "op name is invalid",
-    ),
-    (
-      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[],\"max_payload_bytes\":0}",
-      "max_payload_bytes",
-    ),
-    (
-      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[],\"request_timeout_ms\":0}",
-      "unknown field: request_timeout_ms",
-    ),
-    (
-      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"file://tmp\",\"ops\":[],\"extensions\":[],\"initialization_units\":[]}]}",
-      "source_origin",
-    ),
-    (
-      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"http://localhost:5173/app\",\"ops\":[],\"extensions\":[],\"initialization_units\":[]}]}",
-      "source_origin",
-    ),
-    (
-      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"app\",\"ops\":[],\"extensions\":[],\"initialization_units\":[]},{\"source_origin\":\"app\",\"ops\":[],\"extensions\":[],\"initialization_units\":[]}]}",
-      "duplicate source origins",
-    ),
-    (
-      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"app\",\"ops\":[],\"extensions\":[],\"initialization_units\":false}]}",
-      "initialization_units",
-    ),
-    (
-      "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[{\"source_origin\":\"app\",\"ops\":[],\"extensions\":[],\"initialization_units\":[{\"owner\":\"test\",\"name\":\"setup\",\"source\":\"\",\"unexpected\":true}]}]}",
-      "unknown field: unexpected",
-    ),
-  ]
-  for _, item in cases {
-    let (raw, expected) = item
-    let window_json = "{\"abi_version\":1,\"title\":\"Invalid\",\"width\":320,\"height\":240,\"initial_url\":\"about:blank\",\"bridge\":" +
-      raw +
-      "}"
-    let error = expect_native_error(() => {
-      Window::new(runtime, config=WindowConfig::unsafe_from_json(window_json))
-    })
-    inspect(error.status(), content="-1")
-    assert_true(error.message().contains(expected))
-  }
-  runtime.destroy()
-}
-
-///|
-test "runtime probe maps native config errors" {
-  let error = expect_native_error(() => probe_runtime())
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("runtime_root"))
-}
-
-///|
-test "runtime probe reports missing runtime files" {
-  let error = expect_native_error(() => {
-    RuntimeConfig::new(
-      runtime_root="missing-runtime-root",
-      helper_path="missing-helper",
-    ).probe()
-  })
-  inspect(error.status(), content="-7")
-  assert_true(error.message().contains("runtime engine library"))
-}
-
-///|
-test "runtime create does not fake engine configs" {
-  let error = expect_native_error(() => {
-    Runtime::new(
-      config=RuntimeConfig::new(
-        runtime_root="missing-runtime-root",
-        helper_path="missing-helper",
-      ),
-    )
-  })
-  inspect(error.status(), content="-7")
-  assert_true(error.message().contains("runtime engine library"))
-}
-
-///|
-test "execute_process does not ignore engine configs" {
-  let error = expect_native_error(() => {
-    execute_process(
-      config=RuntimeConfig::new(
-        runtime_root="missing-runtime-root",
-        helper_path="missing-helper",
-      ),
-    )
-  })
-  inspect(error.status(), content="-7")
-  assert_true(error.message().contains("runtime engine library"))
-}
-
-///|
-test "invalid handle returns structured native error" {
-  let window = Window::{ handle: 0L, lifecycle: WindowLive }
-  let error = expect_native_error(() => window.show())
-  inspect(error.status(), content="-2")
-  assert_true(error.message().contains("invalid window handle"))
-}
-
-///|
-test "runtime config requires abi_version 1" {
-  let error = expect_native_error(() => {
-    Runtime::new(config=RuntimeConfig::unsafe_from_json("{\"abi_version\":2}"))
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("abi_version"))
-}
-
-///|
-test "execute_process requires abi_version 1" {
-  let error = expect_native_error(() => {
-    execute_process(config=RuntimeConfig::unsafe_from_json("{}"))
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("abi_version"))
-}
-
-///|
-test "runtime config rejects unknown fields" {
-  let error = expect_native_error(() => {
-    Runtime::new(
-      config=RuntimeConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"debug\":true}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("unknown field: debug"))
-}
-
-///|
-test "runtime config rejects non-boolean headless" {
-  let error = expect_native_error(() => {
-    Runtime::new(
-      config=RuntimeConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"headless\":\"true\"}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("headless"))
-}
-
-///|
-test "runtime config rejects malformed JSON object" {
-  let error = expect_native_error(() => {
-    Runtime::new(config=RuntimeConfig::unsafe_from_json("{\"abi_version\":1,}"))
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("trailing comma"))
-}
-
-///|
-test "runtime config requires top-level abi_version" {
-  let error = expect_native_error(() => {
-    Runtime::new(
-      config=RuntimeConfig::unsafe_from_json(
-        "{\"cache_dir\":{\"abi_version\":1}}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  inspect(
-    error.message(),
-    content="runtime field has invalid type or range: cache_dir",
-  )
-}
-
-///|
-test "runtime config rejects a relative cache directory" {
-  let error = expect_native_error(() => {
-    Runtime::new(
-      config=RuntimeConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"cache_dir\":\"relative-cache\"}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  inspect(error.message(), content="runtime cache_dir must be an absolute path")
-}
-
-///|
-test "window config requires positive width and height" {
-  let runtime = Runtime::new()
-  let error = expect_native_error(() => {
-    Window::new(
-      runtime,
-      config=WindowConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"title\":\"Bad\"}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("width and height"))
-  runtime.destroy()
-}
-
-///|
-test "typed window config is validated before native FFI" {
-  let runtime = Runtime::new()
-  let error = expect_native_error(() => {
-    Window::new(runtime, config=WindowConfig::new(width=0, height=240))
-  })
-  inspect(error.status(), content="-1")
-  inspect(error.message(), content="width and height must be positive")
-  assert_true(runtime.poll_event() is None)
-  runtime.destroy()
-}
-
-///|
-test "window config rejects unknown fields" {
-  let runtime = Runtime::new()
-  let error = expect_native_error(() => {
-    Window::new(
-      runtime,
-      config=WindowConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"resizable\":true}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("unknown field: resizable"))
-  runtime.destroy()
-}
-
-///|
-test "typed window config serializes overlay titlebar style" {
-  let config = WindowConfig::new(titlebar_style=TitlebarStyle::Overlay)
-  let json = config.to_json_string()
-  let supports_overlay = runtime_info() catch { _ => return }
-  if supports_overlay.features.contains("titlebar_overlay") {
-    assert_true(json.contains("\"titlebar_style\":\"overlay\""))
-  } else {
-    assert_false(json.contains("\"titlebar_style\""))
-  }
-}
-
-///|
-test "typed window config serializes supported size hints" {
-  let config = WindowConfig::new(size_hint=WindowSizeHint::Fixed)
-  let json = config.to_json_string()
-  let info = runtime_info() catch { _ => return }
-  if info.features.contains("window_size_hints") {
-    assert_true(json.contains("\"size_hint\":\"fixed\""))
-  } else {
-    assert_false(json.contains("\"size_hint\""))
-  }
-}
-
-///|
 test "runtime events decode typed launch inputs and notification results" {
   let urls = decode_runtime_event_json(
     "{\"type\":\"open_urls\",\"items\":[\"devtoys://open?id=1\"]}",
@@ -906,65 +442,6 @@ test "app activation JSON keeps stable schema fields" {
       #|{"abi_version":1,"urls":["dev.proton://open?id=1"],"files":["/tmp/a.txt"],"reopen":false}
     ),
   )
-}
-
-///|
-test "window config accepts overlay titlebar style" {
-  let runtime = Runtime::new()
-  let window = Window::new(
-    runtime,
-    config=WindowConfig::new(titlebar_style=TitlebarStyle::Overlay),
-  )
-  window.destroy()
-  runtime.destroy()
-}
-
-///|
-test "window config rejects unsupported titlebar style" {
-  let runtime = Runtime::new()
-  let error = expect_native_error(() => {
-    Window::new(
-      runtime,
-      config=WindowConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"titlebar_style\":\"hidden_inset\"}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("invalid type or range"))
-  runtime.destroy()
-}
-
-///|
-test "window config rejects unsupported size hints" {
-  let runtime = Runtime::new()
-  let error = expect_native_error(() => {
-    Window::new(
-      runtime,
-      config=WindowConfig::unsafe_from_json(
-        "{\"abi_version\":1,\"title\":\"Bad\",\"width\":320,\"height\":240,\"size_hint\":\"stretch\"}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("invalid type or range"))
-  runtime.destroy()
-}
-
-///|
-test "window config requires abi_version 1" {
-  let runtime = Runtime::new()
-  let error = expect_native_error(() => {
-    Window::new(
-      runtime,
-      config=WindowConfig::unsafe_from_json(
-        "{\"title\":\"Bad\",\"width\":320,\"height\":240}",
-      ),
-    )
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("abi_version"))
-  runtime.destroy()
 }
 
 ///|

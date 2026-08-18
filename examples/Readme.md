@@ -73,8 +73,8 @@ moon -C examples run 01_run --target native
   JavaScript helpers and events.
 - `48_titlebar_overlay`: cross-platform overlay demo with native window
   controls and compact web-rendered application chrome.
-- `49_app_menu`: app-level native menu definitions and macOS menu command
-  events with the optional focused window id.
+- `49_app_menu`: app-level typed native menu roles and menu command events with
+  the optional focused window id.
 - `50_browser_control`: asynchronous navigation, popup, download, certificate,
   media-permission, and download-progress browser policy handlers.
 - `51_child_process_close_repro`: long-lived child process and pending bridge
@@ -88,6 +88,8 @@ moon -C examples run 01_run --target native
   `BrowserHandle::open_devtools` and closes it with the window lifecycle.
 - `55_desktop_showcase`: presentation-ready macOS desktop capability console
   combining native dialogs, clipboard access, notifications, and tray menus.
+- `56_i18n`: one explicit application locale observed through MoonBit command
+  context, CEF `navigator.languages`, and localized typed native menus.
 
 All runnable examples should import `moonbit-community/proton`. `proton.project.json`
 configures app settings such as window, entry, debug, frontend, and bundle
