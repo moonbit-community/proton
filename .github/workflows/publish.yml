@@ -5,10 +5,31 @@ run-name: publish Proton packages to Mooncakes
 on:
   workflow_dispatch:
     inputs:
-      resume_from_shell:
-        description: Publish only proton_shell, proton_ext, and proton_cli
-        type: boolean
-        default: false
+      resume_from:
+        description: First module to publish after a partial release
+        type: choice
+        default: config
+        options:
+          - config
+          - codegen
+          - contract
+          - rsa
+          - updater
+          - sys/ffi
+          - sys/shell
+          - sys/auto_launch
+          - sys/clipboard
+          - sys/global_hotkey
+          - sys/keepawake
+          - sys/microphone
+          - sys/power_monitor
+          - sys/process
+          - sys/tray
+          - client
+          - rabbita
+          - proton
+          - extensions
+          - cli
 
 permissions:
   contents: read
@@ -55,20 +76,23 @@ jobs:
 
       - name: Publish packages
         run: |
+          resume_from="${{ inputs.resume_from }}"
+          publishing=false
+
           publish_module() {
             module_dir="$1"
             module_name="$2"
+            if [ "$publishing" != "true" ]; then
+              if [ "$module_dir" != "$resume_from" ]; then
+                echo "Skipping $module_name before resume point $resume_from"
+                return
+              fi
+              publishing=true
+            fi
             echo "Publishing $module_name from $module_dir"
             moon -C "$module_dir" publish
             moon update
           }
-
-          if [ "${{ inputs.resume_from_shell }}" = "true" ]; then
-            publish_module sys/shell moonbit-community/proton_shell
-            publish_module extensions moonbit-community/proton_ext
-            publish_module cli moonbit-community/proton_cli
-            exit 0
-          fi
 
           publish_module config moonbit-community/proton_config
           publish_module codegen moonbit-community/proton_codegen
