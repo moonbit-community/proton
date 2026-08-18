@@ -196,6 +196,12 @@ enum NativeViewEvent {
 } derive(Debug, Eq)
 
 ///|
+pub extend NativeViewEvent with Eq::{not_equal, equal}
+
+///|
+pub extend NativeViewEvent with Debug::{to_repr}
+
+///|
 pub extend RuntimeEvent with Eq::{not_equal, equal}
 
 ///|

@@ -114,9 +114,9 @@ function platformConfig(cefRoot, env) {
     const libs = pkgConfig(["--libs", "gtk+-3.0", "x11"]);
     const releaseDir = path.join(cefRoot, "Release");
     return {
-      stubCc: requestedCc || "cc",
+      stubCc: requestedCc || "clang",
       stubFlags: appendFlags("-DOS_LINUX=1 -DCEF_X11=1", commonStubFlags, cflags),
-      loaderCc: envValue(env, "CXX").trim() || "c++",
+      loaderCc: envValue(env, "CXX").trim() || "clang++",
       loaderFlags: "-std=c++17",
       linkFlags: appendFlags(
         `-L${quote(releaseDir)} -lcef -Wl,-rpath,${quote(releaseDir)}`,

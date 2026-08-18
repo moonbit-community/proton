@@ -3255,7 +3255,7 @@ int32_t proton_engine_execute_process(
   proton_engine_init_main_args(&args, &main_args);
   proton_engine_init_handlers();
   snprintf(g_proton_engine_locale, sizeof(g_proton_engine_locale), "%s",
-           config.locale);
+           config->locale);
   int exit_code = cef_execute_process(&args, &g_app.app, NULL);
   proton_engine_free_main_args(&main_args);
   if (out_exit_code != NULL) {
@@ -4141,7 +4141,7 @@ int32_t proton_engine_window_create(
     }
     gtk_container_add(GTK_CONTAINER(window->window), window->root_box);
     if (runtime->menu_definition != NULL) {
-      status = proton_engine_window_install_menu(
+      int32_t status = proton_engine_window_install_menu(
           window, runtime->menu_definition, error, error_len);
       if (status != PROTON_OK) {
         gtk_widget_destroy(window->window);
