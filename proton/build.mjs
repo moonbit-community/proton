@@ -110,6 +110,11 @@ function platformConfig(cefRoot, env) {
   }
 
   if (process.platform === "linux") {
+    // FIXME(toolchain): The MoonBit native runtime currently exports process-wide
+    // malloc/free symbols through mimalloc. CEF or libc may allocate memory that
+    // executable code then frees through a different allocator. Fix this with
+    // MoonBit-specific allocator symbols in the toolchain; linker symbol maps or
+    // allocator wrappers here are not a safe substitute.
     const cflags = pkgConfig(["--cflags", "gtk+-3.0", "x11"]);
     const libs = pkgConfig(["--libs", "gtk+-3.0", "x11"]);
     const releaseDir = path.join(cefRoot, "Release");
