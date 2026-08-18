@@ -69,7 +69,6 @@ function pkgConfig(args) {
 function platformConfig(cefRoot, env) {
   const commonStubFlags = appendFlags(
     "-DCEF_API_VERSION=14700",
-    `-include ${quote(path.join(ffiRoot, "src", "proton_allocator.h"))}`,
     `-I${quote(path.join(ffiRoot, "include"))}`,
     `-I${quote(cefRoot)}`,
   );
