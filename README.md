@@ -492,9 +492,9 @@ proton_cli package
 proton_cli package --release
 ```
 
-The package command performs a debug build by default. Pass `--release` to use
-MoonBit's release build mode, or `--no-build` to reuse an existing build from
-the selected mode. Package output is written to `dist` by default.
+The package command performs an incremental debug executable build by default.
+Pass `--release` to use MoonBit's release build mode. Package output is written
+to `dist` by default.
 Icons, resources, output targets, signing, notarization, custom URL schemes, and
 macOS document types are configured through `proton.project.json` and package command
 options.

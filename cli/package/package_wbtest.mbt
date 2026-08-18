@@ -12,12 +12,11 @@ fn parse_package_matches(args : Array[String]) -> @argparse.Matches raise {
 test "parse package args accepts repeated targets and overrides" {
   let raw = parse_package_args([
     "--package", "desktop", "--target", "app", "--target", "zip", "--target", "dmg",
-    "--output", "dist", "--no-build", "--dry-run",
+    "--output", "dist", "--dry-run",
   ])
   @debug.assert_eq(raw.app_package, Some("desktop"))
   @debug.assert_eq(raw.targets, ["app", "zip", "dmg"])
   @debug.assert_eq(raw.output, Some("dist"))
-  assert_false(raw.build)
   assert_false(raw.release)
   assert_true(raw.dry_run)
 }
@@ -25,8 +24,19 @@ test "parse package args accepts repeated targets and overrides" {
 ///|
 test "parse package args enables release builds explicitly" {
   let raw = parse_package_args(["--release"])
-  assert_true(raw.build)
   assert_true(raw.release)
+}
+
+///|
+test "package no longer accepts an implicit cached executable" {
+  try parse_package_args(["--no-build"]) catch {
+    error =>
+      assert_true(
+        error.to_string().contains("unexpected argument '--no-build'"),
+      )
+  } noraise {
+    _ => abort("expected --no-build to be rejected")
+  }
 }
 
 ///|
@@ -286,7 +296,6 @@ test "macOS plist contains bundle identity and executable" {
     update_revision: 42UL,
     targets: ["app"],
     output: "dist",
-    build: false,
     release: false,
     base_dir: ".",
     frontend_dist: None,
@@ -353,7 +362,6 @@ test "macOS helper plist matches its bundle identity" {
     update_revision: 42UL,
     targets: ["app"],
     output: "dist",
-    build: false,
     release: false,
     base_dir: ".",
     frontend_dist: None,

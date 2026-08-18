@@ -10,7 +10,6 @@ struct RawPackageOptions {
   config_path : String?
   targets : Array[String]
   output : String?
-  build : Bool
   release : Bool
   dry_run : Bool
   sign : Bool
@@ -37,7 +36,6 @@ struct PackagePlan {
   update_revision : UInt64
   targets : Array[String]
   output : String
-  build : Bool
   release : Bool
   base_dir : String
   frontend_dist : String?
@@ -93,7 +91,6 @@ pub fn command() -> @argparse.Command {
     "package",
     about="Package a Proton application",
     flags=[
-      FlagArg("no-build", about="Reuse an existing package build"),
       FlagArg("release", about="Build and package the release output"),
       FlagArg("dry-run", about="Print the resolved package plan"),
       FlagArg("sign", about="Sign the packaged application"),
@@ -221,8 +218,6 @@ fn package_options_from_matches(
     is {
       "notarize"? : Some(notarize)
       | (None with notarize = false),
-      "no-build"? : Some(no_build)
-      | (None with no_build = false),
       "release"? : Some(release)
       | (None with release = false),
       "dry-run"? : Some(dry_run)
@@ -239,7 +234,6 @@ fn package_options_from_matches(
     config_path: config_path.get(0),
     targets,
     output: output.get(0),
-    build: !no_build,
     release,
     dry_run,
     sign: sign || notarize,
@@ -412,7 +406,6 @@ async fn build_package_plan(
     update_revision,
     targets,
     output,
-    build: raw.build,
     release: raw.release,
     base_dir,
     frontend_dist,
@@ -606,8 +599,6 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
     plan.sign_binaries.join(", ")
   }
   println("  sign binaries: " + sign_binaries)
-  let build = if plan.build { "yes" } else { "no" }
-  println("  build: " + build)
   let build_mode = if plan.release { "release" } else { "debug" }
   println("  build mode: " + build_mode)
   println("  sign: " + bool_text(plan.sign))
@@ -628,13 +619,9 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
   // Resolve the active runtime before any build work so a missing
   // `proton_cli cef setup` fails fast instead of after a full application build.
   let runtime = read_active_runtime(plan.workspace_root)
-  if plan.build {
-    run_package_build(plan)
-  }
-  let executable = match find_package_executable(plan) {
-    Some(path) => path
-    None =>
-      raise PackagePlanError::MissingExecutable(path=package_build_root(plan))
+  let executable = run_package_build(plan)
+  if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
+    raise PackagePlanError::MissingExecutable(path=executable)
   }
   match current_package_host() {
     Windows => stage_windows_portable(plan, executable, runtime)
@@ -649,59 +636,13 @@ async fn is_macos_host() -> Bool {
 }
 
 ///|
-async fn run_package_build(plan : PackagePlan) -> Unit {
-  // Keep local packaging fast by default. Distribution builds opt into the
-  // Moon release mode explicitly through `proton_cli package --release`.
-  let moon_args : Array[String] = []
-  if plan.release {
-    moon_args.push("--release")
-  }
-  @build.run_release(plan.root, plan.app_package, plan.config_path, moon_args)
-}
-
-///|
-fn package_build_root(plan : PackagePlan) -> String {
-  @fsutil.resolve_path(plan.workspace_root, "_build")
-}
-
-///|
-async fn find_package_executable(plan : PackagePlan) -> String? {
-  // `--no-build` must reuse the same build mode selected for this command.
-  let build_mode = if plan.release { "release" } else { "debug" }
-  let root = @fsutil.resolve_path(
-    package_build_root(plan),
-    "native/" + build_mode + "/build",
+async fn run_package_build(plan : PackagePlan) -> String {
+  @build.build_executable(
+    plan.root,
+    plan.app_package,
+    plan.config_path,
+    plan.release,
   )
-  let package_name = path_basename(plan.app_package)
-  find_named_file(root, package_name + ".exe")
-}
-
-///|
-async fn find_named_file(root : String, name : String) -> String? {
-  guard @fsutil.path_exists(root) else { return None }
-  if @fsutil.path_is_file(root) {
-    return if path_basename(root) == name { Some(root) } else { None }
-  }
-  // A dSYM bundle mirrors the executable basename under Resources/DWARF, but
-  // that file contains debug symbols rather than runnable Mach-O code.
-  if path_basename(root).has_suffix(".dSYM") {
-    return None
-  }
-  let entries = @async_fs.readdir(
-    root,
-    include_hidden=true,
-    include_special=false,
-  ) catch {
-    error if @async.is_being_cancelled() => raise error
-    _ => return None
-  }
-  for entry in entries {
-    match find_named_file(@fsutil.resolve_path(root, entry), name) {
-      Some(path) => return Some(path)
-      None => ()
-    }
-  }
-  None
 }
 
 ///|

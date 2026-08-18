@@ -99,6 +99,40 @@ test "moon build args prepend an isolated target directory" {
 }
 
 ///|
+test "moon build-only args select the requested build mode" {
+  @debug.assert_eq(moon_build_only_args("app", false), [
+    "run", "app", "--target", "native", "--debug", "--build-only",
+  ])
+  @debug.assert_eq(moon_build_only_args("desktop", true), [
+    "run", "desktop", "--target", "native", "--release", "--build-only",
+  ])
+}
+
+///|
+test "moon build-only output identifies one executable" {
+  assert_eq(
+    artifact_path_from_build_output(
+      "{\"artifacts_path\":[\"/tmp/build/app.exe\"]}\n",
+    ),
+    "/tmp/build/app.exe",
+  )
+}
+
+///|
+test "moon build-only output rejects missing or ambiguous artifacts" {
+  for
+    output in [
+      "{}", "{\"artifacts_path\":[]}", "{\"artifacts_path\":[\"first.exe\",\"second.exe\"]}",
+      "{\"artifacts_path\":[1]}",
+    ] {
+    let error = expect_build_error_message(() => {
+      artifact_path_from_build_output(output)
+    })
+    assert_true(error.contains("returned invalid output"))
+  }
+}
+
+///|
 test "frontend release rejects url production entry" {
   let frontend = Some(
     @proton_config.ProjectFrontendConfig::new(
