@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_ext/net/contract"
+
+import {
+  "moonbit-community/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let extension : @proton_contract.ExtensionContract
+
+pub let request : @proton_contract.Command[Request, Response]
+
+// Errors
+
+// Types and methods
+pub(all) struct Request {
+  http_method : String
+  url : String
+  headers : Map[String, String]
+  body : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Request::equal(Self, Self) -> Bool
+pub fn Request::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Request::not_equal(Self, Self) -> Bool
+pub fn Request::to_json(Self) -> Json
+pub fn Request::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Response {
+  status : Int
+  status_text : String
+  headers : Map[String, String]
+  body : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Response::equal(Self, Self) -> Bool
+pub fn Response::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Response::not_equal(Self, Self) -> Bool
+pub fn Response::to_json(Self) -> Json
+pub fn Response::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

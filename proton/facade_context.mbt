@@ -3,6 +3,7 @@
 pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
+  locale_preferences : @locale.LocalePreferences
 }
 
 ///|
@@ -14,6 +15,7 @@ pub struct WindowContext {
   windows : WindowManager
   tasks : @async.TaskGroup[Unit]
   events : WindowEventEmitter
+  locale_preferences : @locale.LocalePreferences
 }
 
 ///|
@@ -46,8 +48,9 @@ priv struct WindowLifecycleHook {
 fn ApplicationContext::new(
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
+  locale_preferences : @locale.LocalePreferences,
 ) -> ApplicationContext {
-  ApplicationContext::{ tasks, windows }
+  ApplicationContext::{ tasks, windows, locale_preferences }
 }
 
 ///|
@@ -58,8 +61,45 @@ fn WindowContext::new(
   windows : WindowManager,
   tasks : @async.TaskGroup[Unit],
   events : WindowEventEmitter,
+  locale_preferences : @locale.LocalePreferences,
 ) -> WindowContext {
-  WindowContext::{ id, window, handle, windows, tasks, events }
+  WindowContext::{
+    id,
+    window,
+    handle,
+    windows,
+    tasks,
+    events,
+    locale_preferences,
+  }
+}
+
+///|
+/// Returns the immutable application locale selected at startup.
+pub fn ApplicationContext::locale(self : ApplicationContext) -> @locale.Locale {
+  self.locale_preferences.locale()
+}
+
+///|
+/// Returns the application's ordered language preferences.
+pub fn ApplicationContext::preferred_languages(
+  self : ApplicationContext,
+) -> Array[@locale.Locale] {
+  self.locale_preferences.preferred_languages()
+}
+
+///|
+/// Returns the immutable application locale selected at startup.
+pub fn WindowContext::locale(self : WindowContext) -> @locale.Locale {
+  self.locale_preferences.locale()
+}
+
+///|
+/// Returns the application's ordered language preferences.
+pub fn WindowContext::preferred_languages(
+  self : WindowContext,
+) -> Array[@locale.Locale] {
+  self.locale_preferences.preferred_languages()
 }
 
 ///|

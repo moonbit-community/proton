@@ -13,6 +13,8 @@ pub using @native {
   type Menu,
   type MenuBar,
   type MenuItem,
+  type MenuItemRole,
+  type MenuRole,
   type ProcessResult,
   type Runtime,
   type RuntimeConfig,
@@ -34,6 +36,9 @@ pub using @proton_command {
   type CommandRegistrar,
   type PermissionScopeValidationError,
 }
+
+///|
+pub using @locale {type Locale, type LocaleParseError}
 
 ///|
 pub type AppEntry = @manifest.AppEntry

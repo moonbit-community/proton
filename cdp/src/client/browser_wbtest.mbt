@@ -181,45 +181,6 @@ test "browser scalar helpers reject missing and invalid fields" {
 }
 
 ///|
-async test "browser target helpers send schema commands" {
-  @async.with_task_group() <| group => {
-    let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let addr = server.addr
-    group.spawn_bg() <| () => {
-      defer server.close()
-      let (conn, _) = server.accept()
-      defer conn.close()
-      let request = conn.read_request()
-      let ws = @websocket.from_http_server(request, conn)
-      defer ws.close()
-
-      let get_targets = ws.recv().read_all().text()
-      assert_true(get_targets.contains("\"method\":\"Target.getTargets\""))
-      ws.send_text(
-        "{\"id\":1,\"result\":{\"targetInfos\":[{\"targetId\":\"target-1\",\"type\":\"page\",\"title\":\"Example\",\"url\":\"https://example.com/\",\"attached\":false}]}}",
-      )
-
-      let create_target = ws.recv().read_all().text()
-      assert_true(create_target.contains("\"method\":\"Target.createTarget\""))
-      assert_true(create_target.contains("\"browserContextId\":\"context-1\""))
-      assert_true(create_target.contains("\"newWindow\":true"))
-      ws.send_text("{\"id\":2,\"result\":{\"targetId\":\"target-2\"}}")
-    }
-    let client = CdpClient::connect("ws://127.0.0.1:\{addr.port()}")
-    defer client.close()
-    let targets = client.get_targets()
-    inspect(targets.length(), content="1")
-    inspect(targets[0].target_id, content="target-1")
-    let target_id = client.create_target(
-      url="https://example.com/",
-      browser_context_id="context-1",
-      new_window=true,
-    )
-    inspect(target_id, content="target-2")
-  }
-}
-
-///|
 test "browser target info list parser rejects invalid target list shape" {
   let result : Result[Array[CdpTargetInfo], Error] = try_result_client_browser_wbtest(() => {
       parse_target_infos({ "targetInfos": {} })

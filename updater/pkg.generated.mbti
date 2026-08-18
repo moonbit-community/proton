@@ -17,7 +17,12 @@ pub(all) suberror ManifestError {
   MissingField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)
 } derive(Eq, @debug.Debug)
+pub fn ManifestError::equal(Self, Self) -> Bool
 pub fn ManifestError::message(Self) -> String
+pub fn ManifestError::not_equal(Self, Self) -> Bool
+pub fn ManifestError::output(Self, &Logger) -> Unit
+pub fn ManifestError::to_repr(Self) -> @debug.Repr
+pub fn ManifestError::to_string(Self) -> String
 
 // Types and methods
 pub struct Manifest {
@@ -42,16 +47,24 @@ pub struct PlatformUpdate {
   sha256_hex : String
   signature_hex : String
 } derive(Eq, @debug.Debug)
+pub fn PlatformUpdate::equal(Self, Self) -> Bool
+pub fn PlatformUpdate::not_equal(Self, Self) -> Bool
 pub fn PlatformUpdate::sha256_hex(Self) -> String
 pub fn PlatformUpdate::signature_hex(Self) -> String
 pub fn PlatformUpdate::size(Self) -> Int64
+pub fn PlatformUpdate::to_repr(Self) -> @debug.Repr
 pub fn PlatformUpdate::url(Self) -> String
 
 pub struct Timestamp {
   text : String
 } derive(Eq, @debug.Debug)
+pub fn Timestamp::equal(Self, Self) -> Bool
 pub fn Timestamp::is_before(Self, Self) -> Bool
+pub fn Timestamp::not_equal(Self, Self) -> Bool
+pub fn Timestamp::output(Self, &Logger) -> Unit
 pub fn Timestamp::parse(String) -> Self?
+pub fn Timestamp::to_repr(Self) -> @debug.Repr
+pub fn Timestamp::to_string(Self) -> String
 pub fn Timestamp::to_text(Self) -> String
 pub impl Show for Timestamp
 
@@ -60,8 +73,13 @@ pub struct Version {
   minor : Int
   patch : Int
 } derive(Eq, @debug.Debug)
+pub fn Version::equal(Self, Self) -> Bool
 pub fn Version::is_newer_than(Self, Self) -> Bool
+pub fn Version::not_equal(Self, Self) -> Bool
+pub fn Version::output(Self, &Logger) -> Unit
 pub fn Version::parse(String) -> Self?
+pub fn Version::to_repr(Self) -> @debug.Repr
+pub fn Version::to_string(Self) -> String
 pub impl Show for Version
 
 // Type aliases

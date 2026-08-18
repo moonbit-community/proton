@@ -1,0 +1,69 @@
+///|
+/// Failures produced while querying the operating system's language order.
+pub(all) suberror SystemLocaleError {
+  NativeQuery(@native.NativeError)
+} derive(Debug)
+
+///|
+pub extend SystemLocaleError with Debug::{to_repr}
+
+///|
+pub fn SystemLocaleError::message(self : SystemLocaleError) -> String {
+  match self {
+    NativeQuery(error) =>
+      "failed to query system preferred languages: " + error.message()
+  }
+}
+
+///|
+impl Show for SystemLocaleError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+pub extend SystemLocaleError with Show::{to_string, output}
+
+///|
+/// Returns the operating system's valid preferred languages in preference
+/// order. Invalid platform entries are ignored.
+pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError {
+  let raw = @native.system_preferred_language_tags() catch {
+    error => raise NativeQuery(error)
+  }
+  normalize_platform_languages(raw)
+}
+
+///|
+#cfg(platform="linux")
+fn normalize_platform_languages(
+  values : Array[String],
+) -> Array[@locale.Locale] {
+  let tags : Array[String] = []
+  for value in values {
+    for candidate in @locale.posix_locale_candidates(value) {
+      tags.push(candidate)
+    }
+  }
+  @locale.normalize_system_languages(tags)
+}
+
+///|
+#cfg(not(platform="linux"))
+fn normalize_platform_languages(
+  values : Array[String],
+) -> Array[@locale.Locale] {
+  @locale.normalize_system_languages(values)
+}
+
+///|
+fn resolve_locale_preferences(
+  explicit : @locale.Locale?,
+) -> @locale.LocalePreferences {
+  let system = system_preferred_languages() catch {
+    error => {
+      println("warning: " + error.message() + "; falling back to en-US")
+      []
+    }
+  }
+  @locale.LocalePreferences::resolve(explicit, system)
+}

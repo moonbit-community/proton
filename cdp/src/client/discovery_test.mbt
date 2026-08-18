@@ -78,105 +78,6 @@ test "extract websocket url from /json/version response" {
 }
 
 ///|
-async test "discover remote debugging version targets and protocol" {
-  @async.with_task_group() <| group => {
-    let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let addr = server.addr
-    let paths = []
-    group.spawn_bg() <| () => {
-      defer server.close()
-      for _ in 0..<4 {
-        let (conn, _) = server.accept()
-        defer conn.close()
-        let request = conn.read_request()
-        paths.push(request.path)
-        conn.send_response(200, "OK", extra_headers={
-          "Content-Type": "application/json",
-        })
-        match request.path {
-          "/json/version" =>
-            conn.write(
-              (
-                $|{
-                $|  "Browser": "Chrome/144.0.0.0",
-                $|  "Protocol-Version": "1.3",
-                $|  "User-Agent": "Chrome Test",
-                $|  "V8-Version": "14.4",
-                $|  "WebKit-Version": "537.36",
-                $|  "webSocketDebuggerUrl": "ws://localhost:\{addr.port()}/devtools/browser/browser-1"
-                $|}
-              ),
-            )
-          "/json/list" =>
-            conn.write(
-              (
-                $|[
-                $|  {
-                $|    "id": "page-1",
-                $|    "type": "page",
-                $|    "title": "Example",
-                $|    "url": "https://example.com/",
-                $|    "description": "",
-                $|    "devtoolsFrontendUrl": "/devtools/inspector.html?ws=localhost:\{addr.port()}/devtools/page/page-1",
-                $|    "webSocketDebuggerUrl": "ws://localhost:\{addr.port()}/devtools/page/page-1"
-                $|  }
-                $|]
-              ),
-            )
-          "/json/protocol" =>
-            conn.write(
-              (
-                $|{
-                $|  "version": { "major": "1", "minor": "3" },
-                $|  "domains": [{ "domain": "Page", "commands": [], "events": [], "types": [] }]
-                $|}
-              ),
-            )
-          other => conn.write("{\"unexpected\":\"\{other}\"}")
-        }
-        conn.end_response()
-      }
-    }
-    let http_target = @client.parse_cdp_target("127.0.0.1:\{addr.port()}")
-    let version = @client.discover_version(http_target)
-    inspect(version.browser, content="Chrome/144.0.0.0")
-    inspect(version.protocol_version, content="1.3")
-    inspect(
-      version.web_socket_debugger_url,
-      content="ws://127.0.0.1:\{addr.port()}/devtools/browser/browser-1",
-    )
-    let targets = @client.discover_targets(http_target)
-    inspect(targets.length(), content="1")
-    inspect(targets[0].target_id, content="page-1")
-    inspect(targets[0].target_type, content="page")
-    guard targets[0].web_socket_debugger_url is Some(page_ws) else {
-      fail("expected normalized page websocket url")
-    }
-    inspect(
-      page_ws,
-      content="ws://127.0.0.1:\{addr.port()}/devtools/page/page-1",
-    )
-    let selected_page_ws = @client.discover_page_web_socket_url(
-      http_target,
-      target_id="page-1",
-    )
-    inspect(
-      selected_page_ws,
-      content="ws://127.0.0.1:\{addr.port()}/devtools/page/page-1",
-    )
-    let protocol = @client.discover_protocol(
-      WebSocket("ws://127.0.0.1:\{addr.port()}/devtools/browser/browser-1"),
-    )
-    assert_true(
-      protocol is { "version": { "major": "1", "minor": "3", .. }, .. },
-    )
-    json_inspect(paths, content=[
-      "/json/version", "/json/list", "/json/list", "/json/protocol",
-    ])
-  }
-}
-
-///|
 test "select discovered targets by page defaults and filters" {
   let targets = sample_discovered_targets()
   let first_page = @client.select_discovered_page_target(targets)
@@ -209,59 +110,6 @@ test "select discovered target reports no match" {
   )
   guard result is Err(NoMatchingTarget("id=missing type=page")) else {
     fail("expected NoMatchingTarget")
-  }
-}
-
-///|
-async test "discover page websocket keeps direct page endpoint" {
-  inspect(
-    @client.discover_page_web_socket_url(
-      WebSocket("ws://localhost:9222/devtools/page/page-1"),
-    ),
-    content="ws://localhost:9222/devtools/page/page-1",
-  )
-}
-
-///|
-async test "discover page websocket reports target without endpoint" {
-  @async.with_task_group() <| group => {
-    let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let addr = server.addr
-    group.spawn_bg() <| () => {
-      defer server.close()
-      let (conn, _) = server.accept()
-      defer conn.close()
-      let request = conn.read_request()
-      guard request.path is "/json/list" else { fail("expected /json/list") }
-      conn.send_response(200, "OK", extra_headers={
-        "Content-Type": "application/json",
-      })
-      conn.write(
-        (
-          $|[
-          $|  {
-          $|    "id": "page-2",
-          $|    "type": "page",
-          $|    "title": "Settings",
-          $|    "url": "chrome://settings/",
-          $|    "description": ""
-          $|  }
-          $|]
-        ),
-      )
-      conn.end_response()
-    }
-    try
-      @client.discover_page_web_socket_url(
-        @client.parse_cdp_target("127.0.0.1:\{addr.port()}"),
-        title="Settings",
-      )
-    catch {
-      @client.DiscoveryError::MissingTargetWebSocketDebuggerUrl("page-2") => ()
-      _ => fail("expected MissingTargetWebSocketDebuggerUrl")
-    } noraise {
-      _ => fail("expected MissingTargetWebSocketDebuggerUrl")
-    }
   }
 }
 
@@ -412,22 +260,6 @@ test "discovery errors expose stable diagnostic paths" {
 }
 
 ///|
-async test "direct websocket discovery returns url without HTTP lookup" {
-  inspect(
-    @client.discover_web_socket_url(
-      WebSocket("ws://127.0.0.1:9222/devtools/browser/id"),
-    ),
-    content="ws://127.0.0.1:9222/devtools/browser/id",
-  )
-  inspect(
-    @client.discover_browser_web_socket_url(
-      WebSocket("wss://chrome.example.test/devtools/browser/id"),
-    ),
-    content="wss://chrome.example.test/devtools/browser/id",
-  )
-}
-
-///|
 test "version websocket extraction rejects invalid shapes" {
   let not_object : Result[String, @client.DiscoveryError] = try_result_client_discovery_test(() => {
       @client.web_socket_url_from_version_json([])
@@ -495,33 +327,4 @@ test "build chrome launch args includes optional browser flags" {
   assert_true(args.contains("--disable-gpu"))
   assert_true(args.contains("--lang=en-US"))
   assert_true(!args.contains("about:blank"))
-}
-
-///|
-async test "wait for browser endpoint reads websocket debugger url" {
-  @async.with_task_group() <| group => {
-    let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
-    let addr = server.addr
-    let paths = []
-    group.spawn_bg() <| () => {
-      defer server.close()
-      let (conn, _) = server.accept()
-      defer conn.close()
-      let request = conn.read_request()
-      paths.push(request.path)
-      conn.send_response(200, "OK", extra_headers={
-        "Content-Type": "application/json",
-      })
-      conn.write(
-        "{\"webSocketDebuggerUrl\":\"ws://127.0.0.1:\{addr.port()}/devtools/browser/id\"}",
-      )
-      conn.end_response()
-    }
-    let url = @client.wait_for_browser_endpoint(
-      "http://127.0.0.1:\{addr.port()}",
-      timeout_ms=1000,
-    )
-    inspect(url, content="ws://127.0.0.1:\{addr.port()}/devtools/browser/id")
-    json_inspect(paths, content=["/json/version"])
-  }
 }

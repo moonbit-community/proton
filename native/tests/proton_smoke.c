@@ -1059,6 +1059,39 @@ static int expect_runtime_info(void) {
   return 0;
 }
 
+static int expect_system_preferred_languages(void) {
+  char tiny[1];
+  int32_t required = 0;
+  int32_t status =
+      proton_system_preferred_languages_json(tiny, 1, &required);
+  if (expect_status("preferred languages small buffer", status,
+                    PROTON_ERR_BUFFER_TOO_SMALL)) {
+    return 1;
+  }
+  if (required < 2) {
+    return fail("preferred languages did not report a JSON array length");
+  }
+  char *buffer = (char *)malloc((size_t)required + 1);
+  if (buffer == NULL) {
+    return fail("failed to allocate preferred languages buffer");
+  }
+  int32_t actual_required = 0;
+  status = proton_system_preferred_languages_json(
+      buffer, required + 1, &actual_required);
+  if (expect_status("preferred languages", status, PROTON_OK)) {
+    free(buffer);
+    return 1;
+  }
+  if (actual_required != required || buffer[0] != '[' ||
+      buffer[actual_required - 1] != ']' || buffer[actual_required] != '\0') {
+    fprintf(stderr, "unexpected preferred languages JSON: %s\n", buffer);
+    free(buffer);
+    return 1;
+  }
+  free(buffer);
+  return 0;
+}
+
 static int write_empty_file(const char *path) {
   FILE *file = fopen(path, "wb");
   if (file == NULL) {
@@ -1437,6 +1470,9 @@ int main(int argc, char **argv) {
     return 1;
   }
   if (expect_runtime_info()) {
+    return 1;
+  }
+  if (expect_system_preferred_languages()) {
     return 1;
   }
   if (expect_app_instance_forwarding()) {
@@ -1877,14 +1913,33 @@ int main(int argc, char **argv) {
 
   runtime = PROTON_INVALID_HANDLE;
   if (expect_status(
-          "runtime_create accepts boolean headless",
+          "runtime_create accepts headless language config",
           proton_runtime_create_json(
-              "{\"abi_version\":1,\"headless\":true}", &runtime),
+              "{\"abi_version\":1,\"headless\":true,\"locale\":\"zh-CN\","
+              "\"accept_languages\":[\"zh-CN\",\"en-US\"],"
+              "\"framework_dialog_ok_label\":\"Confirm\","
+              "\"framework_dialog_cancel_label\":\"Dismiss\"}",
+              &runtime),
           PROTON_OK)) {
     return 1;
   }
-  if (expect_status("runtime_destroy after headless config",
+  if (expect_status("runtime_destroy after language config",
                     proton_runtime_destroy(runtime), PROTON_OK)) {
+    return 1;
+  }
+
+  runtime = PROTON_INVALID_HANDLE;
+  status = proton_runtime_create_json(
+      "{\"abi_version\":1,\"accept_languages\":[\"en-US\",7]}",
+      &runtime);
+  if (expect_status("runtime_create rejects invalid language list", status,
+                    PROTON_ERR_INVALID_ARGUMENT)) {
+    return 1;
+  }
+  if (runtime != PROTON_INVALID_HANDLE) {
+    return fail("invalid language list should leave runtime handle invalid");
+  }
+  if (expect_last_error_contains("accept_languages")) {
     return 1;
   }
 
@@ -2065,7 +2120,11 @@ int main(int argc, char **argv) {
   status = proton_window_create_json(
       runtime,
       "{\"abi_version\":1,\"title\":\"Overlay\",\"width\":320,"
-      "\"height\":240,\"titlebar_style\":\"overlay\"}",
+      "\"height\":240,\"titlebar_style\":\"overlay\","
+      "\"framework_titlebar_minimize_label\":\"Minimize\","
+      "\"framework_titlebar_maximize_label\":\"Maximize\","
+      "\"framework_titlebar_restore_label\":\"Restore\","
+      "\"framework_titlebar_close_label\":\"Close\"}",
       &window);
   if (expect_status("window_create accepts overlay titlebar style", status,
                     PROTON_OK)) {

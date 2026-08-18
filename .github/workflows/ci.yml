@@ -195,11 +195,14 @@ jobs:
         run: |
           moon check --target native --deny-warn
           moon -C codegen test lib --target wasm --diagnostic-limit 80
+          moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a env \
               LD_LIBRARY_PATH="$PROTON_NATIVE_DIST/bin:$PROTON_NATIVE_DIST/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
               LD_PRELOAD="libcef.so${LD_PRELOAD:+:$LD_PRELOAD}" \
-              moon -C proton test native --target native --diagnostic-limit 80
+              moon -C proton test -p moonbit-community/proton/native \
+                moonbit-community/proton/updater \
+                --target native --diagnostic-limit 80
             xvfb-run -a moon -C cli test -p moonbit-community/proton_cli \
               moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
               moonbit-community/proton_cli/cef \
@@ -208,7 +211,9 @@ jobs:
               moonbit-community/proton_cli/output moonbit-community/proton_cli/package \
               --target native --no-parallelize --diagnostic-limit 80
           else
-            moon -C proton test native --target native --diagnostic-limit 80
+            moon -C proton test -p moonbit-community/proton/native \
+              moonbit-community/proton/updater \
+              --target native --diagnostic-limit 80
             moon -C cli test -p moonbit-community/proton_cli \
               moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
               moonbit-community/proton_cli/cef \
@@ -228,7 +233,8 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           moon check --target native --deny-warn
           moon -C codegen test lib --target wasm --diagnostic-limit 80
-          moon -C proton test native --target native --diagnostic-limit 80
+          moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80
+          moon -C proton test -p moonbit-community/proton/native moonbit-community/proton/updater --target native --diagnostic-limit 80
           moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
           moon -C e2e build --target native --diagnostic-limit 80
 
@@ -240,7 +246,7 @@ jobs:
               moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard \
               moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
               moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
-              moonbit-community/proton_ext/metadata_check moonbit-community/proton_ext/microphone \
+              moonbit-community/proton_ext/microphone \
               moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
               moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray \
               --target native
@@ -252,7 +258,7 @@ jobs:
               moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard \
               moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
               moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
-              moonbit-community/proton_ext/metadata_check moonbit-community/proton_ext/microphone \
+              moonbit-community/proton_ext/microphone \
               moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
               moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray \
               --target native
@@ -277,7 +283,6 @@ jobs:
             "moonbit-community/proton_ext/fs"
             "moonbit-community/proton_ext/global_hotkey"
             "moonbit-community/proton_ext/keepawake"
-            "moonbit-community/proton_ext/metadata_check"
             "moonbit-community/proton_ext/microphone"
             "moonbit-community/proton_ext/notification"
             "moonbit-community/proton_ext/path"
@@ -322,20 +327,21 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          moon -C e2e test -p moonbit-community/proton/e2e/test --target native --no-parallelize --diagnostic-limit 200
+          moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 
       - name: Run MoonBit CDP e2e on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         timeout-minutes: 25
         env:
           PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
+          MOON_CC: cc
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            xvfb-run -a moon -C e2e test -p moonbit-community/proton/e2e/test \
-              --target native --no-parallelize --diagnostic-limit 200
+            xvfb-run -a moon -C e2e run test --target native \
+              --diagnostic-limit 200 -- --self-hosted
           else
-            moon -C e2e test -p moonbit-community/proton/e2e/test \
-              --target native --no-parallelize --diagnostic-limit 200
+            moon -C e2e run test --target native \
+              --diagnostic-limit 200 -- --self-hosted
           fi
 
       - name: List Unix example binaries

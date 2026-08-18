@@ -35,6 +35,28 @@ pub fn runtime_info() -> RuntimeInfo raise NativeError {
 }
 
 ///|
+/// Returns the operating system's preferred language tags in preference order.
+///
+/// Platform adapters may return platform-native locale syntax. The public
+/// facade owns validation and canonicalization into `Locale` values.
+pub fn system_preferred_language_tags() -> Array[String] raise NativeError {
+  let text = require_native_text(
+    "system preferred languages",
+    PayloadBytesExcludingTerminator,
+    (buffer, buffer_len, required) => {
+      proton_system_preferred_languages_json_ffi(buffer, buffer_len, required)
+    },
+  )
+  @json.from_json(decode_native_json(text, "system preferred languages")) catch {
+    error =>
+      raise InvalidPayload(
+        context="system preferred languages",
+        message="expected string array: " + error.to_string(),
+      )
+  }
+}
+
+///|
 /// Enumerates all connected displays.
 ///
 /// Returns an array of `ScreenInfo` describing each monitor's bounds, work

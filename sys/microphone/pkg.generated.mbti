@@ -17,9 +17,14 @@ pub(all) struct CaptureConfig {
   echo_cancellation : Bool
   noise_suppression : Bool
 } derive(Eq, @debug.Debug)
+pub fn CaptureConfig::equal(Self, Self) -> Bool
 pub fn CaptureConfig::new(channels? : Int, sample_rate_hz? : Int, sample_format? : SampleFormat, echo_cancellation? : Bool, noise_suppression? : Bool) -> Self
 pub fn CaptureConfig::normalized(Self) -> Self
+pub fn CaptureConfig::not_equal(Self, Self) -> Bool
+pub fn CaptureConfig::output(Self, &Logger) -> Unit
 pub fn CaptureConfig::recommended_chunk_frames(Self) -> Int
+pub fn CaptureConfig::to_repr(Self) -> @debug.Repr
+pub fn CaptureConfig::to_string(Self) -> String
 pub fn CaptureConfig::uses_voice_processing(Self) -> Bool
 pub impl Show for CaptureConfig
 
@@ -29,7 +34,12 @@ pub(all) enum CaptureState {
   Recording
   Muted
 } derive(Eq, @debug.Debug)
+pub fn CaptureState::equal(Self, Self) -> Bool
 pub fn CaptureState::label(Self) -> String
+pub fn CaptureState::not_equal(Self, Self) -> Bool
+pub fn CaptureState::output(Self, &Logger) -> Unit
+pub fn CaptureState::to_repr(Self) -> @debug.Repr
+pub fn CaptureState::to_string(Self) -> String
 pub impl Show for CaptureState
 
 pub(all) struct MicrophoneDevice {
@@ -39,10 +49,15 @@ pub(all) struct MicrophoneDevice {
   default_config : CaptureConfig
   monitor_supported : Bool
 } derive(Eq, @debug.Debug)
+pub fn MicrophoneDevice::equal(Self, Self) -> Bool
 pub fn MicrophoneDevice::is_live(Self) -> Bool
 pub fn MicrophoneDevice::list() -> Array[Self]
+pub fn MicrophoneDevice::not_equal(Self, Self) -> Bool
+pub fn MicrophoneDevice::output(Self, &Logger) -> Unit
 pub fn MicrophoneDevice::parse_listing(String) -> Array[Self]
 pub fn MicrophoneDevice::session_label(Self) -> String
+pub fn MicrophoneDevice::to_repr(Self) -> @debug.Repr
+pub fn MicrophoneDevice::to_string(Self) -> String
 pub impl Show for MicrophoneDevice
 
 pub(all) enum SampleFormat {
@@ -51,6 +66,11 @@ pub(all) enum SampleFormat {
   F32
 } derive(Eq, @debug.Debug)
 pub fn SampleFormat::bytes_per_sample(Self) -> Int
+pub fn SampleFormat::equal(Self, Self) -> Bool
+pub fn SampleFormat::not_equal(Self, Self) -> Bool
+pub fn SampleFormat::output(Self, &Logger) -> Unit
+pub fn SampleFormat::to_repr(Self) -> @debug.Repr
+pub fn SampleFormat::to_string(Self) -> String
 pub impl Show for SampleFormat
 
 // Type aliases

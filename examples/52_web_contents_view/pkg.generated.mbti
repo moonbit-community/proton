@@ -11,10 +11,16 @@ import {
 
 // Types and methods
 type NavigatePayload derive(ToJson, @json.FromJson)
+pub fn NavigatePayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NavigatePayload::to_json(Self) -> Json
 
 type NavigateReply derive(ToJson, @json.FromJson)
+pub fn NavigateReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NavigateReply::to_json(Self) -> Json
 
 type SimpleReply derive(ToJson, @json.FromJson)
+pub fn SimpleReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SimpleReply::to_json(Self) -> Json
 
 // Type aliases
 

@@ -23,21 +23,46 @@ pub(all) struct ClipboardActivity {
   operation : String
   text_length : Int?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ClipboardActivity::equal(Self, Self) -> Bool
+pub fn ClipboardActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ClipboardActivity::not_equal(Self, Self) -> Bool
+pub fn ClipboardActivity::to_json(Self) -> Json
+pub fn ClipboardActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ReadTextReply {
   text : String?
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ReadTextReply::equal(Self, Self) -> Bool
+pub fn ReadTextReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReadTextReply::not_equal(Self, Self) -> Bool
+pub fn ReadTextReply::to_json(Self) -> Json
+pub fn ReadTextReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ReadTextRequest {
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ReadTextRequest::equal(Self, Self) -> Bool
+pub fn ReadTextRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReadTextRequest::not_equal(Self, Self) -> Bool
+pub fn ReadTextRequest::to_json(Self) -> Json
+pub fn ReadTextRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct WriteTextReply {
   written : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn WriteTextReply::equal(Self, Self) -> Bool
+pub fn WriteTextReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn WriteTextReply::not_equal(Self, Self) -> Bool
+pub fn WriteTextReply::to_json(Self) -> Json
+pub fn WriteTextReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct WriteTextRequest {
   text : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn WriteTextRequest::equal(Self, Self) -> Bool
+pub fn WriteTextRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn WriteTextRequest::not_equal(Self, Self) -> Bool
+pub fn WriteTextRequest::to_json(Self) -> Json
+pub fn WriteTextRequest::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

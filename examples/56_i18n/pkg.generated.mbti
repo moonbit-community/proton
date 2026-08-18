@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/56_i18n"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type LocaleRequest derive(ToJson, @json.FromJson)
+pub fn LocaleRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn LocaleRequest::to_json(Self) -> Json
+
+type LocaleSnapshot derive(ToJson, @json.FromJson)
+pub fn LocaleSnapshot::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn LocaleSnapshot::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

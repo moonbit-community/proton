@@ -231,6 +231,18 @@ fn scenario_probe_expression(name : String) -> String raise {
         #|  }
         #|})()
       )
+    "56_i18n" =>
+      (
+        #|;(() => {
+        #|  if (location.href !== "https://proton.localhost/") return false;
+        #|  if (document.title !== "Proton I18n E2E") return false;
+        #|  if (navigator.language !== "zh-CN") return false;
+        #|  if (!Array.isArray(navigator.languages)) return false;
+        #|  if (navigator.languages[0] !== "zh-CN") return false;
+        #|  if (!navigator.languages.includes("en-US")) return false;
+        #|  return new Set(navigator.languages).size === navigator.languages.length;
+        #|})()
+      )
     _ => fail("unsupported E2E scenario: " + name)
   }
 }

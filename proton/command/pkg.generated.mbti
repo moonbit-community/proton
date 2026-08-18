@@ -18,12 +18,20 @@ pub(all) suberror ExtensionSpecError {
   InvalidContract(detail~ : String)
   ForeignCommandRoute(extension_id~ : String, operation_name~ : String)
 } derive(Eq)
+pub fn ExtensionSpecError::equal(Self, Self) -> Bool
 pub fn ExtensionSpecError::message(Self) -> String
+pub fn ExtensionSpecError::not_equal(Self, Self) -> Bool
+pub fn ExtensionSpecError::output(Self, &Logger) -> Unit
+pub fn ExtensionSpecError::to_string(Self) -> String
 
 pub(all) suberror PermissionScopeValidationError {
   Invalid(detail~ : String)
 } derive(Eq)
+pub fn PermissionScopeValidationError::equal(Self, Self) -> Bool
 pub fn PermissionScopeValidationError::message(Self) -> String
+pub fn PermissionScopeValidationError::not_equal(Self, Self) -> Bool
+pub fn PermissionScopeValidationError::output(Self, &Logger) -> Unit
+pub fn PermissionScopeValidationError::to_string(Self) -> String
 
 // Types and methods
 pub struct AppCommandApiDescriptor {

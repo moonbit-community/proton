@@ -13,6 +13,7 @@ import {
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton/ipc",
+  "moonbit-community/proton/internal/locale",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/native",
   "moonbit-community/proton/updater",
@@ -21,7 +22,6 @@ import {
 }
 
 import {
-  "moonbitlang/async/fs" @async_fs,
   "moonbit-community/proton_contract",
 } for "wbtest"
 
@@ -36,15 +36,19 @@ options(
     "facade_context.mbt": [ "native" ],
     "facade_entry.mbt": [ "native" ],
     "facade_event_loop.mbt": [ "native" ],
+    "facade_i18n.mbt": [ "native" ],
     "facade_instance.mbt": [ "native" ],
     "facade_lifecycle.mbt": [ "native" ],
+    "facade_locale.mbt": [ "native" ],
     "facade_macos_layout.mbt": [ "native" ],
+    "facade_menu.mbt": [ "native" ],
     "facade_manifest.mbt": [ "native" ],
     "facade_notification.mbt": [ "native" ],
     "facade_paths.mbt": [ "native" ],
     "facade_permissions.mbt": [ "native" ],
     "facade_runtime.mbt": [ "native" ],
     "facade_session.mbt": [ "native" ],
+    "facade_test.mbt": [ "native" ],
     "facade_runtime_wakeup.mbt": [ "native" ],
     "facade_runner.mbt": [ "native" ],
     "facade_types.mbt": [ "native" ],

@@ -28,7 +28,12 @@ pub(all) suberror BootstrapError {
   UnsupportedField(path~ : String, reason~ : String)
   UnsupportedValue(path~ : String, value~ : String)
 } derive(Eq, @debug.Debug)
+pub fn BootstrapError::equal(Self, Self) -> Bool
 pub fn BootstrapError::message(Self) -> String
+pub fn BootstrapError::not_equal(Self, Self) -> Bool
+pub fn BootstrapError::output(Self, &Logger) -> Unit
+pub fn BootstrapError::to_repr(Self) -> @debug.Repr
+pub fn BootstrapError::to_string(Self) -> String
 
 // Types and methods
 type LoadedAppManifest

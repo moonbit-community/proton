@@ -21,13 +21,23 @@ pub(all) suberror DevConfigError {
   BackendDirectoryMissing(path~ : String)
   BackendDirectoryNotDirectory(path~ : String)
 } derive(Eq, @debug.Debug)
+pub fn DevConfigError::equal(Self, Self) -> Bool
 pub fn DevConfigError::message(Self) -> String
+pub fn DevConfigError::not_equal(Self, Self) -> Bool
+pub fn DevConfigError::output(Self, &Logger) -> Unit
+pub fn DevConfigError::to_repr(Self) -> @debug.Repr
+pub fn DevConfigError::to_string(Self) -> String
 
 pub(all) suberror DevProcessError {
   Start(role~ : String, detail~ : String)
   Exit(role~ : String, code~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn DevProcessError::equal(Self, Self) -> Bool
 pub fn DevProcessError::message(Self) -> String
+pub fn DevProcessError::not_equal(Self, Self) -> Bool
+pub fn DevProcessError::output(Self, &Logger) -> Unit
+pub fn DevProcessError::to_repr(Self) -> @debug.Repr
+pub fn DevProcessError::to_string(Self) -> String
 
 pub(all) suberror DevRuntimeError {
   NativeDistOverride(detail~ : String)
@@ -40,7 +50,12 @@ pub(all) suberror DevRuntimeError {
   HelperMissing(label~ : String, path~ : String)
   SetupRequired(detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn DevRuntimeError::equal(Self, Self) -> Bool
 pub fn DevRuntimeError::message(Self) -> String
+pub fn DevRuntimeError::not_equal(Self, Self) -> Bool
+pub fn DevRuntimeError::output(Self, &Logger) -> Unit
+pub fn DevRuntimeError::to_repr(Self) -> @debug.Repr
+pub fn DevRuntimeError::to_string(Self) -> String
 
 pub(all) suberror DevServerError {
   MissingScheme(url~ : String)
@@ -54,19 +69,38 @@ pub(all) suberror DevServerError {
   FrontendExited(code~ : Int)
   Timeout(url~ : String)
 } derive(Eq, @debug.Debug)
+pub fn DevServerError::equal(Self, Self) -> Bool
 pub fn DevServerError::message(Self) -> String
+pub fn DevServerError::not_equal(Self, Self) -> Bool
+pub fn DevServerError::output(Self, &Logger) -> Unit
+pub fn DevServerError::to_repr(Self) -> @debug.Repr
+pub fn DevServerError::to_string(Self) -> String
 
 pub(all) suberror DevUsageError {
   InvalidNonNegativeInteger(option~ : String, value~ : String)
 } derive(Eq, @debug.Debug)
+pub fn DevUsageError::equal(Self, Self) -> Bool
 pub fn DevUsageError::message(Self) -> String
+pub fn DevUsageError::not_equal(Self, Self) -> Bool
+pub fn DevUsageError::output(Self, &Logger) -> Unit
+pub fn DevUsageError::to_repr(Self) -> @debug.Repr
+pub fn DevUsageError::to_string(Self) -> String
 
 // Types and methods
 type DevRuntime derive(Eq, @debug.Debug)
+pub fn DevRuntime::equal(Self, Self) -> Bool
+pub fn DevRuntime::not_equal(Self, Self) -> Bool
+pub fn DevRuntime::to_repr(Self) -> @debug.Repr
 
 type DevUrlEndpoint derive(Eq, @debug.Debug)
+pub fn DevUrlEndpoint::equal(Self, Self) -> Bool
+pub fn DevUrlEndpoint::not_equal(Self, Self) -> Bool
+pub fn DevUrlEndpoint::to_repr(Self) -> @debug.Repr
 
 type RawDevOptions derive(Eq, @debug.Debug)
+pub fn RawDevOptions::equal(Self, Self) -> Bool
+pub fn RawDevOptions::not_equal(Self, Self) -> Bool
+pub fn RawDevOptions::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

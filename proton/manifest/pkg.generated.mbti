@@ -16,6 +16,11 @@ pub(all) enum AppEntry {
   File(String)
   Asset(String)
 } derive(Eq, @debug.Debug)
+pub fn AppEntry::equal(Self, Self) -> Bool
+pub fn AppEntry::not_equal(Self, Self) -> Bool
+pub fn AppEntry::output(Self, &Logger) -> Unit
+pub fn AppEntry::to_repr(Self) -> @debug.Repr
+pub fn AppEntry::to_string(Self) -> String
 pub impl Show for AppEntry
 
 pub struct AppManifest {
@@ -37,7 +42,12 @@ pub struct AppWindowManifest {
   entry : AppEntry
   open_on_start : Bool
 } derive(Eq, @debug.Debug)
+pub fn AppWindowManifest::equal(Self, Self) -> Bool
 pub fn AppWindowManifest::new(String, WindowManifest, AppEntry, open_on_start? : Bool) -> Self
+pub fn AppWindowManifest::not_equal(Self, Self) -> Bool
+pub fn AppWindowManifest::output(Self, &Logger) -> Unit
+pub fn AppWindowManifest::to_repr(Self) -> @debug.Repr
+pub fn AppWindowManifest::to_string(Self) -> String
 pub impl Show for AppWindowManifest
 
 pub(all) enum ExtensionSetting {
@@ -46,7 +56,12 @@ pub(all) enum ExtensionSetting {
 } derive(Eq, @debug.Debug)
 pub fn ExtensionSetting::disabled() -> Self
 pub fn ExtensionSetting::enabled() -> Self
+pub fn ExtensionSetting::equal(Self, Self) -> Bool
 pub fn ExtensionSetting::is_enabled(Self) -> Bool
+pub fn ExtensionSetting::not_equal(Self, Self) -> Bool
+pub fn ExtensionSetting::output(Self, &Logger) -> Unit
+pub fn ExtensionSetting::to_repr(Self) -> @debug.Repr
+pub fn ExtensionSetting::to_string(Self) -> String
 pub impl Show for ExtensionSetting
 
 pub struct PermissionGrant {
@@ -65,11 +80,19 @@ pub(all) enum PermissionOrigin {
   App
   Entry
 } derive(Eq, @debug.Debug)
+pub fn PermissionOrigin::equal(Self, Self) -> Bool
+pub fn PermissionOrigin::not_equal(Self, Self) -> Bool
+pub fn PermissionOrigin::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TitlebarStyle {
   Default
   Overlay
 } derive(Eq, @debug.Debug)
+pub fn TitlebarStyle::equal(Self, Self) -> Bool
+pub fn TitlebarStyle::not_equal(Self, Self) -> Bool
+pub fn TitlebarStyle::output(Self, &Logger) -> Unit
+pub fn TitlebarStyle::to_repr(Self) -> @debug.Repr
+pub fn TitlebarStyle::to_string(Self) -> String
 pub impl Show for TitlebarStyle
 
 pub struct WindowManifest {
@@ -79,7 +102,12 @@ pub struct WindowManifest {
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
 } derive(Eq, @debug.Debug)
+pub fn WindowManifest::equal(Self, Self) -> Bool
 pub fn WindowManifest::new(String, Int, Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle) -> Self
+pub fn WindowManifest::not_equal(Self, Self) -> Bool
+pub fn WindowManifest::output(Self, &Logger) -> Unit
+pub fn WindowManifest::to_repr(Self) -> @debug.Repr
+pub fn WindowManifest::to_string(Self) -> String
 pub impl Show for WindowManifest
 
 pub(all) enum WindowSizeHint {
@@ -88,6 +116,11 @@ pub(all) enum WindowSizeHint {
   Min
   Max
 } derive(Eq, @debug.Debug)
+pub fn WindowSizeHint::equal(Self, Self) -> Bool
+pub fn WindowSizeHint::not_equal(Self, Self) -> Bool
+pub fn WindowSizeHint::output(Self, &Logger) -> Unit
+pub fn WindowSizeHint::to_repr(Self) -> @debug.Repr
+pub fn WindowSizeHint::to_string(Self) -> String
 pub impl Show for WindowSizeHint
 
 // Type aliases

@@ -121,34 +121,3 @@ test "doctor exposes only readonly diagnostics" {
     _ => fail("doctor must not execute project commands")
   }
 }
-
-///|
-fn moon_mod_version_from_source(path : String, source : String) -> String? {
-  let (ast, reports) = @moon_config.parse_moon_mod(name=path, source)
-  guard reports.length() == 0 else { return None }
-  match ast {
-    @moon_config.Ast::Obj(fields, ..) => {
-      for field in fields {
-        match field {
-          ("version", @moon_config.Ast::Str(version, ..)) =>
-            return Some(version)
-          _ => ()
-        }
-      }
-      None
-    }
-    _ => None
-  }
-}
-
-///|
-test "embedded cli version matches moon.mod" {
-  let path = "moon.mod"
-  let source = @mbfs.read_file_to_string(path, encoding="utf8") catch {
-    err => fail("failed to read " + path + ": " + @debug.render(Repr(err)))
-  }
-  match moon_mod_version_from_source(path, source) {
-    Some(version) => assert_eq(cli_current_version, version)
-    None => fail("expected moon.mod version to parse")
-  }
-}

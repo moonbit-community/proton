@@ -142,6 +142,7 @@ fn config_app(path : String?, auto_config~ : Bool) -> App {
     debug_level_value: 0,
     headless_value: false,
     single_instance_identifier: None,
+    explicit_locale: None,
     title_overridden: false,
     size_overridden: false,
     titlebar_style_overridden: false,
@@ -192,6 +193,13 @@ pub fn App::debug_level(self : App, debug : Int) -> App {
 /// `PROTON_HEADLESS=1` to force this mode for automated test runs.
 pub fn App::headless(self : App, enabled? : Bool = true) -> App {
   self.headless_value = enabled
+  self
+}
+
+///|
+/// Selects the immutable locale used by this application runtime.
+pub fn App::locale(self : App, locale : @locale.Locale) -> App {
+  self.explicit_locale = Some(locale)
   self
 }
 

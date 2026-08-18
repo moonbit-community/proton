@@ -2,10 +2,6 @@ import {
   "moonbitlang/core/encoding/utf8",
 }
 
-import {
-  "moonbitlang/core/env",
-} for "test"
-
 supported_targets = "native"
 
 options(

@@ -21,7 +21,12 @@ pub(all) suberror KeyError {
   ModulusTooSmall(bits~ : Int, minimum~ : Int)
   InvalidExponent(detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn KeyError::equal(Self, Self) -> Bool
 pub fn KeyError::message(Self) -> String
+pub fn KeyError::not_equal(Self, Self) -> Bool
+pub fn KeyError::output(Self, &Logger) -> Unit
+pub fn KeyError::to_repr(Self) -> @debug.Repr
+pub fn KeyError::to_string(Self) -> String
 
 // Types and methods
 pub struct PublicKey {

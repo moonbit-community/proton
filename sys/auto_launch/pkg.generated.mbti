@@ -37,11 +37,22 @@ pub enum AutoLaunchError {
   UnsupportedPlatform(Platform)
   NativeFailure(action~ : String, message~ : String)
 } derive(Eq, @debug.Debug)
+pub fn AutoLaunchError::equal(Self, Self) -> Bool
+pub fn AutoLaunchError::not_equal(Self, Self) -> Bool
+pub fn AutoLaunchError::output(Self, &Logger) -> Unit
+pub fn AutoLaunchError::to_repr(Self) -> @debug.Repr
+pub fn AutoLaunchError::to_string(Self) -> String
 pub impl Show for AutoLaunchError
 
 type BackendKind derive(Eq, @debug.Debug)
+pub fn BackendKind::equal(Self, Self) -> Bool
+pub fn BackendKind::not_equal(Self, Self) -> Bool
+pub fn BackendKind::to_repr(Self) -> @debug.Repr
 
 type FileEntry derive(Eq, @debug.Debug)
+pub fn FileEntry::equal(Self, Self) -> Bool
+pub fn FileEntry::not_equal(Self, Self) -> Bool
+pub fn FileEntry::to_repr(Self) -> @debug.Repr
 
 pub enum Platform {
   Windows
@@ -49,6 +60,11 @@ pub enum Platform {
   Linux
   Unsupported
 } derive(Eq, @debug.Debug)
+pub fn Platform::equal(Self, Self) -> Bool
+pub fn Platform::not_equal(Self, Self) -> Bool
+pub fn Platform::output(Self, &Logger) -> Unit
+pub fn Platform::to_repr(Self) -> @debug.Repr
+pub fn Platform::to_string(Self) -> String
 pub impl Show for Platform
 
 // Type aliases

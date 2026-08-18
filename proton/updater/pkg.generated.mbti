@@ -36,7 +36,12 @@ pub(all) suberror UpdateError {
   InstallInterrupted(detail~ : String)
   InstallFailed(step~ : String, detail~ : String)
 } derive(Eq, @debug.Debug)
+pub fn UpdateError::equal(Self, Self) -> Bool
 pub fn UpdateError::message(Self) -> String
+pub fn UpdateError::not_equal(Self, Self) -> Bool
+pub fn UpdateError::output(Self, &Logger) -> Unit
+pub fn UpdateError::to_repr(Self) -> @debug.Repr
+pub fn UpdateError::to_string(Self) -> String
 
 // Types and methods
 pub struct AvailableUpdate {
@@ -48,9 +53,12 @@ pub struct AvailableUpdate {
   sha256_hex : String
   signature_hex : String
 } derive(Eq, @debug.Debug)
+pub fn AvailableUpdate::equal(Self, Self) -> Bool
+pub fn AvailableUpdate::not_equal(Self, Self) -> Bool
 pub fn AvailableUpdate::notes_url(Self) -> String?
 pub fn AvailableUpdate::revision(Self) -> UInt64
 pub fn AvailableUpdate::size(Self) -> Int64
+pub fn AvailableUpdate::to_repr(Self) -> @debug.Repr
 pub fn AvailableUpdate::url(Self) -> String
 pub fn AvailableUpdate::version(Self) -> @proton_updater.Version
 
@@ -58,11 +66,17 @@ pub enum CheckOutcome {
   UpToDate
   Available(AvailableUpdate)
 } derive(Eq, @debug.Debug)
+pub fn CheckOutcome::equal(Self, Self) -> Bool
+pub fn CheckOutcome::not_equal(Self, Self) -> Bool
+pub fn CheckOutcome::to_repr(Self) -> @debug.Repr
 
 pub enum InstallOutcome {
   Installed
   AlreadyInstalled
 } derive(Eq, @debug.Debug)
+pub fn InstallOutcome::equal(Self, Self) -> Bool
+pub fn InstallOutcome::not_equal(Self, Self) -> Bool
+pub fn InstallOutcome::to_repr(Self) -> @debug.Repr
 
 pub struct UpdateChannel {
   endpoint : String

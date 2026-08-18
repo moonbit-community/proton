@@ -19,6 +19,7 @@ fn App::new(
     debug_level_value: debug,
     headless_value: false,
     single_instance_identifier: None,
+    explicit_locale: None,
     title_overridden: false,
     size_overridden: false,
     titlebar_style_overridden: false,
@@ -262,6 +263,7 @@ fn App::resolved_headless(self : App) -> Bool {
 fn App::inline_app_config(self : App) -> ResolvedAppConfig {
   ResolvedAppConfig::{
     manifest: self.inline_manifest(),
+    application_name: self.window.title,
     permission_base_path: current_permission_base_path(),
     application_identifier: self.single_instance_identifier,
     instance_identifier: self.single_instance_identifier,
@@ -329,6 +331,10 @@ fn App::merge_config(
       extensions~,
       permissions~,
     ),
+    application_name: match project {
+      Some(project) => project.metadata().product_name()
+      None => window.title
+    },
     permission_base_path: match loaded.base_dir() {
       Some(base_dir) => {
         let base : @mbpath.Path = base_dir

@@ -42,6 +42,12 @@ pub extend UpdaterUsageError with Debug::{to_repr}
 pub extend UpdaterUsageError with Show::{to_string, output}
 
 ///|
+priv struct ValidatedPublicKey {
+  text : String
+  bits : Int
+}
+
+///|
 pub fn UpdaterUsageError::message(self : UpdaterUsageError) -> String {
   match self {
     MissingModulus =>
@@ -64,7 +70,13 @@ impl Show for UpdaterUsageError with fn output(self, logger) {
 /// Runs a parsed updater subcommand.
 pub fn run(matches : @argparse.Matches) -> Unit raise UpdaterUsageError {
   match matches.subcommand {
-    Some(("public-key", key_matches)) => println(public_key(key_matches))
+    Some(("public-key", key_matches)) => {
+      let key = public_key(key_matches)
+      println(
+        "# \{key.bits}-bit RSA, add to proton.project.json updater.public_keys",
+      )
+      println(key.text)
+    }
     _ => abort("argparse invariant violated: missing updater subcommand")
   }
 }
@@ -77,7 +89,9 @@ pub fn run(matches : @argparse.Matches) -> Unit raise UpdaterUsageError {
 /// `moonbit-community/proton_rsa` was written specifically to contain no ASN.1 parser
 /// at all. OpenSSL already prints the modulus directly, so adding a parser here
 /// would take on that risk to save one shell command.
-fn public_key(matches : @argparse.Matches) -> String raise UpdaterUsageError {
+fn public_key(
+  matches : @argparse.Matches,
+) -> ValidatedPublicKey raise UpdaterUsageError {
   guard matches.values
     is {
       "modulus": [modulus, ..],
@@ -96,10 +110,7 @@ fn public_key(matches : @argparse.Matches) -> String raise UpdaterUsageError {
   let key = @rsa.PublicKey::parse(text) catch {
     error => raise RejectedKey(detail=error.message())
   }
-  println(
-    "# \{key.bits()}-bit RSA, add to proton.project.json updater.public_keys",
-  )
-  text
+  ValidatedPublicKey::{ text, bits: key.bits() }
 }
 
 ///|

@@ -23,6 +23,7 @@ typedef struct {
 
 typedef struct {
   char *label;
+  char *role;
   proton_linux_menu_item_t *items;
   size_t item_count;
 } proton_linux_menu_t;
@@ -99,6 +100,7 @@ static void proton_linux_menu_dispose(proton_linux_menu_t *menu) {
   }
   free(menu->items);
   free(menu->label);
+  free(menu->role);
   memset(menu, 0, sizeof(*menu));
 }
 
@@ -190,7 +192,8 @@ static bool proton_linux_menu_parse_item(proton_json_value_t value,
         proton_linux_menu_optional_string(parse->doc, value, "role", &valid);
     item.label = proton_linux_menu_optional_string(parse->doc, value, "label",
                                                    &valid);
-    if (!valid || !proton_linux_menu_role_supported(item.role)) {
+    if (!valid || item.label == NULL ||
+        !proton_linux_menu_role_supported(item.role)) {
       proton_linux_menu_item_dispose(&item);
       proton_linux_menu_set_message(parse->error, parse->error_len,
                                     "menu role is unsupported");
@@ -244,7 +247,10 @@ static bool proton_linux_menu_parse_menu(proton_json_value_t value,
 
   proton_linux_menu_t menu = {0};
   menu.label = proton_json_copy_string(parse->doc, label_value);
-  if (menu.label == NULL) {
+  int valid = 1;
+  menu.role = proton_linux_menu_optional_string(
+      parse->doc, value, "role", &valid);
+  if (!valid || menu.label == NULL) {
     proton_linux_menu_dispose(&menu);
     proton_linux_menu_set_message(parse->error, parse->error_len,
                                   "menu requires label and items");
@@ -317,108 +323,6 @@ proton_linux_menu_bar_t *proton_linux_menu_bar_parse(const char *menu_json,
   }
   proton_json_dispose(&doc);
   return menu_bar;
-}
-
-static int proton_linux_menu_label_equal(const char *left,
-                                         const char *right) {
-  return left != NULL && right != NULL && g_ascii_strcasecmp(left, right) == 0;
-}
-
-static int proton_linux_menu_has_label(
-    const proton_linux_menu_bar_t *menu_bar,
-    const char *label) {
-  for (size_t index = 0; index < menu_bar->menu_count; index++) {
-    if (proton_linux_menu_label_equal(menu_bar->menus[index].label, label)) {
-      return 1;
-    }
-  }
-  return 0;
-}
-
-static const char *proton_linux_menu_application_name(void) {
-  const char *name = g_get_application_name();
-  if (name == NULL || name[0] == '\0') {
-    name = g_get_prgname();
-  }
-  return name != NULL && name[0] != '\0' ? name : "Proton";
-}
-
-static const char *proton_linux_menu_role_label(const char *role,
-                                                const char *app_name) {
-  if (strcmp(role, "quit") == 0) {
-    return "Quit";
-  }
-  if (strcmp(role, "hide") == 0) {
-    return "Hide";
-  }
-  if (strcmp(role, "hide_others") == 0) {
-    return "Hide Others";
-  }
-  if (strcmp(role, "show_all") == 0) {
-    return "Show All";
-  }
-  if (strcmp(role, "close") == 0) {
-    return "Close";
-  }
-  if (strcmp(role, "minimize") == 0) {
-    return "Minimize";
-  }
-  if (strcmp(role, "zoom") == 0) {
-    return "Zoom";
-  }
-  if (strcmp(role, "undo") == 0) {
-    return "Undo";
-  }
-  if (strcmp(role, "redo") == 0) {
-    return "Redo";
-  }
-  if (strcmp(role, "cut") == 0) {
-    return "Cut";
-  }
-  if (strcmp(role, "copy") == 0) {
-    return "Copy";
-  }
-  if (strcmp(role, "paste") == 0) {
-    return "Paste";
-  }
-  if (strcmp(role, "select_all") == 0) {
-    return "Select All";
-  }
-  return app_name;
-}
-
-static const char *proton_linux_menu_role_key(const char *role) {
-  if (strcmp(role, "quit") == 0) {
-    return "q";
-  }
-  if (strcmp(role, "hide") == 0 || strcmp(role, "hide_others") == 0) {
-    return "h";
-  }
-  if (strcmp(role, "close") == 0) {
-    return "w";
-  }
-  if (strcmp(role, "minimize") == 0) {
-    return "m";
-  }
-  if (strcmp(role, "undo") == 0) {
-    return "z";
-  }
-  if (strcmp(role, "redo") == 0) {
-    return "Z";
-  }
-  if (strcmp(role, "cut") == 0) {
-    return "x";
-  }
-  if (strcmp(role, "copy") == 0) {
-    return "c";
-  }
-  if (strcmp(role, "paste") == 0) {
-    return "v";
-  }
-  if (strcmp(role, "select_all") == 0) {
-    return "a";
-  }
-  return "";
 }
 
 static void proton_linux_menu_activation_destroy(gpointer data) {
@@ -526,14 +430,12 @@ static int proton_linux_menu_append_role(
     const char *role,
     const char *label,
     const char *key,
-    const char *app_name,
     GtkAccelGroup *accelerators,
     proton_linux_menu_command_callback_t command_callback,
     proton_linux_menu_role_callback_t role_callback,
     void *user_data) {
   GtkWidget *item = proton_linux_menu_create_action_item(
-      label != NULL ? label : proton_linux_menu_role_label(role, app_name),
-      role, key != NULL ? key : proton_linux_menu_role_key(role), 0,
+      label, role, key != NULL ? key : "", 0,
       strcmp(role, "hide_others") == 0 ? GDK_MOD1_MASK : 0, accelerators,
       command_callback, role_callback, user_data);
   if (item == NULL) {
@@ -545,7 +447,6 @@ static int proton_linux_menu_append_role(
 
 static GtkWidget *proton_linux_menu_create_custom_menu(
     const proton_linux_menu_t *definition,
-    const char *app_name,
     GtkAccelGroup *accelerators,
     proton_linux_menu_command_callback_t command_callback,
     proton_linux_menu_role_callback_t role_callback,
@@ -566,7 +467,7 @@ static GtkWidget *proton_linux_menu_create_custom_menu(
           1, 0, accelerators, command_callback, role_callback, user_data);
     } else if (!proton_linux_menu_append_role(
                    menu, definition_item->role, definition_item->label,
-                   definition_item->key, app_name, accelerators,
+                   definition_item->key, accelerators,
                    command_callback, role_callback, user_data)) {
       gtk_widget_destroy(menu);
       return NULL;
@@ -595,91 +496,6 @@ static int proton_linux_menu_append_top_level(GtkWidget *menu_bar,
   return 1;
 }
 
-static GtkWidget *proton_linux_menu_create_app_menu(
-    const char *app_name,
-    GtkAccelGroup *accelerators,
-    proton_linux_menu_command_callback_t command_callback,
-    proton_linux_menu_role_callback_t role_callback,
-    void *user_data) {
-  static const char *roles[] = {"hide", "hide_others", "show_all"};
-  GtkWidget *menu = gtk_menu_new();
-  if (menu == NULL) {
-    return NULL;
-  }
-  for (size_t index = 0; index < sizeof(roles) / sizeof(roles[0]); index++) {
-    if (!proton_linux_menu_append_role(
-            menu, roles[index], NULL, NULL, app_name, accelerators,
-            command_callback, role_callback, user_data)) {
-      gtk_widget_destroy(menu);
-      return NULL;
-    }
-  }
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
-  if (!proton_linux_menu_append_role(
-          menu, "quit", NULL, NULL, app_name, accelerators, command_callback,
-          role_callback, user_data)) {
-    gtk_widget_destroy(menu);
-    return NULL;
-  }
-  return menu;
-}
-
-static GtkWidget *proton_linux_menu_create_edit_menu(
-    const char *app_name,
-    GtkAccelGroup *accelerators,
-    proton_linux_menu_command_callback_t command_callback,
-    proton_linux_menu_role_callback_t role_callback,
-    void *user_data) {
-  static const char *first_roles[] = {"undo", "redo"};
-  static const char *second_roles[] = {"cut", "copy", "paste", "select_all"};
-  GtkWidget *menu = gtk_menu_new();
-  if (menu == NULL) {
-    return NULL;
-  }
-  for (size_t index = 0;
-       index < sizeof(first_roles) / sizeof(first_roles[0]); index++) {
-    if (!proton_linux_menu_append_role(
-            menu, first_roles[index], NULL, NULL, app_name, accelerators,
-            command_callback, role_callback, user_data)) {
-      gtk_widget_destroy(menu);
-      return NULL;
-    }
-  }
-  gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
-  for (size_t index = 0;
-       index < sizeof(second_roles) / sizeof(second_roles[0]); index++) {
-    if (!proton_linux_menu_append_role(
-            menu, second_roles[index], NULL, NULL, app_name, accelerators,
-            command_callback, role_callback, user_data)) {
-      gtk_widget_destroy(menu);
-      return NULL;
-    }
-  }
-  return menu;
-}
-
-static GtkWidget *proton_linux_menu_create_window_menu(
-    const char *app_name,
-    GtkAccelGroup *accelerators,
-    proton_linux_menu_command_callback_t command_callback,
-    proton_linux_menu_role_callback_t role_callback,
-    void *user_data) {
-  static const char *roles[] = {"minimize", "zoom", "close"};
-  GtkWidget *menu = gtk_menu_new();
-  if (menu == NULL) {
-    return NULL;
-  }
-  for (size_t index = 0; index < sizeof(roles) / sizeof(roles[0]); index++) {
-    if (!proton_linux_menu_append_role(
-            menu, roles[index], NULL, NULL, app_name, accelerators,
-            command_callback, role_callback, user_data)) {
-      gtk_widget_destroy(menu);
-      return NULL;
-    }
-  }
-  return menu;
-}
-
 GtkWidget *proton_linux_menu_bar_create_widget(
     const proton_linux_menu_bar_t *menu_bar,
     GtkAccelGroup *accelerators,
@@ -693,7 +509,6 @@ GtkWidget *proton_linux_menu_bar_create_widget(
                                   "menu widget callbacks are required");
     return NULL;
   }
-  const char *app_name = proton_linux_menu_application_name();
   GtkWidget *widget = gtk_menu_bar_new();
   if (widget == NULL) {
     proton_linux_menu_set_message(error, error_len,
@@ -701,21 +516,10 @@ GtkWidget *proton_linux_menu_bar_create_widget(
     return NULL;
   }
 
-  GtkWidget *app_menu = proton_linux_menu_create_app_menu(
-      app_name, accelerators, command_callback, role_callback, user_data);
-  if (app_menu == NULL ||
-      !proton_linux_menu_append_top_level(widget, app_name, app_menu)) {
-    gtk_widget_destroy(widget);
-    proton_linux_menu_set_message(error, error_len,
-                                  "failed to create application menu");
-    return NULL;
-  }
-
   for (size_t index = 0; index < menu_bar->menu_count; index++) {
     const proton_linux_menu_t *definition = &menu_bar->menus[index];
     GtkWidget *menu = proton_linux_menu_create_custom_menu(
-        definition, app_name, accelerators, command_callback, role_callback,
-        user_data);
+        definition, accelerators, command_callback, role_callback, user_data);
     if (menu == NULL || !proton_linux_menu_append_top_level(
                             widget, definition->label, menu)) {
       gtk_widget_destroy(widget);
@@ -725,27 +529,5 @@ GtkWidget *proton_linux_menu_bar_create_widget(
     }
   }
 
-  if (!proton_linux_menu_has_label(menu_bar, "Edit")) {
-    GtkWidget *edit_menu = proton_linux_menu_create_edit_menu(
-        app_name, accelerators, command_callback, role_callback, user_data);
-    if (edit_menu == NULL ||
-        !proton_linux_menu_append_top_level(widget, "Edit", edit_menu)) {
-      gtk_widget_destroy(widget);
-      proton_linux_menu_set_message(error, error_len,
-                                    "failed to create edit menu");
-      return NULL;
-    }
-  }
-  if (!proton_linux_menu_has_label(menu_bar, "Window")) {
-    GtkWidget *window_menu = proton_linux_menu_create_window_menu(
-        app_name, accelerators, command_callback, role_callback, user_data);
-    if (window_menu == NULL ||
-        !proton_linux_menu_append_top_level(widget, "Window", window_menu)) {
-      gtk_widget_destroy(widget);
-      proton_linux_menu_set_message(error, error_len,
-                                    "failed to create window menu");
-      return NULL;
-    }
-  }
   return widget;
 }

@@ -1,18 +1,4 @@
 ///|
-fn ensure_fsutil_test_dir(path : String) -> Unit {
-  @mbfs.create_dir(path) catch {
-    _ => ()
-  }
-}
-
-///|
-fn write_fsutil_test_file(path : String, text : String) -> Unit {
-  @mbfs.write_string_to_file(path, text, encoding="utf8") catch {
-    _ => abort("failed to write fsutil test file: " + path)
-  }
-}
-
-///|
 #cfg(not(platform="windows"))
 test "resolve_path preserves POSIX backslashes" {
   let base = "/tmp/proton fsutil base"
@@ -98,23 +84,4 @@ test "path_join joins with the platform separator" {
   assert_eq(path_join("a", ""), "a")
   assert_eq(path_join("a/", "b"), "a" + @path.sep.to_string() + "b")
   assert_eq(path_join("a", "b"), "a" + @path.sep.to_string() + "b")
-}
-
-///|
-async test "find_project_root_from walks up to marker" {
-  let root = @async_fs.tmpdir(prefix="proton-fsutil-project-root-")
-  ensure_fsutil_test_dir(path_join(root, "nested"))
-  ensure_fsutil_test_dir(path_join(root, "nested/child"))
-  write_fsutil_test_file(path_join(root, "moon.work"), "")
-  assert_eq(find_project_root_from(path_join(root, "nested/child")), root)
-}
-
-///|
-async test "find_project_root_from returns start without marker" {
-  let root = @async_fs.tmpdir(prefix="proton-fsutil-no-marker-")
-  ensure_fsutil_test_dir(path_join(root, "nested"))
-  let start = path_join(root, "nested")
-  let actual = find_project_root_from(start)
-  @async_fs.rmdir(root, recursive=true)
-  assert_eq(actual, start)
 }

@@ -54,7 +54,10 @@ static int expect_widget_accelerator(void) {
   proton_linux_menu_bar_t *definition = proton_linux_menu_bar_parse(
       "{\"abi_version\":1,\"menus\":[{\"label\":\"Smoke\","
       "\"items\":[{\"kind\":\"command\",\"id\":\"smoke.command\","
-      "\"label\":\"Smoke Command\",\"key\":\"s\"}]}]}",
+      "\"label\":\"Smoke Command\",\"key\":\"s\"},"
+      "{\"kind\":\"role\",\"role\":\"close\",\"label\":\"Close\","
+      "\"key\":\"w\"},{\"kind\":\"role\",\"role\":\"hide_others\","
+      "\"label\":\"Hide Others\",\"key\":\"h\"}]}]}",
       error, sizeof(error));
   if (definition == NULL) {
     fprintf(stderr, "widget menu should parse: %s\n", error);
@@ -117,7 +120,7 @@ int main(int argc, char **argv) {
       "\"items\":[{\"kind\":\"command\",\"id\":\"devtools\","
       "\"label\":\"Open DevTools\",\"key\":\"d\"},"
       "{\"kind\":\"separator\"},{\"kind\":\"role\","
-      "\"role\":\"close\"}]}]}");
+      "\"role\":\"close\",\"label\":\"Close\",\"key\":\"w\"}]}]}");
   failures += expect_valid("empty custom menu set",
                            "{\"abi_version\":1,\"menus\":[]}");
   failures += expect_valid(

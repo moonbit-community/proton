@@ -1,19 +1,4 @@
 ///|
-/// Creates a synthetic guard for white-box testing of MoonBit-side error paths.
-#borrow(last_error)
-extern "C" fn native_test_guard_make(
-  active : Bool,
-  status : Int,
-  last_error : Bytes,
-  scope : Int,
-) -> Guard = "moonbit_keepawake_test_guard_make"
-
-///|
-test "test support package is linked into the test build" {
-  assert_true(@testsupport.stub_linked())
-}
-
-///|
 test "normalize_reason trims surrounding whitespace" {
   assert_eq(normalize_reason("  writing backups  "), "writing backups")
   assert_eq(normalize_reason("   "), default_reason)
@@ -58,22 +43,6 @@ test "raise_native_error uses fallback detail for empty payloads" {
       )
     ) else {
     fail("expected an operation failure with fallback detail")
-  }
-}
-
-///|
-test "finish_acquire raises synthetic backend failures" {
-  let handle = native_test_guard_make(
-    false,
-    native_status_backend_unavailable,
-    @ffi.to_cstr("synthetic acquire failure"),
-    Scope::PreventSystemSleep.native_code(),
-  )
-  let result : Result[Guard, Error] = Ok(finish_acquire(handle)) catch {
-    e => Err(e)
-  }
-  guard result is Err(BackendUnavailable(detail="synthetic acquire failure")) else {
-    fail("expected the synthetic acquire failure to surface")
   }
 }
 

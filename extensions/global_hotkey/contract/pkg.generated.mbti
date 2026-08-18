@@ -29,22 +29,47 @@ pub(all) struct GlobalHotkeyActivity {
   operation : String
   accelerator : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn GlobalHotkeyActivity::equal(Self, Self) -> Bool
+pub fn GlobalHotkeyActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyActivity::not_equal(Self, Self) -> Bool
+pub fn GlobalHotkeyActivity::to_json(Self) -> Json
+pub fn GlobalHotkeyActivity::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GlobalHotkeyListReply {
   accelerators : Array[String]
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn GlobalHotkeyListReply::equal(Self, Self) -> Bool
+pub fn GlobalHotkeyListReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyListReply::not_equal(Self, Self) -> Bool
+pub fn GlobalHotkeyListReply::to_json(Self) -> Json
+pub fn GlobalHotkeyListReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GlobalHotkeyReply {
   registered : Bool
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn GlobalHotkeyReply::equal(Self, Self) -> Bool
+pub fn GlobalHotkeyReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyReply::not_equal(Self, Self) -> Bool
+pub fn GlobalHotkeyReply::to_json(Self) -> Json
+pub fn GlobalHotkeyReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GlobalHotkeyRequest {
   accelerator : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn GlobalHotkeyRequest::equal(Self, Self) -> Bool
+pub fn GlobalHotkeyRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyRequest::not_equal(Self, Self) -> Bool
+pub fn GlobalHotkeyRequest::to_json(Self) -> Json
+pub fn GlobalHotkeyRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GlobalHotkeyTriggered {
   accelerator : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn GlobalHotkeyTriggered::equal(Self, Self) -> Bool
+pub fn GlobalHotkeyTriggered::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GlobalHotkeyTriggered::not_equal(Self, Self) -> Bool
+pub fn GlobalHotkeyTriggered::to_json(Self) -> Json
+pub fn GlobalHotkeyTriggered::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

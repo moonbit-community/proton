@@ -17,6 +17,9 @@ pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 // Errors
 type UpdaterError derive(@debug.Debug)
+pub fn UpdaterError::output(Self, &Logger) -> Unit
+pub fn UpdaterError::to_repr(Self) -> @debug.Repr
+pub fn UpdaterError::to_string(Self) -> String
 
 // Types and methods
 

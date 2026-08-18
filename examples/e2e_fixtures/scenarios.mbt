@@ -391,3 +391,25 @@ pub async fn run_devtools() -> Unit {
   )
   .run_or_abort()
 }
+
+///|
+let i18n_resource : String =
+  #|<!doctype html>
+  #|<html><head><meta charset="utf-8"><title>Proton I18n E2E</title></head>
+  #|<body><h1>Internationalization</h1></body></html>
+
+///|
+pub async fn run_i18n() -> Unit {
+  let locale = @proton.Locale::parse("zh-CN") catch {
+    error => abort(error.message())
+  }
+  @proton.html(
+    "Proton I18n E2E",
+    i18n_resource,
+    width=720,
+    height=480,
+    debug=true,
+  )
+  .locale(locale)
+  .run_or_abort()
+}
