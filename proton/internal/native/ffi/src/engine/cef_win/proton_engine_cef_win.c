@@ -68,6 +68,10 @@
 // CEF callback: tearing the frame down inline during OnBeforeClose can
 // invalidate browser teardown state on the external message pump route.
 #define PROTON_ENGINE_WM_DESTROY_SELF (WM_USER + 0x31)
+// Posted to a frame window from a child browser's DoClose callback. Destroying
+// the child HWND inside that callback re-enters CEF while it is still unwinding
+// the browser close state.
+#define PROTON_ENGINE_WM_DESTROY_CHILD (WM_USER + 0x32)
 typedef struct proton_engine_client proton_engine_client_t;
 
 struct proton_engine_runtime {
@@ -1977,6 +1981,13 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     // may already be freed, so only the HWND is touched here.
     DestroyWindow(hwnd);
     return 0;
+  case PROTON_ENGINE_WM_DESTROY_CHILD: {
+    HWND child = (HWND)lparam;
+    if (child != NULL && IsWindow(child) && GetParent(child) == hwnd) {
+      DestroyWindow(child);
+    }
+    return 0;
+  }
   case WM_NCCREATE: {
     CREATESTRUCTW *create = (CREATESTRUCTW *)lparam;
     window = (proton_engine_window_t *)create->lpCreateParams;
@@ -4748,10 +4759,11 @@ static int CEF_CALLBACK proton_engine_do_close(
                           view->browser_id);
   // A view browser owns no top-level window; CEF's default would post
   // WM_CLOSE to the frame window and cancel the view close. Take over and
-  // destroy the browser's child window, which completes the teardown via
-  // WindowDestroyed.
+  // destroy the browser's child window on the next frame-window message,
+  // which completes the teardown via WindowDestroyed without re-entering CEF.
   if (view->hwnd != NULL) {
-    DestroyWindow(view->hwnd);
+    PostMessageW(view->window->hwnd, PROTON_ENGINE_WM_DESTROY_CHILD, 0,
+                 (LPARAM)view->hwnd);
     view->hwnd = NULL;
     return 1;
   }
