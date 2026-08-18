@@ -2,11 +2,6 @@
 let app_child_scenario_env = "MBT_PROTON_E2E_APP_CHILD"
 
 ///|
-priv suberror E2eOperationError {
-  TimedOut(description~ : String, timeout_ms~ : Int)
-} derive(Debug)
-
-///|
 async fn[X] run_e2e_operation_with_timeout(
   timeout : Int,
   description : String,
@@ -14,7 +9,7 @@ async fn[X] run_e2e_operation_with_timeout(
 ) -> X {
   match @async.with_timeout_opt(timeout, operation) {
     Some(result) => result
-    None => raise E2eOperationError::TimedOut(description~, timeout_ms=timeout)
+    None => fail(description + " timed out after " + timeout.to_string() + "ms")
   }
 }
 
@@ -558,7 +553,7 @@ async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int) -> Unit {
         fail(
           "scenario app exited with code=" +
           code.to_string() +
-          app_output_suffix(app.output_path),
+          app_diagnostic_suffix(app),
         )
       None => ()
     }
@@ -569,7 +564,7 @@ async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int) -> Unit {
     "scenario app did not exit within " +
     timeout.to_string() +
     "ms" +
-    app_output_suffix(app.output_path),
+    app_diagnostic_suffix(app),
   )
 }
 
