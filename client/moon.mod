@@ -1,10 +1,10 @@
 name = "moonbit-community/proton_client"
 
-version = "0.1.17"
+version = "0.1.18"
 
 import {
   "moonbitlang/async@0.20.5",
-  "moonbit-community/proton_contract@0.1.17",
+  "moonbit-community/proton_contract@0.1.18",
 }
 
 readme = "README.mbt.md"
