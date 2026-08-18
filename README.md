@@ -328,6 +328,29 @@ or runtime language switching. The application remains responsible for its
 page content, dialogs, notifications, and custom menu labels. See
 `examples/56_i18n`.
 
+## Native menus
+
+`App::menu` accepts a complete logical `MenuBar`. Use `Menu::role` and
+`MenuItem::role` for platform-standard behavior; omitted labels and default
+items are resolved from the immutable application locale. Use `Menu::new` and
+`MenuItem::command` for application-defined labels and commands:
+
+```moonbit
+@proton.MenuBar::new(menus=[
+  @proton.Menu::role(@proton.MenuRole::Edit),
+  @proton.Menu::role(@proton.MenuRole::Window),
+  @proton.Menu::new("Tools", items=[
+    @proton.MenuItem::command("tools.refresh", "Refresh", key="r"),
+  ]),
+])
+```
+
+On macOS, Proton inserts an Application menu when absent and places the
+`MenuRole::Application` menu first as required by AppKit. Linux renders only
+menus supplied by the application. Native application menus are not yet
+implemented on Windows, so applications must not call `App::menu` there.
+Custom labels remain the application's localization responsibility.
+
 ## Headless automation
 
 Code-driven applications can run with CEF off-screen rendering and no native
@@ -358,8 +381,8 @@ Generated projects describe their toolchain in `proton.project.json`:
   "frontend": {
     "path": "frontend",
     "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "moonx --target native moonbit-community/warren@0.2.4 dev --direct --port 4300",
-    "before_build": "moonx --target native moonbit-community/warren@0.2.4 build",
+    "before_dev": "moonx --target native moonbit-community/warren@0.2.7 dev --direct --port 4300",
+    "before_build": "moonx --target native moonbit-community/warren@0.2.7 build",
     "dist": "dist"
   },
   "entry": {
@@ -452,6 +475,14 @@ the example above, the signing target is
 filename, such as `helpers/worker.exe`, for a Windows executable. Globs are
 allowed for `bundle.resources` only; every `bundle.sign.binaries` entry names
 one file.
+
+Backend code can locate these files through `@proton.resource_dir()`. It
+returns the absolute directory containing the implicitly discovered
+`proton.project.json`, which is the project directory during development and
+the packaged resource directory at runtime. Joining the same relative path,
+such as `helpers/worker`, therefore addresses the same resource before and
+after packaging. Code-only applications without a discovered project config
+raise `AppPathError`.
 
 Inspect the resolved bundle plan before creating artifacts:
 

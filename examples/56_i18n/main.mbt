@@ -45,17 +45,31 @@ fn i18n_extension() -> @proton_extension.Extension {
 }
 
 ///|
+#cfg(not(platform="windows"))
 fn menu_bar() -> @proton.MenuBar {
   @proton.MenuBar::new(menus=[
     @proton.Menu::role(@proton.MenuRole::Edit),
     @proton.Menu::role(@proton.MenuRole::Window),
     @proton.Menu::role(@proton.MenuRole::Help, items=[
-      @proton.MenuItem::command("help.locale", "Locale contract"),
+      @proton.MenuItem::command("help.locale", "语言环境契约"),
     ]),
   ])
 }
 
 ///|
+#cfg(platform="windows")
+async fn main {
+  let locale = @proton.Locale::parse("zh-CN") catch {
+    error => abort(error.message())
+  }
+  @proton.html("Proton 国际化", resource, width=860, height=600, debug=true)
+  .locale(locale)
+  .expose(i18n_extension())
+  .run_or_abort()
+}
+
+///|
+#cfg(not(platform="windows"))
 async fn main {
   let locale = @proton.Locale::parse("zh-CN") catch {
     error => abort(error.message())

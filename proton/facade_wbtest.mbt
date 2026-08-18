@@ -1093,6 +1093,14 @@ test "packaged config takes precedence over environment and working directory" {
 }
 
 ///|
+test "resource directory is the absolute directory containing project config" {
+  @debug.assert_eq(
+    resource_dir_from_config_path(default_config_file),
+    current_permission_base_path(),
+  )
+}
+
+///|
 test "typed facade appends validated secondary windows" {
   let configured = html("Main", "<main>Main</main>").add_window(
     "settings",
@@ -1395,6 +1403,7 @@ test "standard menus resolve from the application locale" {
     ]),
     preferences,
     "Proton Demo",
+    macos_application_menu=true,
   )
   let definitions = resolved.definitions()
   assert_eq(definitions.length(), 3)
@@ -1436,8 +1445,8 @@ test "custom menu labels never imply a standard role" {
     "Proton Demo",
   )
   let definitions = resolved.definitions()
-  assert_eq(definitions.length(), 2)
-  let (role, label, items) = definitions[1].definition()
+  assert_eq(definitions.length(), 1)
+  let (role, label, items) = definitions[0].definition()
   assert_eq(role, None)
   assert_eq(label, Some("Edit"))
   let (_, command_id, command_label, _, item_role) = items.unwrap()[0].definition()
@@ -1459,8 +1468,33 @@ test "explicit standard menu items replace role defaults" {
     preferences,
     "Proton Demo",
   )
-  let (_, _, items) = resolved.definitions()[1].definition()
+  let (_, _, items) = resolved.definitions()[0].definition()
   assert_eq(items.unwrap(), [])
+}
+
+///|
+test "macOS menu resolution puts an explicit application role first" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("en-US")),
+    [],
+  )
+  let resolved = resolve_menu(
+    @native.MenuBar::new(menus=[
+      @native.Menu::role(@native.MenuRole::Edit),
+      @native.Menu::role(@native.MenuRole::Application),
+      @native.Menu::role(@native.MenuRole::Window),
+    ]),
+    preferences,
+    "Proton Demo",
+    macos_application_menu=true,
+  )
+  let definitions = resolved.definitions()
+  let (first_role, _, _) = definitions[0].definition()
+  let (second_role, _, _) = definitions[1].definition()
+  let (third_role, _, _) = definitions[2].definition()
+  assert_eq(first_role, Some(@native.MenuRole::Application))
+  assert_eq(second_role, Some(@native.MenuRole::Edit))
+  assert_eq(third_role, Some(@native.MenuRole::Window))
 }
 
 ///|

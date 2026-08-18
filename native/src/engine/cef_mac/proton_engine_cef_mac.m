@@ -1822,9 +1822,23 @@ static int CEF_CALLBACK proton_engine_do_close(cef_life_span_handler_t *self,
       view->browser_view = nil;
       return 1;
     }
-    // Windowless (headless) rendering has no host view; returning false lets
-    // CEF destroy the browser object immediately.
-    return 0;
+    if (view->window != NULL && view->window->headless) {
+      // Windowless (headless) rendering has no host view; returning false lets
+      // CEF destroy the browser object immediately.
+      return 0;
+    }
+    // Defensive: a windowed view with no host view pointer — either it was
+    // never captured (the browser host or its window handle was unavailable
+    // at creation), or windowWillClose already cleared it while the NSWindow
+    // teardown is still pending. CEF only asks do_close before
+    // WindowDestroyed, so no dealloc handshake can complete this teardown
+    // from here — but returning false is strictly worse: CEF's default would
+    // performClose: the owning NSWindow, which the window delegate cancels.
+    // Cancel the default and log the wedge; in the windowWillClose interleave
+    // the pending teardown still completes via WindowDestroyed.
+    proton_engine_debug_log("view_browser_do_close_without_host_view browser=%d",
+                            view->browser_id);
+    return 1;
   }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   if (window != NULL) {
@@ -3078,6 +3092,19 @@ static int proton_engine_request_all_windows_close(void) {
   proton_engine_debug_log("window_will_close browser=%d", window->browser_id);
   window->appkit_closing = 1;
   proton_engine_window_close_views(window);
+  // A deferred view close (beforeunload/unload still in flight) leaves the
+  // view's browser host view attached, and the NSWindow teardown that follows
+  // releases the whole view tree, dealloc'ing every CefBrowserHostView and
+  // firing its WindowDestroyed(). Clear each view's borrowed browser_view
+  // pointer now so view_on_before_close cannot message a dangling pointer
+  // afterwards. Do NOT removeFromSuperview here: the resulting dealloc would
+  // re-enter CEF (WindowDestroyed -> DestroyBrowser -> on_before_close ->
+  // finalize) and can free this window and its view structs while this loop
+  // and the code below still use them.
+  for (proton_engine_view_t *view = window->views; view != NULL;
+       view = view->next) {
+    view->browser_view = nil;
+  }
   if (window->browser != NULL) {
     // AppKit has already closed the user-visible window. Publish that lifecycle
     // edge immediately; CEF on_before_close is only browser resource cleanup.
@@ -5043,13 +5070,13 @@ static int proton_engine_view_request_browser_close(proton_engine_view_t *view,
   host->close_browser(host, force_close);
   host->base.release((cef_base_ref_counted_t *)host);
   // For windowed rendering the browser only dies once its host view leaves
-  // the view hierarchy (CefBrowserHostView dealloc -> WindowDestroyed).
-  // Detach it after the close request; do_close cancels CEF's default
-  // performClose: on the owning NSWindow.
-  if (view->browser_view != nil) {
-    [view->browser_view removeFromSuperview];
-    view->browser_view = nil;
-  }
+  // the view hierarchy (CefBrowserHostView dealloc -> WindowDestroyed). The
+  // detach is owned by do_close, which runs inside the close handshake above
+  // and cancels CEF's default performClose: on the owning NSWindow. Do NOT
+  // detach here: when CEF defers the close past this call (beforeunload or
+  // unload handlers), do_close would later find browser_view already nil and
+  // fall through to CEF's default, which the window delegate cancels, wedging
+  // the browser half-closed and leaking it.
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return 1;
 }

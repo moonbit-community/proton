@@ -325,27 +325,15 @@ async fn run_manifest(
     error => {
       let primary = normalize_async_run_error(error)
       if !headless {
-        match windows.get(0) {
-          Some(window) =>
-            show_app_run_failure(
-              runtime,
-              window.window,
-              wakeup,
-              primary,
-              locale_preferences,
-              lifecycle.has_reached_running(),
-            ) catch {
-              _ => ()
-            }
-          None =>
-            show_runtime_failure_dialog(
-              runtime,
-              wakeup,
-              primary.message(),
-              locale_preferences,
-            ) catch {
-              _ => ()
-            }
+        show_app_run_failure(
+          runtime,
+          preferred_active_window(windows).map(window => window.window),
+          wakeup,
+          primary,
+          locale_preferences,
+          lifecycle.has_reached_running(),
+        ) catch {
+          _ => ()
         }
       }
       let failure = cleanup_run_error(
@@ -687,13 +675,19 @@ async fn show_runtime_failure_dialog(
   wakeup : RuntimeWakeup,
   detail : String,
   preferences : @locale.LocalePreferences,
+  application_started : Bool,
 ) -> Unit {
-  let message = framework_failure_message(
-    startup_failure_summary(preferences),
-    detail,
-  )
+  let (title, summary) = if application_started {
+    (
+      application_error_title(preferences),
+      application_error_summary(preferences),
+    )
+  } else {
+    (startup_failure_title(preferences), startup_failure_summary(preferences))
+  }
+  let message = framework_failure_message(summary, detail)
   let dialog = runtime.begin_message_dialog(
-    Some(startup_failure_title(preferences)),
+    Some(title),
     message,
     @native.DialogLevel::Error,
   ) catch {
@@ -715,7 +709,7 @@ async fn show_window_failure_dialog(
   wakeup : RuntimeWakeup,
   detail : String,
   preferences : @locale.LocalePreferences,
-) -> Unit {
+) -> Bool {
   let message = framework_failure_message(
     application_error_summary(preferences),
     detail,
@@ -725,25 +719,27 @@ async fn show_window_failure_dialog(
     message,
     @native.DialogLevel::Error,
   ) catch {
-    _ => return
+    _ => return false
   }
   while true {
     let revision = wakeup.revision()
-    let result = window.poll_dialog_result(dialog) catch { _ => return }
+    let result = window.poll_dialog_result(dialog) catch { _ => return false }
     match result {
-      @native.DialogPollResult::Ready(_) => return
+      @native.DialogPollResult::Ready(_) => return true
       @native.DialogPollResult::Pending =>
         wakeup.wait_after(revision) catch {
-          _ => return
+          _ => return false
         }
     }
+  } nobreak {
+    false
   }
 }
 
 ///|
 async fn show_app_run_failure(
   runtime : @native.Runtime,
-  window : @native.Window,
+  window : @native.Window?,
   wakeup : RuntimeWakeup,
   error : AppRunError,
   preferences : @locale.LocalePreferences,
@@ -751,10 +747,22 @@ async fn show_app_run_failure(
 ) -> Unit {
   let message = app_run_error_dialog_text(error)
   if application_started {
-    show_window_failure_dialog(window.as_ref(), wakeup, message, preferences)
-  } else {
-    show_runtime_failure_dialog(runtime, wakeup, message, preferences)
+    match window {
+      Some(window) =>
+        if show_window_failure_dialog(
+            window.as_ref(),
+            wakeup,
+            message,
+            preferences,
+          ) {
+          return
+        }
+      None => ()
+    }
   }
+  show_runtime_failure_dialog(
+    runtime, wakeup, message, preferences, application_started,
+  )
 }
 
 ///|

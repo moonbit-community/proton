@@ -9,7 +9,17 @@ fn resolve_runtime_menu(
 }
 
 ///|
-#cfg(not(platform="windows"))
+#cfg(platform="linux")
+fn resolve_runtime_menu(
+  menu : @native.MenuBar?,
+  preferences : @locale.LocalePreferences,
+  application_name : String,
+) -> @native.MenuBar? {
+  menu.map(menu => resolve_menu(menu, preferences, application_name))
+}
+
+///|
+#cfg(not(any(platform="windows", platform="linux")))
 fn resolve_runtime_menu(
   menu : @native.MenuBar?,
   preferences : @locale.LocalePreferences,
@@ -20,6 +30,7 @@ fn resolve_runtime_menu(
       menu.unwrap_or(@native.MenuBar::new(menus=[])),
       preferences,
       application_name,
+      macos_application_menu=true,
     ),
   )
 }
@@ -29,22 +40,31 @@ fn resolve_menu(
   menu_bar : @native.MenuBar,
   preferences : @locale.LocalePreferences,
   application_name : String,
+  macos_application_menu? : Bool = false,
 ) -> @native.MenuBar {
   let catalog = framework_catalog(preferences)
-  let definitions = menu_bar.definitions()
   let resolved : Array[@native.Menu] = []
-  if !definitions.any(menu => {
-      menu.definition().0 is Some(@native.MenuRole::Application)
-    }) {
-    resolved.push(
-      resolve_standard_menu(
-        @native.MenuRole::Application,
-        None,
-        None,
-        catalog,
-        application_name,
-      ),
-    )
+  let source = menu_bar.definitions()
+  let definitions = if macos_application_menu {
+    let normalized : Array[@native.Menu] = []
+    let mut has_application_menu = false
+    for menu in source {
+      if menu.definition().0 is Some(@native.MenuRole::Application) {
+        normalized.push(menu)
+        has_application_menu = true
+      }
+    }
+    if !has_application_menu {
+      normalized.push(@native.Menu::role(@native.MenuRole::Application))
+    }
+    for menu in source {
+      if !(menu.definition().0 is Some(@native.MenuRole::Application)) {
+        normalized.push(menu)
+      }
+    }
+    normalized
+  } else {
+    source
   }
   for menu in definitions {
     let (role, label, items) = menu.definition()
