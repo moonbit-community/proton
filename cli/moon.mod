@@ -1,11 +1,11 @@
 name = "moonbit-community/proton_cli"
 
-version = "0.1.17"
+version = "0.1.18"
 
 import {
-  "moonbit-community/proton_config@0.1.17",
-  "moonbit-community/proton_rsa@0.1.17",
-  "moonbit-community/proton_updater@0.1.17",
+  "moonbit-community/proton_config@0.1.18",
+  "moonbit-community/proton_rsa@0.1.18",
+  "moonbit-community/proton_updater@0.1.18",
   "moonbitlang/x@0.4.50",
   "moonbitlang/moon_config@0.3.13",
   "moonbitlang/async@0.20.5",

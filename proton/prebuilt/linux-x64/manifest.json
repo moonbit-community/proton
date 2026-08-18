@@ -1,6 +1,6 @@
 {
   "platform": "linux-x64",
-  "proton_version": "0.1.17",
+  "proton_version": "0.1.18",
   "source_hash": "sha256:befa6b5aedc9a21f0a869c5225652e162caac797ffc3edd7697565985bb8b9e0",
   "artifacts": {
     "shared_lib": "lib/libproton.so",

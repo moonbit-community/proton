@@ -1,6 +1,6 @@
 {
   "platform": "win32-x64",
-  "proton_version": "0.1.17",
+  "proton_version": "0.1.18",
   "source_hash": "sha256:b61e63b1dd44120d63a12e65dc1598b831d12e8905c4776a1ede7478885a92e2",
   "artifacts": {
     "dll": "bin/proton.dll",
