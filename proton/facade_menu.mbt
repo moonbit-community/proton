@@ -9,18 +9,58 @@ fn resolve_runtime_menu(
 }
 
 ///|
-#cfg(not(platform="windows"))
+#cfg(platform="linux")
+fn resolve_runtime_menu(
+  menu : @native.MenuBar?,
+  preferences : @locale.LocalePreferences,
+  application_name : String,
+) -> @native.MenuBar? {
+  menu.map(menu => resolve_menu(menu, preferences, application_name))
+}
+
+///|
+#cfg(not(any(platform="windows", platform="linux")))
 fn resolve_runtime_menu(
   menu : @native.MenuBar?,
   preferences : @locale.LocalePreferences,
   application_name : String,
 ) -> @native.MenuBar? {
   Some(
-    resolve_menu(
+    resolve_macos_menu(
       menu.unwrap_or(@native.MenuBar::new(menus=[])),
       preferences,
       application_name,
     ),
+  )
+}
+
+///|
+fn resolve_macos_menu(
+  menu_bar : @native.MenuBar,
+  preferences : @locale.LocalePreferences,
+  application_name : String,
+) -> @native.MenuBar {
+  let definitions = menu_bar.definitions()
+  let normalized : Array[@native.Menu] = []
+  let mut has_application_menu = false
+  for menu in definitions {
+    if menu.definition().0 is Some(@native.MenuRole::Application) {
+      normalized.push(menu)
+      has_application_menu = true
+    }
+  }
+  if !has_application_menu {
+    normalized.push(@native.Menu::role(@native.MenuRole::Application))
+  }
+  for menu in definitions {
+    if !(menu.definition().0 is Some(@native.MenuRole::Application)) {
+      normalized.push(menu)
+    }
+  }
+  resolve_menu(
+    @native.MenuBar::new(menus=normalized),
+    preferences,
+    application_name,
   )
 }
 
@@ -31,21 +71,8 @@ fn resolve_menu(
   application_name : String,
 ) -> @native.MenuBar {
   let catalog = framework_catalog(preferences)
-  let definitions = menu_bar.definitions()
   let resolved : Array[@native.Menu] = []
-  if !definitions.any(menu => {
-      menu.definition().0 is Some(@native.MenuRole::Application)
-    }) {
-    resolved.push(
-      resolve_standard_menu(
-        @native.MenuRole::Application,
-        None,
-        None,
-        catalog,
-        application_name,
-      ),
-    )
-  }
+  let definitions = menu_bar.definitions()
   for menu in definitions {
     let (role, label, items) = menu.definition()
     match role {

@@ -434,6 +434,22 @@ fn RunningWindow::is_closed(self : RunningWindow) -> Bool {
 }
 
 ///|
+fn preferred_active_window(windows : Array[RunningWindow]) -> RunningWindow? {
+  let mut fallback : RunningWindow? = None
+  for running in windows {
+    if running.is_active() {
+      if running.id == "main" {
+        return Some(running)
+      }
+      if fallback is None {
+        fallback = Some(running)
+      }
+    }
+  }
+  fallback
+}
+
+///|
 fn RuntimeSession::close_window(
   self : RuntimeSession,
   id : String,
@@ -1808,22 +1824,7 @@ fn RuntimeSession::dispatch_launch_input_event(
 fn RuntimeSession::activate_for_launch_input(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
-  let mut target : RunningWindow? = None
-  for running in self.windows {
-    if !running.is_closed() && running.id == "main" {
-      target = Some(running)
-      break
-    }
-  }
-  if target is None {
-    for running in self.windows {
-      if !running.is_closed() {
-        target = Some(running)
-        break
-      }
-    }
-  }
-  match target {
+  match preferred_active_window(self.windows) {
     Some(running) => {
       let state = running.window.state() catch {
         error => raise native_run_error("read activation window state", error)

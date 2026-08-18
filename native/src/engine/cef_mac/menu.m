@@ -64,8 +64,15 @@ static NSMenuItem *proton_engine_add_menu_item(NSMenu *menu,
 
 static void proton_engine_add_top_level_menu(NSMenu *main_menu,
                                              NSString *title,
-                                             NSMenu *submenu) {
-  NSMenuItem *item = proton_engine_add_menu_item(main_menu, title, nil, @"");
+                                             NSMenu *submenu,
+                                             BOOL first) {
+  NSMenuItem *item = first
+                         ? [main_menu insertItemWithTitle:title
+                                                  action:nil
+                                           keyEquivalent:@""
+                                                 atIndex:0]
+                         : proton_engine_add_menu_item(
+                               main_menu, title, nil, @"");
   [main_menu setSubmenu:submenu forItem:item];
 }
 
@@ -214,7 +221,8 @@ static int proton_engine_install_menu_definitions(NSArray *menus,
     if (menu == nil || label == nil) {
       return 0;
     }
-    proton_engine_add_top_level_menu(main_menu, label, menu);
+    proton_engine_add_top_level_menu(
+        main_menu, label, menu, [role isEqualToString:@"application"]);
     if ([role isEqualToString:@"window"]) {
       window_menu = menu;
     }
