@@ -3058,6 +3058,19 @@ static int proton_engine_request_all_windows_close(void) {
   proton_engine_debug_log("window_will_close browser=%d", window->browser_id);
   window->appkit_closing = 1;
   proton_engine_window_close_views(window);
+  // A deferred view close (beforeunload/unload still in flight) leaves the
+  // view's browser host view attached, and the NSWindow teardown that follows
+  // releases the whole view tree, dealloc'ing every CefBrowserHostView and
+  // firing its WindowDestroyed(). Clear each view's borrowed browser_view
+  // pointer now so view_on_before_close cannot message a dangling pointer
+  // afterwards. Do NOT removeFromSuperview here: the resulting dealloc would
+  // re-enter CEF (WindowDestroyed -> DestroyBrowser -> on_before_close ->
+  // finalize) and can free this window and its view structs while this loop
+  // and the code below still use them.
+  for (proton_engine_view_t *view = window->views; view != NULL;
+       view = view->next) {
+    view->browser_view = nil;
+  }
   if (window->browser != NULL) {
     // AppKit has already closed the user-visible window. Publish that lifecycle
     // edge immediately; CEF on_before_close is only browser resource cleanup.
