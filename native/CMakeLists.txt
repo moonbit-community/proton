@@ -471,6 +471,9 @@ if(BUILD_TESTING)
     tests/proton_state_smoke.c
     src/proton_state.c
   )
+  add_executable(proton_cookie_state_lifetime_test
+    tests/cookie_state_lifetime_test.c
+  )
   if(APPLE)
     add_executable(proton_config_test
       tests/proton_config_test.c
@@ -512,6 +515,10 @@ if(BUILD_TESTING)
     C_STANDARD 11
     C_STANDARD_REQUIRED ON
   )
+  set_target_properties(proton_cookie_state_lifetime_test PROPERTIES
+    C_STANDARD 11
+    C_STANDARD_REQUIRED ON
+  )
   if(NOT WIN32)
     target_link_libraries(proton_exports_smoke PRIVATE ${CMAKE_DL_LIBS})
     target_link_libraries(proton_state_smoke PRIVATE Threads::Threads)
@@ -530,6 +537,8 @@ if(BUILD_TESTING)
   add_test(NAME proton_exports_smoke COMMAND proton_exports_smoke)
   add_test(NAME proton_bridge_policy_test COMMAND proton_bridge_policy_test)
   add_test(NAME proton_state_smoke COMMAND proton_state_smoke)
+  add_test(NAME proton_cookie_state_lifetime_test
+           COMMAND proton_cookie_state_lifetime_test)
   if(APPLE)
     add_test(NAME proton_config_test COMMAND proton_config_test)
   endif()
