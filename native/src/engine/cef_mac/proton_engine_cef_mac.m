@@ -4998,13 +4998,13 @@ static int proton_engine_view_request_browser_close(proton_engine_view_t *view,
   host->close_browser(host, force_close);
   host->base.release((cef_base_ref_counted_t *)host);
   // For windowed rendering the browser only dies once its host view leaves
-  // the view hierarchy (CefBrowserHostView dealloc -> WindowDestroyed).
-  // Detach it after the close request; do_close cancels CEF's default
-  // performClose: on the owning NSWindow.
-  if (view->browser_view != nil) {
-    [view->browser_view removeFromSuperview];
-    view->browser_view = nil;
-  }
+  // the view hierarchy (CefBrowserHostView dealloc -> WindowDestroyed). The
+  // detach is owned by do_close, which runs inside the close handshake above
+  // and cancels CEF's default performClose: on the owning NSWindow. Do NOT
+  // detach here: when CEF defers the close past this call (beforeunload or
+  // unload handlers), do_close would later find browser_view already nil and
+  // fall through to CEF's default, which the window delegate cancels, wedging
+  // the browser half-closed and leaking it.
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return 1;
 }
