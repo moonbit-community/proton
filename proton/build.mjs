@@ -113,7 +113,6 @@ function platformConfig(cefRoot, env) {
     const cflags = pkgConfig(["--cflags", "gtk+-3.0", "x11"]);
     const libs = pkgConfig(["--libs", "gtk+-3.0", "x11"]);
     const releaseDir = path.join(cefRoot, "Release");
-    const symbolMap = path.join(ffiRoot, "linux_symbols.map");
     return {
       stubCc: requestedCc || "clang",
       stubFlags: appendFlags("-DOS_LINUX=1 -DCEF_X11=1", commonStubFlags, cflags),
@@ -121,7 +120,6 @@ function platformConfig(cefRoot, env) {
       loaderFlags: "-std=c++17",
       linkFlags: appendFlags(
         `-L${quote(releaseDir)} -lcef -Wl,-rpath,${quote(releaseDir)}`,
-        `-Wl,--version-script,${quote(symbolMap)}`,
         libs,
         "-ldl -lpthread -lm",
       ),
