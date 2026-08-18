@@ -476,6 +476,14 @@ filename, such as `helpers/worker.exe`, for a Windows executable. Globs are
 allowed for `bundle.resources` only; every `bundle.sign.binaries` entry names
 one file.
 
+Backend code can locate these files through `@proton.resource_dir()`. It
+returns the absolute directory containing the implicitly discovered
+`proton.project.json`, which is the project directory during development and
+the packaged resource directory at runtime. Joining the same relative path,
+such as `helpers/worker`, therefore addresses the same resource before and
+after packaging. Code-only applications without a discovered project config
+raise `AppPathError`.
+
 Inspect the resolved bundle plan before creating artifacts:
 
 ```sh

@@ -38,6 +38,8 @@ pub fn last_error_message() -> String
 
 pub fn probe_runtime(config? : @native.RuntimeConfig) -> Unit raise @native.NativeError
 
+pub fn resource_dir() -> String raise AppPathError
+
 pub fn runtime_info() -> @native.RuntimeInfo raise @native.NativeError
 
 pub fn runtime_info_json() -> String raise @native.NativeError
@@ -92,6 +94,7 @@ pub fn AppEntryError::to_string(Self) -> String
 pub(all) suberror AppPathError {
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
+  ResourceDirUnavailable
   PlatformProbe(@native.NativeError)
 } derive(Eq, @debug.Debug)
 pub fn AppPathError::equal(Self, Self) -> Bool

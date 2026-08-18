@@ -1093,6 +1093,14 @@ test "packaged config takes precedence over environment and working directory" {
 }
 
 ///|
+test "resource directory is the absolute directory containing project config" {
+  @debug.assert_eq(
+    resource_dir_from_config_path(default_config_file),
+    current_permission_base_path(),
+  )
+}
+
+///|
 test "typed facade appends validated secondary windows" {
   let configured = html("Main", "<main>Main</main>").add_window(
     "settings",
