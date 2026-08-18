@@ -85,6 +85,8 @@ priv struct RunningWindow {
   permissions : WindowPermissionPolicy
   lifetime : WindowLifetime
   views : Array[RunningView]
+  mut document : ResourceDocument?
+  asset_root : String?
   mut bridge_ready : Bool
   mut state : SessionWindowState
 }
@@ -93,6 +95,33 @@ priv struct RunningWindow {
 priv struct RunningView {
   id : String
   view : @native.View
+  mut document : ResourceDocument?
+}
+
+///|
+priv struct ResourceDocument {
+  url : String
+  content : Bytes
+}
+
+///|
+priv enum PreparedEntry {
+  RemoteEntry(String)
+  DocumentEntry(ResourceDocument, String?)
+}
+
+///|
+priv struct ResourceResponse {
+  status : Int
+  mime_type : String
+  body : Bytes
+}
+
+///|
+priv struct PendingResourceRequest {
+  request_id : Int64
+  window : Int64
+  task : @async.Task[ResourceResponse]
 }
 
 ///|
@@ -123,6 +152,7 @@ priv struct PlannedWindow {
 ///|
 priv struct PreparedWindow {
   plan : PlannedWindow
+  entry : PreparedEntry
   bridge : @native.BridgeConfig?
   permissions : WindowPermissionPolicy
   browser_policy : @native.BrowserPolicy
@@ -197,6 +227,7 @@ priv struct RuntimeSession {
   pending_window_opens : Array[PendingWindowOpen]
   pending_window_closes : Array[PendingWindowClose]
   pending_browser_requests : Array[PendingBrowserRequest]
+  pending_resource_requests : Array[PendingResourceRequest]
   navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
   popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
   download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?

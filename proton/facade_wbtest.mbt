@@ -458,6 +458,74 @@ test "asset url path encoding escapes browser url delimiters" {
 }
 
 ///|
+test "resource urls decode paths without query or fragment data" {
+  assert_eq(
+    resource_url_path(
+      "https://proton.localhost/assets/a%20b/%e4%b8%ad.js?version=1#entry",
+    ),
+    Some("assets/a b/中.js"),
+  )
+}
+
+///|
+test "resource urls reject traversal and malformed encodings" {
+  assert_eq(resource_url_path("https://proton.localhost/../secret"), None)
+  assert_eq(
+    resource_url_path("https://proton.localhost/assets/%2e%2e/secret"),
+    None,
+  )
+  assert_eq(resource_url_path("https://proton.localhost/%2fetc/passwd"), None)
+  assert_eq(resource_url_path("https://proton.localhost/%00.txt"), None)
+  assert_eq(resource_url_path("https://proton.localhost/%zz.txt"), None)
+}
+
+///|
+test "resource root containment requires a path boundary" {
+  let separator = @mbpath.sep.to_string()
+  let root = separator + "tmp" + separator + "app"
+  assert_true(
+    resource_path_is_under_root(root + separator + "index.html", root),
+  )
+  assert_true(resource_path_is_under_root(root, root))
+  assert_true(
+    resource_path_is_under_root(
+      separator + "tmp" + separator + "file",
+      separator,
+    ),
+  )
+  assert_false(
+    resource_path_is_under_root(
+      root + "-other" + separator + "index.html",
+      root,
+    ),
+  )
+}
+
+///|
+test "resource mime types cover browser assets" {
+  assert_eq(resource_mime_type("main.CSS"), "text/css")
+  assert_eq(resource_mime_type("main.mjs"), "text/javascript")
+  assert_eq(resource_mime_type("font.woff2"), "font/woff2")
+  assert_eq(resource_mime_type("data.bin"), "application/octet-stream")
+}
+
+///|
+async test "inline documents resolve without filesystem access" {
+  let document = ResourceDocument::{
+    url: "proton://view/",
+    content: b"<h1>view</h1>",
+  }
+  let response = resolve_resource_request(
+    Some(document),
+    None,
+    "proton://view/",
+  )
+  assert_eq(response.status, 200)
+  assert_eq(response.mime_type, "text/html")
+  assert_eq(response.body, b"<h1>view</h1>")
+}
+
+///|
 test "extension event transport can target a page instance" {
   let event = @ipc.IpcExtensionEvent::new("ticker", "done", null)
   let event_json = bridge_event_json(

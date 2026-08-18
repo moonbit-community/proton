@@ -1222,6 +1222,21 @@ fn decode_native_runtime_event(
         },
       })
     }
+    25 =>
+      ResourceRequested({
+        request_id: @native_ffi.event_int64(event, 2),
+        window,
+        view: {
+          let view = @native_ffi.event_int64(event, 1)
+          if view == proton_invalid_handle {
+            None
+          } else {
+            Some(view)
+          }
+        },
+        url: require_native_event_text(event, 0, "resource request"),
+      })
+    26 => ResourceRequestCancelled(@native_ffi.event_int64(event, 2))
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -1253,6 +1268,26 @@ pub fn Runtime::respond_bridge_request(
     @native_ffi.proton_runtime_respond_bridge_request_json_ffi(
       self.active_handle(),
       @ffi.to_cstr(response.to_json_string()),
+    ),
+  )
+}
+
+///|
+pub fn Runtime::complete_resource_request(
+  self : Runtime,
+  request_id : Int64,
+  status : Int,
+  mime_type : String,
+  data : Bytes,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.runtime_complete_resource_request(
+      self.active_handle(),
+      request_id,
+      status,
+      @ffi.to_cstr(mime_type),
+      data,
+      data.length(),
     ),
   )
 }
@@ -1630,39 +1665,6 @@ pub fn Window::load_url(self : Window, url : String) -> Unit raise NativeError {
     @native_ffi.proton_window_load_url_ffi(
       self.live_handle(),
       @ffi.to_cstr(url),
-    ),
-  )
-}
-
-///|
-pub fn Window::load_html(
-  self : Window,
-  html : String,
-  base_url : String,
-) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_window_load_html_ffi(
-      self.live_handle(),
-      @ffi.to_cstr(html),
-      @ffi.to_cstr(base_url),
-    ),
-  )
-}
-
-///|
-/// Load an HTML document whose relative URLs resolve inside `asset_root`.
-pub fn Window::load_asset(
-  self : Window,
-  html : String,
-  document_url : String,
-  asset_root : String,
-) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_window_load_asset_ffi(
-      self.live_handle(),
-      @ffi.to_cstr(html),
-      @ffi.to_cstr(document_url),
-      @ffi.to_cstr(asset_root),
     ),
   )
 }
@@ -2396,23 +2398,6 @@ pub fn View::state(self : View) -> ViewState raise NativeError {
     error =>
       raise InvalidPayload(context="view state", message=error.to_string())
   }
-}
-
-///|
-/// Loads inline HTML into the view, served from `base_url` on the `proton://`
-/// scheme, mirroring `Window::load_html`.
-pub fn View::load_html(
-  self : View,
-  html : String,
-  base_url : String,
-) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_view_load_html_ffi(
-      self.live_handle(),
-      @ffi.to_cstr(html),
-      @ffi.to_cstr(base_url),
-    ),
-  )
 }
 
 ///|

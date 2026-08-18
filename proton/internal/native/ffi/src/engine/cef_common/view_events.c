@@ -77,6 +77,22 @@ void proton_view_events_bind(proton_view_events_t *events,
   proton_view_events_unlock(events);
 }
 
+int proton_view_events_ids(proton_view_events_t *events,
+                           proton_view_id_t *out_view,
+                           proton_window_id_t *out_window) {
+  if (events == NULL || out_view == NULL || out_window == NULL) {
+    return 0;
+  }
+  proton_view_events_lock(events);
+  int bound = events->bound;
+  if (bound) {
+    *out_view = events->view;
+    *out_window = events->window;
+  }
+  proton_view_events_unlock(events);
+  return bound;
+}
+
 static void proton_view_events_enqueue(proton_view_events_t *events,
                                        proton_event_t *event) {
   if (events == NULL || event == NULL) {

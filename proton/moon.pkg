@@ -1,5 +1,6 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/external_loop_integration" @extloop,
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
@@ -47,6 +48,7 @@ options(
     "facade_notification.mbt": [ "native" ],
     "facade_paths.mbt": [ "native" ],
     "facade_permissions.mbt": [ "native" ],
+    "facade_resource.mbt": [ "native" ],
     "facade_runtime.mbt": [ "native" ],
     "facade_session.mbt": [ "native" ],
     "facade_test.mbt": [ "native" ],

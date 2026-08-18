@@ -136,8 +136,6 @@ pub fn proton_view_destroy_ffi(ViewHandle) -> Int
 
 pub fn proton_view_eval_ffi(ViewHandle, Bytes) -> Int
 
-pub fn proton_view_load_html_ffi(ViewHandle, Bytes, Bytes) -> Int
-
 pub fn proton_view_load_url_ffi(ViewHandle, Bytes) -> Int
 
 pub fn proton_view_set_bounds_ffi(ViewHandle, Int, Int, Int, Int) -> Int
@@ -184,10 +182,6 @@ pub fn proton_window_focus_ffi(WindowHandle) -> Int
 
 pub fn proton_window_hide_ffi(WindowHandle) -> Int
 
-pub fn proton_window_load_asset_ffi(WindowHandle, Bytes, Bytes, Bytes) -> Int
-
-pub fn proton_window_load_html_ffi(WindowHandle, Bytes, Bytes) -> Int
-
 pub fn proton_window_load_url_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_maximize_ffi(WindowHandle) -> Int
@@ -219,6 +213,8 @@ pub fn proton_window_show_ffi(WindowHandle) -> Int
 pub fn proton_window_state_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_take_bridge_failure_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
+pub fn runtime_complete_resource_request(RuntimeHandle, Int64, Int, Bytes, Bytes, Int) -> Int
 
 pub fn runtime_create(Int, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, @ref.Ref[RuntimeHandle]) -> Int
 

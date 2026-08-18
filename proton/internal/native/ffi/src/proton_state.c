@@ -175,11 +175,28 @@ proton_event_t *proton_runtime_poll_event(proton_runtime_slot_t *runtime) {
   return runtime == NULL ? NULL : proton_event_queue_pop(&runtime->events);
 }
 
+int64_t proton_runtime_reserve_window_id(proton_runtime_slot_t *runtime) {
+  int64_t id = runtime->next_window_id++;
+  if (runtime->next_window_id <= 0) {
+    runtime->next_window_id = 1;
+  }
+  return id;
+}
+
+int64_t proton_runtime_reserve_view_id(proton_runtime_slot_t *runtime) {
+  int64_t id = runtime->next_view_id++;
+  if (runtime->next_view_id <= 0) {
+    runtime->next_view_id = 1;
+  }
+  return id;
+}
+
 int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
                                   proton_engine_window_t *engine_window,
-                                  int32_t width, int32_t height,
+                                  int64_t logical_id, int32_t width,
+                                  int32_t height,
                                   proton_window_slot_t **out_window) {
-  if (runtime == NULL || out_window == NULL) {
+  if (runtime == NULL || logical_id <= 0 || out_window == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime and out_window are required");
   }
@@ -194,10 +211,7 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
   window->engine_window = engine_window;
   window->width = width;
   window->height = height;
-  window->logical_id = runtime->next_window_id++;
-  if (runtime->next_window_id <= 0) {
-    runtime->next_window_id = 1;
-  }
+  window->logical_id = logical_id;
   if (!proton_runtime_enqueue_window_event(runtime, PROTON_EVENT_WINDOW_CREATED,
                                            window->logical_id)) {
     free(window);
@@ -508,11 +522,12 @@ int32_t proton_destroy_windows_for_runtime(proton_runtime_slot_t *runtime) {
 }
 
 int32_t proton_view_slot_create(proton_window_slot_t *window,
-                                proton_engine_view_t *engine_view, int32_t x,
-                                int32_t y, int32_t width, int32_t height,
-                                int32_t z_order, bool visible,
+                                proton_engine_view_t *engine_view,
+                                int64_t logical_id, int32_t x, int32_t y,
+                                int32_t width, int32_t height, int32_t z_order,
+                                bool visible,
                                 proton_view_slot_t **out_view) {
-  if (window == NULL || out_view == NULL) {
+  if (window == NULL || logical_id <= 0 || out_view == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "window and out_view are required");
   }
@@ -532,10 +547,7 @@ int32_t proton_view_slot_create(proton_window_slot_t *window,
   view->height = height;
   view->z_order = z_order;
   view->visible = visible;
-  view->logical_id = window->runtime->next_view_id++;
-  if (window->runtime->next_view_id <= 0) {
-    window->runtime->next_view_id = 1;
-  }
+  view->logical_id = logical_id;
   view->next = window->runtime->views;
   window->runtime->views = view;
   *out_view = view;

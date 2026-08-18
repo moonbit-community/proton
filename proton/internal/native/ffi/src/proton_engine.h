@@ -33,6 +33,7 @@ typedef struct {
 } proton_engine_runtime_config_t;
 
 typedef struct {
+  proton_window_id_t public_window;
   char title[512];
   char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
   int32_t width;
@@ -49,6 +50,8 @@ typedef struct {
 } proton_engine_window_config_t;
 
 typedef struct {
+  proton_window_id_t public_window;
+  proton_view_id_t public_view;
   char initial_url[PROTON_ENGINE_MAX_URL_BYTES];
   int32_t x;
   int32_t y;
@@ -115,6 +118,10 @@ int32_t proton_engine_runtime_create(
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                       char *error,
                                       size_t error_len);
+int32_t proton_engine_complete_resource_request(
+    int64_t request_id, int32_t status, const char *mime_type,
+    const void *data, size_t data_len);
+void proton_engine_cancel_resource_requests(void);
 int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_runtime_t *runtime,
     char *error,
@@ -223,17 +230,6 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
                                       const char *url,
                                       char *error,
                                       size_t error_len);
-int32_t proton_engine_window_load_html(proton_engine_window_t *window,
-                                       const char *html,
-                                       const char *base_url,
-                                       char *error,
-                                       size_t error_len);
-int32_t proton_engine_window_load_asset(proton_engine_window_t *window,
-                                        const char *html,
-                                        const char *document_url,
-                                        const char *asset_root,
-                                        char *error,
-                                        size_t error_len);
 int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,
@@ -249,8 +245,6 @@ int32_t proton_engine_window_emit_bridge_event_json(
     const char *event_json,
     char *error,
     size_t error_len);
-void proton_engine_window_bind_public_id(proton_engine_window_t *window,
-                                         proton_window_id_t public_window);
 uint64_t proton_engine_window_bridge_revision(
     proton_engine_window_t *window);
 int32_t proton_engine_window_bridge_state_json(
@@ -337,18 +331,10 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
                                 const char *script,
                                 char *error,
                                 size_t error_len);
-int32_t proton_engine_view_load_html(proton_engine_view_t *view,
-                                     const char *html,
-                                     const char *base_url,
-                                     char *error,
-                                     size_t error_len);
 int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
                                                 const char *command_json,
                                                 char *error,
                                                 size_t error_len);
-void proton_engine_view_bind_public_id(proton_engine_view_t *view,
-                                       proton_view_id_t public_view);
-
 /* Session cookie and cache management. The engine implementation reaches the
    CEF cookie manager through the window's browser host request context. Cookie
    get completion is published to the runtime event queue; set, delete, flush,

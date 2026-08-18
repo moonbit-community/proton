@@ -260,6 +260,7 @@ int32_t proton_runtime_destroy(proton_runtime_handle_t runtime) {
   if (status != PROTON_OK) {
     return status;
   }
+  proton_engine_cancel_resource_requests();
   if (slot->engine_runtime != NULL) {
     char engine_error[512] = {0};
     status = proton_engine_runtime_destroy(slot->engine_runtime, engine_error,
@@ -270,6 +271,35 @@ int32_t proton_runtime_destroy(proton_runtime_handle_t runtime) {
     slot->engine_runtime = NULL;
   }
   proton_runtime_slot_destroy(slot);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_runtime_complete_resource_request(
+    proton_runtime_handle_t runtime, int64_t request_id, int32_t status,
+    const char *mime_type, const uint8_t *data, int32_t data_len) {
+  proton_runtime_slot_t *slot = NULL;
+  int32_t runtime_status = proton_get_runtime(runtime, &slot);
+  if (runtime_status != PROTON_OK) {
+    return runtime_status;
+  }
+  if (request_id <= 0 || status < 100 || status > 599 || mime_type == NULL ||
+      mime_type[0] == '\0' || data_len < 0 ||
+      (data == NULL && data_len > 0)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "invalid resource response");
+  }
+  (void)slot;
+  runtime_status = proton_engine_complete_resource_request(
+      request_id, status, mime_type, data, (size_t)data_len);
+  if (runtime_status == PROTON_ERR_STALE_RESOURCE_REQUEST) {
+    return proton_set_error(runtime_status,
+                            "resource request is no longer pending");
+  }
+  if (runtime_status != PROTON_OK) {
+    return proton_set_error(runtime_status,
+                            "failed to complete resource request");
+  }
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
@@ -563,6 +593,8 @@ int32_t proton_internal_window_create(
   if (status != PROTON_OK) {
     return status;
   }
+  int64_t logical_id = proton_runtime_reserve_window_id(runtime_slot);
+  config.public_window = logical_id;
 
   proton_engine_window_t *engine_window = NULL;
   if (runtime_slot->engine_runtime != NULL) {
@@ -579,8 +611,8 @@ int32_t proton_internal_window_create(
     }
   }
 
-  status = proton_window_slot_create(runtime_slot, engine_window, width,
-                                    height, out_window);
+  status = proton_window_slot_create(runtime_slot, engine_window, logical_id,
+                                     width, height, out_window);
   if (status != PROTON_OK) {
     if (engine_window != NULL) {
       char engine_error[512] = {0};
@@ -588,10 +620,6 @@ int32_t proton_internal_window_create(
                                          sizeof(engine_error));
     }
     return status;
-  }
-  if (engine_window != NULL) {
-    proton_engine_window_bind_public_id(engine_window,
-                                        (*out_window)->logical_id);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;
@@ -1022,57 +1050,6 @@ int32_t proton_window_load_url(proton_window_handle_t window, const char *url) {
     status = proton_engine_window_load_url(slot->engine_window, url,
                                            engine_error,
                                            sizeof(engine_error));
-    if (status != PROTON_OK) {
-      return proton_set_engine_status(status, engine_error);
-    }
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_window_load_html(proton_window_handle_t window, const char *html,
-                                const char *base_url) {
-  proton_window_slot_t *slot = NULL;
-  int32_t status = proton_get_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (html == NULL || base_url == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "html and base_url are required");
-  }
-  if (slot->engine_window != NULL) {
-    char engine_error[512] = {0};
-    status = proton_engine_window_load_html(slot->engine_window, html, base_url,
-                                            engine_error,
-                                            sizeof(engine_error));
-    if (status != PROTON_OK) {
-      return proton_set_engine_status(status, engine_error);
-    }
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_window_load_asset(proton_window_handle_t window, const char *html,
-                                 const char *document_url,
-                                 const char *asset_root) {
-  proton_window_slot_t *slot = NULL;
-  int32_t status = proton_get_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (html == NULL || document_url == NULL || document_url[0] == '\0' ||
-      asset_root == NULL || asset_root[0] == '\0') {
-    return proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "html, document_url, and asset_root are required");
-  }
-  if (slot->engine_window != NULL) {
-    char engine_error[512] = {0};
-    status = proton_engine_window_load_asset(
-        slot->engine_window, html, document_url, asset_root, engine_error,
-        sizeof(engine_error));
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
     }
@@ -1692,6 +1669,9 @@ int32_t proton_internal_view_create(
   if (status != PROTON_OK) {
     return status;
   }
+  int64_t logical_id = proton_runtime_reserve_view_id(runtime_slot);
+  config.public_window = window_slot->logical_id;
+  config.public_view = logical_id;
 
   proton_engine_view_t *engine_view = NULL;
   if (window_slot->engine_window != NULL) {
@@ -1709,7 +1689,7 @@ int32_t proton_internal_view_create(
   }
 
   status = proton_view_slot_create(
-      window_slot, engine_view, config.x, config.y, config.width,
+      window_slot, engine_view, logical_id, config.x, config.y, config.width,
       config.height, config.z_order, config.visible != 0, out_view);
   if (status != PROTON_OK) {
     if (engine_view != NULL) {
@@ -1718,9 +1698,6 @@ int32_t proton_internal_view_create(
                                        sizeof(engine_error));
     }
     return status;
-  }
-  if (engine_view != NULL) {
-    proton_engine_view_bind_public_id(engine_view, (*out_view)->logical_id);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;
@@ -1830,29 +1807,6 @@ int32_t proton_view_load_url(proton_view_handle_t view, const char *url) {
     char engine_error[512] = {0};
     status = proton_engine_view_load_url(slot->engine_view, url, engine_error,
                                          sizeof(engine_error));
-    if (status != PROTON_OK) {
-      return proton_set_engine_status(status, engine_error);
-    }
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_view_load_html(proton_view_handle_t view, const char *html,
-                              const char *base_url) {
-  proton_view_slot_t *slot = NULL;
-  int32_t status = proton_get_view(view, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (html == NULL || base_url == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "html and base_url are required");
-  }
-  if (slot->engine_view != NULL) {
-    char engine_error[512] = {0};
-    status = proton_engine_view_load_html(slot->engine_view, html, base_url,
-                                          engine_error, sizeof(engine_error));
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
     }

@@ -51,6 +51,7 @@ fn RuntimeSession::new(
     pending_window_opens: [],
     pending_window_closes: [],
     pending_browser_requests: [],
+    pending_resource_requests: [],
     navigation_handler,
     popup_handler,
     download_handler,
@@ -194,13 +195,8 @@ fn RuntimeSession::view_handle(
       )
     },
     load_view_html: (html, base_url) => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "load HTML in",
-        view => view.load_html(html, base_url),
+      self.load_view_html(
+        window_id, window_native_id, id, native_id, html, base_url,
       )
     },
     eval_view_script: script => {
@@ -317,7 +313,7 @@ fn RuntimeSession::add_window_view(
         error,
       )
   }
-  let running_view = RunningView::{ id: view_id, view: created }
+  let running_view = RunningView::{ id: view_id, view: created, document: None }
   running.views.push(running_view)
   self.view_handle(running, running_view)
 }
@@ -403,9 +399,7 @@ fn RuntimeSession::browser_handle(
       })
     },
     load_browser_html: (html, base_url) => {
-      self.control_window(id, native_id, "load HTML in", window => {
-        window.load_html(html, base_url)
-      })
+      self.load_window_html(id, native_id, html, base_url)
     },
     eval_browser_script: script => {
       self.control_window(id, native_id, "evaluate script in", window => {
@@ -495,6 +489,70 @@ fn RuntimeSession::control_window(
 }
 
 ///|
+fn RuntimeSession::load_window_html(
+  self : RuntimeSession,
+  id : String,
+  native_id : Int64,
+  html : String,
+  base_url : String,
+) -> Unit raise WindowSessionError {
+  let running = match self.find_active_window(id) {
+    Some(running) if running.window.id() == native_id => running
+    _ => raise StaleWindow(id~)
+  }
+  guard resource_document_url_is_supported(base_url) else {
+    raise window_operation_failed(
+      "load HTML in window " + id,
+      @native.NativeError::InvalidArgument(
+        message="base_url must use a Proton application origin",
+      ),
+    )
+  }
+  let previous = running.document
+  running.document = Some({ url: base_url, content: @utf8.encode(html) })
+  running.window.load_url(base_url) catch {
+    error => {
+      running.document = previous
+      raise window_operation_failed("load HTML in window " + id, error)
+    }
+  }
+}
+
+///|
+fn RuntimeSession::load_view_html(
+  self : RuntimeSession,
+  window_id : String,
+  window_native_id : Int64,
+  view_id : String,
+  view_native_id : Int64,
+  html : String,
+  base_url : String,
+) -> Unit raise WindowSessionError {
+  let running = self.resolve_view(
+    window_id, window_native_id, view_id, view_native_id,
+  )
+  guard resource_document_url_is_supported(base_url) else {
+    raise window_operation_failed(
+      "load HTML in view " + view_id + " in window " + window_id,
+      @native.NativeError::InvalidArgument(
+        message="base_url must use a Proton application origin",
+      ),
+    )
+  }
+  let previous = running.document
+  running.document = Some({ url: base_url, content: @utf8.encode(html) })
+  running.view.load_url(base_url) catch {
+    error => {
+      running.document = previous
+      raise window_operation_failed(
+        "load HTML in view " + view_id + " in window " + window_id,
+        error,
+      )
+    }
+  }
+}
+
+///|
 fn RuntimeSession::read_window_state(
   self : RuntimeSession,
   id : String,
@@ -570,17 +628,23 @@ fn RuntimeSession::create_window(
         )
     }
   }
+  let (document, asset_root) = match definition.entry {
+    RemoteEntry(_) => (None, None)
+    DocumentEntry(document, asset_root) => (Some(document), asset_root)
+  }
   let running = RunningWindow::{
     id: plan.id,
     window: created_window,
     permissions: definition.permissions,
     lifetime: WindowLifetime::new(),
     views: [],
+    document,
+    asset_root,
     bridge_ready: !self.monitor_bridge,
     state: WindowStarting,
   }
   self.windows.push(running)
-  load_entry_after_create(created_window, plan.entry) catch {
+  load_prepared_entry(created_window, definition.entry) catch {
     error => raise EntryLoadError(error)
   }
   for view_plan in definition.views {
@@ -1298,6 +1362,7 @@ async fn RuntimeSession::run(self : RuntimeSession) -> Unit raise AppRunError {
   self.cancel_all_bridge_tasks()
   self.cancel_all_window_close_requests()
   self.cancel_all_browser_requests()
+  self.cancel_all_resource_requests()
 }
 
 ///|
@@ -1350,6 +1415,9 @@ fn RuntimeSession::pump_once(
   if self.complete_browser_requests() {
     did_work = true
   }
+  if self.complete_resource_requests() {
+    did_work = true
+  }
   did_work
 }
 
@@ -1382,6 +1450,7 @@ fn RuntimeSession::dispatch_runtime_event(
   self.dispatch_window_event(event)
   self.dispatch_view_event(event)
   self.dispatch_browser_event(event)
+  self.dispatch_resource_event(event)
   self.dispatch_notification_event(event)
   self.dispatch_launch_input_event(event)
   self.dispatch_menu_event(event)
@@ -1406,6 +1475,7 @@ fn RuntimeSession::dispatch_window_event(
   if event.is_window_closed() {
     self.cancel_window_close_requests(event.window_id())
     self.cancel_browser_requests(event.window_id())
+    self.cancel_resource_requests_for_window(event.window_id())
   }
   match (event.window_id(), event.window_state_change()) {
     (Some(window_id), Some(state)) =>
@@ -1684,6 +1754,135 @@ fn RuntimeSession::cancel_all_browser_requests(self : RuntimeSession) -> Unit {
     pending.task.cancel()
   }
   self.pending_browser_requests.clear()
+}
+
+///|
+fn RuntimeSession::dispatch_resource_event(
+  self : RuntimeSession,
+  event : @native.RuntimeEvent,
+) -> Unit {
+  match event.resource_request() {
+    Some(request) => self.start_resource_request(request)
+    None => ()
+  }
+  self.cancel_resource_request(event.resource_request_cancellation())
+}
+
+///|
+fn RuntimeSession::start_resource_request(
+  self : RuntimeSession,
+  request : @native.NativeResourceRequest,
+) -> Unit {
+  let (document, asset_root) = match
+    self.find_window_by_native_id(request.window) {
+    Some(window) if request.view is Some(view_id) => {
+      let mut document = None
+      for view in window.views {
+        if view.view.id() == view_id {
+          document = view.document
+          break
+        }
+      }
+      (document, None)
+    }
+    Some(window) => (window.document, window.asset_root)
+    None => (None, None)
+  }
+  let task = self.window_tasks.spawn(
+    () => {
+      defer self.wakeup.signal.notify()
+      resolve_resource_request(document, asset_root, request.url)
+    },
+    no_wait=true,
+  )
+  self.pending_resource_requests.push({
+    request_id: request.request_id,
+    window: request.window,
+    task,
+  })
+}
+
+///|
+fn RuntimeSession::complete_resource_requests(
+  self : RuntimeSession,
+) -> Bool raise AppRunError {
+  let remaining : Array[PendingResourceRequest] = []
+  let mut did_work = false
+  for pending in self.pending_resource_requests {
+    let completed = pending.task.try_wait() catch {
+      _ => Some(resource_text_response(500, "Resource request failed"))
+    }
+    match completed {
+      None => remaining.push(pending)
+      Some(response) => {
+        did_work = true
+        self.runtime.complete_resource_request(
+          pending.request_id,
+          response.status,
+          response.mime_type,
+          response.body,
+        ) catch {
+          error =>
+            if !error.is_stale_resource_request() {
+              raise native_run_error("complete resource request", error)
+            }
+        }
+      }
+    }
+  }
+  self.pending_resource_requests.clear()
+  for pending in remaining {
+    self.pending_resource_requests.push(pending)
+  }
+  did_work
+}
+
+///|
+fn RuntimeSession::cancel_resource_request(
+  self : RuntimeSession,
+  request_id : Int64?,
+) -> Unit {
+  guard request_id is Some(request_id) else { return }
+  let remaining : Array[PendingResourceRequest] = []
+  for pending in self.pending_resource_requests {
+    if pending.request_id == request_id {
+      pending.task.cancel()
+    } else {
+      remaining.push(pending)
+    }
+  }
+  self.pending_resource_requests.clear()
+  for pending in remaining {
+    self.pending_resource_requests.push(pending)
+  }
+}
+
+///|
+fn RuntimeSession::cancel_resource_requests_for_window(
+  self : RuntimeSession,
+  window_id : Int64?,
+) -> Unit {
+  guard window_id is Some(window_id) else { return }
+  let remaining : Array[PendingResourceRequest] = []
+  for pending in self.pending_resource_requests {
+    if pending.window == window_id {
+      pending.task.cancel()
+    } else {
+      remaining.push(pending)
+    }
+  }
+  self.pending_resource_requests.clear()
+  for pending in remaining {
+    self.pending_resource_requests.push(pending)
+  }
+}
+
+///|
+fn RuntimeSession::cancel_all_resource_requests(self : RuntimeSession) -> Unit {
+  for pending in self.pending_resource_requests {
+    pending.task.cancel()
+  }
+  self.pending_resource_requests.clear()
 }
 
 ///|

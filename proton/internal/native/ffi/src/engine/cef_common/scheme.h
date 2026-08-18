@@ -12,15 +12,9 @@
 
 #include <stddef.h>
 
-/* Application resources are served by one factory shared by every engine. It
-   is bound to two names: the proton:// transport scheme and the host-scoped
-   HTTPS application origin. See app_origin.h for why the application itself
-   lives on the HTTPS origin.
-
-   The factory runs on CEF's IO thread while the main thread may be replacing
-   or freeing a window's html state, so it snapshots everything through the
-   window_state.h accessors under the engine's window lock and copies it before
-   doing any disk-bound work. */
+/* Application resources are requested by CEF's IO thread and resolved by the
+   MoonBit runtime. The handler retains CEF's continuation while the request is
+   pending; native callbacks only enqueue events and never enter MoonBit. */
 
 cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
     cef_scheme_handler_factory_t *self,
@@ -28,6 +22,13 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
     cef_frame_t *frame,
     const cef_string_t *scheme_name,
     cef_request_t *request);
+
+/* Completes one pending request. The handler copies `mime_type` and `data`
+   before resuming CEF, so the caller retains ownership of both buffers. */
+int32_t proton_engine_complete_resource_request(
+    int64_t request_id, int32_t status, const char *mime_type,
+    const void *data, size_t data_len);
+void proton_engine_cancel_resource_requests(void);
 
 /* Declares proton:// to Chromium. Call from on_register_custom_schemes; the
    HTTPS origin needs no declaration because https is already standard. */

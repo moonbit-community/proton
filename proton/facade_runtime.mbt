@@ -239,6 +239,9 @@ async fn run_manifest(
       devtools=manifest.debug > 0,
     )
     for index, plan in plans {
+      let entry = prepare_entry(plan.entry) catch {
+        error => raise EntryLoadError(error)
+      }
       let bridge = if bridge_enabled {
         let grants = permission_policies[index].native_grants(
           command_extensions,
@@ -252,6 +255,7 @@ async fn run_manifest(
       }
       definitions.push(PreparedWindow::{
         plan,
+        entry,
         bridge,
         permissions: permission_policies[index],
         browser_policy,

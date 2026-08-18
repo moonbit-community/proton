@@ -10,7 +10,6 @@
 #include "menu.h"
 #include "window.h"
 
-#include "../cef_common/document.h"
 #include "../cef_common/message.h"
 #include "../cef_common/profile_storage.h"
 #include "../cef_common/scheme.h"
@@ -88,7 +87,6 @@ typedef struct proton_engine_client proton_engine_client_t;
 struct proton_engine_runtime {
   int owns_cef_runtime;
   int headless;
-  char *asset_root;
   int64_t next_bridge_request_id;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
@@ -112,9 +110,6 @@ struct proton_engine_window {
   cef_browser_t *browser;
   int browser_id;
   proton_window_id_t public_window_id;
-  char *html_url;
-  char *html;
-  size_t html_len;
   char *bridge_config_json;
   int32_t max_bridge_payload_bytes;
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
@@ -184,9 +179,6 @@ struct proton_engine_view {
   int finalized;
   int osr_paint_seen;
   int closed;
-  char *html_url;
-  char *html;
-  size_t html_len;
   proton_browser_session_t *browser_session;
   proton_view_events_t *events;
   int has_background_color;
@@ -288,10 +280,8 @@ static proton_engine_display_handler_t g_display_handler;
 static proton_engine_scheme_factory_t g_scheme_factory;
 static proton_engine_window_t *g_windows = NULL;
 
-/* Guards g_windows list membership and the per-window html/html_url/html_len
-   fields. Writers run on the main thread; the scheme handler factory reads
-   them on CEF's IO thread, so both sides must take this lock. Keep critical
-   sections leaf-only: never call back into engine or CEF code while held. */
+/* Guards g_windows list membership read by CEF callback threads. Keep this
+   lock leaf-only: never call back into engine or CEF code while held. */
 static pthread_mutex_t g_proton_engine_window_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void proton_engine_window_lock(void) {
@@ -908,69 +898,30 @@ cef_browser_t *proton_engine_window_browser(proton_engine_window_t *window) {
   return window != NULL ? window->browser : NULL;
 }
 
-const char *proton_engine_window_html_url(proton_engine_window_t *window) {
-  return window != NULL ? window->html_url : NULL;
-}
-
-const char *proton_engine_runtime_asset_root(
-    proton_engine_window_t *window) {
-  proton_engine_runtime_t *runtime = window != NULL ? window->runtime : NULL;
-  if (runtime == NULL && g_windows != NULL) {
-    runtime = g_windows->runtime;
-  }
-  return runtime != NULL ? runtime->asset_root : NULL;
-}
-
-const char *proton_engine_window_html(proton_engine_window_t *window,
-                                     size_t *len) {
-  if (len != NULL) {
-    *len = window != NULL ? window->html_len : 0;
-  }
-  return window != NULL ? window->html : NULL;
-}
-
-void proton_engine_window_replace_document(proton_engine_window_t *window,
-                                           char *url, char *html,
-                                           size_t html_len) {
-  if (window == NULL) {
-    free(url);
-    free(html);
-    return;
-  }
-  free(window->html_url);
-  free(window->html);
-  window->html_url = url;
-  window->html = html;
-  window->html_len = html_len;
-}
-
-void proton_engine_runtime_adopt_asset_root(proton_engine_window_t *window,
-                                            char *root) {
-  proton_engine_runtime_t *runtime = window != NULL ? window->runtime : NULL;
-  if (runtime == NULL && g_windows != NULL) {
-    runtime = g_windows->runtime;
-  }
-  if (runtime == NULL) {
-    free(root);
-    return;
-  }
-  runtime->asset_root = root;
-}
-
 proton_engine_view_t *proton_engine_window_lookup_view_browser(
     cef_browser_t *browser) {
   return proton_engine_view_from_browser(browser);
 }
 
-const char *proton_engine_view_html_url(proton_engine_view_t *view) {
-  return view != NULL ? view->html_url : NULL;
+proton_window_id_t proton_engine_view_window_public_id(
+    proton_engine_view_t *view) {
+  proton_view_id_t view_id = PROTON_INVALID_HANDLE;
+  proton_window_id_t window_id = PROTON_INVALID_HANDLE;
+  if (view == NULL ||
+      !proton_view_events_ids(view->events, &view_id, &window_id)) {
+    return PROTON_INVALID_HANDLE;
+  }
+  return window_id;
 }
 
-const char *proton_engine_view_html(proton_engine_view_t *view, size_t *len) {
-  if (len != NULL) {
-    *len = view != NULL ? view->html_len : 0;
+proton_view_id_t proton_engine_view_public_id(proton_engine_view_t *view) {
+  proton_view_id_t view_id = PROTON_INVALID_HANDLE;
+  proton_window_id_t window_id = PROTON_INVALID_HANDLE;
+  if (view == NULL ||
+      !proton_view_events_ids(view->events, &view_id, &window_id)) {
+    return PROTON_INVALID_HANDLE;
   }
-  return view != NULL ? view->html : NULL;
+  return view_id;
 }
 
 proton_window_id_t
@@ -3049,7 +3000,6 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   g_proton_cef_runtime_active = 0;
   /* The e2e suite uses this as proof that native shutdown completed. */
   proton_engine_debug_log("runtime_destroy_complete");
-  free(runtime->asset_root);
   free(runtime);
   return PROTON_OK;
 }
@@ -3524,6 +3474,7 @@ int32_t proton_engine_window_create(
     return PROTON_ERR_ENGINE;
   }
   window->runtime = runtime;
+  window->public_window_id = config.public_window;
   window->native_id = g_next_window_native_id++;
   if (g_next_window_native_id == 0) {
     g_next_window_native_id = 1;
@@ -3546,6 +3497,8 @@ int32_t proton_engine_window_create(
                               "failed to allocate browser session");
     return PROTON_ERR_ENGINE;
   }
+  proton_browser_session_bind_window(window->browser_session,
+                                     config.public_window);
   window->client = proton_engine_client_create(window);
   if (window->client == NULL) {
     proton_browser_session_destroy(window->browser_session);
@@ -3656,8 +3609,6 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
   proton_engine_window_lock();
   proton_engine_window_free_views(window);
   free(window->client);
-  free(window->html_url);
-  free(window->html);
   free(window->bridge_config_json);
   free(window->initial_url);
   proton_browser_session_destroy(window->browser_session);
@@ -4180,61 +4131,6 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-static int32_t proton_engine_window_load_document(
-    proton_engine_window_t *window, const char *html,
-    const char *document_url, const char *asset_root, char *error,
-    size_t error_len) {
-  char *url = NULL;
-  size_t html_len = 0;
-  int32_t status = proton_engine_window_install_document(
-      window, html, document_url, asset_root, &url, &html_len, error,
-      error_len);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  /* Before the browser exists there is nothing to navigate, so the create
-     path picks this url up as its initial navigation instead. */
-  if ((window->browser == NULL &&
-       (window->browser_create_pending || window->browser_create_scheduled)) ||
-      window->initial_navigation_pending) {
-    free(window->initial_url);
-    window->initial_url = url;
-    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-    return PROTON_OK;
-  }
-  proton_engine_debug_log("load_html browser=%d document_url=%s bytes=%llu",
-                          window->browser_id, url,
-                          (unsigned long long)html_len);
-  status = proton_engine_window_load_url(window, url, error, error_len);
-  free(url);
-  return status;
-}
-
-int32_t proton_engine_window_load_html(proton_engine_window_t *window,
-                                       const char *html,
-                                       const char *base_url,
-                                       char *error,
-                                       size_t error_len) {
-
-  return proton_engine_window_load_document(window, html, base_url, NULL,
-                                             error, error_len);
-}
-
-int32_t proton_engine_window_load_asset(proton_engine_window_t *window,
-                                        const char *html,
-                                        const char *document_url,
-                                        const char *asset_root,
-                                        char *error,
-                                        size_t error_len) {
-
-  if (asset_root == NULL || asset_root[0] == '\0') {
-    proton_engine_set_message(error, error_len, "asset_root is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  return proton_engine_window_load_document(
-      window, html, document_url, asset_root, error, error_len);
-}
-
 int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,
@@ -4307,16 +4203,6 @@ int32_t proton_engine_window_emit_bridge_event_json(
   }
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
-}
-
-void proton_engine_window_bind_public_id(proton_engine_window_t *window,
-                                         proton_window_id_t public_window) {
-
-  if (window != NULL) {
-    window->public_window_id = public_window;
-    proton_browser_session_bind_window(window->browser_session,
-                                       public_window);
-  }
 }
 
 uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
@@ -4511,8 +4397,6 @@ static void proton_engine_window_free_views(proton_engine_window_t *window) {
     proton_engine_view_t *next = view->next;
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
-    free(view->html_url);
-    free(view->html);
     free(view->client);
     free(view->initial_url);
     free(view);
@@ -4881,6 +4765,8 @@ int32_t proton_engine_view_create(
                               "failed to allocate view state");
     return PROTON_ERR_ENGINE;
   }
+  proton_view_events_bind(view->events, config.public_view,
+                          config.public_window);
   view->has_background_color = config.has_background_color;
   view->background_color = config.background_color;
   proton_engine_debug_log("view_create rect=%d,%d %dx%d visible=%d z=%d",
@@ -5070,67 +4956,6 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
   return PROTON_OK;
 }
 
-int32_t proton_engine_view_load_html(proton_engine_view_t *view,
-                                     const char *html,
-                                     const char *base_url,
-                                     char *error,
-                                     size_t error_len) {
-
-  if (view == NULL || view->closed) {
-    proton_engine_set_message(error, error_len, "view is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (html == NULL) {
-    html = "";
-  }
-  const char *effective_base_url =
-      base_url != NULL && base_url[0] != '\0' ? base_url : "proton://app/";
-  if (!proton_engine_url_is_proton(effective_base_url)) {
-    proton_engine_set_message(error, error_len,
-                              "base_url must use the proton:// scheme");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  char *url_copy = proton_engine_strdup(effective_base_url);
-  char *html_copy = proton_engine_strdup(html);
-  char *pending_url = NULL;
-  if (url_copy == NULL || html_copy == NULL) {
-    free(url_copy);
-    free(html_copy);
-    proton_engine_set_message(error, error_len, "failed to copy html");
-    return PROTON_ERR_ENGINE;
-  }
-  if ((view->browser == NULL &&
-       (view->browser_create_pending || view->browser_create_scheduled)) ||
-      view->initial_navigation_pending) {
-    pending_url = proton_engine_strdup(effective_base_url);
-    if (pending_url == NULL) {
-      free(url_copy);
-      free(html_copy);
-      proton_engine_set_message(error, error_len,
-                                "failed to copy pending browser url");
-      return PROTON_ERR_ENGINE;
-    }
-  }
-  proton_engine_window_lock();
-  free(view->html_url);
-  free(view->html);
-  view->html_url = url_copy;
-  view->html = html_copy;
-  view->html_len = strlen(html_copy);
-  proton_engine_window_unlock();
-  if (pending_url != NULL) {
-    free(view->initial_url);
-    view->initial_url = pending_url;
-    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-    return PROTON_OK;
-  }
-  proton_engine_debug_log("view_load_html browser=%d base_url=%s bytes=%llu",
-                          view->browser_id, effective_base_url,
-                          (unsigned long long)view->html_len);
-  return proton_engine_view_load_url(view, effective_base_url, error,
-                                     error_len);
-}
-
 int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
                                                 const char *command_json,
                                                 char *error,
@@ -5144,15 +4969,6 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
   return proton_browser_session_command_json(view->browser_session,
                                              view->browser, command_json,
                                              error, error_len);
-}
-
-void proton_engine_view_bind_public_id(proton_engine_view_t *view,
-                                       proton_view_id_t public_view) {
-
-  if (view != NULL && view->window != NULL) {
-    proton_view_events_bind(view->events, public_view,
-                            proton_engine_window_public_id(view->window));
-  }
 }
 
 int32_t proton_engine_screen_enumerate(

@@ -19,6 +19,9 @@ void proton_view_events_destroy(proton_view_events_t *events);
 void proton_view_events_bind(proton_view_events_t *events,
                              proton_view_id_t view,
                              proton_window_id_t window);
+int proton_view_events_ids(proton_view_events_t *events,
+                           proton_view_id_t *out_view,
+                           proton_window_id_t *out_window);
 
 void proton_view_events_loading_changed(proton_view_events_t *events,
                                         int32_t is_loading);

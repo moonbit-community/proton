@@ -65,6 +65,7 @@ enum {
   PROTON_ERR_UPDATE_BUSY = -15,
   PROTON_ERR_UPDATE_ROLLBACK = -16,
   PROTON_ERR_UPDATE_REVISION_MISMATCH = -17,
+  PROTON_ERR_STALE_RESOURCE_REQUEST = -18,
   PROTON_ERR_BUSY = -19
 };
 
@@ -94,6 +95,9 @@ int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
 int32_t proton_runtime_destroy(proton_runtime_handle_t runtime);
+int32_t proton_runtime_complete_resource_request(
+    proton_runtime_handle_t runtime, int64_t request_id, int32_t status,
+    const char *mime_type, const uint8_t *data, int32_t data_len);
 /* Wakes a blocked host-loop poll, or makes the next one return immediately.
  * Takes no handle because the foreign waiting thread owns none. */
 void proton_runtime_signal_wakeup(void);
@@ -163,13 +167,6 @@ int32_t proton_window_respond_close_request(
     proton_window_handle_t window, int64_t request_id, int32_t allow);
 int32_t proton_window_load_url(proton_window_handle_t window,
                                           const char *url);
-int32_t proton_window_load_html(proton_window_handle_t window,
-                                           const char *html,
-                                           const char *base_url);
-int32_t proton_window_load_asset(proton_window_handle_t window,
-                                            const char *html,
-                                            const char *document_url,
-                                            const char *asset_root);
 int32_t proton_window_eval(proton_window_handle_t window,
                                       const char *script);
 int32_t proton_window_browser_command_json(
@@ -326,9 +323,6 @@ int32_t proton_view_set_z_order(proton_view_handle_t view,
                                            int32_t z_order);
 int32_t proton_view_load_url(proton_view_handle_t view,
                                         const char *url);
-int32_t proton_view_load_html(proton_view_handle_t view,
-                                         const char *html,
-                                         const char *base_url);
 int32_t proton_view_eval(proton_view_handle_t view, const char *script);
 int32_t proton_view_browser_command_json(
     proton_view_handle_t view, const char *command_json);

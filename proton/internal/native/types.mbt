@@ -59,6 +59,11 @@ pub fn NativeError::is_stale_browser_request(self : NativeError) -> Bool {
 }
 
 ///|
+pub fn NativeError::is_stale_resource_request(self : NativeError) -> Bool {
+  self.status() == proton_err_stale_resource_request
+}
+
+///|
 pub fn NativeError::is_update_busy(self : NativeError) -> Bool {
   self.status() == proton_err_update_busy
 }
@@ -164,7 +169,23 @@ enum RuntimeEvent {
   BrowserRequest(Int64, NativeBrowserRequest)
   BrowserDownloadUpdated(Int64, NativeDownloadUpdate)
   ViewEvent(Int64, Int64, NativeViewEvent)
+  ResourceRequested(NativeResourceRequest)
+  ResourceRequestCancelled(Int64)
 } derive(Debug, Eq)
+
+///|
+pub(all) struct NativeResourceRequest {
+  request_id : Int64
+  window : Int64
+  view : Int64?
+  url : String
+} derive(Debug, Eq)
+
+///|
+pub extend NativeResourceRequest with Eq::{not_equal, equal}
+
+///|
+pub extend NativeResourceRequest with Debug::{to_repr}
 
 ///|
 enum NativeViewEvent {
@@ -630,6 +651,8 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     ViewEvent(_, _, Navigated(_)) => "view_navigated"
     ViewEvent(_, _, TitleUpdated(_)) => "view_title_updated"
     ViewEvent(_, _, LoadFailed(_, _, _)) => "view_load_failed"
+    ResourceRequested(_) => "resource_requested"
+    ResourceRequestCancelled(_) => "resource_request_cancelled"
   }
 }
 
@@ -651,11 +674,13 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BrowserRequest(window, _)
     | BrowserDownloadUpdated(window, _)
     | ViewEvent(window, _, _) => Some(window)
+    ResourceRequested(request) => Some(request.window)
     MenuCommand(_, window) => window
     DialogCompleted(completion) => completion.window
     CookieGetCompleted(completion) => Some(completion.window)
     BridgeRequestReceived(_)
     | BridgeRequestCancelled(_)
+    | ResourceRequestCancelled(_)
     | LaunchInput(_)
     | NotificationResult(_) => None
   }
@@ -666,6 +691,27 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
 pub fn RuntimeEvent::view_id(self : RuntimeEvent) -> Int64? {
   match self {
     ViewEvent(_, view, _) => Some(view)
+    ResourceRequested(request) => request.view
+    _ => None
+  }
+}
+
+///|
+pub fn RuntimeEvent::resource_request(
+  self : RuntimeEvent,
+) -> NativeResourceRequest? {
+  match self {
+    ResourceRequested(request) => Some(request)
+    _ => None
+  }
+}
+
+///|
+pub fn RuntimeEvent::resource_request_cancellation(
+  self : RuntimeEvent,
+) -> Int64? {
+  match self {
+    ResourceRequestCancelled(request_id) => Some(request_id)
     _ => None
   }
 }

@@ -41,6 +41,8 @@ typedef enum proton_event_kind {
   PROTON_EVENT_BRIDGE_REQUEST = 22,
   PROTON_EVENT_DIALOG_COMPLETED = 23,
   PROTON_EVENT_COOKIE_GET_COMPLETED = 24,
+  PROTON_EVENT_RESOURCE_REQUESTED = 25,
+  PROTON_EVENT_RESOURCE_REQUEST_CANCELLED = 26,
 } proton_event_kind_t;
 
 typedef struct proton_event {

@@ -198,6 +198,17 @@ pub extern "C" fn runtime_poll_event(
 ) -> Int = "proton_internal_runtime_poll_event"
 
 ///|
+#borrow(mime_type, data)
+pub extern "C" fn runtime_complete_resource_request(
+  runtime : RuntimeHandle,
+  request_id : Int64,
+  status : Int,
+  mime_type : Bytes,
+  data : Bytes,
+  data_len : Int,
+) -> Int = "proton_runtime_complete_resource_request"
+
+///|
 pub extern "C" fn event_kind(event : EventHandle) -> Int = "proton_internal_event_kind"
 
 ///|
@@ -470,23 +481,6 @@ pub extern "C" fn proton_window_load_url_ffi(
 ) -> Int = "proton_window_load_url"
 
 ///|
-#borrow(html, base_url)
-pub extern "C" fn proton_window_load_html_ffi(
-  window : WindowHandle,
-  html : Bytes,
-  base_url : Bytes,
-) -> Int = "proton_window_load_html"
-
-///|
-#borrow(html, document_url, asset_root)
-pub extern "C" fn proton_window_load_asset_ffi(
-  window : WindowHandle,
-  html : Bytes,
-  document_url : Bytes,
-  asset_root : Bytes,
-) -> Int = "proton_window_load_asset"
-
-///|
 #borrow(script)
 pub extern "C" fn proton_window_eval_ffi(
   window : WindowHandle,
@@ -636,14 +630,6 @@ pub extern "C" fn proton_view_state_json_ffi(
   buffer_len : Int,
   out_required_len : Ref[Int],
 ) -> Int = "proton_view_state_json"
-
-///|
-#borrow(html, base_url)
-pub extern "C" fn proton_view_load_html_ffi(
-  view : ViewHandle,
-  html : Bytes,
-  base_url : Bytes,
-) -> Int = "proton_view_load_html"
 
 ///|
 #borrow(script)
