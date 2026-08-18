@@ -249,8 +249,16 @@ fn forward_menu_command(
       None,
     ),
   ) catch {
-    error => raise native_run_error("forward menu command", error)
+    error =>
+      if !is_ignorable_menu_forward_error(error) {
+        raise native_run_error("forward menu command", error)
+      }
   }
+}
+
+///|
+fn is_ignorable_menu_forward_error(error : @native.NativeError) -> Bool {
+  error.is_invalid_state() || error.is_stale_window_request()
 }
 
 ///|
