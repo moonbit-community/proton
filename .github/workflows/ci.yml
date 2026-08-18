@@ -271,7 +271,26 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
+          $debuggerRoot = "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x64"
+          $cdb = Join-Path $debuggerRoot "cdb.exe"
+          $gflags = Join-Path $debuggerRoot "gflags.exe"
+          if (!(Test-Path $cdb) -or !(Test-Path $gflags)) {
+            throw "Windows debugging tools are unavailable at $debuggerRoot"
+          }
+          $testExe = Resolve-Path "_build\native\debug\build\moonbit-community\proton\e2e\test\test.exe"
+          $commands = Join-Path $env:RUNNER_TEMP "proton-cdb.txt"
+          @(
+            '.childdbg 1'
+            'sxe -c ".echo PROTON_HEAP_CORRUPTION; !analyze -v; ~* kb; q" 0xc0000374'
+            'sxe -c ".echo PROTON_ACCESS_VIOLATION; !analyze -v; ~* kb; q" av'
+            'g'
+          ) | Set-Content -Path $commands -Encoding ascii
+          & $gflags /p /enable test.exe /full
+          try {
+            & $cdb -o -g -G -cf $commands $testExe --self-hosted
+          } finally {
+            & $gflags /p /disable test.exe
+          }
 
       - name: Run MoonBit CDP e2e on Unix
         if: ${{ matrix.os != 'windows-latest' }}
