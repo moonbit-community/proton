@@ -1,6 +1,6 @@
 {
   "platform": "darwin-arm64",
-  "proton_version": "0.1.16",
+  "proton_version": "0.1.17",
   "source_hash": "sha256:eb3d93d0ed5d4cc8aa3e21155a4fd0f2a0a6e34789a4cae346c81c81a9035211",
   "artifacts": {
     "shared_lib": "lib/libproton.dylib",
