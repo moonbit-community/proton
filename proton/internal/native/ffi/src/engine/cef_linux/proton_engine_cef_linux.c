@@ -3994,6 +3994,7 @@ int32_t proton_engine_window_create(
     return PROTON_ERR_NOT_INITIALIZED;
   }
   proton_engine_window_config_t config = *input_config;
+  int32_t status = PROTON_OK;
   if (runtime->headless && config.titlebar_overlay) {
     proton_engine_set_message(
         error, error_len,
@@ -4141,7 +4142,7 @@ int32_t proton_engine_window_create(
     }
     gtk_container_add(GTK_CONTAINER(window->window), window->root_box);
     if (runtime->menu_definition != NULL) {
-      int32_t status = proton_engine_window_install_menu(
+      status = proton_engine_window_install_menu(
           window, runtime->menu_definition, error, error_len);
       if (status != PROTON_OK) {
         gtk_widget_destroy(window->window);

@@ -235,6 +235,9 @@ pub(all) struct BridgeDiagnostic {
   additional_failure_count : Int?
   details_truncated : Bool
 } derive(Eq, @debug.Debug)
+pub fn BridgeDiagnostic::equal(Self, Self) -> Bool
+pub fn BridgeDiagnostic::not_equal(Self, Self) -> Bool
+pub fn BridgeDiagnostic::to_repr(Self) -> @debug.Repr
 
 pub struct BrowserHandle {
   id : String
@@ -348,6 +351,9 @@ pub(all) enum MenuItemRole {
   Paste
   SelectAll
 } derive(Eq, @debug.Debug)
+pub fn MenuItemRole::equal(Self, Self) -> Bool
+pub fn MenuItemRole::not_equal(Self, Self) -> Bool
+pub fn MenuItemRole::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MenuRole {
   Application
@@ -357,6 +363,9 @@ pub(all) enum MenuRole {
   Window
   Help
 } derive(Eq, @debug.Debug)
+pub fn MenuRole::equal(Self, Self) -> Bool
+pub fn MenuRole::not_equal(Self, Self) -> Bool
+pub fn MenuRole::to_repr(Self) -> @debug.Repr
 
 pub(all) enum NavigationDecision {
   Allow
@@ -414,6 +423,9 @@ pub(all) enum RuntimeLaunchInput {
   OpenFiles(Array[String])
   Reopen
 } derive(Eq, @debug.Debug)
+pub fn RuntimeLaunchInput::equal(Self, Self) -> Bool
+pub fn RuntimeLaunchInput::not_equal(Self, Self) -> Bool
+pub fn RuntimeLaunchInput::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ScreenInfo {
   id : Int
@@ -428,11 +440,17 @@ pub(all) struct ScreenInfo {
   scale_factor_percent : Int
   is_primary : Bool
 } derive(Eq, @debug.Debug)
+pub fn ScreenInfo::equal(Self, Self) -> Bool
+pub fn ScreenInfo::not_equal(Self, Self) -> Bool
+pub fn ScreenInfo::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TitlebarStyle {
   Default
   Overlay
 } derive(Eq, @debug.Debug)
+pub fn TitlebarStyle::equal(Self, Self) -> Bool
+pub fn TitlebarStyle::not_equal(Self, Self) -> Bool
+pub fn TitlebarStyle::to_repr(Self) -> @debug.Repr
 
 pub enum UpdateCheck {
   NotConfigured
@@ -507,6 +525,9 @@ pub(all) struct ViewState {
   visible : Bool
   z_order : Int
 } derive(Eq, @debug.Debug)
+pub fn ViewState::equal(Self, Self) -> Bool
+pub fn ViewState::not_equal(Self, Self) -> Bool
+pub fn ViewState::to_repr(Self) -> @debug.Repr
 
 pub(all) enum WindowCloseDecision {
   Allow
@@ -606,6 +627,9 @@ pub(all) struct WindowMonitor {
   work_height : Int
   scale_factor_percent : Int
 } derive(Eq, @debug.Debug)
+pub fn WindowMonitor::equal(Self, Self) -> Bool
+pub fn WindowMonitor::not_equal(Self, Self) -> Bool
+pub fn WindowMonitor::to_repr(Self) -> @debug.Repr
 
 pub(all) enum WindowSizeHint {
   Unconstrained
@@ -613,6 +637,9 @@ pub(all) enum WindowSizeHint {
   Min
   Max
 } derive(Eq, @debug.Debug)
+pub fn WindowSizeHint::equal(Self, Self) -> Bool
+pub fn WindowSizeHint::not_equal(Self, Self) -> Bool
+pub fn WindowSizeHint::to_repr(Self) -> @debug.Repr
 
 pub(all) struct WindowState {
   x : Int
@@ -629,6 +656,9 @@ pub(all) struct WindowState {
   always_on_top : Bool
   theme : String
 } derive(Eq, @debug.Debug)
+pub fn WindowState::equal(Self, Self) -> Bool
+pub fn WindowState::not_equal(Self, Self) -> Bool
+pub fn WindowState::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub using @manifest {type AppEntry}
