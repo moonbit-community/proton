@@ -130,6 +130,11 @@ function platformConfig(cefRoot, env) {
 }
 
 export function createNativeLinkConfig(env = readPayloadEnv()) {
+  // Moon runs workspace prebuilds before it can build the CLI that creates the
+  // first runtime manifest. Only that setup build has no native link target.
+  if (envValue(env, "PROTON_CEF_SETUP_BOOTSTRAP") === "1") {
+    return { vars: {}, link_configs: [] };
+  }
   const cefRoot = activeCefRoot();
   const config = platformConfig(cefRoot, env);
   return {

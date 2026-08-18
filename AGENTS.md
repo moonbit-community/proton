@@ -74,7 +74,7 @@ developer must perform them.
   `proton_cli cef setup`; assembled runtimes are cached at user level.
 
 ## Build And Test
-- `moon -C cli run . -- -C .. cef setup`
+- `PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cli run . -- -C .. cef setup`
 - `moon install --path proton/internal/cef_process --bin <output-dir>`
 - With `.proton/runtime.json` selecting the active CEF runtime:
   `moon -C proton test internal/native --target native --diagnostic-limit 80`
@@ -193,7 +193,7 @@ native checks before handing off larger refactors.
   helpers. Platform ids should stay predictable: `win32-x64`, `darwin-arm64`,
   and `linux-x64`; add `darwin-x64` only when it is supported.
 - CEF is a native implementation detail. Do not expose CEF in public facade names.
-- `proton/native_link_config.mjs` is the only MoonBit native-link integration
+- `proton/build.mjs` is the only MoonBit native-link integration
   point. It reads `.proton/runtime.json` and supplies CEF include, compiler, and
   linker configuration to the private source packages.
 - Keep private FFI functions MoonBit-friendly: status codes, external pointers,
