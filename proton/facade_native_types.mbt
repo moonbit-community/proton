@@ -6,6 +6,12 @@ pub(all) enum TitlebarStyle {
 } derive(Debug, Eq)
 
 ///|
+pub extend TitlebarStyle with Eq::{not_equal, equal}
+
+///|
+pub extend TitlebarStyle with Debug::{to_repr}
+
+///|
 /// Controls how configured window dimensions constrain native resizing.
 pub(all) enum WindowSizeHint {
   Unconstrained
@@ -13,6 +19,12 @@ pub(all) enum WindowSizeHint {
   Min
   Max
 } derive(Debug, Eq)
+
+///|
+pub extend WindowSizeHint with Eq::{not_equal, equal}
+
+///|
+pub extend WindowSizeHint with Debug::{to_repr}
 
 ///|
 /// Geometry and scaling information for the monitor containing a window.
@@ -27,6 +39,12 @@ pub(all) struct WindowMonitor {
   work_height : Int
   scale_factor_percent : Int
 } derive(Debug, Eq)
+
+///|
+pub extend WindowMonitor with Eq::{not_equal, equal}
+
+///|
+pub extend WindowMonitor with Debug::{to_repr}
 
 ///|
 fn WindowMonitor::from_native(monitor : @native.WindowMonitor) -> WindowMonitor {
@@ -62,6 +80,12 @@ pub(all) struct WindowState {
 } derive(Debug, Eq)
 
 ///|
+pub extend WindowState with Eq::{not_equal, equal}
+
+///|
+pub extend WindowState with Debug::{to_repr}
+
+///|
 fn WindowState::from_native(state : @native.WindowState) -> WindowState {
   {
     x: state.x,
@@ -95,6 +119,12 @@ pub(all) struct ScreenInfo {
   scale_factor_percent : Int
   is_primary : Bool
 } derive(Debug, Eq)
+
+///|
+pub extend ScreenInfo with Eq::{not_equal, equal}
+
+///|
+pub extend ScreenInfo with Debug::{to_repr}
 
 ///|
 fn ScreenInfo::from_native(screen : @native.ScreenInfo) -> ScreenInfo {
@@ -141,6 +171,12 @@ pub(all) struct ViewState {
   visible : Bool
   z_order : Int
 } derive(Debug, Eq)
+
+///|
+pub extend ViewState with Eq::{not_equal, equal}
+
+///|
+pub extend ViewState with Debug::{to_repr}
 
 ///|
 fn ViewState::from_native(state : @native.ViewState) -> ViewState {
@@ -216,6 +252,12 @@ pub(all) enum MenuRole {
 } derive(Debug, Eq)
 
 ///|
+pub extend MenuRole with Eq::{not_equal, equal}
+
+///|
+pub extend MenuRole with Debug::{to_repr}
+
+///|
 fn MenuRole::to_native(self : MenuRole) -> @native.MenuRole {
   match self {
     Application => @native.MenuRole::Application
@@ -244,6 +286,12 @@ pub(all) enum MenuItemRole {
   Paste
   SelectAll
 } derive(Debug, Eq)
+
+///|
+pub extend MenuItemRole with Eq::{not_equal, equal}
+
+///|
+pub extend MenuItemRole with Debug::{to_repr}
 
 ///|
 fn MenuItemRole::to_native(self : MenuItemRole) -> @native.MenuItemRole {
@@ -390,6 +438,12 @@ pub(all) struct BridgeDiagnostic {
   additional_failure_count : Int?
   details_truncated : Bool
 } derive(Debug, Eq)
+
+///|
+pub extend BridgeDiagnostic with Eq::{not_equal, equal}
+
+///|
+pub extend BridgeDiagnostic with Debug::{to_repr}
 
 ///|
 fn BridgeDiagnostic::from_native(

@@ -7,6 +7,12 @@ pub(all) enum RuntimeLaunchInput {
 } derive(Eq, Debug)
 
 ///|
+pub extend RuntimeLaunchInput with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeLaunchInput with Debug::{to_repr}
+
+///|
 /// High-level application facade for ordinary Proton apps.
 struct App {
   mut window : @manifest.WindowManifest
