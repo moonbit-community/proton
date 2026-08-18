@@ -4,34 +4,33 @@ pub fn abi_version() -> Int {
 }
 
 ///|
-pub fn runtime_info_json() -> String raise NativeError {
-  require_native_text("runtime info JSON", PayloadBytesExcludingTerminator, (
+fn runtime_platform_id() -> String raise NativeError {
+  require_native_text("runtime platform id", PayloadBytesExcludingTerminator, (
     buffer,
     buffer_len,
     required,
-  ) => @native_ffi.proton_runtime_info_json_ffi(buffer, buffer_len, required))
-}
-
-///|
-fn decode_runtime_info(text : String) -> RuntimeInfo raise NativeError {
-  let json = @json.parse(text) catch {
-    error =>
-      raise InvalidPayload(
-        context="runtime info JSON",
-        message=error.to_string(),
-      )
-  }
-  let info : RuntimeInfo = @json.from_json(json) catch {
-    error =>
-      raise InvalidPayload(context="runtime info", message=error.to_string())
-  }
-  expect_abi_version(info.abi_version, "runtime info")
-  info
+  ) => @native_ffi.proton_runtime_platform_id_ffi(buffer, buffer_len, required))
 }
 
 ///|
 pub fn runtime_info() -> RuntimeInfo raise NativeError {
-  decode_runtime_info(runtime_info_json())
+  let platform_id = runtime_platform_id()
+  let platform = if platform_id.has_prefix("win32-") {
+    "windows"
+  } else if platform_id.has_prefix("darwin-") {
+    "macos"
+  } else {
+    "linux"
+  }
+  RuntimeInfo::{
+    platform,
+    platform_id,
+    features: [
+      "event_polling", "bridge_events", "bridge_permission_grants", "titlebar_overlay",
+      "headless_osr", "window_size_hints", "window_session", "browser_session", "app_single_instance",
+      "web_contents_view", "native_image",
+    ],
+  }
 }
 
 ///|
@@ -45,9 +44,7 @@ pub fn system_preferred_language_tags() -> Array[String] raise NativeError {
     PayloadBytesExcludingTerminator,
     (buffer, buffer_len, required) => {
       @native_ffi.proton_system_preferred_languages_json_ffi(
-        buffer,
-        buffer_len,
-        required,
+        buffer, buffer_len, required,
       )
     },
   )
@@ -766,35 +763,6 @@ pub fn execute_process(
 }
 
 ///|
-pub fn probe_runtime(
-  config? : RuntimeConfig = RuntimeConfig::bundled(),
-) -> Unit raise NativeError {
-  validate_runtime_config(config)
-  check_status(
-    @native_ffi.runtime_probe(
-      runtime_config_bool(config.use_bundled),
-      runtime_config_string(config.runtime_root),
-      runtime_config_string(config.helper_path),
-      runtime_config_string(config.resources_dir),
-      runtime_config_string(config.locales_dir),
-      runtime_config_string(config.cache_dir),
-      runtime_config_string(config.locale),
-      runtime_config_languages(config.accept_languages),
-      runtime_config_string(config.framework_dialog_ok_label),
-      runtime_config_string(config.framework_dialog_cancel_label),
-      config.remote_debugging_port,
-      runtime_config_bool(config.headless),
-      runtime_config_bool(config.persist_session_cookies),
-    ),
-  )
-}
-
-///|
-pub fn RuntimeConfig::probe(self : RuntimeConfig) -> Unit raise NativeError {
-  probe_runtime(config=self)
-}
-
-///|
 pub fn Runtime::new(
   config? : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> Runtime raise NativeError {
@@ -854,41 +822,6 @@ fn Runtime::active_handle(
 }
 
 ///|
-/// Advances one external-message-pump iteration for a low-level host.
-pub fn Runtime::do_message_loop_work(self : Runtime) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_runtime_do_message_loop_work_ffi(self.active_handle()),
-  )
-}
-
-///|
-/// Waits for low-level external-pump work.
-pub fn Runtime::wait(
-  self : Runtime,
-  interest_mask~ : Int,
-  timeout_ms? : Int,
-) -> RuntimeWaitReady raise NativeError {
-  if interest_mask == runtime_wait_none {
-    raise invalid_argument("interest_mask is required")
-  }
-  if interest_mask.land(runtime_wait_all.lnot()) != 0 {
-    raise invalid_argument("interest_mask contains unsupported bits")
-  }
-  let ready_mask = Ref(runtime_wait_none)
-  let status = @native_ffi.proton_runtime_wait_ffi(
-    self.active_handle(),
-    interest_mask,
-    encode_wait_timeout(timeout_ms),
-    ready_mask,
-  )
-  if status < 0 {
-    raise native_error(status)
-  } else {
-    RuntimeWaitReady::{ mask: ready_mask.val }
-  }
-}
-
-///|
 /// Encodes an optional wait timeout for the ABI. The sentinel lives here and
 /// nowhere else: callers say `None` to wait indefinitely. A deadline that has
 /// already passed is a zero wait rather than an error, because arriving late is
@@ -939,83 +872,14 @@ pub fn host_loop_end() -> Unit {
 }
 
 ///|
-/// Wakes a blocked `Runtime::wait` or `host_loop_poll`, or makes the next one
-/// return immediately when none is blocked yet. A lost wakeup deadlocks the
-/// host, so the two cases behave the same.
+/// Wakes a blocked `host_loop_poll`, or makes the next one return immediately.
+/// A lost wakeup deadlocks the host, so the two cases behave the same.
 ///
 /// Takes no runtime and is safe from any thread, touching only atomics and the
 /// platform run loop. That is what lets a thread outside the runtime call it:
 /// handles validate thread ownership and such a thread owns none.
 pub fn signal_wakeup() -> Unit {
   @native_ffi.proton_runtime_signal_wakeup_ffi()
-}
-
-///|
-/// Installs the write end of a non-blocking pipe used to wake the host async
-/// runtime. The native runtime duplicates the descriptor and does not borrow
-/// the caller's ownership.
-pub fn Runtime::set_wakeup_fd(
-  self : Runtime,
-  wakeup_fd : Int,
-) -> Unit raise NativeError {
-  if wakeup_fd < -1 {
-    raise invalid_argument("wakeup_fd must be -1 or a valid descriptor")
-  }
-  check_status(
-    @native_ffi.proton_runtime_set_wakeup_fd_ffi(
-      self.active_handle(),
-      wakeup_fd,
-    ),
-  )
-}
-
-///|
-/// Prepares a platform-owned wakeup source and returns its locator.
-///
-/// Call `activate_wakeup_source` after opening the locator for reading.
-pub fn Runtime::prepare_wakeup_source(
-  self : Runtime,
-) -> String raise NativeError {
-  let handle = self.active_handle()
-  require_native_text(
-    "runtime wakeup source",
-    PayloadBytesExcludingTerminator,
-    (buffer, buffer_len, required) => {
-      @native_ffi.proton_runtime_prepare_wakeup_source_ffi(
-        handle, buffer, buffer_len, required,
-      )
-    },
-  )
-}
-
-///|
-/// Activates a prepared wakeup source after its reader is connected.
-pub fn Runtime::activate_wakeup_source(
-  self : Runtime,
-) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_runtime_activate_wakeup_source_ffi(self.active_handle()),
-  )
-}
-
-///|
-/// Returns the delay until CEF next needs its external message pump serviced,
-/// or `None` when no delayed pump is scheduled.
-pub fn Runtime::next_wakeup_delay_ms(self : Runtime) -> Int? raise NativeError {
-  let delay = Ref(-1L)
-  let status = @native_ffi.proton_runtime_next_wakeup_delay_ms_ffi(
-    self.active_handle(),
-    delay,
-  )
-  if status < 0 {
-    raise native_error(status)
-  } else if delay.val < 0L {
-    None
-  } else if delay.val > 2147483647L {
-    Some(2147483647)
-  } else {
-    Some(delay.val.to_int())
-  }
 }
 
 ///|

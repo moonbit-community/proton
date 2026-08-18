@@ -374,7 +374,7 @@ static int32_t proton_update_acquire_commit_lock(const char *appimage_path,
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_begin_revision(
+int32_t proton_update_stage_begin_revision(
     const char *parent_dir, int64_t expected_size, uint64_t target_revision,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
   if (out_stage != NULL) {
@@ -462,14 +462,14 @@ PROTON_API int32_t proton_update_stage_begin_revision(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_begin(
+int32_t proton_update_stage_begin(
     const char *parent_dir, int64_t expected_size,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
   return proton_update_stage_begin_revision(parent_dir, expected_size, 0,
                                             out_stage, error, error_len);
 }
 
-PROTON_API int32_t proton_update_stage_write(
+int32_t proton_update_stage_write(
     proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
     char *error, int32_t error_len) {
   proton_update_stage_slot_t *slot = NULL;
@@ -498,7 +498,7 @@ PROTON_API int32_t proton_update_stage_write(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_install_outcome(
+int32_t proton_update_stage_install_outcome(
     proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
     int32_t error_len) {
   if (out_outcome != NULL) {
@@ -634,13 +634,13 @@ PROTON_API int32_t proton_update_stage_install_outcome(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_install(
+int32_t proton_update_stage_install(
     proton_update_stage_id_t stage, char *error, int32_t error_len) {
   int32_t outcome = PROTON_UPDATE_INSTALLED;
   return proton_update_stage_install_outcome(stage, &outcome, error, error_len);
 }
 
-PROTON_API int32_t proton_update_current_revision(
+int32_t proton_update_current_revision(
     uint64_t *out_revision, char *error, int32_t error_len) {
   (void)error;
   (void)error_len;
@@ -662,7 +662,7 @@ PROTON_API int32_t proton_update_current_revision(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_cleanup_previous(char *error,
+int32_t proton_update_cleanup_previous(char *error,
                                                   int32_t error_len) {
   (void)error;
   (void)error_len;
@@ -673,7 +673,7 @@ PROTON_API int32_t proton_update_cleanup_previous(char *error,
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_abort(
+int32_t proton_update_stage_abort(
     proton_update_stage_id_t stage, char *error, int32_t error_len) {
   proton_update_stage_slot_t *slot = NULL;
   int32_t status =
@@ -685,7 +685,7 @@ PROTON_API int32_t proton_update_stage_abort(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_install(const char *archive,
+int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
                                          const char *parent_dir, char *error,
                                          int32_t error_len) {
@@ -710,7 +710,7 @@ PROTON_API int32_t proton_update_install(const char *archive,
                                              error_len);
 }
 
-PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len) {
+int32_t proton_update_relaunch(char *error, int32_t error_len) {
   if (proton_update_current[0] == '\0') {
     proton_update_set_message(error, error_len,
                               "no application has been replaced");
@@ -943,7 +943,7 @@ static int proton_update_write_revision_w(const wchar_t *exe_path,
   return ok && bytes_written == (DWORD)len;
 }
 
-PROTON_API int32_t proton_update_stage_begin_revision(
+int32_t proton_update_stage_begin_revision(
     const char *parent_dir, int64_t expected_size, uint64_t target_revision,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
   if (out_stage != NULL) {
@@ -1039,14 +1039,14 @@ PROTON_API int32_t proton_update_stage_begin_revision(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_begin(
+int32_t proton_update_stage_begin(
     const char *parent_dir, int64_t expected_size,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
   return proton_update_stage_begin_revision(parent_dir, expected_size, 0,
                                             out_stage, error, error_len);
 }
 
-PROTON_API int32_t proton_update_stage_write(
+int32_t proton_update_stage_write(
     proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
     char *error, int32_t error_len) {
   proton_update_stage_slot_t *slot = NULL;
@@ -1077,7 +1077,7 @@ PROTON_API int32_t proton_update_stage_write(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_install_outcome(
+int32_t proton_update_stage_install_outcome(
     proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
     int32_t error_len) {
   if (out_outcome != NULL) {
@@ -1197,13 +1197,13 @@ PROTON_API int32_t proton_update_stage_install_outcome(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_install(
+int32_t proton_update_stage_install(
     proton_update_stage_id_t stage, char *error, int32_t error_len) {
   int32_t outcome = PROTON_UPDATE_INSTALLED;
   return proton_update_stage_install_outcome(stage, &outcome, error, error_len);
 }
 
-PROTON_API int32_t proton_update_current_revision(
+int32_t proton_update_current_revision(
     uint64_t *out_revision, char *error, int32_t error_len) {
   (void)error;
   (void)error_len;
@@ -1224,7 +1224,7 @@ PROTON_API int32_t proton_update_current_revision(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_cleanup_previous(char *error,
+int32_t proton_update_cleanup_previous(char *error,
                                                   int32_t error_len) {
   (void)error;
   (void)error_len;
@@ -1239,7 +1239,7 @@ PROTON_API int32_t proton_update_cleanup_previous(char *error,
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_abort(
+int32_t proton_update_stage_abort(
     proton_update_stage_id_t stage, char *error, int32_t error_len) {
   proton_update_stage_slot_t *slot = NULL;
   int32_t status =
@@ -1251,7 +1251,7 @@ PROTON_API int32_t proton_update_stage_abort(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_install(const char *archive,
+int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
                                          const char *parent_dir, char *error,
                                          int32_t error_len) {
@@ -1276,7 +1276,7 @@ PROTON_API int32_t proton_update_install(const char *archive,
                                              error_len);
 }
 
-PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len) {
+int32_t proton_update_relaunch(char *error, int32_t error_len) {
   if (proton_update_current[0] == '\0') {
     proton_update_set_message(error, error_len,
                               "no application has been replaced");
@@ -1550,7 +1550,7 @@ static int32_t proton_update_get_stage(proton_update_stage_id_t handle,
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_begin_revision(
+int32_t proton_update_stage_begin_revision(
     const char *parent_dir, int64_t expected_size, uint64_t target_revision,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
   if (out_stage != NULL) {
@@ -1674,14 +1674,14 @@ PROTON_API int32_t proton_update_stage_begin_revision(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_begin(
+int32_t proton_update_stage_begin(
     const char *parent_dir, int64_t expected_size,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len) {
   return proton_update_stage_begin_revision(parent_dir, expected_size, 0,
                                             out_stage, error, error_len);
 }
 
-PROTON_API int32_t proton_update_stage_write(
+int32_t proton_update_stage_write(
     proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
     char *error, int32_t error_len) {
   proton_update_stage_slot_t *slot = NULL;
@@ -1718,7 +1718,7 @@ PROTON_API int32_t proton_update_stage_write(
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_abort(
+int32_t proton_update_stage_abort(
     proton_update_stage_id_t stage, char *error, int32_t error_len) {
   proton_update_stage_slot_t *slot = NULL;
   int32_t status =
@@ -1894,7 +1894,7 @@ static int proton_update_bundle_revision(const char *bundle,
   return 1;
 }
 
-PROTON_API int32_t proton_update_current_revision(
+int32_t proton_update_current_revision(
     uint64_t *out_revision, char *error, int32_t error_len) {
   if (out_revision == NULL) {
     proton_update_set_message(error, error_len,
@@ -2110,7 +2110,7 @@ static int proton_update_is_previous_name(const char *name,
   return 1;
 }
 
-PROTON_API int32_t proton_update_cleanup_previous(char *error,
+int32_t proton_update_cleanup_previous(char *error,
                                                   int32_t error_len) {
   char current[PROTON_UPDATE_MAX_PATH];
   if (!proton_update_running_bundle(current, sizeof(current))) {
@@ -2247,7 +2247,7 @@ static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
   return PROTON_OK;
 }
 
-PROTON_API int32_t proton_update_stage_install_outcome(
+int32_t proton_update_stage_install_outcome(
     proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
     int32_t error_len) {
   if (out_outcome == NULL) {
@@ -2371,13 +2371,13 @@ PROTON_API int32_t proton_update_stage_install_outcome(
   return status;
 }
 
-PROTON_API int32_t proton_update_stage_install(
+int32_t proton_update_stage_install(
     proton_update_stage_id_t stage, char *error, int32_t error_len) {
   int32_t outcome = PROTON_UPDATE_INSTALLED;
   return proton_update_stage_install_outcome(stage, &outcome, error, error_len);
 }
 
-PROTON_API int32_t proton_update_install(const char *archive,
+int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
                                          const char *parent_dir, char *error,
                                          int32_t error_len) {
@@ -2401,7 +2401,7 @@ PROTON_API int32_t proton_update_install(const char *archive,
   return proton_update_stage_install_outcome(stage, &outcome, error, error_len);
 }
 
-PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len) {
+int32_t proton_update_relaunch(char *error, int32_t error_len) {
   if (proton_update_current[0] == '\0') {
     proton_update_set_message(error, error_len,
                               "no application has been replaced");

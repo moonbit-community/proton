@@ -40,7 +40,6 @@ pub fn DevProcessError::to_repr(Self) -> @debug.Repr
 pub fn DevProcessError::to_string(Self) -> String
 
 pub(all) suberror DevRuntimeError {
-  NativeDistOverride(detail~ : String)
   Setup(detail~ : String)
   ManifestMissing(path~ : String)
   ManifestInvalid(path~ : String, detail~ : String)

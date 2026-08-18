@@ -55,19 +55,19 @@ moon -C examples run 01_run --target native
   tray support reporting and menu items that trigger visible app actions.
 - `28_app_tray`: focused tray support reporting, lifecycle, tooltip/icon update,
   flat menu, menu-item events, and platform-specific tray-icon click events.
-- `37_native_mvp`: direct native-window MVP smoke for the native DLL route.
+- `37_native_mvp`: direct native-window MVP smoke for the source-built runtime.
 - `38_*` and `39_*`: inline HTML command-extension proxy examples backed by the
-  native DLL bridge.
-- `40_event_broadcast`: command-extension event broadcast over the native DLL
+  source-built native bridge.
+- `40_event_broadcast`: command-extension event broadcast over the source-built native
   bridge.
-- `41_app_commands`: current `core.invokeOp` bridge example and E2E fixture for the native DLL
+- `41_app_commands`: current `core.invokeOp` bridge example and E2E fixture for the source-built native
   route.
 - `app_commands_fixture`: non-runnable shared implementation used by
   `41_app_commands` and the MoonBit E2E suite.
 - `e2e_fixtures`: non-runnable shared scenario implementations used by the
   MoonBit E2E suite (`e2e/`).
 - `42_attribute_codegen_commands`: generated command metadata plus generated
-  event helper over the native DLL bridge.
+  event helper over the source-built native bridge.
 - `44_app_activation`: single-instance URL and document activation configured
   through the App builder.
 - `45_bridge_multi_window`: typed facade multi-window bridge E2E example.

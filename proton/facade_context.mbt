@@ -61,14 +61,7 @@ fn WindowContext::new(
   events : WindowEventEmitter,
   locale_preferences : @locale.LocalePreferences,
 ) -> WindowContext {
-  WindowContext::{
-    id,
-    handle,
-    windows,
-    tasks,
-    events,
-    locale_preferences,
-  }
+  WindowContext::{ id, handle, windows, tasks, events, locale_preferences }
 }
 
 ///|

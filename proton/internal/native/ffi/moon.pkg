@@ -13,6 +13,7 @@ options(
     "src/proton_config.c",
     "src/proton_event.c",
     "src/proton_json.c",
+    "src/proton_locale.c",
     "src/proton_menu.c",
     "src/proton_state.c",
     "src/proton_update.c",

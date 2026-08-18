@@ -92,8 +92,8 @@ pub fn view(
   visible? : Bool = true,
   z_order? : Int = 0,
   background_color? : String,
-) -> @native.ViewConfig {
-  @native.ViewConfig::new(
+) -> ViewConfig {
+  ViewConfig::new(
     width~,
     height~,
     x~,
@@ -229,7 +229,7 @@ pub fn App::entry_asset(self : App, path : String) -> App {
 
 ///|
 /// Sets the app-level native menu bar.
-pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
+pub fn App::menu(self : App, menu : MenuBar) -> App {
   self.menu = Some(menu)
   self
 }
@@ -359,11 +359,7 @@ pub fn App::on_window_event(
 /// with the window and can later be found through `WindowHandle::view(id)`
 /// or observed through `App::on_view_event`. Use the imperative
 /// `WindowHandle::add_view` for views whose lifetime is dynamic.
-pub fn App::with_view(
-  self : App,
-  id : String,
-  config : @native.ViewConfig,
-) -> App {
+pub fn App::with_view(self : App, id : String, config : ViewConfig) -> App {
   if id.trim().is_empty() {
     self.validation_errors.push(
       InvalidSetting(name="views.id", message="must not be empty"),
@@ -594,7 +590,7 @@ pub fn[State] App::window_lifecycle(
 ///|
 /// Registers one extension setting with the app facade.
 ///
-/// The native DLL route exposes command extensions through
+/// The source-built native route exposes command extensions through
 /// `window.__MoonBit__.core.invokeOp(...)` and generated high-level proxies.
 /// The renderer installs the bridge before the page's first script executes.
 pub fn App::extension(

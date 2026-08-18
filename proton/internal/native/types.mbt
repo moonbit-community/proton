@@ -1,7 +1,7 @@
 ///|
-/// Failures at the MoonBit/native runtime boundary.
+/// Failures at Proton's private MoonBit/native boundary.
 pub(all) suberror NativeError {
-  /// A negative status returned by the public Proton C ABI.
+  /// A negative status returned by a private platform stub.
   Status(status~ : Int, message~ : String)
   /// An invalid argument rejected before entering the C ABI.
   InvalidArgument(message~ : String)
@@ -92,24 +92,18 @@ pub extend ProcessResult with Debug::{to_repr}
 
 ///|
 pub(all) struct RuntimeInfo {
-  abi_version : Int
-  runtime_available : Bool
-  build_mode : String
   platform : String
-  /// The prebuilt identifier this library was built as, such as
-  /// `darwin-arm64`. Matches the platform keys in an update manifest.
+  /// The source-built target identifier, such as `darwin-arm64`. Matches the
+  /// platform keys in an update manifest.
   platform_id : String
   features : Array[String]
-} derive(Debug, Eq, FromJson)
+} derive(Debug, Eq)
 
 ///|
 pub extend RuntimeInfo with Eq::{not_equal, equal}
 
 ///|
 pub extend RuntimeInfo with Debug::{to_repr}
-
-///|
-pub extend RuntimeInfo with FromJson::{from_json}
 
 ///|
 pub(all) struct RuntimeWaitReady {

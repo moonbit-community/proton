@@ -63,11 +63,11 @@ pub extern "C" fn proton_abi_version_ffi() -> Int = "proton_abi_version"
 
 ///|
 #borrow(buffer, out_required_len)
-pub extern "C" fn proton_runtime_info_json_ffi(
+pub extern "C" fn proton_runtime_platform_id_ffi(
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
-) -> Int = "proton_runtime_info_json"
+) -> Int = "proton_runtime_platform_id"
 
 ///|
 #borrow(buffer, out_required_len)
@@ -115,24 +115,6 @@ pub extern "C" fn execute_process(
 ) -> Int = "proton_internal_execute_process"
 
 ///|
-#borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label)
-pub extern "C" fn runtime_probe(
-  use_bundled : Int,
-  runtime_root : Bytes,
-  helper_path : Bytes,
-  resources_dir : Bytes,
-  locales_dir : Bytes,
-  cache_dir : Bytes,
-  locale : Bytes,
-  accept_languages : Bytes,
-  dialog_ok_label : Bytes,
-  dialog_cancel_label : Bytes,
-  remote_debugging_port : Int,
-  headless : Int,
-  persist_session_cookies : Int,
-) -> Int = "proton_internal_runtime_probe"
-
-///|
 #borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label, out_runtime)
 pub extern "C" fn runtime_create(
   use_bundled : Int,
@@ -155,24 +137,6 @@ pub extern "C" fn runtime_create(
 pub extern "C" fn proton_runtime_destroy_ffi(runtime : RuntimeHandle) -> Int = "proton_runtime_destroy"
 
 ///|
-pub extern "C" fn proton_runtime_do_message_loop_work_ffi(
-  runtime : RuntimeHandle,
-) -> Int = "proton_runtime_do_message_loop_work"
-
-///|
-/// `timeout_ms` is `runtime_wait_timeout_infinite` to wait indefinitely; every
-/// other negative value is rejected by the native side.
-#borrow(out_ready_mask)
-pub extern "C" fn proton_runtime_wait_ffi(
-  runtime : RuntimeHandle,
-  interest_mask : Int,
-  timeout_ms : Int,
-  out_ready_mask : Ref[Int],
-) -> Int = "proton_runtime_wait"
-
-///|
-/// Wakes a blocked `Runtime::wait`, or makes the next one return immediately.
-///
 /// Safe to call from any thread and takes no handle, which is what lets a
 /// foreign thread use it: handles validate thread ownership and that thread
 /// owns none.
@@ -182,7 +146,7 @@ pub extern "C" fn proton_runtime_signal_wakeup_ffi() -> Unit = "proton_runtime_s
 pub extern "C" fn proton_host_loop_begin_ffi() -> Int = "proton_host_loop_begin"
 
 ///|
-/// `timeout_ms` follows the same encoding as `proton_runtime_wait_ffi`.
+/// A negative `timeout_ms` waits until the host loop is signalled.
 #borrow(out_ready_mask)
 pub extern "C" fn proton_host_loop_poll_ffi(
   timeout_ms : Int,
@@ -191,33 +155,6 @@ pub extern "C" fn proton_host_loop_poll_ffi(
 
 ///|
 pub extern "C" fn proton_host_loop_end_ffi() -> Unit = "proton_host_loop_end"
-
-///|
-pub extern "C" fn proton_runtime_set_wakeup_fd_ffi(
-  runtime : RuntimeHandle,
-  wakeup_fd : Int,
-) -> Int = "proton_runtime_set_wakeup_fd"
-
-///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_runtime_prepare_wakeup_source_ffi(
-  runtime : RuntimeHandle,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_runtime_prepare_wakeup_source"
-
-///|
-pub extern "C" fn proton_runtime_activate_wakeup_source_ffi(
-  runtime : RuntimeHandle,
-) -> Int = "proton_runtime_activate_wakeup_source"
-
-///|
-#borrow(out_delay_ms)
-pub extern "C" fn proton_runtime_next_wakeup_delay_ms_ffi(
-  runtime : RuntimeHandle,
-  out_delay_ms : Ref[Int64],
-) -> Int = "proton_runtime_next_wakeup_delay_ms"
 
 ///|
 pub extern "C" fn runtime_set_menu(

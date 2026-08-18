@@ -81,12 +81,14 @@ fn active_runtime_dist(root : String) -> String raise {
 }
 
 ///|
-fn source_built_helper(root : String) -> String {
-  join_path(
-    root,
-    "_build/native/debug/build/moonbit-community/proton/internal/cef_process/" +
-    helper_executable_name(),
-  )
+fn helper_install_dir(output_root : String) -> String {
+  join_path(output_root, "helper-bin")
+}
+
+///|
+fn installed_helper_path(output_root : String) -> String {
+  let name = if @path.sep == '\\' { "cef_process.exe" } else { "cef_process" }
+  join_path(helper_install_dir(output_root), name)
 }
 
 ///|
@@ -118,7 +120,7 @@ fn app_process_env(
   let runtime_dist = active_runtime_dist(root)
   let bin_dir = join_path(runtime_dist, "bin")
   let lib_dir = join_path(runtime_dist, "lib")
-  let helper_path = source_built_helper(root)
+  let helper_path = installed_helper_path(output_root)
   guard @mbfs.path_exists(bin_dir) else {
     fail(
       "native runtime bin directory does not exist: " +
@@ -175,15 +177,6 @@ fn app_process_env(
     }
   }
   result
-}
-
-///|
-fn helper_executable_name() -> String {
-  if @path.sep == '\\' {
-    "cef_process.exe"
-  } else {
-    "cef_process"
-  }
 }
 
 ///|
@@ -263,6 +256,36 @@ fn scenario_app_command() -> (String, Array[String]) raise {
     (executable, [])
   } else {
     isolated_app_command(executable, [])
+  }
+}
+
+///|
+async fn install_scenario_helper(root : String, output_root : String) -> Unit {
+  let log_path = join_path(output_root, "helper-install.log")
+  let output = @process.redirect_to_file(
+    log_path,
+    create_mode=@fs.CreateOrTruncate,
+  )
+  let code = @process.run(
+    "moon",
+    [
+      "--target-dir",
+      join_path(output_root, "helper-build"),
+      "install",
+      "--path",
+      join_path(root, "proton/internal/cef_process"),
+      "--bin",
+      helper_install_dir(output_root),
+    ],
+    cwd=root,
+    stdout=output,
+    stderr=output,
+  )
+  guard code == 0 else {
+    fail("failed to install the E2E CEF helper" + app_output_suffix(log_path))
+  }
+  guard @mbfs.path_exists(installed_helper_path(output_root)) else {
+    fail("moon install did not produce the E2E CEF helper")
   }
 }
 
@@ -658,41 +681,19 @@ async fn run_scenario_probe_once(
 }
 
 ///|
-async fn run_scenario_probe_with_retry(
+async fn run_scenario_probe(
   root : String,
   name : String,
   timeout : Int,
 ) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-")
   defer remove_dev_extension_tree(output_root)
-  let operation_timeout = scenario_operation_timeout(name, timeout)
-  let mut attempt = 0
-  while attempt < 4 {
-    let succeeded = try {
-      run_e2e_operation_with_timeout(
-        operation_timeout,
-        "E2E scenario " + name,
-        () => run_scenario_probe_once(root, output_root, name, timeout),
-      )
-      true
-    } catch {
-      error => {
-        if attempt == 3 || !retryable_scenario_error_for(name, error) {
-          raise error
-        }
-        // A transient pipe EAGAIN can recur for one or two attempts on a
-        // loaded shared runner while it catches its breath; back off a little
-        // between attempts so a clean probe has a real chance to run.
-        println("MoonBit " + name + " transient attempt failed; retrying")
-        @async.sleep(2000)
-        false
-      }
-    }
-    if succeeded {
-      return
-    }
-    attempt = attempt + 1
-  }
+  install_scenario_helper(root, output_root)
+  run_e2e_operation_with_timeout(
+    scenario_operation_timeout(name, timeout),
+    "E2E scenario " + name,
+    () => run_scenario_probe_once(root, output_root, name, timeout),
+  )
 }
 
 ///|
@@ -714,65 +715,20 @@ fn scenario_operation_timeout(name : String, timeout : Int) -> Int {
 }
 
 ///|
-fn retryable_scenario_error(error : Error) -> Bool {
-  retryable_scenario_error_for("", error)
-}
-
-///|
-fn retryable_scenario_error_for(name : String, error : Error) -> Bool {
-  match error {
-    E2eOperationError::TimedOut(..) => true
-    @io.ReaderClosed => true
-    // A subprocess pipe read can transiently report a non-blocking errno such
-    // as EAGAIN on a loaded CI runner; that is a transport condition, not a
-    // scenario failure, so retry it instead of failing the whole E2E.
-    @os_error.OSError(_, ..) as err => err.is_nonblocking_io_error()
-    _ => retryable_startup_error_for(name, error)
-  }
-}
-
-///|
-fn retryable_startup_error_for(name : String, error : Error) -> Bool {
-  let text = @debug.render(Repr(error)).to_lower()
-  // Retry only failures emitted by the explicit startup waiters.  Transport
-  // retry classification is handled by retryable_scenario_error using typed
-  // errors; broad text matches such as "connection reset" would hide bugs.
-  // The navigation waiter covers the page load right after Page.navigate,
-  // which can stall on a loaded CI runner while the local server and CEF
-  // settle.
-  text.contains("scenario app exited before cdp became ready") ||
-  text.contains("cdp endpoint did not start within") ||
-  text.contains("cdp page target") ||
-  (
-    name == "52_web_contents_view" &&
-    text.contains("scenario app did not exit within")
-  ) ||
-  text.contains("timed out waiting for navigation to") ||
-  // The web-contents-view probe asserts on auxiliary log files (OSR paint
-  // records, per-view event logs) that the child app writes asynchronously.
-  // On a loaded shared runner those files can lag behind the probe fast enough
-  // to miss the deadline even though the app behaved correctly, so treat these
-  // as transient and let the heavy scenario retry cleanly.
-  text.contains("native log did not record") ||
-  text.contains("failed to read web contents view event log") ||
-  text.contains("view event log missed")
-}
-
-///|
 async fn run_self_hosted_scenarios() -> Unit {
   let root = repository_root()
   let timeout = timeout_ms()
-  run_scenario_probe_with_retry(root, "41_app_commands", timeout)
+  run_scenario_probe(root, "41_app_commands", timeout)
   run_pending_lifecycle_probe(root, timeout)
-  run_scenario_probe_with_retry(root, "38_async_extension_add", timeout)
-  run_scenario_probe_with_retry(root, "39_sync_async_extensions", timeout)
-  run_scenario_probe_with_retry(root, "40_event_broadcast", timeout)
+  run_scenario_probe(root, "38_async_extension_add", timeout)
+  run_scenario_probe(root, "39_sync_async_extensions", timeout)
+  run_scenario_probe(root, "40_event_broadcast", timeout)
   run_event_lifecycle_probe(root, timeout)
-  run_scenario_probe_with_retry(root, "45_bridge_multi_window", timeout)
-  run_scenario_probe_with_retry(root, "52_web_contents_view", timeout)
-  run_scenario_probe_with_retry(root, "54_devtools", timeout)
-  run_scenario_probe_with_retry(root, "56_i18n", timeout)
-  run_scenario_probe_with_retry(root, "46_asset_sidecar_resources", timeout)
-  run_dev_extension_scenario_with_retry(root, timeout)
-  run_scenario_probe_with_retry(root, "42_attribute_codegen_commands", timeout)
+  run_scenario_probe(root, "45_bridge_multi_window", timeout)
+  run_scenario_probe(root, "52_web_contents_view", timeout)
+  run_scenario_probe(root, "54_devtools", timeout)
+  run_scenario_probe(root, "56_i18n", timeout)
+  run_scenario_probe(root, "46_asset_sidecar_resources", timeout)
+  run_dev_extension_scenario(root, timeout)
+  run_scenario_probe(root, "42_attribute_codegen_commands", timeout)
 }

@@ -75,7 +75,7 @@ developer must perform them.
 
 ## Build And Test
 - `moon -C cli run . -- -C .. cef setup`
-- `moon build proton/internal/cef_process --target native`
+- `moon install --path proton/internal/cef_process --bin <output-dir>`
 - With `.proton/runtime.json` selecting the active CEF runtime:
   `moon -C proton test internal/native --target native --diagnostic-limit 80`
 - With `.proton/runtime.json` selecting the active CEF runtime:

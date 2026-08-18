@@ -132,7 +132,7 @@ fn RuntimeSession::window_handle(
     read_window_state: () => self.read_window_state(id, native_id),
     browser: self.browser_handle(window),
     add_view: (view_id, config) => {
-      self.add_window_view(id, native_id, view_id, config)
+      self.add_window_view(id, native_id, view_id, config.to_native())
     },
     remove_view: view_id => self.remove_window_view(id, native_id, view_id),
     list_views: () => self.list_window_views(id, native_id),
@@ -227,11 +227,11 @@ fn RuntimeSession::view_handle(
       let running = self.resolve_view(
         window_id, window_native_id, id, native_id,
       )
-      running.view.state() catch {
+      ViewState::from_native(running.view.state()) catch {
         error =>
-          raise OperationFailed(
-            action="read view " + id + " state in window " + window_id,
-            error~,
+          raise window_operation_failed(
+            "read view " + id + " state in window " + window_id,
+            error,
           )
       }
     },
@@ -280,9 +280,9 @@ fn RuntimeSession::control_view(
   )
   operation(running.view) catch {
     error =>
-      raise OperationFailed(
-        action=action + " view " + view_id + " in window " + window_id,
-        error~,
+      raise window_operation_failed(
+        action + " view " + view_id + " in window " + window_id,
+        error,
       )
   }
 }
@@ -300,11 +300,9 @@ fn RuntimeSession::add_window_view(
     _ => raise StaleWindow(id=window_id)
   }
   if view_id.is_empty() {
-    raise OperationFailed(
-      action="add view to window " + window_id,
-      error=@native.NativeError::InvalidArgument(
-        message="view id must not be empty",
-      ),
+    raise window_operation_failed(
+      "add view to window " + window_id,
+      @native.NativeError::InvalidArgument(message="view id must not be empty"),
     )
   }
   for view in running.views {
@@ -314,9 +312,9 @@ fn RuntimeSession::add_window_view(
   }
   let created = @native.View::new(running.window, config) catch {
     error =>
-      raise OperationFailed(
-        action="add view " + view_id + " to window " + window_id,
-        error~,
+      raise window_operation_failed(
+        "add view " + view_id + " to window " + window_id,
+        error,
       )
   }
   let running_view = RunningView::{ id: view_id, view: created }
@@ -348,9 +346,9 @@ fn RuntimeSession::remove_window_view(
   let view = running.views[index]
   view.view.destroy() catch {
     error =>
-      raise OperationFailed(
-        action="remove view " + view_id + " from window " + window_id,
-        error~,
+      raise window_operation_failed(
+        "remove view " + view_id + " from window " + window_id,
+        error,
       )
   }
   ignore(running.views.remove(index))
@@ -472,7 +470,7 @@ fn RuntimeSession::close_window(
     _ => raise StaleWindow(id~)
   }
   running.window.close() catch {
-    error => raise OperationFailed(action="close window " + id, error~)
+    error => raise window_operation_failed("close window " + id, error)
   }
   if self.window_close_handler is None {
     running.state = WindowCloseRequested
@@ -492,7 +490,7 @@ fn RuntimeSession::control_window(
     _ => raise StaleWindow(id~)
   }
   operation(running.window) catch {
-    error => raise OperationFailed(action=action + " window " + id, error~)
+    error => raise window_operation_failed(action + " window " + id, error)
   }
 }
 
@@ -501,14 +499,14 @@ fn RuntimeSession::read_window_state(
   self : RuntimeSession,
   id : String,
   native_id : Int64,
-) -> @native.WindowState raise WindowSessionError {
+) -> WindowState raise WindowSessionError {
   let running = match self.find_active_window(id) {
     Some(running) if running.window.id() == native_id => running
     _ => raise StaleWindow(id~)
   }
-  running.window.state() catch {
+  WindowState::from_native(running.window.state()) catch {
     error =>
-      raise OperationFailed(action="read window " + id + " state", error~)
+      raise window_operation_failed("read window " + id + " state", error)
   }
 }
 
@@ -595,14 +593,11 @@ fn RuntimeSession::create_window(
         view_config,
       ) catch {
         error =>
-          raise native_run_error(
-            "add view " + view_id + " to " + plan.id,
-            match error {
-              OperationFailed(error~, ..) => error
-              other =>
-                @native.NativeError::InvalidArgument(message=other.message())
-            },
-          )
+          raise match error {
+            OperationFailed(action~, status~, detail~) =>
+              RuntimeOperationFailed(action~, status~, detail~)
+            other => UnexpectedTaskFailure(detail=other.message())
+          }
       },
     )
   }
@@ -766,18 +761,18 @@ fn RuntimeSession::advance_window_opens(self : RuntimeSession) -> Bool {
       let error = match state {
         Some(state) =>
           BridgeStartupError(
-            bridge_startup_timeout_diagnostic(
-              state,
-              self.bridge_startup_timeout_ms,
+            BridgeDiagnostic::from_native(
+              bridge_startup_timeout_diagnostic(
+                state,
+                self.bridge_startup_timeout_ms,
+              ),
             ),
           )
         None =>
-          NativeRuntimeError(
+          RuntimeOperationFailed(
             action="open window " + pending.id,
-            error=@native.NativeError::InvalidPayload(
-              context="bridge startup",
-              message="window startup timed out",
-            ),
+            status=-1,
+            detail="bridge startup: window startup timed out",
           )
       }
       self.fail_window_open(pending, error)
@@ -985,7 +980,7 @@ pub fn WindowHandle::set_zoom_percent(
 ///|
 pub fn WindowHandle::state(
   self : WindowHandle,
-) -> @native.WindowState raise WindowSessionError {
+) -> WindowState raise WindowSessionError {
   (self.read_window_state)()
 }
 
@@ -1002,7 +997,7 @@ pub fn WindowHandle::browser(self : WindowHandle) -> BrowserHandle {
 pub fn WindowHandle::add_view(
   self : WindowHandle,
   id : String,
-  config : @native.ViewConfig,
+  config : ViewConfig,
 ) -> ViewHandle raise WindowSessionError {
   (self.add_view)(id, config)
 }
@@ -1143,7 +1138,7 @@ pub fn ViewHandle::close_devtools(
 /// Reads the current view state from the native runtime.
 pub fn ViewHandle::state(
   self : ViewHandle,
-) -> @native.ViewState raise WindowSessionError {
+) -> ViewState raise WindowSessionError {
   (self.read_view_state)()
 }
 
@@ -1276,7 +1271,9 @@ async fn RuntimeSession::wait_for_bridge_startup(
         None => return
         Some(state) =>
           raise BridgeStartupError(
-            bridge_startup_timeout_diagnostic(state, timeout_ms),
+            BridgeDiagnostic::from_native(
+              bridge_startup_timeout_diagnostic(state, timeout_ms),
+            ),
           )
       }
     }
@@ -1418,7 +1415,9 @@ fn RuntimeSession::dispatch_window_event(
           for handler in self.window_event_handlers {
             ignore(
               self.window_tasks.spawn(
-                () => handler(handle, StateChanged(state)),
+                () => {
+                  handler(handle, StateChanged(WindowState::from_native(state)))
+                },
                 no_wait=true,
               ),
             )
@@ -1923,7 +1922,8 @@ fn RuntimeSession::check_bridge_failures(
         raise native_run_error("read bridge failure for " + running.id, error)
     }
     match failure {
-      Some(diagnostic) => raise BridgeRuntimeError(diagnostic)
+      Some(diagnostic) =>
+        raise BridgeRuntimeError(BridgeDiagnostic::from_native(diagnostic))
       None => ()
     }
   }

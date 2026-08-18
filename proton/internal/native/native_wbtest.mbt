@@ -227,7 +227,9 @@ test "runtime config preserves typed native ABI values" {
   assert_false(bundled.headless)
   assert_true(bundled.persist_session_cookies)
   assert_true(RuntimeConfig::bundled(headless=true).headless)
-  assert_false(RuntimeConfig::new(persist_session_cookies=false).persist_session_cookies)
+  assert_false(
+    RuntimeConfig::new(persist_session_cookies=false).persist_session_cookies,
+  )
 }
 
 ///|
@@ -462,21 +464,6 @@ test "app activation JSON keeps stable schema fields" {
 }
 
 ///|
-test "runtime info payload requires abi_version 1" {
-  let error = expect_native_error(() => {
-    decode_runtime_info(
-      "{\"abi_version\":2,\"runtime_available\":true,\"build_mode\":\"debug\",\"platform\":\"test\",\"platform_id\":\"test\",\"features\":[]}",
-    )
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("abi_version"))
-  let info = decode_runtime_info(
-    "{\"abi_version\":1,\"runtime_available\":true,\"build_mode\":\"debug\",\"platform\":\"test\",\"platform_id\":\"test\",\"features\":[]}",
-  )
-  inspect(info.platform, content="test")
-}
-
-///|
 test "bridge lifecycle state payload requires abi_version 1" {
   let error = expect_native_error(() => {
     decode_bridge_lifecycle_state(
@@ -542,4 +529,11 @@ test "bridge request validates abi_version when present" {
   })
   inspect(type_error.status(), content="-1")
   assert_true(type_error.message().contains("abi_version"))
+}
+
+///|
+fn init {
+  host_loop_begin() catch {
+    error => abort("failed to start native test host loop: " + error.message())
+  }
 }

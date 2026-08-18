@@ -6,11 +6,11 @@ fn load_entry_after_create(
   match entry {
     @manifest.AppEntry::Html(html) =>
       window.load_html(html, asset_base_url()) catch {
-        error => raise NativeLoad(action="load html", error~)
+        error => raise entry_platform_load_failed("load html", error)
       }
     @manifest.AppEntry::Url(url) =>
       window.load_url(url) catch {
-        error => raise NativeLoad(action="load url", error~)
+        error => raise entry_platform_load_failed("load url", error)
       }
     @manifest.AppEntry::File(path) =>
       load_file_entry_after_create(
@@ -39,7 +39,7 @@ fn load_file_entry_after_create(
     asset_document_url(resolved),
     resolved.dirname().to_string(),
   ) catch {
-    error => raise NativeLoad(action~, error~)
+    error => raise entry_platform_load_failed(action, error)
   }
 }
 

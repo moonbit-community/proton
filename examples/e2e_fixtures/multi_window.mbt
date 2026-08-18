@@ -11,7 +11,7 @@ pub extend MultiWindowIdentifyPayload with FromJson::{from_json}
 struct MultiWindowIdentifyReply {
   label : String
   window : String
-  request_id : String
+  page_instance : String
 } derive(ToJson)
 
 ///|
@@ -40,7 +40,7 @@ fn multi_window_extension() -> @proton_extension.Extension {
         MultiWindowIdentifyReply::{
           label: payload.label,
           window: context.window_id(),
-          request_id: context.page_instance().unwrap_or(context.window_id()),
+          page_instance: context.page_instance().unwrap_or(context.window_id()),
         }
       })
     },

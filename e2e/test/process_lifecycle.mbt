@@ -436,30 +436,10 @@ async fn run_pending_lifecycle_probe_once(
 async fn run_pending_lifecycle_probe(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
-  let mut attempt = 0
-  while attempt < 2 {
-    let succeeded = try {
-      run_e2e_operation_with_timeout(
-        timeout,
-        "41_app_commands pending lifecycle",
-        () => run_pending_lifecycle_probe_once(root, output_root, timeout),
-      )
-      true
-    } catch {
-      error => {
-        if attempt == 1 || !retryable_scenario_error(error) {
-          raise error
-        }
-        println("MoonBit pending lifecycle attempt failed; retrying once")
-        false
-      }
-    }
-    if succeeded {
-      return
-    }
-    @async.sleep(1000)
-    attempt = attempt + 1
-  }
+  install_scenario_helper(root, output_root)
+  run_e2e_operation_with_timeout(timeout, "41_app_commands pending lifecycle", () => {
+    run_pending_lifecycle_probe_once(root, output_root, timeout)
+  })
 }
 
 ///|
@@ -536,30 +516,12 @@ async fn run_event_lifecycle_probe_once(
 async fn run_event_lifecycle_probe(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
-  let mut attempt = 0
-  while attempt < 2 {
-    let succeeded = try {
-      run_e2e_operation_with_timeout(
-        timeout,
-        "40_event_broadcast event lifecycle",
-        () => run_event_lifecycle_probe_once(root, output_root, timeout),
-      )
-      true
-    } catch {
-      error => {
-        if attempt == 1 || !retryable_scenario_error(error) {
-          raise error
-        }
-        println("MoonBit event lifecycle attempt failed; retrying once")
-        false
-      }
-    }
-    if succeeded {
-      return
-    }
-    @async.sleep(1000)
-    attempt = attempt + 1
-  }
+  install_scenario_helper(root, output_root)
+  run_e2e_operation_with_timeout(
+    timeout,
+    "40_event_broadcast event lifecycle",
+    () => run_event_lifecycle_probe_once(root, output_root, timeout),
+  )
 }
 
 ///|

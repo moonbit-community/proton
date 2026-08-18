@@ -3,17 +3,15 @@
 `moonbit-community/proton/internal/native` owns Proton's private MoonBit/native
 boundary. Applications use the root `moonbit-community/proton` facade instead.
 
-The public API uses Proton-owned `Runtime` and `Window` values. Raw native
-handles are intentionally not part of the public surface.
+The private ownership layer uses Proton-owned `Runtime` and `Window` values.
+The root facade does not expose these values or raw native handles.
 
 ```mbt check
 ///|
-test "native ABI is loaded" {
+test "native boundary is linked" {
   inspect(abi_version(), content="1")
   let info = runtime_info()
-  inspect(info.abi_version, content="1")
-  assert_true(info.build_mode == "abi-only" || info.build_mode == "runtime")
-  assert_true(info.runtime_available == (info.build_mode == "runtime"))
+  assert_true(info.platform.length() > 0)
   assert_true(info.features.contains("event_polling"))
   assert_true(info.features.contains("bridge_events"))
 }
@@ -28,92 +26,22 @@ absolute path owned by one running process; it enables persistent browser state.
 For persistent profiles, `persist_session_cookies` defaults to `true`, so
 session cookies without an expiry are stored alongside permanent cookies.
 
-For packaged Proton runtimes, `RuntimeConfig::bundled()` resolves CEF resources
+For packaged applications, the private runtime config resolves CEF resources
 and the matching helper from the application bundle.
 
 The default configuration resolves the CEF runtime and matching helper from the
 packaged application or the environment installed by Proton tooling. Explicit
-runtime configs must include both `runtime_root` and `helper_path` and pass
-`RuntimeConfig::probe`.
+runtime configs must include both `runtime_root` and `helper_path`; creating the
+runtime validates the complete configuration before initializing CEF.
 
-```mbt check
-///|
-test "runtime and window lifecycle" {
-  let runtime = Runtime::new()
-  let window = Window::new(
-    runtime,
-    config=WindowConfig::new(
-      title="Proton",
-      width=320,
-      height=240,
-      initial_url="about:blank",
-    ),
-  )
-  match runtime.poll_event() {
-    Some(event) => inspect(event.event_type(), content="window_created")
-    _ => fail("expected window_created")
-  }
-  window.load_html("<p>Hello Proton</p>", "proton://app/")
-  window.destroy()
-  runtime.destroy()
-}
-```
-
-`Runtime::wait` is a low-level primitive for hosts that own the external
-message pump. It reports which kinds of work may be ready, and the caller still
-drains events or bridge requests through the poll APIs. The root facade uses
-the process-wide host loop instead, which installs directly into the MoonBit
-async scheduler before application code starts.
-
-```mbt check
-///|
-test "runtime wait event readiness" {
-  let runtime = Runtime::new()
-  let empty = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=0)
-
-  inspect(empty.is_timeout(), content="true")
-  let window = Window::new(runtime)
-  let ready = runtime.wait(interest_mask=runtime_wait_event, timeout_ms=0)
-
-  inspect(ready.has_event(), content="true")
-  match runtime.poll_event() {
-    Some(event) => inspect(event.event_type(), content="window_created")
-    _ => fail("expected window_created")
-  }
-  window.destroy()
-  runtime.destroy()
-}
-```
+The root facade installs the process-wide native host loop directly into the
+MoonBit async scheduler before application code starts. There is no second
+runtime-owned pump API.
 
 Windows can host additional web contents views, following the Electron
 `WebContentsView` model: each view is an independent browser positioned with
 top-left coordinates inside the window's content area and stacked above the
 window's main browser. Engine support is reported through the
-`web_contents_view` runtime feature.
-
-```mbt check
-///|
-test "web contents view lifecycle" {
-  let runtime = Runtime::new()
-  let window = Window::new(runtime)
-  let view = View::new(
-    window,
-    ViewConfig::new(
-      width=320,
-      height=200,
-      x=10,
-      y=20,
-      initial_url="about:blank",
-    ),
-  )
-  view.set_bounds(x=20, y=30, width=300, height=180)
-  view.set_z_order(1)
-  view.load_url("about:blank")
-  let state = view.state()
-  inspect(state.width, content="300")
-  inspect(state.visible, content="true")
-  view.destroy()
-  window.destroy()
-  runtime.destroy()
-}
-```
+`web_contents_view` runtime feature. Applications access views through the root
+facade's `WindowHandle` and `ViewHandle`; they never construct the private
+ownership objects directly.

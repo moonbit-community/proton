@@ -21,15 +21,15 @@ verifies that the application, helper process tree, and CDP endpoint stop:
 
 ```sh
 moon -C cli run . -- -C .. cef setup
-moon build proton/internal/cef_process --target native
 moon -C e2e test -p moonbit-community/proton/e2e/test \
   --target native --no-parallelize --diagnostic-limit 200
 ```
 
 Keep the package filter and `--no-parallelize`: E2E tests own native processes,
 CDP ports, frontend servers, and runtime logs. `.proton/runtime.json` selects
-the setup-managed CEF runtime, while the helper is built from the same Proton
-source as the application. The suite covers:
+the setup-managed CEF runtime. Each isolated scenario installs a release helper
+from the same Proton source as the application through `moon install --path`.
+The suite covers:
 
 - `38_async_extension_add`, `39_sync_async_extensions`, and
   `42_attribute_codegen_commands` command-extension proxies;

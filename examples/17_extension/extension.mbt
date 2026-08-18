@@ -71,7 +71,7 @@ let resource : String =
   #|  <body>
   #|    <main>
   #|      <h1>Core Extension Metadata</h1>
-  #|      <p>This example is a legacy core-extension metadata smoke. The current native DLL route exposes page-callable APIs through command extensions.</p>
+  #|      <p>This example is a legacy core-extension metadata smoke. The current source-built native route exposes page-callable APIs through command extensions.</p>
   #|      <pre id="output">Run 38_async_extension_add, 39_sync_async_extensions, 40_event_broadcast, or 42_attribute_codegen_commands for bridge extension calls.</pre>
   #|    </main>
   #|  </body>

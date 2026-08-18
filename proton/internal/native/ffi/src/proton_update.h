@@ -1,11 +1,9 @@
 #ifndef PROTON_UPDATE_H
 #define PROTON_UPDATE_H
 
-/* The shipped update entry points are declared in the public header; only the
-   hooks the tests need live here. They deliberately carry no PROTON_API, so
-   hidden visibility keeps them out of the shipped export set: a way to lie
-   about which bundle is running does not belong in the ABI an application
-   links against. */
+/* Runtime entry points live in the shared private FFI header. This header only
+   declares updater test hooks; the MoonBit production facade does not bind
+   them. */
 #include "proton_native.h"
 
 #include <stddef.h>

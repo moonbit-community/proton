@@ -208,7 +208,6 @@ pub async fn build_executable(
     build_cef_process(
       invocation.backend_path,
       invocation.moon_target_dir?,
-      release~,
     ),
   )
   executable
@@ -227,7 +226,6 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
     build_cef_process(
       invocation.backend_path,
       invocation.moon_target_dir?,
-      release=invocation.moon_args.contains("--release"),
     ),
   )
 }
@@ -304,36 +302,27 @@ async fn resolve_proton_source(
 }
 
 ///|
-fn cef_process_output_path(
-  workspace_root : String,
-  moon_target_dir : String?,
-  release : Bool,
-) -> String {
-  let target_dir = moon_target_dir.unwrap_or(
-    @fsutil.path_join(workspace_root, "_build"),
-  )
-  let mode = if release { "release" } else { "debug" }
-  @fsutil.resolve_path(
-    target_dir,
-    "native/" +
-    mode +
-    "/build/moonbit-community/proton/internal/cef_process/cef_process.exe",
-  )
+pub fn cef_process_install_path(bin_dir : String) -> String {
+  let name = if @path.sep == '\\' { "cef_process.exe" } else { "cef_process" }
+  @fsutil.resolve_path(bin_dir, name)
 }
 
 ///|
 pub async fn build_cef_process(
   backend_path : String,
   moon_target_dir? : String,
-  release? : Bool = false,
 ) -> String {
   let workspace_root = @fsutil.find_workspace_root_from(backend_path)
   let source = resolve_proton_source(workspace_root, backend_path)
+  let bin_dir = moon_target_dir.unwrap_or(
+    @fsutil.path_join(workspace_root, "_build"),
+  )
   let args : Array[String] = [
-    "build",
+    "install",
+    "--path",
     @fsutil.path_join(source, "internal/cef_process"),
-    "--target",
-    "native",
+    "--bin",
+    bin_dir,
   ]
   match moon_target_dir {
     Some(target_dir) => {
@@ -342,21 +331,18 @@ pub async fn build_cef_process(
     }
     None => ()
   }
-  if release {
-    args.push("--release")
-  }
-  @output.info("Building CEF process helper: moon " + args.join(" "))
+  @output.info("Installing CEF process helper: moon " + args.join(" "))
   let code = @process.run("moon", args, cwd=backend_path) catch {
     error =>
       raise BuildProcessError::Start(
-        command="CEF process helper build",
+        command="CEF process helper install",
         detail=@debug.render(Repr(error)),
       )
   }
   if code != 0 {
-    raise BuildProcessError::Exit(command="CEF process helper build", code~)
+    raise BuildProcessError::Exit(command="CEF process helper install", code~)
   }
-  let output = cef_process_output_path(workspace_root, moon_target_dir, release)
+  let output = cef_process_install_path(bin_dir)
   guard @fsutil.path_is_file(output) else {
     raise BuildPathError::Missing(role="CEF process helper", path=output)
   }

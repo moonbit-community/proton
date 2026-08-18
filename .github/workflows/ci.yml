@@ -108,9 +108,11 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           moon -C cli run . -- -C .. cef setup
-          moon build proton/internal/cef_process --target native
+          helper_bin="$RUNNER_TEMP/proton-helper"
+          moon --target-dir "$RUNNER_TEMP/proton-helper-build" install \
+            --path proton/internal/cef_process --bin "$helper_bin"
           runtime=$(node -p "require('./.proton/runtime.json').dist")
-          helper="$GITHUB_WORKSPACE/_build/native/debug/build/moonbit-community/proton/internal/cef_process/cef_process.exe"
+          helper="$helper_bin/cef_process"
           echo "PROTON_RUNTIME_ROOT=$runtime" >> "$GITHUB_ENV"
           echo "PROTON_HELPER_PATH=$helper" >> "$GITHUB_ENV"
 
@@ -120,14 +122,16 @@ jobs:
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
           moon -C cli run . -- -C .. cef setup
-          moon build proton/internal/cef_process --target native
+          $helperBin = Join-Path $env:RUNNER_TEMP "proton-helper"
+          $helperBuild = Join-Path $env:RUNNER_TEMP "proton-helper-build"
+          moon --target-dir $helperBuild install --path proton/internal/cef_process --bin $helperBin
           $manifest = Get-Content .proton\runtime.json | ConvertFrom-Json
           # windows-latest runners have no usable D3D device; force ANGLE's
           # SwiftShader path so the engine's GPU process can start at all.
           $env:ANGLE_DEFAULT_PLATFORM = "swiftshader"
           "ANGLE_DEFAULT_PLATFORM=swiftshader" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "PROTON_RUNTIME_ROOT=$($manifest.dist)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "PROTON_HELPER_PATH=$env:GITHUB_WORKSPACE\_build\native\debug\build\moonbit-community\proton\internal\cef_process\cef_process.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "PROTON_HELPER_PATH=$(Join-Path $helperBin 'cef_process.exe')" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}

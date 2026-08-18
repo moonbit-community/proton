@@ -17,24 +17,9 @@
 #define PROTON_THREAD_LOCAL _Thread_local
 #endif
 
-#ifndef PROTON_WITH_ENGINE
-#define PROTON_WITH_ENGINE 0
-#endif
-
-#ifdef _WIN32
-#define PROTON_PLATFORM_NAME "windows"
-#elif defined(__APPLE__)
-#define PROTON_PLATFORM_NAME "macos"
-#else
-#define PROTON_PLATFORM_NAME "linux"
-#endif
-
-/* The prebuilt this library was built as, in the same vocabulary as
-   `proton/prebuilt/<id>/` and the update manifest's platform keys.
-
-   It is reported rather than derived by the caller because this library is the
-   platform-specific artifact: anything reconstructing the pair from a platform
-   name and a CPU query is guessing at what this file already knows. */
+/* The current source-built target, in the same vocabulary as update manifest
+   platform keys. It stays native-owned because MoonBit platform cfg does not
+   expose every supported architecture. */
 #if defined(_WIN32)
 #define PROTON_PLATFORM_ID "win32-x64"
 #elif defined(__APPLE__) && defined(__aarch64__)
@@ -43,61 +28,6 @@
 #define PROTON_PLATFORM_ID "darwin-x64"
 #else
 #define PROTON_PLATFORM_ID "linux-x64"
-#endif
-
-#if PROTON_WITH_ENGINE && \
-    (defined(_WIN32) || defined(__APPLE__) || defined(__linux__))
-#define PROTON_RUNTIME_WAIT_FEATURE ",\"runtime_wait\""
-#else
-#define PROTON_RUNTIME_WAIT_FEATURE ""
-#endif
-
-#if PROTON_WITH_ENGINE && \
-    (defined(_WIN32) || defined(__APPLE__) || defined(__linux__))
-#define PROTON_TITLEBAR_OVERLAY_FEATURE ",\"titlebar_overlay\""
-#define PROTON_HEADLESS_OSR_FEATURE ",\"headless_osr\""
-#define PROTON_WINDOW_SIZE_HINTS_FEATURE ",\"window_size_hints\""
-#define PROTON_WINDOW_SESSION_FEATURE ",\"window_session\""
-#define PROTON_BROWSER_SESSION_FEATURE ",\"browser_session\""
-#else
-#define PROTON_TITLEBAR_OVERLAY_FEATURE ""
-#define PROTON_HEADLESS_OSR_FEATURE ""
-#define PROTON_WINDOW_SIZE_HINTS_FEATURE ""
-#define PROTON_WINDOW_SESSION_FEATURE ""
-#define PROTON_BROWSER_SESSION_FEATURE ""
-#endif
-
-#if PROTON_WITH_ENGINE && defined(__APPLE__)
-#define PROTON_RUNTIME_WAKEUP_FD_FEATURE ",\"runtime_wakeup_fd\""
-#define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
-#elif PROTON_WITH_ENGINE && defined(_WIN32)
-#define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
-#define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ",\"runtime_wakeup_source\""
-#else
-#define PROTON_RUNTIME_WAKEUP_FD_FEATURE ""
-#define PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE ""
-#endif
-
-#if PROTON_WITH_ENGINE && \
-    (defined(__APPLE__) || defined(__linux__) || defined(_WIN32))
-#define PROTON_APP_SINGLE_INSTANCE_FEATURE ",\"app_single_instance\""
-#else
-#define PROTON_APP_SINGLE_INSTANCE_FEATURE ""
-#endif
-
-#if PROTON_WITH_ENGINE && \
-    (defined(__APPLE__) || defined(_WIN32) || defined(__linux__))
-#define PROTON_WEB_CONTENTS_VIEW_FEATURE ",\"web_contents_view\""
-#define PROTON_NATIVE_IMAGE_FEATURE ",\"native_image\""
-#else
-#define PROTON_WEB_CONTENTS_VIEW_FEATURE ""
-#define PROTON_NATIVE_IMAGE_FEATURE ""
-#endif
-
-#if PROTON_WITH_ENGINE && defined(__APPLE__)
-#define PROTON_NOTIFICATION_RESULT_FEATURE ",\"notification_result\""
-#else
-#define PROTON_NOTIFICATION_RESULT_FEATURE ""
 #endif
 
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
@@ -163,45 +93,20 @@ int64_t proton_view_logical_id(proton_view_handle_t view) {
   return view != NULL ? view->logical_id : 0;
 }
 
-int32_t proton_runtime_info_json(char *buffer,
-                                 int32_t buffer_len,
-                                 int32_t *out_required_len) {
+int32_t proton_runtime_platform_id(char *buffer,
+                                   int32_t buffer_len,
+                                   int32_t *out_required_len) {
   if (out_required_len == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_required_len is required");
   }
-  char info[512];
-  int required = snprintf(
-      info, sizeof(info),
-      "{\"abi_version\":%d,\"runtime_available\":%s,"
-      "\"build_mode\":\"%s\",\"platform\":\"%s\","
-      "\"platform_id\":\"%s\","
-      "\"features\":[\"base_abi\",\"event_polling\",\"bridge_events\","
-      "\"bridge_permission_grants\""
-      PROTON_RUNTIME_WAIT_FEATURE PROTON_TITLEBAR_OVERLAY_FEATURE
-          PROTON_HEADLESS_OSR_FEATURE
-          PROTON_WINDOW_SIZE_HINTS_FEATURE
-          PROTON_WINDOW_SESSION_FEATURE
-          PROTON_BROWSER_SESSION_FEATURE
-          PROTON_APP_SINGLE_INSTANCE_FEATURE
-          PROTON_RUNTIME_WAKEUP_FD_FEATURE
-          PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
-          PROTON_WEB_CONTENTS_VIEW_FEATURE PROTON_NATIVE_IMAGE_FEATURE
-              PROTON_NOTIFICATION_RESULT_FEATURE
-              "]}",
-      PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
-      PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME,
-      PROTON_PLATFORM_ID);
-  if (required < 0 || required >= (int)sizeof(info)) {
-    return proton_set_error(PROTON_ERR_ENGINE,
-                            "runtime info buffer is too small internally");
-  }
+  int required = (int)strlen(PROTON_PLATFORM_ID);
   *out_required_len = required;
   if (buffer == NULL || buffer_len <= required) {
     return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
-                            "runtime info buffer is too small");
+                            "runtime platform id buffer is too small");
   }
-  memcpy(buffer, info, (size_t)required + 1);
+  memcpy(buffer, PROTON_PLATFORM_ID, (size_t)required + 1);
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
@@ -280,30 +185,6 @@ int32_t proton_internal_execute_process(
   status = proton_engine_execute_process(&config, out_exit_code, engine_error,
                                          sizeof(engine_error));
   return proton_set_engine_status(status, engine_error);
-}
-
-int32_t proton_internal_runtime_probe(
-    int32_t use_bundled, const char *runtime_root, const char *helper_path,
-    const char *resources_dir, const char *locales_dir, const char *cache_dir,
-    const char *locale, const char *accept_languages,
-    const char *dialog_ok_label, const char *dialog_cancel_label,
-    int32_t remote_debugging_port, int32_t headless,
-    int32_t persist_session_cookies) {
-  proton_engine_runtime_config_t config;
-  int32_t status = proton_config_prepare_runtime(
-      use_bundled, runtime_root, helper_path, resources_dir, locales_dir,
-      cache_dir, locale, accept_languages, dialog_ok_label,
-      dialog_cancel_label, remote_debugging_port, headless,
-      persist_session_cookies, &config);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_config_probe_runtime(&config);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
 }
 
 int32_t proton_internal_runtime_create(
@@ -393,105 +274,6 @@ int32_t proton_runtime_destroy(proton_runtime_handle_t runtime) {
   return PROTON_OK;
 }
 
-int32_t proton_runtime_do_message_loop_work(proton_runtime_handle_t runtime) {
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_require_runtime_owner_thread(slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime != NULL) {
-    char engine_error[512] = {0};
-    status = proton_engine_runtime_do_message_loop_work(
-        slot->engine_runtime, engine_error, sizeof(engine_error));
-    if (status != PROTON_OK) {
-      return proton_set_engine_status(status, engine_error);
-    }
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_runtime_wait(proton_runtime_handle_t runtime,
-                            uint32_t interest_mask,
-                            int32_t timeout_ms,
-                            uint32_t *out_ready_mask) {
-  if (out_ready_mask == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_ready_mask is required");
-  }
-  /* Any negative value is an elapsed deadline rather than a request to wait
-     forever; only the documented constant means that. Collapsing the two here
-     would turn an arithmetic slip into a hang. */
-  if (timeout_ms < 0 && timeout_ms != PROTON_WAIT_TIMEOUT_INFINITE) {
-    return proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "timeout_ms must be non-negative or PROTON_WAIT_TIMEOUT_INFINITE");
-  }
-  *out_ready_mask = PROTON_WAIT_NONE;
-  if (interest_mask == PROTON_WAIT_NONE) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "interest_mask is required");
-  }
-  if ((interest_mask & ~PROTON_WAIT_ALL) != 0) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "interest_mask contains unsupported bits");
-  }
-
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_require_runtime_owner_thread(slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  uint32_t ready_mask = PROTON_WAIT_NONE;
-  if ((interest_mask & PROTON_WAIT_EVENT) != 0) {
-    proton_runtime_sync_engine_closed_windows(slot);
-    if (proton_runtime_has_events(slot)) {
-      ready_mask |= PROTON_WAIT_EVENT;
-    }
-  }
-  if (ready_mask != PROTON_WAIT_NONE) {
-    *out_ready_mask = ready_mask;
-    g_last_error[0] = '\0';
-    return PROTON_OK;
-  }
-
-  uint32_t engine_interest = interest_mask & PROTON_WAIT_PLATFORM;
-  if (engine_interest == PROTON_WAIT_NONE) {
-    g_last_error[0] = '\0';
-    return PROTON_OK;
-  }
-  if (slot->engine_runtime == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "runtime wait requires native engine");
-  }
-
-  char engine_error[512] = {0};
-  uint32_t engine_ready = PROTON_WAIT_NONE;
-  status = proton_engine_runtime_wait(slot->engine_runtime, engine_interest,
-                                      timeout_ms, &engine_ready, engine_error,
-                                      sizeof(engine_error));
-  if (status != PROTON_OK) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  ready_mask = engine_ready & engine_interest;
-  if ((interest_mask & PROTON_WAIT_EVENT) != 0) {
-    if (proton_runtime_has_events(slot)) {
-      ready_mask |= PROTON_WAIT_EVENT;
-    }
-  }
-  *out_ready_mask = ready_mask;
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
 int32_t proton_host_loop_begin(void) {
   if (g_host_lifecycle != PROTON_HOST_IDLE) {
     return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
@@ -556,98 +338,6 @@ void proton_runtime_signal_wakeup(void) {
      foreign thread for a wakeup that only touches atomics and the platform
      run loop. */
   proton_engine_runtime_signal_external_event(NULL);
-}
-
-int32_t proton_runtime_set_wakeup_fd(proton_runtime_handle_t runtime,
-                                     int32_t wakeup_fd) {
-  if (wakeup_fd < -1) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "wakeup_fd must be -1 or a valid descriptor");
-  }
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_require_runtime_owner_thread(slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "runtime wakeup fd requires native engine");
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_runtime_set_wakeup_fd(
-      slot->engine_runtime, wakeup_fd, engine_error, sizeof(engine_error));
-  return proton_set_engine_status(status, engine_error);
-}
-
-int32_t proton_runtime_prepare_wakeup_source(
-    proton_runtime_handle_t runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len) {
-  if (out_required_len == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_required_len is required");
-  }
-  *out_required_len = 0;
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "runtime wakeup source requires native engine");
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_runtime_prepare_wakeup_source(
-      slot->engine_runtime, buffer, buffer_len, out_required_len, engine_error,
-      sizeof(engine_error));
-  return proton_set_engine_status(status, engine_error);
-}
-
-int32_t
-proton_runtime_activate_wakeup_source(proton_runtime_handle_t runtime) {
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "runtime wakeup source requires native engine");
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_runtime_activate_wakeup_source(
-      slot->engine_runtime, engine_error, sizeof(engine_error));
-  return proton_set_engine_status(status, engine_error);
-}
-
-int32_t proton_runtime_next_wakeup_delay_ms(proton_runtime_handle_t runtime,
-                                            int64_t *out_delay_ms) {
-  if (out_delay_ms == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_delay_ms is required");
-  }
-  *out_delay_ms = -1;
-  proton_runtime_slot_t *slot = NULL;
-  int32_t status = proton_get_runtime(runtime, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_require_runtime_owner_thread(slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (slot->engine_runtime == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "runtime wakeup delay requires native engine");
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_runtime_next_wakeup_delay_ms(
-      slot->engine_runtime, out_delay_ms, engine_error, sizeof(engine_error));
-  return proton_set_engine_status(status, engine_error);
 }
 
 int32_t proton_internal_runtime_set_menu(proton_runtime_handle_t runtime,

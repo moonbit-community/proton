@@ -216,8 +216,7 @@ test "bridge frontend config preserves initialization unit ownership" {
 
 ///|
 test "app run errors retain typed bridge diagnostics" {
-  let diagnostic = @native.BridgeDiagnostic::{
-    abi_version: 1,
+  let diagnostic = BridgeDiagnostic::{
     stage: "bootstrap",
     code: "bridge_bootstrap_failed",
     message: "bootstrap exploded",
@@ -309,10 +308,8 @@ async test "headless mode rejects native menus before runtime startup" {
   let manifest = test_command_manifest("test/disabled", enabled=false)
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
-  let menu = @native.MenuBar::new(menus=[
-    @native.Menu::new("App", items=[
-      @native.MenuItem::role(@native.MenuItemRole::Close, label="Close"),
-    ]),
+  let menu = MenuBar::new(menus=[
+    Menu::new("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
   ])
   let mut rejected = false
   run_manifest(
@@ -322,7 +319,7 @@ async test "headless mode rejects native menus before runtime startup" {
     [],
     [],
     [],
-    Some(menu),
+    Some(menu.to_native()),
     30000,
     true,
     @locale.LocalePreferences::resolve(None, []),
@@ -1545,11 +1542,11 @@ test "with_view stores declarative views and rejects invalid ids" {
   inspect(app.planned_views.length(), content="0")
   let app = app.with_view(
     "browser",
-    @native.ViewConfig::new(width=320, height=240, initial_url="about:blank"),
+    ViewConfig::new(width=320, height=240, initial_url="about:blank"),
   )
   inspect(app.planned_views.length(), content="1")
-  let app = app.with_view("browser", @native.ViewConfig::new(width=1, height=1))
-  let app = app.with_view("  ", @native.ViewConfig::new(width=1, height=1))
+  let app = app.with_view("browser", ViewConfig::new(width=1, height=1))
+  let app = app.with_view("  ", ViewConfig::new(width=1, height=1))
   inspect(app.planned_views.length(), content="1")
   inspect(app.validation_errors.length(), content="2")
 }

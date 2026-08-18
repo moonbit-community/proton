@@ -1,21 +1,4 @@
 ///|
-pub using @native {
-  screens,
-  type Menu,
-  type MenuBar,
-  type MenuItem,
-  type MenuItemRole,
-  type MenuRole,
-  type RuntimeConfig,
-  type ScreenInfo,
-  type TitlebarStyle,
-  type WindowConfig,
-  type WindowMonitor,
-  type WindowSizeHint,
-  type WindowState,
-}
-
-///|
 pub using @proton_command {
   type CommandContext,
   type CommandWindow,

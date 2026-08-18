@@ -3,16 +3,6 @@
 
 #include <stdint.h>
 
-#ifdef _WIN32
-#ifdef PROTON_BUILD
-#define PROTON_API __declspec(dllexport)
-#else
-#define PROTON_API __declspec(dllimport)
-#endif
-#else
-#define PROTON_API __attribute__((visibility("default")))
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -83,42 +73,30 @@ enum {
   PROTON_UPDATE_ALREADY_INSTALLED = 1
 };
 
-PROTON_API int32_t proton_abi_version(void);
-PROTON_API proton_runtime_handle_t proton_runtime_null(void);
-PROTON_API proton_window_handle_t proton_window_null(void);
-PROTON_API proton_view_handle_t proton_view_null(void);
-PROTON_API proton_image_handle_t proton_image_null(void);
-PROTON_API int64_t proton_window_logical_id(proton_window_handle_t window);
-PROTON_API int64_t proton_view_logical_id(proton_view_handle_t view);
-PROTON_API int32_t proton_runtime_info_json(char *buffer,
-                                            int32_t buffer_len,
-                                            int32_t *out_required_len);
-PROTON_API int32_t proton_system_preferred_languages_json(
+int32_t proton_abi_version(void);
+proton_runtime_handle_t proton_runtime_null(void);
+proton_window_handle_t proton_window_null(void);
+proton_view_handle_t proton_view_null(void);
+proton_image_handle_t proton_image_null(void);
+int64_t proton_window_logical_id(proton_window_handle_t window);
+int64_t proton_view_logical_id(proton_view_handle_t view);
+int32_t proton_runtime_platform_id(char *buffer,
+                                   int32_t buffer_len,
+                                   int32_t *out_required_len);
+int32_t proton_system_preferred_languages_json(
     char *buffer, int32_t buffer_len, int32_t *out_required_len);
-PROTON_API int32_t proton_app_instance_acquire(
+int32_t proton_app_instance_acquire(
     const char *identifier, const char *activation_json,
     proton_app_instance_id_t *out_instance, int32_t *out_primary);
-PROTON_API int32_t proton_app_instance_attach_runtime(
+int32_t proton_app_instance_attach_runtime(
     proton_app_instance_id_t instance, proton_runtime_handle_t runtime);
-PROTON_API int32_t
+int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
-PROTON_API int32_t proton_runtime_destroy(proton_runtime_handle_t runtime);
-PROTON_API int32_t proton_runtime_do_message_loop_work(
-    proton_runtime_handle_t runtime);
-PROTON_API int32_t proton_runtime_wait(proton_runtime_handle_t runtime,
-                                       uint32_t interest_mask,
-                                       int32_t timeout_ms,
-                                       uint32_t *out_ready_mask);
-
-/* Wakes a `proton_runtime_wait` blocked on any runtime, or makes the next one
- * return immediately if none is blocked yet. Losing a wakeup deadlocks the
- * host, so the two cases must behave the same.
- *
- * Takes no handle on purpose. It is called from a thread that owns none, and
- * handles validate thread ownership. It touches only atomics and the platform
- * run loop, so it is safe from any thread and from a foreign runtime. */
-PROTON_API void proton_runtime_signal_wakeup(void);
+int32_t proton_runtime_destroy(proton_runtime_handle_t runtime);
+/* Wakes a blocked host-loop poll, or makes the next one return immediately.
+ * Takes no handle because the foreign waiting thread owns none. */
+void proton_runtime_signal_wakeup(void);
 
 /* The main thread's event loop.
  *
@@ -134,106 +112,95 @@ PROTON_API void proton_runtime_signal_wakeup(void);
  * releases the loop.
  *
  * `poll` is the only thing that advances the platform toolkit once the host
- * loop is running, so the host must keep calling it. A host that owns a
- * runtime handle uses `proton_runtime_do_message_loop_work` instead and does
- * not run a host loop at all. */
-PROTON_API int32_t proton_host_loop_begin(void);
-PROTON_API int32_t proton_host_loop_poll(int32_t timeout_ms,
+ * loop is running, so the host must keep calling it. */
+int32_t proton_host_loop_begin(void);
+int32_t proton_host_loop_poll(int32_t timeout_ms,
                                          uint32_t *out_ready_mask);
-PROTON_API void proton_host_loop_end(void);
-PROTON_API int32_t proton_runtime_set_wakeup_fd(proton_runtime_handle_t runtime,
-                                                int32_t wakeup_fd);
-PROTON_API int32_t proton_runtime_prepare_wakeup_source(
-    proton_runtime_handle_t runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len);
-PROTON_API int32_t
-proton_runtime_activate_wakeup_source(proton_runtime_handle_t runtime);
-PROTON_API int32_t proton_runtime_next_wakeup_delay_ms(
-    proton_runtime_handle_t runtime, int64_t *out_delay_ms);
-PROTON_API int32_t proton_runtime_respond_bridge_request_json(
+void proton_host_loop_end(void);
+int32_t proton_runtime_respond_bridge_request_json(
     proton_runtime_handle_t runtime, const char *response_json);
-PROTON_API int32_t proton_runtime_begin_message_dialog(
+int32_t proton_runtime_begin_message_dialog(
     proton_runtime_handle_t runtime, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,
     int32_t level, int64_t *out_dialog);
 
-PROTON_API int32_t proton_notification_is_supported(int32_t *out_supported);
-PROTON_API int32_t proton_notification_show(const char *title,
+int32_t proton_notification_is_supported(int32_t *out_supported);
+int32_t proton_notification_show(const char *title,
                                             const char *body,
                                             const char *payload,
                                             int32_t has_payload);
-PROTON_API int32_t proton_notification_poll_click(
+int32_t proton_notification_poll_click(
     char *buffer, int32_t buffer_len, int32_t *out_required_len,
     int32_t *out_has_payload, int32_t *out_available);
-PROTON_API int32_t proton_notification_cleanup(void);
+int32_t proton_notification_cleanup(void);
 
-PROTON_API int32_t proton_window_destroy(proton_window_handle_t window);
-PROTON_API int32_t proton_window_show(proton_window_handle_t window);
-PROTON_API int32_t proton_window_hide(proton_window_handle_t window);
-PROTON_API int32_t proton_window_close(proton_window_handle_t window);
-PROTON_API int32_t proton_window_focus(proton_window_handle_t window);
-PROTON_API int32_t proton_window_set_title(proton_window_handle_t window,
+int32_t proton_window_destroy(proton_window_handle_t window);
+int32_t proton_window_show(proton_window_handle_t window);
+int32_t proton_window_hide(proton_window_handle_t window);
+int32_t proton_window_close(proton_window_handle_t window);
+int32_t proton_window_focus(proton_window_handle_t window);
+int32_t proton_window_set_title(proton_window_handle_t window,
                                            const char *title);
-PROTON_API int32_t proton_window_set_size(proton_window_handle_t window,
+int32_t proton_window_set_size(proton_window_handle_t window,
                                           int32_t width, int32_t height);
-PROTON_API int32_t proton_window_minimize(proton_window_handle_t window);
-PROTON_API int32_t proton_window_maximize(proton_window_handle_t window);
-PROTON_API int32_t proton_window_restore(proton_window_handle_t window);
-PROTON_API int32_t proton_window_set_fullscreen(proton_window_handle_t window,
+int32_t proton_window_minimize(proton_window_handle_t window);
+int32_t proton_window_maximize(proton_window_handle_t window);
+int32_t proton_window_restore(proton_window_handle_t window);
+int32_t proton_window_set_fullscreen(proton_window_handle_t window,
                                                 int32_t fullscreen);
-PROTON_API int32_t proton_window_set_position(proton_window_handle_t window,
+int32_t proton_window_set_position(proton_window_handle_t window,
                                               int32_t x, int32_t y);
-PROTON_API int32_t proton_window_set_always_on_top(proton_window_handle_t window,
+int32_t proton_window_set_always_on_top(proton_window_handle_t window,
                                                    int32_t always_on_top);
-PROTON_API int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
+int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                                   int32_t zoom_percent);
-PROTON_API int32_t proton_window_state_json(proton_window_handle_t window,
+int32_t proton_window_state_json(proton_window_handle_t window,
                                             char *buffer, int32_t buffer_len,
                                             int32_t *out_required_len);
-PROTON_API int32_t proton_window_set_close_interception(
+int32_t proton_window_set_close_interception(
     proton_window_handle_t window, int32_t enabled);
-PROTON_API int32_t proton_window_respond_close_request(
+int32_t proton_window_respond_close_request(
     proton_window_handle_t window, int64_t request_id, int32_t allow);
-PROTON_API int32_t proton_window_load_url(proton_window_handle_t window,
+int32_t proton_window_load_url(proton_window_handle_t window,
                                           const char *url);
-PROTON_API int32_t proton_window_load_html(proton_window_handle_t window,
+int32_t proton_window_load_html(proton_window_handle_t window,
                                            const char *html,
                                            const char *base_url);
-PROTON_API int32_t proton_window_load_asset(proton_window_handle_t window,
+int32_t proton_window_load_asset(proton_window_handle_t window,
                                             const char *html,
                                             const char *document_url,
                                             const char *asset_root);
-PROTON_API int32_t proton_window_eval(proton_window_handle_t window,
+int32_t proton_window_eval(proton_window_handle_t window,
                                       const char *script);
-PROTON_API int32_t proton_window_browser_command_json(
+int32_t proton_window_browser_command_json(
     proton_window_handle_t window, const char *command_json);
-PROTON_API int32_t proton_window_respond_browser_request_json(
+int32_t proton_window_respond_browser_request_json(
     proton_window_handle_t window, const char *response_json);
-PROTON_API int32_t proton_window_emit_bridge_event_json(
+int32_t proton_window_emit_bridge_event_json(
     proton_window_handle_t window, const char *event_json);
-PROTON_API int32_t proton_window_bridge_state_json(
+int32_t proton_window_bridge_state_json(
     proton_window_handle_t window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len);
-PROTON_API int32_t proton_window_take_bridge_failure_json(
+int32_t proton_window_take_bridge_failure_json(
     proton_window_handle_t window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len);
-PROTON_API int32_t proton_window_begin_message_dialog(
+int32_t proton_window_begin_message_dialog(
     proton_window_handle_t window, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,
     int32_t level, int64_t *out_dialog);
-PROTON_API int32_t proton_window_begin_confirm_dialog(
+int32_t proton_window_begin_confirm_dialog(
     proton_window_handle_t window, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,
     int32_t level, int64_t *out_dialog);
-PROTON_API int32_t proton_window_begin_open_file_dialog(
+int32_t proton_window_begin_open_file_dialog(
     proton_window_handle_t window, const char *title_utf8,
     int32_t title_len, const char *path_utf8, int32_t path_len,
     int64_t *out_dialog);
-PROTON_API int32_t proton_window_begin_save_file_dialog(
+int32_t proton_window_begin_save_file_dialog(
     proton_window_handle_t window, const char *title_utf8,
     int32_t title_len, const char *path_utf8, int32_t path_len,
     int64_t *out_dialog);
-PROTON_API int32_t proton_window_begin_choose_directory_dialog(
+int32_t proton_window_begin_choose_directory_dialog(
     proton_window_handle_t window, const char *title_utf8,
     int32_t title_len, const char *path_utf8, int32_t path_len,
     int64_t *out_dialog);
@@ -249,35 +216,35 @@ PROTON_API int32_t proton_window_begin_choose_directory_dialog(
 /* Begin retrieving cookies. Completion is delivered through the runtime event
    queue with the returned request id. Returns PROTON_ERR_BUSY if a cookie get
    is already in progress for this window. */
-PROTON_API int32_t proton_window_cookie_begin_get_json(
+int32_t proton_window_cookie_begin_get_json(
     proton_window_handle_t window, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id);
 
 /* Set a cookie from a JSON object. The JSON must contain "url", "name",
    and "value", and may contain "domain", "path", "secure", "http_only",
    "same_site", "expires". Fire-and-forget. */
-PROTON_API int32_t proton_window_cookie_set_json(
+int32_t proton_window_cookie_set_json(
     proton_window_handle_t window, const char *cookie_json);
 
 /* Delete cookies. If url_utf8 is NULL or empty, all cookies are deleted.
    If name_utf8 is non-NULL, only cookies with that name matching the URL
    are deleted. Fire-and-forget. */
-PROTON_API int32_t proton_window_cookie_delete(
+int32_t proton_window_cookie_delete(
     proton_window_handle_t window, const char *url_utf8,
     const char *name_utf8);
 
 /* Flush the cookie store to disk. Fire-and-forget. */
-PROTON_API int32_t proton_window_cookie_flush(proton_window_handle_t window);
+int32_t proton_window_cookie_flush(proton_window_handle_t window);
 
 /* Clear the HTTP cache for the window's request context. Fire-and-forget. */
-PROTON_API int32_t proton_window_clear_cache(proton_window_handle_t window);
+int32_t proton_window_clear_cache(proton_window_handle_t window);
 
 /* Enumerates all connected displays.
    Returns a JSON array of screen objects. Each screen has:
    id, x, y, width, height, work_x, work_y, work_width, work_height,
    scale_factor_percent, is_primary.
    Returns PROTON_ERR_UNSUPPORTED if the native engine is not available. */
-PROTON_API int32_t proton_screen_enumerate_json(char *buffer,
+int32_t proton_screen_enumerate_json(char *buffer,
                                                 int32_t buffer_len,
                                                 int32_t *out_required_len);
 
@@ -293,21 +260,21 @@ PROTON_API int32_t proton_screen_enumerate_json(char *buffer,
    replacement stays on one filesystem. An explicit absolute parent is kept
    for low-level hosts and tests, but is rejected unless it is on that same
    filesystem. */
-PROTON_API int32_t proton_update_stage_begin(
+int32_t proton_update_stage_begin(
     const char *parent_dir, int64_t expected_size,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
-PROTON_API int32_t proton_update_stage_begin_revision(
+int32_t proton_update_stage_begin_revision(
     const char *parent_dir, int64_t expected_size, uint64_t target_revision,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
-PROTON_API int32_t proton_update_stage_write(
+int32_t proton_update_stage_write(
     proton_update_stage_id_t stage, const char *chunk, int32_t chunk_len,
     char *error, int32_t error_len);
-PROTON_API int32_t proton_update_stage_install(
+int32_t proton_update_stage_install(
     proton_update_stage_id_t stage, char *error, int32_t error_len);
-PROTON_API int32_t proton_update_stage_install_outcome(
+int32_t proton_update_stage_install_outcome(
     proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
     int32_t error_len);
-PROTON_API int32_t proton_update_stage_abort(
+int32_t proton_update_stage_abort(
     proton_update_stage_id_t stage, char *error, int32_t error_len);
 
 /* Reads the monotonic update revision embedded in the installed application.
@@ -315,7 +282,7 @@ PROTON_API int32_t proton_update_stage_abort(
    This is an optimistic process-local check used to avoid downloading an
    update another task already installed. The install transaction repeats the
    comparison while holding the cross-process commit lock. */
-PROTON_API int32_t proton_update_current_revision(
+int32_t proton_update_current_revision(
     uint64_t *out_revision, char *error, int32_t error_len);
 
 /* Removes older application bundles retained by successful update swaps.
@@ -325,7 +292,7 @@ PROTON_API int32_t proton_update_current_revision(
    signing identity matches the running application and whose update revision
    is older. A cleanup failure must not make an otherwise healthy application
    fail to start. */
-PROTON_API int32_t proton_update_cleanup_previous(char *error,
+int32_t proton_update_cleanup_previous(char *error,
                                                   int32_t error_len);
 
 /* Installs an authenticated update archive over the running application.
@@ -334,7 +301,7 @@ PROTON_API int32_t proton_update_cleanup_previous(char *error,
    native transaction. The expanded bundle path is never exposed between
    validation and use. Implemented on macOS; other platforms report
    PROTON_ERR_UNSUPPORTED rather than pretending to have installed anything. */
-PROTON_API int32_t proton_update_install(const char *archive,
+int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
                                          const char *parent_dir, char *error,
                                          int32_t error_len);
@@ -344,28 +311,28 @@ PROTON_API int32_t proton_update_install(const char *archive,
 
    Success means the request was accepted, not that the application is running:
    the platform decides that asynchronously and does not report back. */
-PROTON_API int32_t proton_update_relaunch(char *error, int32_t error_len);
+int32_t proton_update_relaunch(char *error, int32_t error_len);
 /* Web contents views: child web views hosted inside a window's content area,
    each backed by its own browser instance. Bounds use a top-left origin in
    the window's content coordinate space, matching the Electron
    WebContentsView model. Requires the "web_contents_view" runtime feature. */
-PROTON_API int32_t proton_view_destroy(proton_view_handle_t view);
-PROTON_API int32_t proton_view_set_bounds(proton_view_handle_t view, int32_t x,
+int32_t proton_view_destroy(proton_view_handle_t view);
+int32_t proton_view_set_bounds(proton_view_handle_t view, int32_t x,
                                           int32_t y, int32_t width,
                                           int32_t height);
-PROTON_API int32_t proton_view_set_visible(proton_view_handle_t view,
+int32_t proton_view_set_visible(proton_view_handle_t view,
                                            int32_t visible);
-PROTON_API int32_t proton_view_set_z_order(proton_view_handle_t view,
+int32_t proton_view_set_z_order(proton_view_handle_t view,
                                            int32_t z_order);
-PROTON_API int32_t proton_view_load_url(proton_view_handle_t view,
+int32_t proton_view_load_url(proton_view_handle_t view,
                                         const char *url);
-PROTON_API int32_t proton_view_load_html(proton_view_handle_t view,
+int32_t proton_view_load_html(proton_view_handle_t view,
                                          const char *html,
                                          const char *base_url);
-PROTON_API int32_t proton_view_eval(proton_view_handle_t view, const char *script);
-PROTON_API int32_t proton_view_browser_command_json(
+int32_t proton_view_eval(proton_view_handle_t view, const char *script);
+int32_t proton_view_browser_command_json(
     proton_view_handle_t view, const char *command_json);
-PROTON_API int32_t proton_view_state_json(proton_view_handle_t view, char *buffer,
+int32_t proton_view_state_json(proton_view_handle_t view, char *buffer,
                                           int32_t buffer_len,
                                           int32_t *out_required_len);
 
@@ -377,27 +344,27 @@ PROTON_API int32_t proton_view_state_json(proton_view_handle_t view, char *buffe
    proton_image_destroy. All functions return PROTON_ERR_UNSUPPORTED when
    the native engine is not available. */
 
-PROTON_API int32_t proton_image_create_empty(proton_image_handle_t *out_image);
-PROTON_API int32_t proton_image_destroy(proton_image_handle_t image);
-PROTON_API int32_t proton_image_add_png(proton_image_handle_t image,
+int32_t proton_image_create_empty(proton_image_handle_t *out_image);
+int32_t proton_image_destroy(proton_image_handle_t image);
+int32_t proton_image_add_png(proton_image_handle_t image,
                                         const uint8_t *data,
                                         int32_t data_len,
                                         float scale_factor);
-PROTON_API int32_t proton_image_add_jpeg(proton_image_handle_t image,
+int32_t proton_image_add_jpeg(proton_image_handle_t image,
                                          const uint8_t *data,
                                          int32_t data_len,
                                          float scale_factor);
-PROTON_API int32_t proton_image_add_bitmap(proton_image_handle_t image,
+int32_t proton_image_add_bitmap(proton_image_handle_t image,
                                            const uint8_t *data,
                                            int32_t data_len,
                                            int32_t width, int32_t height,
                                            float scale_factor);
-PROTON_API int32_t proton_image_is_empty(proton_image_handle_t image);
-PROTON_API int32_t proton_image_get_size_json(proton_image_handle_t image,
+int32_t proton_image_is_empty(proton_image_handle_t image);
+int32_t proton_image_get_size_json(proton_image_handle_t image,
                                               char *buffer,
                                               int32_t buffer_len,
                                               int32_t *out_required_len);
-PROTON_API int32_t proton_image_to_png(proton_image_handle_t image,
+int32_t proton_image_to_png(proton_image_handle_t image,
                                        float scale_factor,
                                        int32_t with_transparency,
                                        uint8_t *buffer,
@@ -405,14 +372,14 @@ PROTON_API int32_t proton_image_to_png(proton_image_handle_t image,
                                        int32_t *out_required_len,
                                        int32_t *out_width,
                                        int32_t *out_height);
-PROTON_API int32_t proton_image_to_jpeg(proton_image_handle_t image,
+int32_t proton_image_to_jpeg(proton_image_handle_t image,
                                         float scale_factor,
                                         int32_t quality, uint8_t *buffer,
                                         int32_t buffer_len,
                                         int32_t *out_required_len,
                                         int32_t *out_width,
                                         int32_t *out_height);
-PROTON_API int32_t proton_image_to_bitmap(proton_image_handle_t image,
+int32_t proton_image_to_bitmap(proton_image_handle_t image,
                                           float scale_factor,
                                           uint8_t *buffer,
                                           int32_t buffer_len,
@@ -420,7 +387,7 @@ PROTON_API int32_t proton_image_to_bitmap(proton_image_handle_t image,
                                           int32_t *out_width,
                                           int32_t *out_height);
 
-PROTON_API int32_t proton_last_error_message(char *buffer,
+int32_t proton_last_error_message(char *buffer,
                                              int32_t buffer_len);
 
 #ifdef __cplusplus

@@ -4,6 +4,8 @@ package "moonbit-community/proton_cli/fsutil"
 // Values
 pub async fn find_project_root_from(String) -> String
 
+pub async fn find_workspace_root_from(String) -> String
+
 pub async fn path_exists(String) -> Bool
 
 pub fn path_is_absolute(String) -> Bool

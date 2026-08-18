@@ -600,7 +600,6 @@ async fn run_package_build(plan : PackagePlan) -> String {
   )
 }
 
-///|
 async fn read_active_runtime(root : String) -> String {
   match @env.get_env_var("PROTON_NATIVE_DIST") {
     Some(value) if value.trim().to_owned() != "" =>

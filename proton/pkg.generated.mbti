@@ -6,8 +6,8 @@ import {
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension",
   "moonbit-community/proton/internal/locale",
+  "moonbit-community/proton/internal/native",
   "moonbit-community/proton/manifest",
-  "moonbit-community/proton/native",
   "moonbit-community/proton/updater",
   "moonbit-community/proton_contract",
   "moonbitlang/async",
@@ -15,7 +15,7 @@ import {
 }
 
 // Values
-pub fn abi_version() -> Int
+pub fn app() -> App
 
 pub fn app_data_dir(String) -> String raise AppPathError
 
@@ -23,36 +23,28 @@ pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizab
 
 pub async fn check_for_update() -> UpdateCheck
 
-pub fn execute_process(config? : @native.RuntimeConfig) -> @native.ProcessResult raise @native.NativeError
+pub fn config(String) -> App
 
 pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
-pub fn last_error_message() -> String
-
-pub fn probe_runtime(config? : @native.RuntimeConfig) -> Unit raise @native.NativeError
-
 pub fn resource_dir() -> String
 
-pub fn runtime_info() -> @native.RuntimeInfo raise @native.NativeError
-
-pub fn runtime_info_json() -> String raise @native.NativeError
-
-pub fn screens() -> Array[@native.ScreenInfo] raise @native.NativeError
+pub fn screens() -> Array[ScreenInfo] raise ScreenQueryError
 
 pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError
 
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
-pub fn view(String, width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, background_color? : String) -> @native.ViewConfig
+pub fn view(String, width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, background_color? : String) -> ViewConfig
 
 // Errors
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
   LifecycleHook(LifecycleHookError)
-  WindowDestroy(@native.NativeError)
-  RuntimeDestroy(@native.NativeError)
+  WindowDestroy(status~ : Int, detail~ : String)
+  RuntimeDestroy(status~ : Int, detail~ : String)
 } derive(@debug.Debug)
 pub fn AppCleanupError::message(Self) -> String
 pub fn AppCleanupError::output(Self, &Logger) -> Unit
@@ -77,7 +69,7 @@ pub fn AppConfigurationError::to_string(Self) -> String
 
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
-  NativeLoad(action~ : String, error~ : @native.NativeError)
+  PlatformLoad(action~ : String, status~ : Int, detail~ : String)
   ClosedDuringStartup
 } derive(@debug.Debug)
 pub fn AppEntryError::message(Self) -> String
@@ -88,7 +80,7 @@ pub fn AppEntryError::to_string(Self) -> String
 pub(all) suberror AppPathError {
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
-  PlatformProbe(@native.NativeError)
+  PlatformProbe(status~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn AppPathError::equal(Self, Self) -> Bool
 pub fn AppPathError::message(Self) -> String
@@ -99,12 +91,12 @@ pub(all) suberror AppRunError {
   EventLoopError(String)
   ConfigurationError(AppConfigurationError)
   UnsupportedNativeFeature(feature~ : String)
-  NativeRuntimeError(action~ : String, error~ : @native.NativeError)
+  RuntimeOperationFailed(action~ : String, status~ : Int, detail~ : String)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
   LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)
-  BridgeStartupError(@native.BridgeDiagnostic)
-  BridgeRuntimeError(@native.BridgeDiagnostic)
+  BridgeStartupError(BridgeDiagnostic)
+  BridgeRuntimeError(BridgeDiagnostic)
   CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
 } derive(@debug.Debug)
@@ -135,13 +127,22 @@ pub fn LifecycleHookError::to_repr(Self) -> @debug.Repr
 pub fn LifecycleHookError::to_string(Self) -> String
 
 pub(all) suberror NotificationDeliveryError {
-  Native(@native.NativeError)
+  NativeFailure(status~ : Int, detail~ : String)
   WaitInterrupted(detail~ : String)
+  DeliveryFailed(message~ : String)
 } derive(Eq, @debug.Debug)
 pub fn NotificationDeliveryError::equal(Self, Self) -> Bool
 pub fn NotificationDeliveryError::message(Self) -> String
 pub fn NotificationDeliveryError::not_equal(Self, Self) -> Bool
 pub fn NotificationDeliveryError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror ScreenQueryError {
+  QueryFailed(status~ : Int, detail~ : String)
+} derive(@debug.Debug)
+pub fn ScreenQueryError::message(Self) -> String
+pub fn ScreenQueryError::output(Self, &Logger) -> Unit
+pub fn ScreenQueryError::to_repr(Self) -> @debug.Repr
+pub fn ScreenQueryError::to_string(Self) -> String
 
 pub(all) suberror SystemLocaleError {
   NativeQuery(@native.NativeError)
@@ -159,7 +160,7 @@ pub(all) suberror WindowSessionError {
   AlreadyExists(id~ : String)
   StaleView(id~ : String)
   Cancelled
-  OperationFailed(action~ : String, error~ : @native.NativeError)
+  OperationFailed(action~ : String, status~ : Int, detail~ : String)
   StartupFailed(id~ : String, error~ : AppRunError)
 } derive(@debug.Debug)
 pub fn WindowSessionError::message(Self) -> String
@@ -169,7 +170,7 @@ pub fn WindowSessionError::to_string(Self) -> String
 
 // Types and methods
 type App
-pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : @native.WindowSizeHint, titlebar_style? : @native.TitlebarStyle, open_on_start? : Bool) -> Self
+pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, open_on_start? : Bool) -> Self
 pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise) -> Self
@@ -185,11 +186,11 @@ pub fn App::extension(Self, @extension.Extension) -> Self
 pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
-pub fn App::menu(Self, @native.MenuBar) -> Self
+pub fn App::menu(Self, MenuBar) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
 pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise) -> Self
-pub fn App::on_launch_input(Self, async (@native.RuntimeLaunchInput) -> Unit noraise) -> Self
+pub fn App::on_launch_input(Self, async (RuntimeLaunchInput) -> Unit noraise) -> Self
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_popup_request(Self, async (BrowserHandle, PopupRequest) -> PopupDecision noraise) -> Self
@@ -203,11 +204,11 @@ pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::single_instance(Self, String) -> Self
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
-pub fn App::titlebar_style(Self, @native.TitlebarStyle) -> Self
+pub fn App::titlebar_style(Self, TitlebarStyle) -> Self
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
 pub fn App::url_scheme(Self, String) -> Self
 pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Self
-pub fn App::with_view(Self, String, @native.ViewConfig) -> Self
+pub fn App::with_view(Self, String, ViewConfig) -> Self
 
 pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
@@ -218,6 +219,22 @@ pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::windows(Self) -> WindowManager
+
+pub(all) struct BridgeDiagnostic {
+  stage : String
+  code : String
+  message : String
+  page_instance : String
+  url : String
+  owner : String?
+  source_url : String?
+  source_line : String?
+  line : Int?
+  column : Int?
+  stack : String?
+  additional_failure_count : Int?
+  details_truncated : Bool
+} derive(Eq, @debug.Debug)
 
 pub struct BrowserHandle {
   id : String
@@ -292,6 +309,55 @@ pub fn MediaPermissionRequest::equal(Self, Self) -> Bool
 pub fn MediaPermissionRequest::not_equal(Self, Self) -> Bool
 pub fn MediaPermissionRequest::to_repr(Self) -> @debug.Repr
 
+pub struct Menu {
+  label : String?
+  role : MenuRole?
+  items : Array[MenuItem]?
+}
+pub fn Menu::new(String, items~ : Array[MenuItem]) -> Self
+pub fn Menu::role(MenuRole, label? : String, items? : Array[MenuItem]) -> Self
+
+pub struct MenuBar {
+  menus : Array[Menu]
+}
+pub fn MenuBar::new(menus~ : Array[Menu]) -> Self
+
+pub struct MenuItem {
+  kind : Int
+  id : String?
+  label : String?
+  key : String?
+  role : MenuItemRole?
+}
+pub fn MenuItem::command(String, String, key? : String) -> Self
+pub fn MenuItem::role(MenuItemRole, label? : String, key? : String) -> Self
+pub fn MenuItem::separator() -> Self
+
+pub(all) enum MenuItemRole {
+  Quit
+  Hide
+  HideOthers
+  ShowAll
+  Close
+  Minimize
+  Zoom
+  Undo
+  Redo
+  Cut
+  Copy
+  Paste
+  SelectAll
+} derive(Eq, @debug.Debug)
+
+pub(all) enum MenuRole {
+  Application
+  File
+  Edit
+  View
+  Window
+  Help
+} derive(Eq, @debug.Debug)
+
 pub(all) enum NavigationDecision {
   Allow
   Deny
@@ -343,6 +409,31 @@ pub fn PopupRequest::equal(Self, Self) -> Bool
 pub fn PopupRequest::not_equal(Self, Self) -> Bool
 pub fn PopupRequest::to_repr(Self) -> @debug.Repr
 
+pub(all) enum RuntimeLaunchInput {
+  OpenUrls(Array[String])
+  OpenFiles(Array[String])
+  Reopen
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ScreenInfo {
+  id : Int
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  work_x : Int
+  work_y : Int
+  work_width : Int
+  work_height : Int
+  scale_factor_percent : Int
+  is_primary : Bool
+} derive(Eq, @debug.Debug)
+
+pub(all) enum TitlebarStyle {
+  Default
+  Overlay
+} derive(Eq, @debug.Debug)
+
 pub enum UpdateCheck {
   NotConfigured
   UpToDate
@@ -356,6 +447,18 @@ pub enum UpdateInstallOutcome {
 pub fn UpdateInstallOutcome::equal(Self, Self) -> Bool
 pub fn UpdateInstallOutcome::not_equal(Self, Self) -> Bool
 pub fn UpdateInstallOutcome::to_repr(Self) -> @debug.Repr
+
+pub struct ViewConfig {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  visible : Bool
+  z_order : Int
+  initial_url : String
+  background_color : String?
+}
+pub fn ViewConfig::new(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String) -> Self
 
 pub(all) enum ViewEvent {
   LoadingChanged(is_loading~ : Bool)
@@ -377,10 +480,9 @@ pub struct ViewHandle {
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
   send_view_command : (String, Int?) -> Unit raise WindowSessionError
-  read_view_state : () -> @native.ViewState raise WindowSessionError
+  read_view_state : () -> ViewState raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
 }
-pub fn ViewHandle::as_native_ref(Self) -> @native.ViewRef
 pub fn ViewHandle::back(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::close(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::close_devtools(Self) -> Unit raise WindowSessionError
@@ -394,8 +496,17 @@ pub fn ViewHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessio
 pub fn ViewHandle::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_visible(Self, Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_z_order(Self, Int) -> Unit raise WindowSessionError
-pub fn ViewHandle::state(Self) -> @native.ViewState raise WindowSessionError
+pub fn ViewHandle::state(Self) -> ViewState raise WindowSessionError
 pub fn ViewHandle::stop(Self) -> Unit raise WindowSessionError
+
+pub(all) struct ViewState {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  visible : Bool
+  z_order : Int
+} derive(Eq, @debug.Debug)
 
 pub(all) enum WindowCloseDecision {
   Allow
@@ -407,7 +518,6 @@ pub fn WindowCloseDecision::to_repr(Self) -> @debug.Repr
 
 pub struct WindowContext {
   id : String
-  window : @native.WindowRef
   handle : WindowHandle
   windows : WindowManager
   tasks : @async.TaskGroup[Unit]
@@ -420,11 +530,10 @@ pub fn WindowContext::id(Self) -> String
 pub fn WindowContext::locale(Self) -> @locale.Locale
 pub fn WindowContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn WindowContext::task_group(Self) -> @async.TaskGroup[Unit]
-pub fn WindowContext::window(Self) -> @native.WindowRef
 pub fn WindowContext::windows(Self) -> WindowManager
 
 pub(all) enum WindowEvent {
-  StateChanged(@native.WindowState)
+  StateChanged(WindowState)
 } derive(Eq, @debug.Debug)
 pub fn WindowEvent::equal(Self, Self) -> Bool
 pub fn WindowEvent::not_equal(Self, Self) -> Bool
@@ -451,15 +560,14 @@ pub struct WindowHandle {
   set_window_position : (Int, Int) -> Unit raise WindowSessionError
   set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
-  read_window_state : () -> @native.WindowState raise WindowSessionError
+  read_window_state : () -> WindowState raise WindowSessionError
   browser : BrowserHandle
-  add_view : (String, @native.ViewConfig) -> ViewHandle raise WindowSessionError
+  add_view : (String, ViewConfig) -> ViewHandle raise WindowSessionError
   remove_view : (String) -> Unit raise WindowSessionError
   list_views : () -> Array[ViewHandle]
   find_view : (String) -> ViewHandle?
 }
-pub fn WindowHandle::add_view(Self, String, @native.ViewConfig) -> ViewHandle raise WindowSessionError
-pub fn WindowHandle::as_native_ref(Self) -> @native.WindowRef
+pub fn WindowHandle::add_view(Self, String, ViewConfig) -> ViewHandle raise WindowSessionError
 pub fn WindowHandle::browser(Self) -> BrowserHandle
 pub fn WindowHandle::close(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::focus(Self) -> Unit raise WindowSessionError
@@ -476,7 +584,7 @@ pub fn WindowHandle::set_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_title(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::show(Self) -> Unit raise WindowSessionError
-pub fn WindowHandle::state(Self) -> @native.WindowState raise WindowSessionError
+pub fn WindowHandle::state(Self) -> WindowState raise WindowSessionError
 pub fn WindowHandle::view(Self, String) -> ViewHandle?
 pub fn WindowHandle::views(Self) -> Array[ViewHandle]
 
@@ -487,63 +595,58 @@ pub struct WindowManager {
 pub fn WindowManager::find(Self, String) -> WindowHandle?
 pub async fn WindowManager::open(Self, String) -> WindowHandle raise WindowSessionError
 
+pub(all) struct WindowMonitor {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  work_x : Int
+  work_y : Int
+  work_width : Int
+  work_height : Int
+  scale_factor_percent : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum WindowSizeHint {
+  Unconstrained
+  Fixed
+  Min
+  Max
+} derive(Eq, @debug.Debug)
+
+pub(all) struct WindowState {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  monitor : WindowMonitor
+  zoom_percent : Int
+  visible : Bool
+  focused : Bool
+  minimized : Bool
+  maximized : Bool
+  fullscreen : Bool
+  always_on_top : Bool
+  theme : String
+} derive(Eq, @debug.Debug)
+
 // Type aliases
 pub using @manifest {type AppEntry}
-
-pub using @native {type BridgeDiagnostic}
-
-pub using @native {type BridgeLifecycleState}
 
 pub using @core {type AppCommandRequestContext as CommandContext}
 
 pub using @command {type CommandRegistrar}
 
+pub using @core {type CommandWindow}
+
 pub using @locale {type Locale}
 
 pub using @locale {type LocaleParseError}
-
-pub using @native {type Menu}
-
-pub using @native {type MenuBar}
-
-pub using @native {type MenuItem}
-
-pub using @native {type MenuItemRole}
-
-pub using @native {type MenuRole}
-
-pub using @native {type NativeError}
 
 pub using @manifest {type PermissionGrant}
 
 pub using @manifest {type PermissionOrigin}
 
 pub using @command {type PermissionScopeValidationError}
-
-pub using @native {type ProcessResult}
-
-pub using @native {type Runtime}
-
-pub using @native {type RuntimeConfig}
-
-pub using @native {type RuntimeEvent}
-
-pub using @native {type RuntimeInfo}
-
-pub using @native {type RuntimeLaunchInput}
-
-pub using @native {type ScreenInfo}
-
-pub using @native {type TitlebarStyle}
-
-pub using @native {type Window}
-
-pub using @native {type WindowConfig}
-
-pub using @native {type WindowMonitor}
-
-pub using @native {type WindowSizeHint}
-
-pub using @native {type WindowState}
 
 // Traits

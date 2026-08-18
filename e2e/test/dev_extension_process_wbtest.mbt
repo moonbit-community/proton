@@ -1,29 +1,4 @@
 ///|
-test "dev extension retry classification stays narrow" {
-  assert_true(retryable_dev_extension_error(@io.ReaderClosed))
-  assert_true(
-    retryable_dev_extension_error(
-      @client.BrowserError::CommandFailed(-32000, "Target closed"),
-    ),
-  )
-  assert_true(
-    retryable_dev_extension_error(
-      Failure::Failure("scenario app exited before CDP became ready"),
-    ),
-  )
-  assert_false(
-    retryable_dev_extension_error(
-      @client.BrowserError::InvalidField("sessionId"),
-    ),
-  )
-  assert_false(
-    retryable_dev_extension_error(
-      Failure::Failure("connected CDP probe failed"),
-    ),
-  )
-}
-
-///|
 test "dev extension command timeouts cover slow platform work" {
   let command_timeout = dev_extension_command_timeout(60000)
   if @path.sep == '\\' {

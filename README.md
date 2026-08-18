@@ -3,7 +3,7 @@
 Proton is a MoonBit framework for building native desktop applications with a
 web frontend.
 
-Supported prebuilt runtimes:
+Supported source-built native backends:
 
 - Windows x64
 - macOS Apple Silicon
@@ -40,12 +40,13 @@ desktop runtime. `.proton/` stores the selected runtime metadata and should not
 be committed.
 
 `cef setup` stores downloaded CEF binaries in
-`~/.proton/cache/cef/<platform>/<cef-name>` and assembled Proton runtimes in
+`~/.proton/cache/cef/<platform>/<cef-name>` and assembled CEF runtimes in
 `~/.proton/runtimes/<platform>/<runtime-id>`. Subsequent projects reference the
 same immutable runtime through their small `.proton/runtime.json` instead of
-copying hundreds of megabytes into every project. Override the cache roots with
-`PROTON_CEF_CACHE` and `PROTON_RUNTIME_CACHE`; relative overrides are resolved
-from the project root.
+copying hundreds of megabytes into every project. Proton's own native sources
+are compiled into the application by Moon; only CEF is cached externally.
+Override the cache roots with `PROTON_CEF_CACHE` and `PROTON_RUNTIME_CACHE`;
+relative overrides are resolved from the project root.
 
 ## Application entry
 
@@ -159,9 +160,9 @@ Until the page reports its first region update, Proton keeps a small DPI-aware
 leading drag fallback. Pages must also reserve the native caption-button area.
 Overlay windows request DWM's dark caption appearance so the native controls
 blend with dark application chrome.
-Typed window configs send `titlebar_style` only when the loaded runtime reports
-the `titlebar_overlay` feature. Older prebuilts and unsupported platforms omit
-the field and retain their default titlebar behavior.
+Typed window configs send `titlebar_style` only when the source-built backend
+reports the `titlebar_overlay` feature. Unsupported platforms retain their
+default titlebar behavior.
 See `examples/48_titlebar_overlay` for a cross-platform overlay layout example.
 
 The primary entry constructors accept `resizable=false` for a fixed window.
@@ -405,10 +406,12 @@ processes, CDP connections, frontend servers, and cleanup:
 
 ```sh
 moon -C cli run . -- -C .. cef setup
-moon build proton/internal/cef_process --target native
 moon -C e2e test -p moonbit-community/proton/e2e/test \
   --target native --no-parallelize --diagnostic-limit 200
 ```
+
+Each E2E scenario installs its release CEF helper from the local Proton source
+with `moon install --path` into the scenario's temporary directory.
 
 For an application that is already running with CDP enabled, use the typed
 driver instead:

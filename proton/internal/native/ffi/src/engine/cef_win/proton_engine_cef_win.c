@@ -307,7 +307,6 @@ static void proton_engine_release_pump_event(void) {
   }
 }
 static proton_engine_runtime_t *g_proton_engine_active_runtime = NULL;
-static volatile LONG g_proton_engine_wakeup_source_id = 0;
 
 static void CEF_CALLBACK proton_engine_osr_get_view_rect(
     cef_render_handler_t *self,
@@ -371,33 +370,13 @@ static void CEF_CALLBACK proton_engine_osr_on_paint(
     int width,
     int height);
 
-static void proton_engine_signal_wakeup_source(
-    proton_engine_runtime_t *runtime, unsigned char wakeup_byte) {
-  if (runtime == NULL || !runtime->wakeup_lock_initialized) {
-    return;
-  }
-  EnterCriticalSection(&runtime->wakeup_lock);
-  if (runtime->wakeup_write != NULL && runtime->wakeup_active) {
-    DWORD written = 0;
-    if (!WriteFile(runtime->wakeup_write, &wakeup_byte, 1, &written, NULL)) {
-      DWORD error = GetLastError();
-      if (error == ERROR_BROKEN_PIPE) {
-        runtime->wakeup_active = 0;
-      }
-      // Any other failure is transient: ERROR_NO_DATA means the NOWAIT pipe
-      // is full, and the buffered bytes already guarantee a wakeup. Keep the
-      // pipe active instead of disabling wakeups permanently.
-    }
-  }
-  LeaveCriticalSection(&runtime->wakeup_lock);
-}
-
 static void proton_engine_signal_wait_source(
     proton_engine_runtime_t *runtime, uint32_t ready_mask) {
+  (void)runtime;
+  (void)ready_mask;
   if (g_proton_engine_pump_event != NULL) {
     SetEvent(g_proton_engine_pump_event);
   }
-  proton_engine_signal_wakeup_source(runtime, (unsigned char)ready_mask);
 }
 
 void proton_engine_runtime_signal_external_event(
@@ -3165,31 +3144,9 @@ int32_t proton_engine_runtime_create(
   return PROTON_OK;
 }
 
-static void proton_engine_close_wakeup_source(
-    proton_engine_runtime_t *runtime) {
-  if (runtime == NULL || !runtime->wakeup_lock_initialized) {
-    return;
-  }
-  EnterCriticalSection(&runtime->wakeup_lock);
-  HANDLE wakeup_write = runtime->wakeup_write;
-  runtime->wakeup_write = NULL;
-  runtime->wakeup_active = 0;
-  runtime->wakeup_path[0] = '\0';
-  LeaveCriticalSection(&runtime->wakeup_lock);
-  if (wakeup_write != NULL) {
-    DisconnectNamedPipe(wakeup_write);
-    CloseHandle(wakeup_write);
-  }
-}
-
 static void proton_engine_dispose_runtime_state(
     proton_engine_runtime_t *runtime) {
-  proton_engine_close_wakeup_source(runtime);
   proton_engine_bridge_pending_clear_all();
-  if (runtime->wakeup_lock_initialized) {
-    DeleteCriticalSection(&runtime->wakeup_lock);
-    runtime->wakeup_lock_initialized = 0;
-  }
   proton_engine_release_pump_event();
   proton_engine_reset_scheduled_pump();
   if (g_proton_engine_active_runtime == runtime) {
@@ -3443,113 +3400,6 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   }
   *out_ready_mask = ready_mask & interest_mask;
   return PROTON_OK;
-}
-
-// TODO: Connect a Windows async event source instead of a POSIX descriptor.
-int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
-                                            int32_t wakeup_fd,
-                                            char *error,
-                                            size_t error_len) {
-  (void)runtime;
-  (void)wakeup_fd;
-  proton_engine_set_message(error, error_len,
-                            "runtime wakeup fd is not supported on Windows");
-  return PROTON_ERR_UNSUPPORTED;
-}
-
-int32_t proton_engine_runtime_prepare_wakeup_source(
-    proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len) {
-  if (out_required_len != NULL) {
-    *out_required_len = 0;
-  }
-  if (runtime == NULL || !g_proton_cef_initialized) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  if (out_required_len == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "out_required_len is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-
-  EnterCriticalSection(&runtime->wakeup_lock);
-  if (runtime->wakeup_write == NULL) {
-    LONG source_id = InterlockedIncrement(&g_proton_engine_wakeup_source_id);
-    snprintf(runtime->wakeup_path, sizeof(runtime->wakeup_path),
-             "\\\\.\\pipe\\proton.runtime.%lu.%ld",
-             (unsigned long)GetCurrentProcessId(), (long)source_id);
-    wchar_t wide_path[256] = {0};
-    proton_engine_utf8_to_wide(
-        runtime->wakeup_path, wide_path,
-        (int)(sizeof(wide_path) / sizeof(wide_path[0])));
-    runtime->wakeup_write = CreateNamedPipeW(
-        wide_path, PIPE_ACCESS_OUTBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE,
-        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_NOWAIT, 1, 4096, 4096, 0,
-        NULL);
-    if (runtime->wakeup_write == INVALID_HANDLE_VALUE) {
-      runtime->wakeup_write = NULL;
-      runtime->wakeup_path[0] = '\0';
-      LeaveCriticalSection(&runtime->wakeup_lock);
-      proton_engine_set_message(error, error_len,
-                                "failed to create runtime wakeup source");
-      return PROTON_ERR_PLATFORM;
-    }
-  }
-  size_t required = strlen(runtime->wakeup_path);
-  *out_required_len = (int32_t)required;
-  if (buffer == NULL || buffer_len <= (int32_t)required) {
-    LeaveCriticalSection(&runtime->wakeup_lock);
-    proton_engine_set_message(error, error_len,
-                              "runtime wakeup source buffer is too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  memcpy(buffer, runtime->wakeup_path, required + 1);
-  LeaveCriticalSection(&runtime->wakeup_lock);
-  return PROTON_OK;
-}
-
-int32_t proton_engine_runtime_activate_wakeup_source(
-    proton_engine_runtime_t *runtime, char *error, size_t error_len) {
-  if (runtime == NULL || !g_proton_cef_initialized) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  EnterCriticalSection(&runtime->wakeup_lock);
-  if (runtime->wakeup_write == NULL) {
-    LeaveCriticalSection(&runtime->wakeup_lock);
-    proton_engine_set_message(error, error_len,
-                              "runtime wakeup source is not prepared");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  BOOL connected = ConnectNamedPipe(runtime->wakeup_write, NULL);
-  DWORD connect_error = connected ? ERROR_SUCCESS : GetLastError();
-  if (!connected && connect_error != ERROR_PIPE_CONNECTED) {
-    LeaveCriticalSection(&runtime->wakeup_lock);
-    proton_engine_set_message(error, error_len,
-                              "runtime wakeup source has no reader");
-    return PROTON_ERR_PLATFORM;
-  }
-  runtime->wakeup_active = 1;
-  LeaveCriticalSection(&runtime->wakeup_lock);
-  proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
-}
-
-// TODO: Expose scheduled pump deadlines with the Windows async event source.
-int32_t proton_engine_runtime_next_wakeup_delay_ms(
-    proton_engine_runtime_t *runtime,
-    int64_t *out_delay_ms,
-    char *error,
-    size_t error_len) {
-  (void)runtime;
-  if (out_delay_ms != NULL) {
-    *out_delay_ms = -1;
-  }
-  proton_engine_set_message(
-      error, error_len,
-      "runtime wakeup delay is not supported on Windows");
-  return PROTON_ERR_UNSUPPORTED;
 }
 
 // TODO: Implement app menu rendering and command events on Windows.

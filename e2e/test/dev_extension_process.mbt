@@ -510,48 +510,11 @@ async fn run_dev_extension_scenario_once(
 }
 
 ///|
-async fn run_dev_extension_scenario_with_retry(
-  root : String,
-  timeout : Int,
-) -> Unit {
+async fn run_dev_extension_scenario(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-dev-extension-")
   defer remove_dev_extension_tree(output_root)
-  let mut attempt = 0
-  while attempt < 2 {
-    let succeeded = try {
-      run_dev_extension_scenario_once(root, output_root, timeout)
-      true
-    } catch {
-      error => {
-        if attempt == 1 || !retryable_dev_extension_error(error) {
-          raise error
-        }
-        println(
-          "MoonBit 47_dev_extension_js transient attempt failed; retrying once",
-        )
-        false
-      }
-    }
-    if succeeded {
-      return
-    }
-    @async.sleep(1000)
-    attempt = attempt + 1
-  }
-}
-
-///|
-fn retryable_dev_extension_error(error : Error) -> Bool {
-  // This scenario deliberately reloads and replaces its direct page target.
-  // On a loaded CI runner CEF can close the old page WebSocket just before the
-  // reconnect loop takes ownership, and a CDP command issued against the
-  // dying target then surfaces as CommandFailed.  Recreate the isolated
-  // scenario once; persistent transport closures still fail on the second
-  // attempt.
-  match error {
-    @client.BrowserError::CommandFailed(_, _) => true
-    _ => retryable_scenario_error(error)
-  }
+  install_scenario_helper(root, output_root)
+  run_dev_extension_scenario_once(root, output_root, timeout)
 }
 
 ///|

@@ -139,20 +139,6 @@ int32_t proton_engine_host_loop_poll(int32_t timeout_ms,
                                      char *error,
                                      size_t error_len);
 void proton_engine_host_loop_end(void);
-int32_t proton_engine_runtime_set_wakeup_fd(proton_engine_runtime_t *runtime,
-                                            int32_t wakeup_fd,
-                                            char *error,
-                                            size_t error_len);
-int32_t proton_engine_runtime_prepare_wakeup_source(
-    proton_engine_runtime_t *runtime, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len);
-int32_t proton_engine_runtime_activate_wakeup_source(
-    proton_engine_runtime_t *runtime, char *error, size_t error_len);
-int32_t proton_engine_runtime_next_wakeup_delay_ms(
-    proton_engine_runtime_t *runtime,
-    int64_t *out_delay_ms,
-    char *error,
-    size_t error_len);
 void proton_engine_runtime_signal_external_event(
     proton_engine_runtime_t *runtime);
 int32_t proton_engine_runtime_set_menu(

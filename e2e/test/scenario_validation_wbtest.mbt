@@ -49,45 +49,10 @@ test "E2E paths resolve backslash relative runtime directories" {
 }
 
 ///|
-test "scenario retries only startup and closed CDP transports" {
+test "scenario operation timeouts cover their explicit phases" {
   assert_eq(scenario_operation_timeout("52_web_contents_view", 60000), 240000)
   assert_eq(scenario_operation_timeout("41_app_commands", 60000), 120000)
-  assert_true(
-    retryable_scenario_error(
-      E2eOperationError::TimedOut(
-        description="E2E scenario stalled",
-        timeout_ms=60000,
-      ),
-    ),
-  )
-  assert_true(retryable_scenario_error(@io.ReaderClosed))
-  assert_true(
-    retryable_scenario_error(
-      Failure::Failure("scenario app exited before CDP became ready"),
-    ),
-  )
-  assert_true(
-    retryable_scenario_error(
-      Failure::Failure(
-        "timed out waiting for navigation to http://127.0.0.1:8080/probe.html",
-      ),
-    ),
-  )
-  assert_true(
-    retryable_scenario_error_for(
-      "52_web_contents_view",
-      Failure::Failure("scenario app did not exit within 20000ms"),
-    ),
-  )
-  assert_false(
-    retryable_scenario_error_for(
-      "41_app_commands",
-      Failure::Failure("scenario app did not exit within 20000ms"),
-    ),
-  )
-  assert_false(
-    retryable_scenario_error(Failure::Failure("connected CDP probe failed")),
-  )
+  assert_eq(scenario_operation_timeout("38_async_extension_add", 60000), 60000)
 }
 
 ///|

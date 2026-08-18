@@ -17,7 +17,7 @@ struct App {
   mut single_instance_identifier : String?
   mut explicit_locale : @locale.Locale?
   mut bridge_startup_timeout_value_ms : Int
-  mut menu : @native.MenuBar?
+  mut menu : MenuBar?
   url_schemes : Array[String]
   document_extensions : Array[String]
   mut update_channel : ResolvedUpdateChannel?
@@ -26,7 +26,7 @@ struct App {
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
-  planned_views : Array[(String, @native.ViewConfig)]
+  planned_views : Array[(String, ViewConfig)]
   launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
@@ -300,7 +300,7 @@ pub struct ViewHandle {
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
   send_view_command : (String, Int?) -> Unit raise WindowSessionError
-  read_view_state : () -> @native.ViewState raise WindowSessionError
+  read_view_state : () -> ViewState raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
 }
 
@@ -325,9 +325,9 @@ pub struct WindowHandle {
   set_window_position : (Int, Int) -> Unit raise WindowSessionError
   set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
-  read_window_state : () -> @native.WindowState raise WindowSessionError
+  read_window_state : () -> WindowState raise WindowSessionError
   browser : BrowserHandle
-  add_view : (String, @native.ViewConfig) -> ViewHandle raise WindowSessionError
+  add_view : (String, ViewConfig) -> ViewHandle raise WindowSessionError
   remove_view : (String) -> Unit raise WindowSessionError
   list_views : () -> Array[ViewHandle]
   find_view : (String) -> ViewHandle?
@@ -343,7 +343,7 @@ pub struct WindowManager {
 ///|
 /// An observed change to a running native window.
 pub(all) enum WindowEvent {
-  StateChanged(@native.WindowState)
+  StateChanged(WindowState)
 } derive(Debug, Eq)
 
 ///|
@@ -520,7 +520,7 @@ pub(all) suberror WindowSessionError {
   AlreadyExists(id~ : String)
   StaleView(id~ : String)
   Cancelled
-  OperationFailed(action~ : String, error~ : @native.NativeError)
+  OperationFailed(action~ : String, status~ : Int, detail~ : String)
   StartupFailed(id~ : String, error~ : AppRunError)
 } derive(Debug)
 
@@ -580,7 +580,7 @@ pub extend AppConfigurationError with Debug::{to_repr}
 /// Failures while loading the application's initial document.
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
-  NativeLoad(action~ : String, error~ : @native.NativeError)
+  PlatformLoad(action~ : String, status~ : Int, detail~ : String)
   ClosedDuringStartup
 } derive(Debug)
 
@@ -615,8 +615,8 @@ pub extend LifecycleHookError with Debug::{to_repr}
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
   LifecycleHook(LifecycleHookError)
-  WindowDestroy(@native.NativeError)
-  RuntimeDestroy(@native.NativeError)
+  WindowDestroy(status~ : Int, detail~ : String)
+  RuntimeDestroy(status~ : Int, detail~ : String)
 } derive(Debug)
 
 ///|
@@ -628,12 +628,12 @@ pub(all) suberror AppRunError {
   EventLoopError(String)
   ConfigurationError(AppConfigurationError)
   UnsupportedNativeFeature(feature~ : String)
-  NativeRuntimeError(action~ : String, error~ : @native.NativeError)
+  RuntimeOperationFailed(action~ : String, status~ : Int, detail~ : String)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
   LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)
-  BridgeStartupError(@native.BridgeDiagnostic)
-  BridgeRuntimeError(@native.BridgeDiagnostic)
+  BridgeStartupError(BridgeDiagnostic)
+  BridgeRuntimeError(BridgeDiagnostic)
   CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
 } derive(Debug)
