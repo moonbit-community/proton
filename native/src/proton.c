@@ -94,6 +94,12 @@
 #define PROTON_NATIVE_IMAGE_FEATURE ""
 #endif
 
+#if PROTON_WITH_ENGINE && defined(__APPLE__)
+#define PROTON_NOTIFICATION_RESULT_FEATURE ",\"notification_result\""
+#else
+#define PROTON_NOTIFICATION_RESULT_FEATURE ""
+#endif
+
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
 static PROTON_THREAD_LOCAL char g_last_error[512];
 
@@ -289,6 +295,7 @@ int32_t proton_runtime_info_json(char *buffer,
           PROTON_RUNTIME_WAKEUP_FD_FEATURE
           PROTON_RUNTIME_WAKEUP_SOURCE_FEATURE
           PROTON_WEB_CONTENTS_VIEW_FEATURE PROTON_NATIVE_IMAGE_FEATURE
+              PROTON_NOTIFICATION_RESULT_FEATURE
               "]}",
       PROTON_ABI_VERSION, PROTON_WITH_ENGINE ? "true" : "false",
       PROTON_WITH_ENGINE ? "runtime" : "abi-only", PROTON_PLATFORM_NAME,

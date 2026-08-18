@@ -1015,6 +1015,8 @@ static int expect_runtime_info(void) {
   int has_window_size_hints =
       strstr(buffer, "\"window_size_hints\"") != NULL;
   int has_window_session = strstr(buffer, "\"window_session\"") != NULL;
+  int has_notification_result =
+      strstr(buffer, "\"notification_result\"") != NULL;
   if (strstr(buffer, "\"abi_version\":1") == NULL ||
       (!has_abi_only && !has_runtime) ||
       strstr(buffer, "\"base_abi\"") == NULL ||
@@ -1041,6 +1043,19 @@ static int expect_runtime_info(void) {
     fprintf(stderr, "unexpected window session capability: %s\n", buffer);
     return 1;
   }
+#if defined(__APPLE__)
+  if (has_notification_result != has_runtime) {
+    fprintf(stderr, "unexpected notification result capability: %s\n",
+            buffer);
+    return 1;
+  }
+#else
+  if (has_notification_result) {
+    fprintf(stderr, "unsupported notification result capability: %s\n",
+            buffer);
+    return 1;
+  }
+#endif
 #else
   if (has_titlebar_overlay) {
     fprintf(stderr, "unsupported titlebar overlay capability: %s\n", buffer);
@@ -1052,6 +1067,11 @@ static int expect_runtime_info(void) {
   }
   if (has_window_session) {
     fprintf(stderr, "unsupported window session capability: %s\n", buffer);
+    return 1;
+  }
+  if (has_notification_result) {
+    fprintf(stderr, "unsupported notification result capability: %s\n",
+            buffer);
     return 1;
   }
 #endif

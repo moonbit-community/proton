@@ -1200,6 +1200,12 @@ async test "notification completion is delivered only to an active waiter" {
 }
 
 ///|
+test "notification completion capability controls result waiting" {
+  assert_true(notification_result_event_supported(["notification_result"]))
+  assert_false(notification_result_event_supported(["runtime_wait"]))
+}
+
+///|
 test "app data directory follows platform conventions" {
   assert_eq(
     app_data_dir_for_platform(

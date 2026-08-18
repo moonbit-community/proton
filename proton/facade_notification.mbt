@@ -49,6 +49,17 @@ async fn take_notification_result() -> @native.NativeNotificationResult {
 }
 
 ///|
+fn notification_result_event_supported(features : Array[String]) -> Bool {
+  features.contains("notification_result")
+}
+
+///|
+fn native_notification_result_supported() -> Bool raise @native.NativeError {
+  let info = @native.runtime_info()
+  notification_result_event_supported(info.features)
+}
+
+///|
 /// Failures while starting or waiting for native notification delivery.
 pub(all) suberror NotificationDeliveryError {
   Native(@native.NativeError)
@@ -73,22 +84,31 @@ pub fn NotificationDeliveryError::message(
 }
 
 ///|
-/// Starts one native notification and waits until macOS reports authorization
-/// and delivery completion.
+/// Starts one native notification and waits for a completion event only on
+/// platforms that advertise the `notification_result` runtime capability.
 #doc(hidden)
 pub async fn notification_show_and_wait(
   title : String,
   body : String,
   payload? : String,
 ) -> @native.NativeNotificationResult raise NotificationDeliveryError {
-  acquire_notification_result_slot() catch {
-    error => raise WaitInterrupted(detail=@debug.render(Repr(error)))
+  let waits_for_result = native_notification_result_supported() catch {
+    error => raise Native(error)
   }
-  defer release_notification_result_slot()
+  if waits_for_result {
+    acquire_notification_result_slot() catch {
+      error => raise WaitInterrupted(detail=@debug.render(Repr(error)))
+    }
+    defer release_notification_result_slot()
+  }
   @native.notification_show(title, body, payload?) catch {
     error => raise Native(error)
   }
-  @async.protect_from_cancel(take_notification_result, resume_on_cancel=true) catch {
-    error => raise WaitInterrupted(detail=@debug.render(Repr(error)))
+  if waits_for_result {
+    @async.protect_from_cancel(take_notification_result, resume_on_cancel=true) catch {
+      error => raise WaitInterrupted(detail=@debug.render(Repr(error)))
+    }
+  } else {
+    @native.NativeNotificationResult::Delivered
   }
 }
