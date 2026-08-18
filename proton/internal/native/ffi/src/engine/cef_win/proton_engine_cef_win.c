@@ -276,6 +276,7 @@ static uint64_t g_proton_engine_next_view_native_id = 1;
 static proton_engine_scheme_factory_t g_proton_engine_scheme_factory;
 static CRITICAL_SECTION g_proton_engine_window_lock;
 static proton_engine_window_t *g_proton_engine_windows;
+static proton_engine_window_t *g_proton_engine_closed_windows;
 static proton_engine_bridge_pending_t *g_proton_engine_bridge_pending;
 static char g_proton_engine_resources_dir[PROTON_ENGINE_MAX_PATH_BYTES];
 static char g_proton_engine_locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
@@ -2416,11 +2417,20 @@ static proton_engine_client_t *proton_engine_client_new(
   return client;
 }
 
-static void proton_engine_window_free(proton_engine_window_t *window) {
+static void proton_engine_window_defer_free(proton_engine_window_t *window) {
   if (window == NULL) {
     return;
   }
   proton_engine_window_list_remove(window);
+  window->next = g_proton_engine_closed_windows;
+  g_proton_engine_closed_windows = window;
+}
+
+static void proton_engine_window_free_storage(
+    proton_engine_window_t *window) {
+  if (window == NULL) {
+    return;
+  }
   proton_engine_window_free_views(window);
   if (window->hwnd != NULL) {
     // A deferred destroy may still be queued for this frame; detach the
@@ -2441,6 +2451,17 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
   free(window->draggable_regions);
   proton_engine_bridge_lifecycle_dispose(&window->bridge_lifecycle);
   free(window);
+}
+
+static void proton_engine_free_closed_windows(void) {
+  proton_engine_window_t *window = g_proton_engine_closed_windows;
+  g_proton_engine_closed_windows = NULL;
+  while (window != NULL) {
+    proton_engine_window_t *next = window->next;
+    window->next = NULL;
+    proton_engine_window_free_storage(window);
+    window = next;
+  }
 }
 
 static int CEF_CALLBACK proton_engine_on_before_popup(
@@ -3161,6 +3182,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
       return status;
     }
     proton_engine_cef_shutdown();
+    proton_engine_free_closed_windows();
     runtime->owns_cef_runtime = 0;
   }
   proton_engine_dispose_runtime_state(runtime);
@@ -4662,7 +4684,10 @@ static void proton_engine_window_finalize_if_ready(
       return;
     }
   }
-  proton_engine_window_free(window);
+  // OnBeforeClose is CEF's final browser callback, but CEF still owns and
+  // releases callback objects while unwinding it and during cef_shutdown.
+  // Keep the host storage alive until that shutdown has completed.
+  proton_engine_window_defer_free(window);
 }
 
 static void proton_engine_window_close_views(
@@ -4805,6 +4830,7 @@ static proton_engine_client_t *proton_engine_view_client_create(
   }
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
+  client->client.base.release = proton_engine_client_release;
   client->view = view;
   // Views wire the life span, load, display, and render handlers: life span
   // drives the close state machine, load/display feed the view event stream,
