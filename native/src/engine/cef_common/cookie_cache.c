@@ -1,5 +1,6 @@
 #include "../../proton_engine.h"
 #include "../../proton_json.h"
+#include "cookie_state_lifetime.h"
 #include "message.h"
 #include "window_state.h"
 
@@ -47,6 +48,8 @@ typedef struct {
 
 typedef struct proton_cookie_get_state {
   proton_engine_window_t *window;
+  proton_cookie_state_ref_count_t refs; /* list owner plus visitor refs */
+  proton_cookie_state_detached_t detached; /* no longer visible to callers */
   int done;                 /* set when the visitor has finished          */
   char *json;               /* accumulated JSON array body                */
   size_t json_len;          /* bytes used in json                         */
@@ -55,6 +58,21 @@ typedef struct proton_cookie_get_state {
 } proton_cookie_get_state_t;
 
 static proton_cookie_get_state_t *g_cookie_get_states = NULL;
+
+static void proton_cookie_get_state_destroy(proton_cookie_get_state_t *state) {
+  if (state == NULL) {
+    return;
+  }
+  free(state->json);
+  free(state);
+}
+
+static void proton_cookie_get_state_release(proton_cookie_get_state_t *state) {
+  if (state != NULL &&
+      proton_cookie_state_lifetime_release(&state->refs)) {
+    proton_cookie_get_state_destroy(state);
+  }
+}
 
 static proton_cookie_get_state_t *
 proton_cookie_get_state_find(proton_engine_window_t *window) {
@@ -86,6 +104,7 @@ proton_cookie_get_state_acquire(proton_engine_window_t *window) {
   if (state == NULL) {
     return NULL;
   }
+  proton_cookie_state_lifetime_init(&state->refs, &state->detached);
   state->window = window;
   state->next = g_cookie_get_states;
   g_cookie_get_states = state;
@@ -168,7 +187,7 @@ static int proton_cookie_json_append_escaped(proton_cookie_get_state_t *state,
 typedef struct {
   cef_cookie_visitor_t visitor;
   proton_engine_ref_counted_t refs;
-  proton_cookie_get_state_t *state; /* weak pointer */
+  proton_cookie_get_state_t *state; /* visitor-owned state reference */
 } proton_cookie_visitor_impl_t;
 
 static const char *
@@ -212,7 +231,8 @@ static int CEF_CALLBACK proton_cookie_visitor_visit(
   proton_cookie_visitor_impl_t *impl =
       (proton_cookie_visitor_impl_t *)self;
   proton_cookie_get_state_t *state = impl->state;
-  if (state == NULL) {
+  if (state == NULL ||
+      proton_cookie_state_lifetime_is_detached(&state->detached)) {
     return 0;
   }
 
@@ -305,18 +325,23 @@ proton_cookie_visitor_release(cef_base_ref_counted_t *base) {
                        memory_order_acq_rel) - 1);
 #endif
   if (value <= 0) {
-    /* All refs gone - CEF has finished the visit.  Mark the state done so
-       the poll loop can collect the result.  The visitor itself is freed
-       here; the state lives until the poll caller reads and releases it. */
+    /* All visitor refs are gone. Mark a live state done, then release the
+       visitor's state reference. Cleanup may have detached it already. */
     if (impl->state != NULL) {
-      impl->state->done = 1;
+      proton_cookie_get_state_t *state = impl->state;
+      if (!proton_cookie_state_lifetime_is_detached(&state->detached)) {
+        state->done = 1;
+      }
+      impl->state = NULL;
+      proton_cookie_get_state_release(state);
     }
     free(impl);
     return 1;
   }
   /* CEF released its ref but the caller still holds one.  The visit is
      complete from CEF's perspective, so signal done. */
-  if (impl->state != NULL) {
+  if (impl->state != NULL &&
+      !proton_cookie_state_lifetime_is_detached(&impl->state->detached)) {
     impl->state->done = 1;
   }
   return 0;
@@ -335,6 +360,7 @@ proton_cookie_visitor_create(proton_cookie_get_state_t *state) {
   /* Override release with our custom implementation. */
   impl->visitor.base.release = proton_cookie_visitor_release;
   impl->visitor.visit = proton_cookie_visitor_visit;
+  proton_cookie_state_lifetime_retain(&state->refs);
   impl->state = state;
   return &impl->visitor;
 }
@@ -421,7 +447,9 @@ int32_t proton_engine_window_cookie_begin_get_json(
   manager->base.release((cef_base_ref_counted_t *)manager);
 
   if (!ok) {
-    state->done = 1;
+    if (!proton_cookie_state_lifetime_is_detached(&state->detached)) {
+      state->done = 1;
+    }
     proton_engine_set_message(error, error_len,
                               "cookie manager rejected the visit request");
     return PROTON_ERR_ENGINE;
@@ -693,8 +721,9 @@ void proton_engine_window_cookie_cleanup(proton_engine_window_t *window) {
     proton_cookie_get_state_t *state = *link;
     if (state->window == window) {
       *link = state->next;
-      free(state->json);
-      free(state);
+      state->window = NULL;
+      proton_cookie_state_lifetime_detach(&state->detached);
+      proton_cookie_get_state_release(state);
       return;
     }
     link = &state->next;
