@@ -83,6 +83,8 @@ jobs:
           publish_module sys/global_hotkey moonbit-community/proton_global_hotkey
           publish_module sys/keepawake moonbit-community/proton_keepawake
           publish_module sys/microphone moonbit-community/proton_microphone
+          publish_module sys/power_monitor moonbit-community/proton_power_monitor
+          publish_module sys/process moonbit-community/proton_process
           publish_module sys/tray moonbit-community/proton_tray
 
           publish_module client moonbit-community/proton_client
