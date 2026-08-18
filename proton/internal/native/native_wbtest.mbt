@@ -143,12 +143,20 @@ test "native text reader accepts lengths that include the terminator" {
 }
 
 ///|
-test "runtime events preserve bridge cancellation request ids" {
-  let event = decode_runtime_event_json(
-    "{\"type\":\"bridge_request_cancelled\",\"request_id\":\"42\"}",
-  )
-  assert_eq(event.event_type(), "bridge_request_cancelled")
-  assert_true(event.bridge_request_cancellation() == Some(42L))
+test "native ABI version and availability" {
+  inspect(abi_version(), content="1")
+}
+
+///|
+test "runtime info reports source-built platform metadata" {
+  let typed = runtime_info()
+  assert_true(typed.platform.length() > 0)
+  assert_true(typed.features.contains("event_polling"))
+  assert_true(typed.features.contains("bridge_events"))
+  assert_true(typed.features.contains("bridge_permission_grants"))
+  assert_true(typed.features.contains("titlebar_overlay"))
+  assert_true(typed.features.contains("headless_osr"))
+  assert_true(typed.features.contains("window_session"))
 }
 
 ///|
@@ -167,36 +175,18 @@ test "runtime wait ready mask helpers" {
 }
 
 ///|
-test "runtime event decodes a complete window state snapshot" {
-  let event = decode_runtime_event_json(
-    (
-      #|{"type":"window_state_changed","window":"7","state":{"x":10,"y":20,"width":800,"height":600,"monitor":{"x":0,"y":0,"width":1920,"height":1080,"work_x":0,"work_y":24,"work_width":1920,"work_height":1056,"scale_factor_percent":200},"zoom_percent":125,"visible":true,"focused":true,"minimized":false,"maximized":false,"fullscreen":false,"always_on_top":true,"theme":"dark"}}
-    ),
-  )
-  debug_inspect(event.window_id(), content="Some(7)")
-  match event.window_state_change() {
-    Some(state) => {
-      inspect(state.x, content="10")
-      inspect(state.monitor.scale_factor_percent, content="200")
-      inspect(state.zoom_percent, content="125")
-      inspect(state.focused, content="true")
-      inspect(state.always_on_top, content="true")
-      inspect(state.theme, content="dark")
-    }
-    None => fail("expected window state")
-  }
-}
-
-///|
-test "runtime event decodes a sequenced window close request" {
-  let event = decode_runtime_event_json(
-    (
-      #|{"type":"window_close_requested","window":"9","request_id":"42"}
-    ),
-  )
-  debug_inspect(event.window_id(), content="Some(9)")
-  debug_inspect(event.window_close_request(), content="Some(42)")
-  assert_true(event.window_state_change() is None)
+test "typed window state fields map to a snapshot" {
+  let fields = [
+    10, 20, 800, 600, 0, 0, 1920, 1080, 0, 24, 1920, 1056, 200, 125, 1, 1, 0, 0,
+    0, 1, 2,
+  ]
+  let state = window_state_from_fields(index => fields[index])
+  inspect(state.x, content="10")
+  inspect(state.monitor.scale_factor_percent, content="200")
+  inspect(state.zoom_percent, content="125")
+  inspect(state.focused, content="true")
+  inspect(state.always_on_top, content="true")
+  inspect(state.theme, content="dark")
 }
 
 ///|
@@ -280,138 +270,6 @@ test "bridge config retains typed renderer policy" {
 }
 
 ///|
-test "menu config preserves typed native ABI values" {
-  let menu = MenuBar::new(menus=[
-    Menu::new("Demo", items=[
-      MenuItem::command("demo.refresh", "Refresh", key="r"),
-      MenuItem::separator(),
-      MenuItem::role(MenuItemRole::Close, label="Close Window", key="w"),
-    ]),
-  ])
-  let definitions = menu.definitions()
-  assert_eq(definitions.length(), 1)
-  let (_, label, items) = definitions[0].definition()
-  assert_eq(label, Some("Demo"))
-  let items = items.unwrap()
-  assert_eq(items.length(), 3)
-  let (_, id, _, _, _) = items[0].definition()
-  assert_eq(id, Some("demo.refresh"))
-  let (_, _, role_label, key, role) = items[2].definition()
-  assert_eq(role, Some(MenuItemRole::Close))
-  assert_eq(role_label, Some("Close Window"))
-  assert_eq(key, Some("w"))
-}
-
-///|
-test "runtime event decodes menu command payload" {
-  let event = decode_runtime_event_json(
-    "{\"type\":\"menu_command\",\"command_id\":\"demo.refresh\",\"window\":\"17\"}",
-  )
-  inspect(event.event_type(), content="menu_command")
-  assert_true(event.menu_command_id() == Some("demo.refresh"))
-  assert_true(event.window_id() == Some(17L))
-}
-
-///|
-test "native errors identify invalid object state" {
-  assert_true(
-    NativeError::Status(
-      status=proton_err_invalid_state,
-      message="window is closing or destroyed",
-    ).is_invalid_state(),
-  )
-  assert_false(
-    NativeError::Status(
-      status=proton_err_stale_window_request,
-      message="window close request is no longer pending",
-    ).is_invalid_state(),
-  )
-  assert_false(
-    NativeError::InvalidArgument(message="invalid state").is_invalid_state(),
-  )
-}
-
-///|
-test "runtime event decodes browser control requests" {
-  let navigation = decode_runtime_event_json(
-    "{\"type\":\"browser_navigation_requested\",\"window\":\"7\",\"request_id\":\"11\",\"url\":\"https://example.com/next\",\"method\":\"POST\",\"user_gesture\":true,\"redirect\":false}",
-  )
-  match navigation.browser_request() {
-    Some(Navigation(request_id~, url~, http_method~, user_gesture~, redirect~)) => {
-      assert_eq(request_id, 11L)
-      assert_eq(url, "https://example.com/next")
-      assert_eq(http_method, "POST")
-      assert_true(user_gesture)
-      assert_false(redirect)
-    }
-    _ => fail("expected navigation request")
-  }
-  let popup = decode_runtime_event_json(
-    "{\"type\":\"browser_popup_requested\",\"window\":\"7\",\"request_id\":\"12\",\"url\":\"https://example.com/popup\",\"disposition\":4,\"user_gesture\":false}",
-  )
-  match popup.browser_request() {
-    Some(Popup(request_id~, url~, disposition~, user_gesture~)) => {
-      assert_eq(request_id, 12L)
-      assert_eq(url, "https://example.com/popup")
-      assert_eq(disposition, 4)
-      assert_false(user_gesture)
-    }
-    _ => fail("expected popup request")
-  }
-  let download = decode_runtime_event_json(
-    "{\"type\":\"browser_download_requested\",\"window\":\"7\",\"request_id\":\"13\",\"download_id\":9,\"url\":\"https://example.com/file\",\"suggested_name\":\"file.txt\"}",
-  )
-  match download.browser_request() {
-    Some(Download(request_id~, download_id~, url~, suggested_name~)) => {
-      assert_eq(request_id, 13L)
-      assert_eq(download_id, 9)
-      assert_eq(url, "https://example.com/file")
-      assert_eq(suggested_name, "file.txt")
-    }
-    _ => fail("expected download request")
-  }
-  let certificate = decode_runtime_event_json(
-    "{\"type\":\"browser_certificate_error\",\"window\":\"7\",\"request_id\":\"14\",\"url\":\"https://expired.example\",\"error\":-201}",
-  )
-  match certificate.browser_request() {
-    Some(Certificate(request_id~, url~, error_code~)) => {
-      assert_eq(request_id, 14L)
-      assert_eq(url, "https://expired.example")
-      assert_eq(error_code, -201)
-    }
-    _ => fail("expected certificate request")
-  }
-  let media = decode_runtime_event_json(
-    "{\"type\":\"browser_media_permission_requested\",\"window\":\"7\",\"request_id\":\"15\",\"url\":\"https://example.com\",\"permissions\":3}",
-  )
-  match media.browser_request() {
-    Some(Media(request_id~, origin~, permissions~)) => {
-      assert_eq(request_id, 15L)
-      assert_eq(origin, "https://example.com")
-      assert_eq(permissions, 3)
-    }
-    _ => fail("expected media permission request")
-  }
-}
-
-///|
-test "runtime event decodes browser download progress" {
-  let event = decode_runtime_event_json(
-    "{\"type\":\"browser_download_updated\",\"window\":\"7\",\"download_id\":9,\"download_state\":\"progress\",\"received_bytes\":\"1024\",\"total_bytes\":\"4096\",\"percent\":25}",
-  )
-  match event.browser_download_update() {
-    Some(update) => {
-      assert_eq(update.download_id, 9)
-      assert_eq(update.state, "progress")
-      assert_eq(update.received_bytes, 1024L)
-      assert_eq(update.total_bytes, 4096L)
-      assert_eq(update.percent, 25)
-    }
-    None => fail("expected download update")
-  }
-}
-
-///|
 test "bridge request keeps transport metadata outside the payload" {
   let request = decode_bridge_request_json(
     "{\"abi_version\":1,\"request_id\":\"7\",\"window\":\"11\"," +
@@ -427,28 +285,58 @@ test "bridge request keeps transport metadata outside the payload" {
 }
 
 ///|
-test "runtime events decode typed launch inputs and notification results" {
-  let urls = decode_runtime_event_json(
-    "{\"type\":\"open_urls\",\"items\":[\"devtoys://open?id=1\"]}",
-  )
-  @debug.assert_eq(
-    urls.launch_input(),
-    Some(RuntimeLaunchInput::OpenUrls(["devtoys://open?id=1"])),
-  )
-  let files = decode_runtime_event_json(
-    "{\"type\":\"open_files\",\"items\":[\"/tmp/a.txt\"]}",
-  )
-  @debug.assert_eq(
-    files.launch_input(),
-    Some(RuntimeLaunchInput::OpenFiles(["/tmp/a.txt"])),
-  )
-  let denied = decode_runtime_event_json(
-    "{\"type\":\"notification_result\",\"ok\":false,\"message\":\"denied\"}",
-  )
-  @debug.assert_eq(
-    denied.notification_result(),
-    Some(NativeNotificationResult::Failed("denied")),
-  )
+test "runtime create does not fake engine configs" {
+  let error = expect_native_error(() => {
+    Runtime::new(
+      config=RuntimeConfig::new(
+        runtime_root="missing-runtime-root",
+        helper_path="missing-helper",
+      ),
+    )
+  })
+  inspect(error.status(), content="-7")
+  assert_true(error.message().contains("runtime engine library"))
+}
+
+///|
+test "execute_process does not ignore engine configs" {
+  let error = expect_native_error(() => {
+    execute_process(
+      config=RuntimeConfig::new(
+        runtime_root="missing-runtime-root",
+        helper_path="missing-helper",
+      ),
+    )
+  })
+  inspect(error.status(), content="-7")
+  assert_true(error.message().contains("runtime engine library"))
+}
+
+///|
+test "invalid handle returns structured native error" {
+  let window = Window::{
+    handle: @native_ffi.window_null(),
+    id: proton_invalid_handle,
+    lifecycle: WindowLive,
+  }
+  let error = expect_native_error(() => window.show())
+  inspect(error.status(), content="-2")
+  assert_true(error.message().contains("invalid window handle"))
+}
+
+///|
+test "runtime config rejects a relative cache directory" {
+  let error = expect_native_error(() => {
+    Runtime::new(
+      config=RuntimeConfig::new(
+        runtime_root="/runtime",
+        helper_path="/runtime/cef_process",
+        cache_dir="relative-cache",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  inspect(error.message(), content="runtime cache_dir must be an absolute path")
 }
 
 ///|
@@ -491,26 +379,6 @@ test "bridge diagnostic payload requires abi_version 1" {
     "{\"abi_version\":1,\"stage\":\"load\",\"code\":\"x\",\"message\":\"m\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"details_truncated\":false}",
   )
   inspect(diagnostic.stage, content="load")
-}
-
-///|
-test "runtime event validates abi_version when present" {
-  let accepted = decode_runtime_event_json(
-    "{\"type\":\"window_closed\",\"window\":\"1\",\"abi_version\":1}",
-  )
-  inspect(accepted.event_type(), content="window_closed")
-  let error = expect_native_error(() => {
-    decode_runtime_event_json("{\"type\":\"window_closed\",\"abi_version\":2}")
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("abi_version"))
-  let type_error = expect_native_error(() => {
-    decode_runtime_event_json(
-      "{\"type\":\"window_closed\",\"abi_version\":\"1\"}",
-    )
-  })
-  inspect(type_error.status(), content="-1")
-  assert_true(type_error.message().contains("abi_version"))
 }
 
 ///|

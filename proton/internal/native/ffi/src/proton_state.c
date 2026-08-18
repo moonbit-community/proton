@@ -2,7 +2,6 @@
 
 #include "proton_internal.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -312,71 +311,6 @@ void proton_runtime_sync_engine_closed_windows(
       window->visible = false;
     }
   }
-}
-
-int32_t proton_format_window_state_json(
-    const proton_engine_window_state_t *state, char *buffer,
-    size_t buffer_len) {
-  if (state == NULL || buffer == NULL || buffer_len == 0) {
-    return -1;
-  }
-  const char *theme =
-      state->theme == 2 ? "dark" : state->theme == 1 ? "light" : "system";
-  return snprintf(
-      buffer, buffer_len,
-      "{\"x\":%d,\"y\":%d,\"width\":%d,\"height\":%d,"
-      "\"monitor\":{\"x\":%d,\"y\":%d,\"width\":%d,\"height\":%d,"
-      "\"work_x\":%d,\"work_y\":%d,\"work_width\":%d,\"work_height\":%d,"
-      "\"scale_factor_percent\":%d},"
-      "\"zoom_percent\":%d,\"visible\":%s,\"focused\":%s,"
-      "\"minimized\":%s,\"maximized\":%s,\"fullscreen\":%s,"
-      "\"always_on_top\":%s,\"theme\":\"%s\"}",
-      state->x, state->y, state->width, state->height, state->monitor_x,
-      state->monitor_y, state->monitor_width, state->monitor_height,
-      state->work_x, state->work_y, state->work_width, state->work_height,
-      state->scale_factor_percent, state->zoom_percent,
-      state->visible ? "true" : "false", state->focused ? "true" : "false",
-      state->minimized ? "true" : "false",
-      state->maximized ? "true" : "false",
-      state->fullscreen ? "true" : "false",
-      state->always_on_top ? "true" : "false", theme);
-}
-
-int32_t proton_format_screen_array_json(
-    const proton_engine_screen_info_t *screens, int32_t count, char *buffer,
-    size_t buffer_len) {
-  if (screens == NULL || buffer == NULL || buffer_len == 0) {
-    return -1;
-  }
-  if (count <= 0) {
-    return snprintf(buffer, buffer_len, "[]");
-  }
-  size_t offset = 0;
-  int written = snprintf(buffer, buffer_len, "[");
-  if (written < 0 || (size_t)written >= buffer_len) {
-    return -1;
-  }
-  offset += (size_t)written;
-  for (int32_t i = 0; i < count; i++) {
-    const proton_engine_screen_info_t *screen = &screens[i];
-    written = snprintf(
-        buffer + offset, buffer_len - offset,
-        "%s{\"id\":%d,\"x\":%d,\"y\":%d,\"width\":%d,\"height\":%d,"
-        "\"work_x\":%d,\"work_y\":%d,\"work_width\":%d,\"work_height\":%d,"
-        "\"scale_factor_percent\":%d,\"is_primary\":%s}",
-        i == 0 ? "" : ",", screen->id, screen->x, screen->y,
-        screen->width, screen->height, screen->work_x, screen->work_y,
-        screen->work_width, screen->work_height,
-        screen->scale_factor_percent, screen->is_primary ? "true" : "false");
-    if (written < 0 || (size_t)written >= buffer_len - offset) {
-      return -1;
-    }
-    offset += (size_t)written;
-  }
-  written = snprintf(buffer + offset, buffer_len - offset, "]");
-  return written < 0 || (size_t)written >= buffer_len - offset
-             ? -1
-             : (int32_t)(offset + (size_t)written);
 }
 
 int32_t proton_runtime_sync_engine_window_states(

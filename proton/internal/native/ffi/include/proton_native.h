@@ -158,9 +158,11 @@ int32_t proton_window_set_always_on_top(proton_window_handle_t window,
                                                    int32_t always_on_top);
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                                   int32_t zoom_percent);
-int32_t proton_window_state_json(proton_window_handle_t window,
-                                            char *buffer, int32_t buffer_len,
-                                            int32_t *out_required_len);
+/* Writes the 21 integer fields of the current window state into out_fields.
+   The field order is private to the matching MoonBit wrapper. */
+int32_t proton_window_get_state(proton_window_handle_t window,
+                                int32_t *out_fields,
+                                int32_t field_capacity);
 int32_t proton_window_set_close_interception(
     proton_window_handle_t window, int32_t enabled);
 int32_t proton_window_respond_close_request(
@@ -217,11 +219,13 @@ int32_t proton_window_cookie_begin_get_json(
     proton_window_handle_t window, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id);
 
-/* Set a cookie from a JSON object. The JSON must contain "url", "name",
-   and "value", and may contain "domain", "path", "secure", "http_only",
-   "same_site", "expires". Fire-and-forget. */
-int32_t proton_window_cookie_set_json(
-    proton_window_handle_t window, const char *cookie_json);
+/* Sets a cookie. Optional domain/path values are represented by empty strings;
+   same_site uses 0=unspecified, 1=no_restriction, 2=lax, 3=strict. */
+int32_t proton_window_cookie_set(
+    proton_window_handle_t window, const char *url_utf8,
+    const char *name_utf8, const char *value_utf8,
+    const char *domain_utf8, const char *path_utf8,
+    int32_t secure, int32_t http_only, int32_t same_site);
 
 /* Delete cookies. If url_utf8 is NULL or empty, all cookies are deleted.
    If name_utf8 is non-NULL, only cookies with that name matching the URL
@@ -236,14 +240,11 @@ int32_t proton_window_cookie_flush(proton_window_handle_t window);
 /* Clear the HTTP cache for the window's request context. Fire-and-forget. */
 int32_t proton_window_clear_cache(proton_window_handle_t window);
 
-/* Enumerates all connected displays.
-   Returns a JSON array of screen objects. Each screen has:
-   id, x, y, width, height, work_x, work_y, work_width, work_height,
-   scale_factor_percent, is_primary.
-   Returns PROTON_ERR_UNSUPPORTED if the native engine is not available. */
-int32_t proton_screen_enumerate_json(char *buffer,
-                                                int32_t buffer_len,
-                                                int32_t *out_required_len);
+/* Enumerates connected displays into caller-owned integer storage. Each
+   display occupies 11 fields in the order consumed by the MoonBit wrapper. */
+int32_t proton_screen_enumerate(int32_t *out_fields,
+                                int32_t field_capacity,
+                                int32_t *out_screen_count);
 
 /* Creates a private artifact staging transaction for a streaming update.
 
@@ -326,15 +327,16 @@ int32_t proton_view_load_url(proton_view_handle_t view,
 int32_t proton_view_eval(proton_view_handle_t view, const char *script);
 int32_t proton_view_browser_command_json(
     proton_view_handle_t view, const char *command_json);
-int32_t proton_view_state_json(proton_view_handle_t view, char *buffer,
-                                          int32_t buffer_len,
-                                          int32_t *out_required_len);
+/* Writes the six integer fields of the current view state into out_fields. */
+int32_t proton_view_get_state(proton_view_handle_t view,
+                              int32_t *out_fields,
+                              int32_t field_capacity);
 
 /* Native image management. Images are standalone objects backed by CEF's
    cef_image_t. They are not tied to a runtime or window and can be created
    on any thread. Use proton_image_create_empty to get a handle, add
    representations with add_png/add_jpeg/add_bitmap, query with is_empty and
-   get_size_json, export with to_png/to_jpeg/to_bitmap, and release with
+   get_size, export with to_png/to_jpeg/to_bitmap, and release with
    proton_image_destroy. All functions return PROTON_ERR_UNSUPPORTED when
    the native engine is not available. */
 
@@ -354,10 +356,9 @@ int32_t proton_image_add_bitmap(proton_image_handle_t image,
                                            int32_t width, int32_t height,
                                            float scale_factor);
 int32_t proton_image_is_empty(proton_image_handle_t image);
-int32_t proton_image_get_size_json(proton_image_handle_t image,
-                                              char *buffer,
-                                              int32_t buffer_len,
-                                              int32_t *out_required_len);
+int32_t proton_image_get_size(proton_image_handle_t image,
+                              int32_t *out_width,
+                              int32_t *out_height);
 int32_t proton_image_to_png(proton_image_handle_t image,
                                        float scale_factor,
                                        int32_t with_transparency,

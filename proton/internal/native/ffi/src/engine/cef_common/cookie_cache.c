@@ -1,6 +1,5 @@
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
-#include "../../proton_json.h"
 #include "cookie_state_lifetime.h"
 #include "message.h"
 #include "window_state.h"
@@ -552,109 +551,54 @@ int32_t proton_engine_window_cookie_begin_get_json(
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_cookie_set_json(
-    proton_engine_window_t *window, const char *cookie_json, char *error,
-    size_t error_len) {
+int32_t proton_engine_window_cookie_set(
+    proton_engine_window_t *window, const char *url_utf8,
+    const char *name_utf8, const char *value_utf8,
+    const char *domain_utf8, const char *path_utf8,
+    int32_t secure, int32_t http_only, int32_t same_site,
+    char *error, size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (cookie_json == NULL) {
-    proton_engine_set_message(error, error_len, "cookie JSON is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-
-  proton_json_doc_t doc;
-  if (!proton_json_parse(&doc, cookie_json)) {
-    proton_engine_set_message(error, error_len, "failed to parse cookie JSON");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  proton_json_value_t root;
-  if (!proton_json_root_object(&doc, &root) ||
-      !proton_json_is_object(&doc, root)) {
-    proton_json_dispose(&doc);
+  if (url_utf8 == NULL || name_utf8 == NULL || value_utf8 == NULL ||
+      domain_utf8 == NULL || path_utf8 == NULL) {
     proton_engine_set_message(error, error_len,
-                              "cookie JSON must be an object");
+                              "cookie strings are required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-
-  proton_json_value_t url_val;
-  proton_json_value_t name_val;
-  proton_json_value_t value_val;
-  proton_json_value_t domain_val;
-  proton_json_value_t path_val;
-  proton_json_value_t secure_val;
-  proton_json_value_t http_only_val;
-  proton_json_value_t same_site_val;
-  bool has_url = proton_json_object_get(&doc, root, "url", &url_val);
-  bool has_name = proton_json_object_get(&doc, root, "name", &name_val);
-  bool has_value = proton_json_object_get(&doc, root, "value", &value_val);
-  bool has_domain = proton_json_object_get(&doc, root, "domain", &domain_val);
-  bool has_path = proton_json_object_get(&doc, root, "path", &path_val);
-  bool has_secure = proton_json_object_get(&doc, root, "secure", &secure_val);
-  bool has_http_only =
-      proton_json_object_get(&doc, root, "http_only", &http_only_val);
-  bool has_same_site =
-      proton_json_object_get(&doc, root, "same_site", &same_site_val);
-
-  if (!has_url || !has_name || !has_value) {
-    proton_json_dispose(&doc);
-    proton_engine_set_message(error, error_len,
-                              "cookie JSON requires url, name, and value");
+  if ((secure != 0 && secure != 1) ||
+      (http_only != 0 && http_only != 1) ||
+      same_site < 0 || same_site > 3) {
+    proton_engine_set_message(error, error_len, "invalid cookie flags");
     return PROTON_ERR_INVALID_ARGUMENT;
-  }
-
-  char url_buf[1024] = {0};
-  char name_buf[512] = {0};
-  char value_buf[4096] = {0};
-  char domain_buf[512] = {0};
-  char path_buf[512] = {0};
-  char same_site_buf[32] = {0};
-  proton_json_read_string(&doc, url_val, url_buf, sizeof(url_buf));
-  proton_json_read_string(&doc, name_val, name_buf, sizeof(name_buf));
-  proton_json_read_string(&doc, value_val, value_buf, sizeof(value_buf));
-  if (has_domain) {
-    proton_json_read_string(&doc, domain_val, domain_buf, sizeof(domain_buf));
-  }
-  if (has_path) {
-    proton_json_read_string(&doc, path_val, path_buf, sizeof(path_buf));
-  }
-  if (has_same_site) {
-    proton_json_read_string(&doc, same_site_val, same_site_buf,
-                            sizeof(same_site_buf));
-  }
-  bool secure = false;
-  bool http_only = false;
-  if (has_secure) {
-    proton_json_read_bool(&doc, secure_val, &secure);
-  }
-  if (has_http_only) {
-    proton_json_read_bool(&doc, http_only_val, &http_only);
   }
 
   cef_cookie_t cookie = {0};
   cookie.size = sizeof(cookie);
-  cef_string_from_utf8(name_buf, strlen(name_buf), &cookie.name);
-  cef_string_from_utf8(value_buf, strlen(value_buf), &cookie.value);
-  cef_string_from_utf8(domain_buf, strlen(domain_buf), &cookie.domain);
-  cef_string_from_utf8(path_buf, strlen(path_buf), &cookie.path);
+  cef_string_from_utf8(name_utf8, strlen(name_utf8), &cookie.name);
+  cef_string_from_utf8(value_utf8, strlen(value_utf8), &cookie.value);
+  cef_string_from_utf8(domain_utf8, strlen(domain_utf8), &cookie.domain);
+  cef_string_from_utf8(path_utf8, strlen(path_utf8), &cookie.path);
   cookie.secure = secure ? 1 : 0;
   cookie.httponly = http_only ? 1 : 0;
-  cookie.same_site = CEF_COOKIE_SAME_SITE_UNSPECIFIED;
-  if (has_same_site) {
-    if (strcmp(same_site_buf, "no_restriction") == 0) {
-      cookie.same_site = CEF_COOKIE_SAME_SITE_NO_RESTRICTION;
-    } else if (strcmp(same_site_buf, "lax") == 0) {
-      cookie.same_site = CEF_COOKIE_SAME_SITE_LAX_MODE;
-    } else if (strcmp(same_site_buf, "strict") == 0) {
-      cookie.same_site = CEF_COOKIE_SAME_SITE_STRICT_MODE;
-    }
+  switch (same_site) {
+  case 1:
+    cookie.same_site = CEF_COOKIE_SAME_SITE_NO_RESTRICTION;
+    break;
+  case 2:
+    cookie.same_site = CEF_COOKIE_SAME_SITE_LAX_MODE;
+    break;
+  case 3:
+    cookie.same_site = CEF_COOKIE_SAME_SITE_STRICT_MODE;
+    break;
+  default:
+    cookie.same_site = CEF_COOKIE_SAME_SITE_UNSPECIFIED;
+    break;
   }
 
   cef_string_t url = {0};
-  cef_string_from_utf8(url_buf, strlen(url_buf), &url);
-
-  proton_json_dispose(&doc);
+  cef_string_from_utf8(url_utf8, strlen(url_utf8), &url);
 
   cef_cookie_manager_t *manager =
       proton_cookie_manager_from_window(window, error, error_len);

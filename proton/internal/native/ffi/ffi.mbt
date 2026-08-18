@@ -452,13 +452,12 @@ pub extern "C" fn proton_window_respond_browser_request_json_ffi(
 ) -> Int = "proton_window_respond_browser_request_json"
 
 ///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_window_state_json_ffi(
+#borrow(out_fields)
+pub extern "C" fn proton_window_get_state_ffi(
   window : WindowHandle,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_window_state_json"
+  out_fields : FixedArray[Int],
+  field_capacity : Int,
+) -> Int = "proton_window_get_state"
 
 ///|
 pub extern "C" fn proton_window_set_close_interception_ffi(
@@ -623,13 +622,12 @@ pub extern "C" fn proton_view_load_url_ffi(
 ) -> Int = "proton_view_load_url"
 
 ///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_view_state_json_ffi(
+#borrow(out_fields)
+pub extern "C" fn proton_view_get_state_ffi(
   view : ViewHandle,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_view_state_json"
+  out_fields : FixedArray[Int],
+  field_capacity : Int,
+) -> Int = "proton_view_get_state"
 
 ///|
 #borrow(script)
@@ -646,12 +644,12 @@ pub extern "C" fn proton_view_browser_command_json_ffi(
 ) -> Int = "proton_view_browser_command_json"
 
 ///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_screen_enumerate_json_ffi(
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_screen_enumerate_json"
+#borrow(out_fields, out_screen_count)
+pub extern "C" fn proton_screen_enumerate_ffi(
+  out_fields : FixedArray[Int],
+  field_capacity : Int,
+  out_screen_count : Ref[Int],
+) -> Int = "proton_screen_enumerate"
 
 ///|
 #borrow(url_utf8, out_request_id)
@@ -663,11 +661,18 @@ pub extern "C" fn proton_window_cookie_begin_get_json_ffi(
 ) -> Int = "proton_window_cookie_begin_get_json"
 
 ///|
-#borrow(cookie_json)
-pub extern "C" fn proton_window_cookie_set_json_ffi(
+#borrow(url_utf8, name_utf8, value_utf8, domain_utf8, path_utf8)
+pub extern "C" fn proton_window_cookie_set_ffi(
   window : WindowHandle,
-  cookie_json : Bytes,
-) -> Int = "proton_window_cookie_set_json"
+  url_utf8 : Bytes,
+  name_utf8 : Bytes,
+  value_utf8 : Bytes,
+  domain_utf8 : Bytes,
+  path_utf8 : Bytes,
+  secure : Int,
+  http_only : Int,
+  same_site : Int,
+) -> Int = "proton_window_cookie_set"
 
 ///|
 #borrow(url_utf8, name_utf8)
@@ -725,13 +730,12 @@ pub extern "C" fn proton_image_add_bitmap_ffi(
 pub extern "C" fn proton_image_is_empty_ffi(image : ImageHandle) -> Int = "proton_image_is_empty"
 
 ///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_image_get_size_json_ffi(
+#borrow(out_width, out_height)
+pub extern "C" fn proton_image_get_size_ffi(
   image : ImageHandle,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_image_get_size_json"
+  out_width : Ref[Int],
+  out_height : Ref[Int],
+) -> Int = "proton_image_get_size"
 
 ///|
 #borrow(buffer, out_required_len, out_width, out_height)

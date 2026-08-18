@@ -343,9 +343,12 @@ int32_t proton_engine_window_cookie_begin_get_json(
     proton_engine_window_t *window, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id, char *error,
     size_t error_len);
-int32_t proton_engine_window_cookie_set_json(
-    proton_engine_window_t *window, const char *cookie_json, char *error,
-    size_t error_len);
+int32_t proton_engine_window_cookie_set(
+    proton_engine_window_t *window, const char *url_utf8,
+    const char *name_utf8, const char *value_utf8,
+    const char *domain_utf8, const char *path_utf8,
+    int32_t secure, int32_t http_only, int32_t same_site,
+    char *error, size_t error_len);
 int32_t proton_engine_window_cookie_delete(proton_engine_window_t *window,
                                            const char *url_utf8,
                                            const char *name_utf8,

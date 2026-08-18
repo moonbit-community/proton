@@ -13,8 +13,6 @@ pub fn abi_version() -> Int
 
 pub fn bridge_permission_grants_supported() -> Bool
 
-pub fn decode_runtime_event_json(String) -> RuntimeEvent raise NativeError
-
 pub fn execute_process(config? : RuntimeConfig) -> ProcessResult raise NativeError
 
 pub fn host_loop_begin() -> Unit raise NativeError
@@ -228,6 +226,16 @@ pub fn BrowserPolicyMode::equal(Self, Self) -> Bool
 pub fn BrowserPolicyMode::not_equal(Self, Self) -> Bool
 pub fn BrowserPolicyMode::to_repr(Self) -> @debug.Repr
 
+pub(all) enum CookieSameSite {
+  Unspecified
+  NoRestriction
+  Lax
+  Strict
+} derive(Eq, @debug.Debug)
+pub fn CookieSameSite::equal(Self, Self) -> Bool
+pub fn CookieSameSite::not_equal(Self, Self) -> Bool
+pub fn CookieSameSite::to_repr(Self) -> @debug.Repr
+
 pub(all) enum DialogLevel {
   Info
   Warning
@@ -236,10 +244,6 @@ pub(all) enum DialogLevel {
 pub fn DialogLevel::equal(Self, Self) -> Bool
 pub fn DialogLevel::not_equal(Self, Self) -> Bool
 pub fn DialogLevel::to_repr(Self) -> @debug.Repr
-
-type ImageSize derive(ToJson, @json.FromJson)
-pub fn ImageSize::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn ImageSize::to_json(Self) -> Json
 
 type Menu derive(Eq, @debug.Debug)
 pub fn Menu::equal(Self, Self) -> Bool
@@ -463,9 +467,8 @@ pub(all) struct ScreenInfo {
   work_height : Int
   scale_factor_percent : Int
   is_primary : Bool
-} derive(Eq, @debug.Debug, @json.FromJson)
+} derive(Eq, @debug.Debug)
 pub fn ScreenInfo::equal(Self, Self) -> Bool
-pub fn ScreenInfo::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ScreenInfo::not_equal(Self, Self) -> Bool
 pub fn ScreenInfo::to_repr(Self) -> @debug.Repr
 
@@ -526,9 +529,8 @@ pub(all) struct ViewState {
   height : Int
   visible : Bool
   z_order : Int
-} derive(Eq, @debug.Debug, @json.FromJson)
+} derive(Eq, @debug.Debug)
 pub fn ViewState::equal(Self, Self) -> Bool
-pub fn ViewState::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn ViewState::not_equal(Self, Self) -> Bool
 pub fn ViewState::to_repr(Self) -> @debug.Repr
 
@@ -541,7 +543,7 @@ pub fn Window::close(Self) -> Unit raise NativeError
 pub fn Window::cookie_begin_get(Self, String?, Bool) -> Int64 raise NativeError
 pub fn Window::cookie_delete(Self, String?, String?) -> Unit raise NativeError
 pub fn Window::cookie_flush(Self) -> Unit raise NativeError
-pub fn Window::cookie_set(Self, String) -> Unit raise NativeError
+pub fn Window::cookie_set(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : CookieSameSite) -> Unit raise NativeError
 pub fn Window::destroy(Self) -> Unit raise NativeError
 pub fn Window::emit_bridge_event_json(Self, String) -> Unit raise NativeError
 pub fn Window::eval(Self, String) -> Unit raise NativeError
@@ -582,9 +584,8 @@ pub(all) struct WindowMonitor {
   work_width : Int
   work_height : Int
   scale_factor_percent : Int
-} derive(Eq, @debug.Debug, @json.FromJson)
+} derive(Eq, @debug.Debug)
 pub fn WindowMonitor::equal(Self, Self) -> Bool
-pub fn WindowMonitor::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn WindowMonitor::not_equal(Self, Self) -> Bool
 pub fn WindowMonitor::to_repr(Self) -> @debug.Repr
 
@@ -625,9 +626,8 @@ pub(all) struct WindowState {
   fullscreen : Bool
   always_on_top : Bool
   theme : String
-} derive(Eq, @debug.Debug, @json.FromJson)
+} derive(Eq, @debug.Debug)
 pub fn WindowState::equal(Self, Self) -> Bool
-pub fn WindowState::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn WindowState::not_equal(Self, Self) -> Bool
 pub fn WindowState::to_repr(Self) -> @debug.Repr
 

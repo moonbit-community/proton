@@ -146,12 +146,6 @@ PROTON_INTERNAL int32_t proton_runtime_sync_engine_close_requests(
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL void proton_runtime_sync_engine_bridge_lifecycle(
     proton_runtime_slot_t *runtime);
-PROTON_INTERNAL int32_t proton_format_window_state_json(
-    const proton_engine_window_state_t *state, char *buffer,
-    size_t buffer_len);
-PROTON_INTERNAL int32_t proton_format_screen_array_json(
-    const proton_engine_screen_info_t *screens, int32_t count, char *buffer,
-    size_t buffer_len);
 PROTON_INTERNAL int32_t proton_destroy_windows_for_runtime(
     proton_runtime_slot_t *runtime);
 

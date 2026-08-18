@@ -393,6 +393,30 @@ pub extend NativeCookieGetCompletion with Eq::{not_equal, equal}
 pub extend NativeCookieGetCompletion with Debug::{to_repr}
 
 ///|
+pub(all) enum CookieSameSite {
+  Unspecified = 0
+  NoRestriction = 1
+  Lax = 2
+  Strict = 3
+} derive(Debug, Eq)
+
+///|
+pub extend CookieSameSite with Eq::{not_equal, equal}
+
+///|
+pub extend CookieSameSite with Debug::{to_repr}
+
+///|
+fn CookieSameSite::native_value(self : CookieSameSite) -> Int {
+  match self {
+    Unspecified => 0
+    NoRestriction => 1
+    Lax => 2
+    Strict => 3
+  }
+}
+
+///|
 /// Geometry and scaling information for the monitor containing a window.
 pub(all) struct WindowMonitor {
   x : Int
@@ -404,16 +428,13 @@ pub(all) struct WindowMonitor {
   work_width : Int
   work_height : Int
   scale_factor_percent : Int
-} derive(Debug, Eq, FromJson)
+} derive(Debug, Eq)
 
 ///|
 pub extend WindowMonitor with Eq::{not_equal, equal}
 
 ///|
 pub extend WindowMonitor with Debug::{to_repr}
-
-///|
-pub extend WindowMonitor with FromJson::{from_json}
 
 ///|
 /// A point-in-time native window state snapshot.
@@ -431,7 +452,7 @@ pub(all) struct WindowState {
   fullscreen : Bool
   always_on_top : Bool
   theme : String
-} derive(Debug, Eq, FromJson)
+} derive(Debug, Eq)
 
 ///|
 /// Information about a single connected display.
@@ -447,7 +468,7 @@ pub(all) struct ScreenInfo {
   work_height : Int
   scale_factor_percent : Int
   is_primary : Bool
-} derive(Debug, Eq, FromJson)
+} derive(Debug, Eq)
 
 ///|
 pub extend ScreenInfo with Eq::{not_equal, equal}
@@ -456,16 +477,10 @@ pub extend ScreenInfo with Eq::{not_equal, equal}
 pub extend ScreenInfo with Debug::{to_repr}
 
 ///|
-pub extend ScreenInfo with FromJson::{from_json}
-
-///|
 pub extend WindowState with Eq::{not_equal, equal}
 
 ///|
 pub extend WindowState with Debug::{to_repr}
-
-///|
-pub extend WindowState with FromJson::{from_json}
 
 ///|
 /// A native notification activation, optionally carrying its application
@@ -995,18 +1010,6 @@ struct NativeImage {
 }
 
 ///|
-struct ImageSize {
-  width : Int
-  height : Int
-} derive(FromJson, ToJson)
-
-///|
-pub extend ImageSize with ToJson::{to_json}
-
-///|
-pub extend ImageSize with FromJson::{from_json}
-
-///|
 pub extend WindowRef with Eq::{not_equal, equal}
 
 ///|
@@ -1507,16 +1510,13 @@ pub(all) struct ViewState {
   height : Int
   visible : Bool
   z_order : Int
-} derive(Debug, Eq, FromJson)
+} derive(Debug, Eq)
 
 ///|
 pub extend ViewState with Eq::{not_equal, equal}
 
 ///|
 pub extend ViewState with Debug::{to_repr}
-
-///|
-pub extend ViewState with FromJson::{from_json}
 
 ///|
 /// Native configuration for one web contents view. `width` and `height` are

@@ -31,6 +31,9 @@
 #endif
 
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
+#define PROTON_WINDOW_STATE_FIELD_COUNT 21
+#define PROTON_SCREEN_FIELD_COUNT 11
+#define PROTON_VIEW_STATE_FIELD_COUNT 6
 
 typedef enum proton_host_lifecycle {
   PROTON_HOST_IDLE = 0,
@@ -896,15 +899,13 @@ int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
   return proton_window_apply_action(window, &action);
 }
 
-int32_t proton_window_state_json(proton_window_handle_t window,
-                                 char *buffer,
-                                 int32_t buffer_len,
-                                 int32_t *out_required_len) {
-  if (out_required_len == NULL) {
+int32_t proton_window_get_state(proton_window_handle_t window,
+                                int32_t *out_fields,
+                                int32_t field_capacity) {
+  if (out_fields == NULL || field_capacity < PROTON_WINDOW_STATE_FIELD_COUNT) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_required_len is required");
+                            "window state field buffer is too small");
   }
-  *out_required_len = 0;
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
@@ -925,30 +926,40 @@ int32_t proton_window_state_json(proton_window_handle_t window,
       return proton_set_engine_status(status, engine_error);
     }
   }
-  char json[1024];
-  int written = proton_format_window_state_json(&state, json, sizeof(json));
-  if (written < 0 || written >= (int)sizeof(json)) {
-    return proton_set_error(PROTON_ERR_ENGINE,
-                            "window state payload is too large");
-  }
-  *out_required_len = written;
-  if (buffer == NULL || buffer_len <= written) {
-    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
-                            "window state buffer is too small");
-  }
-  memcpy(buffer, json, (size_t)written + 1);
+  out_fields[0] = state.x;
+  out_fields[1] = state.y;
+  out_fields[2] = state.width;
+  out_fields[3] = state.height;
+  out_fields[4] = state.monitor_x;
+  out_fields[5] = state.monitor_y;
+  out_fields[6] = state.monitor_width;
+  out_fields[7] = state.monitor_height;
+  out_fields[8] = state.work_x;
+  out_fields[9] = state.work_y;
+  out_fields[10] = state.work_width;
+  out_fields[11] = state.work_height;
+  out_fields[12] = state.scale_factor_percent;
+  out_fields[13] = state.zoom_percent;
+  out_fields[14] = state.visible;
+  out_fields[15] = state.focused;
+  out_fields[16] = state.minimized;
+  out_fields[17] = state.maximized;
+  out_fields[18] = state.fullscreen;
+  out_fields[19] = state.always_on_top;
+  out_fields[20] = state.theme;
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
 
-int32_t proton_screen_enumerate_json(char *buffer,
-                                     int32_t buffer_len,
-                                     int32_t *out_required_len) {
-  if (out_required_len == NULL) {
+int32_t proton_screen_enumerate(int32_t *out_fields,
+                                int32_t field_capacity,
+                                int32_t *out_screen_count) {
+  if (out_fields == NULL || out_screen_count == NULL ||
+      field_capacity < PROTON_ENGINE_MAX_SCREENS * PROTON_SCREEN_FIELD_COUNT) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_required_len is required");
+                            "screen field buffer is too small");
   }
-  *out_required_len = 0;
+  *out_screen_count = 0;
 
   proton_engine_screen_info_t screens[PROTON_ENGINE_MAX_SCREENS];
   int32_t count = 0;
@@ -960,19 +971,22 @@ int32_t proton_screen_enumerate_json(char *buffer,
     return proton_set_engine_status(status, engine_error);
   }
 
-  char json[4096];
-  int written =
-      proton_format_screen_array_json(screens, count, json, sizeof(json));
-  if (written < 0 || written >= (int)sizeof(json)) {
-    return proton_set_error(PROTON_ERR_ENGINE,
-                            "screen enumeration payload is too large");
+  for (int32_t i = 0; i < count; i++) {
+    const proton_engine_screen_info_t *screen = &screens[i];
+    int32_t *fields = out_fields + i * PROTON_SCREEN_FIELD_COUNT;
+    fields[0] = screen->id;
+    fields[1] = screen->x;
+    fields[2] = screen->y;
+    fields[3] = screen->width;
+    fields[4] = screen->height;
+    fields[5] = screen->work_x;
+    fields[6] = screen->work_y;
+    fields[7] = screen->work_width;
+    fields[8] = screen->work_height;
+    fields[9] = screen->scale_factor_percent;
+    fields[10] = screen->is_primary;
   }
-  *out_required_len = written;
-  if (buffer == NULL || buffer_len <= written) {
-    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
-                            "screen enumeration buffer is too small");
-  }
-  memcpy(buffer, json, (size_t)written + 1);
+  *out_screen_count = count;
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
@@ -1554,25 +1568,36 @@ int32_t proton_window_cookie_begin_get_json(proton_window_handle_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_cookie_set_json(proton_window_handle_t window,
-                                      const char *cookie_json) {
+int32_t proton_window_cookie_set(
+    proton_window_handle_t window, const char *url_utf8,
+    const char *name_utf8, const char *value_utf8,
+    const char *domain_utf8, const char *path_utf8,
+    int32_t secure, int32_t http_only, int32_t same_site) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  if (cookie_json == NULL) {
+  if (url_utf8 == NULL || name_utf8 == NULL || value_utf8 == NULL ||
+      domain_utf8 == NULL || path_utf8 == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "cookie JSON is required");
+                            "cookie strings are required");
+  }
+  if ((secure != 0 && secure != 1) ||
+      (http_only != 0 && http_only != 1) ||
+      same_site < 0 || same_site > 3) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "invalid cookie flags");
   }
   if (slot->engine_window == NULL) {
     return proton_set_error(PROTON_ERR_UNSUPPORTED,
                             "cookie operations require native engine");
   }
   char engine_error[512] = {0};
-  status = proton_engine_window_cookie_set_json(slot->engine_window,
-                                                 cookie_json, engine_error,
-                                                 sizeof(engine_error));
+  status = proton_engine_window_cookie_set(
+      slot->engine_window, url_utf8, name_utf8, value_utf8, domain_utf8,
+      path_utf8, secure, http_only, same_site, engine_error,
+      sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
@@ -1861,35 +1886,24 @@ int32_t proton_view_browser_command_json(proton_view_handle_t view,
   return PROTON_OK;
 }
 
-int32_t proton_view_state_json(proton_view_handle_t view, char *buffer,
-                               int32_t buffer_len,
-                               int32_t *out_required_len) {
-  if (out_required_len == NULL) {
+int32_t proton_view_get_state(proton_view_handle_t view,
+                              int32_t *out_fields,
+                              int32_t field_capacity) {
+  if (out_fields == NULL || field_capacity < PROTON_VIEW_STATE_FIELD_COUNT) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_required_len is required");
+                            "view state field buffer is too small");
   }
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  char state[256];
-  int required = snprintf(
-      state, sizeof(state),
-      "{\"x\":%d,\"y\":%d,\"width\":%d,\"height\":%d,"
-      "\"visible\":%s,\"z_order\":%d}",
-      slot->x, slot->y, slot->width, slot->height,
-      slot->visible ? "true" : "false", slot->z_order);
-  if (required < 0 || required >= (int)sizeof(state)) {
-    return proton_set_error(PROTON_ERR_ENGINE,
-                            "view state payload is too large");
-  }
-  *out_required_len = required;
-  if (buffer == NULL || buffer_len <= required) {
-    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
-                            "view state buffer is too small");
-  }
-  memcpy(buffer, state, (size_t)required + 1);
+  out_fields[0] = slot->x;
+  out_fields[1] = slot->y;
+  out_fields[2] = slot->width;
+  out_fields[3] = slot->height;
+  out_fields[4] = slot->visible ? 1 : 0;
+  out_fields[5] = slot->z_order;
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
@@ -2019,37 +2033,25 @@ int32_t proton_image_is_empty(proton_image_handle_t image) {
   return empty ? 1 : 0;
 }
 
-int32_t proton_image_get_size_json(proton_image_handle_t image, char *buffer,
-                                   int32_t buffer_len,
-                                   int32_t *out_required_len) {
+int32_t proton_image_get_size(proton_image_handle_t image,
+                              int32_t *out_width,
+                              int32_t *out_height) {
+  if (out_width == NULL || out_height == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "image size outputs are required");
+  }
   proton_image_slot_t *slot = NULL;
   int32_t status = proton_get_image(image, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  int32_t width = 0;
-  int32_t height = 0;
   char engine_error[512] = {0};
-  status = proton_engine_image_get_size(slot->engine_image, &width, &height,
-                                        engine_error, sizeof(engine_error));
+  status = proton_engine_image_get_size(slot->engine_image, out_width,
+                                        out_height, engine_error,
+                                        sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
-  char json[64];
-  int required = snprintf(json, sizeof(json), "{\"width\":%d,\"height\":%d}",
-                          width, height);
-  if (required < 0 || required >= (int)sizeof(json)) {
-    return proton_set_error(PROTON_ERR_ENGINE,
-                            "image size payload is too large");
-  }
-  if (out_required_len != NULL) {
-    *out_required_len = required;
-  }
-  if (buffer == NULL || buffer_len <= required) {
-    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
-                            "image size buffer is too small");
-  }
-  memcpy(buffer, json, (size_t)required + 1);
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

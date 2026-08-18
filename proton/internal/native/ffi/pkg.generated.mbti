@@ -80,7 +80,7 @@ pub fn proton_image_create_empty_ffi(@ref.Ref[ImageHandle]) -> Int
 
 pub fn proton_image_destroy_ffi(ImageHandle) -> Int
 
-pub fn proton_image_get_size_json_ffi(ImageHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_image_get_size_ffi(ImageHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
 pub fn proton_image_is_empty_ffi(ImageHandle) -> Int
 
@@ -110,7 +110,7 @@ pub fn proton_runtime_respond_bridge_request_json_ffi(RuntimeHandle, Bytes) -> I
 
 pub fn proton_runtime_signal_wakeup_ffi() -> Unit
 
-pub fn proton_screen_enumerate_json_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_screen_enumerate_ffi(FixedArray[Int], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_system_preferred_languages_json_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
@@ -136,6 +136,8 @@ pub fn proton_view_destroy_ffi(ViewHandle) -> Int
 
 pub fn proton_view_eval_ffi(ViewHandle, Bytes) -> Int
 
+pub fn proton_view_get_state_ffi(ViewHandle, FixedArray[Int], Int) -> Int
+
 pub fn proton_view_load_url_ffi(ViewHandle, Bytes) -> Int
 
 pub fn proton_view_set_bounds_ffi(ViewHandle, Int, Int, Int, Int) -> Int
@@ -143,8 +145,6 @@ pub fn proton_view_set_bounds_ffi(ViewHandle, Int, Int, Int, Int) -> Int
 pub fn proton_view_set_visible_ffi(ViewHandle, Int) -> Int
 
 pub fn proton_view_set_z_order_ffi(ViewHandle, Int) -> Int
-
-pub fn proton_view_state_json_ffi(ViewHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_begin_choose_directory_dialog_ffi(WindowHandle, Bytes, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
 
@@ -170,7 +170,7 @@ pub fn proton_window_cookie_delete_ffi(WindowHandle, Bytes, Bytes) -> Int
 
 pub fn proton_window_cookie_flush_ffi(WindowHandle) -> Int
 
-pub fn proton_window_cookie_set_json_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_cookie_set_ffi(WindowHandle, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int) -> Int
 
 pub fn proton_window_destroy_ffi(WindowHandle) -> Int
 
@@ -179,6 +179,8 @@ pub fn proton_window_emit_bridge_event_json_ffi(WindowHandle, Bytes) -> Int
 pub fn proton_window_eval_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_focus_ffi(WindowHandle) -> Int
+
+pub fn proton_window_get_state_ffi(WindowHandle, FixedArray[Int], Int) -> Int
 
 pub fn proton_window_hide_ffi(WindowHandle) -> Int
 
@@ -209,8 +211,6 @@ pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int
 pub fn proton_window_set_zoom_percent_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_show_ffi(WindowHandle) -> Int
-
-pub fn proton_window_state_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_take_bridge_failure_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 

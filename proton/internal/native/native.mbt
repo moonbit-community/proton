@@ -65,21 +65,32 @@ pub fn system_preferred_language_tags() -> Array[String] raise NativeError {
 /// primary display. Raises `UnsupportedNativeFeature` when the native
 /// engine is not available.
 pub fn screens() -> Array[ScreenInfo] raise NativeError {
-  let text = require_native_text(
-    "screen enumeration",
-    PayloadBytesExcludingTerminator,
-    (buffer, buffer_len, required) => {
-      @native_ffi.proton_screen_enumerate_json_ffi(buffer, buffer_len, required)
-    },
+  let fields = FixedArray::make(
+    proton_max_screens * proton_screen_field_count,
+    0,
   )
-  let json = decode_native_json(text, "screen enumeration")
-  @json.from_json(json) catch {
-    error =>
-      raise InvalidPayload(
-        context="screen enumeration",
-        message=error.to_string(),
-      )
+  let count = Ref(0)
+  check_status(
+    @native_ffi.proton_screen_enumerate_ffi(fields, fields.length(), count),
+  )
+  let screens = []
+  for index in 0..<count.val {
+    let offset = index * proton_screen_field_count
+    screens.push({
+      id: fields[offset],
+      x: fields[offset + 1],
+      y: fields[offset + 2],
+      width: fields[offset + 3],
+      height: fields[offset + 4],
+      work_x: fields[offset + 5],
+      work_y: fields[offset + 6],
+      work_width: fields[offset + 7],
+      work_height: fields[offset + 8],
+      scale_factor_percent: fields[offset + 9],
+      is_primary: fields[offset + 10] != 0,
+    })
   }
+  screens
 }
 
 ///|
@@ -245,28 +256,6 @@ fn decode_string_json(json : Json, label : String) -> String raise NativeError {
 }
 
 ///|
-fn decode_int_json(json : Json, label : String) -> Int raise NativeError {
-  @json.from_json(json) catch {
-    error =>
-      raise InvalidPayload(
-        context=label,
-        message="expected integer: " + error.to_string(),
-      )
-  }
-}
-
-///|
-fn decode_bool_json(json : Json, label : String) -> Bool raise NativeError {
-  @json.from_json(json) catch {
-    error =>
-      raise InvalidPayload(
-        context=label,
-        message="expected boolean: " + error.to_string(),
-      )
-  }
-}
-
-///|
 /// Rejects payloads whose `abi_version` does not match the schema version
 /// this binding implements.
 fn expect_abi_version(found : Int, context : String) -> Unit raise NativeError {
@@ -290,328 +279,6 @@ fn decode_optional_abi_version(
     { "abi_version": Number(version, ..), .. } =>
       expect_abi_version(version.to_int(), context)
     _ => raise InvalidPayload(context~, message="expected number abi_version")
-  }
-}
-
-///|
-pub fn decode_runtime_event_json(
-  text : String,
-) -> RuntimeEvent raise NativeError {
-  let json = decode_native_json(text, "runtime event")
-  let object = match json {
-    Object(object) => object
-    _ =>
-      raise InvalidPayload(context="runtime event", message="expected object")
-  }
-  decode_optional_abi_version(object, "runtime event")
-  guard object
-    is {
-      "type": event_type_json,
-      "window"? : window_json,
-      "view"? : view_json,
-      "title"? : title_json,
-      "is_loading"? : is_loading_json,
-      "state"? : state_json,
-      "request_id"? : request_id_json,
-      "url"? : url_json,
-      "method"? : method_json,
-      "user_gesture"? : user_gesture_json,
-      "redirect"? : redirect_json,
-      "disposition"? : disposition_json,
-      "download_id"? : download_id_json,
-      "suggested_name"? : suggested_name_json,
-      "download_state"? : download_state_json,
-      "received_bytes"? : received_bytes_json,
-      "total_bytes"? : total_bytes_json,
-      "percent"? : percent_json,
-      "error"? : error_json,
-      "permissions"? : permissions_json,
-      "command_id"? : command_id_json,
-      "revision"? : revision_json,
-      "items"? : items_json,
-      "ok"? : ok_json,
-      "message"? : message_json,
-      ..
-    } else {
-    raise InvalidPayload(context="runtime event", message="missing type")
-  }
-  let event_type = decode_string_json(event_type_json, "runtime event type")
-  let window = window_json.map(value => {
-    decode_int64_json(value, "runtime event window")
-  })
-  let view = view_json.map(value => {
-    decode_int64_json(value, "runtime event view")
-  })
-  let title = title_json.map(value => {
-    decode_string_json(value, "runtime event title")
-  })
-  let is_loading = is_loading_json.map(value => {
-    decode_bool_json(value, "runtime event is_loading")
-  })
-  let state = match state_json {
-    None => None
-    Some(value) =>
-      Some(
-        @json.from_json(value) catch {
-          error =>
-            raise InvalidPayload(
-              context="runtime event window state",
-              message=error.to_string(),
-            )
-        },
-      )
-  }
-  let request_id = request_id_json.map(value => {
-    decode_int64_json(value, "runtime event request id")
-  })
-  let url = url_json.map(value => decode_string_json(value, "runtime event URL"))
-  let http_method = method_json.map(value => {
-    decode_string_json(value, "runtime event method")
-  })
-  let user_gesture = user_gesture_json.map(value => {
-    decode_bool_json(value, "runtime event user gesture")
-  })
-  let redirect = redirect_json.map(value => {
-    decode_bool_json(value, "runtime event redirect")
-  })
-  let disposition = disposition_json.map(value => {
-    decode_int_json(value, "runtime event disposition")
-  })
-  let download_id = download_id_json.map(value => {
-    decode_int_json(value, "runtime event download id")
-  })
-  let suggested_name = suggested_name_json.map(value => {
-    decode_string_json(value, "runtime event suggested name")
-  })
-  let download_state = download_state_json.map(value => {
-    decode_string_json(value, "runtime event download state")
-  })
-  let received_bytes = received_bytes_json.map(value => {
-    decode_int64_json(value, "runtime event received bytes")
-  })
-  let total_bytes = total_bytes_json.map(value => {
-    decode_int64_json(value, "runtime event total bytes")
-  })
-  let percent = percent_json.map(value => {
-    decode_int_json(value, "runtime event percent")
-  })
-  let error_code = error_json.map(value => {
-    decode_int_json(value, "runtime event error code")
-  })
-  let permissions = permissions_json.map(value => {
-    decode_int_json(value, "runtime event permissions")
-  })
-  let menu_command_id = command_id_json.map(value => {
-    decode_string_json(value, "runtime event command id")
-  })
-  let revision = revision_json.map(value => {
-    decode_int64_json(value, "runtime event revision")
-  })
-  let items = match items_json {
-    None => []
-    Some(Array(values)) => {
-      let items : Array[String] = []
-      for value in values {
-        items.push(decode_string_json(value, "runtime event item"))
-      }
-      items
-    }
-    Some(_) =>
-      raise InvalidPayload(
-        context="runtime event items",
-        message="expected string array",
-      )
-  }
-  let ok = match ok_json {
-    None => None
-    Some(True) => Some(true)
-    Some(False) => Some(false)
-    Some(_) =>
-      raise InvalidPayload(
-        context="runtime event ok",
-        message="expected boolean",
-      )
-  }
-  let message = message_json.map(value => {
-    decode_string_json(value, "runtime event message")
-  })
-  match event_type {
-    "window_created" => {
-      guard window is Some(window) else {
-        raise runtime_event_missing(event_type, "window")
-      }
-      WindowCreated(window)
-    }
-    "window_closed" => {
-      guard window is Some(window) else {
-        raise runtime_event_missing(event_type, "window")
-      }
-      WindowClosed(window)
-    }
-    "window_state_changed" => {
-      guard (window, state) is (Some(window), Some(state)) else {
-        raise runtime_event_missing(event_type, "window or state")
-      }
-      WindowStateChanged(window, state)
-    }
-    "window_close_requested" => {
-      guard (window, request_id) is (Some(window), Some(request_id)) else {
-        raise runtime_event_missing(event_type, "window or request_id")
-      }
-      WindowCloseRequested(window, request_id)
-    }
-    "bridge_lifecycle_changed" => {
-      guard (window, revision) is (Some(window), Some(revision)) else {
-        raise runtime_event_missing(event_type, "window or revision")
-      }
-      BridgeLifecycleChanged(window, revision)
-    }
-    "bridge_request_cancelled" => {
-      guard request_id is Some(request_id) else {
-        raise runtime_event_missing(event_type, "request_id")
-      }
-      BridgeRequestCancelled(request_id)
-    }
-    "menu_command" => {
-      guard menu_command_id is Some(command_id) else {
-        raise runtime_event_missing(event_type, "command_id")
-      }
-      MenuCommand(command_id, window)
-    }
-    "open_urls" => LaunchInput(OpenUrls(items))
-    "open_files" => LaunchInput(OpenFiles(items))
-    "reopen" => LaunchInput(Reopen)
-    "notification_result" =>
-      match ok {
-        Some(true) => NotificationResult(Delivered)
-        Some(false) =>
-          NotificationResult(
-            Failed(message.unwrap_or("notification delivery failed")),
-          )
-        None => raise runtime_event_missing(event_type, "ok")
-      }
-    "browser_navigation_requested" => {
-      guard (window, request_id, url)
-        is (Some(window), Some(request_id), Some(url)) else {
-        raise runtime_event_missing(event_type, "window, request_id, or url")
-      }
-      BrowserRequest(
-        window,
-        Navigation(
-          request_id~,
-          url~,
-          http_method=http_method.unwrap_or("GET"),
-          user_gesture=user_gesture.unwrap_or(false),
-          redirect=redirect.unwrap_or(false),
-        ),
-      )
-    }
-    "browser_popup_requested" => {
-      guard (window, request_id, url)
-        is (Some(window), Some(request_id), Some(url)) else {
-        raise runtime_event_missing(event_type, "window, request_id, or url")
-      }
-      BrowserRequest(
-        window,
-        Popup(
-          request_id~,
-          url~,
-          disposition=disposition.unwrap_or(0),
-          user_gesture=user_gesture.unwrap_or(false),
-        ),
-      )
-    }
-    "browser_download_requested" => {
-      guard (window, request_id, url, download_id)
-        is (Some(window), Some(request_id), Some(url), Some(download_id)) else {
-        raise runtime_event_missing(
-          event_type, "window, request_id, url, or download_id",
-        )
-      }
-      BrowserRequest(
-        window,
-        Download(
-          request_id~,
-          download_id~,
-          url~,
-          suggested_name=suggested_name.unwrap_or(""),
-        ),
-      )
-    }
-    "browser_certificate_error" => {
-      guard (window, request_id, url, error_code)
-        is (Some(window), Some(request_id), Some(url), Some(error_code)) else {
-        raise runtime_event_missing(
-          event_type, "window, request_id, url, or error",
-        )
-      }
-      BrowserRequest(window, Certificate(request_id~, url~, error_code~))
-    }
-    "browser_media_permission_requested" => {
-      guard (window, request_id, url, permissions)
-        is (Some(window), Some(request_id), Some(url), Some(permissions)) else {
-        raise runtime_event_missing(
-          event_type, "window, request_id, origin, or permissions",
-        )
-      }
-      BrowserRequest(window, Media(request_id~, origin=url, permissions~))
-    }
-    "browser_download_updated" => {
-      guard (
-          window, download_id, download_state, received_bytes, total_bytes, percent,
-        )
-        is (
-          Some(window),
-          Some(download_id),
-          Some(state),
-          Some(received_bytes),
-          Some(total_bytes),
-          Some(percent),
-        ) else {
-        raise runtime_event_missing(event_type, "download update fields")
-      }
-      BrowserDownloadUpdated(window, {
-        download_id,
-        state,
-        received_bytes,
-        total_bytes,
-        percent,
-      })
-    }
-    "view_loading_changed" => {
-      guard (window, view, is_loading)
-        is (Some(window), Some(view), Some(is_loading)) else {
-        raise runtime_event_missing(event_type, "window, view, or is_loading")
-      }
-      ViewEvent(window, view, LoadingChanged(is_loading))
-    }
-    "view_navigated" => {
-      guard (window, view, url) is (Some(window), Some(view), Some(url)) else {
-        raise runtime_event_missing(event_type, "window, view, or url")
-      }
-      ViewEvent(window, view, Navigated(url))
-    }
-    "view_title_updated" => {
-      guard (window, view, title) is (Some(window), Some(view), Some(title)) else {
-        raise runtime_event_missing(event_type, "window, view, or title")
-      }
-      ViewEvent(window, view, TitleUpdated(title))
-    }
-    "view_load_failed" => {
-      guard (window, view, url, error_code, message)
-        is (Some(window), Some(view), Some(url), Some(error_code), Some(message)
-        ) else {
-        raise runtime_event_missing(
-          event_type, "window, view, url, error, or message",
-        )
-      }
-      ViewEvent(window, view, LoadFailed(url, error_code, message))
-    }
-    _ =>
-      raise InvalidPayload(
-        context="runtime event",
-        message="unsupported event type " + event_type,
-      )
   }
 }
 
@@ -1021,8 +688,7 @@ fn native_event_items(
 }
 
 ///|
-fn native_window_state(event : @native_ffi.EventHandle) -> WindowState {
-  let field = index => @native_ffi.event_window_state_field(event, index)
+fn window_state_from_fields(field : (Int) -> Int) -> WindowState {
   let theme = match field(20) {
     1 => "light"
     2 => "dark"
@@ -1053,6 +719,13 @@ fn native_window_state(event : @native_ffi.EventHandle) -> WindowState {
     always_on_top: field(19) != 0,
     theme,
   }
+}
+
+///|
+fn native_window_state(event : @native_ffi.EventHandle) -> WindowState {
+  window_state_from_fields(index => {
+    @native_ffi.event_window_state_field(event, index)
+  })
 }
 
 ///|
@@ -1602,25 +1275,15 @@ pub fn Window::set_zoom_percent(
 
 ///|
 pub fn Window::state(self : Window) -> WindowState raise NativeError {
-  let handle = self.live_handle()
-  let text = match
-    read_native_text("window state", PayloadBytesExcludingTerminator, (
-      buffer,
-      buffer_len,
-      required,
-    ) => {
-      @native_ffi.proton_window_state_json_ffi(
-        handle, buffer, buffer_len, required,
-      )
-    }) {
-    Some(text) => text
-    None =>
-      raise InvalidPayload(context="window state", message="missing payload")
-  }
-  @json.from_json(decode_native_json(text, "window state")) catch {
-    error =>
-      raise InvalidPayload(context="window state", message=error.to_string())
-  }
+  let fields = FixedArray::make(proton_window_state_field_count, 0)
+  check_status(
+    @native_ffi.proton_window_get_state_ffi(
+      self.live_handle(),
+      fields,
+      fields.length(),
+    ),
+  )
+  window_state_from_fields(index => fields[index])
 }
 
 ///|
@@ -1841,17 +1504,43 @@ pub fn Window::cookie_begin_get(
 }
 
 ///|
-/// Sets a cookie from a JSON object. The JSON must contain "url", "name",
-/// and "value", and may contain "domain", "path", "secure", "http_only",
-/// "same_site", "expires". Fire-and-forget.
+/// Sets a cookie for the window's session. Fire-and-forget.
 pub fn Window::cookie_set(
   self : Window,
-  cookie_json : String,
+  url : String,
+  name : String,
+  value : String,
+  domain? : String,
+  path? : String,
+  secure? : Bool = false,
+  http_only? : Bool = false,
+  same_site? : CookieSameSite = Unspecified,
 ) -> Unit raise NativeError {
+  if url.is_empty() {
+    raise invalid_argument("cookie url must not be empty")
+  }
+  if name.is_empty() {
+    raise invalid_argument("cookie name must not be empty")
+  }
   check_status(
-    @native_ffi.proton_window_cookie_set_json_ffi(
+    @native_ffi.proton_window_cookie_set_ffi(
       self.live_handle(),
-      @ffi.to_cstr(cookie_json),
+      @ffi.to_cstr(url),
+      @ffi.to_cstr(name),
+      @ffi.to_cstr(value),
+      @ffi.to_cstr(domain.unwrap_or("")),
+      @ffi.to_cstr(path.unwrap_or("")),
+      if secure {
+        1
+      } else {
+        0
+      },
+      if http_only {
+        1
+      } else {
+        0
+      },
+      same_site.native_value(),
     ),
   )
 }
@@ -2004,22 +1693,12 @@ pub fn NativeImage::is_empty(self : NativeImage) -> Bool raise NativeError {
 ///|
 /// Returns the image size in density-independent pixels as `(width, height)`.
 pub fn NativeImage::size(self : NativeImage) -> (Int, Int) raise NativeError {
-  let handle = self.live_handle()
-  let text = require_native_text(
-    "image size",
-    PayloadBytesExcludingTerminator,
-    (buffer, buffer_len, required) => {
-      @native_ffi.proton_image_get_size_json_ffi(
-        handle, buffer, buffer_len, required,
-      )
-    },
+  let width = Ref(0)
+  let height = Ref(0)
+  check_status(
+    @native_ffi.proton_image_get_size_ffi(self.live_handle(), width, height),
   )
-  let json = decode_native_json(text, "image size")
-  let size : ImageSize = @json.from_json(json) catch {
-    error =>
-      raise InvalidPayload(context="image size", message=error.to_string())
-  }
-  (size.width, size.height)
+  (width.val, height.val)
 }
 
 ///|
@@ -2379,24 +2058,21 @@ pub fn View::load_url(self : View, url : String) -> Unit raise NativeError {
 ///|
 /// Reads the current view state from the native runtime.
 pub fn View::state(self : View) -> ViewState raise NativeError {
-  let handle = self.live_handle()
-  let text = match
-    read_native_text("view state", PayloadBytesExcludingTerminator, (
-      buffer,
-      buffer_len,
-      required,
-    ) => {
-      @native_ffi.proton_view_state_json_ffi(
-        handle, buffer, buffer_len, required,
-      )
-    }) {
-    Some(text) => text
-    None =>
-      raise InvalidPayload(context="view state", message="missing payload")
-  }
-  @json.from_json(decode_native_json(text, "view state")) catch {
-    error =>
-      raise InvalidPayload(context="view state", message=error.to_string())
+  let fields = FixedArray::make(proton_view_state_field_count, 0)
+  check_status(
+    @native_ffi.proton_view_get_state_ffi(
+      self.live_handle(),
+      fields,
+      fields.length(),
+    ),
+  )
+  {
+    x: fields[0],
+    y: fields[1],
+    width: fields[2],
+    height: fields[3],
+    visible: fields[4] != 0,
+    z_order: fields[5],
   }
 }
 

@@ -48,3 +48,15 @@ let runtime_wait_timeout_infinite : Int = -1
 
 ///|
 let proton_invalid_handle : Int64 = 0L
+
+///|
+let proton_window_state_field_count = 21
+
+///|
+let proton_screen_field_count = 11
+
+///|
+let proton_max_screens = 16
+
+///|
+let proton_view_state_field_count = 6
