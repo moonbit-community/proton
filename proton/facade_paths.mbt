@@ -3,6 +3,7 @@
 pub(all) suberror AppPathError {
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
+  ResourceDirUnavailable
   PlatformProbe(@native.NativeError)
 } derive(Debug, Eq)
 
@@ -19,9 +20,31 @@ pub fn AppPathError::message(self : AppPathError) -> String {
       "invalid application identifier: " + identifier
     MissingHomeDirectory(platform~) =>
       "cannot resolve the application data directory on " + platform
+    ResourceDirUnavailable =>
+      "cannot resolve the application resource directory without proton.project.json"
     PlatformProbe(error) =>
       "cannot determine the Proton platform: " + error.message()
   }
+}
+
+///|
+/// Resolves the absolute application resource directory.
+///
+/// This follows Proton's implicit project config discovery. In development it
+/// is the directory containing `proton.project.json`; in a packaged application
+/// it is the directory into which `bundle.resources` are copied, such as
+/// `Contents/Resources` in a macOS application bundle.
+pub fn resource_dir() -> String raise AppPathError {
+  match implicit_config_path() {
+    Some(path) => resource_dir_from_config_path(path)
+    None => raise ResourceDirUnavailable
+  }
+}
+
+///|
+fn resource_dir_from_config_path(path : String) -> String {
+  let config : @mbpath.Path = path
+  config.resolve().dirname().to_string()
 }
 
 ///|
