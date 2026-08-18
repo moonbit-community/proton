@@ -28,7 +28,7 @@ const codegenVersion = fs
   .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 assert(codegenVersion, "codegen/moon.mod is missing its version");
 const codegenCoordinate = `moonbit-community/proton_codegen@${codegenVersion}`;
-const warrenCoordinate = "moonbit-community/warren@0.2.4";
+const warrenCoordinate = "moonbit-community/warren@0.2.7";
 let appProcess = null;
 let staticServer = null;
 let succeeded = false;

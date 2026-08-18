@@ -94,8 +94,28 @@ jobs:
             moon update
           }
 
+          wait_for_codegen() {
+            version=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)"/\1/p' codegen/moon.mod)
+            if [ -z "$version" ]; then
+              echo "Could not read the proton_codegen version." >&2
+              return 1
+            fi
+            coordinate="moonbit-community/proton_codegen@$version"
+            deadline=$((SECONDS + 900))
+            echo "Waiting for $coordinate executable asset"
+            until moonx "$coordinate" --help >/dev/null 2>&1; do
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                echo "$coordinate is still unavailable after 15 minutes." >&2
+                return 1
+              fi
+              sleep 15
+            done
+            echo "$coordinate executable asset is ready"
+          }
+
           publish_module config moonbit-community/proton_config
           publish_module codegen moonbit-community/proton_codegen
+          wait_for_codegen
           publish_module contract moonbit-community/proton_contract
           publish_module rsa moonbit-community/proton_rsa
           publish_module updater moonbit-community/proton_updater
