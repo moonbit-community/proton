@@ -1,0 +1,14 @@
+import {
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/async/process",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/path",
+}
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "windows_icon.c" ],
+)

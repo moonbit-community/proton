@@ -39,6 +39,9 @@ developer must perform them.
 - `codegen/`: `moonbit-community/proton_codegen`; WASM executable invoked through
   `moonx` by application prebuild rules, plus its reusable parser/renderer library.
 - `cli/`: `moonbit-community/proton_cli`; independent native developer CLI module.
+- `package/`: standalone `moonbit-community/proton_package` module. It packages
+  already-built executables from explicit metadata and payloads; it does not
+  discover Proton projects, invoke Moon builds, or assemble CEF runtimes.
 - `extensions/`: `moonbit-community/proton_ext`; command extensions for examples and
   applications. Platform capability extensions are backed by the bindings
   under `sys/`.
@@ -97,6 +100,7 @@ developer must perform them.
   `moon -C codegen test lib --target wasm`
 - With `.proton\runtime.json` active runtime `bin` on `PATH`:
   `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
+- `moon -C package test lib --target native --diagnostic-limit 80`
 - `moon check --target native`
 - `node scripts/verify_generated.mjs`
 - `moon -C extensions test -p moonbit-community/proton_ext moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake moonbit-community/proton_ext/microphone moonbit-community/proton_ext/notification moonbit-community/proton_ext/path moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray --target native`
@@ -136,7 +140,8 @@ native checks before handing off larger refactors.
 ### Release Checklist
 
 - `.github/workflows/publish.yml` publishes the dependency chain in this order:
-  `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`, `proton_updater`, the ten
+  `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`,
+  `proton_updater`, `proton_package`, the ten
   `sys` modules, `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and
   finally `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not
   published.
