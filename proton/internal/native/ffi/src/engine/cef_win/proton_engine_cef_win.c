@@ -127,6 +127,7 @@ struct proton_engine_window {
   int destroy_requested;
   int closed;
   struct proton_engine_view *views;
+  int finalize_queued;
   struct proton_engine_window *next;
 };
 
@@ -2418,9 +2419,12 @@ static proton_engine_client_t *proton_engine_client_new(
 }
 
 static void proton_engine_window_defer_free(proton_engine_window_t *window) {
-  if (window == NULL) {
+  // Windowless CloseBrowser can synchronously finalize the last view before
+  // the outer window destroy resumes, so queue insertion must be idempotent.
+  if (window == NULL || window->finalize_queued) {
     return;
   }
+  window->finalize_queued = 1;
   proton_engine_window_list_remove(window);
   window->next = g_proton_engine_closed_windows;
   g_proton_engine_closed_windows = window;
@@ -4674,8 +4678,8 @@ static void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
 
 static void proton_engine_window_finalize_if_ready(
     proton_engine_window_t *window) {
-  if (window == NULL || !window->destroy_requested ||
-      window->browser != NULL) {
+  if (window == NULL || window->finalize_queued ||
+      !window->destroy_requested || window->browser != NULL) {
     return;
   }
   for (proton_engine_view_t *view = window->views; view != NULL;
