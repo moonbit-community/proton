@@ -24,6 +24,7 @@ static void test_cleanup_waits_for_visitor_release(void) {
   proton_cookie_state_ref_count_t refs;
   proton_cookie_state_detached_t detached;
 
+  /* A pending CEF visitor must keep the detached state alive. */
   proton_cookie_state_lifetime_init(&refs, &detached);
   proton_cookie_state_lifetime_retain(&refs);
   proton_cookie_state_lifetime_detach(&detached);
