@@ -381,8 +381,8 @@ Generated projects describe their toolchain in `proton.project.json`:
   "frontend": {
     "path": "frontend",
     "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "moonx --target native moonbit-community/warren@0.2.4 dev --direct --port 4300",
-    "before_build": "moonx --target native moonbit-community/warren@0.2.4 build",
+    "before_dev": "moonx --target native moonbit-community/warren@0.2.7 dev --direct --port 4300",
+    "before_build": "moonx --target native moonbit-community/warren@0.2.7 build",
     "dist": "dist"
   },
   "entry": {
