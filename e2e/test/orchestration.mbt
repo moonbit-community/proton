@@ -151,7 +151,7 @@ fn app_process_env(
     // shutdown, so nested Moon commands inherit an explicit host compiler.
     result["MOON_CC"] = match @env.get_env_var("MOON_CC") {
       Some(value) if value.trim() != "" => value
-      _ => "cc"
+      _ => "clang"
     }
     result["LD_LIBRARY_PATH"] = prepend_env_path(
       lib_dir,
