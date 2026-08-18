@@ -6,15 +6,51 @@ pub(all) struct TodoItem {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend TodoItem with ToJson::{to_json}
+
+///|
+pub extend TodoItem with FromJson::{from_json}
+
+///|
+pub extend TodoItem with Eq::{not_equal, equal}
+
+///|
+pub extend TodoItem with Debug::{to_repr}
+
+///|
 pub(all) struct TodoSnapshot {
   version : Int
   todos : Array[TodoItem]
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend TodoSnapshot with ToJson::{to_json}
+
+///|
+pub extend TodoSnapshot with FromJson::{from_json}
+
+///|
+pub extend TodoSnapshot with Eq::{not_equal, equal}
+
+///|
+pub extend TodoSnapshot with Debug::{to_repr}
+
+///|
 pub(all) struct CreateTodoRequest {
   title : String
 } derive(ToJson, FromJson, Eq, Debug)
+
+///|
+pub extend CreateTodoRequest with ToJson::{to_json}
+
+///|
+pub extend CreateTodoRequest with FromJson::{from_json}
+
+///|
+pub extend CreateTodoRequest with Eq::{not_equal, equal}
+
+///|
+pub extend CreateTodoRequest with Debug::{to_repr}
 
 ///|
 pub(all) struct SetTodoCompletedRequest {
@@ -23,9 +59,33 @@ pub(all) struct SetTodoCompletedRequest {
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
+pub extend SetTodoCompletedRequest with ToJson::{to_json}
+
+///|
+pub extend SetTodoCompletedRequest with FromJson::{from_json}
+
+///|
+pub extend SetTodoCompletedRequest with Eq::{not_equal, equal}
+
+///|
+pub extend SetTodoCompletedRequest with Debug::{to_repr}
+
+///|
 pub(all) struct DeleteTodoRequest {
   id : Int
 } derive(ToJson, FromJson, Eq, Debug)
+
+///|
+pub extend DeleteTodoRequest with ToJson::{to_json}
+
+///|
+pub extend DeleteTodoRequest with FromJson::{from_json}
+
+///|
+pub extend DeleteTodoRequest with Eq::{not_equal, equal}
+
+///|
+pub extend DeleteTodoRequest with Debug::{to_repr}
 
 ///|
 pub let list_todos : @proton_contract.Command[Unit, TodoSnapshot] = @proton_contract.command(
