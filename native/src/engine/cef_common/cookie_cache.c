@@ -339,11 +339,7 @@ proton_cookie_visitor_release(cef_base_ref_counted_t *base) {
     return 1;
   }
   /* CEF released its ref but the caller still holds one.  The visit is
-     complete from CEF's perspective, so signal done. */
-  if (impl->state != NULL &&
-      !proton_cookie_state_lifetime_is_detached(&impl->state->detached)) {
-    impl->state->done = 1;
-  }
+     still in progress, so leave the state pending until the final release. */
   return 0;
 }
 
