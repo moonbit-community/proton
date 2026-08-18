@@ -45,6 +45,7 @@ fn i18n_extension() -> @proton_extension.Extension {
 }
 
 ///|
+#cfg(not(platform="windows"))
 fn menu_bar() -> @proton.MenuBar {
   @proton.MenuBar::new(menus=[
     @proton.Menu::role(@proton.MenuRole::Edit),
