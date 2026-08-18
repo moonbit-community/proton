@@ -36,6 +36,12 @@ pub fn NativeError::message(self : NativeError) -> String {
 }
 
 ///|
+/// Reports whether the native object is closing or has already been destroyed.
+pub fn NativeError::is_invalid_state(self : NativeError) -> Bool {
+  self.status() == proton_err_invalid_state
+}
+
+///|
 /// Reports whether a bridge response lost its renderer request while an
 /// asynchronous handler was still completing.
 pub fn NativeError::is_stale_bridge_response(self : NativeError) -> Bool {

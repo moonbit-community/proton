@@ -313,6 +313,25 @@ test "runtime event decodes menu command payload" {
 }
 
 ///|
+test "native errors identify invalid object state" {
+  assert_true(
+    NativeError::Status(
+      status=proton_err_invalid_state,
+      message="window is closing or destroyed",
+    ).is_invalid_state(),
+  )
+  assert_false(
+    NativeError::Status(
+      status=proton_err_stale_window_request,
+      message="window close request is no longer pending",
+    ).is_invalid_state(),
+  )
+  assert_false(
+    NativeError::InvalidArgument(message="invalid state").is_invalid_state(),
+  )
+}
+
+///|
 test "runtime event decodes browser control requests" {
   let navigation = decode_runtime_event_json(
     "{\"type\":\"browser_navigation_requested\",\"window\":\"7\",\"request_id\":\"11\",\"url\":\"https://example.com/next\",\"method\":\"POST\",\"user_gesture\":true,\"redirect\":false}",
