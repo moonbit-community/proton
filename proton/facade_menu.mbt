@@ -26,41 +26,12 @@ fn resolve_runtime_menu(
   application_name : String,
 ) -> @native.MenuBar? {
   Some(
-    resolve_macos_menu(
+    resolve_menu(
       menu.unwrap_or(@native.MenuBar::new(menus=[])),
       preferences,
       application_name,
+      macos_application_menu=true,
     ),
-  )
-}
-
-///|
-fn resolve_macos_menu(
-  menu_bar : @native.MenuBar,
-  preferences : @locale.LocalePreferences,
-  application_name : String,
-) -> @native.MenuBar {
-  let definitions = menu_bar.definitions()
-  let normalized : Array[@native.Menu] = []
-  let mut has_application_menu = false
-  for menu in definitions {
-    if menu.definition().0 is Some(@native.MenuRole::Application) {
-      normalized.push(menu)
-      has_application_menu = true
-    }
-  }
-  if !has_application_menu {
-    normalized.push(@native.Menu::role(@native.MenuRole::Application))
-  }
-  for menu in definitions {
-    if !(menu.definition().0 is Some(@native.MenuRole::Application)) {
-      normalized.push(menu)
-    }
-  }
-  resolve_menu(
-    @native.MenuBar::new(menus=normalized),
-    preferences,
-    application_name,
   )
 }
 
@@ -69,10 +40,32 @@ fn resolve_menu(
   menu_bar : @native.MenuBar,
   preferences : @locale.LocalePreferences,
   application_name : String,
+  macos_application_menu? : Bool = false,
 ) -> @native.MenuBar {
   let catalog = framework_catalog(preferences)
   let resolved : Array[@native.Menu] = []
-  let definitions = menu_bar.definitions()
+  let source = menu_bar.definitions()
+  let definitions = if macos_application_menu {
+    let normalized : Array[@native.Menu] = []
+    let mut has_application_menu = false
+    for menu in source {
+      if menu.definition().0 is Some(@native.MenuRole::Application) {
+        normalized.push(menu)
+        has_application_menu = true
+      }
+    }
+    if !has_application_menu {
+      normalized.push(@native.Menu::role(@native.MenuRole::Application))
+    }
+    for menu in source {
+      if !(menu.definition().0 is Some(@native.MenuRole::Application)) {
+        normalized.push(menu)
+      }
+    }
+    normalized
+  } else {
+    source
+  }
   for menu in definitions {
     let (role, label, items) = menu.definition()
     match role {

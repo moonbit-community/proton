@@ -1388,13 +1388,14 @@ test "standard menus resolve from the application locale" {
     Some(@locale.Locale::parse("zh-CN")),
     [],
   )
-  let resolved = resolve_macos_menu(
+  let resolved = resolve_menu(
     @native.MenuBar::new(menus=[
       @native.Menu::role(@native.MenuRole::Edit),
       @native.Menu::role(@native.MenuRole::Window),
     ]),
     preferences,
     "Proton Demo",
+    macos_application_menu=true,
   )
   let definitions = resolved.definitions()
   assert_eq(definitions.length(), 3)
@@ -1469,7 +1470,7 @@ test "macOS menu resolution puts an explicit application role first" {
     Some(@locale.Locale::parse("en-US")),
     [],
   )
-  let resolved = resolve_macos_menu(
+  let resolved = resolve_menu(
     @native.MenuBar::new(menus=[
       @native.Menu::role(@native.MenuRole::Edit),
       @native.Menu::role(@native.MenuRole::Application),
@@ -1477,6 +1478,7 @@ test "macOS menu resolution puts an explicit application role first" {
     ]),
     preferences,
     "Proton Demo",
+    macos_application_menu=true,
   )
   let definitions = resolved.definitions()
   let (first_role, _, _) = definitions[0].definition()
