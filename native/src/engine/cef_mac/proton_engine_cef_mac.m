@@ -1800,9 +1800,23 @@ static int CEF_CALLBACK proton_engine_do_close(cef_life_span_handler_t *self,
       view->browser_view = nil;
       return 1;
     }
-    // Windowless (headless) rendering has no host view; returning false lets
-    // CEF destroy the browser object immediately.
-    return 0;
+    if (view->window != NULL && view->window->headless) {
+      // Windowless (headless) rendering has no host view; returning false lets
+      // CEF destroy the browser object immediately.
+      return 0;
+    }
+    // Defensive: a windowed view with no host view pointer — either it was
+    // never captured (the browser host or its window handle was unavailable
+    // at creation), or windowWillClose already cleared it while the NSWindow
+    // teardown is still pending. CEF only asks do_close before
+    // WindowDestroyed, so no dealloc handshake can complete this teardown
+    // from here — but returning false is strictly worse: CEF's default would
+    // performClose: the owning NSWindow, which the window delegate cancels.
+    // Cancel the default and log the wedge; in the windowWillClose interleave
+    // the pending teardown still completes via WindowDestroyed.
+    proton_engine_debug_log("view_browser_do_close_without_host_view browser=%d",
+                            view->browser_id);
+    return 1;
   }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   if (window != NULL) {
