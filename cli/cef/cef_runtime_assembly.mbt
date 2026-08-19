@@ -109,8 +109,18 @@ async fn assemble_runtime(
   runtime_dir~ : String,
 ) -> Unit {
   assert_safe_generated_dir(runtime_dir, cache_root)
+  let runtime_lock = acquire_install_lock(runtime_dir)
+  defer runtime_lock.close()
+  defer runtime_lock.unlock()
   if @fsutil.path_is_dir(runtime_dir) {
-    return
+    try validate_runtime_dist(runtime_dir, platform) catch {
+      error if @async.is_being_cancelled() => raise error
+      _ => remove_tree(runtime_dir)
+    } noraise {
+      _ => return
+    }
+  } else if @fsutil.path_exists(runtime_dir) {
+    remove_tree(runtime_dir)
   }
   ensure_dir(@fsutil.path_parent(runtime_dir))
   let staging = create_runtime_staging(runtime_dir)

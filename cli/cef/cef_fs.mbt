@@ -111,6 +111,48 @@ async fn ensure_dir(path : String) -> Unit {
 }
 
 ///|
+async fn acquire_install_lock(target_dir : String) -> @async_fs.File {
+  let lock_path = target_dir + ".lock"
+  ensure_dir(@fsutil.path_parent(lock_path))
+  let file = @async_fs.open(lock_path, mode=ReadWrite, create_mode=OpenOrCreate) catch {
+    err =>
+      raise CefFileSystemError::Write(
+        path=lock_path,
+        detail=@debug.render(Repr(err)),
+      )
+  }
+  file.lock(Exclusive) catch {
+    err => {
+      file.close()
+      raise CefFileSystemError::Write(
+        path=lock_path,
+        detail="failed to acquire install lock: " + @debug.render(Repr(err)),
+      )
+    }
+  }
+  file
+}
+
+///|
+async fn create_install_staging(target_dir : String) -> String {
+  let prefix = target_dir + ".staging-" + @async.now().to_string()
+  for index = 0; ; index = index + 1 {
+    let staging = prefix + "-" + index.to_string()
+    try @async_fs.mkdir(staging) catch {
+      error =>
+        if !@fsutil.path_exists(staging) {
+          raise CefFileSystemError::CreateDirectory(
+            path=staging,
+            detail=@debug.render(Repr(error)),
+          )
+        }
+    } noraise {
+      _ => return staging
+    }
+  }
+}
+
+///|
 async fn normalize_cef_runtime_layout(root : String) -> Unit {
   let release_dir = @fsutil.path_join(root, "Release")
   if !@fsutil.path_exists(release_dir) {
