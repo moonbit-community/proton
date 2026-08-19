@@ -691,7 +691,6 @@ static void mb_linux_x11_io_error_exit_handler(
 
 static void mb_linux_register_display(mb_global_hotkey_state_t *state) {
   mb_x11_io_error_handler_t previous_handler = NULL;
-  int install_handler = 0;
 
   pthread_mutex_lock(&mb_linux_x11_handler_lock);
   while (mb_linux_x11_handler_changing) {
@@ -699,32 +698,31 @@ static void mb_linux_register_display(mb_global_hotkey_state_t *state) {
   }
   if (!mb_linux_x11_handler_installed) {
     mb_linux_x11_handler_changing = 1;
-    install_handler = 1;
-  }
-  pthread_mutex_unlock(&mb_linux_x11_handler_lock);
+    pthread_mutex_unlock(&mb_linux_x11_handler_lock);
 
-  if (install_handler) {
     previous_handler =
         mb_x11_api.XSetIOErrorHandler(mb_linux_x11_io_error_handler);
+    mb_x11_api.XSetIOErrorExitHandler(
+        state->display, mb_linux_x11_io_error_exit_handler, state);
+
     pthread_mutex_lock(&mb_linux_x11_handler_lock);
     mb_linux_x11_previous_io_error_handler = previous_handler;
     mb_linux_x11_handler_installed = 1;
+    state->x11_next = mb_linux_x11_states;
+    mb_linux_x11_states = state;
+    mb_linux_x11_handler_users += 1;
     mb_linux_x11_handler_changing = 0;
     pthread_cond_broadcast(&mb_linux_x11_handler_cond);
     pthread_mutex_unlock(&mb_linux_x11_handler_lock);
+    return;
   }
 
-  pthread_mutex_lock(&mb_linux_x11_handler_lock);
-  while (mb_linux_x11_handler_changing) {
-    pthread_cond_wait(&mb_linux_x11_handler_cond, &mb_linux_x11_handler_lock);
-  }
+  mb_x11_api.XSetIOErrorExitHandler(
+      state->display, mb_linux_x11_io_error_exit_handler, state);
   state->x11_next = mb_linux_x11_states;
   mb_linux_x11_states = state;
   mb_linux_x11_handler_users += 1;
   pthread_mutex_unlock(&mb_linux_x11_handler_lock);
-
-  mb_x11_api.XSetIOErrorExitHandler(
-      state->display, mb_linux_x11_io_error_exit_handler, state);
 }
 
 static void mb_linux_unregister_display(mb_global_hotkey_state_t *state) {
