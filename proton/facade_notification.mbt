@@ -99,7 +99,7 @@ pub async fn notification_show_and_wait(
   payload? : String,
 ) -> Unit raise NotificationDeliveryError {
   let waits_for_result = native_notification_result_supported() catch {
-    error => raise Native(error)
+    error => raise NativeFailure(status=error.status(), detail=error.message())
   }
   if waits_for_result {
     acquire_notification_result_slot() catch {

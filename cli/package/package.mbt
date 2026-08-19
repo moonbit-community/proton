@@ -573,11 +573,12 @@ async fn execute_package_plan(plan : PackagePlan) -> Array[String] {
   if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
     raise PackagePlanError::MissingExecutable(path=executable)
   }
-  let spec = package_spec(plan, executable, runtime)
+  let helper = @build.build_cef_process(plan.root)
+  let spec = package_spec(plan, executable, helper, runtime)
   let artifacts = @packager.build_with(spec, package_customization(plan), async fn(
     layout,
   ) {
-    prepare_proton_package(plan, runtime, layout)
+    prepare_proton_package(plan, helper, layout)
   })
   for artifact in artifacts {
     println("Packaged: " + artifact)
@@ -600,6 +601,7 @@ async fn run_package_build(plan : PackagePlan) -> String {
   )
 }
 
+///|
 async fn read_active_runtime(root : String) -> String {
   match @env.get_env_var("PROTON_NATIVE_DIST") {
     Some(value) if value.trim().to_owned() != "" =>

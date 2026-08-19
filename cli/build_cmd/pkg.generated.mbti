@@ -8,9 +8,9 @@ import {
 }
 
 // Values
-pub async fn build_executable(String, String, String, Bool) -> String
-
 pub async fn build_cef_process(String, moon_target_dir? : String) -> String
+
+pub async fn build_executable(String, String, String, Bool) -> String
 
 pub fn cef_process_install_path(String) -> String
 

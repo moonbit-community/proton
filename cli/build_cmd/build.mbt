@@ -204,12 +204,6 @@ pub async fn build_executable(
     invocation.app_package,
     release,
   )
-  ignore(
-    build_cef_process(
-      invocation.backend_path,
-      invocation.moon_target_dir?,
-    ),
-  )
   executable
 }
 
@@ -222,12 +216,8 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
     invocation.moon_args,
     invocation.moon_target_dir,
   )
-  ignore(
-    build_cef_process(
-      invocation.backend_path,
-      invocation.moon_target_dir?,
-    ),
-  )
+  let moon_target_dir = invocation.moon_target_dir
+  ignore(build_cef_process(invocation.backend_path, moon_target_dir?))
 }
 
 ///|

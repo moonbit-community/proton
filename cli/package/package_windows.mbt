@@ -1,8 +1,8 @@
 ///|
 fn windows_runtime_binary_files() -> Array[String] {
   [
-    "proton.dll", "cef_process.exe", "chrome_elf.dll", "d3dcompiler_47.dll", "dxcompiler.dll",
-    "dxil.dll", "libcef.dll", "libEGL.dll", "libGLESv2.dll", "v8_context_snapshot.bin",
+    "chrome_elf.dll", "d3dcompiler_47.dll", "dxcompiler.dll", "dxil.dll", "libcef.dll",
+    "libEGL.dll", "libGLESv2.dll", "v8_context_snapshot.bin",
     "vk_swiftshader.dll", "vk_swiftshader_icd.json", "vulkan-1.dll",
   ]
 }
@@ -62,6 +62,7 @@ async fn validate_windows_portable_layout(
 ) -> Unit {
   let required : Array[String] = [
     executable,
+    @fsutil.resolve_path(output, "cef_process.exe"),
     @fsutil.resolve_path(output, "proton-package.json"),
   ]
   for name in windows_runtime_binary_files() {

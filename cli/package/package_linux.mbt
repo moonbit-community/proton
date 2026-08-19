@@ -1,7 +1,7 @@
 ///|
 /// Keeps the development executable's absolute runtime path out of a packaged
 /// AppImage while preserving the shared `bin` + `Resources/proton` layout.
-let linux_package_rpath : String = "$ORIGIN/../Resources/proton/lib"
+let linux_package_rpath : String = "$ORIGIN/../Resources/proton/bin"
 
 ///|
 async fn set_linux_rpath(binary : String, rpath : String) -> Unit {

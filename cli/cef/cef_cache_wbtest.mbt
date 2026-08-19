@@ -177,46 +177,30 @@ async test "empty CEF artifacts are rejected as incomplete" {
 }
 
 ///|
-async fn test_write_prebuilt_fixture_files(
-  root : String,
-  platform : ProtonPlatform,
-) -> Unit {
-  for relative in proton_prebuilt_relative_files(platform) {
-    let path = @fsutil.path_join(root, relative)
-    @async_fs.mkdir(@fsutil.path_parent(path), recursive=true) catch {
-      _ => ()
-    }
-    @async_fs.write_file(path, "prebuilt", create_mode=CreateOrTruncate)
-  }
-}
-
-///|
 async test "runtime assembly rebuilds an existing truncated runtime" {
   let temp = test_cef_cache_fixture_root()
   let cache_root = @fsutil.path_join(temp, "runtimes")
   let cef_root = @fsutil.path_join(temp, "cef")
-  let prebuilt_root = @fsutil.path_join(temp, "prebuilt")
   let runtime_dir = @fsutil.path_join(cache_root, "darwin-arm64/runtime")
   let platform = darwin_arm64_platform()
   @async_fs.mkdir(cef_root, recursive=true)
-  @async_fs.mkdir(prebuilt_root, recursive=true)
   test_write_cef_fixture_files(cef_root, platform)
-  test_write_prebuilt_fixture_files(prebuilt_root, platform)
   assemble_runtime(
     cache_root~,
     platform~,
     cef_root~,
-    prebuilt_root~,
     runtime_dir~,
     report_progress=false,
   )
-  let truncated = @fsutil.path_join(runtime_dir, "lib/libproton.dylib")
+  let truncated = @fsutil.path_join(
+    runtime_dir,
+    runtime_required_relative_files(platform)[0],
+  )
   @async_fs.write_file(truncated, "", create_mode=CreateOrTruncate)
   assemble_runtime(
     cache_root~,
     platform~,
     cef_root~,
-    prebuilt_root~,
     runtime_dir~,
     report_progress=false,
   )

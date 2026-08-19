@@ -2,10 +2,11 @@
 async fn package_spec(
   plan : PackagePlan,
   executable : String,
+  helper : String,
   runtime : String,
 ) -> @packager.PackageSpec {
   let host = current_package_host()
-  let payloads = package_payloads(plan, runtime, host)
+  let payloads = package_payloads(plan, helper, runtime, host)
   let formats = plan.targets.map(target => {
     @packager.PackageFormat::parse(target)
   })
@@ -35,12 +36,13 @@ async fn package_spec(
 ///|
 async fn package_payloads(
   plan : PackagePlan,
+  helper : String,
   runtime : String,
   host : PackageHost,
 ) -> Array[@packager.Payload] {
   let payloads : Array[@packager.Payload] = []
   match host {
-    Macos | Linux =>
+    Macos | Linux => {
       payloads.push(
         @packager.Payload::new(
           runtime,
@@ -48,6 +50,16 @@ async fn package_payloads(
           location=@packager.PayloadLocation::Resources,
         ),
       )
+      if host == Linux {
+        payloads.push(
+          @packager.Payload::new(
+            helper,
+            "cef_process",
+            location=@packager.PayloadLocation::Executables,
+          ),
+        )
+      }
+    }
     Windows => {
       require_windows_runtime_layout(runtime)
       for name in windows_runtime_binary_files() {
@@ -73,6 +85,13 @@ async fn package_payloads(
           @fsutil.resolve_path(runtime, "Resources"),
           ".",
           location=@packager.PayloadLocation::Resources,
+        ),
+      )
+      payloads.push(
+        @packager.Payload::new(
+          helper,
+          "cef_process.exe",
+          location=@packager.PayloadLocation::Executables,
         ),
       )
     }
@@ -155,11 +174,6 @@ fn macos_package_sign_targets(
     @packager.MacosSignTarget::new(prefix + "/bin/libEGL.dylib"),
     @packager.MacosSignTarget::new(prefix + "/bin/libGLESv2.dylib"),
     @packager.MacosSignTarget::new(prefix + "/bin/libvk_swiftshader.dylib"),
-    @packager.MacosSignTarget::new(
-      prefix + "/bin/cef_process",
-      identifier="cef_process",
-    ),
-    @packager.MacosSignTarget::new(prefix + "/lib/libproton.dylib"),
   ]
   for binary in plan.sign_binaries {
     match relative_to_base(plan.base_dir, binary) {
@@ -188,7 +202,7 @@ fn macos_package_sign_targets(
 fn windows_package_sign_targets(
   plan : PackagePlan,
 ) -> Array[String] raise PackagePlanError {
-  let targets = ["cef_process.exe", "proton.dll"]
+  let targets = ["cef_process.exe"]
   for binary in plan.sign_binaries {
     match relative_to_base(plan.base_dir, binary) {
       Some(relative) => {
@@ -206,7 +220,7 @@ fn windows_package_sign_targets(
 ///|
 async fn prepare_proton_package(
   plan : PackagePlan,
-  runtime : String,
+  helper : String,
   layout : @packager.PackageLayout,
 ) -> Unit {
   let host = current_package_host()
@@ -222,15 +236,19 @@ async fn prepare_proton_package(
   }
   write_package_manifest(plan, metadata_root, kind)
   match host {
-    Macos => prepare_macos_proton_package(plan, runtime, layout)
+    Macos => prepare_macos_proton_package(plan, helper, layout)
     Windows =>
       validate_windows_portable_layout(layout.root(), layout.executable())
     Linux => {
-      let helper = @fsutil.resolve_path(runtime, "bin/cef_process")
-      guard @fsutil.path_is_file(helper) else {
-        raise PackageRuntimeError::HelperMissing(path=helper)
+      let staged_helper = @fsutil.resolve_path(
+        layout.executables(),
+        "cef_process",
+      )
+      guard @fsutil.path_is_file(staged_helper) else {
+        raise PackageRuntimeError::HelperMissing(path=staged_helper)
       }
       set_linux_rpath(layout.executable(), linux_package_rpath)
+      set_linux_rpath(staged_helper, linux_package_rpath)
     }
   }
 }
@@ -238,16 +256,10 @@ async fn prepare_proton_package(
 ///|
 async fn prepare_macos_proton_package(
   plan : PackagePlan,
-  runtime : String,
+  helper_source : String,
   layout : @packager.PackageLayout,
 ) -> Unit {
   require_launchable_macho(layout.executable())
-  replace_macos_rpath(
-    layout.executable(),
-    @fsutil.resolve_path(runtime, "lib"),
-    "@executable_path/../Resources/proton/lib",
-  )
-  let helper_source = @fsutil.resolve_path(runtime, "bin/cef_process")
   guard @fsutil.path_is_file(helper_source) else {
     raise PackageRuntimeError::HelperMissing(path=helper_source)
   }
@@ -268,9 +280,6 @@ async fn prepare_macos_proton_package(
     write_text(
       @fsutil.resolve_path(helper_app, "Contents/Info.plist"),
       helper_info_plist(plan, helper),
-    )
-    add_macos_rpath(
-      helper_executable, "@loader_path/../../../../Resources/proton/lib",
     )
   }
 }
