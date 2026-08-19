@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_codegen"
 
-version = "0.1.18"
+version = "0.1.19"
 
 import {
   "moonbitlang/async@0.20.5",

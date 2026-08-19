@@ -13,7 +13,7 @@ struct ModuleDocument {
   ast : @moon_config.Ast
 }
 
-let independently_versioned_modules = ["./package"]
+let independently_versioned_modules : ReadOnlyArray[String] = ["./package"]
 
 fn fail(message : String) -> Unit {
   println("error: " + message)
