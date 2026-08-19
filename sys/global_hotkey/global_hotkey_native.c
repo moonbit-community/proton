@@ -643,8 +643,18 @@ static pthread_cond_t mb_linux_x11_handler_cond = PTHREAD_COND_INITIALIZER;
 static mb_global_hotkey_state_t *mb_linux_x11_states = NULL;
 static int mb_linux_x11_handler_installed = 0;
 static int mb_linux_x11_handler_changing = 0;
+static int mb_linux_x11_handler_registering = 0;
 static int mb_linux_x11_handler_users = 0;
 static mb_x11_io_error_handler_t mb_linux_x11_previous_io_error_handler = NULL;
+
+static void mb_linux_wake_thread(
+    mb_global_hotkey_state_t *state,
+    char byte) {
+  if (state->wake_pipe[1] >= 0) {
+    ssize_t write_result = write(state->wake_pipe[1], &byte, 1);
+    (void)write_result;
+  }
+}
 
 static void mb_linux_mark_connection_lost(
     mb_global_hotkey_state_t *state) {
@@ -652,9 +662,7 @@ static void mb_linux_mark_connection_lost(
       atomic_exchange(&state->x11_connection_lost, 1) != 0) {
     return;
   }
-  if (state->wake_pipe[1] >= 0) {
-    (void)write(state->wake_pipe[1], "x", 1);
-  }
+  mb_linux_wake_thread(state, 'x');
 }
 
 static int mb_linux_x11_io_error_handler(Display *display) {
@@ -662,6 +670,9 @@ static int mb_linux_x11_io_error_handler(Display *display) {
   mb_x11_io_error_handler_t previous_handler;
 
   pthread_mutex_lock(&mb_linux_x11_handler_lock);
+  while (mb_linux_x11_handler_registering) {
+    pthread_cond_wait(&mb_linux_x11_handler_cond, &mb_linux_x11_handler_lock);
+  }
   state = mb_linux_x11_states;
   while (state != NULL && state->display != display) {
     state = state->x11_next;
@@ -699,23 +710,25 @@ static void mb_linux_register_display(mb_global_hotkey_state_t *state) {
   }
   first_user = !mb_linux_x11_handler_installed;
   mb_linux_x11_handler_changing = 1;
-  state->x11_next = mb_linux_x11_states;
-  mb_linux_x11_states = state;
-  mb_linux_x11_handler_users += 1;
+  mb_linux_x11_handler_registering = 1;
   pthread_mutex_unlock(&mb_linux_x11_handler_lock);
 
+  mb_x11_api.XSetIOErrorExitHandler(
+      state->display, mb_linux_x11_io_error_exit_handler, state);
   if (first_user) {
     previous_handler =
         mb_x11_api.XSetIOErrorHandler(mb_linux_x11_io_error_handler);
   }
-  mb_x11_api.XSetIOErrorExitHandler(
-      state->display, mb_linux_x11_io_error_exit_handler, state);
 
   pthread_mutex_lock(&mb_linux_x11_handler_lock);
   if (first_user) {
     mb_linux_x11_previous_io_error_handler = previous_handler;
     mb_linux_x11_handler_installed = 1;
   }
+  state->x11_next = mb_linux_x11_states;
+  mb_linux_x11_states = state;
+  mb_linux_x11_handler_users += 1;
+  mb_linux_x11_handler_registering = 0;
   mb_linux_x11_handler_changing = 0;
   pthread_cond_broadcast(&mb_linux_x11_handler_cond);
   pthread_mutex_unlock(&mb_linux_x11_handler_lock);
@@ -1062,7 +1075,8 @@ static void *mb_linux_thread_main(void *raw_state) {
 
     if (FD_ISSET(state->wake_pipe[0], &read_fds)) {
       char byte = 0;
-      (void)read(state->wake_pipe[0], &byte, 1);
+      ssize_t read_result = read(state->wake_pipe[0], &byte, 1);
+      (void)read_result;
       pthread_mutex_lock(&state->lock);
       if (!state->running ||
           atomic_load(&state->x11_connection_lost) != 0) {
@@ -1705,7 +1719,7 @@ MOONBIT_FFI_EXPORT void mb_global_hotkey_destroy(
     pthread_mutex_lock(&state->lock);
     state->running = 0;
     pthread_mutex_unlock(&state->lock);
-    (void)write(state->wake_pipe[1], "q", 1);
+    mb_linux_wake_thread(state, 'q');
     pthread_join(state->thread, NULL);
   }
   pthread_mutex_lock(&state->lock);
