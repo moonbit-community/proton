@@ -44,6 +44,15 @@ static void proton_notification_set_message(char *error,
   }
 }
 
+static int proton_notification_set_icon_version(HWND window) {
+  NOTIFYICONDATAW icon = {0};
+  icon.cbSize = sizeof(icon);
+  icon.hWnd = window;
+  icon.uID = PROTON_NOTIFICATION_TRAY_ID;
+  icon.uVersion = NOTIFYICON_VERSION_4;
+  return Shell_NotifyIconW(NIM_SETVERSION, &icon) != FALSE;
+}
+
 static LRESULT CALLBACK proton_notification_wnd_proc(HWND hwnd,
                                                      UINT msg,
                                                      WPARAM wparam,
@@ -75,7 +84,14 @@ static LRESULT CALLBACK proton_notification_wnd_proc(HWND hwnd,
     icon.uCallbackMessage = PROTON_NOTIFICATION_WM_CALLBACK;
     icon.hIcon = g_notification_icon != NULL ? g_notification_icon
                                              : LoadIconW(NULL, IDI_APPLICATION);
-    Shell_NotifyIconW(NIM_ADD, &icon);
+    if (Shell_NotifyIconW(NIM_ADD, &icon)) {
+      if (!proton_notification_set_icon_version(hwnd)) {
+        Shell_NotifyIconW(NIM_DELETE, &icon);
+        g_notification_icon_added = 0;
+      }
+    } else {
+      g_notification_icon_added = 0;
+    }
     return 0;
   }
   return DefWindowProcW(hwnd, msg, wparam, lparam);
@@ -207,6 +223,15 @@ int32_t proton_engine_notification_show(const char *title_utf8,
     proton_notification_set_message(error, error_len,
                                     "Shell_NotifyIconW failed");
     return PROTON_ERR_PLATFORM;
+  }
+  if (command == NIM_ADD) {
+    if (!proton_notification_set_icon_version(window)) {
+      Shell_NotifyIconW(NIM_DELETE, &icon);
+      proton_notification_set_message(
+          error, error_len,
+          "Shell_NotifyIconW(NIM_SETVERSION) failed");
+      return PROTON_ERR_PLATFORM;
+    }
   }
   g_notification_icon_added = 1;
   return PROTON_OK;

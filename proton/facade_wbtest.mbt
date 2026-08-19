@@ -489,6 +489,39 @@ test "frontend menu event transport preserves focused window" {
 }
 
 ///|
+test "menu forwarding ignores only closing window errors" {
+  assert_true(
+    is_ignorable_menu_forward_error(
+      @native.NativeError::Status(
+        status=-3,
+        message="window is closing or destroyed",
+      ),
+    ),
+  )
+  assert_true(
+    is_ignorable_menu_forward_error(
+      @native.NativeError::Status(
+        status=-13,
+        message="window close request is no longer pending",
+      ),
+    ),
+  )
+  assert_false(
+    is_ignorable_menu_forward_error(
+      @native.NativeError::Status(
+        status=-7,
+        message="failed to send bridge event to renderer",
+      ),
+    ),
+  )
+  assert_false(
+    is_ignorable_menu_forward_error(
+      @native.NativeError::InvalidArgument(message="invalid event"),
+    ),
+  )
+}
+
+///|
 test "dev bridge page policy parses exact http origins" {
   assert_eq(
     unwrap_configuration(() => url_origin("http://localhost:5173/app")),
@@ -1197,6 +1230,12 @@ async test "notification completion is delivered only to an active waiter" {
     result,
     @native.NativeNotificationResult::Failed("permission denied"),
   )
+}
+
+///|
+test "notification completion capability controls result waiting" {
+  assert_true(notification_result_event_supported(["notification_result"]))
+  assert_false(notification_result_event_supported(["runtime_wait"]))
 }
 
 ///|
