@@ -308,6 +308,32 @@ pub fn cef_process_install_path(bin_dir : String) -> String {
 }
 
 ///|
+fn native_moon_process_env_for(
+  windows : Bool,
+  configured_cc : String?,
+) -> Map[String, String] {
+  let env : Map[String, String] = Map([])
+  if !windows {
+    // Selecting a host compiler makes Moon build its C runtime from source
+    // instead of linking libmoonbitrun.o, whose process-wide allocator symbols
+    // would otherwise interpose on CEF and libc allocations.
+    env["MOON_CC"] = match configured_cc {
+      Some(value) if value.trim() != "" => value
+      // Proton's shared native-stub package contains Objective-C sources even
+      // on Linux, so its portable host-compiler default must be Clang.
+      _ => "clang"
+    }
+  }
+  env
+}
+
+///|
+/// Returns the environment required for a Proton native Moon command.
+pub fn native_moon_process_env() -> Map[String, String] {
+  native_moon_process_env_for(@path.sep == '\\', @env.get_env_var("MOON_CC"))
+}
+
+///|
 pub async fn build_cef_process(
   backend_path : String,
   moon_target_dir? : String,
@@ -332,7 +358,12 @@ pub async fn build_cef_process(
     None => ()
   }
   @output.info("Installing CEF process helper: moon " + args.join(" "))
-  let code = @process.run("moon", args, cwd=backend_path) catch {
+  let code = @process.run(
+    "moon",
+    args,
+    cwd=backend_path,
+    extra_env=native_moon_process_env(),
+  ) catch {
     error =>
       raise BuildProcessError::Start(
         command="CEF process helper install",
@@ -584,7 +615,12 @@ async fn run_moon_build(
     app_package, moon_args, moon_target_dir,
   )
   @output.info("Building Proton app: moon " + args.join(" "))
-  let code = @process.run("moon", args, cwd=root) catch {
+  let code = @process.run(
+    "moon",
+    args,
+    cwd=root,
+    extra_env=native_moon_process_env(),
+  ) catch {
     err =>
       raise BuildProcessError::Start(
         command="MoonBit build",
@@ -680,7 +716,12 @@ async fn run_moon_build_only(
 ) -> String {
   let args = moon_build_only_args(app_package, release)
   @output.info("Building Proton executable: moon " + args.join(" "))
-  let (code, stdout) = @process.collect_stdout("moon", args, cwd=root) catch {
+  let (code, stdout) = @process.collect_stdout(
+    "moon",
+    args,
+    cwd=root,
+    extra_env=native_moon_process_env(),
+  ) catch {
     error =>
       raise BuildProcessError::Start(
         command="MoonBit executable build",

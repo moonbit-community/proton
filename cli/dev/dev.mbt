@@ -1054,7 +1054,11 @@ async fn run_app(
     }
   }
   @output.info("Starting Proton app: moon " + moon_args.join(" "))
-  let (spawn_env, inherit_env) = dev_app_spawn_env(env)
+  let moon_env = @build.native_moon_process_env()
+  for key, value in env {
+    moon_env[key] = value
+  }
+  let (spawn_env, inherit_env) = dev_app_spawn_env(moon_env)
   let code = @process.run(
     "moon",
     moon_args,

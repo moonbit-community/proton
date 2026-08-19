@@ -16,6 +16,8 @@ pub fn cef_process_install_path(String) -> String
 
 pub fn command() -> @argparse.Command
 
+pub fn native_moon_process_env() -> Map[String, String]
+
 pub async fn run(String, @argparse.Matches) -> Unit
 
 // Errors
