@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_power_monitor"
 
-version = "0.1.18"
+version = "0.1.19"
 
 import {
-  "moonbit-community/proton_ffi@0.1.18",
+  "moonbit-community/proton_ffi@0.1.19",
 }
 
 readme = "README.mbt.md"
