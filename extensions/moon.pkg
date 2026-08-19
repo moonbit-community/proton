@@ -10,6 +10,7 @@ import {
   "moonbit-community/proton_ext/net",
   "moonbit-community/proton_ext/notification",
   "moonbit-community/proton_ext/power_monitor",
+  "moonbit-community/proton_ext/screen_monitor",
   "moonbit-community/proton_ext/process",
   "moonbit-community/proton_ext/path",
   "moonbit-community/proton_ext/shell",

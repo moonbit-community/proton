@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_ext/screen_monitor"
+
+import {
+  "moonbit-community/proton/command",
+  "moonbit-community/proton/extension",
+  "moonbit-community/proton_contract",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn extension() -> @extension.Extension
+
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
+
+// Errors
+type ScreenMonitorError derive(Eq, @debug.Debug)
+pub fn ScreenMonitorError::equal(Self, Self) -> Bool
+pub fn ScreenMonitorError::not_equal(Self, Self) -> Bool
+pub fn ScreenMonitorError::output(Self, &Logger) -> Unit
+pub fn ScreenMonitorError::to_repr(Self) -> @debug.Repr
+pub fn ScreenMonitorError::to_string(Self) -> String
+
+// Types and methods
+
+// Type aliases
+
+// Traits

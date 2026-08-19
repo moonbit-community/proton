@@ -713,22 +713,18 @@ async fn stage_macos_app(
   executable : String,
   runtime : String,
 ) -> Unit {
-  stage_macos_app_impl(plan, executable, runtime) catch {
-    error => {
-      for
-        path in [
-          macos_staging_root_path(plan),
-          macos_dmg_staging_path(plan),
-          macos_dmg_root_path(plan),
-          macos_zip_staging_path(plan),
-        ] {
-        remove_tree(path) catch {
-          _ => ()
-        }
-      }
-      raise error
+  errdefer (for
+    path in [
+      macos_staging_root_path(plan),
+      macos_dmg_staging_path(plan),
+      macos_dmg_root_path(plan),
+      macos_zip_staging_path(plan),
+    ] {
+    remove_tree(path) catch {
+      _ => ()
     }
-  }
+  })
+  stage_macos_app_impl(plan, executable, runtime)
 }
 
 ///|
@@ -1007,64 +1003,52 @@ async fn promote_staged_artifacts(artifacts : Array[StagedArtifact]) -> Unit {
 
   let backed_up : Array[String] = []
   let promoted : Array[String] = []
-  try {
-    for artifact in artifacts {
-      if @fsutil.path_exists(artifact.destination) {
-        rename_staged_artifact(
-          artifact.destination,
-          artifact.destination + ".backup",
-        )
-        backed_up.push(artifact.destination)
+  errdefer {
+    let rollback_failures : Array[String] = []
+    let promoted_count = promoted.length()
+    for offset in 0..<promoted_count {
+      let destination = promoted[promoted_count - offset - 1]
+      remove_tree(destination) catch {
+        rollback_error =>
+          rollback_failures.push(
+            "remove " + destination + ": " + @debug.render(Repr(rollback_error)),
+          )
       }
     }
-    for artifact in artifacts {
-      rename_staged_artifact(artifact.staging, artifact.destination)
-      promoted.push(artifact.destination)
+    let backup_count = backed_up.length()
+    for offset in 0..<backup_count {
+      let destination = backed_up[backup_count - offset - 1]
+      let backup = destination + ".backup"
+      @async_fs.rename(backup, destination) catch {
+        rollback_error =>
+          rollback_failures.push(
+            "restore " +
+            destination +
+            ": " +
+            @debug.render(Repr(rollback_error)),
+          )
+      }
     }
-  } catch {
-    error => {
-      let rollback_failures : Array[String] = []
-      let promoted_count = promoted.length()
-      for offset in 0..<promoted_count {
-        let destination = promoted[promoted_count - offset - 1]
-        remove_tree(destination) catch {
-          rollback_error =>
-            rollback_failures.push(
-              "remove " +
-              destination +
-              ": " +
-              @debug.render(Repr(rollback_error)),
-            )
-        }
-      }
-      let backup_count = backed_up.length()
-      for offset in 0..<backup_count {
-        let destination = backed_up[backup_count - offset - 1]
-        let backup = destination + ".backup"
-        @async_fs.rename(backup, destination) catch {
-          rollback_error =>
-            rollback_failures.push(
-              "restore " +
-              destination +
-              ": " +
-              @debug.render(Repr(rollback_error)),
-            )
-        }
-      }
-      if @async.is_being_cancelled() {
-        raise error
-      }
-      if rollback_failures.length() > 0 {
-        raise PackageFileSystemError::Copy(
-          source="staged package artifacts",
-          destination=artifacts[0].destination,
-          detail=@debug.render(Repr(error)) +
-            "; rollback failed: " +
-            rollback_failures.join("; "),
-        )
-      }
-      raise error
+    if rollback_failures.length() > 0 {
+      raise PackageFileSystemError::Copy(
+        source="staged package artifacts",
+        destination=artifacts[0].destination,
+        detail="rollback failed: " + rollback_failures.join("; "),
+      )
     }
+  }
+  for artifact in artifacts {
+    if @fsutil.path_exists(artifact.destination) {
+      rename_staged_artifact(
+        artifact.destination,
+        artifact.destination + ".backup",
+      )
+      backed_up.push(artifact.destination)
+    }
+  }
+  for artifact in artifacts {
+    rename_staged_artifact(artifact.staging, artifact.destination)
+    promoted.push(artifact.destination)
   }
 
   for destination in backed_up {
@@ -2029,14 +2013,8 @@ async fn notarize_macos_app_with_tools(
     "." + package_executable_name(plan.product_name) + ".notary.zip",
   )
   remove_tree(archive)
-  submit_macos_notarization(app, archive, profile, tools) catch {
-    error => {
-      remove_tree(archive) catch {
-        _ => ()
-      }
-      raise error
-    }
-  }
+  errdefer (remove_tree(archive) catch { _ => () })
+  submit_macos_notarization(app, archive, profile, tools)
   remove_tree(archive)
 }
 

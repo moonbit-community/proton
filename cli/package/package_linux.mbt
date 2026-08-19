@@ -144,20 +144,13 @@ async fn stage_linux_appdir(
   executable : String,
   runtime : String,
 ) -> Unit {
-  stage_linux_appdir_impl(plan, executable, runtime) catch {
-    error => {
-      for
-        path in [
-          linux_appdir_staging_path(plan),
-          linux_appimage_staging_path(plan),
-        ] {
-        remove_tree(path) catch {
-          _ => ()
-        }
-      }
-      raise error
+  errdefer (for
+    path in [linux_appdir_staging_path(plan), linux_appimage_staging_path(plan)] {
+    remove_tree(path) catch {
+      _ => ()
     }
-  }
+  })
+  stage_linux_appdir_impl(plan, executable, runtime)
 }
 
 ///|

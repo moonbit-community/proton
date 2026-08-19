@@ -63,19 +63,8 @@ fn[T] run_with_cleanup(
   action : () -> T raise,
   cleanup : () -> Unit raise,
 ) -> T raise {
-  try action() catch {
-    err => {
-      cleanup() catch {
-        _ => ()
-      }
-      raise err
-    }
-  } noraise {
-    value => {
-      cleanup()
-      value
-    }
-  }
+  defer cleanup()
+  action()
 }
 
 ///|

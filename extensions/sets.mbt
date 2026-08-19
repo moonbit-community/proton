@@ -20,6 +20,7 @@ pub fn all() -> @proton_extension.Extensions {
     @keepawake.extension(),
     @microphone.extension(),
     @power_monitor.extension(),
+    @screen_monitor.extension(),
     @process.extension(),
     @net.extension(),
   ])
@@ -39,6 +40,7 @@ pub fn desktop() -> @proton_extension.Extensions {
     @keepawake.extension(),
     @microphone.extension(),
     @power_monitor.extension(),
+    @screen_monitor.extension(),
     @process.extension(),
     @net.extension(),
   ])
