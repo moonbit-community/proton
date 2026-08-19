@@ -42,8 +42,7 @@ pub fn MacosSigningError::to_string(Self) -> String
 pub(all) suberror PackageConfigError {
   NotFound(path~ : String)
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
-  BundleInactive
-  BundleMissing
+  PackageMissing
   MissingField(field~ : String)
 } derive(Eq, @debug.Debug)
 pub fn PackageConfigError::equal(Self, Self) -> Bool

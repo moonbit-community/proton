@@ -72,8 +72,3 @@ fn dirname_string(path : String) -> String {
   let native_path : @mbpath.Path = project_path_for_host(path)
   native_path.dirname().to_string()
 }
-
-///|
-fn normalize_keyword(raw : String) -> String {
-  raw.trim().to_owned().to_lower()
-}

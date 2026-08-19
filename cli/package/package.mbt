@@ -39,7 +39,6 @@ struct PackagePlan {
   release : Bool
   base_dir : String
   frontend_dist : String?
-  entry_paths : Array[String]
   resources : Array[String]
   sign_binaries : Array[String]
   icons : Array[String]
@@ -298,37 +297,18 @@ async fn build_package_plan(
   project : @proton_config.ProjectConfig,
   update_revision : UInt64,
 ) -> PackagePlan {
-  let bundle = match project.bundle() {
-    Some(bundle) if bundle.active() => bundle
-    Some(_) => raise PackageConfigError::BundleInactive
-    None => raise PackageConfigError::BundleMissing
+  let package_config = match project.package_config() {
+    Some(package_config) => package_config
+    None => raise PackageConfigError::PackageMissing
   }
-  let metadata = project.metadata()
-  let product_name = validate_product_name(metadata.product_name)
-  let identifier = match metadata.identifier {
-    Some(identifier) => identifier
-    None => raise PackageConfigError::MissingField(field="identifier")
-  }
-  let version = match metadata.version {
-    Some(version) => version
-    None => raise PackageConfigError::MissingField(field="moon.mod version")
-  }
+  let product_name = validate_product_name(package_config.product_name)
+  let identifier = package_config.identifier
   let identifier = validate_bundle_identifier(identifier)
-  let version = version.trim().to_owned()
-  guard version != "" else {
-    raise PackageConfigError::MissingField(field="moon.mod version")
-  }
-  let macos_host = is_macos_host()
-  let (macos_version, bundle_version) = if macos_host {
-    validate_macos_version(version)
-  } else {
-    (version, version)
-  }
   let host = current_package_host()
   let targets = if raw.targets.length() > 0 {
     copy_strings(raw.targets)
-  } else if bundle.targets.length() > 0 {
-    copy_strings(bundle.targets)
+  } else if package_config.formats.length() > 0 {
+    copy_strings(package_config.formats)
   } else {
     match host {
       Linux => ["appimage"]
@@ -349,6 +329,17 @@ async fn build_package_plan(
     Some(backend) => @fsutil.resolve_path(base_dir, backend.path())
     None => @fsutil.find_project_root_from(base_dir)
   }
+  let version = match
+    @proton_config.read_moon_mod_metadata(backend_root).version {
+    Some(version) if version.trim().to_owned() != "" =>
+      version.trim().to_owned()
+    _ => raise PackageConfigError::MissingField(field="moon.mod version")
+  }
+  let (macos_version, bundle_version) = if is_macos_host() {
+    validate_macos_version(version)
+  } else {
+    (version, version)
+  }
   let app_package = match raw.app_package {
     Some(app_package) => app_package
     None =>
@@ -359,18 +350,11 @@ async fn build_package_plan(
   }
   let output = match raw.output {
     Some(output) => @fsutil.resolve_path(base_dir, output)
-    None => @fsutil.resolve_path(base_dir, bundle.output())
+    None => @fsutil.resolve_path(base_dir, package_config.output())
   }
   let frontend_dist = match project.frontend() {
     Some(frontend) => frontend.dist()
     None => None
-  }
-  let entry_paths : Array[String] = []
-  for entry in project.entries() {
-    match entry {
-      File(path) | Asset(path) => entry_paths.push(path)
-      Html(_) | Url(_) => ()
-    }
   }
   let workspace_root = find_workspace_root_from(base_dir)
   PackagePlan::{
@@ -389,16 +373,15 @@ async fn build_package_plan(
     release: raw.release,
     base_dir,
     frontend_dist,
-    entry_paths,
-    resources: copy_strings(bundle.resources),
-    sign_binaries: match bundle.sign {
+    resources: package_config.resources(),
+    sign_binaries: match package_config.sign() {
       Some(sign) => sign.binaries()
       None => []
     },
-    icons: copy_strings(bundle.icon),
-    url_schemes: copy_strings(bundle.url_schemes),
-    document_types: bundle.document_types.copy(),
-    macos_icon: first_macos_icon(bundle.icon),
+    icons: package_config.icons(),
+    url_schemes: package_config.url_schemes(),
+    document_types: package_config.document_types(),
+    macos_icon: first_macos_icon(package_config.icons()),
     sign: raw.sign,
     notarize: raw.notarize,
   }
@@ -543,19 +526,6 @@ fn first_macos_icon(icons : Array[String]) -> String? {
     }
   }
   None
-}
-
-///|
-fn release_project_config_text(source : String) -> String {
-  let json = @json.parse(source) catch { _ => return source }
-  guard json is Object(fields) else { return source }
-  match fields.get("debug") {
-    Some(True) => {
-      fields["debug"] = Json::boolean(false)
-      Json::object(fields).stringify(indent=2) + "\n"
-    }
-    _ => source
-  }
 }
 
 ///|
@@ -854,21 +824,6 @@ async fn write_text(
   @async_fs.write_file(path, text, create_mode=CreateOrTruncate) catch {
     error => raise Write(path~, detail=@debug.render(Repr(error)))
   }
-}
-
-///|
-async fn stage_release_project_config(
-  source : String,
-  destination : String,
-) -> Unit {
-  let text = @async_fs.read_file(source).text() catch {
-    error =>
-      raise PackageFileSystemError::Read(
-        path=source,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  write_text(destination, release_project_config_text(text))
 }
 
 ///|

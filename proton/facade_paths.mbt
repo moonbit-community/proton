@@ -3,7 +3,6 @@
 pub(all) suberror AppPathError {
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
-  ResourceDirUnavailable
   PlatformProbe(@native.NativeError)
 } derive(Debug, Eq)
 
@@ -20,8 +19,6 @@ pub fn AppPathError::message(self : AppPathError) -> String {
       "invalid application identifier: " + identifier
     MissingHomeDirectory(platform~) =>
       "cannot resolve the application data directory on " + platform
-    ResourceDirUnavailable =>
-      "cannot resolve the application resource directory without proton.project.json"
     PlatformProbe(error) =>
       "cannot determine the Proton platform: " + error.message()
   }
@@ -30,21 +27,49 @@ pub fn AppPathError::message(self : AppPathError) -> String {
 ///|
 /// Resolves the absolute application resource directory.
 ///
-/// This follows Proton's implicit project config discovery. In development it
-/// is the directory containing `proton.project.json`; in a packaged application
-/// it is the directory into which `bundle.resources` are copied, such as
-/// `Contents/Resources` in a macOS application bundle.
-pub fn resource_dir() -> String raise AppPathError {
-  match implicit_config_path() {
-    Some(path) => resource_dir_from_config_path(path)
-    None => raise ResourceDirUnavailable
+/// `proton_cli dev` supplies the project resource directory explicitly. A
+/// packaged application resolves the package resource directory beside its
+/// executable. Directly launched code uses the current working directory.
+pub fn resource_dir() -> String {
+  runtime_resource_dir()
+}
+
+///|
+fn runtime_resource_dir() -> String {
+  match @env.get_env_var("PROTON_RESOURCE_DIR") {
+    Some(value) if value.trim().to_owned() != "" => {
+      let path : @mbpath.Path = value.trim().to_owned()
+      return path.resolve().to_string()
+    }
+    _ => ()
+  }
+  match packaged_resource_dir() {
+    Some(path) => path
+    None => {
+      let current : @mbpath.Path = "."
+      current.resolve().to_string()
+    }
   }
 }
 
 ///|
-fn resource_dir_from_config_path(path : String) -> String {
-  let config : @mbpath.Path = path
-  config.resolve().dirname().to_string()
+fn packaged_resource_dir() -> String? {
+  let args = @env.args()
+  guard args.length() > 0 else { return None }
+  let executable : @mbpath.Path = args[0]
+  let executable_dir = executable.resolve().dirname()
+  let candidate = if @mbpath.sep == '\\' {
+    executable_dir.join("Resources").normalize()
+  } else {
+    executable_dir.join("../Resources").normalize()
+  }
+  let packaged = @mbfs.is_file(
+    candidate.join("proton-package.json").to_string(),
+  ) catch {
+    _ => false
+  }
+  guard packaged else { return None }
+  Some(candidate.to_string())
 }
 
 ///|

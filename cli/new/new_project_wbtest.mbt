@@ -287,8 +287,10 @@ test "templates receive final author title and size" {
   guard find_planned_file(files, "backend/app/main.mbt") is Some(main_mbt) else {
     abort("missing backend/app/main.mbt")
   }
-  assert_true(main_mbt.contains("@proton.config(\"proton.project.json\")"))
+  assert_true(main_mbt.contains("@proton.asset("))
+  assert_true(main_mbt.contains(".single_instance(\"com.justjavac.demo\")"))
   assert_true(main_mbt.contains("backend.register_commands(registrar)"))
+  assert_true(main_mbt.contains("@proton.PermissionGrant::new("))
   guard find_planned_file(files, "proton.project.json") is Some(config) else {
     abort("missing proton.project.json")
   }
@@ -297,9 +299,6 @@ test "templates receive final author title and size" {
   }
   guard config_json
     is {
-      "product_name": "Demo App",
-      "identifier": "com.justjavac.demo",
-      "window": { "title": "Demo App", "width": 1000, "height": 700, .. },
       "backend": { "path": "backend", "package": "app", .. },
       "frontend": {
         "path": "frontend",
@@ -307,10 +306,10 @@ test "templates receive final author title and size" {
         "before_build": before_build,
         ..
       },
-      "entry": { "value": "frontend/dist/index.html", .. },
-      "bundle": {
-        "active": true,
-        "targets": ["app", "zip"],
+      "package": {
+        "product_name": "Demo App",
+        "identifier": "com.justjavac.demo",
+        "formats": ["app", "zip"],
         "output": "dist",
         ..
       },
@@ -351,7 +350,7 @@ test "templates receive final author title and size" {
   assert_true(readme.contains("proton_cli dev"))
   assert_true(readme.contains("## Build"))
   assert_true(readme.contains("proton_cli build"))
-  assert_true(readme.contains("## Bundle"))
+  assert_true(readme.contains("## Package"))
   assert_true(readme.contains("shared/"))
   assert_true(readme.contains("proton_cli package --dry-run"))
 }
@@ -367,7 +366,7 @@ test "user title can contain template braces" {
   let config_json = @json.parse(config) catch {
     error => abort(error.to_string())
   }
-  guard config_json is { "product_name": "A {{ Demo }}", .. } else {
+  guard config_json is { "package": { "product_name": "A {{ Demo }}", .. }, .. } else {
     abort("generated title did not preserve template braces")
   }
 }

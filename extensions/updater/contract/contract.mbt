@@ -70,8 +70,8 @@ pub extend UpdateProgress with FromJson::{from_json}
 ///
 /// Takes no arguments, and this is the point. A page that could name an
 /// endpoint, a version or a path would hold a remote code execution primitive
-/// over the host; every one of those comes from `proton.project.json` and the signed
-/// manifest instead.
+/// over the host; every one of those comes from the host's `App::update_channel`
+/// configuration and the signed manifest instead.
 pub let check : @proton_contract.Command[Unit, UpdateStatus] = extension.command(
   "check",
 )

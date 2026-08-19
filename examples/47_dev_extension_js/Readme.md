@@ -18,10 +18,10 @@ $repo = (Resolve-Path ..).Path
 moon -C ..\cli run . -- -C $repo dev --package examples/47_dev_extension_js
 ```
 
-The CLI discovers the package-local `proton.project.json`, injects it into the app as
-`PROTON_CONFIG_PATH`, uses `frontend.before_dev` to start Vite from the
-configured `frontend.path`, then Proton opens `frontend.dev_url` with
-`PROTON_DEV=1`. The Vite page receives `window.__MoonBit__.ticker` from native
+The CLI reads the package-local `proton.project.json`, uses
+`frontend.before_dev` to start Vite from the configured `frontend.path`, then
+overrides the code-declared asset entry with `frontend.dev_url` in development.
+The Vite page receives `window.__MoonBit__.ticker` from native
 bridge injection; it does not load a Proton script manually.
 
 For a production build:

@@ -6,9 +6,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     Some(error) => raise ConfigurationError(error)
     None => ()
   }
-  let resolved = self.resolved_app_config() catch {
-    error => raise ConfigurationError(error)
-  }
+  let resolved = self.resolved_app_config()
   let browser_data_dir = resolve_browser_data_dir(resolved) catch {
     error => raise ConfigurationError(error)
   }

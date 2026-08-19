@@ -90,9 +90,9 @@ async fn artifact_digest_and_size(
 }
 
 ///|
-/// The updater's anti-rollback anchor. Written beside the staged `proton.project.json`
-/// so the two always travel together, and read back by the native updater to
-/// decide whether an offered revision moves forward.
+/// The updater's anti-rollback anchor. Written into the package metadata
+/// directory and read back by the native updater to decide whether an offered
+/// revision moves forward.
 ///
 /// macOS has no need of it -- its revision lives in the code-signed
 /// `Info.plist`. The other two hosts have no signature to carry it, so the

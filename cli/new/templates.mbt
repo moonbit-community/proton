@@ -223,15 +223,6 @@ fn plan_project_files(
 ///|
 fn project_config_file(context : TemplateContext) -> PlannedFile {
   let config : Json = {
-    "product_name": context.title,
-    "identifier": context.identifier,
-    "single_instance": true,
-    "window": {
-      "title": context.title,
-      "width": context.width,
-      "height": context.height,
-      "size_hint": "none",
-    },
     "backend": { "path": "backend", "package": "app" },
     "frontend": {
       "path": "frontend",
@@ -244,10 +235,12 @@ fn project_config_file(context : TemplateContext) -> PlannedFile {
       " build",
       "dist": "dist",
     },
-    "entry": { "kind": "asset", "value": "frontend/dist/index.html" },
-    "permissions": [{ "window": "main", "origin": "entry", "extension": "app" }],
-    "debug": true,
-    "bundle": { "active": true, "targets": ["app", "zip"], "output": "dist" },
+    "package": {
+      "product_name": context.title,
+      "identifier": context.identifier,
+      "formats": ["app", "zip"],
+      "output": "dist",
+    },
   }
   { path: "proton.project.json", content: config.stringify(indent=2) + "\n" }
 }

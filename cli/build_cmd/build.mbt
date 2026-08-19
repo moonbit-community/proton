@@ -143,7 +143,6 @@ pub extend RawBuildOptions with Debug::{to_repr}
 ///|
 priv struct BuildProjectConfig {
   base_dir : String
-  entries : Array[@proton_config.ProjectEntry]
   backend : @proton_config.ProjectBackendConfig?
   frontend : @proton_config.ProjectFrontendConfig?
 }
@@ -426,9 +425,6 @@ fn validate_release_config(
       }
     None => ()
   }
-  for entry in config.entries {
-    validate_production_entry_kind(entry, config.frontend)
-  }
 }
 
 ///|
@@ -451,42 +447,6 @@ async fn validate_release_files(
         None => ()
       }
     None => ()
-  }
-  for entry in config.entries {
-    validate_production_entry_file(entry)
-  }
-}
-
-///|
-fn validate_production_entry_kind(
-  entry : @proton_config.ProjectEntry,
-  frontend : @proton_config.ProjectFrontendConfig?,
-) -> Unit raise BuildConfigError {
-  match frontend {
-    Some(_) =>
-      match entry {
-        File(_) | Asset(_) => ()
-        Html(_) | Url(_) =>
-          raise BuildConfigError::InvalidRelease(
-            message="frontend production entry must use file or asset",
-          )
-      }
-    None => ()
-  }
-}
-
-///|
-async fn validate_production_entry_file(
-  entry : @proton_config.ProjectEntry,
-) -> Unit {
-  match entry {
-    File(path) | Asset(path) =>
-      if !@fsutil.path_exists(path) {
-        raise Missing(role="production entry", path~)
-      } else if @fsutil.path_is_dir(path) {
-        raise WrongKind(role="production entry", path~, expected="a file")
-      }
-    Html(_) | Url(_) => ()
   }
 }
 
@@ -514,7 +474,6 @@ async fn read_project_config(
   let project = loaded.config()
   BuildProjectConfig::{
     base_dir: project.base_dir(),
-    entries: project.entries(),
     backend: project.backend(),
     frontend: project.frontend(),
   }

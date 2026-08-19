@@ -72,9 +72,7 @@ pub fn run(matches : @argparse.Matches) -> Unit raise UpdaterUsageError {
   match matches.subcommand {
     Some(("public-key", key_matches)) => {
       let key = public_key(key_matches)
-      println(
-        "# \{key.bits}-bit RSA, add to proton.project.json updater.public_keys",
-      )
+      println("# \{key.bits}-bit RSA, pass to App::update_channel public_keys")
       println(key.text)
     }
     _ => abort("argparse invariant violated: missing updater subcommand")

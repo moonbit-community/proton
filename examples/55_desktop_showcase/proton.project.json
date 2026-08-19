@@ -1,24 +1,12 @@
 {
-  "product_name": "Proton Desktop Showcase",
-  "identifier": "community.moonbit.proton.desktop-showcase",
-  "window": {
-    "title": "Proton Desktop Showcase",
-    "width": 1180,
-    "height": 780,
-    "size_hint": "none"
-  },
   "backend": {
     "path": "..",
     "package": "55_desktop_showcase"
   },
-  "entry": {
-    "kind": "file",
-    "value": "app.html"
-  },
-  "debug": true,
-  "bundle": {
-    "active": true,
-    "targets": [
+  "package": {
+    "product_name": "Proton Desktop Showcase",
+    "identifier": "community.moonbit.proton.desktop-showcase",
+    "formats": [
       "app"
     ],
     "output": "../../dist"

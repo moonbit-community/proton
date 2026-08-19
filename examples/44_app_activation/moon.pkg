@@ -1,7 +1,7 @@
 import {
-  "moonbit-community/proton/bootstrap",
-  "moonbit-community/proton/manifest",
-  "moonbitlang/x/fs" @mbfs,
+  "moonbitlang/async",
+  "moonbitlang/core/debug",
+  "moonbit-community/proton",
 }
 
 supported_targets = "native"

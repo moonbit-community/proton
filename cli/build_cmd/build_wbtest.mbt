@@ -133,44 +133,9 @@ test "moon build-only output rejects missing or ambiguous artifacts" {
 }
 
 ///|
-test "frontend release rejects url production entry" {
-  let frontend = Some(
-    @proton_config.ProjectFrontendConfig::new(
-      dist=Some("fixtures/frontend-dist"),
-    ),
-  )
-  let error = expect_build_error_message(() => {
-    validate_production_entry_kind(
-      @proton_config.ProjectEntry::Url("http://localhost:5173"),
-      frontend,
-    )
-  })
-  assert_true(error.contains("frontend production entry"))
-}
-
-///|
-test "frontend release config preflight rejects url entry" {
-  let config = BuildProjectConfig::{
-    base_dir: ".",
-    entries: [@proton_config.ProjectEntry::Url("http://localhost:5173")],
-    backend: None,
-    frontend: Some(
-      @proton_config.ProjectFrontendConfig::new(
-        dist=Some("fixtures/frontend-dist"),
-      ),
-    ),
-  }
-  let error = expect_build_error_message(() => validate_release_config(config))
-  assert_true(error.contains("frontend production entry"))
-}
-
-///|
 test "frontend release requires dist" {
   let config = BuildProjectConfig::{
     base_dir: ".",
-    entries: [
-      @proton_config.ProjectEntry::Asset("fixtures/frontend-dist/index.html"),
-    ],
     backend: None,
     frontend: Some(
       @proton_config.ProjectFrontendConfig::new(

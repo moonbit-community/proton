@@ -11,7 +11,7 @@ repository = "https://github.com/moonbit-community/proton"
 
 license = "Apache-2.0"
 
-description = "Typed project configuration models and JSON decoding for Proton."
+description = "Typed CLI project configuration and JSON decoding for Proton."
 
 options(
   warn_list: "",

@@ -168,42 +168,6 @@ test "macOS package metadata validation rejects unsafe values" {
 }
 
 ///|
-test "release project config disables only the top-level debug field" {
-  let source =
-    #|{
-    #|  "product_name": "MoonBit 桌面应用",
-    #|  "window": {
-    #|    "title": "debug = true",
-    #|    "width": 800,
-    #|    "height": 600
-    #|  },
-    #|  "entry": {
-    #|    "kind": "html",
-    #|    "value": "<p>debug = true</p>"
-    #|  },
-    #|  "debug": true,
-    #|  "bundle": {
-    #|    "active": true
-    #|  }
-    #|}
-  let release = release_project_config_text(source)
-  assert_true(release.contains("\"title\": \"debug = true\""))
-  assert_true(release.contains("\"value\": \"<p>debug = true</p>\""))
-  let json = @json.parse(release) catch { error => abort(error.to_string()) }
-  guard json is { "debug": false, .. } else {
-    abort("expected disabled top-level debug field")
-  }
-}
-
-///|
-test "release project config preserves an already disabled or absent debug field" {
-  let disabled = "{\"window\":{\"title\":\"Demo\"},\"debug\":false}\n"
-  assert_eq(release_project_config_text(disabled), disabled)
-  let absent = "{\"window\":{\"title\":\"Demo\"}}\n"
-  assert_eq(release_project_config_text(absent), absent)
-}
-
-///|
 test "macOS package defines the complete CEF helper family" {
   let helpers = macos_helper_specs("Demo & App", "dev.proton.demo")
   @debug.assert_eq(helpers.map(fn(helper) { helper.bundle_name }), [
@@ -237,7 +201,6 @@ test "macOS helper plist matches its bundle identity" {
     release: false,
     base_dir: ".",
     frontend_dist: None,
-    entry_paths: [],
     sign_binaries: [],
     resources: [],
     icons: [],

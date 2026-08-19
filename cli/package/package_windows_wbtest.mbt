@@ -20,7 +20,6 @@ fn windows_test_plan(
     release: false,
     base_dir: root,
     frontend_dist: Some(@fsutil.resolve_path(root, "frontend/dist")),
-    entry_paths: [@fsutil.resolve_path(root, "frontend/dist/index.html")],
     sign_binaries: [],
     resources: [@fsutil.resolve_path(root, "bundle resources/**")],
     icons: [],
@@ -37,7 +36,9 @@ test "Windows signing includes configured resource binaries" {
   let root = "fixtures/proton-package-windows-configured-signing"
   let plan = windows_test_plan(root, ["app"], true)
   plan.sign_binaries.push(@fsutil.resolve_path(root, "helpers/worker.exe"))
-  assert_true(windows_package_sign_targets(plan).contains("helpers/worker.exe"))
+  assert_true(
+    windows_package_sign_targets(plan).contains("Resources/helpers/worker.exe"),
+  )
 }
 
 ///|

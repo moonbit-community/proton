@@ -13,9 +13,17 @@ fn load_entry_after_create(
         error => raise NativeLoad(action="load url", error~)
       }
     @manifest.AppEntry::File(path) =>
-      load_file_entry_after_create(window, "load file", path)
+      load_file_entry_after_create(
+        window,
+        "load file",
+        resolve_entry_path(path),
+      )
     @manifest.AppEntry::Asset(path) =>
-      load_file_entry_after_create(window, "load asset", path)
+      load_file_entry_after_create(
+        window,
+        "load asset",
+        resolve_asset_path(path),
+      )
   }
 }
 
@@ -23,9 +31,8 @@ fn load_entry_after_create(
 fn load_file_entry_after_create(
   window : @native.Window,
   action : String,
-  path : String,
+  resolved : @mbpath.Path,
 ) -> Unit raise AppEntryError {
-  let resolved = resolve_entry_path(path)
   let html = read_file_entry_html(resolved.to_string())
   window.load_asset(
     inject_html_bootstrap(html, base_tag(asset_base_url())),
@@ -44,6 +51,21 @@ fn resolve_entry_path(path : String) -> @mbpath.Path {
     path
   }
   @mbpath.Path(native_path).resolve()
+}
+
+///|
+fn resolve_asset_path(path : String) -> @mbpath.Path {
+  let native_path = if @mbpath.sep == '\\' {
+    path.replace_all(old="/", new="\\")
+  } else {
+    path
+  }
+  let path : @mbpath.Path = native_path
+  if path.is_absolute() {
+    path.normalize()
+  } else {
+    @mbpath.Path(runtime_resource_dir()).join(native_path).normalize()
+  }
 }
 
 ///|

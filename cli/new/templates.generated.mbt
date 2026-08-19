@@ -627,8 +627,12 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|async fn main {
           #|  let backend = @todo.Backend::new()
-          #|  @proton.config("proton.project.json")
+          #|  @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
+          #|  .single_instance({{identifier_mbt}})
           #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
+          #|  .permission(
+          #|    @proton.PermissionGrant::new("main", @proton.PermissionOrigin::Entry, "app"),
+          #|  )
           #|  .run_or_abort()
           #|}
           #|
@@ -848,19 +852,23 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|proton_cli build -- --release
           #|```
           #|
-          #|## Bundle
+          #|## Package
           #|
-          #|The `bundle` block in `proton.project.json` controls package creation:
+          #|The `package` block in `proton.project.json` contains static packaging metadata:
           #|
           #|```json
           #|{
-          #|  "bundle": {
-          #|    "active": true,
-          #|    "targets": ["app", "zip"],
+          #|  "package": {
+          #|    "product_name": "My App",
+          #|    "identifier": "com.example.my-app",
+          #|    "formats": ["app", "zip"],
           #|    "output": "dist"
           #|  }
           #|}
           #|```
+          #|
+          #|Window behavior, the asset entry, single-instance handling, and renderer
+          #|permissions are declared by the Proton `App` builder in `backend/app/main.mbt`.
           #|
           #|Inspect the resolved package plan, then create the application and zip archive:
           #|

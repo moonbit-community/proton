@@ -197,9 +197,7 @@ fn dev_extension_runtime_env(
   env["NO_COLOR"] = "1"
   env["FORCE_COLOR"] = "0"
   env["PROTON_NO_UPDATE_CHECK"] = "1"
-  env["PROTON_CONFIG_PATH"] = join_path(
-    root, "examples/47_dev_extension_js/proton.project.json",
-  )
+  env["PROTON_RESOURCE_DIR"] = join_path(root, "examples/47_dev_extension_js")
   env
 }
 

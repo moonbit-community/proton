@@ -77,10 +77,7 @@ async fn package_payloads(
       )
     }
   }
-  let location = match host {
-    Windows => @packager.PayloadLocation::Executables
-    Macos | Linux => @packager.PayloadLocation::Resources
-  }
+  let location = @packager.PayloadLocation::Resources
   for payload in project_payloads(plan, location) {
     payloads.push(payload)
   }
@@ -97,7 +94,6 @@ async fn project_payloads(
     Some(path) => inputs.push(path)
     None => ()
   }
-  inputs.append(plan.entry_paths)
   inputs.append(plan.resources)
   let copied : Map[String, Bool] = Map([])
   let payloads : Array[@packager.Payload] = []
@@ -195,8 +191,12 @@ fn windows_package_sign_targets(
   let targets = ["cef_process.exe", "proton.dll"]
   for binary in plan.sign_binaries {
     match relative_to_base(plan.base_dir, binary) {
-      Some(relative) if !targets.contains(relative) => targets.push(relative)
-      Some(_) => ()
+      Some(relative) => {
+        let target = "Resources/" + relative
+        if !targets.contains(target) {
+          targets.push(target)
+        }
+      }
       None => raise PackagePlanError::InputOutsideProject(path=binary)
     }
   }
@@ -214,10 +214,6 @@ async fn prepare_proton_package(
     Windows => layout.root()
     Macos | Linux => layout.resources()
   }
-  stage_release_project_config(
-    plan.config_path,
-    @fsutil.resolve_path(metadata_root, "proton.project.json"),
-  )
   stage_update_revision(plan, metadata_root)
   let kind = match host {
     Macos => "macos-app"

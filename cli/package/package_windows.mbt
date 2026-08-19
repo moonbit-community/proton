@@ -62,7 +62,6 @@ async fn validate_windows_portable_layout(
 ) -> Unit {
   let required : Array[String] = [
     executable,
-    @fsutil.resolve_path(output, "proton.project.json"),
     @fsutil.resolve_path(output, "proton-package.json"),
   ]
   for name in windows_runtime_binary_files() {

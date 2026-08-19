@@ -8,7 +8,6 @@ import {
   "moonbitlang/core/string",
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,
-  "moonbit-community/proton/bootstrap",
   "moonbit-community/proton/command" @proton_command,
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension" @proton_extension,
