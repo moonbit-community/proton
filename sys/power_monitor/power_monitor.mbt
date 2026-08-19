@@ -24,6 +24,23 @@ pub extend PowerSourceInfo with Eq::{not_equal, equal}
 pub extend PowerSourceInfo with Debug::{to_repr}
 
 ///|
+/// System power and session events delivered by the watch backend.
+pub enum PowerMonitorEvent {
+  Suspend
+  Resume
+  OnAC
+  OnBattery
+  LockScreen
+  UnlockScreen
+} derive(Debug, Eq)
+
+///|
+pub extend PowerMonitorEvent with Eq::{not_equal, equal}
+
+///|
+pub extend PowerMonitorEvent with Debug::{to_repr}
+
+///|
 pub struct PowerMonitor {
   priv handle : State
 }
@@ -80,6 +97,50 @@ pub fn PowerMonitor::power_source(
 }
 
 ///|
+/// Starts the event watch backend. The backend is best-effort: a platform that
+/// cannot watch (for example Linux without a system D-Bus) records the failure
+/// on the native side and returns `BackendUnavailable`, leaving polling queries
+/// fully usable.
+pub fn PowerMonitor::start_watching(
+  self : PowerMonitor,
+) -> Unit raise PowerMonitorError {
+  let status = native_start_watching(self.handle)
+  if status != native_status_ok {
+    raise self.classify_status(status, "start_watching")
+  }
+}
+
+///|
+/// Stops the event watch backend and joins its thread. Idempotent.
+pub fn PowerMonitor::stop_watching(
+  self : PowerMonitor,
+) -> Unit raise PowerMonitorError {
+  let status = native_stop_watching(self.handle)
+  if status != native_status_ok {
+    raise self.classify_status(status, "stop_watching")
+  }
+}
+
+///|
+/// Drains every pending event from the queue. Returns an empty array when no
+/// event is pending; never raises for an empty queue.
+pub fn PowerMonitor::drain_events(
+  self : PowerMonitor,
+) -> Array[PowerMonitorEvent] {
+  let events : Array[PowerMonitorEvent] = []
+  let event = Ref(0)
+  while true {
+    let status = native_take_event(self.handle, event)
+    if status == native_status_ok {
+      events.push(power_monitor_event_from_native_code(event.val))
+    } else {
+      break
+    }
+  }
+  events
+}
+
+///|
 fn PowerMonitor::classify_status(
   self : PowerMonitor,
   status : Int,
@@ -102,6 +163,19 @@ fn power_source_from_native_code(code : Int) -> PowerSource {
     _ if code == native_source_battery => Battery
     _ if code == native_source_unknown => Unknown
     _ => Unknown
+  }
+}
+
+///|
+fn power_monitor_event_from_native_code(code : Int) -> PowerMonitorEvent {
+  match code {
+    _ if code == native_event_suspend => Suspend
+    _ if code == native_event_resume => Resume
+    _ if code == native_event_on_ac => OnAC
+    _ if code == native_event_on_battery => OnBattery
+    _ if code == native_event_lock_screen => LockScreen
+    _ if code == native_event_unlock_screen => UnlockScreen
+    _ => Suspend
   }
 }
 
