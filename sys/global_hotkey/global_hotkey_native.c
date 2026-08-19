@@ -17,6 +17,7 @@
 
 #ifdef __linux__
 #include <stdatomic.h>
+#include <sys/socket.h>
 #include <sys/select.h>
 #include <unistd.h>
 #include <X11/Xlib.h>
@@ -2036,6 +2037,16 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_take_triggered_id(
   return 0;
 #endif
 }
+
+#ifdef __linux__
+MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_test_disconnect(
+    mb_global_hotkey_state_t *state) {
+  if (state == NULL || state->display == NULL) {
+    return 1;
+  }
+  return shutdown(ConnectionNumber(state->display), SHUT_RDWR) == 0 ? 0 : 1;
+}
+#endif
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t mb_global_hotkey_last_error_message(void) {
   return mb_make_bytes_from_buffer(mb_last_error_message,
