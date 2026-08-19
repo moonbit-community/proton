@@ -278,6 +278,7 @@ jobs:
         timeout-minutes: 25
         env:
           PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
+          MOON_CC: clang
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a moon -C e2e run test --target native \
