@@ -243,3 +243,33 @@ async test "failed staged publish restores the previous directory" {
   )
   remove_tree(temp)
 }
+
+///|
+async test "install locks serialize access to the same cache directory" {
+  let temp = test_cef_cache_fixture_root()
+  let target = @fsutil.path_join(temp, "cache")
+  let first = acquire_install_lock(target)
+  let first_locked = Ref(true)
+  defer {
+    if first_locked.val {
+      first.unlock()
+    }
+    first.close()
+  }
+  @async.with_task_group() <| group => {
+    let acquired = Ref(false)
+    let waiter = group.spawn(() => {
+      let second = acquire_install_lock(target)
+      defer second.close()
+      defer second.unlock()
+      acquired.val = true
+    })
+    @async.sleep(50)
+    assert_false(acquired.val)
+    first.unlock()
+    first_locked.val = false
+    waiter.wait()
+    assert_true(acquired.val)
+  }
+  remove_tree(temp)
+}
