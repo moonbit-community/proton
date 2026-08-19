@@ -41,7 +41,9 @@ developer must perform them.
 - `cli/`: `moonbit-community/proton_cli`; independent native developer CLI module.
 - `package/`: standalone `moonbit-community/proton_package` module. It packages
   already-built executables from explicit metadata and payloads; it does not
-  discover Proton projects, invoke Moon builds, or assemble CEF runtimes.
+  discover Proton projects, invoke Moon builds, or assemble CEF runtimes. It
+  has an independent version line and is excluded from the workspace lockstep
+  bump.
 - `extensions/`: `moonbit-community/proton_ext`; command extensions for examples and
   applications. Platform capability extensions are backed by the bindings
   under `sys/`.
@@ -139,17 +141,22 @@ native checks before handing off larger refactors.
 
 ### Release Checklist
 
-- `.github/workflows/publish.yml` publishes the dependency chain in this order:
+- `.github/workflows/publish.yml` publishes the lockstep dependency chain in this order:
   `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`,
-  `proton_updater`, `proton_package`, the ten
+  `proton_updater`, the ten
   `sys` modules, `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and
   finally `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not
   published.
-- All modules in `moon.work` use one lockstep version. Prepare a release only
-  through `moon run scripts/bump_version.mbtx -- patch`, `minor`, or
-  `major`; do not edit individual module versions by hand. The script discovers
-  modules through `moon.work`, updates their versions and internal requirements,
-  and refuses to run if any workspace module has drifted from the shared version.
+- `proton_package` has its own version line. Select `package` as the workflow's
+  resume point to publish only that module; the workflow exits before the
+  lockstep chain.
+- All modules in `moon.work` except the explicitly independent
+  `proton_package` use one lockstep version. Prepare a lockstep release only
+  through `moon run scripts/bump_version.mbtx -- patch`, `minor`, or `major`;
+  do not edit individual lockstep module versions by hand. The script discovers
+  modules through `moon.work`, skips independently versioned modules, updates
+  the lockstep versions and internal requirements, and refuses to run if that
+  set has drifted from the shared version.
 - Run the release checks before the first publish:
 
   ```sh
