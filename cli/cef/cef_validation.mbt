@@ -5,13 +5,7 @@ async fn has_source_cef_files(root : String, platform : ProtonPlatform) -> Bool 
 
 ///|
 async fn validate_cef_root(root : String, platform : ProtonPlatform) -> Unit {
-  let missing : Array[String] = []
-  for relative in installed_cef_relative_files(platform) {
-    let path = @fsutil.path_join(root, relative)
-    if !@fsutil.path_exists(path) {
-      missing.push(path)
-    }
-  }
+  let missing = validate_cef_layout(root, platform)
   let version_path = @fsutil.path_join(root, "version.txt")
   if !@fsutil.path_exists(version_path) {
     missing.push(version_path)
@@ -19,6 +13,21 @@ async fn validate_cef_root(root : String, platform : ProtonPlatform) -> Unit {
   if missing.length() > 0 {
     raise InvalidCefRoot(path=root, missing~)
   }
+}
+
+///|
+async fn validate_cef_layout(
+  root : String,
+  platform : ProtonPlatform,
+) -> Array[String] {
+  let missing : Array[String] = []
+  for relative in installed_cef_relative_files(platform) {
+    let path = @fsutil.path_join(root, relative)
+    if !@fsutil.path_exists(path) {
+      missing.push(path)
+    }
+  }
+  missing
 }
 
 ///|

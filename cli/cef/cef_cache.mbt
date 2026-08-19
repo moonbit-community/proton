@@ -35,29 +35,45 @@ async fn install_cef_root(
   assert_safe_install_dir(install_dir, root)
   remove_tree(install_dir)
   @output.info("[INFO] Installing CEF into: " + install_dir)
-  copy_tree(extracted_root, install_dir)
-  normalize_cef_runtime_layout(install_dir)
-  let version_path = @fsutil.path_join(install_dir, "version.txt")
-  @async_fs.write_file(version_path, name + "\n", create_mode=CreateOrTruncate) catch {
-    err =>
-      raise CefFileSystemError::Write(
-        path=version_path,
-        detail=@debug.render(Repr(err)),
-      )
+  try {
+    copy_tree(extracted_root, install_dir)
+    normalize_cef_runtime_layout(install_dir)
+    let missing = validate_cef_layout(install_dir, platform)
+    if missing.length() > 0 {
+      raise InvalidCefRoot(path=install_dir, missing~)
+    }
+    let version_path = @fsutil.path_join(install_dir, "version.txt")
+    @async_fs.write_file(
+      version_path,
+      name + "\n",
+      create_mode=CreateOrTruncate,
+    ) catch {
+      err =>
+        raise CefFileSystemError::Write(
+          path=version_path,
+          detail=@debug.render(Repr(err)),
+        )
+    }
+    let checksum_path = @fsutil.path_join(install_dir, "sha256.txt")
+    @async_fs.write_file(
+      checksum_path,
+      sha256 + "\n",
+      create_mode=CreateOrTruncate,
+    ) catch {
+      err =>
+        raise CefFileSystemError::Write(
+          path=checksum_path,
+          detail=@debug.render(Repr(err)),
+        )
+    }
+  } catch {
+    error => {
+      remove_tree(install_dir) catch {
+        _ => ()
+      }
+      raise error
+    }
   }
-  let checksum_path = @fsutil.path_join(install_dir, "sha256.txt")
-  @async_fs.write_file(
-    checksum_path,
-    sha256 + "\n",
-    create_mode=CreateOrTruncate,
-  ) catch {
-    err =>
-      raise CefFileSystemError::Write(
-        path=checksum_path,
-        detail=@debug.render(Repr(err)),
-      )
-  }
-  validate_cef_root(install_dir, platform)
 }
 
 ///|
@@ -174,14 +190,12 @@ async fn ensure_cef_cache(
   let cache_dir = global_cef_cache_dir(project_root=root, platform~, name~).unwrap_or(
     project_cache,
   )
-  if installed_version(cache_dir) == name &&
-    installed_checksum(cache_dir) == sha256 {
-    normalize_cef_runtime_layout(cache_dir)
+  if cached_cef_root_is_valid(cache_dir, name, sha256, platform) {
     return cache_dir
   }
+  remove_tree(cache_dir)
   if project_cache != cache_dir &&
-    installed_version(project_cache) == name &&
-    installed_checksum(project_cache) == sha256 {
+    cached_cef_root_is_valid(project_cache, name, sha256, platform) {
     install_cef_root(
       extracted_root=project_cache,
       install_dir=cache_dir,
@@ -192,6 +206,9 @@ async fn ensure_cef_cache(
     )
     return cache_dir
   }
+  if project_cache != cache_dir {
+    remove_tree(project_cache)
+  }
   setup_downloaded_cef(
     name~,
     url~,
@@ -201,6 +218,28 @@ async fn ensure_cef_cache(
     platform~,
   )
   cache_dir
+}
+
+///|
+async fn cached_cef_root_is_valid(
+  cache_dir : String,
+  name : String,
+  sha256 : String,
+  platform : ProtonPlatform,
+) -> Bool {
+  guard installed_version(cache_dir) == name &&
+    installed_checksum(cache_dir) == sha256 else {
+    return false
+  }
+  normalize_cef_runtime_layout(cache_dir) catch {
+    error if @async.is_being_cancelled() => raise error
+    _ => return false
+  }
+  validate_cef_root(cache_dir, platform) catch {
+    error if @async.is_being_cancelled() => raise error
+    _ => return false
+  }
+  true
 }
 
 ///|
