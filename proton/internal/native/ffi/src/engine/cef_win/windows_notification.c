@@ -85,7 +85,7 @@ static LRESULT CALLBACK proton_notification_wnd_proc(HWND hwnd,
     icon.uFlags = NIF_MESSAGE | NIF_ICON;
     icon.uCallbackMessage = PROTON_NOTIFICATION_WM_CALLBACK;
     icon.hIcon = g_notification_icon != NULL ? g_notification_icon
-                                             : LoadIconW(NULL, IDI_APPLICATION);
+                                             : LoadIconW(NULL, MAKEINTRESOURCEW(IDI_APPLICATION));
     if (Shell_NotifyIconW(NIM_ADD, &icon)) {
       if (!proton_notification_set_icon_version(hwnd)) {
         Shell_NotifyIconW(NIM_DELETE, &icon);
@@ -113,8 +113,8 @@ static int32_t proton_notification_ensure_window(char *error,
     cls.lpfnWndProc = proton_notification_wnd_proc;
     cls.hInstance = instance;
     cls.lpszClassName = PROTON_NOTIFICATION_CLASS_NAME;
-    cls.hIcon = LoadIconW(NULL, IDI_APPLICATION);
-    cls.hCursor = LoadCursorW(NULL, IDC_ARROW);
+    cls.hIcon = LoadIconW(NULL, MAKEINTRESOURCEW(IDI_APPLICATION));
+    cls.hCursor = LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW));
     g_notification_class_atom = RegisterClassExW(&cls);
     if (g_notification_class_atom == 0) {
       ReleaseSRWLockExclusive(&g_notification_window_lock);
@@ -127,7 +127,7 @@ static int32_t proton_notification_ensure_window(char *error,
         RegisterWindowMessageW(L"TaskbarCreated");
   }
   g_notification_window = CreateWindowExW(
-      0, MAKEINTATOM(g_notification_class_atom), L"Proton Notification",
+      0, MAKEINTRESOURCEW(g_notification_class_atom), L"Proton Notification",
       WS_OVERLAPPED, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandleW(NULL),
       NULL);
   if (g_notification_window == NULL) {
@@ -141,7 +141,7 @@ static int32_t proton_notification_ensure_window(char *error,
 }
 
 static HICON proton_notification_load_icon(void) {
-  HICON icon = LoadIconW(NULL, IDI_APPLICATION);
+  HICON icon = LoadIconW(NULL, MAKEINTRESOURCEW(IDI_APPLICATION));
   return icon;
 }
 
@@ -209,7 +209,7 @@ int32_t proton_engine_notification_show(const char *title_utf8,
   icon.uFlags = NIF_MESSAGE | NIF_ICON | NIF_INFO;
   icon.uCallbackMessage = PROTON_NOTIFICATION_WM_CALLBACK;
   icon.hIcon = g_notification_icon != NULL ? g_notification_icon
-                                           : LoadIconW(NULL, IDI_APPLICATION);
+                                           : LoadIconW(NULL, MAKEINTRESOURCEW(IDI_APPLICATION));
   icon.dwInfoFlags = NIIF_INFO;
   wcsncpy(icon.szInfoTitle, title_w,
           sizeof(icon.szInfoTitle) / sizeof(wchar_t) - 1);

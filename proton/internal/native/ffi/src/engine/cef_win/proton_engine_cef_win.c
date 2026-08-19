@@ -4290,9 +4290,9 @@ static LRESULT CALLBACK proton_engine_dialog_window_proc(
       return -1;
     }
     HICON icon = LoadIconW(
-        NULL, request->level == 2
-                  ? IDI_ERROR
-                  : (request->level == 1 ? IDI_WARNING : IDI_INFORMATION));
+        NULL, MAKEINTRESOURCEW(request->level == 2
+                                    ? IDI_ERROR
+                                    : (request->level == 1 ? IDI_WARNING : IDI_INFORMATION)));
     SendMessageW(request->icon_control, STM_SETICON, (WPARAM)icon, 0);
     HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
     SendMessageW(request->message_control, WM_SETFONT, (WPARAM)font, TRUE);
@@ -4339,7 +4339,7 @@ static int proton_engine_register_dialog_class(void) {
   window_class.cbSize = sizeof(window_class);
   window_class.lpfnWndProc = proton_engine_dialog_window_proc;
   window_class.hInstance = instance;
-  window_class.hCursor = LoadCursorW(NULL, IDC_ARROW);
+  window_class.hCursor = LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW));
   window_class.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
   window_class.lpszClassName = PROTON_ENGINE_DIALOG_CLASS;
   return RegisterClassExW(&window_class) != 0;
