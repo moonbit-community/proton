@@ -8,6 +8,8 @@ import {
 }
 
 // Values
+pub let activity : @proton_contract.Event[ScreenMonitorActivity]
+
 pub let display_added : @proton_contract.Event[DisplayJSON]
 
 pub let display_metrics_changed : @proton_contract.Event[DisplayJSON]
@@ -109,6 +111,15 @@ pub fn ScreenEventReply::from_json(Json, @json.JsonPath) -> Self raise @json.Jso
 pub fn ScreenEventReply::not_equal(Self, Self) -> Bool
 pub fn ScreenEventReply::to_json(Self) -> Json
 pub fn ScreenEventReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ScreenMonitorActivity {
+  operation : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ScreenMonitorActivity::equal(Self, Self) -> Bool
+pub fn ScreenMonitorActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ScreenMonitorActivity::not_equal(Self, Self) -> Bool
+pub fn ScreenMonitorActivity::to_json(Self) -> Json
+pub fn ScreenMonitorActivity::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

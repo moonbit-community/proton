@@ -59,16 +59,31 @@ fn display_to_contract(
 }
 
 ///|
+/// Emits an `activity` event describing which screen query command ran. Query
+/// handlers call this so the renderer can observe screen API usage, matching
+/// the activity convention shared across `proton_ext`.
+async fn emit_activity(
+  context : @proton.CommandContext,
+  operation : String,
+) -> Unit {
+  context.emit(@screen_monitor_contract.activity, @screen_monitor_contract.ScreenMonitorActivity::{
+    operation,
+  })
+}
+
+///|
 /// Returns every connected display with the primary display listed first.
 /// Mirrors Electron's `screen.getAllDisplays()`.
 #proton.command(contract=get_all_displays_command)
 async fn get_all_displays(
+  context : @proton.CommandContext,
   _request : @proton_contract.EmptyRequest,
 ) -> @screen_monitor_contract.DisplaysReply {
   let monitor = ensure_monitor()
   let displays = monitor.displays() catch {
     error => raise QueryFailed(operation="displays", detail=error.to_string())
   }
+  emit_activity(context, "getAllDisplays")
   @screen_monitor_contract.DisplaysReply::{
     displays: displays.map(fn(d) { display_to_contract(d) }),
   }
@@ -78,6 +93,7 @@ async fn get_all_displays(
 /// Returns the primary display. Mirrors Electron's `screen.getPrimaryDisplay()`.
 #proton.command(contract=get_primary_display_command)
 async fn get_primary_display(
+  context : @proton.CommandContext,
   _request : @proton_contract.EmptyRequest,
 ) -> @screen_monitor_contract.DisplayReply {
   let monitor = ensure_monitor()
@@ -85,6 +101,7 @@ async fn get_primary_display(
     error =>
       raise QueryFailed(operation="primary_display", detail=error.to_string())
   }
+  emit_activity(context, "getPrimaryDisplay")
   @screen_monitor_contract.DisplayReply::{
     display: display_to_contract(display),
   }
@@ -95,6 +112,7 @@ async fn get_primary_display(
 /// `screen.getDisplayNearestPoint(point)`.
 #proton.command(contract=get_display_nearest_point_command)
 async fn get_display_nearest_point(
+  context : @proton.CommandContext,
   request : @screen_monitor_contract.NearestPointRequest,
 ) -> @screen_monitor_contract.DisplayReply {
   let monitor = ensure_monitor()
@@ -105,6 +123,7 @@ async fn get_display_nearest_point(
         detail=error.to_string(),
       )
   }
+  emit_activity(context, "getDisplayNearestPoint")
   @screen_monitor_contract.DisplayReply::{
     display: display_to_contract(display),
   }
@@ -115,6 +134,7 @@ async fn get_display_nearest_point(
 /// origin. Mirrors Electron's `screen.getCursorScreenPoint()`.
 #proton.command(contract=get_cursor_point_command)
 async fn get_cursor_point(
+  context : @proton.CommandContext,
   _request : @proton_contract.EmptyRequest,
 ) -> @screen_monitor_contract.CursorPointReply {
   let monitor = ensure_monitor()
@@ -122,6 +142,7 @@ async fn get_cursor_point(
     error =>
       raise QueryFailed(operation="cursor_point", detail=error.to_string())
   }
+  emit_activity(context, "getCursorScreenPoint")
   @screen_monitor_contract.CursorPointReply::{
     point: @screen_monitor_contract.PointJSON::{ x: point.x, y: point.y },
   }

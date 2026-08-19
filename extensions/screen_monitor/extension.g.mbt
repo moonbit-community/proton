@@ -18,19 +18,19 @@ pub fn register_commands(
 ) -> Unit raise {
   registrar.bind(
     get_all_displays_command,
-    (_context, request) => get_all_displays(request),
+    (context, request) => get_all_displays(context, request),
   )
   registrar.bind(
     get_primary_display_command,
-    (_context, request) => get_primary_display(request),
+    (context, request) => get_primary_display(context, request),
   )
   registrar.bind(
     get_display_nearest_point_command,
-    (_context, request) => get_display_nearest_point(request),
+    (context, request) => get_display_nearest_point(context, request),
   )
   registrar.bind(
     get_cursor_point_command,
-    (_context, request) => get_cursor_point(request),
+    (context, request) => get_cursor_point(context, request),
   )
   registrar.bind(
     drain_events_command,

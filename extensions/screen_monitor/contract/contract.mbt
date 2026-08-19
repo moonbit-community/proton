@@ -156,6 +156,26 @@ pub extend ScreenEventReply with ToJson::{to_json}
 pub extend ScreenEventReply with FromJson::{from_json}
 
 ///|
+/// Telemetry for screen query commands, so renderers can observe which screen
+/// APIs were exercised. Follows the activity-event convention shared by the
+/// other `proton_ext` command extensions.
+pub(all) struct ScreenMonitorActivity {
+  operation : String
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend ScreenMonitorActivity with Eq::{not_equal, equal}
+
+///|
+pub extend ScreenMonitorActivity with Debug::{to_repr}
+
+///|
+pub extend ScreenMonitorActivity with ToJson::{to_json}
+
+///|
+pub extend ScreenMonitorActivity with FromJson::{from_json}
+
+///|
 pub let get_all_displays : @proton_contract.Command[
   @proton_contract.EmptyRequest,
   DisplaysReply,
@@ -200,4 +220,10 @@ pub let display_removed : @proton_contract.Event[DisplayJSON] = extension.event(
 ///|
 pub let display_metrics_changed : @proton_contract.Event[DisplayJSON] = extension.event(
   "display-metrics-changed",
+)
+
+///|
+/// Emitted when a screen query command runs, carrying which operation it was.
+pub let activity : @proton_contract.Event[ScreenMonitorActivity] = extension.event(
+  "activity",
 )
