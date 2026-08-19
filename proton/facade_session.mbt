@@ -435,18 +435,28 @@ fn RunningWindow::is_closed(self : RunningWindow) -> Bool {
 
 ///|
 fn preferred_active_window(windows : Array[RunningWindow]) -> RunningWindow? {
-  let mut fallback : RunningWindow? = None
+  preferred_active_windows(windows).get(0)
+}
+
+///|
+fn preferred_active_windows(
+  windows : Array[RunningWindow],
+) -> Array[RunningWindow] {
+  let candidates : Array[RunningWindow] = []
+  let fallback : Array[RunningWindow] = []
   for running in windows {
     if running.is_active() {
       if running.id == "main" {
-        return Some(running)
-      }
-      if fallback is None {
-        fallback = Some(running)
+        candidates.push(running)
+      } else {
+        fallback.push(running)
       }
     }
   }
-  fallback
+  for running in fallback {
+    candidates.push(running)
+  }
+  candidates
 }
 
 ///|
@@ -1824,27 +1834,69 @@ fn RuntimeSession::dispatch_launch_input_event(
 fn RuntimeSession::activate_for_launch_input(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
-  match preferred_active_window(self.windows) {
-    Some(running) => {
-      let state = running.window.state() catch {
-        error => raise native_run_error("read activation window state", error)
+  for running in preferred_active_windows(self.windows) {
+    if try_activate_window_for_launch_input(running) {
+      return
+    }
+  }
+}
+
+///|
+fn try_activate_window_for_launch_input(
+  running : RunningWindow,
+) -> Bool raise AppRunError {
+  try_activate_for_launch_input(
+    () => running.window.state(),
+    () => running.window.restore(),
+    () => running.window.show(),
+    () => running.window.focus(),
+  )
+}
+
+///|
+fn try_activate_for_launch_input(
+  read_state : () -> @native.WindowState raise @native.NativeError,
+  restore : () -> Unit raise @native.NativeError,
+  show : () -> Unit raise @native.NativeError,
+  focus : () -> Unit raise @native.NativeError,
+) -> Bool raise AppRunError {
+  let state = read_state() catch {
+    error => {
+      if error.is_invalid_state() || error.is_stale_window_request() {
+        return false
       }
-      if state.minimized {
-        running.window.restore() catch {
-          error => raise native_run_error("restore activation window", error)
+      raise native_run_error("read activation window state", error)
+    }
+  }
+  if state.minimized {
+    restore() catch {
+      error => {
+        if error.is_invalid_state() || error.is_stale_window_request() {
+          return false
         }
-      }
-      if !state.visible {
-        running.window.show() catch {
-          error => raise native_run_error("show activation window", error)
-        }
-      }
-      running.window.focus() catch {
-        error => raise native_run_error("focus activation window", error)
+        raise native_run_error("restore activation window", error)
       }
     }
-    None => ()
   }
+  if !state.visible {
+    show() catch {
+      error => {
+        if error.is_invalid_state() || error.is_stale_window_request() {
+          return false
+        }
+        raise native_run_error("show activation window", error)
+      }
+    }
+  }
+  focus() catch {
+    error => {
+      if error.is_invalid_state() || error.is_stale_window_request() {
+        return false
+      }
+      raise native_run_error("focus activation window", error)
+    }
+  }
+  true
 }
 
 ///|

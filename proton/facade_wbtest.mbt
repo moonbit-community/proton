@@ -522,6 +522,156 @@ test "menu forwarding ignores only closing window errors" {
 }
 
 ///|
+fn test_activation_window_state(
+  visible? : Bool = true,
+  minimized? : Bool = false,
+) -> @native.WindowState {
+  @native.WindowState::{
+    x: 0,
+    y: 0,
+    width: 800,
+    height: 600,
+    monitor: @native.WindowMonitor::{
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+      work_x: 0,
+      work_y: 0,
+      work_width: 1920,
+      work_height: 1040,
+      scale_factor_percent: 100,
+    },
+    zoom_percent: 100,
+    visible,
+    focused: false,
+    minimized,
+    maximized: false,
+    fullscreen: false,
+    always_on_top: false,
+    theme: "system",
+  }
+}
+
+///|
+fn test_launch_activation_ignores_status(
+  status : Int,
+) -> Array[(Bool, Array[String])] {
+  let results : Array[(Bool, Array[String])] = []
+  for stage in ["state", "restore", "show", "focus"] {
+    let calls : Array[String] = []
+    let activated = unwrap_app_run(() => {
+      try_activate_for_launch_input(
+        () => {
+          if stage == "state" {
+            raise @native.NativeError::Status(
+              status~,
+              message="window is no longer usable",
+            )
+          }
+          test_activation_window_state(
+            visible=stage != "show",
+            minimized=stage == "restore",
+          )
+        },
+        () => {
+          calls.push("restore")
+          if stage == "restore" {
+            raise @native.NativeError::Status(
+              status~,
+              message="window is no longer usable",
+            )
+          }
+        },
+        () => {
+          calls.push("show")
+          if stage == "show" {
+            raise @native.NativeError::Status(
+              status~,
+              message="window is no longer usable",
+            )
+          }
+        },
+        () => {
+          calls.push("focus")
+          if stage == "focus" {
+            raise @native.NativeError::Status(
+              status~,
+              message="window is no longer usable",
+            )
+          }
+        },
+      )
+    })
+    results.push((activated, calls))
+  }
+  results
+}
+
+///|
+test "launch activation skips invalid native windows at every stage" {
+  for status in [-3, -13] {
+    let results = test_launch_activation_ignores_status(status)
+    assert_eq(results.length(), 4)
+    for index = 0; index < results.length(); index = index + 1 {
+      let (activated, calls) = results[index]
+      assert_false(activated)
+      let expected_calls = match index {
+        0 => []
+        1 => ["restore"]
+        2 => ["show"]
+        _ => ["focus"]
+      }
+      assert_eq(calls, expected_calls)
+    }
+  }
+}
+
+///|
+test "launch activation preserves unexpected native errors" {
+  let calls : Array[String] = []
+  let error = expect_app_run_error(() => {
+    ignore(
+      try_activate_for_launch_input(
+        () => test_activation_window_state(),
+        () => (),
+        () => (),
+        () => {
+          calls.push("focus")
+          raise @native.NativeError::Status(
+            status=-7,
+            message="failed to focus window",
+          )
+        },
+      ),
+    )
+  })
+  match error {
+    NativeRuntimeError(action~, error~) => {
+      assert_eq(action, "focus activation window")
+      assert_eq(error.status(), -7)
+      assert_eq(calls, ["focus"])
+    }
+    _ => fail("expected unexpected native error")
+  }
+}
+
+///|
+test "launch activation restores shows and focuses in order" {
+  let calls : Array[String] = []
+  let activated = unwrap_app_run(() => {
+    try_activate_for_launch_input(
+      () => test_activation_window_state(visible=false, minimized=true),
+      () => calls.push("restore"),
+      () => calls.push("show"),
+      () => calls.push("focus"),
+    )
+  })
+  assert_true(activated)
+  assert_eq(calls, ["restore", "show", "focus"])
+}
+
+///|
 test "dev bridge page policy parses exact http origins" {
   assert_eq(
     unwrap_configuration(() => url_origin("http://localhost:5173/app")),
