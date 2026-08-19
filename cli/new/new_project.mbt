@@ -245,28 +245,26 @@ async fn create_project(
   let target_parent = @fsutil.path_parent(options.resolved_target_dir)
   let existing_ancestor = nearest_existing_ancestor(target_parent)
   let mut staging_dir = ""
-  {
-    errdefer {
-      let rollback_failures : Array[String] = []
-      @async.protect_from_cancel(resume_on_cancel=true, () => {
-        remove_transaction_tree(staging_dir, rollback_failures)
-      })
-      if rollback_failures.length() > 0 {
-        raise NewProjectWriteError::Rollback(
-          primary="project staging failed",
-          detail=rollback_failures.join("; "),
-        )
-      }
-    }
-    @async.protect_from_cancel(() => {
-      staging_dir = reserve_staging_directory(
-        existing_ancestor,
-        options.resolved_target_dir,
-      )
-    })
-  }
+  let reserve_rollback_failures : Array[String] = []
   errdefer {
-    let rollback_failures : Array[String] = []
+    @async.protect_from_cancel(resume_on_cancel=true, () => {
+      remove_transaction_tree(staging_dir, reserve_rollback_failures)
+    })
+    if reserve_rollback_failures.length() > 0 {
+      raise NewProjectWriteError::Rollback(
+        primary="failed to reserve the project staging directory",
+        detail=reserve_rollback_failures.join("; "),
+      )
+    }
+  }
+  @async.protect_from_cancel(() => {
+    staging_dir = reserve_staging_directory(
+      existing_ancestor,
+      options.resolved_target_dir,
+    )
+  })
+  let rollback_failures : Array[String] = []
+  errdefer {
     @async.protect_from_cancel(resume_on_cancel=true, () => {
       remove_transaction_tree(staging_dir, rollback_failures)
       if target_existed && !@fsutil.path_exists(options.resolved_target_dir) {
@@ -278,7 +276,7 @@ async fn create_project(
     })
     if rollback_failures.length() > 0 {
       raise NewProjectWriteError::Rollback(
-        primary="project creation failed",
+        primary="failed to generate or commit the project",
         detail=rollback_failures.join("; "),
       )
     }

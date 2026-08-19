@@ -96,19 +96,11 @@ async fn assemble_runtime(
   }
   ensure_dir(@fsutil.path_parent(runtime_dir))
   let staging = create_runtime_staging(runtime_dir)
-  try {
-    if report_progress {
-      @output.info("[INFO] Assembling CEF runtime: " + runtime_dir)
-    }
-    copy_cef_runtime(platform, cef_root, staging)
-    validate_runtime_dist(staging, platform)
-    replace_staged_directory(staging, runtime_dir)
-  } catch {
-    error => {
-      remove_tree(staging) catch {
-        _ => ()
-      }
-      raise error
-    }
+  defer (remove_tree(staging) catch { _ => () })
+  if report_progress {
+    @output.info("[INFO] Assembling CEF runtime: " + runtime_dir)
   }
+  copy_cef_runtime(platform, cef_root, staging)
+  validate_runtime_dist(staging, platform)
+  replace_staged_directory(staging, runtime_dir)
 }

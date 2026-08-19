@@ -712,9 +712,10 @@ test "launch activation preserves unexpected native errors" {
     )
   })
   match error {
-    NativeRuntimeError(action~, error~) => {
+    RuntimeOperationFailed(action~, status~, detail~) => {
       assert_eq(action, "focus activation window")
-      assert_eq(error.status(), -7)
+      assert_eq(status, -7)
+      assert_eq(detail, "failed to focus window")
       assert_eq(calls, ["focus"])
     }
     _ => fail("expected unexpected native error")

@@ -39,7 +39,7 @@ async fn install_cef_root(
   if report_progress {
     @output.info("[INFO] Installing CEF into: " + install_dir)
   }
-  errdefer (remove_tree(staging) catch { _ => () })
+  defer (remove_tree(staging) catch { _ => () })
   copy_tree(extracted_root, staging)
   normalize_cef_runtime_layout(staging)
   let missing = validate_cef_layout(staging, platform)
@@ -296,20 +296,18 @@ async fn setup_downloaded_cef(
   ensure_download_tool("tar")
   let temp_dir = make_temp_dir()
   let archive_path = @fsutil.path_join(temp_dir, name + ".tar.bz2")
-  {
-    errdefer (remove_tree(temp_dir) catch { _ => () })
-    download_file(archive_url(name, url), archive_path, sha256)
-    extract_tar_bz2(archive_path, temp_dir)
-    let extracted_root = find_extracted_root(temp_dir, name, platform)
-    install_cef_root(
-      extracted_root~,
-      install_dir~,
-      name~,
-      sha256~,
-      root~,
-      platform~,
-    )
-  }
+  errdefer (remove_tree(temp_dir) catch { _ => () })
+  download_file(archive_url(name, url), archive_path, sha256)
+  extract_tar_bz2(archive_path, temp_dir)
+  let extracted_root = find_extracted_root(temp_dir, name, platform)
+  install_cef_root(
+    extracted_root~,
+    install_dir~,
+    name~,
+    sha256~,
+    root~,
+    platform~,
+  )
   remove_tree(temp_dir)
 }
 
