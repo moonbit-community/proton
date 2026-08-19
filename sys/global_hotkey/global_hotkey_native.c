@@ -16,6 +16,7 @@
 #endif
 
 #ifdef __linux__
+#include <stdatomic.h>
 #include <sys/select.h>
 #include <unistd.h>
 #include <X11/Xlib.h>
@@ -72,6 +73,8 @@ typedef struct mb_global_hotkey_state {
   int running;
   int thread_started;
   int wake_pipe[2];
+  atomic_int x11_connection_lost;
+  struct mb_global_hotkey_state *x11_next;
   Display *display;
   Window root_window;
   unsigned int lock_mask;
@@ -98,6 +101,7 @@ static void mb_state_set_startup_error(
 static void mb_push_trigger_locked(
     mb_global_hotkey_state_t *state,
     int32_t id);
+static void mb_set_error_message(const char *message);
 
 #ifdef __APPLE__
 typedef struct mb_macos_api {
@@ -605,6 +609,8 @@ static void *mb_macos_thread_main(void *raw_state) {
 #endif
 
 #ifdef __linux__
+typedef int (*mb_x11_io_error_handler_t)(Display *);
+
 typedef struct mb_x11_api {
   void *handle;
   int loaded;
@@ -621,12 +627,167 @@ typedef struct mb_x11_api {
   KeySym (*XStringToKeysym)(const char *);
   KeyCode (*XKeysymToKeycode)(Display *, KeySym);
   int (*XSetErrorHandler)(int (*handler)(Display *, XErrorEvent *));
+  mb_x11_io_error_handler_t (*XSetIOErrorHandler)(
+      mb_x11_io_error_handler_t);
+  void (*XSetIOErrorExitHandler)(Display *, void (*handler)(Display *, void *),
+                                 void *);
   XModifierKeymap *(*XGetModifierMapping)(Display *);
   int (*XFreeModifiermap)(XModifierKeymap *);
 } mb_x11_api_t;
 
 static mb_x11_api_t mb_x11_api;
 static MB_THREAD_LOCAL int mb_linux_x11_error_code = 0;
+static pthread_mutex_t mb_linux_x11_handler_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t mb_linux_x11_handler_cond = PTHREAD_COND_INITIALIZER;
+static mb_global_hotkey_state_t *mb_linux_x11_states = NULL;
+static int mb_linux_x11_handler_installed = 0;
+static int mb_linux_x11_handler_changing = 0;
+static int mb_linux_x11_handler_users = 0;
+static mb_x11_io_error_handler_t mb_linux_x11_previous_io_error_handler = NULL;
+
+static void mb_linux_mark_connection_lost(
+    mb_global_hotkey_state_t *state) {
+  if (state == NULL ||
+      atomic_exchange(&state->x11_connection_lost, 1) != 0) {
+    return;
+  }
+  if (state->wake_pipe[1] >= 0) {
+    (void)write(state->wake_pipe[1], "x", 1);
+  }
+}
+
+static int mb_linux_x11_io_error_handler(Display *display) {
+  mb_global_hotkey_state_t *state;
+  mb_x11_io_error_handler_t previous_handler;
+
+  pthread_mutex_lock(&mb_linux_x11_handler_lock);
+  state = mb_linux_x11_states;
+  while (state != NULL && state->display != display) {
+    state = state->x11_next;
+  }
+  if (state != NULL) {
+    mb_linux_mark_connection_lost(state);
+    pthread_mutex_unlock(&mb_linux_x11_handler_lock);
+    return 0;
+  }
+  previous_handler = mb_linux_x11_previous_io_error_handler;
+  pthread_mutex_unlock(&mb_linux_x11_handler_lock);
+  if (previous_handler != NULL &&
+      previous_handler != mb_linux_x11_io_error_handler) {
+    return previous_handler(display);
+  }
+  return 0;
+}
+
+static void mb_linux_x11_io_error_exit_handler(
+    Display *display,
+    void *raw_state) {
+  mb_global_hotkey_state_t *state =
+      (mb_global_hotkey_state_t *)raw_state;
+  (void)display;
+  mb_linux_mark_connection_lost(state);
+}
+
+static void mb_linux_register_display(mb_global_hotkey_state_t *state) {
+  mb_x11_io_error_handler_t previous_handler = NULL;
+  int install_handler = 0;
+
+  pthread_mutex_lock(&mb_linux_x11_handler_lock);
+  while (mb_linux_x11_handler_changing) {
+    pthread_cond_wait(&mb_linux_x11_handler_cond, &mb_linux_x11_handler_lock);
+  }
+  if (!mb_linux_x11_handler_installed) {
+    mb_linux_x11_handler_changing = 1;
+    install_handler = 1;
+  }
+  pthread_mutex_unlock(&mb_linux_x11_handler_lock);
+
+  if (install_handler) {
+    previous_handler =
+        mb_x11_api.XSetIOErrorHandler(mb_linux_x11_io_error_handler);
+    pthread_mutex_lock(&mb_linux_x11_handler_lock);
+    mb_linux_x11_previous_io_error_handler = previous_handler;
+    mb_linux_x11_handler_installed = 1;
+    mb_linux_x11_handler_changing = 0;
+    pthread_cond_broadcast(&mb_linux_x11_handler_cond);
+    pthread_mutex_unlock(&mb_linux_x11_handler_lock);
+  }
+
+  pthread_mutex_lock(&mb_linux_x11_handler_lock);
+  while (mb_linux_x11_handler_changing) {
+    pthread_cond_wait(&mb_linux_x11_handler_cond, &mb_linux_x11_handler_lock);
+  }
+  state->x11_next = mb_linux_x11_states;
+  mb_linux_x11_states = state;
+  mb_linux_x11_handler_users += 1;
+  pthread_mutex_unlock(&mb_linux_x11_handler_lock);
+
+  mb_x11_api.XSetIOErrorExitHandler(
+      state->display, mb_linux_x11_io_error_exit_handler, state);
+}
+
+static void mb_linux_unregister_display(mb_global_hotkey_state_t *state) {
+  mb_global_hotkey_state_t **cursor;
+  mb_x11_io_error_handler_t previous_handler = NULL;
+  int restore_handler = 0;
+
+  pthread_mutex_lock(&mb_linux_x11_handler_lock);
+  while (mb_linux_x11_handler_changing) {
+    pthread_cond_wait(&mb_linux_x11_handler_cond, &mb_linux_x11_handler_lock);
+  }
+  cursor = &mb_linux_x11_states;
+  while (*cursor != NULL && *cursor != state) {
+    cursor = &(*cursor)->x11_next;
+  }
+  if (*cursor == state) {
+    *cursor = state->x11_next;
+    state->x11_next = NULL;
+    mb_linux_x11_handler_users -= 1;
+  }
+  if (mb_linux_x11_handler_users == 0 && mb_linux_x11_handler_installed) {
+    mb_linux_x11_handler_changing = 1;
+    previous_handler = mb_linux_x11_previous_io_error_handler;
+    restore_handler = 1;
+  }
+  pthread_mutex_unlock(&mb_linux_x11_handler_lock);
+
+  if (restore_handler) {
+    mb_x11_io_error_handler_t observed_handler =
+        mb_x11_api.XSetIOErrorHandler(previous_handler);
+    if (observed_handler != mb_linux_x11_io_error_handler) {
+      (void)mb_x11_api.XSetIOErrorHandler(observed_handler);
+    }
+    pthread_mutex_lock(&mb_linux_x11_handler_lock);
+    mb_linux_x11_previous_io_error_handler = NULL;
+    mb_linux_x11_handler_installed = 0;
+    mb_linux_x11_handler_changing = 0;
+    pthread_cond_broadcast(&mb_linux_x11_handler_cond);
+    pthread_mutex_unlock(&mb_linux_x11_handler_lock);
+  }
+}
+
+static int mb_linux_connection_is_lost(
+    mb_global_hotkey_state_t *state) {
+  return atomic_load(&state->x11_connection_lost) != 0;
+}
+
+static void mb_linux_close_display(mb_global_hotkey_state_t *state) {
+  if (state->display != NULL) {
+    mb_x11_api.XCloseDisplay(state->display);
+    mb_linux_unregister_display(state);
+    state->display = NULL;
+  }
+}
+
+static int mb_linux_require_connection(
+    mb_global_hotkey_state_t *state,
+    const char *operation) {
+  if (!mb_linux_connection_is_lost(state)) {
+    return 1;
+  }
+  mb_set_error_message(operation);
+  return 0;
+}
 
 static int mb_linux_x11_error_handler(Display *display, XErrorEvent *event) {
   (void)display;
@@ -673,6 +834,12 @@ static int mb_linux_load_x11(void) {
       dlsym(mb_x11_api.handle, "XKeysymToKeycode");
   mb_x11_api.XSetErrorHandler = (int (*)(int (*)(Display *, XErrorEvent *)))
       dlsym(mb_x11_api.handle, "XSetErrorHandler");
+  mb_x11_api.XSetIOErrorHandler =
+      (mb_x11_io_error_handler_t(*)(mb_x11_io_error_handler_t))dlsym(
+          mb_x11_api.handle, "XSetIOErrorHandler");
+  mb_x11_api.XSetIOErrorExitHandler =
+      (void (*)(Display *, void (*)(Display *, void *), void *))dlsym(
+          mb_x11_api.handle, "XSetIOErrorExitHandler");
   mb_x11_api.XGetModifierMapping = (XModifierKeymap * (*)(Display *))
       dlsym(mb_x11_api.handle, "XGetModifierMapping");
   mb_x11_api.XFreeModifiermap = (int (*)(XModifierKeymap *))
@@ -685,6 +852,8 @@ static int mb_linux_load_x11(void) {
       mb_x11_api.XSync == NULL || mb_x11_api.XStringToKeysym == NULL ||
       mb_x11_api.XKeysymToKeycode == NULL ||
       mb_x11_api.XSetErrorHandler == NULL ||
+      mb_x11_api.XSetIOErrorHandler == NULL ||
+      mb_x11_api.XSetIOErrorExitHandler == NULL ||
       mb_x11_api.XGetModifierMapping == NULL ||
       mb_x11_api.XFreeModifiermap == NULL) {
     dlclose(mb_x11_api.handle);
@@ -900,7 +1069,8 @@ static void *mb_linux_thread_main(void *raw_state) {
       char byte = 0;
       (void)read(state->wake_pipe[0], &byte, 1);
       pthread_mutex_lock(&state->lock);
-      if (!state->running) {
+      if (!state->running ||
+          atomic_load(&state->x11_connection_lost) != 0) {
         pthread_mutex_unlock(&state->lock);
         break;
       }
@@ -908,9 +1078,13 @@ static void *mb_linux_thread_main(void *raw_state) {
     }
 
     if (FD_ISSET(display_fd, &read_fds)) {
-      while (mb_x11_api.XPending(state->display) > 0) {
+      while (atomic_load(&state->x11_connection_lost) == 0 &&
+             mb_x11_api.XPending(state->display) > 0) {
         XEvent event;
         mb_x11_api.XNextEvent(state->display, &event);
+        if (atomic_load(&state->x11_connection_lost) != 0) {
+          break;
+        }
         if (event.type == KeyPress) {
           unsigned int clean_modifiers =
               mb_linux_clean_event_modifiers(state, event.xkey.state);
@@ -1350,10 +1524,15 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_platform_supported(void) {
   mb_set_error_message("");
   return 1;
 #elif defined(__linux__)
+  mb_global_hotkey_state_t probe_state;
   Display *display;
+  memset(&probe_state, 0, sizeof(probe_state));
+  probe_state.wake_pipe[0] = -1;
+  probe_state.wake_pipe[1] = -1;
+  atomic_init(&probe_state.x11_connection_lost, 0);
   if (!mb_linux_load_x11()) {
     mb_set_error_message(
-        "libX11 could not be loaded; install the X11 runtime and headers");
+        "a compatible libX11 could not be loaded; install libX11 1.7 or newer");
     return 0;
   }
   display = mb_x11_api.XOpenDisplay(NULL);
@@ -1362,7 +1541,13 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_platform_supported(void) {
         "an X11 display is required; ensure DISPLAY is set or use XWayland");
     return 0;
   }
-  mb_x11_api.XCloseDisplay(display);
+  probe_state.display = display;
+  mb_linux_register_display(&probe_state);
+  mb_linux_close_display(&probe_state);
+  if (mb_linux_connection_is_lost(&probe_state)) {
+    mb_set_error_message("the X11 connection was lost during capability probing");
+    return 0;
+  }
   mb_set_error_message("");
   return 1;
 #elif defined(__APPLE__)
@@ -1408,40 +1593,54 @@ MOONBIT_FFI_EXPORT mb_global_hotkey_state_t *mb_global_hotkey_create(void) {
   mb_set_error_message("");
   return state;
 #elif defined(__linux__)
+  state->wake_pipe[0] = -1;
+  state->wake_pipe[1] = -1;
+  atomic_init(&state->x11_connection_lost, 0);
   if (!mb_linux_load_x11()) {
     free(state);
     mb_set_error_message(
-        "libX11 could not be loaded; install the X11 runtime and headers");
+        "a compatible libX11 could not be loaded; install libX11 1.7 or newer");
     return NULL;
   }
-  state->display = mb_x11_api.XOpenDisplay(NULL);
-  if (state->display == NULL) {
-    free(state);
-    mb_set_error_message(
-        "an X11 display is required; ensure DISPLAY is set or use XWayland");
-    return NULL;
-  }
-  state->root_window = DefaultRootWindow(state->display);
-  state->lock_mask = LockMask;
-  state->numlock_mask = mb_linux_detect_numlock_mask(state->display);
   if (!mb_init_sync_primitives(&state->lock, &state->ready_cond)) {
-    mb_x11_api.XCloseDisplay(state->display);
     free(state);
     mb_set_error_message("failed to initialize Linux synchronization primitives");
     return NULL;
   }
   if (pipe(state->wake_pipe) != 0) {
     mb_destroy_sync_primitives(&state->lock, &state->ready_cond);
-    mb_x11_api.XCloseDisplay(state->display);
     free(state);
     mb_set_error_message("failed to create the Linux wake pipe");
     return NULL;
   }
-  if (pthread_create(&state->thread, NULL, mb_linux_thread_main, state) != 0) {
+  state->display = mb_x11_api.XOpenDisplay(NULL);
+  if (state->display == NULL) {
     close(state->wake_pipe[0]);
     close(state->wake_pipe[1]);
     mb_destroy_sync_primitives(&state->lock, &state->ready_cond);
-    mb_x11_api.XCloseDisplay(state->display);
+    free(state);
+    mb_set_error_message(
+        "an X11 display is required; ensure DISPLAY is set or use XWayland");
+    return NULL;
+  }
+  mb_linux_register_display(state);
+  state->root_window = DefaultRootWindow(state->display);
+  state->lock_mask = LockMask;
+  state->numlock_mask = mb_linux_detect_numlock_mask(state->display);
+  if (mb_linux_connection_is_lost(state)) {
+    mb_linux_close_display(state);
+    close(state->wake_pipe[0]);
+    close(state->wake_pipe[1]);
+    mb_destroy_sync_primitives(&state->lock, &state->ready_cond);
+    free(state);
+    mb_set_error_message("the X11 connection was lost during initialization");
+    return NULL;
+  }
+  if (pthread_create(&state->thread, NULL, mb_linux_thread_main, state) != 0) {
+    mb_linux_close_display(state);
+    close(state->wake_pipe[0]);
+    close(state->wake_pipe[1]);
+    mb_destroy_sync_primitives(&state->lock, &state->ready_cond);
     free(state);
     mb_set_error_message("failed to create the Linux hotkey thread");
     return NULL;
@@ -1517,7 +1716,7 @@ MOONBIT_FFI_EXPORT void mb_global_hotkey_destroy(
   pthread_mutex_lock(&state->lock);
   {
     mb_registration_t *cursor = state->registrations;
-    while (cursor != NULL) {
+    while (cursor != NULL && !mb_linux_connection_is_lost(state)) {
       unsigned int base_modifiers = cursor->modifiers;
       unsigned int variants[4] = {
           base_modifiers,
@@ -1532,13 +1731,15 @@ MOONBIT_FFI_EXPORT void mb_global_hotkey_destroy(
       }
       cursor = cursor->next;
     }
-    mb_x11_api.XFlush(state->display);
+    if (!mb_linux_connection_is_lost(state)) {
+      mb_x11_api.XFlush(state->display);
+    }
     mb_clear_runtime_state_locked(state);
   }
   pthread_mutex_unlock(&state->lock);
+  mb_linux_close_display(state);
   close(state->wake_pipe[0]);
   close(state->wake_pipe[1]);
-  mb_x11_api.XCloseDisplay(state->display);
   mb_destroy_sync_primitives(&state->lock, &state->ready_cond);
   free(state);
 #elif defined(__APPLE__)
@@ -1625,6 +1826,11 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_register(
     unsigned int base_modifiers = mb_linux_modifiers((uint32_t)modifiers);
     unsigned int variants[4];
     size_t index;
+    if (!mb_linux_require_connection(
+            state, "the X11 connection was lost; cannot register hotkey")) {
+      free(name);
+      return 1;
+    }
     if (!mb_linux_keycode_from_name(state->display, name, &keycode)) {
       free(name);
       mb_set_error_message("unsupported X11 hotkey key");
@@ -1643,6 +1849,11 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_register(
     }
     mb_x11_api.XSync(state->display, False);
     mb_x11_api.XSetErrorHandler(NULL);
+    if (!mb_linux_require_connection(
+            state, "the X11 connection was lost; cannot register hotkey")) {
+      free(name);
+      return 1;
+    }
     if (mb_linux_x11_error_code != 0) {
       for (index = 0; index < 4; index++) {
         mb_x11_api.XUngrabKey(state->display, keycode, variants[index],
@@ -1654,10 +1865,15 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_register(
       return 1;
     }
 
+    mb_x11_api.XFlush(state->display);
+    if (!mb_linux_require_connection(
+            state, "the X11 connection was lost; cannot register hotkey")) {
+      free(name);
+      return 1;
+    }
     pthread_mutex_lock(&state->lock);
     mb_add_registration_locked(state, id, base_modifiers, keycode);
     pthread_mutex_unlock(&state->lock);
-    mb_x11_api.XFlush(state->display);
     free(name);
     mb_set_error_message("");
     return 0;
@@ -1724,6 +1940,11 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_unregister(
     unsigned int variants[4];
     size_t index;
 
+    if (!mb_linux_require_connection(
+            state, "the X11 connection was lost; cannot unregister hotkey")) {
+      return 1;
+    }
+
     pthread_mutex_lock(&state->lock);
     {
       mb_registration_t *registration = mb_find_registration_locked(state, id);
@@ -1750,15 +1971,23 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_unregister(
     }
     mb_x11_api.XSync(state->display, False);
     mb_x11_api.XSetErrorHandler(NULL);
+    if (!mb_linux_require_connection(
+            state, "the X11 connection was lost; cannot unregister hotkey")) {
+      return 1;
+    }
     if (mb_linux_x11_error_code != 0) {
       mb_set_error_message("the X11 hotkey could not be unregistered");
       return 1;
     }
 
+    mb_x11_api.XFlush(state->display);
+    if (!mb_linux_require_connection(
+            state, "the X11 connection was lost; cannot unregister hotkey")) {
+      return 1;
+    }
     pthread_mutex_lock(&state->lock);
     mb_remove_registration_locked(state, id, NULL, NULL);
     pthread_mutex_unlock(&state->lock);
-    mb_x11_api.XFlush(state->display);
     mb_set_error_message("");
     return 0;
   }
@@ -1792,6 +2021,11 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_take_triggered_id(
     return id;
   }
 #elif defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__)
+  if (mb_linux_connection_is_lost(state)) {
+    return 0;
+  }
+#endif
   pthread_mutex_lock(&state->lock);
   {
     int32_t id = mb_take_triggered_id_locked(state);
