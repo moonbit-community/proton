@@ -1482,24 +1482,34 @@ test "notification completion capability controls result waiting" {
 }
 
 ///|
+/// Normalizes host path separators so path assertions are platform-agnostic.
+fn normalize_path_separators(path : String) -> String {
+  path.replace_all(old="\\", new="/")
+}
+
+///|
 test "app data directory follows platform conventions" {
   assert_eq(
-    app_data_dir_for_platform(
-      "macos",
-      "com.example.devtoys",
-      Some("/Users/test"),
-      None,
-      None,
+    normalize_path_separators(
+      app_data_dir_for_platform(
+        "macos",
+        "com.example.devtoys",
+        Some("/Users/test"),
+        None,
+        None,
+      ),
     ),
     "/Users/test/Library/Application Support/com.example.devtoys",
   )
   assert_eq(
-    app_data_dir_for_platform(
-      "linux",
-      "com.example.devtoys",
-      Some("/home/test"),
-      None,
-      Some("/data"),
+    normalize_path_separators(
+      app_data_dir_for_platform(
+        "linux",
+        "com.example.devtoys",
+        Some("/home/test"),
+        None,
+        Some("/data"),
+      ),
     ),
     "/data/com.example.devtoys",
   )
