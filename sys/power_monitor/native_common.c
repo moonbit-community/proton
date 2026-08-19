@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static void power_monitor_set_error(power_monitor_state_t *state,
@@ -11,10 +12,139 @@ static void power_monitor_set_error(power_monitor_state_t *state,
   }
 }
 
-/* GC finalizer: no platform resources to release beyond what the platform
-   helpers already manage, but keep the hook for future use. */
+static void power_monitor_lock_acquire(power_monitor_state_t *state) {
+#if defined(_WIN32)
+  EnterCriticalSection(&state->event_lock);
+#else
+  pthread_mutex_lock(&state->event_lock);
+#endif
+}
+
+static void power_monitor_lock_release(power_monitor_state_t *state) {
+#if defined(_WIN32)
+  LeaveCriticalSection(&state->event_lock);
+#else
+  pthread_mutex_unlock(&state->event_lock);
+#endif
+}
+
+/* Shared lifecycle helper so an explicit destroy and the GC finalizer take the
+   same path. All steps are idempotent through `destroyed`. */
+static void power_monitor_destroy_state(power_monitor_state_t *state) {
+  if (state->destroyed) {
+    return;
+  }
+  state->destroyed = 1;
+  power_monitor_platform_stop_watching(state);
+  power_monitor_release_events(state);
+  power_monitor_lock_destroy(state);
+}
+
+void power_monitor_lock_init(power_monitor_state_t *state) {
+  if (state == NULL) {
+    return;
+  }
+#if defined(_WIN32)
+  InitializeCriticalSection(&state->event_lock);
+#else
+  pthread_mutex_init(&state->event_lock, NULL);
+#endif
+}
+
+void power_monitor_lock_destroy(power_monitor_state_t *state) {
+  if (state == NULL) {
+    return;
+  }
+#if defined(_WIN32)
+  DeleteCriticalSection(&state->event_lock);
+#else
+  pthread_mutex_destroy(&state->event_lock);
+#endif
+}
+
+void power_monitor_push_event(power_monitor_state_t *state, int32_t event) {
+  if (state == NULL) {
+    return;
+  }
+  power_monitor_lock_acquire(state);
+  if (state->event_queue_size >= POWER_MONITOR_EVENT_QUEUE_CAPACITY) {
+    /* A full queue drops the oldest entry so the latest system state is always
+       preserved, matching the intent documented on the queue fields. */
+    power_monitor_event_node_t *oldest = state->event_head;
+    if (oldest != NULL) {
+      state->event_head = oldest->next;
+      if (state->event_head == NULL) {
+        state->event_tail = NULL;
+      }
+      free(oldest);
+      state->event_queue_size--;
+    }
+    state->event_queue_overflow = 1;
+  }
+  power_monitor_event_node_t *node =
+      (power_monitor_event_node_t *)calloc(1, sizeof(*node));
+  if (node != NULL) {
+    node->event = event;
+    if (state->event_tail == NULL) {
+      state->event_head = node;
+      state->event_tail = node;
+    } else {
+      state->event_tail->next = node;
+      state->event_tail = node;
+    }
+    state->event_queue_size++;
+  }
+  power_monitor_lock_release(state);
+}
+
+int32_t power_monitor_take_event(power_monitor_state_t *state,
+                                 int32_t *out_event) {
+  if (state == NULL || out_event == NULL) {
+    return power_monitor_STATUS_OPERATION_FAILED;
+  }
+  int32_t status = power_monitor_STATUS_EMPTY;
+  power_monitor_lock_acquire(state);
+  power_monitor_event_node_t *node = state->event_head;
+  if (node != NULL) {
+    *out_event = node->event;
+    state->event_head = node->next;
+    if (state->event_head == NULL) {
+      state->event_tail = NULL;
+    }
+    free(node);
+    state->event_queue_size--;
+    status = power_monitor_STATUS_OK;
+  }
+  power_monitor_lock_release(state);
+  return status;
+}
+
+void power_monitor_release_events(power_monitor_state_t *state) {
+  if (state == NULL) {
+    return;
+  }
+  power_monitor_lock_acquire(state);
+  power_monitor_event_node_t *node = state->event_head;
+  while (node != NULL) {
+    power_monitor_event_node_t *next = node->next;
+    free(node);
+    node = next;
+  }
+  state->event_head = NULL;
+  state->event_tail = NULL;
+  state->event_queue_size = 0;
+  state->event_queue_overflow = 0;
+  power_monitor_lock_release(state);
+}
+
+/* GC finalizer: tears the watch backend and the event queue down when the
+   external object is collected without an explicit destroy(). */
 static void power_monitor_finalize(void *payload) {
-  (void)payload;
+  power_monitor_state_t *state = (power_monitor_state_t *)payload;
+  if (state == NULL) {
+    return;
+  }
+  power_monitor_destroy_state(state);
 }
 
 MOONBIT_FFI_EXPORT
@@ -27,6 +157,7 @@ void *moonbit_power_monitor_create(void) {
   }
   memset(state, 0, sizeof(*state));
   state->source = power_monitor_SOURCE_UNKNOWN;
+  power_monitor_lock_init(state);
   power_monitor_platform_init(state);
   return state;
 }
@@ -106,8 +237,34 @@ moonbit_bytes_t moonbit_power_monitor_last_error(void *handle) {
 }
 
 MOONBIT_FFI_EXPORT
+int32_t moonbit_power_monitor_start_watching(void *handle) {
+  if (handle == NULL) {
+    return power_monitor_STATUS_OPERATION_FAILED;
+  }
+  return power_monitor_platform_start_watching(
+      (power_monitor_state_t *)handle);
+}
+
+MOONBIT_FFI_EXPORT
+int32_t moonbit_power_monitor_stop_watching(void *handle) {
+  if (handle == NULL) {
+    return power_monitor_STATUS_OPERATION_FAILED;
+  }
+  return power_monitor_platform_stop_watching((power_monitor_state_t *)handle);
+}
+
+MOONBIT_FFI_EXPORT
+int32_t moonbit_power_monitor_take_event(void *handle, int32_t *out_event) {
+  if (handle == NULL || out_event == NULL) {
+    return power_monitor_STATUS_OPERATION_FAILED;
+  }
+  return power_monitor_take_event((power_monitor_state_t *)handle, out_event);
+}
+
+MOONBIT_FFI_EXPORT
 void moonbit_power_monitor_destroy(void *handle) {
   if (handle == NULL) {
     return;
   }
+  power_monitor_destroy_state((power_monitor_state_t *)handle);
 }

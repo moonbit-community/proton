@@ -135,6 +135,7 @@ try {
     "microphone",
     "notification",
     "path",
+    "power_monitor",
     "shell",
     "tray",
     "updater",
