@@ -38,7 +38,19 @@ fn format_supported(host : PackageHost, format : PackageFormat) -> Bool {
 ///|
 /// Packages an already-built executable using the current host's native tools.
 pub async fn build(spec : PackageSpec) -> Array[String] {
+  build_with(spec, PackageCustomization::new(), fn(_layout) { () })
+}
+
+///|
+/// Packages an executable and allows framework-specific staging before the
+/// package is signed and converted into its requested artifacts.
+pub async fn build_with(
+  spec : PackageSpec,
+  customization : PackageCustomization,
+  prepare : async (PackageLayout) -> Unit,
+) -> Array[String] {
   let spec = validate_spec(spec)
+  validate_customization(customization)
   let host = current_package_host()
   for format in spec.formats {
     guard format_supported(host, format) else {
@@ -50,9 +62,33 @@ pub async fn build(spec : PackageSpec) -> Array[String] {
   }
   ensure_dir(spec.output)
   match host {
-    Macos => package_macos(spec)
-    Windows => package_windows(spec)
-    Linux => package_linux(spec)
+    Macos => package_macos(spec, customization, prepare)
+    Windows => package_windows(spec, customization, prepare)
+    Linux => package_linux(spec, customization, prepare)
+  }
+}
+
+///|
+fn validate_customization(
+  customization : PackageCustomization,
+) -> Unit raise PackagePlanError {
+  for property in customization.macos_plist_strings {
+    guard property.key.trim().length() > 0 else {
+      raise InvalidPayload(detail="macOS plist property key must not be empty")
+    }
+  }
+  for target in customization.macos_sign_targets {
+    validate_relative_destination(target.path)
+  }
+  for target in customization.windows_sign_targets {
+    validate_relative_destination(target)
+  }
+  for target in customization.windows_verify_targets {
+    validate_relative_destination(target)
+  }
+  match customization.linux_resources_path {
+    Some(path) => validate_relative_destination(path)
+    None => ()
   }
 }
 
@@ -70,7 +106,13 @@ fn validate_spec(spec : PackageSpec) -> PackageSpec raise PackagePlanError {
   for payload in spec.payloads {
     validate_relative_destination(payload.destination)
   }
-  PackageSpec::{ ..spec, product_name, identifier, version }
+  PackageSpec::{
+    ..spec,
+    product_name,
+    identifier,
+    version,
+    sign: spec.sign || spec.notarize,
+  }
 }
 
 ///|
@@ -371,7 +413,41 @@ async fn write_text(path : String, text : String) -> Unit {
 
 ///|
 async fn promote(source : String, destination : String) -> Unit {
-  remove_tree(destination)
+  let backup = destination + ".backup"
+  if path_exists(backup) {
+    if path_exists(destination) {
+      remove_tree(backup)
+    } else {
+      rename_package_path(backup, destination)
+    }
+  }
+  let had_destination = path_exists(destination)
+  if had_destination {
+    rename_package_path(destination, backup)
+  }
+  {
+    errdefer (if had_destination && path_exists(backup) {
+      rename_package_path(backup, destination) catch {
+        rollback_error =>
+          raise PackageFileSystemError::Copy(
+            source~,
+            destination~,
+            detail="package promotion failed and restore failed: " +
+              @debug.render(Repr(rollback_error)),
+          )
+      }
+    })
+    rename_package_path(source, destination)
+  }
+  if had_destination {
+    remove_tree(backup) catch {
+      _ => ()
+    }
+  }
+}
+
+///|
+async fn rename_package_path(source : String, destination : String) -> Unit {
   @async_fs.rename(source, destination) catch {
     error =>
       raise PackageFileSystemError::Copy(

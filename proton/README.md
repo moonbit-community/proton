@@ -27,17 +27,21 @@ has to be installed by hand, but the package must import `moonbitlang/async` for
 - `@proton.url(title, url, ...)` — a remote or local URL.
 - `@proton.file(title, path, ...)` — an HTML file on disk.
 - `@proton.asset(title, path, ...)` — an HTML asset shipped with the app.
-- `@proton.config("proton.project.json")` — an app described by a `proton.project.json` file.
-- `@proton.app()` — config from `PROTON_CONFIG_PATH`, `proton.project.json` in the
-  current working directory, or code-only defaults.
 
 ## Commands and events
 
 Register typed commands on the app builder:
 
 ```moonbit
-@proton.config("proton.project.json")
+@proton.html("Commands", html)
 .commands(fn(registrar) raise { registrar.bind(ping_command, ping) })
+.permission(
+  @proton.PermissionGrant::new(
+    "main",
+    @proton.PermissionOrigin::Entry,
+    "app",
+  ),
+)
 .run_or_abort()
 ```
 

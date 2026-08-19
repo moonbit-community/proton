@@ -134,12 +134,6 @@ test "macOS package paths normalize absolute and relative inputs" {
 }
 
 ///|
-test "package executable name is filesystem safe" {
-  assert_eq(package_executable_name("My Proton App!"), "my-proton-app")
-  assert_eq(package_executable_name("  ---  "), "proton-app")
-}
-
-///|
 test "macOS package metadata validation rejects unsafe values" {
   try validate_product_name("Demo/App") catch {
     PackagePlanError::InvalidProductName(reason~) =>
@@ -171,164 +165,6 @@ test "macOS package metadata validation rejects unsafe values" {
   } noraise {
     _ => abort("expected identifier character error")
   }
-}
-
-///|
-test "default macOS entitlements enable CEF JIT without disabling validation" {
-  let entitlements = default_macos_entitlements(allow_untrusted_libraries=false)
-  assert_true(entitlements.contains("com.apple.security.cs.allow-jit"))
-  assert_true(
-    entitlements.contains(
-      "com.apple.security.cs.allow-unsigned-executable-memory",
-    ),
-  )
-  assert_false(entitlements.contains("disable-library-validation"))
-  let adhoc_entitlements = default_macos_entitlements(
-    allow_untrusted_libraries=true,
-  )
-  assert_true(adhoc_entitlements.contains("disable-library-validation"))
-}
-
-///|
-test "macOS signing args apply hardened runtime entitlements to app code" {
-  let args = macos_codesign_args(
-    "Developer ID Application: Example",
-    "Demo.app",
-    runtime_options=true,
-    deep=false,
-    entitlements=Some("proton.entitlements"),
-    identifier=None,
-  )
-  assert_true(args.contains("--timestamp"))
-  assert_true(args.contains("--options"))
-  assert_true(args.contains("runtime"))
-  assert_true(args.contains("--entitlements"))
-  assert_true(args.contains("proton.entitlements"))
-  assert_false(args.contains("--deep"))
-  assert_eq(args[args.length() - 1], "Demo.app")
-}
-
-///|
-test "macOS CEF process signing preserves hardened runtime and identifier" {
-  let args = macos_codesign_args(
-    "Developer ID Application: Example",
-    "cef_process",
-    runtime_options=true,
-    deep=false,
-    entitlements=None,
-    identifier=Some("cef_process"),
-  )
-  assert_true(args.contains("--timestamp"))
-  assert_true(args.contains("--options"))
-  assert_true(args.contains("runtime"))
-  assert_true(args.contains("-i"))
-  assert_true(args.contains("cef_process"))
-  assert_false(args.contains("--deep"))
-  assert_false(args.contains("--entitlements"))
-}
-
-///|
-test "macOS signature verification args seal nested bundles deeply" {
-  let app_args = macos_codesign_verify_args("Demo.app", deep=true)
-  @debug.assert_eq(app_args, [
-    "--verify", "--deep", "--strict", "--verbose=2", "Demo.app",
-  ])
-  let dylib_args = macos_codesign_verify_args("libproton.dylib", deep=false)
-  @debug.assert_eq(dylib_args, [
-    "--verify", "--strict", "--verbose=2", "libproton.dylib",
-  ])
-}
-
-///|
-test "macOS icon plist entry is conditional" {
-  assert_eq(macos_icon_plist_entry(None), "")
-  assert_true(macos_icon_plist_entry(Some("icon.icns")).contains("AppIcon"))
-}
-
-///|
-test "release project config disables only the top-level debug field" {
-  let source =
-    #|{
-    #|  "product_name": "MoonBit 桌面应用",
-    #|  "window": {
-    #|    "title": "debug = true",
-    #|    "width": 800,
-    #|    "height": 600
-    #|  },
-    #|  "entry": {
-    #|    "kind": "html",
-    #|    "value": "<p>debug = true</p>"
-    #|  },
-    #|  "debug": true,
-    #|  "bundle": {
-    #|    "active": true
-    #|  }
-    #|}
-  let release = release_project_config_text(source)
-  assert_true(release.contains("\"title\": \"debug = true\""))
-  assert_true(release.contains("\"value\": \"<p>debug = true</p>\""))
-  let json = @json.parse(release) catch { error => abort(error.to_string()) }
-  guard json is { "debug": false, .. } else {
-    abort("expected disabled top-level debug field")
-  }
-}
-
-///|
-test "release project config preserves an already disabled or absent debug field" {
-  let disabled = "{\"window\":{\"title\":\"Demo\"},\"debug\":false}\n"
-  assert_eq(release_project_config_text(disabled), disabled)
-  let absent = "{\"window\":{\"title\":\"Demo\"}}\n"
-  assert_eq(release_project_config_text(absent), absent)
-}
-
-///|
-test "macOS plist contains bundle identity and executable" {
-  let plan = PackagePlan::{
-    root: ".",
-    workspace_root: ".",
-    app_package: "app",
-    config_path: "proton.project.json",
-    product_name: "Demo & App",
-    identifier: "dev.proton.demo",
-    version: "1.2.3",
-    macos_version: "1.2.3",
-    bundle_version: "1.2.3",
-    update_revision: 42UL,
-    targets: ["app"],
-    output: "dist",
-    release: false,
-    base_dir: ".",
-    frontend_dist: None,
-    entry_paths: [],
-    sign_binaries: [],
-    resources: [],
-    icons: [],
-    url_schemes: ["devtoys"],
-    document_types: [
-      @proton_config.ProjectDocumentType::new(
-        "Text",
-        ["txt", "md"],
-        role="Editor",
-      ),
-    ],
-    macos_icon: None,
-    sign: false,
-    notarize: false,
-  }
-  let plist = macos_info_plist(plan, "demo-app")
-  assert_true(plist.contains("<string>Demo &amp; App</string>"))
-  assert_true(plist.contains("<string>dev.proton.demo</string>"))
-  assert_true(plist.contains("<string>demo-app</string>"))
-  assert_true(plist.contains("<string>1.2.3</string>"))
-  assert_true(
-    plist.contains("<key>ProtonUpdateRevision</key><string>42</string>"),
-  )
-  assert_true(plist.contains("CFBundleURLTypes"))
-  assert_true(plist.contains("<string>devtoys</string>"))
-  assert_true(plist.contains("CFBundleDocumentTypes"))
-  assert_true(plist.contains("<string>Editor</string>"))
-  assert_true(plist.contains("<string>md</string>"))
-  assert_false(plist.contains("CFBundleIconFile"))
 }
 
 ///|
@@ -365,7 +201,6 @@ test "macOS helper plist matches its bundle identity" {
     release: false,
     base_dir: ".",
     frontend_dist: None,
-    entry_paths: [],
     sign_binaries: [],
     resources: [],
     icons: [],

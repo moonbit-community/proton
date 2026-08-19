@@ -1,8 +1,6 @@
 ///|
 /// High-level application facade for ordinary Proton apps.
 struct App {
-  file_path : String?
-  auto_config : Bool
   mut window : @manifest.WindowManifest
   mut entry : @manifest.AppEntry
   windows : Array[@manifest.AppWindowManifest]
@@ -10,13 +8,11 @@ struct App {
   mut headless_value : Bool
   mut single_instance_identifier : String?
   mut explicit_locale : @locale.Locale?
-  mut title_overridden : Bool
-  mut size_overridden : Bool
-  mut titlebar_style_overridden : Bool
-  mut entry_overridden : Bool
-  mut debug_overridden : Bool
   mut bridge_startup_timeout_value_ms : Int
   mut menu : @native.MenuBar?
+  url_schemes : Array[String]
+  document_extensions : Array[String]
+  mut update_channel : ResolvedUpdateChannel?
   extension_settings : Map[String, @manifest.ExtensionSetting]
   permission_grants : Array[@manifest.PermissionGrant]
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
@@ -54,15 +50,16 @@ priv struct ResolvedAppConfig {
   instance_identifier : String?
   url_schemes : Array[String]
   document_extensions : Array[String]
-  /// The update channel and the identity it updates, when `proton.project.json`
-  /// declares one. Absent for an application configured inline: there is no
-  /// file to declare an endpoint in, and inventing one would be worse.
+  /// The update channel and the identity it updates, when configured by code.
   update_channel : ResolvedUpdateChannel?
 }
 
 ///|
 priv struct ResolvedUpdateChannel {
-  config : @bootstrap.ProtonUpdaterConfig
+  endpoint : String
+  public_keys : Array[String]
+  check_on_launch : Bool
+  freshness_days : Int
 }
 
 ///|
@@ -532,7 +529,6 @@ priv struct AppLifecycle {
 /// Failures while resolving and validating an application's configuration.
 pub(all) suberror AppConfigurationError {
   InvalidSetting(name~ : String, message~ : String)
-  Bootstrap(@bootstrap.BootstrapError)
   ExtensionDependencyCycle(extension_id~ : String)
   ExtensionUnavailable(
     extension_id~ : String,

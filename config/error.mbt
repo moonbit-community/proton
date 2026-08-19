@@ -61,7 +61,7 @@ fn render_field_key_error(path : String) -> String {
     path[prefix.length():].to_owned() +
     "' found in proton.project.json."
   } else {
-    for scope in ["window", "entry", "frontend", "bundle"] {
+    for scope in ["backend", "frontend", "package"] {
       let scope_prefix = scope + "."
       if path.has_prefix(scope_prefix) {
         return "Unexpected" +

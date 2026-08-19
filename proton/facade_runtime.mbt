@@ -6,9 +6,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     Some(error) => raise ConfigurationError(error)
     None => ()
   }
-  let resolved = self.resolved_app_config() catch {
-    error => raise ConfigurationError(error)
-  }
+  let resolved = self.resolved_app_config()
   let browser_data_dir = resolve_browser_data_dir(resolved) catch {
     error => raise ConfigurationError(error)
   }
@@ -18,41 +16,39 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
     None => None
   }
-  run_manifest(
-    resolved.manifest,
-    resolved.permission_base_path,
-    self.command_extensions,
-    self.command_registrars,
-    self.application_lifecycle_hooks,
-    self.window_lifecycle_hooks,
-    self.menu,
-    self.bridge_startup_timeout_value_ms,
-    self.resolved_headless(),
-    locale_preferences,
-    browser_data_dir?,
-    application_name=resolved.application_name,
-    app_instance~,
-    launch_input_handlers=self.launch_input_handlers,
-    planned_views=self.planned_views,
-    window_event_handlers=self.window_event_handlers,
-    view_event_handlers=self.view_event_handlers,
-    window_close_handler=self.window_close_handler,
-    navigation_handler=self.navigation_handler,
-    popup_handler=self.popup_handler,
-    download_handler=self.download_handler,
-    certificate_handler=self.certificate_handler,
-    media_handler=self.media_handler,
-    download_event_handlers=self.download_event_handlers,
-    update_channel=resolved.update_channel,
-    update_handlers=self.update_handlers,
-  ) catch {
-    error => {
-      match app_instance {
-        Some(instance) => destroy_app_instance(instance) catch { _ => () }
-        None => ()
-      }
-      raise error
-    }
+  {
+    errdefer (match app_instance {
+      Some(instance) => destroy_app_instance(instance) catch { _ => () }
+      None => ()
+    })
+    run_manifest(
+      resolved.manifest,
+      resolved.permission_base_path,
+      self.command_extensions,
+      self.command_registrars,
+      self.application_lifecycle_hooks,
+      self.window_lifecycle_hooks,
+      self.menu,
+      self.bridge_startup_timeout_value_ms,
+      self.resolved_headless(),
+      locale_preferences,
+      browser_data_dir?,
+      application_name=resolved.application_name,
+      app_instance~,
+      launch_input_handlers=self.launch_input_handlers,
+      planned_views=self.planned_views,
+      window_event_handlers=self.window_event_handlers,
+      view_event_handlers=self.view_event_handlers,
+      window_close_handler=self.window_close_handler,
+      navigation_handler=self.navigation_handler,
+      popup_handler=self.popup_handler,
+      download_handler=self.download_handler,
+      certificate_handler=self.certificate_handler,
+      media_handler=self.media_handler,
+      download_event_handlers=self.download_event_handlers,
+      update_channel=resolved.update_channel,
+      update_handlers=self.update_handlers,
+    )
   }
   match app_instance {
     Some(instance) => destroy_app_instance(instance)

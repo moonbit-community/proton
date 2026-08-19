@@ -2,7 +2,6 @@
 pub fn AppConfigurationError::message(self : AppConfigurationError) -> String {
   match self {
     InvalidSetting(name~, message~) => name + ": " + message
-    Bootstrap(error) => error.message()
     ExtensionDependencyCycle(extension_id~) =>
       "command extension dependency cycle detected at: " + extension_id
     ExtensionUnavailable(extension_id~, requested_by~, state~) =>

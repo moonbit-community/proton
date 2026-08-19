@@ -59,7 +59,11 @@ fn linux_apprun(name : String) -> String {
 }
 
 ///|
-async fn package_linux(spec : PackageSpec) -> Array[String] {
+async fn package_linux(
+  spec : PackageSpec,
+  customization : PackageCustomization,
+  prepare : async (PackageLayout) -> Unit,
+) -> Array[String] {
   guard path_is_file(spec.executable) else {
     raise PackagePlanError::MissingExecutable(path=spec.executable)
   }
@@ -77,7 +81,10 @@ async fn package_linux(spec : PackageSpec) -> Array[String] {
   remove_tree(appdir)
   let name = executable_name(spec.product_name)
   let bin = path_join(appdir, "usr/bin")
-  let resources = path_join(appdir, "usr/share/" + name)
+  let resources = path_join(
+    appdir,
+    customization.linux_resources_path.unwrap_or("usr/share/" + name),
+  )
   let libraries = path_join(appdir, "usr/lib")
   for directory in [bin, resources, libraries] {
     ensure_dir(directory)
@@ -95,6 +102,13 @@ async fn package_linux(spec : PackageSpec) -> Array[String] {
   let apprun = path_join(appdir, "AppRun")
   write_text(apprun, linux_apprun(name))
   @async_fs.chmod(apprun, 0o755)
+  prepare(PackageLayout::{
+    root: appdir,
+    executable: staged_executable,
+    resources,
+    libraries,
+    executables: bin,
+  })
   let arch = linux_arch()
   let destination = path_join(
     spec.output,

@@ -2,7 +2,6 @@
 package "moonbit-community/proton"
 
 import {
-  "moonbit-community/proton/bootstrap",
   "moonbit-community/proton/command",
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension",
@@ -18,15 +17,11 @@ import {
 // Values
 pub fn abi_version() -> Int
 
-pub fn app() -> App
-
 pub fn app_data_dir(String) -> String raise AppPathError
 
 pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub async fn check_for_update() -> UpdateCheck
-
-pub fn config(String) -> App
 
 pub fn execute_process(config? : @native.RuntimeConfig) -> @native.ProcessResult raise @native.NativeError
 
@@ -38,7 +33,7 @@ pub fn last_error_message() -> String
 
 pub fn probe_runtime(config? : @native.RuntimeConfig) -> Unit raise @native.NativeError
 
-pub fn resource_dir() -> String raise AppPathError
+pub fn resource_dir() -> String
 
 pub fn runtime_info() -> @native.RuntimeInfo raise @native.NativeError
 
@@ -66,7 +61,6 @@ pub fn AppCleanupError::to_string(Self) -> String
 
 pub(all) suberror AppConfigurationError {
   InvalidSetting(name~ : String, message~ : String)
-  Bootstrap(@bootstrap.BootstrapError)
   ExtensionDependencyCycle(extension_id~ : String)
   ExtensionUnavailable(extension_id~ : String, requested_by~ : String?, state~ : String)
   ExtensionAdaptationFailed(extension_id~ : String, error~ : @extension.ExtensionAdapterError)
@@ -94,7 +88,6 @@ pub fn AppEntryError::to_string(Self) -> String
 pub(all) suberror AppPathError {
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
-  ResourceDirUnavailable
   PlatformProbe(@native.NativeError)
 } derive(Eq, @debug.Debug)
 pub fn AppPathError::equal(Self, Self) -> Bool
@@ -182,6 +175,7 @@ pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise) -> Self
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
+pub fn App::document_extension(Self, String) -> Self
 pub fn App::entry_asset(Self, String) -> Self
 pub fn App::entry_file(Self, String) -> Self
 pub fn App::entry_html(Self, String) -> Self
@@ -210,6 +204,8 @@ pub fn App::single_instance(Self, String) -> Self
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, @native.TitlebarStyle) -> Self
+pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
+pub fn App::url_scheme(Self, String) -> Self
 pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Self
 pub fn App::with_view(Self, String, @native.ViewConfig) -> Self
 

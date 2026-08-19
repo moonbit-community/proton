@@ -745,22 +745,17 @@ test "HTTP entry permissions use the exact canonical origin" {
 }
 
 ///|
-test "replacing a development entry preserves permission grants" {
-  let original = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Development", 320, 240),
-    @manifest.AppEntry::Asset("app.html"),
-    permissions=[
+test "replacing an entry preserves permission grants" {
+  let replaced = asset("Development", "app.html")
+    .permission(
       @manifest.PermissionGrant::new(
         "main",
         @manifest.PermissionOrigin::Entry,
         "app",
       ),
-    ],
-  )
-  let replaced = manifest_with_entry(
-    original,
-    @manifest.AppEntry::Url("http://localhost:5173"),
-  )
+    )
+    .entry_url("http://localhost:5173")
+    .inline_manifest()
   let grants = replaced.permission_grants()
   assert_eq(grants.length(), 1)
   assert_eq(grants[0].extension(), "app")
@@ -1262,25 +1257,9 @@ test "entry HTML injection does not install the bridge" {
 }
 
 ///|
-test "packaged config takes precedence over environment and working directory" {
-  @debug.assert_eq(
-    choose_implicit_config_path(
-      bundled=Some(
-        "/Applications/Todo.app/Contents/Resources/proton.project.json",
-      ),
-      environment=Some("/tmp/override.proton.project.json"),
-      cwd_has_default=true,
-    ),
-    Some("/Applications/Todo.app/Contents/Resources/proton.project.json"),
-  )
-}
-
-///|
-test "resource directory is the absolute directory containing project config" {
-  @debug.assert_eq(
-    resource_dir_from_config_path(default_config_file),
-    current_permission_base_path(),
-  )
+test "direct launches use the working directory as their resource directory" {
+  let current : @mbpath.Path = "."
+  @debug.assert_eq(runtime_resource_dir(), current.resolve().to_string())
 }
 
 ///|
@@ -1313,28 +1292,19 @@ test "single instance builder validates and resolves an inline identity" {
   assert_true(invalid.validation_error() is Some(_))
   let resolved = html("App", "<main>App</main>")
     .single_instance("dev.proton.inline")
-    .inline_app_config()
+    .resolved_app_config()
   assert_eq(resolved.application_identifier, Some("dev.proton.inline"))
   assert_eq(resolved.instance_identifier, Some("dev.proton.inline"))
 }
 
 ///|
-test "project identity is independent from single instance routing" {
+test "activation associations are declared by application code" {
   let app = html("App", "<main>App</main>")
-  let loaded = @bootstrap.LoadedAppManifest::new(
-    app.inline_manifest(),
-    base_dir=None,
-  )
-  let project = @bootstrap.ProtonProjectConfig::new(
-    loaded,
-    @bootstrap.ProtonAppMetadata::new(
-      "App",
-      identifier=Some("dev.proton.project"),
-    ),
-  )
-  let resolved = app.merge_config(loaded, project=Some(project))
-  assert_eq(resolved.application_identifier, Some("dev.proton.project"))
-  assert_eq(resolved.instance_identifier, None)
+    .url_scheme("dev.proton")
+    .document_extension(".md")
+  let resolved = app.resolved_app_config()
+  assert_eq(resolved.url_schemes, ["dev.proton"])
+  assert_eq(resolved.document_extensions, ["md"])
 }
 
 ///|
@@ -1427,38 +1397,19 @@ test "app data directory follows platform conventions" {
 }
 
 ///|
-fn updater_test_channel(
-  check_on_launch : Bool,
-  identifier? : String? = Some("com.example.app"),
-  version? : String? = Some("1.2.3"),
-) -> ResolvedUpdateChannel? {
-  let project = @bootstrap.ProtonProjectConfig::new(
-    @bootstrap.LoadedAppManifest::new(
-      @manifest.AppManifest::new(
-        @manifest.WindowManifest::new("Test", 800, 600),
-        @manifest.AppEntry::Url("https://example.com/"),
-      ),
-      base_dir=None,
-    ),
-    @bootstrap.ProtonAppMetadata::new("Test", identifier~, version~),
-    updater=Some(
-      @bootstrap.ProtonUpdaterConfig::new(
-        "https://updates.example.com/latest.json",
-        ["rsa-sha256:ab:010001"],
-        check_on_launch~,
-      ),
-    ),
+fn updater_test_channel(check_on_launch : Bool) -> ResolvedUpdateChannel? {
+  url("Test", "https://example.com/")
+  .update_channel(
+    "https://updates.example.com/latest.json",
+    ["rsa-sha256:ab:010001"],
+    check_on_launch~,
   )
-  resolved_update_channel(project)
+  .resolved_app_config().update_channel
 }
 
 ///|
-/// Channel identity and release ordering come from the signed application
-/// bundle rather than optional project release metadata.
-test "an update channel does not require release metadata" {
+test "an update channel is configured by application code" {
   assert_true(updater_test_channel(true) is Some(_))
-  assert_true(updater_test_channel(true, identifier=None) is Some(_))
-  assert_true(updater_test_channel(true, version=None) is Some(_))
 }
 
 ///|

@@ -39,7 +39,6 @@ struct PackagePlan {
   release : Bool
   base_dir : String
   frontend_dist : String?
-  entry_paths : Array[String]
   resources : Array[String]
   sign_binaries : Array[String]
   icons : Array[String]
@@ -55,27 +54,6 @@ pub extend PackagePlan with Eq::{not_equal, equal}
 
 ///|
 pub extend PackagePlan with Debug::{to_repr}
-
-///|
-priv struct StagedArtifact {
-  staging : String
-  destination : String
-}
-
-///|
-struct MacosCodeSignTarget {
-  path : String
-  runtime_options : Bool
-  entitlements : Bool
-  identifier : String?
-  deep : Bool
-} derive(Debug, Eq)
-
-///|
-pub extend MacosCodeSignTarget with Eq::{not_equal, equal}
-
-///|
-pub extend MacosCodeSignTarget with Debug::{to_repr}
 
 ///|
 priv struct MacosHelperSpec {
@@ -163,11 +141,12 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   if raw.dry_run {
     return
   }
-  execute_package_plan(plan)
+  let artifacts = execute_package_plan(plan)
   match updater_base_url {
     Some(base_url) =>
       write_updater_metadata(
         plan,
+        artifacts,
         base_url,
         match matches.values {
           { "updater-published-at": [published_at, ..], .. } => published_at
@@ -318,37 +297,18 @@ async fn build_package_plan(
   project : @proton_config.ProjectConfig,
   update_revision : UInt64,
 ) -> PackagePlan {
-  let bundle = match project.bundle() {
-    Some(bundle) if bundle.active() => bundle
-    Some(_) => raise PackageConfigError::BundleInactive
-    None => raise PackageConfigError::BundleMissing
+  let package_config = match project.package_config() {
+    Some(package_config) => package_config
+    None => raise PackageConfigError::PackageMissing
   }
-  let metadata = project.metadata()
-  let product_name = validate_product_name(metadata.product_name)
-  let identifier = match metadata.identifier {
-    Some(identifier) => identifier
-    None => raise PackageConfigError::MissingField(field="identifier")
-  }
-  let version = match metadata.version {
-    Some(version) => version
-    None => raise PackageConfigError::MissingField(field="moon.mod version")
-  }
+  let product_name = validate_product_name(package_config.product_name)
+  let identifier = package_config.identifier
   let identifier = validate_bundle_identifier(identifier)
-  let version = version.trim().to_owned()
-  guard version != "" else {
-    raise PackageConfigError::MissingField(field="moon.mod version")
-  }
-  let macos_host = is_macos_host()
-  let (macos_version, bundle_version) = if macos_host {
-    validate_macos_version(version)
-  } else {
-    (version, version)
-  }
   let host = current_package_host()
   let targets = if raw.targets.length() > 0 {
     copy_strings(raw.targets)
-  } else if bundle.targets.length() > 0 {
-    copy_strings(bundle.targets)
+  } else if package_config.formats.length() > 0 {
+    copy_strings(package_config.formats)
   } else {
     match host {
       Linux => ["appimage"]
@@ -369,6 +329,17 @@ async fn build_package_plan(
     Some(backend) => @fsutil.resolve_path(base_dir, backend.path())
     None => @fsutil.find_project_root_from(base_dir)
   }
+  let version = match
+    @proton_config.read_moon_mod_metadata(backend_root).version {
+    Some(version) if version.trim().to_owned() != "" =>
+      version.trim().to_owned()
+    _ => raise PackageConfigError::MissingField(field="moon.mod version")
+  }
+  let (macos_version, bundle_version) = if is_macos_host() {
+    validate_macos_version(version)
+  } else {
+    (version, version)
+  }
   let app_package = match raw.app_package {
     Some(app_package) => app_package
     None =>
@@ -379,18 +350,11 @@ async fn build_package_plan(
   }
   let output = match raw.output {
     Some(output) => @fsutil.resolve_path(base_dir, output)
-    None => @fsutil.resolve_path(base_dir, bundle.output())
+    None => @fsutil.resolve_path(base_dir, package_config.output())
   }
   let frontend_dist = match project.frontend() {
     Some(frontend) => frontend.dist()
     None => None
-  }
-  let entry_paths : Array[String] = []
-  for entry in project.entries() {
-    match entry {
-      File(path) | Asset(path) => entry_paths.push(path)
-      Html(_) | Url(_) => ()
-    }
   }
   let workspace_root = find_workspace_root_from(base_dir)
   PackagePlan::{
@@ -409,16 +373,15 @@ async fn build_package_plan(
     release: raw.release,
     base_dir,
     frontend_dist,
-    entry_paths,
-    resources: copy_strings(bundle.resources),
-    sign_binaries: match bundle.sign {
+    resources: package_config.resources(),
+    sign_binaries: match package_config.sign() {
       Some(sign) => sign.binaries()
       None => []
     },
-    icons: copy_strings(bundle.icon),
-    url_schemes: copy_strings(bundle.url_schemes),
-    document_types: bundle.document_types.copy(),
-    macos_icon: first_macos_icon(bundle.icon),
+    icons: package_config.icons(),
+    url_schemes: package_config.url_schemes(),
+    document_types: package_config.document_types(),
+    macos_icon: first_macos_icon(package_config.icons()),
     sign: raw.sign,
     notarize: raw.notarize,
   }
@@ -566,19 +529,6 @@ fn first_macos_icon(icons : Array[String]) -> String? {
 }
 
 ///|
-fn release_project_config_text(source : String) -> String {
-  let json = @json.parse(source) catch { _ => return source }
-  guard json is Object(fields) else { return source }
-  match fields.get("debug") {
-    Some(True) => {
-      fields["debug"] = Json::boolean(false)
-      Json::object(fields).stringify(indent=2) + "\n"
-    }
-    _ => source
-  }
-}
-
-///|
 fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   if dry_run {
     println("Proton package plan (dry run):")
@@ -615,7 +565,7 @@ fn bool_text(value : Bool) -> String {
 }
 
 ///|
-async fn execute_package_plan(plan : PackagePlan) -> Unit {
+async fn execute_package_plan(plan : PackagePlan) -> Array[String] {
   // Resolve the active runtime before any build work so a missing
   // `proton_cli cef setup` fails fast instead of after a full application build.
   let runtime = read_active_runtime(plan.workspace_root)
@@ -623,11 +573,16 @@ async fn execute_package_plan(plan : PackagePlan) -> Unit {
   if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
     raise PackagePlanError::MissingExecutable(path=executable)
   }
-  match current_package_host() {
-    Windows => stage_windows_portable(plan, executable, runtime)
-    Macos => stage_macos_app(plan, executable, runtime)
-    Linux => stage_linux_appdir(plan, executable, runtime)
+  let spec = package_spec(plan, executable, runtime)
+  let artifacts = @packager.build_with(spec, package_customization(plan), async fn(
+    layout,
+  ) {
+    prepare_proton_package(plan, runtime, layout)
+  })
+  for artifact in artifacts {
+    println("Packaged: " + artifact)
   }
+  artifacts
 }
 
 ///|
@@ -708,30 +663,6 @@ async fn require_runtime(path : String) -> String {
 }
 
 ///|
-async fn stage_macos_app(
-  plan : PackagePlan,
-  executable : String,
-  runtime : String,
-) -> Unit {
-  stage_macos_app_impl(plan, executable, runtime) catch {
-    error => {
-      for
-        path in [
-          macos_staging_root_path(plan),
-          macos_dmg_staging_path(plan),
-          macos_dmg_root_path(plan),
-          macos_zip_staging_path(plan),
-        ] {
-        remove_tree(path) catch {
-          _ => ()
-        }
-      }
-      raise error
-    }
-  }
-}
-
-///|
 /// Mach-O `filetype` values this packager can name. Only `MH_EXECUTE` is
 /// spawnable; `MH_DSYM` is the one that actually shows up here, because a
 /// debug build mirrors the executable's basename inside
@@ -798,354 +729,11 @@ async fn require_launchable_macho(path : String) -> Unit {
 }
 
 ///|
-async fn stage_macos_app_impl(
-  plan : PackagePlan,
-  executable : String,
-  runtime : String,
-) -> Unit {
-  let final_app = @fsutil.resolve_path(plan.output, plan.product_name + ".app")
-  let executable_name = package_executable_name(plan.product_name)
-  let app = macos_staging_app_path(plan)
-  let contents = @fsutil.resolve_path(app, "Contents")
-  let macos = @fsutil.resolve_path(contents, "MacOS")
-  let resources = @fsutil.resolve_path(contents, "Resources")
-  let frameworks = @fsutil.resolve_path(contents, "Frameworks")
-  remove_tree(macos_staging_root_path(plan))
-  for dir in [macos, resources, frameworks] {
-    ensure_dir(dir)
-  }
-  let staged_executable = @fsutil.resolve_path(macos, executable_name)
-  copy_file(executable, staged_executable)
-  // An app bundle's CFBundleExecutable must remain directly launchable even
-  // when the source was staged by a filesystem API that drops Unix modes.
-  @async_fs.chmod(staged_executable, 0o755) catch {
-    error =>
-      raise PackageFileSystemError::Copy(
-        source=executable,
-        destination=staged_executable,
-        detail="failed to make staged app executable: " +
-          @debug.render(Repr(error)),
-      )
-  }
-  require_launchable_macho(staged_executable)
-  replace_macos_rpath(
-    staged_executable,
-    @fsutil.resolve_path(runtime, "lib"),
-    "@executable_path/../Resources/proton/lib",
-  )
-  copy_tree(runtime, @fsutil.resolve_path(resources, "proton"))
-  stage_release_project_config(
-    plan.config_path,
-    @fsutil.resolve_path(resources, "proton.project.json"),
-  )
-  stage_project_inputs(plan, resources)
-  stage_macos_icon(plan, resources)
-  let helper_source = @fsutil.resolve_path(runtime, "bin/cef_process")
-  guard @fsutil.path_exists(helper_source) else {
-    raise PackageRuntimeError::HelperMissing(path=helper_source)
-  }
-  for helper in macos_helper_specs(plan.product_name, plan.identifier) {
-    let helper_app = @fsutil.resolve_path(
-      frameworks,
-      helper.bundle_name + ".app",
-    )
-    let helper_macos = @fsutil.resolve_path(helper_app, "Contents/MacOS")
-    let helper_executable = @fsutil.resolve_path(
-      helper_macos,
-      helper.executable_name,
-    )
-    ensure_dir(helper_macos)
-    copy_file(helper_source, helper_executable)
-    // Each CEF subprocess is the declared executable of its own helper app.
-    @async_fs.chmod(helper_executable, 0o755) catch {
-      error =>
-        raise PackageFileSystemError::Copy(
-          source=helper_source,
-          destination=helper_executable,
-          detail="failed to make staged helper executable: " +
-            @debug.render(Repr(error)),
-        )
-    }
-    require_launchable_macho(helper_executable)
-    write_text(
-      @fsutil.resolve_path(helper_app, "Contents/Info.plist"),
-      helper_info_plist(plan, helper),
-    )
-    add_macos_rpath(
-      helper_executable, "@loader_path/../../../../Resources/proton/lib",
-    )
-  }
-  write_text(
-    @fsutil.resolve_path(contents, "Info.plist"),
-    macos_info_plist(plan, executable_name),
-  )
-  write_package_manifest(plan, resources, "macos-app")
-  if plan.sign {
-    sign_macos_app(plan, app, executable_name)
-  } else {
-    sign_macos_app_adhoc(plan, app, executable_name)
-  }
-  let dmg = if plan.targets.contains("dmg") {
-    Some(create_macos_dmg(plan, app))
-  } else {
-    None
-  }
-  if plan.notarize {
-    match dmg {
-      Some(dmg) => notarize_macos_dmg(app, dmg)
-      None => notarize_macos_app(plan, app)
-    }
-  }
-  let zip = if plan.targets.contains("zip") {
-    let staging = macos_zip_staging_path(plan)
-    create_zip(app, staging)
-    Some(staging)
-  } else {
-    None
-  }
-  let artifacts = [StagedArtifact::{ staging: app, destination: final_app }]
-  match dmg {
-    Some(dmg) =>
-      artifacts.push(StagedArtifact::{
-        staging: dmg,
-        destination: macos_dmg_path(plan),
-      })
-    None => ()
-  }
-  match zip {
-    Some(zip) =>
-      artifacts.push(StagedArtifact::{
-        staging: zip,
-        destination: macos_zip_path(plan),
-      })
-    None => ()
-  }
-  promote_staged_artifacts(artifacts)
-  remove_tree(macos_staging_root_path(plan)) catch {
-    _ => ()
-  }
-  println("Packaged macOS app: " + final_app)
-  match dmg {
-    Some(_) => {
-      let final_dmg = macos_dmg_path(plan)
-      println("Created disk image: " + final_dmg)
-    }
-    None => ()
-  }
-  if zip is Some(_) {
-    println("Created archive: " + macos_zip_path(plan))
-  }
-}
-
-///|
-fn macos_staging_root_path(plan : PackagePlan) -> String {
-  @fsutil.resolve_path(
-    plan.output,
-    "." + package_executable_name(plan.product_name) + ".staging",
-  )
-}
-
-///|
-fn macos_staging_app_path(plan : PackagePlan) -> String {
-  @fsutil.resolve_path(
-    macos_staging_root_path(plan),
-    plan.product_name + ".app",
-  )
-}
-
-///|
-fn macos_zip_path(plan : PackagePlan) -> String {
-  @fsutil.resolve_path(plan.output, plan.product_name + ".app.zip")
-}
-
-///|
-fn macos_zip_staging_path(plan : PackagePlan) -> String {
-  @fsutil.resolve_path(
-    plan.output,
-    "." + package_executable_name(plan.product_name) + ".staging.app.zip",
-  )
-}
-
-///|
-async fn recover_staged_artifact_backup(destination : String) -> Unit {
-  let backup = destination + ".backup"
-  if @fsutil.path_exists(backup) {
-    if @fsutil.path_exists(destination) {
-      remove_tree(backup)
-    } else {
-      @async_fs.rename(backup, destination) catch {
-        error =>
-          raise PackageFileSystemError::Copy(
-            source=backup,
-            destination~,
-            detail="restore failed: " + @debug.render(Repr(error)),
-          )
-      }
-    }
-  }
-}
-
-///|
-async fn rename_staged_artifact(source : String, destination : String) -> Unit {
-  @async_fs.rename(source, destination) catch {
-    error if @async.is_being_cancelled() => raise error
-    error =>
-      raise PackageFileSystemError::Copy(
-        source~,
-        destination~,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-}
-
-///|
-async fn promote_staged_artifacts(artifacts : Array[StagedArtifact]) -> Unit {
-  guard artifacts.length() > 0 else { return }
-  for artifact in artifacts {
-    recover_staged_artifact_backup(artifact.destination)
-  }
-
-  let backed_up : Array[String] = []
-  let promoted : Array[String] = []
-  try {
-    for artifact in artifacts {
-      if @fsutil.path_exists(artifact.destination) {
-        rename_staged_artifact(
-          artifact.destination,
-          artifact.destination + ".backup",
-        )
-        backed_up.push(artifact.destination)
-      }
-    }
-    for artifact in artifacts {
-      rename_staged_artifact(artifact.staging, artifact.destination)
-      promoted.push(artifact.destination)
-    }
-  } catch {
-    error => {
-      let rollback_failures : Array[String] = []
-      let promoted_count = promoted.length()
-      for offset in 0..<promoted_count {
-        let destination = promoted[promoted_count - offset - 1]
-        remove_tree(destination) catch {
-          rollback_error =>
-            rollback_failures.push(
-              "remove " +
-              destination +
-              ": " +
-              @debug.render(Repr(rollback_error)),
-            )
-        }
-      }
-      let backup_count = backed_up.length()
-      for offset in 0..<backup_count {
-        let destination = backed_up[backup_count - offset - 1]
-        let backup = destination + ".backup"
-        @async_fs.rename(backup, destination) catch {
-          rollback_error =>
-            rollback_failures.push(
-              "restore " +
-              destination +
-              ": " +
-              @debug.render(Repr(rollback_error)),
-            )
-        }
-      }
-      if @async.is_being_cancelled() {
-        raise error
-      }
-      if rollback_failures.length() > 0 {
-        raise PackageFileSystemError::Copy(
-          source="staged package artifacts",
-          destination=artifacts[0].destination,
-          detail=@debug.render(Repr(error)) +
-            "; rollback failed: " +
-            rollback_failures.join("; "),
-        )
-      }
-      raise error
-    }
-  }
-
-  for destination in backed_up {
-    remove_tree(destination + ".backup") catch {
-      _ => ()
-    }
-  }
-}
-
-///|
-async fn stage_project_inputs(plan : PackagePlan, destination : String) -> Unit {
-  let inputs : Array[String] = []
-  match plan.frontend_dist {
-    Some(path) => inputs.push(path)
-    None => ()
-  }
-  for path in plan.entry_paths {
-    inputs.push(path)
-  }
-  for path in plan.resources {
-    inputs.push(path)
-  }
-  let copied : Map[String, Bool] = Map([])
-  for input in inputs {
-    guard copied.get(input) is None else { continue }
-    copied[input] = true
-    let source = match glob_tree_root(input) {
-      Some(root) => root
-      None if input.contains("*") =>
-        raise PackagePlanError::UnsupportedResourceGlob(path=input)
-      None => input
-    }
-    guard @fsutil.path_exists(source) else {
-      raise PackagePlanError::MissingInput(path=input)
-    }
-    let relative = match relative_to_base(plan.base_dir, source) {
-      Some(relative) => relative
-      None => raise PackagePlanError::InputOutsideProject(path=input)
-    }
-    copy_tree(source, @fsutil.resolve_path(destination, relative))
-  }
-}
-
-///|
-/// Resolves `bundle.sign.binaries` into the files copied below a package's
-/// resource root. Signing never copies a file; every target must already have
-/// been staged through `bundle.resources`.
-fn PackagePlan::sign_binary_targets(
-  self : PackagePlan,
-  resource_root : String,
-) -> Array[String] raise PackagePlanError {
-  let targets : Array[String] = []
-  for binary in self.sign_binaries {
-    let relative = match relative_to_base(self.base_dir, binary) {
-      Some(relative) => relative
-      None => raise PackagePlanError::InputOutsideProject(path=binary)
-    }
-    targets.push(@fsutil.resolve_path(resource_root, relative))
-  }
-  targets
-}
-
-///|
 fn glob_tree_root(path : String) -> String? {
   if normalize_slashes(path).has_suffix("/**") {
     Some(path.unsafe_substring(start=0, end=path.length() - 3).to_string())
   } else {
     None
-  }
-}
-
-///|
-async fn stage_macos_icon(plan : PackagePlan, resources : String) -> Unit {
-  match plan.macos_icon {
-    None => ()
-    Some(icon) => {
-      guard @fsutil.path_exists(icon) else {
-        raise PackagePlanError::MissingIcon(path=icon)
-      }
-      copy_file(icon, @fsutil.resolve_path(resources, "AppIcon.icns"))
-    }
   }
 }
 
@@ -1176,34 +764,6 @@ fn path_basename(path : String) -> String {
 }
 
 ///|
-fn package_executable_name(product_name : String) -> String {
-  let mut output = ""
-  let mut previous_dash = false
-  for char in product_name.trim().to_owned().to_lower() {
-    if char.is_ascii_alphabetic() ||
-      char.is_ascii_digit() ||
-      char == '-' ||
-      char == '_' {
-      output = output + char.to_string()
-      previous_dash = false
-    } else if !previous_dash && output != "" {
-      output = output + "-"
-      previous_dash = true
-    }
-  }
-  while output.has_suffix("-") {
-    output = output
-      .unsafe_substring(start=0, end=output.length() - 1)
-      .to_string()
-  }
-  if output == "" {
-    "proton-app"
-  } else {
-    output
-  }
-}
-
-///|
 async fn ensure_dir(path : String) -> Unit {
   guard !@fsutil.path_exists(path) else { return }
   let parent = @fsutil.path_parent(path)
@@ -1219,28 +779,6 @@ async fn ensure_dir(path : String) -> Unit {
         path~,
         detail=@debug.render(Repr(error)),
       )
-    }
-  }
-}
-
-///|
-async fn remove_tree(path : String) -> Unit {
-  guard @fsutil.path_exists(path) else { return }
-  if @fsutil.path_is_file(path) {
-    @async_fs.remove(path) catch {
-      error =>
-        raise PackageFileSystemError::Remove(
-          path~,
-          detail=@debug.render(Repr(error)),
-        )
-    }
-  } else {
-    @async_fs.rmdir(path, recursive=true) catch {
-      error =>
-        raise PackageFileSystemError::Remove(
-          path~,
-          detail=@debug.render(Repr(error)),
-        )
     }
   }
 }
@@ -1279,62 +817,6 @@ async fn copy_file(source : String, destination : String) -> Unit {
 }
 
 ///|
-async fn copy_tree(source : String, destination : String) -> Unit {
-  if @fsutil.path_is_file(source) {
-    return copy_file(source, destination)
-  }
-  guard @fsutil.path_is_dir(source) else {
-    raise PackageFileSystemError::InvalidSource(path=source)
-  }
-  ensure_dir(@fsutil.path_parent(destination))
-  let code = if @path.sep == '\\' {
-    let (code, _) = @process.collect_output_merged("robocopy", [
-      source, destination, "/E", "/COPY:DAT", "/DCOPY:DAT", "/NFL", "/NDL", "/NJH",
-      "/NJS", "/NP", "/R:2", "/W:1",
-    ]) catch {
-      error =>
-        raise PackageFileSystemError::Copy(
-          source~,
-          destination~,
-          detail=@debug.render(Repr(error)),
-        )
-    }
-    code
-  } else if is_macos_host() {
-    let (code, _) = @process.collect_output_merged("ditto", [
-      source, destination,
-    ]) catch {
-      error =>
-        raise PackageFileSystemError::Copy(
-          source~,
-          destination~,
-          detail=@debug.render(Repr(error)),
-        )
-    }
-    code
-  } else {
-    let (code, _) = @process.collect_output_merged("cp", [
-      "-R", source, destination,
-    ]) catch {
-      error =>
-        raise PackageFileSystemError::Copy(
-          source~,
-          destination~,
-          detail=@debug.render(Repr(error)),
-        )
-    }
-    code
-  }
-  if code != 0 && !(@path.sep == '\\' && code < 8) {
-    raise PackageFileSystemError::Copy(
-      source~,
-      destination~,
-      detail="copy tool exited with code " + code.to_string(),
-    )
-  }
-}
-
-///|
 async fn write_text(
   path : String,
   text : String,
@@ -1345,113 +827,12 @@ async fn write_text(
 }
 
 ///|
-async fn stage_release_project_config(
-  source : String,
-  destination : String,
-) -> Unit {
-  let text = @async_fs.read_file(source).text() catch {
-    error =>
-      raise PackageFileSystemError::Read(
-        path=source,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  write_text(destination, release_project_config_text(text))
-}
-
-///|
 fn xml_escape(text : String) -> String {
   text
   .replace_all(old="&", new="&amp;")
   .replace_all(old="<", new="&lt;")
   .replace_all(old=">", new="&gt;")
   .replace_all(old="\"", new="&quot;")
-}
-
-///|
-fn macos_info_plist(plan : PackagePlan, executable : String) -> String {
-  let template =
-    #|<?xml version="1.0" encoding="UTF-8"?>
-    #|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    #|<plist version="1.0"><dict>
-    #|<key>CFBundleDisplayName</key><string>{{PRODUCT}}</string>
-    #|<key>CFBundleExecutable</key><string>{{EXECUTABLE}}</string>
-    #|<key>CFBundleIdentifier</key><string>{{IDENTIFIER}}</string>
-    #|{{ICON}}
-    #|{{URL_TYPES}}
-    #|{{DOCUMENT_TYPES}}
-    #|<key>CFBundleName</key><string>{{PRODUCT}}</string>
-    #|<key>CFBundlePackageType</key><string>APPL</string>
-    #|<key>CFBundleShortVersionString</key><string>{{MACOS_VERSION}}</string>
-    #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
-    #|<key>ProtonUpdateRevision</key><string>{{UPDATE_REVISION}}</string>
-    #|<key>LSMinimumSystemVersion</key><string>12.0</string>
-    #|<key>NSHighResolutionCapable</key><true/>
-    #|</dict></plist>
-    #|
-  template
-  .replace_all(old="{{PRODUCT}}", new=xml_escape(plan.product_name))
-  .replace_all(old="{{EXECUTABLE}}", new=xml_escape(executable))
-  .replace_all(old="{{IDENTIFIER}}", new=xml_escape(plan.identifier))
-  .replace_all(old="{{VERSION}}", new=xml_escape(plan.version))
-  .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(plan.macos_version))
-  .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(plan.bundle_version))
-  .replace_all(old="{{UPDATE_REVISION}}", new=plan.update_revision.to_string())
-  .replace_all(old="{{ICON}}", new=macos_icon_plist_entry(plan.macos_icon))
-  .replace_all(old="{{URL_TYPES}}", new=macos_url_types_plist_entry(plan))
-  .replace_all(
-    old="{{DOCUMENT_TYPES}}",
-    new=macos_document_types_plist_entry(plan.document_types),
-  )
-}
-
-///|
-fn macos_icon_plist_entry(icon : String?) -> String {
-  match icon {
-    Some(_) => "<key>CFBundleIconFile</key><string>AppIcon</string>"
-    None => ""
-  }
-}
-
-///|
-fn macos_url_types_plist_entry(plan : PackagePlan) -> String {
-  guard plan.url_schemes.length() > 0 else { return "" }
-  let schemes = StringBuilder::new()
-  for scheme in plan.url_schemes {
-    schemes.write_string("<string>")
-    schemes.write_string(xml_escape(scheme))
-    schemes.write_string("</string>")
-  }
-  "<key>CFBundleURLTypes</key><array><dict>" +
-  "<key>CFBundleURLName</key><string>" +
-  xml_escape(plan.identifier) +
-  "</string><key>CFBundleURLSchemes</key><array>" +
-  schemes.to_string() +
-  "</array></dict></array>"
-}
-
-///|
-fn macos_document_types_plist_entry(
-  document_types : Array[@proton_config.ProjectDocumentType],
-) -> String {
-  guard document_types.length() > 0 else { return "" }
-  let entries = StringBuilder::new()
-  for document_type in document_types {
-    entries.write_string("<dict><key>CFBundleTypeName</key><string>")
-    entries.write_string(xml_escape(document_type.name))
-    entries.write_string("</string><key>CFBundleTypeRole</key><string>")
-    entries.write_string(xml_escape(document_type.role))
-    entries.write_string("</string><key>CFBundleTypeExtensions</key><array>")
-    for extension in document_type.extensions {
-      entries.write_string("<string>")
-      entries.write_string(xml_escape(extension))
-      entries.write_string("</string>")
-    }
-    entries.write_string(
-      "</array><key>LSHandlerRank</key><string>Owner</string></dict>",
-    )
-  }
-  "<key>CFBundleDocumentTypes</key><array>" + entries.to_string() + "</array>"
 }
 
 ///|
@@ -1572,623 +953,6 @@ async fn replace_macos_rpath(
   }
   if code != 0 {
     raise PackageToolError::Exit(tool="install_name_tool", code~, detail=binary)
-  }
-}
-
-///|
-fn required_macos_signing_identity() -> String raise MacosSigningError {
-  match @env.get_env_var("PROTON_MACOS_SIGNING_IDENTITY") {
-    Some(identity) if identity.trim().to_owned() != "" =>
-      identity.trim().to_owned()
-    _ =>
-      raise MacosSigningError::InvalidConfiguration(
-        detail="--sign requires PROTON_MACOS_SIGNING_IDENTITY with a Developer ID Application identity",
-      )
-  }
-}
-
-///|
-async fn sign_macos_app(
-  plan : PackagePlan,
-  app : String,
-  executable_name : String,
-) -> Unit {
-  let identity = required_macos_signing_identity()
-  let is_adhoc = validate_macos_signing_identity(
-    identity,
-    notarize=plan.notarize,
-  )
-  sign_macos_app_with_identity(
-    plan,
-    app,
-    executable_name,
-    identity,
-    allow_untrusted_libraries=is_adhoc,
-    verify_developer_id=!is_adhoc,
-  )
-}
-
-///|
-async fn sign_macos_app_adhoc(
-  plan : PackagePlan,
-  app : String,
-  executable_name : String,
-) -> Unit {
-  sign_macos_app_with_identity(
-    plan,
-    app,
-    executable_name,
-    "-",
-    allow_untrusted_libraries=true,
-    verify_developer_id=false,
-  )
-}
-
-///|
-async fn sign_macos_app_with_identity(
-  plan : PackagePlan,
-  app : String,
-  executable_name : String,
-  identity : String,
-  allow_untrusted_libraries~ : Bool,
-  verify_developer_id~ : Bool,
-) -> Unit {
-  let contents = @fsutil.resolve_path(app, "Contents")
-  let entitlements = resolve_macos_entitlements(app, allow_untrusted_libraries~)
-  let main = @fsutil.resolve_path(contents, "MacOS/" + executable_name)
-  let cef_framework = @fsutil.resolve_path(
-    contents, "Resources/proton/Frameworks/Chromium Embedded Framework.framework",
-  )
-  let libproton = @fsutil.resolve_path(
-    contents, "Resources/proton/lib/libproton.dylib",
-  )
-  let runtime_bin = @fsutil.resolve_path(contents, "Resources/proton/bin")
-  let cef_framework_libraries = @fsutil.resolve_path(cef_framework, "Libraries")
-  let targets = [
-    // Sign the CEF framework inside-out. `codesign --deep` does not reliably
-    // replace CEF's existing ad-hoc signatures on these nested dylibs, so
-    // notarization otherwise sees neither Developer ID nor secure timestamps.
-    MacosCodeSignTarget::{
-      path: @fsutil.resolve_path(cef_framework_libraries, "libEGL.dylib"),
-      runtime_options: true,
-      entitlements: false,
-      identifier: None,
-      deep: false,
-    },
-    MacosCodeSignTarget::{
-      path: @fsutil.resolve_path(cef_framework_libraries, "libGLESv2.dylib"),
-      runtime_options: true,
-      entitlements: false,
-      identifier: None,
-      deep: false,
-    },
-    MacosCodeSignTarget::{
-      path: @fsutil.resolve_path(
-        cef_framework_libraries, "libcef_sandbox.dylib",
-      ),
-      runtime_options: true,
-      entitlements: false,
-      identifier: None,
-      deep: false,
-    },
-    MacosCodeSignTarget::{
-      path: @fsutil.resolve_path(
-        cef_framework_libraries, "libvk_swiftshader.dylib",
-      ),
-      runtime_options: true,
-      entitlements: false,
-      identifier: None,
-      deep: false,
-    },
-    MacosCodeSignTarget::{
-      path: cef_framework,
-      runtime_options: true,
-      entitlements: false,
-      identifier: None,
-      // The nested dylibs above are already signed. Seal the framework without
-      // asking codesign to rediscover or rewrite nested code.
-      deep: false,
-    },
-    MacosCodeSignTarget::{
-      path: @fsutil.resolve_path(runtime_bin, "libEGL.dylib"),
-      runtime_options: true,
-      entitlements: false,
-      identifier: None,
-      deep: false,
-    },
-    MacosCodeSignTarget::{
-      path: @fsutil.resolve_path(runtime_bin, "libGLESv2.dylib"),
-      runtime_options: true,
-      entitlements: false,
-      identifier: None,
-      deep: false,
-    },
-    MacosCodeSignTarget::{
-      path: @fsutil.resolve_path(runtime_bin, "libvk_swiftshader.dylib"),
-      runtime_options: true,
-      entitlements: false,
-      identifier: None,
-      deep: false,
-    },
-    MacosCodeSignTarget::{
-      path: @fsutil.resolve_path(runtime_bin, "cef_process"),
-      // This is a standalone executable, not passive library code. Apple
-      // requires its signature to carry the hardened runtime option, while CEF
-      // requires the stable identifier used by its subprocess bootstrap.
-      runtime_options: true,
-      entitlements: false,
-      identifier: Some("cef_process"),
-      deep: false,
-    },
-    MacosCodeSignTarget::{
-      path: libproton,
-      runtime_options: true,
-      entitlements: false,
-      identifier: None,
-      deep: false,
-    },
-  ]
-  for
-    binary in plan.sign_binary_targets(
-      @fsutil.resolve_path(contents, "Resources"),
-    ) {
-    targets.push(MacosCodeSignTarget::{
-      path: binary,
-      runtime_options: true,
-      entitlements: true,
-      identifier: None,
-      deep: false,
-    })
-  }
-  for helper in macos_helper_specs(plan.product_name, plan.identifier) {
-    targets.push(MacosCodeSignTarget::{
-      path: @fsutil.resolve_path(
-        contents,
-        "Frameworks/" + helper.bundle_name + ".app",
-      ),
-      runtime_options: true,
-      entitlements: true,
-      identifier: None,
-      deep: false,
-    })
-  }
-  targets.push(MacosCodeSignTarget::{
-    path: main,
-    runtime_options: true,
-    entitlements: true,
-    identifier: None,
-    deep: false,
-  })
-  targets.push(MacosCodeSignTarget::{
-    path: app,
-    runtime_options: true,
-    entitlements: true,
-    identifier: None,
-    // Every nested target is signed above. Sign the outer bundle without
-    // deprecated deep traversal so it cannot rewrite inner identities.
-    deep: false,
-  })
-  require_macos_codesign_targets(targets)
-  for target in targets {
-    codesign_target(
-      identity,
-      target.path,
-      runtime_options=target.runtime_options,
-      deep=target.deep,
-      entitlements=if target.entitlements { Some(entitlements) } else { None },
-      identifier=target.identifier,
-    )
-  }
-  for target in targets {
-    verify_macos_codesign_target(target.path, deep=target.deep)
-  }
-  // Deep verification is useful and non-mutating after every nested target has
-  // been signed explicitly.
-  verify_macos_codesign_target(app, deep=true)
-  if verify_developer_id {
-    verify_macos_developer_id(app)
-  }
-}
-
-///|
-async fn require_macos_codesign_targets(
-  targets : Array[MacosCodeSignTarget],
-) -> Unit {
-  for target in targets {
-    guard @fsutil.path_exists(target.path) else {
-      raise MacosSigningError::MissingTarget(path=target.path)
-    }
-  }
-}
-
-///|
-fn validate_macos_signing_identity(
-  identity : String,
-  notarize~ : Bool,
-) -> Bool raise MacosSigningError {
-  if identity != "-" {
-    return false
-  }
-  if !macos_adhoc_signing_allowed() {
-    raise InvalidConfiguration(
-      detail="ad-hoc signing is not a release path; set PROTON_MACOS_ALLOW_ADHOC=1 only for local diagnostics",
-    )
-  }
-  if notarize {
-    raise InvalidConfiguration(
-      detail="--notarize requires a Developer ID Application identity; ad-hoc signing is diagnostic only",
-    )
-  }
-  true
-}
-
-///|
-fn macos_adhoc_signing_allowed() -> Bool {
-  match @env.get_env_var("PROTON_MACOS_ALLOW_ADHOC") {
-    Some(value) =>
-      match value.trim().to_owned().to_lower() {
-        "1" | "true" | "yes" | "on" => true
-        _ => false
-      }
-    None => false
-  }
-}
-
-///|
-async fn verify_macos_developer_id(app : String) -> Unit {
-  let (code, output) = @process.collect_output_merged("codesign", [
-    "--display", "--verbose=4", app,
-  ]) catch {
-    error =>
-      raise MacosSigningError::Verification(
-        detail="failed to inspect signing authority: " +
-          @debug.render(Repr(error)),
-      )
-  }
-  guard code == 0 else {
-    raise MacosSigningError::Verification(
-      detail="failed to inspect signing authority",
-    )
-  }
-  let text = output.text() catch {
-    error =>
-      raise MacosSigningError::Verification(
-        detail="failed to decode signing authority: " +
-          @debug.render(Repr(error)),
-      )
-  }
-  if !text.contains("Authority=Developer ID Application:") {
-    raise MacosSigningError::Verification(
-      detail="release signing must use a Developer ID Application identity",
-    )
-  }
-}
-
-///|
-async fn codesign_target(
-  identity : String,
-  target : String,
-  runtime_options~ : Bool,
-  deep~ : Bool,
-  entitlements~ : String?,
-  identifier~ : String?,
-) -> Unit {
-  let args = macos_codesign_args(
-    identity,
-    target,
-    runtime_options~,
-    deep~,
-    entitlements~,
-    identifier~,
-  )
-  let code = @process.run("codesign", args) catch {
-    error =>
-      raise MacosSigningError::ToolFailure(
-        stage="codesign " + target,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  if code != 0 {
-    raise MacosSigningError::ToolFailure(
-      stage="codesign " + target,
-      detail="exit code " + code.to_string(),
-    )
-  }
-}
-
-///|
-async fn verify_macos_codesign_target(target : String, deep~ : Bool) -> Unit {
-  let args = macos_codesign_verify_args(target, deep~)
-  let code = @process.run("codesign", args) catch {
-    error =>
-      raise MacosSigningError::Verification(
-        detail=target + ": " + @debug.render(Repr(error)),
-      )
-  }
-  if code != 0 {
-    raise MacosSigningError::Verification(
-      detail=target + ": exit code " + code.to_string(),
-    )
-  }
-}
-
-///|
-fn macos_codesign_verify_args(target : String, deep~ : Bool) -> Array[String] {
-  let args : Array[String] = ["--verify"]
-  if deep {
-    args.push("--deep")
-  }
-  args.push("--strict")
-  args.push("--verbose=2")
-  args.push(target)
-  args
-}
-
-///|
-fn macos_codesign_args(
-  identity : String,
-  target : String,
-  runtime_options~ : Bool,
-  deep~ : Bool,
-  entitlements~ : String?,
-  identifier~ : String?,
-) -> Array[String] {
-  let args : Array[String] = ["--force", "--timestamp"]
-  if deep {
-    args.push("--deep")
-  }
-  if runtime_options {
-    args.push("--options")
-    args.push("runtime")
-  }
-  match entitlements {
-    Some(path) if runtime_options => {
-      args.push("--entitlements")
-      args.push(path)
-    }
-    _ => ()
-  }
-  match identifier {
-    Some(identifier) => args.append(["-i", identifier])
-    None => ()
-  }
-  args.append(["--sign", identity, target])
-  args
-}
-
-///|
-async fn resolve_macos_entitlements(
-  app : String,
-  allow_untrusted_libraries~ : Bool,
-) -> String {
-  match @env.get_env_var("PROTON_MACOS_ENTITLEMENTS") {
-    Some(path) if path.trim().to_owned() != "" => {
-      let path = @path.Path(path.trim().to_owned()).resolve().to_string()
-      if @fsutil.path_is_file(path) {
-        path
-      } else {
-        raise MacosSigningError::InvalidConfiguration(
-          detail="macOS entitlements file is missing: " + path,
-        )
-      }
-    }
-    _ => {
-      let path = @fsutil.resolve_path(
-        app, "Contents/Resources/proton.entitlements",
-      )
-      write_text(path, default_macos_entitlements(allow_untrusted_libraries~))
-      path
-    }
-  }
-}
-
-///|
-fn default_macos_entitlements(allow_untrusted_libraries~ : Bool) -> String {
-  let library_validation = if allow_untrusted_libraries {
-    "<key>com.apple.security.cs.disable-library-validation</key><true/>\n"
-  } else {
-    ""
-  }
-  (
-    #|<?xml version="1.0" encoding="UTF-8"?>
-    #|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    #|<plist version="1.0"><dict>
-    #|<key>com.apple.security.cs.allow-jit</key><true/>
-    #|<key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
-    #|{{LIBRARY_VALIDATION}}
-    #|</dict></plist>
-    #|
-  ).replace_all(old="{{LIBRARY_VALIDATION}}", new=library_validation)
-}
-
-///|
-async fn notarize_macos_app(plan : PackagePlan, app : String) -> Unit {
-  notarize_macos_app_with_tools(plan, app, default_macos_notary_tools())
-}
-
-///|
-priv struct MacosNotaryTools {
-  xcrun : String
-  spctl : String
-}
-
-///|
-fn default_macos_notary_tools() -> MacosNotaryTools {
-  MacosNotaryTools::{ xcrun: "xcrun", spctl: "spctl" }
-}
-
-///|
-async fn notarize_macos_app_with_tools(
-  plan : PackagePlan,
-  app : String,
-  tools : MacosNotaryTools,
-) -> Unit {
-  let profile = required_macos_notary_profile()
-  let archive = @fsutil.resolve_path(
-    plan.output,
-    "." + package_executable_name(plan.product_name) + ".notary.zip",
-  )
-  remove_tree(archive)
-  submit_macos_notarization(app, archive, profile, tools) catch {
-    error => {
-      remove_tree(archive) catch {
-        _ => ()
-      }
-      raise error
-    }
-  }
-  remove_tree(archive)
-}
-
-///|
-async fn submit_macos_notarization(
-  app : String,
-  archive : String,
-  profile : String,
-  tools : MacosNotaryTools,
-) -> Unit {
-  let zip_code = @process.run("ditto", [
-    "-c", "-k", "--keepParent", app, archive,
-  ]) catch {
-    error =>
-      raise MacosSigningError::ToolFailure(
-        stage="create notarization archive",
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  guard zip_code == 0 else {
-    raise MacosSigningError::ToolFailure(
-      stage="create notarization archive",
-      detail="exit code " + zip_code.to_string(),
-    )
-  }
-  submit_macos_notarization_artifact(archive, profile, xcrun=tools.xcrun)
-  staple_macos_artifact(app, xcrun=tools.xcrun)
-  validate_macos_staple(app, xcrun=tools.xcrun)
-  assess_macos_app(app, spctl=tools.spctl)
-}
-
-///|
-fn required_macos_notary_profile() -> String raise MacosSigningError {
-  match @env.get_env_var("PROTON_NOTARY_PROFILE") {
-    Some(profile) if profile.trim().to_owned() != "" =>
-      profile.trim().to_owned()
-    _ =>
-      raise MacosSigningError::InvalidConfiguration(
-        detail="--notarize requires PROTON_NOTARY_PROFILE",
-      )
-  }
-}
-
-///|
-async fn submit_macos_notarization_artifact(
-  artifact : String,
-  profile : String,
-  xcrun? : String = "xcrun",
-) -> Unit {
-  let code = @process.run(xcrun, [
-    "notarytool", "submit", artifact, "--keychain-profile", profile, "--wait",
-  ]) catch {
-    error =>
-      raise MacosSigningError::ToolFailure(
-        stage="submit notarization",
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  guard code == 0 else {
-    raise MacosSigningError::ToolFailure(
-      stage="notarytool submit",
-      detail="exit code " + code.to_string(),
-    )
-  }
-}
-
-///|
-async fn staple_macos_artifact(
-  artifact : String,
-  xcrun? : String = "xcrun",
-) -> Unit {
-  let code = @process.run(xcrun, ["stapler", "staple", artifact]) catch {
-    error =>
-      raise MacosSigningError::ToolFailure(
-        stage="staple notarization ticket",
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  guard code == 0 else {
-    raise MacosSigningError::ToolFailure(
-      stage="stapler",
-      detail="exit code " + code.to_string(),
-    )
-  }
-}
-
-///|
-async fn validate_macos_staple(
-  artifact : String,
-  xcrun? : String = "xcrun",
-) -> Unit {
-  let code = @process.run(xcrun, ["stapler", "validate", artifact]) catch {
-    error =>
-      raise MacosSigningError::ToolFailure(
-        stage="validate notarization ticket",
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  guard code == 0 else {
-    raise MacosSigningError::ToolFailure(
-      stage="stapler validate",
-      detail="exit code " + code.to_string(),
-    )
-  }
-}
-
-///|
-async fn assess_macos_app(app : String, spctl? : String = "spctl") -> Unit {
-  let code = @process.run(spctl, [
-    "--assess", "--type", "execute", "--verbose=4", app,
-  ]) catch {
-    error =>
-      raise MacosSigningError::ToolFailure(
-        stage="Gatekeeper assessment",
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  if code != 0 {
-    raise MacosSigningError::ToolFailure(
-      stage="Gatekeeper assessment",
-      detail="exit code " + code.to_string(),
-    )
-  }
-}
-
-///|
-async fn create_zip(source : String, archive : String) -> Unit {
-  remove_tree(archive)
-  let code = if @path.sep == '\\' {
-    @process.run("powershell", [
-      "-NoProfile", "-Command", "Compress-Archive", "-Path", source, "-DestinationPath",
-      archive,
-    ]) catch {
-      error =>
-        raise PackageToolError::Start(
-          tool="Compress-Archive",
-          detail=@debug.render(Repr(error)),
-        )
-    }
-  } else {
-    @process.run("ditto", [
-      "-c", "-k", "--norsrc", "--keepParent", source, archive,
-    ]) catch {
-      error =>
-        raise PackageToolError::Start(
-          tool="ditto",
-          detail=@debug.render(Repr(error)),
-        )
-    }
-  }
-  if code != 0 {
-    raise PackageToolError::Exit(tool="zip", code~, detail=archive)
   }
 }
 

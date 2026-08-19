@@ -4,6 +4,7 @@ version = "0.1.18"
 
 import {
   "moonbit-community/proton_config@0.1.18",
+  "moonbit-community/proton_package@0.1.18",
   "moonbit-community/proton_rsa@0.1.18",
   "moonbit-community/proton_updater@0.1.18",
   "moonbitlang/x@0.4.50",

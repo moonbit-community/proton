@@ -16,7 +16,7 @@ let update_check_delay_ms : Int = 20 * 1000
 let update_check_jitter_ms : Int = 40 * 1000
 
 ///|
-/// The channel this process resolved from `proton.project.json`, once it is running.
+/// The update channel configured on the application, once it is running.
 ///
 /// Process-global because the update channel is a property of the installed
 /// application, not of a window or a request. The renderer-facing extension
@@ -144,15 +144,15 @@ pub fn PendingUpdate::restart(_self : PendingUpdate) -> Unit raise {
 }
 
 ///|
-/// Builds the channel described by `proton.project.json`.
+/// Builds the channel configured by `App::update_channel`.
 fn ResolvedUpdateChannel::open(
   self : ResolvedUpdateChannel,
 ) -> @updater.UpdateChannel raise {
   let platform = @native.runtime_info().platform_id
   let current_revision = @native.update_current_revision()
   @updater.UpdateChannel::new(
-    self.config.endpoint(),
-    self.config.public_keys(),
+    self.endpoint,
+    self.public_keys,
     platform,
     current_revision,
   )
@@ -166,7 +166,7 @@ async fn ResolvedUpdateChannel::poll(
   // The staging directory is resolved when an update is taken, not here. A
   // check that has found nothing should not have created anything.
   let channel = self.open()
-  let bound = @updater.oldest_accepted(self.config.freshness_days())
+  let bound = @updater.oldest_accepted(self.freshness_days)
   match channel.check(@updater.http_fetch, bound) {
     UpToDate => None
     Available(offer) =>
@@ -230,11 +230,11 @@ fn cleanup_previous_update() -> Unit {
 /// Whether launching should contact the update endpoint.
 ///
 /// An application that registered no handler is not asked to, even when
-/// `proton.project.json` declares a channel. Contacting a server on every launch is a
-/// privacy decision, and one that nothing in the application is prepared to act
-/// on is a request made on a user's behalf for no reason.
+/// Contacting a server on every launch is a privacy decision, and one that
+/// nothing in the application is prepared to act on is a request made on a
+/// user's behalf for no reason.
 fn checks_on_launch(channel : ResolvedUpdateChannel, handlers : Int) -> Bool {
-  handlers > 0 && channel.config.checks_on_launch()
+  handlers > 0 && channel.check_on_launch
 }
 
 ///|

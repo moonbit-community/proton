@@ -176,7 +176,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
       }
   }
   let runtime = ensure_dev_runtime(root, raw.setup_runtime)
-  let app_env = dev_process_env(runtime, frontend_url, config_path)
+  let app_env = dev_process_env(runtime, frontend_url, project_base)
   let frontend_env = dev_frontend_process_env(
     app_env,
     @env.get_env_var("LD_PRELOAD"),
@@ -525,7 +525,7 @@ fn helper_executable_name() -> String {
 async fn dev_process_env(
   runtime : DevRuntime,
   frontend_url : String?,
-  config_path : String?,
+  resource_dir : String,
 ) -> Map[String, String] {
   let env : Map[String, String] = {
     "PROTON_MODE": "dev",
@@ -534,13 +534,10 @@ async fn dev_process_env(
     "PROTON_NATIVE_DIST": runtime.root,
     "PROTON_RUNTIME_ROOT": runtime.root,
     "PROTON_HELPER_PATH": runtime.helper_path,
+    "PROTON_RESOURCE_DIR": resource_dir,
   }
   match frontend_url {
     Some(url) => env["PROTON_FRONTEND_URL"] = url
-    None => ()
-  }
-  match config_path {
-    Some(path) => env["PROTON_CONFIG_PATH"] = path
     None => ()
   }
   let path_key = path_env_key()

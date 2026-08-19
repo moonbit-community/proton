@@ -27,11 +27,11 @@ developer must perform them.
   `proton` as a dynamic library/import library, installs `proton_native.h`, and
   installs the helper executable when the engine build is enabled.
 - `proton/`: root `moonbit-community/proton` MoonBit module. The public facade owns the
-  app API (`html`, `url`, `file`, `asset`, `config`), command-extension bridge
+  app API (`html`, `url`, `file`, `asset`), command-extension bridge
   wiring, and selected low-level native re-exports.
 - `proton/native/`: safe MoonBit binding over the `proton_*` C ABI. MoonBit code
   links only the native Proton library through `proton/native_link_config.mjs`.
-- `proton/manifest/`, `proton/bootstrap/`, `proton/catalog/`,
+- `proton/manifest/`, `proton/catalog/`,
   `proton/core/`, `proton/command/`, `proton/ipc/`: supporting packages for
   metadata, tooling, command bridge wiring, and transport-neutral IPC protocol
   helpers. Do not reintroduce the old app runtime route without an explicit

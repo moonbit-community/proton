@@ -327,8 +327,7 @@ try {
         "Resources\icudtl.dat",
         "Resources\resources.pak",
         "Resources\locales\en-US.pak",
-        "proton.project.json",
-        "frontend\dist\index.html",
+        "Resources\frontend\dist\index.html",
         "proton-package.json"
     )
     foreach ($relative in $requiredFiles) {

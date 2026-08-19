@@ -16,8 +16,7 @@ pub extend PackageUsageError with Show::{to_string, output}
 pub(all) suberror PackageConfigError {
   NotFound(path~ : String)
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
-  BundleInactive
-  BundleMissing
+  PackageMissing
   MissingField(field~ : String)
 } derive(Debug, Eq)
 
@@ -171,8 +170,7 @@ pub fn PackageConfigError::message(self : PackageConfigError) -> String {
     NotFound(path~) => "proton package config not found: " + path
     Invalid(path~, error~) =>
       "invalid proton package config " + path + ": " + error.message()
-    BundleInactive => "bundle.active must be true for proton package"
-    BundleMissing => "bundle config is required for proton package"
+    PackageMissing => "package config is required for proton package"
     MissingField(field~) => field + " is required for proton package"
   }
 }
@@ -189,7 +187,7 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
       "package target " + target + " is not supported on " + platform
     UnsupportedPlatform => "proton package currently supports macOS and Windows"
     UnsupportedResourceGlob(path~) =>
-      "unsupported bundle.resources glob: " + path
+      "unsupported package.resources glob: " + path
     MissingInput(path~) => "package input is missing: " + path
     MissingExecutable(path~) =>
       "Moon reported a package executable that does not exist: " + path

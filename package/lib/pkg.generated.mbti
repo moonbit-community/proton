@@ -8,6 +8,8 @@ import {
 // Values
 pub async fn build(PackageSpec) -> Array[String]
 
+pub async fn build_with(PackageSpec, PackageCustomization, async (PackageLayout) -> Unit) -> Array[String]
+
 // Errors
 pub(all) suberror LinuxPackagingError {
   InvalidConfiguration(detail~ : String)
@@ -88,6 +90,29 @@ pub fn DocumentType::new(String, Array[String], role? : String) -> Self
 pub fn DocumentType::not_equal(Self, Self) -> Bool
 pub fn DocumentType::to_repr(Self) -> @debug.Repr
 
+pub struct MacosPlistString {
+  key : String
+  value : String
+}
+pub fn MacosPlistString::new(String, String) -> Self
+
+pub struct MacosSignTarget {
+  path : String
+  runtime_options : Bool
+  entitlements : Bool
+  identifier : String?
+}
+pub fn MacosSignTarget::new(String, runtime_options? : Bool, entitlements? : Bool, identifier? : String) -> Self
+
+pub struct PackageCustomization {
+  macos_plist_strings : Array[MacosPlistString]
+  macos_sign_targets : Array[MacosSignTarget]
+  windows_sign_targets : Array[String]
+  windows_verify_targets : Array[String]
+  linux_resources_path : String?
+}
+pub fn PackageCustomization::new(macos_plist_strings? : Array[MacosPlistString], macos_sign_targets? : Array[MacosSignTarget], windows_sign_targets? : Array[String], windows_verify_targets? : Array[String], linux_resources_path? : String) -> Self
+
 pub(all) enum PackageFormat {
   App
   Zip
@@ -100,6 +125,19 @@ pub fn PackageFormat::not_equal(Self, Self) -> Bool
 pub fn PackageFormat::parse(String) -> Self raise PackagePlanError
 pub fn PackageFormat::to_repr(Self) -> @debug.Repr
 pub fn PackageFormat::to_string(Self) -> String
+
+pub struct PackageLayout {
+  root : String
+  executable : String
+  resources : String
+  libraries : String
+  executables : String
+}
+pub fn PackageLayout::executable(Self) -> String
+pub fn PackageLayout::executables(Self) -> String
+pub fn PackageLayout::libraries(Self) -> String
+pub fn PackageLayout::resources(Self) -> String
+pub fn PackageLayout::root(Self) -> String
 
 pub struct PackageSpec {
   executable : String

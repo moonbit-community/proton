@@ -49,6 +49,8 @@ moon -C examples run 01_run --target native
 - `19_*` through `35_*`: extension and app-capability examples for filesystem,
   path, shell, desktop integration, notification, tray, hotkey, auto-launch,
   keepawake, and microphone behavior.
+- `22_app_builder`: window, file entry, size, and debug behavior declared with
+  the MoonBit App builder.
 - `25_app_system`: combined notification, tray, and global-hotkey runtime with
   tray support reporting and menu items that trigger visible app actions.
 - `28_app_tray`: focused tray support reporting, lifecycle, tooltip/icon update,
@@ -66,7 +68,8 @@ moon -C examples run 01_run --target native
   MoonBit E2E suite (`e2e/`).
 - `42_attribute_codegen_commands`: generated command metadata plus generated
   event helper over the native DLL bridge.
-- `44_project_config`: `proton.project.json` project config decoding
+- `44_app_activation`: single-instance URL and document activation configured
+  through the App builder.
 - `45_bridge_multi_window`: typed facade multi-window bridge E2E example.
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
 - `47_dev_extension_js`: Vite dev-server injection smoke for extension
@@ -91,9 +94,9 @@ moon -C examples run 01_run --target native
 - `56_i18n`: one explicit application locale observed through MoonBit command
   context, CEF `navigator.languages`, and localized typed native menus.
 
-All runnable examples should import `moonbit-community/proton`. `proton.project.json`
-configures app settings such as window, entry, debug, frontend, and bundle
-metadata.
+All runnable examples should import `moonbit-community/proton`. Runtime behavior
+is configured through the App builder; `proton.project.json` is present only
+when an example needs CLI frontend/build or package metadata.
 
 Tray v1 is implemented by the `tray` extension through `moonbit-community/proton_tray`; Proton
 native C does not expose a tray ABI. Windows is the baseline for tray-icon
