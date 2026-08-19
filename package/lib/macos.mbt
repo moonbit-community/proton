@@ -27,7 +27,8 @@ fn macos_info_plist(
 ) -> String {
   let schemes = StringBuilder::new()
   for scheme in spec.url_schemes {
-    schemes.write_string("<string>" + xml_escape(scheme) + "</string>")
+    schemes <+
+      $|<string>\{xml_escape(scheme)}</string>
   }
   let url_types = if schemes.to_string() == "" {
     ""
@@ -41,23 +42,14 @@ fn macos_info_plist(
   }
   let document_entries = StringBuilder::new()
   for document_type in spec.document_types {
-    document_entries.write_string("<dict><key>CFBundleTypeName</key><string>")
-    document_entries.write_string(xml_escape(document_type.name))
-    document_entries.write_string(
-      "</string><key>CFBundleTypeRole</key><string>",
-    )
-    document_entries.write_string(xml_escape(document_type.role))
-    document_entries.write_string(
-      "</string><key>CFBundleTypeExtensions</key><array>",
-    )
+    document_entries <+
+      $|<dict><key>CFBundleTypeName</key><string>\{xml_escape(document_type.name)}</string><key>CFBundleTypeRole</key><string>\{xml_escape(document_type.role)}</string><key>CFBundleTypeExtensions</key><array>
     for extension in document_type.extensions {
-      document_entries.write_string(
-        "<string>" + xml_escape(extension) + "</string>",
-      )
+      document_entries <+
+        $|<string>\{xml_escape(extension)}</string>
     }
-    document_entries.write_string(
-      "</array><key>LSHandlerRank</key><string>Owner</string></dict>",
-    )
+    document_entries <+
+      "</array><key>LSHandlerRank</key><string>Owner</string></dict>"
   }
   let document_types = if document_entries.to_string() == "" {
     ""
