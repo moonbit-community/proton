@@ -123,7 +123,8 @@ async fn run_dev_extension_page_probe(
   let value = evaluate_json(page, dev_extension_probe_expression(), true)
   let result : DevExtensionProbe = decode_probe(value, "dev extension")
   assert_dev_extension_probe(result, frontend_url, value)
-  run_dev_extension_reload_probe(page, target, frontend_url, timeout)
+  run_dev_extension_reload_probe(page, frontend_url, timeout)
+  page.close()
   page_open = false
   run_dev_extension_non_proton_probe(target, output_root, timeout)
   assert_dev_extension_native_log(app.native_log_path)
@@ -297,7 +298,6 @@ fn dev_extension_production_probe_expression() -> String {
 ///|
 async fn run_dev_extension_reload_probe(
   page : @client.CdpClient,
-  target : String,
   frontend_url : String,
   timeout : Int,
 ) -> Unit {
@@ -317,12 +317,8 @@ async fn run_dev_extension_reload_probe(
       false,
     ),
   )
-  ignore(page.send_cdp_command("Page.reload"))
-  page.close()
-  let reloaded_page = connect_page_matching_expression(
-    target,
-    frontend_url,
-    true,
+  reload_page_and_wait(
+    page,
     (
       #|Boolean(
       #|  window.__MoonBit__?.ticker?.start &&
@@ -333,12 +329,7 @@ async fn run_dev_extension_reload_probe(
     "dev extension bridge after reload",
     timeout,
   )
-  defer reloaded_page.close()
-  let value = evaluate_json(
-    reloaded_page,
-    dev_extension_reload_probe_expression(),
-    true,
-  )
+  let value = evaluate_json(page, dev_extension_reload_probe_expression(), true)
   let result : DevExtensionReloadProbe = decode_probe(
     value, "dev extension reload",
   )
