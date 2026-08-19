@@ -15,6 +15,7 @@ import {
   "moonbit-community/proton_auto_launch@0.1.18",
   "moonbit-community/proton_keepawake@0.1.18",
   "moonbit-community/proton_power_monitor@0.1.18",
+  "moonbit-community/proton_screen_monitor@0.1.18",
   "moonbit-community/proton_process@0.1.18",
   "moonbit-community/proton_shell@0.1.18",
 }

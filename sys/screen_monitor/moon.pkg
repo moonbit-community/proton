@@ -1,0 +1,15 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+}
+
+supported_targets = "native"
+
+options(
+  "native-stub": [
+    "native_common.c",
+    "native_windows.c",
+    "native_macos.c",
+    "native_linux.c",
+  ],
+)
