@@ -1,0 +1,145 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_package/lib"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub async fn build(PackageSpec) -> Array[String]
+
+// Errors
+pub(all) suberror LinuxPackagingError {
+  InvalidConfiguration(detail~ : String)
+  ToolFailure(stage~ : String, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn LinuxPackagingError::equal(Self, Self) -> Bool
+pub fn LinuxPackagingError::message(Self) -> String
+pub fn LinuxPackagingError::not_equal(Self, Self) -> Bool
+pub fn LinuxPackagingError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror MacosSigningError {
+  InvalidConfiguration(detail~ : String)
+  ToolFailure(stage~ : String, detail~ : String)
+  Verification(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn MacosSigningError::equal(Self, Self) -> Bool
+pub fn MacosSigningError::message(Self) -> String
+pub fn MacosSigningError::not_equal(Self, Self) -> Bool
+pub fn MacosSigningError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror PackageFileSystemError {
+  CreateDirectory(path~ : String, detail~ : String)
+  Remove(path~ : String, detail~ : String)
+  Copy(source~ : String, destination~ : String, detail~ : String)
+  Read(path~ : String, detail~ : String)
+  Write(path~ : String, detail~ : String)
+  InvalidSource(path~ : String)
+} derive(Eq, @debug.Debug)
+pub fn PackageFileSystemError::equal(Self, Self) -> Bool
+pub fn PackageFileSystemError::message(Self) -> String
+pub fn PackageFileSystemError::not_equal(Self, Self) -> Bool
+pub fn PackageFileSystemError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror PackagePlanError {
+  InvalidProductName(reason~ : String)
+  InvalidIdentifier(identifier~ : String, reason~ : String)
+  InvalidVersion(version~ : String, reason~ : String)
+  UnsupportedFormat(format~ : String)
+  UnsupportedFormatForPlatform(format~ : String, platform~ : String)
+  MissingExecutable(path~ : String)
+  MissingInput(path~ : String)
+  MissingIcon(path~ : String)
+  InvalidPayload(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn PackagePlanError::equal(Self, Self) -> Bool
+pub fn PackagePlanError::message(Self) -> String
+pub fn PackagePlanError::not_equal(Self, Self) -> Bool
+pub fn PackagePlanError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror PackageToolError {
+  Start(tool~ : String, detail~ : String)
+  Exit(tool~ : String, code~ : Int, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn PackageToolError::equal(Self, Self) -> Bool
+pub fn PackageToolError::message(Self) -> String
+pub fn PackageToolError::not_equal(Self, Self) -> Bool
+pub fn PackageToolError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror WindowsPackagingError {
+  InvalidConfiguration(detail~ : String)
+  MissingTarget(path~ : String)
+  ToolFailure(stage~ : String, detail~ : String)
+  Verification(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn WindowsPackagingError::equal(Self, Self) -> Bool
+pub fn WindowsPackagingError::message(Self) -> String
+pub fn WindowsPackagingError::not_equal(Self, Self) -> Bool
+pub fn WindowsPackagingError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub struct DocumentType {
+  name : String
+  extensions : Array[String]
+  role : String
+} derive(Eq, @debug.Debug)
+pub fn DocumentType::equal(Self, Self) -> Bool
+pub fn DocumentType::new(String, Array[String], role? : String) -> Self
+pub fn DocumentType::not_equal(Self, Self) -> Bool
+pub fn DocumentType::to_repr(Self) -> @debug.Repr
+
+pub(all) enum PackageFormat {
+  App
+  Zip
+  Dmg
+  Nsis
+  AppImage
+} derive(Eq, @debug.Debug)
+pub fn PackageFormat::equal(Self, Self) -> Bool
+pub fn PackageFormat::not_equal(Self, Self) -> Bool
+pub fn PackageFormat::parse(String) -> Self raise PackagePlanError
+pub fn PackageFormat::to_repr(Self) -> @debug.Repr
+pub fn PackageFormat::to_string(Self) -> String
+
+pub struct PackageSpec {
+  executable : String
+  product_name : String
+  identifier : String
+  version : String
+  formats : Array[PackageFormat]
+  output : String
+  payloads : Array[Payload]
+  icons : Array[String]
+  url_schemes : Array[String]
+  document_types : Array[DocumentType]
+  sign : Bool
+  notarize : Bool
+} derive(Eq, @debug.Debug)
+pub fn PackageSpec::equal(Self, Self) -> Bool
+pub fn PackageSpec::new(String, String, String, String, Array[PackageFormat], String, payloads? : Array[Payload], icons? : Array[String], url_schemes? : Array[String], document_types? : Array[DocumentType], sign? : Bool, notarize? : Bool) -> Self
+pub fn PackageSpec::not_equal(Self, Self) -> Bool
+pub fn PackageSpec::to_repr(Self) -> @debug.Repr
+
+pub struct Payload {
+  source : String
+  destination : String
+  location : PayloadLocation
+} derive(Eq, @debug.Debug)
+pub fn Payload::equal(Self, Self) -> Bool
+pub fn Payload::new(String, String, location? : PayloadLocation) -> Self
+pub fn Payload::not_equal(Self, Self) -> Bool
+pub fn Payload::to_repr(Self) -> @debug.Repr
+
+pub(all) enum PayloadLocation {
+  Resources
+  Libraries
+  Executables
+} derive(Eq, @debug.Debug)
+pub fn PayloadLocation::equal(Self, Self) -> Bool
+pub fn PayloadLocation::not_equal(Self, Self) -> Bool
+pub fn PayloadLocation::parse(String) -> Self raise PackagePlanError
+pub fn PayloadLocation::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

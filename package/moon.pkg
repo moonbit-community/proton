@@ -1,0 +1,15 @@
+import {
+  "moonbit-community/proton_package/lib" @package,
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x/path",
+  "moonbitlang/x/sys",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

@@ -23,9 +23,24 @@ pub struct PowerMonitor {
   // private fields
 }
 pub fn PowerMonitor::destroy(Self) -> Unit
+pub fn PowerMonitor::drain_events(Self) -> Array[PowerMonitorEvent]
 pub fn PowerMonitor::idle_seconds(Self) -> Int raise PowerMonitorError
 pub fn PowerMonitor::new() -> Self raise PowerMonitorError
 pub fn PowerMonitor::power_source(Self) -> PowerSourceInfo raise PowerMonitorError
+pub fn PowerMonitor::start_watching(Self) -> Unit raise PowerMonitorError
+pub fn PowerMonitor::stop_watching(Self) -> Unit raise PowerMonitorError
+
+pub enum PowerMonitorEvent {
+  Suspend
+  Resume
+  OnAC
+  OnBattery
+  LockScreen
+  UnlockScreen
+} derive(Eq, @debug.Debug)
+pub fn PowerMonitorEvent::equal(Self, Self) -> Bool
+pub fn PowerMonitorEvent::not_equal(Self, Self) -> Bool
+pub fn PowerMonitorEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PowerSource {
   Unknown

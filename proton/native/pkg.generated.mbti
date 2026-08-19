@@ -73,6 +73,7 @@ pub(all) suberror NativeError {
   InvalidPayload(context~ : String, message~ : String)
 } derive(Eq, @debug.Debug)
 pub fn NativeError::equal(Self, Self) -> Bool
+pub fn NativeError::is_invalid_state(Self) -> Bool
 pub fn NativeError::is_stale_bridge_response(Self) -> Bool
 pub fn NativeError::is_stale_browser_request(Self) -> Bool
 pub fn NativeError::is_stale_window_request(Self) -> Bool

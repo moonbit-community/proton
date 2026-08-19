@@ -53,6 +53,7 @@ pub extend BuildPathError with Show::{to_string, output}
 pub(all) suberror BuildProcessError {
   Start(command~ : String, detail~ : String)
   Exit(command~ : String, code~ : Int)
+  InvalidOutput(command~ : String, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -99,6 +100,8 @@ pub fn BuildProcessError::message(self : BuildProcessError) -> String {
   match self {
     Start(command~, detail~) => "failed to run " + command + ": " + detail
     Exit(command~, code~) => command + " exited with code " + code.to_string()
+    InvalidOutput(command~, detail~) =>
+      command + " returned invalid output: " + detail
   }
 }
 
@@ -182,25 +185,45 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
 }
 
 ///|
-/// Runs the release build requested by the package workflow.
-pub async fn run_release(
+/// Builds the application executable requested by the package workflow and
+/// returns the artifact path reported by Moon.
+pub async fn build_executable(
   cwd : String,
   app_package : String,
   config_path : String,
-  moon_args : Array[String],
-) -> Unit {
-  validate_moon_build_args(moon_args)
-  run_with_options(cwd, RawBuildOptions::{
+  release : Bool,
+) -> String {
+  let invocation = prepare_build(cwd, RawBuildOptions::{
     app_package: Some(app_package),
     config_path: Some(config_path),
     moon_target_dir: None,
     run_frontend_build: true,
-    moon_args,
+    moon_args: [],
   })
+  run_moon_build_only(invocation.backend_path, invocation.app_package, release)
 }
 
 ///|
 async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
+  let invocation = prepare_build(cwd, raw)
+  run_moon_build(
+    invocation.backend_path,
+    invocation.app_package,
+    invocation.moon_args,
+    invocation.moon_target_dir,
+  )
+}
+
+///|
+priv struct BuildInvocation {
+  backend_path : String
+  app_package : String
+  moon_target_dir : String?
+  moon_args : Array[String]
+}
+
+///|
+async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
   let cwd = @path.Path(cwd).resolve().to_string()
   let root = @fsutil.find_project_root_from(cwd)
   let config_path = resolve_build_config_path(cwd, root, raw)
@@ -225,7 +248,12 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
   let moon_target_dir = raw.moon_target_dir.map(path => {
     @fsutil.resolve_path(root, path)
   })
-  run_moon_build(backend_path, app_package, raw.moon_args, moon_target_dir)
+  BuildInvocation::{
+    backend_path,
+    app_package,
+    moon_target_dir,
+    moon_args: raw.moon_args,
+  }
 }
 
 ///|
@@ -547,6 +575,76 @@ fn moon_build_args_with_target_dir(
     args.push(arg)
   }
   args
+}
+
+///|
+fn moon_build_only_args(app_package : String, release : Bool) -> Array[String] {
+  [
+    "run",
+    app_package,
+    "--target",
+    "native",
+    if release {
+      "--release"
+    } else {
+      "--debug"
+    },
+    "--build-only",
+  ]
+}
+
+///|
+fn artifact_path_from_build_output(
+  output : String,
+) -> String raise BuildProcessError {
+  let json = @json.parse(output) catch {
+    error =>
+      raise InvalidOutput(
+        command="MoonBit executable build",
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  guard json is { "artifacts_path": Array(paths), .. } else {
+    raise InvalidOutput(
+      command="MoonBit executable build",
+      detail="missing artifacts_path array",
+    )
+  }
+  guard paths is [String(path)] else {
+    raise InvalidOutput(
+      command="MoonBit executable build",
+      detail="expected exactly one executable artifact",
+    )
+  }
+  path
+}
+
+///|
+async fn run_moon_build_only(
+  root : String,
+  app_package : String,
+  release : Bool,
+) -> String {
+  let args = moon_build_only_args(app_package, release)
+  @output.info("Building Proton executable: moon " + args.join(" "))
+  let (code, stdout) = @process.collect_stdout("moon", args, cwd=root) catch {
+    error =>
+      raise BuildProcessError::Start(
+        command="MoonBit executable build",
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  if code != 0 {
+    raise BuildProcessError::Exit(command="MoonBit executable build", code~)
+  }
+  let output = stdout.text() catch {
+    error =>
+      raise BuildProcessError::InvalidOutput(
+        command="MoonBit executable build",
+        detail="failed to decode stdout: " + @debug.render(Repr(error)),
+      )
+  }
+  artifact_path_from_build_output(output)
 }
 
 ///|

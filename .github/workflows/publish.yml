@@ -15,6 +15,7 @@ on:
           - contract
           - rsa
           - updater
+          - package
           - sys/ffi
           - sys/shell
           - sys/auto_launch
@@ -93,6 +94,12 @@ jobs:
             moon -C "$module_dir" publish
             moon update
           }
+
+          if [ "$resume_from" = "package" ]; then
+            publishing=true
+            publish_module package moonbit-community/proton_package
+            exit 0
+          fi
 
           wait_for_codegen() {
             version=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)"/\1/p' codegen/moon.mod)
