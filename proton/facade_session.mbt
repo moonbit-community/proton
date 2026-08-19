@@ -1845,7 +1845,22 @@ fn RuntimeSession::activate_for_launch_input(
 fn try_activate_window_for_launch_input(
   running : RunningWindow,
 ) -> Bool raise AppRunError {
-  let state = running.window.state() catch {
+  try_activate_for_launch_input(
+    () => running.window.state(),
+    () => running.window.restore(),
+    () => running.window.show(),
+    () => running.window.focus(),
+  )
+}
+
+///|
+fn try_activate_for_launch_input(
+  read_state : () -> @native.WindowState raise @native.NativeError,
+  restore : () -> Unit raise @native.NativeError,
+  show : () -> Unit raise @native.NativeError,
+  focus : () -> Unit raise @native.NativeError,
+) -> Bool raise AppRunError {
+  let state = read_state() catch {
     error => {
       if error.is_invalid_state() || error.is_stale_window_request() {
         return false
@@ -1854,7 +1869,7 @@ fn try_activate_window_for_launch_input(
     }
   }
   if state.minimized {
-    running.window.restore() catch {
+    restore() catch {
       error => {
         if error.is_invalid_state() || error.is_stale_window_request() {
           return false
@@ -1864,7 +1879,7 @@ fn try_activate_window_for_launch_input(
     }
   }
   if !state.visible {
-    running.window.show() catch {
+    show() catch {
       error => {
         if error.is_invalid_state() || error.is_stale_window_request() {
           return false
@@ -1873,7 +1888,7 @@ fn try_activate_window_for_launch_input(
       }
     }
   }
-  running.window.focus() catch {
+  focus() catch {
     error => {
       if error.is_invalid_state() || error.is_stale_window_request() {
         return false
