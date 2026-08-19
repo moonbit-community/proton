@@ -18,6 +18,10 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
     None => None
   }
+  errdefer (match app_instance {
+    Some(instance) => destroy_app_instance(instance) catch { _ => () }
+    None => ()
+  })
   run_manifest(
     resolved.manifest,
     resolved.permission_base_path,
@@ -45,15 +49,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     download_event_handlers=self.download_event_handlers,
     update_channel=resolved.update_channel,
     update_handlers=self.update_handlers,
-  ) catch {
-    error => {
-      match app_instance {
-        Some(instance) => destroy_app_instance(instance) catch { _ => () }
-        None => ()
-      }
-      raise error
-    }
-  }
+  )
   match app_instance {
     Some(instance) => destroy_app_instance(instance)
     None => ()

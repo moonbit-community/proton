@@ -312,20 +312,16 @@ async fn stage_windows_portable_with_options(
   announce : Bool,
 ) -> Unit {
   prepare_windows_package_paths(plan)
+  errdefer (cleanup_failed_windows_package(plan) catch {
+    cleanup_error =>
+      raise WindowsPackagingError::ToolFailure(
+        stage="Windows package rollback/cleanup",
+        detail=cleanup_error.to_string(),
+      )
+  })
   stage_windows_portable_impl(
     plan, executable, runtime, sign_tool, signing, announce,
-  ) catch {
-    error => {
-      cleanup_failed_windows_package(plan) catch {
-        cleanup_error =>
-          raise WindowsPackagingError::ToolFailure(
-            stage="Windows package rollback/cleanup",
-            detail=error.to_string() + "; " + cleanup_error.to_string(),
-          )
-      }
-      raise error
-    }
-  }
+  )
 }
 
 ///|

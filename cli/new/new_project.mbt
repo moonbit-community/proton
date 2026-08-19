@@ -245,59 +245,42 @@ async fn create_project(
   let target_parent = @fsutil.path_parent(options.resolved_target_dir)
   let existing_ancestor = nearest_existing_ancestor(target_parent)
   let mut staging_dir = ""
-  @async.protect_from_cancel(() => {
-    staging_dir = reserve_staging_directory(
-      existing_ancestor,
-      options.resolved_target_dir,
-    )
-  }) catch {
-    error => {
-      let rollback_failures : Array[String] = []
-      @async.protect_from_cancel(resume_on_cancel=true, () => {
-        remove_transaction_tree(staging_dir, rollback_failures)
-      })
-      if rollback_failures.length() > 0 {
-        raise NewProjectWriteError::Rollback(
-          primary=@debug.render(Repr(error)),
-          detail=rollback_failures.join("; "),
-        )
+  // Transaction rollback. Runs only if this function raises after a staging
+  // directory has been reserved; on success the staging dir was committed
+  // (renamed) into the target, so there is nothing to roll back. `staging_dir`
+  // stays empty when reservation fails, which makes this a no-op for that path.
+  errdefer (if staging_dir != "" {
+    let rollback_failures : Array[String] = []
+    @async.protect_from_cancel(resume_on_cancel=true, () => {
+      remove_transaction_tree(staging_dir, rollback_failures)
+      if target_existed && !@fsutil.path_exists(options.resolved_target_dir) {
+        restore_empty_target(options.resolved_target_dir, rollback_failures)
       }
-      raise error
+      remove_created_parent_directories(
+        target_parent, existing_ancestor, rollback_failures,
+      )
+    })
+    if rollback_failures.length() > 0 {
+      raise NewProjectWriteError::Rollback(
+        primary="failed to create project",
+        detail=rollback_failures.join("; "),
+      )
     }
+  })
+  staging_dir = @async.protect_from_cancel(() => {
+    reserve_staging_directory(existing_ancestor, options.resolved_target_dir)
+  })
+  write_project_files(staging_dir, files)
+  maybe_init_git(options, staging_dir)
+  if options.run_check {
+    run_moon_check(options, staging_dir)
   }
-  try {
-    write_project_files(staging_dir, files)
-    maybe_init_git(options, staging_dir)
-    if options.run_check {
-      run_moon_check(options, staging_dir)
-    }
-    commit_project(
-      staging_dir,
-      options.resolved_target_dir,
-      target_parent,
-      target_existed,
-    )
-  } catch {
-    error => {
-      let rollback_failures : Array[String] = []
-      @async.protect_from_cancel(resume_on_cancel=true, () => {
-        remove_transaction_tree(staging_dir, rollback_failures)
-        if target_existed && !@fsutil.path_exists(options.resolved_target_dir) {
-          restore_empty_target(options.resolved_target_dir, rollback_failures)
-        }
-        remove_created_parent_directories(
-          target_parent, existing_ancestor, rollback_failures,
-        )
-      })
-      if rollback_failures.length() > 0 {
-        raise NewProjectWriteError::Rollback(
-          primary=@debug.render(Repr(error)),
-          detail=rollback_failures.join("; "),
-        )
-      }
-      raise error
-    }
-  }
+  commit_project(
+    staging_dir,
+    options.resolved_target_dir,
+    target_parent,
+    target_existed,
+  )
 }
 
 ///|

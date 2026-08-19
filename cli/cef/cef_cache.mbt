@@ -39,47 +39,35 @@ async fn install_cef_root(
   if report_progress {
     @output.info("[INFO] Installing CEF into: " + install_dir)
   }
-  try {
-    copy_tree(extracted_root, staging)
-    normalize_cef_runtime_layout(staging)
-    let missing = validate_cef_layout(staging, platform)
-    if missing.length() > 0 {
-      raise InvalidCefRoot(path=install_dir, missing~)
-    }
-    let version_path = @fsutil.path_join(staging, "version.txt")
-    @async_fs.write_file(
-      version_path,
-      name + "\n",
-      create_mode=CreateOrTruncate,
-    ) catch {
-      err =>
-        raise CefFileSystemError::Write(
-          path=version_path,
-          detail=@debug.render(Repr(err)),
-        )
-    }
-    let checksum_path = @fsutil.path_join(staging, "sha256.txt")
-    @async_fs.write_file(
-      checksum_path,
-      sha256 + "\n",
-      create_mode=CreateOrTruncate,
-    ) catch {
-      err =>
-        raise CefFileSystemError::Write(
-          path=checksum_path,
-          detail=@debug.render(Repr(err)),
-        )
-    }
-    validate_cef_root(staging, platform)
-    replace_staged_directory(staging, install_dir)
-  } catch {
-    error => {
-      remove_tree(staging) catch {
-        _ => ()
-      }
-      raise error
-    }
+  errdefer (remove_tree(staging) catch { _ => () })
+  copy_tree(extracted_root, staging)
+  normalize_cef_runtime_layout(staging)
+  let missing = validate_cef_layout(staging, platform)
+  if missing.length() > 0 {
+    raise InvalidCefRoot(path=install_dir, missing~)
   }
+  let version_path = @fsutil.path_join(staging, "version.txt")
+  @async_fs.write_file(version_path, name + "\n", create_mode=CreateOrTruncate) catch {
+    err =>
+      raise CefFileSystemError::Write(
+        path=version_path,
+        detail=@debug.render(Repr(err)),
+      )
+  }
+  let checksum_path = @fsutil.path_join(staging, "sha256.txt")
+  @async_fs.write_file(
+    checksum_path,
+    sha256 + "\n",
+    create_mode=CreateOrTruncate,
+  ) catch {
+    err =>
+      raise CefFileSystemError::Write(
+        path=checksum_path,
+        detail=@debug.render(Repr(err)),
+      )
+  }
+  validate_cef_root(staging, platform)
+  replace_staged_directory(staging, install_dir)
 }
 
 ///|
@@ -235,37 +223,33 @@ async fn ensure_cef_cache(
     project_cache,
   )
   let lock = acquire_install_lock(cache_dir)
-  try {
-    if cached_cef_root_is_valid(cache_dir, name, sha256, platform) {
-      return { root: cache_dir, lock }
-    }
-    if project_cache != cache_dir &&
-      install_from_project_cache(
-        project_cache~,
-        cache_dir~,
-        name~,
-        sha256~,
-        root~,
-        platform~,
-      ) {
-      return { root: cache_dir, lock }
-    }
-    setup_downloaded_cef(
+  errdefer {
+    lock.unlock()
+    lock.close()
+  }
+  if cached_cef_root_is_valid(cache_dir, name, sha256, platform) {
+    return { root: cache_dir, lock }
+  }
+  if project_cache != cache_dir &&
+    install_from_project_cache(
+      project_cache~,
+      cache_dir~,
       name~,
-      url~,
       sha256~,
       root~,
-      install_dir=cache_dir,
       platform~,
-    )
-    { root: cache_dir, lock }
-  } catch {
-    error => {
-      lock.unlock()
-      lock.close()
-      raise error
-    }
+    ) {
+    return { root: cache_dir, lock }
   }
+  setup_downloaded_cef(
+    name~,
+    url~,
+    sha256~,
+    root~,
+    install_dir=cache_dir,
+    platform~,
+  )
+  { root: cache_dir, lock }
 }
 
 ///|
@@ -312,26 +296,18 @@ async fn setup_downloaded_cef(
   ensure_download_tool("tar")
   let temp_dir = make_temp_dir()
   let archive_path = @fsutil.path_join(temp_dir, name + ".tar.bz2")
-  try {
-    download_file(archive_url(name, url), archive_path, sha256)
-    extract_tar_bz2(archive_path, temp_dir)
-    let extracted_root = find_extracted_root(temp_dir, name, platform)
-    install_cef_root(
-      extracted_root~,
-      install_dir~,
-      name~,
-      sha256~,
-      root~,
-      platform~,
-    )
-  } catch {
-    error => {
-      remove_tree(temp_dir) catch {
-        _ => ()
-      }
-      raise error
-    }
-  }
+  errdefer (remove_tree(temp_dir) catch { _ => () })
+  download_file(archive_url(name, url), archive_path, sha256)
+  extract_tar_bz2(archive_path, temp_dir)
+  let extracted_root = find_extracted_root(temp_dir, name, platform)
+  install_cef_root(
+    extracted_root~,
+    install_dir~,
+    name~,
+    sha256~,
+    root~,
+    platform~,
+  )
   remove_tree(temp_dir)
 }
 

@@ -181,32 +181,24 @@ async fn replace_staged_directory(staging : String, target : String) -> Unit {
         )
     }
   }
-  try {
-    @async_fs.rename(staging, target, replace=false) catch {
-      err =>
+  errdefer (if had_target {
+    @async_fs.rename(backup, target, replace=false) catch {
+      restore_error =>
         raise CefFileSystemError::Copy(
-          source=staging,
+          source=backup,
           destination=target,
-          detail=@debug.render(Repr(err)),
+          detail="failed to restore after publish error: " +
+            @debug.render(Repr(restore_error)),
         )
     }
-  } catch {
-    error => {
-      if had_target {
-        @async_fs.rename(backup, target, replace=false) catch {
-          restore_error =>
-            raise CefFileSystemError::Copy(
-              source=backup,
-              destination=target,
-              detail="failed to restore after publish error " +
-                @debug.render(Repr(error)) +
-                ": " +
-                @debug.render(Repr(restore_error)),
-            )
-        }
-      }
-      raise error
-    }
+  })
+  @async_fs.rename(staging, target, replace=false) catch {
+    err =>
+      raise CefFileSystemError::Copy(
+        source=staging,
+        destination=target,
+        detail=@debug.render(Repr(err)),
+      )
   }
   if had_target {
     remove_tree(backup) catch {

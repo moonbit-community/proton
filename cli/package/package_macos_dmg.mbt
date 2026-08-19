@@ -26,17 +26,15 @@ async fn create_macos_dmg(plan : PackagePlan, app : String) -> String {
   remove_tree(root)
   remove_tree(staging)
   ensure_dir(root)
-  create_macos_dmg_impl(plan, app, root, staging) catch {
-    error => {
-      remove_tree(root) catch {
-        _ => ()
-      }
-      remove_tree(staging) catch {
-        _ => ()
-      }
-      raise error
+  errdefer {
+    remove_tree(root) catch {
+      _ => ()
+    }
+    remove_tree(staging) catch {
+      _ => ()
     }
   }
+  create_macos_dmg_impl(plan, app, root, staging)
   remove_tree(root)
   if plan.sign {
     sign_macos_dmg(plan, staging)

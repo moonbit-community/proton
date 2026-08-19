@@ -63,9 +63,7 @@ async fn do_request(
         error => raise RequestFailed(detail=@debug.render(Repr(error)))
       }
     _ => {
-      let (base_url, path) = split_url(request.url) catch {
-        error => raise error
-      }
+      let (base_url, path) = split_url(request.url)
       let client = @http.Client::Client(base_url, headers~) catch {
         error => raise RequestFailed(detail=@debug.render(Repr(error)))
       }
