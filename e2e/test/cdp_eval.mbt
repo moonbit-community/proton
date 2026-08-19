@@ -14,3 +14,22 @@ async fn evaluate_bool(
     _ => false
   }
 }
+
+///|
+async fn reload_page_and_wait(
+  page : @client.CdpClient,
+  expression : String,
+  description : String,
+  timeout : Int,
+) -> Unit {
+  page.clear_cdp_events()
+  ignore(page.send_schema_command("Page.reload", timeout_ms=timeout))
+  ignore(
+    run_e2e_operation_with_timeout(
+      timeout,
+      "Page.loadEventFired after reload",
+      () => page.recv_cdp_event(method_name="Page.loadEventFired"),
+    ),
+  )
+  wait_for_cdp_expression(page, expression, description, timeout)
+}

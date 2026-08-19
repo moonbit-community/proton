@@ -159,7 +159,8 @@ async fn run_app_commands_full_probe(
   wait_for_native_osr_paint(native_log_path, timeout)
   assert_app_commands_probe(page)
   let queue = run_queue_full_probe(page)
-  run_reload_probe(page, target, timeout)
+  run_reload_probe(page, timeout)
+  page.close()
   page_open = false
   run_non_proton_probe(target, output_root, timeout)
   assert_native_bridge_guards(native_log_path)
@@ -382,11 +383,7 @@ async fn run_queue_full_probe(page : @client.CdpClient) -> QueueFullProbeResult 
 }
 
 ///|
-async fn run_reload_probe(
-  page : @client.CdpClient,
-  target : String,
-  timeout : Int,
-) -> Unit {
+async fn run_reload_probe(page : @client.CdpClient, timeout : Int) -> Unit {
   ignore(page.send_schema_command("Page.enable"))
   ignore(
     evaluate_json(
@@ -407,12 +404,8 @@ async fn run_reload_probe(
       false,
     ),
   )
-  ignore(page.send_cdp_command("Page.reload"))
-  page.close()
-  let reloaded_page = connect_page_matching_expression(
-    target,
-    "https://proton.localhost/",
-    false,
+  reload_page_and_wait(
+    page,
     (
       #|Boolean(
       #|  window.__MoonBit__?.core?.invokeOp &&
@@ -422,9 +415,8 @@ async fn run_reload_probe(
     "bridge after reload",
     timeout,
   )
-  defer reloaded_page.close()
   let value = evaluate_json(
-    reloaded_page,
+    page,
     (
       #|;(async () => {
       #|  const invoke = window.__MoonBit__?.core?.invokeOp;
