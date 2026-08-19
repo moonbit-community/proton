@@ -31,11 +31,14 @@ async fn install_cef_root(
   sha256~ : String,
   root~ : String,
   platform~ : ProtonPlatform,
+  report_progress? : Bool = true,
 ) -> Unit {
   assert_safe_install_dir(install_dir, root)
   ensure_dir(@fsutil.path_parent(install_dir))
   let staging = create_install_staging(install_dir)
-  @output.info("[INFO] Installing CEF into: " + install_dir)
+  if report_progress {
+    @output.info("[INFO] Installing CEF into: " + install_dir)
+  }
   try {
     copy_tree(extracted_root, staging)
     normalize_cef_runtime_layout(staging)

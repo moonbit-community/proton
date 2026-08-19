@@ -36,6 +36,7 @@ async test "failed CEF installation removes incomplete cache markers" {
       sha256="a".repeat(64),
       root=project_root,
       platform~,
+      report_progress=false,
     )
     false
   } catch {
@@ -97,6 +98,7 @@ async test "successful CEF installation writes markers after validation" {
     sha256="a".repeat(64),
     root=project_root,
     platform~,
+    report_progress=false,
   )
   assert_eq(installed_version(install), "cef-test")
   assert_eq(installed_checksum(install), "a".repeat(64))
@@ -124,6 +126,7 @@ async test "failed replacement keeps the previously valid CEF cache" {
     sha256="a".repeat(64),
     root=project_root,
     platform~,
+    report_progress=false,
   )
   @async_fs.mkdir(replacement, recursive=true)
   let failed = try {
@@ -134,6 +137,7 @@ async test "failed replacement keeps the previously valid CEF cache" {
       sha256="b".repeat(64),
       root=project_root,
       platform~,
+      report_progress=false,
     )
     false
   } catch {
@@ -204,6 +208,7 @@ async test "runtime assembly rebuilds an existing truncated runtime" {
     cef_root~,
     prebuilt_root~,
     runtime_dir~,
+    report_progress=false,
   )
   let truncated = @fsutil.path_join(runtime_dir, "lib/libproton.dylib")
   @async_fs.write_file(truncated, "", create_mode=CreateOrTruncate)
@@ -213,6 +218,7 @@ async test "runtime assembly rebuilds an existing truncated runtime" {
     cef_root~,
     prebuilt_root~,
     runtime_dir~,
+    report_progress=false,
   )
   assert_true(file_is_nonempty(truncated))
   validate_runtime_dist(runtime_dir, platform)

@@ -107,6 +107,7 @@ async fn assemble_runtime(
   cef_root~ : String,
   prebuilt_root~ : String,
   runtime_dir~ : String,
+  report_progress? : Bool = true,
 ) -> Unit {
   assert_safe_generated_dir(runtime_dir, cache_root)
   let runtime_lock = acquire_install_lock(runtime_dir)
@@ -123,7 +124,9 @@ async fn assemble_runtime(
   ensure_dir(@fsutil.path_parent(runtime_dir))
   let staging = create_runtime_staging(runtime_dir)
   try {
-    @output.info("[INFO] Assembling Proton runtime: " + runtime_dir)
+    if report_progress {
+      @output.info("[INFO] Assembling Proton runtime: " + runtime_dir)
+    }
     copy_prebuilt_runtime(platform, prebuilt_root, staging)
     if platform.id != "win32-x64" {
       make_executable(
