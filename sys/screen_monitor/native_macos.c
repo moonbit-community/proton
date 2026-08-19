@@ -4,6 +4,7 @@
 #include <dlfcn.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 /* Screen enumeration, cursor location, and hot-plug reconfiguration arrive
    through CoreGraphics, which exposes a plain C API and can be dlopen'd like
@@ -23,7 +24,10 @@ typedef struct {
   proton_cg_float height;
 } proton_cg_rect;
 
-typedef int64_t proton_cg_point_t;
+typedef struct {
+  proton_cg_float x;
+  proton_cg_float y;
+} proton_cg_point_t;
 
 typedef proton_cg_error (*proton_cg_get_active_display_list_fn)(
     proton_cg_display_count, proton_cg_direct_display_id *,
