@@ -12,8 +12,6 @@ pub fn command() -> @argparse.Command
 
 pub async fn run(String, @argparse.Matches) -> Unit
 
-pub async fn write_updater_metadata(PackagePlan, String, String) -> Unit raise UpdaterMetadataError
-
 // Errors
 pub(all) suberror LinuxPackagingError {
   InvalidConfiguration(detail~ : String)
@@ -156,11 +154,6 @@ pub fn WindowsPackagingError::to_repr(Self) -> @debug.Repr
 pub fn WindowsPackagingError::to_string(Self) -> String
 
 // Types and methods
-type MacosCodeSignTarget derive(Eq, @debug.Debug)
-pub fn MacosCodeSignTarget::equal(Self, Self) -> Bool
-pub fn MacosCodeSignTarget::not_equal(Self, Self) -> Bool
-pub fn MacosCodeSignTarget::to_repr(Self) -> @debug.Repr
-
 pub(all) enum PackageHost {
   Macos
   Windows
@@ -178,16 +171,6 @@ type RawPackageOptions derive(Eq, @debug.Debug)
 pub fn RawPackageOptions::equal(Self, Self) -> Bool
 pub fn RawPackageOptions::not_equal(Self, Self) -> Bool
 pub fn RawPackageOptions::to_repr(Self) -> @debug.Repr
-
-type WindowsSignTool derive(Eq, @debug.Debug)
-pub fn WindowsSignTool::equal(Self, Self) -> Bool
-pub fn WindowsSignTool::not_equal(Self, Self) -> Bool
-pub fn WindowsSignTool::to_repr(Self) -> @debug.Repr
-
-type WindowsSigningConfig derive(Eq, @debug.Debug)
-pub fn WindowsSigningConfig::equal(Self, Self) -> Bool
-pub fn WindowsSigningConfig::not_equal(Self, Self) -> Bool
-pub fn WindowsSigningConfig::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

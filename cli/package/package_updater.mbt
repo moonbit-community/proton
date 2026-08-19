@@ -120,32 +120,30 @@ async fn stage_update_revision(plan : PackagePlan, directory : String) -> Unit {
 /// path wants: on Windows the installer, because applying an update re-runs
 /// it; on macOS the zip, because it is the smaller of the two and needs no
 /// mounting to expand.
-fn updater_artifact_path(plan : PackagePlan, platform : String) -> String? {
+fn updater_artifact_path(
+  artifacts : Array[String],
+  platform : String,
+) -> String? {
+  let first_with_suffix = fn(suffix : String) -> String? {
+    for artifact in artifacts {
+      if artifact.to_lower().has_suffix(suffix) {
+        return Some(artifact)
+      }
+    }
+    None
+  }
   match package_host_of(platform) {
     Some(Macos) =>
-      if plan.targets.contains("zip") {
-        Some(macos_zip_path(plan))
-      } else if plan.targets.contains("dmg") {
-        Some(macos_dmg_path(plan))
-      } else {
-        None
+      match first_with_suffix(".app.zip") {
+        Some(path) => Some(path)
+        None => first_with_suffix(".dmg")
       }
     Some(Windows) =>
-      if plan.targets.contains("nsis") {
-        Some(windows_installer_path(plan))
-      } else if plan.targets.contains("zip") {
-        Some(windows_archive_path(plan))
-      } else {
-        None
+      match first_with_suffix("-setup.exe") {
+        Some(path) => Some(path)
+        None => first_with_suffix(".zip")
       }
-    Some(Linux) =>
-      // The suffix has to match what create_linux_appimage produced, so both
-      // read the architecture from the same platform id.
-      match
-        (plan.targets.contains("appimage"), linux_appimage_arch_of(platform)) {
-        (true, Some(arch)) => Some(linux_appimage_path(plan, arch))
-        _ => None
-      }
+    Some(Linux) => first_with_suffix(".appimage")
     None => None
   }
 }
@@ -193,8 +191,9 @@ fn updater_fragment_json(
 /// every field except the signature. Signing is a separate step the developer
 /// runs with their own key, so this command stops exactly where secret material
 /// would otherwise be required.
-pub async fn write_updater_metadata(
+async fn write_updater_metadata(
   plan : PackagePlan,
+  artifacts : Array[String],
   base_url : String,
   published_at : String,
 ) -> Unit raise UpdaterMetadataError {
@@ -205,7 +204,7 @@ pub async fn write_updater_metadata(
   let platform = @cef.current_platform_id() catch {
     error => raise UnknownPlatform(detail=@debug.render(Repr(error)))
   }
-  let artifact = match updater_artifact_path(plan, platform) {
+  let artifact = match updater_artifact_path(artifacts, platform) {
     Some(path) => path
     None => raise NoDistributableArtifact
   }

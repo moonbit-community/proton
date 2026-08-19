@@ -112,6 +112,106 @@ pub fn DocumentType::new(
 }
 
 ///|
+/// Host-native directories for a package while it is being assembled.
+///
+/// The paths are valid only for the duration of `build_with`. A caller may use
+/// them to add framework-specific files after the generic payloads have been
+/// copied and before signing and artifact creation begin.
+pub struct PackageLayout {
+  root : String
+  executable : String
+  resources : String
+  libraries : String
+  executables : String
+}
+
+///|
+pub fn PackageLayout::root(self : PackageLayout) -> String {
+  self.root
+}
+
+///|
+pub fn PackageLayout::executable(self : PackageLayout) -> String {
+  self.executable
+}
+
+///|
+pub fn PackageLayout::resources(self : PackageLayout) -> String {
+  self.resources
+}
+
+///|
+pub fn PackageLayout::libraries(self : PackageLayout) -> String {
+  self.libraries
+}
+
+///|
+pub fn PackageLayout::executables(self : PackageLayout) -> String {
+  self.executables
+}
+
+///|
+/// An additional string property written to a generated macOS Info.plist.
+pub struct MacosPlistString {
+  key : String
+  value : String
+}
+
+///|
+pub fn MacosPlistString::new(key : String, value : String) -> MacosPlistString {
+  MacosPlistString::{ key, value }
+}
+
+///|
+/// A nested macOS code object signed before the main executable and app.
+///
+/// `path` is relative to the staged `.app` root. Array order is signing order,
+/// allowing callers to describe inside-out signing for nested frameworks.
+pub struct MacosSignTarget {
+  path : String
+  runtime_options : Bool
+  entitlements : Bool
+  identifier : String?
+}
+
+///|
+pub fn MacosSignTarget::new(
+  path : String,
+  runtime_options? : Bool = true,
+  entitlements? : Bool = false,
+  identifier? : String,
+) -> MacosSignTarget {
+  MacosSignTarget::{ path, runtime_options, entitlements, identifier }
+}
+
+///|
+/// Host-specific additions to the otherwise portable package specification.
+pub struct PackageCustomization {
+  macos_plist_strings : Array[MacosPlistString]
+  macos_sign_targets : Array[MacosSignTarget]
+  windows_sign_targets : Array[String]
+  windows_verify_targets : Array[String]
+  linux_resources_path : String?
+}
+
+///|
+pub fn PackageCustomization::new(
+  macos_plist_strings? : Array[MacosPlistString] = [],
+  macos_sign_targets? : Array[MacosSignTarget] = [],
+  windows_sign_targets? : Array[String] = [],
+  windows_verify_targets? : Array[String] = [],
+  linux_resources_path? : String,
+) -> PackageCustomization {
+  PackageCustomization::{
+    macos_plist_strings,
+    macos_sign_targets,
+    windows_sign_targets,
+    windows_verify_targets,
+    linux_resources_path,
+  }
+}
+
+///|
 /// Complete input to the host-native packager.
 pub struct PackageSpec {
   executable : String

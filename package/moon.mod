@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_package"
 
-version = "0.1.0"
+version = "0.1.1"
 
 import {
   "moonbitlang/async@0.20.5",
@@ -19,6 +19,6 @@ description = "Host-native desktop application packaging library and CLI."
 
 options(
   warn_list: "",
-  preferred_target: "native",
-  supported_targets: "native",
+  preferred_target: "wasm",
+  supported_targets: "native+wasm",
 )
