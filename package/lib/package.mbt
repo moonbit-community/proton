@@ -425,22 +425,19 @@ async fn promote(source : String, destination : String) -> Unit {
   if had_destination {
     rename_package_path(destination, backup)
   }
-  rename_package_path(source, destination) catch {
-    error => {
-      if had_destination && path_exists(backup) {
-        rename_package_path(backup, destination) catch {
-          rollback_error =>
-            raise PackageFileSystemError::Copy(
-              source~,
-              destination~,
-              detail=@debug.render(Repr(error)) +
-                "; restore failed: " +
-                @debug.render(Repr(rollback_error)),
-            )
-        }
+  {
+    errdefer (if had_destination && path_exists(backup) {
+      rename_package_path(backup, destination) catch {
+        rollback_error =>
+          raise PackageFileSystemError::Copy(
+            source~,
+            destination~,
+            detail="package promotion failed and restore failed: " +
+              @debug.render(Repr(rollback_error)),
+          )
       }
-      raise error
-    }
+    })
+    rename_package_path(source, destination)
   }
   if had_destination {
     remove_tree(backup) catch {

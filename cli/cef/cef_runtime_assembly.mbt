@@ -123,25 +123,17 @@ async fn assemble_runtime(
   }
   ensure_dir(@fsutil.path_parent(runtime_dir))
   let staging = create_runtime_staging(runtime_dir)
-  try {
-    if report_progress {
-      @output.info("[INFO] Assembling Proton runtime: " + runtime_dir)
-    }
-    copy_prebuilt_runtime(platform, prebuilt_root, staging)
-    if platform.id != "win32-x64" {
-      make_executable(
-        @fsutil.path_join(@fsutil.path_join(staging, "bin"), "cef_process"),
-      )
-    }
-    copy_cef_runtime(platform, cef_root, staging)
-    validate_runtime_dist(staging, platform)
-    replace_staged_directory(staging, runtime_dir)
-  } catch {
-    error => {
-      remove_tree(staging) catch {
-        _ => ()
-      }
-      raise error
-    }
+  errdefer (remove_tree(staging) catch { _ => () })
+  if report_progress {
+    @output.info("[INFO] Assembling Proton runtime: " + runtime_dir)
   }
+  copy_prebuilt_runtime(platform, prebuilt_root, staging)
+  if platform.id != "win32-x64" {
+    make_executable(
+      @fsutil.path_join(@fsutil.path_join(staging, "bin"), "cef_process"),
+    )
+  }
+  copy_cef_runtime(platform, cef_root, staging)
+  validate_runtime_dist(staging, platform)
+  replace_staged_directory(staging, runtime_dir)
 }
