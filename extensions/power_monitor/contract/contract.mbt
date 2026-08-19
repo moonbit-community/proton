@@ -51,6 +51,41 @@ pub extend PowerMonitorActivity with ToJson::{to_json}
 pub extend PowerMonitorActivity with FromJson::{from_json}
 
 ///|
+/// Payload for power-monitor session events. Electron's powerMonitor events
+/// carry no arguments, so the payload is empty and the event name alone is the
+/// signal.
+pub(all) struct PowerMonitorEventPayload {} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend PowerMonitorEventPayload with Eq::{not_equal, equal}
+
+///|
+pub extend PowerMonitorEventPayload with Debug::{to_repr}
+
+///|
+pub extend PowerMonitorEventPayload with ToJson::{to_json}
+
+///|
+pub extend PowerMonitorEventPayload with FromJson::{from_json}
+
+///|
+pub(all) struct PowerMonitorEventReply {
+  count : Int
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend PowerMonitorEventReply with Eq::{not_equal, equal}
+
+///|
+pub extend PowerMonitorEventReply with Debug::{to_repr}
+
+///|
+pub extend PowerMonitorEventReply with ToJson::{to_json}
+
+///|
+pub extend PowerMonitorEventReply with FromJson::{from_json}
+
+///|
 pub let get_idle_time : @proton_contract.Command[
   @proton_contract.EmptyRequest,
   IdleTimeReply,
@@ -63,6 +98,42 @@ pub let get_power_source : @proton_contract.Command[
 ] = extension.command("getPowerSource")
 
 ///|
+pub let drain_events : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  PowerMonitorEventReply,
+] = extension.command("drainEvents")
+
+///|
 pub let activity : @proton_contract.Event[PowerMonitorActivity] = extension.event(
   "activity",
+)
+
+///|
+pub let suspend : @proton_contract.Event[PowerMonitorEventPayload] = extension.event(
+  "suspend",
+)
+
+///|
+pub let resume_event : @proton_contract.Event[PowerMonitorEventPayload] = extension.event(
+  "resume",
+)
+
+///|
+pub let on_ac : @proton_contract.Event[PowerMonitorEventPayload] = extension.event(
+  "on-ac",
+)
+
+///|
+pub let on_battery : @proton_contract.Event[PowerMonitorEventPayload] = extension.event(
+  "on-battery",
+)
+
+///|
+pub let lock_screen : @proton_contract.Event[PowerMonitorEventPayload] = extension.event(
+  "lock-screen",
+)
+
+///|
+pub let unlock_screen : @proton_contract.Event[PowerMonitorEventPayload] = extension.event(
+  "unlock-screen",
 )
