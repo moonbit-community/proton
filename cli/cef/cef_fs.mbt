@@ -115,6 +115,7 @@ async fn acquire_install_lock(target_dir : String) -> @async_fs.File {
   let lock_path = target_dir + ".lock"
   ensure_dir(@fsutil.path_parent(lock_path))
   let file = @async_fs.open(lock_path, mode=ReadWrite, create_mode=OpenOrCreate) catch {
+    error if @async.is_being_cancelled() => raise error
     err =>
       raise CefFileSystemError::Write(
         path=lock_path,
@@ -122,6 +123,10 @@ async fn acquire_install_lock(target_dir : String) -> @async_fs.File {
       )
   }
   file.lock(Exclusive) catch {
+    error if @async.is_being_cancelled() => {
+      file.close()
+      raise error
+    }
     err => {
       file.close()
       raise CefFileSystemError::Write(
@@ -148,6 +153,64 @@ async fn create_install_staging(target_dir : String) -> String {
         }
     } noraise {
       _ => return staging
+    }
+  }
+}
+
+///|
+async fn create_install_backup(target_dir : String) -> String {
+  let prefix = target_dir + ".backup-" + @async.now().to_string()
+  for index = 0; ; index = index + 1 {
+    let backup = prefix + "-" + index.to_string()
+    guard !@fsutil.path_exists(backup) else { continue }
+    return backup
+  }
+}
+
+///|
+async fn replace_staged_directory(staging : String, target : String) -> Unit {
+  let had_target = @fsutil.path_exists(target)
+  let backup = if had_target { create_install_backup(target) } else { "" }
+  if had_target {
+    @async_fs.rename(target, backup, replace=false) catch {
+      err =>
+        raise CefFileSystemError::Copy(
+          source=target,
+          destination=backup,
+          detail=@debug.render(Repr(err)),
+        )
+    }
+  }
+  try {
+    @async_fs.rename(staging, target, replace=false) catch {
+      err =>
+        raise CefFileSystemError::Copy(
+          source=staging,
+          destination=target,
+          detail=@debug.render(Repr(err)),
+        )
+    }
+  } catch {
+    error => {
+      if had_target {
+        @async_fs.rename(backup, target, replace=false) catch {
+          restore_error =>
+            raise CefFileSystemError::Copy(
+              source=backup,
+              destination=target,
+              detail="failed to restore after publish error " +
+                @debug.render(Repr(error)) +
+                ": " +
+                @debug.render(Repr(restore_error)),
+            )
+        }
+      }
+      raise error
+    }
+  }
+  if had_target {
+    remove_tree(backup) catch {
+      _ => ()
     }
   }
 }

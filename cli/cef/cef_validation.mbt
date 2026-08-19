@@ -64,7 +64,15 @@ async fn validate_runtime_dist(
 ///|
 async fn runtime_path_is_valid(path : String) -> Bool {
   if @fsutil.path_is_dir(path) {
-    true
+    let entries = @async_fs.readdir(
+      path,
+      include_hidden=true,
+      include_special=false,
+    ) catch {
+      error if @async.is_being_cancelled() => raise error
+      _ => return false
+    }
+    entries.length() > 0
   } else {
     file_is_nonempty(path)
   }

@@ -115,12 +115,10 @@ async fn assemble_runtime(
   if @fsutil.path_is_dir(runtime_dir) {
     try validate_runtime_dist(runtime_dir, platform) catch {
       error if @async.is_being_cancelled() => raise error
-      _ => remove_tree(runtime_dir)
+      _ => ()
     } noraise {
       _ => return
     }
-  } else if @fsutil.path_exists(runtime_dir) {
-    remove_tree(runtime_dir)
   }
   ensure_dir(@fsutil.path_parent(runtime_dir))
   let staging = create_runtime_staging(runtime_dir)
@@ -134,18 +132,7 @@ async fn assemble_runtime(
     }
     copy_cef_runtime(platform, cef_root, staging)
     validate_runtime_dist(staging, platform)
-    @async_fs.rename(staging, runtime_dir, replace=false) catch {
-      error => {
-        if @fsutil.path_is_dir(runtime_dir) {
-          remove_tree(staging)
-          return
-        }
-        raise CefRuntimeError::RuntimeConflict(
-          path=runtime_dir,
-          detail=@debug.render(Repr(error)),
-        )
-      }
-    }
+    replace_staged_directory(staging, runtime_dir)
   } catch {
     error => {
       remove_tree(staging) catch {

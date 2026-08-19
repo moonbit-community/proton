@@ -68,15 +68,7 @@ async fn install_cef_root(
         )
     }
     validate_cef_root(staging, platform)
-    remove_tree(install_dir)
-    @async_fs.rename(staging, install_dir, replace=false) catch {
-      err =>
-        raise CefFileSystemError::Copy(
-          source=staging,
-          destination=install_dir,
-          detail=@debug.render(Repr(err)),
-        )
-    }
+    replace_staged_directory(staging, install_dir)
   } catch {
     error => {
       remove_tree(staging) catch {
@@ -190,44 +182,87 @@ fn home_directory() -> String? {
 }
 
 ///|
+priv struct CefCacheLease {
+  root : String
+  lock : @async_fs.File
+}
+
+///|
+fn CefCacheLease::release(self : CefCacheLease) -> Unit {
+  self.lock.unlock()
+  self.lock.close()
+}
+
+///|
+async fn install_from_project_cache(
+  project_cache~ : String,
+  cache_dir~ : String,
+  name~ : String,
+  sha256~ : String,
+  root~ : String,
+  platform~ : ProtonPlatform,
+) -> Bool {
+  let project_lock = acquire_install_lock(project_cache)
+  defer project_lock.close()
+  defer project_lock.unlock()
+  guard cached_cef_root_is_valid(project_cache, name, sha256, platform) else {
+    return false
+  }
+  install_cef_root(
+    extracted_root=project_cache,
+    install_dir=cache_dir,
+    name~,
+    sha256~,
+    root~,
+    platform~,
+  )
+  true
+}
+
+///|
 async fn ensure_cef_cache(
   root~ : String,
   platform~ : ProtonPlatform,
   name~ : String,
   url~ : String?,
   sha256~ : String,
-) -> String {
+) -> CefCacheLease {
   let project_cache = project_cef_cache_dir(root~, platform~, name~)
   let cache_dir = global_cef_cache_dir(project_root=root, platform~, name~).unwrap_or(
     project_cache,
   )
-  if cached_cef_root_is_valid(cache_dir, name, sha256, platform) {
-    return cache_dir
-  }
-  if project_cache != cache_dir &&
-    cached_cef_root_is_valid(project_cache, name, sha256, platform) {
-    install_cef_root(
-      extracted_root=project_cache,
-      install_dir=cache_dir,
+  let lock = acquire_install_lock(cache_dir)
+  try {
+    if cached_cef_root_is_valid(cache_dir, name, sha256, platform) {
+      return { root: cache_dir, lock }
+    }
+    if project_cache != cache_dir &&
+      install_from_project_cache(
+        project_cache~,
+        cache_dir~,
+        name~,
+        sha256~,
+        root~,
+        platform~,
+      ) {
+      return { root: cache_dir, lock }
+    }
+    setup_downloaded_cef(
       name~,
+      url~,
       sha256~,
       root~,
+      install_dir=cache_dir,
       platform~,
     )
-    return cache_dir
+    { root: cache_dir, lock }
+  } catch {
+    error => {
+      lock.unlock()
+      lock.close()
+      raise error
+    }
   }
-  if project_cache != cache_dir {
-    remove_tree(project_cache)
-  }
-  setup_downloaded_cef(
-    name~,
-    url~,
-    sha256~,
-    root~,
-    install_dir=cache_dir,
-    platform~,
-  )
-  cache_dir
 }
 
 ///|
