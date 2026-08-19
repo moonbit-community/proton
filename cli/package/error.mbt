@@ -192,9 +192,7 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
       "unsupported bundle.resources glob: " + path
     MissingInput(path~) => "package input is missing: " + path
     MissingExecutable(path~) =>
-      "package executable not found under " +
-      path +
-      "; run proton package without --no-build first"
+      "Moon reported a package executable that does not exist: " + path
     NotLaunchableMachO(path~, filetype~) =>
       "staged bundle executable " +
       path +

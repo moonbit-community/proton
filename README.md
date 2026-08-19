@@ -440,6 +440,26 @@ MBT_CDP_TARGET=9222 moon -C e2e run test --target native
 
 ## Bundle and package
 
+To package an already-built executable independently of Proton project
+discovery and runtime assembly, install `moonbit-community/proton_package`:
+
+```sh
+moon install moonbit-community/proton_package
+proton_package \
+  --executable ./build/my-app \
+  --product-name "My App" \
+  --identifier com.example.my-app \
+  --version 1.0.0 \
+  --format app \
+  --output dist
+```
+
+The same implementation is available as the
+`moonbit-community/proton_package/lib` package. `--config` accepts a reusable
+JSON specification; paths in that file are resolved relative to the file.
+
+### Proton projects
+
 The `bundle` block in `proton.project.json` enables package creation and selects its
 default targets and output directory:
 
@@ -492,9 +512,9 @@ proton_cli package
 proton_cli package --release
 ```
 
-The package command performs a debug build by default. Pass `--release` to use
-MoonBit's release build mode, or `--no-build` to reuse an existing build from
-the selected mode. Package output is written to `dist` by default.
+The package command performs an incremental debug executable build by default.
+Pass `--release` to use MoonBit's release build mode. Package output is written
+to `dist` by default.
 Icons, resources, output targets, signing, notarization, custom URL schemes, and
 macOS document types are configured through `proton.project.json` and package command
 options.

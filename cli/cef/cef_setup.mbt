@@ -85,7 +85,9 @@ async fn setup(
   let (proton_version, proton_source_hash) = prebuilt_manifest_identity(
     prebuilt_root,
   )
-  let cef_root = ensure_cef_cache(root~, platform~, name~, url~, sha256~)
+  let cef_cache = ensure_cef_cache(root~, platform~, name~, url~, sha256~)
+  defer cef_cache.release()
+  let cef_root = cef_cache.root
   let runtime_id = proton_runtime_id(proton_version, proton_source_hash, sha256)
   let global_cache_root = resolve_global_runtime_cache_root(
     project_root=root,
