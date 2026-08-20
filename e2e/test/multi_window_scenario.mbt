@@ -49,21 +49,25 @@ pub extend MultiWindowProbe with FromJson::{from_json}
 
 ///|
 async fn run_multi_window_scenario_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
 ) -> ShutdownProbeResult {
   let (target_a, target_b) = wait_for_multi_window_targets(target, timeout)
   let browser = @client.connect_cdp_browser_target_with_timeout(
+    tasks,
     cdp_target_from(target),
     timeout_ms=timeout,
   )
-  let page_a = @client.connect_cdp_page_target_with_timeout(
+  let page_a = @page.Page::connect(
+    tasks,
     cdp_target_from(target),
     target_id=target_a.target_id,
     timeout_ms=timeout,
   )
-  let page_b = @client.connect_cdp_page_target_with_timeout(
+  let page_b = @page.Page::connect(
+    tasks,
     cdp_target_from(target),
     target_id=target_b.target_id,
     timeout_ms=timeout,
@@ -119,15 +123,13 @@ async fn run_multi_window_scenario_probe(
 
 ///|
 async fn run_multi_window_page_clients(
-  page_a : @client.CdpClient,
-  page_b : @client.CdpClient,
+  page_a : @page.Page,
+  page_b : @page.Page,
   target_a : String,
   target_b : String,
   timeout : Int,
   native_log_path : String?,
 ) -> MultiWindowProbe {
-  ignore(page_a.send_schema_command("Runtime.enable"))
-  ignore(page_b.send_schema_command("Runtime.enable"))
   wait_for_ready(page_a, multi_window_ready_expression(), timeout)
   wait_for_ready(page_b, multi_window_ready_expression(), timeout)
   let (value_a, value_b) = @async.with_task_group(group => {

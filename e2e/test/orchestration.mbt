@@ -466,12 +466,15 @@ fn file_output_suffix(path : String, label : String) -> String {
 
 ///|
 async fn close_browser(target : String, timeout : Int) -> Unit {
-  let browser = @client.connect_cdp_browser_target_with_timeout(
-    cdp_target_from(target),
-    timeout_ms=timeout,
-  )
-  defer browser.close()
-  close_connected_browser(browser)
+  @async.with_task_group(group => {
+    let browser = @client.connect_cdp_browser_target_with_timeout(
+      group,
+      cdp_target_from(target),
+      timeout_ms=timeout,
+    )
+    defer browser.close()
+    close_connected_browser(browser)
+  })
 }
 
 ///|
@@ -580,13 +583,13 @@ async fn run_scenario_probe_once(
       timeout,
     )
     let shutdown = if name == "45_bridge_multi_window" {
-      run_multi_window_scenario_probe(app, target, timeout)
+      run_multi_window_scenario_probe(group, app, target, timeout)
     } else if name == "52_web_contents_view" {
       run_web_contents_view_scenario_probe(
-        app, target, browser_web_socket_url, timeout,
+        group, app, target, browser_web_socket_url, timeout,
       )
     } else if name == "54_devtools" {
-      run_devtools_scenario_page_probe(app, target, timeout)
+      run_devtools_scenario_page_probe(group, app, target, timeout)
       match app_exit_code(app.process) {
         Some(code) =>
           fail(
@@ -598,7 +601,7 @@ async fn run_scenario_probe_once(
       }
       finish_scenario_app(app, target)
     } else if name == "56_i18n" {
-      run_i18n_scenario_page_probe(app, target, timeout)
+      run_i18n_scenario_page_probe(group, app, target, timeout)
       match app_exit_code(app.process) {
         Some(code) =>
           fail(
@@ -612,17 +615,19 @@ async fn run_scenario_probe_once(
     } else {
       if name == "41_app_commands" {
         run_app_commands_full_probe(
+          group,
           output_root,
           target,
           timeout,
           app.native_log_path,
         )
       } else if name == "40_event_broadcast" {
-        run_event_scenario_page_probe(app, target, timeout)
+        run_event_scenario_page_probe(group, app, target, timeout)
       } else if name == "46_asset_sidecar_resources" {
-        run_asset_sidecar_scenario_page_probe(app, target, timeout)
+        run_asset_sidecar_scenario_page_probe(group, app, target, timeout)
       } else {
         run_extension_scenario_page_probe(
+          group,
           app,
           target,
           name,

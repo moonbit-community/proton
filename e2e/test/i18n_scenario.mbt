@@ -1,10 +1,17 @@
 ///|
 async fn run_i18n_scenario_page_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
 ) -> Unit {
-  let page = connect_spawned_page(app, target, timeout, title="Proton I18n E2E")
+  let page = connect_spawned_page(
+    tasks,
+    app,
+    target,
+    timeout,
+    title="Proton I18n E2E",
+  )
   defer page.close()
   wait_for_ready(page, scenario_ready_expression("56_i18n"), timeout)
   guard evaluate_bool(page, scenario_probe_expression("56_i18n"), true) else {
@@ -28,6 +35,7 @@ async fn run_i18n_scenario_page_probe(
       connection.end_response()
     })
     let probe = navigate_page_and_connect(
+      group,
       target,
       "http://127.0.0.1:" + server.addr.port().to_string() + "/i18n",
       timeout,

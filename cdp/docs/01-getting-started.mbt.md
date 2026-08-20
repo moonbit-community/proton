@@ -24,6 +24,7 @@ For an executable package that connects to CDP:
 import {
   "moonbitlang/async",
   "moonbit-community/proton_cdp/client",
+  "moonbit-community/proton_cdp/page",
   "moonbit-community/proton_cdp/protocol",
   "moonbit-community/proton_cdp/protocol/typed",
 }
@@ -91,12 +92,13 @@ The browser-level WebSocket is the right endpoint for `Browser.*` and
 
 ```mbt nocheck
 let target = @client.parse_cdp_target("9222")
-let client = @client.connect_cdp_browser_target(target)
-defer client.close()
-
-let response = client.send_schema_command("Browser.getVersion")
-let result = @client.cdp_response_result_json(response)
-println(result.stringify())
+@async.with_task_group(fn(tasks) {
+  let client = @client.connect_cdp_browser_target(tasks, target)
+  defer client.close()
+  let response = client.send_schema_command("Browser.getVersion")
+  let result = @client.cdp_response_result_json(response)
+  println(result.stringify())
+})
 ```
 
 `send_schema_command` validates the method, parameters, and successful result
@@ -109,17 +111,17 @@ connect to a page-level target:
 
 ```mbt nocheck
 let target = @client.parse_cdp_target("9222")
-let page = @client.connect_cdp_page_target(target)
-defer page.close()
+@async.with_task_group(fn(tasks) {
+  let page = @page.Page::connect(tasks, target)
+  defer page.close()
+  println(page.evaluate("document.title").stringify())
+})
 ```
 
 You can select a page by target id, URL, or title:
 
 ```mbt nocheck
-let page = @client.connect_cdp_page_target(
-  target,
-  url="https://example.com/",
-)
+let page = @page.Page::connect(tasks, target, url="https://example.com/")
 ```
 
 When no selector is provided, the first discovered page target is used.

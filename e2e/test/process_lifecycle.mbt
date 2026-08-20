@@ -376,15 +376,15 @@ async fn run_pending_lifecycle_probe_once(
     ignore(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
-    let page = connect_spawned_page(app, target, timeout)
+    let page = connect_spawned_page(group, app, target, timeout)
     let mut page_open = true
     defer (if page_open { page.close() })
     let browser = @client.connect_cdp_browser_target_with_timeout(
+      group,
       cdp_target_from(target),
       timeout_ms=timeout,
     )
     defer browser.close()
-    ignore(page.send_schema_command("Runtime.enable"))
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     let initial_slow_adds = count_native_log_entries(
       app.native_log_path,
@@ -458,15 +458,15 @@ async fn run_event_lifecycle_probe_once(
     ignore(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
-    let page = connect_spawned_page(app, target, timeout)
+    let page = connect_spawned_page(group, app, target, timeout)
     let mut page_open = true
     defer (if page_open { page.close() })
     let browser = @client.connect_cdp_browser_target_with_timeout(
+      group,
       cdp_target_from(target),
       timeout_ms=timeout,
     )
     defer browser.close()
-    ignore(page.send_schema_command("Runtime.enable"))
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     let initial_starts = count_native_log_entries(
       app.native_log_path,
@@ -526,11 +526,12 @@ async fn run_event_lifecycle_probe(root : String, timeout : Int) -> Unit {
 
 ///|
 async fn connect_spawned_page(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
   title? : String,
-) -> @client.CdpClient {
+) -> @page.Page {
   let mut elapsed = 0
   while elapsed <= timeout {
     match app_exit_code(app.process) {
@@ -547,7 +548,8 @@ async fn connect_spawned_page(
         cdp_start_poll_timeout_ms,
         "CDP page connection probe",
         () => {
-          @client.connect_cdp_page_target_with_timeout(
+          @page.Page::connect(
+            tasks,
             cdp_target_from(target),
             title?,
             timeout_ms=cdp_start_poll_timeout_ms,

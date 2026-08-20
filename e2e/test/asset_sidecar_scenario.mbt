@@ -28,13 +28,13 @@ pub extend AssetSidecarScenarioProbe with FromJson::{from_json}
 
 ///|
 async fn run_asset_sidecar_scenario_page_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
 ) -> Unit {
-  let page = connect_spawned_page(app, target, timeout)
+  let page = connect_spawned_page(tasks, app, target, timeout)
   defer page.close()
-  ignore(page.send_schema_command("Runtime.enable"))
   wait_for_ready(
     page,
     scenario_ready_expression("46_asset_sidecar_resources"),
@@ -57,11 +57,7 @@ async fn run_asset_sidecar_scenario_page_probe(
     "asset document navigation with bridge", timeout,
   )
   assert_asset_sidecar_native_log(app.native_log_path)
-  ignore(
-    page.send_cdp_command("Page.navigate", params={
-      "url": "https://proton.localhost/missing.html",
-    }),
-  )
+  ignore(page.navigate("https://proton.localhost/missing.html"))
   wait_for_cdp_expression(
     page, "location.pathname === '/missing.html' && document.body?.textContent === 'Not Found'",
     "asset sidecar local 404", timeout,

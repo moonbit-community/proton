@@ -1,0 +1,51 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_cdp/page"
+
+import {
+  "moonbit-community/proton_cdp/client",
+  "moonbitlang/async",
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror JavaScriptError {
+  Exception(Json)
+  MissingValue(Json)
+} derive(@debug.Debug)
+pub fn JavaScriptError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror PageLifecycleError {
+  Closed
+  ContextLost
+} derive(@debug.Debug)
+pub fn PageLifecycleError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub struct IsolatedWorld {
+  // private fields
+}
+pub async fn IsolatedWorld::evaluate(Self, String, await_promise? : Bool) -> Json
+
+pub struct Navigation {
+  // private fields
+}
+pub async fn Navigation::wait_for_context(Self) -> Unit
+
+pub struct Page {
+  // private fields
+}
+pub async fn Page::capture_png(Self) -> String
+pub fn Page::close(Self) -> Unit
+pub async fn[X] Page::connect(@async.TaskGroup[X], @client.CdpTarget, target_id? : String, url? : String, title? : String, timeout_ms? : Int) -> Self
+pub async fn[X] Page::connect_web_socket(@async.TaskGroup[X], String, timeout_ms? : Int) -> Self
+pub async fn Page::create_isolated_world(Self, String, grant_universal_access? : Bool) -> IsolatedWorld
+pub async fn Page::evaluate(Self, String, await_promise? : Bool) -> Json
+pub async fn Page::navigate(Self, String) -> Navigation
+pub async fn Page::reload(Self) -> Navigation
+pub async fn Page::wait_until(Self, String) -> Unit
+
+// Type aliases
+
+// Traits

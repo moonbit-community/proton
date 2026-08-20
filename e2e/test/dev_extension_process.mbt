@@ -411,7 +411,7 @@ async fn run_dev_extension_dev_probe_once(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
     run_dev_extension_page_probe(
-      app, target, frontend_url, output_root, timeout,
+      group, app, target, frontend_url, output_root, timeout,
     )
     match app_exit_code(app.process) {
       Some(code) =>
@@ -456,7 +456,7 @@ async fn run_dev_extension_production_probe_once(
     ignore(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
-    run_dev_extension_production_page_probe(app, target, timeout)
+    run_dev_extension_production_page_probe(group, app, target, timeout)
     match app_exit_code(app.process) {
       Some(code) =>
         fail(

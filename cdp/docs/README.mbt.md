@@ -3,7 +3,7 @@
 `moonbit-community/proton_cdp` is a MoonBit library for the Chrome DevTools Protocol
 (CDP). It provides direct access to CDP messages with protocol metadata,
 schema-aware validation, generated typed command builders, remote debugging
-discovery, a WebSocket CDP client, target helpers, event buffering, and
+discovery, a WebSocket CDP client, context-aware page sessions, target helpers, and
 optional local Chrome launch support.
 
 ## Packages
@@ -31,7 +31,7 @@ optional local Chrome launch support.
   discovery, and connecting to browser or page targets.
 - [Commands and schemas](02-commands-and-schemas.mbt.md): raw commands, schema-aware
   commands, typed commands, and remote protocol comparison.
-- [Events and targets](03-events-and-targets.mbt.md): event buffering, handlers, and
+- [Events and targets](03-events-and-targets.mbt.md): event observation, handlers, and
   flattened target sessions.
 - [Running and testing](04-running-and-testing.mbt.md): launching Chrome, examples,
   unit tests, coverage, and real-browser E2E tests.

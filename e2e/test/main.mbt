@@ -34,26 +34,25 @@ async fn run_connected_scenario_probe(
   target : String,
   timeout : Int,
 ) -> Unit {
-  if name == "45_bridge_multi_window" {
-    run_multi_window_driver_probe(target, timeout)
-    return
-  }
-  let page = if name == "54_devtools" {
-    @client.connect_cdp_page_target_with_timeout(
-      cdp_target_from(target),
-      title="Proton DevTools API",
-      timeout_ms=timeout,
-    )
-  } else {
-    @client.connect_cdp_page_target_with_timeout(
-      cdp_target_from(target),
-      timeout_ms=timeout,
-    )
-  }
-  defer page.close()
-  ignore(page.send_schema_command("Runtime.enable"))
-  wait_for_ready(page, scenario_ready_expression(name), timeout)
-  guard evaluate_bool(page, scenario_probe_expression(name), true) else {
-    fail("CDP e2e probe failed for " + name)
-  }
+  @async.with_task_group(group => {
+    if name == "45_bridge_multi_window" {
+      run_multi_window_driver_probe(group, target, timeout)
+      return
+    }
+    let page = if name == "54_devtools" {
+      @page.Page::connect(
+        group,
+        cdp_target_from(target),
+        title="Proton DevTools API",
+        timeout_ms=timeout,
+      )
+    } else {
+      @page.Page::connect(group, cdp_target_from(target), timeout_ms=timeout)
+    }
+    defer page.close()
+    wait_for_ready(page, scenario_ready_expression(name), timeout)
+    guard evaluate_bool(page, scenario_probe_expression(name), true) else {
+      fail("CDP e2e probe failed for " + name)
+    }
+  })
 }

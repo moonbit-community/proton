@@ -12,45 +12,57 @@ async fn[T, E : Error] try_result_client_client(
 ///|
 /// WebSocket client for Chrome DevTools Protocol.
 ///
-/// `CdpClient` tracks in-flight command ids, buffers nonmatching responses and
-/// events, and exposes raw plus schema-aware send helpers. Create it from a
+/// `CdpClient` tracks in-flight command ids, dispatches responses and events
+/// from one reader task, and exposes raw plus schema-aware send helpers. Create it from a
 /// direct WebSocket URL with `CdpClient::connect`, or from a discovery target
 /// with `connect_cdp_target` / `connect_cdp_browser_target`.
 ///
 /// The client is intentionally a thin CDP transport. It does not own browser
-/// lifecycle, retry commands, schedule background reads, or interpret domain
-/// semantics beyond lightweight schema validation. Incoming messages are read
-/// only while a caller is waiting for a response or event, which keeps control
-/// flow explicit for tools and tests.
+/// lifecycle, retry commands, or interpret domain semantics beyond lightweight
+/// schema validation. Its reader belongs to the caller-provided task group, so
+/// connection lifetime remains structurally scoped.
 ///
 /// State retained by the client is diagnostic and convenience state:
 ///
 /// - `last_cdp_request`, `last_cdp_response`, and `last_cdp_event` expose the
 ///   most recent traffic observed by this client.
-/// - `pending_responses` stores responses that arrived while waiting for a
-///   different command id.
-/// - `cdp_events` stores events observed while reading from the socket.
 /// - `attached_targets` mirrors flattened target attach/detach events seen on
 ///   this connection; it is not a full browser target registry.
 ///
 /// Example:
 /// ```
-/// // let client = CdpClient::connect("ws://127.0.0.1:9222/devtools/browser/id")
+/// // let client = CdpClient::connect(tasks, "ws://127.0.0.1:9222/devtools/browser/id")
 /// // defer client.close()
 /// ```
 pub struct CdpClient {
   priv ws : @websocket.Conn
   priv mut next_id : Int
   priv mut next_event_handler_id : Int
-  priv pending_responses : Map[Int, @protocol.CdpResponseMessage]
+  priv mut next_close_handler_id : Int
+  priv pending_commands : Map[Int, CdpPendingCommand]
   priv command_contexts : Map[Int, CdpCommandContext]
+  priv mut closed : Bool
+  priv event_changed : @async.CondVar
   priv mut last_command_failure : CdpCommandFailure?
-  priv cdp_events : Array[@protocol.CdpEventMessage]
   priv cdp_event_handlers : Array[CdpEventHandler]
+  priv close_handlers : Array[CdpCloseHandler]
   priv mut last_cdp_request : @protocol.CdpCommandMessage?
   priv mut last_cdp_response : @protocol.CdpResponseMessage?
   priv mut last_cdp_event : @protocol.CdpEventMessage?
   priv attached_targets : Map[String, CdpAttachedTarget]
+}
+
+///|
+priv enum CdpPendingCommandState {
+  Waiting
+  Completed(@protocol.CdpResponseMessage)
+  ConnectionClosed
+}
+
+///|
+priv struct CdpPendingCommand {
+  mut state : CdpPendingCommandState
+  changed : @async.CondVar
 }
 
 ///|
@@ -67,6 +79,12 @@ struct CdpEventHandler {
   method_name : String?
   session_id : String?
   handler : (@protocol.CdpEventMessage) -> Unit
+}
+
+///|
+struct CdpCloseHandler {
+  id : Int
+  handler : () -> Unit
 }
 
 ///|
@@ -256,10 +274,13 @@ pub fn CdpConnectionError::message(self : CdpConnectionError) -> String {
 ///
 /// Example:
 /// ```
-/// // let client = CdpClient::connect("ws://127.0.0.1:9222/devtools/browser/id")
+/// // let client = CdpClient::connect(tasks, "ws://127.0.0.1:9222/devtools/browser/id")
 /// ```
-pub async fn CdpClient::connect(web_socket_url : String) -> CdpClient {
-  CdpClient::from_websocket(@websocket.connect(web_socket_url))
+pub async fn[X] CdpClient::connect(
+  tasks : @async.TaskGroup[X],
+  web_socket_url : String,
+) -> CdpClient {
+  CdpClient::from_websocket(tasks, @websocket.connect(web_socket_url))
 }
 
 ///|
@@ -274,9 +295,10 @@ pub async fn CdpClient::connect(web_socket_url : String) -> CdpClient {
 ///
 /// Example:
 /// ```
-/// // let client = CdpClient::connect_with_timeout(url, timeout_ms=5000)
+/// // let client = CdpClient::connect_with_timeout(tasks, url, timeout_ms=5000)
 /// ```
-pub async fn CdpClient::connect_with_timeout(
+pub async fn[X] CdpClient::connect_with_timeout(
+  tasks : @async.TaskGroup[X],
   web_socket_url : String,
   timeout_ms? : Int = 25000,
 ) -> CdpClient {
@@ -285,7 +307,7 @@ pub async fn CdpClient::connect_with_timeout(
     @async.with_timeout_opt(timeout_ms, () => @websocket.connect(web_socket_url))
   })
   match result {
-    Ok(Some(ws)) => CdpClient::from_websocket(ws)
+    Ok(Some(ws)) => CdpClient::from_websocket(tasks, ws)
     Ok(None) =>
       raise CdpConnectionError::ConnectionTimeout(web_socket_url, timeout_ms)
     Err(_) =>
@@ -297,21 +319,29 @@ pub async fn CdpClient::connect_with_timeout(
 
 ///|
 /// Wraps an already-open WebSocket as a CDP client.
-fn CdpClient::from_websocket(ws : @websocket.Conn) -> CdpClient {
-  {
+fn[X] CdpClient::from_websocket(
+  tasks : @async.TaskGroup[X],
+  ws : @websocket.Conn,
+) -> CdpClient {
+  let client = CdpClient::{
     ws,
     next_id: 1,
     next_event_handler_id: 1,
-    pending_responses: {},
+    next_close_handler_id: 1,
+    pending_commands: {},
     command_contexts: {},
+    closed: false,
+    event_changed: @async.CondVar::Cond(),
     last_command_failure: None,
-    cdp_events: [],
     cdp_event_handlers: [],
+    close_handlers: [],
     last_cdp_request: None,
     last_cdp_response: None,
     last_cdp_event: None,
     attached_targets: {},
   }
+  tasks.spawn_bg(() => client.read_messages(), no_wait=true, allow_failure=true)
+  client
 }
 
 ///|
@@ -327,11 +357,14 @@ fn CdpClient::from_websocket(ws : @websocket.Conn) -> CdpClient {
 /// Example:
 /// ```
 /// // let target = parse_cdp_target("9222")
-/// // let client = connect_cdp_target(target)
+/// // let client = connect_cdp_target(tasks, target)
 /// ```
-pub async fn connect_cdp_target(target : CdpTarget) -> CdpClient {
+pub async fn[X] connect_cdp_target(
+  tasks : @async.TaskGroup[X],
+  target : CdpTarget,
+) -> CdpClient {
   let web_socket_url = discover_web_socket_url(target)
-  CdpClient::connect(web_socket_url)
+  CdpClient::connect(tasks, web_socket_url)
 }
 
 ///|
@@ -343,14 +376,15 @@ pub async fn connect_cdp_target(target : CdpTarget) -> CdpClient {
 ///
 /// Example:
 /// ```
-/// // let client = connect_cdp_target_with_timeout(target, timeout_ms=5000)
+/// // let client = connect_cdp_target_with_timeout(tasks, target, timeout_ms=5000)
 /// ```
-pub async fn connect_cdp_target_with_timeout(
+pub async fn[X] connect_cdp_target_with_timeout(
+  tasks : @async.TaskGroup[X],
   target : CdpTarget,
   timeout_ms? : Int = 25000,
 ) -> CdpClient {
   let web_socket_url = discover_web_socket_url(target)
-  CdpClient::connect_with_timeout(web_socket_url, timeout_ms~)
+  CdpClient::connect_with_timeout(tasks, web_socket_url, timeout_ms~)
 }
 
 ///|
@@ -363,11 +397,14 @@ pub async fn connect_cdp_target_with_timeout(
 ///
 /// Example:
 /// ```
-/// // let client = connect_cdp_browser_target(parse_cdp_target("9222"))
+/// // let client = connect_cdp_browser_target(tasks, parse_cdp_target("9222"))
 /// ```
-pub async fn connect_cdp_browser_target(target : CdpTarget) -> CdpClient {
+pub async fn[X] connect_cdp_browser_target(
+  tasks : @async.TaskGroup[X],
+  target : CdpTarget,
+) -> CdpClient {
   let web_socket_url = discover_browser_web_socket_url(target)
-  CdpClient::connect(web_socket_url)
+  CdpClient::connect(tasks, web_socket_url)
 }
 
 ///|
@@ -375,14 +412,15 @@ pub async fn connect_cdp_browser_target(target : CdpTarget) -> CdpClient {
 ///
 /// Example:
 /// ```
-/// // let client = connect_cdp_browser_target_with_timeout(target, timeout_ms=5000)
+/// // let client = connect_cdp_browser_target_with_timeout(tasks, target, timeout_ms=5000)
 /// ```
-pub async fn connect_cdp_browser_target_with_timeout(
+pub async fn[X] connect_cdp_browser_target_with_timeout(
+  tasks : @async.TaskGroup[X],
   target : CdpTarget,
   timeout_ms? : Int = 25000,
 ) -> CdpClient {
   let web_socket_url = discover_browser_web_socket_url(target)
-  CdpClient::connect_with_timeout(web_socket_url, timeout_ms~)
+  CdpClient::connect_with_timeout(tasks, web_socket_url, timeout_ms~)
 }
 
 ///|
@@ -398,9 +436,10 @@ pub async fn connect_cdp_browser_target_with_timeout(
 ///
 /// Example:
 /// ```
-/// // let client = connect_cdp_page_target(parse_cdp_target("9222"), title="Example")
+/// // let client = connect_cdp_page_target(tasks, parse_cdp_target("9222"), title="Example")
 /// ```
-pub async fn connect_cdp_page_target(
+pub async fn[X] connect_cdp_page_target(
+  tasks : @async.TaskGroup[X],
   target : CdpTarget,
   target_id? : String,
   url? : String,
@@ -412,7 +451,7 @@ pub async fn connect_cdp_page_target(
     url?,
     title?,
   )
-  CdpClient::connect(web_socket_url)
+  CdpClient::connect(tasks, web_socket_url)
 }
 
 ///|
@@ -420,9 +459,10 @@ pub async fn connect_cdp_page_target(
 ///
 /// Example:
 /// ```
-/// // let client = connect_cdp_page_target_with_timeout(target, target_id="page-1", timeout_ms=5000)
+/// // let client = connect_cdp_page_target_with_timeout(tasks, target, target_id="page-1", timeout_ms=5000)
 /// ```
-pub async fn connect_cdp_page_target_with_timeout(
+pub async fn[X] connect_cdp_page_target_with_timeout(
+  tasks : @async.TaskGroup[X],
   target : CdpTarget,
   target_id? : String,
   url? : String,
@@ -435,22 +475,24 @@ pub async fn connect_cdp_page_target_with_timeout(
     url?,
     title?,
   )
-  CdpClient::connect_with_timeout(web_socket_url, timeout_ms~)
+  CdpClient::connect_with_timeout(tasks, web_socket_url, timeout_ms~)
 }
 
 ///|
-/// Closes the WebSocket and clears in-flight response state.
+/// Closes the WebSocket and completes all in-flight waits as connection closed.
 ///
-/// Buffered events and last-message diagnostics remain available after close,
-/// but any pending command contexts and buffered responses are discarded because
-/// no further reads can complete them.
+/// The last-message diagnostics remain available after close. Events are live
+/// notifications and are not retained for replay.
 ///
 /// Example:
 /// ```
 /// // defer client.close()
 /// ```
 pub fn CdpClient::close(self : CdpClient) -> Unit {
-  self.clear_connection_state()
+  if self.closed {
+    return
+  }
+  self.mark_connection_closed()
   self.ws.close()
 }
 
@@ -461,9 +503,8 @@ pub fn CdpClient::close(self : CdpClient) -> Unit {
 /// the bundled protocol manifest. Use `send_schema_command` for bundled-schema
 /// validation.
 ///
-/// Events and responses for other in-flight command ids may be read while
-/// waiting. Events are appended to the event buffer; other responses are kept
-/// for later `recv_cdp_response` calls.
+/// The connection's single reader routes responses directly to their matching
+/// waiters and delivers events to registered handlers while this call waits.
 ///
 /// Example:
 /// ```
@@ -590,11 +631,16 @@ pub async fn CdpClient::send_cdp_command(
   params? : Json,
   session_id? : String,
 ) -> Int {
+  guard !self.closed else { raise BrowserError::ConnectionClosed }
   let id = self.next_id
   self.next_id = self.next_id + 1
   let command = @protocol.cdp_command(id~, method_name~, params?, session_id?)
   self.last_cdp_request = Some(command)
   self.command_contexts[id] = { method_name, session_id }
+  self.pending_commands[id] = {
+    state: Waiting,
+    changed: @async.CondVar::Cond(),
+  }
   self.ws.send_text(command.stringify())
   id
 }
@@ -602,12 +648,8 @@ pub async fn CdpClient::send_cdp_command(
 ///|
 /// Waits for the response with the requested command id.
 ///
-/// Nonmatching responses are buffered, and events are recorded in the event
-/// buffer. On timeout the command state is cleared and the WebSocket is closed.
-///
-/// Closing the socket on timeout avoids leaving the client in a partially read
-/// state where the timed-out command might still complete later and confuse
-/// subsequent waits.
+/// The connection reader completes the matching pending command directly. A
+/// timeout removes only that command; a later response for it is discarded.
 ///
 /// Example:
 /// ```
@@ -624,7 +666,6 @@ pub async fn CdpClient::recv_cdp_response(
     Some(response) => response
     None => {
       self.clear_inflight_command(id)
-      self.ws.close()
       raise BrowserError::WaitTimeout("cdp response \{id}")
     }
   }
@@ -642,6 +683,10 @@ async fn CdpClient::send_cdp_message_no_wait(
     method_name: command.method_name,
     session_id: command.session_id,
   }
+  self.pending_commands[command.id] = {
+    state: Waiting,
+    changed: @async.CondVar::Cond(),
+  }
   self.ws.send_text(command.stringify())
 }
 
@@ -651,6 +696,9 @@ fn CdpClient::reserve_cdp_command_id(
   self : CdpClient,
   id : Int,
 ) -> Unit raise BrowserError {
+  if self.closed {
+    raise ConnectionClosed
+  }
   if id <= 0 || self.command_contexts.contains(id) {
     raise InvalidField("id")
   }
@@ -660,28 +708,28 @@ fn CdpClient::reserve_cdp_command_id(
 }
 
 ///|
-/// Reads WebSocket messages until the requested response is available.
+/// Waits until the connection reader completes the requested command.
 async fn CdpClient::recv_response(
   self : CdpClient,
   id : Int,
 ) -> @protocol.CdpResponseMessage {
-  match self.take_pending_response(id) {
-    Some(response) => return self.finish_response(response)
-    None => ()
-  }
-  for ;; {
-    let message = self.ws.recv()
-    let text = message.read_all().text()
-    let incoming = @protocol.parse_cdp_incoming(@json.parse(text))
-    match incoming {
-      Response(response) =>
-        if response.id == id {
-          return self.finish_response(response)
-        } else if self.command_contexts.contains(response.id) {
-          self.pending_responses[response.id] = response
-        }
-      Event(event) => self.record_cdp_event(event)
+  guard self.pending_commands.get(id) is Some(pending) else {
+    if self.closed {
+      raise BrowserError::ConnectionClosed
     }
+    raise BrowserError::InvalidField("id")
+  }
+  while pending.state is Waiting {
+    pending.changed.wait()
+  }
+  self.pending_commands.remove(id)
+  match pending.state {
+    Completed(response) => self.finish_response(response)
+    ConnectionClosed => {
+      self.command_contexts.remove(id)
+      raise BrowserError::ConnectionClosed
+    }
+    Waiting => abort("CDP command resumed without a completion")
   }
 }
 
@@ -775,40 +823,6 @@ pub fn CdpClient::attached_target(
 }
 
 ///|
-/// Returns buffered CDP events, optionally filtered by method and session.
-///
-/// Events are buffered when received while waiting for responses or while
-/// calling `recv_cdp_event`.
-/// Filtering is exact: `method_name` matches the full CDP event name such as
-/// `Runtime.consoleAPICalled`, and `session_id` matches flattened target
-/// session ids.
-///
-/// Example:
-/// ```
-/// // let loads = client.cdp_events(method_name="Page.loadEventFired")
-/// ```
-pub fn CdpClient::cdp_events(
-  self : CdpClient,
-  method_name? : String,
-  session_id? : String,
-) -> Array[@protocol.CdpEventMessage] {
-  self.cdp_events.filter(event => {
-    cdp_event_matches(event, method_name?, session_id?)
-  })
-}
-
-///|
-/// Clears the buffered CDP event list.
-///
-/// Example:
-/// ```
-/// // client.clear_cdp_events()
-/// ```
-pub fn CdpClient::clear_cdp_events(self : CdpClient) -> Unit {
-  self.cdp_events.clear()
-}
-
-///|
 /// Registers an in-process callback for matching CDP events.
 ///
 /// Returns a handler id that can be passed to `remove_cdp_event_handler`.
@@ -860,14 +874,42 @@ pub fn CdpClient::remove_cdp_event_handler(self : CdpClient, id : Int) -> Bool {
 }
 
 ///|
-/// Waits for the next buffered or incoming event matching the filters.
+/// Registers a synchronous notification for connection closure.
+pub fn CdpClient::on_close(self : CdpClient, handler : () -> Unit) -> Int {
+  let id = self.next_close_handler_id
+  self.next_close_handler_id = id + 1
+  if self.closed {
+    handler()
+  } else {
+    self.close_handlers.push({ id, handler })
+  }
+  id
+}
+
+///|
+/// Removes a previously registered connection-close handler.
+pub fn CdpClient::remove_close_handler(self : CdpClient, id : Int) -> Bool {
+  let kept : Array[CdpCloseHandler] = []
+  let mut removed = false
+  for handler in self.close_handlers {
+    if handler.id == id {
+      removed = true
+    } else {
+      kept.push(handler)
+    }
+  }
+  self.close_handlers.clear()
+  for handler in kept {
+    self.close_handlers.push(handler)
+  }
+  removed
+}
+
+///|
+/// Waits for the next incoming event matching the filters.
 ///
-/// Nonmatching responses are buffered so later `recv_cdp_response` calls can
-/// still complete.
-///
-/// If a matching event is already buffered, it is returned without reading the
-/// socket. The event remains in the buffer so callers can also inspect it later
-/// through `cdp_events`.
+/// This observes future events only. Events are never replayed as lifecycle
+/// notifications.
 ///
 /// Example:
 /// ```
@@ -878,28 +920,63 @@ pub async fn CdpClient::recv_cdp_event(
   method_name? : String,
   session_id? : String,
 ) -> @protocol.CdpEventMessage {
-  for event in self.cdp_events {
-    if cdp_event_matches(event, method_name?, session_id?) {
-      return event
+  let completion : Ref[@protocol.CdpEventMessage?] = Ref(None)
+  let handler_id = self.on_cdp_event(method_name?, session_id?, event => {
+    if completion.val is None {
+      completion.val = Some(event)
+      self.event_changed.broadcast()
     }
+  })
+  defer ignore(self.remove_cdp_event_handler(handler_id))
+  while completion.val is None && !self.closed {
+    self.event_changed.wait()
   }
+  match completion.val {
+    Some(event) => event
+    None => raise BrowserError::ConnectionClosed
+  }
+}
+
+///|
+async fn CdpClient::read_messages(self : CdpClient) -> Unit {
+  defer self.mark_connection_closed()
   for ;; {
     let message = self.ws.recv()
     let text = message.read_all().text()
-    let incoming = @protocol.parse_cdp_incoming(@json.parse(text))
-    match incoming {
-      Response(response) =>
-        if self.command_contexts.contains(response.id) {
-          self.pending_responses[response.id] = response
-        }
-      Event(event) => {
-        self.record_cdp_event(event)
-        if cdp_event_matches(event, method_name?, session_id?) {
-          return event
-        }
-      }
+    match @protocol.parse_cdp_incoming(@json.parse(text)) {
+      Response(response) => self.complete_response(response)
+      Event(event) => self.record_cdp_event(event)
     }
   }
+}
+
+///|
+fn CdpClient::complete_response(
+  self : CdpClient,
+  response : @protocol.CdpResponseMessage,
+) -> Unit {
+  guard self.pending_commands.get(response.id) is Some(pending) else { return }
+  if pending.state is Waiting {
+    pending.state = Completed(response)
+    pending.changed.broadcast()
+  }
+}
+
+///|
+fn CdpClient::mark_connection_closed(self : CdpClient) -> Unit {
+  guard !self.closed else { return }
+  self.closed = true
+  self.event_changed.broadcast()
+  for _, pending in self.pending_commands {
+    if pending.state is Waiting {
+      pending.state = ConnectionClosed
+      pending.changed.broadcast()
+    }
+  }
+  for handler in self.close_handlers {
+    (handler.handler)()
+  }
+  self.close_handlers.clear()
 }
 
 ///|
@@ -915,7 +992,6 @@ fn CdpClient::record_cdp_event(
     "Inspector.detached" => self.record_inspector_detached(event)
     _ => ()
   }
-  self.cdp_events.push(event)
   for handler in self.cdp_event_handlers {
     if cdp_event_matches(
         event,
@@ -973,21 +1049,6 @@ fn CdpClient::record_inspector_detached(
 }
 
 ///|
-/// Removes and returns a buffered response for an id.
-fn CdpClient::take_pending_response(
-  self : CdpClient,
-  id : Int,
-) -> @protocol.CdpResponseMessage? {
-  match self.pending_responses.get(id) {
-    Some(response) => {
-      self.pending_responses.remove(id)
-      Some(response)
-    }
-    None => None
-  }
-}
-
-///|
 /// Records response diagnostics and clears in-flight command state.
 fn CdpClient::finish_response(
   self : CdpClient,
@@ -1019,14 +1080,7 @@ fn CdpClient::finish_response(
 /// Clears state for one timed-out command id.
 fn CdpClient::clear_inflight_command(self : CdpClient, id : Int) -> Unit {
   self.command_contexts.remove(id)
-  self.pending_responses.remove(id)
-}
-
-///|
-/// Clears all in-flight command and buffered response state.
-fn CdpClient::clear_connection_state(self : CdpClient) -> Unit {
-  self.command_contexts.clear()
-  self.pending_responses.clear()
+  self.pending_commands.remove(id)
 }
 
 ///|

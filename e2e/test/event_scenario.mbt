@@ -105,14 +105,14 @@ pub extend EventReloadScenarioProbe with FromJson::{from_json}
 
 ///|
 async fn run_event_scenario_page_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
 ) -> Unit {
-  let page = connect_spawned_page(app, target, timeout)
+  let page = connect_spawned_page(tasks, app, target, timeout)
   let mut page_open = true
   defer (if page_open { page.close() })
-  ignore(page.send_schema_command("Runtime.enable"))
   wait_for_cdp_expression(
     page, "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on)",
     "event broadcast bridge", timeout,
@@ -216,10 +216,9 @@ fn assert_event_scenario_probe(
 
 ///|
 async fn run_event_reload_scenario_probe(
-  page : @client.CdpClient,
+  page : @page.Page,
   timeout : Int,
 ) -> Unit {
-  ignore(page.send_schema_command("Page.enable"))
   ignore(
     evaluate_json(
       page,

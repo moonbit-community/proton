@@ -12,7 +12,8 @@ MoonBit library for the Chrome DevTools Protocol (CDP).
 - Discovery: `/json/version`, `/json/list`, `/json/protocol`.
 - Commands: raw, bundled-schema-validated, remote-schema-checked, generated
   typed builders.
-- Events: buffering, filtering, synchronous handlers.
+- Events: synchronous handlers and diagnostic history.
+- Page sessions: main-frame execution-context tracking and safe evaluation.
 - Targets: browser-level `Target.*` helpers and flattened sessions.
 - Launch: optional Chrome/Edge/Chromium startup with remote debugging.
 
@@ -22,7 +23,8 @@ MoonBit library for the Chrome DevTools Protocol (CDP).
 | --- | --- |
 | `moonbit-community/proton_cdp/protocol` | Wire types, bundled manifest, schema validation, remote schema diff. |
 | `moonbit-community/proton_cdp/protocol/typed` | Generated params, command builders, event builders, result decoders. |
-| `moonbit-community/proton_cdp/client` | Discovery, WebSocket client, event buffer, target helpers, launch helpers. |
+| `moonbit-community/proton_cdp/client` | Discovery, WebSocket client, event handlers, target helpers, launch helpers. |
+| `moonbit-community/proton_cdp/page` | Context-aware page evaluation, navigation, screenshots, and isolated worlds. |
 
 ## Docs
 
@@ -54,27 +56,25 @@ Browser-level command:
 
 ```mbt nocheck
 let target = @client.parse_cdp_target("9222")
-let browser = @client.connect_cdp_browser_target(target)
-defer browser.close()
-
-let response = browser.send_schema_command("Browser.getVersion")
-println(@client.cdp_response_result_json(response).stringify())
+@async.with_task_group(fn(tasks) {
+  let browser = @client.connect_cdp_browser_target(tasks, target)
+  defer browser.close()
+  let response = browser.send_schema_command("Browser.getVersion")
+  println(@client.cdp_response_result_json(response).stringify())
+})
 ```
 
 Page-level command:
 
 ```mbt nocheck
-let page = @client.connect_cdp_page_target(@client.parse_cdp_target("9222"))
-defer page.close()
-
-let response = page.send_schema_command(
-  "Runtime.evaluate",
-  params={
-    "expression": "1 + 1",
-    "returnByValue": true,
-  },
-)
-println(@client.cdp_response_result_json(response).stringify())
+@async.with_task_group(fn(tasks) {
+  let page = @page.Page::connect(
+    tasks,
+    @client.parse_cdp_target("9222"),
+  )
+  defer page.close()
+  println(page.evaluate("1 + 1").stringify())
+})
 ```
 
 Typed command builders live in `moonbit-community/proton_cdp/protocol/typed`, for example
