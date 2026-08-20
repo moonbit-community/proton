@@ -1819,3 +1819,12 @@ test "framework catalog localizes controls without changing technical details" {
     "The application encountered an error.\n\n" + detail,
   )
 }
+
+///|
+test "system locale errors expose stable facade diagnostics" {
+  let error = SystemLocaleError::NativeQuery(status=-9, detail="query failed")
+  assert_eq(
+    error.message(),
+    "failed to query system preferred languages (-9): query failed",
+  )
+}

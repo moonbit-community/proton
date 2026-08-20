@@ -1,7 +1,7 @@
 ///|
 /// Failures produced while querying the operating system's language order.
 pub(all) suberror SystemLocaleError {
-  NativeQuery(@native.NativeError)
+  NativeQuery(status~ : Int, detail~ : String)
 } derive(Debug)
 
 ///|
@@ -10,8 +10,11 @@ pub extend SystemLocaleError with Debug::{to_repr}
 ///|
 pub fn SystemLocaleError::message(self : SystemLocaleError) -> String {
   match self {
-    NativeQuery(error) =>
-      "failed to query system preferred languages: " + error.message()
+    NativeQuery(status~, detail~) =>
+      "failed to query system preferred languages (" +
+      status.to_string() +
+      "): " +
+      detail
   }
 }
 
@@ -28,7 +31,7 @@ pub extend SystemLocaleError with Show::{to_string, output}
 /// order. Invalid platform entries are ignored.
 pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError {
   let raw = @native.system_preferred_language_tags() catch {
-    error => raise NativeQuery(error)
+    error => raise NativeQuery(status=error.status(), detail=error.message())
   }
   normalize_platform_languages(raw)
 }

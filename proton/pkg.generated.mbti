@@ -6,7 +6,6 @@ import {
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension",
   "moonbit-community/proton/internal/locale",
-  "moonbit-community/proton/internal/native",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/updater",
   "moonbit-community/proton_contract",
@@ -141,7 +140,7 @@ pub fn ScreenQueryError::to_repr(Self) -> @debug.Repr
 pub fn ScreenQueryError::to_string(Self) -> String
 
 pub(all) suberror SystemLocaleError {
-  NativeQuery(@native.NativeError)
+  NativeQuery(status~ : Int, detail~ : String)
 } derive(@debug.Debug)
 pub fn SystemLocaleError::message(Self) -> String
 pub fn SystemLocaleError::output(Self, &Logger) -> Unit
