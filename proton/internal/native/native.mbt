@@ -5,11 +5,9 @@ pub fn abi_version() -> Int {
 
 ///|
 fn runtime_platform_id() -> String raise NativeError {
-  require_native_text("runtime platform id", PayloadBytesExcludingTerminator, (
-    buffer,
-    buffer_len,
-    required,
-  ) => @native_ffi.proton_runtime_platform_id_ffi(buffer, buffer_len, required))
+  require_native_text("runtime platform id", (buffer, buffer_len, required) => {
+    @native_ffi.proton_runtime_platform_id_ffi(buffer, buffer_len, required)
+  })
 }
 
 ///|
@@ -39,15 +37,15 @@ pub fn runtime_info() -> RuntimeInfo raise NativeError {
 /// Platform adapters may return platform-native locale syntax. The public
 /// facade owns validation and canonicalization into `Locale` values.
 pub fn system_preferred_language_tags() -> Array[String] raise NativeError {
-  let text = require_native_text(
-    "system preferred languages",
-    PayloadBytesExcludingTerminator,
-    (buffer, buffer_len, required) => {
-      @native_ffi.proton_system_preferred_languages_json_ffi(
-        buffer, buffer_len, required,
-      )
-    },
-  )
+  let text = require_native_text("system preferred languages", (
+    buffer,
+    buffer_len,
+    required,
+  ) => {
+    @native_ffi.proton_system_preferred_languages_json_ffi(
+      buffer, buffer_len, required,
+    )
+  })
   @json.from_json(decode_native_json(text, "system preferred languages")) catch {
     error =>
       raise InvalidPayload(
@@ -649,11 +647,9 @@ fn native_event_text(
   event : @native_ffi.EventHandle,
   field : Int,
 ) -> String? raise NativeError {
-  read_native_text("runtime event JSON", PayloadBytesExcludingTerminator, (
-    buffer,
-    buffer_len,
-    required,
-  ) => @native_ffi.event_text(event, field, buffer, buffer_len, required))
+  read_native_text("runtime event JSON", (buffer, buffer_len, required) => {
+    @native_ffi.event_text(event, field, buffer, buffer_len, required)
+  })
 }
 
 ///|
@@ -675,13 +671,11 @@ fn native_event_items(
   let items : Array[String] = []
   let count = @native_ffi.event_item_count(event)
   for index = 0; index < count; index = index + 1 {
-    let item = require_native_text(
-      "runtime event item",
-      PayloadBytesExcludingTerminator,
-      (buffer, buffer_len, required) => {
-        @native_ffi.event_item(event, index, buffer, buffer_len, required)
-      },
-    )
+    let item = require_native_text("runtime event item", (
+      buffer,
+      buffer_len,
+      required,
+    ) => @native_ffi.event_item(event, index, buffer, buffer_len, required))
     items.push(item)
   }
   items
@@ -910,6 +904,14 @@ fn decode_native_runtime_event(
         url: require_native_event_text(event, 0, "resource request"),
       })
     26 => ResourceRequestCancelled(@native_ffi.event_int64(event, 2))
+    27 =>
+      NotificationClicked(
+        if @native_ffi.event_int(event, 3) == 0 {
+          None
+        } else {
+          Some(require_native_event_text(event, 0, "notification click"))
+        },
+      )
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -1405,11 +1407,9 @@ fn window_bridge_json(
   query : (@native_ffi.WindowHandle, FixedArray[Byte], Int, Ref[Int]) -> Int,
 ) -> String? raise NativeError {
   let handle = window.live_handle()
-  read_native_text(context, PayloadBytesExcludingTerminator, (
-    buffer,
-    buffer_len,
-    required,
-  ) => query(handle, buffer, buffer_len, required))
+  read_native_text(context, (buffer, buffer_len, required) => {
+    query(handle, buffer, buffer_len, required)
+  })
 }
 
 ///|

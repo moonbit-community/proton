@@ -32,34 +32,6 @@ pub fn notification_show(
 }
 
 ///|
-/// Removes and returns the oldest pending notification activation.
-pub fn notification_poll_click() -> NativeNotificationClick? raise NativeError {
-  let has_payload = Ref(0)
-  let available = Ref(0)
-  match
-    read_native_text("notification click", BufferBytesIncludingTerminator, (
-      buffer,
-      buffer_len,
-      required,
-    ) => {
-      let status = @native_ffi.proton_notification_poll_click_ffi(
-        buffer, buffer_len, required, has_payload, available,
-      )
-      if status == 0 && available.val == 0 {
-        proton_event_none
-      } else {
-        status
-      }
-    }) {
-    None => None
-    Some(text) => {
-      let payload = if has_payload.val == 0 { None } else { Some(text) }
-      Some(NativeNotificationClick::{ payload, })
-    }
-  }
-}
-
-///|
 /// Releases process-level notification hooks installed by Proton.
 pub fn notification_cleanup() -> Unit raise NativeError {
   check_status(@native_ffi.proton_notification_cleanup_ffi())

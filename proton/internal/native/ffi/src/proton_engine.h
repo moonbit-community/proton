@@ -170,12 +170,6 @@ int32_t proton_engine_notification_show(const char *title,
                                         int32_t has_payload,
                                         char *error,
                                         size_t error_len);
-/* On success with a click available, *out_required_len is the payload length
-   including its NUL terminator (strlen + 1). */
-int32_t proton_engine_notification_poll_click(
-    char *buffer, int32_t buffer_len, int32_t *out_required_len,
-    int32_t *out_has_payload, int32_t *out_available, char *error,
-    size_t error_len);
 int32_t proton_engine_notification_cleanup(char *error, size_t error_len);
 
 int32_t proton_engine_window_create(

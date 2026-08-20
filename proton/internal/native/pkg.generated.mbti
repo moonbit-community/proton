@@ -25,8 +25,6 @@ pub fn last_error_message() -> String
 
 pub fn notification_cleanup() -> Unit raise NativeError
 
-pub fn notification_poll_click() -> NativeNotificationClick? raise NativeError
-
 pub fn notification_show(String, String, payload? : String) -> Unit raise NativeError
 
 pub fn notification_supported() -> Bool raise NativeError
@@ -349,13 +347,6 @@ pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int, Int)
 pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int) -> (Bytes, Int, Int) raise NativeError
 pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int, Int) raise NativeError
 
-pub(all) struct NativeNotificationClick {
-  payload : String?
-} derive(Eq, @debug.Debug)
-pub fn NativeNotificationClick::equal(Self, Self) -> Bool
-pub fn NativeNotificationClick::not_equal(Self, Self) -> Bool
-pub fn NativeNotificationClick::to_repr(Self) -> @debug.Repr
-
 pub(all) enum NativeNotificationResult {
   Delivered
   Failed(String)
@@ -419,6 +410,7 @@ pub fn RuntimeEvent::is_window_created(Self) -> Bool
 pub fn RuntimeEvent::launch_input(Self) -> RuntimeLaunchInput?
 pub fn RuntimeEvent::menu_command_id(Self) -> String?
 pub fn RuntimeEvent::not_equal(Self, Self) -> Bool
+pub fn RuntimeEvent::notification_click(Self) -> String??
 pub fn RuntimeEvent::notification_result(Self) -> NativeNotificationResult?
 pub fn RuntimeEvent::resource_request(Self) -> NativeResourceRequest?
 pub fn RuntimeEvent::resource_request_cancellation(Self) -> Int64?

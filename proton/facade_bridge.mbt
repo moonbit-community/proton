@@ -250,14 +250,39 @@ fn forward_menu_command(
     ),
   ) catch {
     error =>
-      if !is_ignorable_menu_forward_error(error) {
+      if !is_ignorable_frontend_event_forward_error(error) {
         raise native_run_error("forward menu command", error)
       }
   }
 }
 
 ///|
-fn is_ignorable_menu_forward_error(error : @native.NativeError) -> Bool {
+fn forward_extension_event(
+  window : @native.Window,
+  extension_namespace : String,
+  name : String,
+  payload : Json,
+) -> Unit raise AppRunError {
+  window.emit_bridge_event_json(
+    bridge_event_json(
+      "extension",
+      name,
+      payload,
+      Some(extension_namespace),
+      None,
+    ),
+  ) catch {
+    error =>
+      if !is_ignorable_frontend_event_forward_error(error) {
+        raise native_run_error("forward extension event", error)
+      }
+  }
+}
+
+///|
+fn is_ignorable_frontend_event_forward_error(
+  error : @native.NativeError,
+) -> Bool {
   error.is_invalid_state() || error.is_stale_window_request()
 }
 

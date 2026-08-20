@@ -174,30 +174,6 @@ int32_t proton_engine_notification_show(const char *title_utf8,
   return PROTON_OK;
 }
 
-int32_t proton_engine_notification_poll_click(
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required,
-    int32_t *out_has_payload,
-    int32_t *out_available,
-    char *error,
-    size_t error_len) {
-  (void)buffer;
-  (void)buffer_len;
-  (void)error;
-  (void)error_len;
-  if (out_required != NULL) {
-    *out_required = 0;
-  }
-  if (out_has_payload != NULL) {
-    *out_has_payload = 0;
-  }
-  if (out_available != NULL) {
-    *out_available = 0;
-  }
-  return PROTON_OK;
-}
-
 int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
   (void)error;
   (void)error_len;

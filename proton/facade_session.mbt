@@ -1995,11 +1995,29 @@ fn runtime_session_dispatch_window_event(
 
 ///|
 fn RuntimeSession::dispatch_notification_event(
-  _self : RuntimeSession,
+  self : RuntimeSession,
   event : @native.RuntimeEvent,
-) -> Unit {
+) -> Unit raise AppRunError {
   match event.notification_result() {
     Some(result) => publish_notification_result(result)
+    None => ()
+  }
+  match event.notification_click() {
+    Some(payload) =>
+      for running in preferred_active_windows(self.windows) {
+        guard running.is_active() &&
+          running.bridge_ready &&
+          running.permissions.grants_extension(notification_extension_id) else {
+          continue
+        }
+        forward_extension_event(
+          running.window,
+          notification_extension_namespace,
+          "click",
+          notification_click_payload(payload),
+        )
+        break
+      }
     None => ()
   }
 }

@@ -284,16 +284,6 @@ pub extern "C" fn proton_notification_show_ffi(
 ) -> Int = "proton_notification_show"
 
 ///|
-#borrow(buffer, out_required_len, out_has_payload, out_available)
-pub extern "C" fn proton_notification_poll_click_ffi(
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-  out_has_payload : Ref[Int],
-  out_available : Ref[Int],
-) -> Int = "proton_notification_poll_click"
-
-///|
 pub extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notification_cleanup"
 
 ///|

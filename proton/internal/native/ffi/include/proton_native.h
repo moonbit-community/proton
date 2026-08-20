@@ -133,9 +133,6 @@ int32_t proton_notification_show(const char *title,
                                             const char *body,
                                             const char *payload,
                                             int32_t has_payload);
-int32_t proton_notification_poll_click(
-    char *buffer, int32_t buffer_len, int32_t *out_required_len,
-    int32_t *out_has_payload, int32_t *out_available);
 int32_t proton_notification_cleanup(void);
 
 int32_t proton_window_destroy(proton_window_handle_t window);

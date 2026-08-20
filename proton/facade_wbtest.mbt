@@ -554,9 +554,9 @@ test "frontend menu event transport preserves focused window" {
 }
 
 ///|
-test "menu forwarding ignores only closing window errors" {
+test "frontend event forwarding ignores only closing window errors" {
   assert_true(
-    is_ignorable_menu_forward_error(
+    is_ignorable_frontend_event_forward_error(
       @native.NativeError::Status(
         status=-3,
         message="window is closing or destroyed",
@@ -564,7 +564,7 @@ test "menu forwarding ignores only closing window errors" {
     ),
   )
   assert_true(
-    is_ignorable_menu_forward_error(
+    is_ignorable_frontend_event_forward_error(
       @native.NativeError::Status(
         status=-13,
         message="window close request is no longer pending",
@@ -572,7 +572,7 @@ test "menu forwarding ignores only closing window errors" {
     ),
   )
   assert_false(
-    is_ignorable_menu_forward_error(
+    is_ignorable_frontend_event_forward_error(
       @native.NativeError::Status(
         status=-7,
         message="failed to send bridge event to renderer",
@@ -580,7 +580,7 @@ test "menu forwarding ignores only closing window errors" {
     ),
   )
   assert_false(
-    is_ignorable_menu_forward_error(
+    is_ignorable_frontend_event_forward_error(
       @native.NativeError::InvalidArgument(message="invalid event"),
     ),
   )
@@ -1479,6 +1479,18 @@ async test "notification completion is delivered only to an active waiter" {
 test "notification completion capability controls result waiting" {
   assert_true(notification_result_event_supported(["notification_result"]))
   assert_false(notification_result_event_supported(["runtime_wait"]))
+}
+
+///|
+test "notification click events use the extension payload contract" {
+  inspect(
+    notification_click_payload(Some("open-item")).stringify(),
+    content="{\"payload\":\"open-item\"}",
+  )
+  inspect(
+    notification_click_payload(None).stringify(),
+    content="{\"payload\":null}",
+  )
 }
 
 ///|

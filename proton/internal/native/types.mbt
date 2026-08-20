@@ -166,6 +166,7 @@ enum RuntimeEvent {
   MenuCommand(String, Int64?)
   LaunchInput(RuntimeLaunchInput)
   NotificationResult(NativeNotificationResult)
+  NotificationClicked(String?)
   BrowserRequest(Int64, NativeBrowserRequest)
   BrowserDownloadUpdated(Int64, NativeDownloadUpdate)
   ViewEvent(Int64, Int64, NativeViewEvent)
@@ -489,19 +490,6 @@ pub extend WindowState with Eq::{not_equal, equal}
 pub extend WindowState with Debug::{to_repr}
 
 ///|
-/// A native notification activation, optionally carrying its application
-/// payload.
-pub(all) struct NativeNotificationClick {
-  payload : String?
-} derive(Debug, Eq)
-
-///|
-pub extend NativeNotificationClick with Eq::{not_equal, equal}
-
-///|
-pub extend NativeNotificationClick with Debug::{to_repr}
-
-///|
 /// An application-level native menu bar.
 struct MenuBar {
   menus : Array[Menu]
@@ -662,6 +650,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     LaunchInput(OpenFiles(_)) => "open_files"
     LaunchInput(Reopen) => "reopen"
     NotificationResult(_) => "notification_result"
+    NotificationClicked(_) => "notification_clicked"
     BrowserRequest(_, Navigation(..)) => "browser_navigation_requested"
     BrowserRequest(_, Popup(..)) => "browser_popup_requested"
     BrowserRequest(_, Download(..)) => "browser_download_requested"
@@ -703,7 +692,8 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BridgeRequestCancelled(_)
     | ResourceRequestCancelled(_)
     | LaunchInput(_)
-    | NotificationResult(_) => None
+    | NotificationResult(_)
+    | NotificationClicked(_) => None
   }
 }
 
@@ -905,6 +895,14 @@ pub fn RuntimeEvent::notification_result(
 ) -> NativeNotificationResult? {
   match self {
     NotificationResult(result) => Some(result)
+    _ => None
+  }
+}
+
+///|
+pub fn RuntimeEvent::notification_click(self : RuntimeEvent) -> String?? {
+  match self {
+    NotificationClicked(payload) => Some(payload)
     _ => None
   }
 }

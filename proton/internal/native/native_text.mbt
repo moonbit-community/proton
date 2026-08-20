@@ -1,34 +1,15 @@
 ///|
-priv enum NativeTextLength {
-  PayloadBytesExcludingTerminator
-  BufferBytesIncludingTerminator
-}
-
-///|
 fn native_text_buffer_length(
   context : String,
   required : Int,
-  length : NativeTextLength,
 ) -> Int raise NativeError {
-  match length {
-    PayloadBytesExcludingTerminator =>
-      if required < 0 || required == 2147483647 {
-        raise InvalidPayload(
-          context~,
-          message="native query returned an invalid required length",
-        )
-      } else {
-        required + 1
-      }
-    BufferBytesIncludingTerminator =>
-      if required <= 0 {
-        raise InvalidPayload(
-          context~,
-          message="native query returned an invalid required length",
-        )
-      } else {
-        required
-      }
+  if required < 0 || required == 2147483647 {
+    raise InvalidPayload(
+      context~,
+      message="native query returned an invalid required length",
+    )
+  } else {
+    required + 1
   }
 }
 
@@ -36,34 +17,20 @@ fn native_text_buffer_length(
 fn native_text_payload_length(
   context : String,
   required : Int,
-  length : NativeTextLength,
 ) -> Int raise NativeError {
-  match length {
-    PayloadBytesExcludingTerminator =>
-      if required < 0 {
-        raise InvalidPayload(
-          context~,
-          message="native query returned an invalid payload length",
-        )
-      } else {
-        required
-      }
-    BufferBytesIncludingTerminator =>
-      if required <= 0 {
-        raise InvalidPayload(
-          context~,
-          message="native query returned an invalid buffer length",
-        )
-      } else {
-        required - 1
-      }
+  if required < 0 {
+    raise InvalidPayload(
+      context~,
+      message="native query returned an invalid payload length",
+    )
+  } else {
+    required
   }
 }
 
 ///|
 fn read_native_text(
   context : String,
-  length : NativeTextLength,
   query : (FixedArray[Byte], Int, Ref[Int]) -> Int,
 ) -> String? raise NativeError {
   let required = Ref(0)
@@ -76,7 +43,7 @@ fn read_native_text(
       return None
     }
     if status == proton_err_buffer_too_small {
-      let next_len = native_text_buffer_length(context, required.val, length)
+      let next_len = native_text_buffer_length(context, required.val)
       if next_len <= buffer_len {
         raise InvalidPayload(
           context~,
@@ -96,7 +63,7 @@ fn read_native_text(
         message="native query returned unexpected status " + status.to_string(),
       )
     }
-    let payload_len = native_text_payload_length(context, required.val, length)
+    let payload_len = native_text_payload_length(context, required.val)
     if payload_len == 0 {
       return Some("")
     }
@@ -113,10 +80,9 @@ fn read_native_text(
 ///|
 fn require_native_text(
   context : String,
-  length : NativeTextLength,
   query : (FixedArray[Byte], Int, Ref[Int]) -> Int,
 ) -> String raise NativeError {
-  match read_native_text(context, length, query) {
+  match read_native_text(context, query) {
     Some(text) => text
     None =>
       raise InvalidPayload(context~, message="native query returned no value")

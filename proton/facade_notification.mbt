@@ -15,6 +15,22 @@ let notification_result_broker : NotificationResultBroker = NotificationResultBr
 }
 
 ///|
+let notification_extension_id = "moonbit-community/proton-notification"
+
+///|
+let notification_extension_namespace = "notification"
+
+///|
+fn notification_click_payload(payload : String?) -> Json {
+  Json::object({
+    "payload": match payload {
+      Some(payload) => Json(payload)
+      None => Json::null()
+    },
+  })
+}
+
+///|
 async fn acquire_notification_result_slot() -> Unit {
   while notification_result_broker.busy {
     notification_result_broker.gate.wait()
@@ -131,15 +147,6 @@ pub fn notification_supported() -> Bool raise NotificationDeliveryError {
   @native.notification_supported() catch {
     error => raise NativeFailure(status=error.status(), detail=error.message())
   }
-}
-
-///|
-#doc(hidden)
-pub fn notification_poll_click_payload() -> String?? raise NotificationDeliveryError {
-  let click = @native.notification_poll_click() catch {
-    error => raise NativeFailure(status=error.status(), detail=error.message())
-  }
-  click.map(item => item.payload)
 }
 
 ///|

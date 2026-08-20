@@ -1,9 +1,4 @@
 ///|
-priv struct NotificationNativeClick {
-  payload : String?
-}
-
-///|
 fn notification_native_ensure_supported() -> Unit raise NotificationError {
   let supported = @proton.notification_supported() catch {
     error => raise NativeOperation(detail=error.message())
@@ -27,14 +22,6 @@ async fn notification_native_show(
         error => raise NativeOperation(detail=error.message())
       }
   }
-}
-
-///|
-fn notification_native_take_click() -> NotificationNativeClick? raise NotificationError {
-  let payload = @proton.notification_poll_click_payload() catch {
-    error => raise NativeOperation(detail=error.message())
-  }
-  payload.map(payload => NotificationNativeClick::{ payload, })
 }
 
 ///|

@@ -7,25 +7,12 @@
 #import <Foundation/Foundation.h>
 #import <UserNotifications/UserNotifications.h>
 
-#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTON_NOTIFICATION_MAX_CLICKS 16
 #define PROTON_NOTIFICATION_MAX_PAYLOAD_BYTES 65536
-
-typedef struct {
-  char payload[PROTON_NOTIFICATION_MAX_PAYLOAD_BYTES];
-  int32_t has_payload;
-} proton_notification_click_t;
-
-static proton_notification_click_t
-    g_notification_clicks[PROTON_NOTIFICATION_MAX_CLICKS];
-static uint32_t g_notification_click_head = 0;
-static uint32_t g_notification_click_count = 0;
-static pthread_mutex_t g_notification_click_lock = PTHREAD_MUTEX_INITIALIZER;
 static NSString *const ProtonNotificationPayloadKey = @"proton_payload";
 
 static void proton_notification_complete(BOOL delivered, NSError *error) {
@@ -51,27 +38,20 @@ static void proton_notification_set_message(char *error,
   }
 }
 
-static void proton_notification_enqueue_click(NSString *payload,
+static void proton_notification_publish_click(NSString *payload,
                                                int32_t has_payload) {
-  const char *utf8 = payload != nil ? [payload UTF8String] : "";
-  size_t payload_len = utf8 != NULL ? strlen(utf8) : 0;
-  if (utf8 == NULL || payload_len >= PROTON_NOTIFICATION_MAX_PAYLOAD_BYTES) {
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_NOTIFICATION_CLICKED);
+  if (event == NULL) {
     return;
   }
-
-  pthread_mutex_lock(&g_notification_click_lock);
-  if (g_notification_click_count == PROTON_NOTIFICATION_MAX_CLICKS) {
-    g_notification_click_head =
-        (g_notification_click_head + 1) % PROTON_NOTIFICATION_MAX_CLICKS;
-    g_notification_click_count--;
+  event->bool_a = has_payload;
+  if (has_payload &&
+      !proton_event_set_text(&event->text_a, [payload UTF8String])) {
+    proton_event_destroy(event);
+    return;
   }
-  uint32_t index =
-      (g_notification_click_head + g_notification_click_count) %
-      PROTON_NOTIFICATION_MAX_CLICKS;
-  memcpy(g_notification_clicks[index].payload, utf8, payload_len + 1);
-  g_notification_clicks[index].has_payload = has_payload;
-  g_notification_click_count++;
-  pthread_mutex_unlock(&g_notification_click_lock);
+  (void)proton_event_publish(event);
 }
 
 static void proton_notification_reveal_app(void) {
@@ -116,7 +96,7 @@ static void proton_notification_reveal_app(void) {
     id payload = [response.notification.request.content.userInfo
         objectForKey:ProtonNotificationPayloadKey];
     int32_t has_payload = [payload isKindOfClass:[NSString class]] ? 1 : 0;
-    proton_notification_enqueue_click(has_payload ? (NSString *)payload : nil,
+    proton_notification_publish_click(has_payload ? (NSString *)payload : nil,
                                       has_payload);
     dispatch_async(dispatch_get_main_queue(), ^{
       proton_notification_reveal_app();
@@ -230,51 +210,6 @@ int32_t proton_engine_notification_show(const char *title_utf8,
   return PROTON_OK;
 }
 
-int32_t proton_engine_notification_poll_click(
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required,
-    int32_t *out_has_payload,
-    int32_t *out_available,
-    char *error,
-    size_t error_len) {
-  *out_required = 0;
-  *out_has_payload = 0;
-  *out_available = 0;
-
-  pthread_mutex_lock(&g_notification_click_lock);
-  if (g_notification_click_count == 0) {
-    pthread_mutex_unlock(&g_notification_click_lock);
-    return PROTON_OK;
-  }
-
-  const proton_notification_click_t *click =
-      &g_notification_clicks[g_notification_click_head];
-  size_t required = strlen(click->payload) + 1;
-  if (required > INT32_MAX) {
-    pthread_mutex_unlock(&g_notification_click_lock);
-    proton_notification_set_message(error, error_len,
-                                    "notification click payload is too large");
-    return PROTON_ERR_ENGINE;
-  }
-  *out_required = (int32_t)required;
-  *out_has_payload = click->has_payload;
-  *out_available = 1;
-  if (buffer == NULL || buffer_len < *out_required) {
-    pthread_mutex_unlock(&g_notification_click_lock);
-    proton_notification_set_message(error, error_len,
-                                    "notification click buffer is too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-
-  memcpy(buffer, click->payload, required);
-  g_notification_click_head =
-      (g_notification_click_head + 1) % PROTON_NOTIFICATION_MAX_CLICKS;
-  g_notification_click_count--;
-  pthread_mutex_unlock(&g_notification_click_lock);
-  return PROTON_OK;
-}
-
 int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
   if (g_notification_delegate != nil) {
     UNUserNotificationCenter *center =
@@ -283,10 +218,6 @@ int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
       [center setDelegate:nil];
     }
   }
-  pthread_mutex_lock(&g_notification_click_lock);
-  g_notification_click_head = 0;
-  g_notification_click_count = 0;
-  pthread_mutex_unlock(&g_notification_click_lock);
   return PROTON_OK;
 }
 

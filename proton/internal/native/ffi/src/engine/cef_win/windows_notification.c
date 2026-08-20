@@ -1,6 +1,7 @@
 #if defined(_WIN32)
 
 #include "../../proton_engine.h"
+#include "../../proton_event.h"
 
 #define UNICODE 1
 #define _UNICODE 1
@@ -14,22 +15,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PROTON_NOTIFICATION_MAX_CLICKS 16
-#define PROTON_NOTIFICATION_MAX_PAYLOAD_BYTES 65536
 #define PROTON_NOTIFICATION_TRAY_ID 1
 #define PROTON_NOTIFICATION_WM_CALLBACK (WM_APP + 1)
 #define PROTON_NOTIFICATION_CLASS_NAME L"ProtonNotificationWindow"
-
-typedef struct {
-  char payload[PROTON_NOTIFICATION_MAX_PAYLOAD_BYTES];
-  int32_t has_payload;
-} proton_notification_click_t;
-
-static proton_notification_click_t
-    g_notification_clicks[PROTON_NOTIFICATION_MAX_CLICKS];
-static uint32_t g_notification_click_head = 0;
-static uint32_t g_notification_click_count = 0;
-static SRWLOCK g_notification_click_lock = SRWLOCK_INIT;
 
 static HWND g_notification_window = NULL;
 static SRWLOCK g_notification_window_lock = SRWLOCK_INIT;
@@ -62,15 +50,12 @@ static LRESULT CALLBACK proton_notification_wnd_proc(HWND hwnd,
   if (msg == PROTON_NOTIFICATION_WM_CALLBACK) {
     switch (LOWORD(lparam)) {
       case NIN_BALLOONUSERCLICK: {
-        AcquireSRWLockExclusive(&g_notification_click_lock);
-        if (g_notification_click_count < PROTON_NOTIFICATION_MAX_CLICKS) {
-          uint32_t index = (g_notification_click_head + g_notification_click_count) %
-                           PROTON_NOTIFICATION_MAX_CLICKS;
-          g_notification_clicks[index].has_payload = 0;
-          g_notification_clicks[index].payload[0] = '\0';
-          g_notification_click_count++;
+        proton_event_t *event =
+            proton_event_create(PROTON_EVENT_NOTIFICATION_CLICKED);
+        if (event != NULL) {
+          event->bool_a = 0;
+          (void)proton_event_publish(event);
         }
-        ReleaseSRWLockExclusive(&g_notification_click_lock);
         return 0;
       }
       default:
@@ -239,58 +224,6 @@ int32_t proton_engine_notification_show(const char *title_utf8,
   return PROTON_OK;
 }
 
-int32_t proton_engine_notification_poll_click(
-    char *buffer,
-    int32_t buffer_len,
-    int32_t *out_required,
-    int32_t *out_has_payload,
-    int32_t *out_available,
-    char *error,
-    size_t error_len) {
-  (void)error;
-  (void)error_len;
-  if (out_required != NULL) {
-    *out_required = 0;
-  }
-  if (out_has_payload != NULL) {
-    *out_has_payload = 0;
-  }
-  if (out_available != NULL) {
-    *out_available = 0;
-  }
-  AcquireSRWLockExclusive(&g_notification_click_lock);
-  if (g_notification_click_count == 0) {
-    ReleaseSRWLockExclusive(&g_notification_click_lock);
-    return PROTON_OK;
-  }
-  const proton_notification_click_t *click =
-      &g_notification_clicks[g_notification_click_head];
-  size_t required = strlen(click->payload) + 1;
-  if (required > INT32_MAX) {
-    ReleaseSRWLockExclusive(&g_notification_click_lock);
-    return PROTON_ERR_ENGINE;
-  }
-  if (out_required != NULL) {
-    *out_required = (int32_t)required;
-  }
-  if (out_has_payload != NULL) {
-    *out_has_payload = click->has_payload;
-  }
-  if (out_available != NULL) {
-    *out_available = 1;
-  }
-  if (buffer == NULL || buffer_len < (int32_t)required) {
-    ReleaseSRWLockExclusive(&g_notification_click_lock);
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  memcpy(buffer, click->payload, required);
-  g_notification_click_head =
-      (g_notification_click_head + 1) % PROTON_NOTIFICATION_MAX_CLICKS;
-  g_notification_click_count--;
-  ReleaseSRWLockExclusive(&g_notification_click_lock);
-  return PROTON_OK;
-}
-
 int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
   (void)error;
   (void)error_len;
@@ -308,10 +241,6 @@ int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
     g_notification_window = NULL;
   }
   ReleaseSRWLockExclusive(&g_notification_window_lock);
-  AcquireSRWLockExclusive(&g_notification_click_lock);
-  g_notification_click_head = 0;
-  g_notification_click_count = 0;
-  ReleaseSRWLockExclusive(&g_notification_click_lock);
   return PROTON_OK;
 }
 
