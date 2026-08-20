@@ -257,6 +257,10 @@ async fn prepare_proton_package(
       }
       set_linux_rpath(layout.executable(), linux_package_rpath)
       set_linux_rpath(staged_helper, linux_package_rpath)
+      let executable_name = host_path(layout.executable()).basename().to_owned()
+      let apprun = resolve_path(layout.root(), "AppRun")
+      write_text(apprun, proton_linux_apprun(executable_name))
+      @async_fs.chmod(apprun, 0o755)
     }
   }
 }
