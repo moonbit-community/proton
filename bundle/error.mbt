@@ -10,6 +10,7 @@ priv suberror BundlePlanError {
 priv suberror BundleRuntimeError {
   ExecutableMissing(path~ : String)
   HelperMissing(path~ : String)
+  LegacyDynamicDependency(path~ : String, dependency~ : String)
 }
 
 ///|
@@ -57,6 +58,11 @@ fn BundleRuntimeError::message(self : BundleRuntimeError) -> String {
   match self {
     ExecutableMissing(path~) => "application executable is missing: " + path
     HelperMissing(path~) => "Proton helper executable is missing: " + path
+    LegacyDynamicDependency(path~, dependency~) =>
+      "executable " +
+      path +
+      " still depends on removed Proton runtime library " +
+      dependency
   }
 }
 
