@@ -6,6 +6,7 @@ test "the AppDir keeps Proton resources at the shared runtime location" {
 ///|
 test "the AppImage launcher establishes the CEF loader environment" {
   let script = proton_linux_apprun("demo")
+  assert_true(script.contains("HERE=\"$APPDIR\""))
   assert_true(script.contains("PROTON_RUNTIME_ROOT=\"$PROTON_ROOT\""))
   assert_true(
     script.contains("PROTON_HELPER_PATH=\"$HERE/usr/bin/cef_process\""),

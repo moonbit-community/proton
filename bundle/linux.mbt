@@ -7,7 +7,7 @@ let linux_package_rpath : String = "$ORIGIN/../Resources/proton/bin"
 fn proton_linux_apprun(name : String) -> String {
   let prefix =
     #|#!/bin/sh
-    #|HERE="$(dirname "$(readlink -f "$0")")"
+    #|HERE="$APPDIR"
     #|PROTON_ROOT="$HERE/usr/Resources/proton"
     #|CEF_LIBRARY="$PROTON_ROOT/bin/libcef.so"
     #|export PROTON_RUNTIME_ROOT="$PROTON_ROOT"

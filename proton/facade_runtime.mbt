@@ -157,7 +157,16 @@ async fn run_manifest(
   let dialog_completions = DialogCompletionStore::new()
   try {
     if !headless {
-      match resolve_runtime_menu(menu, locale_preferences, application_name) {
+      let platform = @native.runtime_info().platform catch {
+          error => raise native_run_error("query runtime platform", error)
+        }
+      match
+        resolve_runtime_menu(
+          menu,
+          locale_preferences,
+          application_name,
+          platform~,
+        ) {
         Some(menu) =>
           runtime.set_menu(menu) catch {
             error => raise native_run_error("set menu", error)

@@ -63,9 +63,12 @@ pub(all) suberror BrowserError {
   WaitTimeout(String)
 } derive(Eq, ToJson, @debug.Debug)
 pub fn BrowserError::equal(Self, Self) -> Bool
+pub fn BrowserError::message(Self) -> String
 pub fn BrowserError::not_equal(Self, Self) -> Bool
+pub fn BrowserError::output(Self, &Logger) -> Unit
 pub fn BrowserError::to_json(Self) -> Json
 pub fn BrowserError::to_repr(Self) -> @debug.Repr
+pub fn BrowserError::to_string(Self) -> String
 
 pub(all) suberror BrowserLaunchError {
   BrowserNotFound

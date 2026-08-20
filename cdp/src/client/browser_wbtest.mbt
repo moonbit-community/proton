@@ -119,6 +119,10 @@ test "browser response helpers classify result shapes" {
   guard failed is Err(BrowserError::CommandFailed(-32000, "failed")) else {
     fail("expected command failure")
   }
+  assert_eq(
+    BrowserError::CommandFailed(-32000, "failed").to_string(),
+    "CDP command failed with code -32000: failed",
+  )
   let failed_json : Result[Json, Error] = try_result_client_browser_wbtest(() => {
     cdp_response_result_json(error_response)
   })

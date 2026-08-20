@@ -26,6 +26,25 @@ pub extend BrowserError with Debug::{to_repr}
 pub extend BrowserError with ToJson::{to_json}
 
 ///|
+pub extend BrowserError with Show::{to_string, output}
+
+///|
+pub fn BrowserError::message(self : BrowserError) -> String {
+  match self {
+    CommandFailed(code, message) =>
+      "CDP command failed with code " + code.to_string() + ": " + message
+    MissingField(field) => "CDP response is missing field: " + field
+    InvalidField(field) => "CDP response has an invalid field: " + field
+    WaitTimeout(operation) => "CDP operation timed out: " + operation
+  }
+}
+
+///|
+impl Show for BrowserError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
 /// Basic target metadata returned by `Target.getTargets`.
 ///
 /// `target_id` is the value used by `Target.attachToTarget` and

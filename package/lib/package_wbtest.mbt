@@ -172,11 +172,12 @@ test "AppImage metadata points at the staged executable" {
     ),
   )
   let apprun = linux_apprun("demo-app")
+  assert_true(apprun.contains("HERE=\"$APPDIR\""))
   inspect(
     apprun,
     content=(
       $|#!/bin/sh
-      $|HERE="$(dirname "$(readlink -f "$0")")"
+      $|HERE="$APPDIR"
       $|exec "$HERE/usr/bin/demo-app" "$@"
       $|
     ),

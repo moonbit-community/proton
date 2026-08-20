@@ -54,7 +54,7 @@ fn linux_desktop_entry(spec : PackageSpec, name : String) -> String {
 fn linux_apprun(name : String) -> String {
   let prefix =
     #|#!/bin/sh
-    #|HERE="$(dirname "$(readlink -f "$0")")"
+    #|HERE="$APPDIR"
   prefix + "\nexec \"$HERE/usr/bin/" + name + "\" \"$@\"\n"
 }
 

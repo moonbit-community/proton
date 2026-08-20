@@ -33,14 +33,20 @@ pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleE
   let raw = @native.system_preferred_language_tags() catch {
     error => raise NativeQuery(status=error.status(), detail=error.message())
   }
-  normalize_platform_languages(raw)
+  let platform = @native.runtime_info().platform catch {
+      error => raise NativeQuery(status=error.status(), detail=error.message())
+    }
+  normalize_platform_languages(raw, posix=platform == "linux")
 }
 
 ///|
-#cfg(platform="linux")
 fn normalize_platform_languages(
   values : Array[String],
+  posix~ : Bool,
 ) -> Array[@locale.Locale] {
+  if !posix {
+    return @locale.normalize_system_languages(values)
+  }
   let tags : Array[String] = []
   for value in values {
     for candidate in @locale.posix_locale_candidates(value) {
@@ -48,14 +54,6 @@ fn normalize_platform_languages(
     }
   }
   @locale.normalize_system_languages(tags)
-}
-
-///|
-#cfg(not(platform="linux"))
-fn normalize_platform_languages(
-  values : Array[String],
-) -> Array[@locale.Locale] {
-  @locale.normalize_system_languages(values)
 }
 
 ///|

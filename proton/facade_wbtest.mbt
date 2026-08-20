@@ -1713,6 +1713,26 @@ test "standard menus resolve from the application locale" {
 }
 
 ///|
+test "runtime menu defaults are platform-specific" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("en-US")),
+    [],
+  )
+  assert_eq(
+    resolve_runtime_menu(None, preferences, "Proton Demo", platform="linux"),
+    None,
+  )
+  let macos = resolve_runtime_menu(
+    None,
+    preferences,
+    "Proton Demo",
+    platform="macos",
+  ).unwrap()
+  let (role, _, _) = macos.definitions()[0].definition()
+  assert_eq(role, Some(@native.MenuRole::Application))
+}
+
+///|
 test "custom menu labels never imply a standard role" {
   let preferences = @locale.LocalePreferences::resolve(
     Some(@locale.Locale::parse("en-US")),
@@ -1826,5 +1846,21 @@ test "system locale errors expose stable facade diagnostics" {
   assert_eq(
     error.message(),
     "failed to query system preferred languages (-9): query failed",
+  )
+}
+
+///|
+test "POSIX system locales are normalized only on Linux" {
+  assert_eq(
+    normalize_platform_languages(["zh_CN.UTF-8"], posix=true).map(locale => {
+      locale.to_string()
+    }),
+    ["zh-CN"],
+  )
+  assert_eq(
+    normalize_platform_languages(["en-US"], posix=false).map(locale => {
+      locale.to_string()
+    }),
+    ["en-US"],
   )
 }
