@@ -6,10 +6,6 @@ async fn has_source_cef_files(root : String, platform : ProtonPlatform) -> Bool 
 ///|
 async fn validate_cef_root(root : String, platform : ProtonPlatform) -> Unit {
   let missing = validate_cef_layout(root, platform)
-  let version_path = path_join(root, "version.txt")
-  if !path_exists(version_path) {
-    missing.push(version_path)
-  }
   if missing.length() > 0 {
     raise InvalidCefRoot(path=root, missing~)
   }

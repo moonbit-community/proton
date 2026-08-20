@@ -285,13 +285,15 @@ async fn write_package_manifest(
   let manifest : Json = {
     "schema_version": 1,
     "kind": kind,
-    "product_name": spec.product_name,
-    "identifier": spec.identifier,
-    "version": spec.version,
+    "product_name": spec.package_spec.product_name,
+    "identifier": spec.package_spec.identifier,
+    "version": spec.package_spec.version,
     "bundle_version": spec.bundle_version,
-    "targets": spec.formats.map(fn(format) { format.to_string() }),
-    "url_schemes": spec.url_schemes,
-    "document_types": spec.document_types.map(fn(document_type) -> Json {
+    "targets": spec.package_spec.formats.map(fn(format) { format.to_string() }),
+    "url_schemes": spec.package_spec.url_schemes,
+    "document_types": spec.package_spec.document_types.map(fn(
+      document_type,
+    ) -> Json {
       {
         "name": document_type.name(),
         "extensions": document_type.extensions(),

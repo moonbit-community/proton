@@ -8,4 +8,8 @@ import {
   "moonbitlang/x/path",
 }
 
+import {
+  "moonbitlang/async",
+} for "test"
+
 supported_targets = "native+wasm"

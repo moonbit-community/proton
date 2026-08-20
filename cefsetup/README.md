@@ -12,3 +12,6 @@ moonx moonbit-community/proton_cefsetup
 
 Proton's developer tools and bundler use the module's `store` package to resolve
 and validate the installation without persisting project-local absolute paths.
+The package exposes only `install_default`, `resolve_default`, and the resolved
+SDK, runtime, platform, and archive paths. Installation uses one lock and one
+staging directory before atomically publishing a manifest-backed runtime.

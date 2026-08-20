@@ -1,97 +1,43 @@
 ///|
-pub(all) suberror BundlePlanError {
+priv suberror BundlePlanError {
   UnsupportedResourceGlob(path~ : String)
   MissingInput(path~ : String)
   NotLaunchableMachO(path~ : String, filetype~ : Int)
   InputOutsideBase(path~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
-pub extend BundlePlanError with Eq::{not_equal, equal}
-
-///|
-pub extend BundlePlanError with Debug::{to_repr}
-
-///|
-pub extend BundlePlanError with Show::{to_string, output}
-
-///|
-pub(all) suberror BundleRuntimeError {
+priv suberror BundleRuntimeError {
   ExecutableMissing(path~ : String)
   HelperMissing(path~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
-pub extend BundleRuntimeError with Eq::{not_equal, equal}
-
-///|
-pub extend BundleRuntimeError with Debug::{to_repr}
-
-///|
-pub extend BundleRuntimeError with Show::{to_string, output}
-
-///|
-pub(all) suberror BundleFileSystemError {
+priv suberror BundleFileSystemError {
   CreateDirectory(path~ : String, detail~ : String)
   Copy(source~ : String, destination~ : String, detail~ : String)
   Read(path~ : String, detail~ : String)
   Write(path~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
-pub extend BundleFileSystemError with Eq::{not_equal, equal}
-
-///|
-pub extend BundleFileSystemError with Debug::{to_repr}
-
-///|
-pub extend BundleFileSystemError with Show::{to_string, output}
-
-///|
-pub(all) suberror BundleToolError {
+priv suberror BundleToolError {
   Exit(tool~ : String, code~ : Int, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
-pub extend BundleToolError with Eq::{not_equal, equal}
-
-///|
-pub extend BundleToolError with Debug::{to_repr}
-
-///|
-pub extend BundleToolError with Show::{to_string, output}
-
-///|
-pub(all) suberror WindowsBundleError {
+priv suberror WindowsBundleError {
   InvalidRuntime(detail~ : String)
   InvalidLayout(detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
-pub extend WindowsBundleError with Eq::{not_equal, equal}
-
-///|
-pub extend WindowsBundleError with Debug::{to_repr}
-
-///|
-pub extend WindowsBundleError with Show::{to_string, output}
-
-///|
-pub(all) suberror LinuxBundleError {
+priv suberror LinuxBundleError {
   ToolFailure(stage~ : String, detail~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
-pub extend LinuxBundleError with Eq::{not_equal, equal}
-
-///|
-pub extend LinuxBundleError with Debug::{to_repr}
-
-///|
-pub extend LinuxBundleError with Show::{to_string, output}
-
-///|
-pub fn BundlePlanError::message(self : BundlePlanError) -> String {
+fn BundlePlanError::message(self : BundlePlanError) -> String {
   match self {
     UnsupportedResourceGlob(path~) =>
       "unsupported bundle resource glob: " + path
@@ -107,7 +53,7 @@ pub fn BundlePlanError::message(self : BundlePlanError) -> String {
 }
 
 ///|
-pub fn BundleRuntimeError::message(self : BundleRuntimeError) -> String {
+fn BundleRuntimeError::message(self : BundleRuntimeError) -> String {
   match self {
     ExecutableMissing(path~) => "application executable is missing: " + path
     HelperMissing(path~) => "Proton helper executable is missing: " + path
@@ -115,7 +61,7 @@ pub fn BundleRuntimeError::message(self : BundleRuntimeError) -> String {
 }
 
 ///|
-pub fn BundleFileSystemError::message(self : BundleFileSystemError) -> String {
+fn BundleFileSystemError::message(self : BundleFileSystemError) -> String {
   match self {
     CreateDirectory(path~, detail~) =>
       "failed to create directory " + path + ": " + detail
@@ -127,7 +73,7 @@ pub fn BundleFileSystemError::message(self : BundleFileSystemError) -> String {
 }
 
 ///|
-pub fn BundleToolError::message(self : BundleToolError) -> String {
+fn BundleToolError::message(self : BundleToolError) -> String {
   match self {
     Exit(tool~, code~, detail~) =>
       tool + " exited with code " + code.to_string() + ": " + detail
@@ -135,7 +81,7 @@ pub fn BundleToolError::message(self : BundleToolError) -> String {
 }
 
 ///|
-pub fn WindowsBundleError::message(self : WindowsBundleError) -> String {
+fn WindowsBundleError::message(self : WindowsBundleError) -> String {
   match self {
     InvalidRuntime(detail~) => "invalid Windows Proton runtime: " + detail
     InvalidLayout(detail~) => "invalid Windows bundle layout: " + detail
@@ -143,7 +89,7 @@ pub fn WindowsBundleError::message(self : WindowsBundleError) -> String {
 }
 
 ///|
-pub fn LinuxBundleError::message(self : LinuxBundleError) -> String {
+fn LinuxBundleError::message(self : LinuxBundleError) -> String {
   match self {
     ToolFailure(stage~, detail~) => stage + " failed: " + detail
   }

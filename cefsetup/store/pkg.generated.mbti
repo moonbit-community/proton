@@ -1,110 +1,27 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonbit-community/proton_cefsetup/store"
 
-import {
-  "moonbitlang/core/debug",
-}
-
 // Values
-pub async fn current_platform_id() -> String
-
 pub async fn install_default() -> InstalledRuntime
 
 pub async fn resolve_default() -> InstalledRuntime
 
 // Errors
-pub(all) suberror CefDownloadError {
-  CreateTemporaryDirectory(detail~ : String)
-  Start(url~ : String, detail~ : String)
-  CurlExit(url~ : String, code~ : Int)
-  OpenArchive(path~ : String, detail~ : String)
-  ChecksumMismatch(expected~ : String, actual~ : String)
-  ExtractStart(path~ : String, detail~ : String)
-  ExtractExit(path~ : String, code~ : Int)
-  ExtractedRootNotFound(path~ : String)
-  ToolUnavailable(tool~ : String)
-} derive(Eq, @debug.Debug)
-pub fn CefDownloadError::equal(Self, Self) -> Bool
-pub fn CefDownloadError::message(Self) -> String
-pub fn CefDownloadError::not_equal(Self, Self) -> Bool
-pub fn CefDownloadError::output(Self, &Logger) -> Unit
-pub fn CefDownloadError::to_repr(Self) -> @debug.Repr
-pub fn CefDownloadError::to_string(Self) -> String
-
-pub(all) suberror CefFileSystemError {
-  CreateDirectory(path~ : String, detail~ : String)
-  ReadDirectory(path~ : String, detail~ : String)
-  Copy(source~ : String, destination~ : String, detail~ : String)
-  Write(path~ : String, detail~ : String)
-  Remove(path~ : String, detail~ : String)
-  InvalidSource(path~ : String)
-} derive(Eq, @debug.Debug)
-pub fn CefFileSystemError::equal(Self, Self) -> Bool
-pub fn CefFileSystemError::message(Self) -> String
-pub fn CefFileSystemError::not_equal(Self, Self) -> Bool
-pub fn CefFileSystemError::output(Self, &Logger) -> Unit
-pub fn CefFileSystemError::to_repr(Self) -> @debug.Repr
-pub fn CefFileSystemError::to_string(Self) -> String
-
-pub(all) suberror CefPlatformError {
-  Unsupported(platform~ : String)
-} derive(Eq, @debug.Debug)
-pub fn CefPlatformError::equal(Self, Self) -> Bool
-pub fn CefPlatformError::message(Self) -> String
-pub fn CefPlatformError::not_equal(Self, Self) -> Bool
-pub fn CefPlatformError::output(Self, &Logger) -> Unit
-pub fn CefPlatformError::to_repr(Self) -> @debug.Repr
-pub fn CefPlatformError::to_string(Self) -> String
-
-pub(all) suberror CefRuntimeError {
-  StoreRootUnavailable
-  StoreRootNotAbsolute(path~ : String)
-  NotInstalled(path~ : String)
-  InvalidCefRoot(path~ : String, missing~ : Array[String])
-  InvalidRuntime(path~ : String, missing~ : Array[String])
-  ManifestRead(path~ : String, detail~ : String)
-  ManifestSyntax(path~ : String, detail~ : String)
-  ManifestShape(path~ : String, detail~ : String)
-  ManifestField(path~ : String, field~ : String)
-  ManifestFieldValue(path~ : String, field~ : String, detail~ : String)
-  UnsafeGeneratedDirectory(path~ : String)
-  UnsafeInstallDirectory(path~ : String)
-} derive(Eq, @debug.Debug)
-pub fn CefRuntimeError::equal(Self, Self) -> Bool
-pub fn CefRuntimeError::message(Self) -> String
-pub fn CefRuntimeError::not_equal(Self, Self) -> Bool
-pub fn CefRuntimeError::output(Self, &Logger) -> Unit
-pub fn CefRuntimeError::to_repr(Self) -> @debug.Repr
-pub fn CefRuntimeError::to_string(Self) -> String
 
 // Types and methods
 pub struct InstalledRuntime {
   root : String
   sdk_root : String
   runtime_root : String
-  requirement : RuntimeRequirement
-} derive(Eq, @debug.Debug)
-pub fn InstalledRuntime::equal(Self, Self) -> Bool
-pub fn InstalledRuntime::not_equal(Self, Self) -> Bool
-pub fn InstalledRuntime::requirement(Self) -> RuntimeRequirement
-pub fn InstalledRuntime::root(Self) -> String
-pub fn InstalledRuntime::runtime_root(Self) -> String
-pub fn InstalledRuntime::sdk_root(Self) -> String
-pub fn InstalledRuntime::to_repr(Self) -> @debug.Repr
-
-pub struct RuntimeRequirement {
   platform : String
   cef_archive : String
   cef_sha256 : String
   layout_version : Int
-} derive(Eq, @debug.Debug)
-pub fn RuntimeRequirement::cef_archive(Self) -> String
-pub fn RuntimeRequirement::cef_sha256(Self) -> String
-pub fn RuntimeRequirement::equal(Self, Self) -> Bool
-pub fn RuntimeRequirement::layout_version(Self) -> Int
-pub fn RuntimeRequirement::not_equal(Self, Self) -> Bool
-pub fn RuntimeRequirement::platform(Self) -> String
-pub fn RuntimeRequirement::to_repr(Self) -> @debug.Repr
+}
+pub fn InstalledRuntime::cef_archive(Self) -> String
+pub fn InstalledRuntime::platform(Self) -> String
+pub fn InstalledRuntime::runtime_root(Self) -> String
+pub fn InstalledRuntime::sdk_root(Self) -> String
 
 // Type aliases
 

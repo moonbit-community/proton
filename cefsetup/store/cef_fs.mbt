@@ -140,64 +140,15 @@ async fn create_install_staging(target_dir : String) -> String {
 }
 
 ///|
-async fn create_install_backup(target_dir : String) -> String {
-  let prefix = target_dir + ".backup-" + @async.now().to_string()
-  for index = 0; ; index = index + 1 {
-    let backup = prefix + "-" + index.to_string()
-    guard !path_exists(backup) else { continue }
-    return backup
-  }
-}
-
-///|
-async fn replace_staged_directory(staging : String, target : String) -> Unit {
-  let had_target = path_exists(target)
-  let backup = if had_target { create_install_backup(target) } else { "" }
-  if had_target {
-    @async_fs.rename(target, backup, replace=false) catch {
-      err =>
-        raise CefFileSystemError::Copy(
-          source=target,
-          destination=backup,
-          detail=@debug.render(Repr(err)),
-        )
-    }
-  }
-  let mut restore_failure : String? = None
-  try {
-    errdefer (if had_target {
-      @async_fs.rename(backup, target, replace=false) catch {
-        restore_error =>
-          restore_failure = Some(@debug.render(Repr(restore_error)))
-      }
-    })
-    @async_fs.rename(staging, target, replace=false) catch {
-      err =>
-        raise CefFileSystemError::Copy(
-          source=staging,
-          destination=target,
-          detail=@debug.render(Repr(err)),
-        )
-    }
-  } catch {
-    error =>
-      match restore_failure {
-        Some(restore_error) =>
-          raise CefFileSystemError::Copy(
-            source=backup,
-            destination=target,
-            detail="failed to restore after publish error " +
-              @debug.render(Repr(error)) +
-              ": " +
-              restore_error,
-          )
-        None => raise error
-      }
-  }
-  if had_target {
-    remove_tree(backup) catch {
-      _ => ()
-    }
+async fn publish_staged_directory(staging : String, target : String) -> Unit {
+  remove_tree(target)
+  @async_fs.rename(staging, target, replace=false) catch {
+    err =>
+      raise CefFileSystemError::Copy(
+        source=staging,
+        destination=target,
+        detail=@debug.render(Repr(err)),
+      )
   }
 }
 

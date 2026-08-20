@@ -3,38 +3,43 @@ async fn package_spec(
   spec : ProtonBundleSpec,
   runtime : String,
 ) -> @packager.PackageSpec {
+  let payloads = spec.package_spec.payloads.copy()
+  payloads.append(package_payloads(spec, runtime, current_bundle_host()))
   @packager.PackageSpec::new(
-    spec.executable,
-    spec.product_name,
-    spec.identifier,
-    spec.version,
-    spec.formats,
-    spec.output,
-    payloads=package_payloads(spec, runtime, current_bundle_host()),
-    icons=spec.icons,
-    url_schemes=spec.url_schemes,
-    document_types=spec.document_types,
-    sign=spec.sign,
-    notarize=spec.notarize,
+    spec.package_spec.executable,
+    spec.package_spec.product_name,
+    spec.package_spec.identifier,
+    spec.package_spec.version,
+    spec.package_spec.formats,
+    spec.package_spec.output,
+    payloads~,
+    icons=spec.package_spec.icons,
+    url_schemes=spec.package_spec.url_schemes,
+    document_types=spec.package_spec.document_types,
+    sign=spec.package_spec.sign,
+    notarize=spec.package_spec.notarize,
   )
 }
 
 ///|
 /// Packages an already-built Proton application using the active immutable
 /// runtime installation.
-pub async fn build(spec : ProtonBundleSpec) -> Array[String] {
-  guard path_is_file(spec.executable) else {
-    raise BundleRuntimeError::ExecutableMissing(path=spec.executable)
+pub async fn build(spec : ProtonBundleSpec) -> BundleResult {
+  guard path_is_file(spec.package_spec.executable) else {
+    raise BundleRuntimeError::ExecutableMissing(
+      path=spec.package_spec.executable,
+    )
   }
   guard path_is_file(spec.cef_process) else {
     raise BundleRuntimeError::HelperMissing(path=spec.cef_process)
   }
-  let runtime = @cef_store.resolve_default().runtime_root()
-  @packager.build_with(
-    package_spec(spec, runtime),
+  let installation = @cef_store.resolve_default()
+  let artifacts = @packager.build_with(
+    package_spec(spec, installation.runtime_root()),
     package_customization(spec),
     async fn(layout) { prepare_proton_package(spec, layout) },
   )
+  BundleResult::{ artifacts, platform: installation.platform() }
 }
 
 ///|
@@ -190,7 +195,11 @@ fn macos_package_sign_targets(
       None => raise BundlePlanError::InputOutsideBase(path=binary)
     }
   }
-  for helper in macos_helper_specs(spec.product_name, spec.identifier) {
+  for
+    helper in macos_helper_specs(
+      spec.package_spec.product_name,
+      spec.package_spec.identifier,
+    ) {
     targets.push(
       @packager.MacosSignTarget::new(
         "Contents/Frameworks/" + helper.bundle_name + ".app",
@@ -258,7 +267,11 @@ async fn prepare_macos_proton_package(
   layout : @packager.PackageLayout,
 ) -> Unit {
   require_launchable_macho(layout.executable())
-  for helper in macos_helper_specs(spec.product_name, spec.identifier) {
+  for
+    helper in macos_helper_specs(
+      spec.package_spec.product_name,
+      spec.package_spec.identifier,
+    ) {
     let helper_app = resolve_path(
       layout.libraries(),
       helper.bundle_name + ".app",

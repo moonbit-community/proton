@@ -54,7 +54,6 @@ pub(all) suberror UpdaterMetadataError {
   NoDistributableArtifact
   UnreadableArtifact(path~ : String, detail~ : String)
   InvalidBaseUrl(url~ : String)
-  UnknownPlatform(detail~ : String)
   MissingPublishedAt
   MissingRevision
   InvalidRevision(value~ : String)

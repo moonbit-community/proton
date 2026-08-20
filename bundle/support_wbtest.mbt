@@ -3,17 +3,20 @@ fn test_bundle_spec(
   root : String,
   sign_binaries? : Array[String] = [],
 ) -> ProtonBundleSpec {
-  ProtonBundleSpec::new(
+  let package_spec = @packager.PackageSpec::new(
     resolve_path(root, "app"),
-    resolve_path(root, "cef_process"),
-    root,
     "Demo & App",
     "dev.proton.demo",
     "1.2.3",
-    "1.2.3",
-    "42",
     [@packager.PackageFormat::App],
     resolve_path(root, "dist"),
+  )
+  ProtonBundleSpec::new(
+    package_spec,
+    resolve_path(root, "cef_process"),
+    root,
+    "1.2.3",
+    "42",
     None,
     update_revision=42UL,
     sign_binaries~,
@@ -39,7 +42,10 @@ test "macOS bundle defines the complete CEF helper family" {
 ///|
 test "macOS helper plist matches its bundle identity" {
   let spec = test_bundle_spec(".")
-  let helper = macos_helper_specs(spec.product_name, spec.identifier)[4]
+  let helper = macos_helper_specs(
+      spec.package_spec.product_name,
+      spec.package_spec.identifier,
+    )[4]
   let plist = helper_info_plist(spec, helper)
   assert_true(
     plist.contains(

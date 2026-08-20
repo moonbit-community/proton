@@ -1,22 +1,8 @@
 ///|
 async fn validate_installed_runtime(runtime : InstalledRuntime) -> Unit {
   validate_runtime_manifest(runtime)
-  let platform = platform_from_override(Some(runtime.requirement.platform)).unwrap()
+  let platform = platform_from_override(Some(runtime.platform)).unwrap()
   validate_cef_root(runtime.sdk_root, platform)
-  guard installed_version(runtime.sdk_root) == runtime.requirement.cef_archive else {
-    raise CefRuntimeError::ManifestFieldValue(
-      path=path_join(runtime.sdk_root, "version.txt"),
-      field="cef_archive",
-      detail="installed SDK does not match runtime manifest",
-    )
-  }
-  guard installed_checksum(runtime.sdk_root) == runtime.requirement.cef_sha256 else {
-    raise CefRuntimeError::ManifestFieldValue(
-      path=path_join(runtime.sdk_root, "sha256.txt"),
-      field="cef_sha256",
-      detail="installed SDK does not match runtime manifest",
-    )
-  }
   validate_runtime_dist(runtime.runtime_root, platform)
 }
 
@@ -62,24 +48,25 @@ async fn install_required_runtime() -> InstalledRuntime {
     root: staging_root,
     sdk_root: path_join(staging_root, "sdk"),
     runtime_root: path_join(staging_root, "runtime"),
-    requirement,
+    platform: requirement.platform,
+    cef_archive: requirement.cef_archive,
+    cef_sha256: requirement.cef_sha256,
+    layout_version: requirement.layout_version,
   }
   setup_downloaded_cef(
     name=requirement.cef_archive,
     sha256=requirement.cef_sha256,
-    root=staging_root,
-    install_dir=staging.sdk_root,
+    sdk_root=staging.sdk_root,
     platform~,
   )
   assemble_runtime(
-    cache_root=staging_root,
     platform~,
     cef_root=staging.sdk_root,
     runtime_dir=staging.runtime_root,
   )
   write_runtime_manifest(staging)
   validate_installed_runtime(staging)
-  replace_staged_directory(staging_root, runtime.root)
+  publish_staged_directory(staging_root, runtime.root)
   validate_installed_runtime(runtime)
   runtime
 }

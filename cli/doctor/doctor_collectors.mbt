@@ -72,13 +72,7 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
 
 ///|
 async fn collect_environment() -> DoctorSection {
-  let lines : Array[DoctorLine] = [
-    DoctorLine::new(
-      "environment.platform",
-      Ok,
-      "platform: " + @cef_store.current_platform_id(),
-    ),
-  ]
+  let lines : Array[DoctorLine] = []
   let (status, output) = @process.collect_output_merged("moon", ["version"]) catch {
     _ => {
       lines.push(
@@ -130,12 +124,11 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
     DoctorLine::new("runtime.layout", Ok, "runtime installation is valid"),
   )
   if verbose {
-    let requirement = runtime.requirement()
     lines.push(
       DoctorLine::new(
         "runtime.versions",
         Neutral,
-        "CEF " + requirement.cef_archive(),
+        "CEF " + runtime.cef_archive(),
       ),
     )
     lines.push(DoctorLine::new("runtime.path", Neutral, runtime.runtime_root()))

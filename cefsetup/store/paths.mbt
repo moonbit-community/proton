@@ -62,21 +62,6 @@ fn resolve_path(base : String, path : String) -> String {
 }
 
 ///|
-fn relative_path(base : String, path : String) -> String {
-  let base_path = host_path(base).resolve()
-  host_path(path).resolve().relative(base=base_path).to_string()
-}
-
-///|
-fn path_is_within(root : String, candidate : String) -> Bool {
-  let relative = relative_path(root, candidate)
-  let relative_path = host_path(relative)
-  !relative_path.is_absolute() &&
-  relative != ".." &&
-  !relative.has_prefix(".." + @path.sep.to_string())
-}
-
-///|
 fn home_directory() -> String? {
   let primary = if @path.sep == '\\' { "USERPROFILE" } else { "HOME" }
   let fallback = if @path.sep == '\\' { "HOME" } else { "USERPROFILE" }

@@ -2,22 +2,28 @@
 let runtime_manifest_name = "manifest.json"
 
 ///|
+priv struct RuntimeManifest {
+  schema_version : Int
+  platform : String
+  cef_archive : String
+  cef_sha256 : String
+  layout_version : Int
+  sdk : String
+  runtime : String
+} derive(ToJson, FromJson, Eq)
+
+///|
+extend RuntimeManifest with ToJson::{to_json}
+
+///|
 pub struct InstalledRuntime {
   root : String
   sdk_root : String
   runtime_root : String
-  requirement : RuntimeRequirement
-} derive(Debug, Eq)
-
-///|
-pub extend InstalledRuntime with Eq::{not_equal, equal}
-
-///|
-pub extend InstalledRuntime with Debug::{to_repr}
-
-///|
-pub fn InstalledRuntime::root(self : InstalledRuntime) -> String {
-  self.root
+  platform : String
+  cef_archive : String
+  cef_sha256 : String
+  layout_version : Int
 }
 
 ///|
@@ -31,10 +37,13 @@ pub fn InstalledRuntime::runtime_root(self : InstalledRuntime) -> String {
 }
 
 ///|
-pub fn InstalledRuntime::requirement(
-  self : InstalledRuntime,
-) -> RuntimeRequirement {
-  self.requirement
+pub fn InstalledRuntime::platform(self : InstalledRuntime) -> String {
+  self.platform
+}
+
+///|
+pub fn InstalledRuntime::cef_archive(self : InstalledRuntime) -> String {
+  self.cef_archive
 }
 
 ///|
@@ -58,24 +67,52 @@ fn installed_runtime(
     root,
     sdk_root: path_join(root, "sdk"),
     runtime_root: path_join(root, "runtime"),
-    requirement,
+    platform: requirement.platform,
+    cef_archive: requirement.cef_archive,
+    cef_sha256: requirement.cef_sha256,
+    layout_version: requirement.layout_version,
   }
 }
 
 ///|
-fn runtime_manifest_json(requirement : RuntimeRequirement) -> String {
-  Json::object({
-    "schema_version": Json::number(1.0, repr="1"),
-    "platform": requirement.platform,
-    "cef_archive": requirement.cef_archive,
-    "cef_sha256": requirement.cef_sha256,
-    "layout_version": Json::number(
-      requirement.layout_version.to_double(),
-      repr=requirement.layout_version.to_string(),
-    ),
-    "sdk": "sdk",
-    "runtime": "runtime",
-  }).stringify()
+fn installed_requirement(runtime : InstalledRuntime) -> RuntimeRequirement {
+  {
+    platform: runtime.platform,
+    cef_archive: runtime.cef_archive,
+    cef_sha256: runtime.cef_sha256,
+    layout_version: runtime.layout_version,
+  }
+}
+
+///|
+fn runtime_manifest(requirement : RuntimeRequirement) -> RuntimeManifest {
+  {
+    schema_version: 1,
+    platform: requirement.platform,
+    cef_archive: requirement.cef_archive,
+    cef_sha256: requirement.cef_sha256,
+    layout_version: requirement.layout_version,
+    sdk: "sdk",
+    runtime: "runtime",
+  }
+}
+
+///|
+async fn read_runtime_manifest_json(path : String) -> Json {
+  let content = @async_fs.read_file(path).text() catch {
+    err =>
+      raise CefRuntimeError::ManifestRead(
+        path~,
+        detail=@debug.render(Repr(err)),
+      )
+  }
+  @json.parse(content) catch {
+    err =>
+      raise CefRuntimeError::ManifestSyntax(
+        path~,
+        detail=@debug.render(Repr(err)),
+      )
+  }
 }
 
 ///|
@@ -83,7 +120,8 @@ async fn write_runtime_manifest(runtime : InstalledRuntime) -> Unit {
   let path = path_join(runtime.root, runtime_manifest_name)
   @async_fs.write_file(
     path,
-    runtime_manifest_json(runtime.requirement) + "\n",
+    runtime_manifest(installed_requirement(runtime)).to_json().stringify() +
+    "\n",
     create_mode=CreateOrTruncate,
   ) catch {
     err =>
@@ -92,75 +130,22 @@ async fn write_runtime_manifest(runtime : InstalledRuntime) -> Unit {
 }
 
 ///|
-fn require_manifest_string(
-  fields : Map[String, Json],
-  name : String,
-  path : String,
-) -> String raise CefRuntimeError {
-  match fields.get(name) {
-    Some(String(value)) => value
-    _ => raise CefRuntimeError::ManifestField(path~, field=name)
-  }
-}
-
-///|
-fn require_manifest_int(
-  fields : Map[String, Json],
-  name : String,
-  path : String,
-) -> Int raise CefRuntimeError {
-  match fields.get(name) {
-    Some(value) =>
-      @json.from_json(value) catch {
-        _ => raise CefRuntimeError::ManifestField(path~, field=name)
-      }
-    None => raise CefRuntimeError::ManifestField(path~, field=name)
-  }
-}
-
-///|
 async fn validate_runtime_manifest(runtime : InstalledRuntime) -> Unit {
   let path = path_join(runtime.root, runtime_manifest_name)
-  let json = read_json_file(path)
-  guard json is Object(fields) else {
-    raise CefRuntimeError::ManifestShape(path~, detail="root must be an object")
-  }
-  let schema_version = require_manifest_int(fields, "schema_version", path)
-  guard schema_version == 1 else {
-    raise CefRuntimeError::ManifestFieldValue(
-      path~,
-      field="schema_version",
-      detail="expected 1, got " + schema_version.to_string(),
-    )
-  }
-  let expected = runtime.requirement
-  let values = [
-    ("platform", expected.platform),
-    ("cef_archive", expected.cef_archive),
-    ("cef_sha256", expected.cef_sha256),
-    ("sdk", "sdk"),
-    ("runtime", "runtime"),
-  ]
-  for item in values {
-    let (field, expected_value) = item
-    let actual = require_manifest_string(fields, field, path)
-    guard actual == expected_value else {
-      raise CefRuntimeError::ManifestFieldValue(
+  let actual : RuntimeManifest = @json.from_json(
+    read_runtime_manifest_json(path),
+  ) catch {
+    error =>
+      raise CefRuntimeError::ManifestInvalid(
         path~,
-        field~,
-        detail="expected \"" + expected_value + "\", got \"" + actual + "\"",
+        detail=@debug.render(Repr(error)),
       )
-    }
   }
-  let layout_version = require_manifest_int(fields, "layout_version", path)
-  guard layout_version == expected.layout_version else {
-    raise CefRuntimeError::ManifestFieldValue(
+  let expected = runtime_manifest(installed_requirement(runtime))
+  guard actual == expected else {
+    raise CefRuntimeError::ManifestInvalid(
       path~,
-      field="layout_version",
-      detail="expected " +
-        expected.layout_version.to_string() +
-        ", got " +
-        layout_version.to_string(),
+      detail="contents do not match the required CEF installation",
     )
   }
 }

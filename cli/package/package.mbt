@@ -132,12 +132,13 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   if raw.dry_run {
     return
   }
-  let artifacts = execute_package_plan(plan)
+  let result = execute_package_plan(plan)
   match updater_base_url {
     Some(base_url) =>
       write_updater_metadata(
         plan,
-        artifacts,
+        result.artifacts(),
+        result.platform(),
         base_url,
         match matches.values {
           { "updater-published-at": [published_at, ..], .. } => published_at
@@ -239,6 +240,15 @@ async fn current_package_host() -> PackageHost {
 }
 
 ///|
+fn package_host_name(host : PackageHost) -> String {
+  match host {
+    Macos => "macOS"
+    Windows => "Windows"
+    Linux => "Linux"
+  }
+}
+
+///|
 /// The host a platform id names. Used where the question is which platform's
 /// artifacts are being described rather than which one is running -- update
 /// metadata names the platform it was built for, and has the id in hand.
@@ -310,7 +320,7 @@ async fn build_package_plan(
     guard package_target_hosts(target) is Some(hosts) && hosts.contains(host) else {
       raise PackagePlanError::UnsupportedTargetForPlatform(
         target~,
-        platform=@cef_store.current_platform_id(),
+        platform=package_host_name(host),
       )
     }
   }
@@ -543,7 +553,7 @@ fn bool_text(value : Bool) -> String {
 }
 
 ///|
-async fn execute_package_plan(plan : PackagePlan) -> Array[String] {
+async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
   let executable = run_package_build(plan)
   if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
     raise PackagePlanError::MissingExecutable(path=executable)
@@ -559,32 +569,36 @@ async fn execute_package_plan(plan : PackagePlan) -> Array[String] {
   let formats = plan.targets.map(target => {
     @packager.PackageFormat::parse(target)
   })
-  let spec = @bundle.ProtonBundleSpec::new(
+  let package_spec = @packager.PackageSpec::new(
     executable,
-    helper,
-    plan.base_dir,
     plan.product_name,
     plan.identifier,
     plan.version,
-    plan.macos_version,
-    plan.bundle_version,
     formats,
     plan.output,
-    plan.frontend_dist,
-    update_revision=plan.update_revision,
-    resources=plan.resources,
-    sign_binaries=plan.sign_binaries,
     icons=plan.icons,
     url_schemes=plan.url_schemes,
     document_types~,
     sign=plan.sign,
     notarize=plan.notarize,
   )
-  let artifacts = @bundle.build(spec)
+  let spec = @bundle.ProtonBundleSpec::new(
+    package_spec,
+    helper,
+    plan.base_dir,
+    plan.macos_version,
+    plan.bundle_version,
+    plan.frontend_dist,
+    update_revision=plan.update_revision,
+    resources=plan.resources,
+    sign_binaries=plan.sign_binaries,
+  )
+  let result = @bundle.build(spec)
+  let artifacts = result.artifacts()
   for artifact in artifacts {
     println("Packaged: " + artifact)
   }
-  artifacts
+  result
 }
 
 ///|

@@ -63,7 +63,7 @@ test "runtime cache identity is the CEF content digest" {
 ///|
 test "runtime installation contains no machine paths in its manifest" {
   let requirement = runtime_requirement(darwin_arm64_platform())
-  let manifest = runtime_manifest_json(requirement)
+  let manifest = runtime_manifest(requirement).to_json().stringify()
   assert_true(manifest.contains("\"sdk\":\"sdk\""))
   assert_true(manifest.contains("\"runtime\":\"runtime\""))
   assert_false(manifest.contains("/Users/"))
@@ -121,54 +121,6 @@ test "default CEF archives have pinned SHA-256 digests" {
     assert_eq(value.length(), 64)
     for ch in value {
       assert_true(ch.is_ascii_digit() || (ch >= 'a' && ch <= 'f'))
-    }
-  }
-}
-
-///|
-test "generated runtime directories must stay under the store root" {
-  let root = "/Users/test/.proton/store"
-  assert_safe_generated_dir(
-    "/Users/test/.proton/store/darwin-arm64/cef-content-hash", root,
-  )
-  for
-    dir in [
-      root,
-      "/Users/test/.proton",
-      "/.proton/store/darwin-arm64/x",
-      "/Users/test/.proton/store.evil/x",
-      "",
-      root + "/",
-    ] {
-    try assert_safe_generated_dir(dir, root) catch {
-      CefRuntimeError::UnsafeGeneratedDirectory(..) => ()
-      _ => abort("expected unsafe generated directory: " + dir)
-    } noraise {
-      _ => abort("expected unsafe generated directory to fail: " + dir)
-    }
-  }
-}
-
-///|
-test "CEF installation never removes a project boundary or filesystem root" {
-  let root = resolve_path(".", "fixtures/proton-cef-project")
-  let cache = resolve_path(".", "fixtures/proton-cef-cache/runtime")
-  assert_safe_install_dir(cache, root)
-  let parent = path_parent(root)
-  let mut filesystem_root = root
-  for ;; {
-    let next = path_parent(filesystem_root)
-    if next == filesystem_root {
-      break
-    }
-    filesystem_root = next
-  }
-  for dir in ["", root, parent, filesystem_root] {
-    try assert_safe_install_dir(dir, root) catch {
-      CefRuntimeError::UnsafeInstallDirectory(..) => ()
-      _ => abort("expected unsafe install directory: " + dir)
-    } noraise {
-      _ => abort("expected unsafe install directory to fail: " + dir)
     }
   }
 }

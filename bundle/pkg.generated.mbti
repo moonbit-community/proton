@@ -3,104 +3,33 @@ package "moonbit-community/proton_bundle"
 
 import {
   "moonbit-community/proton_package/lib",
-  "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn build(ProtonBundleSpec) -> Array[String]
+pub async fn build(ProtonBundleSpec) -> BundleResult
 
 // Errors
-pub(all) suberror BundleFileSystemError {
-  CreateDirectory(path~ : String, detail~ : String)
-  Copy(source~ : String, destination~ : String, detail~ : String)
-  Read(path~ : String, detail~ : String)
-  Write(path~ : String, detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn BundleFileSystemError::equal(Self, Self) -> Bool
-pub fn BundleFileSystemError::message(Self) -> String
-pub fn BundleFileSystemError::not_equal(Self, Self) -> Bool
-pub fn BundleFileSystemError::output(Self, &Logger) -> Unit
-pub fn BundleFileSystemError::to_repr(Self) -> @debug.Repr
-pub fn BundleFileSystemError::to_string(Self) -> String
-
-pub(all) suberror BundlePlanError {
-  UnsupportedResourceGlob(path~ : String)
-  MissingInput(path~ : String)
-  NotLaunchableMachO(path~ : String, filetype~ : Int)
-  InputOutsideBase(path~ : String)
-} derive(Eq, @debug.Debug)
-pub fn BundlePlanError::equal(Self, Self) -> Bool
-pub fn BundlePlanError::message(Self) -> String
-pub fn BundlePlanError::not_equal(Self, Self) -> Bool
-pub fn BundlePlanError::output(Self, &Logger) -> Unit
-pub fn BundlePlanError::to_repr(Self) -> @debug.Repr
-pub fn BundlePlanError::to_string(Self) -> String
-
-pub(all) suberror BundleRuntimeError {
-  ExecutableMissing(path~ : String)
-  HelperMissing(path~ : String)
-} derive(Eq, @debug.Debug)
-pub fn BundleRuntimeError::equal(Self, Self) -> Bool
-pub fn BundleRuntimeError::message(Self) -> String
-pub fn BundleRuntimeError::not_equal(Self, Self) -> Bool
-pub fn BundleRuntimeError::output(Self, &Logger) -> Unit
-pub fn BundleRuntimeError::to_repr(Self) -> @debug.Repr
-pub fn BundleRuntimeError::to_string(Self) -> String
-
-pub(all) suberror BundleToolError {
-  Exit(tool~ : String, code~ : Int, detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn BundleToolError::equal(Self, Self) -> Bool
-pub fn BundleToolError::message(Self) -> String
-pub fn BundleToolError::not_equal(Self, Self) -> Bool
-pub fn BundleToolError::output(Self, &Logger) -> Unit
-pub fn BundleToolError::to_repr(Self) -> @debug.Repr
-pub fn BundleToolError::to_string(Self) -> String
-
-pub(all) suberror LinuxBundleError {
-  ToolFailure(stage~ : String, detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn LinuxBundleError::equal(Self, Self) -> Bool
-pub fn LinuxBundleError::message(Self) -> String
-pub fn LinuxBundleError::not_equal(Self, Self) -> Bool
-pub fn LinuxBundleError::output(Self, &Logger) -> Unit
-pub fn LinuxBundleError::to_repr(Self) -> @debug.Repr
-pub fn LinuxBundleError::to_string(Self) -> String
-
-pub(all) suberror WindowsBundleError {
-  InvalidRuntime(detail~ : String)
-  InvalidLayout(detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn WindowsBundleError::equal(Self, Self) -> Bool
-pub fn WindowsBundleError::message(Self) -> String
-pub fn WindowsBundleError::not_equal(Self, Self) -> Bool
-pub fn WindowsBundleError::output(Self, &Logger) -> Unit
-pub fn WindowsBundleError::to_repr(Self) -> @debug.Repr
-pub fn WindowsBundleError::to_string(Self) -> String
 
 // Types and methods
+pub struct BundleResult {
+  artifacts : Array[String]
+  platform : String
+}
+pub fn BundleResult::artifacts(Self) -> Array[String]
+pub fn BundleResult::platform(Self) -> String
+
 pub struct ProtonBundleSpec {
-  executable : String
+  package_spec : @lib.PackageSpec
   cef_process : String
   base_dir : String
-  product_name : String
-  identifier : String
-  version : String
   macos_version : String
   bundle_version : String
   update_revision : UInt64
-  formats : Array[@lib.PackageFormat]
-  output : String
   frontend_dist : String?
   resources : Array[String]
   sign_binaries : Array[String]
-  icons : Array[String]
-  url_schemes : Array[String]
-  document_types : Array[@lib.DocumentType]
-  sign : Bool
-  notarize : Bool
 }
-pub fn ProtonBundleSpec::new(String, String, String, String, String, String, String, String, Array[@lib.PackageFormat], String, String?, update_revision? : UInt64, resources? : Array[String], sign_binaries? : Array[String], icons? : Array[String], url_schemes? : Array[String], document_types? : Array[@lib.DocumentType], sign? : Bool, notarize? : Bool) -> Self
+pub fn ProtonBundleSpec::new(@lib.PackageSpec, String, String, String, String, String?, update_revision? : UInt64, resources? : Array[String], sign_binaries? : Array[String]) -> Self
 
 // Type aliases
 

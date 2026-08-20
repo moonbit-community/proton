@@ -5,6 +5,8 @@
 matching `cef_process` executable, writes Proton metadata, and describes the
 platform-specific signing layout.
 
-The module does not inspect a MoonBit project or run a build. Callers provide
-the application executable, the matching helper executable, package metadata,
-and project payload paths explicitly.
+The module does not inspect a MoonBit project or run a build. Callers provide a
+complete `proton_package.PackageSpec`, the matching helper executable, and only
+the additional Proton payload inputs. `build` returns both the produced
+artifacts and the platform of the resolved runtime so callers do not need to
+query the CEF store independently.

@@ -14,44 +14,20 @@ async fn make_temp_dir() -> String {
 }
 
 ///|
-let cef_download_max_attempts = 3
-
-///|
-let cef_download_retry_delay_ms = 2000
-
-///|
 async fn download_file(
   url : String,
   destination : String,
   expected_sha256 : String,
 ) -> Unit {
   report_info("[INFO] Downloading CEF: " + url)
-  let mut last_code = 1
-  for attempt in 1..<=cef_download_max_attempts {
-    let code = @process.run("curl", [
-      "-L", "--fail", "--retry", "5", "--retry-all-errors", "--retry-delay", "2",
-      "--connect-timeout", "30", "--output", destination, url,
-    ]) catch {
-      err =>
-        raise CefDownloadError::Start(url~, detail=@debug.render(Repr(err)))
-    }
-    if code == 0 {
-      verify_file_sha256(destination, expected_sha256)
-      return
-    }
-    last_code = code
-    if attempt < cef_download_max_attempts {
-      report_info(
-        "[INFO] CEF download attempt " +
-        attempt.to_string() +
-        " failed (curl exit " +
-        code.to_string() +
-        "); retrying",
-      )
-      @async.sleep(cef_download_retry_delay_ms)
-    }
+  let code = @process.run("curl", [
+    "-L", "--fail", "--retry", "5", "--retry-all-errors", "--retry-delay", "2", "--connect-timeout",
+    "30", "--output", destination, url,
+  ]) catch {
+    err => raise CefDownloadError::Start(url~, detail=@debug.render(Repr(err)))
   }
-  raise CefDownloadError::CurlExit(url~, code=last_code)
+  guard code == 0 else { raise CefDownloadError::CurlExit(url~, code~) }
+  verify_file_sha256(destination, expected_sha256)
 }
 
 ///|
@@ -100,27 +76,5 @@ async fn find_extracted_root(
   if has_source_cef_files(named, platform) {
     return named
   }
-  let candidates : Array[String] = []
-  let entries = @async_fs.readdir(
-    extract_dir,
-    include_hidden=true,
-    include_special=false,
-  ) catch {
-    err =>
-      raise CefFileSystemError::ReadDirectory(
-        path=extract_dir,
-        detail=@debug.render(Repr(err)),
-      )
-  }
-  for entry in entries {
-    guard entry.has_prefix("cef_binary_") else { continue }
-    let candidate = path_join(extract_dir, entry)
-    if path_is_dir(candidate) && has_source_cef_files(candidate, platform) {
-      candidates.push(candidate)
-    }
-  }
-  match candidates {
-    [candidate] => candidate
-    _ => raise CefDownloadError::ExtractedRootNotFound(path=extract_dir)
-  }
+  raise CefDownloadError::ExtractedRootNotFound(path=named)
 }

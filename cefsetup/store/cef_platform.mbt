@@ -8,37 +8,11 @@ priv struct ProtonPlatform {
 
 ///|
 /// The immutable CEF requirement selected by a Proton release.
-pub struct RuntimeRequirement {
+priv struct RuntimeRequirement {
   platform : String
   cef_archive : String
   cef_sha256 : String
   layout_version : Int
-} derive(Debug, Eq)
-
-///|
-pub extend RuntimeRequirement with Eq::{not_equal, equal}
-
-///|
-pub extend RuntimeRequirement with Debug::{to_repr}
-
-///|
-pub fn RuntimeRequirement::platform(self : RuntimeRequirement) -> String {
-  self.platform
-}
-
-///|
-pub fn RuntimeRequirement::cef_archive(self : RuntimeRequirement) -> String {
-  self.cef_archive
-}
-
-///|
-pub fn RuntimeRequirement::cef_sha256(self : RuntimeRequirement) -> String {
-  self.cef_sha256
-}
-
-///|
-pub fn RuntimeRequirement::layout_version(self : RuntimeRequirement) -> Int {
-  self.layout_version
 }
 
 ///|
@@ -66,13 +40,6 @@ async fn current_platform() -> ProtonPlatform {
     macos=is_macos_host(),
     arch=detect_host_arch(),
   )
-}
-
-///|
-/// Returns the stable platform id used by `cef setup` and runtime manifests.
-pub async fn current_platform_id() -> String {
-  let platform = current_platform()
-  platform.id
 }
 
 ///|

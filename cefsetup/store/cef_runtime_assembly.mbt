@@ -1,18 +1,4 @@
 ///|
-fn assert_safe_generated_dir(
-  generated_dir : String,
-  cache_root : String,
-) -> Unit raise CefRuntimeError {
-  let normalized_generated = resolve_path(".", generated_dir)
-  let normalized_root = resolve_path(".", cache_root)
-  if generated_dir == "" ||
-    normalized_generated == normalized_root ||
-    !path_is_within(normalized_root, normalized_generated) {
-    raise UnsafeGeneratedDirectory(path=generated_dir)
-  }
-}
-
-///|
 async fn copy_cef_runtime(
   platform : ProtonPlatform,
   cef_root : String,
@@ -47,51 +33,17 @@ async fn copy_cef_runtime(
 }
 
 ///|
-async fn create_runtime_staging(runtime_dir : String) -> String {
-  let prefix = runtime_dir + ".staging-" + @async.now().to_string()
-  for index = 0; ; index = index + 1 {
-    let staging = prefix + "-" + index.to_string()
-    try @async_fs.mkdir(staging) catch {
-      error =>
-        if !path_exists(staging) {
-          raise CefFileSystemError::CreateDirectory(
-            path=staging,
-            detail=@debug.render(Repr(error)),
-          )
-        }
-    } noraise {
-      _ => return staging
-    }
-  }
-}
-
-///|
 async fn assemble_runtime(
-  cache_root~ : String,
   platform~ : ProtonPlatform,
   cef_root~ : String,
   runtime_dir~ : String,
   report_progress? : Bool = true,
 ) -> Unit {
-  assert_safe_generated_dir(runtime_dir, cache_root)
-  let runtime_lock = acquire_install_lock(runtime_dir)
-  defer runtime_lock.close()
-  defer runtime_lock.unlock()
-  if path_is_dir(runtime_dir) {
-    try validate_runtime_dist(runtime_dir, platform) catch {
-      error if @async.is_being_cancelled() => raise error
-      _ => ()
-    } noraise {
-      _ => return
-    }
-  }
-  ensure_dir(path_parent(runtime_dir))
-  let staging = create_runtime_staging(runtime_dir)
-  defer (remove_tree(staging) catch { _ => () })
+  remove_tree(runtime_dir)
+  ensure_dir(runtime_dir)
   if report_progress {
     report_info("[INFO] Assembling CEF runtime: " + runtime_dir)
   }
-  copy_cef_runtime(platform, cef_root, staging)
-  validate_runtime_dist(staging, platform)
-  replace_staged_directory(staging, runtime_dir)
+  copy_cef_runtime(platform, cef_root, runtime_dir)
+  validate_runtime_dist(runtime_dir, platform)
 }
