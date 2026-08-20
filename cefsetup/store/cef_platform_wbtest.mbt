@@ -92,6 +92,36 @@ test "host platform detection does not guess arm64 for unknown macOS arch" {
 }
 
 ///|
+test "host platform detection rejects unsupported Windows CPUs" {
+  let x64 = platform_from_host(windows=true, macos=false, arch=Some("AMD64"))
+  assert_eq(x64.id, "win32-x64")
+  assert_true(x64.supported)
+  let arm64 = platform_from_host(windows=true, macos=false, arch=Some("ARM64"))
+  assert_eq(arm64.id, "win32-arm64")
+  assert_false(arm64.supported)
+  let unknown = platform_from_host(windows=true, macos=false, arch=None)
+  assert_eq(unknown.id, "win32-unknown")
+  assert_false(unknown.supported)
+}
+
+///|
+test "host platform detection rejects unsupported Linux CPUs" {
+  let x64 = platform_from_host(windows=false, macos=false, arch=Some("x86_64"))
+  assert_eq(x64.id, "linux-x64")
+  assert_true(x64.supported)
+  let arm64 = platform_from_host(
+    windows=false,
+    macos=false,
+    arch=Some("aarch64"),
+  )
+  assert_eq(arm64.id, "linux-arm64")
+  assert_false(arm64.supported)
+  let unknown = platform_from_host(windows=false, macos=false, arch=None)
+  assert_eq(unknown.id, "linux-unknown")
+  assert_false(unknown.supported)
+}
+
+///|
 test "platform override accepts stable platform ids" {
   match platform_from_override(Some("darwin-x64")) {
     Some(platform) => {

@@ -62,7 +62,11 @@ fn platform_from_host(
   arch~ : String?,
 ) -> ProtonPlatform {
   if windows {
-    win32_x64_platform()
+    match normalized_host_arch(arch) {
+      Some("x64") => win32_x64_platform()
+      Some(value) => unsupported_platform("win32-" + value)
+      None => unsupported_platform("win32-unknown")
+    }
   } else if macos {
     match normalized_host_arch(arch) {
       Some("arm64") => darwin_arm64_platform()
@@ -72,8 +76,9 @@ fn platform_from_host(
     }
   } else {
     match normalized_host_arch(arch) {
-      Some("arm64") => unsupported_platform("linux-arm64")
-      _ => linux_x64_platform()
+      Some("x64") => linux_x64_platform()
+      Some(value) => unsupported_platform("linux-" + value)
+      None => unsupported_platform("linux-unknown")
     }
   }
 }
