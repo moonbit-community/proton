@@ -404,8 +404,12 @@ async fn create_macos_dmg(
   remove_tree(staging)
   ensure_dir(root)
   errdefer {
-    remove_tree(root) catch { _ => () }
-    remove_tree(staging) catch { _ => () }
+    remove_tree(root) catch {
+      _ => ()
+    }
+    remove_tree(staging) catch {
+      _ => ()
+    }
   }
   copy_tree(app, path_join(root, spec.product_name + ".app"))
   @async_fs.symlink(target="/Applications", path_join(root, "Applications")) catch {

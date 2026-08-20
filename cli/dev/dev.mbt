@@ -175,16 +175,9 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
       }
   }
   let runtime = ensure_dev_runtime(root, raw.setup_runtime)
-  let helper_path = @build.build_cef_process(
-    root,
-    backend_path,
-    moon_target_dir?,
-  )
+  let helper_path = @build.build_cef_process(backend_path, moon_target_dir?)
   let app_env = dev_process_env(
-    runtime,
-    helper_path,
-    frontend_url,
-    project_base,
+    runtime, helper_path, frontend_url, project_base,
   )
   let frontend_env = dev_frontend_process_env(
     app_env,

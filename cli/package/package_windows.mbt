@@ -2,8 +2,8 @@
 fn windows_runtime_binary_files() -> Array[String] {
   [
     "chrome_elf.dll", "d3dcompiler_47.dll", "dxcompiler.dll", "dxil.dll", "libcef.dll",
-    "libEGL.dll", "libGLESv2.dll", "v8_context_snapshot.bin",
-    "vk_swiftshader.dll", "vk_swiftshader_icd.json", "vulkan-1.dll",
+    "libEGL.dll", "libGLESv2.dll", "v8_context_snapshot.bin", "vk_swiftshader.dll",
+    "vk_swiftshader_icd.json", "vulkan-1.dll",
   ]
 }
 

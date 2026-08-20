@@ -924,40 +924,6 @@ async fn write_package_manifest(
 }
 
 ///|
-async fn add_macos_rpath(binary : String, rpath : String) -> Unit {
-  let code = @process.run("install_name_tool", ["-add_rpath", rpath, binary]) catch {
-    error =>
-      raise PackageToolError::Start(
-        tool="install_name_tool",
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  if code != 0 {
-    raise PackageToolError::Exit(tool="install_name_tool", code~, detail=binary)
-  }
-}
-
-///|
-async fn replace_macos_rpath(
-  binary : String,
-  current : String,
-  replacement : String,
-) -> Unit {
-  let code = @process.run("install_name_tool", [
-    "-rpath", current, replacement, binary,
-  ]) catch {
-    error =>
-      raise PackageToolError::Start(
-        tool="install_name_tool",
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  if code != 0 {
-    raise PackageToolError::Exit(tool="install_name_tool", code~, detail=binary)
-  }
-}
-
-///|
 async fn resolve_package_config_path(
   cwd : String,
   root : String,
