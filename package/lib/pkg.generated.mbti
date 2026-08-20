@@ -10,6 +10,8 @@ pub async fn build(PackageSpec) -> Array[String]
 
 pub async fn build_with(PackageSpec, PackageCustomization, async (PackageLayout) -> Unit) -> Array[String]
 
+pub fn validate_package_version(String) -> String raise PackagePlanError
+
 // Errors
 pub(all) suberror LinuxPackagingError {
   InvalidConfiguration(detail~ : String)

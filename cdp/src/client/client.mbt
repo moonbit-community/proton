@@ -323,6 +323,13 @@ fn[X] CdpClient::from_websocket(
   tasks : @async.TaskGroup[X],
   ws : @websocket.Conn,
 ) -> CdpClient {
+  let client = CdpClient::new(ws)
+  tasks.spawn_bg(() => client.read_messages(), no_wait=true, allow_failure=true)
+  client
+}
+
+///|
+fn CdpClient::new(ws : @websocket.Conn) -> CdpClient {
   let client = CdpClient::{
     ws,
     next_id: 1,
@@ -340,7 +347,6 @@ fn[X] CdpClient::from_websocket(
     last_cdp_event: None,
     attached_targets: {},
   }
-  tasks.spawn_bg(() => client.read_messages(), no_wait=true, allow_failure=true)
   client
 }
 
@@ -641,6 +647,7 @@ pub async fn CdpClient::send_cdp_command(
     state: Waiting,
     changed: @async.CondVar::Cond(),
   }
+  errdefer self.clear_inflight_command(id)
   self.ws.send_text(command.stringify())
   id
 }
@@ -662,12 +669,10 @@ pub async fn CdpClient::recv_cdp_response(
   timeout_ms? : Int = 25000,
 ) -> @protocol.CdpResponseMessage {
   let timeout_ms = checked_duration(timeout_ms, "timeout")
+  defer self.clear_inflight_command(id)
   match @async.with_timeout_opt(timeout_ms, () => self.recv_response(id)) {
     Some(response) => response
-    None => {
-      self.clear_inflight_command(id)
-      raise BrowserError::WaitTimeout("cdp response \{id}")
-    }
+    None => raise BrowserError::WaitTimeout("cdp response \{id}")
   }
 }
 
@@ -687,6 +692,7 @@ async fn CdpClient::send_cdp_message_no_wait(
     state: Waiting,
     changed: @async.CondVar::Cond(),
   }
+  errdefer self.clear_inflight_command(command.id)
   self.ws.send_text(command.stringify())
 }
 
@@ -699,7 +705,7 @@ fn CdpClient::reserve_cdp_command_id(
   if self.closed {
     raise ConnectionClosed
   }
-  if id <= 0 || self.command_contexts.contains(id) {
+  if id <= 0 || self.pending_commands.contains(id) {
     raise InvalidField("id")
   }
   if id >= self.next_id {
@@ -722,13 +728,9 @@ async fn CdpClient::recv_response(
   while pending.state is Waiting {
     pending.changed.wait()
   }
-  self.pending_commands.remove(id)
   match pending.state {
-    Completed(response) => self.finish_response(response)
-    ConnectionClosed => {
-      self.command_contexts.remove(id)
-      raise BrowserError::ConnectionClosed
-    }
+    Completed(response) => response
+    ConnectionClosed => raise BrowserError::ConnectionClosed
     Waiting => abort("CDP command resumed without a completion")
   }
 }
@@ -955,6 +957,7 @@ fn CdpClient::complete_response(
   self : CdpClient,
   response : @protocol.CdpResponseMessage,
 ) -> Unit {
+  self.record_response(response)
   guard self.pending_commands.get(response.id) is Some(pending) else { return }
   if pending.state is Waiting {
     pending.state = Completed(response)
@@ -1049,11 +1052,11 @@ fn CdpClient::record_inspector_detached(
 }
 
 ///|
-/// Records response diagnostics and clears in-flight command state.
-fn CdpClient::finish_response(
+/// Records response diagnostics when the connection reader receives a response.
+fn CdpClient::record_response(
   self : CdpClient,
   response : @protocol.CdpResponseMessage,
-) -> @protocol.CdpResponseMessage {
+) -> Unit {
   self.last_cdp_response = Some(response)
   if response.error is Some(error) {
     let context = self.command_contexts.get(response.id)
@@ -1073,11 +1076,10 @@ fn CdpClient::finish_response(
     })
   }
   self.command_contexts.remove(response.id)
-  response
 }
 
 ///|
-/// Clears state for one timed-out command id.
+/// Clears state for one completed, failed, timed-out, or cancelled command id.
 fn CdpClient::clear_inflight_command(self : CdpClient, id : Int) -> Unit {
   self.command_contexts.remove(id)
   self.pending_commands.remove(id)

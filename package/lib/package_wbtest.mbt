@@ -19,6 +19,26 @@ test "package identifiers require reverse-DNS form" {
 }
 
 ///|
+test "package versions cannot escape package paths" {
+  for version in ["1.2", "v1", "2026.08", "1.2.3-beta.1+build.5"] {
+    assert_eq(validate_package_version(version), version)
+  }
+  for
+    version in [
+      "", "1.2.3/../../outside", "1.2.3\\outside", "1.2.3\nExec=outside",
+    ] {
+    let mut rejected = false
+    try validate_package_version(version) catch {
+      InvalidVersion(..) => rejected = true
+      _ => ()
+    } noraise {
+      _ => ()
+    }
+    assert_true(rejected)
+  }
+}
+
+///|
 test "payload destinations cannot escape their package area" {
   validate_relative_destination("assets/icon.png")
   let mut rejected = false

@@ -329,7 +329,7 @@ async fn build_package_plan(
     Some(backend) => @fsutil.resolve_path(base_dir, backend.path())
     None => base_dir
   }
-  let version = package_config.version.trim().to_owned()
+  let version = @packager.validate_package_version(package_config.version)
   let (macos_version, bundle_version) = if is_macos_host() {
     validate_macos_version(version)
   } else {
