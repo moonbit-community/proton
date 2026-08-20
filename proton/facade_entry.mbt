@@ -9,14 +9,17 @@ async fn prepare_entry(
         None,
       )
     @manifest.AppEntry::Url(url) => RemoteEntry(url)
-    @manifest.AppEntry::File(path) => prepare_file_entry(path)
-    @manifest.AppEntry::Asset(path) => prepare_file_entry(path)
+    @manifest.AppEntry::File(path) =>
+      prepare_file_entry(resolve_entry_path(path))
+    @manifest.AppEntry::Asset(path) =>
+      prepare_file_entry(resolve_asset_path(path))
   }
 }
 
 ///|
-async fn prepare_file_entry(path : String) -> PreparedEntry raise AppEntryError {
-  let resolved = resolve_entry_path(path)
+async fn prepare_file_entry(
+  resolved : @mbpath.Path,
+) -> PreparedEntry raise AppEntryError {
   let resolved_text = resolved.to_string()
   let canonical = @async_fs.realpath(resolved_text) catch {
     error =>
@@ -56,6 +59,21 @@ fn resolve_entry_path(path : String) -> @mbpath.Path {
     path
   }
   @mbpath.Path(native_path).resolve()
+}
+
+///|
+fn resolve_asset_path(path : String) -> @mbpath.Path {
+  let native_path = if @mbpath.sep == '\\' {
+    path.replace_all(old="/", new="\\")
+  } else {
+    path
+  }
+  let path : @mbpath.Path = native_path
+  if path.is_absolute() {
+    path.normalize()
+  } else {
+    @mbpath.Path(runtime_resource_dir()).join(native_path).normalize()
+  }
 }
 
 ///|
