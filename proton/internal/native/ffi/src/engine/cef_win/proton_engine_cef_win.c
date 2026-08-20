@@ -10,6 +10,8 @@
 #include <commctrl.h>
 #include <dwmapi.h>
 #include <windowsx.h>
+#include <objbase.h>
+#include <shobjidl.h>
 
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
@@ -4125,21 +4127,37 @@ int32_t proton_engine_window_take_bridge_failure_json(
    their messages, and completion crosses into MoonBit through the wake source. */
 typedef struct proton_engine_win_dialog_request {
   int64_t id;
+  int64_t public_window;
   proton_engine_runtime_t *runtime;
   proton_engine_window_t *window;
   wchar_t *title;
   wchar_t *message;
   wchar_t *ok_label;
+  wchar_t *cancel_label;
   HWND dialog;
   HWND icon_control;
   HWND message_control;
   HWND ok_button;
+  HWND cancel_button;
   HWND parent;
   int parent_was_enabled;
   int completed;
+  int kind;
+  int clicked_ok;
   int32_t level;
   struct proton_engine_win_dialog_request *next;
 } proton_engine_win_dialog_request_t;
+
+enum {
+  PROTON_ENGINE_WIN_DIALOG_KIND_MESSAGE = 0,
+  PROTON_ENGINE_WIN_DIALOG_KIND_CONFIRM = 1,
+};
+
+enum {
+  PROTON_ENGINE_WIN_FILE_DIALOG_OPEN = 0,
+  PROTON_ENGINE_WIN_FILE_DIALOG_SAVE = 1,
+  PROTON_ENGINE_WIN_FILE_DIALOG_CHOOSE_DIRECTORY = 2,
+};
 
 static int64_t g_next_dialog_id = 1;
 static proton_engine_win_dialog_request_t *g_dialog_requests = NULL;
@@ -4185,6 +4203,7 @@ static void proton_engine_dialog_free(
   free(request->title);
   free(request->message);
   free(request->ok_label);
+  free(request->cancel_label);
   free(request);
 }
 
@@ -4247,11 +4266,45 @@ static void proton_engine_dialog_layout(
   int message_x = margin + icon_size + gap;
   int message_width = client.right - message_x - margin;
   int message_height = button_y - margin - gap;
+  int button_gap = proton_engine_dialog_scale(request->dialog, 8);
   MoveWindow(request->icon_control, margin, margin, icon_size, icon_size, TRUE);
   MoveWindow(request->message_control, message_x, margin, message_width,
              message_height, TRUE);
-  MoveWindow(request->ok_button, client.right - margin - button_width,
-             button_y, button_width, button_height, TRUE);
+  if (request->cancel_button != NULL) {
+    int left = client.right - margin - 2 * button_width - button_gap;
+    MoveWindow(request->cancel_button, left, button_y, button_width,
+               button_height, TRUE);
+    MoveWindow(request->ok_button, client.right - margin - button_width,
+               button_y, button_width, button_height, TRUE);
+  } else {
+    MoveWindow(request->ok_button, client.right - margin - button_width,
+               button_y, button_width, button_height, TRUE);
+  }
+}
+
+/* Completing a dialog publishes PROTON_EVENT_DIALOG_COMPLETED so the facade
+   can resolve the pending request by id. The event is thread-safe to publish;
+   file dialogs that run on a worker thread call this on their own. */
+static void proton_engine_publish_dialog_completed(int64_t window,
+                                                   int64_t request_id,
+                                                   int32_t status,
+                                                   const char *result,
+                                                   const char *error_message) {
+  proton_event_t *event = proton_event_create(PROTON_EVENT_DIALOG_COMPLETED);
+  if (event == NULL) {
+    return;
+  }
+  event->window = window;
+  event->request_id = request_id;
+  event->int_a = status;
+  if (proton_event_set_text(
+          &event->text_a, status == PROTON_OK && result != NULL ? result : "") &&
+      proton_event_set_text(&event->text_b,
+                            error_message != NULL ? error_message : "")) {
+    (void)proton_event_publish(event);
+  } else {
+    proton_event_destroy(event);
+  }
 }
 
 static LRESULT CALLBACK proton_engine_dialog_window_proc(
@@ -4285,8 +4338,16 @@ static LRESULT CALLBACK proton_engine_dialog_window_proc(
         0, L"BUTTON", request->ok_label,
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON, 0, 0, 0, 0,
         hwnd, (HMENU)(INT_PTR)IDOK, instance, NULL);
+    if (request->kind == PROTON_ENGINE_WIN_DIALOG_KIND_CONFIRM) {
+      request->cancel_button = CreateWindowExW(
+          0, L"BUTTON", request->cancel_label,
+          WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, 0, 0, 0, hwnd,
+          (HMENU)(INT_PTR)IDCANCEL, instance, NULL);
+    }
     if (request->icon_control == NULL || request->message_control == NULL ||
-        request->ok_button == NULL) {
+        request->ok_button == NULL ||
+        (request->kind == PROTON_ENGINE_WIN_DIALOG_KIND_CONFIRM &&
+         request->cancel_button == NULL)) {
       return -1;
     }
     HICON icon = LoadIconW(
@@ -4297,13 +4358,23 @@ static LRESULT CALLBACK proton_engine_dialog_window_proc(
     HFONT font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
     SendMessageW(request->message_control, WM_SETFONT, (WPARAM)font, TRUE);
     SendMessageW(request->ok_button, WM_SETFONT, (WPARAM)font, TRUE);
+    if (request->cancel_button != NULL) {
+      SendMessageW(request->cancel_button, WM_SETFONT, (WPARAM)font, TRUE);
+    }
     return 0;
   }
   case WM_SIZE:
     proton_engine_dialog_layout(request);
     return 0;
   case WM_COMMAND:
-    if (LOWORD(wparam) == IDOK && HIWORD(wparam) == BN_CLICKED) {
+    if (HIWORD(wparam) == BN_CLICKED) {
+      if (LOWORD(wparam) == IDOK) {
+        request->clicked_ok = 1;
+      } else if (LOWORD(wparam) == IDCANCEL) {
+        request->clicked_ok = 0;
+      } else {
+        break;
+      }
       DestroyWindow(hwnd);
       return 0;
     }
@@ -4311,12 +4382,23 @@ static LRESULT CALLBACK proton_engine_dialog_window_proc(
   case WM_CLOSE:
     DestroyWindow(hwnd);
     return 0;
-  case WM_DESTROY:
+  case WM_DESTROY: {
+    proton_engine_runtime_t *runtime = request->runtime;
     request->dialog = NULL;
     request->completed = 1;
     proton_engine_dialog_release_parent(request);
-    proton_engine_signal_wait_source(request->runtime, PROTON_WAIT_PLATFORM);
+    if (request->kind == PROTON_ENGINE_WIN_DIALOG_KIND_CONFIRM) {
+      const char *result = request->clicked_ok ? "1" : "0";
+      proton_engine_publish_dialog_completed(
+          request->public_window, request->id, PROTON_OK, result, NULL);
+      proton_engine_dialog_remove(request);
+      proton_engine_dialog_free(request);
+    }
+    if (runtime != NULL) {
+      proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
+    }
     return 0;
+  }
   case WM_NCDESTROY:
     SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
     return DefWindowProcW(hwnd, message, wparam, lparam);
@@ -4495,6 +4577,11 @@ static void proton_engine_dialog_cancel_matching(
     }
     if (request->dialog != NULL) {
       DestroyWindow(request->dialog);
+      if (request->kind == PROTON_ENGINE_WIN_DIALOG_KIND_CONFIRM) {
+        // WM_DESTROY published the completion event, then removed and freed
+        // this request. Restart the scan to pick up the next match.
+        continue;
+      }
     }
     proton_engine_dialog_remove(request);
     proton_engine_dialog_free(request);
@@ -4546,21 +4633,348 @@ int32_t proton_engine_window_begin_confirm_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  // TODO: Implement the remaining Windows dialog kinds on the same async
-  // request lifecycle instead of reintroducing synchronous native APIs.
-  (void)window;
-  (void)title_utf8;
-  (void)title_len;
-  (void)message_utf8;
-  (void)message_len;
-  (void)level;
-  if (out_dialog != NULL) {
-    *out_dialog = PROTON_INVALID_HANDLE;
+  if (window == NULL || out_dialog == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "dialog window and output are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
-  proton_engine_set_message(
-      error, error_len,
-      "async confirm dialogs are not implemented on Windows");
-  return PROTON_ERR_UNSUPPORTED;
+  *out_dialog = PROTON_INVALID_HANDLE;
+  proton_engine_runtime_t *runtime = window->runtime;
+  if (window->headless || (runtime != NULL && runtime->headless)) {
+    proton_engine_set_message(error, error_len,
+                              "native dialogs are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (window->hwnd == NULL) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (runtime->dialog_ok_label[0] == '\0' ||
+      runtime->dialog_cancel_label[0] == '\0') {
+    proton_engine_set_message(error, error_len,
+                              "runtime dialog labels are not configured");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  proton_engine_win_dialog_request_t *request =
+      (proton_engine_win_dialog_request_t *)calloc(1, sizeof(*request));
+  if (request == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate dialog request");
+    return PROTON_ERR_ENGINE;
+  }
+  request->title = proton_engine_dialog_text(title_utf8, title_len);
+  request->message = proton_engine_dialog_text(message_utf8, message_len);
+  request->ok_label = proton_engine_dialog_text(
+      runtime->dialog_ok_label, (int32_t)strlen(runtime->dialog_ok_label));
+  request->cancel_label = proton_engine_dialog_text(
+      runtime->dialog_cancel_label,
+      (int32_t)strlen(runtime->dialog_cancel_label));
+  if (request->title == NULL || request->message == NULL ||
+      request->ok_label == NULL || request->cancel_label == NULL) {
+    proton_engine_dialog_free(request);
+    proton_engine_set_message(error, error_len,
+                              "dialog text is not valid UTF-8");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  request->runtime = runtime;
+  request->window = window;
+  request->public_window = proton_engine_window_public_id(window);
+  request->level = level;
+  request->parent = window->hwnd;
+  request->parent_was_enabled = IsWindowEnabled(request->parent);
+  request->kind = PROTON_ENGINE_WIN_DIALOG_KIND_CONFIRM;
+  request->id = g_next_dialog_id++;
+  if (g_next_dialog_id <= 0) {
+    g_next_dialog_id = 1;
+  }
+  request->next = g_dialog_requests;
+  g_dialog_requests = request;
+  if (!proton_engine_register_dialog_class()) {
+    proton_engine_dialog_remove(request);
+    proton_engine_dialog_free(request);
+    proton_engine_set_message(error, error_len,
+                              "failed to register native dialog class");
+    return PROTON_ERR_PLATFORM;
+  }
+  UINT dpi = request->parent != NULL ? GetDpiForWindow(request->parent) : 96;
+  int width = MulDiv(460, dpi > 0 ? (int)dpi : 96, 96);
+  int height = MulDiv(210, dpi > 0 ? (int)dpi : 96, 96);
+  if (request->parent_was_enabled) {
+    EnableWindow(request->parent, FALSE);
+  }
+  HWND dialog_window = CreateWindowExW(
+      WS_EX_DLGMODALFRAME, PROTON_ENGINE_DIALOG_CLASS, request->title,
+      WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_CLIPCHILDREN, CW_USEDEFAULT,
+      CW_USEDEFAULT, width, height, request->parent, NULL,
+      GetModuleHandleW(NULL), request);
+  if (dialog_window == NULL) {
+    if (request->parent_was_enabled) {
+      EnableWindow(request->parent, TRUE);
+    }
+    proton_engine_dialog_remove(request);
+    proton_engine_dialog_free(request);
+    proton_engine_set_message(error, error_len,
+                              "failed to create native confirm dialog");
+    return PROTON_ERR_PLATFORM;
+  }
+  proton_engine_center_dialog(dialog_window, request->parent);
+  ShowWindow(dialog_window, SW_SHOW);
+  SetForegroundWindow(dialog_window);
+  SetFocus(request->ok_button);
+  *out_dialog = request->id;
+  return PROTON_OK;
+}
+
+/* File dialogs run on a worker thread with IFileDialog because Show() drains
+   a private modal message loop that would otherwise block the CEF host loop.
+   On completion the worker publishes PROTON_EVENT_DIALOG_COMPLETED (matching
+   the macOS async lifecycle) and frees its own request. */
+typedef struct proton_engine_win_file_dialog_request {
+  int64_t id;
+  int64_t public_window;
+  HWND parent;
+  wchar_t *title;
+  wchar_t *initial_path;
+  int mode;
+  struct proton_engine_win_file_dialog_request *next;
+} proton_engine_win_file_dialog_request_t;
+
+static proton_engine_win_file_dialog_request_t *g_file_dialog_requests = NULL;
+
+static char *proton_engine_wide_to_utf8(const wchar_t *value) {
+  if (value == NULL) {
+    return NULL;
+  }
+  int required = WideCharToMultiByte(CP_UTF8, 0, value, -1, NULL, 0, NULL, NULL);
+  if (required <= 0) {
+    return NULL;
+  }
+  char *result = (char *)calloc((size_t)required, 1);
+  if (result == NULL) {
+    return NULL;
+  }
+  if (WideCharToMultiByte(CP_UTF8, 0, value, -1, result, required, NULL,
+                          NULL) <= 0) {
+    free(result);
+    return NULL;
+  }
+  return result;
+}
+
+static void proton_engine_set_initial_location(IFileDialog *dialog,
+                                               const wchar_t *path,
+                                               int mode) {
+  if (dialog == NULL || path == NULL || path[0] == L'\0') {
+    return;
+  }
+  wchar_t folder[32768];
+  wchar_t name[1024];
+  folder[0] = L'\0';
+  name[0] = L'\0';
+  DWORD attributes = GetFileAttributesW(path);
+  BOOL is_directory = attributes != INVALID_FILE_ATTRIBUTES &&
+                      (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+  if (is_directory) {
+    wcsncpy(folder, path, sizeof(folder) / sizeof(folder[0]) - 1);
+    folder[sizeof(folder) / sizeof(folder[0]) - 1] = L'\0';
+  } else {
+    const wchar_t *slash = NULL;
+    for (const wchar_t *cursor = path; *cursor != L'\0'; ++cursor) {
+      if (*cursor == L'\\' || *cursor == L'/') {
+        slash = cursor;
+      }
+    }
+    if (slash != NULL) {
+      size_t directory_length = (size_t)(slash - path);
+      if (directory_length > 0 &&
+          directory_length < sizeof(folder) / sizeof(folder[0])) {
+        memcpy(folder, path, directory_length * sizeof(wchar_t));
+        folder[directory_length] = L'\0';
+      }
+      if (slash[1] != L'\0') {
+        wcsncpy(name, slash + 1, sizeof(name) / sizeof(name[0]) - 1);
+        name[sizeof(name) / sizeof(name[0]) - 1] = L'\0';
+      }
+    } else {
+      wcsncpy(name, path, sizeof(name) / sizeof(name[0]) - 1);
+      name[sizeof(name) / sizeof(name[0]) - 1] = L'\0';
+    }
+  }
+  if (folder[0] != L'\0') {
+    IShellItem *item = NULL;
+    if (SUCCEEDED(SHCreateItemFromParsingName(folder, NULL, &IID_IShellItem,
+                                              (void **)&item)) &&
+        item != NULL) {
+      (void)dialog->lpVtbl->SetFolder(dialog, item);
+      item->lpVtbl->Release(item);
+    }
+  }
+  if (mode == PROTON_ENGINE_WIN_FILE_DIALOG_SAVE && name[0] != L'\0') {
+    (void)dialog->lpVtbl->SetFileName(dialog, name);
+  }
+}
+
+static void proton_engine_file_dialog_lock_init(void) {
+  proton_engine_init_window_lock();
+}
+
+static proton_engine_win_file_dialog_request_t *proton_engine_file_dialog_add(
+    proton_engine_win_file_dialog_request_t *request) {
+  if (g_proton_engine_window_lock_initialized) {
+    EnterCriticalSection(&g_proton_engine_window_lock);
+  }
+  request->next = g_file_dialog_requests;
+  g_file_dialog_requests = request;
+  if (g_proton_engine_window_lock_initialized) {
+    LeaveCriticalSection(&g_proton_engine_window_lock);
+  }
+  return request;
+}
+
+static void proton_engine_file_dialog_remove(
+    proton_engine_win_file_dialog_request_t *request) {
+  if (g_proton_engine_window_lock_initialized) {
+    EnterCriticalSection(&g_proton_engine_window_lock);
+  }
+  proton_engine_win_file_dialog_request_t **cursor = &g_file_dialog_requests;
+  while (*cursor != NULL) {
+    if (*cursor == request) {
+      *cursor = request->next;
+      request->next = NULL;
+      break;
+    }
+    cursor = &(*cursor)->next;
+  }
+  if (g_proton_engine_window_lock_initialized) {
+    LeaveCriticalSection(&g_proton_engine_window_lock);
+  }
+}
+
+static void proton_engine_file_dialog_free(
+    proton_engine_win_file_dialog_request_t *request) {
+  if (request == NULL) {
+    return;
+  }
+  free(request->title);
+  free(request->initial_path);
+  free(request);
+}
+
+static DWORD WINAPI proton_engine_file_dialog_thread(LPVOID param) {
+  proton_engine_win_file_dialog_request_t *request =
+      (proton_engine_win_file_dialog_request_t *)param;
+  char *result_path = NULL;
+  HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+  BOOL com_ok = SUCCEEDED(hr);
+  IFileDialog *filedialog = NULL;
+  if (com_ok) {
+    if (request->mode == PROTON_ENGINE_WIN_FILE_DIALOG_SAVE) {
+      hr = CoCreateInstance(&CLSID_FileSaveDialog, NULL, CLSCTX_INPROC_SERVER,
+                            &IID_IFileDialog, (void **)&filedialog);
+    } else {
+      hr = CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,
+                            &IID_IFileDialog, (void **)&filedialog);
+    }
+  }
+  if (SUCCEEDED(hr) && filedialog != NULL) {
+    if (request->title != NULL && request->title[0] != L'\0') {
+      (void)filedialog->lpVtbl->SetTitle(filedialog, request->title);
+    }
+    DWORD options = FOS_OVERWRITEPROMPT;
+    if (request->mode == PROTON_ENGINE_WIN_FILE_DIALOG_CHOOSE_DIRECTORY) {
+      options |= FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM;
+    } else if (request->mode == PROTON_ENGINE_WIN_FILE_DIALOG_OPEN) {
+      options |= FOS_FILEMUSTEXIST;
+    }
+    (void)filedialog->lpVtbl->SetOptions(filedialog, options);
+    proton_engine_set_initial_location(filedialog, request->initial_path,
+                                       request->mode);
+    hr = filedialog->lpVtbl->Show(filedialog, request->parent);
+    if (SUCCEEDED(hr)) {
+      IShellItem *selected = NULL;
+      if (SUCCEEDED(filedialog->lpVtbl->GetResult(filedialog, &selected)) &&
+          selected != NULL) {
+        wchar_t *display = NULL;
+        if (SUCCEEDED(selected->lpVtbl->GetDisplayName(
+                selected, SIGDN_FILESYSPATH, &display)) &&
+            display != NULL) {
+          result_path = proton_engine_wide_to_utf8(display);
+          CoTaskMemFree(display);
+        }
+        selected->lpVtbl->Release(selected);
+      }
+    }
+    filedialog->lpVtbl->Release(filedialog);
+  }
+  if (com_ok) {
+    CoUninitialize();
+  }
+  proton_engine_publish_dialog_completed(
+      request->public_window, request->id, PROTON_OK,
+      result_path != NULL ? result_path : "", NULL);
+  free(result_path);
+  proton_engine_file_dialog_remove(request);
+  proton_engine_file_dialog_free(request);
+  return 0;
+}
+
+static int32_t proton_engine_window_begin_file_dialog(
+    proton_engine_window_t *window, const char *title_utf8, int32_t title_len,
+    const char *path_utf8, int32_t path_len, int32_t mode, int64_t *out_dialog,
+    char *error, size_t error_len) {
+  if (window == NULL || out_dialog == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "dialog window and output are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_dialog = PROTON_INVALID_HANDLE;
+  proton_engine_runtime_t *runtime = window->runtime;
+  if (window->headless || (runtime != NULL && runtime->headless)) {
+    proton_engine_set_message(error, error_len,
+                              "native dialogs are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (window->hwnd == NULL) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  proton_engine_file_dialog_lock_init();
+  proton_engine_win_file_dialog_request_t *request =
+      (proton_engine_win_file_dialog_request_t *)calloc(
+          1, sizeof(*request));
+  if (request == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate dialog request");
+    return PROTON_ERR_ENGINE;
+  }
+  request->title = proton_engine_dialog_text(title_utf8, title_len);
+  request->initial_path = proton_engine_dialog_text(path_utf8, path_len);
+  if (request->title == NULL || request->initial_path == NULL) {
+    proton_engine_file_dialog_free(request);
+    proton_engine_set_message(error, error_len,
+                              "dialog text is not valid UTF-8");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  request->public_window = proton_engine_window_public_id(window);
+  request->parent = window->hwnd;
+  request->mode = mode;
+  request->id = g_next_dialog_id++;
+  if (g_next_dialog_id <= 0) {
+    g_next_dialog_id = 1;
+  }
+  proton_engine_file_dialog_add(request);
+  HANDLE thread = CreateThread(NULL, 0, proton_engine_file_dialog_thread,
+                               request, 0, NULL);
+  if (thread == NULL) {
+    proton_engine_file_dialog_remove(request);
+    proton_engine_file_dialog_free(request);
+    proton_engine_set_message(error, error_len,
+                              "failed to start file dialog thread");
+    return PROTON_ERR_ENGINE;
+  }
+  CloseHandle(thread);
+  *out_dialog = request->id;
+  return PROTON_OK;
 }
 
 int32_t proton_engine_window_begin_open_file_dialog(
@@ -4572,17 +4986,9 @@ int32_t proton_engine_window_begin_open_file_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  (void)window;
-  (void)title_utf8;
-  (void)title_len;
-  (void)path_utf8;
-  (void)path_len;
-  if (out_dialog != NULL) {
-    *out_dialog = PROTON_INVALID_HANDLE;
-  }
-  proton_engine_set_message(error, error_len,
-                            "async native dialogs are not implemented on Windows");
-  return PROTON_ERR_UNSUPPORTED;
+  return proton_engine_window_begin_file_dialog(
+      window, title_utf8, title_len, path_utf8, path_len,
+      PROTON_ENGINE_WIN_FILE_DIALOG_OPEN, out_dialog, error, error_len);
 }
 
 int32_t proton_engine_window_begin_save_file_dialog(
@@ -4594,9 +5000,9 @@ int32_t proton_engine_window_begin_save_file_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  return proton_engine_window_begin_open_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, out_dialog,
-      error, error_len);
+  return proton_engine_window_begin_file_dialog(
+      window, title_utf8, title_len, path_utf8, path_len,
+      PROTON_ENGINE_WIN_FILE_DIALOG_SAVE, out_dialog, error, error_len);
 }
 
 int32_t proton_engine_window_begin_choose_directory_dialog(
@@ -4608,9 +5014,10 @@ int32_t proton_engine_window_begin_choose_directory_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len) {
-  return proton_engine_window_begin_open_file_dialog(
-      window, title_utf8, title_len, path_utf8, path_len, out_dialog,
-      error, error_len);
+  return proton_engine_window_begin_file_dialog(
+      window, title_utf8, title_len, path_utf8, path_len,
+      PROTON_ENGINE_WIN_FILE_DIALOG_CHOOSE_DIRECTORY, out_dialog, error,
+      error_len);
 }
 
 // MARK: - Web contents views
