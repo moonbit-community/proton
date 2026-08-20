@@ -157,10 +157,28 @@ test "NSIS script carries package identity and update behavior" {
 test "AppImage metadata points at the staged executable" {
   let spec = package_test_spec([AppImage])
   let entry = linux_desktop_entry(spec, "demo-app")
-  assert_true(entry.contains("Name=Demo App"))
-  assert_true(entry.contains("Exec=demo-app"))
-  assert_true(entry.contains("Icon=demo-app"))
+  inspect(
+    entry,
+    content=(
+      $|[Desktop Entry]
+      $|Type=Application
+      $|Terminal=false
+      $|Categories=Utility;
+      $|Name=Demo App
+      $|Exec=demo-app
+      $|Icon=demo-app
+      $|X-AppImage-Version=1.2.3
+      $|
+    ),
+  )
   let apprun = linux_apprun("demo-app")
-  assert_true(apprun.contains("HERE=\"$(dirname \"$(readlink -f \"$0\")\")\""))
-  assert_true(apprun.contains("exec \"$HERE/usr/bin/demo-app\" \"$@\""))
+  inspect(
+    apprun,
+    content=(
+      $|#!/bin/sh
+      $|HERE="$(dirname "$(readlink -f "$0")")"
+      $|exec "$HERE/usr/bin/demo-app" "$@"
+      $|
+    ),
+  )
 }

@@ -36,7 +36,7 @@ fn linux_desktop_entry(spec : PackageSpec, name : String) -> String {
     #|Terminal=false
     #|Categories=Utility;
   prefix +
-  "Name=" +
+  "\nName=" +
   spec.product_name +
   "\n" +
   "Exec=" +
@@ -55,7 +55,7 @@ fn linux_apprun(name : String) -> String {
   let prefix =
     #|#!/bin/sh
     #|HERE="$(dirname "$(readlink -f "$0")")"
-  prefix + "exec \"$HERE/usr/bin/" + name + "\" \"$@\"\n"
+  prefix + "\nexec \"$HERE/usr/bin/" + name + "\" \"$@\"\n"
 }
 
 ///|
