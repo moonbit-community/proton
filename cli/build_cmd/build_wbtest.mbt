@@ -130,6 +130,26 @@ test "CEF process helper uses its explicit install directory" {
 }
 
 ///|
+test "Proton source comes from Moon's resolved package source" {
+  let workspace = @fsutil.resolve_path(".", "fixtures/workspace")
+  let output = "moonc check app.mbt -pkg-sources moonbit-community/proton:../deps/proton -target native\n"
+  assert_eq(
+    proton_source_from_build_plan(output, workspace),
+    Some(@fsutil.resolve_path(workspace, "../deps/proton")),
+  )
+}
+
+///|
+test "Proton source parser preserves quoted paths" {
+  let workspace = @fsutil.resolve_path(".", "fixtures/workspace")
+  let output = "moonc check app.mbt -pkg-sources moonbit-community/proton:'../deps/proton source' -target native\n"
+  assert_eq(
+    proton_source_from_build_plan(output, workspace),
+    Some(@fsutil.resolve_path(workspace, "../deps/proton source")),
+  )
+}
+
+///|
 test "moon build-only output rejects missing or ambiguous artifacts" {
   for
     output in [

@@ -77,6 +77,7 @@ fn installed_runtime(
 ///|
 fn installed_requirement(runtime : InstalledRuntime) -> RuntimeRequirement {
   {
+    base_url: "",
     platform: runtime.platform,
     cef_archive: runtime.cef_archive,
     cef_sha256: runtime.cef_sha256,

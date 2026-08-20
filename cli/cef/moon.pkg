@@ -1,4 +1,5 @@
 import {
+  "moonbit-community/proton_cli/build_cmd" @build,
   "moonbit-community/proton_cefsetup/store" @cef_store,
   "moonbitlang/core/argparse",
 }

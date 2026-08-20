@@ -4,7 +4,7 @@ async fn build_doctor_report(cwd : String, verbose~ : Bool) -> DoctorReport {
   let sections = [
     collect_project(project),
     collect_environment(),
-    collect_runtime(verbose~),
+    collect_runtime(project, verbose~),
   ]
   { sections, }
 }

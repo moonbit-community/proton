@@ -16,11 +16,12 @@ fn setup_command() -> @argparse.Command {
 
 ///|
 /// Runs a parsed CEF management subcommand.
-pub async fn run(_cwd : String, matches : @argparse.Matches) -> Unit {
+pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   guard matches.subcommand is Some(("setup", setup_matches)) else {
     abort("argparse invariant violated: missing cef subcommand")
   }
   ignore(setup_matches)
-  let runtime = @cef_store.install_default()
+  let requirements = @build.resolve_project_runtime_requirements(cwd)
+  let runtime = @cef_store.install_declared(requirements)
   println(runtime.runtime_root())
 }

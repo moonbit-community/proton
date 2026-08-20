@@ -167,21 +167,19 @@ try {
   );
 
   const runtimeRequirementsMoon = tempOutputPath("requirements.generated.mbt");
-  const runtimeRequirementsJs = tempOutputPath(
-    "cef_requirements.generated.mjs",
-  );
+  const runtimeRequirementsJson = tempOutputPath("cef_requirements.json");
   run("node", [
     path.join(repoRoot, "scripts", "generate_runtime_requirements.mjs"),
     runtimeRequirementsMoon,
-    runtimeRequirementsJs,
+    runtimeRequirementsJson,
   ]);
   compareGeneratedFile(
     "cefsetup/store/requirements.generated.mbt",
     runtimeRequirementsMoon,
   );
   compareGeneratedFile(
-    "proton/cef_requirements.generated.mjs",
-    runtimeRequirementsJs,
+    "proton/cef_requirements.json",
+    runtimeRequirementsJson,
   );
 
   if (failures.length > 0) {

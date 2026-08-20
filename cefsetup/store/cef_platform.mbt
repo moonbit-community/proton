@@ -9,6 +9,7 @@ priv struct ProtonPlatform {
 ///|
 /// The immutable CEF requirement selected by a Proton release.
 priv struct RuntimeRequirement {
+  base_url : String
   platform : String
   cef_archive : String
   cef_sha256 : String
@@ -18,6 +19,7 @@ priv struct RuntimeRequirement {
 ///|
 fn runtime_requirement(platform : ProtonPlatform) -> RuntimeRequirement {
   RuntimeRequirement::{
+    base_url: default_cef_base_url,
     platform: platform.id,
     cef_archive: platform.default_cef_name,
     cef_sha256: platform.default_cef_sha256,

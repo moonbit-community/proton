@@ -4,14 +4,15 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  cefApiVersion,
-  runtimeLayoutVersion,
-  runtimeRequirements,
-} from "./cef_requirements.generated.mjs";
 
 const moduleRoot = path.dirname(fileURLToPath(import.meta.url));
 const ffiRoot = path.join(moduleRoot, "internal", "native", "ffi");
+const runtimeRequirementsDocument = JSON.parse(
+  fs.readFileSync(path.join(moduleRoot, "cef_requirements.json"), "utf8"),
+);
+const cefApiVersion = runtimeRequirementsDocument.cef_api_version;
+const runtimeLayoutVersion = runtimeRequirementsDocument.layout_version;
+const runtimeRequirements = runtimeRequirementsDocument.platforms;
 
 function readPayloadEnv() {
   const raw = fs.readFileSync(0, "utf8").trim();

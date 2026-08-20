@@ -21,6 +21,7 @@ pub fn BundleResult::platform(Self) -> String
 pub struct ProtonBundleSpec {
   package_spec : @lib.PackageSpec
   cef_process : String
+  runtime_requirements : String
   base_dir : String
   macos_version : String
   bundle_version : String
@@ -29,7 +30,7 @@ pub struct ProtonBundleSpec {
   resources : Array[String]
   sign_binaries : Array[String]
 }
-pub fn ProtonBundleSpec::new(@lib.PackageSpec, String, String, String, String, String?, update_revision? : UInt64, resources? : Array[String], sign_binaries? : Array[String]) -> Self
+pub fn ProtonBundleSpec::new(@lib.PackageSpec, String, String, String, String, String, String?, update_revision? : UInt64, resources? : Array[String], sign_binaries? : Array[String]) -> Self
 
 // Type aliases
 

@@ -102,9 +102,22 @@ async fn collect_environment() -> DoctorSection {
 }
 
 ///|
-async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
+async fn collect_runtime(
+  project : ProjectDoctorInfo?,
+  verbose~ : Bool,
+) -> DoctorSection {
   let lines : Array[DoctorLine] = []
-  let runtime = try @cef_store.resolve_default() catch {
+  let runtime = try {
+    match project {
+      Some(project) => {
+        let requirements = @build.resolve_project_runtime_requirements(
+          project.root,
+        )
+        @cef_store.resolve_declared(requirements)
+      }
+      None => @cef_store.resolve_default()
+    }
+  } catch {
     error => {
       lines.push(
         DoctorLine::new(

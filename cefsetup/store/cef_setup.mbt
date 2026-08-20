@@ -9,7 +9,19 @@ async fn validate_installed_runtime(runtime : InstalledRuntime) -> Unit {
 ///|
 /// Resolves the default immutable runtime installation for this Proton release.
 pub async fn resolve_default() -> InstalledRuntime {
-  let requirement = default_requirement()
+  resolve_requirement(default_requirement())
+}
+
+///|
+/// Resolves the immutable runtime declared by a Proton source dependency.
+pub async fn resolve_declared(path : String) -> InstalledRuntime {
+  resolve_requirement(read_declared_requirement(path))
+}
+
+///|
+async fn resolve_requirement(
+  requirement : RuntimeRequirement,
+) -> InstalledRuntime {
   let root = runtime_store_root()
   let runtime = installed_runtime(root, requirement)
   guard path_is_dir(runtime.root) else {
@@ -22,14 +34,20 @@ pub async fn resolve_default() -> InstalledRuntime {
 ///|
 /// Installs the default runtime selected by this Proton release.
 pub async fn install_default() -> InstalledRuntime {
-  install_required_runtime()
+  install_requirement(default_requirement())
 }
 
 ///|
-async fn install_required_runtime() -> InstalledRuntime {
-  let platform = current_platform()
-  require_supported_platform(platform)
-  let requirement = runtime_requirement(platform)
+/// Installs the immutable runtime declared by a Proton source dependency.
+pub async fn install_declared(path : String) -> InstalledRuntime {
+  install_requirement(read_declared_requirement(path))
+}
+
+///|
+async fn install_requirement(
+  requirement : RuntimeRequirement,
+) -> InstalledRuntime {
+  let platform = platform_from_override(Some(requirement.platform)).unwrap()
   let store_root = runtime_store_root()
   let runtime = installed_runtime(store_root, requirement)
   ensure_dir(path_parent(runtime.root))
@@ -54,6 +72,7 @@ async fn install_required_runtime() -> InstalledRuntime {
     layout_version: requirement.layout_version,
   }
   setup_downloaded_cef(
+    base_url=requirement.base_url,
     name=requirement.cef_archive,
     sha256=requirement.cef_sha256,
     sdk_root=staging.sdk_root,

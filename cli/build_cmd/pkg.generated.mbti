@@ -8,7 +8,7 @@ import {
 }
 
 // Values
-pub async fn build_cef_process(String, moon_target_dir? : String) -> String
+pub async fn build_cef_process(String, String, moon_target_dir? : String) -> String
 
 pub async fn build_executable(String, String, String, Bool) -> String
 
@@ -17,6 +17,14 @@ pub fn cef_process_install_path(String) -> String
 pub fn command() -> @argparse.Command
 
 pub fn native_moon_process_env() -> Map[String, String]
+
+pub async fn resolve_default_project_proton_source(String) -> String
+
+pub async fn resolve_project_runtime_requirements(String) -> String
+
+pub async fn resolve_proton_runtime_requirements(String) -> String
+
+pub async fn resolve_proton_source(String, String) -> String
 
 pub async fn run(String, @argparse.Matches) -> Unit
 

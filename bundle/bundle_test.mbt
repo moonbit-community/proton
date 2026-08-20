@@ -11,6 +11,7 @@ async test "build rejects a missing application through the public interface" {
   let proton = ProtonBundleSpec::new(
     package_spec,
     "/missing/cef_process",
+    "/missing/cef_requirements.json",
     "/missing",
     "1.0.0",
     "1",

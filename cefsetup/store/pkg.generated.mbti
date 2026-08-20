@@ -2,7 +2,11 @@
 package "moonbit-community/proton_cefsetup/store"
 
 // Values
+pub async fn install_declared(String) -> InstalledRuntime
+
 pub async fn install_default() -> InstalledRuntime
+
+pub async fn resolve_declared(String) -> InstalledRuntime
 
 pub async fn resolve_default() -> InstalledRuntime
 

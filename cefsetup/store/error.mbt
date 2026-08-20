@@ -35,6 +35,9 @@ priv suberror CefRuntimeError {
   ManifestRead(path~ : String, detail~ : String)
   ManifestSyntax(path~ : String, detail~ : String)
   ManifestInvalid(path~ : String, detail~ : String)
+  RequirementRead(path~ : String, detail~ : String)
+  RequirementSyntax(path~ : String, detail~ : String)
+  RequirementInvalid(path~ : String, detail~ : String)
 }
 
 ///|
@@ -102,6 +105,12 @@ fn CefRuntimeError::message(self : CefRuntimeError) -> String {
       "Invalid JSON in manifest " + path + ": " + detail
     ManifestInvalid(path~, detail~) =>
       "Invalid manifest " + path + ": " + detail
+    RequirementRead(path~, detail~) =>
+      "Failed to read CEF requirements " + path + ": " + detail
+    RequirementSyntax(path~, detail~) =>
+      "Invalid JSON in CEF requirements " + path + ": " + detail
+    RequirementInvalid(path~, detail~) =>
+      "Invalid CEF requirements " + path + ": " + detail
   }
 }
 

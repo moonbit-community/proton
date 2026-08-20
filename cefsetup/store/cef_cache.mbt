@@ -1,6 +1,6 @@
 ///|
-fn archive_url(name : String) -> String {
-  default_cef_base_url + "/" + name + ".tar.bz2"
+fn archive_url(base_url : String, name : String) -> String {
+  base_url + "/" + name + ".tar.bz2"
 }
 
 ///|
@@ -22,6 +22,7 @@ async fn prepare_cef_sdk(
 
 ///|
 async fn setup_downloaded_cef(
+  base_url~ : String,
   name~ : String,
   sha256~ : String,
   sdk_root~ : String,
@@ -30,7 +31,7 @@ async fn setup_downloaded_cef(
   let temp_dir = make_temp_dir()
   let archive_path = path_join(temp_dir, name + ".tar.bz2")
   errdefer (remove_tree(temp_dir) catch { _ => () })
-  download_file(archive_url(name), archive_path, sha256)
+  download_file(archive_url(base_url, name), archive_path, sha256)
   extract_tar_bz2(archive_path, temp_dir)
   let extracted_root = find_extracted_root(temp_dir, name, platform)
   prepare_cef_sdk(extracted_root~, sdk_root~, platform~)

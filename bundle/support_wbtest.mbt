@@ -14,6 +14,7 @@ fn test_bundle_spec(
   ProtonBundleSpec::new(
     package_spec,
     resolve_path(root, "cef_process"),
+    resolve_path(root, "cef_requirements.json"),
     root,
     "1.2.3",
     "42",
