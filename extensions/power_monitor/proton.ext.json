@@ -1,5 +1,7 @@
 {
   "id": "moonbit-community/proton-power-monitor",
   "namespace": "powerMonitor",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton_ext/power_monitor",
   "package": "@moonbit-community/proton-power-monitor"
 }

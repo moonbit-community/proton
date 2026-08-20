@@ -161,8 +161,8 @@ fn decode_package(
     None => None
     Some(Object(values)) => {
       validate_object_fields(values, "package", [
-        "product_name", "identifier", "formats", "icons", "resources", "sign", "url_schemes",
-        "document_types", "output",
+        "product_name", "identifier", "version", "formats", "icons", "resources",
+        "sign", "url_schemes", "document_types", "output",
       ])
       let formats = optional_string_array(values, "formats", "package.formats")
       validate_formats(formats)
@@ -184,6 +184,7 @@ fn decode_package(
         ProjectPackageConfig::new(
           required_string(values, "product_name", "package.product_name"),
           required_string(values, "identifier", "package.identifier"),
+          required_string(values, "version", "package.version"),
           formats~,
           icons~,
           resources~,

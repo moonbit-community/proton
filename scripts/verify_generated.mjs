@@ -11,10 +11,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-generated-check-"));
 const failures = [];
-const codegenWasm = path.join(
-  repoRoot,
-  "_build/wasm/debug/build/moonbit-community/proton_codegen/proton_codegen.wasm",
-);
+let codegenWasm;
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -24,6 +21,22 @@ function run(command, args) {
   if (result.status !== 0) {
     throw new Error(`Command failed: ${command} ${args.join(" ")}`);
   }
+}
+
+function buildArtifact(args) {
+  const result = spawnSync("moon", args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    process.stderr.write(result.stderr ?? "");
+    throw new Error(`Command failed: moon ${args.join(" ")}`);
+  }
+  const artifacts = JSON.parse(result.stdout).artifacts_path;
+  if (!Array.isArray(artifacts) || artifacts.length !== 1) {
+    throw new Error(`Expected one Moon artifact, received: ${result.stdout}`);
+  }
+  return artifacts[0];
 }
 
 function runCodegen(args) {
@@ -78,7 +91,13 @@ try {
     "updater",
   ];
 
-  run("moon", ["build", "codegen", "--target", "wasm"]);
+  codegenWasm = buildArtifact([
+    "run",
+    "codegen",
+    "--target",
+    "wasm",
+    "--build-only",
+  ]);
 
   for (const extension of codegenExtensions) {
     const inputPath = path.join(repoRoot, "extensions", extension, "extension.mbt");

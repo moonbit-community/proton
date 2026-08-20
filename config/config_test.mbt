@@ -24,6 +24,7 @@ test "project config contains only CLI build and package settings" {
     #|  "package": {
     #|    "product_name": "Todo",
     #|    "identifier": "com.example.todo",
+    #|    "version": "1.2.3",
     #|    "formats": ["app", "zip"],
     #|    "icons": ["icons/app.icns"],
     #|    "resources": ["assets"],
@@ -42,6 +43,7 @@ test "project config contains only CLI build and package settings" {
   assert_true(dist.has_suffix("frontend/dist"))
   let package_config = config.package_config().unwrap()
   assert_eq(package_config.product_name, "Todo")
+  assert_eq(package_config.version(), "1.2.3")
   assert_eq(package_config.formats(), ["app", "zip"])
   assert_true(package_config.icons()[0].has_suffix("icons/app.icns"))
 }

@@ -99,8 +99,7 @@ pub fn command() -> @argparse.Command {
 pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let raw = package_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
-  let root = @fsutil.find_project_root_from(cwd)
-  let config_path = match resolve_package_config_path(cwd, root, raw) {
+  let config_path = match resolve_package_config_path(cwd, raw) {
     Some(path) => path
     None => raise PackageConfigError::NotFound(path="proton.project.json")
   }
@@ -328,14 +327,9 @@ async fn build_package_plan(
   let backend = project.backend()
   let backend_root = match backend {
     Some(backend) => @fsutil.resolve_path(base_dir, backend.path())
-    None => @fsutil.find_project_root_from(base_dir)
+    None => base_dir
   }
-  let version = match
-    @proton_config.read_moon_mod_metadata(backend_root).version {
-    Some(version) if version.trim().to_owned() != "" =>
-      version.trim().to_owned()
-    _ => raise PackageConfigError::MissingField(field="moon.mod version")
-  }
+  let version = package_config.version.trim().to_owned()
   let (macos_version, bundle_version) = if is_macos_host() {
     validate_macos_version(version)
   } else {
@@ -624,24 +618,14 @@ async fn run_package_build(plan : PackagePlan) -> String {
 ///|
 async fn resolve_package_config_path(
   cwd : String,
-  root : String,
   raw : RawPackageOptions,
 ) -> String? {
   match raw.config_path {
     Some(path) => Some(@fsutil.resolve_path(cwd, path))
     None => {
-      let package_config = @fsutil.resolve_path(
-        cwd,
-        raw.app_package.unwrap_or(default_package) + "/" + default_config_file,
-      )
       let cwd_config = @fsutil.resolve_path(cwd, default_config_file)
-      let root_config = @fsutil.resolve_path(root, default_config_file)
-      if @fsutil.path_exists(package_config) {
-        Some(package_config)
-      } else if @fsutil.path_exists(cwd_config) {
+      if @fsutil.path_exists(cwd_config) {
         Some(cwd_config)
-      } else if @fsutil.path_exists(root_config) {
-        Some(root_config)
       } else {
         None
       }

@@ -12,10 +12,6 @@ pub fn load_project_config_from_json(Json, String) -> LoadedProjectConfig raise 
 
 pub fn load_project_config_from_text(String, String, name? : String) -> LoadedProjectConfig raise ProjectConfigError
 
-pub fn read_moon_mod_metadata(String) -> MoonModMetadata
-
-pub fn read_nearest_moon_mod_metadata(String) -> MoonModMetadata
-
 // Errors
 pub(all) suberror ProjectConfigError {
   FileRead(path~ : String, detail~ : String)
@@ -47,20 +43,6 @@ pub fn LoadedProjectConfig::new(ProjectConfig, warnings? : Array[String]) -> Sel
 pub fn LoadedProjectConfig::not_equal(Self, Self) -> Bool
 pub fn LoadedProjectConfig::to_repr(Self) -> @debug.Repr
 pub fn LoadedProjectConfig::warnings(Self) -> Array[String]
-
-pub(all) struct MoonModMetadata {
-  root_dir : String?
-  name : String?
-  version : String?
-  description : String?
-  license : String?
-  repository : String?
-  readme : String?
-  keywords : Array[String]
-} derive(Eq, @debug.Debug)
-pub fn MoonModMetadata::equal(Self, Self) -> Bool
-pub fn MoonModMetadata::not_equal(Self, Self) -> Bool
-pub fn MoonModMetadata::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ProjectBackendConfig {
   path : String
@@ -119,6 +101,7 @@ pub fn ProjectFrontendConfig::to_repr(Self) -> @debug.Repr
 pub(all) struct ProjectPackageConfig {
   product_name : String
   identifier : String
+  version : String
   formats : Array[String]
   icons : Array[String]
   resources : Array[String]
@@ -131,13 +114,14 @@ pub fn ProjectPackageConfig::document_types(Self) -> Array[ProjectDocumentType]
 pub fn ProjectPackageConfig::equal(Self, Self) -> Bool
 pub fn ProjectPackageConfig::formats(Self) -> Array[String]
 pub fn ProjectPackageConfig::icons(Self) -> Array[String]
-pub fn ProjectPackageConfig::new(String, String, formats? : Array[String], icons? : Array[String], resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String) -> Self
+pub fn ProjectPackageConfig::new(String, String, String, formats? : Array[String], icons? : Array[String], resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String) -> Self
 pub fn ProjectPackageConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectPackageConfig::output(Self) -> String
 pub fn ProjectPackageConfig::resources(Self) -> Array[String]
 pub fn ProjectPackageConfig::sign(Self) -> ProjectSignConfig?
 pub fn ProjectPackageConfig::to_repr(Self) -> @debug.Repr
 pub fn ProjectPackageConfig::url_schemes(Self) -> Array[String]
+pub fn ProjectPackageConfig::version(Self) -> String
 
 pub(all) struct ProjectSignConfig {
   binaries : Array[String]

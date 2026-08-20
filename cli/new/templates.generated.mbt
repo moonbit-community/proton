@@ -861,6 +861,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|  "package": {
           #|    "product_name": "My App",
           #|    "identifier": "com.example.my-app",
+          #|    "version": "0.1.0",
           #|    "formats": ["app", "zip"],
           #|    "output": "dist"
           #|  }

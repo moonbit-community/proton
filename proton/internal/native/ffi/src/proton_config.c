@@ -33,6 +33,12 @@
 #define PROTON_MAX_BRIDGE_OP_NAME_BYTES 128
 #define PROTON_MAX_PATH_BYTES 4096
 
+#ifdef __APPLE__
+static bool proton_macos_current_executable_path(char *out, size_t out_len);
+static bool proton_config_macos_bundle_contents_path(
+    const char *executable_path, char *out, size_t out_len);
+#endif
+
 static bool proton_path_is_absolute(const char *path) {
   if (path == NULL || path[0] == '\0') {
     return false;
@@ -364,59 +370,53 @@ bool proton_config_default_runtime_root(char *out, size_t out_len) {
     int written = snprintf(out, out_len, "%s", env_root);
     return written > 0 && (size_t)written < out_len;
   }
-  if (!proton_module_dir(out, out_len)) {
-    return false;
-  }
-  char module_dir[PROTON_MAX_PATH_BYTES] = {0};
-  int written = snprintf(module_dir, sizeof(module_dir), "%s", out);
-  if (written < 0 || (size_t)written >= sizeof(module_dir)) {
-    return false;
-  }
-  char search_dir[PROTON_MAX_PATH_BYTES] = {0};
-  written = snprintf(search_dir, sizeof(search_dir), "%s", module_dir);
-  if (written < 0 || (size_t)written >= sizeof(search_dir)) {
-    return false;
-  }
+#ifdef __APPLE__
+  char executable_path[PROTON_MAX_PATH_BYTES] = {0};
+  char contents_dir[PROTON_MAX_PATH_BYTES] = {0};
   char resources_dir[PROTON_MAX_PATH_BYTES] = {0};
-  char bundled_runtime[PROTON_MAX_PATH_BYTES] = {0};
-  for (;;) {
-    if (proton_join_path(resources_dir, sizeof(resources_dir), search_dir,
-                         "Resources") &&
-        proton_join_path(bundled_runtime, sizeof(bundled_runtime),
-                         resources_dir, "proton") &&
-        proton_dir_exists(bundled_runtime)) {
-      written = snprintf(out, out_len, "%s", bundled_runtime);
-      return written >= 0 && (size_t)written < out_len;
-    }
-    char parent[PROTON_MAX_PATH_BYTES] = {0};
-    written = snprintf(parent, sizeof(parent), "%s", search_dir);
-    if (written < 0 || (size_t)written >= sizeof(parent) ||
-        !proton_path_parent(parent) || strcmp(parent, search_dir) == 0) {
-      break;
-    }
-    written = snprintf(search_dir, sizeof(search_dir), "%s", parent);
-    if (written < 0 || (size_t)written >= sizeof(search_dir)) {
-      break;
-    }
-  }
-  written = snprintf(out, out_len, "%s", module_dir);
-  if (written < 0 || (size_t)written >= out_len) {
-    return false;
-  }
-  if (proton_path_basename_equals(out, "bin")
-#ifndef _WIN32
-      || proton_path_basename_equals(out, "lib")
+  return proton_macos_current_executable_path(executable_path,
+                                               sizeof(executable_path)) &&
+         proton_config_macos_bundle_contents_path(
+             executable_path, contents_dir, sizeof(contents_dir)) &&
+         proton_join_path(resources_dir, sizeof(resources_dir), contents_dir,
+                          "Resources") &&
+         proton_join_path(out, out_len, resources_dir, "proton");
+#elif defined(_WIN32)
+  return proton_module_dir(out, out_len);
+#else
+  (void)out;
+  (void)out_len;
+  return false;
 #endif
-  ) {
-    return proton_path_parent(out);
-  }
-  return true;
 }
 
 #ifdef __APPLE__
-bool proton_config_macos_bundle_helper_path(const char *executable_path,
-                                            char *out,
-                                            size_t out_len) {
+static bool proton_macos_current_executable_path(char *out, size_t out_len) {
+  if (out == NULL || out_len == 0 || out_len > UINT32_MAX) {
+    return false;
+  }
+  uint32_t size = (uint32_t)out_len;
+  if (_NSGetExecutablePath(out, &size) != 0) {
+    return false;
+  }
+  char resolved[PROTON_MAX_PATH_BYTES] = {0};
+  if (realpath(out, resolved) == NULL) {
+    return true;
+  }
+  int written = snprintf(out, out_len, "%s", resolved);
+  return written >= 0 && (size_t)written < out_len;
+}
+
+static bool proton_path_has_app_suffix(const char *path) {
+  if (path == NULL) {
+    return false;
+  }
+  size_t length = strlen(path);
+  return length > 4 && strcmp(path + length - 4, ".app") == 0;
+}
+
+static bool proton_config_macos_bundle_contents_path(
+    const char *executable_path, char *out, size_t out_len) {
   if (executable_path == NULL || executable_path[0] == '\0' || out == NULL ||
       out_len == 0) {
     return false;
@@ -438,13 +438,73 @@ bool proton_config_macos_bundle_helper_path(const char *executable_path,
   char app_dir[PROTON_MAX_PATH_BYTES] = {0};
   written = snprintf(app_dir, sizeof(app_dir), "%s", contents_dir);
   if (written < 0 || (size_t)written >= sizeof(app_dir) ||
+      !proton_path_parent(app_dir) || !proton_path_has_app_suffix(app_dir)) {
+    return false;
+  }
+  char app_parent[PROTON_MAX_PATH_BYTES] = {0};
+  written = snprintf(app_parent, sizeof(app_parent), "%s", app_dir);
+  if (written < 0 || (size_t)written >= sizeof(app_parent) ||
+      !proton_path_parent(app_parent)) {
+    return false;
+  }
+  if (proton_path_basename_equals(app_parent, "Frameworks")) {
+    if (!proton_path_parent(app_parent) ||
+        !proton_path_basename_equals(app_parent, "Contents")) {
+      return false;
+    }
+    written = snprintf(out, out_len, "%s", app_parent);
+  } else {
+    written = snprintf(out, out_len, "%s", contents_dir);
+  }
+  return written >= 0 && (size_t)written < out_len;
+}
+
+static bool proton_config_macos_is_helper_executable(
+    const char *executable_path) {
+  char macos_dir[PROTON_MAX_PATH_BYTES] = {0};
+  int written = snprintf(macos_dir, sizeof(macos_dir), "%s", executable_path);
+  if (written < 0 || (size_t)written >= sizeof(macos_dir) ||
+      !proton_path_parent(macos_dir)) {
+    return false;
+  }
+  char contents_dir[PROTON_MAX_PATH_BYTES] = {0};
+  written = snprintf(contents_dir, sizeof(contents_dir), "%s", macos_dir);
+  if (written < 0 || (size_t)written >= sizeof(contents_dir) ||
+      !proton_path_parent(contents_dir)) {
+    return false;
+  }
+  char app_dir[PROTON_MAX_PATH_BYTES] = {0};
+  written = snprintf(app_dir, sizeof(app_dir), "%s", contents_dir);
+  if (written < 0 || (size_t)written >= sizeof(app_dir) ||
+      !proton_path_parent(app_dir)) {
+    return false;
+  }
+  return proton_path_parent(app_dir) &&
+         proton_path_basename_equals(app_dir, "Frameworks");
+}
+
+bool proton_config_macos_bundle_helper_path(const char *executable_path,
+                                            char *out,
+                                            size_t out_len) {
+  if (executable_path == NULL || executable_path[0] == '\0' || out == NULL ||
+      out_len == 0) {
+    return false;
+  }
+  char contents_dir[PROTON_MAX_PATH_BYTES] = {0};
+  if (!proton_config_macos_bundle_contents_path(
+          executable_path, contents_dir, sizeof(contents_dir))) {
+    return false;
+  }
+  char app_dir[PROTON_MAX_PATH_BYTES] = {0};
+  int written = snprintf(app_dir, sizeof(app_dir), "%s", contents_dir);
+  if (written < 0 || (size_t)written >= sizeof(app_dir) ||
       !proton_path_parent(app_dir)) {
     return false;
   }
   const char *app_name = strrchr(app_dir, '/');
   app_name = app_name == NULL ? app_dir : app_name + 1;
   size_t app_name_len = strlen(app_name);
-  if (app_name_len <= 4 || strcmp(app_name + app_name_len - 4, ".app") != 0) {
+  if (!proton_path_has_app_suffix(app_name)) {
     return false;
   }
   size_t product_name_len = app_name_len - 4;
@@ -475,22 +535,6 @@ bool proton_config_macos_bundle_helper_path(const char *executable_path,
   }
   return true;
 }
-
-static bool proton_macos_current_executable_path(char *out, size_t out_len) {
-  if (out == NULL || out_len == 0 || out_len > UINT32_MAX) {
-    return false;
-  }
-  uint32_t size = (uint32_t)out_len;
-  if (_NSGetExecutablePath(out, &size) != 0) {
-    return false;
-  }
-  char resolved[PROTON_MAX_PATH_BYTES] = {0};
-  if (realpath(out, resolved) == NULL) {
-    return true;
-  }
-  int written = snprintf(out, out_len, "%s", resolved);
-  return written >= 0 && (size_t)written < out_len;
-}
 #endif
 
 bool proton_config_default_helper_path(char *out, size_t out_len) {
@@ -503,7 +547,7 @@ bool proton_config_default_helper_path(char *out, size_t out_len) {
   char executable_path[PROTON_MAX_PATH_BYTES] = {0};
   if (proton_macos_current_executable_path(executable_path,
                                            sizeof(executable_path))) {
-    if (strstr(executable_path, ".app/Contents/Frameworks/") != NULL) {
+    if (proton_config_macos_is_helper_executable(executable_path)) {
       int written = snprintf(out, out_len, "%s", executable_path);
       return written >= 0 && (size_t)written < out_len;
     }
@@ -513,34 +557,12 @@ bool proton_config_default_helper_path(char *out, size_t out_len) {
     }
   }
 #endif
+#ifdef _WIN32
   char executable_dir[PROTON_MAX_PATH_BYTES] = {0};
-  if (proton_module_dir(executable_dir, sizeof(executable_dir))) {
-#ifdef _WIN32
-    if (proton_join_path(out, out_len, executable_dir, "cef_process.exe") &&
-        proton_path_exists(out)) {
-      return true;
-    }
+  return proton_module_dir(executable_dir, sizeof(executable_dir)) &&
+         proton_join_path(out, out_len, executable_dir, "cef_process.exe");
 #else
-    if (proton_join_path(out, out_len, executable_dir, "cef_process") &&
-        proton_path_exists(out)) {
-      return true;
-    }
-#endif
-  }
-  char runtime_root[PROTON_MAX_PATH_BYTES] = {0};
-  char bin_dir[PROTON_MAX_PATH_BYTES] = {0};
-  if (!proton_config_default_runtime_root(runtime_root, sizeof(runtime_root)) ||
-      !proton_join_path(bin_dir, sizeof(bin_dir), runtime_root, "bin")) {
-    return false;
-  }
-#ifdef _WIN32
-  if (proton_join_path(out, out_len, runtime_root, "cef_process.exe") &&
-      proton_path_exists(out)) {
-    return true;
-  }
-  return proton_join_path(out, out_len, bin_dir, "cef_process.exe");
-#else
-  return proton_join_path(out, out_len, bin_dir, "cef_process");
+  return false;
 #endif
 }
 

@@ -196,43 +196,6 @@ async fn require_launchable_macho(path : String) -> Unit {
 }
 
 ///|
-fn legacy_dynamic_dependency(host : BundleHost, output : String) -> String? {
-  let output = output.to_lower()
-  match host {
-    Macos if output.contains("libproton.dylib") => Some("libproton.dylib")
-    Linux if output.contains("libproton.so") => Some("libproton.so")
-    Windows if output.contains("proton.dll") => Some("proton.dll")
-    _ => None
-  }
-}
-
-///|
-async fn require_source_built_proton(path : String, host : BundleHost) -> Unit {
-  let (tool, args) = match host {
-    Macos => ("otool", ["-L", path])
-    Linux => ("patchelf", ["--print-needed", path])
-    Windows => ("dumpbin", ["/nologo", "/dependents", path])
-  }
-  let (code, output) = @process.collect_output_merged(tool, args) catch {
-    error =>
-      raise BundleToolError::Exit(
-        tool~,
-        code=-1,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  let text = output.text() catch { _ => "non-UTF-8 output" }
-  guard code == 0 else {
-    raise BundleToolError::Exit(tool~, code~, detail=text)
-  }
-  match legacy_dynamic_dependency(host, text) {
-    Some(dependency) =>
-      raise BundleRuntimeError::LegacyDynamicDependency(path~, dependency~)
-    None => ()
-  }
-}
-
-///|
 fn xml_escape(text : String) -> String {
   text
   .replace_all(old="&", new="&amp;")

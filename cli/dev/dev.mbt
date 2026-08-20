@@ -114,8 +114,7 @@ pub fn command() -> @argparse.Command {
 pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let raw = dev_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
-  let root = @fsutil.find_project_root_from(cwd)
-  let config_path = resolve_dev_config_path(cwd, root, raw)
+  let config_path = resolve_dev_config_path(cwd, raw)
   let project_config = load_dev_project_config(config_path)
   let frontend_config = match project_config {
     Some(config) => config.frontend()
@@ -123,7 +122,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   }
   let project_base = project_config
     .map(fn(config) { config.base_dir() })
-    .unwrap_or(root)
+    .unwrap_or(cwd)
   let frontend_url : String? = match raw.url {
     Some(url) => Some(url)
     None =>
@@ -133,7 +132,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
       }
   }
   let moon_target_dir = raw.moon_target_dir.map(path => {
-    @fsutil.resolve_path(root, path)
+    @fsutil.resolve_path(cwd, path)
   })
   validate_frontend_dev_url(frontend_url, raw.ready_path)
   let frontend_command : String? = match raw.command {
@@ -335,36 +334,18 @@ async fn resolve_backend_path(root : String, backend_path : String?) -> String {
 }
 
 ///|
-async fn resolve_dev_config_path(
-  cwd : String,
-  root : String,
-  raw : RawDevOptions,
-) -> String? {
+async fn resolve_dev_config_path(cwd : String, raw : RawDevOptions) -> String? {
   match raw.config_path {
     Some(path) => Some(@fsutil.resolve_path(cwd, path))
     None => {
-      let package_config = package_config_path(
-        cwd,
-        raw.app_package.unwrap_or(default_package),
-      )
       let cwd_config = @fsutil.path_join(cwd, default_config_file)
-      let root_config = @fsutil.path_join(root, default_config_file)
-      if @fsutil.path_exists(package_config) {
-        Some(package_config)
-      } else if @fsutil.path_exists(cwd_config) {
+      if @fsutil.path_exists(cwd_config) {
         Some(cwd_config)
-      } else if @fsutil.path_exists(root_config) {
-        Some(root_config)
       } else {
         None
       }
     }
   }
-}
-
-///|
-fn package_config_path(cwd : String, app_package : String) -> String {
-  @fsutil.resolve_path(cwd, @fsutil.path_join(app_package, default_config_file))
 }
 
 ///|

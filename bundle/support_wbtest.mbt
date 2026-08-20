@@ -91,36 +91,3 @@ test "Mach-O rejection reports the discovered filetype" {
 }
 
 ///|
-test "legacy Proton dynamic dependencies are recognized per platform" {
-  assert_eq(
-    legacy_dynamic_dependency(
-      Macos,
-      "/tmp/app:\n\t@rpath/libproton.dylib (compatibility version 0.0.0)",
-    ),
-    Some("libproton.dylib"),
-  )
-  assert_eq(
-    legacy_dynamic_dependency(Linux, "libcef.so\nlibproton.so.1\nlibc.so.6"),
-    Some("libproton.so"),
-  )
-  assert_eq(
-    legacy_dynamic_dependency(
-      Windows,
-      "Image has the following dependencies:\r\n    PROTON.DLL\r\n",
-    ),
-    Some("proton.dll"),
-  )
-}
-
-///|
-test "current source-built dependencies do not match legacy libraries" {
-  assert_eq(
-    legacy_dynamic_dependency(Macos, "libcef.dylib\nlibc++.1.dylib"),
-    None,
-  )
-  assert_eq(legacy_dynamic_dependency(Linux, "libcef.so\nlibc.so.6"), None)
-  assert_eq(
-    legacy_dynamic_dependency(Windows, "libcef.dll\nKERNEL32.dll"),
-    None,
-  )
-}

@@ -15,10 +15,7 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-scaffold-e2e-"));
 const projectDir = path.join(tempRoot, "todo");
 const frontendDir = path.join(projectDir, "frontend");
 const frontendDist = path.join(frontendDir, "dist");
-const codegenWasm = path.join(
-  repoRoot,
-  "_build/wasm/debug/build/moonbit-community/proton_codegen/proton_codegen.wasm",
-);
+let codegenWasm;
 const codegenVersion = fs
   .readFileSync(path.join(repoRoot, "codegen", "moon.mod"), "utf8")
   .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
@@ -74,6 +71,16 @@ function run(command, args, options = {}) {
     fail(`${command} exited with status ${result.status}${output}`);
   }
   return `${result.stdout ?? ""}${result.stderr ?? ""}`;
+}
+
+function buildArtifact(args) {
+  const output = run("moon", args, { capture: true });
+  const artifacts = JSON.parse(output).artifacts_path;
+  assert(
+    Array.isArray(artifacts) && artifacts.length === 1,
+    `expected one Moon artifact, received: ${output}`,
+  );
+  return artifacts[0];
 }
 
 function runtimeEnv(extra = {}) {
@@ -154,7 +161,13 @@ function verifyGeneratedTree() {
 }
 
 function installLocalMoonxShim() {
-  run("moon", ["build", "codegen", "--target", "wasm"]);
+  codegenWasm = buildArtifact([
+    "run",
+    "codegen",
+    "--target",
+    "wasm",
+    "--build-only",
+  ]);
   const binDir = path.join(tempRoot, "bin");
   fs.mkdirSync(binDir);
   const shim = path.join(binDir, "moonx");

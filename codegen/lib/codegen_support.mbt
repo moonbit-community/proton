@@ -56,6 +56,7 @@ fn validate_proton_ext_codegen_fields(
     match key {
       "id"
       | "namespace"
+      | "moonbit_import_path"
       | "version"
       | "display_name"
       | "description"

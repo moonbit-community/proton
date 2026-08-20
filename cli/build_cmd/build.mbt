@@ -237,8 +237,7 @@ priv struct BuildInvocation {
 ///|
 async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
   let cwd = @path.Path(cwd).resolve().to_string()
-  let root = @fsutil.find_project_root_from(cwd)
-  let config_path = resolve_build_config_path(cwd, root, raw)
+  let config_path = resolve_build_config_path(cwd, raw)
   let config = load_project_config(config_path)
   validate_release_config(config)
   if raw.run_frontend_build {
@@ -258,7 +257,7 @@ async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
       }
   }
   let moon_target_dir = raw.moon_target_dir.map(path => {
-    @fsutil.resolve_path(root, path)
+    @fsutil.resolve_path(cwd, path)
   })
   BuildInvocation::{
     backend_path,
@@ -307,7 +306,6 @@ pub async fn resolve_proton_source(
   backend_path : String,
   app_package : String,
 ) -> String {
-  let workspace_root = @fsutil.find_workspace_root_from(backend_path)
   let (code, output) = @process.collect_output_merged(
     "moon",
     ["check", app_package, "--target", "native", "--dry-run"],
@@ -333,13 +331,13 @@ pub async fn resolve_proton_source(
       detail=text.trim().to_owned(),
     )
   }
-  guard proton_source_from_build_plan(text, workspace_root) is Some(source) else {
+  guard proton_source_from_build_plan(text, backend_path) is Some(source) else {
     raise BuildProcessError::InvalidOutput(
       command="MoonBit dependency resolution",
       detail="the application does not resolve moonbit-community/proton",
     )
   }
-  guard @fsutil.path_is_file(@fsutil.path_join(source, "moon.mod")) &&
+  guard @fsutil.path_is_file(@fsutil.path_join(source, "cef_requirements.json")) &&
     @fsutil.path_is_dir(@fsutil.path_join(source, "internal/cef_process")) else {
     raise BuildPathError::Missing(
       role="resolved Proton source containing internal/cef_process",
@@ -418,10 +416,9 @@ pub async fn build_cef_process(
   backend_path : String,
   moon_target_dir? : String,
 ) -> String {
-  let workspace_root = @fsutil.find_workspace_root_from(backend_path)
   ignore(resolve_proton_runtime_requirements(proton_source))
   let bin_dir = moon_target_dir.unwrap_or(
-    @fsutil.path_join(workspace_root, "_build"),
+    @fsutil.path_join(backend_path, "_build"),
   )
   let args : Array[String] = [
     "install",
@@ -506,34 +503,19 @@ fn validate_moon_build_args(args : Array[String]) -> Unit raise BuildUsageError 
 ///|
 async fn resolve_build_config_path(
   cwd : String,
-  root : String,
   raw : RawBuildOptions,
 ) -> String? {
   match raw.config_path {
     Some(path) => Some(@fsutil.resolve_path(cwd, path))
     None => {
-      let package_config = package_config_path(
-        cwd,
-        raw.app_package.unwrap_or(default_package),
-      )
       let cwd_config = @fsutil.path_join(cwd, default_config_file)
-      let root_config = @fsutil.path_join(root, default_config_file)
-      if @fsutil.path_exists(package_config) {
-        Some(package_config)
-      } else if @fsutil.path_exists(cwd_config) {
+      if @fsutil.path_exists(cwd_config) {
         Some(cwd_config)
-      } else if @fsutil.path_exists(root_config) {
-        Some(root_config)
       } else {
         None
       }
     }
   }
-}
-
-///|
-fn package_config_path(cwd : String, app_package : String) -> String {
-  @fsutil.resolve_path(cwd, @fsutil.path_join(app_package, default_config_file))
 }
 
 ///|

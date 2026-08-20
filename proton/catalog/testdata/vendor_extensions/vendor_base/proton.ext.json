@@ -1,6 +1,8 @@
 {
   "id": "vendor/base",
   "namespace": "vendorBase",
+  "version": "1.0.0",
+  "moonbit_import_path": "vendor/extensions/base",
   "display_name": "Vendor Base",
   "description": "Base vendor extension fixture.",
   "platforms": [

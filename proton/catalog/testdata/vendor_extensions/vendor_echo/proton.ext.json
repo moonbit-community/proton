@@ -1,6 +1,8 @@
 {
   "id": "vendor/echo",
   "namespace": "vendorEcho",
+  "version": "1.0.0",
+  "moonbit_import_path": "vendor/extensions/echo",
   "display_name": "Vendor Echo",
   "description": "Echo vendor extension fixture.",
   "platforms": [

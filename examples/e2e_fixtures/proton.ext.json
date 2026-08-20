@@ -1,4 +1,6 @@
 {
   "id": "examples/attribute-codegen",
-  "namespace": "add"
+  "namespace": "add",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton/examples/e2e_fixtures"
 }

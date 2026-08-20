@@ -94,25 +94,25 @@ pub fn ExtensionDescriptor::description(self : ExtensionDescriptor) -> String {
 }
 
 ///|
-/// Returns the SPDX-style license string, if declared or inherited.
+/// Returns the SPDX-style license string, if declared.
 pub fn ExtensionDescriptor::license(self : ExtensionDescriptor) -> String? {
   self.license
 }
 
 ///|
-/// Returns the source repository URL, if declared or inherited.
+/// Returns the source repository URL, if declared.
 pub fn ExtensionDescriptor::repository(self : ExtensionDescriptor) -> String? {
   self.repository
 }
 
 ///|
-/// Returns the readme path or URL, if declared or inherited.
+/// Returns the readme path or URL, if declared.
 pub fn ExtensionDescriptor::readme(self : ExtensionDescriptor) -> String? {
   self.readme
 }
 
 ///|
-/// Returns discovery keywords declared by metadata or inherited from `moon.mod`.
+/// Returns discovery keywords declared by metadata.
 pub fn ExtensionDescriptor::keywords(
   self : ExtensionDescriptor,
 ) -> Array[String] {
@@ -128,7 +128,7 @@ pub fn ExtensionDescriptor::js_namespace(self : ExtensionDescriptor) -> String {
 }
 
 ///|
-/// Returns the inferred MoonBit import path used for explicit linking.
+/// Returns the declared MoonBit import path used for explicit linking.
 pub fn ExtensionDescriptor::moonbit_import_path(
   self : ExtensionDescriptor,
 ) -> String {
@@ -230,42 +230,17 @@ fn decode_proton_ext_fields(
   let js_namespace = proton_ext_required_string(fields, "namespace")
   let root_dir = path_dirname(path)
   validate_proton_ext_namespace(js_namespace)
-  let moon_mod_metadata = @proton_config.read_nearest_moon_mod_metadata(
-    root_dir,
-  )
-  let version = proton_ext_optional_string(
-    fields,
-    "version",
-    moon_mod_metadata.version.unwrap_or("0.1.0"),
-  )
+  let version = proton_ext_required_string(fields, "version")
   let display_name = proton_ext_optional_string(fields, "display_name", id)
-  let description = proton_ext_optional_string(
-    fields,
-    "description",
-    moon_mod_metadata.description.unwrap_or(""),
-  )
-  let license = proton_ext_optional_string_option(
-    fields,
-    "license",
-    moon_mod_metadata.license,
-  )
-  let repository = proton_ext_optional_string_option(
-    fields,
-    "repository",
-    moon_mod_metadata.repository,
-  )
-  let readme = proton_ext_optional_string_option(
-    fields,
-    "readme",
-    moon_mod_metadata.readme,
-  )
-  let keywords = proton_ext_optional_string_array(
-    fields,
-    "keywords",
-    moon_mod_metadata.keywords,
-  )
+  let description = proton_ext_optional_string(fields, "description", "")
+  let license = proton_ext_optional_string_option(fields, "license", None)
+  let repository = proton_ext_optional_string_option(fields, "repository", None)
+  let readme = proton_ext_optional_string_option(fields, "readme", None)
+  let keywords = proton_ext_optional_string_array(fields, "keywords", [])
   validate_proton_ext_keywords(keywords)
-  let moonbit_import_path = infer_moonbit_import_path(path)
+  let moonbit_import_path = proton_ext_required_string(
+    fields, "moonbit_import_path",
+  )
   let publish_package = proton_ext_optional_string_value(fields, "package")
   match publish_package {
     Some(package_name) => validate_npm_package_name(package_name)
@@ -303,6 +278,7 @@ fn validate_proton_ext_fields(
     match key {
       "id"
       | "namespace"
+      | "moonbit_import_path"
       | "package"
       | "version"
       | "display_name"
@@ -594,61 +570,4 @@ fn path_join(base : String, child : String) -> String {
 fn path_dirname(path : String) -> String {
   let native_path : @mbpath.Path = path
   native_path.dirname().to_string()
-}
-
-///|
-/// Infers a fallback MoonBit import path when no `moon.mod` can be found.
-fn default_moonbit_import_path(path : String) -> String {
-  let dir = path_dirname(path)
-  let parts = dir.replace(old="\\", new="/").split("/").collect()
-  let mut extension_root_index = -1
-  for index, part in parts {
-    if part == "extensions" {
-      extension_root_index = index
-    }
-  }
-  if extension_root_index >= 0 && extension_root_index < parts.length() - 1 {
-    let package_parts : Array[String] = []
-    for index, part in parts {
-      if index >= extension_root_index {
-        package_parts.push(part.to_owned())
-      }
-    }
-    return package_parts.join("/")
-  }
-  guard parts.length() > 0 else { return "" }
-  let name = parts[parts.length() - 1]
-  guard name != "" && name != "." && name != ".." else { return "" }
-  "moonbit-community/proton_ext/" + name.to_owned()
-}
-
-///|
-fn infer_moonbit_import_path(path : String) -> String {
-  let package_dir = path_dirname(path)
-  let metadata = @proton_config.read_nearest_moon_mod_metadata(package_dir)
-  match (metadata.root_dir, metadata.name) {
-    (Some(module_dir), Some(module_name)) => {
-      let relative = relative_package_dir(module_dir, package_dir)
-      if relative == "" {
-        module_name
-      } else {
-        module_name + "/" + relative
-      }
-    }
-    _ => default_moonbit_import_path(path)
-  }
-}
-
-///|
-fn relative_package_dir(module_dir : String, package_dir : String) -> String {
-  let module_path_value : @mbpath.Path = module_dir
-  let package_path_value : @mbpath.Path = package_dir
-  let relative_path = package_path_value.relative(base=module_path_value)
-  guard !relative_path.is_absolute() else { return "" }
-  let relative = relative_path.to_string().replace(old="\\", new="/")
-  if relative == "." {
-    return ""
-  }
-  guard relative != ".." && !relative.has_prefix("../") else { return "" }
-  relative
 }

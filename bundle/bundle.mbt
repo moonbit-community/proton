@@ -33,9 +33,6 @@ pub async fn build(spec : ProtonBundleSpec) -> BundleResult {
   guard path_is_file(spec.cef_process) else {
     raise BundleRuntimeError::HelperMissing(path=spec.cef_process)
   }
-  let host = current_bundle_host()
-  require_source_built_proton(spec.package_spec.executable, host)
-  require_source_built_proton(spec.cef_process, host)
   let installation = @cef_store.resolve_declared(spec.runtime_requirements)
   let artifacts = @packager.build_with(
     package_spec(spec, installation.runtime_root()),

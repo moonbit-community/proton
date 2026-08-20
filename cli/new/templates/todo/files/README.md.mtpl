@@ -50,6 +50,7 @@ The `package` block in `proton.project.json` contains static packaging metadata:
   "package": {
     "product_name": "My App",
     "identifier": "com.example.my-app",
+    "version": "0.1.0",
     "formats": ["app", "zip"],
     "output": "dist"
   }

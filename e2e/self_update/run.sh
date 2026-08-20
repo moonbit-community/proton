@@ -28,14 +28,10 @@ Darwin) ;;
   ;;
 esac
 
-binary="$repo/_build/native/debug/build/moonbit-community/proton/e2e/self_update/self_update.exe"
-if [ ! -x "$binary" ]; then
-  echo "build it first: moon -C e2e build --target native" >&2
-  exit 1
-fi
-
 rm -rf "$work"
 mkdir -p "$work/keys" "$work/server" "$work/install" "$work/build"
+moon install --path "$repo/e2e/self_update" --bin "$work/build"
+binary="$work/build/self_update"
 
 # The publisher's key. A real release keeps this offline; here it lives beside
 # the artifacts it signs because nothing about it is secret to this test.

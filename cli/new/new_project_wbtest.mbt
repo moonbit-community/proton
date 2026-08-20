@@ -299,7 +299,7 @@ test "templates receive final author title and size" {
   }
   guard config_json
     is {
-      "backend": { "path": "backend", "package": "app", .. },
+      "backend": { "path": ".", "package": "backend/app", .. },
       "frontend": {
         "path": "frontend",
         "before_dev": before_dev,
@@ -309,6 +309,7 @@ test "templates receive final author title and size" {
       "package": {
         "product_name": "Demo App",
         "identifier": "com.justjavac.demo",
+        "version": "0.1.0",
         "formats": ["app", "zip"],
         "output": "dist",
         ..

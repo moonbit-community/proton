@@ -223,7 +223,7 @@ fn plan_project_files(
 ///|
 fn project_config_file(context : TemplateContext) -> PlannedFile {
   let config : Json = {
-    "backend": { "path": "backend", "package": "app" },
+    "backend": { "path": ".", "package": "backend/app" },
     "frontend": {
       "path": "frontend",
       "dev_url": "http://127.0.0.1:4300",
@@ -238,6 +238,7 @@ fn project_config_file(context : TemplateContext) -> PlannedFile {
     "package": {
       "product_name": context.title,
       "identifier": context.identifier,
+      "version": "0.1.0",
       "formats": ["app", "zip"],
       "output": "dist",
     },

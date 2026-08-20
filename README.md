@@ -358,8 +358,8 @@ Generated projects describe their toolchain in `proton.project.json`:
 ```json
 {
   "backend": {
-    "path": "backend",
-    "package": "app"
+    "path": ".",
+    "package": "backend/app"
   },
   "frontend": {
     "path": "frontend",
@@ -373,7 +373,10 @@ Generated projects describe their toolchain in `proton.project.json`:
 
 `backend` selects the MoonBit package that runs the Proton runtime. The
 application entry is declared in MoonBit with `@proton.html`, `url`, `file`, or
-`asset`. Project file paths must be relative and use `/` separators. The
+`asset`. `backend.path` is the exact working directory passed to Moon; Proton
+does not search parent directories for `moon.work`, `moon.mod`, or another
+project configuration. Project file paths must be relative and use `/`
+separators. The
 `frontend` block drives development and build orchestration: `path` is the
 frontend working directory, `before_dev`/`before_build` run there, `dev_url`
 is the development server to wait for, and `dist` is the build output to
@@ -456,6 +459,7 @@ payload inputs needed before the application can run:
   "package": {
     "product_name": "My App",
     "identifier": "com.example.my-app",
+    "version": "1.0.0",
     "formats": ["app", "zip"],
     "resources": ["helpers/worker"],
     "sign": {

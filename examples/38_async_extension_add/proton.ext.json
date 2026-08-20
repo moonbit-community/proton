@@ -1,4 +1,6 @@
 {
   "id": "examples/async-add",
-  "namespace": "add"
+  "namespace": "add",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton/examples/38_async_extension_add"
 }

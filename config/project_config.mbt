@@ -142,6 +142,7 @@ pub fn ProjectDocumentType::extensions(
 pub(all) struct ProjectPackageConfig {
   product_name : String
   identifier : String
+  version : String
   formats : Array[String]
   icons : Array[String]
   resources : Array[String]
@@ -161,6 +162,7 @@ pub extend ProjectPackageConfig with Debug::{to_repr}
 pub fn ProjectPackageConfig::new(
   product_name : String,
   identifier : String,
+  version : String,
   formats? : Array[String] = [],
   icons? : Array[String] = [],
   resources? : Array[String] = [],
@@ -172,6 +174,7 @@ pub fn ProjectPackageConfig::new(
   ProjectPackageConfig::{
     product_name,
     identifier,
+    version,
     formats: formats.copy(),
     icons: icons.copy(),
     resources: resources.copy(),
@@ -180,6 +183,11 @@ pub fn ProjectPackageConfig::new(
     document_types: document_types.copy(),
     output,
   }
+}
+
+///|
+pub fn ProjectPackageConfig::version(self : ProjectPackageConfig) -> String {
+  self.version
 }
 
 ///|
