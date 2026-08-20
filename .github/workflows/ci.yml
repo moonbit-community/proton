@@ -8,7 +8,7 @@ on:
 
 env:
   PROTON_NO_UPDATE_CHECK: 1
-  PROTON_CEF_CACHE: ${{ github.workspace }}/.proton-global-cache
+  PROTON_RUNTIME_STORE: ${{ github.workspace }}/.proton-runtime-store
 
 jobs:
   format:
@@ -55,11 +55,11 @@ jobs:
           key: ${{ runner.os }}-mooncakes-${{ hashFiles('**/moon.mod') }}
           restore-keys: ${{ runner.os }}-mooncakes-
 
-      - name: Cache CEF downloads
+      - name: Cache Proton runtimes
         uses: actions/cache@v6
         with:
-          path: .proton-global-cache
-          key: ${{ runner.os }}-cef-global-${{ hashFiles('cli/cef/cef_platform.mbt') }}
+          path: .proton-runtime-store
+          key: ${{ runner.os }}-proton-runtime-${{ hashFiles('cefsetup/requirements.json') }}
 
       - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
