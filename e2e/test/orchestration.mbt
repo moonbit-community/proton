@@ -64,14 +64,9 @@ fn e2e_host_path(path : String) -> @path.Path {
 }
 
 ///|
-fn active_runtime_dist(root : String) -> String raise {
-  let manifest_path = join_path(root, ".proton/runtime.json")
-  guard @mbfs.path_exists(manifest_path) else {
-    fail("CEF runtime is not configured; run proton_cli cef setup")
-  }
-  match read_runtime_dist(manifest_path) {
-    Ok(dist) => resolve_path(root, dist)
-    Err(message) => fail(message)
+async fn active_runtime_dist() -> String {
+  @cef_store.resolve_default().runtime_root() catch {
+    error => fail("CEF runtime is not installed: " + error.to_string())
   }
 }
 
@@ -87,32 +82,13 @@ fn installed_helper_path(output_root : String) -> String {
 }
 
 ///|
-fn read_runtime_dist(manifest_path : String) -> Result[String, String] {
-  let text = @mbfs.read_file_to_string(manifest_path, encoding="utf8") catch {
-    _ => return Err("failed to read runtime manifest: " + manifest_path)
-  }
-  let json = @json.parse(text) catch {
-    _ => return Err("invalid runtime manifest JSON: " + manifest_path)
-  }
-  match json {
-    { "dist": String(dist), .. } if dist != "" => Ok(dist)
-    Object(_) =>
-      Err(
-        "runtime manifest is missing a non-empty string dist field: " +
-        manifest_path,
-      )
-    _ => Err("runtime manifest must be a JSON object: " + manifest_path)
-  }
-}
-
-///|
-fn app_process_env(
+async fn app_process_env(
   root : String,
   output_root : String,
   scenario : String,
   cdp_port : Int,
-) -> Map[String, String] raise {
-  let runtime_dist = active_runtime_dist(root)
+) -> Map[String, String] {
+  let runtime_dist = active_runtime_dist()
   let bin_dir = join_path(runtime_dist, "bin")
   let lib_dir = join_path(runtime_dist, "lib")
   let helper_path = installed_helper_path(output_root)

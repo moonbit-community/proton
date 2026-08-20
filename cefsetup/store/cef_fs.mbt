@@ -38,20 +38,20 @@ async fn copy_file(src : String, dest : String) -> Unit {
 
 ///|
 async fn copy_file_if_exists(src : String, dest : String) -> Unit {
-  guard @fsutil.path_exists(src) else { return }
+  guard path_exists(src) else { return }
   copy_file(src, dest)
 }
 
 ///|
 async fn copy_tree(src : String, dest : String) -> Unit {
-  if @fsutil.path_is_file(src) {
+  if path_is_file(src) {
     copy_file(src, dest)
     return
   }
-  if !@fsutil.path_is_dir(src) {
+  if !path_is_dir(src) {
     raise CefFileSystemError::InvalidSource(path=src)
   }
-  if !@fsutil.path_exists(dest) {
+  if !path_exists(dest) {
     @async_fs.mkdir(dest, recursive=true) catch {
       err =>
         raise CefFileSystemError::CreateDirectory(
@@ -72,16 +72,16 @@ async fn copy_tree(src : String, dest : String) -> Unit {
       )
   }
   for entry in entries {
-    copy_tree(@fsutil.path_join(src, entry), @fsutil.path_join(dest, entry))
+    copy_tree(path_join(src, entry), path_join(dest, entry))
   }
 }
 
 ///|
 async fn ensure_dir(path : String) -> Unit {
-  guard !@fsutil.path_exists(path) else { return }
+  guard !path_exists(path) else { return }
   @async_fs.mkdir(path, recursive=true) catch {
     err => {
-      if @fsutil.path_is_dir(path) {
+      if path_is_dir(path) {
         return
       }
       raise CefFileSystemError::CreateDirectory(
@@ -95,7 +95,7 @@ async fn ensure_dir(path : String) -> Unit {
 ///|
 async fn acquire_install_lock(target_dir : String) -> @async_fs.File {
   let lock_path = target_dir + ".lock"
-  ensure_dir(@fsutil.path_parent(lock_path))
+  ensure_dir(path_parent(lock_path))
   let file = @async_fs.open(lock_path, mode=ReadWrite, create_mode=OpenOrCreate) catch {
     error if @async.is_being_cancelled() => raise error
     err =>
@@ -127,7 +127,7 @@ async fn create_install_staging(target_dir : String) -> String {
     let staging = prefix + "-" + index.to_string()
     try @async_fs.mkdir(staging) catch {
       error =>
-        if !@fsutil.path_exists(staging) {
+        if !path_exists(staging) {
           raise CefFileSystemError::CreateDirectory(
             path=staging,
             detail=@debug.render(Repr(error)),
@@ -144,14 +144,14 @@ async fn create_install_backup(target_dir : String) -> String {
   let prefix = target_dir + ".backup-" + @async.now().to_string()
   for index = 0; ; index = index + 1 {
     let backup = prefix + "-" + index.to_string()
-    guard !@fsutil.path_exists(backup) else { continue }
+    guard !path_exists(backup) else { continue }
     return backup
   }
 }
 
 ///|
 async fn replace_staged_directory(staging : String, target : String) -> Unit {
-  let had_target = @fsutil.path_exists(target)
+  let had_target = path_exists(target)
   let backup = if had_target { create_install_backup(target) } else { "" }
   if had_target {
     @async_fs.rename(target, backup, replace=false) catch {
@@ -203,8 +203,8 @@ async fn replace_staged_directory(staging : String, target : String) -> Unit {
 
 ///|
 async fn normalize_cef_runtime_layout(root : String) -> Unit {
-  let release_dir = @fsutil.path_join(root, "Release")
-  if !@fsutil.path_exists(release_dir) {
+  let release_dir = path_join(root, "Release")
+  if !path_exists(release_dir) {
     @async_fs.mkdir(release_dir, recursive=true) catch {
       err =>
         raise CefFileSystemError::CreateDirectory(
@@ -218,21 +218,21 @@ async fn normalize_cef_runtime_layout(root : String) -> Unit {
       "icudtl.dat", "chrome_100_percent.pak", "chrome_200_percent.pak", "resources.pak",
     ] {
     copy_file_if_exists(
-      @fsutil.path_join(@fsutil.path_join(root, "Resources"), file_name),
-      @fsutil.path_join(release_dir, file_name),
+      path_join(path_join(root, "Resources"), file_name),
+      path_join(release_dir, file_name),
     )
   }
 }
 
 ///|
 async fn remove_tree(path : String) -> Unit {
-  guard @fsutil.path_exists(path) else { return }
-  if @fsutil.path_is_file(path) {
+  guard path_exists(path) else { return }
+  if path_is_file(path) {
     @async_fs.remove(path) catch {
       err =>
         raise CefFileSystemError::Remove(path~, detail=@debug.render(Repr(err)))
     }
-  } else if @fsutil.path_is_dir(path) {
+  } else if path_is_dir(path) {
     @async_fs.rmdir(path, recursive=true) catch {
       err =>
         raise CefFileSystemError::Remove(path~, detail=@debug.render(Repr(err)))

@@ -251,7 +251,6 @@ try {
     $Npm = Require-Command "npm.cmd"
     $SignTool = Require-Command "signtool.exe"
     $CertUtil = Require-Command "certutil.exe"
-    Require-Path (Join-Path $RepoRoot ".proton\runtime.json") "Run 'moon -C cli run . -- -C .. cef setup' first."
     Require-Path (Join-Path $ExampleDir "proton.project.json") "Package smoke example is missing."
 
     $nodeModules = Join-Path $ExampleDir "frontend\node_modules"

@@ -188,11 +188,11 @@ async fn run_dev_extension_command(
 }
 
 ///|
-fn dev_extension_runtime_env(
+async fn dev_extension_runtime_env(
   root : String,
   output_root : String,
   cdp_port : Int,
-) -> Map[String, String] raise {
+) -> Map[String, String] {
   let env = app_process_env(root, output_root, "47_dev_extension_js", cdp_port)
   env["NO_COLOR"] = "1"
   env["FORCE_COLOR"] = "0"
@@ -213,11 +213,11 @@ fn restore_dev_extension_parent_preload(
 }
 
 ///|
-fn dev_extension_host_env(
+async fn dev_extension_host_env(
   root : String,
   output_root : String,
   cdp_port : Int,
-) -> Map[String, String] raise {
+) -> Map[String, String] {
   let env = dev_extension_runtime_env(root, output_root, cdp_port)
   // app_process_env injects libcef.so for Linux application children. The
   // CLI/build hosts launch Moon or Node rather than CEF, so restore the
@@ -340,7 +340,7 @@ async fn build_dev_extension_frontend(
   output_root : String,
   timeout : Int,
 ) -> Unit {
-  let runtime_dist = active_runtime_dist(root)
+  let runtime_dist = active_runtime_dist()
   let has_linux_cef = @mbfs.path_exists(
     join_path(runtime_dist, "bin/libcef.so"),
   )

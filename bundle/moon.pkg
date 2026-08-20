@@ -1,0 +1,11 @@
+import {
+  "moonbit-community/proton_package/lib" @packager,
+  "moonbit-community/proton_cefsetup/store" @cef_store,
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/async/process",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonbitlang/x/path",
+}
+
+supported_targets = "native+wasm"

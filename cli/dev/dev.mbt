@@ -174,7 +174,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         None => default_package
       }
   }
-  let runtime = ensure_dev_runtime(root, raw.setup_runtime)
+  let runtime = ensure_dev_runtime(raw.setup_runtime)
   let helper_path = @build.build_cef_process(backend_path, moon_target_dir?)
   let app_env = dev_process_env(
     runtime, helper_path, frontend_url, project_base,
@@ -399,16 +399,16 @@ async fn read_dev_project_config(
 }
 
 ///|
-async fn ensure_dev_runtime(root : String, setup_runtime : Bool) -> DevRuntime {
-  read_dev_runtime(root) catch {
+async fn ensure_dev_runtime(setup_runtime : Bool) -> DevRuntime {
+  resolve_dev_runtime() catch {
     error if @async.is_being_cancelled() => raise error
     error =>
       if setup_runtime {
-        @cef.setup_default(root) catch {
+        ignore(@cef_store.install_default()) catch {
           error if @async.is_being_cancelled() => raise error
           error => raise Setup(detail=error.to_string())
         }
-        read_dev_runtime(root)
+        resolve_dev_runtime()
       } else {
         raise SetupRequired(detail=error.to_string())
       }
@@ -416,31 +416,9 @@ async fn ensure_dev_runtime(root : String, setup_runtime : Bool) -> DevRuntime {
 }
 
 ///|
-async fn read_dev_runtime(root : String) -> DevRuntime {
-  let manifest_path = runtime_manifest_path(root)
-  let text = @async_fs.read_file(manifest_path).text() catch {
-    _ => raise ManifestMissing(path=manifest_path)
-  }
-  let json = @json.parse(text) catch {
-    err =>
-      raise ManifestInvalid(path=manifest_path, detail=@debug.render(Repr(err)))
-  }
-  let platform = json_string_field(json, "platform", manifest_path)
-  let expected_platform = @cef.current_platform_id() catch {
-    error =>
-      raise ManifestInvalid(
-        path=manifest_path,
-        detail="failed to detect host platform: " + error.to_string(),
-      )
-  }
-  if platform != expected_platform {
-    raise PlatformMismatch(expected=expected_platform, actual=platform)
-  }
-  let dist = json_string_field(json, "dist", manifest_path)
-  dev_runtime_from_root(
-    @fsutil.resolve_path(root, dist),
-    "active Proton runtime",
-  )
+async fn resolve_dev_runtime() -> DevRuntime {
+  let runtime = @cef_store.resolve_default()
+  dev_runtime_from_root(runtime.runtime_root(), "Proton runtime store")
 }
 
 ///|
@@ -457,11 +435,6 @@ async fn dev_runtime_from_root(
 }
 
 ///|
-fn runtime_manifest_path(root : String) -> String {
-  @fsutil.path_join(@fsutil.path_join(root, ".proton"), "runtime.json")
-}
-
-///|
 fn validate_frontend_dev_url(
   frontend_url : String?,
   ready_path : String?,
@@ -469,22 +442,6 @@ fn validate_frontend_dev_url(
   match frontend_url {
     None => ()
     Some(url) => ignore(parse_dev_url_endpoint(url, ready_path))
-  }
-}
-
-///|
-fn json_string_field(
-  json : Json,
-  field : String,
-  label : String,
-) -> String raise DevRuntimeError {
-  match json {
-    Object(object) =>
-      match object.get(field) {
-        Some(String(value)) => value
-        _ => raise ManifestField(path=label, field~)
-      }
-    _ => raise ManifestInvalid(path=label, detail="root must be a JSON object")
   }
 }
 

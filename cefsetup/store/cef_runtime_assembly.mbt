@@ -3,11 +3,11 @@ fn assert_safe_generated_dir(
   generated_dir : String,
   cache_root : String,
 ) -> Unit raise CefRuntimeError {
-  let normalized_generated = @fsutil.resolve_path(".", generated_dir)
-  let normalized_root = @fsutil.resolve_path(".", cache_root)
+  let normalized_generated = resolve_path(".", generated_dir)
+  let normalized_root = resolve_path(".", cache_root)
   if generated_dir == "" ||
     normalized_generated == normalized_root ||
-    !@fsutil.path_is_within(normalized_root, normalized_generated) {
+    !path_is_within(normalized_root, normalized_generated) {
     raise UnsafeGeneratedDirectory(path=generated_dir)
   }
 }
@@ -20,38 +20,29 @@ async fn copy_cef_runtime(
 ) -> Unit {
   if platform.id == "darwin-arm64" {
     let framework = "Chromium Embedded Framework.framework"
-    let framework_src = @fsutil.path_join(
-      @fsutil.path_join(cef_root, "Release"),
+    let framework_src = path_join(path_join(cef_root, "Release"), framework)
+    let framework_dst = path_join(
+      path_join(runtime_dir, "Frameworks"),
       framework,
     )
-    let framework_dst = @fsutil.path_join(
-      @fsutil.path_join(runtime_dir, "Frameworks"),
-      framework,
-    )
-    let bin_dir = @fsutil.path_join(runtime_dir, "bin")
-    ensure_dir(@fsutil.path_join(runtime_dir, "Frameworks"))
+    let bin_dir = path_join(runtime_dir, "bin")
+    ensure_dir(path_join(runtime_dir, "Frameworks"))
     ensure_dir(bin_dir)
     copy_tree(framework_src, framework_dst)
     copy_tree(
-      @fsutil.path_join(framework_src, "Resources"),
-      @fsutil.path_join(runtime_dir, "Resources"),
+      path_join(framework_src, "Resources"),
+      path_join(runtime_dir, "Resources"),
     )
-    let libraries = @fsutil.path_join(framework_src, "Libraries")
+    let libraries = path_join(framework_src, "Libraries")
     for name in ["libEGL.dylib", "libGLESv2.dylib", "libvk_swiftshader.dylib"] {
-      copy_file(
-        @fsutil.path_join(libraries, name),
-        @fsutil.path_join(bin_dir, name),
-      )
+      copy_file(path_join(libraries, name), path_join(bin_dir, name))
     }
     return
   }
+  copy_tree(path_join(cef_root, "Release"), path_join(runtime_dir, "bin"))
   copy_tree(
-    @fsutil.path_join(cef_root, "Release"),
-    @fsutil.path_join(runtime_dir, "bin"),
-  )
-  copy_tree(
-    @fsutil.path_join(cef_root, "Resources"),
-    @fsutil.path_join(runtime_dir, "Resources"),
+    path_join(cef_root, "Resources"),
+    path_join(runtime_dir, "Resources"),
   )
 }
 
@@ -62,7 +53,7 @@ async fn create_runtime_staging(runtime_dir : String) -> String {
     let staging = prefix + "-" + index.to_string()
     try @async_fs.mkdir(staging) catch {
       error =>
-        if !@fsutil.path_exists(staging) {
+        if !path_exists(staging) {
           raise CefFileSystemError::CreateDirectory(
             path=staging,
             detail=@debug.render(Repr(error)),
@@ -86,7 +77,7 @@ async fn assemble_runtime(
   let runtime_lock = acquire_install_lock(runtime_dir)
   defer runtime_lock.close()
   defer runtime_lock.unlock()
-  if @fsutil.path_is_dir(runtime_dir) {
+  if path_is_dir(runtime_dir) {
     try validate_runtime_dist(runtime_dir, platform) catch {
       error if @async.is_being_cancelled() => raise error
       _ => ()
@@ -94,11 +85,11 @@ async fn assemble_runtime(
       _ => return
     }
   }
-  ensure_dir(@fsutil.path_parent(runtime_dir))
+  ensure_dir(path_parent(runtime_dir))
   let staging = create_runtime_staging(runtime_dir)
   defer (remove_tree(staging) catch { _ => () })
   if report_progress {
-    @output.info("[INFO] Assembling CEF runtime: " + runtime_dir)
+    report_info("[INFO] Assembling CEF runtime: " + runtime_dir)
   }
   copy_cef_runtime(platform, cef_root, staging)
   validate_runtime_dist(staging, platform)

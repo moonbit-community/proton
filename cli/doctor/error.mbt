@@ -1,9 +1,4 @@
 ///|
-priv suberror DoctorRuntimeManifestError {
-  Invalid(String)
-} derive(Debug)
-
-///|
 pub(all) suberror DoctorError {
   WorkingDirectoryMissing(path~ : String)
   WorkingDirectoryNotDirectory(path~ : String)
@@ -18,20 +13,6 @@ pub extend DoctorError with Debug::{to_repr}
 
 ///|
 pub extend DoctorError with Show::{to_string, output}
-
-///|
-fn DoctorRuntimeManifestError::message(
-  self : DoctorRuntimeManifestError,
-) -> String {
-  match self {
-    Invalid(message) => message
-  }
-}
-
-///|
-impl Show for DoctorRuntimeManifestError with fn output(self, logger) {
-  logger.write_string(self.message())
-}
 
 ///|
 pub fn DoctorError::message(self : DoctorError) -> String {

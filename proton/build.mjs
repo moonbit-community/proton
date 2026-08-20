@@ -4,6 +4,11 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  cefApiVersion,
+  runtimeLayoutVersion,
+  runtimeRequirements,
+} from "./cef_requirements.generated.mjs";
 
 const moduleRoot = path.dirname(fileURLToPath(import.meta.url));
 const ffiRoot = path.join(moduleRoot, "internal", "native", "ffi");
@@ -25,37 +30,66 @@ function appendFlags(...parts) {
   return parts.filter(part => part.length > 0).join(" ");
 }
 
-function findRuntimeManifest(start) {
-  for (let current = path.resolve(start); ; current = path.dirname(current)) {
-    const manifest = path.join(current, ".proton", "runtime.json");
-    if (fs.existsSync(manifest)) {
-      return manifest;
-    }
-    const parent = path.dirname(current);
-    if (parent === current) {
-      throw new Error(
-        "Proton CEF runtime is not configured; run `proton_cli cef setup` in the project",
-      );
-    }
-  }
+function runtimePlatformId() {
+  return `${process.platform}-${process.arch}`;
 }
 
-function activeCefRoot() {
-  const manifestPath = findRuntimeManifest(process.cwd());
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-  const expectedPlatform = `${process.platform}-${process.arch}`;
-  if (manifest.platform !== expectedPlatform) {
+function runtimeStoreRoot(env) {
+  const configured = envValue(env, "PROTON_RUNTIME_STORE").trim();
+  if (configured.length > 0) {
+    if (!path.isAbsolute(configured)) {
+      throw new Error(`PROTON_RUNTIME_STORE must be an absolute path: ${configured}`);
+    }
+    return path.resolve(configured);
+  }
+  const home = envValue(env, process.platform === "win32" ? "USERPROFILE" : "HOME").trim()
+    || envValue(env, process.platform === "win32" ? "HOME" : "USERPROFILE").trim();
+  if (home.length === 0) {
+    throw new Error("Cannot resolve the Proton runtime store because no home directory is available");
+  }
+  return path.resolve(home, ".proton", "store");
+}
+
+function runtimeInstallation(env) {
+  const platform = runtimePlatformId();
+  const requirement = runtimeRequirements[platform];
+  if (!requirement?.supported) {
+    throw new Error(`The Proton CEF backend is not supported for ${platform}`);
+  }
+  const id = `cef-${requirement.sha256}-layout-${runtimeLayoutVersion}`;
+  return {
+    platform,
+    requirement,
+    root: path.join(runtimeStoreRoot(env), platform, id),
+  };
+}
+
+function installedCefRoot(env) {
+  const installation = runtimeInstallation(env);
+  const manifestPath = path.join(installation.root, "manifest.json");
+  if (!fs.existsSync(manifestPath)) {
     throw new Error(
-      `Proton runtime platform is ${manifest.platform}; expected ${expectedPlatform}`,
+      `The required Proton runtime is not installed: ${installation.root}\n` +
+      "Run `moonx moonbit-community/proton_cefsetup`.",
     );
   }
-  if (typeof manifest.cef !== "string" || !path.isAbsolute(manifest.cef)) {
-    throw new Error(`Invalid CEF path in ${manifestPath}`);
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  if (manifest.schema_version !== 1 ||
+      manifest.platform !== installation.platform ||
+      manifest.cef_archive !== installation.requirement.archive ||
+      manifest.cef_sha256 !== installation.requirement.sha256 ||
+      manifest.layout_version !== runtimeLayoutVersion ||
+      manifest.sdk !== "sdk" ||
+      manifest.runtime !== "runtime") {
+    throw new Error(
+      `Invalid Proton runtime manifest: ${manifestPath}`,
+    );
   }
-  if (!fs.existsSync(manifest.cef)) {
-    throw new Error(`CEF SDK does not exist: ${manifest.cef}`);
+  const cefRoot = path.join(installation.root, manifest.sdk);
+  if (!fs.existsSync(cefRoot)) {
+    throw new Error(`CEF SDK does not exist: ${cefRoot}`);
   }
-  return manifest.cef;
+  return cefRoot;
 }
 
 function pkgConfig(args) {
@@ -68,7 +102,7 @@ function pkgConfig(args) {
 
 function platformConfig(cefRoot, env) {
   const commonStubFlags = appendFlags(
-    "-DCEF_API_VERSION=14700",
+    `-DCEF_API_VERSION=${cefApiVersion}`,
     `-I${quote(path.join(ffiRoot, "include"))}`,
     `-I${quote(cefRoot)}`,
   );
@@ -130,12 +164,13 @@ function platformConfig(cefRoot, env) {
 }
 
 export function createNativeLinkConfig(env = readPayloadEnv()) {
-  // Moon runs workspace prebuilds before it can build the CLI that creates the
-  // first runtime manifest. Only that setup build has no native link target.
+  // A source checkout runs workspace prebuilds before it can build the setup
+  // executable that creates the first store installation. Only that bootstrap
+  // build has no Proton native link target.
   if (envValue(env, "PROTON_CEF_SETUP_BOOTSTRAP") === "1") {
     return { vars: {}, link_configs: [] };
   }
-  const cefRoot = activeCefRoot();
+  const cefRoot = installedCefRoot(env);
   const config = platformConfig(cefRoot, env);
   return {
     vars: {

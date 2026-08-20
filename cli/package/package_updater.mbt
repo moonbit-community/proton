@@ -54,6 +54,17 @@ pub fn UpdaterMetadataError::message(self : UpdaterMetadataError) -> String {
 }
 
 ///|
+fn path_basename(path : String) -> String {
+  let native_path : @path.Path = path
+  native_path.basename().to_owned()
+}
+
+///|
+async fn write_updater_file(path : String, text : String) -> Unit {
+  @async_fs.write_file(path, text, create_mode=CreateOrTruncate)
+}
+
+///|
 impl Show for UpdaterMetadataError with fn output(self, logger) {
   logger.write_string(self.message())
 }
@@ -102,17 +113,6 @@ async fn artifact_digest_and_size(
 ///
 /// Held as a decimal string for the same reason macOS holds one: it preserves
 /// the full uint64 range that plist integers and JSON doubles do not.
-let update_revision_file_name : String = "proton-update-revision"
-
-///|
-async fn stage_update_revision(plan : PackagePlan, directory : String) -> Unit {
-  write_text(
-    @fsutil.resolve_path(directory, update_revision_file_name),
-    "\{plan.update_revision}\n",
-  )
-}
-
-///|
 /// Returns the artifact an update would download.
 ///
 /// Always exactly one file, so a staged directory is never a candidate. Where
@@ -201,7 +201,7 @@ async fn write_updater_metadata(
   guard base_url.has_prefix("https://") else {
     raise InvalidBaseUrl(url=base_url)
   }
-  let platform = @cef.current_platform_id() catch {
+  let platform = @cef_store.current_platform_id() catch {
     error => raise UnknownPlatform(detail=@debug.render(Repr(error)))
   }
   let artifact = match updater_artifact_path(artifacts, platform) {
@@ -226,14 +226,14 @@ async fn write_updater_metadata(
     plan.output,
     "latest-\{platform}.json",
   )
-  write_text(digest_path, "\{sha256}  \{name}\n") catch {
+  write_updater_file(digest_path, "\{sha256}  \{name}\n") catch {
     error =>
       raise UnreadableArtifact(
         path=digest_path,
         detail=@debug.render(Repr(error)),
       )
   }
-  write_text(fragment_path, fragment) catch {
+  write_updater_file(fragment_path, fragment) catch {
     error =>
       raise UnreadableArtifact(
         path=fragment_path,

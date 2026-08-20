@@ -43,6 +43,12 @@ developer must perform them.
   discover Proton projects, invoke Moon builds, or assemble CEF runtimes. It
   has an independent version line and is excluded from the workspace lockstep
   bump.
+- `cefsetup/`: `moonbit-community/proton_cefsetup`; its root executable installs
+  the CEF release selected by the module version. The `store` package owns the
+  CEF requirements and immutable user-wide installation store.
+- `bundle/`: `moonbit-community/proton_bundle`; the Proton-specific adapter over
+  `proton_package`. It accepts already-built application and helper executables,
+  resolves `proton_cefsetup/store`, and stages Proton's platform bundle layout.
 - `extensions/`: `moonbit-community/proton_ext`; command extensions for examples and
   applications. Platform capability extensions are backed by the bindings
   under `sys/`.
@@ -70,22 +76,19 @@ developer must perform them.
   aligned with the actual examples.
 - `lib/`, `build/`, and `_build/`: generated or vendored artifacts. Packaged
   application artifacts are written to `dist/`.
-- `.proton/`: generated project runtime selection created by
-  `proton_cli cef setup`; assembled runtimes are cached at user level.
+- `~/.proton/store/`: immutable user-level CEF SDK and runtime installations.
+  Projects do not contain runtime copies or runtime-selection manifests.
 
 ## Build And Test
-- `PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cli run . -- -C .. cef setup`
+- `PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cefsetup run . --target native`
 - `moon install --path proton/internal/cef_process --bin <output-dir>`
-- With `.proton/runtime.json` selecting the active CEF runtime:
-  `moon -C proton test internal/native --target native --diagnostic-limit 80`
-- With `.proton/runtime.json` selecting the active CEF runtime:
-  `moon -C proton check --target native --diagnostic-limit 80`
-- With `.proton/runtime.json` selecting the active CEF runtime:
-  `moon -C examples build --target native --diagnostic-limit 80`
-- With `.proton/runtime.json` selecting the active CEF runtime:
-  `moon -C codegen test lib --target wasm`
-- With `.proton/runtime.json` selecting the active CEF runtime:
-  `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
+- `moon -C proton test internal/native --target native --diagnostic-limit 80`
+- `moon -C proton check --target native --diagnostic-limit 80`
+- `moon -C examples build --target native --diagnostic-limit 80`
+- `moon -C codegen test lib --target wasm`
+- `moon -C cefsetup test store --target native --diagnostic-limit 80`
+- `moon -C bundle test --target native --diagnostic-limit 80`
+- `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
 - `moon -C package test lib --target native --diagnostic-limit 80`
 - `moon check --target native`
 - `node scripts/verify_generated.mjs`
@@ -116,10 +119,9 @@ native checks before handing off larger refactors.
 
 - `.github/workflows/publish.yml` publishes the lockstep dependency chain in this order:
   `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`,
-  `proton_updater`, the ten
-  `sys` modules, `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and
-  finally `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not
-  published.
+  `proton_updater`, `proton_cefsetup`, the ten `sys` modules, `proton_client`,
+  `proton_rabbita`, `proton`, `proton_bundle`, `proton_ext`, and finally
+  `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not published.
 - `proton_package` has its own version line. Select `package` as the workflow's
   resume point to publish only that module; the workflow exits before the
   lockstep chain.
@@ -187,15 +189,16 @@ native checks before handing off larger refactors.
 - There is one runtime route: MoonBit builds Proton's private C, Objective-C, or
   C++ stubs directly into the application and the matching `cef_process`
   executable. CEF remains a dynamically loaded third-party runtime.
-- `proton_cli cef setup` assembles immutable CEF runtimes in the user-level cache
-  and writes the selected absolute runtime path to `.proton/runtime.json`.
+- `proton_cefsetup` assembles the release's immutable CEF runtime in the
+  user-level store. `proton_cli cef setup` is a convenience frontend to the same
+  operation and writes no project state.
 - Keep platform-specific setup decisions centralized in the CLI/native platform
   helpers. Platform ids should stay predictable: `win32-x64`, `darwin-arm64`,
   and `linux-x64`; add `darwin-x64` only when it is supported.
 - CEF is a native implementation detail. Do not expose CEF in public facade names.
-- `proton/build.mjs` is the only MoonBit native-link integration
-  point. It reads `.proton/runtime.json` and supplies CEF include, compiler, and
-  linker configuration to the private source packages.
+- `proton/build.mjs` is the only MoonBit native-link integration point. It
+  resolves the release's generated CEF requirement in the immutable store and
+  supplies compiler and linker configuration to the private source packages.
 - Keep private FFI functions MoonBit-friendly: status codes, external pointers,
   UTF-8 strings, and typed MoonBit wrappers. Do not expose them publicly.
 - Runtime, window, view, bridge, and menu configuration crosses the private FFI
@@ -253,8 +256,8 @@ native checks before handing off larger refactors.
   host view (NSView/child HWND/X window) instead.
 - Respect the thread model. Runtime, window, and view objects are owned by their
   creating thread; native callbacks only enqueue work for that owner thread.
-- `proton_cli cef setup` owns CEF runtime assembly and writes
-  `.proton/runtime.json` in the project.
+- `proton_cefsetup/store` owns CEF runtime assembly and resolution. No project-local
+  runtime-selection file is permitted.
 - Keep `cef_process.exe` or the platform equivalent as a MoonBit executable
   built from the same Proton source revision as the application.
 - CEF internal logging is disabled by default. Use `PROTON_CEF_LOG` only as a

@@ -899,7 +899,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|dist/
           #|.mooncakes/
           #|.moonagent/
-          #|.proton/
           #|frontend/dist/
           #|backend/todo/commands.g.mbt
           #|

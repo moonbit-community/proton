@@ -118,10 +118,3 @@ priv struct ProjectDoctorInfo {
   root : String
   config_path : String
 }
-
-///|
-priv struct DoctorRuntimeManifest {
-  platform : String
-  cef_version : String
-  dist : String
-}

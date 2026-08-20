@@ -166,6 +166,24 @@ try {
     bridgeBootstrapOutput,
   );
 
+  const runtimeRequirementsMoon = tempOutputPath("requirements.generated.mbt");
+  const runtimeRequirementsJs = tempOutputPath(
+    "cef_requirements.generated.mjs",
+  );
+  run("node", [
+    path.join(repoRoot, "scripts", "generate_runtime_requirements.mjs"),
+    runtimeRequirementsMoon,
+    runtimeRequirementsJs,
+  ]);
+  compareGeneratedFile(
+    "cefsetup/store/requirements.generated.mbt",
+    runtimeRequirementsMoon,
+  );
+  compareGeneratedFile(
+    "proton/cef_requirements.generated.mjs",
+    runtimeRequirementsJs,
+  );
+
   if (failures.length > 0) {
     console.error(`Generated files are stale: ${failures.join(", ")}`);
     process.exitCode = 1;

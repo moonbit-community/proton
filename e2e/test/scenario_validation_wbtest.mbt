@@ -24,7 +24,7 @@ test "E2E paths use host absolute path rules" {
 }
 
 ///|
-test "E2E paths resolve backslash relative runtime directories" {
+test "E2E paths resolve backslash relative directories" {
   let root = if @path.sep == '\\' {
     "C:\\workspace\\proton"
   } else {
@@ -36,12 +36,8 @@ test "E2E paths resolve backslash relative runtime directories" {
   } else {
     normalized_root + @path.sep.to_string()
   }
-  let resolved = resolve_path(root, ".proton\\runtimes\\test")
-  let suffix = ".proton" +
-    @path.sep.to_string() +
-    "runtimes" +
-    @path.sep.to_string() +
-    "test"
+  let resolved = resolve_path(root, "runtime\\test")
+  let suffix = "runtime" + @path.sep.to_string() + "test"
   assert_true(@path.Path(root).is_absolute())
   assert_eq(resolved, root_prefix + suffix)
   assert_eq(resolve_path(root, root), normalized_root)

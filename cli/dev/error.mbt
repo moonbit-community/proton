@@ -37,10 +37,6 @@ pub extend DevConfigError with Show::{to_string, output}
 /// Failures while locating and validating the native development runtime.
 pub(all) suberror DevRuntimeError {
   Setup(detail~ : String)
-  ManifestMissing(path~ : String)
-  ManifestInvalid(path~ : String, detail~ : String)
-  ManifestField(path~ : String, field~ : String)
-  PlatformMismatch(expected~ : String, actual~ : String)
   DirectoryMissing(label~ : String, path~ : String)
   HelperMissing(label~ : String, path~ : String)
   SetupRequired(detail~ : String)
@@ -122,21 +118,11 @@ pub fn DevConfigError::message(self : DevConfigError) -> String {
 pub fn DevRuntimeError::message(self : DevRuntimeError) -> String {
   match self {
     Setup(detail~) => "failed to set up Proton runtime: " + detail
-    ManifestMissing(path~) => "active Proton runtime is missing: " + path
-    ManifestInvalid(path~, detail~) =>
-      "invalid Proton runtime manifest " + path + ": " + detail
-    ManifestField(path~, field~) =>
-      "Proton runtime manifest " + path + " missing string field: " + field
-    PlatformMismatch(expected~, actual~) =>
-      "active Proton runtime platform mismatch: expected " +
-      expected +
-      ", got " +
-      actual
     DirectoryMissing(label~, path~) => label + " directory is missing: " + path
     HelperMissing(label~, path~) => label + " helper is missing: " + path
     SetupRequired(detail~) =>
       detail +
-      "\n\nRun `proton_cli cef setup` first, or retry with `proton_cli dev --setup`."
+      "\n\nRun `moonx moonbit-community/proton_cefsetup`, or retry with `proton_cli dev --setup`."
   }
 }
 

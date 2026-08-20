@@ -41,10 +41,6 @@ pub fn DevProcessError::to_string(Self) -> String
 
 pub(all) suberror DevRuntimeError {
   Setup(detail~ : String)
-  ManifestMissing(path~ : String)
-  ManifestInvalid(path~ : String, detail~ : String)
-  ManifestField(path~ : String, field~ : String)
-  PlatformMismatch(expected~ : String, actual~ : String)
   DirectoryMissing(label~ : String, path~ : String)
   HelperMissing(label~ : String, path~ : String)
   SetupRequired(detail~ : String)

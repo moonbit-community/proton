@@ -11,9 +11,9 @@ async fn test_write_cef_fixture_files(
   platform : ProtonPlatform,
 ) -> Unit {
   for relative in installed_cef_relative_files(platform) {
-    let path = @fsutil.path_join(root, relative)
-    let parent = @fsutil.path_parent(path)
-    if !@fsutil.path_exists(parent) {
+    let path = path_join(root, relative)
+    let parent = path_parent(path)
+    if !path_exists(parent) {
       @async_fs.mkdir(parent, recursive=true)
     }
     @async_fs.write_file(path, "fixture", create_mode=CreateOrTruncate)
@@ -23,9 +23,9 @@ async fn test_write_cef_fixture_files(
 ///|
 async test "failed CEF installation removes incomplete cache markers" {
   let temp = test_cef_cache_fixture_root()
-  let source = @fsutil.path_join(temp, "source")
-  let install = @fsutil.path_join(temp, "cache")
-  let project_root = @fsutil.path_join(temp, "project")
+  let source = path_join(temp, "source")
+  let install = path_join(temp, "cache")
+  let project_root = path_join(temp, "project")
   @async_fs.mkdir(source, recursive=true)
   let platform = darwin_arm64_platform()
   let failed = try {
@@ -43,13 +43,9 @@ async test "failed CEF installation removes incomplete cache markers" {
     InvalidCefRoot(path~, missing~) => {
       assert_eq(path, install)
       assert_true(missing.length() > 0)
-      assert_false(
-        @fsutil.path_exists(@fsutil.path_join(install, "version.txt")),
-      )
-      assert_false(
-        @fsutil.path_exists(@fsutil.path_join(install, "sha256.txt")),
-      )
-      assert_false(@fsutil.path_exists(install))
+      assert_false(path_exists(path_join(install, "version.txt")))
+      assert_false(path_exists(path_join(install, "sha256.txt")))
+      assert_false(path_exists(install))
       true
     }
     _ => false
@@ -63,31 +59,29 @@ async test "failed CEF installation removes incomplete cache markers" {
 ///|
 async test "CEF cache validation rejects marker-only directories" {
   let temp = test_cef_cache_fixture_root()
-  let cache = @fsutil.path_join(temp, "cache")
+  let cache = path_join(temp, "cache")
   @async_fs.mkdir(cache, recursive=true)
   @async_fs.write_file(
-    @fsutil.path_join(cache, "version.txt"),
+    path_join(cache, "version.txt"),
     "cef-test\n",
     create_mode=CreateOrTruncate,
   )
   @async_fs.write_file(
-    @fsutil.path_join(cache, "sha256.txt"),
+    path_join(cache, "sha256.txt"),
     "a".repeat(64) + "\n",
     create_mode=CreateOrTruncate,
   )
   let platform = darwin_arm64_platform()
-  assert_false(
-    cached_cef_root_is_valid(cache, "cef-test", "a".repeat(64), platform),
-  )
+  assert_true(validate_cef_layout(cache, platform).length() > 0)
   remove_tree(temp)
 }
 
 ///|
 async test "successful CEF installation writes markers after validation" {
   let temp = test_cef_cache_fixture_root()
-  let source = @fsutil.path_join(temp, "source")
-  let install = @fsutil.path_join(temp, "cache")
-  let project_root = @fsutil.path_join(temp, "project")
+  let source = path_join(temp, "source")
+  let install = path_join(temp, "cache")
+  let project_root = path_join(temp, "project")
   @async_fs.mkdir(source, recursive=true)
   let platform = darwin_arm64_platform()
   test_write_cef_fixture_files(source, platform)
@@ -103,19 +97,16 @@ async test "successful CEF installation writes markers after validation" {
   assert_eq(installed_version(install), "cef-test")
   assert_eq(installed_checksum(install), "a".repeat(64))
   validate_cef_root(install, platform)
-  assert_true(
-    cached_cef_root_is_valid(install, "cef-test", "a".repeat(64), platform),
-  )
   remove_tree(temp)
 }
 
 ///|
 async test "failed replacement keeps the previously valid CEF cache" {
   let temp = test_cef_cache_fixture_root()
-  let source = @fsutil.path_join(temp, "source")
-  let replacement = @fsutil.path_join(temp, "replacement")
-  let install = @fsutil.path_join(temp, "cache")
-  let project_root = @fsutil.path_join(temp, "project")
+  let source = path_join(temp, "source")
+  let replacement = path_join(temp, "replacement")
+  let install = path_join(temp, "cache")
+  let project_root = path_join(temp, "project")
   let platform = darwin_arm64_platform()
   @async_fs.mkdir(source, recursive=true)
   test_write_cef_fixture_files(source, platform)
@@ -156,20 +147,17 @@ async test "failed replacement keeps the previously valid CEF cache" {
 ///|
 async test "empty CEF artifacts are rejected as incomplete" {
   let temp = test_cef_cache_fixture_root()
-  let cache = @fsutil.path_join(temp, "cache")
+  let cache = path_join(temp, "cache")
   let platform = darwin_arm64_platform()
   @async_fs.mkdir(cache, recursive=true)
   for relative in installed_cef_relative_files(platform) {
-    let path = @fsutil.path_join(cache, relative)
-    @async_fs.mkdir(@fsutil.path_parent(path), recursive=true) catch {
+    let path = path_join(cache, relative)
+    @async_fs.mkdir(path_parent(path), recursive=true) catch {
       _ => ()
     }
     @async_fs.write_file(path, "fixture", create_mode=CreateOrTruncate)
   }
-  let empty_path = @fsutil.path_join(
-    cache,
-    installed_cef_relative_files(platform)[0],
-  )
+  let empty_path = path_join(cache, installed_cef_relative_files(platform)[0])
   @async_fs.write_file(empty_path, "", create_mode=CreateOrTruncate)
   let missing = validate_cef_layout(cache, platform)
   assert_true(missing.contains(empty_path))
@@ -179,9 +167,9 @@ async test "empty CEF artifacts are rejected as incomplete" {
 ///|
 async test "runtime assembly rebuilds an existing truncated runtime" {
   let temp = test_cef_cache_fixture_root()
-  let cache_root = @fsutil.path_join(temp, "runtimes")
-  let cef_root = @fsutil.path_join(temp, "cef")
-  let runtime_dir = @fsutil.path_join(cache_root, "darwin-arm64/runtime")
+  let cache_root = path_join(temp, "runtimes")
+  let cef_root = path_join(temp, "cef")
+  let runtime_dir = path_join(cache_root, "darwin-arm64/runtime")
   let platform = darwin_arm64_platform()
   @async_fs.mkdir(cef_root, recursive=true)
   test_write_cef_fixture_files(cef_root, platform)
@@ -192,7 +180,7 @@ async test "runtime assembly rebuilds an existing truncated runtime" {
     runtime_dir~,
     report_progress=false,
   )
-  let truncated = @fsutil.path_join(
+  let truncated = path_join(
     runtime_dir,
     runtime_required_relative_files(platform)[0],
   )
@@ -212,12 +200,12 @@ async test "runtime assembly rebuilds an existing truncated runtime" {
 ///|
 async test "failed staged publish restores the previous directory" {
   let temp = test_cef_cache_fixture_root()
-  let target = @fsutil.path_join(temp, "target")
-  let marker = @fsutil.path_join(target, "marker.txt")
+  let target = path_join(temp, "target")
+  let marker = path_join(target, "marker.txt")
   @async_fs.mkdir(target)
   @async_fs.write_file(marker, "previous", create_mode=CreateOrTruncate)
   let failed = try {
-    replace_staged_directory(@fsutil.path_join(temp, "missing"), target)
+    replace_staged_directory(path_join(temp, "missing"), target)
     false
   } catch {
     CefFileSystemError::Copy(source=_, destination=_, detail=_) => true
@@ -237,7 +225,7 @@ async test "failed staged publish restores the previous directory" {
 ///|
 async test "install locks serialize access to the same cache directory" {
   let temp = test_cef_cache_fixture_root()
-  let target = @fsutil.path_join(temp, "cache")
+  let target = path_join(temp, "cache")
   let first = acquire_install_lock(target)
   let first_locked = Ref(true)
   defer {

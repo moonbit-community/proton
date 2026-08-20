@@ -25,7 +25,7 @@ async fn download_file(
   destination : String,
   expected_sha256 : String,
 ) -> Unit {
-  @output.info("[INFO] Downloading CEF: " + url)
+  report_info("[INFO] Downloading CEF: " + url)
   let mut last_code = 1
   for attempt in 1..<=cef_download_max_attempts {
     let code = @process.run("curl", [
@@ -41,7 +41,7 @@ async fn download_file(
     }
     last_code = code
     if attempt < cef_download_max_attempts {
-      @output.info(
+      report_info(
         "[INFO] CEF download attempt " +
         attempt.to_string() +
         " failed (curl exit " +
@@ -76,42 +76,8 @@ async fn verify_file_sha256(path : String, expected : String) -> Unit {
 }
 
 ///|
-fn valid_sha256(value : String) -> Bool {
-  if value.length() != 64 {
-    return false
-  }
-  for ch in value {
-    guard ch.is_ascii_digit() || (ch >= 'a' && ch <= 'f') else { return false }
-  }
-  true
-}
-
-///|
-fn resolve_cef_archive_sha256(
-  platform : ProtonPlatform,
-  name : String,
-  url : String?,
-  provided : String?,
-) -> String raise CefUsageError {
-  match provided {
-    Some(value) => {
-      let normalized = value.trim().to_owned().to_lower()
-      if valid_sha256(normalized) {
-        return normalized
-      }
-      raise InvalidChecksum(value~)
-    }
-    None => ()
-  }
-  if url is None && name == platform.default_cef_name {
-    return platform.default_cef_sha256
-  }
-  raise MissingCustomChecksum
-}
-
-///|
 async fn extract_tar_bz2(archive_path : String, destination : String) -> Unit {
-  @output.info("[INFO] Extracting: " + archive_path)
+  report_info("[INFO] Extracting: " + archive_path)
   let code = @process.run("tar", ["-xjf", archive_path, "-C", destination]) catch {
     err =>
       raise CefDownloadError::ExtractStart(
@@ -130,7 +96,7 @@ async fn find_extracted_root(
   name : String,
   platform : ProtonPlatform,
 ) -> String {
-  let named = @fsutil.path_join(extract_dir, name)
+  let named = path_join(extract_dir, name)
   if has_source_cef_files(named, platform) {
     return named
   }
@@ -148,9 +114,8 @@ async fn find_extracted_root(
   }
   for entry in entries {
     guard entry.has_prefix("cef_binary_") else { continue }
-    let candidate = @fsutil.path_join(extract_dir, entry)
-    if @fsutil.path_is_dir(candidate) &&
-      has_source_cef_files(candidate, platform) {
+    let candidate = path_join(extract_dir, entry)
+    if path_is_dir(candidate) && has_source_cef_files(candidate, platform) {
       candidates.push(candidate)
     }
   }

@@ -25,7 +25,6 @@ pub extend RawPackageOptions with Debug::{to_repr}
 ///|
 struct PackagePlan {
   root : String
-  workspace_root : String
   app_package : String
   config_path : String
   product_name : String
@@ -44,7 +43,6 @@ struct PackagePlan {
   icons : Array[String]
   url_schemes : Array[String]
   document_types : Array[@proton_config.ProjectDocumentType]
-  macos_icon : String?
   sign : Bool
   notarize : Bool
 } derive(Debug, Eq)
@@ -54,13 +52,6 @@ pub extend PackagePlan with Eq::{not_equal, equal}
 
 ///|
 pub extend PackagePlan with Debug::{to_repr}
-
-///|
-priv struct MacosHelperSpec {
-  bundle_name : String
-  executable_name : String
-  bundle_identifier : String
-}
 
 ///|
 /// Returns the declarative `proton_cli package` command specification.
@@ -319,7 +310,7 @@ async fn build_package_plan(
     guard package_target_hosts(target) is Some(hosts) && hosts.contains(host) else {
       raise PackagePlanError::UnsupportedTargetForPlatform(
         target~,
-        platform=@cef.current_platform_id(),
+        platform=@cef_store.current_platform_id(),
       )
     }
   }
@@ -356,10 +347,8 @@ async fn build_package_plan(
     Some(frontend) => frontend.dist()
     None => None
   }
-  let workspace_root = find_workspace_root_from(base_dir)
   PackagePlan::{
     root: backend_root,
-    workspace_root,
     app_package,
     config_path,
     product_name,
@@ -381,7 +370,6 @@ async fn build_package_plan(
     icons: package_config.icons(),
     url_schemes: package_config.url_schemes(),
     document_types: package_config.document_types(),
-    macos_icon: first_macos_icon(package_config.icons()),
     sign: raw.sign,
     notarize: raw.notarize,
   }
@@ -519,16 +507,6 @@ fn validate_bundle_version(value : String) -> String raise PackagePlanError {
 }
 
 ///|
-fn first_macos_icon(icons : Array[String]) -> String? {
-  for icon in icons {
-    if icon.to_lower().has_suffix(".icns") {
-      return Some(icon)
-    }
-  }
-  None
-}
-
-///|
 fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   if dry_run {
     println("Proton package plan (dry run):")
@@ -566,20 +544,43 @@ fn bool_text(value : Bool) -> String {
 
 ///|
 async fn execute_package_plan(plan : PackagePlan) -> Array[String] {
-  // Resolve the active runtime before any build work so a missing
-  // `proton_cli cef setup` fails fast instead of after a full application build.
-  let runtime = read_active_runtime(plan.workspace_root)
   let executable = run_package_build(plan)
   if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
     raise PackagePlanError::MissingExecutable(path=executable)
   }
   let helper = @build.build_cef_process(plan.root)
-  let spec = package_spec(plan, executable, helper, runtime)
-  let artifacts = @packager.build_with(spec, package_customization(plan), async fn(
-    layout,
-  ) {
-    prepare_proton_package(plan, helper, layout)
+  let document_types = plan.document_types.map(document_type => {
+    @packager.DocumentType::new(
+      document_type.name,
+      document_type.extensions.copy(),
+      role=document_type.role,
+    )
   })
+  let formats = plan.targets.map(target => {
+    @packager.PackageFormat::parse(target)
+  })
+  let spec = @bundle.ProtonBundleSpec::new(
+    executable,
+    helper,
+    plan.base_dir,
+    plan.product_name,
+    plan.identifier,
+    plan.version,
+    plan.macos_version,
+    plan.bundle_version,
+    formats,
+    plan.output,
+    plan.frontend_dist,
+    update_revision=plan.update_revision,
+    resources=plan.resources,
+    sign_binaries=plan.sign_binaries,
+    icons=plan.icons,
+    url_schemes=plan.url_schemes,
+    document_types~,
+    sign=plan.sign,
+    notarize=plan.notarize,
+  )
+  let artifacts = @bundle.build(spec)
   for artifact in artifacts {
     println("Packaged: " + artifact)
   }
@@ -598,328 +599,6 @@ async fn run_package_build(plan : PackagePlan) -> String {
     plan.app_package,
     plan.config_path,
     plan.release,
-  )
-}
-
-///|
-async fn read_active_runtime(root : String) -> String {
-  match @env.get_env_var("PROTON_NATIVE_DIST") {
-    Some(value) if value.trim().to_owned() != "" =>
-      return require_runtime(
-        @fsutil.resolve_path(root, value.trim().to_owned()),
-      )
-    _ => ()
-  }
-  let manifest_path = @fsutil.resolve_path(root, ".proton/runtime.json")
-  let text = @async_fs.read_file(manifest_path).text() catch {
-    _ => raise PackageRuntimeError::ManifestMissing(path=manifest_path)
-  }
-  let json = @json.parse(text) catch {
-    error =>
-      raise PackageRuntimeError::ManifestInvalid(
-        path=manifest_path,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  match json {
-    Object(fields) => {
-      guard fields is { "platform": String(platform), .. } else {
-        raise PackageRuntimeError::ManifestField(
-          path=manifest_path,
-          field="platform",
-        )
-      }
-      let expected_platform = @cef.current_platform_id()
-      guard platform == expected_platform else {
-        raise PackageRuntimeError::PlatformMismatch(
-          expected=expected_platform,
-          actual=platform,
-        )
-      }
-      match fields {
-        { "dist": String(dist), .. } =>
-          require_runtime(@fsutil.resolve_path(root, dist))
-        _ =>
-          raise PackageRuntimeError::ManifestField(
-            path=manifest_path,
-            field="dist",
-          )
-      }
-    }
-    _ =>
-      raise PackageRuntimeError::ManifestInvalid(
-        path=manifest_path,
-        detail="root must be an object",
-      )
-  }
-}
-
-///|
-async fn require_runtime(path : String) -> String {
-  if @fsutil.path_is_dir(path) {
-    path
-  } else {
-    raise DirectoryMissing(path~)
-  }
-}
-
-///|
-/// Mach-O `filetype` values this packager can name. Only `MH_EXECUTE` is
-/// spawnable; `MH_DSYM` is the one that actually shows up here, because a
-/// debug build mirrors the executable's basename inside
-/// `<name>.dSYM/Contents/Resources/DWARF/`.
-const MachoExecute : Int = 0x2
-
-///|
-fn macho_filetype_name(filetype : Int) -> String {
-  match filetype {
-    0x1 => "MH_OBJECT"
-    0x2 => "MH_EXECUTE"
-    0x6 => "MH_DYLIB"
-    0x8 => "MH_BUNDLE"
-    0xa => "MH_DSYM"
-    _ => "0x" + filetype.to_string()
-  }
-}
-
-///|
-fn macho_u32_le(data : Bytes, offset : Int) -> Int {
-  data[offset].to_int() |
-  (data[offset + 1].to_int() << 8) |
-  (data[offset + 2].to_int() << 16) |
-  (data[offset + 3].to_int() << 24)
-}
-
-///|
-/// The `filetype` of a thin little-endian Mach-O, or `None` for anything this
-/// reader will not judge.
-///
-/// 64- and 32-bit thin headers agree up to `filetype`, so one offset serves
-/// both. Universal binaries (`FAT_MAGIC`) and non-Mach-O files return `None`
-/// on purpose: the caller rejects only what it can prove wrong, so a format
-/// this function does not understand is never turned into a build failure.
-/// Extending to fat archives means walking the arch table and judging each
-/// contained header.
-fn macho_thin_filetype(data : Bytes) -> Int? {
-  guard data.length() >= 16 else { return None }
-  let magic = macho_u32_le(data, 0)
-  guard magic == 0xfeedfacf || magic == 0xfeedface else { return None }
-  Some(macho_u32_le(data, 12))
-}
-
-///|
-/// Refuse to ship a bundle executable the kernel will not spawn.
-///
-/// `codesign` cannot stand in for this: a dSYM companion is a legitimate
-/// Mach-O and signs and verifies exactly like the real binary, differing
-/// only in the header's `filetype`. Nor can the executable bit, which this
-/// packager sets on whatever it staged. So a bundle carrying symbols where
-/// its binary belongs passes every other check and then fails at launch with
-/// `Launchd job spawn failed` — this is the only place that catches it.
-async fn require_launchable_macho(path : String) -> Unit {
-  let data = @async_fs.read_file(path) catch {
-    error =>
-      raise PackageFileSystemError::Read(
-        path~,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  guard macho_thin_filetype(data.binary()) is Some(filetype) else { return }
-  guard filetype != MachoExecute else { return }
-  raise PackagePlanError::NotLaunchableMachO(path~, filetype~)
-}
-
-///|
-fn glob_tree_root(path : String) -> String? {
-  if normalize_slashes(path).has_suffix("/**") {
-    Some(path.unsafe_substring(start=0, end=path.length() - 3).to_string())
-  } else {
-    None
-  }
-}
-
-///|
-fn relative_to_base(base : String, path : String) -> String? {
-  let root = @fsutil.resolve_path(base, ".")
-  let candidate = @fsutil.resolve_path(base, path)
-  guard @fsutil.path_is_within(root, candidate) else { return None }
-  let relative = normalize_slashes(@fsutil.relative_path(root, candidate))
-  if relative == "" {
-    Some(".")
-  } else if relative == ".." || relative.has_prefix("../") {
-    None
-  } else {
-    Some(relative)
-  }
-}
-
-///|
-fn normalize_slashes(path : String) -> String {
-  path.replace_all(old="\\", new="/")
-}
-
-///|
-fn path_basename(path : String) -> String {
-  let native_path : @path.Path = path
-  native_path.basename().to_owned()
-}
-
-///|
-async fn ensure_dir(path : String) -> Unit {
-  guard !@fsutil.path_exists(path) else { return }
-  let parent = @fsutil.path_parent(path)
-  if parent != path && !@fsutil.path_exists(parent) {
-    ensure_dir(parent)
-  }
-  @async_fs.mkdir(path) catch {
-    error => {
-      if @fsutil.path_exists(path) {
-        return
-      }
-      raise PackageFileSystemError::CreateDirectory(
-        path~,
-        detail=@debug.render(Repr(error)),
-      )
-    }
-  }
-}
-
-///|
-async fn copy_file(source : String, destination : String) -> Unit {
-  ensure_dir(@fsutil.path_parent(destination))
-  if is_macos_host() {
-    let code = @process.run("ditto", [source, destination]) catch {
-      error =>
-        raise PackageFileSystemError::Copy(
-          source~,
-          destination~,
-          detail=@debug.render(Repr(error)),
-        )
-    }
-    if code != 0 {
-      raise PackageToolError::Exit(tool="ditto", code~, detail=source)
-    }
-    return
-  }
-  let data = @async_fs.read_file(source) catch {
-    error =>
-      raise PackageFileSystemError::Read(
-        path=source,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  @async_fs.write_file(destination, data, create_mode=CreateOrTruncate) catch {
-    error =>
-      raise PackageFileSystemError::Write(
-        path=destination,
-        detail=@debug.render(Repr(error)),
-      )
-  }
-}
-
-///|
-async fn write_text(
-  path : String,
-  text : String,
-) -> Unit raise PackageFileSystemError {
-  @async_fs.write_file(path, text, create_mode=CreateOrTruncate) catch {
-    error => raise Write(path~, detail=@debug.render(Repr(error)))
-  }
-}
-
-///|
-fn xml_escape(text : String) -> String {
-  text
-  .replace_all(old="&", new="&amp;")
-  .replace_all(old="<", new="&lt;")
-  .replace_all(old=">", new="&gt;")
-  .replace_all(old="\"", new="&quot;")
-}
-
-///|
-fn macos_helper_specs(
-  product_name : String,
-  identifier : String,
-) -> Array[MacosHelperSpec] {
-  let base_name = product_name + " Helper"
-  let base_identifier = identifier + ".helper"
-  [
-    MacosHelperSpec::{
-      bundle_name: base_name,
-      executable_name: base_name,
-      bundle_identifier: base_identifier,
-    },
-    MacosHelperSpec::{
-      bundle_name: base_name + " (Alerts)",
-      executable_name: base_name + " (Alerts)",
-      bundle_identifier: base_identifier + ".alerts",
-    },
-    MacosHelperSpec::{
-      bundle_name: base_name + " (GPU)",
-      executable_name: base_name + " (GPU)",
-      bundle_identifier: base_identifier + ".gpu",
-    },
-    MacosHelperSpec::{
-      bundle_name: base_name + " (Plugin)",
-      executable_name: base_name + " (Plugin)",
-      bundle_identifier: base_identifier + ".plugin",
-    },
-    MacosHelperSpec::{
-      bundle_name: base_name + " (Renderer)",
-      executable_name: base_name + " (Renderer)",
-      bundle_identifier: base_identifier + ".renderer",
-    },
-  ]
-}
-
-///|
-fn helper_info_plist(plan : PackagePlan, helper : MacosHelperSpec) -> String {
-  let template =
-    #|<?xml version="1.0" encoding="UTF-8"?>
-    #|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    #|<plist version="1.0"><dict>
-    #|<key>CFBundleExecutable</key><string>{{EXECUTABLE}}</string>
-    #|<key>CFBundleIdentifier</key><string>{{IDENTIFIER}}</string>
-    #|<key>CFBundleName</key><string>{{NAME}}</string>
-    #|<key>CFBundlePackageType</key><string>APPL</string>
-    #|<key>CFBundleShortVersionString</key><string>{{MACOS_VERSION}}</string>
-    #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
-    #|</dict></plist>
-    #|
-  template
-  .replace_all(old="{{EXECUTABLE}}", new=xml_escape(helper.executable_name))
-  .replace_all(old="{{IDENTIFIER}}", new=xml_escape(helper.bundle_identifier))
-  .replace_all(old="{{NAME}}", new=xml_escape(helper.bundle_name))
-  .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(plan.macos_version))
-  .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(plan.bundle_version))
-}
-
-///|
-async fn write_package_manifest(
-  plan : PackagePlan,
-  destination : String,
-  kind : String,
-) -> Unit raise PackageFileSystemError {
-  let manifest : Json = {
-    "schema_version": 1,
-    "kind": kind,
-    "product_name": plan.product_name,
-    "identifier": plan.identifier,
-    "version": plan.version,
-    "bundle_version": plan.bundle_version,
-    "targets": plan.targets,
-    "url_schemes": plan.url_schemes,
-    "document_types": plan.document_types.map(fn(document_type) -> Json {
-      {
-        "name": document_type.name,
-        "extensions": document_type.extensions,
-        "role": document_type.role,
-      }
-    }),
-  }
-  write_text(
-    @fsutil.resolve_path(destination, "proton-package.json"),
-    manifest.stringify() + "\n",
   )
 }
 
@@ -949,26 +628,6 @@ async fn resolve_package_config_path(
       }
     }
   }
-}
-
-///|
-async fn find_workspace_root_from(start : String) -> String {
-  let mut module_root : String? = None
-  for dir = start; dir != ""; {
-    if @fsutil.path_exists(@fsutil.path_join(dir, "moon.work")) {
-      return dir
-    }
-    if module_root is None &&
-      @fsutil.path_exists(@fsutil.path_join(dir, "moon.mod")) {
-      module_root = Some(dir)
-    }
-    let parent = @fsutil.path_parent(dir)
-    if parent == dir {
-      return module_root.unwrap_or(start)
-    }
-    continue parent
-  }
-  module_root.unwrap_or(start)
 }
 
 ///|

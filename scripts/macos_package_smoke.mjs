@@ -496,10 +496,6 @@ async function main() {
     fail("macOS package smoke requires a macOS host");
   }
   requirePath(
-    path.join(repoRoot, ".proton", "runtime.json"),
-    "run `moon -C cli run . -- -C .. cef setup` first",
-  );
-  requirePath(
     path.join(exampleDir, "frontend", "node_modules"),
     "run `npm ci` in examples/47_dev_extension_js/frontend first",
   );

@@ -1,44 +1,47 @@
 ///|
 async fn package_spec(
-  plan : PackagePlan,
-  executable : String,
-  helper : String,
+  spec : ProtonBundleSpec,
   runtime : String,
 ) -> @packager.PackageSpec {
-  let host = current_package_host()
-  let payloads = package_payloads(plan, helper, runtime, host)
-  let formats = plan.targets.map(target => {
-    @packager.PackageFormat::parse(target)
-  })
-  let document_types = plan.document_types.map(document_type => {
-    @packager.DocumentType::new(
-      document_type.name,
-      document_type.extensions.copy(),
-      role=document_type.role,
-    )
-  })
   @packager.PackageSpec::new(
-    executable,
-    plan.product_name,
-    plan.identifier,
-    plan.version,
-    formats,
-    plan.output,
-    payloads~,
-    icons=plan.icons.copy(),
-    url_schemes=plan.url_schemes.copy(),
-    document_types~,
-    sign=plan.sign,
-    notarize=plan.notarize,
+    spec.executable,
+    spec.product_name,
+    spec.identifier,
+    spec.version,
+    spec.formats,
+    spec.output,
+    payloads=package_payloads(spec, runtime, current_bundle_host()),
+    icons=spec.icons,
+    url_schemes=spec.url_schemes,
+    document_types=spec.document_types,
+    sign=spec.sign,
+    notarize=spec.notarize,
+  )
+}
+
+///|
+/// Packages an already-built Proton application using the active immutable
+/// runtime installation.
+pub async fn build(spec : ProtonBundleSpec) -> Array[String] {
+  guard path_is_file(spec.executable) else {
+    raise BundleRuntimeError::ExecutableMissing(path=spec.executable)
+  }
+  guard path_is_file(spec.cef_process) else {
+    raise BundleRuntimeError::HelperMissing(path=spec.cef_process)
+  }
+  let runtime = @cef_store.resolve_default().runtime_root()
+  @packager.build_with(
+    package_spec(spec, runtime),
+    package_customization(spec),
+    async fn(layout) { prepare_proton_package(spec, layout) },
   )
 }
 
 ///|
 async fn package_payloads(
-  plan : PackagePlan,
-  helper : String,
+  spec : ProtonBundleSpec,
   runtime : String,
-  host : PackageHost,
+  host : BundleHost,
 ) -> Array[@packager.Payload] {
   let payloads : Array[@packager.Payload] = []
   match host {
@@ -53,7 +56,7 @@ async fn package_payloads(
       if host == Linux {
         payloads.push(
           @packager.Payload::new(
-            helper,
+            spec.cef_process,
             "cef_process",
             location=@packager.PayloadLocation::Executables,
           ),
@@ -65,7 +68,7 @@ async fn package_payloads(
       for name in windows_runtime_binary_files() {
         payloads.push(
           @packager.Payload::new(
-            @fsutil.resolve_path(runtime, "bin/" + name),
+            resolve_path(runtime, "bin/" + name),
             name,
             location=@packager.PayloadLocation::Executables,
           ),
@@ -74,7 +77,7 @@ async fn package_payloads(
       for name in windows_runtime_root_data_files() {
         payloads.push(
           @packager.Payload::new(
-            @fsutil.resolve_path(runtime, "bin/" + name),
+            resolve_path(runtime, "bin/" + name),
             name,
             location=@packager.PayloadLocation::Executables,
           ),
@@ -82,14 +85,14 @@ async fn package_payloads(
       }
       payloads.push(
         @packager.Payload::new(
-          @fsutil.resolve_path(runtime, "Resources"),
+          resolve_path(runtime, "Resources"),
           ".",
           location=@packager.PayloadLocation::Resources,
         ),
       )
       payloads.push(
         @packager.Payload::new(
-          helper,
+          spec.cef_process,
           "cef_process.exe",
           location=@packager.PayloadLocation::Executables,
         ),
@@ -97,7 +100,7 @@ async fn package_payloads(
     }
   }
   let location = @packager.PayloadLocation::Resources
-  for payload in project_payloads(plan, location) {
+  for payload in project_payloads(spec, location) {
     payloads.push(payload)
   }
   payloads
@@ -105,15 +108,15 @@ async fn package_payloads(
 
 ///|
 async fn project_payloads(
-  plan : PackagePlan,
+  spec : ProtonBundleSpec,
   location : @packager.PayloadLocation,
 ) -> Array[@packager.Payload] {
   let inputs : Array[String] = []
-  match plan.frontend_dist {
+  match spec.frontend_dist {
     Some(path) => inputs.push(path)
     None => ()
   }
-  inputs.append(plan.resources)
+  inputs.append(spec.resources)
   let copied : Map[String, Bool] = Map([])
   let payloads : Array[@packager.Payload] = []
   for input in inputs {
@@ -122,15 +125,15 @@ async fn project_payloads(
     let source = match glob_tree_root(input) {
       Some(root) => root
       None if input.contains("*") =>
-        raise PackagePlanError::UnsupportedResourceGlob(path=input)
+        raise BundlePlanError::UnsupportedResourceGlob(path=input)
       None => input
     }
-    guard @fsutil.path_exists(source) else {
-      raise PackagePlanError::MissingInput(path=input)
+    guard path_exists(source) else {
+      raise BundlePlanError::MissingInput(path=input)
     }
-    let relative = match relative_to_base(plan.base_dir, source) {
+    let relative = match relative_to_base(spec.base_dir, source) {
       Some(relative) => relative
-      None => raise PackagePlanError::InputOutsideProject(path=input)
+      None => raise BundlePlanError::InputOutsideBase(path=input)
     }
     payloads.push(@packager.Payload::new(source, relative, location~))
   }
@@ -139,17 +142,17 @@ async fn project_payloads(
 
 ///|
 fn package_customization(
-  plan : PackagePlan,
-) -> @packager.PackageCustomization raise PackagePlanError {
+  spec : ProtonBundleSpec,
+) -> @packager.PackageCustomization raise BundlePlanError {
   @packager.PackageCustomization::new(
     macos_plist_strings=[
       @packager.MacosPlistString::new(
         "ProtonUpdateRevision",
-        plan.update_revision.to_string(),
+        spec.update_revision.to_string(),
       ),
     ],
-    macos_sign_targets=macos_package_sign_targets(plan),
-    windows_sign_targets=windows_package_sign_targets(plan),
+    macos_sign_targets=macos_package_sign_targets(spec),
+    windows_sign_targets=windows_package_sign_targets(spec),
     windows_verify_targets=["d3dcompiler_47.dll", "dxil.dll"],
     linux_resources_path="usr/Resources",
   )
@@ -157,8 +160,8 @@ fn package_customization(
 
 ///|
 fn macos_package_sign_targets(
-  plan : PackagePlan,
-) -> Array[@packager.MacosSignTarget] raise PackagePlanError {
+  spec : ProtonBundleSpec,
+) -> Array[@packager.MacosSignTarget] raise BundlePlanError {
   let prefix = "Contents/Resources/proton"
   let framework = prefix + "/Frameworks/Chromium Embedded Framework.framework"
   let targets = [
@@ -175,8 +178,8 @@ fn macos_package_sign_targets(
     @packager.MacosSignTarget::new(prefix + "/bin/libGLESv2.dylib"),
     @packager.MacosSignTarget::new(prefix + "/bin/libvk_swiftshader.dylib"),
   ]
-  for binary in plan.sign_binaries {
-    match relative_to_base(plan.base_dir, binary) {
+  for binary in spec.sign_binaries {
+    match relative_to_base(spec.base_dir, binary) {
       Some(relative) =>
         targets.push(
           @packager.MacosSignTarget::new(
@@ -184,10 +187,10 @@ fn macos_package_sign_targets(
             entitlements=true,
           ),
         )
-      None => raise PackagePlanError::InputOutsideProject(path=binary)
+      None => raise BundlePlanError::InputOutsideBase(path=binary)
     }
   }
-  for helper in macos_helper_specs(plan.product_name, plan.identifier) {
+  for helper in macos_helper_specs(spec.product_name, spec.identifier) {
     targets.push(
       @packager.MacosSignTarget::new(
         "Contents/Frameworks/" + helper.bundle_name + ".app",
@@ -200,18 +203,18 @@ fn macos_package_sign_targets(
 
 ///|
 fn windows_package_sign_targets(
-  plan : PackagePlan,
-) -> Array[String] raise PackagePlanError {
+  spec : ProtonBundleSpec,
+) -> Array[String] raise BundlePlanError {
   let targets = ["cef_process.exe"]
-  for binary in plan.sign_binaries {
-    match relative_to_base(plan.base_dir, binary) {
+  for binary in spec.sign_binaries {
+    match relative_to_base(spec.base_dir, binary) {
       Some(relative) => {
         let target = "Resources/" + relative
         if !targets.contains(target) {
           targets.push(target)
         }
       }
-      None => raise PackagePlanError::InputOutsideProject(path=binary)
+      None => raise BundlePlanError::InputOutsideBase(path=binary)
     }
   }
   targets
@@ -219,33 +222,29 @@ fn windows_package_sign_targets(
 
 ///|
 async fn prepare_proton_package(
-  plan : PackagePlan,
-  helper : String,
+  spec : ProtonBundleSpec,
   layout : @packager.PackageLayout,
 ) -> Unit {
-  let host = current_package_host()
+  let host = current_bundle_host()
   let metadata_root = match host {
     Windows => layout.root()
     Macos | Linux => layout.resources()
   }
-  stage_update_revision(plan, metadata_root)
+  stage_update_revision(spec, metadata_root)
   let kind = match host {
     Macos => "macos-app"
     Windows => "windows-portable"
     Linux => "linux-appimage"
   }
-  write_package_manifest(plan, metadata_root, kind)
+  write_package_manifest(spec, metadata_root, kind)
   match host {
-    Macos => prepare_macos_proton_package(plan, helper, layout)
+    Macos => prepare_macos_proton_package(spec, layout)
     Windows =>
       validate_windows_portable_layout(layout.root(), layout.executable())
     Linux => {
-      let staged_helper = @fsutil.resolve_path(
-        layout.executables(),
-        "cef_process",
-      )
-      guard @fsutil.path_is_file(staged_helper) else {
-        raise PackageRuntimeError::HelperMissing(path=staged_helper)
+      let staged_helper = resolve_path(layout.executables(), "cef_process")
+      guard path_is_file(staged_helper) else {
+        raise BundleRuntimeError::HelperMissing(path=staged_helper)
       }
       set_linux_rpath(layout.executable(), linux_package_rpath)
       set_linux_rpath(staged_helper, linux_package_rpath)
@@ -255,31 +254,24 @@ async fn prepare_proton_package(
 
 ///|
 async fn prepare_macos_proton_package(
-  plan : PackagePlan,
-  helper_source : String,
+  spec : ProtonBundleSpec,
   layout : @packager.PackageLayout,
 ) -> Unit {
   require_launchable_macho(layout.executable())
-  guard @fsutil.path_is_file(helper_source) else {
-    raise PackageRuntimeError::HelperMissing(path=helper_source)
-  }
-  for helper in macos_helper_specs(plan.product_name, plan.identifier) {
-    let helper_app = @fsutil.resolve_path(
+  for helper in macos_helper_specs(spec.product_name, spec.identifier) {
+    let helper_app = resolve_path(
       layout.libraries(),
       helper.bundle_name + ".app",
     )
-    let helper_macos = @fsutil.resolve_path(helper_app, "Contents/MacOS")
-    let helper_executable = @fsutil.resolve_path(
-      helper_macos,
-      helper.executable_name,
-    )
+    let helper_macos = resolve_path(helper_app, "Contents/MacOS")
+    let helper_executable = resolve_path(helper_macos, helper.executable_name)
     ensure_dir(helper_macos)
-    copy_file(helper_source, helper_executable)
+    copy_file(spec.cef_process, helper_executable)
     @async_fs.chmod(helper_executable, 0o755)
     require_launchable_macho(helper_executable)
     write_text(
-      @fsutil.resolve_path(helper_app, "Contents/Info.plist"),
-      helper_info_plist(plan, helper),
+      resolve_path(helper_app, "Contents/Info.plist"),
+      helper_info_plist(spec, helper),
     )
   }
 }

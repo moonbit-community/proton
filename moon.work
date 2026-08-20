@@ -7,6 +7,8 @@ members = [
   "./rsa",
   "./updater",
   "./proton",
+  "./cefsetup",
+  "./bundle",
   "./package",
   "./cli",
   "./config",

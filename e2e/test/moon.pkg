@@ -15,6 +15,7 @@ import {
   "moonbit-community/proton/examples/e2e_fixtures",
   "moonbit-community/proton_cdp/client",
   "moonbit-community/proton_cdp/protocol/typed",
+  "moonbit-community/proton_cefsetup/store" @cef_store,
 }
 
 supported_targets = "native"

@@ -1,20 +1,4 @@
 ///|
-pub(all) suberror CefUsageError {
-  InvalidArchiveName(name~ : String)
-  InvalidChecksum(value~ : String)
-  MissingCustomChecksum
-} derive(Debug, Eq)
-
-///|
-pub extend CefUsageError with Eq::{not_equal, equal}
-
-///|
-pub extend CefUsageError with Debug::{to_repr}
-
-///|
-pub extend CefUsageError with Show::{to_string, output}
-
-///|
 pub(all) suberror CefPlatformError {
   Unsupported(platform~ : String)
 } derive(Debug, Eq)
@@ -30,7 +14,6 @@ pub extend CefPlatformError with Show::{to_string, output}
 
 ///|
 pub(all) suberror CefFileSystemError {
-  CurrentDirectoryUnavailable
   CreateDirectory(path~ : String, detail~ : String)
   ReadDirectory(path~ : String, detail~ : String)
   Copy(source~ : String, destination~ : String, detail~ : String)
@@ -72,6 +55,9 @@ pub extend CefDownloadError with Show::{to_string, output}
 
 ///|
 pub(all) suberror CefRuntimeError {
+  StoreRootUnavailable
+  StoreRootNotAbsolute(path~ : String)
+  NotInstalled(path~ : String)
   InvalidCefRoot(path~ : String, missing~ : Array[String])
   InvalidRuntime(path~ : String, missing~ : Array[String])
   ManifestRead(path~ : String, detail~ : String)
@@ -79,11 +65,8 @@ pub(all) suberror CefRuntimeError {
   ManifestShape(path~ : String, detail~ : String)
   ManifestField(path~ : String, field~ : String)
   ManifestFieldValue(path~ : String, field~ : String, detail~ : String)
-  ActivePlatformMismatch(expected~ : String, actual~ : String)
-  ActiveDistMismatch(expected~ : String, actual~ : String)
   UnsafeGeneratedDirectory(path~ : String)
   UnsafeInstallDirectory(path~ : String)
-  RuntimeConflict(path~ : String, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -96,15 +79,6 @@ pub extend CefRuntimeError with Debug::{to_repr}
 pub extend CefRuntimeError with Show::{to_string, output}
 
 ///|
-pub fn CefUsageError::message(self : CefUsageError) -> String {
-  match self {
-    InvalidArchiveName(name~) => "Invalid CEF archive name: " + name
-    InvalidChecksum(value~) => "Invalid CEF archive SHA-256: " + value
-    MissingCustomChecksum => "Custom CEF archive name or URL requires --sha256"
-  }
-}
-
-///|
 pub fn CefPlatformError::message(self : CefPlatformError) -> String {
   match self {
     Unsupported(platform~) =>
@@ -115,7 +89,6 @@ pub fn CefPlatformError::message(self : CefPlatformError) -> String {
 ///|
 pub fn CefFileSystemError::message(self : CefFileSystemError) -> String {
   match self {
-    CurrentDirectoryUnavailable => "Failed to read current directory"
     CreateDirectory(path~, detail~) =>
       "Failed to create directory " + path + ": " + detail
     ReadDirectory(path~, detail~) =>
@@ -158,6 +131,12 @@ pub fn CefDownloadError::message(self : CefDownloadError) -> String {
 ///|
 pub fn CefRuntimeError::message(self : CefRuntimeError) -> String {
   match self {
+    StoreRootUnavailable =>
+      "Cannot resolve the Proton runtime store because no home directory is available"
+    StoreRootNotAbsolute(path~) =>
+      "PROTON_RUNTIME_STORE must be an absolute path: " + path
+    NotInstalled(path~) =>
+      "The required Proton runtime is not installed: " + path
     InvalidCefRoot(path~, missing~) =>
       "Invalid CEF root: " + path + "\nMissing:\n" + missing.join("\n")
     InvalidRuntime(path~, missing~) =>
@@ -171,25 +150,11 @@ pub fn CefRuntimeError::message(self : CefRuntimeError) -> String {
       "Manifest " + path + " missing string field: " + field
     ManifestFieldValue(path~, field~, detail~) =>
       "Invalid manifest " + path + " field " + field + ": " + detail
-    ActivePlatformMismatch(expected~, actual~) =>
-      "Active runtime platform mismatch: expected " +
-      expected +
-      ", got " +
-      actual
-    ActiveDistMismatch(expected~, actual~) =>
-      "Active runtime dist mismatch: expected " + expected + ", got " + actual
     UnsafeGeneratedDirectory(path~) =>
       "Refusing to replace unsafe generated directory: " + path
     UnsafeInstallDirectory(path~) =>
       "Refusing to replace unsafe CEF install directory: " + path
-    RuntimeConflict(path~, detail~) =>
-      "Cannot assemble Proton runtime at " + path + ": " + detail
   }
-}
-
-///|
-impl Show for CefUsageError with fn output(self, logger) {
-  logger.write_string(self.message())
 }
 
 ///|

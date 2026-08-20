@@ -15,6 +15,8 @@ on:
           - contract
           - rsa
           - updater
+          - cefsetup
+          - bundle
           - package
           - sys/ffi
           - sys/shell
@@ -126,6 +128,7 @@ jobs:
           publish_module contract moonbit-community/proton_contract
           publish_module rsa moonbit-community/proton_rsa
           publish_module updater moonbit-community/proton_updater
+          publish_module cefsetup moonbit-community/proton_cefsetup
 
           publish_module sys/ffi moonbit-community/proton_ffi
           publish_module sys/shell moonbit-community/proton_shell
@@ -141,6 +144,7 @@ jobs:
           publish_module client moonbit-community/proton_client
           publish_module rabbita moonbit-community/proton_rabbita
           publish_module proton moonbit-community/proton
+          publish_module bundle moonbit-community/proton_bundle
 
           publish_module extensions moonbit-community/proton_ext
           publish_module cli moonbit-community/proton_cli

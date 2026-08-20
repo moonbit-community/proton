@@ -5,14 +5,12 @@ Run commands from the repository root.
 Install or assemble the native runtime first:
 
 ```powershell
-moon -C cli run . -- -C .. cef setup
-$runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+$runtime = moon -C cefsetup run . --target native | Select-Object -Last 1
 $env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 ```
 
 ```sh
-moon -C cli run . -- -C .. cef setup
-runtime="$(node -e "const path=require('path');const value=JSON.parse(require('fs').readFileSync('.proton/runtime.json','utf8')).dist;process.stdout.write(path.resolve(value))")"
+runtime="$(moon -C cefsetup run . --target native | tail -n 1)"
 export PATH="$runtime/bin:$PATH"
 ```
 

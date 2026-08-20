@@ -86,8 +86,11 @@ pub struct DocumentType {
   role : String
 } derive(Eq, @debug.Debug)
 pub fn DocumentType::equal(Self, Self) -> Bool
+pub fn DocumentType::extensions(Self) -> Array[String]
+pub fn DocumentType::name(Self) -> String
 pub fn DocumentType::new(String, Array[String], role? : String) -> Self
 pub fn DocumentType::not_equal(Self, Self) -> Bool
+pub fn DocumentType::role(Self) -> String
 pub fn DocumentType::to_repr(Self) -> @debug.Repr
 
 pub struct MacosPlistString {

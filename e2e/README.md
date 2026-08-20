@@ -20,14 +20,14 @@ mode, performs typed CDP probes, closes Chromium through `Browser.close`, and
 verifies that the application, helper process tree, and CDP endpoint stop:
 
 ```sh
-moon -C cli run . -- -C .. cef setup
+moon -C cefsetup run . --target native
 moon -C e2e test -p moonbit-community/proton/e2e/test \
   --target native --no-parallelize --diagnostic-limit 200
 ```
 
 Keep the package filter and `--no-parallelize`: E2E tests own native processes,
-CDP ports, frontend servers, and runtime logs. `.proton/runtime.json` selects
-the setup-managed CEF runtime. Each isolated scenario installs a release helper
+CDP ports, frontend servers, and runtime logs. The tests resolve the required
+CEF runtime from the immutable user-wide store. Each isolated scenario installs a release helper
 from the same Proton source as the application through `moon install --path`.
 The suite covers:
 
