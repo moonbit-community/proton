@@ -4733,6 +4733,7 @@ int32_t proton_engine_window_take_bridge_failure_json(
 
 typedef struct proton_engine_linux_dialog_request {
   int64_t id;
+  int64_t public_window;
   proton_engine_runtime_t *runtime;
   proton_engine_window_t *window;
   GtkWidget *dialog;
@@ -4743,18 +4744,26 @@ typedef struct proton_engine_linux_dialog_request {
 static int64_t g_next_dialog_id = 1;
 static proton_engine_linux_dialog_request_t *g_dialog_requests = NULL;
 
-static proton_engine_linux_dialog_request_t *
-proton_engine_dialog_find(proton_engine_runtime_t *runtime,
-                          proton_engine_window_t *window,
-                          int64_t id) {
-  for (proton_engine_linux_dialog_request_t *request = g_dialog_requests;
-       request != NULL; request = request->next) {
-    if (request->id == id && request->runtime == runtime &&
-        request->window == window) {
-      return request;
-    }
+static void proton_engine_publish_dialog_completed(int64_t window,
+                                                   int64_t request_id,
+                                                   int32_t status,
+                                                   const char *result,
+                                                   const char *error_message) {
+  proton_event_t *event = proton_event_create(PROTON_EVENT_DIALOG_COMPLETED);
+  if (event == NULL) {
+    return;
   }
-  return NULL;
+  event->window = window;
+  event->request_id = request_id;
+  event->int_a = status;
+  if (proton_event_set_text(
+          &event->text_a, status == PROTON_OK && result != NULL ? result : "") &&
+      proton_event_set_text(&event->text_b,
+                            error_message != NULL ? error_message : "")) {
+    (void)proton_event_publish(event);
+  } else {
+    proton_event_destroy(event);
+  }
 }
 
 static void proton_engine_dialog_remove(
@@ -4780,8 +4789,12 @@ static void proton_engine_dialog_response(GtkDialog *dialog,
     return;
   }
   request->completed = 1;
+  request->dialog = NULL;
+  g_signal_handlers_disconnect_by_data(dialog, request);
   gtk_widget_destroy(GTK_WIDGET(dialog));
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  proton_engine_publish_dialog_completed(request->public_window, request->id,
+                                         PROTON_OK, "", NULL);
+  proton_engine_dialog_remove(request);
 }
 
 static void proton_engine_dialog_destroyed(GtkWidget *dialog,
@@ -4794,7 +4807,9 @@ static void proton_engine_dialog_destroyed(GtkWidget *dialog,
   request->dialog = NULL;
   if (!request->completed) {
     request->completed = 1;
-    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    proton_engine_publish_dialog_completed(request->public_window, request->id,
+                                           PROTON_OK, "", NULL);
+    proton_engine_dialog_remove(request);
   }
   (void)dialog;
 }
@@ -4879,6 +4894,7 @@ static int32_t proton_engine_begin_message_dialog(
   }
   request->runtime = runtime;
   request->window = window;
+  request->public_window = proton_engine_window_public_id(window);
   request->dialog = dialog;
   request->next = g_dialog_requests;
   g_dialog_requests = request;
@@ -4888,34 +4904,6 @@ static int32_t proton_engine_begin_message_dialog(
                    request);
   gtk_widget_show_all(dialog);
   *out_dialog = request->id;
-  return PROTON_OK;
-}
-
-static int32_t proton_engine_poll_message_dialog(
-    proton_engine_runtime_t *runtime, proton_engine_window_t *window,
-    int64_t dialog, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len) {
-  if (out_required_len == NULL) {
-    proton_engine_set_message(error, error_len, "out_required_len is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_required_len = 0;
-  proton_engine_linux_dialog_request_t *request =
-      proton_engine_dialog_find(runtime, window, dialog);
-  if (request == NULL) {
-    proton_engine_set_message(error, error_len, "dialog request is unknown");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (!request->completed) {
-    return PROTON_EVENT_NONE;
-  }
-  *out_required_len = 1;
-  if (buffer == NULL || buffer_len < 1) {
-    proton_engine_set_message(error, error_len, "dialog result buffer too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  buffer[0] = '\0';
-  proton_engine_dialog_remove(request);
   return PROTON_OK;
 }
 

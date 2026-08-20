@@ -4182,19 +4182,6 @@ static wchar_t *proton_engine_dialog_text(const char *text, int32_t text_len) {
   return result;
 }
 
-static proton_engine_win_dialog_request_t *proton_engine_dialog_find(
-    proton_engine_runtime_t *runtime, proton_engine_window_t *window,
-    int64_t id) {
-  for (proton_engine_win_dialog_request_t *request = g_dialog_requests;
-       request != NULL; request = request->next) {
-    if (request->id == id && request->runtime == runtime &&
-        request->window == window) {
-      return request;
-    }
-  }
-  return NULL;
-}
-
 static void proton_engine_dialog_free(
     proton_engine_win_dialog_request_t *request) {
   if (request == NULL) {
@@ -4387,13 +4374,15 @@ static LRESULT CALLBACK proton_engine_dialog_window_proc(
     request->dialog = NULL;
     request->completed = 1;
     proton_engine_dialog_release_parent(request);
-    if (request->kind == PROTON_ENGINE_WIN_DIALOG_KIND_CONFIRM) {
-      const char *result = request->clicked_ok ? "1" : "0";
-      proton_engine_publish_dialog_completed(
-          request->public_window, request->id, PROTON_OK, result, NULL);
-      proton_engine_dialog_remove(request);
-      proton_engine_dialog_free(request);
-    }
+    const char *result =
+        request->kind == PROTON_ENGINE_WIN_DIALOG_KIND_CONFIRM
+            ? (request->clicked_ok ? "1" : "0")
+            : "";
+    proton_engine_publish_dialog_completed(
+        request->public_window, request->id, PROTON_OK, result, NULL);
+    SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+    proton_engine_dialog_remove(request);
+    proton_engine_dialog_free(request);
     if (runtime != NULL) {
       proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
     }
@@ -4487,6 +4476,7 @@ static int32_t proton_engine_begin_message_dialog(
   }
   request->runtime = runtime;
   request->window = window;
+  request->public_window = proton_engine_window_public_id(window);
   request->level = level;
   request->parent = window != NULL ? window->hwnd : NULL;
   request->parent_was_enabled =
@@ -4530,35 +4520,6 @@ static int32_t proton_engine_begin_message_dialog(
   SetForegroundWindow(dialog_window);
   SetFocus(request->ok_button);
   *out_dialog = request->id;
-  return PROTON_OK;
-}
-
-static int32_t proton_engine_poll_message_dialog(
-    proton_engine_runtime_t *runtime, proton_engine_window_t *window,
-    int64_t dialog, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len) {
-  if (out_required_len == NULL) {
-    proton_engine_set_message(error, error_len, "out_required_len is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_required_len = 0;
-  proton_engine_win_dialog_request_t *request =
-      proton_engine_dialog_find(runtime, window, dialog);
-  if (request == NULL) {
-    proton_engine_set_message(error, error_len, "dialog request is unknown");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (!request->completed) {
-    return PROTON_EVENT_NONE;
-  }
-  *out_required_len = 1;
-  if (buffer == NULL || buffer_len < 1) {
-    proton_engine_set_message(error, error_len, "dialog result buffer too small");
-    return PROTON_ERR_BUFFER_TOO_SMALL;
-  }
-  buffer[0] = '\0';
-  proton_engine_dialog_remove(request);
-  proton_engine_dialog_free(request);
   return PROTON_OK;
 }
 
