@@ -16,6 +16,28 @@ async fn evaluate_bool(
 }
 
 ///|
+fn is_transient_execution_context_error(error : Error) -> Bool {
+  match error {
+    @client.BrowserError::CommandFailed(
+      -32000,
+      "Cannot find default execution context"
+    ) => true
+    _ => false
+  }
+}
+
+///|
+async fn evaluate_bool_while_context_available(
+  page : @client.CdpClient,
+  expression : String,
+) -> Bool {
+  evaluate_bool(page, expression, false) catch {
+    error if is_transient_execution_context_error(error) => false
+    error => raise error
+  }
+}
+
+///|
 async fn reload_page_and_wait(
   page : @client.CdpClient,
   expression : String,

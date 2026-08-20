@@ -6,7 +6,7 @@ async fn wait_for_ready(
 ) -> Unit {
   let attempts = timeout / 100
   for attempt in 0..<=attempts {
-    if evaluate_bool(page, expression, false) {
+    if evaluate_bool_while_context_available(page, expression) {
       return
     }
     if attempt < attempts {
