@@ -440,6 +440,17 @@ static int32_t proton_engine_dialog_begin_on_parent(
   proton_engine_dialog_request_retain(request);
   dispatch_async(dispatch_get_main_queue(), ^{
     @autoreleasepool {
+      proton_engine_dialog_lock();
+      int cancelled = request->completed;
+      proton_engine_dialog_unlock();
+      if (cancelled) {
+        if (cleanup_without_start != nil) {
+          cleanup_without_start();
+        }
+        [parent release];
+        proton_engine_dialog_request_release(request);
+        return;
+      }
       proton_engine_window_t *current =
           proton_engine_window_lookup_native_id(native_id);
       if (proton_engine_window_is_closed_or_missing(current)) {
@@ -610,9 +621,13 @@ int32_t proton_engine_window_begin_message_dialog(
         [alert addButtonWithTitle:proton_engine_dialog_label(
                                       proton_engine_runtime_dialog_ok_label(
                                           runtime))];
+        request->platform_state = [[alert window] retain];
         [alert beginSheetModalForWindow:parent
                       completionHandler:^(NSModalResponse returnCode) {
                         (void)returnCode;
+                        NSWindow *sheet = (NSWindow *)request->platform_state;
+                        request->platform_state = NULL;
+                        [sheet release];
                         proton_engine_dialog_complete(request, PROTON_OK, "",
                                                       NULL);
                         [title release];
@@ -671,10 +686,14 @@ int32_t proton_engine_window_begin_confirm_dialog(
         [alert addButtonWithTitle:proton_engine_dialog_label(
                                       proton_engine_runtime_dialog_cancel_label(
                                           runtime))];
+        request->platform_state = [[alert window] retain];
         [alert beginSheetModalForWindow:parent
                       completionHandler:^(NSModalResponse returnCode) {
                         const char *result =
                             returnCode == NSAlertFirstButtonReturn ? "1" : "0";
+                        NSWindow *sheet = (NSWindow *)request->platform_state;
+                        request->platform_state = NULL;
+                        [sheet release];
                         proton_engine_dialog_complete(request, PROTON_OK,
                                                       result, NULL);
                         [title release];
@@ -715,6 +734,7 @@ static int32_t proton_engine_window_begin_file_dialog(
   status = proton_engine_dialog_begin_on_parent(
       window, request, ^(NSWindow *parent) {
         NSSavePanel *panel = proton_engine_make_file_panel(mode, title, path);
+        request->platform_state = [panel retain];
         [panel beginSheetModalForWindow:parent
                       completionHandler:^(NSModalResponse returnCode) {
                         NSString *result = @"";
@@ -722,6 +742,8 @@ static int32_t proton_engine_window_begin_file_dialog(
                             [panel URL] != nil) {
                           result = [[panel URL] path] ?: @"";
                         }
+                        request->platform_state = NULL;
+                        [panel release];
                         proton_engine_dialog_complete_string(request, result);
                         [title release];
                         [path release];
@@ -784,6 +806,42 @@ int32_t proton_engine_window_begin_choose_directory_dialog(
       window, title_utf8, title_len, path_utf8, path_len,
       PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY, out_dialog, error,
       error_len);
+}
+
+int32_t proton_engine_window_cancel_dialog(proton_engine_window_t *window,
+                                           int64_t dialog,
+                                           char *error,
+                                           size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  uintptr_t owner_id =
+      (uintptr_t)proton_engine_window_native_id(window);
+  proton_engine_dialog_lock();
+  proton_engine_dialog_request_t *request =
+      proton_engine_dialog_request_remove_locked(
+          PROTON_ENGINE_DIALOG_OWNER_WINDOW, owner_id, dialog);
+  if (request == NULL) {
+    proton_engine_dialog_unlock();
+    return PROTON_OK;
+  }
+  request->completed = 1;
+  NSWindow *sheet = request->platform_state != NULL
+                        ? [(NSWindow *)request->platform_state retain]
+                        : nil;
+  proton_engine_dialog_unlock();
+  if (sheet != nil) {
+    NSWindow *parent = [sheet sheetParent];
+    if (parent != nil) {
+      [parent endSheet:sheet returnCode:NSModalResponseCancel];
+    } else {
+      [sheet orderOut:nil];
+    }
+    [sheet release];
+  }
+  proton_engine_dialog_request_release(request);
+  return PROTON_OK;
 }
 
 #endif

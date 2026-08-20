@@ -1925,6 +1925,17 @@ pub fn WindowRef::begin_choose_directory_dialog(
 }
 
 ///|
+pub fn WindowRef::cancel_dialog(
+  self : WindowRef,
+  dialog : Int64,
+) -> Unit raise NativeError {
+  let status = @native_ffi.proton_window_cancel_dialog_ffi(self.handle, dialog)
+  if status < 0 {
+    raise native_error(status)
+  }
+}
+
+///|
 fn validate_view_config(config : ViewConfig) -> Unit raise NativeError {
   if config.width <= 0 || config.height <= 0 {
     raise invalid_argument("view width and height must be positive")

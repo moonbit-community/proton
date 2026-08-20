@@ -294,6 +294,10 @@ int32_t proton_engine_window_begin_choose_directory_dialog(
     int64_t *out_dialog,
     char *error,
     size_t error_len);
+int32_t proton_engine_window_cancel_dialog(proton_engine_window_t *window,
+                                           int64_t dialog,
+                                           char *error,
+                                           size_t error_len);
 const char *proton_engine_name(void);
 
 int32_t proton_engine_view_create(

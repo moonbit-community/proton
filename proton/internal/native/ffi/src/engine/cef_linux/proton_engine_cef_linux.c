@@ -4938,6 +4938,34 @@ static void proton_engine_dialog_cancel_window(proton_engine_window_t *window) {
   }
 }
 
+int32_t proton_engine_window_cancel_dialog(proton_engine_window_t *window,
+                                           int64_t dialog,
+                                           char *error,
+                                           size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  proton_engine_linux_dialog_request_t **cursor = &g_dialog_requests;
+  while (*cursor != NULL) {
+    proton_engine_linux_dialog_request_t *request = *cursor;
+    if (request->window != window || request->id != dialog) {
+      cursor = &request->next;
+      continue;
+    }
+    *cursor = request->next;
+    request->next = NULL;
+    request->completed = 1;
+    if (request->dialog != NULL) {
+      g_signal_handlers_disconnect_by_data(request->dialog, request);
+      gtk_widget_destroy(request->dialog);
+    }
+    free(request);
+    return PROTON_OK;
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_engine_runtime_begin_message_dialog(
     proton_engine_runtime_t *runtime, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,

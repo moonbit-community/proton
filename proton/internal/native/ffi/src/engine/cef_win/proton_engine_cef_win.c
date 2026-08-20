@@ -136,6 +136,8 @@ struct proton_engine_window {
 static void proton_engine_dialog_cancel_runtime(
     proton_engine_runtime_t *runtime);
 static void proton_engine_dialog_cancel_window(proton_engine_window_t *window);
+static void proton_engine_file_dialog_cancel_window(
+    proton_engine_window_t *window);
 
 typedef struct {
   LONG refs;
@@ -4413,7 +4415,8 @@ static int proton_engine_register_dialog_class(void) {
   window_class.hCursor = LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW));
   window_class.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
   window_class.lpszClassName = PROTON_ENGINE_DIALOG_CLASS;
-  return RegisterClassExW(&window_class) != 0;
+  return RegisterClassExW(&window_class) != 0 ||
+         GetLastError() == ERROR_CLASS_ALREADY_EXISTS;
 }
 
 static void proton_engine_center_dialog(HWND dialog, HWND parent) {
@@ -4537,8 +4540,7 @@ static void proton_engine_dialog_cancel_matching(
       return;
     }
     if (request->dialog != NULL) {
-      DestroyWindow(request->dialog);
-      if (request->kind == PROTON_ENGINE_WIN_DIALOG_KIND_CONFIRM) {
+      if (DestroyWindow(request->dialog)) {
         // WM_DESTROY published the completion event, then removed and freed
         // this request. Restart the scan to pick up the next match.
         continue;
@@ -4557,6 +4559,7 @@ static void proton_engine_dialog_cancel_runtime(
 static void proton_engine_dialog_cancel_window(proton_engine_window_t *window) {
   if (window != NULL) {
     proton_engine_dialog_cancel_matching(window->runtime, window, 1);
+    proton_engine_file_dialog_cancel_window(window);
   }
 }
 
@@ -4694,6 +4697,9 @@ typedef struct proton_engine_win_file_dialog_request {
   int64_t id;
   int64_t public_window;
   HWND parent;
+  HWND cancel_window;
+  IFileDialog *dialog;
+  volatile LONG cancel_requested;
   wchar_t *title;
   wchar_t *initial_path;
   int mode;
@@ -4701,6 +4707,50 @@ typedef struct proton_engine_win_file_dialog_request {
 } proton_engine_win_file_dialog_request_t;
 
 static proton_engine_win_file_dialog_request_t *g_file_dialog_requests = NULL;
+
+#define PROTON_ENGINE_FILE_DIALOG_CANCEL_MESSAGE (WM_APP + 0x51)
+#define PROTON_ENGINE_FILE_DIALOG_CANCEL_CLASS                            \
+  L"ProtonNativeFileDialogCancel"
+
+static LRESULT CALLBACK proton_engine_file_dialog_cancel_proc(
+    HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
+  proton_engine_win_file_dialog_request_t *request =
+      (proton_engine_win_file_dialog_request_t *)GetWindowLongPtrW(
+          hwnd, GWLP_USERDATA);
+  if (message == WM_NCCREATE) {
+    CREATESTRUCTW *create = (CREATESTRUCTW *)lparam;
+    request = (proton_engine_win_file_dialog_request_t *)create->lpCreateParams;
+    SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)request);
+  }
+  if (message == PROTON_ENGINE_FILE_DIALOG_CANCEL_MESSAGE &&
+      request != NULL && request->dialog != NULL) {
+    (void)request->dialog->lpVtbl->Close(
+        request->dialog, HRESULT_FROM_WIN32(ERROR_CANCELLED));
+    return 0;
+  }
+  if (message == WM_NCDESTROY) {
+    SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+  }
+  return DefWindowProcW(hwnd, message, wparam, lparam);
+}
+
+static int proton_engine_register_file_dialog_cancel_class(void) {
+  HINSTANCE instance = GetModuleHandleW(NULL);
+  WNDCLASSEXW existing;
+  memset(&existing, 0, sizeof(existing));
+  existing.cbSize = sizeof(existing);
+  if (GetClassInfoExW(instance, PROTON_ENGINE_FILE_DIALOG_CANCEL_CLASS,
+                      &existing)) {
+    return 1;
+  }
+  WNDCLASSEXW window_class;
+  memset(&window_class, 0, sizeof(window_class));
+  window_class.cbSize = sizeof(window_class);
+  window_class.lpfnWndProc = proton_engine_file_dialog_cancel_proc;
+  window_class.hInstance = instance;
+  window_class.lpszClassName = PROTON_ENGINE_FILE_DIALOG_CANCEL_CLASS;
+  return RegisterClassExW(&window_class) != 0;
+}
 
 static char *proton_engine_wide_to_utf8(const wchar_t *value) {
   if (value == NULL) {
@@ -4838,6 +4888,21 @@ static DWORD WINAPI proton_engine_file_dialog_thread(LPVOID param) {
     }
   }
   if (SUCCEEDED(hr) && filedialog != NULL) {
+    HWND cancel_window = NULL;
+    if (proton_engine_register_file_dialog_cancel_class()) {
+      cancel_window = CreateWindowExW(
+          0, PROTON_ENGINE_FILE_DIALOG_CANCEL_CLASS, L"", 0, 0, 0, 0, 0,
+          HWND_MESSAGE, NULL, GetModuleHandleW(NULL), request);
+    }
+    if (g_proton_engine_window_lock_initialized) {
+      EnterCriticalSection(&g_proton_engine_window_lock);
+    }
+    request->dialog = filedialog;
+    request->cancel_window = cancel_window;
+    LONG cancelled = request->cancel_requested;
+    if (g_proton_engine_window_lock_initialized) {
+      LeaveCriticalSection(&g_proton_engine_window_lock);
+    }
     if (request->title != NULL && request->title[0] != L'\0') {
       (void)filedialog->lpVtbl->SetTitle(filedialog, request->title);
     }
@@ -4850,7 +4915,11 @@ static DWORD WINAPI proton_engine_file_dialog_thread(LPVOID param) {
     (void)filedialog->lpVtbl->SetOptions(filedialog, options);
     proton_engine_set_initial_location(filedialog, request->initial_path,
                                        request->mode);
-    hr = filedialog->lpVtbl->Show(filedialog, request->parent);
+    if (!cancelled) {
+      hr = filedialog->lpVtbl->Show(filedialog, request->parent);
+    } else {
+      hr = HRESULT_FROM_WIN32(ERROR_CANCELLED);
+    }
     if (SUCCEEDED(hr)) {
       IShellItem *selected = NULL;
       if (SUCCEEDED(filedialog->lpVtbl->GetResult(filedialog, &selected)) &&
@@ -4864,6 +4933,17 @@ static DWORD WINAPI proton_engine_file_dialog_thread(LPVOID param) {
         }
         selected->lpVtbl->Release(selected);
       }
+    }
+    if (g_proton_engine_window_lock_initialized) {
+      EnterCriticalSection(&g_proton_engine_window_lock);
+    }
+    request->dialog = NULL;
+    request->cancel_window = NULL;
+    if (g_proton_engine_window_lock_initialized) {
+      LeaveCriticalSection(&g_proton_engine_window_lock);
+    }
+    if (cancel_window != NULL) {
+      DestroyWindow(cancel_window);
     }
     filedialog->lpVtbl->Release(filedialog);
   }
@@ -4938,6 +5018,40 @@ static int32_t proton_engine_window_begin_file_dialog(
   return PROTON_OK;
 }
 
+static int proton_engine_file_dialog_request_cancel(
+    proton_engine_window_t *window, int64_t dialog, int match_id) {
+  int matched = 0;
+  proton_engine_file_dialog_lock_init();
+  EnterCriticalSection(&g_proton_engine_window_lock);
+  int64_t public_window = proton_engine_window_public_id(window);
+  for (proton_engine_win_file_dialog_request_t *request =
+           g_file_dialog_requests;
+       request != NULL; request = request->next) {
+    if (request->public_window != public_window ||
+        (match_id && request->id != dialog)) {
+      continue;
+    }
+    InterlockedExchange(&request->cancel_requested, 1);
+    if (request->cancel_window != NULL) {
+      (void)PostMessageW(request->cancel_window,
+                         PROTON_ENGINE_FILE_DIALOG_CANCEL_MESSAGE, 0, 0);
+    }
+    matched = 1;
+    if (match_id) {
+      break;
+    }
+  }
+  LeaveCriticalSection(&g_proton_engine_window_lock);
+  return matched;
+}
+
+static void proton_engine_file_dialog_cancel_window(
+    proton_engine_window_t *window) {
+  if (window != NULL) {
+    (void)proton_engine_file_dialog_request_cancel(window, 0, 0);
+  }
+}
+
 int32_t proton_engine_window_begin_open_file_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,
@@ -4979,6 +5093,27 @@ int32_t proton_engine_window_begin_choose_directory_dialog(
       window, title_utf8, title_len, path_utf8, path_len,
       PROTON_ENGINE_WIN_FILE_DIALOG_CHOOSE_DIRECTORY, out_dialog, error,
       error_len);
+}
+
+int32_t proton_engine_window_cancel_dialog(proton_engine_window_t *window,
+                                           int64_t dialog,
+                                           char *error,
+                                           size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  for (proton_engine_win_dialog_request_t *request = g_dialog_requests;
+       request != NULL; request = request->next) {
+    if (request->window == window && request->id == dialog) {
+      if (request->dialog != NULL) {
+        DestroyWindow(request->dialog);
+      }
+      return PROTON_OK;
+    }
+  }
+  (void)proton_engine_file_dialog_request_cancel(window, dialog, 1);
+  return PROTON_OK;
 }
 
 // MARK: - Web contents views

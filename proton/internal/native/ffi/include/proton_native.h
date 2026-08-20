@@ -200,6 +200,8 @@ int32_t proton_window_begin_choose_directory_dialog(
     proton_window_handle_t window, const char *title_utf8,
     int32_t title_len, const char *path_utf8, int32_t path_len,
     int64_t *out_dialog);
+int32_t proton_window_cancel_dialog(proton_window_handle_t window,
+                                    int64_t dialog);
 /* Session cookie and cache management.
 
    Cookie get completion is delivered through the runtime event queue. Cookie

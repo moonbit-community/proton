@@ -1517,6 +1517,27 @@ int32_t proton_window_begin_choose_directory_dialog(
   return PROTON_OK;
 }
 
+int32_t proton_window_cancel_dialog(proton_window_handle_t window,
+                                    int64_t dialog) {
+  if (dialog == PROTON_INVALID_HANDLE) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "dialog id is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_cancel_dialog(
+      slot->engine_window, dialog, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_cookie_begin_get_json(proton_window_handle_t window,
                                             const char *url_utf8,
                                             int32_t include_http_only,

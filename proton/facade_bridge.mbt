@@ -427,9 +427,11 @@ fn command_dialog_level(level : String) -> @native.DialogLevel {
 
 ///|
 async fn wait_for_command_dialog(
+  window : @native.WindowRef,
   completions : DialogCompletionStore,
   dialog : Int64,
 ) -> String {
+  defer (window.cancel_dialog(dialog) catch { _ => () })
   completions.wait(dialog)
 }
 
@@ -445,7 +447,7 @@ fn command_window_capability(
         message,
         command_dialog_level(level),
       )
-      ignore(wait_for_command_dialog(dialog_completions, dialog))
+      ignore(wait_for_command_dialog(window, dialog_completions, dialog))
     },
     async fn(title, message, level) {
       let dialog = window.begin_confirm_dialog(
@@ -453,11 +455,11 @@ fn command_window_capability(
         message,
         command_dialog_level(level),
       )
-      wait_for_command_dialog(dialog_completions, dialog) == "1"
+      wait_for_command_dialog(window, dialog_completions, dialog) == "1"
     },
     async fn(title, path) {
       let dialog = window.begin_open_file_dialog(title, path)
-      let result = wait_for_command_dialog(dialog_completions, dialog)
+      let result = wait_for_command_dialog(window, dialog_completions, dialog)
       if result.is_empty() {
         None
       } else {
@@ -466,7 +468,7 @@ fn command_window_capability(
     },
     async fn(title, path) {
       let dialog = window.begin_save_file_dialog(title, path)
-      let result = wait_for_command_dialog(dialog_completions, dialog)
+      let result = wait_for_command_dialog(window, dialog_completions, dialog)
       if result.is_empty() {
         None
       } else {
@@ -475,7 +477,7 @@ fn command_window_capability(
     },
     async fn(title, path) {
       let dialog = window.begin_choose_directory_dialog(title, path)
-      let result = wait_for_command_dialog(dialog_completions, dialog)
+      let result = wait_for_command_dialog(window, dialog_completions, dialog)
       if result.is_empty() {
         None
       } else {

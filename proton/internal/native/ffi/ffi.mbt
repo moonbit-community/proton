@@ -559,6 +559,12 @@ pub extern "C" fn proton_window_begin_choose_directory_dialog_ffi(
 ) -> Int = "proton_window_begin_choose_directory_dialog"
 
 ///|
+pub extern "C" fn proton_window_cancel_dialog_ffi(
+  window : WindowHandle,
+  dialog : Int64,
+) -> Int = "proton_window_cancel_dialog"
+
+///|
 #borrow(buffer)
 pub extern "C" fn proton_last_error_message_ffi(
   buffer : FixedArray[Byte],

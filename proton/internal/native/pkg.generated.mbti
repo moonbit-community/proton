@@ -590,6 +590,7 @@ pub fn WindowRef::begin_confirm_dialog(Self, String?, String, DialogLevel) -> In
 pub fn WindowRef::begin_message_dialog(Self, String?, String, DialogLevel) -> Int64 raise NativeError
 pub fn WindowRef::begin_open_file_dialog(Self, String?, String?) -> Int64 raise NativeError
 pub fn WindowRef::begin_save_file_dialog(Self, String?, String?) -> Int64 raise NativeError
+pub fn WindowRef::cancel_dialog(Self, Int64) -> Unit raise NativeError
 pub fn WindowRef::equal(Self, Self) -> Bool
 pub fn WindowRef::not_equal(Self, Self) -> Bool
 pub fn WindowRef::to_repr(Self) -> @debug.Repr

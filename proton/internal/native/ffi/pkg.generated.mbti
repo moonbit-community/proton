@@ -158,6 +158,8 @@ pub fn proton_window_bridge_state_json_ffi(WindowHandle, FixedArray[Byte], Int, 
 
 pub fn proton_window_browser_command_json_ffi(WindowHandle, Bytes) -> Int
 
+pub fn proton_window_cancel_dialog_ffi(WindowHandle, Int64) -> Int
+
 pub fn proton_window_clear_cache_ffi(WindowHandle) -> Int
 
 pub fn proton_window_close_ffi(WindowHandle) -> Int
