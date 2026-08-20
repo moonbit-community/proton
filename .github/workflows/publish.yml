@@ -62,6 +62,9 @@ jobs:
       - name: Show MoonBit version
         run: moon version --all
 
+      - name: Install CEF runtime
+        run: moon -C cefsetup run . --target native
+
       - name: Validate release
         run: |
           moon update
