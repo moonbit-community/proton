@@ -38,23 +38,6 @@ pub extend NotificationReply with ToJson::{to_json}
 pub extend NotificationReply with FromJson::{from_json}
 
 ///|
-pub(all) struct NotificationDrainReply {
-  count : Int
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-pub extend NotificationDrainReply with Eq::{not_equal, equal}
-
-///|
-pub extend NotificationDrainReply with Debug::{to_repr}
-
-///|
-pub extend NotificationDrainReply with ToJson::{to_json}
-
-///|
-pub extend NotificationDrainReply with FromJson::{from_json}
-
-///|
 pub(all) struct NotificationActivity {
   operation : String
   title : String?
@@ -94,12 +77,6 @@ pub extend NotificationClick with FromJson::{from_json}
 pub let show : @proton_contract.Command[NotificationRequest, NotificationReply] = extension.command(
   "show",
 )
-
-///|
-pub let drain_clicks : @proton_contract.Command[
-  @proton_contract.EmptyRequest,
-  NotificationDrainReply,
-] = extension.command("drainClicks")
 
 ///|
 pub let activity : @proton_contract.Event[NotificationActivity] = extension.event(

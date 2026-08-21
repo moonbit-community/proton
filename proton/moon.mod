@@ -24,7 +24,7 @@ keywords = [ "proton", "gui", "web", "desktop-app" ]
 description = "MoonBit bindings for the Proton native desktop runtime."
 
 options(
-  "--moonbit-unstable-prebuild": "native_link_config.mjs",
+  "--moonbit-unstable-prebuild": "build.mjs",
   warn_list: "",
   preferred_target: "native",
   supported_targets: "+native",

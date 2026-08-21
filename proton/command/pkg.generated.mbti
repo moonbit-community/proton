@@ -104,4 +104,6 @@ pub using @core {type AppCommandRequestContext}
 
 pub using @core {type AppCommandRequestContext as CommandContext}
 
+pub using @core {type CommandWindow}
+
 // Traits

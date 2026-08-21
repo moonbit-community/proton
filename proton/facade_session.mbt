@@ -5,6 +5,7 @@ fn RuntimeSession::new(
   definitions : Array[PreparedWindow],
   windows : Array[RunningWindow],
   command_host : CommandHostRuntime?,
+  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   monitor_bridge : Bool,
@@ -34,6 +35,7 @@ fn RuntimeSession::new(
     windows,
     command_host,
     pending_bridge: [],
+    dialog_completions,
     wakeup,
     forward_menu_events,
     monitor_bridge,
@@ -49,6 +51,7 @@ fn RuntimeSession::new(
     pending_window_opens: [],
     pending_window_closes: [],
     pending_browser_requests: [],
+    pending_resource_requests: [],
     navigation_handler,
     popup_handler,
     download_handler,
@@ -130,7 +133,7 @@ fn RuntimeSession::window_handle(
     read_window_state: () => self.read_window_state(id, native_id),
     browser: self.browser_handle(window),
     add_view: (view_id, config) => {
-      self.add_window_view(id, native_id, view_id, config)
+      self.add_window_view(id, native_id, view_id, config.to_native())
     },
     remove_view: view_id => self.remove_window_view(id, native_id, view_id),
     list_views: () => self.list_window_views(id, native_id),
@@ -192,13 +195,8 @@ fn RuntimeSession::view_handle(
       )
     },
     load_view_html: (html, base_url) => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "load HTML in",
-        view => view.load_html(html, base_url),
+      self.load_view_html(
+        window_id, window_native_id, id, native_id, html, base_url,
       )
     },
     eval_view_script: script => {
@@ -225,11 +223,11 @@ fn RuntimeSession::view_handle(
       let running = self.resolve_view(
         window_id, window_native_id, id, native_id,
       )
-      running.view.state() catch {
+      ViewState::from_native(running.view.state()) catch {
         error =>
-          raise OperationFailed(
-            action="read view " + id + " state in window " + window_id,
-            error~,
+          raise window_operation_failed(
+            "read view " + id + " state in window " + window_id,
+            error,
           )
       }
     },
@@ -278,9 +276,9 @@ fn RuntimeSession::control_view(
   )
   operation(running.view) catch {
     error =>
-      raise OperationFailed(
-        action=action + " view " + view_id + " in window " + window_id,
-        error~,
+      raise window_operation_failed(
+        action + " view " + view_id + " in window " + window_id,
+        error,
       )
   }
 }
@@ -298,11 +296,9 @@ fn RuntimeSession::add_window_view(
     _ => raise StaleWindow(id=window_id)
   }
   if view_id.is_empty() {
-    raise OperationFailed(
-      action="add view to window " + window_id,
-      error=@native.NativeError::InvalidArgument(
-        message="view id must not be empty",
-      ),
+    raise window_operation_failed(
+      "add view to window " + window_id,
+      @native.NativeError::InvalidArgument(message="view id must not be empty"),
     )
   }
   for view in running.views {
@@ -312,12 +308,12 @@ fn RuntimeSession::add_window_view(
   }
   let created = @native.View::new(running.window, config) catch {
     error =>
-      raise OperationFailed(
-        action="add view " + view_id + " to window " + window_id,
-        error~,
+      raise window_operation_failed(
+        "add view " + view_id + " to window " + window_id,
+        error,
       )
   }
-  let running_view = RunningView::{ id: view_id, view: created }
+  let running_view = RunningView::{ id: view_id, view: created, document: None }
   running.views.push(running_view)
   self.view_handle(running, running_view)
 }
@@ -346,9 +342,9 @@ fn RuntimeSession::remove_window_view(
   let view = running.views[index]
   view.view.destroy() catch {
     error =>
-      raise OperationFailed(
-        action="remove view " + view_id + " from window " + window_id,
-        error~,
+      raise window_operation_failed(
+        "remove view " + view_id + " from window " + window_id,
+        error,
       )
   }
   ignore(running.views.remove(index))
@@ -403,9 +399,7 @@ fn RuntimeSession::browser_handle(
       })
     },
     load_browser_html: (html, base_url) => {
-      self.control_window(id, native_id, "load HTML in", window => {
-        window.load_html(html, base_url)
-      })
+      self.load_window_html(id, native_id, html, base_url)
     },
     eval_browser_script: script => {
       self.control_window(id, native_id, "evaluate script in", window => {
@@ -470,7 +464,7 @@ fn RuntimeSession::close_window(
     _ => raise StaleWindow(id~)
   }
   running.window.close() catch {
-    error => raise OperationFailed(action="close window " + id, error~)
+    error => raise window_operation_failed("close window " + id, error)
   }
   if self.window_close_handler is None {
     running.state = WindowCloseRequested
@@ -490,7 +484,71 @@ fn RuntimeSession::control_window(
     _ => raise StaleWindow(id~)
   }
   operation(running.window) catch {
-    error => raise OperationFailed(action=action + " window " + id, error~)
+    error => raise window_operation_failed(action + " window " + id, error)
+  }
+}
+
+///|
+fn RuntimeSession::load_window_html(
+  self : RuntimeSession,
+  id : String,
+  native_id : Int64,
+  html : String,
+  base_url : String,
+) -> Unit raise WindowSessionError {
+  let running = match self.find_active_window(id) {
+    Some(running) if running.window.id() == native_id => running
+    _ => raise StaleWindow(id~)
+  }
+  guard resource_document_url_is_supported(base_url) else {
+    raise window_operation_failed(
+      "load HTML in window " + id,
+      @native.NativeError::InvalidArgument(
+        message="base_url must use a Proton application origin",
+      ),
+    )
+  }
+  let previous = running.document
+  running.document = Some({ url: base_url, content: @utf8.encode(html) })
+  running.window.load_url(base_url) catch {
+    error => {
+      running.document = previous
+      raise window_operation_failed("load HTML in window " + id, error)
+    }
+  }
+}
+
+///|
+fn RuntimeSession::load_view_html(
+  self : RuntimeSession,
+  window_id : String,
+  window_native_id : Int64,
+  view_id : String,
+  view_native_id : Int64,
+  html : String,
+  base_url : String,
+) -> Unit raise WindowSessionError {
+  let running = self.resolve_view(
+    window_id, window_native_id, view_id, view_native_id,
+  )
+  guard resource_document_url_is_supported(base_url) else {
+    raise window_operation_failed(
+      "load HTML in view " + view_id + " in window " + window_id,
+      @native.NativeError::InvalidArgument(
+        message="base_url must use a Proton application origin",
+      ),
+    )
+  }
+  let previous = running.document
+  running.document = Some({ url: base_url, content: @utf8.encode(html) })
+  running.view.load_url(base_url) catch {
+    error => {
+      running.document = previous
+      raise window_operation_failed(
+        "load HTML in view " + view_id + " in window " + window_id,
+        error,
+      )
+    }
   }
 }
 
@@ -499,14 +557,14 @@ fn RuntimeSession::read_window_state(
   self : RuntimeSession,
   id : String,
   native_id : Int64,
-) -> @native.WindowState raise WindowSessionError {
+) -> WindowState raise WindowSessionError {
   let running = match self.find_active_window(id) {
     Some(running) if running.window.id() == native_id => running
     _ => raise StaleWindow(id~)
   }
-  running.window.state() catch {
+  WindowState::from_native(running.window.state()) catch {
     error =>
-      raise OperationFailed(action="read window " + id + " state", error~)
+      raise window_operation_failed("read window " + id + " state", error)
   }
 }
 
@@ -570,17 +628,23 @@ fn RuntimeSession::create_window(
         )
     }
   }
+  let (document, asset_root) = match definition.entry {
+    RemoteEntry(_) => (None, None)
+    DocumentEntry(document, asset_root) => (Some(document), asset_root)
+  }
   let running = RunningWindow::{
     id: plan.id,
     window: created_window,
     permissions: definition.permissions,
     lifetime: WindowLifetime::new(),
     views: [],
+    document,
+    asset_root,
     bridge_ready: !self.monitor_bridge,
     state: WindowStarting,
   }
   self.windows.push(running)
-  load_entry_after_create(created_window, plan.entry) catch {
+  load_prepared_entry(created_window, definition.entry) catch {
     error => raise EntryLoadError(error)
   }
   for view_plan in definition.views {
@@ -593,14 +657,11 @@ fn RuntimeSession::create_window(
         view_config,
       ) catch {
         error =>
-          raise native_run_error(
-            "add view " + view_id + " to " + plan.id,
-            match error {
-              OperationFailed(error~, ..) => error
-              other =>
-                @native.NativeError::InvalidArgument(message=other.message())
-            },
-          )
+          raise match error {
+            OperationFailed(action~, status~, detail~) =>
+              RuntimeOperationFailed(action~, status~, detail~)
+            other => UnexpectedTaskFailure(detail=other.message())
+          }
       },
     )
   }
@@ -764,18 +825,18 @@ fn RuntimeSession::advance_window_opens(self : RuntimeSession) -> Bool {
       let error = match state {
         Some(state) =>
           BridgeStartupError(
-            bridge_startup_timeout_diagnostic(
-              state,
-              self.bridge_startup_timeout_ms,
+            BridgeDiagnostic::from_native(
+              bridge_startup_timeout_diagnostic(
+                state,
+                self.bridge_startup_timeout_ms,
+              ),
             ),
           )
         None =>
-          NativeRuntimeError(
+          RuntimeOperationFailed(
             action="open window " + pending.id,
-            error=@native.NativeError::InvalidPayload(
-              context="bridge startup",
-              message="window startup timed out",
-            ),
+            status=-1,
+            detail="bridge startup: window startup timed out",
           )
       }
       self.fail_window_open(pending, error)
@@ -886,12 +947,6 @@ pub fn WindowHandle::id(self : WindowHandle) -> String {
 }
 
 ///|
-/// Returns a low-level non-owning reference for APIs such as dialogs.
-pub fn WindowHandle::as_native_ref(self : WindowHandle) -> @native.WindowRef {
-  @native.WindowRef::unsafe_from_handle(self.native_id)
-}
-
-///|
 pub fn WindowHandle::show(self : WindowHandle) -> Unit raise WindowSessionError {
   (self.show_window)()
 }
@@ -989,7 +1044,7 @@ pub fn WindowHandle::set_zoom_percent(
 ///|
 pub fn WindowHandle::state(
   self : WindowHandle,
-) -> @native.WindowState raise WindowSessionError {
+) -> WindowState raise WindowSessionError {
   (self.read_window_state)()
 }
 
@@ -1006,7 +1061,7 @@ pub fn WindowHandle::browser(self : WindowHandle) -> BrowserHandle {
 pub fn WindowHandle::add_view(
   self : WindowHandle,
   id : String,
-  config : @native.ViewConfig,
+  config : ViewConfig,
 ) -> ViewHandle raise WindowSessionError {
   (self.add_view)(id, config)
 }
@@ -1036,12 +1091,6 @@ pub fn WindowHandle::view(self : WindowHandle, id : String) -> ViewHandle? {
 /// Returns the declarative id of this view.
 pub fn ViewHandle::id(self : ViewHandle) -> String {
   self.id
-}
-
-///|
-/// Returns a low-level non-owning reference for native APIs.
-pub fn ViewHandle::as_native_ref(self : ViewHandle) -> @native.ViewRef {
-  @native.ViewRef::unsafe_from_handle(self.native_id)
 }
 
 ///|
@@ -1153,7 +1202,7 @@ pub fn ViewHandle::close_devtools(
 /// Reads the current view state from the native runtime.
 pub fn ViewHandle::state(
   self : ViewHandle,
-) -> @native.ViewState raise WindowSessionError {
+) -> ViewState raise WindowSessionError {
   (self.read_view_state)()
 }
 
@@ -1269,7 +1318,7 @@ async fn RuntimeSession::wait_for_bridge_startup(
         None => return
         Some(_) =>
           if did_work {
-            @async.sleep(0)
+            @async.pause()
           } else {
             self.wakeup.wait_after(revision)
           }
@@ -1286,7 +1335,9 @@ async fn RuntimeSession::wait_for_bridge_startup(
         None => return
         Some(state) =>
           raise BridgeStartupError(
-            bridge_startup_timeout_diagnostic(state, timeout_ms),
+            BridgeDiagnostic::from_native(
+              bridge_startup_timeout_diagnostic(state, timeout_ms),
+            ),
           )
       }
     }
@@ -1301,7 +1352,7 @@ async fn RuntimeSession::run(self : RuntimeSession) -> Unit raise AppRunError {
     let revision = self.wakeup.revision()
     let did_work = self.pump_once(monitor_bridge=self.monitor_bridge)
     if did_work {
-      @async.sleep(0) catch {
+      @async.pause() catch {
         error => raise normalize_async_run_error(error)
       }
     } else {
@@ -1311,6 +1362,7 @@ async fn RuntimeSession::run(self : RuntimeSession) -> Unit raise AppRunError {
   self.cancel_all_bridge_tasks()
   self.cancel_all_window_close_requests()
   self.cancel_all_browser_requests()
+  self.cancel_all_resource_requests()
 }
 
 ///|
@@ -1328,7 +1380,7 @@ async fn RuntimeSession::drive_until_complete(
       None => {
         let did_work = self.pump_once(monitor_bridge=self.monitor_bridge)
         if did_work {
-          @async.sleep(0) catch {
+          @async.pause() catch {
             error => raise normalize_async_run_error(error)
           }
         } else {
@@ -1351,9 +1403,6 @@ fn RuntimeSession::pump_once(
   if monitor_bridge {
     self.check_bridge_failures()
   }
-  if self.drain_bridge_requests() {
-    did_work = true
-  }
   if self.complete_bridge_requests() {
     did_work = true
   }
@@ -1364,6 +1413,9 @@ fn RuntimeSession::pump_once(
     did_work = true
   }
   if self.complete_browser_requests() {
+    did_work = true
+  }
+  if self.complete_resource_requests() {
     did_work = true
   }
   did_work
@@ -1398,9 +1450,15 @@ fn RuntimeSession::dispatch_runtime_event(
   self.dispatch_window_event(event)
   self.dispatch_view_event(event)
   self.dispatch_browser_event(event)
+  self.dispatch_resource_event(event)
   self.dispatch_notification_event(event)
   self.dispatch_launch_input_event(event)
   self.dispatch_menu_event(event)
+  self.dialog_completions.complete(event.dialog_completion())
+  match event.bridge_request() {
+    Some(request) => self.start_bridge_request(request)
+    None => ()
+  }
   self.cancel_bridge_request(event.bridge_request_cancellation())
 }
 
@@ -1417,6 +1475,7 @@ fn RuntimeSession::dispatch_window_event(
   if event.is_window_closed() {
     self.cancel_window_close_requests(event.window_id())
     self.cancel_browser_requests(event.window_id())
+    self.cancel_resource_requests_for_window(event.window_id())
   }
   match (event.window_id(), event.window_state_change()) {
     (Some(window_id), Some(state)) =>
@@ -1426,7 +1485,9 @@ fn RuntimeSession::dispatch_window_event(
           for handler in self.window_event_handlers {
             ignore(
               self.window_tasks.spawn(
-                () => handler(handle, StateChanged(state)),
+                () => {
+                  handler(handle, StateChanged(WindowState::from_native(state)))
+                },
                 no_wait=true,
               ),
             )
@@ -1696,6 +1757,135 @@ fn RuntimeSession::cancel_all_browser_requests(self : RuntimeSession) -> Unit {
 }
 
 ///|
+fn RuntimeSession::dispatch_resource_event(
+  self : RuntimeSession,
+  event : @native.RuntimeEvent,
+) -> Unit {
+  match event.resource_request() {
+    Some(request) => self.start_resource_request(request)
+    None => ()
+  }
+  self.cancel_resource_request(event.resource_request_cancellation())
+}
+
+///|
+fn RuntimeSession::start_resource_request(
+  self : RuntimeSession,
+  request : @native.NativeResourceRequest,
+) -> Unit {
+  let (document, asset_root) = match
+    self.find_window_by_native_id(request.window) {
+    Some(window) if request.view is Some(view_id) => {
+      let mut document = None
+      for view in window.views {
+        if view.view.id() == view_id {
+          document = view.document
+          break
+        }
+      }
+      (document, None)
+    }
+    Some(window) => (window.document, window.asset_root)
+    None => (None, None)
+  }
+  let task = self.window_tasks.spawn(
+    () => {
+      defer self.wakeup.signal.notify()
+      resolve_resource_request(document, asset_root, request.url)
+    },
+    no_wait=true,
+  )
+  self.pending_resource_requests.push({
+    request_id: request.request_id,
+    window: request.window,
+    task,
+  })
+}
+
+///|
+fn RuntimeSession::complete_resource_requests(
+  self : RuntimeSession,
+) -> Bool raise AppRunError {
+  let remaining : Array[PendingResourceRequest] = []
+  let mut did_work = false
+  for pending in self.pending_resource_requests {
+    let completed = pending.task.try_wait() catch {
+      _ => Some(resource_text_response(500, "Resource request failed"))
+    }
+    match completed {
+      None => remaining.push(pending)
+      Some(response) => {
+        did_work = true
+        self.runtime.complete_resource_request(
+          pending.request_id,
+          response.status,
+          response.mime_type,
+          response.body,
+        ) catch {
+          error =>
+            if !error.is_stale_resource_request() {
+              raise native_run_error("complete resource request", error)
+            }
+        }
+      }
+    }
+  }
+  self.pending_resource_requests.clear()
+  for pending in remaining {
+    self.pending_resource_requests.push(pending)
+  }
+  did_work
+}
+
+///|
+fn RuntimeSession::cancel_resource_request(
+  self : RuntimeSession,
+  request_id : Int64?,
+) -> Unit {
+  guard request_id is Some(request_id) else { return }
+  let remaining : Array[PendingResourceRequest] = []
+  for pending in self.pending_resource_requests {
+    if pending.request_id == request_id {
+      pending.task.cancel()
+    } else {
+      remaining.push(pending)
+    }
+  }
+  self.pending_resource_requests.clear()
+  for pending in remaining {
+    self.pending_resource_requests.push(pending)
+  }
+}
+
+///|
+fn RuntimeSession::cancel_resource_requests_for_window(
+  self : RuntimeSession,
+  window_id : Int64?,
+) -> Unit {
+  guard window_id is Some(window_id) else { return }
+  let remaining : Array[PendingResourceRequest] = []
+  for pending in self.pending_resource_requests {
+    if pending.window == window_id {
+      pending.task.cancel()
+    } else {
+      remaining.push(pending)
+    }
+  }
+  self.pending_resource_requests.clear()
+  for pending in remaining {
+    self.pending_resource_requests.push(pending)
+  }
+}
+
+///|
+fn RuntimeSession::cancel_all_resource_requests(self : RuntimeSession) -> Unit {
+  for pending in self.pending_resource_requests {
+    pending.task.cancel()
+  }
+  self.pending_resource_requests.clear()
+}
+
+///|
 fn RuntimeSession::start_window_close_request(
   self : RuntimeSession,
   window_id : Int64,
@@ -1805,11 +1995,29 @@ fn runtime_session_dispatch_window_event(
 
 ///|
 fn RuntimeSession::dispatch_notification_event(
-  _self : RuntimeSession,
+  self : RuntimeSession,
   event : @native.RuntimeEvent,
-) -> Unit {
+) -> Unit raise AppRunError {
   match event.notification_result() {
     Some(result) => publish_notification_result(result)
+    None => ()
+  }
+  match event.notification_click() {
+    Some(payload) =>
+      for running in preferred_active_windows(self.windows) {
+        guard running.is_active() &&
+          running.bridge_ready &&
+          running.permissions.grants_extension(notification_extension_id) else {
+          continue
+        }
+        forward_extension_event(
+          running.window,
+          notification_extension_namespace,
+          "click",
+          notification_click_payload(payload),
+        )
+        break
+      }
     None => ()
   }
 }
@@ -1820,7 +2028,14 @@ fn RuntimeSession::dispatch_launch_input_event(
   event : @native.RuntimeEvent,
 ) -> Unit raise AppRunError {
   match event.launch_input() {
-    Some(input) => {
+    Some(native_input) => {
+      let input = match native_input {
+        @native.RuntimeLaunchInput::OpenUrls(urls) =>
+          RuntimeLaunchInput::OpenUrls(urls)
+        @native.RuntimeLaunchInput::OpenFiles(files) =>
+          RuntimeLaunchInput::OpenFiles(files)
+        @native.RuntimeLaunchInput::Reopen => RuntimeLaunchInput::Reopen
+      }
       self.activate_for_launch_input()
       for handler in self.launch_input_handlers {
         ignore(self.window_tasks.spawn(() => handler(input), no_wait=true))
@@ -1924,31 +2139,11 @@ fn RuntimeSession::check_bridge_failures(
         raise native_run_error("read bridge failure for " + running.id, error)
     }
     match failure {
-      Some(diagnostic) => raise BridgeRuntimeError(diagnostic)
+      Some(diagnostic) =>
+        raise BridgeRuntimeError(BridgeDiagnostic::from_native(diagnostic))
       None => ()
     }
   }
-}
-
-///|
-fn RuntimeSession::drain_bridge_requests(
-  self : RuntimeSession,
-) -> Bool raise AppRunError {
-  let mut did_work = false
-  let mut polling = true
-  while polling {
-    let request = self.runtime.poll_bridge_request() catch {
-      error => raise native_run_error("poll bridge request", error)
-    }
-    match request {
-      None => polling = false
-      Some(request) => {
-        did_work = true
-        self.start_bridge_request(request)
-      }
-    }
-  }
-  did_work
 }
 
 ///|
@@ -1992,6 +2187,7 @@ fn RuntimeSession::start_bridge_request(
             host,
             request,
             self.wakeup.signal,
+            self.dialog_completions,
             self.locale_preferences,
           )
         },

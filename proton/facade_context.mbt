@@ -10,7 +10,6 @@ pub struct ApplicationContext {
 /// Window-lifetime capabilities supplied to window startup hooks.
 pub struct WindowContext {
   id : String
-  window : @native.WindowRef
   handle : WindowHandle
   windows : WindowManager
   tasks : @async.TaskGroup[Unit]
@@ -56,22 +55,13 @@ fn ApplicationContext::new(
 ///|
 fn WindowContext::new(
   id : String,
-  window : @native.WindowRef,
   handle : WindowHandle,
   windows : WindowManager,
   tasks : @async.TaskGroup[Unit],
   events : WindowEventEmitter,
   locale_preferences : @locale.LocalePreferences,
 ) -> WindowContext {
-  WindowContext::{
-    id,
-    window,
-    handle,
-    windows,
-    tasks,
-    events,
-    locale_preferences,
-  }
+  WindowContext::{ id, handle, windows, tasks, events, locale_preferences }
 }
 
 ///|
@@ -128,12 +118,6 @@ pub fn ApplicationContext::task_group(
 /// Returns the window manager owned by this running application.
 pub fn ApplicationContext::windows(self : ApplicationContext) -> WindowManager {
   self.windows
-}
-
-///|
-/// Returns a non-owning reference to this window.
-pub fn WindowContext::window(self : WindowContext) -> @native.WindowRef {
-  self.window
 }
 
 ///|

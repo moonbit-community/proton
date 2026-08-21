@@ -12,21 +12,30 @@ MoonBit library for the Chrome DevTools Protocol (CDP).
   builders, result decoders.
 - `moonbit-community/proton_cdp/client`: discovery, WebSocket client, events, targets,
   browser launch helpers.
+- `moonbit-community/proton_cdp/page`: context-aware page evaluation and navigation.
 
 ## Minimal Use
 
 ```mbt nocheck
 let target = @client.parse_cdp_target("9222")
-let browser = @client.connect_cdp_browser_target(target)
-defer browser.close()
-
-let response = browser.send_schema_command("Browser.getVersion")
-println(@client.cdp_response_result_json(response).stringify())
+@async.with_task_group(fn(tasks) {
+  let browser = @client.connect_cdp_browser_target(tasks, target)
+  let response = browser.send_schema_command("Browser.getVersion")
+  println(@client.cdp_response_result_json(response).stringify())
+})
 ```
+
+Connections belong to the task group passed to `connect`; leaving that scope
+cancels the reader and closes the WebSocket.
 
 For page domains:
 
 ```mbt nocheck
-let page = @client.connect_cdp_page_target(@client.parse_cdp_target("9222"))
-defer page.close()
+@async.with_task_group(fn(tasks) {
+  let page = @page.Page::connect(
+    tasks,
+    @client.parse_cdp_target("9222"),
+  )
+  println(page.evaluate("document.title").stringify())
+})
 ```

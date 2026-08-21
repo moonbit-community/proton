@@ -1,34 +1,34 @@
 ///|
 async fn evaluate_bool(
-  page : @client.CdpClient,
+  page : @page.Page,
   expression : String,
   await_promise : Bool,
 ) -> Bool {
-  let response = page.send_schema_command("Runtime.evaluate", params={
-    "expression": expression,
-    "returnByValue": true,
-    "awaitPromise": await_promise,
-  })
-  match @client.cdp_response_result_json(response) {
-    { "result": { "value": true, .. }, .. } => true
-    _ => false
-  }
+  page.evaluate(expression, await_promise~) is True
+}
+
+///|
+async fn evaluate_json(
+  page : @page.Page,
+  expression : String,
+  await_promise : Bool,
+) -> Json {
+  page.evaluate(expression, await_promise~)
 }
 
 ///|
 async fn reload_page_and_wait(
-  page : @client.CdpClient,
+  page : @page.Page,
   expression : String,
   description : String,
   timeout : Int,
 ) -> Unit {
-  page.clear_cdp_events()
-  ignore(page.send_schema_command("Page.reload", timeout_ms=timeout))
+  let navigation = page.reload()
   ignore(
     run_e2e_operation_with_timeout(
       timeout,
-      "Page.loadEventFired after reload",
-      () => page.recv_cdp_event(method_name="Page.loadEventFired"),
+      "main-frame execution context after reload",
+      () => navigation.wait_for_context(),
     ),
   )
   wait_for_cdp_expression(page, expression, description, timeout)

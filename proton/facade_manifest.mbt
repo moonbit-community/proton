@@ -113,13 +113,9 @@ fn runtime_debug_override_enabled() -> Bool {
 
 ///|
 fn proton_dev_mode_enabled() -> Bool {
-  match @env.get_env_var("PROTON_DEV") {
-    Some(value) if env_flag_is_enabled(value) => true
-    _ =>
-      match @env.get_env_var("PROTON_MODE") {
-        Some(value) => value.trim().to_owned().to_lower() == "dev"
-        None => false
-      }
+  match @env.get_env_var("PROTON_MODE") {
+    Some(value) => value.trim().to_owned().to_lower() == "dev"
+    None => false
   }
 }
 

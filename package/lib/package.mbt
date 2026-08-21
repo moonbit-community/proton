@@ -17,6 +17,30 @@ async fn current_package_host() -> PackageHost {
 }
 
 ///|
+/// Validates and trims the version used by package metadata and paths.
+pub fn validate_package_version(
+  value : String,
+) -> String raise PackagePlanError {
+  let value = value.trim().to_owned()
+  guard value != "" else {
+    raise InvalidVersion(version=value, reason="must not be empty")
+  }
+  for char in value {
+    let code = char.to_int()
+    if code < 32 || code == 127 {
+      raise InvalidVersion(
+        version=value,
+        reason="contains an ASCII control character",
+      )
+    }
+    if char == '/' || char == '\\' {
+      raise InvalidVersion(version=value, reason="contains a path separator")
+    }
+  }
+  value
+}
+
+///|
 fn host_name(host : PackageHost) -> String {
   match host {
     Macos => "macOS"
@@ -96,10 +120,7 @@ fn validate_customization(
 fn validate_spec(spec : PackageSpec) -> PackageSpec raise PackagePlanError {
   let product_name = validate_product_name(spec.product_name)
   let identifier = validate_identifier(spec.identifier)
-  let version = spec.version.trim().to_owned()
-  guard version != "" else {
-    raise InvalidVersion(version=spec.version, reason="must not be empty")
-  }
+  let version = validate_package_version(spec.version)
   guard spec.formats.length() > 0 else {
     raise UnsupportedFormat(format="no format selected")
   }

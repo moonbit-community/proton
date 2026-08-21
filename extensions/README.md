@@ -1,13 +1,14 @@
 # Extensions
 
-`moonbit-community/proton_ext` contains Proton extension packages for the native DLL
-route. Generated app-command extensions expose host capabilities through the
-Proton bridge and keep metadata for catalog/codegen validation.
+`moonbit-community/proton_ext` contains Proton extension packages for the
+source-built native route. Generated app-command extensions expose host
+capabilities through the Proton bridge and keep metadata for catalog/codegen
+validation.
 
 The current supported route is:
 
 ```text
-MoonBit app -> moonbit-community/proton -> proton dynamic library -> command bridge
+MoonBit app -> moonbit-community/proton -> private native stubs -> command bridge
 ```
 
 Applications register backend implementations with `.extension(...)` and grant

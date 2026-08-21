@@ -149,30 +149,22 @@ test "extension identity generation renders moon ext identity" {
 }
 
 ///|
-test "typed codegen rejects removed event annotations" {
-  try {
-    ignore(
-      generate_typed_commands_from_sources([
-        (
-          "commands.mbt",
-          (
-            #|#proton.event(name="changed")
-            #|struct Changed {
-            #|  value : Int
-            #|}
-            #|
-            #|#proton.command(contract=ping)
-            #|fn ping() -> Unit {}
-            #|
-          ),
-        ),
-      ]),
-    )
-    fail("expected removed event annotation error")
-  } catch {
-    CommandCodegenError::Attribute(kind="event", ..) => ()
-    _ => fail("expected removed event annotation error")
-  }
+test "typed codegen parses extend declarations" {
+  let generated = generate_typed_commands_from_sources([
+    (
+      "commands.mbt",
+      (
+        #|struct Request {}
+        #|
+        #|pub extend Request with ToJson::{to_json}
+        #|
+        #|#proton.command(contract=ping)
+        #|fn ping() -> Unit {}
+        #|
+      ),
+    ),
+  ])
+  assert_true(generated.source.contains("registrar.bind(\n    ping,"))
 }
 
 ///|

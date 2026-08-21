@@ -13,32 +13,6 @@ pub fn command() -> @argparse.Command
 pub async fn run(String, @argparse.Matches) -> Unit
 
 // Errors
-pub(all) suberror LinuxPackagingError {
-  InvalidConfiguration(detail~ : String)
-  MissingTarget(path~ : String)
-  ToolFailure(stage~ : String, detail~ : String)
-  Verification(detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn LinuxPackagingError::equal(Self, Self) -> Bool
-pub fn LinuxPackagingError::message(Self) -> String
-pub fn LinuxPackagingError::not_equal(Self, Self) -> Bool
-pub fn LinuxPackagingError::output(Self, &Logger) -> Unit
-pub fn LinuxPackagingError::to_repr(Self) -> @debug.Repr
-pub fn LinuxPackagingError::to_string(Self) -> String
-
-pub(all) suberror MacosSigningError {
-  InvalidConfiguration(detail~ : String)
-  MissingTarget(path~ : String)
-  ToolFailure(stage~ : String, detail~ : String)
-  Verification(detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn MacosSigningError::equal(Self, Self) -> Bool
-pub fn MacosSigningError::message(Self) -> String
-pub fn MacosSigningError::not_equal(Self, Self) -> Bool
-pub fn MacosSigningError::output(Self, &Logger) -> Unit
-pub fn MacosSigningError::to_repr(Self) -> @debug.Repr
-pub fn MacosSigningError::to_string(Self) -> String
-
 pub(all) suberror PackageConfigError {
   NotFound(path~ : String)
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
@@ -52,33 +26,12 @@ pub fn PackageConfigError::output(Self, &Logger) -> Unit
 pub fn PackageConfigError::to_repr(Self) -> @debug.Repr
 pub fn PackageConfigError::to_string(Self) -> String
 
-pub(all) suberror PackageFileSystemError {
-  CreateDirectory(path~ : String, detail~ : String)
-  Remove(path~ : String, detail~ : String)
-  Copy(source~ : String, destination~ : String, detail~ : String)
-  Read(path~ : String, detail~ : String)
-  Write(path~ : String, detail~ : String)
-  InvalidSource(path~ : String)
-} derive(Eq, @debug.Debug)
-pub fn PackageFileSystemError::equal(Self, Self) -> Bool
-pub fn PackageFileSystemError::message(Self) -> String
-pub fn PackageFileSystemError::not_equal(Self, Self) -> Bool
-pub fn PackageFileSystemError::output(Self, &Logger) -> Unit
-pub fn PackageFileSystemError::to_repr(Self) -> @debug.Repr
-pub fn PackageFileSystemError::to_string(Self) -> String
-
 pub(all) suberror PackagePlanError {
   InvalidProductName(reason~ : String)
   InvalidIdentifier(identifier~ : String, reason~ : String)
   InvalidVersion(version~ : String, reason~ : String)
   UnsupportedTargetForPlatform(target~ : String, platform~ : String)
-  UnsupportedPlatform
-  UnsupportedResourceGlob(path~ : String)
-  MissingInput(path~ : String)
   MissingExecutable(path~ : String)
-  NotLaunchableMachO(path~ : String, filetype~ : Int)
-  InputOutsideProject(path~ : String)
-  MissingIcon(path~ : String)
 } derive(Eq, @debug.Debug)
 pub fn PackagePlanError::equal(Self, Self) -> Bool
 pub fn PackagePlanError::message(Self) -> String
@@ -86,32 +39,6 @@ pub fn PackagePlanError::not_equal(Self, Self) -> Bool
 pub fn PackagePlanError::output(Self, &Logger) -> Unit
 pub fn PackagePlanError::to_repr(Self) -> @debug.Repr
 pub fn PackagePlanError::to_string(Self) -> String
-
-pub(all) suberror PackageRuntimeError {
-  ManifestMissing(path~ : String)
-  ManifestInvalid(path~ : String, detail~ : String)
-  ManifestField(path~ : String, field~ : String)
-  PlatformMismatch(expected~ : String, actual~ : String)
-  DirectoryMissing(path~ : String)
-  HelperMissing(path~ : String)
-} derive(Eq, @debug.Debug)
-pub fn PackageRuntimeError::equal(Self, Self) -> Bool
-pub fn PackageRuntimeError::message(Self) -> String
-pub fn PackageRuntimeError::not_equal(Self, Self) -> Bool
-pub fn PackageRuntimeError::output(Self, &Logger) -> Unit
-pub fn PackageRuntimeError::to_repr(Self) -> @debug.Repr
-pub fn PackageRuntimeError::to_string(Self) -> String
-
-pub(all) suberror PackageToolError {
-  Start(tool~ : String, detail~ : String)
-  Exit(tool~ : String, code~ : Int, detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn PackageToolError::equal(Self, Self) -> Bool
-pub fn PackageToolError::message(Self) -> String
-pub fn PackageToolError::not_equal(Self, Self) -> Bool
-pub fn PackageToolError::output(Self, &Logger) -> Unit
-pub fn PackageToolError::to_repr(Self) -> @debug.Repr
-pub fn PackageToolError::to_string(Self) -> String
 
 pub(all) suberror PackageUsageError {
   UnsupportedTarget(target~ : String)
@@ -127,7 +54,6 @@ pub(all) suberror UpdaterMetadataError {
   NoDistributableArtifact
   UnreadableArtifact(path~ : String, detail~ : String)
   InvalidBaseUrl(url~ : String)
-  UnknownPlatform(detail~ : String)
   MissingPublishedAt
   MissingRevision
   InvalidRevision(value~ : String)
@@ -138,19 +64,6 @@ pub fn UpdaterMetadataError::message(Self) -> String
 pub fn UpdaterMetadataError::not_equal(Self, Self) -> Bool
 pub fn UpdaterMetadataError::output(Self, &Logger) -> Unit
 pub fn UpdaterMetadataError::to_string(Self) -> String
-
-pub(all) suberror WindowsPackagingError {
-  InvalidConfiguration(detail~ : String)
-  MissingTarget(path~ : String)
-  ToolFailure(stage~ : String, detail~ : String)
-  Verification(detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn WindowsPackagingError::equal(Self, Self) -> Bool
-pub fn WindowsPackagingError::message(Self) -> String
-pub fn WindowsPackagingError::not_equal(Self, Self) -> Bool
-pub fn WindowsPackagingError::output(Self, &Logger) -> Unit
-pub fn WindowsPackagingError::to_repr(Self) -> @debug.Repr
-pub fn WindowsPackagingError::to_string(Self) -> String
 
 // Types and methods
 pub(all) enum PackageHost {

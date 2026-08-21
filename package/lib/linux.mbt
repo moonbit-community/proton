@@ -36,7 +36,7 @@ fn linux_desktop_entry(spec : PackageSpec, name : String) -> String {
     #|Terminal=false
     #|Categories=Utility;
   prefix +
-  "Name=" +
+  "\nName=" +
   spec.product_name +
   "\n" +
   "Exec=" +
@@ -54,8 +54,8 @@ fn linux_desktop_entry(spec : PackageSpec, name : String) -> String {
 fn linux_apprun(name : String) -> String {
   let prefix =
     #|#!/bin/sh
-    #|HERE="$(dirname "$(readlink -f "$0")")"
-  prefix + "exec \"$HERE/usr/bin/" + name + "\" \"$@\"\n"
+    #|HERE="$APPDIR"
+  prefix + "\nexec \"$HERE/usr/bin/" + name + "\" \"$@\"\n"
 }
 
 ///|
@@ -79,6 +79,7 @@ async fn package_linux(
   }
   let appdir = linux_appdir_path(spec)
   remove_tree(appdir)
+  errdefer (remove_tree(appdir) catch { _ => () })
   let name = executable_name(spec.product_name)
   let bin = path_join(appdir, "usr/bin")
   let resources = path_join(
@@ -116,6 +117,7 @@ async fn package_linux(
   )
   let staging = destination + ".staging"
   remove_tree(staging)
+  errdefer (remove_tree(staging) catch { _ => () })
   let (code, output) = @process.collect_output_merged(
     "appimagetool",
     ["--no-appstream", appdir, staging],

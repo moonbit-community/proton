@@ -15,6 +15,22 @@ let notification_result_broker : NotificationResultBroker = NotificationResultBr
 }
 
 ///|
+let notification_extension_id = "moonbit-community/proton-notification"
+
+///|
+let notification_extension_namespace = "notification"
+
+///|
+fn notification_click_payload(payload : String?) -> Json {
+  Json::object({
+    "payload": match payload {
+      Some(payload) => Json(payload)
+      None => Json::null()
+    },
+  })
+}
+
+///|
 async fn acquire_notification_result_slot() -> Unit {
   while notification_result_broker.busy {
     notification_result_broker.gate.wait()
@@ -62,8 +78,9 @@ fn native_notification_result_supported() -> Bool raise @native.NativeError {
 ///|
 /// Failures while starting or waiting for native notification delivery.
 pub(all) suberror NotificationDeliveryError {
-  Native(@native.NativeError)
+  NativeFailure(status~ : Int, detail~ : String)
   WaitInterrupted(detail~ : String)
+  DeliveryFailed(message~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -77,9 +94,14 @@ pub fn NotificationDeliveryError::message(
   self : NotificationDeliveryError,
 ) -> String {
   match self {
-    Native(error) => error.message()
+    NativeFailure(status~, detail~) =>
+      "native notification operation failed (" +
+      status.to_string() +
+      "): " +
+      detail
     WaitInterrupted(detail~) =>
       "notification delivery wait was interrupted: " + detail
+    DeliveryFailed(message~) => "notification was not delivered: " + message
   }
 }
 
@@ -91,9 +113,9 @@ pub async fn notification_show_and_wait(
   title : String,
   body : String,
   payload? : String,
-) -> @native.NativeNotificationResult raise NotificationDeliveryError {
+) -> Unit raise NotificationDeliveryError {
   let waits_for_result = native_notification_result_supported() catch {
-    error => raise Native(error)
+    error => raise NativeFailure(status=error.status(), detail=error.message())
   }
   if waits_for_result {
     acquire_notification_result_slot() catch {
@@ -102,13 +124,35 @@ pub async fn notification_show_and_wait(
     defer release_notification_result_slot()
   }
   @native.notification_show(title, body, payload?) catch {
-    error => raise Native(error)
+    error => raise NativeFailure(status=error.status(), detail=error.message())
   }
   if waits_for_result {
-    @async.protect_from_cancel(take_notification_result, resume_on_cancel=true) catch {
+    let result = @async.protect_from_cancel(
+      take_notification_result,
+      resume_on_cancel=true,
+    ) catch {
       error => raise WaitInterrupted(detail=@debug.render(Repr(error)))
     }
-  } else {
-    @native.NativeNotificationResult::Delivered
+    match result {
+      @native.NativeNotificationResult::Delivered => ()
+      @native.NativeNotificationResult::Failed(message) =>
+        raise DeliveryFailed(message~)
+    }
+  }
+}
+
+///|
+#doc(hidden)
+pub fn notification_supported() -> Bool raise NotificationDeliveryError {
+  @native.notification_supported() catch {
+    error => raise NativeFailure(status=error.status(), detail=error.message())
+  }
+}
+
+///|
+#doc(hidden)
+pub fn notification_cleanup() -> Unit raise NotificationDeliveryError {
+  @native.notification_cleanup() catch {
+    error => raise NativeFailure(status=error.status(), detail=error.message())
   }
 }

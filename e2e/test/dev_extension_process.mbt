@@ -188,11 +188,11 @@ async fn run_dev_extension_command(
 }
 
 ///|
-fn dev_extension_runtime_env(
+async fn dev_extension_runtime_env(
   root : String,
   output_root : String,
   cdp_port : Int,
-) -> Map[String, String] raise {
+) -> Map[String, String] {
   let env = app_process_env(root, output_root, "47_dev_extension_js", cdp_port)
   env["NO_COLOR"] = "1"
   env["FORCE_COLOR"] = "0"
@@ -213,11 +213,11 @@ fn restore_dev_extension_parent_preload(
 }
 
 ///|
-fn dev_extension_host_env(
+async fn dev_extension_host_env(
   root : String,
   output_root : String,
   cdp_port : Int,
-) -> Map[String, String] raise {
+) -> Map[String, String] {
   let env = dev_extension_runtime_env(root, output_root, cdp_port)
   // app_process_env injects libcef.so for Linux application children. The
   // CLI/build hosts launch Moon or Node rather than CEF, so restore the
@@ -340,7 +340,7 @@ async fn build_dev_extension_frontend(
   output_root : String,
   timeout : Int,
 ) -> Unit {
-  let runtime_dist = active_runtime_dist(root)
+  let runtime_dist = active_runtime_dist()
   let has_linux_cef = @mbfs.path_exists(
     join_path(runtime_dist, "bin/libcef.so"),
   )
@@ -411,7 +411,7 @@ async fn run_dev_extension_dev_probe_once(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
     run_dev_extension_page_probe(
-      app, target, frontend_url, output_root, timeout,
+      group, app, target, frontend_url, output_root, timeout,
     )
     match app_exit_code(app.process) {
       Some(code) =>
@@ -456,7 +456,7 @@ async fn run_dev_extension_production_probe_once(
     ignore(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
-    run_dev_extension_production_page_probe(app, target, timeout)
+    run_dev_extension_production_page_probe(group, app, target, timeout)
     match app_exit_code(app.process) {
       Some(code) =>
         fail(
@@ -510,48 +510,11 @@ async fn run_dev_extension_scenario_once(
 }
 
 ///|
-async fn run_dev_extension_scenario_with_retry(
-  root : String,
-  timeout : Int,
-) -> Unit {
+async fn run_dev_extension_scenario(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-dev-extension-")
   defer remove_dev_extension_tree(output_root)
-  let mut attempt = 0
-  while attempt < 2 {
-    let succeeded = try {
-      run_dev_extension_scenario_once(root, output_root, timeout)
-      true
-    } catch {
-      error => {
-        if attempt == 1 || !retryable_dev_extension_error(error) {
-          raise error
-        }
-        println(
-          "MoonBit 47_dev_extension_js transient attempt failed; retrying once",
-        )
-        false
-      }
-    }
-    if succeeded {
-      return
-    }
-    @async.sleep(1000)
-    attempt = attempt + 1
-  }
-}
-
-///|
-fn retryable_dev_extension_error(error : Error) -> Bool {
-  // This scenario deliberately reloads and replaces its direct page target.
-  // On a loaded CI runner CEF can close the old page WebSocket just before the
-  // reconnect loop takes ownership, and a CDP command issued against the
-  // dying target then surfaces as CommandFailed.  Recreate the isolated
-  // scenario once; persistent transport closures still fail on the second
-  // attempt.
-  match error {
-    @client.BrowserError::CommandFailed(_, _) => true
-    _ => retryable_scenario_error(error)
-  }
+  install_scenario_helper(root, output_root)
+  run_dev_extension_scenario_once(root, output_root, timeout)
 }
 
 ///|

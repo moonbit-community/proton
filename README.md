@@ -3,7 +3,7 @@
 Proton is a MoonBit framework for building native desktop applications with a
 web frontend.
 
-Supported prebuilt runtimes:
+Supported source-built native backends:
 
 - Windows x64
 - macOS Apple Silicon
@@ -36,16 +36,15 @@ proton_cli dev
 The generated project is a three-module workspace: `shared/` holds the typed
 command and event contracts used on both sides, `frontend/` is a Rabbita
 application built and served by Warren, and `backend/` runs the Proton
-desktop runtime. `.proton/` stores the selected runtime metadata and should not
-be committed.
+desktop runtime.
 
-`cef setup` stores downloaded CEF binaries in
-`~/.proton/cache/cef/<platform>/<cef-name>` and assembled Proton runtimes in
-`~/.proton/runtimes/<platform>/<runtime-id>`. Subsequent projects reference the
-same immutable runtime through their small `.proton/runtime.json` instead of
-copying hundreds of megabytes into every project. Override the cache roots with
-`PROTON_CEF_CACHE` and `PROTON_RUNTIME_CACHE`; relative overrides are resolved
-from the project root.
+`cef setup` installs the exact CEF SDK and runtime required by this Proton
+release into the user-wide immutable store at `~/.proton/store`. Every
+project using the same Proton release resolves the same installation directly;
+projects contain no runtime copy or runtime-selection file. Proton's native
+sources are compiled into the application by Moon, while only CEF remains an
+external runtime. Set `PROTON_RUNTIME_STORE` to an absolute path to relocate
+the store.
 
 ## Application entry
 
@@ -159,9 +158,9 @@ Until the page reports its first region update, Proton keeps a small DPI-aware
 leading drag fallback. Pages must also reserve the native caption-button area.
 Overlay windows request DWM's dark caption appearance so the native controls
 blend with dark application chrome.
-Typed window configs send `titlebar_style` only when the loaded runtime reports
-the `titlebar_overlay` feature. Older prebuilts and unsupported platforms omit
-the field and retain their default titlebar behavior.
+Typed window configs send `titlebar_style` only when the source-built backend
+reports the `titlebar_overlay` feature. Unsupported platforms retain their
+default titlebar behavior.
 See `examples/48_titlebar_overlay` for a cross-platform overlay layout example.
 
 The primary entry constructors accept `resizable=false` for a fixed window.
@@ -359,8 +358,8 @@ Generated projects describe their toolchain in `proton.project.json`:
 ```json
 {
   "backend": {
-    "path": "backend",
-    "package": "app"
+    "path": ".",
+    "package": "backend/app"
   },
   "frontend": {
     "path": "frontend",
@@ -374,7 +373,10 @@ Generated projects describe their toolchain in `proton.project.json`:
 
 `backend` selects the MoonBit package that runs the Proton runtime. The
 application entry is declared in MoonBit with `@proton.html`, `url`, `file`, or
-`asset`. Project file paths must be relative and use `/` separators. The
+`asset`. `backend.path` is the exact working directory passed to Moon; Proton
+does not search parent directories for `moon.work`, `moon.mod`, or another
+project configuration. Project file paths must be relative and use `/`
+separators. The
 `frontend` block drives development and build orchestration: `path` is the
 frontend working directory, `before_dev`/`before_build` run there, `dev_url`
 is the development server to wait for, and `dist` is the build output to
@@ -404,10 +406,13 @@ The native bridge E2E suite is implemented in MoonBit and owns its application
 processes, CDP connections, frontend servers, and cleanup:
 
 ```sh
-PROTON_NATIVE_DIST="$PWD/native/dist" \
-PATH="$PWD/native/dist/bin:$PATH" \
-moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
+moon -C cefsetup run . --target native
+moon -C e2e test -p moonbit-community/proton/e2e/test \
+  --target native --no-parallelize --diagnostic-limit 200
 ```
+
+Each E2E scenario installs its release CEF helper from the local Proton source
+with `moon install --path` into the scenario's temporary directory.
 
 For an application that is already running with CDP enabled, use the typed
 driver instead:
@@ -419,8 +424,15 @@ MBT_CDP_TARGET=9222 moon -C e2e run test --target native
 
 ## Package
 
-To package an already-built executable independently of Proton project
-discovery and runtime assembly, install `moonbit-community/proton_package`:
+`moonbit-community/proton_package` is the generic host-native packager. It does
+not discover Proton projects or know about CEF. `proton_cli package` builds the
+application and helper, then delegates Proton's runtime and helper bundle layout
+to `moonbit-community/proton_bundle`, which in turn calls `proton_package`.
+
+Developers who do not use `proton_cli` can use the same layers directly: build
+the application executable, install the matching `cef_process` executable, and
+pass both explicit paths to `proton_bundle`. Use `proton_package` alone only for
+applications that do not need Proton's CEF layout:
 
 ```sh
 moon install moonbit-community/proton_package
@@ -447,6 +459,7 @@ payload inputs needed before the application can run:
   "package": {
     "product_name": "My App",
     "identifier": "com.example.my-app",
+    "version": "1.0.0",
     "formats": ["app", "zip"],
     "resources": ["helpers/worker"],
     "sign": {
@@ -545,10 +558,10 @@ proton_cli doctor
 ```
 
 Doctor checks the project configuration, MoonBit toolchain, active platform,
-and Proton runtime layout without changing the project. Outside a Proton
+and required Proton runtime installation without changing the project. Outside a Proton
 project, it reports environment information and skips project-specific checks.
 
-Run `proton_cli cef setup` again when the active runtime is missing or invalid.
+Run `proton_cli cef setup` again when the required runtime is missing or invalid.
 Use `PROTON_CEF_LOG=default` temporarily when browser-runtime logs are needed.
 
 See [examples/Readme.md](examples/Readme.md) for runnable examples. Repository

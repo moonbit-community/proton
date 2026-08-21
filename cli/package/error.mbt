@@ -35,13 +35,7 @@ pub(all) suberror PackagePlanError {
   InvalidIdentifier(identifier~ : String, reason~ : String)
   InvalidVersion(version~ : String, reason~ : String)
   UnsupportedTargetForPlatform(target~ : String, platform~ : String)
-  UnsupportedPlatform
-  UnsupportedResourceGlob(path~ : String)
-  MissingInput(path~ : String)
   MissingExecutable(path~ : String)
-  NotLaunchableMachO(path~ : String, filetype~ : Int)
-  InputOutsideProject(path~ : String)
-  MissingIcon(path~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -52,110 +46,6 @@ pub extend PackagePlanError with Debug::{to_repr}
 
 ///|
 pub extend PackagePlanError with Show::{to_string, output}
-
-///|
-pub(all) suberror PackageRuntimeError {
-  ManifestMissing(path~ : String)
-  ManifestInvalid(path~ : String, detail~ : String)
-  ManifestField(path~ : String, field~ : String)
-  PlatformMismatch(expected~ : String, actual~ : String)
-  DirectoryMissing(path~ : String)
-  HelperMissing(path~ : String)
-} derive(Debug, Eq)
-
-///|
-pub extend PackageRuntimeError with Eq::{not_equal, equal}
-
-///|
-pub extend PackageRuntimeError with Debug::{to_repr}
-
-///|
-pub extend PackageRuntimeError with Show::{to_string, output}
-
-///|
-pub(all) suberror PackageFileSystemError {
-  CreateDirectory(path~ : String, detail~ : String)
-  Remove(path~ : String, detail~ : String)
-  Copy(source~ : String, destination~ : String, detail~ : String)
-  Read(path~ : String, detail~ : String)
-  Write(path~ : String, detail~ : String)
-  InvalidSource(path~ : String)
-} derive(Debug, Eq)
-
-///|
-pub extend PackageFileSystemError with Eq::{not_equal, equal}
-
-///|
-pub extend PackageFileSystemError with Debug::{to_repr}
-
-///|
-pub extend PackageFileSystemError with Show::{to_string, output}
-
-///|
-pub(all) suberror PackageToolError {
-  Start(tool~ : String, detail~ : String)
-  Exit(tool~ : String, code~ : Int, detail~ : String)
-} derive(Debug, Eq)
-
-///|
-pub extend PackageToolError with Eq::{not_equal, equal}
-
-///|
-pub extend PackageToolError with Debug::{to_repr}
-
-///|
-pub extend PackageToolError with Show::{to_string, output}
-
-///|
-pub(all) suberror MacosSigningError {
-  InvalidConfiguration(detail~ : String)
-  MissingTarget(path~ : String)
-  ToolFailure(stage~ : String, detail~ : String)
-  Verification(detail~ : String)
-} derive(Debug, Eq)
-
-///|
-pub extend MacosSigningError with Eq::{not_equal, equal}
-
-///|
-pub extend MacosSigningError with Debug::{to_repr}
-
-///|
-pub extend MacosSigningError with Show::{to_string, output}
-
-///|
-pub(all) suberror WindowsPackagingError {
-  InvalidConfiguration(detail~ : String)
-  MissingTarget(path~ : String)
-  ToolFailure(stage~ : String, detail~ : String)
-  Verification(detail~ : String)
-} derive(Debug, Eq)
-
-///|
-pub extend WindowsPackagingError with Eq::{not_equal, equal}
-
-///|
-pub extend WindowsPackagingError with Debug::{to_repr}
-
-///|
-pub extend WindowsPackagingError with Show::{to_string, output}
-
-///|
-pub(all) suberror LinuxPackagingError {
-  InvalidConfiguration(detail~ : String)
-  MissingTarget(path~ : String)
-  ToolFailure(stage~ : String, detail~ : String)
-  Verification(detail~ : String)
-} derive(Debug, Eq)
-
-///|
-pub extend LinuxPackagingError with Eq::{not_equal, equal}
-
-///|
-pub extend LinuxPackagingError with Debug::{to_repr}
-
-///|
-pub extend LinuxPackagingError with Show::{to_string, output}
 
 ///|
 pub fn PackageUsageError::message(self : PackageUsageError) -> String {
@@ -185,107 +75,8 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
       "invalid bundle version " + version + ": " + reason
     UnsupportedTargetForPlatform(target~, platform~) =>
       "package target " + target + " is not supported on " + platform
-    UnsupportedPlatform => "proton package currently supports macOS and Windows"
-    UnsupportedResourceGlob(path~) =>
-      "unsupported package.resources glob: " + path
-    MissingInput(path~) => "package input is missing: " + path
     MissingExecutable(path~) =>
       "Moon reported a package executable that does not exist: " + path
-    NotLaunchableMachO(path~, filetype~) =>
-      "staged bundle executable " +
-      path +
-      " is a Mach-O of type " +
-      macho_filetype_name(filetype) +
-      ", not MH_EXECUTE; the kernel refuses to spawn it"
-    InputOutsideProject(path~) =>
-      "package input must stay inside the project: " + path
-    MissingIcon(path~) => "package icon is missing: " + path
-  }
-}
-
-///|
-pub fn PackageRuntimeError::message(self : PackageRuntimeError) -> String {
-  match self {
-    ManifestMissing(path~) =>
-      "active Proton runtime is missing: " +
-      path +
-      "; run `proton_cli cef setup` to assemble it"
-    ManifestInvalid(path~, detail~) =>
-      "invalid active Proton runtime manifest " + path + ": " + detail
-    ManifestField(path~, field~) =>
-      "active Proton runtime manifest " +
-      path +
-      " missing string field: " +
-      field
-    PlatformMismatch(expected~, actual~) =>
-      "active Proton runtime platform mismatch: expected " +
-      expected +
-      ", got " +
-      actual
-    DirectoryMissing(path~) =>
-      "active Proton runtime directory is missing: " +
-      path +
-      "; run `proton_cli cef setup`"
-    HelperMissing(path~) =>
-      "active Proton runtime helper is missing: " +
-      path +
-      "; run `proton_cli cef setup`"
-  }
-}
-
-///|
-pub fn PackageFileSystemError::message(self : PackageFileSystemError) -> String {
-  match self {
-    CreateDirectory(path~, detail~) =>
-      "failed to create directory " + path + ": " + detail
-    Remove(path~, detail~) => "failed to remove " + path + ": " + detail
-    Copy(source~, destination~, detail~) =>
-      "failed to copy " + source + " to " + destination + ": " + detail
-    Read(path~, detail~) => "failed to read " + path + ": " + detail
-    Write(path~, detail~) => "failed to write " + path + ": " + detail
-    InvalidSource(path~) => "package input is not a file or directory: " + path
-  }
-}
-
-///|
-pub fn PackageToolError::message(self : PackageToolError) -> String {
-  match self {
-    Start(tool~, detail~) => "failed to run " + tool + ": " + detail
-    Exit(tool~, code~, detail~) =>
-      tool +
-      " exited with code " +
-      code.to_string() +
-      (if detail == "" { "" } else { ": " + detail })
-  }
-}
-
-///|
-pub fn MacosSigningError::message(self : MacosSigningError) -> String {
-  match self {
-    InvalidConfiguration(detail~) => detail
-    MissingTarget(path~) => "required macOS signing target is missing: " + path
-    ToolFailure(stage~, detail~) => stage + " failed: " + detail
-    Verification(detail~) => "macOS signing verification failed: " + detail
-  }
-}
-
-///|
-pub fn WindowsPackagingError::message(self : WindowsPackagingError) -> String {
-  match self {
-    InvalidConfiguration(detail~) => detail
-    MissingTarget(path~) => "required Windows target is missing: " + path
-    ToolFailure(stage~, detail~) => stage + " failed: " + detail
-    Verification(detail~) => "Windows package verification failed: " + detail
-  }
-}
-
-///|
-pub fn LinuxPackagingError::message(self : LinuxPackagingError) -> String {
-  match self {
-    InvalidConfiguration(detail~) => detail
-    MissingTarget(path~) => "required Linux target is missing: \{path}"
-    ToolFailure(stage~, detail~) => "\{stage} failed: \{detail}"
-    Verification(detail~) => "Linux package verification failed: \{detail}"
   }
 }
 
@@ -301,35 +92,5 @@ impl Show for PackageConfigError with fn output(self, logger) {
 
 ///|
 impl Show for PackagePlanError with fn output(self, logger) {
-  logger.write_string(self.message())
-}
-
-///|
-impl Show for PackageRuntimeError with fn output(self, logger) {
-  logger.write_string(self.message())
-}
-
-///|
-impl Show for PackageFileSystemError with fn output(self, logger) {
-  logger.write_string(self.message())
-}
-
-///|
-impl Show for PackageToolError with fn output(self, logger) {
-  logger.write_string(self.message())
-}
-
-///|
-impl Show for MacosSigningError with fn output(self, logger) {
-  logger.write_string(self.message())
-}
-
-///|
-impl Show for WindowsPackagingError with fn output(self, logger) {
-  logger.write_string(self.message())
-}
-
-///|
-impl Show for LinuxPackagingError with fn output(self, logger) {
   logger.write_string(self.message())
 }

@@ -112,6 +112,21 @@ pub fn DocumentType::new(
 }
 
 ///|
+pub fn DocumentType::name(self : DocumentType) -> String {
+  self.name
+}
+
+///|
+pub fn DocumentType::extensions(self : DocumentType) -> Array[String] {
+  self.extensions.copy()
+}
+
+///|
+pub fn DocumentType::role(self : DocumentType) -> String {
+  self.role
+}
+
+///|
 /// Host-native directories for a package while it is being assembled.
 ///
 /// The paths are valid only for the duration of `build_with`. A caller may use

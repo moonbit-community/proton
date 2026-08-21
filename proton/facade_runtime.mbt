@@ -16,40 +16,38 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
     None => None
   }
-  {
-    errdefer (match app_instance {
-      Some(instance) => destroy_app_instance(instance) catch { _ => () }
-      None => ()
-    })
-    run_manifest(
-      resolved.manifest,
-      resolved.permission_base_path,
-      self.command_extensions,
-      self.command_registrars,
-      self.application_lifecycle_hooks,
-      self.window_lifecycle_hooks,
-      self.menu,
-      self.bridge_startup_timeout_value_ms,
-      self.resolved_headless(),
-      locale_preferences,
-      browser_data_dir?,
-      application_name=resolved.application_name,
-      app_instance~,
-      launch_input_handlers=self.launch_input_handlers,
-      planned_views=self.planned_views,
-      window_event_handlers=self.window_event_handlers,
-      view_event_handlers=self.view_event_handlers,
-      window_close_handler=self.window_close_handler,
-      navigation_handler=self.navigation_handler,
-      popup_handler=self.popup_handler,
-      download_handler=self.download_handler,
-      certificate_handler=self.certificate_handler,
-      media_handler=self.media_handler,
-      download_event_handlers=self.download_event_handlers,
-      update_channel=resolved.update_channel,
-      update_handlers=self.update_handlers,
-    )
-  }
+  errdefer (match app_instance {
+    Some(instance) => destroy_app_instance(instance) catch { _ => () }
+    None => ()
+  })
+  run_manifest(
+    resolved.manifest,
+    resolved.permission_base_path,
+    self.command_extensions,
+    self.command_registrars,
+    self.application_lifecycle_hooks,
+    self.window_lifecycle_hooks,
+    self.menu.map(menu => menu.to_native()),
+    self.bridge_startup_timeout_value_ms,
+    self.resolved_headless(),
+    locale_preferences,
+    browser_data_dir?,
+    application_name=resolved.application_name,
+    app_instance~,
+    launch_input_handlers=self.launch_input_handlers,
+    planned_views=self.planned_views.map(view => (view.0, view.1.to_native())),
+    window_event_handlers=self.window_event_handlers,
+    view_event_handlers=self.view_event_handlers,
+    window_close_handler=self.window_close_handler,
+    navigation_handler=self.navigation_handler,
+    popup_handler=self.popup_handler,
+    download_handler=self.download_handler,
+    certificate_handler=self.certificate_handler,
+    media_handler=self.media_handler,
+    download_event_handlers=self.download_event_handlers,
+    update_channel=resolved.update_channel,
+    update_handlers=self.update_handlers,
+  )
   match app_instance {
     Some(instance) => destroy_app_instance(instance)
     None => ()
@@ -156,9 +154,19 @@ async fn run_manifest(
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []
   let wakeup = RuntimeWakeup::new()
+  let dialog_completions = DialogCompletionStore::new()
   try {
     if !headless {
-      match resolve_runtime_menu(menu, locale_preferences, application_name) {
+      let platform = @native.runtime_info().platform catch {
+          error => raise native_run_error("query runtime platform", error)
+        }
+      match
+        resolve_runtime_menu(
+          menu,
+          locale_preferences,
+          application_name,
+          platform~,
+        ) {
         Some(menu) =>
           runtime.set_menu(menu) catch {
             error => raise native_run_error("set menu", error)
@@ -238,6 +246,9 @@ async fn run_manifest(
       devtools=manifest.debug > 0,
     )
     for index, plan in plans {
+      let entry = prepare_entry(plan.entry) catch {
+        error => raise EntryLoadError(error)
+      }
       let bridge = if bridge_enabled {
         let grants = permission_policies[index].native_grants(
           command_extensions,
@@ -251,6 +262,7 @@ async fn run_manifest(
       }
       definitions.push(PreparedWindow::{
         plan,
+        entry,
         bridge,
         permissions: permission_policies[index],
         browser_policy,
@@ -264,8 +276,8 @@ async fn run_manifest(
     @async.with_task_group(application_tasks => {
       @async.with_task_group(window_tasks => {
         let session = RuntimeSession::new(
-          runtime, locale_preferences, definitions, windows, command_host, wakeup,
-          forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
+          runtime, locale_preferences, definitions, windows, command_host, dialog_completions,
+          wakeup, forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
           window_tasks, view_event_handlers, window_close_handler, window_lifecycle_hooks,
           lifecycle_failures, bridge_startup_timeout_ms, navigation_handler, popup_handler,
           download_handler, certificate_handler, media_handler, download_event_handlers,
@@ -324,6 +336,7 @@ async fn run_manifest(
         show_app_run_failure(
           runtime,
           preferred_active_window(windows).map(window => window.window),
+          dialog_completions,
           wakeup,
           primary,
           locale_preferences,
@@ -478,7 +491,7 @@ fn native_run_error(
   action : String,
   error : @native.NativeError,
 ) -> AppRunError {
-  NativeRuntimeError(action~, error~)
+  runtime_operation_failed(action, error)
 }
 
 ///|
@@ -486,7 +499,8 @@ fn normalize_async_run_error(error : Error) -> AppRunError {
   match error {
     EventLoopError(message) => EventLoopError(message)
     ConfigurationError(error) => ConfigurationError(error)
-    NativeRuntimeError(action~, error~) => NativeRuntimeError(action~, error~)
+    RuntimeOperationFailed(action~, status~, detail~) =>
+      RuntimeOperationFailed(action~, status~, detail~)
     CommandExtensionLifecycleError(error) =>
       CommandExtensionLifecycleError(error)
     LifecycleHookError(error) => LifecycleHookError(error)
@@ -614,12 +628,15 @@ fn refresh_window_bridge_startup_state(
             error,
           )
       } noraise {
-        diagnostic => raise BridgeStartupError(diagnostic)
+        diagnostic =>
+          raise BridgeStartupError(BridgeDiagnostic::from_native(diagnostic))
       }
     "ineligible" =>
       raise BridgeStartupError(
-        bridge_protocol_diagnostic(
-          state, "bridge_entry_origin_ineligible", "the application entry is not eligible for the native bridge",
+        BridgeDiagnostic::from_native(
+          bridge_protocol_diagnostic(
+            state, "bridge_entry_origin_ineligible", "the application entry is not eligible for the native bridge",
+          ),
         ),
       )
     _ => false
@@ -657,8 +674,8 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
     UnsupportedNativeFeature(feature~) =>
       "The active Proton native runtime is incompatible with this application.\n\nMissing feature: " +
       feature
-    NativeRuntimeError(action~, error~) =>
-      action + " failed: " + error.message()
+    RuntimeOperationFailed(action~, status~, detail~) =>
+      action + " failed (" + status.to_string() + "): " + detail
     CommandExtensionLifecycleError(error) => error.message()
     LifecycleHookError(error) => error.message()
     UnexpectedTaskFailure(detail~) => detail
@@ -668,6 +685,7 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
 ///|
 async fn show_runtime_failure_dialog(
   runtime : @native.Runtime,
+  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   detail : String,
   preferences : @locale.LocalePreferences,
@@ -689,19 +707,16 @@ async fn show_runtime_failure_dialog(
   ) catch {
     _ => return
   }
-  while true {
-    let revision = wakeup.revision()
-    let completed = runtime.poll_message_dialog(dialog) catch { _ => return }
-    match completed {
-      true => return
-      false => wakeup.wait_after(revision) catch { _ => return }
-    }
+  wait_for_failure_dialog(runtime, dialog_completions, wakeup, dialog) catch {
+    _ => return
   }
 }
 
 ///|
 async fn show_window_failure_dialog(
+  runtime : @native.Runtime,
   window : @native.WindowRef,
+  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   detail : String,
   preferences : @locale.LocalePreferences,
@@ -717,25 +732,17 @@ async fn show_window_failure_dialog(
   ) catch {
     _ => return false
   }
-  while true {
-    let revision = wakeup.revision()
-    let result = window.poll_dialog_result(dialog) catch { _ => return false }
-    match result {
-      @native.DialogPollResult::Ready(_) => return true
-      @native.DialogPollResult::Pending =>
-        wakeup.wait_after(revision) catch {
-          _ => return false
-        }
-    }
-  } nobreak {
-    false
+  wait_for_failure_dialog(runtime, dialog_completions, wakeup, dialog) catch {
+    _ => return false
   }
+  true
 }
 
 ///|
 async fn show_app_run_failure(
   runtime : @native.Runtime,
   window : @native.Window?,
+  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   error : AppRunError,
   preferences : @locale.LocalePreferences,
@@ -746,7 +753,9 @@ async fn show_app_run_failure(
     match window {
       Some(window) =>
         if show_window_failure_dialog(
+            runtime,
             window.as_ref(),
+            dialog_completions,
             wakeup,
             message,
             preferences,
@@ -757,7 +766,7 @@ async fn show_app_run_failure(
     }
   }
   show_runtime_failure_dialog(
-    runtime, wakeup, message, preferences, application_started,
+    runtime, dialog_completions, wakeup, message, preferences, application_started,
   )
 }
 
@@ -840,7 +849,6 @@ async fn run_window_lifecycle_scope(
       hooks,
       WindowContext::new(
         running.id,
-        running.window.as_ref(),
         handle,
         windows,
         tasks,

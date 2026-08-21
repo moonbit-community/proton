@@ -28,15 +28,10 @@ Darwin) ;;
   ;;
 esac
 
-binary="$repo/_build/native/debug/build/moonbit-community/proton/e2e/self_update/self_update.exe"
-native_dist="${PROTON_NATIVE_DIST:-$repo/native/dist}"
-if [ ! -x "$binary" ]; then
-  echo "build it first: moon -C e2e build --target native" >&2
-  exit 1
-fi
-
 rm -rf "$work"
 mkdir -p "$work/keys" "$work/server" "$work/install" "$work/build"
+moon install --path "$repo/e2e/self_update" --bin "$work/build"
+binary="$work/build/self_update"
 
 # The publisher's key. A real release keeps this offline; here it lives beside
 # the artifacts it signs because nothing about it is secret to this test.
@@ -55,14 +50,6 @@ make_bundle() {
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" \
     "$app/Contents/Frameworks"
   cp "$binary" "$app/Contents/MacOS/updatee"
-  cp "$native_dist/lib/libproton.dylib" "$app/Contents/Frameworks/libproton.dylib"
-  otool -l "$app/Contents/MacOS/updatee" |
-    awk '/cmd LC_RPATH/{getline; getline; print $2}' |
-    while IFS= read -r rpath; do
-      install_name_tool -delete_rpath "$rpath" "$app/Contents/MacOS/updatee"
-    done
-  install_name_tool -add_rpath '@executable_path/../Frameworks' \
-    "$app/Contents/MacOS/updatee"
   printf '%s' "$version" > "$app/Contents/Resources/version"
   cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -76,7 +63,6 @@ make_bundle() {
 <key>LSBackgroundOnly</key><true/>
 </dict></plist>
 PLIST
-  codesign --force --sign - "$app/Contents/Frameworks/libproton.dylib" 2>/dev/null
   codesign --force --identifier "$identifier" --sign - "$app" 2>/dev/null
   codesign --verify --strict "$app"
 }

@@ -1,8 +1,8 @@
 ///|
 /// Failures while creating or waiting for a native dialog.
 suberror DialogError {
-  BeginFailed(kind~ : String, error~ : @native.NativeError)
-  PollFailed(kind~ : String, error~ : @native.NativeError)
+  WindowUnavailable
+  OperationFailed(kind~ : String, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -17,10 +17,9 @@ pub extend DialogError with Show::{to_string, output}
 ///|
 fn DialogError::message(self : DialogError) -> String {
   match self {
-    BeginFailed(kind~, error~) =>
-      "failed to open " + kind + " dialog: " + error.message()
-    PollFailed(kind~, error~) =>
-      "failed to poll " + kind + " dialog: " + error.message()
+    WindowUnavailable => "dialog command has no issuing window"
+    OperationFailed(kind~, detail~) =>
+      "failed to show " + kind + " dialog: " + detail
   }
 }
 

@@ -5,16 +5,13 @@ target/
 .repos/
 dist/
 
-# CMake build directories and cache
+# Build directories and cache
 build/
 !cli/build/
 !cli/build/**
 bin/
 native/build*/
 native/dist*/
-CMakeUserPresets.json
-*.cmake
-!native/tests/run_proton_smoke.cmake
 
 # OS generated files
 .DS_Store
@@ -47,10 +44,6 @@ bisect.coverage
 # Optional local CEF binary distributions
 .cef-cache/
 .proton/
-
-# Package prebuilt Proton artifacts are intentionally shipped.
-!proton/prebuilt/
-!proton/prebuilt/**
 
 # Local linked worktrees created by Claude Code.
 .claude/worktrees/

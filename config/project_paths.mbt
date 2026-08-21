@@ -62,12 +62,6 @@ fn project_path_has_root(path : String) -> Bool {
 }
 
 ///|
-fn join_path_string(base : String, child : String) -> String {
-  let base_path : @mbpath.Path = project_path_for_host(base)
-  base_path.join(project_path_for_host(child)).normalize().to_string()
-}
-
-///|
 fn dirname_string(path : String) -> String {
   let native_path : @mbpath.Path = project_path_for_host(path)
   native_path.dirname().to_string()

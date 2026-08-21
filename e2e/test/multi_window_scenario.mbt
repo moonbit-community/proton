@@ -1,7 +1,7 @@
 ///|
 struct MultiWindowResponseProbe {
   label : String
-  request_id : String
+  page_instance : String
   window : String
 } derive(FromJson, Eq, Debug)
 
@@ -49,30 +49,29 @@ pub extend MultiWindowProbe with FromJson::{from_json}
 
 ///|
 async fn run_multi_window_scenario_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
 ) -> ShutdownProbeResult {
   let (target_a, target_b) = wait_for_multi_window_targets(target, timeout)
   let browser = @client.connect_cdp_browser_target_with_timeout(
+    tasks,
     cdp_target_from(target),
     timeout_ms=timeout,
   )
-  let page_a = @client.connect_cdp_page_target_with_timeout(
+  let page_a = @page.Page::connect(
+    tasks,
     cdp_target_from(target),
     target_id=target_a.target_id,
     timeout_ms=timeout,
   )
-  let page_b = @client.connect_cdp_page_target_with_timeout(
+  let page_b = @page.Page::connect(
+    tasks,
     cdp_target_from(target),
     target_id=target_b.target_id,
     timeout_ms=timeout,
   )
-  defer {
-    browser.close()
-    page_a.close()
-    page_b.close()
-  }
   let initial = run_multi_window_page_clients(
     page_a,
     page_b,
@@ -93,6 +92,7 @@ async fn run_multi_window_scenario_probe(
       )
     None => ()
   }
+  page_a.close()
   let surviving = decode_probe(
     evaluate_json(page_b, multi_window_probe_expression(0), true),
     "surviving multi-window B",
@@ -101,11 +101,13 @@ async fn run_multi_window_scenario_probe(
   guard surviving.response.window == initial.b.response.window else {
     fail("surviving window B changed native window handles")
   }
-  guard surviving.response.request_id != initial.b.response.request_id else {
-    fail("surviving window B reused its previous request_id")
+  guard surviving.response.page_instance == initial.b.response.page_instance else {
+    fail("surviving window B changed its page instance")
   }
   close_page_target(browser, target_b.target_id)
   wait_for_multi_window_closed_browsers(app.native_log_path, 2, timeout)
+  page_b.close()
+  browser.close()
   let shutdown = wait_for_scenario_app_shutdown(
     app, target, snapshot, process_shutdown_timeout_ms,
   )
@@ -119,15 +121,13 @@ async fn run_multi_window_scenario_probe(
 
 ///|
 async fn run_multi_window_page_clients(
-  page_a : @client.CdpClient,
-  page_b : @client.CdpClient,
+  page_a : @page.Page,
+  page_b : @page.Page,
   target_a : String,
   target_b : String,
   timeout : Int,
   native_log_path : String?,
 ) -> MultiWindowProbe {
-  ignore(page_a.send_schema_command("Runtime.enable"))
-  ignore(page_b.send_schema_command("Runtime.enable"))
   wait_for_ready(page_a, multi_window_ready_expression(), timeout)
   wait_for_ready(page_b, multi_window_ready_expression(), timeout)
   let (value_a, value_b) = @async.with_task_group(group => {
@@ -189,8 +189,8 @@ fn assert_multi_window_probe(
   guard target_a != target_b else {
     fail("multi-window probe used the same CDP target for both windows")
   }
-  guard result.a.response.request_id != result.b.response.request_id else {
-    fail("multi-window responses reused the same request_id")
+  guard result.a.response.page_instance != result.b.response.page_instance else {
+    fail("multi-window responses reported the same page instance")
   }
   guard result.a.response.window != result.b.response.window else {
     fail("multi-window responses reported the same native window handle")
@@ -202,7 +202,7 @@ fn assert_multi_window_page(
   page : MultiWindowPageProbe,
   expected_label : String,
 ) -> Unit raise {
-  guard page.url == "proton://app/" + expected_label else {
+  guard page.url == "https://proton.localhost/" else {
     fail("multi-window " + expected_label + " URL mismatch: " + page.url)
   }
   guard page.title == "Bridge Multi " + expected_label else {
@@ -222,8 +222,10 @@ fn assert_multi_window_page(
       page.response.label,
     )
   }
-  guard page.response.request_id != "" else {
-    fail("multi-window " + expected_label + " response is missing request_id")
+  guard page.response.page_instance != "" else {
+    fail(
+      "multi-window " + expected_label + " response is missing page instance",
+    )
   }
   guard page.response.window != "" else {
     fail(

@@ -1,45 +1,53 @@
 ///|
-fn load_entry_after_create(
-  window : @native.Window,
+async fn prepare_entry(
   entry : @manifest.AppEntry,
-) -> Unit raise AppEntryError {
+) -> PreparedEntry raise AppEntryError {
   match entry {
     @manifest.AppEntry::Html(html) =>
-      window.load_html(html, asset_base_url()) catch {
-        error => raise NativeLoad(action="load html", error~)
-      }
-    @manifest.AppEntry::Url(url) =>
-      window.load_url(url) catch {
-        error => raise NativeLoad(action="load url", error~)
-      }
+      DocumentEntry(
+        { url: asset_base_url(), content: @utf8.encode(html) },
+        None,
+      )
+    @manifest.AppEntry::Url(url) => RemoteEntry(url)
     @manifest.AppEntry::File(path) =>
-      load_file_entry_after_create(
-        window,
-        "load file",
-        resolve_entry_path(path),
-      )
+      prepare_file_entry(resolve_entry_path(path))
     @manifest.AppEntry::Asset(path) =>
-      load_file_entry_after_create(
-        window,
-        "load asset",
-        resolve_asset_path(path),
-      )
+      prepare_file_entry(resolve_asset_path(path))
   }
 }
 
 ///|
-fn load_file_entry_after_create(
-  window : @native.Window,
-  action : String,
+async fn prepare_file_entry(
   resolved : @mbpath.Path,
+) -> PreparedEntry raise AppEntryError {
+  let resolved_text = resolved.to_string()
+  let canonical = @async_fs.realpath(resolved_text) catch {
+    error =>
+      raise ReadFailed(path=resolved_text, detail=@debug.render(Repr(error)))
+  }
+  let html = @async_fs.read_file(canonical).text() catch {
+    error => raise ReadFailed(path=canonical, detail=@debug.render(Repr(error)))
+  }
+  let document = ResourceDocument::{
+    url: asset_document_url(resolved),
+    content: @utf8.encode(
+      inject_html_bootstrap(html, base_tag(asset_base_url())),
+    ),
+  }
+  DocumentEntry(document, Some(@mbpath.Path(canonical).dirname().to_string()))
+}
+
+///|
+fn load_prepared_entry(
+  window : @native.Window,
+  entry : PreparedEntry,
 ) -> Unit raise AppEntryError {
-  let html = read_file_entry_html(resolved.to_string())
-  window.load_asset(
-    inject_html_bootstrap(html, base_tag(asset_base_url())),
-    asset_document_url(resolved),
-    resolved.dirname().to_string(),
-  ) catch {
-    error => raise NativeLoad(action~, error~)
+  let url = match entry {
+    RemoteEntry(url) => url
+    DocumentEntry(document, _) => document.url
+  }
+  window.load_url(url) catch {
+    error => raise entry_platform_load_failed("load entry", error)
   }
 }
 
@@ -65,13 +73,6 @@ fn resolve_asset_path(path : String) -> @mbpath.Path {
     path.normalize()
   } else {
     @mbpath.Path(runtime_resource_dir()).join(native_path).normalize()
-  }
-}
-
-///|
-fn read_file_entry_html(path : String) -> String raise AppEntryError {
-  @mbfs.read_file_to_string(path) catch {
-    error => raise ReadFailed(path~, detail=@debug.render(Repr(error)))
   }
 }
 

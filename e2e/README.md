@@ -1,6 +1,6 @@
 # Proton E2E
 
-CDP-based end-to-end tests for the native DLL bridge route.
+CDP-based end-to-end tests for the source-built native bridge route.
 
 The module is part of the root `moon.work`. Do not mutate the workspace before
 running E2E tests.
@@ -20,18 +20,16 @@ mode, performs typed CDP probes, closes Chromium through `Browser.close`, and
 verifies that the application, helper process tree, and CDP endpoint stop:
 
 ```sh
-PROTON_NATIVE_DIST="$PWD/native/dist" \
-PATH="$PWD/native/dist/bin:$PATH" \
-MOON_CC=cc \
-moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
+moon -C cefsetup run . --target native
+moon -C e2e test -p moonbit-community/proton/e2e/test \
+  --target native --no-parallelize --diagnostic-limit 200
 ```
 
-The runner executes scenarios sequentially because they own native processes,
-CDP ports, frontend servers, and runtime logs. `PROTON_NATIVE_DIST` may point
-at a setup-managed runtime or a local engine install. On Linux, the self-hosted
-runner also supplies the required `libcef.so`
-preload to each application child; callers do not need to set `LD_PRELOAD`
-manually. The suite covers:
+Keep the package filter and `--no-parallelize`: E2E tests own native processes,
+CDP ports, frontend servers, and runtime logs. The tests resolve the required
+CEF runtime from the immutable user-wide store. Each isolated scenario installs a release helper
+from the same Proton source as the application through `moon install --path`.
+The suite covers:
 
 - `38_async_extension_add`, `39_sync_async_extensions`, and
   `42_attribute_codegen_commands` command-extension proxies;
@@ -64,6 +62,6 @@ The current Linux engine still initializes GTK/X11. Run the same probe under a
 virtual X server when no display is available:
 
 ```sh
-xvfb-run -a env PROTON_NATIVE_DIST=native/dist MOON_CC=cc \
-  moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
+xvfb-run -a moon -C e2e test -p moonbit-community/proton/e2e/test \
+  --target native --no-parallelize --diagnostic-limit 200
 ```

@@ -29,7 +29,7 @@ The shipped runtime is large. Measured on `darwin-arm64` at Proton 0.1.13:
 | Component | Size | Changes when |
 | --- | --- | --- |
 | CEF framework | ~390 MB | Proton bumps its CEF version |
-| Proton runtime (`libproton`, `cef_process`) | ~460 KB | Every Proton release |
+| Proton native code and `cef_process` | ~460 KB | Every Proton release |
 | Application binary and frontend assets | Single-digit MB, typically | Every application release |
 
 A packaged application inherits all three. A real example: the Draw application
@@ -637,8 +637,7 @@ under Program Files — but it is not signed, and the design should not pretend
 otherwise.
 
 Merging per-platform fragments into one manifest is a separate step because the
-three platforms are built on three machines, which is already true of
-`proton/prebuilt/`.
+three platforms are built on three machines.
 
 ## Failure handling
 

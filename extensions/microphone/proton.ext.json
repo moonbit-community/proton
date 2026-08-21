@@ -1,5 +1,7 @@
 {
   "id": "moonbit-community/proton-microphone",
   "namespace": "microphone",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton_ext/microphone",
   "package": "@moonbit-community/proton-microphone"
 }

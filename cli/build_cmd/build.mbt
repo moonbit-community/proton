@@ -199,7 +199,12 @@ pub async fn build_executable(
     run_frontend_build: true,
     moon_args: [],
   })
-  run_moon_build_only(invocation.backend_path, invocation.app_package, release)
+  let executable = run_moon_build_only(
+    invocation.backend_path,
+    invocation.app_package,
+    release,
+  )
+  executable
 }
 
 ///|
@@ -210,6 +215,14 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
     invocation.app_package,
     invocation.moon_args,
     invocation.moon_target_dir,
+  )
+  let moon_target_dir = invocation.moon_target_dir
+  let proton_source = resolve_proton_source(
+    invocation.backend_path,
+    invocation.app_package,
+  )
+  ignore(
+    build_cef_process(proton_source, invocation.backend_path, moon_target_dir?),
   )
 }
 
@@ -224,8 +237,7 @@ priv struct BuildInvocation {
 ///|
 async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
   let cwd = @path.Path(cwd).resolve().to_string()
-  let root = @fsutil.find_project_root_from(cwd)
-  let config_path = resolve_build_config_path(cwd, root, raw)
+  let config_path = resolve_build_config_path(cwd, raw)
   let config = load_project_config(config_path)
   validate_release_config(config)
   if raw.run_frontend_build {
@@ -245,7 +257,7 @@ async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
       }
   }
   let moon_target_dir = raw.moon_target_dir.map(path => {
-    @fsutil.resolve_path(root, path)
+    @fsutil.resolve_path(cwd, path)
   })
   BuildInvocation::{
     backend_path,
@@ -253,6 +265,196 @@ async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
     moon_target_dir,
     moon_args: raw.moon_args,
   }
+}
+
+///|
+fn unquote_build_plan_path(value : String) -> String {
+  let value = value.trim().to_owned()
+  if value.length() >= 2 &&
+    (
+      (value.has_prefix("'") && value.has_suffix("'")) ||
+      (value.has_prefix("\"") && value.has_suffix("\""))
+    ) {
+    value[1:value.length() - 1].to_owned()
+  } else {
+    value
+  }
+}
+
+///|
+fn proton_source_from_build_plan(
+  output : String,
+  workspace_root : String,
+) -> String? {
+  let marker = "-pkg-sources moonbit-community/proton:"
+  for line in output.replace(old="\r\n", new="\n").split("\n") {
+    guard line.split_once(marker) is Some((_, suffix)) else { continue }
+    let suffix = match suffix.split_once(" -target ") {
+      Some((path, _)) => path
+      None => suffix
+    }
+    let source = unquote_build_plan_path(suffix.to_owned())
+    if source != "" {
+      return Some(@fsutil.resolve_path(workspace_root, source))
+    }
+  }
+  None
+}
+
+///|
+pub async fn resolve_proton_source(
+  backend_path : String,
+  app_package : String,
+) -> String {
+  let (code, output) = @process.collect_output_merged(
+    "moon",
+    ["check", app_package, "--target", "native", "--dry-run"],
+    cwd=backend_path,
+    extra_env=native_moon_process_env(),
+  ) catch {
+    error =>
+      raise BuildProcessError::Start(
+        command="MoonBit dependency resolution",
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  let text = output.text() catch {
+    error =>
+      raise BuildProcessError::InvalidOutput(
+        command="MoonBit dependency resolution",
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  guard code == 0 else {
+    raise BuildProcessError::InvalidOutput(
+      command="MoonBit dependency resolution",
+      detail=text.trim().to_owned(),
+    )
+  }
+  guard proton_source_from_build_plan(text, backend_path) is Some(source) else {
+    raise BuildProcessError::InvalidOutput(
+      command="MoonBit dependency resolution",
+      detail="the application does not resolve moonbit-community/proton",
+    )
+  }
+  guard @fsutil.path_is_file(@fsutil.path_join(source, "cef_requirements.json")) &&
+    @fsutil.path_is_dir(@fsutil.path_join(source, "internal/cef_process")) else {
+    raise BuildPathError::Missing(
+      role="resolved Proton source containing internal/cef_process",
+      path=source,
+    )
+  }
+  source
+}
+
+///|
+pub async fn resolve_default_project_proton_source(cwd : String) -> String {
+  let invocation = prepare_build(cwd, RawBuildOptions::{
+    app_package: None,
+    config_path: None,
+    moon_target_dir: None,
+    run_frontend_build: false,
+    moon_args: [],
+  })
+  resolve_proton_source(invocation.backend_path, invocation.app_package)
+}
+
+///|
+pub async fn resolve_proton_runtime_requirements(source : String) -> String {
+  let path = @fsutil.path_join(source, "cef_requirements.json")
+  guard @fsutil.path_is_file(path) else {
+    raise BuildPathError::Missing(
+      role="resolved Proton CEF requirements",
+      path~,
+    )
+  }
+  path
+}
+
+///|
+pub async fn resolve_project_runtime_requirements(cwd : String) -> String {
+  resolve_proton_runtime_requirements(
+    resolve_default_project_proton_source(cwd),
+  )
+}
+
+///|
+pub fn cef_process_install_path(bin_dir : String) -> String {
+  let name = if @path.sep == '\\' { "cef_process.exe" } else { "cef_process" }
+  @fsutil.resolve_path(bin_dir, name)
+}
+
+///|
+fn native_moon_process_env_for(
+  windows : Bool,
+  configured_cc : String?,
+) -> Map[String, String] {
+  let env : Map[String, String] = Map([])
+  if !windows {
+    // Selecting a host compiler makes Moon build its C runtime from source
+    // instead of linking libmoonbitrun.o, whose process-wide allocator symbols
+    // would otherwise interpose on CEF and libc allocations.
+    env["MOON_CC"] = match configured_cc {
+      Some(value) if value.trim() != "" => value
+      // Proton's shared native-stub package contains Objective-C sources even
+      // on Linux, so its portable host-compiler default must be Clang.
+      _ => "clang"
+    }
+  }
+  env
+}
+
+///|
+/// Returns the environment required for a Proton native Moon command.
+pub fn native_moon_process_env() -> Map[String, String] {
+  native_moon_process_env_for(@path.sep == '\\', @env.get_env_var("MOON_CC"))
+}
+
+///|
+pub async fn build_cef_process(
+  proton_source : String,
+  backend_path : String,
+  moon_target_dir? : String,
+) -> String {
+  ignore(resolve_proton_runtime_requirements(proton_source))
+  let bin_dir = moon_target_dir.unwrap_or(
+    @fsutil.path_join(backend_path, "_build"),
+  )
+  let args : Array[String] = [
+    "install",
+    "--path",
+    @fsutil.path_join(proton_source, "internal/cef_process"),
+    "--bin",
+    bin_dir,
+  ]
+  match moon_target_dir {
+    Some(target_dir) => {
+      args.push("--target-dir")
+      args.push(target_dir)
+    }
+    None => ()
+  }
+  @output.info("Installing CEF process helper: moon " + args.join(" "))
+  let code = @process.run(
+    "moon",
+    args,
+    cwd=backend_path,
+    extra_env=native_moon_process_env(),
+  ) catch {
+    error =>
+      raise BuildProcessError::Start(
+        command="CEF process helper install",
+        detail=@debug.render(Repr(error)),
+      )
+  }
+  if code != 0 {
+    raise BuildProcessError::Exit(command="CEF process helper install", code~)
+  }
+  let output = cef_process_install_path(bin_dir)
+  guard @fsutil.path_is_file(output) else {
+    raise BuildPathError::Missing(role="CEF process helper", path=output)
+  }
+  output
 }
 
 ///|
@@ -301,34 +503,19 @@ fn validate_moon_build_args(args : Array[String]) -> Unit raise BuildUsageError 
 ///|
 async fn resolve_build_config_path(
   cwd : String,
-  root : String,
   raw : RawBuildOptions,
 ) -> String? {
   match raw.config_path {
     Some(path) => Some(@fsutil.resolve_path(cwd, path))
     None => {
-      let package_config = package_config_path(
-        cwd,
-        raw.app_package.unwrap_or(default_package),
-      )
       let cwd_config = @fsutil.path_join(cwd, default_config_file)
-      let root_config = @fsutil.path_join(root, default_config_file)
-      if @fsutil.path_exists(package_config) {
-        Some(package_config)
-      } else if @fsutil.path_exists(cwd_config) {
+      if @fsutil.path_exists(cwd_config) {
         Some(cwd_config)
-      } else if @fsutil.path_exists(root_config) {
-        Some(root_config)
       } else {
         None
       }
     }
   }
-}
-
-///|
-fn package_config_path(cwd : String, app_package : String) -> String {
-  @fsutil.resolve_path(cwd, @fsutil.path_join(app_package, default_config_file))
 }
 
 ///|
@@ -464,14 +651,13 @@ async fn read_project_config(
         ),
       )
   }
-  let loaded = @proton_config.load_project_config_from_text(
+  let project = @proton_config.load_project_config_from_text(
     source,
     @fsutil.path_parent(path),
     name=path,
   ) catch {
     error => raise Invalid(path~, error~)
   }
-  let project = loaded.config()
   BuildProjectConfig::{
     base_dir: project.base_dir(),
     backend: project.backend(),
@@ -490,7 +676,12 @@ async fn run_moon_build(
     app_package, moon_args, moon_target_dir,
   )
   @output.info("Building Proton app: moon " + args.join(" "))
-  let code = @process.run("moon", args, cwd=root) catch {
+  let code = @process.run(
+    "moon",
+    args,
+    cwd=root,
+    extra_env=native_moon_process_env(),
+  ) catch {
     err =>
       raise BuildProcessError::Start(
         command="MoonBit build",
@@ -586,7 +777,12 @@ async fn run_moon_build_only(
 ) -> String {
   let args = moon_build_only_args(app_package, release)
   @output.info("Building Proton executable: moon " + args.join(" "))
-  let (code, stdout) = @process.collect_stdout("moon", args, cwd=root) catch {
+  let (code, stdout) = @process.collect_stdout(
+    "moon",
+    args,
+    cwd=root,
+    extra_env=native_moon_process_env(),
+  ) catch {
     error =>
       raise BuildProcessError::Start(
         command="MoonBit executable build",

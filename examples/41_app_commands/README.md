@@ -2,7 +2,7 @@
 
 Proton command-extension bridge example and native E2E fixture.
 
-This example exercises the current native DLL bridge route:
+This example exercises the current source-built native bridge route:
 `window.__MoonBit__.core.invokeOp(...)` calls registered MoonBit command
 handlers through the `proton_*` C ABI request/response queue.
 

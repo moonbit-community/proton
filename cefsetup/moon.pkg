@@ -1,0 +1,11 @@
+import {
+  "moonbit-community/proton_cefsetup/store",
+  "moonbitlang/async",
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/env",
+  "moonbitlang/x/sys",
+}
+
+supported_targets = "native+wasm"
+
+pkgtype(kind: "executable")

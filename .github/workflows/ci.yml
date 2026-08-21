@@ -8,7 +8,7 @@ on:
 
 env:
   PROTON_NO_UPDATE_CHECK: 1
-  PROTON_CEF_CACHE: ${{ github.workspace }}/.proton-global-cache
+  PROTON_RUNTIME_STORE: ${{ github.workspace }}/.proton-runtime-store
 
 jobs:
   format:
@@ -21,12 +21,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-
-      - name: Test prebuilt source hash verifier
-        run: node --test scripts/prebuilt_source_hash_test.mjs
-
-      - name: Verify prebuilt source hashes
-        run: node scripts/prebuilt_source_hash.mjs --verify
 
       - name: Install MoonBit
         run: |
@@ -61,11 +55,11 @@ jobs:
           key: ${{ runner.os }}-mooncakes-${{ hashFiles('**/moon.mod') }}
           restore-keys: ${{ runner.os }}-mooncakes-
 
-      - name: Cache CEF downloads
+      - name: Cache Proton runtimes
         uses: actions/cache@v6
         with:
-          path: .proton-global-cache
-          key: ${{ runner.os }}-cef-global-${{ hashFiles('cli/cef/cef_platform.mbt') }}
+          path: .proton-runtime-store
+          key: ${{ runner.os }}-proton-runtime-${{ hashFiles('cefsetup/requirements.json') }}
 
       - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
@@ -104,91 +98,41 @@ jobs:
         with:
           node-version: 24
 
-      - name: Test prebuilt ABI verifier
-        run: node --test scripts/verify_prebuilt_abi_test.mjs
-
       - name: Test bridge bootstrap JS
-        run: node --test native/tests/bridge_bootstrap.test.mjs
+        run: node --test proton/internal/native/ffi/tests/bridge_bootstrap.test.mjs
 
-      - name: Verify generated files
-        run: node scripts/verify_generated.mjs --skip-prebuilt-abi
-
-      - name: Verify Linux prebuilt ABI
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: node scripts/verify_prebuilt_abi.mjs linux-x64
-
-      - name: Verify macOS prebuilt ABI
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: node scripts/verify_prebuilt_abi.mjs darwin-arm64
-
-      - name: Verify Windows prebuilt ABI
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: node scripts/verify_prebuilt_abi.mjs win32-x64
-
-      - name: Build active Proton engine runtime on Unix
+      - name: Configure CEF runtime and build helper on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          moon -C cli run . -- -C .. cef setup
-          runtime="$RUNNER_TEMP/proton-runtime"
-          cef_root=$(node -p "require('./.proton/runtime.json').cef")
-          cmake -S native -B native/build-engine \
-            -DCMAKE_INSTALL_PREFIX="$runtime" \
-            -DPROTON_WITH_ENGINE=ON \
-            -DPROTON_ENGINE_ROOT="$cef_root"
-          cmake --build native/build-engine
-          cmake --install native/build-engine
-          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            # The overlay titlebar path needs a real window manager for CEF to
-            # deliver draggable regions; Xvfb alone has none.
-            xvfb-run -a sh -c 'openbox & sleep 1; ctest --test-dir native/build-engine --output-on-failure'
-          else
-            ctest --test-dir native/build-engine --output-on-failure
-          fi
-          node native/scripts/verify_link_config.mjs "$runtime"
-          echo "PROTON_NATIVE_DIST=$runtime" >> "$GITHUB_ENV"
-          echo "$runtime/bin" >> "$GITHUB_PATH"
+          runtime=$(PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cefsetup run . --target native | tail -n 1)
+          helper_bin="$RUNNER_TEMP/proton-helper"
+          moon --target-dir "$RUNNER_TEMP/proton-helper-build" install \
+            --path proton/internal/cef_process --bin "$helper_bin"
+          helper="$helper_bin/cef_process"
+          echo "PROTON_RUNTIME_ROOT=$runtime" >> "$GITHUB_ENV"
+          echo "PROTON_HELPER_PATH=$helper" >> "$GITHUB_ENV"
 
-      - name: Build active Proton engine runtime on Windows
+      - name: Configure CEF runtime and build helper on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          moon -C cli run . -- -C .. cef setup
-          if (!(Test-Path .proton\runtime.json)) {
-            throw "missing .proton\runtime.json"
-          }
-          $manifest = Get-Content .proton\runtime.json | ConvertFrom-Json
-          $runtime = Join-Path $env:RUNNER_TEMP "proton-runtime"
-          $cefRoot = $manifest.cef
-          cmake -S native -B native\build-engine `
-            "-DCMAKE_INSTALL_PREFIX=$runtime" `
-            -DPROTON_WITH_ENGINE=ON `
-            "-DPROTON_ENGINE_ROOT=$cefRoot"
-          cmake --build native\build-engine --config Debug
-          cmake --install native\build-engine --config Debug
+          $env:PROTON_CEF_SETUP_BOOTSTRAP = "1"
+          $runtime = moon -C cefsetup run . --target native | Select-Object -Last 1
+          Remove-Item Env:PROTON_CEF_SETUP_BOOTSTRAP
+          $helperBin = Join-Path $env:RUNNER_TEMP "proton-helper"
+          $helperBuild = Join-Path $env:RUNNER_TEMP "proton-helper-build"
+          moon --target-dir $helperBuild install --path proton/internal/cef_process --bin $helperBin
           # windows-latest runners have no usable D3D device; force ANGLE's
           # SwiftShader path so the engine's GPU process can start at all.
           $env:ANGLE_DEFAULT_PLATFORM = "swiftshader"
           "ANGLE_DEFAULT_PLATFORM=swiftshader" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          ctest --test-dir native\build-engine -C Debug --output-on-failure
-          if (!(Test-Path "$runtime\bin\proton.dll")) {
-            throw "missing active proton.dll"
-          }
-          $runtimePath = (Resolve-Path $runtime).Path
-          node native\scripts\verify_link_config.mjs $runtimePath
-          "PROTON_NATIVE_DIST=$runtimePath" | Out-File -FilePath $env:GITHUB_ENV -Append
-          (Resolve-Path "$runtimePath\bin").Path | Out-File -FilePath $env:GITHUB_PATH -Append
+          "PROTON_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "PROTON_HELPER_PATH=$(Join-Path $helperBin 'cef_process.exe')" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Join-Path $runtime "bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
-      - name: Test native updater in Release mode
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          cmake -S native -B native/build-release-tests \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DPROTON_WITH_ENGINE=OFF
-          cmake --build native/build-release-tests --target proton_update_test
-          ctest --test-dir native/build-release-tests \
-            --output-on-failure \
-            -R '^proton_update_test$'
+      - name: Verify generated files
+        run: node scripts/verify_generated.mjs
 
       - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}
@@ -198,12 +142,8 @@ jobs:
           moon -C codegen test lib --target wasm --diagnostic-limit 80
           moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            xvfb-run -a env \
-              LD_LIBRARY_PATH="$PROTON_NATIVE_DIST/bin:$PROTON_NATIVE_DIST/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-              LD_PRELOAD="libcef.so${LD_PRELOAD:+:$LD_PRELOAD}" \
-              moon -C proton test -p moonbit-community/proton/native \
-                moonbit-community/proton/updater \
-                --target native --diagnostic-limit 80
+            xvfb-run -a moon -C proton test internal/native --target native --diagnostic-limit 80
+            xvfb-run -a moon -C proton test updater --target native --diagnostic-limit 80
             xvfb-run -a moon -C cli test -p moonbit-community/proton_cli \
               moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
               moonbit-community/proton_cli/cef \
@@ -212,9 +152,8 @@ jobs:
               moonbit-community/proton_cli/output moonbit-community/proton_cli/package \
               --target native --no-parallelize --diagnostic-limit 80
           else
-            moon -C proton test -p moonbit-community/proton/native \
-              moonbit-community/proton/updater \
-              --target native --diagnostic-limit 80
+            moon -C proton test internal/native --target native --diagnostic-limit 80
+            moon -C proton test updater --target native --diagnostic-limit 80
             moon -C cli test -p moonbit-community/proton_cli \
               moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
               moonbit-community/proton_cli/cef \
@@ -236,7 +175,8 @@ jobs:
           moon -C package test lib --target native --diagnostic-limit 80
           moon -C codegen test lib --target wasm --diagnostic-limit 80
           moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80
-          moon -C proton test -p moonbit-community/proton/native moonbit-community/proton/updater --target native --diagnostic-limit 80
+          moon -C proton test internal/native --target native --diagnostic-limit 80
+          moon -C proton test updater --target native --diagnostic-limit 80
           moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
           moon -C e2e build --target native --diagnostic-limit 80
 
@@ -318,7 +258,7 @@ jobs:
 
       - name: List Windows example binaries
         if: ${{ matrix.os == 'windows-latest' }}
-        run: Get-ChildItem -Path ".\examples\target" -Recurse -Filter "*.exe" | ForEach-Object { "{0} ({1} bytes)" -f $_.FullName, $_.Length }
+        run: Get-ChildItem -Path ".\_build" -Recurse -Filter "*.exe" | ForEach-Object { "{0} ({1} bytes)" -f $_.FullName, $_.Length }
 
       - name: Run MoonBit CDP e2e on Windows
         if: ${{ matrix.os == 'windows-latest' }}
@@ -336,7 +276,7 @@ jobs:
         timeout-minutes: 25
         env:
           PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
-          MOON_CC: cc
+          MOON_CC: clang
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a moon -C e2e run test --target native \
@@ -348,4 +288,4 @@ jobs:
 
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}
-        run: find ./examples/target -type f | xargs ls -lh
+        run: find ./_build -type f -perm -111 | xargs ls -lh

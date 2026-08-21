@@ -14,6 +14,7 @@ pub(all) suberror BrowserError {
   MissingField(String)
   InvalidField(String)
   WaitTimeout(String)
+  ConnectionClosed
 } derive(Eq, ToJson, Debug)
 
 ///|
@@ -24,6 +25,26 @@ pub extend BrowserError with Debug::{to_repr}
 
 ///|
 pub extend BrowserError with ToJson::{to_json}
+
+///|
+pub extend BrowserError with Show::{to_string, output}
+
+///|
+pub fn BrowserError::message(self : BrowserError) -> String {
+  match self {
+    CommandFailed(code, message) =>
+      "CDP command failed with code " + code.to_string() + ": " + message
+    MissingField(field) => "CDP response is missing field: " + field
+    InvalidField(field) => "CDP response has an invalid field: " + field
+    WaitTimeout(operation) => "CDP operation timed out: " + operation
+    ConnectionClosed => "CDP connection closed"
+  }
+}
+
+///|
+impl Show for BrowserError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
 
 ///|
 /// Basic target metadata returned by `Target.getTargets`.
@@ -69,7 +90,7 @@ pub extend CdpTargetInfo with ToJson::{to_json}
 ///
 /// Example:
 /// ```
-/// // let client = connect_cdp_browser_target(parse_cdp_target("9222"))
+/// // let client = connect_cdp_browser_target(tasks, parse_cdp_target("9222"))
 /// // let targets = client.get_targets()
 /// ```
 pub async fn CdpClient::get_targets(self : CdpClient) -> Array[CdpTargetInfo] {

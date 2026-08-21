@@ -1,106 +1,61 @@
 ///|
-/// Maps the public dialog level string to the native dialog level.
-fn level_to_native(level : String?) -> @native.DialogLevel {
-  match level {
-    Some("warning") => @native.DialogLevel::Warning
-    Some("error") => @native.DialogLevel::Error
-    _ => @native.DialogLevel::Info
-  }
-}
-
-///|
-async fn wait_for_dialog_result(
+fn command_window(
   context : @proton.CommandContext,
-  window : @native.WindowRef,
-  dialog : Int64,
-  kind : String,
-) -> String {
-  let mut completed = ""
-  let mut waiting = true
-  while waiting {
-    let revision = context.wake_revision()
-    let result = window.poll_dialog_result(dialog) catch {
-      error => raise PollFailed(kind~, error~)
-    }
-    match result {
-      @native.DialogPollResult::Ready(result) => {
-        completed = result
-        waiting = false
-      }
-      @native.DialogPollResult::Pending => context.wait_for_wake(revision)
-    }
+) -> @proton.CommandWindow raise DialogError {
+  match context.window() {
+    Some(window) => window
+    None => raise WindowUnavailable
   }
-  completed
 }
 
 ///|
 async fn show_message_dialog(
   context : @proton.CommandContext,
-  window : @native.WindowRef,
   payload : @dialog_contract.MessageRequest,
-) -> @dialog_contract.MessageReply {
-  let dialog = window.begin_message_dialog(
+) -> @dialog_contract.MessageReply raise DialogError {
+  command_window(context).show_message(
     payload.title,
     payload.message,
-    level_to_native(payload.level),
+    payload.level.unwrap_or("info"),
   ) catch {
-    error => raise BeginFailed(kind="message", error~)
+    error => raise OperationFailed(kind="message", detail=error.to_string())
   }
-  ignore(wait_for_dialog_result(context, window, dialog, "message"))
   @dialog_contract.MessageReply::{ acknowledged: true }
 }
 
 ///|
 async fn confirm_message_dialog(
   context : @proton.CommandContext,
-  window : @native.WindowRef,
   payload : @dialog_contract.MessageRequest,
-) -> @dialog_contract.ConfirmReply {
-  let dialog = window.begin_confirm_dialog(
+) -> @dialog_contract.ConfirmReply raise DialogError {
+  let confirmed = command_window(context).confirm(
     payload.title,
     payload.message,
-    level_to_native(payload.level),
+    payload.level.unwrap_or("info"),
   ) catch {
-    error => raise BeginFailed(kind="confirm", error~)
+    error => raise OperationFailed(kind="confirm", detail=error.to_string())
   }
-  let result = wait_for_dialog_result(context, window, dialog, "confirm")
-  @dialog_contract.ConfirmReply::{ confirmed: result == "1" }
+  @dialog_contract.ConfirmReply::{ confirmed, }
 }
 
 ///|
 async fn open_file_dialog(
   context : @proton.CommandContext,
-  window : @native.WindowRef,
   payload : @dialog_contract.FileDialogRequest,
-) -> @dialog_contract.FileDialogReply {
-  let dialog = window.begin_open_file_dialog(payload.title, payload.path) catch {
-    error => raise BeginFailed(kind="open file", error~)
+) -> @dialog_contract.FileDialogReply raise DialogError {
+  let path = command_window(context).open_file(payload.title, payload.path) catch {
+    error => raise OperationFailed(kind="open file", detail=error.to_string())
   }
-  let path = wait_for_dialog_result(context, window, dialog, "open file")
-  @dialog_contract.FileDialogReply::{
-    path: if path.is_empty() {
-      None
-    } else {
-      Some(path)
-    },
-  }
+  @dialog_contract.FileDialogReply::{ path, }
 }
 
 ///|
 async fn save_file_dialog(
   context : @proton.CommandContext,
-  window : @native.WindowRef,
   payload : @dialog_contract.FileDialogRequest,
-) -> @dialog_contract.FileDialogReply {
-  let dialog = window.begin_save_file_dialog(payload.title, payload.path) catch {
-    error => raise BeginFailed(kind="save file", error~)
+) -> @dialog_contract.FileDialogReply raise DialogError {
+  let path = command_window(context).save_file(payload.title, payload.path) catch {
+    error => raise OperationFailed(kind="save file", detail=error.to_string())
   }
-  let path = wait_for_dialog_result(context, window, dialog, "save file")
-  @dialog_contract.FileDialogReply::{
-    path: if path.is_empty() {
-      None
-    } else {
-      Some(path)
-    },
-  }
+  @dialog_contract.FileDialogReply::{ path, }
 }

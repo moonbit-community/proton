@@ -6,7 +6,6 @@ import {
   "moonbitlang/x/fs" @mbfs,
   "moonbitlang/x/path" @mbpath,
   "moonbit-community/proton/updater",
-  "moonbit-community/proton/native",
   "moonbit-community/proton_updater",
 }
 

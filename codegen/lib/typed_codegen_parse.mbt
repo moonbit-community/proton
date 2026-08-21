@@ -1,33 +1,4 @@
 ///|
-/// Strips explicit trait-promotion `extend` declarations before parsing.
-///
-/// `moonbitlang/parser@0.3.13` does not yet understand the
-/// `pub extend Type with Trait::{...}` declaration, so the codegen parser would
-/// reject source files that use it. The declarations only promote trait methods
-/// to regular methods and carry no command-contract information, so they are
-/// safe to drop before parsing.
-fn strip_extend_declarations(source : String) -> String {
-  let lines = source.split("\n").collect()
-  let kept : Array[String] = []
-  for line in lines {
-    let line_str = line.to_owned()
-    if !is_extend_promotion(line_str) {
-      kept.push(line_str)
-    }
-  }
-  kept.join("\n")
-}
-
-///|
-fn is_extend_promotion(line : String) -> Bool {
-  let trimmed = line.trim().to_owned()
-  if !(trimmed.has_prefix("extend ") || trimmed.has_prefix("pub extend ")) {
-    return false
-  }
-  trimmed.contains(" with ") && trimmed.contains("::{")
-}
-
-///|
 /// Generates one typed package registrar from explicit MoonBit source inputs.
 pub fn generate_typed_commands_from_sources(
   sources : Array[(String, String)],
@@ -42,11 +13,11 @@ pub fn generate_typed_commands_from_sources(
   let commands : Array[ParsedTypedCommand] = []
   for source_entry in sources {
     let (path, source) = source_entry
-    let (ast, reports) = @parser.parse_string(strip_extend_declarations(source))
+    let (ast, reports) = @parser.parse_string(source)
     guard reports.is_empty() else {
       raise CodegenInputError::SourceParse(path~)
     }
-    commands.append(parse_typed_commands(ast, source))
+    commands.append(parse_typed_commands(ast))
   }
   guard commands.length() > 0 else { raise CommandCodegenError::MissingCommand }
   validate_typed_contract_duplicates(commands)
@@ -114,21 +85,18 @@ pub async fn generate_extension_identity_from_file(
 ///|
 fn parse_typed_commands(
   ast : @list.List[@moonbitlang/parser/syntax.Impl],
-  source : String,
 ) -> Array[ParsedTypedCommand] raise {
   let commands : Array[ParsedTypedCommand] = []
   ast.each(fn(item) raise {
     match item {
       TopFuncDef(fun_decl~, ..) =>
-        match typed_contract_attribute(fun_decl.attrs, source) {
+        match typed_contract_attribute(fun_decl.attrs) {
           Some(contract_expression) =>
             commands.push(
               parse_typed_command_from_func(fun_decl, contract_expression),
             )
           None => ()
         }
-      TopTypeDef(type_decl) =>
-        reject_removed_typed_attributes(type_decl.attrs, source)
       _ => ()
     }
   })
@@ -138,11 +106,10 @@ fn parse_typed_commands(
 ///|
 fn typed_contract_attribute(
   attrs : @list.List[@moonbitlang/parser/attribute.Attribute],
-  source : String,
 ) -> String? raise {
   let mut contract : String? = None
   attrs.each(fn(attr) raise {
-    let raw = recover_attr_raw(source, attr)
+    let raw = attr.raw
     if raw.has_prefix("#proton.command") {
       guard contract is None else {
         raise CommandCodegenError::Attribute(
@@ -151,36 +118,9 @@ fn typed_contract_attribute(
         )
       }
       contract = Some(parse_contract_attribute(raw))
-    } else if raw.has_prefix("#proton.event") {
-      raise CommandCodegenError::Attribute(
-        kind="event",
-        detail="#proton.event was removed; declare an Event value in the shared contract",
-      )
-    } else if raw.has_prefix("#proton.script") ||
-      raw.has_prefix("#proton.destroy") {
-      raise CommandCodegenError::Attribute(
-        kind="attribute",
-        detail="#proton.script and #proton.destroy are extension lifecycle configuration, not command bindings",
-      )
     }
   })
   contract
-}
-
-///|
-fn reject_removed_typed_attributes(
-  attrs : @list.List[@moonbitlang/parser/attribute.Attribute],
-  source : String,
-) -> Unit raise {
-  attrs.each(fn(attr) raise {
-    let raw = recover_attr_raw(source, attr)
-    if raw.has_prefix("#proton.event") {
-      raise CommandCodegenError::Attribute(
-        kind="event",
-        detail="#proton.event was removed; declare an Event value in the shared contract",
-      )
-    }
-  })
 }
 
 ///|

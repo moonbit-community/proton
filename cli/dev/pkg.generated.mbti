@@ -16,6 +16,7 @@ pub async fn run(String, @argparse.Matches) -> Unit
 pub(all) suberror DevConfigError {
   NotFound(path~ : String)
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
+  FrontendCommandMissing
   FrontendDirectoryMissing(path~ : String)
   FrontendDirectoryNotDirectory(path~ : String)
   BackendDirectoryMissing(path~ : String)
@@ -40,12 +41,7 @@ pub fn DevProcessError::to_repr(Self) -> @debug.Repr
 pub fn DevProcessError::to_string(Self) -> String
 
 pub(all) suberror DevRuntimeError {
-  NativeDistOverride(detail~ : String)
   Setup(detail~ : String)
-  ManifestMissing(path~ : String)
-  ManifestInvalid(path~ : String, detail~ : String)
-  ManifestField(path~ : String, field~ : String)
-  PlatformMismatch(expected~ : String, actual~ : String)
   DirectoryMissing(label~ : String, path~ : String)
   HelperMissing(label~ : String, path~ : String)
   SetupRequired(detail~ : String)
@@ -66,6 +62,7 @@ pub(all) suberror DevServerError {
   InvalidPort(value~ : String)
   PortOutOfRange(value~ : String)
   ReadyProbeUnavailable
+  FrontendUrlInUse(url~ : String)
   FrontendExited(code~ : Int)
   Timeout(url~ : String)
 } derive(Eq, @debug.Debug)

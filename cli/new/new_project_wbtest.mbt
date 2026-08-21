@@ -299,7 +299,7 @@ test "templates receive final author title and size" {
   }
   guard config_json
     is {
-      "backend": { "path": "backend", "package": "app", .. },
+      "backend": { "path": ".", "package": "backend/app", .. },
       "frontend": {
         "path": "frontend",
         "before_dev": before_dev,
@@ -309,6 +309,7 @@ test "templates receive final author title and size" {
       "package": {
         "product_name": "Demo App",
         "identifier": "com.justjavac.demo",
+        "version": "0.1.0",
         "formats": ["app", "zip"],
         "output": "dist",
         ..
@@ -391,55 +392,4 @@ test "template render error names template" {
   } noraise {
     _ => abort("expected render error")
   }
-}
-
-///|
-test "registry dependency failures are classified separately" {
-  assert_true(
-    moon_check_has_registry_resolution_failure(
-      "Failed to resolve registry dependency `moonbit-community/proton_contract`",
-    ),
-  )
-  assert_true(
-    moon_check_has_registry_resolution_failure(
-      "failed to resolve registry dependency `moonbit-community/proton_client`",
-    ),
-  )
-  assert_false(
-    moon_check_has_registry_resolution_failure("Parsing error: UnexpectedToken"),
-  )
-  let error = NewProjectToolError::RegistryDependenciesUnavailable(
-    code=255,
-    project="todo",
-  )
-  let message = error.message()
-  assert_true(
-    message.contains(
-      "moonbit-community/proton_contract@" + default_proton_contract_version,
-    ),
-  )
-  assert_true(
-    message.contains(
-      "moonbit-community/proton_codegen@" + default_proton_codegen_version,
-    ),
-  )
-  assert_true(
-    message.contains(
-      "moonbit-community/proton_client@" + default_proton_client_version,
-    ),
-  )
-  assert_true(
-    message.contains(
-      "moonbit-community/proton_rabbita@" + default_proton_rabbita_version,
-    ),
-  )
-  assert_true(
-    message.contains("moonbit-community/proton@" + default_proton_version),
-  )
-  assert_true(
-    message.contains(
-      "moonbit-community/proton_cli@" + default_proton_cli_version,
-    ),
-  )
-  assert_true(message.contains("project was rolled back"))
 }

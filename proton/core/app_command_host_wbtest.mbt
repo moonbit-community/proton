@@ -49,7 +49,7 @@ async test "production command errors hide backend diagnostics" {
   })
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
-      AppCommandRequestContext::new(7L, group, detached_locale_preferences()),
+      AppCommandRequestContext::new(group, detached_locale_preferences()),
       @ipc.IpcOpRequest::new("request-1", "app:fail", null),
     )
     assert_false(response.is_ok())
@@ -120,7 +120,6 @@ async test "request context observes its shared runtime wake signal" {
   let signal = RuntimeWakeSignal::new()
   @async.with_task_group(group => {
     let context = AppCommandRequestContext::new(
-      7L,
       group,
       detached_locale_preferences(),
       wake_signal=signal,
@@ -128,7 +127,7 @@ async test "request context observes its shared runtime wake signal" {
     let revision = context.wake_revision()
     signal.notify()
     context.wait_for_wake(revision)
-    inspect(context.window(), content="7")
+    assert_true(context.window() is None)
     inspect(context.wake_revision(), content="1")
   })
 }
@@ -140,7 +139,7 @@ async test "request context exposes the application locale snapshot" {
     [@locale.Locale::parse("en-GB")],
   )
   @async.with_task_group(group => {
-    let context = AppCommandRequestContext::new(7L, group, preferences)
+    let context = AppCommandRequestContext::new(group, preferences)
     assert_eq(context.locale().to_string(), "ja-JP")
     assert_eq(context.preferred_languages().map(locale => locale.to_string()), [
       "ja-JP", "en-GB", "en-US",
@@ -181,7 +180,7 @@ async test "context-aware handlers receive the supplied locale" {
   )
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
-      AppCommandRequestContext::new(7L, group, preferences),
+      AppCommandRequestContext::new(group, preferences),
       @ipc.IpcOpRequest::new("request-context", "app:locale", null),
     )
     assert_true(response.is_ok())
@@ -198,7 +197,6 @@ async test "request context exposes only its owning extension scope" {
   let original : Map[String, Json] = { "root": "./data" }
   @async.with_task_group(group => {
     let context = AppCommandRequestContext::new(
-      7L,
       group,
       detached_locale_preferences(),
       window_id="secondary",
@@ -240,7 +238,6 @@ async test "request context emits through its page-scoped destination" {
   )
   @async.with_task_group(group => {
     let context = AppCommandRequestContext::new(
-      7L,
       group,
       detached_locale_preferences(),
       emit_event=fn(route, name, payload) {

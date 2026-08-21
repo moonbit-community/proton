@@ -18,7 +18,7 @@ priv struct RendererOffer {
 /// that could hand back an update could hand back a different one. What
 /// `download` installs is whatever this host authenticated, and there is no
 /// argument that changes that.
-let offered : Ref[Map[Int64, RendererOffer]] = Ref(Map([]))
+let offered : Ref[Map[String, RendererOffer]] = Ref(Map([]))
 
 ///|
 #proton.command(contract=check_command)
@@ -26,12 +26,12 @@ async fn check(
   context : @proton.CommandContext,
   _request : Unit,
 ) -> @updater_contract.UpdateStatus {
-  check_for_page(context.window(), context.page_instance())
+  check_for_page(context.window_id(), context.page_instance())
 }
 
 ///|
 async fn check_for_page(
-  window : Int64,
+  window : String,
   page_instance : String?,
 ) -> @updater_contract.UpdateStatus {
   match @proton.check_for_update() {
@@ -71,7 +71,7 @@ async fn check_for_page(
 /// Consumption happens before the first async install step, so concurrent
 /// renderer requests cannot install the same offer twice.
 fn take_offered(
-  window : Int64,
+  window : String,
   page_instance : String?,
 ) -> @proton.PendingUpdate raise {
   guard offered.val.get(window) is Some(offer) &&
@@ -88,7 +88,7 @@ async fn download(
   context : @proton.CommandContext,
   _request : Unit,
 ) -> @updater_contract.UpdateInstalled {
-  let window = context.window()
+  let window = context.window_id()
   let update = take_offered(window, context.page_instance())
   let total = update.size()
   let report : async (Int64) -> Unit noraise = async fn(received) noraise {

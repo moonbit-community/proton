@@ -19,6 +19,26 @@ test "package identifiers require reverse-DNS form" {
 }
 
 ///|
+test "package versions cannot escape package paths" {
+  for version in ["1.2", "v1", "2026.08", "1.2.3-beta.1+build.5"] {
+    assert_eq(validate_package_version(version), version)
+  }
+  for
+    version in [
+      "", "1.2.3/../../outside", "1.2.3\\outside", "1.2.3\nExec=outside",
+    ] {
+    let mut rejected = false
+    try validate_package_version(version) catch {
+      InvalidVersion(..) => rejected = true
+      _ => ()
+    } noraise {
+      _ => ()
+    }
+    assert_true(rejected)
+  }
+}
+
+///|
 test "payload destinations cannot escape their package area" {
   validate_relative_destination("assets/icon.png")
   let mut rejected = false
@@ -157,10 +177,29 @@ test "NSIS script carries package identity and update behavior" {
 test "AppImage metadata points at the staged executable" {
   let spec = package_test_spec([AppImage])
   let entry = linux_desktop_entry(spec, "demo-app")
-  assert_true(entry.contains("Name=Demo App"))
-  assert_true(entry.contains("Exec=demo-app"))
-  assert_true(entry.contains("Icon=demo-app"))
+  inspect(
+    entry,
+    content=(
+      $|[Desktop Entry]
+      $|Type=Application
+      $|Terminal=false
+      $|Categories=Utility;
+      $|Name=Demo App
+      $|Exec=demo-app
+      $|Icon=demo-app
+      $|X-AppImage-Version=1.2.3
+      $|
+    ),
+  )
   let apprun = linux_apprun("demo-app")
-  assert_true(apprun.contains("HERE=\"$(dirname \"$(readlink -f \"$0\")\")\""))
-  assert_true(apprun.contains("exec \"$HERE/usr/bin/demo-app\" \"$@\""))
+  assert_true(apprun.contains("HERE=\"$APPDIR\""))
+  inspect(
+    apprun,
+    content=(
+      $|#!/bin/sh
+      $|HERE="$APPDIR"
+      $|exec "$HERE/usr/bin/demo-app" "$@"
+      $|
+    ),
+  )
 }

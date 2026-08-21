@@ -24,14 +24,14 @@ test "project config contains only CLI build and package settings" {
     #|  "package": {
     #|    "product_name": "Todo",
     #|    "identifier": "com.example.todo",
+    #|    "version": "1.2.3",
     #|    "formats": ["app", "zip"],
     #|    "icons": ["icons/app.icns"],
     #|    "resources": ["assets"],
     #|    "output": "dist"
     #|  }
     #|}
-  let loaded = load_project_config_from_text(source, "/workspace/todo")
-  let config = loaded.config()
+  let config = load_project_config_from_text(source, "/workspace/todo")
   assert_eq(config.backend().unwrap().app_package(), "app")
   let dist = config
     .frontend()
@@ -42,30 +42,36 @@ test "project config contains only CLI build and package settings" {
   assert_true(dist.has_suffix("frontend/dist"))
   let package_config = config.package_config().unwrap()
   assert_eq(package_config.product_name, "Todo")
+  assert_eq(package_config.version(), "1.2.3")
   assert_eq(package_config.formats(), ["app", "zip"])
   assert_true(package_config.icons()[0].has_suffix("icons/app.icns"))
 }
 
 ///|
-test "runtime fields are rejected with an App API migration message" {
+test "project config rejects unknown top-level fields" {
   let source =
-    #|{ "window": { "title": "Todo" }, "debug": true }
+    #|{ "window": { "title": "Todo" } }
   let error = expect_config_error(() => {
     ignore(load_project_config_from_text(source, "/workspace/todo"))
   })
-  let message = error.message()
-  assert_true(message.contains("runtime behavior"))
-  assert_true(message.contains("Proton App API"))
+  assert_eq(error, UnknownField(path="proton.project.json.window"))
 }
 
 ///|
-test "legacy package fields point to the package object" {
-  let source =
-    #|{ "product_name": "Todo", "bundle": {} }
-  let error = expect_config_error(() => {
-    ignore(load_project_config_from_text(source, "/workspace/todo"))
-  })
-  assert_true(error.message().contains("moved under the `package` object"))
+test "project config sections must be objects" {
+  for section in ["backend", "frontend", "package"] {
+    let source = "{ \"" + section + "\": false }"
+    let error = expect_config_error(() => {
+      ignore(load_project_config_from_text(source, "/workspace/todo"))
+    })
+    assert_eq(
+      error,
+      InvalidField(
+        path="proton.project.json." + section,
+        expectation="must be an object",
+      ),
+    )
+  }
 }
 
 ///|

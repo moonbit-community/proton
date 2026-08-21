@@ -7,6 +7,7 @@ import {
   "moonbitlang/x@0.4.50",
   "moonbit-community/proton_cdp@0.1.19",
   "moonbit-community/proton@0.1.19",
+  "moonbit-community/proton_cefsetup@0.1.19",
   "moonbit-community/proton_updater@0.1.19",
   "moonbit-community/proton/examples@0.1.19",
 }

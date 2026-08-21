@@ -2,9 +2,6 @@
 let show_command = @notification_contract.show
 
 ///|
-let drain_clicks_command = @notification_contract.drain_clicks
-
-///|
 /// Rejects empty notification bodies before calling the native package.
 fn ensure_body(body : String) -> String raise NotificationError {
   if body.is_empty() {
@@ -47,40 +44,11 @@ async fn show(
 }
 
 ///|
-/// Drains native notification clicks into extension events.
-#proton.command(contract=drain_clicks_command)
-async fn drain_clicks(
-  context : @proton.CommandContext,
-  _request : @proton_contract.EmptyRequest,
-) -> @notification_contract.NotificationDrainReply {
-  let mut count = 0
-  while true {
-    match notification_native_take_click() {
-      None => break
-      Some(click) => {
-        context.emit(@notification_contract.click, @notification_contract.NotificationClick::{
-          payload: click.payload,
-        })
-        count += 1
-      }
-    }
-  }
-  @notification_contract.NotificationDrainReply::{ count, }
-}
-
-///|
 pub fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     @notification_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
-    scripts=[
-      @proton_extension.poller_script(
-        js_namespace="notification",
-        drain_method="drainClicks",
-        poller_field="__protonClickPoller",
-      ),
-    ],
     on_destroy=fn() raise { cleanup_notification() },
   )
 }

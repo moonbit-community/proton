@@ -376,15 +376,12 @@ async fn run_pending_lifecycle_probe_once(
     ignore(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
-    let page = connect_spawned_page(app, target, timeout)
-    let mut page_open = true
-    defer (if page_open { page.close() })
+    let page = connect_spawned_page(group, app, target, timeout)
     let browser = @client.connect_cdp_browser_target_with_timeout(
+      group,
       cdp_target_from(target),
       timeout_ms=timeout,
     )
-    defer browser.close()
-    ignore(page.send_schema_command("Runtime.enable"))
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     let initial_slow_adds = count_native_log_entries(
       app.native_log_path,
@@ -419,7 +416,6 @@ async fn run_pending_lifecycle_probe_once(
       timeout,
     )
     page.close()
-    page_open = false
     let shutdown = finish_scenario_app_with_connected_browser(
       app, target, browser,
     )
@@ -436,30 +432,10 @@ async fn run_pending_lifecycle_probe_once(
 async fn run_pending_lifecycle_probe(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
-  let mut attempt = 0
-  while attempt < 2 {
-    let succeeded = try {
-      run_e2e_operation_with_timeout(
-        timeout,
-        "41_app_commands pending lifecycle",
-        () => run_pending_lifecycle_probe_once(root, output_root, timeout),
-      )
-      true
-    } catch {
-      error => {
-        if attempt == 1 || !retryable_scenario_error(error) {
-          raise error
-        }
-        println("MoonBit pending lifecycle attempt failed; retrying once")
-        false
-      }
-    }
-    if succeeded {
-      return
-    }
-    @async.sleep(1000)
-    attempt = attempt + 1
-  }
+  install_scenario_helper(root, output_root)
+  run_e2e_operation_with_timeout(timeout, "41_app_commands pending lifecycle", () => {
+    run_pending_lifecycle_probe_once(root, output_root, timeout)
+  })
 }
 
 ///|
@@ -478,15 +454,12 @@ async fn run_event_lifecycle_probe_once(
     ignore(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
-    let page = connect_spawned_page(app, target, timeout)
-    let mut page_open = true
-    defer (if page_open { page.close() })
+    let page = connect_spawned_page(group, app, target, timeout)
     let browser = @client.connect_cdp_browser_target_with_timeout(
+      group,
       cdp_target_from(target),
       timeout_ms=timeout,
     )
-    defer browser.close()
-    ignore(page.send_schema_command("Runtime.enable"))
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     let initial_starts = count_native_log_entries(
       app.native_log_path,
@@ -518,7 +491,6 @@ async fn run_event_lifecycle_probe_once(
     )
     @async.sleep(250)
     page.close()
-    page_open = false
     let shutdown = finish_scenario_app_with_connected_browser(
       app, target, browser,
     )
@@ -536,39 +508,22 @@ async fn run_event_lifecycle_probe_once(
 async fn run_event_lifecycle_probe(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
-  let mut attempt = 0
-  while attempt < 2 {
-    let succeeded = try {
-      run_e2e_operation_with_timeout(
-        timeout,
-        "40_event_broadcast event lifecycle",
-        () => run_event_lifecycle_probe_once(root, output_root, timeout),
-      )
-      true
-    } catch {
-      error => {
-        if attempt == 1 || !retryable_scenario_error(error) {
-          raise error
-        }
-        println("MoonBit event lifecycle attempt failed; retrying once")
-        false
-      }
-    }
-    if succeeded {
-      return
-    }
-    @async.sleep(1000)
-    attempt = attempt + 1
-  }
+  install_scenario_helper(root, output_root)
+  run_e2e_operation_with_timeout(
+    timeout,
+    "40_event_broadcast event lifecycle",
+    () => run_event_lifecycle_probe_once(root, output_root, timeout),
+  )
 }
 
 ///|
 async fn connect_spawned_page(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
   title? : String,
-) -> @client.CdpClient {
+) -> @page.Page {
   let mut elapsed = 0
   while elapsed <= timeout {
     match app_exit_code(app.process) {
@@ -585,7 +540,8 @@ async fn connect_spawned_page(
         cdp_start_poll_timeout_ms,
         "CDP page connection probe",
         () => {
-          @client.connect_cdp_page_target_with_timeout(
+          @page.Page::connect(
+            tasks,
             cdp_target_from(target),
             title?,
             timeout_ms=cdp_start_poll_timeout_ms,
@@ -661,7 +617,6 @@ fn assert_pending_lifecycle_log(path : String) -> Unit raise {
   }
   let mut pending_cleanup = false
   let mut stale_response_handled = false
-  let mut queue_cleared = false
   let mut pending_cleared = false
   let mut window_closed = false
   let mut runtime_destroyed = false
@@ -669,8 +624,7 @@ fn assert_pending_lifecycle_log(path : String) -> Unit raise {
     let line = raw_line.to_owned()
     if line.contains("bridge_pending_remove_browser") {
       let pending = log_int_field(line, "pending=").unwrap_or(0)
-      let queued = log_int_field(line, "queued=").unwrap_or(0)
-      if pending > 0 || queued > 0 {
+      if pending > 0 {
         pending_cleanup = true
       }
     }
@@ -678,9 +632,6 @@ fn assert_pending_lifecycle_log(path : String) -> Unit raise {
       line.contains("bridge_response_no_pending request=") ||
       line.contains("bridge_response_send_failed request=") {
       stale_response_handled = true
-    }
-    if line.contains("bridge_queue_clear removed=") {
-      queue_cleared = true
     }
     if line.contains("bridge_pending_clear_all removed=") {
       pending_cleared = true
@@ -696,8 +647,8 @@ fn assert_pending_lifecycle_log(path : String) -> Unit raise {
   guard pending_cleanup || stale_response_handled else {
     fail("native log did not prove pending response state was handled")
   }
-  guard queue_cleared && pending_cleared else {
-    fail("native log did not prove runtime bridge state was cleared")
+  guard pending_cleared else {
+    fail("native log did not prove pending bridge state was cleared")
   }
   guard window_closed && runtime_destroyed else {
     fail("native log did not prove window and runtime shutdown completed")

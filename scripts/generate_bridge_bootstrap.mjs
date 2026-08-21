@@ -8,13 +8,13 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 const sourcePath = path.join(
   repoRoot,
-  "native/src/engine/cef_common/bridge_bootstrap.js",
+  "proton/internal/native/ffi/src/engine/cef_common/bridge_bootstrap.js",
 );
 const outputPath = process.argv[2]
   ? path.resolve(process.argv[2])
   : path.join(
       repoRoot,
-      "native/src/engine/cef_common/bridge_bootstrap.generated.h",
+      "proton/internal/native/ffi/src/engine/cef_common/bridge_bootstrap.generated.h",
     );
 const source = fs.readFileSync(sourcePath);
 const rows = [];

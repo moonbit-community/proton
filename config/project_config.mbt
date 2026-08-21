@@ -142,6 +142,7 @@ pub fn ProjectDocumentType::extensions(
 pub(all) struct ProjectPackageConfig {
   product_name : String
   identifier : String
+  version : String
   formats : Array[String]
   icons : Array[String]
   resources : Array[String]
@@ -161,6 +162,7 @@ pub extend ProjectPackageConfig with Debug::{to_repr}
 pub fn ProjectPackageConfig::new(
   product_name : String,
   identifier : String,
+  version : String,
   formats? : Array[String] = [],
   icons? : Array[String] = [],
   resources? : Array[String] = [],
@@ -172,6 +174,7 @@ pub fn ProjectPackageConfig::new(
   ProjectPackageConfig::{
     product_name,
     identifier,
+    version,
     formats: formats.copy(),
     icons: icons.copy(),
     resources: resources.copy(),
@@ -180,6 +183,11 @@ pub fn ProjectPackageConfig::new(
     document_types: document_types.copy(),
     output,
   }
+}
+
+///|
+pub fn ProjectPackageConfig::version(self : ProjectPackageConfig) -> String {
+  self.version
 }
 
 ///|
@@ -275,36 +283,4 @@ pub fn ProjectConfig::package_config(
   self : ProjectConfig,
 ) -> ProjectPackageConfig? {
   self.package_config
-}
-
-///|
-pub(all) struct LoadedProjectConfig {
-  config : ProjectConfig
-  warnings : Array[String]
-} derive(Eq, Debug)
-
-///|
-pub extend LoadedProjectConfig with Eq::{not_equal, equal}
-
-///|
-pub extend LoadedProjectConfig with Debug::{to_repr}
-
-///|
-pub fn LoadedProjectConfig::new(
-  config : ProjectConfig,
-  warnings? : Array[String] = [],
-) -> LoadedProjectConfig {
-  LoadedProjectConfig::{ config, warnings: warnings.copy() }
-}
-
-///|
-pub fn LoadedProjectConfig::config(self : LoadedProjectConfig) -> ProjectConfig {
-  self.config
-}
-
-///|
-pub fn LoadedProjectConfig::warnings(
-  self : LoadedProjectConfig,
-) -> Array[String] {
-  self.warnings.copy()
 }

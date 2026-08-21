@@ -1,5 +1,7 @@
 {
   "id": "moonbit-community/proton-auto-launch",
   "namespace": "autoLaunch",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton_ext/auto_launch",
   "package": "@moonbit-community/proton-auto-launch"
 }

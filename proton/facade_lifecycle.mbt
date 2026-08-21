@@ -85,12 +85,18 @@ fn app_cleanup(
   lifecycle.begin_destroying()
   for running in windows {
     running.window.destroy() catch {
-      error => failures.push(WindowDestroy(error))
+      error =>
+        failures.push(
+          WindowDestroy(status=error.status(), detail=error.message()),
+        )
     }
   }
   let failure_count = failures.length()
   runtime.destroy() catch {
-    error => failures.push(RuntimeDestroy(error))
+    error =>
+      failures.push(
+        RuntimeDestroy(status=error.status(), detail=error.message()),
+      )
   }
   if failures.length() == failure_count {
     lifecycle.finish()

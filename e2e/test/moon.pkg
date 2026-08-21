@@ -2,8 +2,6 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/async/http",
-  "moonbitlang/async/io",
-  "moonbitlang/async/os_error",
   "moonbitlang/async/process",
   "moonbitlang/async/socket",
   "moonbitlang/core/debug",
@@ -16,7 +14,8 @@ import {
   "moonbit-community/proton/examples/app_commands_fixture",
   "moonbit-community/proton/examples/e2e_fixtures",
   "moonbit-community/proton_cdp/client",
-  "moonbit-community/proton_cdp/protocol/typed",
+  "moonbit-community/proton_cdp/page",
+  "moonbit-community/proton_cefsetup/store" @cef_store,
 }
 
 supported_targets = "native"

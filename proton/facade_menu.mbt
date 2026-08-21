@@ -1,30 +1,13 @@
 ///|
-#cfg(platform="windows")
 fn resolve_runtime_menu(
   menu : @native.MenuBar?,
   preferences : @locale.LocalePreferences,
   application_name : String,
+  platform~ : String,
 ) -> @native.MenuBar? {
-  menu.map(menu => resolve_menu(menu, preferences, application_name))
-}
-
-///|
-#cfg(platform="linux")
-fn resolve_runtime_menu(
-  menu : @native.MenuBar?,
-  preferences : @locale.LocalePreferences,
-  application_name : String,
-) -> @native.MenuBar? {
-  menu.map(menu => resolve_menu(menu, preferences, application_name))
-}
-
-///|
-#cfg(not(any(platform="windows", platform="linux")))
-fn resolve_runtime_menu(
-  menu : @native.MenuBar?,
-  preferences : @locale.LocalePreferences,
-  application_name : String,
-) -> @native.MenuBar? {
+  if platform != "macos" {
+    return menu.map(menu => resolve_menu(menu, preferences, application_name))
+  }
   Some(
     resolve_menu(
       menu.unwrap_or(@native.MenuBar::new(menus=[])),

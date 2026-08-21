@@ -11,18 +11,11 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const timeoutMs = Number(process.env.PROTON_SCAFFOLD_E2E_TIMEOUT_MS ?? "60000");
-const nativeDist = path.resolve(
-  process.env.PROTON_NATIVE_DIST ?? path.join(repoRoot, "native", "dist"),
-);
-const nativeBin = path.join(nativeDist, "bin");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-scaffold-e2e-"));
 const projectDir = path.join(tempRoot, "todo");
 const frontendDir = path.join(projectDir, "frontend");
 const frontendDist = path.join(frontendDir, "dist");
-const codegenWasm = path.join(
-  repoRoot,
-  "_build/wasm/debug/build/moonbit-community/proton_codegen/proton_codegen.wasm",
-);
+let codegenWasm;
 const codegenVersion = fs
   .readFileSync(path.join(repoRoot, "codegen", "moon.mod"), "utf8")
   .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
@@ -80,11 +73,19 @@ function run(command, args, options = {}) {
   return `${result.stdout ?? ""}${result.stderr ?? ""}`;
 }
 
+function buildArtifact(args) {
+  const output = run("moon", args, { capture: true });
+  const artifacts = JSON.parse(output).artifacts_path;
+  assert(
+    Array.isArray(artifacts) && artifacts.length === 1,
+    `expected one Moon artifact, received: ${output}`,
+  );
+  return artifacts[0];
+}
+
 function runtimeEnv(extra = {}) {
   return {
     ...process.env,
-    PATH: `${nativeBin}${path.delimiter}${process.env.PATH ?? ""}`,
-    PROTON_NATIVE_DIST: nativeDist,
     PROTON_NO_UPDATE_CHECK: "1",
     ...extra,
   };
@@ -160,7 +161,13 @@ function verifyGeneratedTree() {
 }
 
 function installLocalMoonxShim() {
-  run("moon", ["build", "codegen", "--target", "wasm"]);
+  codegenWasm = buildArtifact([
+    "run",
+    "codegen",
+    "--target",
+    "wasm",
+    "--build-only",
+  ]);
   const binDir = path.join(tempRoot, "bin");
   fs.mkdirSync(binDir);
   const shim = path.join(binDir, "moonx");
@@ -705,9 +712,7 @@ async function runPackagedAppSmoke(executable, expectedRevision) {
     PROTON_REMOTE_DEBUGGING_PORT: String(cdpPort),
   };
   delete packagedEnv.PROTON_HELPER_PATH;
-  delete packagedEnv.PROTON_NATIVE_DIST;
   delete packagedEnv.PROTON_RUNTIME_ROOT;
-  delete packagedEnv.PROTON_DEV;
   delete packagedEnv.PROTON_MODE;
   appProcess = spawn(executable, [`--remote-debugging-port=${cdpPort}`], {
     cwd: projectDir,
@@ -754,7 +759,6 @@ async function main() {
   if (process.platform !== "darwin") {
     fail("the scaffold package and lifecycle smoke currently requires macOS");
   }
-  assert(isDirectory(nativeBin), `native runtime is missing: ${nativeBin}`);
   run("moon", ["--version"], { capture: true });
   run("moonx", ["--target", "native", warrenCoordinate, "--help"], {
     capture: true,
@@ -779,6 +783,7 @@ async function main() {
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   installLocalMoonxShim();
   connectLocalSourceModules();
+  localCli(["-C", projectDir, "cef", "setup"]);
 
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
   verifySourceSmokeCodegen();

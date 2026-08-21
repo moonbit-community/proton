@@ -3,7 +3,7 @@
 pub(all) suberror AppPathError {
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
-  PlatformProbe(@native.NativeError)
+  PlatformProbe(status~ : Int, detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -19,8 +19,11 @@ pub fn AppPathError::message(self : AppPathError) -> String {
       "invalid application identifier: " + identifier
     MissingHomeDirectory(platform~) =>
       "cannot resolve the application data directory on " + platform
-    PlatformProbe(error) =>
-      "cannot determine the Proton platform: " + error.message()
+    PlatformProbe(status~, detail~) =>
+      "cannot determine the Proton platform (" +
+      status.to_string() +
+      "): " +
+      detail
   }
 }
 
@@ -79,7 +82,7 @@ fn packaged_resource_dir() -> String? {
 /// This function resolves the path but does not create the directory.
 pub fn app_data_dir(identifier : String) -> String raise AppPathError {
   let info = @native.runtime_info() catch {
-    error => raise PlatformProbe(error)
+    error => raise PlatformProbe(status=error.status(), detail=error.message())
   }
   let platform = info.platform
   app_data_dir_for_platform(
