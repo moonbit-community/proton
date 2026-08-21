@@ -651,14 +651,13 @@ async fn read_project_config(
         ),
       )
   }
-  let loaded = @proton_config.load_project_config_from_text(
+  let project = @proton_config.load_project_config_from_text(
     source,
     @fsutil.path_parent(path),
     name=path,
   ) catch {
     error => raise Invalid(path~, error~)
   }
-  let project = loaded.config()
   BuildProjectConfig::{
     base_dir: project.base_dir(),
     backend: project.backend(),

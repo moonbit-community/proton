@@ -41,9 +41,8 @@ moon -C examples run 01_run --target native
 ## Groups
 
 - `01_run`: minimal app-style startup through `moonbit-community/proton`
-- `02_*` through `18_*`: root-facade examples that compile against the native
-  DLL route (`02_local`, `03_remote`, `12_embed`, `17_extension`,
-  `18_extension_fs`).
+- `02_local`, `03_remote`, and `12_embed`: root-facade entry variants.
+- `18_extension_fs`: command-extension filesystem integration.
 - `19_*` through `35_*`: extension and app-capability examples for filesystem,
   path, shell, desktop integration, notification, tray, hotkey, auto-launch,
   keepawake, and microphone behavior.

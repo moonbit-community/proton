@@ -1,7 +1,7 @@
 ///|
 pub fn load_project_config_from_file(
   path : String,
-) -> LoadedProjectConfig raise ProjectConfigError {
+) -> ProjectConfig raise ProjectConfigError {
   load_project_config_from_text(
     read_project_config_text(path),
     config_base_dir(path),
@@ -14,7 +14,7 @@ pub fn load_project_config_from_text(
   source : String,
   base_dir : String,
   name? : String = "proton.project.json",
-) -> LoadedProjectConfig raise ProjectConfigError {
+) -> ProjectConfig raise ProjectConfigError {
   let json = @json.parse(source) catch {
     error => raise Syntax(name~, diagnostics=error.to_string())
   }
@@ -25,8 +25,8 @@ pub fn load_project_config_from_text(
 pub fn load_project_config_from_json(
   json : Json,
   base_dir : String,
-) -> LoadedProjectConfig raise ProjectConfigError {
-  LoadedProjectConfig::new(decode_project_config(json, base_dir))
+) -> ProjectConfig raise ProjectConfigError {
+  decode_project_config(json, base_dir)
 }
 
 ///|

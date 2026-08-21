@@ -31,8 +31,7 @@ test "project config contains only CLI build and package settings" {
     #|    "output": "dist"
     #|  }
     #|}
-  let loaded = load_project_config_from_text(source, "/workspace/todo")
-  let config = loaded.config()
+  let config = load_project_config_from_text(source, "/workspace/todo")
   assert_eq(config.backend().unwrap().app_package(), "app")
   let dist = config
     .frontend()

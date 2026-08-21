@@ -713,7 +713,6 @@ async function runPackagedAppSmoke(executable, expectedRevision) {
   };
   delete packagedEnv.PROTON_HELPER_PATH;
   delete packagedEnv.PROTON_RUNTIME_ROOT;
-  delete packagedEnv.PROTON_DEV;
   delete packagedEnv.PROTON_MODE;
   appProcess = spawn(executable, [`--remote-debugging-port=${cdpPort}`], {
     cwd: projectDir,

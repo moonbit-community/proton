@@ -529,77 +529,27 @@ async fn maybe_init_git(
 }
 
 ///|
-let moon_check_max_attempts = 3
-
-///|
-let moon_check_retry_delay_ms = 2000
-
-///|
 async fn run_moon_check(
   options : NewProjectOptions,
   project_dir : String,
 ) -> Unit raise NewProjectToolError {
-  let mut attempt = 1
-  while true {
-    let (code, data) = @process.collect_output_merged("moon", [
-      "-C", project_dir, "check", "--target", "js,native", "--diagnostic-limit",
-      "80",
-    ]) catch {
-      err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
+  let (code, data) = @process.collect_output_merged("moon", [
+    "-C", project_dir, "check", "--target", "js,native", "--diagnostic-limit", "80",
+  ]) catch {
+    err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
+  }
+  let output = data.text() catch {
+    err =>
+      raise Start(tool="moon check output", detail=@debug.render(Repr(err)))
+  }
+  if output != "" {
+    @stdio.stderr.write(output) catch {
+      _ => ()
     }
-    let output = data.text() catch {
-      err =>
-        raise Start(tool="moon check output", detail=@debug.render(Repr(err)))
-    }
-    if output != "" {
-      @stdio.stderr.write(output) catch {
-        _ => ()
-      }
-    }
-    if code == 0 {
-      return
-    }
-    if attempt < moon_check_max_attempts &&
-      moon_check_has_transient_network_failure(output) {
-      @output.info(
-        "[INFO] moon check hit a transient network error; retrying (" +
-        (attempt + 1).to_string() +
-        "/" +
-        moon_check_max_attempts.to_string() +
-        ")",
-      )
-      @async.sleep(moon_check_retry_delay_ms) catch {
-        error =>
-          raise Start(
-            tool="moon check retry",
-            detail=@debug.render(Repr(error)),
-          )
-      }
-      attempt = attempt + 1
-      continue
-    }
-    if moon_check_has_registry_resolution_failure(output) {
-      raise RegistryDependenciesUnavailable(code~, project=options.target_dir)
-    }
+  }
+  if code != 0 {
     raise MoonCheckFailed(code~, project=options.target_dir)
   }
-}
-
-///|
-fn moon_check_has_transient_network_failure(output : String) -> Bool {
-  let lowered = output.to_lower()
-  let markers = [
-    "tls handshake", "channel closed", "request or response body error", "connection reset",
-    "connection refused", "failed to download", "network is unreachable", "temporary failure",
-    "error sending request", "operation timed out",
-  ]
-  markers.any(fn(marker) { lowered.contains(marker) })
-}
-
-///|
-fn moon_check_has_registry_resolution_failure(output : String) -> Bool {
-  output.contains("Failed to resolve registry dependency") ||
-  output.contains("failed to resolve registry dependency")
 }
 
 ///|

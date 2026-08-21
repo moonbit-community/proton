@@ -113,14 +113,13 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         ),
       )
   }
-  let loaded = @proton_config.load_project_config_from_text(
+  let project = @proton_config.load_project_config_from_text(
     config_text,
     @fsutil.path_parent(config_path),
     name=config_path,
   ) catch {
     error => raise PackageConfigError::Invalid(path=config_path, error~)
   }
-  let project = loaded.config()
   let updater_base_url = match matches.values {
     { "updater-base-url": [base_url, ..], .. } => Some(base_url)
     _ => None

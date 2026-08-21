@@ -284,35 +284,3 @@ pub fn ProjectConfig::package_config(
 ) -> ProjectPackageConfig? {
   self.package_config
 }
-
-///|
-pub(all) struct LoadedProjectConfig {
-  config : ProjectConfig
-  warnings : Array[String]
-} derive(Eq, Debug)
-
-///|
-pub extend LoadedProjectConfig with Eq::{not_equal, equal}
-
-///|
-pub extend LoadedProjectConfig with Debug::{to_repr}
-
-///|
-pub fn LoadedProjectConfig::new(
-  config : ProjectConfig,
-  warnings? : Array[String] = [],
-) -> LoadedProjectConfig {
-  LoadedProjectConfig::{ config, warnings: warnings.copy() }
-}
-
-///|
-pub fn LoadedProjectConfig::config(self : LoadedProjectConfig) -> ProjectConfig {
-  self.config
-}
-
-///|
-pub fn LoadedProjectConfig::warnings(
-  self : LoadedProjectConfig,
-) -> Array[String] {
-  self.warnings.copy()
-}

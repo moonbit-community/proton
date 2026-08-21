@@ -369,14 +369,13 @@ async fn read_dev_project_config(
         ),
       )
   }
-  let loaded = @proton_config.load_project_config_from_text(
+  @proton_config.load_project_config_from_text(
     source,
     @fsutil.path_parent(path),
     name=path,
   ) catch {
     error => raise Invalid(path~, error~)
   }
-  loaded.config()
 }
 
 ///|
@@ -438,8 +437,6 @@ async fn dev_process_env(
 ) -> Map[String, String] {
   let env : Map[String, String] = {
     "PROTON_MODE": "dev",
-    "PROTON_DEV": "1",
-    "PROTON_HMR": "1",
     "PROTON_RUNTIME_ROOT": runtime.root,
     "PROTON_HELPER_PATH": helper_path,
     "PROTON_RESOURCE_DIR": resource_dir,

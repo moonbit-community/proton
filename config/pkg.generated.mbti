@@ -6,11 +6,11 @@ import {
 }
 
 // Values
-pub fn load_project_config_from_file(String) -> LoadedProjectConfig raise ProjectConfigError
+pub fn load_project_config_from_file(String) -> ProjectConfig raise ProjectConfigError
 
-pub fn load_project_config_from_json(Json, String) -> LoadedProjectConfig raise ProjectConfigError
+pub fn load_project_config_from_json(Json, String) -> ProjectConfig raise ProjectConfigError
 
-pub fn load_project_config_from_text(String, String, name? : String) -> LoadedProjectConfig raise ProjectConfigError
+pub fn load_project_config_from_text(String, String, name? : String) -> ProjectConfig raise ProjectConfigError
 
 // Errors
 pub(all) suberror ProjectConfigError {
@@ -32,17 +32,6 @@ pub fn ProjectConfigError::to_repr(Self) -> @debug.Repr
 pub fn ProjectConfigError::to_string(Self) -> String
 
 // Types and methods
-pub(all) struct LoadedProjectConfig {
-  config : ProjectConfig
-  warnings : Array[String]
-} derive(Eq, @debug.Debug)
-pub fn LoadedProjectConfig::config(Self) -> ProjectConfig
-pub fn LoadedProjectConfig::equal(Self, Self) -> Bool
-pub fn LoadedProjectConfig::new(ProjectConfig, warnings? : Array[String]) -> Self
-pub fn LoadedProjectConfig::not_equal(Self, Self) -> Bool
-pub fn LoadedProjectConfig::to_repr(Self) -> @debug.Repr
-pub fn LoadedProjectConfig::warnings(Self) -> Array[String]
-
 pub(all) struct ProjectBackendConfig {
   path : String
   app_package : String

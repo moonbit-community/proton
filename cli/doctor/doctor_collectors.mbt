@@ -52,7 +52,7 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
             ),
           )
       } noraise {
-        loaded => {
+        _ =>
           lines.push(
             DoctorLine::new(
               "project.config",
@@ -60,10 +60,6 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
               "proton.project.json is valid",
             ),
           )
-          for warning in loaded.warnings() {
-            lines.push(DoctorLine::new("project.config.warning", Warn, warning))
-          }
-        }
       }
     }
   }

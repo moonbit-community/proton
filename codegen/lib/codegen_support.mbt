@@ -131,49 +131,6 @@ fn type_list_text(
 }
 
 ///|
-fn recover_attr_raw(
-  source : String,
-  attr : @moonbitlang/parser/attribute.Attribute,
-) -> String {
-  let raw = attr.raw
-  if raw.contains("(") {
-    return raw
-  }
-  let loc = attr.loc
-  let start_str = loc.start.to_string()
-  let parse_pos = fn(s : String) -> (Int, Int) {
-    let mut text = s
-    if text.has_prefix("\"") && text.length() >= 2 {
-      text = text[1:text.length()].to_owned()
-    }
-    if text.has_suffix("\"") && text.length() >= 1 {
-      text = text[0:text.length() - 1].to_owned()
-    }
-    let parts = text.split(":").collect()
-    if parts.length() >= 2 {
-      (
-        @string.parse_int(parts[parts.length() - 2]) catch {
-          _ => -1
-        },
-        @string.parse_int(parts[parts.length() - 1]) catch {
-          _ => -1
-        },
-      )
-    } else {
-      (-1, -1)
-    }
-  }
-  let (line, col) = parse_pos(start_str)
-  let lines = source.split("\n").collect()
-  let idx = line - 1
-  guard idx >= 0 && idx < lines.length() else { return raw }
-  let full = lines[idx].to_owned()
-  let start = col - 1
-  guard start >= 0 && start < full.length() else { return raw }
-  full[start:].trim().to_owned()
-}
-
-///|
 fn path_dirname(path : String) -> String {
   let native_path : @mbpath.Path = path
   native_path.dirname().to_string()

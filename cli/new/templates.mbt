@@ -28,22 +28,6 @@ let default_warren_version = "0.2.7"
 let default_async_version = "0.20.3"
 
 ///|
-fn scaffold_release_chain() -> String {
-  "moonbit-community/proton_contract@" +
-  default_proton_contract_version +
-  "\n  moonbit-community/proton_codegen@" +
-  default_proton_codegen_version +
-  "\n  moonbit-community/proton_client@" +
-  default_proton_client_version +
-  "\n  moonbit-community/proton_rabbita@" +
-  default_proton_rabbita_version +
-  "\n  moonbit-community/proton@" +
-  default_proton_version +
-  "\n  moonbit-community/proton_cli@" +
-  default_proton_cli_version
-}
-
-///|
 priv struct TemplateContext {
   title : String
   title_html : String
