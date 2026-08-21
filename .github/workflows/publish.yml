@@ -66,7 +66,7 @@ jobs:
         run: moon update
 
       - name: Install CEF runtime
-        run: moon -C cefsetup run . --target native
+        run: PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cefsetup run . --target native
 
       - name: Validate release
         run: |
