@@ -22,57 +22,42 @@ async fn path_is_file(path : String) -> Bool {
 }
 
 ///|
-fn host_path(path : String) -> @path.Path {
-  if @path.sep == '\\' {
-    path.replace_all(old="/", new="\\")
-  } else {
-    path
-  }
-}
-
-///|
 fn path_join(base : String, child : String) -> String {
-  if base == "" {
-    child
-  } else if child == "" {
-    base
-  } else {
-    host_path(base).join(host_path(child)).to_string()
-  }
+  let base : @path.Path = base
+  base.join(child).to_string()
 }
 
 ///|
 fn path_parent(path : String) -> String {
-  host_path(path).dirname().to_string()
+  let path : @path.Path = path
+  path.dirname().to_string()
 }
 
 ///|
 fn path_is_absolute(path : String) -> Bool {
-  host_path(path).is_absolute()
+  let path : @path.Path = path
+  path.is_absolute()
 }
 
 ///|
 fn resolve_path(base : String, path : String) -> String {
-  let candidate = host_path(path)
+  let candidate : @path.Path = path
   if candidate.is_absolute() {
     candidate.resolve().to_string()
   } else {
-    host_path(base).join(candidate).resolve().to_string()
+    let base : @path.Path = base
+    base.join(candidate).resolve().to_string()
   }
 }
 
 ///|
 fn home_directory() -> String? {
-  let primary = if @path.sep == '\\' { "USERPROFILE" } else { "HOME" }
-  let fallback = if @path.sep == '\\' { "HOME" } else { "USERPROFILE" }
-  for name in [primary, fallback] {
-    match @env.get_env_var(name) {
-      Some(value) if value.trim().to_owned() != "" =>
-        return Some(value.trim().to_owned())
-      _ => ()
-    }
+  let name = if @path.sep == '\\' { "USERPROFILE" } else { "HOME" }
+  match @env.get_env_var(name) {
+    Some(value) if value.trim().to_owned() != "" =>
+      Some(value.trim().to_owned())
+    _ => None
   }
-  None
 }
 
 ///|

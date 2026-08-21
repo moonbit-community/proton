@@ -94,10 +94,9 @@ Rules:
 - Platform keys reuse the identifiers Proton already uses everywhere else:
   `darwin-arm64`, `darwin-x64`, `win32-x64`, `linux-x64`. Introducing a second
   naming scheme for the same concept would be a defect.
-- `kind` is `"full"` in version 1. It is the extension point: `"layered"` and
-  `"delta"` can be added later, and a client that does not understand a `kind`
-  treats that platform entry as unavailable rather than failing the whole
-  manifest.
+- `kind` must be `"full"`. Other values are invalid for this schema version.
+  Adding another artifact form requires a new schema and an implementation that
+  validates it explicitly.
 - `sha256` and `signature` are hexadecimal, matching the key format. One
   encoding throughout means one strict decoder rather than two.
 - `sha256` is for integrity and resumable download bookkeeping. It is **not** a

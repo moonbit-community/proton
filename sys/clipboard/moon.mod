@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_clipboard"
 
-version = "0.1.19"
+version = "0.2.0"
 
 readme = "README.mbt.md"
 

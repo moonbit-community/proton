@@ -1,10 +1,10 @@
 name = "moonbit-community/proton_cefsetup"
 
-version = "0.1.19"
+version = "0.2.0"
 
 import {
-  "moonbitlang/async@0.20.5",
-  "moonbitlang/x@0.4.50",
+  "moonbitlang/async@0.21.0",
+  "moonbitlang/x@0.5.1",
 }
 
 readme = "README.md"

@@ -797,6 +797,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|- `shared/` contains the target-neutral typed application contract.
           #|- `frontend/` is a JavaScript Rabbita module owned by Warren.
           #|- `backend/` is a native Proton module.
+          #|- `proton.project.json` is required by `proton_cli dev`, `build`, and `package`.
           #|- Keep command and event names in `shared/todo_contract.mbt`.
           #|- The Moon prebuild rule regenerates the typed bridge through
           #|  `moonx moonbit-community/proton_codegen`; do not invoke codegen from application
@@ -836,8 +837,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|proton_cli dev
           #|```
           #|
-          #|`dev` starts Warren in `frontend/`, waits for the development URL, then runs
-          #|`backend/app`.
+          #|`dev` reads the required `proton.project.json`, starts Warren in `frontend/`,
+          #|waits for the development URL, then runs `backend/app`.
           #|
           #|## Build
           #|

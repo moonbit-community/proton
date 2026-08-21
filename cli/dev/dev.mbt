@@ -110,14 +110,9 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let raw = dev_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
   let config_path = resolve_dev_config_path(cwd, raw)
-  let project_config = load_dev_project_config(config_path)
-  let frontend_config = match project_config {
-    Some(config) => config.frontend()
-    None => None
-  }
-  let project_base = project_config
-    .map(fn(config) { config.base_dir() })
-    .unwrap_or(cwd)
+  let project_config = read_dev_project_config(config_path)
+  let frontend_config = project_config.frontend()
+  let project_base = project_config.base_dir()
   let frontend_url : String? = match raw.url {
     Some(url) => Some(url)
     None =>
@@ -159,10 +154,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     frontend_path,
     managed_frontend_command is Some(_),
   )
-  let backend = match project_config {
-    Some(config) => config.backend()
-    None => None
-  }
+  let backend = project_config.backend()
   let backend_path = resolve_backend_path(
     project_base,
     backend.map(fn(config) { config.path() }),
@@ -326,33 +318,13 @@ async fn resolve_backend_path(root : String, backend_path : String?) -> String {
 }
 
 ///|
-async fn resolve_dev_config_path(cwd : String, raw : RawDevOptions) -> String? {
-  match raw.config_path {
-    Some(path) => Some(@fsutil.resolve_path(cwd, path))
-    None => {
-      let cwd_config = @fsutil.path_join(cwd, default_config_file)
-      if @fsutil.path_exists(cwd_config) {
-        Some(cwd_config)
-      } else {
-        None
-      }
-    }
+async fn resolve_dev_config_path(cwd : String, raw : RawDevOptions) -> String {
+  let path = match raw.config_path {
+    Some(path) => @fsutil.resolve_path(cwd, path)
+    None => @fsutil.path_join(cwd, default_config_file)
   }
-}
-
-///|
-async fn load_dev_project_config(
-  config_path : String?,
-) -> @proton_config.ProjectConfig? {
-  match config_path {
-    None => None
-    Some(path) => {
-      if !@fsutil.path_exists(path) {
-        raise NotFound(path~)
-      }
-      Some(read_dev_project_config(path))
-    }
-  }
+  guard @fsutil.path_exists(path) else { raise NotFound(path~) }
+  path
 }
 
 ///|

@@ -40,9 +40,7 @@ developer must perform them.
 - `cli/`: `moonbit-community/proton_cli`; independent native developer CLI module.
 - `package/`: standalone `moonbit-community/proton_package` module. It packages
   already-built executables from explicit metadata and payloads; it does not
-  discover Proton projects, invoke Moon builds, or assemble CEF runtimes. It
-  has an independent version line and is excluded from the workspace lockstep
-  bump.
+  discover Proton projects, invoke Moon builds, or assemble CEF runtimes.
 - `cefsetup/`: `moonbit-community/proton_cefsetup`; its root executable installs
   the CEF release selected by the module version. The `store` package owns the
   CEF requirements and immutable user-wide installation store.
@@ -119,19 +117,14 @@ native checks before handing off larger refactors.
 
 - `.github/workflows/publish.yml` publishes the lockstep dependency chain in this order:
   `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`,
-  `proton_updater`, `proton_cefsetup`, the ten `sys` modules, `proton_client`,
-  `proton_rabbita`, `proton`, `proton_bundle`, `proton_ext`, and finally
-  `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not published.
-- `proton_package` has its own version line. Select `package` as the workflow's
-  resume point to publish only that module; the workflow exits before the
-  lockstep chain.
-- All modules in `moon.work` except the explicitly independent
-  `proton_package` use one lockstep version. Prepare a lockstep release only
+  `proton_updater`, `proton_cefsetup`, `proton_package`, the ten `sys` modules,
+  `proton_client`, `proton_rabbita`, `proton`, `proton_bundle`, `proton_ext`,
+  and finally `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not published.
+- All modules in `moon.work` use one lockstep version. Prepare a lockstep release only
   through `moon run scripts/bump_version.mbtx -- patch`, `minor`, or `major`;
   do not edit individual lockstep module versions by hand. The script discovers
-  modules through `moon.work`, skips independently versioned modules, updates
-  the lockstep versions and internal requirements, and refuses to run if that
-  set has drifted from the shared version.
+  modules through `moon.work`, updates the lockstep versions and internal
+  requirements, and refuses to run if that set has drifted from the shared version.
 - Run the release checks before the first publish:
 
   ```sh

@@ -38,6 +38,28 @@ fn split_url(url : String) -> (String, String) raise NetError {
 }
 
 ///|
+fn request_headers(
+  headers : Map[String, String],
+) -> Map[@http.CaseInsensitiveString, String] {
+  let result : Map[@http.CaseInsensitiveString, String] = Map([])
+  for name, value in headers {
+    result[name] = value
+  }
+  result
+}
+
+///|
+fn response_headers(
+  headers : Map[@http.CaseInsensitiveString, String],
+) -> Map[String, String] {
+  let result : Map[String, String] = Map([])
+  for name, value in headers {
+    result[name.to_string()] = value
+  }
+  result
+}
+
+///|
 /// Makes an HTTP request and returns the response.
 #proton.command(contract=request_command)
 async fn do_request(
@@ -45,7 +67,7 @@ async fn do_request(
   request : @net_contract.Request,
 ) -> @net_contract.Response {
   let meth = parse_method(request.http_method)
-  let headers = request.headers
+  let headers = request_headers(request.headers)
   let body_bytes = request.body.map(fn(s) { @utf8.encode(s) }).unwrap_or(b"")
   // Use top-level functions for GET/POST/PUT (they handle full URL parsing).
   // Use Client for DELETE, PATCH, HEAD, OPTIONS (need URL split + path).
@@ -81,7 +103,7 @@ async fn do_request(
   @net_contract.Response::{
     status: response.code,
     status_text: response.reason,
-    headers: response.headers,
+    headers: response_headers(response.headers),
     body: @utf8.decode_lossy(data.binary()),
   }
 }

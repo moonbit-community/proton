@@ -247,7 +247,7 @@ async fn create_project(
   let mut staging_dir = ""
   let reserve_rollback_failures : Array[String] = []
   errdefer {
-    @async.protect_from_cancel(resume_on_cancel=true, () => {
+    @async.protect_from_cancel(() => {
       remove_transaction_tree(staging_dir, reserve_rollback_failures)
     })
     if reserve_rollback_failures.length() > 0 {
@@ -265,7 +265,7 @@ async fn create_project(
   })
   let rollback_failures : Array[String] = []
   errdefer {
-    @async.protect_from_cancel(resume_on_cancel=true, () => {
+    @async.protect_from_cancel(() => {
       remove_transaction_tree(staging_dir, rollback_failures)
       if target_existed && !@fsutil.path_exists(options.resolved_target_dir) {
         restore_empty_target(options.resolved_target_dir, rollback_failures)
