@@ -15,7 +15,6 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-scaffold-e2e-"));
 const projectDir = path.join(tempRoot, "todo");
 const frontendDir = path.join(projectDir, "frontend");
 const frontendDist = path.join(frontendDir, "dist");
-let codegenWasm;
 const codegenVersion = fs
   .readFileSync(path.join(repoRoot, "codegen", "moon.mod"), "utf8")
   .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
@@ -71,16 +70,6 @@ function run(command, args, options = {}) {
     fail(`${command} exited with status ${result.status}${output}`);
   }
   return `${result.stdout ?? ""}${result.stderr ?? ""}`;
-}
-
-function buildArtifact(args) {
-  const output = run("moon", args, { capture: true });
-  const artifacts = JSON.parse(output).artifacts_path;
-  assert(
-    Array.isArray(artifacts) && artifacts.length === 1,
-    `expected one Moon artifact, received: ${output}`,
-  );
-  return artifacts[0];
 }
 
 function runtimeEnv(extra = {}) {
@@ -160,37 +149,17 @@ function verifyGeneratedTree() {
   );
 }
 
-function installLocalMoonxShim() {
-  codegenWasm = buildArtifact([
-    "run",
-    "codegen",
-    "--target",
-    "wasm",
-    "--build-only",
-  ]);
-  const binDir = path.join(tempRoot, "bin");
-  fs.mkdirSync(binDir);
-  const shim = path.join(binDir, "moonx");
-  const realMoonx = run("which", ["moonx"], { capture: true }).trim();
-  fs.writeFileSync(
-    shim,
-    `#!/usr/bin/env node
-const { spawnSync } = require("node:child_process");
-const expected = ${JSON.stringify(codegenCoordinate)};
-if (process.argv[2] === expected) {
-  const result = spawnSync("moonrun", [${JSON.stringify(codegenWasm)}, ...process.argv.slice(3)], {
-    stdio: "inherit",
-  });
-  process.exit(result.status ?? 1);
-}
-const result = spawnSync(${JSON.stringify(realMoonx)}, process.argv.slice(2), {
-  stdio: "inherit",
-});
-process.exit(result.status ?? 1);
-`,
+function useLocalCodegenPackage() {
+  const backendModPath = path.join(projectDir, "backend", "moon.mod");
+  const source = fs.readFileSync(backendModPath, "utf8");
+  const localCommand = `moon runwasm '${path.join(repoRoot, "codegen")}'`;
+  const updated = source.replace(`moonx ${codegenCoordinate}`, localCommand);
+  assert(updated !== source, "generated backend is missing the codegen command");
+  assert(
+    !updated.includes(`moonx ${codegenCoordinate}`),
+    "generated backend contains multiple codegen commands",
   );
-  fs.chmodSync(shim, 0o755);
-  process.env.PATH = `${binDir}${path.delimiter}${process.env.PATH ?? ""}`;
+  fs.writeFileSync(backendModPath, updated);
 }
 
 function verifySourceSmokeCodegen() {
@@ -201,8 +170,9 @@ function verifySourceSmokeCodegen() {
     "commands.g.mbt",
   );
   const fresh = path.join(tempRoot, "commands.fresh.mbt");
-  run("moonrun", [
-    codegenWasm,
+  run("moon", [
+    "runwasm",
+    path.join(repoRoot, "codegen"),
     path.join(projectDir, "backend", "todo", "commands.mbt"),
     "-o",
     fresh,
@@ -781,7 +751,7 @@ async function main() {
   ]);
   verifyGeneratedTree();
   run("moon", ["fmt", "--check"], { cwd: projectDir });
-  installLocalMoonxShim();
+  useLocalCodegenPackage();
   connectLocalSourceModules();
   localCli(["-C", projectDir, "cef", "setup"]);
 
