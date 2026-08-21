@@ -167,16 +167,8 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         None => default_package
       }
   }
-  let proton_source = @build.resolve_proton_source(backend_path, app_package)
-  let runtime_requirements = @build.resolve_proton_runtime_requirements(
-    proton_source,
-  )
-  let runtime = ensure_dev_runtime(runtime_requirements, raw.setup_runtime)
-  let helper_path = @build.build_cef_process(
-    proton_source,
-    backend_path,
-    moon_target_dir?,
-  )
+  let runtime = ensure_dev_runtime(raw.setup_runtime)
+  let helper_path = @build.build_cef_process(backend_path, moon_target_dir?)
   let app_env = dev_process_env(
     runtime, helper_path, frontend_url, project_base,
   )
@@ -351,19 +343,16 @@ async fn read_dev_project_config(
 }
 
 ///|
-async fn ensure_dev_runtime(
-  requirements : String,
-  setup_runtime : Bool,
-) -> DevRuntime {
-  resolve_dev_runtime(requirements) catch {
+async fn ensure_dev_runtime(setup_runtime : Bool) -> DevRuntime {
+  resolve_dev_runtime() catch {
     error if @async.is_being_cancelled() => raise error
     error =>
       if setup_runtime {
-        ignore(@cef_store.install_declared(requirements)) catch {
+        ignore(@cef_store.install_default()) catch {
           error if @async.is_being_cancelled() => raise error
           error => raise Setup(detail=error.to_string())
         }
-        resolve_dev_runtime(requirements)
+        resolve_dev_runtime()
       } else {
         raise SetupRequired(detail=error.to_string())
       }
@@ -371,8 +360,8 @@ async fn ensure_dev_runtime(
 }
 
 ///|
-async fn resolve_dev_runtime(requirements : String) -> DevRuntime {
-  let runtime = @cef_store.resolve_declared(requirements)
+async fn resolve_dev_runtime() -> DevRuntime {
+  let runtime = @cef_store.resolve_default()
   dev_runtime_from_root(runtime.runtime_root(), "Proton runtime store")
 }
 

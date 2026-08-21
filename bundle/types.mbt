@@ -2,12 +2,10 @@
 /// Complete input for assembling an already-built Proton application bundle.
 ///
 /// The executable in `package_spec` and `cef_process` must come from the same
-/// Proton source revision. Project payloads are resolved beneath `base_dir`;
-/// `runtime_requirements` is the declaration shipped by that Proton source.
+/// Proton release. Project payloads are resolved beneath `base_dir`.
 pub struct ProtonBundleSpec {
   package_spec : @packager.PackageSpec
   cef_process : String
-  runtime_requirements : String
   base_dir : String
   macos_version : String
   bundle_version : String
@@ -21,7 +19,6 @@ pub struct ProtonBundleSpec {
 pub fn ProtonBundleSpec::new(
   package_spec : @packager.PackageSpec,
   cef_process : String,
-  runtime_requirements : String,
   base_dir : String,
   macos_version : String,
   bundle_version : String,
@@ -33,7 +30,6 @@ pub fn ProtonBundleSpec::new(
   ProtonBundleSpec::{
     package_spec,
     cef_process,
-    runtime_requirements,
     base_dir,
     macos_version,
     bundle_version,

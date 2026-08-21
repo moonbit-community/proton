@@ -551,11 +551,7 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
   if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
     raise PackagePlanError::MissingExecutable(path=executable)
   }
-  let proton_source = @build.resolve_proton_source(plan.root, plan.app_package)
-  let runtime_requirements = @build.resolve_proton_runtime_requirements(
-    proton_source,
-  )
-  let helper = @build.build_cef_process(proton_source, plan.root)
+  let helper = @build.build_cef_process(plan.root)
   let document_types = plan.document_types.map(document_type => {
     @packager.DocumentType::new(
       document_type.name,
@@ -582,7 +578,6 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
   let spec = @bundle.ProtonBundleSpec::new(
     package_spec,
     helper,
-    runtime_requirements,
     plan.base_dir,
     plan.macos_version,
     plan.bundle_version,

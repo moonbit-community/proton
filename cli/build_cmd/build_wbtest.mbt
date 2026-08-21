@@ -130,22 +130,10 @@ test "CEF process helper uses its explicit install directory" {
 }
 
 ///|
-test "Proton source comes from Moon's resolved package source" {
-  let workspace = @fsutil.resolve_path(".", "fixtures/workspace")
-  let output = "moonc check app.mbt -pkg-sources moonbit-community/proton:../deps/proton -target native\n"
+test "CEF process helper is installed from the lockstep Proton release" {
   assert_eq(
-    proton_source_from_build_plan(output, workspace),
-    Some(@fsutil.resolve_path(workspace, "../deps/proton")),
-  )
-}
-
-///|
-test "Proton source parser preserves quoted paths" {
-  let workspace = @fsutil.resolve_path(".", "fixtures/workspace")
-  let output = "moonc check app.mbt -pkg-sources moonbit-community/proton:'../deps/proton source' -target native\n"
-  assert_eq(
-    proton_source_from_build_plan(output, workspace),
-    Some(@fsutil.resolve_path(workspace, "../deps/proton source")),
+    cef_process_package("1.2.3"),
+    "moonbit-community/proton/internal/cef_process@1.2.3",
   )
 }
 

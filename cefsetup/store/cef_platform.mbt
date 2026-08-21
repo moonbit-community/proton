@@ -17,6 +17,16 @@ priv struct RuntimeRequirement {
 }
 
 ///|
+priv struct RuntimeRequirementInfo {
+  proton_version : String
+  base_url : String
+  platform : String
+  cef_archive : String
+  cef_sha256 : String
+  layout_version : Int
+} derive(ToJson)
+
+///|
 fn runtime_requirement(platform : ProtonPlatform) -> RuntimeRequirement {
   RuntimeRequirement::{
     base_url: default_cef_base_url,
@@ -33,6 +43,20 @@ async fn default_requirement() -> RuntimeRequirement {
   let platform = current_platform()
   require_supported_platform(platform)
   runtime_requirement(platform)
+}
+
+///|
+/// Returns the CEF requirement embedded in this Proton release as JSON.
+pub async fn default_requirement_json() -> String {
+  let requirement = default_requirement()
+  ToJson::to_json(RuntimeRequirementInfo::{
+    proton_version: release_version(),
+    base_url: requirement.base_url,
+    platform: requirement.platform,
+    cef_archive: requirement.cef_archive,
+    cef_sha256: requirement.cef_sha256,
+    layout_version: requirement.layout_version,
+  }).stringify()
 }
 
 ///|

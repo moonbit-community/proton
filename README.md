@@ -46,6 +46,12 @@ sources are compiled into the application by Moon, while only CEF remains an
 external runtime. Set `PROTON_RUNTIME_STORE` to an absolute path to relocate
 the store.
 
+`proton_cli`, `proton`, `proton_bundle`, and `proton_cefsetup` are released in
+lockstep. The CLI uses its embedded release requirement and installs the
+matching helper through Moon; it does not inspect a project's Moon workspace or
+dependency source directories. `proton_cli cef requirements` prints the active
+requirement as JSON.
+
 ## Application entry
 
 Generated projects define application runtime behavior with the MoonBit `App`

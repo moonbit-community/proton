@@ -22,7 +22,6 @@ fn windows_test_spec(
   ProtonBundleSpec::new(
     package_spec,
     resolve_path(root, "cef_process.exe"),
-    resolve_path(root, "cef_requirements.json"),
     root,
     "1.0.0",
     "1.0.0",
