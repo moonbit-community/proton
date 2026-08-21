@@ -236,14 +236,32 @@ priv struct BuildInvocation {
 
 ///|
 async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
-  let cwd = @path.Path(cwd).resolve().to_string()
-  let config_path = resolve_build_config_path(cwd, raw)
-  let config = load_project_config(config_path)
+  let (cwd, config) = load_build_project(cwd, raw)
   validate_release_config(config)
   if raw.run_frontend_build {
     run_frontend_build(config.base_dir, config)
   }
   validate_release_files(config.base_dir, config)
+  project_build_invocation(cwd, config, raw)
+}
+
+///|
+async fn load_build_project(
+  cwd : String,
+  raw : RawBuildOptions,
+) -> (String, BuildProjectConfig) {
+  let cwd = @path.Path(cwd).resolve().to_string()
+  let config_path = resolve_build_config_path(cwd, raw)
+  let config = load_project_config(config_path)
+  (cwd, config)
+}
+
+///|
+async fn project_build_invocation(
+  cwd : String,
+  config : BuildProjectConfig,
+  raw : RawBuildOptions,
+) -> BuildInvocation {
   let backend_path = resolve_backend_path(
     config.base_dir,
     config.backend.map(fn(backend) { backend.path() }),
@@ -349,13 +367,15 @@ pub async fn resolve_proton_source(
 
 ///|
 pub async fn resolve_default_project_proton_source(cwd : String) -> String {
-  let invocation = prepare_build(cwd, RawBuildOptions::{
+  let raw = RawBuildOptions::{
     app_package: None,
     config_path: None,
     moon_target_dir: None,
     run_frontend_build: false,
     moon_args: [],
-  })
+  }
+  let (cwd, config) = load_build_project(cwd, raw)
+  let invocation = project_build_invocation(cwd, config, raw)
   resolve_proton_source(invocation.backend_path, invocation.app_package)
 }
 

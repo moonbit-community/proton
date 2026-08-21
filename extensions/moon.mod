@@ -1,22 +1,22 @@
 name = "moonbit-community/proton_ext"
 
-version = "0.2.0"
+version = "0.2.1"
 
 import {
-  "moonbit-community/proton_ffi@0.2.0",
+  "moonbit-community/proton_ffi@0.2.1",
   "moonbitlang/x@0.5.1",
   "moonbitlang/async@0.21.0",
-  "moonbit-community/proton_clipboard@0.2.0",
-  "moonbit-community/proton_tray@0.2.0",
-  "moonbit-community/proton_global_hotkey@0.2.0",
-  "moonbit-community/proton@0.2.0",
-  "moonbit-community/proton_contract@0.2.0",
-  "moonbit-community/proton_microphone@0.2.0",
-  "moonbit-community/proton_auto_launch@0.2.0",
-  "moonbit-community/proton_keepawake@0.2.0",
-  "moonbit-community/proton_power_monitor@0.2.0",
-  "moonbit-community/proton_process@0.2.0",
-  "moonbit-community/proton_shell@0.2.0",
+  "moonbit-community/proton_clipboard@0.2.1",
+  "moonbit-community/proton_tray@0.2.1",
+  "moonbit-community/proton_global_hotkey@0.2.1",
+  "moonbit-community/proton@0.2.1",
+  "moonbit-community/proton_contract@0.2.1",
+  "moonbit-community/proton_microphone@0.2.1",
+  "moonbit-community/proton_auto_launch@0.2.1",
+  "moonbit-community/proton_keepawake@0.2.1",
+  "moonbit-community/proton_power_monitor@0.2.1",
+  "moonbit-community/proton_process@0.2.1",
+  "moonbit-community/proton_shell@0.2.1",
 }
 
 readme = "README.md"
