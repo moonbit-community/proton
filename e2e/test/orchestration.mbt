@@ -472,7 +472,6 @@ async fn close_browser(target : String, timeout : Int) -> Unit {
       cdp_target_from(target),
       timeout_ms=timeout,
     )
-    defer browser.close()
     close_connected_browser(browser)
   })
 }

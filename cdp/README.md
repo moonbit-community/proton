@@ -58,11 +58,13 @@ Browser-level command:
 let target = @client.parse_cdp_target("9222")
 @async.with_task_group(fn(tasks) {
   let browser = @client.connect_cdp_browser_target(tasks, target)
-  defer browser.close()
   let response = browser.send_schema_command("Browser.getVersion")
   println(@client.cdp_response_result_json(response).stringify())
 })
 ```
+
+Connections belong to the task group passed to `connect`; leaving that scope
+cancels the reader and closes the WebSocket.
 
 Page-level command:
 
@@ -72,7 +74,6 @@ Page-level command:
     tasks,
     @client.parse_cdp_target("9222"),
   )
-  defer page.close()
   println(page.evaluate("1 + 1").stringify())
 })
 ```

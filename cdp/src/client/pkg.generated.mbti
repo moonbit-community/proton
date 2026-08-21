@@ -141,7 +141,7 @@ pub struct CdpClient {
 pub async fn CdpClient::attach_to_target(Self, String, flatten? : Bool) -> String
 pub fn CdpClient::attached_target(Self, String) -> CdpAttachedTarget?
 pub fn CdpClient::attached_targets(Self) -> Array[CdpAttachedTarget]
-pub fn CdpClient::close(Self) -> Unit
+pub async fn CdpClient::close(Self) -> Unit
 pub async fn[X] CdpClient::connect(@async.TaskGroup[X], String) -> Self
 pub async fn[X] CdpClient::connect_with_timeout(@async.TaskGroup[X], String, timeout_ms? : Int) -> Self
 pub async fn CdpClient::create_target(Self, url? : String, browser_context_id? : String, new_window? : Bool) -> String

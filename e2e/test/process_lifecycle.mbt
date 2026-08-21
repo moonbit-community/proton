@@ -377,14 +377,11 @@ async fn run_pending_lifecycle_probe_once(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
     let page = connect_spawned_page(group, app, target, timeout)
-    let mut page_open = true
-    defer (if page_open { page.close() })
     let browser = @client.connect_cdp_browser_target_with_timeout(
       group,
       cdp_target_from(target),
       timeout_ms=timeout,
     )
-    defer browser.close()
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     let initial_slow_adds = count_native_log_entries(
       app.native_log_path,
@@ -419,7 +416,6 @@ async fn run_pending_lifecycle_probe_once(
       timeout,
     )
     page.close()
-    page_open = false
     let shutdown = finish_scenario_app_with_connected_browser(
       app, target, browser,
     )
@@ -459,14 +455,11 @@ async fn run_event_lifecycle_probe_once(
       wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
     )
     let page = connect_spawned_page(group, app, target, timeout)
-    let mut page_open = true
-    defer (if page_open { page.close() })
     let browser = @client.connect_cdp_browser_target_with_timeout(
       group,
       cdp_target_from(target),
       timeout_ms=timeout,
     )
-    defer browser.close()
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     let initial_starts = count_native_log_entries(
       app.native_log_path,
@@ -498,7 +491,6 @@ async fn run_event_lifecycle_probe_once(
     )
     @async.sleep(250)
     page.close()
-    page_open = false
     let shutdown = finish_scenario_app_with_connected_browser(
       app, target, browser,
     )

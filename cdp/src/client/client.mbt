@@ -32,16 +32,17 @@ async fn[T, E : Error] try_result_client_client(
 /// Example:
 /// ```
 /// // let client = CdpClient::connect(tasks, "ws://127.0.0.1:9222/devtools/browser/id")
-/// // defer client.close()
 /// ```
 pub struct CdpClient {
   priv ws : @websocket.Conn
+  priv mut reader : @async.Task[Unit]?
+  priv mut lifecycle : CdpClientLifecycle
+  priv lifecycle_changed : @async.CondVar
   priv mut next_id : Int
   priv mut next_event_handler_id : Int
   priv mut next_close_handler_id : Int
   priv pending_commands : Map[Int, CdpPendingCommand]
   priv command_contexts : Map[Int, CdpCommandContext]
-  priv mut closed : Bool
   priv event_changed : @async.CondVar
   priv mut last_command_failure : CdpCommandFailure?
   priv cdp_event_handlers : Array[CdpEventHandler]
@@ -50,6 +51,13 @@ pub struct CdpClient {
   priv mut last_cdp_response : @protocol.CdpResponseMessage?
   priv mut last_cdp_event : @protocol.CdpEventMessage?
   priv attached_targets : Map[String, CdpAttachedTarget]
+}
+
+///|
+priv enum CdpClientLifecycle {
+  Open
+  Closing
+  Closed
 }
 
 ///|
@@ -324,7 +332,10 @@ fn[X] CdpClient::from_websocket(
   ws : @websocket.Conn,
 ) -> CdpClient {
   let client = CdpClient::new(ws)
-  tasks.spawn_bg(() => client.read_messages(), no_wait=true, allow_failure=true)
+  client.reader = Some(
+    tasks.spawn(() => client.read_messages(), no_wait=true, allow_failure=true),
+  )
+  tasks.add_defer(() => client.close())
   client
 }
 
@@ -332,12 +343,14 @@ fn[X] CdpClient::from_websocket(
 fn CdpClient::new(ws : @websocket.Conn) -> CdpClient {
   let client = CdpClient::{
     ws,
+    reader: None,
+    lifecycle: Open,
+    lifecycle_changed: @async.CondVar::Cond(),
     next_id: 1,
     next_event_handler_id: 1,
     next_close_handler_id: 1,
     pending_commands: {},
     command_contexts: {},
-    closed: false,
     event_changed: @async.CondVar::Cond(),
     last_command_failure: None,
     cdp_event_handlers: [],
@@ -485,21 +498,37 @@ pub async fn[X] connect_cdp_page_target_with_timeout(
 }
 
 ///|
-/// Closes the WebSocket and completes all in-flight waits as connection closed.
+/// Closes the connection and waits for its reader task to terminate.
 ///
-/// The last-message diagnostics remain available after close. Events are live
-/// notifications and are not retained for replay.
+/// Closing first cancels the reader while the socket is still registered with
+/// the async runtime. The reader owns the final WebSocket close after its
+/// pending read has unwound. The last-message diagnostics remain available.
 ///
 /// Example:
 /// ```
-/// // defer client.close()
+/// // client.close()
 /// ```
-pub fn CdpClient::close(self : CdpClient) -> Unit {
-  if self.closed {
-    return
+pub async fn CdpClient::close(self : CdpClient) -> Unit {
+  if self.lifecycle is Open {
+    self.lifecycle = Closing
+    self.notify_connection_closed()
+    match self.reader {
+      Some(reader) => reader.cancel()
+      None => self.finish_reader()
+    }
   }
-  self.mark_connection_closed()
-  self.ws.close()
+  match self.reader {
+    Some(reader) =>
+      try reader.wait() catch {
+        _ => ()
+      } noraise {
+        _ => ()
+      }
+    None => ()
+  }
+  while !(self.lifecycle is Closed) {
+    self.lifecycle_changed.wait()
+  }
 }
 
 ///|
@@ -637,7 +666,7 @@ pub async fn CdpClient::send_cdp_command(
   params? : Json,
   session_id? : String,
 ) -> Int {
-  guard !self.closed else { raise BrowserError::ConnectionClosed }
+  guard self.lifecycle is Open else { raise BrowserError::ConnectionClosed }
   let id = self.next_id
   self.next_id = self.next_id + 1
   let command = @protocol.cdp_command(id~, method_name~, params?, session_id?)
@@ -702,7 +731,7 @@ fn CdpClient::reserve_cdp_command_id(
   self : CdpClient,
   id : Int,
 ) -> Unit raise BrowserError {
-  if self.closed {
+  if !(self.lifecycle is Open) {
     raise ConnectionClosed
   }
   if id <= 0 || self.pending_commands.contains(id) {
@@ -720,7 +749,7 @@ async fn CdpClient::recv_response(
   id : Int,
 ) -> @protocol.CdpResponseMessage {
   guard self.pending_commands.get(id) is Some(pending) else {
-    if self.closed {
+    if !(self.lifecycle is Open) {
       raise BrowserError::ConnectionClosed
     }
     raise BrowserError::InvalidField("id")
@@ -880,7 +909,7 @@ pub fn CdpClient::remove_cdp_event_handler(self : CdpClient, id : Int) -> Bool {
 pub fn CdpClient::on_close(self : CdpClient, handler : () -> Unit) -> Int {
   let id = self.next_close_handler_id
   self.next_close_handler_id = id + 1
-  if self.closed {
+  if !(self.lifecycle is Open) {
     handler()
   } else {
     self.close_handlers.push({ id, handler })
@@ -930,7 +959,7 @@ pub async fn CdpClient::recv_cdp_event(
     }
   })
   defer ignore(self.remove_cdp_event_handler(handler_id))
-  while completion.val is None && !self.closed {
+  while completion.val is None && self.lifecycle is Open {
     self.event_changed.wait()
   }
   match completion.val {
@@ -941,7 +970,7 @@ pub async fn CdpClient::recv_cdp_event(
 
 ///|
 async fn CdpClient::read_messages(self : CdpClient) -> Unit {
-  defer self.mark_connection_closed()
+  defer self.finish_reader()
   for ;; {
     let message = self.ws.recv()
     let text = message.read_all().text()
@@ -966,9 +995,7 @@ fn CdpClient::complete_response(
 }
 
 ///|
-fn CdpClient::mark_connection_closed(self : CdpClient) -> Unit {
-  guard !self.closed else { return }
-  self.closed = true
+fn CdpClient::notify_connection_closed(self : CdpClient) -> Unit {
   self.event_changed.broadcast()
   for _, pending in self.pending_commands {
     if pending.state is Waiting {
@@ -980,6 +1007,18 @@ fn CdpClient::mark_connection_closed(self : CdpClient) -> Unit {
     (handler.handler)()
   }
   self.close_handlers.clear()
+}
+
+///|
+/// Completes the reader-owned transport shutdown after no read is in flight.
+fn CdpClient::finish_reader(self : CdpClient) -> Unit {
+  if self.lifecycle is Open {
+    self.lifecycle = Closing
+    self.notify_connection_closed()
+  }
+  self.ws.close()
+  self.lifecycle = Closed
+  self.lifecycle_changed.broadcast()
 }
 
 ///|

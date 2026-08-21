@@ -49,7 +49,6 @@ async fn run_connected_scenario_probe(
     } else {
       @page.Page::connect(group, cdp_target_from(target), timeout_ms=timeout)
     }
-    defer page.close()
     wait_for_ready(page, scenario_ready_expression(name), timeout)
     guard evaluate_bool(page, scenario_probe_expression(name), true) else {
       fail("CDP e2e probe failed for " + name)

@@ -117,15 +117,12 @@ async fn run_dev_extension_page_probe(
   timeout : Int,
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
-  let mut page_open = true
-  defer (if page_open { page.close() })
   wait_for_ready(page, dev_extension_ready_expression(), timeout)
   let value = evaluate_json(page, dev_extension_probe_expression(), true)
   let result : DevExtensionProbe = decode_probe(value, "dev extension")
   assert_dev_extension_probe(result, frontend_url, value)
   run_dev_extension_reload_probe(page, frontend_url, timeout)
   page.close()
-  page_open = false
   run_dev_extension_non_proton_probe(tasks, target, output_root, timeout)
   assert_dev_extension_native_log(app.native_log_path)
   println("MoonBit 47_dev_extension_js dev probe passed")
@@ -139,7 +136,6 @@ async fn run_dev_extension_production_page_probe(
   timeout : Int,
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
-  defer page.close()
   wait_for_ready(page, dev_extension_ready_expression(), timeout) catch {
     error =>
       fail(error.to_string() + dev_extension_ready_diagnostic_suffix(page, app))

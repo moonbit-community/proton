@@ -94,7 +94,6 @@ The browser-level WebSocket is the right endpoint for `Browser.*` and
 let target = @client.parse_cdp_target("9222")
 @async.with_task_group(fn(tasks) {
   let client = @client.connect_cdp_browser_target(tasks, target)
-  defer client.close()
   let response = client.send_schema_command("Browser.getVersion")
   let result = @client.cdp_response_result_json(response)
   println(result.stringify())
@@ -113,7 +112,6 @@ connect to a page-level target:
 let target = @client.parse_cdp_target("9222")
 @async.with_task_group(fn(tasks) {
   let page = @page.Page::connect(tasks, target)
-  defer page.close()
   println(page.evaluate("document.title").stringify())
 })
 ```

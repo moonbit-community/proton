@@ -32,11 +32,6 @@ async fn run_web_contents_view_scenario_probe(
   )
   let page_left = connect_web_contents_view_page(tasks, left, timeout)
   let page_right = connect_web_contents_view_page(tasks, right, timeout)
-  defer {
-    browser.close()
-    page_left.close()
-    page_right.close()
-  }
   wait_for_ready(page_left, web_contents_view_ready_expression(), timeout)
   wait_for_ready(page_right, web_contents_view_ready_expression(), timeout)
   let (left_value, right_value) = @async.with_task_group(group => {

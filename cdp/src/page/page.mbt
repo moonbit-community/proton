@@ -83,7 +83,7 @@ pub async fn[X] Page::connect(
     title?,
     timeout_ms~,
   )
-  Page::initialize(client, timeout_ms)
+  Page::initialize_scoped(tasks, client, timeout_ms)
 }
 
 ///|
@@ -98,7 +98,19 @@ pub async fn[X] Page::connect_web_socket(
     web_socket_url,
     timeout_ms~,
   )
-  Page::initialize(client, timeout_ms)
+  Page::initialize_scoped(tasks, client, timeout_ms)
+}
+
+///|
+async fn[X] Page::initialize_scoped(
+  tasks : @async.TaskGroup[X],
+  client : @client.CdpClient,
+  timeout_ms : Int,
+) -> Page {
+  errdefer client.close()
+  let page = Page::initialize(client, timeout_ms)
+  tasks.add_defer(() => page.close())
+  page
 }
 
 ///|
@@ -107,8 +119,6 @@ async fn Page::initialize(client : @client.CdpClient, timeout_ms : Int) -> Page 
   let event_handler = client.on_cdp_event(event => state.handle_event(event))
   let close_handler = client.on_close(() => state.close())
   let page = Page::{ client, state, event_handler, close_handler }
-  let mut initialized = false
-  defer (if !initialized { page.close() })
   ignore(
     @client.cdp_response_result_json(
       client.send_schema_command("Page.enable", timeout_ms~),
@@ -127,13 +137,12 @@ async fn Page::initialize(client : @client.CdpClient, timeout_ms : Int) -> Page 
       client.send_schema_command("Runtime.enable", timeout_ms~),
     ),
   )
-  initialized = true
   page
 }
 
 ///|
 /// Closes the page connection and wakes all lifecycle waiters.
-pub fn Page::close(self : Page) -> Unit {
+pub async fn Page::close(self : Page) -> Unit {
   ignore(self.client.remove_cdp_event_handler(self.event_handler))
   ignore(self.client.remove_close_handler(self.close_handler))
   self.state.close()

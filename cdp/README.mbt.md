@@ -20,11 +20,13 @@ MoonBit library for the Chrome DevTools Protocol (CDP).
 let target = @client.parse_cdp_target("9222")
 @async.with_task_group(fn(tasks) {
   let browser = @client.connect_cdp_browser_target(tasks, target)
-  defer browser.close()
   let response = browser.send_schema_command("Browser.getVersion")
   println(@client.cdp_response_result_json(response).stringify())
 })
 ```
+
+Connections belong to the task group passed to `connect`; leaving that scope
+cancels the reader and closes the WebSocket.
 
 For page domains:
 
@@ -34,7 +36,6 @@ For page domains:
     tasks,
     @client.parse_cdp_target("9222"),
   )
-  defer page.close()
   println(page.evaluate("document.title").stringify())
 })
 ```

@@ -72,11 +72,6 @@ async fn run_multi_window_scenario_probe(
     target_id=target_b.target_id,
     timeout_ms=timeout,
   )
-  defer {
-    browser.close()
-    page_a.close()
-    page_b.close()
-  }
   let initial = run_multi_window_page_clients(
     page_a,
     page_b,

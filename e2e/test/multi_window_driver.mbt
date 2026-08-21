@@ -17,10 +17,6 @@ async fn run_multi_window_driver_probe(
     target_id=target_b.target_id,
     timeout_ms=timeout,
   )
-  defer {
-    page_a.close()
-    page_b.close()
-  }
   wait_for_ready(page_a, multi_window_ready_expression(), timeout)
   wait_for_ready(page_b, multi_window_ready_expression(), timeout)
   let (result_a, result_b) = @async.with_task_group(group => {

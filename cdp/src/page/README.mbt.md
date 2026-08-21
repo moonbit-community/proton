@@ -13,7 +13,6 @@ side-effect-free readiness predicates that may span document navigation.
     tasks,
     @client.parse_cdp_target("9222"),
   )
-  defer page.close()
   page.wait_until("document.readyState === 'complete'")
   println(page.evaluate("document.title").stringify())
 })

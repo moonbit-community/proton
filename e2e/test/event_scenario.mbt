@@ -111,8 +111,6 @@ async fn run_event_scenario_page_probe(
   timeout : Int,
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
-  let mut page_open = true
-  defer (if page_open { page.close() })
   wait_for_cdp_expression(
     page, "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on)",
     "event broadcast bridge", timeout,
@@ -159,7 +157,6 @@ async fn run_event_scenario_page_probe(
   assert_event_scenario_probe(result, value)
   run_event_reload_scenario_probe(page, timeout)
   page.close()
-  page_open = false
   assert_event_scenario_native_log(app.native_log_path)
   println("MoonBit 40_event_broadcast event/reload probe passed")
 }

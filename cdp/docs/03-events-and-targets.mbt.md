@@ -46,7 +46,6 @@ let browser = @client.connect_cdp_browser_target(
   tasks,
   @client.parse_cdp_target("9222"),
 )
-defer browser.close()
 
 let target_id = browser.create_target(url="https://example.com/")
 let session_id = browser.attach_to_target(target_id, flatten=true)

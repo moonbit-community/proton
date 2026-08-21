@@ -12,7 +12,6 @@ async fn run_i18n_scenario_page_probe(
     timeout,
     title="Proton I18n E2E",
   )
-  defer page.close()
   wait_for_ready(page, scenario_ready_expression("56_i18n"), timeout)
   guard evaluate_bool(page, scenario_probe_expression("56_i18n"), true) else {
     fail("CEF did not expose the configured navigator language preferences")
@@ -34,13 +33,14 @@ async fn run_i18n_scenario_page_probe(
       )
       connection.end_response()
     })
-    let probe = navigate_page_and_connect(
-      group,
-      target,
-      "http://127.0.0.1:" + server.addr.port().to_string() + "/i18n",
-      timeout,
+    ignore(
+      navigate_page_and_connect(
+        group,
+        target,
+        "http://127.0.0.1:" + server.addr.port().to_string() + "/i18n",
+        timeout,
+      ),
     )
-    defer probe.close()
     server_task.wait()
     let header = accept_language.val.unwrap_or("")
     let primary = match header.split_once(",") {

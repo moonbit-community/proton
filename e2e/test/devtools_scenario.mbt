@@ -20,7 +20,6 @@ async fn run_devtools_scenario_page_probe(
     timeout,
     title="Proton DevTools API",
   )
-  defer page.close()
   wait_for_ready(page, scenario_ready_expression("54_devtools"), timeout)
   let isolated_world = page.create_isolated_world(
     "DevTools Performance Metrics",

@@ -34,7 +34,6 @@ async fn run_asset_sidecar_scenario_page_probe(
   timeout : Int,
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
-  defer page.close()
   wait_for_ready(
     page,
     scenario_ready_expression("46_asset_sidecar_resources"),

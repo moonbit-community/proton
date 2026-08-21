@@ -134,8 +134,6 @@ async fn run_app_commands_full_probe(
     cdp_target_from(target),
     timeout_ms=timeout,
   )
-  let mut page_open = true
-  defer (if page_open { page.close() })
   wait_for_ready(page, scenario_ready_expression("41_app_commands"), timeout)
   assert_bridge_contract(page)
   let screenshot = capture_headless_screenshot(page)
@@ -144,7 +142,6 @@ async fn run_app_commands_full_probe(
   let queue = run_queue_full_probe(page)
   run_reload_probe(page, timeout)
   page.close()
-  page_open = false
   run_non_proton_probe(tasks, target, output_root, timeout)
   assert_native_bridge_guards(native_log_path)
   println(
@@ -443,7 +440,6 @@ async fn run_non_proton_probe(
   let proton_page = navigate_page_and_connect(
     tasks, target, "https://proton.localhost/", timeout,
   )
-  defer proton_page.close()
   wait_for_ready(
     proton_page,
     scenario_ready_expression("41_app_commands"),
@@ -490,7 +486,6 @@ async fn[X] navigate_and_read_origin(
   timeout : Int,
 ) -> OriginProbeResult {
   let page = navigate_page_and_connect(tasks, target, url, timeout)
-  defer page.close()
   let value = evaluate_json(
     page,
     (

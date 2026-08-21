@@ -129,7 +129,6 @@ async fn run_extension_scenario_page_probe(
   native_log_path : String,
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
-  defer page.close()
   wait_for_ready(page, scenario_ready_expression(name), timeout)
   let bridge_expression = match name {
     "38_async_extension_add" =>

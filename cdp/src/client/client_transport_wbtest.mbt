@@ -3,7 +3,8 @@ async test "response diagnostics precede consumption and cancellation clears sta
   @async.with_task_group(group => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
     let port = server.addr.port()
-    group.spawn_bg(no_wait=true, () => {
+    let peer_closed = Ref(false)
+    let server_task = group.spawn(() => {
       defer server.close()
       let (connection, _) = server.accept()
       defer connection.close()
@@ -13,12 +14,12 @@ async test "response diagnostics precede consumption and cancellation clears sta
       ignore(websocket.recv().read_all().text())
       websocket.send_text("{\"id\":1,\"result\":{\"ok\":true}}")
       ignore(websocket.recv().read_all().text())
-      let never = @async.CondVar::Cond()
-      never.wait()
+      ignore(websocket.recv()) catch {
+        _ => peer_closed.val = true
+      }
     })
 
     let client = CdpClient::connect(group, "ws://127.0.0.1:\{port}")
-    defer client.close()
     let first = client.send_cdp_command("Browser.getVersion")
     guard client.pending_commands.get(first) is Some(first_pending) else {
       fail("first CDP command was not registered")
@@ -59,6 +60,11 @@ async test "response diagnostics precede consumption and cancellation clears sta
     }
     assert_false(client.pending_commands.contains(second))
     assert_false(client.command_contexts.contains(second))
+    client.close()
+    server_task.wait()
+    assert_true(peer_closed.val)
+    assert_true(client.lifecycle is Closed)
+    client.close()
   })
 }
 
@@ -67,7 +73,7 @@ async test "send failure clears registered command state" {
   @async.with_task_group(group => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
     let port = server.addr.port()
-    group.spawn_bg(no_wait=true, () => {
+    let server_task = group.spawn(() => {
       defer server.close()
       let (connection, _) = server.accept()
       defer connection.close()
@@ -91,5 +97,32 @@ async test "send failure clears registered command state" {
     assert_true(failed)
     assert_eq(client.pending_commands.length(), 0)
     assert_eq(client.command_contexts.length(), 0)
+    server_task.wait()
+  })
+}
+
+///|
+async test "task group exit closes client after cancelling reader" {
+  @async.with_task_group(outer => {
+    let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"))
+    let port = server.addr.port()
+    let peer_closed = Ref(false)
+    let server_task = outer.spawn(() => {
+      defer server.close()
+      let (connection, _) = server.accept()
+      defer connection.close()
+      let request = connection.read_request()
+      let websocket = @websocket.from_http_server(request, connection)
+      defer websocket.close()
+      ignore(websocket.recv()) catch {
+        _ => peer_closed.val = true
+      }
+    })
+
+    @async.with_task_group(inner => {
+      ignore(CdpClient::connect(inner, "ws://127.0.0.1:\{port}"))
+    })
+    server_task.wait()
+    assert_true(peer_closed.val)
   })
 }
