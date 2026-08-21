@@ -115,18 +115,20 @@ test "rejects an invalid release revision" {
 }
 
 ///|
-test "treats an unimplemented artifact kind as nothing on offer" {
+test "rejects an unimplemented artifact kind" {
   let text = manifest_json(
     (
       $|{"darwin-arm64":{"kind":"delta","url":"https://example.com/app.patch",
       $| "size":16,"sha256":"\{sample_sha256}","signature":"abcd"}}
     ),
   )
-  let manifest = Manifest::parse(text)
-  // The document decodes; this client simply has no update to install. Failing
-  // the whole manifest would let a newer release format lock older clients out.
-  assert_eq(manifest.platforms(), [])
-  assert_eq(manifest.platform("darwin-arm64"), None)
+  assert_eq(
+    parse_failure(text),
+    InvalidField(
+      path="manifest.platforms.darwin-arm64.kind",
+      expectation="must be \"full\"",
+    ),
+  )
 }
 
 ///|

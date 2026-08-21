@@ -49,6 +49,19 @@ test "parse dev args accepts an isolated Moon target directory" {
 }
 
 ///|
+async test "dev requires a project config" {
+  let root = @async_fs.tmpdir(prefix="proton-dev-config-")
+  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  try resolve_dev_config_path(root, parse_dev_args([])) catch {
+    DevConfigError::NotFound(path~) =>
+      @debug.assert_eq(path, @fsutil.path_join(root, default_config_file))
+    _ => abort("expected missing project config error")
+  } noraise {
+    _ => abort("expected missing project config to fail")
+  }
+}
+
+///|
 test "dev frontend does not inherit the injected CEF preload" {
   let app_env = {
     "LD_PRELOAD": "libcef.so" + path_list_separator() + "existing-preload.so",
