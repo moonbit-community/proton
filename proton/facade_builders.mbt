@@ -121,7 +121,8 @@ pub fn App::debug_level(self : App, debug : Int) -> App {
 ///|
 /// Enables or disables off-screen headless rendering for the application.
 ///
-/// Headless mode does not create a native top-level window. Set
+/// Headless mode does not create a native top-level window, so native dialogs,
+/// menus, title bars, and other window-bound UI are unavailable. Set
 /// `PROTON_HEADLESS=1` to force this mode for automated test runs.
 pub fn App::headless(self : App, enabled? : Bool = true) -> App {
   self.headless_value = enabled

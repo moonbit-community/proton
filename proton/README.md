@@ -86,6 +86,10 @@ when all windows have closed.
 `.headless()` runs the app off-screen without creating a native window. Set
 `PROTON_HEADLESS=1` to force headless mode for automated test runs.
 
+Native dialogs, menus, title bars, and other window-bound UI are unavailable in
+headless mode. In particular, open, save, and directory dialogs fail with an
+unsupported-operation error instead of displaying unparented system UI.
+
 ## Application locale
 
 `App::locale` selects an immutable application locale before native runtime

@@ -58,6 +58,20 @@ hidden native top-level window and does not enable Chromium's `--headless`
 switch. Set `PROTON_HEADLESS=1` in the app environment; the self-hosted suite
 does this automatically.
 
+CDP controls Chromium content, not AppKit, Win32, or GTK system UI. Native
+dialogs are therefore unavailable in headless mode and cannot be completed by
+CDP. Tests for New, Open, and Save workflows should keep these boundaries
+separate:
+
+- exercise rendering, bridge commands, and dialog error handling through
+  headless CDP;
+- pass explicit temporary paths to backend file operations instead of opening a
+  native picker;
+- test renderer behavior after a selection with a fake dialog result; and
+- keep a small headed platform test for displaying, completing, and cancelling
+  real native dialogs. CDP may trigger the browser action, but platform UI
+  automation or a human must operate the dialog itself.
+
 The current Linux engine still initializes GTK/X11. Run the same probe under a
 virtual X server when no display is available:
 
