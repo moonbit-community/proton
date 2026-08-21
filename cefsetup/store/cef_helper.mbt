@@ -76,7 +76,7 @@ pub async fn resolve_default_helper() -> String {
 
 ///|
 /// Installs the helper executable selected by this Proton release.
-pub async fn install_default_helper() -> String {
+async fn install_default_helper() -> String {
   let (root, executable, executable_name) = default_helper_paths()
   ensure_dir(path_parent(root))
   let lock = acquire_install_lock(root)

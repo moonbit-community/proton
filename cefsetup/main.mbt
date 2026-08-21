@@ -2,7 +2,7 @@
 fn command() -> @argparse.Command {
   @argparse.Command(
     "proton_cefsetup",
-    about="Install the CEF runtime required by Proton",
+    about="Install the CEF runtime and subprocess helper required by Proton",
   )
 }
 

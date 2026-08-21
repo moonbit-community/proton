@@ -790,7 +790,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|- Build with `proton_cli build`.
           #|- Inspect packaging with `proton_cli package --dry-run`.
           #|- Package with `proton_cli package`.
-          #|- If the Proton runtime is not configured, run `proton_cli cef setup`.
+          #|- If the Proton installation is missing, run `proton_cli cef setup`.
           #|
           #|## Project Notes
           #|

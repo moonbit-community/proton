@@ -27,7 +27,7 @@ async fn resolve_requirement(
 
 ///|
 /// Installs the default runtime selected by this Proton release.
-pub async fn install_default() -> InstalledRuntime {
+async fn install_default() -> InstalledRuntime {
   install_requirement(default_requirement())
 }
 
