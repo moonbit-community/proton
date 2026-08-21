@@ -62,12 +62,14 @@ jobs:
       - name: Show MoonBit version
         run: moon version --all
 
+      - name: Update MoonBit registry
+        run: moon update
+
       - name: Install CEF runtime
         run: moon -C cefsetup run . --target native
 
       - name: Validate release
         run: |
-          moon update
           moon fmt --check
           node scripts/verify_generated.mjs
           node scripts/verify_release_metadata.mjs
