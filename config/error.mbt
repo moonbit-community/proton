@@ -9,7 +9,6 @@ pub(all) suberror ProjectConfigError {
   DuplicateValue(path~ : String, value~ : String)
   UnknownField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)
-  UnsupportedField(path~ : String, reason~ : String)
   UnsupportedValue(path~ : String, value~ : String)
 } derive(Debug, Eq)
 
@@ -33,22 +32,7 @@ pub fn ProjectConfigError::message(self : ProjectConfigError) -> String {
     DuplicateValue(path~, value~) => "duplicate value in " + path + ": " + value
     UnknownField(path~) => render_field_key_error(path)
     InvalidField(path~, expectation~) => path + " " + expectation
-    UnsupportedField(path~, reason~) =>
-      render_unsupported_field_error(path, reason)
     UnsupportedValue(path~, value~) => "unsupported " + path + ": " + value
-  }
-}
-
-///|
-fn render_unsupported_field_error(path : String, reason : String) -> String {
-  let prefix = "proton.project.json."
-  if path.has_prefix(prefix) {
-    "proton.project.json field `" +
-    path[prefix.length():].to_owned() +
-    "` " +
-    reason
-  } else {
-    path + " " + reason
   }
 }
 

@@ -42,55 +42,13 @@ fn decode_project_config(
   base_dir : String,
 ) -> ProjectConfig raise ProjectConfigError {
   guard json is Object(fields) else { raise InvalidRoot }
-  validate_project_fields(fields)
+  validate_object_fields(fields, "proton.project.json", [
+    "backend", "frontend", "package",
+  ])
   let backend = decode_backend(fields, base_dir)
   let frontend = decode_frontend(fields, base_dir)
   let package_config = decode_package(fields, base_dir)
   ProjectConfig::new(base_dir, backend~, frontend~, package_config~)
-}
-
-///|
-fn validate_project_fields(
-  fields : Map[String, Json],
-) -> Unit raise ProjectConfigError {
-  let errors : Array[ProjectConfigError] = []
-  for key, value in fields {
-    match key {
-      "backend" | "frontend" | "package" =>
-        match value {
-          Object(_) => ()
-          _ =>
-            errors.push(
-              InvalidField(
-                path="proton.project.json." + key,
-                expectation="must be an object",
-              ),
-            )
-        }
-      "window"
-      | "windows"
-      | "entry"
-      | "permissions"
-      | "debug"
-      | "single_instance"
-      | "updater" =>
-        errors.push(
-          UnsupportedField(
-            path="proton.project.json." + key,
-            reason="is runtime behavior; configure it with the Proton App API.",
-          ),
-        )
-      "product_name" | "identifier" | "bundle" =>
-        errors.push(
-          UnsupportedField(
-            path="proton.project.json." + key,
-            reason="moved under the `package` object.",
-          ),
-        )
-      other => errors.push(UnknownField(path="proton.project.json." + other))
-    }
-  }
-  raise_errors(errors)
 }
 
 ///|
@@ -113,7 +71,11 @@ fn decode_backend(
         ),
       )
     }
-    Some(_) => None
+    Some(_) =>
+      raise InvalidField(
+        path="proton.project.json.backend",
+        expectation="must be an object",
+      )
   }
 }
 
@@ -148,7 +110,11 @@ fn decode_frontend(
         ),
       )
     }
-    Some(_) => None
+    Some(_) =>
+      raise InvalidField(
+        path="proton.project.json.frontend",
+        expectation="must be an object",
+      )
   }
 }
 
@@ -201,7 +167,11 @@ fn decode_package(
         ),
       )
     }
-    Some(_) => None
+    Some(_) =>
+      raise InvalidField(
+        path="proton.project.json.package",
+        expectation="must be an object",
+      )
   }
 }
 

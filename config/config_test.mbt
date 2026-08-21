@@ -49,25 +49,30 @@ test "project config contains only CLI build and package settings" {
 }
 
 ///|
-test "runtime fields are rejected with an App API migration message" {
+test "project config rejects unknown top-level fields" {
   let source =
-    #|{ "window": { "title": "Todo" }, "debug": true }
+    #|{ "window": { "title": "Todo" } }
   let error = expect_config_error(() => {
     ignore(load_project_config_from_text(source, "/workspace/todo"))
   })
-  let message = error.message()
-  assert_true(message.contains("runtime behavior"))
-  assert_true(message.contains("Proton App API"))
+  assert_eq(error, UnknownField(path="proton.project.json.window"))
 }
 
 ///|
-test "legacy package fields point to the package object" {
-  let source =
-    #|{ "product_name": "Todo", "bundle": {} }
-  let error = expect_config_error(() => {
-    ignore(load_project_config_from_text(source, "/workspace/todo"))
-  })
-  assert_true(error.message().contains("moved under the `package` object"))
+test "project config sections must be objects" {
+  for section in ["backend", "frontend", "package"] {
+    let source = "{ \"" + section + "\": false }"
+    let error = expect_config_error(() => {
+      ignore(load_project_config_from_text(source, "/workspace/todo"))
+    })
+    assert_eq(
+      error,
+      InvalidField(
+        path="proton.project.json." + section,
+        expectation="must be an object",
+      ),
+    )
+  }
 }
 
 ///|

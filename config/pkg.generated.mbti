@@ -22,7 +22,6 @@ pub(all) suberror ProjectConfigError {
   DuplicateValue(path~ : String, value~ : String)
   UnknownField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)
-  UnsupportedField(path~ : String, reason~ : String)
   UnsupportedValue(path~ : String, value~ : String)
 } derive(Eq, @debug.Debug)
 pub fn ProjectConfigError::equal(Self, Self) -> Bool
