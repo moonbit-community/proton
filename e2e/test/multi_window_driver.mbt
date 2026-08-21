@@ -36,6 +36,8 @@ async fn run_multi_window_driver_probe(
   guard target_a.target_id != target_b.target_id else {
     fail("CDP e2e multi-window driver used the same target twice")
   }
+  page_a.close()
+  page_b.close()
 }
 
 ///|

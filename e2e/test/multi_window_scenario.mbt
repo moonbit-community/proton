@@ -92,6 +92,7 @@ async fn run_multi_window_scenario_probe(
       )
     None => ()
   }
+  page_a.close()
   let surviving = decode_probe(
     evaluate_json(page_b, multi_window_probe_expression(0), true),
     "surviving multi-window B",
@@ -105,6 +106,8 @@ async fn run_multi_window_scenario_probe(
   }
   close_page_target(browser, target_b.target_id)
   wait_for_multi_window_closed_browsers(app.native_log_path, 2, timeout)
+  page_b.close()
+  browser.close()
   let shutdown = wait_for_scenario_app_shutdown(
     app, target, snapshot, process_shutdown_timeout_ms,
   )
