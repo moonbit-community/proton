@@ -23,7 +23,6 @@ struct RawDevOptions {
   frontend_path : String?
   timeout_ms : Int
   ready_path : String?
-  wait_for_dev_server : Bool
   start_frontend : Bool
   setup_runtime : Bool
   app_args : Array[String]
@@ -68,10 +67,6 @@ pub fn command() -> @argparse.Command {
     "dev",
     about="Run a Proton app in development mode",
     flags=[
-      FlagArg(
-        "no-dev-server-wait",
-        about="Start the app without waiting for the frontend URL",
-      ),
       FlagArg(
         "no-frontend",
         about="Do not start the configured frontend command",
@@ -134,7 +129,6 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let moon_target_dir = raw.moon_target_dir.map(path => {
     @fsutil.resolve_path(cwd, path)
   })
-  validate_frontend_dev_url(frontend_url, raw.ready_path)
   let frontend_command : String? = match raw.command {
     Some(command) => Some(command)
     None =>
@@ -142,6 +136,15 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         Some(config) => config.before_dev()
         None => None
       }
+  }
+  validate_frontend_dev_url(frontend_url, raw.ready_path)
+  let managed_frontend_command = managed_frontend_command(
+    frontend_url,
+    frontend_command,
+    raw.start_frontend,
+  )
+  if raw.start_frontend {
+    ensure_frontend_url_available(frontend_url)
   }
   let frontend_path : String? = match raw.frontend_path {
     Some(path) => Some(@fsutil.resolve_path(project_base, path))
@@ -154,8 +157,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let frontend_working_dir = resolve_frontend_path(
     project_base,
     frontend_path,
-    frontend_command,
-    raw.start_frontend,
+    managed_frontend_command is Some(_),
   )
   let backend = match project_config {
     Some(config) => config.backend()
@@ -193,25 +195,19 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   @async.with_task_group(group => {
     // Announce the wait before the frontend child starts writing to the
     // terminal, so its startup output cannot interleave with this line.
-    if raw.wait_for_dev_server {
-      announce_frontend_server_wait(frontend_url, raw.ready_path)
+    announce_frontend_server_wait(frontend_url, raw.ready_path)
+    let frontend_process = match managed_frontend_command {
+      Some(command) =>
+        Some(start_frontend(group, frontend_working_dir, command, frontend_env))
+      None => None
     }
-    let frontend_process = maybe_start_frontend(
-      group,
-      frontend_working_dir,
-      frontend_command,
-      raw.start_frontend,
-      frontend_env,
-    )
     defer cancel_frontend(frontend_process)
-    if raw.wait_for_dev_server {
-      wait_for_frontend(
-        frontend_url,
-        raw.ready_path,
-        raw.timeout_ms,
-        frontend_process,
-      )
-    }
+    wait_for_frontend(
+      frontend_url,
+      raw.ready_path,
+      raw.timeout_ms,
+      frontend_process,
+    )
     let code = run_app(
       backend_path,
       app_package,
@@ -252,8 +248,6 @@ fn dev_options_from_matches(
     }
   guard matches.flags
     is {
-      "no-dev-server-wait"? : Some(no_dev_server_wait)
-      | (None with no_dev_server_wait = false),
       "no-frontend"? : Some(no_frontend)
       | (None with no_frontend = false),
       "setup"? : Some(setup_runtime)
@@ -269,7 +263,6 @@ fn dev_options_from_matches(
     frontend_path: frontend_path.get(0),
     timeout_ms: parse_non_negative_int(timeout, "--timeout-ms"),
     ready_path: ready_path.get(0),
-    wait_for_dev_server: !no_dev_server_wait,
     start_frontend: !no_frontend,
     setup_runtime,
     app_args,
@@ -295,10 +288,9 @@ fn parse_non_negative_int(
 async fn resolve_frontend_path(
   root : String,
   frontend_path : String?,
-  frontend_command : String?,
   start_frontend : Bool,
 ) -> String {
-  if !start_frontend || frontend_command is None {
+  if !start_frontend {
     return root
   }
   match frontend_path {
@@ -600,36 +592,40 @@ fn path_list_separator() -> String {
 }
 
 ///|
-async fn[X] maybe_start_frontend(
+async fn[X] start_frontend(
   group : @async.TaskGroup[X],
   frontend_path : String,
-  command : String?,
-  start_frontend : Bool,
+  command : String,
   env : Map[String, String],
-) -> @process.Process? raise DevProcessError {
+) -> @process.Process raise DevProcessError {
+  @output.info("Starting frontend: " + command)
+  @output.info("Frontend path: " + frontend_path)
+  let (program, args) = shell_command(command)
+  @process.spawn(
+    group,
+    program,
+    args,
+    cwd=frontend_path,
+    extra_env=env,
+    cancel_handler=frontend_cancel_handler(),
+    no_wait=true,
+  ) catch {
+    err => raise Start(role="frontend command", detail=@debug.render(Repr(err)))
+  }
+}
+
+///|
+fn managed_frontend_command(
+  frontend_url : String?,
+  frontend_command : String?,
+  start_frontend : Bool,
+) -> String? raise DevConfigError {
   if !start_frontend {
     return None
   }
-  match command {
-    None => None
-    Some(command) => {
-      @output.info("Starting frontend: " + command)
-      @output.info("Frontend path: " + frontend_path)
-      let (program, args) = shell_command(command)
-      let process = @process.spawn(
-        group,
-        program,
-        args,
-        cwd=frontend_path,
-        extra_env=env,
-        cancel_handler=frontend_cancel_handler(),
-        no_wait=true,
-      ) catch {
-        err =>
-          raise Start(role="frontend command", detail=@debug.render(Repr(err)))
-      }
-      Some(process)
-    }
+  match (frontend_url, frontend_command) {
+    (Some(_), None) => raise FrontendCommandMissing
+    (_, command) => command
   }
 }
 
@@ -754,6 +750,20 @@ async fn validate_ready_probe(ready_path : String?) -> Unit {
         raise DevServerError::ReadyProbeUnavailable
       }
     None => ()
+  }
+}
+
+///|
+/// Rejects an occupied endpoint before Proton starts a managed frontend.
+async fn ensure_frontend_url_available(frontend_url : String?) -> Unit {
+  match frontend_url {
+    None => ()
+    Some(url) => {
+      let endpoint = parse_dev_url_endpoint(url, None)
+      if tcp_ready(endpoint.host, endpoint.port) {
+        raise FrontendUrlInUse(url~)
+      }
+    }
   }
 }
 
