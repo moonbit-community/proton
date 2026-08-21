@@ -25,8 +25,8 @@ moon check --target js,native --diagnostic-limit 80
 proton_cli dev
 ```
 
-`dev` starts Warren in `frontend/`, waits for the development URL, then runs
-`backend/app`.
+`dev` reads the required `proton.project.json`, starts Warren in `frontend/`,
+waits for the development URL, then runs `backend/app`.
 
 ## Build
 

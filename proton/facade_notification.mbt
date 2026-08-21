@@ -127,10 +127,7 @@ pub async fn notification_show_and_wait(
     error => raise NativeFailure(status=error.status(), detail=error.message())
   }
   if waits_for_result {
-    let result = @async.protect_from_cancel(
-      take_notification_result,
-      resume_on_cancel=true,
-    ) catch {
+    let result = @async.protect_from_cancel(take_notification_result) catch {
       error => raise WaitInterrupted(detail=@debug.render(Repr(error)))
     }
     match result {

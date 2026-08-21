@@ -176,7 +176,7 @@ async fn start_application_lifecycle_hooks(
         )
     }
     group.add_defer(async fn() {
-      @async.protect_from_cancel(activation.shutdown, resume_on_cancel=true) catch {
+      @async.protect_from_cancel(activation.shutdown) catch {
         error =>
           cleanup_failures.push(
             LifecycleHook(
@@ -203,7 +203,7 @@ async fn start_window_lifecycle_hooks(
         )
     }
     group.add_defer(async fn() {
-      @async.protect_from_cancel(activation.close, resume_on_cancel=true) catch {
+      @async.protect_from_cancel(activation.close) catch {
         error =>
           cleanup_failures.push(
             LifecycleHook(

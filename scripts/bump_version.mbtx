@@ -4,7 +4,7 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/string",
   "moonbitlang/moon_config",
-  "moonbitlang/x@0.4.43/sys",
+  "moonbitlang/x@0.5.1/sys",
 }
 
 struct ModuleDocument {

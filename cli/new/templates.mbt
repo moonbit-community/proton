@@ -25,7 +25,7 @@ let default_warren_version = "0.2.7"
 ///|
 /// Scaffolded backends need this directly: `async fn main` is only available to
 /// a package that imports `moonbitlang/async`.
-let default_async_version = "0.20.3"
+let default_async_version = "0.21.0"
 
 ///|
 priv struct TemplateContext {
