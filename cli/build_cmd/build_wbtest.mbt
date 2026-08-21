@@ -188,3 +188,25 @@ test "frontend release requires dist" {
   let error = expect_build_error_message(() => validate_release_config(config))
   assert_true(error.contains("frontend.dist is required"))
 }
+
+///|
+async test "project resolution does not require frontend build output" {
+  let config = BuildProjectConfig::{
+    base_dir: ".",
+    backend: None,
+    frontend: Some(
+      @proton_config.ProjectFrontendConfig::new(
+        dist=Some("missing-frontend-dist"),
+      ),
+    ),
+  }
+  let invocation = project_build_invocation(".", config, RawBuildOptions::{
+    app_package: None,
+    config_path: None,
+    moon_target_dir: None,
+    run_frontend_build: false,
+    moon_args: [],
+  })
+  @debug.assert_eq(invocation.backend_path, ".")
+  @debug.assert_eq(invocation.app_package, default_package)
+}
