@@ -100,13 +100,18 @@ function verifyGeneratedDependencies() {
   if (!backend.includes(codegen)) {
     throw new Error(`backend/moon.mod is missing ${codegen}`);
   }
-  const generatedCommands = path.join(
-    projectDir,
-    "backend/todo/commands.g.mbt",
-  );
-  if (!fs.existsSync(generatedCommands)) {
-    throw new Error("Moon prebuild did not generate backend/todo/commands.g.mbt");
+}
+
+function useLocalCodegenPackage() {
+  const backendModPath = path.join(projectDir, "backend", "moon.mod");
+  const source = fs.readFileSync(backendModPath, "utf8");
+  const coordinate = `moonx moonbit-community/proton_codegen@${moduleVersion("codegen/moon.mod")}`;
+  const localCommand = `moon runwasm '${path.join(repoRoot, "codegen")}'`;
+  const updated = source.replace(coordinate, localCommand);
+  if (updated === source || updated.includes(coordinate)) {
+    throw new Error("could not select the local codegen package");
   }
+  fs.writeFileSync(backendModPath, updated);
 }
 
 try {
@@ -122,13 +127,18 @@ try {
     "registry_smoke",
     "--identifier",
     "dev.proton.registry-smoke",
+    "--no-check",
     "--no-git",
     "-y",
   ]);
   verifyGeneratedDependencies();
+  useLocalCodegenPackage();
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], {
     cwd: projectDir,
   });
+  if (!fs.existsSync(path.join(projectDir, "backend/todo/commands.g.mbt"))) {
+    throw new Error("Moon prebuild did not generate backend/todo/commands.g.mbt");
+  }
   succeeded = true;
   console.log("Registry scaffold smoke passed.");
 } finally {
