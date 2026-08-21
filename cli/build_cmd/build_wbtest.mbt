@@ -119,25 +119,6 @@ test "moon build-only output identifies one executable" {
 }
 
 ///|
-test "CEF process helper uses its explicit install directory" {
-  let bin = @fsutil.resolve_path(".", "fixtures/helper-bin")
-  let expected = if @path.sep == '\\' {
-    @fsutil.resolve_path(bin, "cef_process.exe")
-  } else {
-    @fsutil.resolve_path(bin, "cef_process")
-  }
-  assert_eq(cef_process_install_path(bin), expected)
-}
-
-///|
-test "CEF process helper is installed from the lockstep Proton release" {
-  assert_eq(
-    cef_process_package("1.2.3"),
-    "moonbit-community/proton/internal/cef_process@1.2.3",
-  )
-}
-
-///|
 test "moon build-only output rejects missing or ambiguous artifacts" {
   for
     output in [

@@ -3,7 +3,7 @@
 pub fn command() -> @argparse.Command {
   @argparse.Command(
     "cef",
-    about="Manage the Proton CEF runtime",
+    about="Manage the Proton CEF installation",
     subcommands=[setup_command(), requirements_command()],
     subcommand_required=true,
   )
@@ -11,7 +11,10 @@ pub fn command() -> @argparse.Command {
 
 ///|
 fn setup_command() -> @argparse.Command {
-  @argparse.Command("setup", about="Install the shared Proton CEF runtime")
+  @argparse.Command(
+    "setup",
+    about="Install the shared Proton CEF runtime and subprocess helper",
+  )
 }
 
 ///|
@@ -28,7 +31,7 @@ pub async fn run(matches : @argparse.Matches) -> Unit {
   match matches.subcommand {
     Some(("setup", setup_matches)) => {
       ignore(setup_matches)
-      let runtime = @cef_store.install_default()
+      let runtime = @cef_store.setup_default()
       println(runtime.runtime_root())
     }
     Some(("requirements", requirement_matches)) => {

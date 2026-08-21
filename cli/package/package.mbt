@@ -551,7 +551,7 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
   if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
     raise PackagePlanError::MissingExecutable(path=executable)
   }
-  let helper = @build.build_cef_process(plan.root)
+  let helper = @cef_store.resolve_default_helper()
   let document_types = plan.document_types.map(document_type => {
     @packager.DocumentType::new(
       document_type.name,

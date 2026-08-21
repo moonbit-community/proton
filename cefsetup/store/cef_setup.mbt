@@ -32,6 +32,14 @@ pub async fn install_default() -> InstalledRuntime {
 }
 
 ///|
+/// Installs the CEF runtime and Proton helper selected by this release.
+pub async fn setup_default() -> InstalledRuntime {
+  let runtime = install_default()
+  ignore(install_default_helper())
+  runtime
+}
+
+///|
 async fn install_requirement(
   requirement : RuntimeRequirement,
 ) -> InstalledRuntime {

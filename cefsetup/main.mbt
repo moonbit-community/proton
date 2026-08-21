@@ -15,7 +15,7 @@ async fn run(args : ArrayView[String]) -> Int {
     }
   }
   ignore(matches)
-  try @store.install_default() catch {
+  try @store.setup_default() catch {
     error => {
       println("error: " + error.to_string())
       1

@@ -119,6 +119,25 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
   lines.push(
     DoctorLine::new("runtime.layout", Ok, "runtime installation is valid"),
   )
+  let helper = try @cef_store.resolve_default_helper() catch {
+    error => {
+      lines.push(
+        DoctorLine::new(
+          "runtime.helper_missing",
+          Error,
+          "CEF subprocess helper is not installed",
+          hint=error.to_string() +
+            "\nRun `moonx moonbit-community/proton_cefsetup`.",
+        ),
+      )
+      return DoctorSection::new("runtime", "Runtime", lines)
+    }
+  } noraise {
+    value => value
+  }
+  lines.push(
+    DoctorLine::new("runtime.helper", Ok, "subprocess helper is installed"),
+  )
   if verbose {
     lines.push(
       DoctorLine::new(
@@ -128,6 +147,7 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
       ),
     )
     lines.push(DoctorLine::new("runtime.path", Neutral, runtime.runtime_root()))
+    lines.push(DoctorLine::new("runtime.helper_path", Neutral, helper))
   }
   DoctorSection::new("runtime", "Runtime", lines)
 }

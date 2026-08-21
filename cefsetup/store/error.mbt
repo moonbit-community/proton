@@ -38,6 +38,15 @@ priv suberror CefRuntimeError {
 }
 
 ///|
+priv suberror CefHelperError {
+  NotInstalled(path~ : String)
+  CreateTemporaryDirectory(detail~ : String)
+  InstallStart(detail~ : String)
+  InstallExit(code~ : Int)
+  InstalledExecutableMissing(path~ : String)
+}
+
+///|
 fn CefPlatformError::message(self : CefPlatformError) -> String {
   match self {
     Unsupported(platform~) =>
@@ -106,6 +115,25 @@ fn CefRuntimeError::message(self : CefRuntimeError) -> String {
 }
 
 ///|
+fn CefHelperError::message(self : CefHelperError) -> String {
+  match self {
+    NotInstalled(path~) =>
+      "The required Proton helper is not installed: " +
+      path +
+      "\nRun `moonx moonbit-community/proton_cefsetup`."
+    CreateTemporaryDirectory(detail~) =>
+      "Failed to create the Proton helper build directory: " + detail
+    InstallStart(detail~) =>
+      "Failed to start the Proton helper build: " + detail
+    InstallExit(code~) =>
+      "Failed to build the Proton helper: moon install exited with code " +
+      code.to_string()
+    InstalledExecutableMissing(path~) =>
+      "The Proton helper build did not produce " + path
+  }
+}
+
+///|
 impl Show for CefPlatformError with fn output(self, logger) {
   logger.write_string(self.message())
 }
@@ -122,5 +150,10 @@ impl Show for CefDownloadError with fn output(self, logger) {
 
 ///|
 impl Show for CefRuntimeError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+impl Show for CefHelperError with fn output(self, logger) {
   logger.write_string(self.message())
 }

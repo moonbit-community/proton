@@ -39,18 +39,18 @@ application built and served by Warren, and `backend/` runs the Proton
 desktop runtime.
 
 `cef setup` installs the exact CEF SDK and runtime required by this Proton
-release into the user-wide immutable store at `~/.proton/store`. Every
-project using the same Proton release resolves the same installation directly;
-projects contain no runtime copy or runtime-selection file. Proton's native
-sources are compiled into the application by Moon, while only CEF remains an
-external runtime. Set `PROTON_RUNTIME_STORE` to an absolute path to relocate
-the store.
+release into the user-wide immutable store at `~/.proton/store`. It also
+installs the release's CEF subprocess helper once under
+`~/.proton/helpers/<platform>/<version>`. Every project using the same Proton
+release resolves these installations directly; projects contain no runtime or
+helper copy and no runtime-selection file. Proton's native sources are compiled
+into the application by Moon, while only CEF remains an external runtime. Set
+`PROTON_RUNTIME_STORE` to an absolute path to relocate the CEF store.
 
 `proton_cli`, `proton`, `proton_bundle`, and `proton_cefsetup` are released in
-lockstep. The CLI uses its embedded release requirement and installs the
-matching helper through Moon; it does not inspect a project's Moon workspace or
-dependency source directories. `proton_cli cef requirements` prints the active
-requirement as JSON.
+lockstep. The CLI resolves the helper installed by setup; it does not inspect a
+project's Moon workspace or dependency source directories. `proton_cli cef
+requirements` prints the active requirement as JSON.
 
 ## Application entry
 
@@ -432,11 +432,13 @@ MBT_CDP_TARGET=9222 moon -C e2e run test --target native
 
 `moonbit-community/proton_package` is the generic host-native packager. It does
 not discover Proton projects or know about CEF. `proton_cli package` builds the
-application and helper, then delegates Proton's runtime and helper bundle layout
-to `moonbit-community/proton_bundle`, which in turn calls `proton_package`.
+application, resolves the runtime and helper installed by `cef setup`, then
+delegates Proton's bundle layout to `moonbit-community/proton_bundle`, which in
+turn calls `proton_package`.
 
-Developers who do not use `proton_cli` can use the same layers directly: build
-the application executable, install the matching `cef_process` executable, and
+Developers who do not use `proton_cli` can use the same layers directly: run
+`moonx moonbit-community/proton_cefsetup`, build the application executable,
+resolve the installed runtime and helper through `proton_cefsetup/store`, and
 pass both explicit paths to `proton_bundle`. Use `proton_package` alone only for
 applications that do not need Proton's CEF layout:
 
@@ -564,10 +566,12 @@ proton_cli doctor
 ```
 
 Doctor checks the project configuration, MoonBit toolchain, active platform,
-and required Proton runtime installation without changing the project. Outside a Proton
-project, it reports environment information and skips project-specific checks.
+and required Proton runtime and helper installations without changing the
+project. Outside a Proton project, it reports environment information and skips
+project-specific checks.
 
-Run `proton_cli cef setup` again when the required runtime is missing or invalid.
+Run `proton_cli cef setup` again when the required runtime or helper is missing
+or invalid.
 Use `PROTON_CEF_LOG=default` temporarily when browser-runtime logs are needed.
 
 See [examples/Readme.md](examples/Readme.md) for runnable examples. Repository

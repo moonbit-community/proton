@@ -216,8 +216,6 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
     invocation.moon_args,
     invocation.moon_target_dir,
   )
-  let moon_target_dir = invocation.moon_target_dir
-  ignore(build_cef_process(invocation.backend_path, moon_target_dir?))
 }
 
 ///|
@@ -280,17 +278,6 @@ async fn project_build_invocation(
 }
 
 ///|
-pub fn cef_process_install_path(bin_dir : String) -> String {
-  let name = if @path.sep == '\\' { "cef_process.exe" } else { "cef_process" }
-  @fsutil.resolve_path(bin_dir, name)
-}
-
-///|
-fn cef_process_package(version : String) -> String {
-  "moonbit-community/proton/internal/cef_process@" + version
-}
-
-///|
 fn native_moon_process_env_for(
   windows : Bool,
   configured_cc : String?,
@@ -314,50 +301,6 @@ fn native_moon_process_env_for(
 /// Returns the environment required for a Proton native Moon command.
 pub fn native_moon_process_env() -> Map[String, String] {
   native_moon_process_env_for(@path.sep == '\\', @env.get_env_var("MOON_CC"))
-}
-
-///|
-pub async fn build_cef_process(
-  backend_path : String,
-  moon_target_dir? : String,
-) -> String {
-  let bin_dir = moon_target_dir.unwrap_or(
-    @fsutil.path_join(backend_path, "_build"),
-  )
-  let args : Array[String] = [
-    "install",
-    cef_process_package(@cef_store.release_version()),
-    "--bin",
-    bin_dir,
-  ]
-  match moon_target_dir {
-    Some(target_dir) => {
-      args.push("--target-dir")
-      args.push(target_dir)
-    }
-    None => ()
-  }
-  @output.info("Installing CEF process helper: moon " + args.join(" "))
-  let code = @process.run(
-    "moon",
-    args,
-    cwd=backend_path,
-    extra_env=native_moon_process_env(),
-  ) catch {
-    error =>
-      raise BuildProcessError::Start(
-        command="CEF process helper install",
-        detail=@debug.render(Repr(error)),
-      )
-  }
-  if code != 0 {
-    raise BuildProcessError::Exit(command="CEF process helper install", code~)
-  }
-  let output = cef_process_install_path(bin_dir)
-  guard @fsutil.path_is_file(output) else {
-    raise BuildPathError::Missing(role="CEF process helper", path=output)
-  }
-  output
 }
 
 ///|
