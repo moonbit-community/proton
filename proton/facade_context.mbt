@@ -4,6 +4,7 @@ pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
+  request_quit : () -> Unit
 }
 
 ///|
@@ -48,8 +49,9 @@ fn ApplicationContext::ApplicationContext(
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
+  request_quit? : () -> Unit = fn() {  },
 ) -> ApplicationContext {
-  ApplicationContext::{ tasks, windows, locale_preferences, }
+  ApplicationContext::{ tasks, windows, locale_preferences, request_quit, }
 }
 
 ///|
@@ -118,6 +120,16 @@ pub fn ApplicationContext::task_group(
 /// Returns the window manager owned by this running application.
 pub fn ApplicationContext::windows(self : ApplicationContext) -> WindowManager {
   self.windows
+}
+
+///|
+/// Requests an orderly application shutdown.
+///
+/// Proton closes every open window, runs configured close interception, and
+/// destroys the native runtime after all windows have closed. A denied window
+/// close cancels this quit request.
+pub fn ApplicationContext::quit(self : ApplicationContext) -> Unit {
+  (self.request_quit)()
 }
 
 ///|

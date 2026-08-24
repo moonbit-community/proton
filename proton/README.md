@@ -75,8 +75,11 @@ Add secondary windows to the app builder:
 )
 ```
 
-The window id `"main"` is reserved for the primary window. The process exits
-when all windows have closed.
+The window id `"main"` is reserved for the primary window. By default, the
+process exits when all windows have closed. Use
+`.last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)` when
+the application should remain available for Dock, protocol, document, or tray
+activation after its last window closes.
 
 ## Headless mode
 

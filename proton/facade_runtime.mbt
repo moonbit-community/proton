@@ -34,6 +34,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     browser_data_dir?,
     application_name=resolved.application_name,
     app_instance~,
+    last_window_closed_policy=self.last_window_closed_policy_value,
     launch_input_handlers=self.launch_input_handlers,
     planned_views=self.planned_views.map(view => (view.0, view.1.to_native())),
     window_event_handlers=self.window_event_handlers,
@@ -78,7 +79,10 @@ async fn run_manifest(
   application_name? : String = "Proton",
   app_instance? : @native.AppInstance? = None,
   planned_views? : Array[(String, @native.ViewConfig)] = [],
-  launch_input_handlers? : Array[async (RuntimeLaunchInput) -> Unit noraise] = [],
+  last_window_closed_policy? : LastWindowClosedPolicy = LastWindowClosedPolicy::Quit,
+  launch_input_handlers? : Array[
+    async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
+  ] = [],
   window_event_handlers? : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ] = [],
@@ -286,15 +290,12 @@ async fn run_manifest(
         let session = RuntimeSession(
           runtime, locale_preferences, definitions, windows, command_host, dialog_completions,
           wakeup, forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
-          window_tasks, view_event_handlers, window_close_handler, window_lifecycle_hooks,
-          lifecycle_failures, bridge_startup_timeout_ms, navigation_handler, popup_handler,
-          download_handler, certificate_handler, media_handler, download_event_handlers,
+          application_tasks, last_window_closed_policy, window_tasks, view_event_handlers,
+          window_close_handler, window_lifecycle_hooks, lifecycle_failures, bridge_startup_timeout_ms,
+          navigation_handler, popup_handler, download_handler, certificate_handler,
+          media_handler, download_event_handlers,
         )
-        let application_context = ApplicationContext(
-          application_tasks,
-          session.window_manager(),
-          locale_preferences,
-        )
+        let application_context = session.application_context()
         let application_start = application_tasks.spawn(
           () => {
             defer session.wakeup.signal.notify()

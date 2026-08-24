@@ -172,6 +172,7 @@ enum RuntimeEvent {
   ViewEvent(Int64, Int64, NativeViewEvent)
   ResourceRequested(NativeResourceRequest)
   ResourceRequestCancelled(Int64)
+  QuitRequested
 } derive(Debug, Eq)
 
 ///|
@@ -663,6 +664,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     ViewEvent(_, _, LoadFailed(_, _, _)) => "view_load_failed"
     ResourceRequested(_) => "resource_requested"
     ResourceRequestCancelled(_) => "resource_request_cancelled"
+    QuitRequested => "quit_requested"
   }
 }
 
@@ -693,7 +695,8 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | ResourceRequestCancelled(_)
     | LaunchInput(_)
     | NotificationResult(_)
-    | NotificationClicked(_) => None
+    | NotificationClicked(_)
+    | QuitRequested => None
   }
 }
 
@@ -791,6 +794,11 @@ pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
   self is WindowClosed(_)
+}
+
+///|
+pub fn RuntimeEvent::is_quit_requested(self : RuntimeEvent) -> Bool {
+  self is QuitRequested
 }
 
 ///|

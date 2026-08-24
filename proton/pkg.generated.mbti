@@ -149,6 +149,7 @@ pub fn SystemLocaleError::to_string(Self) -> String
 pub(all) suberror WindowSessionError {
   UnknownWindow(id~ : String)
   AlreadyOpen(id~ : String)
+  ApplicationQuitting
   StaleWindow(id~ : String)
   UnknownView(id~ : String)
   AlreadyExists(id~ : String)
@@ -177,12 +178,13 @@ pub fn App::entry_file(Self, String) -> Self
 pub fn App::entry_html(Self, String) -> Self
 pub fn App::entry_url(Self, String) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
+pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
 pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise) -> Self
-pub fn App::on_launch_input(Self, async (RuntimeLaunchInput) -> Unit noraise) -> Self
+pub fn App::on_launch_input(Self, async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise) -> Self
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_popup_request(Self, async (BrowserHandle, PopupRequest) -> PopupDecision noraise) -> Self
@@ -205,9 +207,11 @@ pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
+  request_quit : () -> Unit
 }
 pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
+pub fn ApplicationContext::quit(Self) -> Unit
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::windows(Self) -> WindowManager
 
@@ -294,6 +298,14 @@ pub(all) struct DownloadRequest {
 pub fn DownloadRequest::equal(Self, Self) -> Bool
 pub fn DownloadRequest::not_equal(Self, Self) -> Bool
 pub fn DownloadRequest::to_repr(Self) -> @debug.Repr
+
+pub(all) enum LastWindowClosedPolicy {
+  Quit
+  KeepRunning
+} derive(Eq, @debug.Debug)
+pub fn LastWindowClosedPolicy::equal(Self, Self) -> Bool
+pub fn LastWindowClosedPolicy::not_equal(Self, Self) -> Bool
+pub fn LastWindowClosedPolicy::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MediaPermissionRequest {
   origin : String

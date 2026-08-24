@@ -117,6 +117,14 @@ test "notification clicks preserve optional payloads" {
 }
 
 ///|
+test "quit request is an application-level runtime event" {
+  let event = RuntimeEvent::QuitRequested
+  assert_eq(event.event_type(), "quit_requested")
+  assert_true(event.is_quit_requested())
+  assert_eq(event.window_id(), None)
+}
+
+///|
 test "native ABI version and availability" {
   inspect(abi_version(), content="1")
 }

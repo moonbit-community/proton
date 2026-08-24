@@ -16,6 +16,7 @@ fn App::App(
     single_instance_identifier: None,
     explicit_locale: None,
     bridge_startup_timeout_value_ms: default_bridge_startup_timeout_ms,
+    last_window_closed_policy_value: LastWindowClosedPolicy::Quit,
     menu: None,
     url_schemes: [],
     document_extensions: [],

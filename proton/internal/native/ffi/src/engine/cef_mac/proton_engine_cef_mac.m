@@ -265,7 +265,6 @@ static int g_proton_cef_initialized = 0;
 static int g_proton_cef_library_loaded = 0;
 static int g_proton_cef_runtime_active = 0;
 static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
-static int g_proton_app_terminating = 0;
 static int32_t g_proton_remote_debugging_port =
     PROTON_REMOTE_DEBUGGING_DISABLED;
 static proton_engine_app_t g_app;
@@ -2531,31 +2530,6 @@ static void proton_engine_window_mark_closed(proton_engine_window_t *window) {
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 }
 
-static int proton_engine_request_all_windows_close(void) {
-  int requested = 0;
-  for (proton_engine_window_t *window = g_windows; window != NULL;
-       window = window->next) {
-    if (window->closed) {
-      continue;
-    }
-    requested = 1;
-    proton_engine_window_close_views(window);
-    if (window->browser != NULL) {
-      cef_browser_host_t *host = window->browser->get_host(window->browser);
-      if (host != NULL) {
-        host->close_browser(host, 1);
-        host->base.release((cef_base_ref_counted_t *)host);
-        continue;
-      }
-    }
-    proton_engine_window_mark_closed(window);
-    if (window->window != nil) {
-      [window->window close];
-    }
-  }
-  return requested;
-}
-
 static void proton_engine_window_commit_appkit_close(
     proton_engine_window_t *window, NSWindow *native_window) {
   if (window == NULL || native_window == nil || window->window == nil) {
@@ -2564,9 +2538,8 @@ static void proton_engine_window_commit_appkit_close(
   proton_engine_debug_log("window_commit_close browser=%d", window->browser_id);
   window->appkit_closing = 1;
   proton_engine_window_close_views(window);
-  // Replacing the content view below releases the complete browser view tree.
-  // Clear these borrowed pointers first so deferred view close callbacks never
-  // message an AppKit object that the replacement has already deallocated.
+  // Clear borrowed child-view pointers first so deferred close callbacks never
+  // message AppKit objects released while the main browser view is detached.
   for (proton_engine_view_t *view = window->views; view != NULL;
        view = view->next) {
     view->browser_view = nil;
@@ -2575,14 +2548,20 @@ static void proton_engine_window_commit_appkit_close(
     proton_engine_bridge_pending_remove_browser(window->runtime,
                                                 window->browser_id);
   }
+  NSView *browser_view = window->browser_view;
   window->window = nil;
   window->content_view = nil;
-  window->browser_view = nil;
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 
-  // CEF completes a windowed browser close when replacing the content view
-  // destroys its CefBrowserHostView child. Keep that hierarchy intact until
-  // the replacement so CefBrowserHostView::dealloc can call WindowDestroyed.
+  // A windowed CEF browser completes close only after CefBrowserHostView is
+  // destroyed. Detach and release the host view explicitly so its dealloc can
+  // deliver WindowDestroyed; replacing the parent content view alone leaves
+  // the browser partially closed.
+  if (browser_view != nil) {
+    [browser_view removeFromSuperview];
+    [browser_view release];
+  }
+  window->browser_view = nil;
   [native_window setDelegate:nil];
   NSView *empty_content_view = [[NSView alloc] initWithFrame:NSZeroRect];
   [native_window setContentView:empty_content_view];
@@ -2748,10 +2727,9 @@ static void proton_engine_window_commit_appkit_close(
 }
 
 - (void)terminate:(id)sender {
-  (void)sender;
   proton_engine_debug_log("app_terminate");
-  g_proton_app_terminating = 1;
-  if (g_proton_cef_initialized && proton_engine_request_all_windows_close()) {
+  proton_event_t *event = proton_event_create(PROTON_EVENT_QUIT_REQUESTED);
+  if (event != NULL && proton_event_publish(event)) {
     return;
   }
   [super terminate:sender];
