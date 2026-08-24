@@ -1,0 +1,10 @@
+name: probe
+on:
+  push:
+  workflow_dispatch:
+  pull_request:
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "probe ok"
