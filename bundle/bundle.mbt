@@ -245,7 +245,7 @@ async fn prepare_proton_package(
     Windows => "windows-portable"
     Linux => "linux-appimage"
   }
-  write_package_manifest(spec, metadata_root, kind)
+  write_package_manifest(spec, metadata_root, kind, host)
   match host {
     Macos => prepare_macos_proton_package(spec, layout)
     Windows =>

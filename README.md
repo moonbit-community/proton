@@ -514,21 +514,21 @@ proton_cli package --release
 The package command performs an incremental debug executable build by default.
 Pass `--release` to use MoonBit's release build mode. Package output is written
 to `dist` by default.
-Icons, resources, output targets, signing, notarization, custom URL schemes, and
+Icons, resources, output formats, signing, notarization, custom URL schemes, and
 macOS document types are configured through `proton.project.json` and package command
 options.
 
-The `dmg` target is available on macOS. It creates a compressed disk image
+The `dmg` format is available on macOS. It creates a compressed disk image
 containing the app and an `/Applications` shortcut for drag-to-install:
 
 ```sh
-proton_cli package --release --target app --target dmg
+proton_cli package --release --format app --format dmg
 ```
 
-With `--notarize`, Proton submits the DMG when that target is enabled, then
+With `--notarize`, Proton submits the DMG when that format is enabled, then
 staples and validates both the DMG and the app before creating any requested
-ZIP archive. Without a `dmg` target, the existing app notarization flow is
-used. Windows supports the `app` and `zip` targets.
+ZIP archive. Without a `dmg` format, the existing app notarization flow is
+used. Windows supports the `app` and `zip` formats.
 
 ### Open an unsigned app on macOS
 
@@ -553,7 +553,7 @@ revision as well as the reproducible publication time. The revision is embedded
 in the signed app and emitted into the signed manifest fragment:
 
 ```sh
-proton_cli package --release --target zip \
+proton_cli package --release --format zip \
   --updater-base-url https://example.com/releases \
   --updater-published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --updater-revision 42

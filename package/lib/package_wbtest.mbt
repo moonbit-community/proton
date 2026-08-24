@@ -6,6 +6,19 @@ test "package formats use stable command names" {
 }
 
 ///|
+test "package formats use one host capability table" {
+  assert_eq(resolve_package_formats_for_host([], Macos), [App, Zip])
+  assert_eq(resolve_package_formats_for_host([], Windows), [App, Zip])
+  assert_eq(resolve_package_formats_for_host([], Linux), [AppImage])
+  try ignore(resolve_package_formats_for_host([App, App], Macos)) catch {
+    DuplicateFormat(format~) => assert_eq(format, "app")
+    _ => abort("expected a duplicate format error")
+  } noraise {
+    _ => abort("expected duplicate formats to be rejected")
+  }
+}
+
+///|
 test "package identifiers require reverse-DNS form" {
   assert_eq(validate_identifier("com.example.app"), "com.example.app")
   let mut rejected = false
@@ -16,6 +29,24 @@ test "package identifiers require reverse-DNS form" {
     _ => ()
   }
   assert_true(rejected)
+}
+
+///|
+test "package metadata rejects path-unsafe values" {
+  for product_name in ["Demo/App", "Demo\\App", "Demo:App", "Demo\nApp"] {
+    try validate_product_name(product_name) catch {
+      InvalidProductName(..) => ()
+      _ => abort("expected an invalid product name")
+    } noraise {
+      _ => abort("expected an invalid product name")
+    }
+  }
+  try validate_identifier("com.example.bad_value") catch {
+    InvalidIdentifier(identifier="com.example.bad_value", ..) => ()
+    _ => abort("expected an invalid identifier")
+  } noraise {
+    _ => abort("expected an invalid identifier")
+  }
 }
 
 ///|

@@ -8,12 +8,9 @@ let default_config_file = "proton.project.json"
 struct RawPackageOptions {
   app_package : String?
   config_path : String?
-  targets : Array[String]
-  output : String?
+  package_args : @package_args.PackageArguments
   release : Bool
   dry_run : Bool
-  sign : Bool
-  notarize : Bool
 } derive(Debug, Eq)
 
 ///|
@@ -30,10 +27,8 @@ struct PackagePlan {
   product_name : String
   identifier : String
   version : String
-  macos_version : String
-  bundle_version : String
   update_revision : UInt64
-  targets : Array[String]
+  formats : Array[@packager.PackageFormat]
   output : String
   release : Bool
   base_dir : String
@@ -56,41 +51,38 @@ pub extend PackagePlan with Debug::{to_repr}
 ///|
 /// Returns the declarative `proton_cli package` command specification.
 pub fn command() -> @argparse.Command {
+  let flags = @package_args.flags()
+  flags.push(
+    @argparse.FlagArg("release", about="Build and package the release output"),
+  )
+  flags.push(
+    @argparse.FlagArg("dry-run", about="Print the resolved package plan"),
+  )
+  let options = [
+    @argparse.OptionArg("package", about="MoonBit application package"),
+    @argparse.OptionArg("config", about="Proton project config"),
+  ]
+  options.append(@package_args.options())
+  options.append([
+    @argparse.OptionArg(
+      "updater-base-url",
+      about="Emit update metadata with artifacts served from this https base URL",
+    ),
+    @argparse.OptionArg(
+      "updater-published-at",
+      about="Publication instant for the manifest fragment (YYYY-MM-DDTHH:MM:SSZ)",
+    ),
+    @argparse.OptionArg(
+      "updater-revision",
+      allow_hyphen_values=true,
+      about="Monotonic release sequence embedded in the app and signed manifest",
+    ),
+  ])
   @argparse.Command(
     "package",
     about="Package a Proton application",
-    flags=[
-      FlagArg("release", about="Build and package the release output"),
-      FlagArg("dry-run", about="Print the resolved package plan"),
-      FlagArg("sign", about="Sign the packaged application"),
-      FlagArg(
-        "notarize",
-        about="Sign, notarize, and staple a macOS application",
-      ),
-    ],
-    options=[
-      OptionArg("package", about="MoonBit application package"),
-      OptionArg("config", about="Proton project config"),
-      OptionArg(
-        "target",
-        action=Append,
-        about="Package target (app, zip, Windows nsis, macOS dmg, or Linux appimage); may be repeated",
-      ),
-      OptionArg("output", about="Output directory"),
-      OptionArg(
-        "updater-base-url",
-        about="Emit update metadata with artifacts served from this https base URL",
-      ),
-      OptionArg(
-        "updater-published-at",
-        about="Publication instant for the manifest fragment (YYYY-MM-DDTHH:MM:SSZ)",
-      ),
-      OptionArg(
-        "updater-revision",
-        allow_hyphen_values=true,
-        about="Monotonic release sequence embedded in the app and signed manifest",
-      ),
-    ],
+    flags~,
+    options~,
   )
 }
 
@@ -170,122 +162,29 @@ fn updater_revision_from_matches(
 ///|
 fn package_options_from_matches(
   matches : @argparse.Matches,
-) -> RawPackageOptions raise PackageUsageError {
+) -> RawPackageOptions raise @packager.PackagePlanError {
   guard matches.values
     is {
-      "target"? : Some(targets)
-      | (None with targets = []),
       "package"? : Some(app_package)
       | (None with app_package = []),
       "config"? : Some(config_path)
       | (None with config_path = []),
-      "output"? : Some(output)
-      | (None with output = []),
       ..
     }
   guard matches.flags
     is {
-      "notarize"? : Some(notarize)
-      | (None with notarize = false),
       "release"? : Some(release)
       | (None with release = false),
       "dry-run"? : Some(dry_run)
       | (None with dry_run = false),
-      "sign"? : Some(sign)
-      | (None with sign = false),
       ..
     }
-  for target in targets {
-    validate_package_target(target)
-  }
   RawPackageOptions::{
     app_package: app_package.get(0),
     config_path: config_path.get(0),
-    targets,
-    output: output.get(0),
+    package_args: @package_args.from_matches(matches),
     release,
     dry_run,
-    sign: sign || notarize,
-    notarize,
-  }
-}
-
-///|
-/// The platform `package` is running on.
-///
-/// Packaging drives the host's own tooling -- codesign, makensis,
-/// appimagetool -- so the host decides both which targets can be built and
-/// which artifact an update downloads.
-pub(all) enum PackageHost {
-  Macos
-  Windows
-  Linux
-} derive(Eq)
-
-///|
-pub extend PackageHost with Eq::{not_equal, equal}
-
-///|
-/// The host `package` is running on, which is the platform it can build for.
-async fn current_package_host() -> PackageHost {
-  if @path.sep == '\\' {
-    Windows
-  } else if is_macos_host() {
-    Macos
-  } else {
-    Linux
-  }
-}
-
-///|
-fn package_host_name(host : PackageHost) -> String {
-  match host {
-    Macos => "macOS"
-    Windows => "Windows"
-    Linux => "Linux"
-  }
-}
-
-///|
-/// The host a platform id names. Used where the question is which platform's
-/// artifacts are being described rather than which one is running -- update
-/// metadata names the platform it was built for, and has the id in hand.
-fn package_host_of(platform : String) -> PackageHost? {
-  if platform.has_prefix("darwin-") {
-    Some(Macos)
-  } else if platform.has_prefix("win32-") {
-    Some(Windows)
-  } else if platform.has_prefix("linux-") {
-    Some(Linux)
-  } else {
-    None
-  }
-}
-
-///|
-/// Every target `package` accepts, and the hosts that can build it.
-///
-/// A target only builds on the platform it targets, because producing it runs
-/// that platform's own tooling. Absent from this table means not a target at
-/// all, so one table answers both "is this a target?" and "can this host build
-/// it?" -- previously separate checks that could disagree.
-fn package_target_hosts(target : String) -> Array[PackageHost]? {
-  match target {
-    // `app` names a macOS bundle and a Windows portable directory; on Linux
-    // the distributable unit is the AppImage itself.
-    "app" => Some([Macos, Windows])
-    "zip" => Some([Macos, Windows])
-    "dmg" => Some([Macos])
-    "nsis" => Some([Windows])
-    "appimage" => Some([Linux])
-    _ => None
-  }
-}
-
-///|
-fn validate_package_target(target : String) -> Unit raise PackageUsageError {
-  guard package_target_hosts(target) is Some(_) else {
-    raise UnsupportedTarget(target~)
   }
 }
 
@@ -300,40 +199,29 @@ async fn build_package_plan(
     Some(package_config) => package_config
     None => raise PackageConfigError::PackageMissing
   }
-  let product_name = validate_product_name(package_config.product_name)
-  let identifier = package_config.identifier
-  let identifier = validate_bundle_identifier(identifier)
-  let host = current_package_host()
-  let targets = if raw.targets.length() > 0 {
-    copy_strings(raw.targets)
+  let product_name = @packager.validate_product_name(
+    raw.package_args.product_name.unwrap_or(package_config.product_name),
+  )
+  let identifier = @packager.validate_identifier(
+    raw.package_args.identifier.unwrap_or(package_config.identifier),
+  )
+  let configured_formats = if raw.package_args.formats.length() > 0 {
+    raw.package_args.formats.copy()
   } else if package_config.formats.length() > 0 {
-    copy_strings(package_config.formats)
+    package_config.formats.map(value => @packager.PackageFormat::parse(value))
   } else {
-    match host {
-      Linux => ["appimage"]
-      Macos | Windows => ["app", "zip"]
-    }
+    []
   }
-  for target in targets {
-    guard package_target_hosts(target) is Some(hosts) && hosts.contains(host) else {
-      raise PackagePlanError::UnsupportedTargetForPlatform(
-        target~,
-        platform=package_host_name(host),
-      )
-    }
-  }
+  let formats = @packager.resolve_package_formats(configured_formats)
   let base_dir = @fsutil.resolve_path(project.base_dir(), ".")
   let backend = project.backend()
   let backend_root = match backend {
     Some(backend) => @fsutil.resolve_path(base_dir, backend.path())
     None => base_dir
   }
-  let version = @packager.validate_package_version(package_config.version)
-  let (macos_version, bundle_version) = if is_macos_host() {
-    validate_macos_version(version)
-  } else {
-    (version, version)
-  }
+  let version = @packager.validate_package_version(
+    raw.package_args.version.unwrap_or(package_config.version),
+  )
   let app_package = match raw.app_package {
     Some(app_package) => app_package
     None =>
@@ -342,7 +230,7 @@ async fn build_package_plan(
         None => default_package
       }
   }
-  let output = match raw.output {
+  let output = match raw.package_args.output {
     Some(output) => @fsutil.resolve_path(base_dir, output)
     None => @fsutil.resolve_path(base_dir, package_config.output())
   }
@@ -357,10 +245,8 @@ async fn build_package_plan(
     product_name,
     identifier,
     version,
-    macos_version,
-    bundle_version,
     update_revision,
-    targets,
+    formats,
     output,
     release: raw.release,
     base_dir,
@@ -370,143 +256,20 @@ async fn build_package_plan(
       Some(sign) => sign.binaries()
       None => []
     },
-    icons: package_config.icons(),
-    url_schemes: package_config.url_schemes(),
+    icons: if raw.package_args.icons.length() > 0 {
+      raw.package_args.icons.map(icon => @fsutil.resolve_path(base_dir, icon))
+    } else {
+      package_config.icons()
+    },
+    url_schemes: if raw.package_args.url_schemes.length() > 0 {
+      raw.package_args.url_schemes.copy()
+    } else {
+      package_config.url_schemes()
+    },
     document_types: package_config.document_types(),
-    sign: raw.sign,
-    notarize: raw.notarize,
+    sign: raw.package_args.sign,
+    notarize: raw.package_args.notarize,
   }
-}
-
-///|
-fn validate_product_name(value : String) -> String raise PackagePlanError {
-  let value = value.trim().to_owned()
-  guard value != "" else {
-    raise InvalidProductName(reason="value is required")
-  }
-  for char in value {
-    let code = char.to_int()
-    if code < 32 || code == 127 {
-      raise InvalidProductName(reason="contains an ASCII control character")
-    }
-    if char == '/' || char == '\\' || char == ':' {
-      raise InvalidProductName(
-        reason="contains a path-unsafe character: " + char.to_string(),
-      )
-    }
-  }
-  value
-}
-
-///|
-fn validate_bundle_identifier(value : String) -> String raise PackagePlanError {
-  let value = value.trim().to_owned()
-  let components : Array[StringView] = value.split(".").collect()
-  guard components.length() >= 2 else {
-    raise InvalidIdentifier(
-      identifier=value,
-      reason="expected a reverse-DNS bundle identifier",
-    )
-  }
-  for component in components {
-    guard component.length() > 0 else {
-      raise InvalidIdentifier(
-        identifier=value,
-        reason="contains an empty component",
-      )
-    }
-    let mut at_start = true
-    for char in component {
-      if at_start {
-        guard char.is_ascii_alphabetic() || char.is_ascii_digit() else {
-          raise InvalidIdentifier(
-            identifier=value,
-            reason="a component must start with an ASCII letter or digit",
-          )
-        }
-        at_start = false
-      }
-      guard char.is_ascii_alphabetic() || char.is_ascii_digit() || char == '-' else {
-        raise InvalidIdentifier(
-          identifier=value,
-          reason="contains an unsupported character",
-        )
-      }
-    }
-  }
-  value
-}
-
-///|
-fn validate_macos_version(
-  value : String,
-) -> (String, String) raise PackagePlanError {
-  let value = value.trim().to_owned()
-  let core = match value.split_once("-") {
-    Some((core, _)) => core.to_owned()
-    None => value
-  }
-  let core = match core.split_once("+") {
-    Some((core, _)) => core.to_owned()
-    None => core
-  }
-  let components : Array[StringView] = core.split(".").collect()
-  guard components.length() >= 1 && components.length() <= 3 else {
-    raise InvalidVersion(
-      version=core,
-      reason="macOS version must contain one to three numeric components",
-    )
-  }
-  let normalized : Array[String] = []
-  for component in components {
-    guard component.length() > 0 else {
-      raise InvalidVersion(version=core, reason="contains an empty component")
-    }
-    for char in component {
-      guard char.is_ascii_digit() else {
-        raise InvalidVersion(version=core, reason="components must be numeric")
-      }
-    }
-    normalized.push(component.to_owned())
-  }
-  while normalized.length() < 3 {
-    normalized.push("0")
-  }
-  let short_version = normalized.join(".")
-  let bundle_version = match @env.get_env_var("PROTON_MACOS_BUILD_NUMBER") {
-    Some(build) if build.trim().to_owned() != "" =>
-      validate_bundle_version(build.trim().to_owned())
-    _ => short_version
-  }
-  (short_version, bundle_version)
-}
-
-///|
-fn validate_bundle_version(value : String) -> String raise PackagePlanError {
-  let components : Array[StringView] = value.split(".").collect()
-  guard components.length() >= 1 && components.length() <= 3 else {
-    raise InvalidVersion(
-      version=value,
-      reason="PROTON_MACOS_BUILD_NUMBER must contain one to three numeric components",
-    )
-  }
-  for component in components {
-    guard component.length() > 0 else {
-      raise InvalidVersion(
-        version=value,
-        reason="PROTON_MACOS_BUILD_NUMBER contains an empty component",
-      )
-    }
-    for char in component {
-      guard char.is_ascii_digit() else {
-        raise InvalidVersion(
-          version=value,
-          reason="PROTON_MACOS_BUILD_NUMBER components must be numeric",
-        )
-      }
-    }
-  }
-  value
 }
 
 ///|
@@ -522,7 +285,9 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  identifier: " + plan.identifier)
   println("  version: " + plan.version)
   println("  update revision: " + plan.update_revision.to_string())
-  println("  targets: " + plan.targets.join(", "))
+  println(
+    "  formats: " + plan.formats.map(format => format.to_string()).join(", "),
+  )
   println("  output: " + plan.output)
   let sign_binaries = if plan.sign_binaries.length() == 0 {
     "none"
@@ -549,7 +314,7 @@ fn bool_text(value : Bool) -> String {
 async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
   let executable = run_package_build(plan)
   if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
-    raise PackagePlanError::MissingExecutable(path=executable)
+    raise @packager.PackagePlanError::MissingExecutable(path=executable)
   }
   let helper = @cef_store.resolve_default_helper()
   let document_types = plan.document_types.map(document_type => {
@@ -559,15 +324,12 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
       role=document_type.role,
     )
   })
-  let formats = plan.targets.map(target => {
-    @packager.PackageFormat::parse(target)
-  })
   let package_spec = @packager.PackageSpec::new(
     executable,
     plan.product_name,
     plan.identifier,
     plan.version,
-    formats,
+    plan.formats,
     plan.output,
     icons=plan.icons,
     url_schemes=plan.url_schemes,
@@ -579,8 +341,6 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
     package_spec,
     helper,
     plan.base_dir,
-    plan.macos_version,
-    plan.bundle_version,
     plan.frontend_dist,
     update_revision=plan.update_revision,
     resources=plan.resources,
@@ -592,11 +352,6 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
     println("Packaged: " + artifact)
   }
   result
-}
-
-///|
-async fn is_macos_host() -> Bool {
-  @fsutil.path_exists("/System/Library/CoreServices/SystemVersion.plist")
 }
 
 ///|
@@ -625,9 +380,4 @@ async fn resolve_package_config_path(
       }
     }
   }
-}
-
-///|
-fn copy_strings(values : Array[String]) -> Array[String] {
-  values.map(fn(value) { value })
 }

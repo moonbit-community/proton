@@ -12,8 +12,6 @@ async test "build rejects a missing application through the public interface" {
     package_spec,
     "/missing/cef_process",
     "/missing",
-    "1.0.0",
-    "1",
     None,
   )
   try ignore(build(proton)) catch {

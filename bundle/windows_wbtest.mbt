@@ -23,8 +23,6 @@ fn windows_test_spec(
     package_spec,
     resolve_path(root, "cef_process.exe"),
     root,
-    "1.0.0",
-    "1.0.0",
     Some(resolve_path(root, "frontend/dist")),
     resources=[resolve_path(root, "bundle resources/**")],
   )

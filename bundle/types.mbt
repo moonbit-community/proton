@@ -7,8 +7,6 @@ pub struct ProtonBundleSpec {
   package_spec : @packager.PackageSpec
   cef_process : String
   base_dir : String
-  macos_version : String
-  bundle_version : String
   update_revision : UInt64
   frontend_dist : String?
   resources : Array[String]
@@ -20,8 +18,6 @@ pub fn ProtonBundleSpec::new(
   package_spec : @packager.PackageSpec,
   cef_process : String,
   base_dir : String,
-  macos_version : String,
-  bundle_version : String,
   frontend_dist : String?,
   update_revision? : UInt64 = 0UL,
   resources? : Array[String] = [],
@@ -31,8 +27,6 @@ pub fn ProtonBundleSpec::new(
     package_spec,
     cef_process,
     base_dir,
-    macos_version,
-    bundle_version,
     update_revision,
     frontend_dist,
     resources,
