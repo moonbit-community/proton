@@ -340,6 +340,11 @@ so CDP can be enabled separately for end-to-end tests. Native menus, dialogs,
 and titlebar overlay are unavailable in this mode. Linux still requires an
 X11 display; use Xvfb in display-less CI jobs.
 
+Development and explicit debug mode use an ephemeral remote-debugging port by
+default, and CEF prints the selected WebSocket endpoint to stderr. Set
+`PROTON_REMOTE_DEBUGGING_PORT` to `0` to request the same behavior explicitly,
+or to a value from `1024` through `65535` when a fixed port is required.
+
 ## Frontend projects
 
 Generated projects describe their toolchain in `proton.project.json`:

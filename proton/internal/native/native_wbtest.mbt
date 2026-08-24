@@ -174,6 +174,7 @@ test "runtime config preserves typed native ABI values" {
       @locale.Locale::parse("zh-CN"),
       @locale.Locale::parse("en-US"),
     ],
+    remote_debugging=RemoteDebugging::Ephemeral,
     headless=true,
   )
   assert_eq(runtime_config.helper_path, Some("cef_process.exe"))
@@ -184,6 +185,7 @@ test "runtime config preserves typed native ABI values" {
   assert_eq(runtime_config.accept_languages, ["zh-CN", "en-US"])
   assert_eq(runtime_config.framework_dialog_ok_label, Some("OK"))
   assert_eq(runtime_config.framework_dialog_cancel_label, Some("Cancel"))
+  assert_eq(runtime_config.remote_debugging, RemoteDebugging::Ephemeral)
   let bundled = RuntimeConfig::bundled(cache_dir~)
   assert_true(bundled.use_bundled)
   assert_eq(bundled.runtime_root, None)
@@ -194,6 +196,19 @@ test "runtime config preserves typed native ABI values" {
   assert_false(
     RuntimeConfig::new(persist_session_cookies=false).persist_session_cookies,
   )
+}
+
+///|
+test "remote debugging modes have distinct native encodings" {
+  assert_eq(runtime_config_remote_debugging(RemoteDebugging::Disabled), 0)
+  assert_eq(runtime_config_remote_debugging(RemoteDebugging::Ephemeral), -1)
+  assert_eq(runtime_config_remote_debugging(RemoteDebugging::Fixed(9333)), 9333)
+  let error = expect_native_error(() => {
+    validate_runtime_config(
+      RuntimeConfig::bundled(remote_debugging=RemoteDebugging::Fixed(1023)),
+    )
+  })
+  assert_true(error.message().contains("between 1024 and 65535"))
 }
 
 ///|

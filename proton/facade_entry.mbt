@@ -149,22 +149,43 @@ fn debug_level_from_bool(enabled : Bool) -> Int {
 }
 
 ///|
-fn debug_port(debug : Int) -> Int {
-  if debug > 0 {
-    match @env.get_env_var("PROTON_REMOTE_DEBUGGING_PORT") {
-      Some(value) => {
-        let port = @string.parse_int(value[:]) catch { _ => 9222 }
-        if port > 0 {
-          port
-        } else {
-          9222
-        }
-      }
-      None => 9222
-    }
-  } else {
-    0
+fn resolve_remote_debugging(
+  debug : Int,
+  configured_port : String?,
+) -> @native.RemoteDebugging raise AppConfigurationError {
+  guard debug > 0 else { return @native.RemoteDebugging::Disabled }
+  let value = match configured_port {
+    Some(value) => value.trim().to_owned()
+    None => ""
   }
+  guard value != "" else { return @native.RemoteDebugging::Ephemeral }
+  let port = @string.parse_int(value[:]) catch {
+    _ =>
+      raise InvalidSetting(
+        name="PROTON_REMOTE_DEBUGGING_PORT",
+        message="must be 0 or an integer between 1024 and 65535",
+      )
+  }
+  if port == 0 {
+    @native.RemoteDebugging::Ephemeral
+  } else if port >= 1024 && port <= 65535 {
+    @native.RemoteDebugging::Fixed(port)
+  } else {
+    raise InvalidSetting(
+      name="PROTON_REMOTE_DEBUGGING_PORT",
+      message="must be 0 or an integer between 1024 and 65535",
+    )
+  }
+}
+
+///|
+fn remote_debugging(
+  debug : Int,
+) -> @native.RemoteDebugging raise AppConfigurationError {
+  resolve_remote_debugging(
+    debug,
+    @env.get_env_var("PROTON_REMOTE_DEBUGGING_PORT"),
+  )
 }
 
 ///|

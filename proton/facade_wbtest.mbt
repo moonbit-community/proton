@@ -243,6 +243,38 @@ test "bridge startup timeout is finite and configurable" {
 }
 
 ///|
+test "debug mode uses an ephemeral endpoint unless a fixed port is explicit" {
+  assert_eq(
+    resolve_remote_debugging(0, None),
+    @native.RemoteDebugging::Disabled,
+  )
+  assert_eq(
+    resolve_remote_debugging(1, None),
+    @native.RemoteDebugging::Ephemeral,
+  )
+  assert_eq(
+    resolve_remote_debugging(1, Some("0")),
+    @native.RemoteDebugging::Ephemeral,
+  )
+  assert_eq(
+    resolve_remote_debugging(1, Some(" 9333 ")),
+    @native.RemoteDebugging::Fixed(9333),
+  )
+}
+
+///|
+test "debug mode rejects invalid fixed ports instead of falling back" {
+  for value in ["invalid", "-1", "1023", "65536"] {
+    try ignore(resolve_remote_debugging(1, Some(value))) catch {
+      InvalidSetting(name="PROTON_REMOTE_DEBUGGING_PORT", ..) => ()
+      _ => fail("expected an invalid remote debugging port")
+    } noraise {
+      _ => fail("expected an invalid remote debugging port")
+    }
+  }
+}
+
+///|
 test "headless mode defaults off and is configurable" {
   let default_app = html("Test", "<html></html>")
   assert_false(default_app.headless_value)

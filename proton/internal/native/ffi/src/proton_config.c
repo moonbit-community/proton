@@ -673,10 +673,13 @@ int32_t proton_config_prepare_runtime(
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime config output is required");
   }
-  if (remote_debugging_port < 0 || remote_debugging_port > 65535) {
+  if (remote_debugging_port != PROTON_REMOTE_DEBUGGING_EPHEMERAL &&
+      remote_debugging_port != PROTON_REMOTE_DEBUGGING_DISABLED &&
+      (remote_debugging_port < 1024 || remote_debugging_port > 65535)) {
     return proton_set_error(
         PROTON_ERR_INVALID_ARGUMENT,
-        "runtime remote_debugging_port must be between 0 and 65535");
+        "runtime remote debugging must be disabled, ephemeral, or use a port "
+        "between 1024 and 65535");
   }
   if (cache_dir != NULL && cache_dir[0] != '\0' &&
       !proton_path_is_absolute(cache_dir)) {
