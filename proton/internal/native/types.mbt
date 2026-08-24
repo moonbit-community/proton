@@ -523,6 +523,7 @@ struct MenuItem {
   label : String?
   key : String?
   role : MenuItemRole?
+  submenu : Menu?
 } derive(Debug, Eq)
 
 ///|
@@ -530,6 +531,7 @@ priv enum MenuItemKind {
   Command
   Separator
   Role
+  Submenu
 } derive(Debug, Eq)
 
 ///|
@@ -1347,13 +1349,27 @@ pub fn MenuItem::command(
   label : String,
   key? : String,
 ) -> MenuItem {
-  { kind: Command, id: Some(id), label: Some(label), key, role: None }
+  {
+    kind: Command,
+    id: Some(id),
+    label: Some(label),
+    key,
+    role: None,
+    submenu: None,
+  }
 }
 
 ///|
 /// Creates a menu separator.
 pub fn MenuItem::separator() -> MenuItem {
-  { kind: Separator, id: None, label: None, key: None, role: None }
+  {
+    kind: Separator,
+    id: None,
+    label: None,
+    key: None,
+    role: None,
+    submenu: None,
+  }
 }
 
 ///|
@@ -1363,7 +1379,20 @@ pub fn MenuItem::role(
   label? : String,
   key? : String,
 ) -> MenuItem {
-  { kind: Role, id: None, label, key, role: Some(role) }
+  { kind: Role, id: None, label, key, role: Some(role), submenu: None }
+}
+
+///|
+/// Creates a nested submenu item with its own set of items.
+pub fn MenuItem::submenu(label : String, items~ : Array[MenuItem]) -> MenuItem {
+  {
+    kind: Submenu,
+    id: None,
+    label: None,
+    key: None,
+    role: None,
+    submenu: Some({ label: Some(label), role: None, items: Some(items.copy()) }),
+  }
 }
 
 ///|
@@ -1382,13 +1411,14 @@ pub fn Menu::definition(self : Menu) -> (MenuRole?, String?, Array[MenuItem]?) {
 #doc(hidden)
 pub fn MenuItem::definition(
   self : MenuItem,
-) -> (String, String?, String?, String?, MenuItemRole?) {
+) -> (String, String?, String?, String?, MenuItemRole?, Menu?) {
   let kind = match self.kind {
     Command => "command"
     Separator => "separator"
     Role => "role"
+    Submenu => "submenu"
   }
-  (kind, self.id, self.label, self.key, self.role)
+  (kind, self.id, self.label, self.key, self.role, self.submenu)
 }
 
 ///|

@@ -238,11 +238,33 @@ static NSString *proton_engine_menu_role_key(NSString *role) {
   return @"";
 }
 
+static NSMenu *proton_engine_create_custom_menu(const proton_menu_t *definition,
+                                                NSString *app_name, char *error,
+                                                size_t error_len);
+
 static int proton_engine_add_custom_menu_item(NSMenu *menu,
                                               const proton_menu_item_t *item,
                                               NSString *app_name,
                                               char *error,
                                               size_t error_len) {
+  if (item->kind == PROTON_MENU_ITEM_SUBMENU) {
+    NSString *label = proton_engine_menu_text(item->label);
+    if (label == nil || item->submenu == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "menu submenu requires a label");
+      return 0;
+    }
+    NSMenu *submenu = proton_engine_create_custom_menu(
+        item->submenu, app_name, error, error_len);
+    if (submenu == nil) {
+      return 0;
+    }
+    NSMenuItem *menu_item =
+        [[NSMenuItem alloc] initWithTitle:label action:NULL keyEquivalent:@""];
+    [menu_item setSubmenu:submenu];
+    [menu addItem:menu_item];
+    return 1;
+  }
   if (item->kind == PROTON_MENU_ITEM_SEPARATOR) {
     [menu addItem:[NSMenuItem separatorItem]];
     return 1;

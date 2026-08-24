@@ -179,13 +179,22 @@ pub extern "C" fn menu_config_add_menu(
 #borrow(id, label, key, role)
 pub extern "C" fn menu_config_add_item(
   menu : MenuConfigHandle,
-  menu_index : Int,
   kind : Int,
   id : Bytes,
   label : Bytes,
   key : Bytes,
   role : Bytes,
 ) -> Int = "proton_internal_menu_config_add_item"
+
+///|
+#borrow(label)
+pub extern "C" fn menu_config_begin_submenu(
+  menu : MenuConfigHandle,
+  label : Bytes,
+) -> Int = "proton_internal_menu_config_begin_submenu"
+
+///|
+pub extern "C" fn menu_config_end_submenu(menu : MenuConfigHandle) -> Int = "proton_internal_menu_config_end_submenu"
 
 ///|
 pub extern "C" fn menu_config_destroy(menu : MenuConfigHandle) -> Unit = "proton_internal_menu_config_destroy"

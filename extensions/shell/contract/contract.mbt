@@ -33,6 +33,38 @@ pub extend RevealItemRequest with ToJson::{to_json}
 pub extend RevealItemRequest with FromJson::{from_json}
 
 ///|
+pub(all) struct TrashItemRequest {
+  path : String
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend TrashItemRequest with Eq::{not_equal, equal}
+
+///|
+pub extend TrashItemRequest with Debug::{to_repr}
+
+///|
+pub extend TrashItemRequest with ToJson::{to_json}
+
+///|
+pub extend TrashItemRequest with FromJson::{from_json}
+
+///|
+pub(all) struct BeepRequest {} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend BeepRequest with Eq::{not_equal, equal}
+
+///|
+pub extend BeepRequest with Debug::{to_repr}
+
+///|
+pub extend BeepRequest with ToJson::{to_json}
+
+///|
+pub extend BeepRequest with FromJson::{from_json}
+
+///|
 pub(all) struct ShellReply {
   launched : Bool
 } derive(ToJson, FromJson, Debug, Eq)
@@ -75,6 +107,16 @@ pub let open : @proton_contract.Command[OpenRequest, ShellReply] = extension.com
 ///|
 pub let reveal_item : @proton_contract.Command[RevealItemRequest, ShellReply] = extension.command(
   "revealItem",
+)
+
+///|
+pub let trash_item : @proton_contract.Command[TrashItemRequest, ShellReply] = extension.command(
+  "trashItem",
+)
+
+///|
+pub let beep : @proton_contract.Command[BeepRequest, ShellReply] = extension.command(
+  "beep",
 )
 
 ///|

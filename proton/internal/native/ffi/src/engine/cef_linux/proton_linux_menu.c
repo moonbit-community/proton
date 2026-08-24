@@ -13,6 +13,7 @@ typedef proton_menu_t proton_linux_menu_t;
 #define PROTON_LINUX_MENU_ITEM_COMMAND PROTON_MENU_ITEM_COMMAND
 #define PROTON_LINUX_MENU_ITEM_SEPARATOR PROTON_MENU_ITEM_SEPARATOR
 #define PROTON_LINUX_MENU_ITEM_ROLE PROTON_MENU_ITEM_ROLE
+#define PROTON_LINUX_MENU_ITEM_SUBMENU PROTON_MENU_ITEM_SUBMENU
 
 typedef struct {
   proton_linux_menu_command_callback_t command_callback;
@@ -159,6 +160,40 @@ static GtkWidget *proton_linux_menu_create_custom_menu(
     GtkAccelGroup *accelerators,
     proton_linux_menu_command_callback_t command_callback,
     proton_linux_menu_role_callback_t role_callback,
+    void *user_data);
+
+static int proton_linux_menu_append_submenu(
+    GtkWidget *menu,
+    const proton_menu_item_t *definition_item,
+    GtkAccelGroup *accelerators,
+    proton_linux_menu_command_callback_t command_callback,
+    proton_linux_menu_role_callback_t role_callback,
+    void *user_data) {
+  if (definition_item->label == NULL ||
+      definition_item->submenu == NULL) {
+    return 0;
+  }
+  GtkWidget *submenu = proton_linux_menu_create_custom_menu(
+      definition_item->submenu, accelerators, command_callback,
+      role_callback, user_data);
+  if (submenu == NULL) {
+    return 0;
+  }
+  GtkWidget *item = gtk_menu_item_new_with_label(definition_item->label);
+  if (item == NULL) {
+    gtk_widget_destroy(submenu);
+    return 0;
+  }
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), submenu);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+  return 1;
+}
+
+static GtkWidget *proton_linux_menu_create_custom_menu(
+    const proton_linux_menu_t *definition,
+    GtkAccelGroup *accelerators,
+    proton_linux_menu_command_callback_t command_callback,
+    proton_linux_menu_role_callback_t role_callback,
     void *user_data) {
   GtkWidget *menu = gtk_menu_new();
   if (menu == NULL) {
@@ -168,6 +203,15 @@ static GtkWidget *proton_linux_menu_create_custom_menu(
     const proton_linux_menu_item_t *definition_item =
         &definition->items[index];
     GtkWidget *item = NULL;
+    if (definition_item->kind == PROTON_LINUX_MENU_ITEM_SUBMENU) {
+      if (!proton_linux_menu_append_submenu(
+              menu, definition_item, accelerators, command_callback,
+              role_callback, user_data)) {
+        gtk_widget_destroy(menu);
+        return NULL;
+      }
+      continue;
+    }
     if (definition_item->kind == PROTON_LINUX_MENU_ITEM_SEPARATOR) {
       item = gtk_separator_menu_item_new();
     } else if (definition_item->kind == PROTON_LINUX_MENU_ITEM_COMMAND) {

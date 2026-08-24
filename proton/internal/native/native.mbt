@@ -564,6 +564,7 @@ fn menu_item_kind_code(kind : MenuItemKind) -> Int {
     Command => 0
     Separator => 1
     Role => 2
+    Submenu => 3
   }
 }
 
@@ -622,23 +623,65 @@ fn build_menu_config(
       @native_ffi.menu_config_destroy(handle)
       raise native_error(menu_status)
     }
-    for item in definition.items.unwrap_or([]) {
-      let item_status = @native_ffi.menu_config_add_item(
-        handle,
-        menu_index.val,
-        menu_item_kind_code(item.kind),
-        runtime_config_string(item.id),
-        runtime_config_string(item.label),
-        runtime_config_string(item.key),
-        runtime_config_string(menu_item_role_name(item.role)),
-      )
-      if item_status < 0 {
-        @native_ffi.menu_config_destroy(handle)
-        raise native_error(item_status)
-      }
+    let items_status = append_menu_config_items(
+      handle,
+      definition.items.unwrap_or([]),
+    )
+    if items_status < 0 {
+      @native_ffi.menu_config_destroy(handle)
+      raise native_error(items_status)
     }
   }
   handle
+}
+
+///|
+/// Recursively appends menu items to the current builder target, bracketing
+/// nested submenus with begin/end submenu calls on the native config handle.
+/// Returns the first negative status, or `0` on success.
+fn append_menu_config_items(
+  handle : @native_ffi.MenuConfigHandle,
+  items : Array[MenuItem],
+) -> Int {
+  for item in items {
+    match item.kind {
+      Submenu => {
+        let sub_menu = item.submenu.unwrap()
+        let begin_status = @native_ffi.menu_config_begin_submenu(
+          handle,
+          runtime_config_string(sub_menu.label),
+        )
+        if begin_status < 0 {
+          return begin_status
+        }
+        let child_status = append_menu_config_items(
+          handle,
+          sub_menu.items.unwrap_or([]),
+        )
+        if child_status < 0 {
+          return child_status
+        }
+        let end_status = @native_ffi.menu_config_end_submenu(handle)
+        if end_status < 0 {
+          return end_status
+        }
+      }
+      _ => {
+        let add_status = @native_ffi.menu_config_add_item(
+          handle,
+          menu_item_kind_code(item.kind),
+          runtime_config_string(item.id),
+          runtime_config_string(item.label),
+          runtime_config_string(item.key),
+          runtime_config_string(menu_item_role_name(item.role)),
+        )
+        if add_status < 0 {
+          return add_status
+        }
+      }
+    }
+  }
+  0
 }
 
 ///|

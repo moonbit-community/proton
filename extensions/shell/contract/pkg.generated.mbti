@@ -10,15 +10,27 @@ import {
 // Values
 pub let activity : @proton_contract.Event[ShellActivity]
 
+pub let beep : @proton_contract.Command[BeepRequest, ShellReply]
+
 pub let extension : @proton_contract.ExtensionContract
 
 pub let open : @proton_contract.Command[OpenRequest, ShellReply]
 
 pub let reveal_item : @proton_contract.Command[RevealItemRequest, ShellReply]
 
+pub let trash_item : @proton_contract.Command[TrashItemRequest, ShellReply]
+
 // Errors
 
 // Types and methods
+pub(all) struct BeepRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn BeepRequest::equal(Self, Self) -> Bool
+pub fn BeepRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn BeepRequest::not_equal(Self, Self) -> Bool
+pub fn BeepRequest::to_json(Self) -> Json
+pub fn BeepRequest::to_repr(Self) -> @debug.Repr
+
 pub(all) struct OpenRequest {
   target : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -55,6 +67,15 @@ pub fn ShellReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecod
 pub fn ShellReply::not_equal(Self, Self) -> Bool
 pub fn ShellReply::to_json(Self) -> Json
 pub fn ShellReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct TrashItemRequest {
+  path : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn TrashItemRequest::equal(Self, Self) -> Bool
+pub fn TrashItemRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrashItemRequest::not_equal(Self, Self) -> Bool
+pub fn TrashItemRequest::to_json(Self) -> Json
+pub fn TrashItemRequest::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
