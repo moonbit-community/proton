@@ -1,10 +1,10 @@
 name = "moonbit-community/proton_bundle"
 
-version = "0.2.1"
+version = "0.2.2"
 
 import {
-  "moonbit-community/proton_package@0.2.1",
-  "moonbit-community/proton_cefsetup@0.2.1",
+  "moonbit-community/proton_package@0.2.2",
+  "moonbit-community/proton_cefsetup@0.2.2",
   "moonbitlang/async@0.21.0",
   "moonbitlang/x@0.5.1",
 }
