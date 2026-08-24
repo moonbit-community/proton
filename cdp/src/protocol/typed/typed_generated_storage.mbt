@@ -239,7 +239,7 @@ pub fn StorageAttributionReportingAggregatableResult::from_json(
 ) -> StorageAttributionReportingAggregatableResult raise @protocol.ProtocolSchemaError {
   let method_name = "StorageAttributionReportingAggregatableResult"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -526,7 +526,7 @@ pub fn StorageAttributionReportingEventLevelResult::from_json(
 ) -> StorageAttributionReportingEventLevelResult raise @protocol.ProtocolSchemaError {
   let method_name = "StorageAttributionReportingEventLevelResult"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -983,7 +983,7 @@ pub fn StorageAttributionReportingReportResult::from_json(
 ) -> StorageAttributionReportingReportResult raise @protocol.ProtocolSchemaError {
   let method_name = "StorageAttributionReportingReportResult"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1227,7 +1227,7 @@ pub fn StorageAttributionReportingSourceRegistrationResult::from_json(
 ) -> StorageAttributionReportingSourceRegistrationResult raise @protocol.ProtocolSchemaError {
   let method_name = "StorageAttributionReportingSourceRegistrationResult"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1274,7 +1274,7 @@ pub fn StorageAttributionReportingSourceRegistrationTimeConfig::from_json(
 ) -> StorageAttributionReportingSourceRegistrationTimeConfig raise @protocol.ProtocolSchemaError {
   let method_name = "StorageAttributionReportingSourceRegistrationTimeConfig"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1318,7 +1318,7 @@ pub fn StorageAttributionReportingSourceType::from_json(
 ) -> StorageAttributionReportingSourceType raise @protocol.ProtocolSchemaError {
   let method_name = "StorageAttributionReportingSourceType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1365,7 +1365,7 @@ pub fn StorageAttributionReportingTriggerDataMatching::from_json(
 ) -> StorageAttributionReportingTriggerDataMatching raise @protocol.ProtocolSchemaError {
   let method_name = "StorageAttributionReportingTriggerDataMatching"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1639,7 +1639,7 @@ pub fn StorageInterestGroupAccessType::from_json(
 ) -> StorageInterestGroupAccessType raise @protocol.ProtocolSchemaError {
   let method_name = "StorageInterestGroupAccessType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1683,7 +1683,7 @@ pub fn StorageInterestGroupAuctionEventType::from_json(
 ) -> StorageInterestGroupAuctionEventType raise @protocol.ProtocolSchemaError {
   let method_name = "StorageInterestGroupAuctionEventType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1727,7 +1727,7 @@ pub fn StorageInterestGroupAuctionFetchType::from_json(
 ) -> StorageInterestGroupAuctionFetchType raise @protocol.ProtocolSchemaError {
   let method_name = "StorageInterestGroupAuctionFetchType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1771,7 +1771,7 @@ pub fn StorageInterestGroupAuctionId::from_json(
 ) -> StorageInterestGroupAuctionId raise @protocol.ProtocolSchemaError {
   let method_name = "StorageInterestGroupAuctionId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1894,7 +1894,7 @@ pub fn StorageSerializedStorageKey::from_json(
 ) -> StorageSerializedStorageKey raise @protocol.ProtocolSchemaError {
   let method_name = "StorageSerializedStorageKey"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1938,7 +1938,7 @@ pub fn StorageSharedStorageAccessMethod::from_json(
 ) -> StorageSharedStorageAccessMethod raise @protocol.ProtocolSchemaError {
   let method_name = "StorageSharedStorageAccessMethod"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2142,7 +2142,7 @@ pub fn StorageSharedStorageAccessScope::from_json(
 ) -> StorageSharedStorageAccessScope raise @protocol.ProtocolSchemaError {
   let method_name = "StorageSharedStorageAccessScope"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2477,7 +2477,7 @@ pub fn StorageSignedInt64AsBase10::from_json(
 ) -> StorageSignedInt64AsBase10 raise @protocol.ProtocolSchemaError {
   let method_name = "StorageSignedInt64AsBase10"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2639,7 +2639,7 @@ pub fn StorageStorageBucketsDurability::from_json(
 ) -> StorageStorageBucketsDurability raise @protocol.ProtocolSchemaError {
   let method_name = "StorageStorageBucketsDurability"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2679,7 +2679,7 @@ pub fn StorageStorageType::from_json(
 ) -> StorageStorageType raise @protocol.ProtocolSchemaError {
   let method_name = "StorageStorageType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2770,7 +2770,7 @@ pub fn StorageUnsignedInt128AsBase16::from_json(
 ) -> StorageUnsignedInt128AsBase16 raise @protocol.ProtocolSchemaError {
   let method_name = "StorageUnsignedInt128AsBase16"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2814,7 +2814,7 @@ pub fn StorageUnsignedInt64AsBase10::from_json(
 ) -> StorageUnsignedInt64AsBase10 raise @protocol.ProtocolSchemaError {
   let method_name = "StorageUnsignedInt64AsBase10"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3607,7 +3607,7 @@ pub fn StorageGetInterestGroupDetailsResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { details: typed_required_result_json(method_name, fields, "details") }
+  { details: typed_required_result_json(method_name, fields, "details"), }
 }
 
 ///|

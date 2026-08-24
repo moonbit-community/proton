@@ -9,7 +9,7 @@
 /// commands, events, and domain types.
 pub fn protocol_manifest() -> ProtocolManifest {
   {
-    version: { major: "1", minor: "3" },
+    version: { major: "1", minor: "3", },
     sources: [
       {
         protocol: "browser",

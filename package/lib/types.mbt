@@ -85,7 +85,7 @@ pub fn Payload::new(
   destination : String,
   location? : PayloadLocation = Resources,
 ) -> Payload {
-  Payload::{ source, destination, location }
+  Payload::{ source, destination, location, }
 }
 
 ///|
@@ -108,7 +108,7 @@ pub fn DocumentType::new(
   extensions : Array[String],
   role? : String = "Viewer",
 ) -> DocumentType {
-  DocumentType::{ name, extensions, role }
+  DocumentType::{ name, extensions, role, }
 }
 
 ///|
@@ -174,7 +174,7 @@ pub struct MacosPlistString {
 
 ///|
 pub fn MacosPlistString::new(key : String, value : String) -> MacosPlistString {
-  MacosPlistString::{ key, value }
+  MacosPlistString::{ key, value, }
 }
 
 ///|
@@ -196,7 +196,7 @@ pub fn MacosSignTarget::new(
   entitlements? : Bool = false,
   identifier? : String,
 ) -> MacosSignTarget {
-  MacosSignTarget::{ path, runtime_options, entitlements, identifier }
+  MacosSignTarget::{ path, runtime_options, entitlements, identifier, }
 }
 
 ///|

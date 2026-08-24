@@ -64,7 +64,7 @@ pub fn UpdateChannel::new(
     }
     trusted_keys.push(key)
   }
-  UpdateChannel::{ endpoint, trusted_keys, platform, current_revision }
+  UpdateChannel::{ endpoint, trusted_keys, platform, current_revision, }
 }
 
 ///|

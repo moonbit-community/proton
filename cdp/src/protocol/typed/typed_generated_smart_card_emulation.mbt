@@ -40,7 +40,7 @@ pub fn SmartCardEmulationConnectionState::from_json(
 ) -> SmartCardEmulationConnectionState raise @protocol.ProtocolSchemaError {
   let method_name = "SmartCardEmulationConnectionState"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -84,7 +84,7 @@ pub fn SmartCardEmulationDisposition::from_json(
 ) -> SmartCardEmulationDisposition raise @protocol.ProtocolSchemaError {
   let method_name = "SmartCardEmulationDisposition"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -128,7 +128,7 @@ pub fn SmartCardEmulationProtocol::from_json(
 ) -> SmartCardEmulationProtocol raise @protocol.ProtocolSchemaError {
   let method_name = "SmartCardEmulationProtocol"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -447,7 +447,7 @@ pub fn SmartCardEmulationResultCode::from_json(
 ) -> SmartCardEmulationResultCode raise @protocol.ProtocolSchemaError {
   let method_name = "SmartCardEmulationResultCode"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -491,7 +491,7 @@ pub fn SmartCardEmulationShareMode::from_json(
 ) -> SmartCardEmulationShareMode raise @protocol.ProtocolSchemaError {
   let method_name = "SmartCardEmulationShareMode"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

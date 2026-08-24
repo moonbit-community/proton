@@ -39,7 +39,7 @@ pub async fn build(spec : ProtonBundleSpec) -> BundleResult {
     package_customization(spec),
     async fn(layout) { prepare_proton_package(spec, layout) },
   )
-  BundleResult::{ artifacts, platform: installation.platform() }
+  BundleResult::{ artifacts, platform: installation.platform(), }
 }
 
 ///|

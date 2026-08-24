@@ -144,7 +144,7 @@ fn fail(payload : FailPayload) -> String raise AppCommandError {
 ///|
 fn report_probe(payload : ReportProbePayload) -> ReportProbeReply {
   println("[app-commands] " + payload.report)
-  ReportProbeReply::{ ok: true }
+  ReportProbeReply::{ ok: true, }
 }
 
 ///|

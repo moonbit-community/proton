@@ -100,7 +100,7 @@ async fn wait_for_scenario_app_shutdown(
     cdp_http_endpoint_from(target),
     process_shutdown_timeout_ms,
   )
-  ShutdownProbeResult::{ helper_processes: snapshot.helper_pids.length() }
+  ShutdownProbeResult::{ helper_processes: snapshot.helper_pids.length(), }
 }
 
 ///|
@@ -154,7 +154,7 @@ async fn snapshot_process_tree(root_pid : Int) -> ProcessSnapshot {
       helper_pids.push(row.pid)
     }
   }
-  ProcessSnapshot::{ pids, helper_pids, commands, created_at }
+  ProcessSnapshot::{ pids, helper_pids, commands, created_at, }
 }
 
 ///|

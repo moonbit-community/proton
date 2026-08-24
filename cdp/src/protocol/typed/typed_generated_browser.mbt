@@ -103,7 +103,7 @@ pub fn BrowserBrowserCommandId::from_json(
 ) -> BrowserBrowserCommandId raise @protocol.ProtocolSchemaError {
   let method_name = "BrowserBrowserCommandId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -143,7 +143,7 @@ pub fn BrowserBrowserContextID::from_json(
 ) -> BrowserBrowserContextID raise @protocol.ProtocolSchemaError {
   let method_name = "BrowserBrowserContextID"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -370,7 +370,7 @@ pub fn BrowserPermissionSetting::from_json(
 ) -> BrowserPermissionSetting raise @protocol.ProtocolSchemaError {
   let method_name = "BrowserPermissionSetting"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -410,7 +410,7 @@ pub fn BrowserPermissionType::from_json(
 ) -> BrowserPermissionType raise @protocol.ProtocolSchemaError {
   let method_name = "BrowserPermissionType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -454,7 +454,7 @@ pub fn BrowserPrivacySandboxAPI::from_json(
 ) -> BrowserPrivacySandboxAPI raise @protocol.ProtocolSchemaError {
   let method_name = "BrowserPrivacySandboxAPI"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -497,7 +497,7 @@ pub fn BrowserWindowID::from_json(
     Number(inner, ..) => {
       let int = inner.to_int()
       if int.to_double() == inner {
-        { value: int }
+        { value: int, }
       } else {
         raise InvalidParameterType(method_name, "value", "integer")
       }
@@ -541,7 +541,7 @@ pub fn BrowserWindowState::from_json(
 ) -> BrowserWindowState raise @protocol.ProtocolSchemaError {
   let method_name = "BrowserWindowState"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

@@ -49,7 +49,7 @@ fn ApplicationContext::new(
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
 ) -> ApplicationContext {
-  ApplicationContext::{ tasks, windows, locale_preferences }
+  ApplicationContext::{ tasks, windows, locale_preferences, }
 }
 
 ///|
@@ -61,7 +61,7 @@ fn WindowContext::new(
   events : WindowEventEmitter,
   locale_preferences : @locale.LocalePreferences,
 ) -> WindowContext {
-  WindowContext::{ id, handle, windows, tasks, events, locale_preferences }
+  WindowContext::{ id, handle, windows, tasks, events, locale_preferences, }
 }
 
 ///|

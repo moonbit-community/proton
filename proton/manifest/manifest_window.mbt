@@ -127,7 +127,7 @@ pub fn WindowManifest::new(
   size_hint? : WindowSizeHint = WindowSizeHint::None,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
 ) -> WindowManifest {
-  WindowManifest::{ title, width, height, size_hint, titlebar_style }
+  WindowManifest::{ title, width, height, size_hint, titlebar_style, }
 }
 
 ///|
@@ -140,5 +140,5 @@ pub fn AppWindowManifest::new(
   entry : AppEntry,
   open_on_start? : Bool = true,
 ) -> AppWindowManifest {
-  AppWindowManifest::{ id, window, entry, open_on_start }
+  AppWindowManifest::{ id, window, entry, open_on_start, }
 }

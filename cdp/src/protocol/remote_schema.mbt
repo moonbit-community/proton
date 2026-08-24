@@ -183,7 +183,7 @@ pub fn protocol_schema_diff(
       Some(remote_command) => {
         let details = command_diff_details(command, remote_command)
         if details.length() > 0 {
-          changed_commands.push({ name: command.cdp_method, details })
+          changed_commands.push({ name: command.cdp_method, details, })
         }
       }
       None => local_only_commands.push(command.cdp_method)
@@ -202,7 +202,7 @@ pub fn protocol_schema_diff(
       Some(remote_event) => {
         let details = event_diff_details(event, remote_event)
         if details.length() > 0 {
-          changed_events.push({ name: event.cdp_method, details })
+          changed_events.push({ name: event.cdp_method, details, })
         }
       }
       None => local_only_events.push(event.cdp_method)
@@ -222,7 +222,7 @@ pub fn protocol_schema_diff(
       Some(remote_type) => {
         let details = type_diff_details(type_, remote_type)
         if details.length() > 0 {
-          changed_types.push({ name, details })
+          changed_types.push({ name, details, })
         }
       }
       None => local_only_types.push(name)
@@ -318,7 +318,7 @@ fn parse_remote_protocol_schema(
       )
     }
   }
-  { version, domains, commands, events, types }
+  { version, domains, commands, events, types, }
 }
 
 ///|

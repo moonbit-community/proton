@@ -997,7 +997,7 @@ pub fn AnimationAnimationCanceledEventParams::from_json(
   let method_name = "Animation.animationCanceled"
   ignore(@protocol.cdp_schema_event(method_name~, params~))
   let fields = typed_json_fields(method_name, params)
-  { id: typed_required_string(method_name, fields, "id", "string") }
+  { id: typed_required_string(method_name, fields, "id", "string"), }
 }
 
 ///|
@@ -1065,7 +1065,7 @@ pub fn AnimationAnimationCreatedEventParams::from_json(
   let method_name = "Animation.animationCreated"
   ignore(@protocol.cdp_schema_event(method_name~, params~))
   let fields = typed_json_fields(method_name, params)
-  { id: typed_required_string(method_name, fields, "id", "string") }
+  { id: typed_required_string(method_name, fields, "id", "string"), }
 }
 
 ///|

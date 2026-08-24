@@ -41,7 +41,7 @@ fn DoctorLine::new(
   text : String,
   hint? : String,
 ) -> DoctorLine {
-  { code, status, text, hint }
+  { code, status, text, hint, }
 }
 
 ///|
@@ -57,7 +57,7 @@ fn DoctorSection::new(
   title : String,
   lines : Array[DoctorLine],
 ) -> DoctorSection {
-  { id, title, lines }
+  { id, title, lines, }
 }
 
 ///|
@@ -110,7 +110,7 @@ fn DoctorReport::summary(self : DoctorReport) -> DoctorSummary {
       }
     }
   }
-  { total, passed, warnings, errors, neutral }
+  { total, passed, warnings, errors, neutral, }
 }
 
 ///|

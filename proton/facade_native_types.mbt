@@ -214,7 +214,7 @@ pub fn ViewConfig::new(
   initial_url? : String = "about:blank",
   background_color? : String,
 ) -> ViewConfig {
-  { x, y, width, height, visible, z_order, initial_url, background_color }
+  { x, y, width, height, visible, z_order, initial_url, background_color, }
 }
 
 ///|
@@ -328,12 +328,18 @@ pub fn MenuItem::command(
   label : String,
   key? : String,
 ) -> MenuItem {
-  { kind: menu_item_command, id: Some(id), label: Some(label), key, role: None }
+  {
+    kind: menu_item_command,
+    id: Some(id),
+    label: Some(label),
+    key,
+    role: None,
+  }
 }
 
 ///|
 pub fn MenuItem::separator() -> MenuItem {
-  { kind: menu_item_separator, id: None, label: None, key: None, role: None }
+  { kind: menu_item_separator, id: None, label: None, key: None, role: None, }
 }
 
 ///|
@@ -342,7 +348,7 @@ pub fn MenuItem::role(
   label? : String,
   key? : String,
 ) -> MenuItem {
-  { kind: menu_item_role, id: None, label, key, role: Some(role) }
+  { kind: menu_item_role, id: None, label, key, role: Some(role), }
 }
 
 ///|
@@ -374,7 +380,7 @@ pub struct Menu {
 
 ///|
 pub fn Menu::new(label : String, items~ : Array[MenuItem]) -> Menu {
-  { label: Some(label), role: None, items: Some(items.copy()) }
+  { label: Some(label), role: None, items: Some(items.copy()), }
 }
 
 ///|
@@ -385,7 +391,7 @@ pub fn Menu::role(
   label? : String,
   items? : Array[MenuItem],
 ) -> Menu {
-  { label, role: Some(role), items: items.map(items => items.copy()) }
+  { label, role: Some(role), items: items.map(items => items.copy()), }
 }
 
 ///|

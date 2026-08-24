@@ -40,7 +40,7 @@ pub fn NetworkAlternateProtocolUsage::from_json(
 ) -> NetworkAlternateProtocolUsage raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkAlternateProtocolUsage"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -251,7 +251,7 @@ pub fn NetworkBlockedReason::from_json(
 ) -> NetworkBlockedReason raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkBlockedReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -466,7 +466,7 @@ pub fn NetworkCertificateTransparencyCompliance::from_json(
 ) -> NetworkCertificateTransparencyCompliance raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkCertificateTransparencyCompliance"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -619,7 +619,7 @@ pub fn NetworkConnectionType::from_json(
 ) -> NetworkConnectionType raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkConnectionType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -703,7 +703,7 @@ pub fn NetworkContentEncoding::from_json(
 ) -> NetworkContentEncoding raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkContentEncoding"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -747,7 +747,7 @@ pub fn NetworkContentSecurityPolicySource::from_json(
 ) -> NetworkContentSecurityPolicySource raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkContentSecurityPolicySource"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -953,7 +953,7 @@ pub fn NetworkCookieBlockedReason::from_json(
 ) -> NetworkCookieBlockedReason raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkCookieBlockedReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -997,7 +997,7 @@ pub fn NetworkCookieExemptionReason::from_json(
 ) -> NetworkCookieExemptionReason raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkCookieExemptionReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1207,7 +1207,7 @@ pub fn NetworkCookiePriority::from_json(
 ) -> NetworkCookiePriority raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkCookiePriority"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1247,7 +1247,7 @@ pub fn NetworkCookieSameSite::from_json(
 ) -> NetworkCookieSameSite raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkCookieSameSite"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1291,7 +1291,7 @@ pub fn NetworkCookieSourceScheme::from_json(
 ) -> NetworkCookieSourceScheme raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkCookieSourceScheme"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1331,7 +1331,7 @@ pub fn NetworkCorsError::from_json(
 ) -> NetworkCorsError raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkCorsError"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1556,7 +1556,7 @@ pub fn NetworkCrossOriginEmbedderPolicyValue::from_json(
 ) -> NetworkCrossOriginEmbedderPolicyValue raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkCrossOriginEmbedderPolicyValue"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1667,7 +1667,7 @@ pub fn NetworkCrossOriginOpenerPolicyValue::from_json(
 ) -> NetworkCrossOriginOpenerPolicyValue raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkCrossOriginOpenerPolicyValue"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1871,7 +1871,7 @@ pub fn NetworkDeviceBoundSessionEventId::from_json(
 ) -> NetworkDeviceBoundSessionEventId raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkDeviceBoundSessionEventId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1982,7 +1982,7 @@ pub fn NetworkDeviceBoundSessionFetchResult::from_json(
 ) -> NetworkDeviceBoundSessionFetchResult raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkDeviceBoundSessionFetchResult"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2241,7 +2241,7 @@ pub fn NetworkDirectSocketDnsQueryType::from_json(
 ) -> NetworkDirectSocketDnsQueryType raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkDirectSocketDnsQueryType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2524,7 +2524,7 @@ pub fn NetworkErrorReason::from_json(
 ) -> NetworkErrorReason raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkErrorReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2733,7 +2733,7 @@ pub fn NetworkInterceptionId::from_json(
 ) -> NetworkInterceptionId raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkInterceptionId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2777,7 +2777,7 @@ pub fn NetworkInterceptionStage::from_json(
 ) -> NetworkInterceptionStage raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkInterceptionStage"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2817,7 +2817,7 @@ pub fn NetworkIPAddressSpace::from_json(
 ) -> NetworkIPAddressSpace raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkIPAddressSpace"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2857,7 +2857,7 @@ pub fn NetworkLoaderId::from_json(
 ) -> NetworkLoaderId raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkLoaderId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3035,7 +3035,7 @@ pub fn NetworkLocalNetworkAccessRequestPolicy::from_json(
 ) -> NetworkLocalNetworkAccessRequestPolicy raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkLocalNetworkAccessRequestPolicy"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3075,7 +3075,7 @@ pub fn NetworkMonotonicTime::from_json(
 ) -> NetworkMonotonicTime raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkMonotonicTime"
   match value {
-    Number(inner, ..) => { value: inner }
+    Number(inner, ..) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "number")
   }
 }
@@ -3209,7 +3209,7 @@ pub fn NetworkPostDataEntry::from_json(
 ) -> NetworkPostDataEntry raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkPostDataEntry"
   let fields = typed_json_fields(method_name, value)
-  { bytes: typed_optional_string(method_name, fields, "bytes", "string") }
+  { bytes: typed_optional_string(method_name, fields, "bytes", "string"), }
 }
 
 ///|
@@ -3332,7 +3332,7 @@ pub fn NetworkRenderBlockingBehavior::from_json(
 ) -> NetworkRenderBlockingBehavior raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkRenderBlockingBehavior"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3372,7 +3372,7 @@ pub fn NetworkReportId::from_json(
 ) -> NetworkReportId raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkReportId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3547,7 +3547,7 @@ pub fn NetworkReportStatus::from_json(
 ) -> NetworkReportStatus raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkReportStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3716,7 +3716,7 @@ pub fn NetworkRequestId::from_json(
 ) -> NetworkRequestId raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkRequestId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3818,7 +3818,7 @@ pub fn NetworkResourcePriority::from_json(
 ) -> NetworkResourcePriority raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkResourcePriority"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3994,7 +3994,7 @@ pub fn NetworkResourceType::from_json(
 ) -> NetworkResourceType raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkResourceType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -4444,7 +4444,7 @@ pub fn NetworkServiceWorkerResponseSource::from_json(
 ) -> NetworkServiceWorkerResponseSource raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkServiceWorkerResponseSource"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -4555,7 +4555,7 @@ pub fn NetworkServiceWorkerRouterSource::from_json(
 ) -> NetworkServiceWorkerRouterSource raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkServiceWorkerRouterSource"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -4599,7 +4599,7 @@ pub fn NetworkSetCookieBlockedReason::from_json(
 ) -> NetworkSetCookieBlockedReason raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkSetCookieBlockedReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -4779,7 +4779,7 @@ pub fn NetworkSignedExchangeErrorField::from_json(
 ) -> NetworkSignedExchangeErrorField raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkSignedExchangeErrorField"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -5113,7 +5113,7 @@ pub fn NetworkTimeSinceEpoch::from_json(
 ) -> NetworkTimeSinceEpoch raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkTimeSinceEpoch"
   match value {
-    Number(inner, ..) => { value: inner }
+    Number(inner, ..) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "number")
   }
 }
@@ -5157,7 +5157,7 @@ pub fn NetworkTrustTokenOperationType::from_json(
 ) -> NetworkTrustTokenOperationType raise @protocol.ProtocolSchemaError {
   let method_name = "NetworkTrustTokenOperationType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

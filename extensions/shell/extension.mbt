@@ -40,7 +40,7 @@ async fn open(
     operation: "open",
     target: request.target,
   })
-  @shell_contract.ShellReply::{ launched: true }
+  @shell_contract.ShellReply::{ launched: true, }
 }
 
 ///|
@@ -60,7 +60,7 @@ async fn reveal_item(
     operation: "revealItem",
     target: request.path,
   })
-  @shell_contract.ShellReply::{ launched: true }
+  @shell_contract.ShellReply::{ launched: true, }
 }
 
 ///|

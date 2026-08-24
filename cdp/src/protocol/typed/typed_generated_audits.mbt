@@ -365,7 +365,7 @@ pub fn AuditsAttributionReportingIssueType::from_json(
 ) -> AuditsAttributionReportingIssueType raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsAttributionReportingIssueType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -478,7 +478,7 @@ pub fn AuditsBlockedByResponseReason::from_json(
 ) -> AuditsBlockedByResponseReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsBlockedByResponseReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -630,7 +630,7 @@ pub fn AuditsClientHintIssueReason::from_json(
 ) -> AuditsClientHintIssueReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsClientHintIssueReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -674,7 +674,7 @@ pub fn AuditsConnectionAllowlistError::from_json(
 ) -> AuditsConnectionAllowlistError raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsConnectionAllowlistError"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -863,7 +863,7 @@ pub fn AuditsContentSecurityPolicyViolationType::from_json(
 ) -> AuditsContentSecurityPolicyViolationType raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsContentSecurityPolicyViolationType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -980,7 +980,7 @@ pub fn AuditsCookieExclusionReason::from_json(
 ) -> AuditsCookieExclusionReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsCookieExclusionReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1188,7 +1188,7 @@ pub fn AuditsCookieOperation::from_json(
 ) -> AuditsCookieOperation raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsCookieOperation"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1232,7 +1232,7 @@ pub fn AuditsCookieWarningReason::from_json(
 ) -> AuditsCookieWarningReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsCookieWarningReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1482,7 +1482,7 @@ pub fn AuditsElementAccessibilityIssueReason::from_json(
 ) -> AuditsElementAccessibilityIssueReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsElementAccessibilityIssueReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1631,7 +1631,7 @@ pub fn AuditsFederatedAuthRequestIssueReason::from_json(
 ) -> AuditsFederatedAuthRequestIssueReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsFederatedAuthRequestIssueReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1731,7 +1731,7 @@ pub fn AuditsFederatedAuthUserInfoRequestIssueReason::from_json(
 ) -> AuditsFederatedAuthUserInfoRequestIssueReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsFederatedAuthUserInfoRequestIssueReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1854,7 +1854,7 @@ pub fn AuditsGenericIssueErrorType::from_json(
 ) -> AuditsGenericIssueErrorType raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsGenericIssueErrorType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1952,7 +1952,7 @@ pub fn AuditsHeavyAdReason::from_json(
 ) -> AuditsHeavyAdReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsHeavyAdReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1996,7 +1996,7 @@ pub fn AuditsHeavyAdResolutionStatus::from_json(
 ) -> AuditsHeavyAdResolutionStatus raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsHeavyAdResolutionStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2036,7 +2036,7 @@ pub fn AuditsInsightType::from_json(
 ) -> AuditsInsightType raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsInsightType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2137,7 +2137,7 @@ pub fn AuditsInspectorIssueCode::from_json(
 ) -> AuditsInspectorIssueCode raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsInspectorIssueCode"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2505,7 +2505,7 @@ pub fn AuditsIssueId::from_json(
 ) -> AuditsIssueId raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsIssueId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2707,7 +2707,7 @@ pub fn AuditsMixedContentResolutionStatus::from_json(
 ) -> AuditsMixedContentResolutionStatus raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsMixedContentResolutionStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2751,7 +2751,7 @@ pub fn AuditsMixedContentResourceType::from_json(
 ) -> AuditsMixedContentResourceType raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsMixedContentResourceType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2849,7 +2849,7 @@ pub fn AuditsPartitioningBlobURLInfo::from_json(
 ) -> AuditsPartitioningBlobURLInfo raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsPartitioningBlobURLInfo"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3001,7 +3001,7 @@ pub fn AuditsPerformanceIssueType::from_json(
 ) -> AuditsPerformanceIssueType raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsPerformanceIssueType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3139,7 +3139,7 @@ pub fn AuditsPermissionElementIssueType::from_json(
 ) -> AuditsPermissionElementIssueType raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsPermissionElementIssueType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3243,7 +3243,7 @@ pub fn AuditsPropertyRuleIssueReason::from_json(
 ) -> AuditsPropertyRuleIssueReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsPropertyRuleIssueReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3471,7 +3471,7 @@ pub fn AuditsSharedArrayBufferIssueType::from_json(
 ) -> AuditsSharedArrayBufferIssueType raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsSharedArrayBufferIssueType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3515,7 +3515,7 @@ pub fn AuditsSharedDictionaryError::from_json(
 ) -> AuditsSharedDictionaryError raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsSharedDictionaryError"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3676,7 +3676,7 @@ pub fn AuditsSRIMessageSignatureError::from_json(
 ) -> AuditsSRIMessageSignatureError raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsSRIMessageSignatureError"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3854,7 +3854,7 @@ pub fn AuditsStyleSheetLoadingIssueReason::from_json(
 ) -> AuditsStyleSheetLoadingIssueReason raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsStyleSheetLoadingIssueReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3898,7 +3898,7 @@ pub fn AuditsUnencodedDigestError::from_json(
 ) -> AuditsUnencodedDigestError raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsUnencodedDigestError"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -4060,7 +4060,7 @@ pub fn AuditsUserReidentificationIssueType::from_json(
 ) -> AuditsUserReidentificationIssueType raise @protocol.ProtocolSchemaError {
   let method_name = "AuditsUserReidentificationIssueType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

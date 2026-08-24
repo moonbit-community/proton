@@ -49,7 +49,11 @@ fn tray_support() -> @proton_contract.SupportReply {
   let platform = platform_label(@sys_tray.current_platform())
   match @sys_tray.ensure_supported() {
     Ok(_) =>
-      @proton_contract.SupportReply::{ supported: true, platform, reason: None }
+      @proton_contract.SupportReply::{
+        supported: true,
+        platform,
+        reason: None,
+      }
     Err(error) =>
       @proton_contract.SupportReply::{
         supported: false,
@@ -271,7 +275,7 @@ async fn hide(
     None => {
       app_command_tray_visible.val = false
       emit_command_activity(context, "hide", None, None)
-      @tray_contract.TrayReply::{ visible: false }
+      @tray_contract.TrayReply::{ visible: false, }
     }
     Some(handle) =>
       match handle.hide() {
@@ -340,7 +344,7 @@ async fn drain_events(
   _request : @proton_contract.EmptyRequest,
 ) -> @tray_contract.TrayEventReply {
   match app_command_tray_handle.val {
-    None => @tray_contract.TrayEventReply::{ count: 0 }
+    None => @tray_contract.TrayEventReply::{ count: 0, }
     Some(handle) => {
       match handle.pump(blocking=false) {
         Ok(_) => ()
@@ -350,7 +354,7 @@ async fn drain_events(
       for event in events {
         emit_native_tray_event(context, event)
       }
-      @tray_contract.TrayEventReply::{ count: events.length() }
+      @tray_contract.TrayEventReply::{ count: events.length(), }
     }
   }
 }
@@ -364,7 +368,7 @@ async fn destroy(
 ) -> @tray_contract.TrayReply {
   destroy_tray(app_command_tray_handle.val)
   emit_command_activity(context, "destroy", None, None)
-  @tray_contract.TrayReply::{ visible: false }
+  @tray_contract.TrayReply::{ visible: false, }
 }
 
 ///|

@@ -130,7 +130,7 @@ pub fn TargetSessionID::from_json(
 ) -> TargetSessionID raise @protocol.ProtocolSchemaError {
   let method_name = "TargetSessionID"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -212,7 +212,7 @@ pub fn TargetTargetID::from_json(
 ) -> TargetTargetID raise @protocol.ProtocolSchemaError {
   let method_name = "TargetTargetID"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -350,7 +350,7 @@ pub fn TargetWindowState::from_json(
 ) -> TargetWindowState raise @protocol.ProtocolSchemaError {
   let method_name = "TargetWindowState"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

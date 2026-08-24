@@ -52,7 +52,7 @@ async fn enable(
     operation: "enable",
     identifier: Some(identifier),
   })
-  @auto_launch_contract.MutationReply::{ changed: true }
+  @auto_launch_contract.MutationReply::{ changed: true, }
 }
 
 ///|
@@ -67,7 +67,7 @@ async fn disable(
     operation: "disable",
     identifier: Some(identifier),
   })
-  @auto_launch_contract.MutationReply::{ changed: true }
+  @auto_launch_contract.MutationReply::{ changed: true, }
 }
 
 ///|

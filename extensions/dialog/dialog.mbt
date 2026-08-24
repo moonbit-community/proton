@@ -20,7 +20,7 @@ async fn show_message_dialog(
   ) catch {
     error => raise OperationFailed(kind="message", detail=error.to_string())
   }
-  @dialog_contract.MessageReply::{ acknowledged: true }
+  @dialog_contract.MessageReply::{ acknowledged: true, }
 }
 
 ///|

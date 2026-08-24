@@ -464,7 +464,7 @@ pub fn Runtime::new(
   if status < 0 {
     raise native_error(status)
   } else {
-    Runtime::{ handle: out_runtime.val, lifecycle: RuntimeActive }
+    Runtime::{ handle: out_runtime.val, lifecycle: RuntimeActive, }
   }
 }
 
@@ -537,7 +537,7 @@ pub fn host_loop_poll(timeout_ms? : Int) -> RuntimeWaitReady raise NativeError {
   if status < 0 {
     raise native_error(status)
   } else {
-    RuntimeWaitReady::{ mask: ready_mask.val }
+    RuntimeWaitReady::{ mask: ready_mask.val, }
   }
 }
 
@@ -1603,7 +1603,7 @@ pub fn Window::clear_cache(self : Window) -> Unit raise NativeError {
 pub fn NativeImage::create_empty() -> NativeImage raise NativeError {
   let out_image = Ref(@native_ffi.image_null())
   check_status(@native_ffi.proton_image_create_empty_ffi(out_image))
-  NativeImage::{ handle: out_image.val, lifecycle: ImageLive }
+  NativeImage::{ handle: out_image.val, lifecycle: ImageLive, }
 }
 
 ///|

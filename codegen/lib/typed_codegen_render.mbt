@@ -70,7 +70,7 @@ pub fn generate_extension_identity(
     $|    js_namespace=\{mbt_string(js_namespace)},
     $|  )
     $|
-  ProtonCommandCodegenOutput::{ source: builder.to_string(), warnings: [] }
+  ProtonCommandCodegenOutput::{ source: builder.to_string(), warnings: [], }
 }
 
 ///|

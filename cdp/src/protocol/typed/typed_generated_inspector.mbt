@@ -84,7 +84,7 @@ pub fn InspectorDetachedEventParams::from_json(
   let method_name = "Inspector.detached"
   ignore(@protocol.cdp_schema_event(method_name~, params~))
   let fields = typed_json_fields(method_name, params)
-  { reason: typed_required_string(method_name, fields, "reason", "string") }
+  { reason: typed_required_string(method_name, fields, "reason", "string"), }
 }
 
 ///|

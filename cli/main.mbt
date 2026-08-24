@@ -54,7 +54,7 @@ fn parse_cli_version(version : String) -> CliVersion? {
           parse_cli_version_part(patch),
         ) {
         (Some(major), Some(minor), Some(patch)) =>
-          Some(CliVersion::{ major, minor, patch })
+          Some(CliVersion::{ major, minor, patch, })
         _ => None
       }
     _ => None

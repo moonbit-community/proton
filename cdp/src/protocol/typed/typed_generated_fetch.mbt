@@ -190,7 +190,7 @@ pub fn FetchRequestId::from_json(
 ) -> FetchRequestId raise @protocol.ProtocolSchemaError {
   let method_name = "FetchRequestId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -292,7 +292,7 @@ pub fn FetchRequestStage::from_json(
 ) -> FetchRequestStage raise @protocol.ProtocolSchemaError {
   let method_name = "FetchRequestStage"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

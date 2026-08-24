@@ -40,7 +40,7 @@ pub extend BrowserLaunchError with ToJson::{to_json}
 ///
 /// # Example
 /// ```mbt nocheck
-/// let options = { ..default_launch_options(), headless: true, port: 9222 }
+/// let options = { ..default_launch_options(), headless: true, port: 9222, }
 /// ```
 pub(all) struct CdpLaunchOptions {
   browser_path : String?
@@ -147,7 +147,7 @@ pub fn default_launch_options() -> CdpLaunchOptions {
 /// # Example
 /// ```mbt nocheck
 /// async test {
-///   let info = launch_browser({ ..default_launch_options(), headless: true })
+///   let info = launch_browser({ ..default_launch_options(), headless: true, })
 ///   assert_true(info.web_socket_url.has_prefix("ws://"))
 /// }
 /// ```
@@ -341,9 +341,9 @@ fn parse_devtools_active_port(raw : String) -> DevToolsActivePort? {
           if path == "" {
             None
           } else if path.has_prefix("/") {
-            Some({ port, web_socket_path: path })
+            Some({ port, web_socket_path: path, })
           } else {
-            Some({ port, web_socket_path: "/\{path}" })
+            Some({ port, web_socket_path: "/\{path}", })
           }
         }
         None => None

@@ -68,10 +68,10 @@ let reload_command : @proton_contract.Command[Json, SimpleReply] = browser_contr
 let sidebar_width = 288
 
 ///|
-let panel_slot : Ref[@proton.ViewHandle?] = { val: None }
+let panel_slot : Ref[@proton.ViewHandle?] = { val: None, }
 
 ///|
-let host_slot : Ref[@proton.WindowHandle?] = { val: None }
+let host_slot : Ref[@proton.WindowHandle?] = { val: None, }
 
 ///|
 fn normalize_url(url : String) -> String {
@@ -88,11 +88,11 @@ fn navigate(payload : NavigatePayload) -> NavigateReply {
   match panel_slot.val {
     Some(view) => {
       view.load_url(url) catch {
-        _ => return NavigateReply::{ ok: false, url }
+        _ => return NavigateReply::{ ok: false, url, }
       }
-      NavigateReply::{ ok: true, url }
+      NavigateReply::{ ok: true, url, }
     }
-    None => NavigateReply::{ ok: false, url }
+    None => NavigateReply::{ ok: false, url, }
   }
 }
 
@@ -101,11 +101,11 @@ fn panel_command(action : (@proton.ViewHandle) -> Unit raise) -> SimpleReply {
   match panel_slot.val {
     Some(view) => {
       action(view) catch {
-        _ => return SimpleReply::{ ok: false }
+        _ => return SimpleReply::{ ok: false, }
       }
-      SimpleReply::{ ok: true }
+      SimpleReply::{ ok: true, }
     }
-    None => SimpleReply::{ ok: false }
+    None => SimpleReply::{ ok: false, }
   }
 }
 

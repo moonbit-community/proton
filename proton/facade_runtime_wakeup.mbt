@@ -14,7 +14,7 @@ priv struct RuntimeWakeup {
 /// Attaches to the running host loop. `App::run` has already refused to start
 /// without one, so there is nothing left to fail here.
 fn RuntimeWakeup::new() -> RuntimeWakeup {
-  RuntimeWakeup::{ signal: host_event_loop_signal() }
+  RuntimeWakeup::{ signal: host_event_loop_signal(), }
 }
 
 ///|

@@ -1038,7 +1038,7 @@ pub extend TitlebarStyle with Debug::{to_repr}
 /// previous retry-on-failure behavior. A concurrent double-fill is benign
 /// (the query is pure and idempotent). The cached `features` array is shared
 /// with callers; all current callers only read it.
-let runtime_info_cache : Ref[RuntimeInfo?] = { val: None }
+let runtime_info_cache : Ref[RuntimeInfo?] = { val: None, }
 
 ///|
 fn cached_runtime_info() -> RuntimeInfo raise NativeError {
@@ -1105,7 +1105,7 @@ pub fn BrowserPolicy::new(
   media? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   devtools? : Bool = false,
 ) -> BrowserPolicy {
-  { navigation, popup, download, certificate, media, devtools }
+  { navigation, popup, download, certificate, media, devtools, }
 }
 
 ///|
@@ -1320,13 +1320,13 @@ pub fn WindowConfig::with_framework_titlebar_labels(
 ///|
 /// Creates an application-level menu bar.
 pub fn MenuBar::new(menus~ : Array[Menu]) -> MenuBar {
-  { menus: menus.copy() }
+  { menus: menus.copy(), }
 }
 
 ///|
 /// Creates a top-level menu.
 pub fn Menu::new(label : String, items~ : Array[MenuItem]) -> Menu {
-  { label: Some(label), role: None, items: Some(items.copy()) }
+  { label: Some(label), role: None, items: Some(items.copy()), }
 }
 
 ///|
@@ -1337,7 +1337,7 @@ pub fn Menu::role(
   label? : String,
   items? : Array[MenuItem],
 ) -> Menu {
-  { label, role: Some(role), items: items.map(items => items.copy()) }
+  { label, role: Some(role), items: items.map(items => items.copy()), }
 }
 
 ///|
@@ -1347,13 +1347,13 @@ pub fn MenuItem::command(
   label : String,
   key? : String,
 ) -> MenuItem {
-  { kind: Command, id: Some(id), label: Some(label), key, role: None }
+  { kind: Command, id: Some(id), label: Some(label), key, role: None, }
 }
 
 ///|
 /// Creates a menu separator.
 pub fn MenuItem::separator() -> MenuItem {
-  { kind: Separator, id: None, label: None, key: None, role: None }
+  { kind: Separator, id: None, label: None, key: None, role: None, }
 }
 
 ///|
@@ -1363,7 +1363,7 @@ pub fn MenuItem::role(
   label? : String,
   key? : String,
 ) -> MenuItem {
-  { kind: Role, id: None, label, key, role: Some(role) }
+  { kind: Role, id: None, label, key, role: Some(role), }
 }
 
 ///|
@@ -1395,7 +1395,7 @@ pub fn MenuItem::definition(
 pub fn WindowRef::unsafe_from_handle(
   handle : @native_ffi.WindowHandle,
 ) -> WindowRef {
-  WindowRef::{ handle, id: @native_ffi.window_logical_id(handle) }
+  WindowRef::{ handle, id: @native_ffi.window_logical_id(handle), }
 }
 
 ///|
@@ -1409,7 +1409,7 @@ pub fn BridgeConfig::new(
   grants~ : Array[BridgeGrantConfig],
   max_payload_bytes? : Int = 1048576,
 ) -> BridgeConfig {
-  { max_payload_bytes, grants: grants.map(fn(grant) { grant.copy() }) }
+  { max_payload_bytes, grants: grants.map(fn(grant) { grant.copy() }), }
 }
 
 ///|
@@ -1432,7 +1432,7 @@ pub fn BridgeExtensionConfig::new(
   js_namespace : String,
   apis~ : Array[String],
 ) -> BridgeExtensionConfig {
-  { js_namespace, apis: copy_strings(apis) }
+  { js_namespace, apis: copy_strings(apis), }
 }
 
 ///|
@@ -1441,21 +1441,21 @@ pub fn BridgeInitializationUnit::new(
   name : String,
   source : String,
 ) -> BridgeInitializationUnit {
-  { owner, name, source }
+  { owner, name, source, }
 }
 
 ///|
 fn BridgeInitializationUnit::copy(
   self : BridgeInitializationUnit,
 ) -> BridgeInitializationUnit {
-  { owner: self.owner, name: self.name, source: self.source }
+  { owner: self.owner, name: self.name, source: self.source, }
 }
 
 ///|
 fn BridgeExtensionConfig::copy(
   self : BridgeExtensionConfig,
 ) -> BridgeExtensionConfig {
-  { js_namespace: self.js_namespace, apis: copy_strings(self.apis) }
+  { js_namespace: self.js_namespace, apis: copy_strings(self.apis), }
 }
 
 ///|
@@ -1570,7 +1570,7 @@ pub fn ViewConfig::new(
   initial_url? : String = "about:blank",
   background_color? : String,
 ) -> ViewConfig {
-  { x, y, width, height, visible, z_order, initial_url, background_color }
+  { x, y, width, height, visible, z_order, initial_url, background_color, }
 }
 
 ///|

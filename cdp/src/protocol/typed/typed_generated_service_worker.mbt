@@ -40,7 +40,7 @@ pub fn ServiceWorkerRegistrationID::from_json(
 ) -> ServiceWorkerRegistrationID raise @protocol.ProtocolSchemaError {
   let method_name = "ServiceWorkerRegistrationID"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -324,7 +324,7 @@ pub fn ServiceWorkerServiceWorkerVersionRunningStatus::from_json(
 ) -> ServiceWorkerServiceWorkerVersionRunningStatus raise @protocol.ProtocolSchemaError {
   let method_name = "ServiceWorkerServiceWorkerVersionRunningStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -368,7 +368,7 @@ pub fn ServiceWorkerServiceWorkerVersionStatus::from_json(
 ) -> ServiceWorkerServiceWorkerVersionStatus raise @protocol.ProtocolSchemaError {
   let method_name = "ServiceWorkerServiceWorkerVersionStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

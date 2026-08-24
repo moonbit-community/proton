@@ -36,7 +36,7 @@ pub fn PreloadPrefetchStatus::from_json(
 ) -> PreloadPrefetchStatus raise @protocol.ProtocolSchemaError {
   let method_name = "PreloadPrefetchStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -206,7 +206,7 @@ pub fn PreloadPreloadingStatus::from_json(
 ) -> PreloadPreloadingStatus raise @protocol.ProtocolSchemaError {
   let method_name = "PreloadPreloadingStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -250,7 +250,7 @@ pub fn PreloadPreloadPipelineId::from_json(
 ) -> PreloadPreloadPipelineId raise @protocol.ProtocolSchemaError {
   let method_name = "PreloadPreloadPipelineId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -294,7 +294,7 @@ pub fn PreloadPrerenderFinalStatus::from_json(
 ) -> PreloadPrerenderFinalStatus raise @protocol.ProtocolSchemaError {
   let method_name = "PreloadPrerenderFinalStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -491,7 +491,7 @@ pub fn PreloadRuleSetErrorType::from_json(
 ) -> PreloadRuleSetErrorType raise @protocol.ProtocolSchemaError {
   let method_name = "PreloadRuleSetErrorType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -531,7 +531,7 @@ pub fn PreloadRuleSetId::from_json(
 ) -> PreloadRuleSetId raise @protocol.ProtocolSchemaError {
   let method_name = "PreloadRuleSetId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -575,7 +575,7 @@ pub fn PreloadSpeculationAction::from_json(
 ) -> PreloadSpeculationAction raise @protocol.ProtocolSchemaError {
   let method_name = "PreloadSpeculationAction"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -619,7 +619,7 @@ pub fn PreloadSpeculationTargetHint::from_json(
 ) -> PreloadSpeculationTargetHint raise @protocol.ProtocolSchemaError {
   let method_name = "PreloadSpeculationTargetHint"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

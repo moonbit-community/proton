@@ -40,7 +40,7 @@ pub fn DOMDebuggerCSPViolationType::from_json(
 ) -> DOMDebuggerCSPViolationType raise @protocol.ProtocolSchemaError {
   let method_name = "DOMDebuggerCSPViolationType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -84,7 +84,7 @@ pub fn DOMDebuggerDOMBreakpointType::from_json(
 ) -> DOMDebuggerDOMBreakpointType raise @protocol.ProtocolSchemaError {
   let method_name = "DOMDebuggerDOMBreakpointType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

@@ -110,7 +110,7 @@ async fn acquire_next_guard(
     operation: "acquire",
     scope: Some(scope_name),
   })
-  @keepawake_contract.KeepAwakeReply::{ active: true, scope: Some(scope_name) }
+  @keepawake_contract.KeepAwakeReply::{ active: true, scope: Some(scope_name), }
 }
 
 ///|
@@ -130,7 +130,7 @@ async fn release(
       })
       reply
     }
-    None => @keepawake_contract.KeepAwakeReply::{ active: false, scope: None }
+    None => @keepawake_contract.KeepAwakeReply::{ active: false, scope: None, }
   }
 }
 
@@ -148,9 +148,9 @@ fn status(
           scope: Some(scope_label(active_guard.scope())),
         }
       } else {
-        @keepawake_contract.KeepAwakeReply::{ active: false, scope: None }
+        @keepawake_contract.KeepAwakeReply::{ active: false, scope: None, }
       }
-    _ => @keepawake_contract.KeepAwakeReply::{ active: false, scope: None }
+    _ => @keepawake_contract.KeepAwakeReply::{ active: false, scope: None, }
   }
 }
 

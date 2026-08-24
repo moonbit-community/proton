@@ -90,7 +90,7 @@ pub fn ExtensionsStorageArea::from_json(
 ) -> ExtensionsStorageArea raise @protocol.ProtocolSchemaError {
   let method_name = "ExtensionsStorageArea"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -297,7 +297,7 @@ pub fn ExtensionsGetStorageItemsResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { data: typed_required_result_json(method_name, fields, "data") }
+  { data: typed_required_result_json(method_name, fields, "data"), }
 }
 
 ///|
@@ -399,7 +399,7 @@ pub fn ExtensionsLoadUnpackedResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { id: typed_required_result_string(method_name, fields, "id", "string") }
+  { id: typed_required_result_string(method_name, fields, "id", "string"), }
 }
 
 ///|

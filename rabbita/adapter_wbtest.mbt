@@ -22,7 +22,7 @@ struct TestScheduler {
 ///|
 fn TestScheduler::new() -> TestScheduler {
   TestScheduler::{
-    hooks_value: @cmd.Hooks::{ url_request: None, url_changed: None },
+    hooks_value: @cmd.Hooks::{ url_request: None, url_changed: None, },
   }
 }
 
@@ -275,7 +275,7 @@ test "duplicate event routes do not overwrite erased tagger slots" {
     .get("app:duplicate_rabbita_event")
     .unwrap()
   let slot : Ref[EventTaggers[CountChanged]] = erased_slot.cast()
-  ignore((slot.val.received)(CountChanged::{ count: 7 }))
+  ignore((slot.val.received)(CountChanged::{ count: 7, }))
   assert_eq(first_count.val, 7)
   assert_eq(duplicate_value.val, "")
 }

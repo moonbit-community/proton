@@ -93,13 +93,13 @@ test "top-level navigation invalidates context when the frame id is reused" {
 test "missing unique context is classified as lifecycle loss" {
   assert_true(
     is_execution_context_loss(
-      { code: -32602, message: "uniqueContextId not found", data: None },
+      { code: -32602, message: "uniqueContextId not found", data: None, },
       true,
     ),
   )
   assert_false(
     is_execution_context_loss(
-      { code: -32602, message: "Invalid URL", data: None },
+      { code: -32602, message: "Invalid URL", data: None, },
       true,
     ),
   )

@@ -255,7 +255,7 @@ fn parse_platform(
       expectation="must be an even number of hexadecimal characters",
     )
   }
-  PlatformUpdate::{ url, size, sha256_hex, signature_hex }
+  PlatformUpdate::{ url, size, sha256_hex, signature_hex, }
 }
 
 ///|

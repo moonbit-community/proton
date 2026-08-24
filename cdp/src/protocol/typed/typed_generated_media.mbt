@@ -250,7 +250,7 @@ pub fn MediaPlayerId::from_json(
 ) -> MediaPlayerId raise @protocol.ProtocolSchemaError {
   let method_name = "MediaPlayerId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -380,7 +380,7 @@ pub fn MediaTimestamp::from_json(
 ) -> MediaTimestamp raise @protocol.ProtocolSchemaError {
   let method_name = "MediaTimestamp"
   match value {
-    Number(inner, ..) => { value: inner }
+    Number(inner, ..) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "number")
   }
 }

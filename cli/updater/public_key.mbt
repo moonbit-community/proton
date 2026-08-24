@@ -108,7 +108,7 @@ fn public_key(
   let key = @rsa.PublicKey::parse(text) catch {
     error => raise RejectedKey(detail=error.message())
   }
-  ValidatedPublicKey::{ text, bits: key.bits() }
+  ValidatedPublicKey::{ text, bits: key.bits(), }
 }
 
 ///|

@@ -148,7 +148,7 @@ pub fn cdp_command(
   params? : Json,
   session_id? : String,
 ) -> CdpCommandMessage {
-  { id, method_name, params, session_id }
+  { id, method_name, params, session_id, }
 }
 
 ///|
@@ -210,7 +210,7 @@ fn parse_response(
     None => None
   }
   let session_id = optional_string(fields, "sessionId")
-  { id, result, error, session_id }
+  { id, result, error, session_id, }
 }
 
 ///|
@@ -221,7 +221,7 @@ fn parse_event(
   let method_name = required_string(fields, "method")
   let params = fields.get("params")
   let session_id = optional_string(fields, "sessionId")
-  { method_name, params, session_id }
+  { method_name, params, session_id, }
 }
 
 ///|
@@ -234,7 +234,7 @@ fn parse_error(json : Json) -> CdpError raise ProtocolDecodeError {
   }
   let message = required_string(fields, "message")
   let data = fields.get("data")
-  { code, message, data }
+  { code, message, data, }
 }
 
 ///|

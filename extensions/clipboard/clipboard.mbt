@@ -31,7 +31,7 @@ fn write_clipboard_text(
 ) -> @clipboard_contract.WriteTextReply raise ClipboardError {
   ensure_supported()
   match @sys_clipboard.write_text(text) {
-    Ok(_) => @clipboard_contract.WriteTextReply::{ written: true }
+    Ok(_) => @clipboard_contract.WriteTextReply::{ written: true, }
     Err(error) => raise WriteFailed(detail=error)
   }
 }

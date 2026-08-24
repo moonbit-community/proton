@@ -411,7 +411,7 @@ pub fn ProtocolEvent::build_event(
     self.parameters,
     params?,
   )
-  { method_name: self.cdp_method, params, session_id }
+  { method_name: self.cdp_method, params, session_id, }
 }
 
 ///|

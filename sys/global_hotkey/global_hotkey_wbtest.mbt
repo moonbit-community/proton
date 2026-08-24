@@ -141,15 +141,19 @@ test "decode_key_name covers named key aliases" {
 test "parse_accelerator normalizes modifiers and keys" {
   assert_true(
     parse_accelerator("cmd + option + k") ==
-    Ok({ normalized: "Alt+Meta+K", modifiers: 9, key_name: "K" }),
+    Ok({ normalized: "Alt+Meta+K", modifiers: 9, key_name: "K", }),
   )
   assert_true(
     parse_accelerator("ctrl+shift+page-down") ==
-    Ok({ normalized: "Ctrl+Shift+PageDown", modifiers: 6, key_name: "PageDown" }),
+    Ok({
+      normalized: "Ctrl+Shift+PageDown",
+      modifiers: 6,
+      key_name: "PageDown",
+    }),
   )
   assert_true(
     parse_accelerator("ctrl+-") ==
-    Ok({ normalized: "Ctrl+Minus", modifiers: 2, key_name: "Minus" }),
+    Ok({ normalized: "Ctrl+Minus", modifiers: 2, key_name: "Minus", }),
   )
 }
 
@@ -157,7 +161,7 @@ test "parse_accelerator normalizes modifiers and keys" {
 test "parse_accelerator accepts modifier aliases" {
   assert_true(
     parse_accelerator("ctl+quote") ==
-    Ok({ normalized: "Ctrl+Quote", modifiers: 2, key_name: "Quote" }),
+    Ok({ normalized: "Ctrl+Quote", modifiers: 2, key_name: "Quote", }),
   )
   assert_true(
     parse_accelerator("control+super+grave") ==
@@ -169,7 +173,7 @@ test "parse_accelerator accepts modifier aliases" {
   )
   assert_true(
     parse_accelerator("windows+pageup") ==
-    Ok({ normalized: "Meta+PageUp", modifiers: 8, key_name: "PageUp" }),
+    Ok({ normalized: "Meta+PageUp", modifiers: 8, key_name: "PageUp", }),
   )
 }
 

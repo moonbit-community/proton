@@ -9,7 +9,7 @@ fn CommandErrorPolicy::new(
   expose_details : Bool,
   report_diagnostic : (String) -> Unit,
 ) -> CommandErrorPolicy {
-  CommandErrorPolicy::{ expose_details, report_diagnostic }
+  CommandErrorPolicy::{ expose_details, report_diagnostic, }
 }
 
 ///|

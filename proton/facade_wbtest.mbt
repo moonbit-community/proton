@@ -103,7 +103,7 @@ fn test_extension_capability(
   scope? : Json = Json::empty_object(),
   targets? : Array[RendererTarget] = [RendererTarget::entry()],
 ) -> ExtensionCapabilityBinding {
-  ExtensionCapabilityBinding::{ spec, scope, targets }
+  ExtensionCapabilityBinding::{ spec, scope, targets, }
 }
 
 ///|
@@ -846,7 +846,7 @@ test "renderer policy binds extension ops and scope to one trusted source" {
   let policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
       "main",
-      BridgePagePolicy::{ entry_origin: None },
+      BridgePagePolicy::{ entry_origin: None, },
       [],
       resolved,
     )
@@ -899,7 +899,7 @@ test "one extension supports distinct scopes in different windows" {
   let main_policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
       "main",
-      BridgePagePolicy::{ entry_origin: None },
+      BridgePagePolicy::{ entry_origin: None, },
       [],
       resolved,
     )
@@ -907,7 +907,7 @@ test "one extension supports distinct scopes in different windows" {
   let secondary_policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
       "secondary",
-      BridgePagePolicy::{ entry_origin: None },
+      BridgePagePolicy::{ entry_origin: None, },
       [],
       resolved,
     )
@@ -936,7 +936,7 @@ test "application commands grant the primary entry by default" {
   })
   let policy = resolve_window_permission_policy(
     "main",
-    BridgePagePolicy::{ entry_origin: None },
+    BridgePagePolicy::{ entry_origin: None, },
     build.app_capabilities,
     [],
   )
@@ -954,7 +954,7 @@ test "omitted renderer capabilities are a valid empty policy" {
   assert_true(build.runtime is None)
   let policy = resolve_window_permission_policy(
     "main",
-    BridgePagePolicy::{ entry_origin: None },
+    BridgePagePolicy::{ entry_origin: None, },
     build.app_capabilities,
     [],
   )
@@ -985,13 +985,13 @@ test "application command registrars retain separate renderer targets" {
   })
   let primary_policy = resolve_window_permission_policy(
     "main",
-    BridgePagePolicy::{ entry_origin: None },
+    BridgePagePolicy::{ entry_origin: None, },
     build.app_capabilities,
     [],
   )
   let secondary_policy = resolve_window_permission_policy(
     "secondary",
-    BridgePagePolicy::{ entry_origin: None },
+    BridgePagePolicy::{ entry_origin: None, },
     build.app_capabilities,
     [],
   )
@@ -1037,7 +1037,7 @@ test "renderer capabilities reject targets that resolve to the same origin" {
     expect_configuration_error(() => {
       resolve_window_permission_policy(
         "main",
-        BridgePagePolicy::{ entry_origin: None },
+        BridgePagePolicy::{ entry_origin: None, },
         [],
         resolved,
       )
@@ -1259,7 +1259,7 @@ async test "application lifecycle hooks shut down in reverse order" {
 
 ///|
 async test "runtime wakeup preserves notification before suspension" {
-  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal::new() }
+  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal::new(), }
   let revision = wakeup.revision()
   wakeup.signal.notify()
   let completed = @async.with_timeout_opt(100, () => wakeup.wait_after(revision))
@@ -1696,7 +1696,7 @@ fn test_view_handle(
     eval_view_script: fn(_script) {  },
     send_view_command: fn(_command, _download_id) {  },
     read_view_state: fn() {
-      { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1 }
+      { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1, }
     },
     close_view: fn() { calls.push("close") },
   }

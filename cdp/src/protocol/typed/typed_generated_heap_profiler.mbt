@@ -40,7 +40,7 @@ pub fn HeapProfilerHeapSnapshotObjectId::from_json(
 ) -> HeapProfilerHeapSnapshotObjectId raise @protocol.ProtocolSchemaError {
   let method_name = "HeapProfilerHeapSnapshotObjectId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1007,7 +1007,7 @@ pub fn HeapProfilerAddHeapSnapshotChunkEventParams::from_json(
   let method_name = "HeapProfiler.addHeapSnapshotChunk"
   ignore(@protocol.cdp_schema_event(method_name~, params~))
   let fields = typed_json_fields(method_name, params)
-  { chunk: typed_required_string(method_name, fields, "chunk", "string") }
+  { chunk: typed_required_string(method_name, fields, "chunk", "string"), }
 }
 
 ///|

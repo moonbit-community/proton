@@ -588,7 +588,7 @@ pub fn[State] App::window_lifecycle(
   self.window_lifecycle_hooks.push(WindowLifecycleHook::{
     start: async fn(context) {
       let state = on_ready(context)
-      WindowLifecycleActivation::{ close: async fn() { on_close(state) } }
+      WindowLifecycleActivation::{ close: async fn() { on_close(state) }, }
     },
   })
   self
@@ -635,14 +635,14 @@ pub fn App::capability(
 ///|
 /// Selects a window's configured entry as a renderer capability target.
 pub fn RendererTarget::entry(window? : String = "main") -> RendererTarget {
-  RendererTarget::{ window, bundled: false }
+  RendererTarget::{ window, bundled: false, }
 }
 
 ///|
 /// Selects Proton's bundled application origin in one window as a renderer
 /// capability target.
 pub fn RendererTarget::bundled(window? : String = "main") -> RendererTarget {
-  RendererTarget::{ window, bundled: true }
+  RendererTarget::{ window, bundled: true, }
 }
 
 ///|

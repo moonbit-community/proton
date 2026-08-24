@@ -125,7 +125,7 @@ pub fn FedCmAccountUrlType::from_json(
 ) -> FedCmAccountUrlType raise @protocol.ProtocolSchemaError {
   let method_name = "FedCmAccountUrlType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -165,7 +165,7 @@ pub fn FedCmDialogButton::from_json(
 ) -> FedCmDialogButton raise @protocol.ProtocolSchemaError {
   let method_name = "FedCmDialogButton"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -205,7 +205,7 @@ pub fn FedCmDialogType::from_json(
 ) -> FedCmDialogType raise @protocol.ProtocolSchemaError {
   let method_name = "FedCmDialogType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -245,7 +245,7 @@ pub fn FedCmLoginState::from_json(
 ) -> FedCmLoginState raise @protocol.ProtocolSchemaError {
   let method_name = "FedCmLoginState"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

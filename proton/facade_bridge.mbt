@@ -71,12 +71,12 @@ fn build_command_host(
   if has_commands {
     host.seal_registrations()
     CommandHostBuild::{
-      runtime: Some(CommandHostRuntime::{ host, destroy_hooks, closed: false }),
+      runtime: Some(CommandHostRuntime::{ host, destroy_hooks, closed: false, }),
       app_capabilities,
     }
   } else {
     ignore(close_command_host_runtime(host, destroy_hooks))
-    CommandHostBuild::{ runtime: None, app_capabilities }
+    CommandHostBuild::{ runtime: None, app_capabilities, }
   }
 }
 
@@ -200,7 +200,7 @@ fn bridge_frontend_config_for_extension(
   let extensions : Array[@native.BridgeExtensionConfig] = []
   let initialization_units : Array[@native.BridgeInitializationUnit] = []
   append_bridge_extension_frontend(id, spec, extensions, initialization_units)
-  BridgeFrontendConfig::{ extensions, initialization_units }
+  BridgeFrontendConfig::{ extensions, initialization_units, }
 }
 
 ///|
@@ -507,7 +507,7 @@ fn command_window_capability(
 
 ///|
 fn default_bridge_page_policy() -> BridgePagePolicy {
-  BridgePagePolicy::{ entry_origin: None }
+  BridgePagePolicy::{ entry_origin: None, }
 }
 
 ///|
@@ -516,7 +516,7 @@ fn bridge_page_policy_for_entry(
 ) -> BridgePagePolicy raise AppConfigurationError {
   match entry {
     @manifest.AppEntry::Url(url) =>
-      BridgePagePolicy::{ entry_origin: Some(url_origin(url)) }
+      BridgePagePolicy::{ entry_origin: Some(url_origin(url)), }
     _ => default_bridge_page_policy()
   }
 }

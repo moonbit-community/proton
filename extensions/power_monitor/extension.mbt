@@ -44,7 +44,7 @@ async fn get_idle_time(
   context.emit(@power_monitor_contract.activity, @power_monitor_contract.PowerMonitorActivity::{
     operation: "get_idle_time",
   })
-  @power_monitor_contract.IdleTimeReply::{ idle_seconds: seconds }
+  @power_monitor_contract.IdleTimeReply::{ idle_seconds: seconds, }
 }
 
 ///|
@@ -78,7 +78,7 @@ async fn emit_power_monitor_event(
   context : @proton.CommandContext,
   event : @sys_power_monitor.PowerMonitorEvent,
 ) -> Unit {
-  let payload = @power_monitor_contract.PowerMonitorEventPayload::{  }
+  let payload = @power_monitor_contract.PowerMonitorEventPayload::{ }
   match event {
     Suspend => context.emit(@power_monitor_contract.suspend, payload)
     Resume => context.emit(@power_monitor_contract.resume_event, payload)
@@ -101,7 +101,7 @@ async fn drain_events(
   for event in events {
     emit_power_monitor_event(context, event)
   }
-  @power_monitor_contract.PowerMonitorEventReply::{ count: events.length() }
+  @power_monitor_contract.PowerMonitorEventReply::{ count: events.length(), }
 }
 
 ///|

@@ -119,13 +119,13 @@ pub fn IpcOpRequest::new(
   name : String,
   payload : Json,
 ) -> IpcOpRequest {
-  IpcOpRequest::{ version: ipc_protocol_version, id, name, payload }
+  IpcOpRequest::{ version: ipc_protocol_version, id, name, payload, }
 }
 
 ///|
 /// Creates one successful operation response frame.
 pub fn IpcOpResponse::ok(id : String, body : Json) -> IpcOpResponse {
-  IpcOpResponse::{ version: ipc_protocol_version, id, status: 0, body }
+  IpcOpResponse::{ version: ipc_protocol_version, id, status: 0, body, }
 }
 
 ///|

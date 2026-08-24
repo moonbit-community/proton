@@ -52,7 +52,7 @@ test "generated typed protocol surface covers commands and events" {
 
 ///|
 test "generated typed protocol surface covers domain types" {
-  let node_id : @typed.AccessibilityAXNodeId = { value: "node-1" }
+  let node_id : @typed.AccessibilityAXNodeId = { value: "node-1", }
   assert_true(node_id.to_json() is "node-1")
 
   let remote : @typed.RuntimeRemoteObject = {
@@ -72,7 +72,7 @@ test "generated typed protocol surface covers domain types" {
   assert_true(remote_json is { "value": 2, .. })
   assert_true(remote_json is { "description": "2", .. })
 
-  let quad : @typed.DOMQuad = { value: [0.0, 1.0, 2.0, 3.0] }
+  let quad : @typed.DOMQuad = { value: [0.0, 1.0, 2.0, 3.0], }
   assert_true(quad.to_json() is [0, 1, 2, 3])
   let decoded_quad = @typed.DOMQuad::from_json([0, 1, 2, 3])
   inspect(decoded_quad.value.length(), content="4")
@@ -125,7 +125,7 @@ test "generated typed protocol builders produce schema-aware wire messages" {
   let navigate_params : @typed.PageNavigateParams = {
     url: "https://example.com/",
     referrer: None,
-    transition_type: Some({ value: "typed" }),
+    transition_type: Some({ value: "typed", }),
     frame_id: None,
     referrer_policy: None,
   }
@@ -163,7 +163,7 @@ test "generated typed protocol builders produce schema-aware wire messages" {
   assert_true(evaluate.params is Some({ "awaitPromise": true, .. }))
 
   let event_params : @typed.PageLoadEventFiredEventParams = {
-    timestamp: { value: 12.5 },
+    timestamp: { value: 12.5, },
   }
   let event = @typed.page_load_event_fired_event(
     event_params,
@@ -173,7 +173,7 @@ test "generated typed protocol builders produce schema-aware wire messages" {
   assert_true(event.params is Some({ "timestamp": 12.5, .. }))
 
   let trace_event_params : @typed.TracingDataCollectedEventParams = {
-    value: [{ value: { "name": "thread_name" } }, { value: { "ph": "M" } }],
+    value: [{ value: { "name": "thread_name" }, }, { value: { "ph": "M" }, }],
   }
   let trace_event = @typed.tracing_data_collected_event(trace_event_params)
   inspect(trace_event.method_name, content="Tracing.dataCollected")
@@ -183,7 +183,7 @@ test "generated typed protocol builders produce schema-aware wire messages" {
   )
 
   let permissions_params : @typed.BrowserGrantPermissionsParams = {
-    permissions: [{ value: "geolocation" }, { value: "notifications" }],
+    permissions: [{ value: "geolocation", }, { value: "notifications", }],
     origin: Some("https://example.com"),
     browser_context_id: None,
   }
