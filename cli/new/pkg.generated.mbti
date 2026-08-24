@@ -13,6 +13,7 @@ pub async fn run(String, @argparse.Matches) -> Unit
 
 // Errors
 pub(all) suberror NewProjectInputError {
+  InvalidTemplate(template~ : String)
   InvalidPositiveInteger(field~ : String, value~ : String)
   EmptyTitle
   InvalidAuthor(author~ : String, reason~ : String)

@@ -1,0 +1,24 @@
+///|
+async fn main {
+  let html =
+    #|<!doctype html>
+    #|<html lang="en">
+    #|  <head>
+    #|    <meta charset="utf-8">
+    #|    <meta name="viewport" content="width=device-width, initial-scale=1">
+    #|    <title>{{title_html}}</title>
+    #|    <style>
+    #|      :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    #|      body { display: grid; min-height: 100vh; margin: 0; place-items: center; }
+    #|    </style>
+    #|  </head>
+    #|  <body>
+    #|    <main>
+    #|      <h1>{{title_html}}</h1>
+    #|      <p>Your minimal Proton app is running.</p>
+    #|    </main>
+    #|  </body>
+    #|</html>
+  @proton.html({{title_mbt}}, html, width={{width}}, height={{height}})
+  .run_or_abort()
+}
