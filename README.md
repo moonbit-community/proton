@@ -15,12 +15,15 @@ Install the CLI and create a project:
 
 ```sh
 moon install moonbit-community/proton_cli
-proton_cli new my-app --yes
+proton_cli new my-app --template minimal --yes
 cd my-app
 ```
 
-Fetch the MoonBit dependencies and set up the native runtime. The generated
-project runs its pinned Warren frontend toolchain through `moonx`:
+Choose `minimal` for a single-module app with inline HTML, or `isomorphic` for
+the three-module Rabbita and Warren Todo example. Without `--template`, `new`
+uses `isomorphic` by default.
+
+Fetch the MoonBit dependencies and set up the native runtime:
 
 ```sh
 moon update
@@ -33,10 +36,8 @@ Start development:
 proton_cli dev
 ```
 
-The generated project is a three-module workspace: `shared/` holds the typed
-command and event contracts used on both sides, `frontend/` is a Rabbita
-application built and served by Warren, and `backend/` runs the Proton
-desktop runtime.
+The minimal project runs directly from `app/main.mbt` without a separate
+frontend toolchain.
 
 `cef setup` installs the exact CEF SDK and runtime required by this Proton
 release into the user-wide immutable store at `~/.proton/store`. It also
@@ -54,8 +55,9 @@ requirements` prints the active requirement as JSON.
 
 ## Application entry
 
-Generated projects define application runtime behavior with the MoonBit `App`
-builder and register their typed commands in `backend/app/main.mbt`:
+Both templates define application runtime behavior with the MoonBit `App`
+builder. The `isomorphic` template also registers typed commands in
+`backend/app/main.mbt`:
 
 ```moonbit
 async fn main {

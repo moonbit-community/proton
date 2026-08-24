@@ -1,0 +1,18 @@
+name = "{{module_name}}"
+
+version = "0.1.0"
+
+import {
+  "moonbitlang/async@{{async_version}}",
+  "moonbit-community/proton@{{proton_version}}",
+}
+
+license = "Apache-2.0"
+
+description = "A minimal Proton desktop application."
+
+options(
+  warn_list: "",
+  preferred_target: "native",
+  supported_targets: "+native",
+)

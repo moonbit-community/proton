@@ -1,6 +1,7 @@
 ///|
 struct RawNewProjectOptions {
   path : String?
+  template : String?
   title : String?
   author : String?
   identifier : String?
@@ -23,6 +24,7 @@ struct NewProjectOptions {
   cwd : String
   target_dir : String
   resolved_target_dir : String
+  template : String
   title : String
   author : String
   project_name : String
@@ -59,6 +61,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     defaults
   }
   let files = plan_project_files(
+    options.template,
     options.title,
     options.author,
     options.project_name,
@@ -106,6 +109,11 @@ pub fn command() -> @argparse.Command {
       ),
     ],
     options=[
+      OptionArg(
+        "template",
+        long="template",
+        about="Project template: minimal or isomorphic",
+      ),
       OptionArg("title", long="title", about="Application and window title"),
       OptionArg("author", long="author", about="MoonBit module author"),
       OptionArg(
@@ -134,6 +142,8 @@ fn new_options_from_matches(
     is {
       "path"? : Some(path)
       | (None with path = []),
+      "template"? : Some(template)
+      | (None with template = []),
       "title"? : Some(title)
       | (None with title = []),
       "author"? : Some(author)
@@ -158,6 +168,7 @@ fn new_options_from_matches(
     }
   {
     path: path.get(0),
+    template: template.get(0),
     title: title.get(0),
     author: author.get(0),
     identifier: identifier.get(0),
@@ -176,6 +187,9 @@ fn options_from_raw(
   raw : RawNewProjectOptions,
 ) -> NewProjectOptions raise NewProjectInputError {
   let target_dir = raw.path.unwrap_or(default_project_path)
+  let template = parse_project_template(
+    raw.template.unwrap_or(default_template_name),
+  )
   let slug = project_slug(cwd, target_dir)
   let title = raw.title.unwrap_or(slug_to_title(slug))
   let author = raw.author.unwrap_or(default_author)
@@ -193,6 +207,7 @@ fn options_from_raw(
     cwd,
     target_dir,
     resolved_target_dir: @fsutil.resolve_path(cwd, target_dir),
+    template,
     title,
     author,
     project_name: slug,

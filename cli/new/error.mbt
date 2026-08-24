@@ -1,6 +1,7 @@
 ///|
 /// Invalid values supplied while configuring a new project.
 pub(all) suberror NewProjectInputError {
+  InvalidTemplate(template~ : String)
   InvalidPositiveInteger(field~ : String, value~ : String)
   EmptyTitle
   InvalidAuthor(author~ : String, reason~ : String)
@@ -94,6 +95,10 @@ pub extend NewProjectToolError with Show::{to_string, output}
 ///|
 pub fn NewProjectInputError::message(self : NewProjectInputError) -> String {
   match self {
+    InvalidTemplate(template~) =>
+      "unknown project template " +
+      template +
+      "; expected minimal or isomorphic"
     InvalidPositiveInteger(field~, value~) =>
       field + " must be a positive integer: " + value
     EmptyTitle => "app title must not be empty"

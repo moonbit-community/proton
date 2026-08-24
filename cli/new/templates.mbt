@@ -28,12 +28,34 @@ let default_warren_version = "0.2.7"
 let default_async_version = "0.21.0"
 
 ///|
+let default_template_name = "isomorphic"
+
+///|
+fn template_architecture(template : String) -> String {
+  match template {
+    "minimal" => "single MoonBit module with inline HTML"
+    "isomorphic" => "shared contract + Rabbita frontend + Proton backend"
+    _ => abort("invalid validated project template: " + template)
+  }
+}
+
+///|
+fn parse_project_template(value : String) -> String raise NewProjectInputError {
+  match value.to_lower() {
+    "minimal" => "minimal"
+    "isomorphic" => "isomorphic"
+    _ => raise InvalidTemplate(template=value)
+  }
+}
+
+///|
 priv struct TemplateContext {
   title : String
   title_html : String
   title_mbt : String
   author : String
   project_name : String
+  module_name : String
   shared_module : String
   frontend_module : String
   backend_module : String
@@ -93,6 +115,7 @@ fn template_context(
     title_mbt: mbt_string(title),
     author,
     project_name,
+    module_name: module_prefix,
     shared_module: module_prefix + "_shared",
     frontend_module: module_prefix + "_frontend",
     backend_module: module_prefix + "_backend",
@@ -120,6 +143,7 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "title_mbt", value: context.title_mbt },
     { name: "author", value: context.author },
     { name: "project_name", value: context.project_name },
+    { name: "module_name", value: context.module_name },
     { name: "shared_module", value: context.shared_module },
     { name: "frontend_module", value: context.frontend_module },
     { name: "backend_module", value: context.backend_module },
@@ -186,6 +210,7 @@ fn validate_template_placeholders(
 
 ///|
 fn plan_project_files(
+  template : String,
   title : String,
   author : String,
   project_name : String,
@@ -197,40 +222,57 @@ fn plan_project_files(
     title, author, project_name, identifier, width, height,
   )
   let files : Array[PlannedFile] = []
-  for spec in template_specs() {
+  for spec in template_specs(template) {
     files.push(render_template(spec, context))
   }
-  files.push(project_config_file(context))
+  files.push(project_config_file(context, template))
   files
 }
 
 ///|
-fn project_config_file(context : TemplateContext) -> PlannedFile {
-  let config : Json = {
-    "backend": { "path": ".", "package": "backend/app" },
-    "frontend": {
-      "path": "frontend",
-      "dev_url": "http://127.0.0.1:4300",
-      "before_dev": "moonx --target native moonbit-community/warren@" +
-      context.warren_version +
-      " dev --direct --port 4300",
-      "before_build": "moonx --target native moonbit-community/warren@" +
-      context.warren_version +
-      " build",
-      "dist": "dist",
-    },
-    "package": {
-      "product_name": context.title,
-      "identifier": context.identifier,
-      "version": "0.1.0",
-      "formats": ["app", "zip"],
-      "output": "dist",
-    },
+fn project_config_file(
+  context : TemplateContext,
+  template : String,
+) -> PlannedFile {
+  let package_config : Json = {
+    "product_name": context.title,
+    "identifier": context.identifier,
+    "version": "0.1.0",
+    "formats": ["app", "zip"],
+    "output": "dist",
+  }
+  let config : Json = match template {
+    "minimal" =>
+      {
+        "backend": { "path": ".", "package": "app" },
+        "package": package_config,
+      }
+    "isomorphic" =>
+      {
+        "backend": { "path": ".", "package": "backend/app" },
+        "frontend": {
+          "path": "frontend",
+          "dev_url": "http://127.0.0.1:4300",
+          "before_dev": "moonx --target native moonbit-community/warren@" +
+          context.warren_version +
+          " dev --direct --port 4300",
+          "before_build": "moonx --target native moonbit-community/warren@" +
+          context.warren_version +
+          " build",
+          "dist": "dist",
+        },
+        "package": package_config,
+      }
+    _ => abort("invalid validated project template: " + template)
   }
   { path: "proton.project.json", content: config.stringify(indent=2) + "\n" }
 }
 
 ///|
-fn template_specs() -> Array[TemplateSpec] {
-  generated_template_specs()
+fn template_specs(template : String) -> Array[TemplateSpec] {
+  match template {
+    "minimal" => generated_minimal_template_specs()
+    "isomorphic" => generated_isomorphic_template_specs()
+    _ => abort("invalid validated project template: " + template)
+  }
 }

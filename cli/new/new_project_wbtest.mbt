@@ -16,6 +16,7 @@ fn must_options(
 test "default new options" {
   let options = must_options([])
   assert_eq(options.target_dir, "todo")
+  assert_eq(options.template, "isomorphic")
   assert_eq(options.title, "Todo")
   assert_eq(options.author, "username")
   assert_eq(options.project_name, "todo")
@@ -25,6 +26,22 @@ test "default new options" {
   assert_true(options.run_check)
   assert_false(options.yes)
   assert_false(options.dry_run)
+}
+
+///|
+test "template option selects minimal scaffold" {
+  let options = must_options(["demo", "--template", "minimal"])
+  assert_eq(options.template, "minimal")
+}
+
+///|
+test "todo is not a template name" {
+  try options_from_raw(".", must_parse(["demo", "--template", "todo"])) catch {
+    InvalidTemplate(template="todo") => ()
+    _ => abort("expected invalid template")
+  } noraise {
+    _ => abort("expected template to fail")
+  }
 }
 
 ///|
@@ -174,7 +191,7 @@ test "project config preserves application identity" {
   let context = template_context(
     "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
   )
-  let config = @json.parse(project_config_file(context).content) catch {
+  let config = @json.parse(project_config_file(context, "isomorphic").content) catch {
     error => abort(error.to_string())
   }
   guard config
@@ -187,6 +204,24 @@ test "project config preserves application identity" {
       ..
     } else {
     abort("project config did not preserve application identity")
+  }
+}
+
+///|
+test "minimal project config uses a single backend module" {
+  let context = template_context(
+    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+  )
+  let config = @json.parse(project_config_file(context, "minimal").content) catch {
+    error => abort(error.to_string())
+  }
+  guard config
+    is {
+      "backend": { "path": ".", "package": "app", .. },
+      "frontend"? : None,
+      ..
+    } else {
+    abort("minimal project config did not use a single backend module")
   }
 }
 
