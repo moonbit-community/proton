@@ -182,27 +182,6 @@ typedef enum {
   PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED
 } proton_engine_bridge_request_status_t;
 
-static const char *proton_engine_bridge_request_reject_event(
-    proton_engine_bridge_request_status_t status) {
-  switch (status) {
-  case PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED:
-    return "bridge_reject_origin_not_allowed";
-  case PROTON_ENGINE_BRIDGE_REQUEST_OP_UNKNOWN:
-    return "bridge_reject_op_not_registered";
-  case PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED:
-    return "bridge_reject_not_allowed";
-  case PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED:
-    return "bridge_reject_payload_too_large";
-  case PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED:
-    return "bridge_reject_invalid_page_instance";
-  case PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED:
-    return "bridge_reject_allocation_failed";
-  case PROTON_ENGINE_BRIDGE_REQUEST_OK:
-  default:
-    return "bridge_accept";
-  }
-}
-
 static const char *proton_engine_bridge_request_reject_message(
     proton_engine_bridge_request_status_t status) {
   switch (status) {

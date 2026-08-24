@@ -124,7 +124,6 @@ async fn run_dev_extension_page_probe(
   run_dev_extension_reload_probe(page, frontend_url, timeout)
   page.close()
   run_dev_extension_non_proton_probe(tasks, target, output_root, timeout)
-  assert_dev_extension_native_log(app.native_log_path)
   println("MoonBit 47_dev_extension_js dev probe passed")
 }
 
@@ -149,7 +148,6 @@ async fn run_dev_extension_production_page_probe(
     value, "dev extension production",
   )
   assert_dev_extension_production_probe(result, value)
-  assert_dev_extension_native_log(app.native_log_path)
   println("MoonBit 47_dev_extension_js production probe passed")
 }
 
@@ -551,13 +549,5 @@ fn assert_dev_extension_production_probe(
   }
   guard tick_count == 2 && done_count == 1 else {
     fail("production dev extension event count mismatch: " + value.stringify())
-  }
-}
-
-///|
-fn assert_dev_extension_native_log(path : String) -> Unit raise {
-  guard count_native_log_entries(path, "bridge_enqueue", "op=ext:ticker/start") >
-    0 else {
-    fail("native log did not record ext:ticker/start for dev extension")
   }
 }

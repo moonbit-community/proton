@@ -55,7 +55,6 @@ async fn run_asset_sidecar_scenario_page_probe(
     page, "document.title === 'Asset Navigation Complete' && document.querySelector('#navigation-result')?.textContent === 'Navigated with bridge: 42'",
     "asset document navigation with bridge", timeout,
   )
-  assert_asset_sidecar_native_log(app.native_log_path)
   ignore(page.navigate("https://proton.localhost/missing.html"))
   wait_for_cdp_expression(
     page, "location.pathname === '/missing.html' && document.body?.textContent === 'Not Found'",
@@ -164,14 +163,5 @@ fn assert_asset_sidecar_probe(
   }
   guard result.command_reply == 42 && result.delayed_reply == 42 else {
     fail("asset sidecar command replies mismatch: " + value.stringify())
-  }
-}
-
-///|
-fn assert_asset_sidecar_native_log(path : String) -> Unit raise {
-  for op in ["ext:add/add", "ext:add/addLater", "ext:add/reportProbe"] {
-    guard count_native_log_entries(path, "bridge_enqueue", "op=" + op) > 0 else {
-      fail("native log did not record " + op)
-    }
   }
 }

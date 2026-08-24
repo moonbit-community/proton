@@ -128,7 +128,6 @@ async fn run_app_commands_full_probe(
   output_root : String,
   target : String,
   timeout : Int,
-  native_log_path : String,
 ) -> Unit {
   let page = @page.Page::connect(
     tasks,
@@ -138,13 +137,11 @@ async fn run_app_commands_full_probe(
   wait_for_ready(page, scenario_ready_expression("41_app_commands"), timeout)
   assert_bridge_contract(page)
   let screenshot = capture_headless_screenshot(page)
-  wait_for_native_osr_paint(native_log_path, timeout)
   assert_app_commands_probe(page)
   let queue = run_queue_full_probe(page)
   run_reload_probe(page, timeout)
   page.close()
   run_non_proton_probe(tasks, target, output_root, timeout)
-  assert_native_bridge_guards(native_log_path)
   println(
     "MoonBit 41_app_commands full probe passed: screenshot=" +
     screenshot.width.to_string() +
@@ -636,130 +633,6 @@ fn file_url(path : String) -> String {
     "file:///" + escaped
   } else {
     "file://" + escaped
-  }
-}
-
-///|
-fn assert_native_bridge_guards(native_log_path : String) -> Unit raise {
-  let log = @mbfs.read_file_to_string(native_log_path, encoding="utf8") catch {
-    _ => fail("failed to read native E2E log: " + native_log_path)
-  }
-  let mut unknown_rejected = false
-  let mut unknown_enqueued = false
-  let mut queue_full_rejected = false
-  let mut oversized_pending : String? = None
-  for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
-    let line = raw_line.to_owned()
-    if line.contains("bridge_reject_op_not_registered") &&
-      line.contains("op=ext:appCommands/unknown") {
-      unknown_rejected = true
-    }
-    if line.contains("bridge_enqueue") &&
-      line.contains("op=ext:appCommands/unknown") {
-      unknown_enqueued = true
-    }
-    if line.contains("bridge_reject_queue_full") {
-      queue_full_rejected = true
-    }
-    if line.contains("bridge_reject_invalid_renderer") &&
-      line.contains("op=ext:appCommands/ping") {
-      match
-        (log_int_field(line, "payload_bytes="), log_field(line, "pending=")) {
-        (Some(bytes), Some(pending)) if bytes > 1048576 =>
-          oversized_pending = Some(pending)
-        _ => ()
-      }
-    }
-  }
-  guard unknown_rejected && !unknown_enqueued else {
-    fail("native log did not prove unknown op rejection before enqueue")
-  }
-  guard queue_full_rejected else {
-    fail("native log did not prove queue-full rejection")
-  }
-  let pending = match oversized_pending {
-    Some(pending) => pending
-    None => fail("native log did not prove oversized renderer rejection")
-  }
-  let mut oversized_crossed_boundary = false
-  let pending_token = "pending=" + pending
-  for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
-    let line = raw_line.to_owned()
-    if (
-        line.contains("browser_bridge_request") ||
-        line.contains("bridge_enqueue")
-      ) &&
-      line.contains(pending_token) &&
-      line.contains("op=ext:appCommands/ping") {
-      oversized_crossed_boundary = true
-    }
-  }
-  guard !oversized_crossed_boundary else {
-    fail("native log shows oversized payload crossed into the browser queue")
-  }
-  guard native_log_has_valid_osr_paint(log) else {
-    fail("native log did not contain a valid headless OSR paint")
-  }
-}
-
-///|
-async fn wait_for_native_osr_paint(path : String, timeout : Int) -> Unit {
-  let mut elapsed = 0
-  while elapsed <= timeout {
-    let log = @mbfs.read_file_to_string(path, encoding="utf8") catch { _ => "" }
-    if native_log_has_valid_osr_paint(log) {
-      return
-    }
-    @async.sleep(100)
-    elapsed = elapsed + 100
-  }
-  fail("native log did not contain a valid headless OSR paint")
-}
-
-///|
-fn native_log_has_valid_osr_paint(log : String) -> Bool {
-  for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
-    let line = raw_line.to_owned()
-    if line.contains("osr_paint") {
-      match log_field(line, "size=") {
-        Some(size) =>
-          match size.split_once("x") {
-            Some((width, height)) =>
-              match (parse_log_int(width), parse_log_int(height)) {
-                (Some(width), Some(height)) if width > 1 && height > 1 =>
-                  return true
-                _ => ()
-              }
-            None => ()
-          }
-        None => ()
-      }
-    }
-  }
-  false
-}
-
-///|
-fn log_field(line : String, label : String) -> String? {
-  match line.find(label) {
-    None => None
-    Some(index) => {
-      let start = index + label.length()
-      let rest = line.unsafe_substring(start~, end=line.length())
-      let end = match rest.find(" ") {
-        Some(end) => end
-        None => rest.length()
-      }
-      Some(rest.unsafe_substring(start=0, end~).to_string())
-    }
-  }
-}
-
-///|
-fn log_int_field(line : String, label : String) -> Int? {
-  match log_field(line, label) {
-    Some(value) => parse_log_int(value)
-    None => None
   }
 }
 
