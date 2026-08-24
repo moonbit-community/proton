@@ -14,4 +14,5 @@ The module mirrors Electron's `screen` module:
 
 Coordinates are physical pixels in a top-left origin. On Linux the backend uses
 X11 + RandR; a Wayland-only session reports `BackendUnavailable` for watching
-while polling queries remain available through XWayland when present.
+while polling queries remain available through XWayland when present. The
+module is published on Proton's shared workspace version.

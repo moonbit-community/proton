@@ -438,6 +438,11 @@ int32_t screen_monitor_platform_start_watching(screen_monitor_state_t *state) {
     pthread_cond_wait(&state->ready_cond, &state->event_lock);
   }
   pthread_mutex_unlock(&state->event_lock);
+  if (!state->watch_started) {
+    pthread_join(state->watch_thread, NULL);
+    state->thread_started = 0;
+    return screen_monitor_STATUS_BACKEND_UNAVAILABLE;
+  }
   return screen_monitor_STATUS_OK;
 }
 

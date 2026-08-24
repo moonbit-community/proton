@@ -63,8 +63,10 @@ fn[T] run_with_cleanup(
   action : () -> T raise,
   cleanup : () -> Unit raise,
 ) -> T raise {
-  errdefer (cleanup() catch { _ => () })
-  let value = action()
+  let value = {
+    errdefer (cleanup() catch { _ => () })
+    action()
+  }
   cleanup()
   value
 }

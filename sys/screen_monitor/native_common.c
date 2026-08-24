@@ -238,7 +238,7 @@ static int32_t screen_monitor_refresh(screen_monitor_state_t *state) {
     if (state->last_error[0] == '\0') {
       screen_monitor_set_error(state, "enumerating displays failed");
     }
-    return screen_monitor_STATUS_OPERATION_FAILED;
+    return -count;
   }
   return screen_monitor_STATUS_OK;
 }
@@ -271,22 +271,31 @@ moonbit_bytes_t moonbit_screen_monitor_enumerate_json(void *handle) {
   /* Build the JSON into a heap buffer, then hand the exact byte span to
      MoonBit. The payload is wrapped in an object so the MoonBit side can decode
      it with a single derived `FromJson` struct. */
-  char *buffer = (char *)malloc(4096);
+  char item[512];
+  size_t capacity = 64 + ((size_t)state->display_count * sizeof(item));
+  char *buffer = (char *)malloc(capacity);
   if (buffer == NULL) {
     state->status = screen_monitor_STATUS_OPERATION_FAILED;
     return moonbit_make_bytes(0, 0);
   }
-  int32_t capacity = 4096;
-  char item[512];
-  int32_t used = snprintf(buffer, (size_t)capacity, "{\"displays\":[");
+  size_t used = (size_t)snprintf(buffer, capacity, "{\"displays\":[");
   for (int32_t i = 0; i < state->display_count; i++) {
     screen_monitor_format_display_json(&state->displays[i], i == 0, item,
                                        sizeof(item));
-    used += snprintf(buffer + used, (size_t)(capacity - used), "%s", item);
+    size_t item_length = strlen(item);
+    if (item_length + 3 > capacity - used) {
+      free(buffer);
+      state->status = screen_monitor_STATUS_OPERATION_FAILED;
+      screen_monitor_set_error(state, "formatting display list failed");
+      return moonbit_make_bytes(0, 0);
+    }
+    memcpy(buffer + used, item, item_length);
+    used += item_length;
   }
-  used += snprintf(buffer + used, (size_t)(capacity - used), "]}");
-  moonbit_bytes_t bytes = moonbit_make_bytes(used, 0);
-  memcpy(bytes, buffer, (size_t)used);
+  memcpy(buffer + used, "]}", 3);
+  used += 2;
+  moonbit_bytes_t bytes = moonbit_make_bytes((int32_t)used, 0);
+  memcpy(bytes, buffer, used);
   free(buffer);
   return bytes;
 }
