@@ -338,9 +338,20 @@ pub fn App::on_update_available(
 ///|
 pub fn App::on_launch_input(
   self : App,
-  handler : async (RuntimeLaunchInput) -> Unit noraise,
+  handler : async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
 ) -> App {
   self.launch_input_handlers.push(handler)
+  self
+}
+
+///|
+/// Chooses whether closing the last window exits the application or leaves it
+/// running so a later launch input can open another window.
+pub fn App::last_window_closed_policy(
+  self : App,
+  policy : LastWindowClosedPolicy,
+) -> App {
+  self.last_window_closed_policy_value = policy
   self
 }
 

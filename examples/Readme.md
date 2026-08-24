@@ -90,6 +90,9 @@ moon -C examples run 01_run --target native
   combining native dialogs, clipboard access, notifications, and tray menus.
 - `56_i18n`: one explicit application locale observed through MoonBit command
   context, CEF `navigator.languages`, and localized typed native menus.
+- `57_background_residency`: keeps the process alive after the last window
+  closes, then recreates the main window when a second launch delivers
+  `Reopen`; this is the lifecycle used by messaging and synchronization apps.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

@@ -98,6 +98,46 @@ fn test_manifest() -> @manifest.AppManifest {
 }
 
 ///|
+test "last-window policy defaults to quit and can keep the app running" {
+  let app = html("Lifecycle", "<html></html>")
+  assert_eq(app.last_window_closed_policy_value, LastWindowClosedPolicy::Quit)
+  let app = app.last_window_closed_policy(LastWindowClosedPolicy::KeepRunning)
+  assert_eq(
+    app.last_window_closed_policy_value,
+    LastWindowClosedPolicy::KeepRunning,
+  )
+  assert_true(
+    should_quit_after_last_window(LastWindowClosedPolicy::Quit, true, true),
+  )
+  assert_false(
+    should_quit_after_last_window(
+      LastWindowClosedPolicy::KeepRunning,
+      true,
+      true,
+    ),
+  )
+  assert_false(
+    should_quit_after_last_window(LastWindowClosedPolicy::Quit, false, true),
+  )
+}
+
+///|
+async test "application context forwards orderly quit requests" {
+  let requested = Ref(false)
+  @async.with_task_group(group => {
+    let context = ApplicationContext(
+      group,
+      test_window_manager(),
+      @locale.LocalePreferences::resolve(None, []),
+      request_quit=fn() { requested.val = true },
+    )
+    context.quit()
+    group.return_immediately(())
+  })
+  assert_true(requested.val)
+}
+
+///|
 fn test_extension_capability(
   spec : @proton_command.AppCommandExtensionSpec,
   scope? : Json = Json::empty_object(),

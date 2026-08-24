@@ -253,14 +253,25 @@ activation:
 ```moonbit
 @proton.asset("My App", "frontend/dist/index.html")
 .single_instance("com.example.my-app")
-.on_launch_input(async fn(input) noraise {
+.last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+.on_launch_input(async fn(context, input) noraise {
   match input {
     OpenUrls(urls) => ...
     OpenFiles(paths) => ...
-    Reopen => ...
+    Reopen =>
+      if context.windows().find("main") is None {
+        ignore(context.windows().open("main")) catch {
+          _ => ()
+        }
+      }
   }
 })
 ```
+
+By default, closing the last window quits the application. Select
+`KeepRunning` for applications that should remain available in the Dock or
+system tray after their windows close. Call `context.quit()` from an
+application-lifetime callback to request an orderly shutdown.
 
 The instance coordinator is implemented on macOS, Windows, and Linux. Packaged
 macOS applications register `package.url_schemes` and `package.document_types`

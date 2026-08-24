@@ -151,6 +151,7 @@ pub fn WindowSessionError::message(self : WindowSessionError) -> String {
   match self {
     UnknownWindow(id~) => "window is not declared: " + id
     AlreadyOpen(id~) => "window is already open: " + id
+    ApplicationQuitting => "the application is quitting"
     StaleWindow(id~) => "window instance is no longer active: " + id
     UnknownView(id~) => "view does not exist in its window: " + id
     AlreadyExists(id~) => "view already exists in its window: " + id

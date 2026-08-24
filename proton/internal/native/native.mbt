@@ -923,6 +923,7 @@ fn decode_native_runtime_event(
           Some(require_native_event_text(event, 0, "notification click"))
         },
       )
+    28 => QuitRequested
     kind =>
       raise InvalidPayload(
         context="runtime event",

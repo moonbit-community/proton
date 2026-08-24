@@ -13,6 +13,19 @@ pub extend RuntimeLaunchInput with Eq::{not_equal, equal}
 pub extend RuntimeLaunchInput with Debug::{to_repr}
 
 ///|
+/// Controls what Proton does after the last application window closes.
+pub(all) enum LastWindowClosedPolicy {
+  Quit
+  KeepRunning
+} derive(Eq, Debug)
+
+///|
+pub extend LastWindowClosedPolicy with Eq::{not_equal, equal}
+
+///|
+pub extend LastWindowClosedPolicy with Debug::{to_repr}
+
+///|
 /// High-level application facade for ordinary Proton apps.
 struct App {
   mut window : @manifest.WindowManifest
@@ -23,6 +36,7 @@ struct App {
   mut single_instance_identifier : String?
   mut explicit_locale : @locale.Locale?
   mut bridge_startup_timeout_value_ms : Int
+  mut last_window_closed_policy_value : LastWindowClosedPolicy
   mut menu : MenuBar?
   url_schemes : Array[String]
   document_extensions : Array[String]
@@ -31,7 +45,9 @@ struct App {
   extension_capabilities : Array[ExtensionCapabilityBinding]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
   planned_views : Array[(String, ViewConfig)]
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise]
+  launch_input_handlers : Array[
+    async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
+  ]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
@@ -256,7 +272,11 @@ priv struct RuntimeSession {
   wakeup : RuntimeWakeup
   forward_menu_events : Bool
   monitor_bridge : Bool
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise]
+  application_tasks : @async.TaskGroup[Unit]
+  last_window_closed_policy : LastWindowClosedPolicy
+  launch_input_handlers : Array[
+    async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
+  ]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
@@ -279,6 +299,8 @@ priv struct RuntimeSession {
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
+  mut quit_requested : Bool
+  mut quit_close_started : Bool
 }
 
 ///|
@@ -589,6 +611,7 @@ pub extend DownloadEvent with Debug::{to_repr}
 pub(all) suberror WindowSessionError {
   UnknownWindow(id~ : String)
   AlreadyOpen(id~ : String)
+  ApplicationQuitting
   StaleWindow(id~ : String)
   UnknownView(id~ : String)
   AlreadyExists(id~ : String)
