@@ -233,3 +233,11 @@ fn WindowPermissionPolicy::grant_for_request(
   }
   None
 }
+
+///|
+fn WindowPermissionPolicy::grants_extension(
+  self : WindowPermissionPolicy,
+  extension_id : String,
+) -> Bool {
+  self.grants.any(grant => grant.extension_id == extension_id)
+}

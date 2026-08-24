@@ -1,8 +1,9 @@
 {
   "id": "moonbit-community/proton-path",
   "namespace": "path",
+  "moonbit_import_path": "moonbit-community/proton_ext/path",
   "package": "@moonbit-community/proton-path",
-  "version": "0.1.0",
+  "version": "0.1.19",
   "display_name": "Path",
   "description": "MoonBit-style portable path helpers wrapping moonbitlang/x/path operations.",
   "platforms": [

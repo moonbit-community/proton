@@ -11,4 +11,4 @@ It provides:
 - extension events
 
 Application lifecycle and app composition belong in the root `proton` facade,
-which drives the native Proton dynamic library.
+which owns the source-built native runtime and its async host loop.

@@ -3,7 +3,7 @@
 Proton is a MoonBit framework for building native desktop applications with a
 web frontend.
 
-Supported prebuilt runtimes:
+Supported source-built native backends:
 
 - Windows x64
 - macOS Apple Silicon
@@ -36,27 +36,34 @@ proton_cli dev
 The generated project is a three-module workspace: `shared/` holds the typed
 command and event contracts used on both sides, `frontend/` is a Rabbita
 application built and served by Warren, and `backend/` runs the Proton
-desktop runtime. `.proton/` stores the selected runtime metadata and should not
-be committed.
+desktop runtime.
 
-`cef setup` stores downloaded CEF binaries in
-`~/.proton/cache/cef/<platform>/<cef-name>` and assembled Proton runtimes in
-`~/.proton/runtimes/<platform>/<runtime-id>`. Subsequent projects reference the
-same immutable runtime through their small `.proton/runtime.json` instead of
-copying hundreds of megabytes into every project. Override the cache roots with
-`PROTON_CEF_CACHE` and `PROTON_RUNTIME_CACHE`; relative overrides are resolved
-from the project root.
+`cef setup` installs the exact CEF SDK and runtime required by this Proton
+release into the user-wide immutable store at `~/.proton/store`. Every
+project using the same Proton release resolves the same installation directly;
+projects contain no runtime copy or runtime-selection file. Proton's native
+sources are compiled into the application by Moon, while only CEF remains an
+external runtime. Set `PROTON_RUNTIME_STORE` to an absolute path to relocate
+the store.
 
 ## Application entry
 
-Generated projects explicitly load `proton.project.json` with `@proton.config(...)`
-and register their typed commands in `backend/app/main.mbt`:
+Generated projects define application runtime behavior with the MoonBit `App`
+builder and register their typed commands in `backend/app/main.mbt`:
 
 ```moonbit
 async fn main {
   let backend = @todo.Backend::new()
-  @proton.config("proton.project.json")
+  @proton.asset("My App", "frontend/dist/index.html")
+  .single_instance("com.example.my-app")
   .commands(fn(registrar) raise { backend.register_commands(registrar) })
+  .permission(
+    @proton.PermissionGrant::new(
+      "main",
+      @proton.PermissionOrigin::Entry,
+      "app",
+    ),
+  )
   .run_or_abort()
 }
 ```
@@ -64,10 +71,6 @@ async fn main {
 Commands are declared once in the `shared/` contract package and wired into
 the runtime with `.commands(...)`; the frontend invokes them through the
 typed Rabbita client and can subscribe to events pushed by the backend.
-
-The default config name honors `PROTON_CONFIG_PATH` (including
-`proton_cli dev --config`) and resolves the packaged config location when the
-application is bundled. Non-default paths are used exactly as provided.
 
 For a small application, inline HTML can be opened directly:
 
@@ -83,8 +86,8 @@ async fn main {
 }
 ```
 
-The root package also supports URL, file, asset, and project-config entries
-through `@proton.url`, `@proton.file`, `@proton.asset`, and `@proton.config`.
+The root package also supports URL, file, and packaged asset entries through
+`@proton.url`, `@proton.file`, and `@proton.asset`.
 
 ## Renderer permissions
 
@@ -93,18 +96,16 @@ renderer capability requires a grant for one window, one trusted source, and
 one extension. Missing grants are denied.
 
 Commands registered directly with `.commands(...)` belong to the `app`
-permission id. Generated projects declare that grant in `proton.project.json`:
+permission id. Grant that capability on the App builder:
 
-```json
-{
-  "permissions": [
-    {
-      "window": "main",
-      "origin": "entry",
-      "extension": "app"
-    }
-  ]
-}
+```moonbit
+.permission(
+  @proton.PermissionGrant::new(
+    "main",
+    @proton.PermissionOrigin::Entry,
+    "app",
+  ),
+)
 ```
 
 `origin: "app"` names bundled `proton://app` content. `origin: "entry"` follows
@@ -133,22 +134,16 @@ must declare path ranges and exact commands:
 The renderer cannot select or widen these roots. Proton matches the trusted
 frame origin in native code, rechecks the grant during MoonBit dispatch, and
 the filesystem extension validates the canonical target before each operation.
-Relative filesystem roots and request paths are anchored to the directory
-containing `proton.project.json`; apps configured entirely in MoonBit use the working
-directory captured during startup.
+Relative filesystem roots and request paths are anchored to
+`@proton.resource_dir()`: the project root supplied by `proton_cli dev`, the
+packaged resources directory, or the startup working directory for direct runs.
 
 On macOS and Windows, web content can extend beneath the native titlebar while
-retaining the system window controls. Set `titlebar_style` in `proton.project.json`:
+retaining the system window controls:
 
-```json
-{
-  "window": {
-    "title": "My App",
-    "width": 900,
-    "height": 700,
-    "titlebar_style": "overlay"
-  }
-}
+```moonbit
+@proton.html("My App", html)
+.titlebar_style(@proton.TitlebarStyle::Overlay)
 ```
 
 `titlebar_style` accepts `"default"` and `"overlay"`. Overlay rendering is
@@ -163,21 +158,15 @@ Until the page reports its first region update, Proton keeps a small DPI-aware
 leading drag fallback. Pages must also reserve the native caption-button area.
 Overlay windows request DWM's dark caption appearance so the native controls
 blend with dark application chrome.
-Typed window configs send `titlebar_style` only when the loaded runtime reports
-the `titlebar_overlay` feature. Older prebuilts and unsupported platforms omit
-the field and retain their default titlebar behavior.
+Typed window configs send `titlebar_style` only when the source-built backend
+reports the `titlebar_overlay` feature. Unsupported platforms retain their
+default titlebar behavior.
 See `examples/48_titlebar_overlay` for a cross-platform overlay layout example.
 
-`size_hint` accepts `"none"`, `"fixed"`, `"min"`, and `"max"`. A fixed window
-cannot be resized; minimum and maximum hints constrain resizing relative to the
+The primary entry constructors accept `resizable=false` for a fixed window.
+Secondary windows can select `WindowSizeHint::Unconstrained`, `Fixed`, `Min`,
+or `Max`; minimum and maximum hints constrain resizing relative to the
 configured width and height.
-
-Code-only apps can select the same style through the facade:
-
-```moonbit
-@proton.html("My App", html)
-.titlebar_style(@proton.TitlebarStyle::Overlay)
-```
 
 The typed facade can own additional windows without replacing Proton's bridge
 pump:
@@ -213,7 +202,7 @@ monitor, work area, scale factor, focus, and theme.
 Window state and close requests are delivered by the managed runtime session:
 
 ```moonbit
-@proton.app()
+@proton.html("Main", main_html)
 .on_window_event(async fn(window, event) noraise {
   match event {
     StateChanged(state) => println(window.id() + ": " + state.theme)
@@ -265,14 +254,7 @@ window.remove_view("panel")
 See `examples/52_web_contents_view`.
 
 Enable operating-system single-instance routing with a stable application
-identifier:
-
-```json
-{
-  "identifier": "com.example.my-app",
-  "single_instance": true
-}
-```
+identifier by calling `.single_instance("com.example.my-app")`.
 
 When another process starts, Proton forwards its protocol URLs and document
 paths to the primary process before creating CEF, then exits. The primary
@@ -280,7 +262,8 @@ process restores and focuses its application window before delivering the typed
 activation:
 
 ```moonbit
-@proton.config("proton.project.json")
+@proton.asset("My App", "frontend/dist/index.html")
+.single_instance("com.example.my-app")
 .on_launch_input(async fn(input) noraise {
   match input {
     OpenUrls(urls) => ...
@@ -291,7 +274,7 @@ activation:
 ```
 
 The instance coordinator is implemented on macOS, Windows, and Linux. Packaged
-macOS applications register `bundle.url_schemes` and `bundle.document_types`
+macOS applications register `package.url_schemes` and `package.document_types`
 through `Info.plist`. Windows portable ZIPs and the current Linux build do not
 install operating-system associations; their `proton-package.json` metadata is
 intended for a future installer/package target. Direct launches and associations
@@ -357,7 +340,7 @@ Code-driven applications can run with CEF off-screen rendering and no native
 top-level window:
 
 ```moonbit
-@proton.config("proton.project.json")
+@proton.html("Automation", html)
 .headless()
 .run_or_abort()
 ```
@@ -375,8 +358,8 @@ Generated projects describe their toolchain in `proton.project.json`:
 ```json
 {
   "backend": {
-    "path": "backend",
-    "package": "app"
+    "path": ".",
+    "package": "backend/app"
   },
   "frontend": {
     "path": "frontend",
@@ -384,19 +367,17 @@ Generated projects describe their toolchain in `proton.project.json`:
     "before_dev": "moonx --target native moonbit-community/warren@0.2.7 dev --direct --port 4300",
     "before_build": "moonx --target native moonbit-community/warren@0.2.7 build",
     "dist": "dist"
-  },
-  "entry": {
-    "kind": "asset",
-    "value": "frontend/dist/index.html"
   }
 }
 ```
 
-`backend` selects the MoonBit package that runs the Proton runtime. `entry`
-selects what the main window loads: `kind` is `"html"`, `"url"`, `"file"`, or
-`"asset"`. Project file paths must be relative and use `/` separators;
-`file`/`asset` values resolve relative to the config file. The `frontend` block
-drives development and build orchestration: `path` is the
+`backend` selects the MoonBit package that runs the Proton runtime. The
+application entry is declared in MoonBit with `@proton.html`, `url`, `file`, or
+`asset`. `backend.path` is the exact working directory passed to Moon; Proton
+does not search parent directories for `moon.work`, `moon.mod`, or another
+project configuration. Project file paths must be relative and use `/`
+separators. The
+`frontend` block drives development and build orchestration: `path` is the
 frontend working directory, `before_dev`/`before_build` run there, `dev_url`
 is the development server to wait for, and `dist` is the build output to
 validate (resolved relative to `path`).
@@ -425,10 +406,13 @@ The native bridge E2E suite is implemented in MoonBit and owns its application
 processes, CDP connections, frontend servers, and cleanup:
 
 ```sh
-PROTON_NATIVE_DIST="$PWD/native/dist" \
-PATH="$PWD/native/dist/bin:$PATH" \
-moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
+moon -C cefsetup run . --target native
+moon -C e2e test -p moonbit-community/proton/e2e/test \
+  --target native --no-parallelize --diagnostic-limit 200
 ```
+
+Each E2E scenario installs its release CEF helper from the local Proton source
+with `moon install --path` into the scenario's temporary directory.
 
 For an application that is already running with CDP enabled, use the typed
 driver instead:
@@ -438,10 +422,17 @@ MBT_PROTON_E2E_SCENARIO=41_app_commands \
 MBT_CDP_TARGET=9222 moon -C e2e run test --target native
 ```
 
-## Bundle and package
+## Package
 
-To package an already-built executable independently of Proton project
-discovery and runtime assembly, install `moonbit-community/proton_package`:
+`moonbit-community/proton_package` is the generic host-native packager. It does
+not discover Proton projects or know about CEF. `proton_cli package` builds the
+application and helper, then delegates Proton's runtime and helper bundle layout
+to `moonbit-community/proton_bundle`, which in turn calls `proton_package`.
+
+Developers who do not use `proton_cli` can use the same layers directly: build
+the application executable, install the matching `cef_process` executable, and
+pass both explicit paths to `proton_bundle`. Use `proton_package` alone only for
+applications that do not need Proton's CEF layout:
 
 ```sh
 moon install moonbit-community/proton_package
@@ -460,15 +451,16 @@ JSON specification; paths in that file are resolved relative to the file.
 
 ### Proton projects
 
-The `bundle` block in `proton.project.json` enables package creation and selects its
-default targets and output directory:
+The `package` block in `proton.project.json` contains the static metadata and
+payload inputs needed before the application can run:
 
 ```json
 {
-  "single_instance": true,
-  "bundle": {
-    "active": true,
-    "targets": ["app", "zip"],
+  "package": {
+    "product_name": "My App",
+    "identifier": "com.example.my-app",
+    "version": "1.0.0",
+    "formats": ["app", "zip"],
     "resources": ["helpers/worker"],
     "sign": {
       "binaries": ["helpers/worker"]
@@ -486,25 +478,24 @@ default targets and output directory:
 }
 ```
 
-`bundle.resources` copies project files into the package. `bundle.sign.binaries`
+`package.resources` copies project files into the package. `package.sign.binaries`
 does not copy anything; it names resource files that `proton_cli` must sign.
 Both arrays use paths relative to the directory containing `proton.project.json`. For
 the example above, the signing target is
 `My App.app/Contents/Resources/helpers/worker` on macOS and
-`My App/helpers/worker` in a Windows portable package. Use the platform's actual
+`My App/Resources/helpers/worker` in a Windows portable package. Use the platform's actual
 filename, such as `helpers/worker.exe`, for a Windows executable. Globs are
-allowed for `bundle.resources` only; every `bundle.sign.binaries` entry names
+allowed for `package.resources` only; every `package.sign.binaries` entry names
 one file.
 
 Backend code can locate these files through `@proton.resource_dir()`. It
-returns the absolute directory containing the implicitly discovered
-`proton.project.json`, which is the project directory during development and
-the packaged resource directory at runtime. Joining the same relative path,
+returns the absolute project directory supplied by `proton_cli dev`, the
+packaged resource directory at runtime, or the startup working directory for a
+direct run. Joining the same relative path,
 such as `helpers/worker`, therefore addresses the same resource before and
-after packaging. Code-only applications without a discovered project config
-raise `AppPathError`.
+after packaging.
 
-Inspect the resolved bundle plan before creating artifacts:
+Inspect the resolved package plan before creating artifacts:
 
 ```sh
 proton_cli package --dry-run
@@ -567,10 +558,10 @@ proton_cli doctor
 ```
 
 Doctor checks the project configuration, MoonBit toolchain, active platform,
-and Proton runtime layout without changing the project. Outside a Proton
+and required Proton runtime installation without changing the project. Outside a Proton
 project, it reports environment information and skips project-specific checks.
 
-Run `proton_cli cef setup` again when the active runtime is missing or invalid.
+Run `proton_cli cef setup` again when the required runtime is missing or invalid.
 Use `PROTON_CEF_LOG=default` temporarily when browser-runtime logs are needed.
 
 See [examples/Readme.md](examples/Readme.md) for runnable examples. Repository

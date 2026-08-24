@@ -36,7 +36,7 @@ fn linux_desktop_entry(spec : PackageSpec, name : String) -> String {
     #|Terminal=false
     #|Categories=Utility;
   prefix +
-  "Name=" +
+  "\nName=" +
   spec.product_name +
   "\n" +
   "Exec=" +
@@ -54,12 +54,16 @@ fn linux_desktop_entry(spec : PackageSpec, name : String) -> String {
 fn linux_apprun(name : String) -> String {
   let prefix =
     #|#!/bin/sh
-    #|HERE="$(dirname "$(readlink -f "$0")")"
-  prefix + "exec \"$HERE/usr/bin/" + name + "\" \"$@\"\n"
+    #|HERE="$APPDIR"
+  prefix + "\nexec \"$HERE/usr/bin/" + name + "\" \"$@\"\n"
 }
 
 ///|
-async fn package_linux(spec : PackageSpec) -> Array[String] {
+async fn package_linux(
+  spec : PackageSpec,
+  customization : PackageCustomization,
+  prepare : async (PackageLayout) -> Unit,
+) -> Array[String] {
   guard path_is_file(spec.executable) else {
     raise PackagePlanError::MissingExecutable(path=spec.executable)
   }
@@ -75,9 +79,13 @@ async fn package_linux(spec : PackageSpec) -> Array[String] {
   }
   let appdir = linux_appdir_path(spec)
   remove_tree(appdir)
+  errdefer (remove_tree(appdir) catch { _ => () })
   let name = executable_name(spec.product_name)
   let bin = path_join(appdir, "usr/bin")
-  let resources = path_join(appdir, "usr/share/" + name)
+  let resources = path_join(
+    appdir,
+    customization.linux_resources_path.unwrap_or("usr/share/" + name),
+  )
   let libraries = path_join(appdir, "usr/lib")
   for directory in [bin, resources, libraries] {
     ensure_dir(directory)
@@ -95,6 +103,13 @@ async fn package_linux(spec : PackageSpec) -> Array[String] {
   let apprun = path_join(appdir, "AppRun")
   write_text(apprun, linux_apprun(name))
   @async_fs.chmod(apprun, 0o755)
+  prepare(PackageLayout::{
+    root: appdir,
+    executable: staged_executable,
+    resources,
+    libraries,
+    executables: bin,
+  })
   let arch = linux_arch()
   let destination = path_join(
     spec.output,
@@ -102,6 +117,7 @@ async fn package_linux(spec : PackageSpec) -> Array[String] {
   )
   let staging = destination + ".staging"
   remove_tree(staging)
+  errdefer (remove_tree(staging) catch { _ => () })
   let (code, output) = @process.collect_output_merged(
     "appimagetool",
     ["--no-appstream", appdir, staging],

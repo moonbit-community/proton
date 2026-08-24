@@ -2,7 +2,7 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbit-community/proton_rsa" @rsa,
-  "moonbit-community/proton/native",
+  "moonbit-community/proton/internal/native",
   "moonbit-community/proton_updater" @manifest,
   "moonbitlang/core/debug",
   "moonbitlang/core/env",

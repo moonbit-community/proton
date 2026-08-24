@@ -9,4 +9,8 @@ import {
   "moonbit-community/proton_cdp/protocol",
 }
 
+import {
+  "moonbitlang/async/socket",
+} for "wbtest"
+
 supported_targets = "+native"

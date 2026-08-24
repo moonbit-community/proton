@@ -29,7 +29,7 @@ The shipped runtime is large. Measured on `darwin-arm64` at Proton 0.1.13:
 | Component | Size | Changes when |
 | --- | --- | --- |
 | CEF framework | ~390 MB | Proton bumps its CEF version |
-| Proton runtime (`libproton`, `cef_process`) | ~460 KB | Every Proton release |
+| Proton native code and `cef_process` | ~460 KB | Every Proton release |
 | Application binary and frontend assets | Single-digit MB, typically | Every application release |
 
 A packaged application inherits all three. A real example: the Draw application
@@ -87,17 +87,16 @@ release asset, or plain HTTP host can serve it.
 Rules:
 
 - `schema_version` is rejected when unknown. This follows the discipline already
-  applied to `proton.project.json` and the native runtime and window configs: unknown
-  top-level fields are an error, never silently ignored.
+  applied to Proton's structured CLI and native configs: unknown top-level
+  fields are an error, never silently ignored.
 - `revision` is a positive unsigned 64-bit release sequence. It is independent
   of the display `version`, increases for every release, and never resets.
 - Platform keys reuse the identifiers Proton already uses everywhere else:
   `darwin-arm64`, `darwin-x64`, `win32-x64`, `linux-x64`. Introducing a second
   naming scheme for the same concept would be a defect.
-- `kind` is `"full"` in version 1. It is the extension point: `"layered"` and
-  `"delta"` can be added later, and a client that does not understand a `kind`
-  treats that platform entry as unavailable rather than failing the whole
-  manifest.
+- `kind` must be `"full"`. Other values are invalid for this schema version.
+  Adding another artifact form requires a new schema and an implementation that
+  validates it explicitly.
 - `sha256` and `signature` are hexadecimal, matching the key format. One
   encoding throughout means one strict decoder rather than two.
 - `sha256` is for integrity and resumable download bookkeeping. It is **not** a
@@ -217,7 +216,7 @@ Three parties, and only the first has any key material:
 
 | Party | Provides |
 | --- | --- |
-| Application developer | Owns the key pair, signs releases, writes the public keys into their `proton.project.json` |
+| Application developer | Owns the key pair, signs releases, and compiles the public keys into the app with `App::update_channel` |
 | Proton | Nothing. It verifies with the public keys the developer configured |
 | End user | Nothing |
 
@@ -260,7 +259,7 @@ Key handling:
 - Signing is performed by OpenSSL, not by any code in this project. Key
   generation and signing are where the operations that must not be improvised
   live, and both stay outside the framework.
-- Trusted public keys are declared in `proton.project.json` as a **list**. A signature
+- Trusted public keys are passed to `App::update_channel` as a **list**. A signature
   verifies if it matches any key in that list. See [Key rotation](#key-rotation)
   for why this is a list from the first release rather than a single value.
 - Public keys are never read from the manifest, because a key supplied by the
@@ -290,15 +289,14 @@ section exists:
 
 Trusting a list instead of a single key removes both:
 
-```json
-{
-  "updater": {
-    "public_keys": [
-      "rsa-sha256:94c05429a8686a46...:010001",
-      "rsa-sha256:b71fe3a20c4d8815...:010001"
-    ]
-  }
-}
+```moonbit
+app.update_channel(
+  "https://example.com/updates/latest.json",
+  [
+    "rsa-sha256:94c05429a8686a46...:010001",
+    "rsa-sha256:b71fe3a20c4d8815...:010001",
+  ],
+)
 ```
 
 A reserve key is distributed in the trusted list long before it is used. When
@@ -513,27 +511,22 @@ themselves.
 
 ## Configuration
 
-```json
-{
-  "updater": {
-    "active": true,
-    "endpoint": "https://example.com/updates/latest.json",
-    "public_keys": [
-      "rsa-sha256:94c05429a8686a46...:010001",
-      "rsa-sha256:b71fe3a20c4d8815...:010001"
-    ],
-    "check_on_launch": true,
-    "freshness_days": 30
-  }
-}
+```moonbit
+@proton.asset("My App", "frontend/dist/index.html")
+.update_channel(
+  "https://example.com/updates/latest.json",
+  [
+    "rsa-sha256:94c05429a8686a46...:010001",
+    "rsa-sha256:b71fe3a20c4d8815...:010001",
+  ],
+  check_on_launch=true,
+  freshness_days=30,
+)
 ```
 
-`public_keys` must contain at least one key when `active` is true. An empty list
-is a configuration error, not an invitation to skip verification.
-
-`active: false` compiles the updater out of the decision path entirely; an
-application that distributes through an app store or a system package manager
-must not also update itself.
+`public_keys` must contain at least one key. An application that omits
+`.update_channel(...)` has no updater channel; an empty list is a configuration
+error, not an invitation to skip verification.
 
 ## Automatic check
 
@@ -577,12 +570,9 @@ future updater command cannot silently enlarge an existing renderer's
 authority:
 
 ```moonbit
-@proton.app()
-  .extension(@updater.extension())
-  .grant("main", [
-    @proton.Permission::command(@updater_contract.check),
-    @proton.Permission::command(@updater_contract.download),
-  ])
+@proton.asset("My App", "frontend/dist/index.html")
+.update_channel(endpoint, public_keys)
+.expose(@updater.extension())
 ```
 
 The logical-window grant is only one half of the decision. The native bridge
@@ -604,7 +594,7 @@ remote code execution primitive over the host. `download` installs whatever the
 host already authenticated for that same native window and renderer page
 instance, or refuses. A check performed by one window or by a page before
 navigation cannot be consumed by another page. Everything it acts on comes
-from `proton.project.json` and the signed manifest.
+from the host's `App::update_channel` and the signed manifest.
 
 The extension is not in `@ext.all()` or `@ext.desktop()`. An application asking
 for "the built-in extensions" should not thereby hand its pages the ability to
@@ -640,14 +630,13 @@ apply can prove it is committing the artifact the manifest ordered. Where it
 lands depends on what the platform can protect: macOS uses
 `ProtonUpdateRevision` in the app's signed `Info.plist`, while Windows and
 Linux have no signature to carry it and instead get a `proton-update-revision`
-file beside the staged `proton.project.json`. That file is still awkward to forge in
+file beside the staged `proton-package.json`. That file is still awkward to forge in
 place — an AppImage's squashfs is read-only, and a Windows install tree sits
 under Program Files — but it is not signed, and the design should not pretend
 otherwise.
 
 Merging per-platform fragments into one manifest is a separate step because the
-three platforms are built on three machines, which is already true of
-`proton/prebuilt/`.
+three platforms are built on three machines.
 
 ## Failure handling
 
@@ -668,9 +657,9 @@ three platforms are built on three machines, which is already true of
   endpoint still prevents a client from learning that a fix exists. Nothing in a
   pull-based updater can fix that; the client can only surface prolonged
   unreachability to the application.
-- **Trusted key integrity on Windows and Linux.** The trusted key list lives in
-  `proton.project.json`, which is protected by the code-signed bundle on macOS and by
-  nothing on the current portable Windows and Linux layouts. Those platforms
+- **Trusted key integrity on Windows and Linux.** The trusted key list is compiled
+  into the application executable, which is protected by the code-signed bundle
+  on macOS and by nothing on the current portable Windows and Linux layouts. Those platforms
   also lack the second trust anchor that makes key loss recoverable on macOS.
 - **Staging disk space.** The archive and expanded application coexist briefly
   in the private staging directory; enough free disk space is still required.

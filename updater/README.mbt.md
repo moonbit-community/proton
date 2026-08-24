@@ -28,15 +28,9 @@ match manifest.platform("darwin-arm64") {
 }
 ```
 
-`schema_version` must be exactly `2`, and unknown fields are an error rather
-than something to skip — the same discipline `proton.project.json` and the native
-runtime configs already follow, so that a typo in a release manifest fails
-loudly instead of silently omitting whatever it was meant to say.
-
-One case deliberately does **not** fail: a platform entry whose `kind` this
-client does not implement is treated as no update on offer. Failing the whole
-document would let a newer release format lock every older client out of every
-platform at once, including the platforms it could still have served.
+`schema_version` must be exactly `2`, `kind` must be `"full"`, and unknown
+fields are errors. A release manifest is one strict protocol document: invalid
+or unsupported content fails loudly instead of being treated as no update.
 
 ## Ordering
 

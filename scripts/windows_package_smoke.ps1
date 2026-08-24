@@ -251,7 +251,6 @@ try {
     $Npm = Require-Command "npm.cmd"
     $SignTool = Require-Command "signtool.exe"
     $CertUtil = Require-Command "certutil.exe"
-    Require-Path (Join-Path $RepoRoot ".proton\runtime.json") "Run 'moon -C cli run . -- -C .. cef setup' first."
     Require-Path (Join-Path $ExampleDir "proton.project.json") "Package smoke example is missing."
 
     $nodeModules = Join-Path $ExampleDir "frontend\node_modules"
@@ -305,7 +304,6 @@ try {
 
     $requiredFiles = @(
         "$ExecutableName.exe",
-        "proton.dll",
         "cef_process.exe",
         "chrome_elf.dll",
         "d3dcompiler_47.dll",
@@ -327,8 +325,7 @@ try {
         "Resources\icudtl.dat",
         "Resources\resources.pak",
         "Resources\locales\en-US.pak",
-        "proton.project.json",
-        "frontend\dist\index.html",
+        "Resources\frontend\dist\index.html",
         "proton-package.json"
     )
     foreach ($relative in $requiredFiles) {
@@ -342,8 +339,7 @@ try {
 
     $ownedTargets = @(
         (Join-Path $PortableDir "$ExecutableName.exe"),
-        (Join-Path $PortableDir "cef_process.exe"),
-        (Join-Path $PortableDir "proton.dll")
+        (Join-Path $PortableDir "cef_process.exe")
     )
     foreach ($target in $ownedTargets) {
         Invoke-External $SignTool @("verify", "/pa", "/all", "/v", $target)

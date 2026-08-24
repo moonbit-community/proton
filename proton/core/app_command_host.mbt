@@ -19,6 +19,83 @@ pub struct RuntimeWakeSignal {
 }
 
 ///|
+/// Window-scoped application capabilities available to one command request.
+/// The native window identity and implementation remain owned by the Proton
+/// runtime; extensions can only invoke these semantic operations.
+pub struct CommandWindow {
+  show_message_dialog : async (String?, String, String) -> Unit
+  show_confirm_dialog : async (String?, String, String) -> Bool
+  open_file_dialog : async (String?, String?) -> String?
+  save_file_dialog : async (String?, String?) -> String?
+  choose_directory_dialog : async (String?, String?) -> String?
+}
+
+///|
+#doc(hidden)
+pub fn CommandWindow::new(
+  show_message_dialog : async (String?, String, String) -> Unit,
+  show_confirm_dialog : async (String?, String, String) -> Bool,
+  open_file_dialog : async (String?, String?) -> String?,
+  save_file_dialog : async (String?, String?) -> String?,
+  choose_directory_dialog : async (String?, String?) -> String?,
+) -> CommandWindow {
+  {
+    show_message_dialog,
+    show_confirm_dialog,
+    open_file_dialog,
+    save_file_dialog,
+    choose_directory_dialog,
+  }
+}
+
+///|
+pub async fn CommandWindow::show_message(
+  self : CommandWindow,
+  title : String?,
+  message : String,
+  level : String,
+) -> Unit {
+  (self.show_message_dialog)(title, message, level)
+}
+
+///|
+pub async fn CommandWindow::confirm(
+  self : CommandWindow,
+  title : String?,
+  message : String,
+  level : String,
+) -> Bool {
+  (self.show_confirm_dialog)(title, message, level)
+}
+
+///|
+pub async fn CommandWindow::open_file(
+  self : CommandWindow,
+  title : String?,
+  path : String?,
+) -> String? {
+  (self.open_file_dialog)(title, path)
+}
+
+///|
+pub async fn CommandWindow::save_file(
+  self : CommandWindow,
+  title : String?,
+  path : String?,
+) -> String? {
+  (self.save_file_dialog)(title, path)
+}
+
+///|
+pub async fn CommandWindow::choose_directory(
+  self : CommandWindow,
+  title : String?,
+  path : String?,
+) -> String? {
+  (self.choose_directory_dialog)(title, path)
+}
+
+///|
 pub fn RuntimeWakeSignal::new() -> RuntimeWakeSignal {
   RuntimeWakeSignal::{ revision: 0L, condition: @async.CondVar::Cond() }
 }
@@ -52,7 +129,7 @@ pub async fn RuntimeWakeSignal::wait_for_change(
 ///|
 /// Request-scoped context for one bridged app command dispatch.
 pub struct AppCommandRequestContext {
-  window : Int64
+  window : CommandWindow?
   window_id : String
   source_origin : String
   page_instance : String?
@@ -67,9 +144,9 @@ pub struct AppCommandRequestContext {
 ///|
 #doc(hidden)
 pub fn AppCommandRequestContext::new(
-  window : Int64,
   tasks : @async.TaskGroup[Unit],
   locale_preferences : @locale.LocalePreferences,
+  window? : CommandWindow,
   window_id? : String = "main",
   source_origin? : String = "app",
   page_instance? : String? = None,
@@ -102,7 +179,6 @@ pub fn AppCommandRequestContext::new(
 /// Builds a request context that is not attached to an application session.
 #doc(hidden)
 pub fn AppCommandRequestContext::detached(
-  window : Int64,
   tasks : @async.TaskGroup[Unit],
   window_id? : String = "main",
   source_origin? : String = "app",
@@ -119,7 +195,6 @@ pub fn AppCommandRequestContext::detached(
   },
 ) -> AppCommandRequestContext {
   AppCommandRequestContext::new(
-    window,
     tasks,
     detached_locale_preferences(),
     window_id~,
@@ -173,7 +248,7 @@ pub async fn AppCommandRequestContext::wait_for_wake(
 ///|
 pub fn AppCommandRequestContext::window(
   self : AppCommandRequestContext,
-) -> Int64 {
+) -> CommandWindow? {
   self.window
 }
 

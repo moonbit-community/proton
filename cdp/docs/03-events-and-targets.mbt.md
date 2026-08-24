@@ -4,22 +4,24 @@ This page covers CDP events, event handlers, and browser-level target sessions.
 
 ## Handle events
 
-Events received while waiting for responses are buffered.
+One reader task dispatches events independently from command waiters. Register
+handlers before enabling a CDP domain so its initial events cannot be missed.
 
 ```mbt nocheck
+let created = Ref(0)
+let handler_id = page.on_cdp_event(
+  method_name="Runtime.executionContextCreated",
+  event => {
+    ignore(event)
+    created.val = created.val + 1
+  },
+)
 ignore(page.send_schema_command("Runtime.enable"))
-let event = page.recv_cdp_event(method_name="Runtime.executionContextCreated")
-println(event.method_name)
+ignore(page.remove_cdp_event_handler(handler_id))
+println(created.val)
 ```
 
-You can inspect buffered events later:
-
-```mbt nocheck
-let events = page.cdp_events(method_name="Runtime.consoleAPICalled")
-println(events.length())
-```
-
-You can also register a synchronous handler:
+Register synchronous handlers for events that remain relevant after setup:
 
 ```mbt nocheck
 let handler_id = page.on_cdp_event(
@@ -40,8 +42,10 @@ avoid long blocking work.
 Use browser-level Target commands to create or attach to targets:
 
 ```mbt nocheck
-let browser = @client.connect_cdp_browser_target(@client.parse_cdp_target("9222"))
-defer browser.close()
+let browser = @client.connect_cdp_browser_target(
+  tasks,
+  @client.parse_cdp_target("9222"),
+)
 
 let target_id = browser.create_target(url="https://example.com/")
 let session_id = browser.attach_to_target(target_id, flatten=true)

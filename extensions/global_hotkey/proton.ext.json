@@ -1,5 +1,7 @@
 {
   "id": "moonbit-community/proton-global-hotkey",
   "namespace": "globalHotkey",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton_ext/global_hotkey",
   "package": "@moonbit-community/proton-global-hotkey"
 }

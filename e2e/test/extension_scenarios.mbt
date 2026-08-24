@@ -121,15 +121,14 @@ pub extend AttributeScenarioProbe with FromJson::{from_json}
 
 ///|
 async fn run_extension_scenario_page_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   name : String,
   timeout : Int,
   native_log_path : String,
 ) -> Unit {
-  let page = connect_spawned_page(app, target, timeout)
-  defer page.close()
-  ignore(page.send_schema_command("Runtime.enable"))
+  let page = connect_spawned_page(tasks, app, target, timeout)
   wait_for_ready(page, scenario_ready_expression(name), timeout)
   let bridge_expression = match name {
     "38_async_extension_add" =>
@@ -152,7 +151,7 @@ async fn run_extension_scenario_page_probe(
 ///|
 async fn run_extension_scenario_probe(
   name : String,
-  page : @client.CdpClient,
+  page : @page.Page,
   native_log_path : String,
 ) -> Unit {
   match name {
@@ -165,7 +164,7 @@ async fn run_extension_scenario_probe(
 }
 
 ///|
-async fn run_async_add_scenario_probe(page : @client.CdpClient) -> Unit {
+async fn run_async_add_scenario_probe(page : @page.Page) -> Unit {
   let value = evaluate_json(
     page,
     (
@@ -197,7 +196,7 @@ async fn run_async_add_scenario_probe(page : @client.CdpClient) -> Unit {
 }
 
 ///|
-async fn run_sync_async_scenario_probe(page : @client.CdpClient) -> Unit {
+async fn run_sync_async_scenario_probe(page : @page.Page) -> Unit {
   let value = evaluate_json(
     page,
     (
@@ -243,7 +242,7 @@ async fn run_sync_async_scenario_probe(page : @client.CdpClient) -> Unit {
 }
 
 ///|
-async fn run_attribute_scenario_probe(page : @client.CdpClient) -> Unit {
+async fn run_attribute_scenario_probe(page : @page.Page) -> Unit {
   let value = evaluate_json(
     page,
     (

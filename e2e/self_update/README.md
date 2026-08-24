@@ -12,9 +12,8 @@ The script prints what happened and exits non-zero if any of it did not.
 
 ## What this covers that the unit tests cannot
 
-`native/tests/proton_update_test.c` drives the replacement against throwaway
-directories, and the MoonBit tests drive the refusals. Neither can cover the
-three things that only exist in a real installation:
+MoonBit tests drive inert refusal paths against throwaway directories. They
+cannot cover the things that only exist in a real installation:
 
 - the running bundle is found from the running executable, rather than supplied
   by a test hook,

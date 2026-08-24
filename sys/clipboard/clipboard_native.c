@@ -414,10 +414,30 @@ static int mb_try_write_clipboard(const char *text, size_t len) {
 
 MOONBIT_FFI_EXPORT int32_t mb_clipboard_platform_supported(void) {
 #if defined(_WIN32)
+  mb_set_error(MB_STATUS_OK, "");
   return 1;
-#elif defined(__APPLE__) || defined(__linux__)
-  return mb_unix_clipboard_backend_available();
+#elif defined(__APPLE__)
+  if (mb_unix_clipboard_backend_available()) {
+    mb_set_error(MB_STATUS_OK, "");
+    return 1;
+  }
+  mb_set_error(MB_STATUS_NOT_AVAILABLE,
+               "macOS clipboard commands pbcopy and pbpaste were not found "
+               "on PATH");
+  return 0;
+#elif defined(__linux__)
+  if (mb_unix_clipboard_backend_available()) {
+    mb_set_error(MB_STATUS_OK, "");
+    return 1;
+  }
+  mb_set_error(
+    MB_STATUS_NOT_AVAILABLE,
+    "No Linux clipboard backend found on PATH; install wl-clipboard "
+    "(wl-copy and wl-paste), xclip, or xsel");
+  return 0;
 #else
+  mb_set_error(MB_STATUS_NOT_AVAILABLE,
+               "Clipboard is unsupported on this platform");
   return 0;
 #endif
 }

@@ -1,13 +1,14 @@
 # Extensions
 
-`moonbit-community/proton_ext` contains Proton extension packages for the native DLL
-route. Generated app-command extensions expose host capabilities through the
-Proton bridge and keep metadata for catalog/codegen validation.
+`moonbit-community/proton_ext` contains Proton extension packages for the
+source-built native route. Generated app-command extensions expose host
+capabilities through the Proton bridge and keep metadata for catalog/codegen
+validation.
 
 The current supported route is:
 
 ```text
-MoonBit app -> moonbit-community/proton -> proton dynamic library -> command bridge
+MoonBit app -> moonbit-community/proton -> private native stubs -> command bridge
 ```
 
 Applications register backend implementations with `.extension(...)` and grant
@@ -69,10 +70,9 @@ calling page is rejected with `bridge op is not allowed`.
 ## Extension Metadata
 
 Extension metadata is used by code generation, catalog checks, dependency
-planning, and generated command bridge packages. Applications should register
-extensions in top-level Proton code. Renderer permissions may be declared with
-typed builders in code or through the `permissions` array in `proton.project.json`;
-extension settings in `proton.project.json` are not the active registration surface.
+planning, and generated command bridge packages. Applications register
+extensions and renderer permissions with typed builders in top-level Proton
+code. `proton.project.json` is CLI-only and does not expose capabilities.
 
 ## Tray Notes
 

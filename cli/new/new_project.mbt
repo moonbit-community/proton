@@ -245,13 +245,27 @@ async fn create_project(
   let target_parent = @fsutil.path_parent(options.resolved_target_dir)
   let existing_ancestor = nearest_existing_ancestor(target_parent)
   let mut staging_dir = ""
-  // Transaction rollback. Runs only if this function raises after a staging
-  // directory has been reserved; on success the staging dir was committed
-  // (renamed) into the target, so there is nothing to roll back. `staging_dir`
-  // stays empty when reservation fails, which makes this a no-op for that path.
-  errdefer (if staging_dir != "" {
-    let rollback_failures : Array[String] = []
-    @async.protect_from_cancel(resume_on_cancel=true, () => {
+  let reserve_rollback_failures : Array[String] = []
+  errdefer {
+    @async.protect_from_cancel(() => {
+      remove_transaction_tree(staging_dir, reserve_rollback_failures)
+    })
+    if reserve_rollback_failures.length() > 0 {
+      raise NewProjectWriteError::Rollback(
+        primary="failed to reserve the project staging directory",
+        detail=reserve_rollback_failures.join("; "),
+      )
+    }
+  }
+  @async.protect_from_cancel(() => {
+    staging_dir = reserve_staging_directory(
+      existing_ancestor,
+      options.resolved_target_dir,
+    )
+  })
+  let rollback_failures : Array[String] = []
+  errdefer {
+    @async.protect_from_cancel(() => {
       remove_transaction_tree(staging_dir, rollback_failures)
       if target_existed && !@fsutil.path_exists(options.resolved_target_dir) {
         restore_empty_target(options.resolved_target_dir, rollback_failures)
@@ -262,14 +276,11 @@ async fn create_project(
     })
     if rollback_failures.length() > 0 {
       raise NewProjectWriteError::Rollback(
-        primary="failed to create project",
+        primary="failed to generate or commit the project",
         detail=rollback_failures.join("; "),
       )
     }
-  })
-  staging_dir = @async.protect_from_cancel(() => {
-    reserve_staging_directory(existing_ancestor, options.resolved_target_dir)
-  })
+  }
   write_project_files(staging_dir, files)
   maybe_init_git(options, staging_dir)
   if options.run_check {
@@ -518,77 +529,27 @@ async fn maybe_init_git(
 }
 
 ///|
-let moon_check_max_attempts = 3
-
-///|
-let moon_check_retry_delay_ms = 2000
-
-///|
 async fn run_moon_check(
   options : NewProjectOptions,
   project_dir : String,
 ) -> Unit raise NewProjectToolError {
-  let mut attempt = 1
-  while true {
-    let (code, data) = @process.collect_output_merged("moon", [
-      "-C", project_dir, "check", "--target", "js,native", "--diagnostic-limit",
-      "80",
-    ]) catch {
-      err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
+  let (code, data) = @process.collect_output_merged("moon", [
+    "-C", project_dir, "check", "--target", "js,native", "--diagnostic-limit", "80",
+  ]) catch {
+    err => raise Start(tool="moon check", detail=@debug.render(Repr(err)))
+  }
+  let output = data.text() catch {
+    err =>
+      raise Start(tool="moon check output", detail=@debug.render(Repr(err)))
+  }
+  if output != "" {
+    @stdio.stderr.write(output) catch {
+      _ => ()
     }
-    let output = data.text() catch {
-      err =>
-        raise Start(tool="moon check output", detail=@debug.render(Repr(err)))
-    }
-    if output != "" {
-      @stdio.stderr.write(output) catch {
-        _ => ()
-      }
-    }
-    if code == 0 {
-      return
-    }
-    if attempt < moon_check_max_attempts &&
-      moon_check_has_transient_network_failure(output) {
-      @output.info(
-        "[INFO] moon check hit a transient network error; retrying (" +
-        (attempt + 1).to_string() +
-        "/" +
-        moon_check_max_attempts.to_string() +
-        ")",
-      )
-      @async.sleep(moon_check_retry_delay_ms) catch {
-        error =>
-          raise Start(
-            tool="moon check retry",
-            detail=@debug.render(Repr(error)),
-          )
-      }
-      attempt = attempt + 1
-      continue
-    }
-    if moon_check_has_registry_resolution_failure(output) {
-      raise RegistryDependenciesUnavailable(code~, project=options.target_dir)
-    }
+  }
+  if code != 0 {
     raise MoonCheckFailed(code~, project=options.target_dir)
   }
-}
-
-///|
-fn moon_check_has_transient_network_failure(output : String) -> Bool {
-  let lowered = output.to_lower()
-  let markers = [
-    "tls handshake", "channel closed", "request or response body error", "connection reset",
-    "connection refused", "failed to download", "network is unreachable", "temporary failure",
-    "error sending request", "operation timed out",
-  ]
-  markers.any(fn(marker) { lowered.contains(marker) })
-}
-
-///|
-fn moon_check_has_registry_resolution_failure(output : String) -> Bool {
-  output.contains("Failed to resolve registry dependency") ||
-  output.contains("failed to resolve registry dependency")
 }
 
 ///|

@@ -1,6 +1,6 @@
 # Attribute Codegen Commands
 
-Attribute-codegen command example for the native DLL bridge.
+Attribute-codegen command example for the source-built native bridge.
 
 This package uses generated command metadata to expose
 `window.__MoonBit__.add.slowAdd(payload)` through the same inline HTML proxy

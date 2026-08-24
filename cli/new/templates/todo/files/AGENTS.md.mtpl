@@ -17,6 +17,7 @@ This is a MoonBit Proton native desktop app.
 - `shared/` contains the target-neutral typed application contract.
 - `frontend/` is a JavaScript Rabbita module owned by Warren.
 - `backend/` is a native Proton module.
+- `proton.project.json` is required by `proton_cli dev`, `build`, and `package`.
 - Keep command and event names in `shared/todo_contract.mbt`.
 - The Moon prebuild rule regenerates the typed bridge through
   `moonx moonbit-community/proton_codegen`; do not invoke codegen from application

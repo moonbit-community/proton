@@ -105,14 +105,12 @@ pub extend EventReloadScenarioProbe with FromJson::{from_json}
 
 ///|
 async fn run_event_scenario_page_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
 ) -> Unit {
-  let page = connect_spawned_page(app, target, timeout)
-  let mut page_open = true
-  defer (if page_open { page.close() })
-  ignore(page.send_schema_command("Runtime.enable"))
+  let page = connect_spawned_page(tasks, app, target, timeout)
   wait_for_cdp_expression(
     page, "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on)",
     "event broadcast bridge", timeout,
@@ -157,8 +155,8 @@ async fn run_event_scenario_page_probe(
   )
   let result : EventScenarioProbe = decode_probe(value, "event broadcast")
   assert_event_scenario_probe(result, value)
-  run_event_reload_scenario_probe(page, target, timeout)
-  page_open = false
+  run_event_reload_scenario_probe(page, timeout)
+  page.close()
   assert_event_scenario_native_log(app.native_log_path)
   println("MoonBit 40_event_broadcast event/reload probe passed")
 }
@@ -215,11 +213,9 @@ fn assert_event_scenario_probe(
 
 ///|
 async fn run_event_reload_scenario_probe(
-  page : @client.CdpClient,
-  target : String,
+  page : @page.Page,
   timeout : Int,
 ) -> Unit {
-  ignore(page.send_schema_command("Page.enable"))
   ignore(
     evaluate_json(
       page,
@@ -239,12 +235,8 @@ async fn run_event_reload_scenario_probe(
       false,
     ),
   )
-  ignore(page.send_cdp_command("Page.reload"))
-  page.close()
-  let reloaded_page = connect_page_matching_expression(
-    target,
-    "https://proton.localhost/",
-    false,
+  reload_page_and_wait(
+    page,
     (
       #|Boolean(
       #|  window.__MoonBit__?.ticker?.start &&
@@ -255,9 +247,8 @@ async fn run_event_reload_scenario_probe(
     "event bridge after reload",
     timeout,
   )
-  defer reloaded_page.close()
   let value = evaluate_json(
-    reloaded_page,
+    page,
     (
       #|;(async () => {
       #|  window.__eventReloadProbe = [];

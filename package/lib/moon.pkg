@@ -7,7 +7,7 @@ import {
   "moonbitlang/x/path",
 }
 
-supported_targets = "native"
+supported_targets = "native+wasm"
 
 options(
   "native-stub": [ "windows_icon.c" ],

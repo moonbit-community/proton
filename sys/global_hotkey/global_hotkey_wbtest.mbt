@@ -1,10 +1,38 @@
 ///|
+/// Closes the X11 connection used by the native manager so the disconnect path
+/// can be exercised without terminating the test's X server.
+#cfg(platform="linux")
+extern "C" fn test_disconnect_ffi(state : GlobalHotkeyState) -> Int = "mb_global_hotkey_test_disconnect"
+
+///|
 test "decode_error_message falls back when ffi output is empty" {
   assert_eq(decode_error_message(@utf8.encode(""), "fallback"), "fallback")
   assert_eq(
     decode_error_message(@utf8.encode("native failure"), "fallback"),
     "native failure",
   )
+}
+
+///|
+#cfg(platform="linux")
+test "X11 disconnect is reported without terminating the host process" {
+  if !platform_supported_ffi() {
+    return
+  }
+  let state = create_state_ffi()
+  if state_is_null_ffi(state) {
+    fail(decode_error_message(last_error_message_ffi(), "create failed"))
+  }
+  assert_eq(test_disconnect_ffi(state), 0)
+  let status = register_hotkey_ffi(state, 1, 2, @utf8.encode("K"))
+  assert_eq(status, 1)
+  assert_true(
+    decode_error_message(last_error_message_ffi(), "missing error").contains(
+      "X11 connection was lost",
+    ),
+  )
+  assert_eq(take_triggered_id_ffi(state), 0)
+  destroy_state_ffi(state)
 }
 
 ///|

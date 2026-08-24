@@ -18,6 +18,7 @@ pub extend DevUsageError with Show::{to_string, output}
 pub(all) suberror DevConfigError {
   NotFound(path~ : String)
   Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
+  FrontendCommandMissing
   FrontendDirectoryMissing(path~ : String)
   FrontendDirectoryNotDirectory(path~ : String)
   BackendDirectoryMissing(path~ : String)
@@ -36,12 +37,7 @@ pub extend DevConfigError with Show::{to_string, output}
 ///|
 /// Failures while locating and validating the native development runtime.
 pub(all) suberror DevRuntimeError {
-  NativeDistOverride(detail~ : String)
   Setup(detail~ : String)
-  ManifestMissing(path~ : String)
-  ManifestInvalid(path~ : String, detail~ : String)
-  ManifestField(path~ : String, field~ : String)
-  PlatformMismatch(expected~ : String, actual~ : String)
   DirectoryMissing(label~ : String, path~ : String)
   HelperMissing(label~ : String, path~ : String)
   SetupRequired(detail~ : String)
@@ -67,6 +63,7 @@ pub(all) suberror DevServerError {
   InvalidPort(value~ : String)
   PortOutOfRange(value~ : String)
   ReadyProbeUnavailable
+  FrontendUrlInUse(url~ : String)
   FrontendExited(code~ : Int)
   Timeout(url~ : String)
 } derive(Debug, Eq)
@@ -110,6 +107,8 @@ pub fn DevConfigError::message(self : DevConfigError) -> String {
     NotFound(path~) => "proton dev config not found: " + path
     Invalid(path~, error~) =>
       "invalid proton dev config " + path + ": " + error.message()
+    FrontendCommandMissing =>
+      "frontend.before_dev is required when proton_cli dev manages frontend.dev_url\n\nConfigure frontend.before_dev, pass --command, or use --no-frontend to connect to an existing server."
     FrontendDirectoryMissing(path~) => "frontend path does not exist: " + path
     FrontendDirectoryNotDirectory(path~) =>
       "frontend path is not a directory: " + path
@@ -122,25 +121,12 @@ pub fn DevConfigError::message(self : DevConfigError) -> String {
 ///|
 pub fn DevRuntimeError::message(self : DevRuntimeError) -> String {
   match self {
-    NativeDistOverride(detail~) =>
-      detail +
-      "\n\nPROTON_NATIVE_DIST is set; unset it or point it at a valid Proton runtime."
     Setup(detail~) => "failed to set up Proton runtime: " + detail
-    ManifestMissing(path~) => "active Proton runtime is missing: " + path
-    ManifestInvalid(path~, detail~) =>
-      "invalid Proton runtime manifest " + path + ": " + detail
-    ManifestField(path~, field~) =>
-      "Proton runtime manifest " + path + " missing string field: " + field
-    PlatformMismatch(expected~, actual~) =>
-      "active Proton runtime platform mismatch: expected " +
-      expected +
-      ", got " +
-      actual
     DirectoryMissing(label~, path~) => label + " directory is missing: " + path
     HelperMissing(label~, path~) => label + " helper is missing: " + path
     SetupRequired(detail~) =>
       detail +
-      "\n\nRun `proton_cli cef setup` first, or retry with `proton_cli dev --setup`."
+      "\n\nRun `moonx moonbit-community/proton_cefsetup`, or retry with `proton_cli dev --setup`."
   }
 }
 
@@ -157,6 +143,10 @@ pub fn DevServerError::message(self : DevServerError) -> String {
     PortOutOfRange(value~) => "frontend dev URL port is out of range: " + value
     ReadyProbeUnavailable =>
       "--ready-path requires curl on PATH; install curl or omit --ready-path to use TCP readiness"
+    FrontendUrlInUse(url~) =>
+      "frontend dev URL is already in use: " +
+      url +
+      "\n\nStop the existing server, change frontend.dev_url and frontend.before_dev, or use --no-frontend to connect to the existing server."
     FrontendExited(code~) =>
       "frontend command exited before the dev server became ready: " +
       code.to_string()

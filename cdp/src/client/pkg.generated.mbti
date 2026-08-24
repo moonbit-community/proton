@@ -3,6 +3,7 @@ package "moonbit-community/proton_cdp/client"
 
 import {
   "moonbit-community/proton_cdp/protocol",
+  "moonbitlang/async",
   "moonbitlang/core/debug",
 }
 
@@ -13,17 +14,17 @@ pub fn chrome_executable_candidates() -> Array[String]
 
 pub fn chrome_launch_args(CdpLaunchOptions) -> Array[String]
 
-pub async fn connect_cdp_browser_target(CdpTarget) -> CdpClient
+pub async fn[X] connect_cdp_browser_target(@async.TaskGroup[X], CdpTarget) -> CdpClient
 
-pub async fn connect_cdp_browser_target_with_timeout(CdpTarget, timeout_ms? : Int) -> CdpClient
+pub async fn[X] connect_cdp_browser_target_with_timeout(@async.TaskGroup[X], CdpTarget, timeout_ms? : Int) -> CdpClient
 
-pub async fn connect_cdp_page_target(CdpTarget, target_id? : String, url? : String, title? : String) -> CdpClient
+pub async fn[X] connect_cdp_page_target(@async.TaskGroup[X], CdpTarget, target_id? : String, url? : String, title? : String) -> CdpClient
 
-pub async fn connect_cdp_page_target_with_timeout(CdpTarget, target_id? : String, url? : String, title? : String, timeout_ms? : Int) -> CdpClient
+pub async fn[X] connect_cdp_page_target_with_timeout(@async.TaskGroup[X], CdpTarget, target_id? : String, url? : String, title? : String, timeout_ms? : Int) -> CdpClient
 
-pub async fn connect_cdp_target(CdpTarget) -> CdpClient
+pub async fn[X] connect_cdp_target(@async.TaskGroup[X], CdpTarget) -> CdpClient
 
-pub async fn connect_cdp_target_with_timeout(CdpTarget, timeout_ms? : Int) -> CdpClient
+pub async fn[X] connect_cdp_target_with_timeout(@async.TaskGroup[X], CdpTarget, timeout_ms? : Int) -> CdpClient
 
 pub fn default_launch_options() -> CdpLaunchOptions
 
@@ -61,11 +62,15 @@ pub(all) suberror BrowserError {
   MissingField(String)
   InvalidField(String)
   WaitTimeout(String)
+  ConnectionClosed
 } derive(Eq, ToJson, @debug.Debug)
 pub fn BrowserError::equal(Self, Self) -> Bool
+pub fn BrowserError::message(Self) -> String
 pub fn BrowserError::not_equal(Self, Self) -> Bool
+pub fn BrowserError::output(Self, &Logger) -> Unit
 pub fn BrowserError::to_json(Self) -> Json
 pub fn BrowserError::to_repr(Self) -> @debug.Repr
+pub fn BrowserError::to_string(Self) -> String
 
 pub(all) suberror BrowserLaunchError {
   BrowserNotFound
@@ -136,11 +141,9 @@ pub struct CdpClient {
 pub async fn CdpClient::attach_to_target(Self, String, flatten? : Bool) -> String
 pub fn CdpClient::attached_target(Self, String) -> CdpAttachedTarget?
 pub fn CdpClient::attached_targets(Self) -> Array[CdpAttachedTarget]
-pub fn CdpClient::cdp_events(Self, method_name? : String, session_id? : String) -> Array[@protocol.CdpEventMessage]
-pub fn CdpClient::clear_cdp_events(Self) -> Unit
-pub fn CdpClient::close(Self) -> Unit
-pub async fn CdpClient::connect(String) -> Self
-pub async fn CdpClient::connect_with_timeout(String, timeout_ms? : Int) -> Self
+pub async fn CdpClient::close(Self) -> Unit
+pub async fn[X] CdpClient::connect(@async.TaskGroup[X], String) -> Self
+pub async fn[X] CdpClient::connect_with_timeout(@async.TaskGroup[X], String, timeout_ms? : Int) -> Self
 pub async fn CdpClient::create_target(Self, url? : String, browser_context_id? : String, new_window? : Bool) -> String
 pub async fn CdpClient::get_targets(Self) -> Array[CdpTargetInfo]
 pub fn CdpClient::last_cdp_event(Self) -> @protocol.CdpEventMessage?
@@ -148,14 +151,18 @@ pub fn CdpClient::last_cdp_request(Self) -> @protocol.CdpCommandMessage?
 pub fn CdpClient::last_cdp_response(Self) -> @protocol.CdpResponseMessage?
 pub fn CdpClient::last_command_failure(Self) -> CdpCommandFailure?
 pub fn CdpClient::on_cdp_event(Self, method_name? : String, session_id? : String, (@protocol.CdpEventMessage) -> Unit) -> Int
+pub fn CdpClient::on_close(Self, () -> Unit) -> Int
 pub async fn CdpClient::recv_cdp_event(Self, method_name? : String, session_id? : String) -> @protocol.CdpEventMessage
 pub async fn CdpClient::recv_cdp_response(Self, Int, timeout_ms? : Int) -> @protocol.CdpResponseMessage
 pub fn CdpClient::remove_cdp_event_handler(Self, Int) -> Bool
+pub fn CdpClient::remove_close_handler(Self, Int) -> Bool
 pub async fn CdpClient::send_cdp_command(Self, String, params? : Json, session_id? : String) -> Int
 pub async fn CdpClient::send_cdp_message(Self, @protocol.CdpCommandMessage, timeout_ms? : Int) -> @protocol.CdpResponseMessage
 pub async fn CdpClient::send_command(Self, String, params? : Json, session_id? : String) -> @protocol.CdpResponseMessage
 pub async fn CdpClient::send_remote_schema_command(Self, Json, String, params? : Json, session_id? : String, timeout_ms? : Int) -> @protocol.CdpResponseMessage
 pub async fn CdpClient::send_schema_command(Self, String, params? : Json, session_id? : String, timeout_ms? : Int) -> @protocol.CdpResponseMessage
+
+type CdpCloseHandler
 
 type CdpCommandContext
 

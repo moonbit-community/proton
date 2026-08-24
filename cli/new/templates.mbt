@@ -1,20 +1,20 @@
 ///|
-let default_proton_version = "0.1.18"
+let default_proton_version = "0.2.1"
 
 ///|
-let default_proton_codegen_version = "0.1.18"
+let default_proton_codegen_version = "0.2.1"
 
 ///|
-let default_proton_cli_version = "0.1.18"
+let default_proton_cli_version = "0.2.1"
 
 ///|
-let default_proton_contract_version = "0.1.18"
+let default_proton_contract_version = "0.2.1"
 
 ///|
-let default_proton_client_version = "0.1.18"
+let default_proton_client_version = "0.2.1"
 
 ///|
-let default_proton_rabbita_version = "0.1.18"
+let default_proton_rabbita_version = "0.2.1"
 
 ///|
 let default_rabbita_version = "0.14.1"
@@ -25,23 +25,7 @@ let default_warren_version = "0.2.7"
 ///|
 /// Scaffolded backends need this directly: `async fn main` is only available to
 /// a package that imports `moonbitlang/async`.
-let default_async_version = "0.20.3"
-
-///|
-fn scaffold_release_chain() -> String {
-  "moonbit-community/proton_contract@" +
-  default_proton_contract_version +
-  "\n  moonbit-community/proton_codegen@" +
-  default_proton_codegen_version +
-  "\n  moonbit-community/proton_client@" +
-  default_proton_client_version +
-  "\n  moonbit-community/proton_rabbita@" +
-  default_proton_rabbita_version +
-  "\n  moonbit-community/proton@" +
-  default_proton_version +
-  "\n  moonbit-community/proton_cli@" +
-  default_proton_cli_version
-}
+let default_async_version = "0.21.0"
 
 ///|
 priv struct TemplateContext {
@@ -223,16 +207,7 @@ fn plan_project_files(
 ///|
 fn project_config_file(context : TemplateContext) -> PlannedFile {
   let config : Json = {
-    "product_name": context.title,
-    "identifier": context.identifier,
-    "single_instance": true,
-    "window": {
-      "title": context.title,
-      "width": context.width,
-      "height": context.height,
-      "size_hint": "none",
-    },
-    "backend": { "path": "backend", "package": "app" },
+    "backend": { "path": ".", "package": "backend/app" },
     "frontend": {
       "path": "frontend",
       "dev_url": "http://127.0.0.1:4300",
@@ -244,10 +219,13 @@ fn project_config_file(context : TemplateContext) -> PlannedFile {
       " build",
       "dist": "dist",
     },
-    "entry": { "kind": "asset", "value": "frontend/dist/index.html" },
-    "permissions": [{ "window": "main", "origin": "entry", "extension": "app" }],
-    "debug": true,
-    "bundle": { "active": true, "targets": ["app", "zip"], "output": "dist" },
+    "package": {
+      "product_name": context.title,
+      "identifier": context.identifier,
+      "version": "0.1.0",
+      "formats": ["app", "zip"],
+      "output": "dist",
+    },
   }
   { path: "proton.project.json", content: config.stringify(indent=2) + "\n" }
 }

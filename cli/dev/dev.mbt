@@ -23,7 +23,6 @@ struct RawDevOptions {
   frontend_path : String?
   timeout_ms : Int
   ready_path : String?
-  wait_for_dev_server : Bool
   start_frontend : Bool
   setup_runtime : Bool
   app_args : Array[String]
@@ -40,7 +39,6 @@ struct DevRuntime {
   root : String
   bin_dir : String
   lib_dir : String
-  helper_path : String
 } derive(Debug, Eq)
 
 ///|
@@ -69,10 +67,6 @@ pub fn command() -> @argparse.Command {
     "dev",
     about="Run a Proton app in development mode",
     flags=[
-      FlagArg(
-        "no-dev-server-wait",
-        about="Start the app without waiting for the frontend URL",
-      ),
       FlagArg(
         "no-frontend",
         about="Do not start the configured frontend command",
@@ -115,16 +109,10 @@ pub fn command() -> @argparse.Command {
 pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let raw = dev_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
-  let root = @fsutil.find_project_root_from(cwd)
-  let config_path = resolve_dev_config_path(cwd, root, raw)
-  let project_config = load_dev_project_config(config_path)
-  let frontend_config = match project_config {
-    Some(config) => config.frontend()
-    None => None
-  }
-  let project_base = project_config
-    .map(fn(config) { config.base_dir() })
-    .unwrap_or(root)
+  let config_path = resolve_dev_config_path(cwd, raw)
+  let project_config = read_dev_project_config(config_path)
+  let frontend_config = project_config.frontend()
+  let project_base = project_config.base_dir()
   let frontend_url : String? = match raw.url {
     Some(url) => Some(url)
     None =>
@@ -134,9 +122,8 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
       }
   }
   let moon_target_dir = raw.moon_target_dir.map(path => {
-    @fsutil.resolve_path(root, path)
+    @fsutil.resolve_path(cwd, path)
   })
-  validate_frontend_dev_url(frontend_url, raw.ready_path)
   let frontend_command : String? = match raw.command {
     Some(command) => Some(command)
     None =>
@@ -144,6 +131,15 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         Some(config) => config.before_dev()
         None => None
       }
+  }
+  validate_frontend_dev_url(frontend_url, raw.ready_path)
+  let managed_frontend_command = managed_frontend_command(
+    frontend_url,
+    frontend_command,
+    raw.start_frontend,
+  )
+  if raw.start_frontend {
+    ensure_frontend_url_available(frontend_url)
   }
   let frontend_path : String? = match raw.frontend_path {
     Some(path) => Some(@fsutil.resolve_path(project_base, path))
@@ -156,13 +152,9 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let frontend_working_dir = resolve_frontend_path(
     project_base,
     frontend_path,
-    frontend_command,
-    raw.start_frontend,
+    managed_frontend_command is Some(_),
   )
-  let backend = match project_config {
-    Some(config) => config.backend()
-    None => None
-  }
+  let backend = project_config.backend()
   let backend_path = resolve_backend_path(
     project_base,
     backend.map(fn(config) { config.path() }),
@@ -175,8 +167,19 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         None => default_package
       }
   }
-  let runtime = ensure_dev_runtime(root, raw.setup_runtime)
-  let app_env = dev_process_env(runtime, frontend_url, config_path)
+  let proton_source = @build.resolve_proton_source(backend_path, app_package)
+  let runtime_requirements = @build.resolve_proton_runtime_requirements(
+    proton_source,
+  )
+  let runtime = ensure_dev_runtime(runtime_requirements, raw.setup_runtime)
+  let helper_path = @build.build_cef_process(
+    proton_source,
+    backend_path,
+    moon_target_dir?,
+  )
+  let app_env = dev_process_env(
+    runtime, helper_path, frontend_url, project_base,
+  )
   let frontend_env = dev_frontend_process_env(
     app_env,
     @env.get_env_var("LD_PRELOAD"),
@@ -184,25 +187,19 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   @async.with_task_group(group => {
     // Announce the wait before the frontend child starts writing to the
     // terminal, so its startup output cannot interleave with this line.
-    if raw.wait_for_dev_server {
-      announce_frontend_server_wait(frontend_url, raw.ready_path)
+    announce_frontend_server_wait(frontend_url, raw.ready_path)
+    let frontend_process = match managed_frontend_command {
+      Some(command) =>
+        Some(start_frontend(group, frontend_working_dir, command, frontend_env))
+      None => None
     }
-    let frontend_process = maybe_start_frontend(
-      group,
-      frontend_working_dir,
-      frontend_command,
-      raw.start_frontend,
-      frontend_env,
-    )
     defer cancel_frontend(frontend_process)
-    if raw.wait_for_dev_server {
-      wait_for_frontend(
-        frontend_url,
-        raw.ready_path,
-        raw.timeout_ms,
-        frontend_process,
-      )
-    }
+    wait_for_frontend(
+      frontend_url,
+      raw.ready_path,
+      raw.timeout_ms,
+      frontend_process,
+    )
     let code = run_app(
       backend_path,
       app_package,
@@ -243,8 +240,6 @@ fn dev_options_from_matches(
     }
   guard matches.flags
     is {
-      "no-dev-server-wait"? : Some(no_dev_server_wait)
-      | (None with no_dev_server_wait = false),
       "no-frontend"? : Some(no_frontend)
       | (None with no_frontend = false),
       "setup"? : Some(setup_runtime)
@@ -260,7 +255,6 @@ fn dev_options_from_matches(
     frontend_path: frontend_path.get(0),
     timeout_ms: parse_non_negative_int(timeout, "--timeout-ms"),
     ready_path: ready_path.get(0),
-    wait_for_dev_server: !no_dev_server_wait,
     start_frontend: !no_frontend,
     setup_runtime,
     app_args,
@@ -286,10 +280,9 @@ fn parse_non_negative_int(
 async fn resolve_frontend_path(
   root : String,
   frontend_path : String?,
-  frontend_command : String?,
   start_frontend : Bool,
 ) -> String {
-  if !start_frontend || frontend_command is None {
+  if !start_frontend {
     return root
   }
   match frontend_path {
@@ -325,51 +318,13 @@ async fn resolve_backend_path(root : String, backend_path : String?) -> String {
 }
 
 ///|
-async fn resolve_dev_config_path(
-  cwd : String,
-  root : String,
-  raw : RawDevOptions,
-) -> String? {
-  match raw.config_path {
-    Some(path) => Some(@fsutil.resolve_path(cwd, path))
-    None => {
-      let package_config = package_config_path(
-        cwd,
-        raw.app_package.unwrap_or(default_package),
-      )
-      let cwd_config = @fsutil.path_join(cwd, default_config_file)
-      let root_config = @fsutil.path_join(root, default_config_file)
-      if @fsutil.path_exists(package_config) {
-        Some(package_config)
-      } else if @fsutil.path_exists(cwd_config) {
-        Some(cwd_config)
-      } else if @fsutil.path_exists(root_config) {
-        Some(root_config)
-      } else {
-        None
-      }
-    }
+async fn resolve_dev_config_path(cwd : String, raw : RawDevOptions) -> String {
+  let path = match raw.config_path {
+    Some(path) => @fsutil.resolve_path(cwd, path)
+    None => @fsutil.path_join(cwd, default_config_file)
   }
-}
-
-///|
-fn package_config_path(cwd : String, app_package : String) -> String {
-  @fsutil.resolve_path(cwd, @fsutil.path_join(app_package, default_config_file))
-}
-
-///|
-async fn load_dev_project_config(
-  config_path : String?,
-) -> @proton_config.ProjectConfig? {
-  match config_path {
-    None => None
-    Some(path) => {
-      if !@fsutil.path_exists(path) {
-        raise NotFound(path~)
-      }
-      Some(read_dev_project_config(path))
-    }
-  }
+  guard @fsutil.path_exists(path) else { raise NotFound(path~) }
+  path
 }
 
 ///|
@@ -386,81 +341,39 @@ async fn read_dev_project_config(
         ),
       )
   }
-  let loaded = @proton_config.load_project_config_from_text(
+  @proton_config.load_project_config_from_text(
     source,
     @fsutil.path_parent(path),
     name=path,
   ) catch {
     error => raise Invalid(path~, error~)
   }
-  loaded.config()
 }
 
 ///|
-async fn ensure_dev_runtime(root : String, setup_runtime : Bool) -> DevRuntime {
-  let native_dist_override = dev_native_dist_override(root)
-  read_dev_runtime(root) catch {
+async fn ensure_dev_runtime(
+  requirements : String,
+  setup_runtime : Bool,
+) -> DevRuntime {
+  resolve_dev_runtime(requirements) catch {
     error if @async.is_being_cancelled() => raise error
     error =>
-      match native_dist_override {
-        Some(_) => raise NativeDistOverride(detail=error.to_string())
-        None if setup_runtime => {
-          @cef.setup_default(root) catch {
-            error if @async.is_being_cancelled() => raise error
-            error => raise Setup(detail=error.to_string())
-          }
-          read_dev_runtime(root)
+      if setup_runtime {
+        ignore(@cef_store.install_declared(requirements)) catch {
+          error if @async.is_being_cancelled() => raise error
+          error => raise Setup(detail=error.to_string())
         }
-        None => raise SetupRequired(detail=error.to_string())
-      }
-  }
-}
-
-///|
-async fn read_dev_runtime(root : String) -> DevRuntime {
-  match dev_native_dist_override(root) {
-    Some(path) => return dev_runtime_from_root(path, "PROTON_NATIVE_DIST")
-    None => ()
-  }
-  let manifest_path = runtime_manifest_path(root)
-  let text = @async_fs.read_file(manifest_path).text() catch {
-    _ => raise ManifestMissing(path=manifest_path)
-  }
-  let json = @json.parse(text) catch {
-    err =>
-      raise ManifestInvalid(path=manifest_path, detail=@debug.render(Repr(err)))
-  }
-  let platform = json_string_field(json, "platform", manifest_path)
-  let expected_platform = @cef.current_platform_id() catch {
-    error =>
-      raise ManifestInvalid(
-        path=manifest_path,
-        detail="failed to detect host platform: " + error.to_string(),
-      )
-  }
-  if platform != expected_platform {
-    raise PlatformMismatch(expected=expected_platform, actual=platform)
-  }
-  let dist = json_string_field(json, "dist", manifest_path)
-  dev_runtime_from_root(
-    @fsutil.resolve_path(root, dist),
-    "active Proton runtime",
-  )
-}
-
-///|
-fn dev_native_dist_override(root : String) -> String? {
-  match @env.get_env_var("PROTON_NATIVE_DIST") {
-    Some(value) => {
-      let value = value.trim().to_owned()
-      if value == "" {
-        None
+        resolve_dev_runtime(requirements)
       } else {
-        Some(@fsutil.resolve_path(root, value))
+        raise SetupRequired(detail=error.to_string())
       }
-    }
-    None => None
   }
+}
+
+///|
+async fn resolve_dev_runtime(requirements : String) -> DevRuntime {
+  let runtime = @cef_store.resolve_declared(requirements)
+  dev_runtime_from_root(runtime.runtime_root(), "Proton runtime store")
 }
 
 ///|
@@ -470,19 +383,10 @@ async fn dev_runtime_from_root(
 ) -> DevRuntime {
   let bin_dir = @fsutil.path_join(runtime_root, "bin")
   let lib_dir = @fsutil.path_join(runtime_root, "lib")
-  let helper_path = @fsutil.path_join(bin_dir, helper_executable_name())
   if !@fsutil.path_exists(runtime_root) {
     raise DirectoryMissing(label~, path=runtime_root)
   }
-  if !@fsutil.path_exists(helper_path) {
-    raise HelperMissing(label~, path=helper_path)
-  }
-  DevRuntime::{ root: runtime_root, bin_dir, lib_dir, helper_path }
-}
-
-///|
-fn runtime_manifest_path(root : String) -> String {
-  @fsutil.path_join(@fsutil.path_join(root, ".proton"), "runtime.json")
+  DevRuntime::{ root: runtime_root, bin_dir, lib_dir }
 }
 
 ///|
@@ -497,50 +401,20 @@ fn validate_frontend_dev_url(
 }
 
 ///|
-fn json_string_field(
-  json : Json,
-  field : String,
-  label : String,
-) -> String raise DevRuntimeError {
-  match json {
-    Object(object) =>
-      match object.get(field) {
-        Some(String(value)) => value
-        _ => raise ManifestField(path=label, field~)
-      }
-    _ => raise ManifestInvalid(path=label, detail="root must be a JSON object")
-  }
-}
-
-///|
-fn helper_executable_name() -> String {
-  if @path.sep == '\\' {
-    "cef_process.exe"
-  } else {
-    "cef_process"
-  }
-}
-
-///|
 async fn dev_process_env(
   runtime : DevRuntime,
+  helper_path : String,
   frontend_url : String?,
-  config_path : String?,
+  resource_dir : String,
 ) -> Map[String, String] {
   let env : Map[String, String] = {
     "PROTON_MODE": "dev",
-    "PROTON_DEV": "1",
-    "PROTON_HMR": "1",
-    "PROTON_NATIVE_DIST": runtime.root,
     "PROTON_RUNTIME_ROOT": runtime.root,
-    "PROTON_HELPER_PATH": runtime.helper_path,
+    "PROTON_HELPER_PATH": helper_path,
+    "PROTON_RESOURCE_DIR": resource_dir,
   }
   match frontend_url {
     Some(url) => env["PROTON_FRONTEND_URL"] = url
-    None => ()
-  }
-  match config_path {
-    Some(path) => env["PROTON_CONFIG_PATH"] = path
     None => ()
   }
   let path_key = path_env_key()
@@ -590,7 +464,7 @@ fn dev_frontend_process_env(
 /// environment block and keeps the *last* duplicate of each variable; the
 /// inherited original `Path` therefore shadows the prepended runtime `bin`
 /// directory and the app exits immediately with 0xC0000135 because
-/// `proton.dll` and the CEF libraries are not on its DLL search path.
+/// CEF libraries are not on its DLL search path.
 /// Returning a complete environment with the overrides applied and spawning
 /// with `inherit_env=false` keeps exactly one entry per variable, so the
 /// runtime `bin` directory survives the handoff.
@@ -687,36 +561,40 @@ fn path_list_separator() -> String {
 }
 
 ///|
-async fn[X] maybe_start_frontend(
+async fn[X] start_frontend(
   group : @async.TaskGroup[X],
   frontend_path : String,
-  command : String?,
-  start_frontend : Bool,
+  command : String,
   env : Map[String, String],
-) -> @process.Process? raise DevProcessError {
+) -> @process.Process raise DevProcessError {
+  @output.info("Starting frontend: " + command)
+  @output.info("Frontend path: " + frontend_path)
+  let (program, args) = shell_command(command)
+  @process.spawn(
+    group,
+    program,
+    args,
+    cwd=frontend_path,
+    extra_env=env,
+    cancel_handler=frontend_cancel_handler(),
+    no_wait=true,
+  ) catch {
+    err => raise Start(role="frontend command", detail=@debug.render(Repr(err)))
+  }
+}
+
+///|
+fn managed_frontend_command(
+  frontend_url : String?,
+  frontend_command : String?,
+  start_frontend : Bool,
+) -> String? raise DevConfigError {
   if !start_frontend {
     return None
   }
-  match command {
-    None => None
-    Some(command) => {
-      @output.info("Starting frontend: " + command)
-      @output.info("Frontend path: " + frontend_path)
-      let (program, args) = shell_command(command)
-      let process = @process.spawn(
-        group,
-        program,
-        args,
-        cwd=frontend_path,
-        extra_env=env,
-        cancel_handler=frontend_cancel_handler(),
-        no_wait=true,
-      ) catch {
-        err =>
-          raise Start(role="frontend command", detail=@debug.render(Repr(err)))
-      }
-      Some(process)
-    }
+  match (frontend_url, frontend_command) {
+    (Some(_), None) => raise FrontendCommandMissing
+    (_, command) => command
   }
 }
 
@@ -841,6 +719,20 @@ async fn validate_ready_probe(ready_path : String?) -> Unit {
         raise DevServerError::ReadyProbeUnavailable
       }
     None => ()
+  }
+}
+
+///|
+/// Rejects an occupied endpoint before Proton starts a managed frontend.
+async fn ensure_frontend_url_available(frontend_url : String?) -> Unit {
+  match frontend_url {
+    None => ()
+    Some(url) => {
+      let endpoint = parse_dev_url_endpoint(url, None)
+      if tcp_ready(endpoint.host, endpoint.port) {
+        raise FrontendUrlInUse(url~)
+      }
+    }
   }
 }
 
@@ -1083,7 +975,11 @@ async fn run_app(
     }
   }
   @output.info("Starting Proton app: moon " + moon_args.join(" "))
-  let (spawn_env, inherit_env) = dev_app_spawn_env(env)
+  let moon_env = @build.native_moon_process_env()
+  for key, value in env {
+    moon_env[key] = value
+  }
+  let (spawn_env, inherit_env) = dev_app_spawn_env(moon_env)
   let code = @process.run(
     "moon",
     moon_args,

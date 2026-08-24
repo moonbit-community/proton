@@ -48,12 +48,15 @@ fn unsupported_error_message() -> String {
 }
 
 ///|
-/// Converts a support probe into the public result form.
-fn ensure_supported_result(supported : Bool) -> Result[Unit, String] {
+/// Converts a support probe and its native diagnostic into the public result form.
+fn ensure_supported_result(
+  supported : Bool,
+  error_message : Bytes,
+) -> Result[Unit, String] {
   if supported {
     Ok(())
   } else {
-    Err(unsupported_error_message())
+    Err(decode_error_message(error_message, unsupported_error_message()))
   }
 }
 
@@ -66,7 +69,7 @@ fn read_text_result(
   error_message : Bytes,
 ) -> Result[String?, String] {
   if !supported {
-    Err(unsupported_error_message())
+    Err(decode_error_message(error_message, unsupported_error_message()))
   } else if error_code == 0 {
     Ok(decode_optional_text(bytes))
   } else {
@@ -82,7 +85,7 @@ fn write_text_result(
   error_message : Bytes,
 ) -> Result[Unit, String] {
   if !supported {
-    Err(unsupported_error_message())
+    Err(decode_error_message(error_message, unsupported_error_message()))
   } else if status == 0 {
     Ok(())
   } else {
@@ -101,7 +104,7 @@ fn read_text_with(
   if supported {
     read_text_result(true, read(), get_error_code(), get_error_message())
   } else {
-    Err(unsupported_error_message())
+    read_text_result(false, b"", 0, get_error_message())
   }
 }
 
@@ -116,7 +119,7 @@ fn write_text_with(
   if supported {
     write_text_result(true, write(@utf8.encode(text)), get_error_message())
   } else {
-    Err(unsupported_error_message())
+    write_text_result(false, 0, get_error_message())
   }
 }
 
@@ -148,9 +151,9 @@ pub fn is_supported() -> Bool {
 ///|
 /// Verifies that the current native platform is supported by this package.
 ///
-/// Returns `Ok(())` on supported platforms and an explanatory `Err(String)` on
-/// unsupported targets. Use this when you want to fail fast before attempting a
-/// clipboard read or write.
+/// Returns `Ok(())` when a backend is available and an explanatory `Err(String)`
+/// on unsupported targets or when required runtime tools are missing. Use this
+/// when you want to fail fast before attempting a clipboard read or write.
 ///
 /// This is a convenience wrapper around `is_supported()` for callers that
 /// prefer `Result`-based control flow.
@@ -165,7 +168,8 @@ pub fn is_supported() -> Bool {
 /// }
 /// ```
 pub fn ensure_supported() -> Result[Unit, String] {
-  ensure_supported_result(is_supported())
+  let supported = is_supported()
+  ensure_supported_result(supported, last_error_message_ffi())
 }
 
 ///|
@@ -192,11 +196,9 @@ pub fn ensure_supported() -> Result[Unit, String] {
 /// }
 /// ```
 pub fn read_text() -> Result[String?, String] {
+  let supported = is_supported()
   read_text_with(
-    is_supported(),
-    read_text_ffi,
-    last_error_code_ffi,
-    last_error_message_ffi,
+    supported, read_text_ffi, last_error_code_ffi, last_error_message_ffi,
   )
 }
 
@@ -219,5 +221,6 @@ pub fn read_text() -> Result[String?, String] {
 /// }
 /// ```
 pub fn write_text(text : String) -> Result[Unit, String] {
-  write_text_with(is_supported(), text, write_text_ffi, last_error_message_ffi)
+  let supported = is_supported()
+  write_text_with(supported, text, write_text_ffi, last_error_message_ffi)
 }

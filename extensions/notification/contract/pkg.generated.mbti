@@ -12,8 +12,6 @@ pub let activity : @proton_contract.Event[NotificationActivity]
 
 pub let click : @proton_contract.Event[NotificationClick]
 
-pub let drain_clicks : @proton_contract.Command[@proton_contract.EmptyRequest, NotificationDrainReply]
-
 pub let extension : @proton_contract.ExtensionContract
 
 pub let show : @proton_contract.Command[NotificationRequest, NotificationReply]
@@ -40,15 +38,6 @@ pub fn NotificationClick::from_json(Json, @json.JsonPath) -> Self raise @json.Js
 pub fn NotificationClick::not_equal(Self, Self) -> Bool
 pub fn NotificationClick::to_json(Self) -> Json
 pub fn NotificationClick::to_repr(Self) -> @debug.Repr
-
-pub(all) struct NotificationDrainReply {
-  count : Int
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn NotificationDrainReply::equal(Self, Self) -> Bool
-pub fn NotificationDrainReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn NotificationDrainReply::not_equal(Self, Self) -> Bool
-pub fn NotificationDrainReply::to_json(Self) -> Json
-pub fn NotificationDrainReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NotificationReply {
   shown : Bool

@@ -1,7 +1,9 @@
 ///|
+#cfg(target="native")
 let windows_icon_error_buffer_length = 1024
 
 ///|
+#cfg(target="native")
 #borrow(executable, icon, error_buffer)
 extern "C" fn set_windows_executable_icon_ffi(
   executable : Bytes,
@@ -23,6 +25,7 @@ fn first_windows_icon(icons : Array[String]) -> String? {
 }
 
 ///|
+#cfg(target="native")
 async fn stage_windows_icon(spec : PackageSpec, executable : String) -> Unit {
   guard first_windows_icon(spec.icons) is Some(icon) else { return }
   guard path_is_file(icon) else {
@@ -52,4 +55,17 @@ async fn stage_windows_icon(spec : PackageSpec, executable : String) -> Unit {
       },
     )
   }
+}
+
+///|
+#cfg(target="wasm")
+fn stage_windows_icon(
+  spec : PackageSpec,
+  _executable : String,
+) -> Unit raise WindowsPackagingError {
+  guard first_windows_icon(spec.icons) is Some(_) else { return }
+  raise WindowsPackagingError::ToolFailure(
+    stage="embed Windows application icon",
+    detail="Windows icon embedding requires the native proton_package backend",
+  )
 }

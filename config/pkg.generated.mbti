@@ -6,15 +6,11 @@ import {
 }
 
 // Values
-pub fn load_project_config_from_file(String) -> LoadedProjectConfig raise ProjectConfigError
+pub fn load_project_config_from_file(String) -> ProjectConfig raise ProjectConfigError
 
-pub fn load_project_config_from_json(Json, String) -> LoadedProjectConfig raise ProjectConfigError
+pub fn load_project_config_from_json(Json, String) -> ProjectConfig raise ProjectConfigError
 
-pub fn load_project_config_from_text(String, String, name? : String) -> LoadedProjectConfig raise ProjectConfigError
-
-pub fn read_moon_mod_metadata(String) -> MoonModMetadata
-
-pub fn read_nearest_moon_mod_metadata(String) -> MoonModMetadata
+pub fn load_project_config_from_text(String, String, name? : String) -> ProjectConfig raise ProjectConfigError
 
 // Errors
 pub(all) suberror ProjectConfigError {
@@ -26,7 +22,6 @@ pub(all) suberror ProjectConfigError {
   DuplicateValue(path~ : String, value~ : String)
   UnknownField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)
-  UnsupportedField(path~ : String, reason~ : String)
   UnsupportedValue(path~ : String, value~ : String)
 } derive(Eq, @debug.Debug)
 pub fn ProjectConfigError::equal(Self, Self) -> Bool
@@ -37,42 +32,6 @@ pub fn ProjectConfigError::to_repr(Self) -> @debug.Repr
 pub fn ProjectConfigError::to_string(Self) -> String
 
 // Types and methods
-pub(all) struct LoadedProjectConfig {
-  config : ProjectConfig
-  warnings : Array[String]
-} derive(Eq, @debug.Debug)
-pub fn LoadedProjectConfig::config(Self) -> ProjectConfig
-pub fn LoadedProjectConfig::equal(Self, Self) -> Bool
-pub fn LoadedProjectConfig::new(ProjectConfig, warnings? : Array[String]) -> Self
-pub fn LoadedProjectConfig::not_equal(Self, Self) -> Bool
-pub fn LoadedProjectConfig::to_repr(Self) -> @debug.Repr
-pub fn LoadedProjectConfig::warnings(Self) -> Array[String]
-
-pub(all) struct MoonModMetadata {
-  root_dir : String?
-  name : String?
-  version : String?
-  description : String?
-  license : String?
-  repository : String?
-  readme : String?
-  keywords : Array[String]
-} derive(Eq, @debug.Debug)
-pub fn MoonModMetadata::equal(Self, Self) -> Bool
-pub fn MoonModMetadata::not_equal(Self, Self) -> Bool
-pub fn MoonModMetadata::to_repr(Self) -> @debug.Repr
-
-pub(all) struct ProjectAppWindowConfig {
-  id : String
-  window : ProjectWindowConfig
-  entry : ProjectEntry
-  open_on_start : Bool
-} derive(Eq, @debug.Debug)
-pub fn ProjectAppWindowConfig::equal(Self, Self) -> Bool
-pub fn ProjectAppWindowConfig::new(String, ProjectWindowConfig, ProjectEntry, open_on_start? : Bool) -> Self
-pub fn ProjectAppWindowConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectAppWindowConfig::to_repr(Self) -> @debug.Repr
-
 pub(all) struct ProjectBackendConfig {
   path : String
   app_package : String
@@ -84,54 +43,20 @@ pub fn ProjectBackendConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectBackendConfig::path(Self) -> String
 pub fn ProjectBackendConfig::to_repr(Self) -> @debug.Repr
 
-pub(all) struct ProjectBundleConfig {
-  active : Bool
-  targets : Array[String]
-  icon : Array[String]
-  resources : Array[String]
-  sign : ProjectSignConfig?
-  url_schemes : Array[String]
-  document_types : Array[ProjectDocumentType]
-  output : String
-} derive(Eq, @debug.Debug)
-pub fn ProjectBundleConfig::active(Self) -> Bool
-pub fn ProjectBundleConfig::equal(Self, Self) -> Bool
-pub fn ProjectBundleConfig::new(active? : Bool, targets? : Array[String], icon? : Array[String], resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String) -> Self
-pub fn ProjectBundleConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectBundleConfig::output(Self) -> String
-pub fn ProjectBundleConfig::to_repr(Self) -> @debug.Repr
-
 pub(all) struct ProjectConfig {
   base_dir : String
-  window : ProjectWindowConfig
-  entry : ProjectEntry
-  windows : Array[ProjectAppWindowConfig]
-  metadata : ProjectMetadata
   backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
-  bundle : ProjectBundleConfig?
-  updater : ProjectUpdaterConfig?
-  permissions : Array[ProjectPermissionGrant]
-  debug : Int
-  single_instance : Bool
+  package_config : ProjectPackageConfig?
 } derive(Eq, @debug.Debug)
 pub fn ProjectConfig::backend(Self) -> ProjectBackendConfig?
 pub fn ProjectConfig::base_dir(Self) -> String
-pub fn ProjectConfig::bundle(Self) -> ProjectBundleConfig?
-pub fn ProjectConfig::debug(Self) -> Int
-pub fn ProjectConfig::entries(Self) -> Array[ProjectEntry]
-pub fn ProjectConfig::entry(Self) -> ProjectEntry
 pub fn ProjectConfig::equal(Self, Self) -> Bool
 pub fn ProjectConfig::frontend(Self) -> ProjectFrontendConfig?
-pub fn ProjectConfig::metadata(Self) -> ProjectMetadata
-pub fn ProjectConfig::new(String, ProjectWindowConfig, ProjectEntry, ProjectMetadata, windows? : Array[ProjectAppWindowConfig], backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, bundle? : ProjectBundleConfig?, updater? : ProjectUpdaterConfig?, permissions? : Array[ProjectPermissionGrant], debug? : Int, single_instance? : Bool) -> Self
+pub fn ProjectConfig::new(String, backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, package_config? : ProjectPackageConfig?) -> Self
 pub fn ProjectConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectConfig::permissions(Self) -> Array[ProjectPermissionGrant]
-pub fn ProjectConfig::single_instance(Self) -> Bool
+pub fn ProjectConfig::package_config(Self) -> ProjectPackageConfig?
 pub fn ProjectConfig::to_repr(Self) -> @debug.Repr
-pub fn ProjectConfig::updater(Self) -> ProjectUpdaterConfig?
-pub fn ProjectConfig::window(Self) -> ProjectWindowConfig
-pub fn ProjectConfig::windows(Self) -> Array[ProjectAppWindowConfig]
 
 pub(all) struct ProjectDocumentType {
   name : String
@@ -143,16 +68,6 @@ pub fn ProjectDocumentType::extensions(Self) -> Array[String]
 pub fn ProjectDocumentType::new(String, Array[String], role? : String) -> Self
 pub fn ProjectDocumentType::not_equal(Self, Self) -> Bool
 pub fn ProjectDocumentType::to_repr(Self) -> @debug.Repr
-
-pub(all) enum ProjectEntry {
-  Html(String)
-  Url(String)
-  File(String)
-  Asset(String)
-} derive(Eq, @debug.Debug)
-pub fn ProjectEntry::equal(Self, Self) -> Bool
-pub fn ProjectEntry::not_equal(Self, Self) -> Bool
-pub fn ProjectEntry::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ProjectFrontendConfig {
   dev_url : String?
@@ -171,28 +86,30 @@ pub fn ProjectFrontendConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectFrontendConfig::path(Self) -> String?
 pub fn ProjectFrontendConfig::to_repr(Self) -> @debug.Repr
 
-pub(all) struct ProjectMetadata {
+pub(all) struct ProjectPackageConfig {
   product_name : String
-  identifier : String?
-  version : String?
-  description : String?
-  license : String?
+  identifier : String
+  version : String
+  formats : Array[String]
+  icons : Array[String]
+  resources : Array[String]
+  sign : ProjectSignConfig?
+  url_schemes : Array[String]
+  document_types : Array[ProjectDocumentType]
+  output : String
 } derive(Eq, @debug.Debug)
-pub fn ProjectMetadata::equal(Self, Self) -> Bool
-pub fn ProjectMetadata::new(String, identifier? : String?, version? : String?, description? : String?, license? : String?) -> Self
-pub fn ProjectMetadata::not_equal(Self, Self) -> Bool
-pub fn ProjectMetadata::to_repr(Self) -> @debug.Repr
-
-pub(all) struct ProjectPermissionGrant {
-  window : String
-  origin : String
-  extension : String
-  scope : Json
-} derive(Eq, @debug.Debug)
-pub fn ProjectPermissionGrant::equal(Self, Self) -> Bool
-pub fn ProjectPermissionGrant::new(String, String, String, scope? : Json) -> Self
-pub fn ProjectPermissionGrant::not_equal(Self, Self) -> Bool
-pub fn ProjectPermissionGrant::to_repr(Self) -> @debug.Repr
+pub fn ProjectPackageConfig::document_types(Self) -> Array[ProjectDocumentType]
+pub fn ProjectPackageConfig::equal(Self, Self) -> Bool
+pub fn ProjectPackageConfig::formats(Self) -> Array[String]
+pub fn ProjectPackageConfig::icons(Self) -> Array[String]
+pub fn ProjectPackageConfig::new(String, String, String, formats? : Array[String], icons? : Array[String], resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String) -> Self
+pub fn ProjectPackageConfig::not_equal(Self, Self) -> Bool
+pub fn ProjectPackageConfig::output(Self) -> String
+pub fn ProjectPackageConfig::resources(Self) -> Array[String]
+pub fn ProjectPackageConfig::sign(Self) -> ProjectSignConfig?
+pub fn ProjectPackageConfig::to_repr(Self) -> @debug.Repr
+pub fn ProjectPackageConfig::url_schemes(Self) -> Array[String]
+pub fn ProjectPackageConfig::version(Self) -> String
 
 pub(all) struct ProjectSignConfig {
   binaries : Array[String]
@@ -202,53 +119,6 @@ pub fn ProjectSignConfig::equal(Self, Self) -> Bool
 pub fn ProjectSignConfig::new(binaries? : Array[String]) -> Self
 pub fn ProjectSignConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectSignConfig::to_repr(Self) -> @debug.Repr
-
-pub(all) enum ProjectTitlebarStyle {
-  TitlebarDefault
-  TitlebarOverlay
-} derive(Eq, @debug.Debug)
-pub fn ProjectTitlebarStyle::equal(Self, Self) -> Bool
-pub fn ProjectTitlebarStyle::not_equal(Self, Self) -> Bool
-pub fn ProjectTitlebarStyle::to_repr(Self) -> @debug.Repr
-
-pub(all) struct ProjectUpdaterConfig {
-  active : Bool
-  endpoint : String
-  public_keys : Array[String]
-  check_on_launch : Bool
-  freshness_days : Int
-} derive(Eq, @debug.Debug)
-pub fn ProjectUpdaterConfig::checks_on_launch(Self) -> Bool
-pub fn ProjectUpdaterConfig::endpoint(Self) -> String
-pub fn ProjectUpdaterConfig::equal(Self, Self) -> Bool
-pub fn ProjectUpdaterConfig::freshness_days(Self) -> Int
-pub fn ProjectUpdaterConfig::is_active(Self) -> Bool
-pub fn ProjectUpdaterConfig::new(String, Array[String], active? : Bool, check_on_launch? : Bool, freshness_days? : Int) -> Self
-pub fn ProjectUpdaterConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectUpdaterConfig::public_keys(Self) -> Array[String]
-pub fn ProjectUpdaterConfig::to_repr(Self) -> @debug.Repr
-
-pub(all) struct ProjectWindowConfig {
-  title : String
-  width : Int
-  height : Int
-  size_hint : ProjectWindowSizeHint
-  titlebar_style : ProjectTitlebarStyle
-} derive(Eq, @debug.Debug)
-pub fn ProjectWindowConfig::equal(Self, Self) -> Bool
-pub fn ProjectWindowConfig::new(String, Int, Int, size_hint? : ProjectWindowSizeHint, titlebar_style? : ProjectTitlebarStyle) -> Self
-pub fn ProjectWindowConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectWindowConfig::to_repr(Self) -> @debug.Repr
-
-pub(all) enum ProjectWindowSizeHint {
-  WindowSizeNone
-  WindowSizeMin
-  WindowSizeMax
-  WindowSizeFixed
-} derive(Eq, @debug.Debug)
-pub fn ProjectWindowSizeHint::equal(Self, Self) -> Bool
-pub fn ProjectWindowSizeHint::not_equal(Self, Self) -> Bool
-pub fn ProjectWindowSizeHint::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

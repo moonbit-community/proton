@@ -1,8 +1,31 @@
 ///|
+fn window_operation_failed(
+  action : String,
+  error : @native.NativeError,
+) -> WindowSessionError {
+  OperationFailed(action~, status=error.status(), detail=error.message())
+}
+
+///|
+fn runtime_operation_failed(
+  action : String,
+  error : @native.NativeError,
+) -> AppRunError {
+  RuntimeOperationFailed(action~, status=error.status(), detail=error.message())
+}
+
+///|
+fn entry_platform_load_failed(
+  action : String,
+  error : @native.NativeError,
+) -> AppEntryError {
+  PlatformLoad(action~, status=error.status(), detail=error.message())
+}
+
+///|
 pub fn AppConfigurationError::message(self : AppConfigurationError) -> String {
   match self {
     InvalidSetting(name~, message~) => name + ": " + message
-    Bootstrap(error) => error.message()
     ExtensionDependencyCycle(extension_id~) =>
       "command extension dependency cycle detected at: " + extension_id
     ExtensionUnavailable(extension_id~, requested_by~, state~) =>
@@ -46,7 +69,8 @@ pub fn AppEntryError::message(self : AppEntryError) -> String {
   match self {
     ReadFailed(path~, detail~) =>
       "failed to read HTML entry " + path + ": " + detail
-    NativeLoad(action~, error~) => action + " failed: " + error.message()
+    PlatformLoad(action~, status~, detail~) =>
+      action + " failed (" + status.to_string() + "): " + detail
     ClosedDuringStartup => "window closed before startup completed"
   }
 }
@@ -108,8 +132,10 @@ pub fn AppCleanupError::message(self : AppCleanupError) -> String {
   match self {
     CommandExtension(error) => error.message()
     LifecycleHook(error) => error.message()
-    WindowDestroy(error) => "failed to destroy window: " + error.message()
-    RuntimeDestroy(error) => "failed to destroy runtime: " + error.message()
+    WindowDestroy(status~, detail~) =>
+      "failed to destroy window (" + status.to_string() + "): " + detail
+    RuntimeDestroy(status~, detail~) =>
+      "failed to destroy runtime (" + status.to_string() + "): " + detail
   }
 }
 
@@ -131,7 +157,8 @@ pub fn WindowSessionError::message(self : WindowSessionError) -> String {
     AlreadyExists(id~) => "view already exists in its window: " + id
     StaleView(id~) => "view instance is no longer active: " + id
     Cancelled => "window operation was cancelled"
-    OperationFailed(action~, error~) => action + " failed: " + error.message()
+    OperationFailed(action~, status~, detail~) =>
+      action + " failed (" + status.to_string() + "): " + detail
     StartupFailed(id~, error~) =>
       "failed to open window " + id + ": " + error.message()
   }
@@ -144,6 +171,22 @@ impl Show for WindowSessionError with fn output(self, logger) {
 
 ///|
 pub extend WindowSessionError with Show::{to_string, output}
+
+///|
+pub fn ScreenQueryError::message(self : ScreenQueryError) -> String {
+  match self {
+    QueryFailed(status~, detail~) =>
+      "failed to query screens (" + status.to_string() + "): " + detail
+  }
+}
+
+///|
+impl Show for ScreenQueryError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+pub extend ScreenQueryError with Show::{to_string, output}
 
 ///|
 fn cleanup_failure_message(
@@ -175,8 +218,13 @@ pub fn AppRunError::message(self : AppRunError) -> String {
     UnsupportedNativeFeature(feature~) =>
       "the active Proton native runtime does not support required feature: " +
       feature
-    NativeRuntimeError(action~, error~) =>
-      "native runtime failed during " + action + ": " + error.message()
+    RuntimeOperationFailed(action~, status~, detail~) =>
+      "runtime failed during " +
+      action +
+      " (" +
+      status.to_string() +
+      "): " +
+      detail
     CommandExtensionLifecycleError(error) =>
       "command extension lifecycle failed: " + error.message()
     LifecycleHookError(error) =>

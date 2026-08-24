@@ -5,14 +5,12 @@ Run commands from the repository root.
 Install or assemble the native runtime first:
 
 ```powershell
-moon -C cli run . -- -C .. cef setup
-$runtime = (Get-Content .proton\runtime.json | ConvertFrom-Json).dist
+$runtime = moon -C cefsetup run . --target native | Select-Object -Last 1
 $env:PATH = (Resolve-Path "$runtime\bin").Path + ';' + $env:PATH
 ```
 
 ```sh
-moon -C cli run . -- -C .. cef setup
-runtime="$(node -e "const path=require('path');const value=JSON.parse(require('fs').readFileSync('.proton/runtime.json','utf8')).dist;process.stdout.write(path.resolve(value))")"
+runtime="$(moon -C cefsetup run . --target native | tail -n 1)"
 export PATH="$runtime/bin:$PATH"
 ```
 
@@ -43,30 +41,32 @@ moon -C examples run 01_run --target native
 ## Groups
 
 - `01_run`: minimal app-style startup through `moonbit-community/proton`
-- `02_*` through `18_*`: root-facade examples that compile against the native
-  DLL route (`02_local`, `03_remote`, `12_embed`, `17_extension`,
-  `18_extension_fs`).
+- `02_local`, `03_remote`, and `12_embed`: root-facade entry variants.
+- `18_extension_fs`: command-extension filesystem integration.
 - `19_*` through `35_*`: extension and app-capability examples for filesystem,
   path, shell, desktop integration, notification, tray, hotkey, auto-launch,
   keepawake, and microphone behavior.
+- `22_app_builder`: window, file entry, size, and debug behavior declared with
+  the MoonBit App builder.
 - `25_app_system`: combined notification, tray, and global-hotkey runtime with
   tray support reporting and menu items that trigger visible app actions.
 - `28_app_tray`: focused tray support reporting, lifecycle, tooltip/icon update,
   flat menu, menu-item events, and platform-specific tray-icon click events.
-- `37_native_mvp`: direct native-window MVP smoke for the native DLL route.
+- `37_native_mvp`: direct native-window MVP smoke for the source-built runtime.
 - `38_*` and `39_*`: inline HTML command-extension proxy examples backed by the
-  native DLL bridge.
-- `40_event_broadcast`: command-extension event broadcast over the native DLL
+  source-built native bridge.
+- `40_event_broadcast`: command-extension event broadcast over the source-built native
   bridge.
-- `41_app_commands`: current `core.invokeOp` bridge example and E2E fixture for the native DLL
+- `41_app_commands`: current `core.invokeOp` bridge example and E2E fixture for the source-built native
   route.
 - `app_commands_fixture`: non-runnable shared implementation used by
   `41_app_commands` and the MoonBit E2E suite.
 - `e2e_fixtures`: non-runnable shared scenario implementations used by the
   MoonBit E2E suite (`e2e/`).
 - `42_attribute_codegen_commands`: generated command metadata plus generated
-  event helper over the native DLL bridge.
-- `44_project_config`: `proton.project.json` project config decoding
+  event helper over the source-built native bridge.
+- `44_app_activation`: single-instance URL and document activation configured
+  through the App builder.
 - `45_bridge_multi_window`: typed facade multi-window bridge E2E example.
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
 - `47_dev_extension_js`: Vite dev-server injection smoke for extension
@@ -91,9 +91,9 @@ moon -C examples run 01_run --target native
 - `56_i18n`: one explicit application locale observed through MoonBit command
   context, CEF `navigator.languages`, and localized typed native menus.
 
-All runnable examples should import `moonbit-community/proton`. `proton.project.json`
-configures app settings such as window, entry, debug, frontend, and bundle
-metadata.
+All runnable examples should import `moonbit-community/proton`. Runtime behavior
+is configured through the App builder; `proton.project.json` is present only
+when an example needs CLI frontend/build or package metadata.
 
 Tray v1 is implemented by the `tray` extension through `moonbit-community/proton_tray`; Proton
 native C does not expose a tray ABI. Windows is the baseline for tray-icon

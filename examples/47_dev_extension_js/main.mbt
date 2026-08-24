@@ -116,5 +116,13 @@ async fn run_ticker(
 
 ///|
 async fn main {
-  @proton.app().expose(ticker_extension()).run_or_abort()
+  @proton.asset(
+    "Proton Dev Extension JS",
+    "frontend/dist/index.html",
+    width=900,
+    height=620,
+  )
+  .single_instance("com.justjavac.proton.dev-extension-js")
+  .expose(ticker_extension())
+  .run_or_abort()
 }

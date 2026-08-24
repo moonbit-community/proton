@@ -1,16 +1,7 @@
 import {
-  "moonbit-community/proton_cli/fsutil",
-  "moonbit-community/proton_cli/output",
-  "moonbitlang/async",
-  "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/async/process",
+  "moonbit-community/proton_cli/build_cmd" @build,
+  "moonbit-community/proton_cefsetup/store" @cef_store,
   "moonbitlang/core/argparse",
-  "moonbitlang/core/debug",
-  "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/env",
-  "moonbitlang/core/json",
-  "moonbitlang/x/crypto",
-  "moonbitlang/x/path",
 }
 
 supported_targets = "native+wasm"

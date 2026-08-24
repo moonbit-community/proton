@@ -12,20 +12,14 @@ node ./scripts/embed_asset.mjs <input> <output> <identifier>
 
 ## `verify_generated.mjs`
 
-Checks release metadata and prebuilt ABI metadata, checks the host platform's
-prebuilt exports, then checks that committed generated MoonBit files match
-their sources. It builds the standalone `proton_codegen` WASM executable,
-writes fresh outputs to a temp directory, and compares them against the
-repository.
+Checks release metadata and that committed generated MoonBit and native bridge
+files match their sources. It builds the standalone `proton_codegen` WASM
+executable, writes fresh outputs to a temp directory, and compares them against
+the repository.
 
 ```sh
 node ./scripts/verify_generated.mjs
 ```
-
-CI passes `--skip-prebuilt-abi` because each matrix runner verifies its own
-prebuilt in the following platform-specific step. The flag retains metadata
-validation and generated-file comparison; it skips only dynamic-library symbol
-inspection. Release validation should keep using the default command.
 
 Run this before publishing `proton` or `proton_ext`, and after changing any of:
 
@@ -39,10 +33,9 @@ put `dev_build` or repository-relative codegen rules back into `proton` or
 
 ## `verify_release_metadata.mjs`
 
-Checks that `proton/prebuilt/*/manifest.json` and the `proton new` template
-default version match `proton/moon.mod`. It also checks the published-module
-dependency chain from `proton_config` into `proton` and `proton_cli`, plus the
-CLI's embedded version string.
+Checks that the `proton new` template default version matches `proton/moon.mod`.
+It also checks the published-module dependency chain from `proton_config` into
+`proton` and `proton_cli`, plus the CLI's embedded version string.
 
 ```sh
 node ./scripts/verify_release_metadata.mjs
@@ -62,43 +55,6 @@ moon run scripts/bump_version.mbtx -- minor
 moon run scripts/bump_version.mbtx -- major
 ```
 
-## `verify_prebuilt_abi.mjs`
-
-With `--metadata-only`, checks every shipped Proton prebuilt manifest, declared
-artifact, and public header. Pass a platform id to validate only that platform's
-staged artifacts and inspect its dynamic-library exports against the
-`PROTON_API` declarations in `native/include/proton_native.h`:
-
-```sh
-node ./scripts/verify_prebuilt_abi.mjs --metadata-only
-node ./scripts/verify_prebuilt_abi.mjs darwin-arm64
-node ./scripts/verify_prebuilt_abi.mjs linux-x64
-node ./scripts/verify_prebuilt_abi.mjs win32-x64
-```
-
-CI runs the matching symbol check on each platform. Unix builds hide internal
-symbols by default, while `PROTON_API` remains the public ABI export marker.
-Any extra `proton_*` export fails; platform-specific exceptions are not part of
-the shipped ABI. The Windows check also requires the DLL and helper's embedded
-source hashes to match their current build inputs.
-
-## `prebuilt_source_hash.mjs`
-
-Computes, records, and verifies a SHA-256 hash of every repository input used
-to build each platform's prebuilt runtime. The native-host build workflows
-record the hash after staging their artifacts. Ordinary CI verifies all three
-manifest hashes, and the Windows ABI check verifies the hash embedded in its
-shipped binaries:
-
-```sh
-node ./scripts/prebuilt_source_hash.mjs --print win32-x64
-node ./scripts/prebuilt_source_hash.mjs --record darwin-arm64
-node ./scripts/prebuilt_source_hash.mjs --verify
-```
-
-Do not record a hash without rebuilding and testing that platform's staged
-runtime first.
-
 Bridge E2E coverage lives in the `e2e/` MoonBit module. Run the complete
 self-hosted suite with `moon -C e2e test`; no JavaScript bridge-smoke wrapper is
 required.
@@ -113,11 +69,11 @@ process shutdown. This is a source-integration test: it replaces unpublished
 registry dependencies in the temporary project with modules from this checkout.
 It does not prove that the generated registry dependencies are published.
 
-Build and install the native runtime first. Warren is resolved by `moonx` from
-the generated project configuration:
+Warren is resolved by `moonx` from the generated project configuration. The
+script configures the shared CEF runtime itself:
 
 ```sh
-PROTON_NATIVE_DIST="$PWD/native/dist" node ./scripts/e2e_scaffold_source_smoke.mjs
+node ./scripts/e2e_scaffold_source_smoke.mjs
 ```
 
 ## `e2e_scaffold_registry_smoke.mjs`
