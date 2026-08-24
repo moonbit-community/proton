@@ -199,7 +199,6 @@ pub(all) enum BridgeResponse {
   Ok(request_id~ : Int64, payload~ : Json)
   Err(request_id~ : Int64, code~ : String, message~ : String)
 } derive(@debug.Debug)
-pub fn BridgeResponse::to_json_string(Self) -> String
 pub fn BridgeResponse::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BrowserPolicy {

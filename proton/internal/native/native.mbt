@@ -951,10 +951,19 @@ pub fn Runtime::respond_bridge_request(
   self : Runtime,
   response : BridgeResponse,
 ) -> Unit raise NativeError {
+  let (request_id, ok, body_json) = match response {
+    Ok(request_id~, payload~) => (request_id, 1, payload.stringify())
+    Err(request_id~, code~, message~) => {
+      let error : Json = { "code": code, "message": message }
+      (request_id, 0, error.stringify())
+    }
+  }
   check_status(
-    @native_ffi.proton_runtime_respond_bridge_request_json_ffi(
+    @native_ffi.proton_runtime_respond_bridge_request_ffi(
       self.active_handle(),
-      @ffi.to_cstr(response.to_json_string()),
+      request_id,
+      ok,
+      @ffi.to_cstr(body_json),
     ),
   )
 }

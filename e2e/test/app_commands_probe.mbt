@@ -26,6 +26,7 @@ struct AppCommandsProbeResult {
   ping_source : String
   sum_total : Int
   sum_source : String
+  string_result : String
   unknown_rejected : Bool
   unknown_message : String
   fail_rejected : Bool
@@ -231,6 +232,7 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
       #|    right: 22,
       #|    delay_ms: 50,
       #|  });
+      #|  const stringResult = await invoke("ext:appCommands/stringResult", {});
       #|  let unknown_rejected = false;
       #|  let unknown_message = "";
       #|  try {
@@ -267,6 +269,7 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
       #|    ping_source: ping?.source || "",
       #|    sum_total: sum?.total || 0,
       #|    sum_source: sum?.source || "",
+      #|    string_result: stringResult,
       #|    unknown_rejected,
       #|    unknown_message,
       #|    fail_rejected,
@@ -291,6 +294,9 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
   }
   guard result.sum_total == 42 && result.sum_source == "commands" else {
     fail("unexpected slowAdd result: " + value.stringify())
+  }
+  guard result.string_result == "Cancelled" else {
+    fail("unexpected string result: " + value.stringify())
   }
   guard result.unknown_rejected &&
     result.unknown_message.contains("bridge op is not registered") else {

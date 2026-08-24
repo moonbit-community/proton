@@ -110,6 +110,11 @@ let fail_command : @proton_contract.Command[FailPayload, String] = app_contract.
 )
 
 ///|
+let string_result_command : @proton_contract.Command[PingPayload, String] = app_contract.command(
+  "stringResult",
+)
+
+///|
 let report_probe_command : @proton_contract.Command[
   ReportProbePayload,
   ReportProbeReply,
@@ -142,6 +147,11 @@ fn fail(payload : FailPayload) -> String raise AppCommandError {
 }
 
 ///|
+fn string_result(_payload : PingPayload) -> String {
+  "Cancelled"
+}
+
+///|
 fn report_probe(payload : ReportProbePayload) -> ReportProbeReply {
   println("[app-commands] " + payload.report)
   ReportProbeReply::{ ok: true, }
@@ -152,6 +162,9 @@ fn register_app_commands(registrar : @proton.CommandRegistrar) -> Unit raise {
   registrar.bind(ping_command, (_context, payload) => ping(payload))
   registrar.bind(slow_add_command, (_context, payload) => slow_add(payload))
   registrar.bind(fail_command, (_context, payload) => fail(payload))
+  registrar.bind(string_result_command, (_context, payload) => {
+    string_result(payload)
+  })
   registrar.bind(report_probe_command, (_context, payload) => {
     report_probe(payload)
   })
@@ -165,6 +178,7 @@ fn app_commands_extension() -> @proton_extension.Extension {
       ping_command.contract_route(),
       slow_add_command.contract_route(),
       fail_command.contract_route(),
+      string_result_command.contract_route(),
       report_probe_command.contract_route(),
     ],
     fn(registrar) raise { register_app_commands(registrar) },
