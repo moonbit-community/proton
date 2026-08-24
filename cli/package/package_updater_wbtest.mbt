@@ -88,3 +88,23 @@ test "a malformed fragment is caught at package time" {
   )
   assert_true(decode_failure(bad_instant) is UndecodableFragment(_))
 }
+
+///|
+test "updater metadata selects an artifact returned by the packager" {
+  let artifacts = ["/tmp/Draw.app", "/tmp/Draw.dmg", "/tmp/Draw.app.zip"]
+  assert_eq(
+    updater_artifact_path(artifacts, "darwin-arm64"),
+    Some("/tmp/Draw.app.zip"),
+  )
+  assert_eq(
+    updater_artifact_path(
+      ["C:\\dist\\draw.zip", "C:\\dist\\draw-setup.exe"],
+      "win32-x64",
+    ),
+    Some("C:\\dist\\draw-setup.exe"),
+  )
+  assert_eq(
+    updater_artifact_path(["/tmp/draw.AppImage"], "linux-x64"),
+    Some("/tmp/draw.AppImage"),
+  )
+}

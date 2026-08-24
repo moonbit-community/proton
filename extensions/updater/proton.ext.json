@@ -1,8 +1,9 @@
 {
   "id": "moonbit-community/proton-updater",
   "namespace": "updater",
+  "moonbit_import_path": "moonbit-community/proton_ext/updater",
   "package": "@moonbit-community/proton-updater",
-  "version": "0.1.0",
+  "version": "0.1.19",
   "display_name": "Updater",
   "description": "Lets a page ask whether an update exists and ask for it to be taken.",
   "platforms": [

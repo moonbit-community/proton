@@ -88,4 +88,4 @@ Useful environment variables:
 - `MBT_CDP_E2E_PROFILE`: profile directory for launch-based E2E.
 
 The E2E flow checks discovery, target creation, target attach, Page/Runtime/DOM
-and Network commands, event buffering, and cleanup.
+and Network commands, event dispatch, and cleanup.

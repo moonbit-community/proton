@@ -1,5 +1,7 @@
 {
   "id": "moonbit-community/proton-clipboard",
   "namespace": "clipboard",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton_ext/clipboard",
   "package": "@moonbit-community/proton-clipboard"
 }

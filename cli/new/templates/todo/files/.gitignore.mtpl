@@ -3,6 +3,5 @@ _build/
 dist/
 .mooncakes/
 .moonagent/
-.proton/
 frontend/dist/
 backend/todo/commands.g.mbt

@@ -9,7 +9,7 @@
 /// nothing is watching.
 async fn main {
   if @env.get_env_var("PROTON_E2E_ROLE") == Some("update") &&
-    @native.update_current_revision() == 1UL {
+    @updater.current_revision() == 1UL {
     run_update() catch {
       error => {
         println("failed: \{error}")
@@ -22,7 +22,7 @@ async fn main {
       "\{bundle}/Contents/Resources/version",
     )
     report_launch(bundle, version)
-    @native.update_cleanup_previous() catch {
+    @updater.cleanup_previous() catch {
       error => report_launch(bundle, "cleanup failed: " + error.message())
     }
   }
@@ -57,7 +57,7 @@ async fn run_update() -> Unit {
   // the new version.
   let bundle = running_bundle()
   let text = @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version")
-  let current_revision = @native.update_current_revision()
+  let current_revision = @updater.current_revision()
   report_launch(bundle, text)
   println("running \{text}")
   let channel = @updater.UpdateChannel::new(

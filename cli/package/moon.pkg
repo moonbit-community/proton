@@ -1,12 +1,11 @@
 import {
+  "moonbit-community/proton_bundle" @bundle,
   "moonbit-community/proton_config",
+  "moonbit-community/proton_package/lib" @packager,
   "moonbit-community/proton_updater" @updater,
   "moonbit-community/proton_cli/build_cmd" @build,
-  "moonbit-community/proton_cli/cef",
   "moonbit-community/proton_cli/fsutil",
-  "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
-  "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/env",
@@ -18,7 +17,3 @@ import {
 }
 
 supported_targets = "native+wasm"
-
-options(
-  "native-stub": [ "package_windows_icon.c" ],
-)

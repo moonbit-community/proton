@@ -109,36 +109,33 @@ pub extend DevExtensionReloadProbe with FromJson::{from_json}
 
 ///|
 async fn run_dev_extension_page_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   frontend_url : String,
   output_root : String,
   timeout : Int,
 ) -> Unit {
-  let page = connect_spawned_page(app, target, timeout)
-  let mut page_open = true
-  defer (if page_open { page.close() })
-  ignore(page.send_schema_command("Runtime.enable"))
+  let page = connect_spawned_page(tasks, app, target, timeout)
   wait_for_ready(page, dev_extension_ready_expression(), timeout)
   let value = evaluate_json(page, dev_extension_probe_expression(), true)
   let result : DevExtensionProbe = decode_probe(value, "dev extension")
   assert_dev_extension_probe(result, frontend_url, value)
-  run_dev_extension_reload_probe(page, target, frontend_url, timeout)
-  page_open = false
-  run_dev_extension_non_proton_probe(target, output_root, timeout)
+  run_dev_extension_reload_probe(page, frontend_url, timeout)
+  page.close()
+  run_dev_extension_non_proton_probe(tasks, target, output_root, timeout)
   assert_dev_extension_native_log(app.native_log_path)
   println("MoonBit 47_dev_extension_js dev probe passed")
 }
 
 ///|
 async fn run_dev_extension_production_page_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   timeout : Int,
 ) -> Unit {
-  let page = connect_spawned_page(app, target, timeout)
-  defer page.close()
-  ignore(page.send_schema_command("Runtime.enable"))
+  let page = connect_spawned_page(tasks, app, target, timeout)
   wait_for_ready(page, dev_extension_ready_expression(), timeout) catch {
     error =>
       fail(error.to_string() + dev_extension_ready_diagnostic_suffix(page, app))
@@ -163,7 +160,7 @@ fn dev_extension_ready_expression() -> String {
 
 ///|
 async fn dev_extension_ready_diagnostic_suffix(
-  page : @client.CdpClient,
+  page : @page.Page,
   app : SpawnedScenarioApp,
 ) -> String {
   let page_diagnostic = evaluate_json(
@@ -296,12 +293,10 @@ fn dev_extension_production_probe_expression() -> String {
 
 ///|
 async fn run_dev_extension_reload_probe(
-  page : @client.CdpClient,
-  target : String,
+  page : @page.Page,
   frontend_url : String,
   timeout : Int,
 ) -> Unit {
-  ignore(page.send_schema_command("Page.enable"))
   ignore(
     evaluate_json(
       page,
@@ -317,12 +312,8 @@ async fn run_dev_extension_reload_probe(
       false,
     ),
   )
-  ignore(page.send_cdp_command("Page.reload"))
-  page.close()
-  let reloaded_page = connect_page_matching_expression(
-    target,
-    frontend_url,
-    true,
+  reload_page_and_wait(
+    page,
     (
       #|Boolean(
       #|  window.__MoonBit__?.ticker?.start &&
@@ -333,12 +324,7 @@ async fn run_dev_extension_reload_probe(
     "dev extension bridge after reload",
     timeout,
   )
-  defer reloaded_page.close()
-  let value = evaluate_json(
-    reloaded_page,
-    dev_extension_reload_probe_expression(),
-    true,
-  )
+  let value = evaluate_json(page, dev_extension_reload_probe_expression(), true)
   let result : DevExtensionReloadProbe = decode_probe(
     value, "dev extension reload",
   )
@@ -390,6 +376,7 @@ fn dev_extension_reload_probe_expression() -> String {
 
 ///|
 async fn run_dev_extension_non_proton_probe(
+  tasks : @async.TaskGroup[Unit],
   target : String,
   output_root : String,
   timeout : Int,
@@ -401,8 +388,13 @@ async fn run_dev_extension_non_proton_probe(
     _ => fail("failed to write non-Proton dev probe: " + file_path)
   }
   defer (@mbfs.remove_file(file_path) catch { _ => () })
-  let about = navigate_and_read_origin(target, "about:blank", timeout)
-  let file = navigate_and_read_origin(target, file_url(file_path), timeout)
+  let about = navigate_and_read_origin(tasks, target, "about:blank", timeout)
+  let file = navigate_and_read_origin(
+    tasks,
+    target,
+    file_url(file_path),
+    timeout,
+  )
   let http_page = run_http_origin_probe(target, timeout)
   assert_non_proton_origin("about", about)
   assert_non_proton_origin("file", file)

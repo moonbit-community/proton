@@ -1,8 +1,20 @@
 ///|
+/// An operating-system request delivered to an already running application.
+pub(all) enum RuntimeLaunchInput {
+  OpenUrls(Array[String])
+  OpenFiles(Array[String])
+  Reopen
+} derive(Eq, Debug)
+
+///|
+pub extend RuntimeLaunchInput with Eq::{not_equal, equal}
+
+///|
+pub extend RuntimeLaunchInput with Debug::{to_repr}
+
+///|
 /// High-level application facade for ordinary Proton apps.
 struct App {
-  file_path : String?
-  auto_config : Bool
   mut window : @manifest.WindowManifest
   mut entry : @manifest.AppEntry
   windows : Array[@manifest.AppWindowManifest]
@@ -10,19 +22,17 @@ struct App {
   mut headless_value : Bool
   mut single_instance_identifier : String?
   mut explicit_locale : @locale.Locale?
-  mut title_overridden : Bool
-  mut size_overridden : Bool
-  mut titlebar_style_overridden : Bool
-  mut entry_overridden : Bool
-  mut debug_overridden : Bool
   mut bridge_startup_timeout_value_ms : Int
-  mut menu : @native.MenuBar?
+  mut menu : MenuBar?
+  url_schemes : Array[String]
+  document_extensions : Array[String]
+  mut update_channel : ResolvedUpdateChannel?
   extension_settings : Map[String, @manifest.ExtensionSetting]
   permission_grants : Array[@manifest.PermissionGrant]
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
   command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
-  planned_views : Array[(String, @native.ViewConfig)]
+  planned_views : Array[(String, ViewConfig)]
   launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
@@ -54,15 +64,16 @@ priv struct ResolvedAppConfig {
   instance_identifier : String?
   url_schemes : Array[String]
   document_extensions : Array[String]
-  /// The update channel and the identity it updates, when `proton.project.json`
-  /// declares one. Absent for an application configured inline: there is no
-  /// file to declare an endpoint in, and inventing one would be worse.
+  /// The update channel and the identity it updates, when configured by code.
   update_channel : ResolvedUpdateChannel?
 }
 
 ///|
 priv struct ResolvedUpdateChannel {
-  config : @bootstrap.ProtonUpdaterConfig
+  endpoint : String
+  public_keys : Array[String]
+  check_on_launch : Bool
+  freshness_days : Int
 }
 
 ///|
@@ -80,6 +91,8 @@ priv struct RunningWindow {
   permissions : WindowPermissionPolicy
   lifetime : WindowLifetime
   views : Array[RunningView]
+  mut document : ResourceDocument?
+  asset_root : String?
   mut bridge_ready : Bool
   mut state : SessionWindowState
 }
@@ -88,6 +101,33 @@ priv struct RunningWindow {
 priv struct RunningView {
   id : String
   view : @native.View
+  mut document : ResourceDocument?
+}
+
+///|
+priv struct ResourceDocument {
+  url : String
+  content : Bytes
+}
+
+///|
+priv enum PreparedEntry {
+  RemoteEntry(String)
+  DocumentEntry(ResourceDocument, String?)
+}
+
+///|
+priv struct ResourceResponse {
+  status : Int
+  mime_type : String
+  body : Bytes
+}
+
+///|
+priv struct PendingResourceRequest {
+  request_id : Int64
+  window : Int64
+  task : @async.Task[ResourceResponse]
 }
 
 ///|
@@ -118,6 +158,7 @@ priv struct PlannedWindow {
 ///|
 priv struct PreparedWindow {
   plan : PlannedWindow
+  entry : PreparedEntry
   bridge : @native.BridgeConfig?
   permissions : WindowPermissionPolicy
   browser_policy : @native.BrowserPolicy
@@ -174,6 +215,7 @@ priv struct RuntimeSession {
   windows : Array[RunningWindow]
   command_host : CommandHostRuntime?
   pending_bridge : Array[BridgeDispatchTask]
+  dialog_completions : DialogCompletionStore
   wakeup : RuntimeWakeup
   forward_menu_events : Bool
   monitor_bridge : Bool
@@ -191,6 +233,7 @@ priv struct RuntimeSession {
   pending_window_opens : Array[PendingWindowOpen]
   pending_window_closes : Array[PendingWindowClose]
   pending_browser_requests : Array[PendingBrowserRequest]
+  pending_resource_requests : Array[PendingResourceRequest]
   navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
   popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
   download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
@@ -199,6 +242,24 @@ priv struct RuntimeSession {
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
+}
+
+///|
+priv enum DialogCompletionState {
+  Waiting
+  Completed(Result[String, @native.NativeError])
+}
+
+///|
+priv struct PendingDialogCompletion {
+  dialog : Int64
+  mut state : DialogCompletionState
+  changed : @async.CondVar
+}
+
+///|
+priv struct DialogCompletionStore {
+  pending : Array[PendingDialogCompletion]
 }
 
 ///|
@@ -276,7 +337,7 @@ pub struct ViewHandle {
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
   send_view_command : (String, Int?) -> Unit raise WindowSessionError
-  read_view_state : () -> @native.ViewState raise WindowSessionError
+  read_view_state : () -> ViewState raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
 }
 
@@ -301,9 +362,9 @@ pub struct WindowHandle {
   set_window_position : (Int, Int) -> Unit raise WindowSessionError
   set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
-  read_window_state : () -> @native.WindowState raise WindowSessionError
+  read_window_state : () -> WindowState raise WindowSessionError
   browser : BrowserHandle
-  add_view : (String, @native.ViewConfig) -> ViewHandle raise WindowSessionError
+  add_view : (String, ViewConfig) -> ViewHandle raise WindowSessionError
   remove_view : (String) -> Unit raise WindowSessionError
   list_views : () -> Array[ViewHandle]
   find_view : (String) -> ViewHandle?
@@ -319,7 +380,7 @@ pub struct WindowManager {
 ///|
 /// An observed change to a running native window.
 pub(all) enum WindowEvent {
-  StateChanged(@native.WindowState)
+  StateChanged(WindowState)
 } derive(Debug, Eq)
 
 ///|
@@ -496,7 +557,7 @@ pub(all) suberror WindowSessionError {
   AlreadyExists(id~ : String)
   StaleView(id~ : String)
   Cancelled
-  OperationFailed(action~ : String, error~ : @native.NativeError)
+  OperationFailed(action~ : String, status~ : Int, detail~ : String)
   StartupFailed(id~ : String, error~ : AppRunError)
 } derive(Debug)
 
@@ -532,7 +593,6 @@ priv struct AppLifecycle {
 /// Failures while resolving and validating an application's configuration.
 pub(all) suberror AppConfigurationError {
   InvalidSetting(name~ : String, message~ : String)
-  Bootstrap(@bootstrap.BootstrapError)
   ExtensionDependencyCycle(extension_id~ : String)
   ExtensionUnavailable(
     extension_id~ : String,
@@ -557,7 +617,7 @@ pub extend AppConfigurationError with Debug::{to_repr}
 /// Failures while loading the application's initial document.
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
-  NativeLoad(action~ : String, error~ : @native.NativeError)
+  PlatformLoad(action~ : String, status~ : Int, detail~ : String)
   ClosedDuringStartup
 } derive(Debug)
 
@@ -592,8 +652,8 @@ pub extend LifecycleHookError with Debug::{to_repr}
 pub(all) suberror AppCleanupError {
   CommandExtension(CommandExtensionLifecycleError)
   LifecycleHook(LifecycleHookError)
-  WindowDestroy(@native.NativeError)
-  RuntimeDestroy(@native.NativeError)
+  WindowDestroy(status~ : Int, detail~ : String)
+  RuntimeDestroy(status~ : Int, detail~ : String)
 } derive(Debug)
 
 ///|
@@ -605,12 +665,12 @@ pub(all) suberror AppRunError {
   EventLoopError(String)
   ConfigurationError(AppConfigurationError)
   UnsupportedNativeFeature(feature~ : String)
-  NativeRuntimeError(action~ : String, error~ : @native.NativeError)
+  RuntimeOperationFailed(action~ : String, status~ : Int, detail~ : String)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
   LifecycleHookError(LifecycleHookError)
   EntryLoadError(AppEntryError)
-  BridgeStartupError(@native.BridgeDiagnostic)
-  BridgeRuntimeError(@native.BridgeDiagnostic)
+  BridgeStartupError(BridgeDiagnostic)
+  BridgeRuntimeError(BridgeDiagnostic)
   CleanupFailed(primary~ : String?, failures~ : Array[AppCleanupError])
   UnexpectedTaskFailure(detail~ : String)
 } derive(Debug)

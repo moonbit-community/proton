@@ -16,6 +16,7 @@ pub extend WebContentsViewPageProbe with FromJson::{from_json}
 
 ///|
 async fn run_web_contents_view_scenario_probe(
+  tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
   browser_web_socket_url : String,
@@ -25,18 +26,12 @@ async fn run_web_contents_view_scenario_probe(
     app, target, timeout,
   )
   let browser = @client.CdpClient::connect_with_timeout(
+    tasks,
     browser_web_socket_url,
     timeout_ms=timeout,
   )
-  let page_left = connect_web_contents_view_page(left, timeout)
-  let page_right = connect_web_contents_view_page(right, timeout)
-  defer {
-    browser.close()
-    page_left.close()
-    page_right.close()
-  }
-  ignore(page_left.send_schema_command("Runtime.enable"))
-  ignore(page_right.send_schema_command("Runtime.enable"))
+  let page_left = connect_web_contents_view_page(tasks, left, timeout)
+  let page_right = connect_web_contents_view_page(tasks, right, timeout)
   wait_for_ready(page_left, web_contents_view_ready_expression(), timeout)
   wait_for_ready(page_right, web_contents_view_ready_expression(), timeout)
   let (left_value, right_value) = @async.with_task_group(group => {
@@ -111,15 +106,13 @@ async fn run_web_contents_view_scenario_probe(
 
 ///|
 async fn connect_web_contents_view_page(
+  tasks : @async.TaskGroup[Unit],
   target : @client.CdpDiscoveredTarget,
   timeout : Int,
-) -> @client.CdpClient {
+) -> @page.Page {
   match target.web_socket_debugger_url {
     Some(web_socket_url) =>
-      @client.CdpClient::connect_with_timeout(
-        web_socket_url,
-        timeout_ms=timeout,
-      )
+      @page.Page::connect_web_socket(tasks, web_socket_url, timeout_ms=timeout)
     None => fail("CDP page target has no WebSocket URL: " + target.target_id)
   }
 }

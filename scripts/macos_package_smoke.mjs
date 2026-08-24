@@ -274,10 +274,9 @@ function verifyBundle() {
       "Frameworks",
       "Chromium Embedded Framework.framework",
     ),
-    ...["libEGL.dylib", "libGLESv2.dylib", "libvk_swiftshader.dylib", "cef_process"].map(
+    ...["libEGL.dylib", "libGLESv2.dylib", "libvk_swiftshader.dylib"].map(
       (name) => path.join(contents, "Resources", "proton", "bin", name),
     ),
-    path.join(contents, "Resources", "proton", "lib", "libproton.dylib"),
     ...helpers,
     path.join(contents, "MacOS", executableName),
     appPath,
@@ -285,6 +284,14 @@ function verifyBundle() {
   for (const target of targets) {
     requirePath(target, "the macOS package layout is incomplete");
     run("codesign", ["--verify", "--strict", "--verbose=2", target]);
+  }
+  for (const obsolete of [
+    path.join(contents, "Resources", "proton", "lib", "libproton.dylib"),
+    path.join(contents, "Resources", "proton", "bin", "cef_process"),
+  ]) {
+    if (fs.existsSync(obsolete)) {
+      fail(`obsolete Proton runtime artifact was packaged: ${obsolete}`);
+    }
   }
   run("codesign", [
     "--verify",
@@ -382,9 +389,34 @@ async function launchBundle() {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "proton-macos-package-smoke-"));
   run("ditto", ["-x", "-k", archivePath, tempDir]);
   const extractedApp = path.join(tempDir, `${productName}.app`);
-  const executable = path.join(
+  const contents = path.join(extractedApp, "Contents");
+  const projectConfigPath = path.join(
+    contents,
+    "Resources",
+    "proton.project.json",
+  );
+  const projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, "utf8"));
+  projectConfig.debug = true;
+  fs.writeFileSync(projectConfigPath, `${JSON.stringify(projectConfig, null, 2)}\n`);
+  run("plutil", [
+    "-replace",
+    "CFBundleIdentifier",
+    "-string",
+    `com.justjavac.proton.dev-extension-js.package-smoke-${process.pid}`,
+    path.join(contents, "Info.plist"),
+  ]);
+  run("codesign", [
+    "--force",
+    "--sign",
+    "-",
+    "--options",
+    "runtime",
+    "--entitlements",
+    path.join(contents, "Resources", "proton.entitlements"),
     extractedApp,
-    "Contents",
+  ]);
+  const executable = path.join(
+    contents,
     "MacOS",
     executableName,
   );
@@ -418,9 +450,9 @@ async function launchBundle() {
     closeLog();
   });
   const page = await waitForPage(cdpPort);
-  const expectedPage = "/Contents/Resources/frontend/dist/index.html";
-  if (!page.url.includes(expectedPage)) {
-    fail(`packaged page URL is outside the bundle: ${page.url}`);
+  const expectedPage = "https://proton.localhost/index.html";
+  if (page.url !== expectedPage) {
+    fail(`unexpected packaged page URL: ${page.url}`);
   }
   const helpers = childProcessCommands(appProcess.pid);
   if (helpers.length === 0) {
@@ -463,10 +495,6 @@ async function main() {
   if (process.platform !== "darwin") {
     fail("macOS package smoke requires a macOS host");
   }
-  requirePath(
-    path.join(repoRoot, ".proton", "runtime.json"),
-    "run `moon -C cli run . -- -C .. cef setup` first",
-  );
   requirePath(
     path.join(exampleDir, "frontend", "node_modules"),
     "run `npm ci` in examples/47_dev_extension_js/frontend first",

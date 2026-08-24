@@ -1,6 +1,8 @@
 {
   "id": "vendor/fs",
   "namespace": "fs",
+  "version": "2.3.4",
+  "moonbit_import_path": "vendor/exts/fs",
   "package": "@vendor/proton-fs",
   "dependencies": [
     "vendor/path"

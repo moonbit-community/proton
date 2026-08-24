@@ -9,7 +9,6 @@ test "parse dev args defaults and app args" {
   @debug.assert_eq(raw.app_package, None)
   @debug.assert_eq(raw.config_path, None)
   @debug.assert_eq(raw.moon_target_dir, None)
-  @debug.assert_eq(raw.wait_for_dev_server, true)
   @debug.assert_eq(raw.start_frontend, true)
   @debug.assert_eq(raw.app_args, ["--profile", "smoke"])
 }
@@ -47,6 +46,19 @@ test "parse dev args accepts an isolated Moon target directory" {
     "--package", "desktop", "--moon-target-dir", "custom-dev-build",
   ])
   @debug.assert_eq(raw.moon_target_dir, Some("custom-dev-build"))
+}
+
+///|
+async test "dev requires a project config" {
+  let root = @async_fs.tmpdir(prefix="proton-dev-config-")
+  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  try resolve_dev_config_path(root, parse_dev_args([])) catch {
+    DevConfigError::NotFound(path~) =>
+      @debug.assert_eq(path, @fsutil.path_join(root, default_config_file))
+    _ => abort("expected missing project config error")
+  } noraise {
+    _ => abort("expected missing project config to fail")
+  }
 }
 
 ///|
@@ -142,4 +154,42 @@ test "frontend dev url validation runs without server wait" {
   } noraise {
     _ => abort("expected missing URL scheme to fail")
   }
+}
+
+///|
+test "managed frontend URL requires a command" {
+  try
+    managed_frontend_command(Some("http://localhost:4300"), None, true)
+  catch {
+    DevConfigError::FrontendCommandMissing => ()
+    _ => abort("expected missing frontend command error")
+  } noraise {
+    _ => abort("expected managed frontend without a command to fail")
+  }
+  @debug.assert_eq(
+    managed_frontend_command(
+      Some("http://localhost:4300"),
+      Some("npm run dev"),
+      true,
+    ),
+    Some("npm run dev"),
+  )
+  @debug.assert_eq(
+    managed_frontend_command(Some("http://localhost:4300"), None, false),
+    None,
+  )
+  @debug.assert_eq(managed_frontend_command(None, None, true), None)
+}
+
+///|
+test "occupied frontend URL reports managed frontend guidance" {
+  let error = DevServerError::FrontendUrlInUse(url="http://127.0.0.1:4300")
+  @debug.assert_eq(
+    error.message(),
+    (
+      #|frontend dev URL is already in use: http://127.0.0.1:4300
+      #|
+      #|Stop the existing server, change frontend.dev_url and frontend.before_dev, or use --no-frontend to connect to the existing server.
+    ),
+  )
 }

@@ -84,6 +84,9 @@ pub fn EventTickerResult::to_json(Self) -> Json
 type MultiWindowIdentifyPayload derive(@json.FromJson)
 pub fn MultiWindowIdentifyPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 
+type MultiWindowIdentifyReply derive(ToJson)
+pub fn MultiWindowIdentifyReply::to_json(Self) -> Json
+
 type SyncDoublePayload derive(ToJson, @json.FromJson)
 pub fn SyncDoublePayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SyncDoublePayload::to_json(Self) -> Json

@@ -1,0 +1,381 @@
+///|
+fn[T] expect_native_error(
+  action : () -> T raise NativeError,
+) -> NativeError raise {
+  try action() catch {
+    error => error
+  } noraise {
+    _ => fail("expected native operation to fail")
+  }
+}
+
+///|
+#cfg(platform="windows")
+fn test_absolute_cache_dir() -> String {
+  "C:\\proton-cache"
+}
+
+///|
+#cfg(not(platform="windows"))
+fn test_absolute_cache_dir() -> String {
+  "/tmp/proton-cache"
+}
+
+///|
+fn native_text_test_copy(
+  text : String,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  required : Ref[Int],
+) -> Int {
+  let text_bytes = @ffi.to_cstr(text)
+  let payload_len = text_bytes.length() - 1
+  required.val = payload_len
+  if buffer_len < payload_len + 1 {
+    return proton_err_buffer_too_small
+  }
+  buffer.blit_from_bytes(0, text_bytes, 0, payload_len + 1)
+  0
+}
+
+///|
+test "native text reader retries when the payload grows" {
+  let calls = Ref(0)
+  let final_text = "{\"url\":\"proton://app/a/much/longer/path\"}"
+  let result = read_native_text("growing payload", (
+    buffer,
+    buffer_len,
+    required,
+  ) => {
+    calls.val = calls.val + 1
+    match calls.val {
+      1 => {
+        required.val = 2
+        proton_err_buffer_too_small
+      }
+      2 => {
+        required.val = final_text.length()
+        proton_err_buffer_too_small
+      }
+      _ => native_text_test_copy(final_text, buffer, buffer_len, required)
+    }
+  })
+  @debug.assert_eq(
+    result,
+    Some("{\"url\":\"proton://app/a/much/longer/path\"}"),
+  )
+  assert_eq(calls.val, 3)
+}
+
+///|
+test "native text reader decodes the successful shorter snapshot" {
+  let calls = Ref(0)
+  let result = read_native_text("shrinking payload", (
+    buffer,
+    buffer_len,
+    required,
+  ) => {
+    calls.val = calls.val + 1
+    if calls.val == 1 {
+      required.val = 128
+      proton_err_buffer_too_small
+    } else {
+      native_text_test_copy("ready", buffer, buffer_len, required)
+    }
+  })
+  @debug.assert_eq(result, Some("ready"))
+  assert_eq(calls.val, 2)
+}
+
+///|
+test "native text reader handles no event after resizing" {
+  let calls = Ref(0)
+  let result = read_native_text("optional payload", (
+    _buffer,
+    _buffer_len,
+    required,
+  ) => {
+    calls.val = calls.val + 1
+    if calls.val == 1 {
+      required.val = 16
+      proton_err_buffer_too_small
+    } else {
+      proton_event_none
+    }
+  })
+  @debug.assert_eq(result, None)
+  assert_eq(calls.val, 2)
+}
+
+///|
+test "notification clicks preserve optional payloads" {
+  let with_payload = RuntimeEvent::NotificationClicked(Some("open-item"))
+  assert_eq(with_payload.event_type(), "notification_clicked")
+  assert_eq(with_payload.notification_click(), Some(Some("open-item")))
+  let without_payload = RuntimeEvent::NotificationClicked(None)
+  assert_eq(without_payload.notification_click(), Some(None))
+}
+
+///|
+test "native ABI version and availability" {
+  inspect(abi_version(), content="1")
+}
+
+///|
+test "runtime info reports source-built platform metadata" {
+  let typed = runtime_info()
+  assert_true(typed.platform.length() > 0)
+  assert_true(typed.features.contains("event_polling"))
+  assert_true(typed.features.contains("bridge_events"))
+  assert_true(typed.features.contains("bridge_permission_grants"))
+  assert_true(typed.features.contains("titlebar_overlay"))
+  assert_true(typed.features.contains("headless_osr"))
+  assert_true(typed.features.contains("window_session"))
+}
+
+///|
+test "runtime wait ready mask helpers" {
+  let ready = RuntimeWaitReady::{
+    mask: runtime_wait_event.lor(runtime_wait_platform),
+  }
+  inspect(ready.mask(), content="5")
+  inspect(ready.has_event(), content="true")
+  inspect(ready.has_platform(), content="true")
+  inspect(ready.is_timeout(), content="false")
+  inspect(
+    RuntimeWaitReady::{ mask: runtime_wait_none }.is_timeout(),
+    content="true",
+  )
+}
+
+///|
+test "typed window state fields map to a snapshot" {
+  let fields = [
+    10, 20, 800, 600, 0, 0, 1920, 1080, 0, 24, 1920, 1056, 200, 125, 1, 1, 0, 0,
+    0, 1, 2,
+  ]
+  let state = window_state_from_fields(index => fields[index])
+  inspect(state.x, content="10")
+  inspect(state.monitor.scale_factor_percent, content="200")
+  inspect(state.zoom_percent, content="125")
+  inspect(state.focused, content="true")
+  inspect(state.always_on_top, content="true")
+  inspect(state.theme, content="dark")
+}
+
+///|
+test "runtime config preserves typed native ABI values" {
+  let cache_dir = test_absolute_cache_dir()
+  let runtime_config = RuntimeConfig::new(
+    helper_path="cef_process.exe",
+    cache_dir~,
+    locale=@locale.Locale::parse("zh-CN"),
+    accept_languages=[
+      @locale.Locale::parse("zh-CN"),
+      @locale.Locale::parse("en-US"),
+    ],
+    headless=true,
+  )
+  assert_eq(runtime_config.helper_path, Some("cef_process.exe"))
+  assert_eq(runtime_config.cache_dir, Some(cache_dir))
+  assert_true(runtime_config.headless)
+  assert_true(runtime_config.persist_session_cookies)
+  assert_eq(runtime_config.locale, Some("zh-CN"))
+  assert_eq(runtime_config.accept_languages, ["zh-CN", "en-US"])
+  assert_eq(runtime_config.framework_dialog_ok_label, Some("OK"))
+  assert_eq(runtime_config.framework_dialog_cancel_label, Some("Cancel"))
+  let bundled = RuntimeConfig::bundled(cache_dir~)
+  assert_true(bundled.use_bundled)
+  assert_eq(bundled.runtime_root, None)
+  assert_eq(bundled.helper_path, None)
+  assert_false(bundled.headless)
+  assert_true(bundled.persist_session_cookies)
+  assert_true(RuntimeConfig::bundled(headless=true).headless)
+  assert_false(
+    RuntimeConfig::new(persist_session_cookies=false).persist_session_cookies,
+  )
+}
+
+///|
+test "window config preserves typed native ABI values" {
+  let window_config = WindowConfig::new(
+    title="Typed",
+    width=320,
+    height=240,
+    browser=BrowserPolicy::new(
+      navigation=BrowserPolicyMode::Ask,
+      popup=BrowserPolicyMode::Ask,
+      download=BrowserPolicyMode::Ask,
+      certificate=BrowserPolicyMode::Ask,
+      media=BrowserPolicyMode::Ask,
+      devtools=true,
+    ),
+    bridge=BridgeConfig::new(grants=[
+      BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
+    ]),
+  )
+  assert_eq(window_config.title, "Typed")
+  assert_eq(window_config.width, 320)
+  assert_eq(window_config.height, 240)
+  assert_eq(window_config.browser.navigation, BrowserPolicyMode::Ask)
+  assert_eq(window_config.browser.popup, BrowserPolicyMode::Ask)
+  assert_true(window_config.browser.devtools)
+  assert_true(window_config.bridge is Some(_))
+  assert_eq(window_config.framework_titlebar_minimize_label, Some("Minimize"))
+  assert_eq(window_config.framework_titlebar_close_label, Some("Close"))
+}
+
+///|
+test "bridge config retains typed renderer policy" {
+  let bridge_config = BridgeConfig::new(grants=[
+    BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
+  ])
+  inspect(bridge_config.grants[0].source_origin, content="app")
+  assert_eq(bridge_config.grants[0].ops, ["ext:app/ping"])
+  let dev_bridge = BridgeConfig::new(grants=[
+    BridgeGrantConfig::new("http://localhost:5173", ops=["ext:app/ping"], initialization_units=[
+      BridgeInitializationUnit::new("test", "dev", "window.__protonDev = true;"),
+    ]),
+  ])
+  inspect(
+    dev_bridge.grants[0].initialization_units[0].source,
+    content="window.__protonDev = true;",
+  )
+}
+
+///|
+test "bridge request keeps transport metadata outside the payload" {
+  let request = decode_bridge_request_json(
+    "{\"abi_version\":1,\"request_id\":\"7\",\"window\":\"11\"," +
+    "\"op\":\"ext:add/sum\",\"payload\":{\"left\":20,\"right\":22}," +
+    "\"page_instance\":\"page-1\",\"source_origin\":\"app\"}",
+  )
+  inspect(request.request_id(), content="7")
+  inspect(request.window(), content="11")
+  inspect(request.op(), content="ext:add/sum")
+  assert_eq(request.payload(), ({ "left": 20, "right": 22 } : Json))
+  assert_eq(request.page_instance(), Some("page-1"))
+  assert_eq(request.source_origin(), "app")
+}
+
+///|
+test "runtime create does not fake engine configs" {
+  let error = expect_native_error(() => {
+    Runtime::new(
+      config=RuntimeConfig::new(
+        runtime_root="missing-runtime-root",
+        helper_path="missing-helper",
+      ),
+    )
+  })
+  inspect(error.status(), content="-7")
+  assert_true(error.message().contains("runtime engine library"))
+}
+
+///|
+test "execute_process does not ignore engine configs" {
+  let error = expect_native_error(() => {
+    execute_process(
+      config=RuntimeConfig::new(
+        runtime_root="missing-runtime-root",
+        helper_path="missing-helper",
+      ),
+    )
+  })
+  inspect(error.status(), content="-7")
+  assert_true(error.message().contains("runtime engine library"))
+}
+
+///|
+test "invalid handle returns structured native error" {
+  let window = Window::{
+    handle: @native_ffi.window_null(),
+    id: proton_invalid_handle,
+    lifecycle: WindowLive,
+  }
+  let error = expect_native_error(() => window.show())
+  inspect(error.status(), content="-2")
+  assert_true(error.message().contains("invalid window handle"))
+}
+
+///|
+test "runtime config rejects a relative cache directory" {
+  let error = expect_native_error(() => {
+    Runtime::new(
+      config=RuntimeConfig::new(
+        runtime_root="/runtime",
+        helper_path="/runtime/cef_process",
+        cache_dir="relative-cache",
+      ),
+    )
+  })
+  inspect(error.status(), content="-1")
+  inspect(error.message(), content="runtime cache_dir must be an absolute path")
+}
+
+///|
+test "app activation JSON keeps stable schema fields" {
+  inspect(
+    AppActivation::new(urls=["dev.proton://open?id=1"], files=["/tmp/a.txt"])
+    .to_json()
+    .stringify(),
+    content=(
+      #|{"abi_version":1,"urls":["dev.proton://open?id=1"],"files":["/tmp/a.txt"],"reopen":false}
+    ),
+  )
+}
+
+///|
+test "bridge lifecycle state payload requires abi_version 1" {
+  let error = expect_native_error(() => {
+    decode_bridge_lifecycle_state(
+      "{\"abi_version\":2,\"revision\":\"7\",\"outcome\":\"ready\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"failure_pending\":false}",
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
+  let state = decode_bridge_lifecycle_state(
+    "{\"abi_version\":1,\"revision\":\"7\",\"outcome\":\"ready\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"failure_pending\":false}",
+  )
+  inspect(state.revision, content="7")
+}
+
+///|
+test "bridge diagnostic payload requires abi_version 1" {
+  let error = expect_native_error(() => {
+    decode_bridge_diagnostic(
+      "{\"abi_version\":2,\"stage\":\"load\",\"code\":\"x\",\"message\":\"m\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"details_truncated\":false}",
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
+  let diagnostic = decode_bridge_diagnostic(
+    "{\"abi_version\":1,\"stage\":\"load\",\"code\":\"x\",\"message\":\"m\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"details_truncated\":false}",
+  )
+  inspect(diagnostic.stage, content="load")
+}
+
+///|
+test "bridge request validates abi_version when present" {
+  let error = expect_native_error(() => {
+    decode_bridge_request_json(
+      "{\"abi_version\":2,\"request_id\":\"7\",\"window\":\"11\",\"op\":\"ext:add/sum\"}",
+    )
+  })
+  inspect(error.status(), content="-1")
+  assert_true(error.message().contains("abi_version"))
+  let type_error = expect_native_error(() => {
+    decode_bridge_request_json(
+      "{\"abi_version\":\"1\",\"request_id\":\"7\",\"window\":\"11\",\"op\":\"ext:add/sum\"}",
+    )
+  })
+  inspect(type_error.status(), content="-1")
+  assert_true(type_error.message().contains("abi_version"))
+}
+
+///|
+fn init {
+  host_loop_begin() catch {
+    error => abort("failed to start native test host loop: " + error.message())
+  }
+}

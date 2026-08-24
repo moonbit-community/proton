@@ -71,7 +71,7 @@ pub fn AppCommandHost::registered_ops(Self) -> Array[String]
 pub fn AppCommandHost::seal_registrations(Self) -> Unit
 
 pub struct AppCommandRequestContext {
-  window : Int64
+  window : CommandWindow?
   window_id : String
   source_origin : String
   page_instance : String?
@@ -92,8 +92,21 @@ pub fn AppCommandRequestContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub async fn AppCommandRequestContext::wait_for_wake(Self, Int64) -> Unit
 pub fn AppCommandRequestContext::wake_revision(Self) -> Int64
 pub fn AppCommandRequestContext::wake_signal(Self) -> RuntimeWakeSignal
-pub fn AppCommandRequestContext::window(Self) -> Int64
+pub fn AppCommandRequestContext::window(Self) -> CommandWindow?
 pub fn AppCommandRequestContext::window_id(Self) -> String
+
+pub struct CommandWindow {
+  show_message_dialog : async (String?, String, String) -> Unit
+  show_confirm_dialog : async (String?, String, String) -> Bool
+  open_file_dialog : async (String?, String?) -> String?
+  save_file_dialog : async (String?, String?) -> String?
+  choose_directory_dialog : async (String?, String?) -> String?
+}
+pub async fn CommandWindow::choose_directory(Self, String?, String?) -> String?
+pub async fn CommandWindow::confirm(Self, String?, String, String) -> Bool
+pub async fn CommandWindow::open_file(Self, String?, String?) -> String?
+pub async fn CommandWindow::save_file(Self, String?, String?) -> String?
+pub async fn CommandWindow::show_message(Self, String?, String, String) -> Unit
 
 type MbtProcessHost
 pub fn MbtProcessHost::close(Self) -> Unit

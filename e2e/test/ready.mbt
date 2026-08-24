@@ -1,19 +1,14 @@
 ///|
 async fn wait_for_ready(
-  page : @client.CdpClient,
+  page : @page.Page,
   expression : String,
   timeout : Int,
 ) -> Unit {
-  let attempts = timeout / 100
-  for attempt in 0..<=attempts {
-    if evaluate_bool(page, expression, false) {
-      return
-    }
-    if attempt < attempts {
-      @async.sleep(100)
-    }
-  }
-  fail("CDP e2e timed out waiting for ready expression: " + expression)
+  ignore(
+    run_e2e_operation_with_timeout(timeout, "ready expression: " + expression, () => {
+      page.wait_until(expression)
+    }),
+  )
 }
 
 ///|

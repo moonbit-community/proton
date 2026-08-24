@@ -1,5 +1,7 @@
 {
   "id": "moonbit-community/proton-dialog",
   "namespace": "dialog",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton_ext/dialog",
   "package": "@moonbit-community/proton-dialog"
 }

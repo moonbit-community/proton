@@ -1,0 +1,13 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/internal/native/cef_loader"
+
+// Values
+pub fn ensure_linked() -> Unit
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

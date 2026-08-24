@@ -627,8 +627,12 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|async fn main {
           #|  let backend = @todo.Backend::new()
-          #|  @proton.config("proton.project.json")
+          #|  @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
+          #|  .single_instance({{identifier_mbt}})
           #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
+          #|  .permission(
+          #|    @proton.PermissionGrant::new("main", @proton.PermissionOrigin::Entry, "app"),
+          #|  )
           #|  .run_or_abort()
           #|}
           #|
@@ -793,6 +797,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|- `shared/` contains the target-neutral typed application contract.
           #|- `frontend/` is a JavaScript Rabbita module owned by Warren.
           #|- `backend/` is a native Proton module.
+          #|- `proton.project.json` is required by `proton_cli dev`, `build`, and `package`.
           #|- Keep command and event names in `shared/todo_contract.mbt`.
           #|- The Moon prebuild rule regenerates the typed bridge through
           #|  `moonx moonbit-community/proton_codegen`; do not invoke codegen from application
@@ -832,8 +837,8 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|proton_cli dev
           #|```
           #|
-          #|`dev` starts Warren in `frontend/`, waits for the development URL, then runs
-          #|`backend/app`.
+          #|`dev` reads the required `proton.project.json`, starts Warren in `frontend/`,
+          #|waits for the development URL, then runs `backend/app`.
           #|
           #|## Build
           #|
@@ -848,19 +853,24 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|proton_cli build -- --release
           #|```
           #|
-          #|## Bundle
+          #|## Package
           #|
-          #|The `bundle` block in `proton.project.json` controls package creation:
+          #|The `package` block in `proton.project.json` contains static packaging metadata:
           #|
           #|```json
           #|{
-          #|  "bundle": {
-          #|    "active": true,
-          #|    "targets": ["app", "zip"],
+          #|  "package": {
+          #|    "product_name": "My App",
+          #|    "identifier": "com.example.my-app",
+          #|    "version": "0.1.0",
+          #|    "formats": ["app", "zip"],
           #|    "output": "dist"
           #|  }
           #|}
           #|```
+          #|
+          #|Window behavior, the asset entry, single-instance handling, and renderer
+          #|permissions are declared by the Proton `App` builder in `backend/app/main.mbt`.
           #|
           #|Inspect the resolved package plan, then create the application and zip archive:
           #|
@@ -891,7 +901,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|dist/
           #|.mooncakes/
           #|.moonagent/
-          #|.proton/
           #|frontend/dist/
           #|backend/todo/commands.g.mbt
           #|

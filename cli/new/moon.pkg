@@ -1,6 +1,5 @@
 import {
   "moonbit-community/proton_cli/fsutil",
-  "moonbit-community/proton_cli/output",
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/io",

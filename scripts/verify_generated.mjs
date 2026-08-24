@@ -11,12 +11,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-generated-check-"));
 const failures = [];
-const abiFailures = [];
-const skipPrebuiltAbi = process.argv.includes("--skip-prebuilt-abi");
-const codegenWasm = path.join(
-  repoRoot,
-  "_build/wasm/debug/build/moonbit-community/proton_codegen/proton_codegen.wasm",
-);
+let codegenWasm;
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -28,10 +23,20 @@ function run(command, args) {
   }
 }
 
-function runAllowFailure(command, args) {
-  return (
-    spawnSync(command, args, { cwd: repoRoot, stdio: "inherit" }).status === 0
-  );
+function buildArtifact(args) {
+  const result = spawnSync("moon", args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    process.stderr.write(result.stderr ?? "");
+    throw new Error(`Command failed: moon ${args.join(" ")}`);
+  }
+  const artifacts = JSON.parse(result.stdout).artifacts_path;
+  if (!Array.isArray(artifacts) || artifacts.length !== 1) {
+    throw new Error(`Expected one Moon artifact, received: ${result.stdout}`);
+  }
+  return artifacts[0];
 }
 
 function runCodegen(args) {
@@ -68,63 +73,8 @@ function tempOutputPath(fileName) {
   return path.join(tempRoot, fileName);
 }
 
-/// Every platform staged under proton/prebuilt/ ships from this repository, so
-/// all of them are validated regardless of the host. Checking only the host
-/// platform lets a rebuild that covers one platform pass while the others still
-/// carry binaries that predate the current public header.
-export function stagedPrebuiltPlatforms() {
-  const prebuiltRoot = path.join(repoRoot, "proton", "prebuilt");
-  if (!fs.existsSync(prebuiltRoot)) {
-    return [];
-  }
-  return fs
-    .readdirSync(prebuiltRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
-}
-
 try {
   run("node", [path.join(repoRoot, "scripts", "verify_release_metadata.mjs")]);
-  const platforms = stagedPrebuiltPlatforms();
-  if (skipPrebuiltAbi || platforms.length === 0) {
-    run("node", [
-      path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
-      "--metadata-only",
-    ]);
-  }
-  /// Each platform is reported before the run ends, so a single stale prebuilt
-  /// does not hide the state of the others or of the codegen comparison below.
-  /// Platforms whose artifact format the host inspection tool cannot read
-  /// (for example GNU nm on a Mach-O dylib) are skipped rather than reported
-  /// as failures; every platform is still verified on its own host's CI leg.
-  for (const platform of skipPrebuiltAbi ? [] : platforms) {
-    const probe = spawnSync(
-      "node",
-      [
-        path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
-        "--tool-probe",
-        platform,
-      ],
-      { encoding: "utf8" },
-    );
-    if (probe.status !== 0) {
-      const detail = (probe.stdout || probe.stderr || "")
-        .trim()
-        .replace(/^\[SKIP\]\s*/, "");
-      console.log(`[SKIP] ${platform}: ${detail}`);
-      continue;
-    }
-    if (
-      !runAllowFailure("node", [
-        path.join(repoRoot, "scripts", "verify_prebuilt_abi.mjs"),
-        platform,
-      ])
-    ) {
-      abiFailures.push(platform);
-    }
-  }
-
   const codegenExtensions = [
     "auto_launch",
     "clipboard",
@@ -141,7 +91,13 @@ try {
     "updater",
   ];
 
-  run("moon", ["build", "codegen", "--target", "wasm"]);
+  codegenWasm = buildArtifact([
+    "run",
+    "codegen",
+    "--target",
+    "wasm",
+    "--build-only",
+  ]);
 
   for (const extension of codegenExtensions) {
     const inputPath = path.join(repoRoot, "extensions", extension, "extension.mbt");
@@ -225,16 +181,26 @@ try {
     bridgeBootstrapOutput,
   ]);
   compareGeneratedFile(
-    "native/src/engine/cef_common/bridge_bootstrap.generated.h",
+    "proton/internal/native/ffi/src/engine/cef_common/bridge_bootstrap.generated.h",
     bridgeBootstrapOutput,
   );
 
-  if (abiFailures.length > 0) {
-    console.error(
-      `Prebuilt runtimes do not export the current public ABI: ${abiFailures.join(", ")}`,
-    );
-    process.exitCode = 1;
-  }
+  const runtimeRequirementsMoon = tempOutputPath("requirements.generated.mbt");
+  const runtimeRequirementsJson = tempOutputPath("cef_requirements.json");
+  run("node", [
+    path.join(repoRoot, "scripts", "generate_runtime_requirements.mjs"),
+    runtimeRequirementsMoon,
+    runtimeRequirementsJson,
+  ]);
+  compareGeneratedFile(
+    "cefsetup/store/requirements.generated.mbt",
+    runtimeRequirementsMoon,
+  );
+  compareGeneratedFile(
+    "proton/cef_requirements.json",
+    runtimeRequirementsJson,
+  );
+
   if (failures.length > 0) {
     console.error(`Generated files are stale: ${failures.join(", ")}`);
     process.exitCode = 1;

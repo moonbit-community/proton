@@ -1,5 +1,7 @@
 {
   "id": "moonbit-community/proton-keepawake",
   "namespace": "keepAwake",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton_ext/keepawake",
   "package": "@moonbit-community/proton-keepawake"
 }

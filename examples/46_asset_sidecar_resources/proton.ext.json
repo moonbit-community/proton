@@ -1,4 +1,6 @@
 {
   "id": "examples/asset-sidecar",
-  "namespace": "add"
+  "namespace": "add",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton/examples/46_asset_sidecar_resources"
 }

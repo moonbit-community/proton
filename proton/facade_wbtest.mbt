@@ -40,7 +40,7 @@ priv suberror FacadeLifecycleTestError {
 
 ///|
 async fn test_open_window(id : String) -> WindowHandle raise WindowSessionError {
-  @async.sleep(0) catch {
+  @async.pause() catch {
     _ => raise UnknownWindow(id~)
   }
   raise UnknownWindow(id~)
@@ -216,8 +216,7 @@ test "bridge frontend config preserves initialization unit ownership" {
 
 ///|
 test "app run errors retain typed bridge diagnostics" {
-  let diagnostic = @native.BridgeDiagnostic::{
-    abi_version: 1,
+  let diagnostic = BridgeDiagnostic::{
     stage: "bootstrap",
     code: "bridge_bootstrap_failed",
     message: "bootstrap exploded",
@@ -309,10 +308,8 @@ async test "headless mode rejects native menus before runtime startup" {
   let manifest = test_command_manifest("test/disabled", enabled=false)
   let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
   )
-  let menu = @native.MenuBar::new(menus=[
-    @native.Menu::new("App", items=[
-      @native.MenuItem::role(@native.MenuItemRole::Close, label="Close"),
-    ]),
+  let menu = MenuBar::new(menus=[
+    Menu::new("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
   ])
   let mut rejected = false
   run_manifest(
@@ -322,7 +319,7 @@ async test "headless mode rejects native menus before runtime startup" {
     [],
     [],
     [],
-    Some(menu),
+    Some(menu.to_native()),
     30000,
     true,
     @locale.LocalePreferences::resolve(None, []),
@@ -444,7 +441,7 @@ test "base tags escape HTML attributes" {
 ///|
 test "asset urls expose a document root instead of the local file path" {
   let path = "46_asset_sidecar_resources/app/app.html"
-  let file_path = resolve_entry_path(path)
+  let file_path = resolve_asset_path(path)
   let base = asset_base_url().replace_all(old="\\", new="/")
   let document = asset_document_url(file_path).replace_all(old="\\", new="/")
   inspect(base, content="https://proton.localhost/")
@@ -458,6 +455,74 @@ test "asset url path encoding escapes browser url delimiters" {
     asset_url_path_encode("C:/tmp/a b/#?%/中.html"),
     content="C:/tmp/a%20b/%23%3f%25/%e4%b8%ad.html",
   )
+}
+
+///|
+test "resource urls decode paths without query or fragment data" {
+  assert_eq(
+    resource_url_path(
+      "https://proton.localhost/assets/a%20b/%e4%b8%ad.js?version=1#entry",
+    ),
+    Some("assets/a b/中.js"),
+  )
+}
+
+///|
+test "resource urls reject traversal and malformed encodings" {
+  assert_eq(resource_url_path("https://proton.localhost/../secret"), None)
+  assert_eq(
+    resource_url_path("https://proton.localhost/assets/%2e%2e/secret"),
+    None,
+  )
+  assert_eq(resource_url_path("https://proton.localhost/%2fetc/passwd"), None)
+  assert_eq(resource_url_path("https://proton.localhost/%00.txt"), None)
+  assert_eq(resource_url_path("https://proton.localhost/%zz.txt"), None)
+}
+
+///|
+test "resource root containment requires a path boundary" {
+  let separator = @mbpath.sep.to_string()
+  let root = separator + "tmp" + separator + "app"
+  assert_true(
+    resource_path_is_under_root(root + separator + "index.html", root),
+  )
+  assert_true(resource_path_is_under_root(root, root))
+  assert_true(
+    resource_path_is_under_root(
+      separator + "tmp" + separator + "file",
+      separator,
+    ),
+  )
+  assert_false(
+    resource_path_is_under_root(
+      root + "-other" + separator + "index.html",
+      root,
+    ),
+  )
+}
+
+///|
+test "resource mime types cover browser assets" {
+  assert_eq(resource_mime_type("main.CSS"), "text/css")
+  assert_eq(resource_mime_type("main.mjs"), "text/javascript")
+  assert_eq(resource_mime_type("font.woff2"), "font/woff2")
+  assert_eq(resource_mime_type("data.bin"), "application/octet-stream")
+}
+
+///|
+async test "inline documents resolve without filesystem access" {
+  let document = ResourceDocument::{
+    url: "proton://view/",
+    content: b"<h1>view</h1>",
+  }
+  let response = resolve_resource_request(
+    Some(document),
+    None,
+    "proton://view/",
+  )
+  assert_eq(response.status, 200)
+  assert_eq(response.mime_type, "text/html")
+  assert_eq(response.body, b"<h1>view</h1>")
 }
 
 ///|
@@ -489,9 +554,9 @@ test "frontend menu event transport preserves focused window" {
 }
 
 ///|
-test "menu forwarding ignores only closing window errors" {
+test "frontend event forwarding ignores only closing window errors" {
   assert_true(
-    is_ignorable_menu_forward_error(
+    is_ignorable_frontend_event_forward_error(
       @native.NativeError::Status(
         status=-3,
         message="window is closing or destroyed",
@@ -499,7 +564,7 @@ test "menu forwarding ignores only closing window errors" {
     ),
   )
   assert_true(
-    is_ignorable_menu_forward_error(
+    is_ignorable_frontend_event_forward_error(
       @native.NativeError::Status(
         status=-13,
         message="window close request is no longer pending",
@@ -507,7 +572,7 @@ test "menu forwarding ignores only closing window errors" {
     ),
   )
   assert_false(
-    is_ignorable_menu_forward_error(
+    is_ignorable_frontend_event_forward_error(
       @native.NativeError::Status(
         status=-7,
         message="failed to send bridge event to renderer",
@@ -515,7 +580,7 @@ test "menu forwarding ignores only closing window errors" {
     ),
   )
   assert_false(
-    is_ignorable_menu_forward_error(
+    is_ignorable_frontend_event_forward_error(
       @native.NativeError::InvalidArgument(message="invalid event"),
     ),
   )
@@ -647,9 +712,10 @@ test "launch activation preserves unexpected native errors" {
     )
   })
   match error {
-    NativeRuntimeError(action~, error~) => {
+    RuntimeOperationFailed(action~, status~, detail~) => {
       assert_eq(action, "focus activation window")
-      assert_eq(error.status(), -7)
+      assert_eq(status, -7)
+      assert_eq(detail, "failed to focus window")
       assert_eq(calls, ["focus"])
     }
     _ => fail("expected unexpected native error")
@@ -722,16 +788,12 @@ test "dev bridge page policy parses exact http origins" {
 test "native bridge config isolates each window entry origin" {
   let first = native_bridge_config([
     @native.BridgeGrantConfig::new("http://localhost:3000", ops=["app:ping"]),
-  ]).to_json_string()
+  ])
   let second = native_bridge_config([
     @native.BridgeGrantConfig::new("http://localhost:4000", ops=["app:ping"]),
-  ]).to_json_string()
-  assert_true(first.contains("http://localhost:3000"))
-  assert_false(first.contains("http://localhost:4000"))
-  assert_true(second.contains("http://localhost:4000"))
-  assert_false(second.contains("http://localhost:3000"))
-  assert_false(first.contains("request_timeout_ms"))
-  assert_false(second.contains("request_timeout_ms"))
+  ])
+  inspect(first.grants[0].source_origin, content="http://localhost:3000")
+  inspect(second.grants[0].source_origin, content="http://localhost:4000")
 }
 
 ///|
@@ -745,22 +807,17 @@ test "HTTP entry permissions use the exact canonical origin" {
 }
 
 ///|
-test "replacing a development entry preserves permission grants" {
-  let original = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Development", 320, 240),
-    @manifest.AppEntry::Asset("app.html"),
-    permissions=[
+test "replacing an entry preserves permission grants" {
+  let replaced = asset("Development", "app.html")
+    .permission(
       @manifest.PermissionGrant::new(
         "main",
         @manifest.PermissionOrigin::Entry,
         "app",
       ),
-    ],
-  )
-  let replaced = manifest_with_entry(
-    original,
-    @manifest.AppEntry::Url("http://localhost:5173"),
-  )
+    )
+    .entry_url("http://localhost:5173")
+    .inline_manifest()
   let grants = replaced.permission_grants()
   assert_eq(grants.length(), 1)
   assert_eq(grants[0].extension(), "app")
@@ -1107,6 +1164,68 @@ async test "runtime wakeup preserves notification before suspension" {
 }
 
 ///|
+async test "dialog completion wakes only its registered waiter" {
+  let completions = DialogCompletionStore::new()
+  @async.with_task_group(group => {
+    let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
+    while completions.pending.is_empty() {
+      @async.pause()
+    }
+    completions.complete(
+      Some(@native.NativeDialogCompletion::{
+        dialog: 42L,
+        window: Some(7L),
+        result: Ok("unrelated"),
+      }),
+    )
+    assert_true(waiting.try_wait() is None)
+    completions.complete(
+      Some(@native.NativeDialogCompletion::{
+        dialog: 41L,
+        window: Some(7L),
+        result: Ok("selected"),
+      }),
+    )
+    assert_eq(waiting.wait(), "selected")
+    group.return_immediately(())
+  })
+  assert_true(completions.pending.is_empty())
+}
+
+///|
+async test "dialog completion propagates native failure" {
+  let completions = DialogCompletionStore::new()
+  let observed : Ref[@native.NativeError?] = Ref(None)
+  @async.with_task_group(group => {
+    let waiting = group.spawn(no_wait=true, () => {
+      ignore(completions.wait(51L)) catch {
+        @native.Status(status~, message~) =>
+          observed.val = Some(@native.Status(status~, message~))
+        error =>
+          abort("unexpected dialog completion error: " + error.to_string())
+      }
+    })
+    while completions.pending.is_empty() {
+      @async.pause()
+    }
+    completions.complete(
+      Some(@native.NativeDialogCompletion::{
+        dialog: 51L,
+        window: None,
+        result: Err(@native.Status(status=-7, message="dialog owner closed")),
+      }),
+    )
+    waiting.wait()
+    group.return_immediately(())
+  })
+  assert_eq(
+    observed.val,
+    Some(@native.Status(status=-7, message="dialog owner closed")),
+  )
+  assert_true(completions.pending.is_empty())
+}
+
+///|
 async test "application lifecycle startup rolls back completed hooks" {
   let calls : Array[String] = []
   let cleanup_failures : Array[AppCleanupError] = []
@@ -1180,7 +1299,6 @@ async test "window close joins owned tasks before close hooks" {
       configured.window_lifecycle_hooks,
       WindowContext::new(
         "main",
-        @native.WindowRef::unsafe_from_handle(17L),
         test_window_handle("main", 17L),
         test_window_manager(),
         group,
@@ -1262,25 +1380,9 @@ test "entry HTML injection does not install the bridge" {
 }
 
 ///|
-test "packaged config takes precedence over environment and working directory" {
-  @debug.assert_eq(
-    choose_implicit_config_path(
-      bundled=Some(
-        "/Applications/Todo.app/Contents/Resources/proton.project.json",
-      ),
-      environment=Some("/tmp/override.proton.project.json"),
-      cwd_has_default=true,
-    ),
-    Some("/Applications/Todo.app/Contents/Resources/proton.project.json"),
-  )
-}
-
-///|
-test "resource directory is the absolute directory containing project config" {
-  @debug.assert_eq(
-    resource_dir_from_config_path(default_config_file),
-    current_permission_base_path(),
-  )
+test "direct launches use the working directory as their resource directory" {
+  let current : @mbpath.Path = "."
+  @debug.assert_eq(runtime_resource_dir(), current.resolve().to_string())
 }
 
 ///|
@@ -1313,28 +1415,19 @@ test "single instance builder validates and resolves an inline identity" {
   assert_true(invalid.validation_error() is Some(_))
   let resolved = html("App", "<main>App</main>")
     .single_instance("dev.proton.inline")
-    .inline_app_config()
+    .resolved_app_config()
   assert_eq(resolved.application_identifier, Some("dev.proton.inline"))
   assert_eq(resolved.instance_identifier, Some("dev.proton.inline"))
 }
 
 ///|
-test "project identity is independent from single instance routing" {
+test "activation associations are declared by application code" {
   let app = html("App", "<main>App</main>")
-  let loaded = @bootstrap.LoadedAppManifest::new(
-    app.inline_manifest(),
-    base_dir=None,
-  )
-  let project = @bootstrap.ProtonProjectConfig::new(
-    loaded,
-    @bootstrap.ProtonAppMetadata::new(
-      "App",
-      identifier=Some("dev.proton.project"),
-    ),
-  )
-  let resolved = app.merge_config(loaded, project=Some(project))
-  assert_eq(resolved.application_identifier, Some("dev.proton.project"))
-  assert_eq(resolved.instance_identifier, None)
+    .url_scheme("dev.proton")
+    .document_extension(".md")
+  let resolved = app.resolved_app_config()
+  assert_eq(resolved.url_schemes, ["dev.proton"])
+  assert_eq(resolved.document_extensions, ["md"])
 }
 
 ///|
@@ -1389,24 +1482,46 @@ test "notification completion capability controls result waiting" {
 }
 
 ///|
+test "notification click events use the extension payload contract" {
+  inspect(
+    notification_click_payload(Some("open-item")).stringify(),
+    content="{\"payload\":\"open-item\"}",
+  )
+  inspect(
+    notification_click_payload(None).stringify(),
+    content="{\"payload\":null}",
+  )
+}
+
+///|
+/// Normalizes host path separators so path assertions are platform-agnostic.
+fn normalize_path_separators(path : String) -> String {
+  path.replace_all(old="\\", new="/")
+}
+
+///|
 test "app data directory follows platform conventions" {
   assert_eq(
-    app_data_dir_for_platform(
-      "macos",
-      "com.example.devtoys",
-      Some("/Users/test"),
-      None,
-      None,
+    normalize_path_separators(
+      app_data_dir_for_platform(
+        "macos",
+        "com.example.devtoys",
+        Some("/Users/test"),
+        None,
+        None,
+      ),
     ),
     "/Users/test/Library/Application Support/com.example.devtoys",
   )
   assert_eq(
-    app_data_dir_for_platform(
-      "linux",
-      "com.example.devtoys",
-      Some("/home/test"),
-      None,
-      Some("/data"),
+    normalize_path_separators(
+      app_data_dir_for_platform(
+        "linux",
+        "com.example.devtoys",
+        Some("/home/test"),
+        None,
+        Some("/data"),
+      ),
     ),
     "/data/com.example.devtoys",
   )
@@ -1427,38 +1542,19 @@ test "app data directory follows platform conventions" {
 }
 
 ///|
-fn updater_test_channel(
-  check_on_launch : Bool,
-  identifier? : String? = Some("com.example.app"),
-  version? : String? = Some("1.2.3"),
-) -> ResolvedUpdateChannel? {
-  let project = @bootstrap.ProtonProjectConfig::new(
-    @bootstrap.LoadedAppManifest::new(
-      @manifest.AppManifest::new(
-        @manifest.WindowManifest::new("Test", 800, 600),
-        @manifest.AppEntry::Url("https://example.com/"),
-      ),
-      base_dir=None,
-    ),
-    @bootstrap.ProtonAppMetadata::new("Test", identifier~, version~),
-    updater=Some(
-      @bootstrap.ProtonUpdaterConfig::new(
-        "https://updates.example.com/latest.json",
-        ["rsa-sha256:ab:010001"],
-        check_on_launch~,
-      ),
-    ),
+fn updater_test_channel(check_on_launch : Bool) -> ResolvedUpdateChannel? {
+  url("Test", "https://example.com/")
+  .update_channel(
+    "https://updates.example.com/latest.json",
+    ["rsa-sha256:ab:010001"],
+    check_on_launch~,
   )
-  resolved_update_channel(project)
+  .resolved_app_config().update_channel
 }
 
 ///|
-/// Channel identity and release ordering come from the signed application
-/// bundle rather than optional project release metadata.
-test "an update channel does not require release metadata" {
+test "an update channel is configured by application code" {
   assert_true(updater_test_channel(true) is Some(_))
-  assert_true(updater_test_channel(true, identifier=None) is Some(_))
-  assert_true(updater_test_channel(true, version=None) is Some(_))
 }
 
 ///|
@@ -1516,7 +1612,6 @@ test "view handle routes operations through its closures" {
   let state = view.state()
   inspect(state.width, content="300")
   inspect(state.z_order, content="1")
-  assert_eq(view.as_native_ref(), @native.ViewRef::unsafe_from_handle(7L))
   view.close()
   debug_inspect(
     calls,
@@ -1538,11 +1633,11 @@ test "with_view stores declarative views and rejects invalid ids" {
   inspect(app.planned_views.length(), content="0")
   let app = app.with_view(
     "browser",
-    @native.ViewConfig::new(width=320, height=240, initial_url="about:blank"),
+    ViewConfig::new(width=320, height=240, initial_url="about:blank"),
   )
   inspect(app.planned_views.length(), content="1")
-  let app = app.with_view("browser", @native.ViewConfig::new(width=1, height=1))
-  let app = app.with_view("  ", @native.ViewConfig::new(width=1, height=1))
+  let app = app.with_view("browser", ViewConfig::new(width=1, height=1))
+  let app = app.with_view("  ", ViewConfig::new(width=1, height=1))
   inspect(app.planned_views.length(), content="1")
   inspect(app.validation_errors.length(), content="2")
 }
@@ -1566,7 +1661,6 @@ async test "lifecycle contexts expose one immutable locale snapshot" {
     )
     let window = WindowContext::new(
       "main",
-      @native.WindowRef::unsafe_from_handle(17L),
       test_window_handle("main", 17L),
       test_window_manager(),
       group,
@@ -1616,6 +1710,26 @@ test "standard menus resolve from the application locale" {
   let (window_role, window_label, _) = definitions[2].definition()
   assert_eq(window_role, Some(@native.MenuRole::Window))
   assert_eq(window_label, Some("窗口"))
+}
+
+///|
+test "runtime menu defaults are platform-specific" {
+  let preferences = @locale.LocalePreferences::resolve(
+    Some(@locale.Locale::parse("en-US")),
+    [],
+  )
+  assert_eq(
+    resolve_runtime_menu(None, preferences, "Proton Demo", platform="linux"),
+    None,
+  )
+  let macos = resolve_runtime_menu(
+    None,
+    preferences,
+    "Proton Demo",
+    platform="macos",
+  ).unwrap()
+  let (role, _, _) = macos.definitions()[0].definition()
+  assert_eq(role, Some(@native.MenuRole::Application))
 }
 
 ///|
@@ -1723,5 +1837,30 @@ test "framework catalog localizes controls without changing technical details" {
   assert_eq(
     framework_failure_message(application_error_summary(unsupported), detail),
     "The application encountered an error.\n\n" + detail,
+  )
+}
+
+///|
+test "system locale errors expose stable facade diagnostics" {
+  let error = SystemLocaleError::NativeQuery(status=-9, detail="query failed")
+  assert_eq(
+    error.message(),
+    "failed to query system preferred languages (-9): query failed",
+  )
+}
+
+///|
+test "POSIX system locales are normalized only on Linux" {
+  assert_eq(
+    normalize_platform_languages(["zh_CN.UTF-8"], posix=true).map(locale => {
+      locale.to_string()
+    }),
+    ["zh-CN"],
+  )
+  assert_eq(
+    normalize_platform_languages(["en-US"], posix=false).map(locale => {
+      locale.to_string()
+    }),
+    ["en-US"],
   )
 }

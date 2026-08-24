@@ -1,22 +1,22 @@
 ///|
-async fn run_multi_window_driver_probe(target : String, timeout : Int) -> Unit {
+async fn run_multi_window_driver_probe(
+  tasks : @async.TaskGroup[Unit],
+  target : String,
+  timeout : Int,
+) -> Unit {
   let (target_a, target_b) = wait_for_multi_window_targets(target, timeout)
-  let page_a = @client.connect_cdp_page_target_with_timeout(
+  let page_a = @page.Page::connect(
+    tasks,
     cdp_target_from(target),
     target_id=target_a.target_id,
     timeout_ms=timeout,
   )
-  let page_b = @client.connect_cdp_page_target_with_timeout(
+  let page_b = @page.Page::connect(
+    tasks,
     cdp_target_from(target),
     target_id=target_b.target_id,
     timeout_ms=timeout,
   )
-  defer {
-    page_a.close()
-    page_b.close()
-  }
-  ignore(page_a.send_schema_command("Runtime.enable"))
-  ignore(page_b.send_schema_command("Runtime.enable"))
   wait_for_ready(page_a, multi_window_ready_expression(), timeout)
   wait_for_ready(page_b, multi_window_ready_expression(), timeout)
   let (result_a, result_b) = @async.with_task_group(group => {
@@ -36,6 +36,8 @@ async fn run_multi_window_driver_probe(target : String, timeout : Int) -> Unit {
   guard target_a.target_id != target_b.target_id else {
     fail("CDP e2e multi-window driver used the same target twice")
   }
+  page_a.close()
+  page_b.close()
 }
 
 ///|

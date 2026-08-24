@@ -11,18 +11,10 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const timeoutMs = Number(process.env.PROTON_SCAFFOLD_E2E_TIMEOUT_MS ?? "60000");
-const nativeDist = path.resolve(
-  process.env.PROTON_NATIVE_DIST ?? path.join(repoRoot, "native", "dist"),
-);
-const nativeBin = path.join(nativeDist, "bin");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-scaffold-e2e-"));
 const projectDir = path.join(tempRoot, "todo");
 const frontendDir = path.join(projectDir, "frontend");
 const frontendDist = path.join(frontendDir, "dist");
-const codegenWasm = path.join(
-  repoRoot,
-  "_build/wasm/debug/build/moonbit-community/proton_codegen/proton_codegen.wasm",
-);
 const codegenVersion = fs
   .readFileSync(path.join(repoRoot, "codegen", "moon.mod"), "utf8")
   .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
@@ -83,8 +75,6 @@ function run(command, args, options = {}) {
 function runtimeEnv(extra = {}) {
   return {
     ...process.env,
-    PATH: `${nativeBin}${path.delimiter}${process.env.PATH ?? ""}`,
-    PROTON_NATIVE_DIST: nativeDist,
     PROTON_NO_UPDATE_CHECK: "1",
     ...extra,
   };
@@ -159,31 +149,17 @@ function verifyGeneratedTree() {
   );
 }
 
-function installLocalMoonxShim() {
-  run("moon", ["build", "codegen", "--target", "wasm"]);
-  const binDir = path.join(tempRoot, "bin");
-  fs.mkdirSync(binDir);
-  const shim = path.join(binDir, "moonx");
-  const realMoonx = run("which", ["moonx"], { capture: true }).trim();
-  fs.writeFileSync(
-    shim,
-    `#!/usr/bin/env node
-const { spawnSync } = require("node:child_process");
-const expected = ${JSON.stringify(codegenCoordinate)};
-if (process.argv[2] === expected) {
-  const result = spawnSync("moonrun", [${JSON.stringify(codegenWasm)}, ...process.argv.slice(3)], {
-    stdio: "inherit",
-  });
-  process.exit(result.status ?? 1);
-}
-const result = spawnSync(${JSON.stringify(realMoonx)}, process.argv.slice(2), {
-  stdio: "inherit",
-});
-process.exit(result.status ?? 1);
-`,
+function useLocalCodegenPackage() {
+  const backendModPath = path.join(projectDir, "backend", "moon.mod");
+  const source = fs.readFileSync(backendModPath, "utf8");
+  const localCommand = `moon runwasm '${path.join(repoRoot, "codegen")}'`;
+  const updated = source.replace(`moonx ${codegenCoordinate}`, localCommand);
+  assert(updated !== source, "generated backend is missing the codegen command");
+  assert(
+    !updated.includes(`moonx ${codegenCoordinate}`),
+    "generated backend contains multiple codegen commands",
   );
-  fs.chmodSync(shim, 0o755);
-  process.env.PATH = `${binDir}${path.delimiter}${process.env.PATH ?? ""}`;
+  fs.writeFileSync(backendModPath, updated);
 }
 
 function verifySourceSmokeCodegen() {
@@ -194,8 +170,9 @@ function verifySourceSmokeCodegen() {
     "commands.g.mbt",
   );
   const fresh = path.join(tempRoot, "commands.fresh.mbt");
-  run("moonrun", [
-    codegenWasm,
+  run("moon", [
+    "runwasm",
+    path.join(repoRoot, "codegen"),
     path.join(projectDir, "backend", "todo", "commands.mbt"),
     "-o",
     fresh,
@@ -705,9 +682,7 @@ async function runPackagedAppSmoke(executable, expectedRevision) {
     PROTON_REMOTE_DEBUGGING_PORT: String(cdpPort),
   };
   delete packagedEnv.PROTON_HELPER_PATH;
-  delete packagedEnv.PROTON_NATIVE_DIST;
   delete packagedEnv.PROTON_RUNTIME_ROOT;
-  delete packagedEnv.PROTON_DEV;
   delete packagedEnv.PROTON_MODE;
   appProcess = spawn(executable, [`--remote-debugging-port=${cdpPort}`], {
     cwd: projectDir,
@@ -754,7 +729,6 @@ async function main() {
   if (process.platform !== "darwin") {
     fail("the scaffold package and lifecycle smoke currently requires macOS");
   }
-  assert(isDirectory(nativeBin), `native runtime is missing: ${nativeBin}`);
   run("moon", ["--version"], { capture: true });
   run("moonx", ["--target", "native", warrenCoordinate, "--help"], {
     capture: true,
@@ -777,8 +751,9 @@ async function main() {
   ]);
   verifyGeneratedTree();
   run("moon", ["fmt", "--check"], { cwd: projectDir });
-  installLocalMoonxShim();
+  useLocalCodegenPackage();
   connectLocalSourceModules();
+  localCli(["-C", projectDir, "cef", "setup"]);
 
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
   verifySourceSmokeCodegen();

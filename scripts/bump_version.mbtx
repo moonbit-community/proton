@@ -4,7 +4,7 @@ import {
   "moonbitlang/core/env",
   "moonbitlang/core/string",
   "moonbitlang/moon_config",
-  "moonbitlang/x@0.4.43/sys",
+  "moonbitlang/x@0.5.1/sys",
 }
 
 struct ModuleDocument {
@@ -12,8 +12,6 @@ struct ModuleDocument {
   source : String
   ast : @moon_config.Ast
 }
-
-let independently_versioned_modules = ["./package"]
 
 fn fail(message : String) -> Unit {
   println("error: " + message)
@@ -117,9 +115,6 @@ async fn main {
     guard item is @moon_config.Ast::Str(member_path, ..) else {
       fail("moon.work contains a non-string member")
       return
-    }
-    guard !independently_versioned_modules.contains(member_path) else {
-      continue
     }
     let path = member_path + "/moon.mod"
     let source = @fs.read_file(path).text()

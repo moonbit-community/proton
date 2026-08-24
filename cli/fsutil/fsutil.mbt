@@ -84,21 +84,3 @@ pub fn path_is_within(root : String, candidate : String) -> Bool {
   relative != ".." &&
   !relative.has_prefix(".." + @path.sep.to_string())
 }
-
-///|
-/// Walks up from `start` looking for `moon.work` or `moon.mod`; returns the
-/// first directory containing either marker, or `start` when none is found.
-pub async fn find_project_root_from(start : String) -> String {
-  for dir = start; dir != ""; {
-    if path_exists(path_join(dir, "moon.work")) ||
-      path_exists(path_join(dir, "moon.mod")) {
-      return dir
-    }
-    let parent = path_parent(dir)
-    if parent == dir {
-      return start
-    }
-    continue parent
-  }
-  start
-}

@@ -250,14 +250,39 @@ fn forward_menu_command(
     ),
   ) catch {
     error =>
-      if !is_ignorable_menu_forward_error(error) {
+      if !is_ignorable_frontend_event_forward_error(error) {
         raise native_run_error("forward menu command", error)
       }
   }
 }
 
 ///|
-fn is_ignorable_menu_forward_error(error : @native.NativeError) -> Bool {
+fn forward_extension_event(
+  window : @native.Window,
+  extension_namespace : String,
+  name : String,
+  payload : Json,
+) -> Unit raise AppRunError {
+  window.emit_bridge_event_json(
+    bridge_event_json(
+      "extension",
+      name,
+      payload,
+      Some(extension_namespace),
+      None,
+    ),
+  ) catch {
+    error =>
+      if !is_ignorable_frontend_event_forward_error(error) {
+        raise native_run_error("forward extension event", error)
+      }
+  }
+}
+
+///|
+fn is_ignorable_frontend_event_forward_error(
+  error : @native.NativeError,
+) -> Bool {
   error.is_invalid_state() || error.is_stale_window_request()
 }
 
@@ -321,6 +346,7 @@ async fn dispatch_bridge_request(
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
   wake_signal : @core.RuntimeWakeSignal,
+  dialog_completions : DialogCompletionStore,
   locale_preferences : @locale.LocalePreferences,
 ) -> @native.BridgeResponse {
   let grant = match
@@ -337,7 +363,8 @@ async fn dispatch_bridge_request(
   @async.with_task_group(command_tasks => {
     result.val = Some(
       dispatch_bridge_request_in_command_scope(
-        window, window_id, grant, host, request, wake_signal, command_tasks, locale_preferences,
+        window, window_id, grant, host, request, wake_signal, dialog_completions,
+        command_tasks, locale_preferences,
       ),
     )
     command_tasks.return_immediately(())
@@ -353,14 +380,15 @@ async fn dispatch_bridge_request_in_command_scope(
   host : @core.AppCommandHost,
   request : @native.BridgeRequest,
   wake_signal : @core.RuntimeWakeSignal,
+  dialog_completions : DialogCompletionStore,
   command_tasks : @async.TaskGroup[Unit],
   locale_preferences : @locale.LocalePreferences,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
   let request_context = @core.AppCommandRequestContext::new(
-    window.id(),
     command_tasks,
     locale_preferences,
+    window=command_window_capability(window.as_ref(), dialog_completions),
     window_id~,
     source_origin=request.source_origin(),
     page_instance=request.page_instance(),
@@ -386,6 +414,77 @@ async fn dispatch_bridge_request_in_command_scope(
     }
     @native.BridgeResponse::Err(request_id~, code="op_failed", message~)
   }
+}
+
+///|
+fn command_dialog_level(level : String) -> @native.DialogLevel {
+  match level {
+    "warning" => @native.DialogLevel::Warning
+    "error" => @native.DialogLevel::Error
+    _ => @native.DialogLevel::Info
+  }
+}
+
+///|
+async fn wait_for_command_dialog(
+  window : @native.WindowRef,
+  completions : DialogCompletionStore,
+  dialog : Int64,
+) -> String {
+  defer (window.cancel_dialog(dialog) catch { _ => () })
+  completions.wait(dialog)
+}
+
+///|
+fn command_window_capability(
+  window : @native.WindowRef,
+  dialog_completions : DialogCompletionStore,
+) -> @core.CommandWindow {
+  @core.CommandWindow::new(
+    async fn(title, message, level) {
+      let dialog = window.begin_message_dialog(
+        title,
+        message,
+        command_dialog_level(level),
+      )
+      ignore(wait_for_command_dialog(window, dialog_completions, dialog))
+    },
+    async fn(title, message, level) {
+      let dialog = window.begin_confirm_dialog(
+        title,
+        message,
+        command_dialog_level(level),
+      )
+      wait_for_command_dialog(window, dialog_completions, dialog) == "1"
+    },
+    async fn(title, path) {
+      let dialog = window.begin_open_file_dialog(title, path)
+      let result = wait_for_command_dialog(window, dialog_completions, dialog)
+      if result.is_empty() {
+        None
+      } else {
+        Some(result)
+      }
+    },
+    async fn(title, path) {
+      let dialog = window.begin_save_file_dialog(title, path)
+      let result = wait_for_command_dialog(window, dialog_completions, dialog)
+      if result.is_empty() {
+        None
+      } else {
+        Some(result)
+      }
+    },
+    async fn(title, path) {
+      let dialog = window.begin_choose_directory_dialog(title, path)
+      let result = wait_for_command_dialog(window, dialog_completions, dialog)
+      if result.is_empty() {
+        None
+      } else {
+        Some(result)
+      }
+    },
+  )
 }
 
 ///|

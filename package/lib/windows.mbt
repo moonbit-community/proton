@@ -92,6 +92,14 @@ async fn sign_windows_executable(path : String) -> Unit {
   }
   args.push(path)
   run_signtool(args, "sign Windows executable")
+  verify_windows_executable(path)
+}
+
+///|
+async fn verify_windows_executable(path : String) -> Unit {
+  guard path_is_file(path) else {
+    raise WindowsPackagingError::MissingTarget(path~)
+  }
   run_signtool(
     ["verify", "/pa", "/all", "/v", path],
     "verify Windows executable",
@@ -102,6 +110,7 @@ async fn sign_windows_executable(path : String) -> Unit {
 async fn create_windows_zip(source : String, destination : String) -> Unit {
   let staging = destination + ".staging"
   remove_tree(staging)
+  errdefer (remove_tree(staging) catch { _ => () })
   let script =
     #|& {
     #|  $ErrorActionPreference = "Stop"
@@ -135,20 +144,45 @@ async fn create_windows_zip(source : String, destination : String) -> Unit {
 }
 
 ///|
-async fn package_windows(spec : PackageSpec) -> Array[String] {
+async fn package_windows(
+  spec : PackageSpec,
+  customization : PackageCustomization,
+  prepare : async (PackageLayout) -> Unit,
+) -> Array[String] {
   guard path_is_file(spec.executable) else {
     raise PackagePlanError::MissingExecutable(path=spec.executable)
   }
   let staging = windows_staging_path(spec)
   remove_tree(staging)
   ensure_dir(staging)
+  errdefer (remove_tree(staging) catch { _ => () })
   let name = executable_name(spec.product_name) + ".exe"
   let staged_executable = path_join(staging, name)
   copy_file(spec.executable, staged_executable)
   copy_payloads(spec, path_join(staging, "Resources"), staging, staging)
   stage_windows_icon(spec, staged_executable)
+  let layout = PackageLayout::{
+    root: staging,
+    executable: staged_executable,
+    resources: path_join(staging, "Resources"),
+    libraries: staging,
+    executables: staging,
+  }
+  prepare(layout)
   if spec.sign {
-    sign_windows_executable(staged_executable)
+    let targets = [staged_executable]
+    for target in customization.windows_sign_targets {
+      let path = path_join(staging, target)
+      if !targets.contains(path) {
+        targets.push(path)
+      }
+    }
+    for target in targets {
+      sign_windows_executable(target)
+    }
+    for target in customization.windows_verify_targets {
+      verify_windows_executable(path_join(staging, target))
+    }
   }
   let outputs : Array[String] = []
   let app = windows_app_path(spec)

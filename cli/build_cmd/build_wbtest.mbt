@@ -119,6 +119,37 @@ test "moon build-only output identifies one executable" {
 }
 
 ///|
+test "CEF process helper uses its explicit install directory" {
+  let bin = @fsutil.resolve_path(".", "fixtures/helper-bin")
+  let expected = if @path.sep == '\\' {
+    @fsutil.resolve_path(bin, "cef_process.exe")
+  } else {
+    @fsutil.resolve_path(bin, "cef_process")
+  }
+  assert_eq(cef_process_install_path(bin), expected)
+}
+
+///|
+test "Proton source comes from Moon's resolved package source" {
+  let workspace = @fsutil.resolve_path(".", "fixtures/workspace")
+  let output = "moonc check app.mbt -pkg-sources moonbit-community/proton:../deps/proton -target native\n"
+  assert_eq(
+    proton_source_from_build_plan(output, workspace),
+    Some(@fsutil.resolve_path(workspace, "../deps/proton")),
+  )
+}
+
+///|
+test "Proton source parser preserves quoted paths" {
+  let workspace = @fsutil.resolve_path(".", "fixtures/workspace")
+  let output = "moonc check app.mbt -pkg-sources moonbit-community/proton:'../deps/proton source' -target native\n"
+  assert_eq(
+    proton_source_from_build_plan(output, workspace),
+    Some(@fsutil.resolve_path(workspace, "../deps/proton source")),
+  )
+}
+
+///|
 test "moon build-only output rejects missing or ambiguous artifacts" {
   for
     output in [
@@ -133,44 +164,20 @@ test "moon build-only output rejects missing or ambiguous artifacts" {
 }
 
 ///|
-test "frontend release rejects url production entry" {
-  let frontend = Some(
-    @proton_config.ProjectFrontendConfig::new(
-      dist=Some("fixtures/frontend-dist"),
-    ),
-  )
-  let error = expect_build_error_message(() => {
-    validate_production_entry_kind(
-      @proton_config.ProjectEntry::Url("http://localhost:5173"),
-      frontend,
-    )
+test "native Moon commands select a source-built runtime on Unix" {
+  @debug.assert_eq(native_moon_process_env_for(false, None), {
+    "MOON_CC": "clang",
   })
-  assert_true(error.contains("frontend production entry"))
-}
-
-///|
-test "frontend release config preflight rejects url entry" {
-  let config = BuildProjectConfig::{
-    base_dir: ".",
-    entries: [@proton_config.ProjectEntry::Url("http://localhost:5173")],
-    backend: None,
-    frontend: Some(
-      @proton_config.ProjectFrontendConfig::new(
-        dist=Some("fixtures/frontend-dist"),
-      ),
-    ),
-  }
-  let error = expect_build_error_message(() => validate_release_config(config))
-  assert_true(error.contains("frontend production entry"))
+  @debug.assert_eq(native_moon_process_env_for(false, Some("clang")), {
+    "MOON_CC": "clang",
+  })
+  @debug.assert_eq(native_moon_process_env_for(true, None), Map([]))
 }
 
 ///|
 test "frontend release requires dist" {
   let config = BuildProjectConfig::{
     base_dir: ".",
-    entries: [
-      @proton_config.ProjectEntry::Asset("fixtures/frontend-dist/index.html"),
-    ],
     backend: None,
     frontend: Some(
       @proton_config.ProjectFrontendConfig::new(
@@ -180,4 +187,26 @@ test "frontend release requires dist" {
   }
   let error = expect_build_error_message(() => validate_release_config(config))
   assert_true(error.contains("frontend.dist is required"))
+}
+
+///|
+async test "project resolution does not require frontend build output" {
+  let config = BuildProjectConfig::{
+    base_dir: ".",
+    backend: None,
+    frontend: Some(
+      @proton_config.ProjectFrontendConfig::new(
+        dist=Some("missing-frontend-dist"),
+      ),
+    ),
+  }
+  let invocation = project_build_invocation(".", config, RawBuildOptions::{
+    app_package: None,
+    config_path: None,
+    moon_target_dir: None,
+    run_frontend_build: false,
+    moon_args: [],
+  })
+  @debug.assert_eq(invocation.backend_path, ".")
+  @debug.assert_eq(invocation.app_package, default_package)
 }

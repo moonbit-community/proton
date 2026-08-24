@@ -23,15 +23,27 @@ test "error message falls back when ffi message is empty" {
 
 ///|
 test "ensure_supported_result covers both outcomes" {
-  assert_eq(ensure_supported_result(true), Ok(()))
-  assert_eq(ensure_supported_result(false), Err(unsupported_error_message()))
+  assert_eq(ensure_supported_result(true, @utf8.encode("ignored")), Ok(()))
+  assert_eq(
+    ensure_supported_result(false, @utf8.encode("no clipboard backend found")),
+    Err("no clipboard backend found"),
+  )
+  assert_eq(
+    ensure_supported_result(false, b""),
+    Err(unsupported_error_message()),
+  )
 }
 
 ///|
 test "read_text_result handles unsupported clipboard" {
   assert_eq(
-    read_text_result(false, @utf8.encode("ignored"), 0, @utf8.encode("ignored")),
-    Err(unsupported_error_message()),
+    read_text_result(
+      false,
+      @utf8.encode("ignored"),
+      0,
+      @utf8.encode("no clipboard backend found"),
+    ),
+    Err("no clipboard backend found"),
   )
 }
 
@@ -67,8 +79,8 @@ test "read_text_result handles explicit and fallback errors" {
 ///|
 test "write_text_result handles unsupported clipboard" {
   assert_eq(
-    write_text_result(false, 1, @utf8.encode("ignored")),
-    Err(unsupported_error_message()),
+    write_text_result(false, 1, @utf8.encode("no clipboard backend found")),
+    Err("no clipboard backend found"),
   )
 }
 
@@ -95,9 +107,9 @@ test "read_text_with covers supported and unsupported wrapper paths" {
   )
   assert_eq(
     read_text_with(false, fn() { @utf8.encode("ignored") }, fn() { 1 }, fn() {
-      @utf8.encode("ignored")
+      @utf8.encode("no clipboard backend found")
     }),
-    Err(unsupported_error_message()),
+    Err("no clipboard backend found"),
   )
 }
 
@@ -120,8 +132,8 @@ test "write_text_with covers supported and unsupported wrapper paths" {
   )
   assert_eq(
     write_text_with(false, "ignored", fn(_bytes) { 1 }, fn() {
-      @utf8.encode("ignored")
+      @utf8.encode("no clipboard backend found")
     }),
-    Err(unsupported_error_message()),
+    Err("no clipboard backend found"),
   )
 }

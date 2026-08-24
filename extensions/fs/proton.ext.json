@@ -1,8 +1,9 @@
 {
   "id": "moonbit-community/proton-fs",
   "namespace": "fs",
+  "moonbit_import_path": "moonbit-community/proton_ext/fs",
   "package": "@moonbit-community/proton-fs",
-  "version": "0.1.0",
+  "version": "0.1.19",
   "display_name": "Filesystem",
   "description": "MoonBit-style host filesystem access wrapping async/fs-shaped operations.",
   "platforms": [

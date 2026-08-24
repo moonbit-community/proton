@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_keepawake"
 
-version = "0.1.18"
+version = "0.2.1"
 
 import {
-  "moonbit-community/proton_ffi@0.1.18",
+  "moonbit-community/proton_ffi@0.2.1",
 }
 
 readme = "README.mbt.md"

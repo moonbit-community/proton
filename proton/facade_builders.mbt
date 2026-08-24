@@ -92,8 +92,8 @@ pub fn view(
   visible? : Bool = true,
   z_order? : Int = 0,
   background_color? : String,
-) -> @native.ViewConfig {
-  @native.ViewConfig::new(
+) -> ViewConfig {
+  ViewConfig::new(
     width~,
     height~,
     x~,
@@ -106,73 +106,6 @@ pub fn view(
 }
 
 ///|
-/// Creates an application from `PROTON_CONFIG_PATH`, `proton.project.json` in the
-/// current working directory, or code-only defaults.
-pub fn app() -> App {
-  config_app(None, auto_config=true)
-}
-
-///|
-/// Creates an application backed by a `proton.project.json` config file.
-///
-/// The default `proton.project.json` path honors `PROTON_CONFIG_PATH` and packaged
-/// config discovery. Other paths are used exactly as provided.
-pub fn config(path : String) -> App {
-  let path = if path == default_config_file {
-    implicit_config_path().unwrap_or(path)
-  } else {
-    path
-  }
-  config_app(Some(path), auto_config=false)
-}
-
-///|
-fn config_app(path : String?, auto_config~ : Bool) -> App {
-  App::{
-    file_path: path,
-    auto_config,
-    window: @manifest.WindowManifest::new(
-      "Proton",
-      900,
-      700,
-      size_hint=@manifest.WindowSizeHint::None,
-    ),
-    entry: @manifest.AppEntry::Html(""),
-    windows: [],
-    debug_level_value: 0,
-    headless_value: false,
-    single_instance_identifier: None,
-    explicit_locale: None,
-    title_overridden: false,
-    size_overridden: false,
-    titlebar_style_overridden: false,
-    entry_overridden: false,
-    debug_overridden: false,
-    bridge_startup_timeout_value_ms: default_bridge_startup_timeout_ms,
-    menu: None,
-    extension_settings: Map([]),
-    permission_grants: [],
-    command_extensions: Map([]),
-    command_registrars: [],
-    application_lifecycle_hooks: [],
-    planned_views: [],
-    launch_input_handlers: [],
-    window_event_handlers: [],
-    view_event_handlers: [],
-    window_close_handler: None,
-    navigation_handler: None,
-    popup_handler: None,
-    download_handler: None,
-    certificate_handler: None,
-    media_handler: None,
-    download_event_handlers: [],
-    update_handlers: [],
-    window_lifecycle_hooks: [],
-    validation_errors: [],
-  }
-}
-
-///|
 /// Enables or disables runtime debug mode.
 pub fn App::debug(self : App, enabled? : Bool = true) -> App {
   self.debug_level(debug_level_from_bool(enabled))
@@ -181,7 +114,6 @@ pub fn App::debug(self : App, enabled? : Bool = true) -> App {
 ///|
 /// Sets the runtime debug level.
 pub fn App::debug_level(self : App, debug : Int) -> App {
-  self.debug_overridden = true
   self.debug_level_value = debug
   self
 }
@@ -231,7 +163,6 @@ pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> App {
 ///|
 /// Sets the primary window title.
 pub fn App::title(self : App, title : String) -> App {
-  self.title_overridden = true
   self.window = @manifest.WindowManifest::new(
     title,
     self.window.width,
@@ -245,7 +176,6 @@ pub fn App::title(self : App, title : String) -> App {
 ///|
 /// Sets the primary window size.
 pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
-  self.size_overridden = true
   self.window = @manifest.WindowManifest::new(
     self.window.title,
     width,
@@ -260,7 +190,6 @@ pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
 /// Sets whether web content remains below or extends beneath the native
 /// titlebar. Overlay rendering is currently implemented on macOS and Windows.
 pub fn App::titlebar_style(self : App, style : TitlebarStyle) -> App {
-  self.titlebar_style_overridden = true
   self.window = @manifest.WindowManifest::new(
     self.window.title,
     self.window.width,
@@ -300,8 +229,88 @@ pub fn App::entry_asset(self : App, path : String) -> App {
 
 ///|
 /// Sets the app-level native menu bar.
-pub fn App::menu(self : App, menu : @native.MenuBar) -> App {
+pub fn App::menu(self : App, menu : MenuBar) -> App {
   self.menu = Some(menu)
+  self
+}
+
+///|
+/// Registers an application URL scheme for single-instance launch forwarding.
+/// OS registration belongs to the package configuration.
+pub fn App::url_scheme(self : App, scheme : String) -> App {
+  let scheme = scheme.trim().to_owned().to_lower()
+  if scheme == "" || scheme.contains(":") || scheme.contains("/") {
+    self.validation_errors.push(
+      InvalidSetting(name="url_scheme", message="must be a scheme name"),
+    )
+  } else if !self.url_schemes.contains(scheme) {
+    self.url_schemes.push(scheme)
+  }
+  self
+}
+
+///|
+/// Registers a document extension for single-instance launch forwarding.
+/// OS registration belongs to the package configuration.
+pub fn App::document_extension(self : App, extension : String) -> App {
+  let extension = extension.trim().to_owned().to_lower()
+  let extension = if extension.has_prefix(".") {
+    extension.unsafe_substring(start=1, end=extension.length()).to_string()
+  } else {
+    extension
+  }
+  if extension == "" || extension.contains("/") || extension.contains("\\") {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="document_extension",
+        message="must be a file extension",
+      ),
+    )
+  } else if !self.document_extensions.contains(extension) {
+    self.document_extensions.push(extension)
+  }
+  self
+}
+
+///|
+/// Configures the signed update channel used by this application.
+pub fn App::update_channel(
+  self : App,
+  endpoint : String,
+  public_keys : Array[String],
+  check_on_launch? : Bool = true,
+  freshness_days? : Int = 30,
+) -> App {
+  let endpoint = endpoint.trim().to_owned()
+  if !endpoint.has_prefix("https://") {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="update_channel.endpoint",
+        message="must be an https URL",
+      ),
+    )
+  } else if public_keys.length() == 0 {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="update_channel.public_keys",
+        message="must contain at least one trusted key",
+      ),
+    )
+  } else if freshness_days <= 0 {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="update_channel.freshness_days",
+        message="must be positive",
+      ),
+    )
+  } else {
+    self.update_channel = Some(ResolvedUpdateChannel::{
+      endpoint,
+      public_keys: public_keys.copy(),
+      check_on_launch,
+      freshness_days,
+    })
+  }
   self
 }
 
@@ -350,11 +359,7 @@ pub fn App::on_window_event(
 /// with the window and can later be found through `WindowHandle::view(id)`
 /// or observed through `App::on_view_event`. Use the imperative
 /// `WindowHandle::add_view` for views whose lifetime is dynamic.
-pub fn App::with_view(
-  self : App,
-  id : String,
-  config : @native.ViewConfig,
-) -> App {
+pub fn App::with_view(self : App, id : String, config : ViewConfig) -> App {
   if id.trim().is_empty() {
     self.validation_errors.push(
       InvalidSetting(name="views.id", message="must not be empty"),
@@ -585,7 +590,7 @@ pub fn[State] App::window_lifecycle(
 ///|
 /// Registers one extension setting with the app facade.
 ///
-/// The native DLL route exposes command extensions through
+/// The source-built native route exposes command extensions through
 /// `window.__MoonBit__.core.invokeOp(...)` and generated high-level proxies.
 /// The renderer installs the bridge before the page's first script executes.
 pub fn App::extension(

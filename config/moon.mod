@@ -1,17 +1,16 @@
 name = "moonbit-community/proton_config"
 
-version = "0.1.18"
+version = "0.2.1"
 
 import {
-  "moonbitlang/moon_config@0.3.13",
-  "moonbitlang/x@0.4.50",
+  "moonbitlang/x@0.5.1",
 }
 
 repository = "https://github.com/moonbit-community/proton"
 
 license = "Apache-2.0"
 
-description = "Typed project configuration models and JSON decoding for Proton."
+description = "Typed CLI project configuration and JSON decoding for Proton."
 
 options(
   warn_list: "",

@@ -82,10 +82,6 @@ pub fn Manifest::notes_url(self : Manifest) -> String? {
 
 ///|
 /// Returns the update offered for one platform identifier, if any.
-///
-/// A platform that is absent, or whose entry names a `kind` this client does
-/// not implement, has no update on offer. Neither is an error: a manifest may
-/// legitimately describe artifacts that a older client cannot install.
 pub fn Manifest::platform(
   self : Manifest,
   platform : String,
@@ -213,13 +209,10 @@ fn parse_platforms(
   }
   let platforms : Map[String, PlatformUpdate] = Map([])
   for name, platform_json in entries {
-    match parse_platform(platform_json, "manifest.platforms.\{name}") {
-      Some(update) => platforms[name] = update
-      // An unrecognised `kind` means this client cannot install that artifact,
-      // not that the manifest is broken. Failing the whole document would let a
-      // newer release format lock every older client out of every platform.
-      None => ()
-    }
+    platforms[name] = parse_platform(
+      platform_json,
+      "manifest.platforms.\{name}",
+    )
   }
   platforms
 }
@@ -228,14 +221,16 @@ fn parse_platforms(
 fn parse_platform(
   json : Json,
   path : String,
-) -> PlatformUpdate? raise ManifestError {
+) -> PlatformUpdate raise ManifestError {
   guard json is Object(fields) else { raise NotAnObject(path~) }
   for key, _ in fields {
     guard key is ("kind" | "url" | "size" | "sha256" | "signature") else {
       raise UnknownField(path="\{path}.\{key}")
     }
   }
-  guard required_string(fields, "kind", path) is "full" else { return None }
+  guard required_string(fields, "kind", path) is "full" else {
+    raise InvalidField(path="\{path}.kind", expectation="must be \"full\"")
+  }
   let url = required_string(fields, "url", path)
   guard url.has_prefix("https://") else {
     raise InvalidField(path="\{path}.url", expectation="must be an https URL")
@@ -260,7 +255,7 @@ fn parse_platform(
       expectation="must be an even number of hexadecimal characters",
     )
   }
-  Some(PlatformUpdate::{ url, size, sha256_hex, signature_hex })
+  PlatformUpdate::{ url, size, sha256_hex, signature_hex }
 }
 
 ///|

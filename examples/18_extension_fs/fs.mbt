@@ -298,7 +298,7 @@ let resource : String =
   #|                                <textarea id="content">
   #|Hello from the fs extension metadata example.
   #|
-  #| The current native DLL route exposes filesystem calls through command extensions.</textarea
+  #| The current source-built native route exposes filesystem calls through command extensions.</textarea
   #|                                >
   #|                            </label>
   #|                            <div class="actions">

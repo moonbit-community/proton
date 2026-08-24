@@ -10,7 +10,6 @@ pub struct ApplicationContext {
 /// Window-lifetime capabilities supplied to window startup hooks.
 pub struct WindowContext {
   id : String
-  window : @native.WindowRef
   handle : WindowHandle
   windows : WindowManager
   tasks : @async.TaskGroup[Unit]
@@ -56,22 +55,13 @@ fn ApplicationContext::new(
 ///|
 fn WindowContext::new(
   id : String,
-  window : @native.WindowRef,
   handle : WindowHandle,
   windows : WindowManager,
   tasks : @async.TaskGroup[Unit],
   events : WindowEventEmitter,
   locale_preferences : @locale.LocalePreferences,
 ) -> WindowContext {
-  WindowContext::{
-    id,
-    window,
-    handle,
-    windows,
-    tasks,
-    events,
-    locale_preferences,
-  }
+  WindowContext::{ id, handle, windows, tasks, events, locale_preferences }
 }
 
 ///|
@@ -131,12 +121,6 @@ pub fn ApplicationContext::windows(self : ApplicationContext) -> WindowManager {
 }
 
 ///|
-/// Returns a non-owning reference to this window.
-pub fn WindowContext::window(self : WindowContext) -> @native.WindowRef {
-  self.window
-}
-
-///|
 /// Returns the session-controlled handle for this concrete window instance.
 pub fn WindowContext::handle(self : WindowContext) -> WindowHandle {
   self.handle
@@ -192,7 +176,7 @@ async fn start_application_lifecycle_hooks(
         )
     }
     group.add_defer(async fn() {
-      @async.protect_from_cancel(activation.shutdown, resume_on_cancel=true) catch {
+      @async.protect_from_cancel(activation.shutdown) catch {
         error =>
           cleanup_failures.push(
             LifecycleHook(
@@ -219,7 +203,7 @@ async fn start_window_lifecycle_hooks(
         )
     }
     group.add_defer(async fn() {
-      @async.protect_from_cancel(activation.close, resume_on_cancel=true) catch {
+      @async.protect_from_cancel(activation.close) catch {
         error =>
           cleanup_failures.push(
             LifecycleHook(

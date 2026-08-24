@@ -8,6 +8,10 @@ import {
 }
 
 // Values
+pub fn cleanup_previous() -> Unit raise UpdateError
+
+pub fn current_revision() -> UInt64 raise UpdateError
+
 pub async fn http_fetch(String) -> Bytes raise UpdateError
 
 pub async fn http_fetch_artifact(String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError

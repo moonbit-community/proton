@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_shell"
 
-version = "0.1.18"
+version = "0.2.1"
 
 import {
-  "moonbit-community/proton_ffi@0.1.18",
+  "moonbit-community/proton_ffi@0.2.1",
 }
 
 repository = "https://github.com/moonbit-community/proton/tree/main/sys/shell"

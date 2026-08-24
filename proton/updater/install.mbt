@@ -147,3 +147,27 @@ pub fn relaunch() -> Unit raise UpdateError {
       )
   }
 }
+
+///|
+/// Returns the revision recorded by the running application bundle.
+pub fn current_revision() -> UInt64 raise UpdateError {
+  @native.update_current_revision() catch {
+    error =>
+      raise InstallFailed(
+        step="read the installed update revision",
+        detail=error.message(),
+      )
+  }
+}
+
+///|
+/// Removes the retained backup from a successfully relaunched application.
+pub fn cleanup_previous() -> Unit raise UpdateError {
+  @native.update_cleanup_previous() catch {
+    error =>
+      raise InstallFailed(
+        step="clean up the previous application bundle",
+        detail=error.message(),
+      )
+  }
+}

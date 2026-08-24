@@ -24,10 +24,10 @@ adding JavaScript helpers or hand-rolled filesystem behavior.
   directory with the exact filesystem commands allowed below it.
 - Permission roots are backend configuration. Renderer requests cannot add or
   widen them.
-- Relative permission roots and relative renderer paths are anchored to the
-  directory containing `proton.project.json` (or the process working directory for an
-  app configured entirely in MoonBit). Packaging therefore does not change
-  their meaning.
+- Relative permission roots and relative renderer paths are anchored to
+  `@proton.resource_dir()`. The CLI supplies the project root during development,
+  packaged apps use their resources directory, and direct runs use the startup
+  working directory.
 - Canonical path checks and filesystem operations are serialized so concurrent
   renderer requests cannot race a path check with a rename.
 - A path that resolves outside every matching root is denied, including a

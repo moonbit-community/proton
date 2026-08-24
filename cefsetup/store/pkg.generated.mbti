@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_cefsetup/store"
+
+// Values
+pub async fn install_declared(String) -> InstalledRuntime
+
+pub async fn install_default() -> InstalledRuntime
+
+pub async fn resolve_declared(String) -> InstalledRuntime
+
+pub async fn resolve_default() -> InstalledRuntime
+
+// Errors
+
+// Types and methods
+pub struct InstalledRuntime {
+  root : String
+  sdk_root : String
+  runtime_root : String
+  platform : String
+  cef_archive : String
+  cef_sha256 : String
+  layout_version : Int
+}
+pub fn InstalledRuntime::cef_archive(Self) -> String
+pub fn InstalledRuntime::platform(Self) -> String
+pub fn InstalledRuntime::runtime_root(Self) -> String
+pub fn InstalledRuntime::sdk_root(Self) -> String
+
+// Type aliases
+
+// Traits
