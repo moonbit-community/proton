@@ -2635,6 +2635,20 @@ static void CEF_CALLBACK proton_engine_on_loading_state_change(
   (void)self;
   (void)canGoBack;
   (void)canGoForward;
+  proton_engine_window_t *window =
+      proton_engine_window_from_browser_client(browser);
+  if (!isLoading && window != NULL && window->headless) {
+    // The resize notification sent during synchronous browser creation can
+    // precede compositor readiness. Invalidate after loading settles so a
+    // windowless browser reliably delivers its initial OnPaint callback.
+    cef_browser_host_t *host = browser->get_host(browser);
+    if (host != NULL) {
+      if (host->invalidate != NULL) {
+        host->invalidate(host, PET_VIEW);
+      }
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+  }
   proton_engine_verbose_log("loading_state browser=%d loading=%d",
                             proton_engine_browser_id(browser), isLoading);
 }
