@@ -37,6 +37,9 @@ async fn prompt_new_project_options(
   raw : RawNewProjectOptions,
   defaults : NewProjectOptions,
 ) -> NewProjectOptions {
+  let template = parse_project_template(
+    prompt_text("Template (minimal/isomorphic)", defaults.template),
+  )
   let target_dir = prompt_text("Project directory", defaults.target_dir)
   let slug = project_slug(defaults.cwd, target_dir)
   let title_default = raw.title.unwrap_or(slug_to_title(slug))
@@ -57,6 +60,7 @@ async fn prompt_new_project_options(
   let height = parse_positive_int(height_text, "height")
   let next = NewProjectOptions::{
     ..defaults,
+    template,
     target_dir,
     resolved_target_dir: @fsutil.resolve_path(defaults.cwd, target_dir),
     title,
@@ -74,30 +78,39 @@ async fn prompt_new_project_options(
 async fn confirm_create(options : NewProjectOptions) -> Bool {
   println("")
   println("Project directory: " + options.target_dir)
+  println("Template: " + options.template)
   println("App title: " + options.title)
   println("Module author: " + options.author)
-  println(
-    "Shared module: " + options.author + "/" + options.project_name + "_shared",
-  )
-  println(
-    "Frontend module: " +
-    options.author +
-    "/" +
-    options.project_name +
-    "_frontend",
-  )
-  println(
-    "Backend module: " +
-    options.author +
-    "/" +
-    options.project_name +
-    "_backend",
-  )
+  if options.template == "minimal" {
+    println("App module: " + options.author + "/" + options.project_name)
+  } else {
+    println(
+      "Shared module: " +
+      options.author +
+      "/" +
+      options.project_name +
+      "_shared",
+    )
+    println(
+      "Frontend module: " +
+      options.author +
+      "/" +
+      options.project_name +
+      "_frontend",
+    )
+    println(
+      "Backend module: " +
+      options.author +
+      "/" +
+      options.project_name +
+      "_backend",
+    )
+  }
   println("Bundle identifier: " + options.identifier)
   println(
     "Window: " + options.width.to_string() + "x" + options.height.to_string(),
   )
-  println("Architecture: shared contract + Rabbita frontend + Proton backend")
+  println("Architecture: " + template_architecture(options.template))
   let check_text = if options.run_check { "yes" } else { "no" }
   println("Run moon check: " + check_text)
   println("")
