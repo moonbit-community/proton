@@ -45,7 +45,7 @@ pub fn Version::parse(text : String) -> Version? {
       Some(value) => values.push(value)
     }
   }
-  Some(Version::{ major: values[0], minor: values[1], patch: values[2] })
+  Some(Version::{ major: values[0], minor: values[1], patch: values[2], })
 }
 
 ///|

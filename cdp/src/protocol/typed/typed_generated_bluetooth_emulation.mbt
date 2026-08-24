@@ -40,7 +40,7 @@ pub fn BluetoothEmulationCentralState::from_json(
 ) -> BluetoothEmulationCentralState raise @protocol.ProtocolSchemaError {
   let method_name = "BluetoothEmulationCentralState"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -87,7 +87,7 @@ pub fn BluetoothEmulationCharacteristicOperationType::from_json(
 ) -> BluetoothEmulationCharacteristicOperationType raise @protocol.ProtocolSchemaError {
   let method_name = "BluetoothEmulationCharacteristicOperationType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -223,7 +223,7 @@ pub fn BluetoothEmulationCharacteristicWriteType::from_json(
 ) -> BluetoothEmulationCharacteristicWriteType raise @protocol.ProtocolSchemaError {
   let method_name = "BluetoothEmulationCharacteristicWriteType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -267,7 +267,7 @@ pub fn BluetoothEmulationDescriptorOperationType::from_json(
 ) -> BluetoothEmulationDescriptorOperationType raise @protocol.ProtocolSchemaError {
   let method_name = "BluetoothEmulationDescriptorOperationType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -311,7 +311,7 @@ pub fn BluetoothEmulationGATTOperationType::from_json(
 ) -> BluetoothEmulationGATTOperationType raise @protocol.ProtocolSchemaError {
   let method_name = "BluetoothEmulationGATTOperationType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

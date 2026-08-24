@@ -20,7 +20,7 @@ fn parsed_device(name : String, id_number : Int) -> MicrophoneDevice {
     id: "mic-\{id_number}",
     name,
     state: Idle,
-    default_config: CaptureConfig::new(),
+    default_config: CaptureConfig(),
     monitor_supported: false,
   }
 }
@@ -32,7 +32,7 @@ fn parsed_device(name : String, id_number : Int) -> MicrophoneDevice {
 /// decoded the native string encoding. Empty lines are ignored, Linux
 /// monitor/source-loopback names are filtered out, and parsed ids are assigned
 /// densely as `mic-0`, `mic-1`, and so on. Each parsed device receives
-/// `CaptureConfig::new()` defaults and starts in `Idle`, which keeps tests
+/// `CaptureConfig()` defaults and starts in `Idle`, which keeps tests
 /// deterministic even when the host platform reports devices in a different
 /// order.
 ///

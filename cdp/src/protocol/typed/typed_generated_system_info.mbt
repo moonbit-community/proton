@@ -202,7 +202,7 @@ pub fn SystemInfoImageType::from_json(
 ) -> SystemInfoImageType raise @protocol.ProtocolSchemaError {
   let method_name = "SystemInfoImageType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -339,7 +339,7 @@ pub fn SystemInfoSubsamplingFormat::from_json(
 ) -> SystemInfoSubsamplingFormat raise @protocol.ProtocolSchemaError {
   let method_name = "SystemInfoSubsamplingFormat"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

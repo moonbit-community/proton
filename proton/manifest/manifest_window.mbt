@@ -120,25 +120,25 @@ pub impl Show for AppWindowManifest with fn output(self, logger) {
 /// Builds a manifest window configuration.
 /// This is the declarative window shape consumed by bootstrap and later turned
 /// into runtime `WindowConfig` values.
-pub fn WindowManifest::new(
+pub fn WindowManifest::WindowManifest(
   title : String,
   width : Int,
   height : Int,
   size_hint? : WindowSizeHint = WindowSizeHint::None,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
 ) -> WindowManifest {
-  WindowManifest::{ title, width, height, size_hint, titlebar_style }
+  WindowManifest::{ title, width, height, size_hint, titlebar_style, }
 }
 
 ///|
 /// Builds a declarative secondary window entry.
 /// Secondary windows keep their own id, window settings, and entry payload in
 /// the manifest document.
-pub fn AppWindowManifest::new(
+pub fn AppWindowManifest::AppWindowManifest(
   id : String,
   window : WindowManifest,
   entry : AppEntry,
   open_on_start? : Bool = true,
 ) -> AppWindowManifest {
-  AppWindowManifest::{ id, window, entry, open_on_start }
+  AppWindowManifest::{ id, window, entry, open_on_start, }
 }

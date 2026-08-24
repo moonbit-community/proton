@@ -175,7 +175,7 @@ pub fn BackgroundServiceServiceName::from_json(
 ) -> BackgroundServiceServiceName raise @protocol.ProtocolSchemaError {
   let method_name = "BackgroundServiceServiceName"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

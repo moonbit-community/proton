@@ -192,7 +192,7 @@ fn cleanup_failure_message(
   primary : String?,
   failures : Array[AppCleanupError],
 ) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   match primary {
     Some(message) => {
       builder.write_string(message)

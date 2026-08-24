@@ -36,7 +36,7 @@ pub fn WebAuthnAuthenticatorId::from_json(
 ) -> WebAuthnAuthenticatorId raise @protocol.ProtocolSchemaError {
   let method_name = "WebAuthnAuthenticatorId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -80,7 +80,7 @@ pub fn WebAuthnAuthenticatorProtocol::from_json(
 ) -> WebAuthnAuthenticatorProtocol raise @protocol.ProtocolSchemaError {
   let method_name = "WebAuthnAuthenticatorProtocol"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -124,7 +124,7 @@ pub fn WebAuthnAuthenticatorTransport::from_json(
 ) -> WebAuthnAuthenticatorTransport raise @protocol.ProtocolSchemaError {
   let method_name = "WebAuthnAuthenticatorTransport"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -266,7 +266,7 @@ pub fn WebAuthnCtap2Version::from_json(
 ) -> WebAuthnCtap2Version raise @protocol.ProtocolSchemaError {
   let method_name = "WebAuthnCtap2Version"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

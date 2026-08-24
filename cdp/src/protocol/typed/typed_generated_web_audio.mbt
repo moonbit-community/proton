@@ -239,7 +239,7 @@ pub fn WebAudioAutomationRate::from_json(
 ) -> WebAudioAutomationRate raise @protocol.ProtocolSchemaError {
   let method_name = "WebAudioAutomationRate"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -364,7 +364,7 @@ pub fn WebAudioChannelCountMode::from_json(
 ) -> WebAudioChannelCountMode raise @protocol.ProtocolSchemaError {
   let method_name = "WebAudioChannelCountMode"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -408,7 +408,7 @@ pub fn WebAudioChannelInterpretation::from_json(
 ) -> WebAudioChannelInterpretation raise @protocol.ProtocolSchemaError {
   let method_name = "WebAudioChannelInterpretation"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -513,7 +513,7 @@ pub fn WebAudioContextState::from_json(
 ) -> WebAudioContextState raise @protocol.ProtocolSchemaError {
   let method_name = "WebAudioContextState"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -553,7 +553,7 @@ pub fn WebAudioContextType::from_json(
 ) -> WebAudioContextType raise @protocol.ProtocolSchemaError {
   let method_name = "WebAudioContextType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -593,7 +593,7 @@ pub fn WebAudioGraphObjectId::from_json(
 ) -> WebAudioGraphObjectId raise @protocol.ProtocolSchemaError {
   let method_name = "WebAudioGraphObjectId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -633,7 +633,7 @@ pub fn WebAudioNodeType::from_json(
 ) -> WebAudioNodeType raise @protocol.ProtocolSchemaError {
   let method_name = "WebAudioNodeType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -673,7 +673,7 @@ pub fn WebAudioParamType::from_json(
 ) -> WebAudioParamType raise @protocol.ProtocolSchemaError {
   let method_name = "WebAudioParamType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

@@ -48,7 +48,7 @@ fn decode_project_config(
   let backend = decode_backend(fields, base_dir)
   let frontend = decode_frontend(fields, base_dir)
   let package_config = decode_package(fields, base_dir)
-  ProjectConfig::new(base_dir, backend~, frontend~, package_config~)
+  ProjectConfig(base_dir, backend~, frontend~, package_config~)
 }
 
 ///|
@@ -61,7 +61,7 @@ fn decode_backend(
     Some(Object(values)) => {
       validate_object_fields(values, "backend", ["path", "package"])
       Some(
-        ProjectBackendConfig::new(
+        ProjectBackendConfig(
           rebase_project_path(
             required_string(values, "path", "backend.path"),
             base_dir,
@@ -95,7 +95,7 @@ fn decode_frontend(
       )
       let frontend_root = path.unwrap_or(base_dir)
       Some(
-        ProjectFrontendConfig::new(
+        ProjectFrontendConfig(
           path~,
           dev_url=optional_string(values, "dev_url", "frontend.dev_url"),
           before_dev=optional_string(
@@ -146,7 +146,7 @@ fn decode_package(
       )
       validate_url_schemes(url_schemes)
       Some(
-        ProjectPackageConfig::new(
+        ProjectPackageConfig(
           required_string(values, "product_name", "package.product_name"),
           required_string(values, "identifier", "package.identifier"),
           required_string(values, "version", "package.version"),
@@ -195,7 +195,7 @@ fn decode_sign(
         }
       }
       Some(
-        ProjectSignConfig::new(
+        ProjectSignConfig(
           binaries=rebased_paths(binaries, base_dir, "package.sign.binaries"),
         ),
       )
@@ -230,7 +230,7 @@ fn decode_document_types(
           raise MissingField(path="package.document_types.extensions")
         }
         result.push(
-          ProjectDocumentType::new(
+          ProjectDocumentType(
             required_string(values, "name", "package.document_types.name"),
             extensions,
             role=optional_string(values, "role", "package.document_types.role").unwrap_or(

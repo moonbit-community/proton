@@ -1379,7 +1379,7 @@ pub fn CSSCSSRuleType::from_json(
 ) -> CSSCSSRuleType raise @protocol.ProtocolSchemaError {
   let method_name = "CSSCSSRuleType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2781,7 +2781,7 @@ pub fn CSSStyleSheetOrigin::from_json(
 ) -> CSSStyleSheetOrigin raise @protocol.ProtocolSchemaError {
   let method_name = "CSSStyleSheetOrigin"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -4603,7 +4603,7 @@ pub fn CSSGetStyleSheetTextResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { text: typed_required_result_string(method_name, fields, "text", "string") }
+  { text: typed_required_result_string(method_name, fields, "text", "string"), }
 }
 
 ///|

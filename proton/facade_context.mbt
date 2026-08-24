@@ -44,16 +44,16 @@ priv struct WindowLifecycleHook {
 }
 
 ///|
-fn ApplicationContext::new(
+fn ApplicationContext::ApplicationContext(
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
 ) -> ApplicationContext {
-  ApplicationContext::{ tasks, windows, locale_preferences }
+  ApplicationContext::{ tasks, windows, locale_preferences, }
 }
 
 ///|
-fn WindowContext::new(
+fn WindowContext::WindowContext(
   id : String,
   handle : WindowHandle,
   windows : WindowManager,
@@ -61,7 +61,7 @@ fn WindowContext::new(
   events : WindowEventEmitter,
   locale_preferences : @locale.LocalePreferences,
 ) -> WindowContext {
-  WindowContext::{ id, handle, windows, tasks, events, locale_preferences }
+  WindowContext::{ id, handle, windows, tasks, events, locale_preferences, }
 }
 
 ///|
@@ -100,7 +100,7 @@ pub fn WindowContext::id(self : WindowContext) -> String {
 }
 
 ///|
-fn WindowEventEmitter::new(
+fn WindowEventEmitter::WindowEventEmitter(
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise,
 ) -> WindowEventEmitter {
   WindowEventEmitter::{ emit_event, }

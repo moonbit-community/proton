@@ -134,7 +134,7 @@ pub fn MemoryPressureLevel::from_json(
 ) -> MemoryPressureLevel raise @protocol.ProtocolSchemaError {
   let method_name = "MemoryPressureLevel"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

@@ -5,7 +5,7 @@ async fn package_spec(
 ) -> @packager.PackageSpec {
   let payloads = spec.package_spec.payloads.copy()
   payloads.append(package_payloads(spec, runtime, current_bundle_host()))
-  @packager.PackageSpec::new(
+  @packager.PackageSpec(
     spec.package_spec.executable,
     spec.package_spec.product_name,
     spec.package_spec.identifier,
@@ -39,7 +39,7 @@ pub async fn build(spec : ProtonBundleSpec) -> BundleResult {
     package_customization(spec),
     async fn(layout) { prepare_proton_package(spec, layout) },
   )
-  BundleResult::{ artifacts, platform: installation.platform() }
+  BundleResult::{ artifacts, platform: installation.platform(), }
 }
 
 ///|
@@ -52,7 +52,7 @@ async fn package_payloads(
   match host {
     Macos | Linux => {
       payloads.push(
-        @packager.Payload::new(
+        @packager.Payload(
           runtime,
           "proton",
           location=@packager.PayloadLocation::Resources,
@@ -60,7 +60,7 @@ async fn package_payloads(
       )
       if host == Linux {
         payloads.push(
-          @packager.Payload::new(
+          @packager.Payload(
             spec.cef_process,
             "cef_process",
             location=@packager.PayloadLocation::Executables,
@@ -72,7 +72,7 @@ async fn package_payloads(
       require_windows_runtime_layout(runtime)
       for name in windows_runtime_binary_files() {
         payloads.push(
-          @packager.Payload::new(
+          @packager.Payload(
             resolve_path(runtime, "bin/" + name),
             name,
             location=@packager.PayloadLocation::Executables,
@@ -81,7 +81,7 @@ async fn package_payloads(
       }
       for name in windows_runtime_root_data_files() {
         payloads.push(
-          @packager.Payload::new(
+          @packager.Payload(
             resolve_path(runtime, "bin/" + name),
             name,
             location=@packager.PayloadLocation::Executables,
@@ -89,14 +89,14 @@ async fn package_payloads(
         )
       }
       payloads.push(
-        @packager.Payload::new(
+        @packager.Payload(
           resolve_path(runtime, "Resources"),
           ".",
           location=@packager.PayloadLocation::Resources,
         ),
       )
       payloads.push(
-        @packager.Payload::new(
+        @packager.Payload(
           spec.cef_process,
           "cef_process.exe",
           location=@packager.PayloadLocation::Executables,
@@ -140,7 +140,7 @@ async fn project_payloads(
       Some(relative) => relative
       None => raise BundlePlanError::InputOutsideBase(path=input)
     }
-    payloads.push(@packager.Payload::new(source, relative, location~))
+    payloads.push(@packager.Payload(source, relative, location~))
   }
   payloads
 }
@@ -149,9 +149,9 @@ async fn project_payloads(
 fn package_customization(
   spec : ProtonBundleSpec,
 ) -> @packager.PackageCustomization raise BundlePlanError {
-  @packager.PackageCustomization::new(
+  @packager.PackageCustomization(
     macos_plist_strings=[
-      @packager.MacosPlistString::new(
+      @packager.MacosPlistString(
         "ProtonUpdateRevision",
         spec.update_revision.to_string(),
       ),
@@ -170,24 +170,20 @@ fn macos_package_sign_targets(
   let prefix = "Contents/Resources/proton"
   let framework = prefix + "/Frameworks/Chromium Embedded Framework.framework"
   let targets = [
-    @packager.MacosSignTarget::new(framework + "/Libraries/libEGL.dylib"),
-    @packager.MacosSignTarget::new(framework + "/Libraries/libGLESv2.dylib"),
-    @packager.MacosSignTarget::new(
-      framework + "/Libraries/libcef_sandbox.dylib",
-    ),
-    @packager.MacosSignTarget::new(
-      framework + "/Libraries/libvk_swiftshader.dylib",
-    ),
-    @packager.MacosSignTarget::new(framework),
-    @packager.MacosSignTarget::new(prefix + "/bin/libEGL.dylib"),
-    @packager.MacosSignTarget::new(prefix + "/bin/libGLESv2.dylib"),
-    @packager.MacosSignTarget::new(prefix + "/bin/libvk_swiftshader.dylib"),
+    @packager.MacosSignTarget(framework + "/Libraries/libEGL.dylib"),
+    @packager.MacosSignTarget(framework + "/Libraries/libGLESv2.dylib"),
+    @packager.MacosSignTarget(framework + "/Libraries/libcef_sandbox.dylib"),
+    @packager.MacosSignTarget(framework + "/Libraries/libvk_swiftshader.dylib"),
+    @packager.MacosSignTarget(framework),
+    @packager.MacosSignTarget(prefix + "/bin/libEGL.dylib"),
+    @packager.MacosSignTarget(prefix + "/bin/libGLESv2.dylib"),
+    @packager.MacosSignTarget(prefix + "/bin/libvk_swiftshader.dylib"),
   ]
   for binary in spec.sign_binaries {
     match relative_to_base(spec.base_dir, binary) {
       Some(relative) =>
         targets.push(
-          @packager.MacosSignTarget::new(
+          @packager.MacosSignTarget(
             "Contents/Resources/" + relative,
             entitlements=true,
           ),
@@ -201,7 +197,7 @@ fn macos_package_sign_targets(
       spec.package_spec.identifier,
     ) {
     targets.push(
-      @packager.MacosSignTarget::new(
+      @packager.MacosSignTarget(
         "Contents/Frameworks/" + helper.bundle_name + ".app",
         entitlements=true,
       ),

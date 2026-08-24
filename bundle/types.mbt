@@ -14,7 +14,7 @@ pub struct ProtonBundleSpec {
 }
 
 ///|
-pub fn ProtonBundleSpec::new(
+pub fn ProtonBundleSpec::ProtonBundleSpec(
   package_spec : @packager.PackageSpec,
   cef_process : String,
   base_dir : String,

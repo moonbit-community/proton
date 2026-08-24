@@ -21,7 +21,7 @@ priv struct ProtonEventLoop {
 /// scheduler is already running by then, and a waiter that missed the object it
 /// was supposed to wait on would never be woken.
 let host_event_loop : ProtonEventLoop = ProtonEventLoop::{
-  signal: @core.RuntimeWakeSignal::new(),
+  signal: @core.RuntimeWakeSignal(),
   installed: false,
   install_error: None,
 }

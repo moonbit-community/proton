@@ -40,7 +40,7 @@ pub fn SecurityCertificateErrorAction::from_json(
 ) -> SecurityCertificateErrorAction raise @protocol.ProtocolSchemaError {
   let method_name = "SecurityCertificateErrorAction"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -83,7 +83,7 @@ pub fn SecurityCertificateId::from_json(
     Number(inner, ..) => {
       let int = inner.to_int()
       if int.to_double() == inner {
-        { value: int }
+        { value: int, }
       } else {
         raise InvalidParameterType(method_name, "value", "integer")
       }
@@ -355,7 +355,7 @@ pub fn SecurityMixedContentType::from_json(
 ) -> SecurityMixedContentType raise @protocol.ProtocolSchemaError {
   let method_name = "SecurityMixedContentType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -444,7 +444,7 @@ pub fn SecuritySafetyTipStatus::from_json(
 ) -> SecuritySafetyTipStatus raise @protocol.ProtocolSchemaError {
   let method_name = "SecuritySafetyTipStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -484,7 +484,7 @@ pub fn SecuritySecurityState::from_json(
 ) -> SecuritySecurityState raise @protocol.ProtocolSchemaError {
   let method_name = "SecuritySecurityState"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

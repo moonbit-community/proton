@@ -380,7 +380,7 @@ async fn dev_runtime_from_root(
   if !@fsutil.path_exists(runtime_root) {
     raise DirectoryMissing(label~, path=runtime_root)
   }
-  DevRuntime::{ root: runtime_root, bin_dir, lib_dir }
+  DevRuntime::{ root: runtime_root, bin_dir, lib_dir, }
 }
 
 ///|
@@ -824,7 +824,7 @@ fn parse_dev_url_endpoint(
     raise InvalidOrigin(url=wait_url)
   }
   let (host, port) = parse_host_port(authority, default_port)
-  DevUrlEndpoint::{ url: wait_url, host, port }
+  DevUrlEndpoint::{ url: wait_url, host, port, }
 }
 
 ///|

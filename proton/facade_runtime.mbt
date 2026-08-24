@@ -118,14 +118,14 @@ async fn run_manifest(
       ),
     )
   }
-  let lifecycle = AppLifecycle::new()
+  let lifecycle = AppLifecycle()
   lifecycle.begin_starting()
   let forward_menu_events = menu is Some(_)
   let catalog = framework_catalog(locale_preferences)
   let remote_debugging = remote_debugging(manifest.debug) catch {
     error => raise ConfigurationError(error)
   }
-  let runtime = @native.Runtime::new(
+  let runtime = @native.Runtime(
     config=@native.RuntimeConfig::bundled(
       cache_dir?=browser_data_dir,
       locale=locale_preferences.chromium_locale(),
@@ -156,8 +156,8 @@ async fn run_manifest(
   let mut command_host : CommandHostRuntime? = None
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []
-  let wakeup = RuntimeWakeup::new()
-  let dialog_completions = DialogCompletionStore::new()
+  let wakeup = RuntimeWakeup()
+  let dialog_completions = DialogCompletionStore()
   try {
     if !headless {
       let platform = @native.runtime_info().platform catch {
@@ -225,7 +225,7 @@ async fn run_manifest(
       raise UnsupportedNativeFeature(feature="bridge_permission_grants")
     }
     let definitions : Array[PreparedWindow] = []
-    let browser_policy = @native.BrowserPolicy::new(
+    let browser_policy = @native.BrowserPolicy(
       navigation=if navigation_handler is Some(_) {
         @native.BrowserPolicyMode::Ask
       } else {
@@ -283,14 +283,14 @@ async fn run_manifest(
     }
     @async.with_task_group(application_tasks => {
       @async.with_task_group(window_tasks => {
-        let session = RuntimeSession::new(
+        let session = RuntimeSession(
           runtime, locale_preferences, definitions, windows, command_host, dialog_completions,
           wakeup, forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
           window_tasks, view_event_handlers, window_close_handler, window_lifecycle_hooks,
           lifecycle_failures, bridge_startup_timeout_ms, navigation_handler, popup_handler,
           download_handler, certificate_handler, media_handler, download_event_handlers,
         )
-        let application_context = ApplicationContext::new(
+        let application_context = ApplicationContext(
           application_tasks,
           session.window_manager(),
           locale_preferences,
@@ -448,7 +448,7 @@ fn native_window_config(
   preferences : @locale.LocalePreferences,
 ) -> @native.WindowConfig {
   let catalog = framework_catalog(preferences)
-  @native.WindowConfig::new(
+  @native.WindowConfig(
     title=window.title,
     width=window.width,
     height=window.height,
@@ -477,7 +477,7 @@ fn native_window_config(
 fn native_bridge_config(
   grants : Array[@native.BridgeGrantConfig],
 ) -> @native.BridgeConfig {
-  @native.BridgeConfig::new(grants~)
+  @native.BridgeConfig(grants~)
 }
 
 ///|
@@ -490,7 +490,7 @@ fn ensure_entry_bridge_grant(
     None => "app"
   }
   if !grants.any(grant => grant.source_origin == source_origin) {
-    grants.push(@native.BridgeGrantConfig::new(source_origin, ops=[]))
+    grants.push(@native.BridgeGrantConfig(source_origin, ops=[]))
   }
 }
 
@@ -790,7 +790,7 @@ fn take_runtime_bridge_failure(
 }
 
 ///|
-fn WindowLifetime::new() -> WindowLifetime {
+fn WindowLifetime::WindowLifetime() -> WindowLifetime {
   WindowLifetime::{
     ready: false,
     closed: false,
@@ -855,7 +855,7 @@ async fn run_window_lifecycle_scope(
   @async.with_task_group(tasks => {
     start_window_lifecycle_hooks(
       hooks,
-      WindowContext::new(
+      WindowContext(
         running.id,
         handle,
         windows,

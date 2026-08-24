@@ -90,7 +90,7 @@ pub fn update_stage_begin(
     ),
     message,
   )
-  { handle: handle.val }
+  { handle: handle.val, }
 }
 
 ///|

@@ -187,7 +187,7 @@ pub fn AccessibilityAXNodeId::from_json(
 ) -> AccessibilityAXNodeId raise @protocol.ProtocolSchemaError {
   let method_name = "AccessibilityAXNodeId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -280,7 +280,7 @@ pub fn AccessibilityAXPropertyName::from_json(
 ) -> AccessibilityAXPropertyName raise @protocol.ProtocolSchemaError {
   let method_name = "AccessibilityAXPropertyName"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -457,7 +457,7 @@ pub fn AccessibilityAXValueNativeSourceType::from_json(
 ) -> AccessibilityAXValueNativeSourceType raise @protocol.ProtocolSchemaError {
   let method_name = "AccessibilityAXValueNativeSourceType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -607,7 +607,7 @@ pub fn AccessibilityAXValueSourceType::from_json(
 ) -> AccessibilityAXValueSourceType raise @protocol.ProtocolSchemaError {
   let method_name = "AccessibilityAXValueSourceType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -651,7 +651,7 @@ pub fn AccessibilityAXValueType::from_json(
 ) -> AccessibilityAXValueType raise @protocol.ProtocolSchemaError {
   let method_name = "AccessibilityAXValueType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

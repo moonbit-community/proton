@@ -46,7 +46,7 @@ pub struct PowerMonitor {
 }
 
 ///|
-pub fn PowerMonitor::new() -> PowerMonitor raise PowerMonitorError {
+pub fn PowerMonitor::PowerMonitor() -> PowerMonitor raise PowerMonitorError {
   let handle = native_create()
   let monitor = PowerMonitor::{ handle, }
   monitor.finish_create()

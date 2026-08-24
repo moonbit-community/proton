@@ -353,7 +353,7 @@ pub fn AutofillFillingStrategy::from_json(
 ) -> AutofillFillingStrategy raise @protocol.ProtocolSchemaError {
   let method_name = "AutofillFillingStrategy"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

@@ -21,7 +21,7 @@ fn ensure_monitor() -> @sys_screen_monitor.ScreenMonitor raise ScreenMonitorErro
   match active_monitor.val {
     Some(monitor) => monitor
     None => {
-      let monitor = @sys_screen_monitor.ScreenMonitor::new() catch {
+      let monitor = @sys_screen_monitor.ScreenMonitor() catch {
         error => raise BackendUnavailable(detail=error.to_string())
       }
       // Best-effort: enable the event watch backend. A platform that cannot
@@ -144,7 +144,7 @@ async fn get_cursor_point(
   }
   emit_activity(context, "getCursorScreenPoint")
   @screen_monitor_contract.CursorPointReply::{
-    point: @screen_monitor_contract.PointJSON::{ x: point.x, y: point.y },
+    point: @screen_monitor_contract.PointJSON::{ x: point.x, y: point.y, },
   }
 }
 
@@ -183,7 +183,7 @@ async fn drain_events(
       None => ()
     }
   }
-  @screen_monitor_contract.ScreenEventReply::{ count: events.length() }
+  @screen_monitor_contract.ScreenEventReply::{ count: events.length(), }
 }
 
 ///|

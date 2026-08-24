@@ -109,9 +109,9 @@ async fn run_ticker(
     ticks.push(tick)
     context.emit(tick_event, tick)
   }
-  let done = DoneEvent::{ run_id: payload.run_id, total: count }
+  let done = DoneEvent::{ run_id: payload.run_id, total: count, }
   context.emit(done_event, done)
-  TickerResult::{ ticks, done }
+  TickerResult::{ ticks, done, }
 }
 
 ///|

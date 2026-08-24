@@ -20,9 +20,9 @@ struct TestScheduler {
 }
 
 ///|
-fn TestScheduler::new() -> TestScheduler {
+fn TestScheduler::TestScheduler() -> TestScheduler {
   TestScheduler::{
-    hooks_value: @cmd.Hooks::{ url_request: None, url_changed: None },
+    hooks_value: @cmd.Hooks::{ url_request: None, url_changed: None, },
   }
 }
 
@@ -111,7 +111,7 @@ extern "js" fn fake_has_abort_signal() -> Bool =
 ///|
 test "invoke schedules bridge callbacks without entering async from an effect" {
   install_fake_bridge("{\"value\":\"pong\"}")
-  let scheduler = TestScheduler::new()
+  let scheduler = TestScheduler()
   let echo : @proton_contract.Command[Unit, EchoResponse] = @proton_contract.command(
     "echo",
   )
@@ -156,7 +156,7 @@ test "invoke schedules bridge callbacks without entering async from an effect" {
 ///|
 test "subscription updates taggers without reinstalling its listener" {
   install_fake_bridge("{}")
-  let scheduler = TestScheduler::new()
+  let scheduler = TestScheduler()
   let changed : @proton_contract.Event[CountChanged] = @proton_contract.event(
     "count_changed",
   )
@@ -208,7 +208,7 @@ test "subscription updates taggers without reinstalling its listener" {
 ///|
 test "failed subscription remains terminal until it is reloaded" {
   remove_fake_bridge()
-  let scheduler = TestScheduler::new()
+  let scheduler = TestScheduler()
   let changed : @proton_contract.Event[CountChanged] = @proton_contract.event(
     "terminal_subscription_failure",
   )
@@ -275,7 +275,7 @@ test "duplicate event routes do not overwrite erased tagger slots" {
     .get("app:duplicate_rabbita_event")
     .unwrap()
   let slot : Ref[EventTaggers[CountChanged]] = erased_slot.cast()
-  ignore((slot.val.received)(CountChanged::{ count: 7 }))
+  ignore((slot.val.received)(CountChanged::{ count: 7, }))
   assert_eq(first_count.val, 7)
   assert_eq(duplicate_value.val, "")
 }

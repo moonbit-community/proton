@@ -1,10 +1,10 @@
 ///|
 test "configs are normalized before chunk sizing" {
-  let defaults = @proton_microphone.CaptureConfig::new()
+  let defaults = @proton_microphone.CaptureConfig()
   inspect(defaults.channels, content="1")
   inspect(defaults.sample_rate_hz, content="48000")
   inspect(defaults.sample_format, content="F32")
-  let config = @proton_microphone.CaptureConfig::new(
+  let config = @proton_microphone.CaptureConfig(
     channels=0,
     sample_rate_hz=4_000,
     sample_format=I16,
@@ -20,7 +20,7 @@ test "voice processing and liveness stay explicit" {
     id: "mic-1",
     name: "Studio Mic",
     state: Recording,
-    default_config: @proton_microphone.CaptureConfig::new(
+    default_config: @proton_microphone.CaptureConfig(
       channels=2,
       sample_format=F32,
       echo_cancellation=true,
@@ -30,7 +30,7 @@ test "voice processing and liveness stay explicit" {
   inspect(device.default_config.uses_voice_processing(), content="true")
   inspect(device.is_live(), content="true")
   inspect(
-    @proton_microphone.CaptureConfig::new().uses_voice_processing(),
+    @proton_microphone.CaptureConfig().uses_voice_processing(),
     content="false",
   )
   let muted_device = @proton_microphone.MicrophoneDevice::{
@@ -49,7 +49,7 @@ test "labels and sample sizes are stable" {
     id: "mic-1",
     name: "Studio Mic",
     state: Armed,
-    default_config: @proton_microphone.CaptureConfig::new(
+    default_config: @proton_microphone.CaptureConfig(
       sample_rate_hz=16_000,
       sample_format=I16,
       noise_suppression=true,

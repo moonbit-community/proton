@@ -331,7 +331,7 @@ fn[X] CdpClient::from_websocket(
   tasks : @async.TaskGroup[X],
   ws : @websocket.Conn,
 ) -> CdpClient {
-  let client = CdpClient::new(ws)
+  let client = CdpClient(ws)
   client.reader = Some(
     tasks.spawn(() => client.read_messages(), no_wait=true, allow_failure=true),
   )
@@ -340,7 +340,7 @@ fn[X] CdpClient::from_websocket(
 }
 
 ///|
-fn CdpClient::new(ws : @websocket.Conn) -> CdpClient {
+fn CdpClient::CdpClient(ws : @websocket.Conn) -> CdpClient {
   let client = CdpClient::{
     ws,
     reader: None,
@@ -671,7 +671,7 @@ pub async fn CdpClient::send_cdp_command(
   self.next_id = self.next_id + 1
   let command = @protocol.cdp_command(id~, method_name~, params?, session_id?)
   self.last_cdp_request = Some(command)
-  self.command_contexts[id] = { method_name, session_id }
+  self.command_contexts[id] = { method_name, session_id, }
   self.pending_commands[id] = {
     state: Waiting,
     changed: @async.CondVar::Cond(),
@@ -874,7 +874,7 @@ pub fn CdpClient::on_cdp_event(
 ) -> Int {
   let id = self.next_event_handler_id
   self.next_event_handler_id = id + 1
-  self.cdp_event_handlers.push({ id, method_name, session_id, handler })
+  self.cdp_event_handlers.push({ id, method_name, session_id, handler, })
   id
 }
 
@@ -912,7 +912,7 @@ pub fn CdpClient::on_close(self : CdpClient, handler : () -> Unit) -> Int {
   if !(self.lifecycle is Open) {
     handler()
   } else {
-    self.close_handlers.push({ id, handler })
+    self.close_handlers.push({ id, handler, })
   }
   id
 }

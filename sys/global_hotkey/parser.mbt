@@ -33,7 +33,7 @@ priv enum ModifierKind {
 ///|
 /// Creates an empty modifier set for one accelerator parse.
 fn new_modifier_set() -> ModifierSet {
-  { control: false, shift: false, alt: false, meta: false }
+  { control: false, shift: false, alt: false, meta: false, }
 }
 
 ///|
@@ -128,7 +128,7 @@ fn ModifierSet::normalize_accelerator_name(
   self : ModifierSet,
   key_name : String,
 ) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let mut wrote_modifier = false
   if self.control {
     builder.write_string("Ctrl")
@@ -306,7 +306,7 @@ fn parse_accelerator(raw : String) -> Result[ParsedGlobalHotkey, String] {
   match key_name {
     Some(key_name) => {
       let normalized = modifiers.normalize_accelerator_name(key_name)
-      Ok({ normalized, modifiers: modifiers.mask(), key_name })
+      Ok({ normalized, modifiers: modifiers.mask(), key_name, })
     }
     None => Err("global_hotkey accelerator must include a key")
   }

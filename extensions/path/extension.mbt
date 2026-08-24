@@ -41,13 +41,13 @@ fn basename(
 ///|
 #proton.command(contract=dirname_command)
 fn dirname(request : @path_contract.PathRequest) -> @path_contract.PathReply {
-  @path_contract.PathReply::{ path: dirname_path(request.path) }
+  @path_contract.PathReply::{ path: dirname_path(request.path), }
 }
 
 ///|
 #proton.command(contract=extname_command)
 fn extname(request : @path_contract.PathRequest) -> @path_contract.ExtnameReply {
-  @path_contract.ExtnameReply::{ ext: extname_path(request.path) }
+  @path_contract.ExtnameReply::{ ext: extname_path(request.path), }
 }
 
 ///|
@@ -63,19 +63,19 @@ fn is_absolute(
 ///|
 #proton.command(contract=join_command)
 fn join(request : @path_contract.JoinRequest) -> @path_contract.PathReply {
-  @path_contract.PathReply::{ path: join_paths(request.left, request.right) }
+  @path_contract.PathReply::{ path: join_paths(request.left, request.right), }
 }
 
 ///|
 #proton.command(contract=join_all_command)
 fn join_all(request : @path_contract.PathsRequest) -> @path_contract.PathReply {
-  @path_contract.PathReply::{ path: join_many_paths(request.paths) }
+  @path_contract.PathReply::{ path: join_many_paths(request.paths), }
 }
 
 ///|
 #proton.command(contract=normalize_command)
 fn normalize(request : @path_contract.PathRequest) -> @path_contract.PathReply {
-  @path_contract.PathReply::{ path: normalize_path(request.path) }
+  @path_contract.PathReply::{ path: normalize_path(request.path), }
 }
 
 ///|
@@ -83,13 +83,13 @@ fn normalize(request : @path_contract.PathRequest) -> @path_contract.PathReply {
 fn relative(
   request : @path_contract.RelativeRequest,
 ) -> @path_contract.PathReply {
-  @path_contract.PathReply::{ path: relative_path(request.path, request.base) }
+  @path_contract.PathReply::{ path: relative_path(request.path, request.base), }
 }
 
 ///|
 #proton.command(contract=resolve_command)
 fn resolve(request : @path_contract.PathRequest) -> @path_contract.PathReply {
-  @path_contract.PathReply::{ path: resolve_path(request.path) }
+  @path_contract.PathReply::{ path: resolve_path(request.path), }
 }
 
 ///|
@@ -97,7 +97,7 @@ fn resolve(request : @path_contract.PathRequest) -> @path_contract.PathReply {
 fn resolve_all(
   request : @path_contract.PathsRequest,
 ) -> @path_contract.PathReply {
-  @path_contract.PathReply::{ path: resolve_many_paths(request.paths) }
+  @path_contract.PathReply::{ path: resolve_many_paths(request.paths), }
 }
 
 ///|

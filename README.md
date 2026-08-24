@@ -61,7 +61,7 @@ builder. The `isomorphic` template also registers typed commands in
 
 ```moonbit
 async fn main {
-  let backend = @todo.Backend::new()
+  let backend = @todo.Backend()
   @proton.asset("My App", "frontend/dist/index.html")
   .single_instance("com.example.my-app")
   .commands(fn(registrar) raise { backend.register_commands(registrar) })
@@ -105,7 +105,7 @@ ranges and exact commands:
 @proton.html("Files", html)
 .capability(
   @fs.capability([
-    @fs.PermissionRoot::new("./workspace", [
+    @fs.PermissionRoot("./workspace", [
       "read_file",
       "write_file",
       "readdir",
@@ -304,14 +304,14 @@ page content, dialogs, notifications, and custom menu labels. See
 
 `App::menu` accepts a complete logical `MenuBar`. Use `Menu::role` and
 `MenuItem::role` for platform-standard behavior; omitted labels and default
-items are resolved from the immutable application locale. Use `Menu::new` and
+items are resolved from the immutable application locale. Use `Menu` and
 `MenuItem::command` for application-defined labels and commands:
 
 ```moonbit
-@proton.MenuBar::new(menus=[
+@proton.MenuBar(menus=[
   @proton.Menu::role(@proton.MenuRole::Edit),
   @proton.Menu::role(@proton.MenuRole::Window),
-  @proton.Menu::new("Tools", items=[
+  @proton.Menu("Tools", items=[
     @proton.MenuItem::command("tools.refresh", "Refresh", key="r"),
   ]),
 ])

@@ -626,7 +626,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|///|
           #|async fn main {
-          #|  let backend = @todo.Backend::new()
+          #|  let backend = @todo.Backend()
           #|  @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
           #|  .single_instance({{identifier_mbt}})
           #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
@@ -669,7 +669,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|///|
-          #|pub fn Backend::new() -> Backend {
+          #|pub fn Backend::Backend() -> Backend {
           #|  Backend::{ next_id: 1, version: 0, todos: [] }
           #|}
           #|

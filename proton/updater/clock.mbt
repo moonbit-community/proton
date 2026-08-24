@@ -74,7 +74,7 @@ fn pad(value : Int, width : Int) -> String {
   if digits.length() > width {
     return digits
   }
-  let builder = StringBuilder::new(size_hint=width)
+  let builder = StringBuilder(size_hint=width)
   for _ in 0..<(width - digits.length()) {
     builder.write_char('0')
   }

@@ -184,7 +184,7 @@ pub fn create() -> Result[GlobalHotkeyManager, String] {
   match
     create_status_result(state_is_null_ffi(state), last_error_message_ffi()) {
     Err(error) => Err(error)
-    Ok(_) => Ok({ state, store: new_registration_store() })
+    Ok(_) => Ok({ state, store: new_registration_store(), })
   }
 }
 

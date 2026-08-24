@@ -36,7 +36,7 @@ struct RegistrationStore {
 ///|
 /// Creates an empty registration store ready for a fresh manager.
 fn new_registration_store() -> RegistrationStore {
-  { registrations: {}, registration_names: {}, next_id: 1, destroyed: false }
+  { registrations: {}, registration_names: {}, next_id: 1, destroyed: false, }
 }
 
 ///|
@@ -84,7 +84,7 @@ fn RegistrationStore::plan_register(
         Some(_) => Err("global_hotkey already registered: " + parsed.normalized)
         None => {
           let id = self.take_next_id()
-          Ok({ id, parsed })
+          Ok({ id, parsed, })
         }
       }
   }
@@ -110,7 +110,7 @@ fn RegistrationStore::plan_unregister(
     Err(error) => Err(error)
     Ok(parsed) =>
       match self.registrations.get(parsed.normalized) {
-        Some(id) => Ok(Some({ id, normalized: parsed.normalized }))
+        Some(id) => Ok(Some({ id, normalized: parsed.normalized, }))
         None => Ok(None)
       }
   }

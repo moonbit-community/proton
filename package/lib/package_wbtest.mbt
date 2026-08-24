@@ -90,7 +90,7 @@ test "executable names are stable and filesystem safe" {
 
 ///|
 test "macOS plist customization is escaped" {
-  let spec = PackageSpec::new(
+  let spec = PackageSpec(
     "/tmp/demo",
     "Demo & App",
     "dev.proton.demo",
@@ -98,12 +98,12 @@ test "macOS plist customization is escaped" {
     [App],
     "/tmp/dist",
     url_schemes=["devtoys"],
-    document_types=[DocumentType::new("Text", ["txt"], role="Editor")],
+    document_types=[DocumentType("Text", ["txt"], role="Editor")],
   )
   let plist = macos_info_plist(
     spec,
-    PackageCustomization::new(macos_plist_strings=[
-      MacosPlistString::new("Build&Revision", "42<"),
+    PackageCustomization(macos_plist_strings=[
+      MacosPlistString("Build&Revision", "42<"),
     ]),
     "demo-app",
     "1.2.3",
@@ -120,7 +120,7 @@ test "macOS plist customization is escaped" {
 ///|
 #cfg(target="wasm")
 test "Windows icon embedding reports the native-only operation" {
-  let spec = PackageSpec::new(
+  let spec = PackageSpec(
     "demo.exe",
     "Demo",
     "dev.proton.demo",
@@ -142,7 +142,7 @@ test "Windows icon embedding reports the native-only operation" {
 
 ///|
 fn package_test_spec(formats : Array[PackageFormat]) -> PackageSpec {
-  PackageSpec::new(
+  PackageSpec(
     "/tmp/demo", "Demo App", "dev.proton.demo", "1.2.3", formats, "/tmp/dist",
   )
 }

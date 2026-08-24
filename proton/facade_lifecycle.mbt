@@ -1,6 +1,6 @@
 ///|
-fn AppLifecycle::new() -> AppLifecycle {
-  AppLifecycle::{ state: Constructing }
+fn AppLifecycle::AppLifecycle() -> AppLifecycle {
+  AppLifecycle::{ state: Constructing, }
 }
 
 ///|

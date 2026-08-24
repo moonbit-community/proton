@@ -22,7 +22,7 @@ fn execution_context_destroyed_params(id : Int, unique_id : String) -> Json {
 
 ///|
 test "page state tracks only the main-frame default context" {
-  let state = PageState::new()
+  let state = PageState()
   state.set_main_frame("main")
   state.context_created(
     Some(execution_context_created_params(1, "iframe-world", "iframe")),
@@ -39,7 +39,7 @@ test "page state tracks only the main-frame default context" {
 
 ///|
 test "destroyed and cleared events invalidate the current context" {
-  let state = PageState::new()
+  let state = PageState()
   state.set_main_frame("main")
   state.context_created(
     Some(execution_context_created_params(1, "first", "main")),
@@ -61,7 +61,7 @@ test "destroyed and cleared events invalidate the current context" {
 
 ///|
 test "an obsolete lease cannot invalidate a replacement context" {
-  let state = PageState::new()
+  let state = PageState()
   state.set_main_frame("main")
   state.context_created(
     Some(execution_context_created_params(1, "first", "main")),
@@ -80,7 +80,7 @@ test "an obsolete lease cannot invalidate a replacement context" {
 
 ///|
 test "top-level navigation invalidates context when the frame id is reused" {
-  let state = PageState::new()
+  let state = PageState()
   state.set_main_frame("main")
   state.context_created(
     Some(execution_context_created_params(1, "before-reload", "main")),
@@ -93,13 +93,13 @@ test "top-level navigation invalidates context when the frame id is reused" {
 test "missing unique context is classified as lifecycle loss" {
   assert_true(
     is_execution_context_loss(
-      { code: -32602, message: "uniqueContextId not found", data: None },
+      { code: -32602, message: "uniqueContextId not found", data: None, },
       true,
     ),
   )
   assert_false(
     is_execution_context_loss(
-      { code: -32602, message: "Invalid URL", data: None },
+      { code: -32602, message: "Invalid URL", data: None, },
       true,
     ),
   )

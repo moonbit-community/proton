@@ -58,7 +58,7 @@ pub fn PublicKey::parse(text : String) -> PublicKey raise KeyError {
     raise InvalidExponent(detail="must be smaller than the modulus")
   }
   guard exponent.is_odd() else { raise InvalidExponent(detail="must be odd") }
-  PublicKey::{ modulus, exponent, size: modulus_bytes.length() }
+  PublicKey::{ modulus, exponent, size: modulus_bytes.length(), }
 }
 
 ///|

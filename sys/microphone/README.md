@@ -58,7 +58,7 @@ Create a configuration by overriding only the fields that matter:
 
 ```mbt
 ///|
-let config = @proton_microphone.CaptureConfig::new(
+let config = @proton_microphone.CaptureConfig(
   channels=2,
   sample_rate_hz=48_000,
   echo_cancellation=true,

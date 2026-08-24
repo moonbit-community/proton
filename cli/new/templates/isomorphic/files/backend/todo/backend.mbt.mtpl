@@ -6,7 +6,7 @@ pub struct Backend {
 }
 
 ///|
-pub fn Backend::new() -> Backend {
+pub fn Backend::Backend() -> Backend {
   Backend::{ next_id: 1, version: 0, todos: [] }
 }
 

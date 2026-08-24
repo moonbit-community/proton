@@ -80,12 +80,12 @@ pub extend Payload with Eq::{not_equal, equal}
 pub extend Payload with Debug::{to_repr}
 
 ///|
-pub fn Payload::new(
+pub fn Payload::Payload(
   source : String,
   destination : String,
   location? : PayloadLocation = Resources,
 ) -> Payload {
-  Payload::{ source, destination, location }
+  Payload::{ source, destination, location, }
 }
 
 ///|
@@ -103,12 +103,12 @@ pub extend DocumentType with Eq::{not_equal, equal}
 pub extend DocumentType with Debug::{to_repr}
 
 ///|
-pub fn DocumentType::new(
+pub fn DocumentType::DocumentType(
   name : String,
   extensions : Array[String],
   role? : String = "Viewer",
 ) -> DocumentType {
-  DocumentType::{ name, extensions, role }
+  DocumentType::{ name, extensions, role, }
 }
 
 ///|
@@ -173,8 +173,11 @@ pub struct MacosPlistString {
 }
 
 ///|
-pub fn MacosPlistString::new(key : String, value : String) -> MacosPlistString {
-  MacosPlistString::{ key, value }
+pub fn MacosPlistString::MacosPlistString(
+  key : String,
+  value : String,
+) -> MacosPlistString {
+  MacosPlistString::{ key, value, }
 }
 
 ///|
@@ -190,13 +193,13 @@ pub struct MacosSignTarget {
 }
 
 ///|
-pub fn MacosSignTarget::new(
+pub fn MacosSignTarget::MacosSignTarget(
   path : String,
   runtime_options? : Bool = true,
   entitlements? : Bool = false,
   identifier? : String,
 ) -> MacosSignTarget {
-  MacosSignTarget::{ path, runtime_options, entitlements, identifier }
+  MacosSignTarget::{ path, runtime_options, entitlements, identifier, }
 }
 
 ///|
@@ -210,7 +213,7 @@ pub struct PackageCustomization {
 }
 
 ///|
-pub fn PackageCustomization::new(
+pub fn PackageCustomization::PackageCustomization(
   macos_plist_strings? : Array[MacosPlistString] = [],
   macos_sign_targets? : Array[MacosSignTarget] = [],
   windows_sign_targets? : Array[String] = [],
@@ -250,7 +253,7 @@ pub extend PackageSpec with Eq::{not_equal, equal}
 pub extend PackageSpec with Debug::{to_repr}
 
 ///|
-pub fn PackageSpec::new(
+pub fn PackageSpec::PackageSpec(
   executable : String,
   product_name : String,
   identifier : String,

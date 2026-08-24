@@ -1,6 +1,6 @@
 ///|
 async test "build rejects a missing application through the public interface" {
-  let package_spec = @packager.PackageSpec::new(
+  let package_spec = @packager.PackageSpec(
     "/missing/proton-app",
     "Missing App",
     "dev.proton.missing",
@@ -8,7 +8,7 @@ async test "build rejects a missing application through the public interface" {
     [@packager.PackageFormat::App],
     "/tmp/proton-missing-output",
   )
-  let proton = ProtonBundleSpec::new(
+  let proton = ProtonBundleSpec::ProtonBundleSpec(
     package_spec,
     "/missing/cef_process",
     "/missing",

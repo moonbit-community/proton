@@ -40,5 +40,5 @@ pub fn render_js_template(
 /// This keeps call sites readable when several template tokens need to be
 /// substituted together.
 pub fn replacement(token : String, value : String) -> TemplateReplacement {
-  TemplateReplacement::{ token, value }
+  TemplateReplacement::{ token, value, }
 }

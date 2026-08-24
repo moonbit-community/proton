@@ -17,7 +17,9 @@ pub struct CommandRegistrar {
 ///|
 /// Creates a registrar over one application command host.
 #doc(hidden)
-pub fn CommandRegistrar::new(host : @core.AppCommandHost) -> CommandRegistrar {
+pub fn CommandRegistrar::CommandRegistrar(
+  host : @core.AppCommandHost,
+) -> CommandRegistrar {
   CommandRegistrar::{ host, }
 }
 

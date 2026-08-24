@@ -4,7 +4,7 @@ fn windows_test_spec(
   targets : Array[String],
   sign : Bool,
 ) -> ProtonBundleSpec {
-  let package_spec = @packager.PackageSpec::new(
+  let package_spec = @packager.PackageSpec(
     resolve_path(root, "app.exe"),
     "Demo App",
     "dev.proton.demo",
@@ -19,7 +19,7 @@ fn windows_test_spec(
     resolve_path(root, "output with spaces"),
     sign~,
   )
-  ProtonBundleSpec::new(
+  ProtonBundleSpec(
     package_spec,
     resolve_path(root, "cef_process.exe"),
     root,

@@ -109,7 +109,7 @@ test "browser response helpers classify result shapes" {
   let error_response : @protocol.CdpResponseMessage = {
     id: 4,
     result: None,
-    error: Some({ code: -32000, message: "failed", data: None }),
+    error: Some({ code: -32000, message: "failed", data: None, }),
     session_id: None,
   }
   let failed : Result[Map[String, Json], Error] = try_result_client_browser_wbtest(() => {

@@ -1,22 +1,22 @@
 ///|
 test "app manifest constructor copies mutable inputs" {
   let windows = [
-    AppWindowManifest::new(
+    AppWindowManifest::AppWindowManifest(
       "settings",
-      WindowManifest::new("Settings", 420, 320),
+      WindowManifest::WindowManifest("Settings", 420, 320),
       File("settings.html"),
     ),
   ]
-  let manifest = AppManifest::new(
-    WindowManifest::new("Main", 960, 720),
+  let manifest = AppManifest::AppManifest(
+    WindowManifest::WindowManifest("Main", 960, 720),
     Html("<html></html>"),
     windows~,
   )
 
   windows.push(
-    AppWindowManifest::new(
+    AppWindowManifest::AppWindowManifest(
       "later",
-      WindowManifest::new("Later", 320, 240),
+      WindowManifest::WindowManifest("Later", 320, 240),
       File("later.html"),
     ),
   )

@@ -54,7 +54,7 @@ async fn check_for_page(
       }
     }
     Available(update) => {
-      offered.val[window] = RendererOffer::{ page_instance, update }
+      offered.val[window] = RendererOffer::{ page_instance, update, }
       @updater_contract.UpdateStatus::{
         state: "available",
         version: Some(update.version()),

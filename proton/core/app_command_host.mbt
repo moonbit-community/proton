@@ -32,7 +32,7 @@ pub struct CommandWindow {
 
 ///|
 #doc(hidden)
-pub fn CommandWindow::new(
+pub fn CommandWindow::CommandWindow(
   show_message_dialog : async (String?, String, String) -> Unit,
   show_confirm_dialog : async (String?, String, String) -> Bool,
   open_file_dialog : async (String?, String?) -> String?,
@@ -96,8 +96,8 @@ pub async fn CommandWindow::choose_directory(
 }
 
 ///|
-pub fn RuntimeWakeSignal::new() -> RuntimeWakeSignal {
-  RuntimeWakeSignal::{ revision: 0L, condition: @async.CondVar::Cond() }
+pub fn RuntimeWakeSignal::RuntimeWakeSignal() -> RuntimeWakeSignal {
+  RuntimeWakeSignal::{ revision: 0L, condition: @async.CondVar::Cond(), }
 }
 
 ///|
@@ -143,7 +143,7 @@ pub struct AppCommandRequestContext {
 
 ///|
 #doc(hidden)
-pub fn AppCommandRequestContext::new(
+pub fn AppCommandRequestContext::AppCommandRequestContext(
   tasks : @async.TaskGroup[Unit],
   locale_preferences : @locale.LocalePreferences,
   window? : CommandWindow,
@@ -152,7 +152,7 @@ pub fn AppCommandRequestContext::new(
   page_instance? : String? = None,
   permission_extension? : String,
   permission_scope? : Json,
-  wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal::new(),
+  wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal(),
   emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise = fn(
     _route,
     _name,
@@ -185,7 +185,7 @@ pub fn AppCommandRequestContext::detached(
   page_instance? : String? = None,
   permission_extension? : String,
   permission_scope? : Json,
-  wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal::new(),
+  wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal(),
   emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise = fn(
     _route,
     _name,
@@ -194,7 +194,7 @@ pub fn AppCommandRequestContext::detached(
 
   },
 ) -> AppCommandRequestContext {
-  AppCommandRequestContext::new(
+  AppCommandRequestContext(
     tasks,
     detached_locale_preferences(),
     window_id~,
@@ -334,7 +334,7 @@ pub async fn[Payload : ToJson] AppCommandRequestContext::emit(
 ///
 /// Handler diagnostics remain in backend logs by default. Set
 /// `expose_error_details` only for a trusted development frontend.
-pub fn AppCommandHost::new(
+pub fn AppCommandHost::AppCommandHost(
   expose_error_details? : Bool = false,
 ) -> AppCommandHost {
   AppCommandHost::new_with_diagnostic_reporter(

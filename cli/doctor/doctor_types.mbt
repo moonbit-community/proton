@@ -35,13 +35,13 @@ priv struct DoctorLine {
 }
 
 ///|
-fn DoctorLine::new(
+fn DoctorLine::DoctorLine(
   code : String,
   status : DoctorStatus,
   text : String,
   hint? : String,
 ) -> DoctorLine {
-  { code, status, text, hint }
+  { code, status, text, hint, }
 }
 
 ///|
@@ -52,12 +52,12 @@ priv struct DoctorSection {
 }
 
 ///|
-fn DoctorSection::new(
+fn DoctorSection::DoctorSection(
   id : String,
   title : String,
   lines : Array[DoctorLine],
 ) -> DoctorSection {
-  { id, title, lines }
+  { id, title, lines, }
 }
 
 ///|
@@ -110,7 +110,7 @@ fn DoctorReport::summary(self : DoctorReport) -> DoctorSummary {
       }
     }
   }
-  { total, passed, warnings, errors, neutral }
+  { total, passed, warnings, errors, neutral, }
 }
 
 ///|

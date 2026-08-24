@@ -101,7 +101,7 @@ fn resolve_package_formats_for_host(
 ///|
 /// Packages an already-built executable using the current host's native tools.
 pub async fn build(spec : PackageSpec) -> Array[String] {
-  build_with(spec, PackageCustomization::new(), fn(_layout) { () })
+  build_with(spec, PackageCustomization(), fn(_layout) { () })
 }
 
 ///|

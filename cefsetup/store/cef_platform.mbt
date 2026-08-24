@@ -151,7 +151,7 @@ async fn is_macos_host() -> Bool {
 
 ///|
 fn unsupported_platform(id : String) -> ProtonPlatform {
-  { id, default_cef_name: "", default_cef_sha256: "", supported: false }
+  { id, default_cef_name: "", default_cef_sha256: "", supported: false, }
 }
 
 ///|

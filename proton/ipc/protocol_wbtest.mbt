@@ -11,19 +11,19 @@ fn[T] expect_ipc_error(action : () -> T raise IpcError) -> IpcError raise {
 test "protocol version is shared by constructors" {
   assert_eq(protocol_version(), 1)
   assert_eq(
-    IpcOpRequest::new("req-version", "app:ping", null).version,
+    IpcOpRequest("req-version", "app:ping", null).version,
     protocol_version(),
   )
   assert_eq(IpcOpResponse::ok("req-version", null).version, protocol_version())
   assert_eq(
-    IpcExtensionEvent::new("ticker", "tick", null).version,
+    IpcExtensionEvent("ticker", "tick", null).version,
     protocol_version(),
   )
 }
 
 ///|
 test "operation frames round trip through JSON" {
-  let request = IpcOpRequest::new("req-1", "app:add", { "left": 1, "right": 2 })
+  let request = IpcOpRequest("req-1", "app:add", { "left": 1, "right": 2 })
   let parsed_request = parse_ipc_op_request(request.stringify())
   assert_eq(parsed_request, request)
   let response = IpcOpResponse::ok("req-1", 3)
@@ -64,15 +64,10 @@ test "decoded requests expose reusable validation" {
 
 ///|
 test "extension descriptor copies mutable array inputs" {
-  let apis = [IpcExtensionApi::new("ping")]
+  let apis = [IpcExtensionApi("ping")]
   let scripts = ["window.__demo = true;"]
-  let descriptor = IpcExtensionDescriptor::new(
-    "vendor/demo",
-    "demo",
-    apis,
-    scripts~,
-  )
-  apis.push(IpcExtensionApi::new("later"))
+  let descriptor = IpcExtensionDescriptor("vendor/demo", "demo", apis, scripts~)
+  apis.push(IpcExtensionApi("later"))
   scripts.push("window.__demo = false;")
   assert_eq(descriptor.apis.length(), 1)
   assert_eq(descriptor.scripts.length(), 1)

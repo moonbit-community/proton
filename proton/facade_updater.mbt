@@ -150,7 +150,7 @@ fn ResolvedUpdateChannel::open(
 ) -> @updater.UpdateChannel raise {
   let platform = @native.runtime_info().platform_id
   let current_revision = @native.update_current_revision()
-  @updater.UpdateChannel::new(
+  @updater.UpdateChannel(
     self.endpoint,
     self.public_keys,
     platform,

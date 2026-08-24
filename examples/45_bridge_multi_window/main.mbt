@@ -39,7 +39,7 @@ async fn identify(
   payload : IdentifyPayload,
 ) -> IdentifyReply {
   @async.sleep(payload.delay_ms.unwrap_or(0))
-  IdentifyReply::{ label: payload.label, window: context.window_id() }
+  IdentifyReply::{ label: payload.label, window: context.window_id(), }
 }
 
 ///|

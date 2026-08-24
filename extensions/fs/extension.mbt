@@ -52,7 +52,7 @@ async fn read_file(
   request : @fs_contract.ReadFileRequest,
 ) -> @fs_contract.ReadFileReply {
   let reply = with_authorized_path(context, "read_file", request.path, resolved => {
-    read_text_file({ path: resolved, sync_timestamp: request.sync_timestamp })
+    read_text_file({ path: resolved, sync_timestamp: request.sync_timestamp, })
   })
   emit_activity(
     context,
@@ -117,7 +117,7 @@ async fn kind(
     path_kind(resolved, option_bool(request.follow_symlink, true))
   })
   emit_activity(context, "kind", path=Some(request.path))
-  @fs_contract.KindReply::{ path: request.path, kind }
+  @fs_contract.KindReply::{ path: request.path, kind, }
 }
 
 ///|
@@ -130,7 +130,7 @@ async fn size(
     path_size(resolved)
   })
   emit_activity(context, "size", path=Some(request.path))
-  @fs_contract.SizeReply::{ path: request.path, size }
+  @fs_contract.SizeReply::{ path: request.path, size, }
 }
 
 ///|
@@ -148,7 +148,7 @@ async fn readdir(
     })
   })
   emit_activity(context, "readdir", path=Some(request.path))
-  @fs_contract.ReaddirReply::{ path: request.path, entries }
+  @fs_contract.ReaddirReply::{ path: request.path, entries, }
 }
 
 ///|
@@ -165,7 +165,7 @@ async fn mkdir(
     })
   })
   emit_activity(context, "mkdir", path=Some(request.path))
-  @fs_contract.MkdirReply::{ path: request.path, created }
+  @fs_contract.MkdirReply::{ path: request.path, created, }
 }
 
 ///|
@@ -188,10 +188,10 @@ async fn rmdir(
   request : @fs_contract.RemovePathRequest,
 ) -> @fs_contract.RemovePathReply {
   let removed = with_authorized_path(context, "rmdir", request.path, resolved => {
-    remove_dir({ path: resolved, recursive: request.recursive })
+    remove_dir({ path: resolved, recursive: request.recursive, })
   })
   emit_activity(context, "rmdir", path=Some(request.path))
-  @fs_contract.RemovePathReply::{ path: request.path, removed }
+  @fs_contract.RemovePathReply::{ path: request.path, removed, }
 }
 
 ///|
@@ -203,7 +203,7 @@ async fn rename(
   with_authorized_paths(context, "rename", request.old_path, request.new_path, (
     old_path,
     new_path,
-  ) => rename_path({ old_path, new_path, replace: request.replace }))
+  ) => rename_path({ old_path, new_path, replace: request.replace, }))
   emit_activity(context, "rename", path=Some(request.new_path))
   @fs_contract.RenameReply::{
     old_path: request.old_path,
@@ -222,7 +222,7 @@ async fn realpath(
     realpath_path(resolved)
   })
   emit_activity(context, "realpath", path=Some(real_path))
-  @fs_contract.RealpathReply::{ path: real_path }
+  @fs_contract.RealpathReply::{ path: real_path, }
 }
 
 ///|

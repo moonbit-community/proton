@@ -1,5 +1,5 @@
 ///|
-fn App::new(
+fn App::App(
   title : String,
   width : Int,
   height : Int,
@@ -8,7 +8,7 @@ fn App::new(
   size_hint : @manifest.WindowSizeHint,
 ) -> App {
   App::{
-    window: @manifest.WindowManifest::new(title, width, height, size_hint~),
+    window: @manifest.WindowManifest(title, width, height, size_hint~),
     entry,
     windows: [],
     debug_level_value: debug,
@@ -90,7 +90,7 @@ fn App::inline_manifest(self : App) -> @manifest.AppManifest {
   } else {
     self.debug_level_value
   }
-  @manifest.AppManifest::new(self.window, entry, debug~, windows=self.windows)
+  @manifest.AppManifest(self.window, entry, debug~, windows=self.windows)
 }
 
 ///|

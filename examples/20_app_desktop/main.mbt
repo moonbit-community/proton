@@ -9,6 +9,6 @@ async fn main {
     )
     .capability(@dialog.capability())
     .capability(@clipboard.capability())
-    .capability(@fs.capability([@fs.PermissionRoot::new(".", ["write_file"])]))
+    .capability(@fs.capability([@fs.PermissionRoot(".", ["write_file"])]))
   app.run_or_abort()
 }

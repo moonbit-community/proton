@@ -15,7 +15,7 @@ pub struct PermissionRoot {
 }
 
 ///|
-pub fn PermissionRoot::new(
+pub fn PermissionRoot::PermissionRoot(
   path : String,
   commands : Array[String],
 ) -> PermissionRoot raise FsError {
@@ -36,7 +36,7 @@ pub fn PermissionRoot::new(
     seen[command] = ()
     copied.push(command)
   }
-  PermissionRoot::{ path, commands: copied }
+  PermissionRoot::{ path, commands: copied, }
 }
 
 ///|
@@ -152,7 +152,7 @@ fn permission_roots_from_json(
       }
       command
     })
-    PermissionRoot::new(path, commands)
+    PermissionRoot(path, commands)
   })
 }
 
@@ -187,7 +187,7 @@ fn path_for_platform(path : String) -> String {
   if @mbpath.sep != '\\' {
     return path
   }
-  let builder = StringBuilder::new(size_hint=path.length())
+  let builder = StringBuilder(size_hint=path.length())
   for _, char in path {
     builder.write_char(if char == '/' { '\\' } else { char })
   }

@@ -204,7 +204,7 @@ pub struct ViewConfig {
 }
 
 ///|
-pub fn ViewConfig::new(
+pub fn ViewConfig::ViewConfig(
   width~ : Int,
   height~ : Int,
   x? : Int = 0,
@@ -214,12 +214,12 @@ pub fn ViewConfig::new(
   initial_url? : String = "about:blank",
   background_color? : String,
 ) -> ViewConfig {
-  { x, y, width, height, visible, z_order, initial_url, background_color }
+  { x, y, width, height, visible, z_order, initial_url, background_color, }
 }
 
 ///|
 fn ViewConfig::to_native(self : ViewConfig) -> @native.ViewConfig {
-  @native.ViewConfig::new(
+  @native.ViewConfig(
     width=self.width,
     height=self.height,
     x=self.x,
@@ -328,12 +328,18 @@ pub fn MenuItem::command(
   label : String,
   key? : String,
 ) -> MenuItem {
-  { kind: menu_item_command, id: Some(id), label: Some(label), key, role: None }
+  {
+    kind: menu_item_command,
+    id: Some(id),
+    label: Some(label),
+    key,
+    role: None,
+  }
 }
 
 ///|
 pub fn MenuItem::separator() -> MenuItem {
-  { kind: menu_item_separator, id: None, label: None, key: None, role: None }
+  { kind: menu_item_separator, id: None, label: None, key: None, role: None, }
 }
 
 ///|
@@ -342,7 +348,7 @@ pub fn MenuItem::role(
   label? : String,
   key? : String,
 ) -> MenuItem {
-  { kind: menu_item_role, id: None, label, key, role: Some(role) }
+  { kind: menu_item_role, id: None, label, key, role: Some(role), }
 }
 
 ///|
@@ -373,8 +379,8 @@ pub struct Menu {
 }
 
 ///|
-pub fn Menu::new(label : String, items~ : Array[MenuItem]) -> Menu {
-  { label: Some(label), role: None, items: Some(items.copy()) }
+pub fn Menu::Menu(label : String, items~ : Array[MenuItem]) -> Menu {
+  { label: Some(label), role: None, items: Some(items.copy()), }
 }
 
 ///|
@@ -385,7 +391,7 @@ pub fn Menu::role(
   label? : String,
   items? : Array[MenuItem],
 ) -> Menu {
-  { label, role: Some(role), items: items.map(items => items.copy()) }
+  { label, role: Some(role), items: items.map(items => items.copy()), }
 }
 
 ///|
@@ -398,7 +404,7 @@ fn Menu::to_native(self : Menu) -> @native.Menu {
         items?=self.items.map(items => items.map(item => item.to_native())),
       )
     None =>
-      @native.Menu::new(
+      @native.Menu(
         self.label.unwrap_or(""),
         items=self.items.unwrap_or([]).map(item => item.to_native()),
       )
@@ -412,13 +418,13 @@ pub struct MenuBar {
 }
 
 ///|
-pub fn MenuBar::new(menus~ : Array[Menu]) -> MenuBar {
+pub fn MenuBar::MenuBar(menus~ : Array[Menu]) -> MenuBar {
   { menus, }
 }
 
 ///|
 fn MenuBar::to_native(self : MenuBar) -> @native.MenuBar {
-  @native.MenuBar::new(menus=self.menus.map(menu => menu.to_native()))
+  @native.MenuBar(menus=self.menus.map(menu => menu.to_native()))
 }
 
 ///|

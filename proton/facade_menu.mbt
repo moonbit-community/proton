@@ -10,7 +10,7 @@ fn resolve_runtime_menu(
   }
   Some(
     resolve_menu(
-      menu.unwrap_or(@native.MenuBar::new(menus=[])),
+      menu.unwrap_or(@native.MenuBar(menus=[])),
       preferences,
       application_name,
       macos_application_menu=true,
@@ -61,11 +61,11 @@ fn resolve_menu(
         let final_items = items
           .unwrap_or([])
           .map(item => resolve_menu_item(item, catalog, application_name))
-        resolved.push(@native.Menu::new(final_label, items=final_items))
+        resolved.push(@native.Menu(final_label, items=final_items))
       }
     }
   }
-  @native.MenuBar::new(menus=resolved)
+  @native.MenuBar(menus=resolved)
 }
 
 ///|

@@ -36,7 +36,7 @@ pub fn PageAdFrameExplanation::from_json(
 ) -> PageAdFrameExplanation raise @protocol.ProtocolSchemaError {
   let method_name = "PageAdFrameExplanation"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -133,7 +133,7 @@ pub fn PageAdFrameType::from_json(
 ) -> PageAdFrameType raise @protocol.ProtocolSchemaError {
   let method_name = "PageAdFrameType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -335,7 +335,7 @@ pub fn PageAppManifestParsedProperties::from_json(
 ) -> PageAppManifestParsedProperties raise @protocol.ProtocolSchemaError {
   let method_name = "PageAppManifestParsedProperties"
   let fields = typed_json_fields(method_name, value)
-  { scope: typed_required_string(method_name, fields, "scope", "string") }
+  { scope: typed_required_string(method_name, fields, "scope", "string"), }
 }
 
 ///|
@@ -583,7 +583,7 @@ pub fn PageBackForwardCacheNotRestoredReason::from_json(
 ) -> PageBackForwardCacheNotRestoredReason raise @protocol.ProtocolSchemaError {
   let method_name = "PageBackForwardCacheNotRestoredReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -627,7 +627,7 @@ pub fn PageBackForwardCacheNotRestoredReasonType::from_json(
 ) -> PageBackForwardCacheNotRestoredReasonType raise @protocol.ProtocolSchemaError {
   let method_name = "PageBackForwardCacheNotRestoredReasonType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -671,7 +671,7 @@ pub fn PageClientNavigationDisposition::from_json(
 ) -> PageClientNavigationDisposition raise @protocol.ProtocolSchemaError {
   let method_name = "PageClientNavigationDisposition"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -715,7 +715,7 @@ pub fn PageClientNavigationReason::from_json(
 ) -> PageClientNavigationReason raise @protocol.ProtocolSchemaError {
   let method_name = "PageClientNavigationReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -810,7 +810,7 @@ pub fn PageCrossOriginIsolatedContextType::from_json(
 ) -> PageCrossOriginIsolatedContextType raise @protocol.ProtocolSchemaError {
   let method_name = "PageCrossOriginIsolatedContextType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -850,7 +850,7 @@ pub fn PageDialogType::from_json(
 ) -> PageDialogType raise @protocol.ProtocolSchemaError {
   let method_name = "PageDialogType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1278,7 +1278,7 @@ pub fn PageFrameId::from_json(
 ) -> PageFrameId raise @protocol.ProtocolSchemaError {
   let method_name = "PageFrameId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1515,7 +1515,7 @@ pub fn PageGatedAPIFeatures::from_json(
 ) -> PageGatedAPIFeatures raise @protocol.ProtocolSchemaError {
   let method_name = "PageGatedAPIFeatures"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1865,7 +1865,7 @@ pub fn PageNavigationType::from_json(
 ) -> PageNavigationType raise @protocol.ProtocolSchemaError {
   let method_name = "PageNavigationType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1964,7 +1964,7 @@ pub fn PageOriginTrialStatus::from_json(
 ) -> PageOriginTrialStatus raise @protocol.ProtocolSchemaError {
   let method_name = "PageOriginTrialStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2075,7 +2075,7 @@ pub fn PageOriginTrialTokenStatus::from_json(
 ) -> PageOriginTrialTokenStatus raise @protocol.ProtocolSchemaError {
   let method_name = "PageOriginTrialTokenStatus"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2180,7 +2180,7 @@ pub fn PageOriginTrialUsageRestriction::from_json(
 ) -> PageOriginTrialUsageRestriction raise @protocol.ProtocolSchemaError {
   let method_name = "PageOriginTrialUsageRestriction"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2277,7 +2277,7 @@ pub fn PagePermissionsPolicyBlockReason::from_json(
 ) -> PagePermissionsPolicyBlockReason raise @protocol.ProtocolSchemaError {
   let method_name = "PagePermissionsPolicyBlockReason"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2321,7 +2321,7 @@ pub fn PagePermissionsPolicyFeature::from_json(
 ) -> PagePermissionsPolicyFeature raise @protocol.ProtocolSchemaError {
   let method_name = "PagePermissionsPolicyFeature"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2465,7 +2465,7 @@ pub fn PageReferrerPolicy::from_json(
 ) -> PageReferrerPolicy raise @protocol.ProtocolSchemaError {
   let method_name = "PageReferrerPolicy"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2781,7 +2781,7 @@ pub fn PageScriptIdentifier::from_json(
 ) -> PageScriptIdentifier raise @protocol.ProtocolSchemaError {
   let method_name = "PageScriptIdentifier"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2821,7 +2821,7 @@ pub fn PageSecureContextType::from_json(
 ) -> PageSecureContextType raise @protocol.ProtocolSchemaError {
   let method_name = "PageSecureContextType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3031,7 +3031,7 @@ pub fn PageTransitionType::from_json(
 ) -> PageTransitionType raise @protocol.ProtocolSchemaError {
   let method_name = "PageTransitionType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -3796,7 +3796,7 @@ pub fn PageCaptureScreenshotResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { data: typed_required_result_string(method_name, fields, "data", "string") }
+  { data: typed_required_result_string(method_name, fields, "data", "string"), }
 }
 
 ///|
@@ -3892,7 +3892,7 @@ pub fn PageCaptureSnapshotResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { data: typed_required_result_string(method_name, fields, "data", "string") }
+  { data: typed_required_result_string(method_name, fields, "data", "string"), }
 }
 
 ///|
@@ -9331,7 +9331,7 @@ pub fn PageScreencastVisibilityChangedEventParams::from_json(
   let method_name = "Page.screencastVisibilityChanged"
   ignore(@protocol.cdp_schema_event(method_name~, params~))
   let fields = typed_json_fields(method_name, params)
-  { visible: typed_required_bool(method_name, fields, "visible", "boolean") }
+  { visible: typed_required_bool(method_name, fields, "visible", "boolean"), }
 }
 
 ///|

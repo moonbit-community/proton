@@ -1333,7 +1333,7 @@ pub fn DOMSnapshotStringIndex::from_json(
     Number(inner, ..) => {
       let int = inner.to_int()
       if int.to_double() == inner {
-        { value: int }
+        { value: int, }
       } else {
         raise InvalidParameterType(method_name, "value", "integer")
       }

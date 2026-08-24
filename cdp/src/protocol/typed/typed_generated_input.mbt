@@ -158,7 +158,7 @@ pub fn InputGestureSourceType::from_json(
 ) -> InputGestureSourceType raise @protocol.ProtocolSchemaError {
   let method_name = "InputGestureSourceType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -198,7 +198,7 @@ pub fn InputMouseButton::from_json(
 ) -> InputMouseButton raise @protocol.ProtocolSchemaError {
   let method_name = "InputMouseButton"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -238,7 +238,7 @@ pub fn InputTimeSinceEpoch::from_json(
 ) -> InputTimeSinceEpoch raise @protocol.ProtocolSchemaError {
   let method_name = "InputTimeSinceEpoch"
   match value {
-    Number(inner, ..) => { value: inner }
+    Number(inner, ..) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "number")
   }
 }

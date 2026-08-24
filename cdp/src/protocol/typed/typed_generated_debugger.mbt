@@ -97,7 +97,7 @@ pub fn DebuggerBreakpointId::from_json(
 ) -> DebuggerBreakpointId raise @protocol.ProtocolSchemaError {
   let method_name = "DebuggerBreakpointId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -232,7 +232,7 @@ pub fn DebuggerCallFrameId::from_json(
 ) -> DebuggerCallFrameId raise @protocol.ProtocolSchemaError {
   let method_name = "DebuggerCallFrameId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -552,7 +552,7 @@ pub fn DebuggerScriptLanguage::from_json(
 ) -> DebuggerScriptLanguage raise @protocol.ProtocolSchemaError {
   let method_name = "DebuggerScriptLanguage"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

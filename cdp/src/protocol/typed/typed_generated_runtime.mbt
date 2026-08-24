@@ -493,7 +493,7 @@ pub fn RuntimeExecutionContextId::from_json(
     Number(inner, ..) => {
       let int = inner.to_int()
       if int.to_double() == inner {
-        { value: int }
+        { value: int, }
       } else {
         raise InvalidParameterType(method_name, "value", "integer")
       }
@@ -1015,7 +1015,7 @@ pub fn RuntimeRemoteObjectId::from_json(
 ) -> RuntimeRemoteObjectId raise @protocol.ProtocolSchemaError {
   let method_name = "RuntimeRemoteObjectId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1055,7 +1055,7 @@ pub fn RuntimeScriptId::from_json(
 ) -> RuntimeScriptId raise @protocol.ProtocolSchemaError {
   let method_name = "RuntimeScriptId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1275,7 +1275,7 @@ pub fn RuntimeTimeDelta::from_json(
 ) -> RuntimeTimeDelta raise @protocol.ProtocolSchemaError {
   let method_name = "RuntimeTimeDelta"
   match value {
-    Number(inner, ..) => { value: inner }
+    Number(inner, ..) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "number")
   }
 }
@@ -1315,7 +1315,7 @@ pub fn RuntimeTimestamp::from_json(
 ) -> RuntimeTimestamp raise @protocol.ProtocolSchemaError {
   let method_name = "RuntimeTimestamp"
   match value {
-    Number(inner, ..) => { value: inner }
+    Number(inner, ..) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "number")
   }
 }
@@ -1355,7 +1355,7 @@ pub fn RuntimeUniqueDebuggerId::from_json(
 ) -> RuntimeUniqueDebuggerId raise @protocol.ProtocolSchemaError {
   let method_name = "RuntimeUniqueDebuggerId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1399,7 +1399,7 @@ pub fn RuntimeUnserializableValue::from_json(
 ) -> RuntimeUnserializableValue raise @protocol.ProtocolSchemaError {
   let method_name = "RuntimeUnserializableValue"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2273,7 +2273,7 @@ pub fn RuntimeGetIsolateIdResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { id: typed_required_result_string(method_name, fields, "id", "string") }
+  { id: typed_required_result_string(method_name, fields, "id", "string"), }
 }
 
 ///|

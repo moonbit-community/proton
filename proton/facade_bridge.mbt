@@ -3,13 +3,13 @@ fn build_command_host(
   command_capabilities : Array[AppCommandCapability],
   extension_capabilities : Array[ExtensionCapabilityBinding],
 ) -> CommandHostBuild raise AppRunError {
-  let host = @core.AppCommandHost::new(
+  let host = @core.AppCommandHost(
     expose_error_details=proton_dev_mode_enabled(),
   )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
   let app_capabilities : Array[RegisteredAppCommandCapability] = []
   let mut has_commands = false
-  let registrar = @proton_command.CommandRegistrar::new(host)
+  let registrar = @proton_command.CommandRegistrar(host)
   for capability in command_capabilities {
     let registered_before = host.registered_ops().length()
     (capability.register)(registrar) catch {
@@ -71,12 +71,12 @@ fn build_command_host(
   if has_commands {
     host.seal_registrations()
     CommandHostBuild::{
-      runtime: Some(CommandHostRuntime::{ host, destroy_hooks, closed: false }),
+      runtime: Some(CommandHostRuntime::{ host, destroy_hooks, closed: false, }),
       app_capabilities,
     }
   } else {
     ignore(close_command_host_runtime(host, destroy_hooks))
-    CommandHostBuild::{ runtime: None, app_capabilities }
+    CommandHostBuild::{ runtime: None, app_capabilities, }
   }
 }
 
@@ -200,7 +200,7 @@ fn bridge_frontend_config_for_extension(
   let extensions : Array[@native.BridgeExtensionConfig] = []
   let initialization_units : Array[@native.BridgeInitializationUnit] = []
   append_bridge_extension_frontend(id, spec, extensions, initialization_units)
-  BridgeFrontendConfig::{ extensions, initialization_units }
+  BridgeFrontendConfig::{ extensions, initialization_units, }
 }
 
 ///|
@@ -222,11 +222,11 @@ fn append_bridge_extension_frontend(
     }
     apis.push(api_name)
   }
-  extensions.push(@native.BridgeExtensionConfig::new(js_namespace, apis~))
+  extensions.push(@native.BridgeExtensionConfig(js_namespace, apis~))
   let scripts = spec.scripts()
   for index, script in scripts {
     initialization_units.push(
-      @native.BridgeInitializationUnit::new(
+      @native.BridgeInitializationUnit(
         id,
         "script-" + index.to_string(),
         script,
@@ -403,7 +403,7 @@ async fn dispatch_bridge_request_in_command_scope(
   locale_preferences : @locale.LocalePreferences,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
-  let request_context = @core.AppCommandRequestContext::new(
+  let request_context = @core.AppCommandRequestContext(
     command_tasks,
     locale_preferences,
     window=command_window_capability(window.as_ref(), dialog_completions),
@@ -417,11 +417,7 @@ async fn dispatch_bridge_request_in_command_scope(
   )
   let response = host.dispatch_ipc_with_context(
     request_context,
-    @ipc.IpcOpRequest::new(
-      request_id.to_string(),
-      request.op(),
-      request.payload(),
-    ),
+    @ipc.IpcOpRequest(request_id.to_string(), request.op(), request.payload()),
   )
   if response.is_ok() {
     @native.BridgeResponse::Ok(request_id~, payload=response.body)
@@ -458,7 +454,7 @@ fn command_window_capability(
   window : @native.WindowRef,
   dialog_completions : DialogCompletionStore,
 ) -> @core.CommandWindow {
-  @core.CommandWindow::new(
+  @core.CommandWindow(
     async fn(title, message, level) {
       let dialog = window.begin_message_dialog(
         title,
@@ -507,7 +503,7 @@ fn command_window_capability(
 
 ///|
 fn default_bridge_page_policy() -> BridgePagePolicy {
-  BridgePagePolicy::{ entry_origin: None }
+  BridgePagePolicy::{ entry_origin: None, }
 }
 
 ///|
@@ -516,7 +512,7 @@ fn bridge_page_policy_for_entry(
 ) -> BridgePagePolicy raise AppConfigurationError {
   match entry {
     @manifest.AppEntry::Url(url) =>
-      BridgePagePolicy::{ entry_origin: Some(url_origin(url)) }
+      BridgePagePolicy::{ entry_origin: Some(url_origin(url)), }
     _ => default_bridge_page_policy()
   }
 }

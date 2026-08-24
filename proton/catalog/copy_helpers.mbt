@@ -7,7 +7,7 @@ fn copy_strings(values : Array[String]) -> Array[String] {
 fn copy_extension_descriptor(
   descriptor : ExtensionDescriptor,
 ) -> ExtensionDescriptor {
-  ExtensionDescriptor::new(
+  ExtensionDescriptor(
     descriptor.id(),
     descriptor.version(),
     descriptor.display_name(),
