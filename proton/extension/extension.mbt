@@ -10,8 +10,14 @@ struct Extension {
 }
 
 ///|
-struct Extensions {
-  items : Array[Extension]
+/// A typed extension capability that can be granted to a renderer.
+///
+/// Extension packages build this value after validating their public scope
+/// types. Applications pass it to `App::capability` without handling extension
+/// identifiers or raw permission JSON.
+pub struct RendererCapability {
+  extension : Extension
+  scope : Json
 }
 
 ///|
@@ -59,13 +65,36 @@ pub fn typed(
 }
 
 ///|
-pub fn Extensions::new(items : Array[Extension]) -> Extensions {
-  Extensions::{ items: copy_extensions(items) }
+/// Builds a renderer capability from an extension definition and its validated
+/// internal scope.
+///
+/// This constructor is intended for extension authors. Application-facing
+/// extension packages should expose a typed `capability` function instead.
+pub fn capability(
+  extension : Extension,
+  scope? : Json = Json::empty_object(),
+) -> RendererCapability {
+  RendererCapability::{ extension, scope: clone_capability_json(scope) }
 }
 
 ///|
-pub fn extensions(items : Array[Extension]) -> Extensions {
-  Extensions::new(items)
+#doc(hidden)
+pub fn RendererCapability::id(self : RendererCapability) -> String {
+  self.extension.id()
+}
+
+///|
+#doc(hidden)
+pub fn RendererCapability::command_spec(
+  self : RendererCapability,
+) -> @proton_command.AppCommandExtensionSpec raise ExtensionAdapterError {
+  self.extension.command_spec()
+}
+
+///|
+#doc(hidden)
+pub fn RendererCapability::scope(self : RendererCapability) -> Json {
+  clone_capability_json(self.scope)
 }
 
 ///|
@@ -95,13 +124,18 @@ pub fn Extension::command_spec(
 }
 
 ///|
-pub fn Extensions::items(self : Extensions) -> Array[Extension] {
-  copy_extensions(self.items)
-}
-
-///|
-fn copy_extensions(items : Array[Extension]) -> Array[Extension] {
-  items.map(fn(item) { item })
+fn clone_capability_json(value : Json) -> Json {
+  match value {
+    Array(values) => Json::array(values.map(clone_capability_json))
+    Object(fields) => {
+      let copied : Map[String, Json] = Map([])
+      for key, value in fields {
+        copied[key] = clone_capability_json(value)
+      }
+      Json::object(copied)
+    }
+    _ => value
+  }
 }
 
 ///|

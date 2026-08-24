@@ -28,13 +28,8 @@ pub struct AppManifest {
   entry : AppEntry
   windows : Array[AppWindowManifest]
   debug : Int
-  extensions : Map[String, ExtensionSetting]
-  permissions : Array[PermissionGrant]
 }
-pub fn AppManifest::extension_setting(Self, String) -> ExtensionSetting?
-pub fn AppManifest::extension_settings(Self) -> Array[(String, ExtensionSetting)]
-pub fn AppManifest::new(WindowManifest, AppEntry, debug? : Int, windows? : Array[AppWindowManifest], extensions? : Map[String, ExtensionSetting], permissions? : Array[PermissionGrant]) -> Self
-pub fn AppManifest::permission_grants(Self) -> Array[PermissionGrant]
+pub fn AppManifest::new(WindowManifest, AppEntry, debug? : Int, windows? : Array[AppWindowManifest]) -> Self
 
 pub struct AppWindowManifest {
   id : String
@@ -49,40 +44,6 @@ pub fn AppWindowManifest::output(Self, &Logger) -> Unit
 pub fn AppWindowManifest::to_repr(Self) -> @debug.Repr
 pub fn AppWindowManifest::to_string(Self) -> String
 pub impl Show for AppWindowManifest
-
-pub(all) enum ExtensionSetting {
-  Disabled
-  Enabled
-} derive(Eq, @debug.Debug)
-pub fn ExtensionSetting::disabled() -> Self
-pub fn ExtensionSetting::enabled() -> Self
-pub fn ExtensionSetting::equal(Self, Self) -> Bool
-pub fn ExtensionSetting::is_enabled(Self) -> Bool
-pub fn ExtensionSetting::not_equal(Self, Self) -> Bool
-pub fn ExtensionSetting::output(Self, &Logger) -> Unit
-pub fn ExtensionSetting::to_repr(Self) -> @debug.Repr
-pub fn ExtensionSetting::to_string(Self) -> String
-pub impl Show for ExtensionSetting
-
-pub struct PermissionGrant {
-  window : String
-  origin : PermissionOrigin
-  extension : String
-  scope : Json
-}
-pub fn PermissionGrant::extension(Self) -> String
-pub fn PermissionGrant::new(String, PermissionOrigin, String, scope? : Json) -> Self
-pub fn PermissionGrant::origin(Self) -> PermissionOrigin
-pub fn PermissionGrant::scope(Self) -> Json
-pub fn PermissionGrant::window(Self) -> String
-
-pub(all) enum PermissionOrigin {
-  App
-  Entry
-} derive(Eq, @debug.Debug)
-pub fn PermissionOrigin::equal(Self, Self) -> Bool
-pub fn PermissionOrigin::not_equal(Self, Self) -> Bool
-pub fn PermissionOrigin::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TitlebarStyle {
   Default

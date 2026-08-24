@@ -107,17 +107,17 @@ async fn download(
 }
 
 ///|
-/// Returns the updater extension for `App::extension`.
-///
-/// Registration installs the backend implementation but grants no renderer
-/// authority. Applications must separately grant the typed updater commands to
-/// each logical window that may invoke them; native bridge policy independently
-/// validates the calling frame origin.
-pub fn extension() -> @proton_extension.Extension {
+fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     @updater_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
     on_destroy=fn() { offered.val = Map([]) },
   )
+}
+
+///|
+/// Grants updater commands to a renderer selected by `App::capability`.
+pub fn capability() -> @proton_extension.RendererCapability {
+  @proton_extension.capability(extension())
 }

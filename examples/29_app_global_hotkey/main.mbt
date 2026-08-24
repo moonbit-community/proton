@@ -6,6 +6,6 @@ async fn main {
     width=960,
     height=740,
     debug=true,
-  ).expose(@global_hotkey.extension())
+  ).capability(@global_hotkey.capability())
   app.run_or_abort()
 }

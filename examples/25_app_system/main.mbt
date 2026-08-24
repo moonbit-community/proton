@@ -7,8 +7,8 @@ async fn main {
       height=760,
       debug=true,
     )
-    .expose(@tray.extension())
-    .expose(@notification.extension())
-    .expose(@global_hotkey.extension())
+    .capability(@tray.capability())
+    .capability(@notification.capability())
+    .capability(@global_hotkey.capability())
   app.run_or_abort()
 }

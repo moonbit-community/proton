@@ -4,17 +4,14 @@ package "moonbit-community/proton_ext/fs"
 import {
   "moonbit-community/proton/command",
   "moonbit-community/proton/extension",
-  "moonbit-community/proton/manifest",
   "moonbit-community/proton_contract",
   "moonbitlang/core/debug",
 }
 
 // Values
-pub fn extension() -> @extension.Extension
+pub fn capability(Array[PermissionRoot]) -> @extension.RendererCapability raise FsError
 
 pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
-
-pub fn permission(Array[PermissionRoot], window? : String, origin? : @manifest.PermissionOrigin) -> @manifest.PermissionGrant raise FsError
 
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 

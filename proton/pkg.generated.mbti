@@ -54,8 +54,7 @@ pub(all) suberror AppConfigurationError {
   InvalidJavaScriptNamespace(js_namespace~ : String)
   InvalidJavaScriptApi(js_namespace~ : String, api_name~ : String)
   InvalidEntryUrl(url~ : String, reason~ : String)
-  InvalidPermissionGrant(detail~ : String)
-  MissingPermissionGrant(extension_id~ : String)
+  InvalidRendererCapability(detail~ : String)
 } derive(@debug.Debug)
 pub fn AppConfigurationError::message(Self) -> String
 pub fn AppConfigurationError::output(Self, &Logger) -> Unit
@@ -168,7 +167,8 @@ type App
 pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, open_on_start? : Bool) -> Self
 pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
-pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise) -> Self
+pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Self
+pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise, targets? : Array[RendererTarget]) -> Self
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
 pub fn App::document_extension(Self, String) -> Self
@@ -176,9 +176,6 @@ pub fn App::entry_asset(Self, String) -> Self
 pub fn App::entry_file(Self, String) -> Self
 pub fn App::entry_html(Self, String) -> Self
 pub fn App::entry_url(Self, String) -> Self
-pub fn App::expose(Self, @extension.Extension, window? : String, origin? : @manifest.PermissionOrigin, scope? : Json) -> Self
-pub fn App::extension(Self, @extension.Extension) -> Self
-pub fn App::extensions(Self, @extension.Extensions) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
@@ -193,7 +190,6 @@ pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> 
 pub fn App::on_view_event(Self, async (ViewHandle, ViewEvent) -> Unit noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
-pub fn App::permission(Self, @manifest.PermissionGrant) -> Self
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::single_instance(Self, String) -> Self
@@ -412,6 +408,13 @@ pub(all) struct PopupRequest {
 pub fn PopupRequest::equal(Self, Self) -> Bool
 pub fn PopupRequest::not_equal(Self, Self) -> Bool
 pub fn PopupRequest::to_repr(Self) -> @debug.Repr
+
+pub struct RendererTarget {
+  window : String
+  bundled : Bool
+}
+pub fn RendererTarget::bundled(window? : String) -> Self
+pub fn RendererTarget::entry(window? : String) -> Self
 
 pub(all) enum RuntimeLaunchInput {
   OpenUrls(Array[String])
@@ -667,10 +670,6 @@ pub using @core {type CommandWindow}
 pub using @locale {type Locale}
 
 pub using @locale {type LocaleParseError}
-
-pub using @manifest {type PermissionGrant}
-
-pub using @manifest {type PermissionOrigin}
 
 pub using @command {type PermissionScopeValidationError}
 

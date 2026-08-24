@@ -50,9 +50,8 @@ pub fn AppConfigurationError::message(self : AppConfigurationError) -> String {
       "." +
       api_name
     InvalidEntryUrl(url~, reason~) => "invalid entry URL " + url + ": " + reason
-    InvalidPermissionGrant(detail~) => "invalid permission grant: " + detail
-    MissingPermissionGrant(extension_id~) =>
-      "registered renderer capability has no permission grant: " + extension_id
+    InvalidRendererCapability(detail~) =>
+      "invalid renderer capability: " + detail
   }
 }
 

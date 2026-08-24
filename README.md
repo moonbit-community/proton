@@ -63,13 +63,6 @@ async fn main {
   @proton.asset("My App", "frontend/dist/index.html")
   .single_instance("com.example.my-app")
   .commands(fn(registrar) raise { backend.register_commands(registrar) })
-  .permission(
-    @proton.PermissionGrant::new(
-      "main",
-      @proton.PermissionOrigin::Entry,
-      "app",
-    ),
-  )
   .run_or_abort()
 }
 ```
@@ -95,39 +88,21 @@ async fn main {
 The root package also supports URL, file, and packaged asset entries through
 `@proton.url`, `@proton.file`, and `@proton.asset`.
 
-## Renderer permissions
+## Renderer capabilities
 
-Registering backend commands does not expose them to a renderer. Every
-renderer capability requires a grant for one window, one trusted source, and
-one extension. Missing grants are denied.
+Commands registered with `.commands(...)` are available to the primary
+window's configured entry by default. Use `targets` when another window or
+Proton's bundled origin also needs them.
 
-Commands registered directly with `.commands(...)` belong to the `app`
-permission id. Grant that capability on the App builder:
-
-```moonbit
-.permission(
-  @proton.PermissionGrant::new(
-    "main",
-    @proton.PermissionOrigin::Entry,
-    "app",
-  ),
-)
-```
-
-`origin: "app"` names bundled `proton://app` content. `origin: "entry"` follows
-the configured entry and resolves URL entries to their exact HTTP(S) origin,
-including `frontend.dev_url` during development. Arbitrary origins cannot be
-granted.
-
-For extensions without an additional scope, `.expose(extension)` is the
-explicit shorthand for registration plus an empty grant. Filesystem access
-must declare path ranges and exact commands:
+Extensions expose typed capabilities. Adding a capability both installs its
+backend handlers and grants it to the selected renderer, so registration and
+authority cannot drift apart. Filesystem access additionally declares path
+ranges and exact commands:
 
 ```moonbit
 @proton.html("Files", html)
-.extension(@fs.extension())
-.permission(
-  @fs.permission([
+.capability(
+  @fs.capability([
     @fs.PermissionRoot::new("./workspace", [
       "read_file",
       "write_file",
@@ -136,6 +111,12 @@ must declare path ranges and exact commands:
   ]),
 )
 ```
+
+The default target is `@proton.RendererTarget::entry()` for the primary
+window. Multi-window applications pass `targets=[...]` with
+`RendererTarget::entry(window=...)` or `RendererTarget::bundled(window=...)`.
+Omitting a capability is valid; attempts to invoke an unavailable operation are
+rejected by the bridge rather than preventing the application from starting.
 
 The renderer cannot select or widen these roots. Proton matches the trusted
 frame origin in native code, rechecks the grant during MoonBit dispatch, and
@@ -198,7 +179,7 @@ pump:
 ```
 
 Runtime-created windows must be declared before startup so packaging inputs,
-origins, and permissions remain explicit. `open_on_start=false` declares a
+origins, and renderer capabilities remain explicit. `open_on_start=false` declares a
 template without creating it; `WindowManager::open` creates a fresh concrete
 instance when the application needs it. `WindowHandle` supports show, hide,
 focus, close, title, size, position, minimize, maximize, restore, fullscreen,

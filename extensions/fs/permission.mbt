@@ -40,20 +40,18 @@ pub fn PermissionRoot::new(
 }
 
 ///|
-/// Creates a renderer grant for this extension.
+/// Creates the filesystem capability granted to a renderer by `App::capability`.
 ///
 /// Relative roots and renderer paths are resolved against the application's
 /// trusted configuration directory. Access is allowed only when the canonical
 /// target remains at or below a root that grants the requested command.
-pub fn permission(
+pub fn capability(
   roots : Array[PermissionRoot],
-  window? : String = "main",
-  origin? : @proton.PermissionOrigin = Entry,
-) -> @proton.PermissionGrant raise FsError {
+) -> @proton_extension.RendererCapability raise FsError {
   guard roots.length() > 0 else {
     raise InvalidPermissionScope("at least one filesystem root is required")
   }
-  @proton.PermissionGrant::new(window, origin, fs_extension_id, scope={
+  @proton_extension.capability(extension(), scope={
     "roots": roots.map(fn(root) -> Json {
       { "path": root.path, "commands": root.commands }
     }),

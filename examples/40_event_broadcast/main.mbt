@@ -122,6 +122,6 @@ async fn main {
     width=900,
     height=620,
     debug=true,
-  ).expose(ticker_extension())
+  ).capability(@proton_extension.capability(ticker_extension()))
   app.run_or_abort()
 }

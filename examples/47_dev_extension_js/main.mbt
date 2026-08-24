@@ -123,6 +123,6 @@ async fn main {
     height=620,
   )
   .single_instance("com.justjavac.proton.dev-extension-js")
-  .expose(ticker_extension())
+  .capability(@proton_extension.capability(ticker_extension()))
   .run_or_abort()
 }

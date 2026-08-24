@@ -630,9 +630,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|  @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
           #|  .single_instance({{identifier_mbt}})
           #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
-          #|  .permission(
-          #|    @proton.PermissionGrant::new("main", @proton.PermissionOrigin::Entry, "app"),
-          #|  )
           #|  .run_or_abort()
           #|}
           #|

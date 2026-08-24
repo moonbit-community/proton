@@ -368,7 +368,7 @@ async fn destroy(
 }
 
 ///|
-pub fn extension() -> @proton_extension.Extension {
+fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     @tray_contract.extension,
     generated_extension_command_routes(),
@@ -382,4 +382,10 @@ pub fn extension() -> @proton_extension.Extension {
     ],
     on_destroy=fn() { cleanup_tray() },
   )
+}
+
+///|
+/// Grants tray commands to renderer targets selected by `App::capability`.
+pub fn capability() -> @proton_extension.RendererCapability {
+  @proton_extension.capability(extension())
 }

@@ -8,7 +8,7 @@ import {
 }
 
 // Values
-pub fn extensions(Array[Extension]) -> Extensions
+pub fn capability(Extension, scope? : Json) -> RendererCapability
 
 pub fn poller_script(js_namespace~ : String, drain_method~ : String, poller_field~ : String) -> String
 
@@ -28,9 +28,10 @@ type Extension
 pub fn Extension::command_spec(Self) -> @command.AppCommandExtensionSpec raise ExtensionAdapterError
 pub fn Extension::id(Self) -> String
 
-type Extensions
-pub fn Extensions::items(Self) -> Array[Extension]
-pub fn Extensions::new(Array[Extension]) -> Self
+pub struct RendererCapability {
+  extension : Extension
+  scope : Json
+}
 
 // Type aliases
 

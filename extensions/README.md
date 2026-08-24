@@ -11,17 +11,18 @@ The current supported route is:
 MoonBit app -> moonbit-community/proton -> private native stubs -> command bridge
 ```
 
-Applications register backend implementations with `.extension(...)` and grant
-renderer access separately with `.permission(...)`. `.expose(...)` is an
-explicit shorthand for both steps when an extension uses an empty scope.
-Registration alone never installs the extension API in a page. Inline HTML
+Applications add typed extension capabilities with `.capability(...)`. One
+capability installs its backend implementation and grants its validated scope
+to the selected renderer targets; these two decisions cannot drift apart.
+Omitted capabilities are unavailable and do not prevent startup. Inline HTML
 entries can call granted proxies through `window.__MoonBit__.<namespace>` or
 the low-level `window.__MoonBit__.core.invokeOp(...)` bridge, depending on the
 extension and example. Pages subscribe to events through either
 `window.__MoonBit__.events.on(...)` or `window.__MoonBit__.<namespace>.on(...)`.
 
-Application commands registered with `.commands(...)` are exposed under
-`window.__MoonBit__.app`, one proxy per granted command:
+Application commands registered with `.commands(...)` are exposed to the
+primary configured entry by default under `window.__MoonBit__.app`, one proxy
+per registered command:
 
 ```js
 await window.__MoonBit__.app.ping({ value: 1 });
@@ -48,9 +49,8 @@ receives the raw payload text.
 `invokeOp` is the transport-level entry point and takes the fully qualified
 route: `app:<name>` for application commands and `ext:<namespace>/<name>` for
 extension commands. Prefer the proxies above, which build the route for you.
-A request for a route no grant declares is rejected with
-`bridge op is not registered`; a route that exists but was not granted to the
-calling page is rejected with `bridge op is not allowed`.
+A request for an unavailable route is rejected by the bridge. A route granted
+to another renderer target is rejected for the calling page.
 
 ## Packages
 
@@ -70,9 +70,9 @@ calling page is rejected with `bridge op is not allowed`.
 ## Extension Metadata
 
 Extension metadata is used by code generation, catalog checks, dependency
-planning, and generated command bridge packages. Applications register
-extensions and renderer permissions with typed builders in top-level Proton
-code. `proton.project.json` is CLI-only and does not expose capabilities.
+planning, and generated command bridge packages. Applications grant renderer
+capabilities with typed builders in top-level Proton code.
+`proton.project.json` is CLI-only and does not expose capabilities.
 
 ## Tray Notes
 

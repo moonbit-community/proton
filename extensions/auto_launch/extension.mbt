@@ -71,10 +71,16 @@ async fn disable(
 }
 
 ///|
-pub fn extension() -> @proton_extension.Extension {
+fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     @auto_launch_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
   )
+}
+
+///|
+/// Grants auto-launch commands to renderer targets selected by `App::capability`.
+pub fn capability() -> @proton_extension.RendererCapability {
+  @proton_extension.capability(extension())
 }

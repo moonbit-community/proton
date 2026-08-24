@@ -23,8 +23,8 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
   run_manifest(
     resolved.manifest,
     resolved.permission_base_path,
-    self.command_extensions,
-    self.command_registrars,
+    self.command_capabilities,
+    self.extension_capabilities,
     self.application_lifecycle_hooks,
     self.window_lifecycle_hooks,
     self.menu.map(menu => menu.to_native()),
@@ -66,8 +66,8 @@ pub async fn App::run_or_abort(self : App) -> Unit {
 async fn run_manifest(
   manifest : @manifest.AppManifest,
   permission_base_path : String,
-  command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
-  command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise],
+  command_capabilities : Array[AppCommandCapability],
+  extension_capabilities : Array[ExtensionCapabilityBinding],
   application_lifecycle_hooks : Array[ApplicationLifecycleHook],
   window_lifecycle_hooks : Array[WindowLifecycleHook],
   menu : @native.MenuBar?,
@@ -174,11 +174,23 @@ async fn run_manifest(
         None => ()
       }
     }
-    command_host = build_command_host(
-      manifest,
-      command_extensions,
-      command_registrars~,
+    validate_renderer_capability_targets(
+      manifest, command_capabilities, extension_capabilities,
+    ) catch {
+      error => raise ConfigurationError(error)
+    }
+    let command_extensions = command_extension_specs(extension_capabilities) catch {
+      error => raise ConfigurationError(error)
+    }
+    let resolved_extension_capabilities = resolve_extension_capabilities(
+      extension_capabilities, permission_base_path,
+    ) catch {
+      error => raise ConfigurationError(error)
+    }
+    let command_build = build_command_host(
+      command_capabilities, extension_capabilities,
     )
+    command_host = command_build.runtime
     let policies : Array[BridgePagePolicy] = []
     for plan in plans {
       let policy = bridge_page_policy_for_entry(plan.entry) catch {
@@ -186,29 +198,22 @@ async fn run_manifest(
       }
       policies.push(policy)
     }
-    let ops = match command_host {
-      Some(host) => host.host.registered_ops()
-      None => []
-    }
-    validate_registered_capabilities_have_grants(
-      manifest, command_extensions, ops,
-    ) catch {
-      error => raise ConfigurationError(error)
-    }
     let permission_policies : Array[WindowPermissionPolicy] = []
     for index, plan in plans {
       permission_policies.push(
         resolve_window_permission_policy(
           plan.id,
           policies[index],
-          manifest,
-          permission_base_path,
-          command_extensions,
-          ops,
+          command_build.app_capabilities,
+          resolved_extension_capabilities,
         ) catch {
           error => raise ConfigurationError(error)
         },
       )
+    }
+    let ops = match command_host {
+      Some(host) => host.host.registered_ops()
+      None => []
     }
     let bridge_enabled = ops.length() > 0 ||
       forward_menu_events ||

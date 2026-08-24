@@ -1,14 +1,7 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonbit-community/proton_ext"
 
-import {
-  "moonbit-community/proton/extension",
-}
-
 // Values
-pub fn all() -> @extension.Extensions
-
-pub fn desktop() -> @extension.Extensions
 
 // Errors
 

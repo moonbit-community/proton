@@ -290,7 +290,7 @@ test "templates receive final author title and size" {
   assert_true(main_mbt.contains("@proton.asset("))
   assert_true(main_mbt.contains(".single_instance(\"com.justjavac.demo\")"))
   assert_true(main_mbt.contains("backend.register_commands(registrar)"))
-  assert_true(main_mbt.contains("@proton.PermissionGrant::new("))
+  assert_false(main_mbt.contains(".permission("))
   guard find_planned_file(files, "proton.project.json") is Some(config) else {
     abort("missing proton.project.json")
   }

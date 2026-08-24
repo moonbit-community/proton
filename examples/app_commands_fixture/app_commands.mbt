@@ -180,6 +180,6 @@ pub async fn run() -> Unit {
     width=920,
     height=680,
     debug=true,
-  ).expose(app_commands_extension())
+  ).capability(@proton_extension.capability(app_commands_extension()))
   app.run_or_abort()
 }

@@ -6,6 +6,6 @@ async fn main {
     width=920,
     height=680,
     debug=true,
-  ).expose(@keepawake.extension())
+  ).capability(@keepawake.capability())
   app.run_or_abort()
 }
