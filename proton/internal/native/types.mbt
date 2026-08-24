@@ -1115,6 +1115,20 @@ pub fn bridge_permission_grants_supported() -> Bool {
 }
 
 ///|
+/// Controls whether and where CEF exposes its remote debugging endpoint.
+pub(all) enum RemoteDebugging {
+  Disabled
+  Ephemeral
+  Fixed(Int)
+} derive(Debug, Eq)
+
+///|
+pub extend RemoteDebugging with Eq::{not_equal, equal}
+
+///|
+pub extend RemoteDebugging with Debug::{to_repr}
+
+///|
 struct RuntimeConfig {
   use_bundled : Bool
   headless : Bool
@@ -1128,7 +1142,7 @@ struct RuntimeConfig {
   accept_languages : Array[String]
   framework_dialog_ok_label : String?
   framework_dialog_cancel_label : String?
-  remote_debugging_port : Int
+  remote_debugging : RemoteDebugging
 } derive(Debug, Eq)
 
 ///|
@@ -1174,7 +1188,7 @@ pub fn RuntimeConfig::new(
   cache_dir? : String,
   locale? : @locale.Locale,
   accept_languages? : Array[@locale.Locale] = [],
-  remote_debugging_port? : Int = 0,
+  remote_debugging? : RemoteDebugging = Disabled,
   headless? : Bool = false,
   persist_session_cookies? : Bool = true,
 ) -> RuntimeConfig {
@@ -1191,7 +1205,7 @@ pub fn RuntimeConfig::new(
     accept_languages: accept_languages.map(value => value.to_string()),
     framework_dialog_ok_label: Some("OK"),
     framework_dialog_cancel_label: Some("Cancel"),
-    remote_debugging_port,
+    remote_debugging,
   }
 }
 
@@ -1206,7 +1220,7 @@ pub fn RuntimeConfig::bundled(
   cache_dir? : String,
   locale? : @locale.Locale,
   accept_languages? : Array[@locale.Locale] = [],
-  remote_debugging_port? : Int = 0,
+  remote_debugging? : RemoteDebugging = Disabled,
   headless? : Bool = false,
   persist_session_cookies? : Bool = true,
 ) -> RuntimeConfig {
@@ -1223,7 +1237,7 @@ pub fn RuntimeConfig::bundled(
     accept_languages: accept_languages.map(value => value.to_string()),
     framework_dialog_ok_label: Some("OK"),
     framework_dialog_cancel_label: Some("Cancel"),
-    remote_debugging_port,
+    remote_debugging,
   }
 }
 
@@ -1274,7 +1288,7 @@ pub fn RuntimeConfig::with_framework_dialog_labels(
     accept_languages: self.accept_languages,
     framework_dialog_ok_label: Some(ok),
     framework_dialog_cancel_label: Some(cancel),
-    remote_debugging_port: self.remote_debugging_port,
+    remote_debugging: self.remote_debugging,
   }
 }
 
