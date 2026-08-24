@@ -137,7 +137,7 @@ jobs:
       - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          moon check --target native --deny-warn --warn-list=-92
+          moon check --target native --deny-warn
           moon -C package test lib --target native --diagnostic-limit 80
           moon -C codegen test lib --target wasm --diagnostic-limit 80
           moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80
@@ -171,7 +171,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          moon check --target native --deny-warn --warn-list=-92
+          moon check --target native --deny-warn
           moon -C package test lib --target native --diagnostic-limit 80
           moon -C codegen test lib --target wasm --diagnostic-limit 80
           moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80

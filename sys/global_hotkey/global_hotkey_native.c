@@ -1842,6 +1842,10 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_register(
     }
     if (!mb_linux_keycode_from_name(state->display, name, &keycode)) {
       free(name);
+      if (!mb_linux_require_connection(
+              state, "the X11 connection was lost; cannot register hotkey")) {
+        return 1;
+      }
       mb_set_error_message("unsupported X11 hotkey key");
       return 1;
     }
