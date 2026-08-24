@@ -121,8 +121,9 @@ int32_t proton_host_loop_begin(void);
 int32_t proton_host_loop_poll(int32_t timeout_ms,
                                          uint32_t *out_ready_mask);
 void proton_host_loop_end(void);
-int32_t proton_runtime_respond_bridge_request_json(
-    proton_runtime_handle_t runtime, const char *response_json);
+int32_t proton_runtime_respond_bridge_request(
+    proton_runtime_handle_t runtime, int64_t request_id, int32_t ok,
+    const char *body_json);
 int32_t proton_runtime_begin_message_dialog(
     proton_runtime_handle_t runtime, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,

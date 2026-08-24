@@ -69,23 +69,6 @@ static int proton_engine_json_read_int64_field(const char *json,
   return ok ? 1 : 0;
 }
 
-static char *proton_engine_json_copy_raw_field(const char *json,
-                                               const char *field_name) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, json)) {
-    return NULL;
-  }
-  char *copy = NULL;
-  if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, field_name, &value)) {
-    copy = proton_json_copy_raw(&doc, value);
-  }
-  proton_json_dispose(&doc);
-  return copy;
-}
-
 typedef struct {
   const proton_json_doc_t *doc;
   const char *op;

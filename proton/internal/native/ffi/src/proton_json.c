@@ -518,11 +518,11 @@ char *proton_json_copy_string(const proton_json_doc_t *doc,
   return copy;
 }
 
-char *proton_json_copy_raw(const proton_json_doc_t *doc,
-                           proton_json_value_t value) {
+char *proton_json_copy_object(const proton_json_doc_t *doc,
+                              proton_json_value_t value) {
   const jsmntok_t *tokens = proton_json_tokens(doc);
   if (doc == NULL || tokens == NULL || value.index < 0 ||
-      value.index >= doc->token_count) {
+      value.index >= doc->token_count || !proton_json_is_object(doc, value)) {
     return NULL;
   }
   const jsmntok_t *token = &tokens[value.index];

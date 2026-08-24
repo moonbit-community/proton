@@ -104,7 +104,7 @@ pub fn proton_runtime_destroy_ffi(RuntimeHandle) -> Int
 
 pub fn proton_runtime_platform_id_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
-pub fn proton_runtime_respond_bridge_request_json_ffi(RuntimeHandle, Bytes) -> Int
+pub fn proton_runtime_respond_bridge_request_ffi(RuntimeHandle, Int64, Int, Bytes) -> Int
 
 pub fn proton_runtime_signal_wakeup_ffi() -> Unit
 

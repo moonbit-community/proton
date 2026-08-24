@@ -1482,36 +1482,6 @@ fn copy_strings(values : Array[String]) -> Array[String] {
 }
 
 ///|
-pub fn BridgeResponse::to_json_string(self : BridgeResponse) -> String {
-  match self {
-    Ok(request_id~, payload~) => {
-      let response : Json = {
-        "abi_version": Json::number(1.0, repr="1"),
-        "request_id": Json::number(
-          request_id.to_double(),
-          repr=request_id.to_string(),
-        ),
-        "ok": true,
-        "payload": payload,
-      }
-      response.stringify()
-    }
-    Err(request_id~, code~, message~) => {
-      let response : Json = {
-        "abi_version": Json::number(1.0, repr="1"),
-        "request_id": Json::number(
-          request_id.to_double(),
-          repr=request_id.to_string(),
-        ),
-        "ok": false,
-        "error": { "code": code, "message": message },
-      }
-      response.stringify()
-    }
-  }
-}
-
-///|
 priv enum ViewLifecycleState {
   ViewLive = 0
   ViewDestroying = 1
