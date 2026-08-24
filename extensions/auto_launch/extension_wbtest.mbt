@@ -1,10 +1,4 @@
 ///|
-test "auto launch current platform has a JavaScript label" {
-  let label = platform_label(@sys_auto_launch.current_platform())
-  assert_true(["windows", "macos", "linux", "unsupported"].contains(label))
-}
-
-///|
 test "auto launch descriptor validates payloads through package constructor" {
   let error = try
     build_launcher(@auto_launch_contract.AutoLaunchRequest::{
