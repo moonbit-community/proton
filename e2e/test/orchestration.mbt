@@ -40,18 +40,9 @@ fn current_working_directory() -> String raise {
 
 ///|
 fn repository_root() -> String raise {
-  let mut current = @path.Path(current_working_directory())
-  for ;; {
-    let current_text = current.to_string()
-    if @mbfs.path_exists(join_path(current_text, "moon.work")) {
-      return current_text
-    }
-    let parent = current.dirname()
-    if parent == current {
-      fail("could not find repository root from " + current_text)
-    }
-    current = parent
-  }
+  // `moon -C e2e` makes the E2E module the process working directory.
+  let e2e_root = @path.Path(current_working_directory())
+  e2e_root.dirname().to_string()
 }
 
 ///|
