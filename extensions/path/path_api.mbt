@@ -10,7 +10,7 @@ fn prepare_native_path(path : String) -> String {
   if @mbpath.sep != '\\' {
     return path
   }
-  let builder = StringBuilder::new(size_hint=path.length())
+  let builder = StringBuilder(size_hint=path.length())
   for _, ch in path {
     builder.write_char(if ch == '/' { '\\' } else { ch })
   }

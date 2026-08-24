@@ -53,7 +53,7 @@ fn hex_digit(digit : Char, url : String) -> Int raise UpdateError {
 /// later, and those refusals describe the problem better than an encoding
 /// complaint would.
 fn bytes_to_utf8(body : Bytes) -> String {
-  let builder = StringBuilder::new(size_hint=body.length())
+  let builder = StringBuilder(size_hint=body.length())
   for character in @encoding.decoder(UTF8).decode_lossy(body[:]) {
     builder.write_char(character)
   }

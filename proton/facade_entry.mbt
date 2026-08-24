@@ -114,7 +114,7 @@ fn asset_document_url(path : @mbpath.Path) -> String {
 ///|
 fn asset_url_path_encode(path : String) -> String {
   let bytes = @utf8.encode(path)
-  let builder = StringBuilder::new(size_hint=bytes.length())
+  let builder = StringBuilder(size_hint=bytes.length())
   for byte in bytes {
     if asset_url_path_byte_is_safe(byte) {
       builder.write_char(byte.to_char())

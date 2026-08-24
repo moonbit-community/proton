@@ -89,7 +89,7 @@ fn title_case(text : String) -> String {
 ///|
 /// Escape the HTML-sensitive characters `&`, `<`, `>`, `"`, and `'`.
 fn escape_html(value : String) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   for ch in value {
     match ch {
       '&' => out.write_string("&amp;")
@@ -168,7 +168,7 @@ fn is_ascii_letter(char : Char) -> Bool {
 ///|
 /// Convert every ASCII letter in a string to lowercase.
 fn ascii_to_lower(text : String) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   for ch in text {
     if is_ascii_uppercase(ch) {
       out.write_char((ch.to_int() + 32) |> Int::unsafe_to_char)
@@ -182,7 +182,7 @@ fn ascii_to_lower(text : String) -> String {
 ///|
 /// Uppercase the first character of a non-empty string.
 fn capitalize_word(word : String) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   let mut first = true
   for ch in word {
     if first {

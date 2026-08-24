@@ -100,7 +100,7 @@ fn encode_args(args : Array[String]) -> Bytes {
   if args.length() == 0 {
     return @ffi.to_cstr("")
   }
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for arg in args {
     builder.write_string(arg)
     builder.write_char('\u0000')

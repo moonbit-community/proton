@@ -149,7 +149,7 @@ fn mbt_string(s : String) -> String {
 
 ///|
 fn escape_mbt_string(s : String) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for _, ch in s {
     match ch {
       '"' => builder.write_string("\\\"")

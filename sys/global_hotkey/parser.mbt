@@ -128,7 +128,7 @@ fn ModifierSet::normalize_accelerator_name(
   self : ModifierSet,
   key_name : String,
 ) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let mut wrote_modifier = false
   if self.control {
     builder.write_string("Ctrl")

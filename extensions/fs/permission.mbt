@@ -187,7 +187,7 @@ fn path_for_platform(path : String) -> String {
   if @mbpath.sep != '\\' {
     return path
   }
-  let builder = StringBuilder::new(size_hint=path.length())
+  let builder = StringBuilder(size_hint=path.length())
   for _, char in path {
     builder.write_char(if char == '/' { '\\' } else { char })
   }

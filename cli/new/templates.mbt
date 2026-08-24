@@ -164,7 +164,7 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
 
 ///|
 fn mbt_string(value : String) -> String {
-  let out = StringBuilder::new()
+  let out = StringBuilder()
   out.write_char('"')
   for ch in value {
     match ch {

@@ -26,12 +26,12 @@ fn macos_info_plist(
   short_version : String,
   bundle_version : String,
 ) -> String {
-  let custom_properties = StringBuilder::new()
+  let custom_properties = StringBuilder()
   for property in customization.macos_plist_strings {
     custom_properties <+
       $|<key>\{xml_escape(property.key)}</key><string>\{xml_escape(property.value)}</string>
   }
-  let schemes = StringBuilder::new()
+  let schemes = StringBuilder()
   for scheme in spec.url_schemes {
     schemes <+
       $|<string>\{xml_escape(scheme)}</string>
@@ -46,7 +46,7 @@ fn macos_info_plist(
     schemes.to_string() +
     "</array></dict></array>"
   }
-  let document_entries = StringBuilder::new()
+  let document_entries = StringBuilder()
   for document_type in spec.document_types {
     document_entries <+
       $|<dict><key>CFBundleTypeName</key><string>\{xml_escape(document_type.name)}</string><key>CFBundleTypeRole</key><string>\{xml_escape(document_type.role)}</string><key>CFBundleTypeExtensions</key><array>
