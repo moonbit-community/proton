@@ -244,7 +244,10 @@ fn macos_helper_specs(
 fn helper_info_plist(
   spec : ProtonBundleSpec,
   helper : MacosHelperSpec,
-) -> String {
+) -> String raise @packager.PackagePlanError {
+  let (macos_version, bundle_version) = @packager.macos_versions(
+    spec.package_spec.version,
+  )
   let template =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -261,8 +264,8 @@ fn helper_info_plist(
   .replace_all(old="{{EXECUTABLE}}", new=xml_escape(helper.executable_name))
   .replace_all(old="{{IDENTIFIER}}", new=xml_escape(helper.bundle_identifier))
   .replace_all(old="{{NAME}}", new=xml_escape(helper.bundle_name))
-  .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(spec.macos_version))
-  .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(spec.bundle_version))
+  .replace_all(old="{{MACOS_VERSION}}", new=xml_escape(macos_version))
+  .replace_all(old="{{BUNDLE_VERSION}}", new=xml_escape(bundle_version))
 }
 
 ///|
@@ -281,14 +284,19 @@ async fn write_package_manifest(
   spec : ProtonBundleSpec,
   destination : String,
   kind : String,
+  host : BundleHost,
 ) -> Unit {
+  let bundle_version = match host {
+    Macos => @packager.macos_versions(spec.package_spec.version).1
+    Windows | Linux => spec.package_spec.version
+  }
   let manifest : Json = {
     "schema_version": 1,
     "kind": kind,
     "product_name": spec.package_spec.product_name,
     "identifier": spec.package_spec.identifier,
     "version": spec.package_spec.version,
-    "bundle_version": spec.bundle_version,
+    "bundle_version": bundle_version,
     "targets": spec.package_spec.formats.map(fn(format) { format.to_string() }),
     "url_schemes": spec.package_spec.url_schemes,
     "document_types": spec.package_spec.document_types.map(fn(

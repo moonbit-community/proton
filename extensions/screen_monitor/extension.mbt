@@ -198,7 +198,7 @@ fn cleanup_screen_monitor() -> Unit {
 }
 
 ///|
-pub fn extension() -> @proton_extension.Extension {
+fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     @screen_monitor_contract.extension,
     generated_extension_command_routes(),
@@ -212,4 +212,11 @@ pub fn extension() -> @proton_extension.Extension {
     ],
     on_destroy=fn() { cleanup_screen_monitor() },
   )
+}
+
+///|
+/// Grants screen-monitor commands to renderer targets selected by
+/// `App::capability`.
+pub fn capability() -> @proton_extension.RendererCapability {
+  @proton_extension.capability(extension())
 }

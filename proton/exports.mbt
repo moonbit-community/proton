@@ -13,7 +13,3 @@ pub using @locale {type Locale, type LocaleParseError}
 pub type AppEntry = @manifest.AppEntry
 
 ///|
-pub type PermissionGrant = @manifest.PermissionGrant
-
-///|
-pub type PermissionOrigin = @manifest.PermissionOrigin

@@ -6,6 +6,6 @@ async fn main {
     width=1040,
     height=760,
     debug=true,
-  ).expose(@microphone.extension())
+  ).capability(@microphone.capability())
   app.run_or_abort()
 }

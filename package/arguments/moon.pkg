@@ -1,0 +1,6 @@
+import {
+  "moonbit-community/proton_package/lib" @package,
+  "moonbitlang/core/argparse",
+}
+
+supported_targets = "native+wasm"

@@ -29,6 +29,18 @@ pub fn DevConfigError::output(Self, &Logger) -> Unit
 pub fn DevConfigError::to_repr(Self) -> @debug.Repr
 pub fn DevConfigError::to_string(Self) -> String
 
+pub(all) suberror DevInstallationError {
+  Setup(detail~ : String)
+  DirectoryMissing(label~ : String, path~ : String)
+  SetupRequired(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn DevInstallationError::equal(Self, Self) -> Bool
+pub fn DevInstallationError::message(Self) -> String
+pub fn DevInstallationError::not_equal(Self, Self) -> Bool
+pub fn DevInstallationError::output(Self, &Logger) -> Unit
+pub fn DevInstallationError::to_repr(Self) -> @debug.Repr
+pub fn DevInstallationError::to_string(Self) -> String
+
 pub(all) suberror DevProcessError {
   Start(role~ : String, detail~ : String)
   Exit(role~ : String, code~ : Int)
@@ -39,19 +51,6 @@ pub fn DevProcessError::not_equal(Self, Self) -> Bool
 pub fn DevProcessError::output(Self, &Logger) -> Unit
 pub fn DevProcessError::to_repr(Self) -> @debug.Repr
 pub fn DevProcessError::to_string(Self) -> String
-
-pub(all) suberror DevRuntimeError {
-  Setup(detail~ : String)
-  DirectoryMissing(label~ : String, path~ : String)
-  HelperMissing(label~ : String, path~ : String)
-  SetupRequired(detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn DevRuntimeError::equal(Self, Self) -> Bool
-pub fn DevRuntimeError::message(Self) -> String
-pub fn DevRuntimeError::not_equal(Self, Self) -> Bool
-pub fn DevRuntimeError::output(Self, &Logger) -> Unit
-pub fn DevRuntimeError::to_repr(Self) -> @debug.Repr
-pub fn DevRuntimeError::to_string(Self) -> String
 
 pub(all) suberror DevServerError {
   MissingScheme(url~ : String)

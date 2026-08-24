@@ -7,8 +7,7 @@ async fn main {
       height=720,
       debug=true,
     )
-    .extension(@fs.extension())
-    .permission(@fs.permission([@fs.PermissionRoot::new(".", ["readdir"])]))
-    .expose(@path.extension())
+    .capability(@fs.capability([@fs.PermissionRoot::new(".", ["readdir"])]))
+    .capability(@path.capability())
   app.run_or_abort()
 }

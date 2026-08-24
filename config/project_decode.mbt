@@ -131,7 +131,6 @@ fn decode_package(
         "sign", "url_schemes", "document_types", "output",
       ])
       let formats = optional_string_array(values, "formats", "package.formats")
-      validate_formats(formats)
       let icons = rebased_paths(
         optional_string_array(values, "icons", "package.icons"),
         base_dir,
@@ -260,13 +259,6 @@ fn rebased_paths(
 }
 
 ///|
-fn validate_formats(formats : Array[String]) -> Unit raise ProjectConfigError {
-  validate_unique_values(formats, "package.formats", [
-    "app", "zip", "dmg", "nsis", "appimage",
-  ])
-}
-
-///|
 fn validate_url_schemes(
   schemes : Array[String],
 ) -> Unit raise ProjectConfigError {
@@ -301,24 +293,6 @@ fn url_scheme_is_valid(scheme : String) -> Bool {
     }
   }
   true
-}
-
-///|
-fn validate_unique_values(
-  values : Array[String],
-  label : String,
-  allowed : Array[String],
-) -> Unit raise ProjectConfigError {
-  let seen : Map[String, Unit] = Map([])
-  for value in values {
-    guard allowed.contains(value) else {
-      raise UnsupportedValue(path=label, value~)
-    }
-    guard !seen.contains(value) else {
-      raise DuplicateValue(path=label, value~)
-    }
-    seen[value] = ()
-  }
 }
 
 ///|

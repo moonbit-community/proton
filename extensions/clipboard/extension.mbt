@@ -36,10 +36,16 @@ async fn write_text(
 
 ///|
 /// Builds the typed clipboard extension.
-pub fn extension() -> @proton_extension.Extension {
+fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     @clipboard_contract.extension,
     generated_extension_command_routes(),
     fn(registrar) raise { register_commands(registrar) },
   )
+}
+
+///|
+/// Grants clipboard commands to renderer targets selected by `App::capability`.
+pub fn capability() -> @proton_extension.RendererCapability {
+  @proton_extension.capability(extension())
 }

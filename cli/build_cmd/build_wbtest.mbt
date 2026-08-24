@@ -119,37 +119,6 @@ test "moon build-only output identifies one executable" {
 }
 
 ///|
-test "CEF process helper uses its explicit install directory" {
-  let bin = @fsutil.resolve_path(".", "fixtures/helper-bin")
-  let expected = if @path.sep == '\\' {
-    @fsutil.resolve_path(bin, "cef_process.exe")
-  } else {
-    @fsutil.resolve_path(bin, "cef_process")
-  }
-  assert_eq(cef_process_install_path(bin), expected)
-}
-
-///|
-test "Proton source comes from Moon's resolved package source" {
-  let workspace = @fsutil.resolve_path(".", "fixtures/workspace")
-  let output = "moonc check app.mbt -pkg-sources moonbit-community/proton:../deps/proton -target native\n"
-  assert_eq(
-    proton_source_from_build_plan(output, workspace),
-    Some(@fsutil.resolve_path(workspace, "../deps/proton")),
-  )
-}
-
-///|
-test "Proton source parser preserves quoted paths" {
-  let workspace = @fsutil.resolve_path(".", "fixtures/workspace")
-  let output = "moonc check app.mbt -pkg-sources moonbit-community/proton:'../deps/proton source' -target native\n"
-  assert_eq(
-    proton_source_from_build_plan(output, workspace),
-    Some(@fsutil.resolve_path(workspace, "../deps/proton source")),
-  )
-}
-
-///|
 test "moon build-only output rejects missing or ambiguous artifacts" {
   for
     output in [

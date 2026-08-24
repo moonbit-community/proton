@@ -14,10 +14,7 @@ fn test_bundle_spec(
   ProtonBundleSpec::new(
     package_spec,
     resolve_path(root, "cef_process"),
-    resolve_path(root, "cef_requirements.json"),
     root,
-    "1.2.3",
-    "42",
     None,
     update_revision=42UL,
     sign_binaries~,
@@ -58,7 +55,9 @@ test "macOS helper plist matches its bundle identity" {
       "<key>CFBundleIdentifier</key><string>dev.proton.demo.helper.renderer</string>",
     ),
   )
-  assert_true(plist.contains("<key>CFBundleVersion</key><string>42</string>"))
+  assert_true(
+    plist.contains("<key>CFBundleVersion</key><string>1.2.3</string>"),
+  )
 }
 
 ///|

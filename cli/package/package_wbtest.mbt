@@ -9,14 +9,24 @@ fn parse_package_matches(args : Array[String]) -> @argparse.Matches raise {
 }
 
 ///|
-test "parse package args accepts repeated targets and overrides" {
+test "parse package args accepts repeated formats and overrides" {
   let raw = parse_package_args([
-    "--package", "desktop", "--target", "app", "--target", "zip", "--target", "dmg",
-    "--output", "dist", "--dry-run",
+    "--package", "desktop", "--format", "app", "--format", "zip", "--format", "dmg",
+    "--output", "dist", "--product-name", "Demo", "--identifier", "com.example.demo",
+    "--version", "1.2.3", "--icon", "app.icns", "--url-scheme", "demo", "--dry-run",
   ])
   @debug.assert_eq(raw.app_package, Some("desktop"))
-  @debug.assert_eq(raw.targets, ["app", "zip", "dmg"])
-  @debug.assert_eq(raw.output, Some("dist"))
+  @debug.assert_eq(raw.package_args.formats, [
+    @packager.PackageFormat::App,
+    @packager.PackageFormat::Zip,
+    @packager.PackageFormat::Dmg,
+  ])
+  @debug.assert_eq(raw.package_args.output, Some("dist"))
+  assert_eq(raw.package_args.product_name, Some("Demo"))
+  assert_eq(raw.package_args.identifier, Some("com.example.demo"))
+  assert_eq(raw.package_args.version, Some("1.2.3"))
+  assert_eq(raw.package_args.icons, ["app.icns"])
+  assert_eq(raw.package_args.url_schemes, ["demo"])
   assert_false(raw.release)
   assert_true(raw.dry_run)
 }
@@ -40,12 +50,12 @@ test "package no longer accepts an implicit cached executable" {
 }
 
 ///|
-test "parse package args rejects unsupported target" {
-  try parse_package_args(["--target", "msi"]) catch {
-    PackageUsageError::UnsupportedTarget(target="msi") => ()
-    _ => abort("expected unsupported target")
+test "parse package args rejects unsupported format" {
+  try parse_package_args(["--format", "msi"]) catch {
+    @packager.PackagePlanError::UnsupportedFormat(format="msi") => ()
+    _ => abort("expected unsupported format")
   } noraise {
-    _ => abort("expected unsupported target")
+    _ => abort("expected unsupported format")
   }
 }
 
@@ -86,16 +96,16 @@ test "updater revision is explicit, positive and full width" {
 ///|
 test "notarize implies signing" {
   let raw = parse_package_args(["--notarize", "--dry-run"])
-  assert_true(raw.sign)
-  assert_true(raw.notarize)
+  assert_true(raw.package_args.sign)
+  assert_true(raw.package_args.notarize)
   assert_true(raw.dry_run)
 }
 
 ///|
 test "sign does not require notarization" {
   let raw = parse_package_args(["--sign"])
-  assert_true(raw.sign)
-  assert_false(raw.notarize)
+  assert_true(raw.package_args.sign)
+  assert_false(raw.package_args.notarize)
 }
 
 ///|
@@ -131,38 +141,4 @@ test "macOS package paths normalize absolute and relative inputs" {
     @fsutil.resolve_path(base, "\\tmp\\proton path"),
     base + "/\\tmp\\proton path",
   )
-}
-
-///|
-test "macOS package metadata validation rejects unsafe values" {
-  try validate_product_name("Demo/App") catch {
-    PackagePlanError::InvalidProductName(reason~) =>
-      assert_true(reason.contains("path-unsafe character"))
-    _ => abort("expected unsafe product name")
-  } noraise {
-    _ => abort("expected unsafe product name")
-  }
-  try validate_product_name("Demo\nApp") catch {
-    PackagePlanError::InvalidProductName(reason~) =>
-      assert_true(reason.contains("ASCII control character"))
-    _ => abort("expected control character error")
-  } noraise {
-    _ => abort("expected control character error")
-  }
-  try validate_bundle_identifier("demo") catch {
-    PackagePlanError::InvalidIdentifier(identifier="demo", reason~) =>
-      assert_true(reason.contains("reverse-DNS"))
-    _ => abort("expected reverse-DNS identifier error")
-  } noraise {
-    _ => abort("expected reverse-DNS identifier error")
-  }
-  try validate_bundle_identifier("com.example.bad_value") catch {
-    PackagePlanError::InvalidIdentifier(
-      identifier="com.example.bad_value",
-      reason~
-    ) => assert_true(reason.contains("unsupported character"))
-    _ => abort("expected identifier character error")
-  } noraise {
-    _ => abort("expected identifier character error")
-  }
 }

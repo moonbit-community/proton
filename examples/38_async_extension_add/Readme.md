@@ -2,8 +2,8 @@
 
 Async command-extension metadata example.
 
-This package registers and grants an async command extension through
-`.expose(...)`.
+This package installs and grants an async command extension through
+`.capability(...)`.
 The source-built native route exposes `window.__MoonBit__.core.invokeOp(...)` and injects
 the high-level `window.__MoonBit__.add.slowAdd(...)` proxy for inline HTML.
 

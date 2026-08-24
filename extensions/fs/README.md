@@ -19,8 +19,7 @@ adding JavaScript helpers or hand-rolled filesystem behavior.
 
 ## Safety Notes
 
-- Registering this extension does not grant filesystem access.
-- Expose it with `@fs.permission(...)`; each `PermissionRoot` pairs one host
+- Add it with `@fs.capability(...)`; each `PermissionRoot` pairs one host
   directory with the exact filesystem commands allowed below it.
 - Permission roots are backend configuration. Renderer requests cannot add or
   widen them.

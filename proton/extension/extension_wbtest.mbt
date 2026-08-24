@@ -15,6 +15,23 @@ test "typed extensions defer validated command spec construction" {
 }
 
 ///|
+test "renderer capabilities own their scope" {
+  let contract = @proton_contract.extension(
+    id="example/scoped",
+    js_namespace="scoped",
+  )
+  let ping : @proton_contract.Command[Unit, Unit] = contract.command("ping")
+  let extension = typed(contract, [ping.contract_route()], fn(registrar) raise {
+    registrar.bind(ping, (_context, _request) => ())
+  })
+  let fields : Map[String, Json] = { "root": "./workspace" }
+  let configured = capability(extension, scope=Json::object(fields))
+  fields["root"] = "./changed"
+  assert_eq(configured.id(), "example/scoped")
+  inspect(configured.scope().stringify(), content="{\"root\":\"./workspace\"}")
+}
+
+///|
 test "typed extension adaptation reports foreign routes" {
   let contract = @proton_contract.extension(
     id="example/typed",

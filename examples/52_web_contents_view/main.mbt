@@ -197,7 +197,7 @@ async fn main {
     debug=true,
   )
   .titlebar_style(@proton.TitlebarStyle::Overlay)
-  .expose(browser_extension())
+  .capability(@proton_extension.capability(browser_extension()))
   .on_window_event(async fn(_window, event) noraise {
     match event {
       StateChanged(state) =>

@@ -7,9 +7,9 @@ async fn main {
       height=780,
     )
     .debug()
-    .expose(@dialog.extension())
-    .expose(@clipboard.extension())
-    .expose(@notification.extension())
-    .expose(@tray.extension())
+    .capability(@dialog.capability())
+    .capability(@clipboard.capability())
+    .capability(@notification.capability())
+    .capability(@tray.capability())
   app.run_or_abort()
 }

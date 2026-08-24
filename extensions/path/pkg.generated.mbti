@@ -8,7 +8,7 @@ import {
 }
 
 // Values
-pub fn extension() -> @extension.Extension
+pub fn capability() -> @extension.RendererCapability
 
 pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
 

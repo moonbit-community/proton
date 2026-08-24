@@ -17,6 +17,26 @@ pub extend UpdaterMetadataError with Eq::{not_equal, equal}
 pub extend UpdaterMetadataError with Show::{to_string, output}
 
 ///|
+priv enum UpdatePlatform {
+  Macos
+  Windows
+  Linux
+}
+
+///|
+fn update_platform_of(platform : String) -> UpdatePlatform? {
+  if platform.has_prefix("darwin-") {
+    Some(Macos)
+  } else if platform.has_prefix("win32-") {
+    Some(Windows)
+  } else if platform.has_prefix("linux-") {
+    Some(Linux)
+  } else {
+    None
+  }
+}
+
+///|
 pub fn UpdaterMetadataError::message(self : UpdaterMetadataError) -> String {
   match self {
     NoDistributableArtifact =>
@@ -130,7 +150,7 @@ fn updater_artifact_path(
     }
     None
   }
-  match package_host_of(platform) {
+  match update_platform_of(platform) {
     Some(Macos) =>
       match first_with_suffix(".app.zip") {
         Some(path) => Some(path)

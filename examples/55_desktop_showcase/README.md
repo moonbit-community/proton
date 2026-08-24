@@ -13,7 +13,7 @@ identifier. Build the presentation-ready `.app` from the repository root:
 moon -C cli run . -- package \
   -C .. \
   --config examples/55_desktop_showcase/proton.project.json \
-  --target app
+  --format app
 ```
 
 The packaged application is written to `dist/Proton Desktop Showcase.app`.

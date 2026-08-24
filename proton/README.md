@@ -35,15 +35,12 @@ Register typed commands on the app builder:
 ```moonbit
 @proton.html("Commands", html)
 .commands(fn(registrar) raise { registrar.bind(ping_command, ping) })
-.permission(
-  @proton.PermissionGrant::new(
-    "main",
-    @proton.PermissionOrigin::Entry,
-    "app",
-  ),
-)
 .run_or_abort()
 ```
+
+Application commands target the primary configured entry by default. Pass
+`targets` to `.commands(...)` when a different renderer needs them. Extension
+packages expose typed values consumed by `.capability(...)`.
 
 `@proton.CommandRegistrar` binds contract command descriptors to async
 handlers; each handler receives a `@proton.CommandContext` and the decoded
@@ -85,6 +82,10 @@ when all windows have closed.
 
 `.headless()` runs the app off-screen without creating a native window. Set
 `PROTON_HEADLESS=1` to force headless mode for automated test runs.
+
+Native dialogs, menus, title bars, and other window-bound UI are unavailable in
+headless mode. In particular, open, save, and directory dialogs fail with an
+unsupported-operation error instead of displaying unparented system UI.
 
 ## Application locale
 

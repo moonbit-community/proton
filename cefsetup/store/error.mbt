@@ -35,9 +35,15 @@ priv suberror CefRuntimeError {
   ManifestRead(path~ : String, detail~ : String)
   ManifestSyntax(path~ : String, detail~ : String)
   ManifestInvalid(path~ : String, detail~ : String)
-  RequirementRead(path~ : String, detail~ : String)
-  RequirementSyntax(path~ : String, detail~ : String)
-  RequirementInvalid(path~ : String, detail~ : String)
+}
+
+///|
+priv suberror CefHelperError {
+  NotInstalled(path~ : String)
+  CreateTemporaryDirectory(detail~ : String)
+  InstallStart(detail~ : String)
+  InstallExit(code~ : Int)
+  InstalledExecutableMissing(path~ : String)
 }
 
 ///|
@@ -105,12 +111,25 @@ fn CefRuntimeError::message(self : CefRuntimeError) -> String {
       "Invalid JSON in manifest " + path + ": " + detail
     ManifestInvalid(path~, detail~) =>
       "Invalid manifest " + path + ": " + detail
-    RequirementRead(path~, detail~) =>
-      "Failed to read CEF requirements " + path + ": " + detail
-    RequirementSyntax(path~, detail~) =>
-      "Invalid JSON in CEF requirements " + path + ": " + detail
-    RequirementInvalid(path~, detail~) =>
-      "Invalid CEF requirements " + path + ": " + detail
+  }
+}
+
+///|
+fn CefHelperError::message(self : CefHelperError) -> String {
+  match self {
+    NotInstalled(path~) =>
+      "The required Proton helper is not installed: " +
+      path +
+      "\nRun `moonx moonbit-community/proton_cefsetup`."
+    CreateTemporaryDirectory(detail~) =>
+      "Failed to create the Proton helper build directory: " + detail
+    InstallStart(detail~) =>
+      "Failed to start the Proton helper build: " + detail
+    InstallExit(code~) =>
+      "Failed to build the Proton helper: moon install exited with code " +
+      code.to_string()
+    InstalledExecutableMissing(path~) =>
+      "The Proton helper build did not produce " + path
   }
 }
 
@@ -131,5 +150,10 @@ impl Show for CefDownloadError with fn output(self, logger) {
 
 ///|
 impl Show for CefRuntimeError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+impl Show for CefHelperError with fn output(self, logger) {
   logger.write_string(self.message())
 }

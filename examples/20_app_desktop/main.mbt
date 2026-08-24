@@ -7,9 +7,8 @@ async fn main {
       height=680,
       debug=true,
     )
-    .expose(@dialog.extension())
-    .expose(@clipboard.extension())
-    .extension(@fs.extension())
-    .permission(@fs.permission([@fs.PermissionRoot::new(".", ["write_file"])]))
+    .capability(@dialog.capability())
+    .capability(@clipboard.capability())
+    .capability(@fs.capability([@fs.PermissionRoot::new(".", ["write_file"])]))
   app.run_or_abort()
 }

@@ -60,6 +60,45 @@ fn format_supported(host : PackageHost, format : PackageFormat) -> Bool {
 }
 
 ///|
+/// Resolves an explicit format list, or the current host's defaults when the
+/// list is empty, and rejects formats that the current host cannot build.
+pub async fn resolve_package_formats(
+  formats : Array[PackageFormat],
+) -> Array[PackageFormat] {
+  resolve_package_formats_for_host(formats, current_package_host())
+}
+
+///|
+fn resolve_package_formats_for_host(
+  formats : Array[PackageFormat],
+  host : PackageHost,
+) -> Array[PackageFormat] raise PackagePlanError {
+  let formats = if formats.length() > 0 {
+    formats.copy()
+  } else {
+    match host {
+      Macos | Windows => [PackageFormat::App, PackageFormat::Zip]
+      Linux => [PackageFormat::AppImage]
+    }
+  }
+  let seen : Map[String, Unit] = Map([])
+  for format in formats {
+    let name = format.to_string()
+    guard !seen.contains(name) else {
+      raise PackagePlanError::DuplicateFormat(format=name)
+    }
+    seen[name] = ()
+    guard format_supported(host, format) else {
+      raise PackagePlanError::UnsupportedFormatForPlatform(
+        format=name,
+        platform=host_name(host),
+      )
+    }
+  }
+  formats
+}
+
+///|
 /// Packages an already-built executable using the current host's native tools.
 pub async fn build(spec : PackageSpec) -> Array[String] {
   build_with(spec, PackageCustomization::new(), fn(_layout) { () })
@@ -75,15 +114,9 @@ pub async fn build_with(
 ) -> Array[String] {
   let spec = validate_spec(spec)
   validate_customization(customization)
+  let formats = resolve_package_formats(spec.formats)
+  let spec = PackageSpec::{ ..spec, formats, }
   let host = current_package_host()
-  for format in spec.formats {
-    guard format_supported(host, format) else {
-      raise PackagePlanError::UnsupportedFormatForPlatform(
-        format=format.to_string(),
-        platform=host_name(host),
-      )
-    }
-  }
   ensure_dir(spec.output)
   match host {
     Macos => package_macos(spec, customization, prepare)
@@ -137,7 +170,8 @@ fn validate_spec(spec : PackageSpec) -> PackageSpec raise PackagePlanError {
 }
 
 ///|
-fn validate_product_name(value : String) -> String raise PackagePlanError {
+/// Validates and trims an application display name for native package metadata.
+pub fn validate_product_name(value : String) -> String raise PackagePlanError {
   let value = value.trim().to_owned()
   guard value != "" else {
     raise InvalidProductName(reason="value is required")
@@ -157,7 +191,8 @@ fn validate_product_name(value : String) -> String raise PackagePlanError {
 }
 
 ///|
-fn validate_identifier(value : String) -> String raise PackagePlanError {
+/// Validates and trims a reverse-DNS application identifier.
+pub fn validate_identifier(value : String) -> String raise PackagePlanError {
   let value = value.trim().to_owned()
   let components : Array[StringView] = value.split(".").collect()
   guard components.length() >= 2 else {

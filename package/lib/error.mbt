@@ -4,6 +4,7 @@ pub(all) suberror PackagePlanError {
   InvalidIdentifier(identifier~ : String, reason~ : String)
   InvalidVersion(version~ : String, reason~ : String)
   UnsupportedFormat(format~ : String)
+  DuplicateFormat(format~ : String)
   UnsupportedFormatForPlatform(format~ : String, platform~ : String)
   MissingExecutable(path~ : String)
   MissingInput(path~ : String)
@@ -26,6 +27,7 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
     InvalidVersion(version~, reason~) =>
       "invalid version " + version + ": " + reason
     UnsupportedFormat(format~) => "unsupported package format: " + format
+    DuplicateFormat(format~) => "duplicate package format: " + format
     UnsupportedFormatForPlatform(format~, platform~) =>
       "package format " + format + " is not supported on " + platform
     MissingExecutable(path~) => "package executable is missing: " + path

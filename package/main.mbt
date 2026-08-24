@@ -34,32 +34,19 @@ fn empty_config() -> RawConfig {
 
 ///|
 fn command() -> @argparse.Command {
+  let options = [
+    @argparse.OptionArg("config", about="JSON package specification"),
+    @argparse.OptionArg(
+      "executable",
+      about="Already-built application executable",
+    ),
+  ]
+  options.append(@package_args.options())
   @argparse.Command(
     "proton_package",
     about="Package an already-built desktop executable",
-    flags=[
-      FlagArg("sign", about="Sign the packaged application"),
-      FlagArg("notarize", about="Sign and notarize a macOS application"),
-    ],
-    options=[
-      OptionArg("config", about="JSON package specification"),
-      OptionArg("executable", about="Already-built application executable"),
-      OptionArg("product-name", about="Application display name"),
-      OptionArg("identifier", about="Reverse-DNS application identifier"),
-      OptionArg("version", about="Application version"),
-      OptionArg(
-        "format",
-        action=Append,
-        about="Output format: app, zip, dmg, nsis, or appimage; may be repeated",
-      ),
-      OptionArg("output", about="Artifact output directory"),
-      OptionArg("icon", action=Append, about="Platform icon; may be repeated"),
-      OptionArg(
-        "url-scheme",
-        action=Append,
-        about="Registered URL scheme; may be repeated",
-      ),
-    ],
+    flags=@package_args.flags(),
+    options~,
   )
 }
 
@@ -212,11 +199,6 @@ fn first(values : Map[String, Array[String]], name : String) -> String? {
 }
 
 ///|
-fn values(values : Map[String, Array[String]], name : String) -> Array[String] {
-  values.get(name).unwrap_or([])
-}
-
-///|
 fn required(value : String?, name : String) -> String {
   match value {
     Some(value) => value
@@ -241,33 +223,27 @@ async fn run(args : ArrayView[String]) -> Unit {
     Some(path) => read_config(path)
     None => empty_config()
   }
+  let arguments = @package_args.from_matches(matches)
   let executable = prefer(
     first(matches.values, "executable"),
     config.executable,
   )
-  let product_name = prefer(
-    first(matches.values, "product-name"),
-    config.product_name,
-  )
-  let identifier = prefer(
-    first(matches.values, "identifier"),
-    config.identifier,
-  )
-  let version = prefer(first(matches.values, "version"), config.version)
-  let output = prefer(first(matches.values, "output"), config.output).unwrap_or(
-    "dist",
-  )
-  let format_values = values(matches.values, "format")
-  let formats = (if format_values.length() > 0 {
-    format_values
+  let product_name = prefer(arguments.product_name, config.product_name)
+  let identifier = prefer(arguments.identifier, config.identifier)
+  let version = prefer(arguments.version, config.version)
+  let output = prefer(arguments.output, config.output).unwrap_or("dist")
+  let formats = if arguments.formats.length() > 0 {
+    arguments.formats
   } else {
-    config.formats
-  }).map(value => @package.PackageFormat::parse(value))
-  let icon_values = values(matches.values, "icon")
-  let icons = if icon_values.length() > 0 { icon_values } else { config.icons }
-  let scheme_values = values(matches.values, "url-scheme")
-  let url_schemes = if scheme_values.length() > 0 {
-    scheme_values
+    config.formats.map(value => @package.PackageFormat::parse(value))
+  }
+  let icons = if arguments.icons.length() > 0 {
+    arguments.icons
+  } else {
+    config.icons
+  }
+  let url_schemes = if arguments.url_schemes.length() > 0 {
+    arguments.url_schemes
   } else {
     config.url_schemes
   }
@@ -282,8 +258,8 @@ async fn run(args : ArrayView[String]) -> Unit {
     icons=icons.map(fn(path) { @path.Path(path).resolve().to_string() }),
     url_schemes~,
     document_types=config.document_types,
-    sign=matches.flags.get("sign").unwrap_or(false) || config.sign,
-    notarize=matches.flags.get("notarize").unwrap_or(false) || config.notarize,
+    sign=arguments.sign || config.sign,
+    notarize=arguments.notarize || config.notarize,
   )
   for artifact in @package.build(spec) {
     println(artifact)

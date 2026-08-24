@@ -49,7 +49,7 @@ pub async fn run_async_extension_add() -> Unit {
     width=840,
     height=560,
     debug=true,
-  ).expose(async_add_extension())
+  ).capability(@proton_extension.capability(async_add_extension()))
   app.run_or_abort()
 }
 
@@ -175,8 +175,8 @@ pub async fn run_sync_async_extensions() -> Unit {
       height=620,
       debug=true,
     )
-    .expose(sync_math_fixture_extension())
-    .expose(async_add_fixture_extension())
+    .capability(@proton_extension.capability(sync_math_fixture_extension()))
+    .capability(@proton_extension.capability(async_add_fixture_extension()))
   app.run_or_abort()
 }
 
@@ -194,7 +194,7 @@ pub async fn run_attribute_codegen_commands() -> Unit {
     width=840,
     height=560,
     debug=true,
-  ).expose(extension())
+  ).capability(@proton_extension.capability(extension()))
   app.run_or_abort()
 }
 
@@ -331,7 +331,7 @@ pub async fn run_event_broadcast() -> Unit {
     width=900,
     height=620,
     debug=true,
-  ).expose(event_ticker_extension())
+  ).capability(@proton_extension.capability(event_ticker_extension()))
   app.run_or_abort()
 }
 
@@ -362,7 +362,7 @@ pub async fn run_asset_sidecar() -> Unit {
     width=760,
     height=500,
     debug=true,
-  ).expose(asset_sidecar_extension())
+  ).capability(@proton_extension.capability(asset_sidecar_extension()))
   app.run_or_abort()
 }
 

@@ -216,7 +216,7 @@ async fn dispatch_cli(cwd : String, matches : @argparse.Matches) -> Bool {
     Some(("dev", dev_matches)) => @dev.run(cwd, dev_matches)
     Some(("build", build_matches)) => @build.run(cwd, build_matches)
     Some(("package", package_matches)) => @package.run(cwd, package_matches)
-    Some(("cef", cef_matches)) => @cef.run(cwd, cef_matches)
+    Some(("cef", cef_matches)) => @cef.run(cef_matches)
     Some(("updater", updater_matches)) => @updater.run(updater_matches)
     _ => abort("argparse invariant violated: missing subcommand")
   }

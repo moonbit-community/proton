@@ -13,12 +13,6 @@ pub async fn resolve_default() -> InstalledRuntime {
 }
 
 ///|
-/// Resolves the immutable runtime declared by a Proton source dependency.
-pub async fn resolve_declared(path : String) -> InstalledRuntime {
-  resolve_requirement(read_declared_requirement(path))
-}
-
-///|
 async fn resolve_requirement(
   requirement : RuntimeRequirement,
 ) -> InstalledRuntime {
@@ -33,14 +27,16 @@ async fn resolve_requirement(
 
 ///|
 /// Installs the default runtime selected by this Proton release.
-pub async fn install_default() -> InstalledRuntime {
+async fn install_default() -> InstalledRuntime {
   install_requirement(default_requirement())
 }
 
 ///|
-/// Installs the immutable runtime declared by a Proton source dependency.
-pub async fn install_declared(path : String) -> InstalledRuntime {
-  install_requirement(read_declared_requirement(path))
+/// Installs the CEF runtime and Proton helper selected by this release.
+pub async fn setup_default() -> InstalledRuntime {
+  let runtime = install_default()
+  ignore(install_default_helper())
+  runtime
 }
 
 ///|

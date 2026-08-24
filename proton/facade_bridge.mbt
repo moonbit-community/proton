@@ -1,17 +1,18 @@
 ///|
 fn build_command_host(
-  manifest : @manifest.AppManifest,
-  command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
-  command_registrars? : Array[(@proton_command.CommandRegistrar) -> Unit raise] = [],
-) -> CommandHostRuntime? raise AppRunError {
+  command_capabilities : Array[AppCommandCapability],
+  extension_capabilities : Array[ExtensionCapabilityBinding],
+) -> CommandHostBuild raise AppRunError {
   let host = @core.AppCommandHost::new(
     expose_error_details=proton_dev_mode_enabled(),
   )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
+  let app_capabilities : Array[RegisteredAppCommandCapability] = []
   let mut has_commands = false
   let registrar = @proton_command.CommandRegistrar::new(host)
-  for register in command_registrars {
-    register(registrar) catch {
+  for capability in command_capabilities {
+    let registered_before = host.registered_ops().length()
+    (capability.register)(registrar) catch {
       error => {
         ignore(close_command_host_runtime(host, destroy_hooks))
         raise CommandExtensionLifecycleError(
@@ -19,11 +20,26 @@ fn build_command_host(
         )
       }
     }
-    has_commands = true
+    let registered = host.registered_ops()
+    let ops : Array[String] = []
+    for index in registered_before..<registered.length() {
+      ops.push(registered[index])
+    }
+    if !ops.is_empty() {
+      has_commands = true
+    }
+    app_capabilities.push(RegisteredAppCommandCapability::{
+      ops,
+      targets: capability.targets.copy(),
+    })
   }
-  let ordered_ids = enabled_command_extension_order(
-    manifest, command_extensions,
-  ) catch {
+  let command_extensions = command_extension_specs(extension_capabilities) catch {
+    error => {
+      ignore(close_command_host_runtime(host, destroy_hooks))
+      raise ConfigurationError(error)
+    }
+  }
+  let ordered_ids = command_extension_order(command_extensions) catch {
     error => {
       ignore(close_command_host_runtime(host, destroy_hooks))
       raise ConfigurationError(error)
@@ -54,11 +70,46 @@ fn build_command_host(
   }
   if has_commands {
     host.seal_registrations()
-    Some(CommandHostRuntime::{ host, destroy_hooks, closed: false })
+    CommandHostBuild::{
+      runtime: Some(CommandHostRuntime::{ host, destroy_hooks, closed: false }),
+      app_capabilities,
+    }
   } else {
     ignore(close_command_host_runtime(host, destroy_hooks))
-    None
+    CommandHostBuild::{ runtime: None, app_capabilities }
   }
+}
+
+///|
+fn command_extension_specs(
+  capabilities : Array[ExtensionCapabilityBinding],
+) -> Map[String, @proton_command.AppCommandExtensionSpec] raise AppConfigurationError {
+  let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
+  for capability in capabilities {
+    let id = capability.spec.id()
+    match specs.get(id) {
+      Some(existing) => {
+        guard extension_specs_match(existing, capability.spec) else {
+          raise InvalidRendererCapability(
+            detail="extension " + id + " has conflicting definitions",
+          )
+        }
+      }
+      None => specs[id] = capability.spec
+    }
+  }
+  specs
+}
+
+///|
+fn extension_specs_match(
+  first : @proton_command.AppCommandExtensionSpec,
+  second : @proton_command.AppCommandExtensionSpec,
+) -> Bool {
+  first.js_namespace() == second.js_namespace() &&
+  first.op_names() == second.op_names() &&
+  first.dependencies() == second.dependencies() &&
+  first.scripts() == second.scripts()
 }
 
 ///|
@@ -85,35 +136,21 @@ fn close_command_host_runtime(
 }
 
 ///|
-fn enabled_command_extension_order(
-  manifest : @manifest.AppManifest,
+fn command_extension_order(
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
 ) -> Array[String] raise AppConfigurationError {
   let visit_state : Map[String, Int] = Map([])
   let ordered : Array[String] = []
   for id, _spec in command_extensions {
-    match manifest.extension_setting(id) {
-      Some(setting) if setting.is_enabled() =>
-        visit_enabled_command_extension(
-          id,
-          None,
-          manifest,
-          command_extensions,
-          visit_state,
-          ordered,
-        )
-      None => ()
-      _ => ()
-    }
+    visit_command_extension(id, None, command_extensions, visit_state, ordered)
   }
   ordered
 }
 
 ///|
-fn visit_enabled_command_extension(
+fn visit_command_extension(
   id : String,
   requested_by : String?,
-  manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
   visit_state : Map[String, Int],
   ordered : Array[String],
@@ -123,15 +160,12 @@ fn visit_enabled_command_extension(
     Some(1) => raise ExtensionDependencyCycle(extension_id=id)
     _ => ()
   }
-  let spec = require_enabled_command_extension(
-    id, requested_by, manifest, command_extensions,
-  )
+  let spec = require_command_extension(id, requested_by, command_extensions)
   visit_state[id] = 1
   for dependency in spec.dependencies() {
-    visit_enabled_command_extension(
+    visit_command_extension(
       dependency,
       Some(id),
-      manifest,
       command_extensions,
       visit_state,
       ordered,
@@ -142,34 +176,18 @@ fn visit_enabled_command_extension(
 }
 
 ///|
-fn require_enabled_command_extension(
+fn require_command_extension(
   id : String,
   requested_by : String?,
-  manifest : @manifest.AppManifest,
   command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
 ) -> @proton_command.AppCommandExtensionSpec raise AppConfigurationError {
-  match manifest.extension_setting(id) {
-    Some(setting) if setting.is_enabled() => ()
-    Some(_) =>
-      raise ExtensionUnavailable(
-        extension_id=id,
-        requested_by~,
-        state="disabled",
-      )
-    None =>
-      raise ExtensionUnavailable(
-        extension_id=id,
-        requested_by~,
-        state="missing",
-      )
-  }
   match command_extensions.get(id) {
     Some(spec) => spec
     None =>
       raise ExtensionUnavailable(
         extension_id=id,
         requested_by~,
-        state="unregistered",
+        state="missing",
       )
   }
 }

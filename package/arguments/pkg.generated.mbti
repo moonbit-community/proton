@@ -1,0 +1,37 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_package/arguments"
+
+import {
+  "moonbit-community/proton_package/lib",
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn flags() -> Array[@argparse.FlagArg]
+
+pub fn from_matches(@argparse.Matches) -> PackageArguments raise @lib.PackagePlanError
+
+pub fn options() -> Array[@argparse.OptionArg]
+
+// Errors
+
+// Types and methods
+pub(all) struct PackageArguments {
+  product_name : String?
+  identifier : String?
+  version : String?
+  formats : Array[@lib.PackageFormat]
+  output : String?
+  icons : Array[String]
+  url_schemes : Array[String]
+  sign : Bool
+  notarize : Bool
+} derive(Eq, @debug.Debug)
+pub fn PackageArguments::equal(Self, Self) -> Bool
+pub fn PackageArguments::not_equal(Self, Self) -> Bool
+pub fn PackageArguments::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
