@@ -16,6 +16,11 @@ typedef struct proton_engine_view proton_engine_view_t;
 #define PROTON_ENGINE_MAX_URL_BYTES 131072
 #define PROTON_ENGINE_MAX_LABEL_BYTES 256
 
+enum {
+  PROTON_REMOTE_DEBUGGING_EPHEMERAL = -1,
+  PROTON_REMOTE_DEBUGGING_DISABLED = 0,
+};
+
 typedef struct {
   char runtime_root[PROTON_ENGINE_MAX_PATH_BYTES];
   char helper_path[PROTON_ENGINE_MAX_PATH_BYTES];

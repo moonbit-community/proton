@@ -285,6 +285,8 @@ static int g_proton_cef_initialized = 0;
 static int g_proton_cef_runtime_active = 0;
 static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
 static char g_proton_engine_locale[PROTON_ENGINE_MAX_PATH_BYTES];
+static int32_t g_proton_remote_debugging_port =
+    PROTON_REMOTE_DEBUGGING_DISABLED;
 static proton_engine_app_t g_app;
 static proton_engine_browser_process_handler_t g_browser_process_handler;
 static proton_engine_render_process_handler_t g_render_process_handler;
@@ -1074,6 +1076,12 @@ static void CEF_CALLBACK proton_engine_on_before_command_line_processing(
       g_proton_engine_locale[0] != '\0') {
     proton_engine_append_switch_with_value(command_line, "lang",
                                            g_proton_engine_locale);
+  }
+  if (proton_engine_process_type_is_browser(process_type) &&
+      g_proton_remote_debugging_port ==
+          PROTON_REMOTE_DEBUGGING_EPHEMERAL) {
+    proton_engine_append_switch_with_value(command_line,
+                                           "remote-debugging-port", "0");
   }
   proton_engine_append_switch(command_line, "disable-gpu");
   proton_engine_append_switch(command_line, "in-process-gpu");
@@ -3282,6 +3290,7 @@ int32_t proton_engine_runtime_create(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_engine_runtime_config_t config = *input_config;
+  g_proton_remote_debugging_port = config.remote_debugging_port;
 
   int temporary_profile = config.cache_dir[0] == '\0';
   if (temporary_profile) {
@@ -3334,7 +3343,9 @@ int32_t proton_engine_runtime_create(
   settings.external_message_pump = 1;
   settings.windowless_rendering_enabled = config.headless;
   settings.log_severity = proton_engine_cef_log_severity_from_env();
-  settings.remote_debugging_port = config.remote_debugging_port;
+  settings.remote_debugging_port = config.remote_debugging_port > 0
+                                       ? config.remote_debugging_port
+                                       : PROTON_REMOTE_DEBUGGING_DISABLED;
   settings.persist_session_cookies = config.persist_session_cookies;
   proton_engine_set_string(&settings.browser_subprocess_path,
                            config.helper_path);

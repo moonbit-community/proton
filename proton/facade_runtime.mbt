@@ -122,12 +122,15 @@ async fn run_manifest(
   lifecycle.begin_starting()
   let forward_menu_events = menu is Some(_)
   let catalog = framework_catalog(locale_preferences)
+  let remote_debugging = remote_debugging(manifest.debug) catch {
+    error => raise ConfigurationError(error)
+  }
   let runtime = @native.Runtime::new(
     config=@native.RuntimeConfig::bundled(
       cache_dir?=browser_data_dir,
       locale=locale_preferences.chromium_locale(),
       accept_languages=locale_preferences.accept_languages(),
-      remote_debugging_port=debug_port(manifest.debug),
+      remote_debugging~,
       headless~,
     ).with_framework_dialog_labels(catalog.dialog_ok, catalog.dialog_cancel),
   ) catch {

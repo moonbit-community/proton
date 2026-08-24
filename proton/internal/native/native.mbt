@@ -370,11 +370,22 @@ fn runtime_config_languages(values : Array[String]) -> Bytes {
 }
 
 ///|
+fn runtime_config_remote_debugging(value : RemoteDebugging) -> Int {
+  match value {
+    Disabled => 0
+    Ephemeral => -1
+    Fixed(port) => port
+  }
+}
+
+///|
 fn validate_runtime_config(config : RuntimeConfig) -> Unit raise NativeError {
-  if config.remote_debugging_port < 0 || config.remote_debugging_port > 65535 {
-    raise invalid_argument(
-      "runtime remote_debugging_port must be between 0 and 65535",
-    )
+  match config.remote_debugging {
+    Fixed(port) if port < 1024 || port > 65535 =>
+      raise invalid_argument(
+        "runtime fixed remote debugging port must be between 1024 and 65535",
+      )
+    _ => ()
   }
   match config.cache_dir {
     Some(cache_dir) => {
@@ -413,7 +424,7 @@ pub fn execute_process(
     runtime_config_languages(config.accept_languages),
     runtime_config_string(config.framework_dialog_ok_label),
     runtime_config_string(config.framework_dialog_cancel_label),
-    config.remote_debugging_port,
+    runtime_config_remote_debugging(config.remote_debugging),
     runtime_config_bool(config.headless),
     runtime_config_bool(config.persist_session_cookies),
     out_exit_code,
@@ -445,7 +456,7 @@ pub fn Runtime::new(
     runtime_config_languages(config.accept_languages),
     runtime_config_string(config.framework_dialog_ok_label),
     runtime_config_string(config.framework_dialog_cancel_label),
-    config.remote_debugging_port,
+    runtime_config_remote_debugging(config.remote_debugging),
     runtime_config_bool(config.headless),
     runtime_config_bool(config.persist_session_cookies),
     out_runtime,

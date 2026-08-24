@@ -378,6 +378,15 @@ pub fn ProcessResult::equal(Self, Self) -> Bool
 pub fn ProcessResult::not_equal(Self, Self) -> Bool
 pub fn ProcessResult::to_repr(Self) -> @debug.Repr
 
+pub(all) enum RemoteDebugging {
+  Disabled
+  Ephemeral
+  Fixed(Int)
+} derive(Eq, @debug.Debug)
+pub fn RemoteDebugging::equal(Self, Self) -> Bool
+pub fn RemoteDebugging::not_equal(Self, Self) -> Bool
+pub fn RemoteDebugging::to_repr(Self) -> @debug.Repr
+
 type Runtime
 pub fn Runtime::begin_message_dialog(Self, String?, String, DialogLevel) -> Int64 raise NativeError
 pub fn Runtime::complete_resource_request(Self, Int64, Int, String, Bytes) -> Unit raise NativeError
@@ -388,9 +397,9 @@ pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Unit raise Nativ
 pub fn Runtime::set_menu(Self, MenuBar) -> Unit raise NativeError
 
 type RuntimeConfig derive(Eq, @debug.Debug)
-pub fn RuntimeConfig::bundled(helper_path? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging_port? : Int, headless? : Bool, persist_session_cookies? : Bool) -> Self
+pub fn RuntimeConfig::bundled(helper_path? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging? : RemoteDebugging, headless? : Bool, persist_session_cookies? : Bool) -> Self
 pub fn RuntimeConfig::equal(Self, Self) -> Bool
-pub fn RuntimeConfig::new(runtime_root? : String, helper_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging_port? : Int, headless? : Bool, persist_session_cookies? : Bool) -> Self
+pub fn RuntimeConfig::new(runtime_root? : String, helper_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging? : RemoteDebugging, headless? : Bool, persist_session_cookies? : Bool) -> Self
 pub fn RuntimeConfig::not_equal(Self, Self) -> Bool
 pub fn RuntimeConfig::to_repr(Self) -> @debug.Repr
 
