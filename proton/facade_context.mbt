@@ -44,7 +44,7 @@ priv struct WindowLifecycleHook {
 }
 
 ///|
-fn ApplicationContext::new(
+fn ApplicationContext::ApplicationContext(
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
@@ -53,7 +53,7 @@ fn ApplicationContext::new(
 }
 
 ///|
-fn WindowContext::new(
+fn WindowContext::WindowContext(
   id : String,
   handle : WindowHandle,
   windows : WindowManager,
@@ -100,7 +100,7 @@ pub fn WindowContext::id(self : WindowContext) -> String {
 }
 
 ///|
-fn WindowEventEmitter::new(
+fn WindowEventEmitter::WindowEventEmitter(
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise,
 ) -> WindowEventEmitter {
   WindowEventEmitter::{ emit_event, }

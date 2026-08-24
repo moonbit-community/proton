@@ -1,5 +1,5 @@
 ///|
-fn RuntimeSession::new(
+fn RuntimeSession::RuntimeSession(
   runtime : @native.Runtime,
   locale_preferences : @locale.LocalePreferences,
   definitions : Array[PreparedWindow],
@@ -306,7 +306,7 @@ fn RuntimeSession::add_window_view(
       raise AlreadyExists(id=view_id)
     }
   }
-  let created = @native.View::new(running.window, config) catch {
+  let created = @native.View::View(running.window, config) catch {
     error =>
       raise window_operation_failed(
         "add view " + view_id + " to window " + window_id,
@@ -612,7 +612,7 @@ fn RuntimeSession::create_window(
       ),
     )
   }
-  let created_window = @native.Window::new(
+  let created_window = @native.Window::Window(
     self.runtime,
     config=native_window_config(
       plan.window,
@@ -640,7 +640,7 @@ fn RuntimeSession::create_window(
     id: plan.id,
     window: created_window,
     permissions: definition.permissions,
-    lifetime: WindowLifetime::new(),
+    lifetime: WindowLifetime(),
     views: [],
     document,
     asset_root,
@@ -681,7 +681,7 @@ async fn RuntimeSession::activate_window(
     running.lifetime.wait_until_ready()
     return
   }
-  let window_events = WindowEventEmitter::new(
+  let window_events = WindowEventEmitter(
     typed_event_sender(running.window, None),
   )
   let manager = self.window_manager()
@@ -718,14 +718,14 @@ async fn RuntimeSession::request_open_window(
   self : RuntimeSession,
   id : String,
 ) -> WindowHandle raise WindowSessionError {
-  let completion = WindowOpenCompletion::new()
+  let completion = WindowOpenCompletion()
   self.window_commands.push(Open(id, completion))
   self.wakeup.signal.notify()
   completion.wait()
 }
 
 ///|
-fn WindowOpenCompletion::new() -> WindowOpenCompletion {
+fn WindowOpenCompletion::WindowOpenCompletion() -> WindowOpenCompletion {
   WindowOpenCompletion::{
     state: WindowOpenPending,
     changed: @async.CondVar::Cond(),

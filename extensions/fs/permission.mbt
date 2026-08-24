@@ -15,7 +15,7 @@ pub struct PermissionRoot {
 }
 
 ///|
-pub fn PermissionRoot::new(
+pub fn PermissionRoot::PermissionRoot(
   path : String,
   commands : Array[String],
 ) -> PermissionRoot raise FsError {
@@ -152,7 +152,7 @@ fn permission_roots_from_json(
       }
       command
     })
-    PermissionRoot::new(path, commands)
+    PermissionRoot(path, commands)
   })
 }
 

@@ -9,7 +9,7 @@ pub struct ExtensionCatalog {
 /// Creates an empty extension catalog.
 /// Discovery order is tracked alongside descriptor lookup so later tooling and
 /// generated output stay deterministic.
-pub fn ExtensionCatalog::new() -> ExtensionCatalog {
+pub fn ExtensionCatalog::ExtensionCatalog() -> ExtensionCatalog {
   ExtensionCatalog::{ descriptors: Map([]), discovery_order: [], }
 }
 
@@ -20,7 +20,7 @@ pub fn ExtensionCatalog::new() -> ExtensionCatalog {
 pub fn ExtensionCatalog::from_descriptors(
   descriptors : Array[ExtensionDescriptor],
 ) -> ExtensionCatalog raise ExtensionCatalogError {
-  let catalog = ExtensionCatalog::new()
+  let catalog = ExtensionCatalog()
   for descriptor in descriptors {
     let id = descriptor.id()
     guard id.trim().to_owned() != "" else {

@@ -86,7 +86,7 @@ async test "send failure clears registered command state" {
     })
 
     let websocket = @websocket.connect("ws://127.0.0.1:\{port}")
-    let client = CdpClient::new(websocket)
+    let client = CdpClient(websocket)
     websocket.close()
     let mut failed = false
     try ignore(client.send_cdp_command("Browser.getVersion")) catch {

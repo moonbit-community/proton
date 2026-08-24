@@ -9,7 +9,7 @@ async fn main {
     )
     .capability(
       @fs.capability([
-        @fs.PermissionRoot::new(".", [
+        @fs.PermissionRoot(".", [
           "read_file", "write_file", "exists", "kind", "size", "readdir", "remove",
           "realpath",
         ]),

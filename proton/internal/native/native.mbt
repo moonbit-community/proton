@@ -92,7 +92,7 @@ pub fn screens() -> Array[ScreenInfo] raise NativeError {
 }
 
 ///|
-pub fn AppActivation::new(
+pub fn AppActivation::AppActivation(
   urls? : Array[String] = [],
   files? : Array[String] = [],
   reopen? : Bool = false,
@@ -439,7 +439,7 @@ pub fn execute_process(
 }
 
 ///|
-pub fn Runtime::new(
+pub fn Runtime::Runtime(
   config? : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> Runtime raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
@@ -1063,9 +1063,9 @@ fn build_bridge_config(
 }
 
 ///|
-pub fn Window::new(
+pub fn Window::Window(
   runtime : Runtime,
-  config? : WindowConfig = WindowConfig::new(),
+  config? : WindowConfig = WindowConfig(),
 ) -> Window raise NativeError {
   validate_window_config(config)
   let out_window = Ref(@native_ffi.window_null())
@@ -1957,7 +1957,7 @@ fn validate_view_config(config : ViewConfig) -> Unit raise NativeError {
 /// Creates a web contents view inside `window`. The view renders above the
 /// window's main browser content; use `set_z_order` to stack multiple views.
 /// Requires the `web_contents_view` native runtime feature.
-pub fn View::new(
+pub fn View::View(
   window : Window,
   config : ViewConfig,
 ) -> View raise NativeError {

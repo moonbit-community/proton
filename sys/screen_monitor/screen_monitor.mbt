@@ -163,7 +163,7 @@ fn decode_native_detail(bytes : Bytes) -> String {
 /// Creates a new screen monitor handle. The native backend is verified during
 /// creation so an unavailable platform surfaces immediately as
 /// `BackendUnavailable`.
-pub fn ScreenMonitor::new() -> ScreenMonitor raise ScreenMonitorError {
+pub fn ScreenMonitor::ScreenMonitor() -> ScreenMonitor raise ScreenMonitorError {
   let handle = native_create()
   let monitor = ScreenMonitor::{ handle, }
   let status = native_status(handle)

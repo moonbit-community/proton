@@ -115,11 +115,7 @@ fn payloads_field(
       None => @package.PayloadLocation::Resources
       Some(_) => abort("package config payload location must be a string")
     }
-    @package.Payload::new(
-      resolve_config_path(base, source),
-      destination,
-      location~,
-    )
+    @package.Payload(resolve_config_path(base, source), destination, location~)
   })
 }
 
@@ -147,7 +143,7 @@ fn document_types_field(
       None => "Viewer"
       Some(_) => abort("document_type role must be a string")
     }
-    @package.DocumentType::new(name, extensions, role~)
+    @package.DocumentType(name, extensions, role~)
   })
 }
 
@@ -247,7 +243,7 @@ async fn run(args : ArrayView[String]) -> Unit {
   } else {
     config.url_schemes
   }
-  let spec = @package.PackageSpec::new(
+  let spec = @package.PackageSpec(
     @path.Path(required(executable, "executable")).resolve().to_string(),
     required(product_name, "product-name"),
     required(identifier, "identifier"),

@@ -3,7 +3,7 @@ fn test_bundle_spec(
   root : String,
   sign_binaries? : Array[String] = [],
 ) -> ProtonBundleSpec {
-  let package_spec = @packager.PackageSpec::new(
+  let package_spec = @packager.PackageSpec(
     resolve_path(root, "app"),
     "Demo & App",
     "dev.proton.demo",
@@ -11,7 +11,7 @@ fn test_bundle_spec(
     [@packager.PackageFormat::App],
     resolve_path(root, "dist"),
   )
-  ProtonBundleSpec::new(
+  ProtonBundleSpec(
     package_spec,
     resolve_path(root, "cef_process"),
     root,

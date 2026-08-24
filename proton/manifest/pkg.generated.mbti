@@ -29,7 +29,7 @@ pub struct AppManifest {
   windows : Array[AppWindowManifest]
   debug : Int
 }
-pub fn AppManifest::new(WindowManifest, AppEntry, debug? : Int, windows? : Array[AppWindowManifest]) -> Self
+pub fn AppManifest::AppManifest(WindowManifest, AppEntry, debug? : Int, windows? : Array[AppWindowManifest]) -> Self
 
 pub struct AppWindowManifest {
   id : String
@@ -37,8 +37,8 @@ pub struct AppWindowManifest {
   entry : AppEntry
   open_on_start : Bool
 } derive(Eq, @debug.Debug)
+pub fn AppWindowManifest::AppWindowManifest(String, WindowManifest, AppEntry, open_on_start? : Bool) -> Self
 pub fn AppWindowManifest::equal(Self, Self) -> Bool
-pub fn AppWindowManifest::new(String, WindowManifest, AppEntry, open_on_start? : Bool) -> Self
 pub fn AppWindowManifest::not_equal(Self, Self) -> Bool
 pub fn AppWindowManifest::output(Self, &Logger) -> Unit
 pub fn AppWindowManifest::to_repr(Self) -> @debug.Repr
@@ -63,8 +63,8 @@ pub struct WindowManifest {
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
 } derive(Eq, @debug.Debug)
+pub fn WindowManifest::WindowManifest(String, Int, Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle) -> Self
 pub fn WindowManifest::equal(Self, Self) -> Bool
-pub fn WindowManifest::new(String, Int, Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle) -> Self
 pub fn WindowManifest::not_equal(Self, Self) -> Bool
 pub fn WindowManifest::output(Self, &Logger) -> Unit
 pub fn WindowManifest::to_repr(Self) -> @debug.Repr

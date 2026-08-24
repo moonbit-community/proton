@@ -308,13 +308,13 @@ pub struct Menu {
   role : MenuRole?
   items : Array[MenuItem]?
 }
-pub fn Menu::new(String, items~ : Array[MenuItem]) -> Self
+pub fn Menu::Menu(String, items~ : Array[MenuItem]) -> Self
 pub fn Menu::role(MenuRole, label? : String, items? : Array[MenuItem]) -> Self
 
 pub struct MenuBar {
   menus : Array[Menu]
 }
-pub fn MenuBar::new(menus~ : Array[Menu]) -> Self
+pub fn MenuBar::MenuBar(menus~ : Array[Menu]) -> Self
 
 pub struct MenuItem {
   kind : Int
@@ -474,7 +474,7 @@ pub struct ViewConfig {
   initial_url : String
   background_color : String?
 }
-pub fn ViewConfig::new(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String) -> Self
+pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String) -> Self
 
 pub(all) enum ViewEvent {
   LoadingChanged(is_loading~ : Bool)

@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let backend = @todo.Backend::new()
+  let backend = @todo.Backend()
   @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
   .single_instance({{identifier_mbt}})
   .commands(fn(registrar) raise { backend.register_commands(registrar) })

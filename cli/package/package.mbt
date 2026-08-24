@@ -318,13 +318,13 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
   }
   let helper = @cef_store.resolve_default_helper()
   let document_types = plan.document_types.map(document_type => {
-    @packager.DocumentType::new(
+    @packager.DocumentType(
       document_type.name,
       document_type.extensions.copy(),
       role=document_type.role,
     )
   })
-  let package_spec = @packager.PackageSpec::new(
+  let package_spec = @packager.PackageSpec(
     executable,
     plan.product_name,
     plan.identifier,
@@ -337,7 +337,7 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
     sign=plan.sign,
     notarize=plan.notarize,
   )
-  let spec = @bundle.ProtonBundleSpec::new(
+  let spec = @bundle.ProtonBundleSpec(
     package_spec,
     helper,
     plan.base_dir,

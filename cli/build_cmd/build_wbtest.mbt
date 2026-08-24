@@ -149,9 +149,7 @@ test "frontend release requires dist" {
     base_dir: ".",
     backend: None,
     frontend: Some(
-      @proton_config.ProjectFrontendConfig::new(
-        before_build=Some("npm run build"),
-      ),
+      @proton_config.ProjectFrontendConfig(before_build=Some("npm run build")),
     ),
   }
   let error = expect_build_error_message(() => validate_release_config(config))
@@ -164,9 +162,7 @@ async test "project resolution does not require frontend build output" {
     base_dir: ".",
     backend: None,
     frontend: Some(
-      @proton_config.ProjectFrontendConfig::new(
-        dist=Some("missing-frontend-dist"),
-      ),
+      @proton_config.ProjectFrontendConfig(dist=Some("missing-frontend-dist")),
     ),
   }
   let invocation = project_build_invocation(".", config, RawBuildOptions::{

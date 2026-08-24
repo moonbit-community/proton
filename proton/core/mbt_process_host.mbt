@@ -5,7 +5,7 @@ priv struct CommandErrorPolicy {
 }
 
 ///|
-fn CommandErrorPolicy::new(
+fn CommandErrorPolicy::CommandErrorPolicy(
   expose_details : Bool,
   report_diagnostic : (String) -> Unit,
 ) -> CommandErrorPolicy {
@@ -51,7 +51,7 @@ struct MbtProcessHost {
 ///
 /// Handler diagnostics remain in backend logs by default. Set
 /// `expose_error_details` only for a trusted development frontend.
-pub fn MbtProcessHost::new(
+pub fn MbtProcessHost::MbtProcessHost(
   expose_error_details? : Bool = false,
 ) -> MbtProcessHost {
   MbtProcessHost::new_with_diagnostic_reporter(
@@ -65,11 +65,9 @@ fn MbtProcessHost::new_with_diagnostic_reporter(
   report_diagnostic : (String) -> Unit,
 ) -> MbtProcessHost {
   MbtProcessHost::{
-    registry: OpRegistry::new(),
+    registry: OpRegistry(),
     op_names: [],
-    error_policy: CommandErrorPolicy::new(
-      expose_error_details, report_diagnostic,
-    ),
+    error_policy: CommandErrorPolicy(expose_error_details, report_diagnostic),
     registration_sealed: false,
     closed: false,
   }

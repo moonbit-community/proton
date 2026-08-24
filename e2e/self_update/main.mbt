@@ -60,7 +60,7 @@ async fn run_update() -> Unit {
   let current_revision = @updater.current_revision()
   report_launch(bundle, text)
   println("running \{text}")
-  let channel = @updater.UpdateChannel::new(
+  let channel = @updater.UpdateChannel(
     endpoint,
     [key],
     "darwin-arm64",

@@ -3,13 +3,13 @@ fn build_command_host(
   command_capabilities : Array[AppCommandCapability],
   extension_capabilities : Array[ExtensionCapabilityBinding],
 ) -> CommandHostBuild raise AppRunError {
-  let host = @core.AppCommandHost::new(
+  let host = @core.AppCommandHost(
     expose_error_details=proton_dev_mode_enabled(),
   )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
   let app_capabilities : Array[RegisteredAppCommandCapability] = []
   let mut has_commands = false
-  let registrar = @proton_command.CommandRegistrar::new(host)
+  let registrar = @proton_command.CommandRegistrar(host)
   for capability in command_capabilities {
     let registered_before = host.registered_ops().length()
     (capability.register)(registrar) catch {
@@ -222,11 +222,11 @@ fn append_bridge_extension_frontend(
     }
     apis.push(api_name)
   }
-  extensions.push(@native.BridgeExtensionConfig::new(js_namespace, apis~))
+  extensions.push(@native.BridgeExtensionConfig(js_namespace, apis~))
   let scripts = spec.scripts()
   for index, script in scripts {
     initialization_units.push(
-      @native.BridgeInitializationUnit::new(
+      @native.BridgeInitializationUnit(
         id,
         "script-" + index.to_string(),
         script,
@@ -403,7 +403,7 @@ async fn dispatch_bridge_request_in_command_scope(
   locale_preferences : @locale.LocalePreferences,
 ) -> @native.BridgeResponse {
   let request_id = request.request_id()
-  let request_context = @core.AppCommandRequestContext::new(
+  let request_context = @core.AppCommandRequestContext(
     command_tasks,
     locale_preferences,
     window=command_window_capability(window.as_ref(), dialog_completions),
@@ -417,11 +417,7 @@ async fn dispatch_bridge_request_in_command_scope(
   )
   let response = host.dispatch_ipc_with_context(
     request_context,
-    @ipc.IpcOpRequest::new(
-      request_id.to_string(),
-      request.op(),
-      request.payload(),
-    ),
+    @ipc.IpcOpRequest(request_id.to_string(), request.op(), request.payload()),
   )
   if response.is_ok() {
     @native.BridgeResponse::Ok(request_id~, payload=response.body)
@@ -458,7 +454,7 @@ fn command_window_capability(
   window : @native.WindowRef,
   dialog_completions : DialogCompletionStore,
 ) -> @core.CommandWindow {
-  @core.CommandWindow::new(
+  @core.CommandWindow(
     async fn(title, message, level) {
       let dialog = window.begin_message_dialog(
         title,

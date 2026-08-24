@@ -88,9 +88,9 @@ pub struct UpdateChannel {
   platform : String
   current_revision : UInt64
 }
+pub fn UpdateChannel::UpdateChannel(String, Array[String], String, UInt64) -> Self raise UpdateError
 pub async fn UpdateChannel::check(Self, async (String) -> Bytes raise UpdateError, @proton_updater.Timestamp) -> CheckOutcome raise UpdateError
 pub async fn UpdateChannel::download_and_install(Self, async (String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError, AvailableUpdate, on_progress? : async (Int64) -> Unit noraise) -> InstallOutcome raise UpdateError
-pub fn UpdateChannel::new(String, Array[String], String, UInt64) -> Self raise UpdateError
 
 // Type aliases
 pub type ArtifactFetch = async (String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError

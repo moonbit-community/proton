@@ -15,7 +15,7 @@ fn ensure_monitor() -> @sys_power_monitor.PowerMonitor raise PowerMonitorError {
   match active_monitor.val {
     Some(monitor) => monitor
     None => {
-      let monitor = @sys_power_monitor.PowerMonitor::new() catch {
+      let monitor = @sys_power_monitor.PowerMonitor() catch {
         error => raise BackendUnavailable(detail=error.to_string())
       }
       // Best-effort: enable the event watch backend. A platform that cannot

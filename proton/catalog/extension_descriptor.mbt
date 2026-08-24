@@ -28,7 +28,7 @@ pub extend ExtensionDescriptor with Debug::{to_repr}
 /// Builds one typed extension metadata descriptor.
 /// Most callers load descriptors from disk, but this constructor keeps tests and
 /// tooling code simple when fixtures are assembled in memory.
-pub fn ExtensionDescriptor::new(
+pub fn ExtensionDescriptor::ExtensionDescriptor(
   id : String,
   version : String,
   display_name : String,
@@ -251,7 +251,7 @@ fn decode_proton_ext_fields(
   validate_proton_ext_platforms(platforms)
   let dependencies = proton_ext_optional_string_array(fields, "dependencies", [])
   validate_proton_ext_dependencies(id, dependencies)
-  ExtensionDescriptor::new(
+  ExtensionDescriptor(
     id,
     version,
     display_name,

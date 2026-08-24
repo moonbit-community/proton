@@ -62,12 +62,12 @@ pub fn Rect::to_repr(Self) -> @debug.Repr
 pub struct ScreenMonitor {
   // private fields
 }
+pub fn ScreenMonitor::ScreenMonitor() -> Self raise ScreenMonitorError
 pub fn ScreenMonitor::cursor_point(Self) -> Point raise ScreenMonitorError
 pub fn ScreenMonitor::destroy(Self) -> Unit
 pub fn ScreenMonitor::display_nearest_point(Self, Int, Int) -> DisplayInfo raise ScreenMonitorError
 pub fn ScreenMonitor::displays(Self) -> Array[DisplayInfo] raise ScreenMonitorError
 pub fn ScreenMonitor::drain_events(Self) -> Array[ScreenMonitorEvent]
-pub fn ScreenMonitor::new() -> Self raise ScreenMonitorError
 pub fn ScreenMonitor::primary_display(Self) -> DisplayInfo raise ScreenMonitorError
 pub fn ScreenMonitor::start_watching(Self) -> Unit raise ScreenMonitorError
 pub fn ScreenMonitor::stop_watching(Self) -> Unit raise ScreenMonitorError

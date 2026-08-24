@@ -1,7 +1,7 @@
 ///|
 fn menu_bar() -> @proton.MenuBar {
-  @proton.MenuBar::new(menus=[
-    @proton.Menu::new("Demo", items=[
+  @proton.MenuBar(menus=[
+    @proton.Menu("Demo", items=[
       @proton.MenuItem::command("demo.refresh", "Refresh Status", key="r"),
       @proton.MenuItem::command("demo.settings", "Open Settings", key=","),
       @proton.MenuItem::separator(),

@@ -58,7 +58,7 @@ fn default_entries() -> Array[(String, Bytes)] {
 
 ///|
 fn channel(current : UInt64) -> UpdateChannel raise {
-  UpdateChannel::new(manifest_url, [trusted_key], "darwin-arm64", current)
+  UpdateChannel(manifest_url, [trusted_key], "darwin-arm64", current)
 }
 
 ///|
@@ -134,7 +134,7 @@ async test "offers nothing when the installed revision is not older" {
 
 ///|
 async test "offers nothing for a platform the manifest does not name" {
-  let other = UpdateChannel::new(manifest_url, [trusted_key], "win32-x64", 2UL)
+  let other = UpdateChannel(manifest_url, [trusted_key], "win32-x64", 2UL)
   assert_eq(other.check(serving(default_entries()), accepted_from()), UpToDate)
 }
 
@@ -278,7 +278,7 @@ async test "refuses an oversized artifact before accepting its extra chunk" {
 ///|
 async test "refuses a key that cannot be used" {
   let build = fn() -> UpdateError {
-    let _ = UpdateChannel::new(
+    let _ = UpdateChannel(
       manifest_url,
       ["rsa-sha256:00\{vector_modulus_hex}:010001"],
       "darwin-arm64",
@@ -297,7 +297,7 @@ async test "accepts a signature from any trusted key, not only the first" {
   // a transition release. An unrelated key listed first must not prevent the
   // real signer from being recognised.
   let unrelated = "rsa-sha256:\{vector_modulus_hex.replace(old="94c0", new="94c1")}:010001"
-  let rotated = UpdateChannel::new(
+  let rotated = UpdateChannel(
     manifest_url,
     [unrelated, trusted_key],
     "darwin-arm64",

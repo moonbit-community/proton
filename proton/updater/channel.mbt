@@ -51,7 +51,7 @@ pub struct UpdateChannel {
 /// Trusted keys are parsed once, here, so that a key which cannot be used is
 /// reported when the channel is built rather than at the moment a signature
 /// needs checking.
-pub fn UpdateChannel::new(
+pub fn UpdateChannel::UpdateChannel(
   endpoint : String,
   public_keys : Array[String],
   platform : String,

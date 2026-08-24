@@ -7,7 +7,7 @@ priv struct OpRegistry {
 
 ///|
 /// Creates an empty op handler registry.
-fn OpRegistry::new() -> OpRegistry {
+fn OpRegistry::OpRegistry() -> OpRegistry {
   OpRegistry::{
     handlers: Map([]),
     async_handlers: Map([]),

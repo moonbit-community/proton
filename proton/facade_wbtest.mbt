@@ -91,8 +91,8 @@ fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
 
 ///|
 fn test_manifest() -> @manifest.AppManifest {
-  @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Test", 320, 240),
+  @manifest.AppManifest(
+    @manifest.WindowManifest("Test", 320, 240),
     @manifest.AppEntry::Html("<html></html>"),
   )
 }
@@ -284,8 +284,8 @@ test "headless mode defaults off and is configurable" {
 
 ///|
 async test "headless mode rejects titlebar overlay before runtime startup" {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new(
+  let manifest = @manifest.AppManifest(
+    @manifest.WindowManifest(
       "Test",
       320,
       240,
@@ -319,8 +319,8 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
 ///|
 async test "headless mode rejects native menus before runtime startup" {
   let manifest = test_manifest()
-  let menu = MenuBar::new(menus=[
-    Menu::new("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
+  let menu = MenuBar(menus=[
+    Menu("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
   ])
   let mut rejected = false
   run_manifest(
@@ -406,7 +406,7 @@ async test "bridge cancellation targets only the matching handler task" {
 
 ///|
 test "extension events use structured bridge transport JSON" {
-  let event = @ipc.IpcExtensionEvent::new("ticker", "tick", {
+  let event = @ipc.IpcExtensionEvent("ticker", "tick", {
     "text": "</script><p>escaped</p>",
     "index": 1,
   })
@@ -538,7 +538,7 @@ async test "inline documents resolve without filesystem access" {
 
 ///|
 test "extension event transport can target a page instance" {
-  let event = @ipc.IpcExtensionEvent::new("ticker", "done", null)
+  let event = @ipc.IpcExtensionEvent("ticker", "done", null)
   let event_json = bridge_event_json(
     "extension",
     event.event_name,
@@ -798,10 +798,10 @@ test "dev bridge page policy parses exact http origins" {
 ///|
 test "native bridge config isolates each window entry origin" {
   let first = native_bridge_config([
-    @native.BridgeGrantConfig::new("http://localhost:3000", ops=["app:ping"]),
+    @native.BridgeGrantConfig("http://localhost:3000", ops=["app:ping"]),
   ])
   let second = native_bridge_config([
-    @native.BridgeGrantConfig::new("http://localhost:4000", ops=["app:ping"]),
+    @native.BridgeGrantConfig("http://localhost:4000", ops=["app:ping"]),
   ])
   inspect(first.grants[0].source_origin, content="http://localhost:3000")
   inspect(second.grants[0].source_origin, content="http://localhost:4000")
@@ -1207,7 +1207,7 @@ test "command host registration preserves cleanup failures" {
 
 ///|
 test "application lifecycle advances through close and destroy" {
-  let lifecycle = AppLifecycle::new()
+  let lifecycle = AppLifecycle()
   assert_true(lifecycle.state is Constructing)
   assert_false(lifecycle.has_reached_running())
   lifecycle.begin_starting()
@@ -1244,7 +1244,7 @@ async test "application lifecycle hooks shut down in reverse order" {
   @async.with_task_group(group => {
     start_application_lifecycle_hooks(
       configured.application_lifecycle_hooks,
-      ApplicationContext::new(
+      ApplicationContext(
         group,
         test_window_manager(),
         @locale.LocalePreferences::resolve(None, []),
@@ -1259,7 +1259,7 @@ async test "application lifecycle hooks shut down in reverse order" {
 
 ///|
 async test "runtime wakeup preserves notification before suspension" {
-  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal::new(), }
+  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal(), }
   let revision = wakeup.revision()
   wakeup.signal.notify()
   let completed = @async.with_timeout_opt(100, () => wakeup.wait_after(revision))
@@ -1268,7 +1268,7 @@ async test "runtime wakeup preserves notification before suspension" {
 
 ///|
 async test "dialog completion wakes only its registered waiter" {
-  let completions = DialogCompletionStore::new()
+  let completions = DialogCompletionStore()
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
     while completions.pending.is_empty() {
@@ -1297,7 +1297,7 @@ async test "dialog completion wakes only its registered waiter" {
 
 ///|
 async test "dialog completion propagates native failure" {
-  let completions = DialogCompletionStore::new()
+  let completions = DialogCompletionStore()
   let observed : Ref[@native.NativeError?] = Ref(None)
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, () => {
@@ -1354,7 +1354,7 @@ async test "application lifecycle startup rolls back completed hooks" {
     @async.with_task_group(group => {
       start_application_lifecycle_hooks(
         configured.application_lifecycle_hooks,
-        ApplicationContext::new(
+        ApplicationContext(
           group,
           test_window_manager(),
           @locale.LocalePreferences::resolve(None, []),
@@ -1400,12 +1400,12 @@ async test "window close joins owned tasks before close hooks" {
   @async.with_task_group(group => {
     start_window_lifecycle_hooks(
       configured.window_lifecycle_hooks,
-      WindowContext::new(
+      WindowContext(
         "main",
         test_window_handle("main", 17L),
         test_window_manager(),
         group,
-        WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+        WindowEventEmitter(fn(_route, _name, _payload) {  }),
         @locale.LocalePreferences::resolve(None, []),
       ),
       group,
@@ -1735,11 +1735,11 @@ test "with_view stores declarative views and rejects invalid ids" {
   inspect(app.planned_views.length(), content="0")
   let app = app.with_view(
     "browser",
-    ViewConfig::new(width=320, height=240, initial_url="about:blank"),
+    ViewConfig(width=320, height=240, initial_url="about:blank"),
   )
   inspect(app.planned_views.length(), content="1")
-  let app = app.with_view("browser", ViewConfig::new(width=1, height=1))
-  let app = app.with_view("  ", ViewConfig::new(width=1, height=1))
+  let app = app.with_view("browser", ViewConfig(width=1, height=1))
+  let app = app.with_view("  ", ViewConfig(width=1, height=1))
   inspect(app.planned_views.length(), content="1")
   inspect(app.validation_errors.length(), content="2")
 }
@@ -1751,7 +1751,7 @@ async test "lifecycle contexts expose one immutable locale snapshot" {
     [@locale.Locale::parse("en-GB")],
   )
   @async.with_task_group(group => {
-    let application = ApplicationContext::new(
+    let application = ApplicationContext(
       group,
       test_window_manager(),
       preferences,
@@ -1761,12 +1761,12 @@ async test "lifecycle contexts expose one immutable locale snapshot" {
       application.preferred_languages().map(locale => locale.to_string()),
       ["zh-CN", "en-GB", "en-US"],
     )
-    let window = WindowContext::new(
+    let window = WindowContext(
       "main",
       test_window_handle("main", 17L),
       test_window_manager(),
       group,
-      WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+      WindowEventEmitter(fn(_route, _name, _payload) {  }),
       preferences,
     )
     assert_eq(window.locale(), application.locale())
@@ -1782,7 +1782,7 @@ test "standard menus resolve from the application locale" {
     [],
   )
   let resolved = resolve_menu(
-    @native.MenuBar::new(menus=[
+    @native.MenuBar(menus=[
       @native.Menu::role(@native.MenuRole::Edit),
       @native.Menu::role(@native.MenuRole::Window),
     ]),
@@ -1841,8 +1841,8 @@ test "custom menu labels never imply a standard role" {
     [],
   )
   let resolved = resolve_menu(
-    @native.MenuBar::new(menus=[
-      @native.Menu::new("Edit", items=[
+    @native.MenuBar(menus=[
+      @native.Menu("Edit", items=[
         @native.MenuItem::command("custom.edit", "Custom Edit"),
       ]),
     ]),
@@ -1867,9 +1867,7 @@ test "explicit standard menu items replace role defaults" {
     [],
   )
   let resolved = resolve_menu(
-    @native.MenuBar::new(menus=[
-      @native.Menu::role(@native.MenuRole::Edit, items=[]),
-    ]),
+    @native.MenuBar(menus=[@native.Menu::role(@native.MenuRole::Edit, items=[])]),
     preferences,
     "Proton Demo",
   )
@@ -1884,7 +1882,7 @@ test "macOS menu resolution puts an explicit application role first" {
     [],
   )
   let resolved = resolve_menu(
-    @native.MenuBar::new(menus=[
+    @native.MenuBar(menus=[
       @native.Menu::role(@native.MenuRole::Edit),
       @native.Menu::role(@native.MenuRole::Application),
       @native.Menu::role(@native.MenuRole::Window),

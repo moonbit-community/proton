@@ -17,8 +17,8 @@ pub extend AddResponse with ToJson::{to_json}
 
 ///|
 async test "typed registrar binds descriptor identity and codecs" {
-  let host = @core.AppCommandHost::new()
-  let registrar = CommandRegistrar::new(host)
+  let host = @core.AppCommandHost()
+  let registrar = CommandRegistrar(host)
   let add : @proton_contract.Command[AddRequest, AddResponse] = @proton_contract.command(
     "add",
   )
@@ -31,7 +31,7 @@ async test "typed registrar binds descriptor identity and codecs" {
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
       @core.AppCommandRequestContext::detached(group),
-      @ipc.IpcOpRequest::new("request-1", "app:add", { "left": 20, "right": 22 }),
+      @ipc.IpcOpRequest("request-1", "app:add", { "left": 20, "right": 22 }),
     )
     assert_true(response.is_ok())
     inspect(response.body.stringify(), content="{\"total\":42}")
@@ -40,8 +40,8 @@ async test "typed registrar binds descriptor identity and codecs" {
 
 ///|
 test "typed registrar rejects invalid and duplicate descriptors" {
-  let host = @core.AppCommandHost::new()
-  let registrar = CommandRegistrar::new(host)
+  let host = @core.AppCommandHost()
+  let registrar = CommandRegistrar(host)
   let invalid : @proton_contract.Command[Unit, Unit] = @proton_contract.command(
     "",
   )
@@ -83,13 +83,13 @@ async test "typed extension specs derive APIs from contract routes" {
   })
   assert_eq(spec.op_names(), ["ext:typed/add"])
   assert_eq(spec.apis().map(api => api.api_name()), ["add"])
-  let host = @core.AppCommandHost::new()
-  spec.register(CommandRegistrar::new(host))
+  let host = @core.AppCommandHost()
+  spec.register(CommandRegistrar(host))
   host.seal_registrations()
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
       @core.AppCommandRequestContext::detached(group),
-      @ipc.IpcOpRequest::new("request-1", "ext:typed/add", {
+      @ipc.IpcOpRequest("request-1", "ext:typed/add", {
         "left": 20,
         "right": 22,
       }),

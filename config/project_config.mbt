@@ -12,7 +12,7 @@ pub extend ProjectBackendConfig with Eq::{not_equal, equal}
 pub extend ProjectBackendConfig with Debug::{to_repr}
 
 ///|
-pub fn ProjectBackendConfig::new(
+pub fn ProjectBackendConfig::ProjectBackendConfig(
   path : String,
   app_package : String,
 ) -> ProjectBackendConfig {
@@ -46,7 +46,7 @@ pub extend ProjectFrontendConfig with Eq::{not_equal, equal}
 pub extend ProjectFrontendConfig with Debug::{to_repr}
 
 ///|
-pub fn ProjectFrontendConfig::new(
+pub fn ProjectFrontendConfig::ProjectFrontendConfig(
   dev_url? : String? = None,
   dist? : String? = None,
   before_dev? : String? = None,
@@ -97,7 +97,7 @@ pub extend ProjectSignConfig with Eq::{not_equal, equal}
 pub extend ProjectSignConfig with Debug::{to_repr}
 
 ///|
-pub fn ProjectSignConfig::new(
+pub fn ProjectSignConfig::ProjectSignConfig(
   binaries? : Array[String] = [],
 ) -> ProjectSignConfig {
   ProjectSignConfig::{ binaries: binaries.copy(), }
@@ -122,7 +122,7 @@ pub extend ProjectDocumentType with Eq::{not_equal, equal}
 pub extend ProjectDocumentType with Debug::{to_repr}
 
 ///|
-pub fn ProjectDocumentType::new(
+pub fn ProjectDocumentType::ProjectDocumentType(
   name : String,
   extensions : Array[String],
   role? : String = "Viewer",
@@ -159,7 +159,7 @@ pub extend ProjectPackageConfig with Eq::{not_equal, equal}
 pub extend ProjectPackageConfig with Debug::{to_repr}
 
 ///|
-pub fn ProjectPackageConfig::new(
+pub fn ProjectPackageConfig::ProjectPackageConfig(
   product_name : String,
   identifier : String,
   version : String,
@@ -254,7 +254,7 @@ pub extend ProjectConfig with Eq::{not_equal, equal}
 pub extend ProjectConfig with Debug::{to_repr}
 
 ///|
-pub fn ProjectConfig::new(
+pub fn ProjectConfig::ProjectConfig(
   base_dir : String,
   backend? : ProjectBackendConfig? = None,
   frontend? : ProjectFrontendConfig? = None,
