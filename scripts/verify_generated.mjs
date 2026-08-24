@@ -86,6 +86,7 @@ try {
     "notification",
     "path",
     "power_monitor",
+    "screen_monitor",
     "shell",
     "tray",
     "updater",

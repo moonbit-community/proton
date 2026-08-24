@@ -23,6 +23,7 @@ members = [
   "./sys/microphone",
   "./sys/power_monitor",
   "./sys/process",
+  "./sys/screen_monitor",
   "./sys/shell",
   "./sys/tray",
 ]

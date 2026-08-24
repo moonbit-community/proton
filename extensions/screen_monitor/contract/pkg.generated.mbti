@@ -1,0 +1,126 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_ext/screen_monitor/contract"
+
+import {
+  "moonbit-community/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let activity : @proton_contract.Event[ScreenMonitorActivity]
+
+pub let display_added : @proton_contract.Event[DisplayJSON]
+
+pub let display_metrics_changed : @proton_contract.Event[DisplayJSON]
+
+pub let display_removed : @proton_contract.Event[DisplayJSON]
+
+pub let drain_events : @proton_contract.Command[@proton_contract.EmptyRequest, ScreenEventReply]
+
+pub let extension : @proton_contract.ExtensionContract
+
+pub let get_all_displays : @proton_contract.Command[@proton_contract.EmptyRequest, DisplaysReply]
+
+pub let get_cursor_point : @proton_contract.Command[@proton_contract.EmptyRequest, CursorPointReply]
+
+pub let get_display_nearest_point : @proton_contract.Command[NearestPointRequest, DisplayReply]
+
+pub let get_primary_display : @proton_contract.Command[@proton_contract.EmptyRequest, DisplayReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct CursorPointReply {
+  point : PointJSON
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn CursorPointReply::equal(Self, Self) -> Bool
+pub fn CursorPointReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn CursorPointReply::not_equal(Self, Self) -> Bool
+pub fn CursorPointReply::to_json(Self) -> Json
+pub fn CursorPointReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct DisplayBounds {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn DisplayBounds::equal(Self, Self) -> Bool
+pub fn DisplayBounds::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DisplayBounds::not_equal(Self, Self) -> Bool
+pub fn DisplayBounds::to_json(Self) -> Json
+pub fn DisplayBounds::to_repr(Self) -> @debug.Repr
+
+pub(all) struct DisplayJSON {
+  id : Int
+  bounds : DisplayBounds
+  work_area : DisplayBounds
+  scale_factor : Double
+  is_primary : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn DisplayJSON::equal(Self, Self) -> Bool
+pub fn DisplayJSON::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DisplayJSON::not_equal(Self, Self) -> Bool
+pub fn DisplayJSON::to_json(Self) -> Json
+pub fn DisplayJSON::to_repr(Self) -> @debug.Repr
+
+pub(all) struct DisplayReply {
+  display : DisplayJSON
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn DisplayReply::equal(Self, Self) -> Bool
+pub fn DisplayReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DisplayReply::not_equal(Self, Self) -> Bool
+pub fn DisplayReply::to_json(Self) -> Json
+pub fn DisplayReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct DisplaysReply {
+  displays : Array[DisplayJSON]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn DisplaysReply::equal(Self, Self) -> Bool
+pub fn DisplaysReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DisplaysReply::not_equal(Self, Self) -> Bool
+pub fn DisplaysReply::to_json(Self) -> Json
+pub fn DisplaysReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NearestPointRequest {
+  x : Int
+  y : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn NearestPointRequest::equal(Self, Self) -> Bool
+pub fn NearestPointRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NearestPointRequest::not_equal(Self, Self) -> Bool
+pub fn NearestPointRequest::to_json(Self) -> Json
+pub fn NearestPointRequest::to_repr(Self) -> @debug.Repr
+
+pub(all) struct PointJSON {
+  x : Int
+  y : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PointJSON::equal(Self, Self) -> Bool
+pub fn PointJSON::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PointJSON::not_equal(Self, Self) -> Bool
+pub fn PointJSON::to_json(Self) -> Json
+pub fn PointJSON::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ScreenEventReply {
+  count : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ScreenEventReply::equal(Self, Self) -> Bool
+pub fn ScreenEventReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ScreenEventReply::not_equal(Self, Self) -> Bool
+pub fn ScreenEventReply::to_json(Self) -> Json
+pub fn ScreenEventReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ScreenMonitorActivity {
+  operation : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ScreenMonitorActivity::equal(Self, Self) -> Bool
+pub fn ScreenMonitorActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ScreenMonitorActivity::not_equal(Self, Self) -> Bool
+pub fn ScreenMonitorActivity::to_json(Self) -> Json
+pub fn ScreenMonitorActivity::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

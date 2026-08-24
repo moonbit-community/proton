@@ -1,0 +1,88 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_screen_monitor"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+pub(all) suberror ScreenMonitorError {
+  BackendUnavailable(detail~ : String)
+  OperationFailed(operation~ : String, detail~ : String)
+  Empty
+} derive(Eq)
+pub fn ScreenMonitorError::equal(Self, Self) -> Bool
+pub fn ScreenMonitorError::not_equal(Self, Self) -> Bool
+pub fn ScreenMonitorError::output(Self, &Logger) -> Unit
+pub fn ScreenMonitorError::to_string(Self) -> String
+pub impl Show for ScreenMonitorError
+
+// Types and methods
+pub struct DisplayInfo {
+  id : Int
+  bounds : Rect
+  work_area : Rect
+  scale_factor : Double
+  is_primary : Bool
+} derive(Eq, @debug.Debug)
+pub fn DisplayInfo::equal(Self, Self) -> Bool
+pub fn DisplayInfo::not_equal(Self, Self) -> Bool
+pub fn DisplayInfo::to_repr(Self) -> @debug.Repr
+
+type DisplayWire derive(@json.FromJson)
+pub fn DisplayWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+
+type DisplaysWire derive(@json.FromJson)
+pub fn DisplaysWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+
+pub struct Point {
+  x : Int
+  y : Int
+} derive(Eq, @debug.Debug)
+pub fn Point::equal(Self, Self) -> Bool
+pub fn Point::not_equal(Self, Self) -> Bool
+pub fn Point::to_repr(Self) -> @debug.Repr
+
+type PointWire derive(@json.FromJson)
+pub fn PointWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+
+pub struct Rect {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+} derive(Eq, @debug.Debug)
+pub fn Rect::equal(Self, Self) -> Bool
+pub fn Rect::not_equal(Self, Self) -> Bool
+pub fn Rect::to_repr(Self) -> @debug.Repr
+
+pub struct ScreenMonitor {
+  // private fields
+}
+pub fn ScreenMonitor::cursor_point(Self) -> Point raise ScreenMonitorError
+pub fn ScreenMonitor::destroy(Self) -> Unit
+pub fn ScreenMonitor::display_nearest_point(Self, Int, Int) -> DisplayInfo raise ScreenMonitorError
+pub fn ScreenMonitor::displays(Self) -> Array[DisplayInfo] raise ScreenMonitorError
+pub fn ScreenMonitor::drain_events(Self) -> Array[ScreenMonitorEvent]
+pub fn ScreenMonitor::new() -> Self raise ScreenMonitorError
+pub fn ScreenMonitor::primary_display(Self) -> DisplayInfo raise ScreenMonitorError
+pub fn ScreenMonitor::start_watching(Self) -> Unit raise ScreenMonitorError
+pub fn ScreenMonitor::stop_watching(Self) -> Unit raise ScreenMonitorError
+
+pub enum ScreenMonitorEvent {
+  DisplayAdded
+  DisplayRemoved
+  DisplayMetricsChanged
+} derive(Eq, @debug.Debug)
+pub fn ScreenMonitorEvent::equal(Self, Self) -> Bool
+pub fn ScreenMonitorEvent::not_equal(Self, Self) -> Bool
+pub fn ScreenMonitorEvent::to_repr(Self) -> @debug.Repr
+
+pub type State
+
+// Type aliases
+
+// Traits

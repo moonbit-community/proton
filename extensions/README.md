@@ -66,6 +66,8 @@ to another renderer target is rejected for the calling page.
 - `auto_launch`: startup-entry helper definitions
 - `keepawake`: keep-awake helper definitions
 - `microphone`: microphone discovery/capture helper definitions
+- `power_monitor`: power, idle, and session-event helper definitions
+- `screen_monitor`: display queries, cursor position, and display-topology events
 
 ## Extension Metadata
 
