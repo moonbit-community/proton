@@ -70,6 +70,6 @@ async fn main {
     width=760,
     height=520,
     debug=true,
-  ).expose(child_process_extension())
+  ).capability(@proton_extension.capability(child_process_extension()))
   app.run_or_abort()
 }

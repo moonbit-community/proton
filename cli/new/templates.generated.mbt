@@ -630,9 +630,6 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|  @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
           #|  .single_instance({{identifier_mbt}})
           #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
-          #|  .permission(
-          #|    @proton.PermissionGrant::new("main", @proton.PermissionOrigin::Entry, "app"),
-          #|  )
           #|  .run_or_abort()
           #|}
           #|
@@ -790,7 +787,7 @@ fn generated_template_specs() -> Array[TemplateSpec] {
           #|- Build with `proton_cli build`.
           #|- Inspect packaging with `proton_cli package --dry-run`.
           #|- Package with `proton_cli package`.
-          #|- If the Proton runtime is not configured, run `proton_cli cef setup`.
+          #|- If the Proton installation is missing, run `proton_cli cef setup`.
           #|
           #|## Project Notes
           #|

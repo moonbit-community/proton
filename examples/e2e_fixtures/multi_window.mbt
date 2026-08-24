@@ -78,21 +78,10 @@ async fn run_multi_window_bridge() -> Result[Unit, String] {
       height=420,
       open_on_start=true,
     )
-    .extension(multi_window_extension())
-    .permission(
-      @proton.PermissionGrant::new(
-        "main",
-        @proton.PermissionOrigin::Entry,
-        "e2e/multi-window",
-      ),
-    )
-    .permission(
-      @proton.PermissionGrant::new(
-        "secondary",
-        @proton.PermissionOrigin::Entry,
-        "e2e/multi-window",
-      ),
-    )
+    .capability(@proton_extension.capability(multi_window_extension()), targets=[
+      @proton.RendererTarget::entry(),
+      @proton.RendererTarget::entry(window="secondary"),
+    ])
   try {
     app.run()
     Ok(())

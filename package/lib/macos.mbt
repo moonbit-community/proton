@@ -97,7 +97,12 @@ fn macos_info_plist(
 }
 
 ///|
-fn macos_versions(value : String) -> (String, String) raise PackagePlanError {
+/// Resolves the macOS short and bundle versions from a package version.
+///
+/// `PROTON_MACOS_BUILD_NUMBER`, when present, overrides the bundle version.
+pub fn macos_versions(
+  value : String,
+) -> (String, String) raise PackagePlanError {
   let value = value.trim().to_owned()
   let core = match value.split_once("-") {
     Some((core, _)) => core.to_owned()
@@ -131,10 +136,41 @@ fn macos_versions(value : String) -> (String, String) raise PackagePlanError {
   }
   let short_version = normalized.join(".")
   let bundle_version = match @env.get_env_var("PROTON_MACOS_BUILD_NUMBER") {
-    Some(value) if value.trim().to_owned() != "" => value.trim().to_owned()
+    Some(value) if value.trim().to_owned() != "" =>
+      validate_macos_bundle_version(value.trim().to_owned())
     _ => short_version
   }
   (short_version, bundle_version)
+}
+
+///|
+fn validate_macos_bundle_version(
+  value : String,
+) -> String raise PackagePlanError {
+  let components : Array[StringView] = value.split(".").collect()
+  guard components.length() >= 1 && components.length() <= 3 else {
+    raise InvalidVersion(
+      version=value,
+      reason="PROTON_MACOS_BUILD_NUMBER must contain one to three numeric components",
+    )
+  }
+  for component in components {
+    guard component.length() > 0 else {
+      raise InvalidVersion(
+        version=value,
+        reason="PROTON_MACOS_BUILD_NUMBER contains an empty component",
+      )
+    }
+    for char in component {
+      guard char.is_ascii_digit() else {
+        raise InvalidVersion(
+          version=value,
+          reason="PROTON_MACOS_BUILD_NUMBER components must be numeric",
+        )
+      }
+    }
+  }
+  value
 }
 
 ///|

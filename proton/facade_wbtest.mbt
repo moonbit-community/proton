@@ -90,37 +90,20 @@ fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
 }
 
 ///|
-fn test_command_manifest(
-  extension_id : String,
-  enabled? : Bool = true,
-) -> @manifest.AppManifest {
-  let setting = if enabled {
-    @manifest.ExtensionSetting::enabled()
-  } else {
-    @manifest.ExtensionSetting::disabled()
-  }
-  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
-  extensions[extension_id] = setting
+fn test_manifest() -> @manifest.AppManifest {
   @manifest.AppManifest::new(
     @manifest.WindowManifest::new("Test", 320, 240),
     @manifest.AppEntry::Html("<html></html>"),
-    extensions~,
   )
 }
 
 ///|
-fn test_command_manifest_ids(
-  extension_ids : Array[String],
-) -> @manifest.AppManifest {
-  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
-  for id in extension_ids {
-    extensions[id] = @manifest.ExtensionSetting::enabled()
-  }
-  @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Test", 320, 240),
-    @manifest.AppEntry::Html("<html></html>"),
-    extensions~,
-  )
+fn test_extension_capability(
+  spec : @proton_command.AppCommandExtensionSpec,
+  scope? : Json = Json::empty_object(),
+  targets? : Array[RendererTarget] = [RendererTarget::entry()],
+) -> ExtensionCapabilityBinding {
+  ExtensionCapabilityBinding::{ spec, scope, targets }
 }
 
 ///|
@@ -278,13 +261,11 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     ),
     @manifest.AppEntry::Html("<html></html>"),
   )
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
   let mut rejected = false
   run_manifest(
     manifest,
     ".",
-    command_extensions,
+    [],
     [],
     [],
     [],
@@ -305,9 +286,7 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
 
 ///|
 async test "headless mode rejects native menus before runtime startup" {
-  let manifest = test_command_manifest("test/disabled", enabled=false)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
+  let manifest = test_manifest()
   let menu = MenuBar::new(menus=[
     Menu::new("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
   ])
@@ -315,7 +294,7 @@ async test "headless mode rejects native menus before runtime startup" {
   run_manifest(
     manifest,
     ".",
-    command_extensions,
+    [],
     [],
     [],
     [],
@@ -797,7 +776,7 @@ test "native bridge config isolates each window entry origin" {
 }
 
 ///|
-test "HTTP entry permissions use the exact canonical origin" {
+test "HTTP entry capabilities use the exact canonical origin" {
   let policy = unwrap_configuration(() => {
     bridge_page_policy_for_entry(
       @manifest.AppEntry::Url("HTTPS://Example.COM:443/app"),
@@ -807,55 +786,37 @@ test "HTTP entry permissions use the exact canonical origin" {
 }
 
 ///|
-test "replacing an entry preserves permission grants" {
+test "replacing an entry preserves renderer capabilities" {
   let replaced = asset("Development", "app.html")
-    .permission(
-      @manifest.PermissionGrant::new(
-        "main",
-        @manifest.PermissionOrigin::Entry,
-        "app",
-      ),
-    )
+    .commands(fn(_registrar) {  })
     .entry_url("http://localhost:5173")
-    .inline_manifest()
-  let grants = replaced.permission_grants()
-  assert_eq(grants.length(), 1)
-  assert_eq(grants[0].extension(), "app")
+  assert_eq(replaced.command_capabilities.length(), 1)
+  assert_eq(replaced.command_capabilities[0].targets.length(), 1)
+  assert_eq(replaced.command_capabilities[0].targets[0].window, "main")
+  assert_false(replaced.command_capabilities[0].targets[0].bundled)
 }
 
 ///|
-test "permission policy binds extension ops and scope to one trusted source" {
+test "renderer policy binds extension ops and scope to one trusted source" {
   let extension_id = "examples/scoped"
-  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
-  extensions[extension_id] = @manifest.ExtensionSetting::enabled()
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Scoped", 320, 240),
-    @manifest.AppEntry::Html("<html></html>"),
-    extensions~,
-    permissions=[
-      @manifest.PermissionGrant::new(
-        "main",
-        @manifest.PermissionOrigin::Entry,
-        extension_id,
-        scope={ "root": "./data" },
-      ),
-    ],
+  let capability = test_extension_capability(
+    test_command_spec(extension_id, "scoped", ["read"], resolve_permission=fn(
+      scope,
+      base_path,
+    ) {
+      { "base_path": base_path, "scope": scope }
+    }),
+    scope={ "root": "./data" },
   )
-  let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
-  specs[extension_id] = test_command_spec(extension_id, "scoped", ["read"], resolve_permission=fn(
-    scope,
-    base_path,
-  ) {
-    { "base_path": base_path, "scope": scope }
+  let resolved = unwrap_configuration(() => {
+    resolve_extension_capabilities([capability], "/trusted/project")
   })
   let policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
       "main",
       BridgePagePolicy::{ entry_origin: None },
-      manifest,
-      "/trusted/project",
-      specs,
-      ["ext:scoped/read"],
+      [],
+      resolved,
     )
   })
   assert_eq(policy.grants.length(), 1)
@@ -873,88 +834,200 @@ test "permission policy binds extension ops and scope to one trusted source" {
 }
 
 ///|
-test "registered renderer capabilities require an explicit grant" {
-  let extension_id = "examples/ungranted"
-  let manifest = test_command_manifest(extension_id)
-  let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
-  specs[extension_id] = test_command_spec(extension_id, "ungranted", ["read"])
-  match
-    expect_configuration_error(() => {
-      validate_registered_capabilities_have_grants(manifest, specs, [
-        "ext:ungranted/read",
-      ])
-    }) {
-    MissingPermissionGrant(extension_id=actual) =>
-      assert_eq(actual, extension_id)
-    error => fail(error.message())
+test "one extension supports distinct scopes in different windows" {
+  let extension_id = "examples/window-scopes"
+  let registered = Ref(0)
+  let contract = @proton_contract.extension(
+    id=extension_id,
+    js_namespace="windowScopes",
+  )
+  let read : @proton_contract.Command[Unit, Unit] = contract.command("read")
+  let spec = @proton_command.AppCommandExtensionSpec::typed(
+    contract,
+    [read.contract_route()],
+    fn(registrar) raise {
+      registered.val = registered.val + 1
+      registrar.bind(read, (_context, _request) => ())
+    },
+    resolve_permission=fn(scope, _base_path) { scope },
+  ) catch {
+    error => abort(error.message())
   }
+  let capabilities = [
+    test_extension_capability(spec, scope={ "root": "./main" }),
+    test_extension_capability(spec, scope={ "root": "./secondary" }, targets=[
+      RendererTarget::entry(window="secondary"),
+    ]),
+  ]
+  let resolved = unwrap_configuration(() => {
+    resolve_extension_capabilities(capabilities, "/trusted/project")
+  })
+  let build = unwrap_app_run(() => build_command_host([], capabilities))
+  assert_eq(registered.val, 1)
+  let main_policy = unwrap_configuration(() => {
+    resolve_window_permission_policy(
+      "main",
+      BridgePagePolicy::{ entry_origin: None },
+      [],
+      resolved,
+    )
+  })
+  let secondary_policy = unwrap_configuration(() => {
+    resolve_window_permission_policy(
+      "secondary",
+      BridgePagePolicy::{ entry_origin: None },
+      [],
+      resolved,
+    )
+  })
+  inspect(
+    main_policy.grants[0].scope.stringify(),
+    content="{\"root\":\"./main\"}",
+  )
+  inspect(
+    secondary_policy.grants[0].scope.stringify(),
+    content="{\"root\":\"./secondary\"}",
+  )
+  ignore(close_command_host(build.runtime))
 }
 
 ///|
-test "permission grants reject unknown windows" {
-  let extension_id = "examples/window"
-  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
-  extensions[extension_id] = @manifest.ExtensionSetting::enabled()
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Unknown window", 320, 240),
-    @manifest.AppEntry::Html("<html></html>"),
-    extensions~,
-    permissions=[
-      @manifest.PermissionGrant::new(
-        "missing",
-        @manifest.PermissionOrigin::Entry,
-        extension_id,
-      ),
-    ],
+test "application commands grant the primary entry by default" {
+  let ping : @proton_contract.Command[Unit, String] = @proton_contract.command(
+    "ping",
   )
-  let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
-  specs[extension_id] = test_command_spec(extension_id, "window", ["read"])
+  let configured = html("Commands", "<html></html>").commands(registrar => {
+    registrar.bind(ping, (_context, _request) => "pong")
+  })
+  let build = unwrap_app_run(() => {
+    build_command_host(configured.command_capabilities, [])
+  })
+  let policy = resolve_window_permission_policy(
+    "main",
+    BridgePagePolicy::{ entry_origin: None },
+    build.app_capabilities,
+    [],
+  )
+  assert_true(policy.grant_for_request("app", "app:ping") is Some(_))
+  ignore(close_command_host(build.runtime))
+}
+
+///|
+test "omitted renderer capabilities are a valid empty policy" {
+  let manifest = test_manifest()
+  unwrap_configuration(() => {
+    validate_renderer_capability_targets(manifest, [], [])
+  })
+  let build = unwrap_app_run(() => build_command_host([], []))
+  assert_true(build.runtime is None)
+  let policy = resolve_window_permission_policy(
+    "main",
+    BridgePagePolicy::{ entry_origin: None },
+    build.app_capabilities,
+    [],
+  )
+  assert_eq(policy.grants.length(), 0)
+}
+
+///|
+test "application command registrars retain separate renderer targets" {
+  let primary : @proton_contract.Command[Unit, String] = @proton_contract.command(
+    "primary",
+  )
+  let secondary : @proton_contract.Command[Unit, String] = @proton_contract.command(
+    "secondary",
+  )
+  let configured = html("Commands", "<html></html>")
+    .add_window("secondary", "Secondary", AppEntry::Html("<html></html>"))
+    .commands(registrar => {
+      registrar.bind(primary, (_context, _request) => "primary")
+    })
+    .commands(
+      registrar => {
+        registrar.bind(secondary, (_context, _request) => "secondary")
+      },
+      targets=[RendererTarget::entry(window="secondary")],
+    )
+  let build = unwrap_app_run(() => {
+    build_command_host(configured.command_capabilities, [])
+  })
+  let primary_policy = resolve_window_permission_policy(
+    "main",
+    BridgePagePolicy::{ entry_origin: None },
+    build.app_capabilities,
+    [],
+  )
+  let secondary_policy = resolve_window_permission_policy(
+    "secondary",
+    BridgePagePolicy::{ entry_origin: None },
+    build.app_capabilities,
+    [],
+  )
+  assert_true(primary_policy.grant_for_request("app", "app:primary") is Some(_))
+  assert_true(primary_policy.grant_for_request("app", "app:secondary") is None)
+  assert_true(
+    secondary_policy.grant_for_request("app", "app:secondary") is Some(_),
+  )
+  assert_true(secondary_policy.grant_for_request("app", "app:primary") is None)
+  ignore(close_command_host(build.runtime))
+}
+
+///|
+test "renderer capabilities reject unknown windows" {
+  let configured = html("Unknown window", "<html></html>").commands(
+    fn(_registrar) {  },
+    targets=[RendererTarget::entry(window="missing")],
+  )
   match
     expect_configuration_error(() => {
-      validate_registered_capabilities_have_grants(manifest, specs, [
-        "ext:window/read",
-      ])
+      validate_renderer_capability_targets(
+        configured.inline_manifest(),
+        configured.command_capabilities,
+        [],
+      )
     }) {
-    InvalidPermissionGrant(detail~) =>
+    InvalidRendererCapability(detail~) =>
       assert_true(detail.contains("unknown window missing"))
     error => fail(error.message())
   }
 }
 
 ///|
-test "extension permission scopes are validated before startup" {
-  let extension_id = "examples/unscoped"
-  let extensions : Map[String, @manifest.ExtensionSetting] = Map([])
-  extensions[extension_id] = @manifest.ExtensionSetting::enabled()
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Invalid scope", 320, 240),
-    @manifest.AppEntry::Html("<html></html>"),
-    extensions~,
-    permissions=[
-      @manifest.PermissionGrant::new(
-        "main",
-        @manifest.PermissionOrigin::Entry,
-        extension_id,
-        scope={ "unexpected": true },
-      ),
-    ],
+test "renderer capabilities reject targets that resolve to the same origin" {
+  let capability = test_extension_capability(
+    test_command_spec("examples/duplicate-origin", "duplicateOrigin", ["read"]),
+    targets=[RendererTarget::entry(), RendererTarget::bundled()],
   )
-  let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
-  specs[extension_id] = test_command_spec(extension_id, "unscoped", ["read"])
+  let resolved = unwrap_configuration(() => {
+    resolve_extension_capabilities([capability], "/trusted/project")
+  })
   match
     expect_configuration_error(() => {
-      ignore(
-        resolve_window_permission_policy(
-          "main",
-          BridgePagePolicy::{ entry_origin: None },
-          manifest,
-          "/trusted/project",
-          specs,
-          ["ext:unscoped/read"],
-        ),
+      resolve_window_permission_policy(
+        "main",
+        BridgePagePolicy::{ entry_origin: None },
+        [],
+        resolved,
       )
     }) {
-    InvalidPermissionGrant(detail~) =>
+    InvalidRendererCapability(detail~) =>
+      assert_true(detail.contains("repeats source app"))
+    error => fail(error.message())
+  }
+}
+
+///|
+test "extension capability scopes are validated before startup" {
+  let extension_id = "examples/unscoped"
+  let capability = test_extension_capability(
+    test_command_spec(extension_id, "unscoped", ["read"]),
+    scope={ "unexpected": true },
+  )
+  match
+    expect_configuration_error(() => {
+      ignore(resolve_extension_capabilities([capability], "/trusted/project"))
+    }) {
+    InvalidRendererCapability(detail~) =>
       assert_true(
         detail.contains("does not accept a non-empty permission scope"),
       )
@@ -966,15 +1039,12 @@ test "extension permission scopes are validated before startup" {
 test "command host close runs extension destroy hooks once" {
   let extension_id = "examples/destroy"
   let destroyed = Ref(0)
-  let manifest = test_command_manifest(extension_id)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
   let contract = @proton_contract.extension(
     id=extension_id,
     js_namespace="destroyTest",
   )
   let ping : @proton_contract.Command[Unit, String] = contract.command("ping")
-  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::typed(
+  let spec = @proton_command.AppCommandExtensionSpec::typed(
     contract,
     [ping.contract_route()],
     fn(registrar) raise { registrar.bind(ping, (_context, _request) => "pong") },
@@ -982,7 +1052,10 @@ test "command host close runs extension destroy hooks once" {
   ) catch {
     error => abort(error.message())
   }
-  match unwrap_app_run(() => build_command_host(manifest, command_extensions)) {
+  let build = unwrap_app_run(() => {
+    build_command_host([], [test_extension_capability(spec)])
+  })
+  match build.runtime {
     Some(host) => {
       ignore(close_command_host(Some(host)))
       assert_eq(destroyed.val, 1)
@@ -995,23 +1068,21 @@ test "command host close runs extension destroy hooks once" {
 
 ///|
 test "command host installs typed application registrars before sealing" {
-  let manifest = test_command_manifest_ids([])
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
   let ping : @proton_contract.Command[Unit, String] = @proton_contract.command(
     "ping",
   )
-  let registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise] = [
-    registrar => registrar.bind(ping, (_context, _request) => "pong"),
+  let capabilities = [
+    AppCommandCapability::{
+      register: registrar => {
+        registrar.bind(ping, (_context, _request) => "pong")
+      },
+      targets: [RendererTarget::entry()],
+    },
   ]
-  match
-    unwrap_app_run(() => {
-      build_command_host(
-        manifest,
-        command_extensions,
-        command_registrars=registrars,
-      )
-    }) {
+  let build = unwrap_app_run(() => build_command_host(capabilities, []))
+  assert_eq(build.app_capabilities.length(), 1)
+  assert_eq(build.app_capabilities[0].ops, ["app:ping"])
+  match build.runtime {
     Some(host) => {
       assert_eq(host.host.registered_ops(), ["app:ping"])
       ignore(close_command_host(Some(host)))
@@ -1024,11 +1095,8 @@ test "command host installs typed application registrars before sealing" {
 test "command host close drains every destroy hook after a failure" {
   let base_id = "examples/base-destroy"
   let feature_id = "examples/feature-destroy"
-  let manifest = test_command_manifest_ids([base_id, feature_id])
   let destroyed : Array[String] = []
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
-  command_extensions[base_id] = @proton_command.AppCommandExtensionSpec::typed(
+  let base_spec = @proton_command.AppCommandExtensionSpec::typed(
     @proton_contract.extension(id=base_id, js_namespace="baseDestroy"),
     [],
     fn(_registrar) {  },
@@ -1036,7 +1104,7 @@ test "command host close drains every destroy hook after a failure" {
   ) catch {
     error => abort(error.message())
   }
-  command_extensions[feature_id] = @proton_command.AppCommandExtensionSpec::typed(
+  let feature_spec = @proton_command.AppCommandExtensionSpec::typed(
     @proton_contract.extension(id=feature_id, js_namespace="featureDestroy"),
     [],
     fn(_registrar) {  },
@@ -1048,7 +1116,13 @@ test "command host close drains every destroy hook after a failure" {
   ) catch {
     error => abort(error.message())
   }
-  match unwrap_app_run(() => build_command_host(manifest, command_extensions)) {
+  let build = unwrap_app_run(() => {
+    build_command_host([], [
+      test_extension_capability(base_spec),
+      test_extension_capability(feature_spec),
+    ])
+  })
+  match build.runtime {
     Some(host) => {
       let failures = close_command_host(Some(host))
       assert_eq(destroyed, [feature_id, base_id])
@@ -1067,10 +1141,7 @@ test "command host close drains every destroy hook after a failure" {
 ///|
 test "command host registration preserves cleanup failures" {
   let extension_id = "examples/registration-cleanup"
-  let manifest = test_command_manifest(extension_id)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
-  command_extensions[extension_id] = @proton_command.AppCommandExtensionSpec::typed(
+  let spec = @proton_command.AppCommandExtensionSpec::typed(
     @proton_contract.extension(
       id=extension_id,
       js_namespace="registrationCleanup",
@@ -1086,7 +1157,7 @@ test "command host registration preserves cleanup failures" {
     error => abort(error.message())
   }
   let error = expect_app_run_error(() => {
-    ignore(build_command_host(manifest, command_extensions))
+    ignore(build_command_host([], [test_extension_capability(spec)]))
   })
   match error {
     CleanupFailed(primary~, failures~) => {
@@ -1318,20 +1389,23 @@ async test "window close joins owned tasks before close hooks" {
 test "command host registers extension dependencies before dependents" {
   let dependency_id = "examples/base"
   let extension_id = "examples/feature"
-  let manifest = test_command_manifest_ids([dependency_id, extension_id])
   let registered : Array[String] = []
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
-  command_extensions[extension_id] = test_tracking_command_spec(
+  let feature_spec = test_tracking_command_spec(
     extension_id,
     "feature",
     registered,
     dependencies=[dependency_id],
   )
-  command_extensions[dependency_id] = test_tracking_command_spec(
+  let dependency_spec = test_tracking_command_spec(
     dependency_id, "base", registered,
   )
-  match unwrap_app_run(() => build_command_host(manifest, command_extensions)) {
+  let build = unwrap_app_run(() => {
+    build_command_host([], [
+      test_extension_capability(feature_spec),
+      test_extension_capability(dependency_spec),
+    ])
+  })
+  match build.runtime {
     Some(host) => {
       ignore(close_command_host(Some(host)))
       @debug.assert_eq(registered, [dependency_id, extension_id])
@@ -1344,17 +1418,13 @@ test "command host registers extension dependencies before dependents" {
 test "command host rejects missing extension dependencies" {
   let extension_id = "examples/feature"
   let dependency_id = "examples/base"
-  let manifest = test_command_manifest(extension_id)
-  let command_extensions : Map[String, @proton_command.AppCommandExtensionSpec] = Map([],
-  )
-  command_extensions[extension_id] = test_command_spec(
-    extension_id,
-    "feature",
-    [],
-    dependencies=[dependency_id],
-  )
+  let feature_spec = test_command_spec(extension_id, "feature", [], dependencies=[
+    dependency_id,
+  ])
   match
-    expect_app_run_error(() => build_command_host(manifest, command_extensions)) {
+    expect_app_run_error(() => {
+      build_command_host([], [test_extension_capability(feature_spec)])
+    }) {
     ConfigurationError(
       ExtensionUnavailable(extension_id=missing_id, requested_by~, state~)
     ) => {

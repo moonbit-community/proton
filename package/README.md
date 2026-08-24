@@ -37,6 +37,8 @@ For reusable configuration, pass `--config package.json`:
 
 Supported host-native formats are macOS `app`, `zip`, and `dmg`; Windows
 `app`, `zip`, and `nsis`; and Linux `appimage`.
+When no format is specified, macOS and Windows produce `app` and `zip`, while
+Linux produces `appimage`.
 
 The executable and `lib` package support both the wasm and native MoonBit
 targets. Windows executable icon embedding uses a native C stub; requesting an

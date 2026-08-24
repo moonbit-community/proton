@@ -121,7 +121,8 @@ pub fn App::debug_level(self : App, debug : Int) -> App {
 ///|
 /// Enables or disables off-screen headless rendering for the application.
 ///
-/// Headless mode does not create a native top-level window. Set
+/// Headless mode does not create a native top-level window, so native dialogs,
+/// menus, title bars, and other window-bound UI are unavailable. Set
 /// `PROTON_HEADLESS=1` to force this mode for automated test runs.
 pub fn App::headless(self : App, enabled? : Bool = true) -> App {
   self.headless_value = enabled
@@ -538,12 +539,18 @@ fn manifest_titlebar_style(style : TitlebarStyle) -> @manifest.TitlebarStyle {
 /// Adds one package registrar for typed application commands.
 ///
 /// Registration runs before any window is created and is sealed before the
-/// renderer bridge starts accepting requests.
+/// renderer bridge starts accepting requests. Only the operations registered
+/// by this callback are granted to its targets; the primary configured entry is
+/// the default target.
 pub fn App::commands(
   self : App,
   register : (@proton_command.CommandRegistrar) -> Unit raise,
+  targets? : Array[RendererTarget],
 ) -> App {
-  self.command_registrars.push(register)
+  self.command_capabilities.push(AppCommandCapability::{
+    register,
+    targets: renderer_capability_targets(targets),
+  })
   self
 }
 
@@ -588,23 +595,23 @@ pub fn[State] App::window_lifecycle(
 }
 
 ///|
-/// Registers one extension setting with the app facade.
+/// Grants one typed extension capability to its renderer targets.
 ///
-/// The source-built native route exposes command extensions through
-/// `window.__MoonBit__.core.invokeOp(...)` and generated high-level proxies.
-/// The renderer installs the bridge before the page's first script executes.
-pub fn App::extension(
+/// The default target is the configured entry of the primary window. The
+/// capability registers its backend handlers and exposes only its validated
+/// scope to those renderers.
+pub fn App::capability(
   self : App,
-  extension : @proton_extension.Extension,
+  capability : @proton_extension.RendererCapability,
+  targets? : Array[RendererTarget],
 ) -> App {
-  let id = extension.id()
+  let id = capability.id()
   if id.trim().to_owned() == "" {
     self.validation_errors.push(
-      InvalidSetting(name="extension.id", message="must not be empty"),
+      InvalidSetting(name="capability.id", message="must not be empty"),
     )
   } else {
-    self.extension_settings[id] = @manifest.ExtensionSetting::enabled()
-    let command_spec = Some(extension.command_spec()) catch {
+    let command_spec = Some(capability.command_spec()) catch {
       error => {
         self.validation_errors.push(
           ExtensionAdaptationFailed(extension_id=id, error~),
@@ -613,7 +620,12 @@ pub fn App::extension(
       }
     }
     match command_spec {
-      Some(spec) => self.command_extensions[id] = spec
+      Some(spec) =>
+        self.extension_capabilities.push(ExtensionCapabilityBinding::{
+          spec,
+          scope: capability.scope(),
+          targets: renderer_capability_targets(targets),
+        })
       None => ()
     }
   }
@@ -621,41 +633,24 @@ pub fn App::extension(
 }
 
 ///|
-/// Grants one registered extension to a trusted source in one window.
-///
-/// Extension registration alone never exposes renderer capabilities.
-pub fn App::permission(self : App, grant : @manifest.PermissionGrant) -> App {
-  self.permission_grants.push(grant)
-  self
+/// Selects a window's configured entry as a renderer capability target.
+pub fn RendererTarget::entry(window? : String = "main") -> RendererTarget {
+  RendererTarget::{ window, bundled: false }
 }
 
 ///|
-/// Registers an extension and explicitly exposes it to one trusted page.
-///
-/// Use `extension` plus `permission` separately when an extension provides a
-/// typed permission builder, such as the filesystem extension.
-pub fn App::expose(
-  self : App,
-  extension : @proton_extension.Extension,
-  window? : String = "main",
-  origin? : @manifest.PermissionOrigin = Entry,
-  scope? : Json = Json::empty_object(),
-) -> App {
-  let extension_id = extension.id()
-  ignore(self.extension(extension))
-  self.permission(
-    @manifest.PermissionGrant::new(window, origin, extension_id, scope~),
-  )
+/// Selects Proton's bundled application origin in one window as a renderer
+/// capability target.
+pub fn RendererTarget::bundled(window? : String = "main") -> RendererTarget {
+  RendererTarget::{ window, bundled: true }
 }
 
 ///|
-/// Registers a set of extension settings with the app facade.
-pub fn App::extensions(
-  self : App,
-  extensions : @proton_extension.Extensions,
-) -> App {
-  for extension in extensions.items() {
-    ignore(self.extension(extension))
+fn renderer_capability_targets(
+  configured : Array[RendererTarget]?,
+) -> Array[RendererTarget] {
+  match configured {
+    Some(targets) => targets.copy()
+    None => [RendererTarget::entry()]
   }
-  self
 }

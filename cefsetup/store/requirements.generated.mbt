@@ -2,6 +2,11 @@
 // Source: cefsetup/requirements.json.
 
 ///|
+pub fn release_version() -> String {
+  "0.2.1"
+}
+
+///|
 let default_cef_base_url = "https://cef-builds.spotifycdn.com"
 
 ///|

@@ -35,22 +35,21 @@ pub extend DevConfigError with Debug::{to_repr}
 pub extend DevConfigError with Show::{to_string, output}
 
 ///|
-/// Failures while locating and validating the native development runtime.
-pub(all) suberror DevRuntimeError {
+/// Failures while locating and validating the native development installation.
+pub(all) suberror DevInstallationError {
   Setup(detail~ : String)
   DirectoryMissing(label~ : String, path~ : String)
-  HelperMissing(label~ : String, path~ : String)
   SetupRequired(detail~ : String)
 } derive(Debug, Eq)
 
 ///|
-pub extend DevRuntimeError with Eq::{not_equal, equal}
+pub extend DevInstallationError with Eq::{not_equal, equal}
 
 ///|
-pub extend DevRuntimeError with Debug::{to_repr}
+pub extend DevInstallationError with Debug::{to_repr}
 
 ///|
-pub extend DevRuntimeError with Show::{to_string, output}
+pub extend DevInstallationError with Show::{to_string, output}
 
 ///|
 /// Invalid frontend URLs and readiness failures.
@@ -119,11 +118,10 @@ pub fn DevConfigError::message(self : DevConfigError) -> String {
 }
 
 ///|
-pub fn DevRuntimeError::message(self : DevRuntimeError) -> String {
+pub fn DevInstallationError::message(self : DevInstallationError) -> String {
   match self {
-    Setup(detail~) => "failed to set up Proton runtime: " + detail
+    Setup(detail~) => "failed to set up Proton installation: " + detail
     DirectoryMissing(label~, path~) => label + " directory is missing: " + path
-    HelperMissing(label~, path~) => label + " helper is missing: " + path
     SetupRequired(detail~) =>
       detail +
       "\n\nRun `moonx moonbit-community/proton_cefsetup`, or retry with `proton_cli dev --setup`."
@@ -173,7 +171,7 @@ impl Show for DevConfigError with fn output(self, logger) {
 }
 
 ///|
-impl Show for DevRuntimeError with fn output(self, logger) {
+impl Show for DevInstallationError with fn output(self, logger) {
   logger.write_string(self.message())
 }
 

@@ -20,10 +20,8 @@ fn App::new(
     url_schemes: [],
     document_extensions: [],
     update_channel: None,
-    extension_settings: Map([]),
-    permission_grants: [],
-    command_extensions: Map([]),
-    command_registrars: [],
+    command_capabilities: [],
+    extension_capabilities: [],
     application_lifecycle_hooks: [],
     planned_views: [],
     launch_input_handlers: [],
@@ -92,14 +90,7 @@ fn App::inline_manifest(self : App) -> @manifest.AppManifest {
   } else {
     self.debug_level_value
   }
-  @manifest.AppManifest::new(
-    self.window,
-    entry,
-    debug~,
-    windows=self.windows,
-    extensions=self.extension_settings,
-    permissions=self.permission_grants,
-  )
+  @manifest.AppManifest::new(self.window, entry, debug~, windows=self.windows)
 }
 
 ///|

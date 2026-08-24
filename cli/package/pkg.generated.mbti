@@ -26,30 +26,6 @@ pub fn PackageConfigError::output(Self, &Logger) -> Unit
 pub fn PackageConfigError::to_repr(Self) -> @debug.Repr
 pub fn PackageConfigError::to_string(Self) -> String
 
-pub(all) suberror PackagePlanError {
-  InvalidProductName(reason~ : String)
-  InvalidIdentifier(identifier~ : String, reason~ : String)
-  InvalidVersion(version~ : String, reason~ : String)
-  UnsupportedTargetForPlatform(target~ : String, platform~ : String)
-  MissingExecutable(path~ : String)
-} derive(Eq, @debug.Debug)
-pub fn PackagePlanError::equal(Self, Self) -> Bool
-pub fn PackagePlanError::message(Self) -> String
-pub fn PackagePlanError::not_equal(Self, Self) -> Bool
-pub fn PackagePlanError::output(Self, &Logger) -> Unit
-pub fn PackagePlanError::to_repr(Self) -> @debug.Repr
-pub fn PackagePlanError::to_string(Self) -> String
-
-pub(all) suberror PackageUsageError {
-  UnsupportedTarget(target~ : String)
-} derive(Eq, @debug.Debug)
-pub fn PackageUsageError::equal(Self, Self) -> Bool
-pub fn PackageUsageError::message(Self) -> String
-pub fn PackageUsageError::not_equal(Self, Self) -> Bool
-pub fn PackageUsageError::output(Self, &Logger) -> Unit
-pub fn PackageUsageError::to_repr(Self) -> @debug.Repr
-pub fn PackageUsageError::to_string(Self) -> String
-
 pub(all) suberror UpdaterMetadataError {
   NoDistributableArtifact
   UnreadableArtifact(path~ : String, detail~ : String)
@@ -66,14 +42,6 @@ pub fn UpdaterMetadataError::output(Self, &Logger) -> Unit
 pub fn UpdaterMetadataError::to_string(Self) -> String
 
 // Types and methods
-pub(all) enum PackageHost {
-  Macos
-  Windows
-  Linux
-} derive(Eq)
-pub fn PackageHost::equal(Self, Self) -> Bool
-pub fn PackageHost::not_equal(Self, Self) -> Bool
-
 type PackagePlan derive(Eq, @debug.Debug)
 pub fn PackagePlan::equal(Self, Self) -> Bool
 pub fn PackagePlan::not_equal(Self, Self) -> Bool

@@ -27,10 +27,8 @@ struct App {
   url_schemes : Array[String]
   document_extensions : Array[String]
   mut update_channel : ResolvedUpdateChannel?
-  extension_settings : Map[String, @manifest.ExtensionSetting]
-  permission_grants : Array[@manifest.PermissionGrant]
-  command_extensions : Map[String, @proton_command.AppCommandExtensionSpec]
-  command_registrars : Array[(@proton_command.CommandRegistrar) -> Unit raise]
+  command_capabilities : Array[AppCommandCapability]
+  extension_capabilities : Array[ExtensionCapabilityBinding]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
   planned_views : Array[(String, ViewConfig)]
   launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise]
@@ -50,6 +48,45 @@ struct App {
   update_handlers : Array[async (PendingUpdate) -> Unit noraise]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
   validation_errors : Array[AppConfigurationError]
+}
+
+///|
+/// Identifies one renderer page that may use a capability.
+pub struct RendererTarget {
+  window : String
+  bundled : Bool
+}
+
+///|
+priv struct AppCommandCapability {
+  register : (@proton_command.CommandRegistrar) -> Unit raise
+  targets : Array[RendererTarget]
+}
+
+///|
+priv struct ExtensionCapabilityBinding {
+  spec : @proton_command.AppCommandExtensionSpec
+  scope : Json
+  targets : Array[RendererTarget]
+}
+
+///|
+priv struct RegisteredAppCommandCapability {
+  ops : Array[String]
+  targets : Array[RendererTarget]
+}
+
+///|
+priv struct ResolvedExtensionCapability {
+  spec : @proton_command.AppCommandExtensionSpec
+  scope : Json
+  targets : Array[RendererTarget]
+}
+
+///|
+priv struct CommandHostBuild {
+  runtime : CommandHostRuntime?
+  app_capabilities : Array[RegisteredAppCommandCapability]
 }
 
 ///|
@@ -606,8 +643,7 @@ pub(all) suberror AppConfigurationError {
   InvalidJavaScriptNamespace(js_namespace~ : String)
   InvalidJavaScriptApi(js_namespace~ : String, api_name~ : String)
   InvalidEntryUrl(url~ : String, reason~ : String)
-  InvalidPermissionGrant(detail~ : String)
-  MissingPermissionGrant(extension_id~ : String)
+  InvalidRendererCapability(detail~ : String)
 } derive(Debug)
 
 ///|

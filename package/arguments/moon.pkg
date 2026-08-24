@@ -1,5 +1,5 @@
 import {
-  "moonbit-community/proton_cefsetup/store" @cef_store,
+  "moonbit-community/proton_package/lib" @package,
   "moonbitlang/core/argparse",
 }
 

@@ -1,4 +1,5 @@
 import {
+  "moonbit-community/proton_package/arguments" @package_args,
   "moonbit-community/proton_package/lib" @package,
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,

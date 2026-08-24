@@ -64,7 +64,7 @@ async fn main {
   }
   @proton.html("Proton 国际化", resource, width=860, height=600, debug=true)
   .locale(locale)
-  .expose(i18n_extension())
+  .capability(@proton_extension.capability(i18n_extension()))
   .run_or_abort()
 }
 
@@ -77,6 +77,6 @@ async fn main {
   @proton.html("Proton 国际化", resource, width=860, height=600, debug=true)
   .locale(locale)
   .menu(menu_bar())
-  .expose(i18n_extension())
+  .capability(@proton_extension.capability(i18n_extension()))
   .run_or_abort()
 }

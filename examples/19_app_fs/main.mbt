@@ -7,15 +7,14 @@ async fn main {
       height=720,
       debug=true,
     )
-    .extension(@fs.extension())
-    .permission(
-      @fs.permission([
+    .capability(
+      @fs.capability([
         @fs.PermissionRoot::new(".", [
           "read_file", "write_file", "exists", "kind", "size", "readdir", "remove",
           "realpath",
         ]),
       ]),
     )
-    .expose(@path.extension())
+    .capability(@path.capability())
   app.run_or_abort()
 }

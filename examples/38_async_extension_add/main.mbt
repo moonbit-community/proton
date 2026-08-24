@@ -6,6 +6,6 @@ async fn main {
     width=840,
     height=560,
     debug=true,
-  ).expose(extension())
+  ).capability(@proton_extension.capability(extension()))
   app.run_or_abort()
 }

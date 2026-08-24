@@ -226,7 +226,7 @@ async fn realpath(
 }
 
 ///|
-pub fn extension() -> @proton_extension.Extension {
+fn extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     @fs_contract.extension,
     generated_extension_command_routes(),

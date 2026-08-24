@@ -561,18 +561,14 @@ and is not something a framework should decide for every application.
 
 ## Renderer surface
 
-*Implemented* as the `moonbit-community/proton-updater` extension, in the `updater`
-namespace. Update capability is exposed through the existing permission model.
-Registration alone grants nothing; a window needs an explicit grant.
-
-The recommended grant names the two typed commands separately, so adding a
-future updater command cannot silently enlarge an existing renderer's
-authority:
+*Implemented* as the `moonbit-community/proton-updater` extension, in the
+`updater` namespace. Applications grant its typed capability explicitly to
+selected renderer targets:
 
 ```moonbit
 @proton.asset("My App", "frontend/dist/index.html")
 .update_channel(endpoint, public_keys)
-.expose(@updater.extension())
+.capability(@updater.capability())
 ```
 
 The logical-window grant is only one half of the decision. The native bridge
@@ -596,9 +592,8 @@ instance, or refuses. A check performed by one window or by a page before
 navigation cannot be consumed by another page. Everything it acts on comes
 from the host's `App::update_channel` and the signed manifest.
 
-The extension is not in `@ext.all()` or `@ext.desktop()`. An application asking
-for "the built-in extensions" should not thereby hand its pages the ability to
-replace it; registering this one is a separate decision.
+Adding the updater capability is a separate application decision. It is never
+enabled implicitly by Proton or by another desktop capability.
 
 A renderer that could choose the update URL would hold a remote code execution
 primitive over the host. That is the single most important boundary in this

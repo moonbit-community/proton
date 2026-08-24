@@ -39,12 +39,18 @@ application built and served by Warren, and `backend/` runs the Proton
 desktop runtime.
 
 `cef setup` installs the exact CEF SDK and runtime required by this Proton
-release into the user-wide immutable store at `~/.proton/store`. Every
-project using the same Proton release resolves the same installation directly;
-projects contain no runtime copy or runtime-selection file. Proton's native
-sources are compiled into the application by Moon, while only CEF remains an
-external runtime. Set `PROTON_RUNTIME_STORE` to an absolute path to relocate
-the store.
+release into the user-wide immutable store at `~/.proton/store`. It also
+installs the release's CEF subprocess helper once under
+`~/.proton/helpers/<platform>/<version>`. Every project using the same Proton
+release resolves these installations directly; projects contain no runtime or
+helper copy and no runtime-selection file. Proton's native sources are compiled
+into the application by Moon, while only CEF remains an external runtime. Set
+`PROTON_RUNTIME_STORE` to an absolute path to relocate the CEF store.
+
+`proton_cli`, `proton`, `proton_bundle`, and `proton_cefsetup` are released in
+lockstep. The CLI resolves the helper installed by setup; it does not inspect a
+project's Moon workspace or dependency source directories. `proton_cli cef
+requirements` prints the active requirement as JSON.
 
 ## Application entry
 
@@ -57,13 +63,6 @@ async fn main {
   @proton.asset("My App", "frontend/dist/index.html")
   .single_instance("com.example.my-app")
   .commands(fn(registrar) raise { backend.register_commands(registrar) })
-  .permission(
-    @proton.PermissionGrant::new(
-      "main",
-      @proton.PermissionOrigin::Entry,
-      "app",
-    ),
-  )
   .run_or_abort()
 }
 ```
@@ -89,39 +88,21 @@ async fn main {
 The root package also supports URL, file, and packaged asset entries through
 `@proton.url`, `@proton.file`, and `@proton.asset`.
 
-## Renderer permissions
+## Renderer capabilities
 
-Registering backend commands does not expose them to a renderer. Every
-renderer capability requires a grant for one window, one trusted source, and
-one extension. Missing grants are denied.
+Commands registered with `.commands(...)` are available to the primary
+window's configured entry by default. Use `targets` when another window or
+Proton's bundled origin also needs them.
 
-Commands registered directly with `.commands(...)` belong to the `app`
-permission id. Grant that capability on the App builder:
-
-```moonbit
-.permission(
-  @proton.PermissionGrant::new(
-    "main",
-    @proton.PermissionOrigin::Entry,
-    "app",
-  ),
-)
-```
-
-`origin: "app"` names bundled `proton://app` content. `origin: "entry"` follows
-the configured entry and resolves URL entries to their exact HTTP(S) origin,
-including `frontend.dev_url` during development. Arbitrary origins cannot be
-granted.
-
-For extensions without an additional scope, `.expose(extension)` is the
-explicit shorthand for registration plus an empty grant. Filesystem access
-must declare path ranges and exact commands:
+Extensions expose typed capabilities. Adding a capability both installs its
+backend handlers and grants it to the selected renderer, so registration and
+authority cannot drift apart. Filesystem access additionally declares path
+ranges and exact commands:
 
 ```moonbit
 @proton.html("Files", html)
-.extension(@fs.extension())
-.permission(
-  @fs.permission([
+.capability(
+  @fs.capability([
     @fs.PermissionRoot::new("./workspace", [
       "read_file",
       "write_file",
@@ -130,6 +111,12 @@ must declare path ranges and exact commands:
   ]),
 )
 ```
+
+The default target is `@proton.RendererTarget::entry()` for the primary
+window. Multi-window applications pass `targets=[...]` with
+`RendererTarget::entry(window=...)` or `RendererTarget::bundled(window=...)`.
+Omitting a capability is valid; attempts to invoke an unavailable operation are
+rejected by the bridge rather than preventing the application from starting.
 
 The renderer cannot select or widen these roots. Proton matches the trusted
 frame origin in native code, rechecks the grant during MoonBit dispatch, and
@@ -192,7 +179,7 @@ pump:
 ```
 
 Runtime-created windows must be declared before startup so packaging inputs,
-origins, and permissions remain explicit. `open_on_start=false` declares a
+origins, and renderer capabilities remain explicit. `open_on_start=false` declares a
 template without creating it; `WindowManager::open` creates a fresh concrete
 instance when the application needs it. `WindowHandle` supports show, hide,
 focus, close, title, size, position, minimize, maximize, restore, fullscreen,
@@ -426,11 +413,13 @@ MBT_CDP_TARGET=9222 moon -C e2e run test --target native
 
 `moonbit-community/proton_package` is the generic host-native packager. It does
 not discover Proton projects or know about CEF. `proton_cli package` builds the
-application and helper, then delegates Proton's runtime and helper bundle layout
-to `moonbit-community/proton_bundle`, which in turn calls `proton_package`.
+application, resolves the runtime and helper installed by `cef setup`, then
+delegates Proton's bundle layout to `moonbit-community/proton_bundle`, which in
+turn calls `proton_package`.
 
-Developers who do not use `proton_cli` can use the same layers directly: build
-the application executable, install the matching `cef_process` executable, and
+Developers who do not use `proton_cli` can use the same layers directly: run
+`moonx moonbit-community/proton_cefsetup`, build the application executable,
+resolve the installed runtime and helper through `proton_cefsetup/store`, and
 pass both explicit paths to `proton_bundle`. Use `proton_package` alone only for
 applications that do not need Proton's CEF layout:
 
@@ -506,21 +495,21 @@ proton_cli package --release
 The package command performs an incremental debug executable build by default.
 Pass `--release` to use MoonBit's release build mode. Package output is written
 to `dist` by default.
-Icons, resources, output targets, signing, notarization, custom URL schemes, and
+Icons, resources, output formats, signing, notarization, custom URL schemes, and
 macOS document types are configured through `proton.project.json` and package command
 options.
 
-The `dmg` target is available on macOS. It creates a compressed disk image
+The `dmg` format is available on macOS. It creates a compressed disk image
 containing the app and an `/Applications` shortcut for drag-to-install:
 
 ```sh
-proton_cli package --release --target app --target dmg
+proton_cli package --release --format app --format dmg
 ```
 
-With `--notarize`, Proton submits the DMG when that target is enabled, then
+With `--notarize`, Proton submits the DMG when that format is enabled, then
 staples and validates both the DMG and the app before creating any requested
-ZIP archive. Without a `dmg` target, the existing app notarization flow is
-used. Windows supports the `app` and `zip` targets.
+ZIP archive. Without a `dmg` format, the existing app notarization flow is
+used. Windows supports the `app` and `zip` formats.
 
 ### Open an unsigned app on macOS
 
@@ -545,7 +534,7 @@ revision as well as the reproducible publication time. The revision is embedded
 in the signed app and emitted into the signed manifest fragment:
 
 ```sh
-proton_cli package --release --target zip \
+proton_cli package --release --format zip \
   --updater-base-url https://example.com/releases \
   --updater-published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --updater-revision 42
@@ -558,10 +547,12 @@ proton_cli doctor
 ```
 
 Doctor checks the project configuration, MoonBit toolchain, active platform,
-and required Proton runtime installation without changing the project. Outside a Proton
-project, it reports environment information and skips project-specific checks.
+and required Proton runtime and helper installations without changing the
+project. Outside a Proton project, it reports environment information and skips
+project-specific checks.
 
-Run `proton_cli cef setup` again when the required runtime is missing or invalid.
+Run `proton_cli cef setup` again when the required runtime or helper is missing
+or invalid.
 Use `PROTON_CEF_LOG=default` temporarily when browser-runtime logs are needed.
 
 See [examples/Readme.md](examples/Readme.md) for runnable examples. Repository

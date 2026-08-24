@@ -10,7 +10,15 @@ pub async fn build(PackageSpec) -> Array[String]
 
 pub async fn build_with(PackageSpec, PackageCustomization, async (PackageLayout) -> Unit) -> Array[String]
 
+pub fn macos_versions(String) -> (String, String) raise PackagePlanError
+
+pub async fn resolve_package_formats(Array[PackageFormat]) -> Array[PackageFormat]
+
+pub fn validate_identifier(String) -> String raise PackagePlanError
+
 pub fn validate_package_version(String) -> String raise PackagePlanError
+
+pub fn validate_product_name(String) -> String raise PackagePlanError
 
 // Errors
 pub(all) suberror LinuxPackagingError {
@@ -50,6 +58,7 @@ pub(all) suberror PackagePlanError {
   InvalidIdentifier(identifier~ : String, reason~ : String)
   InvalidVersion(version~ : String, reason~ : String)
   UnsupportedFormat(format~ : String)
+  DuplicateFormat(format~ : String)
   UnsupportedFormatForPlatform(format~ : String, platform~ : String)
   MissingExecutable(path~ : String)
   MissingInput(path~ : String)

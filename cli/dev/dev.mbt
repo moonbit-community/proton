@@ -24,7 +24,7 @@ struct RawDevOptions {
   timeout_ms : Int
   ready_path : String?
   start_frontend : Bool
-  setup_runtime : Bool
+  setup_installation : Bool
   app_args : Array[String]
 } derive(Debug, Eq)
 
@@ -74,7 +74,7 @@ pub fn command() -> @argparse.Command {
       FlagArg(
         "setup",
         negatable=true,
-        about="Install the runtime automatically when it is missing",
+        about="Install the runtime and helper automatically when missing",
       ),
     ],
     options=[
@@ -167,16 +167,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
         None => default_package
       }
   }
-  let proton_source = @build.resolve_proton_source(backend_path, app_package)
-  let runtime_requirements = @build.resolve_proton_runtime_requirements(
-    proton_source,
-  )
-  let runtime = ensure_dev_runtime(runtime_requirements, raw.setup_runtime)
-  let helper_path = @build.build_cef_process(
-    proton_source,
-    backend_path,
-    moon_target_dir?,
-  )
+  let (runtime, helper_path) = ensure_dev_installation(raw.setup_installation)
   let app_env = dev_process_env(
     runtime, helper_path, frontend_url, project_base,
   )
@@ -242,8 +233,8 @@ fn dev_options_from_matches(
     is {
       "no-frontend"? : Some(no_frontend)
       | (None with no_frontend = false),
-      "setup"? : Some(setup_runtime)
-      | (None with setup_runtime = false),
+      "setup"? : Some(setup_installation)
+      | (None with setup_installation = false),
       ..
     }
   RawDevOptions::{
@@ -256,7 +247,7 @@ fn dev_options_from_matches(
     timeout_ms: parse_non_negative_int(timeout, "--timeout-ms"),
     ready_path: ready_path.get(0),
     start_frontend: !no_frontend,
-    setup_runtime,
+    setup_installation,
     app_args,
   }
 }
@@ -351,19 +342,18 @@ async fn read_dev_project_config(
 }
 
 ///|
-async fn ensure_dev_runtime(
-  requirements : String,
-  setup_runtime : Bool,
-) -> DevRuntime {
-  resolve_dev_runtime(requirements) catch {
+async fn ensure_dev_installation(
+  setup_installation : Bool,
+) -> (DevRuntime, String) {
+  resolve_dev_installation() catch {
     error if @async.is_being_cancelled() => raise error
     error =>
-      if setup_runtime {
-        ignore(@cef_store.install_declared(requirements)) catch {
+      if setup_installation {
+        ignore(@cef_store.setup_default()) catch {
           error if @async.is_being_cancelled() => raise error
           error => raise Setup(detail=error.to_string())
         }
-        resolve_dev_runtime(requirements)
+        resolve_dev_installation()
       } else {
         raise SetupRequired(detail=error.to_string())
       }
@@ -371,9 +361,13 @@ async fn ensure_dev_runtime(
 }
 
 ///|
-async fn resolve_dev_runtime(requirements : String) -> DevRuntime {
-  let runtime = @cef_store.resolve_declared(requirements)
-  dev_runtime_from_root(runtime.runtime_root(), "Proton runtime store")
+async fn resolve_dev_installation() -> (DevRuntime, String) {
+  let runtime = @cef_store.resolve_default()
+  let helper = @cef_store.resolve_default_helper()
+  (
+    dev_runtime_from_root(runtime.runtime_root(), "Proton runtime store"),
+    helper,
+  )
 }
 
 ///|

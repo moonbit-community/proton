@@ -6,6 +6,6 @@ async fn main {
     width=940,
     height=720,
     debug=true,
-  ).expose(@notification.extension())
+  ).capability(@notification.capability())
   app.run_or_abort()
 }

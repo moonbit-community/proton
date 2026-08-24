@@ -75,7 +75,9 @@ developer must perform them.
 - `lib/`, `build/`, and `_build/`: generated or vendored artifacts. Packaged
   application artifacts are written to `dist/`.
 - `~/.proton/store/`: immutable user-level CEF SDK and runtime installations.
-  Projects do not contain runtime copies or runtime-selection manifests.
+  `~/.proton/helpers/`: immutable subprocess helpers selected by platform and
+  Proton version. Projects do not contain runtime copies, helper copies, or
+  runtime-selection manifests.
 
 ## Build And Test
 - `PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cefsetup run . --target native`
@@ -158,8 +160,8 @@ native checks before handing off larger refactors.
     --identifier "com.example.proton-release-smoke" -y --no-git
   proton_cli -C "$tmp_dir/release-smoke" cef setup
   proton_cli -C "$tmp_dir/release-smoke" build
-  proton_cli -C "$tmp_dir/release-smoke" package --release --target app --dry-run
-  proton_cli -C "$tmp_dir/release-smoke" package --release --target app
+  proton_cli -C "$tmp_dir/release-smoke" package --release --format app --dry-run
+  proton_cli -C "$tmp_dir/release-smoke" package --release --format app
   ```
 
 - The release is not complete until the independent scaffold passes
@@ -182,9 +184,12 @@ native checks before handing off larger refactors.
 - There is one runtime route: MoonBit builds Proton's private C, Objective-C, or
   C++ stubs directly into the application and the matching `cef_process`
   executable. CEF remains a dynamically loaded third-party runtime.
-- `proton_cefsetup` assembles the release's immutable CEF runtime in the
-  user-level store. `proton_cli cef setup` is a convenience frontend to the same
-  operation and writes no project state.
+- `proton_cefsetup` installs the release's immutable CEF runtime and matching
+  subprocess helper in the user-level stores. `proton_cli cef setup` is a
+  convenience frontend to the same operation and writes no project state.
+- Lockstep tooling consumes the requirement embedded in `proton_cefsetup`.
+  Never locate a project's Proton dependency by parsing Moon build output or
+  scanning workspace and module files.
 - Keep platform-specific setup decisions centralized in the CLI/native platform
   helpers. Platform ids should stay predictable: `win32-x64`, `darwin-arm64`,
   and `linux-x64`; add `darwin-x64` only when it is supported.
@@ -252,7 +257,7 @@ native checks before handing off larger refactors.
 - `proton_cefsetup/store` owns CEF runtime assembly and resolution. No project-local
   runtime-selection file is permitted.
 - Keep `cef_process.exe` or the platform equivalent as a MoonBit executable
-  built from the same Proton source revision as the application.
+  installed from the same lockstep Proton release as the application.
 - CEF internal logging is disabled by default. Use `PROTON_CEF_LOG` only as a
   temporary debugging switch; do not turn Chromium log noise back on by default.
 - When adding a platform, implement the same ABI behind the same exported

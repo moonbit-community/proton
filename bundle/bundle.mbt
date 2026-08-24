@@ -33,7 +33,7 @@ pub async fn build(spec : ProtonBundleSpec) -> BundleResult {
   guard path_is_file(spec.cef_process) else {
     raise BundleRuntimeError::HelperMissing(path=spec.cef_process)
   }
-  let installation = @cef_store.resolve_declared(spec.runtime_requirements)
+  let installation = @cef_store.resolve_default()
   let artifacts = @packager.build_with(
     package_spec(spec, installation.runtime_root()),
     package_customization(spec),
@@ -245,7 +245,7 @@ async fn prepare_proton_package(
     Windows => "windows-portable"
     Linux => "linux-appimage"
   }
-  write_package_manifest(spec, metadata_root, kind)
+  write_package_manifest(spec, metadata_root, kind, host)
   match host {
     Macos => prepare_macos_proton_package(spec, layout)
     Windows =>

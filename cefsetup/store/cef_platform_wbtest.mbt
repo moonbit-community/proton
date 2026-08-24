@@ -61,6 +61,17 @@ test "runtime cache identity is the CEF content digest" {
 }
 
 ///|
+async test "release requirement is available without a source file" {
+  let requirement = default_requirement_json()
+  assert_true(
+    requirement.contains("\"proton_version\":\"" + release_version() + "\""),
+  )
+  assert_true(requirement.contains("\"cef_archive\":"))
+  assert_true(requirement.contains("\"cef_sha256\":"))
+  assert_true(requirement.contains("\"layout_version\":"))
+}
+
+///|
 test "runtime installation contains no machine paths in its manifest" {
   let requirement = runtime_requirement(darwin_arm64_platform())
   let manifest = runtime_manifest(requirement).to_json().stringify()
