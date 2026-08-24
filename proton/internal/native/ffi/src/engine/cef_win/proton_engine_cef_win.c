@@ -3415,6 +3415,18 @@ int32_t proton_engine_runtime_set_menu(
   return PROTON_ERR_UNSUPPORTED;
 }
 
+int32_t proton_engine_window_popup_menu(
+    proton_engine_window_t *window, int32_t x, int32_t y,
+    const proton_menu_bar_t *menu_bar, char *error, size_t error_len) {
+  (void)window;
+  (void)x;
+  (void)y;
+  (void)menu_bar;
+  proton_engine_set_message(error, error_len,
+                            "native popup menus are not implemented on Windows");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
 int32_t proton_engine_runtime_respond_bridge_request_json(
     proton_engine_runtime_t *runtime,
     const char *response_json,

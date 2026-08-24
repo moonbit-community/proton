@@ -194,6 +194,10 @@ int32_t proton_engine_window_close(proton_engine_window_t *window,
                                    char *error,
                                    size_t error_len);
 int32_t proton_engine_window_is_closed(proton_engine_window_t *window);
+int32_t proton_engine_window_popup_menu(proton_engine_window_t *window,
+                                       int32_t x, int32_t y,
+                                       const proton_menu_bar_t *menu_bar,
+                                       char *error, size_t error_len);
 int32_t proton_engine_window_focus(proton_engine_window_t *window,
                                    char *error,
                                    size_t error_len);

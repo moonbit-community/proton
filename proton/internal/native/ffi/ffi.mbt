@@ -163,6 +163,14 @@ pub extern "C" fn runtime_set_menu(
 ) -> Int = "proton_internal_runtime_set_menu"
 
 ///|
+pub extern "C" fn menu_popup(
+  window : WindowHandle,
+  x : Int,
+  y : Int,
+  menu : MenuConfigHandle,
+) -> Int = "proton_internal_menu_popup"
+
+///|
 #borrow(out_menu)
 pub extern "C" fn menu_config_create(out_menu : Ref[MenuConfigHandle]) -> Int = "proton_internal_menu_config_create"
 

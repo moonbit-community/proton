@@ -3856,6 +3856,41 @@ int32_t proton_engine_runtime_set_menu(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_popup_menu(
+    proton_engine_window_t *window, int32_t x, int32_t y,
+    const proton_menu_bar_t *menu_bar, char *error, size_t error_len) {
+  (void)x;
+  (void)y;
+  if (window == NULL || !g_proton_cef_initialized) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (menu_bar == NULL || menu_bar->menu_count == 0) {
+    proton_engine_set_message(error, error_len,
+                              "popup menu requires at least one menu");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->window == NULL || window->browser_host == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "window is not ready for a popup menu");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  GtkWidget *popup = proton_linux_menu_create_popup_widget(
+      menu_bar, proton_engine_menu_command_activated,
+      proton_engine_menu_role_activated, window, error, error_len);
+  if (popup == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create popup menu");
+    return PROTON_ERR_PLATFORM;
+  }
+  gtk_widget_show_all(popup);
+  /* Pop up relative to the browser host so the menu appears in the window. */
+  gtk_menu_popup_at_widget(GTK_MENU(popup), window->browser_host,
+                           GDK_GRAVITY_NORTH_WEST, GDK_GRAVITY_NORTH_WEST,
+                           NULL);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_runtime_respond_bridge_request_json(
     proton_engine_runtime_t *runtime,
     const char *response_json,

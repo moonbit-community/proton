@@ -697,6 +697,23 @@ pub fn Runtime::set_menu(
 }
 
 ///|
+/// Pops up `menu` as a window-level context menu at view-relative
+/// coordinates `(x, y)` (CSS pixels, top-left origin). Command and role
+/// items deliver through the same runtime menu events as the application
+/// menu bar.
+pub fn Window::popup_menu(
+  self : Window,
+  menu : MenuBar,
+  x : Int,
+  y : Int,
+) -> Unit raise NativeError {
+  let config = build_menu_config(menu)
+  let status = @native_ffi.menu_popup(self.live_handle(), x, y, config)
+  @native_ffi.menu_config_destroy(config)
+  check_status(status)
+}
+
+///|
 fn native_event_text(
   event : @native_ffi.EventHandle,
   field : Int,

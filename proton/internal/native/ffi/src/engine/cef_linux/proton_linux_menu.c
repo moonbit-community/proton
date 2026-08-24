@@ -285,4 +285,23 @@ GtkWidget *proton_linux_menu_bar_create_widget(
   return widget;
 }
 
+GtkWidget *proton_linux_menu_create_popup_widget(
+    const proton_linux_menu_bar_t *menu_bar,
+    proton_linux_menu_command_callback_t command_callback,
+    proton_linux_menu_role_callback_t role_callback,
+    void *user_data,
+    char *error,
+    size_t error_len) {
+  if (menu_bar == NULL || menu_bar->menu_count == 0 ||
+      command_callback == NULL || role_callback == NULL) {
+    proton_linux_menu_set_message(error, error_len,
+                                  "popup widget requires a menu definition");
+    return NULL;
+  }
+  /* A context menu has a single top-level definition whose items are shown
+     directly. Accelerators are not needed for a transient popup. */
+  return proton_linux_menu_create_custom_menu(
+      &menu_bar->menus[0], NULL, command_callback, role_callback, user_data);
+}
+
 #endif

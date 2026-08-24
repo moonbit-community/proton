@@ -408,6 +408,37 @@ int32_t proton_engine_menu_set_on_main(const proton_menu_bar_t *menu_bar,
   return PROTON_OK;
 }
 
+int32_t proton_engine_menu_popup_on_main(void *host_view, int32_t x,
+                                         int32_t y,
+                                         const proton_menu_bar_t *menu_bar,
+                                         char *error, size_t error_len) {
+  if (menu_bar == NULL || menu_bar->menu_count == 0) {
+    proton_engine_set_message(error, error_len,
+                              "popup menu requires at least one menu");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (host_view == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "popup menu requires a hosted view");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  NSView *view = (__bridge NSView *)host_view;
+  NSString *app_name = proton_engine_application_name();
+  NSMenu *popup = proton_engine_create_custom_menu(
+      &menu_bar->menus[0], app_name, error, error_len);
+  if (popup == nil) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  /* The renderer reports cursor coordinates in CSS pixels with a top-left
+     origin, while AppKit positions menus in the view's own coordinate space.
+     Flip only when the host view is not already flipped. */
+  CGFloat menu_height = [view bounds].size.height;
+  CGFloat location_y = [view isFlipped] ? (CGFloat)y : menu_height - (CGFloat)y;
+  NSPoint location = NSMakePoint((CGFloat)x, location_y);
+  [popup popUpMenuPositioningItem:nil atLocation:location inView:view];
+  return PROTON_OK;
+}
+
 static void proton_engine_enqueue_menu_command(
     NSString *command_id,
     proton_window_id_t focused_window) {

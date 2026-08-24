@@ -6,6 +6,7 @@ import {
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension",
   "moonbit-community/proton/internal/locale",
+  "moonbit-community/proton/internal/native",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/updater",
   "moonbit-community/proton_contract",
@@ -309,6 +310,7 @@ pub struct Menu {
   items : Array[MenuItem]?
 }
 pub fn Menu::new(String, items~ : Array[MenuItem]) -> Self
+pub fn Menu::popup(Self, @native.Window, Int, Int) -> Unit raise @native.NativeError
 pub fn Menu::role(MenuRole, label? : String, items? : Array[MenuItem]) -> Self
 
 pub struct MenuBar {
@@ -322,10 +324,12 @@ pub struct MenuItem {
   label : String?
   key : String?
   role : MenuItemRole?
+  submenu : Menu?
 }
 pub fn MenuItem::command(String, String, key? : String) -> Self
 pub fn MenuItem::role(MenuItemRole, label? : String, key? : String) -> Self
 pub fn MenuItem::separator() -> Self
+pub fn MenuItem::submenu(String, items~ : Array[Self]) -> Self
 
 pub(all) enum MenuItemRole {
   Quit

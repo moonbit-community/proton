@@ -25,4 +25,12 @@ GtkWidget *proton_linux_menu_bar_create_widget(
     char *error,
     size_t error_len);
 
+GtkWidget *proton_linux_menu_create_popup_widget(
+    const proton_linux_menu_bar_t *menu_bar,
+    proton_linux_menu_command_callback_t command_callback,
+    proton_linux_menu_role_callback_t role_callback,
+    void *user_data,
+    char *error,
+    size_t error_len);
+
 #endif
