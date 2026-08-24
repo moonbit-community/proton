@@ -2,6 +2,7 @@
 
 #include "../../proton_json.h"
 #include "bridge_lifecycle.h"
+#include "native_log.h"
 #include "bridge_policy.h"
 
 #include <stddef.h>
@@ -61,34 +62,10 @@ static unsigned long proton_engine_bridge_process_id(void) {
 }
 
 static void proton_engine_bridge_log(const char *format, ...) {
-#if defined(_WIN32)
-  wchar_t wide_path[4096] = {0};
-  DWORD path_len = GetEnvironmentVariableW(
-      L"PROTON_NATIVE_LOG", wide_path,
-      (DWORD)(sizeof(wide_path) / sizeof(wide_path[0])));
-  if (path_len == 0 ||
-      path_len >= sizeof(wide_path) / sizeof(wide_path[0]) ||
-      format == NULL) {
-    return;
-  }
-  FILE *file = _wfopen(wide_path, L"ab");
-#else
-  const char *path = getenv("PROTON_NATIVE_LOG");
-  if (path == NULL || path[0] == '\0' || format == NULL) {
-    return;
-  }
-  FILE *file = fopen(path, "ab");
-#endif
-  if (file == NULL) {
-    return;
-  }
   va_list args;
   va_start(args, format);
-  fprintf(file, "renderer pid=%lu ", proton_engine_bridge_process_id());
-  vfprintf(file, format, args);
+  proton_native_logv(PROTON_NATIVE_LOG_DEBUG, format, args);
   va_end(args);
-  fputc('\n', file);
-  fclose(file);
 }
 
 static void proton_engine_bridge_set_string(cef_string_t *out,

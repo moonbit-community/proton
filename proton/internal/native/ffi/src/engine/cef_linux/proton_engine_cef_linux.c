@@ -47,6 +47,7 @@
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/message.h"
+#include "../cef_common/native_log.h"
 #include "../cef_common/profile_storage.h"
 #include "../cef_common/scheme.h"
 #include "../cef_common/view_events.h"
@@ -64,7 +65,6 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdbool.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -330,29 +330,6 @@ static int32_t proton_engine_window_install_menu(
     char *error,
     size_t error_len);
 
-static void proton_engine_log_to_env(const char *env_name,
-                                     const char *format,
-                                     va_list args) {
-  const char *path = getenv(env_name);
-  if (path == NULL || path[0] == '\0') {
-    return;
-  }
-  FILE *file = fopen(path, "ab");
-  if (file == NULL) {
-    return;
-  }
-  vfprintf(file, format, args);
-  fputc('\n', file);
-  fclose(file);
-}
-
-static void proton_engine_debug_log(const char *format, ...) {
-  va_list args;
-  va_start(args, format);
-  proton_engine_log_to_env("PROTON_NATIVE_LOG", format, args);
-  va_end(args);
-}
-
 static ssize_t proton_engine_write_no_sigpipe(int fd,
                                               const void *buffer,
                                               size_t length) {
@@ -504,7 +481,7 @@ static void proton_engine_log_runtime_wait_ready(uint32_t ready_mask,
                                 memory_order_relaxed) +
       1;
   if (count <= 16) {
-    proton_engine_debug_log("runtime_wait ready mask=%u interest=%u",
+    proton_native_log_debug("runtime_wait ready mask=%u interest=%u",
                             ready_mask, interest_mask);
   }
 }
@@ -908,7 +885,7 @@ static int proton_engine_bridge_pending_cancel(
       *cursor = pending->next;
       if (!proton_engine_runtime_enqueue_bridge_cancellation(runtime,
                                                               request_id)) {
-        proton_engine_debug_log(
+        proton_native_log_debug(
             "bridge_cancel_queue_full request=%lld browser=%d pending=%d",
             (long long)request_id, browser_id, renderer_pending_id);
       }
@@ -937,7 +914,7 @@ static void proton_engine_bridge_pending_remove_context(
       *cursor = pending->next;
       if (!proton_engine_runtime_enqueue_bridge_cancellation(runtime,
                                                               request_id)) {
-        proton_engine_debug_log(
+        proton_native_log_debug(
             "bridge_cancel_queue_full request=%lld browser=%d pending=%d",
             (long long)request_id, browser_id,
             pending->renderer_pending_id);
@@ -976,7 +953,7 @@ static void proton_engine_bridge_pending_remove_browser(
       *cursor = pending->next;
       (void)proton_engine_runtime_enqueue_bridge_cancellation(runtime,
                                                                request_id);
-      proton_engine_debug_log("bridge_pending_remove request=%lld browser=%d",
+      proton_native_log_debug("bridge_pending_remove request=%lld browser=%d",
                               (long long)request_id, browser_id);
       proton_engine_bridge_pending_free(pending);
       removed_pending++;
@@ -984,7 +961,7 @@ static void proton_engine_bridge_pending_remove_browser(
     }
     cursor = &pending->next;
   }
-  proton_engine_debug_log(
+  proton_native_log_debug(
       "bridge_pending_remove_browser browser=%d pending=%llu",
       browser_id, (unsigned long long)removed_pending);
 }
@@ -999,7 +976,7 @@ static void proton_engine_bridge_pending_clear_all(void) {
     pending = next;
     removed++;
   }
-  proton_engine_debug_log("bridge_pending_clear_all removed=%llu",
+  proton_native_log_debug("bridge_pending_clear_all removed=%llu",
                           (unsigned long long)removed);
 }
 
@@ -1204,7 +1181,7 @@ static void CEF_CALLBACK proton_engine_osr_on_paint(
     if (view != NULL && type == PET_VIEW && width > 0 && height > 0 &&
         !view->osr_paint_seen) {
       view->osr_paint_seen = 1;
-      proton_engine_debug_log("view_osr_paint browser=%d size=%dx%d",
+      proton_native_log_debug("view_osr_paint browser=%d size=%dx%d",
                               view->browser_id, width, height);
     }
     return;
@@ -1216,7 +1193,7 @@ static void CEF_CALLBACK proton_engine_osr_on_paint(
   window->osr_paint_height = height;
   if (!window->osr_paint_seen) {
     window->osr_paint_seen = 1;
-    proton_engine_debug_log("osr_paint browser=%d size=%dx%d",
+    proton_native_log_debug("osr_paint browser=%d size=%dx%d",
                             proton_engine_browser_id(browser), width, height);
   }
 }
@@ -1262,7 +1239,7 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   (void)self;
   proton_engine_view_t *view = proton_engine_view_from_browser(browser);
   if (view != NULL) {
-    proton_engine_debug_log("view_browser_before_close browser=%d",
+    proton_native_log_debug("view_browser_before_close browser=%d",
                             view->browser_id);
     view->browser_before_close_seen = 1;
     view->closed = 1;
@@ -1281,7 +1258,7 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   if (window != NULL) {
-    proton_engine_debug_log("browser_before_close browser=%d",
+    proton_native_log_debug("browser_before_close browser=%d",
                             window->browser_id);
     proton_engine_window_close_views(window);
     proton_engine_window_mark_closed(window);
@@ -1330,7 +1307,7 @@ static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
     proton_linux_titlebar_region_t *copy =
         (proton_linux_titlebar_region_t *)malloc(regions_count * sizeof(*copy));
     if (copy == NULL) {
-      proton_engine_debug_log("draggable_regions_allocation_failed count=%zu",
+      proton_native_log_debug("draggable_regions_allocation_failed count=%zu",
                               regions_count);
       return;
     }
@@ -1346,7 +1323,7 @@ static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
     window->draggable_region_count = regions_count;
     window->draggable_regions_reported = 1;
   }
-  proton_engine_debug_log("draggable_regions browser=%d count=%zu",
+  proton_native_log_debug("draggable_regions browser=%d count=%zu",
                           window->browser_id,
                           window->draggable_region_count);
   proton_engine_overlay_update_input_shape(window);
@@ -1707,7 +1684,7 @@ static int CEF_CALLBACK proton_engine_v8_execute(
         !proton_engine_bridge_payload_is_valid(
             payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES))) ||
       !proton_engine_bridge_page_instance_is_valid(page_instance)) {
-    proton_engine_debug_log(
+    proton_native_log_debug(
         "bridge_reject_invalid_renderer pending=%d op=%s payload_bytes=%llu",
         pending_id, op != NULL ? op : "",
         (unsigned long long)(payload_json != NULL ? strlen(payload_json) : 0));
@@ -1904,7 +1881,7 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     int cancelled = proton_engine_bridge_pending_cancel(
         window != NULL ? window->runtime : NULL, browser_id,
         renderer_pending_id, page_instance);
-    proton_engine_debug_log(
+    proton_native_log_debug(
         "browser_bridge_cancel browser=%d pending=%d cancelled=%d",
         browser_id, renderer_pending_id, cancelled);
     free(action);
@@ -1921,7 +1898,7 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     return 1;
   }
   free(action);
-  proton_engine_debug_log("browser_bridge_request browser=%d pending=%d op=%s",
+  proton_native_log_debug("browser_bridge_request browser=%d pending=%d op=%s",
                           browser_id, renderer_pending_id,
                           op != NULL ? op : "");
 
@@ -1938,7 +1915,7 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
                 &window->runtime->next_bridge_request_id, &request_id,
                 &request_json);
   if (build_status != PROTON_ENGINE_BRIDGE_REQUEST_OK) {
-    proton_engine_debug_log(
+    proton_native_log_debug(
         "%s browser=%d pending=%d op=%s url=%s",
         proton_engine_bridge_request_reject_event(build_status), browser_id,
         renderer_pending_id, op != NULL ? op : "",
@@ -1962,13 +1939,13 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
         proton_engine_bridge_pending_take(request_id);
     proton_engine_bridge_pending_free(pending);
     free(request_json);
-    proton_engine_debug_log("bridge_reject_queue_full browser=%d pending=%d op=%s",
+    proton_native_log_debug("bridge_reject_queue_full browser=%d pending=%d op=%s",
                             browser_id, renderer_pending_id,
                             op != NULL ? op : "");
     proton_engine_reject_renderer_request(frame, renderer_pending_id,
                                           "bridge request queue is full");
   } else {
-    proton_engine_debug_log(
+    proton_native_log_debug(
         "bridge_enqueue request=%lld browser=%d pending=%d op=%s",
         (long long)request_id, browser_id, renderer_pending_id,
         op != NULL ? op : "");
@@ -2016,7 +1993,7 @@ static void CEF_CALLBACK proton_engine_on_load_end(
   }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   char *url = proton_engine_userfree_to_utf8(frame->get_url(frame));
-  proton_engine_debug_log("load_end browser=%d status=%d url=%s",
+  proton_native_log_debug("load_end browser=%d status=%d url=%s",
                           window != NULL ? window->browser_id : -1,
                           httpStatusCode, url != NULL ? url : "(null)");
   if (window != NULL && window->bridge_config_json != NULL && url != NULL &&
@@ -2132,7 +2109,7 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
     const cef_string_t *error_string) {
   (void)self;
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
-  proton_engine_debug_log(
+  proton_native_log_debug(
       "render_terminated browser=%d status=%d code=%d",
       window != NULL ? window->browser_id : -1, (int)status, error_code);
   if (window == NULL || window->bridge_config_json == NULL || window->closing) {
@@ -2203,7 +2180,7 @@ static void proton_engine_window_mark_closed(proton_engine_window_t *window) {
     return;
   }
   if (!window->closed) {
-    proton_engine_debug_log("window_closed browser=%d", window->browser_id);
+    proton_native_log_debug("window_closed browser=%d", window->browser_id);
   }
   window->closed = 1;
   proton_engine_bridge_pending_remove_browser(window->runtime,
@@ -2256,7 +2233,7 @@ static gboolean proton_engine_on_window_delete(GtkWidget *widget,
       } else {
         host->close_browser(host, 0);
       }
-      proton_engine_debug_log("window_delete_close browser=%d allow=%d",
+      proton_native_log_debug("window_delete_close browser=%d allow=%d",
                               window->browser_id, allow_close);
       host->base.release((cef_base_ref_counted_t *)host);
       proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
@@ -2558,7 +2535,7 @@ static void proton_engine_overlay_update_input_shape(
   XSync(display, False);
   const int x11_error = gdk_x11_display_error_trap_pop(gdk_display);
   if (x11_error != 0) {
-    proton_engine_debug_log("overlay_input_update_failed x11_error=%d",
+    proton_native_log_debug("overlay_input_update_failed x11_error=%d",
                             x11_error);
   }
   cairo_region_destroy(region);
@@ -2775,10 +2752,10 @@ static void proton_engine_overlay_begin_moveresize(
   if (!XSendEvent(event->display, event->root, False,
                   SubstructureRedirectMask | SubstructureNotifyMask,
                   &message)) {
-    proton_engine_debug_log("overlay_moveresize_send_failed direction=%d",
+    proton_native_log_debug("overlay_moveresize_send_failed direction=%d",
                             direction);
   } else {
-    proton_engine_debug_log("overlay_moveresize direction=%d", direction);
+    proton_native_log_debug("overlay_moveresize direction=%d", direction);
   }
   XFlush(event->display);
 }
@@ -2984,7 +2961,7 @@ static void proton_engine_sync_browser_bounds(proton_engine_window_t *window) {
     XSync(display, False);
     const int x11_error = gdk_x11_display_error_trap_pop(gdk_display);
     if (!browser_window_valid || x11_error != 0) {
-      proton_engine_debug_log(
+      proton_native_log_debug(
           "browser_bounds_deferred handle=%lu valid=%d x11_error=%d",
           (unsigned long)browser_handle, browser_window_valid, x11_error);
     }
@@ -3125,10 +3102,10 @@ static void proton_engine_remove_temporary_profile(void) {
 
 static void proton_engine_cef_shutdown(void) {
   if (g_proton_cef_initialized) {
-    proton_engine_debug_log("cef_shutdown_start");
+    proton_native_log_debug("cef_shutdown_start");
     cef_shutdown();
     g_proton_cef_initialized = 0;
-    proton_engine_debug_log("cef_shutdown_done");
+    proton_native_log_debug("cef_shutdown_done");
   }
   proton_engine_remove_temporary_profile();
 }
@@ -3359,7 +3336,7 @@ int32_t proton_engine_runtime_create(
     proton_engine_set_string(&settings.cache_path, config.cache_dir);
   }
 
-  proton_engine_debug_log("cef_initialize_start");
+  proton_native_log_debug("cef_initialize_start");
   int cef_initialized = cef_initialize(&args, &settings, &g_app.app, NULL);
   cef_string_clear(&settings.browser_subprocess_path);
   cef_string_clear(&settings.resources_dir_path);
@@ -3377,11 +3354,11 @@ int32_t proton_engine_runtime_create(
     return PROTON_ERR_ENGINE;
   }
   g_proton_cef_initialized = 1;
-  proton_engine_debug_log("cef_initialize_done");
+  proton_native_log_debug("cef_initialize_done");
 
   /* CEF's Linux browser process must initialize before GTK starts its
    * process-global state and helper threads. */
-  proton_engine_debug_log("gtk_initialize_start");
+  proton_native_log_debug("gtk_initialize_start");
   if (!proton_engine_ensure_gtk(error, error_len)) {
     proton_engine_cef_shutdown();
     proton_engine_runtime_dispose_menu(runtime);
@@ -3389,8 +3366,8 @@ int32_t proton_engine_runtime_create(
     g_active_runtime = NULL;
     return PROTON_ERR_PLATFORM;
   }
-  proton_engine_debug_log("gtk_initialize_done");
-  proton_engine_debug_log("runtime_create remote_debugging_port=%d",
+  proton_native_log_debug("gtk_initialize_done");
+  proton_native_log_debug("runtime_create remote_debugging_port=%d",
                           config.remote_debugging_port);
 
   g_proton_cef_runtime_active = 1;
@@ -3459,7 +3436,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  proton_engine_debug_log("runtime_destroy_start owns_cef=%d",
+  proton_native_log_debug("runtime_destroy_start owns_cef=%d",
                           runtime->owns_cef_runtime);
   proton_engine_dialog_cancel_runtime(runtime);
   if (runtime->owns_cef_runtime) {
@@ -3478,9 +3455,9 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     g_active_runtime = NULL;
   }
   g_proton_cef_runtime_active = 0;
-  proton_engine_debug_log("runtime_destroy_done");
+  proton_native_log_debug("runtime_destroy_done");
   /* The e2e suite uses this as proof that native shutdown completed. */
-  proton_engine_debug_log("runtime_destroy_complete");
+  proton_native_log_debug("runtime_destroy_complete");
   free(runtime);
   return PROTON_OK;
 }
@@ -3866,7 +3843,7 @@ int32_t proton_engine_runtime_respond_bridge_request(
   proton_engine_bridge_pending_t *pending =
       proton_engine_bridge_pending_take(request_id);
   if (pending == NULL) {
-    proton_engine_debug_log("bridge_response_no_pending request=%lld",
+    proton_native_log_debug("bridge_response_no_pending request=%lld",
                             (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "bridge request is no longer pending");
@@ -3878,7 +3855,7 @@ int32_t proton_engine_runtime_respond_bridge_request(
       ok ? body_json : "null", ok ? "" : body_json);
   proton_engine_bridge_pending_free(pending);
   if (!sent) {
-    proton_engine_debug_log("bridge_response_send_failed request=%lld",
+    proton_native_log_debug("bridge_response_send_failed request=%lld",
                             (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "failed to send bridge response to renderer");
@@ -3892,7 +3869,7 @@ static int32_t proton_engine_window_create_browser(
     const char *initial_url,
     char *error,
     size_t error_len) {
-  proton_engine_debug_log("create_browser_start initial_url=%s size=%dx%d",
+  proton_native_log_debug("create_browser_start initial_url=%s size=%dx%d",
                           initial_url != NULL ? initial_url : "",
                           window != NULL ? window->width : 0,
                           window != NULL ? window->height : 0);
@@ -3955,7 +3932,7 @@ static int32_t proton_engine_window_create_browser(
   if (extra_info_value != NULL) {
     extra_info_value->base.release((cef_base_ref_counted_t *)extra_info_value);
   }
-  proton_engine_debug_log("create_browser_returned browser=%p", window->browser);
+  proton_native_log_debug("create_browser_returned browser=%p", window->browser);
   cef_string_clear(&window_info.window_name);
   cef_string_clear(&url);
   if (window->browser == NULL) {
@@ -3964,7 +3941,7 @@ static int32_t proton_engine_window_create_browser(
   }
   window->browser_id = window->browser->get_identifier(window->browser);
   proton_engine_window_list_add(window);
-  proton_engine_debug_log("create_browser id=%d initial_url=%s size=%dx%d",
+  proton_native_log_debug("create_browser id=%d initial_url=%s size=%dx%d",
                           window->browser_id,
                           initial_url != NULL ? initial_url : "",
                           window->width, window->height);
@@ -4173,7 +4150,7 @@ int32_t proton_engine_window_create(
       proton_engine_overlay_update_maximize_button(window);
       proton_engine_overlay_update_input_shape(window);
       const int resize_handle = proton_engine_overlay_resize_handle(window);
-      proton_engine_debug_log(
+      proton_native_log_debug(
           "overlay_ready controls=%dx%d resize_handle=%d content=%dx%d",
           window->overlay_controls != NULL
               ? gtk_widget_get_allocated_width(window->overlay_controls)
@@ -4186,7 +4163,7 @@ int32_t proton_engine_window_create(
           gtk_widget_get_allocated_height(window->browser_host));
     }
   }
-  proton_engine_debug_log("window_create title=%s size=%dx%d initial_url=%s",
+  proton_native_log_debug("window_create title=%s size=%dx%d initial_url=%s",
                           config.title, config.width, config.height,
                           config.initial_url);
 
@@ -4215,7 +4192,7 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
   }
   proton_engine_dialog_cancel_window(window);
   if (window->closed && window->browser == NULL) {
-    proton_engine_debug_log("window_destroy_defer_closed browser=%d",
+    proton_native_log_debug("window_destroy_defer_closed browser=%d",
                             window->browser_id);
     window->destroy_requested = 1;
     proton_engine_window_close_views(window);
@@ -5495,7 +5472,7 @@ static int CEF_CALLBACK proton_engine_do_close(
     // top-level window).
     return 0;
   }
-  proton_engine_debug_log("view_browser_do_close browser=%d",
+  proton_native_log_debug("view_browser_do_close browser=%d",
                           view->browser_id);
   // A view browser owns no top-level window; CEF's default would deliver a
   // delete event to the frame window and cancel the view close. Take over
@@ -5618,7 +5595,7 @@ static int32_t proton_engine_view_create_browser(
     host->base.release((cef_base_ref_counted_t *)host);
   }
   proton_engine_window_layout_views(window);
-  proton_engine_debug_log("view_create_browser id=%d rect=%d,%d %dx%d",
+  proton_native_log_debug("view_create_browser id=%d rect=%d,%d %dx%d",
                           view->browser_id, (int)view->x, (int)view->y,
                           (int)view->width, (int)view->height);
   if (view->initial_url[0] != '\0' &&
@@ -5841,7 +5818,7 @@ int32_t proton_engine_view_load_url(proton_engine_view_t *view,
   }
   cef_string_t cef_url = {0};
   proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
-  proton_engine_debug_log("view_load_url browser=%d url=%s", view->browser_id,
+  proton_native_log_debug("view_load_url browser=%d url=%s", view->browser_id,
                           proton_engine_log_url(url));
   frame->load_url(frame, &cef_url);
   cef_string_clear(&cef_url);

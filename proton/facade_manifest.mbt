@@ -57,8 +57,34 @@ fn App::validation_error(self : App) -> AppConfigurationError? {
       ),
     )
   } else {
-    self.validation_errors.get(0)
+    match
+      native_log_level_configuration_error(
+        @env.get_env_var("PROTON_NATIVE_LOG_LEVEL"),
+      ) {
+      Some(error) => Some(error)
+      None => self.validation_errors.get(0)
+    }
   }
+}
+
+///|
+fn native_log_level_configuration_error(
+  configured_level : String?,
+) -> AppConfigurationError? {
+  let log_level = match configured_level {
+    Some(value) if value.trim().to_owned() != "" =>
+      value.trim().to_owned().to_lower()
+    _ => "debug"
+  }
+  guard log_level == "off" || log_level == "debug" || log_level == "trace" else {
+    return Some(
+      InvalidSetting(
+        name="PROTON_NATIVE_LOG_LEVEL",
+        message="must be off, debug, or trace",
+      ),
+    )
+  }
+  None
 }
 
 ///|

@@ -572,6 +572,10 @@ project-specific checks.
 Run `proton_cli cef setup` again when the required runtime or helper is missing
 or invalid.
 Use `PROTON_CEF_LOG=default` temporarily when browser-runtime logs are needed.
+Set `PROTON_NATIVE_LOG_LEVEL` to `debug` or `trace` to write Proton native
+diagnostics to stderr. Set `PROTON_NATIVE_LOG_FILE` to write them to a file
+instead; relative paths are resolved from the process working directory, and
+specifying a file without a level defaults to `debug`.
 
 See [examples/Readme.md](examples/Readme.md) for runnable examples. Repository
 contributors and release maintainers should follow [AGENTS.md](AGENTS.md).

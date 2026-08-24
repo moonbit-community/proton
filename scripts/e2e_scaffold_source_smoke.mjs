@@ -677,7 +677,7 @@ async function runPackagedAppSmoke(executable, expectedRevision) {
   const logPath = path.join(tempRoot, "proton-native.log");
   const packagedEnv = {
     ...process.env,
-    PROTON_NATIVE_LOG: logPath,
+    PROTON_NATIVE_LOG_FILE: logPath,
     PROTON_NO_UPDATE_CHECK: "1",
     PROTON_REMOTE_DEBUGGING_PORT: String(cdpPort),
   };

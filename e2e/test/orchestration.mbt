@@ -98,7 +98,7 @@ async fn app_process_env(
   let result : Map[String, String] = {
     "PROTON_RUNTIME_ROOT": runtime_dist,
     "PROTON_HELPER_PATH": helper_path,
-    "PROTON_NATIVE_LOG": scenario_native_log_path(output_root, cdp_port),
+    "PROTON_NATIVE_LOG_FILE": scenario_native_log_path(output_root, cdp_port),
     "PROTON_REMOTE_DEBUGGING_PORT": cdp_port.to_string(),
     "PROTON_HEADLESS": "1",
     "PROTON_E2E_ASSET_SIDECAR_ENTRY": join_path(

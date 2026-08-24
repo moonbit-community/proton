@@ -315,6 +315,21 @@ test "debug mode rejects invalid fixed ports instead of falling back" {
 }
 
 ///|
+test "native logging accepts only known levels" {
+  assert_true(native_log_level_configuration_error(None) is None)
+  assert_true(native_log_level_configuration_error(Some("debug")) is None)
+  assert_true(native_log_level_configuration_error(Some("trace")) is None)
+  assert_true(native_log_level_configuration_error(Some("off")) is None)
+  match native_log_level_configuration_error(Some("verbose")) {
+    Some(InvalidSetting(name~, message~)) => {
+      assert_eq(name, "PROTON_NATIVE_LOG_LEVEL")
+      assert_eq(message, "must be off, debug, or trace")
+    }
+    _ => fail("expected an invalid native log level")
+  }
+}
+
+///|
 test "headless mode defaults off and is configurable" {
   let default_app = html("Test", "<html></html>")
   assert_false(default_app.headless_value)
