@@ -363,7 +363,10 @@ async fn ensure_dev_installation(
 ///|
 async fn resolve_dev_installation() -> (DevRuntime, String) {
   let runtime = @cef_store.resolve_default()
-  let helper = @cef_store.resolve_default_helper()
+  let helper = match @env.get_env_var("PROTON_HELPER_PATH") {
+    Some(path) if path.trim() != "" => path
+    _ => @cef_store.resolve_default_helper()
+  }
   (
     dev_runtime_from_root(runtime.runtime_root(), "Proton runtime store"),
     helper,
