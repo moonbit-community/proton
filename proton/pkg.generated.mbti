@@ -324,6 +324,7 @@ pub struct Menu {
   items : Array[MenuItem]?
 }
 pub fn Menu::Menu(String, items~ : Array[MenuItem]) -> Self
+pub fn Menu::popup(Self, WindowHandle, Int, Int) -> Unit raise WindowSessionError
 pub fn Menu::role(MenuRole, label? : String, items? : Array[MenuItem]) -> Self
 
 pub struct MenuBar {
@@ -337,10 +338,12 @@ pub struct MenuItem {
   label : String?
   key : String?
   role : MenuItemRole?
+  submenu : Menu?
 }
 pub fn MenuItem::command(String, String, key? : String) -> Self
 pub fn MenuItem::role(MenuItemRole, label? : String, key? : String) -> Self
 pub fn MenuItem::separator() -> Self
+pub fn MenuItem::submenu(String, items~ : Array[Self]) -> Self
 
 pub(all) enum MenuItemRole {
   Quit
@@ -594,6 +597,7 @@ pub struct WindowHandle {
   set_window_position : (Int, Int) -> Unit raise WindowSessionError
   set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
+  popup_window_menu : (Menu, Int, Int) -> Unit raise WindowSessionError
   read_window_state : () -> WindowState raise WindowSessionError
   browser : BrowserHandle
   add_view : (String, ViewConfig) -> ViewHandle raise WindowSessionError

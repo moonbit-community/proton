@@ -15,15 +15,28 @@ static char *proton_menu_copy_string(const char *value) {
   return copy;
 }
 
-static void proton_menu_item_dispose(proton_menu_item_t *item) {
-  if (item == NULL) {
+static void proton_menu_bar_reset_build_state(proton_menu_bar_t *menu_bar) {
+  free(menu_bar->build_stack);
+  menu_bar->build_stack = NULL;
+  menu_bar->build_stack_len = 0;
+  menu_bar->build_stack_cap = 0;
+  menu_bar->build_target = NULL;
+}
+
+static void proton_menu_destroy(proton_menu_t *menu) {
+  if (menu == NULL) {
     return;
   }
-  free(item->id);
-  free(item->label);
-  free(item->key);
-  free(item->role);
-  memset(item, 0, sizeof(*item));
+  for (size_t item_index = 0; item_index < menu->item_count; item_index++) {
+    proton_menu_item_t *item = &menu->items[item_index];
+    free(item->id);
+    free(item->label);
+    free(item->key);
+    free(item->role);
+    proton_menu_destroy(item->submenu);
+  }
+  free(menu->items);
+  free(menu->label);
 }
 
 void proton_menu_bar_destroy(proton_menu_bar_t *menu_bar) {
@@ -32,14 +45,10 @@ void proton_menu_bar_destroy(proton_menu_bar_t *menu_bar) {
   }
   for (size_t menu_index = 0; menu_index < menu_bar->menu_count;
        menu_index++) {
-    proton_menu_t *menu = &menu_bar->menus[menu_index];
-    for (size_t item_index = 0; item_index < menu->item_count; item_index++) {
-      proton_menu_item_dispose(&menu->items[item_index]);
-    }
-    free(menu->items);
-    free(menu->label);
+    proton_menu_destroy(&menu_bar->menus[menu_index]);
   }
   free(menu_bar->menus);
+  proton_menu_bar_reset_build_state(menu_bar);
   free(menu_bar);
 }
 
@@ -102,15 +111,28 @@ int32_t proton_internal_menu_config_add_menu(
   }
   *out_menu_index = (int32_t)menu_bar->menu_count;
   menu_bar->menu_count++;
+  menu_bar->build_target = menu;
   return PROTON_OK;
 }
 
-int32_t proton_internal_menu_config_add_item(
-    proton_menu_bar_t *menu_bar, int32_t menu_index, int32_t kind,
-    const char *id, const char *label, const char *key, const char *role) {
-  if (menu_bar == NULL || menu_index < 0 ||
-      (size_t)menu_index >= menu_bar->menu_count || kind < PROTON_MENU_ITEM_COMMAND ||
-      kind > PROTON_MENU_ITEM_ROLE) {
+/* The current item-append target is always non-NULL during building: either a
+   top-level menu (after `add_menu`) or a nested submenu (after
+   `begin_submenu`). */
+static proton_menu_t *proton_menu_config_build_target(
+    proton_menu_bar_t *menu_bar) {
+  if (menu_bar == NULL || menu_bar->build_target == NULL) {
+    return NULL;
+  }
+  return menu_bar->build_target;
+}
+
+static int32_t proton_menu_config_append_item(
+    proton_menu_bar_t *menu_bar, int32_t kind, const char *id,
+    const char *label, const char *key, const char *role,
+    proton_menu_t *submenu) {
+  proton_menu_t *menu = proton_menu_config_build_target(menu_bar);
+  if (menu == NULL || kind < PROTON_MENU_ITEM_COMMAND ||
+      kind > PROTON_MENU_ITEM_SUBMENU) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "menu item is invalid");
   }
@@ -123,8 +145,12 @@ int32_t proton_internal_menu_config_add_item(
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "menu role is unsupported");
   }
+  if (kind == PROTON_MENU_ITEM_SUBMENU &&
+      (label == NULL || label[0] == '\0')) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "menu submenu requires a label");
+  }
 
-  proton_menu_t *menu = &menu_bar->menus[menu_index];
   proton_menu_item_t *items = (proton_menu_item_t *)realloc(
       menu->items, (menu->item_count + 1) * sizeof(*items));
   if (items == NULL) {
@@ -138,16 +164,118 @@ int32_t proton_internal_menu_config_add_item(
       .label = proton_menu_copy_string(label),
       .key = proton_menu_copy_string(key),
       .role = proton_menu_copy_string(role),
+      .submenu = submenu,
   };
   if ((id != NULL && id[0] != '\0' && item.id == NULL) ||
       (label != NULL && label[0] != '\0' && item.label == NULL) ||
       (key != NULL && key[0] != '\0' && item.key == NULL) ||
       (role != NULL && role[0] != '\0' && item.role == NULL)) {
-    proton_menu_item_dispose(&item);
+    free(item.id);
+    free(item.label);
+    free(item.key);
+    free(item.role);
     return proton_set_error(PROTON_ERR_ENGINE,
                             "failed to copy menu item");
   }
   menu->items[menu->item_count++] = item;
+  return PROTON_OK;
+}
+
+int32_t proton_internal_menu_config_add_item(
+    proton_menu_bar_t *menu_bar, int32_t kind, const char *id,
+    const char *label, const char *key, const char *role) {
+  if (kind == PROTON_MENU_ITEM_SUBMENU) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "submenu item requires begin_submenu");
+  }
+  return proton_menu_config_append_item(menu_bar, kind, id, label, key, role,
+                                        NULL);
+}
+
+int32_t proton_internal_menu_config_begin_submenu(
+    proton_menu_bar_t *menu_bar, const char *label) {
+  proton_menu_t *parent = proton_menu_config_build_target(menu_bar);
+  if (parent == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "submenu requires an open menu");
+  }
+  proton_menu_t *submenu = (proton_menu_t *)calloc(1, sizeof(*submenu));
+  if (submenu == NULL) {
+    return proton_set_error(PROTON_ERR_ENGINE,
+                            "failed to allocate submenu");
+  }
+  submenu->label = proton_menu_copy_string(label);
+  if (submenu->label == NULL) {
+    free(submenu);
+    return proton_set_error(PROTON_ERR_ENGINE, "failed to copy submenu label");
+  }
+
+  /* Append the SUBMENU item to the current target (the parent) first, so its
+     `submenu` member is reachable from the tree, then navigate into it. */
+  int32_t status = proton_menu_config_append_item(
+      menu_bar, PROTON_MENU_ITEM_SUBMENU, NULL, label, NULL, NULL, submenu);
+  if (status != PROTON_OK) {
+    proton_menu_destroy(submenu);
+    return status;
+  }
+
+  if (menu_bar->build_stack_len == menu_bar->build_stack_cap) {
+    size_t cap = menu_bar->build_stack_cap == 0
+                     ? 8
+                     : menu_bar->build_stack_cap * 2;
+    proton_menu_t **stack = (proton_menu_t **)realloc(
+        menu_bar->build_stack, cap * sizeof(*stack));
+    if (stack == NULL) {
+      /* Recover the previously appended item and roll back. */
+      parent->item_count--;
+      proton_menu_destroy(submenu);
+      return proton_set_error(PROTON_ERR_ENGINE,
+                              "failed to grow submenu stack");
+    }
+    menu_bar->build_stack = stack;
+    menu_bar->build_stack_cap = cap;
+  }
+  menu_bar->build_stack[menu_bar->build_stack_len++] = parent;
+  menu_bar->build_target = submenu;
+  return PROTON_OK;
+}
+
+int32_t proton_internal_menu_config_end_submenu(
+    proton_menu_bar_t *menu_bar) {
+  if (menu_bar == NULL || menu_bar->build_stack_len == 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "no submenu is open");
+  }
+  menu_bar->build_target = menu_bar->build_stack[menu_bar->build_stack_len - 1];
+  menu_bar->build_stack_len--;
+  return PROTON_OK;
+}
+
+static int32_t proton_menu_clone_append_items(
+    proton_menu_bar_t *builder, const proton_menu_t *source) {
+  for (size_t item_index = 0; item_index < source->item_count; item_index++) {
+    const proton_menu_item_t *item = &source->items[item_index];
+    if (item->kind == PROTON_MENU_ITEM_SUBMENU) {
+      const char *label = item->label != NULL ? item->label : "";
+      if (proton_internal_menu_config_begin_submenu(builder, label) !=
+          PROTON_OK) {
+        return PROTON_ERR_ENGINE;
+      }
+      if (item->submenu != NULL &&
+          proton_menu_clone_append_items(builder, item->submenu) != PROTON_OK) {
+        return PROTON_ERR_ENGINE;
+      }
+      if (proton_internal_menu_config_end_submenu(builder) != PROTON_OK) {
+        return PROTON_ERR_ENGINE;
+      }
+      continue;
+    }
+    if (proton_internal_menu_config_add_item(
+            builder, item->kind, item->id, item->label, item->key,
+            item->role) != PROTON_OK) {
+      return PROTON_ERR_ENGINE;
+    }
+  }
   return PROTON_OK;
 }
 
@@ -167,16 +295,12 @@ proton_menu_bar_t *proton_menu_bar_clone(const proton_menu_bar_t *menu_bar) {
       proton_menu_bar_destroy(copy);
       return NULL;
     }
-    for (size_t item_index = 0; item_index < menu->item_count; item_index++) {
-      const proton_menu_item_t *item = &menu->items[item_index];
-      if (proton_internal_menu_config_add_item(
-              copy, copied_index, item->kind, item->id, item->label, item->key,
-              item->role) != PROTON_OK) {
-        proton_menu_bar_destroy(copy);
-        return NULL;
-      }
+    if (proton_menu_clone_append_items(copy, menu) != PROTON_OK) {
+      proton_menu_bar_destroy(copy);
+      return NULL;
     }
   }
+  proton_menu_bar_reset_build_state(copy);
   return copy;
 }
 

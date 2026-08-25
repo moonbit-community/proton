@@ -92,11 +92,20 @@ fn resolve_menu_item(
   catalog : FrameworkCatalog,
   application_name : String,
 ) -> @native.MenuItem {
-  let (kind, id, label, key, role) = item.definition()
+  let (kind, id, label, key, role, submenu) = item.definition()
   match kind {
     "command" =>
       @native.MenuItem::command(id.unwrap_or(""), label.unwrap_or(""), key?)
     "separator" => @native.MenuItem::separator()
+    "submenu" => {
+      let (_, sub_label, sub_items) = submenu.unwrap().definition()
+      @native.MenuItem::submenu(
+        sub_label.unwrap_or(""),
+        items=sub_items
+          .unwrap_or([])
+          .map(item => resolve_menu_item(item, catalog, application_name)),
+      )
+    }
     "role" => {
       let role = role.unwrap()
       @native.MenuItem::role(
@@ -196,4 +205,18 @@ fn standard_item_key(role : @native.MenuItemRole) -> String {
     Paste => "v"
     SelectAll => "a"
   }
+}
+
+///|
+/// Pops up this menu as a window-level context menu at view-relative
+/// coordinates (top-left origin, CSS pixels) inside `window`. Command items
+/// deliver through the same `menu.command` event path as the application menu
+/// bar; role items invoke their platform-native actions.
+pub fn Menu::popup(
+  self : Menu,
+  window : WindowHandle,
+  x : Int,
+  y : Int,
+) -> Unit raise WindowSessionError {
+  window.popup_menu(self, x, y)
 }

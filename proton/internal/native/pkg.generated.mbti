@@ -261,6 +261,7 @@ pub fn MenuItem::equal(Self, Self) -> Bool
 pub fn MenuItem::not_equal(Self, Self) -> Bool
 pub fn MenuItem::role(MenuItemRole, label? : String, key? : String) -> Self
 pub fn MenuItem::separator() -> Self
+pub fn MenuItem::submenu(String, items~ : Array[Self]) -> Self
 pub fn MenuItem::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MenuItemRole {
@@ -558,6 +559,7 @@ pub fn Window::id(Self) -> Int64
 pub fn Window::load_url(Self, String) -> Unit raise NativeError
 pub fn Window::maximize(Self) -> Unit raise NativeError
 pub fn Window::minimize(Self) -> Unit raise NativeError
+pub fn Window::popup_menu(Self, MenuBar, Int, Int) -> Unit raise NativeError
 pub fn Window::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
 pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeError
 pub fn Window::restore(Self) -> Unit raise NativeError

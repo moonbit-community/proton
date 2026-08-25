@@ -16,6 +16,7 @@ typedef proton_menu_t proton_linux_menu_t;
 #define PROTON_LINUX_MENU_ITEM_COMMAND PROTON_MENU_ITEM_COMMAND
 #define PROTON_LINUX_MENU_ITEM_SEPARATOR PROTON_MENU_ITEM_SEPARATOR
 #define PROTON_LINUX_MENU_ITEM_ROLE PROTON_MENU_ITEM_ROLE
+#define PROTON_LINUX_MENU_ITEM_SUBMENU PROTON_MENU_ITEM_SUBMENU
 
 typedef struct {
   proton_linux_menu_command_callback_t command_callback;
@@ -162,6 +163,40 @@ static GtkWidget *proton_linux_menu_create_custom_menu(
     GtkAccelGroup *accelerators,
     proton_linux_menu_command_callback_t command_callback,
     proton_linux_menu_role_callback_t role_callback,
+    void *user_data);
+
+static int proton_linux_menu_append_submenu(
+    GtkWidget *menu,
+    const proton_menu_item_t *definition_item,
+    GtkAccelGroup *accelerators,
+    proton_linux_menu_command_callback_t command_callback,
+    proton_linux_menu_role_callback_t role_callback,
+    void *user_data) {
+  if (definition_item->label == NULL ||
+      definition_item->submenu == NULL) {
+    return 0;
+  }
+  GtkWidget *submenu = proton_linux_menu_create_custom_menu(
+      definition_item->submenu, accelerators, command_callback,
+      role_callback, user_data);
+  if (submenu == NULL) {
+    return 0;
+  }
+  GtkWidget *item = gtk_menu_item_new_with_label(definition_item->label);
+  if (item == NULL) {
+    gtk_widget_destroy(submenu);
+    return 0;
+  }
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), submenu);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+  return 1;
+}
+
+static GtkWidget *proton_linux_menu_create_custom_menu(
+    const proton_linux_menu_t *definition,
+    GtkAccelGroup *accelerators,
+    proton_linux_menu_command_callback_t command_callback,
+    proton_linux_menu_role_callback_t role_callback,
     void *user_data) {
   GtkWidget *menu = gtk_menu_new();
   if (menu == NULL) {
@@ -171,6 +206,15 @@ static GtkWidget *proton_linux_menu_create_custom_menu(
     const proton_linux_menu_item_t *definition_item =
         &definition->items[index];
     GtkWidget *item = NULL;
+    if (definition_item->kind == PROTON_LINUX_MENU_ITEM_SUBMENU) {
+      if (!proton_linux_menu_append_submenu(
+              menu, definition_item, accelerators, command_callback,
+              role_callback, user_data)) {
+        gtk_widget_destroy(menu);
+        return NULL;
+      }
+      continue;
+    }
     if (definition_item->kind == PROTON_LINUX_MENU_ITEM_SEPARATOR) {
       item = gtk_separator_menu_item_new();
     } else if (definition_item->kind == PROTON_LINUX_MENU_ITEM_COMMAND) {
@@ -242,6 +286,25 @@ GtkWidget *proton_linux_menu_bar_create_widget(
   }
 
   return widget;
+}
+
+GtkWidget *proton_linux_menu_create_popup_widget(
+    const proton_linux_menu_bar_t *menu_bar,
+    proton_linux_menu_command_callback_t command_callback,
+    proton_linux_menu_role_callback_t role_callback,
+    void *user_data,
+    char *error,
+    size_t error_len) {
+  if (menu_bar == NULL || menu_bar->menu_count == 0 ||
+      command_callback == NULL || role_callback == NULL) {
+    proton_linux_menu_set_message(error, error_len,
+                                  "popup widget requires a menu definition");
+    return NULL;
+  }
+  /* A context menu has a single top-level definition whose items are shown
+     directly. Accelerators are not needed for a transient popup. */
+  return proton_linux_menu_create_custom_menu(
+      &menu_bar->menus[0], NULL, command_callback, role_callback, user_data);
 }
 
 static void proton_engine_menu_enqueue_command(
@@ -432,6 +495,48 @@ int32_t proton_engine_runtime_set_menu(
   }
   proton_linux_menu_bar_destroy(runtime->menu_definition);
   runtime->menu_definition = menu_definition;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_popup_menu(
+    proton_engine_window_t *window, int32_t x, int32_t y,
+    const proton_menu_bar_t *menu_bar, char *error, size_t error_len) {
+  if (window == NULL || !proton_engine_runtime_initialized()) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (menu_bar == NULL || menu_bar->menu_count == 0) {
+    proton_engine_set_message(error, error_len,
+                              "popup menu requires at least one menu");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->window == NULL || window->browser_host == NULL ||
+      gtk_widget_get_window(window->browser_host) == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "window is not ready for a popup menu");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  GtkWidget *popup = proton_linux_menu_create_popup_widget(
+      menu_bar, proton_engine_menu_command_activated,
+      proton_engine_menu_role_activated, window, error, error_len);
+  if (popup == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create popup menu");
+    return PROTON_ERR_PLATFORM;
+  }
+  gtk_widget_show_all(popup);
+  /* Renderer coordinates use the browser host's top-left CSS-pixel space.
+     GTK 3 popup rectangles use GDK logical coordinates, which match that
+     space without applying the monitor scale factor again. */
+  GdkRectangle anchor = {
+      .x = x,
+      .y = y,
+      .width = 1,
+      .height = 1,
+  };
+  gtk_menu_popup_at_rect(GTK_MENU(popup),
+                         gtk_widget_get_window(window->browser_host), &anchor,
+                         GDK_GRAVITY_NORTH_WEST, GDK_GRAVITY_NORTH_WEST, NULL);
   return PROTON_OK;
 }
 

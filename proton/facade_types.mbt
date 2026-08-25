@@ -428,6 +428,7 @@ pub struct WindowHandle {
   set_window_position : (Int, Int) -> Unit raise WindowSessionError
   set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
+  popup_window_menu : (Menu, Int, Int) -> Unit raise WindowSessionError
   read_window_state : () -> WindowState raise WindowSessionError
   browser : BrowserHandle
   add_view : (String, ViewConfig) -> ViewHandle raise WindowSessionError

@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/58_context_menu"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type ShowContextMenuReply derive(ToJson, @json.FromJson)
+pub fn ShowContextMenuReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ShowContextMenuReply::to_json(Self) -> Json
+
+type ShowContextMenuRequest derive(ToJson, @json.FromJson)
+pub fn ShowContextMenuRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ShowContextMenuRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

@@ -6,6 +6,8 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
   [
     open_command.contract_route(),
     reveal_item_command.contract_route(),
+    trash_item_command.contract_route(),
+    beep_command.contract_route(),
   ]
 }
 
@@ -20,5 +22,13 @@ pub fn register_commands(
   registrar.bind(
     reveal_item_command,
     (context, request) => reveal_item(context, request),
+  )
+  registrar.bind(
+    trash_item_command,
+    (context, request) => trash_item(context, request),
+  )
+  registrar.bind(
+    beep_command,
+    (context, request) => beep(context, request),
   )
 }

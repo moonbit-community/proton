@@ -46,15 +46,21 @@ pub fn execute_process(Int, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Byt
 
 pub fn image_null() -> ImageHandle
 
-pub fn menu_config_add_item(MenuConfigHandle, Int, Int, Bytes, Bytes, Bytes, Bytes) -> Int
+pub fn menu_config_add_item(MenuConfigHandle, Int, Bytes, Bytes, Bytes, Bytes) -> Int
 
 pub fn menu_config_add_menu(MenuConfigHandle, Bytes, Int, @ref.Ref[Int]) -> Int
+
+pub fn menu_config_begin_submenu(MenuConfigHandle, Bytes) -> Int
 
 pub fn menu_config_create(@ref.Ref[MenuConfigHandle]) -> Int
 
 pub fn menu_config_destroy(MenuConfigHandle) -> Unit
 
+pub fn menu_config_end_submenu(MenuConfigHandle) -> Int
+
 pub fn menu_config_null() -> MenuConfigHandle
+
+pub fn menu_popup(WindowHandle, Int, Int, MenuConfigHandle) -> Int
 
 pub fn proton_abi_version_ffi() -> Int
 

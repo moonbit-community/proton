@@ -15,6 +15,7 @@
 
 static int g_proton_app_menu_installed = 0;
 static proton_engine_runtime_t *g_menu_runtime = NULL;
+static NSWindow *g_popup_window = nil;
 
 @class ProtonMenuCommandTarget;
 static ProtonMenuCommandTarget *g_menu_command_target = nil;
@@ -42,8 +43,10 @@ static void proton_engine_enqueue_menu_command(
     represented = [sender representedObject];
   }
   if ([represented isKindOfClass:[NSString class]]) {
+    NSWindow *target_window =
+        g_popup_window != nil ? g_popup_window : [NSApp keyWindow];
     proton_window_id_t focused_window =
-        proton_engine_window_public_id_for_native_window([NSApp keyWindow]);
+        proton_engine_window_public_id_for_native_window(target_window);
     proton_engine_enqueue_menu_command((NSString *)represented,
                                        focused_window);
   }
@@ -238,11 +241,33 @@ static NSString *proton_engine_menu_role_key(NSString *role) {
   return @"";
 }
 
+static NSMenu *proton_engine_create_custom_menu(const proton_menu_t *definition,
+                                                NSString *app_name, char *error,
+                                                size_t error_len);
+
 static int proton_engine_add_custom_menu_item(NSMenu *menu,
                                               const proton_menu_item_t *item,
                                               NSString *app_name,
                                               char *error,
                                               size_t error_len) {
+  if (item->kind == PROTON_MENU_ITEM_SUBMENU) {
+    NSString *label = proton_engine_menu_text(item->label);
+    if (label == nil || item->submenu == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "menu submenu requires a label");
+      return 0;
+    }
+    NSMenu *submenu = proton_engine_create_custom_menu(
+        item->submenu, app_name, error, error_len);
+    if (submenu == nil) {
+      return 0;
+    }
+    NSMenuItem *menu_item =
+        [[NSMenuItem alloc] initWithTitle:label action:NULL keyEquivalent:@""];
+    [menu_item setSubmenu:submenu];
+    [menu addItem:menu_item];
+    return 1;
+  }
   if (item->kind == PROTON_MENU_ITEM_SEPARATOR) {
     [menu addItem:[NSMenuItem separatorItem]];
     return 1;
@@ -383,6 +408,39 @@ int32_t proton_engine_menu_set_on_main(const proton_menu_bar_t *menu_bar,
   if (!proton_engine_install_menu_definitions(menu_bar, error, error_len)) {
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_menu_popup_on_main(void *host_view, int32_t x,
+                                         int32_t y,
+                                         const proton_menu_bar_t *menu_bar,
+                                         char *error, size_t error_len) {
+  if (menu_bar == NULL || menu_bar->menu_count == 0) {
+    proton_engine_set_message(error, error_len,
+                              "popup menu requires at least one menu");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (host_view == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "popup menu requires a hosted view");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  NSView *view = (__bridge NSView *)host_view;
+  NSString *app_name = proton_engine_application_name();
+  NSMenu *popup = proton_engine_create_custom_menu(
+      &menu_bar->menus[0], app_name, error, error_len);
+  if (popup == nil) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  /* The renderer reports cursor coordinates in CSS pixels with a top-left
+     origin, while AppKit positions menus in the view's own coordinate space.
+     Flip only when the host view is not already flipped. */
+  CGFloat menu_height = [view bounds].size.height;
+  CGFloat location_y = [view isFlipped] ? (CGFloat)y : menu_height - (CGFloat)y;
+  NSPoint location = NSMakePoint((CGFloat)x, location_y);
+  g_popup_window = [view window];
+  [popup popUpMenuPositioningItem:nil atLocation:location inView:view];
+  g_popup_window = nil;
   return PROTON_OK;
 }
 

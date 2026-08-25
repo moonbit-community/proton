@@ -241,6 +241,9 @@ let menu_item_separator : Int = 1
 let menu_item_role : Int = 2
 
 ///|
+let menu_item_submenu : Int = 3
+
+///|
 /// A standard top-level application menu role.
 pub(all) enum MenuRole {
   Application
@@ -320,6 +323,7 @@ pub struct MenuItem {
   label : String?
   key : String?
   role : MenuItemRole?
+  submenu : Menu?
 }
 
 ///|
@@ -334,12 +338,20 @@ pub fn MenuItem::command(
     label: Some(label),
     key,
     role: None,
+    submenu: None,
   }
 }
 
 ///|
 pub fn MenuItem::separator() -> MenuItem {
-  { kind: menu_item_separator, id: None, label: None, key: None, role: None, }
+  {
+    kind: menu_item_separator,
+    id: None,
+    label: None,
+    key: None,
+    role: None,
+    submenu: None,
+  }
 }
 
 ///|
@@ -348,7 +360,27 @@ pub fn MenuItem::role(
   label? : String,
   key? : String,
 ) -> MenuItem {
-  { kind: menu_item_role, id: None, label, key, role: Some(role), }
+  {
+    kind: menu_item_role,
+    id: None,
+    label,
+    key,
+    role: Some(role),
+    submenu: None,
+  }
+}
+
+///|
+/// Creates a nested submenu item with its own set of items.
+pub fn MenuItem::submenu(label : String, items~ : Array[MenuItem]) -> MenuItem {
+  {
+    kind: menu_item_submenu,
+    id: None,
+    label: None,
+    key: None,
+    role: None,
+    submenu: Some({ label: Some(label), role: None, items: Some(items.copy()), }),
+  }
 }
 
 ///|
@@ -361,6 +393,13 @@ fn MenuItem::to_native(self : MenuItem) -> @native.MenuItem {
         key?=self.key,
       )
     1 => @native.MenuItem::separator()
+    3 => {
+      let sub = self.submenu.unwrap()
+      @native.MenuItem::submenu(
+        sub.label.unwrap_or(""),
+        items=sub.items.unwrap_or([]).map(item => item.to_native()),
+      )
+    }
     _ =>
       @native.MenuItem::role(
         self.role.unwrap().to_native(),

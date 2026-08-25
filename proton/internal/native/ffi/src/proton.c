@@ -399,6 +399,36 @@ int32_t proton_internal_runtime_set_menu(proton_runtime_handle_t runtime,
   return PROTON_OK;
 }
 
+int32_t proton_internal_menu_popup(proton_window_handle_t window, int32_t x,
+                                   int32_t y,
+                                   const proton_menu_bar_t *menu_bar) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  status = proton_require_runtime_owner_thread(slot->runtime);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (menu_bar == NULL || menu_bar->menu_count == 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "popup menu requires at least one menu");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window popup menu requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_popup_menu(
+      slot->engine_window, x, y, menu_bar, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
                                            proton_event_t **out_event) {
   proton_runtime_slot_t *slot = NULL;

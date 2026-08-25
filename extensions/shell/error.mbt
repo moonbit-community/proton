@@ -19,7 +19,7 @@ pub extend ShellError with Show::{to_string, output}
 fn ShellError::message(self : ShellError) -> String {
   match self {
     UnsupportedPlatform =>
-      "shell extension currently supports Windows native builds only"
+      "shell extension currently supports Windows, macOS, and Linux native builds"
     EmptyTarget(field~) => field + " must not be empty"
     LaunchFailed(operation~, target~) =>
       "shell." + operation + " failed for target: " + target

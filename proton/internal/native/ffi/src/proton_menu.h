@@ -10,6 +10,7 @@ typedef enum {
   PROTON_MENU_ITEM_COMMAND = 0,
   PROTON_MENU_ITEM_SEPARATOR = 1,
   PROTON_MENU_ITEM_ROLE = 2,
+  PROTON_MENU_ITEM_SUBMENU = 3,
 } proton_menu_item_kind_t;
 
 typedef enum {
@@ -22,24 +23,34 @@ typedef enum {
   PROTON_MENU_ROLE_HELP = 6,
 } proton_menu_role_t;
 
+typedef struct proton_menu proton_menu_t;
+
 typedef struct {
   proton_menu_item_kind_t kind;
   char *id;
   char *label;
   char *key;
   char *role;
+  /* Owned nested menu; NULL unless `kind` is PROTON_MENU_ITEM_SUBMENU. */
+  proton_menu_t *submenu;
 } proton_menu_item_t;
 
-typedef struct {
+struct proton_menu {
   char *label;
   proton_menu_role_t role;
   proton_menu_item_t *items;
   size_t item_count;
-} proton_menu_t;
+};
 
 typedef struct proton_menu_bar {
   proton_menu_t *menus;
   size_t menu_count;
+  /* Builder-only state: the container that receives `add_item` appends and a
+     parent stack for nested submenus. Cleared after the config is built. */
+  proton_menu_t *build_target;
+  proton_menu_t **build_stack;
+  size_t build_stack_len;
+  size_t build_stack_cap;
 } proton_menu_bar_t;
 
 PROTON_INTERNAL proton_menu_bar_t *proton_menu_bar_clone(
@@ -53,8 +64,12 @@ PROTON_INTERNAL int32_t proton_internal_menu_config_add_menu(
     proton_menu_bar_t *menu_bar, const char *label, int32_t role,
     int32_t *out_menu_index);
 PROTON_INTERNAL int32_t proton_internal_menu_config_add_item(
-    proton_menu_bar_t *menu_bar, int32_t menu_index, int32_t kind,
-    const char *id, const char *label, const char *key, const char *role);
+    proton_menu_bar_t *menu_bar, int32_t kind, const char *id,
+    const char *label, const char *key, const char *role);
+PROTON_INTERNAL int32_t proton_internal_menu_config_begin_submenu(
+    proton_menu_bar_t *menu_bar, const char *label);
+PROTON_INTERNAL int32_t proton_internal_menu_config_end_submenu(
+    proton_menu_bar_t *menu_bar);
 PROTON_INTERNAL void proton_internal_menu_config_destroy(
     proton_menu_bar_t *menu_bar);
 

@@ -13,6 +13,7 @@
 #include "../cef_common/view_events.h"
 #include "mac_dialog.h"
 #include "mac_launch_input.h"
+#include "mac_menu.h"
 
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_frame_capi.h"
@@ -961,6 +962,47 @@ int32_t proton_engine_window_close(proton_engine_window_t *window,
 int32_t proton_engine_window_is_closed(proton_engine_window_t *window) {
 
   return window == NULL || window->closed;
+}
+
+int32_t proton_engine_window_popup_menu(
+    proton_engine_window_t *window, int32_t x, int32_t y,
+    const proton_menu_bar_t *menu_bar, char *error, size_t error_len) {
+  if (window == NULL || !proton_engine_runtime_initialized()) {
+    proton_engine_set_message(error, error_len, "runtime is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (menu_bar == NULL || menu_bar->menu_count == 0) {
+    proton_engine_set_message(error, error_len,
+                              "popup menu requires at least one menu");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->browser_view == nil) {
+    proton_engine_set_message(error, error_len,
+                              "window is not ready for a popup menu");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  NSView *view = window->browser_view;
+  __block int32_t status = PROTON_OK;
+  char main_error[512] = {0};
+  char *main_error_buffer = main_error;
+  /* Context menus can be the only menu surface in an application. Keep the
+     runtime route installed while AppKit dispatches the synchronous popup so
+     command items use the same event path as the application menu. */
+  proton_engine_menu_set_runtime(window->runtime);
+  void (^work)(void) = ^{
+    status = proton_engine_menu_popup_on_main(
+        (__bridge void *)view, x, y, menu_bar, main_error_buffer,
+        sizeof(main_error));
+  };
+  if ([NSThread isMainThread]) {
+    work();
+  } else {
+    dispatch_sync(dispatch_get_main_queue(), work);
+  }
+  if (status != PROTON_OK) {
+    proton_engine_set_message(error, error_len, main_error);
+  }
+  return status;
 }
 
 int32_t proton_engine_window_focus(proton_engine_window_t *window,

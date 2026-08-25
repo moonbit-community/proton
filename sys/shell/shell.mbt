@@ -1,7 +1,7 @@
 ///|
 /// Returns the shared unsupported-platform error message.
 fn unsupported_error_message() -> String {
-  "shell package currently supports Windows native builds only"
+  "shell package currently supports Windows, macOS, and Linux native builds"
 }
 
 ///|
@@ -54,5 +54,40 @@ pub fn reveal_item(path : String) -> Result[Unit, String] {
     Ok(())
   } else {
     Err("shell.revealItem failed")
+  }
+}
+
+///|
+/// Moves `path` to the operating-system trash or recycle bin.
+///
+/// On Windows this uses the recycle bin (the item can still be restored), on
+/// macOS this uses the Finder Trash (supporting "Put Back"), and on Linux this
+/// delegates to `gio trash`. Returns `Err(String)` on unsupported platforms or
+/// when the item could not be trashed.
+pub fn trash_item(path : String) -> Result[Unit, String] {
+  if !is_supported() {
+    return Err(unsupported_error_message())
+  }
+  if trash_item_ffi(@ffi.to_cstr(path)) {
+    Ok(())
+  } else {
+    Err("shell.trashItem failed")
+  }
+}
+
+///|
+/// Plays the operating system's default alert sound.
+///
+/// On Windows this calls `MessageBeep`. On macOS and Linux it writes the
+/// terminal bell escape to stderr. Returns `Ok(())` when the platform has a
+/// beep backend.
+pub fn beep() -> Result[Unit, String] {
+  if !is_supported() {
+    return Err(unsupported_error_message())
+  }
+  if beep_ffi() {
+    Ok(())
+  } else {
+    Err("shell.beep failed")
   }
 }

@@ -55,7 +55,11 @@ fn test_window_manager() -> WindowManager {
 }
 
 ///|
-fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
+fn test_window_handle(
+  id : String,
+  native_id : Int64,
+  popup_calls? : Array[String],
+) -> WindowHandle {
   let browser = BrowserHandle::{
     id,
     native_id,
@@ -80,6 +84,16 @@ fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
     set_window_position: fn(_x, _y) {  },
     set_window_always_on_top: fn(_always_on_top) {  },
     set_window_zoom_percent: fn(_zoom_percent) {  },
+    popup_window_menu: fn(menu, x, y) {
+      match popup_calls {
+        Some(calls) => {
+          let (_, label, _) = menu.to_native().definition()
+          let title = label.unwrap_or("")
+          calls.push("popup:\{title}@\{x},\{y}")
+        }
+        None => ()
+      }
+    },
     read_window_state: fn() { abort("test window state is not available") },
     browser,
     add_view: fn(_id, _config) { abort("test views are not available") },
@@ -1881,6 +1895,15 @@ test "view handle routes operations through its closures" {
 }
 
 ///|
+test "window context menu routes through the public window handle" {
+  let calls : Array[String] = []
+  let window = test_window_handle("main", 17L, popup_calls=calls)
+  let menu = Menu("Context", items=[MenuItem::separator()])
+  menu.popup(window, 123, 456)
+  debug_inspect(calls, content="[\"popup:Context@123,456\"]")
+}
+
+///|
 test "with_view stores declarative views and rejects invalid ids" {
   let app = html("Test", "<html></html>")
   inspect(app.planned_views.length(), content="0")
@@ -1947,7 +1970,7 @@ test "standard menus resolve from the application locale" {
   assert_eq(application_role, Some(@native.MenuRole::Application))
   assert_eq(application_label, Some("Proton Demo"))
   let application_items = application_items.unwrap()
-  let (_, _, quit_label, quit_key, quit_role) = application_items[application_items.length() -
+  let (_, _, quit_label, quit_key, quit_role, _) = application_items[application_items.length() -
   1].definition()
   assert_eq(quit_role, Some(@native.MenuItemRole::Quit))
   assert_eq(quit_label, Some("退出 Proton Demo"))
@@ -1956,7 +1979,7 @@ test "standard menus resolve from the application locale" {
   assert_eq(edit_role, Some(@native.MenuRole::Edit))
   assert_eq(edit_label, Some("编辑"))
   let edit_items = edit_items.unwrap()
-  let (_, _, copy_label, copy_key, copy_role) = edit_items[4].definition()
+  let (_, _, copy_label, copy_key, copy_role, _) = edit_items[4].definition()
   assert_eq(copy_role, Some(@native.MenuItemRole::Copy))
   assert_eq(copy_label, Some("拷贝"))
   assert_eq(copy_key, Some("c"))
@@ -2005,7 +2028,7 @@ test "custom menu labels never imply a standard role" {
   let (role, label, items) = definitions[0].definition()
   assert_eq(role, None)
   assert_eq(label, Some("Edit"))
-  let (_, command_id, command_label, _, item_role) = items.unwrap()[0].definition()
+  let (_, command_id, command_label, _, item_role, _) = items.unwrap()[0].definition()
   assert_eq(command_id, Some("custom.edit"))
   assert_eq(command_label, Some("Custom Edit"))
   assert_eq(item_role, None)

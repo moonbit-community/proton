@@ -2,6 +2,8 @@
 package "moonbit-community/proton_shell"
 
 // Values
+pub fn beep() -> Result[Unit, String]
+
 pub fn ensure_supported() -> Result[Unit, String]
 
 pub fn is_supported() -> Bool
@@ -9,6 +11,8 @@ pub fn is_supported() -> Bool
 pub fn open(String) -> Result[Unit, String]
 
 pub fn reveal_item(String) -> Result[Unit, String]
+
+pub fn trash_item(String) -> Result[Unit, String]
 
 // Errors
 

@@ -150,6 +150,11 @@ fn RuntimeSession::window_handle(
         window.set_zoom_percent(zoom_percent)
       })
     },
+    popup_window_menu: (menu, x, y) => {
+      self.control_window(id, native_id, "popup menu in", window => {
+        window.popup_menu(@native.MenuBar(menus=[menu.to_native()]), x, y)
+      })
+    },
     read_window_state: () => self.read_window_state(id, native_id),
     browser: self.browser_handle(window),
     add_view: (view_id, config) => {
@@ -1079,6 +1084,16 @@ pub fn WindowHandle::state(
   self : WindowHandle,
 ) -> WindowState raise WindowSessionError {
   (self.read_window_state)()
+}
+
+///|
+fn WindowHandle::popup_menu(
+  self : WindowHandle,
+  menu : Menu,
+  x : Int,
+  y : Int,
+) -> Unit raise WindowSessionError {
+  (self.popup_window_menu)(menu, x, y)
 }
 
 ///|
