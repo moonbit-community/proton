@@ -182,7 +182,7 @@ fn invoke_callback_outcome(
   ignore(
     invoke_with_callbacks(
       echo,
-      { value: "ping" },
+      { value: "ping", },
       value => response.val = Some(value),
       error => failure.val = Some(error),
     ),
@@ -201,8 +201,8 @@ async test "client uses typed JSON commands and live events" {
   let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
     "echo",
   )
-  let response = invoke(echo, { value: "ping" })
-  assert_eq(response, EchoResponse::{ value: "pong" })
+  let response = invoke(echo, { value: "ping", })
+  assert_eq(response, EchoResponse::{ value: "pong", })
   inspect(fake_route(), content="app:echo")
   inspect(fake_request_json(), content="{\"value\":\"ping\"}")
   let changed : @proton_contract.Event[CountChanged] = @proton_contract.event(
@@ -223,7 +223,7 @@ async test "client uses typed JSON commands and live events" {
   assert_false(fake_has_listener("app:count_changed"))
   remove_fake_bridge()
   try {
-    ignore(invoke(echo, { value: "ping" }))
+    ignore(invoke(echo, { value: "ping", }))
     fail("expected BridgeUnavailable")
   } catch {
     ClientFailure::BridgeUnavailable => ()
@@ -256,7 +256,7 @@ async test "client preserves remote error detail through invoke" {
     "echo",
   )
   try {
-    ignore(invoke(echo, { value: "ping" }))
+    ignore(invoke(echo, { value: "ping", }))
     fail("expected RemoteFailure")
   } catch {
     ClientFailure::RemoteFailure(code~, message~, detail~) => {
@@ -279,7 +279,7 @@ async test "client maps cancellation rejection through invoke" {
     "echo",
   )
   try {
-    ignore(invoke(echo, { value: "ping" }))
+    ignore(invoke(echo, { value: "ping", }))
     fail("expected RequestCancelled")
   } catch {
     ClientFailure::RequestCancelled => ()
@@ -295,7 +295,7 @@ async test "client maps unclassified bridge rejection to transport failure" {
     "echo",
   )
   try {
-    ignore(invoke(echo, { value: "ping" }))
+    ignore(invoke(echo, { value: "ping", }))
     fail("expected TransportFailure")
   } catch {
     ClientFailure::TransportFailure(message~) =>
@@ -312,7 +312,7 @@ async test "client reports response decoding failures through invoke" {
     "echo",
   )
   try {
-    ignore(invoke(echo, { value: "ping" }))
+    ignore(invoke(echo, { value: "ping", }))
     fail("expected ResponseDecode")
   } catch {
     ClientFailure::ResponseDecode(message~) =>
@@ -324,7 +324,7 @@ async test "client reports response decoding failures through invoke" {
 ///|
 test "callback invocation serializes requests and decodes responses" {
   let outcome = invoke_callback_outcome("{\"value\":\"pong\"}")
-  assert_eq(outcome.response, Some(EchoResponse::{ value: "pong" }))
+  assert_eq(outcome.response, Some(EchoResponse::{ value: "pong", }))
   assert_eq(outcome.failure, None)
   assert_eq(outcome.route, "app:callback_echo")
   assert_eq(outcome.request_json, "{\"value\":\"ping\"}")
@@ -337,7 +337,7 @@ test "callback invocation returns an idempotent bridge cancellation" {
   let echo : @proton_contract.Command[EchoRequest, EchoResponse] = @proton_contract.command(
     "callback_cancel",
   )
-  let cancel = invoke_with_callbacks(echo, { value: "ping" }, _value => (), _error => {
+  let cancel = invoke_with_callbacks(echo, { value: "ping", }, _value => (), _error => {
     ()
   })
   assert_false(fake_callback_signal_aborted())
@@ -357,7 +357,7 @@ test "callback invocation reports synchronous preflight failures" {
   ignore(
     invoke_with_callbacks(
       invalid,
-      { value: "ping" },
+      { value: "ping", },
       _value => response_called.val = true,
       error => failure.val = Some(error),
     ),
@@ -377,7 +377,7 @@ test "callback invocation reports synchronous preflight failures" {
   ignore(
     invoke_with_callbacks(
       echo,
-      { value: "ping" },
+      { value: "ping", },
       _value => response_called.val = true,
       error => failure.val = Some(error),
     ),

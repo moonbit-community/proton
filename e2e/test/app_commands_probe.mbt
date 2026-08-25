@@ -205,7 +205,7 @@ async fn capture_headless_screenshot(
       height.to_string(),
     )
   }
-  ScreenshotProbeResult::{ bytes: png.length(), width, height }
+  ScreenshotProbeResult::{ bytes: png.length(), width, height, }
 }
 
 ///|

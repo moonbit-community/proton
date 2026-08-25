@@ -232,7 +232,7 @@ pub fn AppCommandExtensionSpec::scripts(
 
 ///|
 pub fn AppCommandExtensionRegistry::AppCommandExtensionRegistry() -> AppCommandExtensionRegistry {
-  AppCommandExtensionRegistry::{ specs: Map([]), registration_order: [] }
+  AppCommandExtensionRegistry::{ specs: Map([]), registration_order: [], }
 }
 
 ///|

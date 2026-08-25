@@ -118,7 +118,7 @@ async fn Page::initialize(client : @client.CdpClient, timeout_ms : Int) -> Page 
   let state = PageState()
   let event_handler = client.on_cdp_event(event => state.handle_event(event))
   let close_handler = client.on_close(() => state.close())
-  let page = Page::{ client, state, event_handler, close_handler }
+  let page = Page::{ client, state, event_handler, close_handler, }
   ignore(
     @client.cdp_response_result_json(
       client.send_schema_command("Page.enable", timeout_ms~),
@@ -195,7 +195,7 @@ pub async fn Page::navigate(self : Page, url : String) -> Navigation {
       self.client.send_schema_command("Page.navigate", params={ "url": url }),
     ),
   )
-  { page: self, previous_generation }
+  { page: self, previous_generation, }
 }
 
 ///|
@@ -207,7 +207,7 @@ pub async fn Page::reload(self : Page) -> Navigation {
       self.client.send_schema_command("Page.reload"),
     ),
   )
-  { page: self, previous_generation }
+  { page: self, previous_generation, }
 }
 
 ///|
@@ -249,7 +249,7 @@ pub async fn Page::create_isolated_world(
   guard result is { "executionContextId": Number(context_id, ..), .. } else {
     raise @client.BrowserError::InvalidField("executionContextId")
   }
-  { page: self, context_id: context_id.to_int() }
+  { page: self, context_id: context_id.to_int(), }
 }
 
 ///|

@@ -60,7 +60,7 @@ async fn slow_add(
   @async.sleep(delay_ms)
   let total = request.left + request.right
   context.emit(attribute_add_finished_event, AddFinished::{ total, })
-  AddReply::{ total, waited_ms: delay_ms }
+  AddReply::{ total, waited_ms: delay_ms, }
 }
 
 ///|

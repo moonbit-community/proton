@@ -151,7 +151,7 @@ test "runtime wait ready mask helpers" {
   inspect(ready.has_platform(), content="true")
   inspect(ready.is_timeout(), content="false")
   inspect(
-    RuntimeWaitReady::{ mask: runtime_wait_none }.is_timeout(),
+    RuntimeWaitReady::{ mask: runtime_wait_none, }.is_timeout(),
     content="true",
   )
 }

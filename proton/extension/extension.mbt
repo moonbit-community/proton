@@ -74,7 +74,7 @@ pub fn capability(
   extension : Extension,
   scope? : Json = Json::empty_object(),
 ) -> RendererCapability {
-  RendererCapability::{ extension, scope: clone_capability_json(scope) }
+  RendererCapability::{ extension, scope: clone_capability_json(scope), }
 }
 
 ///|

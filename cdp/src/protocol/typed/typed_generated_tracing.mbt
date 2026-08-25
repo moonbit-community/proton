@@ -76,7 +76,7 @@ pub fn TracingMemoryDumpLevelOfDetail::from_json(
 ) -> TracingMemoryDumpLevelOfDetail raise @protocol.ProtocolSchemaError {
   let method_name = "TracingMemoryDumpLevelOfDetail"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -120,7 +120,7 @@ pub fn TracingStreamCompression::from_json(
 ) -> TracingStreamCompression raise @protocol.ProtocolSchemaError {
   let method_name = "TracingStreamCompression"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -160,7 +160,7 @@ pub fn TracingStreamFormat::from_json(
 ) -> TracingStreamFormat raise @protocol.ProtocolSchemaError {
   let method_name = "TracingStreamFormat"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -341,7 +341,7 @@ pub fn TracingTracingBackend::from_json(
 ) -> TracingTracingBackend raise @protocol.ProtocolSchemaError {
   let method_name = "TracingTracingBackend"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

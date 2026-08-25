@@ -19,7 +19,7 @@ async fn show_notification(
   let body = ensure_body(payload.body)
   notification_native_ensure_supported()
   notification_native_show(payload.title.unwrap_or(""), body, payload.payload)
-  @notification_contract.NotificationReply::{ shown: true }
+  @notification_contract.NotificationReply::{ shown: true, }
 }
 
 ///|

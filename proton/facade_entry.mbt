@@ -5,7 +5,7 @@ async fn prepare_entry(
   match entry {
     @manifest.AppEntry::Html(html) =>
       DocumentEntry(
-        { url: asset_base_url(), content: @utf8.encode(html) },
+        { url: asset_base_url(), content: @utf8.encode(html), },
         None,
       )
     @manifest.AppEntry::Url(url) => RemoteEntry(url)

@@ -97,7 +97,7 @@ pub async fn CommandWindow::choose_directory(
 
 ///|
 pub fn RuntimeWakeSignal::RuntimeWakeSignal() -> RuntimeWakeSignal {
-  RuntimeWakeSignal::{ revision: 0L, condition: @async.CondVar::Cond() }
+  RuntimeWakeSignal::{ revision: 0L, condition: @async.CondVar::Cond(), }
 }
 
 ///|

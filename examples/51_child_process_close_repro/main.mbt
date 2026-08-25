@@ -59,7 +59,7 @@ async fn hold_child_process(
   for ;; {
     @async.sleep(1000)
   }
-  HoldResult::{ pid: process.pid }
+  HoldResult::{ pid: process.pid, }
 }
 
 ///|

@@ -1,6 +1,6 @@
 ///|
 fn DialogCompletionStore::DialogCompletionStore() -> DialogCompletionStore {
-  { pending: [] }
+  { pending: [], }
 }
 
 ///|

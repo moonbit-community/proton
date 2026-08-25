@@ -89,7 +89,7 @@ pub fn DOMBackendNodeId::from_json(
     Number(inner, ..) => {
       let int = inner.to_int()
       if int.to_double() == inner {
-        { value: int }
+        { value: int, }
       } else {
         raise InvalidParameterType(method_name, "value", "integer")
       }
@@ -206,7 +206,7 @@ pub fn DOMCompatibilityMode::from_json(
 ) -> DOMCompatibilityMode raise @protocol.ProtocolSchemaError {
   let method_name = "DOMCompatibilityMode"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -349,7 +349,7 @@ pub fn DOMLogicalAxes::from_json(
 ) -> DOMLogicalAxes raise @protocol.ProtocolSchemaError {
   let method_name = "DOMLogicalAxes"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -701,7 +701,7 @@ pub fn DOMNodeId::from_json(
     Number(inner, ..) => {
       let int = inner.to_int()
       if int.to_double() == inner {
-        { value: int }
+        { value: int, }
       } else {
         raise InvalidParameterType(method_name, "value", "integer")
       }
@@ -745,7 +745,7 @@ pub fn DOMPhysicalAxes::from_json(
 ) -> DOMPhysicalAxes raise @protocol.ProtocolSchemaError {
   let method_name = "DOMPhysicalAxes"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -785,7 +785,7 @@ pub fn DOMPseudoType::from_json(
 ) -> DOMPseudoType raise @protocol.ProtocolSchemaError {
   let method_name = "DOMPseudoType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -970,7 +970,7 @@ pub fn DOMScrollOrientation::from_json(
 ) -> DOMScrollOrientation raise @protocol.ProtocolSchemaError {
   let method_name = "DOMScrollOrientation"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1010,7 +1010,7 @@ pub fn DOMShadowRootType::from_json(
 ) -> DOMShadowRootType raise @protocol.ProtocolSchemaError {
   let method_name = "DOMShadowRootType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1100,7 +1100,7 @@ pub fn DOMStyleSheetId::from_json(
 ) -> DOMStyleSheetId raise @protocol.ProtocolSchemaError {
   let method_name = "DOMStyleSheetId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -2572,7 +2572,7 @@ pub fn DOMGetFileInfoResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { path: typed_required_result_string(method_name, fields, "path", "string") }
+  { path: typed_required_result_string(method_name, fields, "path", "string"), }
 }
 
 ///|

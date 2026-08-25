@@ -51,7 +51,7 @@ fn ApplicationContext::ApplicationContext(
   locale_preferences : @locale.LocalePreferences,
   request_quit? : () -> Unit = fn() {  },
 ) -> ApplicationContext {
-  ApplicationContext::{ tasks, windows, locale_preferences, request_quit }
+  ApplicationContext::{ tasks, windows, locale_preferences, request_quit, }
 }
 
 ///|
@@ -63,7 +63,7 @@ fn WindowContext::WindowContext(
   events : WindowEventEmitter,
   locale_preferences : @locale.LocalePreferences,
 ) -> WindowContext {
-  WindowContext::{ id, handle, windows, tasks, events, locale_preferences }
+  WindowContext::{ id, handle, windows, tasks, events, locale_preferences, }
 }
 
 ///|

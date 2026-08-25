@@ -318,9 +318,9 @@ async fn run_event_ticker(
     ticks.push(tick)
     context.emit(event_tick_event, tick)
   }
-  let done = EventDone::{ run_id: payload.run_id, total: count }
+  let done = EventDone::{ run_id: payload.run_id, total: count, }
   context.emit(event_done_event, done)
-  EventTickerResult::{ ticks, done }
+  EventTickerResult::{ ticks, done, }
 }
 
 ///|

@@ -109,7 +109,7 @@ pub fn CacheStorageCachedResponse::from_json(
 ) -> CacheStorageCachedResponse raise @protocol.ProtocolSchemaError {
   let method_name = "CacheStorageCachedResponse"
   let fields = typed_json_fields(method_name, value)
-  { body: typed_required_string(method_name, fields, "body", "string") }
+  { body: typed_required_string(method_name, fields, "body", "string"), }
 }
 
 ///|
@@ -151,7 +151,7 @@ pub fn CacheStorageCachedResponseType::from_json(
 ) -> CacheStorageCachedResponseType raise @protocol.ProtocolSchemaError {
   let method_name = "CacheStorageCachedResponseType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -191,7 +191,7 @@ pub fn CacheStorageCacheId::from_json(
 ) -> CacheStorageCacheId raise @protocol.ProtocolSchemaError {
   let method_name = "CacheStorageCacheId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

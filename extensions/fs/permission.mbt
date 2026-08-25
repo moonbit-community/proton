@@ -36,7 +36,7 @@ pub fn PermissionRoot::PermissionRoot(
     seen[command] = ()
     copied.push(command)
   }
-  PermissionRoot::{ path, commands: copied }
+  PermissionRoot::{ path, commands: copied, }
 }
 
 ///|

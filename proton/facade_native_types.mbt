@@ -214,7 +214,7 @@ pub fn ViewConfig::ViewConfig(
   initial_url? : String = "about:blank",
   background_color? : String,
 ) -> ViewConfig {
-  { x, y, width, height, visible, z_order, initial_url, background_color }
+  { x, y, width, height, visible, z_order, initial_url, background_color, }
 }
 
 ///|
@@ -379,7 +379,7 @@ pub fn MenuItem::submenu(label : String, items~ : Array[MenuItem]) -> MenuItem {
     label: None,
     key: None,
     role: None,
-    submenu: Some({ label: Some(label), role: None, items: Some(items.copy()) }),
+    submenu: Some({ label: Some(label), role: None, items: Some(items.copy()), }),
   }
 }
 
@@ -419,7 +419,7 @@ pub struct Menu {
 
 ///|
 pub fn Menu::Menu(label : String, items~ : Array[MenuItem]) -> Menu {
-  { label: Some(label), role: None, items: Some(items.copy()) }
+  { label: Some(label), role: None, items: Some(items.copy()), }
 }
 
 ///|
@@ -430,7 +430,7 @@ pub fn Menu::role(
   label? : String,
   items? : Array[MenuItem],
 ) -> Menu {
-  { label, role: Some(role), items: items.map(items => items.copy()) }
+  { label, role: Some(role), items: items.map(items => items.copy()), }
 }
 
 ///|

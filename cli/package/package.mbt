@@ -188,7 +188,7 @@ fn package_options_from_matches(
     updater_metadata: match
       (updater_base_url.get(0), updater_published_at.get(0)) {
       (Some(base_url), Some(published_at)) =>
-        Some(UpdaterMetadataOptions::{ base_url, published_at })
+        Some(UpdaterMetadataOptions::{ base_url, published_at, })
       _ => None
     },
     update_revision: parse_updater_revision(updater_revision.get(0)),

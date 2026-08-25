@@ -136,26 +136,26 @@ fn template_context(
 ///|
 fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
   [
-    { name: "title", value: context.title },
-    { name: "title_html", value: context.title_html },
-    { name: "title_mbt", value: context.title_mbt },
-    { name: "author", value: context.author },
-    { name: "project_name", value: context.project_name },
-    { name: "module_name", value: context.module_name },
-    { name: "shared_module", value: context.shared_module },
-    { name: "frontend_module", value: context.frontend_module },
-    { name: "backend_module", value: context.backend_module },
-    { name: "width", value: context.width.to_string() },
-    { name: "height", value: context.height.to_string() },
-    { name: "proton_version", value: context.proton_version },
-    { name: "proton_codegen_version", value: context.proton_codegen_version },
-    { name: "proton_cli_version", value: context.proton_cli_version },
-    { name: "proton_contract_version", value: context.proton_contract_version },
-    { name: "proton_client_version", value: context.proton_client_version },
-    { name: "proton_rabbita_version", value: context.proton_rabbita_version },
-    { name: "rabbita_version", value: context.rabbita_version },
-    { name: "warren_version", value: context.warren_version },
-    { name: "async_version", value: context.async_version },
+    { name: "title", value: context.title, },
+    { name: "title_html", value: context.title_html, },
+    { name: "title_mbt", value: context.title_mbt, },
+    { name: "author", value: context.author, },
+    { name: "project_name", value: context.project_name, },
+    { name: "module_name", value: context.module_name, },
+    { name: "shared_module", value: context.shared_module, },
+    { name: "frontend_module", value: context.frontend_module, },
+    { name: "backend_module", value: context.backend_module, },
+    { name: "width", value: context.width.to_string(), },
+    { name: "height", value: context.height.to_string(), },
+    { name: "proton_version", value: context.proton_version, },
+    { name: "proton_codegen_version", value: context.proton_codegen_version, },
+    { name: "proton_cli_version", value: context.proton_cli_version, },
+    { name: "proton_contract_version", value: context.proton_contract_version, },
+    { name: "proton_client_version", value: context.proton_client_version, },
+    { name: "proton_rabbita_version", value: context.proton_rabbita_version, },
+    { name: "rabbita_version", value: context.rabbita_version, },
+    { name: "warren_version", value: context.warren_version, },
+    { name: "async_version", value: context.async_version, },
   ]
 }
 
@@ -188,7 +188,7 @@ fn render_template(
   for item in vars {
     output = output.replace_all(old="{{" + item.name + "}}", new=item.value)
   }
-  { path: spec.output_path, content: output }
+  { path: spec.output_path, content: output, }
 }
 
 ///|
@@ -263,7 +263,7 @@ fn project_config_file(
       }
     _ => abort("invalid validated project template: " + template)
   }
-  { path: "proton.project.json", content: config.stringify(indent=2) + "\n" }
+  { path: "proton.project.json", content: config.stringify(indent=2) + "\n", }
 }
 
 ///|

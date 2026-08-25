@@ -176,7 +176,7 @@ pub fn LayerTreeLayerId::from_json(
 ) -> LayerTreeLayerId raise @protocol.ProtocolSchemaError {
   let method_name = "LayerTreeLayerId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -350,7 +350,7 @@ pub fn LayerTreeSnapshotId::from_json(
 ) -> LayerTreeSnapshotId raise @protocol.ProtocolSchemaError {
   let method_name = "LayerTreeSnapshotId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

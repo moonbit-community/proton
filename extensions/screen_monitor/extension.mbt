@@ -144,7 +144,7 @@ async fn get_cursor_point(
   }
   emit_activity(context, "getCursorScreenPoint")
   @screen_monitor_contract.CursorPointReply::{
-    point: @screen_monitor_contract.PointJSON::{ x: point.x, y: point.y },
+    point: @screen_monitor_contract.PointJSON::{ x: point.x, y: point.y, },
   }
 }
 
@@ -183,7 +183,7 @@ async fn drain_events(
       None => ()
     }
   }
-  @screen_monitor_contract.ScreenEventReply::{ count: events.length() }
+  @screen_monitor_contract.ScreenEventReply::{ count: events.length(), }
 }
 
 ///|

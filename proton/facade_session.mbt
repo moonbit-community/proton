@@ -338,7 +338,11 @@ fn RuntimeSession::add_window_view(
         error,
       )
   }
-  let running_view = RunningView::{ id: view_id, view: created, document: None }
+  let running_view = RunningView::{
+    id: view_id,
+    view: created,
+    document: None,
+  }
   running.views.push(running_view)
   self.view_handle(running, running_view)
 }
@@ -534,7 +538,7 @@ fn RuntimeSession::load_window_html(
     )
   }
   let previous = running.document
-  running.document = Some({ url: base_url, content: @utf8.encode(html) })
+  running.document = Some({ url: base_url, content: @utf8.encode(html), })
   running.window.load_url(base_url) catch {
     error => {
       running.document = previous
@@ -565,7 +569,7 @@ fn RuntimeSession::load_view_html(
     )
   }
   let previous = running.document
-  running.document = Some({ url: base_url, content: @utf8.encode(html) })
+  running.document = Some({ url: base_url, content: @utf8.encode(html), })
   running.view.load_url(base_url) catch {
     error => {
       running.document = previous
@@ -1662,18 +1666,18 @@ fn RuntimeSession::start_browser_request(
           match self.navigation_handler {
             Some(handler) =>
               match
-                handler(browser, { url, http_method, user_gesture, redirect }) {
+                handler(browser, { url, http_method, user_gesture, redirect, }) {
                 NavigationDecision::Allow =>
-                  BrowserResponse::{ action: "allow", path: None }
+                  BrowserResponse::{ action: "allow", path: None, }
                 NavigationDecision::Deny =>
-                  BrowserResponse::{ action: "deny", path: None }
+                  BrowserResponse::{ action: "deny", path: None, }
               }
-            None => BrowserResponse::{ action: "deny", path: None }
+            None => BrowserResponse::{ action: "deny", path: None, }
           }
         Popup(url~, disposition~, user_gesture~, ..) => {
           let decision = match self.popup_handler {
             Some(handler) =>
-              handler(browser, { url, disposition, user_gesture })
+              handler(browser, { url, disposition, user_gesture, })
             None => PopupDecision::Deny
           }
           match decision {
@@ -1692,48 +1696,49 @@ fn RuntimeSession::start_browser_request(
               }
             }
           }
-          BrowserResponse::{ action: "deny", path: None }
+          BrowserResponse::{ action: "deny", path: None, }
         }
         Download(download_id~, url~, suggested_name~, ..) =>
           match self.download_handler {
             Some(handler) =>
-              match handler(browser, { id: download_id, url, suggested_name }) {
+              match
+                handler(browser, { id: download_id, url, suggested_name, }) {
                 DownloadDecision::Deny =>
-                  BrowserResponse::{ action: "deny", path: None }
+                  BrowserResponse::{ action: "deny", path: None, }
                 DownloadDecision::ShowSaveDialog =>
-                  BrowserResponse::{ action: "allow", path: None }
+                  BrowserResponse::{ action: "allow", path: None, }
                 DownloadDecision::SaveTo(path) =>
-                  BrowserResponse::{ action: "allow", path: Some(path) }
+                  BrowserResponse::{ action: "allow", path: Some(path), }
               }
-            None => BrowserResponse::{ action: "deny", path: None }
+            None => BrowserResponse::{ action: "deny", path: None, }
           }
         Certificate(url~, error_code~, ..) =>
           match self.certificate_handler {
             Some(handler) =>
-              match handler(browser, { url, error_code }) {
+              match handler(browser, { url, error_code, }) {
                 BrowserPermissionDecision::Allow =>
-                  BrowserResponse::{ action: "allow", path: None }
+                  BrowserResponse::{ action: "allow", path: None, }
                 BrowserPermissionDecision::Deny =>
-                  BrowserResponse::{ action: "deny", path: None }
+                  BrowserResponse::{ action: "deny", path: None, }
               }
-            None => BrowserResponse::{ action: "deny", path: None }
+            None => BrowserResponse::{ action: "deny", path: None, }
           }
         Media(origin~, permissions~, ..) =>
           match self.media_handler {
             Some(handler) =>
-              match handler(browser, { origin, permissions }) {
+              match handler(browser, { origin, permissions, }) {
                 BrowserPermissionDecision::Allow =>
-                  BrowserResponse::{ action: "allow", path: None }
+                  BrowserResponse::{ action: "allow", path: None, }
                 BrowserPermissionDecision::Deny =>
-                  BrowserResponse::{ action: "deny", path: None }
+                  BrowserResponse::{ action: "deny", path: None, }
               }
-            None => BrowserResponse::{ action: "deny", path: None }
+            None => BrowserResponse::{ action: "deny", path: None, }
           }
       }
     },
     no_wait=true,
   )
-  self.pending_browser_requests.push({ window: window_id, request_id, task })
+  self.pending_browser_requests.push({ window: window_id, request_id, task, })
 }
 
 ///|
@@ -1744,7 +1749,7 @@ fn RuntimeSession::complete_browser_requests(
   let mut did_work = false
   for pending in self.pending_browser_requests {
     let completed = pending.task.try_wait() catch {
-      _ => Some(BrowserResponse::{ action: "deny", path: None })
+      _ => Some(BrowserResponse::{ action: "deny", path: None, })
     }
     match completed {
       None => remaining.push(pending)

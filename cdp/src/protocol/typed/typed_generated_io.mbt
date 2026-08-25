@@ -36,7 +36,7 @@ pub fn IOStreamHandle::from_json(
 ) -> IOStreamHandle raise @protocol.ProtocolSchemaError {
   let method_name = "IOStreamHandle"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -257,7 +257,7 @@ pub fn IOResolveBlobResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { uuid: typed_required_result_string(method_name, fields, "uuid", "string") }
+  { uuid: typed_required_result_string(method_name, fields, "uuid", "string"), }
 }
 
 ///|

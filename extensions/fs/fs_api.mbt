@@ -96,7 +96,11 @@ async fn read_text_file(
       sync_timestamp=option_bool(payload.sync_timestamp, false),
     )
     let content = data.text()
-    { path: payload.path, content, bytes_read: bytes_written_for_text(content) }
+    {
+      path: payload.path,
+      content,
+      bytes_read: bytes_written_for_text(content),
+    }
   } catch {
     error => raise ReadFailed(path=payload.path, detail=fs_error_detail(error))
   }

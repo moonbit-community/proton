@@ -16,7 +16,7 @@ pub fn ProjectBackendConfig::ProjectBackendConfig(
   path : String,
   app_package : String,
 ) -> ProjectBackendConfig {
-  ProjectBackendConfig::{ path, app_package }
+  ProjectBackendConfig::{ path, app_package, }
 }
 
 ///|
@@ -53,7 +53,7 @@ pub fn ProjectFrontendConfig::ProjectFrontendConfig(
   before_build? : String? = None,
   path? : String? = None,
 ) -> ProjectFrontendConfig {
-  ProjectFrontendConfig::{ dev_url, dist, before_dev, before_build, path }
+  ProjectFrontendConfig::{ dev_url, dist, before_dev, before_build, path, }
 }
 
 ///|
@@ -100,7 +100,7 @@ pub extend ProjectSignConfig with Debug::{to_repr}
 pub fn ProjectSignConfig::ProjectSignConfig(
   binaries? : Array[String] = [],
 ) -> ProjectSignConfig {
-  ProjectSignConfig::{ binaries: binaries.copy() }
+  ProjectSignConfig::{ binaries: binaries.copy(), }
 }
 
 ///|
@@ -127,7 +127,7 @@ pub fn ProjectDocumentType::ProjectDocumentType(
   extensions : Array[String],
   role? : String = "Viewer",
 ) -> ProjectDocumentType {
-  ProjectDocumentType::{ name, extensions: extensions.copy(), role }
+  ProjectDocumentType::{ name, extensions: extensions.copy(), role, }
 }
 
 ///|
@@ -258,7 +258,7 @@ pub fn ProjectConfig::ProjectConfig(
   frontend? : ProjectFrontendConfig? = None,
   package_config? : ProjectPackageConfig? = None,
 ) -> ProjectConfig {
-  ProjectConfig::{ base_dir, identifier, backend, frontend, package_config }
+  ProjectConfig::{ base_dir, identifier, backend, frontend, package_config, }
 }
 
 ///|

@@ -38,7 +38,7 @@ pub fn EmulationDevicePosture::from_json(
 ) -> EmulationDevicePosture raise @protocol.ProtocolSchemaError {
   let method_name = "EmulationDevicePosture"
   let fields = typed_json_fields(method_name, value)
-  { type_: typed_required_string(method_name, fields, "type", "string") }
+  { type_: typed_required_string(method_name, fields, "type", "string"), }
 }
 
 ///|
@@ -80,7 +80,7 @@ pub fn EmulationDisabledImageType::from_json(
 ) -> EmulationDisabledImageType raise @protocol.ProtocolSchemaError {
   let method_name = "EmulationDisabledImageType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -265,7 +265,7 @@ pub fn EmulationPressureSource::from_json(
 ) -> EmulationPressureSource raise @protocol.ProtocolSchemaError {
   let method_name = "EmulationPressureSource"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -305,7 +305,7 @@ pub fn EmulationPressureState::from_json(
 ) -> EmulationPressureState raise @protocol.ProtocolSchemaError {
   let method_name = "EmulationPressureState"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -424,7 +424,7 @@ pub fn EmulationScreenId::from_json(
 ) -> EmulationScreenId raise @protocol.ProtocolSchemaError {
   let method_name = "EmulationScreenId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -798,7 +798,7 @@ pub fn EmulationSensorReadingSingle::from_json(
 ) -> EmulationSensorReadingSingle raise @protocol.ProtocolSchemaError {
   let method_name = "EmulationSensorReadingSingle"
   let fields = typed_json_fields(method_name, value)
-  { value: typed_required_double(method_name, fields, "value", "number") }
+  { value: typed_required_double(method_name, fields, "value", "number"), }
 }
 
 ///|
@@ -888,7 +888,7 @@ pub fn EmulationSensorType::from_json(
 ) -> EmulationSensorType raise @protocol.ProtocolSchemaError {
   let method_name = "EmulationSensorType"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1102,7 +1102,7 @@ pub fn EmulationVirtualTimePolicy::from_json(
 ) -> EmulationVirtualTimePolicy raise @protocol.ProtocolSchemaError {
   let method_name = "EmulationVirtualTimePolicy"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

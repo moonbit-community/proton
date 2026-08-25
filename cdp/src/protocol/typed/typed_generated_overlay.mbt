@@ -91,7 +91,7 @@ pub fn OverlayColorFormat::from_json(
 ) -> OverlayColorFormat raise @protocol.ProtocolSchemaError {
   let method_name = "OverlayColorFormat"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -252,7 +252,7 @@ pub fn OverlayContrastAlgorithm::from_json(
 ) -> OverlayContrastAlgorithm raise @protocol.ProtocolSchemaError {
   let method_name = "OverlayContrastAlgorithm"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1074,7 +1074,7 @@ pub fn OverlayInspectMode::from_json(
 ) -> OverlayInspectMode raise @protocol.ProtocolSchemaError {
   let method_name = "OverlayInspectMode"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -1602,7 +1602,7 @@ pub fn OverlayGetGridHighlightObjectsForTestResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { highlights: typed_required_result_json(method_name, fields, "highlights") }
+  { highlights: typed_required_result_json(method_name, fields, "highlights"), }
 }
 
 ///|
@@ -1716,7 +1716,7 @@ pub fn OverlayGetHighlightObjectForTestResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { highlight: typed_required_result_json(method_name, fields, "highlight") }
+  { highlight: typed_required_result_json(method_name, fields, "highlight"), }
 }
 
 ///|
@@ -1820,7 +1820,7 @@ pub fn OverlayGetSourceOrderHighlightObjectForTestResult::from_json(
   }
   ignore(@protocol.cdp_schema_response(method_name~, response))
   let fields = typed_result_fields(method_name, result)
-  { highlight: typed_required_result_json(method_name, fields, "highlight") }
+  { highlight: typed_required_result_json(method_name, fields, "highlight"), }
 }
 
 ///|

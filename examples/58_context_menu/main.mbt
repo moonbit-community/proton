@@ -35,7 +35,7 @@ let show_context_menu_command : @proton_contract.Command[
 ] = context_menu_contract.command("show")
 
 ///|
-let window_slot : Ref[@proton.WindowHandle?] = { val: None }
+let window_slot : Ref[@proton.WindowHandle?] = { val: None, }
 
 ///|
 fn context_menu() -> @proton.Menu {
@@ -78,7 +78,7 @@ fn show_context_menu(request : ShowContextMenuRequest) -> ShowContextMenuReply {
       }
     }
     None =>
-      ShowContextMenuReply::{ opened: false, message: "window is not ready" }
+      ShowContextMenuReply::{ opened: false, message: "window is not ready", }
   }
 }
 

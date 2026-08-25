@@ -26,7 +26,7 @@ test {
   let ping : @proton_contract.Command[PingRequest, PingReply] = @proton_contract.command(
     "ping",
   )
-  let request = PingRequest::{ value: "hello" }
+  let request = PingRequest::{ value: "hello", }
   let command = invoke(
     ping,
     request,

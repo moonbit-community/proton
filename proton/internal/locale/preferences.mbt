@@ -29,7 +29,7 @@ pub fn LocalePreferences::resolve(
     _ => abort("invalid fallback locale")
   }
   push_unique_locale(preferred, english)
-  { locale_value: preferred[0], preferred_values: preferred }
+  { locale_value: preferred[0], preferred_values: preferred, }
 }
 
 ///|

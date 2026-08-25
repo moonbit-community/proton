@@ -36,7 +36,7 @@ pub fn DeviceAccessDeviceId::from_json(
 ) -> DeviceAccessDeviceId raise @protocol.ProtocolSchemaError {
   let method_name = "DeviceAccessDeviceId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }
@@ -127,7 +127,7 @@ pub fn DeviceAccessRequestId::from_json(
 ) -> DeviceAccessRequestId raise @protocol.ProtocolSchemaError {
   let method_name = "DeviceAccessRequestId"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

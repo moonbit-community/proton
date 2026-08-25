@@ -103,7 +103,7 @@ pub extend PointWire with @json.FromJson::{from_json}
 fn display_from_wire(w : DisplayWire) -> DisplayInfo {
   DisplayInfo::{
     id: w.id,
-    bounds: Rect::{ x: w.x, y: w.y, width: w.width, height: w.height },
+    bounds: Rect::{ x: w.x, y: w.y, width: w.width, height: w.height, },
     work_area: Rect::{
       x: w.work_x,
       y: w.work_y,
@@ -258,7 +258,7 @@ pub fn ScreenMonitor::cursor_point(
     raise self.classify_status(status, "cursor_point")
   }
   match decode_point(bytes) {
-    Some(wire) => Point::{ x: wire.x, y: wire.y }
+    Some(wire) => Point::{ x: wire.x, y: wire.y, }
     None => raise Empty
   }
 }

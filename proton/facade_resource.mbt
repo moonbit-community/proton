@@ -47,7 +47,7 @@ fn resource_response(
   mime_type : String,
   body : Bytes,
 ) -> ResourceResponse {
-  { status, mime_type, body }
+  { status, mime_type, body, }
 }
 
 ///|

@@ -36,7 +36,7 @@ async fn spawn(
     operation: "spawn",
     process_id: id,
   })
-  @process_contract.SpawnReply::{ process_id: id, pid }
+  @process_contract.SpawnReply::{ process_id: id, pid, }
 }
 
 ///|
@@ -74,7 +74,7 @@ async fn kill(
     operation: "kill",
     process_id: request.process_id,
   })
-  @process_contract.KillReply::{ killed: true }
+  @process_contract.KillReply::{ killed: true, }
 }
 
 ///|

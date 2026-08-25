@@ -114,7 +114,7 @@ fn invalid_event_subscription(
         scheduler,
         notify(@proton_client.InvalidContract(message~)),
       )
-      Some({ unload: _scheduler => (), update_tagger: _payload => () })
+      Some({ unload: _scheduler => (), update_tagger: _payload => (), })
     }),
   )
 }

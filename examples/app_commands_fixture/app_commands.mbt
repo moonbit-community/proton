@@ -154,7 +154,7 @@ fn string_result(_payload : PingPayload) -> String {
 ///|
 fn report_probe(payload : ReportProbePayload) -> ReportProbeReply {
   println("[app-commands] " + payload.report)
-  ReportProbeReply::{ ok: true }
+  ReportProbeReply::{ ok: true, }
 }
 
 ///|

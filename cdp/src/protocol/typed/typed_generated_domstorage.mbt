@@ -81,7 +81,7 @@ pub fn DOMStorageSerializedStorageKey::from_json(
 ) -> DOMStorageSerializedStorageKey raise @protocol.ProtocolSchemaError {
   let method_name = "DOMStorageSerializedStorageKey"
   match value {
-    String(inner) => { value: inner }
+    String(inner) => { value: inner, }
     _ => raise InvalidParameterType(method_name, "value", "string")
   }
 }

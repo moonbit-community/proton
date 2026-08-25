@@ -112,7 +112,7 @@ pub extend ContractDefinitionError with Show::{to_string, output}
 ///|
 /// Creates an application command descriptor.
 pub fn[Request, Response] command(name : String) -> Command[Request, Response] {
-  Command::{ route: application_route(name), type_marker: None }
+  Command::{ route: application_route(name), type_marker: None, }
 }
 
 ///|
@@ -131,7 +131,7 @@ pub fn[Payload] event(name : String) -> Event[Payload] {
 /// Extension packages normally expose a value generated from `proton.ext.json`
 /// instead of calling this constructor by hand.
 pub fn extension(id~ : String, js_namespace~ : String) -> ExtensionContract {
-  ExtensionContract::{ id, js_namespace }
+  ExtensionContract::{ id, js_namespace, }
 }
 
 ///|
@@ -140,7 +140,7 @@ pub fn[Request, Response] ExtensionContract::command(
   self : ExtensionContract,
   name : String,
 ) -> Command[Request, Response] {
-  Command::{ route: self.route(name), type_marker: None }
+  Command::{ route: self.route(name), type_marker: None, }
 }
 
 ///|
@@ -274,7 +274,7 @@ pub fn ContractRoute::extension_namespace(self : ContractRoute) -> String? {
 
 ///|
 fn application_route(name : String) -> ContractRoute {
-  ContractRoute::{ scope: Application, name }
+  ContractRoute::{ scope: Application, name, }
 }
 
 ///|
@@ -284,7 +284,7 @@ fn[Payload] new_event(route : ContractRoute) -> Event[Payload] {
   if !duplicate_route {
     declared_event_routes[operation_name] = ()
   }
-  Event::{ route, type_marker: None, duplicate_route }
+  Event::{ route, type_marker: None, duplicate_route, }
 }
 
 ///|

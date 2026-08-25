@@ -208,7 +208,7 @@ async fn[X] spawn_scenario_app(
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )
-  SpawnedScenarioApp::{ process, output_path }
+  SpawnedScenarioApp::{ process, output_path, }
 }
 
 ///|

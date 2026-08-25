@@ -96,5 +96,5 @@ pub fn[Payload : @json.FromJson] subscribe(
       error => failure(EventDecode(message=error.to_string()))
     }
   })
-  Subscription::{ closed: false, close_listener }
+  Subscription::{ closed: false, close_listener, }
 }

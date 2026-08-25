@@ -61,7 +61,7 @@ priv struct FileHandler {
 fn FileHandler::FileHandler(path : String) -> FileHandler raise LoggingError {
   let file = open_file(@utf8.encode(path))
   guard file_is_open(file) else { raise OpenFile(path~) }
-  FileHandler::{ file, failed: false }
+  FileHandler::{ file, failed: false, }
 }
 
 ///|
@@ -98,8 +98,8 @@ pub fn RuntimeLogging::RuntimeLogging(
   match output {
     Stderr => {
       logger.set_config(config)
-      logger.set_handler(StderrHandler::{ failed: false })
-      RuntimeLogging::{ close_handler: fn() { () }, closed: false }
+      logger.set_handler(StderrHandler::{ failed: false, })
+      RuntimeLogging::{ close_handler: fn() { () }, closed: false, }
     }
     File(path) => {
       let file = FileHandler(path)
