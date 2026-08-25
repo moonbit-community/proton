@@ -55,7 +55,11 @@ fn test_window_manager() -> WindowManager {
 }
 
 ///|
-fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
+fn test_window_handle(
+  id : String,
+  native_id : Int64,
+  popup_calls? : Array[String],
+) -> WindowHandle {
   let browser = BrowserHandle::{
     id,
     native_id,
@@ -80,6 +84,16 @@ fn test_window_handle(id : String, native_id : Int64) -> WindowHandle {
     set_window_position: fn(_x, _y) {  },
     set_window_always_on_top: fn(_always_on_top) {  },
     set_window_zoom_percent: fn(_zoom_percent) {  },
+    popup_window_menu: fn(menu, x, y) {
+      match popup_calls {
+        Some(calls) => {
+          let (_, label, _) = menu.to_native().definition()
+          let title = label.unwrap_or("")
+          calls.push("popup:\{title}@\{x},\{y}")
+        }
+        None => ()
+      }
+    },
     read_window_state: fn() { abort("test window state is not available") },
     browser,
     add_view: fn(_id, _config) { abort("test views are not available") },
@@ -1727,6 +1741,15 @@ test "view handle routes operations through its closures" {
       #|]
     ),
   )
+}
+
+///|
+test "window context menu routes through the public window handle" {
+  let calls : Array[String] = []
+  let window = test_window_handle("main", 17L, popup_calls=calls)
+  let menu = Menu::new("Context", items=[MenuItem::separator()])
+  menu.popup(window, 123, 456)
+  debug_inspect(calls, content="[\"popup:Context@123,456\"]")
 }
 
 ///|

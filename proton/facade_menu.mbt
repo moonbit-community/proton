@@ -209,14 +209,14 @@ fn standard_item_key(role : @native.MenuItemRole) -> String {
 
 ///|
 /// Pops up this menu as a window-level context menu at view-relative
-/// coordinates (top-left origin, CSS pixels) inside `window`. Command and
-/// role items deliver through the same runtime menu events as the
-/// application menu bar.
+/// coordinates (top-left origin, CSS pixels) inside `window`. Command items
+/// deliver through the same `menu.command` event path as the application menu
+/// bar; role items invoke their platform-native actions.
 pub fn Menu::popup(
   self : Menu,
-  window : @native.Window,
+  window : WindowHandle,
   x : Int,
   y : Int,
-) -> Unit raise @native.NativeError {
-  window.popup_menu(@native.MenuBar::new(menus=[self.to_native()]), x, y)
+) -> Unit raise WindowSessionError {
+  window.popup_menu(self, x, y)
 }

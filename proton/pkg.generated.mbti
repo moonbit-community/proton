@@ -6,7 +6,6 @@ import {
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension",
   "moonbit-community/proton/internal/locale",
-  "moonbit-community/proton/internal/native",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/updater",
   "moonbit-community/proton_contract",
@@ -310,7 +309,7 @@ pub struct Menu {
   items : Array[MenuItem]?
 }
 pub fn Menu::new(String, items~ : Array[MenuItem]) -> Self
-pub fn Menu::popup(Self, @native.Window, Int, Int) -> Unit raise @native.NativeError
+pub fn Menu::popup(Self, WindowHandle, Int, Int) -> Unit raise WindowSessionError
 pub fn Menu::role(MenuRole, label? : String, items? : Array[MenuItem]) -> Self
 
 pub struct MenuBar {
@@ -583,6 +582,7 @@ pub struct WindowHandle {
   set_window_position : (Int, Int) -> Unit raise WindowSessionError
   set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
+  popup_window_menu : (Menu, Int, Int) -> Unit raise WindowSessionError
   read_window_state : () -> WindowState raise WindowSessionError
   browser : BrowserHandle
   add_view : (String, ViewConfig) -> ViewHandle raise WindowSessionError

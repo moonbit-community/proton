@@ -3367,6 +3367,10 @@ int32_t proton_engine_window_popup_menu(
   __block int32_t status = PROTON_OK;
   char main_error[512] = {0};
   char *main_error_buffer = main_error;
+  /* Context menus can be the only menu surface in an application. Keep the
+     runtime route installed while AppKit dispatches the synchronous popup so
+     command items use the same event path as the application menu. */
+  proton_engine_menu_set_runtime(window->runtime);
   void (^work)(void) = ^{
     status = proton_engine_menu_popup_on_main(
         (__bridge void *)view, x, y, menu_bar, main_error_buffer,

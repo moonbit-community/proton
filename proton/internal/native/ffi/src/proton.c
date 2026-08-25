@@ -407,6 +407,10 @@ int32_t proton_internal_menu_popup(proton_window_handle_t window, int32_t x,
   if (status != PROTON_OK) {
     return status;
   }
+  status = proton_require_runtime_owner_thread(slot->runtime);
+  if (status != PROTON_OK) {
+    return status;
+  }
   if (menu_bar == NULL || menu_bar->menu_count == 0) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "popup menu requires at least one menu");

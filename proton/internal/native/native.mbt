@@ -698,9 +698,9 @@ pub fn Runtime::set_menu(
 
 ///|
 /// Pops up `menu` as a window-level context menu at view-relative
-/// coordinates `(x, y)` (CSS pixels, top-left origin). Command and role
-/// items deliver through the same runtime menu events as the application
-/// menu bar.
+/// coordinates `(x, y)` (CSS pixels, top-left origin). Command items deliver
+/// through the same runtime menu events as the application menu bar; role
+/// items invoke their platform-native actions.
 pub fn Window::popup_menu(
   self : Window,
   menu : MenuBar,

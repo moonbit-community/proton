@@ -120,7 +120,9 @@ async fn run_manifest(
   }
   let lifecycle = AppLifecycle::new()
   lifecycle.begin_starting()
-  let forward_menu_events = menu is Some(_)
+  // Context menus are created after startup through WindowHandle, so windowed
+  // applications need menu command events even without an application menu.
+  let forward_menu_events = !headless
   let catalog = framework_catalog(locale_preferences)
   let remote_debugging = remote_debugging(manifest.debug) catch {
     error => raise ConfigurationError(error)

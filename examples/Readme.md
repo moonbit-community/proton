@@ -90,6 +90,9 @@ moon -C examples run 01_run --target native
   combining native dialogs, clipboard access, notifications, and tray menus.
 - `56_i18n`: one explicit application locale observed through MoonBit command
   context, CEF `navigator.languages`, and localized typed native menus.
+- `57_context_menu`: manual Electron-style window context menu review with
+  renderer CSS-pixel coordinates, nested submenu items, role items, and menu
+  command events.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

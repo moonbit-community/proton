@@ -3859,8 +3859,6 @@ int32_t proton_engine_runtime_set_menu(
 int32_t proton_engine_window_popup_menu(
     proton_engine_window_t *window, int32_t x, int32_t y,
     const proton_menu_bar_t *menu_bar, char *error, size_t error_len) {
-  (void)x;
-  (void)y;
   if (window == NULL || !g_proton_cef_initialized) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
@@ -3870,7 +3868,8 @@ int32_t proton_engine_window_popup_menu(
                               "popup menu requires at least one menu");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (window->window == NULL || window->browser_host == NULL) {
+  if (window->window == NULL || window->browser_host == NULL ||
+      gtk_widget_get_window(window->browser_host) == NULL) {
     proton_engine_set_message(error, error_len,
                               "window is not ready for a popup menu");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -3884,10 +3883,18 @@ int32_t proton_engine_window_popup_menu(
     return PROTON_ERR_PLATFORM;
   }
   gtk_widget_show_all(popup);
-  /* Pop up relative to the browser host so the menu appears in the window. */
-  gtk_menu_popup_at_widget(GTK_MENU(popup), window->browser_host,
-                           GDK_GRAVITY_NORTH_WEST, GDK_GRAVITY_NORTH_WEST,
-                           NULL);
+  /* Renderer coordinates use the browser host's top-left CSS-pixel space.
+     GTK 3 popup rectangles use GDK logical coordinates, which match that
+     space without applying the monitor scale factor again. */
+  GdkRectangle anchor = {
+      .x = x,
+      .y = y,
+      .width = 1,
+      .height = 1,
+  };
+  gtk_menu_popup_at_rect(GTK_MENU(popup),
+                         gtk_widget_get_window(window->browser_host), &anchor,
+                         GDK_GRAVITY_NORTH_WEST, GDK_GRAVITY_NORTH_WEST, NULL);
   return PROTON_OK;
 }
 

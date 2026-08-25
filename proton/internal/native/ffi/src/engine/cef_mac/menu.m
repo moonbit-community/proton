@@ -15,6 +15,7 @@
 
 static int g_proton_app_menu_installed = 0;
 static proton_engine_runtime_t *g_menu_runtime = NULL;
+static NSWindow *g_popup_window = nil;
 
 @class ProtonMenuCommandTarget;
 static ProtonMenuCommandTarget *g_menu_command_target = nil;
@@ -42,8 +43,10 @@ static void proton_engine_enqueue_menu_command(
     represented = [sender representedObject];
   }
   if ([represented isKindOfClass:[NSString class]]) {
+    NSWindow *target_window =
+        g_popup_window != nil ? g_popup_window : [NSApp keyWindow];
     proton_window_id_t focused_window =
-        proton_engine_window_public_id_for_native_window([NSApp keyWindow]);
+        proton_engine_window_public_id_for_native_window(target_window);
     proton_engine_enqueue_menu_command((NSString *)represented,
                                        focused_window);
   }
@@ -435,7 +438,9 @@ int32_t proton_engine_menu_popup_on_main(void *host_view, int32_t x,
   CGFloat menu_height = [view bounds].size.height;
   CGFloat location_y = [view isFlipped] ? (CGFloat)y : menu_height - (CGFloat)y;
   NSPoint location = NSMakePoint((CGFloat)x, location_y);
+  g_popup_window = [view window];
   [popup popUpMenuPositioningItem:nil atLocation:location inView:view];
+  g_popup_window = nil;
   return PROTON_OK;
 }
 
