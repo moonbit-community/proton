@@ -4,11 +4,6 @@ fn parse_package_args(args : Array[String]) -> RawPackageOptions raise {
 }
 
 ///|
-fn parse_package_matches(args : Array[String]) -> @argparse.Matches raise {
-  command().parse(argv=args, env=Map([]))
-}
-
-///|
 test "parse package args accepts repeated formats and overrides" {
   let raw = parse_package_args([
     "--package", "desktop", "--format", "app", "--format", "zip", "--format", "dmg",
@@ -73,35 +68,52 @@ test "parse package args rejects unsupported format" {
 
 ///|
 test "updater revision is explicit, positive and full width" {
-  assert_eq(updater_revision_from_matches(parse_package_matches([]), None), 0UL)
+  assert_eq(parse_package_args([]).update_revision, 0UL)
   let maximum = "18446744073709551615"
-  let matches = parse_package_matches(["--updater-revision", maximum])
   assert_eq(
-    updater_revision_from_matches(matches, None),
+    parse_package_args(["--updater-revision", maximum]).update_revision,
     18446744073709551615UL,
   )
-  let no_revision = parse_package_matches([])
   try
-    ignore(
-      updater_revision_from_matches(
-        no_revision,
-        Some("https://example.com/releases"),
-      ),
-    )
+    parse_package_args(["--updater-base-url", "https://example.com/releases"])
   catch {
-    MissingRevision => ()
-    _ => abort("expected a missing updater revision")
+    error => assert_true(error.to_string().contains("updater-revision"))
   } noraise {
     _ => abort("expected the updater revision to be required")
   }
   for expected in ["0", "-1", "1.5", "not-a-number"] {
-    let invalid = parse_package_matches(["--updater-revision", expected])
-    try ignore(updater_revision_from_matches(invalid, None)) catch {
+    try parse_package_args(["--updater-revision", expected]) catch {
       InvalidRevision(value~) => assert_eq(value, expected)
       _ => abort("expected an invalid updater revision")
     } noraise {
       _ => abort("expected the updater revision to be rejected")
     }
+  }
+}
+
+///|
+test "updater metadata options form one complete value" {
+  let raw = parse_package_args([
+    "--updater-base-url", "https://example.com/releases", "--updater-published-at",
+    "2026-08-25T00:00:00Z", "--updater-revision", "42",
+  ])
+  assert_eq(
+    raw.updater_metadata,
+    Some(UpdaterMetadataOptions::{
+      base_url: "https://example.com/releases",
+      published_at: "2026-08-25T00:00:00Z",
+    }),
+  )
+  assert_eq(raw.update_revision, 42UL)
+  try
+    parse_package_args([
+      "--updater-base-url", "https://example.com/releases", "--updater-revision",
+      "42",
+    ])
+  catch {
+    error => assert_true(error.to_string().contains("updater-published-at"))
+  } noraise {
+    _ => abort("expected updater metadata to require a publication instant")
   }
 }
 

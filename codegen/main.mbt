@@ -45,6 +45,7 @@ fn codegen_command() -> @argparse.Command {
       OptionArg(
         "identity-name",
         about="Generated binding name for --extension-identity",
+        requires=["extension-identity"],
       ),
     ],
     positionals=[
@@ -95,11 +96,6 @@ async fn generate(matches : @argparse.Matches) -> Unit {
       ..
     }
   let identity_name = identity_args.get(0)
-  if !extension_identity && identity_name is Some(_) {
-    raise CodegenCliError::Invalid(
-      message="--identity-name requires --extension-identity",
-    )
-  }
   let result = if extension_identity {
     guard inputs is [metadata_path] else {
       raise CodegenCliError::Invalid(
@@ -129,7 +125,7 @@ async fn generate(matches : @argparse.Matches) -> Unit {
 async fn run(args : ArrayView[String]) -> Int {
   let matches = @argparse.parse(codegen_command(), argv=args, env=Map([])) catch {
     error => {
-      write_stderr_line("error: " + error.to_string())
+      write_stderr_line(error.to_string())
       return 2
     }
   }
