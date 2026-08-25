@@ -1,6 +1,6 @@
 # Proton Logging Design
 
-Status: accepted design; implementation has not started.
+Status: implemented.
 
 ## Decision
 
@@ -82,29 +82,15 @@ Other repository components keep their ownership boundaries:
 - `proton/core` accepts a diagnostic reporter from the facade and does not
   print directly.
 
-## Application Identity
-
-Every application has an explicit identifier configured independently from
-single-instance behavior:
-
-```moonbit
-@proton.html(page)
-.identifier("com.example.app")
-.single_instance()
-```
-
-The identifier is required and supplies the stable identity used by platform
-log paths and other operating-system integration. `single_instance()` only
-enables the single-instance policy; it does not accept or define identity.
-
 ## Startup Configuration
 
 At startup Proton selects an initial handler and xlog configuration. The
 application may subsequently use xlog's normal APIs to replace either.
 
-Ordinary launches start with `Warn` written to the platform log file.
-`proton_cli dev` explicitly launches the child process with `Info` and
-standard-error output. Logging does not infer its behavior from `PROTON_MODE`.
+Packaged applications start with `Warn` written to the platform log file.
+Direct launches use standard error. `proton_cli dev` explicitly launches the
+child process with `Info` and standard-error output. Logging does not infer its
+behavior from `PROTON_MODE`.
 
 `MOON_XLOG` keeps xlog's native syntax for root levels and hierarchical category
 overrides, for example:
@@ -116,7 +102,8 @@ warn,proton.bridge=debug,app.sync=trace
 `PROTON_LOG_OUTPUT` is limited to Proton's initial desktop handler selection:
 `stderr` or `file`. It does not encode a path or duplicate xlog's filtering
 configuration. `proton_cli dev` sets it explicitly to `stderr` for the child
-process.
+process. File output requires the immutable package metadata included in a
+packaged application; it never requires identity in application code.
 
 The root logger and handler exist before Proton creates the native runtime and
 remain alive until application cleanup, window teardown, and native runtime
@@ -126,14 +113,18 @@ destruction have completed.
 
 Proton adds two private implementations of xlog's open `Handler` trait:
 
-- a standard-error handler that writes through MoonBit's stderr API;
+- a standard-error handler backed by a package-private synchronous I/O stub;
 - a platform file handler that owns path resolution and file lifetime.
+
+The stub only writes the UTF-8 record already formatted by MoonBit and owns the
+corresponding file handle. It does not select levels, construct records, inspect
+runtime state, or provide a native engine logging API.
 
 There is no composite handler, background logging task, queue, rolling policy,
 upload service, or in-application log viewer in Proton. Applications remain free
 to use other xlog handlers directly.
 
-The platform file handler writes synchronous UTF-8 text under the
+The platform file handler writes synchronous UTF-8 text under the packaged
 application's user log location:
 
 - macOS: `~/Library/Logs/<identifier>/`;

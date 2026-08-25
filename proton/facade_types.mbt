@@ -723,6 +723,7 @@ pub extend AppCleanupError with Debug::{to_repr}
 pub(all) suberror AppRunError {
   EventLoopError(String)
   ConfigurationError(AppConfigurationError)
+  LoggingInitializationFailed(detail~ : String)
   UnsupportedNativeFeature(feature~ : String)
   RuntimeOperationFailed(action~ : String, status~ : Int, detail~ : String)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)

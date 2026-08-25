@@ -19,17 +19,17 @@ fn CommandErrorPolicy::response_message(
   safe_message : String,
 ) -> String {
   let diagnostic = @debug.render(Repr(error))
+  (self.report_diagnostic)(diagnostic)
   if self.expose_details {
     diagnostic
   } else {
-    (self.report_diagnostic)(diagnostic)
     safe_message
   }
 }
 
 ///|
-fn report_command_diagnostic(diagnostic : String) -> Unit {
-  println("[proton] command dispatch failed: " + diagnostic)
+fn ignore_command_diagnostic(_diagnostic : String) -> Unit {
+  ()
 }
 
 ///|
@@ -49,13 +49,14 @@ struct MbtProcessHost {
 ///|
 /// Creates an empty MBT-side command host.
 ///
-/// Handler diagnostics remain in backend logs by default. Set
+/// Set `diagnostic_reporter` to retain backend-only handler diagnostics. Set
 /// `expose_error_details` only for a trusted development frontend.
 pub fn MbtProcessHost::MbtProcessHost(
   expose_error_details? : Bool = false,
+  diagnostic_reporter? : (String) -> Unit = ignore_command_diagnostic,
 ) -> MbtProcessHost {
   MbtProcessHost::new_with_diagnostic_reporter(
-    expose_error_details, report_command_diagnostic,
+    expose_error_details, diagnostic_reporter,
   )
 }
 

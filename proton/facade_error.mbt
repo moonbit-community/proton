@@ -215,6 +215,8 @@ pub fn AppRunError::message(self : AppRunError) -> String {
     EventLoopError(message) => "application event loop failed: " + message
     ConfigurationError(error) =>
       "application configuration failed: " + error.message()
+    LoggingInitializationFailed(detail~) =>
+      "application logging failed to initialize: " + detail
     UnsupportedNativeFeature(feature~) =>
       "the active Proton native runtime does not support required feature: " +
       feature

@@ -332,13 +332,14 @@ pub async fn[Payload : ToJson] AppCommandRequestContext::emit(
 ///|
 /// Creates an empty app command host.
 ///
-/// Handler diagnostics remain in backend logs by default. Set
+/// Set `diagnostic_reporter` to retain backend-only handler diagnostics. Set
 /// `expose_error_details` only for a trusted development frontend.
 pub fn AppCommandHost::AppCommandHost(
   expose_error_details? : Bool = false,
+  diagnostic_reporter? : (String) -> Unit = ignore_command_diagnostic,
 ) -> AppCommandHost {
   AppCommandHost::new_with_diagnostic_reporter(
-    expose_error_details, report_command_diagnostic,
+    expose_error_details, diagnostic_reporter,
   )
 }
 

@@ -406,6 +406,10 @@ async fn dev_process_env(
 ) -> Map[String, String] {
   let env : Map[String, String] = {
     "PROTON_MODE": "dev",
+    "MOON_XLOG": @env.get_env_var("MOON_XLOG").unwrap_or("info"),
+    "PROTON_LOG_OUTPUT": @env.get_env_var("PROTON_LOG_OUTPUT").unwrap_or(
+      "stderr",
+    ),
     "PROTON_RUNTIME_ROOT": runtime.root,
     "PROTON_HELPER_PATH": helper_path,
     "PROTON_RESOURCE_DIR": resource_dir,

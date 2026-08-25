@@ -81,6 +81,15 @@ process exits when all windows have closed. Use
 the application should remain available for Dock, protocol, document, or tray
 activation after its last window closes.
 
+## Logging
+
+Use `tonyfettes/xlog@0.4.1` directly for application logs. Proton configures the
+global logger before native runtime creation. Packaged applications write to
+their platform log directory; direct launches and `proton_cli dev` use stderr.
+`MOON_XLOG` controls filtering and `PROTON_LOG_OUTPUT` selects `file` or
+`stderr`; file output requires packaged application metadata. Application
+categories should use `app.*`; `proton.*` is reserved for framework diagnostics.
+
 ## Headless mode
 
 `.headless()` runs the app off-screen without creating a native window. Set

@@ -689,6 +689,8 @@ fn RuntimeSession::create_window(
       },
     )
   }
+  @xlog.info(category="proton.window") <?
+    { "message": "window created", "window": running.id }
   running
 }
 
@@ -2334,6 +2336,8 @@ fn runtime_session_mark_window_closed(
         Some(window) => {
           window.state = WindowClosed
           window.lifetime.close()
+          @xlog.info(category="proton.window") <?
+            { "message": "window closed", "window": window.id }
         }
         None => ()
       }

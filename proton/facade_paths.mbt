@@ -76,6 +76,34 @@ fn packaged_resource_dir() -> String? {
 }
 
 ///|
+fn packaged_application_manifest_path() -> String? {
+  let args = @env.args()
+  guard args.length() > 0 else { return None }
+  let executable : @mbpath.Path = args[0]
+  let executable = executable.resolve()
+  let executable_dir = executable.dirname()
+  let candidates = if @mbpath.sep == '\\' {
+    [executable_dir.join("proton-package.json")]
+  } else {
+    [
+      executable_dir.join("../Resources/proton-package.json"),
+      executable_dir
+      .join("../share")
+      .join(executable.basename().to_owned())
+      .join("proton-package.json"),
+    ]
+  }
+  for candidate in candidates {
+    let candidate = candidate.normalize()
+    let packaged = @mbfs.is_file(candidate.to_string()) catch { _ => false }
+    if packaged {
+      return Some(candidate.to_string())
+    }
+  }
+  None
+}
+
+///|
 /// Resolves the stable per-application directory for native persistent data.
 ///
 /// The identifier should match the packaged bundle/application identifier.
@@ -97,6 +125,54 @@ pub fn app_data_dir(identifier : String) -> String raise AppPathError {
 ///|
 fn browser_data_dir(identifier : String) -> String raise AppPathError {
   @mbpath.Path(app_data_dir(identifier)).join("browser").normalize().to_string()
+}
+
+///|
+fn app_log_dir(identifier : String) -> String raise AppPathError {
+  let info = @native.runtime_info() catch {
+    error => raise PlatformProbe(status=error.status(), detail=error.message())
+  }
+  app_log_dir_for_platform(
+    info.platform,
+    identifier,
+    @env.get_env_var("HOME"),
+    @env.get_env_var("LOCALAPPDATA"),
+    @env.get_env_var("XDG_STATE_HOME"),
+  )
+}
+
+///|
+fn app_log_dir_for_platform(
+  platform : String,
+  identifier : String,
+  home : String?,
+  local_app_data : String?,
+  xdg_state_home : String?,
+) -> String raise AppPathError {
+  validate_app_identifier(identifier)
+  match platform {
+    "macos" =>
+      @mbpath.Path(require_path_base(home, platform))
+      .join("Library/Logs")
+      .join(identifier)
+      .normalize()
+      .to_string()
+    "windows" =>
+      @mbpath.Path(require_path_base(local_app_data, platform))
+      .join(identifier)
+      .join("Logs")
+      .normalize()
+      .to_string()
+    "linux" => {
+      let base = match non_empty_path(xdg_state_home) {
+        Some(path) => @mbpath.Path(path)
+        None =>
+          @mbpath.Path(require_path_base(home, platform)).join(".local/state")
+      }
+      base.join(identifier).join("logs").normalize().to_string()
+    }
+    _ => raise MissingHomeDirectory(platform~)
+  }
 }
 
 ///|
