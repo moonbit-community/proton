@@ -1,6 +1,6 @@
-#if defined(__linux__)
+#if defined(_WIN32)
 
-#include "internal.h"
+#include "win_internal.h"
 
 #include "../../proton_config.h"
 #include "../../proton_event.h"
@@ -10,10 +10,10 @@
 #include "../cef_common/strings.h"
 #include "../cef_common/view_events.h"
 
-#define PROTON_ENGINE_REF_INCREMENT(refs) atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
+#define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
+#define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
+#define PROTON_ENGINE_REF_LOAD(refs) InterlockedCompareExchange(&(refs)->refs, 0, 0)
+#define PROTON_ENGINE_REF_STORE(refs, value) InterlockedExchange(&(refs)->refs, value)
 #include "../cef_common/ref_count.h"
 #undef PROTON_ENGINE_REF_INCREMENT
 #undef PROTON_ENGINE_REF_DECREMENT
@@ -25,8 +25,8 @@
 #include "include/capi/cef_values_capi.h"
 #include "include/internal/cef_string.h"
 
-#include <gdk/gdkx.h>
-#include <X11/Xlib.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #include <math.h>
 #include <stdint.h>
@@ -35,14 +35,14 @@
 
 // MARK: - Web contents views
 //
-// A view is an extra child browser hosted inside a window's browser host,
+// A view is an extra child browser hosted inside a window's client area,
 // following the Electron WebContentsView model: explicit top-left bounds,
 // visibility, z-order, and an independent load target. Struct lifetime is
-// owned by the window: views are only freed from the window's storage
-// teardown once every view has finalized, so native ABI view slots stay
-// valid for the whole window lifetime. Close semantics mirror the macOS
-// engine: do_close takes over from CEF's default (which would post a delete
-// event to the frame window) and destroys the browser's X window instead.
+// owned by the window: views are only freed from proton_engine_window_free
+// once every view has finalized, so native ABI view slots stay valid for the
+// whole window lifetime. Close semantics mirror the macOS engine: do_close
+// takes over from CEF's default (which would post WM_CLOSE to the frame
+// window) and tears down the browser's child HWND instead.
 
 static proton_engine_display_handler_t g_display_handler;
 static uint64_t g_next_view_native_id = 1;
@@ -62,7 +62,15 @@ void proton_engine_window_free_views(proton_engine_window_t *window) {
     proton_engine_view_t *next = view->next;
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
-    free(view->client);
+    if (view->client != NULL) {
+      // Drop only the engine's reference; CEF's final release after
+      // OnBeforeClose frees the client (guaranteed by the finalize gate).
+      cef_base_ref_counted_t *client_base =
+          (cef_base_ref_counted_t *)view->client;
+      view->client->view = NULL;
+      view->client = NULL;
+      client_base->release(client_base);
+    }
     free(view);
     view = next;
   }
@@ -79,7 +87,7 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
   if (view->client != NULL) {
     view->client->view = NULL;
   }
-  view->xwindow = 0;
+  view->hwnd = NULL;
   view->finalized = 1;
   // The window's own finalize is gated on every view being finalized; this
   // call is a no-op unless the window is waiting on exactly this view.
@@ -87,8 +95,8 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
 }
 
 void proton_engine_window_finalize_if_ready(proton_engine_window_t *window) {
-  if (window == NULL || !window->destroy_requested ||
-      window->browser != NULL) {
+  if (window == NULL || window->finalize_queued ||
+      !window->destroy_requested || window->browser != NULL) {
     return;
   }
   for (proton_engine_view_t *view = window->views; view != NULL;
@@ -97,6 +105,9 @@ void proton_engine_window_finalize_if_ready(proton_engine_window_t *window) {
       return;
     }
   }
+  // OnBeforeClose is CEF's final browser callback, but CEF still owns and
+  // releases callback objects while unwinding it and during cef_shutdown.
+  // Keep the host storage alive until that shutdown has completed.
   proton_engine_window_defer_free(window);
 }
 
@@ -131,7 +142,7 @@ void proton_engine_window_close_views(proton_engine_window_t *window) {
   }
 }
 
-// Re-stacks view browser X windows above the window's main browser by
+// Re-stacks view browser windows above the window's main browser view by
 // ascending (z_order, native_id).
 void proton_engine_window_layout_views(proton_engine_window_t *window) {
   if (window == NULL) {
@@ -140,7 +151,7 @@ void proton_engine_window_layout_views(proton_engine_window_t *window) {
   size_t count = 0;
   for (proton_engine_view_t *view = window->views; view != NULL;
        view = view->next) {
-    if (view->xwindow != 0 && view->display != NULL && !view->closed) {
+    if (view->hwnd != NULL && !view->closed) {
       count++;
     }
   }
@@ -155,7 +166,7 @@ void proton_engine_window_layout_views(proton_engine_window_t *window) {
   size_t index = 0;
   for (proton_engine_view_t *view = window->views; view != NULL;
        view = view->next) {
-    if (view->xwindow != 0 && view->display != NULL && !view->closed) {
+    if (view->hwnd != NULL && !view->closed) {
       order[index++] = view;
     }
   }
@@ -172,7 +183,8 @@ void proton_engine_window_layout_views(proton_engine_window_t *window) {
     order[j] = current;
   }
   for (size_t i = 0; i < count; i++) {
-    XRaiseWindow(order[i]->display, order[i]->xwindow);
+    SetWindowPos(order[i]->hwnd, HWND_TOP, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
   }
   free(order);
 }
@@ -181,19 +193,20 @@ int CEF_CALLBACK proton_engine_do_close(
     cef_life_span_handler_t *self,
     cef_browser_t *browser) {
   (void)self;
-  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  proton_engine_view_t *view =
+      proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
   if (view == NULL) {
-    // Frame windows keep CEF's default close behavior (delete event on the
-    // top-level window).
+    // Frame windows keep CEF's default close behavior (WM_CLOSE to the frame).
     return 0;
   }
-  // A view browser owns no top-level window; CEF's default would deliver a
-  // delete event to the frame window and cancel the view close. Take over
-  // and destroy the browser's X window, which completes the teardown via
-  // WindowDestroyed.
-  if (view->xwindow != 0 && view->display != NULL) {
-    XDestroyWindow(view->display, view->xwindow);
-    view->xwindow = 0;
+  // A view browser owns no top-level window; CEF's default would post
+  // WM_CLOSE to the frame window and cancel the view close. Take over and
+  // destroy the browser's child window on the next frame-window message,
+  // which completes the teardown via WindowDestroyed without re-entering CEF.
+  if (view->hwnd != NULL) {
+    PostMessageW(view->window->hwnd, PROTON_ENGINE_WM_DESTROY_CHILD, 0,
+                 (LPARAM)view->hwnd);
+    view->hwnd = NULL;
     return 1;
   }
   // Windowless (headless) rendering has no child window; returning false lets
@@ -206,14 +219,15 @@ void CEF_CALLBACK proton_engine_on_title_change(
     cef_browser_t *browser,
     const cef_string_t *title) {
   (void)self;
-  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  proton_engine_view_t *view =
+      proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
   if (view == NULL) {
     return;
   }
   char *title_utf8 = proton_engine_cef_string_to_utf8(title);
   proton_view_events_title_updated(view->events, title_utf8);
   free(title_utf8);
-  proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
+  proton_engine_signal_wait_source(view->window->runtime, PROTON_WAIT_EVENT);
 }
 
 static cef_display_handler_t *CEF_CALLBACK
@@ -240,6 +254,7 @@ static proton_engine_client_t *proton_engine_view_client_create(
   }
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
+  client->client.base.release = proton_engine_client_release;
   client->view = view;
   // Views wire the life span, load, display, and render handlers: life span
   // drives the close state machine, load/display feed the view event stream,
@@ -265,21 +280,13 @@ static int32_t proton_engine_view_create_browser(
   memset(&browser_settings, 0, sizeof(browser_settings));
   window_info.size = sizeof(window_info);
   browser_settings.size = sizeof(browser_settings);
-  if (!window->headless &&
-      (window->browser_host == NULL ||
-       gtk_widget_get_window(window->browser_host) == NULL)) {
-    proton_engine_set_message(error, error_len,
-                              "window is not ready for view browser creation");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
   if (window->headless) {
     window_info.windowless_rendering_enabled = 1;
     window_info.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
   } else {
-    GdkWindow *host_gdk_window = gtk_widget_get_window(window->browser_host);
-    view->display = GDK_WINDOW_XDISPLAY(host_gdk_window);
-    window_info.parent_window =
-        (cef_window_handle_t)GDK_WINDOW_XID(host_gdk_window);
+    window_info.parent_window = window->hwnd;
+    window_info.style =
+        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
   }
   window_info.bounds.x = view->x;
   window_info.bounds.y = view->y;
@@ -307,9 +314,9 @@ static int32_t proton_engine_view_create_browser(
         host->was_hidden(host, 1);
       }
     } else {
-      view->xwindow = host->get_window_handle(host);
-      if (!view->visible && view->xwindow != 0 && view->display != NULL) {
-        XUnmapWindow(view->display, view->xwindow);
+      view->hwnd = host->get_window_handle(host);
+      if (!view->visible && view->hwnd != NULL) {
+        ShowWindow(view->hwnd, SW_HIDE);
       }
     }
     host->base.release((cef_base_ref_counted_t *)host);
@@ -404,7 +411,7 @@ int32_t proton_engine_view_create(
     proton_engine_view_finalize_if_ready(view);
     return status;
   }
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  proton_engine_signal_wait_source(window->runtime, PROTON_WAIT_PLATFORM);
   *out_view = view;
   return PROTON_OK;
 }
@@ -467,10 +474,12 @@ int32_t proton_engine_view_set_bounds(proton_engine_view_t *view,
         host->base.release((cef_base_ref_counted_t *)host);
       }
     }
-  } else if (view->xwindow != 0 && view->display != NULL) {
-    XMoveResizeWindow(view->display, view->xwindow, x, y, width, height);
+  } else if (view->hwnd != NULL) {
+    SetWindowPos(view->hwnd, NULL, x, y, width, height,
+                 SWP_NOZORDER | SWP_NOACTIVATE);
   }
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  proton_engine_signal_wait_source(view->window->runtime,
+                                   PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 
@@ -491,14 +500,11 @@ int32_t proton_engine_view_set_visible(proton_engine_view_t *view,
         host->base.release((cef_base_ref_counted_t *)host);
       }
     }
-  } else if (view->xwindow != 0 && view->display != NULL) {
-    if (view->visible) {
-      XMapWindow(view->display, view->xwindow);
-    } else {
-      XUnmapWindow(view->display, view->xwindow);
-    }
+  } else if (view->hwnd != NULL) {
+    ShowWindow(view->hwnd, view->visible ? SW_SHOW : SW_HIDE);
   }
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  proton_engine_signal_wait_source(view->window->runtime,
+                                   PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 
@@ -512,7 +518,8 @@ int32_t proton_engine_view_set_z_order(proton_engine_view_t *view,
   }
   view->z_order = z_order;
   proton_engine_window_layout_views(view->window);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  proton_engine_signal_wait_source(view->window->runtime,
+                                   PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 
@@ -538,7 +545,8 @@ int32_t proton_engine_view_load_url(proton_engine_view_t *view,
   frame->load_url(frame, &cef_url);
   cef_string_clear(&cef_url);
   frame->base.release((cef_base_ref_counted_t *)frame);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  proton_engine_signal_wait_source(view->window->runtime,
+                                   PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 
@@ -563,7 +571,8 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
   cef_string_clear(&code);
   cef_string_clear(&script_url);
   frame->base.release((cef_base_ref_counted_t *)frame);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  proton_engine_signal_wait_source(view->window->runtime,
+                                   PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 
@@ -580,5 +589,6 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
                                              view->browser, command_json,
                                              error, error_len);
 }
+
 
 #endif

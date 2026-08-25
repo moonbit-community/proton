@@ -10,8 +10,8 @@
 #include <gtk/gtk.h>
 #include <stdatomic.h>
 
-#include "proton_linux_menu.h"
-#include "proton_linux_titlebar.h"
+#include "linux_menu.h"
+#include "linux_titlebar.h"
 
 #include "include/capi/cef_app_capi.h"
 #include "include/capi/cef_browser_process_handler_capi.h"

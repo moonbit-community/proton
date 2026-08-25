@@ -1,6 +1,6 @@
 #if defined(__APPLE__)
 
-#include "internal.h"
+#include "mac_internal.h"
 
 #include "../../proton_config.h"
 #include "../../proton_event.h"
@@ -25,8 +25,8 @@
 #include "../cef_common/scheme.h"
 #include "../cef_common/strings.h"
 #include "../cef_common/view_events.h"
-#include "dialog.h"
-#include "launch_input.h"
+#include "mac_dialog.h"
+#include "mac_launch_input.h"
 
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_frame_capi.h"

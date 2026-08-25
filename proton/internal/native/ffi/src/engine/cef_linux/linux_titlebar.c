@@ -1,6 +1,6 @@
 #if defined(__linux__)
 
-#include "internal.h"
+#include "linux_internal.h"
 
 #include <stdint.h>
 #include <string.h>

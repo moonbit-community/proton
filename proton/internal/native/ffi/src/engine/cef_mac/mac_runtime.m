@@ -5,11 +5,11 @@
 #include "../../proton_event.h"
 #include "../../proton_json.h"
 
-#include "dialog.h"
-#include "internal.h"
-#include "launch_input.h"
-#include "menu.h"
-#include "window.h"
+#include "mac_dialog.h"
+#include "mac_internal.h"
+#include "mac_launch_input.h"
+#include "mac_menu.h"
+#include "mac_window.h"
 
 #include "../cef_common/message.h"
 #include "../cef_common/profile_storage.h"

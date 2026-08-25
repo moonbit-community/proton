@@ -1,6 +1,6 @@
 #if defined(_WIN32)
 
-#include "internal.h"
+#include "win_internal.h"
 #include "../../proton_config.h"
 #include "../../proton_event.h"
 #include "../../proton_json.h"

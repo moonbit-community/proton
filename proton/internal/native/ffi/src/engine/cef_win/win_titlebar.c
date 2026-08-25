@@ -1,6 +1,6 @@
 #if defined(_WIN32)
 
-#include "internal.h"
+#include "win_internal.h"
 
 #include <commctrl.h>
 #include <dwmapi.h>

@@ -1,6 +1,6 @@
 #if defined(__linux__)
 
-#include "internal.h"
+#include "linux_internal.h"
 
 #include "../../proton_config.h"
 #include "../../proton_event.h"

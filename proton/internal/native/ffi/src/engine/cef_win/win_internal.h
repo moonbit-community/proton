@@ -10,7 +10,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#include "proton_win_titlebar.h"
+#include "win_titlebar.h"
 
 #define PROTON_ENGINE_WINDOW_CLASS L"ProtonNativeWindow"
 #define PROTON_ENGINE_MAX_BRIDGE_PENDING 256

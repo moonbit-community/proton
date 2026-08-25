@@ -1,6 +1,6 @@
 #if defined(_WIN32)
 
-#include "internal.h"
+#include "win_internal.h"
 
 #include "../../proton_event.h"
 #include "../cef_common/message.h"

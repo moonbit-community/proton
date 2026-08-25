@@ -1,7 +1,7 @@
 #if defined(_WIN32)
 
 #include "../../proton_engine.h"
-#include "internal.h"
+#include "win_internal.h"
 #include "../../proton_config.h"
 #include "../../proton_event.h"
 #include "../../proton_json.h"
@@ -14,7 +14,7 @@
 #include <objbase.h>
 #include <shobjidl.h>
 
-#include "proton_win_titlebar.h"
+#include "win_titlebar.h"
 
 #include "include/cef_api_hash.h"
 #include "include/capi/cef_app_capi.h"

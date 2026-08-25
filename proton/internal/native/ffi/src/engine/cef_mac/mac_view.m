@@ -1,6 +1,6 @@
 #if defined(__APPLE__)
 
-#include "internal.h"
+#include "mac_internal.h"
 
 #include "../../proton_config.h"
 #include "../../proton_event.h"

@@ -5,12 +5,12 @@
 #endif
 
 #include "../../proton_engine.h"
-#include "internal.h"
+#include "linux_internal.h"
 #include "../../proton_config.h"
 #include "../../proton_event.h"
 #include "../../proton_json.h"
-#include "proton_linux_menu.h"
-#include "proton_linux_titlebar.h"
+#include "linux_menu.h"
+#include "linux_titlebar.h"
 
 #ifndef OS_LINUX
 #define OS_LINUX 1
