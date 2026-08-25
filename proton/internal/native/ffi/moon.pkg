@@ -37,6 +37,7 @@ options(
     "src/engine/cef_mac/mac_window.m",
     "src/engine/cef_win/win_client.c",
     "src/engine/cef_win/win_dialog.c",
+    "src/engine/cef_win/win_menu.c",
     "src/engine/cef_win/win_notification.c",
     "src/engine/cef_win/win_runtime.c",
     "src/engine/cef_win/win_screen.c",

@@ -246,6 +246,7 @@ int proton_engine_runtime_enqueue_bridge_cancellation(
     proton_engine_runtime_t *runtime,
     int64_t request_id);
 proton_engine_window_t *proton_engine_find_window_by_browser_id(int browser_id);
+proton_engine_window_t *proton_engine_windows_head(void);
 void proton_engine_window_list_add(proton_engine_window_t *window);
 void proton_engine_window_list_remove(proton_engine_window_t *window);
 void proton_engine_init_app(void);

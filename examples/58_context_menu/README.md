@@ -8,6 +8,8 @@ menu API.
 - Use the button to check an explicit coordinate popup.
 - Check command events, separators, a nested submenu, and a standard `SelectAll`
   role item.
+- On Windows with display scaling above 100%, confirm the popup stays aligned
+  with the amber marker instead of drifting down and right.
 
 Run it with:
 
@@ -15,5 +17,5 @@ Run it with:
 moon -C examples run 58_context_menu --target native
 ```
 
-Windows currently reports native popup menus as unsupported, matching Proton's
-native application-menu behavior on that platform.
+The popup path is implemented with the platform-native menu surface on macOS,
+Windows, and Linux.

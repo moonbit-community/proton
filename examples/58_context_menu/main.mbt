@@ -155,7 +155,7 @@ fn html() -> String {
     #|          <h1>Context menu<br>coordinate lab</h1>
     #|          <p class="summary">Review Proton's Electron-style <code>Menu.popup(window, x, y)</code> path: native placement, nested items, role actions, and renderer command events.</p>
     #|        </div>
-    #|        <div class="badge">CSS PX · TOP LEFT</div>
+    #|        <div id="scale" class="badge">CSS PX · TOP LEFT</div>
     #|      </header>
     #|      <div class="layout">
     #|        <section class="panel">
@@ -182,6 +182,7 @@ fn html() -> String {
     #|            <li>Open <strong>More</strong> and choose <strong>More Action</strong> to verify nested command routing.</li>
     #|            <li>Focus the text field, right-click inside it, then choose <strong>More → Select All</strong>.</li>
     #|            <li>Use the button and confirm the popup opens at the surface crosshair.</li>
+    #|            <li>On Windows above 100% display scaling, repeat the edge checks and confirm there is no DPI drift.</li>
     #|          </ol>
     #|          <h2 class="log-title">Event log</h2>
     #|          <ol id="log"><li class="empty">No menu commands received yet.</li></ol>
@@ -193,6 +194,7 @@ fn html() -> String {
     #|      const surface = document.querySelector("#surface");
     #|      const marker = document.querySelector("#marker");
     #|      const log = document.querySelector("#log");
+    #|      document.querySelector("#scale").textContent = `CSS PX · DPR ${window.devicePixelRatio}`;
     #|      let lastPoint = { x: 0, y: 0 };
     #|      const invoke = (payload) => window.__MoonBit__.core.invokeOp("ext:contextMenu/show", payload);
     #|      function record(message) {
