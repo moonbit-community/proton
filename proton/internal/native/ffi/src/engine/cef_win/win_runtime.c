@@ -96,6 +96,14 @@ static void proton_engine_release_pump_event(void) {
 }
 static proton_engine_runtime_t *g_proton_engine_active_runtime = NULL;
 
+int proton_engine_runtime_initialized(void) {
+  return g_proton_cef_initialized;
+}
+
+int32_t proton_engine_runtime_remote_debugging_port(void) {
+  return g_proton_remote_debugging_port;
+}
+
 void proton_engine_signal_wait_source(
     proton_engine_runtime_t *runtime, uint32_t ready_mask) {
   (void)runtime;

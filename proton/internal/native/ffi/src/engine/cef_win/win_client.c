@@ -80,6 +80,81 @@ static proton_engine_bridge_pending_t *g_proton_engine_bridge_pending;
 static char g_proton_engine_resources_dir[PROTON_ENGINE_MAX_PATH_BYTES];
 static char g_proton_engine_locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
 
+static void CEF_CALLBACK proton_engine_osr_get_view_rect(
+    cef_render_handler_t *self, cef_browser_t *browser, cef_rect_t *rect);
+static int CEF_CALLBACK proton_engine_osr_get_screen_info(
+    cef_render_handler_t *self, cef_browser_t *browser,
+    cef_screen_info_t *screen_info);
+static void CEF_CALLBACK proton_engine_osr_on_popup_show(
+    cef_render_handler_t *self, cef_browser_t *browser, int show);
+static void CEF_CALLBACK proton_engine_osr_on_popup_size(
+    cef_render_handler_t *self, cef_browser_t *browser,
+    const cef_rect_t *rect);
+static void CEF_CALLBACK proton_engine_osr_on_paint(
+    cef_render_handler_t *self, cef_browser_t *browser,
+    cef_paint_element_type_t type, size_t dirty_rects_count,
+    const cef_rect_t *dirty_rects, const void *buffer, int width, int height);
+static int CEF_CALLBACK proton_engine_on_before_popup(
+    cef_life_span_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    int popup_id, const cef_string_t *target_url,
+    const cef_string_t *target_frame_name,
+    cef_window_open_disposition_t target_disposition, int user_gesture,
+    const cef_popup_features_t *popup_features, cef_window_info_t *window_info,
+    cef_client_t **client, cef_browser_settings_t *settings,
+    cef_dictionary_value_t **extra_info, int *no_javascript_access);
+static void CEF_CALLBACK proton_engine_on_before_close(
+    cef_life_span_handler_t *self, cef_browser_t *browser);
+static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
+    cef_drag_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    size_t regions_count, const cef_draggable_region_t *regions);
+static void CEF_CALLBACK proton_engine_on_loading_state_change(
+    cef_load_handler_t *self, cef_browser_t *browser, int isLoading,
+    int canGoBack, int canGoForward);
+static void CEF_CALLBACK proton_engine_on_load_start(
+    cef_load_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    cef_transition_type_t transition_type);
+static void CEF_CALLBACK proton_engine_on_load_end(
+    cef_load_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    int httpStatusCode);
+static void CEF_CALLBACK proton_engine_on_load_error(
+    cef_load_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    cef_errorcode_t errorCode, const cef_string_t *errorText,
+    const cef_string_t *failedUrl);
+static int CEF_CALLBACK proton_engine_on_before_browse(
+    cef_request_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    cef_request_t *request, int user_gesture, int is_redirect);
+static int CEF_CALLBACK proton_engine_on_certificate_error(
+    cef_request_handler_t *self, cef_browser_t *browser,
+    cef_errorcode_t cert_error, const cef_string_t *request_url,
+    cef_sslinfo_t *ssl_info, cef_callback_t *callback);
+static int CEF_CALLBACK proton_engine_can_download(
+    cef_download_handler_t *self, cef_browser_t *browser,
+    const cef_string_t *url, const cef_string_t *request_method);
+static int CEF_CALLBACK proton_engine_on_before_download(
+    cef_download_handler_t *self, cef_browser_t *browser,
+    cef_download_item_t *download_item, const cef_string_t *suggested_name,
+    cef_before_download_callback_t *callback);
+static void CEF_CALLBACK proton_engine_on_download_updated(
+    cef_download_handler_t *self, cef_browser_t *browser,
+    cef_download_item_t *download_item,
+    cef_download_item_callback_t *callback);
+static int CEF_CALLBACK proton_engine_on_media_permission(
+    cef_permission_handler_t *self, cef_browser_t *browser,
+    cef_frame_t *frame, const cef_string_t *requesting_origin,
+    uint32_t requested_permissions, cef_media_access_callback_t *callback);
+static void CEF_CALLBACK proton_engine_on_render_process_terminated(
+    cef_request_handler_t *self, cef_browser_t *browser,
+    cef_termination_status_t status, int error_code,
+    const cef_string_t *error_string);
+static cef_drag_handler_t *CEF_CALLBACK
+proton_engine_client_get_drag_handler(cef_client_t *self);
+static cef_request_handler_t *CEF_CALLBACK
+proton_engine_client_get_request_handler(cef_client_t *self);
+static cef_download_handler_t *CEF_CALLBACK
+proton_engine_client_get_download_handler(cef_client_t *self);
+static cef_permission_handler_t *CEF_CALLBACK
+proton_engine_client_get_permission_handler(cef_client_t *self);
+
 static size_t proton_engine_bridge_pending_count(void) {
   size_t count = 0;
   for (proton_engine_bridge_pending_t *pending =
@@ -682,7 +757,7 @@ static void proton_engine_on_before_command_line_processing(
     return;
   }
   if ((process_type == NULL || process_type->length == 0) &&
-      g_proton_remote_debugging_port ==
+      proton_engine_runtime_remote_debugging_port() ==
           PROTON_REMOTE_DEBUGGING_EPHEMERAL) {
     proton_engine_append_switch_with_value(command_line,
                                            "remote-debugging-port", "0");

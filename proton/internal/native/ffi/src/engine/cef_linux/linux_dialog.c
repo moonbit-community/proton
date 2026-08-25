@@ -6,6 +6,7 @@
 #include "../cef_common/message.h"
 
 #include <gtk/gtk.h>
+#include <gdk/gdkx.h>
 
 #include <stdint.h>
 #include <stdlib.h>

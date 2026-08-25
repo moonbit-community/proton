@@ -3,6 +3,9 @@
 
 #include "bridge_policy.h"
 
+#include <stdio.h>
+#include <string.h>
+
 static int proton_engine_bridge_op_is_valid(const char *op) {
   if (op == NULL || op[0] == '\0') {
     return 0;

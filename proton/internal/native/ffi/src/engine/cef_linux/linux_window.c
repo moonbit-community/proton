@@ -38,6 +38,7 @@
 #include "include/internal/cef_string.h"
 
 #include <gtk/gtk.h>
+#include <gdk/gdkx.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 
@@ -1109,11 +1110,5 @@ int32_t proton_engine_window_take_bridge_failure_json(
   return proton_engine_bridge_lifecycle_take_failure_json(
       &window->bridge_lifecycle, buffer, buffer_len, out_required_len);
 }
-
-typedef enum proton_engine_linux_dialog_kind {
-  PROTON_ENGINE_LINUX_DIALOG_MESSAGE = 0,
-  PROTON_ENGINE_LINUX_DIALOG_CONFIRM = 1,
-  PROTON_ENGINE_LINUX_DIALOG_FILE = 2,
-} proton_engine_linux_dialog_kind_t;
 
 #endif

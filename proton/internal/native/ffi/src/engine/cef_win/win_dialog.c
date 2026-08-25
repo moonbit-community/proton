@@ -55,6 +55,9 @@ enum {
 static int64_t g_next_dialog_id = 1;
 static proton_engine_win_dialog_request_t *g_dialog_requests = NULL;
 
+static void proton_engine_file_dialog_cancel_window(
+    proton_engine_window_t *window);
+
 static wchar_t *proton_engine_dialog_text(const char *text, int32_t text_len) {
   if (text == NULL || text_len <= 0) {
     return (wchar_t *)calloc(1, sizeof(wchar_t));

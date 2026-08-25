@@ -372,7 +372,8 @@ int32_t proton_engine_window_create(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   *out_window = NULL;
-  if (runtime == NULL || input_config == NULL || !g_proton_cef_initialized) {
+  if (runtime == NULL || input_config == NULL ||
+      !proton_engine_runtime_initialized()) {
     proton_engine_set_message(error, error_len, "runtime is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }

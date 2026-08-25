@@ -6,9 +6,12 @@
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
+#include "../cef_common/window_state.h"
 
 #include <gtk/gtk.h>
 #include <stdatomic.h>
+
+#include <X11/Xlib.h>
 
 #include "linux_menu.h"
 #include "linux_titlebar.h"
@@ -46,6 +49,12 @@ enum {
 };
 
 typedef struct proton_engine_client proton_engine_client_t;
+
+typedef enum proton_engine_linux_dialog_kind {
+  PROTON_ENGINE_LINUX_DIALOG_MESSAGE = 0,
+  PROTON_ENGINE_LINUX_DIALOG_CONFIRM = 1,
+  PROTON_ENGINE_LINUX_DIALOG_FILE = 2,
+} proton_engine_linux_dialog_kind_t;
 
 struct proton_engine_runtime {
   int owns_cef_runtime;

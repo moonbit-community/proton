@@ -6,6 +6,7 @@
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
+#include "../cef_common/window_state.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -18,10 +19,6 @@
 #define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
 #define PROTON_ENGINE_WM_DESTROY_SELF (WM_USER + 0x31)
 #define PROTON_ENGINE_WM_DESTROY_CHILD (WM_USER + 0x32)
-
-#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
-#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
-#endif
 
 #include "include/capi/cef_app_capi.h"
 #include "include/capi/cef_browser_process_handler_capi.h"
@@ -240,6 +237,8 @@ struct proton_engine_view {
 };
 
 void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms);
+int proton_engine_runtime_initialized(void);
+int32_t proton_engine_runtime_remote_debugging_port(void);
 int proton_engine_runtime_enqueue_bridge_request(
     proton_engine_runtime_t *runtime,
     char *request_json);

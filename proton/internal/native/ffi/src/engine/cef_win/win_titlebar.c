@@ -7,6 +7,8 @@
 #include <string.h>
 #include <windowsx.h>
 
+#define PROTON_DWMWA_USE_IMMERSIVE_DARK_MODE 20
+
 static int proton_win_is_caption_button_hit(LRESULT hit_test) {
   return hit_test == HTMINBUTTON || hit_test == HTMAXBUTTON ||
          hit_test == HTCLOSE;
@@ -193,7 +195,7 @@ static int proton_engine_overlay_caption_buttons_rect(HWND hwnd, RECT *out) {
 
 void proton_engine_overlay_apply_frame(HWND hwnd) {
   const BOOL use_dark_caption = TRUE;
-  (void)DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
+  (void)DwmSetWindowAttribute(hwnd, PROTON_DWMWA_USE_IMMERSIVE_DARK_MODE,
                               &use_dark_caption,
                               sizeof(use_dark_caption));
   MARGINS margins = {
