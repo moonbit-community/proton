@@ -82,6 +82,34 @@ test "dev frontend does not inherit the injected CEF preload" {
 }
 
 ///|
+async test "dev selects xlog info on stderr unless the caller overrides it" {
+  let runtime = DevRuntime::{
+    root: "/runtime",
+    bin_dir: "/runtime/bin",
+    lib_dir: "/runtime/lib",
+  }
+  let child = dev_process_env(
+    runtime,
+    "/helper",
+    None,
+    "/project",
+    "/project/proton.project.json",
+  )
+  @debug.assert_eq(
+    child.get("MOON_XLOG"),
+    Some(@env.get_env_var("MOON_XLOG").unwrap_or("info")),
+  )
+  assert_eq(
+    child.get("PROTON_PROJECT_CONFIG"),
+    Some("/project/proton.project.json"),
+  )
+  @debug.assert_eq(
+    child.get("PROTON_LOG_OUTPUT"),
+    Some(@env.get_env_var("PROTON_LOG_OUTPUT").unwrap_or("stderr")),
+  )
+}
+
+///|
 test "parse dev url endpoint keeps next 404-compatible tcp readiness" {
   let endpoint = parse_dev_url_endpoint("http://localhost:3000/app", None)
   @debug.assert_eq(endpoint.url, "http://localhost:3000/app")

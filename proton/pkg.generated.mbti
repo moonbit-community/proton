@@ -14,8 +14,6 @@ import {
 }
 
 // Values
-pub fn app_data_dir(String) -> String raise AppPathError
-
 pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub async fn check_for_update() -> UpdateCheck
@@ -72,6 +70,7 @@ pub fn AppEntryError::to_repr(Self) -> @debug.Repr
 pub fn AppEntryError::to_string(Self) -> String
 
 pub(all) suberror AppPathError {
+  MissingApplicationIdentifier
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
   PlatformProbe(status~ : Int, detail~ : String)
@@ -84,6 +83,7 @@ pub fn AppPathError::to_repr(Self) -> @debug.Repr
 pub(all) suberror AppRunError {
   EventLoopError(String)
   ConfigurationError(AppConfigurationError)
+  LoggingInitializationFailed(detail~ : String)
   UnsupportedNativeFeature(feature~ : String)
   RuntimeOperationFailed(action~ : String, status~ : Int, detail~ : String)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)
@@ -149,6 +149,7 @@ pub fn SystemLocaleError::to_string(Self) -> String
 pub(all) suberror WindowSessionError {
   UnknownWindow(id~ : String)
   AlreadyOpen(id~ : String)
+  ApplicationQuitting
   StaleWindow(id~ : String)
   UnknownView(id~ : String)
   AlreadyExists(id~ : String)
@@ -169,6 +170,7 @@ pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) ->
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise, targets? : Array[RendererTarget]) -> Self
+pub fn App::data_dir(Self) -> String raise AppPathError
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
 pub fn App::document_extension(Self, String) -> Self
@@ -177,12 +179,15 @@ pub fn App::entry_file(Self, String) -> Self
 pub fn App::entry_html(Self, String) -> Self
 pub fn App::entry_url(Self, String) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
+pub fn App::identifier(Self, String) -> Self
+pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
+pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
 pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise) -> Self
-pub fn App::on_launch_input(Self, async (RuntimeLaunchInput) -> Unit noraise) -> Self
+pub fn App::on_launch_input(Self, async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise) -> Self
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_popup_request(Self, async (BrowserHandle, PopupRequest) -> PopupDecision noraise) -> Self
@@ -192,7 +197,7 @@ pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDec
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
-pub fn App::single_instance(Self, String) -> Self
+pub fn App::single_instance(Self, enabled? : Bool) -> Self
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, TitlebarStyle) -> Self
@@ -205,9 +210,11 @@ pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
+  request_quit : () -> Unit
 }
 pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
+pub fn ApplicationContext::quit(Self) -> Unit
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::windows(Self) -> WindowManager
 
@@ -295,6 +302,14 @@ pub fn DownloadRequest::equal(Self, Self) -> Bool
 pub fn DownloadRequest::not_equal(Self, Self) -> Bool
 pub fn DownloadRequest::to_repr(Self) -> @debug.Repr
 
+pub(all) enum LastWindowClosedPolicy {
+  Quit
+  KeepRunning
+} derive(Eq, @debug.Debug)
+pub fn LastWindowClosedPolicy::equal(Self, Self) -> Bool
+pub fn LastWindowClosedPolicy::not_equal(Self, Self) -> Bool
+pub fn LastWindowClosedPolicy::to_repr(Self) -> @debug.Repr
+
 pub(all) struct MediaPermissionRequest {
   origin : String
   permissions : Int
@@ -308,14 +323,14 @@ pub struct Menu {
   role : MenuRole?
   items : Array[MenuItem]?
 }
-pub fn Menu::new(String, items~ : Array[MenuItem]) -> Self
+pub fn Menu::Menu(String, items~ : Array[MenuItem]) -> Self
 pub fn Menu::popup(Self, WindowHandle, Int, Int) -> Unit raise WindowSessionError
 pub fn Menu::role(MenuRole, label? : String, items? : Array[MenuItem]) -> Self
 
 pub struct MenuBar {
   menus : Array[Menu]
 }
-pub fn MenuBar::new(menus~ : Array[Menu]) -> Self
+pub fn MenuBar::MenuBar(menus~ : Array[Menu]) -> Self
 
 pub struct MenuItem {
   kind : Int
@@ -477,7 +492,7 @@ pub struct ViewConfig {
   initial_url : String
   background_color : String?
 }
-pub fn ViewConfig::new(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String) -> Self
+pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String) -> Self
 
 pub(all) enum ViewEvent {
   LoadingChanged(is_loading~ : Bool)

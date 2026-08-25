@@ -17,7 +17,6 @@ async fn[X] run_e2e_operation_with_timeout(
 struct SpawnedScenarioApp {
   process : @process.Process
   output_path : String
-  native_log_path : String
 }
 
 ///|
@@ -40,18 +39,9 @@ fn current_working_directory() -> String raise {
 
 ///|
 fn repository_root() -> String raise {
-  let mut current = @path.Path(current_working_directory())
-  for ;; {
-    let current_text = current.to_string()
-    if @mbfs.path_exists(join_path(current_text, "moon.work")) {
-      return current_text
-    }
-    let parent = current.dirname()
-    if parent == current {
-      fail("could not find repository root from " + current_text)
-    }
-    current = parent
-  }
+  // `moon -C e2e` makes the E2E module the process working directory.
+  let e2e_root = @path.Path(current_working_directory())
+  e2e_root.dirname().to_string()
 }
 
 ///|
@@ -107,11 +97,13 @@ async fn app_process_env(
   let result : Map[String, String] = {
     "PROTON_RUNTIME_ROOT": runtime_dist,
     "PROTON_HELPER_PATH": helper_path,
-    "PROTON_NATIVE_LOG": scenario_native_log_path(output_root, cdp_port),
     "PROTON_REMOTE_DEBUGGING_PORT": cdp_port.to_string(),
     "PROTON_HEADLESS": "1",
     "PROTON_E2E_ASSET_SIDECAR_ENTRY": join_path(
       root, "examples/46_asset_sidecar_resources/app/app.html",
+    ),
+    "PROTON_E2E_WEB_CONTENTS_VIEW_EVENTS": scenario_web_contents_view_events_path(
+      output_root, cdp_port,
     ),
   }
   result[app_child_scenario_env] = scenario
@@ -151,8 +143,11 @@ async fn app_process_env(
 }
 
 ///|
-fn scenario_native_log_path(output_root : String, cdp_port : Int) -> String {
-  join_path(output_root, "native-" + cdp_port.to_string() + ".log")
+fn scenario_web_contents_view_events_path(
+  output_root : String,
+  cdp_port : Int,
+) -> String {
+  join_path(output_root, "view-events-" + cdp_port.to_string() + ".txt")
 }
 
 ///|
@@ -213,11 +208,7 @@ async fn[X] spawn_scenario_app(
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )
-  SpawnedScenarioApp::{
-    process,
-    output_path,
-    native_log_path: scenario_native_log_path(output_root, cdp_port),
-  }
+  SpawnedScenarioApp::{ process, output_path }
 }
 
 ///|
@@ -448,8 +439,7 @@ fn app_output_suffix(path : String) -> String {
 
 ///|
 fn app_diagnostic_suffix(app : SpawnedScenarioApp) -> String {
-  app_output_suffix(app.output_path) +
-  file_output_suffix(app.native_log_path, "Native log")
+  app_output_suffix(app.output_path)
 }
 
 ///|
@@ -522,6 +512,29 @@ async fn close_page_target(
 }
 
 ///|
+async fn wait_for_page_target_closed(
+  browser : @client.CdpClient,
+  target_id : String,
+  timeout : Int,
+) -> Unit {
+  let mut elapsed = 0
+  while elapsed <= timeout {
+    let targets = browser.get_targets()
+    if !targets.any(info => info.target_id == target_id) {
+      return
+    }
+    @async.sleep(cdp_start_poll_timeout_ms)
+    elapsed = elapsed + cdp_start_poll_timeout_ms
+  }
+  fail(
+    "CDP page target did not close within " +
+    timeout.to_string() +
+    "ms: " +
+    target_id,
+  )
+}
+
+///|
 async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int) -> Unit {
   let mut elapsed = 0
   while elapsed <= timeout {
@@ -585,7 +598,12 @@ async fn run_scenario_probe_once(
       run_multi_window_scenario_probe(group, app, target, timeout)
     } else if name == "52_web_contents_view" {
       run_web_contents_view_scenario_probe(
-        group, app, target, browser_web_socket_url, timeout,
+        group,
+        app,
+        target,
+        browser_web_socket_url,
+        scenario_web_contents_view_events_path(output_root, port),
+        timeout,
       )
     } else if name == "54_devtools" {
       run_devtools_scenario_page_probe(group, app, target, timeout)
@@ -613,26 +631,13 @@ async fn run_scenario_probe_once(
       finish_scenario_app(app, target)
     } else {
       if name == "41_app_commands" {
-        run_app_commands_full_probe(
-          group,
-          output_root,
-          target,
-          timeout,
-          app.native_log_path,
-        )
+        run_app_commands_full_probe(group, output_root, target, timeout)
       } else if name == "40_event_broadcast" {
         run_event_scenario_page_probe(group, app, target, timeout)
       } else if name == "46_asset_sidecar_resources" {
         run_asset_sidecar_scenario_page_probe(group, app, target, timeout)
       } else {
-        run_extension_scenario_page_probe(
-          group,
-          app,
-          target,
-          name,
-          timeout,
-          app.native_log_path,
-        )
+        run_extension_scenario_page_probe(group, app, target, name, timeout)
       }
       match app_exit_code(app.process) {
         Some(code) =>

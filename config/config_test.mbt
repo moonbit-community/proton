@@ -13,6 +13,7 @@ fn expect_config_error(
 test "project config contains only CLI build and package settings" {
   let source =
     #|{
+    #|  "identifier": "com.example.todo",
     #|  "backend": { "path": "backend", "package": "app" },
     #|  "frontend": {
     #|    "path": "frontend",
@@ -23,7 +24,6 @@ test "project config contains only CLI build and package settings" {
     #|  },
     #|  "package": {
     #|    "product_name": "Todo",
-    #|    "identifier": "com.example.todo",
     #|    "version": "1.2.3",
     #|    "formats": ["app", "zip"],
     #|    "icons": ["icons/app.icns"],
@@ -32,6 +32,7 @@ test "project config contains only CLI build and package settings" {
     #|  }
     #|}
   let config = load_project_config_from_text(source, "/workspace/todo")
+  assert_eq(config.identifier(), "com.example.todo")
   assert_eq(config.backend().unwrap().app_package(), "app")
   let dist = config
     .frontend()
@@ -50,7 +51,7 @@ test "project config contains only CLI build and package settings" {
 ///|
 test "project config rejects unknown top-level fields" {
   let source =
-    #|{ "window": { "title": "Todo" } }
+    #|{ "identifier": "com.example.todo", "window": { "title": "Todo" } }
   let error = expect_config_error(() => {
     ignore(load_project_config_from_text(source, "/workspace/todo"))
   })
@@ -58,9 +59,50 @@ test "project config rejects unknown top-level fields" {
 }
 
 ///|
+test "project config requires a valid application identity" {
+  let missing = expect_config_error(() => {
+    ignore(load_project_config_from_text("{}", "/workspace/todo"))
+  })
+  assert_eq(missing, MissingField(path="identifier"))
+  let invalid = expect_config_error(() => {
+    ignore(
+      load_project_config_from_text(
+        "{ \"identifier\": \"not-an-identifier\" }", "/workspace/todo",
+      ),
+    )
+  })
+  assert_eq(
+    invalid,
+    InvalidField(
+      path="identifier",
+      expectation="must be a reverse-DNS application identifier",
+    ),
+  )
+}
+
+///|
+test "project package cannot define a second application identity" {
+  let source =
+    #|{
+    #|  "identifier": "com.example.todo",
+    #|  "package": {
+    #|    "product_name": "Todo",
+    #|    "identifier": "com.example.other",
+    #|    "version": "1.0.0"
+    #|  }
+    #|}
+  let error = expect_config_error(() => {
+    ignore(load_project_config_from_text(source, "/workspace/todo"))
+  })
+  assert_eq(error, UnknownField(path="package.identifier"))
+}
+
+///|
 test "project config sections must be objects" {
   for section in ["backend", "frontend", "package"] {
-    let source = "{ \"" + section + "\": false }"
+    let source = "{ \"identifier\": \"com.example.todo\", \"" +
+      section +
+      "\": false }"
     let error = expect_config_error(() => {
       ignore(load_project_config_from_text(source, "/workspace/todo"))
     })
@@ -78,7 +120,8 @@ test "project config sections must be objects" {
 test "project paths reject absolute and platform-specific spelling" {
   for
     source in [
-      "{ \"backend\": { \"path\": \"/tmp/backend\", \"package\": \"app\" } }", "{ \"frontend\": { \"path\": \"frontend\\\\src\" } }",
+      "{ \"identifier\": \"com.example.todo\", \"backend\": { \"path\": \"/tmp/backend\", \"package\": \"app\" } }",
+      "{ \"identifier\": \"com.example.todo\", \"frontend\": { \"path\": \"frontend\\\\src\" } }",
     ] {
     ignore(
       expect_config_error(() => {

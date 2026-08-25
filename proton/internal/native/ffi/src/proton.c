@@ -572,25 +572,34 @@ void proton_internal_event_destroy(proton_event_t *event) {
   proton_event_destroy(event);
 }
 
-int32_t proton_runtime_respond_bridge_request_json(
-    proton_runtime_handle_t runtime,
-    const char *response_json) {
+int32_t proton_runtime_respond_bridge_request(
+    proton_runtime_handle_t runtime, int64_t request_id, int32_t ok,
+    const char *body_json) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  status = proton_config_validate_bridge_response(response_json);
-  if (status != PROTON_OK) {
-    return status;
+  if (request_id <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge response requires positive request_id");
+  }
+  if (ok != 0 && ok != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge response ok must be 0 or 1");
+  }
+  if (body_json == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge response body_json is required");
   }
   if (slot->engine_runtime == NULL) {
     return proton_set_error(PROTON_ERR_UNSUPPORTED,
                             "bridge response requires native engine");
   }
   char engine_error[512] = {0};
-  status = proton_engine_runtime_respond_bridge_request_json(
-      slot->engine_runtime, response_json, engine_error, sizeof(engine_error));
+  status = proton_engine_runtime_respond_bridge_request(
+      slot->engine_runtime, request_id, ok, body_json, engine_error,
+      sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }

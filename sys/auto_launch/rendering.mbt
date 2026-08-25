@@ -55,7 +55,7 @@ fn linux_desktop_contents(config : AutoLaunchConfig) -> String {
 ///|
 /// Renders the `<string>` items for a LaunchAgent `ProgramArguments` array.
 fn plist_program_arguments(arguments : Array[String]) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   for argument in arguments {
     builder.write_string("    <string>")
     builder.write_string(xml_escape(argument))

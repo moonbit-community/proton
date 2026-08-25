@@ -83,7 +83,6 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
                                            proton_json_value_t value) {
   char text[PROTON_MAX_PATH_BYTES];
   int32_t integer = 0;
-  bool boolean = false;
   bool valid = true;
   if (strcmp(key, "abi_version") == 0) {
     return true;
@@ -95,13 +94,6 @@ static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
       valid = proton_json_is_array(doc, value);
     } else if (strcmp(key, "max_payload_bytes") == 0) {
       valid = proton_json_read_int32(doc, value, &integer) && integer > 0;
-    }
-  } else if (strcmp(config_name, "bridge response") == 0) {
-    if (strcmp(key, "request_id") == 0) {
-      int64_t request_id = 0;
-      valid = proton_json_read_int64_string_or_number(doc, value, &request_id);
-    } else if (strcmp(key, "ok") == 0) {
-      valid = proton_json_read_bool(doc, value, &boolean);
     }
   } else if (strcmp(config_name, "bridge event") == 0) {
     if (strcmp(key, "kind") == 0 || strcmp(key, "extension") == 0 ||
@@ -208,14 +200,6 @@ static int32_t proton_validate_abi_config(
   proton_json_dispose(&doc);
   return validation.status;
 }
-
-static const char *const proton_bridge_response_keys[] = {
-    "abi_version",
-    "request_id",
-    "ok",
-    "payload",
-    "error",
-};
 
 static const char *const proton_bridge_event_keys[] = {
     "abi_version",
@@ -988,42 +972,6 @@ int32_t proton_config_prepare_view(
     config.has_background_color = 1;
   }
   *out_config = config;
-  return PROTON_OK;
-}
-
-int32_t proton_config_validate_bridge_response(const char *response_json) {
-  int32_t status = proton_validate_abi_config(
-      response_json, "bridge response", proton_bridge_response_keys,
-      sizeof(proton_bridge_response_keys) /
-          sizeof(proton_bridge_response_keys[0]),
-      PROTON_ABI_VERSION);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, response_json) ||
-      !proton_json_root_object(&doc, &root)) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge response must be a JSON object");
-  }
-  int64_t request_id = 0;
-  if (!proton_json_object_get(&doc, root, "request_id", &value) ||
-      !proton_json_read_int64_string_or_number(&doc, value, &request_id) ||
-      request_id <= 0) {
-    proton_json_dispose(&doc);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge response requires positive request_id");
-  }
-  bool ok = false;
-  if (!proton_json_object_get(&doc, root, "ok", &value) ||
-      !proton_json_read_bool(&doc, value, &ok)) {
-    proton_json_dispose(&doc);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge response requires boolean ok");
-  }
-  proton_json_dispose(&doc);
   return PROTON_OK;
 }
 

@@ -2,8 +2,8 @@
 test "doctor renderers expose failures and summaries" {
   let report : DoctorReport = {
     sections: [
-      DoctorSection::new("project", "Project", [
-        DoctorLine::new("project.not_found", Error, "no Proton project found"),
+      DoctorSection("project", "Project", [
+        DoctorLine("project.not_found", Error, "no Proton project found"),
       ]),
     ],
   }

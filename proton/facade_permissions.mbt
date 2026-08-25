@@ -197,7 +197,7 @@ fn WindowPermissionPolicy::native_grants(
       }
     }
     native_grants.push(
-      @native.BridgeGrantConfig::new(
+      @native.BridgeGrantConfig(
         source_origin,
         ops~,
         extensions~,

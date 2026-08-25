@@ -55,19 +55,16 @@ async fn run_web_contents_view_app() -> Result[Unit, String] {
     )
     .on_view_event(fn(_view, event) noraise {
       view_events.push(web_contents_view_event_line(event))
-      match @env.get_env_var("PROTON_NATIVE_LOG") {
-        Some(native_log) =>
-          @mbfs.write_string_to_file(
-            native_log + ".view-events",
-            view_events.join("\n"),
-          ) catch {
+      match @env.get_env_var("PROTON_E2E_WEB_CONTENTS_VIEW_EVENTS") {
+        Some(path) =>
+          @mbfs.write_string_to_file(path, view_events.join("\n")) catch {
             _ => ()
           }
         None => ()
       }
     })
   try {
-    app.run()
+    app.identifier("dev.proton.e2e-web-contents-view").run()
     Ok(())
   } catch {
     error => Err(error.message())

@@ -92,7 +92,7 @@ pub fn screens() -> Array[ScreenInfo] raise NativeError {
 }
 
 ///|
-pub fn AppActivation::new(
+pub fn AppActivation::AppActivation(
   urls? : Array[String] = [],
   files? : Array[String] = [],
   reopen? : Bool = false,
@@ -439,7 +439,7 @@ pub fn execute_process(
 }
 
 ///|
-pub fn Runtime::new(
+pub fn Runtime::Runtime(
   config? : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> Runtime raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
@@ -983,6 +983,7 @@ fn decode_native_runtime_event(
           Some(require_native_event_text(event, 0, "notification click"))
         },
       )
+    28 => QuitRequested
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -1010,10 +1011,19 @@ pub fn Runtime::respond_bridge_request(
   self : Runtime,
   response : BridgeResponse,
 ) -> Unit raise NativeError {
+  let (request_id, ok, body_json) = match response {
+    Ok(request_id~, payload~) => (request_id, 1, payload.stringify())
+    Err(request_id~, code~, message~) => {
+      let error : Json = { "code": code, "message": message }
+      (request_id, 0, error.stringify())
+    }
+  }
   check_status(
-    @native_ffi.proton_runtime_respond_bridge_request_json_ffi(
+    @native_ffi.proton_runtime_respond_bridge_request_ffi(
       self.active_handle(),
-      @ffi.to_cstr(response.to_json_string()),
+      request_id,
+      ok,
+      @ffi.to_cstr(body_json),
     ),
   )
 }
@@ -1123,9 +1133,9 @@ fn build_bridge_config(
 }
 
 ///|
-pub fn Window::new(
+pub fn Window::Window(
   runtime : Runtime,
-  config? : WindowConfig = WindowConfig::new(),
+  config? : WindowConfig = WindowConfig(),
 ) -> Window raise NativeError {
   validate_window_config(config)
   let out_window = Ref(@native_ffi.window_null())
@@ -2017,7 +2027,7 @@ fn validate_view_config(config : ViewConfig) -> Unit raise NativeError {
 /// Creates a web contents view inside `window`. The view renders above the
 /// window's main browser content; use `set_z_order` to stack multiple views.
 /// Requires the `web_contents_view` native runtime feature.
-pub fn View::new(
+pub fn View::View(
   window : Window,
   config : ViewConfig,
 ) -> View raise NativeError {

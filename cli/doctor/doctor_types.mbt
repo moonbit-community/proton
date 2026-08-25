@@ -35,7 +35,7 @@ priv struct DoctorLine {
 }
 
 ///|
-fn DoctorLine::new(
+fn DoctorLine::DoctorLine(
   code : String,
   status : DoctorStatus,
   text : String,
@@ -52,7 +52,7 @@ priv struct DoctorSection {
 }
 
 ///|
-fn DoctorSection::new(
+fn DoctorSection::DoctorSection(
   id : String,
   title : String,
   lines : Array[DoctorLine],

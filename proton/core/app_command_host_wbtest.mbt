@@ -27,7 +27,7 @@ fn quiet_app_command_host(
 
 ///|
 test "app command host starts open and empty" {
-  let host = AppCommandHost::new()
+  let host = AppCommandHost()
   @debug.assert_eq(host.registered_ops(), [])
   host.op("app:ping", fn(_payload : Unit) { "pong" })
   @debug.assert_eq(host.registered_ops(), ["app:ping"])
@@ -49,8 +49,8 @@ async test "production command errors hide backend diagnostics" {
   })
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
-      AppCommandRequestContext::new(group, detached_locale_preferences()),
-      @ipc.IpcOpRequest::new("request-1", "app:fail", null),
+      AppCommandRequestContext(group, detached_locale_preferences()),
+      @ipc.IpcOpRequest("request-1", "app:fail", null),
     )
     assert_false(response.is_ok())
     assert_eq(response_error_message(response), "op app:fail failed")
@@ -71,14 +71,14 @@ async test "production command errors hide backend diagnostics" {
 
 ///|
 async test "development command errors retain backend diagnostics" {
-  let host = AppCommandHost::new(expose_error_details=true)
+  let host = AppCommandHost(expose_error_details=true)
   host.op("app:fail", fn(_payload : Unit) -> String raise {
     raise CommandHostTestError::PrivateFailure(
       "/Users/example/private.mbt:42\nstack: internal_handler",
     )
   })
   let response = host.dispatch_ipc(
-    @ipc.IpcOpRequest::new("request-2", "app:fail", null),
+    @ipc.IpcOpRequest("request-2", "app:fail", null),
   )
   let message = response_error_message(response)
   assert_false(response.is_ok())
@@ -89,7 +89,7 @@ async test "development command errors retain backend diagnostics" {
 
 ///|
 test "panic command host rejects registration after close" {
-  let host = MbtProcessHost::new()
+  let host = MbtProcessHost()
   host.op("app:ping", fn(_payload : Unit) { "pong" })
   host.close()
   host.op("app:late", fn(_payload : Unit) { "late" })
@@ -97,7 +97,7 @@ test "panic command host rejects registration after close" {
 
 ///|
 test "panic command host rejects registration after sealing" {
-  let host = AppCommandHost::new()
+  let host = AppCommandHost()
   host.op("app:ping", fn(_payload : Unit) { "pong" })
   host.seal_registrations()
   host.op("app:late", fn(_payload : Unit) { "late" })
@@ -105,7 +105,7 @@ test "panic command host rejects registration after sealing" {
 
 ///|
 async test "runtime wake signal preserves notifications across wait races" {
-  let signal = RuntimeWakeSignal::new()
+  let signal = RuntimeWakeSignal()
   let revision = signal.revision()
   signal.notify()
   inspect(signal.revision(), content="1")
@@ -117,9 +117,9 @@ async test "runtime wake signal preserves notifications across wait races" {
 
 ///|
 async test "request context observes its shared runtime wake signal" {
-  let signal = RuntimeWakeSignal::new()
+  let signal = RuntimeWakeSignal()
   @async.with_task_group(group => {
-    let context = AppCommandRequestContext::new(
+    let context = AppCommandRequestContext(
       group,
       detached_locale_preferences(),
       wake_signal=signal,
@@ -139,7 +139,7 @@ async test "request context exposes the application locale snapshot" {
     [@locale.Locale::parse("en-GB")],
   )
   @async.with_task_group(group => {
-    let context = AppCommandRequestContext::new(group, preferences)
+    let context = AppCommandRequestContext(group, preferences)
     assert_eq(context.locale().to_string(), "ja-JP")
     assert_eq(context.preferred_languages().map(locale => locale.to_string()), [
       "ja-JP", "en-GB", "en-US",
@@ -157,7 +157,7 @@ async test "context-aware handlers reject contextless dispatch" {
     context.locale().to_string()
   })
   let response = host.dispatch_ipc(
-    @ipc.IpcOpRequest::new("request-contextless", "app:locale", null),
+    @ipc.IpcOpRequest("request-contextless", "app:locale", null),
   )
   assert_false(response.is_ok())
   assert_false(called.val)
@@ -170,7 +170,7 @@ async test "context-aware handlers reject contextless dispatch" {
 
 ///|
 async test "context-aware handlers receive the supplied locale" {
-  let host = AppCommandHost::new()
+  let host = AppCommandHost()
   host.op_async_with_context("app:locale", fn(context, _payload : Unit) {
     context.locale().to_string()
   })
@@ -180,8 +180,8 @@ async test "context-aware handlers receive the supplied locale" {
   )
   @async.with_task_group(group => {
     let response = host.dispatch_ipc_with_context(
-      AppCommandRequestContext::new(group, preferences),
-      @ipc.IpcOpRequest::new("request-context", "app:locale", null),
+      AppCommandRequestContext(group, preferences),
+      @ipc.IpcOpRequest("request-context", "app:locale", null),
     )
     assert_true(response.is_ok())
     match response.body {
@@ -196,7 +196,7 @@ async test "context-aware handlers receive the supplied locale" {
 async test "request context exposes only its owning extension scope" {
   let original : Map[String, Json] = { "root": "./data" }
   @async.with_task_group(group => {
-    let context = AppCommandRequestContext::new(
+    let context = AppCommandRequestContext(
       group,
       detached_locale_preferences(),
       window_id="secondary",
@@ -237,7 +237,7 @@ async test "request context emits through its page-scoped destination" {
     "changed",
   )
   @async.with_task_group(group => {
-    let context = AppCommandRequestContext::new(
+    let context = AppCommandRequestContext(
       group,
       detached_locale_preferences(),
       emit_event=fn(route, name, payload) {

@@ -181,7 +181,7 @@ fn updater_fragment_json(
   size : Int64,
   sha256 : String,
 ) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder <+
     $|{
     $|  "schema_version": 2,

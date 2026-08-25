@@ -10,5 +10,5 @@ async fn main {
     .capability(@tray.capability())
     .capability(@notification.capability())
     .capability(@global_hotkey.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.25-app-system").run_or_abort()
 }

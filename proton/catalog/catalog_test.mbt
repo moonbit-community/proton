@@ -3,7 +3,7 @@ test "extension descriptor constructor and accessors copy mutable arrays" {
   let platforms = ["windows"]
   let dependencies = ["vendor/base"]
   let keywords = ["demo"]
-  let descriptor = ExtensionDescriptor::new(
+  let descriptor = ExtensionDescriptor::ExtensionDescriptor(
     "vendor/demo",
     "0.1.0",
     "Demo",

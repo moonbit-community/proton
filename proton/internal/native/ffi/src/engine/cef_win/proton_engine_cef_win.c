@@ -43,7 +43,6 @@
 
 #include "../cef_common/bridge_renderer.h"
 #include "../cef_common/bridge_lifecycle.h"
-#include "../cef_common/bridge_response.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/message.h"
 #include "../cef_common/profile_storage.h"
@@ -54,7 +53,6 @@
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -105,9 +103,6 @@ struct proton_engine_window {
   int height;
   int headless;
   int headless_hidden;
-  int osr_paint_seen;
-  int osr_paint_width;
-  int osr_paint_height;
   int osr_popup_visible;
   cef_rect_t osr_popup_rect;
   int size_hint;
@@ -243,7 +238,6 @@ struct proton_engine_view {
   int finalize_after_browser_close;
   int finalized;
   int closed;
-  int osr_paint_seen;
   struct proton_engine_view *next;
 };
 
@@ -288,7 +282,6 @@ static proton_engine_bridge_pending_t *g_proton_engine_bridge_pending;
 static char g_proton_engine_resources_dir[PROTON_ENGINE_MAX_PATH_BYTES];
 static char g_proton_engine_locales_dir[PROTON_ENGINE_MAX_PATH_BYTES];
 static volatile LONG64 g_proton_engine_scheduled_pump_delay_ms = -1;
-static volatile LONG g_proton_engine_runtime_wait_log_count = 0;
 /* Set only while this process is inside cef_do_message_loop_work. */
 static volatile LONG g_proton_engine_message_pump_active = 0;
 static HANDLE g_proton_engine_pump_event = NULL;
@@ -450,46 +443,6 @@ static int CEF_CALLBACK proton_engine_on_media_permission(
     cef_frame_t *frame, const cef_string_t *requesting_origin,
     uint32_t requested_permissions, cef_media_access_callback_t *callback);
 
-static void proton_engine_log_to_env(const char *env_name,
-                                     const char *format,
-                                     va_list args) {
-  wchar_t wide_env_name[128] = {0};
-  if (MultiByteToWideChar(CP_UTF8, 0, env_name, -1, wide_env_name,
-                          (int)(sizeof(wide_env_name) /
-                                sizeof(wide_env_name[0]))) <= 0) {
-    return;
-  }
-  wchar_t wide_path[4096] = {0};
-  DWORD written = GetEnvironmentVariableW(
-      wide_env_name, wide_path,
-      (DWORD)(sizeof(wide_path) / sizeof(wide_path[0])));
-  if (written == 0 ||
-      written >= sizeof(wide_path) / sizeof(wide_path[0])) {
-    return;
-  }
-  FILE *file = _wfopen(wide_path, L"ab");
-  if (file == NULL) {
-    return;
-  }
-  vfprintf(file, format, args);
-  fputc('\n', file);
-  fclose(file);
-}
-
-static void proton_engine_debug_log(const char *format, ...) {
-  va_list args;
-  va_start(args, format);
-  proton_engine_log_to_env("PROTON_NATIVE_LOG", format, args);
-  va_end(args);
-}
-
-static void proton_engine_verbose_log(const char *format, ...) {
-  va_list args;
-  va_start(args, format);
-  proton_engine_log_to_env("PROTON_NATIVE_LOG_VERBOSE", format, args);
-  va_end(args);
-}
-
 static int proton_engine_env_equals_ignore_case(const char *value,
                                                 const char *expected) {
   if (value == NULL || expected == NULL) {
@@ -564,15 +517,6 @@ static void proton_engine_reset_scheduled_pump(void) {
   InterlockedExchange64(&g_proton_engine_scheduled_pump_delay_ms, -1);
   if (g_proton_engine_pump_event != NULL) {
     ResetEvent(g_proton_engine_pump_event);
-  }
-}
-
-static void proton_engine_log_runtime_wait_ready(uint32_t ready_mask,
-                                                 uint32_t interest_mask) {
-  LONG count = InterlockedIncrement(&g_proton_engine_runtime_wait_log_count);
-  if (count <= 16) {
-    proton_engine_debug_log("runtime_wait ready mask=%u interest=%u",
-                            ready_mask, interest_mask);
   }
 }
 
@@ -872,12 +816,8 @@ static int proton_engine_bridge_pending_cancel(
         strcmp(pending->page_instance, page_instance) == 0) {
       int64_t request_id = pending->request_id;
       *cursor = pending->next;
-      if (!proton_engine_runtime_enqueue_bridge_cancellation(runtime,
-                                                              request_id)) {
-        proton_engine_debug_log(
-            "bridge_cancel_queue_full request=%lld browser=%d pending=%d",
-            (long long)request_id, browser_id, renderer_pending_id);
-      }
+      (void)proton_engine_runtime_enqueue_bridge_cancellation(runtime,
+                                                              request_id);
       proton_engine_bridge_pending_free(pending);
       return 1;
     }
@@ -902,13 +842,8 @@ static void proton_engine_bridge_pending_remove_context(
         strcmp(pending->page_instance, page_instance) == 0) {
       int64_t request_id = pending->request_id;
       *cursor = pending->next;
-      if (!proton_engine_runtime_enqueue_bridge_cancellation(runtime,
-                                                              request_id)) {
-        proton_engine_debug_log(
-            "bridge_cancel_queue_full request=%lld browser=%d pending=%d",
-            (long long)request_id, browser_id,
-            pending->renderer_pending_id);
-      }
+      (void)proton_engine_runtime_enqueue_bridge_cancellation(runtime,
+                                                              request_id);
       proton_engine_bridge_pending_free(pending);
       continue;
     }
@@ -935,7 +870,6 @@ static void proton_engine_bridge_pending_remove_browser(
     proton_engine_runtime_t *runtime,
     int browser_id) {
   proton_engine_bridge_pending_t **cursor = &g_proton_engine_bridge_pending;
-  size_t removed_pending = 0;
   while (*cursor != NULL) {
     proton_engine_bridge_pending_t *pending = *cursor;
     if (pending->browser_id == browser_id) {
@@ -943,28 +877,20 @@ static void proton_engine_bridge_pending_remove_browser(
       (void)proton_engine_runtime_enqueue_bridge_cancellation(
           runtime, pending->request_id);
       proton_engine_bridge_pending_free(pending);
-      removed_pending++;
       continue;
     }
     cursor = &pending->next;
   }
-  proton_engine_debug_log(
-      "bridge_pending_remove_browser browser=%d pending=%llu",
-      browser_id, (unsigned long long)removed_pending);
 }
 
 static void proton_engine_bridge_pending_clear_all(void) {
   proton_engine_bridge_pending_t *pending = g_proton_engine_bridge_pending;
   g_proton_engine_bridge_pending = NULL;
-  size_t removed = 0;
   while (pending != NULL) {
     proton_engine_bridge_pending_t *next = pending->next;
     proton_engine_bridge_pending_free(pending);
     pending = next;
-    removed++;
   }
-  proton_engine_debug_log("bridge_pending_clear_all removed=%llu",
-                          (unsigned long long)removed);
 }
 
 static int proton_engine_send_bridge_response_to_frame(
@@ -1128,9 +1054,6 @@ static int CEF_CALLBACK proton_engine_v8_execute(
   char *function_name = proton_engine_cef_string_to_utf8(name);
   int handled = function_name != NULL &&
                 strcmp(function_name, PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION) == 0;
-  proton_engine_verbose_log("v8_execute name=%s handled=%d argc=%llu",
-                            function_name != NULL ? function_name : "",
-                            handled, (unsigned long long)argumentsCount);
   free(function_name);
   if (!handled) {
     return 0;
@@ -1158,10 +1081,6 @@ static int CEF_CALLBACK proton_engine_v8_execute(
         !proton_engine_bridge_payload_is_valid(
             payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES))) ||
       !proton_engine_bridge_page_instance_is_valid(page_instance)) {
-    proton_engine_debug_log(
-        "bridge_reject_invalid_renderer pending=%d op=%s payload_bytes=%llu",
-        pending_id, op != NULL ? op : "",
-        (unsigned long long)(payload_json != NULL ? strlen(payload_json) : 0));
     free(action);
     free(op);
     free(payload_json);
@@ -1197,8 +1116,6 @@ static int CEF_CALLBACK proton_engine_v8_execute(
   }
   int browser_id = proton_engine_browser_id(browser);
   char *frame_url = proton_engine_userfree_to_utf8(frame->get_url(frame));
-  proton_engine_verbose_log("v8_invoke_frame browser=%d url=%s", browser_id,
-                            proton_engine_log_url(frame_url));
   if (!proton_engine_url_is_bridge_candidate(frame_url)) {
     browser->base.release((cef_base_ref_counted_t *)browser);
     frame->base.release((cef_base_ref_counted_t *)frame);
@@ -1215,8 +1132,6 @@ static int CEF_CALLBACK proton_engine_v8_execute(
   free(frame_url);
   int ok = proton_engine_send_bridge_request_to_browser(
       frame, action, pending_id, op, payload_json, page_instance);
-  proton_engine_verbose_log("v8_invoke pending=%d browser=%d ok=%d op=%s",
-                            pending_id, browser_id, ok, op != NULL ? op : "");
   if (!ok) {
     proton_engine_set_string(exception, "failed to send bridge request");
   }
@@ -1233,7 +1148,6 @@ static int CEF_CALLBACK proton_engine_v8_execute(
 static void CEF_CALLBACK proton_engine_on_web_kit_initialized(
     cef_render_process_handler_t *self) {
   (void)self;
-  proton_engine_verbose_log("bridge_extension_register skipped");
 }
 
 static void CEF_CALLBACK proton_engine_on_context_created(
@@ -1347,8 +1261,6 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     proton_engine_bridge_pending_remove_context(
         window != NULL ? window->runtime : NULL, browser_id, page_instance);
     free(page_instance);
-    proton_engine_debug_log("browser_bridge_context_disposed browser=%d",
-                            browser_id);
     return 1;
   }
   if (!is_request) {
@@ -1369,12 +1281,9 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
       proton_engine_userfree_to_utf8(args->get_string(args, 4));
   args->base.release((cef_base_ref_counted_t *)args);
   if (action != NULL && strcmp(action, "cancel") == 0) {
-    int cancelled = proton_engine_bridge_pending_cancel(
+    (void)proton_engine_bridge_pending_cancel(
         window != NULL ? window->runtime : NULL, browser_id,
         renderer_pending_id, page_instance);
-    proton_engine_debug_log(
-        "browser_bridge_cancel browser=%d pending=%d cancelled=%d",
-        browser_id, renderer_pending_id, cancelled);
     free(action);
     free(op);
     free(payload_json);
@@ -1389,9 +1298,6 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
     return 1;
   }
   free(action);
-  proton_engine_verbose_log("browser_bridge_request browser=%d pending=%d op=%s",
-                            proton_engine_browser_id(browser),
-                            renderer_pending_id, op != NULL ? op : "");
 
   char *frame_url = proton_engine_userfree_to_utf8(frame->get_url(frame));
   int64_t request_id = 0;
@@ -1406,11 +1312,6 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
                 &window->runtime->next_bridge_request_id, &request_id,
                 &request_json);
   if (build_status != PROTON_ENGINE_BRIDGE_REQUEST_OK) {
-    proton_engine_debug_log(
-        "%s browser=%d pending=%d op=%s url=%s",
-        proton_engine_bridge_request_reject_event(build_status), browser_id,
-        renderer_pending_id, op != NULL ? op : "",
-        proton_engine_log_url(frame_url));
     proton_engine_reject_renderer_request(
         frame, renderer_pending_id,
         proton_engine_bridge_request_reject_message(build_status));
@@ -1430,16 +1331,8 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
         proton_engine_bridge_pending_take(request_id);
     proton_engine_bridge_pending_free(pending);
     free(request_json);
-    proton_engine_debug_log("bridge_reject_queue_full browser=%d pending=%d op=%s",
-                            browser_id, renderer_pending_id,
-                            op != NULL ? op : "");
     proton_engine_reject_renderer_request(frame, renderer_pending_id,
                                           "bridge request queue is full");
-  } else {
-    proton_engine_debug_log(
-        "bridge_enqueue request=%lld browser=%d pending=%d op=%s",
-        (long long)request_id, browser_id, renderer_pending_id,
-        op != NULL ? op : "");
   }
   free(op);
   free(payload_json);
@@ -1842,11 +1735,8 @@ static LRESULT CALLBACK proton_engine_overlay_child_proc(
 
 static BOOL CALLBACK proton_engine_overlay_subclass_descendant(HWND hwnd,
                                                                LPARAM data) {
-  if (!SetWindowSubclass(hwnd, proton_engine_overlay_child_proc, 1,
-                         (DWORD_PTR)data)) {
-    proton_engine_verbose_log("overlay_subclass_failed hwnd=%p error=%lu",
-                              (void *)hwnd, GetLastError());
-  }
+  (void)SetWindowSubclass(hwnd, proton_engine_overlay_child_proc, 1,
+                          (DWORD_PTR)data);
   return TRUE;
 }
 
@@ -1856,11 +1746,8 @@ static void proton_engine_overlay_subclass_browser(
   if (window == NULL || browser_hwnd == NULL || !window->titlebar_overlay) {
     return;
   }
-  if (!SetWindowSubclass(browser_hwnd, proton_engine_overlay_child_proc, 1,
-                         (DWORD_PTR)window)) {
-    proton_engine_verbose_log("overlay_subclass_failed hwnd=%p error=%lu",
-                              (void *)browser_hwnd, GetLastError());
-  }
+  (void)SetWindowSubclass(browser_hwnd, proton_engine_overlay_child_proc, 1,
+                          (DWORD_PTR)window);
   EnumChildWindows(browser_hwnd, proton_engine_overlay_subclass_descendant,
                    (LPARAM)window);
 }
@@ -2143,7 +2030,6 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     break;
   case WM_CLOSE:
     if (window != NULL) {
-      proton_engine_debug_log("window_wm_close browser=%d", window->browser_id);
       if (window->close_interception_enabled &&
           !window->close_interception_bypass) {
         if (!window->close_request_pending) {
@@ -2171,9 +2057,6 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
             host->close_browser(host, 0);
           }
           window->browser_close_requested = 1;
-          proton_engine_debug_log(
-              "window_wm_close_browser browser=%d allow=%d",
-              window->browser_id, allow_close);
           host->base.release((cef_base_ref_counted_t *)host);
           if (!allow_close) {
             return 0;
@@ -2188,8 +2071,6 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     if (window != NULL) {
       window->closed = 1;
       window->hwnd = NULL;
-      proton_engine_debug_log("window_wm_destroy browser=%d",
-                              window->browser_id);
     }
     return 0;
   default:
@@ -2361,31 +2242,10 @@ static void CEF_CALLBACK proton_engine_osr_on_paint(
   (void)dirty_rects_count;
   (void)dirty_rects;
   (void)buffer;
-  proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
-  if (window == NULL) {
-    // View browsers track paint separately from window OSR state; one log
-    // line per browser is enough for e2e to prove the view viewport size.
-    proton_engine_view_t *view = proton_engine_find_view_by_browser_id(
-        proton_engine_browser_id(browser));
-    if (view != NULL && type == PET_VIEW && width > 0 && height > 0 &&
-        !view->osr_paint_seen) {
-      view->osr_paint_seen = 1;
-      proton_engine_debug_log("view_osr_paint browser=%d size=%dx%d",
-                              view->browser_id, width, height);
-    }
-    return;
-  }
-  if (!window->headless || type != PET_VIEW || width <= 0 || height <= 0) {
-    return;
-  }
-  window->osr_paint_width = width;
-  window->osr_paint_height = height;
-  if (!window->osr_paint_seen) {
-    window->osr_paint_seen = 1;
-    proton_engine_debug_log("osr_paint browser=%d size=%dx%d",
-                            proton_engine_browser_id(browser), width, height);
-  }
+  (void)browser;
+  (void)type;
+  (void)width;
+  (void)height;
 }
 
 static int CEF_CALLBACK proton_engine_client_release(
@@ -2520,8 +2380,6 @@ static void CEF_CALLBACK proton_engine_on_before_close(
       proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
   if (view != NULL) {
     proton_engine_runtime_t *runtime = view->window->runtime;
-    proton_engine_debug_log("view_browser_before_close browser=%d",
-                            view->browser_id);
     view->browser_before_close_seen = 1;
     view->closed = 1;
     view->hwnd = NULL;
@@ -2542,16 +2400,11 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   if (window == NULL) {
     return;
   }
-  proton_engine_debug_log("browser_before_close browser=%d",
-                          window->browser_id);
   proton_engine_bridge_pending_remove_browser(window->runtime,
                                               window->browser_id);
   if (window->browser != NULL) {
     proton_engine_browser_release(window->browser);
     window->browser = NULL;
-  }
-  if (!window->closed) {
-    proton_engine_debug_log("window_closed browser=%d", window->browser_id);
   }
   window->closed = 1;
   window->browser_close_requested = 1;
@@ -2599,8 +2452,6 @@ static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
     proton_win_titlebar_region_t *copy =
         (proton_win_titlebar_region_t *)malloc(regions_count * sizeof(*copy));
     if (copy == NULL) {
-      proton_engine_verbose_log("draggable_regions_allocation_failed count=%zu",
-                                regions_count);
       return;
     }
     for (size_t i = 0; i < regions_count; i++) {
@@ -2622,9 +2473,6 @@ static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
     proton_engine_overlay_subclass_browser(window, browser_hwnd);
     host->base.release((cef_base_ref_counted_t *)host);
   }
-  proton_engine_verbose_log("draggable_regions browser=%d count=%zu",
-                            window->browser_id,
-                            window->draggable_region_count);
 }
 
 static void CEF_CALLBACK proton_engine_on_loading_state_change(
@@ -2636,8 +2484,20 @@ static void CEF_CALLBACK proton_engine_on_loading_state_change(
   (void)self;
   (void)canGoBack;
   (void)canGoForward;
-  proton_engine_verbose_log("loading_state browser=%d loading=%d",
-                            proton_engine_browser_id(browser), isLoading);
+  proton_engine_window_t *window =
+      proton_engine_window_from_browser_client(browser);
+  if (!isLoading && window != NULL && window->headless) {
+    // The resize notification sent during synchronous browser creation can
+    // precede compositor readiness. Invalidate after loading settles so a
+    // windowless browser reliably delivers its initial OnPaint callback.
+    cef_browser_host_t *host = browser->get_host(browser);
+    if (host != NULL) {
+      if (host->invalidate != NULL) {
+        host->invalidate(host, PET_VIEW);
+      }
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+  }
 }
 
 static void CEF_CALLBACK proton_engine_on_load_start(
@@ -2662,10 +2522,6 @@ static void CEF_CALLBACK proton_engine_on_load_start(
     free(url);
     return;
   }
-  proton_engine_verbose_log("load_start browser=%d main=%d url=%s",
-                            proton_engine_browser_id(browser),
-                            frame != NULL ? frame->is_main(frame) : 0,
-                            proton_engine_log_url(url));
   free(url);
 }
 
@@ -2675,6 +2531,7 @@ static void CEF_CALLBACK proton_engine_on_load_end(
     cef_frame_t *frame,
     int httpStatusCode) {
   (void)self;
+  (void)httpStatusCode;
   char *url = frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
                             : NULL;
   proton_engine_view_t *view =
@@ -2688,10 +2545,6 @@ static void CEF_CALLBACK proton_engine_on_load_end(
     free(url);
     return;
   }
-  proton_engine_verbose_log("load_end browser=%d main=%d status=%d url=%s",
-                            proton_engine_browser_id(browser),
-                            frame != NULL ? frame->is_main(frame) : 0,
-                            httpStatusCode, proton_engine_log_url(url));
   proton_engine_window_t *window =
       proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
   if (window != NULL && window->bridge_config_json != NULL && frame != NULL &&
@@ -2712,10 +2565,6 @@ static void CEF_CALLBACK proton_engine_on_load_error(
   (void)self;
   char *text = proton_engine_cef_string_to_utf8(errorText);
   char *url = proton_engine_cef_string_to_utf8(failedUrl);
-  proton_engine_debug_log("load_error browser=%d main=%d code=%d text=%s url=%s",
-                          proton_engine_browser_id(browser),
-                          frame != NULL ? frame->is_main(frame) : 0, errorCode,
-                          text != NULL ? text : "", proton_engine_log_url(url));
   proton_engine_view_t *view =
       proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
   if (view != NULL) {
@@ -2967,10 +2816,6 @@ static int32_t proton_engine_window_create_browser(
     return PROTON_ERR_ENGINE;
   }
   window->browser_id = proton_engine_browser_id(window->browser);
-  proton_engine_verbose_log(
-      "create_browser thread=%lu id=%d initial_url=%s size=%dx%d",
-      GetCurrentThreadId(), window->browser_id,
-      proton_engine_log_url(initial_url), browser_width, browser_height);
   proton_engine_resize_browser(window, browser_width, browser_height);
   return PROTON_OK;
 }
@@ -3205,8 +3050,6 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     runtime->owns_cef_runtime = 0;
   }
   proton_engine_dispose_runtime_state(runtime);
-  /* The e2e suite uses this as proof that native shutdown completed. */
-  proton_engine_debug_log("runtime_destroy_complete");
   return PROTON_OK;
 }
 
@@ -3224,12 +3067,6 @@ int32_t proton_engine_runtime_do_message_loop_work(
   while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
     TranslateMessage(&msg);
     DispatchMessageW(&msg);
-  }
-  static int log_count = 0;
-  if (log_count < 8) {
-    proton_engine_verbose_log("do_message_loop_work thread=%lu",
-                              GetCurrentThreadId());
-    log_count++;
   }
   if (!g_proton_engine_multi_threaded_message_loop) {
     cef_do_message_loop_work();
@@ -3322,7 +3159,6 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
     ready_mask |= PROTON_WAIT_PLATFORM;
   }
   if (ready_mask != PROTON_WAIT_NONE) {
-    proton_engine_log_runtime_wait_ready(ready_mask, interest_mask);
     *out_ready_mask = ready_mask;
     return PROTON_OK;
   }
@@ -3397,9 +3233,6 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
       proton_engine_get_scheduled_pump_delay_ms() == 0) {
     ready_mask |= PROTON_WAIT_PLATFORM;
   }
-  if (ready_mask != PROTON_WAIT_NONE) {
-    proton_engine_log_runtime_wait_ready(ready_mask, interest_mask);
-  }
   *out_ready_mask = ready_mask & interest_mask;
   return PROTON_OK;
 }
@@ -3427,49 +3260,31 @@ int32_t proton_engine_window_popup_menu(
   return PROTON_ERR_UNSUPPORTED;
 }
 
-int32_t proton_engine_runtime_respond_bridge_request_json(
+int32_t proton_engine_runtime_respond_bridge_request(
     proton_engine_runtime_t *runtime,
-    const char *response_json,
+    int64_t request_id,
+    int32_t ok,
+    const char *body_json,
     char *error,
     size_t error_len) {
   (void)runtime;
-  if (response_json == NULL) {
-    proton_engine_set_message(error, error_len, "response_json is required");
+  if (body_json == NULL) {
+    proton_engine_set_message(error, error_len, "body_json is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  proton_engine_bridge_response_t response;
-  int parse_status =
-      proton_engine_bridge_response_parse(response_json, &response);
-  if (parse_status == PROTON_ENGINE_BRIDGE_RESPONSE_INVALID) {
-    proton_engine_set_message(error, error_len,
-                              "bridge response payload is invalid");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (parse_status == PROTON_ENGINE_BRIDGE_RESPONSE_NO_MEMORY) {
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate bridge response payload");
-    return PROTON_ERR_ENGINE;
-  }
-  int64_t request_id = response.request_id;
   proton_engine_bridge_pending_t *pending =
       proton_engine_bridge_pending_take(request_id);
   if (pending == NULL) {
-    proton_engine_bridge_response_dispose(&response);
-    proton_engine_debug_log("bridge_response_no_pending request=%lld",
-                            (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "bridge request is no longer pending");
     return PROTON_ERR_STALE_BRIDGE_RESPONSE;
   }
 
   int sent = proton_engine_send_bridge_response_to_frame(
-      pending->frame, pending->renderer_pending_id, response.ok,
-      response.payload_json, response.error_json);
-  proton_engine_bridge_response_dispose(&response);
+      pending->frame, pending->renderer_pending_id, ok,
+      ok ? body_json : "null", ok ? "" : body_json);
   proton_engine_bridge_pending_free(pending);
   if (!sent) {
-    proton_engine_debug_log("bridge_response_send_failed request=%lld",
-                            (long long)request_id);
     proton_engine_set_message(error, error_len,
                               "failed to send bridge response to renderer");
     return PROTON_ERR_STALE_BRIDGE_RESPONSE;
@@ -4034,9 +3849,6 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
   }
   cef_string_t value = {0};
   proton_engine_set_string(&value, url);
-  proton_engine_verbose_log("load_url thread=%lu browser=%d url=%s",
-                            GetCurrentThreadId(), window->browser_id,
-                            proton_engine_log_url(url));
   frame->load_url(frame, &value);
   cef_string_clear(&value);
   frame->base.release((cef_base_ref_counted_t *)frame);
@@ -5310,8 +5122,6 @@ static int CEF_CALLBACK proton_engine_do_close(
     // Frame windows keep CEF's default close behavior (WM_CLOSE to the frame).
     return 0;
   }
-  proton_engine_debug_log("view_browser_do_close browser=%d",
-                          view->browser_id);
   // A view browser owns no top-level window; CEF's default would post
   // WM_CLOSE to the frame window and cancel the view close. Take over and
   // destroy the browser's child window on the next frame-window message,
@@ -5428,9 +5238,6 @@ static int32_t proton_engine_view_create_browser(
     host->base.release((cef_base_ref_counted_t *)host);
   }
   proton_engine_window_layout_views(window);
-  proton_engine_debug_log("view_create_browser id=%d rect=%d,%d %dx%d",
-                          view->browser_id, (int)view->x, (int)view->y,
-                          (int)view->width, (int)view->height);
   if (view->initial_url[0] != '\0' &&
       strcmp(view->initial_url, "about:blank") != 0) {
     cef_frame_t *frame = view->browser->get_main_frame(view->browser);
@@ -5651,8 +5458,6 @@ int32_t proton_engine_view_load_url(proton_engine_view_t *view,
   }
   cef_string_t cef_url = {0};
   proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
-  proton_engine_debug_log("view_load_url browser=%d url=%s", view->browser_id,
-                          proton_engine_log_url(url));
   frame->load_url(frame, &cef_url);
   cef_string_clear(&cef_url);
   frame->base.release((cef_base_ref_counted_t *)frame);

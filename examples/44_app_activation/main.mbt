@@ -20,11 +20,18 @@ let page =
 ///|
 async fn main {
   @proton.html("Application Activation", page, width=760, height=480)
-  .single_instance("com.example.proton.activation")
+  .identifier("com.example.proton.activation")
+  .single_instance()
   .url_scheme("proton-example")
   .document_extension("proton-example")
-  .on_launch_input(fn(input) noraise {
+  .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+  .on_launch_input(async fn(context, input) noraise {
     println("activation: " + @debug.render(Repr(input)))
+    if input is Reopen && context.windows().find("main") is None {
+      ignore(context.windows().open("main")) catch {
+        error => println("failed to reopen main window: " + error.message())
+      }
+    }
   })
   .run_or_abort()
 }

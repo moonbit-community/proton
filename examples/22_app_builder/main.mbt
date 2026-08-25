@@ -6,5 +6,7 @@ async fn main {
     width=920,
     height=680,
     debug=true,
-  ).run_or_abort()
+  )
+  .identifier("dev.proton.22-app-builder")
+  .run_or_abort()
 }

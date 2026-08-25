@@ -4,6 +4,7 @@ pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
+  request_quit : () -> Unit
 }
 
 ///|
@@ -44,16 +45,17 @@ priv struct WindowLifecycleHook {
 }
 
 ///|
-fn ApplicationContext::new(
+fn ApplicationContext::ApplicationContext(
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
+  request_quit? : () -> Unit = fn() {  },
 ) -> ApplicationContext {
-  ApplicationContext::{ tasks, windows, locale_preferences }
+  ApplicationContext::{ tasks, windows, locale_preferences, request_quit }
 }
 
 ///|
-fn WindowContext::new(
+fn WindowContext::WindowContext(
   id : String,
   handle : WindowHandle,
   windows : WindowManager,
@@ -100,7 +102,7 @@ pub fn WindowContext::id(self : WindowContext) -> String {
 }
 
 ///|
-fn WindowEventEmitter::new(
+fn WindowEventEmitter::WindowEventEmitter(
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise,
 ) -> WindowEventEmitter {
   WindowEventEmitter::{ emit_event, }
@@ -118,6 +120,16 @@ pub fn ApplicationContext::task_group(
 /// Returns the window manager owned by this running application.
 pub fn ApplicationContext::windows(self : ApplicationContext) -> WindowManager {
   self.windows
+}
+
+///|
+/// Requests an orderly application shutdown.
+///
+/// Proton closes every open window, runs configured close interception, and
+/// destroys the native runtime after all windows have closed. A denied window
+/// close cancels this quit request.
+pub fn ApplicationContext::quit(self : ApplicationContext) -> Unit {
+  (self.request_quit)()
 }
 
 ///|

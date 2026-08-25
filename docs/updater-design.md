@@ -248,7 +248,7 @@ it is avoided — no secret passes through the framework at any point.
 An end user must **not** be able to supply a trusted key. If they could, so
 could anything running with their privileges, which would defeat the channel
 entirely. This is why the key belongs in the packaged, integrity-protected
-bundle rather than anywhere writable such as `app_data_dir()`, and why the
+bundle rather than anywhere writable such as `app.data_dir()`, and why the
 absence of that protection on Windows and Linux is recorded as a limitation.
 
 Key handling:

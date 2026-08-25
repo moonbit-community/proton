@@ -71,8 +71,12 @@ jobs:
       - name: Update MoonBit registry
         run: moon update
 
-      - name: Install CEF runtime
-        run: PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cefsetup run . --target native
+      - name: Install CEF runtime and build helper from source
+        run: |
+          PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cefsetup run . --target native -- --runtime-only
+          helper_bin="$RUNNER_TEMP/proton-helper"
+          moon --target-dir "$RUNNER_TEMP/proton-helper-build" install --path \
+            proton/internal/cef_process --bin "$helper_bin"
 
       - name: Validate release
         run: |

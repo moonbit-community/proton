@@ -1,5 +1,5 @@
 ///|
-fn DialogCompletionStore::new() -> DialogCompletionStore {
+fn DialogCompletionStore::DialogCompletionStore() -> DialogCompletionStore {
   { pending: [] }
 }
 

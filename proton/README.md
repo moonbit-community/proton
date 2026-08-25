@@ -10,7 +10,9 @@ workflow — scaffolding, CEF runtime setup, dev mode, and packaging — see the
 
 ```moonbit
 async fn main {
-  @proton.html("Hello", "<h1>Hello</h1>").run_or_abort()
+  @proton.html("Hello", "<h1>Hello</h1>")
+  .identifier("dev.proton.hello")
+  .run_or_abort()
 }
 ```
 
@@ -20,6 +22,12 @@ main thread and only async's waiting half moves to a thread of its own. Nothing
 has to be installed by hand, but the package must import `moonbitlang/async` for
 `async fn main` to be available at all. `@proton.html` accepts optional
 `width?`, `height?`, `debug?`, and `resizable?` arguments.
+
+Every application requires a stable reverse-DNS identity. Managed projects use
+`.load_config()` to load it from `proton.project.json` during development and from
+packaged metadata after distribution. Applications without project metadata use
+`.identifier(...)` as shown above. These sources are mutually exclusive, and
+an explicit identity must match any packaged metadata present at runtime.
 
 ## Entry points
 
@@ -34,6 +42,7 @@ Register typed commands on the app builder:
 
 ```moonbit
 @proton.html("Commands", html)
+.identifier("dev.proton.commands")
 .commands(fn(registrar) raise { registrar.bind(ping_command, ping) })
 .run_or_abort()
 ```
@@ -75,8 +84,20 @@ Add secondary windows to the app builder:
 )
 ```
 
-The window id `"main"` is reserved for the primary window. The process exits
-when all windows have closed.
+The window id `"main"` is reserved for the primary window. By default, the
+process exits when all windows have closed. Use
+`.last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)` when
+the application should remain available for Dock, protocol, document, or tray
+activation after its last window closes.
+
+## Logging
+
+Use `tonyfettes/xlog@0.4.1` directly for application logs. Proton configures the
+global logger before native runtime creation. Packaged applications write to
+their platform log directory; direct launches and `proton_cli dev` use stderr.
+`MOON_XLOG` controls filtering and `PROTON_LOG_OUTPUT` selects `file` or
+`stderr`; file output requires packaged application metadata. Application
+categories should use `app.*`; `proton.*` is reserved for framework diagnostics.
 
 ## Headless mode
 

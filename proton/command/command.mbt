@@ -45,14 +45,14 @@ pub struct AppCommandExtensionRegistry {
 }
 
 ///|
-pub fn AppCommandApiDescriptor::new(
+pub fn AppCommandApiDescriptor::AppCommandApiDescriptor(
   api_name : String,
 ) -> AppCommandApiDescriptor {
   AppCommandApiDescriptor::{ api_name, }
 }
 
 ///|
-pub fn AppCommandExtensionDescriptor::new(
+pub fn AppCommandExtensionDescriptor::AppCommandExtensionDescriptor(
   id : String,
   js_namespace : String,
   apis : Array[AppCommandApiDescriptor],
@@ -67,7 +67,7 @@ pub fn AppCommandExtensionDescriptor::new(
 }
 
 ///|
-pub fn AppCommandsConfig::new(
+pub fn AppCommandsConfig::AppCommandsConfig(
   op_names : Array[String],
   extensions? : Array[AppCommandExtensionDescriptor] = [],
   framework_extension_ids? : Array[String] = [],
@@ -118,7 +118,7 @@ pub fn AppCommandExtensionSpec::typed(
         operation_name=route.operation_name(),
       )
     }
-    apis.push(AppCommandApiDescriptor::new(route.member_name()))
+    apis.push(AppCommandApiDescriptor(route.member_name()))
   }
   let resolve_permission : (Json, String) -> Json raise PermissionScopeValidationError = match
     resolve_permission {
@@ -184,7 +184,7 @@ pub fn AppCommandExtensionSpec::op_names(
 pub fn AppCommandExtensionSpec::to_ipc_descriptor(
   self : AppCommandExtensionSpec,
 ) -> @ipc.IpcExtensionDescriptor {
-  @ipc.IpcExtensionDescriptor::new(
+  @ipc.IpcExtensionDescriptor(
     self.id,
     self.js_namespace,
     self.apis.map(fn(api) { api.to_ipc_api() }),
@@ -231,7 +231,7 @@ pub fn AppCommandExtensionSpec::scripts(
 }
 
 ///|
-pub fn AppCommandExtensionRegistry::new() -> AppCommandExtensionRegistry {
+pub fn AppCommandExtensionRegistry::AppCommandExtensionRegistry() -> AppCommandExtensionRegistry {
   AppCommandExtensionRegistry::{ specs: Map([]), registration_order: [] }
 }
 
@@ -301,14 +301,14 @@ pub fn AppCommandApiDescriptor::api_name(
 pub fn AppCommandApiDescriptor::to_ipc_api(
   self : AppCommandApiDescriptor,
 ) -> @ipc.IpcExtensionApi {
-  @ipc.IpcExtensionApi::new(self.api_name)
+  @ipc.IpcExtensionApi(self.api_name)
 }
 
 ///|
 pub fn AppCommandExtensionDescriptor::to_ipc_descriptor(
   self : AppCommandExtensionDescriptor,
 ) -> @ipc.IpcExtensionDescriptor {
-  @ipc.IpcExtensionDescriptor::new(
+  @ipc.IpcExtensionDescriptor(
     self.id,
     self.js_namespace,
     self.apis.map(fn(api) { api.to_ipc_api() }),
@@ -379,7 +379,7 @@ fn copy_ipc_extension_descriptors(
   values : Array[@ipc.IpcExtensionDescriptor],
 ) -> Array[@ipc.IpcExtensionDescriptor] {
   values.map(fn(value) {
-    @ipc.IpcExtensionDescriptor::new(
+    @ipc.IpcExtensionDescriptor(
       value.id,
       value.js_namespace,
       value.apis,

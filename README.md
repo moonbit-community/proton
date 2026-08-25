@@ -61,9 +61,10 @@ builder. The `isomorphic` template also registers typed commands in
 
 ```moonbit
 async fn main {
-  let backend = @todo.Backend::new()
+  let backend = @todo.Backend()
   @proton.asset("My App", "frontend/dist/index.html")
-  .single_instance("com.example.my-app")
+  .load_config()
+  .single_instance()
   .commands(fn(registrar) raise { backend.register_commands(registrar) })
   .run_or_abort()
 }
@@ -83,7 +84,7 @@ async fn main {
     width=900,
     height=700,
     debug=true,
-  ).run_or_abort()
+  ).load_config().run_or_abort()
 }
 ```
 
@@ -105,7 +106,7 @@ ranges and exact commands:
 @proton.html("Files", html)
 .capability(
   @fs.capability([
-    @fs.PermissionRoot::new("./workspace", [
+    @fs.PermissionRoot("./workspace", [
       "read_file",
       "write_file",
       "readdir",
@@ -224,6 +225,7 @@ The declarative path attaches a view to the primary window at startup:
   "browser",
   @proton.view("https://example.com/", width=832, height=720, x=288),
 )
+.load_config()
 .run_or_abort()
 ```
 
@@ -242,8 +244,8 @@ window.remove_view("panel")
 
 See `examples/52_web_contents_view`.
 
-Enable operating-system single-instance routing with a stable application
-identifier by calling `.single_instance("com.example.my-app")`.
+Enable operating-system single-instance routing by calling `.single_instance()`.
+The stable application identity comes from `.load_config()` or `.identifier(...)`.
 
 When another process starts, Proton forwards its protocol URLs and document
 paths to the primary process before creating CEF, then exits. The primary
@@ -252,15 +254,27 @@ activation:
 
 ```moonbit
 @proton.asset("My App", "frontend/dist/index.html")
-.single_instance("com.example.my-app")
-.on_launch_input(async fn(input) noraise {
+.load_config()
+.single_instance()
+.last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+.on_launch_input(async fn(context, input) noraise {
   match input {
     OpenUrls(urls) => ...
     OpenFiles(paths) => ...
-    Reopen => ...
+    Reopen =>
+      if context.windows().find("main") is None {
+        ignore(context.windows().open("main")) catch {
+          _ => ()
+        }
+      }
   }
 })
 ```
+
+By default, closing the last window quits the application. Select
+`KeepRunning` for applications that should remain available in the Dock or
+system tray after their windows close. Call `context.quit()` from an
+application-lifetime callback to request an orderly shutdown.
 
 The instance coordinator is implemented on macOS, Windows, and Linux. Packaged
 macOS applications register `package.url_schemes` and `package.document_types`
@@ -269,9 +283,30 @@ install operating-system associations; their `proton-package.json` metadata is
 intended for a future installer/package target. Direct launches and associations
 installed by another package manager still use the same forwarding path.
 
-Use `@proton.app_data_dir("com.example.my-app")` to resolve the stable native
-data directory for an application identifier. The function does not create the
-directory.
+Use `app.data_dir()` to resolve the stable native data directory for the
+application's configured identifier. The method does not create the directory.
+
+## Logging
+
+Applications log through `tonyfettes/xlog@0.4.1` directly. Use `app.*`
+categories for application records; Proton reserves `proton.*` for runtime
+diagnostics:
+
+```moonbit
+@xlog.info(category="app.sync") <? {
+  "message": "synchronization started",
+  "account": account_id,
+}
+```
+
+Packaged applications write `Warn` and above to the platform application log
+directory derived from their package metadata. Direct launches and
+`proton_cli dev` write to stderr; `proton_cli dev` also selects `Info`.
+`MOON_XLOG` controls xlog level and category filters, while
+`PROTON_LOG_OUTPUT` selects the initial Proton handler as `file` or `stderr`.
+File output requires packaged application metadata. Applications may replace
+the global xlog handler or configuration afterwards. CEF's temporary
+diagnostic log remains separate under `PROTON_CEF_LOG`.
 
 ## Application locale
 
@@ -285,6 +320,7 @@ let locale = @proton.Locale::parse("zh-CN") catch {
   error => abort(error.message())
 }
 @proton.html("My App", html)
+.load_config()
 .locale(locale)
 .run_or_abort()
 ```
@@ -304,14 +340,14 @@ page content, dialogs, notifications, and custom menu labels. See
 
 `App::menu` accepts a complete logical `MenuBar`. Use `Menu::role` and
 `MenuItem::role` for platform-standard behavior; omitted labels and default
-items are resolved from the immutable application locale. Use `Menu::new` and
+items are resolved from the immutable application locale. Use `Menu` and
 `MenuItem::command` for application-defined labels and commands:
 
 ```moonbit
-@proton.MenuBar::new(menus=[
+@proton.MenuBar(menus=[
   @proton.Menu::role(@proton.MenuRole::Edit),
   @proton.Menu::role(@proton.MenuRole::Window),
-  @proton.Menu::new("Tools", items=[
+  @proton.Menu("Tools", items=[
     @proton.MenuItem::command("tools.refresh", "Refresh", key="r"),
   ]),
 ])
@@ -330,6 +366,7 @@ top-level window:
 
 ```moonbit
 @proton.html("Automation", html)
+.load_config()
 .headless()
 .run_or_abort()
 ```
@@ -351,6 +388,7 @@ Generated projects describe their toolchain in `proton.project.json`:
 
 ```json
 {
+  "identifier": "com.example.my-app",
   "backend": {
     "path": ".",
     "package": "backend/app"
@@ -364,6 +402,15 @@ Generated projects describe their toolchain in `proton.project.json`:
   }
 }
 ```
+
+`identifier` is the required application identity shared by the runtime and
+packaging tools. Calling `.load_config()` loads it from this file during development
+and from the sanitized `proton-package.json` inside a packaged application.
+Projects without `proton.project.json` must set the same identity directly with
+`.identifier("com.example.my-app")`; the two sources cannot be combined. If
+such an application is packaged through the lower-level packaging API, Proton
+also verifies at startup that its explicit identity matches the packaged
+metadata.
 
 `backend` selects the MoonBit package that runs the Proton runtime. The
 application entry is declared in MoonBit with `@proton.html`, `url`, `file`, or
@@ -447,14 +494,14 @@ JSON specification; paths in that file are resolved relative to the file.
 
 ### Proton projects
 
-The `package` block in `proton.project.json` contains the static metadata and
-payload inputs needed before the application can run:
+The top-level `identifier` is the application's canonical identity. The
+`package` block contains the remaining static metadata and payload inputs:
 
 ```json
 {
+  "identifier": "com.example.my-app",
   "package": {
     "product_name": "My App",
-    "identifier": "com.example.my-app",
     "version": "1.0.0",
     "formats": ["app", "zip"],
     "resources": ["helpers/worker"],

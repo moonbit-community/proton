@@ -45,7 +45,7 @@ fn windows_uninstall_registry_key(plan : PackageSpec) -> String {
 /// dropped. The human-readable version still ships in `FileVersion`.
 fn windows_installer_version_quad(version : String) -> String {
   let digits = []
-  let current = StringBuilder::new()
+  let current = StringBuilder()
   for char in version {
     if char.is_ascii_digit() {
       current.write_char(char)
@@ -89,7 +89,7 @@ fn windows_installer_quote(value : String) -> String {
 fn windows_installer_script(plan : PackageSpec, source : String) -> String {
   let product = windows_installer_quote(plan.product_name)
   let executable = "\{executable_name(plan.product_name)}.exe"
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder <+
     #|Unicode true
     #|ManifestDPIAware true

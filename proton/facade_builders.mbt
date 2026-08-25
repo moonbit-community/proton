@@ -8,7 +8,7 @@ pub fn html(
   debug? : Bool = false,
   resizable? : Bool = true,
 ) -> App {
-  App::new(
+  App(
     title,
     width,
     height,
@@ -28,7 +28,7 @@ pub fn url(
   debug? : Bool = false,
   resizable? : Bool = true,
 ) -> App {
-  App::new(
+  App(
     title,
     width,
     height,
@@ -48,7 +48,7 @@ pub fn file(
   debug? : Bool = false,
   resizable? : Bool = true,
 ) -> App {
-  App::new(
+  App(
     title,
     width,
     height,
@@ -68,7 +68,7 @@ pub fn asset(
   debug? : Bool = false,
   resizable? : Bool = true,
 ) -> App {
-  App::new(
+  App(
     title,
     width,
     height,
@@ -93,7 +93,7 @@ pub fn view(
   z_order? : Int = 0,
   background_color? : String,
 ) -> ViewConfig {
-  ViewConfig::new(
+  ViewConfig(
     width~,
     height~,
     x~,
@@ -139,18 +139,8 @@ pub fn App::locale(self : App, locale : @locale.Locale) -> App {
 ///|
 /// Ensures only one operating-system process owns this application identity.
 /// Later processes forward their URL, document, or reopen activation and exit.
-pub fn App::single_instance(self : App, identifier : String) -> App {
-  let identifier = identifier.trim().to_owned()
-  if identifier == "" {
-    self.validation_errors.push(
-      InvalidSetting(
-        name="single_instance",
-        message="identifier must not be empty",
-      ),
-    )
-  } else {
-    self.single_instance_identifier = Some(identifier)
-  }
+pub fn App::single_instance(self : App, enabled? : Bool = true) -> App {
+  self.single_instance_enabled = enabled
   self
 }
 
@@ -164,7 +154,7 @@ pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> App {
 ///|
 /// Sets the primary window title.
 pub fn App::title(self : App, title : String) -> App {
-  self.window = @manifest.WindowManifest::new(
+  self.window = @manifest.WindowManifest(
     title,
     self.window.width,
     self.window.height,
@@ -177,7 +167,7 @@ pub fn App::title(self : App, title : String) -> App {
 ///|
 /// Sets the primary window size.
 pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
-  self.window = @manifest.WindowManifest::new(
+  self.window = @manifest.WindowManifest(
     self.window.title,
     width,
     height,
@@ -191,7 +181,7 @@ pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
 /// Sets whether web content remains below or extends beneath the native
 /// titlebar. Overlay rendering is currently implemented on macOS and Windows.
 pub fn App::titlebar_style(self : App, style : TitlebarStyle) -> App {
-  self.window = @manifest.WindowManifest::new(
+  self.window = @manifest.WindowManifest(
     self.window.title,
     self.window.width,
     self.window.height,
@@ -338,9 +328,20 @@ pub fn App::on_update_available(
 ///|
 pub fn App::on_launch_input(
   self : App,
-  handler : async (RuntimeLaunchInput) -> Unit noraise,
+  handler : async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
 ) -> App {
   self.launch_input_handlers.push(handler)
+  self
+}
+
+///|
+/// Chooses whether closing the last window exits the application or leaves it
+/// running so a later launch input can open another window.
+pub fn App::last_window_closed_policy(
+  self : App,
+  policy : LastWindowClosedPolicy,
+) -> App {
+  self.last_window_closed_policy_value = policy
   self
 }
 
@@ -501,9 +502,9 @@ pub fn App::add_window(
     return self
   }
   self.windows.push(
-    @manifest.AppWindowManifest::new(
+    @manifest.AppWindowManifest(
       normalized_id,
-      @manifest.WindowManifest::new(
+      @manifest.WindowManifest(
         title,
         width,
         height,

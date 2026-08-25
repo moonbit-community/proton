@@ -105,10 +105,50 @@ fn test_window_handle(
 
 ///|
 fn test_manifest() -> @manifest.AppManifest {
-  @manifest.AppManifest::new(
-    @manifest.WindowManifest::new("Test", 320, 240),
+  @manifest.AppManifest(
+    @manifest.WindowManifest("Test", 320, 240),
     @manifest.AppEntry::Html("<html></html>"),
   )
+}
+
+///|
+test "last-window policy defaults to quit and can keep the app running" {
+  let app = html("Lifecycle", "<html></html>")
+  assert_eq(app.last_window_closed_policy_value, LastWindowClosedPolicy::Quit)
+  let app = app.last_window_closed_policy(LastWindowClosedPolicy::KeepRunning)
+  assert_eq(
+    app.last_window_closed_policy_value,
+    LastWindowClosedPolicy::KeepRunning,
+  )
+  assert_true(
+    should_quit_after_last_window(LastWindowClosedPolicy::Quit, true, true),
+  )
+  assert_false(
+    should_quit_after_last_window(
+      LastWindowClosedPolicy::KeepRunning,
+      true,
+      true,
+    ),
+  )
+  assert_false(
+    should_quit_after_last_window(LastWindowClosedPolicy::Quit, false, true),
+  )
+}
+
+///|
+async test "application context forwards orderly quit requests" {
+  let requested = Ref(false)
+  @async.with_task_group(group => {
+    let context = ApplicationContext(
+      group,
+      test_window_manager(),
+      @locale.LocalePreferences::resolve(None, []),
+      request_quit=fn() { requested.val = true },
+    )
+    context.quit()
+    group.return_immediately(())
+  })
+  assert_true(requested.val)
 }
 
 ///|
@@ -242,7 +282,7 @@ test "the event loop is installed during process initialization" {
 
 ///|
 test "bridge startup timeout is finite and configurable" {
-  let default_app = html("Test", "<html></html>")
+  let default_app = html("Test", "<html></html>").identifier("dev.proton.test")
   inspect(default_app.bridge_startup_timeout_value_ms, content="30000")
   let configured = default_app.bridge_startup_timeout_ms(2500)
   inspect(configured.bridge_startup_timeout_value_ms, content="2500")
@@ -298,8 +338,8 @@ test "headless mode defaults off and is configurable" {
 
 ///|
 async test "headless mode rejects titlebar overlay before runtime startup" {
-  let manifest = @manifest.AppManifest::new(
-    @manifest.WindowManifest::new(
+  let manifest = @manifest.AppManifest(
+    @manifest.WindowManifest(
       "Test",
       320,
       240,
@@ -333,8 +373,8 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
 ///|
 async test "headless mode rejects native menus before runtime startup" {
   let manifest = test_manifest()
-  let menu = MenuBar::new(menus=[
-    Menu::new("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
+  let menu = MenuBar(menus=[
+    Menu("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
   ])
   let mut rejected = false
   run_manifest(
@@ -420,7 +460,7 @@ async test "bridge cancellation targets only the matching handler task" {
 
 ///|
 test "extension events use structured bridge transport JSON" {
-  let event = @ipc.IpcExtensionEvent::new("ticker", "tick", {
+  let event = @ipc.IpcExtensionEvent("ticker", "tick", {
     "text": "</script><p>escaped</p>",
     "index": 1,
   })
@@ -552,7 +592,7 @@ async test "inline documents resolve without filesystem access" {
 
 ///|
 test "extension event transport can target a page instance" {
-  let event = @ipc.IpcExtensionEvent::new("ticker", "done", null)
+  let event = @ipc.IpcExtensionEvent("ticker", "done", null)
   let event_json = bridge_event_json(
     "extension",
     event.event_name,
@@ -812,10 +852,10 @@ test "dev bridge page policy parses exact http origins" {
 ///|
 test "native bridge config isolates each window entry origin" {
   let first = native_bridge_config([
-    @native.BridgeGrantConfig::new("http://localhost:3000", ops=["app:ping"]),
+    @native.BridgeGrantConfig("http://localhost:3000", ops=["app:ping"]),
   ])
   let second = native_bridge_config([
-    @native.BridgeGrantConfig::new("http://localhost:4000", ops=["app:ping"]),
+    @native.BridgeGrantConfig("http://localhost:4000", ops=["app:ping"]),
   ])
   inspect(first.grants[0].source_origin, content="http://localhost:3000")
   inspect(second.grants[0].source_origin, content="http://localhost:4000")
@@ -1221,7 +1261,7 @@ test "command host registration preserves cleanup failures" {
 
 ///|
 test "application lifecycle advances through close and destroy" {
-  let lifecycle = AppLifecycle::new()
+  let lifecycle = AppLifecycle()
   assert_true(lifecycle.state is Constructing)
   assert_false(lifecycle.has_reached_running())
   lifecycle.begin_starting()
@@ -1258,7 +1298,7 @@ async test "application lifecycle hooks shut down in reverse order" {
   @async.with_task_group(group => {
     start_application_lifecycle_hooks(
       configured.application_lifecycle_hooks,
-      ApplicationContext::new(
+      ApplicationContext(
         group,
         test_window_manager(),
         @locale.LocalePreferences::resolve(None, []),
@@ -1273,7 +1313,7 @@ async test "application lifecycle hooks shut down in reverse order" {
 
 ///|
 async test "runtime wakeup preserves notification before suspension" {
-  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal::new() }
+  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal() }
   let revision = wakeup.revision()
   wakeup.signal.notify()
   let completed = @async.with_timeout_opt(100, () => wakeup.wait_after(revision))
@@ -1282,7 +1322,7 @@ async test "runtime wakeup preserves notification before suspension" {
 
 ///|
 async test "dialog completion wakes only its registered waiter" {
-  let completions = DialogCompletionStore::new()
+  let completions = DialogCompletionStore()
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
     while completions.pending.is_empty() {
@@ -1311,7 +1351,7 @@ async test "dialog completion wakes only its registered waiter" {
 
 ///|
 async test "dialog completion propagates native failure" {
-  let completions = DialogCompletionStore::new()
+  let completions = DialogCompletionStore()
   let observed : Ref[@native.NativeError?] = Ref(None)
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, () => {
@@ -1368,7 +1408,7 @@ async test "application lifecycle startup rolls back completed hooks" {
     @async.with_task_group(group => {
       start_application_lifecycle_hooks(
         configured.application_lifecycle_hooks,
-        ApplicationContext::new(
+        ApplicationContext(
           group,
           test_window_manager(),
           @locale.LocalePreferences::resolve(None, []),
@@ -1414,12 +1454,12 @@ async test "window close joins owned tasks before close hooks" {
   @async.with_task_group(group => {
     start_window_lifecycle_hooks(
       configured.window_lifecycle_hooks,
-      WindowContext::new(
+      WindowContext(
         "main",
         test_window_handle("main", 17L),
         test_window_manager(),
         group,
-        WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+        WindowEventEmitter(fn(_route, _name, _payload) {  }),
         @locale.LocalePreferences::resolve(None, []),
       ),
       group,
@@ -1526,19 +1566,66 @@ test "typed facade appends validated secondary windows" {
 }
 
 ///|
-test "single instance builder validates and resolves an inline identity" {
-  let invalid = html("App", "<main>App</main>").single_instance(" ")
+test "application identity is required and single instance reuses it" {
+  let missing = html("App", "<main>App</main>")
+  guard missing.validation_error()
+    is Some(InvalidSetting(name="identifier", ..)) else {
+    fail("expected a missing application identity")
+  }
+  let invalid = html("App", "<main>App</main>").identifier(" ")
   assert_true(invalid.validation_error() is Some(_))
   let resolved = html("App", "<main>App</main>")
-    .single_instance("dev.proton.inline")
+    .identifier("dev.proton.inline")
+    .single_instance()
     .resolved_app_config()
-  assert_eq(resolved.application_identifier, Some("dev.proton.inline"))
+  assert_eq(resolved.application_identifier, "dev.proton.inline")
   assert_eq(resolved.instance_identifier, Some("dev.proton.inline"))
+
+  let not_single_instance = html("App", "<main>App</main>")
+    .identifier("dev.proton.inline")
+    .single_instance(enabled=false)
+    .resolved_app_config()
+  assert_eq(not_single_instance.instance_identifier, None)
+}
+
+///|
+test "application identity sources cannot be combined" {
+  let app = html("App", "<main>App</main>")
+    .identifier("dev.proton.inline")
+    .identifier("dev.proton.other")
+  assert_true(app.validation_error() is Some(_))
+
+  let managed = html("App", "<main>App</main>")
+  managed.application_identity = Some(ProjectConfig("dev.proton.managed"))
+  let combined = managed.identifier("dev.proton.inline")
+  guard combined.validation_error()
+    is Some(InvalidSetting(name="identifier", message~)) else {
+    fail("expected duplicate application identity sources")
+  }
+  assert_true(message.contains("either .load_config() or .identifier(...)"))
+}
+
+///|
+test "explicit identity must match packaged application metadata" {
+  debug_inspect(
+    verify_packaged_application_identifier(
+      "dev.proton.inline", "dev.proton.inline",
+    ),
+    content="Ok(\"dev.proton.inline\")",
+  )
+  guard verify_packaged_application_identifier(
+      "dev.proton.inline", "dev.proton.packaged",
+    )
+    is Err(InvalidSetting(name="identifier", message~)) else {
+    fail("expected packaged identity mismatch")
+  }
+  assert_true(message.contains("dev.proton.packaged"))
 }
 
 ///|
 test "activation associations are declared by application code" {
   let app = html("App", "<main>App</main>")
+    .identifier("dev.proton.activation")
     .url_scheme("dev.proton")
     .document_extension(".md")
   let resolved = app.resolved_app_config()
@@ -1658,8 +1745,72 @@ test "app data directory follows platform conventions" {
 }
 
 ///|
+test "application log directory follows platform conventions" {
+  assert_eq(
+    normalize_path_separators(
+      app_log_dir_for_platform(
+        "macos",
+        "com.example.app",
+        Some("/Users/test"),
+        None,
+        None,
+      ),
+    ),
+    "/Users/test/Library/Logs/com.example.app",
+  )
+  assert_eq(
+    normalize_path_separators(
+      app_log_dir_for_platform(
+        "windows",
+        "com.example.app",
+        None,
+        Some("C:/Users/test/AppData/Local"),
+        None,
+      ),
+    ),
+    "C:/Users/test/AppData/Local/com.example.app/Logs",
+  )
+  assert_eq(
+    normalize_path_separators(
+      app_log_dir_for_platform(
+        "linux",
+        "com.example.app",
+        Some("/home/test"),
+        None,
+        None,
+      ),
+    ),
+    "/home/test/.local/state/com.example.app/logs",
+  )
+}
+
+///|
+test "managed identity reads the packaged identifier" {
+  let metadata =
+    #|{
+    #|  "identifier": "com.example.app",
+    #|  "product_name": "Example"
+    #|}
+  debug_inspect(
+    packaged_application_identifier_from_json(metadata),
+    content="Ok(\"com.example.app\")",
+  )
+}
+
+///|
+test "managed identity rejects packaged metadata without an identifier" {
+  let metadata : Json = { "product_name": "Example" }
+  guard packaged_application_identifier_from_json(metadata.stringify())
+    is Err(InvalidSetting(message~, ..)) else {
+    fail("expected packaged metadata validation to fail")
+  }
+  inspect(message, content="packaged application metadata requires identifier")
+}
+
+///|
 fn updater_test_channel(check_on_launch : Bool) -> ResolvedUpdateChannel? {
   url("Test", "https://example.com/")
+  .identifier("dev.proton.update-test")
   .update_channel(
     "https://updates.example.com/latest.json",
     ["rsa-sha256:ab:010001"],
@@ -1747,7 +1898,7 @@ test "view handle routes operations through its closures" {
 test "window context menu routes through the public window handle" {
   let calls : Array[String] = []
   let window = test_window_handle("main", 17L, popup_calls=calls)
-  let menu = Menu::new("Context", items=[MenuItem::separator()])
+  let menu = Menu("Context", items=[MenuItem::separator()])
   menu.popup(window, 123, 456)
   debug_inspect(calls, content="[\"popup:Context@123,456\"]")
 }
@@ -1758,11 +1909,11 @@ test "with_view stores declarative views and rejects invalid ids" {
   inspect(app.planned_views.length(), content="0")
   let app = app.with_view(
     "browser",
-    ViewConfig::new(width=320, height=240, initial_url="about:blank"),
+    ViewConfig(width=320, height=240, initial_url="about:blank"),
   )
   inspect(app.planned_views.length(), content="1")
-  let app = app.with_view("browser", ViewConfig::new(width=1, height=1))
-  let app = app.with_view("  ", ViewConfig::new(width=1, height=1))
+  let app = app.with_view("browser", ViewConfig(width=1, height=1))
+  let app = app.with_view("  ", ViewConfig(width=1, height=1))
   inspect(app.planned_views.length(), content="1")
   inspect(app.validation_errors.length(), content="2")
 }
@@ -1774,7 +1925,7 @@ async test "lifecycle contexts expose one immutable locale snapshot" {
     [@locale.Locale::parse("en-GB")],
   )
   @async.with_task_group(group => {
-    let application = ApplicationContext::new(
+    let application = ApplicationContext(
       group,
       test_window_manager(),
       preferences,
@@ -1784,12 +1935,12 @@ async test "lifecycle contexts expose one immutable locale snapshot" {
       application.preferred_languages().map(locale => locale.to_string()),
       ["zh-CN", "en-GB", "en-US"],
     )
-    let window = WindowContext::new(
+    let window = WindowContext(
       "main",
       test_window_handle("main", 17L),
       test_window_manager(),
       group,
-      WindowEventEmitter::new(fn(_route, _name, _payload) {  }),
+      WindowEventEmitter(fn(_route, _name, _payload) {  }),
       preferences,
     )
     assert_eq(window.locale(), application.locale())
@@ -1805,7 +1956,7 @@ test "standard menus resolve from the application locale" {
     [],
   )
   let resolved = resolve_menu(
-    @native.MenuBar::new(menus=[
+    @native.MenuBar(menus=[
       @native.Menu::role(@native.MenuRole::Edit),
       @native.Menu::role(@native.MenuRole::Window),
     ]),
@@ -1864,8 +2015,8 @@ test "custom menu labels never imply a standard role" {
     [],
   )
   let resolved = resolve_menu(
-    @native.MenuBar::new(menus=[
-      @native.Menu::new("Edit", items=[
+    @native.MenuBar(menus=[
+      @native.Menu("Edit", items=[
         @native.MenuItem::command("custom.edit", "Custom Edit"),
       ]),
     ]),
@@ -1890,9 +2041,7 @@ test "explicit standard menu items replace role defaults" {
     [],
   )
   let resolved = resolve_menu(
-    @native.MenuBar::new(menus=[
-      @native.Menu::role(@native.MenuRole::Edit, items=[]),
-    ]),
+    @native.MenuBar(menus=[@native.Menu::role(@native.MenuRole::Edit, items=[])]),
     preferences,
     "Proton Demo",
   )
@@ -1907,7 +2056,7 @@ test "macOS menu resolution puts an explicit application role first" {
     [],
   )
   let resolved = resolve_menu(
-    @native.MenuBar::new(menus=[
+    @native.MenuBar(menus=[
       @native.Menu::role(@native.MenuRole::Edit),
       @native.Menu::role(@native.MenuRole::Application),
       @native.Menu::role(@native.MenuRole::Window),

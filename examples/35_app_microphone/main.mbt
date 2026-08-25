@@ -7,5 +7,5 @@ async fn main {
     height=760,
     debug=true,
   ).capability(@microphone.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.35-app-microphone").run_or_abort()
 }

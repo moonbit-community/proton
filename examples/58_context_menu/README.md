@@ -12,7 +12,7 @@ menu API.
 Run it with:
 
 ```sh
-moon -C examples run 57_context_menu --target native
+moon -C examples run 58_context_menu --target native
 ```
 
 Windows currently reports native popup menus as unsupported, matching Proton's

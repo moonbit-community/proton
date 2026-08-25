@@ -11,7 +11,7 @@ pub struct AppManifest {
 /// Builds an app manifest.
 /// The defaults match the minimal declarative shape accepted by bootstrap so
 /// callers can opt into debug, extra windows, or extensions incrementally.
-pub fn AppManifest::new(
+pub fn AppManifest::AppManifest(
   window : WindowManifest,
   entry : AppEntry,
   debug? : Int = 0,

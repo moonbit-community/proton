@@ -117,6 +117,14 @@ test "notification clicks preserve optional payloads" {
 }
 
 ///|
+test "quit request is an application-level runtime event" {
+  let event = RuntimeEvent::QuitRequested
+  assert_eq(event.event_type(), "quit_requested")
+  assert_true(event.is_quit_requested())
+  assert_eq(event.window_id(), None)
+}
+
+///|
 test "native ABI version and availability" {
   inspect(abi_version(), content="1")
 }
@@ -166,7 +174,7 @@ test "typed window state fields map to a snapshot" {
 ///|
 test "runtime config preserves typed native ABI values" {
   let cache_dir = test_absolute_cache_dir()
-  let runtime_config = RuntimeConfig::new(
+  let runtime_config = RuntimeConfig(
     helper_path="cef_process.exe",
     cache_dir~,
     locale=@locale.Locale::parse("zh-CN"),
@@ -194,7 +202,7 @@ test "runtime config preserves typed native ABI values" {
   assert_true(bundled.persist_session_cookies)
   assert_true(RuntimeConfig::bundled(headless=true).headless)
   assert_false(
-    RuntimeConfig::new(persist_session_cookies=false).persist_session_cookies,
+    RuntimeConfig(persist_session_cookies=false).persist_session_cookies,
   )
 }
 
@@ -213,11 +221,11 @@ test "remote debugging modes have distinct native encodings" {
 
 ///|
 test "window config preserves typed native ABI values" {
-  let window_config = WindowConfig::new(
+  let window_config = WindowConfig(
     title="Typed",
     width=320,
     height=240,
-    browser=BrowserPolicy::new(
+    browser=BrowserPolicy(
       navigation=BrowserPolicyMode::Ask,
       popup=BrowserPolicyMode::Ask,
       download=BrowserPolicyMode::Ask,
@@ -225,9 +233,7 @@ test "window config preserves typed native ABI values" {
       media=BrowserPolicyMode::Ask,
       devtools=true,
     ),
-    bridge=BridgeConfig::new(grants=[
-      BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
-    ]),
+    bridge=BridgeConfig(grants=[BridgeGrantConfig("app", ops=["ext:app/ping"])]),
   )
   assert_eq(window_config.title, "Typed")
   assert_eq(window_config.width, 320)
@@ -242,14 +248,14 @@ test "window config preserves typed native ABI values" {
 
 ///|
 test "bridge config retains typed renderer policy" {
-  let bridge_config = BridgeConfig::new(grants=[
-    BridgeGrantConfig::new("app", ops=["ext:app/ping"]),
+  let bridge_config = BridgeConfig(grants=[
+    BridgeGrantConfig("app", ops=["ext:app/ping"]),
   ])
   inspect(bridge_config.grants[0].source_origin, content="app")
   assert_eq(bridge_config.grants[0].ops, ["ext:app/ping"])
-  let dev_bridge = BridgeConfig::new(grants=[
-    BridgeGrantConfig::new("http://localhost:5173", ops=["ext:app/ping"], initialization_units=[
-      BridgeInitializationUnit::new("test", "dev", "window.__protonDev = true;"),
+  let dev_bridge = BridgeConfig(grants=[
+    BridgeGrantConfig("http://localhost:5173", ops=["ext:app/ping"], initialization_units=[
+      BridgeInitializationUnit("test", "dev", "window.__protonDev = true;"),
     ]),
   ])
   inspect(
@@ -276,8 +282,8 @@ test "bridge request keeps transport metadata outside the payload" {
 ///|
 test "runtime create does not fake engine configs" {
   let error = expect_native_error(() => {
-    Runtime::new(
-      config=RuntimeConfig::new(
+    Runtime(
+      config=RuntimeConfig(
         runtime_root="missing-runtime-root",
         helper_path="missing-helper",
       ),
@@ -291,7 +297,7 @@ test "runtime create does not fake engine configs" {
 test "execute_process does not ignore engine configs" {
   let error = expect_native_error(() => {
     execute_process(
-      config=RuntimeConfig::new(
+      config=RuntimeConfig(
         runtime_root="missing-runtime-root",
         helper_path="missing-helper",
       ),
@@ -316,8 +322,8 @@ test "invalid handle returns structured native error" {
 ///|
 test "runtime config rejects a relative cache directory" {
   let error = expect_native_error(() => {
-    Runtime::new(
-      config=RuntimeConfig::new(
+    Runtime(
+      config=RuntimeConfig(
         runtime_root="/runtime",
         helper_path="/runtime/cef_process",
         cache_dir="relative-cache",
@@ -331,7 +337,7 @@ test "runtime config rejects a relative cache directory" {
 ///|
 test "app activation JSON keeps stable schema fields" {
   inspect(
-    AppActivation::new(urls=["dev.proton://open?id=1"], files=["/tmp/a.txt"])
+    AppActivation(urls=["dev.proton://open?id=1"], files=["/tmp/a.txt"])
     .to_json()
     .stringify(),
     content=(

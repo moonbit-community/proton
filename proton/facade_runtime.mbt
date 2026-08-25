@@ -7,12 +7,20 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     None => ()
   }
   let resolved = self.resolved_app_config()
+  let logging = start_runtime_logging(resolved.application_identifier)
+  defer logging.close()
+  @xlog.info(category="proton.runtime") <?
+    { "message": "application runtime starting" }
   let browser_data_dir = resolve_browser_data_dir(resolved) catch {
     error => raise ConfigurationError(error)
   }
   let locale_preferences = resolve_locale_preferences(self.explicit_locale)
   let app_instance = match acquire_app_instance(resolved) {
-    Some(@native.AppInstanceAcquire::Forwarded) => return
+    Some(@native.AppInstanceAcquire::Forwarded) => {
+      @xlog.info(category="proton.runtime") <?
+        { "message": "application activation forwarded to primary instance" }
+      return
+    }
     Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
     None => None
   }
@@ -34,6 +42,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     browser_data_dir?,
     application_name=resolved.application_name,
     app_instance~,
+    last_window_closed_policy=self.last_window_closed_policy_value,
     launch_input_handlers=self.launch_input_handlers,
     planned_views=self.planned_views.map(view => (view.0, view.1.to_native())),
     window_event_handlers=self.window_event_handlers,
@@ -47,10 +56,42 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     download_event_handlers=self.download_event_handlers,
     update_channel=resolved.update_channel,
     update_handlers=self.update_handlers,
-  )
+  ) catch {
+    error => raise logged_runtime_failure(error)
+  }
   match app_instance {
     Some(instance) => destroy_app_instance(instance)
     None => ()
+  }
+  @xlog.info(category="proton.runtime") <?
+    { "message": "application runtime stopped" }
+}
+
+///|
+fn logged_runtime_failure(error : AppRunError) -> AppRunError {
+  @xlog.error(category="proton.runtime") <?
+    {
+      "message": "application runtime failed",
+      "code": app_run_error_log_code(error),
+    }
+  error
+}
+
+///|
+fn app_run_error_log_code(error : AppRunError) -> String {
+  match error {
+    EventLoopError(_) => "event_loop_error"
+    ConfigurationError(_) => "configuration_error"
+    LoggingInitializationFailed(..) => "logging_initialization_failed"
+    UnsupportedNativeFeature(..) => "unsupported_native_feature"
+    RuntimeOperationFailed(..) => "runtime_operation_failed"
+    CommandExtensionLifecycleError(_) => "command_extension_lifecycle_error"
+    LifecycleHookError(_) => "lifecycle_hook_error"
+    EntryLoadError(_) => "entry_load_error"
+    BridgeStartupError(diagnostic) => diagnostic.code
+    BridgeRuntimeError(diagnostic) => diagnostic.code
+    CleanupFailed(..) => "cleanup_failed"
+    UnexpectedTaskFailure(..) => "unexpected_task_failure"
   }
 }
 
@@ -78,7 +119,10 @@ async fn run_manifest(
   application_name? : String = "Proton",
   app_instance? : @native.AppInstance? = None,
   planned_views? : Array[(String, @native.ViewConfig)] = [],
-  launch_input_handlers? : Array[async (RuntimeLaunchInput) -> Unit noraise] = [],
+  last_window_closed_policy? : LastWindowClosedPolicy = LastWindowClosedPolicy::Quit,
+  launch_input_handlers? : Array[
+    async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
+  ] = [],
   window_event_handlers? : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ] = [],
@@ -118,7 +162,7 @@ async fn run_manifest(
       ),
     )
   }
-  let lifecycle = AppLifecycle::new()
+  let lifecycle = AppLifecycle()
   lifecycle.begin_starting()
   // Context menus are created after startup through WindowHandle, so windowed
   // applications need menu command events even without an application menu.
@@ -127,7 +171,7 @@ async fn run_manifest(
   let remote_debugging = remote_debugging(manifest.debug) catch {
     error => raise ConfigurationError(error)
   }
-  let runtime = @native.Runtime::new(
+  let runtime = @native.Runtime(
     config=@native.RuntimeConfig::bundled(
       cache_dir?=browser_data_dir,
       locale=locale_preferences.chromium_locale(),
@@ -158,8 +202,8 @@ async fn run_manifest(
   let mut command_host : CommandHostRuntime? = None
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []
-  let wakeup = RuntimeWakeup::new()
-  let dialog_completions = DialogCompletionStore::new()
+  let wakeup = RuntimeWakeup()
+  let dialog_completions = DialogCompletionStore()
   try {
     if !headless {
       let platform = @native.runtime_info().platform catch {
@@ -227,7 +271,7 @@ async fn run_manifest(
       raise UnsupportedNativeFeature(feature="bridge_permission_grants")
     }
     let definitions : Array[PreparedWindow] = []
-    let browser_policy = @native.BrowserPolicy::new(
+    let browser_policy = @native.BrowserPolicy(
       navigation=if navigation_handler is Some(_) {
         @native.BrowserPolicyMode::Ask
       } else {
@@ -285,18 +329,15 @@ async fn run_manifest(
     }
     @async.with_task_group(application_tasks => {
       @async.with_task_group(window_tasks => {
-        let session = RuntimeSession::new(
+        let session = RuntimeSession(
           runtime, locale_preferences, definitions, windows, command_host, dialog_completions,
           wakeup, forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
-          window_tasks, view_event_handlers, window_close_handler, window_lifecycle_hooks,
-          lifecycle_failures, bridge_startup_timeout_ms, navigation_handler, popup_handler,
-          download_handler, certificate_handler, media_handler, download_event_handlers,
+          application_tasks, last_window_closed_policy, window_tasks, view_event_handlers,
+          window_close_handler, window_lifecycle_hooks, lifecycle_failures, bridge_startup_timeout_ms,
+          navigation_handler, popup_handler, download_handler, certificate_handler,
+          media_handler, download_event_handlers,
         )
-        let application_context = ApplicationContext::new(
-          application_tasks,
-          session.window_manager(),
-          locale_preferences,
-        )
+        let application_context = session.application_context()
         let application_start = application_tasks.spawn(
           () => {
             defer session.wakeup.signal.notify()
@@ -320,6 +361,11 @@ async fn run_manifest(
           session.wait_for_bridge_startup(bridge_startup_timeout_ms) catch {
             error => raise normalize_async_run_error(error)
           }
+          @xlog.info(category="proton.bridge") <?
+            {
+              "message": "renderer bridge ready",
+              "window_count": windows.length(),
+            }
         }
         for running in windows {
           if !running.is_closed() {
@@ -395,13 +441,7 @@ fn resolve_browser_data_dir(
   config : ResolvedAppConfig,
 ) -> String? raise AppConfigurationError {
   guard config.instance_identifier is Some(_) else { return None }
-  guard config.application_identifier is Some(identifier) else {
-    raise InvalidSetting(
-      name="identifier",
-      message="is required for persistent browser storage",
-    )
-  }
-  let path = browser_data_dir(identifier) catch {
+  let path = browser_data_dir(config.application_identifier) catch {
     error => raise InvalidSetting(name="identifier", message=error.message())
   }
   Some(path)
@@ -450,7 +490,7 @@ fn native_window_config(
   preferences : @locale.LocalePreferences,
 ) -> @native.WindowConfig {
   let catalog = framework_catalog(preferences)
-  @native.WindowConfig::new(
+  @native.WindowConfig(
     title=window.title,
     width=window.width,
     height=window.height,
@@ -479,7 +519,7 @@ fn native_window_config(
 fn native_bridge_config(
   grants : Array[@native.BridgeGrantConfig],
 ) -> @native.BridgeConfig {
-  @native.BridgeConfig::new(grants~)
+  @native.BridgeConfig(grants~)
 }
 
 ///|
@@ -492,7 +532,7 @@ fn ensure_entry_bridge_grant(
     None => "app"
   }
   if !grants.any(grant => grant.source_origin == source_origin) {
-    grants.push(@native.BridgeGrantConfig::new(source_origin, ops=[]))
+    grants.push(@native.BridgeGrantConfig(source_origin, ops=[]))
   }
 }
 
@@ -509,6 +549,7 @@ fn normalize_async_run_error(error : Error) -> AppRunError {
   match error {
     EventLoopError(message) => EventLoopError(message)
     ConfigurationError(error) => ConfigurationError(error)
+    LoggingInitializationFailed(detail~) => LoggingInitializationFailed(detail~)
     RuntimeOperationFailed(action~, status~, detail~) =>
       RuntimeOperationFailed(action~, status~, detail~)
     CommandExtensionLifecycleError(error) =>
@@ -681,6 +722,7 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
       cleanup_failure_message(primary, failures)
     EntryLoadError(error) => error.message()
     ConfigurationError(error) => error.message()
+    LoggingInitializationFailed(detail~) => detail
     UnsupportedNativeFeature(feature~) =>
       "The active Proton native runtime is incompatible with this application.\n\nMissing feature: " +
       feature
@@ -792,7 +834,7 @@ fn take_runtime_bridge_failure(
 }
 
 ///|
-fn WindowLifetime::new() -> WindowLifetime {
+fn WindowLifetime::WindowLifetime() -> WindowLifetime {
   WindowLifetime::{
     ready: false,
     closed: false,
@@ -857,7 +899,7 @@ async fn run_window_lifecycle_scope(
   @async.with_task_group(tasks => {
     start_window_lifecycle_hooks(
       hooks,
-      WindowContext::new(
+      WindowContext(
         running.id,
         handle,
         windows,

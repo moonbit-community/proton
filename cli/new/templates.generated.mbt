@@ -626,9 +626,10 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|///|
           #|async fn main {
-          #|  let backend = @todo.Backend::new()
+          #|  let backend = @todo.Backend()
           #|  @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
-          #|  .single_instance({{identifier_mbt}})
+          #|  .load_config()
+          #|  .single_instance()
           #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
           #|  .run_or_abort()
           #|}
@@ -669,7 +670,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|///|
-          #|pub fn Backend::new() -> Backend {
+          #|pub fn Backend::Backend() -> Backend {
           #|  Backend::{ next_id: 1, version: 0, todos: [] }
           #|}
           #|
@@ -852,13 +853,14 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|## Package
           #|
-          #|The `package` block in `proton.project.json` contains static packaging metadata:
+          #|The top-level `identifier` is the application's canonical identity. The
+          #|`package` block contains the remaining static packaging metadata:
           #|
           #|```json
           #|{
+          #|  "identifier": "com.example.my-app",
           #|  "package": {
           #|    "product_name": "My App",
-          #|    "identifier": "com.example.my-app",
           #|    "version": "0.1.0",
           #|    "formats": ["app", "zip"],
           #|    "output": "dist"
@@ -975,6 +977,7 @@ fn generated_minimal_template_specs() -> Array[TemplateSpec] {
           #|    #|  </body>
           #|    #|</html>
           #|  @proton.html({{title_mbt}}, html, width={{width}}, height={{height}})
+          #|  .load_config()
           #|  .run_or_abort()
           #|}
           #|
@@ -990,6 +993,8 @@ fn generated_minimal_template_specs() -> Array[TemplateSpec] {
           #|
           #|The application is a single MoonBit module. Its native entry point and inline
           #|HTML live in `app/main.mbt`; no separate frontend toolchain is required.
+          #|The app calls `.load_config()` to load its required application identity from
+          #|`proton.project.json` during development and packaged metadata after release.
           #|
           #|## Setup
           #|

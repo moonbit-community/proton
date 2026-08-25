@@ -60,10 +60,10 @@ pub fn OpRegistrationError::to_string(Self) -> String
 
 // Types and methods
 type AppCommandHost
+pub fn AppCommandHost::AppCommandHost(expose_error_details? : Bool, diagnostic_reporter? : (String) -> Unit) -> Self
 pub fn AppCommandHost::close(Self) -> Unit
 pub async fn AppCommandHost::dispatch_ipc(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub async fn AppCommandHost::dispatch_ipc_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
-pub fn AppCommandHost::new(expose_error_details? : Bool) -> Self
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError
@@ -82,6 +82,7 @@ pub struct AppCommandRequestContext {
   emit_event : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise
   locale_preferences : @locale.LocalePreferences
 }
+pub fn AppCommandRequestContext::AppCommandRequestContext(@async.TaskGroup[Unit], @locale.LocalePreferences, window? : CommandWindow, window_id? : String, source_origin? : String, page_instance? : String?, permission_extension? : String, permission_scope? : Json, wake_signal? : RuntimeWakeSignal, emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise) -> Self
 pub async fn[Payload : ToJson] AppCommandRequestContext::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
 pub fn AppCommandRequestContext::locale(Self) -> @locale.Locale
 pub fn AppCommandRequestContext::page_instance(Self) -> String?
@@ -102,6 +103,7 @@ pub struct CommandWindow {
   save_file_dialog : async (String?, String?) -> String?
   choose_directory_dialog : async (String?, String?) -> String?
 }
+pub fn CommandWindow::CommandWindow(async (String?, String, String) -> Unit, async (String?, String, String) -> Bool, async (String?, String?) -> String?, async (String?, String?) -> String?, async (String?, String?) -> String?) -> Self
 pub async fn CommandWindow::choose_directory(Self, String?, String?) -> String?
 pub async fn CommandWindow::confirm(Self, String?, String, String) -> Bool
 pub async fn CommandWindow::open_file(Self, String?, String?) -> String?
@@ -109,10 +111,10 @@ pub async fn CommandWindow::save_file(Self, String?, String?) -> String?
 pub async fn CommandWindow::show_message(Self, String?, String, String) -> Unit
 
 type MbtProcessHost
+pub fn MbtProcessHost::MbtProcessHost(expose_error_details? : Bool, diagnostic_reporter? : (String) -> Unit) -> Self
 pub fn MbtProcessHost::close(Self) -> Unit
 pub async fn MbtProcessHost::dispatch_async(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub async fn MbtProcessHost::dispatch_async_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
-pub fn MbtProcessHost::new(expose_error_details? : Bool) -> Self
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError
@@ -122,7 +124,7 @@ pub struct RuntimeWakeSignal {
   mut revision : Int64
   condition : @cond_var.Cond
 }
-pub fn RuntimeWakeSignal::new() -> Self
+pub fn RuntimeWakeSignal::RuntimeWakeSignal() -> Self
 pub fn RuntimeWakeSignal::notify(Self) -> Unit
 pub fn RuntimeWakeSignal::revision(Self) -> Int64
 pub async fn RuntimeWakeSignal::wait_for_change(Self, Int64) -> Unit

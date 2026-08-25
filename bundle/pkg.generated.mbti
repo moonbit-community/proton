@@ -27,7 +27,7 @@ pub struct ProtonBundleSpec {
   resources : Array[String]
   sign_binaries : Array[String]
 }
-pub fn ProtonBundleSpec::new(@lib.PackageSpec, String, String, String?, update_revision? : UInt64, resources? : Array[String], sign_binaries? : Array[String]) -> Self
+pub fn ProtonBundleSpec::ProtonBundleSpec(@lib.PackageSpec, String, String, String?, update_revision? : UInt64, resources? : Array[String], sign_binaries? : Array[String]) -> Self
 
 // Type aliases
 

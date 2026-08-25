@@ -5,10 +5,18 @@ let default_package = "app"
 let default_config_file = "proton.project.json"
 
 ///|
+priv struct UpdaterMetadataOptions {
+  base_url : String
+  published_at : String
+} derive(Debug, Eq)
+
+///|
 struct RawPackageOptions {
   app_package : String?
   config_path : String?
   package_args : @package_args.PackageArguments
+  updater_metadata : UpdaterMetadataOptions?
+  update_revision : UInt64
   release : Bool
   dry_run : Bool
 } derive(Debug, Eq)
@@ -62,15 +70,17 @@ pub fn command() -> @argparse.Command {
     @argparse.OptionArg("package", about="MoonBit application package"),
     @argparse.OptionArg("config", about="Proton project config"),
   ]
-  options.append(@package_args.options())
+  options.append(@package_args.options(include_identifier=false))
   options.append([
     @argparse.OptionArg(
       "updater-base-url",
       about="Emit update metadata with artifacts served from this https base URL",
+      requires=["updater-published-at", "updater-revision"],
     ),
     @argparse.OptionArg(
       "updater-published-at",
       about="Publication instant for the manifest fragment (YYYY-MM-DDTHH:MM:SSZ)",
+      requires=["updater-base-url"],
     ),
     @argparse.OptionArg(
       "updater-revision",
@@ -112,63 +122,55 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   ) catch {
     error => raise PackageConfigError::Invalid(path=config_path, error~)
   }
-  let updater_base_url = match matches.values {
-    { "updater-base-url": [base_url, ..], .. } => Some(base_url)
-    _ => None
-  }
-  let update_revision = updater_revision_from_matches(matches, updater_base_url)
-  let plan = build_package_plan(raw, config_path, project, update_revision)
+  let plan = build_package_plan(raw, config_path, project, raw.update_revision)
   print_package_plan(plan, raw.dry_run)
   if raw.dry_run {
     return
   }
   let result = execute_package_plan(plan)
-  match updater_base_url {
-    Some(base_url) =>
+  match raw.updater_metadata {
+    Some(metadata) =>
       write_updater_metadata(
         plan,
         result.artifacts(),
         result.platform(),
-        base_url,
-        match matches.values {
-          { "updater-published-at": [published_at, ..], .. } => published_at
-          _ => raise MissingPublishedAt
-        },
+        metadata.base_url,
+        metadata.published_at,
       )
     None => ()
   }
 }
 
 ///|
-fn updater_revision_from_matches(
-  matches : @argparse.Matches,
-  base_url : String?,
-) -> UInt64 raise UpdaterMetadataError {
-  match matches.values {
-    { "updater-revision": [value, ..], .. } => {
+fn parse_updater_revision(value : String?) -> UInt64 raise UpdaterMetadataError {
+  match value {
+    Some(value) => {
       let revision = @string.parse_uint64(value[:]) catch {
         _ => raise InvalidRevision(value~)
       }
       guard revision > 0UL else { raise InvalidRevision(value~) }
       revision
     }
-    _ => {
-      guard base_url is None else { raise MissingRevision }
-      0UL
-    }
+    None => 0UL
   }
 }
 
 ///|
 fn package_options_from_matches(
   matches : @argparse.Matches,
-) -> RawPackageOptions raise @packager.PackagePlanError {
+) -> RawPackageOptions raise {
   guard matches.values
     is {
       "package"? : Some(app_package)
       | (None with app_package = []),
       "config"? : Some(config_path)
       | (None with config_path = []),
+      "updater-base-url"? : Some(updater_base_url)
+      | (None with updater_base_url = []),
+      "updater-published-at"? : Some(updater_published_at)
+      | (None with updater_published_at = []),
+      "updater-revision"? : Some(updater_revision)
+      | (None with updater_revision = []),
       ..
     }
   guard matches.flags
@@ -183,6 +185,13 @@ fn package_options_from_matches(
     app_package: app_package.get(0),
     config_path: config_path.get(0),
     package_args: @package_args.from_matches(matches),
+    updater_metadata: match
+      (updater_base_url.get(0), updater_published_at.get(0)) {
+      (Some(base_url), Some(published_at)) =>
+        Some(UpdaterMetadataOptions::{ base_url, published_at })
+      _ => None
+    },
+    update_revision: parse_updater_revision(updater_revision.get(0)),
     release,
     dry_run,
   }
@@ -202,9 +211,7 @@ async fn build_package_plan(
   let product_name = @packager.validate_product_name(
     raw.package_args.product_name.unwrap_or(package_config.product_name),
   )
-  let identifier = @packager.validate_identifier(
-    raw.package_args.identifier.unwrap_or(package_config.identifier),
-  )
+  let identifier = @packager.validate_identifier(project.identifier())
   let configured_formats = if raw.package_args.formats.length() > 0 {
     raw.package_args.formats.copy()
   } else if package_config.formats.length() > 0 {
@@ -318,13 +325,13 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
   }
   let helper = @cef_store.resolve_default_helper()
   let document_types = plan.document_types.map(document_type => {
-    @packager.DocumentType::new(
+    @packager.DocumentType(
       document_type.name,
       document_type.extensions.copy(),
       role=document_type.role,
     )
   })
-  let package_spec = @packager.PackageSpec::new(
+  let package_spec = @packager.PackageSpec(
     executable,
     plan.product_name,
     plan.identifier,
@@ -337,7 +344,7 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
     sign=plan.sign,
     notarize=plan.notarize,
   )
-  let spec = @bundle.ProtonBundleSpec::new(
+  let spec = @bundle.ProtonBundleSpec(
     package_spec,
     helper,
     plan.base_dir,

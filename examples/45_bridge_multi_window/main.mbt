@@ -106,5 +106,6 @@ async fn main {
     on_start=async fn(context) { ignore(context.windows().open("secondary")) },
     on_shutdown=fn(_state) {  },
   )
+  .identifier("dev.proton.45-bridge-multi-window")
   .run_or_abort()
 }

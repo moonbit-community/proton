@@ -78,7 +78,7 @@ static bool proton_engine_bridge_grant_match_item(proton_json_value_t value,
   }
   if (candidate != NULL && strcmp(candidate, match->source_origin) == 0) {
     match->matched = 1;
-    match->grant_json = proton_json_copy_raw(match->doc, value);
+    match->grant_json = proton_json_copy_object(match->doc, value);
   }
   free(candidate);
   return match->matched == 0;

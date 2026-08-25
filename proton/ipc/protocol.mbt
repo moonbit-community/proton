@@ -114,7 +114,7 @@ pub extend IpcExtensionDescriptor with FromJson::{from_json}
 
 ///|
 /// Creates one operation request frame.
-pub fn IpcOpRequest::new(
+pub fn IpcOpRequest::IpcOpRequest(
   id : String,
   name : String,
   payload : Json,
@@ -177,7 +177,7 @@ pub fn parse_ipc_op_response(raw : String) -> IpcOpResponse raise IpcError {
 
 ///|
 /// Creates one extension event IPC frame.
-pub fn IpcExtensionEvent::new(
+pub fn IpcExtensionEvent::IpcExtensionEvent(
   extension_namespace : String,
   event_name : String,
   payload : Json,
@@ -192,13 +192,13 @@ pub fn IpcExtensionEvent::new(
 
 ///|
 /// Creates one remote extension API descriptor.
-pub fn IpcExtensionApi::new(api_name : String) -> IpcExtensionApi {
+pub fn IpcExtensionApi::IpcExtensionApi(api_name : String) -> IpcExtensionApi {
   IpcExtensionApi::{ api_name, }
 }
 
 ///|
 /// Creates one remote extension bridge descriptor.
-pub fn IpcExtensionDescriptor::new(
+pub fn IpcExtensionDescriptor::IpcExtensionDescriptor(
   id : String,
   js_namespace : String,
   apis : Array[IpcExtensionApi],

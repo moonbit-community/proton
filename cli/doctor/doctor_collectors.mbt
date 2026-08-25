@@ -15,7 +15,7 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
   match project {
     None =>
       lines.push(
-        DoctorLine::new(
+        DoctorLine(
           "project.skipped",
           Neutral,
           "not inside a Proton project; project checks skipped",
@@ -25,14 +25,14 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
       let source = @async_fs.read_file(project.config_path).text() catch {
         error => {
           lines.push(
-            DoctorLine::new(
+            DoctorLine(
               "project.config.read_failed",
               Error,
               "failed to read proton.project.json",
               hint=@debug.render(Repr(error)),
             ),
           )
-          return DoctorSection::new("project", "Project", lines)
+          return DoctorSection("project", "Project", lines)
         }
       }
       try
@@ -44,7 +44,7 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
       catch {
         error =>
           lines.push(
-            DoctorLine::new(
+            DoctorLine(
               "project.config.invalid",
               Error,
               "proton.project.json is invalid",
@@ -54,16 +54,12 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
       } noraise {
         _ =>
           lines.push(
-            DoctorLine::new(
-              "project.config",
-              Ok,
-              "proton.project.json is valid",
-            ),
+            DoctorLine("project.config", Ok, "proton.project.json is valid"),
           )
       }
     }
   }
-  DoctorSection::new("project", "Project", lines)
+  DoctorSection("project", "Project", lines)
 }
 
 ///|
@@ -72,29 +68,29 @@ async fn collect_environment() -> DoctorSection {
   let (status, output) = @process.collect_output_merged("moon", ["version"]) catch {
     _ => {
       lines.push(
-        DoctorLine::new(
+        DoctorLine(
           "environment.moon.missing",
           Error,
           "MoonBit toolchain is not available",
           hint="install moon and make it available on PATH",
         ),
       )
-      return DoctorSection::new("environment", "Environment", lines)
+      return DoctorSection("environment", "Environment", lines)
     }
   }
   let version = first_non_empty_line(output.text() catch { _ => "" })
   if status == 0 && version is Some(version) {
-    lines.push(DoctorLine::new("environment.moon", Ok, "moon: " + version))
+    lines.push(DoctorLine("environment.moon", Ok, "moon: " + version))
   } else {
     lines.push(
-      DoctorLine::new(
+      DoctorLine(
         "environment.moon.failed",
         Error,
         "failed to query the MoonBit toolchain",
       ),
     )
   }
-  DoctorSection::new("environment", "Environment", lines)
+  DoctorSection("environment", "Environment", lines)
 }
 
 ///|
@@ -103,7 +99,7 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
   let runtime = try @cef_store.resolve_default() catch {
     error => {
       lines.push(
-        DoctorLine::new(
+        DoctorLine(
           "runtime.missing",
           Error,
           "CEF runtime is not installed",
@@ -111,18 +107,16 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
             "\nRun `moonx moonbit-community/proton_cefsetup`.",
         ),
       )
-      return DoctorSection::new("runtime", "Runtime", lines)
+      return DoctorSection("runtime", "Runtime", lines)
     }
   } noraise {
     value => value
   }
-  lines.push(
-    DoctorLine::new("runtime.layout", Ok, "runtime installation is valid"),
-  )
+  lines.push(DoctorLine("runtime.layout", Ok, "runtime installation is valid"))
   let helper = try @cef_store.resolve_default_helper() catch {
     error => {
       lines.push(
-        DoctorLine::new(
+        DoctorLine(
           "runtime.helper_missing",
           Error,
           "CEF subprocess helper is not installed",
@@ -130,24 +124,18 @@ async fn collect_runtime(verbose~ : Bool) -> DoctorSection {
             "\nRun `moonx moonbit-community/proton_cefsetup`.",
         ),
       )
-      return DoctorSection::new("runtime", "Runtime", lines)
+      return DoctorSection("runtime", "Runtime", lines)
     }
   } noraise {
     value => value
   }
-  lines.push(
-    DoctorLine::new("runtime.helper", Ok, "subprocess helper is installed"),
-  )
+  lines.push(DoctorLine("runtime.helper", Ok, "subprocess helper is installed"))
   if verbose {
     lines.push(
-      DoctorLine::new(
-        "runtime.versions",
-        Neutral,
-        "CEF " + runtime.cef_archive(),
-      ),
+      DoctorLine("runtime.versions", Neutral, "CEF " + runtime.cef_archive()),
     )
-    lines.push(DoctorLine::new("runtime.path", Neutral, runtime.runtime_root()))
-    lines.push(DoctorLine::new("runtime.helper_path", Neutral, helper))
+    lines.push(DoctorLine("runtime.path", Neutral, runtime.runtime_root()))
+    lines.push(DoctorLine("runtime.helper_path", Neutral, helper))
   }
-  DoctorSection::new("runtime", "Runtime", lines)
+  DoctorSection("runtime", "Runtime", lines)
 }

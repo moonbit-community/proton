@@ -331,7 +331,7 @@ fn[X] CdpClient::from_websocket(
   tasks : @async.TaskGroup[X],
   ws : @websocket.Conn,
 ) -> CdpClient {
-  let client = CdpClient::new(ws)
+  let client = CdpClient(ws)
   client.reader = Some(
     tasks.spawn(() => client.read_messages(), no_wait=true, allow_failure=true),
   )
@@ -340,7 +340,7 @@ fn[X] CdpClient::from_websocket(
 }
 
 ///|
-fn CdpClient::new(ws : @websocket.Conn) -> CdpClient {
+fn CdpClient::CdpClient(ws : @websocket.Conn) -> CdpClient {
   let client = CdpClient::{
     ws,
     reader: None,

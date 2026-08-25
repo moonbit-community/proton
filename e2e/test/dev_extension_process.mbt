@@ -282,11 +282,7 @@ async fn spawn_dev_extension_cli_app(
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )
-  SpawnedScenarioApp::{
-    process,
-    output_path,
-    native_log_path: scenario_native_log_path(output_root, cdp_port),
-  }
+  SpawnedScenarioApp::{ process, output_path }
 }
 
 ///|
@@ -327,11 +323,7 @@ async fn spawn_dev_extension_production_app(
     cancel_handler=app_cancel_handler(),
     no_wait=true,
   )
-  SpawnedScenarioApp::{
-    process,
-    output_path,
-    native_log_path: scenario_native_log_path(output_root, cdp_port),
-  }
+  SpawnedScenarioApp::{ process, output_path }
 }
 
 ///|

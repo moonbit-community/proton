@@ -172,6 +172,7 @@ enum RuntimeEvent {
   ViewEvent(Int64, Int64, NativeViewEvent)
   ResourceRequested(NativeResourceRequest)
   ResourceRequestCancelled(Int64)
+  QuitRequested
 } derive(Debug, Eq)
 
 ///|
@@ -665,6 +666,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     ViewEvent(_, _, LoadFailed(_, _, _)) => "view_load_failed"
     ResourceRequested(_) => "resource_requested"
     ResourceRequestCancelled(_) => "resource_request_cancelled"
+    QuitRequested => "quit_requested"
   }
 }
 
@@ -695,7 +697,8 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | ResourceRequestCancelled(_)
     | LaunchInput(_)
     | NotificationResult(_)
-    | NotificationClicked(_) => None
+    | NotificationClicked(_)
+    | QuitRequested => None
   }
 }
 
@@ -793,6 +796,11 @@ pub fn RuntimeEvent::is_window_created(self : RuntimeEvent) -> Bool {
 ///|
 pub fn RuntimeEvent::is_window_closed(self : RuntimeEvent) -> Bool {
   self is WindowClosed(_)
+}
+
+///|
+pub fn RuntimeEvent::is_quit_requested(self : RuntimeEvent) -> Bool {
+  self is QuitRequested
 }
 
 ///|
@@ -1099,7 +1107,7 @@ pub extend BrowserPolicy with Eq::{not_equal, equal}
 pub extend BrowserPolicy with Debug::{to_repr}
 
 ///|
-pub fn BrowserPolicy::new(
+pub fn BrowserPolicy::BrowserPolicy(
   navigation? : BrowserPolicyMode = BrowserPolicyMode::Allow,
   popup? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   download? : BrowserPolicyMode = BrowserPolicyMode::Deny,
@@ -1182,7 +1190,7 @@ pub extend WindowConfig with Debug::{to_repr}
 /// by this runtime. Remote debugging remains independently configurable. Omit
 /// `cache_dir` for an isolated temporary browser profile, or provide an
 /// absolute, process-exclusive path for persistent browser state.
-pub fn RuntimeConfig::new(
+pub fn RuntimeConfig::RuntimeConfig(
   runtime_root? : String,
   helper_path? : String,
   resources_dir? : String,
@@ -1244,14 +1252,14 @@ pub fn RuntimeConfig::bundled(
 }
 
 ///|
-pub fn WindowConfig::new(
+pub fn WindowConfig::WindowConfig(
   title? : String = "Proton",
   width? : Int = 800,
   height? : Int = 600,
   initial_url? : String = "about:blank",
   size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
-  browser? : BrowserPolicy = BrowserPolicy::new(),
+  browser? : BrowserPolicy = BrowserPolicy(),
   bridge? : BridgeConfig,
 ) -> WindowConfig {
   {
@@ -1321,13 +1329,13 @@ pub fn WindowConfig::with_framework_titlebar_labels(
 
 ///|
 /// Creates an application-level menu bar.
-pub fn MenuBar::new(menus~ : Array[Menu]) -> MenuBar {
+pub fn MenuBar::MenuBar(menus~ : Array[Menu]) -> MenuBar {
   { menus: menus.copy() }
 }
 
 ///|
 /// Creates a top-level menu.
-pub fn Menu::new(label : String, items~ : Array[MenuItem]) -> Menu {
+pub fn Menu::Menu(label : String, items~ : Array[MenuItem]) -> Menu {
   { label: Some(label), role: None, items: Some(items.copy()) }
 }
 
@@ -1435,7 +1443,7 @@ pub fn WindowRef::invalid() -> WindowRef {
 }
 
 ///|
-pub fn BridgeConfig::new(
+pub fn BridgeConfig::BridgeConfig(
   grants~ : Array[BridgeGrantConfig],
   max_payload_bytes? : Int = 1048576,
 ) -> BridgeConfig {
@@ -1443,7 +1451,7 @@ pub fn BridgeConfig::new(
 }
 
 ///|
-pub fn BridgeGrantConfig::new(
+pub fn BridgeGrantConfig::BridgeGrantConfig(
   source_origin : String,
   ops~ : Array[String],
   extensions? : Array[BridgeExtensionConfig] = [],
@@ -1458,7 +1466,7 @@ pub fn BridgeGrantConfig::new(
 }
 
 ///|
-pub fn BridgeExtensionConfig::new(
+pub fn BridgeExtensionConfig::BridgeExtensionConfig(
   js_namespace : String,
   apis~ : Array[String],
 ) -> BridgeExtensionConfig {
@@ -1466,7 +1474,7 @@ pub fn BridgeExtensionConfig::new(
 }
 
 ///|
-pub fn BridgeInitializationUnit::new(
+pub fn BridgeInitializationUnit::BridgeInitializationUnit(
   owner : String,
   name : String,
   source : String,
@@ -1490,7 +1498,7 @@ fn BridgeExtensionConfig::copy(
 
 ///|
 fn BridgeGrantConfig::copy(self : BridgeGrantConfig) -> BridgeGrantConfig {
-  BridgeGrantConfig::new(
+  BridgeGrantConfig(
     self.source_origin,
     ops=self.ops,
     extensions=self.extensions,
@@ -1501,36 +1509,6 @@ fn BridgeGrantConfig::copy(self : BridgeGrantConfig) -> BridgeGrantConfig {
 ///|
 fn copy_strings(values : Array[String]) -> Array[String] {
   values.map(fn(value) { value })
-}
-
-///|
-pub fn BridgeResponse::to_json_string(self : BridgeResponse) -> String {
-  match self {
-    Ok(request_id~, payload~) => {
-      let response : Json = {
-        "abi_version": Json::number(1.0, repr="1"),
-        "request_id": Json::number(
-          request_id.to_double(),
-          repr=request_id.to_string(),
-        ),
-        "ok": true,
-        "payload": payload,
-      }
-      response.stringify()
-    }
-    Err(request_id~, code~, message~) => {
-      let response : Json = {
-        "abi_version": Json::number(1.0, repr="1"),
-        "request_id": Json::number(
-          request_id.to_double(),
-          repr=request_id.to_string(),
-        ),
-        "ok": false,
-        "error": { "code": code, "message": message },
-      }
-      response.stringify()
-    }
-  }
 }
 
 ///|
@@ -1590,7 +1568,7 @@ pub extend ViewConfig with Eq::{not_equal, equal}
 pub extend ViewConfig with Debug::{to_repr}
 
 ///|
-pub fn ViewConfig::new(
+pub fn ViewConfig::ViewConfig(
   width~ : Int,
   height~ : Int,
   x? : Int = 0,

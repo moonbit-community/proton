@@ -4,7 +4,6 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/core/argparse",
-  "moonbitlang/core/debug",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/x/path",

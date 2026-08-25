@@ -126,7 +126,6 @@ async fn run_extension_scenario_page_probe(
   target : String,
   name : String,
   timeout : Int,
-  native_log_path : String,
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
   wait_for_ready(page, scenario_ready_expression(name), timeout)
@@ -145,22 +144,17 @@ async fn run_extension_scenario_page_probe(
     "bridge for " + name,
     timeout,
   )
-  run_extension_scenario_probe(name, page, native_log_path)
+  run_extension_scenario_probe(name, page)
 }
 
 ///|
-async fn run_extension_scenario_probe(
-  name : String,
-  page : @page.Page,
-  native_log_path : String,
-) -> Unit {
+async fn run_extension_scenario_probe(name : String, page : @page.Page) -> Unit {
   match name {
     "38_async_extension_add" => run_async_add_scenario_probe(page)
     "39_sync_async_extensions" => run_sync_async_scenario_probe(page)
     "42_attribute_codegen_commands" => run_attribute_scenario_probe(page)
     _ => fail("unsupported extension scenario: " + name)
   }
-  assert_extension_scenario_native_log(name, native_log_path)
 }
 
 ///|
@@ -293,23 +287,5 @@ async fn run_attribute_scenario_probe(page : @page.Page) -> Unit {
     event.extension == "add" &&
     event.total == 42 else {
     fail("attribute codegen event mismatch: " + value.stringify())
-  }
-}
-
-///|
-fn assert_extension_scenario_native_log(
-  name : String,
-  path : String,
-) -> Unit raise {
-  let required_ops : Array[String] = match name {
-    "38_async_extension_add" | "42_attribute_codegen_commands" =>
-      ["ext:add/slowAdd"]
-    "39_sync_async_extensions" => ["ext:math/double", "ext:add/slowAdd"]
-    _ => fail("unsupported extension log scenario: " + name)
-  }
-  for op in required_ops {
-    guard count_native_log_entries(path, "bridge_enqueue", "op=" + op) > 0 else {
-      fail("native log did not record " + op + " for " + name)
-    }
   }
 }

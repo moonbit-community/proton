@@ -5,7 +5,6 @@
 #include "bridge_policy.h"
 
 #include <stddef.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,37 +57,6 @@ static unsigned long proton_engine_bridge_process_id(void) {
 #else
   return (unsigned long)getpid();
 #endif
-}
-
-static void proton_engine_bridge_log(const char *format, ...) {
-#if defined(_WIN32)
-  wchar_t wide_path[4096] = {0};
-  DWORD path_len = GetEnvironmentVariableW(
-      L"PROTON_NATIVE_LOG", wide_path,
-      (DWORD)(sizeof(wide_path) / sizeof(wide_path[0])));
-  if (path_len == 0 ||
-      path_len >= sizeof(wide_path) / sizeof(wide_path[0]) ||
-      format == NULL) {
-    return;
-  }
-  FILE *file = _wfopen(wide_path, L"ab");
-#else
-  const char *path = getenv("PROTON_NATIVE_LOG");
-  if (path == NULL || path[0] == '\0' || format == NULL) {
-    return;
-  }
-  FILE *file = fopen(path, "ab");
-#endif
-  if (file == NULL) {
-    return;
-  }
-  va_list args;
-  va_start(args, format);
-  fprintf(file, "renderer pid=%lu ", proton_engine_bridge_process_id());
-  vfprintf(file, format, args);
-  va_end(args);
-  fputc('\n', file);
-  fclose(file);
 }
 
 static void proton_engine_bridge_set_string(cef_string_t *out,
@@ -406,8 +374,6 @@ static void proton_engine_bridge_send_lifecycle(
   cef_process_message_t *message = cef_process_message_create(&message_name);
   cef_string_clear(&message_name);
   if (message == NULL) {
-    proton_engine_bridge_log("bridge_lifecycle_send outcome=%s created=0",
-                             outcome);
     proton_engine_bridge_record_lifecycle(frame, outcome, page_instance, url,
                                           diagnostic_json);
     return;
@@ -427,12 +393,7 @@ static void proton_engine_bridge_send_lifecycle(
   }
   if (populated) {
     frame->send_process_message(frame, PID_BROWSER, message);
-    proton_engine_bridge_log("bridge_lifecycle_send outcome=%s page=%s",
-                             outcome, page_instance);
   } else {
-    proton_engine_bridge_log(
-        "bridge_lifecycle_send outcome=%s page=%s populated=0", outcome,
-        page_instance);
     message->base.release((cef_base_ref_counted_t *)message);
   }
   proton_engine_bridge_record_lifecycle(frame, outcome, page_instance, url,
@@ -837,9 +798,7 @@ void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_created(
   cef_string_userfree_t config =
       cef_write_json(bridge_value, JSON_WRITER_DEFAULT);
   char *config_json = proton_engine_bridge_userfree_to_utf8(config);
-  int stored = proton_engine_bridge_store_browser_config(browser, config_json);
-  proton_engine_bridge_log("renderer_bridge_config browser=%d stored=%d",
-                           browser->get_identifier(browser), stored);
+  (void)proton_engine_bridge_store_browser_config(browser, config_json);
 }
 
 void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_destroyed(
@@ -853,9 +812,6 @@ void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_destroyed(
     if (entry->browser_id == browser_id) {
       if (entry->instance_count > 1) {
         entry->instance_count--;
-        proton_engine_bridge_log(
-            "bridge_browser_destroyed browser=%d remaining=%zu", browser_id,
-            entry->instance_count);
         return;
       }
       *config_cursor = entry->next;
@@ -869,8 +825,6 @@ void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_destroyed(
     }
     config_cursor = &entry->next;
   }
-  proton_engine_bridge_log("bridge_browser_destroyed browser=%d remaining=0",
-                           browser_id);
   proton_engine_bridge_context_t **context_cursor = &g_contexts;
   while (*context_cursor != NULL) {
     proton_engine_bridge_context_t *entry = *context_cursor;
@@ -1046,8 +1000,6 @@ void proton_engine_bridge_renderer_on_context_created(
       g_contexts = entry;
       dispatcher = NULL;
       page_instance = NULL;
-      proton_engine_bridge_log("renderer_bridge_context browser=%d installed=1",
-                               entry->browser_id);
       int initialized = proton_engine_bridge_initialize_units(
           grant_json, context, frame, entry->page_instance, url);
       if (initialized) {
@@ -1090,8 +1042,6 @@ void proton_engine_bridge_renderer_on_context_released(
       !frame->is_main(frame)) {
     return;
   }
-  proton_engine_bridge_log("bridge_context_released browser=%d",
-                           browser->get_identifier(browser));
   proton_engine_bridge_context_t **cursor = &g_contexts;
   char *page_instance = NULL;
   while (*cursor != NULL) {
@@ -1149,11 +1099,6 @@ static int proton_engine_bridge_dispatch_response(
     cef_string_clear(&error_string);
     cef_v8_value_t *result = proton_engine_bridge_execute(
         function, entry->context, entry->dispatcher, 4, values);
-    int dispatched = result != NULL && result->is_bool(result) &&
-                     result->get_bool_value(result);
-    proton_engine_bridge_log(
-        "renderer_bridge_response browser=%d pending=%d dispatched=%d",
-        entry->browser_id, pending_id, dispatched);
     if (result != NULL) {
       result->base.release((cef_base_ref_counted_t *)result);
     }
@@ -1271,10 +1216,6 @@ int proton_engine_bridge_renderer_on_process_message_received(
   int is_event = strcmp(message_name, PROTON_ENGINE_BRIDGE_EVENT_MESSAGE) == 0;
   int is_lifecycle_probe =
       strcmp(message_name, PROTON_ENGINE_BRIDGE_LIFECYCLE_PROBE_MESSAGE) == 0;
-  proton_engine_bridge_log(
-      "renderer_bridge_message browser=%d response=%d event=%d probe=%d",
-      browser->get_identifier(browser), is_response, is_event,
-      is_lifecycle_probe);
   free(message_name);
   if (is_lifecycle_probe) {
     return proton_engine_bridge_handle_lifecycle_probe(browser, frame);
@@ -1288,8 +1229,6 @@ int proton_engine_bridge_renderer_on_process_message_received(
   }
   proton_engine_bridge_context_t *entry =
       proton_engine_bridge_find_context(browser);
-  proton_engine_bridge_log("renderer_bridge_match browser=%d context=%d",
-                           browser->get_identifier(browser), entry != NULL);
   int handled = is_response
                     ? proton_engine_bridge_dispatch_response(entry, args)
                     : proton_engine_bridge_dispatch_event(entry, args);

@@ -1,5 +1,5 @@
 ///|
-fn App::new(
+fn App::App(
   title : String,
   width : Int,
   height : Int,
@@ -8,14 +8,16 @@ fn App::new(
   size_hint : @manifest.WindowSizeHint,
 ) -> App {
   App::{
-    window: @manifest.WindowManifest::new(title, width, height, size_hint~),
+    window: @manifest.WindowManifest(title, width, height, size_hint~),
     entry,
     windows: [],
     debug_level_value: debug,
     headless_value: false,
-    single_instance_identifier: None,
+    application_identity: None,
+    single_instance_enabled: false,
     explicit_locale: None,
     bridge_startup_timeout_value_ms: default_bridge_startup_timeout_ms,
+    last_window_closed_policy_value: LastWindowClosedPolicy::Quit,
     menu: None,
     url_schemes: [],
     document_extensions: [],
@@ -48,7 +50,16 @@ fn App::set_entry(self : App, entry : @manifest.AppEntry) -> App {
 
 ///|
 fn App::validation_error(self : App) -> AppConfigurationError? {
-  if self.bridge_startup_timeout_value_ms <= 0 {
+  if self.validation_errors.get(0) is Some(error) {
+    Some(error)
+  } else if self.application_identity is None {
+    Some(
+      InvalidSetting(
+        name="identifier",
+        message="is required; call .load_config() or .identifier(...) before running the application",
+      ),
+    )
+  } else if self.bridge_startup_timeout_value_ms <= 0 {
     Some(
       InvalidSetting(
         name="bridge_startup_timeout_ms",
@@ -56,19 +67,27 @@ fn App::validation_error(self : App) -> AppConfigurationError? {
       ),
     )
   } else {
-    self.validation_errors.get(0)
+    None
   }
 }
 
 ///|
 fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
   let manifest = self.inline_manifest()
+  let identifier = match self.application_identity {
+    Some(ProjectConfig(identifier) | Explicit(identifier)) => identifier
+    None => abort("validated application identity is missing")
+  }
   ResolvedAppConfig::{
     manifest,
     application_name: manifest.window.title,
     permission_base_path: runtime_resource_dir(),
-    application_identifier: self.single_instance_identifier,
-    instance_identifier: self.single_instance_identifier,
+    application_identifier: identifier,
+    instance_identifier: if self.single_instance_enabled {
+      Some(identifier)
+    } else {
+      None
+    },
     url_schemes: self.url_schemes.copy(),
     document_extensions: self.document_extensions.copy(),
     update_channel: if proton_dev_mode_enabled() {
@@ -90,7 +109,7 @@ fn App::inline_manifest(self : App) -> @manifest.AppManifest {
   } else {
     self.debug_level_value
   }
-  @manifest.AppManifest::new(self.window, entry, debug~, windows=self.windows)
+  @manifest.AppManifest(self.window, entry, debug~, windows=self.windows)
 }
 
 ///|

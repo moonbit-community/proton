@@ -28,7 +28,7 @@ pub struct PermissionRoot {
   path : String
   commands : Array[String]
 }
-pub fn PermissionRoot::new(String, Array[String]) -> Self raise FsError
+pub fn PermissionRoot::PermissionRoot(String, Array[String]) -> Self raise FsError
 
 // Type aliases
 

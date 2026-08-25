@@ -151,6 +151,7 @@ pub fn WindowSessionError::message(self : WindowSessionError) -> String {
   match self {
     UnknownWindow(id~) => "window is not declared: " + id
     AlreadyOpen(id~) => "window is already open: " + id
+    ApplicationQuitting => "the application is quitting"
     StaleWindow(id~) => "window instance is no longer active: " + id
     UnknownView(id~) => "view does not exist in its window: " + id
     AlreadyExists(id~) => "view already exists in its window: " + id
@@ -192,7 +193,7 @@ fn cleanup_failure_message(
   primary : String?,
   failures : Array[AppCleanupError],
 ) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   match primary {
     Some(message) => {
       builder.write_string(message)
@@ -214,6 +215,8 @@ pub fn AppRunError::message(self : AppRunError) -> String {
     EventLoopError(message) => "application event loop failed: " + message
     ConfigurationError(error) =>
       "application configuration failed: " + error.message()
+    LoggingInitializationFailed(detail~) =>
+      "application logging failed to initialize: " + detail
     UnsupportedNativeFeature(feature~) =>
       "the active Proton native runtime does not support required feature: " +
       feature

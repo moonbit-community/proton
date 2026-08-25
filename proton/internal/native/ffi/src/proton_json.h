@@ -67,7 +67,7 @@ bool proton_json_read_bool(const proton_json_doc_t *doc,
                            bool *out);
 char *proton_json_copy_string(const proton_json_doc_t *doc,
                               proton_json_value_t value);
-char *proton_json_copy_raw(const proton_json_doc_t *doc,
-                           proton_json_value_t value);
+char *proton_json_copy_object(const proton_json_doc_t *doc,
+                              proton_json_value_t value);
 
 #endif

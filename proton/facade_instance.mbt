@@ -15,7 +15,7 @@ fn resolved_app_activation(config : ResolvedAppConfig) -> @native.AppActivation 
       files.push(path.resolve().to_string())
     }
   }
-  @native.AppActivation::new(urls~, files~)
+  @native.AppActivation(urls~, files~)
 }
 
 ///|

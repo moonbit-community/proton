@@ -674,10 +674,8 @@ function setFrontendPackageRevision(revision) {
 
 async function runPackagedAppSmoke(executable, expectedRevision) {
   const cdpPort = await choosePort(9322);
-  const logPath = path.join(tempRoot, "proton-native.log");
   const packagedEnv = {
     ...process.env,
-    PROTON_NATIVE_LOG: logPath,
     PROTON_NO_UPDATE_CHECK: "1",
     PROTON_REMOTE_DEBUGGING_PORT: String(cdpPort),
   };

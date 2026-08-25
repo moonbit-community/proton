@@ -267,11 +267,13 @@ pub extern "C" fn event_item(
 pub extern "C" fn event_destroy(event : EventHandle) -> Unit = "proton_internal_event_destroy"
 
 ///|
-#borrow(response_json)
-pub extern "C" fn proton_runtime_respond_bridge_request_json_ffi(
+#borrow(body_json)
+pub extern "C" fn proton_runtime_respond_bridge_request_ffi(
   runtime : RuntimeHandle,
-  response_json : Bytes,
-) -> Int = "proton_runtime_respond_bridge_request_json"
+  request_id : Int64,
+  ok : Int,
+  body_json : Bytes,
+) -> Int = "proton_runtime_respond_bridge_request"
 
 ///|
 #borrow(title, message, out_dialog)

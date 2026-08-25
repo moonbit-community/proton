@@ -55,7 +55,7 @@ priv struct PageState {
 }
 
 ///|
-fn PageState::new() -> PageState {
+fn PageState::PageState() -> PageState {
   {
     main_frame_id: None,
     context: None,
@@ -115,7 +115,7 @@ async fn[X] Page::initialize_scoped(
 
 ///|
 async fn Page::initialize(client : @client.CdpClient, timeout_ms : Int) -> Page {
-  let state = PageState::new()
+  let state = PageState()
   let event_handler = client.on_cdp_event(event => state.handle_event(event))
   let close_handler = client.on_close(() => state.close())
   let page = Page::{ client, state, event_handler, close_handler }

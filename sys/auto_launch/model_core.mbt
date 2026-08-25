@@ -73,7 +73,7 @@ fn is_identifier_punctuation(ch : Char) -> Bool {
 /// Converts free-form text into a backend-safe identifier fragment.
 fn sanitize_identifier(text : String) -> String {
   let lowered = text.to_lower()
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   let mut last_was_separator = true
   for ch in lowered {
     if is_ascii_letter(ch) ||
@@ -156,7 +156,7 @@ fn write_repeated_char(builder : StringBuilder, ch : Char, count : Int) -> Unit 
 ///|
 /// Quotes one argument using Windows command-line escaping rules.
 fn windows_quote_argument(argument : String) -> String {
-  let builder = StringBuilder::new()
+  let builder = StringBuilder()
   builder.write_char('"')
   let mut backslash_count = 0
   for ch in argument {

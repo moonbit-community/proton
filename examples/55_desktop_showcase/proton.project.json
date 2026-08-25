@@ -1,11 +1,11 @@
 {
+  "identifier": "community.moonbit.proton.desktop-showcase",
   "backend": {
     "path": "../..",
     "package": "examples/55_desktop_showcase"
   },
   "package": {
     "product_name": "Proton Desktop Showcase",
-    "identifier": "community.moonbit.proton.desktop-showcase",
     "version": "0.1.0",
     "formats": [
       "app"

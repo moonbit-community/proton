@@ -4,16 +4,11 @@ fn parse_package_args(args : Array[String]) -> RawPackageOptions raise {
 }
 
 ///|
-fn parse_package_matches(args : Array[String]) -> @argparse.Matches raise {
-  command().parse(argv=args, env=Map([]))
-}
-
-///|
 test "parse package args accepts repeated formats and overrides" {
   let raw = parse_package_args([
     "--package", "desktop", "--format", "app", "--format", "zip", "--format", "dmg",
-    "--output", "dist", "--product-name", "Demo", "--identifier", "com.example.demo",
-    "--version", "1.2.3", "--icon", "app.icns", "--url-scheme", "demo", "--dry-run",
+    "--output", "dist", "--product-name", "Demo", "--version", "1.2.3", "--icon",
+    "app.icns", "--url-scheme", "demo", "--dry-run",
   ])
   @debug.assert_eq(raw.app_package, Some("desktop"))
   @debug.assert_eq(raw.package_args.formats, [
@@ -23,12 +18,24 @@ test "parse package args accepts repeated formats and overrides" {
   ])
   @debug.assert_eq(raw.package_args.output, Some("dist"))
   assert_eq(raw.package_args.product_name, Some("Demo"))
-  assert_eq(raw.package_args.identifier, Some("com.example.demo"))
+  assert_eq(raw.package_args.identifier, None)
   assert_eq(raw.package_args.version, Some("1.2.3"))
   assert_eq(raw.package_args.icons, ["app.icns"])
   assert_eq(raw.package_args.url_schemes, ["demo"])
   assert_false(raw.release)
   assert_true(raw.dry_run)
+}
+
+///|
+test "project packaging rejects an identifier override" {
+  try parse_package_args(["--identifier", "com.example.demo"]) catch {
+    error =>
+      assert_true(
+        error.to_string().contains("unexpected argument '--identifier'"),
+      )
+  } noraise {
+    _ => abort("expected --identifier to be rejected")
+  }
 }
 
 ///|
@@ -61,35 +68,52 @@ test "parse package args rejects unsupported format" {
 
 ///|
 test "updater revision is explicit, positive and full width" {
-  assert_eq(updater_revision_from_matches(parse_package_matches([]), None), 0UL)
+  assert_eq(parse_package_args([]).update_revision, 0UL)
   let maximum = "18446744073709551615"
-  let matches = parse_package_matches(["--updater-revision", maximum])
   assert_eq(
-    updater_revision_from_matches(matches, None),
+    parse_package_args(["--updater-revision", maximum]).update_revision,
     18446744073709551615UL,
   )
-  let no_revision = parse_package_matches([])
   try
-    ignore(
-      updater_revision_from_matches(
-        no_revision,
-        Some("https://example.com/releases"),
-      ),
-    )
+    parse_package_args(["--updater-base-url", "https://example.com/releases"])
   catch {
-    MissingRevision => ()
-    _ => abort("expected a missing updater revision")
+    error => assert_true(error.to_string().contains("updater-revision"))
   } noraise {
     _ => abort("expected the updater revision to be required")
   }
   for expected in ["0", "-1", "1.5", "not-a-number"] {
-    let invalid = parse_package_matches(["--updater-revision", expected])
-    try ignore(updater_revision_from_matches(invalid, None)) catch {
+    try parse_package_args(["--updater-revision", expected]) catch {
       InvalidRevision(value~) => assert_eq(value, expected)
       _ => abort("expected an invalid updater revision")
     } noraise {
       _ => abort("expected the updater revision to be rejected")
     }
+  }
+}
+
+///|
+test "updater metadata options form one complete value" {
+  let raw = parse_package_args([
+    "--updater-base-url", "https://example.com/releases", "--updater-published-at",
+    "2026-08-25T00:00:00Z", "--updater-revision", "42",
+  ])
+  assert_eq(
+    raw.updater_metadata,
+    Some(UpdaterMetadataOptions::{
+      base_url: "https://example.com/releases",
+      published_at: "2026-08-25T00:00:00Z",
+    }),
+  )
+  assert_eq(raw.update_revision, 42UL)
+  try
+    parse_package_args([
+      "--updater-base-url", "https://example.com/releases", "--updater-revision",
+      "42",
+    ])
+  catch {
+    error => assert_true(error.to_string().contains("updater-published-at"))
+  } noraise {
+    _ => abort("expected updater metadata to require a publication instant")
   }
 }
 

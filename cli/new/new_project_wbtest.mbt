@@ -196,11 +196,8 @@ test "project config preserves application identity" {
   }
   guard config
     is {
-      "package": {
-        "product_name": "Demo App",
-        "identifier": "com.justjavac.demo",
-        ..
-      },
+      "identifier": "com.justjavac.demo",
+      "package": { "product_name": "Demo App", .. },
       ..
     } else {
     abort("project config did not preserve application identity")

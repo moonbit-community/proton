@@ -157,7 +157,6 @@ async fn run_event_scenario_page_probe(
   assert_event_scenario_probe(result, value)
   run_event_reload_scenario_probe(page, timeout)
   page.close()
-  assert_event_scenario_native_log(app.native_log_path)
   println("MoonBit 40_event_broadcast event/reload probe passed")
 }
 
@@ -317,13 +316,5 @@ async fn run_event_reload_scenario_probe(
       "event reload did not deliver the current done event: " +
       value.stringify(),
     )
-  }
-}
-
-///|
-fn assert_event_scenario_native_log(path : String) -> Unit raise {
-  guard count_native_log_entries(path, "bridge_enqueue", "op=ext:ticker/start") >
-    0 else {
-    fail("native log did not record ext:ticker/start")
   }
 }

@@ -12,6 +12,8 @@ pub fn load_project_config_from_json(Json, String) -> ProjectConfig raise Projec
 
 pub fn load_project_config_from_text(String, String, name? : String) -> ProjectConfig raise ProjectConfigError
 
+pub fn validate_application_identifier(String) -> String raise ProjectConfigError
+
 // Errors
 pub(all) suberror ProjectConfigError {
   FileRead(path~ : String, detail~ : String)
@@ -36,24 +38,26 @@ pub(all) struct ProjectBackendConfig {
   path : String
   app_package : String
 } derive(Eq, @debug.Debug)
+pub fn ProjectBackendConfig::ProjectBackendConfig(String, String) -> Self
 pub fn ProjectBackendConfig::app_package(Self) -> String
 pub fn ProjectBackendConfig::equal(Self, Self) -> Bool
-pub fn ProjectBackendConfig::new(String, String) -> Self
 pub fn ProjectBackendConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectBackendConfig::path(Self) -> String
 pub fn ProjectBackendConfig::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ProjectConfig {
   base_dir : String
+  identifier : String
   backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
   package_config : ProjectPackageConfig?
 } derive(Eq, @debug.Debug)
+pub fn ProjectConfig::ProjectConfig(String, String, backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, package_config? : ProjectPackageConfig?) -> Self
 pub fn ProjectConfig::backend(Self) -> ProjectBackendConfig?
 pub fn ProjectConfig::base_dir(Self) -> String
 pub fn ProjectConfig::equal(Self, Self) -> Bool
 pub fn ProjectConfig::frontend(Self) -> ProjectFrontendConfig?
-pub fn ProjectConfig::new(String, backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, package_config? : ProjectPackageConfig?) -> Self
+pub fn ProjectConfig::identifier(Self) -> String
 pub fn ProjectConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectConfig::package_config(Self) -> ProjectPackageConfig?
 pub fn ProjectConfig::to_repr(Self) -> @debug.Repr
@@ -63,9 +67,9 @@ pub(all) struct ProjectDocumentType {
   extensions : Array[String]
   role : String
 } derive(Eq, @debug.Debug)
+pub fn ProjectDocumentType::ProjectDocumentType(String, Array[String], role? : String) -> Self
 pub fn ProjectDocumentType::equal(Self, Self) -> Bool
 pub fn ProjectDocumentType::extensions(Self) -> Array[String]
-pub fn ProjectDocumentType::new(String, Array[String], role? : String) -> Self
 pub fn ProjectDocumentType::not_equal(Self, Self) -> Bool
 pub fn ProjectDocumentType::to_repr(Self) -> @debug.Repr
 
@@ -76,19 +80,18 @@ pub(all) struct ProjectFrontendConfig {
   before_build : String?
   path : String?
 } derive(Eq, @debug.Debug)
+pub fn ProjectFrontendConfig::ProjectFrontendConfig(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, path? : String?) -> Self
 pub fn ProjectFrontendConfig::before_build(Self) -> String?
 pub fn ProjectFrontendConfig::before_dev(Self) -> String?
 pub fn ProjectFrontendConfig::dev_url(Self) -> String?
 pub fn ProjectFrontendConfig::dist(Self) -> String?
 pub fn ProjectFrontendConfig::equal(Self, Self) -> Bool
-pub fn ProjectFrontendConfig::new(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, path? : String?) -> Self
 pub fn ProjectFrontendConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectFrontendConfig::path(Self) -> String?
 pub fn ProjectFrontendConfig::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ProjectPackageConfig {
   product_name : String
-  identifier : String
   version : String
   formats : Array[String]
   icons : Array[String]
@@ -98,11 +101,11 @@ pub(all) struct ProjectPackageConfig {
   document_types : Array[ProjectDocumentType]
   output : String
 } derive(Eq, @debug.Debug)
+pub fn ProjectPackageConfig::ProjectPackageConfig(String, String, formats? : Array[String], icons? : Array[String], resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String) -> Self
 pub fn ProjectPackageConfig::document_types(Self) -> Array[ProjectDocumentType]
 pub fn ProjectPackageConfig::equal(Self, Self) -> Bool
 pub fn ProjectPackageConfig::formats(Self) -> Array[String]
 pub fn ProjectPackageConfig::icons(Self) -> Array[String]
-pub fn ProjectPackageConfig::new(String, String, String, formats? : Array[String], icons? : Array[String], resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String) -> Self
 pub fn ProjectPackageConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectPackageConfig::output(Self) -> String
 pub fn ProjectPackageConfig::resources(Self) -> Array[String]
@@ -114,9 +117,9 @@ pub fn ProjectPackageConfig::version(Self) -> String
 pub(all) struct ProjectSignConfig {
   binaries : Array[String]
 } derive(Eq, @debug.Debug)
+pub fn ProjectSignConfig::ProjectSignConfig(binaries? : Array[String]) -> Self
 pub fn ProjectSignConfig::binaries(Self) -> Array[String]
 pub fn ProjectSignConfig::equal(Self, Self) -> Bool
-pub fn ProjectSignConfig::new(binaries? : Array[String]) -> Self
 pub fn ProjectSignConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectSignConfig::to_repr(Self) -> @debug.Repr
 

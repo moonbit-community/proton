@@ -3,11 +3,12 @@ async fn main {
   @proton.html("18 extension fs", resource, width=960, height=720, debug=true)
   .capability(
     @fs.capability([
-      @fs.PermissionRoot::new(".", [
+      @fs.PermissionRoot(".", [
         "read_file", "write_file", "exists", "kind", "size", "readdir", "mkdir",
         "remove", "rmdir", "rename", "realpath",
       ]),
     ]),
   )
+  .identifier("dev.proton.18-extension-fs")
   .run_or_abort()
 }

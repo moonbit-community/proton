@@ -37,7 +37,7 @@ fn build_capture_config(
   payload : @microphone_contract.CaptureConfigRequest,
 ) -> @sys_microphone.CaptureConfig raise MicrophoneError {
   let sample_format = parse_sample_format(payload.sample_format).unwrap_or(F32)
-  @sys_microphone.CaptureConfig::new(
+  @sys_microphone.CaptureConfig(
     channels=payload.channels.unwrap_or(1),
     sample_rate_hz=payload.sample_rate_hz.unwrap_or(48_000),
     sample_format~,

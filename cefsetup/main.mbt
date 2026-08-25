@@ -3,6 +3,12 @@ fn command() -> @argparse.Command {
   @argparse.Command(
     "proton_cefsetup",
     about="Install the CEF runtime and subprocess helper required by Proton",
+    flags=[
+      @argparse.FlagArg(
+        "runtime-only",
+        about="Install the CEF runtime without installing the Proton helper",
+      ),
+    ],
   )
 }
 
@@ -10,12 +16,12 @@ fn command() -> @argparse.Command {
 async fn run(args : ArrayView[String]) -> Int {
   let matches = @argparse.parse(command(), argv=args, env=Map([])) catch {
     error => {
-      println("error: " + error.to_string())
+      println(error.to_string())
       return 2
     }
   }
-  ignore(matches)
-  try @store.setup_default() catch {
+  let runtime_only = matches.flags.get("runtime-only") == Some(true)
+  try @store.setup_default(runtime_only~) catch {
     error => {
       println("error: " + error.to_string())
       1

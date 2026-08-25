@@ -19,7 +19,7 @@ fn example_label {
     id: "mic-1",
     name: "Built-in Mic",
     state: Idle,
-    default_config: @proton_microphone.CaptureConfig::new(
+    default_config: @proton_microphone.CaptureConfig(
       echo_cancellation=true,
       noise_suppression=true,
     ),

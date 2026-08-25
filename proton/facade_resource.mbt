@@ -121,13 +121,13 @@ fn resource_hex_value(byte : Byte) -> Int? {
 
 ///|
 fn resource_path_has_parent_segment(path : String) -> Bool {
-  let mut segment = StringBuilder::new()
+  let mut segment = StringBuilder()
   for character in path {
     if character == '/' || character == '\\' {
       if segment.to_string() == ".." {
         return true
       }
-      segment = StringBuilder::new()
+      segment = StringBuilder()
     } else {
       segment.write_char(character)
     }

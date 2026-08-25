@@ -39,7 +39,7 @@ let window_slot : Ref[@proton.WindowHandle?] = { val: None }
 
 ///|
 fn context_menu() -> @proton.Menu {
-  @proton.Menu::new("Context Menu", items=[
+  @proton.Menu("Context Menu", items=[
     @proton.MenuItem::command(
       "context.inspect_coordinates",
       "Inspect Coordinates",
@@ -151,7 +151,7 @@ fn html() -> String {
     #|    <main>
     #|      <header>
     #|        <div>
-    #|          <p class="eyebrow">Native surface / manual test 57</p>
+    #|          <p class="eyebrow">Native surface / manual test 58</p>
     #|          <h1>Context menu<br>coordinate lab</h1>
     #|          <p class="summary">Review Proton's Electron-style <code>Menu.popup(window, x, y)</code> path: native placement, nested items, role actions, and renderer command events.</p>
     #|        </div>

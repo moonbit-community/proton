@@ -47,7 +47,7 @@ fn i18n_extension() -> @proton_extension.Extension {
 ///|
 #cfg(not(platform="windows"))
 fn menu_bar() -> @proton.MenuBar {
-  @proton.MenuBar::new(menus=[
+  @proton.MenuBar(menus=[
     @proton.Menu::role(@proton.MenuRole::Edit),
     @proton.Menu::role(@proton.MenuRole::Window),
     @proton.Menu::role(@proton.MenuRole::Help, items=[
@@ -65,6 +65,7 @@ async fn main {
   @proton.html("Proton 国际化", resource, width=860, height=600, debug=true)
   .locale(locale)
   .capability(@proton_extension.capability(i18n_extension()))
+  .identifier("dev.proton.56-i18n")
   .run_or_abort()
 }
 
@@ -78,5 +79,6 @@ async fn main {
   .locale(locale)
   .menu(menu_bar())
   .capability(@proton_extension.capability(i18n_extension()))
+  .identifier("dev.proton.56-i18n")
   .run_or_abort()
 }

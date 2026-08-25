@@ -18,7 +18,6 @@ options(
     "src/proton_update.c",
     "src/proton.c",
     "src/engine/cef_common/bridge_lifecycle.c",
-    "src/engine/cef_common/bridge_response.c",
     "src/engine/cef_common/browser_session.c",
     "src/engine/cef_common/bridge_policy.c",
     "src/engine/cef_common/bridge_renderer.c",

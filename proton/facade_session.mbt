@@ -1,5 +1,5 @@
 ///|
-fn RuntimeSession::new(
+fn RuntimeSession::RuntimeSession(
   runtime : @native.Runtime,
   locale_preferences : @locale.LocalePreferences,
   definitions : Array[PreparedWindow],
@@ -9,10 +9,14 @@ fn RuntimeSession::new(
   wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   monitor_bridge : Bool,
-  launch_input_handlers : Array[async (RuntimeLaunchInput) -> Unit noraise],
+  launch_input_handlers : Array[
+    async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
+  ],
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ],
+  application_tasks : @async.TaskGroup[Unit],
+  last_window_closed_policy : LastWindowClosedPolicy,
   window_tasks : @async.TaskGroup[Unit],
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise],
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?,
@@ -39,6 +43,8 @@ fn RuntimeSession::new(
     wakeup,
     forward_menu_events,
     monitor_bridge,
+    application_tasks,
+    last_window_closed_policy,
     launch_input_handlers,
     window_event_handlers,
     view_event_handlers,
@@ -58,6 +64,8 @@ fn RuntimeSession::new(
     certificate_handler,
     media_handler,
     download_event_handlers,
+    quit_requested: false,
+    quit_close_started: false,
   }
 }
 
@@ -69,6 +77,18 @@ fn RuntimeSession::window_manager(self : RuntimeSession) -> WindowManager {
       self.find_active_window(id).map(window => self.window_handle(window))
     },
   }
+}
+
+///|
+fn RuntimeSession::application_context(
+  self : RuntimeSession,
+) -> ApplicationContext {
+  ApplicationContext(
+    self.application_tasks,
+    self.window_manager(),
+    self.locale_preferences,
+    request_quit=() => self.request_quit(),
+  )
 }
 
 ///|
@@ -132,7 +152,7 @@ fn RuntimeSession::window_handle(
     },
     popup_window_menu: (menu, x, y) => {
       self.control_window(id, native_id, "popup menu in", window => {
-        window.popup_menu(@native.MenuBar::new(menus=[menu.to_native()]), x, y)
+        window.popup_menu(@native.MenuBar(menus=[menu.to_native()]), x, y)
       })
     },
     read_window_state: () => self.read_window_state(id, native_id),
@@ -311,7 +331,7 @@ fn RuntimeSession::add_window_view(
       raise AlreadyExists(id=view_id)
     }
   }
-  let created = @native.View::new(running.window, config) catch {
+  let created = @native.View::View(running.window, config) catch {
     error =>
       raise window_operation_failed(
         "add view " + view_id + " to window " + window_id,
@@ -613,7 +633,7 @@ fn RuntimeSession::create_window(
       ),
     )
   }
-  let created_window = @native.Window::new(
+  let created_window = @native.Window::Window(
     self.runtime,
     config=native_window_config(
       plan.window,
@@ -641,7 +661,7 @@ fn RuntimeSession::create_window(
     id: plan.id,
     window: created_window,
     permissions: definition.permissions,
-    lifetime: WindowLifetime::new(),
+    lifetime: WindowLifetime(),
     views: [],
     document,
     asset_root,
@@ -670,6 +690,8 @@ fn RuntimeSession::create_window(
       },
     )
   }
+  @xlog.info(category="proton.window") <?
+    { "message": "window created", "window": running.id }
   running
 }
 
@@ -682,7 +704,7 @@ async fn RuntimeSession::activate_window(
     running.lifetime.wait_until_ready()
     return
   }
-  let window_events = WindowEventEmitter::new(
+  let window_events = WindowEventEmitter(
     typed_event_sender(running.window, None),
   )
   let manager = self.window_manager()
@@ -719,14 +741,17 @@ async fn RuntimeSession::request_open_window(
   self : RuntimeSession,
   id : String,
 ) -> WindowHandle raise WindowSessionError {
-  let completion = WindowOpenCompletion::new()
+  if self.quit_requested {
+    raise ApplicationQuitting
+  }
+  let completion = WindowOpenCompletion()
   self.window_commands.push(Open(id, completion))
   self.wakeup.signal.notify()
   completion.wait()
 }
 
 ///|
-fn WindowOpenCompletion::new() -> WindowOpenCompletion {
+fn WindowOpenCompletion::WindowOpenCompletion() -> WindowOpenCompletion {
   WindowOpenCompletion::{
     state: WindowOpenPending,
     changed: @async.CondVar::Cond(),
@@ -778,6 +803,10 @@ fn RuntimeSession::process_window_commands(self : RuntimeSession) -> Bool {
   self.window_commands.clear()
   for command in commands {
     let Open(id, completion) = command
+    if self.quit_requested {
+      completion.fail(ApplicationQuitting)
+      continue
+    }
     let definition = match self.find_definition(id) {
       Some(definition) => definition
       None => {
@@ -1361,9 +1390,7 @@ async fn RuntimeSession::wait_for_bridge_startup(
 
 ///|
 async fn RuntimeSession::run(self : RuntimeSession) -> Unit raise AppRunError {
-  while !self.all_windows_closed() ||
-        self.window_commands.length() > 0 ||
-        self.pending_window_opens.length() > 0 {
+  while !self.quit_complete() {
     let revision = self.wakeup.revision()
     let did_work = self.pump_once(monitor_bridge=self.monitor_bridge)
     if did_work {
@@ -1433,6 +1460,9 @@ fn RuntimeSession::pump_once(
   if self.complete_resource_requests() {
     did_work = true
   }
+  if self.advance_application_lifetime() {
+    did_work = true
+  }
   did_work
 }
 
@@ -1462,6 +1492,9 @@ fn RuntimeSession::dispatch_runtime_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
 ) -> Unit raise AppRunError {
+  if event.is_quit_requested() {
+    self.request_quit()
+  }
   self.dispatch_window_event(event)
   self.dispatch_view_event(event)
   self.dispatch_browser_event(event)
@@ -1950,6 +1983,9 @@ fn RuntimeSession::complete_window_close_requests(
             }
             if decision == Allow {
               window.state = WindowCloseRequested
+            } else if self.quit_requested {
+              self.quit_requested = false
+              self.quit_close_started = false
             }
           }
           _ => ()
@@ -2044,6 +2080,7 @@ fn RuntimeSession::dispatch_launch_input_event(
 ) -> Unit raise AppRunError {
   match event.launch_input() {
     Some(native_input) => {
+      guard !self.quit_requested else { return }
       let input = match native_input {
         @native.RuntimeLaunchInput::OpenUrls(urls) =>
           RuntimeLaunchInput::OpenUrls(urls)
@@ -2052,8 +2089,14 @@ fn RuntimeSession::dispatch_launch_input_event(
         @native.RuntimeLaunchInput::Reopen => RuntimeLaunchInput::Reopen
       }
       self.activate_for_launch_input()
+      let context = self.application_context()
       for handler in self.launch_input_handlers {
-        ignore(self.window_tasks.spawn(() => handler(input), no_wait=true))
+        ignore(
+          self.application_tasks.spawn(
+            () => handler(context, input),
+            no_wait=true,
+          ),
+        )
       }
     }
     None => ()
@@ -2303,6 +2346,8 @@ fn runtime_session_mark_window_closed(
         Some(window) => {
           window.state = WindowClosed
           window.lifetime.close()
+          @xlog.info(category="proton.window") <?
+            { "message": "window closed", "window": window.id }
         }
         None => ()
       }
@@ -2327,6 +2372,65 @@ fn runtime_session_find_window_by_native_id(
 fn RuntimeSession::all_windows_closed(self : RuntimeSession) -> Bool {
   self.windows.length() > 0 &&
   self.windows.all(fn(window) { window.is_closed() })
+}
+
+///|
+fn should_quit_after_last_window(
+  policy : LastWindowClosedPolicy,
+  has_windows : Bool,
+  all_windows_closed : Bool,
+) -> Bool {
+  policy == LastWindowClosedPolicy::Quit && has_windows && all_windows_closed
+}
+
+///|
+fn RuntimeSession::request_quit(self : RuntimeSession) -> Unit {
+  if !self.quit_requested {
+    self.quit_requested = true
+    self.quit_close_started = false
+    self.wakeup.signal.notify()
+  }
+}
+
+///|
+fn RuntimeSession::advance_application_lifetime(
+  self : RuntimeSession,
+) -> Bool raise AppRunError {
+  let mut did_work = false
+  if !self.quit_requested &&
+    should_quit_after_last_window(
+      self.last_window_closed_policy,
+      self.windows.length() > 0,
+      self.all_windows_closed(),
+    ) {
+    self.request_quit()
+    did_work = true
+  }
+  if self.quit_requested && !self.quit_close_started {
+    self.quit_close_started = true
+    did_work = true
+    for running in self.windows {
+      if !running.is_active() {
+        continue
+      }
+      running.window.close() catch {
+        error => raise native_run_error("close window " + running.id, error)
+      }
+      if self.window_close_handler is None {
+        running.state = WindowCloseRequested
+      }
+    }
+  }
+  did_work
+}
+
+///|
+fn RuntimeSession::quit_complete(self : RuntimeSession) -> Bool {
+  self.quit_requested &&
+  self.windows.all(fn(window) { window.is_closed() }) &&
+  self.window_commands.length() == 0 &&
+  self.pending_window_opens.length() == 0 &&
+  self.pending_window_closes.length() == 0
 }
 
 ///|

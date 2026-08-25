@@ -69,23 +69,6 @@ static int proton_engine_json_read_int64_field(const char *json,
   return ok ? 1 : 0;
 }
 
-static char *proton_engine_json_copy_raw_field(const char *json,
-                                               const char *field_name) {
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  if (!proton_json_parse(&doc, json)) {
-    return NULL;
-  }
-  char *copy = NULL;
-  if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, field_name, &value)) {
-    copy = proton_json_copy_raw(&doc, value);
-  }
-  proton_json_dispose(&doc);
-  return copy;
-}
-
 typedef struct {
   const proton_json_doc_t *doc;
   const char *op;
@@ -198,27 +181,6 @@ typedef enum {
   PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED,
   PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED
 } proton_engine_bridge_request_status_t;
-
-static const char *proton_engine_bridge_request_reject_event(
-    proton_engine_bridge_request_status_t status) {
-  switch (status) {
-  case PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED:
-    return "bridge_reject_origin_not_allowed";
-  case PROTON_ENGINE_BRIDGE_REQUEST_OP_UNKNOWN:
-    return "bridge_reject_op_not_registered";
-  case PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED:
-    return "bridge_reject_not_allowed";
-  case PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED:
-    return "bridge_reject_payload_too_large";
-  case PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED:
-    return "bridge_reject_invalid_page_instance";
-  case PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED:
-    return "bridge_reject_allocation_failed";
-  case PROTON_ENGINE_BRIDGE_REQUEST_OK:
-  default:
-    return "bridge_accept";
-  }
-}
 
 static const char *proton_engine_bridge_request_reject_message(
     proton_engine_bridge_request_status_t status) {

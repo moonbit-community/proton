@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/proton/examples/57_context_menu"
+package "moonbit-community/proton/examples/58_context_menu"
 
 import {
   "moonbitlang/core/json",

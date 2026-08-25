@@ -9,12 +9,12 @@ async fn main {
     )
     .capability(
       @fs.capability([
-        @fs.PermissionRoot::new(".", [
+        @fs.PermissionRoot(".", [
           "read_file", "write_file", "exists", "kind", "size", "readdir", "remove",
           "realpath",
         ]),
       ]),
     )
     .capability(@path.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.19-app-fs").run_or_abort()
 }
