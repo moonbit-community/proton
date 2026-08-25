@@ -1684,6 +1684,71 @@ test "app data directory follows platform conventions" {
 }
 
 ///|
+test "application log directory follows platform conventions" {
+  assert_eq(
+    normalize_path_separators(
+      app_log_dir_for_platform(
+        "macos",
+        "com.example.app",
+        Some("/Users/test"),
+        None,
+        None,
+      ),
+    ),
+    "/Users/test/Library/Logs/com.example.app",
+  )
+  assert_eq(
+    normalize_path_separators(
+      app_log_dir_for_platform(
+        "windows",
+        "com.example.app",
+        None,
+        Some("C:/Users/test/AppData/Local"),
+        None,
+      ),
+    ),
+    "C:/Users/test/AppData/Local/com.example.app/Logs",
+  )
+  assert_eq(
+    normalize_path_separators(
+      app_log_dir_for_platform(
+        "linux",
+        "com.example.app",
+        Some("/home/test"),
+        None,
+        None,
+      ),
+    ),
+    "/home/test/.local/state/com.example.app/logs",
+  )
+}
+
+///|
+test "packaged logging reads the package identifier" {
+  let metadata =
+    #|{
+    #|  "identifier": "com.example.app",
+    #|  "product_name": "Example"
+    #|}
+  inspect(package_identifier_from_json(metadata), content="com.example.app")
+}
+
+///|
+test "packaged logging rejects metadata without an identifier" {
+  let metadata : Json = { "product_name": "Example" }
+  try ignore(package_identifier_from_json(metadata.stringify())) catch {
+    LoggingInitializationFailed(detail~) =>
+      inspect(
+        detail,
+        content="invalid packaged application metadata: identifier is required",
+      )
+    _ => fail("expected packaged metadata validation to fail")
+  } noraise {
+    _ => fail("expected packaged metadata validation to fail")
+  }
+}
+
+///|
 fn updater_test_channel(check_on_launch : Bool) -> ResolvedUpdateChannel? {
   url("Test", "https://example.com/")
   .update_channel(

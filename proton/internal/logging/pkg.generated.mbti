@@ -1,0 +1,34 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/internal/logging"
+
+import {
+  "moonbitlang/core/debug",
+  "tonyfettes/xlog",
+}
+
+// Values
+pub fn current_process_id() -> Int
+
+// Errors
+pub(all) suberror LoggingError {
+  OpenFile(path~ : String)
+  WriteFailed
+} derive(@debug.Debug)
+pub fn LoggingError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) enum Output {
+  Stderr
+  File(String)
+}
+
+pub struct RuntimeLogging {
+  close_handler : () -> Unit
+  mut closed : Bool
+}
+pub fn RuntimeLogging::RuntimeLogging(Output, @xlog.Config) -> Self raise LoggingError
+pub fn RuntimeLogging::close(Self) -> Unit
+
+// Type aliases
+
+// Traits

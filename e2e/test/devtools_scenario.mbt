@@ -32,4 +32,5 @@ async fn run_devtools_scenario_page_probe(
   ) else {
     fail("Proton bridge was injected into a DevTools isolated context")
   }
+  page.close()
 }

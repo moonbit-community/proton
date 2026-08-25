@@ -61,8 +61,9 @@ fn resolve_locale_preferences(
   explicit : @locale.Locale?,
 ) -> @locale.LocalePreferences {
   let system = system_preferred_languages() catch {
-    error => {
-      println("warning: " + error.message() + "; falling back to en-US")
+    _ => {
+      @xlog.warn(category="proton.locale") <?
+        { "message": "system locale query failed; falling back to en-US" }
       []
     }
   }

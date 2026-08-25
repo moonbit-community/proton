@@ -7,12 +7,20 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     None => ()
   }
   let resolved = self.resolved_app_config()
+  let logging = start_runtime_logging()
+  defer logging.close()
+  @xlog.info(category="proton.runtime") <?
+    { "message": "application runtime starting" }
   let browser_data_dir = resolve_browser_data_dir(resolved) catch {
     error => raise ConfigurationError(error)
   }
   let locale_preferences = resolve_locale_preferences(self.explicit_locale)
   let app_instance = match acquire_app_instance(resolved) {
-    Some(@native.AppInstanceAcquire::Forwarded) => return
+    Some(@native.AppInstanceAcquire::Forwarded) => {
+      @xlog.info(category="proton.runtime") <?
+        { "message": "application activation forwarded to primary instance" }
+      return
+    }
     Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
     None => None
   }
@@ -48,10 +56,42 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     download_event_handlers=self.download_event_handlers,
     update_channel=resolved.update_channel,
     update_handlers=self.update_handlers,
-  )
+  ) catch {
+    error => raise logged_runtime_failure(error)
+  }
   match app_instance {
     Some(instance) => destroy_app_instance(instance)
     None => ()
+  }
+  @xlog.info(category="proton.runtime") <?
+    { "message": "application runtime stopped" }
+}
+
+///|
+fn logged_runtime_failure(error : AppRunError) -> AppRunError {
+  @xlog.error(category="proton.runtime") <?
+    {
+      "message": "application runtime failed",
+      "code": app_run_error_log_code(error),
+    }
+  error
+}
+
+///|
+fn app_run_error_log_code(error : AppRunError) -> String {
+  match error {
+    EventLoopError(_) => "event_loop_error"
+    ConfigurationError(_) => "configuration_error"
+    LoggingInitializationFailed(..) => "logging_initialization_failed"
+    UnsupportedNativeFeature(..) => "unsupported_native_feature"
+    RuntimeOperationFailed(..) => "runtime_operation_failed"
+    CommandExtensionLifecycleError(_) => "command_extension_lifecycle_error"
+    LifecycleHookError(_) => "lifecycle_hook_error"
+    EntryLoadError(_) => "entry_load_error"
+    BridgeStartupError(diagnostic) => diagnostic.code
+    BridgeRuntimeError(diagnostic) => diagnostic.code
+    CleanupFailed(..) => "cleanup_failed"
+    UnexpectedTaskFailure(..) => "unexpected_task_failure"
   }
 }
 
@@ -319,6 +359,11 @@ async fn run_manifest(
           session.wait_for_bridge_startup(bridge_startup_timeout_ms) catch {
             error => raise normalize_async_run_error(error)
           }
+          @xlog.info(category="proton.bridge") <?
+            {
+              "message": "renderer bridge ready",
+              "window_count": windows.length(),
+            }
         }
         for running in windows {
           if !running.is_closed() {
@@ -508,6 +553,7 @@ fn normalize_async_run_error(error : Error) -> AppRunError {
   match error {
     EventLoopError(message) => EventLoopError(message)
     ConfigurationError(error) => ConfigurationError(error)
+    LoggingInitializationFailed(detail~) => LoggingInitializationFailed(detail~)
     RuntimeOperationFailed(action~, status~, detail~) =>
       RuntimeOperationFailed(action~, status~, detail~)
     CommandExtensionLifecycleError(error) =>
@@ -680,6 +726,7 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
       cleanup_failure_message(primary, failures)
     EntryLoadError(error) => error.message()
     ConfigurationError(error) => error.message()
+    LoggingInitializationFailed(detail~) => detail
     UnsupportedNativeFeature(feature~) =>
       "The active Proton native runtime is incompatible with this application.\n\nMissing feature: " +
       feature

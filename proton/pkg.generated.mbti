@@ -84,6 +84,7 @@ pub fn AppPathError::to_repr(Self) -> @debug.Repr
 pub(all) suberror AppRunError {
   EventLoopError(String)
   ConfigurationError(AppConfigurationError)
+  LoggingInitializationFailed(detail~ : String)
   UnsupportedNativeFeature(feature~ : String)
   RuntimeOperationFailed(action~ : String, status~ : Int, detail~ : String)
   CommandExtensionLifecycleError(CommandExtensionLifecycleError)

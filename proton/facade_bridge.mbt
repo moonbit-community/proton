@@ -5,6 +5,10 @@ fn build_command_host(
 ) -> CommandHostBuild raise AppRunError {
   let host = @core.AppCommandHost(
     expose_error_details=proton_dev_mode_enabled(),
+    diagnostic_reporter=fn(_detail) {
+      @xlog.error(category="proton.command") <?
+        { "message": "command dispatch failed" }
+    },
   )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
   let app_capabilities : Array[RegisteredAppCommandCapability] = []

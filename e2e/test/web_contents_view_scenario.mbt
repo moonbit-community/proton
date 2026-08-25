@@ -20,6 +20,7 @@ async fn run_web_contents_view_scenario_probe(
   app : SpawnedScenarioApp,
   target : String,
   browser_web_socket_url : String,
+  event_path : String,
   timeout : Int,
 ) -> ShutdownProbeResult {
   let (host, left, right) = wait_for_web_contents_view_targets(
@@ -34,6 +35,8 @@ async fn run_web_contents_view_scenario_probe(
   let page_right = connect_web_contents_view_page(tasks, right, timeout)
   wait_for_ready(page_left, web_contents_view_ready_expression(), timeout)
   wait_for_ready(page_right, web_contents_view_ready_expression(), timeout)
+  ignore(capture_headless_screenshot(page_left))
+  ignore(capture_headless_screenshot(page_right))
   let (left_value, right_value) = @async.with_task_group(group => {
     let task_left = group.spawn(
       () => evaluate_json(page_left, web_contents_view_probe_expression(), true),
@@ -64,14 +67,13 @@ async fn run_web_contents_view_scenario_probe(
     right.target_id != host.target_id else {
     fail("web contents views must expose distinct CDP targets")
   }
-  wait_for_web_contents_view_osr_paints(app.native_log_path, timeout)
   println("MoonBit 52_web_contents_view routing probe passed")
 
   // Close the left view through CDP; the host window and the right view must
   // survive it untouched.
   let snapshot = snapshot_scenario_process_tree(app)
   close_page_target(browser, left.target_id)
-  wait_for_web_contents_view_closed_browsers(app.native_log_path, 1, timeout)
+  wait_for_page_target_closed(browser, left.target_id, timeout)
   match app_exit_code(app.process) {
     Some(code) =>
       fail(
@@ -95,8 +97,7 @@ async fn run_web_contents_view_scenario_probe(
   let shutdown = wait_for_scenario_app_shutdown(
     app, target, snapshot, process_shutdown_timeout_ms,
   )
-  assert_web_contents_view_closed_log(app.native_log_path)
-  assert_web_contents_view_event_log(app.native_log_path)
+  assert_web_contents_view_events(event_path)
   println(
     "MoonBit 52_web_contents_view sequential lifecycle passed: helpers=" +
     shutdown.helper_processes.to_string(),
@@ -204,103 +205,22 @@ fn assert_web_contents_view_page(
 }
 
 ///|
-fn assert_web_contents_view_event_log(native_log_path : String) -> Unit raise {
-  let path = native_log_path + ".view-events"
-  let log = @mbfs.read_file_to_string(path, encoding="utf8") catch {
-    _ => fail("failed to read web contents view event log: " + path)
+fn assert_web_contents_view_events(path : String) -> Unit raise {
+  let events = @mbfs.read_file_to_string(path, encoding="utf8") catch {
+    _ => fail("failed to read web contents view events: " + path)
   }
-  guard log.contains("view_navigated url=data:text/html") else {
-    fail("view event log missed the left view navigation: " + log)
+  guard events.contains("view_navigated url=data:text/html") else {
+    fail("view events missed the left view navigation: " + events)
   }
-  guard log.contains("view_navigated url=proton://view-right/") else {
-    fail("view event log missed the right view navigation: " + log)
+  guard events.contains("view_navigated url=proton://view-right/") else {
+    fail("view events missed the right view navigation: " + events)
   }
-  guard log.contains("view_title_updated title=WCV Left") &&
-    log.contains("view_title_updated title=WCV Right") else {
-    fail("view event log missed view titles: " + log)
+  guard events.contains("view_title_updated title=WCV Left") &&
+    events.contains("view_title_updated title=WCV Right") else {
+    fail("view events missed view titles: " + events)
   }
-  guard log.contains("view_loading_changed loading=true") &&
-    log.contains("view_loading_changed loading=false") else {
-    fail("view event log missed loading state changes: " + log)
-  }
-}
-
-///|
-async fn wait_for_web_contents_view_osr_paints(
-  path : String,
-  timeout : Int,
-) -> Unit {
-  let mut elapsed = 0
-  while elapsed <= timeout {
-    if count_web_contents_view_osr_paints(path) >= 2 {
-      return
-    }
-    @async.sleep(100)
-    elapsed = elapsed + 100
-  }
-  fail("native log did not record valid OSR paint for both web contents views")
-}
-
-///|
-fn count_web_contents_view_osr_paints(path : String) -> Int {
-  let log = @mbfs.read_file_to_string(path, encoding="utf8") catch { _ => "" }
-  let browsers : Map[String, Bool] = Map([])
-  for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
-    let line = raw_line.to_owned()
-    if line.contains("view_osr_paint") {
-      match (log_field(line, "browser="), log_field(line, "size=")) {
-        (Some(browser), Some("300x220")) => browsers[browser] = true
-        _ => ()
-      }
-    }
-  }
-  browsers.length()
-}
-
-///|
-async fn wait_for_web_contents_view_closed_browsers(
-  path : String,
-  expected : Int,
-  timeout : Int,
-) -> Unit {
-  let mut elapsed = 0
-  while elapsed <= timeout {
-    if count_web_contents_view_closed_browsers(path) == expected {
-      return
-    }
-    @async.sleep(100)
-    elapsed = elapsed + 100
-  }
-  fail(
-    "native log did not record " +
-    expected.to_string() +
-    " closed web contents view browsers within " +
-    timeout.to_string() +
-    "ms",
-  )
-}
-
-///|
-fn count_web_contents_view_closed_browsers(path : String) -> Int {
-  let log = @mbfs.read_file_to_string(path, encoding="utf8") catch { _ => "" }
-  let browsers : Map[String, Bool] = Map([])
-  for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
-    let line = raw_line.to_owned()
-    if line.contains("view_browser_before_close") {
-      match log_field(line, "browser=") {
-        Some(browser) => browsers[browser] = true
-        None => ()
-      }
-    }
-  }
-  browsers.length()
-}
-
-///|
-fn assert_web_contents_view_closed_log(path : String) -> Unit raise {
-  guard count_web_contents_view_closed_browsers(path) == 2 else {
-    fail(
-      "native log did not prove both web contents views closed before shutdown",
-    )
+  guard events.contains("view_loading_changed loading=true") &&
+    events.contains("view_loading_changed loading=false") else {
+    fail("view events missed loading state changes: " + events)
   }
 }

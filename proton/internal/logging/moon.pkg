@@ -1,0 +1,16 @@
+import {
+  "moonbitlang/core/encoding/utf8",
+  "tonyfettes/xlog",
+}
+
+import {
+  "moonbitlang/x/fs",
+} for "wbtest"
+
+supported_targets = "native"
+
+options(
+  "is-main": false,
+  "native-stub": [ "logging_io.c" ],
+  targets: { "logging.mbt": [ "native" ], "logging_wbtest.mbt": [ "native" ] },
+)

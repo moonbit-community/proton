@@ -199,8 +199,9 @@ fn start_update_check(
   tasks.spawn_bg(allow_failure=true, () => {
     @async.sleep(update_check_delay_ms + update_check_jitter())
     let offered = channel.poll() catch {
-      error => {
-        println("proton: update check failed: \{error}")
+      _ => {
+        @xlog.warn(category="proton.updater") <?
+          { "message": "update check failed" }
         return
       }
     }
@@ -221,8 +222,9 @@ fn start_update_check(
 /// not turn that successful launch into a failure.
 fn cleanup_previous_update() -> Unit {
   @native.update_cleanup_previous() catch {
-    error =>
-      println("proton: previous update cleanup failed: " + error.message())
+    _ =>
+      @xlog.warn(category="proton.updater") <?
+        { "message": "previous update cleanup failed" }
   }
 }
 

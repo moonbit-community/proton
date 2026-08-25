@@ -284,6 +284,28 @@ Use `@proton.app_data_dir("com.example.my-app")` to resolve the stable native
 data directory for an application identifier. The function does not create the
 directory.
 
+## Logging
+
+Applications log through `tonyfettes/xlog@0.4.1` directly. Use `app.*`
+categories for application records; Proton reserves `proton.*` for runtime
+diagnostics:
+
+```moonbit
+@xlog.info(category="app.sync") <? {
+  "message": "synchronization started",
+  "account": account_id,
+}
+```
+
+Packaged applications write `Warn` and above to the platform application log
+directory derived from their package metadata. Direct launches and
+`proton_cli dev` write to stderr; `proton_cli dev` also selects `Info`.
+`MOON_XLOG` controls xlog level and category filters, while
+`PROTON_LOG_OUTPUT` selects the initial Proton handler as `file` or `stderr`.
+File output requires packaged application metadata. Applications may replace
+the global xlog handler or configuration afterwards. CEF's temporary
+diagnostic log remains separate under `PROTON_CEF_LOG`.
+
 ## Application locale
 
 Proton resolves one immutable locale snapshot before creating the native

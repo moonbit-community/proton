@@ -60,7 +60,7 @@ pub fn OpRegistrationError::to_string(Self) -> String
 
 // Types and methods
 type AppCommandHost
-pub fn AppCommandHost::AppCommandHost(expose_error_details? : Bool) -> Self
+pub fn AppCommandHost::AppCommandHost(expose_error_details? : Bool, diagnostic_reporter? : (String) -> Unit) -> Self
 pub fn AppCommandHost::close(Self) -> Unit
 pub async fn AppCommandHost::dispatch_ipc(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub async fn AppCommandHost::dispatch_ipc_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
@@ -111,7 +111,7 @@ pub async fn CommandWindow::save_file(Self, String?, String?) -> String?
 pub async fn CommandWindow::show_message(Self, String?, String, String) -> Unit
 
 type MbtProcessHost
-pub fn MbtProcessHost::MbtProcessHost(expose_error_details? : Bool) -> Self
+pub fn MbtProcessHost::MbtProcessHost(expose_error_details? : Bool, diagnostic_reporter? : (String) -> Unit) -> Self
 pub fn MbtProcessHost::close(Self) -> Unit
 pub async fn MbtProcessHost::dispatch_async(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub async fn MbtProcessHost::dispatch_async_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse

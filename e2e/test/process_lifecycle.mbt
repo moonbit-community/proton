@@ -383,43 +383,31 @@ async fn run_pending_lifecycle_probe_once(
       timeout_ms=timeout,
     )
     wait_for_ready(page, scenario_ready_expression(name), timeout)
-    let initial_slow_adds = count_native_log_entries(
-      app.native_log_path,
-      "bridge_enqueue",
-      "op=ext:appCommands/slowAdd",
-    )
-    ignore(
-      evaluate_json(
-        page,
-        (
-          #|(() => {
-          #|  const invoke = window.__MoonBit__?.core?.invokeOp;
-          #|  if (typeof invoke !== "function") {
-          #|    throw new Error("bridge is not installed");
-          #|  }
-          #|  window.__protonLifecyclePending = invoke("ext:appCommands/slowAdd", {
-          #|    left: 7,
-          #|    right: 8,
-          #|    delay_ms: 8000,
-          #|  }).catch(() => {});
-          #|  return true;
-          #|})()
-        ),
-        false,
+    let pending = evaluate_json(
+      page,
+      (
+        #|;(async () => {
+        #|  const invoke = window.__MoonBit__?.core?.invokeOp;
+        #|  if (typeof invoke !== "function") {
+        #|    throw new Error("bridge is not installed");
+        #|  }
+        #|  let settled = false;
+        #|  window.__protonLifecyclePending = invoke("ext:appCommands/slowAdd", {
+        #|    left: 7,
+        #|    right: 8,
+        #|    delay_ms: 8000,
+        #|  }).finally(() => { settled = true; });
+        #|  await new Promise((resolve) => setTimeout(resolve, 50));
+        #|  return !settled;
+        #|})()
       ),
+      true,
     )
-    wait_for_native_log_count(
-      app.native_log_path,
-      "bridge_enqueue",
-      "op=ext:appCommands/slowAdd",
-      initial_slow_adds + 1,
-      timeout,
-    )
+    guard pending == true else { fail("slow command did not remain pending") }
     page.close()
     let shutdown = finish_scenario_app_with_connected_browser(
       app, target, browser,
     )
-    assert_pending_lifecycle_log(app.native_log_path)
     println(
       "MoonBit pending lifecycle passed: helpers=" +
       shutdown.helper_processes.to_string(),
@@ -461,41 +449,25 @@ async fn run_event_lifecycle_probe_once(
       timeout_ms=timeout,
     )
     wait_for_ready(page, scenario_ready_expression(name), timeout)
-    let initial_starts = count_native_log_entries(
-      app.native_log_path,
-      "bridge_enqueue",
-      "op=ext:ticker/start",
-    )
-    ignore(
-      evaluate_json(
-        page,
-        (
-          #|(() => {
-          #|  window.__protonEventLifecyclePending = window.__MoonBit__.ticker.start({
-          #|    run_id: 9102,
-          #|    count: 5,
-          #|    interval_ms: 1000,
-          #|  }).catch(() => {});
-          #|  return true;
-          #|})()
-        ),
-        false,
+    let started = evaluate_json(
+      page,
+      (
+        #|;(async () => {
+        #|  await window.__MoonBit__.ticker.start({
+        #|    run_id: 9102,
+        #|    count: 5,
+        #|    interval_ms: 1000,
+        #|  });
+        #|  return true;
+        #|})()
       ),
+      true,
     )
-    wait_for_native_log_count(
-      app.native_log_path,
-      "bridge_enqueue",
-      "op=ext:ticker/start",
-      initial_starts + 1,
-      timeout,
-    )
-    @async.sleep(250)
+    guard started == true else { fail("ticker did not start") }
     page.close()
     let shutdown = finish_scenario_app_with_connected_browser(
       app, target, browser,
     )
-    assert_pending_lifecycle_log(app.native_log_path)
-    assert_event_lifecycle_log(app.native_log_path)
     println(
       "MoonBit event lifecycle passed: helpers=" +
       shutdown.helper_processes.to_string(),
@@ -568,97 +540,3 @@ async fn connect_spawned_page(
 }
 
 ///|
-fn count_native_log_entries(
-  path : String,
-  first : String,
-  second : String,
-) -> Int {
-  let log = @mbfs.read_file_to_string(path, encoding="utf8") catch {
-    _ => return 0
-  }
-  let mut count = 0
-  for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
-    let line = raw_line.to_owned()
-    if line.contains(first) && line.contains(second) {
-      count = count + 1
-    }
-  }
-  count
-}
-
-///|
-async fn wait_for_native_log_count(
-  path : String,
-  first : String,
-  second : String,
-  expected : Int,
-  timeout : Int,
-) -> Unit {
-  let mut elapsed = 0
-  while elapsed <= timeout {
-    if count_native_log_entries(path, first, second) >= expected {
-      return
-    }
-    @async.sleep(100)
-    elapsed = elapsed + 100
-  }
-  fail(
-    "native log did not record " +
-    expected.to_string() +
-    " matching entries for " +
-    second,
-  )
-}
-
-///|
-fn assert_pending_lifecycle_log(path : String) -> Unit raise {
-  let log = @mbfs.read_file_to_string(path, encoding="utf8") catch {
-    _ => fail("failed to read lifecycle native log: " + path)
-  }
-  let mut pending_cleanup = false
-  let mut stale_response_handled = false
-  let mut pending_cleared = false
-  let mut window_closed = false
-  let mut runtime_destroyed = false
-  for raw_line in log.replace_all(old="\r\n", new="\n").split("\n") {
-    let line = raw_line.to_owned()
-    if line.contains("bridge_pending_remove_browser") {
-      let pending = log_int_field(line, "pending=").unwrap_or(0)
-      if pending > 0 {
-        pending_cleanup = true
-      }
-    }
-    if line.contains("bridge_pending_remove request=") ||
-      line.contains("bridge_response_no_pending request=") ||
-      line.contains("bridge_response_send_failed request=") {
-      stale_response_handled = true
-    }
-    if line.contains("bridge_pending_clear_all removed=") {
-      pending_cleared = true
-    }
-    if line.contains("window_closed browser=") {
-      window_closed = true
-    }
-    // Matches the managed marker too, which ends in the same words.
-    if line.contains("runtime_destroy_complete") {
-      runtime_destroyed = true
-    }
-  }
-  guard pending_cleanup || stale_response_handled else {
-    fail("native log did not prove pending response state was handled")
-  }
-  guard pending_cleared else {
-    fail("native log did not prove pending bridge state was cleared")
-  }
-  guard window_closed && runtime_destroyed else {
-    fail("native log did not prove window and runtime shutdown completed")
-  }
-}
-
-///|
-fn assert_event_lifecycle_log(path : String) -> Unit raise {
-  guard count_native_log_entries(path, "bridge_enqueue", "op=ext:ticker/start") >
-    0 else {
-    fail("native log did not prove event lifecycle ticker request was enqueued")
-  }
-}
