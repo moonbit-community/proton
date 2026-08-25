@@ -5,11 +5,9 @@ let cli_current_version : String = "0.2.2"
 let cli_manifest_url : String = "https://mooncakes.io/api/v0/manifest/moonbit-community/proton_cli"
 
 ///|
-priv struct CliVersion {
-  major : Int
-  minor : Int
-  patch : Int
-}
+priv struct CliManifest {
+  latest_version : String
+} derive(FromJson)
 
 ///|
 fn env_flag_is_enabled(value : String) -> Bool {
@@ -28,66 +26,28 @@ fn cli_update_check_disabled() -> Bool {
 }
 
 ///|
-fn parse_cli_version_part(part : StringView) -> Int? {
-  let text = part.to_owned()
-  guard text != "" else { return None }
-  let mut value = 0
-  for ch in text {
-    guard ch.is_ascii_digit() else { return None }
-    value = value * 10 + ch.to_int() - '0'.to_int()
-  }
-  Some(value)
-}
-
-///|
-fn parse_cli_version(version : String) -> CliVersion? {
+fn parse_cli_version(version : String) -> @proton_updater.Version? {
   let core = match version.split_once("-") {
     Some((prefix, _)) => prefix.to_owned()
     None => version
   }
-  match core.split(".").collect() {
-    [major, minor, patch] =>
-      match
-        (
-          parse_cli_version_part(major),
-          parse_cli_version_part(minor),
-          parse_cli_version_part(patch),
-        ) {
-        (Some(major), Some(minor), Some(patch)) =>
-          Some(CliVersion::{ major, minor, patch, })
-        _ => None
-      }
-    _ => None
-  }
-}
-
-///|
-fn compare_cli_version(left : CliVersion, right : CliVersion) -> Int {
-  if left.major != right.major {
-    left.major.compare(right.major)
-  } else if left.minor != right.minor {
-    left.minor.compare(right.minor)
-  } else {
-    left.patch.compare(right.patch)
-  }
+  @proton_updater.Version::parse(core)
 }
 
 ///|
 fn cli_version_is_newer(candidate : String, current : String) -> Bool {
   match (parse_cli_version(candidate), parse_cli_version(current)) {
-    (Some(candidate), Some(current)) =>
-      compare_cli_version(candidate, current) > 0
+    (Some(candidate), Some(current)) => candidate.is_newer_than(current)
     _ => false
   }
 }
 
 ///|
 fn latest_version_from_manifest_text(text : String) -> String? {
-  let manifest = @json.parse(text) catch { _ => return None }
-  match manifest {
-    { "latest_version": String(version), .. } => Some(version)
-    _ => None
+  let manifest : CliManifest = @json.from_json(@json.parse(text)) catch {
+    _ => return None
   }
+  Some(manifest.latest_version)
 }
 
 ///|

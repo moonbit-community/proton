@@ -12,19 +12,11 @@ test "update check env flag accepts common truthy and falsey values" {
 ///|
 test "parse cli semver versions" {
   match parse_cli_version("1.2.3") {
-    Some(version) => {
-      assert_eq(version.major, 1)
-      assert_eq(version.minor, 2)
-      assert_eq(version.patch, 3)
-    }
+    Some(version) => assert_eq(version.to_string(), "1.2.3")
     None => fail("expected version to parse")
   }
   match parse_cli_version("1.2.3-beta.1") {
-    Some(version) => {
-      assert_eq(version.major, 1)
-      assert_eq(version.minor, 2)
-      assert_eq(version.patch, 3)
-    }
+    Some(version) => assert_eq(version.to_string(), "1.2.3")
     None => fail("expected prerelease version to parse")
   }
   assert_true(parse_cli_version("1.2") is None)

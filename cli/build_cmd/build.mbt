@@ -141,13 +141,6 @@ pub extend RawBuildOptions with Eq::{not_equal, equal}
 pub extend RawBuildOptions with Debug::{to_repr}
 
 ///|
-priv struct BuildProjectConfig {
-  base_dir : String
-  backend : @proton_config.ProjectBackendConfig?
-  frontend : @proton_config.ProjectFrontendConfig?
-}
-
-///|
 /// Returns the declarative `proton_cli build` command specification.
 pub fn command() -> @argparse.Command {
   @argparse.Command(
@@ -231,9 +224,9 @@ async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
   let (cwd, config) = load_build_project(cwd, raw)
   validate_release_config(config)
   if raw.run_frontend_build {
-    run_frontend_build(config.base_dir, config)
+    run_frontend_build(config.base_dir(), config)
   }
-  validate_release_files(config.base_dir, config)
+  validate_release_files(config.base_dir(), config)
   project_build_invocation(cwd, config, raw)
 }
 
@@ -241,7 +234,7 @@ async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
 async fn load_build_project(
   cwd : String,
   raw : RawBuildOptions,
-) -> (String, BuildProjectConfig) {
+) -> (String, @proton_config.ProjectConfig) {
   let cwd = @path.Path(cwd).resolve().to_string()
   let config_path = resolve_build_config_path(cwd, raw)
   let config = load_project_config(config_path)
@@ -251,17 +244,18 @@ async fn load_build_project(
 ///|
 async fn project_build_invocation(
   cwd : String,
-  config : BuildProjectConfig,
+  config : @proton_config.ProjectConfig,
   raw : RawBuildOptions,
 ) -> BuildInvocation {
+  let backend = config.backend()
   let backend_path = resolve_backend_path(
-    config.base_dir,
-    config.backend.map(fn(backend) { backend.path() }),
+    config.base_dir(),
+    backend.map(fn(backend) { backend.path() }),
   )
   let app_package = match raw.app_package {
     Some(app_package) => app_package
     None =>
-      match config.backend {
+      match backend {
         Some(backend) => backend.app_package()
         None => default_package
       }
@@ -365,7 +359,9 @@ async fn resolve_build_config_path(
 }
 
 ///|
-async fn load_project_config(config_path : String?) -> BuildProjectConfig {
+async fn load_project_config(
+  config_path : String?,
+) -> @proton_config.ProjectConfig {
   match config_path {
     None => raise NotFound(path=None)
     Some(path) => {
@@ -378,8 +374,11 @@ async fn load_project_config(config_path : String?) -> BuildProjectConfig {
 }
 
 ///|
-async fn run_frontend_build(root : String, config : BuildProjectConfig) -> Unit {
-  match config.frontend {
+async fn run_frontend_build(
+  root : String,
+  config : @proton_config.ProjectConfig,
+) -> Unit {
+  match config.frontend() {
     None => ()
     Some(frontend) =>
       match frontend.before_build() {
@@ -445,9 +444,9 @@ async fn resolve_backend_path(root : String, backend_path : String?) -> String {
 
 ///|
 fn validate_release_config(
-  config : BuildProjectConfig,
+  config : @proton_config.ProjectConfig,
 ) -> Unit raise BuildConfigError {
-  match config.frontend {
+  match config.frontend() {
     Some(frontend) =>
       match frontend.dist() {
         Some(_) => ()
@@ -463,9 +462,9 @@ fn validate_release_config(
 ///|
 async fn validate_release_files(
   root : String,
-  config : BuildProjectConfig,
+  config : @proton_config.ProjectConfig,
 ) -> Unit {
-  match config.frontend {
+  match config.frontend() {
     Some(frontend) =>
       match frontend.dist() {
         Some(dist) => {
@@ -486,7 +485,7 @@ async fn validate_release_files(
 ///|
 async fn read_project_config(
   path : String,
-) -> BuildProjectConfig raise BuildConfigError {
+) -> @proton_config.ProjectConfig raise BuildConfigError {
   let source = @async_fs.read_file(path).text() catch {
     error =>
       raise Invalid(
@@ -497,17 +496,12 @@ async fn read_project_config(
         ),
       )
   }
-  let project = @proton_config.load_project_config_from_text(
+  @proton_config.load_project_config_from_text(
     source,
     @fsutil.path_parent(path),
     name=path,
   ) catch {
     error => raise Invalid(path~, error~)
-  }
-  BuildProjectConfig::{
-    base_dir: project.base_dir(),
-    backend: project.backend(),
-    frontend: project.frontend(),
   }
 }
 
@@ -590,23 +584,22 @@ fn moon_build_only_args(app_package : String, release : Bool) -> Array[String] {
 }
 
 ///|
+priv struct MoonBuildOutput {
+  artifacts_path : Array[String]
+} derive(FromJson)
+
+///|
 fn artifact_path_from_build_output(
   output : String,
 ) -> String raise BuildProcessError {
-  let json = @json.parse(output) catch {
+  let build_output : MoonBuildOutput = @json.from_json(@json.parse(output)) catch {
     error =>
       raise InvalidOutput(
         command="MoonBit executable build",
         detail=@debug.render(Repr(error)),
       )
   }
-  guard json is { "artifacts_path": Array(paths), .. } else {
-    raise InvalidOutput(
-      command="MoonBit executable build",
-      detail="missing artifacts_path array",
-    )
-  }
-  guard paths is [String(path)] else {
+  guard build_output.artifacts_path is [path] else {
     raise InvalidOutput(
       command="MoonBit executable build",
       detail="expected exactly one executable artifact",

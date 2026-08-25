@@ -16,7 +16,7 @@ fn command() -> @argparse.Command {
 async fn run(args : ArrayView[String]) -> Int {
   let matches = @argparse.parse(command(), argv=args, env=Map([])) catch {
     error => {
-      println("error: " + error.to_string())
+      println(error.to_string())
       return 2
     }
   }
