@@ -81,7 +81,7 @@ developer must perform them.
   runtime-selection manifests.
 
 ## Build And Test
-- `PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cefsetup run . --target native`
+- `PROTON_CEF_SETUP_BOOTSTRAP=1 moon -C cefsetup run . --target native -- --runtime-only`
 - `moon install --path proton/internal/cef_process --bin <output-dir>`
 - `moon -C proton test internal/native --target native --diagnostic-limit 80`
 - `moon -C proton check --target native --diagnostic-limit 80`
