@@ -194,8 +194,14 @@ test "NSIS script carries package identity and update behavior" {
   let script = windows_installer_script(spec, "C:\\stage\\Demo App")
   assert_true(script.contains("Name \"Demo App\""))
   assert_true(script.contains("VIProductVersion \"1.2.3.0\""))
-  assert_true(script.contains("taskkill /F /IM \"demo-app.exe\""))
+  assert_true(script.contains("/PROTON-UPDATE="))
+  assert_true(script.contains("taskkill /F /T /PID \"$ProtonUpdatePid\""))
+  assert_true(
+    script.contains("Rename \"$INSTDIR\" \"$INSTDIR.proton-previous\""),
+  )
+  assert_true(script.contains("Rename \"$INSTDIR.proton-next\" \"$INSTDIR\""))
   assert_true(script.contains("File /r \"C:\\stage\\Demo App\\*.*\""))
+  assert_true(script.contains("Exec '\"$INSTDIR\\demo-app.exe\"'"))
   assert_true(
     script.contains(
       "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\dev.proton.demo",

@@ -106,13 +106,14 @@ pub fn PendingUpdate::size(self : PendingUpdate) -> Int64 {
 }
 
 ///|
-/// Downloads this update and installs it over the running application.
+/// Downloads this update and prepares or applies its platform replacement.
 ///
 /// Downloaded chunks are written only to a private native stage while their
-/// size, digest, and signature are checked. The stage cannot be installed
-/// unless that authentication completes, and the expanded bundle's own code
-/// signature is checked before the installed application is touched. The
-/// application is not restarted — see `restart`.
+/// size, digest, and signature are checked. The stage cannot be consumed
+/// unless that authentication completes. macOS and Linux replace the installed
+/// artifact here. Windows keeps the verified NSIS installer locked until
+/// `restart`, because the running process cannot replace its own install tree.
+/// The application is not restarted — see `restart`.
 ///
 /// This is deliberately not something the framework does on its own. Checking
 /// without being asked is a reasonable default; installing without being asked
@@ -215,7 +216,7 @@ fn start_update_check(
 
 ///|
 /// Confirms that this application reached its running state by removing older
-/// bundles retained for launch recovery.
+/// artifacts retained for launch recovery.
 ///
 /// Cleanup cannot be a startup precondition: the current application is
 /// already healthy, and a permissions or filesystem failure beside it should

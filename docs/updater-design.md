@@ -1,6 +1,8 @@
 # Proton Updater Design
 
-Status: implemented on macOS; Windows and Linux apply remain unsupported.
+Status: implemented for macOS bundles, Windows NSIS installations, and Linux
+AppImages. The real packaged self-update scenario remains macOS-only; Windows
+and Linux transaction tests run on their native CI hosts.
 
 An updater is a remote code execution channel that the application installs on
 itself deliberately. Every decision here is made from that starting point: the
@@ -52,7 +54,7 @@ delta artifacts can be introduced without a breaking schema change.
 | Compromised host or CDN | Serve arbitrary bytes at the update URL | RSA signature; the private key never touches the distribution host |
 | Rollback attacker | Replay an older, validly signed release to reintroduce a fixed vulnerability | A signed monotonic revision is checked again under the native commit lock |
 | Compromised renderer | Execute arbitrary script in the page | The renderer cannot choose a URL and cannot apply an update; see [Renderer surface](#renderer-surface) |
-| Local attacker | Replace a staged path between validation and installation | The authenticated archive bytes cross into one native install transaction. Native code creates a 0700 directory with `mkdtemp`, expands there, validates the bundle signature and identity, and replaces the application without exposing the expanded path between those operations |
+| Local attacker | Replace a staged path between validation and installation | Native code owns the stage throughout verification and consumption. macOS never exposes the expanded bundle, Linux renames the staged file directly, and Windows keeps the verified installer open against mutation until UAC accepts it |
 | Manifest substitution | Serve a manifest that points a current version at an attacker-chosen artifact | The manifest is signed; version and artifact digest are covered by that signature |
 | Manifest pinning | Serve a stale manifest so the client never learns about a fix | The signed manifest carries `published_at`; a manifest older than the configured freshness window is refused. The window is measured against the system clock, so this defence is only as good as that clock — a client whose clock is wrong refuses every update rather than accepting a stale one, which is the safe direction but not a silent one |
 
@@ -312,9 +314,10 @@ transition release, which is exactly the mechanism being replaced.
 macOS carries a second, independent trust anchor: the application is code-signed
 by Apple, and Sparkle's rule is that either anchor may be rotated while the other
 holds. So even a total loss of updater keys is recoverable on macOS while the
-Developer ID certificate is intact. The portable Windows and Linux layouts have
-only one anchor and no such recovery, which is one more consequence of having no
-installer on those platforms.
+Developer ID certificate is intact. Windows Authenticode and Linux's artifact
+signature protect releases in different ways, but neither supplies the same
+independent identity comparison during apply, so they do not provide this key
+loss recovery path.
 
 A threshold scheme, where signing requires *m* of *n* keys and no single loss is
 fatal, is the mature form of this. The Update Framework specifies it, and PyPI,
@@ -324,11 +327,11 @@ trusted list is the part of it that costs nothing to adopt now.
 Putting the public key in configuration rather than in application source makes
 rotation easy, and it inherits whatever integrity protection the packaged layout
 provides. On macOS the config ships inside a code-signed bundle, so altering it
-breaks that signature. **The Windows portable ZIP and the current Linux layout
-have no equivalent protection**, so on those platforms an attacker with local
-write access can replace the trusted key. This is one more consequence of having
-no real installer on those platforms, and it should be revisited when they gain
-one.
+breaks that signature. An NSIS installation normally relies on Program Files
+permissions and optional Authenticode, while an AppImage remains a user-owned
+file. Neither has macOS's independently enforced bundle identity check, so a
+local attacker who can replace the installed executable can also replace its
+trusted key list.
 
 ## Client flow
 
@@ -347,7 +350,7 @@ signature, not for the updater manifest or artifact signature.
    native code repeats it at commit time because another process may install
    between the check and apply.
 3. **Download.** Create an opaque native staging transaction and stream each
-   response chunk into it. The archive path never crosses into MoonBit. The
+   response chunk into it. The artifact path never crosses into MoonBit. The
    authenticated manifest size is passed to the transport, which rejects a
    mismatching `Content-Length`, refuses the first oversized chunk, and closes
    the response as soon as the declared number of bytes has arrived.
@@ -355,15 +358,14 @@ signature, not for the updater manifest or artifact signature.
    end of the bounded stream, check the exact size, SHA-256, and signature over
    that digest. Any transfer or verification failure aborts the native stage
    and removes its private file.
-5. **Install.** Consume that same opaque stage in one native transaction. It
-   unpacks with `ditto`, requires exactly one `.app`, validates that bundle's
-   complete code signature and signing identity, and then performs the
-   replacement. Neither the archive path nor the expanded path crosses back to
-   MoonBit, so validation cannot be spent on one object and installation on
-   another. The replaced application is retained beside the install location.
-6. **Relaunch.** Separate from the swap, because when to restart is a question
-   about the user's unsaved work rather than about the update. It reports that
-   the request was accepted, which is all the platform will say — see below.
+5. **Install.** Consume that same opaque stage in the platform transaction.
+   macOS expands, verifies and swaps the bundle; Linux swaps the AppImage;
+   Windows keeps the authenticated NSIS installer locked and ready for UAC.
+   None exposes a caller-selected path between verification and consumption.
+6. **Relaunch.** Separate from download because when to restart is a question
+   about the user's unsaved work. macOS and Linux start the artifact already
+   moved into place. Windows starts the prepared installer, which atomically
+   promotes the complete install tree and launches the replacement.
 
 ## Native surface
 
@@ -399,31 +401,24 @@ them. They are implemented on top of the same private staging transaction
 rather than as separate install paths.
 
 The stage handle is generation-checked and owned by its creating thread. It
-names a private file that native code creates, writes, expands, and removes;
+names a private file that native code creates, writes, consumes, and removes;
 there is no caller-visible path to replace between verification and use.
-Expansion, bundle validation, and replacement deliberately remain one consuming
-operation. Relaunch is separate because the caller owns the decision about
-unsaved work and process exit.
+Relaunch is separate because the caller owns the decision about unsaved work
+and process exit.
 
 MoonBit serializes installs within one process. A waiting request re-reads the
 installed revision after the active request finishes, so it skips both download
-and apply when that revision is already present. Native code acquires a
-non-blocking file lock only for the final commit decision and rename. Under that
-lock it re-reads the installed bundle, requires the staged app's code-signed
-revision to equal the signed manifest revision, and returns distinct busy,
-already-installed, rollback, and revision-mismatch outcomes.
+and apply when that revision is already present. Native code rechecks revision
+ordering under the platform commit lock or mutex and returns distinct busy,
+already-installed, rollback, and revision-mismatch outcomes. macOS additionally
+requires the staged app's code-signed revision to equal the signed manifest
+revision. Windows and Linux package the same revision used to emit the manifest.
 
 Artifact RSA signature verification is **not** here. Choosing RSA kept that in
-MoonBit. Native code verifies the expanded bundle's platform code signature,
-because that seal is what covers the directory tree after extraction, and owns
-the replacement and restart operations. Nothing that decides whether downloaded
-bytes are authentic crosses this boundary.
-
-Everything platform-specific lives behind this surface. Given that the three
-per-platform engine sources are already near-duplicates of one another — a
-duplication that has already produced one identical defect in all three copies —
-the shared portion belongs in `native/src/engine/cef_common/` from the start
-rather than being written three times.
+MoonBit. On macOS, native code also verifies the expanded bundle's platform code
+signature because that seal covers the directory tree after extraction. Native
+code owns platform replacement and restart; downloaded-byte authentication does
+not cross this boundary.
 
 ### Per-platform apply
 
@@ -462,24 +457,29 @@ reported clearly rather than worked around: an application installed somewhere
 the user cannot write, and an application still running from a quarantined or
 translocated location.
 
-**Windows.** The correct mechanism is to re-run the installer, which is what
-Tauri does. The `nsis` package target now produces one, so that mechanism is
-available — but the apply path that would invoke it is not written yet, and
-`proton_update_install` still reports `PROTON_ERR_UNSUPPORTED` on Windows. What
-exists is the other half: the installer closes the running application,
-replaces the installed tree, and records itself under the uninstall key. `/S`
-is NSIS's own switch, so that apply path will need no cooperation from the
-generated script beyond its tolerance for being re-run over a live
-installation.
+**Windows.** The authenticated artifact is the NSIS installer. `install` writes
+it to a private per-user staging file and keeps that file open against mutation;
+`restart` invokes it through UAC with NSIS's `/S` switch and the exact process
+id being replaced. The installer terminates that process tree, expands the new
+release beside the install directory, then renames the complete trees. If
+extraction or promotion fails, the old directory remains or is restored. The
+new application is launched only after promotion succeeds.
+
+The previous install tree is retained as `<install>.proton-previous`. A later
+successful update removes it before retaining the then-current tree. Unlike
+macOS and AppImage installs, an ordinary application process cannot delete that
+Program Files sibling after startup without another elevation prompt.
 
 The portable ZIP remains a separate target and is not an update channel.
 Updating it in place would mean renaming the running directory and moving a
 new one in — Windows permits that, but it is fragile and leaves no OS-level
 record of the install. That path stays unbuilt now that the installer exists.
 
-**Linux.** The `appimage` target now produces the distributable. An AppImage is
-a single file the application owns, which makes replacing it the direct
-analogue of the macOS bundle swap rather than a new mechanism.
+**Linux.** The `appimage` target produces the distributable. An AppImage is a
+single file the application owns, which makes replacing it the direct analogue
+of the macOS bundle swap rather than a new mechanism. The updater stages on the
+same filesystem, retains `<appimage>.proton-previous`, and removes it only after
+the replacement reaches Proton's running lifecycle state.
 
 Flatpak was considered and rejected for this role. A Flatpak application cannot
 update itself at all: `/app` is read-only in the sandbox and updates are OSTree
@@ -505,9 +505,8 @@ is nothing an update could correctly replace. macOS and Windows each have one
 supported shape, so detection has no work to do there. Tauri draws the same
 line, updating AppImages and refusing `.deb` and `.rpm`.
 
-**Consequence:** both platforms now have the packaging target that was blocking
-them, and the medium check that gates them. What remains is the apply paths
-themselves.
+Windows portable directories and Linux package-managed installations remain
+outside this mechanism. Their package manager or installer owns replacement.
 
 ## Configuration
 
@@ -605,7 +604,7 @@ design.
 artifacts it already produces:
 
 - the artifact — whichever single file the host builds: `zip` or `dmg` on
-  macOS, `nsis` or `zip` on Windows, `appimage` on Linux. A staged `app`
+  macOS, `nsis` on Windows, `appimage` on Linux. A staged `app`
   directory is never a candidate, because an update is fetched as one file,
 - a detached `.sig`,
 - a `latest.json` manifest fragment for the built platform.
@@ -623,12 +622,14 @@ producing the signature is an OpenSSL invocation the developer controls.
 written to the manifest fragment and to the installation itself, so native
 apply can prove it is committing the artifact the manifest ordered. Where it
 lands depends on what the platform can protect: macOS uses
-`ProtonUpdateRevision` in the app's signed `Info.plist`, while Windows and
-Linux have no signature to carry it and instead get a `proton-update-revision`
-file beside the staged `proton-package.json`. That file is still awkward to forge in
-place — an AppImage's squashfs is read-only, and a Windows install tree sits
-under Program Files — but it is not signed, and the design should not pretend
-otherwise.
+`ProtonUpdateRevision` in the app's signed `Info.plist`. Linux reads
+`proton-update-revision` from the AppImage's authenticated, read-only squashfs.
+It also advances a sidecar as a cross-process coordination cache while an old
+mounted image is still running; the packaged value and cache are combined by
+maximum, so lowering the mutable cache cannot enable rollback. Windows installs
+the same file under Program Files from the authenticated NSIS artifact; it is
+protected by install-directory permissions after extraction, but is not
+independently code-signed.
 
 Merging per-platform fragments into one manifest is a separate step because the
 three platforms are built on three machines.
@@ -637,12 +638,13 @@ three platforms are built on three machines.
 
 - Any verification failure aborts and deletes the private install transaction.
   The running application is never modified.
-- The swap is the only irreversible step. It must be ordered so that a crash
+- Promotion is the only irreversible step. It must be ordered so that a crash
   before it leaves the old application intact, and a crash after it leaves the
-  new application intact. Nothing may observe a half-swapped bundle.
-- Keep the previous bundle until the new one has started successfully once, so a
-  failed launch can be recovered. Automatic rollback on repeated launch failure
-  is out of scope for version 1; retaining the artifact makes manual recovery
+  new application intact. Nothing may observe a half-promoted artifact.
+- macOS and Linux keep the previous artifact until the new one reaches the
+  running lifecycle state. Windows keeps the administrator-owned previous tree
+  until the next successful elevated update. Automatic rollback on repeated
+  launch failure is out of scope; retaining the artifact makes manual recovery
   possible.
 
 ## Known limitations
@@ -652,16 +654,17 @@ three platforms are built on three machines.
   endpoint still prevents a client from learning that a fix exists. Nothing in a
   pull-based updater can fix that; the client can only surface prolonged
   unreachability to the application.
-- **Trusted key integrity on Windows and Linux.** The trusted key list is compiled
-  into the application executable, which is protected by the code-signed bundle
-  on macOS and by nothing on the current portable Windows and Linux layouts. Those platforms
-  also lack the second trust anchor that makes key loss recoverable on macOS.
-- **Staging disk space.** The archive and expanded application coexist briefly
-  in the private staging directory; enough free disk space is still required.
-- **macOS only.** The Windows and Linux packaging targets that were blocking
-  this now exist; the apply paths themselves are still unimplemented.
-- **Dev runs never check.** A development run is not inside an installed
-  bundle, so there is nothing an update could replace.
+- **Trusted key integrity on Windows and Linux.** The trusted key list is
+  compiled into the application executable. The updater artifact signature
+  authenticates each downloaded replacement, but neither installed layout has
+  macOS's independently enforced bundle seal and signing-identity comparison.
+- **Staging disk space.** The downloaded artifact and old/new installation
+  states coexist briefly; enough free disk space is still required.
+- **Packaged E2E coverage.** Native transaction tests cover Windows and Linux,
+  but the complete signed application update and relaunch scenario is still
+  exercised only on macOS.
+- **Dev runs cannot apply.** A development run is not inside an owned install,
+  so there is nothing an update could correctly replace.
 
 ## Phasing
 
@@ -671,7 +674,7 @@ three platforms are built on three machines.
    be observed and validated end to end without ever modifying an installation.
 3. macOS apply and relaunch.
 4. Windows and Linux apply, on top of the `nsis` and `appimage` targets, gated
-   by the install-medium check.
+   by the install-medium check. Implemented.
 
 ## Open questions
 

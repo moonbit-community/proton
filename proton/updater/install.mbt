@@ -39,17 +39,18 @@ async fn coordinate_install(
 }
 
 ///|
-/// Streams, authenticates and installs an available update.
+/// Streams, authenticates and prepares or applies an available update.
 ///
-/// The native stage owns a private archive from the first chunk through
-/// expansion. `download_into` authenticates the same chunks written there, and
-/// any transfer or authentication failure discards the stage before returning.
+/// The native stage owns a private artifact from the first chunk until the
+/// platform consumes it. `download_into` authenticates the same chunks written
+/// there, and any transfer or authentication failure discards the stage before
+/// returning.
 ///
-/// The native stage is created beside the running application bundle. This is
-/// what keeps final replacement on one filesystem when the application is
-/// installed on an external volume. Neither the archive path nor the expanded
-/// bundle path crosses the FFI boundary, so verification cannot be separated
-/// from use by replacing a path after it was checked.
+/// macOS and Linux stage beside the running artifact so final replacement stays
+/// on one filesystem. Windows stages in the per-user temporary directory,
+/// keeps the verified installer open against modification, and elevates it only
+/// when the application requests `relaunch`. No staging path crosses the FFI
+/// boundary.
 ///
 /// The application is not restarted. When to do that is a question about the
 /// user's unsaved work, not about the update, so it belongs to the caller —
@@ -149,7 +150,7 @@ pub fn relaunch() -> Unit raise UpdateError {
 }
 
 ///|
-/// Returns the revision recorded by the running application bundle.
+/// Returns the revision recorded by the running application artifact.
 pub fn current_revision() -> UInt64 raise UpdateError {
   @native.update_current_revision() catch {
     error =>
@@ -166,7 +167,7 @@ pub fn cleanup_previous() -> Unit raise UpdateError {
   @native.update_cleanup_previous() catch {
     error =>
       raise InstallFailed(
-        step="clean up the previous application bundle",
+        step="clean up the previous application artifact",
         detail=error.message(),
       )
   }

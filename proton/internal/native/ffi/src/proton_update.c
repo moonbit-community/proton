@@ -2,6 +2,7 @@
 
 #include "proton_handle.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +16,6 @@
 #if defined(__APPLE__)
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
-#include <errno.h>
 #include <fts.h>
 #include <mach-o/dyld.h>
 #include <dirent.h>
@@ -28,7 +28,6 @@
 #include <unistd.h>
 extern char **environ;
 #elif defined(__linux__)
-#include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <spawn.h>
@@ -98,10 +97,12 @@ void proton_update_set_medium_for_testing(const char *medium) {
            sizeof(proton_update_medium_override), "%s", medium);
 }
 
+#if defined(__linux__)
 static int proton_update_env_is_set(const char *name) {
   const char *value = getenv(name);
   return value != NULL && value[0] != '\0';
 }
+#endif
 
 static proton_update_medium_t proton_update_detect_medium(void) {
   if (proton_update_medium_override[0] != '\0') {
@@ -181,11 +182,13 @@ static int32_t proton_update_require_owned_medium(char *error,
    because it solves the same problem: keeping the downloaded bytes
    untampered from first write through final rename.
 
-   Revision tracking uses a sidecar file beside the AppImage
-   (`<appimage>.proton-revision`) because an AppImage has no Info.plist. */
+   Revision tracking reads the packaged metadata from the mounted, read-only
+   AppImage filesystem and maintains a mutable sidecar only as a cross-process
+   coordination cache while the old image is still running. */
 #if defined(__linux__)
 
 #define PROTON_UPDATE_MAX_STAGES 8
+static uint64_t proton_update_installed_revision = 0;
 typedef struct {
   uint32_t generation;
   int occupied;
@@ -220,6 +223,7 @@ static void proton_update_stage_release(proton_update_stage_slot_t *slot,
   }
   pthread_mutex_lock(&g_update_stage_mutex);
   slot->staging[0] = '\0';
+  slot->occupied = 0;
   slot->destroyed = 1;
   slot->expected_size = 0;
   slot->written_size = 0;
@@ -302,21 +306,16 @@ static int proton_update_parent_path(const char *path, char *out,
   return 1;
 }
 
-/* Builds the sidecar revision path for an AppImage. */
-static void proton_update_revision_path(const char *appimage_path, char *out,
-                                        size_t out_len) {
-  snprintf(out, out_len, "%s.proton-revision", appimage_path);
-}
-
-/* Reads the revision from the sidecar file. Returns 1 on success, 0 if the
-   file does not exist (revision 0 is reported). */
-static int proton_update_read_revision(const char *appimage_path,
-                                       uint64_t *out_revision) {
-  char revision_path[PROTON_UPDATE_MAX_PATH];
-  proton_update_revision_path(appimage_path, revision_path,
-                              sizeof(revision_path));
-  int fd = open(revision_path, O_RDONLY | O_CLOEXEC);
+/* Reads a decimal revision file. A missing file is revision zero; malformed
+   contents are an error because silently resetting the rollback anchor would
+   make every signed historical release appear current again. */
+static int proton_update_read_revision_file(const char *path,
+                                            uint64_t *out_revision) {
+  int fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
   if (fd < 0) {
+    if (errno != ENOENT) {
+      return 0;
+    }
     *out_revision = 0;
     return 1;
   }
@@ -324,31 +323,112 @@ static int proton_update_read_revision(const char *appimage_path,
   ssize_t n = read(fd, buffer, sizeof(buffer) - 1);
   close(fd);
   if (n <= 0) {
-    *out_revision = 0;
-    return 1;
+    return 0;
   }
   buffer[n] = '\0';
-  *out_revision = (uint64_t)strtoull(buffer, NULL, 10);
+  errno = 0;
+  char *end = NULL;
+  unsigned long long parsed = strtoull(buffer, &end, 10);
+  if (errno != 0 || end == buffer) {
+    return 0;
+  }
+  while (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n') {
+    end++;
+  }
+  if (*end != '\0') {
+    return 0;
+  }
+  *out_revision = (uint64_t)parsed;
   return 1;
 }
 
-/* Writes the revision to the sidecar file. */
-static int proton_update_write_revision(const char *appimage_path,
-                                        uint64_t revision) {
-  char revision_path[PROTON_UPDATE_MAX_PATH];
-  proton_update_revision_path(appimage_path, revision_path,
-                              sizeof(revision_path));
-  int fd = open(revision_path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC,
-                0644);
+static int proton_update_revision_sidecar(const char *appimage_path, char *out,
+                                          size_t out_len) {
+  int written = snprintf(out, out_len, "%s.proton-revision", appimage_path);
+  return written >= 0 && (size_t)written < out_len;
+}
+
+/* Atomically advances the mutable cross-process coordination cache. The
+   packaged revision remains authoritative across launches; taking the maximum
+   of both prevents lowering this cache from enabling a rollback. */
+static int proton_update_write_revision_sidecar(const char *appimage_path,
+                                                uint64_t revision) {
+  char sidecar[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_revision_sidecar(appimage_path, sidecar,
+                                      sizeof(sidecar))) {
+    return 0;
+  }
+  char next[PROTON_UPDATE_MAX_PATH];
+  int next_written = snprintf(next, sizeof(next), "%s.next", sidecar);
+  if (next_written < 0 || (size_t)next_written >= sizeof(next)) {
+    return 0;
+  }
+  (void)unlink(next);
+  int fd = open(next, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW,
+                S_IRUSR | S_IWUSR);
   if (fd < 0) {
     return 0;
   }
   char buffer[32];
-  int len = snprintf(buffer, sizeof(buffer), "%llu",
-                     (unsigned long long)revision);
-  ssize_t written = write(fd, buffer, (size_t)len);
-  close(fd);
-  return written == len;
+  int length = snprintf(buffer, sizeof(buffer), "%llu\n",
+                        (unsigned long long)revision);
+  int ok = write(fd, buffer, (size_t)length) == (ssize_t)length &&
+           fsync(fd) == 0;
+  if (close(fd) != 0) {
+    ok = 0;
+  }
+  if (!ok || rename(next, sidecar) != 0) {
+    (void)unlink(next);
+    return 0;
+  }
+  return 1;
+}
+
+/* Reads the revision embedded in the mounted AppImage. The package builder
+   writes it into the read-only squashfs, so it is part of the authenticated
+   artifact rather than a mutable sidecar beside it. Deriving the resource
+   path from /proc/self/exe avoids trusting an inherited APPDIR value. The
+   sidecar fallback is retained only for native tests that override the running
+   AppImage path. */
+static int proton_update_read_revision(const char *appimage_path,
+                                       uint64_t *out_revision) {
+  uint64_t packaged_revision = 0;
+  if (proton_update_override[0] == '\0') {
+    char executable[PROTON_UPDATE_MAX_PATH];
+    ssize_t length = readlink("/proc/self/exe", executable,
+                              sizeof(executable) - 1);
+    if (length > 0 && (size_t)length < sizeof(executable)) {
+      executable[length] = '\0';
+      char bin_dir[PROTON_UPDATE_MAX_PATH];
+      char usr_dir[PROTON_UPDATE_MAX_PATH];
+      if (!proton_update_parent_path(executable, bin_dir, sizeof(bin_dir)) ||
+          !proton_update_parent_path(bin_dir, usr_dir, sizeof(usr_dir))) {
+        return 0;
+      }
+      char embedded[PROTON_UPDATE_MAX_PATH];
+      int written = snprintf(embedded, sizeof(embedded),
+                             "%s/Resources/proton-update-revision", usr_dir);
+      if (written < 0 || (size_t)written >= sizeof(embedded)) {
+        return 0;
+      }
+      if (!proton_update_read_revision_file(embedded, &packaged_revision)) {
+        return 0;
+      }
+    }
+  }
+  char sidecar[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_revision_sidecar(appimage_path, sidecar,
+                                      sizeof(sidecar))) {
+    return 0;
+  }
+  uint64_t coordinated_revision = 0;
+  if (!proton_update_read_revision_file(sidecar, &coordinated_revision)) {
+    return 0;
+  }
+  *out_revision = packaged_revision > coordinated_revision
+                      ? packaged_revision
+                      : coordinated_revision;
+  return 1;
 }
 
 /* Acquires a cross-process flock beside the AppImage. */
@@ -358,13 +438,28 @@ static int32_t proton_update_acquire_commit_lock(const char *appimage_path,
   char lock_path[PROTON_UPDATE_MAX_PATH];
   snprintf(lock_path, sizeof(lock_path), "%s.proton-update.lock",
            appimage_path);
-  int fd = open(lock_path, O_WRONLY | O_CREAT | O_CLOEXEC, 0644);
+  int fd = open(lock_path, O_WRONLY | O_CREAT | O_CLOEXEC | O_NOFOLLOW,
+                S_IRUSR | S_IWUSR);
   if (fd < 0) {
     proton_update_set_message(error, error_len,
                               "failed to open the update commit lock");
     return PROTON_ERR_PLATFORM;
   }
-  if (flock(fd, LOCK_EX) != 0) {
+  struct stat info;
+  if (fstat(fd, &info) != 0 || !S_ISREG(info.st_mode) ||
+      info.st_uid != geteuid()) {
+    close(fd);
+    proton_update_set_message(error, error_len,
+                              "the update commit lock is not a private file");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (fchmod(fd, S_IRUSR | S_IWUSR) != 0) {
+    close(fd);
+    proton_update_set_message(error, error_len,
+                              "the update commit lock cannot be made private");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (flock(fd, LOCK_EX | LOCK_NB) != 0) {
     close(fd);
     proton_update_set_message(error, error_len,
                               "failed to acquire the update commit lock");
@@ -451,7 +546,7 @@ int32_t proton_update_stage_begin_revision(
   if (fd < 0) {
     proton_update_set_message(error, error_len,
                               "failed to create a staging file");
-    slot->occupied = 0;
+    proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
   /* Keep the file on disk so we can rename it into place during install. */
@@ -567,6 +662,30 @@ int32_t proton_update_stage_install_outcome(
     proton_update_stage_release(slot, 1);
     return status;
   }
+  uint64_t committed_revision = 0;
+  if (!proton_update_read_revision(appimage_path, &committed_revision)) {
+    close(lock_fd);
+    proton_update_set_message(error, error_len,
+                              "failed to re-read the current revision");
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_PLATFORM;
+  }
+  if (target_revision < committed_revision) {
+    close(lock_fd);
+    proton_update_set_message(
+        error, error_len,
+        "the staged update revision is older than the installed application");
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_UPDATE_ROLLBACK;
+  }
+  if (target_revision == committed_revision) {
+    close(lock_fd);
+    if (out_outcome != NULL) {
+      *out_outcome = PROTON_UPDATE_ALREADY_INSTALLED;
+    }
+    proton_update_stage_release(slot, 1);
+    return PROTON_OK;
+  }
   /* Close the staging fd before rename. */
   close(slot->fd);
   slot->fd = -1;
@@ -615,17 +734,34 @@ int32_t proton_update_stage_install_outcome(
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
-  /* Record the new revision. */
-  if (!proton_update_write_revision(appimage_path, target_revision)) {
-    /* The install succeeded but the revision sidecar failed. Not fatal. */
+  if (!proton_update_write_revision_sidecar(appimage_path, target_revision)) {
+    if (rename(appimage_path, staging_path) != 0) {
+      proton_update_set_message(
+          error, error_len,
+          "the update was installed but its revision could not be recorded; "
+          "the previous AppImage remains beside it");
+    } else if (rename(previous_path, appimage_path) != 0) {
+      (void)rename(staging_path, appimage_path);
+      proton_update_set_message(
+          error, error_len,
+          "the update revision could not be recorded and the previous "
+          "AppImage could not be restored");
+    } else {
+      (void)unlink(staging_path);
+      proton_update_set_message(error, error_len,
+                                "failed to record the installed revision");
+    }
+    close(lock_fd);
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_PLATFORM;
   }
   /* Record the current path for relaunch and the previous path for cleanup. */
   snprintf(proton_update_current, sizeof(proton_update_current), "%s",
            appimage_path);
   snprintf(proton_update_previous, sizeof(proton_update_previous), "%s",
            previous_path);
-  /* Remove the old AppImage. */
-  (void)unlink(previous_path);
+  /* Keep the old AppImage until the replacement completes startup. */
+  proton_update_installed_revision = target_revision;
   close(lock_fd);
   proton_update_stage_release(slot, 1);
   if (out_outcome != NULL) {
@@ -658,18 +794,41 @@ int32_t proton_update_current_revision(
     *out_revision = 0;
     return PROTON_OK;
   }
-  *out_revision = revision;
+  *out_revision = revision > proton_update_installed_revision
+                      ? revision
+                      : proton_update_installed_revision;
   return PROTON_OK;
 }
 
 int32_t proton_update_cleanup_previous(char *error,
                                                   int32_t error_len) {
-  (void)error;
-  (void)error_len;
-  if (proton_update_previous[0] != '\0') {
-    (void)unlink(proton_update_previous);
-    proton_update_previous[0] = '\0';
+  char appimage_path[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_running_appimage(appimage_path,
+                                      sizeof(appimage_path))) {
+    return PROTON_OK;
   }
+  char previous_path[PROTON_UPDATE_MAX_PATH];
+  int written = snprintf(previous_path, sizeof(previous_path),
+                         "%s.proton-previous", appimage_path);
+  if (written < 0 || (size_t)written >= sizeof(previous_path)) {
+    proton_update_set_message(error, error_len,
+                              "the previous AppImage path is too long");
+    return PROTON_ERR_PLATFORM;
+  }
+  int lock_fd = -1;
+  int32_t status = proton_update_acquire_commit_lock(
+      appimage_path, &lock_fd, error, error_len);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (unlink(previous_path) != 0 && errno != ENOENT) {
+    close(lock_fd);
+    proton_update_set_message(error, error_len,
+                              "failed to remove the previous AppImage");
+    return PROTON_ERR_PLATFORM;
+  }
+  close(lock_fd);
+  proton_update_previous[0] = '\0';
   return PROTON_OK;
 }
 
@@ -730,15 +889,12 @@ int32_t proton_update_relaunch(char *error, int32_t error_len) {
 
 /* Windows apply path.
 
-   The running executable is locked by the OS, so replacing it requires
-   renaming it aside first. The new file then takes its place, and the old
-   file is scheduled for deletion on the next reboot via
-   MoveFileEx(MOVEFILE_DELAY_UNTIL_REBOOT). The next launch runs the new
-   executable.
-
-   Revision tracking uses a sidecar file beside the executable
-   (`<exe>.proton-revision`) because a portable Windows executable has no
-   equivalent of an Info.plist. */
+   The authenticated artifact is the NSIS installer, not the application
+   executable. Installation therefore has two phases: install() keeps the
+   verified installer open in a private per-user staging file, then restart()
+   elevates and runs it silently. The generated installer terminates the exact
+   application process tree, replaces the complete install directory, and
+   launches the replacement. */
 
 #define PROTON_UPDATE_MAX_STAGES 8
 typedef struct {
@@ -756,13 +912,47 @@ typedef struct {
 static proton_update_stage_slot_t
     g_update_stages[PROTON_UPDATE_MAX_STAGES];
 static CRITICAL_SECTION g_update_stage_mutex;
-static int g_update_stage_mutex_initialized = 0;
+static INIT_ONCE g_update_stage_mutex_once = INIT_ONCE_STATIC_INIT;
+static HANDLE proton_update_pending_installer = INVALID_HANDLE_VALUE;
+static HANDLE proton_update_commit_mutex = NULL;
+static wchar_t proton_update_pending_installer_path[PROTON_UPDATE_MAX_PATH];
+static uint64_t proton_update_pending_revision = 0;
+static int proton_update_pending_cleanup_registered = 0;
+
+static void proton_update_discard_pending(void) {
+  if (proton_update_pending_installer != INVALID_HANDLE_VALUE) {
+    CloseHandle(proton_update_pending_installer);
+    proton_update_pending_installer = INVALID_HANDLE_VALUE;
+  }
+  if (proton_update_pending_installer_path[0] != L'\0') {
+    (void)DeleteFileW(proton_update_pending_installer_path);
+    proton_update_pending_installer_path[0] = L'\0';
+  }
+  proton_update_pending_revision = 0;
+  if (proton_update_commit_mutex != NULL) {
+    (void)ReleaseMutex(proton_update_commit_mutex);
+    CloseHandle(proton_update_commit_mutex);
+    proton_update_commit_mutex = NULL;
+  }
+}
+
+void proton_update_discard_pending_for_testing(void) {
+  proton_update_discard_pending();
+}
+
+static BOOL CALLBACK proton_update_initialize_mutex(PINIT_ONCE once,
+                                                    PVOID parameter,
+                                                    PVOID *context) {
+  (void)once;
+  (void)parameter;
+  (void)context;
+  InitializeCriticalSection(&g_update_stage_mutex);
+  return TRUE;
+}
 
 static void proton_update_ensure_mutex(void) {
-  if (!g_update_stage_mutex_initialized) {
-    InitializeCriticalSection(&g_update_stage_mutex);
-    g_update_stage_mutex_initialized = 1;
-  }
+  (void)InitOnceExecuteOnce(&g_update_stage_mutex_once,
+                            proton_update_initialize_mutex, NULL, NULL);
 }
 
 static proton_update_stage_id_t proton_update_make_stage_handle(
@@ -784,6 +974,7 @@ static void proton_update_stage_release(proton_update_stage_slot_t *slot,
   proton_update_ensure_mutex();
   EnterCriticalSection(&g_update_stage_mutex);
   slot->staging[0] = L'\0';
+  slot->occupied = 0;
   slot->destroyed = 1;
   slot->expected_size = 0;
   slot->written_size = 0;
@@ -892,55 +1083,113 @@ static int proton_update_parent_path_w(const wchar_t *path, wchar_t *out,
   return 1;
 }
 
-/* Builds the sidecar revision path for an executable. */
+/* Builds the packaged revision path beside an executable. */
 static void proton_update_revision_path_w(const wchar_t *exe_path,
                                           wchar_t *out, size_t out_len) {
-  _snwprintf(out, out_len, L"%s.proton-revision", exe_path);
+  wchar_t parent[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_parent_path_w(exe_path, parent,
+                                   PROTON_UPDATE_MAX_PATH)) {
+    out[0] = L'\0';
+    return;
+  }
+  int written = _snwprintf(out, out_len, L"%s\\proton-update-revision",
+                           parent);
+  if (written < 0 || (size_t)written >= out_len) {
+    out[0] = L'\0';
+  }
 }
 
-/* Reads the revision from the sidecar file. */
+/* Reads the revision packaged beside the installed executable. */
 static int proton_update_read_revision_w(const wchar_t *exe_path,
                                          uint64_t *out_revision) {
   wchar_t revision_path[PROTON_UPDATE_MAX_PATH];
   proton_update_revision_path_w(exe_path, revision_path,
                                 PROTON_UPDATE_MAX_PATH);
+  if (revision_path[0] == L'\0') {
+    return 0;
+  }
   HANDLE h_file = CreateFileW(revision_path, GENERIC_READ, FILE_SHARE_READ,
                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if (h_file == INVALID_HANDLE_VALUE) {
-    *out_revision = 0;
-    return 1;
+    DWORD failure = GetLastError();
+    if (failure == ERROR_FILE_NOT_FOUND || failure == ERROR_PATH_NOT_FOUND) {
+      *out_revision = 0;
+      return 1;
+    }
+    return 0;
   }
   char buffer[32];
   DWORD bytes_read = 0;
   BOOL ok = ReadFile(h_file, buffer, sizeof(buffer) - 1, &bytes_read, NULL);
   CloseHandle(h_file);
   if (!ok || bytes_read == 0) {
-    *out_revision = 0;
-    return 1;
+    return 0;
   }
   buffer[bytes_read] = '\0';
-  *out_revision = (uint64_t)_strtoui64(buffer, NULL, 10);
+  errno = 0;
+  char *end = NULL;
+  unsigned long long parsed = _strtoui64(buffer, &end, 10);
+  if (errno != 0 || end == buffer) {
+    return 0;
+  }
+  while (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n') {
+    end++;
+  }
+  if (*end != '\0') {
+    return 0;
+  }
+  *out_revision = (uint64_t)parsed;
   return 1;
 }
 
-/* Writes the revision to the sidecar file. */
-static int proton_update_write_revision_w(const wchar_t *exe_path,
-                                          uint64_t revision) {
-  wchar_t revision_path[PROTON_UPDATE_MAX_PATH];
-  proton_update_revision_path_w(exe_path, revision_path,
-                                PROTON_UPDATE_MAX_PATH);
-  HANDLE h_file = CreateFileW(revision_path, GENERIC_WRITE, 0, NULL,
-                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (h_file == INVALID_HANDLE_VALUE) {
+static int proton_update_is_installed_w(const wchar_t *exe_path) {
+  wchar_t parent[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_parent_path_w(exe_path, parent,
+                                   PROTON_UPDATE_MAX_PATH)) {
     return 0;
   }
-  char buffer[32];
-  int len = snprintf(buffer, sizeof(buffer), "%llu",
-                     (unsigned long long)revision);
-  DWORD bytes_written = 0;
-  BOOL ok = WriteFile(h_file, buffer, (DWORD)len, &bytes_written, NULL);
-  CloseHandle(h_file);
-  return ok && bytes_written == (DWORD)len;
+  wchar_t uninstaller[PROTON_UPDATE_MAX_PATH];
+  int written = _snwprintf(uninstaller, PROTON_UPDATE_MAX_PATH,
+                           L"%s\\Uninstall.exe", parent);
+  if (written < 0 || written >= PROTON_UPDATE_MAX_PATH) {
+    return 0;
+  }
+  DWORD attributes = GetFileAttributesW(uninstaller);
+  return attributes != INVALID_FILE_ATTRIBUTES &&
+         (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+}
+
+static uint64_t proton_update_path_hash_w(const wchar_t *path) {
+  uint64_t hash = 1469598103934665603ULL;
+  for (const wchar_t *cursor = path; *cursor != L'\0'; cursor++) {
+    hash ^= (uint64_t)*cursor;
+    hash *= 1099511628211ULL;
+  }
+  return hash;
+}
+
+static int32_t proton_update_acquire_commit_mutex_w(
+    const wchar_t *exe_path, HANDLE *out_mutex, char *error,
+    int32_t error_len) {
+  wchar_t name[96];
+  _snwprintf(name, sizeof(name) / sizeof(name[0]),
+             L"Local\\ProtonUpdate-%016llx",
+             (unsigned long long)proton_update_path_hash_w(exe_path));
+  HANDLE mutex = CreateMutexW(NULL, FALSE, name);
+  if (mutex == NULL) {
+    proton_update_set_message(error, error_len,
+                              "failed to create the update commit mutex");
+    return PROTON_ERR_PLATFORM;
+  }
+  DWORD wait = WaitForSingleObject(mutex, 0);
+  if (wait != WAIT_OBJECT_0 && wait != WAIT_ABANDONED) {
+    CloseHandle(mutex);
+    proton_update_set_message(error, error_len,
+                              "another process is installing an update");
+    return PROTON_ERR_UPDATE_BUSY;
+  }
+  *out_mutex = mutex;
+  return PROTON_OK;
 }
 
 int32_t proton_update_stage_begin_revision(
@@ -954,12 +1203,16 @@ int32_t proton_update_stage_begin_revision(
     return medium_status;
   }
   if (parent_dir != NULL && parent_dir[0] != '\0') {
+    size_t parent_len = strlen(parent_dir);
     /* Accept drive-letter (C:\) or UNC (\\) absolute paths. */
-    if (!((parent_dir[0] == '\\' && parent_dir[1] == '\\') ||
-          ((parent_dir[0] >= 'A' && parent_dir[0] <= 'Z') &&
+    if (!((parent_len >= 2 && parent_dir[0] == '\\' &&
+           parent_dir[1] == '\\') ||
+          (parent_len >= 3 &&
+           (parent_dir[0] >= 'A' && parent_dir[0] <= 'Z') &&
            parent_dir[1] == ':' &&
            (parent_dir[2] == '\\' || parent_dir[2] == '/')) ||
-          ((parent_dir[0] >= 'a' && parent_dir[0] <= 'z') &&
+          (parent_len >= 3 &&
+           (parent_dir[0] >= 'a' && parent_dir[0] <= 'z') &&
            parent_dir[1] == ':' &&
            (parent_dir[2] == '\\' || parent_dir[2] == '/')))) {
       proton_update_set_message(error, error_len,
@@ -973,6 +1226,12 @@ int32_t proton_update_stage_begin_revision(
                               "failed to determine the running executable path");
     return PROTON_ERR_PLATFORM;
   }
+  if (!proton_update_is_installed_w(exe_path)) {
+    proton_update_set_message(
+        error, error_len,
+        "self-update is only available for NSIS installations on Windows");
+    return PROTON_ERR_UNSUPPORTED;
+  }
   wchar_t stage_dir[PROTON_UPDATE_MAX_PATH];
   if (parent_dir != NULL && parent_dir[0] != '\0') {
     wchar_t *wide_parent = proton_update_utf8_to_wide(parent_dir);
@@ -985,10 +1244,10 @@ int32_t proton_update_stage_begin_revision(
     stage_dir[PROTON_UPDATE_MAX_PATH - 1] = L'\0';
     free(wide_parent);
   } else {
-    if (!proton_update_parent_path_w(exe_path, stage_dir,
-                                     PROTON_UPDATE_MAX_PATH)) {
+    DWORD length = GetTempPathW(PROTON_UPDATE_MAX_PATH, stage_dir);
+    if (length == 0 || length >= PROTON_UPDATE_MAX_PATH) {
       proton_update_set_message(error, error_len,
-                                "failed to determine the executable directory");
+                                "failed to determine the update staging directory");
       return PROTON_ERR_PLATFORM;
     }
   }
@@ -1020,17 +1279,27 @@ int32_t proton_update_stage_begin_revision(
   slot->expected_size = expected_size;
   slot->written_size = 0;
   slot->target_revision = target_revision;
-  /* Create a unique temp file name. */
-  _snwprintf(slot->staging, PROTON_UPDATE_MAX_PATH,
-             L"%s\\.proton-update-stage-%u", stage_dir, index);
   LeaveCriticalSection(&g_update_stage_mutex);
-  /* Create the staging file. */
-  slot->h_file = CreateFileW(slot->staging, GENERIC_WRITE, 0, NULL,
-                             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+  /* CREATE_NEW makes the name reservation and file creation one operation. */
+  for (uint32_t attempt = 0; attempt < 32; attempt++) {
+    _snwprintf(slot->staging, PROTON_UPDATE_MAX_PATH,
+               L"%s\\proton-update-%lu-%llu-%u-%u.exe", stage_dir,
+               (unsigned long)GetCurrentProcessId(),
+               (unsigned long long)GetTickCount64(), generation,
+               index + attempt);
+    slot->staging[PROTON_UPDATE_MAX_PATH - 1] = L'\0';
+    slot->h_file = CreateFileW(
+        slot->staging, GENERIC_WRITE, 0, NULL, CREATE_NEW,
+        FILE_ATTRIBUTE_TEMPORARY, NULL);
+    if (slot->h_file != INVALID_HANDLE_VALUE ||
+        GetLastError() != ERROR_FILE_EXISTS) {
+      break;
+    }
+  }
   if (slot->h_file == INVALID_HANDLE_VALUE) {
     proton_update_set_message(error, error_len,
                               "failed to create a staging file");
-    slot->occupied = 0;
+    proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
   if (out_stage != NULL) {
@@ -1138,58 +1407,70 @@ int32_t proton_update_stage_install_outcome(
     proton_update_stage_release(slot, 1);
     return PROTON_OK;
   }
-  /* Move the staging file to a visible name beside the executable. */
-  wchar_t next_path[PROTON_UPDATE_MAX_PATH];
-  _snwprintf(next_path, PROTON_UPDATE_MAX_PATH, L"%s.proton-next", exe_path);
-  (void)DeleteFileW(next_path);
-  if (!MoveFileW(slot->staging, next_path)) {
+  if (proton_update_pending_installer != INVALID_HANDLE_VALUE) {
     proton_update_set_message(error, error_len,
-                              "failed to move the staging file into place");
+                              "an update is already ready to install");
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_UPDATE_BUSY;
+  }
+  HANDLE commit_mutex = NULL;
+  status = proton_update_acquire_commit_mutex_w(
+      exe_path, &commit_mutex, error, error_len);
+  if (status != PROTON_OK) {
+    proton_update_stage_release(slot, 1);
+    return status;
+  }
+  uint64_t committed_revision = 0;
+  if (!proton_update_read_revision_w(exe_path, &committed_revision)) {
+    ReleaseMutex(commit_mutex);
+    CloseHandle(commit_mutex);
+    proton_update_set_message(error, error_len,
+                              "failed to re-read the current revision");
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
+  if (target_revision < committed_revision) {
+    ReleaseMutex(commit_mutex);
+    CloseHandle(commit_mutex);
+    proton_update_set_message(
+        error, error_len,
+        "the staged update revision is older than the installed application");
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_UPDATE_ROLLBACK;
+  }
+  if (target_revision == committed_revision) {
+    ReleaseMutex(commit_mutex);
+    CloseHandle(commit_mutex);
+    if (out_outcome != NULL) {
+      *out_outcome = PROTON_UPDATE_ALREADY_INSTALLED;
+    }
+    proton_update_stage_release(slot, 1);
+    return PROTON_OK;
+  }
+  HANDLE installer = CreateFileW(slot->staging, GENERIC_READ, FILE_SHARE_READ,
+                                 NULL, OPEN_EXISTING,
+                                 FILE_ATTRIBUTE_NORMAL, NULL);
+  if (installer == INVALID_HANDLE_VALUE) {
+    ReleaseMutex(commit_mutex);
+    CloseHandle(commit_mutex);
+    proton_update_set_message(error, error_len,
+                              "failed to lock the verified update installer");
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_PLATFORM;
+  }
+  /* The verified installer stays open until ShellExecute accepts it. Moving
+     ownership out of the stage prevents any path-based verification/use gap. */
+  proton_update_pending_installer = installer;
+  wcsncpy(proton_update_pending_installer_path, slot->staging,
+          PROTON_UPDATE_MAX_PATH);
+  proton_update_pending_installer_path[PROTON_UPDATE_MAX_PATH - 1] = L'\0';
   slot->staging[0] = L'\0';
-  /* Move the old executable aside. The running exe can be renamed even
-     though it cannot be deleted. */
-  wchar_t old_path[PROTON_UPDATE_MAX_PATH];
-  _snwprintf(old_path, PROTON_UPDATE_MAX_PATH, L"%s.proton-old", exe_path);
-  (void)DeleteFileW(old_path);
-  if (!MoveFileW(exe_path, old_path)) {
-    (void)DeleteFileW(next_path);
-    proton_update_set_message(error, error_len,
-                              "failed to rename the running executable");
-    proton_update_stage_release(slot, 1);
-    return PROTON_ERR_PLATFORM;
+  proton_update_pending_revision = target_revision;
+  proton_update_commit_mutex = commit_mutex;
+  if (!proton_update_pending_cleanup_registered) {
+    (void)atexit(proton_update_discard_pending);
+    proton_update_pending_cleanup_registered = 1;
   }
-  /* Move the new file into place. */
-  if (!MoveFileW(next_path, exe_path)) {
-    /* Attempt to restore the old executable. */
-    (void)MoveFileW(old_path, exe_path);
-    (void)DeleteFileW(next_path);
-    proton_update_set_message(error, error_len,
-                              "failed to move the new executable into place");
-    proton_update_stage_release(slot, 1);
-    return PROTON_ERR_PLATFORM;
-  }
-  /* Schedule the old executable for deletion on the next reboot. */
-  (void)MoveFileExW(old_path, NULL, MOVEFILE_DELAY_UNTIL_REBOOT);
-  /* Record the new revision. */
-  if (!proton_update_write_revision_w(exe_path, target_revision)) {
-    /* The install succeeded but the revision sidecar failed. Not fatal. */
-  }
-  /* Record the current path for relaunch and the old path for cleanup. */
-  WideCharToMultiByte(CP_UTF8, 0, exe_path, -1, proton_update_current,
-                      (int)sizeof(proton_update_current), NULL, NULL);
-  {
-    char old_path_utf8[PROTON_UPDATE_MAX_PATH * 3];
-    WideCharToMultiByte(CP_UTF8, 0, old_path, -1, old_path_utf8,
-                        sizeof(old_path_utf8), NULL, NULL);
-    snprintf(proton_update_previous, sizeof(proton_update_previous), "%s",
-             old_path_utf8);
-  }
-  /* Try to delete the old executable immediately (will fail if still
-     locked, but the scheduled deletion ensures it is cleaned up). */
-  (void)DeleteFileW(old_path);
   proton_update_stage_release(slot, 0);
   if (out_outcome != NULL) {
     *out_outcome = PROTON_UPDATE_INSTALLED;
@@ -1220,7 +1501,9 @@ int32_t proton_update_current_revision(
     *out_revision = 0;
     return PROTON_OK;
   }
-  *out_revision = revision;
+  *out_revision = revision > proton_update_pending_revision
+                      ? revision
+                      : proton_update_pending_revision;
   return PROTON_OK;
 }
 
@@ -1228,14 +1511,6 @@ int32_t proton_update_cleanup_previous(char *error,
                                                   int32_t error_len) {
   (void)error;
   (void)error_len;
-  if (proton_update_previous[0] != '\0') {
-    wchar_t *wide = proton_update_utf8_to_wide(proton_update_previous);
-    if (wide != NULL) {
-      (void)DeleteFileW(wide);
-      free(wide);
-    }
-    proton_update_previous[0] = '\0';
-  }
   return PROTON_OK;
 }
 
@@ -1277,27 +1552,38 @@ int32_t proton_update_install(const char *archive,
 }
 
 int32_t proton_update_relaunch(char *error, int32_t error_len) {
-  if (proton_update_current[0] == '\0') {
+  if (proton_update_pending_installer == INVALID_HANDLE_VALUE ||
+      proton_update_pending_installer_path[0] == L'\0') {
     proton_update_set_message(error, error_len,
-                              "no application has been replaced");
+                              "no Windows installer is ready");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  wchar_t exe_path[PROTON_UPDATE_MAX_PATH];
-  MultiByteToWideChar(CP_UTF8, 0, proton_update_current, -1, exe_path,
-                      PROTON_UPDATE_MAX_PATH);
-  STARTUPINFOW si;
-  PROCESS_INFORMATION pi;
-  ZeroMemory(&si, sizeof(si));
-  si.cb = sizeof(si);
-  ZeroMemory(&pi, sizeof(pi));
-  if (!CreateProcessW(exe_path, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si,
-                      &pi)) {
+  wchar_t parameters[128];
+  _snwprintf(parameters, sizeof(parameters) / sizeof(parameters[0]),
+             L"/S /PROTON-UPDATE=1 /PROTON-PID=%lu",
+             (unsigned long)GetCurrentProcessId());
+  SHELLEXECUTEINFOW execute;
+  ZeroMemory(&execute, sizeof(execute));
+  execute.cbSize = sizeof(execute);
+  execute.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
+  execute.lpVerb = L"runas";
+  execute.lpFile = proton_update_pending_installer_path;
+  execute.lpParameters = parameters;
+  execute.nShow = SW_HIDE;
+  if (!ShellExecuteExW(&execute)) {
     proton_update_set_message(error, error_len,
-                              "failed to relaunch the application");
+                              "failed to start the Windows update installer");
     return PROTON_ERR_PLATFORM;
   }
-  CloseHandle(pi.hProcess);
-  CloseHandle(pi.hThread);
+  if (execute.hProcess != NULL) {
+    CloseHandle(execute.hProcess);
+  }
+  CloseHandle(proton_update_pending_installer);
+  proton_update_pending_installer = INVALID_HANDLE_VALUE;
+  proton_update_pending_installer_path[0] = L'\0';
+  /* Keep the commit mutex until this process exits. The installer terminates
+     this exact process tree before replacing the installation, so the OS then
+     releases the mutex without a handoff race. */
   return PROTON_OK;
 }
 

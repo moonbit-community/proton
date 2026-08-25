@@ -22,4 +22,10 @@ void proton_update_set_medium_for_testing(const char *medium);
    apply, or an empty string. */
 const char *proton_update_previous_bundle_path(void);
 
+#if defined(_WIN32)
+/* Discards a prepared installer without launching it. Tests use this to leave
+   their temporary directory recoverable; production has no binding for it. */
+void proton_update_discard_pending_for_testing(void);
+#endif
+
 #endif
