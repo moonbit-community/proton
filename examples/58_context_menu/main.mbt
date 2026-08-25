@@ -241,6 +241,7 @@ fn html() -> String {
 ///|
 async fn main {
   @proton.html("Context Menu", html(), width=900, height=680, debug=true)
+  .identifier("dev.proton.context-menu")
   .commands(register_commands)
   .window_lifecycle(
     on_ready=context => {
