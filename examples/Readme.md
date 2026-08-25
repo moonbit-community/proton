@@ -96,6 +96,8 @@ moon -C examples run 01_run --target native
 - `58_context_menu`: manual Electron-style window context menu review with
   native macOS, Windows, and Linux popups at renderer CSS-pixel coordinates,
   nested submenu items, role items, and menu command events.
+- `59_window_progress`: manual Electron-style window progress review with
+  determinate, indeterminate, cleared, and animated macOS Dock states.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

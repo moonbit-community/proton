@@ -794,6 +794,20 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_progress_bar(
+    proton_engine_window_t *window, double progress, char *error,
+    size_t error_len) {
+  (void)progress;
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_engine_set_message(
+      error, error_len,
+      "window progress is not implemented on Linux");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
 int32_t proton_engine_window_apply(
     proton_engine_window_t *window,
     const proton_engine_window_action_t *action,

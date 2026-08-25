@@ -59,6 +59,7 @@ fn test_window_handle(
   id : String,
   native_id : Int64,
   popup_calls? : Array[String],
+  progress_calls? : Array[Double],
 ) -> WindowHandle {
   let browser = BrowserHandle::{
     id,
@@ -84,6 +85,12 @@ fn test_window_handle(
     set_window_position: fn(_x, _y) {  },
     set_window_always_on_top: fn(_always_on_top) {  },
     set_window_zoom_percent: fn(_zoom_percent) {  },
+    set_window_progress_bar: progress => {
+      match progress_calls {
+        Some(calls) => calls.push(progress)
+        None => ()
+      }
+    },
     popup_window_menu: fn(menu, x, y) {
       match popup_calls {
         Some(calls) => {
@@ -1901,6 +1908,16 @@ test "window context menu routes through the public window handle" {
   let menu = Menu("Context", items=[MenuItem::separator()])
   menu.popup(window, 123, 456)
   debug_inspect(calls, content="[\"popup:Context@123,456\"]")
+}
+
+///|
+test "window progress routes Electron-compatible values through the handle" {
+  let calls : Array[Double] = []
+  let window = test_window_handle("main", 17L, progress_calls=calls)
+  window.set_progress_bar(0.42)
+  window.set_progress_bar(2.0)
+  window.set_progress_bar(-1.0)
+  debug_inspect(calls, content="[0.42, 2, -1]")
 }
 
 ///|
