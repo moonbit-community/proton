@@ -107,45 +107,6 @@ jobs:
       - name: Test bridge bootstrap JS
         run: node --test proton/internal/native/ffi/tests/bridge_bootstrap.test.mjs
 
-      - name: Test Linux updater transaction
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror \
-            -Iproton/internal/native/ffi/include \
-            -Iproton/internal/native/ffi/src \
-            proton/internal/native/ffi/src/proton_update.c \
-            proton/internal/native/ffi/tests/update_linux_test.c \
-            -pthread -o "$RUNNER_TEMP/proton-update-linux-test"
-          "$RUNNER_TEMP/proton-update-linux-test"
-
-      - name: Test Windows updater transaction
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: |
-          $test = Join-Path $env:RUNNER_TEMP "proton-update-windows-test.exe"
-          cl.exe /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS `
-            /Iproton/internal/native/ffi/include `
-            /Iproton/internal/native/ffi/src `
-            proton/internal/native/ffi/src/proton_update.c `
-            proton/internal/native/ffi/tests/update_windows_test.c `
-            shell32.lib `
-            "/Fe:$test"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & $test
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $packageOutput = Join-Path $env:RUNNER_TEMP "proton-update-windows-package"
-          moon -C package run . --target native -- `
-            --executable $test `
-            --product-name "Updater Test" `
-            --identifier "dev.proton.updater-test" `
-            --version "1.0.0" `
-            --format nsis `
-            --output $packageOutput
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $installer = Join-Path $packageOutput "updater-test-setup.exe"
-          if (-not (Test-Path -LiteralPath $installer)) {
-            throw "NSIS updater installer was not produced: $installer"
-          }
-
       - name: Configure CEF runtime and build helper on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
@@ -180,6 +141,23 @@ jobs:
           "PROTON_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Append
           "PROTON_HELPER_PATH=$(Join-Path $helperBin 'cef_process.exe')" | Out-File -FilePath $env:GITHUB_ENV -Append
           Join-Path $runtime "bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Test Windows NSIS packaging
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          $packageOutput = Join-Path $env:RUNNER_TEMP "proton-update-windows-package"
+          moon -C package run . --target native -- `
+            --executable $env:PROTON_HELPER_PATH `
+            --product-name "Updater Test" `
+            --identifier "dev.proton.updater-test" `
+            --version "1.0.0" `
+            --format nsis `
+            --output $packageOutput
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $installer = Join-Path $packageOutput "updater-test-setup.exe"
+          if (-not (Test-Path -LiteralPath $installer)) {
+            throw "NSIS updater installer was not produced: $installer"
+          }
 
       - name: Verify generated files
         run: node scripts/verify_generated.mjs

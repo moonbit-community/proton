@@ -2,7 +2,7 @@
 
 Status: implemented for macOS bundles, Windows NSIS installations, and Linux
 AppImages. The real packaged self-update scenario remains macOS-only; Windows
-and Linux transaction tests run on their native CI hosts.
+and Linux transaction tests run through MoonBit on their native CI hosts.
 
 An updater is a remote code execution channel that the application installs on
 itself deliberately. Every decision here is made from that starting point: the
@@ -660,9 +660,9 @@ three platforms are built on three machines.
   macOS's independently enforced bundle seal and signing-identity comparison.
 - **Staging disk space.** The downloaded artifact and old/new installation
   states coexist briefly; enough free disk space is still required.
-- **Packaged E2E coverage.** Native transaction tests cover Windows and Linux,
-  but the complete signed application update and relaunch scenario is still
-  exercised only on macOS.
+- **Packaged E2E coverage.** Platform-native MoonBit transaction tests cover
+  Windows and Linux, but the complete signed application update and relaunch
+  scenario is still exercised only on macOS.
 - **Dev runs cannot apply.** A development run is not inside an owned install,
   so there is nothing an update could correctly replace.
 

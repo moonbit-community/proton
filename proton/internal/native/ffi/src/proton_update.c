@@ -1,4 +1,4 @@
-#include "proton_update.h"
+#include "proton_native.h"
 
 #include "proton_handle.h"
 
@@ -60,10 +60,6 @@ void proton_update_set_current_bundle_for_testing(const char *path) {
     return;
   }
   snprintf(proton_update_override, sizeof(proton_update_override), "%s", path);
-}
-
-const char *proton_update_previous_bundle_path(void) {
-  return proton_update_previous;
 }
 
 /* An application may only replace an installation it owns.
