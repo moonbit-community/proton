@@ -7,5 +7,5 @@ async fn main {
     height=680,
     debug=true,
   ).capability(@keepawake.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.34-app-keepawake").run_or_abort()
 }

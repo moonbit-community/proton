@@ -1,6 +1,7 @@
 ///|
 /// Failures while resolving framework-owned application paths.
 pub(all) suberror AppPathError {
+  MissingApplicationIdentifier
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
   PlatformProbe(status~ : Int, detail~ : String)
@@ -15,6 +16,7 @@ pub extend AppPathError with Debug::{to_repr}
 ///|
 pub fn AppPathError::message(self : AppPathError) -> String {
   match self {
+    MissingApplicationIdentifier => "application identifier is not configured"
     InvalidIdentifier(identifier~) =>
       "invalid application identifier: " + identifier
     MissingHomeDirectory(platform~) =>
@@ -104,11 +106,16 @@ fn packaged_application_manifest_path() -> String? {
 }
 
 ///|
-/// Resolves the stable per-application directory for native persistent data.
-///
-/// The identifier should match the packaged bundle/application identifier.
+/// Resolves the stable directory for this application's persistent native data.
 /// This function resolves the path but does not create the directory.
-pub fn app_data_dir(identifier : String) -> String raise AppPathError {
+pub fn App::data_dir(self : App) -> String raise AppPathError {
+  app_data_dir_for_identifier(self.application_identifier())
+}
+
+///|
+fn app_data_dir_for_identifier(
+  identifier : String,
+) -> String raise AppPathError {
   let info = @native.runtime_info() catch {
     error => raise PlatformProbe(status=error.status(), detail=error.message())
   }
@@ -124,7 +131,10 @@ pub fn app_data_dir(identifier : String) -> String raise AppPathError {
 
 ///|
 fn browser_data_dir(identifier : String) -> String raise AppPathError {
-  @mbpath.Path(app_data_dir(identifier)).join("browser").normalize().to_string()
+  @mbpath.Path(app_data_dir_for_identifier(identifier))
+  .join("browser")
+  .normalize()
+  .to_string()
 }
 
 ///|

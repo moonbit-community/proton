@@ -9,5 +9,5 @@ async fn main {
     )
     .capability(@proton_extension.capability(sync_math_extension()))
     .capability(@proton_extension.capability(async_add_extension()))
-  app.run_or_abort()
+  app.identifier("dev.proton.39-sync-async-extensions").run_or_abort()
 }

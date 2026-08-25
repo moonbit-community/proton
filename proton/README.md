@@ -10,7 +10,9 @@ workflow — scaffolding, CEF runtime setup, dev mode, and packaging — see the
 
 ```moonbit
 async fn main {
-  @proton.html("Hello", "<h1>Hello</h1>").run_or_abort()
+  @proton.html("Hello", "<h1>Hello</h1>")
+  .identifier("dev.proton.hello")
+  .run_or_abort()
 }
 ```
 
@@ -20,6 +22,12 @@ main thread and only async's waiting half moves to a thread of its own. Nothing
 has to be installed by hand, but the package must import `moonbitlang/async` for
 `async fn main` to be available at all. `@proton.html` accepts optional
 `width?`, `height?`, `debug?`, and `resizable?` arguments.
+
+Every application requires a stable reverse-DNS identity. Managed projects use
+`.load_config()` to load it from `proton.project.json` during development and from
+packaged metadata after distribution. Applications without project metadata use
+`.identifier(...)` as shown above. These sources are mutually exclusive, and
+an explicit identity must match any packaged metadata present at runtime.
 
 ## Entry points
 
@@ -34,6 +42,7 @@ Register typed commands on the app builder:
 
 ```moonbit
 @proton.html("Commands", html)
+.identifier("dev.proton.commands")
 .commands(fn(registrar) raise { registrar.bind(ping_command, ping) })
 .run_or_abort()
 ```

@@ -30,10 +30,9 @@ pub fn flags() -> Array[@argparse.FlagArg] {
 
 ///|
 /// Returns the package options shared by command-line packaging frontends.
-pub fn options() -> Array[@argparse.OptionArg] {
-  [
+pub fn options(include_identifier? : Bool = true) -> Array[@argparse.OptionArg] {
+  let options : Array[@argparse.OptionArg] = [
     OptionArg("product-name", about="Application display name"),
-    OptionArg("identifier", about="Reverse-DNS application identifier"),
     OptionArg("version", about="Application version"),
     OptionArg(
       "format",
@@ -48,6 +47,13 @@ pub fn options() -> Array[@argparse.OptionArg] {
       about="Registered URL scheme; may be repeated",
     ),
   ]
+  if include_identifier {
+    options.insert(
+      1,
+      OptionArg("identifier", about="Reverse-DNS application identifier"),
+    )
+  }
+  options
 }
 
 ///|

@@ -9,5 +9,5 @@ async fn main {
     )
     .capability(@fs.capability([@fs.PermissionRoot(".", ["readdir"])]))
     .capability(@path.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.23-ops-runtime").run_or_abort()
 }

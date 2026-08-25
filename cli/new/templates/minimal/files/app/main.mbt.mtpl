@@ -20,5 +20,6 @@ async fn main {
     #|  </body>
     #|</html>
   @proton.html({{title_mbt}}, html, width={{width}}, height={{height}})
+  .load_config()
   .run_or_abort()
 }

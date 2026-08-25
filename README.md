@@ -63,7 +63,8 @@ builder. The `isomorphic` template also registers typed commands in
 async fn main {
   let backend = @todo.Backend()
   @proton.asset("My App", "frontend/dist/index.html")
-  .single_instance("com.example.my-app")
+  .load_config()
+  .single_instance()
   .commands(fn(registrar) raise { backend.register_commands(registrar) })
   .run_or_abort()
 }
@@ -83,7 +84,7 @@ async fn main {
     width=900,
     height=700,
     debug=true,
-  ).run_or_abort()
+  ).load_config().run_or_abort()
 }
 ```
 
@@ -224,6 +225,7 @@ The declarative path attaches a view to the primary window at startup:
   "browser",
   @proton.view("https://example.com/", width=832, height=720, x=288),
 )
+.load_config()
 .run_or_abort()
 ```
 
@@ -242,8 +244,8 @@ window.remove_view("panel")
 
 See `examples/52_web_contents_view`.
 
-Enable operating-system single-instance routing with a stable application
-identifier by calling `.single_instance("com.example.my-app")`.
+Enable operating-system single-instance routing by calling `.single_instance()`.
+The stable application identity comes from `.load_config()` or `.identifier(...)`.
 
 When another process starts, Proton forwards its protocol URLs and document
 paths to the primary process before creating CEF, then exits. The primary
@@ -252,7 +254,8 @@ activation:
 
 ```moonbit
 @proton.asset("My App", "frontend/dist/index.html")
-.single_instance("com.example.my-app")
+.load_config()
+.single_instance()
 .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
 .on_launch_input(async fn(context, input) noraise {
   match input {
@@ -280,9 +283,8 @@ install operating-system associations; their `proton-package.json` metadata is
 intended for a future installer/package target. Direct launches and associations
 installed by another package manager still use the same forwarding path.
 
-Use `@proton.app_data_dir("com.example.my-app")` to resolve the stable native
-data directory for an application identifier. The function does not create the
-directory.
+Use `app.data_dir()` to resolve the stable native data directory for the
+application's configured identifier. The method does not create the directory.
 
 ## Logging
 
@@ -318,6 +320,7 @@ let locale = @proton.Locale::parse("zh-CN") catch {
   error => abort(error.message())
 }
 @proton.html("My App", html)
+.load_config()
 .locale(locale)
 .run_or_abort()
 ```
@@ -363,6 +366,7 @@ top-level window:
 
 ```moonbit
 @proton.html("Automation", html)
+.load_config()
 .headless()
 .run_or_abort()
 ```
@@ -384,6 +388,7 @@ Generated projects describe their toolchain in `proton.project.json`:
 
 ```json
 {
+  "identifier": "com.example.my-app",
   "backend": {
     "path": ".",
     "package": "backend/app"
@@ -397,6 +402,15 @@ Generated projects describe their toolchain in `proton.project.json`:
   }
 }
 ```
+
+`identifier` is the required application identity shared by the runtime and
+packaging tools. Calling `.load_config()` loads it from this file during development
+and from the sanitized `proton-package.json` inside a packaged application.
+Projects without `proton.project.json` must set the same identity directly with
+`.identifier("com.example.my-app")`; the two sources cannot be combined. If
+such an application is packaged through the lower-level packaging API, Proton
+also verifies at startup that its explicit identity matches the packaged
+metadata.
 
 `backend` selects the MoonBit package that runs the Proton runtime. The
 application entry is declared in MoonBit with `@proton.html`, `url`, `file`, or
@@ -480,14 +494,14 @@ JSON specification; paths in that file are resolved relative to the file.
 
 ### Proton projects
 
-The `package` block in `proton.project.json` contains the static metadata and
-payload inputs needed before the application can run:
+The top-level `identifier` is the application's canonical identity. The
+`package` block contains the remaining static metadata and payload inputs:
 
 ```json
 {
+  "identifier": "com.example.my-app",
   "package": {
     "product_name": "My App",
-    "identifier": "com.example.my-app",
     "version": "1.0.0",
     "formats": ["app", "zip"],
     "resources": ["helpers/worker"],

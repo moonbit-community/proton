@@ -7,5 +7,5 @@ async fn main {
     height=500,
     debug=true,
   ).capability(@proton_extension.capability(extension()))
-  app.run_or_abort()
+  app.identifier("dev.proton.46-asset-sidecar-resources").run_or_abort()
 }

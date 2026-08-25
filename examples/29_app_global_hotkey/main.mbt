@@ -7,5 +7,5 @@ async fn main {
     height=740,
     debug=true,
   ).capability(@global_hotkey.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.29-app-global-hotkey").run_or_abort()
 }

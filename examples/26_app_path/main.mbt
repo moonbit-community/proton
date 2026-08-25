@@ -7,5 +7,5 @@ async fn main {
     height=720,
     debug=true,
   ).capability(@path.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.26-app-path").run_or_abort()
 }

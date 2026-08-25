@@ -139,18 +139,8 @@ pub fn App::locale(self : App, locale : @locale.Locale) -> App {
 ///|
 /// Ensures only one operating-system process owns this application identity.
 /// Later processes forward their URL, document, or reopen activation and exit.
-pub fn App::single_instance(self : App, identifier : String) -> App {
-  let identifier = identifier.trim().to_owned()
-  if identifier == "" {
-    self.validation_errors.push(
-      InvalidSetting(
-        name="single_instance",
-        message="identifier must not be empty",
-      ),
-    )
-  } else {
-    self.single_instance_identifier = Some(identifier)
-  }
+pub fn App::single_instance(self : App, enabled? : Bool = true) -> App {
+  self.single_instance_enabled = enabled
   self
 }
 

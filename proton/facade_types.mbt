@@ -33,7 +33,8 @@ struct App {
   windows : Array[@manifest.AppWindowManifest]
   mut debug_level_value : Int
   mut headless_value : Bool
-  mut single_instance_identifier : String?
+  mut application_identity : ApplicationIdentitySource?
+  mut single_instance_enabled : Bool
   mut explicit_locale : @locale.Locale?
   mut bridge_startup_timeout_value_ms : Int
   mut last_window_closed_policy_value : LastWindowClosedPolicy
@@ -64,6 +65,12 @@ struct App {
   update_handlers : Array[async (PendingUpdate) -> Unit noraise]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
   validation_errors : Array[AppConfigurationError]
+}
+
+///|
+priv enum ApplicationIdentitySource {
+  ProjectConfig(String)
+  Explicit(String)
 }
 
 ///|
@@ -113,7 +120,7 @@ priv struct ResolvedAppConfig {
   manifest : @manifest.AppManifest
   application_name : String
   permission_base_path : String
-  application_identifier : String?
+  application_identifier : String
   instance_identifier : String?
   url_schemes : Array[String]
   document_extensions : Array[String]

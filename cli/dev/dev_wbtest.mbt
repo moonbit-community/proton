@@ -88,10 +88,20 @@ async test "dev selects xlog info on stderr unless the caller overrides it" {
     bin_dir: "/runtime/bin",
     lib_dir: "/runtime/lib",
   }
-  let child = dev_process_env(runtime, "/helper", None, "/project")
+  let child = dev_process_env(
+    runtime,
+    "/helper",
+    None,
+    "/project",
+    "/project/proton.project.json",
+  )
   @debug.assert_eq(
     child.get("MOON_XLOG"),
     Some(@env.get_env_var("MOON_XLOG").unwrap_or("info")),
+  )
+  assert_eq(
+    child.get("PROTON_PROJECT_CONFIG"),
+    Some("/project/proton.project.json"),
   )
   @debug.assert_eq(
     child.get("PROTON_LOG_OUTPUT"),

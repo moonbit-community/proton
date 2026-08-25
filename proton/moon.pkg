@@ -21,6 +21,7 @@ import {
   "moonbit-community/proton/updater",
   "moonbit-community/proton_updater",
   "moonbit-community/proton_contract",
+  "moonbit-community/proton_config",
 }
 
 import {
@@ -40,6 +41,7 @@ options(
     "facade_entry.mbt": [ "native" ],
     "facade_event_loop.mbt": [ "native" ],
     "facade_i18n.mbt": [ "native" ],
+    "facade_identity.mbt": [ "native" ],
     "facade_instance.mbt": [ "native" ],
     "facade_lifecycle.mbt": [ "native" ],
     "facade_locale.mbt": [ "native" ],

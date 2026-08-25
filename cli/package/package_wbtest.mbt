@@ -12,8 +12,8 @@ fn parse_package_matches(args : Array[String]) -> @argparse.Matches raise {
 test "parse package args accepts repeated formats and overrides" {
   let raw = parse_package_args([
     "--package", "desktop", "--format", "app", "--format", "zip", "--format", "dmg",
-    "--output", "dist", "--product-name", "Demo", "--identifier", "com.example.demo",
-    "--version", "1.2.3", "--icon", "app.icns", "--url-scheme", "demo", "--dry-run",
+    "--output", "dist", "--product-name", "Demo", "--version", "1.2.3", "--icon",
+    "app.icns", "--url-scheme", "demo", "--dry-run",
   ])
   @debug.assert_eq(raw.app_package, Some("desktop"))
   @debug.assert_eq(raw.package_args.formats, [
@@ -23,12 +23,24 @@ test "parse package args accepts repeated formats and overrides" {
   ])
   @debug.assert_eq(raw.package_args.output, Some("dist"))
   assert_eq(raw.package_args.product_name, Some("Demo"))
-  assert_eq(raw.package_args.identifier, Some("com.example.demo"))
+  assert_eq(raw.package_args.identifier, None)
   assert_eq(raw.package_args.version, Some("1.2.3"))
   assert_eq(raw.package_args.icons, ["app.icns"])
   assert_eq(raw.package_args.url_schemes, ["demo"])
   assert_false(raw.release)
   assert_true(raw.dry_run)
+}
+
+///|
+test "project packaging rejects an identifier override" {
+  try parse_package_args(["--identifier", "com.example.demo"]) catch {
+    error =>
+      assert_true(
+        error.to_string().contains("unexpected argument '--identifier'"),
+      )
+  } noraise {
+    _ => abort("expected --identifier to be rejected")
+  }
 }
 
 ///|

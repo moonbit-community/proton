@@ -64,7 +64,7 @@ async fn run_web_contents_view_app() -> Result[Unit, String] {
       }
     })
   try {
-    app.run()
+    app.identifier("dev.proton.e2e-web-contents-view").run()
     Ok(())
   } catch {
     error => Err(error.message())

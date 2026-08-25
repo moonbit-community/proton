@@ -83,7 +83,7 @@ async fn run_multi_window_bridge() -> Result[Unit, String] {
       @proton.RendererTarget::entry(window="secondary"),
     ])
   try {
-    app.run()
+    app.identifier("dev.proton.e2e-multi-window").run()
     Ok(())
   } catch {
     error => Err(error.message())

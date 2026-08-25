@@ -12,7 +12,7 @@ pub fn flags() -> Array[@argparse.FlagArg]
 
 pub fn from_matches(@argparse.Matches) -> PackageArguments raise @lib.PackagePlanError
 
-pub fn options() -> Array[@argparse.OptionArg]
+pub fn options(include_identifier? : Bool) -> Array[@argparse.OptionArg]
 
 // Errors
 

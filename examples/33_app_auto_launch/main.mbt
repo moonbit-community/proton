@@ -7,5 +7,5 @@ async fn main {
     height=700,
     debug=true,
   ).capability(@auto_launch.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.33-app-auto-launch").run_or_abort()
 }

@@ -42,5 +42,6 @@ async fn main {
     },
     on_close=fn(browser) { browser.close_devtools() catch { _ => () } },
   )
+  .identifier("dev.proton.54-devtools")
   .run_or_abort()
 }

@@ -242,5 +242,6 @@ async fn main {
       host_slot.val = None
     },
   )
+  .identifier("dev.proton.52-web-contents-view")
   .run_or_abort()
 }

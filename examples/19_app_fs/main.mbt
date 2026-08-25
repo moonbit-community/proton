@@ -16,5 +16,5 @@ async fn main {
       ]),
     )
     .capability(@path.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.19-app-fs").run_or_abort()
 }

@@ -20,7 +20,8 @@ let page =
 ///|
 async fn main {
   @proton.html("Application Activation", page, width=760, height=480)
-  .single_instance("com.example.proton.activation")
+  .identifier("com.example.proton.activation")
+  .single_instance()
   .url_scheme("proton-example")
   .document_extension("proton-example")
   .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)

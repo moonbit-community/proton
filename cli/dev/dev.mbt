@@ -169,7 +169,7 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   }
   let (runtime, helper_path) = ensure_dev_installation(raw.setup_installation)
   let app_env = dev_process_env(
-    runtime, helper_path, frontend_url, project_base,
+    runtime, helper_path, frontend_url, project_base, config_path,
   )
   let frontend_env = dev_frontend_process_env(
     app_env,
@@ -403,6 +403,7 @@ async fn dev_process_env(
   helper_path : String,
   frontend_url : String?,
   resource_dir : String,
+  project_config : String,
 ) -> Map[String, String] {
   let env : Map[String, String] = {
     "PROTON_MODE": "dev",
@@ -413,6 +414,7 @@ async fn dev_process_env(
     "PROTON_RUNTIME_ROOT": runtime.root,
     "PROTON_HELPER_PATH": helper_path,
     "PROTON_RESOURCE_DIR": resource_dir,
+    "PROTON_PROJECT_CONFIG": project_config,
   }
   match frontend_url {
     Some(url) => env["PROTON_FRONTEND_URL"] = url

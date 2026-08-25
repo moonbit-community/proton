@@ -9,5 +9,6 @@ async fn main {
       ]),
     ]),
   )
+  .identifier("dev.proton.18-extension-fs")
   .run_or_abort()
 }
