@@ -17,7 +17,3 @@ import {
 }
 
 supported_targets = "native+wasm"
-
-options(
-  "native-stub": [ "dev_env_block.c" ],
-)

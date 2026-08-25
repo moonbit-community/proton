@@ -457,74 +457,6 @@ fn dev_frontend_process_env(
 }
 
 ///|
-/// Finalizes the environment for the app child process on Windows.
-///
-/// `@process.run` appends the inherited environment block after `extra_env`,
-/// so the block handed to `moon` contains every overridden variable twice.
-/// `moon` launches the app through Rust's process API, which rebuilds the
-/// environment block and keeps the *last* duplicate of each variable; the
-/// inherited original `Path` therefore shadows the prepended runtime `bin`
-/// directory and the app exits immediately with 0xC0000135 because
-/// CEF libraries are not on its DLL search path.
-/// Returning a complete environment with the overrides applied and spawning
-/// with `inherit_env=false` keeps exactly one entry per variable, so the
-/// runtime `bin` directory survives the handoff.
-#cfg(all(platform="windows", target="native"))
-fn dev_app_spawn_env(
-  overrides : Map[String, String],
-) -> (Map[String, String], Bool) {
-  let env = dev_windows_parent_env()
-  for key, value in overrides {
-    // Variable names are case-insensitive on Windows; drop any inherited
-    // spelling of an overridden name so only one entry remains.
-    for existing in env.keys().collect() {
-      if existing != key && existing.to_lower() == key.to_lower() {
-        env.remove(existing)
-      }
-    }
-    env[key] = value
-  }
-  (env, false)
-}
-
-///|
-/// Non-Windows platforms keep the existing behavior: the child inherits the
-/// parent environment and `extra_env` carries the overrides, leaving the
-/// established rpath and loader-variable handling untouched.
-#cfg(any(not(platform="windows"), target="wasm"))
-fn dev_app_spawn_env(
-  overrides : Map[String, String],
-) -> (Map[String, String], Bool) {
-  (overrides, true)
-}
-
-///|
-#cfg(all(platform="windows", target="native"))
-extern "C" fn dev_windows_env_block() -> String = "proton_cli_dev_env_block"
-
-///|
-/// Reads the parent process environment block with the original variable
-/// names and values preserved. The wide-character block is used instead of
-/// `@env.get_env_vars` so non-ASCII values survive the round trip into the
-/// child process environment.
-#cfg(all(platform="windows", target="native"))
-fn dev_windows_parent_env() -> Map[String, String] {
-  let env : Map[String, String] = Map([])
-  for entry in dev_windows_env_block().split("\u{0}") {
-    match entry.split_once("=") {
-      Some((key, value)) =>
-        // Nameless entries are per-drive current-directory records such as
-        // `=C:`; the child defaults them to its own working directory.
-        if key != "" {
-          env[key.to_owned()] = value.to_owned()
-        }
-      None => ()
-    }
-  }
-  env
-}
-
-///|
 fn path_env_key() -> String {
   if @path.sep == '\\' {
     match @env.get_env_var("Path") {
@@ -980,14 +912,7 @@ async fn run_app(
   for key, value in env {
     moon_env[key] = value
   }
-  let (spawn_env, inherit_env) = dev_app_spawn_env(moon_env)
-  let code = @process.run(
-    "moon",
-    moon_args,
-    cwd=root,
-    extra_env=spawn_env,
-    inherit_env~,
-  ) catch {
+  let code = @process.run("moon", moon_args, cwd=root, extra_env=moon_env) catch {
     err => raise Start(role="MoonBit app", detail=@debug.render(Repr(err)))
   }
   code
