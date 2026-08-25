@@ -100,6 +100,10 @@ int proton_engine_runtime_initialized(void) {
   return g_proton_cef_initialized;
 }
 
+proton_engine_window_t *proton_engine_windows_head(void) {
+  return g_proton_engine_windows;
+}
+
 int32_t proton_engine_runtime_remote_debugging_port(void) {
   return g_proton_remote_debugging_port;
 }
@@ -844,17 +848,5 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   *out_ready_mask = ready_mask & interest_mask;
   return PROTON_OK;
 }
-
-// TODO: Implement app menu rendering and command events on Windows.
-int32_t proton_engine_runtime_set_menu(
-    proton_engine_runtime_t *runtime, const proton_menu_bar_t *menu_bar,
-    char *error, size_t error_len) {
-  (void)runtime;
-  (void)menu_bar;
-  proton_engine_set_message(error, error_len,
-                            "native app menus are not implemented on Windows");
-  return PROTON_ERR_UNSUPPORTED;
-}
-
 
 #endif

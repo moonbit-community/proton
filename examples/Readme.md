@@ -94,8 +94,8 @@ moon -C examples run 01_run --target native
   closes, then recreates the main window when a second launch delivers
   `Reopen`; this is the lifecycle used by messaging and synchronization apps.
 - `58_context_menu`: manual Electron-style window context menu review with
-  renderer CSS-pixel coordinates, nested submenu items, role items, and menu
-  command events.
+  native macOS, Windows, and Linux popups at renderer CSS-pixel coordinates,
+  nested submenu items, role items, and menu command events.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only
