@@ -1,10 +1,10 @@
 #if defined(__APPLE__)
 
-#include "menu.h"
+#include "mac_menu.h"
 
 #include "../../proton_event.h"
 #include "../../proton_engine.h"
-#include "window.h"
+#include "mac_window.h"
 
 #import <Cocoa/Cocoa.h>
 
