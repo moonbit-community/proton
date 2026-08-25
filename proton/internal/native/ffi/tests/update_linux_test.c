@@ -47,6 +47,17 @@ static void read_text(const char *path, char *out, size_t out_len) {
   out[length] = '\0';
 }
 
+static void append_path(const char *path, const char *suffix, char *out,
+                        size_t out_len) {
+  size_t path_len = strlen(path);
+  size_t suffix_len = strlen(suffix);
+  if (path_len >= out_len || suffix_len >= out_len - path_len) {
+    fail("a test path is too long");
+  }
+  memcpy(out, path, path_len);
+  memcpy(out + path_len, suffix, suffix_len + 1);
+}
+
 int main(void) {
   char root[] = "/tmp/proton-update-linux-XXXXXX";
   if (mkdtemp(root) == NULL) {
@@ -56,8 +67,8 @@ int main(void) {
   char revision[TEST_PATH_CAPACITY];
   char lock[TEST_PATH_CAPACITY];
   snprintf(appimage, sizeof(appimage), "%s/Demo.AppImage", root);
-  snprintf(revision, sizeof(revision), "%s.proton-revision", appimage);
-  snprintf(lock, sizeof(lock), "%s.proton-update.lock", appimage);
+  append_path(appimage, ".proton-revision", revision, sizeof(revision));
+  append_path(appimage, ".proton-update.lock", lock, sizeof(lock));
   write_text(appimage, "release-1");
   write_text(revision, "1\n");
   proton_update_set_current_bundle_for_testing(appimage);

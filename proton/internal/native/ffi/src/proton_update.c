@@ -306,6 +306,19 @@ static int proton_update_parent_path(const char *path, char *out,
   return 1;
 }
 
+/* Appends a fixed suffix without accepting a truncated filesystem path. */
+static int proton_update_append_path(const char *path, const char *suffix,
+                                     char *out, size_t out_len) {
+  size_t path_len = strlen(path);
+  size_t suffix_len = strlen(suffix);
+  if (path_len >= out_len || suffix_len >= out_len - path_len) {
+    return 0;
+  }
+  memcpy(out, path, path_len);
+  memcpy(out + path_len, suffix, suffix_len + 1);
+  return 1;
+}
+
 /* Reads a decimal revision file. A missing file is revision zero; malformed
    contents are an error because silently resetting the rollback anchor would
    make every signed historical release appear current again. */
@@ -344,8 +357,8 @@ static int proton_update_read_revision_file(const char *path,
 
 static int proton_update_revision_sidecar(const char *appimage_path, char *out,
                                           size_t out_len) {
-  int written = snprintf(out, out_len, "%s.proton-revision", appimage_path);
-  return written >= 0 && (size_t)written < out_len;
+  return proton_update_append_path(appimage_path, ".proton-revision", out,
+                                   out_len);
 }
 
 /* Atomically advances the mutable cross-process coordination cache. The
@@ -359,8 +372,7 @@ static int proton_update_write_revision_sidecar(const char *appimage_path,
     return 0;
   }
   char next[PROTON_UPDATE_MAX_PATH];
-  int next_written = snprintf(next, sizeof(next), "%s.next", sidecar);
-  if (next_written < 0 || (size_t)next_written >= sizeof(next)) {
+  if (!proton_update_append_path(sidecar, ".next", next, sizeof(next))) {
     return 0;
   }
   (void)unlink(next);
@@ -406,9 +418,9 @@ static int proton_update_read_revision(const char *appimage_path,
         return 0;
       }
       char embedded[PROTON_UPDATE_MAX_PATH];
-      int written = snprintf(embedded, sizeof(embedded),
-                             "%s/Resources/proton-update-revision", usr_dir);
-      if (written < 0 || (size_t)written >= sizeof(embedded)) {
+      if (!proton_update_append_path(
+              usr_dir, "/Resources/proton-update-revision", embedded,
+              sizeof(embedded))) {
         return 0;
       }
       if (!proton_update_read_revision_file(embedded, &packaged_revision)) {
@@ -436,8 +448,12 @@ static int32_t proton_update_acquire_commit_lock(const char *appimage_path,
                                                  int *out_fd, char *error,
                                                  int32_t error_len) {
   char lock_path[PROTON_UPDATE_MAX_PATH];
-  snprintf(lock_path, sizeof(lock_path), "%s.proton-update.lock",
-           appimage_path);
+  if (!proton_update_append_path(appimage_path, ".proton-update.lock",
+                                 lock_path, sizeof(lock_path))) {
+    proton_update_set_message(error, error_len,
+                              "the update commit lock path is too long");
+    return PROTON_ERR_PLATFORM;
+  }
   int fd = open(lock_path, O_WRONLY | O_CREAT | O_CLOEXEC | O_NOFOLLOW,
                 S_IRUSR | S_IWUSR);
   if (fd < 0) {
@@ -539,9 +555,14 @@ int32_t proton_update_stage_begin_revision(
   slot->expected_size = expected_size;
   slot->written_size = 0;
   slot->target_revision = target_revision;
-  snprintf(slot->staging, sizeof(slot->staging),
-           "%s/.proton-update-XXXXXX", stage_dir);
   pthread_mutex_unlock(&g_update_stage_mutex);
+  if (!proton_update_append_path(stage_dir, "/.proton-update-XXXXXX",
+                                 slot->staging, sizeof(slot->staging))) {
+    proton_update_set_message(error, error_len,
+                              "the update staging path is too long");
+    proton_update_stage_release(slot, 0);
+    return PROTON_ERR_PLATFORM;
+  }
   int fd = mkstemp(slot->staging);
   if (fd < 0) {
     proton_update_set_message(error, error_len,
@@ -620,6 +641,17 @@ int32_t proton_update_stage_install_outcome(
     proton_update_stage_release(slot, 1);
     return PROTON_ERR_PLATFORM;
   }
+  char staging_path[PROTON_UPDATE_MAX_PATH];
+  char previous_path[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_append_path(appimage_path, ".proton-next", staging_path,
+                                 sizeof(staging_path)) ||
+      !proton_update_append_path(appimage_path, ".proton-previous",
+                                 previous_path, sizeof(previous_path))) {
+    proton_update_set_message(error, error_len,
+                              "the AppImage update path is too long");
+    proton_update_stage_release(slot, 1);
+    return PROTON_ERR_PLATFORM;
+  }
   /* Flush the staging file before rename. */
   if (fsync(slot->fd) != 0) {
     proton_update_set_message(error, error_len,
@@ -690,9 +722,6 @@ int32_t proton_update_stage_install_outcome(
   close(slot->fd);
   slot->fd = -1;
   /* Move the staging file to a visible name beside the AppImage. */
-  char staging_path[PROTON_UPDATE_MAX_PATH];
-  snprintf(staging_path, sizeof(staging_path), "%s.proton-next",
-           appimage_path);
   (void)unlink(staging_path);
   if (rename(slot->staging, staging_path) != 0) {
     proton_update_set_message(error, error_len,
@@ -711,9 +740,6 @@ int32_t proton_update_stage_install_outcome(
     return PROTON_ERR_PLATFORM;
   }
   /* Move the old AppImage aside. */
-  char previous_path[PROTON_UPDATE_MAX_PATH];
-  snprintf(previous_path, sizeof(previous_path), "%s.proton-previous",
-           appimage_path);
   (void)unlink(previous_path);
   if (rename(appimage_path, previous_path) != 0) {
     (void)unlink(staging_path);
@@ -808,9 +834,8 @@ int32_t proton_update_cleanup_previous(char *error,
     return PROTON_OK;
   }
   char previous_path[PROTON_UPDATE_MAX_PATH];
-  int written = snprintf(previous_path, sizeof(previous_path),
-                         "%s.proton-previous", appimage_path);
-  if (written < 0 || (size_t)written >= sizeof(previous_path)) {
+  if (!proton_update_append_path(appimage_path, ".proton-previous",
+                                 previous_path, sizeof(previous_path))) {
     proton_update_set_message(error, error_len,
                               "the previous AppImage path is too long");
     return PROTON_ERR_PLATFORM;
