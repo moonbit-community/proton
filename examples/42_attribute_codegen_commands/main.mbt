@@ -7,5 +7,5 @@ async fn main {
     height=560,
     debug=true,
   ).capability(@proton_extension.capability(extension()))
-  app.run_or_abort()
+  app.identifier("dev.proton.42-attribute-codegen-commands").run_or_abort()
 }

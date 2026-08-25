@@ -62,7 +62,7 @@ pub fn command() -> @argparse.Command {
     @argparse.OptionArg("package", about="MoonBit application package"),
     @argparse.OptionArg("config", about="Proton project config"),
   ]
-  options.append(@package_args.options())
+  options.append(@package_args.options(include_identifier=false))
   options.append([
     @argparse.OptionArg(
       "updater-base-url",
@@ -202,9 +202,7 @@ async fn build_package_plan(
   let product_name = @packager.validate_product_name(
     raw.package_args.product_name.unwrap_or(package_config.product_name),
   )
-  let identifier = @packager.validate_identifier(
-    raw.package_args.identifier.unwrap_or(package_config.identifier),
-  )
+  let identifier = @packager.validate_identifier(project.identifier())
   let configured_formats = if raw.package_args.formats.length() > 0 {
     raw.package_args.formats.copy()
   } else if package_config.formats.length() > 0 {

@@ -50,5 +50,6 @@ async fn main {
   .on_download_event(fn(_browser, event) {
     println("download \{event.id}: \{event.state} \{event.percent}%")
   })
+  .identifier("dev.proton.50-browser-control")
   .run_or_abort()
 }

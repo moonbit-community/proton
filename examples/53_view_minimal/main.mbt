@@ -22,5 +22,6 @@ async fn main {
     "browser",
     @proton.view("https://example.com/", width=832, height=720, x=288),
   )
+  .identifier("dev.proton.53-view-minimal")
   .run_or_abort()
 }

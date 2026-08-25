@@ -6,6 +6,7 @@ async fn main {
       width=1180,
       height=780,
     )
+    .load_config()
     .debug()
     .capability(@dialog.capability())
     .capability(@clipboard.capability())

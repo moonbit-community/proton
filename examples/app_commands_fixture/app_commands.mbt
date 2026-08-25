@@ -195,5 +195,5 @@ pub async fn run() -> Unit {
     height=680,
     debug=true,
   ).capability(@proton_extension.capability(app_commands_extension()))
-  app.run_or_abort()
+  app.identifier("dev.proton.app-commands-fixture").run_or_abort()
 }

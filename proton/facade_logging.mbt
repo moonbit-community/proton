@@ -1,5 +1,7 @@
 ///|
-async fn start_runtime_logging() -> @logging.RuntimeLogging raise AppRunError {
+async fn start_runtime_logging(
+  application_identifier : String,
+) -> @logging.RuntimeLogging raise AppRunError {
   let config = @xlog.Config::from_env(level=@xlog.Warn) catch {
     error =>
       raise LoggingInitializationFailed(
@@ -7,20 +9,20 @@ async fn start_runtime_logging() -> @logging.RuntimeLogging raise AppRunError {
           xlog_config_error_message(error),
       )
   }
-  let packaged_identifier = packaged_application_identifier()
+  let packaged = packaged_application_manifest_path() is Some(_)
   let output = match @env.get_env_var("PROTON_LOG_OUTPUT") {
-    None => if packaged_identifier is Some(_) { "file" } else { "stderr" }
+    None => if packaged { "file" } else { "stderr" }
     Some(value) => value.trim().to_owned().to_lower()
   }
   let selected = match output {
     "stderr" => @logging.Output::Stderr
     "file" => {
-      guard packaged_identifier is Some(identifier) else {
+      guard packaged else {
         raise LoggingInitializationFailed(
           detail="file logging requires packaged application metadata",
         )
       }
-      let directory = app_log_dir(identifier) catch {
+      let directory = app_log_dir(application_identifier) catch {
         error => raise LoggingInitializationFailed(detail=error.message())
       }
       ensure_log_directory(directory)
@@ -40,42 +42,6 @@ async fn start_runtime_logging() -> @logging.RuntimeLogging raise AppRunError {
     error =>
       raise LoggingInitializationFailed(detail=@debug.render(Repr(error)))
   }
-}
-
-///|
-async fn packaged_application_identifier() -> String? raise AppRunError {
-  guard packaged_application_manifest_path() is Some(path) else { return None }
-  let source = @async_fs.read_file(path).text() catch {
-    error =>
-      raise LoggingInitializationFailed(
-        detail="cannot read packaged application metadata: " + error.to_string(),
-      )
-  }
-  Some(package_identifier_from_json(source))
-}
-
-///|
-fn package_identifier_from_json(source : String) -> String raise AppRunError {
-  let json = @json.parse(source) catch {
-    error =>
-      raise LoggingInitializationFailed(
-        detail="invalid packaged application metadata: " + error.to_string(),
-      )
-  }
-  guard json is Object(fields) else {
-    raise LoggingInitializationFailed(
-      detail="invalid packaged application metadata: expected an object",
-    )
-  }
-  guard fields.get("identifier") is Some(String(identifier)) else {
-    raise LoggingInitializationFailed(
-      detail="invalid packaged application metadata: identifier is required",
-    )
-  }
-  validate_app_identifier(identifier) catch {
-    error => raise LoggingInitializationFailed(detail=error.message())
-  }
-  identifier
 }
 
 ///|

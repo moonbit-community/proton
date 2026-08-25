@@ -43,12 +43,15 @@ fn decode_project_config(
 ) -> ProjectConfig raise ProjectConfigError {
   guard json is Object(fields) else { raise InvalidRoot }
   validate_object_fields(fields, "proton.project.json", [
-    "backend", "frontend", "package",
+    "identifier", "backend", "frontend", "package",
   ])
+  let identifier = validate_application_identifier(
+    required_string(fields, "identifier", "identifier"),
+  )
   let backend = decode_backend(fields, base_dir)
   let frontend = decode_frontend(fields, base_dir)
   let package_config = decode_package(fields, base_dir)
-  ProjectConfig(base_dir, backend~, frontend~, package_config~)
+  ProjectConfig(base_dir, identifier, backend~, frontend~, package_config~)
 }
 
 ///|
@@ -127,8 +130,8 @@ fn decode_package(
     None => None
     Some(Object(values)) => {
       validate_object_fields(values, "package", [
-        "product_name", "identifier", "version", "formats", "icons", "resources",
-        "sign", "url_schemes", "document_types", "output",
+        "product_name", "version", "formats", "icons", "resources", "sign", "url_schemes",
+        "document_types", "output",
       ])
       let formats = optional_string_array(values, "formats", "package.formats")
       let icons = rebased_paths(
@@ -148,7 +151,6 @@ fn decode_package(
       Some(
         ProjectPackageConfig(
           required_string(values, "product_name", "package.product_name"),
-          required_string(values, "identifier", "package.identifier"),
           required_string(values, "version", "package.version"),
           formats~,
           icons~,
@@ -172,6 +174,48 @@ fn decode_package(
         expectation="must be an object",
       )
   }
+}
+
+///|
+/// Validates and trims a canonical reverse-DNS application identifier.
+pub fn validate_application_identifier(
+  value : String,
+) -> String raise ProjectConfigError {
+  let value = value.trim().to_owned()
+  let components : Array[StringView] = value.split(".").collect()
+  guard components.length() >= 2 else {
+    raise InvalidField(
+      path="identifier",
+      expectation="must be a reverse-DNS application identifier",
+    )
+  }
+  for component in components {
+    guard component.length() > 0 else {
+      raise InvalidField(
+        path="identifier",
+        expectation="must not contain an empty component",
+      )
+    }
+    let mut at_start = true
+    for char in component {
+      if at_start {
+        guard char.is_ascii_alphabetic() || char.is_ascii_digit() else {
+          raise InvalidField(
+            path="identifier",
+            expectation="components must start with an ASCII letter or digit",
+          )
+        }
+        at_start = false
+      }
+      guard char.is_ascii_alphabetic() || char.is_ascii_digit() || char == '-' else {
+        raise InvalidField(
+          path="identifier",
+          expectation="must contain only ASCII letters, digits, hyphens, and dots",
+        )
+      }
+    }
+  }
+  value
 }
 
 ///|

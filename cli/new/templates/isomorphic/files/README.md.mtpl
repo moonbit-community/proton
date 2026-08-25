@@ -43,13 +43,14 @@ proton_cli build -- --release
 
 ## Package
 
-The `package` block in `proton.project.json` contains static packaging metadata:
+The top-level `identifier` is the application's canonical identity. The
+`package` block contains the remaining static packaging metadata:
 
 ```json
 {
+  "identifier": "com.example.my-app",
   "package": {
     "product_name": "My App",
-    "identifier": "com.example.my-app",
     "version": "0.1.0",
     "formats": ["app", "zip"],
     "output": "dist"

@@ -141,7 +141,6 @@ pub fn ProjectDocumentType::extensions(
 /// Static metadata and payload inputs consumed by `proton_cli package`.
 pub(all) struct ProjectPackageConfig {
   product_name : String
-  identifier : String
   version : String
   formats : Array[String]
   icons : Array[String]
@@ -161,7 +160,6 @@ pub extend ProjectPackageConfig with Debug::{to_repr}
 ///|
 pub fn ProjectPackageConfig::ProjectPackageConfig(
   product_name : String,
-  identifier : String,
   version : String,
   formats? : Array[String] = [],
   icons? : Array[String] = [],
@@ -173,7 +171,6 @@ pub fn ProjectPackageConfig::ProjectPackageConfig(
 ) -> ProjectPackageConfig {
   ProjectPackageConfig::{
     product_name,
-    identifier,
     version,
     formats: formats.copy(),
     icons: icons.copy(),
@@ -238,10 +235,10 @@ pub fn ProjectPackageConfig::output(self : ProjectPackageConfig) -> String {
 }
 
 ///|
-/// CLI-only project description. Application runtime behavior belongs in
-/// MoonBit code and is intentionally absent from this type.
+/// Project description shared by Proton tooling and managed applications.
 pub(all) struct ProjectConfig {
   base_dir : String
+  identifier : String
   backend : ProjectBackendConfig?
   frontend : ProjectFrontendConfig?
   package_config : ProjectPackageConfig?
@@ -256,16 +253,23 @@ pub extend ProjectConfig with Debug::{to_repr}
 ///|
 pub fn ProjectConfig::ProjectConfig(
   base_dir : String,
+  identifier : String,
   backend? : ProjectBackendConfig? = None,
   frontend? : ProjectFrontendConfig? = None,
   package_config? : ProjectPackageConfig? = None,
 ) -> ProjectConfig {
-  ProjectConfig::{ base_dir, backend, frontend, package_config, }
+  ProjectConfig::{ base_dir, identifier, backend, frontend, package_config, }
 }
 
 ///|
 pub fn ProjectConfig::base_dir(self : ProjectConfig) -> String {
   self.base_dir
+}
+
+///|
+/// Returns the canonical reverse-DNS application identifier.
+pub fn ProjectConfig::identifier(self : ProjectConfig) -> String {
+  self.identifier
 }
 
 ///|

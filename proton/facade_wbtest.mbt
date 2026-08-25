@@ -268,7 +268,7 @@ test "the event loop is installed during process initialization" {
 
 ///|
 test "bridge startup timeout is finite and configurable" {
-  let default_app = html("Test", "<html></html>")
+  let default_app = html("Test", "<html></html>").identifier("dev.proton.test")
   inspect(default_app.bridge_startup_timeout_value_ms, content="30000")
   let configured = default_app.bridge_startup_timeout_ms(2500)
   inspect(configured.bridge_startup_timeout_value_ms, content="2500")
@@ -1552,19 +1552,66 @@ test "typed facade appends validated secondary windows" {
 }
 
 ///|
-test "single instance builder validates and resolves an inline identity" {
-  let invalid = html("App", "<main>App</main>").single_instance(" ")
+test "application identity is required and single instance reuses it" {
+  let missing = html("App", "<main>App</main>")
+  guard missing.validation_error()
+    is Some(InvalidSetting(name="identifier", ..)) else {
+    fail("expected a missing application identity")
+  }
+  let invalid = html("App", "<main>App</main>").identifier(" ")
   assert_true(invalid.validation_error() is Some(_))
   let resolved = html("App", "<main>App</main>")
-    .single_instance("dev.proton.inline")
+    .identifier("dev.proton.inline")
+    .single_instance()
     .resolved_app_config()
-  assert_eq(resolved.application_identifier, Some("dev.proton.inline"))
+  assert_eq(resolved.application_identifier, "dev.proton.inline")
   assert_eq(resolved.instance_identifier, Some("dev.proton.inline"))
+
+  let not_single_instance = html("App", "<main>App</main>")
+    .identifier("dev.proton.inline")
+    .single_instance(enabled=false)
+    .resolved_app_config()
+  assert_eq(not_single_instance.instance_identifier, None)
+}
+
+///|
+test "application identity sources cannot be combined" {
+  let app = html("App", "<main>App</main>")
+    .identifier("dev.proton.inline")
+    .identifier("dev.proton.other")
+  assert_true(app.validation_error() is Some(_))
+
+  let managed = html("App", "<main>App</main>")
+  managed.application_identity = Some(ProjectConfig("dev.proton.managed"))
+  let combined = managed.identifier("dev.proton.inline")
+  guard combined.validation_error()
+    is Some(InvalidSetting(name="identifier", message~)) else {
+    fail("expected duplicate application identity sources")
+  }
+  assert_true(message.contains("either .load_config() or .identifier(...)"))
+}
+
+///|
+test "explicit identity must match packaged application metadata" {
+  debug_inspect(
+    verify_packaged_application_identifier(
+      "dev.proton.inline", "dev.proton.inline",
+    ),
+    content="Ok(\"dev.proton.inline\")",
+  )
+  guard verify_packaged_application_identifier(
+      "dev.proton.inline", "dev.proton.packaged",
+    )
+    is Err(InvalidSetting(name="identifier", message~)) else {
+    fail("expected packaged identity mismatch")
+  }
+  assert_true(message.contains("dev.proton.packaged"))
 }
 
 ///|
 test "activation associations are declared by application code" {
   let app = html("App", "<main>App</main>")
+    .identifier("dev.proton.activation")
     .url_scheme("dev.proton")
     .document_extension(".md")
   let resolved = app.resolved_app_config()
@@ -1724,33 +1771,32 @@ test "application log directory follows platform conventions" {
 }
 
 ///|
-test "packaged logging reads the package identifier" {
+test "managed identity reads the packaged identifier" {
   let metadata =
     #|{
     #|  "identifier": "com.example.app",
     #|  "product_name": "Example"
     #|}
-  inspect(package_identifier_from_json(metadata), content="com.example.app")
+  debug_inspect(
+    packaged_application_identifier_from_json(metadata),
+    content="Ok(\"com.example.app\")",
+  )
 }
 
 ///|
-test "packaged logging rejects metadata without an identifier" {
+test "managed identity rejects packaged metadata without an identifier" {
   let metadata : Json = { "product_name": "Example" }
-  try ignore(package_identifier_from_json(metadata.stringify())) catch {
-    LoggingInitializationFailed(detail~) =>
-      inspect(
-        detail,
-        content="invalid packaged application metadata: identifier is required",
-      )
-    _ => fail("expected packaged metadata validation to fail")
-  } noraise {
-    _ => fail("expected packaged metadata validation to fail")
+  guard packaged_application_identifier_from_json(metadata.stringify())
+    is Err(InvalidSetting(message~, ..)) else {
+    fail("expected packaged metadata validation to fail")
   }
+  inspect(message, content="packaged application metadata requires identifier")
 }
 
 ///|
 fn updater_test_channel(check_on_launch : Bool) -> ResolvedUpdateChannel? {
   url("Test", "https://example.com/")
+  .identifier("dev.proton.update-test")
   .update_channel(
     "https://updates.example.com/latest.json",
     ["rsa-sha256:ab:010001"],

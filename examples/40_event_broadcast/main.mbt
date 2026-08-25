@@ -123,5 +123,5 @@ async fn main {
     height=620,
     debug=true,
   ).capability(@proton_extension.capability(ticker_extension()))
-  app.run_or_abort()
+  app.identifier("dev.proton.40-event-broadcast").run_or_abort()
 }

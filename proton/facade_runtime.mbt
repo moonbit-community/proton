@@ -7,7 +7,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     None => ()
   }
   let resolved = self.resolved_app_config()
-  let logging = start_runtime_logging()
+  let logging = start_runtime_logging(resolved.application_identifier)
   defer logging.close()
   @xlog.info(category="proton.runtime") <?
     { "message": "application runtime starting" }
@@ -439,13 +439,7 @@ fn resolve_browser_data_dir(
   config : ResolvedAppConfig,
 ) -> String? raise AppConfigurationError {
   guard config.instance_identifier is Some(_) else { return None }
-  guard config.application_identifier is Some(identifier) else {
-    raise InvalidSetting(
-      name="identifier",
-      message="is required for persistent browser storage",
-    )
-  }
-  let path = browser_data_dir(identifier) catch {
+  let path = browser_data_dir(config.application_identifier) catch {
     error => raise InvalidSetting(name="identifier", message=error.message())
   }
   Some(path)

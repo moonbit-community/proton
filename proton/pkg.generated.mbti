@@ -14,8 +14,6 @@ import {
 }
 
 // Values
-pub fn app_data_dir(String) -> String raise AppPathError
-
 pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub async fn check_for_update() -> UpdateCheck
@@ -72,6 +70,7 @@ pub fn AppEntryError::to_repr(Self) -> @debug.Repr
 pub fn AppEntryError::to_string(Self) -> String
 
 pub(all) suberror AppPathError {
+  MissingApplicationIdentifier
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
   PlatformProbe(status~ : Int, detail~ : String)
@@ -171,6 +170,7 @@ pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) ->
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise, targets? : Array[RendererTarget]) -> Self
+pub fn App::data_dir(Self) -> String raise AppPathError
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
 pub fn App::document_extension(Self, String) -> Self
@@ -179,7 +179,9 @@ pub fn App::entry_file(Self, String) -> Self
 pub fn App::entry_html(Self, String) -> Self
 pub fn App::entry_url(Self, String) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
+pub fn App::identifier(Self, String) -> Self
 pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
+pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
@@ -195,7 +197,7 @@ pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDec
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
-pub fn App::single_instance(Self, String) -> Self
+pub fn App::single_instance(Self, enabled? : Bool) -> Self
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, TitlebarStyle) -> Self

@@ -37,7 +37,8 @@ let page =
 ///|
 async fn main {
   @proton.html("Background Residency", page, width=760, height=480)
-  .single_instance("com.example.proton.background-residency")
+  .identifier("com.example.proton.background-residency")
+  .single_instance()
   .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
   .on_launch_input(async fn(context, input) noraise {
     if input is Reopen && context.windows().find("main") is None {

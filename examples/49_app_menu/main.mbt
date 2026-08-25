@@ -52,5 +52,6 @@ async fn main {
 
   @proton.html("App Menu", html, width=900, height=640, debug=true)
   .menu(menu_bar())
+  .identifier("dev.proton.49-app-menu")
   .run_or_abort()
 }

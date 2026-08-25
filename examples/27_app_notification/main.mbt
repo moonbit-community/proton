@@ -7,5 +7,5 @@ async fn main {
     height=720,
     debug=true,
   ).capability(@notification.capability())
-  app.run_or_abort()
+  app.identifier("dev.proton.27-app-notification").run_or_abort()
 }

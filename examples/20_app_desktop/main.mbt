@@ -10,5 +10,5 @@ async fn main {
     .capability(@dialog.capability())
     .capability(@clipboard.capability())
     .capability(@fs.capability([@fs.PermissionRoot(".", ["write_file"])]))
-  app.run_or_abort()
+  app.identifier("dev.proton.20-app-desktop").run_or_abort()
 }

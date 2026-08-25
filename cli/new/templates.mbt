@@ -60,7 +60,6 @@ priv struct TemplateContext {
   frontend_module : String
   backend_module : String
   identifier : String
-  identifier_mbt : String
   width : Int
   height : Int
   proton_version : String
@@ -120,7 +119,6 @@ fn template_context(
     frontend_module: module_prefix + "_frontend",
     backend_module: module_prefix + "_backend",
     identifier,
-    identifier_mbt: mbt_string(identifier),
     width,
     height,
     proton_version: default_proton_version,
@@ -147,7 +145,6 @@ fn template_vars(context : TemplateContext) -> Array[TemplateVar] {
     { name: "shared_module", value: context.shared_module, },
     { name: "frontend_module", value: context.frontend_module, },
     { name: "backend_module", value: context.backend_module, },
-    { name: "identifier_mbt", value: context.identifier_mbt, },
     { name: "width", value: context.width.to_string(), },
     { name: "height", value: context.height.to_string(), },
     { name: "proton_version", value: context.proton_version, },
@@ -236,7 +233,6 @@ fn project_config_file(
 ) -> PlannedFile {
   let package_config : Json = {
     "product_name": context.title,
-    "identifier": context.identifier,
     "version": "0.1.0",
     "formats": ["app", "zip"],
     "output": "dist",
@@ -244,11 +240,13 @@ fn project_config_file(
   let config : Json = match template {
     "minimal" =>
       {
+        "identifier": context.identifier,
         "backend": { "path": ".", "package": "app" },
         "package": package_config,
       }
     "isomorphic" =>
       {
+        "identifier": context.identifier,
         "backend": { "path": ".", "package": "backend/app" },
         "frontend": {
           "path": "frontend",
