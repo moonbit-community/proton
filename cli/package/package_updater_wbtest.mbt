@@ -103,6 +103,7 @@ test "updater metadata selects an artifact returned by the packager" {
     ),
     Some("C:\\dist\\draw-setup.exe"),
   )
+  assert_eq(updater_artifact_path(["C:\\dist\\draw.zip"], "win32-x64"), None)
   assert_eq(
     updater_artifact_path(["/tmp/draw.AppImage"], "linux-x64"),
     Some("/tmp/draw.AppImage"),

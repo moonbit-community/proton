@@ -23,7 +23,7 @@ base="https://updates.example.com/"
 case "$(uname -s)" in
 Darwin) ;;
 *)
-  echo "the updater is implemented on macOS only" >&2
+  echo "this packaged self-update scenario runs on macOS only" >&2
   exit 1
   ;;
 esac

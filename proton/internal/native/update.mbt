@@ -70,8 +70,8 @@ fn update_check(
 ///|
 /// Starts a private update staging transaction in an explicit directory.
 ///
-/// Application updates should use `update_stage_begin_for_current_app` so the
-/// stage and installed bundle are guaranteed to be on the same filesystem.
+/// Application updates should use `update_stage_begin_for_current_app` so each
+/// platform selects the correct staging location.
 pub fn update_stage_begin(
   parent_dir : String,
   expected_size : Int64,
@@ -94,11 +94,12 @@ pub fn update_stage_begin(
 }
 
 ///|
-/// Starts a private update stage beside the running application bundle.
+/// Starts a private update stage in the platform's safe location.
 ///
-/// Keeping the stage on the installed application's filesystem makes the
-/// final bundle replacement an atomic rename even when the application runs
-/// from an external volume.
+/// Platforms that replace an artifact with rename keep it on the installed
+/// application's filesystem. Windows instead stages its installer in a
+/// writable per-user directory and keeps the authenticated file locked until
+/// elevation.
 pub fn update_stage_begin_for_current_app(
   expected_size : Int64,
   target_revision : UInt64,
@@ -126,11 +127,11 @@ pub fn update_current_revision() -> UInt64 raise NativeError {
 }
 
 ///|
-/// Removes older bundles retained by completed application updates.
+/// Removes older artifacts retained by completed application updates.
 ///
 /// Call this only after the replacement has completed application startup.
-/// Native code restricts deletion to Proton-reserved sibling names with the
-/// same signing identity and an older update revision.
+/// Native code restricts deletion to Proton-reserved sibling names. Platforms
+/// with a code-signed bundle also validate its identity and revision.
 pub fn update_cleanup_previous() -> Unit raise NativeError {
   let message = FixedArray::make(update_message_capacity, b'\x00')
   update_check(
@@ -200,11 +201,10 @@ pub fn UpdateStage::abort(self : UpdateStage) -> Unit raise NativeError {
 }
 
 ///|
-/// Installs an authenticated update archive over the running application.
+/// Consumes an authenticated update artifact for the running application.
 ///
-/// Expansion, bundle signature validation, and replacement form one native
-/// transaction. The expanded bundle path never crosses the FFI boundary, so
-/// another task cannot replace the validated bundle before installation.
+/// The platform owns the artifact through replacement or installer handoff;
+/// its path never crosses the FFI boundary.
 pub fn update_install(
   archive : Bytes,
   parent_dir : String,
@@ -223,7 +223,7 @@ pub fn update_install(
 }
 
 ///|
-/// Starts the replaced application.
+/// Finishes the prepared replacement and starts the new application.
 ///
 /// The caller is expected to exit afterwards: two copies of the same
 /// application running against the same state is worse than a moment with

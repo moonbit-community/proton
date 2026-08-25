@@ -1,7 +1,9 @@
 # Self-update scenario
 
 A signed application installs a signed release of itself and restarts into the
-new version. macOS only, which is where the updater is implemented.
+new version. This packaged application scenario is macOS-only; the Windows
+installer and Linux AppImage transactions have platform-native regression tests
+in `proton/internal/native/update_wbtest.mbt`.
 
 ```sh
 moon -C e2e build --target native

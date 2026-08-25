@@ -96,7 +96,12 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|SetCompressor /SOLID lzma
     #|RequestExecutionLevel admin
     #|
+    #|!include "FileFunc.nsh"
+    #|!include "LogicLib.nsh"
     #|!include "MUI2.nsh"
+    #|
+    #|Var ProtonUpdate
+    #|Var ProtonUpdatePid
     #|
   builder <+
     $|Name "\{product}"
@@ -111,6 +116,16 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|VIAddVersionKey "FileDescription" "\{product} Setup"
     $|
   builder <+
+    #|Function .onInit
+    #|  ${GetParameters} $R0
+    #|  ${GetOptions} $R0 "/PROTON-UPDATE=" $ProtonUpdate
+    #|  ${GetOptions} $R0 "/PROTON-PID=" $ProtonUpdatePid
+    #|  ${If} $ProtonUpdate == "1"
+    #|  ${AndIf} $ProtonUpdatePid == ""
+    #|    Abort "The update process id is missing."
+    #|  ${EndIf}
+    #|FunctionEnd
+    #|
     #|!define MUI_ABORTWARNING
     #|!insertmacro MUI_PAGE_DIRECTORY
     #|!insertmacro MUI_PAGE_INSTFILES
@@ -121,15 +136,44 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|Section "Install"
     #|
   builder <+
-    $|  ; An update re-runs this installer while the application it is
-    $|  ; replacing is still running, so close it before overwriting.
-    $|  nsExec::Exec 'taskkill /F /IM "\{executable}"'
+    $|  ; Expand the complete release beside the installed tree before moving
+    $|  ; either one. A failed extraction therefore leaves the old app intact.
+    $|  RMDir /r "$INSTDIR.proton-next"
+    $|  SetOutPath "$INSTDIR.proton-next"
+    $|  ClearErrors
+    $|  File /r "\{windows_installer_quote(source)}\\*.*"
+    $|  IfErrors install_failed
+    $|  ClearErrors
+    $|  WriteUninstaller "$INSTDIR.proton-next\\Uninstall.exe"
+    $|  IfErrors install_failed
+    $|
+    $|  ; Reaching a later update proves the current tree started successfully,
+    $|  ; so its predecessor is no longer needed as the recovery copy.
+    $|  RMDir /r "$INSTDIR.proton-previous"
+    $|  IfFileExists "$INSTDIR\\*.*" 0 promote_update
+    $|  ; The updater names the exact process tree it is replacing. A manual
+    $|  ; reinstall has no such token and falls back to the executable name.
+    $|  ${If} $ProtonUpdate == "1"
+    $|    nsExec::Exec 'taskkill /F /T /PID "$ProtonUpdatePid"'
+    $|  ${Else}
+    $|    nsExec::Exec 'taskkill /F /T /IM "\{executable}"'
+    $|  ${EndIf}
     $|  Pop $0
     $|  Sleep 500
-    $|
+    $|  ClearErrors
+    $|  Rename "$INSTDIR" "$INSTDIR.proton-previous"
+    $|  IfErrors install_failed
+    $|promote_update:
+    $|  ClearErrors
+    $|  Rename "$INSTDIR.proton-next" "$INSTDIR"
+    $|  IfErrors 0 install_complete
+    $|  Rename "$INSTDIR.proton-previous" "$INSTDIR"
+    $|  Abort "The new installation could not be moved into place."
+    $|install_failed:
+    $|  RMDir /r "$INSTDIR.proton-next"
+    $|  Abort "The update could not be installed."
+    $|install_complete:
     $|  SetOutPath "$INSTDIR"
-    $|  File /r "\{windows_installer_quote(source)}\\*.*"
-    $|  WriteUninstaller "$INSTDIR\\Uninstall.exe"
     $|
     $|  WriteRegStr HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}" "InstallDir" "$INSTDIR"
     $|  WriteRegStr HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}" "Version" "\{windows_installer_quote(plan.version)}"
@@ -142,6 +186,10 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  WriteRegDWORD HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoRepair" 1
     $|
     $|  CreateShortCut "$SMPROGRAMS\\\{product}.lnk" "$INSTDIR\\\{executable}"
+    $|  ${If} $ProtonUpdate == "1"
+    $|    Exec '"$INSTDIR\\\{executable}"'
+    $|    Delete /REBOOTOK "$EXEPATH"
+    $|  ${EndIf}
     $|SectionEnd
     $|
   builder <+
@@ -150,6 +198,8 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  Pop $0
     $|  Delete "$SMPROGRAMS\\\{product}.lnk"
     $|  RMDir /r "$INSTDIR"
+    $|  RMDir /r "$INSTDIR.proton-previous"
+    $|  RMDir /r "$INSTDIR.proton-next"
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}"
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}"
     $|SectionEnd

@@ -44,7 +44,7 @@ pub fn UpdaterMetadataError::message(self : UpdaterMetadataError) -> String {
         $|no distributable artifact to describe
         $|
         $|An update is downloaded as a single file, so the manifest fragment
-        $|needs a target that produces one: zip or dmg on macOS, nsis or zip on
+        $|needs a target that produces one: zip or dmg on macOS, nsis on
         $|Windows, appimage on Linux. A staged app directory cannot be fetched.
       )
     UnreadableArtifact(path~, detail~) => "cannot read \{path}: \{detail}"
@@ -156,11 +156,7 @@ fn updater_artifact_path(
         Some(path) => Some(path)
         None => first_with_suffix(".dmg")
       }
-    Some(Windows) =>
-      match first_with_suffix("-setup.exe") {
-        Some(path) => Some(path)
-        None => first_with_suffix(".zip")
-      }
+    Some(Windows) => first_with_suffix("-setup.exe")
     Some(Linux) => first_with_suffix(".appimage")
     None => None
   }
