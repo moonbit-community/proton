@@ -1,8 +1,8 @@
 #if defined(__APPLE__)
 
-#include "dialog.h"
+#include "mac_dialog.h"
 
-#include "window.h"
+#include "mac_window.h"
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
 
