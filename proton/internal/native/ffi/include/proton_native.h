@@ -248,16 +248,16 @@ int32_t proton_screen_enumerate(int32_t *out_fields,
 
 /* Creates a private artifact staging transaction for a streaming update.
 
-   The archive path never crosses the ABI. Chunks written to the returned
-   handle are the exact bytes later expanded by proton_update_stage_install,
+   The artifact path never crosses the ABI. Chunks written to the returned
+   handle are the exact bytes later consumed by proton_update_stage_install,
    so authenticating those chunks does not introduce a path-based TOCTOU
    window. The handle is owned by the calling thread.
 
    Application updates should pass NULL or an empty parent_dir. Proton then
-   creates the stage beside the running .app, guaranteeing that final bundle
-   replacement stays on one filesystem. An explicit absolute parent is kept
-   for low-level hosts and tests, but is rejected unless it is on that same
-   filesystem. */
+   selects the platform's safe staging location: beside rename-based macOS and
+   Linux artifacts, or in the per-user temporary directory for a Windows
+   installer that later elevates. An explicit absolute parent is kept for
+   low-level hosts and tests. */
 int32_t proton_update_stage_begin(
     const char *parent_dir, int64_t expected_size,
     proton_update_stage_id_t *out_stage, char *error, int32_t error_len);
@@ -283,29 +283,30 @@ int32_t proton_update_stage_abort(
 int32_t proton_update_current_revision(
     uint64_t *out_revision, char *error, int32_t error_len);
 
-/* Removes older application bundles retained by successful update swaps.
+/* Removes older application artifacts retained by successful update swaps.
 
    Hosts call this only after the replacement has completed application
-   startup. Proton removes only its reserved sibling bundle names whose code
-   signing identity matches the running application and whose update revision
-   is older. A cleanup failure must not make an otherwise healthy application
-   fail to start. */
+   startup. macOS validates a retained bundle's signing identity and revision;
+   Linux removes the reserved previous AppImage. Windows leaves its
+   administrator-owned previous tree for the next elevated update. A cleanup
+   failure must not make an otherwise healthy application fail to start. */
 int32_t proton_update_cleanup_previous(char *error,
                                                   int32_t error_len);
 
-/* Installs an authenticated update archive over the running application.
+/* Consumes an authenticated update artifact for the running application.
 
-   Expansion, bundle signature validation, and replacement happen in one
-   native transaction. The expanded bundle path is never exposed between
-   validation and use. Implemented on macOS; other platforms report
-   PROTON_ERR_UNSUPPORTED rather than pretending to have installed anything. */
+   macOS validates and replaces an application bundle, Linux swaps an AppImage,
+   and Windows locks an NSIS installer until proton_update_relaunch invokes it
+   through UAC. Managed Linux installations and portable Windows directories
+   report PROTON_ERR_UNSUPPORTED. */
 int32_t proton_update_install(const char *archive,
                                          int32_t archive_len,
                                          const char *parent_dir, char *error,
                                          int32_t error_len);
 
-/* Asks the system to start the replaced application. The caller exits
-   afterwards.
+/* Asks the system to finish the prepared replacement and start it. The caller
+   exits afterwards. On Windows this starts the installer that performs both
+   actions; macOS and Linux start the artifact already moved into place.
 
    Success means the request was accepted, not that the application is running:
    the platform decides that asynchronously and does not report back. */

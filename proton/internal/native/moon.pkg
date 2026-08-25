@@ -7,6 +7,12 @@ import {
   "moonbitlang/x/path",
 }
 
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/core/encoding/utf8",
+} for "wbtest"
+
 supported_targets = "native"
 
 options(
@@ -17,6 +23,7 @@ options(
     "native.mbt": [ "native" ],
     "native_text.mbt": [ "native" ],
     "update.mbt": [ "native" ],
+    "update_wbtest.mbt": [ "native" ],
     "native_wbtest.mbt": [ "native" ],
     "README.mbt.md": [ "native" ],
   },
