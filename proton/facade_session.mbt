@@ -1089,6 +1089,22 @@ pub fn WindowHandle::set_position(
 }
 
 ///|
+/// Centers the window in the work area of the monitor containing it.
+///
+/// The current native frame size is preserved. Work-area coordinates exclude
+/// taskbars, docks, and other reserved desktop regions, and use Proton's
+/// top-left coordinate convention on every platform.
+pub fn WindowHandle::center(
+  self : WindowHandle,
+) -> Unit raise WindowSessionError {
+  let state = self.state()
+  let monitor = state.monitor
+  let x = monitor.work_x + (monitor.work_width - state.width) / 2
+  let y = monitor.work_y + (monitor.work_height - state.height) / 2
+  self.set_position(x, y)
+}
+
+///|
 pub fn WindowHandle::set_always_on_top(
   self : WindowHandle,
   always_on_top : Bool,
