@@ -1254,6 +1254,27 @@ int32_t proton_engine_window_set_opacity(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_skip_taskbar(proton_engine_window_t *window,
+                                              int32_t skip, char *error,
+                                              size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (skip != 0 && skip != 1) {
+    proton_engine_set_message(error, error_len, "skip must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "taskbar visibility is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  // Electron's macOS implementation intentionally treats setSkipTaskbar as
+  // a successful no-op because macOS has no taskbar equivalent.
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {

@@ -41,6 +41,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <dwmapi.h>
+#include <shobjidl.h>
 #include <windowsx.h>
 
 #include <math.h>
@@ -678,6 +679,44 @@ int32_t proton_engine_window_set_opacity(proton_engine_window_t *window,
                                   (BYTE)(bounded_opacity * 255.0), LWA_ALPHA)) {
     proton_engine_set_message(error, error_len,
                               "failed to update window opacity");
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_skip_taskbar(proton_engine_window_t *window,
+                                              int32_t skip, char *error,
+                                              size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (skip != 0 && skip != 1) {
+    proton_engine_set_message(error, error_len, "skip must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "taskbar visibility is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  ITaskbarList *taskbar = NULL;
+  HRESULT hr = CoCreateInstance(&CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER,
+                                &IID_ITaskbarList, (void **)&taskbar);
+  if (FAILED(hr) || taskbar == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create taskbar list");
+    return PROTON_ERR_PLATFORM;
+  }
+  hr = taskbar->lpVtbl->HrInit(taskbar);
+  if (SUCCEEDED(hr)) {
+    hr = skip != 0 ? taskbar->lpVtbl->DeleteTab(taskbar, window->hwnd)
+                   : taskbar->lpVtbl->AddTab(taskbar, window->hwnd);
+  }
+  taskbar->lpVtbl->Release(taskbar);
+  if (FAILED(hr)) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update taskbar visibility");
     return PROTON_ERR_PLATFORM;
   }
   return PROTON_OK;

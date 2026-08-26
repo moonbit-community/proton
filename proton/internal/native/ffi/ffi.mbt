@@ -473,6 +473,12 @@ pub extern "C" fn proton_window_set_opacity_ffi(
 ) -> Int = "proton_window_set_opacity"
 
 ///|
+pub extern "C" fn proton_window_set_skip_taskbar_ffi(
+  window : WindowHandle,
+  skip : Int,
+) -> Int = "proton_window_set_skip_taskbar"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

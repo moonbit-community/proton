@@ -226,6 +226,8 @@ pub fn proton_window_set_resizable_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_size_ffi(WindowHandle, Int, Int) -> Int
 
+pub fn proton_window_set_skip_taskbar_ffi(WindowHandle, Int) -> Int
+
 pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_set_zoom_percent_ffi(WindowHandle, Int) -> Int

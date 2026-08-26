@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/66_window_skip_taskbar"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type SkipTaskbarReply derive(ToJson, @json.FromJson)
+pub fn SkipTaskbarReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SkipTaskbarReply::to_json(Self) -> Json
+
+type SkipTaskbarRequest derive(ToJson, @json.FromJson)
+pub fn SkipTaskbarRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SkipTaskbarRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

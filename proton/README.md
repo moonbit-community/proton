@@ -96,6 +96,8 @@ and Windows while preserving programmatic placement; Linux follows Electron's
 successful no-op behavior.
 `WindowHandle::set_opacity` adjusts the complete native window, including its
 frame and renderer, with values clamped to `0.0..1.0`.
+`WindowHandle::set_skip_taskbar` controls the Windows taskbar tab while
+preserving Electron's no-op behavior on macOS and Linux.
 
 ## Logging
 

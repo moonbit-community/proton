@@ -164,6 +164,8 @@ int32_t proton_window_set_movable(proton_window_handle_t window,
                                   int32_t movable);
 int32_t proton_window_set_opacity(proton_window_handle_t window,
                                   double opacity);
+int32_t proton_window_set_skip_taskbar(proton_window_handle_t window,
+                                       int32_t skip);
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                                   int32_t zoom_percent);
 /* Matches Electron's progress value semantics: negative clears the indicator,
