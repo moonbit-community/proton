@@ -160,6 +160,9 @@ int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
    [0, 1] is determinate, and values above 1 are indeterminate. */
 int32_t proton_window_set_progress_bar(proton_window_handle_t window,
                                        double progress);
+/* Matches Electron's flashFrame flag semantics. */
+int32_t proton_window_flash_frame(proton_window_handle_t window,
+                                  int32_t flash);
 /* Writes the 21 integer fields of the current window state into out_fields.
    The field order is private to the matching MoonBit wrapper. */
 int32_t proton_window_get_state(proton_window_handle_t window,

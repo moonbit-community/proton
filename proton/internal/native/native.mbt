@@ -1375,6 +1375,24 @@ pub fn Window::set_progress_bar(
 }
 
 ///|
+/// Starts or stops the platform window-attention indicator.
+pub fn Window::flash_frame(
+  self : Window,
+  flash : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_flash_frame_ffi(
+      self.live_handle(),
+      if flash {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::state(self : Window) -> WindowState raise NativeError {
   let fields = FixedArray::make(proton_window_state_field_count, 0)
   check_status(

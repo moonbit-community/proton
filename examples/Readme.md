@@ -98,6 +98,9 @@ moon -C examples run 01_run --target native
   nested submenu items, role items, and menu command events.
 - `59_window_progress`: manual Electron-style window progress review with
   determinate, indeterminate, cleared, and animated macOS Dock states.
+- `60_window_attention`: manual Electron-style window attention review with
+  continuous macOS Dock bouncing, activation cancellation, and timed explicit
+  cancellation.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

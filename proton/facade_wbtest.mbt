@@ -60,6 +60,7 @@ fn test_window_handle(
   native_id : Int64,
   popup_calls? : Array[String],
   progress_calls? : Array[Double],
+  flash_calls? : Array[Bool],
 ) -> WindowHandle {
   let browser = BrowserHandle::{
     id,
@@ -88,6 +89,12 @@ fn test_window_handle(
     set_window_progress_bar: progress => {
       match progress_calls {
         Some(calls) => calls.push(progress)
+        None => ()
+      }
+    },
+    flash_window_frame: flash => {
+      match flash_calls {
+        Some(calls) => calls.push(flash)
         None => ()
       }
     },
@@ -1918,6 +1925,15 @@ test "window progress routes Electron-compatible values through the handle" {
   window.set_progress_bar(2.0)
   window.set_progress_bar(-1.0)
   debug_inspect(calls, content="[0.42, 2, -1]")
+}
+
+///|
+test "window attention routes Electron-compatible flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, flash_calls=calls)
+  window.flash_frame(true)
+  window.flash_frame(false)
+  debug_inspect(calls, content="[true, false]")
 }
 
 ///|

@@ -157,6 +157,7 @@ struct proton_engine_window {
   int width;
   int height;
   int zoom_percent;
+  NSInteger attention_request_id;
   int headless;
   int headless_hidden;
   int headless_focused;

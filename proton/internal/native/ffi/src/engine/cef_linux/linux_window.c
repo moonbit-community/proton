@@ -808,6 +808,20 @@ int32_t proton_engine_window_set_progress_bar(
   return PROTON_ERR_UNSUPPORTED;
 }
 
+int32_t proton_engine_window_flash_frame(
+    proton_engine_window_t *window, int32_t flash, char *error,
+    size_t error_len) {
+  (void)flash;
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_engine_set_message(
+      error, error_len,
+      "window attention is not implemented on Linux");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
 int32_t proton_engine_window_apply(
     proton_engine_window_t *window,
     const proton_engine_window_action_t *action,

@@ -453,6 +453,12 @@ pub extern "C" fn proton_window_set_progress_bar_ffi(
 ) -> Int = "proton_window_set_progress_bar"
 
 ///|
+pub extern "C" fn proton_window_flash_frame_ffi(
+  window : WindowHandle,
+  flash : Int,
+) -> Int = "proton_window_flash_frame"
+
+///|
 #borrow(command_json)
 pub extern "C" fn proton_window_browser_command_json_ffi(
   window : WindowHandle,

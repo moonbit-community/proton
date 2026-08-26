@@ -553,6 +553,7 @@ pub fn Window::cookie_set(Self, String, String, String, domain? : String, path? 
 pub fn Window::destroy(Self) -> Unit raise NativeError
 pub fn Window::emit_bridge_event_json(Self, String) -> Unit raise NativeError
 pub fn Window::eval(Self, String) -> Unit raise NativeError
+pub fn Window::flash_frame(Self, Bool) -> Unit raise NativeError
 pub fn Window::focus(Self) -> Unit raise NativeError
 pub fn Window::hide(Self) -> Unit raise NativeError
 pub fn Window::id(Self) -> Int64

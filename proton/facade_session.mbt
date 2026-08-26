@@ -155,6 +155,11 @@ fn RuntimeSession::window_handle(
         window.set_progress_bar(progress)
       })
     },
+    flash_window_frame: flash => {
+      self.control_window(id, native_id, "flash frame", window => {
+        window.flash_frame(flash)
+      })
+    },
     popup_window_menu: (menu, x, y) => {
       self.control_window(id, native_id, "popup menu in", window => {
         window.popup_menu(@native.MenuBar(menus=[menu.to_native()]), x, y)
@@ -1098,6 +1103,19 @@ pub fn WindowHandle::set_progress_bar(
   progress : Double,
 ) -> Unit raise WindowSessionError {
   (self.set_window_progress_bar)(progress)
+}
+
+///|
+/// Starts or stops flashing the window to attract the user's attention.
+///
+/// On macOS, `true` continuously bounces the application Dock icon until the
+/// application becomes active or `flash_frame(false)` cancels the request.
+/// Unsupported platforms raise `WindowSessionError`.
+pub fn WindowHandle::flash_frame(
+  self : WindowHandle,
+  flash : Bool,
+) -> Unit raise WindowSessionError {
+  (self.flash_window_frame)(flash)
 }
 
 ///|
