@@ -13,6 +13,8 @@ pub fn to_wstr(String) -> Bytes
 // Errors
 
 // Types and methods
+#external
+pub type EventWakeup
 
 // Type aliases
 

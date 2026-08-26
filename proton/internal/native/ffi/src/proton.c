@@ -374,6 +374,10 @@ void proton_runtime_signal_wakeup(void) {
   proton_engine_runtime_signal_external_event(NULL);
 }
 
+void (*proton_runtime_event_wakeup_callback(void))(void) {
+  return proton_runtime_signal_wakeup;
+}
+
 int32_t proton_internal_runtime_set_menu(proton_runtime_handle_t runtime,
                                          const proton_menu_bar_t *menu_bar) {
   proton_runtime_slot_t *slot = NULL;
@@ -1326,9 +1330,14 @@ int32_t proton_window_respond_close_request(proton_window_handle_t window,
                             "allow must be 0 or 1");
   }
   proton_window_slot_t *slot = NULL;
-  int32_t status = proton_get_window(window, &slot);
+  int32_t status = proton_get_window_for_destroy(window, &slot);
   if (status != PROTON_OK) {
     return status;
+  }
+  if (slot->lifecycle != PROTON_WINDOW_LIVE &&
+      slot->lifecycle != PROTON_WINDOW_CLOSE_REQUESTED) {
+    return proton_set_error(PROTON_ERR_DESTROYED,
+                            "window close request is no longer active");
   }
   if (slot->engine_window == NULL) {
     return proton_set_error(PROTON_ERR_UNSUPPORTED,
@@ -1340,6 +1349,11 @@ int32_t proton_window_respond_close_request(proton_window_handle_t window,
       sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
+  }
+  if (allow) {
+    proton_window_slot_request_close(slot);
+  } else {
+    proton_window_slot_cancel_close(slot);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;

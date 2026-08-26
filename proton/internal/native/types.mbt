@@ -195,6 +195,7 @@ enum NativeViewEvent {
   Navigated(String)
   TitleUpdated(String)
   LoadFailed(String, Int, String)
+  Closed
 } derive(Debug, Eq)
 
 ///|
@@ -664,6 +665,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     ViewEvent(_, _, Navigated(_)) => "view_navigated"
     ViewEvent(_, _, TitleUpdated(_)) => "view_title_updated"
     ViewEvent(_, _, LoadFailed(_, _, _)) => "view_load_failed"
+    ViewEvent(_, _, Closed) => "view_closed"
     ResourceRequested(_) => "resource_requested"
     ResourceRequestCancelled(_) => "resource_request_cancelled"
     QuitRequested => "quit_requested"
@@ -784,8 +786,21 @@ pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_code: Some(error_code),
         error_text: Some(error_text),
       })
+    ViewEvent(_, _, Closed) =>
+      Some({
+        url: None,
+        title: None,
+        is_loading: None,
+        error_code: None,
+        error_text: None,
+      })
     _ => None
   }
+}
+
+///|
+pub fn RuntimeEvent::is_view_closed(self : RuntimeEvent) -> Bool {
+  self is ViewEvent(_, _, Closed)
 }
 
 ///|

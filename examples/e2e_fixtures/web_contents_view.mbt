@@ -85,5 +85,6 @@ fn web_contents_view_event_line(event : @proton.ViewEvent) -> String {
       error_code.to_string() +
       " error_text=" +
       error_text
+    Closed => "view_closed"
   }
 }

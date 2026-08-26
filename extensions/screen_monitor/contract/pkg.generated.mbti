@@ -16,8 +16,6 @@ pub let display_metrics_changed : @proton_contract.Event[DisplayJSON]
 
 pub let display_removed : @proton_contract.Event[DisplayJSON]
 
-pub let drain_events : @proton_contract.Command[@proton_contract.EmptyRequest, ScreenEventReply]
-
 pub let extension : @proton_contract.ExtensionContract
 
 pub let get_all_displays : @proton_contract.Command[@proton_contract.EmptyRequest, DisplaysReply]
@@ -102,15 +100,6 @@ pub fn PointJSON::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecode
 pub fn PointJSON::not_equal(Self, Self) -> Bool
 pub fn PointJSON::to_json(Self) -> Json
 pub fn PointJSON::to_repr(Self) -> @debug.Repr
-
-pub(all) struct ScreenEventReply {
-  count : Int
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn ScreenEventReply::equal(Self, Self) -> Bool
-pub fn ScreenEventReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn ScreenEventReply::not_equal(Self, Self) -> Bool
-pub fn ScreenEventReply::to_json(Self) -> Json
-pub fn ScreenEventReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ScreenMonitorActivity {
   operation : String

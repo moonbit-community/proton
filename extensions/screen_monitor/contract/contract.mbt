@@ -137,25 +137,6 @@ pub extend NearestPointRequest with ToJson::{to_json}
 pub extend NearestPointRequest with FromJson::{from_json}
 
 ///|
-/// Reply for `drainEvents`: the number of topology events that were drained and
-/// forwarded to this renderer.
-pub(all) struct ScreenEventReply {
-  count : Int
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-pub extend ScreenEventReply with Eq::{not_equal, equal}
-
-///|
-pub extend ScreenEventReply with Debug::{to_repr}
-
-///|
-pub extend ScreenEventReply with ToJson::{to_json}
-
-///|
-pub extend ScreenEventReply with FromJson::{from_json}
-
-///|
 /// Telemetry for screen query commands, so renderers can observe which screen
 /// APIs were exercised. Follows the activity-event convention shared by the
 /// other `proton_ext` command extensions.
@@ -198,12 +179,6 @@ pub let get_cursor_point : @proton_contract.Command[
   @proton_contract.EmptyRequest,
   CursorPointReply,
 ] = extension.command("getCursorScreenPoint")
-
-///|
-pub let drain_events : @proton_contract.Command[
-  @proton_contract.EmptyRequest,
-  ScreenEventReply,
-] = extension.command("drainEvents")
 
 ///|
 /// Payload for display topology change events. Mirrors the `newDisplay`

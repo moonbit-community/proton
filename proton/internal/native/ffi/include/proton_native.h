@@ -101,6 +101,7 @@ int32_t proton_runtime_complete_resource_request(
 /* Wakes a blocked host-loop poll, or makes the next one return immediately.
  * Takes no handle because the foreign waiting thread owns none. */
 void proton_runtime_signal_wakeup(void);
+void (*proton_runtime_event_wakeup_callback(void))(void);
 
 /* The main thread's event loop.
  *

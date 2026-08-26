@@ -7,7 +7,6 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
     register_command.contract_route(),
     unregister_command.contract_route(),
     list_command.contract_route(),
-    drain_triggered_command.contract_route(),
   ]
 }
 
@@ -26,9 +25,5 @@ pub fn register_commands(
   registrar.bind(
     list_command,
     (_context, request) => list(request),
-  )
-  registrar.bind(
-    drain_triggered_command,
-    (context, request) => drain_triggered(context, request),
   )
 }

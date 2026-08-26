@@ -308,6 +308,16 @@ pub fn ScreenMonitor::drain_events(
 }
 
 ///|
+/// Installs the opaque native wakeup supplied by an embedding event loop.
+#doc(hidden)
+pub fn ScreenMonitor::set_event_wakeup(
+  self : ScreenMonitor,
+  wakeup : @ffi.EventWakeup,
+) -> Unit {
+  native_set_event_wakeup(self.handle, wakeup)
+}
+
+///|
 fn screen_monitor_event_from_native_code(code : Int) -> ScreenMonitorEvent {
   match code {
     _ if code == native_event_added => DisplayAdded

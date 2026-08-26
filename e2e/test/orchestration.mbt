@@ -468,25 +468,14 @@ async fn close_browser(target : String, timeout : Int) -> Unit {
 
 ///|
 async fn close_connected_browser(browser : @client.CdpClient) -> Unit {
-  let close_response = browser.send_command("Browser.close")
-  match close_response.error {
-    Some(error) =>
-      fail(
-        "Browser.close failed: " + error.code.to_string() + " " + error.message,
-      )
-    None => ()
+  let page_targets = browser
+    .get_targets()
+    .filter(info => info.target_type == "page")
+  guard page_targets.length() > 0 else {
+    fail("CDP browser has no live page target to close")
   }
-  // CEF's Alloy runtime acknowledges Browser.close but does not route the
-  // Chrome-specific close request to CefBrowserHost::CloseBrowser.  Keep the
-  // protocol request in the probe, then close every live page target through
-  // the browser connection so that the native lifecycle is exercised and all
-  // windows are covered.
-  @async.sleep(cdp_start_poll_timeout_ms)
-  let targets = browser.get_targets() catch { _ => return }
-  for info in targets {
-    if info.target_type == "page" {
-      close_page_target(browser, info.target_id)
-    }
+  for info in page_targets {
+    close_page_target(browser, info.target_id)
   }
 }
 

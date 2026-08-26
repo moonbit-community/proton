@@ -45,6 +45,7 @@ typedef enum proton_event_kind {
   PROTON_EVENT_RESOURCE_REQUEST_CANCELLED = 26,
   PROTON_EVENT_NOTIFICATION_CLICKED = 27,
   PROTON_EVENT_QUIT_REQUESTED = 28,
+  PROTON_EVENT_VIEW_CLOSED = 29,
 } proton_event_kind_t;
 
 typedef struct proton_event {

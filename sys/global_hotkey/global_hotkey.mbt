@@ -372,6 +372,19 @@ pub fn GlobalHotkeyManager::drain_triggered(
 }
 
 ///|
+/// Installs the opaque native wakeup supplied by an embedding event loop.
+#doc(hidden)
+pub fn GlobalHotkeyManager::set_event_wakeup(
+  self : GlobalHotkeyManager,
+  wakeup : @ffi.EventWakeup,
+) -> Unit {
+  match self.resolve_state() {
+    Ok(state) => set_event_wakeup_ffi(state, wakeup)
+    Err(_) => ()
+  }
+}
+
+///|
 /// Releases every native resource owned by this manager and clears its registry.
 ///
 /// Calling `destroy()` more than once is harmless. After destruction,

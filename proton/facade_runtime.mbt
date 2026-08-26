@@ -228,16 +228,17 @@ async fn run_manifest(
     ) catch {
       error => raise ConfigurationError(error)
     }
-    let command_extensions = command_extension_specs(extension_capabilities) catch {
+    let extension_catalog = command_extension_catalog(extension_capabilities) catch {
       error => raise ConfigurationError(error)
     }
+    let command_extensions = extension_catalog.specs
     let resolved_extension_capabilities = resolve_extension_capabilities(
       extension_capabilities, permission_base_path,
     ) catch {
       error => raise ConfigurationError(error)
     }
     let command_build = build_command_host(
-      command_capabilities, extension_capabilities,
+      command_capabilities, extension_catalog,
     )
     command_host = command_build.runtime
     let policies : Array[BridgePagePolicy] = []
@@ -260,13 +261,11 @@ async fn run_manifest(
         },
       )
     }
-    let ops = match command_host {
-      Some(host) => host.host.registered_ops()
-      None => []
-    }
-    let bridge_enabled = ops.length() > 0 ||
-      forward_menu_events ||
-      window_lifecycle_hooks.length() > 0
+    let bridge_enabled = requires_renderer_bridge(
+      command_host,
+      forward_menu_events,
+      window_lifecycle_hooks.length() > 0,
+    )
     if bridge_enabled && !@native.bridge_permission_grants_supported() {
       raise UnsupportedNativeFeature(feature="bridge_permission_grants")
     }
@@ -361,20 +360,27 @@ async fn run_manifest(
           session.wait_for_bridge_startup(bridge_startup_timeout_ms) catch {
             error => raise normalize_async_run_error(error)
           }
-          @xlog.info(category="proton.bridge") <?
-            {
-              "message": "renderer bridge ready",
-              "window_count": windows.length(),
-            }
-        }
-        for running in windows {
-          if !running.is_closed() {
-            session.activate_window(running)
+          if !session.quit_requested {
+            @xlog.info(category="proton.bridge") <?
+              {
+                "message": "renderer bridge ready",
+                "window_count": windows.length(),
+              }
           }
         }
-        lifecycle.begin_running()
-        cleanup_previous_update()
-        start_update_check(update_channel, update_handlers, application_tasks)
+        if !session.quit_requested {
+          // A source may enqueue synchronously from start(). Initial windows must
+          // be able to receive those events before native production begins.
+          session.start_extension_event_sources()
+          for running in windows {
+            if !running.is_closed() {
+              session.activate_window(running)
+            }
+          }
+          lifecycle.begin_running()
+          cleanup_previous_update()
+          start_update_check(update_channel, update_handlers, application_tasks)
+        }
         session.run() catch {
           error => raise normalize_async_run_error(error)
         }
@@ -431,6 +437,15 @@ async fn run_manifest(
     Some(error) => raise error
     None => ()
   }
+}
+
+///|
+fn requires_renderer_bridge(
+  command_host : CommandHostRuntime?,
+  forward_menu_events : Bool,
+  has_window_lifecycle_hooks : Bool,
+) -> Bool {
+  command_host is Some(_) || forward_menu_events || has_window_lifecycle_hooks
 }
 
 ///|
@@ -579,6 +594,7 @@ fn CommandHostRuntime::close(
   self : CommandHostRuntime,
 ) -> Array[CommandExtensionLifecycleError] {
   guard !self.closed else { return [] }
+  stop_command_extension_event_sources(self.event_sources)
   let failures = close_command_host_runtime(self.host, self.destroy_hooks)
   self.closed = true
   failures

@@ -2,6 +2,7 @@
 package "moonbit-community/proton/internal/native/ffi"
 
 import {
+  "moonbit-community/proton_ffi",
   "moonbitlang/core/ref",
 }
 
@@ -109,6 +110,8 @@ pub fn proton_notification_show_ffi(Bytes, Bytes, Bytes, Int) -> Int
 pub fn proton_runtime_begin_message_dialog_ffi(RuntimeHandle, Bytes, Int, Bytes, Int, Int, @ref.Ref[Int64]) -> Int
 
 pub fn proton_runtime_destroy_ffi(RuntimeHandle) -> Int
+
+pub fn proton_runtime_event_wakeup_callback_ffi() -> @proton_ffi.EventWakeup
 
 pub fn proton_runtime_platform_id_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 

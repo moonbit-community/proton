@@ -11,7 +11,6 @@ suberror TrayError {
   ShowFailed(detail~ : String)
   HideFailed(detail~ : String)
   SetTooltipFailed(detail~ : String)
-  PumpFailed(detail~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -36,7 +35,6 @@ fn TrayError::message(self : TrayError) -> String {
     ShowFailed(detail~) => "failed to show tray: " + detail
     HideFailed(detail~) => "failed to hide tray: " + detail
     SetTooltipFailed(detail~) => "failed to set tray tooltip: " + detail
-    PumpFailed(detail~) => "failed to pump tray events: " + detail
   }
 }
 

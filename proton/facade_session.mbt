@@ -37,6 +37,7 @@ fn RuntimeSession::RuntimeSession(
     locale_preferences,
     definitions,
     windows,
+    has_created_window: windows.length() > 0,
     command_host,
     pending_bridge: [],
     dialog_completions,
@@ -370,9 +371,19 @@ fn RuntimeSession::add_window_view(
     Some(running) if running.window.id() == window_native_id => running
     _ => raise StaleWindow(id=window_id)
   }
+  let running_view = add_view_to_running_window(running, view_id, config)
+  self.view_handle(running, running_view)
+}
+
+///|
+fn add_view_to_running_window(
+  running : RunningWindow,
+  view_id : String,
+  config : @native.ViewConfig,
+) -> RunningView raise WindowSessionError {
   if view_id.is_empty() {
     raise window_operation_failed(
-      "add view to window " + window_id,
+      "add view to window " + running.id,
       @native.NativeError::InvalidArgument(message="view id must not be empty"),
     )
   }
@@ -384,7 +395,7 @@ fn RuntimeSession::add_window_view(
   let created = @native.View::View(running.window, config) catch {
     error =>
       raise window_operation_failed(
-        "add view " + view_id + " to window " + window_id,
+        "add view " + view_id + " to window " + running.id,
         error,
       )
   }
@@ -394,7 +405,7 @@ fn RuntimeSession::add_window_view(
     document: None,
   }
   running.views.push(running_view)
-  self.view_handle(running, running_view)
+  running_view
 }
 
 ///|
@@ -545,9 +556,7 @@ fn RuntimeSession::close_window(
   running.window.close() catch {
     error => raise window_operation_failed("close window " + id, error)
   }
-  if self.window_close_handler is None {
-    running.state = WindowCloseRequested
-  }
+  running.state = WindowCloseRequested
 }
 
 ///|
@@ -698,15 +707,6 @@ fn RuntimeSession::create_window(
   ) catch {
     error => raise native_run_error("create window " + plan.id, error)
   }
-  if self.window_close_handler is Some(_) {
-    created_window.set_close_interception(true) catch {
-      error =>
-        raise native_run_error(
-          "enable close interception for " + plan.id,
-          error,
-        )
-    }
-  }
   let (document, asset_root) = match definition.entry {
     RemoteEntry(_) => (None, None)
     DocumentEntry(document, asset_root) => (Some(document), asset_root)
@@ -722,19 +722,28 @@ fn RuntimeSession::create_window(
     bridge_ready: !self.monitor_bridge,
     state: WindowStarting,
   }
-  self.windows.push(running)
+  errdefer (created_window.destroy() catch {
+    error =>
+      self.lifecycle_failures.push(
+        WindowDestroy(status=error.status(), detail=error.message()),
+      )
+  })
+  if self.window_close_handler is Some(_) {
+    created_window.set_close_interception(true) catch {
+      error =>
+        raise native_run_error(
+          "enable close interception for " + plan.id,
+          error,
+        )
+    }
+  }
   load_prepared_entry(created_window, definition.entry) catch {
     error => raise EntryLoadError(error)
   }
   for view_plan in definition.views {
     let (view_id, view_config) = view_plan
     ignore(
-      self.add_window_view(
-        running.id,
-        created_window.id(),
-        view_id,
-        view_config,
-      ) catch {
+      add_view_to_running_window(running, view_id, view_config) catch {
         error =>
           raise match error {
             OperationFailed(action~, status~, detail~) =>
@@ -744,6 +753,8 @@ fn RuntimeSession::create_window(
       },
     )
   }
+  self.windows.push(running)
+  self.has_created_window = true
   @xlog.info(category="proton.window") <?
     { "message": "window created", "window": running.id }
   running
@@ -781,7 +792,7 @@ async fn RuntimeSession::activate_window(
     ),
   )
   running.lifetime.wait_until_ready()
-  if running.is_closed() {
+  if !running.is_active() {
     return
   }
   running.window.show() catch {
@@ -946,7 +957,7 @@ fn RuntimeSession::advance_window_opens(self : RuntimeSession) -> Bool {
           Some(_) => {
             did_work = true
             pending.timeout.cancel()
-            if pending.running.is_closed() {
+            if !pending.running.is_active() {
               pending.completion.fail(Cancelled)
             } else {
               pending.completion.succeed(self.window_handle(pending.running))
@@ -1567,6 +1578,9 @@ async fn RuntimeSession::wait_for_bridge_startup(
     while true {
       let revision = self.wakeup.revision()
       let did_work = self.pump_once(monitor_bridge=false)
+      if self.quit_requested {
+        return
+      }
       match refresh_bridge_startup_states(self.windows) {
         None => return
         Some(_) =>
@@ -1584,6 +1598,9 @@ async fn RuntimeSession::wait_for_bridge_startup(
     Some(_) => ()
     None => {
       ignore(self.pump_once(monitor_bridge=false))
+      if self.quit_requested {
+        return
+      }
       match refresh_bridge_startup_states(self.windows) {
         None => return
         Some(state) =>
@@ -1651,6 +1668,9 @@ fn RuntimeSession::pump_once(
   if self.drain_runtime_events() {
     did_work = true
   }
+  if self.drain_extension_events() {
+    did_work = true
+  }
   if monitor_bridge {
     self.check_bridge_failures()
   }
@@ -1673,6 +1693,126 @@ fn RuntimeSession::pump_once(
     did_work = true
   }
   did_work
+}
+
+///|
+fn RuntimeSession::start_extension_event_sources(
+  self : RuntimeSession,
+) -> Unit raise AppRunError {
+  match self.command_host {
+    None => ()
+    Some(host) =>
+      start_command_extension_event_sources(
+        host.event_sources,
+        @native.event_wakeup_callback(),
+      )
+  }
+}
+
+///|
+fn start_command_extension_event_sources(
+  event_sources : Array[CommandExtensionEventSource],
+  wakeup : @proton_extension.EventWakeup,
+) -> Unit raise AppRunError {
+  for event_source in event_sources {
+    guard !event_source.started else { continue }
+    event_source.started = true
+    event_source.source.start(wakeup) catch {
+      error => {
+        event_source.source.stop()
+        event_source.started = false
+        raise CommandExtensionLifecycleError(
+          EventSourceStartFailed(
+            extension_id=event_source.extension_id,
+            detail=@debug.render(Repr(error)),
+          ),
+        )
+      }
+    }
+  }
+}
+
+///|
+fn RuntimeSession::drain_extension_events(
+  self : RuntimeSession,
+) -> Bool raise AppRunError {
+  let mut did_work = false
+  match self.command_host {
+    None => ()
+    Some(host) =>
+      for event_source in host.event_sources {
+        guard event_source.started else { continue }
+        let events = event_source.drain()
+        if !events.is_empty() {
+          did_work = true
+        }
+        for event in events {
+          guard event.extension_id() == event_source.extension_id &&
+            event.extension_namespace() == event_source.extension_namespace else {
+            event_source.disable(
+              "event descriptor belongs to " +
+              event.extension_id() +
+              " (" +
+              event.extension_namespace() +
+              ")",
+            )
+            break
+          }
+          self.forward_extension_event_to_granted_windows(
+            event_source.extension_id,
+            event_source.extension_namespace,
+            event.name(),
+            event.payload(),
+          )
+        }
+      }
+  }
+  did_work
+}
+
+///|
+fn CommandExtensionEventSource::drain(
+  self : CommandExtensionEventSource,
+) -> Array[@proton_extension.Event] {
+  guard self.started else { return [] }
+  self.source.drain() catch {
+    error => {
+      self.disable(@debug.render(Repr(error)))
+      []
+    }
+  }
+}
+
+///|
+fn CommandExtensionEventSource::disable(
+  self : CommandExtensionEventSource,
+  detail : String,
+) -> Unit {
+  self.stop()
+  @xlog.error(category="proton.extension") <?
+    {
+      "message": "event source disabled",
+      "extension_id": self.extension_id,
+      "detail": detail,
+    }
+}
+
+///|
+fn RuntimeSession::forward_extension_event_to_granted_windows(
+  self : RuntimeSession,
+  extension_id : String,
+  extension_namespace : String,
+  name : String,
+  payload : Json,
+) -> Unit raise AppRunError {
+  for running in self.windows {
+    guard running.is_active() &&
+      running.bridge_ready &&
+      running.permissions.grants_extension(extension_id) else {
+      continue
+    }
+    forward_extension_event(running.window, extension_namespace, name, payload)
+  }
 }
 
 ///|
@@ -1723,16 +1863,15 @@ fn RuntimeSession::dispatch_runtime_event(
 fn RuntimeSession::dispatch_window_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
-) -> Unit {
-  runtime_session_dispatch_window_event(
-    self.windows,
-    self.pending_bridge,
-    event,
-  )
+) -> Unit raise AppRunError {
   if event.is_window_closed() {
-    self.cancel_window_close_requests(event.window_id())
-    self.cancel_browser_requests(event.window_id())
-    self.cancel_resource_requests_for_window(event.window_id())
+    let window_id = event.window_id()
+    runtime_session_cancel_window_bridge_tasks(self.pending_bridge, window_id)
+    self.cancel_window_close_requests(window_id)
+    self.cancel_browser_requests(window_id)
+    self.cancel_resource_requests_for_window(window_id)
+    self.retire_closed_window(window_id)
+    return
   }
   match (event.window_id(), event.window_state_change()) {
     (Some(window_id), Some(state)) =>
@@ -1765,8 +1904,9 @@ fn RuntimeSession::dispatch_window_event(
 fn RuntimeSession::dispatch_view_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
-) -> Unit {
-  if self.view_event_handlers.is_empty() {
+) -> Unit raise AppRunError {
+  let closes_view = event.is_view_closed()
+  if self.view_event_handlers.is_empty() && !closes_view {
     return
   }
   let info = match event.view_event() {
@@ -1782,7 +1922,7 @@ fn RuntimeSession::dispatch_view_event(
     Some(running) => running
     None => return
   }
-  for view in running.views {
+  for index, view in running.views {
     if view.view.id() == view_native_id {
       let handle = self.view_handle(running, view)
       let view_event = match event.event_type() {
@@ -1796,7 +1936,18 @@ fn RuntimeSession::dispatch_view_event(
             error_code=info.error_code.unwrap_or(0),
             error_text=info.error_text.unwrap_or(""),
           )
+        "view_closed" => Closed
         _ => return
+      }
+      if closes_view {
+        view.view.destroy() catch {
+          error =>
+            raise native_run_error(
+              "destroy closed view " + view.id + " in window " + running.id,
+              error,
+            )
+        }
+        ignore(running.views.remove(index))
       }
       for handler in self.view_event_handlers {
         ignore(
@@ -1961,7 +2112,7 @@ fn RuntimeSession::complete_browser_requests(
       Some(response) => {
         did_work = true
         match self.find_window_by_native_id(pending.window) {
-          Some(window) if !window.is_closed() => {
+          Some(window) if window.is_active() => {
             let path = response.path
             window.window.respond_browser_request(
               pending.request_id,
@@ -2151,6 +2302,7 @@ fn RuntimeSession::start_window_close_request(
 ) -> Unit {
   guard self.window_close_handler is Some(handler) else { return }
   guard self.find_window_by_native_id(window_id) is Some(window) else { return }
+  window.state = WindowCloseRequested
   let handle = self.window_handle(window)
   let task = self.window_tasks.spawn(
     () => {
@@ -2193,9 +2345,12 @@ fn RuntimeSession::complete_window_close_requests(
             }
             if decision == Allow {
               window.state = WindowCloseRequested
-            } else if self.quit_requested {
-              self.quit_requested = false
-              self.quit_close_started = false
+            } else {
+              window.state = WindowOpen
+              if self.quit_requested {
+                self.quit_requested = false
+                self.quit_close_started = false
+              }
             }
           }
           _ => ()
@@ -2237,21 +2392,6 @@ fn RuntimeSession::cancel_all_window_close_requests(
     pending.task.cancel()
   }
   self.pending_window_closes.clear()
-}
-
-///|
-fn runtime_session_dispatch_window_event(
-  windows : Array[RunningWindow],
-  pending_bridge : Array[BridgeDispatchTask],
-  event : @native.RuntimeEvent,
-) -> Unit {
-  if event.is_window_closed() {
-    runtime_session_mark_window_closed(windows, event.window_id())
-    runtime_session_cancel_window_bridge_tasks(
-      pending_bridge,
-      event.window_id(),
-    )
-  }
 }
 
 ///|
@@ -2398,8 +2538,9 @@ fn RuntimeSession::dispatch_menu_event(
 fn RuntimeSession::check_bridge_failures(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
+  guard !self.quit_requested else { return }
   for running in self.windows {
-    if running.is_closed() {
+    if !running.is_active() {
       continue
     }
     let failure = take_runtime_bridge_failure(running.window) catch {
@@ -2546,42 +2687,34 @@ fn RuntimeSession::find_window_by_native_id(
 }
 
 ///|
-fn runtime_session_mark_window_closed(
-  windows : Array[RunningWindow],
+fn RuntimeSession::retire_closed_window(
+  self : RuntimeSession,
   window_id : Int64?,
-) -> Unit {
-  match window_id {
-    Some(window_id) =>
-      match runtime_session_find_window_by_native_id(windows, window_id) {
-        Some(window) => {
-          window.state = WindowClosed
-          window.lifetime.close()
-          @xlog.info(category="proton.window") <?
-            { "message": "window closed", "window": window.id }
-        }
-        None => ()
-      }
-    None => ()
-  }
-}
-
-///|
-fn runtime_session_find_window_by_native_id(
-  windows : Array[RunningWindow],
-  window_id : Int64,
-) -> RunningWindow? {
-  for running in windows {
+) -> Unit raise AppRunError {
+  guard window_id is Some(window_id) else { return }
+  let mut index = -1
+  for i, running in self.windows {
     if running.window.id() == window_id {
-      return Some(running)
+      index = i
+      break
     }
   }
-  None
+  guard index >= 0 else { return }
+  let running = self.windows[index]
+  running.state = WindowClosed
+  running.lifetime.close()
+  running.window.destroy() catch {
+    error =>
+      raise native_run_error("destroy closed window " + running.id, error)
+  }
+  ignore(self.windows.remove(index))
+  @xlog.info(category="proton.window") <?
+    { "message": "window closed", "window": running.id }
 }
 
 ///|
 fn RuntimeSession::all_windows_closed(self : RuntimeSession) -> Bool {
-  self.windows.length() > 0 &&
-  self.windows.all(fn(window) { window.is_closed() })
+  self.has_created_window && self.windows.all(fn(window) { window.is_closed() })
 }
 
 ///|
@@ -2610,7 +2743,7 @@ fn RuntimeSession::advance_application_lifetime(
   if !self.quit_requested &&
     should_quit_after_last_window(
       self.last_window_closed_policy,
-      self.windows.length() > 0,
+      self.has_created_window,
       self.all_windows_closed(),
     ) {
     self.request_quit()
@@ -2626,9 +2759,7 @@ fn RuntimeSession::advance_application_lifetime(
       running.window.close() catch {
         error => raise native_run_error("close window " + running.id, error)
       }
-      if self.window_close_handler is None {
-        running.state = WindowCloseRequested
-      }
+      running.state = WindowCloseRequested
     }
   }
   did_work

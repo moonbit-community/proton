@@ -75,3 +75,11 @@ test "extension identity validation rejects empty fields" {
     _ => abort("expected EmptyExtensionNamespace")
   }
 }
+
+///|
+test "expected extension event error reports its route" {
+  assert_eq(
+    ContractDefinitionError::ExpectedExtensionEvent(route="app:changed").message(),
+    "event route does not belong to an extension: app:changed",
+  )
+}

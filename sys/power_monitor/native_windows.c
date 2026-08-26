@@ -210,8 +210,9 @@ int32_t power_monitor_platform_start_watching(power_monitor_state_t *state) {
     power_monitor_set_watch_error(state, "CreateThread failed");
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  WaitForSingleObject(state->ready_event, 10000);
+  WaitForSingleObject(state->ready_event, INFINITE);
   if (!state->watch_started) {
+    WaitForSingleObject(state->watch_thread, INFINITE);
     CloseHandle(state->watch_thread);
     state->watch_thread = NULL;
     CloseHandle(state->ready_event);
@@ -227,7 +228,7 @@ int32_t power_monitor_platform_start_watching(power_monitor_state_t *state) {
 int32_t power_monitor_platform_stop_watching(power_monitor_state_t *state) {
   if (state->watch_thread != NULL) {
     PostThreadMessageW(state->watch_thread_id, WM_QUIT, 0, 0);
-    WaitForSingleObject(state->watch_thread, 10000);
+    WaitForSingleObject(state->watch_thread, INFINITE);
     CloseHandle(state->watch_thread);
     state->watch_thread = NULL;
   }

@@ -143,6 +143,9 @@ pub extern "C" fn proton_runtime_destroy_ffi(runtime : RuntimeHandle) -> Int = "
 pub extern "C" fn proton_runtime_signal_wakeup_ffi() -> Unit = "proton_runtime_signal_wakeup"
 
 ///|
+pub extern "C" fn proton_runtime_event_wakeup_callback_ffi() -> @proton_ffi.EventWakeup = "proton_runtime_event_wakeup_callback"
+
+///|
 pub extern "C" fn proton_host_loop_begin_ffi() -> Int = "proton_host_loop_begin"
 
 ///|

@@ -11,10 +11,10 @@ let get_display_nearest_point_command = @screen_monitor_contract.get_display_nea
 let get_cursor_point_command = @screen_monitor_contract.get_cursor_point
 
 ///|
-let drain_events_command = @screen_monitor_contract.drain_events
+let active_monitor : Ref[@sys_screen_monitor.ScreenMonitor?] = Ref(None)
 
 ///|
-let active_monitor : Ref[@sys_screen_monitor.ScreenMonitor?] = Ref(None)
+let event_wakeup : Ref[@proton_extension.EventWakeup?] = Ref(None)
 
 ///|
 fn ensure_monitor() -> @sys_screen_monitor.ScreenMonitor raise ScreenMonitorError {
@@ -23,6 +23,10 @@ fn ensure_monitor() -> @sys_screen_monitor.ScreenMonitor raise ScreenMonitorErro
     None => {
       let monitor = @sys_screen_monitor.ScreenMonitor() catch {
         error => raise BackendUnavailable(detail=error.to_string())
+      }
+      match event_wakeup.val {
+        Some(wakeup) => monitor.set_event_wakeup(wakeup)
+        None => ()
       }
       // Best-effort: enable the event watch backend. A platform that cannot
       // watch only loses topology events; polling queries stay fully usable.
@@ -149,41 +153,42 @@ async fn get_cursor_point(
 }
 
 ///|
-async fn emit_screen_event(
-  context : @proton.CommandContext,
+fn screen_event(
   event : @sys_screen_monitor.ScreenMonitorEvent,
   payload : @screen_monitor_contract.DisplayJSON,
-) -> Unit {
+) -> @proton_extension.Event raise {
   match event {
     DisplayAdded =>
-      context.emit(@screen_monitor_contract.display_added, payload)
+      @proton_extension.event(@screen_monitor_contract.display_added, payload)
     DisplayRemoved =>
-      context.emit(@screen_monitor_contract.display_removed, payload)
+      @proton_extension.event(@screen_monitor_contract.display_removed, payload)
     DisplayMetricsChanged =>
-      context.emit(@screen_monitor_contract.display_metrics_changed, payload)
+      @proton_extension.event(
+        @screen_monitor_contract.display_metrics_changed, payload,
+      )
   }
 }
 
 ///|
-/// Drains native display topology events and forwards each as a JavaScript
-/// extension event carrying the current primary display snapshot.
-#proton.command(contract=drain_events_command)
-async fn drain_events(
-  context : @proton.CommandContext,
-  _request : @proton_contract.EmptyRequest,
-) -> @screen_monitor_contract.ScreenEventReply {
-  let monitor = ensure_monitor()
-  let events = monitor.drain_events()
+fn start_event_source(wakeup : @proton_extension.EventWakeup) -> Unit {
+  event_wakeup.val = Some(wakeup)
+  match active_monitor.val {
+    Some(monitor) => monitor.set_event_wakeup(wakeup)
+    None => ignore(ensure_monitor()) catch { _ => () }
+  }
+}
+
+///|
+fn drain_events() -> Array[@proton_extension.Event] raise {
+  guard active_monitor.val is Some(monitor) else { return [] }
+  let native_events = monitor.drain_events()
   let payload = Some(display_to_contract(monitor.primary_display())) catch {
     _ => None
   }
-  for event in events {
-    match payload {
-      Some(payload) => emit_screen_event(context, event, payload)
-      None => ()
-    }
+  match payload {
+    Some(payload) => native_events.map(event => screen_event(event, payload))
+    None => []
   }
-  @screen_monitor_contract.ScreenEventReply::{ count: events.length(), }
 }
 
 ///|
@@ -195,28 +200,24 @@ fn cleanup_screen_monitor() -> Unit {
     }
     None => ()
   }
+  event_wakeup.val = None
 }
 
 ///|
-fn extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    @screen_monitor_contract.extension,
-    generated_extension_command_routes(),
-    fn(registrar) raise { register_commands(registrar) },
-    scripts=[
-      @proton_extension.poller_script(
-        js_namespace="screen",
-        drain_method="drainEvents",
-        poller_field="__protonEventPoller",
-      ),
-    ],
-    on_destroy=fn() { cleanup_screen_monitor() },
-  )
-}
+let extension_definition : @proton_extension.Extension = @proton_extension.typed(
+  @screen_monitor_contract.extension,
+  generated_extension_command_routes(),
+  fn(registrar) raise { register_commands(registrar) },
+  event_source=@proton_extension.event_source(
+    wakeup => start_event_source(wakeup),
+    () => cleanup_screen_monitor(),
+    () => drain_events(),
+  ),
+)
 
 ///|
 /// Grants screen-monitor commands to renderer targets selected by
 /// `App::capability`.
 pub fn capability() -> @proton_extension.RendererCapability {
-  @proton_extension.capability(extension())
+  @proton_extension.capability(extension_definition)
 }

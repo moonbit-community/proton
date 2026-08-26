@@ -1,7 +1,7 @@
 ///|
 fn build_command_host(
   command_capabilities : Array[AppCommandCapability],
-  extension_capabilities : Array[ExtensionCapabilityBinding],
+  command_extensions : CommandExtensionCatalog,
 ) -> CommandHostBuild raise AppRunError {
   let host = @core.AppCommandHost(
     expose_error_details=proton_dev_mode_enabled(),
@@ -11,6 +11,7 @@ fn build_command_host(
     },
   )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
+  let event_sources : Array[CommandExtensionEventSource] = []
   let app_capabilities : Array[RegisteredAppCommandCapability] = []
   let mut has_commands = false
   let registrar = @proton_command.CommandRegistrar(host)
@@ -37,20 +38,14 @@ fn build_command_host(
       targets: capability.targets.copy(),
     })
   }
-  let command_extensions = command_extension_specs(extension_capabilities) catch {
-    error => {
-      ignore(close_command_host_runtime(host, destroy_hooks))
-      raise ConfigurationError(error)
-    }
-  }
-  let ordered_ids = command_extension_order(command_extensions) catch {
+  let ordered_ids = command_extension_order(command_extensions.specs) catch {
     error => {
       ignore(close_command_host_runtime(host, destroy_hooks))
       raise ConfigurationError(error)
     }
   }
   for id in ordered_ids {
-    let spec = command_extensions[id]
+    let spec = command_extensions.specs[id]
     destroy_hooks.push(CommandExtensionDestroyHook::{
       extension_id: id,
       callback: fn() raise { spec.destroy() },
@@ -70,12 +65,27 @@ fn build_command_host(
         }
       }
     }
+    match command_extensions.event_sources.get(id) {
+      Some(source) =>
+        event_sources.push(CommandExtensionEventSource::{
+          extension_id: id,
+          extension_namespace: spec.js_namespace(),
+          source,
+          started: false,
+        })
+      None => ()
+    }
     has_commands = true
   }
   if has_commands {
     host.seal_registrations()
     CommandHostBuild::{
-      runtime: Some(CommandHostRuntime::{ host, destroy_hooks, closed: false, }),
+      runtime: Some(CommandHostRuntime::{
+        host,
+        destroy_hooks,
+        event_sources,
+        closed: false,
+      }),
       app_capabilities,
     }
   } else {
@@ -85,10 +95,12 @@ fn build_command_host(
 }
 
 ///|
-fn command_extension_specs(
+fn command_extension_catalog(
   capabilities : Array[ExtensionCapabilityBinding],
-) -> Map[String, @proton_command.AppCommandExtensionSpec] raise AppConfigurationError {
+) -> CommandExtensionCatalog raise AppConfigurationError {
   let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
+  let event_sources : Map[String, @proton_extension.EventSource] = Map([])
+  let event_source_definition_ids : Map[String, UInt64] = Map([])
   for capability in capabilities {
     let id = capability.spec.id()
     match specs.get(id) {
@@ -98,11 +110,54 @@ fn command_extension_specs(
             detail="extension " + id + " has conflicting definitions",
           )
         }
+        match (capability.event_source, event_source_definition_ids.get(id)) {
+          (Some(_), Some(definition_id)) => {
+            guard definition_id == capability.definition_id else {
+              raise InvalidRendererCapability(
+                detail="extension " + id + " has conflicting event sources",
+              )
+            }
+          }
+          (None, None) => ()
+          (_, _) =>
+            raise InvalidRendererCapability(
+              detail="extension " + id + " has conflicting event sources",
+            )
+        }
       }
-      None => specs[id] = capability.spec
+      None => {
+        specs[id] = capability.spec
+        match capability.event_source {
+          Some(source) => {
+            event_sources[id] = source
+            event_source_definition_ids[id] = capability.definition_id
+          }
+          None => ()
+        }
+      }
     }
   }
-  specs
+  CommandExtensionCatalog::{ specs, event_sources, }
+}
+
+///|
+fn stop_command_extension_event_sources(
+  event_sources : Array[CommandExtensionEventSource],
+) -> Unit {
+  let source_count = event_sources.length()
+  for index in 0..<source_count {
+    let event_source = event_sources[source_count - index - 1]
+    event_source.stop()
+  }
+}
+
+///|
+fn CommandExtensionEventSource::stop(
+  self : CommandExtensionEventSource,
+) -> Unit {
+  guard self.started else { return }
+  self.source.stop()
+  self.started = false
 }
 
 ///|

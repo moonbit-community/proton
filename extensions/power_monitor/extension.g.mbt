@@ -6,7 +6,6 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
   [
     get_idle_time_command.contract_route(),
     get_power_source_command.contract_route(),
-    drain_events_command.contract_route(),
   ]
 }
 
@@ -21,9 +20,5 @@ pub fn register_commands(
   registrar.bind(
     get_power_source_command,
     (context, request) => get_power_source(context, request),
-  )
-  registrar.bind(
-    drain_events_command,
-    (context, request) => drain_events(context, request),
   )
 }
