@@ -808,6 +808,27 @@ int32_t proton_engine_window_set_progress_bar(
   return PROTON_ERR_UNSUPPORTED;
 }
 
+int32_t proton_engine_window_flash_frame(
+    proton_engine_window_t *window, int32_t flash, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (flash != 0 && flash != 1) {
+    proton_engine_set_message(error, error_len, "flash must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window attention is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  gtk_window_set_urgency_hint(GTK_WINDOW(window->window), flash != 0);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_apply(
     proton_engine_window_t *window,
     const proton_engine_window_action_t *action,

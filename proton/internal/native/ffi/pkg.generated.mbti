@@ -184,6 +184,8 @@ pub fn proton_window_emit_bridge_event_json_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_eval_ffi(WindowHandle, Bytes) -> Int
 
+pub fn proton_window_flash_frame_ffi(WindowHandle, Int) -> Int
+
 pub fn proton_window_focus_ffi(WindowHandle) -> Int
 
 pub fn proton_window_get_state_ffi(WindowHandle, FixedArray[Int], Int) -> Int

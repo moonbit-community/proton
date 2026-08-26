@@ -836,6 +836,10 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
   if (window == NULL) {
     return;
   }
+  if (window->attention_request_id != 0) {
+    [NSApp cancelUserAttentionRequest:window->attention_request_id];
+    window->attention_request_id = 0;
+  }
   if (g_dock_progress_owner == window) {
     proton_engine_dock_progress_clear();
   }
@@ -1178,6 +1182,37 @@ int32_t proton_engine_window_set_progress_bar(
     g_dock_progress_indicator.doubleValue = progress;
   }
   [[NSApp dockTile] display];
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_flash_frame(
+    proton_engine_window_t *window, int32_t flash, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (flash != 0 && flash != 1) {
+    proton_engine_set_message(error, error_len, "flash must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window attention is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (flash) {
+    if (window->attention_request_id != 0) {
+      [NSApp cancelUserAttentionRequest:window->attention_request_id];
+    }
+    window->attention_request_id =
+        [NSApp requestUserAttention:NSCriticalRequest];
+  } else if (window->attention_request_id != 0) {
+    [NSApp cancelUserAttentionRequest:window->attention_request_id];
+    window->attention_request_id = 0;
+  }
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
