@@ -40,13 +40,13 @@ static void proton_engine_apply_size_constraints(
     return;
   }
   [window->window
-      setContentMinSize:window->min_width > 0
-                        ? NSMakeSize(window->min_width, window->min_height)
-                        : NSZeroSize];
+      setMinSize:window->min_width > 0
+                     ? NSMakeSize(window->min_width, window->min_height)
+                     : NSZeroSize];
   [window->window
-      setContentMaxSize:window->max_width > 0
-                        ? NSMakeSize(window->max_width, window->max_height)
-                        : NSMakeSize(CGFLOAT_MAX, CGFLOAT_MAX)];
+      setMaxSize:window->max_width > 0
+                     ? NSMakeSize(window->max_width, window->max_height)
+                     : NSMakeSize(CGFLOAT_MAX, CGFLOAT_MAX)];
 }
 
 static void proton_engine_dock_progress_clear(void) {
