@@ -150,6 +150,16 @@ fn RuntimeSession::window_handle(
         window.set_resizable(resizable)
       })
     },
+    set_window_minimum_size: (width, height) => {
+      self.control_window(id, native_id, "set minimum size", window => {
+        window.set_minimum_size(width, height)
+      })
+    },
+    set_window_maximum_size: (width, height) => {
+      self.control_window(id, native_id, "set maximum size", window => {
+        window.set_maximum_size(width, height)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1097,6 +1107,34 @@ pub fn WindowHandle::set_resizable(
   resizable : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_resizable)(resizable)
+}
+
+///|
+/// Sets the minimum live native window size.
+///
+/// Both dimensions must be positive, or both must be zero to clear the
+/// constraint. Existing maximum size and resizable state remain unchanged.
+/// Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_minimum_size(
+  self : WindowHandle,
+  width : Int,
+  height : Int,
+) -> Unit raise WindowSessionError {
+  (self.set_window_minimum_size)(width, height)
+}
+
+///|
+/// Sets the maximum live native window size.
+///
+/// Both dimensions must be positive, or both must be zero to clear the
+/// constraint. Existing minimum size and resizable state remain unchanged.
+/// Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_maximum_size(
+  self : WindowHandle,
+  width : Int,
+  height : Int,
+) -> Unit raise WindowSessionError {
+  (self.set_window_maximum_size)(width, height)
 }
 
 ///|

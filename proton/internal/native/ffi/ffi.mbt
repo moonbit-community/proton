@@ -447,6 +447,20 @@ pub extern "C" fn proton_window_set_resizable_ffi(
 ) -> Int = "proton_window_set_resizable"
 
 ///|
+pub extern "C" fn proton_window_set_minimum_size_ffi(
+  window : WindowHandle,
+  width : Int,
+  height : Int,
+) -> Int = "proton_window_set_minimum_size"
+
+///|
+pub extern "C" fn proton_window_set_maximum_size_ffi(
+  window : WindowHandle,
+  width : Int,
+  height : Int,
+) -> Int = "proton_window_set_maximum_size"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

@@ -93,6 +93,10 @@ struct proton_engine_window {
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
   int width;
   int height;
+  int min_width;
+  int min_height;
+  int max_width;
+  int max_height;
   int headless;
   int headless_hidden;
   int osr_popup_visible;

@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/62_window_size_limits"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type SetLimitReply derive(ToJson, @json.FromJson)
+pub fn SetLimitReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetLimitReply::to_json(Self) -> Json
+
+type SetLimitRequest derive(ToJson, @json.FromJson)
+pub fn SetLimitRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetLimitRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

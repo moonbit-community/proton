@@ -103,6 +103,8 @@ moon -C examples run 01_run --target native
   activation cancellation, and timed explicit cancellation.
 - `61_window_resizable`: manual Electron-style live window resizing review with
   enable, disable, toggle, and cross-platform native frame checks.
+- `62_window_size_limits`: manual Electron-style minimum and maximum window
+  size review with live constraint updates and clear operations.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

@@ -263,6 +263,16 @@ test "window config preserves typed native ABI values" {
 }
 
 ///|
+test "size constraints accept positive pairs and the clear pair" {
+  validate_size_constraint(640, 480, "minimum")
+  validate_size_constraint(0, 0, "maximum")
+  let error = expect_native_error(() => {
+    validate_size_constraint(0, 480, "minimum")
+  })
+  assert_true(error.message().contains("two positive dimensions"))
+}
+
+///|
 test "bridge config retains typed renderer policy" {
   let bridge_config = BridgeConfig(grants=[
     BridgeGrantConfig("app", ops=["ext:app/ping"]),

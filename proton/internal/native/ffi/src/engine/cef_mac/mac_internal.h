@@ -156,6 +156,10 @@ struct proton_engine_window {
   uint64_t native_id;
   int width;
   int height;
+  int min_width;
+  int min_height;
+  int max_width;
+  int max_height;
   int zoom_percent;
   NSInteger attention_request_id;
   int headless;

@@ -62,6 +62,8 @@ fn test_window_handle(
   progress_calls? : Array[Double],
   flash_calls? : Array[Bool],
   resizable_calls? : Array[Bool],
+  minimum_size_calls? : Array[(Int, Int)],
+  maximum_size_calls? : Array[(Int, Int)],
 ) -> WindowHandle {
   let browser = BrowserHandle::{
     id,
@@ -89,6 +91,18 @@ fn test_window_handle(
     set_window_resizable: resizable => {
       match resizable_calls {
         Some(calls) => calls.push(resizable)
+        None => ()
+      }
+    },
+    set_window_minimum_size: (width, height) => {
+      match minimum_size_calls {
+        Some(calls) => calls.push((width, height))
+        None => ()
+      }
+    },
+    set_window_maximum_size: (width, height) => {
+      match maximum_size_calls {
+        Some(calls) => calls.push((width, height))
         None => ()
       }
     },
@@ -1950,6 +1964,24 @@ test "window resizable routes live capability changes through the handle" {
   window.set_resizable(false)
   window.set_resizable(true)
   debug_inspect(calls, content="[false, true]")
+}
+
+///|
+test "window size limits route live constraints through the handle" {
+  let minimum_calls : Array[(Int, Int)] = []
+  let maximum_calls : Array[(Int, Int)] = []
+  let window = test_window_handle(
+    "main",
+    17L,
+    minimum_size_calls=minimum_calls,
+    maximum_size_calls=maximum_calls,
+  )
+  window.set_minimum_size(640, 480)
+  window.set_minimum_size(0, 0)
+  window.set_maximum_size(1280, 900)
+  window.set_maximum_size(0, 0)
+  debug_inspect(minimum_calls, content="[(640, 480), (0, 0)]")
+  debug_inspect(maximum_calls, content="[(1280, 900), (0, 0)]")
 }
 
 ///|

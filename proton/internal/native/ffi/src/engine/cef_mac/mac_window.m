@@ -34,6 +34,21 @@ static proton_engine_window_t *g_dock_progress_owner = NULL;
 static NSImageView *g_dock_progress_content = nil;
 static NSProgressIndicator *g_dock_progress_indicator = nil;
 
+static void proton_engine_apply_size_constraints(
+    proton_engine_window_t *window) {
+  if (window == NULL || window->window == nil) {
+    return;
+  }
+  [window->window
+      setContentMinSize:window->min_width > 0
+                        ? NSMakeSize(window->min_width, window->min_height)
+                        : NSZeroSize];
+  [window->window
+      setContentMaxSize:window->max_width > 0
+                        ? NSMakeSize(window->max_width, window->max_height)
+                        : NSMakeSize(CGFLOAT_MAX, CGFLOAT_MAX)];
+}
+
 static void proton_engine_dock_progress_clear(void) {
   if (g_dock_progress_indicator != nil) {
     [g_dock_progress_indicator stopAnimation:nil];
@@ -718,6 +733,10 @@ int32_t proton_engine_window_create(
   }
   window->width = config.width;
   window->height = config.height;
+  window->min_width = config.size_hint == 2 ? config.width : 0;
+  window->min_height = config.size_hint == 2 ? config.height : 0;
+  window->max_width = config.size_hint == 3 ? config.width : 0;
+  window->max_height = config.size_hint == 3 ? config.height : 0;
   window->zoom_percent = 100;
   window->headless = runtime->headless;
   window->bridge_config_json =
@@ -781,12 +800,7 @@ int32_t proton_engine_window_create(
     [window->window setRestorable:NO];
     [window->window disableSnapshotRestoration];
     [window->window setTitle:title != nil ? title : @"Proton"];
-    NSSize configured_size = NSMakeSize(config.width, config.height);
-    if (config.size_hint == 2) {
-      [window->window setContentMinSize:configured_size];
-    } else if (config.size_hint == 3) {
-      [window->window setContentMaxSize:configured_size];
-    }
+    proton_engine_apply_size_constraints(window);
     if (config.titlebar_overlay) {
       [window->window setTitleVisibility:NSWindowTitleHidden];
       [window->window setTitlebarAppearsTransparent:YES];
@@ -1143,6 +1157,56 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
     frame.size.height = height;
     [window->window setFrame:frame display:YES animate:NO];
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_minimum_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window size constraints are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (width > 0 && window->max_width > 0 &&
+      (width > window->max_width || height > window->max_height)) {
+    proton_engine_set_message(error, error_len,
+                              "minimum size exceeds maximum size");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  window->min_width = width;
+  window->min_height = height;
+  proton_engine_apply_size_constraints(window);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_maximum_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window size constraints are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (width > 0 && window->min_width > 0 &&
+      (width < window->min_width || height < window->min_height)) {
+    proton_engine_set_message(error, error_len,
+                              "maximum size is below minimum size");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  window->max_width = width;
+  window->max_height = height;
+  proton_engine_apply_size_constraints(window);
   return PROTON_OK;
 }
 

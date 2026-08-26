@@ -120,12 +120,22 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
           handled = true;
         }
       }
-      if (!window->resizable || window->size_hint == 2) {
+      if (!window->resizable) {
         minmax->ptMinTrackSize.x = window->width;
         minmax->ptMinTrackSize.y = window->height;
         handled = true;
       }
-      if (!window->resizable || window->size_hint == 3) {
+      if (window->resizable && window->min_width > 0) {
+        minmax->ptMinTrackSize.x = window->min_width;
+        minmax->ptMinTrackSize.y = window->min_height;
+        handled = true;
+      }
+      if (window->resizable && window->max_width > 0) {
+        minmax->ptMaxTrackSize.x = window->max_width;
+        minmax->ptMaxTrackSize.y = window->max_height;
+        handled = true;
+      }
+      if (!window->resizable) {
         minmax->ptMaxTrackSize.x = window->width;
         minmax->ptMaxTrackSize.y = window->height;
         handled = true;
@@ -400,6 +410,10 @@ int32_t proton_engine_window_create(
   window->headless = runtime->headless;
   window->size_hint = config.size_hint;
   window->resizable = config.size_hint != 1;
+  window->min_width = config.size_hint == 2 ? config.width : 0;
+  window->min_height = config.size_hint == 2 ? config.height : 0;
+  window->max_width = config.size_hint == 3 ? config.width : 0;
+  window->max_height = config.size_hint == 3 ? config.height : 0;
   window->titlebar_overlay = config.titlebar_overlay;
   window->zoom_percent = 100;
   window->windowed_placement.length = sizeof(WINDOWPLACEMENT);
@@ -551,6 +565,54 @@ int32_t proton_engine_window_show(proton_engine_window_t *window,
   } else {
     ShowWindow(window->hwnd, SW_SHOW);
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_minimum_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window size constraints are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (width > 0 && window->max_width > 0 &&
+      (width > window->max_width || height > window->max_height)) {
+    proton_engine_set_message(error, error_len,
+                              "minimum size exceeds maximum size");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  window->min_width = width;
+  window->min_height = height;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_maximum_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window size constraints are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (width > 0 && window->min_width > 0 &&
+      (width < window->min_width || height < window->min_height)) {
+    proton_engine_set_message(error, error_len,
+                              "maximum size is below minimum size");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  window->max_width = width;
+  window->max_height = height;
   return PROTON_OK;
 }
 
