@@ -10,8 +10,6 @@ import {
 // Values
 pub let activity : @proton_contract.Event[PowerMonitorActivity]
 
-pub let drain_events : @proton_contract.Command[@proton_contract.EmptyRequest, PowerMonitorEventReply]
-
 pub let extension : @proton_contract.ExtensionContract
 
 pub let get_idle_time : @proton_contract.Command[@proton_contract.EmptyRequest, IdleTimeReply]
@@ -58,15 +56,6 @@ pub fn PowerMonitorEventPayload::from_json(Json, @json.JsonPath) -> Self raise @
 pub fn PowerMonitorEventPayload::not_equal(Self, Self) -> Bool
 pub fn PowerMonitorEventPayload::to_json(Self) -> Json
 pub fn PowerMonitorEventPayload::to_repr(Self) -> @debug.Repr
-
-pub(all) struct PowerMonitorEventReply {
-  count : Int
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn PowerMonitorEventReply::equal(Self, Self) -> Bool
-pub fn PowerMonitorEventReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn PowerMonitorEventReply::not_equal(Self, Self) -> Bool
-pub fn PowerMonitorEventReply::to_json(Self) -> Json
-pub fn PowerMonitorEventReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct PowerSourceReply {
   source : String

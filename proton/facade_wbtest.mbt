@@ -229,8 +229,27 @@ fn test_extension_capability(
   spec : @proton_command.AppCommandExtensionSpec,
   scope? : Json = Json::empty_object(),
   targets? : Array[RendererTarget] = [RendererTarget::entry()],
+  definition_id? : UInt64 = 1UL,
+  event_source? : @proton_extension.EventSource,
 ) -> ExtensionCapabilityBinding {
-  ExtensionCapabilityBinding::{ spec, scope, targets, }
+  ExtensionCapabilityBinding::{
+    definition_id,
+    spec,
+    event_source,
+    scope,
+    targets,
+  }
+}
+
+///|
+fn test_build_command_host(
+  command_capabilities : Array[AppCommandCapability],
+  extension_capabilities : Array[ExtensionCapabilityBinding],
+) -> CommandHostBuild raise AppRunError {
+  let catalog = command_extension_catalog(extension_capabilities) catch {
+    error => raise ConfigurationError(error)
+  }
+  build_command_host(command_capabilities, catalog)
 }
 
 ///|
@@ -241,6 +260,7 @@ fn test_command_spec(
   dependencies? : Array[String] = [],
   scripts? : Array[String] = [],
   resolve_permission? : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError,
+  on_destroy? : () -> Unit raise = fn() {  },
 ) -> @proton_command.AppCommandExtensionSpec {
   let contract = @proton_contract.extension(id=extension_id, js_namespace~)
   let routes = api_names.map(fn(api_name) {
@@ -256,6 +276,7 @@ fn test_command_spec(
     scripts~,
     dependencies~,
     resolve_permission?,
+    on_destroy~,
   ) catch {
     error => abort(error.message())
   }
@@ -1021,7 +1042,7 @@ test "one extension supports distinct scopes in different windows" {
   let resolved = unwrap_configuration(() => {
     resolve_extension_capabilities(capabilities, "/trusted/project")
   })
-  let build = unwrap_app_run(() => build_command_host([], capabilities))
+  let build = unwrap_app_run(() => test_build_command_host([], capabilities))
   assert_eq(registered.val, 1)
   let main_policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
@@ -1059,7 +1080,7 @@ test "application commands grant the primary entry by default" {
     registrar.bind(ping, (_context, _request) => "pong")
   })
   let build = unwrap_app_run(() => {
-    build_command_host(configured.command_capabilities, [])
+    test_build_command_host(configured.command_capabilities, [])
   })
   let policy = resolve_window_permission_policy(
     "main",
@@ -1077,7 +1098,7 @@ test "omitted renderer capabilities are a valid empty policy" {
   unwrap_configuration(() => {
     validate_renderer_capability_targets(manifest, [], [])
   })
-  let build = unwrap_app_run(() => build_command_host([], []))
+  let build = unwrap_app_run(() => test_build_command_host([], []))
   assert_true(build.runtime is None)
   let policy = resolve_window_permission_policy(
     "main",
@@ -1108,7 +1129,7 @@ test "application command registrars retain separate renderer targets" {
       targets=[RendererTarget::entry(window="secondary")],
     )
   let build = unwrap_app_run(() => {
-    build_command_host(configured.command_capabilities, [])
+    test_build_command_host(configured.command_capabilities, [])
   })
   let primary_policy = resolve_window_permission_policy(
     "main",
@@ -1212,7 +1233,7 @@ test "command host close runs extension destroy hooks once" {
     error => abort(error.message())
   }
   let build = unwrap_app_run(() => {
-    build_command_host([], [test_extension_capability(spec)])
+    test_build_command_host([], [test_extension_capability(spec)])
   })
   match build.runtime {
     Some(host) => {
@@ -1222,6 +1243,129 @@ test "command host close runs extension destroy hooks once" {
       assert_eq(destroyed.val, 1)
     }
     None => fail("expected command host")
+  }
+}
+
+///|
+test "command host stops event sources before extension destroy hooks" {
+  let lifecycle : Array[String] = []
+  let spec = test_command_spec(
+    "examples/event-source-lifecycle",
+    "eventSourceLifecycle",
+    ["ping"],
+    on_destroy=fn() { lifecycle.push("destroy") },
+  )
+  let source = @proton_extension.event_source(
+    _wakeup => lifecycle.push("start"),
+    () => lifecycle.push("stop"),
+    () => [],
+  )
+  let build = unwrap_app_run(() => {
+    test_build_command_host([], [
+      test_extension_capability(spec, event_source=source),
+    ])
+  })
+  match build.runtime {
+    Some(host) => {
+      unwrap_app_run(() => {
+        start_command_extension_event_sources(
+          host.event_sources,
+          @native.event_wakeup_callback(),
+        )
+      })
+      assert_eq(lifecycle, ["start"])
+      assert_eq(close_command_host(Some(host)).length(), 0)
+      assert_eq(lifecycle, ["start", "stop", "destroy"])
+      assert_eq(close_command_host(Some(host)).length(), 0)
+      assert_eq(lifecycle, ["start", "stop", "destroy"])
+    }
+    None => fail("expected command host")
+  }
+}
+
+///|
+test "event source startup failure runs its teardown" {
+  let lifecycle : Array[String] = []
+  let source = @proton_extension.event_source(
+    _wakeup => {
+      lifecycle.push("start")
+      raise FacadeLifecycleTestError::StartFailed("event source")
+    },
+    () => lifecycle.push("stop"),
+    () => [],
+  )
+  let event_sources = [
+    CommandExtensionEventSource::{
+      extension_id: "examples/start-failure",
+      extension_namespace: "startFailure",
+      source,
+      started: false,
+    },
+  ]
+  match
+    expect_app_run_error(() => {
+      start_command_extension_event_sources(
+        event_sources,
+        @native.event_wakeup_callback(),
+      )
+    }) {
+    CommandExtensionLifecycleError(EventSourceStartFailed(..)) => ()
+    error => fail(error.message())
+  }
+  assert_eq(lifecycle, ["start", "stop"])
+  assert_false(event_sources[0].started)
+}
+
+///|
+test "duplicate extension event sources require the same definition" {
+  let spec = test_command_spec(
+    "examples/definition-identity",
+    "definitionIdentity",
+    ["ping"],
+  )
+  let source = @proton_extension.event_source(_wakeup => (), () => (), () => [])
+  match
+    expect_configuration_error(() => {
+      ignore(
+        command_extension_catalog([
+          test_extension_capability(
+            spec,
+            definition_id=1UL,
+            event_source=source,
+          ),
+          test_extension_capability(
+            spec,
+            definition_id=2UL,
+            event_source=source,
+          ),
+        ]),
+      )
+    }) {
+    InvalidRendererCapability(detail~) =>
+      assert_true(detail.contains("conflicting event sources"))
+    error => fail(error.message())
+  }
+}
+
+///|
+test "duplicate renderer capabilities may share one extension event source" {
+  let spec = test_command_spec(
+    "examples/shared-event-source",
+    "sharedEventSource",
+    ["ping"],
+  )
+  let source = @proton_extension.event_source(_wakeup => (), () => (), () => [])
+  let capabilities = [
+    test_extension_capability(spec, definition_id=7UL, event_source=source),
+    test_extension_capability(spec, definition_id=7UL, event_source=source),
+  ]
+  let catalog = unwrap_configuration(() => {
+    command_extension_catalog(capabilities)
+  })
+  assert_eq(catalog.specs.length(), 1)
+  match catalog.event_sources.get(spec.id()) {
+    Some(_) => ()
+    None => fail("expected shared event source")
   }
 }
 
@@ -1238,7 +1382,7 @@ test "command host installs typed application registrars before sealing" {
       targets: [RendererTarget::entry()],
     },
   ]
-  let build = unwrap_app_run(() => build_command_host(capabilities, []))
+  let build = unwrap_app_run(() => test_build_command_host(capabilities, []))
   assert_eq(build.app_capabilities.length(), 1)
   assert_eq(build.app_capabilities[0].ops, ["app:ping"])
   match build.runtime {
@@ -1276,7 +1420,7 @@ test "command host close drains every destroy hook after a failure" {
     error => abort(error.message())
   }
   let build = unwrap_app_run(() => {
-    build_command_host([], [
+    test_build_command_host([], [
       test_extension_capability(base_spec),
       test_extension_capability(feature_spec),
     ])
@@ -1316,7 +1460,7 @@ test "command host registration preserves cleanup failures" {
     error => abort(error.message())
   }
   let error = expect_app_run_error(() => {
-    ignore(build_command_host([], [test_extension_capability(spec)]))
+    ignore(test_build_command_host([], [test_extension_capability(spec)]))
   })
   match error {
     CleanupFailed(primary~, failures~) => {
@@ -1559,7 +1703,7 @@ test "command host registers extension dependencies before dependents" {
     dependency_id, "base", registered,
   )
   let build = unwrap_app_run(() => {
-    build_command_host([], [
+    test_build_command_host([], [
       test_extension_capability(feature_spec),
       test_extension_capability(dependency_spec),
     ])
@@ -1582,7 +1726,7 @@ test "command host rejects missing extension dependencies" {
   ])
   match
     expect_app_run_error(() => {
-      build_command_host([], [test_extension_capability(feature_spec)])
+      test_build_command_host([], [test_extension_capability(feature_spec)])
     }) {
     ConfigurationError(
       ExtensionUnavailable(extension_id=missing_id, requested_by~, state~)

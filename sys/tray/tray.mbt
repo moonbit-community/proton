@@ -488,6 +488,15 @@ pub fn Tray::drain_events(self : Tray) -> Array[TrayEvent] {
 }
 
 ///|
+/// Installs the opaque native wakeup supplied by an embedding event loop.
+#doc(hidden)
+pub fn Tray::set_event_wakeup(self : Tray, wakeup : @ffi.EventWakeup) -> Unit {
+  if self.native && !self.destroyed {
+    set_event_wakeup_ffi(self.handle, wakeup)
+  }
+}
+
+///|
 /// Pumps one native tray loop iteration.
 ///
 /// Call this from long-running native applications when the host platform needs

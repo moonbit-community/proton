@@ -4,15 +4,18 @@ package "moonbit-community/proton/extension"
 import {
   "moonbit-community/proton/command",
   "moonbit-community/proton_contract",
+  "moonbit-community/proton_ffi",
   "moonbitlang/core/debug",
 }
 
 // Values
 pub fn capability(Extension, scope? : Json) -> RendererCapability
 
-pub fn poller_script(js_namespace~ : String, drain_method~ : String, poller_field~ : String) -> String
+pub fn[Payload : ToJson] event(@proton_contract.Event[Payload], Payload) -> Event raise @proton_contract.ContractDefinitionError
 
-pub fn typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (@command.CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (Json, String) -> Json raise @command.PermissionScopeValidationError, on_destroy? : () -> Unit raise) -> Extension
+pub fn event_source((@proton_ffi.EventWakeup) -> Unit raise, () -> Unit, () -> Array[Event] raise) -> EventSource
+
+pub fn typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (@command.CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (Json, String) -> Json raise @command.PermissionScopeValidationError, event_source? : EventSource, on_destroy? : () -> Unit raise) -> Extension
 
 // Errors
 pub(all) suberror ExtensionAdapterError {
@@ -24,6 +27,19 @@ pub fn ExtensionAdapterError::to_repr(Self) -> @debug.Repr
 pub fn ExtensionAdapterError::to_string(Self) -> String
 
 // Types and methods
+pub struct Event {
+  extension_id : String
+  extension_namespace : String
+  name : String
+  payload : Json
+}
+
+pub struct EventSource {
+  start : (@proton_ffi.EventWakeup) -> Unit raise
+  stop : () -> Unit
+  drain : () -> Array[Event] raise
+}
+
 type Extension
 pub fn Extension::command_spec(Self) -> @command.AppCommandExtensionSpec raise ExtensionAdapterError
 pub fn Extension::id(Self) -> String
@@ -34,5 +50,6 @@ pub struct RendererCapability {
 }
 
 // Type aliases
+pub using @proton_ffi {type EventWakeup}
 
 // Traits

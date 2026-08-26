@@ -20,6 +20,7 @@ pub(all) suberror ContractDefinitionError {
   EmptyExtensionNamespace
   EmptyExtensionMember(extension_namespace~ : String)
   DuplicateEventRoute(route~ : String)
+  ExpectedExtensionEvent(route~ : String)
 } derive(Eq, @debug.Debug)
 pub fn ContractDefinitionError::equal(Self, Self) -> Bool
 pub fn ContractDefinitionError::message(Self) -> String

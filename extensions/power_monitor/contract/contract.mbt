@@ -69,23 +69,6 @@ pub extend PowerMonitorEventPayload with ToJson::{to_json}
 pub extend PowerMonitorEventPayload with FromJson::{from_json}
 
 ///|
-pub(all) struct PowerMonitorEventReply {
-  count : Int
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-pub extend PowerMonitorEventReply with Eq::{not_equal, equal}
-
-///|
-pub extend PowerMonitorEventReply with Debug::{to_repr}
-
-///|
-pub extend PowerMonitorEventReply with ToJson::{to_json}
-
-///|
-pub extend PowerMonitorEventReply with FromJson::{from_json}
-
-///|
 pub let get_idle_time : @proton_contract.Command[
   @proton_contract.EmptyRequest,
   IdleTimeReply,
@@ -96,12 +79,6 @@ pub let get_power_source : @proton_contract.Command[
   @proton_contract.EmptyRequest,
   PowerSourceReply,
 ] = extension.command("getPowerSource")
-
-///|
-pub let drain_events : @proton_contract.Command[
-  @proton_contract.EmptyRequest,
-  PowerMonitorEventReply,
-] = extension.command("drainEvents")
 
 ///|
 pub let activity : @proton_contract.Event[PowerMonitorActivity] = extension.event(

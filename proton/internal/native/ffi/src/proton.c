@@ -374,6 +374,10 @@ void proton_runtime_signal_wakeup(void) {
   proton_engine_runtime_signal_external_event(NULL);
 }
 
+void (*proton_runtime_event_wakeup_callback(void))(void) {
+  return proton_runtime_signal_wakeup;
+}
+
 int32_t proton_internal_runtime_set_menu(proton_runtime_handle_t runtime,
                                          const proton_menu_bar_t *menu_bar) {
   proton_runtime_slot_t *slot = NULL;

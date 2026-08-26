@@ -228,16 +228,17 @@ async fn run_manifest(
     ) catch {
       error => raise ConfigurationError(error)
     }
-    let command_extensions = command_extension_specs(extension_capabilities) catch {
+    let extension_catalog = command_extension_catalog(extension_capabilities) catch {
       error => raise ConfigurationError(error)
     }
+    let command_extensions = extension_catalog.specs
     let resolved_extension_capabilities = resolve_extension_capabilities(
       extension_capabilities, permission_base_path,
     ) catch {
       error => raise ConfigurationError(error)
     }
     let command_build = build_command_host(
-      command_capabilities, extension_capabilities,
+      command_capabilities, extension_catalog,
     )
     command_host = command_build.runtime
     let policies : Array[BridgePagePolicy] = []
@@ -351,6 +352,7 @@ async fn run_manifest(
         )
         session.drive_until_complete(application_start)
         active_update_channel.val = update_channel
+        session.start_extension_event_sources()
         for definition in definitions {
           if definition.plan.open_on_start &&
             session.find_active_window(definition.plan.id) is None {
@@ -579,6 +581,7 @@ fn CommandHostRuntime::close(
   self : CommandHostRuntime,
 ) -> Array[CommandExtensionLifecycleError] {
   guard !self.closed else { return [] }
+  stop_command_extension_event_sources(self.event_sources)
   let failures = close_command_host_runtime(self.host, self.destroy_hooks)
   self.closed = true
   failures

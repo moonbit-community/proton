@@ -42,6 +42,13 @@ extern "C" fn native_take_event(handle : State, out_event : Ref[Int]) -> Int = "
 
 ///|
 #borrow(handle)
+extern "C" fn native_set_event_wakeup(
+  handle : State,
+  wakeup : @ffi.EventWakeup,
+) -> Unit = "moonbit_screen_monitor_set_event_wakeup"
+
+///|
+#borrow(handle)
 extern "C" fn native_destroy(handle : State) -> Unit = "moonbit_screen_monitor_destroy"
 
 ///|

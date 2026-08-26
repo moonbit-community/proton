@@ -1,12 +1,49 @@
 ///|
 struct Extension {
+  definition_id : UInt64
   contract : @proton_contract.ExtensionContract
   command_routes : Array[@proton_contract.ContractRoute]
   register : (@proton_command.CommandRegistrar) -> Unit raise
   scripts : Array[String]
   dependencies : Array[String]
   resolve_permission : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError
+  event_source : EventSource?
   on_destroy : () -> Unit raise
+}
+
+///|
+/// One event produced by an extension-owned native event source.
+pub struct Event {
+  extension_id : String
+  extension_namespace : String
+  name : String
+  payload : Json
+}
+
+///|
+/// A native event source integrated with Proton's host event loop.
+///
+/// `start` installs an opaque native wakeup before the source begins producing
+/// events. Native callbacks enqueue their payload and invoke that wakeup;
+/// Proton later calls `drain` on the runtime owner thread. `stop` must be
+/// idempotent and wait until the source can no longer invoke the wakeup.
+pub struct EventSource {
+  start : (EventWakeup) -> Unit raise
+  stop : () -> Unit
+  drain : () -> Array[Event] raise
+}
+
+///|
+/// The opaque native callback supplied to an extension event source.
+pub type EventWakeup = @ffi.EventWakeup
+
+///|
+let next_extension_definition_id : Ref[UInt64] = Ref(0UL)
+
+///|
+fn allocate_extension_definition_id() -> UInt64 {
+  next_extension_definition_id.val += 1UL
+  next_extension_definition_id.val
 }
 
 ///|
@@ -51,16 +88,51 @@ pub fn typed(
     }
     scope
   },
+  event_source? : EventSource,
   on_destroy? : () -> Unit raise = fn() {  },
 ) -> Extension {
   Extension::{
+    definition_id: allocate_extension_definition_id(),
     contract,
     command_routes: command_routes.map(route => route),
     register,
     scripts: scripts.map(script => script),
     dependencies: dependencies.map(dependency => dependency),
     resolve_permission,
+    event_source,
     on_destroy,
+  }
+}
+
+///|
+/// Defines a wake-driven event source with explicit teardown.
+pub fn event_source(
+  start : (EventWakeup) -> Unit raise,
+  stop : () -> Unit,
+  drain : () -> Array[Event] raise,
+) -> EventSource {
+  EventSource::{ start, stop, drain, }
+}
+
+///|
+/// Encodes a typed extension event for delivery to renderer subscribers.
+pub fn[Payload : ToJson] event(
+  descriptor : @proton_contract.Event[Payload],
+  payload : Payload,
+) -> Event raise @proton_contract.ContractDefinitionError {
+  descriptor.validate()
+  let route = descriptor.contract_route()
+  guard route.extension_id() is Some(extension_id) &&
+    route.extension_namespace() is Some(extension_namespace) else {
+    raise @proton_contract.ContractDefinitionError::ExpectedExtensionEvent(
+      route=route.operation_name(),
+    )
+  }
+  Event::{
+    extension_id,
+    extension_namespace,
+    name: descriptor.name(),
+    payload: ToJson::to_json(payload),
   }
 }
 
@@ -95,6 +167,65 @@ pub fn RendererCapability::command_spec(
 #doc(hidden)
 pub fn RendererCapability::scope(self : RendererCapability) -> Json {
   clone_capability_json(self.scope)
+}
+
+///|
+#doc(hidden)
+pub fn RendererCapability::event_source(
+  self : RendererCapability,
+) -> EventSource? {
+  self.extension.event_source
+}
+
+///|
+#doc(hidden)
+pub fn RendererCapability::definition_id(self : RendererCapability) -> UInt64 {
+  self.extension.definition_id
+}
+
+///|
+#doc(hidden)
+pub fn EventSource::start(
+  self : EventSource,
+  wakeup : EventWakeup,
+) -> Unit raise {
+  (self.start)(wakeup)
+}
+
+///|
+#doc(hidden)
+pub fn EventSource::stop(self : EventSource) -> Unit {
+  (self.stop)()
+}
+
+///|
+#doc(hidden)
+pub fn EventSource::drain(self : EventSource) -> Array[Event] raise {
+  (self.drain)()
+}
+
+///|
+#doc(hidden)
+pub fn Event::extension_id(self : Event) -> String {
+  self.extension_id
+}
+
+///|
+#doc(hidden)
+pub fn Event::extension_namespace(self : Event) -> String {
+  self.extension_namespace
+}
+
+///|
+#doc(hidden)
+pub fn Event::name(self : Event) -> String {
+  self.name
+}
+
+///|
+#doc(hidden)
+pub fn Event::payload(self : Event) -> Json {
+  clone_capability_json(self.payload)
 }
 
 ///|
@@ -136,54 +267,4 @@ fn clone_capability_json(value : Json) -> Json {
     }
     _ => value
   }
-}
-
-///|
-/// Builds the standard JavaScript event-poller script for an extension namespace.
-///
-/// Extensions that pump native events through a `drain*` command install this
-/// script so the renderer polls the host on a fixed interval. The script is
-/// idempotent: it exits early if the namespace or its drain method is missing,
-/// or if a poller is already registered.
-pub fn poller_script(
-  js_namespace~ : String,
-  drain_method~ : String,
-  poller_field~ : String,
-) -> String {
-  let ns = js_namespace
-  "(() => {\n" +
-  "  const root = window.__MoonBit__;\n" +
-  "  const " +
-  ns +
-  " = root && root." +
-  ns +
-  ";\n" +
-  "  if (!" +
-  ns +
-  " || typeof " +
-  ns +
-  "." +
-  drain_method +
-  " !== \"function\") {\n" +
-  "    return;\n" +
-  "  }\n" +
-  "  if (" +
-  ns +
-  "." +
-  poller_field +
-  ") {\n" +
-  "    return;\n" +
-  "  }\n" +
-  "  " +
-  ns +
-  "." +
-  poller_field +
-  " = window.setInterval(() => {\n" +
-  "    " +
-  ns +
-  "." +
-  drain_method +
-  "({}).catch(() => {});\n" +
-  "  }, 100);\n" +
-  "})();"
 }

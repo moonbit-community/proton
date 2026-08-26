@@ -98,6 +98,7 @@ pub(all) suberror ContractDefinitionError {
   EmptyExtensionNamespace
   EmptyExtensionMember(extension_namespace~ : String)
   DuplicateEventRoute(route~ : String)
+  ExpectedExtensionEvent(route~ : String)
 } derive(Debug, Eq)
 
 ///|
@@ -332,6 +333,8 @@ pub fn ContractDefinitionError::message(
       "extension contract member must not be empty: " + extension_namespace
     DuplicateEventRoute(route~) =>
       "event route is declared more than once: " + route
+    ExpectedExtensionEvent(route~) =>
+      "event route does not belong to an extension: " + route
   }
 }
 

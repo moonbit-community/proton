@@ -1,5 +1,6 @@
 import {
   "moonbit-community/proton/internal/native/cef_loader",
+  "moonbit-community/proton_ffi",
 }
 
 supported_targets = "native"

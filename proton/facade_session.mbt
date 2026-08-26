@@ -1631,6 +1631,9 @@ fn RuntimeSession::pump_once(
   if self.drain_runtime_events() {
     did_work = true
   }
+  if self.drain_extension_events() {
+    did_work = true
+  }
   if monitor_bridge {
     self.check_bridge_failures()
   }
@@ -1653,6 +1656,126 @@ fn RuntimeSession::pump_once(
     did_work = true
   }
   did_work
+}
+
+///|
+fn RuntimeSession::start_extension_event_sources(
+  self : RuntimeSession,
+) -> Unit raise AppRunError {
+  match self.command_host {
+    None => ()
+    Some(host) =>
+      start_command_extension_event_sources(
+        host.event_sources,
+        @native.event_wakeup_callback(),
+      )
+  }
+}
+
+///|
+fn start_command_extension_event_sources(
+  event_sources : Array[CommandExtensionEventSource],
+  wakeup : @proton_extension.EventWakeup,
+) -> Unit raise AppRunError {
+  for event_source in event_sources {
+    guard !event_source.started else { continue }
+    event_source.started = true
+    event_source.source.start(wakeup) catch {
+      error => {
+        event_source.source.stop()
+        event_source.started = false
+        raise CommandExtensionLifecycleError(
+          EventSourceStartFailed(
+            extension_id=event_source.extension_id,
+            detail=@debug.render(Repr(error)),
+          ),
+        )
+      }
+    }
+  }
+}
+
+///|
+fn RuntimeSession::drain_extension_events(
+  self : RuntimeSession,
+) -> Bool raise AppRunError {
+  let mut did_work = false
+  match self.command_host {
+    None => ()
+    Some(host) =>
+      for event_source in host.event_sources {
+        guard event_source.started else { continue }
+        let events = event_source.drain()
+        if !events.is_empty() {
+          did_work = true
+        }
+        for event in events {
+          guard event.extension_id() == event_source.extension_id &&
+            event.extension_namespace() == event_source.extension_namespace else {
+            event_source.disable(
+              "event descriptor belongs to " +
+              event.extension_id() +
+              " (" +
+              event.extension_namespace() +
+              ")",
+            )
+            break
+          }
+          self.forward_extension_event_to_granted_windows(
+            event_source.extension_id,
+            event_source.extension_namespace,
+            event.name(),
+            event.payload(),
+          )
+        }
+      }
+  }
+  did_work
+}
+
+///|
+fn CommandExtensionEventSource::drain(
+  self : CommandExtensionEventSource,
+) -> Array[@proton_extension.Event] {
+  guard self.started else { return [] }
+  self.source.drain() catch {
+    error => {
+      self.disable(@debug.render(Repr(error)))
+      []
+    }
+  }
+}
+
+///|
+fn CommandExtensionEventSource::disable(
+  self : CommandExtensionEventSource,
+  detail : String,
+) -> Unit {
+  self.stop()
+  @xlog.error(category="proton.extension") <?
+    {
+      "message": "event source disabled",
+      "extension_id": self.extension_id,
+      "detail": detail,
+    }
+}
+
+///|
+fn RuntimeSession::forward_extension_event_to_granted_windows(
+  self : RuntimeSession,
+  extension_id : String,
+  extension_namespace : String,
+  name : String,
+  payload : Json,
+) -> Unit raise AppRunError {
+  for running in self.windows {
+    guard running.is_active() &&
+      running.bridge_ready &&
+      running.permissions.grants_extension(extension_id) else {
+      continue
+    }
+    forward_extension_event(running.window, extension_namespace, name, payload)
+  }
 }
 
 ///|

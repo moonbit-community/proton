@@ -257,6 +257,7 @@ static DWORD WINAPI screen_monitor_watch_thread_main(LPVOID param) {
   if (RegisterClassW(&wc) == 0 && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
     screen_monitor_set_watch_error(state, "RegisterClassW failed");
     state->watch_started = 0;
+    SetEvent(state->ready_event);
     return 1;
   }
 
@@ -266,6 +267,7 @@ static DWORD WINAPI screen_monitor_watch_thread_main(LPVOID param) {
   if (hwnd == NULL) {
     screen_monitor_set_watch_error(state, "CreateWindowExW failed");
     state->watch_started = 0;
+    SetEvent(state->ready_event);
     return 1;
   }
   state->message_window = hwnd;
@@ -285,6 +287,7 @@ static DWORD WINAPI screen_monitor_watch_thread_main(LPVOID param) {
   screen_monitor_platform_enumerate(state);
 
   state->watch_started = 1;
+  SetEvent(state->ready_event);
 
   MSG msg;
   while (GetMessageW(&msg, NULL, 0, 0) > 0) {
@@ -301,12 +304,33 @@ int32_t screen_monitor_platform_start_watching(screen_monitor_state_t *state) {
     return screen_monitor_STATUS_OK;
   }
   state->watch_started = 0;
+  if (state->ready_event == NULL) {
+    state->ready_event = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (state->ready_event == NULL) {
+      screen_monitor_set_watch_error(state, "CreateEventW failed");
+      return screen_monitor_STATUS_OPERATION_FAILED;
+    }
+  }
   state->watch_thread =
       CreateThread(NULL, 0, screen_monitor_watch_thread_main, state, 0,
                    &state->watch_thread_id);
   if (state->watch_thread == NULL) {
+    CloseHandle(state->ready_event);
+    state->ready_event = NULL;
     screen_monitor_set_watch_error(state, "CreateThread failed");
     return screen_monitor_STATUS_OPERATION_FAILED;
+  }
+  WaitForSingleObject(state->ready_event, INFINITE);
+  if (!state->watch_started) {
+    WaitForSingleObject(state->watch_thread, INFINITE);
+    CloseHandle(state->watch_thread);
+    state->watch_thread = NULL;
+    CloseHandle(state->ready_event);
+    state->ready_event = NULL;
+    if (state->watch_error[0] == '\0') {
+      screen_monitor_set_watch_error(state, "watch backend failed to start");
+    }
+    return screen_monitor_STATUS_BACKEND_UNAVAILABLE;
   }
   return screen_monitor_STATUS_OK;
 }
@@ -314,9 +338,13 @@ int32_t screen_monitor_platform_start_watching(screen_monitor_state_t *state) {
 int32_t screen_monitor_platform_stop_watching(screen_monitor_state_t *state) {
   if (state->watch_thread != NULL) {
     PostThreadMessageW(state->watch_thread_id, WM_QUIT, 0, 0);
-    WaitForSingleObject(state->watch_thread, 10000);
+    WaitForSingleObject(state->watch_thread, INFINITE);
     CloseHandle(state->watch_thread);
     state->watch_thread = NULL;
+  }
+  if (state->ready_event != NULL) {
+    CloseHandle(state->ready_event);
+    state->ready_event = NULL;
   }
   if (state->device_handle != NULL) {
     UnregisterDeviceNotification(state->device_handle);

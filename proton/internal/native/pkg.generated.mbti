@@ -4,6 +4,7 @@ package "moonbit-community/proton/internal/native"
 import {
   "moonbit-community/proton/internal/locale",
   "moonbit-community/proton/internal/native/ffi",
+  "moonbit-community/proton_ffi",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -12,6 +13,8 @@ import {
 pub fn abi_version() -> Int
 
 pub fn bridge_permission_grants_supported() -> Bool
+
+pub fn event_wakeup_callback() -> @proton_ffi.EventWakeup
 
 pub fn execute_process(config? : RuntimeConfig) -> ProcessResult raise NativeError
 

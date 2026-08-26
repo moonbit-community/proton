@@ -88,7 +88,9 @@ priv struct AppCommandCapability {
 
 ///|
 priv struct ExtensionCapabilityBinding {
+  definition_id : UInt64
   spec : @proton_command.AppCommandExtensionSpec
+  event_source : @proton_extension.EventSource?
   scope : Json
   targets : Array[RendererTarget]
 }
@@ -97,6 +99,12 @@ priv struct ExtensionCapabilityBinding {
 priv struct RegisteredAppCommandCapability {
   ops : Array[String]
   targets : Array[RendererTarget]
+}
+
+///|
+priv struct CommandExtensionCatalog {
+  specs : Map[String, @proton_command.AppCommandExtensionSpec]
+  event_sources : Map[String, @proton_extension.EventSource]
 }
 
 ///|
@@ -229,7 +237,16 @@ priv struct PreparedWindow {
 priv struct CommandHostRuntime {
   host : @core.AppCommandHost
   destroy_hooks : Array[CommandExtensionDestroyHook]
+  event_sources : Array[CommandExtensionEventSource]
   mut closed : Bool
+}
+
+///|
+priv struct CommandExtensionEventSource {
+  extension_id : String
+  extension_namespace : String
+  source : @proton_extension.EventSource
+  mut started : Bool
 }
 
 ///|
@@ -705,6 +722,7 @@ pub extend AppEntryError with Debug::{to_repr}
 pub(all) suberror CommandExtensionLifecycleError {
   ApplicationRegistrationFailed(detail~ : String)
   RegistrationFailed(extension_id~ : String, detail~ : String)
+  EventSourceStartFailed(extension_id~ : String, detail~ : String)
   DestroyFailed(extension_id~ : String, detail~ : String)
 } derive(Debug)
 

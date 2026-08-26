@@ -124,23 +124,6 @@ pub extend TrayReply with ToJson::{to_json}
 pub extend TrayReply with FromJson::{from_json}
 
 ///|
-pub(all) struct TrayEventReply {
-  count : Int
-} derive(ToJson, FromJson, Debug, Eq)
-
-///|
-pub extend TrayEventReply with Eq::{not_equal, equal}
-
-///|
-pub extend TrayEventReply with Debug::{to_repr}
-
-///|
-pub extend TrayEventReply with ToJson::{to_json}
-
-///|
-pub extend TrayEventReply with FromJson::{from_json}
-
-///|
 pub(all) struct TrayActivity {
   operation : String
   visible : Bool
@@ -260,12 +243,6 @@ pub let set_tooltip : @proton_contract.Command[SetTooltipRequest, TrayReply] = e
 pub let set_menu : @proton_contract.Command[SetMenuRequest, TrayReply] = extension.command(
   "setMenu",
 )
-
-///|
-pub let drain_events : @proton_contract.Command[
-  @proton_contract.EmptyRequest,
-  TrayEventReply,
-] = extension.command("drainEvents")
 
 ///|
 pub let destroy : @proton_contract.Command[

@@ -10,7 +10,6 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
     set_icon_command.contract_route(),
     set_tooltip_command.contract_route(),
     set_menu_command.contract_route(),
-    drain_events_command.contract_route(),
     destroy_command.contract_route(),
   ]
 }
@@ -42,10 +41,6 @@ pub fn register_commands(
   registrar.bind(
     set_menu_command,
     (context, request) => set_menu(context, request),
-  )
-  registrar.bind(
-    drain_events_command,
-    (context, request) => drain_events(context, request),
   )
   registrar.bind(
     destroy_command,

@@ -575,6 +575,12 @@ pub fn signal_wakeup() -> Unit {
 }
 
 ///|
+/// Returns the opaque native callback used by extension event producers.
+pub fn event_wakeup_callback() -> @ffi.EventWakeup {
+  @native_ffi.proton_runtime_event_wakeup_callback_ffi()
+}
+
+///|
 fn menu_item_kind_code(kind : MenuItemKind) -> Int {
   match kind {
     Command => 0

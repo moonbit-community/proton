@@ -102,6 +102,7 @@ pub fn AppRunError::to_string(Self) -> String
 pub(all) suberror CommandExtensionLifecycleError {
   ApplicationRegistrationFailed(detail~ : String)
   RegistrationFailed(extension_id~ : String, detail~ : String)
+  EventSourceStartFailed(extension_id~ : String, detail~ : String)
   DestroyFailed(extension_id~ : String, detail~ : String)
 } derive(@debug.Debug)
 pub fn CommandExtensionLifecycleError::message(Self) -> String
