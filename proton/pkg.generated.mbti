@@ -612,6 +612,7 @@ pub struct WindowHandle {
 }
 pub fn WindowHandle::add_view(Self, String, ViewConfig) -> ViewHandle raise WindowSessionError
 pub fn WindowHandle::browser(Self) -> BrowserHandle
+pub fn WindowHandle::center(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::close(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::flash_frame(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::focus(Self) -> Unit raise WindowSessionError

@@ -105,6 +105,8 @@ moon -C examples run 01_run --target native
   enable, disable, toggle, and cross-platform native frame checks.
 - `62_window_size_limits`: manual Electron-style minimum and maximum window
   size review with live constraint updates and clear operations.
+- `63_window_center`: manual Electron-style window centering review using the
+  current monitor work area and native frame size.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

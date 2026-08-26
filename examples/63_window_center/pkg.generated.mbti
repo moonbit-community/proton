@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/63_window_center"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type CenterReply derive(ToJson, @json.FromJson)
+pub fn CenterReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn CenterReply::to_json(Self) -> Json
+
+type CenterRequest derive(ToJson, @json.FromJson)
+pub fn CenterRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn CenterRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

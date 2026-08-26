@@ -58,12 +58,14 @@ fn test_window_manager() -> WindowManager {
 fn test_window_handle(
   id : String,
   native_id : Int64,
+  position_calls? : Array[(Int, Int)],
   popup_calls? : Array[String],
   progress_calls? : Array[Double],
   flash_calls? : Array[Bool],
   resizable_calls? : Array[Bool],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
+  window_state? : WindowState,
 ) -> WindowHandle {
   let browser = BrowserHandle::{
     id,
@@ -86,7 +88,12 @@ fn test_window_handle(
     maximize_window: fn() {  },
     restore_window: fn() {  },
     set_window_fullscreen: fn(_fullscreen) {  },
-    set_window_position: fn(_x, _y) {  },
+    set_window_position: (x, y) => {
+      match position_calls {
+        Some(calls) => calls.push((x, y))
+        None => ()
+      }
+    },
     set_window_always_on_top: fn(_always_on_top) {  },
     set_window_resizable: resizable => {
       match resizable_calls {
@@ -129,7 +136,10 @@ fn test_window_handle(
         None => ()
       }
     },
-    read_window_state: fn() { abort("test window state is not available") },
+    read_window_state: match window_state {
+      Some(state) => fn() { state }
+      None => fn() { abort("test window state is not available") }
+    },
     browser,
     add_view: fn(_id, _config) { abort("test views are not available") },
     remove_view: fn(_id) { abort("test views are not available") },
@@ -1964,6 +1974,38 @@ test "window resizable routes live capability changes through the handle" {
   window.set_resizable(false)
   window.set_resizable(true)
   debug_inspect(calls, content="[false, true]")
+}
+
+///|
+test "window center uses the current monitor work area and frame size" {
+  let position_calls : Array[(Int, Int)] = []
+  let window = test_window_handle("main", 17L, position_calls~, window_state=WindowState::{
+    x: 120,
+    y: 80,
+    width: 800,
+    height: 600,
+    monitor: WindowMonitor::{
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+      work_x: 0,
+      work_y: 24,
+      work_width: 1920,
+      work_height: 1032,
+      scale_factor_percent: 100,
+    },
+    zoom_percent: 100,
+    visible: true,
+    focused: true,
+    minimized: false,
+    maximized: false,
+    fullscreen: false,
+    always_on_top: false,
+    theme: "system",
+  })
+  window.center()
+  debug_inspect(position_calls, content="[(560, 240)]")
 }
 
 ///|

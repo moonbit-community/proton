@@ -159,6 +159,9 @@ or `Max`; minimum and maximum hints constrain resizing relative to the
 configured width and height. A running `WindowHandle` can also update those
 constraints with `set_minimum_size` and `set_maximum_size`; pass `(0, 0)` to
 clear a constraint. See `examples/62_window_size_limits` for a manual review.
+`WindowHandle::center` places a live window in the work area of its current
+monitor while preserving its size. See `examples/63_window_center` for a
+manual review.
 
 The typed facade can own additional windows without replacing Proton's bridge
 pump:
@@ -189,7 +192,9 @@ template without creating it; `WindowManager::open` creates a fresh concrete
 instance when the application needs it. `WindowHandle` supports show, hide,
 focus, close, title, size, position, minimize, maximize, restore, fullscreen,
 always-on-top, zoom, and a `WindowState` snapshot containing the current
-monitor, work area, scale factor, focus, and theme.
+monitor, work area, scale factor, focus, and theme. `WindowHandle::center`
+centers a live window within that monitor's work area without changing its
+size.
 
 Window state and close requests are delivered by the managed runtime session:
 
