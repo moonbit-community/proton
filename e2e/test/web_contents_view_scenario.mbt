@@ -223,4 +223,7 @@ fn assert_web_contents_view_events(path : String) -> Unit raise {
     events.contains("view_loading_changed loading=false") else {
     fail("view events missed loading state changes: " + events)
   }
+  guard events.contains("view_closed") else {
+    fail("view events missed the closed view lifecycle: " + events)
+  }
 }

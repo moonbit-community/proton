@@ -491,6 +491,7 @@ pub(all) enum ViewEvent {
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  Closed
 } derive(Debug, Eq)
 
 ///|

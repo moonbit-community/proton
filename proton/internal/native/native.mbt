@@ -1006,6 +1006,7 @@ fn decode_native_runtime_event(
         },
       )
     28 => QuitRequested
+    29 => ViewEvent(window, @native_ffi.event_int64(event, 1), Closed)
     kind =>
       raise InvalidPayload(
         context="runtime event",

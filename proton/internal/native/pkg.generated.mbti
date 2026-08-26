@@ -420,6 +420,7 @@ pub fn RuntimeEvent::event_type(Self) -> String
 pub fn RuntimeEvent::has_window(Self) -> Bool
 pub fn RuntimeEvent::is_bridge_lifecycle_changed(Self) -> Bool
 pub fn RuntimeEvent::is_quit_requested(Self) -> Bool
+pub fn RuntimeEvent::is_view_closed(Self) -> Bool
 pub fn RuntimeEvent::is_window_closed(Self) -> Bool
 pub fn RuntimeEvent::is_window_created(Self) -> Bool
 pub fn RuntimeEvent::launch_input(Self) -> RuntimeLaunchInput?

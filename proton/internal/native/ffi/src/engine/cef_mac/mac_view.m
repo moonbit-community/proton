@@ -432,6 +432,7 @@ void proton_engine_view_on_before_close(proton_engine_view_t *view,
   }
   view->browser_before_close_seen = 1;
   proton_engine_view_mark_closed(view);
+  proton_view_events_closed(view->events);
   proton_engine_view_release_browser(view);
   if (view->browser_view != nil) {
     [view->browser_view removeFromSuperview];

@@ -1880,8 +1880,9 @@ fn RuntimeSession::dispatch_window_event(
 fn RuntimeSession::dispatch_view_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
-) -> Unit {
-  if self.view_event_handlers.is_empty() {
+) -> Unit raise AppRunError {
+  let closes_view = event.is_view_closed()
+  if self.view_event_handlers.is_empty() && !closes_view {
     return
   }
   let info = match event.view_event() {
@@ -1897,7 +1898,7 @@ fn RuntimeSession::dispatch_view_event(
     Some(running) => running
     None => return
   }
-  for view in running.views {
+  for index, view in running.views {
     if view.view.id() == view_native_id {
       let handle = self.view_handle(running, view)
       let view_event = match event.event_type() {
@@ -1911,7 +1912,18 @@ fn RuntimeSession::dispatch_view_event(
             error_code=info.error_code.unwrap_or(0),
             error_text=info.error_text.unwrap_or(""),
           )
+        "view_closed" => Closed
         _ => return
+      }
+      if closes_view {
+        view.view.destroy() catch {
+          error =>
+            raise native_run_error(
+              "destroy closed view " + view.id + " in window " + running.id,
+              error,
+            )
+        }
+        ignore(running.views.remove(index))
       }
       for handler in self.view_event_handlers {
         ignore(
