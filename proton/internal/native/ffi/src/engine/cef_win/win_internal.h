@@ -80,6 +80,7 @@ struct proton_engine_window {
   int resizable;
   int movable;
   int minimizable;
+  int maximizable;
   int min_width;
   int min_height;
   int max_width;

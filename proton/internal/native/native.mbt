@@ -1527,6 +1527,24 @@ pub fn Window::set_minimizable(
 }
 
 ///|
+/// Sets whether the user can manually maximize the live native window.
+pub fn Window::set_maximizable(
+  self : Window,
+  maximizable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_maximizable_ffi(
+      self.live_handle(),
+      if maximizable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

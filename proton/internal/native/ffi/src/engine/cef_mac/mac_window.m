@@ -738,6 +738,7 @@ int32_t proton_engine_window_create(
   window->max_width = config.size_hint == 3 ? config.width : 0;
   window->max_height = config.size_hint == 3 ? config.height : 0;
   window->zoom_percent = 100;
+  window->maximizable = 1;
   window->headless = runtime->headless;
   window->bridge_config_json =
       config.bridge_config_json != NULL
@@ -1318,7 +1319,7 @@ int32_t proton_engine_window_set_content_protection(
                               "content protection is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
-  window->window.sharingType = enabled ? NSWindowSharingNone : NSWindowSharingReadWrite;
+  window->window.sharingType = enabled ? NSWindowSharingNone : NSWindowSharingReadOnly;
   return PROTON_OK;
 }
 
@@ -1345,6 +1346,30 @@ int32_t proton_engine_window_set_minimizable(
     style &= ~NSWindowStyleMaskMiniaturizable;
   }
   window->window.styleMask = style;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_maximizable(
+    proton_engine_window_t *window, int32_t maximizable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (maximizable != 0 && maximizable != 1) {
+    proton_engine_set_message(error, error_len, "maximizable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window maximizability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  NSButton *zoom_button = [window->window standardWindowButton:NSWindowZoomButton];
+  if (zoom_button != nil) {
+    zoom_button.enabled = maximizable != 0;
+  }
+  window->maximizable = maximizable;
   return PROTON_OK;
 }
 
@@ -1517,6 +1542,10 @@ int32_t proton_engine_window_apply(
       style &= ~NSWindowStyleMaskResizable;
     }
     window->window.styleMask = style;
+    NSButton *zoom_button = [window->window standardWindowButton:NSWindowZoomButton];
+    if (zoom_button != nil) {
+      zoom_button.enabled = window->maximizable;
+    }
     break;
   }
   default:

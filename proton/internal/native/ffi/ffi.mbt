@@ -503,6 +503,12 @@ pub extern "C" fn proton_window_set_minimizable_ffi(
 ) -> Int = "proton_window_set_minimizable"
 
 ///|
+pub extern "C" fn proton_window_set_maximizable_ffi(
+  window : WindowHandle,
+  maximizable : Int,
+) -> Int = "proton_window_set_maximizable"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

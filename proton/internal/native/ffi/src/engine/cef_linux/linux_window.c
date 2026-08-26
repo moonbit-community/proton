@@ -990,6 +990,26 @@ int32_t proton_engine_window_set_minimizable(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_maximizable(
+    proton_engine_window_t *window, int32_t maximizable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (maximizable != 0 && maximizable != 1) {
+    proton_engine_set_message(error, error_len, "maximizable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window maximizability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  // Electron exposes this setter on macOS and Windows; Linux is a success no-op.
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {
