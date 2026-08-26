@@ -365,9 +365,19 @@ fn RuntimeSession::add_window_view(
     Some(running) if running.window.id() == window_native_id => running
     _ => raise StaleWindow(id=window_id)
   }
+  let running_view = add_view_to_running_window(running, view_id, config)
+  self.view_handle(running, running_view)
+}
+
+///|
+fn add_view_to_running_window(
+  running : RunningWindow,
+  view_id : String,
+  config : @native.ViewConfig,
+) -> RunningView raise WindowSessionError {
   if view_id.is_empty() {
     raise window_operation_failed(
-      "add view to window " + window_id,
+      "add view to window " + running.id,
       @native.NativeError::InvalidArgument(message="view id must not be empty"),
     )
   }
@@ -379,7 +389,7 @@ fn RuntimeSession::add_window_view(
   let created = @native.View::View(running.window, config) catch {
     error =>
       raise window_operation_failed(
-        "add view " + view_id + " to window " + window_id,
+        "add view " + view_id + " to window " + running.id,
         error,
       )
   }
@@ -389,7 +399,7 @@ fn RuntimeSession::add_window_view(
     document: None,
   }
   running.views.push(running_view)
-  self.view_handle(running, running_view)
+  running_view
 }
 
 ///|
@@ -693,15 +703,6 @@ fn RuntimeSession::create_window(
   ) catch {
     error => raise native_run_error("create window " + plan.id, error)
   }
-  if self.window_close_handler is Some(_) {
-    created_window.set_close_interception(true) catch {
-      error =>
-        raise native_run_error(
-          "enable close interception for " + plan.id,
-          error,
-        )
-    }
-  }
   let (document, asset_root) = match definition.entry {
     RemoteEntry(_) => (None, None)
     DocumentEntry(document, asset_root) => (Some(document), asset_root)
@@ -717,19 +718,28 @@ fn RuntimeSession::create_window(
     bridge_ready: !self.monitor_bridge,
     state: WindowStarting,
   }
-  self.windows.push(running)
+  errdefer (created_window.destroy() catch {
+    error =>
+      self.lifecycle_failures.push(
+        WindowDestroy(status=error.status(), detail=error.message()),
+      )
+  })
+  if self.window_close_handler is Some(_) {
+    created_window.set_close_interception(true) catch {
+      error =>
+        raise native_run_error(
+          "enable close interception for " + plan.id,
+          error,
+        )
+    }
+  }
   load_prepared_entry(created_window, definition.entry) catch {
     error => raise EntryLoadError(error)
   }
   for view_plan in definition.views {
     let (view_id, view_config) = view_plan
     ignore(
-      self.add_window_view(
-        running.id,
-        created_window.id(),
-        view_id,
-        view_config,
-      ) catch {
+      add_view_to_running_window(running, view_id, view_config) catch {
         error =>
           raise match error {
             OperationFailed(action~, status~, detail~) =>
@@ -739,6 +749,7 @@ fn RuntimeSession::create_window(
       },
     )
   }
+  self.windows.push(running)
   @xlog.info(category="proton.window") <?
     { "message": "window created", "window": running.id }
   running
