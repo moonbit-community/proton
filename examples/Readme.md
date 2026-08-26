@@ -112,6 +112,8 @@ moon -C examples run 01_run --target native
   programmatic movement checks.
 - `65_window_opacity`: manual Electron-style whole-window opacity review with
   a numeric slider, presets, and native frame checks.
+- `66_window_skip_taskbar`: manual Electron-style taskbar visibility review
+  with Windows taskbar tab removal and macOS/Linux no-op checks.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

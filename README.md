@@ -169,6 +169,9 @@ Windows and follows Electron's no-op behavior on Linux. See
 `WindowHandle::set_opacity` changes the whole native window and clamps values to
 the Electron-compatible `0.0..1.0` range. See `examples/65_window_opacity` for
 a manual review.
+`WindowHandle::set_skip_taskbar` removes or restores the Windows taskbar tab;
+macOS and Linux follow Electron's no-op behavior. See
+`examples/66_window_skip_taskbar` for a manual review.
 
 The typed facade can own additional windows without replacing Proton's bridge
 pump:

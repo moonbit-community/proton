@@ -65,6 +65,7 @@ fn test_window_handle(
   resizable_calls? : Array[Bool],
   movable_calls? : Array[Bool],
   opacity_calls? : Array[Double],
+  skip_taskbar_calls? : Array[Bool],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
   window_state? : WindowState,
@@ -112,6 +113,12 @@ fn test_window_handle(
     set_window_opacity: opacity => {
       match opacity_calls {
         Some(calls) => calls.push(opacity)
+        None => ()
+      }
+    },
+    set_window_skip_taskbar: skip => {
+      match skip_taskbar_calls {
+        Some(calls) => calls.push(skip)
         None => ()
       }
     },
@@ -2006,6 +2013,15 @@ test "window opacity routes live values through the handle" {
   window.set_opacity(0.35)
   window.set_opacity(1.0)
   debug_inspect(calls, content="[0.35, 1]")
+}
+
+///|
+test "window taskbar visibility routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, skip_taskbar_calls=calls)
+  window.set_skip_taskbar(true)
+  window.set_skip_taskbar(false)
+  debug_inspect(calls, content="[true, false]")
 }
 
 ///|

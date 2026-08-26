@@ -170,6 +170,11 @@ fn RuntimeSession::window_handle(
         window.set_opacity(opacity)
       })
     },
+    set_window_skip_taskbar: skip => {
+      self.control_window(id, native_id, "set taskbar visibility", window => {
+        window.set_skip_taskbar(skip)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1188,6 +1193,19 @@ pub fn WindowHandle::set_opacity(
   opacity : Double,
 ) -> Unit raise WindowSessionError {
   (self.set_window_opacity)(opacity)
+}
+
+///|
+/// Sets whether this live native window is omitted from the taskbar or dock.
+///
+/// Windows removes or restores the taskbar tab. macOS and Linux follow
+/// Electron and treat this as a no-op. Headless runtimes raise
+/// `WindowSessionError` because they have no native window shell.
+pub fn WindowHandle::set_skip_taskbar(
+  self : WindowHandle,
+  skip : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_skip_taskbar)(skip)
 }
 
 ///|

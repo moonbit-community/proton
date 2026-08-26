@@ -1451,6 +1451,24 @@ pub fn Window::set_opacity(
 }
 
 ///|
+/// Sets whether the live native window is omitted from the taskbar or dock.
+pub fn Window::set_skip_taskbar(
+  self : Window,
+  skip : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_skip_taskbar_ffi(
+      self.live_handle(),
+      if skip {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,
