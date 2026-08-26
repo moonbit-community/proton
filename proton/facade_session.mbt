@@ -180,6 +180,11 @@ fn RuntimeSession::window_handle(
         window.set_skip_taskbar(skip)
       })
     },
+    set_window_content_protection: enabled => {
+      self.control_window(id, native_id, "set content protection", window => {
+        window.set_content_protection(enabled)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1223,6 +1228,21 @@ pub fn WindowHandle::set_skip_taskbar(
   skip : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_skip_taskbar)(skip)
+}
+
+///|
+/// Sets whether other applications should be prevented from capturing this
+/// live native window.
+///
+/// macOS applies `NSWindowSharingNone`, although ScreenCaptureKit-based apps
+/// on recent macOS releases may still capture the window. Windows uses display
+/// affinity to exclude the window from capture. Linux follows Electron and
+/// treats this as a no-op. Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_content_protection(
+  self : WindowHandle,
+  enabled : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_content_protection)(enabled)
 }
 
 ///|

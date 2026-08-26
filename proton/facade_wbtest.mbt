@@ -66,6 +66,7 @@ fn test_window_handle(
   movable_calls? : Array[Bool],
   opacity_calls? : Array[Double],
   skip_taskbar_calls? : Array[Bool],
+  content_protection_calls? : Array[Bool],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
@@ -120,6 +121,12 @@ fn test_window_handle(
     set_window_skip_taskbar: skip => {
       match skip_taskbar_calls {
         Some(calls) => calls.push(skip)
+        None => ()
+      }
+    },
+    set_window_content_protection: enabled => {
+      match content_protection_calls {
+        Some(calls) => calls.push(enabled)
         None => ()
       }
     },
@@ -2028,6 +2035,15 @@ test "window taskbar visibility routes live flags through the handle" {
   let window = test_window_handle("main", 17L, skip_taskbar_calls=calls)
   window.set_skip_taskbar(true)
   window.set_skip_taskbar(false)
+  debug_inspect(calls, content="[true, false]")
+}
+
+///|
+test "window content protection routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, content_protection_calls=calls)
+  window.set_content_protection(true)
+  window.set_content_protection(false)
   debug_inspect(calls, content="[true, false]")
 }
 
