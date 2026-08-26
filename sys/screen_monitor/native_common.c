@@ -66,6 +66,7 @@ void screen_monitor_push_event(screen_monitor_state_t *state, int32_t event) {
   if (state == NULL) {
     return;
   }
+  screen_monitor_event_wakeup_fn wakeup = NULL;
   screen_monitor_lock_acquire(state);
   if (state->event_queue_size >= SCREEN_MONITOR_EVENT_QUEUE_CAPACITY) {
     /* A full queue drops the oldest entry so the latest topology state is
@@ -93,7 +94,22 @@ void screen_monitor_push_event(screen_monitor_state_t *state, int32_t event) {
       state->event_tail = node;
     }
     state->event_queue_size++;
+    wakeup = state->event_wakeup;
   }
+  screen_monitor_lock_release(state);
+  if (wakeup != NULL) {
+    wakeup();
+  }
+}
+
+void screen_monitor_set_event_wakeup(
+    screen_monitor_state_t *state,
+    screen_monitor_event_wakeup_fn wakeup) {
+  if (state == NULL) {
+    return;
+  }
+  screen_monitor_lock_acquire(state);
+  state->event_wakeup = wakeup;
   screen_monitor_lock_release(state);
 }
 
@@ -216,6 +232,12 @@ int32_t moonbit_screen_monitor_take_event(void *handle, int32_t *out_event) {
     return screen_monitor_STATUS_OPERATION_FAILED;
   }
   return screen_monitor_take_event((screen_monitor_state_t *)handle, out_event);
+}
+
+MOONBIT_FFI_EXPORT void moonbit_screen_monitor_set_event_wakeup(
+    void *handle,
+    screen_monitor_event_wakeup_fn wakeup) {
+  screen_monitor_set_event_wakeup((screen_monitor_state_t *)handle, wakeup);
 }
 
 /* --- JSON query helpers -------------------------------------------------- */

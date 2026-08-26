@@ -38,6 +38,8 @@
 #define MOONBIT_TRAY_COMMAND_BASE 0x7000
 #endif
 
+typedef void (*moonbit_tray_event_wakeup_fn)(void);
+
 typedef struct moonbit_tray_state {
 #ifdef _WIN32
   HWND hwnd;
@@ -76,6 +78,7 @@ typedef struct moonbit_tray_state {
   char events[MOONBIT_TRAY_MAX_EVENTS][MOONBIT_TRAY_MAX_EVENT_BYTES];
   uint32_t event_head;
   uint32_t event_count;
+  moonbit_tray_event_wakeup_fn event_wakeup;
   char last_error[256];
 } moonbit_tray_state_t;
 
@@ -254,6 +257,9 @@ static int32_t moonbit_tray_enqueue_event(
       (state->event_head + state->event_count) % MOONBIT_TRAY_MAX_EVENTS;
   memcpy(state->events[index], event_json, len + 1);
   state->event_count++;
+  if (state->event_wakeup != NULL) {
+    state->event_wakeup();
+  }
   return 1;
 }
 
@@ -3078,6 +3084,15 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_tray_poll_event_json(
   state->event_head = (state->event_head + 1) % MOONBIT_TRAY_MAX_EVENTS;
   state->event_count--;
   return result;
+}
+
+MOONBIT_FFI_EXPORT void moonbit_tray_set_event_wakeup(
+    int64_t handle,
+    moonbit_tray_event_wakeup_fn wakeup) {
+  moonbit_tray_state_t *state = moonbit_tray_from_handle(handle);
+  if (state != NULL) {
+    state->event_wakeup = wakeup;
+  }
 }
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t moonbit_tray_last_error(

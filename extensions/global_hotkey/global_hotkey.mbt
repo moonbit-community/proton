@@ -4,6 +4,9 @@ let app_command_manager : Ref[@sys_global_hotkey.GlobalHotkeyManager?] = Ref(
 )
 
 ///|
+let app_command_event_wakeup : Ref[@proton_extension.EventWakeup?] = Ref(None)
+
+///|
 /// Verifies that global hotkeys are available on the current platform.
 fn ensure_supported() -> Unit raise GlobalHotkeyError {
   match @sys_global_hotkey.ensure_supported() {
@@ -17,9 +20,34 @@ fn ensure_supported() -> Unit raise GlobalHotkeyError {
 fn init_manager() -> @sys_global_hotkey.GlobalHotkeyManager raise GlobalHotkeyError {
   ensure_supported()
   match @sys_global_hotkey.create() {
-    Ok(handle) => handle
+    Ok(handle) => {
+      match app_command_event_wakeup.val {
+        Some(wakeup) => handle.set_event_wakeup(wakeup)
+        None => ()
+      }
+      handle
+    }
     Err(error) => raise ManagerInitializationFailed(detail=error)
   }
+}
+
+///|
+fn install_event_wakeup(wakeup : @proton_extension.EventWakeup) -> Unit {
+  app_command_event_wakeup.val = Some(wakeup)
+  match app_command_manager.val {
+    Some(manager) => manager.set_event_wakeup(wakeup)
+    None => ()
+  }
+}
+
+///|
+fn cleanup_manager() -> Unit {
+  match app_command_manager.val {
+    Some(manager) => manager.destroy()
+    None => ()
+  }
+  app_command_manager.val = None
+  app_command_event_wakeup.val = None
 }
 
 ///|
@@ -72,11 +100,4 @@ fn list_hotkeys(
   manager : @sys_global_hotkey.GlobalHotkeyManager,
 ) -> @global_hotkey_contract.GlobalHotkeyListReply {
   list_or_empty(manager, fn(handle) { handle.list() })
-}
-
-///|
-fn drain_triggered_hotkeys(
-  manager : @sys_global_hotkey.GlobalHotkeyManager,
-) -> @global_hotkey_contract.GlobalHotkeyListReply {
-  list_or_empty(manager, fn(handle) { handle.drain_triggered() })
 }

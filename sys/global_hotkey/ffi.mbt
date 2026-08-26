@@ -41,5 +41,12 @@ extern "C" fn unregister_hotkey_ffi(state : GlobalHotkeyState, id : Int) -> Int 
 extern "C" fn take_triggered_id_ffi(state : GlobalHotkeyState) -> Int = "mb_global_hotkey_take_triggered_id"
 
 ///|
+#borrow(state)
+extern "C" fn set_event_wakeup_ffi(
+  state : GlobalHotkeyState,
+  wakeup : @ffi.EventWakeup,
+) -> Unit = "mb_global_hotkey_set_event_wakeup"
+
+///|
 /// Returns the last backend error message as UTF-8 bytes.
 extern "C" fn last_error_message_ffi() -> Bytes = "mb_global_hotkey_last_error_message"

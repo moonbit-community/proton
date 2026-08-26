@@ -10,8 +10,6 @@ import {
 // Values
 pub let activity : @proton_contract.Event[GlobalHotkeyActivity]
 
-pub let drain_triggered : @proton_contract.Command[@proton_contract.EmptyRequest, GlobalHotkeyListReply]
-
 pub let extension : @proton_contract.ExtensionContract
 
 pub let list : @proton_contract.Command[@proton_contract.EmptyRequest, GlobalHotkeyListReply]

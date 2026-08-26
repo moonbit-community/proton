@@ -33,6 +33,7 @@ void proton_view_events_load_failed(proton_view_events_t *events,
                                     const char *url,
                                     int32_t error_code,
                                     const char *error_text);
+void proton_view_events_closed(proton_view_events_t *events);
 
 
 #endif

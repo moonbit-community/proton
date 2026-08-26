@@ -48,6 +48,8 @@ typedef struct screen_monitor_event_node {
   struct screen_monitor_event_node *next;
 } screen_monitor_event_node_t;
 
+typedef void (*screen_monitor_event_wakeup_fn)(void);
+
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -68,6 +70,7 @@ typedef struct screen_monitor_state {
   screen_monitor_event_node_t *event_tail;
   int32_t event_queue_size;
   int32_t event_queue_overflow;
+  screen_monitor_event_wakeup_fn event_wakeup;
   /* Watch backend state. `watch_started` is best-effort: a backend that is
      unavailable records the failure on `watch_error` and returns a non-OK
      status while leaving query APIs fully usable. */
@@ -80,6 +83,7 @@ typedef struct screen_monitor_state {
 #if defined(_WIN32)
   CRITICAL_SECTION event_lock;
   HANDLE device_handle;
+  HANDLE ready_event;
   HANDLE watch_thread;
   DWORD watch_thread_id;
   HWND message_window;
@@ -135,6 +139,9 @@ void screen_monitor_lock_destroy(screen_monitor_state_t *state);
 void screen_monitor_push_event(screen_monitor_state_t *state, int32_t event);
 int32_t screen_monitor_take_event(screen_monitor_state_t *state,
                                   int32_t *out_event);
+void screen_monitor_set_event_wakeup(
+    screen_monitor_state_t *state,
+    screen_monitor_event_wakeup_fn wakeup);
 void screen_monitor_release_events(screen_monitor_state_t *state);
 
 #endif

@@ -23,9 +23,6 @@ let set_tooltip_command = @tray_contract.set_tooltip
 let set_menu_command = @tray_contract.set_menu
 
 ///|
-let drain_events_command = @tray_contract.drain_events
-
-///|
 let destroy_command = @tray_contract.destroy
 
 ///|
@@ -33,6 +30,9 @@ let app_command_tray_handle : Ref[@sys_tray.Tray?] = Ref(None)
 
 ///|
 let app_command_tray_visible : Ref[Bool] = Ref(false)
+
+///|
+let app_command_event_wakeup : Ref[@proton_extension.EventWakeup?] = Ref(None)
 
 ///|
 fn platform_label(platform : @sys_tray.Platform) -> String {
@@ -70,6 +70,10 @@ fn tray_handle() -> @sys_tray.Tray raise TrayError {
     None =>
       match @sys_tray.create(identifier="moonbit-community.proton.tray") {
         Ok(handle) => {
+          match app_command_event_wakeup.val {
+            Some(wakeup) => handle.set_event_wakeup(wakeup)
+            None => ()
+          }
           app_command_tray_handle.val = Some(handle)
           handle
         }
@@ -183,28 +187,44 @@ async fn emit_command_activity(
 }
 
 ///|
-async fn emit_native_tray_event(
-  context : @proton.CommandContext,
+fn native_tray_event(
   event : @sys_tray.TrayEvent,
-) -> Unit {
+) -> @proton_extension.Event raise {
   match event {
     Click =>
-      context.emit(@tray_contract.click, @tray_contract.TrayClick::{
+      @proton_extension.event(@tray_contract.click, @tray_contract.TrayClick::{
         visible: app_command_tray_visible.val,
       })
     RightClick =>
-      context.emit(@tray_contract.right_click, @tray_contract.TrayRightClick::{
+      @proton_extension.event(@tray_contract.right_click, @tray_contract.TrayRightClick::{
         visible: app_command_tray_visible.val,
       })
     DoubleClick =>
-      context.emit(@tray_contract.double_click, @tray_contract.TrayDoubleClick::{
+      @proton_extension.event(@tray_contract.double_click, @tray_contract.TrayDoubleClick::{
         visible: app_command_tray_visible.val,
       })
     MenuItemClick(item_id) =>
-      context.emit(@tray_contract.menu_item_click, @tray_contract.TrayMenuItemClick::{
+      @proton_extension.event(@tray_contract.menu_item_click, @tray_contract.TrayMenuItemClick::{
         item_id,
         visible: app_command_tray_visible.val,
       })
+  }
+}
+
+///|
+fn install_event_wakeup(wakeup : @proton_extension.EventWakeup) -> Unit {
+  app_command_event_wakeup.val = Some(wakeup)
+  match app_command_tray_handle.val {
+    Some(handle) => handle.set_event_wakeup(wakeup)
+    None => ()
+  }
+}
+
+///|
+fn drain_native_events() -> Array[@proton_extension.Event] raise {
+  match app_command_tray_handle.val {
+    None => []
+    Some(handle) => handle.drain_events().map(native_tray_event)
   }
 }
 
@@ -221,6 +241,7 @@ fn destroy_tray(tray_handle : @sys_tray.Tray?) -> Unit {
 ///|
 fn cleanup_tray() -> Unit {
   destroy_tray(app_command_tray_handle.val)
+  app_command_event_wakeup.val = None
 }
 
 ///|
@@ -337,29 +358,6 @@ async fn set_menu(
 }
 
 ///|
-/// Drains native tray events into JavaScript extension events.
-#proton.command(contract=drain_events_command)
-async fn drain_events(
-  context : @proton.CommandContext,
-  _request : @proton_contract.EmptyRequest,
-) -> @tray_contract.TrayEventReply {
-  match app_command_tray_handle.val {
-    None => @tray_contract.TrayEventReply::{ count: 0, }
-    Some(handle) => {
-      match handle.pump(blocking=false) {
-        Ok(_) => ()
-        Err(error) => raise PumpFailed(detail=error)
-      }
-      let events = handle.drain_events()
-      for event in events {
-        emit_native_tray_event(context, event)
-      }
-      @tray_contract.TrayEventReply::{ count: events.length(), }
-    }
-  }
-}
-
-///|
 /// Destroys the native tray icon.
 #proton.command(contract=destroy_command)
 async fn destroy(
@@ -372,24 +370,19 @@ async fn destroy(
 }
 
 ///|
-fn extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    @tray_contract.extension,
-    generated_extension_command_routes(),
-    fn(registrar) raise { register_commands(registrar) },
-    scripts=[
-      @proton_extension.poller_script(
-        js_namespace="tray",
-        drain_method="drainEvents",
-        poller_field="__protonEventPoller",
-      ),
-    ],
-    on_destroy=fn() { cleanup_tray() },
-  )
-}
+let extension_definition : @proton_extension.Extension = @proton_extension.typed(
+  @tray_contract.extension,
+  generated_extension_command_routes(),
+  fn(registrar) raise { register_commands(registrar) },
+  event_source=@proton_extension.event_source(
+    wakeup => install_event_wakeup(wakeup),
+    () => cleanup_tray(),
+    () => drain_native_events(),
+  ),
+)
 
 ///|
 /// Grants tray commands to renderer targets selected by `App::capability`.
 pub fn capability() -> @proton_extension.RendererCapability {
-  @proton_extension.capability(extension())
+  @proton_extension.capability(extension_definition)
 }

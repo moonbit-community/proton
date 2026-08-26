@@ -54,3 +54,33 @@ test "typed extension adaptation reports foreign routes" {
     _ => fail("expected typed extension adaptation failure")
   }
 }
+
+///|
+test "typed extension events preserve their contract identity" {
+  let contract = @proton_contract.extension(
+    id="example/events",
+    js_namespace="events",
+  )
+  let changed : @proton_contract.Event[String] = contract.event("changed")
+  let emitted = event(changed, "ready")
+  assert_eq(emitted.extension_id(), "example/events")
+  assert_eq(emitted.extension_namespace(), "events")
+  assert_eq(emitted.name(), "changed")
+  debug_inspect(emitted.payload(), content="String(\"ready\")")
+}
+
+///|
+test "extension event encoding rejects application routes" {
+  let changed : @proton_contract.Event[String] = @proton_contract.event(
+    "application-changed",
+  )
+  try {
+    ignore(event(changed, "ready"))
+    fail("expected application event rejection")
+  } catch {
+    @proton_contract.ContractDefinitionError::ExpectedExtensionEvent(
+      route="app:application-changed"
+    ) => ()
+    _ => fail("expected ExpectedExtensionEvent")
+  }
+}

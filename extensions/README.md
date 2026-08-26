@@ -85,8 +85,8 @@ and bridge ABI. The v1 API exposes `support`, `show`, `hide`, `setIcon`,
 
 Tray menus are flat. Supported item kinds are `normal`, `separator`, and
 `checkbox`; nested submenus remain outside the Proton v1 surface. Native tray
-events are pumped by the extension and forwarded as extension events named
-`click`, `rightClick`, `doubleClick`, and `menuItemClick`.
+callbacks enqueue events and wake Proton's host loop, which forwards extension
+events named `click`, `rightClick`, `doubleClick`, and `menuItemClick`.
 
 Windows is the baseline for tray-icon click, right-click, and double-click
 events. Menu item clicks are the portable event path across Windows, Linux, and

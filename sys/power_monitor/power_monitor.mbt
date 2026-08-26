@@ -141,6 +141,16 @@ pub fn PowerMonitor::drain_events(
 }
 
 ///|
+/// Installs the opaque native wakeup supplied by an embedding event loop.
+#doc(hidden)
+pub fn PowerMonitor::set_event_wakeup(
+  self : PowerMonitor,
+  wakeup : @ffi.EventWakeup,
+) -> Unit {
+  native_set_event_wakeup(self.handle, wakeup)
+}
+
+///|
 fn PowerMonitor::classify_status(
   self : PowerMonitor,
   status : Int,

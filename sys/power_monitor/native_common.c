@@ -66,6 +66,7 @@ void power_monitor_push_event(power_monitor_state_t *state, int32_t event) {
   if (state == NULL) {
     return;
   }
+  power_monitor_event_wakeup_fn wakeup = NULL;
   power_monitor_lock_acquire(state);
   if (state->event_queue_size >= POWER_MONITOR_EVENT_QUEUE_CAPACITY) {
     /* A full queue drops the oldest entry so the latest system state is always
@@ -93,7 +94,22 @@ void power_monitor_push_event(power_monitor_state_t *state, int32_t event) {
       state->event_tail = node;
     }
     state->event_queue_size++;
+    wakeup = state->event_wakeup;
   }
+  power_monitor_lock_release(state);
+  if (wakeup != NULL) {
+    wakeup();
+  }
+}
+
+void power_monitor_set_event_wakeup(
+    power_monitor_state_t *state,
+    power_monitor_event_wakeup_fn wakeup) {
+  if (state == NULL) {
+    return;
+  }
+  power_monitor_lock_acquire(state);
+  state->event_wakeup = wakeup;
   power_monitor_lock_release(state);
 }
 
@@ -259,6 +275,12 @@ int32_t moonbit_power_monitor_take_event(void *handle, int32_t *out_event) {
     return power_monitor_STATUS_OPERATION_FAILED;
   }
   return power_monitor_take_event((power_monitor_state_t *)handle, out_event);
+}
+
+MOONBIT_FFI_EXPORT void moonbit_power_monitor_set_event_wakeup(
+    void *handle,
+    power_monitor_event_wakeup_fn wakeup) {
+  power_monitor_set_event_wakeup((power_monitor_state_t *)handle, wakeup);
 }
 
 MOONBIT_FFI_EXPORT

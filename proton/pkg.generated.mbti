@@ -102,6 +102,7 @@ pub fn AppRunError::to_string(Self) -> String
 pub(all) suberror CommandExtensionLifecycleError {
   ApplicationRegistrationFailed(detail~ : String)
   RegistrationFailed(extension_id~ : String, detail~ : String)
+  EventSourceStartFailed(extension_id~ : String, detail~ : String)
   DestroyFailed(extension_id~ : String, detail~ : String)
 } derive(@debug.Debug)
 pub fn CommandExtensionLifecycleError::message(Self) -> String
@@ -499,6 +500,7 @@ pub(all) enum ViewEvent {
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  Closed
 } derive(Eq, @debug.Debug)
 pub fn ViewEvent::equal(Self, Self) -> Bool
 pub fn ViewEvent::not_equal(Self, Self) -> Bool

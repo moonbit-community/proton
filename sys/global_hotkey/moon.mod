@@ -2,6 +2,10 @@ name = "moonbit-community/proton_global_hotkey"
 
 version = "0.2.2"
 
+import {
+  "moonbit-community/proton_ffi@0.2.2",
+}
+
 readme = "README.mbt.md"
 
 repository = "https://github.com/moonbit-community/proton/tree/main/sys/global_hotkey"

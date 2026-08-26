@@ -135,6 +135,15 @@ test "quit request is an application-level runtime event" {
 }
 
 ///|
+test "view closed events preserve owning window and view ids" {
+  let event = RuntimeEvent::ViewEvent(7L, 11L, Closed)
+  assert_eq(event.event_type(), "view_closed")
+  assert_true(event.is_view_closed())
+  assert_eq(event.window_id(), Some(7L))
+  assert_eq(event.view_id(), Some(11L))
+}
+
+///|
 test "native ABI version and availability" {
   inspect(abi_version(), content="1")
 }
