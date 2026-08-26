@@ -174,6 +174,16 @@ int32_t proton_engine_notification_show(const char *title_utf8,
   return PROTON_OK;
 }
 
+int32_t proton_engine_notification_set_badge_count(int32_t count,
+                                                   char *error,
+                                                   size_t error_len) {
+  (void)count;
+  proton_notification_set_message(
+      error, error_len,
+      "application badge counts are not implemented on Linux");
+  return PROTON_ERR_UNSUPPORTED;
+}
+
 int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
   (void)error;
   (void)error_len;

@@ -14,6 +14,8 @@ pub let click : @proton_contract.Event[NotificationClick]
 
 pub let extension : @proton_contract.ExtensionContract
 
+pub let set_badge : @proton_contract.Command[NotificationBadgeRequest, NotificationBadgeReply]
+
 pub let show : @proton_contract.Command[NotificationRequest, NotificationReply]
 
 // Errors
@@ -29,6 +31,24 @@ pub fn NotificationActivity::from_json(Json, @json.JsonPath) -> Self raise @json
 pub fn NotificationActivity::not_equal(Self, Self) -> Bool
 pub fn NotificationActivity::to_json(Self) -> Json
 pub fn NotificationActivity::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NotificationBadgeReply {
+  count : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn NotificationBadgeReply::equal(Self, Self) -> Bool
+pub fn NotificationBadgeReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NotificationBadgeReply::not_equal(Self, Self) -> Bool
+pub fn NotificationBadgeReply::to_json(Self) -> Json
+pub fn NotificationBadgeReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NotificationBadgeRequest {
+  count : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn NotificationBadgeRequest::equal(Self, Self) -> Bool
+pub fn NotificationBadgeRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NotificationBadgeRequest::not_equal(Self, Self) -> Bool
+pub fn NotificationBadgeRequest::to_json(Self) -> Json
+pub fn NotificationBadgeRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NotificationClick {
   payload : String?

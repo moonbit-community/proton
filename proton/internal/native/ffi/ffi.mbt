@@ -303,6 +303,9 @@ pub extern "C" fn proton_notification_show_ffi(
 ) -> Int = "proton_notification_show"
 
 ///|
+pub extern "C" fn proton_notification_set_badge_count_ffi(count : Int) -> Int = "proton_notification_set_badge_count"
+
+///|
 pub extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notification_cleanup"
 
 ///|

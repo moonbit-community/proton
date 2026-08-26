@@ -117,6 +117,16 @@ test "notification clicks preserve optional payloads" {
 }
 
 ///|
+test "notification badge rejects negative counts before native dispatch" {
+  let error = expect_native_error(() => notification_set_badge_count(-1))
+  match error {
+    InvalidArgument(message~) =>
+      assert_eq(message, "notification badge count must be non-negative")
+    _ => fail("expected invalid argument")
+  }
+}
+
+///|
 test "quit request is an application-level runtime event" {
   let event = RuntimeEvent::QuitRequested
   assert_eq(event.event_type(), "quit_requested")

@@ -38,6 +38,41 @@ pub extend NotificationReply with ToJson::{to_json}
 pub extend NotificationReply with FromJson::{from_json}
 
 ///|
+/// The absolute application badge count. Zero clears the badge.
+pub(all) struct NotificationBadgeRequest {
+  count : Int
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend NotificationBadgeRequest with Eq::{not_equal, equal}
+
+///|
+pub extend NotificationBadgeRequest with Debug::{to_repr}
+
+///|
+pub extend NotificationBadgeRequest with ToJson::{to_json}
+
+///|
+pub extend NotificationBadgeRequest with FromJson::{from_json}
+
+///|
+pub(all) struct NotificationBadgeReply {
+  count : Int
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend NotificationBadgeReply with Eq::{not_equal, equal}
+
+///|
+pub extend NotificationBadgeReply with Debug::{to_repr}
+
+///|
+pub extend NotificationBadgeReply with ToJson::{to_json}
+
+///|
+pub extend NotificationBadgeReply with FromJson::{from_json}
+
+///|
 pub(all) struct NotificationActivity {
   operation : String
   title : String?
@@ -77,6 +112,12 @@ pub extend NotificationClick with FromJson::{from_json}
 pub let show : @proton_contract.Command[NotificationRequest, NotificationReply] = extension.command(
   "show",
 )
+
+///|
+pub let set_badge : @proton_contract.Command[
+  NotificationBadgeRequest,
+  NotificationBadgeReply,
+] = extension.command("setBadge")
 
 ///|
 pub let activity : @proton_contract.Event[NotificationActivity] = extension.event(

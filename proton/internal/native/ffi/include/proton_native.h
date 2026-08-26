@@ -134,6 +134,8 @@ int32_t proton_notification_show(const char *title,
                                             const char *body,
                                             const char *payload,
                                             int32_t has_payload);
+/* Sets the absolute application badge count. Zero clears the badge. */
+int32_t proton_notification_set_badge_count(int32_t count);
 int32_t proton_notification_cleanup(void);
 
 int32_t proton_window_destroy(proton_window_handle_t window);

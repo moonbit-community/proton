@@ -32,6 +32,17 @@ pub fn notification_show(
 }
 
 ///|
+/// Sets the absolute application badge count. Zero clears the badge.
+pub fn notification_set_badge_count(count : Int) -> Unit raise NativeError {
+  if count < 0 {
+    raise InvalidArgument(
+      message="notification badge count must be non-negative",
+    )
+  }
+  check_status(@native_ffi.proton_notification_set_badge_count_ffi(count))
+}
+
+///|
 /// Releases process-level notification hooks installed by Proton.
 pub fn notification_cleanup() -> Unit raise NativeError {
   check_status(@native_ffi.proton_notification_cleanup_ffi())
