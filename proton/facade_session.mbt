@@ -150,6 +150,11 @@ fn RuntimeSession::window_handle(
         window.set_zoom_percent(zoom_percent)
       })
     },
+    set_window_progress_bar: progress => {
+      self.control_window(id, native_id, "set progress bar", window => {
+        window.set_progress_bar(progress)
+      })
+    },
     popup_window_menu: (menu, x, y) => {
       self.control_window(id, native_id, "popup menu in", window => {
         window.popup_menu(@native.MenuBar(menus=[menu.to_native()]), x, y)
@@ -1077,6 +1082,22 @@ pub fn WindowHandle::set_zoom_percent(
   zoom_percent : Int,
 ) -> Unit raise WindowSessionError {
   (self.set_window_zoom_percent)(zoom_percent)
+}
+
+///|
+/// Sets the platform progress indicator using Electron-compatible values.
+///
+/// Pass a negative value to clear the indicator, a value from `0.0` through
+/// `1.0` for determinate progress, or a value above `1.0` for indeterminate
+/// progress. The current native implementation displays this in the macOS
+/// Dock as one application-level indicator; the most recent window call wins,
+/// and any negative value clears it. Unsupported platforms raise
+/// `WindowSessionError`.
+pub fn WindowHandle::set_progress_bar(
+  self : WindowHandle,
+  progress : Double,
+) -> Unit raise WindowSessionError {
+  (self.set_window_progress_bar)(progress)
 }
 
 ///|

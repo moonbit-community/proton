@@ -172,6 +172,22 @@ test "typed window state fields map to a snapshot" {
 }
 
 ///|
+test "window progress rejects NaN before native handle access" {
+  let window = Window::{
+    handle: @native_ffi.window_null(),
+    id: 0L,
+    lifecycle: WindowLive,
+  }
+  try window.set_progress_bar(0.0 / 0.0) catch {
+    InvalidArgument(message~) =>
+      inspect(message, content="progress must not be NaN")
+    _ => fail("expected invalid progress")
+  } noraise {
+    _ => fail("expected invalid progress")
+  }
+}
+
+///|
 test "runtime config preserves typed native ABI values" {
   let cache_dir = test_absolute_cache_dir()
   let runtime_config = RuntimeConfig(

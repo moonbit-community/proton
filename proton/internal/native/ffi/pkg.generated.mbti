@@ -210,6 +210,8 @@ pub fn proton_window_set_fullscreen_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_position_ffi(WindowHandle, Int, Int) -> Int
 
+pub fn proton_window_set_progress_bar_ffi(WindowHandle, Double) -> Int
+
 pub fn proton_window_set_size_ffi(WindowHandle, Int, Int) -> Int
 
 pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int

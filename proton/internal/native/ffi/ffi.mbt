@@ -447,6 +447,12 @@ pub extern "C" fn proton_window_set_zoom_percent_ffi(
 ) -> Int = "proton_window_set_zoom_percent"
 
 ///|
+pub extern "C" fn proton_window_set_progress_bar_ffi(
+  window : WindowHandle,
+  progress : Double,
+) -> Int = "proton_window_set_progress_bar"
+
+///|
 #borrow(command_json)
 pub extern "C" fn proton_window_browser_command_json_ffi(
   window : WindowHandle,

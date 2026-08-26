@@ -1357,6 +1357,24 @@ pub fn Window::set_zoom_percent(
 }
 
 ///|
+/// Sets the platform progress indicator for this window.
+///
+/// A negative value clears the indicator, values from `0.0` through `1.0`
+/// display determinate progress, and a value above `1.0` displays an
+/// indeterminate indicator.
+pub fn Window::set_progress_bar(
+  self : Window,
+  progress : Double,
+) -> Unit raise NativeError {
+  if progress.is_nan() {
+    raise invalid_argument("progress must not be NaN")
+  }
+  check_status(
+    @native_ffi.proton_window_set_progress_bar_ffi(self.live_handle(), progress),
+  )
+}
+
+///|
 pub fn Window::state(self : Window) -> WindowState raise NativeError {
   let fields = FixedArray::make(proton_window_state_field_count, 0)
   check_status(

@@ -30,6 +30,63 @@
 
 static proton_engine_window_t *g_windows = NULL;
 static uint64_t g_next_window_native_id = 1;
+static proton_engine_window_t *g_dock_progress_owner = NULL;
+static NSImageView *g_dock_progress_content = nil;
+static NSProgressIndicator *g_dock_progress_indicator = nil;
+
+static void proton_engine_dock_progress_clear(void) {
+  if (g_dock_progress_indicator != nil) {
+    [g_dock_progress_indicator stopAnimation:nil];
+  }
+  [[NSApp dockTile] setContentView:nil];
+  [g_dock_progress_indicator release];
+  [g_dock_progress_content release];
+  g_dock_progress_owner = NULL;
+  g_dock_progress_indicator = nil;
+  g_dock_progress_content = nil;
+  [[NSApp dockTile] display];
+}
+
+static int proton_engine_dock_progress_prepare(char *error,
+                                               size_t error_len) {
+  if (g_dock_progress_content != nil &&
+      g_dock_progress_indicator != nil) {
+    return 1;
+  }
+  NSDockTile *dock_tile = [NSApp dockTile];
+  if (dock_tile == nil) {
+    proton_engine_set_message(error, error_len,
+                              "application Dock tile is not available");
+    return 0;
+  }
+  NSSize tile_size = dock_tile.size;
+  if (tile_size.width <= 0.0 || tile_size.height <= 0.0) {
+    tile_size = NSMakeSize(128.0, 128.0);
+  }
+  NSImageView *content = [[NSImageView alloc]
+      initWithFrame:NSMakeRect(0.0, 0.0, tile_size.width, tile_size.height)];
+  NSProgressIndicator *indicator = [[NSProgressIndicator alloc]
+      initWithFrame:NSMakeRect(8.0, 5.0, MAX(1.0, tile_size.width - 16.0),
+                               14.0)];
+  if (content == nil || indicator == nil) {
+    [indicator release];
+    [content release];
+    proton_engine_set_message(error, error_len,
+                              "failed to create Dock progress indicator");
+    return 0;
+  }
+  content.image = [NSApp applicationIconImage];
+  content.imageScaling = NSImageScaleProportionallyUpOrDown;
+  indicator.style = NSProgressIndicatorStyleBar;
+  indicator.minValue = 0.0;
+  indicator.maxValue = 1.0;
+  indicator.displayedWhenStopped = YES;
+  [content addSubview:indicator];
+  dock_tile.contentView = content;
+  g_dock_progress_content = content;
+  g_dock_progress_indicator = indicator;
+  return 1;
+}
 
 static int32_t proton_engine_window_create_browser(
     proton_engine_window_t *window,
@@ -779,6 +836,9 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
   if (window == NULL) {
     return;
   }
+  if (g_dock_progress_owner == window) {
+    proton_engine_dock_progress_clear();
+  }
   if (window->delegate != nil) {
     [window->delegate release];
     window->delegate = nil;
@@ -1079,6 +1139,46 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
     frame.size.height = height;
     [window->window setFrame:frame display:YES animate:NO];
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_progress_bar(
+    proton_engine_window_t *window, double progress, char *error,
+    size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (isnan(progress)) {
+    proton_engine_set_message(error, error_len,
+                              "progress must not be NaN");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window progress is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (progress < 0.0) {
+    proton_engine_dock_progress_clear();
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
+  }
+  if (!proton_engine_dock_progress_prepare(error, error_len)) {
+    return PROTON_ERR_PLATFORM;
+  }
+  g_dock_progress_owner = window;
+  if (progress > 1.0) {
+    g_dock_progress_indicator.indeterminate = YES;
+    [g_dock_progress_indicator startAnimation:nil];
+  } else {
+    [g_dock_progress_indicator stopAnimation:nil];
+    g_dock_progress_indicator.indeterminate = NO;
+    g_dock_progress_indicator.doubleValue = progress;
+  }
+  [[NSApp dockTile] display];
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 

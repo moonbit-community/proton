@@ -5,6 +5,7 @@
 #include "proton_internal.h"
 #include "proton_state.h"
 
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -936,6 +937,31 @@ int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
       .value = zoom_percent,
   };
   return proton_window_apply_action(window, &action);
+}
+
+int32_t proton_window_set_progress_bar(proton_window_handle_t window,
+                                       double progress) {
+  if (isnan(progress)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "progress must not be NaN");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window progress requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_progress_bar(
+      slot->engine_window, progress, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
 }
 
 int32_t proton_window_get_state(proton_window_handle_t window,
