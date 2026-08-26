@@ -1210,6 +1210,33 @@ int32_t proton_engine_window_set_maximum_size(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_aspect_ratio(
+    proton_engine_window_t *window, double aspect_ratio, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (isnan(aspect_ratio) || aspect_ratio < 0.0) {
+    proton_engine_set_message(error, error_len,
+                              "aspect ratio must be non-negative");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window aspect ratio is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->aspect_ratio = aspect_ratio;
+  if (aspect_ratio > 0.0) {
+    [window->window setContentAspectRatio:NSMakeSize(aspect_ratio, 1.0)];
+  } else {
+    [window->window setResizeIncrements:NSMakeSize(1.0, 1.0)];
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_movable(proton_engine_window_t *window,
                                          int32_t movable, char *error,
                                          size_t error_len) {

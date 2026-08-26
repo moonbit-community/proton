@@ -66,6 +66,7 @@ fn test_window_handle(
   movable_calls? : Array[Bool],
   opacity_calls? : Array[Double],
   skip_taskbar_calls? : Array[Bool],
+  aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
   window_state? : WindowState,
@@ -119,6 +120,12 @@ fn test_window_handle(
     set_window_skip_taskbar: skip => {
       match skip_taskbar_calls {
         Some(calls) => calls.push(skip)
+        None => ()
+      }
+    },
+    set_window_aspect_ratio: aspect_ratio => {
+      match aspect_ratio_calls {
+        Some(calls) => calls.push(aspect_ratio)
         None => ()
       }
     },
@@ -2022,6 +2029,15 @@ test "window taskbar visibility routes live flags through the handle" {
   window.set_skip_taskbar(true)
   window.set_skip_taskbar(false)
   debug_inspect(calls, content="[true, false]")
+}
+
+///|
+test "window aspect ratio routes live values through the handle" {
+  let calls : Array[Double] = []
+  let window = test_window_handle("main", 17L, aspect_ratio_calls=calls)
+  window.set_aspect_ratio(16.0 / 9.0)
+  window.set_aspect_ratio(0.0)
+  debug_inspect(calls, content="[1.7777777777777777, 0]")
 }
 
 ///|

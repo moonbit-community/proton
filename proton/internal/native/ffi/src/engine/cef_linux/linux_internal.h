@@ -97,6 +97,7 @@ struct proton_engine_window {
   int min_height;
   int max_width;
   int max_height;
+  double aspect_ratio;
   int headless;
   int headless_hidden;
   int osr_popup_visible;

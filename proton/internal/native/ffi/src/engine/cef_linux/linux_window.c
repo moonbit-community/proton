@@ -67,6 +67,11 @@ static void proton_engine_apply_size_constraints(
     geometry.max_height = window->max_height;
     hints = (GdkWindowHints)(hints | GDK_HINT_MAX_SIZE);
   }
+  if (window->aspect_ratio > 0.0) {
+    geometry.min_aspect = window->aspect_ratio;
+    geometry.max_aspect = window->aspect_ratio;
+    hints = (GdkWindowHints)(hints | GDK_HINT_ASPECT);
+  }
   gtk_window_set_geometry_hints(GTK_WINDOW(window->window), NULL,
                                 hints == 0 ? NULL : &geometry, hints);
 }
@@ -862,6 +867,29 @@ int32_t proton_engine_window_set_maximum_size(
   }
   window->max_width = width;
   window->max_height = height;
+  proton_engine_apply_size_constraints(window);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_aspect_ratio(
+    proton_engine_window_t *window, double aspect_ratio, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (isnan(aspect_ratio) || aspect_ratio < 0.0) {
+    proton_engine_set_message(error, error_len,
+                              "aspect ratio must be non-negative");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window aspect ratio is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->aspect_ratio = aspect_ratio;
   proton_engine_apply_size_constraints(window);
   return PROTON_OK;
 }
