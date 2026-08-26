@@ -1109,8 +1109,10 @@ pub fn WindowHandle::set_progress_bar(
 /// Starts or stops flashing the window to attract the user's attention.
 ///
 /// On macOS, `true` continuously bounces the application Dock icon until the
-/// application becomes active or `flash_frame(false)` cancels the request.
-/// Unsupported platforms raise `WindowSessionError`.
+/// application becomes active or `flash_frame(false)` cancels the request. On
+/// Windows it flashes the taskbar button until the window becomes active, and
+/// on Linux it sets the desktop window urgency hint. Headless runtimes raise
+/// `WindowSessionError`.
 pub fn WindowHandle::flash_frame(
   self : WindowHandle,
   flash : Bool,
