@@ -37,6 +37,7 @@ fn RuntimeSession::RuntimeSession(
     locale_preferences,
     definitions,
     windows,
+    has_created_window: windows.length() > 0,
     command_host,
     pending_bridge: [],
     dialog_completions,
@@ -750,6 +751,7 @@ fn RuntimeSession::create_window(
     )
   }
   self.windows.push(running)
+  self.has_created_window = true
   @xlog.info(category="proton.window") <?
     { "message": "window created", "window": running.id }
   running
@@ -1837,16 +1839,15 @@ fn RuntimeSession::dispatch_runtime_event(
 fn RuntimeSession::dispatch_window_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
-) -> Unit {
-  runtime_session_dispatch_window_event(
-    self.windows,
-    self.pending_bridge,
-    event,
-  )
+) -> Unit raise AppRunError {
   if event.is_window_closed() {
-    self.cancel_window_close_requests(event.window_id())
-    self.cancel_browser_requests(event.window_id())
-    self.cancel_resource_requests_for_window(event.window_id())
+    let window_id = event.window_id()
+    runtime_session_cancel_window_bridge_tasks(self.pending_bridge, window_id)
+    self.cancel_window_close_requests(window_id)
+    self.cancel_browser_requests(window_id)
+    self.cancel_resource_requests_for_window(window_id)
+    self.retire_closed_window(window_id)
+    return
   }
   match (event.window_id(), event.window_state_change()) {
     (Some(window_id), Some(state)) =>
@@ -2354,21 +2355,6 @@ fn RuntimeSession::cancel_all_window_close_requests(
 }
 
 ///|
-fn runtime_session_dispatch_window_event(
-  windows : Array[RunningWindow],
-  pending_bridge : Array[BridgeDispatchTask],
-  event : @native.RuntimeEvent,
-) -> Unit {
-  if event.is_window_closed() {
-    runtime_session_mark_window_closed(windows, event.window_id())
-    runtime_session_cancel_window_bridge_tasks(
-      pending_bridge,
-      event.window_id(),
-    )
-  }
-}
-
-///|
 fn RuntimeSession::dispatch_notification_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
@@ -2660,42 +2646,34 @@ fn RuntimeSession::find_window_by_native_id(
 }
 
 ///|
-fn runtime_session_mark_window_closed(
-  windows : Array[RunningWindow],
+fn RuntimeSession::retire_closed_window(
+  self : RuntimeSession,
   window_id : Int64?,
-) -> Unit {
-  match window_id {
-    Some(window_id) =>
-      match runtime_session_find_window_by_native_id(windows, window_id) {
-        Some(window) => {
-          window.state = WindowClosed
-          window.lifetime.close()
-          @xlog.info(category="proton.window") <?
-            { "message": "window closed", "window": window.id }
-        }
-        None => ()
-      }
-    None => ()
-  }
-}
-
-///|
-fn runtime_session_find_window_by_native_id(
-  windows : Array[RunningWindow],
-  window_id : Int64,
-) -> RunningWindow? {
-  for running in windows {
+) -> Unit raise AppRunError {
+  guard window_id is Some(window_id) else { return }
+  let mut index = -1
+  for i, running in self.windows {
     if running.window.id() == window_id {
-      return Some(running)
+      index = i
+      break
     }
   }
-  None
+  guard index >= 0 else { return }
+  let running = self.windows[index]
+  running.state = WindowClosed
+  running.lifetime.close()
+  running.window.destroy() catch {
+    error =>
+      raise native_run_error("destroy closed window " + running.id, error)
+  }
+  ignore(self.windows.remove(index))
+  @xlog.info(category="proton.window") <?
+    { "message": "window closed", "window": running.id }
 }
 
 ///|
 fn RuntimeSession::all_windows_closed(self : RuntimeSession) -> Bool {
-  self.windows.length() > 0 &&
-  self.windows.all(fn(window) { window.is_closed() })
+  self.has_created_window && self.windows.all(fn(window) { window.is_closed() })
 }
 
 ///|
@@ -2724,7 +2702,7 @@ fn RuntimeSession::advance_application_lifetime(
   if !self.quit_requested &&
     should_quit_after_last_window(
       self.last_window_closed_policy,
-      self.windows.length() > 0,
+      self.has_created_window,
       self.all_windows_closed(),
     ) {
     self.request_quit()

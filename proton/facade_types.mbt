@@ -290,6 +290,7 @@ priv struct RuntimeSession {
   locale_preferences : @locale.LocalePreferences
   definitions : Array[PreparedWindow]
   windows : Array[RunningWindow]
+  mut has_created_window : Bool
   command_host : CommandHostRuntime?
   pending_bridge : Array[BridgeDispatchTask]
   dialog_completions : DialogCompletionStore
