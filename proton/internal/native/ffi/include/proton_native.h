@@ -175,6 +175,8 @@ int32_t proton_window_set_content_protection(proton_window_handle_t window,
                                              int32_t enabled);
 int32_t proton_window_set_minimizable(proton_window_handle_t window,
                                       int32_t minimizable);
+int32_t proton_window_set_maximizable(proton_window_handle_t window,
+                                      int32_t maximizable);
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                                   int32_t zoom_percent);
 /* Matches Electron's progress value semantics: negative clears the indicator,

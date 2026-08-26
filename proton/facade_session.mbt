@@ -191,6 +191,11 @@ fn RuntimeSession::window_handle(
         window.set_minimizable(minimizable)
       })
     },
+    set_window_maximizable: maximizable => {
+      self.control_window(id, native_id, "set maximizable", window => {
+        window.set_maximizable(maximizable)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1271,6 +1276,18 @@ pub fn WindowHandle::set_minimizable(
   minimizable : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_minimizable)(minimizable)
+}
+
+///|
+/// Sets whether the user can manually maximize this live native window.
+/// macOS and Windows update the native maximize/zoom control; Linux follows
+/// Electron and treats this as a successful no-op. Headless runtimes raise
+/// `WindowSessionError`.
+pub fn WindowHandle::set_maximizable(
+  self : WindowHandle,
+  maximizable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_maximizable)(maximizable)
 }
 
 ///|
