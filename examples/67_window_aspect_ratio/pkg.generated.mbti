@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/67_window_aspect_ratio"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type AspectReply derive(ToJson, @json.FromJson)
+pub fn AspectReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AspectReply::to_json(Self) -> Json
+
+type AspectRequest derive(ToJson, @json.FromJson)
+pub fn AspectRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AspectRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

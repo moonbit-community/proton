@@ -172,6 +172,10 @@ a manual review.
 `WindowHandle::set_skip_taskbar` removes or restores the Windows taskbar tab;
 macOS and Linux follow Electron's no-op behavior. See
 `examples/66_window_skip_taskbar` for a manual review.
+`WindowHandle::set_aspect_ratio` constrains interactive resizing while leaving
+programmatic `set_size` calls unconstrained, matching Electron's API. Pass
+`0.0` to clear the ratio. See `examples/67_window_aspect_ratio` for a manual
+review.
 
 The typed facade can own additional windows without replacing Proton's bridge
 pump:

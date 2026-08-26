@@ -114,6 +114,8 @@ moon -C examples run 01_run --target native
   a numeric slider, presets, and native frame checks.
 - `66_window_skip_taskbar`: manual Electron-style taskbar visibility review
   with Windows taskbar tab removal and macOS/Linux no-op checks.
+- `67_window_aspect_ratio`: manual Electron-style interactive resize ratio
+  review with 16:9, 1:1, clear, and programmatic resize checks.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

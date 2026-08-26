@@ -98,6 +98,9 @@ successful no-op behavior.
 frame and renderer, with values clamped to `0.0..1.0`.
 `WindowHandle::set_skip_taskbar` controls the Windows taskbar tab while
 preserving Electron's no-op behavior on macOS and Linux.
+`WindowHandle::set_aspect_ratio` constrains interactive resizing and accepts
+`0.0` to clear the constraint; programmatic `set_size` calls remain
+unconstrained, matching Electron.
 
 ## Logging
 

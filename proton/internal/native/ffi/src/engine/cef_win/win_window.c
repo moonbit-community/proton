@@ -193,6 +193,61 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
                                        PROTON_WAIT_PLATFORM);
     }
     return 0;
+  case WM_SIZING:
+    if (window != NULL && window->aspect_ratio > 0.0 &&
+        window->resizable && lparam != 0) {
+      RECT *rect = (RECT *)lparam;
+      const int edge = (int)wparam;
+      RECT current_window;
+      RECT current_client;
+      int frame_width = 0;
+      int frame_height = 0;
+      if (GetWindowRect(hwnd, &current_window) &&
+          GetClientRect(hwnd, &current_client)) {
+        frame_width = (current_window.right - current_window.left) -
+                      (current_client.right - current_client.left);
+        frame_height = (current_window.bottom - current_window.top) -
+                       (current_client.bottom - current_client.top);
+      }
+      int client_width = (rect->right - rect->left) - frame_width;
+      int client_height = (rect->bottom - rect->top) - frame_height;
+      if (client_width > 0 && client_height > 0) {
+        if (edge == WMSZ_LEFT || edge == WMSZ_RIGHT) {
+          client_height = (int)lround((double)client_width /
+                                      window->aspect_ratio);
+        } else if (edge == WMSZ_TOP || edge == WMSZ_BOTTOM) {
+          client_width = (int)lround((double)client_height *
+                                     window->aspect_ratio);
+        } else {
+          int height_from_width = (int)lround((double)client_width /
+                                              window->aspect_ratio);
+          int width_from_height = (int)lround((double)client_height *
+                                              window->aspect_ratio);
+          if (abs(height_from_width - client_height) <=
+              abs(width_from_height - client_width)) {
+            client_height = height_from_width;
+          } else {
+            client_width = width_from_height;
+          }
+        }
+        const int outer_width = client_width + frame_width;
+        const int outer_height = client_height + frame_height;
+        if (edge == WMSZ_LEFT || edge == WMSZ_TOPLEFT ||
+            edge == WMSZ_BOTTOMLEFT) {
+          rect->left = rect->right - outer_width;
+        } else {
+          rect->right = rect->left + outer_width;
+        }
+        if (edge == WMSZ_TOP || edge == WMSZ_TOPLEFT ||
+            edge == WMSZ_TOPRIGHT) {
+          rect->top = rect->bottom - outer_height;
+        } else {
+          rect->bottom = rect->top + outer_height;
+        }
+      }
+      return TRUE;
+    }
+    break;
   case WM_MOVING:
     if (window != NULL && !window->movable) {
       // Electron blocks manual frame movement by restoring the current rect.
@@ -623,6 +678,28 @@ int32_t proton_engine_window_set_maximum_size(
   }
   window->max_width = width;
   window->max_height = height;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_aspect_ratio(
+    proton_engine_window_t *window, double aspect_ratio, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (isnan(aspect_ratio) || aspect_ratio < 0.0) {
+    proton_engine_set_message(error, error_len,
+                              "aspect ratio must be non-negative");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window aspect ratio is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->aspect_ratio = aspect_ratio;
   return PROTON_OK;
 }
 

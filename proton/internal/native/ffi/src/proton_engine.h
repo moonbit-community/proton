@@ -215,6 +215,9 @@ int32_t proton_engine_window_set_minimum_size(
 int32_t proton_engine_window_set_maximum_size(
     proton_engine_window_t *window, int32_t width, int32_t height,
     char *error, size_t error_len);
+int32_t proton_engine_window_set_aspect_ratio(
+    proton_engine_window_t *window, double aspect_ratio, char *error,
+    size_t error_len);
 int32_t proton_engine_window_set_movable(proton_engine_window_t *window,
                                          int32_t movable, char *error,
                                          size_t error_len);

@@ -1001,6 +1001,31 @@ int32_t proton_window_set_maximum_size(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+int32_t proton_window_set_aspect_ratio(proton_window_handle_t window,
+                                       double aspect_ratio) {
+  if (isnan(aspect_ratio) || aspect_ratio < 0.0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "aspect_ratio must be non-negative");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window aspect ratio requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_aspect_ratio(
+      slot->engine_window, aspect_ratio, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_set_movable(proton_window_handle_t window,
                                   int32_t movable) {
   if (movable != 0 && movable != 1) {
