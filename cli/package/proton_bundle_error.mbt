@@ -10,6 +10,7 @@ priv suberror BundlePlanError {
 priv suberror BundleRuntimeError {
   ExecutableMissing(path~ : String)
   HelperMissing(path~ : String)
+  UnsupportedPlatform(platform~ : String)
 }
 
 ///|
@@ -57,6 +58,8 @@ fn BundleRuntimeError::message(self : BundleRuntimeError) -> String {
   match self {
     ExecutableMissing(path~) => "application executable is missing: " + path
     HelperMissing(path~) => "Proton helper executable is missing: " + path
+    UnsupportedPlatform(platform~) =>
+      "unsupported Proton package platform: " + platform
   }
 }
 

@@ -19,13 +19,14 @@ fn windows_test_spec(
     resolve_path(root, "output with spaces"),
     sign~,
   )
-  ProtonBundleSpec(
+  ProtonBundleSpec::{
     package_spec,
-    resolve_path(root, "cef_process.exe"),
-    root,
-    Some(resolve_path(root, "frontend/dist")),
-    resources=[resolve_path(root, "bundle resources/**")],
-  )
+    base_dir: root,
+    update_revision: 0UL,
+    frontend_dist: Some(resolve_path(root, "frontend/dist")),
+    resources: [resolve_path(root, "bundle resources/**")],
+    sign_binaries: [],
+  }
 }
 
 ///|

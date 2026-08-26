@@ -85,7 +85,6 @@ const workspaceModuleManifests = [
   "updater/moon.mod",
   "cefsetup/moon.mod",
   "package/moon.mod",
-  "bundle/moon.mod",
   "sys/auto_launch/moon.mod",
   "sys/clipboard/moon.mod",
   "sys/ffi/moon.mod",

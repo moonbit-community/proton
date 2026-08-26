@@ -31,7 +31,6 @@ on:
           - client
           - rabbita
           - proton
-          - bundle
           - extensions
           - cli
 
@@ -135,8 +134,6 @@ jobs:
           publish_module client moonbit-community/proton_client
           publish_module rabbita moonbit-community/proton_rabbita
           publish_module proton moonbit-community/proton
-          publish_module bundle moonbit-community/proton_bundle
-
           publish_module extensions moonbit-community/proton_ext
           publish_module cli moonbit-community/proton_cli
 
