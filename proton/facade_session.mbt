@@ -551,9 +551,7 @@ fn RuntimeSession::close_window(
   running.window.close() catch {
     error => raise window_operation_failed("close window " + id, error)
   }
-  if self.window_close_handler is None {
-    running.state = WindowCloseRequested
-  }
+  running.state = WindowCloseRequested
 }
 
 ///|
@@ -789,7 +787,7 @@ async fn RuntimeSession::activate_window(
     ),
   )
   running.lifetime.wait_until_ready()
-  if running.is_closed() {
+  if !running.is_active() {
     return
   }
   running.window.show() catch {
@@ -2284,6 +2282,7 @@ fn RuntimeSession::start_window_close_request(
 ) -> Unit {
   guard self.window_close_handler is Some(handler) else { return }
   guard self.find_window_by_native_id(window_id) is Some(window) else { return }
+  window.state = WindowCloseRequested
   let handle = self.window_handle(window)
   let task = self.window_tasks.spawn(
     () => {
@@ -2326,9 +2325,12 @@ fn RuntimeSession::complete_window_close_requests(
             }
             if decision == Allow {
               window.state = WindowCloseRequested
-            } else if self.quit_requested {
-              self.quit_requested = false
-              self.quit_close_started = false
+            } else {
+              window.state = WindowOpen
+              if self.quit_requested {
+                self.quit_requested = false
+                self.quit_close_started = false
+              }
             }
           }
           _ => ()
@@ -2737,9 +2739,7 @@ fn RuntimeSession::advance_application_lifetime(
       running.window.close() catch {
         error => raise native_run_error("close window " + running.id, error)
       }
-      if self.window_close_handler is None {
-        running.state = WindowCloseRequested
-      }
+      running.state = WindowCloseRequested
     }
   }
   did_work

@@ -128,6 +128,8 @@ PROTON_INTERNAL int32_t proton_window_slot_create(
 PROTON_INTERNAL void proton_window_slot_destroy(proton_window_slot_t *window);
 PROTON_INTERNAL void proton_window_slot_request_close(
     proton_window_slot_t *window);
+PROTON_INTERNAL void proton_window_slot_cancel_close(
+    proton_window_slot_t *window);
 PROTON_INTERNAL void proton_window_slot_mark_closed(
     proton_window_slot_t *window);
 PROTON_INTERNAL void proton_window_slot_begin_destroy(

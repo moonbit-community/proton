@@ -1577,17 +1577,25 @@ pub fn Window::respond_close_request(
   request_id : Int64,
   allow : Bool,
 ) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_window_respond_close_request_ffi(
-      self.live_handle(),
-      request_id,
-      if allow {
-        1
-      } else {
-        0
-      },
-    ),
+  match self.lifecycle {
+    WindowLive | WindowCloseRequested => ()
+    WindowDestroying | WindowDestroyed =>
+      raise Status(
+        status=proton_err_invalid_state,
+        message="window is closing or destroyed",
+      )
+  }
+  let status = @native_ffi.proton_window_respond_close_request_ffi(
+    self.handle,
+    request_id,
+    if allow {
+      1
+    } else {
+      0
+    },
   )
+  check_status(status)
+  self.lifecycle = if allow { WindowCloseRequested } else { WindowLive }
 }
 
 ///|

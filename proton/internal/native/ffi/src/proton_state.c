@@ -237,6 +237,12 @@ void proton_window_slot_request_close(proton_window_slot_t *window) {
   }
 }
 
+void proton_window_slot_cancel_close(proton_window_slot_t *window) {
+  if (window != NULL && window->lifecycle == PROTON_WINDOW_CLOSE_REQUESTED) {
+    window->lifecycle = PROTON_WINDOW_LIVE;
+  }
+}
+
 void proton_window_slot_mark_closed(proton_window_slot_t *window) {
   if (window != NULL && window->lifecycle != PROTON_WINDOW_DESTROYING &&
       window->lifecycle != PROTON_WINDOW_DESTROYED) {
