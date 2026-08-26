@@ -127,13 +127,13 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   if raw.dry_run {
     return
   }
-  let result = execute_package_plan(plan)
+  let (artifacts, platform) = execute_package_plan(plan)
   match raw.updater_metadata {
     Some(metadata) =>
       write_updater_metadata(
         plan,
-        result.artifacts(),
-        result.platform(),
+        artifacts,
+        platform,
         metadata.base_url,
         metadata.published_at,
       )
@@ -318,12 +318,11 @@ fn bool_text(value : Bool) -> String {
 }
 
 ///|
-async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
+async fn execute_package_plan(plan : PackagePlan) -> (Array[String], String) {
   let executable = run_package_build(plan)
   if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
     raise @packager.PackagePlanError::MissingExecutable(path=executable)
   }
-  let helper = @cef_store.resolve_default_helper()
   let document_types = plan.document_types.map(document_type => {
     @packager.DocumentType(
       document_type.name,
@@ -344,21 +343,19 @@ async fn execute_package_plan(plan : PackagePlan) -> @bundle.BundleResult {
     sign=plan.sign,
     notarize=plan.notarize,
   )
-  let spec = @bundle.ProtonBundleSpec(
+  let spec = ProtonBundleSpec::{
     package_spec,
-    helper,
-    plan.base_dir,
-    plan.frontend_dist,
-    update_revision=plan.update_revision,
-    resources=plan.resources,
-    sign_binaries=plan.sign_binaries,
-  )
-  let result = @bundle.build(spec)
-  let artifacts = result.artifacts()
+    base_dir: plan.base_dir,
+    update_revision: plan.update_revision,
+    frontend_dist: plan.frontend_dist,
+    resources: plan.resources,
+    sign_binaries: plan.sign_binaries,
+  }
+  let (artifacts, platform) = build_proton_package(spec)
   for artifact in artifacts {
     println("Packaged: " + artifact)
   }
-  result
+  (artifacts, platform)
 }
 
 ///|

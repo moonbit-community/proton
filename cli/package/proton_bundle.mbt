@@ -2,9 +2,11 @@
 async fn package_spec(
   spec : ProtonBundleSpec,
   runtime : String,
+  cef_process : String,
+  host : BundleHost,
 ) -> @packager.PackageSpec {
   let payloads = spec.package_spec.payloads.copy()
-  payloads.append(package_payloads(spec, runtime, current_bundle_host()))
+  payloads.append(package_payloads(spec, runtime, cef_process, host))
   @packager.PackageSpec(
     spec.package_spec.executable,
     spec.package_spec.product_name,
@@ -23,29 +25,35 @@ async fn package_spec(
 
 ///|
 /// Packages an already-built Proton application using the active immutable
-/// runtime installation.
-pub async fn build(spec : ProtonBundleSpec) -> BundleResult {
+/// runtime and helper installation.
+async fn build_proton_package(
+  spec : ProtonBundleSpec,
+) -> (Array[String], String) {
   guard path_is_file(spec.package_spec.executable) else {
     raise BundleRuntimeError::ExecutableMissing(
       path=spec.package_spec.executable,
     )
   }
-  guard path_is_file(spec.cef_process) else {
-    raise BundleRuntimeError::HelperMissing(path=spec.cef_process)
-  }
   let installation = @cef_store.resolve_default()
+  let cef_process = @cef_store.resolve_default_helper()
+  guard path_is_file(cef_process) else {
+    raise BundleRuntimeError::HelperMissing(path=cef_process)
+  }
+  let platform = installation.platform()
+  let host = bundle_host_from_platform(platform)
   let artifacts = @packager.build_with(
-    package_spec(spec, installation.runtime_root()),
+    package_spec(spec, installation.runtime_root(), cef_process, host),
     package_customization(spec),
-    async fn(layout) { prepare_proton_package(spec, layout) },
+    async fn(layout) { prepare_proton_package(spec, cef_process, layout, host) },
   )
-  BundleResult::{ artifacts, platform: installation.platform(), }
+  (artifacts, platform)
 }
 
 ///|
 async fn package_payloads(
   spec : ProtonBundleSpec,
   runtime : String,
+  cef_process : String,
   host : BundleHost,
 ) -> Array[@packager.Payload] {
   let payloads : Array[@packager.Payload] = []
@@ -61,7 +69,7 @@ async fn package_payloads(
       if host == Linux {
         payloads.push(
           @packager.Payload(
-            spec.cef_process,
+            cef_process,
             "cef_process",
             location=@packager.PayloadLocation::Executables,
           ),
@@ -97,7 +105,7 @@ async fn package_payloads(
       )
       payloads.push(
         @packager.Payload(
-          spec.cef_process,
+          cef_process,
           "cef_process.exe",
           location=@packager.PayloadLocation::Executables,
         ),
@@ -228,9 +236,10 @@ fn windows_package_sign_targets(
 ///|
 async fn prepare_proton_package(
   spec : ProtonBundleSpec,
+  cef_process : String,
   layout : @packager.PackageLayout,
+  host : BundleHost,
 ) -> Unit {
-  let host = current_bundle_host()
   let metadata_root = match host {
     Windows => layout.root()
     Macos | Linux => layout.resources()
@@ -243,7 +252,7 @@ async fn prepare_proton_package(
   }
   write_package_manifest(spec, metadata_root, kind, host)
   match host {
-    Macos => prepare_macos_proton_package(spec, layout)
+    Macos => prepare_macos_proton_package(spec, cef_process, layout)
     Windows =>
       validate_windows_portable_layout(layout.root(), layout.executable())
     Linux => {
@@ -264,6 +273,7 @@ async fn prepare_proton_package(
 ///|
 async fn prepare_macos_proton_package(
   spec : ProtonBundleSpec,
+  cef_process : String,
   layout : @packager.PackageLayout,
 ) -> Unit {
   require_launchable_macho(layout.executable())
@@ -279,7 +289,7 @@ async fn prepare_macos_proton_package(
     let helper_macos = resolve_path(helper_app, "Contents/MacOS")
     let helper_executable = resolve_path(helper_macos, helper.executable_name)
     ensure_dir(helper_macos)
-    copy_file(spec.cef_process, helper_executable)
+    copy_macos_file(cef_process, helper_executable)
     @async_fs.chmod(helper_executable, 0o755)
     require_launchable_macho(helper_executable)
     write_text(

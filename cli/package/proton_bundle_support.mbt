@@ -76,13 +76,17 @@ fn glob_tree_root(value : String) -> String? {
 }
 
 ///|
-async fn current_bundle_host() -> BundleHost {
-  if @path.sep == '\\' {
-    Windows
-  } else if path_exists("/System/Library/CoreServices/SystemVersion.plist") {
+fn bundle_host_from_platform(
+  platform : String,
+) -> BundleHost raise BundleRuntimeError {
+  if platform.has_prefix("darwin-") {
     Macos
-  } else {
+  } else if platform.has_prefix("win32-") {
+    Windows
+  } else if platform.has_prefix("linux-") {
     Linux
+  } else {
+    raise UnsupportedPlatform(platform~)
   }
 }
 
@@ -107,35 +111,18 @@ async fn ensure_dir(path : String) -> Unit {
 }
 
 ///|
-async fn copy_file(source : String, destination : String) -> Unit {
+async fn copy_macos_file(source : String, destination : String) -> Unit {
   ensure_dir(path_parent(destination))
-  if current_bundle_host() == Macos {
-    let code = @process.run("ditto", [source, destination]) catch {
-      error =>
-        raise BundleFileSystemError::Copy(
-          source~,
-          destination~,
-          detail=@debug.render(Repr(error)),
-        )
-    }
-    guard code == 0 else {
-      raise BundleToolError::Exit(tool="ditto", code~, detail=source)
-    }
-    return
-  }
-  let data = @async_fs.read_file(source) catch {
+  let code = @process.run("ditto", [source, destination]) catch {
     error =>
-      raise BundleFileSystemError::Read(
-        path=source,
+      raise BundleFileSystemError::Copy(
+        source~,
+        destination~,
         detail=@debug.render(Repr(error)),
       )
   }
-  @async_fs.write_file(destination, data, create_mode=CreateOrTruncate) catch {
-    error =>
-      raise BundleFileSystemError::Write(
-        path=destination,
-        detail=@debug.render(Repr(error)),
-      )
+  guard code == 0 else {
+    raise BundleToolError::Exit(tool="ditto", code~, detail=source)
   }
 }
 

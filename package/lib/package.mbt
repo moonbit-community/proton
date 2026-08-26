@@ -154,9 +154,6 @@ fn validate_spec(spec : PackageSpec) -> PackageSpec raise PackagePlanError {
   let product_name = validate_product_name(spec.product_name)
   let identifier = validate_identifier(spec.identifier)
   let version = validate_package_version(spec.version)
-  guard spec.formats.length() > 0 else {
-    raise UnsupportedFormat(format="no format selected")
-  }
   for payload in spec.payloads {
     validate_relative_destination(payload.destination)
   }
