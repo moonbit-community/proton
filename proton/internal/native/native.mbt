@@ -1409,6 +1409,24 @@ pub fn Window::set_maximum_size(
 }
 
 ///|
+/// Sets whether the user can move the live native window.
+pub fn Window::set_movable(
+  self : Window,
+  movable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_movable_ffi(
+      self.live_handle(),
+      if movable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

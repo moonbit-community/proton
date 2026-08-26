@@ -162,6 +162,10 @@ clear a constraint. See `examples/62_window_size_limits` for a manual review.
 `WindowHandle::center` places a live window in the work area of its current
 monitor while preserving its size. See `examples/63_window_center` for a
 manual review.
+`WindowHandle::set_movable` controls manual title-bar movement without blocking
+programmatic `set_position` or `center` calls. It is enforced on macOS and
+Windows and follows Electron's no-op behavior on Linux. See
+`examples/64_window_movable` for a manual review.
 
 The typed facade can own additional windows without replacing Proton's bridge
 pump:
