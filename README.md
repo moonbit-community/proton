@@ -156,7 +156,9 @@ See `examples/48_titlebar_overlay` for a cross-platform overlay layout example.
 The primary entry constructors accept `resizable=false` for a fixed window.
 Secondary windows can select `WindowSizeHint::Unconstrained`, `Fixed`, `Min`,
 or `Max`; minimum and maximum hints constrain resizing relative to the
-configured width and height.
+configured width and height. A running `WindowHandle` can also update those
+constraints with `set_minimum_size` and `set_maximum_size`; pass `(0, 0)` to
+clear a constraint. See `examples/62_window_size_limits` for a manual review.
 
 The typed facade can own additional windows without replacing Proton's bridge
 pump:

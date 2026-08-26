@@ -223,6 +223,22 @@ fn window_size_hint_code(value : WindowSizeHint) -> Int {
 }
 
 ///|
+fn validate_size_constraint(
+  width : Int,
+  height : Int,
+  name : String,
+) -> Unit raise NativeError {
+  if width == 0 && height == 0 {
+    return
+  }
+  if width <= 0 || height <= 0 {
+    raise invalid_argument(
+      name + " size must use two positive dimensions or (0, 0) to clear",
+    )
+  }
+}
+
+///|
 fn browser_policy_code(value : BrowserPolicyMode) -> Int {
   match value {
     Allow => 0
@@ -1354,6 +1370,40 @@ pub fn Window::set_resizable(
       } else {
         0
       },
+    ),
+  )
+}
+
+///|
+/// Sets the minimum live native window size. `(0, 0)` clears the constraint.
+pub fn Window::set_minimum_size(
+  self : Window,
+  width : Int,
+  height : Int,
+) -> Unit raise NativeError {
+  validate_size_constraint(width, height, "minimum")
+  check_status(
+    @native_ffi.proton_window_set_minimum_size_ffi(
+      self.live_handle(),
+      width,
+      height,
+    ),
+  )
+}
+
+///|
+/// Sets the maximum live native window size. `(0, 0)` clears the constraint.
+pub fn Window::set_maximum_size(
+  self : Window,
+  width : Int,
+  height : Int,
+) -> Unit raise NativeError {
+  validate_size_constraint(width, height, "maximum")
+  check_status(
+    @native_ffi.proton_window_set_maximum_size_ffi(
+      self.live_handle(),
+      width,
+      height,
     ),
   )
 }

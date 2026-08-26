@@ -209,6 +209,12 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t height,
                                       char *error,
                                       size_t error_len);
+int32_t proton_engine_window_set_minimum_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len);
+int32_t proton_engine_window_set_maximum_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len);
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len);

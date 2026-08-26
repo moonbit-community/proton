@@ -50,6 +50,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void proton_engine_apply_size_constraints(
+    proton_engine_window_t *window) {
+  if (window == NULL || window->window == NULL || window->headless) {
+    return;
+  }
+  GdkGeometry geometry = {0};
+  GdkWindowHints hints = 0;
+  if (window->min_width > 0) {
+    geometry.min_width = window->min_width;
+    geometry.min_height = window->min_height;
+    hints = (GdkWindowHints)(hints | GDK_HINT_MIN_SIZE);
+  }
+  if (window->max_width > 0) {
+    geometry.max_width = window->max_width;
+    geometry.max_height = window->max_height;
+    hints = (GdkWindowHints)(hints | GDK_HINT_MAX_SIZE);
+  }
+  gtk_window_set_geometry_hints(GTK_WINDOW(window->window), NULL,
+                                hints == 0 ? NULL : &geometry, hints);
+}
+
 static gboolean proton_engine_on_window_delete(GtkWidget *widget,
                                                GdkEvent *event,
                                                gpointer user_data) {
@@ -409,6 +430,10 @@ int32_t proton_engine_window_create(
   window->public_window_id = config.public_window;
   window->width = config.width;
   window->height = config.height;
+  window->min_width = config.size_hint == 2 ? config.width : 0;
+  window->min_height = config.size_hint == 2 ? config.height : 0;
+  window->max_width = config.size_hint == 3 ? config.width : 0;
+  window->max_height = config.size_hint == 3 ? config.height : 0;
   window->headless = runtime->headless;
   window->size_hint = config.size_hint;
   window->titlebar_overlay = config.titlebar_overlay;
@@ -478,20 +503,8 @@ int32_t proton_engine_window_create(
                                 config.height);
     if (config.size_hint == 1) {
       gtk_window_set_resizable(GTK_WINDOW(window->window), FALSE);
-    } else if (config.size_hint == 2 || config.size_hint == 3) {
-      GdkGeometry geometry = {0};
-      GdkWindowHints hints = config.size_hint == 2 ? GDK_HINT_MIN_SIZE
-                                                   : GDK_HINT_MAX_SIZE;
-      if (config.size_hint == 2) {
-        geometry.min_width = config.width;
-        geometry.min_height = config.height;
-      } else {
-        geometry.max_width = config.width;
-        geometry.max_height = config.height;
-      }
-      gtk_window_set_geometry_hints(GTK_WINDOW(window->window), NULL,
-                                    &geometry, hints);
     }
+    proton_engine_apply_size_constraints(window);
     if (window->titlebar_overlay) {
       gtk_window_set_decorated(GTK_WINDOW(window->window), FALSE);
       window->overlay = gtk_overlay_new();
@@ -791,6 +804,56 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
   } else {
     gtk_window_resize(GTK_WINDOW(window->window), width, height);
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_minimum_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window size constraints are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (width > 0 && window->max_width > 0 &&
+      (width > window->max_width || height > window->max_height)) {
+    proton_engine_set_message(error, error_len,
+                              "minimum size exceeds maximum size");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  window->min_width = width;
+  window->min_height = height;
+  proton_engine_apply_size_constraints(window);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_maximum_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window size constraints are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (width > 0 && window->min_width > 0 &&
+      (width < window->min_width || height < window->min_height)) {
+    proton_engine_set_message(error, error_len,
+                              "maximum size is below minimum size");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  window->max_width = width;
+  window->max_height = height;
+  proton_engine_apply_size_constraints(window);
   return PROTON_OK;
 }
 

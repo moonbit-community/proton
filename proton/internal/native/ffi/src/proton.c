@@ -939,6 +939,68 @@ int32_t proton_window_set_resizable(proton_window_handle_t window,
   return proton_window_apply_action(window, &action);
 }
 
+static int32_t proton_validate_size_constraint(int32_t width, int32_t height,
+                                               const char *name) {
+  if ((width == 0 && height == 0) || (width > 0 && height > 0)) {
+    return PROTON_OK;
+  }
+  char message[128];
+  snprintf(message, sizeof(message),
+           "%s size must use two positive dimensions or (0, 0) to clear",
+           name);
+  return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
+}
+
+int32_t proton_window_set_minimum_size(proton_window_handle_t window,
+                                       int32_t width, int32_t height) {
+  int32_t status = proton_validate_size_constraint(width, height, "minimum");
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_window_slot_t *slot = NULL;
+  status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window size constraints require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_minimum_size(
+      slot->engine_window, width, height, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_maximum_size(proton_window_handle_t window,
+                                       int32_t width, int32_t height) {
+  int32_t status = proton_validate_size_constraint(width, height, "maximum");
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_window_slot_t *slot = NULL;
+  status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window size constraints require native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_maximum_size(
+      slot->engine_window, width, height, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                        int32_t zoom_percent) {
   if (zoom_percent < 25 || zoom_percent > 500) {

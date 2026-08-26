@@ -78,6 +78,10 @@ struct proton_engine_window {
   cef_rect_t osr_popup_rect;
   int size_hint;
   int resizable;
+  int min_width;
+  int min_height;
+  int max_width;
+  int max_height;
   int titlebar_overlay;
   int fullscreen;
   int always_on_top;
