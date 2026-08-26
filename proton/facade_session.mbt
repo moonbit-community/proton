@@ -1560,6 +1560,9 @@ async fn RuntimeSession::wait_for_bridge_startup(
     while true {
       let revision = self.wakeup.revision()
       let did_work = self.pump_once(monitor_bridge=false)
+      if self.quit_requested {
+        return
+      }
       match refresh_bridge_startup_states(self.windows) {
         None => return
         Some(_) =>
@@ -1577,6 +1580,9 @@ async fn RuntimeSession::wait_for_bridge_startup(
     Some(_) => ()
     None => {
       ignore(self.pump_once(monitor_bridge=false))
+      if self.quit_requested {
+        return
+      }
       match refresh_bridge_startup_states(self.windows) {
         None => return
         Some(state) =>
@@ -2510,8 +2516,9 @@ fn RuntimeSession::dispatch_menu_event(
 fn RuntimeSession::check_bridge_failures(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
+  guard !self.quit_requested else { return }
   for running in self.windows {
-    if running.is_closed() {
+    if !running.is_active() {
       continue
     }
     let failure = take_runtime_bridge_failure(running.window) catch {

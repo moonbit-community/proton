@@ -360,23 +360,27 @@ async fn run_manifest(
           session.wait_for_bridge_startup(bridge_startup_timeout_ms) catch {
             error => raise normalize_async_run_error(error)
           }
-          @xlog.info(category="proton.bridge") <?
-            {
-              "message": "renderer bridge ready",
-              "window_count": windows.length(),
-            }
-        }
-        // A source may enqueue synchronously from start(). Initial windows must
-        // be able to receive those events before native production begins.
-        session.start_extension_event_sources()
-        for running in windows {
-          if !running.is_closed() {
-            session.activate_window(running)
+          if !session.quit_requested {
+            @xlog.info(category="proton.bridge") <?
+              {
+                "message": "renderer bridge ready",
+                "window_count": windows.length(),
+              }
           }
         }
-        lifecycle.begin_running()
-        cleanup_previous_update()
-        start_update_check(update_channel, update_handlers, application_tasks)
+        if !session.quit_requested {
+          // A source may enqueue synchronously from start(). Initial windows must
+          // be able to receive those events before native production begins.
+          session.start_extension_event_sources()
+          for running in windows {
+            if !running.is_closed() {
+              session.activate_window(running)
+            }
+          }
+          lifecycle.begin_running()
+          cleanup_previous_update()
+          start_update_check(update_channel, update_handlers, application_tasks)
+        }
         session.run() catch {
           error => raise normalize_async_run_error(error)
         }
