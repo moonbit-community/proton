@@ -162,6 +162,8 @@ int32_t proton_window_set_minimum_size(proton_window_handle_t window,
                                        int32_t width, int32_t height);
 int32_t proton_window_set_maximum_size(proton_window_handle_t window,
                                        int32_t width, int32_t height);
+int32_t proton_window_set_aspect_ratio(proton_window_handle_t window,
+                                       double aspect_ratio);
 int32_t proton_window_set_movable(proton_window_handle_t window,
                                   int32_t movable);
 int32_t proton_window_set_opacity(proton_window_handle_t window,

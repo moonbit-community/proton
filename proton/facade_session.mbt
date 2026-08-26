@@ -160,6 +160,11 @@ fn RuntimeSession::window_handle(
         window.set_maximum_size(width, height)
       })
     },
+    set_window_aspect_ratio: aspect_ratio => {
+      self.control_window(id, native_id, "set aspect ratio", window => {
+        window.set_aspect_ratio(aspect_ratio)
+      })
+    },
     set_window_movable: movable => {
       self.control_window(id, native_id, "set movable", window => {
         window.set_movable(movable)
@@ -1166,6 +1171,18 @@ pub fn WindowHandle::set_maximum_size(
   height : Int,
 ) -> Unit raise WindowSessionError {
   (self.set_window_maximum_size)(width, height)
+}
+
+///|
+/// Sets the live native window aspect ratio used while the user resizes it.
+/// Pass `0.0` to clear the constraint. Programmatic `set_size` calls are not
+/// constrained by the ratio, matching Electron's `setAspectRatio` behavior.
+/// Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_aspect_ratio(
+  self : WindowHandle,
+  aspect_ratio : Double,
+) -> Unit raise WindowSessionError {
+  (self.set_window_aspect_ratio)(aspect_ratio)
 }
 
 ///|

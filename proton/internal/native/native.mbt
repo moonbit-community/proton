@@ -1409,6 +1409,20 @@ pub fn Window::set_maximum_size(
 }
 
 ///|
+/// Sets the live native window aspect ratio. Pass `0.0` to clear the ratio.
+pub fn Window::set_aspect_ratio(
+  self : Window,
+  aspect_ratio : Double,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_aspect_ratio_ffi(
+      self.live_handle(),
+      aspect_ratio,
+    ),
+  )
+}
+
+///|
 /// Sets whether the user can move the live native window.
 pub fn Window::set_movable(
   self : Window,

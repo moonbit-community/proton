@@ -599,6 +599,7 @@ pub struct WindowHandle {
   set_window_resizable : (Bool) -> Unit raise WindowSessionError
   set_window_minimum_size : (Int, Int) -> Unit raise WindowSessionError
   set_window_maximum_size : (Int, Int) -> Unit raise WindowSessionError
+  set_window_aspect_ratio : (Double) -> Unit raise WindowSessionError
   set_window_movable : (Bool) -> Unit raise WindowSessionError
   set_window_opacity : (Double) -> Unit raise WindowSessionError
   set_window_skip_taskbar : (Bool) -> Unit raise WindowSessionError
@@ -626,6 +627,7 @@ pub fn WindowHandle::minimize(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::remove_view(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::restore(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_always_on_top(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_aspect_ratio(Self, Double) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_fullscreen(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximum_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_minimum_size(Self, Int, Int) -> Unit raise WindowSessionError

@@ -430,6 +430,7 @@ pub struct WindowHandle {
   set_window_resizable : (Bool) -> Unit raise WindowSessionError
   set_window_minimum_size : (Int, Int) -> Unit raise WindowSessionError
   set_window_maximum_size : (Int, Int) -> Unit raise WindowSessionError
+  set_window_aspect_ratio : (Double) -> Unit raise WindowSessionError
   set_window_movable : (Bool) -> Unit raise WindowSessionError
   set_window_opacity : (Double) -> Unit raise WindowSessionError
   set_window_skip_taskbar : (Bool) -> Unit raise WindowSessionError
