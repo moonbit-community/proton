@@ -1,6 +1,6 @@
 # Event Broadcast
 
-Native DLL bridge example for command-extension event broadcast.
+Source-built command-extension example for event broadcast.
 
 The page calls `window.__MoonBit__.ticker.start(payload)` and subscribes with
 `window.__MoonBit__.ticker.on("tick", listener)` / `ticker.on("done", listener)`.
