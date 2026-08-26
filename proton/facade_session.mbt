@@ -186,6 +186,11 @@ fn RuntimeSession::window_handle(
         window.set_content_protection(enabled)
       })
     },
+    set_window_minimizable: minimizable => {
+      self.control_window(id, native_id, "set minimizable", window => {
+        window.set_minimizable(minimizable)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1254,6 +1259,18 @@ pub fn WindowHandle::set_content_protection(
   enabled : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_content_protection)(enabled)
+}
+
+///|
+/// Sets whether the user can manually minimize this live native window.
+/// macOS and Windows update the native minimize control; Linux follows
+/// Electron and treats this as a successful no-op. Headless runtimes raise
+/// `WindowSessionError`.
+pub fn WindowHandle::set_minimizable(
+  self : WindowHandle,
+  minimizable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_minimizable)(minimizable)
 }
 
 ///|

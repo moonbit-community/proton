@@ -1509,6 +1509,24 @@ pub fn Window::set_content_protection(
 }
 
 ///|
+/// Sets whether the user can manually minimize the live native window.
+pub fn Window::set_minimizable(
+  self : Window,
+  minimizable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_minimizable_ffi(
+      self.live_handle(),
+      if minimizable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

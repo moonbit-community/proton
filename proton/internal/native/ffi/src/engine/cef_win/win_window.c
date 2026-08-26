@@ -479,6 +479,7 @@ int32_t proton_engine_window_create(
   window->size_hint = config.size_hint;
   window->resizable = config.size_hint != 1;
   window->movable = 1;
+  window->minimizable = 1;
   window->min_width = config.size_hint == 2 ? config.width : 0;
   window->min_height = config.size_hint == 2 ? config.height : 0;
   window->max_width = config.size_hint == 3 ? config.width : 0;
@@ -825,6 +826,47 @@ int32_t proton_engine_window_set_content_protection(
                               "failed to update window display affinity");
     return PROTON_ERR_PLATFORM;
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_minimizable(
+    proton_engine_window_t *window, int32_t minimizable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (minimizable != 0 && minimizable != 1) {
+    proton_engine_set_message(error, error_len, "minimizable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window minimizability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  DWORD style = window->fullscreen
+                    ? window->windowed_style
+                    : (DWORD)GetWindowLongW(window->hwnd, GWL_STYLE);
+  if (minimizable) {
+    style |= WS_MINIMIZEBOX;
+  } else {
+    style &= ~WS_MINIMIZEBOX;
+  }
+  if (window->fullscreen) {
+    window->windowed_style = style;
+  } else {
+    SetLastError(0);
+    if (SetWindowLongW(window->hwnd, GWL_STYLE, (LONG)style) == 0 &&
+        GetLastError() != 0) {
+      proton_engine_set_message(error, error_len, "failed to update window style");
+      return PROTON_ERR_PLATFORM;
+    }
+    SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                     SWP_FRAMECHANGED);
+  }
+  window->minimizable = minimizable;
   return PROTON_OK;
 }
 

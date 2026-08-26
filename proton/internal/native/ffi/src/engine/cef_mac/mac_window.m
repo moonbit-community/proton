@@ -1322,6 +1322,32 @@ int32_t proton_engine_window_set_content_protection(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_minimizable(
+    proton_engine_window_t *window, int32_t minimizable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (minimizable != 0 && minimizable != 1) {
+    proton_engine_set_message(error, error_len, "minimizable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window minimizability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  NSWindowStyleMask style = window->window.styleMask;
+  if (minimizable) {
+    style |= NSWindowStyleMaskMiniaturizable;
+  } else {
+    style &= ~NSWindowStyleMaskMiniaturizable;
+  }
+  window->window.styleMask = style;
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {
