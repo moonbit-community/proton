@@ -647,6 +647,42 @@ int32_t proton_engine_window_set_movable(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_opacity(proton_engine_window_t *window,
+                                         double opacity, char *error,
+                                         size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (isnan(opacity)) {
+    proton_engine_set_message(error, error_len,
+                              "opacity must not be NaN");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window opacity is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  const double bounded_opacity = opacity < 0.0 ? 0.0 : (opacity > 1.0 ? 1.0 : opacity);
+  LONG_PTR extended_style = GetWindowLongPtrW(window->hwnd, GWL_EXSTYLE);
+  SetLastError(0);
+  if (SetWindowLongPtrW(window->hwnd, GWL_EXSTYLE,
+                        extended_style | WS_EX_LAYERED) == 0 &&
+      GetLastError() != 0) {
+    proton_engine_set_message(error, error_len,
+                              "failed to enable layered window opacity");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (!SetLayeredWindowAttributes(window->hwnd, 0,
+                                  (BYTE)(bounded_opacity * 255.0), LWA_ALPHA)) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update window opacity");
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_hide(proton_engine_window_t *window,
                                   char *error,
                                   size_t error_len) {

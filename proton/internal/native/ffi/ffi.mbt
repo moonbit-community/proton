@@ -467,6 +467,12 @@ pub extern "C" fn proton_window_set_movable_ffi(
 ) -> Int = "proton_window_set_movable"
 
 ///|
+pub extern "C" fn proton_window_set_opacity_ffi(
+  window : WindowHandle,
+  opacity : Double,
+) -> Int = "proton_window_set_opacity"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

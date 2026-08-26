@@ -64,6 +64,7 @@ fn test_window_handle(
   flash_calls? : Array[Bool],
   resizable_calls? : Array[Bool],
   movable_calls? : Array[Bool],
+  opacity_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
   window_state? : WindowState,
@@ -105,6 +106,12 @@ fn test_window_handle(
     set_window_movable: movable => {
       match movable_calls {
         Some(calls) => calls.push(movable)
+        None => ()
+      }
+    },
+    set_window_opacity: opacity => {
+      match opacity_calls {
+        Some(calls) => calls.push(opacity)
         None => ()
       }
     },
@@ -1990,6 +1997,15 @@ test "window movable routes live capability changes through the handle" {
   window.set_movable(false)
   window.set_movable(true)
   debug_inspect(calls, content="[false, true]")
+}
+
+///|
+test "window opacity routes live values through the handle" {
+  let calls : Array[Double] = []
+  let window = test_window_handle("main", 17L, opacity_calls=calls)
+  window.set_opacity(0.35)
+  window.set_opacity(1.0)
+  debug_inspect(calls, content="[0.35, 1]")
 }
 
 ///|

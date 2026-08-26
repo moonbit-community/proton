@@ -110,6 +110,8 @@ moon -C examples run 01_run --target native
 - `64_window_movable`: manual Electron-style window movement control with
   native drag blocking on macOS and Windows, Linux no-op behavior, and
   programmatic movement checks.
+- `65_window_opacity`: manual Electron-style whole-window opacity review with
+  a numeric slider, presets, and native frame checks.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

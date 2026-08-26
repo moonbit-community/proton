@@ -218,6 +218,9 @@ int32_t proton_engine_window_set_maximum_size(
 int32_t proton_engine_window_set_movable(proton_engine_window_t *window,
                                          int32_t movable, char *error,
                                          size_t error_len);
+int32_t proton_engine_window_set_opacity(proton_engine_window_t *window,
+                                         double opacity, char *error,
+                                         size_t error_len);
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len);
