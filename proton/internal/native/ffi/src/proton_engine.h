@@ -174,6 +174,9 @@ int32_t proton_engine_notification_show(const char *title,
                                         int32_t has_payload,
                                         char *error,
                                         size_t error_len);
+int32_t proton_engine_notification_set_badge_count(int32_t count,
+                                                   char *error,
+                                                   size_t error_len);
 int32_t proton_engine_notification_cleanup(char *error, size_t error_len);
 
 int32_t proton_engine_window_create(

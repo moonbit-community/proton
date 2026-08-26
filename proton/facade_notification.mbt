@@ -148,6 +148,16 @@ pub fn notification_supported() -> Bool raise NotificationDeliveryError {
 
 ///|
 #doc(hidden)
+pub fn notification_set_badge_count(
+  count : Int,
+) -> Unit raise NotificationDeliveryError {
+  @native.notification_set_badge_count(count) catch {
+    error => raise NativeFailure(status=error.status(), detail=error.message())
+  }
+}
+
+///|
+#doc(hidden)
 pub fn notification_cleanup() -> Unit raise NotificationDeliveryError {
   @native.notification_cleanup() catch {
     error => raise NativeFailure(status=error.status(), detail=error.message())

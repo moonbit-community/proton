@@ -1609,6 +1609,17 @@ int32_t proton_notification_show(const char *title,
   return proton_set_engine_status(status, engine_error);
 }
 
+int32_t proton_notification_set_badge_count(int32_t count) {
+  if (count < 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "notification badge count must be non-negative");
+  }
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_notification_set_badge_count(
+      count, engine_error, sizeof(engine_error));
+  return proton_set_engine_status(status, engine_error);
+}
+
 int32_t proton_notification_cleanup(void) {
   char engine_error[512] = {0};
   int32_t status =

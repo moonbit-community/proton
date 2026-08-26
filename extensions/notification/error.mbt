@@ -2,6 +2,7 @@
 /// Failures while validating or delivering native notifications.
 suberror NotificationError {
   EmptyBody
+  InvalidBadgeCount(Int)
   UnsupportedPlatform
   NativeOperation(detail~ : String)
 } derive(Debug, Eq)
@@ -19,6 +20,8 @@ pub extend NotificationError with Show::{to_string, output}
 fn NotificationError::message(self : NotificationError) -> String {
   match self {
     EmptyBody => "notification body must not be empty"
+    InvalidBadgeCount(count) =>
+      "notification badge count must be non-negative, got " + count.to_string()
     UnsupportedPlatform =>
       "native notifications are not implemented on this platform"
     NativeOperation(detail~) =>

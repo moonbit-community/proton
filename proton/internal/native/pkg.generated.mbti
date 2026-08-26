@@ -25,6 +25,8 @@ pub fn last_error_message() -> String
 
 pub fn notification_cleanup() -> Unit raise NativeError
 
+pub fn notification_set_badge_count(Int) -> Unit raise NativeError
+
 pub fn notification_show(String, String, payload? : String) -> Unit raise NativeError
 
 pub fn notification_supported() -> Bool raise NativeError
@@ -569,10 +571,13 @@ pub fn Window::set_close_interception(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreen(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximum_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_minimum_size(Self, Int, Int) -> Unit raise NativeError
+pub fn Window::set_movable(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_opacity(Self, Double) -> Unit raise NativeError
 pub fn Window::set_position(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_progress_bar(Self, Double) -> Unit raise NativeError
 pub fn Window::set_resizable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_size(Self, Int, Int) -> Unit raise NativeError
+pub fn Window::set_skip_taskbar(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_title(Self, String) -> Unit raise NativeError
 pub fn Window::set_zoom_percent(Self, Int) -> Unit raise NativeError
 pub fn Window::show(Self) -> Unit raise NativeError

@@ -102,6 +102,8 @@ pub fn proton_notification_cleanup_ffi() -> Int
 
 pub fn proton_notification_is_supported_ffi(@ref.Ref[Int]) -> Int
 
+pub fn proton_notification_set_badge_count_ffi(Int) -> Int
+
 pub fn proton_notification_show_ffi(Bytes, Bytes, Bytes, Int) -> Int
 
 pub fn proton_runtime_begin_message_dialog_ffi(RuntimeHandle, Bytes, Int, Bytes, Int, Int, @ref.Ref[Int64]) -> Int

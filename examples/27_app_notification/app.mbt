@@ -173,8 +173,8 @@ let resource : String =
   #|    <main>
   #|      <h1>Notification as its own runtime surface.</h1>
   #|      <p class="lead">
-  #|        This example isolates <code>notification.show(...)</code> and its
-  #|        activity and click event streams on macOS.
+  #|        This example isolates <code>notification.show(...)</code>, the
+  #|        application badge, and notification event streams on macOS.
   #|      </p>
   #|      <section class="layout">
   #|        <div class="stack">
@@ -198,8 +198,14 @@ let resource : String =
   #|              Click payload
   #|              <input id="notification-payload" value="standalone-example" />
   #|            </label>
+  #|            <label style="margin-top: 12px;">
+  #|              Application badge count
+  #|              <input id="notification-badge" type="number" min="0" value="3" />
+  #|            </label>
   #|            <div class="actions">
   #|              <button id="show-notification">Show Notification</button>
+  #|              <button class="secondary" id="set-badge">Set Badge</button>
+  #|              <button class="secondary" id="clear-badge">Clear Badge</button>
   #|              <button class="secondary" id="clear-log">Clear Log</button>
   #|            </div>
   #|          </article>
@@ -251,6 +257,24 @@ let resource : String =
   #|        } catch (error) {
   #|          statusLine.textContent = "Notification failed: " + String(error);
   #|        }
+  #|      });
+  #|
+  #|      async function setBadge(count) {
+  #|        try {
+  #|          const result = await window.__MoonBit__.notification.setBadge({ count });
+  #|          statusLine.textContent = "Application badge updated.";
+  #|          appendEvent("notification.setBadge", result);
+  #|        } catch (error) {
+  #|          statusLine.textContent = "Badge update failed: " + String(error);
+  #|        }
+  #|      }
+  #|
+  #|      document.getElementById("set-badge").addEventListener("click", () => {
+  #|        setBadge(Number(document.getElementById("notification-badge").value));
+  #|      });
+  #|
+  #|      document.getElementById("clear-badge").addEventListener("click", () => {
+  #|        setBadge(0);
   #|      });
   #|    </script>
   #|  </body>
