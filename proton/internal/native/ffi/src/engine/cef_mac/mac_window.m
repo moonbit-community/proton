@@ -1232,6 +1232,28 @@ int32_t proton_engine_window_set_movable(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_opacity(proton_engine_window_t *window,
+                                         double opacity, char *error,
+                                         size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (isnan(opacity)) {
+    proton_engine_set_message(error, error_len,
+                              "opacity must not be NaN");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window opacity is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  const double bounded_opacity = opacity < 0.0 ? 0.0 : (opacity > 1.0 ? 1.0 : opacity);
+  [window->window setAlphaValue:bounded_opacity];
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {

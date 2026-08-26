@@ -165,6 +165,11 @@ fn RuntimeSession::window_handle(
         window.set_movable(movable)
       })
     },
+    set_window_opacity: opacity => {
+      self.control_window(id, native_id, "set opacity", window => {
+        window.set_opacity(opacity)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1170,6 +1175,19 @@ pub fn WindowHandle::set_movable(
   movable : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_movable)(movable)
+}
+
+///|
+/// Sets the live native window opacity.
+///
+/// Values are clamped to the Electron-compatible `0.0..1.0` range, where
+/// `0.0` is fully transparent and `1.0` is fully opaque. Headless runtimes
+/// raise `WindowSessionError` because they have no native frame.
+pub fn WindowHandle::set_opacity(
+  self : WindowHandle,
+  opacity : Double,
+) -> Unit raise WindowSessionError {
+  (self.set_window_opacity)(opacity)
 }
 
 ///|

@@ -600,6 +600,7 @@ pub struct WindowHandle {
   set_window_minimum_size : (Int, Int) -> Unit raise WindowSessionError
   set_window_maximum_size : (Int, Int) -> Unit raise WindowSessionError
   set_window_movable : (Bool) -> Unit raise WindowSessionError
+  set_window_opacity : (Double) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError
@@ -628,6 +629,7 @@ pub fn WindowHandle::set_fullscreen(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximum_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_minimum_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_movable(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_opacity(Self, Double) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_position(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_progress_bar(Self, Double) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_resizable(Self, Bool) -> Unit raise WindowSessionError

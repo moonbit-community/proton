@@ -1427,6 +1427,30 @@ pub fn Window::set_movable(
 }
 
 ///|
+/// Sets the opacity of the live native window, clamped to `0.0..1.0`.
+pub fn Window::set_opacity(
+  self : Window,
+  opacity : Double,
+) -> Unit raise NativeError {
+  if opacity.is_nan() {
+    raise invalid_argument("opacity must not be NaN")
+  }
+  let bounded_opacity = if opacity < 0.0 {
+    0.0
+  } else if opacity > 1.0 {
+    1.0
+  } else {
+    opacity
+  }
+  check_status(
+    @native_ffi.proton_window_set_opacity_ffi(
+      self.live_handle(),
+      bounded_opacity,
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

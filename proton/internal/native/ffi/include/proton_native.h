@@ -162,6 +162,8 @@ int32_t proton_window_set_maximum_size(proton_window_handle_t window,
                                        int32_t width, int32_t height);
 int32_t proton_window_set_movable(proton_window_handle_t window,
                                   int32_t movable);
+int32_t proton_window_set_opacity(proton_window_handle_t window,
+                                  double opacity);
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                                   int32_t zoom_percent);
 /* Matches Electron's progress value semantics: negative clears the indicator,

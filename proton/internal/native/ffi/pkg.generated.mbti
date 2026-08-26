@@ -214,6 +214,10 @@ pub fn proton_window_set_maximum_size_ffi(WindowHandle, Int, Int) -> Int
 
 pub fn proton_window_set_minimum_size_ffi(WindowHandle, Int, Int) -> Int
 
+pub fn proton_window_set_movable_ffi(WindowHandle, Int) -> Int
+
+pub fn proton_window_set_opacity_ffi(WindowHandle, Double) -> Int
+
 pub fn proton_window_set_position_ffi(WindowHandle, Int, Int) -> Int
 
 pub fn proton_window_set_progress_bar_ffi(WindowHandle, Double) -> Int

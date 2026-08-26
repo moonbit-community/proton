@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/65_window_opacity"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type OpacityReply derive(ToJson, @json.FromJson)
+pub fn OpacityReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn OpacityReply::to_json(Self) -> Json
+
+type OpacityRequest derive(ToJson, @json.FromJson)
+pub fn OpacityRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn OpacityRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

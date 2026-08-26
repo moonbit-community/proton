@@ -166,6 +166,9 @@ manual review.
 programmatic `set_position` or `center` calls. It is enforced on macOS and
 Windows and follows Electron's no-op behavior on Linux. See
 `examples/64_window_movable` for a manual review.
+`WindowHandle::set_opacity` changes the whole native window and clamps values to
+the Electron-compatible `0.0..1.0` range. See `examples/65_window_opacity` for
+a manual review.
 
 The typed facade can own additional windows without replacing Proton's bridge
 pump:
