@@ -3,7 +3,6 @@ name = "moonbit-community/proton_cli"
 version = "0.2.2"
 
 import {
-  "moonbit-community/proton_bundle@0.2.2",
   "moonbit-community/proton_config@0.2.2",
   "moonbit-community/proton_package@0.2.2",
   "moonbit-community/proton_cefsetup@0.2.2",

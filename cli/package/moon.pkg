@@ -1,5 +1,4 @@
 import {
-  "moonbit-community/proton_bundle" @bundle,
   "moonbit-community/proton_config",
   "moonbit-community/proton_package/lib" @packager,
   "moonbit-community/proton_package/arguments" @package_args,
@@ -8,12 +7,18 @@ import {
   "moonbit-community/proton_cli/build_cmd" @build,
   "moonbit-community/proton_cli/fsutil",
   "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
   "moonbitlang/core/string",
   "moonbitlang/x/crypto",
   "moonbitlang/x/path",
 }
+
+import {
+  "moonbitlang/async",
+} for "wbtest"
 
 supported_targets = "native+wasm"

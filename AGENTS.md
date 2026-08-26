@@ -37,16 +37,15 @@ developer must perform them.
   design decision.
 - `codegen/`: `moonbit-community/proton_codegen`; WASM executable invoked through
   `moonx` by application prebuild rules, plus its reusable parser/renderer library.
-- `cli/`: `moonbit-community/proton_cli`; independent native developer CLI module.
+- `cli/`: `moonbit-community/proton_cli`; independent native developer CLI
+  module. Its `package` package owns the complete Proton project packaging
+  workflow, including CEF runtime and helper assembly over `proton_package`.
 - `package/`: standalone `moonbit-community/proton_package` module. It packages
   already-built executables from explicit metadata and payloads; it does not
   discover Proton projects, invoke Moon builds, or assemble CEF runtimes.
 - `cefsetup/`: `moonbit-community/proton_cefsetup`; its root executable installs
   the CEF release selected by the module version. The `store` package owns the
   CEF requirements and immutable user-wide installation store.
-- `bundle/`: `moonbit-community/proton_bundle`; the Proton-specific adapter over
-  `proton_package`. It accepts already-built application and helper executables,
-  resolves `proton_cefsetup/store`, and stages Proton's platform bundle layout.
 - `extensions/`: `moonbit-community/proton_ext`; command extensions for examples and
   applications. Platform capability extensions are backed by the bindings
   under `sys/`.
@@ -88,7 +87,6 @@ developer must perform them.
 - `moon -C examples build --target native --diagnostic-limit 80`
 - `moon -C codegen test lib --target wasm`
 - `moon -C cefsetup test store --target native --diagnostic-limit 80`
-- `moon -C bundle test --target native --diagnostic-limit 80`
 - `moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80`
 - `moon -C package test lib --target native --diagnostic-limit 80`
 - `moon check --target native`
@@ -121,8 +119,8 @@ native checks before handing off larger refactors.
 - `.github/workflows/publish.yml` publishes the lockstep dependency chain in this order:
   `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`,
   `proton_updater`, `proton_cefsetup`, `proton_package`, the eleven `sys` modules,
-  `proton_client`, `proton_rabbita`, `proton`, `proton_bundle`, `proton_ext`,
-  and finally `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not published.
+  `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and finally
+  `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not published.
 - All modules in `moon.work` use one lockstep version. Prepare a lockstep release only
   through `moon run scripts/bump_version.mbtx -- patch`, `minor`, or `major`;
   do not edit individual lockstep module versions by hand. The script discovers

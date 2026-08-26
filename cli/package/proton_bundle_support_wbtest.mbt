@@ -11,14 +11,28 @@ fn test_bundle_spec(
     [@packager.PackageFormat::App],
     resolve_path(root, "dist"),
   )
-  ProtonBundleSpec(
+  ProtonBundleSpec::{
     package_spec,
-    resolve_path(root, "cef_process"),
-    root,
-    None,
-    update_revision=42UL,
-    sign_binaries~,
-  )
+    base_dir: root,
+    update_revision: 42UL,
+    frontend_dist: None,
+    resources: [],
+    sign_binaries,
+  }
+}
+
+///|
+test "resolved runtime platform selects the Proton package layout" {
+  assert_true(bundle_host_from_platform("darwin-arm64") == Macos)
+  assert_true(bundle_host_from_platform("win32-x64") == Windows)
+  assert_true(bundle_host_from_platform("linux-x64") == Linux)
+  try ignore(bundle_host_from_platform("freebsd-x64")) catch {
+    BundleRuntimeError::UnsupportedPlatform(platform~) =>
+      assert_eq(platform, "freebsd-x64")
+    _ => abort("expected an unsupported platform error")
+  } noraise {
+    _ => abort("expected an unsupported platform error")
+  }
 }
 
 ///|

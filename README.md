@@ -48,10 +48,10 @@ helper copy and no runtime-selection file. Proton's native sources are compiled
 into the application by Moon, while only CEF remains an external runtime. Set
 `PROTON_RUNTIME_STORE` to an absolute path to relocate the CEF store.
 
-`proton_cli`, `proton`, `proton_bundle`, and `proton_cefsetup` are released in
-lockstep. The CLI resolves the helper installed by setup; it does not inspect a
-project's Moon workspace or dependency source directories. `proton_cli cef
-requirements` prints the active requirement as JSON.
+`proton_cli`, `proton`, `proton_package`, and `proton_cefsetup` are released in
+lockstep. The CLI resolves the runtime and helper installed by setup; it does
+not inspect a project's Moon workspace or dependency source directories.
+`proton_cli cef requirements` prints the active requirement as JSON.
 
 ## Application entry
 
@@ -467,15 +467,13 @@ MBT_CDP_TARGET=9222 moon -C e2e run test --target native
 
 `moonbit-community/proton_package` is the generic host-native packager. It does
 not discover Proton projects or know about CEF. `proton_cli package` builds the
-application, resolves the runtime and helper installed by `cef setup`, then
-delegates Proton's bundle layout to `moonbit-community/proton_bundle`, which in
-turn calls `proton_package`.
+application, resolves the runtime and helper installed by `cef setup`, assembles
+the complete Proton/CEF layout, and calls `proton_package` to create the native
+artifacts. This assembly is an implementation detail of the CLI package
+workflow.
 
-Developers who do not use `proton_cli` can use the same layers directly: run
-`moonx moonbit-community/proton_cefsetup`, build the application executable,
-resolve the installed runtime and helper through `proton_cefsetup/store`, and
-pass both explicit paths to `proton_bundle`. Use `proton_package` alone only for
-applications that do not need Proton's CEF layout:
+Developers packaging an already-built application that does not need Proton's
+CEF layout can use `proton_package` directly:
 
 ```sh
 moon install moonbit-community/proton_package
