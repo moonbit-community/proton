@@ -952,7 +952,7 @@ fn RuntimeSession::advance_window_opens(self : RuntimeSession) -> Bool {
           Some(_) => {
             did_work = true
             pending.timeout.cancel()
-            if pending.running.is_closed() {
+            if !pending.running.is_active() {
               pending.completion.fail(Cancelled)
             } else {
               pending.completion.succeed(self.window_handle(pending.running))
@@ -2092,7 +2092,7 @@ fn RuntimeSession::complete_browser_requests(
       Some(response) => {
         did_work = true
         match self.find_window_by_native_id(pending.window) {
-          Some(window) if !window.is_closed() => {
+          Some(window) if window.is_active() => {
             let path = response.path
             window.window.respond_browser_request(
               pending.request_id,
