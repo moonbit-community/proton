@@ -1060,6 +1060,9 @@ test "one extension supports distinct scopes in different windows" {
       resolved,
     )
   })
+  assert_true(main_policy.grants_extension(extension_id))
+  assert_true(secondary_policy.grants_extension(extension_id))
+  assert_false(main_policy.grants_extension("examples/other-extension"))
   inspect(
     main_policy.grants[0].scope.stringify(),
     content="{\"root\":\"./main\"}",
@@ -1367,6 +1370,33 @@ test "duplicate renderer capabilities may share one extension event source" {
     Some(_) => ()
     None => fail("expected shared event source")
   }
+}
+
+///|
+test "event-only extensions still create a renderer bridge host" {
+  let spec = test_command_spec("examples/event-only", "eventOnly", [])
+  let source = @proton_extension.event_source(_wakeup => (), () => (), () => [])
+  let build = unwrap_app_run(() => {
+    test_build_command_host([], [
+      test_extension_capability(spec, event_source=source),
+    ])
+  })
+  match build.runtime {
+    Some(host) => {
+      assert_eq(host.host.registered_ops(), [])
+      assert_eq(host.event_sources.length(), 1)
+      assert_true(requires_renderer_bridge(Some(host), false, false))
+      assert_eq(close_command_host(Some(host)).length(), 0)
+    }
+    None => fail("expected event-only extension to require a bridge host")
+  }
+}
+
+///|
+test "renderer bridge requirement includes every bridge-owned feature" {
+  assert_false(requires_renderer_bridge(None, false, false))
+  assert_true(requires_renderer_bridge(None, true, false))
+  assert_true(requires_renderer_bridge(None, false, true))
 }
 
 ///|

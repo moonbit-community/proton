@@ -261,13 +261,11 @@ async fn run_manifest(
         },
       )
     }
-    let ops = match command_host {
-      Some(host) => host.host.registered_ops()
-      None => []
-    }
-    let bridge_enabled = ops.length() > 0 ||
-      forward_menu_events ||
-      window_lifecycle_hooks.length() > 0
+    let bridge_enabled = requires_renderer_bridge(
+      command_host,
+      forward_menu_events,
+      window_lifecycle_hooks.length() > 0,
+    )
     if bridge_enabled && !@native.bridge_permission_grants_supported() {
       raise UnsupportedNativeFeature(feature="bridge_permission_grants")
     }
@@ -352,7 +350,6 @@ async fn run_manifest(
         )
         session.drive_until_complete(application_start)
         active_update_channel.val = update_channel
-        session.start_extension_event_sources()
         for definition in definitions {
           if definition.plan.open_on_start &&
             session.find_active_window(definition.plan.id) is None {
@@ -369,6 +366,9 @@ async fn run_manifest(
               "window_count": windows.length(),
             }
         }
+        // A source may enqueue synchronously from start(). Initial windows must
+        // be able to receive those events before native production begins.
+        session.start_extension_event_sources()
         for running in windows {
           if !running.is_closed() {
             session.activate_window(running)
@@ -433,6 +433,15 @@ async fn run_manifest(
     Some(error) => raise error
     None => ()
   }
+}
+
+///|
+fn requires_renderer_bridge(
+  command_host : CommandHostRuntime?,
+  forward_menu_events : Bool,
+  has_window_lifecycle_hooks : Bool,
+) -> Bool {
+  command_host is Some(_) || forward_menu_events || has_window_lifecycle_hooks
 }
 
 ///|
