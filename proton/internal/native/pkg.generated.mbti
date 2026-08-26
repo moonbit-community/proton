@@ -573,6 +573,7 @@ pub fn Window::restore(Self) -> Unit raise NativeError
 pub fn Window::set_always_on_top(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_aspect_ratio(Self, Double) -> Unit raise NativeError
 pub fn Window::set_close_interception(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_content_protection(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreen(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximum_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_minimum_size(Self, Int, Int) -> Unit raise NativeError

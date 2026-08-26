@@ -44,6 +44,10 @@
 #include <shobjidl.h>
 #include <windowsx.h>
 
+#ifndef WDA_EXCLUDEFROMCAPTURE
+#define WDA_EXCLUDEFROMCAPTURE 0x00000011
+#endif
+
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -794,6 +798,31 @@ int32_t proton_engine_window_set_skip_taskbar(proton_engine_window_t *window,
   if (FAILED(hr)) {
     proton_engine_set_message(error, error_len,
                               "failed to update taskbar visibility");
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_content_protection(
+    proton_engine_window_t *window, int32_t enabled, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (enabled != 0 && enabled != 1) {
+    proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "content protection is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  const DWORD affinity = enabled ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE;
+  if (!SetWindowDisplayAffinity(window->hwnd, affinity)) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update window display affinity");
     return PROTON_ERR_PLATFORM;
   }
   return PROTON_OK;
