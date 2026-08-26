@@ -145,6 +145,11 @@ fn RuntimeSession::window_handle(
         window.set_always_on_top(always_on_top)
       })
     },
+    set_window_resizable: resizable => {
+      self.control_window(id, native_id, "set resizable", window => {
+        window.set_resizable(resizable)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1079,6 +1084,19 @@ pub fn WindowHandle::set_always_on_top(
   always_on_top : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_always_on_top)(always_on_top)
+}
+
+///|
+/// Sets whether the user can manually resize this window.
+///
+/// This changes the live native window on macOS, Windows, and Linux. Existing
+/// minimum or maximum size hints remain in effect. Headless runtimes raise
+/// `WindowSessionError`.
+pub fn WindowHandle::set_resizable(
+  self : WindowHandle,
+  resizable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_resizable)(resizable)
 }
 
 ///|

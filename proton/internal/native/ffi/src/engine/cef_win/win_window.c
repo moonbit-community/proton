@@ -120,12 +120,12 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
           handled = true;
         }
       }
-      if (window->size_hint == 1 || window->size_hint == 2) {
+      if (!window->resizable || window->size_hint == 2) {
         minmax->ptMinTrackSize.x = window->width;
         minmax->ptMinTrackSize.y = window->height;
         handled = true;
       }
-      if (window->size_hint == 1 || window->size_hint == 3) {
+      if (!window->resizable || window->size_hint == 3) {
         minmax->ptMaxTrackSize.x = window->width;
         minmax->ptMaxTrackSize.y = window->height;
         handled = true;
@@ -399,6 +399,7 @@ int32_t proton_engine_window_create(
   window->height = config.height;
   window->headless = runtime->headless;
   window->size_hint = config.size_hint;
+  window->resizable = config.size_hint != 1;
   window->titlebar_overlay = config.titlebar_overlay;
   window->zoom_percent = 100;
   window->windowed_placement.length = sizeof(WINDOWPLACEMENT);
@@ -815,6 +816,26 @@ int32_t proton_engine_window_apply(
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     window->always_on_top = action->value != 0;
     break;
+  case PROTON_ENGINE_WINDOW_SET_RESIZABLE: {
+    LONG style = GetWindowLongW(window->hwnd, GWL_STYLE);
+    if (action->value != 0) {
+      style |= WS_THICKFRAME | WS_MAXIMIZEBOX;
+    } else {
+      style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+    }
+    SetLastError(0);
+    if (SetWindowLongW(window->hwnd, GWL_STYLE, style) == 0 &&
+        GetLastError() != 0) {
+      proton_engine_set_message(error, error_len,
+                                "failed to update window style");
+      return PROTON_ERR_PLATFORM;
+    }
+    window->resizable = action->value != 0;
+    SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                     SWP_FRAMECHANGED);
+    break;
+  }
   default:
     proton_engine_set_message(error, error_len, "unknown window action");
     return PROTON_ERR_INVALID_ARGUMENT;

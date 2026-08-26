@@ -61,6 +61,7 @@ fn test_window_handle(
   popup_calls? : Array[String],
   progress_calls? : Array[Double],
   flash_calls? : Array[Bool],
+  resizable_calls? : Array[Bool],
 ) -> WindowHandle {
   let browser = BrowserHandle::{
     id,
@@ -85,6 +86,12 @@ fn test_window_handle(
     set_window_fullscreen: fn(_fullscreen) {  },
     set_window_position: fn(_x, _y) {  },
     set_window_always_on_top: fn(_always_on_top) {  },
+    set_window_resizable: resizable => {
+      match resizable_calls {
+        Some(calls) => calls.push(resizable)
+        None => ()
+      }
+    },
     set_window_zoom_percent: fn(_zoom_percent) {  },
     set_window_progress_bar: progress => {
       match progress_calls {
@@ -1934,6 +1941,15 @@ test "window attention routes Electron-compatible flags through the handle" {
   window.flash_frame(true)
   window.flash_frame(false)
   debug_inspect(calls, content="[true, false]")
+}
+
+///|
+test "window resizable routes live capability changes through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, resizable_calls=calls)
+  window.set_resizable(false)
+  window.set_resizable(true)
+  debug_inspect(calls, content="[false, true]")
 }
 
 ///|

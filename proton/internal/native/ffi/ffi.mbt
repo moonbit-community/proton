@@ -441,6 +441,12 @@ pub extern "C" fn proton_window_set_always_on_top_ffi(
 ) -> Int = "proton_window_set_always_on_top"
 
 ///|
+pub extern "C" fn proton_window_set_resizable_ffi(
+  window : WindowHandle,
+  resizable : Int,
+) -> Int = "proton_window_set_resizable"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

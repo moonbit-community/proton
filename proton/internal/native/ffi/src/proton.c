@@ -926,6 +926,19 @@ int32_t proton_window_set_always_on_top(proton_window_handle_t window,
   return proton_window_apply_action(window, &action);
 }
 
+int32_t proton_window_set_resizable(proton_window_handle_t window,
+                                    int32_t resizable) {
+  if (resizable != 0 && resizable != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "resizable must be 0 or 1");
+  }
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_SET_RESIZABLE,
+      .value = resizable,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                        int32_t zoom_percent) {
   if (zoom_percent < 25 || zoom_percent > 500) {

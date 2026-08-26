@@ -1307,6 +1307,16 @@ int32_t proton_engine_window_apply(
     window->window.level =
         action->value != 0 ? NSFloatingWindowLevel : NSNormalWindowLevel;
     break;
+  case PROTON_ENGINE_WINDOW_SET_RESIZABLE: {
+    NSWindowStyleMask style = window->window.styleMask;
+    if (action->value != 0) {
+      style |= NSWindowStyleMaskResizable;
+    } else {
+      style &= ~NSWindowStyleMaskResizable;
+    }
+    window->window.styleMask = style;
+    break;
+  }
   default:
     proton_engine_set_message(error, error_len,
                               "unknown window action");
