@@ -461,6 +461,12 @@ pub extern "C" fn proton_window_set_maximum_size_ffi(
 ) -> Int = "proton_window_set_maximum_size"
 
 ///|
+pub extern "C" fn proton_window_set_movable_ffi(
+  window : WindowHandle,
+  movable : Int,
+) -> Int = "proton_window_set_movable"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

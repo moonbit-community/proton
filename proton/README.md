@@ -90,6 +90,11 @@ process exits when all windows have closed. Use
 the application should remain available for Dock, protocol, document, or tray
 activation after its last window closes.
 
+Live window handles can change native frame behavior after creation. In
+particular, `WindowHandle::set_movable(false)` blocks manual movement on macOS
+and Windows while preserving programmatic placement; Linux follows Electron's
+successful no-op behavior.
+
 ## Logging
 
 Use `tonyfettes/xlog@0.4.1` directly for application logs. Proton configures the

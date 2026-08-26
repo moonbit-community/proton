@@ -107,6 +107,9 @@ moon -C examples run 01_run --target native
   size review with live constraint updates and clear operations.
 - `63_window_center`: manual Electron-style window centering review using the
   current monitor work area and native frame size.
+- `64_window_movable`: manual Electron-style window movement control with
+  native drag blocking on macOS and Windows, Linux no-op behavior, and
+  programmatic movement checks.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

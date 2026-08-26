@@ -192,6 +192,14 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
                                        PROTON_WAIT_PLATFORM);
     }
     return 0;
+  case WM_MOVING:
+    if (window != NULL && !window->movable) {
+      // Electron blocks manual frame movement by restoring the current rect.
+      // Programmatic SetWindowPos calls do not enter this message path.
+      GetWindowRect(hwnd, (RECT *)lparam);
+      return TRUE;
+    }
+    break;
   case WM_MOVE:
   case WM_DISPLAYCHANGE:
   case WM_THEMECHANGED:
@@ -410,6 +418,7 @@ int32_t proton_engine_window_create(
   window->headless = runtime->headless;
   window->size_hint = config.size_hint;
   window->resizable = config.size_hint != 1;
+  window->movable = 1;
   window->min_width = config.size_hint == 2 ? config.width : 0;
   window->min_height = config.size_hint == 2 ? config.height : 0;
   window->max_width = config.size_hint == 3 ? config.width : 0;
@@ -613,6 +622,28 @@ int32_t proton_engine_window_set_maximum_size(
   }
   window->max_width = width;
   window->max_height = height;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_movable(proton_engine_window_t *window,
+                                         int32_t movable, char *error,
+                                         size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (movable != 0 && movable != 1) {
+    proton_engine_set_message(error, error_len,
+                              "movable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window movement is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->movable = movable;
   return PROTON_OK;
 }
 

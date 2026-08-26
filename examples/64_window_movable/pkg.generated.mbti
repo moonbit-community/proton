@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/64_window_movable"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type MovableReply derive(ToJson, @json.FromJson)
+pub fn MovableReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MovableReply::to_json(Self) -> Json
+
+type MovableRequest derive(ToJson, @json.FromJson)
+pub fn MovableRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MovableRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

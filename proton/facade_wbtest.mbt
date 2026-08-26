@@ -63,6 +63,7 @@ fn test_window_handle(
   progress_calls? : Array[Double],
   flash_calls? : Array[Bool],
   resizable_calls? : Array[Bool],
+  movable_calls? : Array[Bool],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
   window_state? : WindowState,
@@ -98,6 +99,12 @@ fn test_window_handle(
     set_window_resizable: resizable => {
       match resizable_calls {
         Some(calls) => calls.push(resizable)
+        None => ()
+      }
+    },
+    set_window_movable: movable => {
+      match movable_calls {
+        Some(calls) => calls.push(movable)
         None => ()
       }
     },
@@ -1973,6 +1980,15 @@ test "window resizable routes live capability changes through the handle" {
   let window = test_window_handle("main", 17L, resizable_calls=calls)
   window.set_resizable(false)
   window.set_resizable(true)
+  debug_inspect(calls, content="[false, true]")
+}
+
+///|
+test "window movable routes live capability changes through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, movable_calls=calls)
+  window.set_movable(false)
+  window.set_movable(true)
   debug_inspect(calls, content="[false, true]")
 }
 

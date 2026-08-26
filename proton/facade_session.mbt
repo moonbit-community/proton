@@ -160,6 +160,11 @@ fn RuntimeSession::window_handle(
         window.set_maximum_size(width, height)
       })
     },
+    set_window_movable: movable => {
+      self.control_window(id, native_id, "set movable", window => {
+        window.set_movable(movable)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1151,6 +1156,20 @@ pub fn WindowHandle::set_maximum_size(
   height : Int,
 ) -> Unit raise WindowSessionError {
   (self.set_window_maximum_size)(width, height)
+}
+
+///|
+/// Sets whether the user can move this live native window.
+///
+/// macOS and Windows prevent manual frame movement when `movable` is false;
+/// programmatic `set_position` and `center` calls remain available. Linux
+/// follows Electron and treats this as a no-op. Headless runtimes raise
+/// `WindowSessionError` because they have no native frame.
+pub fn WindowHandle::set_movable(
+  self : WindowHandle,
+  movable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_movable)(movable)
 }
 
 ///|

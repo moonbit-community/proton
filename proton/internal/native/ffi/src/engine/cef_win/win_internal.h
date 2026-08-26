@@ -78,6 +78,7 @@ struct proton_engine_window {
   cef_rect_t osr_popup_rect;
   int size_hint;
   int resizable;
+  int movable;
   int min_width;
   int min_height;
   int max_width;
