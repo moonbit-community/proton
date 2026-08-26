@@ -117,6 +117,7 @@ moon -C examples run 01_run --target native
 - `67_window_aspect_ratio`: manual Electron-style interactive resize ratio
   review with 16:9, 1:1, clear, and programmatic resize checks.
 - `68_window_content_protection`: manual Electron-style screen-capture protection review.
+- `69_window_minimizable`: manual Electron-style native minimize-control review.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

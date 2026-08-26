@@ -67,6 +67,7 @@ fn test_window_handle(
   opacity_calls? : Array[Double],
   skip_taskbar_calls? : Array[Bool],
   content_protection_calls? : Array[Bool],
+  minimizable_calls? : Array[Bool],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
@@ -127,6 +128,12 @@ fn test_window_handle(
     set_window_content_protection: enabled => {
       match content_protection_calls {
         Some(calls) => calls.push(enabled)
+        None => ()
+      }
+    },
+    set_window_minimizable: minimizable => {
+      match minimizable_calls {
+        Some(calls) => calls.push(minimizable)
         None => ()
       }
     },
@@ -2219,6 +2226,15 @@ test "window content protection routes live flags through the handle" {
   window.set_content_protection(true)
   window.set_content_protection(false)
   debug_inspect(calls, content="[true, false]")
+}
+
+///|
+test "window minimizable routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, minimizable_calls=calls)
+  window.set_minimizable(false)
+  window.set_minimizable(true)
+  debug_inspect(calls, content="[false, true]")
 }
 
 ///|

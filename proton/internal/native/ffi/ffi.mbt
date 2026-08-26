@@ -497,6 +497,12 @@ pub extern "C" fn proton_window_set_content_protection_ffi(
 ) -> Int = "proton_window_set_content_protection"
 
 ///|
+pub extern "C" fn proton_window_set_minimizable_ffi(
+  window : WindowHandle,
+  minimizable : Int,
+) -> Int = "proton_window_set_minimizable"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,
