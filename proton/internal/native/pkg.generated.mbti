@@ -4,6 +4,7 @@ package "moonbit-community/proton/internal/native"
 import {
   "moonbit-community/proton/internal/locale",
   "moonbit-community/proton/internal/native/ffi",
+  "moonbit-community/proton_ffi",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
@@ -12,6 +13,8 @@ import {
 pub fn abi_version() -> Int
 
 pub fn bridge_permission_grants_supported() -> Bool
+
+pub fn event_wakeup_callback() -> @proton_ffi.EventWakeup
 
 pub fn execute_process(config? : RuntimeConfig) -> ProcessResult raise NativeError
 
@@ -417,6 +420,7 @@ pub fn RuntimeEvent::event_type(Self) -> String
 pub fn RuntimeEvent::has_window(Self) -> Bool
 pub fn RuntimeEvent::is_bridge_lifecycle_changed(Self) -> Bool
 pub fn RuntimeEvent::is_quit_requested(Self) -> Bool
+pub fn RuntimeEvent::is_view_closed(Self) -> Bool
 pub fn RuntimeEvent::is_window_closed(Self) -> Bool
 pub fn RuntimeEvent::is_window_created(Self) -> Bool
 pub fn RuntimeEvent::launch_input(Self) -> RuntimeLaunchInput?
@@ -567,6 +571,7 @@ pub fn Window::respond_browser_request(Self, Int64, String, path? : String) -> U
 pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeError
 pub fn Window::restore(Self) -> Unit raise NativeError
 pub fn Window::set_always_on_top(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_aspect_ratio(Self, Double) -> Unit raise NativeError
 pub fn Window::set_close_interception(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreen(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximum_size(Self, Int, Int) -> Unit raise NativeError

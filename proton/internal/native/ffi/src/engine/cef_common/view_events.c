@@ -15,6 +15,7 @@ struct proton_view_events {
   proton_view_id_t view;
   proton_window_id_t window;
   int bound;
+  int closed;
 #ifdef _WIN32
   CRITICAL_SECTION lock;
 #else
@@ -94,16 +95,20 @@ int proton_view_events_ids(proton_view_events_t *events,
 }
 
 static void proton_view_events_enqueue(proton_view_events_t *events,
-                                       proton_event_t *event) {
+                                       proton_event_t *event,
+                                       int closes_view) {
   if (events == NULL || event == NULL) {
     proton_event_destroy(event);
     return;
   }
   proton_view_events_lock(events);
-  if (!events->bound) {
+  if (!events->bound || events->closed) {
     proton_view_events_unlock(events);
     proton_event_destroy(event);
     return;
+  }
+  if (closes_view) {
+    events->closed = 1;
   }
   event->view = events->view;
   event->window = events->window;
@@ -118,7 +123,7 @@ void proton_view_events_loading_changed(proton_view_events_t *events,
   if (event != NULL) {
     event->bool_a = is_loading;
   }
-  proton_view_events_enqueue(events, event);
+  proton_view_events_enqueue(events, event, 0);
 }
 
 void proton_view_events_navigated(proton_view_events_t *events,
@@ -128,7 +133,7 @@ void proton_view_events_navigated(proton_view_events_t *events,
     proton_event_destroy(event);
     event = NULL;
   }
-  proton_view_events_enqueue(events, event);
+  proton_view_events_enqueue(events, event, 0);
 }
 
 void proton_view_events_title_updated(proton_view_events_t *events,
@@ -139,7 +144,7 @@ void proton_view_events_title_updated(proton_view_events_t *events,
     proton_event_destroy(event);
     event = NULL;
   }
-  proton_view_events_enqueue(events, event);
+  proton_view_events_enqueue(events, event, 0);
 }
 
 void proton_view_events_load_failed(proton_view_events_t *events,
@@ -156,5 +161,10 @@ void proton_view_events_load_failed(proton_view_events_t *events,
   if (event != NULL) {
     event->int_a = error_code;
   }
-  proton_view_events_enqueue(events, event);
+  proton_view_events_enqueue(events, event, 0);
+}
+
+void proton_view_events_closed(proton_view_events_t *events) {
+  proton_view_events_enqueue(
+      events, proton_event_create(PROTON_EVENT_VIEW_CLOSED), 1);
 }

@@ -105,5 +105,11 @@ extern "C" fn pump_state_ffi(state : Int64, blocking : Int) -> Int = "moonbit_tr
 extern "C" fn poll_event_json_ffi(state : Int64) -> Bytes = "moonbit_tray_poll_event_json"
 
 ///|
+extern "C" fn set_event_wakeup_ffi(
+  state : Int64,
+  wakeup : @ffi.EventWakeup,
+) -> Unit = "moonbit_tray_set_event_wakeup"
+
+///|
 /// Returns the most recent state-operation error message as UTF-8 bytes.
 extern "C" fn last_state_error_ffi(state : Int64) -> Bytes = "moonbit_tray_last_error"

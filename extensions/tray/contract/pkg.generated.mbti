@@ -16,8 +16,6 @@ pub let destroy : @proton_contract.Command[@proton_contract.EmptyRequest, TrayRe
 
 pub let double_click : @proton_contract.Event[TrayDoubleClick]
 
-pub let drain_events : @proton_contract.Command[@proton_contract.EmptyRequest, TrayEventReply]
-
 pub let extension : @proton_contract.ExtensionContract
 
 pub let hide : @proton_contract.Command[@proton_contract.EmptyRequest, TrayReply]
@@ -106,15 +104,6 @@ pub fn TrayDoubleClick::from_json(Json, @json.JsonPath) -> Self raise @json.Json
 pub fn TrayDoubleClick::not_equal(Self, Self) -> Bool
 pub fn TrayDoubleClick::to_json(Self) -> Json
 pub fn TrayDoubleClick::to_repr(Self) -> @debug.Repr
-
-pub(all) struct TrayEventReply {
-  count : Int
-} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn TrayEventReply::equal(Self, Self) -> Bool
-pub fn TrayEventReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn TrayEventReply::not_equal(Self, Self) -> Bool
-pub fn TrayEventReply::to_json(Self) -> Json
-pub fn TrayEventReply::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TrayMenu {
   items : Array[TrayMenuItem]

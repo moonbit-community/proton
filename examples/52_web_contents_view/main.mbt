@@ -229,6 +229,7 @@ async fn main {
           error=Some("load failed: " + error_text),
         )
       LoadingChanged(..) => ()
+      Closed => panel_slot.val = None
     }
   })
   .window_lifecycle(

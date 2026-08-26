@@ -468,6 +468,7 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   if (view != NULL) {
     view->browser_before_close_seen = 1;
     view->closed = 1;
+    proton_view_events_closed(view->events);
     view->xwindow = 0;
     if (view->browser != NULL) {
       proton_engine_browser_release(view->browser);

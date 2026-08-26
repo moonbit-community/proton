@@ -8,7 +8,6 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
     get_primary_display_command.contract_route(),
     get_display_nearest_point_command.contract_route(),
     get_cursor_point_command.contract_route(),
-    drain_events_command.contract_route(),
   ]
 }
 
@@ -31,9 +30,5 @@ pub fn register_commands(
   registrar.bind(
     get_cursor_point_command,
     (context, request) => get_cursor_point(context, request),
-  )
-  registrar.bind(
-    drain_events_command,
-    (context, request) => drain_events(context, request),
   )
 }

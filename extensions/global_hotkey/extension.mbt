@@ -8,9 +8,6 @@ let unregister_command = @global_hotkey_contract.unregister
 let list_command = @global_hotkey_contract.list
 
 ///|
-let drain_triggered_command = @global_hotkey_contract.drain_triggered
-
-///|
 async fn emit_command_activity(
   context : @proton.CommandContext,
   operation : String,
@@ -73,39 +70,36 @@ fn list(
 }
 
 ///|
-/// Drains triggered global hotkeys from a generated app-command extension.
-#proton.command(contract=drain_triggered_command)
-async fn drain_triggered(
-  context : @proton.CommandContext,
-  _request : @proton_contract.EmptyRequest,
-) -> @global_hotkey_contract.GlobalHotkeyListReply {
-  let reply = drain_triggered_hotkeys(app_command_manager_handle())
-  for accelerator in reply.accelerators {
-    context.emit(@global_hotkey_contract.triggered, @global_hotkey_contract.GlobalHotkeyTriggered::{
-      accelerator,
-    })
+fn drain_events() -> Array[@proton_extension.Event] raise {
+  let events : Array[@proton_extension.Event] = []
+  match app_command_manager.val {
+    Some(manager) =>
+      for accelerator in manager.drain_triggered() {
+        events.push(
+          @proton_extension.event(@global_hotkey_contract.triggered, @global_hotkey_contract.GlobalHotkeyTriggered::{
+            accelerator,
+          }),
+        )
+      }
+    None => ()
   }
-  reply
+  events
 }
 
 ///|
-fn extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    @global_hotkey_contract.extension,
-    generated_extension_command_routes(),
-    fn(registrar) raise { register_commands(registrar) },
-    scripts=[
-      @proton_extension.poller_script(
-        js_namespace="globalHotkey",
-        drain_method="drainTriggered",
-        poller_field="__protonTriggerPoller",
-      ),
-    ],
-  )
-}
+let extension_definition : @proton_extension.Extension = @proton_extension.typed(
+  @global_hotkey_contract.extension,
+  generated_extension_command_routes(),
+  fn(registrar) raise { register_commands(registrar) },
+  event_source=@proton_extension.event_source(
+    wakeup => install_event_wakeup(wakeup),
+    () => cleanup_manager(),
+    () => drain_events(),
+  ),
+)
 
 ///|
 /// Grants global-hotkey commands to renderer targets selected by `App::capability`.
 pub fn capability() -> @proton_extension.RendererCapability {
-  @proton_extension.capability(extension())
+  @proton_extension.capability(extension_definition)
 }

@@ -575,6 +575,12 @@ pub fn signal_wakeup() -> Unit {
 }
 
 ///|
+/// Returns the opaque native callback used by extension event producers.
+pub fn event_wakeup_callback() -> @ffi.EventWakeup {
+  @native_ffi.proton_runtime_event_wakeup_callback_ffi()
+}
+
+///|
 fn menu_item_kind_code(kind : MenuItemKind) -> Int {
   match kind {
     Command => 0
@@ -1000,6 +1006,7 @@ fn decode_native_runtime_event(
         },
       )
     28 => QuitRequested
+    29 => ViewEvent(window, @native_ffi.event_int64(event, 1), Closed)
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -1570,17 +1577,25 @@ pub fn Window::respond_close_request(
   request_id : Int64,
   allow : Bool,
 ) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_window_respond_close_request_ffi(
-      self.live_handle(),
-      request_id,
-      if allow {
-        1
-      } else {
-        0
-      },
-    ),
+  match self.lifecycle {
+    WindowLive | WindowCloseRequested => ()
+    WindowDestroying | WindowDestroyed =>
+      raise Status(
+        status=proton_err_invalid_state,
+        message="window is closing or destroyed",
+      )
+  }
+  let status = @native_ffi.proton_window_respond_close_request_ffi(
+    self.handle,
+    request_id,
+    if allow {
+      1
+    } else {
+      0
+    },
   )
+  check_status(status)
+  self.lifecycle = if allow { WindowCloseRequested } else { WindowLive }
 }
 
 ///|

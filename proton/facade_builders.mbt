@@ -623,7 +623,9 @@ pub fn App::capability(
     match command_spec {
       Some(spec) =>
         self.extension_capabilities.push(ExtensionCapabilityBinding::{
+          definition_id: capability.definition_id(),
           spec,
+          event_source: capability.event_source(),
           scope: capability.scope(),
           targets: renderer_capability_targets(targets),
         })

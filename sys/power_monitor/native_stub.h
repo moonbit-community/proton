@@ -34,6 +34,8 @@ typedef struct power_monitor_event_node {
   struct power_monitor_event_node *next;
 } power_monitor_event_node_t;
 
+typedef void (*power_monitor_event_wakeup_fn)(void);
+
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -57,6 +59,7 @@ typedef struct power_monitor_state {
   power_monitor_event_node_t *event_tail;
   int32_t event_queue_size;
   int32_t event_queue_overflow;
+  power_monitor_event_wakeup_fn event_wakeup;
   /* Watch backend state. `watch_started` is best-effort: a backend that is
      unavailable records the failure on `watch_error` and returns a non-OK
      status while leaving the state usable for polling queries. */
@@ -115,6 +118,9 @@ void power_monitor_lock_destroy(power_monitor_state_t *state);
 void power_monitor_push_event(power_monitor_state_t *state, int32_t event);
 int32_t power_monitor_take_event(power_monitor_state_t *state,
                                  int32_t *out_event);
+void power_monitor_set_event_wakeup(
+    power_monitor_state_t *state,
+    power_monitor_event_wakeup_fn wakeup);
 void power_monitor_release_events(power_monitor_state_t *state);
 
 #endif

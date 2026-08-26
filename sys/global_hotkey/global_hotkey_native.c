@@ -55,10 +55,13 @@ typedef struct mb_trigger {
   struct mb_trigger *next;
 } mb_trigger_t;
 
+typedef void (*mb_global_hotkey_event_wakeup_fn)(void);
+
 typedef struct mb_global_hotkey_state {
   mb_registration_t *registrations;
   mb_trigger_t *triggered_head;
   mb_trigger_t *triggered_tail;
+  mb_global_hotkey_event_wakeup_fn event_wakeup;
   int32_t startup_status;
   char startup_error[512];
 #ifdef _WIN32
@@ -99,7 +102,7 @@ static int mb_keycode_from_name_common(
 static void mb_state_set_startup_error(
     mb_global_hotkey_state_t *state,
     const char *message);
-static void mb_push_trigger_locked(
+static mb_global_hotkey_event_wakeup_fn mb_push_trigger_locked(
     mb_global_hotkey_state_t *state,
     int32_t id);
 static void mb_set_error_message(const char *message);
@@ -472,6 +475,7 @@ static CGEventRef mb_macos_event_callback(CGEventTapProxy proxy,
     return event;
   }
 
+  mb_global_hotkey_event_wakeup_fn wakeup = NULL;
   pthread_mutex_lock(&state->lock);
   {
     uint32_t keycode = (uint32_t)mb_macos_api.CGEventGetIntegerValueField(
@@ -481,13 +485,16 @@ static CGEventRef mb_macos_event_callback(CGEventTapProxy proxy,
     mb_registration_t *cursor = state->registrations;
     while (cursor != NULL) {
       if (cursor->keycode == keycode && cursor->modifiers == modifiers) {
-        mb_push_trigger_locked(state, cursor->id);
+        wakeup = mb_push_trigger_locked(state, cursor->id);
         break;
       }
       cursor = cursor->next;
     }
   }
   pthread_mutex_unlock(&state->lock);
+  if (wakeup != NULL) {
+    wakeup();
+  }
   return event;
 }
 
@@ -1095,6 +1102,7 @@ static void *mb_linux_thread_main(void *raw_state) {
           break;
         }
         if (event.type == KeyPress) {
+          mb_global_hotkey_event_wakeup_fn wakeup = NULL;
           unsigned int clean_modifiers =
               mb_linux_clean_event_modifiers(state, event.xkey.state);
           pthread_mutex_lock(&state->lock);
@@ -1103,13 +1111,16 @@ static void *mb_linux_thread_main(void *raw_state) {
             while (cursor != NULL) {
               if (cursor->keycode == (uint32_t)event.xkey.keycode &&
                   cursor->modifiers == clean_modifiers) {
-                mb_push_trigger_locked(state, cursor->id);
+                wakeup = mb_push_trigger_locked(state, cursor->id);
                 break;
               }
               cursor = cursor->next;
             }
           }
           pthread_mutex_unlock(&state->lock);
+          if (wakeup != NULL) {
+            wakeup();
+          }
         }
       }
     }
@@ -1207,12 +1218,12 @@ static void mb_clear_runtime_state_locked(mb_global_hotkey_state_t *state) {
   state->triggered_tail = NULL;
 }
 
-static void mb_push_trigger_locked(
+static mb_global_hotkey_event_wakeup_fn mb_push_trigger_locked(
     mb_global_hotkey_state_t *state,
     int32_t id) {
   mb_trigger_t *node = (mb_trigger_t *)calloc(1, sizeof(*node));
   if (node == NULL) {
-    return;
+    return NULL;
   }
   node->id = id;
   if (state->triggered_tail == NULL) {
@@ -1222,6 +1233,7 @@ static void mb_push_trigger_locked(
     state->triggered_tail->next = node;
     state->triggered_tail = node;
   }
+  return state->event_wakeup;
 }
 
 static int32_t mb_take_triggered_id_locked(mb_global_hotkey_state_t *state) {
@@ -1508,9 +1520,13 @@ static DWORD WINAPI mb_windows_thread_main(void *raw_state) {
     }
 
     if (message.message == WM_HOTKEY) {
+      mb_global_hotkey_event_wakeup_fn wakeup;
       EnterCriticalSection(&state->lock);
-      mb_push_trigger_locked(state, (int32_t)message.wParam);
+      wakeup = mb_push_trigger_locked(state, (int32_t)message.wParam);
       LeaveCriticalSection(&state->lock);
+      if (wakeup != NULL) {
+        wakeup();
+      }
     }
   }
 
@@ -2047,6 +2063,25 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_take_triggered_id(
   }
 #else
   return 0;
+#endif
+}
+
+MOONBIT_FFI_EXPORT void mb_global_hotkey_set_event_wakeup(
+    mb_global_hotkey_state_t *state,
+    mb_global_hotkey_event_wakeup_fn wakeup) {
+  if (state == NULL) {
+    return;
+  }
+#ifdef _WIN32
+  EnterCriticalSection(&state->lock);
+  state->event_wakeup = wakeup;
+  LeaveCriticalSection(&state->lock);
+#elif defined(__linux__) || defined(__APPLE__)
+  pthread_mutex_lock(&state->lock);
+  state->event_wakeup = wakeup;
+  pthread_mutex_unlock(&state->lock);
+#else
+  state->event_wakeup = wakeup;
 #endif
 }
 

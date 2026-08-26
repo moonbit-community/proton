@@ -91,6 +91,11 @@ pub fn CommandExtensionLifecycleError::message(
       "failed to register application commands: " + detail
     RegistrationFailed(extension_id~, detail~) =>
       "failed to register command extension " + extension_id + ": " + detail
+    EventSourceStartFailed(extension_id~, detail~) =>
+      "failed to start command extension event source " +
+      extension_id +
+      ": " +
+      detail
     DestroyFailed(extension_id~, detail~) =>
       "failed to destroy command extension " + extension_id + ": " + detail
   }

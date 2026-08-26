@@ -103,12 +103,6 @@ pub let list : @proton_contract.Command[
 ] = extension.command("list")
 
 ///|
-pub let drain_triggered : @proton_contract.Command[
-  @proton_contract.EmptyRequest,
-  GlobalHotkeyListReply,
-] = extension.command("drainTriggered")
-
-///|
 pub let activity : @proton_contract.Event[GlobalHotkeyActivity] = extension.event(
   "activity",
 )
