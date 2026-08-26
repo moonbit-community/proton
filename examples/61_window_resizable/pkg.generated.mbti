@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/61_window_resizable"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type SetResizableReply derive(ToJson, @json.FromJson)
+pub fn SetResizableReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetResizableReply::to_json(Self) -> Json
+
+type SetResizableRequest derive(ToJson, @json.FromJson)
+pub fn SetResizableRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetResizableRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

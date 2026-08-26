@@ -77,6 +77,7 @@ struct proton_engine_window {
   int osr_popup_visible;
   cef_rect_t osr_popup_rect;
   int size_hint;
+  int resizable;
   int titlebar_overlay;
   int fullscreen;
   int always_on_top;

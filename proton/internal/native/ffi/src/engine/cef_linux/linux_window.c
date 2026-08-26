@@ -892,6 +892,9 @@ int32_t proton_engine_window_apply(
                               action->value != 0);
     window->always_on_top = action->value != 0;
     break;
+  case PROTON_ENGINE_WINDOW_SET_RESIZABLE:
+    gtk_window_set_resizable(GTK_WINDOW(window->window), action->value != 0);
+    break;
   default:
     proton_engine_set_message(error, error_len, "unknown window action");
     return PROTON_ERR_INVALID_ARGUMENT;

@@ -1341,6 +1341,24 @@ pub fn Window::set_always_on_top(
 }
 
 ///|
+/// Sets whether the live native window can be manually resized.
+pub fn Window::set_resizable(
+  self : Window,
+  resizable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_resizable_ffi(
+      self.live_handle(),
+      if resizable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

@@ -101,6 +101,8 @@ moon -C examples run 01_run --target native
 - `60_window_attention`: manual Electron-style window attention review with
   macOS Dock bouncing, Windows taskbar flashing, Linux urgency hints,
   activation cancellation, and timed explicit cancellation.
+- `61_window_resizable`: manual Electron-style live window resizing review with
+  enable, disable, toggle, and cross-platform native frame checks.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

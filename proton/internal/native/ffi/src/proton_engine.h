@@ -80,6 +80,7 @@ typedef enum {
   PROTON_ENGINE_WINDOW_SET_POSITION = 5,
   PROTON_ENGINE_WINDOW_SET_ALWAYS_ON_TOP = 6,
   PROTON_ENGINE_WINDOW_SET_ZOOM_PERCENT = 7,
+  PROTON_ENGINE_WINDOW_SET_RESIZABLE = 8,
 } proton_engine_window_action_kind_t;
 
 typedef struct {
