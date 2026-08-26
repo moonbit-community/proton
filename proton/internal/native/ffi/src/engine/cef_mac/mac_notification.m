@@ -210,7 +210,40 @@ int32_t proton_engine_notification_show(const char *title_utf8,
   return PROTON_OK;
 }
 
+static int32_t proton_notification_apply_badge_count(int32_t count,
+                                                     char *error,
+                                                     size_t error_len) {
+  @autoreleasepool {
+    NSDockTile *dock_tile = [NSApp dockTile];
+    if (dock_tile == nil) {
+      proton_notification_set_message(error, error_len,
+                                      "application Dock tile is not available");
+      return PROTON_ERR_PLATFORM;
+    }
+    [dock_tile setBadgeLabel:(count > 0)
+                                 ? [NSString stringWithFormat:@"%d", count]
+                                 : nil];
+    [dock_tile display];
+    return PROTON_OK;
+  }
+}
+
+int32_t proton_engine_notification_set_badge_count(int32_t count,
+                                                   char *error,
+                                                   size_t error_len) {
+  __block int32_t status = PROTON_OK;
+  if ([NSThread isMainThread]) {
+    status = proton_notification_apply_badge_count(count, error, error_len);
+  } else {
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      status = proton_notification_apply_badge_count(count, error, error_len);
+    });
+  }
+  return status;
+}
+
 int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
+  proton_engine_notification_set_badge_count(0, error, error_len);
   if (g_notification_delegate != nil) {
     UNUserNotificationCenter *center =
         [UNUserNotificationCenter currentNotificationCenter];

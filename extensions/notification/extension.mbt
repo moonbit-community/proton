@@ -2,12 +2,24 @@
 let show_command = @notification_contract.show
 
 ///|
+let set_badge_command = @notification_contract.set_badge
+
+///|
 /// Rejects empty notification bodies before calling the native package.
 fn ensure_body(body : String) -> String raise NotificationError {
   if body.is_empty() {
     raise EmptyBody
   } else {
     body
+  }
+}
+
+///|
+fn ensure_badge_count(count : Int) -> Int raise NotificationError {
+  if count < 0 {
+    raise InvalidBadgeCount(count)
+  } else {
+    count
   }
 }
 
@@ -41,6 +53,19 @@ async fn show(
     level: request.level,
   })
   reply
+}
+
+///|
+/// Sets the absolute application badge count. Repeating the same value is
+/// deliberately harmless, so replicated renderer state can converge without
+/// increment/decrement races.
+#proton.command(contract=set_badge_command)
+fn set_badge(
+  request : @notification_contract.NotificationBadgeRequest,
+) -> @notification_contract.NotificationBadgeReply raise NotificationError {
+  let count = ensure_badge_count(request.count)
+  notification_native_set_badge_count(count)
+  @notification_contract.NotificationBadgeReply::{ count, }
 }
 
 ///|

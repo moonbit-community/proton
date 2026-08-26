@@ -5,6 +5,7 @@
 pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute] {
   [
     show_command.contract_route(),
+    set_badge_command.contract_route(),
   ]
 }
 
@@ -15,5 +16,9 @@ pub fn register_commands(
   registrar.bind(
     show_command,
     (context, request) => show(context, request),
+  )
+  registrar.bind(
+    set_badge_command,
+    (_context, request) => set_badge(request),
   )
 }
