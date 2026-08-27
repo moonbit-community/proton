@@ -1376,6 +1376,41 @@ int32_t proton_engine_window_set_ignore_mouse_events(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_background_color(
+    proton_engine_window_t *window, uint32_t color, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window background is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  const COLORREF native_color = RGB((color >> 16) & 0xff,
+                                    (color >> 8) & 0xff, color & 0xff);
+  HBRUSH brush = CreateSolidBrush(native_color);
+  if (brush == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create window background brush");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (window->background_brush != NULL) DeleteObject(window->background_brush);
+  window->background_brush = brush;
+  SetLastError(ERROR_SUCCESS);
+  if (SetClassLongPtrW(window->hwnd, GCLP_HBRBACKGROUND, (LONG_PTR)brush) == 0 &&
+      GetLastError() != ERROR_SUCCESS) {
+    DeleteObject(brush);
+    window->background_brush = NULL;
+    proton_engine_set_message(error, error_len,
+                              "failed to update window background brush");
+    return PROTON_ERR_PLATFORM;
+  }
+  InvalidateRect(window->hwnd, NULL, TRUE);
+  return PROTON_OK;
+}
+
 static int proton_engine_windows_theme(void) {
   DWORD light = 1;
   DWORD size = sizeof(light);

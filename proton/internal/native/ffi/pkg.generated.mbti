@@ -213,6 +213,8 @@ pub fn proton_window_set_always_on_top_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_aspect_ratio_ffi(WindowHandle, Double) -> Int
 
+pub fn proton_window_set_background_color_ffi(WindowHandle, Bytes) -> Int
+
 pub fn proton_window_set_closable_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_close_interception_ffi(WindowHandle, Int) -> Int

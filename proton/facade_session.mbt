@@ -221,6 +221,11 @@ fn RuntimeSession::window_handle(
         window.set_ignore_mouse_events(ignore, forward)
       })
     },
+    set_window_background_color: color => {
+      self.control_window(id, native_id, "set background color", window => {
+        window.set_background_color(color)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1380,6 +1385,17 @@ pub fn WindowHandle::set_ignore_mouse_events(
   forward : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_ignore_mouse_events)(ignore, forward)
+}
+
+///|
+/// Sets the live native window background color.
+///
+/// Accepts `#RRGGBB` or `#AARRGGBB`, matching Proton view configuration.
+pub fn WindowHandle::set_background_color(
+  self : WindowHandle,
+  color : String,
+) -> Unit raise WindowSessionError {
+  (self.set_window_background_color)(color)
 }
 
 ///|

@@ -1734,6 +1734,28 @@ int32_t proton_engine_window_set_ignore_mouse_events(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_background_color(
+    proton_engine_window_t *window, uint32_t color, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window background is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  const CGFloat alpha = (CGFloat)((color >> 24) & 0xff) / 255.0;
+  const CGFloat red = (CGFloat)((color >> 16) & 0xff) / 255.0;
+  const CGFloat green = (CGFloat)((color >> 8) & 0xff) / 255.0;
+  const CGFloat blue = (CGFloat)(color & 0xff) / 255.0;
+  window->content_view.wantsLayer = YES;
+  window->content_view.layer.backgroundColor =
+      [NSColor colorWithRed:red green:green blue:blue alpha:alpha].CGColor;
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_get_state(
     proton_engine_window_t *window,
     proton_engine_window_state_t *out_state,

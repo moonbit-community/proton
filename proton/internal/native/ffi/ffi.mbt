@@ -540,6 +540,13 @@ pub extern "C" fn proton_window_set_ignore_mouse_events_ffi(
 ) -> Int = "proton_window_set_ignore_mouse_events"
 
 ///|
+#borrow(color)
+pub extern "C" fn proton_window_set_background_color_ffi(
+  window : WindowHandle,
+  color : Bytes,
+) -> Int = "proton_window_set_background_color"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

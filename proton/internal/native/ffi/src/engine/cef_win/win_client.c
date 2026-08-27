@@ -1157,6 +1157,10 @@ static void proton_engine_window_free_storage(
     // window pointer so the message never dereferences the freed struct.
     SetWindowLongPtrW(window->hwnd, GWLP_USERDATA, 0);
   }
+  if (window->background_brush != NULL) {
+    DeleteObject(window->background_brush);
+    window->background_brush = NULL;
+  }
   if (window->client != NULL) {
     // Drop only the engine's reference. CEF releases its client reference
     // after OnBeforeClose, and the last release frees the client.

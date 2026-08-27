@@ -1299,6 +1299,28 @@ int32_t proton_window_set_ignore_mouse_events(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+int32_t proton_window_set_background_color(proton_window_handle_t window,
+                                           const char *color) {
+  uint32_t parsed_color = 0;
+  if (!proton_parse_color_argb(color, &parsed_color)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "background color must be #RRGGBB or #AARRGGBB");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window background color requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_background_color(
+      slot->engine_window, parsed_color, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                        int32_t zoom_percent) {
   if (zoom_percent < 25 || zoom_percent > 500) {

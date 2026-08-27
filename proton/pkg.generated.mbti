@@ -613,6 +613,7 @@ pub struct WindowHandle {
   set_window_fullscreenable : (Bool) -> Unit raise WindowSessionError
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
   set_window_ignore_mouse_events : (Bool, Bool) -> Unit raise WindowSessionError
+  set_window_background_color : (String) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError
@@ -638,6 +639,7 @@ pub fn WindowHandle::remove_view(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::restore(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_always_on_top(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_aspect_ratio(Self, Double) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_background_color(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_closable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_content_protection(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_focusable(Self, Bool) -> Unit raise WindowSessionError

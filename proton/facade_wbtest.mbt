@@ -74,6 +74,7 @@ fn test_window_handle(
   fullscreenable_calls? : Array[Bool],
   has_shadow_calls? : Array[Bool],
   ignore_mouse_events_calls? : Array[(Bool, Bool)],
+  background_color_calls? : Array[String],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
@@ -176,6 +177,12 @@ fn test_window_handle(
     set_window_ignore_mouse_events: (ignore, forward) => {
       match ignore_mouse_events_calls {
         Some(calls) => calls.push((ignore, forward))
+        None => ()
+      }
+    },
+    set_window_background_color: color => {
+      match background_color_calls {
+        Some(calls) => calls.push(color)
         None => ()
       }
     },
@@ -2331,6 +2338,14 @@ test "window mouse event handling routes flags through the handle" {
   window.set_ignore_mouse_events(true, true)
   window.set_ignore_mouse_events(false, true)
   debug_inspect(calls, content="[(true, true), (false, true)]")
+}
+
+///|
+test "window background color routes values through the handle" {
+  let calls : Array[String] = []
+  let window = test_window_handle("main", 17L, background_color_calls=calls)
+  window.set_background_color("#112233")
+  debug_inspect(calls, content="[\"#112233\"]")
 }
 
 ///|

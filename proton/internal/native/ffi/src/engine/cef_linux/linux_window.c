@@ -1122,6 +1122,31 @@ int32_t proton_engine_window_set_ignore_mouse_events(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_background_color(
+    proton_engine_window_t *window, uint32_t color, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window background is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  GdkRGBA native_color = {
+      .red = (double)((color >> 16) & 0xff) / 255.0,
+      .green = (double)((color >> 8) & 0xff) / 255.0,
+      .blue = (double)(color & 0xff) / 255.0,
+      .alpha = (double)((color >> 24) & 0xff) / 255.0,
+  };
+  gtk_widget_override_background_color(window->window, GTK_STATE_FLAG_NORMAL,
+                                       &native_color);
+  gtk_widget_override_background_color(window->root_box, GTK_STATE_FLAG_NORMAL,
+                                       &native_color);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {

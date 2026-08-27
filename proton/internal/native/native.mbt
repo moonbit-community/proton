@@ -1638,6 +1638,19 @@ pub fn Window::set_ignore_mouse_events(
 }
 
 ///|
+pub fn Window::set_background_color(
+  self : Window,
+  color : String,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_background_color_ffi(
+      self.live_handle(),
+      @utf8.encode(color),
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,
