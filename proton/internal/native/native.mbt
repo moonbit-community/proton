@@ -1682,6 +1682,23 @@ pub fn Window::set_visible_on_all_workspaces(
 }
 
 ///|
+pub fn Window::set_enabled(
+  self : Window,
+  enabled : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_enabled_ffi(
+      self.live_handle(),
+      if enabled {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

@@ -465,6 +465,7 @@ int32_t proton_engine_window_create(
            config.titlebar_close_label);
   window->zoom_percent = 100;
   window->fullscreenable = 1;
+  window->enabled = 1;
   window->bridge_config_json =
       config.bridge_config_json != NULL
           ? proton_engine_strdup(config.bridge_config_json)
@@ -1168,6 +1169,23 @@ int32_t proton_engine_window_set_visible_on_all_workspaces(
   } else {
     gtk_window_unstick(GTK_WINDOW(window->window));
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_enabled(proton_engine_window_t *window,
+                                         int32_t enabled, char *error,
+                                         size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (enabled != 0 && enabled != 1) {
+    proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) return PROTON_OK;
+  gtk_widget_set_sensitive(window->window, enabled != 0);
+  window->enabled = enabled;
   return PROTON_OK;
 }
 

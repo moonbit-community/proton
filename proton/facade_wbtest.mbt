@@ -76,6 +76,7 @@ fn test_window_handle(
   ignore_mouse_events_calls? : Array[(Bool, Bool)],
   background_color_calls? : Array[String],
   visible_on_all_workspaces_calls? : Array[Bool],
+  enabled_calls? : Array[Bool],
   kiosk_calls? : Array[Bool],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
@@ -197,6 +198,12 @@ fn test_window_handle(
     set_window_visible_on_all_workspaces: visible => {
       match visible_on_all_workspaces_calls {
         Some(calls) => calls.push(visible)
+        None => ()
+      }
+    },
+    set_window_enabled: enabled => {
+      match enabled_calls {
+        Some(calls) => calls.push(enabled)
         None => ()
       }
     },
@@ -2382,6 +2389,15 @@ test "window workspace visibility routes live flags through the handle" {
   window.set_visible_on_all_workspaces(true)
   window.set_visible_on_all_workspaces(false)
   debug_inspect(calls, content="[true, false]")
+}
+
+///|
+test "window enabled routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, enabled_calls=calls)
+  window.set_enabled(false)
+  window.set_enabled(true)
+  debug_inspect(calls, content="[false, true]")
 }
 
 ///|

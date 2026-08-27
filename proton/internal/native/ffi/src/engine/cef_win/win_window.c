@@ -495,6 +495,7 @@ int32_t proton_engine_window_create(
   window->closable = 1;
   window->focusable = 1;
   window->fullscreenable = 1;
+  window->enabled = 1;
   window->ignore_mouse_events = 0;
   window->ignore_mouse_forward = 0;
   window->min_width = config.size_hint == 2 ? config.width : 0;
@@ -1431,6 +1432,23 @@ int32_t proton_engine_window_set_visible_on_all_workspaces(
   }
   // Windows has no desktop-wide window visibility equivalent. Electron also
   // treats this operation as a successful no-op on this platform.
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_enabled(proton_engine_window_t *window,
+                                         int32_t enabled, char *error,
+                                         size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (enabled != 0 && enabled != 1) {
+    proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) return PROTON_OK;
+  EnableWindow(window->hwnd, enabled != 0);
+  window->enabled = enabled;
   return PROTON_OK;
 }
 

@@ -86,6 +86,7 @@ struct proton_engine_window {
   int fullscreenable;
   int ignore_mouse_events;
   int ignore_mouse_forward;
+  int enabled;
   HBRUSH background_brush;
   int min_width;
   int min_height;

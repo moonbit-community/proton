@@ -236,6 +236,11 @@ fn RuntimeSession::window_handle(
         window.set_visible_on_all_workspaces(visible)
       })
     },
+    set_window_enabled: enabled => {
+      self.control_window(id, native_id, "set enabled", window => {
+        window.set_enabled(enabled)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1430,6 +1435,15 @@ pub fn WindowHandle::set_visible_on_all_workspaces(
   visible : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_visible_on_all_workspaces)(visible)
+}
+
+///|
+/// Enables or disables user interaction with the live native window.
+pub fn WindowHandle::set_enabled(
+  self : WindowHandle,
+  enabled : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_enabled)(enabled)
 }
 
 ///|
