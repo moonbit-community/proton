@@ -491,6 +491,24 @@ pub extern "C" fn proton_window_set_skip_taskbar_ffi(
 ) -> Int = "proton_window_set_skip_taskbar"
 
 ///|
+pub extern "C" fn proton_window_set_content_protection_ffi(
+  window : WindowHandle,
+  enabled : Int,
+) -> Int = "proton_window_set_content_protection"
+
+///|
+pub extern "C" fn proton_window_set_minimizable_ffi(
+  window : WindowHandle,
+  minimizable : Int,
+) -> Int = "proton_window_set_minimizable"
+
+///|
+pub extern "C" fn proton_window_set_maximizable_ffi(
+  window : WindowHandle,
+  maximizable : Int,
+) -> Int = "proton_window_set_maximizable"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

@@ -452,6 +452,9 @@ pub struct WindowHandle {
   set_window_movable : (Bool) -> Unit raise WindowSessionError
   set_window_opacity : (Double) -> Unit raise WindowSessionError
   set_window_skip_taskbar : (Bool) -> Unit raise WindowSessionError
+  set_window_content_protection : (Bool) -> Unit raise WindowSessionError
+  set_window_minimizable : (Bool) -> Unit raise WindowSessionError
+  set_window_maximizable : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError

@@ -181,6 +181,21 @@ fn RuntimeSession::window_handle(
         window.set_skip_taskbar(skip)
       })
     },
+    set_window_content_protection: enabled => {
+      self.control_window(id, native_id, "set content protection", window => {
+        window.set_content_protection(enabled)
+      })
+    },
+    set_window_minimizable: minimizable => {
+      self.control_window(id, native_id, "set minimizable", window => {
+        window.set_minimizable(minimizable)
+      })
+    },
+    set_window_maximizable: maximizable => {
+      self.control_window(id, native_id, "set maximizable", window => {
+        window.set_maximizable(maximizable)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1234,6 +1249,45 @@ pub fn WindowHandle::set_skip_taskbar(
   skip : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_skip_taskbar)(skip)
+}
+
+///|
+/// Sets whether other applications should be prevented from capturing this
+/// live native window.
+///
+/// macOS applies `NSWindowSharingNone`, although ScreenCaptureKit-based apps
+/// on recent macOS releases may still capture the window. Windows uses display
+/// affinity to exclude the window from capture. Linux follows Electron and
+/// treats this as a no-op. Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_content_protection(
+  self : WindowHandle,
+  enabled : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_content_protection)(enabled)
+}
+
+///|
+/// Sets whether the user can manually minimize this live native window.
+/// macOS and Windows update the native minimize control; Linux follows
+/// Electron and treats this as a successful no-op. Headless runtimes raise
+/// `WindowSessionError`.
+pub fn WindowHandle::set_minimizable(
+  self : WindowHandle,
+  minimizable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_minimizable)(minimizable)
+}
+
+///|
+/// Sets whether the user can manually maximize this live native window.
+/// macOS and Windows update the native maximize/zoom control; Linux follows
+/// Electron and treats this as a successful no-op. Headless runtimes raise
+/// `WindowSessionError`.
+pub fn WindowHandle::set_maximizable(
+  self : WindowHandle,
+  maximizable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_maximizable)(maximizable)
 }
 
 ///|

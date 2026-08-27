@@ -1490,6 +1490,61 @@ pub fn Window::set_skip_taskbar(
 }
 
 ///|
+/// Sets whether other applications should be prevented from capturing the
+/// live native window.
+pub fn Window::set_content_protection(
+  self : Window,
+  enabled : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_content_protection_ffi(
+      self.live_handle(),
+      if enabled {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+/// Sets whether the user can manually minimize the live native window.
+pub fn Window::set_minimizable(
+  self : Window,
+  minimizable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_minimizable_ffi(
+      self.live_handle(),
+      if minimizable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+/// Sets whether the user can manually maximize the live native window.
+pub fn Window::set_maximizable(
+  self : Window,
+  maximizable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_maximizable_ffi(
+      self.live_handle(),
+      if maximizable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

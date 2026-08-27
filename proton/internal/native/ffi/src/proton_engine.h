@@ -230,6 +230,15 @@ int32_t proton_engine_window_set_opacity(proton_engine_window_t *window,
 int32_t proton_engine_window_set_skip_taskbar(proton_engine_window_t *window,
                                               int32_t skip, char *error,
                                               size_t error_len);
+int32_t proton_engine_window_set_content_protection(
+    proton_engine_window_t *window, int32_t enabled, char *error,
+    size_t error_len);
+int32_t proton_engine_window_set_minimizable(
+    proton_engine_window_t *window, int32_t minimizable, char *error,
+    size_t error_len);
+int32_t proton_engine_window_set_maximizable(
+    proton_engine_window_t *window, int32_t maximizable, char *error,
+    size_t error_len);
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len);
