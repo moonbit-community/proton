@@ -1598,6 +1598,23 @@ pub fn Window::set_fullscreenable(
 }
 
 ///|
+pub fn Window::set_has_shadow(
+  self : Window,
+  has_shadow : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_has_shadow_ffi(
+      self.live_handle(),
+      if has_shadow {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

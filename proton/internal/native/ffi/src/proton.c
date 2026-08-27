@@ -1256,6 +1256,27 @@ int32_t proton_window_set_fullscreenable(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+int32_t proton_window_set_has_shadow(proton_window_handle_t window,
+                                     int32_t has_shadow) {
+  if (has_shadow != 0 && has_shadow != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "has_shadow must be 0 or 1");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window shadow requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_has_shadow(
+      slot->engine_window, has_shadow, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                        int32_t zoom_percent) {
   if (zoom_percent < 25 || zoom_percent > 500) {

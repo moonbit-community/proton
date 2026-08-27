@@ -72,6 +72,7 @@ fn test_window_handle(
   closable_calls? : Array[Bool],
   focusable_calls? : Array[Bool],
   fullscreenable_calls? : Array[Bool],
+  has_shadow_calls? : Array[Bool],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
@@ -162,6 +163,12 @@ fn test_window_handle(
     set_window_fullscreenable: fullscreenable => {
       match fullscreenable_calls {
         Some(calls) => calls.push(fullscreenable)
+        None => ()
+      }
+    },
+    set_window_has_shadow: has_shadow => {
+      match has_shadow_calls {
+        Some(calls) => calls.push(has_shadow)
         None => ()
       }
     },
@@ -2298,6 +2305,15 @@ test "window fullscreenable routes live flags through the handle" {
   let window = test_window_handle("main", 17L, fullscreenable_calls=calls)
   window.set_fullscreenable(false)
   window.set_fullscreenable(true)
+  debug_inspect(calls, content="[false, true]")
+}
+
+///|
+test "window shadow routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, has_shadow_calls=calls)
+  window.set_has_shadow(false)
+  window.set_has_shadow(true)
   debug_inspect(calls, content="[false, true]")
 }
 

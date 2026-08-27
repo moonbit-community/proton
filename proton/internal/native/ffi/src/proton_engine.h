@@ -248,6 +248,9 @@ int32_t proton_engine_window_set_focusable(
 int32_t proton_engine_window_set_fullscreenable(
     proton_engine_window_t *window, int32_t fullscreenable, char *error,
     size_t error_len);
+int32_t proton_engine_window_set_has_shadow(
+    proton_engine_window_t *window, int32_t has_shadow, char *error,
+    size_t error_len);
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len);

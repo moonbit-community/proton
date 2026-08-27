@@ -1072,6 +1072,25 @@ int32_t proton_engine_window_set_fullscreenable(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_has_shadow(
+    proton_engine_window_t *window, int32_t has_shadow, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (has_shadow != 0 && has_shadow != 1) {
+    proton_engine_set_message(error, error_len, "has_shadow must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window shadow is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {
