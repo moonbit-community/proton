@@ -213,11 +213,19 @@ pub fn proton_window_set_always_on_top_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_aspect_ratio_ffi(WindowHandle, Double) -> Int
 
+pub fn proton_window_set_closable_ffi(WindowHandle, Int) -> Int
+
 pub fn proton_window_set_close_interception_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_content_protection_ffi(WindowHandle, Int) -> Int
 
+pub fn proton_window_set_focusable_ffi(WindowHandle, Int) -> Int
+
 pub fn proton_window_set_fullscreen_ffi(WindowHandle, Int) -> Int
+
+pub fn proton_window_set_fullscreenable_ffi(WindowHandle, Int) -> Int
+
+pub fn proton_window_set_has_shadow_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_maximizable_ffi(WindowHandle, Int) -> Int
 

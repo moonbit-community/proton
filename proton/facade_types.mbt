@@ -455,6 +455,10 @@ pub struct WindowHandle {
   set_window_content_protection : (Bool) -> Unit raise WindowSessionError
   set_window_minimizable : (Bool) -> Unit raise WindowSessionError
   set_window_maximizable : (Bool) -> Unit raise WindowSessionError
+  set_window_closable : (Bool) -> Unit raise WindowSessionError
+  set_window_focusable : (Bool) -> Unit raise WindowSessionError
+  set_window_fullscreenable : (Bool) -> Unit raise WindowSessionError
+  set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError

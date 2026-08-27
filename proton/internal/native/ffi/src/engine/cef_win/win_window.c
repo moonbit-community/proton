@@ -98,6 +98,11 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
       return 0;
     }
     break;
+  case WM_MOUSEACTIVATE:
+    if (window != NULL && !window->focusable) {
+      return MA_NOACTIVATE;
+    }
+    break;
   case WM_NCHITTEST:
     if (window != NULL && window->titlebar_overlay) {
       return proton_engine_overlay_hit_test(hwnd, lparam);
@@ -283,6 +288,12 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
       HDC dc = BeginPaint(hwnd, &paint);
       FillRect(dc, &paint.rcPaint, (HBRUSH)GetStockObject(BLACK_BRUSH));
       EndPaint(hwnd, &paint);
+      return 0;
+    }
+    break;
+  case WM_SYSCOMMAND:
+    if (window != NULL && (wparam & 0xfff0) == SC_CLOSE &&
+        !window->closable) {
       return 0;
     }
     break;
@@ -481,6 +492,9 @@ int32_t proton_engine_window_create(
   window->movable = 1;
   window->minimizable = 1;
   window->maximizable = 1;
+  window->closable = 1;
+  window->focusable = 1;
+  window->fullscreenable = 1;
   window->min_width = config.size_hint == 2 ? config.width : 0;
   window->min_height = config.size_hint == 2 ? config.height : 0;
   window->max_width = config.size_hint == 3 ? config.width : 0;
@@ -912,6 +926,66 @@ int32_t proton_engine_window_set_maximizable(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_closable(
+    proton_engine_window_t *window, int32_t closable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (closable != 0 && closable != 1) {
+    proton_engine_set_message(error, error_len, "closable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window closability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  HMENU system_menu = GetSystemMenu(window->hwnd, FALSE);
+  if (system_menu == NULL ||
+      EnableMenuItem(system_menu, SC_CLOSE,
+                     MF_BYCOMMAND | (closable ? MF_ENABLED : MF_GRAYED)) ==
+          (UINT)-1) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update window close control");
+    return PROTON_ERR_PLATFORM;
+  }
+  DrawMenuBar(window->hwnd);
+  window->closable = closable;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_focusable(
+    proton_engine_window_t *window, int32_t focusable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (focusable != 0 && focusable != 1) {
+    proton_engine_set_message(error, error_len, "focusable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window focusability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  LONG_PTR style = GetWindowLongPtrW(window->hwnd, GWL_EXSTYLE);
+  LONG_PTR updated = focusable ? (style & ~WS_EX_NOACTIVATE)
+                               : (style | WS_EX_NOACTIVATE);
+  SetLastError(0);
+  if (SetWindowLongPtrW(window->hwnd, GWL_EXSTYLE, updated) == 0 &&
+      GetLastError() != 0) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update window focusability");
+    return PROTON_ERR_PLATFORM;
+  }
+  window->focusable = focusable;
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_hide(proton_engine_window_t *window,
                                   char *error,
                                   size_t error_len) {
@@ -1131,6 +1205,7 @@ int32_t proton_engine_window_apply(
     ShowWindow(window->hwnd, SW_RESTORE);
     break;
   case PROTON_ENGINE_WINDOW_SET_FULLSCREEN:
+    if (!window->fullscreenable && action->value != 0) break;
     if (action->value != 0 && !window->fullscreen) {
       window->windowed_style =
           (DWORD)GetWindowLongW(window->hwnd, GWL_STYLE);
@@ -1222,6 +1297,46 @@ int32_t proton_engine_window_apply(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_engine_signal_wait_source(window->runtime, PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_fullscreenable(
+    proton_engine_window_t *window, int32_t fullscreenable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (fullscreenable != 0 && fullscreenable != 1) {
+    proton_engine_set_message(error, error_len,
+                              "fullscreenable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window fullscreenability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->fullscreenable = fullscreenable;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_has_shadow(
+    proton_engine_window_t *window, int32_t has_shadow, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (has_shadow != 0 && has_shadow != 1) {
+    proton_engine_set_message(error, error_len, "has_shadow must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window shadow is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
   return PROTON_OK;
 }
 

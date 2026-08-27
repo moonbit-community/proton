@@ -1545,6 +1545,76 @@ pub fn Window::set_maximizable(
 }
 
 ///|
+/// Sets whether the user can manually close the live native window.
+pub fn Window::set_closable(
+  self : Window,
+  closable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_closable_ffi(
+      self.live_handle(),
+      if closable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+/// Sets whether the live native window can receive focus.
+pub fn Window::set_focusable(
+  self : Window,
+  focusable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_focusable_ffi(
+      self.live_handle(),
+      if focusable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::set_fullscreenable(
+  self : Window,
+  fullscreenable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_fullscreenable_ffi(
+      self.live_handle(),
+      if fullscreenable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::set_has_shadow(
+  self : Window,
+  has_shadow : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_has_shadow_ffi(
+      self.live_handle(),
+      if has_shadow {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

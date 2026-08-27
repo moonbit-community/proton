@@ -196,6 +196,26 @@ fn RuntimeSession::window_handle(
         window.set_maximizable(maximizable)
       })
     },
+    set_window_closable: closable => {
+      self.control_window(id, native_id, "set closable", window => {
+        window.set_closable(closable)
+      })
+    },
+    set_window_focusable: focusable => {
+      self.control_window(id, native_id, "set focusable", window => {
+        window.set_focusable(focusable)
+      })
+    },
+    set_window_fullscreenable: fullscreenable => {
+      self.control_window(id, native_id, "set fullscreenable", window => {
+        window.set_fullscreenable(fullscreenable)
+      })
+    },
+    set_window_has_shadow: has_shadow => {
+      self.control_window(id, native_id, "set window shadow", window => {
+        window.set_has_shadow(has_shadow)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1288,6 +1308,58 @@ pub fn WindowHandle::set_maximizable(
   maximizable : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_maximizable)(maximizable)
+}
+
+///|
+/// Sets whether the user can manually close this live native window.
+///
+/// macOS and Windows update the native close control; programmatic `close`
+/// calls remain available. Linux follows Electron and treats this as a
+/// successful no-op. Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_closable(
+  self : WindowHandle,
+  closable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_closable)(closable)
+}
+
+///|
+/// Sets whether this live native window can receive focus.
+///
+/// macOS and Windows update the native window behavior. On macOS, disabling
+/// focus does not remove focus from a window that is already focused, matching
+/// Electron. Linux follows Electron and treats this as a successful no-op.
+/// Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_focusable(
+  self : WindowHandle,
+  focusable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_focusable)(focusable)
+}
+
+///|
+/// Sets whether this live native window can enter fullscreen mode.
+///
+/// When disabled, attempts to enter fullscreen are ignored. An already
+/// fullscreen window can still exit fullscreen.
+pub fn WindowHandle::set_fullscreenable(
+  self : WindowHandle,
+  fullscreenable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_fullscreenable)(fullscreenable)
+}
+
+///|
+/// Sets whether this live native window draws a frame shadow.
+///
+/// macOS applies this directly to the native window. Linux and Windows accept
+/// the setting as a successful no-op when the platform frame owns the shadow.
+/// Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_has_shadow(
+  self : WindowHandle,
+  has_shadow : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_has_shadow)(has_shadow)
 }
 
 ///|

@@ -509,6 +509,30 @@ pub extern "C" fn proton_window_set_maximizable_ffi(
 ) -> Int = "proton_window_set_maximizable"
 
 ///|
+pub extern "C" fn proton_window_set_closable_ffi(
+  window : WindowHandle,
+  closable : Int,
+) -> Int = "proton_window_set_closable"
+
+///|
+pub extern "C" fn proton_window_set_focusable_ffi(
+  window : WindowHandle,
+  focusable : Int,
+) -> Int = "proton_window_set_focusable"
+
+///|
+pub extern "C" fn proton_window_set_fullscreenable_ffi(
+  window : WindowHandle,
+  fullscreenable : Int,
+) -> Int = "proton_window_set_fullscreenable"
+
+///|
+pub extern "C" fn proton_window_set_has_shadow_ffi(
+  window : WindowHandle,
+  has_shadow : Int,
+) -> Int = "proton_window_set_has_shadow"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

@@ -81,6 +81,9 @@ struct proton_engine_window {
   int movable;
   int minimizable;
   int maximizable;
+  int closable;
+  int focusable;
+  int fullscreenable;
   int min_width;
   int min_height;
   int max_width;

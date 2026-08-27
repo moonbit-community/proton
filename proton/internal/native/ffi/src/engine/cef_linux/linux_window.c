@@ -464,6 +464,7 @@ int32_t proton_engine_window_create(
            sizeof(window->titlebar_close_label), "%s",
            config.titlebar_close_label);
   window->zoom_percent = 100;
+  window->fullscreenable = 1;
   window->bridge_config_json =
       config.bridge_config_json != NULL
           ? proton_engine_strdup(config.bridge_config_json)
@@ -1019,6 +1020,86 @@ int32_t proton_engine_window_set_maximizable(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_closable(
+    proton_engine_window_t *window, int32_t closable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (closable != 0 && closable != 1) {
+    proton_engine_set_message(error, error_len, "closable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window closability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  // Electron exposes this setter on macOS and Windows; Linux is a success no-op.
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_focusable(
+    proton_engine_window_t *window, int32_t focusable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (focusable != 0 && focusable != 1) {
+    proton_engine_set_message(error, error_len, "focusable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window focusability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  // Electron exposes this setter on macOS and Windows; Linux is a success no-op.
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_fullscreenable(
+    proton_engine_window_t *window, int32_t fullscreenable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (fullscreenable != 0 && fullscreenable != 1) {
+    proton_engine_set_message(error, error_len,
+                              "fullscreenable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window fullscreenability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->fullscreenable = fullscreenable;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_has_shadow(
+    proton_engine_window_t *window, int32_t has_shadow, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (has_shadow != 0 && has_shadow != 1) {
+    proton_engine_set_message(error, error_len, "has_shadow must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window shadow is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {
@@ -1105,9 +1186,9 @@ int32_t proton_engine_window_apply(
     gtk_window_deiconify(GTK_WINDOW(window->window));
     break;
   case PROTON_ENGINE_WINDOW_SET_FULLSCREEN:
-    if (action->value != 0) {
+    if (action->value != 0 && window->fullscreenable) {
       gtk_window_fullscreen(GTK_WINDOW(window->window));
-    } else {
+    } else if (action->value == 0) {
       gtk_window_unfullscreen(GTK_WINDOW(window->window));
     }
     break;
