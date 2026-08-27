@@ -196,6 +196,11 @@ fn RuntimeSession::window_handle(
         window.set_maximizable(maximizable)
       })
     },
+    set_window_closable: closable => {
+      self.control_window(id, native_id, "set closable", window => {
+        window.set_closable(closable)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1288,6 +1293,19 @@ pub fn WindowHandle::set_maximizable(
   maximizable : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_maximizable)(maximizable)
+}
+
+///|
+/// Sets whether the user can manually close this live native window.
+///
+/// macOS and Windows update the native close control; programmatic `close`
+/// calls remain available. Linux follows Electron and treats this as a
+/// successful no-op. Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_closable(
+  self : WindowHandle,
+  closable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_closable)(closable)
 }
 
 ///|

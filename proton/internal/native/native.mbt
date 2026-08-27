@@ -1545,6 +1545,24 @@ pub fn Window::set_maximizable(
 }
 
 ///|
+/// Sets whether the user can manually close the live native window.
+pub fn Window::set_closable(
+  self : Window,
+  closable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_closable_ffi(
+      self.live_handle(),
+      if closable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

@@ -239,6 +239,9 @@ int32_t proton_engine_window_set_minimizable(
 int32_t proton_engine_window_set_maximizable(
     proton_engine_window_t *window, int32_t maximizable, char *error,
     size_t error_len);
+int32_t proton_engine_window_set_closable(
+    proton_engine_window_t *window, int32_t closable, char *error,
+    size_t error_len);
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len);

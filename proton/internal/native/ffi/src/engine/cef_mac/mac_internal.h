@@ -137,6 +137,8 @@ struct proton_engine_window {
   int close_interception_enabled;
   int close_interception_bypass;
   int close_request_pending;
+  int closable;
+  int programmatic_close_pending;
   uint64_t close_request_id;
   proton_browser_session_t *browser_session;
   proton_engine_client_t *client;

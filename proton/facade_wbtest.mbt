@@ -69,6 +69,7 @@ fn test_window_handle(
   content_protection_calls? : Array[Bool],
   minimizable_calls? : Array[Bool],
   maximizable_calls? : Array[Bool],
+  closable_calls? : Array[Bool],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
@@ -141,6 +142,12 @@ fn test_window_handle(
     set_window_maximizable: maximizable => {
       match maximizable_calls {
         Some(calls) => calls.push(maximizable)
+        None => ()
+      }
+    },
+    set_window_closable: closable => {
+      match closable_calls {
+        Some(calls) => calls.push(closable)
         None => ()
       }
     },
@@ -2250,6 +2257,15 @@ test "window maximizable routes live flags through the handle" {
   let window = test_window_handle("main", 17L, maximizable_calls=calls)
   window.set_maximizable(false)
   window.set_maximizable(true)
+  debug_inspect(calls, content="[false, true]")
+}
+
+///|
+test "window closable routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, closable_calls=calls)
+  window.set_closable(false)
+  window.set_closable(true)
   debug_inspect(calls, content="[false, true]")
 }
 

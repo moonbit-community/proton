@@ -456,6 +456,20 @@ static void proton_engine_window_commit_appkit_close(
   [native_window autorelease];
 }
 
+static void proton_engine_window_apply_closable_style(
+    proton_engine_window_t *window) {
+  if (window == NULL || window->window == nil) {
+    return;
+  }
+  NSWindowStyleMask style = window->window.styleMask;
+  if (window->closable || window->programmatic_close_pending) {
+    style |= NSWindowStyleMaskClosable;
+  } else {
+    style &= ~NSWindowStyleMaskClosable;
+  }
+  window->window.styleMask = style;
+}
+
 @interface ProtonWindowDelegate : NSObject <NSWindowDelegate> {
 @public
   proton_engine_window_t *window;
@@ -739,6 +753,7 @@ int32_t proton_engine_window_create(
   window->max_height = config.size_hint == 3 ? config.height : 0;
   window->zoom_percent = 100;
   window->maximizable = 1;
+  window->closable = 1;
   window->headless = runtime->headless;
   window->bridge_config_json =
       config.bridge_config_json != NULL
@@ -1022,6 +1037,8 @@ int32_t proton_engine_window_close(proton_engine_window_t *window,
   }
   window->close_interception_bypass = 0;
   if (!window->headless) {
+    window->programmatic_close_pending = 1;
+    proton_engine_window_apply_closable_style(window);
     [window->window performClose:nil];
     return PROTON_OK;
   }
@@ -1373,6 +1390,27 @@ int32_t proton_engine_window_set_maximizable(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_closable(
+    proton_engine_window_t *window, int32_t closable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (closable != 0 && closable != 1) {
+    proton_engine_set_message(error, error_len, "closable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window closability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->closable = closable;
+  proton_engine_window_apply_closable_style(window);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {
@@ -1632,6 +1670,8 @@ int32_t proton_engine_window_set_close_interception(
   window->close_interception_enabled = enabled != 0;
   if (!window->close_interception_enabled) {
     window->close_request_pending = 0;
+    window->programmatic_close_pending = 0;
+    proton_engine_window_apply_closable_style(window);
   }
   return PROTON_OK;
 }
@@ -1672,6 +1712,9 @@ int32_t proton_engine_window_respond_close_request(
       return proton_engine_window_close(window, error, error_len);
     }
     [window->window performClose:nil];
+  } else if (!allow) {
+    window->programmatic_close_pending = 0;
+    proton_engine_window_apply_closable_style(window);
   }
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
