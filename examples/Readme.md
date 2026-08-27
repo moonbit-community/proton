@@ -118,6 +118,8 @@ moon -C examples run 01_run --target native
   review with 16:9, 1:1, clear, and programmatic resize checks.
 - `68_window_content_protection`: manual Electron-style screen-capture protection review.
 - `69_window_controls`: combined manual Electron-style minimize, maximize, and close control review.
+  Includes focus/fullscreen/shadow plus mouse ignoring, background color,
+  kiosk, workspace visibility, and enabled-state controls.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only
