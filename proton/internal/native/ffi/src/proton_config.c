@@ -913,7 +913,7 @@ int32_t proton_config_prepare_window(
   return PROTON_OK;
 }
 
-static bool proton_parse_color_argb(const char *text, uint32_t *out_color) {
+bool proton_parse_color_argb(const char *text, uint32_t *out_color) {
   if (text == NULL || text[0] == '\0') {
     return false;
   }

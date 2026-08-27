@@ -136,6 +136,11 @@ fn RuntimeSession::window_handle(
         window.set_fullscreen(fullscreen)
       })
     },
+    set_window_kiosk: kiosk => {
+      self.control_window(id, native_id, "set kiosk", window => {
+        window.set_kiosk(kiosk)
+      })
+    },
     set_window_position: (x, y) => {
       self.control_window(id, native_id, "set position", window => {
         window.set_position(x, y)
@@ -214,6 +219,26 @@ fn RuntimeSession::window_handle(
     set_window_has_shadow: has_shadow => {
       self.control_window(id, native_id, "set window shadow", window => {
         window.set_has_shadow(has_shadow)
+      })
+    },
+    set_window_ignore_mouse_events: (ignore, forward) => {
+      self.control_window(id, native_id, "set ignore mouse events", window => {
+        window.set_ignore_mouse_events(ignore, forward)
+      })
+    },
+    set_window_background_color: color => {
+      self.control_window(id, native_id, "set background color", window => {
+        window.set_background_color(color)
+      })
+    },
+    set_window_visible_on_all_workspaces: visible => {
+      self.control_window(id, native_id, "set workspace visibility", window => {
+        window.set_visible_on_all_workspaces(visible)
+      })
+    },
+    set_window_enabled: enabled => {
+      self.control_window(id, native_id, "set enabled", window => {
+        window.set_enabled(enabled)
       })
     },
     set_window_zoom_percent: zoom_percent => {
@@ -1146,6 +1171,18 @@ pub fn WindowHandle::set_fullscreen(
 }
 
 ///|
+/// Enters or leaves kiosk mode.
+///
+/// Kiosk uses the full display and hides system chrome where the platform
+/// supports it. Call with `false` to provide a programmatic exit path.
+pub fn WindowHandle::set_kiosk(
+  self : WindowHandle,
+  kiosk : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_kiosk)(kiosk)
+}
+
+///|
 pub fn WindowHandle::set_position(
   self : WindowHandle,
   x : Int,
@@ -1360,6 +1397,53 @@ pub fn WindowHandle::set_has_shadow(
   has_shadow : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_has_shadow)(has_shadow)
+}
+
+///|
+/// Sets whether this live native window ignores mouse events.
+///
+/// When `ignore` is true, mouse input passes through to the window below while
+/// keyboard input remains available to the focused window. `forward` requests
+/// mouse-move forwarding to Chromium where the platform supports it. Forwarding
+/// is disabled automatically when `ignore` is false.
+pub fn WindowHandle::set_ignore_mouse_events(
+  self : WindowHandle,
+  ignore : Bool,
+  forward : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_ignore_mouse_events)(ignore, forward)
+}
+
+///|
+/// Sets the live native window background color.
+///
+/// Accepts `#RRGGBB` or `#AARRGGBB`, matching Proton view configuration.
+pub fn WindowHandle::set_background_color(
+  self : WindowHandle,
+  color : String,
+) -> Unit raise WindowSessionError {
+  (self.set_window_background_color)(color)
+}
+
+///|
+/// Sets whether the live window appears on every workspace.
+///
+/// This maps to Spaces on macOS and sticky windows on Linux. It is a
+/// successful no-op on Windows, matching Electron.
+pub fn WindowHandle::set_visible_on_all_workspaces(
+  self : WindowHandle,
+  visible : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_visible_on_all_workspaces)(visible)
+}
+
+///|
+/// Enables or disables user interaction with the live native window.
+pub fn WindowHandle::set_enabled(
+  self : WindowHandle,
+  enabled : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_enabled)(enabled)
 }
 
 ///|

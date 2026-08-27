@@ -1336,6 +1336,20 @@ pub fn Window::set_fullscreen(
 }
 
 ///|
+pub fn Window::set_kiosk(self : Window, kiosk : Bool) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_kiosk_ffi(
+      self.live_handle(),
+      if kiosk {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_position(
   self : Window,
   x : Int,
@@ -1606,6 +1620,76 @@ pub fn Window::set_has_shadow(
     @native_ffi.proton_window_set_has_shadow_ffi(
       self.live_handle(),
       if has_shadow {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::set_ignore_mouse_events(
+  self : Window,
+  ignore : Bool,
+  forward : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_ignore_mouse_events_ffi(
+      self.live_handle(),
+      if ignore {
+        1
+      } else {
+        0
+      },
+      if forward {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::set_background_color(
+  self : Window,
+  color : String,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_background_color_ffi(
+      self.live_handle(),
+      @utf8.encode(color),
+    ),
+  )
+}
+
+///|
+pub fn Window::set_visible_on_all_workspaces(
+  self : Window,
+  visible : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_visible_on_all_workspaces_ffi(
+      self.live_handle(),
+      if visible {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::set_enabled(
+  self : Window,
+  enabled : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_enabled_ffi(
+      self.live_handle(),
+      if enabled {
         1
       } else {
         0

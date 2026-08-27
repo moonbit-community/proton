@@ -572,13 +572,17 @@ pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeErro
 pub fn Window::restore(Self) -> Unit raise NativeError
 pub fn Window::set_always_on_top(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_aspect_ratio(Self, Double) -> Unit raise NativeError
+pub fn Window::set_background_color(Self, String) -> Unit raise NativeError
 pub fn Window::set_closable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_close_interception(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_content_protection(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_enabled(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_focusable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreen(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreenable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_has_shadow(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_ignore_mouse_events(Self, Bool, Bool) -> Unit raise NativeError
+pub fn Window::set_kiosk(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximizable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximum_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_minimizable(Self, Bool) -> Unit raise NativeError
@@ -591,6 +595,7 @@ pub fn Window::set_resizable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_skip_taskbar(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_title(Self, String) -> Unit raise NativeError
+pub fn Window::set_visible_on_all_workspaces(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_zoom_percent(Self, Int) -> Unit raise NativeError
 pub fn Window::show(Self) -> Unit raise NativeError
 pub fn Window::state(Self) -> WindowState raise NativeError

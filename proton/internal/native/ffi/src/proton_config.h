@@ -27,6 +27,8 @@ PROTON_INTERNAL int32_t proton_config_prepare_window(
     int32_t certificate_policy, int32_t media_policy, int32_t devtools,
     proton_bridge_config_t *bridge_config,
     proton_engine_window_config_t *out_config);
+PROTON_INTERNAL bool proton_parse_color_argb(const char *text,
+                                             uint32_t *out_color);
 PROTON_INTERNAL int32_t proton_config_prepare_view(
     int32_t x, int32_t y, int32_t width, int32_t height, int32_t visible,
     int32_t z_order, const char *initial_url, const char *background_color,

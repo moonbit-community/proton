@@ -495,6 +495,9 @@ int32_t proton_engine_window_create(
   window->closable = 1;
   window->focusable = 1;
   window->fullscreenable = 1;
+  window->enabled = 1;
+  window->ignore_mouse_events = 0;
+  window->ignore_mouse_forward = 0;
   window->min_width = config.size_hint == 2 ? config.width : 0;
   window->min_height = config.size_hint == 2 ? config.height : 0;
   window->max_width = config.size_hint == 3 ? config.width : 0;
@@ -1205,7 +1208,9 @@ int32_t proton_engine_window_apply(
     ShowWindow(window->hwnd, SW_RESTORE);
     break;
   case PROTON_ENGINE_WINDOW_SET_FULLSCREEN:
-    if (!window->fullscreenable && action->value != 0) break;
+  case PROTON_ENGINE_WINDOW_SET_KIOSK:
+    if (action->kind == PROTON_ENGINE_WINDOW_SET_FULLSCREEN &&
+        !window->fullscreenable && action->value != 0) break;
     if (action->value != 0 && !window->fullscreen) {
       window->windowed_style =
           (DWORD)GetWindowLongW(window->hwnd, GWL_STYLE);
@@ -1337,6 +1342,113 @@ int32_t proton_engine_window_set_has_shadow(
                               "window shadow is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_ignore_mouse_events(
+    proton_engine_window_t *window, int32_t ignore, int32_t forward,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if ((ignore != 0 && ignore != 1) || (forward != 0 && forward != 1)) {
+    proton_engine_set_message(error, error_len,
+                              "ignore and forward must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "mouse event handling is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  LONG_PTR style = GetWindowLongPtrW(window->hwnd, GWL_EXSTYLE);
+  if (ignore) style |= WS_EX_TRANSPARENT;
+  else style &= ~WS_EX_TRANSPARENT;
+  if (SetWindowLongPtrW(window->hwnd, GWL_EXSTYLE, style) == 0 &&
+      GetLastError() != 0) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update mouse event handling");
+    return PROTON_ERR_PLATFORM;
+  }
+  window->ignore_mouse_events = ignore;
+  window->ignore_mouse_forward = ignore ? forward : 0;
+  SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                   SWP_FRAMECHANGED);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_background_color(
+    proton_engine_window_t *window, uint32_t color, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window background is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  const COLORREF native_color = RGB((color >> 16) & 0xff,
+                                    (color >> 8) & 0xff, color & 0xff);
+  HBRUSH brush = CreateSolidBrush(native_color);
+  if (brush == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create window background brush");
+    return PROTON_ERR_PLATFORM;
+  }
+  SetLastError(ERROR_SUCCESS);
+  if (SetClassLongPtrW(window->hwnd, GCLP_HBRBACKGROUND, (LONG_PTR)brush) == 0 &&
+      GetLastError() != ERROR_SUCCESS) {
+    DeleteObject(brush);
+    window->background_brush = NULL;
+    proton_engine_set_message(error, error_len,
+                              "failed to update window background brush");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (window->background_brush != NULL) DeleteObject(window->background_brush);
+  window->background_brush = brush;
+  InvalidateRect(window->hwnd, NULL, TRUE);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_visible_on_all_workspaces(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (visible != 0 && visible != 1) {
+    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "workspace visibility is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  // Windows has no desktop-wide window visibility equivalent. Electron also
+  // treats this operation as a successful no-op on this platform.
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_enabled(proton_engine_window_t *window,
+                                         int32_t enabled, char *error,
+                                         size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (enabled != 0 && enabled != 1) {
+    proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) return PROTON_OK;
+  EnableWindow(window->hwnd, enabled != 0);
+  window->enabled = enabled;
   return PROTON_OK;
 }
 

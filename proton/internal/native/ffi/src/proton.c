@@ -906,6 +906,19 @@ int32_t proton_window_set_fullscreen(proton_window_handle_t window,
   return proton_window_apply_action(window, &action);
 }
 
+int32_t proton_window_set_kiosk(proton_window_handle_t window,
+                                int32_t kiosk) {
+  if (kiosk != 0 && kiosk != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "kiosk must be 0 or 1");
+  }
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_SET_KIOSK,
+      .value = kiosk,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
 int32_t proton_window_set_position(proton_window_handle_t window,
                                    int32_t x,
                                    int32_t y) {
@@ -1272,6 +1285,92 @@ int32_t proton_window_set_has_shadow(proton_window_handle_t window,
   char engine_error[512] = {0};
   status = proton_engine_window_set_has_shadow(
       slot->engine_window, has_shadow, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_ignore_mouse_events(proton_window_handle_t window,
+                                              int32_t ignore,
+                                              int32_t forward) {
+  if ((ignore != 0 && ignore != 1) || (forward != 0 && forward != 1)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "ignore and forward must be 0 or 1");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "mouse event handling requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_ignore_mouse_events(
+      slot->engine_window, ignore, forward, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_background_color(proton_window_handle_t window,
+                                           const char *color) {
+  uint32_t parsed_color = 0;
+  if (!proton_parse_color_argb(color, &parsed_color)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "background color must be #RRGGBB or #AARRGGBB");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window background color requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_background_color(
+      slot->engine_window, parsed_color, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_visible_on_all_workspaces(
+    proton_window_handle_t window, int32_t visible) {
+  if (visible != 0 && visible != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "visible must be 0 or 1");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "workspace visibility requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_visible_on_all_workspaces(
+      slot->engine_window, visible, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_enabled(proton_window_handle_t window,
+                                  int32_t enabled) {
+  if (enabled != 0 && enabled != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "enabled must be 0 or 1");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window enabled state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_enabled(slot->engine_window, enabled,
+                                            engine_error, sizeof(engine_error));
   if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
   g_last_error[0] = '\0';
   return PROTON_OK;

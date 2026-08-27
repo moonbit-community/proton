@@ -152,7 +152,9 @@ int32_t proton_window_minimize(proton_window_handle_t window);
 int32_t proton_window_maximize(proton_window_handle_t window);
 int32_t proton_window_restore(proton_window_handle_t window);
 int32_t proton_window_set_fullscreen(proton_window_handle_t window,
-                                                int32_t fullscreen);
+                                     int32_t fullscreen);
+int32_t proton_window_set_kiosk(proton_window_handle_t window,
+                                int32_t kiosk);
 int32_t proton_window_set_position(proton_window_handle_t window,
                                               int32_t x, int32_t y);
 int32_t proton_window_set_always_on_top(proton_window_handle_t window,
@@ -185,6 +187,15 @@ int32_t proton_window_set_fullscreenable(proton_window_handle_t window,
                                          int32_t fullscreenable);
 int32_t proton_window_set_has_shadow(proton_window_handle_t window,
                                      int32_t has_shadow);
+int32_t proton_window_set_ignore_mouse_events(proton_window_handle_t window,
+                                              int32_t ignore,
+                                              int32_t forward);
+int32_t proton_window_set_background_color(proton_window_handle_t window,
+                                           const char *color);
+int32_t proton_window_set_visible_on_all_workspaces(
+    proton_window_handle_t window, int32_t visible);
+int32_t proton_window_set_enabled(proton_window_handle_t window,
+                                  int32_t enabled);
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                                   int32_t zoom_percent);
 /* Matches Electron's progress value semantics: negative clears the indicator,

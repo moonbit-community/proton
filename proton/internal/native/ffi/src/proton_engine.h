@@ -81,6 +81,7 @@ typedef enum {
   PROTON_ENGINE_WINDOW_SET_ALWAYS_ON_TOP = 6,
   PROTON_ENGINE_WINDOW_SET_ZOOM_PERCENT = 7,
   PROTON_ENGINE_WINDOW_SET_RESIZABLE = 8,
+  PROTON_ENGINE_WINDOW_SET_KIOSK = 9,
 } proton_engine_window_action_kind_t;
 
 typedef struct {
@@ -251,6 +252,18 @@ int32_t proton_engine_window_set_fullscreenable(
 int32_t proton_engine_window_set_has_shadow(
     proton_engine_window_t *window, int32_t has_shadow, char *error,
     size_t error_len);
+int32_t proton_engine_window_set_ignore_mouse_events(
+    proton_engine_window_t *window, int32_t ignore, int32_t forward,
+    char *error, size_t error_len);
+int32_t proton_engine_window_set_background_color(
+    proton_engine_window_t *window, uint32_t color, char *error,
+    size_t error_len);
+int32_t proton_engine_window_set_visible_on_all_workspaces(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len);
+int32_t proton_engine_window_set_enabled(proton_engine_window_t *window,
+                                         int32_t enabled, char *error,
+                                         size_t error_len);
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len);

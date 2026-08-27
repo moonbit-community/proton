@@ -4,7 +4,9 @@ Manual review for Electron-style `WindowHandle::set_minimizable`,
 `WindowHandle::set_maximizable`, `WindowHandle::set_closable`, and
 `WindowHandle::set_focusable`.
 `WindowHandle::set_fullscreenable`.
-`WindowHandle::set_has_shadow`.
+`WindowHandle::set_has_shadow`, `set_ignore_mouse_events`,
+`set_background_color`, `set_kiosk`, `set_visible_on_all_workspaces`, and
+`set_enabled`.
 
 ```sh
 moon -C examples run 69_window_controls --target native
@@ -27,3 +29,8 @@ moon -C examples run 69_window_controls --target native
 macOS and Windows update native controls. Linux follows Electron and treats
 these capability setters as successful no-ops. Headless runtimes report
 unsupported.
+
+8. Use **Interaction test** to disable input, change the background, enable
+all-workspace visibility, and disable the window. Re-enable with **Enable all**.
+9. Enter kiosk and confirm it exits automatically after five seconds; use
+**Exit kiosk** as the immediate programmatic exit check.

@@ -484,8 +484,10 @@ static void proton_engine_window_update_zoom_button(
 
 @interface ProtonWindow : NSWindow {
   BOOL proton_focusable;
+  BOOL proton_enabled;
 }
 - (void)setProtonFocusable:(BOOL)focusable;
+- (void)setProtonEnabled:(BOOL)enabled;
 @end
 
 @implementation ProtonWindow
@@ -499,20 +501,25 @@ static void proton_engine_window_update_zoom_button(
                              defer:flag];
   if (self != nil) {
     proton_focusable = YES;
+    proton_enabled = YES;
   }
   return self;
 }
 
 - (BOOL)canBecomeKeyWindow {
-  return proton_focusable;
+  return proton_focusable && proton_enabled;
 }
 
 - (BOOL)canBecomeMainWindow {
-  return proton_focusable;
+  return proton_focusable && proton_enabled;
 }
 
 - (void)setProtonFocusable:(BOOL)focusable {
   proton_focusable = focusable;
+}
+
+- (void)setProtonEnabled:(BOOL)enabled {
+  proton_enabled = enabled;
 }
 @end
 
@@ -801,6 +808,7 @@ int32_t proton_engine_window_create(
   window->maximizable = 1;
   window->closable = 1;
   window->fullscreenable = 1;
+  window->enabled = 1;
   window->headless = runtime->headless;
   window->bridge_config_json =
       config.bridge_config_json != NULL
@@ -1625,6 +1633,21 @@ int32_t proton_engine_window_apply(
     }
     break;
   }
+  case PROTON_ENGINE_WINDOW_SET_KIOSK: {
+    const BOOL fullscreen =
+        (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0;
+    if (action->value != 0) {
+      [NSApp setPresentationOptions:(NSApplicationPresentationAutoHideDock |
+                                     NSApplicationPresentationAutoHideMenuBar |
+                                     NSApplicationPresentationFullScreen)];
+    } else {
+      [NSApp setPresentationOptions:NSApplicationPresentationDefault];
+    }
+    if (fullscreen != (action->value != 0)) {
+      [window->window toggleFullScreen:nil];
+    }
+    break;
+  }
   case PROTON_ENGINE_WINDOW_SET_POSITION: {
     NSRect frame = window->window.frame;
     const CGFloat cocoa_y =
@@ -1705,6 +1728,100 @@ int32_t proton_engine_window_set_has_shadow(
     return PROTON_ERR_UNSUPPORTED;
   }
   window->window.hasShadow = has_shadow != 0;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_ignore_mouse_events(
+    proton_engine_window_t *window, int32_t ignore, int32_t forward,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (ignore != 0 && ignore != 1) {
+    proton_engine_set_message(error, error_len, "ignore must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (forward != 0 && forward != 1) {
+    proton_engine_set_message(error, error_len, "forward must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "mouse event handling is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->ignore_mouse_events = ignore;
+  window->ignore_mouse_forward = ignore ? forward : 0;
+  [window->window
+      setIgnoresMouseEvents:ignore != 0 || window->enabled == 0];
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_background_color(
+    proton_engine_window_t *window, uint32_t color, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window background is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  const CGFloat alpha = (CGFloat)((color >> 24) & 0xff) / 255.0;
+  const CGFloat red = (CGFloat)((color >> 16) & 0xff) / 255.0;
+  const CGFloat green = (CGFloat)((color >> 8) & 0xff) / 255.0;
+  const CGFloat blue = (CGFloat)(color & 0xff) / 255.0;
+  window->content_view.wantsLayer = YES;
+  window->content_view.layer.backgroundColor =
+      [NSColor colorWithRed:red green:green blue:blue alpha:alpha].CGColor;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_visible_on_all_workspaces(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (visible != 0 && visible != 1) {
+    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "workspace visibility is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  NSWindowCollectionBehavior behavior = window->window.collectionBehavior;
+  if (visible) {
+    behavior |= NSWindowCollectionBehaviorCanJoinAllSpaces;
+  } else {
+    behavior &= ~NSWindowCollectionBehaviorCanJoinAllSpaces;
+  }
+  window->window.collectionBehavior = behavior;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_enabled(proton_engine_window_t *window,
+                                         int32_t enabled, char *error,
+                                         size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (enabled != 0 && enabled != 1) {
+    proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) return PROTON_OK;
+  window->enabled = enabled;
+  [(ProtonWindow *)window->window setProtonEnabled:enabled != 0];
+  [window->window setIgnoresMouseEvents:enabled == 0 || window->ignore_mouse_events != 0];
+  if (!enabled && [window->window isKeyWindow]) [window->window resignKeyWindow];
   return PROTON_OK;
 }
 

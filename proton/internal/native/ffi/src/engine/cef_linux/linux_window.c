@@ -465,6 +465,7 @@ int32_t proton_engine_window_create(
            config.titlebar_close_label);
   window->zoom_percent = 100;
   window->fullscreenable = 1;
+  window->enabled = 1;
   window->bridge_config_json =
       config.bridge_config_json != NULL
           ? proton_engine_strdup(config.bridge_config_json)
@@ -1100,6 +1101,94 @@ int32_t proton_engine_window_set_has_shadow(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_ignore_mouse_events(
+    proton_engine_window_t *window, int32_t ignore, int32_t forward,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if ((ignore != 0 && ignore != 1) || (forward != 0 && forward != 1)) {
+    proton_engine_set_message(error, error_len,
+                              "ignore and forward must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "mouse event handling is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  // Linux window-manager input-shape support varies; keep this API a stable
+  // successful no-op until a compositor-independent implementation exists.
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_background_color(
+    proton_engine_window_t *window, uint32_t color, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window background is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  GdkRGBA native_color = {
+      .red = (double)((color >> 16) & 0xff) / 255.0,
+      .green = (double)((color >> 8) & 0xff) / 255.0,
+      .blue = (double)(color & 0xff) / 255.0,
+      .alpha = (double)((color >> 24) & 0xff) / 255.0,
+  };
+  gtk_widget_override_background_color(window->window, GTK_STATE_FLAG_NORMAL,
+                                       &native_color);
+  gtk_widget_override_background_color(window->root_box, GTK_STATE_FLAG_NORMAL,
+                                       &native_color);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_visible_on_all_workspaces(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (visible != 0 && visible != 1) {
+    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "workspace visibility is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (visible) {
+    gtk_window_stick(GTK_WINDOW(window->window));
+  } else {
+    gtk_window_unstick(GTK_WINDOW(window->window));
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_enabled(proton_engine_window_t *window,
+                                         int32_t enabled, char *error,
+                                         size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (enabled != 0 && enabled != 1) {
+    proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) return PROTON_OK;
+  gtk_widget_set_sensitive(window->window, enabled != 0);
+  window->enabled = enabled;
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {
@@ -1186,7 +1275,10 @@ int32_t proton_engine_window_apply(
     gtk_window_deiconify(GTK_WINDOW(window->window));
     break;
   case PROTON_ENGINE_WINDOW_SET_FULLSCREEN:
-    if (action->value != 0 && window->fullscreenable) {
+  case PROTON_ENGINE_WINDOW_SET_KIOSK:
+    if (action->value != 0 &&
+        (action->kind == PROTON_ENGINE_WINDOW_SET_KIOSK ||
+         window->fullscreenable)) {
       gtk_window_fullscreen(GTK_WINDOW(window->window));
     } else if (action->value == 0) {
       gtk_window_unfullscreen(GTK_WINDOW(window->window));

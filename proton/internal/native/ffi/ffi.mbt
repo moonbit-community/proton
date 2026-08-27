@@ -434,6 +434,12 @@ pub extern "C" fn proton_window_set_fullscreen_ffi(
 ) -> Int = "proton_window_set_fullscreen"
 
 ///|
+pub extern "C" fn proton_window_set_kiosk_ffi(
+  window : WindowHandle,
+  kiosk : Int,
+) -> Int = "proton_window_set_kiosk"
+
+///|
 pub extern "C" fn proton_window_set_position_ffi(
   window : WindowHandle,
   x : Int,
@@ -531,6 +537,32 @@ pub extern "C" fn proton_window_set_has_shadow_ffi(
   window : WindowHandle,
   has_shadow : Int,
 ) -> Int = "proton_window_set_has_shadow"
+
+///|
+pub extern "C" fn proton_window_set_ignore_mouse_events_ffi(
+  window : WindowHandle,
+  ignore : Int,
+  forward : Int,
+) -> Int = "proton_window_set_ignore_mouse_events"
+
+///|
+#borrow(color)
+pub extern "C" fn proton_window_set_background_color_ffi(
+  window : WindowHandle,
+  color : Bytes,
+) -> Int = "proton_window_set_background_color"
+
+///|
+pub extern "C" fn proton_window_set_visible_on_all_workspaces_ffi(
+  window : WindowHandle,
+  visible : Int,
+) -> Int = "proton_window_set_visible_on_all_workspaces"
+
+///|
+pub extern "C" fn proton_window_set_enabled_ffi(
+  window : WindowHandle,
+  enabled : Int,
+) -> Int = "proton_window_set_enabled"
 
 ///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(

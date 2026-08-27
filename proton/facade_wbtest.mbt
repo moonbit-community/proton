@@ -73,6 +73,11 @@ fn test_window_handle(
   focusable_calls? : Array[Bool],
   fullscreenable_calls? : Array[Bool],
   has_shadow_calls? : Array[Bool],
+  ignore_mouse_events_calls? : Array[(Bool, Bool)],
+  background_color_calls? : Array[String],
+  visible_on_all_workspaces_calls? : Array[Bool],
+  enabled_calls? : Array[Bool],
+  kiosk_calls? : Array[Bool],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
@@ -99,6 +104,12 @@ fn test_window_handle(
     maximize_window: fn() {  },
     restore_window: fn() {  },
     set_window_fullscreen: fn(_fullscreen) {  },
+    set_window_kiosk: kiosk => {
+      match kiosk_calls {
+        Some(calls) => calls.push(kiosk)
+        None => ()
+      }
+    },
     set_window_position: (x, y) => {
       match position_calls {
         Some(calls) => calls.push((x, y))
@@ -169,6 +180,30 @@ fn test_window_handle(
     set_window_has_shadow: has_shadow => {
       match has_shadow_calls {
         Some(calls) => calls.push(has_shadow)
+        None => ()
+      }
+    },
+    set_window_ignore_mouse_events: (ignore, forward) => {
+      match ignore_mouse_events_calls {
+        Some(calls) => calls.push((ignore, forward))
+        None => ()
+      }
+    },
+    set_window_background_color: color => {
+      match background_color_calls {
+        Some(calls) => calls.push(color)
+        None => ()
+      }
+    },
+    set_window_visible_on_all_workspaces: visible => {
+      match visible_on_all_workspaces_calls {
+        Some(calls) => calls.push(visible)
+        None => ()
+      }
+    },
+    set_window_enabled: enabled => {
+      match enabled_calls {
+        Some(calls) => calls.push(enabled)
         None => ()
       }
     },
@@ -2314,6 +2349,54 @@ test "window shadow routes live flags through the handle" {
   let window = test_window_handle("main", 17L, has_shadow_calls=calls)
   window.set_has_shadow(false)
   window.set_has_shadow(true)
+  debug_inspect(calls, content="[false, true]")
+}
+
+///|
+test "window mouse event handling routes flags through the handle" {
+  let calls : Array[(Bool, Bool)] = []
+  let window = test_window_handle("main", 17L, ignore_mouse_events_calls=calls)
+  window.set_ignore_mouse_events(true, true)
+  window.set_ignore_mouse_events(false, true)
+  debug_inspect(calls, content="[(true, true), (false, true)]")
+}
+
+///|
+test "window background color routes values through the handle" {
+  let calls : Array[String] = []
+  let window = test_window_handle("main", 17L, background_color_calls=calls)
+  window.set_background_color("#112233")
+  debug_inspect(calls, content="[\"#112233\"]")
+}
+
+///|
+test "window kiosk routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, kiosk_calls=calls)
+  window.set_kiosk(true)
+  window.set_kiosk(false)
+  debug_inspect(calls, content="[true, false]")
+}
+
+///|
+test "window workspace visibility routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle(
+    "main",
+    17L,
+    visible_on_all_workspaces_calls=calls,
+  )
+  window.set_visible_on_all_workspaces(true)
+  window.set_visible_on_all_workspaces(false)
+  debug_inspect(calls, content="[true, false]")
+}
+
+///|
+test "window enabled routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, enabled_calls=calls)
+  window.set_enabled(false)
+  window.set_enabled(true)
   debug_inspect(calls, content="[false, true]")
 }
 
