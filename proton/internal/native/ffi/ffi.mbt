@@ -434,6 +434,12 @@ pub extern "C" fn proton_window_set_fullscreen_ffi(
 ) -> Int = "proton_window_set_fullscreen"
 
 ///|
+pub extern "C" fn proton_window_set_kiosk_ffi(
+  window : WindowHandle,
+  kiosk : Int,
+) -> Int = "proton_window_set_kiosk"
+
+///|
 pub extern "C" fn proton_window_set_position_ffi(
   window : WindowHandle,
   x : Int,

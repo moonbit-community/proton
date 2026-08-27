@@ -581,6 +581,7 @@ pub fn Window::set_fullscreen(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreenable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_has_shadow(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_ignore_mouse_events(Self, Bool, Bool) -> Unit raise NativeError
+pub fn Window::set_kiosk(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximizable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximum_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_minimizable(Self, Bool) -> Unit raise NativeError

@@ -136,6 +136,11 @@ fn RuntimeSession::window_handle(
         window.set_fullscreen(fullscreen)
       })
     },
+    set_window_kiosk: kiosk => {
+      self.control_window(id, native_id, "set kiosk", window => {
+        window.set_kiosk(kiosk)
+      })
+    },
     set_window_position: (x, y) => {
       self.control_window(id, native_id, "set position", window => {
         window.set_position(x, y)
@@ -1153,6 +1158,18 @@ pub fn WindowHandle::set_fullscreen(
   fullscreen : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_fullscreen)(fullscreen)
+}
+
+///|
+/// Enters or leaves kiosk mode.
+///
+/// Kiosk uses the full display and hides system chrome where the platform
+/// supports it. Call with `false` to provide a programmatic exit path.
+pub fn WindowHandle::set_kiosk(
+  self : WindowHandle,
+  kiosk : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_kiosk)(kiosk)
 }
 
 ///|

@@ -152,7 +152,9 @@ int32_t proton_window_minimize(proton_window_handle_t window);
 int32_t proton_window_maximize(proton_window_handle_t window);
 int32_t proton_window_restore(proton_window_handle_t window);
 int32_t proton_window_set_fullscreen(proton_window_handle_t window,
-                                                int32_t fullscreen);
+                                     int32_t fullscreen);
+int32_t proton_window_set_kiosk(proton_window_handle_t window,
+                                int32_t kiosk);
 int32_t proton_window_set_position(proton_window_handle_t window,
                                               int32_t x, int32_t y);
 int32_t proton_window_set_always_on_top(proton_window_handle_t window,

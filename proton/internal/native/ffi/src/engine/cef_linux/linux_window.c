@@ -1233,7 +1233,10 @@ int32_t proton_engine_window_apply(
     gtk_window_deiconify(GTK_WINDOW(window->window));
     break;
   case PROTON_ENGINE_WINDOW_SET_FULLSCREEN:
-    if (action->value != 0 && window->fullscreenable) {
+  case PROTON_ENGINE_WINDOW_SET_KIOSK:
+    if (action->value != 0 &&
+        (action->kind == PROTON_ENGINE_WINDOW_SET_KIOSK ||
+         window->fullscreenable)) {
       gtk_window_fullscreen(GTK_WINDOW(window->window));
     } else if (action->value == 0) {
       gtk_window_unfullscreen(GTK_WINDOW(window->window));

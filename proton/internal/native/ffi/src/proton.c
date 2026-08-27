@@ -906,6 +906,19 @@ int32_t proton_window_set_fullscreen(proton_window_handle_t window,
   return proton_window_apply_action(window, &action);
 }
 
+int32_t proton_window_set_kiosk(proton_window_handle_t window,
+                                int32_t kiosk) {
+  if (kiosk != 0 && kiosk != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "kiosk must be 0 or 1");
+  }
+  const proton_engine_window_action_t action = {
+      .kind = PROTON_ENGINE_WINDOW_SET_KIOSK,
+      .value = kiosk,
+  };
+  return proton_window_apply_action(window, &action);
+}
+
 int32_t proton_window_set_position(proton_window_handle_t window,
                                    int32_t x,
                                    int32_t y) {

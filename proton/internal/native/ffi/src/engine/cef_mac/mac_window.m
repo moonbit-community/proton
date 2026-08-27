@@ -1625,6 +1625,21 @@ int32_t proton_engine_window_apply(
     }
     break;
   }
+  case PROTON_ENGINE_WINDOW_SET_KIOSK: {
+    const BOOL fullscreen =
+        (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0;
+    if (action->value != 0) {
+      [NSApp setPresentationOptions:(NSApplicationPresentationAutoHideDock |
+                                     NSApplicationPresentationAutoHideMenuBar |
+                                     NSApplicationPresentationFullScreen)];
+    } else {
+      [NSApp setPresentationOptions:NSApplicationPresentationDefault];
+    }
+    if (fullscreen != (action->value != 0)) {
+      [window->window toggleFullScreen:nil];
+    }
+    break;
+  }
   case PROTON_ENGINE_WINDOW_SET_POSITION: {
     NSRect frame = window->window.frame;
     const CGFloat cocoa_y =

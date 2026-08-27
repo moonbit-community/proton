@@ -443,6 +443,7 @@ pub struct WindowHandle {
   maximize_window : () -> Unit raise WindowSessionError
   restore_window : () -> Unit raise WindowSessionError
   set_window_fullscreen : (Bool) -> Unit raise WindowSessionError
+  set_window_kiosk : (Bool) -> Unit raise WindowSessionError
   set_window_position : (Int, Int) -> Unit raise WindowSessionError
   set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
   set_window_resizable : (Bool) -> Unit raise WindowSessionError

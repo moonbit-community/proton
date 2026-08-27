@@ -75,6 +75,7 @@ fn test_window_handle(
   has_shadow_calls? : Array[Bool],
   ignore_mouse_events_calls? : Array[(Bool, Bool)],
   background_color_calls? : Array[String],
+  kiosk_calls? : Array[Bool],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
@@ -101,6 +102,12 @@ fn test_window_handle(
     maximize_window: fn() {  },
     restore_window: fn() {  },
     set_window_fullscreen: fn(_fullscreen) {  },
+    set_window_kiosk: kiosk => {
+      match kiosk_calls {
+        Some(calls) => calls.push(kiosk)
+        None => ()
+      }
+    },
     set_window_position: (x, y) => {
       match position_calls {
         Some(calls) => calls.push((x, y))
@@ -2346,6 +2353,15 @@ test "window background color routes values through the handle" {
   let window = test_window_handle("main", 17L, background_color_calls=calls)
   window.set_background_color("#112233")
   debug_inspect(calls, content="[\"#112233\"]")
+}
+
+///|
+test "window kiosk routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, kiosk_calls=calls)
+  window.set_kiosk(true)
+  window.set_kiosk(false)
+  debug_inspect(calls, content="[true, false]")
 }
 
 ///|

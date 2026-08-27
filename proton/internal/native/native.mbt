@@ -1336,6 +1336,20 @@ pub fn Window::set_fullscreen(
 }
 
 ///|
+pub fn Window::set_kiosk(self : Window, kiosk : Bool) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_kiosk_ffi(
+      self.live_handle(),
+      if kiosk {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_position(
   self : Window,
   x : Int,

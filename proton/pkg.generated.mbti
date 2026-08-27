@@ -596,6 +596,7 @@ pub struct WindowHandle {
   maximize_window : () -> Unit raise WindowSessionError
   restore_window : () -> Unit raise WindowSessionError
   set_window_fullscreen : (Bool) -> Unit raise WindowSessionError
+  set_window_kiosk : (Bool) -> Unit raise WindowSessionError
   set_window_position : (Int, Int) -> Unit raise WindowSessionError
   set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
   set_window_resizable : (Bool) -> Unit raise WindowSessionError
@@ -647,6 +648,7 @@ pub fn WindowHandle::set_fullscreen(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_fullscreenable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_has_shadow(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_ignore_mouse_events(Self, Bool, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_kiosk(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximum_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_minimizable(Self, Bool) -> Unit raise WindowSessionError
