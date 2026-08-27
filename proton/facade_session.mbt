@@ -231,6 +231,11 @@ fn RuntimeSession::window_handle(
         window.set_background_color(color)
       })
     },
+    set_window_visible_on_all_workspaces: visible => {
+      self.control_window(id, native_id, "set workspace visibility", window => {
+        window.set_visible_on_all_workspaces(visible)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1413,6 +1418,18 @@ pub fn WindowHandle::set_background_color(
   color : String,
 ) -> Unit raise WindowSessionError {
   (self.set_window_background_color)(color)
+}
+
+///|
+/// Sets whether the live window appears on every workspace.
+///
+/// This maps to Spaces on macOS and sticky windows on Linux. It is a
+/// successful no-op on Windows, matching Electron.
+pub fn WindowHandle::set_visible_on_all_workspaces(
+  self : WindowHandle,
+  visible : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_visible_on_all_workspaces)(visible)
 }
 
 ///|

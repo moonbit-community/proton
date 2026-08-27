@@ -594,6 +594,7 @@ pub fn Window::set_resizable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_skip_taskbar(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_title(Self, String) -> Unit raise NativeError
+pub fn Window::set_visible_on_all_workspaces(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_zoom_percent(Self, Int) -> Unit raise NativeError
 pub fn Window::show(Self) -> Unit raise NativeError
 pub fn Window::state(Self) -> WindowState raise NativeError

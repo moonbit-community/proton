@@ -553,6 +553,12 @@ pub extern "C" fn proton_window_set_background_color_ffi(
 ) -> Int = "proton_window_set_background_color"
 
 ///|
+pub extern "C" fn proton_window_set_visible_on_all_workspaces_ffi(
+  window : WindowHandle,
+  visible : Int,
+) -> Int = "proton_window_set_visible_on_all_workspaces"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

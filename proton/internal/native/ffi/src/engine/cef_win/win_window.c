@@ -1413,6 +1413,27 @@ int32_t proton_engine_window_set_background_color(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_visible_on_all_workspaces(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (visible != 0 && visible != 1) {
+    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "workspace visibility is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  // Windows has no desktop-wide window visibility equivalent. Electron also
+  // treats this operation as a successful no-op on this platform.
+  return PROTON_OK;
+}
+
 static int proton_engine_windows_theme(void) {
   DWORD light = 1;
   DWORD size = sizeof(light);

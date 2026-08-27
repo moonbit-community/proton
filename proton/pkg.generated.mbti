@@ -615,6 +615,7 @@ pub struct WindowHandle {
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
   set_window_ignore_mouse_events : (Bool, Bool) -> Unit raise WindowSessionError
   set_window_background_color : (String) -> Unit raise WindowSessionError
+  set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError
@@ -661,6 +662,7 @@ pub fn WindowHandle::set_resizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_skip_taskbar(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_title(Self, String) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_visible_on_all_workspaces(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::show(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::state(Self) -> WindowState raise WindowSessionError

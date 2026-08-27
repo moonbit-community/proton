@@ -192,6 +192,8 @@ int32_t proton_window_set_ignore_mouse_events(proton_window_handle_t window,
                                               int32_t forward);
 int32_t proton_window_set_background_color(proton_window_handle_t window,
                                            const char *color);
+int32_t proton_window_set_visible_on_all_workspaces(
+    proton_window_handle_t window, int32_t visible);
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                                   int32_t zoom_percent);
 /* Matches Electron's progress value semantics: negative clears the indicator,

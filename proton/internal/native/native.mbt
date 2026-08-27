@@ -1665,6 +1665,23 @@ pub fn Window::set_background_color(
 }
 
 ///|
+pub fn Window::set_visible_on_all_workspaces(
+  self : Window,
+  visible : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_visible_on_all_workspaces_ffi(
+      self.live_handle(),
+      if visible {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

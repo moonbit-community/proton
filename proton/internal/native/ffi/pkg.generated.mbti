@@ -257,6 +257,8 @@ pub fn proton_window_set_skip_taskbar_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int
 
+pub fn proton_window_set_visible_on_all_workspaces_ffi(WindowHandle, Int) -> Int
+
 pub fn proton_window_set_zoom_percent_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_show_ffi(WindowHandle) -> Int
