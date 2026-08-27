@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_screen_monitor"
 
-version = "0.2.2"
+version = "0.2.3"
 
 import {
-  "moonbit-community/proton_ffi@0.2.2",
+  "moonbit-community/proton_ffi@0.2.3",
 }
 
 readme = "README.mbt.md"
@@ -26,8 +26,6 @@ description = "Native screen and display queries plus hot-plug events for MoonBi
 
 preferred_target = "native"
 
-source = "."
+supported_targets = "native"
 
-options(
-  supported_targets: "native",
-)
+source = "."

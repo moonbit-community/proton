@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_keepawake"
 
-version = "0.2.2"
+version = "0.2.3"
 
 import {
-  "moonbit-community/proton_ffi@0.2.2",
+  "moonbit-community/proton_ffi@0.2.3",
 }
 
 readme = "README.mbt.md"
@@ -25,8 +25,6 @@ description = "Native keep-awake guards for MoonBit on Windows, Linux, and macOS
 
 preferred_target = "native"
 
-source = "."
+supported_targets = "native"
 
-options(
-  supported_targets: "native",
-)
+source = "."

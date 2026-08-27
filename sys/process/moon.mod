@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_process"
 
-version = "0.2.2"
+version = "0.2.3"
 
 import {
-  "moonbit-community/proton_ffi@0.2.2",
+  "moonbit-community/proton_ffi@0.2.3",
 }
 
 readme = "README.mbt.md"
@@ -26,8 +26,6 @@ description = "Native child process spawning for MoonBit on Windows, Linux, and 
 
 preferred_target = "native"
 
-source = "."
+supported_targets = "native"
 
-options(
-  supported_targets: "native",
-)
+source = "."

@@ -1,16 +1,16 @@
 name = "moonbit-community/proton"
 
-version = "0.2.2"
+version = "0.2.3"
 
 import {
-  "moonbit-community/proton_ffi@0.2.2",
-  "moonbit-community/proton_config@0.2.2",
-  "moonbit-community/proton_contract@0.2.2",
-  "moonbit-community/proton_updater@0.2.2",
-  "moonbit-community/proton_rsa@0.2.2",
+  "moonbit-community/proton_ffi@0.2.3",
+  "moonbit-community/proton_config@0.2.3",
+  "moonbit-community/proton_contract@0.2.3",
+  "moonbit-community/proton_updater@0.2.3",
+  "moonbit-community/proton_rsa@0.2.3",
   "moonbitlang/async@0.21.0",
   "moonbitlang/x@0.5.1",
-  "moonbitlang/lexer@0.3.13",
+  "moonbitlang/lexer@0.3.14",
   "tonyfettes/xlog@0.4.1",
 }
 
@@ -24,9 +24,11 @@ keywords = [ "proton", "gui", "web", "desktop-app" ]
 
 description = "MoonBit bindings for the Proton native desktop runtime."
 
+preferred_target = "native"
+
+supported_targets = "+native"
+
 options(
   "--moonbit-unstable-prebuild": "build.mjs",
   warn_list: "",
-  preferred_target: "native",
-  supported_targets: "+native",
 )
