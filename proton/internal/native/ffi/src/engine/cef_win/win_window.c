@@ -1399,8 +1399,6 @@ int32_t proton_engine_window_set_background_color(
                               "failed to create window background brush");
     return PROTON_ERR_PLATFORM;
   }
-  if (window->background_brush != NULL) DeleteObject(window->background_brush);
-  window->background_brush = brush;
   SetLastError(ERROR_SUCCESS);
   if (SetClassLongPtrW(window->hwnd, GCLP_HBRBACKGROUND, (LONG_PTR)brush) == 0 &&
       GetLastError() != ERROR_SUCCESS) {
@@ -1410,6 +1408,8 @@ int32_t proton_engine_window_set_background_color(
                               "failed to update window background brush");
     return PROTON_ERR_PLATFORM;
   }
+  if (window->background_brush != NULL) DeleteObject(window->background_brush);
+  window->background_brush = brush;
   InvalidateRect(window->hwnd, NULL, TRUE);
   return PROTON_OK;
 }
