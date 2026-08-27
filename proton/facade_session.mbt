@@ -201,6 +201,11 @@ fn RuntimeSession::window_handle(
         window.set_closable(closable)
       })
     },
+    set_window_focusable: focusable => {
+      self.control_window(id, native_id, "set focusable", window => {
+        window.set_focusable(focusable)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1306,6 +1311,20 @@ pub fn WindowHandle::set_closable(
   closable : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_closable)(closable)
+}
+
+///|
+/// Sets whether this live native window can receive focus.
+///
+/// macOS and Windows update the native window behavior. On macOS, disabling
+/// focus does not remove focus from a window that is already focused, matching
+/// Electron. Linux follows Electron and treats this as a successful no-op.
+/// Headless runtimes raise `WindowSessionError`.
+pub fn WindowHandle::set_focusable(
+  self : WindowHandle,
+  focusable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_focusable)(focusable)
 }
 
 ///|

@@ -470,6 +470,40 @@ static void proton_engine_window_apply_closable_style(
   window->window.styleMask = style;
 }
 
+@interface ProtonWindow : NSWindow {
+  BOOL proton_focusable;
+}
+- (void)setProtonFocusable:(BOOL)focusable;
+@end
+
+@implementation ProtonWindow
+- (instancetype)initWithContentRect:(NSRect)contentRect
+                          styleMask:(NSWindowStyleMask)style
+                            backing:(NSBackingStoreType)backingStoreType
+                              defer:(BOOL)flag {
+  self = [super initWithContentRect:contentRect
+                         styleMask:style
+                           backing:backingStoreType
+                             defer:flag];
+  if (self != nil) {
+    proton_focusable = YES;
+  }
+  return self;
+}
+
+- (BOOL)canBecomeKeyWindow {
+  return proton_focusable;
+}
+
+- (BOOL)canBecomeMainWindow {
+  return proton_focusable;
+}
+
+- (void)setProtonFocusable:(BOOL)focusable {
+  proton_focusable = focusable;
+}
+@end
+
 @interface ProtonWindowDelegate : NSObject <NSWindowDelegate> {
 @public
   proton_engine_window_t *window;
@@ -792,7 +826,7 @@ int32_t proton_engine_window_create(
       style |= NSWindowStyleMaskFullSizeContentView;
     }
     NSString *title = [NSString stringWithUTF8String:config.title];
-    window->window = [[NSWindow alloc] initWithContentRect:rect
+    window->window = [[ProtonWindow alloc] initWithContentRect:rect
                                                  styleMask:style
                                                    backing:NSBackingStoreBuffered
                                                      defer:NO];
@@ -1408,6 +1442,26 @@ int32_t proton_engine_window_set_closable(
   }
   window->closable = closable;
   proton_engine_window_apply_closable_style(window);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_focusable(
+    proton_engine_window_t *window, int32_t focusable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (focusable != 0 && focusable != 1) {
+    proton_engine_set_message(error, error_len, "focusable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window focusability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  [(ProtonWindow *)window->window setProtonFocusable:focusable != 0];
   return PROTON_OK;
 }
 

@@ -1563,6 +1563,24 @@ pub fn Window::set_closable(
 }
 
 ///|
+/// Sets whether the live native window can receive focus.
+pub fn Window::set_focusable(
+  self : Window,
+  focusable : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_focusable_ffi(
+      self.live_handle(),
+      if focusable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

@@ -1,7 +1,8 @@
 # Window Controls
 
 Manual review for Electron-style `WindowHandle::set_minimizable`,
-`WindowHandle::set_maximizable`, and `WindowHandle::set_closable`.
+`WindowHandle::set_maximizable`, `WindowHandle::set_closable`, and
+`WindowHandle::set_focusable`.
 
 ```sh
 moon -C examples run 69_window_controls --target native
@@ -14,6 +15,8 @@ moon -C examples run 69_window_controls --target native
    while ordinary edge resizing remains available.
 4. With close still disabled, use **Programmatic close** as the final check and
    confirm the application can still close its own window.
+5. Disable focus and click the window; on macOS and Windows it should not
+   become the active window. Re-enable focus before the final close check.
 
 macOS and Windows update native controls. Linux follows Electron and treats
 these capability setters as successful no-ops. Headless runtimes report

@@ -515,6 +515,12 @@ pub extern "C" fn proton_window_set_closable_ffi(
 ) -> Int = "proton_window_set_closable"
 
 ///|
+pub extern "C" fn proton_window_set_focusable_ffi(
+  window : WindowHandle,
+  focusable : Int,
+) -> Int = "proton_window_set_focusable"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

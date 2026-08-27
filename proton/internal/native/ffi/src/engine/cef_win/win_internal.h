@@ -82,6 +82,7 @@ struct proton_engine_window {
   int minimizable;
   int maximizable;
   int closable;
+  int focusable;
   int min_width;
   int min_height;
   int max_width;
