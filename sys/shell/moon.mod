@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_shell"
 
-version = "0.2.2"
+version = "0.2.3"
 
 import {
-  "moonbit-community/proton_ffi@0.2.2",
+  "moonbit-community/proton_ffi@0.2.3",
 }
 
 repository = "https://github.com/moonbit-community/proton/tree/main/sys/shell"
@@ -16,8 +16,6 @@ description = "Native shell helpers for MoonBit."
 
 preferred_target = "native"
 
-source = "."
+supported_targets = "+native"
 
-options(
-  supported_targets: "+native",
-)
+source = "."

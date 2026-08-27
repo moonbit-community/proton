@@ -256,6 +256,15 @@ static void proton_engine_window_state_notify(GObject *object,
   }
 }
 
+static void proton_engine_window_active_notify(GObject *object,
+                                               GParamSpec *parameter,
+                                               gpointer user_data) {
+  if (gtk_window_is_active(GTK_WINDOW(object))) {
+    gtk_window_set_urgency_hint(GTK_WINDOW(object), FALSE);
+  }
+  proton_engine_window_state_notify(object, parameter, user_data);
+}
+
 static void proton_engine_window_screen_changed(GtkWidget *widget,
                                                 GdkScreen *previous,
                                                 gpointer user_data) {
@@ -575,7 +584,7 @@ int32_t proton_engine_window_create(
     g_signal_connect(window->window, "configure-event",
                      G_CALLBACK(proton_engine_window_configure), window);
     g_signal_connect(window->window, "notify::is-active",
-                     G_CALLBACK(proton_engine_window_state_notify), window);
+                     G_CALLBACK(proton_engine_window_active_notify), window);
     g_signal_connect(window->window, "notify::scale-factor",
                      G_CALLBACK(proton_engine_window_state_notify), window);
     g_signal_connect(window->window, "screen-changed",
@@ -1122,7 +1131,9 @@ int32_t proton_engine_window_flash_frame(
         "window attention is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
-  gtk_window_set_urgency_hint(GTK_WINDOW(window->window), flash != 0);
+  gboolean urgent =
+      flash != 0 && !gtk_window_is_active(GTK_WINDOW(window->window));
+  gtk_window_set_urgency_hint(GTK_WINDOW(window->window), urgent);
   return PROTON_OK;
 }
 

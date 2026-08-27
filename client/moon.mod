@@ -1,10 +1,10 @@
 name = "moonbit-community/proton_client"
 
-version = "0.2.2"
+version = "0.2.3"
 
 import {
   "moonbitlang/async@0.21.0",
-  "moonbit-community/proton_contract@0.2.2",
+  "moonbit-community/proton_contract@0.2.3",
 }
 
 readme = "README.mbt.md"
@@ -17,7 +17,6 @@ keywords = [ "proton", "client", "ipc" ]
 
 description = "Typed asynchronous frontend client for Proton applications."
 
-options(
-  preferred_target: "js",
-  supported_targets: "js",
-)
+preferred_target = "js"
+
+supported_targets = "js"

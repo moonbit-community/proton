@@ -1,13 +1,13 @@
 name = "moonbit-community/proton/examples"
 
-version = "0.2.2"
+version = "0.2.3"
 
 import {
   "moonbitlang/x@0.5.1",
   "moonbitlang/async@0.21.0",
-  "moonbit-community/proton_ext@0.2.2",
-  "moonbit-community/proton_contract@0.2.2",
-  "moonbit-community/proton@0.2.2",
+  "moonbit-community/proton_ext@0.2.3",
+  "moonbit-community/proton_contract@0.2.3",
+  "moonbit-community/proton@0.2.3",
 }
 
 readme = "README.md"
@@ -34,8 +34,10 @@ rule(
 
 source = ""
 
+preferred_target = "native"
+
+supported_targets = "+native"
+
 options(
   warn_list: "",
-  preferred_target: "native",
-  supported_targets: "+native",
 )
