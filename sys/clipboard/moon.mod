@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_clipboard"
 
-version = "0.2.2"
+version = "0.2.3"
 
 readme = "README.mbt.md"
 
@@ -16,8 +16,6 @@ warnings = ""
 
 preferred_target = "native"
 
-source = "."
+supported_targets = "+native"
 
-options(
-  supported_targets: "+native",
-)
+source = "."

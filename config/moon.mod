@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_config"
 
-version = "0.2.2"
+version = "0.2.3"
 
 import {
   "moonbitlang/x@0.5.1",
@@ -12,8 +12,10 @@ license = "Apache-2.0"
 
 description = "Typed CLI project configuration and JSON decoding for Proton."
 
+preferred_target = "wasm"
+
+supported_targets = "native+wasm"
+
 options(
   warn_list: "",
-  preferred_target: "wasm",
-  supported_targets: "native+wasm",
 )
