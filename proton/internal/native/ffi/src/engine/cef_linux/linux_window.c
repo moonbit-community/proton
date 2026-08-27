@@ -1100,6 +1100,28 @@ int32_t proton_engine_window_set_has_shadow(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_ignore_mouse_events(
+    proton_engine_window_t *window, int32_t ignore, int32_t forward,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if ((ignore != 0 && ignore != 1) || (forward != 0 && forward != 1)) {
+    proton_engine_set_message(error, error_len,
+                              "ignore and forward must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "mouse event handling is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  // Linux window-manager input-shape support varies; keep this API a stable
+  // successful no-op until a compositor-independent implementation exists.
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {

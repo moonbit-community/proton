@@ -84,6 +84,8 @@ struct proton_engine_window {
   int closable;
   int focusable;
   int fullscreenable;
+  int ignore_mouse_events;
+  int ignore_mouse_forward;
   int min_width;
   int min_height;
   int max_width;

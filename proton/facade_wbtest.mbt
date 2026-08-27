@@ -73,6 +73,7 @@ fn test_window_handle(
   focusable_calls? : Array[Bool],
   fullscreenable_calls? : Array[Bool],
   has_shadow_calls? : Array[Bool],
+  ignore_mouse_events_calls? : Array[(Bool, Bool)],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
@@ -169,6 +170,12 @@ fn test_window_handle(
     set_window_has_shadow: has_shadow => {
       match has_shadow_calls {
         Some(calls) => calls.push(has_shadow)
+        None => ()
+      }
+    },
+    set_window_ignore_mouse_events: (ignore, forward) => {
+      match ignore_mouse_events_calls {
+        Some(calls) => calls.push((ignore, forward))
         None => ()
       }
     },
@@ -2315,6 +2322,15 @@ test "window shadow routes live flags through the handle" {
   window.set_has_shadow(false)
   window.set_has_shadow(true)
   debug_inspect(calls, content="[false, true]")
+}
+
+///|
+test "window mouse event handling routes flags through the handle" {
+  let calls : Array[(Bool, Bool)] = []
+  let window = test_window_handle("main", 17L, ignore_mouse_events_calls=calls)
+  window.set_ignore_mouse_events(true, true)
+  window.set_ignore_mouse_events(false, true)
+  debug_inspect(calls, content="[(true, true), (false, true)]")
 }
 
 ///|

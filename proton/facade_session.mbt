@@ -216,6 +216,11 @@ fn RuntimeSession::window_handle(
         window.set_has_shadow(has_shadow)
       })
     },
+    set_window_ignore_mouse_events: (ignore, forward) => {
+      self.control_window(id, native_id, "set ignore mouse events", window => {
+        window.set_ignore_mouse_events(ignore, forward)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1360,6 +1365,21 @@ pub fn WindowHandle::set_has_shadow(
   has_shadow : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_has_shadow)(has_shadow)
+}
+
+///|
+/// Sets whether this live native window ignores mouse events.
+///
+/// When `ignore` is true, mouse input passes through to the window below while
+/// keyboard input remains available to the focused window. `forward` requests
+/// mouse-move forwarding to Chromium where the platform supports it. Forwarding
+/// is disabled automatically when `ignore` is false.
+pub fn WindowHandle::set_ignore_mouse_events(
+  self : WindowHandle,
+  ignore : Bool,
+  forward : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_ignore_mouse_events)(ignore, forward)
 }
 
 ///|

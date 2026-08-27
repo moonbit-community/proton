@@ -1615,6 +1615,29 @@ pub fn Window::set_has_shadow(
 }
 
 ///|
+pub fn Window::set_ignore_mouse_events(
+  self : Window,
+  ignore : Bool,
+  forward : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_ignore_mouse_events_ffi(
+      self.live_handle(),
+      if ignore {
+        1
+      } else {
+        0
+      },
+      if forward {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_zoom_percent(
   self : Window,
   zoom_percent : Int,

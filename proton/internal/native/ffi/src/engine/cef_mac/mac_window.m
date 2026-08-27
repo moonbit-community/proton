@@ -1708,6 +1708,32 @@ int32_t proton_engine_window_set_has_shadow(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_ignore_mouse_events(
+    proton_engine_window_t *window, int32_t ignore, int32_t forward,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (ignore != 0 && ignore != 1) {
+    proton_engine_set_message(error, error_len, "ignore must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (forward != 0 && forward != 1) {
+    proton_engine_set_message(error, error_len, "forward must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "mouse event handling is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->ignore_mouse_events = ignore;
+  window->ignore_mouse_forward = ignore ? forward : 0;
+  [window->window setIgnoresMouseEvents:ignore != 0];
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_get_state(
     proton_engine_window_t *window,
     proton_engine_window_state_t *out_state,

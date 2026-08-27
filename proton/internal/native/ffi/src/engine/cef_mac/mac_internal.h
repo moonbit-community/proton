@@ -168,6 +168,8 @@ struct proton_engine_window {
   int headless;
   int maximizable;
   int fullscreenable;
+  int ignore_mouse_events;
+  int ignore_mouse_forward;
   int headless_hidden;
   int headless_focused;
   int osr_popup_visible;

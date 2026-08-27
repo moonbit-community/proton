@@ -533,6 +533,13 @@ pub extern "C" fn proton_window_set_has_shadow_ffi(
 ) -> Int = "proton_window_set_has_shadow"
 
 ///|
+pub extern "C" fn proton_window_set_ignore_mouse_events_ffi(
+  window : WindowHandle,
+  ignore : Int,
+  forward : Int,
+) -> Int = "proton_window_set_ignore_mouse_events"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

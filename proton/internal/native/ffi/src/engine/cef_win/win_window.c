@@ -495,6 +495,8 @@ int32_t proton_engine_window_create(
   window->closable = 1;
   window->focusable = 1;
   window->fullscreenable = 1;
+  window->ignore_mouse_events = 0;
+  window->ignore_mouse_forward = 0;
   window->min_width = config.size_hint == 2 ? config.width : 0;
   window->min_height = config.size_hint == 2 ? config.height : 0;
   window->max_width = config.size_hint == 3 ? config.width : 0;
@@ -1337,6 +1339,40 @@ int32_t proton_engine_window_set_has_shadow(
                               "window shadow is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_ignore_mouse_events(
+    proton_engine_window_t *window, int32_t ignore, int32_t forward,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if ((ignore != 0 && ignore != 1) || (forward != 0 && forward != 1)) {
+    proton_engine_set_message(error, error_len,
+                              "ignore and forward must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "mouse event handling is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  LONG_PTR style = GetWindowLongPtrW(window->hwnd, GWL_EXSTYLE);
+  if (ignore) style |= WS_EX_TRANSPARENT;
+  else style &= ~WS_EX_TRANSPARENT;
+  if (SetWindowLongPtrW(window->hwnd, GWL_EXSTYLE, style) == 0 &&
+      GetLastError() != 0) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update mouse event handling");
+    return PROTON_ERR_PLATFORM;
+  }
+  window->ignore_mouse_events = ignore;
+  window->ignore_mouse_forward = ignore ? forward : 0;
+  SetWindowPos(window->hwnd, NULL, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                   SWP_FRAMECHANGED);
   return PROTON_OK;
 }
 

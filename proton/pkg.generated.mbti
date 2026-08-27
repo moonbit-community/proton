@@ -612,6 +612,7 @@ pub struct WindowHandle {
   set_window_focusable : (Bool) -> Unit raise WindowSessionError
   set_window_fullscreenable : (Bool) -> Unit raise WindowSessionError
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
+  set_window_ignore_mouse_events : (Bool, Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError
@@ -643,6 +644,7 @@ pub fn WindowHandle::set_focusable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_fullscreen(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_fullscreenable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_has_shadow(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_ignore_mouse_events(Self, Bool, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximum_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_minimizable(Self, Bool) -> Unit raise WindowSessionError
