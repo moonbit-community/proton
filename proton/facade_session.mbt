@@ -206,6 +206,11 @@ fn RuntimeSession::window_handle(
         window.set_focusable(focusable)
       })
     },
+    set_window_fullscreenable: fullscreenable => {
+      self.control_window(id, native_id, "set fullscreenable", window => {
+        window.set_fullscreenable(fullscreenable)
+      })
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1325,6 +1330,18 @@ pub fn WindowHandle::set_focusable(
   focusable : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_focusable)(focusable)
+}
+
+///|
+/// Sets whether this live native window can enter fullscreen mode.
+///
+/// When disabled, attempts to enter fullscreen are ignored. An already
+/// fullscreen window can still exit fullscreen.
+pub fn WindowHandle::set_fullscreenable(
+  self : WindowHandle,
+  fullscreenable : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_fullscreenable)(fullscreenable)
 }
 
 ///|

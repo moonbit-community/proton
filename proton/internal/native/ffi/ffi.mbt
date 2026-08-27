@@ -521,6 +521,12 @@ pub extern "C" fn proton_window_set_focusable_ffi(
 ) -> Int = "proton_window_set_focusable"
 
 ///|
+pub extern "C" fn proton_window_set_fullscreenable_ffi(
+  window : WindowHandle,
+  fullscreenable : Int,
+) -> Int = "proton_window_set_fullscreenable"
+
+///|
 pub extern "C" fn proton_window_set_zoom_percent_ffi(
   window : WindowHandle,
   zoom_percent : Int,

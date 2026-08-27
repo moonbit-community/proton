@@ -223,6 +223,8 @@ pub fn proton_window_set_focusable_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_fullscreen_ffi(WindowHandle, Int) -> Int
 
+pub fn proton_window_set_fullscreenable_ffi(WindowHandle, Int) -> Int
+
 pub fn proton_window_set_maximizable_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_maximum_size_ffi(WindowHandle, Int, Int) -> Int

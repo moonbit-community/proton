@@ -105,6 +105,7 @@ struct proton_engine_window {
   int size_hint;
   int titlebar_overlay;
   int always_on_top;
+  int fullscreenable;
   int zoom_percent;
   int close_interception_enabled;
   int close_interception_bypass;

@@ -3,6 +3,7 @@
 Manual review for Electron-style `WindowHandle::set_minimizable`,
 `WindowHandle::set_maximizable`, `WindowHandle::set_closable`, and
 `WindowHandle::set_focusable`.
+`WindowHandle::set_fullscreenable`.
 
 ```sh
 moon -C examples run 69_window_controls --target native
@@ -17,6 +18,8 @@ moon -C examples run 69_window_controls --target native
    confirm the application can still close its own window.
 5. Disable focus and click the window; on macOS and Windows it should not
    become the active window. Re-enable focus before the final close check.
+6. Disable fullscreenable and confirm entering fullscreen is blocked; exiting
+   an already-fullscreen window remains possible.
 
 macOS and Windows update native controls. Linux follows Electron and treats
 these capability setters as successful no-ops. Headless runtimes report

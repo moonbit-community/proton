@@ -494,6 +494,7 @@ int32_t proton_engine_window_create(
   window->maximizable = 1;
   window->closable = 1;
   window->focusable = 1;
+  window->fullscreenable = 1;
   window->min_width = config.size_hint == 2 ? config.width : 0;
   window->min_height = config.size_hint == 2 ? config.height : 0;
   window->max_width = config.size_hint == 3 ? config.width : 0;
@@ -1204,6 +1205,7 @@ int32_t proton_engine_window_apply(
     ShowWindow(window->hwnd, SW_RESTORE);
     break;
   case PROTON_ENGINE_WINDOW_SET_FULLSCREEN:
+    if (!window->fullscreenable && action->value != 0) break;
     if (action->value != 0 && !window->fullscreen) {
       window->windowed_style =
           (DWORD)GetWindowLongW(window->hwnd, GWL_STYLE);
@@ -1283,6 +1285,27 @@ int32_t proton_engine_window_apply(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_engine_signal_wait_source(window->runtime, PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_fullscreenable(
+    proton_engine_window_t *window, int32_t fullscreenable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (fullscreenable != 0 && fullscreenable != 1) {
+    proton_engine_set_message(error, error_len,
+                              "fullscreenable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window fullscreenability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->fullscreenable = fullscreenable;
   return PROTON_OK;
 }
 

@@ -245,6 +245,9 @@ int32_t proton_engine_window_set_closable(
 int32_t proton_engine_window_set_focusable(
     proton_engine_window_t *window, int32_t focusable, char *error,
     size_t error_len);
+int32_t proton_engine_window_set_fullscreenable(
+    proton_engine_window_t *window, int32_t fullscreenable, char *error,
+    size_t error_len);
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len);

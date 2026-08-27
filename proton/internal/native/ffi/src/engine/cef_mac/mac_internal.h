@@ -167,6 +167,7 @@ struct proton_engine_window {
   NSInteger attention_request_id;
   int headless;
   int maximizable;
+  int fullscreenable;
   int headless_hidden;
   int headless_focused;
   int osr_popup_visible;

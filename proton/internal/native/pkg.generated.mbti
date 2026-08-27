@@ -577,6 +577,7 @@ pub fn Window::set_close_interception(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_content_protection(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_focusable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreen(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_fullscreenable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximizable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximum_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_minimizable(Self, Bool) -> Unit raise NativeError

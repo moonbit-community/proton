@@ -71,6 +71,7 @@ fn test_window_handle(
   maximizable_calls? : Array[Bool],
   closable_calls? : Array[Bool],
   focusable_calls? : Array[Bool],
+  fullscreenable_calls? : Array[Bool],
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
@@ -155,6 +156,12 @@ fn test_window_handle(
     set_window_focusable: focusable => {
       match focusable_calls {
         Some(calls) => calls.push(focusable)
+        None => ()
+      }
+    },
+    set_window_fullscreenable: fullscreenable => {
+      match fullscreenable_calls {
+        Some(calls) => calls.push(fullscreenable)
         None => ()
       }
     },
@@ -2282,6 +2289,15 @@ test "window focusable routes live flags through the handle" {
   let window = test_window_handle("main", 17L, focusable_calls=calls)
   window.set_focusable(false)
   window.set_focusable(true)
+  debug_inspect(calls, content="[false, true]")
+}
+
+///|
+test "window fullscreenable routes live flags through the handle" {
+  let calls : Array[Bool] = []
+  let window = test_window_handle("main", 17L, fullscreenable_calls=calls)
+  window.set_fullscreenable(false)
+  window.set_fullscreenable(true)
   debug_inspect(calls, content="[false, true]")
 }
 

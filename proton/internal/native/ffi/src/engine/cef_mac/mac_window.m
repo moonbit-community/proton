@@ -470,6 +470,18 @@ static void proton_engine_window_apply_closable_style(
   window->window.styleMask = style;
 }
 
+static void proton_engine_window_update_zoom_button(
+    proton_engine_window_t *window) {
+  if (window == NULL || window->window == nil) return;
+  NSButton *button = [window->window standardWindowButton:NSWindowZoomButton];
+  if (button != nil) {
+    const BOOL resizable =
+        (window->window.styleMask & NSWindowStyleMaskResizable) != 0;
+    button.enabled = resizable &&
+                     (window->maximizable || window->fullscreenable);
+  }
+}
+
 @interface ProtonWindow : NSWindow {
   BOOL proton_focusable;
 }
@@ -788,6 +800,7 @@ int32_t proton_engine_window_create(
   window->zoom_percent = 100;
   window->maximizable = 1;
   window->closable = 1;
+  window->fullscreenable = 1;
   window->headless = runtime->headless;
   window->bridge_config_json =
       config.bridge_config_json != NULL
@@ -1416,11 +1429,8 @@ int32_t proton_engine_window_set_maximizable(
                               "window maximizability is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
-  NSButton *zoom_button = [window->window standardWindowButton:NSWindowZoomButton];
-  if (zoom_button != nil) {
-    zoom_button.enabled = maximizable != 0;
-  }
   window->maximizable = maximizable;
+  proton_engine_window_update_zoom_button(window);
   return PROTON_OK;
 }
 
@@ -1607,6 +1617,7 @@ int32_t proton_engine_window_apply(
     }
     break;
   case PROTON_ENGINE_WINDOW_SET_FULLSCREEN: {
+    if (!window->fullscreenable && action->value != 0) break;
     const BOOL fullscreen =
         (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0;
     if (fullscreen != (action->value != 0)) {
@@ -1634,10 +1645,7 @@ int32_t proton_engine_window_apply(
       style &= ~NSWindowStyleMaskResizable;
     }
     window->window.styleMask = style;
-    NSButton *zoom_button = [window->window standardWindowButton:NSWindowZoomButton];
-    if (zoom_button != nil) {
-      zoom_button.enabled = window->maximizable;
-    }
+    proton_engine_window_update_zoom_button(window);
     break;
   }
   default:
@@ -1646,6 +1654,37 @@ int32_t proton_engine_window_apply(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_fullscreenable(
+    proton_engine_window_t *window, int32_t fullscreenable, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (fullscreenable != 0 && fullscreenable != 1) {
+    proton_engine_set_message(error, error_len,
+                              "fullscreenable must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window fullscreenability is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->fullscreenable = fullscreenable;
+  NSWindowCollectionBehavior behavior = window->window.collectionBehavior;
+  if (fullscreenable) {
+    behavior |= NSWindowCollectionBehaviorFullScreenPrimary;
+    behavior &= ~NSWindowCollectionBehaviorFullScreenAuxiliary;
+  } else {
+    behavior &= ~NSWindowCollectionBehaviorFullScreenPrimary;
+    behavior |= NSWindowCollectionBehaviorFullScreenAuxiliary;
+  }
+  window->window.collectionBehavior = behavior;
+  proton_engine_window_update_zoom_button(window);
   return PROTON_OK;
 }
 
