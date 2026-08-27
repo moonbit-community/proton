@@ -607,6 +607,7 @@ pub struct WindowHandle {
   set_window_skip_taskbar : (Bool) -> Unit raise WindowSessionError
   set_window_content_protection : (Bool) -> Unit raise WindowSessionError
   set_window_minimizable : (Bool) -> Unit raise WindowSessionError
+  set_window_maximizable : (Bool) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError
@@ -634,6 +635,7 @@ pub fn WindowHandle::set_always_on_top(Self, Bool) -> Unit raise WindowSessionEr
 pub fn WindowHandle::set_aspect_ratio(Self, Double) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_content_protection(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_fullscreen(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_maximizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximum_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_minimizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_minimum_size(Self, Int, Int) -> Unit raise WindowSessionError
