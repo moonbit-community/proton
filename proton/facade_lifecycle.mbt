@@ -70,13 +70,14 @@ fn AppLifecycle::finish(self : AppLifecycle) -> Unit {
 }
 
 ///|
-fn app_cleanup(
+async fn app_cleanup(
   lifecycle : AppLifecycle,
   runtime : @native.Runtime,
   windows : Array[RunningWindow],
   command_host : CommandHostRuntime?,
+  wakeup : RuntimeWakeup,
   lifecycle_failures? : Array[AppCleanupError] = [],
-) -> Array[AppCleanupError] {
+) -> Array[AppCleanupError] noraise {
   lifecycle.begin_draining()
   let failures = lifecycle_failures.copy()
   for error in close_command_host(command_host) {
@@ -92,11 +93,45 @@ fn app_cleanup(
     }
   }
   let failure_count = failures.length()
-  runtime.destroy() catch {
+  let mut destroy_started = false
+  runtime.begin_destroy() catch {
     error =>
       failures.push(
         RuntimeDestroy(status=error.status(), detail=error.message()),
       )
+  }
+  if failures.length() == failure_count {
+    destroy_started = true
+  }
+  if destroy_started {
+    let mut ready = false
+    while !ready {
+      let revision = wakeup.revision()
+      ready = runtime.destroy_ready() catch {
+        error => {
+          failures.push(
+            RuntimeDestroy(status=error.status(), detail=error.message()),
+          )
+          true
+        }
+      }
+      if !ready {
+        wakeup.wait_after(revision) catch {
+          error => {
+            failures.push(RuntimeDestroy(status=-1, detail=error.message()))
+            ready = true
+          }
+        }
+      }
+    }
+  }
+  if destroy_started && failures.length() == failure_count {
+    runtime.finish_destroy() catch {
+      error =>
+        failures.push(
+          RuntimeDestroy(status=error.status(), detail=error.message()),
+        )
+    }
   }
   if failures.length() == failure_count {
     lifecycle.finish()

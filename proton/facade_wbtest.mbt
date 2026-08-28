@@ -313,6 +313,23 @@ test "last-window policy defaults to quit and can keep the app running" {
 }
 
 ///|
+test "application close commits only after every window allows it" {
+  assert_true(should_commit_application_close([]))
+  assert_true(
+    should_commit_application_close([
+      WindowCloseDecision::Allow,
+      WindowCloseDecision::Allow,
+    ]),
+  )
+  assert_false(
+    should_commit_application_close([
+      WindowCloseDecision::Allow,
+      WindowCloseDecision::Deny,
+    ]),
+  )
+}
+
+///|
 async test "application context forwards orderly quit requests" {
   let requested = Ref(false)
   @async.with_task_group(group => {

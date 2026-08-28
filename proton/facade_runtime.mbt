@@ -182,6 +182,8 @@ async fn run_manifest(
   ) catch {
     error => raise native_run_error("create runtime", error)
   }
+  let wakeup = RuntimeWakeup()
+  let dialog_completions = DialogCompletionStore()
   match app_instance {
     Some(instance) =>
       instance.attach_runtime(runtime) catch {
@@ -189,7 +191,7 @@ async fn run_manifest(
           let attach_error = native_run_error("attach app instance", error)
           let failure = cleanup_run_error(
             Some(attach_error),
-            app_cleanup(lifecycle, runtime, [], None),
+            app_cleanup(lifecycle, runtime, [], None, wakeup),
           )
           match failure {
             Some(cleanup_error) => raise cleanup_error
@@ -202,8 +204,6 @@ async fn run_manifest(
   let mut command_host : CommandHostRuntime? = None
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []
-  let wakeup = RuntimeWakeup()
-  let dialog_completions = DialogCompletionStore()
   try {
     if !headless {
       let platform = @native.runtime_info().platform catch {
@@ -360,7 +360,7 @@ async fn run_manifest(
           session.wait_for_bridge_startup(bridge_startup_timeout_ms) catch {
             error => raise normalize_async_run_error(error)
           }
-          if !session.quit_requested {
+          if !session.is_quitting() {
             @xlog.info(category="proton.bridge") <?
               {
                 "message": "renderer bridge ready",
@@ -368,7 +368,7 @@ async fn run_manifest(
               }
           }
         }
-        if !session.quit_requested {
+        if !session.is_quitting() {
           // A source may enqueue synchronously from start(). Initial windows must
           // be able to receive those events before native production begins.
           session.start_extension_event_sources()
@@ -414,6 +414,7 @@ async fn run_manifest(
           runtime,
           windows,
           command_host,
+          wakeup,
           lifecycle_failures~,
         ),
       )
@@ -431,6 +432,7 @@ async fn run_manifest(
         runtime,
         windows,
         command_host,
+        wakeup,
         lifecycle_failures~,
       ),
     ) {

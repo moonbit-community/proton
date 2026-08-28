@@ -306,3 +306,14 @@ bool proton_event_publish(proton_event_t *event) {
   proton_event_destroy(event);
   return false;
 }
+
+bool proton_event_publish_window_close_requested(int64_t window,
+                                                 uint64_t request_id) {
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_WINDOW_CLOSE_REQUESTED, window);
+  if (event == NULL) {
+    return false;
+  }
+  event->request_id = (int64_t)request_id;
+  return proton_event_publish(event);
+}

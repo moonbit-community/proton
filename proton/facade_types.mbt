@@ -199,6 +199,22 @@ priv struct PendingResourceRequest {
 }
 
 ///|
+priv enum SessionShutdownState {
+  SessionRunning = 0
+  SessionQuitRequested = 1
+  SessionCollectingCloseDecisions = 2
+  SessionClosingWindows = 3
+} derive(Eq)
+
+///|
+priv struct PendingQuitDecision {
+  window : Int64
+  task : @async.Task[WindowCloseDecision]
+  mut decision : WindowCloseDecision?
+  mut native_request : Int64?
+}
+
+///|
 priv enum SessionWindowState {
   WindowStarting = 0
   WindowOpen = 1
@@ -324,8 +340,8 @@ priv struct RuntimeSession {
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
-  mut quit_requested : Bool
-  mut quit_close_started : Bool
+  mut shutdown_state : SessionShutdownState
+  pending_quit_decisions : Array[PendingQuitDecision]
 }
 
 ///|
