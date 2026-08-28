@@ -910,11 +910,7 @@ async fn run_app(
     }
   }
   @output.info("Starting Proton app: moon " + moon_args.join(" "))
-  let moon_env = @build.native_moon_process_env()
-  for key, value in env {
-    moon_env[key] = value
-  }
-  let code = @process.run("moon", moon_args, cwd=root, extra_env=moon_env) catch {
+  let code = @process.run("moon", moon_args, cwd=root, extra_env=env) catch {
     err => raise Start(role="MoonBit app", detail=@debug.render(Repr(err)))
   }
   code

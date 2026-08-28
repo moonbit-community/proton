@@ -109,13 +109,6 @@ async fn app_process_env(
   result[app_child_scenario_env] = scenario
   result[path_key] = prepend_env_path(bin_dir, current_path)
   if @path.sep != '\\' {
-    // Selecting a host compiler makes Moon compile its runtime sources instead
-    // of linking libmoonbitrun.o. This keeps Moon's allocator symbols from
-    // interposing on CEF and libc allocations in the same Unix process.
-    result["MOON_CC"] = match @env.get_env_var("MOON_CC") {
-      Some(value) if value.trim() != "" => value
-      _ => "clang"
-    }
     result["LD_LIBRARY_PATH"] = prepend_env_path(
       lib_dir,
       prepend_env_path(

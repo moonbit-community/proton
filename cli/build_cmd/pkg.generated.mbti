@@ -12,8 +12,6 @@ pub async fn build_executable(String, String, String, Bool) -> String
 
 pub fn command() -> @argparse.Command
 
-pub fn native_moon_process_env() -> Map[String, String]
-
 pub async fn run(String, @argparse.Matches) -> Unit
 
 // Errors
