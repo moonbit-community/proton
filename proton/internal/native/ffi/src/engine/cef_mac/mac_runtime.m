@@ -86,13 +86,13 @@ void proton_engine_window_unlock(void) {
   pthread_mutex_unlock(&g_proton_engine_window_lock);
 }
 static uint64_t g_next_view_native_id = 1;
-static atomic_bool g_external_message_pump_enabled = ATOMIC_VAR_INIT(false);
+static atomic_bool g_external_message_pump_enabled = false;
 // Main-thread only, so a plain bool: set by proton_engine_host_loop_begin and
 // cleared by proton_engine_host_loop_end, both of which refuse other threads.
 static bool g_host_loop_active = false;
-static atomic_llong g_scheduled_pump_deadline_ms = ATOMIC_VAR_INIT(-1);
-static atomic_bool g_message_pump_active = ATOMIC_VAR_INIT(false);
-static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
+static atomic_llong g_scheduled_pump_deadline_ms = -1;
+static atomic_bool g_message_pump_active = false;
+static atomic_uint g_wait_source_ready_mask = PROTON_WAIT_NONE;
 static CFRunLoopRef g_wait_run_loop = NULL;
 static CFRunLoopSourceRef g_wait_source = NULL;
 
