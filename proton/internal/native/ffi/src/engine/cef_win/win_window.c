@@ -338,6 +338,14 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     break;
   case WM_DESTROY:
     if (window != NULL) {
+      if (window->window_icon != NULL) {
+        DestroyIcon(window->window_icon);
+        window->window_icon = NULL;
+      }
+      if (window->modal_parent && window->parent_hwnd != NULL &&
+          IsWindow(window->parent_hwnd)) {
+        EnableWindow(window->parent_hwnd, TRUE);
+      }
       window->closed = 1;
       window->hwnd = NULL;
     }
@@ -1132,6 +1140,8 @@ int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "failed to load window icon");
     return PROTON_ERR_PLATFORM;
   }
+  if (window->window_icon != NULL) DestroyIcon(window->window_icon);
+  window->window_icon = icon;
   SendMessageW(window->hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
   SendMessageW(window->hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
   return PROTON_OK;

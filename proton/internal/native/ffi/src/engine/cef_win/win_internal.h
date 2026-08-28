@@ -89,6 +89,7 @@ struct proton_engine_window {
   int enabled;
   HWND parent_hwnd;
   int modal_parent;
+  HICON window_icon;
   HBRUSH background_brush;
   int min_width;
   int min_height;
