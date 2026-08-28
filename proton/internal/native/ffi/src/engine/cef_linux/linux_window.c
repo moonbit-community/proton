@@ -825,6 +825,32 @@ int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_parent(proton_engine_window_t *window,
+                                        proton_engine_window_t *parent,
+                                        int32_t modal, char *error,
+                                        size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (modal != 0 && modal != 1) {
+    proton_engine_set_message(error, error_len, "modal must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window parenting is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  GtkWindow *parent_window = parent != NULL && parent->window != NULL
+                                 ? GTK_WINDOW(parent->window)
+                                 : NULL;
+  gtk_window_set_transient_for(GTK_WINDOW(window->window), parent_window);
+  gtk_window_set_modal(GTK_WINDOW(window->window),
+                       parent_window != NULL && modal != 0);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t width,
                                       int32_t height,

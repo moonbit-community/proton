@@ -1304,6 +1304,30 @@ pub fn Window::set_icon(self : Window, path : String) -> Unit raise NativeError 
 }
 
 ///|
+/// Establishes or clears this window's native parent relationship.
+pub fn Window::set_parent(
+  self : Window,
+  parent : WindowRef?,
+  modal : Bool,
+) -> Unit raise NativeError {
+  let parent_handle = match parent {
+    Some(parent) => parent.handle
+    None => @native_ffi.window_null()
+  }
+  check_status(
+    @native_ffi.proton_window_set_parent_ffi(
+      self.live_handle(),
+      parent_handle,
+      if modal {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_size(
   self : Window,
   width : Int,

@@ -87,6 +87,8 @@ struct proton_engine_window {
   int ignore_mouse_events;
   int ignore_mouse_forward;
   int enabled;
+  HWND parent_hwnd;
+  int modal_parent;
   HBRUSH background_brush;
   int min_width;
   int min_height;

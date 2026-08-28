@@ -102,6 +102,7 @@ fn test_window_handle(
     focus_window: fn() {  },
     set_window_title: fn(_title) {  },
     set_window_icon: fn(_path) {  },
+    set_window_parent: fn(_parent, _modal) {  },
     set_window_size: fn(_width, _height) {  },
     set_window_button_visibility: fn(_visible) {  },
     set_window_content_size: (width, height) => {

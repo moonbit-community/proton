@@ -439,6 +439,7 @@ pub struct WindowHandle {
   focus_window : () -> Unit raise WindowSessionError
   set_window_title : (String) -> Unit raise WindowSessionError
   set_window_icon : (String) -> Unit raise WindowSessionError
+  set_window_parent : (WindowHandle?, Bool) -> Unit raise WindowSessionError
   set_window_size : (Int, Int) -> Unit raise WindowSessionError
   set_window_content_size : (Int, Int) -> Unit raise WindowSessionError
   read_window_content_size : () -> (Int, Int) raise WindowSessionError

@@ -1137,6 +1137,43 @@ int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_parent(proton_engine_window_t *window,
+                                        proton_engine_window_t *parent,
+                                        int32_t modal, char *error,
+                                        size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (modal != 0 && modal != 1) {
+    proton_engine_set_message(error, error_len, "modal must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window parenting is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (window->modal_parent && window->parent_hwnd != NULL &&
+      IsWindow(window->parent_hwnd)) {
+    EnableWindow(window->parent_hwnd, TRUE);
+  }
+  HWND parent_hwnd = parent != NULL ? parent->hwnd : NULL;
+  SetLastError(0);
+  if (SetWindowLongPtrW(window->hwnd, GWLP_HWNDPARENT,
+                        (LONG_PTR)parent_hwnd) == 0 &&
+      GetLastError() != 0) {
+    proton_engine_set_message(error, error_len, "failed to set window owner");
+    window->parent_hwnd = NULL;
+    window->modal_parent = 0;
+    return PROTON_ERR_PLATFORM;
+  }
+  window->parent_hwnd = parent_hwnd;
+  window->modal_parent = modal != 0 && parent_hwnd != NULL;
+  if (window->modal_parent) EnableWindow(parent_hwnd, FALSE);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t width,
                                       int32_t height,

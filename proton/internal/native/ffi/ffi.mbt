@@ -419,6 +419,13 @@ pub extern "C" fn proton_window_set_icon_ffi(
 ) -> Int = "proton_window_set_icon"
 
 ///|
+pub extern "C" fn proton_window_set_parent_ffi(
+  window : WindowHandle,
+  parent : WindowHandle,
+  modal : Int,
+) -> Int = "proton_window_set_parent"
+
+///|
 pub extern "C" fn proton_window_set_size_ffi(
   window : WindowHandle,
   width : Int,

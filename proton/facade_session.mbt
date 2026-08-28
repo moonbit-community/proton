@@ -122,6 +122,10 @@ fn RuntimeSession::window_handle(
         window.set_icon(path)
       })
     },
+    set_window_parent: (parent, modal) => {
+      let parent_native_id = parent.map(parent => parent.native_id)
+      self.set_window_parent(id, native_id, parent_native_id, modal)
+    },
     set_window_size: (width, height) => {
       self.control_window(id, native_id, "set size", window => {
         window.set_size(width, height)
@@ -755,6 +759,39 @@ fn RuntimeSession::read_window_content_size(
 }
 
 ///|
+fn RuntimeSession::set_window_parent(
+  self : RuntimeSession,
+  id : String,
+  native_id : Int64,
+  parent_native_id : Int64?,
+  modal : Bool,
+) -> Unit raise WindowSessionError {
+  let running = match self.find_active_window(id) {
+    Some(running) if running.window.id() == native_id => running
+    _ => raise StaleWindow(id~)
+  }
+  let parent = match parent_native_id {
+    Some(parent_id) => {
+      let mut found : RunningWindow? = None
+      for candidate in self.windows {
+        if candidate.is_active() && candidate.window.id() == parent_id {
+          found = Some(candidate)
+          break
+        }
+      }
+      match found {
+        Some(parent) => Some(parent.window.as_ref())
+        None => raise StaleWindow(id="parent")
+      }
+    }
+    None => None
+  }
+  running.window.set_parent(parent, modal) catch {
+    error => raise window_operation_failed("set parent of window " + id, error)
+  }
+}
+
+///|
 fn RuntimeSession::find_definition(
   self : RuntimeSession,
   id : String,
@@ -1182,6 +1219,16 @@ pub fn WindowHandle::set_icon(
   path : String,
 ) -> Unit raise WindowSessionError {
   (self.set_window_icon)(path)
+}
+
+///|
+/// Establishes or clears this window's native parent relationship.
+pub fn WindowHandle::set_parent(
+  self : WindowHandle,
+  parent : WindowHandle?,
+  modal? : Bool = false,
+) -> Unit raise WindowSessionError {
+  (self.set_window_parent)(parent, modal)
 }
 
 ///|

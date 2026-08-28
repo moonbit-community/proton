@@ -1226,6 +1226,41 @@ int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_parent(proton_engine_window_t *window,
+                                        proton_engine_window_t *parent,
+                                        int32_t modal, char *error,
+                                        size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (modal != 0 && modal != 1) {
+    proton_engine_set_message(error, error_len, "modal must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window parenting is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  NSWindow *native = window->window;
+  NSWindow *sheet_parent = native.sheetParent;
+  if (sheet_parent != nil) [sheet_parent endSheet:native];
+  NSWindow *child_parent = native.parentWindow;
+  if (child_parent != nil) [child_parent removeChildWindow:native];
+  if (parent == NULL) return PROTON_OK;
+  if (parent->window == nil) {
+    proton_engine_set_message(error, error_len, "parent window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (modal) {
+    [parent->window beginSheet:native completionHandler:nil];
+  } else {
+    [parent->window addChildWindow:native ordered:NSWindowAbove];
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t width,
                                       int32_t height,
