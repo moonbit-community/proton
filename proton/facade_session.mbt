@@ -386,6 +386,18 @@ fn RuntimeSession::view_handle(
         view => view.browser_command(command, download_id?),
       )
     },
+    read_view_navigation_state: () => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      running.view.navigation_state() catch {
+        error =>
+          raise window_operation_failed(
+            "read navigation state of view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
     read_view_state: () => {
       let running = self.resolve_view(
         window_id, window_native_id, id, native_id,
@@ -591,6 +603,19 @@ fn RuntimeSession::browser_handle(
       self.control_window(id, native_id, command + " in", window => {
         window.browser_command(command, download_id?)
       })
+    },
+    read_browser_navigation_state: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      running.window.navigation_state() catch {
+        error =>
+          raise window_operation_failed(
+            "read browser navigation state in window " + id,
+            error,
+          )
+      }
     },
   }
 }
@@ -1286,6 +1311,30 @@ pub fn WindowHandle::content_size(
 }
 
 ///|
+/// Returns `(x, y, width, height)` in logical screen pixels, matching
+/// Electron's `getBounds` coordinate order.
+pub fn WindowHandle::bounds(
+  self : WindowHandle,
+) -> (Int, Int, Int, Int) raise WindowSessionError {
+  let state = (self.read_window_state)()
+  (state.x, state.y, state.width, state.height)
+}
+
+///|
+/// Sets `(x, y, width, height)` in logical screen pixels, matching Electron's
+/// `setBounds` coordinate order.
+pub fn WindowHandle::set_bounds(
+  self : WindowHandle,
+  x~ : Int,
+  y~ : Int,
+  width~ : Int,
+  height~ : Int,
+) -> Unit raise WindowSessionError {
+  self.set_position(x, y)
+  self.set_size(width, height)
+}
+
+///|
 pub fn WindowHandle::minimize(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
@@ -1784,6 +1833,22 @@ pub fn ViewHandle::forward(self : ViewHandle) -> Unit raise WindowSessionError {
 }
 
 ///|
+/// Returns whether the view can navigate to a previous history entry.
+pub fn ViewHandle::can_go_back(
+  self : ViewHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_view_navigation_state)().0
+}
+
+///|
+/// Returns whether the view can navigate to a later history entry.
+pub fn ViewHandle::can_go_forward(
+  self : ViewHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_view_navigation_state)().1
+}
+
+///|
 pub fn ViewHandle::reload(
   self : ViewHandle,
   ignore_cache? : Bool = false,
@@ -1873,6 +1938,22 @@ pub fn BrowserHandle::forward(
   self : BrowserHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("forward", None)
+}
+
+///|
+/// Returns whether the main browser can navigate to a previous history entry.
+pub fn BrowserHandle::can_go_back(
+  self : BrowserHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_browser_navigation_state)().0
+}
+
+///|
+/// Returns whether the main browser can navigate to a later history entry.
+pub fn BrowserHandle::can_go_forward(
+  self : BrowserHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_browser_navigation_state)().1
 }
 
 ///|

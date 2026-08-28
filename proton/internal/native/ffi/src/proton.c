@@ -1811,6 +1811,25 @@ int32_t proton_window_browser_command_json(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+int32_t proton_window_get_navigation_state(
+    proton_window_handle_t window, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "navigation state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_navigation_state(
+      slot->engine_window, out_can_go_back, out_can_go_forward, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_respond_browser_request_json(
     proton_window_handle_t window, const char *response_json) {
   proton_window_slot_t *slot = NULL;
@@ -2582,6 +2601,25 @@ int32_t proton_view_browser_command_json(proton_view_handle_t view,
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_get_navigation_state(
+    proton_view_handle_t view, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "navigation state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_get_navigation_state(
+      slot->engine_view, out_can_go_back, out_can_go_forward, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

@@ -807,3 +807,17 @@ int32_t proton_browser_session_command_json(
   }
   return PROTON_OK;
 }
+
+int32_t proton_browser_navigation_state(
+    cef_browser_t *browser, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward, char *error, size_t error_len) {
+  if (browser == NULL || out_can_go_back == NULL ||
+      out_can_go_forward == NULL) {
+    proton_browser_set_message(error, error_len,
+                               "browser and navigation outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_can_go_back = browser->can_go_back(browser) ? 1 : 0;
+  *out_can_go_forward = browser->can_go_forward(browser) ? 1 : 0;
+  return PROTON_OK;
+}

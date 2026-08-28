@@ -59,6 +59,7 @@ fn test_window_handle(
   id : String,
   native_id : Int64,
   position_calls? : Array[(Int, Int)],
+  size_calls? : Array[(Int, Int)],
   popup_calls? : Array[String],
   progress_calls? : Array[Double],
   flash_calls? : Array[Bool],
@@ -92,6 +93,7 @@ fn test_window_handle(
     load_browser_html: fn(_html, _base_url) {  },
     eval_browser_script: fn(_script) {  },
     send_browser_command: fn(_command, _download_id) {  },
+    read_browser_navigation_state: fn() { (true, false) },
   }
   WindowHandle::{
     id,
@@ -104,7 +106,12 @@ fn test_window_handle(
     set_window_title: fn(_title) {  },
     set_window_icon: fn(_path) {  },
     set_window_parent: fn(_parent, _modal) {  },
-    set_window_size: fn(_width, _height) {  },
+    set_window_size: (width, height) => {
+      match size_calls {
+        Some(calls) => calls.push((width, height))
+        None => ()
+      }
+    },
     set_window_button_visibility: fn(_visible) {  },
     set_window_content_size: (width, height) => {
       match content_size_calls {
@@ -2205,6 +2212,7 @@ fn test_view_handle(
     load_view_html: fn(_html, _base_url) {  },
     eval_view_script: fn(_script) {  },
     send_view_command: fn(_command, _download_id) {  },
+    read_view_navigation_state: fn() { (true, false) },
     read_view_state: fn() {
       { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1, }
     },
@@ -2221,6 +2229,8 @@ test "view handle routes operations through its closures" {
   view.set_visible(false)
   view.set_z_order(2)
   view.load_url("https://example.com/")
+  assert_true(view.can_go_back())
+  assert_false(view.can_go_forward())
   let state = view.state()
   inspect(state.width, content="300")
   inspect(state.z_order, content="1")
@@ -2467,6 +2477,41 @@ test "window center uses the current monitor work area and frame size" {
   })
   window.center()
   debug_inspect(position_calls, content="[(560, 240)]")
+}
+
+///|
+test "window bounds read and write use Electron coordinate order" {
+  let position_calls : Array[(Int, Int)] = []
+  let size_calls : Array[(Int, Int)] = []
+  let window = test_window_handle("main", 17L, position_calls~, size_calls~, window_state=WindowState::{
+    x: 120,
+    y: 80,
+    width: 800,
+    height: 600,
+    monitor: WindowMonitor::{
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+      work_x: 0,
+      work_y: 0,
+      work_width: 1920,
+      work_height: 1080,
+      scale_factor_percent: 100,
+    },
+    zoom_percent: 100,
+    visible: true,
+    focused: true,
+    minimized: false,
+    maximized: false,
+    fullscreen: false,
+    always_on_top: false,
+    theme: "system",
+  })
+  assert_eq(window.bounds(), (120, 80, 800, 600))
+  window.set_bounds(x=40, y=50, width=640, height=480)
+  debug_inspect(position_calls, content="[(40, 50)]")
+  debug_inspect(size_calls, content="[(640, 480)]")
 }
 
 ///|
