@@ -823,6 +823,54 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_content_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (width <= 0 || height <= 0) {
+    proton_engine_set_message(error, error_len, "width and height must be positive");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    window->width = width;
+    window->height = height;
+    proton_engine_sync_browser_bounds(window);
+    return PROTON_OK;
+  }
+  GtkAllocation allocation;
+  gtk_widget_get_allocation(window->browser_host, &allocation);
+  int outer_width = 0;
+  int outer_height = 0;
+  gtk_window_get_size(GTK_WINDOW(window->window), &outer_width, &outer_height);
+  int target_outer_width = outer_width + width - allocation.width;
+  int target_outer_height = outer_height + height - allocation.height;
+  gtk_window_resize(GTK_WINDOW(window->window), target_outer_width,
+                    target_outer_height);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_get_content_size(
+    proton_engine_window_t *window, int32_t *out_width, int32_t *out_height,
+    char *error, size_t error_len) {
+  if (window == NULL || out_width == NULL || out_height == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    *out_width = window->width;
+    *out_height = window->height;
+    return PROTON_OK;
+  }
+  GtkAllocation allocation;
+  gtk_widget_get_allocation(window->browser_host, &allocation);
+  *out_width = allocation.width > 0 ? allocation.width : window->width;
+  *out_height = allocation.height > 0 ? allocation.height : window->height;
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_minimum_size(
     proton_engine_window_t *window, int32_t width, int32_t height,
     char *error, size_t error_len) {

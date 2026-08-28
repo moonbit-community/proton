@@ -1233,6 +1233,56 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_content_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (width <= 0 || height <= 0) {
+    proton_engine_set_message(error, error_len,
+                              "width and height must be positive");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    window->width = width;
+    window->height = height;
+    if (window->browser != NULL) {
+      cef_browser_host_t *host = window->browser->get_host(window->browser);
+      if (host != NULL) {
+        host->was_resized(host);
+        host->base.release((cef_base_ref_counted_t *)host);
+      }
+    }
+    return PROTON_OK;
+  }
+  [window->window setContentSize:NSMakeSize(width, height)];
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_get_content_size(
+    proton_engine_window_t *window, int32_t *out_width, int32_t *out_height,
+    char *error, size_t error_len) {
+  if (window == NULL || out_width == NULL || out_height == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    *out_width = window->width;
+    *out_height = window->height;
+    return PROTON_OK;
+  }
+  if (window->window == nil) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  NSRect bounds = window->window.contentView.bounds;
+  *out_width = (int32_t)llround(bounds.size.width);
+  *out_height = (int32_t)llround(bounds.size.height);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_minimum_size(
     proton_engine_window_t *window, int32_t width, int32_t height,
     char *error, size_t error_len) {

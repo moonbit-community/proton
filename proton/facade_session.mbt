@@ -122,6 +122,12 @@ fn RuntimeSession::window_handle(
         window.set_size(width, height)
       })
     },
+    set_window_content_size: (width, height) => {
+      self.control_window(id, native_id, "set content size", window => {
+        window.set_content_size(width, height)
+      })
+    },
+    read_window_content_size: () => self.read_window_content_size(id, native_id),
     minimize_window: () => {
       self.control_window(id, native_id, "minimize", window => window.minimize())
     },
@@ -712,6 +718,22 @@ fn RuntimeSession::read_window_state(
 }
 
 ///|
+fn RuntimeSession::read_window_content_size(
+  self : RuntimeSession,
+  id : String,
+  native_id : Int64,
+) -> (Int, Int) raise WindowSessionError {
+  let running = match self.find_active_window(id) {
+    Some(running) if running.window.id() == native_id => running
+    _ => raise StaleWindow(id~)
+  }
+  running.window.content_size() catch {
+    error =>
+      raise window_operation_failed("read content size of window " + id, error)
+  }
+}
+
+///|
 fn RuntimeSession::find_definition(
   self : RuntimeSession,
   id : String,
@@ -1139,6 +1161,24 @@ pub fn WindowHandle::set_size(
   height : Int,
 ) -> Unit raise WindowSessionError {
   (self.set_window_size)(width, height)
+}
+
+///|
+/// Sets the renderer content area in logical pixels.
+pub fn WindowHandle::set_content_size(
+  self : WindowHandle,
+  width : Int,
+  height : Int,
+) -> Unit raise WindowSessionError {
+  (self.set_window_content_size)(width, height)
+}
+
+///|
+/// Returns the renderer content area in logical pixels.
+pub fn WindowHandle::content_size(
+  self : WindowHandle,
+) -> (Int, Int) raise WindowSessionError {
+  (self.read_window_content_size)()
 }
 
 ///|

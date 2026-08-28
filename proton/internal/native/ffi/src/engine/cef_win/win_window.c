@@ -1110,6 +1110,57 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_content_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (width <= 0 || height <= 0) {
+    proton_engine_set_message(error, error_len, "width and height must be positive");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    window->width = width;
+    window->height = height;
+    proton_engine_resize_browser(window, width, height);
+    return PROTON_OK;
+  }
+  RECT desired = {0, 0, width, height};
+  DWORD style = (DWORD)GetWindowLongPtrW(window->hwnd, GWL_STYLE);
+  DWORD ex_style = (DWORD)GetWindowLongPtrW(window->hwnd, GWL_EXSTYLE);
+  if (!AdjustWindowRectEx(&desired, style, FALSE, ex_style)) {
+    proton_engine_set_message(error, error_len, "failed to calculate window frame");
+    return PROTON_ERR_PLATFORM;
+  }
+  return proton_engine_window_set_size(window, desired.right - desired.left,
+                                       desired.bottom - desired.top, error,
+                                       error_len);
+}
+
+int32_t proton_engine_window_get_content_size(
+    proton_engine_window_t *window, int32_t *out_width, int32_t *out_height,
+    char *error, size_t error_len) {
+  if (window == NULL || out_width == NULL || out_height == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    *out_width = window->width;
+    *out_height = window->height;
+    return PROTON_OK;
+  }
+  RECT rect;
+  if (!GetClientRect(window->hwnd, &rect)) {
+    proton_engine_set_message(error, error_len, "failed to read client area");
+    return PROTON_ERR_PLATFORM;
+  }
+  *out_width = rect.right - rect.left;
+  *out_height = rect.bottom - rect.top;
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, char *error,
     size_t error_len) {

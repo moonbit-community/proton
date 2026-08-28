@@ -419,6 +419,21 @@ pub extern "C" fn proton_window_set_size_ffi(
 ) -> Int = "proton_window_set_size"
 
 ///|
+pub extern "C" fn proton_window_set_content_size_ffi(
+  window : WindowHandle,
+  width : Int,
+  height : Int,
+) -> Int = "proton_window_set_content_size"
+
+///|
+#borrow(out_width, out_height)
+pub extern "C" fn proton_window_get_content_size_ffi(
+  window : WindowHandle,
+  out_width : Ref[Int],
+  out_height : Ref[Int],
+) -> Int = "proton_window_get_content_size"
+
+///|
 pub extern "C" fn proton_window_minimize_ffi(window : WindowHandle) -> Int = "proton_window_minimize"
 
 ///|

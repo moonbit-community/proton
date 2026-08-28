@@ -1304,6 +1304,40 @@ pub fn Window::set_size(
 }
 
 ///|
+/// Sets the live renderer content area in logical pixels.
+pub fn Window::set_content_size(
+  self : Window,
+  width : Int,
+  height : Int,
+) -> Unit raise NativeError {
+  if width <= 0 || height <= 0 {
+    raise invalid_argument("width and height must be positive")
+  }
+  check_status(
+    @native_ffi.proton_window_set_content_size_ffi(
+      self.live_handle(),
+      width,
+      height,
+    ),
+  )
+}
+
+///|
+/// Returns the live renderer content area in logical pixels.
+pub fn Window::content_size(self : Window) -> (Int, Int) raise NativeError {
+  let width : Ref[Int] = { val: 0, }
+  let height : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_get_content_size_ffi(
+      self.live_handle(),
+      width,
+      height,
+    ),
+  )
+  (width.val, height.val)
+}
+
+///|
 pub fn Window::minimize(self : Window) -> Unit raise NativeError {
   check_status(@native_ffi.proton_window_minimize_ffi(self.live_handle()))
 }
