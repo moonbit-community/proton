@@ -232,6 +232,9 @@ int32_t proton_window_eval(proton_window_handle_t window,
                                       const char *script);
 int32_t proton_window_browser_command_json(
     proton_window_handle_t window, const char *command_json);
+int32_t proton_window_get_navigation_state(
+    proton_window_handle_t window, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward);
 int32_t proton_window_respond_browser_request_json(
     proton_window_handle_t window, const char *response_json);
 int32_t proton_window_emit_bridge_event_json(
@@ -389,6 +392,9 @@ int32_t proton_view_load_url(proton_view_handle_t view,
 int32_t proton_view_eval(proton_view_handle_t view, const char *script);
 int32_t proton_view_browser_command_json(
     proton_view_handle_t view, const char *command_json);
+int32_t proton_view_get_navigation_state(
+    proton_view_handle_t view, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward);
 /* Writes the six integer fields of the current view state into out_fields. */
 int32_t proton_view_get_state(proton_view_handle_t view,
                               int32_t *out_fields,

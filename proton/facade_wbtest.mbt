@@ -93,6 +93,7 @@ fn test_window_handle(
     load_browser_html: fn(_html, _base_url) {  },
     eval_browser_script: fn(_script) {  },
     send_browser_command: fn(_command, _download_id) {  },
+    read_browser_navigation_state: fn() { (true, false) },
   }
   WindowHandle::{
     id,
@@ -2210,6 +2211,7 @@ fn test_view_handle(
     load_view_html: fn(_html, _base_url) {  },
     eval_view_script: fn(_script) {  },
     send_view_command: fn(_command, _download_id) {  },
+    read_view_navigation_state: fn() { (true, false) },
     read_view_state: fn() {
       { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1, }
     },
@@ -2226,6 +2228,8 @@ test "view handle routes operations through its closures" {
   view.set_visible(false)
   view.set_z_order(2)
   view.load_url("https://example.com/")
+  assert_true(view.can_go_back())
+  assert_false(view.can_go_forward())
   let state = view.state()
   inspect(state.width, content="300")
   inspect(state.z_order, content="1")
