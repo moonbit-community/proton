@@ -80,10 +80,10 @@ static char g_proton_engine_locale[PROTON_ENGINE_MAX_PATH_BYTES];
 static int32_t g_proton_remote_debugging_port =
     PROTON_REMOTE_DEBUGGING_DISABLED;
 static proton_engine_window_t *g_windows = NULL;
-static atomic_llong g_scheduled_pump_delay_ms = ATOMIC_VAR_INIT(-1);
-static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
+static atomic_llong g_scheduled_pump_delay_ms = -1;
+static atomic_uint g_wait_source_ready_mask = PROTON_WAIT_NONE;
 /* Set only while this process is inside cef_do_message_loop_work. */
-static atomic_bool g_message_pump_active = ATOMIC_VAR_INIT(false);
+static atomic_bool g_message_pump_active = false;
 static proton_engine_runtime_t *g_active_runtime = NULL;
 
 /* The host loop's wake pipe. Process-wide rather than per-runtime: the
