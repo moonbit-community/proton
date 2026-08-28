@@ -97,6 +97,7 @@ fn test_window_handle(
     id,
     native_id,
     show_window: fn() {  },
+    show_window_inactive: fn() {  },
     hide_window: fn() {  },
     close_window: fn() {  },
     focus_window: fn() {  },

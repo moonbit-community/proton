@@ -697,6 +697,17 @@ int32_t proton_engine_window_show(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_show_inactive(proton_engine_window_t *window,
+                                           char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) return proton_engine_window_show(window, error, error_len);
+  gtk_widget_show_all(window->window);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_hide(proton_engine_window_t *window,
                                   char *error,
                                   size_t error_len) {

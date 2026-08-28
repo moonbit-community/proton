@@ -141,6 +141,7 @@ int32_t proton_notification_cleanup(void);
 
 int32_t proton_window_destroy(proton_window_handle_t window);
 int32_t proton_window_show(proton_window_handle_t window);
+int32_t proton_window_show_inactive(proton_window_handle_t window);
 int32_t proton_window_hide(proton_window_handle_t window);
 int32_t proton_window_close(proton_window_handle_t window);
 int32_t proton_window_focus(proton_window_handle_t window);

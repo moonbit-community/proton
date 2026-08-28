@@ -105,6 +105,11 @@ fn RuntimeSession::window_handle(
     show_window: () => {
       self.control_window(id, native_id, "show", window => window.show())
     },
+    show_window_inactive: () => {
+      self.control_window(id, native_id, "show inactive", window => {
+        window.show_inactive()
+      })
+    },
     hide_window: () => {
       self.control_window(id, native_id, "hide", window => window.hide())
     },
@@ -1183,6 +1188,28 @@ pub fn WindowHandle::id(self : WindowHandle) -> String {
 ///|
 pub fn WindowHandle::show(self : WindowHandle) -> Unit raise WindowSessionError {
   (self.show_window)()
+}
+
+///|
+/// Shows the window without activating it.
+pub fn WindowHandle::show_inactive(
+  self : WindowHandle,
+) -> Unit raise WindowSessionError {
+  (self.show_window_inactive)()
+}
+
+///|
+pub fn WindowHandle::is_visible(
+  self : WindowHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_window_state)().visible
+}
+
+///|
+pub fn WindowHandle::is_focused(
+  self : WindowHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_window_state)().focused
 }
 
 ///|

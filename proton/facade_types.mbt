@@ -434,6 +434,7 @@ pub struct WindowHandle {
   id : String
   native_id : Int64
   show_window : () -> Unit raise WindowSessionError
+  show_window_inactive : () -> Unit raise WindowSessionError
   hide_window : () -> Unit raise WindowSessionError
   close_window : () -> Unit raise WindowSessionError
   focus_window : () -> Unit raise WindowSessionError
