@@ -612,6 +612,7 @@ static void proton_engine_dispose_runtime_state(
     g_proton_engine_active_runtime = NULL;
   }
   g_proton_cef_runtime_active = 0;
+  proton_menu_bar_destroy(runtime->menu_definition);
   free(runtime);
 }
 
