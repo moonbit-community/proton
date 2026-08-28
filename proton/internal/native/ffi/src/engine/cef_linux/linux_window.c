@@ -1605,6 +1605,17 @@ int32_t proton_engine_window_browser_command_json(
       error_len);
 }
 
+int32_t proton_engine_window_get_navigation_state(
+    proton_engine_window_t *window, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward, char *error, size_t error_len) {
+  if (window == NULL || window->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_navigation_state(
+      window->browser, out_can_go_back, out_can_go_forward, error, error_len);
+}
+
 int32_t proton_engine_window_respond_browser_request_json(
     proton_engine_window_t *window, const char *response_json,
     char *error, size_t error_len) {

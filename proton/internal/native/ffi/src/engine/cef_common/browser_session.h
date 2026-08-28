@@ -45,6 +45,9 @@ int32_t proton_browser_session_respond_json(
 int32_t proton_browser_session_command_json(
     proton_browser_session_t *session, cef_browser_t *browser,
     const char *command_json, char *error, size_t error_len);
+int32_t proton_browser_navigation_state(
+    cef_browser_t *browser, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward, char *error, size_t error_len);
 
 int proton_browser_session_before_browse(
     proton_browser_session_t *session, cef_frame_t *frame,

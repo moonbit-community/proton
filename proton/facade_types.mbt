@@ -401,6 +401,7 @@ pub struct BrowserHandle {
   load_browser_html : (String, String) -> Unit raise WindowSessionError
   eval_browser_script : (String) -> Unit raise WindowSessionError
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
+  read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
 }
 
 ///|
@@ -421,6 +422,7 @@ pub struct ViewHandle {
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
   send_view_command : (String, Int?) -> Unit raise WindowSessionError
+  read_view_navigation_state : () -> (Bool, Bool) raise WindowSessionError
   read_view_state : () -> ViewState raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
 }
