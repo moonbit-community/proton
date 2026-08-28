@@ -186,6 +186,8 @@ int32_t proton_window_set_maximizable(proton_window_handle_t window,
                                       int32_t maximizable);
 int32_t proton_window_set_closable(proton_window_handle_t window,
                                    int32_t closable);
+int32_t proton_window_set_button_visibility(proton_window_handle_t window,
+                                            int32_t visible);
 int32_t proton_window_set_focusable(proton_window_handle_t window,
                                     int32_t focusable);
 int32_t proton_window_set_fullscreenable(proton_window_handle_t window,

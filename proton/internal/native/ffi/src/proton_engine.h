@@ -249,6 +249,9 @@ int32_t proton_engine_window_set_maximizable(
 int32_t proton_engine_window_set_closable(
     proton_engine_window_t *window, int32_t closable, char *error,
     size_t error_len);
+int32_t proton_engine_window_set_button_visibility(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len);
 int32_t proton_engine_window_set_focusable(
     proton_engine_window_t *window, int32_t focusable, char *error,
     size_t error_len);

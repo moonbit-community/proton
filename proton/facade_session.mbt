@@ -212,6 +212,11 @@ fn RuntimeSession::window_handle(
         window.set_closable(closable)
       })
     },
+    set_window_button_visibility: visible => {
+      self.control_window(id, native_id, "set window button visibility", window => {
+        window.set_button_visibility(visible)
+      })
+    },
     set_window_focusable: focusable => {
       self.control_window(id, native_id, "set focusable", window => {
         window.set_focusable(focusable)
@@ -1409,6 +1414,17 @@ pub fn WindowHandle::set_closable(
   closable : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_closable)(closable)
+}
+
+///|
+/// Sets visibility of the standard close, minimize, and maximize buttons.
+/// On macOS this updates the native traffic-light controls. Other platforms
+/// apply the equivalent live capability controls where available.
+pub fn WindowHandle::set_window_button_visibility(
+  self : WindowHandle,
+  visible : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_button_visibility)(visible)
 }
 
 ///|

@@ -1513,6 +1513,31 @@ int32_t proton_engine_window_set_closable(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_button_visibility(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (visible != 0 && visible != 1) {
+    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window buttons are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  const NSWindowButton buttons[] = {
+      NSWindowCloseButton, NSWindowMiniaturizeButton, NSWindowZoomButton};
+  for (size_t index = 0; index < sizeof(buttons) / sizeof(buttons[0]); index++) {
+    NSButton *button = [window->window standardWindowButton:buttons[index]];
+    if (button != nil) button.hidden = visible == 0;
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_focusable(
     proton_engine_window_t *window, int32_t focusable, char *error,
     size_t error_len) {
