@@ -466,6 +466,7 @@ pub struct WindowHandle {
   set_window_background_color : (String) -> Unit raise WindowSessionError
   set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
   set_window_enabled : (Bool) -> Unit raise WindowSessionError
+  set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError

@@ -247,6 +247,17 @@ fn RuntimeSession::window_handle(
         window.set_enabled(enabled)
       })
     },
+    set_window_menu: menu => {
+      try {
+        match menu {
+          Some(menu) => self.runtime.set_menu(menu.to_native())
+          None => self.runtime.set_menu(@native.MenuBar(menus=[]))
+        }
+      } catch {
+        error =>
+          raise window_operation_failed("set menu in window " + id, error)
+      }
+    },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
         window.set_zoom_percent(zoom_percent)
@@ -1484,6 +1495,16 @@ pub fn WindowHandle::set_enabled(
   enabled : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_enabled)(enabled)
+}
+
+///|
+/// Replaces the native menu for the application runtime containing this window.
+/// Passing `None` clears the menu.
+pub fn WindowHandle::set_menu(
+  self : WindowHandle,
+  menu : MenuBar?,
+) -> Unit raise WindowSessionError {
+  (self.set_window_menu)(menu)
 }
 
 ///|

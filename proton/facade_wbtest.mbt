@@ -109,6 +109,7 @@ fn test_window_handle(
       }
     },
     read_window_content_size: fn() { content_size.unwrap_or((320, 240)) },
+    set_window_menu: fn(_menu) {  },
     minimize_window: fn() {  },
     maximize_window: fn() {  },
     restore_window: fn() {  },
