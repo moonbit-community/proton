@@ -330,6 +330,15 @@ test "application close commits only after every window allows it" {
 }
 
 ///|
+test "close coordinator starts only one application quit transaction" {
+  let coordinator = CloseCoordinator()
+  assert_false(coordinator.is_quitting())
+  assert_true(coordinator.request_quit())
+  assert_true(coordinator.is_quitting())
+  assert_false(coordinator.request_quit())
+}
+
+///|
 async test "application context forwards orderly quit requests" {
   let requested = Ref(false)
   @async.with_task_group(group => {

@@ -199,19 +199,25 @@ priv struct PendingResourceRequest {
 }
 
 ///|
-priv enum SessionShutdownState {
-  SessionRunning = 0
-  SessionQuitRequested = 1
-  SessionCollectingCloseDecisions = 2
-  SessionClosingWindows = 3
+priv enum CloseCoordinatorState {
+  CloseRunning = 0
+  CloseQuitRequested = 1
+  CloseCollecting = 2
+  CloseCommitted = 3
 } derive(Eq)
 
 ///|
-priv struct PendingQuitDecision {
+priv struct PendingCloseDecision {
   window : Int64
   task : @async.Task[WindowCloseDecision]
   mut decision : WindowCloseDecision?
   mut native_request : Int64?
+}
+
+///|
+priv struct CloseCoordinator {
+  mut state : CloseCoordinatorState
+  pending : Array[PendingCloseDecision]
 }
 
 ///|
@@ -329,7 +335,6 @@ priv struct RuntimeSession {
   bridge_startup_timeout_ms : Int
   window_commands : Array[WindowSessionCommand]
   pending_window_opens : Array[PendingWindowOpen]
-  pending_window_closes : Array[PendingWindowClose]
   pending_browser_requests : Array[PendingBrowserRequest]
   pending_resource_requests : Array[PendingResourceRequest]
   navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
@@ -340,8 +345,7 @@ priv struct RuntimeSession {
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
-  mut shutdown_state : SessionShutdownState
-  pending_quit_decisions : Array[PendingQuitDecision]
+  close_coordinator : CloseCoordinator
 }
 
 ///|
@@ -387,13 +391,6 @@ priv struct PendingWindowOpen {
   completion : WindowOpenCompletion
   mut activation : @async.Task[Unit]?
   timeout : @async.Task[Unit]
-}
-
-///|
-priv struct PendingWindowClose {
-  window : Int64
-  request_id : Int64
-  task : @async.Task[WindowCloseDecision]
 }
 
 ///|
