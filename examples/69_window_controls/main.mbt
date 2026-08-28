@@ -56,7 +56,41 @@ let close_command : @proton_contract.Command[Unit, Unit] = contract.command(
 )
 
 ///|
+struct AdvancedRequest {
+  action : String
+  path : String
+} derive(ToJson, FromJson)
+
+///|
+pub extend AdvancedRequest with ToJson::{to_json}
+
+///|
+pub extend AdvancedRequest with FromJson::{from_json}
+
+///|
+struct AdvancedReply {
+  message : String
+} derive(ToJson, FromJson)
+
+///|
+pub extend AdvancedReply with ToJson::{to_json}
+
+///|
+pub extend AdvancedReply with FromJson::{from_json}
+
+///|
+let advanced_command : @proton_contract.Command[AdvancedRequest, AdvancedReply] = contract.command(
+  "advanced",
+)
+
+///|
 let window_slot : Ref[@proton.WindowHandle?] = { val: None, }
+
+///|
+let child_slot : Ref[@proton.WindowHandle?] = { val: None, }
+
+///|
+let window_manager_slot : Ref[@proton.WindowManager?] = { val: None, }
 
 ///|
 let minimizable_state : Ref[Bool] = { val: true, }
@@ -176,6 +210,65 @@ fn register_commands(registrar : @proton.CommandRegistrar) -> Unit raise {
       None => ()
     }
   })
+  registrar.bind(advanced_command, (_context, request) => {
+    let main = window_slot.val.unwrap()
+    let message = match request.action {
+      "content" => {
+        main.set_content_size(720, 420)
+        let (width, height) = main.content_size()
+        "Content area: \{width} x \{height}"
+      }
+      "menu" => {
+        main.set_menu(
+          Some(
+            @proton.MenuBar(menus=[
+              @proton.Menu("Review", items=[
+                @proton.MenuItem::command("review-ready", "Review ready"),
+                @proton.MenuItem::separator(),
+                @proton.MenuItem::role(@proton.MenuItemRole::Close),
+              ]),
+            ]),
+          ),
+        )
+        "Runtime menu installed"
+      }
+      "clear-menu" => {
+        main.set_menu(None)
+        "Runtime menu cleared"
+      }
+      "hide-buttons" => {
+        main.set_window_button_visibility(false)
+        "Native window buttons hidden"
+      }
+      "show-buttons" => {
+        main.set_window_button_visibility(true)
+        "Native window buttons shown"
+      }
+      "icon" => {
+        main.set_icon(request.path)
+        "Window icon loaded from \{request.path}"
+      }
+      "parent" | "modal" => {
+        let child = match child_slot.val {
+          Some(child) => child
+          None => window_manager_slot.val.unwrap().open("review-child")
+        }
+        child_slot.val = Some(child)
+        child.set_parent(Some(main), modal=request.action == "modal")
+        child.show()
+        "Child relationship set: \{request.action}"
+      }
+      "clear-parent" => {
+        match child_slot.val {
+          Some(child) => child.set_parent(None)
+          None => ()
+        }
+        "Child relationship cleared"
+      }
+      _ => "Unknown advanced action"
+    }
+    AdvancedReply::{ message, }
+  })
 }
 
 ///|
@@ -183,7 +276,7 @@ fn html() -> String {
   (
     #|<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Window Controls</title>
     #|<style>:root{font-family:system-ui,sans-serif;color:#20262b;background:#eef0f3}body{margin:0}main{max-width:780px;margin:auto;padding:42px 24px}header{border-bottom:1px solid #727b85;padding-bottom:20px}.eyebrow{color:#3f659b;font:700 11px ui-monospace,monospace;text-transform:uppercase}h1{margin:0;font-size:42px}.summary{color:#59636c;line-height:1.5}.panel{margin-top:22px;border:1px solid #727b85;background:#fafbfc;padding:24px}.window{border:2px solid #20262b;background:#dce3eb}.bar{height:38px;display:flex;justify-content:flex-end;align-items:center;border-bottom:1px solid #727b85;background:#c8d2dd}.bar span{width:40px;height:38px;display:grid;place-items:center;border-left:1px solid #727b85;font-weight:700}.bar span.off{color:#9da5ad;background:#e8ebef}.screen{min-height:170px;display:grid;place-items:center;color:#3f659b;font:700 13px ui-monospace,monospace}button{margin:18px 10px 0 0;padding:12px 16px;border:1px solid #3f659b;background:#dbe5f2;color:#20262b;font-weight:700;cursor:pointer}button.primary{background:#3f659b;color:white}#status{min-height:40px;color:#59636c;font:12px ui-monospace,monospace;line-height:1.5}</style></head>
-    #|<body><main><header><p class="eyebrow">Native frame / manual test 69</p><h1>Window controls</h1><p class="summary">Review native frame capabilities and interaction controls. Kiosk includes a timed exit path.</p></header><section class="panel"><div class="window"><div class="bar"><span id="minimize">−</span><span id="maximize">□</span><span id="close">×</span></div><div class="screen">Review the real native title-bar controls</div></div><button class="primary" data-min="true" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="false" data-color="#dce3eb" data-kiosk="false" data-workspaces="false" data-enabled="true">Enable all</button><button data-min="false" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="false" data-color="#dce3eb" data-kiosk="false" data-workspaces="false" data-enabled="true">Disable minimize</button><button data-min="true" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="true" data-color="#203040" data-kiosk="false" data-workspaces="true" data-enabled="false">Interaction test (auto-restore 5s)</button><button data-min="true" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="false" data-color="#dce3eb" data-kiosk="true" data-workspaces="false" data-enabled="true">Enter kiosk (auto-exit 5s)</button><button data-min="true" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="false" data-color="#dce3eb" data-kiosk="false" data-workspaces="false" data-enabled="true">Exit kiosk</button><button id="programmatic-close">Programmatic close</button><p id="status" role="status" aria-live="polite">Ready. All native controls are enabled.</p></section></main><script>const min=document.querySelector('#minimize'),max=document.querySelector('#maximize'),close=document.querySelector('#close'),status=document.querySelector('#status');const invoke=(v)=>window.__MoonBit__.core.invokeOp('ext:windowControls/set',v);async function run(button){status.textContent='Updating native window...';const v={minimizable:button.dataset.min==='true',maximizable:button.dataset.max==='true',closable:button.dataset.close==='true',focusable:button.dataset.focus==='true',fullscreenable:button.dataset.full==='true',has_shadow:button.dataset.shadow==='true',ignore_mouse_events:button.dataset.ignore==='true',background_color:button.dataset.color,kiosk:button.dataset.kiosk==='true',visible_on_all_workspaces:button.dataset.workspaces==='true',enabled:button.dataset.enabled==='true'};try{const reply=await invoke(v);min.classList.toggle('off',!reply.minimizable);max.classList.toggle('off',!reply.maximizable);close.classList.toggle('off',!reply.closable);status.textContent=reply.message+(reply.enabled?' Enabled.':' Disabled.')+(reply.kiosk?' Kiosk active.':'')}catch(error){status.textContent='request failed: '+String(error)}if(v.kiosk||!v.enabled||v.ignore_mouse_events){setTimeout(()=>{const exit=document.querySelector('[data-kiosk="false"]');void run(exit)},5000)}}document.querySelectorAll('[data-min]').forEach(button=>button.addEventListener('click',()=>void run(button)));document.querySelector('#programmatic-close').addEventListener('click',()=>void window.__MoonBit__.core.invokeOp('ext:windowControls/close',null))</script></body></html>
+    #|<body><main><header><p class="eyebrow">Native frame / manual test 69</p><h1>Window controls</h1><p class="summary">Review native frame capabilities and interaction controls. Kiosk includes a timed exit path.</p></header><section class="panel"><div class="window"><div class="bar"><span id="minimize">−</span><span id="maximize">□</span><span id="close">×</span></div><div class="screen">Review the real native title-bar controls</div></div><button class="primary" data-min="true" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="false" data-color="#dce3eb" data-kiosk="false" data-workspaces="false" data-enabled="true">Enable all</button><button data-min="false" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="false" data-color="#dce3eb" data-kiosk="false" data-workspaces="false" data-enabled="true">Disable minimize</button><button data-min="true" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="true" data-color="#203040" data-kiosk="false" data-workspaces="true" data-enabled="false">Interaction test (auto-restore 5s)</button><button data-min="true" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="false" data-color="#dce3eb" data-kiosk="true" data-workspaces="false" data-enabled="true">Enter kiosk (auto-exit 5s)</button><button data-min="true" data-max="true" data-close="true" data-focus="true" data-full="true" data-shadow="true" data-ignore="false" data-color="#dce3eb" data-kiosk="false" data-workspaces="false" data-enabled="true">Exit kiosk</button><button id="programmatic-close">Programmatic close</button><hr><button data-advanced="content">Set content 720×420</button><button data-advanced="menu">Install menu</button><button data-advanced="clear-menu">Clear menu</button><button data-advanced="hide-buttons">Hide window buttons</button><button data-advanced="show-buttons">Show window buttons</button><button data-advanced="parent">Open child</button><button data-advanced="modal">Open modal child</button><button data-advanced="clear-parent">Clear child parent</button><input id="icon-path" placeholder="Absolute .ico/.png path"><button data-advanced="icon">Set icon</button><p id="status" role="status" aria-live="polite">Ready. All native controls are enabled.</p></section></main><script>const min=document.querySelector('#minimize'),max=document.querySelector('#maximize'),close=document.querySelector('#close'),status=document.querySelector('#status');const invoke=(v)=>window.__MoonBit__.core.invokeOp('ext:windowControls/set',v);const advanced=(action)=>window.__MoonBit__.core.invokeOp('ext:windowControls/advanced',{action,path:document.querySelector('#icon-path').value});async function run(button){status.textContent='Updating native window...';const v={minimizable:button.dataset.min==='true',maximizable:button.dataset.max==='true',closable:button.dataset.close==='true',focusable:button.dataset.focus==='true',fullscreenable:button.dataset.full==='true',has_shadow:button.dataset.shadow==='true',ignore_mouse_events:button.dataset.ignore==='true',background_color:button.dataset.color,kiosk:button.dataset.kiosk==='true',visible_on_all_workspaces:button.dataset.workspaces==='true',enabled:button.dataset.enabled==='true'};try{const reply=await invoke(v);min.classList.toggle('off',!reply.minimizable);max.classList.toggle('off',!reply.maximizable);close.classList.toggle('off',!reply.closable);status.textContent=reply.message+(reply.enabled?' Enabled.':' Disabled.')+(reply.kiosk?' Kiosk active.':'')}catch(error){status.textContent='request failed: '+String(error)}if(v.kiosk||!v.enabled||v.ignore_mouse_events){setTimeout(()=>{const exit=document.querySelector('[data-kiosk="false"]');void run(exit)},5000)}}document.querySelectorAll('[data-min]').forEach(button=>button.addEventListener('click',()=>void run(button)));document.querySelectorAll('[data-advanced]').forEach(button=>button.addEventListener('click',async()=>{try{status.textContent=(await advanced(button.dataset.advanced)).message}catch(error){status.textContent=String(error)}}));document.querySelector('#programmatic-close').addEventListener('click',()=>void window.__MoonBit__.core.invokeOp('ext:windowControls/close',null))</script></body></html>
   )
 }
 
@@ -191,14 +284,35 @@ fn html() -> String {
 async fn main {
   @proton.html("Window Controls", html(), width=820, height=560, debug=true)
   .identifier("dev.proton.window-controls")
+  .add_window(
+    "review-child",
+    "Window Controls Child",
+    @proton.AppEntry::Html(
+      "<html><body style='font:16px system-ui;padding:32px'><h2>Child window</h2><p>Use the parent controls to test owner and modal relationships.</p></body></html>",
+    ),
+    width=420,
+    height=260,
+    open_on_start=false,
+  )
   .commands(register_commands)
   .window_lifecycle(
     on_ready=context => {
       let window = context.handle()
-      window_slot.val = Some(window)
+      window_manager_slot.val = Some(context.windows())
+      if context.id() == "main" {
+        window_slot.val = Some(window)
+      } else if context.id() == "review-child" {
+        child_slot.val = Some(window)
+      }
       window
     },
-    on_close=fn(_window) { window_slot.val = None },
+    on_close=fn(window) {
+      if window.id() == "main" {
+        window_slot.val = None
+      } else if window.id() == "review-child" {
+        child_slot.val = None
+      }
+    },
   )
   .run_or_abort()
 }

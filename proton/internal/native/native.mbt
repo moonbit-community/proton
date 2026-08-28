@@ -1290,6 +1290,44 @@ pub fn Window::set_title(
 }
 
 ///|
+/// Sets the native window icon from an image file path.
+pub fn Window::set_icon(self : Window, path : String) -> Unit raise NativeError {
+  if path.length() == 0 {
+    raise invalid_argument("icon path must not be empty")
+  }
+  check_status(
+    @native_ffi.proton_window_set_icon_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(path),
+    ),
+  )
+}
+
+///|
+/// Establishes or clears this window's native parent relationship.
+pub fn Window::set_parent(
+  self : Window,
+  parent : WindowRef?,
+  modal : Bool,
+) -> Unit raise NativeError {
+  let parent_handle = match parent {
+    Some(parent) => parent.handle
+    None => @native_ffi.window_null()
+  }
+  check_status(
+    @native_ffi.proton_window_set_parent_ffi(
+      self.live_handle(),
+      parent_handle,
+      if modal {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::set_size(
   self : Window,
   width : Int,
@@ -1301,6 +1339,40 @@ pub fn Window::set_size(
   check_status(
     @native_ffi.proton_window_set_size_ffi(self.live_handle(), width, height),
   )
+}
+
+///|
+/// Sets the live renderer content area in logical pixels.
+pub fn Window::set_content_size(
+  self : Window,
+  width : Int,
+  height : Int,
+) -> Unit raise NativeError {
+  if width <= 0 || height <= 0 {
+    raise invalid_argument("width and height must be positive")
+  }
+  check_status(
+    @native_ffi.proton_window_set_content_size_ffi(
+      self.live_handle(),
+      width,
+      height,
+    ),
+  )
+}
+
+///|
+/// Returns the live renderer content area in logical pixels.
+pub fn Window::content_size(self : Window) -> (Int, Int) raise NativeError {
+  let width : Ref[Int] = { val: 0, }
+  let height : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_get_content_size_ffi(
+      self.live_handle(),
+      width,
+      height,
+    ),
+  )
+  (width.val, height.val)
 }
 
 ///|
@@ -1568,6 +1640,24 @@ pub fn Window::set_closable(
     @native_ffi.proton_window_set_closable_ffi(
       self.live_handle(),
       if closable {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+/// Sets visibility of the standard native window buttons.
+pub fn Window::set_button_visibility(
+  self : Window,
+  visible : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_button_visibility_ffi(
+      self.live_handle(),
+      if visible {
         1
       } else {
         0

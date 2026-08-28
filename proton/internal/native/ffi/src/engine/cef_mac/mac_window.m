@@ -1199,6 +1199,68 @@ int32_t proton_engine_window_set_title(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
+                                      const char *path, char *error,
+                                      size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (path == NULL || path[0] == '\0') {
+    proton_engine_set_message(error, error_len, "icon path is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window icon is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  NSString *value = [NSString stringWithUTF8String:path];
+  NSImage *image = [[NSImage alloc] initWithContentsOfFile:value];
+  if (image == nil) {
+    proton_engine_set_message(error, error_len, "failed to load window icon");
+    return PROTON_ERR_PLATFORM;
+  }
+  [window->window setMiniwindowImage:image];
+  [image release];
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_parent(proton_engine_window_t *window,
+                                        proton_engine_window_t *parent,
+                                        int32_t modal, char *error,
+                                        size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (modal != 0 && modal != 1) {
+    proton_engine_set_message(error, error_len, "modal must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window parenting is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  NSWindow *native = window->window;
+  NSWindow *sheet_parent = native.sheetParent;
+  if (sheet_parent != nil) [sheet_parent endSheet:native];
+  NSWindow *child_parent = native.parentWindow;
+  if (child_parent != nil) [child_parent removeChildWindow:native];
+  if (parent == NULL) return PROTON_OK;
+  if (parent->window == nil) {
+    proton_engine_set_message(error, error_len, "parent window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (modal) {
+    [parent->window beginSheet:native completionHandler:nil];
+  } else {
+    [parent->window addChildWindow:native ordered:NSWindowAbove];
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t width,
                                       int32_t height,
@@ -1230,6 +1292,56 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
     frame.size.height = height;
     [window->window setFrame:frame display:YES animate:NO];
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_content_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (width <= 0 || height <= 0) {
+    proton_engine_set_message(error, error_len,
+                              "width and height must be positive");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    window->width = width;
+    window->height = height;
+    if (window->browser != NULL) {
+      cef_browser_host_t *host = window->browser->get_host(window->browser);
+      if (host != NULL) {
+        host->was_resized(host);
+        host->base.release((cef_base_ref_counted_t *)host);
+      }
+    }
+    return PROTON_OK;
+  }
+  [window->window setContentSize:NSMakeSize(width, height)];
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_get_content_size(
+    proton_engine_window_t *window, int32_t *out_width, int32_t *out_height,
+    char *error, size_t error_len) {
+  if (window == NULL || out_width == NULL || out_height == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    *out_width = window->width;
+    *out_height = window->height;
+    return PROTON_OK;
+  }
+  if (window->window == nil) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  NSRect bounds = window->window.contentView.bounds;
+  *out_width = (int32_t)llround(bounds.size.width);
+  *out_height = (int32_t)llround(bounds.size.height);
   return PROTON_OK;
 }
 
@@ -1460,6 +1572,31 @@ int32_t proton_engine_window_set_closable(
   }
   window->closable = closable;
   proton_engine_window_apply_closable_style(window);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_button_visibility(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (visible != 0 && visible != 1) {
+    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window buttons are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  const NSWindowButton buttons[] = {
+      NSWindowCloseButton, NSWindowMiniaturizeButton, NSWindowZoomButton};
+  for (size_t index = 0; index < sizeof(buttons) / sizeof(buttons[0]); index++) {
+    NSButton *button = [window->window standardWindowButton:buttons[index]];
+    if (button != nil) button.hidden = visible == 0;
+  }
   return PROTON_OK;
 }
 

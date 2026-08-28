@@ -81,6 +81,8 @@ fn test_window_handle(
   aspect_ratio_calls? : Array[Double],
   minimum_size_calls? : Array[(Int, Int)],
   maximum_size_calls? : Array[(Int, Int)],
+  content_size_calls? : Array[(Int, Int)],
+  content_size? : (Int, Int),
   window_state? : WindowState,
 ) -> WindowHandle {
   let browser = BrowserHandle::{
@@ -99,7 +101,18 @@ fn test_window_handle(
     close_window: fn() {  },
     focus_window: fn() {  },
     set_window_title: fn(_title) {  },
+    set_window_icon: fn(_path) {  },
+    set_window_parent: fn(_parent, _modal) {  },
     set_window_size: fn(_width, _height) {  },
+    set_window_button_visibility: fn(_visible) {  },
+    set_window_content_size: (width, height) => {
+      match content_size_calls {
+        Some(calls) => calls.push((width, height))
+        None => ()
+      }
+    },
+    read_window_content_size: fn() { content_size.unwrap_or((320, 240)) },
+    set_window_menu: fn(_menu) {  },
     minimize_window: fn() {  },
     maximize_window: fn() {  },
     restore_window: fn() {  },
@@ -2232,6 +2245,20 @@ test "window context menu routes through the public window handle" {
   let menu = Menu("Context", items=[MenuItem::separator()])
   menu.popup(window, 123, 456)
   debug_inspect(calls, content="[\"popup:Context@123,456\"]")
+}
+
+///|
+test "window content size routes logical dimensions through the handle" {
+  let calls : Array[(Int, Int)] = []
+  let window = test_window_handle(
+    "main",
+    17L,
+    content_size_calls=calls,
+    content_size=(640, 360),
+  )
+  window.set_content_size(800, 450)
+  inspect(window.content_size(), content="(640, 360)")
+  inspect(calls, content="[(800, 450)]")
 }
 
 ///|

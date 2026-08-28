@@ -552,6 +552,7 @@ pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState raise Native
 pub fn Window::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
 pub fn Window::clear_cache(Self) -> Unit raise NativeError
 pub fn Window::close(Self) -> Unit raise NativeError
+pub fn Window::content_size(Self) -> (Int, Int) raise NativeError
 pub fn Window::cookie_begin_get(Self, String?, Bool) -> Int64 raise NativeError
 pub fn Window::cookie_delete(Self, String?, String?) -> Unit raise NativeError
 pub fn Window::cookie_flush(Self) -> Unit raise NativeError
@@ -573,14 +574,17 @@ pub fn Window::restore(Self) -> Unit raise NativeError
 pub fn Window::set_always_on_top(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_aspect_ratio(Self, Double) -> Unit raise NativeError
 pub fn Window::set_background_color(Self, String) -> Unit raise NativeError
+pub fn Window::set_button_visibility(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_closable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_close_interception(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_content_protection(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_content_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_enabled(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_focusable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreen(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_fullscreenable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_has_shadow(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_icon(Self, String) -> Unit raise NativeError
 pub fn Window::set_ignore_mouse_events(Self, Bool, Bool) -> Unit raise NativeError
 pub fn Window::set_kiosk(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_maximizable(Self, Bool) -> Unit raise NativeError
@@ -589,6 +593,7 @@ pub fn Window::set_minimizable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_minimum_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_movable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_opacity(Self, Double) -> Unit raise NativeError
+pub fn Window::set_parent(Self, WindowRef?, Bool) -> Unit raise NativeError
 pub fn Window::set_position(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_progress_bar(Self, Double) -> Unit raise NativeError
 pub fn Window::set_resizable(Self, Bool) -> Unit raise NativeError

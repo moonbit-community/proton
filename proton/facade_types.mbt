@@ -438,7 +438,11 @@ pub struct WindowHandle {
   close_window : () -> Unit raise WindowSessionError
   focus_window : () -> Unit raise WindowSessionError
   set_window_title : (String) -> Unit raise WindowSessionError
+  set_window_icon : (String) -> Unit raise WindowSessionError
+  set_window_parent : (WindowHandle?, Bool) -> Unit raise WindowSessionError
   set_window_size : (Int, Int) -> Unit raise WindowSessionError
+  set_window_content_size : (Int, Int) -> Unit raise WindowSessionError
+  read_window_content_size : () -> (Int, Int) raise WindowSessionError
   minimize_window : () -> Unit raise WindowSessionError
   maximize_window : () -> Unit raise WindowSessionError
   restore_window : () -> Unit raise WindowSessionError
@@ -457,6 +461,7 @@ pub struct WindowHandle {
   set_window_minimizable : (Bool) -> Unit raise WindowSessionError
   set_window_maximizable : (Bool) -> Unit raise WindowSessionError
   set_window_closable : (Bool) -> Unit raise WindowSessionError
+  set_window_button_visibility : (Bool) -> Unit raise WindowSessionError
   set_window_focusable : (Bool) -> Unit raise WindowSessionError
   set_window_fullscreenable : (Bool) -> Unit raise WindowSessionError
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
@@ -464,6 +469,7 @@ pub struct WindowHandle {
   set_window_background_color : (String) -> Unit raise WindowSessionError
   set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
   set_window_enabled : (Bool) -> Unit raise WindowSessionError
+  set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError

@@ -824,6 +824,66 @@ int32_t proton_window_set_title(proton_window_handle_t window, const char *title
   return PROTON_OK;
 }
 
+int32_t proton_window_set_icon(proton_window_handle_t window, const char *path) {
+  if (path == NULL || path[0] == '\0') {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "icon path is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window icon requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_icon(slot->engine_window, path,
+                                         engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_parent(proton_window_handle_t window,
+                                 proton_window_handle_t parent,
+                                 int32_t modal) {
+  if (modal != 0 && modal != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "modal must be 0 or 1");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  proton_window_slot_t *parent_slot = NULL;
+  if (parent != PROTON_INVALID_HANDLE) {
+    status = proton_get_window(parent, &parent_slot);
+    if (status != PROTON_OK) return status;
+    if (parent_slot == slot) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "window cannot parent itself");
+    }
+    if (parent_slot->runtime != slot->runtime) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "parent window belongs to another runtime");
+    }
+  } else if (modal != 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "modal window requires a parent");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window parenting requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_parent(
+      slot->engine_window,
+      parent_slot != NULL ? parent_slot->engine_window : NULL, modal,
+      engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_set_size(proton_window_handle_t window, int32_t width,
                                int32_t height) {
   proton_window_slot_t *slot = NULL;
@@ -846,6 +906,50 @@ int32_t proton_window_set_size(proton_window_handle_t window, int32_t width,
   }
   slot->width = width;
   slot->height = height;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_content_size(proton_window_handle_t window,
+                                       int32_t width, int32_t height) {
+  if (width <= 0 || height <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "width and height must be positive");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "content size requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_content_size(
+      slot->engine_window, width, height, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_get_content_size(proton_window_handle_t window,
+                                       int32_t *out_width,
+                                       int32_t *out_height) {
+  if (out_width == NULL || out_height == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "output dimensions are required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "content size requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_content_size(
+      slot->engine_window, out_width, out_height, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
@@ -1219,6 +1323,27 @@ int32_t proton_window_set_closable(proton_window_handle_t window,
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_button_visibility(proton_window_handle_t window,
+                                            int32_t visible) {
+  if (visible != 0 && visible != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "visible must be 0 or 1");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window button visibility requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_button_visibility(
+      slot->engine_window, visible, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

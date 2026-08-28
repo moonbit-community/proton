@@ -799,6 +799,58 @@ int32_t proton_engine_window_set_title(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
+                                      const char *path, char *error,
+                                      size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (path == NULL || path[0] == '\0') {
+    proton_engine_set_message(error, error_len, "icon path is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window icon is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  GError *load_error = NULL;
+  gtk_window_set_icon_from_file(GTK_WINDOW(window->window), path, &load_error);
+  if (load_error != NULL) {
+    proton_engine_set_message(error, error_len, load_error->message);
+    g_error_free(load_error);
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_parent(proton_engine_window_t *window,
+                                        proton_engine_window_t *parent,
+                                        int32_t modal, char *error,
+                                        size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (modal != 0 && modal != 1) {
+    proton_engine_set_message(error, error_len, "modal must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window parenting is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  GtkWindow *parent_window = parent != NULL && parent->window != NULL
+                                 ? GTK_WINDOW(parent->window)
+                                 : NULL;
+  gtk_window_set_transient_for(GTK_WINDOW(window->window), parent_window);
+  gtk_window_set_modal(GTK_WINDOW(window->window),
+                       parent_window != NULL && modal != 0);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t width,
                                       int32_t height,
@@ -820,6 +872,54 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
   } else {
     gtk_window_resize(GTK_WINDOW(window->window), width, height);
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_content_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (width <= 0 || height <= 0) {
+    proton_engine_set_message(error, error_len, "width and height must be positive");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    window->width = width;
+    window->height = height;
+    proton_engine_sync_browser_bounds(window);
+    return PROTON_OK;
+  }
+  GtkAllocation allocation;
+  gtk_widget_get_allocation(window->browser_host, &allocation);
+  int outer_width = 0;
+  int outer_height = 0;
+  gtk_window_get_size(GTK_WINDOW(window->window), &outer_width, &outer_height);
+  int target_outer_width = outer_width + width - allocation.width;
+  int target_outer_height = outer_height + height - allocation.height;
+  gtk_window_resize(GTK_WINDOW(window->window), target_outer_width,
+                    target_outer_height);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_get_content_size(
+    proton_engine_window_t *window, int32_t *out_width, int32_t *out_height,
+    char *error, size_t error_len) {
+  if (window == NULL || out_width == NULL || out_height == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    *out_width = window->width;
+    *out_height = window->height;
+    return PROTON_OK;
+  }
+  GtkAllocation allocation;
+  gtk_widget_get_allocation(window->browser_host, &allocation);
+  *out_width = allocation.width > 0 ? allocation.width : window->width;
+  *out_height = allocation.height > 0 ? allocation.height : window->height;
   return PROTON_OK;
 }
 
@@ -1038,6 +1138,25 @@ int32_t proton_engine_window_set_closable(
     return PROTON_ERR_UNSUPPORTED;
   }
   // Electron exposes this setter on macOS and Windows; Linux is a success no-op.
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_button_visibility(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (visible != 0 && visible != 1) {
+    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window buttons are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
   return PROTON_OK;
 }
 

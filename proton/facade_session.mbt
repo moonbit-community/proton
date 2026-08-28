@@ -117,11 +117,26 @@ fn RuntimeSession::window_handle(
         window.set_title(title)
       })
     },
+    set_window_icon: path => {
+      self.control_window(id, native_id, "set icon", window => {
+        window.set_icon(path)
+      })
+    },
+    set_window_parent: (parent, modal) => {
+      let parent_native_id = parent.map(parent => parent.native_id)
+      self.set_window_parent(id, native_id, parent_native_id, modal)
+    },
     set_window_size: (width, height) => {
       self.control_window(id, native_id, "set size", window => {
         window.set_size(width, height)
       })
     },
+    set_window_content_size: (width, height) => {
+      self.control_window(id, native_id, "set content size", window => {
+        window.set_content_size(width, height)
+      })
+    },
+    read_window_content_size: () => self.read_window_content_size(id, native_id),
     minimize_window: () => {
       self.control_window(id, native_id, "minimize", window => window.minimize())
     },
@@ -206,6 +221,11 @@ fn RuntimeSession::window_handle(
         window.set_closable(closable)
       })
     },
+    set_window_button_visibility: visible => {
+      self.control_window(id, native_id, "set window button visibility", window => {
+        window.set_button_visibility(visible)
+      })
+    },
     set_window_focusable: focusable => {
       self.control_window(id, native_id, "set focusable", window => {
         window.set_focusable(focusable)
@@ -240,6 +260,17 @@ fn RuntimeSession::window_handle(
       self.control_window(id, native_id, "set enabled", window => {
         window.set_enabled(enabled)
       })
+    },
+    set_window_menu: menu => {
+      try {
+        match menu {
+          Some(menu) => self.runtime.set_menu(menu.to_native())
+          None => self.runtime.set_menu(@native.MenuBar(menus=[]))
+        }
+      } catch {
+        error =>
+          raise window_operation_failed("set menu in window " + id, error)
+      }
     },
     set_window_zoom_percent: zoom_percent => {
       self.control_window(id, native_id, "set zoom", window => {
@@ -712,6 +743,55 @@ fn RuntimeSession::read_window_state(
 }
 
 ///|
+fn RuntimeSession::read_window_content_size(
+  self : RuntimeSession,
+  id : String,
+  native_id : Int64,
+) -> (Int, Int) raise WindowSessionError {
+  let running = match self.find_active_window(id) {
+    Some(running) if running.window.id() == native_id => running
+    _ => raise StaleWindow(id~)
+  }
+  running.window.content_size() catch {
+    error =>
+      raise window_operation_failed("read content size of window " + id, error)
+  }
+}
+
+///|
+fn RuntimeSession::set_window_parent(
+  self : RuntimeSession,
+  id : String,
+  native_id : Int64,
+  parent_native_id : Int64?,
+  modal : Bool,
+) -> Unit raise WindowSessionError {
+  let running = match self.find_active_window(id) {
+    Some(running) if running.window.id() == native_id => running
+    _ => raise StaleWindow(id~)
+  }
+  let parent = match parent_native_id {
+    Some(parent_id) => {
+      let mut found : RunningWindow? = None
+      for candidate in self.windows {
+        if candidate.is_active() && candidate.window.id() == parent_id {
+          found = Some(candidate)
+          break
+        }
+      }
+      match found {
+        Some(parent) => Some(parent.window.as_ref())
+        None => raise StaleWindow(id="parent")
+      }
+    }
+    None => None
+  }
+  running.window.set_parent(parent, modal) catch {
+    error => raise window_operation_failed("set parent of window " + id, error)
+  }
+}
+
+///|
 fn RuntimeSession::find_definition(
   self : RuntimeSession,
   id : String,
@@ -1133,12 +1213,49 @@ pub fn WindowHandle::set_title(
 }
 
 ///|
+/// Sets the native window icon from an image file path.
+pub fn WindowHandle::set_icon(
+  self : WindowHandle,
+  path : String,
+) -> Unit raise WindowSessionError {
+  (self.set_window_icon)(path)
+}
+
+///|
+/// Establishes or clears this window's native parent relationship.
+pub fn WindowHandle::set_parent(
+  self : WindowHandle,
+  parent : WindowHandle?,
+  modal? : Bool = false,
+) -> Unit raise WindowSessionError {
+  (self.set_window_parent)(parent, modal)
+}
+
+///|
 pub fn WindowHandle::set_size(
   self : WindowHandle,
   width : Int,
   height : Int,
 ) -> Unit raise WindowSessionError {
   (self.set_window_size)(width, height)
+}
+
+///|
+/// Sets the renderer content area in logical pixels.
+pub fn WindowHandle::set_content_size(
+  self : WindowHandle,
+  width : Int,
+  height : Int,
+) -> Unit raise WindowSessionError {
+  (self.set_window_content_size)(width, height)
+}
+
+///|
+/// Returns the renderer content area in logical pixels.
+pub fn WindowHandle::content_size(
+  self : WindowHandle,
+) -> (Int, Int) raise WindowSessionError {
+  (self.read_window_content_size)()
 }
 
 ///|
@@ -1361,6 +1478,17 @@ pub fn WindowHandle::set_closable(
 }
 
 ///|
+/// Sets visibility of the standard close, minimize, and maximize buttons.
+/// On macOS this updates the native traffic-light controls. Other platforms
+/// apply the equivalent live capability controls where available.
+pub fn WindowHandle::set_window_button_visibility(
+  self : WindowHandle,
+  visible : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_window_button_visibility)(visible)
+}
+
+///|
 /// Sets whether this live native window can receive focus.
 ///
 /// macOS and Windows update the native window behavior. On macOS, disabling
@@ -1444,6 +1572,16 @@ pub fn WindowHandle::set_enabled(
   enabled : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_window_enabled)(enabled)
+}
+
+///|
+/// Replaces the native menu for the application runtime containing this window.
+/// Passing `None` clears the menu.
+pub fn WindowHandle::set_menu(
+  self : WindowHandle,
+  menu : MenuBar?,
+) -> Unit raise WindowSessionError {
+  (self.set_window_menu)(menu)
 }
 
 ///|

@@ -193,6 +193,8 @@ pub fn proton_window_flash_frame_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_focus_ffi(WindowHandle) -> Int
 
+pub fn proton_window_get_content_size_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+
 pub fn proton_window_get_state_ffi(WindowHandle, FixedArray[Int], Int) -> Int
 
 pub fn proton_window_hide_ffi(WindowHandle) -> Int
@@ -215,11 +217,15 @@ pub fn proton_window_set_aspect_ratio_ffi(WindowHandle, Double) -> Int
 
 pub fn proton_window_set_background_color_ffi(WindowHandle, Bytes) -> Int
 
+pub fn proton_window_set_button_visibility_ffi(WindowHandle, Int) -> Int
+
 pub fn proton_window_set_closable_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_close_interception_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_content_protection_ffi(WindowHandle, Int) -> Int
+
+pub fn proton_window_set_content_size_ffi(WindowHandle, Int, Int) -> Int
 
 pub fn proton_window_set_enabled_ffi(WindowHandle, Int) -> Int
 
@@ -230,6 +236,8 @@ pub fn proton_window_set_fullscreen_ffi(WindowHandle, Int) -> Int
 pub fn proton_window_set_fullscreenable_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_has_shadow_ffi(WindowHandle, Int) -> Int
+
+pub fn proton_window_set_icon_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_set_ignore_mouse_events_ffi(WindowHandle, Int, Int) -> Int
 
@@ -246,6 +254,8 @@ pub fn proton_window_set_minimum_size_ffi(WindowHandle, Int, Int) -> Int
 pub fn proton_window_set_movable_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_opacity_ffi(WindowHandle, Double) -> Int
+
+pub fn proton_window_set_parent_ffi(WindowHandle, WindowHandle, Int) -> Int
 
 pub fn proton_window_set_position_ffi(WindowHandle, Int, Int) -> Int
 

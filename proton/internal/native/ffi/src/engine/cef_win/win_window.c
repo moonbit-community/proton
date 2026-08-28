@@ -338,6 +338,14 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     break;
   case WM_DESTROY:
     if (window != NULL) {
+      if (window->window_icon != NULL) {
+        DestroyIcon(window->window_icon);
+        window->window_icon = NULL;
+      }
+      if (window->modal_parent && window->parent_hwnd != NULL &&
+          IsWindow(window->parent_hwnd)) {
+        EnableWindow(window->parent_hwnd, TRUE);
+      }
       window->closed = 1;
       window->hwnd = NULL;
     }
@@ -959,6 +967,25 @@ int32_t proton_engine_window_set_closable(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_button_visibility(
+    proton_engine_window_t *window, int32_t visible, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (visible != 0 && visible != 1) {
+    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window buttons are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_focusable(
     proton_engine_window_t *window, int32_t focusable, char *error,
     size_t error_len) {
@@ -1085,6 +1112,78 @@ int32_t proton_engine_window_set_title(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
+                                      const char *path, char *error,
+                                      size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (path == NULL || path[0] == '\0') {
+    proton_engine_set_message(error, error_len, "icon path is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window icon is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  wchar_t wide_path[PROTON_ENGINE_MAX_PATH_BYTES];
+  if (proton_engine_utf8_to_wide(path, wide_path,
+                                 (int)(sizeof(wide_path) / sizeof(wide_path[0]))) <= 0) {
+    proton_engine_set_message(error, error_len, "icon path is not valid UTF-8");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  HICON icon = (HICON)LoadImageW(NULL, wide_path, IMAGE_ICON, 0, 0,
+                                 LR_LOADFROMFILE | LR_DEFAULTSIZE);
+  if (icon == NULL) {
+    proton_engine_set_message(error, error_len, "failed to load window icon");
+    return PROTON_ERR_PLATFORM;
+  }
+  if (window->window_icon != NULL) DestroyIcon(window->window_icon);
+  window->window_icon = icon;
+  SendMessageW(window->hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+  SendMessageW(window->hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_parent(proton_engine_window_t *window,
+                                        proton_engine_window_t *parent,
+                                        int32_t modal, char *error,
+                                        size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (modal != 0 && modal != 1) {
+    proton_engine_set_message(error, error_len, "modal must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window parenting is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (window->modal_parent && window->parent_hwnd != NULL &&
+      IsWindow(window->parent_hwnd)) {
+    EnableWindow(window->parent_hwnd, TRUE);
+  }
+  HWND parent_hwnd = parent != NULL ? parent->hwnd : NULL;
+  SetLastError(0);
+  if (SetWindowLongPtrW(window->hwnd, GWLP_HWNDPARENT,
+                        (LONG_PTR)parent_hwnd) == 0 &&
+      GetLastError() != 0) {
+    proton_engine_set_message(error, error_len, "failed to set window owner");
+    window->parent_hwnd = NULL;
+    window->modal_parent = 0;
+    return PROTON_ERR_PLATFORM;
+  }
+  window->parent_hwnd = parent_hwnd;
+  window->modal_parent = modal != 0 && parent_hwnd != NULL;
+  if (window->modal_parent) EnableWindow(parent_hwnd, FALSE);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t width,
                                       int32_t height,
@@ -1107,6 +1206,57 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
     SetWindowPos(window->hwnd, NULL, 0, 0, width, height,
                  SWP_NOMOVE | SWP_NOZORDER);
   }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_content_size(
+    proton_engine_window_t *window, int32_t width, int32_t height,
+    char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (width <= 0 || height <= 0) {
+    proton_engine_set_message(error, error_len, "width and height must be positive");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    window->width = width;
+    window->height = height;
+    proton_engine_resize_browser(window, width, height);
+    return PROTON_OK;
+  }
+  RECT desired = {0, 0, width, height};
+  DWORD style = (DWORD)GetWindowLongPtrW(window->hwnd, GWL_STYLE);
+  DWORD ex_style = (DWORD)GetWindowLongPtrW(window->hwnd, GWL_EXSTYLE);
+  if (!AdjustWindowRectEx(&desired, style, FALSE, ex_style)) {
+    proton_engine_set_message(error, error_len, "failed to calculate window frame");
+    return PROTON_ERR_PLATFORM;
+  }
+  return proton_engine_window_set_size(window, desired.right - desired.left,
+                                       desired.bottom - desired.top, error,
+                                       error_len);
+}
+
+int32_t proton_engine_window_get_content_size(
+    proton_engine_window_t *window, int32_t *out_width, int32_t *out_height,
+    char *error, size_t error_len) {
+  if (window == NULL || out_width == NULL || out_height == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    *out_width = window->width;
+    *out_height = window->height;
+    return PROTON_OK;
+  }
+  RECT rect;
+  if (!GetClientRect(window->hwnd, &rect)) {
+    proton_engine_set_message(error, error_len, "failed to read client area");
+    return PROTON_ERR_PLATFORM;
+  }
+  *out_width = rect.right - rect.left;
+  *out_height = rect.bottom - rect.top;
   return PROTON_OK;
 }
 

@@ -146,8 +146,18 @@ int32_t proton_window_close(proton_window_handle_t window);
 int32_t proton_window_focus(proton_window_handle_t window);
 int32_t proton_window_set_title(proton_window_handle_t window,
                                            const char *title);
+int32_t proton_window_set_icon(proton_window_handle_t window,
+                               const char *path);
+int32_t proton_window_set_parent(proton_window_handle_t window,
+                                 proton_window_handle_t parent,
+                                 int32_t modal);
 int32_t proton_window_set_size(proton_window_handle_t window,
                                           int32_t width, int32_t height);
+int32_t proton_window_set_content_size(proton_window_handle_t window,
+                                       int32_t width, int32_t height);
+int32_t proton_window_get_content_size(proton_window_handle_t window,
+                                       int32_t *out_width,
+                                       int32_t *out_height);
 int32_t proton_window_minimize(proton_window_handle_t window);
 int32_t proton_window_maximize(proton_window_handle_t window);
 int32_t proton_window_restore(proton_window_handle_t window);
@@ -181,6 +191,8 @@ int32_t proton_window_set_maximizable(proton_window_handle_t window,
                                       int32_t maximizable);
 int32_t proton_window_set_closable(proton_window_handle_t window,
                                    int32_t closable);
+int32_t proton_window_set_button_visibility(proton_window_handle_t window,
+                                            int32_t visible);
 int32_t proton_window_set_focusable(proton_window_handle_t window,
                                     int32_t focusable);
 int32_t proton_window_set_fullscreenable(proton_window_handle_t window,

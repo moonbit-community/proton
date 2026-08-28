@@ -591,7 +591,11 @@ pub struct WindowHandle {
   close_window : () -> Unit raise WindowSessionError
   focus_window : () -> Unit raise WindowSessionError
   set_window_title : (String) -> Unit raise WindowSessionError
+  set_window_icon : (String) -> Unit raise WindowSessionError
+  set_window_parent : (WindowHandle?, Bool) -> Unit raise WindowSessionError
   set_window_size : (Int, Int) -> Unit raise WindowSessionError
+  set_window_content_size : (Int, Int) -> Unit raise WindowSessionError
+  read_window_content_size : () -> (Int, Int) raise WindowSessionError
   minimize_window : () -> Unit raise WindowSessionError
   maximize_window : () -> Unit raise WindowSessionError
   restore_window : () -> Unit raise WindowSessionError
@@ -610,6 +614,7 @@ pub struct WindowHandle {
   set_window_minimizable : (Bool) -> Unit raise WindowSessionError
   set_window_maximizable : (Bool) -> Unit raise WindowSessionError
   set_window_closable : (Bool) -> Unit raise WindowSessionError
+  set_window_button_visibility : (Bool) -> Unit raise WindowSessionError
   set_window_focusable : (Bool) -> Unit raise WindowSessionError
   set_window_fullscreenable : (Bool) -> Unit raise WindowSessionError
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
@@ -617,6 +622,7 @@ pub struct WindowHandle {
   set_window_background_color : (String) -> Unit raise WindowSessionError
   set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
   set_window_enabled : (Bool) -> Unit raise WindowSessionError
+  set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError
@@ -632,6 +638,7 @@ pub fn WindowHandle::add_view(Self, String, ViewConfig) -> ViewHandle raise Wind
 pub fn WindowHandle::browser(Self) -> BrowserHandle
 pub fn WindowHandle::center(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::close(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::content_size(Self) -> (Int, Int) raise WindowSessionError
 pub fn WindowHandle::flash_frame(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::focus(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::hide(Self) -> Unit raise WindowSessionError
@@ -645,19 +652,23 @@ pub fn WindowHandle::set_aspect_ratio(Self, Double) -> Unit raise WindowSessionE
 pub fn WindowHandle::set_background_color(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_closable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_content_protection(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_content_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_enabled(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_focusable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_fullscreen(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_fullscreenable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_has_shadow(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_icon(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_ignore_mouse_events(Self, Bool, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_kiosk(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_maximum_size(Self, Int, Int) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_menu(Self, MenuBar?) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_minimizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_minimum_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_movable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_opacity(Self, Double) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_parent(Self, Self?, modal? : Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_position(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_progress_bar(Self, Double) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_resizable(Self, Bool) -> Unit raise WindowSessionError
@@ -665,6 +676,7 @@ pub fn WindowHandle::set_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_skip_taskbar(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_title(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_visible_on_all_workspaces(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_window_button_visibility(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::show(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::state(Self) -> WindowState raise WindowSessionError

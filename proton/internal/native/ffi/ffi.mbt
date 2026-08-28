@@ -412,11 +412,40 @@ pub extern "C" fn proton_window_set_title_ffi(
 ) -> Int = "proton_window_set_title"
 
 ///|
+#borrow(path)
+pub extern "C" fn proton_window_set_icon_ffi(
+  window : WindowHandle,
+  path : Bytes,
+) -> Int = "proton_window_set_icon"
+
+///|
+pub extern "C" fn proton_window_set_parent_ffi(
+  window : WindowHandle,
+  parent : WindowHandle,
+  modal : Int,
+) -> Int = "proton_window_set_parent"
+
+///|
 pub extern "C" fn proton_window_set_size_ffi(
   window : WindowHandle,
   width : Int,
   height : Int,
 ) -> Int = "proton_window_set_size"
+
+///|
+pub extern "C" fn proton_window_set_content_size_ffi(
+  window : WindowHandle,
+  width : Int,
+  height : Int,
+) -> Int = "proton_window_set_content_size"
+
+///|
+#borrow(out_width, out_height)
+pub extern "C" fn proton_window_get_content_size_ffi(
+  window : WindowHandle,
+  out_width : Ref[Int],
+  out_height : Ref[Int],
+) -> Int = "proton_window_get_content_size"
 
 ///|
 pub extern "C" fn proton_window_minimize_ffi(window : WindowHandle) -> Int = "proton_window_minimize"
@@ -519,6 +548,12 @@ pub extern "C" fn proton_window_set_closable_ffi(
   window : WindowHandle,
   closable : Int,
 ) -> Int = "proton_window_set_closable"
+
+///|
+pub extern "C" fn proton_window_set_button_visibility_ffi(
+  window : WindowHandle,
+  visible : Int,
+) -> Int = "proton_window_set_button_visibility"
 
 ///|
 pub extern "C" fn proton_window_set_focusable_ffi(
