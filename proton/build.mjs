@@ -50,46 +50,14 @@ function runtimeStoreRoot(env) {
   return path.resolve(home, ".proton", "store");
 }
 
-function runtimeInstallation(env) {
+function cefSdkRoot(env) {
   const platform = runtimePlatformId();
   const requirement = runtimeRequirements[platform];
   if (!requirement?.supported) {
     throw new Error(`The Proton CEF backend is not supported for ${platform}`);
   }
   const id = `cef-${requirement.sha256}-layout-${runtimeLayoutVersion}`;
-  return {
-    platform,
-    requirement,
-    root: path.join(runtimeStoreRoot(env), platform, id),
-  };
-}
-
-function installedCefRoot(env) {
-  const installation = runtimeInstallation(env);
-  const manifestPath = path.join(installation.root, "manifest.json");
-  if (!fs.existsSync(manifestPath)) {
-    throw new Error(
-      `The required Proton runtime is not installed: ${installation.root}\n` +
-      "Run `moonx moonbit-community/proton_cefsetup`.",
-    );
-  }
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-  if (manifest.schema_version !== 1 ||
-      manifest.platform !== installation.platform ||
-      manifest.cef_archive !== installation.requirement.archive ||
-      manifest.cef_sha256 !== installation.requirement.sha256 ||
-      manifest.layout_version !== runtimeLayoutVersion ||
-      manifest.sdk !== "sdk" ||
-      manifest.runtime !== "runtime") {
-    throw new Error(
-      `Invalid Proton runtime manifest: ${manifestPath}`,
-    );
-  }
-  const cefRoot = path.join(installation.root, manifest.sdk);
-  if (!fs.existsSync(cefRoot)) {
-    throw new Error(`CEF SDK does not exist: ${cefRoot}`);
-  }
-  return cefRoot;
+  return path.join(runtimeStoreRoot(env), platform, id, "sdk");
 }
 
 function pkgConfig(args) {
@@ -170,7 +138,7 @@ export function createNativeLinkConfig(env = readPayloadEnv()) {
   if (envValue(env, "PROTON_CEF_SETUP_BOOTSTRAP") === "1") {
     return { vars: {}, link_configs: [] };
   }
-  const cefRoot = installedCefRoot(env);
+  const cefRoot = cefSdkRoot(env);
   const config = platformConfig(cefRoot, env);
   return {
     vars: {

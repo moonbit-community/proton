@@ -94,7 +94,10 @@ int32_t proton_app_instance_attach_runtime(
 int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
-int32_t proton_runtime_destroy(proton_runtime_handle_t runtime);
+int32_t proton_runtime_begin_destroy(proton_runtime_handle_t runtime);
+int32_t proton_runtime_destroy_ready(proton_runtime_handle_t runtime,
+                                     int32_t *out_ready);
+int32_t proton_runtime_finish_destroy(proton_runtime_handle_t runtime);
 int32_t proton_runtime_complete_resource_request(
     proton_runtime_handle_t runtime, int64_t request_id, int32_t status,
     const char *mime_type, const uint8_t *data, int32_t data_len);

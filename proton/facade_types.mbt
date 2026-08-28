@@ -199,6 +199,28 @@ priv struct PendingResourceRequest {
 }
 
 ///|
+priv enum CloseCoordinatorState {
+  CloseRunning = 0
+  CloseQuitRequested = 1
+  CloseCollecting = 2
+  CloseCommitted = 3
+} derive(Eq)
+
+///|
+priv struct PendingCloseDecision {
+  window : Int64
+  task : @async.Task[WindowCloseDecision]
+  mut decision : WindowCloseDecision?
+  mut native_request : Int64?
+}
+
+///|
+priv struct CloseCoordinator {
+  mut state : CloseCoordinatorState
+  pending : Array[PendingCloseDecision]
+}
+
+///|
 priv enum SessionWindowState {
   WindowStarting = 0
   WindowOpen = 1
@@ -287,13 +309,13 @@ priv struct WindowPermissionPolicy {
 /// instead of duplicating native lifecycle state.
 priv struct RuntimeSession {
   runtime : @native.Runtime
+  event_pump : RuntimeEventPump
   locale_preferences : @locale.LocalePreferences
   definitions : Array[PreparedWindow]
   windows : Array[RunningWindow]
   mut has_created_window : Bool
   command_host : CommandHostRuntime?
   pending_bridge : Array[BridgeDispatchTask]
-  dialog_completions : DialogCompletionStore
   wakeup : RuntimeWakeup
   forward_menu_events : Bool
   monitor_bridge : Bool
@@ -313,7 +335,6 @@ priv struct RuntimeSession {
   bridge_startup_timeout_ms : Int
   window_commands : Array[WindowSessionCommand]
   pending_window_opens : Array[PendingWindowOpen]
-  pending_window_closes : Array[PendingWindowClose]
   pending_browser_requests : Array[PendingBrowserRequest]
   pending_resource_requests : Array[PendingResourceRequest]
   navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
@@ -324,8 +345,7 @@ priv struct RuntimeSession {
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
-  mut quit_requested : Bool
-  mut quit_close_started : Bool
+  close_coordinator : CloseCoordinator
 }
 
 ///|
@@ -344,6 +364,17 @@ priv struct PendingDialogCompletion {
 ///|
 priv struct DialogCompletionStore {
   pending : Array[PendingDialogCompletion]
+}
+
+///|
+/// Sole owner of the native runtime event queue.
+///
+/// Dialog completions are delivered directly to their waiters. Every other
+/// event remains in `session_events` until the runtime session dispatches it.
+priv struct RuntimeEventPump {
+  runtime : @native.Runtime
+  dialog_completions : DialogCompletionStore
+  session_events : Array[@native.RuntimeEvent]
 }
 
 ///|
@@ -371,13 +402,6 @@ priv struct PendingWindowOpen {
   completion : WindowOpenCompletion
   mut activation : @async.Task[Unit]?
   timeout : @async.Task[Unit]
-}
-
-///|
-priv struct PendingWindowClose {
-  window : Int64
-  request_id : Int64
-  task : @async.Task[WindowCloseDecision]
 }
 
 ///|

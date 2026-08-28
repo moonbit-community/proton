@@ -378,43 +378,6 @@ int32_t proton_runtime_sync_engine_window_states(
   return PROTON_OK;
 }
 
-int32_t proton_runtime_sync_engine_close_requests(
-    proton_runtime_slot_t *runtime) {
-  for (proton_window_slot_t *window = runtime->windows; window != NULL;
-       window = window->next) {
-    if (window->lifecycle == PROTON_WINDOW_DESTROYING ||
-        window->lifecycle == PROTON_WINDOW_DESTROYED ||
-        window->engine_window == NULL) {
-      continue;
-    }
-    uint64_t request_id = 0;
-    int32_t pending = 0;
-    char engine_error[512] = {0};
-    int32_t status = proton_engine_window_get_close_request(
-        window->engine_window, &request_id, &pending, engine_error,
-        sizeof(engine_error));
-    if (status != PROTON_OK) {
-      return proton_set_engine_status(status, engine_error);
-    }
-    if (!pending || request_id == 0 ||
-        request_id == window->close_request_notified_revision) {
-      continue;
-    }
-    proton_event_t *event = proton_event_create_window(
-        PROTON_EVENT_WINDOW_CLOSE_REQUESTED, window->logical_id);
-    if (event == NULL) {
-      return proton_set_error(PROTON_ERR_ENGINE,
-                              "failed to allocate window close event");
-    }
-    event->request_id = (int64_t)request_id;
-    if (!proton_runtime_enqueue_event(runtime, event)) {
-      return PROTON_OK;
-    }
-    window->close_request_notified_revision = request_id;
-  }
-  return PROTON_OK;
-}
-
 void proton_runtime_sync_engine_bridge_lifecycle(
     proton_runtime_slot_t *runtime) {
   for (proton_window_slot_t *window = runtime->windows; window != NULL;

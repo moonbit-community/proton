@@ -32,3 +32,33 @@ async fn RuntimeWakeup::wait_after(
     error => raise normalize_async_run_error(error)
   }
 }
+
+///|
+/// Drives one wake-based state machine until its completion predicate holds.
+///
+/// Capturing the revision before checking state closes the notification race:
+/// work arriving between the check and suspension changes the revision, so
+/// `wait_after` returns instead of sleeping indefinitely.
+async fn drive_wakeup_until(
+  wakeup : RuntimeWakeup,
+  complete : () -> Bool raise AppRunError,
+  advance : () -> Bool raise AppRunError,
+) -> Unit raise AppRunError {
+  while true {
+    let revision = wakeup.revision()
+    if complete() {
+      return
+    }
+    let did_work = advance()
+    if complete() {
+      return
+    }
+    if did_work {
+      @async.pause() catch {
+        error => raise normalize_async_run_error(error)
+      }
+    } else {
+      wakeup.wait_after(revision)
+    }
+  }
+}
