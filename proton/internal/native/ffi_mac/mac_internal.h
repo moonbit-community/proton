@@ -2,12 +2,12 @@
 #define PROTON_ENGINE_CEF_MAC_INTERNAL_H
 
 /* Private contracts shared by the macOS engine translation units. */
-#include "../../proton_engine.h"
-#include "../../proton_event.h"
+#include "../ffi/src/proton_engine.h"
+#include "../ffi/src/proton_event.h"
 
-#include "../cef_common/bridge_lifecycle.h"
-#include "../cef_common/browser_session.h"
-#include "../cef_common/view_events.h"
+#include "../ffi/src/engine/cef_common/bridge_lifecycle.h"
+#include "../ffi/src/engine/cef_common/browser_session.h"
+#include "../ffi/src/engine/cef_common/view_events.h"
 
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_app_capi.h"

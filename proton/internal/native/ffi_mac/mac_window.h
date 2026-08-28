@@ -1,11 +1,11 @@
 #ifndef PROTON_ENGINE_CEF_MAC_WINDOW_H
 #define PROTON_ENGINE_CEF_MAC_WINDOW_H
 
-#include "../../proton_engine.h"
+#include "../ffi/src/proton_engine.h"
 
 /* The window lock and the html/asset accessors the shared scheme factory
    reads through are declared with the factory itself. */
-#include "../cef_common/scheme.h"
+#include "../ffi/src/engine/cef_common/scheme.h"
 
 #import <Cocoa/Cocoa.h>
 

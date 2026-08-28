@@ -20,6 +20,12 @@ test "native boundary is linked" {
 Runtime configuration is validated in MoonBit and passed to native code through
 a typed private FFI.
 
+Portable C sources belong to the private `ffi` package. macOS Objective-C
+sources belong to the separate `ffi_mac` package, whose package-local compiler
+flags select Objective-C without changing the compiler used by the application
+or other native stubs. The CEF Objective-C++ loader has its own compilation
+boundary for the same reason.
+
 Omitting `cache_dir` creates an isolated temporary browser profile that is
 removed after native runtime shutdown. A non-empty `cache_dir` must be an
 absolute path owned by one running process; it enables persistent browser state.

@@ -3,8 +3,8 @@
 #include "mac_dialog.h"
 
 #include "mac_window.h"
-#include "../../proton_engine.h"
-#include "../../proton_event.h"
+#include "../ffi/src/proton_engine.h"
+#include "../ffi/src/proton_event.h"
 
 #import <Cocoa/Cocoa.h>
 

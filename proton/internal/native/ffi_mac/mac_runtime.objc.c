@@ -1,9 +1,9 @@
 #if defined(__APPLE__)
 
-#include "../../proton_engine.h"
-#include "../../proton_config.h"
-#include "../../proton_event.h"
-#include "../../proton_json.h"
+#include "../ffi/src/proton_engine.h"
+#include "../ffi/src/proton_config.h"
+#include "../ffi/src/proton_event.h"
+#include "../ffi/src/proton_json.h"
 
 #include "mac_dialog.h"
 #include "mac_internal.h"
@@ -11,9 +11,9 @@
 #include "mac_menu.h"
 #include "mac_window.h"
 
-#include "../cef_common/message.h"
-#include "../cef_common/profile_storage.h"
-#include "../cef_common/scheme.h"
+#include "../ffi/src/engine/cef_common/message.h"
+#include "../ffi/src/engine/cef_common/profile_storage.h"
+#include "../ffi/src/engine/cef_common/scheme.h"
 
 #include "include/cef_api_hash.h"
 #include "include/capi/cef_app_capi.h"
@@ -39,11 +39,11 @@
 #include "include/internal/cef_string.h"
 #include "include/wrapper/cef_library_loader.h"
 
-#include "../cef_common/app_origin.h"
-#include "../cef_common/bridge_renderer.h"
-#include "../cef_common/bridge_lifecycle.h"
-#include "../cef_common/browser_session.h"
-#include "../cef_common/view_events.h"
+#include "../ffi/src/engine/cef_common/app_origin.h"
+#include "../ffi/src/engine/cef_common/bridge_renderer.h"
+#include "../ffi/src/engine/cef_common/bridge_lifecycle.h"
+#include "../ffi/src/engine/cef_common/browser_session.h"
+#include "../ffi/src/engine/cef_common/view_events.h"
 
 #import <Cocoa/Cocoa.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -363,8 +363,8 @@ void proton_engine_unload_cef_library(void) {
   }
 }
 
-#include "../cef_common/strings.h"
-#include "../cef_common/json_fields.h"
+#include "../ffi/src/engine/cef_common/strings.h"
+#include "../ffi/src/engine/cef_common/json_fields.h"
 
 static void proton_engine_append_switch(cef_command_line_t *command_line,
                                         const char *name) {
@@ -445,6 +445,7 @@ static void proton_engine_disable_feature(cef_command_line_t *command_line,
     command_line->remove_switch(command_line, &switch_name);
   }
 #endif
+
   cef_string_clear(&switch_name);
   proton_engine_append_switch_with_value(command_line, "disable-features",
                                          merged);
@@ -457,12 +458,12 @@ static void proton_engine_disable_feature(cef_command_line_t *command_line,
 #define PROTON_ENGINE_REF_LOAD(refs) \
   atomic_load_explicit(&(refs)->refs, memory_order_acquire)
 #define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
-#include "../cef_common/ref_count.h"
+#include "../ffi/src/engine/cef_common/ref_count.h"
 #undef PROTON_ENGINE_REF_INCREMENT
 #undef PROTON_ENGINE_REF_DECREMENT
 #undef PROTON_ENGINE_REF_LOAD
 #undef PROTON_ENGINE_REF_STORE
-#include "../cef_common/bridge_json.h"
+#include "../ffi/src/engine/cef_common/bridge_json.h"
 
 void CEF_CALLBACK proton_engine_on_register_custom_schemes(
     cef_app_t *self,
@@ -1134,7 +1135,6 @@ int32_t proton_engine_runtime_set_menu(
   }
   return status;
 }
-
-
-
 #endif
+
+void proton_mac_engine_link_anchor(void) {}

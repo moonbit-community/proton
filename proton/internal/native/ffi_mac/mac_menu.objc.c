@@ -2,8 +2,8 @@
 
 #include "mac_menu.h"
 
-#include "../../proton_event.h"
-#include "../../proton_engine.h"
+#include "../ffi/src/proton_event.h"
+#include "../ffi/src/proton_engine.h"
 #include "mac_window.h"
 
 #import <Cocoa/Cocoa.h>

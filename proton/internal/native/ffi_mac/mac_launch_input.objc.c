@@ -1,7 +1,7 @@
 #if defined(__APPLE__)
 
 #include "mac_launch_input.h"
-#include "../../proton_event.h"
+#include "../ffi/src/proton_event.h"
 
 #import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
