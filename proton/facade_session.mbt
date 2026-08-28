@@ -1,11 +1,11 @@
 ///|
 fn RuntimeSession::RuntimeSession(
   runtime : @native.Runtime,
+  event_pump : RuntimeEventPump,
   locale_preferences : @locale.LocalePreferences,
   definitions : Array[PreparedWindow],
   windows : Array[RunningWindow],
   command_host : CommandHostRuntime?,
-  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   monitor_bridge : Bool,
@@ -34,13 +34,13 @@ fn RuntimeSession::RuntimeSession(
 ) -> RuntimeSession {
   RuntimeSession::{
     runtime,
+    event_pump,
     locale_preferences,
     definitions,
     windows,
     has_created_window: windows.length() > 0,
     command_host,
     pending_bridge: [],
-    dialog_completions,
     wakeup,
     forward_menu_events,
     monitor_bridge,
@@ -2039,22 +2039,14 @@ async fn RuntimeSession::wait_for_bridge_startup(
   timeout_ms : Int,
 ) -> Unit raise AppRunError {
   let completed = @async.with_timeout_opt(timeout_ms, () => {
-    while true {
-      let revision = self.wakeup.revision()
-      let did_work = self.pump_once(monitor_bridge=false)
-      if self.is_quitting() {
-        return
-      }
-      match refresh_bridge_startup_states(self.windows) {
-        None => return
-        Some(_) =>
-          if did_work {
-            @async.pause()
-          } else {
-            self.wakeup.wait_after(revision)
-          }
-      }
-    }
+    drive_wakeup_until(
+      self.wakeup,
+      () => {
+        self.is_quitting() ||
+        refresh_bridge_startup_states(self.windows) is None
+      },
+      () => self.pump_once(monitor_bridge=false),
+    )
   }) catch {
     error => raise normalize_async_run_error(error)
   }
@@ -2080,17 +2072,9 @@ async fn RuntimeSession::wait_for_bridge_startup(
 
 ///|
 async fn RuntimeSession::run(self : RuntimeSession) -> Unit raise AppRunError {
-  while !self.quit_complete() {
-    let revision = self.wakeup.revision()
-    let did_work = self.pump_once(monitor_bridge=self.monitor_bridge)
-    if did_work {
-      @async.pause() catch {
-        error => raise normalize_async_run_error(error)
-      }
-    } else {
-      self.wakeup.wait_after(revision)
-    }
-  }
+  drive_wakeup_until(self.wakeup, () => self.quit_complete(), () => {
+    self.pump_once(monitor_bridge=self.monitor_bridge)
+  })
   self.cancel_all_bridge_tasks()
   self.close_coordinator.cancel_all()
   self.cancel_all_browser_requests()
@@ -2102,25 +2086,16 @@ async fn RuntimeSession::drive_until_complete(
   self : RuntimeSession,
   task : @async.Task[Unit],
 ) -> Unit raise AppRunError {
-  while true {
-    let revision = self.wakeup.revision()
-    let completed = task.try_wait() catch {
-      error => raise normalize_async_run_error(error)
-    }
-    match completed {
-      Some(_) => return
-      None => {
-        let did_work = self.pump_once(monitor_bridge=self.monitor_bridge)
-        if did_work {
-          @async.pause() catch {
-            error => raise normalize_async_run_error(error)
-          }
-        } else {
-          self.wakeup.wait_after(revision)
-        }
+  drive_wakeup_until(
+    self.wakeup,
+    () => {
+      let completed = task.try_wait() catch {
+        error => raise normalize_async_run_error(error)
       }
-    }
-  }
+      completed is Some(_)
+    },
+    () => self.pump_once(monitor_bridge=self.monitor_bridge),
+  )
 }
 
 ///|
@@ -2280,21 +2255,9 @@ fn RuntimeSession::forward_extension_event_to_granted_windows(
 fn RuntimeSession::drain_runtime_events(
   self : RuntimeSession,
 ) -> Bool raise AppRunError {
-  let mut did_work = false
-  let mut polling = true
-  while polling {
-    let event = self.runtime.poll_event() catch {
-      error => raise native_run_error("poll event", error)
-    }
-    match event {
-      None => polling = false
-      Some(event) => {
-        did_work = true
-        self.dispatch_runtime_event(event)
-      }
-    }
-  }
-  did_work
+  self.event_pump.drain_session_events(event => {
+    self.dispatch_runtime_event(event)
+  })
 }
 
 ///|
@@ -2312,7 +2275,6 @@ fn RuntimeSession::dispatch_runtime_event(
   self.dispatch_notification_event(event)
   self.dispatch_launch_input_event(event)
   self.dispatch_menu_event(event)
-  self.dialog_completions.complete(event.dialog_completion())
   match event.bridge_request() {
     Some(request) => self.start_bridge_request(request)
     None => ()
@@ -3012,7 +2974,7 @@ fn RuntimeSession::start_bridge_request(
             host,
             request,
             self.wakeup.signal,
-            self.dialog_completions,
+            self.event_pump.dialog_completions,
             self.locale_preferences,
           )
         },

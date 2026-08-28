@@ -309,13 +309,13 @@ priv struct WindowPermissionPolicy {
 /// instead of duplicating native lifecycle state.
 priv struct RuntimeSession {
   runtime : @native.Runtime
+  event_pump : RuntimeEventPump
   locale_preferences : @locale.LocalePreferences
   definitions : Array[PreparedWindow]
   windows : Array[RunningWindow]
   mut has_created_window : Bool
   command_host : CommandHostRuntime?
   pending_bridge : Array[BridgeDispatchTask]
-  dialog_completions : DialogCompletionStore
   wakeup : RuntimeWakeup
   forward_menu_events : Bool
   monitor_bridge : Bool
@@ -364,6 +364,17 @@ priv struct PendingDialogCompletion {
 ///|
 priv struct DialogCompletionStore {
   pending : Array[PendingDialogCompletion]
+}
+
+///|
+/// Sole owner of the native runtime event queue.
+///
+/// Dialog completions are delivered directly to their waiters. Every other
+/// event remains in `session_events` until the runtime session dispatches it.
+priv struct RuntimeEventPump {
+  runtime : @native.Runtime
+  dialog_completions : DialogCompletionStore
+  session_events : Array[@native.RuntimeEvent]
 }
 
 ///|

@@ -1698,27 +1698,49 @@ async test "runtime wakeup preserves notification before suspension" {
 }
 
 ///|
+async test "wake driver preserves notification during state advancement" {
+  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal(), }
+  let advances = Ref(0)
+  let completed = @async.with_timeout_opt(100, () => {
+    drive_wakeup_until(wakeup, () => advances.val == 2, () => {
+      advances.val = advances.val + 1
+      if advances.val == 1 {
+        wakeup.signal.notify()
+      }
+      false
+    })
+  })
+  assert_true(completed is Some(_))
+  assert_eq(advances.val, 2)
+}
+
+///|
 async test "dialog completion wakes only its registered waiter" {
   let completions = DialogCompletionStore()
+  assert_false(completions.route_completion(None))
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
     while completions.pending.is_empty() {
       @async.pause()
     }
-    completions.complete(
-      Some(@native.NativeDialogCompletion::{
-        dialog: 42L,
-        window: Some(7L),
-        result: Ok("unrelated"),
-      }),
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeDialogCompletion::{
+          dialog: 42L,
+          window: Some(7L),
+          result: Ok("unrelated"),
+        }),
+      ),
     )
     assert_true(waiting.try_wait() is None)
-    completions.complete(
-      Some(@native.NativeDialogCompletion::{
-        dialog: 41L,
-        window: Some(7L),
-        result: Ok("selected"),
-      }),
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeDialogCompletion::{
+          dialog: 41L,
+          window: Some(7L),
+          result: Ok("selected"),
+        }),
+      ),
     )
     assert_eq(waiting.wait(), "selected")
     group.return_immediately(())
@@ -1742,12 +1764,14 @@ async test "dialog completion propagates native failure" {
     while completions.pending.is_empty() {
       @async.pause()
     }
-    completions.complete(
-      Some(@native.NativeDialogCompletion::{
-        dialog: 51L,
-        window: None,
-        result: Err(@native.Status(status=-7, message="dialog owner closed")),
-      }),
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeDialogCompletion::{
+          dialog: 51L,
+          window: None,
+          result: Err(@native.Status(status=-7, message="dialog owner closed")),
+        }),
+      ),
     )
     waiting.wait()
     group.return_immediately(())
@@ -2293,8 +2317,8 @@ test "window content size routes logical dimensions through the handle" {
     content_size=(640, 360),
   )
   window.set_content_size(800, 450)
-  inspect(window.content_size(), content="(640, 360)")
-  inspect(calls, content="[(800, 450)]")
+  debug_inspect(window.content_size(), content="(640, 360)")
+  debug_inspect(calls, content="[(800, 450)]")
 }
 
 ///|

@@ -31,20 +31,21 @@ fn DialogCompletionStore::remove(
 }
 
 ///|
-fn DialogCompletionStore::complete(
+fn DialogCompletionStore::route_completion(
   self : DialogCompletionStore,
   completion : @native.NativeDialogCompletion?,
-) -> Unit {
-  guard completion is Some(completion) else { return }
+) -> Bool {
+  guard completion is Some(completion) else { return false }
   for pending in self.pending {
     if pending.dialog == completion.dialog {
       if pending.state is Waiting {
         pending.state = Completed(completion.result)
         pending.changed.broadcast()
       }
-      return
+      return true
     }
   }
+  true
 }
 
 ///|
@@ -65,36 +66,16 @@ async fn DialogCompletionStore::wait(
 }
 
 ///|
-fn drain_failure_dialog_events(
-  runtime : @native.Runtime,
-  completions : DialogCompletionStore,
-) -> Unit raise @native.NativeError {
-  while true {
-    match runtime.poll_event() {
-      Some(event) => completions.complete(event.dialog_completion())
-      None => return
-    }
-  }
-}
-
-///|
 async fn wait_for_failure_dialog(
-  runtime : @native.Runtime,
-  completions : DialogCompletionStore,
+  events : RuntimeEventPump,
   wakeup : RuntimeWakeup,
   dialog : Int64,
 ) -> Unit raise AppRunError {
-  let completion = completions.register(dialog)
-  defer completions.remove(dialog)
-  while completion.state is Waiting {
-    let revision = wakeup.revision()
-    drain_failure_dialog_events(runtime, completions) catch {
-      error => raise native_run_error("receive dialog completion", error)
-    }
-    if completion.state is Waiting {
-      wakeup.wait_after(revision)
-    }
-  }
+  let completion = events.dialog_completions.register(dialog)
+  defer events.dialog_completions.remove(dialog)
+  drive_wakeup_until(wakeup, () => !(completion.state is Waiting), () => {
+    events.poll_native_events()
+  })
   match completion.state {
     Completed(Ok(_)) => ()
     Completed(Err(error)) =>

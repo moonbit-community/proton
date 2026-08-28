@@ -184,6 +184,7 @@ async fn run_manifest(
   }
   let wakeup = RuntimeWakeup()
   let dialog_completions = DialogCompletionStore()
+  let event_pump = RuntimeEventPump(runtime, dialog_completions)
   match app_instance {
     Some(instance) =>
       instance.attach_runtime(runtime) catch {
@@ -329,7 +330,7 @@ async fn run_manifest(
     @async.with_task_group(application_tasks => {
       @async.with_task_group(window_tasks => {
         let session = RuntimeSession(
-          runtime, locale_preferences, definitions, windows, command_host, dialog_completions,
+          runtime, event_pump, locale_preferences, definitions, windows, command_host,
           wakeup, forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
           application_tasks, last_window_closed_policy, window_tasks, view_event_handlers,
           window_close_handler, window_lifecycle_hooks, lifecycle_failures, bridge_startup_timeout_ms,
@@ -397,8 +398,8 @@ async fn run_manifest(
       if !headless {
         show_app_run_failure(
           runtime,
+          event_pump,
           preferred_active_window(windows).map(window => window.window),
-          dialog_completions,
           wakeup,
           primary,
           locale_preferences,
@@ -755,7 +756,7 @@ fn app_run_error_dialog_text(error : AppRunError) -> String {
 ///|
 async fn show_runtime_failure_dialog(
   runtime : @native.Runtime,
-  dialog_completions : DialogCompletionStore,
+  event_pump : RuntimeEventPump,
   wakeup : RuntimeWakeup,
   detail : String,
   preferences : @locale.LocalePreferences,
@@ -777,16 +778,15 @@ async fn show_runtime_failure_dialog(
   ) catch {
     _ => return
   }
-  wait_for_failure_dialog(runtime, dialog_completions, wakeup, dialog) catch {
+  wait_for_failure_dialog(event_pump, wakeup, dialog) catch {
     _ => return
   }
 }
 
 ///|
 async fn show_window_failure_dialog(
-  runtime : @native.Runtime,
   window : @native.WindowRef,
-  dialog_completions : DialogCompletionStore,
+  event_pump : RuntimeEventPump,
   wakeup : RuntimeWakeup,
   detail : String,
   preferences : @locale.LocalePreferences,
@@ -802,7 +802,7 @@ async fn show_window_failure_dialog(
   ) catch {
     _ => return false
   }
-  wait_for_failure_dialog(runtime, dialog_completions, wakeup, dialog) catch {
+  wait_for_failure_dialog(event_pump, wakeup, dialog) catch {
     _ => return false
   }
   true
@@ -811,8 +811,8 @@ async fn show_window_failure_dialog(
 ///|
 async fn show_app_run_failure(
   runtime : @native.Runtime,
+  event_pump : RuntimeEventPump,
   window : @native.Window?,
-  dialog_completions : DialogCompletionStore,
   wakeup : RuntimeWakeup,
   error : AppRunError,
   preferences : @locale.LocalePreferences,
@@ -823,9 +823,8 @@ async fn show_app_run_failure(
     match window {
       Some(window) =>
         if show_window_failure_dialog(
-            runtime,
             window.as_ref(),
-            dialog_completions,
+            event_pump,
             wakeup,
             message,
             preferences,
@@ -836,7 +835,7 @@ async fn show_app_run_failure(
     }
   }
   show_runtime_failure_dialog(
-    runtime, dialog_completions, wakeup, message, preferences, application_started,
+    runtime, event_pump, wakeup, message, preferences, application_started,
   )
 }
 
