@@ -1290,6 +1290,20 @@ pub fn Window::set_title(
 }
 
 ///|
+/// Sets the native window icon from an image file path.
+pub fn Window::set_icon(self : Window, path : String) -> Unit raise NativeError {
+  if path.length() == 0 {
+    raise invalid_argument("icon path must not be empty")
+  }
+  check_status(
+    @native_ffi.proton_window_set_icon_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(path),
+    ),
+  )
+}
+
+///|
 pub fn Window::set_size(
   self : Window,
   width : Int,

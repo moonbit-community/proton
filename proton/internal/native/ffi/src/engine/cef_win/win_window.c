@@ -1104,6 +1104,39 @@ int32_t proton_engine_window_set_title(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
+                                      const char *path, char *error,
+                                      size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (path == NULL || path[0] == '\0') {
+    proton_engine_set_message(error, error_len, "icon path is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window icon is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  wchar_t wide_path[PROTON_ENGINE_MAX_PATH_BYTES];
+  if (proton_engine_utf8_to_wide(path, wide_path,
+                                 (int)(sizeof(wide_path) / sizeof(wide_path[0]))) <= 0) {
+    proton_engine_set_message(error, error_len, "icon path is not valid UTF-8");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  HICON icon = (HICON)LoadImageW(NULL, wide_path, IMAGE_ICON, 0, 0,
+                                 LR_LOADFROMFILE | LR_DEFAULTSIZE);
+  if (icon == NULL) {
+    proton_engine_set_message(error, error_len, "failed to load window icon");
+    return PROTON_ERR_PLATFORM;
+  }
+  SendMessageW(window->hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+  SendMessageW(window->hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t width,
                                       int32_t height,

@@ -146,6 +146,8 @@ int32_t proton_window_close(proton_window_handle_t window);
 int32_t proton_window_focus(proton_window_handle_t window);
 int32_t proton_window_set_title(proton_window_handle_t window,
                                            const char *title);
+int32_t proton_window_set_icon(proton_window_handle_t window,
+                               const char *path);
 int32_t proton_window_set_size(proton_window_handle_t window,
                                           int32_t width, int32_t height);
 int32_t proton_window_set_content_size(proton_window_handle_t window,

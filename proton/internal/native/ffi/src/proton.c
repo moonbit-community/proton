@@ -824,6 +824,26 @@ int32_t proton_window_set_title(proton_window_handle_t window, const char *title
   return PROTON_OK;
 }
 
+int32_t proton_window_set_icon(proton_window_handle_t window, const char *path) {
+  if (path == NULL || path[0] == '\0') {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "icon path is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window icon requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_icon(slot->engine_window, path,
+                                         engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_set_size(proton_window_handle_t window, int32_t width,
                                int32_t height) {
   proton_window_slot_t *slot = NULL;

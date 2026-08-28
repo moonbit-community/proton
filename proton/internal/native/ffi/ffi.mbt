@@ -412,6 +412,13 @@ pub extern "C" fn proton_window_set_title_ffi(
 ) -> Int = "proton_window_set_title"
 
 ///|
+#borrow(path)
+pub extern "C" fn proton_window_set_icon_ffi(
+  window : WindowHandle,
+  path : Bytes,
+) -> Int = "proton_window_set_icon"
+
+///|
 pub extern "C" fn proton_window_set_size_ffi(
   window : WindowHandle,
   width : Int,

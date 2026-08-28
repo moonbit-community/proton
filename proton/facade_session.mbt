@@ -117,6 +117,11 @@ fn RuntimeSession::window_handle(
         window.set_title(title)
       })
     },
+    set_window_icon: path => {
+      self.control_window(id, native_id, "set icon", window => {
+        window.set_icon(path)
+      })
+    },
     set_window_size: (width, height) => {
       self.control_window(id, native_id, "set size", window => {
         window.set_size(width, height)
@@ -1168,6 +1173,15 @@ pub fn WindowHandle::set_title(
   title : String,
 ) -> Unit raise WindowSessionError {
   (self.set_window_title)(title)
+}
+
+///|
+/// Sets the native window icon from an image file path.
+pub fn WindowHandle::set_icon(
+  self : WindowHandle,
+  path : String,
+) -> Unit raise WindowSessionError {
+  (self.set_window_icon)(path)
 }
 
 ///|

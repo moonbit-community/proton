@@ -1199,6 +1199,33 @@ int32_t proton_engine_window_set_title(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
+                                      const char *path, char *error,
+                                      size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (path == NULL || path[0] == '\0') {
+    proton_engine_set_message(error, error_len, "icon path is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window icon is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  NSString *value = [NSString stringWithUTF8String:path];
+  NSImage *image = [[NSImage alloc] initWithContentsOfFile:value];
+  if (image == nil) {
+    proton_engine_set_message(error, error_len, "failed to load window icon");
+    return PROTON_ERR_PLATFORM;
+  }
+  [window->window setMiniwindowImage:image];
+  [image release];
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t width,
                                       int32_t height,

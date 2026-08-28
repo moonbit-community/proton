@@ -208,6 +208,10 @@ int32_t proton_engine_window_set_title(proton_engine_window_t *window,
                                        const char *title,
                                        char *error,
                                        size_t error_len);
+int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
+                                      const char *path,
+                                      char *error,
+                                      size_t error_len);
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t width,
                                       int32_t height,
