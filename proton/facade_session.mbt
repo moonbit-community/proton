@@ -1259,6 +1259,30 @@ pub fn WindowHandle::content_size(
 }
 
 ///|
+/// Returns `(x, y, width, height)` in logical screen pixels, matching
+/// Electron's `getBounds` coordinate order.
+pub fn WindowHandle::bounds(
+  self : WindowHandle,
+) -> (Int, Int, Int, Int) raise WindowSessionError {
+  let state = (self.read_window_state)()
+  (state.x, state.y, state.width, state.height)
+}
+
+///|
+/// Sets `(x, y, width, height)` in logical screen pixels, matching Electron's
+/// `setBounds` coordinate order.
+pub fn WindowHandle::set_bounds(
+  self : WindowHandle,
+  x~ : Int,
+  y~ : Int,
+  width~ : Int,
+  height~ : Int,
+) -> Unit raise WindowSessionError {
+  self.set_position(x, y)
+  self.set_size(width, height)
+}
+
+///|
 pub fn WindowHandle::minimize(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
