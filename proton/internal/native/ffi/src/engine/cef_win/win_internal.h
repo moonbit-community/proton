@@ -58,6 +58,7 @@ struct proton_engine_runtime {
   char wakeup_path[256];
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  proton_menu_bar_t *menu_definition;
 };
 
 struct proton_engine_window {
@@ -115,6 +116,10 @@ struct proton_engine_window {
   int closed;
   struct proton_engine_view *views;
   int finalize_queued;
+  HMENU app_menu;
+  proton_menu_bar_t *app_menu_definition;
+  void *app_menu_bindings;
+  size_t app_menu_binding_count;
   struct proton_engine_window *next;
 };
 
@@ -127,6 +132,12 @@ int proton_engine_browser_id(cef_browser_t *browser);
 void proton_engine_browser_release(cef_browser_t *browser);
 proton_engine_view_t *proton_engine_find_view_by_browser_id(int browser_id);
 void proton_engine_window_defer_free(proton_engine_window_t *window);
+void proton_win_menu_dispatch_command(proton_engine_window_t *window,
+                                      UINT command_id);
+int32_t proton_win_menu_apply_to_window(
+    proton_engine_window_t *window, const proton_menu_bar_t *menu_bar,
+    char *error, size_t error_len);
+void proton_win_menu_cleanup_window(proton_engine_window_t *window);
 
 cef_life_span_handler_t *CEF_CALLBACK
 proton_engine_client_get_life_span_handler(cef_client_t *self);

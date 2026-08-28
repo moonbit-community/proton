@@ -125,9 +125,8 @@ Application windows can host independent web contents views with explicit
 bounds, visibility, z-order, navigation, DevTools, and lifecycle events. See
 `examples/45_bridge_multi_window` and `examples/52_web_contents_view`.
 
-Native application menus are available on macOS and Linux. Native context
-menus are available on macOS, Windows, and Linux. Application menu bars are not
-yet implemented on Windows.
+Native application menus and native context menus are available on macOS,
+Windows, and Linux.
 
 Titlebar overlay uses `TitlebarStyle::Overlay` and is implemented on macOS and
 Windows. Interactive controls inside a draggable region must use

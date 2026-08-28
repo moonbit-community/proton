@@ -336,8 +336,16 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
       return 0;
     }
     break;
+  case WM_COMMAND:
+    if (window != NULL && HIWORD(wparam) == 0 &&
+        window->app_menu_bindings != NULL) {
+      proton_win_menu_dispatch_command(window, LOWORD(wparam));
+      return 0;
+    }
+    break;
   case WM_DESTROY:
     if (window != NULL) {
+      proton_win_menu_cleanup_window(window);
       if (window->window_icon != NULL) {
         DestroyIcon(window->window_icon);
         window->window_icon = NULL;
@@ -572,6 +580,20 @@ int32_t proton_engine_window_create(
                        SWP_FRAMECHANGED);
     }
     ShowWindow(window->hwnd, SW_SHOW);
+    if (runtime->menu_definition != NULL) {
+      int32_t menu_status = proton_win_menu_apply_to_window(
+          window, runtime->menu_definition, error, error_len);
+      if (menu_status != PROTON_OK) {
+        DestroyWindow(window->hwnd);
+        window->hwnd = NULL;
+        ((cef_base_ref_counted_t *)window->client)
+            ->release((cef_base_ref_counted_t *)window->client);
+        proton_browser_session_destroy(window->browser_session);
+        free(window->bridge_config_json);
+        free(window);
+        return menu_status;
+      }
+    }
   }
 
   int32_t status =

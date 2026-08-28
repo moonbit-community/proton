@@ -23,15 +23,147 @@ typedef struct {
   UINT next_id;
 } proton_win_menu_builder_t;
 
-// TODO: Implement application menu rendering and command events on Windows.
+static int32_t proton_win_menu_wide_text(
+    const char *value, wchar_t **out_text, char *error, size_t error_len);
+static int32_t proton_win_menu_append_definition(
+    HMENU menu, const proton_menu_t *definition,
+    proton_win_menu_builder_t *builder, char *error, size_t error_len);
+
+void proton_win_menu_cleanup_window(proton_engine_window_t *window) {
+  if (window == NULL) return;
+  if (window->app_menu != NULL) {
+    if (window->hwnd != NULL) {
+      SetMenu(window->hwnd, NULL);
+      DrawMenuBar(window->hwnd);
+    }
+    DestroyMenu(window->app_menu);
+  }
+  free(window->app_menu_bindings);
+  proton_menu_bar_destroy(window->app_menu_definition);
+  window->app_menu = NULL;
+  window->app_menu_definition = NULL;
+  window->app_menu_bindings = NULL;
+  window->app_menu_binding_count = 0;
+}
+
+int32_t proton_win_menu_apply_to_window(
+    proton_engine_window_t *window, const proton_menu_bar_t *menu_bar,
+    char *error, size_t error_len) {
+  if (window == NULL || window->hwnd == NULL || menu_bar == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "window and menu definition are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (menu_bar->menu_count == 0) {
+    proton_win_menu_cleanup_window(window);
+    return PROTON_OK;
+  }
+  proton_menu_bar_t *definition = proton_menu_bar_clone(menu_bar);
+  if (definition == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to copy application menu");
+    return PROTON_ERR_ENGINE;
+  }
+  HMENU menu = CreateMenu();
+  if (menu == NULL) {
+    proton_menu_bar_destroy(definition);
+    proton_engine_set_message(error, error_len,
+                              "failed to create application menu");
+    return PROTON_ERR_PLATFORM;
+  }
+  proton_win_menu_builder_t builder = {.next_id = 1};
+  for (size_t index = 0; index < definition->menu_count; index++) {
+    const proton_menu_t *top_level = &definition->menus[index];
+    if (top_level->label == NULL || top_level->label[0] == '\0') {
+      proton_menu_bar_destroy(definition);
+      DestroyMenu(menu);
+      free(builder.bindings);
+      proton_engine_set_message(error, error_len,
+                                "application menu label is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    wchar_t *label = NULL;
+    int32_t status = proton_win_menu_wide_text(
+        top_level->label, &label, error, error_len);
+    HMENU submenu = NULL;
+    if (status == PROTON_OK) {
+      submenu = CreatePopupMenu();
+      if (submenu == NULL) {
+        free(label);
+        DestroyMenu(menu);
+        free(builder.bindings);
+        proton_menu_bar_destroy(definition);
+        proton_engine_set_message(error, error_len,
+                                  "failed to create application submenu");
+        return PROTON_ERR_PLATFORM;
+      }
+      status = proton_win_menu_append_definition(
+          submenu, top_level, &builder, error, error_len);
+    }
+    if (status == PROTON_OK &&
+        !AppendMenuW(menu, MF_STRING | MF_POPUP, (UINT_PTR)submenu, label)) {
+      proton_engine_set_message(error, error_len,
+                                "failed to append application menu");
+      status = PROTON_ERR_PLATFORM;
+    }
+    free(label);
+    if (status != PROTON_OK) {
+      if (submenu != NULL) DestroyMenu(submenu);
+      proton_menu_bar_destroy(definition);
+      DestroyMenu(menu);
+      free(builder.bindings);
+      return status;
+    }
+  }
+  if (!SetMenu(window->hwnd, menu)) {
+    proton_menu_bar_destroy(definition);
+    DestroyMenu(menu);
+    free(builder.bindings);
+    proton_engine_set_message(error, error_len,
+                              "failed to install application menu");
+    return PROTON_ERR_PLATFORM;
+  }
+  HMENU old_menu = window->app_menu;
+  proton_menu_bar_t *old_definition = window->app_menu_definition;
+  void *old_bindings = window->app_menu_bindings;
+  window->app_menu = menu;
+  window->app_menu_definition = definition;
+  window->app_menu_bindings = builder.bindings;
+  window->app_menu_binding_count = builder.binding_count;
+  if (old_menu != NULL) DestroyMenu(old_menu);
+  proton_menu_bar_destroy(old_definition);
+  free(old_bindings);
+  DrawMenuBar(window->hwnd);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_runtime_set_menu(
     proton_engine_runtime_t *runtime, const proton_menu_bar_t *menu_bar,
     char *error, size_t error_len) {
-  (void)runtime;
-  (void)menu_bar;
-  proton_engine_set_message(error, error_len,
-                            "native app menus are not implemented on Windows");
-  return PROTON_ERR_UNSUPPORTED;
+  if (runtime == NULL || menu_bar == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "runtime and menu definition are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_menu_bar_t *definition = proton_menu_bar_clone(menu_bar);
+  if (definition == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to copy runtime menu definition");
+    return PROTON_ERR_ENGINE;
+  }
+  for (proton_engine_window_t *window = proton_engine_windows_head();
+       window != NULL; window = window->next) {
+    if (window->runtime != runtime || window->hwnd == NULL) continue;
+    int32_t status = proton_win_menu_apply_to_window(
+        window, definition, error, error_len);
+    if (status != PROTON_OK) {
+      proton_menu_bar_destroy(definition);
+      return status;
+    }
+  }
+  proton_menu_bar_destroy(runtime->menu_definition);
+  runtime->menu_definition = definition;
+  return PROTON_OK;
 }
 
 static int32_t proton_win_menu_append_binding(
@@ -292,6 +424,18 @@ static void proton_win_menu_dispatch(
     }
     return;
   }
+}
+
+void proton_win_menu_dispatch_command(proton_engine_window_t *window,
+                                      UINT command_id) {
+  if (window == NULL || window->app_menu_bindings == NULL) return;
+  proton_win_menu_builder_t builder = {
+      .bindings = (proton_win_menu_binding_t *)window->app_menu_bindings,
+      .binding_count = window->app_menu_binding_count,
+      .binding_capacity = window->app_menu_binding_count,
+      .next_id = 0,
+  };
+  proton_win_menu_dispatch(window, &builder, command_id);
 }
 
 int32_t proton_engine_window_popup_menu(
