@@ -587,6 +587,24 @@ fn RuntimeSession::browser_handle(
         window.browser_command(command, download_id?)
       })
     },
+    set_browser_zoom_percent: zoom_percent => {
+      self.control_window(id, native_id, "set browser zoom", window => {
+        window.set_zoom_percent(zoom_percent)
+      })
+    },
+    read_browser_zoom_percent: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      running.window.state().zoom_percent catch {
+        error =>
+          raise window_operation_failed(
+            "read browser zoom in window " + id,
+            error,
+          )
+      }
+    },
   }
 }
 
@@ -1593,6 +1611,14 @@ pub fn WindowHandle::set_zoom_percent(
 }
 
 ///|
+/// Returns the main browser zoom percentage.
+pub fn WindowHandle::zoom_percent(
+  self : WindowHandle,
+) -> Int raise WindowSessionError {
+  (self.read_window_state)().zoom_percent
+}
+
+///|
 /// Sets the platform progress indicator using Electron-compatible values.
 ///
 /// Pass a negative value to clear the indicator, a value from `0.0` through
@@ -1846,6 +1872,23 @@ pub fn BrowserHandle::forward(
   self : BrowserHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("forward", None)
+}
+
+///|
+/// Sets the main browser zoom from 25% through 500%.
+pub fn BrowserHandle::set_zoom_percent(
+  self : BrowserHandle,
+  zoom_percent : Int,
+) -> Unit raise WindowSessionError {
+  (self.set_browser_zoom_percent)(zoom_percent)
+}
+
+///|
+/// Returns the main browser zoom percentage.
+pub fn BrowserHandle::zoom_percent(
+  self : BrowserHandle,
+) -> Int raise WindowSessionError {
+  (self.read_browser_zoom_percent)()
 }
 
 ///|

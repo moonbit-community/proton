@@ -401,6 +401,8 @@ pub struct BrowserHandle {
   load_browser_html : (String, String) -> Unit raise WindowSessionError
   eval_browser_script : (String) -> Unit raise WindowSessionError
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
+  set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
+  read_browser_zoom_percent : () -> Int raise WindowSessionError
 }
 
 ///|

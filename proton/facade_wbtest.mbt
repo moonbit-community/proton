@@ -92,6 +92,8 @@ fn test_window_handle(
     load_browser_html: fn(_html, _base_url) {  },
     eval_browser_script: fn(_script) {  },
     send_browser_command: fn(_command, _download_id) {  },
+    set_browser_zoom_percent: fn(_zoom_percent) {  },
+    read_browser_zoom_percent: fn() { 100 },
   }
   WindowHandle::{
     id,
