@@ -101,6 +101,12 @@ preserving Electron's no-op behavior on macOS and Linux.
 `WindowHandle::set_aspect_ratio` constrains interactive resizing and accepts
 `0.0` to clear the constraint; programmatic `set_size` calls remain
 unconstrained, matching Electron.
+`WindowHandle::set_content_size` adjusts the renderer area while accounting for
+the native frame. `content_size` reads that area back in logical pixels.
+`set_menu` replaces or clears the runtime menu, `set_icon` loads a native icon
+from a file path, and `set_parent` establishes a native owner/transient or modal
+relationship. `set_window_button_visibility` controls standard title-bar buttons
+on macOS and is a successful no-op on other platforms.
 
 ## Logging
 
