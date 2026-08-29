@@ -485,18 +485,44 @@ pub fn Runtime::Runtime(
 }
 
 ///|
-pub fn Runtime::destroy(self : Runtime) -> Unit raise NativeError {
+pub fn Runtime::begin_destroy(self : Runtime) -> Unit raise NativeError {
   match self.lifecycle {
     RuntimeDestroyed => return
     RuntimeActive | RuntimeDestroying => self.lifecycle = RuntimeDestroying
   }
-  let status = @native_ffi.proton_runtime_destroy_ffi(self.handle)
-  if status < 0 {
-    raise native_error(status)
-  } else {
-    self.handle = @native_ffi.runtime_null()
-    self.lifecycle = RuntimeDestroyed
+  check_status(@native_ffi.proton_runtime_begin_destroy_ffi(self.handle))
+}
+
+///|
+pub fn Runtime::destroy_ready(self : Runtime) -> Bool raise NativeError {
+  match self.lifecycle {
+    RuntimeDestroying => ()
+    RuntimeActive =>
+      raise Status(
+        status=proton_err_invalid_state,
+        message="runtime destroy has not begun",
+      )
+    RuntimeDestroyed => return true
   }
+  let ready = Ref(0)
+  check_status(@native_ffi.proton_runtime_destroy_ready_ffi(self.handle, ready))
+  ready.val != 0
+}
+
+///|
+pub fn Runtime::finish_destroy(self : Runtime) -> Unit raise NativeError {
+  match self.lifecycle {
+    RuntimeDestroyed => return
+    RuntimeDestroying => ()
+    RuntimeActive =>
+      raise Status(
+        status=proton_err_invalid_state,
+        message="runtime destroy has not begun",
+      )
+  }
+  check_status(@native_ffi.proton_runtime_finish_destroy_ffi(self.handle))
+  self.handle = @native_ffi.runtime_null()
+  self.lifecycle = RuntimeDestroyed
 }
 
 ///|
@@ -1854,6 +1880,23 @@ pub fn Window::state(self : Window) -> WindowState raise NativeError {
 }
 
 ///|
+/// Returns whether the main browser has backward and forward history.
+pub fn Window::navigation_state(
+  self : Window,
+) -> (Bool, Bool) raise NativeError {
+  let can_go_back : Ref[Int] = { val: 0, }
+  let can_go_forward : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_get_navigation_state_ffi(
+      self.live_handle(),
+      can_go_back,
+      can_go_forward,
+    ),
+  )
+  (can_go_back.val != 0, can_go_forward.val != 0)
+}
+
+///|
 pub fn Window::set_close_interception(
   self : Window,
   enabled : Bool,
@@ -2658,6 +2701,21 @@ pub fn View::state(self : View) -> ViewState raise NativeError {
     visible: fields[4] != 0,
     z_order: fields[5],
   }
+}
+
+///|
+/// Returns whether this view has backward and forward history.
+pub fn View::navigation_state(self : View) -> (Bool, Bool) raise NativeError {
+  let can_go_back : Ref[Int] = { val: 0, }
+  let can_go_forward : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_view_get_navigation_state_ffi(
+      self.live_handle(),
+      can_go_back,
+      can_go_forward,
+    ),
+  )
+  (can_go_back.val != 0, can_go_forward.val != 0)
 }
 
 ///|

@@ -94,7 +94,10 @@ int32_t proton_app_instance_attach_runtime(
 int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
-int32_t proton_runtime_destroy(proton_runtime_handle_t runtime);
+int32_t proton_runtime_begin_destroy(proton_runtime_handle_t runtime);
+int32_t proton_runtime_destroy_ready(proton_runtime_handle_t runtime,
+                                     int32_t *out_ready);
+int32_t proton_runtime_finish_destroy(proton_runtime_handle_t runtime);
 int32_t proton_runtime_complete_resource_request(
     proton_runtime_handle_t runtime, int64_t request_id, int32_t status,
     const char *mime_type, const uint8_t *data, int32_t data_len);
@@ -232,6 +235,9 @@ int32_t proton_window_eval(proton_window_handle_t window,
                                       const char *script);
 int32_t proton_window_browser_command_json(
     proton_window_handle_t window, const char *command_json);
+int32_t proton_window_get_navigation_state(
+    proton_window_handle_t window, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward);
 int32_t proton_window_respond_browser_request_json(
     proton_window_handle_t window, const char *response_json);
 int32_t proton_window_emit_bridge_event_json(
@@ -389,6 +395,9 @@ int32_t proton_view_load_url(proton_view_handle_t view,
 int32_t proton_view_eval(proton_view_handle_t view, const char *script);
 int32_t proton_view_browser_command_json(
     proton_view_handle_t view, const char *command_json);
+int32_t proton_view_get_navigation_state(
+    proton_view_handle_t view, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward);
 /* Writes the six integer fields of the current view state into out_fields. */
 int32_t proton_view_get_state(proton_view_handle_t view,
                               int32_t *out_fields,

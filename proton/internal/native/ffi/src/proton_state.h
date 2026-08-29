@@ -46,6 +46,7 @@ typedef enum proton_view_lifecycle {
 
 struct proton_runtime_slot {
   proton_runtime_lifecycle_t lifecycle;
+  bool destroy_prepared;
   proton_engine_runtime_t *engine_runtime;
   int64_t app_instance;
   proton_thread_id_t owner_thread;
@@ -63,7 +64,6 @@ struct proton_window_slot {
   bool closed_event_sent;
   bool state_valid;
   uint64_t bridge_notified_revision;
-  uint64_t close_request_notified_revision;
   int64_t logical_id;
   proton_runtime_slot_t *runtime;
   proton_engine_window_t *engine_window;
@@ -143,8 +143,6 @@ PROTON_INTERNAL int32_t proton_window_enqueue_closed_once(
 PROTON_INTERNAL void proton_runtime_sync_engine_closed_windows(
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL int32_t proton_runtime_sync_engine_window_states(
-    proton_runtime_slot_t *runtime);
-PROTON_INTERNAL int32_t proton_runtime_sync_engine_close_requests(
     proton_runtime_slot_t *runtime);
 PROTON_INTERNAL void proton_runtime_sync_engine_bridge_lifecycle(
     proton_runtime_slot_t *runtime);

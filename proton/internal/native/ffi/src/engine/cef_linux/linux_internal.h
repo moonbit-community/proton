@@ -3,6 +3,7 @@
 
 /* Private contracts shared by the Linux engine translation units. */
 #include "../../proton_engine.h"
+#include "../../proton_event.h"
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
@@ -109,7 +110,7 @@ struct proton_engine_window {
   int enabled;
   int zoom_percent;
   int close_interception_enabled;
-  int close_interception_bypass;
+  int close_authorized;
   int close_request_pending;
   uint64_t close_request_id;
   proton_browser_session_t *browser_session;

@@ -1188,6 +1188,16 @@ void proton_engine_free_closed_windows(void) {
   }
 }
 
+int proton_engine_closed_windows_ready_for_shutdown(void) {
+  for (proton_engine_window_t *window = g_proton_engine_closed_windows;
+       window != NULL; window = window->next) {
+    if (window->hwnd != NULL) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 static int CEF_CALLBACK proton_engine_on_before_popup(
     cef_life_span_handler_t *self,
     cef_browser_t *browser,

@@ -103,5 +103,7 @@ PROTON_INTERNAL void proton_event_bind_sink(proton_event_sink_fn sink,
 PROTON_INTERNAL void proton_event_unbind_sink(void *user_data);
 PROTON_INTERNAL bool proton_event_try_publish(proton_event_t *event);
 PROTON_INTERNAL bool proton_event_publish(proton_event_t *event);
+PROTON_INTERNAL bool proton_event_publish_window_close_requested(
+    int64_t window, uint64_t request_id);
 
 #endif

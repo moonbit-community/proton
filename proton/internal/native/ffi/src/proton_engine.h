@@ -125,6 +125,7 @@ int32_t proton_engine_runtime_create(
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                       char *error,
                                       size_t error_len);
+int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime);
 int32_t proton_engine_complete_resource_request(
     int64_t request_id, int32_t status, const char *mime_type,
     const void *data, size_t data_len);
@@ -300,9 +301,6 @@ int32_t proton_engine_window_get_state(
 int32_t proton_engine_window_set_close_interception(
     proton_engine_window_t *window, int32_t enabled, char *error,
     size_t error_len);
-int32_t proton_engine_window_get_close_request(
-    proton_engine_window_t *window, uint64_t *out_request_id,
-    int32_t *out_pending, char *error, size_t error_len);
 int32_t proton_engine_window_respond_close_request(
     proton_engine_window_t *window, uint64_t request_id, int32_t allow,
     char *error, size_t error_len);
@@ -317,6 +315,9 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
 int32_t proton_engine_window_browser_command_json(
     proton_engine_window_t *window, const char *command_json,
     char *error, size_t error_len);
+int32_t proton_engine_window_get_navigation_state(
+    proton_engine_window_t *window, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward, char *error, size_t error_len);
 int32_t proton_engine_window_respond_browser_request_json(
     proton_engine_window_t *window, const char *response_json,
     char *error, size_t error_len);
@@ -419,6 +420,9 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
                                                 const char *command_json,
                                                 char *error,
                                                 size_t error_len);
+int32_t proton_engine_view_get_navigation_state(
+    proton_engine_view_t *view, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward, char *error, size_t error_len);
 /* Session cookie and cache management. The engine implementation reaches the
    CEF cookie manager through the window's browser host request context. Cookie
    get completion is published to the runtime event queue; set, delete, flush,

@@ -80,10 +80,10 @@ static char g_proton_engine_locale[PROTON_ENGINE_MAX_PATH_BYTES];
 static int32_t g_proton_remote_debugging_port =
     PROTON_REMOTE_DEBUGGING_DISABLED;
 static proton_engine_window_t *g_windows = NULL;
-static atomic_llong g_scheduled_pump_delay_ms = ATOMIC_VAR_INIT(-1);
-static atomic_uint g_wait_source_ready_mask = ATOMIC_VAR_INIT(PROTON_WAIT_NONE);
+static atomic_llong g_scheduled_pump_delay_ms = -1;
+static atomic_uint g_wait_source_ready_mask = PROTON_WAIT_NONE;
 /* Set only while this process is inside cef_do_message_loop_work. */
-static atomic_bool g_message_pump_active = ATOMIC_VAR_INIT(false);
+static atomic_bool g_message_pump_active = false;
 static proton_engine_runtime_t *g_active_runtime = NULL;
 
 /* The host loop's wake pipe. Process-wide rather than per-runtime: the
@@ -897,37 +897,8 @@ static int proton_engine_runtime_has_windows(
   return 0;
 }
 
-static int32_t proton_engine_runtime_close_windows(
-    proton_engine_runtime_t *runtime, char *error, size_t error_len) {
-  for (proton_engine_window_t *window = g_windows; window != NULL;
-       window = window->next) {
-    if (window->runtime != runtime || window->browser == NULL) {
-      continue;
-    }
-    window->destroy_requested = 1;
-    window->closing = 1;
-    cef_browser_host_t *host = window->browser->get_host(window->browser);
-    if (host != NULL) {
-      host->close_browser(host, 1);
-      host->base.release((cef_base_ref_counted_t *)host);
-    }
-  }
-
-  while (proton_engine_runtime_has_windows(runtime)) {
-    int32_t status = proton_engine_runtime_do_message_loop_work(
-        runtime, error, error_len);
-    if (status != PROTON_OK || !proton_engine_runtime_has_windows(runtime)) {
-      return status;
-    }
-    uint32_t ready_mask = PROTON_WAIT_NONE;
-    status = proton_engine_runtime_wait(
-        runtime, PROTON_WAIT_PLATFORM, PROTON_WAIT_TIMEOUT_INFINITE,
-        &ready_mask, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
-    }
-  }
-  return PROTON_OK;
+int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
+  return runtime != NULL && !proton_engine_runtime_has_windows(runtime);
 }
 
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
@@ -939,10 +910,10 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   }
   proton_engine_dialog_cancel_runtime(runtime);
   if (runtime->owns_cef_runtime) {
-    int32_t status =
-        proton_engine_runtime_close_windows(runtime, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
+    if (!proton_engine_runtime_destroy_ready(runtime)) {
+      proton_engine_set_message(error, error_len,
+                                "runtime still owns closing browser windows");
+      return PROTON_ERR_BUSY;
     }
     proton_engine_bridge_pending_clear_all();
     proton_engine_cef_shutdown();

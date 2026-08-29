@@ -134,7 +134,21 @@ pub extern "C" fn runtime_create(
 ) -> Int = "proton_internal_runtime_create"
 
 ///|
-pub extern "C" fn proton_runtime_destroy_ffi(runtime : RuntimeHandle) -> Int = "proton_runtime_destroy"
+pub extern "C" fn proton_runtime_begin_destroy_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_runtime_begin_destroy"
+
+///|
+#borrow(out_ready)
+pub extern "C" fn proton_runtime_destroy_ready_ffi(
+  runtime : RuntimeHandle,
+  out_ready : Ref[Int],
+) -> Int = "proton_runtime_destroy_ready"
+
+///|
+pub extern "C" fn proton_runtime_finish_destroy_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_runtime_finish_destroy"
 
 ///|
 /// Safe to call from any thread and takes no handle, which is what lets a
@@ -625,6 +639,14 @@ pub extern "C" fn proton_window_browser_command_json_ffi(
 ) -> Int = "proton_window_browser_command_json"
 
 ///|
+#borrow(out_can_go_back, out_can_go_forward)
+pub extern "C" fn proton_window_get_navigation_state_ffi(
+  window : WindowHandle,
+  out_can_go_back : Ref[Int],
+  out_can_go_forward : Ref[Int],
+) -> Int = "proton_window_get_navigation_state"
+
+///|
 #borrow(response_json)
 pub extern "C" fn proton_window_respond_browser_request_json_ffi(
   window : WindowHandle,
@@ -828,6 +850,14 @@ pub extern "C" fn proton_view_browser_command_json_ffi(
   view : ViewHandle,
   command_json : Bytes,
 ) -> Int = "proton_view_browser_command_json"
+
+///|
+#borrow(out_can_go_back, out_can_go_forward)
+pub extern "C" fn proton_view_get_navigation_state_ffi(
+  view : ViewHandle,
+  out_can_go_back : Ref[Int],
+  out_can_go_forward : Ref[Int],
+) -> Int = "proton_view_get_navigation_state"
 
 ///|
 #borrow(out_fields, out_screen_count)

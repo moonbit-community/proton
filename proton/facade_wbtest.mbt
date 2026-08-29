@@ -59,6 +59,7 @@ fn test_window_handle(
   id : String,
   native_id : Int64,
   position_calls? : Array[(Int, Int)],
+  size_calls? : Array[(Int, Int)],
   popup_calls? : Array[String],
   progress_calls? : Array[Double],
   flash_calls? : Array[Bool],
@@ -94,6 +95,7 @@ fn test_window_handle(
     send_browser_command: fn(_command, _download_id) {  },
     set_browser_zoom_percent: fn(_zoom_percent) {  },
     read_browser_zoom_percent: fn() { 100 },
+    read_browser_navigation_state: fn() { (true, false) },
   }
   WindowHandle::{
     id,
@@ -105,7 +107,12 @@ fn test_window_handle(
     set_window_title: fn(_title) {  },
     set_window_icon: fn(_path) {  },
     set_window_parent: fn(_parent, _modal) {  },
-    set_window_size: fn(_width, _height) {  },
+    set_window_size: (width, height) => {
+      match size_calls {
+        Some(calls) => calls.push((width, height))
+        None => ()
+      }
+    },
     set_window_button_visibility: fn(_visible) {  },
     set_window_content_size: (width, height) => {
       match content_size_calls {
@@ -305,6 +312,32 @@ test "last-window policy defaults to quit and can keep the app running" {
   assert_false(
     should_quit_after_last_window(LastWindowClosedPolicy::Quit, false, true),
   )
+}
+
+///|
+test "application close commits only after every window allows it" {
+  assert_true(should_commit_application_close([]))
+  assert_true(
+    should_commit_application_close([
+      WindowCloseDecision::Allow,
+      WindowCloseDecision::Allow,
+    ]),
+  )
+  assert_false(
+    should_commit_application_close([
+      WindowCloseDecision::Allow,
+      WindowCloseDecision::Deny,
+    ]),
+  )
+}
+
+///|
+test "close coordinator starts only one application quit transaction" {
+  let coordinator = CloseCoordinator()
+  assert_false(coordinator.is_quitting())
+  assert_true(coordinator.request_quit())
+  assert_true(coordinator.is_quitting())
+  assert_false(coordinator.request_quit())
 }
 
 ///|
@@ -1667,27 +1700,49 @@ async test "runtime wakeup preserves notification before suspension" {
 }
 
 ///|
+async test "wake driver preserves notification during state advancement" {
+  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal(), }
+  let advances = Ref(0)
+  let completed = @async.with_timeout_opt(100, () => {
+    drive_wakeup_until(wakeup, () => advances.val == 2, () => {
+      advances.val = advances.val + 1
+      if advances.val == 1 {
+        wakeup.signal.notify()
+      }
+      false
+    })
+  })
+  assert_true(completed is Some(_))
+  assert_eq(advances.val, 2)
+}
+
+///|
 async test "dialog completion wakes only its registered waiter" {
   let completions = DialogCompletionStore()
+  assert_false(completions.route_completion(None))
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
     while completions.pending.is_empty() {
       @async.pause()
     }
-    completions.complete(
-      Some(@native.NativeDialogCompletion::{
-        dialog: 42L,
-        window: Some(7L),
-        result: Ok("unrelated"),
-      }),
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeDialogCompletion::{
+          dialog: 42L,
+          window: Some(7L),
+          result: Ok("unrelated"),
+        }),
+      ),
     )
     assert_true(waiting.try_wait() is None)
-    completions.complete(
-      Some(@native.NativeDialogCompletion::{
-        dialog: 41L,
-        window: Some(7L),
-        result: Ok("selected"),
-      }),
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeDialogCompletion::{
+          dialog: 41L,
+          window: Some(7L),
+          result: Ok("selected"),
+        }),
+      ),
     )
     assert_eq(waiting.wait(), "selected")
     group.return_immediately(())
@@ -1711,12 +1766,14 @@ async test "dialog completion propagates native failure" {
     while completions.pending.is_empty() {
       @async.pause()
     }
-    completions.complete(
-      Some(@native.NativeDialogCompletion::{
-        dialog: 51L,
-        window: None,
-        result: Err(@native.Status(status=-7, message="dialog owner closed")),
-      }),
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeDialogCompletion::{
+          dialog: 51L,
+          window: None,
+          result: Err(@native.Status(status=-7, message="dialog owner closed")),
+        }),
+      ),
     )
     waiting.wait()
     group.return_immediately(())
@@ -2206,6 +2263,7 @@ fn test_view_handle(
     load_view_html: fn(_html, _base_url) {  },
     eval_view_script: fn(_script) {  },
     send_view_command: fn(_command, _download_id) {  },
+    read_view_navigation_state: fn() { (true, false) },
     read_view_state: fn() {
       { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1, }
     },
@@ -2222,6 +2280,8 @@ test "view handle routes operations through its closures" {
   view.set_visible(false)
   view.set_z_order(2)
   view.load_url("https://example.com/")
+  assert_true(view.can_go_back())
+  assert_false(view.can_go_forward())
   let state = view.state()
   inspect(state.width, content="300")
   inspect(state.z_order, content="1")
@@ -2259,8 +2319,8 @@ test "window content size routes logical dimensions through the handle" {
     content_size=(640, 360),
   )
   window.set_content_size(800, 450)
-  inspect(window.content_size(), content="(640, 360)")
-  inspect(calls, content="[(800, 450)]")
+  debug_inspect(window.content_size(), content="(640, 360)")
+  debug_inspect(calls, content="[(800, 450)]")
 }
 
 ///|
@@ -2468,6 +2528,41 @@ test "window center uses the current monitor work area and frame size" {
   })
   window.center()
   debug_inspect(position_calls, content="[(560, 240)]")
+}
+
+///|
+test "window bounds read and write use Electron coordinate order" {
+  let position_calls : Array[(Int, Int)] = []
+  let size_calls : Array[(Int, Int)] = []
+  let window = test_window_handle("main", 17L, position_calls~, size_calls~, window_state=WindowState::{
+    x: 120,
+    y: 80,
+    width: 800,
+    height: 600,
+    monitor: WindowMonitor::{
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+      work_x: 0,
+      work_y: 0,
+      work_width: 1920,
+      work_height: 1080,
+      scale_factor_percent: 100,
+    },
+    zoom_percent: 100,
+    visible: true,
+    focused: true,
+    minimized: false,
+    maximized: false,
+    fullscreen: false,
+    always_on_top: false,
+    theme: "system",
+  })
+  assert_eq(window.bounds(), (120, 80, 800, 600))
+  window.set_bounds(x=40, y=50, width=640, height=480)
+  debug_inspect(position_calls, content="[(40, 50)]")
+  debug_inspect(size_calls, content="[(640, 480)]")
 }
 
 ///|

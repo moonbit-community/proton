@@ -144,8 +144,18 @@ static void proton_engine_window_list_remove(proton_engine_window_t *window) {
   proton_engine_window_unlock();
 }
 
-int proton_engine_window_has_any(void) {
-  return g_windows != NULL;
+int proton_engine_runtime_has_windows(proton_engine_runtime_t *runtime) {
+  int has_windows = 0;
+  proton_engine_window_lock();
+  for (proton_engine_window_t *window = g_windows; window != NULL;
+       window = window->next) {
+    if (window->runtime == runtime) {
+      has_windows = 1;
+      break;
+    }
+  }
+  proton_engine_window_unlock();
+  return has_windows;
 }
 
 proton_engine_window_t *proton_engine_window_from_browser(
@@ -585,18 +595,19 @@ static void proton_engine_window_update_zoom_button(
     return YES;
   }
   if (window->close_interception_enabled &&
-      !window->close_interception_bypass) {
+      !window->close_authorized) {
     if (!window->close_request_pending) {
       window->close_request_id++;
       if (window->close_request_id == 0) {
         window->close_request_id = 1;
       }
       window->close_request_pending = 1;
+      (void)proton_event_publish_window_close_requested(
+          window->public_window_id, window->close_request_id);
       proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     }
     return NO;
   }
-  window->close_interception_bypass = 0;
   if (window->browser == NULL) {
     proton_engine_window_commit_appkit_close(window, native_window);
     return YES;
@@ -1079,18 +1090,19 @@ int32_t proton_engine_window_close(proton_engine_window_t *window,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (window->headless && window->close_interception_enabled &&
-      !window->close_interception_bypass) {
+      !window->close_authorized) {
     if (!window->close_request_pending) {
       window->close_request_id++;
       if (window->close_request_id == 0) {
         window->close_request_id = 1;
       }
       window->close_request_pending = 1;
+      (void)proton_event_publish_window_close_requested(
+          window->public_window_id, window->close_request_id);
       proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     }
     return PROTON_OK;
   }
-  window->close_interception_bypass = 0;
   if (!window->headless) {
     window->programmatic_close_pending = 1;
     proton_engine_window_apply_closable_style(window);
@@ -2035,26 +2047,14 @@ int32_t proton_engine_window_set_close_interception(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   window->close_interception_enabled = enabled != 0;
+  if (window->close_interception_enabled) {
+    window->close_authorized = 0;
+  }
   if (!window->close_interception_enabled) {
     window->close_request_pending = 0;
     window->programmatic_close_pending = 0;
     proton_engine_window_apply_closable_style(window);
   }
-  return PROTON_OK;
-}
-
-int32_t proton_engine_window_get_close_request(
-    proton_engine_window_t *window, uint64_t *out_request_id,
-    int32_t *out_pending, char *error, size_t error_len) {
-
-  if (window == NULL || out_request_id == NULL || out_pending == NULL) {
-    proton_engine_set_message(
-        error, error_len,
-        "window, out_request_id, and out_pending are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_request_id = window->close_request_id;
-  *out_pending = window->close_request_pending;
   return PROTON_OK;
 }
 
@@ -2074,12 +2074,13 @@ int32_t proton_engine_window_respond_close_request(
   }
   window->close_request_pending = 0;
   if (allow && !window->closed) {
-    window->close_interception_bypass = 1;
+    window->close_authorized = 1;
     if (window->headless) {
       return proton_engine_window_close(window, error, error_len);
     }
     [window->window performClose:nil];
   } else if (!allow) {
+    window->close_authorized = 0;
     window->programmatic_close_pending = 0;
     proton_engine_window_apply_closable_style(window);
   }
@@ -2168,6 +2169,17 @@ int32_t proton_engine_window_browser_command_json(
   return proton_browser_session_command_json(
       window->browser_session, window->browser, command_json, error,
       error_len);
+}
+
+int32_t proton_engine_window_get_navigation_state(
+    proton_engine_window_t *window, int32_t *out_can_go_back,
+    int32_t *out_can_go_forward, char *error, size_t error_len) {
+  if (window == NULL || window->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_navigation_state(
+      window->browser, out_can_go_back, out_can_go_forward, error, error_len);
 }
 
 int32_t proton_engine_window_respond_browser_request_json(
