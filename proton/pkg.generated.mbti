@@ -260,6 +260,7 @@ pub struct BrowserHandle {
   read_browser_zoom_percent : () -> Int raise WindowSessionError
   read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
   read_browser_state : () -> BrowserState raise WindowSessionError
+  session_handle : SessionHandle
 }
 pub fn BrowserHandle::back(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::can_go_back(Self) -> Bool raise WindowSessionError
@@ -272,6 +273,7 @@ pub fn BrowserHandle::load_html(Self, String, String) -> Unit raise WindowSessio
 pub fn BrowserHandle::load_url(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::open_devtools(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
+pub fn BrowserHandle::session(Self) -> SessionHandle
 pub fn BrowserHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn BrowserHandle::state(Self) -> BrowserState raise WindowSessionError
 pub fn BrowserHandle::stop(Self) -> Unit raise WindowSessionError
@@ -304,6 +306,30 @@ pub(all) struct CertificateError {
 pub fn CertificateError::equal(Self, Self) -> Bool
 pub fn CertificateError::not_equal(Self, Self) -> Bool
 pub fn CertificateError::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Cookie {
+  name : String
+  value : String
+  domain : String
+  path : String
+  secure : Bool
+  http_only : Bool
+  same_site : CookieSameSite
+  expiration_date : Double?
+} derive(Eq, @debug.Debug)
+pub fn Cookie::equal(Self, Self) -> Bool
+pub fn Cookie::not_equal(Self, Self) -> Bool
+pub fn Cookie::to_repr(Self) -> @debug.Repr
+
+pub(all) enum CookieSameSite {
+  Unspecified
+  NoRestriction
+  Lax
+  Strict
+} derive(Eq, @debug.Debug)
+pub fn CookieSameSite::equal(Self, Self) -> Bool
+pub fn CookieSameSite::not_equal(Self, Self) -> Bool
+pub fn CookieSameSite::to_repr(Self) -> @debug.Repr
 
 pub(all) enum DownloadDecision {
   Deny
@@ -491,6 +517,22 @@ pub(all) struct ScreenInfo {
 pub fn ScreenInfo::equal(Self, Self) -> Bool
 pub fn ScreenInfo::not_equal(Self, Self) -> Bool
 pub fn ScreenInfo::to_repr(Self) -> @debug.Repr
+
+pub struct SessionHandle {
+  id : String
+  native_id : Int64
+  read_cookies : async (String?, Bool) -> Array[Cookie] raise WindowSessionError
+  write_cookie : (String, String, String, String?, String?, Bool, Bool, CookieSameSite) -> Unit raise WindowSessionError
+  remove_cookies : (String?, String?) -> Unit raise WindowSessionError
+  flush_cookie_store : () -> Unit raise WindowSessionError
+  clear_http_cache : () -> Unit raise WindowSessionError
+}
+pub fn SessionHandle::clear_cache(Self) -> Unit raise WindowSessionError
+pub fn SessionHandle::delete_cookies(Self, url? : String, name? : String) -> Unit raise WindowSessionError
+pub fn SessionHandle::flush_cookies(Self) -> Unit raise WindowSessionError
+pub async fn SessionHandle::get_cookies(Self, url? : String, include_http_only? : Bool) -> Array[Cookie] raise WindowSessionError
+pub fn SessionHandle::set_cookie(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : CookieSameSite) -> Unit raise WindowSessionError
+pub fn SessionHandle::window_id(Self) -> String
 
 pub(all) enum TitlebarStyle {
   Default

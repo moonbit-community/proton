@@ -380,7 +380,26 @@ priv struct DialogCompletionStore {
 priv struct RuntimeEventPump {
   runtime : @native.Runtime
   dialog_completions : DialogCompletionStore
+  cookie_completions : CookieCompletionStore
   session_events : Array[@native.RuntimeEvent]
+}
+
+///|
+priv enum CookieCompletionState {
+  CookieWaiting
+  CookieCompleted(Result[String, @native.NativeError])
+}
+
+///|
+priv struct PendingCookieCompletion {
+  request_id : Int64
+  mut state : CookieCompletionState
+  changed : @async.CondVar
+}
+
+///|
+priv struct CookieCompletionStore {
+  pending : Array[PendingCookieCompletion]
 }
 
 ///|
@@ -435,6 +454,29 @@ pub struct BrowserHandle {
   read_browser_zoom_percent : () -> Int raise WindowSessionError
   read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
   read_browser_state : () -> BrowserState raise WindowSessionError
+  session_handle : SessionHandle
+}
+
+///|
+/// A non-owning reference to the request context used by one window's main
+/// browser, corresponding to Electron's `webContents.session`.
+pub struct SessionHandle {
+  id : String
+  native_id : Int64
+  read_cookies : async (String?, Bool) -> Array[Cookie] raise WindowSessionError
+  write_cookie : (
+    String,
+    String,
+    String,
+    String?,
+    String?,
+    Bool,
+    Bool,
+    CookieSameSite,
+  ) -> Unit raise WindowSessionError
+  remove_cookies : (String?, String?) -> Unit raise WindowSessionError
+  flush_cookie_store : () -> Unit raise WindowSessionError
+  clear_http_cache : () -> Unit raise WindowSessionError
 }
 
 ///|
@@ -755,6 +797,60 @@ priv enum BridgeRequestLifecycleState {
 priv struct AppLifecycle {
   mut state : AppLifecycleState
 }
+
+///|
+/// SameSite policy for a browser cookie.
+pub(all) enum CookieSameSite {
+  Unspecified
+  NoRestriction
+  Lax
+  Strict
+} derive(Debug, Eq)
+
+///|
+pub extend CookieSameSite with Eq::{not_equal, equal}
+
+///|
+pub extend CookieSameSite with Debug::{to_repr}
+
+///|
+/// One cookie returned by the browser session.
+pub(all) struct Cookie {
+  name : String
+  value : String
+  domain : String
+  path : String
+  secure : Bool
+  http_only : Bool
+  same_site : CookieSameSite
+  expiration_date : Double?
+} derive(Debug, Eq)
+
+///|
+pub extend Cookie with Eq::{not_equal, equal}
+
+///|
+pub extend Cookie with Debug::{to_repr}
+
+///|
+priv struct NativeCookieRecord {
+  name : String
+  value : String
+  domain : String
+  path : String
+  secure : Bool
+  http_only : Bool
+  same_site : String
+  has_expires : Bool
+  expires : Double?
+  creation : Double
+  last_access : Double
+} derive(FromJson)
+
+///|
+priv suberror CookieDecodeError {
+  CookieDecodeError(String)
+} derive(Debug)
 
 ///|
 /// Failures while resolving and validating an application's configuration.

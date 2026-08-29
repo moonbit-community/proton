@@ -105,6 +105,26 @@ fn test_window_handle(
         can_go_forward: false,
       }
     },
+    session_handle: SessionHandle::{
+      id,
+      native_id,
+      read_cookies: (_url, _include_http_only) => [],
+      write_cookie: fn(
+        _url,
+        _name,
+        _value,
+        _domain,
+        _path,
+        _secure,
+        _http_only,
+        _same_site,
+      ) {
+
+      },
+      remove_cookies: fn(_url, _name) {  },
+      flush_cookie_store: fn() {  },
+      clear_http_cache: fn() {  },
+    },
   }
   WindowHandle::{
     id,
@@ -1796,6 +1816,40 @@ async test "dialog completion propagates native failure" {
 }
 
 ///|
+async test "cookie completion wakes only its registered waiter" {
+  let completions = CookieCompletionStore()
+  assert_false(completions.route_completion(None))
+  @async.with_task_group(group => {
+    let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
+    while completions.pending.is_empty() {
+      @async.pause()
+    }
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeCookieGetCompletion::{
+          request_id: 42L,
+          window: 7L,
+          result: Ok("[]"),
+        }),
+      ),
+    )
+    assert_true(waiting.try_wait() is None)
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeCookieGetCompletion::{
+          request_id: 41L,
+          window: 7L,
+          result: Ok("[{\"name\":\"selected\"}]"),
+        }),
+      ),
+    )
+    assert_eq(waiting.wait(), "[{\"name\":\"selected\"}]")
+    group.return_immediately(())
+  })
+  assert_true(completions.pending.is_empty())
+}
+
+///|
 async test "application lifecycle startup rolls back completed hooks" {
   let calls : Array[String] = []
   let cleanup_failures : Array[AppCleanupError] = []
@@ -2337,6 +2391,80 @@ test "app builder registers main browser lifecycle handlers" {
 
   })
   assert_eq(app.browser_event_handlers.length(), 1)
+}
+
+///|
+test "cookie payloads decode Electron-style session fields" {
+  let payload =
+    #|[{"name":"token","value":"abc","domain":"example.test","path":"/","secure":true,"http_only":true,"same_site":"lax","has_expires":true,"expires":11644473600000000,"creation":11644473600000000,"last_access":11644473600000000}]
+    #|
+  let cookies = decode_cookies(payload) catch {
+    CookieDecodeError(detail) => fail(detail)
+  }
+  assert_eq(cookies.length(), 1)
+  let cookie = cookies[0]
+  assert_eq(cookie.name, "token")
+  assert_eq(cookie.value, "abc")
+  assert_eq(cookie.same_site, CookieSameSite::Lax)
+  assert_eq(cookie.expiration_date, Some(0.0))
+}
+
+///|
+async test "session handle routes cookie and cache operations" {
+  let calls : Array[String] = []
+  let session = SessionHandle::{
+    id: "main",
+    native_id: 17L,
+    read_cookies: (url, include_http_only) => {
+      calls.push("get:\{url.unwrap_or("*")}:http_only=\{include_http_only}")
+      []
+    },
+    write_cookie: (
+      url,
+      name,
+      value,
+      _domain,
+      _path,
+      secure,
+      http_only,
+      same_site,
+    ) => {
+      calls.push(
+        "set:\{url}:\{name}=\{value}:secure=\{secure}:http_only=\{http_only}:same_site=\{Repr(same_site)}",
+      )
+    },
+    remove_cookies: (url, name) => {
+      calls.push("delete:\{url.unwrap_or("*")}:\{name.unwrap_or("*")}")
+    },
+    flush_cookie_store: () => calls.push("flush"),
+    clear_http_cache: () => calls.push("clear_cache"),
+  }
+  ignore(
+    session.get_cookies(url="https://example.test/", include_http_only=true),
+  )
+  session.set_cookie(
+    "https://example.test/",
+    "token",
+    "abc",
+    secure=true,
+    http_only=true,
+    same_site=CookieSameSite::Strict,
+  )
+  session.delete_cookies(url="https://example.test/", name="token")
+  session.flush_cookies()
+  session.clear_cache()
+  debug_inspect(
+    calls,
+    content=(
+      #|[
+      #|  "get:https://example.test/:http_only=true",
+      #|  "set:https://example.test/:token=abc:secure=true:http_only=true:same_site=Strict",
+      #|  "delete:https://example.test/:token",
+      #|  "flush",
+      #|  "clear_cache",
+      #|]
+    ),
+  )
 }
 
 ///|

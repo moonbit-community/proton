@@ -465,11 +465,14 @@ proton_cookie_manager_from_window(proton_engine_window_t *window,
   }
   cef_request_context_t *context = host->get_request_context(host);
   if (context == NULL) {
+    host->base.release((cef_base_ref_counted_t *)host);
     proton_engine_set_message(error, error_len,
                               "request context is not available");
     return NULL;
   }
   cef_cookie_manager_t *manager = context->get_cookie_manager(context, NULL);
+  context->base.base.release((cef_base_ref_counted_t *)context);
+  host->base.release((cef_base_ref_counted_t *)host);
   if (manager == NULL) {
     proton_engine_set_message(error, error_len,
                               "cookie manager is not available");
@@ -708,12 +711,15 @@ int32_t proton_engine_window_clear_cache(proton_engine_window_t *window,
   }
   cef_request_context_t *context = host->get_request_context(host);
   if (context == NULL) {
+    host->base.release((cef_base_ref_counted_t *)host);
     proton_engine_set_message(error, error_len,
                               "request context is not available");
     return PROTON_ERR_ENGINE;
   }
   /* clear_http_cache was added in CEF 144; Proton ships CEF 147. */
   context->clear_http_cache(context, NULL);
+  context->base.base.release((cef_base_ref_counted_t *)context);
+  host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }
 

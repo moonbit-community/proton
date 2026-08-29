@@ -25,6 +25,45 @@ let page =
   #|
 
 ///|
+let session_review_started : Ref[Bool] = { val: false, }
+
+///|
+async fn review_session(browser : @proton.BrowserHandle) -> Unit noraise {
+  let session = browser.session()
+  session.set_cookie(
+    "https://example.com/",
+    "proton_review",
+    "active",
+    secure=true,
+    same_site=@proton.CookieSameSite::Lax,
+  ) catch {
+    error => {
+      println("set cookie failed: \{error.message()}")
+      return
+    }
+  }
+  let cookies = session.get_cookies(
+    url="https://example.com/",
+    include_http_only=true,
+  ) catch {
+    error => {
+      println("get cookies failed: \{error.message()}")
+      return
+    }
+  }
+  println("session cookies: \{Repr(cookies)}")
+  session.flush_cookies() catch {
+    error => println("flush cookies failed: \{error.message()}")
+  }
+  session.clear_cache() catch {
+    error => println("clear cache failed: \{error.message()}")
+  }
+  session.delete_cookies(url="https://example.com/", name="proton_review") catch {
+    error => println("delete cookie failed: \{error.message()}")
+  }
+}
+
+///|
 async fn main {
   @proton.html("Browser Control", page, debug=true)
   .on_navigation_request(fn(_browser, request) {
@@ -50,7 +89,7 @@ async fn main {
   .on_download_event(fn(_browser, event) {
     println("download \{event.id}: \{event.state} \{event.percent}%")
   })
-  .on_browser_event(fn(browser, event) noraise {
+  .on_browser_event(async fn(browser, event) noraise {
     println("browser event: \{Repr(event)}")
     let state = browser.state() catch {
       error => {
@@ -61,6 +100,12 @@ async fn main {
     println(
       "browser state: loading=\{state.is_loading} back=\{state.can_go_back} forward=\{state.can_go_forward} title=\{state.title} url=\{state.url}",
     )
+    if event is @proton.BrowserEvent::Navigated(url~) &&
+      url.has_prefix("https://example.com") &&
+      !session_review_started.val {
+      session_review_started.val = true
+      review_session(browser)
+    }
   })
   .identifier("dev.proton.50-browser-control")
   .run_or_abort()

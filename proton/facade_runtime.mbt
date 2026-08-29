@@ -188,7 +188,10 @@ async fn run_manifest(
   }
   let wakeup = RuntimeWakeup()
   let dialog_completions = DialogCompletionStore()
-  let event_pump = RuntimeEventPump(runtime, dialog_completions)
+  let cookie_completions = CookieCompletionStore()
+  let event_pump = RuntimeEventPump(
+    runtime, dialog_completions, cookie_completions,
+  )
   match app_instance {
     Some(instance) =>
       instance.attach_runtime(runtime) catch {

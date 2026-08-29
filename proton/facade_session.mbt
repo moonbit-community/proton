@@ -664,6 +664,7 @@ fn RuntimeSession::browser_handle(
 ) -> BrowserHandle {
   let id = window.id
   let native_id = window.window.id()
+  let session_handle = self.session_handle(window)
   BrowserHandle::{
     id,
     native_id,
@@ -728,6 +729,68 @@ fn RuntimeSession::browser_handle(
             error,
           )
       }
+    },
+    session_handle,
+  }
+}
+
+///|
+fn RuntimeSession::session_handle(
+  self : RuntimeSession,
+  window : RunningWindow,
+) -> SessionHandle {
+  let id = window.id
+  let native_id = window.window.id()
+  SessionHandle::{
+    id,
+    native_id,
+    read_cookies: (url, include_http_only) => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      let request_id = running.window.cookie_begin_get(url, include_http_only) catch {
+        error =>
+          raise window_operation_failed("read cookies in window " + id, error)
+      }
+      let payload = self.event_pump.cookie_completions.wait(request_id)
+      decode_cookies(payload) catch {
+        CookieDecodeError(detail) =>
+          raise OperationFailed(
+            action="decode cookies in window " + id,
+            status=-1,
+            detail~,
+          )
+      }
+    },
+    write_cookie: (url, name, value, domain, path, secure, http_only, same_site) => {
+      self.control_window(id, native_id, "set cookie in", window => {
+        window.cookie_set(
+          url,
+          name,
+          value,
+          domain?,
+          path?,
+          secure~,
+          http_only~,
+          same_site=same_site.to_native(),
+        )
+      })
+    },
+    remove_cookies: (url, name) => {
+      self.control_window(id, native_id, "delete cookies in", window => {
+        window.cookie_delete(url, name)
+      })
+    },
+    flush_cookie_store: () => {
+      self.control_window(id, native_id, "flush cookies in", window => {
+        window.cookie_flush()
+      })
+    },
+    clear_http_cache: () => {
+      self.control_window(id, native_id, "clear cache in", window => {
+        window.clear_cache()
+      })
     },
   }
 }
@@ -2116,6 +2179,12 @@ pub fn BrowserHandle::state(
   self : BrowserHandle,
 ) -> BrowserState raise WindowSessionError {
   (self.read_browser_state)()
+}
+
+///|
+/// Returns the browser session used by this main page.
+pub fn BrowserHandle::session(self : BrowserHandle) -> SessionHandle {
+  self.session_handle
 }
 
 ///|
