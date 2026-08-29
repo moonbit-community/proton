@@ -15,7 +15,10 @@ async test "response diagnostics precede consumption and cancellation clears sta
       websocket.send_text("{\"id\":1,\"result\":{\"ok\":true}}")
       ignore(websocket.recv().read_all().text())
       ignore(websocket.recv()) catch {
-        _ => peer_closed.val = true
+        error => {
+          inspect(error, content="ConnectionClosed(Normal, None)")
+          peer_closed.val = true
+        }
       }
     })
 
