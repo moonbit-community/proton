@@ -2260,6 +2260,10 @@ fn test_view_handle(
     },
     set_view_visible: fn(visible) { calls.push("set_visible:\{visible}") },
     set_view_z_order: fn(z_order) { calls.push("set_z_order:\{z_order}") },
+    set_view_zoom_percent: fn(zoom_percent) {
+      calls.push("set_zoom_percent:\{zoom_percent}")
+    },
+    read_view_zoom_percent: fn() { 125 },
     load_view_url: fn(url) { calls.push("load_url:\{url}") },
     load_view_html: fn(_html, _base_url) {  },
     eval_view_script: fn(_script) {  },
@@ -2280,6 +2284,8 @@ test "view handle routes operations through its closures" {
   view.set_bounds(x=1, y=2, width=300, height=200)
   view.set_visible(false)
   view.set_z_order(2)
+  view.set_zoom_percent(125)
+  inspect(view.zoom_percent(), content="125")
   view.load_url("https://example.com/")
   assert_true(view.can_go_back())
   assert_false(view.can_go_forward())
@@ -2294,6 +2300,7 @@ test "view handle routes operations through its closures" {
       #|  "set_bounds:1,2,300,200",
       #|  "set_visible:false",
       #|  "set_z_order:2",
+      #|  "set_zoom_percent:125",
       #|  "load_url:https://example.com/",
       #|  "close",
       #|]

@@ -48,6 +48,10 @@ async fn run_web_contents_view_app() -> Result[Unit, String] {
             z_order=1,
           ),
         )
+        left.set_zoom_percent(125)
+        if left.zoom_percent() != 125 {
+          abort("web contents view zoom did not persist")
+        }
         left.load_url(wcv_left_url)
         right.load_html(wcv_right_html, wcv_right_url)
       },

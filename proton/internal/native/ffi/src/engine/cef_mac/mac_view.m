@@ -391,6 +391,8 @@ void proton_engine_view_on_after_created(proton_engine_view_t *view,
   view->browser_id = browser->get_identifier(browser);
   view->browser_create_scheduled = 0;
   if (host != NULL) {
+    double factor = (double)view->zoom_percent / 100.0;
+    host->set_zoom_level(host, log(factor) / log(1.2));
     if (window->headless) {
       if (!view->visible && host->was_hidden != NULL) {
         host->was_hidden(host, 1);
@@ -508,6 +510,7 @@ int32_t proton_engine_view_create(
   view->width = config.width;
   view->height = config.height;
   view->z_order = config.z_order;
+  view->zoom_percent = 100;
   view->visible = config.visible;
   view->client = proton_engine_view_client_create(view);
   if (view->client == NULL) {
@@ -659,6 +662,26 @@ int32_t proton_engine_view_set_z_order(proton_engine_view_t *view,
   }
   view->z_order = z_order;
   proton_engine_window_layout_views(view->window);
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_set_zoom_percent(proton_engine_view_t *view,
+                                            int32_t zoom_percent,
+                                            char *error,
+                                            size_t error_len) {
+  if (view == NULL || view->closed) {
+    proton_engine_set_message(error, error_len, "view is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (view->browser != NULL) {
+    int32_t status = proton_browser_set_zoom_percent(
+        view->browser, zoom_percent, error, error_len);
+    if (status != PROTON_OK) {
+      return status;
+    }
+  }
+  view->zoom_percent = zoom_percent;
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }

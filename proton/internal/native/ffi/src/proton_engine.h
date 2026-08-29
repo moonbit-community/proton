@@ -410,6 +410,10 @@ int32_t proton_engine_view_set_z_order(proton_engine_view_t *view,
                                        int32_t z_order,
                                        char *error,
                                        size_t error_len);
+int32_t proton_engine_view_set_zoom_percent(proton_engine_view_t *view,
+                                            int32_t zoom_percent,
+                                            char *error,
+                                            size_t error_len);
 int32_t proton_engine_view_load_url(proton_engine_view_t *view,
                                     const char *url,
                                     char *error,

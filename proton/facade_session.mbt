@@ -406,6 +406,28 @@ fn RuntimeSession::view_handle(
         view => view.set_z_order(z_order),
       )
     },
+    set_view_zoom_percent: zoom_percent => {
+      self.control_view(
+        window_id,
+        window_native_id,
+        id,
+        native_id,
+        "set zoom of",
+        view => view.set_zoom_percent(zoom_percent),
+      )
+    },
+    read_view_zoom_percent: () => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      running.view.zoom_percent() catch {
+        error =>
+          raise window_operation_failed(
+            "read zoom of view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
     load_view_url: url => {
       self.control_view(
         window_id,
@@ -1871,6 +1893,23 @@ pub fn ViewHandle::set_z_order(
   z_order : Int,
 ) -> Unit raise WindowSessionError {
   (self.set_view_z_order)(z_order)
+}
+
+///|
+/// Sets this view's browser zoom from 25% through 500%.
+pub fn ViewHandle::set_zoom_percent(
+  self : ViewHandle,
+  zoom_percent : Int,
+) -> Unit raise WindowSessionError {
+  (self.set_view_zoom_percent)(zoom_percent)
+}
+
+///|
+/// Returns this view's browser zoom percentage.
+pub fn ViewHandle::zoom_percent(
+  self : ViewHandle,
+) -> Int raise WindowSessionError {
+  (self.read_view_zoom_percent)()
 }
 
 ///|

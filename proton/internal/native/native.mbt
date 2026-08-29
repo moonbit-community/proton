@@ -2678,6 +2678,34 @@ pub fn View::set_z_order(self : View, z_order : Int) -> Unit raise NativeError {
 }
 
 ///|
+pub fn View::set_zoom_percent(
+  self : View,
+  zoom_percent : Int,
+) -> Unit raise NativeError {
+  if zoom_percent < 25 || zoom_percent > 500 {
+    raise invalid_argument("zoom_percent must be between 25 and 500")
+  }
+  check_status(
+    @native_ffi.proton_view_set_zoom_percent_ffi(
+      self.live_handle(),
+      zoom_percent,
+    ),
+  )
+}
+
+///|
+pub fn View::zoom_percent(self : View) -> Int raise NativeError {
+  let zoom_percent : Ref[Int] = { val: 100, }
+  check_status(
+    @native_ffi.proton_view_get_zoom_percent_ffi(
+      self.live_handle(),
+      zoom_percent,
+    ),
+  )
+  zoom_percent.val
+}
+
+///|
 pub fn View::load_url(self : View, url : String) -> Unit raise NativeError {
   if url.is_empty() {
     raise invalid_argument("url must not be empty")
