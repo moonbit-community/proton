@@ -84,6 +84,8 @@ fn test_window_handle(
   maximum_size_calls? : Array[(Int, Int)],
   content_size_calls? : Array[(Int, Int)],
   content_size? : (Int, Int),
+  browser_audio_calls? : Array[Bool],
+  browser_audio_muted? : Bool = false,
   window_state? : WindowState,
 ) -> WindowHandle {
   let browser = BrowserHandle::{
@@ -95,6 +97,13 @@ fn test_window_handle(
     send_browser_command: fn(_command, _download_id) {  },
     set_browser_zoom_percent: fn(_zoom_percent) {  },
     read_browser_zoom_percent: fn() { 100 },
+    set_browser_audio_muted: muted => {
+      match browser_audio_calls {
+        Some(calls) => calls.push(muted)
+        None => ()
+      }
+    },
+    read_browser_audio_muted: fn() { browser_audio_muted },
     read_browser_navigation_state: fn() { (true, false) },
     read_browser_state: fn() {
       {
@@ -2327,6 +2336,8 @@ fn test_view_handle(
       calls.push("set_zoom_percent:\{zoom_percent}")
     },
     read_view_zoom_percent: fn() { 125 },
+    set_view_audio_muted: fn(muted) { calls.push("set_audio_muted:\{muted}") },
+    read_view_audio_muted: fn() { true },
     load_view_url: fn(url) { calls.push("load_url:\{url}") },
     load_view_html: fn(_html, _base_url) {  },
     eval_view_script: fn(_script) {  },
@@ -2349,6 +2360,8 @@ test "view handle routes operations through its closures" {
   view.set_z_order(2)
   view.set_zoom_percent(125)
   inspect(view.zoom_percent(), content="125")
+  view.set_audio_muted(true)
+  assert_true(view.is_audio_muted())
   view.load_url("https://example.com/")
   assert_true(view.can_go_back())
   assert_false(view.can_go_forward())
@@ -2364,6 +2377,7 @@ test "view handle routes operations through its closures" {
       #|  "set_visible:false",
       #|  "set_z_order:2",
       #|  "set_zoom_percent:125",
+      #|  "set_audio_muted:true",
       #|  "load_url:https://example.com/",
       #|  "close",
       #|]
@@ -2380,6 +2394,20 @@ test "browser handle exposes the current page state" {
   assert_false(state.is_loading)
   assert_true(state.can_go_back)
   assert_false(state.can_go_forward)
+}
+
+///|
+test "browser handle controls and reads audio mute state" {
+  let calls : Array[Bool] = []
+  let browser = test_window_handle(
+    "main",
+    17L,
+    browser_audio_calls=calls,
+    browser_audio_muted=true,
+  ).browser()
+  browser.set_audio_muted(true)
+  assert_eq(calls, [true])
+  assert_true(browser.is_audio_muted())
 }
 
 ///|

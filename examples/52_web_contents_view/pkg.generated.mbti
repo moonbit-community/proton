@@ -10,6 +10,14 @@ import {
 // Errors
 
 // Types and methods
+type AudioPayload derive(ToJson, @json.FromJson)
+pub fn AudioPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AudioPayload::to_json(Self) -> Json
+
+type AudioReply derive(ToJson, @json.FromJson)
+pub fn AudioReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AudioReply::to_json(Self) -> Json
+
 type NavigatePayload derive(ToJson, @json.FromJson)
 pub fn NavigatePayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn NavigatePayload::to_json(Self) -> Json

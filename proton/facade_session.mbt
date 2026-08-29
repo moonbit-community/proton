@@ -432,6 +432,28 @@ fn RuntimeSession::view_handle(
           )
       }
     },
+    set_view_audio_muted: muted => {
+      self.control_view(
+        window_id,
+        window_native_id,
+        id,
+        native_id,
+        "set audio mute of",
+        view => view.set_audio_muted(muted),
+      )
+    },
+    read_view_audio_muted: () => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      running.view.is_audio_muted() catch {
+        error =>
+          raise window_operation_failed(
+            "read audio mute of view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
     load_view_url: url => {
       self.control_view(
         window_id,
@@ -700,6 +722,24 @@ fn RuntimeSession::browser_handle(
         error =>
           raise window_operation_failed(
             "read browser zoom in window " + id,
+            error,
+          )
+      }
+    },
+    set_browser_audio_muted: muted => {
+      self.control_window(id, native_id, "set browser audio mute", window => {
+        window.set_audio_muted(muted)
+      })
+    },
+    read_browser_audio_muted: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      running.window.is_audio_muted() catch {
+        error =>
+          raise window_operation_failed(
+            "read browser audio mute in window " + id,
             error,
           )
       }
@@ -1993,6 +2033,23 @@ pub fn ViewHandle::zoom_percent(
 }
 
 ///|
+/// Mutes or unmutes audio produced by this view's page.
+pub fn ViewHandle::set_audio_muted(
+  self : ViewHandle,
+  muted : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_view_audio_muted)(muted)
+}
+
+///|
+/// Returns whether audio produced by this view's page is muted.
+pub fn ViewHandle::is_audio_muted(
+  self : ViewHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_view_audio_muted)()
+}
+
+///|
 /// Navigates the view's page, the Electron `view.webContents.loadURL`
 /// equivalent.
 pub fn ViewHandle::load_url(
@@ -2155,6 +2212,23 @@ pub fn BrowserHandle::zoom_percent(
   self : BrowserHandle,
 ) -> Int raise WindowSessionError {
   (self.read_browser_zoom_percent)()
+}
+
+///|
+/// Mutes or unmutes audio produced by the main browser page.
+pub fn BrowserHandle::set_audio_muted(
+  self : BrowserHandle,
+  muted : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_browser_audio_muted)(muted)
+}
+
+///|
+/// Returns whether audio produced by the main browser page is muted.
+pub fn BrowserHandle::is_audio_muted(
+  self : BrowserHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_browser_audio_muted)()
 }
 
 ///|

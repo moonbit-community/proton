@@ -1620,6 +1620,28 @@ int32_t proton_engine_window_get_navigation_state(
       window->browser, out_can_go_back, out_can_go_forward, error, error_len);
 }
 
+int32_t proton_engine_window_set_audio_muted(
+    proton_engine_window_t *window, int32_t muted, char *error,
+    size_t error_len) {
+  if (window == NULL || window->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_set_audio_muted(
+      window->browser, muted, error, error_len);
+}
+
+int32_t proton_engine_window_is_audio_muted(
+    proton_engine_window_t *window, int32_t *out_muted, char *error,
+    size_t error_len) {
+  if (window == NULL || window->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_is_audio_muted(
+      window->browser, out_muted, error, error_len);
+}
+
 int32_t proton_engine_window_get_browser_url(
     proton_engine_window_t *window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len) {

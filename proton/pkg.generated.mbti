@@ -258,6 +258,8 @@ pub struct BrowserHandle {
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_browser_zoom_percent : () -> Int raise WindowSessionError
+  set_browser_audio_muted : (Bool) -> Unit raise WindowSessionError
+  read_browser_audio_muted : () -> Bool raise WindowSessionError
   read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
   read_browser_state : () -> BrowserState raise WindowSessionError
   session_handle : SessionHandle
@@ -269,11 +271,13 @@ pub fn BrowserHandle::cancel_download(Self, Int) -> Unit raise WindowSessionErro
 pub fn BrowserHandle::close_devtools(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::eval(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::forward(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::is_audio_muted(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::load_html(Self, String, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::load_url(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::open_devtools(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
 pub fn BrowserHandle::session(Self) -> SessionHandle
+pub fn BrowserHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionError
 pub fn BrowserHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn BrowserHandle::state(Self) -> BrowserState raise WindowSessionError
 pub fn BrowserHandle::stop(Self) -> Unit raise WindowSessionError
@@ -590,6 +594,8 @@ pub struct ViewHandle {
   set_view_z_order : (Int) -> Unit raise WindowSessionError
   set_view_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_view_zoom_percent : () -> Int raise WindowSessionError
+  set_view_audio_muted : (Bool) -> Unit raise WindowSessionError
+  read_view_audio_muted : () -> Bool raise WindowSessionError
   load_view_url : (String) -> Unit raise WindowSessionError
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
@@ -606,10 +612,12 @@ pub fn ViewHandle::close_devtools(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::eval(Self, String) -> Unit raise WindowSessionError
 pub fn ViewHandle::forward(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::id(Self) -> String
+pub fn ViewHandle::is_audio_muted(Self) -> Bool raise WindowSessionError
 pub fn ViewHandle::load_html(Self, String, String) -> Unit raise WindowSessionError
 pub fn ViewHandle::load_url(Self, String) -> Unit raise WindowSessionError
 pub fn ViewHandle::open_devtools(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
+pub fn ViewHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_visible(Self, Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_z_order(Self, Int) -> Unit raise WindowSessionError

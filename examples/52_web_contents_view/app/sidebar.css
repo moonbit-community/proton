@@ -20,6 +20,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto;
   -webkit-app-region: drag;
 }
 
@@ -67,6 +68,25 @@ h1 {
   background: #fff;
   font: inherit;
   color: #1d1d1f;
+}
+
+#audio-review {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #c8c8cf;
+  background: #fff;
+}
+
+#audio-review strong {
+  font-size: 11px;
+  color: #6e6e73;
+}
+
+#audio-review button[data-muted="true"] {
+  border-color: #9b2c2c;
+  background: #fff1f1;
+  color: #8b1e1e;
 }
 
 #url {

@@ -155,7 +155,11 @@ pub fn proton_view_get_state_ffi(ViewHandle, FixedArray[Int], Int) -> Int
 
 pub fn proton_view_get_zoom_percent_ffi(ViewHandle, @ref.Ref[Int]) -> Int
 
+pub fn proton_view_is_audio_muted_ffi(ViewHandle, @ref.Ref[Int]) -> Int
+
 pub fn proton_view_load_url_ffi(ViewHandle, Bytes) -> Int
+
+pub fn proton_view_set_audio_muted_ffi(ViewHandle, Int) -> Int
 
 pub fn proton_view_set_bounds_ffi(ViewHandle, Int, Int, Int, Int) -> Int
 
@@ -217,6 +221,8 @@ pub fn proton_window_get_state_ffi(WindowHandle, FixedArray[Int], Int) -> Int
 
 pub fn proton_window_hide_ffi(WindowHandle) -> Int
 
+pub fn proton_window_is_audio_muted_ffi(WindowHandle, @ref.Ref[Int]) -> Int
+
 pub fn proton_window_load_url_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_maximize_ffi(WindowHandle) -> Int
@@ -232,6 +238,8 @@ pub fn proton_window_restore_ffi(WindowHandle) -> Int
 pub fn proton_window_set_always_on_top_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_aspect_ratio_ffi(WindowHandle, Double) -> Int
+
+pub fn proton_window_set_audio_muted_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_background_color_ffi(WindowHandle, Bytes) -> Int
 

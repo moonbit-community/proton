@@ -1877,6 +1877,32 @@ pub fn Window::set_zoom_percent(
 }
 
 ///|
+pub fn Window::set_audio_muted(
+  self : Window,
+  muted : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_audio_muted_ffi(
+      self.live_handle(),
+      if muted {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::is_audio_muted(self : Window) -> Bool raise NativeError {
+  let muted : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_is_audio_muted_ffi(self.live_handle(), muted),
+  )
+  muted.val != 0
+}
+
+///|
 /// Sets the platform progress indicator for this window.
 ///
 /// A negative value clears the indicator, values from `0.0` through `1.0`
@@ -2770,6 +2796,32 @@ pub fn View::zoom_percent(self : View) -> Int raise NativeError {
     ),
   )
   zoom_percent.val
+}
+
+///|
+pub fn View::set_audio_muted(
+  self : View,
+  muted : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_view_set_audio_muted_ffi(
+      self.live_handle(),
+      if muted {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn View::is_audio_muted(self : View) -> Bool raise NativeError {
+  let muted : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_view_is_audio_muted_ffi(self.live_handle(), muted),
+  )
+  muted.val != 0
 }
 
 ///|

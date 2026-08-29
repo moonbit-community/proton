@@ -320,6 +320,12 @@ int32_t proton_engine_window_browser_command_json(
 int32_t proton_engine_window_get_navigation_state(
     proton_engine_window_t *window, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len);
+int32_t proton_engine_window_set_audio_muted(
+    proton_engine_window_t *window, int32_t muted, char *error,
+    size_t error_len);
+int32_t proton_engine_window_is_audio_muted(
+    proton_engine_window_t *window, int32_t *out_muted, char *error,
+    size_t error_len);
 int32_t proton_engine_window_get_browser_url(
     proton_engine_window_t *window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len);
@@ -423,6 +429,12 @@ int32_t proton_engine_view_set_zoom_percent(proton_engine_view_t *view,
                                             int32_t zoom_percent,
                                             char *error,
                                             size_t error_len);
+int32_t proton_engine_view_set_audio_muted(proton_engine_view_t *view,
+                                           int32_t muted, char *error,
+                                           size_t error_len);
+int32_t proton_engine_view_is_audio_muted(proton_engine_view_t *view,
+                                          int32_t *out_muted, char *error,
+                                          size_t error_len);
 int32_t proton_engine_view_load_url(proton_engine_view_t *view,
                                     const char *url,
                                     char *error,

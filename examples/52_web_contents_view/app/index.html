@@ -26,6 +26,12 @@
           <option value="150">150%</option>
         </select>
       </label>
+      <section id="audio-review">
+        <strong>Audio mute review</strong>
+        <button id="host-tone">Start host tone</button>
+        <button id="host-mute">Mute host browser</button>
+        <button id="view-mute">Mute web contents view</button>
+      </section>
       <button data-url="https://example.com">Example</button>
       <button data-url="https://moonbitlang.com">MoonBit</button>
       <button data-url="https://developer.mozilla.org">MDN</button>
@@ -34,7 +40,8 @@
       <p class="hint">
         The area on the right is a web contents view: an independent native
         browser hosted inside this window. Navigation events flow back into
-        the sidebar; navigation and zoom controls target that browser only.
+        the sidebar. Start each test tone, then verify host and view audio mute
+        independently.
       </p>
     </div>
     <script src="sidebar.js"></script>

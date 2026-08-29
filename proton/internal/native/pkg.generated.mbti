@@ -529,8 +529,10 @@ pub fn View::browser_command(Self, String, download_id? : Int) -> Unit raise Nat
 pub fn View::destroy(Self) -> Unit raise NativeError
 pub fn View::eval(Self, String) -> Unit raise NativeError
 pub fn View::id(Self) -> Int64
+pub fn View::is_audio_muted(Self) -> Bool raise NativeError
 pub fn View::load_url(Self, String) -> Unit raise NativeError
 pub fn View::navigation_state(Self) -> (Bool, Bool) raise NativeError
+pub fn View::set_audio_muted(Self, Bool) -> Unit raise NativeError
 pub fn View::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise NativeError
 pub fn View::set_visible(Self, Bool) -> Unit raise NativeError
 pub fn View::set_z_order(Self, Int) -> Unit raise NativeError
@@ -587,6 +589,7 @@ pub fn Window::flash_frame(Self, Bool) -> Unit raise NativeError
 pub fn Window::focus(Self) -> Unit raise NativeError
 pub fn Window::hide(Self) -> Unit raise NativeError
 pub fn Window::id(Self) -> Int64
+pub fn Window::is_audio_muted(Self) -> Bool raise NativeError
 pub fn Window::load_url(Self, String) -> Unit raise NativeError
 pub fn Window::maximize(Self) -> Unit raise NativeError
 pub fn Window::minimize(Self) -> Unit raise NativeError
@@ -597,6 +600,7 @@ pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeErro
 pub fn Window::restore(Self) -> Unit raise NativeError
 pub fn Window::set_always_on_top(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_aspect_ratio(Self, Double) -> Unit raise NativeError
+pub fn Window::set_audio_muted(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_background_color(Self, String) -> Unit raise NativeError
 pub fn Window::set_button_visibility(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_closable(Self, Bool) -> Unit raise NativeError

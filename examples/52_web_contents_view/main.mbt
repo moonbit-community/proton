@@ -62,6 +62,31 @@ pub extend ZoomReply with ToJson::{to_json}
 pub extend ZoomReply with FromJson::{from_json}
 
 ///|
+struct AudioPayload {
+  target : String
+  muted : Bool
+} derive(ToJson, FromJson)
+
+///|
+pub extend AudioPayload with ToJson::{to_json}
+
+///|
+pub extend AudioPayload with FromJson::{from_json}
+
+///|
+struct AudioReply {
+  ok : Bool
+  target : String
+  muted : Bool
+} derive(ToJson, FromJson)
+
+///|
+pub extend AudioReply with ToJson::{to_json}
+
+///|
+pub extend AudioReply with FromJson::{from_json}
+
+///|
 let browser_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
   id="examples/web-contents-view-browser",
   js_namespace="browser",
@@ -90,6 +115,11 @@ let reload_command : @proton_contract.Command[Json, SimpleReply] = browser_contr
 ///|
 let zoom_command : @proton_contract.Command[ZoomPayload, ZoomReply] = browser_contract.command(
   "zoom",
+)
+
+///|
+let audio_command : @proton_contract.Command[AudioPayload, AudioReply] = browser_contract.command(
+  "audio",
 )
 
 ///|
@@ -154,6 +184,60 @@ fn set_panel_zoom(payload : ZoomPayload) -> ZoomReply {
 }
 
 ///|
+fn set_audio_muted(payload : AudioPayload) -> AudioReply {
+  match payload.target {
+    "host" =>
+      match host_slot.val {
+        Some(window) => {
+          let browser = window.browser()
+          browser.set_audio_muted(payload.muted) catch {
+            _ =>
+              return AudioReply::{
+                ok: false,
+                target: payload.target,
+                muted: payload.muted,
+              }
+          }
+          let muted = browser.is_audio_muted() catch {
+            _ =>
+              return AudioReply::{
+                ok: false,
+                target: payload.target,
+                muted: payload.muted,
+              }
+          }
+          AudioReply::{ ok: true, target: payload.target, muted, }
+        }
+        None => AudioReply::{ ok: false, target: payload.target, muted: false, }
+      }
+    "view" =>
+      match panel_slot.val {
+        Some(view) => {
+          view.set_audio_muted(payload.muted) catch {
+            _ =>
+              return AudioReply::{
+                ok: false,
+                target: payload.target,
+                muted: payload.muted,
+              }
+          }
+          let muted = view.is_audio_muted() catch {
+            _ =>
+              return AudioReply::{
+                ok: false,
+                target: payload.target,
+                muted: payload.muted,
+              }
+          }
+          AudioReply::{ ok: true, target: payload.target, muted, }
+        }
+        None => AudioReply::{ ok: false, target: payload.target, muted: false, }
+      }
+    _ => AudioReply::{ ok: false, target: payload.target, muted: false, }
+  }
+}
+
+///|
 fn browser_extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     browser_contract,
@@ -163,6 +247,7 @@ fn browser_extension() -> @proton_extension.Extension {
       forward_command.contract_route(),
       reload_command.contract_route(),
       zoom_command.contract_route(),
+      audio_command.contract_route(),
     ],
     fn(registrar) raise {
       registrar.bind(navigate_command, (_context, payload) => navigate(payload))
@@ -177,6 +262,9 @@ fn browser_extension() -> @proton_extension.Extension {
       })
       registrar.bind(zoom_command, (_context, payload) => {
         set_panel_zoom(payload)
+      })
+      registrar.bind(audio_command, (_context, payload) => {
+        set_audio_muted(payload)
       })
     },
   )
@@ -212,7 +300,7 @@ fn sync_sidebar(url~ : String?, title~ : String?, error~ : String?) -> Unit {
 }
 
 ///|
-let start_page_url = "data:text/html,<body style='margin:0;background:rgb(30,32,36);color:rgb(220,224,230);font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1>Built-in Browser</h1><p>Pick a bookmark or enter a URL in the sidebar.</p></div></body>"
+let start_page_url = "data:text/html,<body style='margin:0;background:rgb(30,32,36);color:rgb(220,224,230);font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h1>Built-in Browser</h1><p>Start the view tone, then use the sidebar to mute this view.</p><button onclick='startTone()' style='padding:10px 16px'>Start view tone</button><script>let audioContext,oscillator;function startTone(){if(!audioContext){audioContext=new AudioContext();oscillator=audioContext.createOscillator();oscillator.frequency.value=523.25;oscillator.connect(audioContext.destination);oscillator.start()}audioContext.resume()}</script></div></body>"
 
 ///|
 fn open_panel(window : @proton.WindowHandle) -> Unit {

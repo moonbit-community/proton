@@ -964,3 +964,46 @@ int32_t proton_browser_set_zoom_percent(
   host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }
+
+int32_t proton_browser_set_audio_muted(
+    cef_browser_t *browser, int32_t muted, char *error, size_t error_len) {
+  if (browser == NULL || (muted != 0 && muted != 1)) {
+    proton_browser_set_message(error, error_len,
+                               "browser and muted flag are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL || host->set_audio_muted == NULL) {
+    if (host != NULL) {
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    proton_browser_set_message(error, error_len,
+                               "browser audio control is unavailable");
+    return PROTON_ERR_ENGINE;
+  }
+  host->set_audio_muted(host, muted);
+  host->base.release((cef_base_ref_counted_t *)host);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_is_audio_muted(
+    cef_browser_t *browser, int32_t *out_muted, char *error,
+    size_t error_len) {
+  if (browser == NULL || out_muted == NULL) {
+    proton_browser_set_message(error, error_len,
+                               "browser and muted output are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL || host->is_audio_muted == NULL) {
+    if (host != NULL) {
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    proton_browser_set_message(error, error_len,
+                               "browser audio state is unavailable");
+    return PROTON_ERR_ENGINE;
+  }
+  *out_muted = host->is_audio_muted(host) ? 1 : 0;
+  host->base.release((cef_base_ref_counted_t *)host);
+  return PROTON_OK;
+}

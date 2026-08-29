@@ -627,6 +627,19 @@ pub extern "C" fn proton_window_set_zoom_percent_ffi(
 ) -> Int = "proton_window_set_zoom_percent"
 
 ///|
+pub extern "C" fn proton_window_set_audio_muted_ffi(
+  window : WindowHandle,
+  muted : Int,
+) -> Int = "proton_window_set_audio_muted"
+
+///|
+#borrow(out_muted)
+pub extern "C" fn proton_window_is_audio_muted_ffi(
+  window : WindowHandle,
+  out_muted : Ref[Int],
+) -> Int = "proton_window_is_audio_muted"
+
+///|
 pub extern "C" fn proton_window_set_progress_bar_ffi(
   window : WindowHandle,
   progress : Double,
@@ -866,6 +879,19 @@ pub extern "C" fn proton_view_get_zoom_percent_ffi(
   view : ViewHandle,
   out_zoom_percent : Ref[Int],
 ) -> Int = "proton_view_get_zoom_percent"
+
+///|
+pub extern "C" fn proton_view_set_audio_muted_ffi(
+  view : ViewHandle,
+  muted : Int,
+) -> Int = "proton_view_set_audio_muted"
+
+///|
+#borrow(out_muted)
+pub extern "C" fn proton_view_is_audio_muted_ffi(
+  view : ViewHandle,
+  out_muted : Ref[Int],
+) -> Int = "proton_view_is_audio_muted"
 
 ///|
 #borrow(url)

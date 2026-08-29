@@ -308,6 +308,9 @@ static int32_t proton_engine_view_create_browser(
   if (host != NULL) {
     double factor = (double)view->zoom_percent / 100.0;
     host->set_zoom_level(host, log(factor) / log(1.2));
+    if (host->set_audio_muted != NULL) {
+      host->set_audio_muted(host, view->audio_muted);
+    }
     if (window->headless) {
       if (!view->visible && host->was_hidden != NULL) {
         host->was_hidden(host, 1);
@@ -374,6 +377,7 @@ int32_t proton_engine_view_create(
   view->height = config.height;
   view->z_order = config.z_order;
   view->zoom_percent = 100;
+  view->audio_muted = 0;
   view->visible = config.visible;
   view->has_background_color = config.has_background_color;
   view->background_color = config.background_color;
@@ -538,6 +542,45 @@ int32_t proton_engine_view_set_zoom_percent(proton_engine_view_t *view,
   }
   view->zoom_percent = zoom_percent;
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_set_audio_muted(proton_engine_view_t *view,
+                                           int32_t muted, char *error,
+                                           size_t error_len) {
+  if (view == NULL || view->closed) {
+    proton_engine_set_message(error, error_len, "view is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (view->browser != NULL) {
+    int32_t status = proton_browser_set_audio_muted(
+        view->browser, muted, error, error_len);
+    if (status != PROTON_OK) {
+      return status;
+    }
+  }
+  view->audio_muted = muted != 0;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_is_audio_muted(proton_engine_view_t *view,
+                                          int32_t *out_muted, char *error,
+                                          size_t error_len) {
+  if (view == NULL || view->closed || out_muted == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "view and muted output are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (view->browser != NULL) {
+    int32_t status = proton_browser_is_audio_muted(
+        view->browser, out_muted, error, error_len);
+    if (status != PROTON_OK) {
+      return status;
+    }
+    view->audio_muted = *out_muted != 0;
+  } else {
+    *out_muted = view->audio_muted ? 1 : 0;
+  }
   return PROTON_OK;
 }
 

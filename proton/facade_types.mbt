@@ -452,6 +452,8 @@ pub struct BrowserHandle {
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_browser_zoom_percent : () -> Int raise WindowSessionError
+  set_browser_audio_muted : (Bool) -> Unit raise WindowSessionError
+  read_browser_audio_muted : () -> Bool raise WindowSessionError
   read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
   read_browser_state : () -> BrowserState raise WindowSessionError
   session_handle : SessionHandle
@@ -495,6 +497,8 @@ pub struct ViewHandle {
   set_view_z_order : (Int) -> Unit raise WindowSessionError
   set_view_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_view_zoom_percent : () -> Int raise WindowSessionError
+  set_view_audio_muted : (Bool) -> Unit raise WindowSessionError
+  read_view_audio_muted : () -> Bool raise WindowSessionError
   load_view_url : (String) -> Unit raise WindowSessionError
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
