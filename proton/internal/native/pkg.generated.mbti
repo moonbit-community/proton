@@ -513,10 +513,13 @@ pub fn View::destroy(Self) -> Unit raise NativeError
 pub fn View::eval(Self, String) -> Unit raise NativeError
 pub fn View::id(Self) -> Int64
 pub fn View::load_url(Self, String) -> Unit raise NativeError
+pub fn View::navigation_state(Self) -> (Bool, Bool) raise NativeError
 pub fn View::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise NativeError
 pub fn View::set_visible(Self, Bool) -> Unit raise NativeError
 pub fn View::set_z_order(Self, Int) -> Unit raise NativeError
+pub fn View::set_zoom_percent(Self, Int) -> Unit raise NativeError
 pub fn View::state(Self) -> ViewState raise NativeError
+pub fn View::zoom_percent(Self) -> Int raise NativeError
 
 type ViewConfig derive(Eq, @debug.Debug)
 pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, visible? : Bool, z_order? : Int, initial_url? : String, background_color? : String) -> Self
@@ -569,6 +572,7 @@ pub fn Window::id(Self) -> Int64
 pub fn Window::load_url(Self, String) -> Unit raise NativeError
 pub fn Window::maximize(Self) -> Unit raise NativeError
 pub fn Window::minimize(Self) -> Unit raise NativeError
+pub fn Window::navigation_state(Self) -> (Bool, Bool) raise NativeError
 pub fn Window::popup_menu(Self, MenuBar, Int, Int) -> Unit raise NativeError
 pub fn Window::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
 pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeError
@@ -605,6 +609,7 @@ pub fn Window::set_title(Self, String) -> Unit raise NativeError
 pub fn Window::set_visible_on_all_workspaces(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_zoom_percent(Self, Int) -> Unit raise NativeError
 pub fn Window::show(Self) -> Unit raise NativeError
+pub fn Window::show_inactive(Self) -> Unit raise NativeError
 pub fn Window::state(Self) -> WindowState raise NativeError
 pub fn Window::take_bridge_failure(Self) -> BridgeDiagnostic? raise NativeError
 

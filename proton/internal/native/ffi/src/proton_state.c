@@ -449,6 +449,7 @@ int32_t proton_view_slot_create(proton_window_slot_t *window,
   view->width = width;
   view->height = height;
   view->z_order = z_order;
+  view->zoom_percent = 100;
   view->visible = visible;
   view->logical_id = logical_id;
   view->next = window->runtime->views;

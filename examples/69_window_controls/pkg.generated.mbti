@@ -10,6 +10,14 @@ import {
 // Errors
 
 // Types and methods
+type AdvancedReply derive(ToJson, @json.FromJson)
+pub fn AdvancedReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AdvancedReply::to_json(Self) -> Json
+
+type AdvancedRequest derive(ToJson, @json.FromJson)
+pub fn AdvancedRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AdvancedRequest::to_json(Self) -> Json
+
 type Reply derive(ToJson, @json.FromJson)
 pub fn Reply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn Reply::to_json(Self) -> Json

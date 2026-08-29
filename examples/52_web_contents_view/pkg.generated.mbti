@@ -22,6 +22,14 @@ type SimpleReply derive(ToJson, @json.FromJson)
 pub fn SimpleReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn SimpleReply::to_json(Self) -> Json
 
+type ZoomPayload derive(ToJson, @json.FromJson)
+pub fn ZoomPayload::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ZoomPayload::to_json(Self) -> Json
+
+type ZoomReply derive(ToJson, @json.FromJson)
+pub fn ZoomReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ZoomReply::to_json(Self) -> Json
+
 // Type aliases
 
 // Traits

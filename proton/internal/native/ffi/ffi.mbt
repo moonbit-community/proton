@@ -826,6 +826,19 @@ pub extern "C" fn proton_view_set_z_order_ffi(
 ) -> Int = "proton_view_set_z_order"
 
 ///|
+pub extern "C" fn proton_view_set_zoom_percent_ffi(
+  view : ViewHandle,
+  zoom_percent : Int,
+) -> Int = "proton_view_set_zoom_percent"
+
+///|
+#borrow(out_zoom_percent)
+pub extern "C" fn proton_view_get_zoom_percent_ffi(
+  view : ViewHandle,
+  out_zoom_percent : Ref[Int],
+) -> Int = "proton_view_get_zoom_percent"
+
+///|
 #borrow(url)
 pub extern "C" fn proton_view_load_url_ffi(
   view : ViewHandle,

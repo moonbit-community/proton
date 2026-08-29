@@ -381,6 +381,21 @@ test "invalid handle returns structured native error" {
 }
 
 ///|
+test "view zoom rejects percentages outside the supported range" {
+  let view = View::{
+    handle: @native_ffi.view_null(),
+    id: 1L,
+    lifecycle: ViewLive,
+  }
+  let low = expect_native_error(() => view.set_zoom_percent(24))
+  inspect(low.status(), content="-1")
+  assert_true(low.message().contains("between 25 and 500"))
+  let high = expect_native_error(() => view.set_zoom_percent(501))
+  inspect(high.status(), content="-1")
+  assert_true(high.message().contains("between 25 and 500"))
+}
+
+///|
 test "runtime config rejects a relative cache directory" {
   let error = expect_native_error(() => {
     Runtime(

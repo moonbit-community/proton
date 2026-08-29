@@ -149,7 +149,11 @@ pub fn proton_view_destroy_ffi(ViewHandle) -> Int
 
 pub fn proton_view_eval_ffi(ViewHandle, Bytes) -> Int
 
+pub fn proton_view_get_navigation_state_ffi(ViewHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+
 pub fn proton_view_get_state_ffi(ViewHandle, FixedArray[Int], Int) -> Int
+
+pub fn proton_view_get_zoom_percent_ffi(ViewHandle, @ref.Ref[Int]) -> Int
 
 pub fn proton_view_load_url_ffi(ViewHandle, Bytes) -> Int
 
@@ -158,6 +162,8 @@ pub fn proton_view_set_bounds_ffi(ViewHandle, Int, Int, Int, Int) -> Int
 pub fn proton_view_set_visible_ffi(ViewHandle, Int) -> Int
 
 pub fn proton_view_set_z_order_ffi(ViewHandle, Int) -> Int
+
+pub fn proton_view_set_zoom_percent_ffi(ViewHandle, Int) -> Int
 
 pub fn proton_window_begin_choose_directory_dialog_ffi(WindowHandle, Bytes, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
 
@@ -198,6 +204,8 @@ pub fn proton_window_flash_frame_ffi(WindowHandle, Int) -> Int
 pub fn proton_window_focus_ffi(WindowHandle) -> Int
 
 pub fn proton_window_get_content_size_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+
+pub fn proton_window_get_navigation_state_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
 pub fn proton_window_get_state_ffi(WindowHandle, FixedArray[Int], Int) -> Int
 
@@ -278,6 +286,8 @@ pub fn proton_window_set_visible_on_all_workspaces_ffi(WindowHandle, Int) -> Int
 pub fn proton_window_set_zoom_percent_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_show_ffi(WindowHandle) -> Int
+
+pub fn proton_window_show_inactive_ffi(WindowHandle) -> Int
 
 pub fn proton_window_take_bridge_failure_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 

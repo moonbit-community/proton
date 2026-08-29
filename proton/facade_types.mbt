@@ -444,6 +444,8 @@ pub struct ViewHandle {
   set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
   set_view_visible : (Bool) -> Unit raise WindowSessionError
   set_view_z_order : (Int) -> Unit raise WindowSessionError
+  set_view_zoom_percent : (Int) -> Unit raise WindowSessionError
+  read_view_zoom_percent : () -> Int raise WindowSessionError
   load_view_url : (String) -> Unit raise WindowSessionError
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError

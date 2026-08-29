@@ -391,6 +391,10 @@ int32_t proton_view_set_visible(proton_view_handle_t view,
                                            int32_t visible);
 int32_t proton_view_set_z_order(proton_view_handle_t view,
                                            int32_t z_order);
+int32_t proton_view_set_zoom_percent(proton_view_handle_t view,
+                                     int32_t zoom_percent);
+int32_t proton_view_get_zoom_percent(proton_view_handle_t view,
+                                     int32_t *out_zoom_percent);
 int32_t proton_view_load_url(proton_view_handle_t view,
                                         const char *url);
 int32_t proton_view_eval(proton_view_handle_t view, const char *script);

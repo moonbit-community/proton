@@ -6,6 +6,7 @@
 #include "include/capi/cef_download_item_capi.h"
 #include "include/internal/cef_string.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -819,5 +820,25 @@ int32_t proton_browser_navigation_state(
   }
   *out_can_go_back = browser->can_go_back(browser) ? 1 : 0;
   *out_can_go_forward = browser->can_go_forward(browser) ? 1 : 0;
+  return PROTON_OK;
+}
+
+int32_t proton_browser_set_zoom_percent(
+    cef_browser_t *browser, int32_t zoom_percent,
+    char *error, size_t error_len) {
+  if (browser == NULL || zoom_percent < 25 || zoom_percent > 500) {
+    proton_browser_set_message(error, error_len,
+                               "browser and zoom from 25 to 500 are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL) {
+    proton_browser_set_message(error, error_len,
+                               "browser host is unavailable");
+    return PROTON_ERR_ENGINE;
+  }
+  double factor = (double)zoom_percent / 100.0;
+  host->set_zoom_level(host, log(factor) / log(1.2));
+  host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }

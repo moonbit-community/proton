@@ -2581,6 +2581,46 @@ int32_t proton_view_set_z_order(proton_view_handle_t view, int32_t z_order) {
   return PROTON_OK;
 }
 
+int32_t proton_view_set_zoom_percent(proton_view_handle_t view,
+                                     int32_t zoom_percent) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (zoom_percent < 25 || zoom_percent > 500) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "zoom_percent must be between 25 and 500");
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_set_zoom_percent(
+        slot->engine_view, zoom_percent, engine_error, sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  slot->zoom_percent = zoom_percent;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_get_zoom_percent(proton_view_handle_t view,
+                                     int32_t *out_zoom_percent) {
+  if (out_zoom_percent == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_zoom_percent is required");
+  }
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  *out_zoom_percent = slot->zoom_percent;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_view_load_url(proton_view_handle_t view, const char *url) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
