@@ -394,9 +394,11 @@ pub fn RemoteDebugging::to_repr(Self) -> @debug.Repr
 
 type Runtime
 pub fn Runtime::Runtime(config? : RuntimeConfig) -> Self raise NativeError
+pub fn Runtime::begin_destroy(Self) -> Unit raise NativeError
 pub fn Runtime::begin_message_dialog(Self, String?, String, DialogLevel) -> Int64 raise NativeError
 pub fn Runtime::complete_resource_request(Self, Int64, Int, String, Bytes) -> Unit raise NativeError
-pub fn Runtime::destroy(Self) -> Unit raise NativeError
+pub fn Runtime::destroy_ready(Self) -> Bool raise NativeError
+pub fn Runtime::finish_destroy(Self) -> Unit raise NativeError
 pub fn Runtime::poll_event(Self) -> RuntimeEvent? raise NativeError
 pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Unit raise NativeError
 pub fn Runtime::set_menu(Self, MenuBar) -> Unit raise NativeError

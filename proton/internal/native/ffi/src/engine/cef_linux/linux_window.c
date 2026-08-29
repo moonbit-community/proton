@@ -89,18 +89,19 @@ static gboolean proton_engine_on_window_delete(GtkWidget *widget,
     return FALSE;
   }
   if (window->close_interception_enabled &&
-      !window->close_interception_bypass) {
+      !window->close_authorized) {
     if (!window->close_request_pending) {
       window->close_request_id++;
       if (window->close_request_id == 0) {
         window->close_request_id = 1;
       }
       window->close_request_pending = 1;
+      (void)proton_event_publish_window_close_requested(
+          window->public_window_id, window->close_request_id);
       proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     }
     return TRUE;
   }
-  window->close_interception_bypass = 0;
   if (window->browser != NULL) {
     cef_browser_host_t *host = window->browser->get_host(window->browser);
     if (host != NULL) {
@@ -738,18 +739,19 @@ int32_t proton_engine_window_close(proton_engine_window_t *window,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (window->headless && window->close_interception_enabled &&
-      !window->close_interception_bypass) {
+      !window->close_authorized) {
     if (!window->close_request_pending) {
       window->close_request_id++;
       if (window->close_request_id == 0) {
         window->close_request_id = 1;
       }
       window->close_request_pending = 1;
+      (void)proton_event_publish_window_close_requested(
+          window->public_window_id, window->close_request_id);
       proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     }
     return PROTON_OK;
   }
-  window->close_interception_bypass = 0;
   if (!window->headless) {
     gtk_window_close(GTK_WINDOW(window->window));
     return PROTON_OK;
@@ -1511,23 +1513,12 @@ int32_t proton_engine_window_set_close_interception(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   window->close_interception_enabled = enabled != 0;
+  if (window->close_interception_enabled) {
+    window->close_authorized = 0;
+  }
   if (!window->close_interception_enabled) {
     window->close_request_pending = 0;
   }
-  return PROTON_OK;
-}
-
-int32_t proton_engine_window_get_close_request(
-    proton_engine_window_t *window, uint64_t *out_request_id,
-    int32_t *out_pending, char *error, size_t error_len) {
-  if (window == NULL || out_request_id == NULL || out_pending == NULL) {
-    proton_engine_set_message(
-        error, error_len,
-        "window, out_request_id, and out_pending are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_request_id = window->close_request_id;
-  *out_pending = window->close_request_pending;
   return PROTON_OK;
 }
 
@@ -1546,13 +1537,15 @@ int32_t proton_engine_window_respond_close_request(
   }
   window->close_request_pending = 0;
   if (allow && !window->closed) {
-    window->close_interception_bypass = 1;
+    window->close_authorized = 1;
     if (window->headless) {
       return proton_engine_window_close(window, error, error_len);
     }
     if (window->window != NULL) {
       gtk_window_close(GTK_WINDOW(window->window));
     }
+  } else if (!allow) {
+    window->close_authorized = 0;
   }
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;

@@ -134,7 +134,21 @@ pub extern "C" fn runtime_create(
 ) -> Int = "proton_internal_runtime_create"
 
 ///|
-pub extern "C" fn proton_runtime_destroy_ffi(runtime : RuntimeHandle) -> Int = "proton_runtime_destroy"
+pub extern "C" fn proton_runtime_begin_destroy_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_runtime_begin_destroy"
+
+///|
+#borrow(out_ready)
+pub extern "C" fn proton_runtime_destroy_ready_ffi(
+  runtime : RuntimeHandle,
+  out_ready : Ref[Int],
+) -> Int = "proton_runtime_destroy_ready"
+
+///|
+pub extern "C" fn proton_runtime_finish_destroy_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_runtime_finish_destroy"
 
 ///|
 /// Safe to call from any thread and takes no handle, which is what lets a

@@ -3,6 +3,7 @@
 
 /* Private contracts shared by the macOS engine translation units. */
 #include "../../proton_engine.h"
+#include "../../proton_event.h"
 
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
@@ -135,7 +136,7 @@ struct proton_engine_window {
   int browser_close_requested;
   int cef_allows_appkit_close;
   int close_interception_enabled;
-  int close_interception_bypass;
+  int close_authorized;
   int close_request_pending;
   int closable;
   int programmatic_close_pending;
@@ -238,7 +239,7 @@ int proton_engine_runtime_has_pending_platform_work(
     proton_engine_runtime_t *runtime);
 void proton_engine_runtime_create_pending_browsers(
     proton_engine_runtime_t *runtime);
-int proton_engine_window_has_any(void);
+int proton_engine_runtime_has_windows(proton_engine_runtime_t *runtime);
 proton_engine_client_t *proton_engine_client_from_base(cef_client_t *client);
 void proton_engine_window_release_browser(proton_engine_window_t *window);
 int proton_engine_send_bridge_response_to_frame(

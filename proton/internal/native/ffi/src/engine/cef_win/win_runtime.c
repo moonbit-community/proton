@@ -616,25 +616,24 @@ static void proton_engine_dispose_runtime_state(
   free(runtime);
 }
 
-static int32_t proton_engine_drain_browser_closes(
-    proton_engine_runtime_t *runtime,
-    char *error,
-    size_t error_len) {
-  while (g_proton_engine_windows != NULL) {
-    int32_t status = proton_engine_runtime_do_message_loop_work(
-        runtime, error, error_len);
-    if (status != PROTON_OK || g_proton_engine_windows == NULL) {
-      return status;
-    }
-    uint32_t ready_mask = PROTON_WAIT_NONE;
-    status = proton_engine_runtime_wait(
-        runtime, PROTON_WAIT_PLATFORM, INFINITE, &ready_mask, error,
-        error_len);
-    if (status != PROTON_OK) {
-      return status;
+int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return 0;
+  }
+  if (!g_proton_engine_window_lock_initialized) {
+    return g_proton_engine_windows == NULL;
+  }
+  int32_t ready = 1;
+  EnterCriticalSection(&g_proton_engine_window_lock);
+  for (proton_engine_window_t *window = g_proton_engine_windows;
+       window != NULL; window = window->next) {
+    if (window->runtime == runtime) {
+      ready = 0;
+      break;
     }
   }
-  return PROTON_OK;
+  LeaveCriticalSection(&g_proton_engine_window_lock);
+  return ready && proton_engine_closed_windows_ready_for_shutdown();
 }
 
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
@@ -646,17 +645,10 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   }
   proton_engine_dialog_cancel_runtime(runtime);
   if (runtime->owns_cef_runtime) {
-    int32_t status =
-        proton_engine_drain_browser_closes(runtime, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
-    }
-    // Flush deferred frame destruction posted by OnBeforeClose so no frame
-    // window outlives the browser teardown.
-    status = proton_engine_runtime_do_message_loop_work(runtime, error,
-                                                        error_len);
-    if (status != PROTON_OK) {
-      return status;
+    if (!proton_engine_runtime_destroy_ready(runtime)) {
+      proton_engine_set_message(error, error_len,
+                                "runtime still owns closing browser windows");
+      return PROTON_ERR_BUSY;
     }
     proton_engine_cef_shutdown();
     proton_engine_free_closed_windows();

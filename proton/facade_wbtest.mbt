@@ -93,6 +93,8 @@ fn test_window_handle(
     load_browser_html: fn(_html, _base_url) {  },
     eval_browser_script: fn(_script) {  },
     send_browser_command: fn(_command, _download_id) {  },
+    set_browser_zoom_percent: fn(_zoom_percent) {  },
+    read_browser_zoom_percent: fn() { 100 },
     read_browser_navigation_state: fn() { (true, false) },
   }
   WindowHandle::{
@@ -311,6 +313,32 @@ test "last-window policy defaults to quit and can keep the app running" {
   assert_false(
     should_quit_after_last_window(LastWindowClosedPolicy::Quit, false, true),
   )
+}
+
+///|
+test "application close commits only after every window allows it" {
+  assert_true(should_commit_application_close([]))
+  assert_true(
+    should_commit_application_close([
+      WindowCloseDecision::Allow,
+      WindowCloseDecision::Allow,
+    ]),
+  )
+  assert_false(
+    should_commit_application_close([
+      WindowCloseDecision::Allow,
+      WindowCloseDecision::Deny,
+    ]),
+  )
+}
+
+///|
+test "close coordinator starts only one application quit transaction" {
+  let coordinator = CloseCoordinator()
+  assert_false(coordinator.is_quitting())
+  assert_true(coordinator.request_quit())
+  assert_true(coordinator.is_quitting())
+  assert_false(coordinator.request_quit())
 }
 
 ///|
@@ -1673,27 +1701,49 @@ async test "runtime wakeup preserves notification before suspension" {
 }
 
 ///|
+async test "wake driver preserves notification during state advancement" {
+  let wakeup = RuntimeWakeup::{ signal: @core.RuntimeWakeSignal(), }
+  let advances = Ref(0)
+  let completed = @async.with_timeout_opt(100, () => {
+    drive_wakeup_until(wakeup, () => advances.val == 2, () => {
+      advances.val = advances.val + 1
+      if advances.val == 1 {
+        wakeup.signal.notify()
+      }
+      false
+    })
+  })
+  assert_true(completed is Some(_))
+  assert_eq(advances.val, 2)
+}
+
+///|
 async test "dialog completion wakes only its registered waiter" {
   let completions = DialogCompletionStore()
+  assert_false(completions.route_completion(None))
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
     while completions.pending.is_empty() {
       @async.pause()
     }
-    completions.complete(
-      Some(@native.NativeDialogCompletion::{
-        dialog: 42L,
-        window: Some(7L),
-        result: Ok("unrelated"),
-      }),
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeDialogCompletion::{
+          dialog: 42L,
+          window: Some(7L),
+          result: Ok("unrelated"),
+        }),
+      ),
     )
     assert_true(waiting.try_wait() is None)
-    completions.complete(
-      Some(@native.NativeDialogCompletion::{
-        dialog: 41L,
-        window: Some(7L),
-        result: Ok("selected"),
-      }),
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeDialogCompletion::{
+          dialog: 41L,
+          window: Some(7L),
+          result: Ok("selected"),
+        }),
+      ),
     )
     assert_eq(waiting.wait(), "selected")
     group.return_immediately(())
@@ -1717,12 +1767,14 @@ async test "dialog completion propagates native failure" {
     while completions.pending.is_empty() {
       @async.pause()
     }
-    completions.complete(
-      Some(@native.NativeDialogCompletion::{
-        dialog: 51L,
-        window: None,
-        result: Err(@native.Status(status=-7, message="dialog owner closed")),
-      }),
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeDialogCompletion::{
+          dialog: 51L,
+          window: None,
+          result: Err(@native.Status(status=-7, message="dialog owner closed")),
+        }),
+      ),
     )
     waiting.wait()
     group.return_immediately(())
@@ -2268,8 +2320,8 @@ test "window content size routes logical dimensions through the handle" {
     content_size=(640, 360),
   )
   window.set_content_size(800, 450)
-  inspect(window.content_size(), content="(640, 360)")
-  inspect(calls, content="[(800, 450)]")
+  debug_inspect(window.content_size(), content="(640, 360)")
+  debug_inspect(calls, content="[(800, 450)]")
 }
 
 ///|

@@ -54,6 +54,7 @@ options(
     "facade_permissions.mbt": [ "native" ],
     "facade_resource.mbt": [ "native" ],
     "facade_runtime.mbt": [ "native" ],
+    "facade_runtime_events.mbt": [ "native" ],
     "facade_session.mbt": [ "native" ],
     "facade_test.mbt": [ "native" ],
     "facade_runtime_wakeup.mbt": [ "native" ],

@@ -96,11 +96,6 @@ static atomic_uint g_wait_source_ready_mask = PROTON_WAIT_NONE;
 static CFRunLoopRef g_wait_run_loop = NULL;
 static CFRunLoopSourceRef g_wait_source = NULL;
 
-static int32_t proton_engine_drain_browser_closes(
-    proton_engine_runtime_t *runtime,
-    char *error,
-    size_t error_len);
-
 int proton_engine_runtime_initialized(void) {
   return g_proton_cef_initialized;
 }
@@ -862,12 +857,12 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   proton_engine_dialog_dispose_runtime(runtime);
   proton_engine_menu_clear_runtime(runtime);
   if (runtime->owns_cef_runtime) {
-    proton_engine_bridge_pending_clear_all();
-    int32_t status =
-        proton_engine_drain_browser_closes(runtime, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
+    if (!proton_engine_runtime_destroy_ready(runtime)) {
+      proton_engine_set_message(error, error_len,
+                                "runtime still owns closing browser windows");
+      return PROTON_ERR_BUSY;
     }
+    proton_engine_bridge_pending_clear_all();
     proton_engine_cef_shutdown();
     proton_engine_reset_external_message_pump();
     runtime->owns_cef_runtime = 0;
@@ -875,6 +870,10 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
   g_proton_cef_runtime_active = 0;
   free(runtime);
   return PROTON_OK;
+}
+
+int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
+  return runtime != NULL && !proton_engine_runtime_has_windows(runtime);
 }
 
 static void proton_engine_pump_appkit_cef_once(void) {
@@ -916,25 +915,6 @@ static void proton_engine_run_external_message_pump_once(void) {
   proton_engine_reset_scheduled_pump();
   proton_engine_pump_appkit_cef_once();
   atomic_store_explicit(&g_message_pump_active, false, memory_order_release);
-}
-
-static int32_t proton_engine_drain_browser_closes(
-    proton_engine_runtime_t *runtime, char *error, size_t error_len) {
-  while (proton_engine_window_has_any()) {
-    int32_t status = proton_engine_runtime_do_message_loop_work(
-        runtime, error, error_len);
-    if (status != PROTON_OK || !proton_engine_window_has_any()) {
-      return status;
-    }
-    uint32_t ready_mask = PROTON_WAIT_NONE;
-    status = proton_engine_runtime_wait(
-        runtime, PROTON_WAIT_PLATFORM, PROTON_WAIT_TIMEOUT_INFINITE,
-        &ready_mask, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
-    }
-  }
-  return PROTON_OK;
 }
 
 int32_t proton_engine_runtime_do_message_loop_work(

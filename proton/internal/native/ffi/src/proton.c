@@ -245,7 +245,7 @@ int32_t proton_internal_runtime_create(
   return PROTON_OK;
 }
 
-int32_t proton_runtime_destroy(proton_runtime_handle_t runtime) {
+int32_t proton_runtime_begin_destroy(proton_runtime_handle_t runtime) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime_for_destroy(runtime, &slot);
   if (status == PROTON_ERR_DESTROYED) {
@@ -253,6 +253,10 @@ int32_t proton_runtime_destroy(proton_runtime_handle_t runtime) {
   }
   if (status != PROTON_OK) {
     return status;
+  }
+  if (slot->destroy_prepared) {
+    g_last_error[0] = '\0';
+    return PROTON_OK;
   }
   proton_runtime_slot_begin_destroy(slot);
 
@@ -265,6 +269,52 @@ int32_t proton_runtime_destroy(proton_runtime_handle_t runtime) {
     return status;
   }
   proton_engine_cancel_resource_requests();
+  slot->destroy_prepared = true;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_runtime_destroy_ready(proton_runtime_handle_t runtime,
+                                     int32_t *out_ready) {
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime_for_destroy(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (out_ready == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_ready is required");
+  }
+  if (!slot->destroy_prepared) {
+    return proton_set_error(PROTON_ERR_DESTROYED,
+                            "runtime destroy has not begun");
+  }
+  *out_ready = slot->engine_runtime == NULL ||
+                       proton_engine_runtime_destroy_ready(slot->engine_runtime)
+                   ? 1
+                   : 0;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_runtime_finish_destroy(proton_runtime_handle_t runtime) {
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime_for_destroy(runtime, &slot);
+  if (status == PROTON_ERR_DESTROYED) {
+    return PROTON_OK;
+  }
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (!slot->destroy_prepared) {
+    return proton_set_error(PROTON_ERR_DESTROYED,
+                            "runtime destroy has not begun");
+  }
+  if (slot->engine_runtime != NULL &&
+      !proton_engine_runtime_destroy_ready(slot->engine_runtime)) {
+    return proton_set_error(PROTON_ERR_BUSY,
+                            "runtime still owns closing browser windows");
+  }
   if (slot->engine_runtime != NULL) {
     char engine_error[512] = {0};
     status = proton_engine_runtime_destroy(slot->engine_runtime, engine_error,
@@ -449,10 +499,6 @@ int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
   proton_runtime_sync_engine_closed_windows(slot);
   if (!proton_runtime_has_events(slot)) {
     status = proton_runtime_sync_engine_window_states(slot);
-    if (status != PROTON_OK) {
-      return status;
-    }
-    status = proton_runtime_sync_engine_close_requests(slot);
     if (status != PROTON_OK) {
       return status;
     }
@@ -1691,9 +1737,6 @@ int32_t proton_window_set_close_interception(proton_window_handle_t window,
       slot->engine_window, enabled, engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
-  }
-  if (!enabled) {
-    slot->close_request_notified_revision = 0;
   }
   g_last_error[0] = '\0';
   return PROTON_OK;
