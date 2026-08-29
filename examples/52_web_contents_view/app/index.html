@@ -17,6 +17,15 @@
         <input id="url" placeholder="example.com" />
         <button id="go">Go</button>
       </div>
+      <label id="zoom-control">
+        <span>Zoom</span>
+        <select id="zoom" title="Page zoom">
+          <option value="75">75%</option>
+          <option value="100" selected>100%</option>
+          <option value="125">125%</option>
+          <option value="150">150%</option>
+        </select>
+      </label>
       <button data-url="https://example.com">Example</button>
       <button data-url="https://moonbitlang.com">MoonBit</button>
       <button data-url="https://developer.mozilla.org">MDN</button>
@@ -25,7 +34,7 @@
       <p class="hint">
         The area on the right is a web contents view: an independent native
         browser hosted inside this window. Navigation events flow back into
-        the sidebar; back/forward/reload use per-view browser commands.
+        the sidebar; navigation and zoom controls target that browser only.
       </p>
     </div>
     <script src="sidebar.js"></script>

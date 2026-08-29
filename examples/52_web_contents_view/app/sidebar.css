@@ -24,7 +24,8 @@ body {
 }
 
 #sidebar input,
-#sidebar button {
+#sidebar button,
+#sidebar select {
   -webkit-app-region: no-drag;
 }
 
@@ -47,6 +48,25 @@ h1 {
 #bar {
   display: flex;
   gap: 6px;
+}
+
+#zoom-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: #6e6e73;
+}
+
+#zoom {
+  min-width: 88px;
+  padding: 5px 8px;
+  border: 1px solid #c8c8cf;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  color: #1d1d1f;
 }
 
 #url {

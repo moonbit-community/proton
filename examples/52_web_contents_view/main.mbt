@@ -39,6 +39,29 @@ pub extend SimpleReply with ToJson::{to_json}
 pub extend SimpleReply with FromJson::{from_json}
 
 ///|
+struct ZoomPayload {
+  percent : Int
+} derive(ToJson, FromJson)
+
+///|
+pub extend ZoomPayload with ToJson::{to_json}
+
+///|
+pub extend ZoomPayload with FromJson::{from_json}
+
+///|
+struct ZoomReply {
+  ok : Bool
+  percent : Int
+} derive(ToJson, FromJson)
+
+///|
+pub extend ZoomReply with ToJson::{to_json}
+
+///|
+pub extend ZoomReply with FromJson::{from_json}
+
+///|
 let browser_contract : @proton_contract.ExtensionContract = @proton_contract.extension(
   id="examples/web-contents-view-browser",
   js_namespace="browser",
@@ -62,6 +85,11 @@ let forward_command : @proton_contract.Command[Json, SimpleReply] = browser_cont
 ///|
 let reload_command : @proton_contract.Command[Json, SimpleReply] = browser_contract.command(
   "reload",
+)
+
+///|
+let zoom_command : @proton_contract.Command[ZoomPayload, ZoomReply] = browser_contract.command(
+  "zoom",
 )
 
 ///|
@@ -110,6 +138,22 @@ fn panel_command(action : (@proton.ViewHandle) -> Unit raise) -> SimpleReply {
 }
 
 ///|
+fn set_panel_zoom(payload : ZoomPayload) -> ZoomReply {
+  match panel_slot.val {
+    Some(view) => {
+      view.set_zoom_percent(payload.percent) catch {
+        _ => return ZoomReply::{ ok: false, percent: payload.percent, }
+      }
+      let percent = view.zoom_percent() catch {
+        _ => return ZoomReply::{ ok: false, percent: payload.percent, }
+      }
+      ZoomReply::{ ok: true, percent, }
+    }
+    None => ZoomReply::{ ok: false, percent: payload.percent, }
+  }
+}
+
+///|
 fn browser_extension() -> @proton_extension.Extension {
   @proton_extension.typed(
     browser_contract,
@@ -118,6 +162,7 @@ fn browser_extension() -> @proton_extension.Extension {
       back_command.contract_route(),
       forward_command.contract_route(),
       reload_command.contract_route(),
+      zoom_command.contract_route(),
     ],
     fn(registrar) raise {
       registrar.bind(navigate_command, (_context, payload) => navigate(payload))
@@ -129,6 +174,9 @@ fn browser_extension() -> @proton_extension.Extension {
       })
       registrar.bind(reload_command, (_context, _payload) => {
         panel_command(view => view.reload())
+      })
+      registrar.bind(zoom_command, (_context, payload) => {
+        set_panel_zoom(payload)
       })
     },
   )

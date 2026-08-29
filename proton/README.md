@@ -106,7 +106,8 @@ the native frame. `content_size` reads that area back in logical pixels.
 `set_menu` replaces or clears the runtime menu, `set_icon` loads a native icon
 from a file path, and `set_parent` establishes a native owner/transient or modal
 relationship. `set_window_button_visibility` controls standard title-bar buttons
-on macOS and is a successful no-op on other platforms.
+on macOS and is a successful no-op on other platforms. Web contents views expose
+independent `set_zoom_percent` and `zoom_percent` controls for their own browser.
 
 ## Logging
 

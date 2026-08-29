@@ -24,3 +24,9 @@ document.querySelector("#forward").onclick = () =>
   window.__MoonBit__.browser.forward();
 document.querySelector("#reload").onclick = () =>
   window.__MoonBit__.browser.reload();
+
+document.querySelector("#zoom").onchange = async (event) => {
+  const percent = Number(event.target.value);
+  const reply = await window.__MoonBit__.browser.zoom({ percent });
+  status.textContent = reply.ok ? `Zoom ${reply.percent}%` : "zoom failed";
+};
