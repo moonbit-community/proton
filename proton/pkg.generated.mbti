@@ -245,8 +245,13 @@ pub struct BrowserHandle {
   load_browser_html : (String, String) -> Unit raise WindowSessionError
   eval_browser_script : (String) -> Unit raise WindowSessionError
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
+  set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
+  read_browser_zoom_percent : () -> Int raise WindowSessionError
+  read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
 }
 pub fn BrowserHandle::back(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::can_go_back(Self) -> Bool raise WindowSessionError
+pub fn BrowserHandle::can_go_forward(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::cancel_download(Self, Int) -> Unit raise WindowSessionError
 pub fn BrowserHandle::close_devtools(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::eval(Self, String) -> Unit raise WindowSessionError
@@ -255,8 +260,10 @@ pub fn BrowserHandle::load_html(Self, String, String) -> Unit raise WindowSessio
 pub fn BrowserHandle::load_url(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::open_devtools(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
+pub fn BrowserHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn BrowserHandle::stop(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::window_id(Self) -> String
+pub fn BrowserHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
 pub(all) enum BrowserPermissionDecision {
   Allow
@@ -512,14 +519,19 @@ pub struct ViewHandle {
   set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
   set_view_visible : (Bool) -> Unit raise WindowSessionError
   set_view_z_order : (Int) -> Unit raise WindowSessionError
+  set_view_zoom_percent : (Int) -> Unit raise WindowSessionError
+  read_view_zoom_percent : () -> Int raise WindowSessionError
   load_view_url : (String) -> Unit raise WindowSessionError
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
   send_view_command : (String, Int?) -> Unit raise WindowSessionError
+  read_view_navigation_state : () -> (Bool, Bool) raise WindowSessionError
   read_view_state : () -> ViewState raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
 }
 pub fn ViewHandle::back(Self) -> Unit raise WindowSessionError
+pub fn ViewHandle::can_go_back(Self) -> Bool raise WindowSessionError
+pub fn ViewHandle::can_go_forward(Self) -> Bool raise WindowSessionError
 pub fn ViewHandle::close(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::close_devtools(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::eval(Self, String) -> Unit raise WindowSessionError
@@ -532,8 +544,10 @@ pub fn ViewHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessio
 pub fn ViewHandle::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_visible(Self, Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_z_order(Self, Int) -> Unit raise WindowSessionError
+pub fn ViewHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn ViewHandle::state(Self) -> ViewState raise WindowSessionError
 pub fn ViewHandle::stop(Self) -> Unit raise WindowSessionError
+pub fn ViewHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
 pub(all) struct ViewState {
   x : Int
@@ -587,6 +601,7 @@ pub struct WindowHandle {
   id : String
   native_id : Int64
   show_window : () -> Unit raise WindowSessionError
+  show_window_inactive : () -> Unit raise WindowSessionError
   hide_window : () -> Unit raise WindowSessionError
   close_window : () -> Unit raise WindowSessionError
   focus_window : () -> Unit raise WindowSessionError
@@ -635,6 +650,7 @@ pub struct WindowHandle {
   find_view : (String) -> ViewHandle?
 }
 pub fn WindowHandle::add_view(Self, String, ViewConfig) -> ViewHandle raise WindowSessionError
+pub fn WindowHandle::bounds(Self) -> (Int, Int, Int, Int) raise WindowSessionError
 pub fn WindowHandle::browser(Self) -> BrowserHandle
 pub fn WindowHandle::center(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::close(Self) -> Unit raise WindowSessionError
@@ -643,6 +659,8 @@ pub fn WindowHandle::flash_frame(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::focus(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::hide(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::id(Self) -> String
+pub fn WindowHandle::is_focused(Self) -> Bool raise WindowSessionError
+pub fn WindowHandle::is_visible(Self) -> Bool raise WindowSessionError
 pub fn WindowHandle::maximize(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::minimize(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::remove_view(Self, String) -> Unit raise WindowSessionError
@@ -650,6 +668,7 @@ pub fn WindowHandle::restore(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_always_on_top(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_aspect_ratio(Self, Double) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_background_color(Self, String) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_closable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_content_protection(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_content_size(Self, Int, Int) -> Unit raise WindowSessionError
@@ -679,9 +698,11 @@ pub fn WindowHandle::set_visible_on_all_workspaces(Self, Bool) -> Unit raise Win
 pub fn WindowHandle::set_window_button_visibility(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::show(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::show_inactive(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::state(Self) -> WindowState raise WindowSessionError
 pub fn WindowHandle::view(Self, String) -> ViewHandle?
 pub fn WindowHandle::views(Self) -> Array[ViewHandle]
+pub fn WindowHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
 pub struct WindowManager {
   open_window : async (String) -> WindowHandle raise WindowSessionError
