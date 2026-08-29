@@ -39,6 +39,26 @@ void proton_browser_session_destroy(proton_browser_session_t *session);
 void proton_browser_session_bind_window(proton_browser_session_t *session,
                                          proton_window_id_t window);
 
+void proton_browser_session_loading_changed(proton_browser_session_t *session,
+                                             const char *url,
+                                             int32_t is_loading);
+void proton_browser_session_navigated(proton_browser_session_t *session,
+                                      const char *url);
+void proton_browser_session_title_updated(proton_browser_session_t *session,
+                                           const char *title);
+void proton_browser_session_load_failed(proton_browser_session_t *session,
+                                        const char *url,
+                                        int32_t error_code,
+                                        const char *error_text);
+int32_t proton_browser_session_copy_url(proton_browser_session_t *session,
+                                        char *buffer, int32_t buffer_len,
+                                        int32_t *out_required_len);
+int32_t proton_browser_session_copy_title(proton_browser_session_t *session,
+                                          char *buffer, int32_t buffer_len,
+                                          int32_t *out_required_len);
+int32_t proton_browser_session_is_loading(
+    proton_browser_session_t *session);
+
 int32_t proton_browser_session_respond_json(
     proton_browser_session_t *session, const char *response_json,
     char *error, size_t error_len);

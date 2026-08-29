@@ -53,6 +53,9 @@ struct proton_browser_session {
   proton_browser_navigation_bypass_t *navigation_bypasses;
   proton_browser_signal_fn signal;
   void *signal_user_data;
+  char *url;
+  char *title;
+  int32_t is_loading;
 };
 
 static void proton_browser_set_message(char *error, size_t error_len,
@@ -184,6 +187,8 @@ void proton_browser_session_destroy(proton_browser_session_t *session) {
     free(bypass);
     bypass = next;
   }
+  free(session->url);
+  free(session->title);
   free(session);
 }
 
@@ -192,6 +197,123 @@ void proton_browser_session_bind_window(proton_browser_session_t *session,
   if (session != NULL) {
     session->window = window;
   }
+}
+
+static void proton_browser_session_set_text(char **target, const char *value) {
+  char *copy = proton_browser_copy_string(value != NULL ? value : "");
+  if (copy == NULL) {
+    return;
+  }
+  free(*target);
+  *target = copy;
+}
+
+void proton_browser_session_loading_changed(proton_browser_session_t *session,
+                                             const char *url,
+                                             int32_t is_loading) {
+  if (session == NULL) {
+    return;
+  }
+  if (url != NULL && url[0] != '\0') {
+    proton_browser_session_set_text(&session->url, url);
+  }
+  session->is_loading = is_loading != 0 ? 1 : 0;
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_LOADING_CHANGED, session->window);
+  if (event != NULL) {
+    event->bool_a = session->is_loading;
+  }
+  (void)proton_browser_enqueue_event(session, event);
+}
+
+void proton_browser_session_navigated(proton_browser_session_t *session,
+                                      const char *url) {
+  if (session == NULL) {
+    return;
+  }
+  proton_browser_session_set_text(&session->url, url);
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_NAVIGATED, session->window);
+  if (event != NULL && !proton_event_set_text(&event->text_a, url)) {
+    proton_event_destroy(event);
+    event = NULL;
+  }
+  (void)proton_browser_enqueue_event(session, event);
+}
+
+void proton_browser_session_title_updated(proton_browser_session_t *session,
+                                           const char *title) {
+  if (session == NULL) {
+    return;
+  }
+  proton_browser_session_set_text(&session->title, title);
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_TITLE_UPDATED, session->window);
+  if (event != NULL && !proton_event_set_text(&event->text_a, title)) {
+    proton_event_destroy(event);
+    event = NULL;
+  }
+  (void)proton_browser_enqueue_event(session, event);
+}
+
+void proton_browser_session_load_failed(proton_browser_session_t *session,
+                                        const char *url,
+                                        int32_t error_code,
+                                        const char *error_text) {
+  if (session == NULL) {
+    return;
+  }
+  proton_browser_session_set_text(&session->url, url);
+  session->is_loading = 0;
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_LOAD_FAILED, session->window);
+  if (event != NULL &&
+      (!proton_event_set_text(&event->text_a, url) ||
+       !proton_event_set_text(&event->text_b, error_text))) {
+    proton_event_destroy(event);
+    event = NULL;
+  }
+  if (event != NULL) {
+    event->int_a = error_code;
+  }
+  (void)proton_browser_enqueue_event(session, event);
+}
+
+static int32_t proton_browser_session_copy_text(const char *text,
+                                                char *buffer,
+                                                int32_t buffer_len,
+                                                int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  int32_t required = text != NULL ? (int32_t)strlen(text) : 0;
+  *out_required_len = required;
+  if (buffer == NULL || buffer_len <= required) {
+    return PROTON_ERR_BUFFER_TOO_SMALL;
+  }
+  memcpy(buffer, text != NULL ? text : "", (size_t)required + 1);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_session_copy_url(proton_browser_session_t *session,
+                                        char *buffer, int32_t buffer_len,
+                                        int32_t *out_required_len) {
+  return proton_browser_session_copy_text(
+      session != NULL ? session->url : NULL, buffer, buffer_len,
+      out_required_len);
+}
+
+int32_t proton_browser_session_copy_title(proton_browser_session_t *session,
+                                          char *buffer, int32_t buffer_len,
+                                          int32_t *out_required_len) {
+  return proton_browser_session_copy_text(
+      session != NULL ? session->title : NULL, buffer, buffer_len,
+      out_required_len);
+}
+
+int32_t proton_browser_session_is_loading(
+    proton_browser_session_t *session) {
+  return session != NULL ? session->is_loading : 0;
 }
 
 static proton_browser_pending_t *proton_browser_pending_new(

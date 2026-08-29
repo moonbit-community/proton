@@ -185,6 +185,7 @@ pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
 pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
+pub fn App::on_browser_event(Self, async (BrowserHandle, BrowserEvent) -> Unit noraise) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
 pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise) -> Self
@@ -238,6 +239,16 @@ pub fn BridgeDiagnostic::equal(Self, Self) -> Bool
 pub fn BridgeDiagnostic::not_equal(Self, Self) -> Bool
 pub fn BridgeDiagnostic::to_repr(Self) -> @debug.Repr
 
+pub(all) enum BrowserEvent {
+  LoadingChanged(is_loading~ : Bool)
+  Navigated(url~ : String)
+  TitleUpdated(title~ : String)
+  LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+} derive(Eq, @debug.Debug)
+pub fn BrowserEvent::equal(Self, Self) -> Bool
+pub fn BrowserEvent::not_equal(Self, Self) -> Bool
+pub fn BrowserEvent::to_repr(Self) -> @debug.Repr
+
 pub struct BrowserHandle {
   id : String
   native_id : Int64
@@ -248,6 +259,7 @@ pub struct BrowserHandle {
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_browser_zoom_percent : () -> Int raise WindowSessionError
   read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
+  read_browser_state : () -> BrowserState raise WindowSessionError
 }
 pub fn BrowserHandle::back(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::can_go_back(Self) -> Bool raise WindowSessionError
@@ -261,6 +273,7 @@ pub fn BrowserHandle::load_url(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::open_devtools(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
 pub fn BrowserHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
+pub fn BrowserHandle::state(Self) -> BrowserState raise WindowSessionError
 pub fn BrowserHandle::stop(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::window_id(Self) -> String
 pub fn BrowserHandle::zoom_percent(Self) -> Int raise WindowSessionError
@@ -272,6 +285,17 @@ pub(all) enum BrowserPermissionDecision {
 pub fn BrowserPermissionDecision::equal(Self, Self) -> Bool
 pub fn BrowserPermissionDecision::not_equal(Self, Self) -> Bool
 pub fn BrowserPermissionDecision::to_repr(Self) -> @debug.Repr
+
+pub(all) struct BrowserState {
+  url : String
+  title : String
+  is_loading : Bool
+  can_go_back : Bool
+  can_go_forward : Bool
+} derive(Eq, @debug.Debug)
+pub fn BrowserState::equal(Self, Self) -> Bool
+pub fn BrowserState::not_equal(Self, Self) -> Bool
+pub fn BrowserState::to_repr(Self) -> @debug.Repr
 
 pub(all) struct CertificateError {
   url : String

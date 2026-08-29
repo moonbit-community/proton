@@ -239,6 +239,14 @@ int32_t proton_window_browser_command_json(
 int32_t proton_window_get_navigation_state(
     proton_window_handle_t window, int32_t *out_can_go_back,
     int32_t *out_can_go_forward);
+int32_t proton_window_get_browser_url(
+    proton_window_handle_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len);
+int32_t proton_window_get_browser_title(
+    proton_window_handle_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len);
+int32_t proton_window_get_browser_loading(
+    proton_window_handle_t window, int32_t *out_is_loading);
 int32_t proton_window_respond_browser_request_json(
     proton_window_handle_t window, const char *response_json);
 int32_t proton_window_emit_bridge_event_json(

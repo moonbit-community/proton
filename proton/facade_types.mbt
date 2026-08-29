@@ -53,6 +53,9 @@ struct App {
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
+  browser_event_handlers : Array[
+    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  ]
   mut window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   mut navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
   mut popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
@@ -328,6 +331,9 @@ priv struct RuntimeSession {
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
+  browser_event_handlers : Array[
+    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  ]
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   window_tasks : @async.TaskGroup[Unit]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
@@ -428,6 +434,7 @@ pub struct BrowserHandle {
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_browser_zoom_percent : () -> Int raise WindowSessionError
   read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
+  read_browser_state : () -> BrowserState raise WindowSessionError
 }
 
 ///|
@@ -719,6 +726,21 @@ priv enum AppLifecycleState {
   Destroying = 5
   Closed = 6
 }
+
+///|
+/// An observed lifecycle change for a window's main browser page.
+pub(all) enum BrowserEvent {
+  LoadingChanged(is_loading~ : Bool)
+  Navigated(url~ : String)
+  TitleUpdated(title~ : String)
+  LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+} derive(Debug, Eq)
+
+///|
+pub extend BrowserEvent with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserEvent with Debug::{to_repr}
 
 ///|
 priv enum BridgeRequestLifecycleState {

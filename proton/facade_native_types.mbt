@@ -105,6 +105,33 @@ fn WindowState::from_native(state : @native.WindowState) -> WindowState {
 }
 
 ///|
+/// A point-in-time snapshot of a window's main browser page.
+pub(all) struct BrowserState {
+  url : String
+  title : String
+  is_loading : Bool
+  can_go_back : Bool
+  can_go_forward : Bool
+} derive(Debug, Eq)
+
+///|
+pub extend BrowserState with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserState with Debug::{to_repr}
+
+///|
+fn BrowserState::from_native(state : @native.BrowserState) -> BrowserState {
+  {
+    url: state.url,
+    title: state.title,
+    is_loading: state.is_loading,
+    can_go_back: state.can_go_back,
+    can_go_forward: state.can_go_forward,
+  }
+}
+
+///|
 /// Information about one connected display.
 pub(all) struct ScreenInfo {
   id : Int

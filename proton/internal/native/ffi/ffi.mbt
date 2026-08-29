@@ -650,6 +650,31 @@ pub extern "C" fn proton_window_get_navigation_state_ffi(
 ) -> Int = "proton_window_get_navigation_state"
 
 ///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_window_get_browser_url_ffi(
+  window : WindowHandle,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_get_browser_url"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_window_get_browser_title_ffi(
+  window : WindowHandle,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_get_browser_title"
+
+///|
+#borrow(out_is_loading)
+pub extern "C" fn proton_window_get_browser_loading_ffi(
+  window : WindowHandle,
+  out_is_loading : Ref[Int],
+) -> Int = "proton_window_get_browser_loading"
+
+///|
 #borrow(response_json)
 pub extern "C" fn proton_window_respond_browser_request_json_ffi(
   window : WindowHandle,

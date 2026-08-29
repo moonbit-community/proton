@@ -47,6 +47,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     planned_views=self.planned_views.map(view => (view.0, view.1.to_native())),
     window_event_handlers=self.window_event_handlers,
     view_event_handlers=self.view_event_handlers,
+    browser_event_handlers=self.browser_event_handlers,
     window_close_handler=self.window_close_handler,
     navigation_handler=self.navigation_handler,
     popup_handler=self.popup_handler,
@@ -127,6 +128,9 @@ async fn run_manifest(
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ] = [],
   view_event_handlers? : Array[async (ViewHandle, ViewEvent) -> Unit noraise] = [],
+  browser_event_handlers? : Array[
+    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  ] = [],
   window_close_handler? : (async (WindowHandle) -> WindowCloseDecision noraise)? = None,
   navigation_handler? : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)? = None,
   popup_handler? : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)? = None,
@@ -333,9 +337,9 @@ async fn run_manifest(
           runtime, event_pump, locale_preferences, definitions, windows, command_host,
           wakeup, forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
           application_tasks, last_window_closed_policy, window_tasks, view_event_handlers,
-          window_close_handler, window_lifecycle_hooks, lifecycle_failures, bridge_startup_timeout_ms,
-          navigation_handler, popup_handler, download_handler, certificate_handler,
-          media_handler, download_event_handlers,
+          browser_event_handlers, window_close_handler, window_lifecycle_hooks, lifecycle_failures,
+          bridge_startup_timeout_ms, navigation_handler, popup_handler, download_handler,
+          certificate_handler, media_handler, download_event_handlers,
         )
         let application_context = session.application_context()
         let application_start = application_tasks.spawn(

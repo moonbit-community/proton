@@ -141,6 +141,8 @@ cef_life_span_handler_t *CEF_CALLBACK
 proton_engine_client_get_life_span_handler(cef_client_t *self);
 cef_load_handler_t *CEF_CALLBACK
 proton_engine_client_get_load_handler(cef_client_t *self);
+cef_display_handler_t *CEF_CALLBACK
+proton_engine_client_get_display_handler(cef_client_t *self);
 cef_render_handler_t *CEF_CALLBACK
 proton_engine_client_get_render_handler(cef_client_t *self);
 

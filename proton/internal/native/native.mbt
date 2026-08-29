@@ -1033,6 +1033,27 @@ fn decode_native_runtime_event(
       )
     28 => QuitRequested
     29 => ViewEvent(window, @native_ffi.event_int64(event, 1), Closed)
+    30 =>
+      BrowserEvent(window, LoadingChanged(@native_ffi.event_int(event, 3) != 0))
+    31 =>
+      BrowserEvent(
+        window,
+        Navigated(require_native_event_text(event, 0, "browser navigation")),
+      )
+    32 =>
+      BrowserEvent(
+        window,
+        TitleUpdated(require_native_event_text(event, 0, "browser title")),
+      )
+    33 =>
+      BrowserEvent(
+        window,
+        LoadFailed(
+          require_native_event_text(event, 0, "browser load URL"),
+          @native_ffi.event_int(event, 0),
+          require_native_event_text(event, 1, "browser load error"),
+        ),
+      )
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -1899,6 +1920,32 @@ pub fn Window::navigation_state(
     ),
   )
   (can_go_back.val != 0, can_go_forward.val != 0)
+}
+
+///|
+/// Reads the current main browser page state.
+pub fn Window::browser_state(self : Window) -> BrowserState raise NativeError {
+  let handle = self.live_handle()
+  let url = require_native_text("browser URL", (buffer, buffer_len, required) => {
+    @native_ffi.proton_window_get_browser_url_ffi(
+      handle, buffer, buffer_len, required,
+    )
+  })
+  let title = require_native_text("browser title", (
+    buffer,
+    buffer_len,
+    required,
+  ) => {
+    @native_ffi.proton_window_get_browser_title_ffi(
+      handle, buffer, buffer_len, required,
+    )
+  })
+  let is_loading : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_get_browser_loading_ffi(handle, is_loading),
+  )
+  let (can_go_back, can_go_forward) = self.navigation_state()
+  { url, title, is_loading: is_loading.val != 0, can_go_back, can_go_forward, }
 }
 
 ///|

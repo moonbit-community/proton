@@ -390,6 +390,17 @@ pub fn App::on_view_event(
 }
 
 ///|
+/// Observes lifecycle events for every main browser page: loading changes,
+/// main-frame navigations, title updates, and load failures.
+pub fn App::on_browser_event(
+  self : App,
+  handler : async (BrowserHandle, BrowserEvent) -> Unit noraise,
+) -> App {
+  self.browser_event_handlers.push(handler)
+  self
+}
+
+///|
 /// Intercepts user-initiated close requests without blocking the native UI
 /// thread. `WindowHandle::close` uses the same request path; forced cleanup is
 /// reserved for the session-owned destroy lifecycle.

@@ -144,6 +144,24 @@ test "view closed events preserve owning window and view ids" {
 }
 
 ///|
+test "browser page events preserve window ids and payloads" {
+  let event = RuntimeEvent::BrowserEvent(
+    7L,
+    NativeBrowserEvent::LoadFailed(
+      "https://example.test/failed", -105, "name not resolved",
+    ),
+  )
+  assert_eq(event.event_type(), "browser_load_failed")
+  assert_eq(event.window_id(), Some(7L))
+  guard event.browser_event() is Some(info) else {
+    fail("expected browser event payload")
+  }
+  assert_eq(info.url, Some("https://example.test/failed"))
+  assert_eq(info.error_code, Some(-105))
+  assert_eq(info.error_text, Some("name not resolved"))
+}
+
+///|
 test "native ABI version and availability" {
   inspect(abi_version(), content="1")
 }

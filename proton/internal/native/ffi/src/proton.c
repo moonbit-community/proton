@@ -1873,6 +1873,67 @@ int32_t proton_window_get_navigation_state(
   return PROTON_OK;
 }
 
+int32_t proton_window_get_browser_url(proton_window_handle_t window,
+                                       char *buffer, int32_t buffer_len,
+                                       int32_t *out_required_len) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_browser_url(
+      slot->engine_window, buffer, buffer_len, out_required_len, engine_error,
+      sizeof(engine_error));
+  return status == PROTON_OK
+             ? proton_set_error(PROTON_OK, NULL)
+             : proton_set_error(status, engine_error);
+}
+
+int32_t proton_window_get_browser_title(proton_window_handle_t window,
+                                         char *buffer, int32_t buffer_len,
+                                         int32_t *out_required_len) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_browser_title(
+      slot->engine_window, buffer, buffer_len, out_required_len, engine_error,
+      sizeof(engine_error));
+  return status == PROTON_OK
+             ? proton_set_error(PROTON_OK, NULL)
+             : proton_set_error(status, engine_error);
+}
+
+int32_t proton_window_get_browser_loading(proton_window_handle_t window,
+                                           int32_t *out_is_loading) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_browser_loading(
+      slot->engine_window, out_is_loading, engine_error, sizeof(engine_error));
+  return status == PROTON_OK
+             ? proton_set_error(PROTON_OK, NULL)
+             : proton_set_error(status, engine_error);
+}
+
 int32_t proton_window_respond_browser_request_json(
     proton_window_handle_t window, const char *response_json) {
   proton_window_slot_t *slot = NULL;

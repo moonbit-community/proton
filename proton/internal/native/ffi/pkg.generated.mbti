@@ -203,6 +203,12 @@ pub fn proton_window_flash_frame_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_focus_ffi(WindowHandle) -> Int
 
+pub fn proton_window_get_browser_loading_ffi(WindowHandle, @ref.Ref[Int]) -> Int
+
+pub fn proton_window_get_browser_title_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_window_get_browser_url_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
 pub fn proton_window_get_content_size_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
 pub fn proton_window_get_navigation_state_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int

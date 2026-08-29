@@ -76,7 +76,8 @@ moon -C examples run 01_run --target native
 - `49_app_menu`: app-level typed native menu roles and menu command events with
   the optional focused window id.
 - `50_browser_control`: asynchronous navigation, popup, download, certificate,
-  media-permission, and download-progress browser policy handlers.
+  media-permission, download-progress policy handlers, plus observable main
+  browser page events and state snapshots.
 - `51_child_process_close_repro`: long-lived child process and pending bridge
   request for macOS close-lifecycle regression testing.
 - `52_web_contents_view`: Codex-style built-in browser: an asset-loaded

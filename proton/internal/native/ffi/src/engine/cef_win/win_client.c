@@ -1123,6 +1123,8 @@ proton_engine_client_t *proton_engine_client_new(
   client->client.get_life_span_handler =
       proton_engine_client_get_life_span_handler;
   client->client.get_load_handler = proton_engine_client_get_load_handler;
+  client->client.get_display_handler =
+      proton_engine_client_get_display_handler;
   client->client.get_drag_handler = proton_engine_client_get_drag_handler;
   client->client.get_request_handler =
       proton_engine_client_get_request_handler;
@@ -1381,6 +1383,15 @@ static void CEF_CALLBACK proton_engine_on_load_start(
     free(url);
     return;
   }
+  if (frame != NULL && frame->is_main(frame) && url != NULL &&
+      strcmp(url, "about:blank") != 0) {
+    proton_engine_window_t *window =
+        proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+    proton_browser_session_navigated(
+        window != NULL ? window->browser_session : NULL, url);
+    proton_browser_session_loading_changed(
+        window != NULL ? window->browser_session : NULL, url, 1);
+  }
   free(url);
 }
 
@@ -1406,6 +1417,9 @@ static void CEF_CALLBACK proton_engine_on_load_end(
   }
   proton_engine_window_t *window =
       proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+  if (window != NULL && frame != NULL && frame->is_main(frame)) {
+    proton_browser_session_loading_changed(window->browser_session, url, 0);
+  }
   if (window != NULL && window->bridge_config_json != NULL && frame != NULL &&
       frame->is_main(frame) && url != NULL &&
       strcmp(url, "about:blank") != 0) {
@@ -1439,6 +1453,11 @@ static void CEF_CALLBACK proton_engine_on_load_error(
   }
   proton_engine_window_t *window =
       proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+  if (frame != NULL && frame->is_main(frame)) {
+    proton_browser_session_load_failed(
+        window != NULL ? window->browser_session : NULL, url,
+        (int32_t)errorCode, text);
+  }
   if (window != NULL && window->bridge_config_json != NULL && frame != NULL &&
       frame->is_main(frame) && url != NULL) {
     proton_engine_bridge_lifecycle_report_load_failure(

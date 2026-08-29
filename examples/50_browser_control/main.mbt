@@ -50,6 +50,18 @@ async fn main {
   .on_download_event(fn(_browser, event) {
     println("download \{event.id}: \{event.state} \{event.percent}%")
   })
+  .on_browser_event(fn(browser, event) noraise {
+    println("browser event: \{Repr(event)}")
+    let state = browser.state() catch {
+      error => {
+        println("browser state unavailable: \{Repr(error)}")
+        return
+      }
+    }
+    println(
+      "browser state: loading=\{state.is_loading} back=\{state.can_go_back} forward=\{state.can_go_forward} title=\{state.title} url=\{state.url}",
+    )
+  })
   .identifier("dev.proton.50-browser-control")
   .run_or_abort()
 }

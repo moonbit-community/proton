@@ -169,6 +169,7 @@ enum RuntimeEvent {
   NotificationClicked(String?)
   BrowserRequest(Int64, NativeBrowserRequest)
   BrowserDownloadUpdated(Int64, NativeDownloadUpdate)
+  BrowserEvent(Int64, NativeBrowserEvent)
   ViewEvent(Int64, Int64, NativeViewEvent)
   ResourceRequested(NativeResourceRequest)
   ResourceRequestCancelled(Int64)
@@ -376,6 +377,20 @@ fn DialogLevel::native_value(self : DialogLevel) -> Int {
 }
 
 ///|
+enum NativeBrowserEvent {
+  LoadingChanged(Bool)
+  Navigated(String)
+  TitleUpdated(String)
+  LoadFailed(String, Int, String)
+} derive(Debug, Eq)
+
+///|
+pub extend NativeBrowserEvent with Eq::{not_equal, equal}
+
+///|
+pub extend NativeBrowserEvent with Debug::{to_repr}
+
+///|
 pub(all) struct NativeDialogCompletion {
   dialog : Int64
   window : Int64?
@@ -462,6 +477,22 @@ pub(all) struct WindowState {
   always_on_top : Bool
   theme : String
 } derive(Debug, Eq)
+
+///|
+/// A point-in-time state snapshot for a window's main browser page.
+pub(all) struct BrowserState {
+  url : String
+  title : String
+  is_loading : Bool
+  can_go_back : Bool
+  can_go_forward : Bool
+} derive(Debug, Eq)
+
+///|
+pub extend BrowserState with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserState with Debug::{to_repr}
 
 ///|
 /// Information about a single connected display.
@@ -661,6 +692,10 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     BrowserRequest(_, Certificate(..)) => "browser_certificate_error"
     BrowserRequest(_, Media(..)) => "browser_media_permission_requested"
     BrowserDownloadUpdated(_, _) => "browser_download_updated"
+    BrowserEvent(_, LoadingChanged(_)) => "browser_loading_changed"
+    BrowserEvent(_, Navigated(_)) => "browser_navigated"
+    BrowserEvent(_, TitleUpdated(_)) => "browser_title_updated"
+    BrowserEvent(_, LoadFailed(_, _, _)) => "browser_load_failed"
     ViewEvent(_, _, LoadingChanged(_)) => "view_loading_changed"
     ViewEvent(_, _, Navigated(_)) => "view_navigated"
     ViewEvent(_, _, TitleUpdated(_)) => "view_title_updated"
@@ -689,6 +724,7 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BridgeLifecycleChanged(window, _)
     | BrowserRequest(window, _)
     | BrowserDownloadUpdated(window, _)
+    | BrowserEvent(window, _)
     | ViewEvent(window, _, _) => Some(window)
     ResourceRequested(request) => Some(request.window)
     MenuCommand(_, window) => window
@@ -793,6 +829,46 @@ pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: None,
         error_code: None,
         error_text: None,
+      })
+    _ => None
+  }
+}
+
+///|
+/// Returns the main browser event payload when this event carries one.
+pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
+  match self {
+    BrowserEvent(_, LoadingChanged(is_loading)) =>
+      Some({
+        url: None,
+        title: None,
+        is_loading: Some(is_loading),
+        error_code: None,
+        error_text: None,
+      })
+    BrowserEvent(_, Navigated(url)) =>
+      Some({
+        url: Some(url),
+        title: None,
+        is_loading: None,
+        error_code: None,
+        error_text: None,
+      })
+    BrowserEvent(_, TitleUpdated(title)) =>
+      Some({
+        url: None,
+        title: Some(title),
+        is_loading: None,
+        error_code: None,
+        error_text: None,
+      })
+    BrowserEvent(_, LoadFailed(url, error_code, error_text)) =>
+      Some({
+        url: Some(url),
+        title: None,
+        is_loading: None,
+        error_code: Some(error_code),
+        error_text: Some(error_text),
       })
     _ => None
   }

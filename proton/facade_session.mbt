@@ -19,6 +19,9 @@ fn RuntimeSession::RuntimeSession(
   last_window_closed_policy : LastWindowClosedPolicy,
   window_tasks : @async.TaskGroup[Unit],
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise],
+  browser_event_handlers : Array[
+    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  ],
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?,
   window_lifecycle_hooks : Array[WindowLifecycleHook],
   lifecycle_failures : Array[AppCleanupError],
@@ -49,6 +52,7 @@ fn RuntimeSession::RuntimeSession(
     launch_input_handlers,
     window_event_handlers,
     view_event_handlers,
+    browser_event_handlers,
     window_close_handler,
     window_tasks,
     window_lifecycle_hooks,
@@ -708,6 +712,19 @@ fn RuntimeSession::browser_handle(
         error =>
           raise window_operation_failed(
             "read browser navigation state in window " + id,
+            error,
+          )
+      }
+    },
+    read_browser_state: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      BrowserState::from_native(running.window.browser_state()) catch {
+        error =>
+          raise window_operation_failed(
+            "read browser state in window " + id,
             error,
           )
       }
@@ -2094,6 +2111,14 @@ pub fn BrowserHandle::can_go_forward(
 }
 
 ///|
+/// Reads the current main browser page state.
+pub fn BrowserHandle::state(
+  self : BrowserHandle,
+) -> BrowserState raise WindowSessionError {
+  (self.read_browser_state)()
+}
+
+///|
 pub fn BrowserHandle::reload(
   self : BrowserHandle,
   ignore_cache? : Bool = false,
@@ -2459,16 +2484,17 @@ fn RuntimeSession::dispatch_view_event(
       let handle = self.view_handle(running, view)
       let view_event = match event.event_type() {
         "view_loading_changed" =>
-          LoadingChanged(is_loading=info.is_loading.unwrap_or(false))
-        "view_navigated" => Navigated(url=info.url.unwrap_or(""))
-        "view_title_updated" => TitleUpdated(title=info.title.unwrap_or(""))
+          ViewEvent::LoadingChanged(is_loading=info.is_loading.unwrap_or(false))
+        "view_navigated" => ViewEvent::Navigated(url=info.url.unwrap_or(""))
+        "view_title_updated" =>
+          ViewEvent::TitleUpdated(title=info.title.unwrap_or(""))
         "view_load_failed" =>
-          LoadFailed(
+          ViewEvent::LoadFailed(
             url=info.url.unwrap_or(""),
             error_code=info.error_code.unwrap_or(0),
             error_text=info.error_text.unwrap_or(""),
           )
-        "view_closed" => Closed
+        "view_closed" => ViewEvent::Closed
         _ => return
       }
       if closes_view {
@@ -2499,6 +2525,41 @@ fn RuntimeSession::dispatch_browser_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
 ) -> Unit {
+  match (event.window_id(), event.browser_event()) {
+    (Some(window_id), Some(info)) =>
+      match self.find_window_by_native_id(window_id) {
+        Some(window) => {
+          let browser = self.browser_handle(window)
+          let observed = match event.event_type() {
+            "browser_loading_changed" =>
+              BrowserEvent::LoadingChanged(
+                is_loading=info.is_loading.unwrap_or(false),
+              )
+            "browser_navigated" =>
+              BrowserEvent::Navigated(url=info.url.unwrap_or(""))
+            "browser_title_updated" =>
+              BrowserEvent::TitleUpdated(title=info.title.unwrap_or(""))
+            "browser_load_failed" =>
+              BrowserEvent::LoadFailed(
+                url=info.url.unwrap_or(""),
+                error_code=info.error_code.unwrap_or(0),
+                error_text=info.error_text.unwrap_or(""),
+              )
+            _ => return
+          }
+          for handler in self.browser_event_handlers {
+            ignore(
+              self.window_tasks.spawn(
+                () => handler(browser, observed),
+                no_wait=true,
+              ),
+            )
+          }
+        }
+        None => ()
+      }
+    _ => ()
+  }
   match event.browser_request() {
     Some(request) => self.start_browser_request(event.window_id(), request)
     None => ()

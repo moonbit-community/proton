@@ -207,16 +207,20 @@ void CEF_CALLBACK proton_engine_on_title_change(
     const cef_string_t *title) {
   (void)self;
   proton_engine_view_t *view = proton_engine_view_from_browser(browser);
-  if (view == NULL) {
+  char *title_utf8 = proton_engine_cef_string_to_utf8(title);
+  if (view != NULL) {
+    proton_view_events_title_updated(view->events, title_utf8);
+    free(title_utf8);
+    proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
     return;
   }
-  char *title_utf8 = proton_engine_cef_string_to_utf8(title);
-  proton_view_events_title_updated(view->events, title_utf8);
+  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  proton_browser_session_title_updated(
+      window != NULL ? window->browser_session : NULL, title_utf8);
   free(title_utf8);
-  proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
 }
 
-static cef_display_handler_t *CEF_CALLBACK
+cef_display_handler_t *CEF_CALLBACK
 proton_engine_client_get_display_handler(cef_client_t *self) {
   (void)self;
   g_display_handler.handler.base.add_ref(

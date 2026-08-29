@@ -402,13 +402,17 @@ static void CEF_CALLBACK proton_engine_on_title_change(
     const cef_string_t *title) {
   (void)self;
   proton_engine_view_t *view = proton_engine_view_from_browser(browser);
-  if (view == NULL) {
+  char *title_utf8 = proton_engine_cef_string_to_utf8(title);
+  if (view != NULL) {
+    proton_view_events_title_updated(view->events, title_utf8);
+    free(title_utf8);
+    proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
     return;
   }
-  char *title_utf8 = proton_engine_cef_string_to_utf8(title);
-  proton_view_events_title_updated(view->events, title_utf8);
+  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  proton_browser_session_title_updated(
+      window != NULL ? window->browser_session : NULL, title_utf8);
   free(title_utf8);
-  proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
 }
 
 cef_display_handler_t *CEF_CALLBACK
@@ -998,6 +1002,14 @@ static void CEF_CALLBACK proton_engine_on_load_start(
     free(url);
     return;
   }
+  if (frame != NULL && frame->is_main(frame) && url != NULL &&
+      strcmp(url, "about:blank") != 0) {
+    proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+    proton_browser_session_navigated(
+        window != NULL ? window->browser_session : NULL, url);
+    proton_browser_session_loading_changed(
+        window != NULL ? window->browser_session : NULL, url, 1);
+  }
   free(url);
 }
 
@@ -1020,6 +1032,9 @@ static void CEF_CALLBACK proton_engine_on_load_end(
     return;
   }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  if (window != NULL && frame != NULL && frame->is_main(frame)) {
+    proton_browser_session_loading_changed(window->browser_session, url, 0);
+  }
   if (window != NULL && window->bridge_config_json != NULL && frame != NULL &&
       frame->is_main(frame) && url != NULL &&
       strcmp(url, "about:blank") != 0) {
@@ -1050,6 +1065,9 @@ static void CEF_CALLBACK proton_engine_on_load_error(
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   char *message = proton_engine_cef_string_to_utf8(errorText);
   char *url = proton_engine_cef_string_to_utf8(failedUrl);
+  proton_browser_session_load_failed(
+      window != NULL ? window->browser_session : NULL, url,
+      (int32_t)errorCode, message);
   if (window != NULL && window->bridge_config_json != NULL && url != NULL) {
     proton_engine_bridge_lifecycle_report_load_failure(
         &window->bridge_lifecycle, url,

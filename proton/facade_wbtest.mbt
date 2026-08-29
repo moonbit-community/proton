@@ -96,6 +96,15 @@ fn test_window_handle(
     set_browser_zoom_percent: fn(_zoom_percent) {  },
     read_browser_zoom_percent: fn() { 100 },
     read_browser_navigation_state: fn() { (true, false) },
+    read_browser_state: fn() {
+      {
+        url: "https://example.test/",
+        title: "Example",
+        is_loading: false,
+        can_go_back: true,
+        can_go_forward: false,
+      }
+    },
   }
   WindowHandle::{
     id,
@@ -2306,6 +2315,28 @@ test "view handle routes operations through its closures" {
       #|]
     ),
   )
+}
+
+///|
+test "browser handle exposes the current page state" {
+  let window = test_window_handle("main", 17L)
+  let state = window.browser().state()
+  assert_eq(state.url, "https://example.test/")
+  assert_eq(state.title, "Example")
+  assert_false(state.is_loading)
+  assert_true(state.can_go_back)
+  assert_false(state.can_go_forward)
+}
+
+///|
+test "app builder registers main browser lifecycle handlers" {
+  let app = html("Browser events", "<p>events</p>").on_browser_event(fn(
+    _browser,
+    _event,
+  ) noraise {
+
+  })
+  assert_eq(app.browser_event_handlers.length(), 1)
 }
 
 ///|
