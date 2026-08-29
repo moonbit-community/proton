@@ -397,8 +397,11 @@ pub struct MenuItem {
   key : String?
   role : MenuItemRole?
   submenu : Menu?
+  enabled : Bool
+  visible : Bool
+  checked : Bool?
 }
-pub fn MenuItem::command(String, String, key? : String) -> Self
+pub fn MenuItem::command(String, String, key? : String, enabled? : Bool, visible? : Bool, checked? : Bool) -> Self
 pub fn MenuItem::role(MenuItemRole, label? : String, key? : String) -> Self
 pub fn MenuItem::separator() -> Self
 pub fn MenuItem::submenu(String, items~ : Array[Self]) -> Self

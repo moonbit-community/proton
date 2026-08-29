@@ -47,7 +47,7 @@ pub fn execute_process(Int, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Byt
 
 pub fn image_null() -> ImageHandle
 
-pub fn menu_config_add_item(MenuConfigHandle, Int, Bytes, Bytes, Bytes, Bytes) -> Int
+pub fn menu_config_add_item(MenuConfigHandle, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int) -> Int
 
 pub fn menu_config_add_menu(MenuConfigHandle, Bytes, Int, @ref.Ref[Int]) -> Int
 

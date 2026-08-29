@@ -118,12 +118,16 @@ static GtkWidget *proton_linux_menu_create_action_item(
     const char *value,
     const char *key,
     int is_command,
+    int enabled,
+    int checkable,
+    int checked,
     GdkModifierType extra_modifiers,
     GtkAccelGroup *accelerators,
     proton_linux_menu_command_callback_t command_callback,
     proton_linux_menu_role_callback_t role_callback,
     void *user_data) {
-  GtkWidget *item = gtk_menu_item_new_with_label(label);
+  GtkWidget *item = checkable ? gtk_check_menu_item_new_with_label(label)
+                              : gtk_menu_item_new_with_label(label);
   if (item == NULL ||
       !proton_linux_menu_bind_activation(
           item, value, is_command, command_callback, role_callback,
@@ -135,6 +139,10 @@ static GtkWidget *proton_linux_menu_create_action_item(
   }
   proton_linux_menu_add_accelerator(item, accelerators, key,
                                     extra_modifiers);
+  gtk_widget_set_sensitive(item, enabled != 0);
+  if (checkable) {
+    gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), checked != 0);
+  }
   return item;
 }
 
@@ -148,7 +156,7 @@ static int proton_linux_menu_append_role(
     proton_linux_menu_role_callback_t role_callback,
     void *user_data) {
   GtkWidget *item = proton_linux_menu_create_action_item(
-      label, role, key != NULL ? key : "", 0,
+      label, role, key != NULL ? key : "", 0, 1, 0, 0,
       strcmp(role, "hide_others") == 0 ? GDK_MOD1_MASK : 0, accelerators,
       command_callback, role_callback, user_data);
   if (item == NULL) {
@@ -205,6 +213,9 @@ static GtkWidget *proton_linux_menu_create_custom_menu(
   for (size_t index = 0; index < definition->item_count; index++) {
     const proton_linux_menu_item_t *definition_item =
         &definition->items[index];
+    if (!definition_item->visible) {
+      continue;
+    }
     GtkWidget *item = NULL;
     if (definition_item->kind == PROTON_LINUX_MENU_ITEM_SUBMENU) {
       if (!proton_linux_menu_append_submenu(
@@ -220,7 +231,9 @@ static GtkWidget *proton_linux_menu_create_custom_menu(
     } else if (definition_item->kind == PROTON_LINUX_MENU_ITEM_COMMAND) {
       item = proton_linux_menu_create_action_item(
           definition_item->label, definition_item->id, definition_item->key,
-          1, 0, accelerators, command_callback, role_callback, user_data);
+          1, definition_item->enabled, definition_item->checkable,
+          definition_item->checked, 0, accelerators, command_callback,
+          role_callback, user_data);
     } else if (!proton_linux_menu_append_role(
                    menu, definition_item->role, definition_item->label,
                    definition_item->key, accelerators,

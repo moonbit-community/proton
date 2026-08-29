@@ -209,6 +209,10 @@ pub extern "C" fn menu_config_add_item(
   label : Bytes,
   key : Bytes,
   role : Bytes,
+  enabled : Int,
+  visible : Int,
+  checkable : Int,
+  checked : Int,
 ) -> Int = "proton_internal_menu_config_add_item"
 
 ///|

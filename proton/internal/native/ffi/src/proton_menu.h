@@ -31,6 +31,10 @@ typedef struct {
   char *label;
   char *key;
   char *role;
+  int enabled;
+  int visible;
+  int checkable;
+  int checked;
   /* Owned nested menu; NULL unless `kind` is PROTON_MENU_ITEM_SUBMENU. */
   proton_menu_t *submenu;
 } proton_menu_item_t;
@@ -65,7 +69,8 @@ PROTON_INTERNAL int32_t proton_internal_menu_config_add_menu(
     int32_t *out_menu_index);
 PROTON_INTERNAL int32_t proton_internal_menu_config_add_item(
     proton_menu_bar_t *menu_bar, int32_t kind, const char *id,
-    const char *label, const char *key, const char *role);
+    const char *label, const char *key, const char *role, int32_t enabled,
+    int32_t visible, int32_t checkable, int32_t checked);
 PROTON_INTERNAL int32_t proton_internal_menu_config_begin_submenu(
     proton_menu_bar_t *menu_bar, const char *label);
 PROTON_INTERNAL int32_t proton_internal_menu_config_end_submenu(

@@ -557,6 +557,9 @@ struct MenuItem {
   key : String?
   role : MenuItemRole?
   submenu : Menu?
+  enabled : Bool
+  visible : Bool
+  checked : Bool?
 } derive(Debug, Eq)
 
 ///|
@@ -1442,11 +1445,16 @@ pub fn Menu::role(
 }
 
 ///|
-/// Creates an app command item. Activating it emits `menu_command`.
+/// Creates an app command item. Activating it emits `menu_command`. Passing
+/// `checked` creates a checkbox command item; omitting it creates a normal
+/// command item.
 pub fn MenuItem::command(
   id : String,
   label : String,
   key? : String,
+  enabled? : Bool = true,
+  visible? : Bool = true,
+  checked? : Bool,
 ) -> MenuItem {
   {
     kind: Command,
@@ -1455,6 +1463,9 @@ pub fn MenuItem::command(
     key,
     role: None,
     submenu: None,
+    enabled,
+    visible,
+    checked,
   }
 }
 
@@ -1468,6 +1479,9 @@ pub fn MenuItem::separator() -> MenuItem {
     key: None,
     role: None,
     submenu: None,
+    enabled: true,
+    visible: true,
+    checked: None,
   }
 }
 
@@ -1478,7 +1492,17 @@ pub fn MenuItem::role(
   label? : String,
   key? : String,
 ) -> MenuItem {
-  { kind: Role, id: None, label, key, role: Some(role), submenu: None, }
+  {
+    kind: Role,
+    id: None,
+    label,
+    key,
+    role: Some(role),
+    submenu: None,
+    enabled: true,
+    visible: true,
+    checked: None,
+  }
 }
 
 ///|
@@ -1491,6 +1515,9 @@ pub fn MenuItem::submenu(label : String, items~ : Array[MenuItem]) -> MenuItem {
     key: None,
     role: None,
     submenu: Some({ label: Some(label), role: None, items: Some(items.copy()), }),
+    enabled: true,
+    visible: true,
+    checked: None,
   }
 }
 
@@ -1518,6 +1545,12 @@ pub fn MenuItem::definition(
     Submenu => "submenu"
   }
   (kind, self.id, self.label, self.key, self.role, self.submenu)
+}
+
+///|
+#doc(hidden)
+pub fn MenuItem::state_definition(self : MenuItem) -> (Bool, Bool, Bool?) {
+  (self.enabled, self.visible, self.checked)
 }
 
 ///|

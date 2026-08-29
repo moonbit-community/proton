@@ -73,7 +73,7 @@ moon -C examples run 01_run --target native
   JavaScript helpers and events.
 - `48_titlebar_overlay`: cross-platform overlay demo with native window
   controls and compact web-rendered application chrome.
-- `49_app_menu`: app-level typed native menu roles and menu command events with
+- `49_app_menu`: app-level typed native menu roles, dynamic command states, and menu command events with
   the optional focused window id.
 - `50_browser_control`: asynchronous navigation, popup, download, certificate,
   media-permission, download-progress policy handlers, plus observable main

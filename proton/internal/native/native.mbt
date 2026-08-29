@@ -722,6 +722,26 @@ fn append_menu_config_items(
           runtime_config_string(item.label),
           runtime_config_string(item.key),
           runtime_config_string(menu_item_role_name(item.role)),
+          if item.enabled {
+            1
+          } else {
+            0
+          },
+          if item.visible {
+            1
+          } else {
+            0
+          },
+          if item.checked is Some(_) {
+            1
+          } else {
+            0
+          },
+          if item.checked.unwrap_or(false) {
+            1
+          } else {
+            0
+          },
         )
         if add_status < 0 {
           return add_status

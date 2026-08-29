@@ -2864,7 +2864,13 @@ test "custom menu labels never imply a standard role" {
   let resolved = resolve_menu(
     @native.MenuBar(menus=[
       @native.Menu("Edit", items=[
-        @native.MenuItem::command("custom.edit", "Custom Edit"),
+        @native.MenuItem::command(
+          "custom.edit",
+          "Custom Edit",
+          enabled=false,
+          visible=false,
+          checked=false,
+        ),
       ]),
     ]),
     preferences,
@@ -2875,10 +2881,24 @@ test "custom menu labels never imply a standard role" {
   let (role, label, items) = definitions[0].definition()
   assert_eq(role, None)
   assert_eq(label, Some("Edit"))
-  let (_, command_id, command_label, _, item_role, _) = items.unwrap()[0].definition()
+  let command = items.unwrap()[0]
+  let (_, command_id, command_label, _, item_role, _) = command.definition()
   assert_eq(command_id, Some("custom.edit"))
   assert_eq(command_label, Some("Custom Edit"))
   assert_eq(item_role, None)
+  assert_eq(command.state_definition(), (false, false, Some(false)))
+}
+
+///|
+test "public menu command state converts to the native definition" {
+  let command = MenuItem::command(
+    "custom.state",
+    "Stateful Command",
+    enabled=false,
+    visible=false,
+    checked=true,
+  ).to_native()
+  assert_eq(command.state_definition(), (false, false, Some(true)))
 }
 
 ///|

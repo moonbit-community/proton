@@ -272,7 +272,7 @@ pub fn MenuBar::not_equal(Self, Self) -> Bool
 pub fn MenuBar::to_repr(Self) -> @debug.Repr
 
 type MenuItem derive(Eq, @debug.Debug)
-pub fn MenuItem::command(String, String, key? : String) -> Self
+pub fn MenuItem::command(String, String, key? : String, enabled? : Bool, visible? : Bool, checked? : Bool) -> Self
 pub fn MenuItem::equal(Self, Self) -> Bool
 pub fn MenuItem::not_equal(Self, Self) -> Bool
 pub fn MenuItem::role(MenuItemRole, label? : String, key? : String) -> Self

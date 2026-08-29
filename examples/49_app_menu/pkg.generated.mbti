@@ -1,11 +1,22 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonbit-community/proton/examples/49_app_menu"
 
+import {
+  "moonbitlang/core/json",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
+type MenuStateReply derive(ToJson, @json.FromJson)
+pub fn MenuStateReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MenuStateReply::to_json(Self) -> Json
+
+type MenuStateRequest derive(ToJson, @json.FromJson)
+pub fn MenuStateRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MenuStateRequest::to_json(Self) -> Json
 
 // Type aliases
 

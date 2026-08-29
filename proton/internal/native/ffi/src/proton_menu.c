@@ -129,6 +129,7 @@ static proton_menu_t *proton_menu_config_build_target(
 static int32_t proton_menu_config_append_item(
     proton_menu_bar_t *menu_bar, int32_t kind, const char *id,
     const char *label, const char *key, const char *role,
+    int32_t enabled, int32_t visible, int32_t checkable, int32_t checked,
     proton_menu_t *submenu) {
   proton_menu_t *menu = proton_menu_config_build_target(menu_bar);
   if (menu == NULL || kind < PROTON_MENU_ITEM_COMMAND ||
@@ -164,6 +165,10 @@ static int32_t proton_menu_config_append_item(
       .label = proton_menu_copy_string(label),
       .key = proton_menu_copy_string(key),
       .role = proton_menu_copy_string(role),
+      .enabled = enabled != 0,
+      .visible = visible != 0,
+      .checkable = checkable != 0,
+      .checked = checked != 0,
       .submenu = submenu,
   };
   if ((id != NULL && id[0] != '\0' && item.id == NULL) ||
@@ -183,12 +188,14 @@ static int32_t proton_menu_config_append_item(
 
 int32_t proton_internal_menu_config_add_item(
     proton_menu_bar_t *menu_bar, int32_t kind, const char *id,
-    const char *label, const char *key, const char *role) {
+    const char *label, const char *key, const char *role, int32_t enabled,
+    int32_t visible, int32_t checkable, int32_t checked) {
   if (kind == PROTON_MENU_ITEM_SUBMENU) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "submenu item requires begin_submenu");
   }
   return proton_menu_config_append_item(menu_bar, kind, id, label, key, role,
+                                        enabled, visible, checkable, checked,
                                         NULL);
 }
 
@@ -213,7 +220,8 @@ int32_t proton_internal_menu_config_begin_submenu(
   /* Append the SUBMENU item to the current target (the parent) first, so its
      `submenu` member is reachable from the tree, then navigate into it. */
   int32_t status = proton_menu_config_append_item(
-      menu_bar, PROTON_MENU_ITEM_SUBMENU, NULL, label, NULL, NULL, submenu);
+      menu_bar, PROTON_MENU_ITEM_SUBMENU, NULL, label, NULL, NULL, 1, 1, 0, 0,
+      submenu);
   if (status != PROTON_OK) {
     proton_menu_destroy(submenu);
     return status;
@@ -272,7 +280,8 @@ static int32_t proton_menu_clone_append_items(
     }
     if (proton_internal_menu_config_add_item(
             builder, item->kind, item->id, item->label, item->key,
-            item->role) != PROTON_OK) {
+            item->role, item->enabled, item->visible, item->checkable,
+            item->checked) != PROTON_OK) {
       return PROTON_ERR_ENGINE;
     }
   }

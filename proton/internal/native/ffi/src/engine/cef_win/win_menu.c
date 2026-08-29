@@ -248,6 +248,9 @@ static int32_t proton_win_menu_append_definition(
   }
   for (size_t index = 0; index < definition->item_count; index++) {
     const proton_menu_item_t *item = &definition->items[index];
+    if (!item->visible) {
+      continue;
+    }
     if (item->kind == PROTON_MENU_ITEM_SEPARATOR) {
       if (!AppendMenuW(menu, MF_SEPARATOR, 0, NULL)) {
         proton_engine_set_message(error, error_len,
@@ -312,7 +315,14 @@ static int32_t proton_win_menu_append_definition(
       status = proton_win_menu_wide_text(
           item->label, &label, error, error_len);
     }
-    if (status == PROTON_OK && !AppendMenuW(menu, MF_STRING, id, label)) {
+    UINT flags = MF_STRING;
+    if (!item->enabled) {
+      flags |= MF_GRAYED;
+    }
+    if (item->checkable && item->checked) {
+      flags |= MF_CHECKED;
+    }
+    if (status == PROTON_OK && !AppendMenuW(menu, flags, id, label)) {
       proton_engine_set_message(error, error_len,
                                 "failed to append popup action");
       status = PROTON_ERR_PLATFORM;
