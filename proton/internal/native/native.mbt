@@ -1258,6 +1258,11 @@ pub fn Window::show(self : Window) -> Unit raise NativeError {
 }
 
 ///|
+pub fn Window::show_inactive(self : Window) -> Unit raise NativeError {
+  check_status(@native_ffi.proton_window_show_inactive_ffi(self.live_handle()))
+}
+
+///|
 /// Borrows this owning window handle for APIs that must not destroy it.
 pub fn Window::as_ref(self : Window) -> WindowRef {
   WindowRef::unsafe_from_handle(

@@ -410,6 +410,9 @@ pub extern "C" fn proton_window_destroy_ffi(window : WindowHandle) -> Int = "pro
 pub extern "C" fn proton_window_show_ffi(window : WindowHandle) -> Int = "proton_window_show"
 
 ///|
+pub extern "C" fn proton_window_show_inactive_ffi(window : WindowHandle) -> Int = "proton_window_show_inactive"
+
+///|
 pub extern "C" fn proton_window_hide_ffi(window : WindowHandle) -> Int = "proton_window_hide"
 
 ///|
