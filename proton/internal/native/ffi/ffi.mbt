@@ -659,6 +659,13 @@ pub extern "C" fn proton_window_browser_command_json_ffi(
 ) -> Int = "proton_window_browser_command_json"
 
 ///|
+#borrow(url)
+pub extern "C" fn proton_window_download_url_ffi(
+  window : WindowHandle,
+  url : Bytes,
+) -> Int = "proton_window_download_url"
+
+///|
 #borrow(text, out_request_id)
 pub extern "C" fn proton_window_find_in_page_ffi(
   window : WindowHandle,

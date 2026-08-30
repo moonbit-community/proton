@@ -240,6 +240,8 @@ int32_t proton_window_eval(proton_window_handle_t window,
                                       const char *script);
 int32_t proton_window_browser_command_json(
     proton_window_handle_t window, const char *command_json);
+int32_t proton_window_download_url(
+    proton_window_handle_t window, const char *url);
 int32_t proton_window_find_in_page(
     proton_window_handle_t window, const char *text, int32_t forward,
     int32_t match_case, int32_t find_next, int32_t *out_request_id);
