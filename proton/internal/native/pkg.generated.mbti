@@ -356,6 +356,20 @@ pub fn NativeDownloadUpdate::equal(Self, Self) -> Bool
 pub fn NativeDownloadUpdate::not_equal(Self, Self) -> Bool
 pub fn NativeDownloadUpdate::to_repr(Self) -> @debug.Repr
 
+pub(all) struct NativeFindInPageResult {
+  request_id : Int
+  active_match_ordinal : Int
+  matches : Int
+  selection_x : Int
+  selection_y : Int
+  selection_width : Int
+  selection_height : Int
+  final_update : Bool
+} derive(Eq, @debug.Debug)
+pub fn NativeFindInPageResult::equal(Self, Self) -> Bool
+pub fn NativeFindInPageResult::not_equal(Self, Self) -> Bool
+pub fn NativeFindInPageResult::to_repr(Self) -> @debug.Repr
+
 type NativeImage
 pub fn NativeImage::add_bitmap(Self, Bytes, Int, Int, scale_factor? : Double) -> Unit raise NativeError
 pub fn NativeImage::add_jpeg(Self, Bytes, scale_factor? : Double) -> Unit raise NativeError
@@ -436,6 +450,7 @@ pub fn RuntimeEvent::cookie_get_completion(Self) -> NativeCookieGetCompletion?
 pub fn RuntimeEvent::dialog_completion(Self) -> NativeDialogCompletion?
 pub fn RuntimeEvent::equal(Self, Self) -> Bool
 pub fn RuntimeEvent::event_type(Self) -> String
+pub fn RuntimeEvent::find_in_page_result(Self) -> NativeFindInPageResult?
 pub fn RuntimeEvent::has_window(Self) -> Bool
 pub fn RuntimeEvent::is_bridge_lifecycle_changed(Self) -> Bool
 pub fn RuntimeEvent::is_quit_requested(Self) -> Bool
@@ -528,6 +543,7 @@ pub fn View::View(Window, ViewConfig) -> Self raise NativeError
 pub fn View::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
 pub fn View::destroy(Self) -> Unit raise NativeError
 pub fn View::eval(Self, String) -> Unit raise NativeError
+pub fn View::find_in_page(Self, String, Bool, Bool, Bool) -> Int raise NativeError
 pub fn View::id(Self) -> Int64
 pub fn View::is_audio_muted(Self) -> Bool raise NativeError
 pub fn View::load_url(Self, String) -> Unit raise NativeError
@@ -538,6 +554,7 @@ pub fn View::set_visible(Self, Bool) -> Unit raise NativeError
 pub fn View::set_z_order(Self, Int) -> Unit raise NativeError
 pub fn View::set_zoom_percent(Self, Int) -> Unit raise NativeError
 pub fn View::state(Self) -> ViewState raise NativeError
+pub fn View::stop_find_in_page(Self, Bool) -> Unit raise NativeError
 pub fn View::zoom_percent(Self) -> Int raise NativeError
 
 type ViewConfig derive(Eq, @debug.Debug)
@@ -583,8 +600,10 @@ pub fn Window::cookie_delete(Self, String?, String?) -> Unit raise NativeError
 pub fn Window::cookie_flush(Self) -> Unit raise NativeError
 pub fn Window::cookie_set(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : CookieSameSite) -> Unit raise NativeError
 pub fn Window::destroy(Self) -> Unit raise NativeError
+pub fn Window::download_url(Self, String) -> Unit raise NativeError
 pub fn Window::emit_bridge_event_json(Self, String) -> Unit raise NativeError
 pub fn Window::eval(Self, String) -> Unit raise NativeError
+pub fn Window::find_in_page(Self, String, Bool, Bool, Bool) -> Int raise NativeError
 pub fn Window::flash_frame(Self, Bool) -> Unit raise NativeError
 pub fn Window::focus(Self) -> Unit raise NativeError
 pub fn Window::hide(Self) -> Unit raise NativeError
@@ -633,6 +652,7 @@ pub fn Window::set_zoom_percent(Self, Int) -> Unit raise NativeError
 pub fn Window::show(Self) -> Unit raise NativeError
 pub fn Window::show_inactive(Self) -> Unit raise NativeError
 pub fn Window::state(Self) -> WindowState raise NativeError
+pub fn Window::stop_find_in_page(Self, Bool) -> Unit raise NativeError
 pub fn Window::take_bridge_failure(Self) -> BridgeDiagnostic? raise NativeError
 
 type WindowConfig derive(Eq, @debug.Debug)

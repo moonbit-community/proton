@@ -244,6 +244,7 @@ pub(all) enum BrowserEvent {
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  FoundInPage(result~ : FindInPageResult)
 } derive(Eq, @debug.Debug)
 pub fn BrowserEvent::equal(Self, Self) -> Bool
 pub fn BrowserEvent::not_equal(Self, Self) -> Bool
@@ -256,6 +257,9 @@ pub struct BrowserHandle {
   load_browser_html : (String, String) -> Unit raise WindowSessionError
   eval_browser_script : (String) -> Unit raise WindowSessionError
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
+  download_browser_url : (String) -> Unit raise WindowSessionError
+  find_browser_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
+  stop_browser_find : (Bool) -> Unit raise WindowSessionError
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_browser_zoom_percent : () -> Int raise WindowSessionError
   set_browser_audio_muted : (Bool) -> Unit raise WindowSessionError
@@ -269,7 +273,9 @@ pub fn BrowserHandle::can_go_back(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::can_go_forward(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::cancel_download(Self, Int) -> Unit raise WindowSessionError
 pub fn BrowserHandle::close_devtools(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::download_url(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::eval(Self, String) -> Unit raise WindowSessionError
+pub fn BrowserHandle::find_in_page(Self, String, forward? : Bool, match_case? : Bool, find_next? : Bool) -> Int raise WindowSessionError
 pub fn BrowserHandle::forward(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::is_audio_muted(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::load_html(Self, String, String) -> Unit raise WindowSessionError
@@ -281,6 +287,7 @@ pub fn BrowserHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionErr
 pub fn BrowserHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn BrowserHandle::state(Self) -> BrowserState raise WindowSessionError
 pub fn BrowserHandle::stop(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::stop_find_in_page(Self, clear_selection? : Bool) -> Unit raise WindowSessionError
 pub fn BrowserHandle::window_id(Self) -> String
 pub fn BrowserHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
@@ -363,6 +370,20 @@ pub(all) struct DownloadRequest {
 pub fn DownloadRequest::equal(Self, Self) -> Bool
 pub fn DownloadRequest::not_equal(Self, Self) -> Bool
 pub fn DownloadRequest::to_repr(Self) -> @debug.Repr
+
+pub(all) struct FindInPageResult {
+  request_id : Int
+  active_match_ordinal : Int
+  matches : Int
+  selection_x : Int
+  selection_y : Int
+  selection_width : Int
+  selection_height : Int
+  final_update : Bool
+} derive(Eq, @debug.Debug)
+pub fn FindInPageResult::equal(Self, Self) -> Bool
+pub fn FindInPageResult::not_equal(Self, Self) -> Bool
+pub fn FindInPageResult::to_repr(Self) -> @debug.Repr
 
 pub(all) enum LastWindowClosedPolicy {
   Quit
@@ -580,6 +601,7 @@ pub(all) enum ViewEvent {
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  FoundInPage(result~ : FindInPageResult)
   Closed
 } derive(Eq, @debug.Debug)
 pub fn ViewEvent::equal(Self, Self) -> Bool
@@ -600,6 +622,8 @@ pub struct ViewHandle {
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
   send_view_command : (String, Int?) -> Unit raise WindowSessionError
+  find_view_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
+  stop_view_find : (Bool) -> Unit raise WindowSessionError
   read_view_navigation_state : () -> (Bool, Bool) raise WindowSessionError
   read_view_state : () -> ViewState raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
@@ -610,6 +634,7 @@ pub fn ViewHandle::can_go_forward(Self) -> Bool raise WindowSessionError
 pub fn ViewHandle::close(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::close_devtools(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::eval(Self, String) -> Unit raise WindowSessionError
+pub fn ViewHandle::find_in_page(Self, String, forward? : Bool, match_case? : Bool, find_next? : Bool) -> Int raise WindowSessionError
 pub fn ViewHandle::forward(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::id(Self) -> String
 pub fn ViewHandle::is_audio_muted(Self) -> Bool raise WindowSessionError
@@ -624,6 +649,7 @@ pub fn ViewHandle::set_z_order(Self, Int) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn ViewHandle::state(Self) -> ViewState raise WindowSessionError
 pub fn ViewHandle::stop(Self) -> Unit raise WindowSessionError
+pub fn ViewHandle::stop_find_in_page(Self, clear_selection? : Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
 pub(all) struct ViewState {
