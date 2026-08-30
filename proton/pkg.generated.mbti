@@ -245,6 +245,7 @@ pub(all) enum BrowserEvent {
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
   FoundInPage(result~ : FindInPageResult)
+  PdfPrinted(result~ : PdfPrintResult)
 } derive(Eq, @debug.Debug)
 pub fn BrowserEvent::equal(Self, Self) -> Bool
 pub fn BrowserEvent::not_equal(Self, Self) -> Bool
@@ -258,6 +259,8 @@ pub struct BrowserHandle {
   eval_browser_script : (String) -> Unit raise WindowSessionError
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
   download_browser_url : (String) -> Unit raise WindowSessionError
+  print_browser : () -> Unit raise WindowSessionError
+  print_browser_to_pdf : (String, PdfPrintOptions) -> Int raise WindowSessionError
   find_browser_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
   stop_browser_find : (Bool) -> Unit raise WindowSessionError
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
@@ -281,6 +284,8 @@ pub fn BrowserHandle::is_audio_muted(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::load_html(Self, String, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::load_url(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::open_devtools(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::print(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::print_to_pdf(Self, String, options? : PdfPrintOptions) -> Int raise WindowSessionError
 pub fn BrowserHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
 pub fn BrowserHandle::session(Self) -> SessionHandle
 pub fn BrowserHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionError
@@ -479,6 +484,44 @@ pub(all) struct NavigationRequest {
 pub fn NavigationRequest::equal(Self, Self) -> Bool
 pub fn NavigationRequest::not_equal(Self, Self) -> Bool
 pub fn NavigationRequest::to_repr(Self) -> @debug.Repr
+
+pub(all) enum PdfPrintMargins {
+  Default
+  NoMargins
+  Custom(top~ : Double, right~ : Double, bottom~ : Double, left~ : Double)
+} derive(Eq, @debug.Debug)
+pub fn PdfPrintMargins::equal(Self, Self) -> Bool
+pub fn PdfPrintMargins::not_equal(Self, Self) -> Bool
+pub fn PdfPrintMargins::to_repr(Self) -> @debug.Repr
+
+pub(all) struct PdfPrintOptions {
+  landscape : Bool
+  print_background : Bool
+  scale : Double
+  paper_width : Double
+  paper_height : Double
+  prefer_css_page_size : Bool
+  margins : PdfPrintMargins
+  page_ranges : String
+  display_header_footer : Bool
+  header_template : String
+  footer_template : String
+  generate_tagged_pdf : Bool
+  generate_document_outline : Bool
+} derive(Eq, @debug.Debug)
+pub fn PdfPrintOptions::PdfPrintOptions(landscape? : Bool, print_background? : Bool, scale? : Double, paper_width? : Double, paper_height? : Double, prefer_css_page_size? : Bool, margins? : PdfPrintMargins, page_ranges? : String, display_header_footer? : Bool, header_template? : String, footer_template? : String, generate_tagged_pdf? : Bool, generate_document_outline? : Bool) -> Self
+pub fn PdfPrintOptions::equal(Self, Self) -> Bool
+pub fn PdfPrintOptions::not_equal(Self, Self) -> Bool
+pub fn PdfPrintOptions::to_repr(Self) -> @debug.Repr
+
+pub(all) struct PdfPrintResult {
+  request_id : Int
+  path : String
+  success : Bool
+} derive(Eq, @debug.Debug)
+pub fn PdfPrintResult::equal(Self, Self) -> Bool
+pub fn PdfPrintResult::not_equal(Self, Self) -> Bool
+pub fn PdfPrintResult::to_repr(Self) -> @debug.Repr
 
 pub struct PendingUpdate {
   version : String

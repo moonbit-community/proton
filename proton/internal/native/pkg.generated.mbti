@@ -390,6 +390,15 @@ pub fn NativeNotificationResult::equal(Self, Self) -> Bool
 pub fn NativeNotificationResult::not_equal(Self, Self) -> Bool
 pub fn NativeNotificationResult::to_repr(Self) -> @debug.Repr
 
+pub(all) struct NativePdfPrintResult {
+  request_id : Int
+  path : String
+  success : Bool
+} derive(Eq, @debug.Debug)
+pub fn NativePdfPrintResult::equal(Self, Self) -> Bool
+pub fn NativePdfPrintResult::not_equal(Self, Self) -> Bool
+pub fn NativePdfPrintResult::to_repr(Self) -> @debug.Repr
+
 pub(all) struct NativeResourceRequest {
   request_id : Int64
   window : Int64
@@ -404,6 +413,29 @@ type NativeViewEvent derive(Eq, @debug.Debug)
 pub fn NativeViewEvent::equal(Self, Self) -> Bool
 pub fn NativeViewEvent::not_equal(Self, Self) -> Bool
 pub fn NativeViewEvent::to_repr(Self) -> @debug.Repr
+
+pub(all) struct PdfPrintSettings {
+  landscape : Bool
+  print_background : Bool
+  scale : Double
+  paper_width : Double
+  paper_height : Double
+  prefer_css_page_size : Bool
+  margin_type : Int
+  margin_top : Double
+  margin_right : Double
+  margin_bottom : Double
+  margin_left : Double
+  page_ranges : String
+  display_header_footer : Bool
+  header_template : String
+  footer_template : String
+  generate_tagged_pdf : Bool
+  generate_document_outline : Bool
+} derive(Eq, @debug.Debug)
+pub fn PdfPrintSettings::equal(Self, Self) -> Bool
+pub fn PdfPrintSettings::not_equal(Self, Self) -> Bool
+pub fn PdfPrintSettings::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ProcessResult {
   MainProcess
@@ -462,6 +494,7 @@ pub fn RuntimeEvent::menu_command_id(Self) -> String?
 pub fn RuntimeEvent::not_equal(Self, Self) -> Bool
 pub fn RuntimeEvent::notification_click(Self) -> String??
 pub fn RuntimeEvent::notification_result(Self) -> NativeNotificationResult?
+pub fn RuntimeEvent::pdf_print_result(Self) -> NativePdfPrintResult?
 pub fn RuntimeEvent::resource_request(Self) -> NativeResourceRequest?
 pub fn RuntimeEvent::resource_request_cancellation(Self) -> Int64?
 pub fn RuntimeEvent::to_repr(Self) -> @debug.Repr
@@ -614,6 +647,8 @@ pub fn Window::maximize(Self) -> Unit raise NativeError
 pub fn Window::minimize(Self) -> Unit raise NativeError
 pub fn Window::navigation_state(Self) -> (Bool, Bool) raise NativeError
 pub fn Window::popup_menu(Self, MenuBar, Int, Int) -> Unit raise NativeError
+pub fn Window::print(Self) -> Unit raise NativeError
+pub fn Window::print_to_pdf(Self, String, PdfPrintSettings) -> Int raise NativeError
 pub fn Window::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
 pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeError
 pub fn Window::restore(Self) -> Unit raise NativeError

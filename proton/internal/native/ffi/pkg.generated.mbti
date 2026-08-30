@@ -237,6 +237,10 @@ pub fn proton_window_maximize_ffi(WindowHandle) -> Int
 
 pub fn proton_window_minimize_ffi(WindowHandle) -> Int
 
+pub fn proton_window_print_ffi(WindowHandle) -> Int
+
+pub fn proton_window_print_to_pdf_ffi(WindowHandle, Bytes, Int, Int, Double, Double, Double, Int, Int, Double, Double, Double, Double, Bytes, Int, Bytes, Bytes, Int, Int, @ref.Ref[Int]) -> Int
+
 pub fn proton_window_respond_browser_request_json_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_respond_close_request_ffi(WindowHandle, Int64, Int) -> Int
