@@ -126,6 +126,8 @@ moon -C examples run 01_run --target native
 - `70_find_in_page`: manual Electron-style page search review for both the main
   browser and a web contents view, including direction, case matching, result
   events, and stop behavior.
+- `71_download_url`: manual Electron-style programmatic download review with
+  automatic and dialog destinations, progress events, and cancellation.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only
