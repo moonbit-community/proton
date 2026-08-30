@@ -88,6 +88,7 @@ fn test_window_handle(
   browser_audio_muted? : Bool = false,
   browser_find_calls? : Array[String],
   browser_download_calls? : Array[String],
+  browser_print_calls? : Array[String],
   window_state? : WindowState,
 ) -> WindowHandle {
   let browser = BrowserHandle::{
@@ -102,6 +103,22 @@ fn test_window_handle(
         Some(calls) => calls.push(url)
         None => ()
       }
+    },
+    print_browser: fn() {
+      match browser_print_calls {
+        Some(calls) => calls.push("print")
+        None => ()
+      }
+    },
+    print_browser_to_pdf: fn(path, options) {
+      match browser_print_calls {
+        Some(calls) =>
+          calls.push(
+            "pdf:\{path}:\{options.landscape}:\{options.print_background}:\{options.scale}",
+          )
+        None => ()
+      }
+      9
     },
     find_browser_in_page: fn(text, forward, match_case, find_next) {
       match browser_find_calls {
@@ -2461,6 +2478,31 @@ test "browser handle starts programmatic downloads" {
   let browser = test_window_handle("main", 17L, browser_download_calls=calls).browser()
   browser.download_url("https://example.test/archive.zip")
   assert_eq(calls, ["https://example.test/archive.zip"])
+}
+
+///|
+test "browser handle routes print and PDF operations" {
+  let calls : Array[String] = []
+  let browser = test_window_handle("main", 17L, browser_print_calls=calls).browser()
+  browser.print()
+  let request_id = browser.print_to_pdf(
+    "/tmp/review.pdf",
+    options=PdfPrintOptions(landscape=true, print_background=true, scale=0.75),
+  )
+  assert_eq(request_id, 9)
+  assert_eq(calls, ["print", "pdf:/tmp/review.pdf:true:true:0.75"])
+}
+
+///|
+test "PDF print options map custom margins to the CEF custom type" {
+  let settings = PdfPrintOptions(
+    margins=PdfPrintMargins::Custom(top=0.1, right=0.2, bottom=0.3, left=0.4),
+  ).to_native()
+  assert_eq(settings.margin_type, 2)
+  assert_eq(settings.margin_top, 0.1)
+  assert_eq(settings.margin_right, 0.2)
+  assert_eq(settings.margin_bottom, 0.3)
+  assert_eq(settings.margin_left, 0.4)
 }
 
 ///|
