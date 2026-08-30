@@ -479,6 +479,17 @@ fn RuntimeSession::view_handle(
         view => view.eval(script),
       )
     },
+    focus_view: () => {
+      self.control_window(
+        window_id,
+        window_native_id,
+        "focus for view " + id + " in",
+        window => window.focus(),
+      )
+      self.control_view(window_id, window_native_id, id, native_id, "focus", view => {
+        view.browser_command("focus")
+      })
+    },
     send_view_command: (command, download_id) => {
       self.control_view(
         window_id,
@@ -519,6 +530,30 @@ fn RuntimeSession::view_handle(
         error =>
           raise window_operation_failed(
             "read navigation state of view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
+    read_view_focused: () => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      running.view.browser_is_focused() catch {
+        error =>
+          raise window_operation_failed(
+            "read focus of view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
+    read_view_devtools_opened: () => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      running.view.is_devtools_opened() catch {
+        error =>
+          raise window_operation_failed(
+            "read DevTools state of view " + id + " in window " + window_id,
             error,
           )
       }
@@ -725,6 +760,12 @@ fn RuntimeSession::browser_handle(
         window.eval(script)
       })
     },
+    focus_browser: () => {
+      self.control_window(id, native_id, "focus browser in", window => {
+        window.focus()
+        window.browser_command("focus")
+      })
+    },
     send_browser_command: (command, download_id) => {
       self.control_window(id, native_id, command + " in", window => {
         window.browser_command(command, download_id?)
@@ -816,6 +857,32 @@ fn RuntimeSession::browser_handle(
         error =>
           raise window_operation_failed(
             "read browser navigation state in window " + id,
+            error,
+          )
+      }
+    },
+    read_browser_focused: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      running.window.browser_is_focused() catch {
+        error =>
+          raise window_operation_failed(
+            "read browser focus in window " + id,
+            error,
+          )
+      }
+    },
+    read_browser_devtools_opened: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      running.window.is_devtools_opened() catch {
+        error =>
+          raise window_operation_failed(
+            "read browser DevTools state in window " + id,
             error,
           )
       }
@@ -2245,6 +2312,20 @@ pub fn ViewHandle::stop(self : ViewHandle) -> Unit raise WindowSessionError {
 }
 
 ///|
+/// Focuses this view's web page, matching Electron `webContents.focus()`.
+pub fn ViewHandle::focus(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.focus_view)()
+}
+
+///|
+/// Returns whether this view's web page currently owns focus.
+pub fn ViewHandle::is_focused(
+  self : ViewHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_view_focused)()
+}
+
+///|
 pub fn ViewHandle::open_devtools(
   self : ViewHandle,
 ) -> Unit raise WindowSessionError {
@@ -2256,6 +2337,22 @@ pub fn ViewHandle::close_devtools(
   self : ViewHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_view_command)("close_devtools", None)
+}
+
+///|
+/// Toggles the DevTools view for this web contents.
+pub fn ViewHandle::toggle_devtools(
+  self : ViewHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_view_command)("toggle_devtools", None)
+}
+
+///|
+/// Returns whether this web contents currently has an open DevTools view.
+pub fn ViewHandle::is_devtools_opened(
+  self : ViewHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_view_devtools_opened)()
 }
 
 ///|
@@ -2457,6 +2554,22 @@ pub fn BrowserHandle::stop(
 }
 
 ///|
+/// Focuses the web page, matching Electron `webContents.focus()`.
+pub fn BrowserHandle::focus(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.focus_browser)()
+}
+
+///|
+/// Returns whether the web page currently owns focus.
+pub fn BrowserHandle::is_focused(
+  self : BrowserHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_browser_focused)()
+}
+
+///|
 pub fn BrowserHandle::open_devtools(
   self : BrowserHandle,
 ) -> Unit raise WindowSessionError {
@@ -2468,6 +2581,22 @@ pub fn BrowserHandle::close_devtools(
   self : BrowserHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("close_devtools", None)
+}
+
+///|
+/// Toggles the DevTools view for this web contents.
+pub fn BrowserHandle::toggle_devtools(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_browser_command)("toggle_devtools", None)
+}
+
+///|
+/// Returns whether this web contents currently has an open DevTools view.
+pub fn BrowserHandle::is_devtools_opened(
+  self : BrowserHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_browser_devtools_opened)()
 }
 
 ///|

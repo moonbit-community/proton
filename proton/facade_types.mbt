@@ -449,6 +449,7 @@ pub struct BrowserHandle {
   load_browser_url : (String) -> Unit raise WindowSessionError
   load_browser_html : (String, String) -> Unit raise WindowSessionError
   eval_browser_script : (String) -> Unit raise WindowSessionError
+  focus_browser : () -> Unit raise WindowSessionError
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
   download_browser_url : (String) -> Unit raise WindowSessionError
   print_browser : () -> Unit raise WindowSessionError
@@ -460,6 +461,8 @@ pub struct BrowserHandle {
   set_browser_audio_muted : (Bool) -> Unit raise WindowSessionError
   read_browser_audio_muted : () -> Bool raise WindowSessionError
   read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
+  read_browser_focused : () -> Bool raise WindowSessionError
+  read_browser_devtools_opened : () -> Bool raise WindowSessionError
   read_browser_state : () -> BrowserState raise WindowSessionError
   session_handle : SessionHandle
 }
@@ -507,10 +510,13 @@ pub struct ViewHandle {
   load_view_url : (String) -> Unit raise WindowSessionError
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
+  focus_view : () -> Unit raise WindowSessionError
   send_view_command : (String, Int?) -> Unit raise WindowSessionError
   find_view_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
   stop_view_find : (Bool) -> Unit raise WindowSessionError
   read_view_navigation_state : () -> (Bool, Bool) raise WindowSessionError
+  read_view_focused : () -> Bool raise WindowSessionError
+  read_view_devtools_opened : () -> Bool raise WindowSessionError
   read_view_state : () -> ViewState raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
 }
