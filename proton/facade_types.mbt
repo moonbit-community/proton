@@ -451,6 +451,8 @@ pub struct BrowserHandle {
   eval_browser_script : (String) -> Unit raise WindowSessionError
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
   download_browser_url : (String) -> Unit raise WindowSessionError
+  print_browser : () -> Unit raise WindowSessionError
+  print_browser_to_pdf : (String, PdfPrintOptions) -> Int raise WindowSessionError
   find_browser_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
   stop_browser_find : (Bool) -> Unit raise WindowSessionError
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
@@ -627,6 +629,93 @@ pub extend FindInPageResult with Eq::{not_equal, equal}
 
 ///|
 pub extend FindInPageResult with Debug::{to_repr}
+
+///|
+/// Margins used when printing browser contents to PDF.
+pub(all) enum PdfPrintMargins {
+  Default
+  NoMargins
+  Custom(top~ : Double, right~ : Double, bottom~ : Double, left~ : Double)
+} derive(Debug, Eq)
+
+///|
+pub extend PdfPrintMargins with Eq::{not_equal, equal}
+
+///|
+pub extend PdfPrintMargins with Debug::{to_repr}
+
+///|
+/// Electron-style PDF print settings. Paper dimensions and custom margins use
+/// inches, and scale must be between `0.1` and `2.0`. An empty page range
+/// prints the complete document.
+pub(all) struct PdfPrintOptions {
+  landscape : Bool
+  print_background : Bool
+  scale : Double
+  paper_width : Double
+  paper_height : Double
+  prefer_css_page_size : Bool
+  margins : PdfPrintMargins
+  page_ranges : String
+  display_header_footer : Bool
+  header_template : String
+  footer_template : String
+  generate_tagged_pdf : Bool
+  generate_document_outline : Bool
+} derive(Debug, Eq)
+
+///|
+pub fn PdfPrintOptions::PdfPrintOptions(
+  landscape? : Bool = false,
+  print_background? : Bool = false,
+  scale? : Double = 1.0,
+  paper_width? : Double = 8.5,
+  paper_height? : Double = 11.0,
+  prefer_css_page_size? : Bool = false,
+  margins? : PdfPrintMargins = PdfPrintMargins::Default,
+  page_ranges? : String = "",
+  display_header_footer? : Bool = false,
+  header_template? : String = "",
+  footer_template? : String = "",
+  generate_tagged_pdf? : Bool = false,
+  generate_document_outline? : Bool = false,
+) -> PdfPrintOptions {
+  {
+    landscape,
+    print_background,
+    scale,
+    paper_width,
+    paper_height,
+    prefer_css_page_size,
+    margins,
+    page_ranges,
+    display_header_footer,
+    header_template,
+    footer_template,
+    generate_tagged_pdf,
+    generate_document_outline,
+  }
+}
+
+///|
+pub extend PdfPrintOptions with Eq::{not_equal, equal}
+
+///|
+pub extend PdfPrintOptions with Debug::{to_repr}
+
+///|
+/// Completion of one `print_to_pdf` request.
+pub(all) struct PdfPrintResult {
+  request_id : Int
+  path : String
+  success : Bool
+} derive(Debug, Eq)
+
+///|
+pub extend PdfPrintResult with Eq::{not_equal, equal}
+
+///|
+pub extend PdfPrintResult with Debug::{to_repr}
 
 ///|
 /// The result of an asynchronous native close request.
@@ -807,6 +896,7 @@ pub(all) enum BrowserEvent {
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
   FoundInPage(result~ : FindInPageResult)
+  PdfPrinted(result~ : PdfPrintResult)
 } derive(Debug, Eq)
 
 ///|

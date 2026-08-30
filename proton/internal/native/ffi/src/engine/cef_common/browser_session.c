@@ -4,6 +4,7 @@
 #include "../../proton_event.h"
 
 #include "include/capi/cef_download_item_capi.h"
+#include "include/capi/cef_browser_capi.h"
 #include "include/internal/cef_string.h"
 
 #include <limits.h>
@@ -11,6 +12,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <stdatomic.h>
+#endif
 
 typedef enum {
   PROTON_BROWSER_REQUEST_NAVIGATION = 1,
@@ -39,6 +46,17 @@ typedef struct proton_browser_download {
   struct proton_browser_download *next;
 } proton_browser_download_t;
 
+typedef struct proton_pdf_print_callback {
+  cef_pdf_print_callback_t callback;
+#ifdef _WIN32
+  volatile LONG refs;
+#else
+  atomic_int refs;
+#endif
+  proton_window_id_t window;
+  int32_t request_id;
+} proton_pdf_print_callback_t;
+
 typedef struct proton_browser_navigation_bypass {
   char *url;
   char *method;
@@ -59,7 +77,84 @@ struct proton_browser_session {
   int32_t is_loading;
   int32_t next_find_request_id;
   int32_t active_find_request_id;
+  int32_t next_pdf_request_id;
 };
+
+static char *proton_browser_cef_string_to_utf8(const cef_string_t *value);
+
+static proton_pdf_print_callback_t *proton_pdf_print_callback_from_base(
+    cef_base_ref_counted_t *base) {
+  return (proton_pdf_print_callback_t *)base;
+}
+
+static void CEF_CALLBACK proton_pdf_print_add_ref(
+    cef_base_ref_counted_t *base) {
+  proton_pdf_print_callback_t *callback =
+      proton_pdf_print_callback_from_base(base);
+#ifdef _WIN32
+  (void)InterlockedIncrement(&callback->refs);
+#else
+  (void)atomic_fetch_add_explicit(&callback->refs, 1, memory_order_relaxed);
+#endif
+}
+
+static int CEF_CALLBACK proton_pdf_print_release(
+    cef_base_ref_counted_t *base) {
+  proton_pdf_print_callback_t *callback =
+      proton_pdf_print_callback_from_base(base);
+#ifdef _WIN32
+  LONG refs = InterlockedDecrement(&callback->refs);
+#else
+  int refs = atomic_fetch_sub_explicit(
+                 &callback->refs, 1, memory_order_acq_rel) -
+             1;
+#endif
+  if (refs == 0) {
+    free(callback);
+    return 1;
+  }
+  return 0;
+}
+
+static int CEF_CALLBACK proton_pdf_print_has_one_ref(
+    cef_base_ref_counted_t *base) {
+  proton_pdf_print_callback_t *callback =
+      proton_pdf_print_callback_from_base(base);
+#ifdef _WIN32
+  return callback->refs == 1;
+#else
+  return atomic_load_explicit(&callback->refs, memory_order_acquire) == 1;
+#endif
+}
+
+static int CEF_CALLBACK proton_pdf_print_has_at_least_one_ref(
+    cef_base_ref_counted_t *base) {
+  proton_pdf_print_callback_t *callback =
+      proton_pdf_print_callback_from_base(base);
+#ifdef _WIN32
+  return callback->refs > 0;
+#else
+  return atomic_load_explicit(&callback->refs, memory_order_acquire) > 0;
+#endif
+}
+
+static void CEF_CALLBACK proton_pdf_print_finished(
+    cef_pdf_print_callback_t *self, const cef_string_t *path, int ok) {
+  proton_pdf_print_callback_t *callback =
+      (proton_pdf_print_callback_t *)self;
+  char *result_path = proton_browser_cef_string_to_utf8(path);
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_PDF_PRINT_FINISHED, callback->window);
+  if (event != NULL && result_path != NULL &&
+      proton_event_set_text(&event->text_a, result_path)) {
+    event->request_id = callback->request_id;
+    event->bool_a = ok != 0 ? 1 : 0;
+    (void)proton_event_publish(event);
+  } else {
+    proton_event_destroy(event);
+  }
+  free(result_path);
+}
 
 static void proton_browser_set_message(char *error, size_t error_len,
                                        const char *message) {
@@ -125,6 +220,7 @@ proton_browser_session_t *proton_browser_session_create(
   }
   session->policy = *policy;
   session->next_request_id = 1;
+  session->next_pdf_request_id = 1;
   session->signal = signal;
   session->signal_user_data = signal_user_data;
   return session;
@@ -1036,6 +1132,121 @@ int32_t proton_browser_download_url(
   }
   host->start_download(host, &download_url);
   cef_string_clear(&download_url);
+  host->base.release((cef_base_ref_counted_t *)host);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_print(
+    cef_browser_t *browser, char *error, size_t error_len) {
+  if (browser == NULL) {
+    proton_browser_set_message(error, error_len, "browser is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL || host->print == NULL) {
+    if (host != NULL) {
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    proton_browser_set_message(error, error_len, "browser printing is unavailable");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  host->print(host);
+  host->base.release((cef_base_ref_counted_t *)host);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_print_to_pdf(
+    proton_browser_session_t *session, cef_browser_t *browser,
+    const char *path, int32_t landscape, int32_t print_background,
+    double scale, double paper_width, double paper_height,
+    int32_t prefer_css_page_size, int32_t margin_type,
+    double margin_top, double margin_right, double margin_bottom,
+    double margin_left, const char *page_ranges,
+    int32_t display_header_footer, const char *header_template,
+    const char *footer_template, int32_t generate_tagged_pdf,
+    int32_t generate_document_outline, int32_t *out_request_id,
+    char *error, size_t error_len) {
+  if (session == NULL || browser == NULL || path == NULL || path[0] == '\0' ||
+      page_ranges == NULL || header_template == NULL || footer_template == NULL ||
+      out_request_id == NULL) {
+    proton_browser_set_message(error, error_len,
+                               "browser, session, path, settings, and request output are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL || host->print_to_pdf == NULL) {
+    if (host != NULL) {
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    proton_browser_set_message(error, error_len,
+                               "browser PDF printing is unavailable");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  proton_pdf_print_callback_t *callback =
+      (proton_pdf_print_callback_t *)calloc(1, sizeof(*callback));
+  if (callback == NULL) {
+    host->base.release((cef_base_ref_counted_t *)host);
+    proton_browser_set_message(error, error_len,
+                               "failed to allocate PDF print callback");
+    return PROTON_ERR_ENGINE;
+  }
+  callback->callback.base.size = sizeof(callback->callback);
+  callback->callback.base.add_ref = proton_pdf_print_add_ref;
+  callback->callback.base.release = proton_pdf_print_release;
+  callback->callback.base.has_one_ref = proton_pdf_print_has_one_ref;
+  callback->callback.base.has_at_least_one_ref =
+      proton_pdf_print_has_at_least_one_ref;
+#ifdef _WIN32
+  callback->refs = 1;
+#else
+  atomic_init(&callback->refs, 1);
+#endif
+  callback->window = session->window;
+  callback->request_id = session->next_pdf_request_id;
+  if (session->next_pdf_request_id == INT32_MAX) {
+    session->next_pdf_request_id = 1;
+  } else {
+    session->next_pdf_request_id++;
+  }
+  callback->callback.on_pdf_print_finished = proton_pdf_print_finished;
+
+  cef_string_t output_path = {0};
+  cef_pdf_print_settings_t settings = {0};
+  settings.size = sizeof(settings);
+  settings.landscape = landscape;
+  settings.print_background = print_background;
+  settings.scale = scale;
+  settings.paper_width = paper_width;
+  settings.paper_height = paper_height;
+  settings.prefer_css_page_size = prefer_css_page_size;
+  settings.margin_type = (cef_pdf_print_margin_type_t)margin_type;
+  settings.margin_top = margin_top;
+  settings.margin_right = margin_right;
+  settings.margin_bottom = margin_bottom;
+  settings.margin_left = margin_left;
+  settings.display_header_footer = display_header_footer;
+  settings.generate_tagged_pdf = generate_tagged_pdf;
+  settings.generate_document_outline = generate_document_outline;
+  if (!cef_string_utf8_to_utf16(path, strlen(path), &output_path) ||
+      !cef_string_utf8_to_utf16(page_ranges, strlen(page_ranges), &settings.page_ranges) ||
+      !cef_string_utf8_to_utf16(header_template, strlen(header_template), &settings.header_template) ||
+      !cef_string_utf8_to_utf16(footer_template, strlen(footer_template), &settings.footer_template)) {
+    cef_string_clear(&output_path);
+    cef_string_clear(&settings.page_ranges);
+    cef_string_clear(&settings.header_template);
+    cef_string_clear(&settings.footer_template);
+    callback->callback.base.release(&callback->callback.base);
+    host->base.release((cef_base_ref_counted_t *)host);
+    proton_browser_set_message(error, error_len,
+                               "failed to encode PDF print settings as UTF-16");
+    return PROTON_ERR_ENGINE;
+  }
+  *out_request_id = callback->request_id;
+  host->print_to_pdf(host, &output_path, &settings, &callback->callback);
+  cef_string_clear(&output_path);
+  cef_string_clear(&settings.page_ranges);
+  cef_string_clear(&settings.header_template);
+  cef_string_clear(&settings.footer_template);
   host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }

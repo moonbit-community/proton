@@ -735,6 +735,24 @@ fn RuntimeSession::browser_handle(
         window.download_url(url)
       })
     },
+    print_browser: () => {
+      self.control_window(id, native_id, "print browser in", window => {
+        window.print()
+      })
+    },
+    print_browser_to_pdf: (path, options) => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      running.window.print_to_pdf(path, options.to_native()) catch {
+        error =>
+          raise window_operation_failed(
+            "print browser to PDF in window " + id,
+            error,
+          )
+      }
+    },
     find_browser_in_page: (text, forward, match_case, find_next) => {
       let running = match self.find_active_window(id) {
         Some(running) if running.window.id() == native_id => running
@@ -816,6 +834,38 @@ fn RuntimeSession::browser_handle(
       }
     },
     session_handle,
+  }
+}
+
+///|
+fn PdfPrintOptions::to_native(
+  self : PdfPrintOptions,
+) -> @native.PdfPrintSettings {
+  let (margin_type, margin_top, margin_right, margin_bottom, margin_left) = match
+    self.margins {
+    PdfPrintMargins::Default => (0, 0.0, 0.0, 0.0, 0.0)
+    PdfPrintMargins::NoMargins => (1, 0.0, 0.0, 0.0, 0.0)
+    PdfPrintMargins::Custom(top~, right~, bottom~, left~) =>
+      (2, top, right, bottom, left)
+  }
+  {
+    landscape: self.landscape,
+    print_background: self.print_background,
+    scale: self.scale,
+    paper_width: self.paper_width,
+    paper_height: self.paper_height,
+    prefer_css_page_size: self.prefer_css_page_size,
+    margin_type,
+    margin_top,
+    margin_right,
+    margin_bottom,
+    margin_left,
+    page_ranges: self.page_ranges,
+    display_header_footer: self.display_header_footer,
+    header_template: self.header_template,
+    footer_template: self.footer_template,
+    generate_tagged_pdf: self.generate_tagged_pdf,
+    generate_document_outline: self.generate_document_outline,
   }
 }
 
@@ -2288,6 +2338,25 @@ pub fn BrowserHandle::download_url(
 }
 
 ///|
+/// Opens the platform print flow for the main browser contents.
+pub fn BrowserHandle::print(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.print_browser)()
+}
+
+///|
+/// Starts printing the main browser contents to `path` and returns a request
+/// id. Completion is delivered as `BrowserEvent::PdfPrinted`.
+pub fn BrowserHandle::print_to_pdf(
+  self : BrowserHandle,
+  path : String,
+  options? : PdfPrintOptions = PdfPrintOptions(),
+) -> Int raise WindowSessionError {
+  (self.print_browser_to_pdf)(path, options)
+}
+
+///|
 pub fn BrowserHandle::back(
   self : BrowserHandle,
 ) -> Unit raise WindowSessionError {
@@ -2773,23 +2842,29 @@ fn RuntimeSession::dispatch_browser_event(
   event : @native.RuntimeEvent,
 ) -> Unit {
   match
-    (event.window_id(), event.browser_event(), event.find_in_page_result()) {
-    (Some(window_id), info, find_result) =>
+    (
+      event.window_id(),
+      event.browser_event(),
+      event.find_in_page_result(),
+      event.pdf_print_result(),
+    ) {
+    (Some(window_id), info, find_result, pdf_result) =>
       match self.find_window_by_native_id(window_id) {
         Some(window) => {
           let browser = self.browser_handle(window)
-          let observed = match (event.event_type(), info, find_result) {
-            ("browser_loading_changed", Some(info), _) =>
+          let observed = match
+            (event.event_type(), info, find_result, pdf_result) {
+            ("browser_loading_changed", Some(info), _, _) =>
               Some(
                 BrowserEvent::LoadingChanged(
                   is_loading=info.is_loading.unwrap_or(false),
                 ),
               )
-            ("browser_navigated", Some(info), _) =>
+            ("browser_navigated", Some(info), _, _) =>
               Some(BrowserEvent::Navigated(url=info.url.unwrap_or("")))
-            ("browser_title_updated", Some(info), _) =>
+            ("browser_title_updated", Some(info), _, _) =>
               Some(BrowserEvent::TitleUpdated(title=info.title.unwrap_or("")))
-            ("browser_load_failed", Some(info), _) =>
+            ("browser_load_failed", Some(info), _, _) =>
               Some(
                 BrowserEvent::LoadFailed(
                   url=info.url.unwrap_or(""),
@@ -2797,11 +2872,19 @@ fn RuntimeSession::dispatch_browser_event(
                   error_text=info.error_text.unwrap_or(""),
                 ),
               )
-            ("browser_found_in_page", _, Some(result)) =>
+            ("browser_found_in_page", _, Some(result), _) =>
               Some(
                 BrowserEvent::FoundInPage(
                   result=FindInPageResult::from_native(result),
                 ),
+              )
+            ("browser_pdf_print_finished", _, _, Some(result)) =>
+              Some(
+                BrowserEvent::PdfPrinted(result={
+                  request_id: result.request_id,
+                  path: result.path,
+                  success: result.success,
+                }),
               )
             _ => None
           }

@@ -42,6 +42,7 @@
 #include "include/capi/cef_load_handler_capi.h"
 #include "include/capi/cef_process_message_capi.h"
 #include "include/capi/cef_permission_handler_capi.h"
+#include "include/capi/cef_print_handler_capi.h"
 #include "include/capi/cef_render_handler_capi.h"
 #include "include/capi/cef_render_process_handler_capi.h"
 #include "include/capi/cef_request_handler_capi.h"
@@ -76,6 +77,11 @@ typedef struct {
   proton_engine_ref_counted_t refs;
 } proton_engine_find_handler_t;
 
+typedef struct {
+  cef_print_handler_t handler;
+  proton_engine_ref_counted_t refs;
+} proton_engine_print_handler_t;
+
 static proton_engine_app_t g_app;
 static proton_engine_browser_process_handler_t g_browser_process_handler;
 static proton_engine_render_process_handler_t g_render_process_handler;
@@ -86,6 +92,7 @@ static proton_engine_drag_handler_t g_drag_handler;
 static proton_engine_request_handler_t g_request_handler;
 static proton_engine_download_handler_t g_download_handler;
 static proton_engine_find_handler_t g_find_handler;
+static proton_engine_print_handler_t g_print_handler;
 static proton_engine_permission_handler_t g_permission_handler;
 static proton_engine_render_handler_t g_render_handler;
 static proton_engine_scheme_factory_t g_scheme_factory;
@@ -579,6 +586,25 @@ proton_engine_client_get_find_handler(cef_client_t *self) {
   return &g_find_handler.handler;
 }
 
+static cef_size_t CEF_CALLBACK proton_engine_get_pdf_paper_size(
+    cef_print_handler_t *self, cef_browser_t *browser,
+    int device_units_per_inch) {
+  (void)self;
+  (void)browser;
+  cef_size_t size = {0};
+  if (device_units_per_inch > 0) {
+    size.width = (int)lround(8.5 * (double)device_units_per_inch);
+    size.height = 11 * device_units_per_inch;
+  }
+  return size;
+}
+
+static cef_print_handler_t *CEF_CALLBACK
+proton_engine_client_get_print_handler(cef_client_t *self) {
+  (void)self;
+  return &g_print_handler.handler;
+}
+
 static cef_permission_handler_t *CEF_CALLBACK
 proton_engine_client_get_permission_handler(cef_client_t *self) {
   (void)self;
@@ -754,6 +780,12 @@ void proton_engine_init_handlers(void) {
       (cef_base_ref_counted_t *)&g_find_handler.handler.base,
       sizeof(g_find_handler.handler), &g_find_handler.refs);
   g_find_handler.handler.on_find_result = proton_engine_on_find_result;
+
+  proton_engine_init_ref_counted(
+      (cef_base_ref_counted_t *)&g_print_handler.handler.base,
+      sizeof(g_print_handler.handler), &g_print_handler.refs);
+  g_print_handler.handler.get_pdf_paper_size =
+      proton_engine_get_pdf_paper_size;
 
   proton_engine_init_ref_counted(
       (cef_base_ref_counted_t *)&g_permission_handler.handler.base,
@@ -1412,6 +1444,7 @@ proton_engine_client_t *proton_engine_client_create(
   client->client.get_download_handler =
       proton_engine_client_get_download_handler;
   client->client.get_find_handler = proton_engine_client_get_find_handler;
+  client->client.get_print_handler = proton_engine_client_get_print_handler;
   client->client.get_permission_handler =
       proton_engine_client_get_permission_handler;
   client->client.get_render_handler = proton_engine_client_get_render_handler;

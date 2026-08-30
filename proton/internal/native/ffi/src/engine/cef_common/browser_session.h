@@ -78,6 +78,19 @@ int32_t proton_browser_is_audio_muted(
     size_t error_len);
 int32_t proton_browser_download_url(
     cef_browser_t *browser, const char *url, char *error, size_t error_len);
+int32_t proton_browser_print(
+    cef_browser_t *browser, char *error, size_t error_len);
+int32_t proton_browser_print_to_pdf(
+    proton_browser_session_t *session, cef_browser_t *browser,
+    const char *path, int32_t landscape, int32_t print_background,
+    double scale, double paper_width, double paper_height,
+    int32_t prefer_css_page_size, int32_t margin_type,
+    double margin_top, double margin_right, double margin_bottom,
+    double margin_left, const char *page_ranges,
+    int32_t display_header_footer, const char *header_template,
+    const char *footer_template, int32_t generate_tagged_pdf,
+    int32_t generate_document_outline, int32_t *out_request_id,
+    char *error, size_t error_len);
 int32_t proton_browser_find_in_page(
     proton_browser_session_t *session, cef_browser_t *browser,
     const char *text, int32_t forward, int32_t match_case,
