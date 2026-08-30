@@ -2312,6 +2312,58 @@ pub fn ViewHandle::stop(self : ViewHandle) -> Unit raise WindowSessionError {
 }
 
 ///|
+/// Undoes the most recent edit in the focused frame.
+pub fn ViewHandle::undo(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.send_view_command)("undo", None)
+}
+
+///|
+/// Redoes the most recently undone edit in the focused frame.
+pub fn ViewHandle::redo(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.send_view_command)("redo", None)
+}
+
+///|
+/// Cuts the current selection in the focused frame.
+pub fn ViewHandle::cut(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.send_view_command)("cut", None)
+}
+
+///|
+/// Copies the current selection in the focused frame.
+pub fn ViewHandle::copy(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.send_view_command)("copy", None)
+}
+
+///|
+/// Pastes clipboard contents into the focused frame.
+pub fn ViewHandle::paste(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.send_view_command)("paste", None)
+}
+
+///|
+/// Pastes clipboard contents using the destination's current style.
+pub fn ViewHandle::paste_and_match_style(
+  self : ViewHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_view_command)("paste_and_match_style", None)
+}
+
+///|
+/// Deletes the current selection in the focused frame.
+pub fn ViewHandle::delete(self : ViewHandle) -> Unit raise WindowSessionError {
+  (self.send_view_command)("delete", None)
+}
+
+///|
+/// Selects all editable content in the focused frame.
+pub fn ViewHandle::select_all(
+  self : ViewHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_view_command)("select_all", None)
+}
+
+///|
 /// Focuses this view's web page, matching Electron `webContents.focus()`.
 pub fn ViewHandle::focus(self : ViewHandle) -> Unit raise WindowSessionError {
   (self.focus_view)()
@@ -2551,6 +2603,70 @@ pub fn BrowserHandle::stop(
   self : BrowserHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("stop", None)
+}
+
+///|
+/// Undoes the most recent edit in the focused frame.
+pub fn BrowserHandle::undo(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_browser_command)("undo", None)
+}
+
+///|
+/// Redoes the most recently undone edit in the focused frame.
+pub fn BrowserHandle::redo(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_browser_command)("redo", None)
+}
+
+///|
+/// Cuts the current selection in the focused frame.
+pub fn BrowserHandle::cut(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_browser_command)("cut", None)
+}
+
+///|
+/// Copies the current selection in the focused frame.
+pub fn BrowserHandle::copy(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_browser_command)("copy", None)
+}
+
+///|
+/// Pastes clipboard contents into the focused frame.
+pub fn BrowserHandle::paste(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_browser_command)("paste", None)
+}
+
+///|
+/// Pastes clipboard contents using the destination's current style.
+pub fn BrowserHandle::paste_and_match_style(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_browser_command)("paste_and_match_style", None)
+}
+
+///|
+/// Deletes the current selection in the focused frame.
+pub fn BrowserHandle::delete(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_browser_command)("delete", None)
+}
+
+///|
+/// Selects all editable content in the focused frame.
+pub fn BrowserHandle::select_all(
+  self : BrowserHandle,
+) -> Unit raise WindowSessionError {
+  (self.send_browser_command)("select_all", None)
 }
 
 ///|

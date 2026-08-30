@@ -2091,6 +2091,10 @@ pub fn Window::eval(self : Window, script : String) -> Unit raise NativeError {
 }
 
 ///|
+/// Sends a browser control command to the main page: `back`, `forward`,
+/// `reload`, `reload_ignore_cache`, `stop`, `focus`, `undo`, `redo`, `cut`,
+/// `copy`, `paste`, `paste_and_match_style`, `delete`, `select_all`,
+/// `open_devtools`, `close_devtools`, `toggle_devtools`, or `cancel_download`.
 pub fn Window::browser_command(
   self : Window,
   command : String,
@@ -3088,8 +3092,9 @@ pub fn View::eval(self : View, script : String) -> Unit raise NativeError {
 
 ///|
 /// Sends a browser control command to the view: `back`, `forward`, `reload`,
-/// `reload_ignore_cache`, `stop`, `focus`, `open_devtools`, `close_devtools`,
-/// or `toggle_devtools`.
+/// `reload_ignore_cache`, `stop`, `focus`, `undo`, `redo`, `cut`, `copy`,
+/// `paste`, `paste_and_match_style`, `delete`, `select_all`, `open_devtools`,
+/// `close_devtools`, or `toggle_devtools`.
 pub fn View::browser_command(
   self : View,
   command : String,

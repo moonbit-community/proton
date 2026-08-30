@@ -964,6 +964,41 @@ static int proton_browser_read_command(const char *command_json,
   return 1;
 }
 
+static int32_t proton_browser_execute_edit_command(
+    cef_browser_t *browser, const char *command, char *error,
+    size_t error_len) {
+  cef_frame_t *frame = browser->get_focused_frame(browser);
+  if (frame == NULL) {
+    proton_browser_set_message(error, error_len,
+                               "focused browser frame is unavailable");
+    return PROTON_ERR_ENGINE;
+  }
+  if (strcmp(command, "undo") == 0) {
+    frame->undo(frame);
+  } else if (strcmp(command, "redo") == 0) {
+    frame->redo(frame);
+  } else if (strcmp(command, "cut") == 0) {
+    frame->cut(frame);
+  } else if (strcmp(command, "copy") == 0) {
+    frame->copy(frame);
+  } else if (strcmp(command, "paste") == 0) {
+    frame->paste(frame);
+  } else if (strcmp(command, "paste_and_match_style") == 0) {
+    frame->paste_and_match_style(frame);
+  } else if (strcmp(command, "delete") == 0) {
+    frame->del(frame);
+  } else if (strcmp(command, "select_all") == 0) {
+    frame->select_all(frame);
+  } else {
+    frame->base.release((cef_base_ref_counted_t *)frame);
+    proton_browser_set_message(error, error_len,
+                               "unknown browser editing command");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  frame->base.release((cef_base_ref_counted_t *)frame);
+  return PROTON_OK;
+}
+
 int32_t proton_browser_session_command_json(
     proton_browser_session_t *session, cef_browser_t *browser,
     const char *command_json, char *error, size_t error_len) {
@@ -1008,6 +1043,16 @@ int32_t proton_browser_session_command_json(
     }
     host->set_focus(host, 1);
     host->base.release((cef_base_ref_counted_t *)host);
+  } else if (strcmp(command, "undo") == 0 ||
+             strcmp(command, "redo") == 0 ||
+             strcmp(command, "cut") == 0 ||
+             strcmp(command, "copy") == 0 ||
+             strcmp(command, "paste") == 0 ||
+             strcmp(command, "paste_and_match_style") == 0 ||
+             strcmp(command, "delete") == 0 ||
+             strcmp(command, "select_all") == 0) {
+    return proton_browser_execute_edit_command(browser, command, error,
+                                               error_len);
   } else if (strcmp(command, "open_devtools") == 0 ||
              strcmp(command, "close_devtools") == 0 ||
              strcmp(command, "toggle_devtools") == 0) {

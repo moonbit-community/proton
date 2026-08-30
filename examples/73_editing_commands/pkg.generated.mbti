@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/73_editing_commands"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type EditReply derive(ToJson, @json.FromJson)
+pub fn EditReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EditReply::to_json(Self) -> Json
+
+type EditRequest derive(ToJson, @json.FromJson)
+pub fn EditRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EditRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

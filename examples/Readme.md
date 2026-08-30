@@ -131,6 +131,8 @@ moon -C examples run 01_run --target native
   automatic and dialog destinations, progress events, and cancellation.
 - `72_print_pdf`: manual Electron-style system print and PDF review with typed
   page settings, request ids, completion events, and printable calibration pages.
+- `73_editing_commands`: manual Electron-style undo, redo, clipboard, delete,
+  and select-all review for both the main browser and a web contents view.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

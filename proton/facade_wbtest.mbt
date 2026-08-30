@@ -2468,6 +2468,23 @@ test "view handle routes operations through its closures" {
 }
 
 ///|
+test "view handle routes editing commands" {
+  let calls : Array[String] = []
+  let view = test_view_handle("panel", 7L, calls)
+  view.undo()
+  view.redo()
+  view.cut()
+  view.copy()
+  view.paste()
+  view.paste_and_match_style()
+  view.delete()
+  view.select_all()
+  assert_eq(calls, [
+    "undo", "redo", "cut", "copy", "paste", "paste_and_match_style", "delete", "select_all",
+  ])
+}
+
+///|
 test "browser handle exposes the current page state" {
   let window = test_window_handle("main", 17L)
   let state = window.browser().state()
@@ -2499,6 +2516,23 @@ test "browser handle routes focus and DevTools controls" {
     calls,
     content="[\"focus\", \"open_devtools\", \"toggle_devtools\", \"close_devtools\"]",
   )
+}
+
+///|
+test "browser handle routes editing commands" {
+  let calls : Array[String] = []
+  let browser = test_window_handle("main", 17L, browser_control_calls=calls).browser()
+  browser.undo()
+  browser.redo()
+  browser.cut()
+  browser.copy()
+  browser.paste()
+  browser.paste_and_match_style()
+  browser.delete()
+  browser.select_all()
+  assert_eq(calls, [
+    "undo", "redo", "cut", "copy", "paste", "paste_and_match_style", "delete", "select_all",
+  ])
 }
 
 ///|
