@@ -730,6 +730,11 @@ fn RuntimeSession::browser_handle(
         window.browser_command(command, download_id?)
       })
     },
+    download_browser_url: url => {
+      self.control_window(id, native_id, "download URL in", window => {
+        window.download_url(url)
+      })
+    },
     find_browser_in_page: (text, forward, match_case, find_next) => {
       let running = match self.find_active_window(id) {
         Some(running) if running.window.id() == native_id => running
@@ -2272,6 +2277,17 @@ pub fn BrowserHandle::stop_find_in_page(
 }
 
 ///|
+/// Starts downloading `url` without navigating the page. The request uses the
+/// app's download approval and progress handlers. CEF does not support
+/// Electron's optional custom request headers for this operation.
+pub fn BrowserHandle::download_url(
+  self : BrowserHandle,
+  url : String,
+) -> Unit raise WindowSessionError {
+  (self.download_browser_url)(url)
+}
+
+///|
 pub fn BrowserHandle::back(
   self : BrowserHandle,
 ) -> Unit raise WindowSessionError {
@@ -2764,32 +2780,42 @@ fn RuntimeSession::dispatch_browser_event(
           let browser = self.browser_handle(window)
           let observed = match (event.event_type(), info, find_result) {
             ("browser_loading_changed", Some(info), _) =>
-              BrowserEvent::LoadingChanged(
-                is_loading=info.is_loading.unwrap_or(false),
+              Some(
+                BrowserEvent::LoadingChanged(
+                  is_loading=info.is_loading.unwrap_or(false),
+                ),
               )
             ("browser_navigated", Some(info), _) =>
-              BrowserEvent::Navigated(url=info.url.unwrap_or(""))
+              Some(BrowserEvent::Navigated(url=info.url.unwrap_or("")))
             ("browser_title_updated", Some(info), _) =>
-              BrowserEvent::TitleUpdated(title=info.title.unwrap_or(""))
+              Some(BrowserEvent::TitleUpdated(title=info.title.unwrap_or("")))
             ("browser_load_failed", Some(info), _) =>
-              BrowserEvent::LoadFailed(
-                url=info.url.unwrap_or(""),
-                error_code=info.error_code.unwrap_or(0),
-                error_text=info.error_text.unwrap_or(""),
+              Some(
+                BrowserEvent::LoadFailed(
+                  url=info.url.unwrap_or(""),
+                  error_code=info.error_code.unwrap_or(0),
+                  error_text=info.error_text.unwrap_or(""),
+                ),
               )
             ("browser_found_in_page", _, Some(result)) =>
-              BrowserEvent::FoundInPage(
-                result=FindInPageResult::from_native(result),
+              Some(
+                BrowserEvent::FoundInPage(
+                  result=FindInPageResult::from_native(result),
+                ),
               )
-            _ => return
+            _ => None
           }
-          for handler in self.browser_event_handlers {
-            ignore(
-              self.window_tasks.spawn(
-                () => handler(browser, observed),
-                no_wait=true,
-              ),
-            )
+          match observed {
+            Some(observed) =>
+              for handler in self.browser_event_handlers {
+                ignore(
+                  self.window_tasks.spawn(
+                    () => handler(browser, observed),
+                    no_wait=true,
+                  ),
+                )
+              }
+            None => ()
           }
         }
         None => ()

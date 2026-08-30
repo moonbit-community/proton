@@ -87,6 +87,7 @@ fn test_window_handle(
   browser_audio_calls? : Array[Bool],
   browser_audio_muted? : Bool = false,
   browser_find_calls? : Array[String],
+  browser_download_calls? : Array[String],
   window_state? : WindowState,
 ) -> WindowHandle {
   let browser = BrowserHandle::{
@@ -96,6 +97,12 @@ fn test_window_handle(
     load_browser_html: fn(_html, _base_url) {  },
     eval_browser_script: fn(_script) {  },
     send_browser_command: fn(_command, _download_id) {  },
+    download_browser_url: fn(url) {
+      match browser_download_calls {
+        Some(calls) => calls.push(url)
+        None => ()
+      }
+    },
     find_browser_in_page: fn(text, forward, match_case, find_next) {
       match browser_find_calls {
         Some(calls) =>
@@ -2446,6 +2453,14 @@ test "browser handle routes page find operations" {
   inspect(browser.find_in_page("MoonBit", match_case=true), content="7")
   browser.stop_find_in_page(clear_selection=false)
   assert_eq(calls, ["find:MoonBit:true:true:false", "stop:false"])
+}
+
+///|
+test "browser handle starts programmatic downloads" {
+  let calls : Array[String] = []
+  let browser = test_window_handle("main", 17L, browser_download_calls=calls).browser()
+  browser.download_url("https://example.test/archive.zip")
+  assert_eq(calls, ["https://example.test/archive.zip"])
 }
 
 ///|
