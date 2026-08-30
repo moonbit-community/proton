@@ -1074,6 +1074,35 @@ fn decode_native_runtime_event(
           require_native_event_text(event, 1, "browser load error"),
         ),
       )
+    34 =>
+      BrowserEvent(
+        window,
+        FindResult({
+          request_id: @native_ffi.event_int64(event, 2).to_int(),
+          active_match_ordinal: @native_ffi.event_int(event, 1),
+          matches: @native_ffi.event_int(event, 0),
+          selection_x: @native_ffi.event_int(event, 2),
+          selection_y: @native_ffi.event_int64(event, 4).to_int(),
+          selection_width: @native_ffi.event_int64(event, 5).to_int(),
+          selection_height: @native_ffi.event_int64(event, 3).to_int(),
+          final_update: @native_ffi.event_int(event, 3) != 0,
+        }),
+      )
+    35 =>
+      ViewEvent(
+        window,
+        @native_ffi.event_int64(event, 1),
+        FindResult({
+          request_id: @native_ffi.event_int64(event, 2).to_int(),
+          active_match_ordinal: @native_ffi.event_int(event, 1),
+          matches: @native_ffi.event_int(event, 0),
+          selection_x: @native_ffi.event_int(event, 2),
+          selection_y: @native_ffi.event_int64(event, 4).to_int(),
+          selection_width: @native_ffi.event_int64(event, 5).to_int(),
+          selection_height: @native_ffi.event_int64(event, 3).to_int(),
+          final_update: @native_ffi.event_int(event, 3) != 0,
+        }),
+      )
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -2079,6 +2108,60 @@ pub fn Window::browser_command(
 }
 
 ///|
+pub fn Window::find_in_page(
+  self : Window,
+  text : String,
+  forward : Bool,
+  match_case : Bool,
+  find_next : Bool,
+) -> Int raise NativeError {
+  if text.is_empty() {
+    raise invalid_argument("find text must not be empty")
+  }
+  let request_id : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_find_in_page_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(text),
+      if forward {
+        1
+      } else {
+        0
+      },
+      if match_case {
+        1
+      } else {
+        0
+      },
+      if find_next {
+        1
+      } else {
+        0
+      },
+      request_id,
+    ),
+  )
+  request_id.val
+}
+
+///|
+pub fn Window::stop_find_in_page(
+  self : Window,
+  clear_selection : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_stop_find_in_page_ffi(
+      self.live_handle(),
+      if clear_selection {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
 pub fn Window::respond_browser_request(
   self : Window,
   request_id : Int64,
@@ -2899,6 +2982,60 @@ pub fn View::browser_command(
     @native_ffi.proton_view_browser_command_json_ffi(
       self.live_handle(),
       @ffi.to_cstr(Json::object(fields).stringify()),
+    ),
+  )
+}
+
+///|
+pub fn View::find_in_page(
+  self : View,
+  text : String,
+  forward : Bool,
+  match_case : Bool,
+  find_next : Bool,
+) -> Int raise NativeError {
+  if text.is_empty() {
+    raise invalid_argument("find text must not be empty")
+  }
+  let request_id : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_view_find_in_page_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(text),
+      if forward {
+        1
+      } else {
+        0
+      },
+      if match_case {
+        1
+      } else {
+        0
+      },
+      if find_next {
+        1
+      } else {
+        0
+      },
+      request_id,
+    ),
+  )
+  request_id.val
+}
+
+///|
+pub fn View::stop_find_in_page(
+  self : View,
+  clear_selection : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_view_stop_find_in_page_ffi(
+      self.live_handle(),
+      if clear_selection {
+        1
+      } else {
+        0
+      },
     ),
   )
 }

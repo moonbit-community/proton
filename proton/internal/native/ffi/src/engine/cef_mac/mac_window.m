@@ -2193,6 +2193,31 @@ int32_t proton_engine_window_get_navigation_state(
       window->browser, out_can_go_back, out_can_go_forward, error, error_len);
 }
 
+int32_t proton_engine_window_find_in_page(
+    proton_engine_window_t *window, const char *text, int32_t forward,
+    int32_t match_case, int32_t find_next, int32_t *out_request_id,
+    char *error, size_t error_len) {
+  if (window == NULL || window->browser_session == NULL ||
+      window->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_find_in_page(
+      window->browser_session, window->browser, text, forward, match_case,
+      find_next, out_request_id, error, error_len);
+}
+
+int32_t proton_engine_window_stop_find_in_page(
+    proton_engine_window_t *window, int32_t clear_selection, char *error,
+    size_t error_len) {
+  if (window == NULL || window->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_stop_find_in_page(
+      window->browser, clear_selection, error, error_len);
+}
+
 int32_t proton_engine_window_set_audio_muted(
     proton_engine_window_t *window, int32_t muted, char *error,
     size_t error_len) {

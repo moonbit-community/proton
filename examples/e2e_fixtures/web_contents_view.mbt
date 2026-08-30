@@ -89,6 +89,8 @@ fn web_contents_view_event_line(event : @proton.ViewEvent) -> String {
       error_code.to_string() +
       " error_text=" +
       error_text
+    FoundInPage(result~) =>
+      "view_found_in_page matches=" + result.matches.to_string()
     Closed => "view_closed"
   }
 }

@@ -50,6 +50,8 @@ typedef enum proton_event_kind {
   PROTON_EVENT_BROWSER_NAVIGATED = 31,
   PROTON_EVENT_BROWSER_TITLE_UPDATED = 32,
   PROTON_EVENT_BROWSER_LOAD_FAILED = 33,
+  PROTON_EVENT_BROWSER_FIND_RESULT = 34,
+  PROTON_EVENT_VIEW_FIND_RESULT = 35,
 } proton_event_kind_t;
 
 typedef struct proton_event {

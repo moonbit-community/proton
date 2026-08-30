@@ -132,6 +132,22 @@ fn BrowserState::from_native(state : @native.BrowserState) -> BrowserState {
 }
 
 ///|
+fn FindInPageResult::from_native(
+  result : @native.NativeFindInPageResult,
+) -> FindInPageResult {
+  {
+    request_id: result.request_id,
+    active_match_ordinal: result.active_match_ordinal,
+    matches: result.matches,
+    selection_x: result.selection_x,
+    selection_y: result.selection_y,
+    selection_width: result.selection_width,
+    selection_height: result.selection_height,
+    final_update: result.final_update,
+  }
+}
+
+///|
 /// Information about one connected display.
 pub(all) struct ScreenInfo {
   id : Int

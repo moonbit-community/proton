@@ -76,6 +76,20 @@ int32_t proton_browser_set_audio_muted(
 int32_t proton_browser_is_audio_muted(
     cef_browser_t *browser, int32_t *out_muted, char *error,
     size_t error_len);
+int32_t proton_browser_find_in_page(
+    proton_browser_session_t *session, cef_browser_t *browser,
+    const char *text, int32_t forward, int32_t match_case,
+    int32_t find_next, int32_t *out_request_id, char *error,
+    size_t error_len);
+int32_t proton_browser_stop_find_in_page(
+    cef_browser_t *browser, int32_t clear_selection, char *error,
+    size_t error_len);
+int32_t proton_browser_session_find_request_id(
+    proton_browser_session_t *session, int32_t cef_identifier);
+void proton_browser_session_find_result(
+    proton_browser_session_t *session, int32_t cef_identifier,
+    int32_t count, int32_t x, int32_t y, int32_t width,
+    int32_t height, int32_t active_match_ordinal, int32_t final_update);
 
 int proton_browser_session_before_browse(
     proton_browser_session_t *session, cef_frame_t *frame,

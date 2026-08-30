@@ -263,12 +263,14 @@ static proton_engine_client_t *proton_engine_view_client_create(
   client->view = view;
   // Views wire the life span, load, display, and render handlers: life span
   // drives the close state machine, load/display feed the view event stream,
-  // and the render handler gives headless (OSR) views a viewport. Navigation
-  // policy, bridge, downloads, and permissions stay window-scoped for now.
+  // and the render handler gives headless (OSR) views a viewport. Find results
+  // are view-scoped. Navigation policy, bridge, downloads, and
+  // permissions stay window-scoped for now.
   client->client.get_life_span_handler =
       proton_engine_client_get_life_span_handler;
   client->client.get_load_handler = proton_engine_client_get_load_handler;
   client->client.get_display_handler = proton_engine_client_get_display_handler;
+  client->client.get_find_handler = view->window->client->get_find_handler;
   client->client.get_render_handler = proton_engine_client_get_render_handler;
   return client;
 }
@@ -669,6 +671,31 @@ int32_t proton_engine_view_get_navigation_state(
   }
   return proton_browser_navigation_state(
       view->browser, out_can_go_back, out_can_go_forward, error, error_len);
+}
+
+int32_t proton_engine_view_find_in_page(
+    proton_engine_view_t *view, const char *text, int32_t forward,
+    int32_t match_case, int32_t find_next, int32_t *out_request_id,
+    char *error, size_t error_len) {
+  if (view == NULL || view->closed || view->browser_session == NULL ||
+      view->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_find_in_page(
+      view->browser_session, view->browser, text, forward, match_case,
+      find_next, out_request_id, error, error_len);
+}
+
+int32_t proton_engine_view_stop_find_in_page(
+    proton_engine_view_t *view, int32_t clear_selection, char *error,
+    size_t error_len) {
+  if (view == NULL || view->closed || view->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_stop_find_in_page(
+      view->browser, clear_selection, error, error_len);
 }
 
 

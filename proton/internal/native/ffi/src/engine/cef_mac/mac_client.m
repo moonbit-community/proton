@@ -29,6 +29,7 @@
 #include "mac_launch_input.h"
 
 #include "include/capi/cef_browser_capi.h"
+#include "include/capi/cef_find_handler_capi.h"
 #include "include/capi/cef_frame_capi.h"
 #include "include/capi/cef_task_capi.h"
 #include "include/capi/cef_values_capi.h"
@@ -52,6 +53,11 @@ typedef struct proton_engine_bridge_pending {
   struct proton_engine_bridge_pending *next;
 } proton_engine_bridge_pending_t;
 
+typedef struct {
+  cef_find_handler_t handler;
+  proton_engine_ref_counted_t refs;
+} proton_engine_find_handler_t;
+
 static proton_engine_bridge_pending_t *g_bridge_pending = NULL;
 static proton_engine_app_t g_app;
 static proton_engine_browser_process_handler_t g_browser_process_handler;
@@ -61,6 +67,7 @@ static proton_engine_life_span_handler_t g_life_span_handler;
 static proton_engine_load_handler_t g_load_handler;
 static proton_engine_request_handler_t g_request_handler;
 static proton_engine_download_handler_t g_download_handler;
+static proton_engine_find_handler_t g_find_handler;
 static proton_engine_permission_handler_t g_permission_handler;
 static proton_engine_render_handler_t g_render_handler;
 static proton_engine_display_handler_t g_display_handler;
@@ -370,6 +377,14 @@ proton_engine_client_get_download_handler(cef_client_t *self) {
   return &g_download_handler.handler;
 }
 
+static cef_find_handler_t *CEF_CALLBACK
+proton_engine_client_get_find_handler(cef_client_t *self) {
+  (void)self;
+  g_find_handler.handler.base.add_ref(
+      (cef_base_ref_counted_t *)&g_find_handler.handler);
+  return &g_find_handler.handler;
+}
+
 static cef_permission_handler_t *CEF_CALLBACK
 proton_engine_client_get_permission_handler(cef_client_t *self) {
   (void)self;
@@ -489,6 +504,10 @@ static int CEF_CALLBACK proton_engine_on_media_permission(
     cef_permission_handler_t *self, cef_browser_t *browser,
     cef_frame_t *frame, const cef_string_t *requesting_origin,
     uint32_t requested_permissions, cef_media_access_callback_t *callback);
+static void CEF_CALLBACK proton_engine_on_find_result(
+    cef_find_handler_t *self, cef_browser_t *browser, int identifier,
+    int count, const cef_rect_t *selection_rect, int active_match_ordinal,
+    int final_update);
 
 void proton_engine_init_handlers(void) {
   static int initialized = 0;
@@ -564,6 +583,11 @@ void proton_engine_init_handlers(void) {
       proton_engine_on_before_download;
   g_download_handler.handler.on_download_updated =
       proton_engine_on_download_updated;
+
+  proton_engine_init_ref_counted(
+      (cef_base_ref_counted_t *)&g_find_handler.handler.base,
+      sizeof(g_find_handler.handler), &g_find_handler.refs);
+  g_find_handler.handler.on_find_result = proton_engine_on_find_result;
 
   proton_engine_init_ref_counted(
       (cef_base_ref_counted_t *)&g_permission_handler.handler.base,
@@ -1134,6 +1158,30 @@ static void CEF_CALLBACK proton_engine_on_download_updated(
       callback);
 }
 
+static void CEF_CALLBACK proton_engine_on_find_result(
+    cef_find_handler_t *self, cef_browser_t *browser, int identifier,
+    int count, const cef_rect_t *selection_rect, int active_match_ordinal,
+    int final_update) {
+  (void)self;
+  int x = selection_rect != NULL ? selection_rect->x : 0;
+  int y = selection_rect != NULL ? selection_rect->y : 0;
+  int width = selection_rect != NULL ? selection_rect->width : 0;
+  int height = selection_rect != NULL ? selection_rect->height : 0;
+  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  if (view != NULL) {
+    proton_view_events_find_result(
+        view->events,
+        proton_browser_session_find_request_id(view->browser_session,
+                                               identifier),
+        count, x, y, width, height, active_match_ordinal, final_update);
+    return;
+  }
+  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  proton_browser_session_find_result(
+      window != NULL ? window->browser_session : NULL, identifier, count,
+      x, y, width, height, active_match_ordinal, final_update);
+}
+
 static int CEF_CALLBACK proton_engine_on_media_permission(
     cef_permission_handler_t *self, cef_browser_t *browser,
     cef_frame_t *frame, const cef_string_t *requesting_origin,
@@ -1200,6 +1248,7 @@ proton_engine_client_t *proton_engine_client_create(
       proton_engine_client_get_request_handler;
   client->client.get_download_handler =
       proton_engine_client_get_download_handler;
+  client->client.get_find_handler = proton_engine_client_get_find_handler;
   client->client.get_permission_handler =
       proton_engine_client_get_permission_handler;
   client->client.get_render_handler = proton_engine_client_get_render_handler;

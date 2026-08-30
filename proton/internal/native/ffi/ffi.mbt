@@ -659,6 +659,23 @@ pub extern "C" fn proton_window_browser_command_json_ffi(
 ) -> Int = "proton_window_browser_command_json"
 
 ///|
+#borrow(text, out_request_id)
+pub extern "C" fn proton_window_find_in_page_ffi(
+  window : WindowHandle,
+  text : Bytes,
+  forward : Int,
+  match_case : Int,
+  find_next : Int,
+  out_request_id : Ref[Int],
+) -> Int = "proton_window_find_in_page"
+
+///|
+pub extern "C" fn proton_window_stop_find_in_page_ffi(
+  window : WindowHandle,
+  clear_selection : Int,
+) -> Int = "proton_window_stop_find_in_page"
+
+///|
 #borrow(out_can_go_back, out_can_go_forward)
 pub extern "C" fn proton_window_get_navigation_state_ffi(
   window : WindowHandle,
@@ -921,6 +938,23 @@ pub extern "C" fn proton_view_browser_command_json_ffi(
   view : ViewHandle,
   command_json : Bytes,
 ) -> Int = "proton_view_browser_command_json"
+
+///|
+#borrow(text, out_request_id)
+pub extern "C" fn proton_view_find_in_page_ffi(
+  view : ViewHandle,
+  text : Bytes,
+  forward : Int,
+  match_case : Int,
+  find_next : Int,
+  out_request_id : Ref[Int],
+) -> Int = "proton_view_find_in_page"
+
+///|
+pub extern "C" fn proton_view_stop_find_in_page_ffi(
+  view : ViewHandle,
+  clear_selection : Int,
+) -> Int = "proton_view_stop_find_in_page"
 
 ///|
 #borrow(out_can_go_back, out_can_go_forward)

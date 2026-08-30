@@ -1923,6 +1923,56 @@ int32_t proton_window_get_navigation_state(
   return PROTON_OK;
 }
 
+int32_t proton_window_find_in_page(
+    proton_window_handle_t window, const char *text, int32_t forward,
+    int32_t match_case, int32_t find_next, int32_t *out_request_id) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (text == NULL || text[0] == '\0' || out_request_id == NULL) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "non-empty find text and request output are required");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser find requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_find_in_page(
+      slot->engine_window, text, forward, match_case, find_next,
+      out_request_id, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_stop_find_in_page(
+    proton_window_handle_t window, int32_t clear_selection) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser find requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_stop_find_in_page(
+      slot->engine_window, clear_selection, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_get_browser_url(proton_window_handle_t window,
                                        char *buffer, int32_t buffer_len,
                                        int32_t *out_required_len) {
@@ -2864,6 +2914,56 @@ int32_t proton_view_get_navigation_state(
       slot->engine_view, out_can_go_back, out_can_go_forward, engine_error,
       sizeof(engine_error));
   if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_find_in_page(
+    proton_view_handle_t view, const char *text, int32_t forward,
+    int32_t match_case, int32_t find_next, int32_t *out_request_id) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (text == NULL || text[0] == '\0' || out_request_id == NULL) {
+    return proton_set_error(
+        PROTON_ERR_INVALID_ARGUMENT,
+        "non-empty find text and request output are required");
+  }
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser find requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_find_in_page(
+      slot->engine_view, text, forward, match_case, find_next,
+      out_request_id, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_stop_find_in_page(
+    proton_view_handle_t view, int32_t clear_selection) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser find requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_stop_find_in_page(
+      slot->engine_view, clear_selection, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

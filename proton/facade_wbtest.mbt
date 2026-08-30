@@ -86,6 +86,7 @@ fn test_window_handle(
   content_size? : (Int, Int),
   browser_audio_calls? : Array[Bool],
   browser_audio_muted? : Bool = false,
+  browser_find_calls? : Array[String],
   window_state? : WindowState,
 ) -> WindowHandle {
   let browser = BrowserHandle::{
@@ -95,6 +96,20 @@ fn test_window_handle(
     load_browser_html: fn(_html, _base_url) {  },
     eval_browser_script: fn(_script) {  },
     send_browser_command: fn(_command, _download_id) {  },
+    find_browser_in_page: fn(text, forward, match_case, find_next) {
+      match browser_find_calls {
+        Some(calls) =>
+          calls.push("find:\{text}:\{forward}:\{match_case}:\{find_next}")
+        None => ()
+      }
+      7
+    },
+    stop_browser_find: fn(clear_selection) {
+      match browser_find_calls {
+        Some(calls) => calls.push("stop:\{clear_selection}")
+        None => ()
+      }
+    },
     set_browser_zoom_percent: fn(_zoom_percent) {  },
     read_browser_zoom_percent: fn() { 100 },
     set_browser_audio_muted: muted => {
@@ -2342,6 +2357,13 @@ fn test_view_handle(
     load_view_html: fn(_html, _base_url) {  },
     eval_view_script: fn(_script) {  },
     send_view_command: fn(_command, _download_id) {  },
+    find_view_in_page: fn(text, forward, match_case, find_next) {
+      calls.push("find:\{text}:\{forward}:\{match_case}:\{find_next}")
+      9
+    },
+    stop_view_find: fn(clear_selection) {
+      calls.push("stop_find:\{clear_selection}")
+    },
     read_view_navigation_state: fn() { (true, false) },
     read_view_state: fn() {
       { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1, }
@@ -2363,6 +2385,11 @@ test "view handle routes operations through its closures" {
   view.set_audio_muted(true)
   assert_true(view.is_audio_muted())
   view.load_url("https://example.com/")
+  inspect(
+    view.find_in_page("Proton", forward=false, match_case=true, find_next=true),
+    content="9",
+  )
+  view.stop_find_in_page(clear_selection=false)
   assert_true(view.can_go_back())
   assert_false(view.can_go_forward())
   let state = view.state()
@@ -2379,6 +2406,8 @@ test "view handle routes operations through its closures" {
       #|  "set_zoom_percent:125",
       #|  "set_audio_muted:true",
       #|  "load_url:https://example.com/",
+      #|  "find:Proton:false:true:true",
+      #|  "stop_find:false",
       #|  "close",
       #|]
     ),
@@ -2408,6 +2437,15 @@ test "browser handle controls and reads audio mute state" {
   browser.set_audio_muted(true)
   assert_eq(calls, [true])
   assert_true(browser.is_audio_muted())
+}
+
+///|
+test "browser handle routes page find operations" {
+  let calls : Array[String] = []
+  let browser = test_window_handle("main", 17L, browser_find_calls=calls).browser()
+  inspect(browser.find_in_page("MoonBit", match_case=true), content="7")
+  browser.stop_find_in_page(clear_selection=false)
+  assert_eq(calls, ["find:MoonBit:true:true:false", "stop:false"])
 }
 
 ///|

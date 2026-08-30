@@ -489,6 +489,28 @@ fn RuntimeSession::view_handle(
         view => view.browser_command(command, download_id?),
       )
     },
+    find_view_in_page: (text, forward, match_case, find_next) => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      running.view.find_in_page(text, forward, match_case, find_next) catch {
+        error =>
+          raise window_operation_failed(
+            "find in view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
+    stop_view_find: clear_selection => {
+      self.control_view(
+        window_id,
+        window_native_id,
+        id,
+        native_id,
+        "stop find in",
+        view => view.stop_find_in_page(clear_selection),
+      )
+    },
     read_view_navigation_state: () => {
       let running = self.resolve_view(
         window_id, window_native_id, id, native_id,
@@ -706,6 +728,24 @@ fn RuntimeSession::browser_handle(
     send_browser_command: (command, download_id) => {
       self.control_window(id, native_id, command + " in", window => {
         window.browser_command(command, download_id?)
+      })
+    },
+    find_browser_in_page: (text, forward, match_case, find_next) => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      running.window.find_in_page(text, forward, match_case, find_next) catch {
+        error =>
+          raise window_operation_failed(
+            "find in browser for window " + id,
+            error,
+          )
+      }
+    },
+    stop_browser_find: clear_selection => {
+      self.control_window(id, native_id, "stop browser find in", window => {
+        window.stop_find_in_page(clear_selection)
       })
     },
     set_browser_zoom_percent: zoom_percent => {
@@ -2080,6 +2120,30 @@ pub fn ViewHandle::eval(
 }
 
 ///|
+/// Starts or advances a page search and returns its request id. Set
+/// `find_next=true` to begin a new search session, matching Electron's
+/// `findInPage` option; leave it false to advance the current session.
+pub fn ViewHandle::find_in_page(
+  self : ViewHandle,
+  text : String,
+  forward? : Bool = true,
+  match_case? : Bool = false,
+  find_next? : Bool = false,
+) -> Int raise WindowSessionError {
+  (self.find_view_in_page)(text, forward, match_case, find_next)
+}
+
+///|
+/// Stops the active page search. Set `clear_selection=false` to preserve the
+/// current match highlight.
+pub fn ViewHandle::stop_find_in_page(
+  self : ViewHandle,
+  clear_selection? : Bool = true,
+) -> Unit raise WindowSessionError {
+  (self.stop_view_find)(clear_selection)
+}
+
+///|
 pub fn ViewHandle::back(self : ViewHandle) -> Unit raise WindowSessionError {
   (self.send_view_command)("back", None)
 }
@@ -2181,6 +2245,30 @@ pub fn BrowserHandle::eval(
   script : String,
 ) -> Unit raise WindowSessionError {
   (self.eval_browser_script)(script)
+}
+
+///|
+/// Starts or advances a page search and returns its request id. Set
+/// `find_next=true` to begin a new search session, matching Electron's
+/// `findInPage` option; leave it false to advance the current session.
+pub fn BrowserHandle::find_in_page(
+  self : BrowserHandle,
+  text : String,
+  forward? : Bool = true,
+  match_case? : Bool = false,
+  find_next? : Bool = false,
+) -> Int raise WindowSessionError {
+  (self.find_browser_in_page)(text, forward, match_case, find_next)
+}
+
+///|
+/// Stops the active page search. Set `clear_selection=false` to preserve the
+/// current match highlight.
+pub fn BrowserHandle::stop_find_in_page(
+  self : BrowserHandle,
+  clear_selection? : Bool = true,
+) -> Unit raise WindowSessionError {
+  (self.stop_browser_find)(clear_selection)
 }
 
 ///|
@@ -2609,10 +2697,6 @@ fn RuntimeSession::dispatch_view_event(
   if self.view_event_handlers.is_empty() && !closes_view {
     return
   }
-  let info = match event.view_event() {
-    Some(info) => info
-    None => return
-  }
   let (window_native_id, view_native_id) = match
     (event.window_id(), event.view_id()) {
     (Some(window_id), Some(view_id)) => (window_id, view_id)
@@ -2625,19 +2709,23 @@ fn RuntimeSession::dispatch_view_event(
   for index, view in running.views {
     if view.view.id() == view_native_id {
       let handle = self.view_handle(running, view)
-      let view_event = match event.event_type() {
-        "view_loading_changed" =>
+      let view_event = match
+        (event.event_type(), event.view_event(), event.find_in_page_result()) {
+        ("view_loading_changed", Some(info), _) =>
           ViewEvent::LoadingChanged(is_loading=info.is_loading.unwrap_or(false))
-        "view_navigated" => ViewEvent::Navigated(url=info.url.unwrap_or(""))
-        "view_title_updated" =>
+        ("view_navigated", Some(info), _) =>
+          ViewEvent::Navigated(url=info.url.unwrap_or(""))
+        ("view_title_updated", Some(info), _) =>
           ViewEvent::TitleUpdated(title=info.title.unwrap_or(""))
-        "view_load_failed" =>
+        ("view_load_failed", Some(info), _) =>
           ViewEvent::LoadFailed(
             url=info.url.unwrap_or(""),
             error_code=info.error_code.unwrap_or(0),
             error_text=info.error_text.unwrap_or(""),
           )
-        "view_closed" => ViewEvent::Closed
+        ("view_found_in_page", _, Some(result)) =>
+          ViewEvent::FoundInPage(result=FindInPageResult::from_native(result))
+        ("view_closed", Some(_), _) => ViewEvent::Closed
         _ => return
       }
       if closes_view {
@@ -2668,25 +2756,30 @@ fn RuntimeSession::dispatch_browser_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
 ) -> Unit {
-  match (event.window_id(), event.browser_event()) {
-    (Some(window_id), Some(info)) =>
+  match
+    (event.window_id(), event.browser_event(), event.find_in_page_result()) {
+    (Some(window_id), info, find_result) =>
       match self.find_window_by_native_id(window_id) {
         Some(window) => {
           let browser = self.browser_handle(window)
-          let observed = match event.event_type() {
-            "browser_loading_changed" =>
+          let observed = match (event.event_type(), info, find_result) {
+            ("browser_loading_changed", Some(info), _) =>
               BrowserEvent::LoadingChanged(
                 is_loading=info.is_loading.unwrap_or(false),
               )
-            "browser_navigated" =>
+            ("browser_navigated", Some(info), _) =>
               BrowserEvent::Navigated(url=info.url.unwrap_or(""))
-            "browser_title_updated" =>
+            ("browser_title_updated", Some(info), _) =>
               BrowserEvent::TitleUpdated(title=info.title.unwrap_or(""))
-            "browser_load_failed" =>
+            ("browser_load_failed", Some(info), _) =>
               BrowserEvent::LoadFailed(
                 url=info.url.unwrap_or(""),
                 error_code=info.error_code.unwrap_or(0),
                 error_text=info.error_text.unwrap_or(""),
+              )
+            ("browser_found_in_page", _, Some(result)) =>
+              BrowserEvent::FoundInPage(
+                result=FindInPageResult::from_native(result),
               )
             _ => return
           }
