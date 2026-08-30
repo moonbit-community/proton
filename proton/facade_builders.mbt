@@ -379,8 +379,9 @@ pub fn App::with_view(self : App, id : String, config : ViewConfig) -> App {
 }
 
 ///|
-/// Observes lifecycle events for every running web contents view: loading
-/// changes, main-frame navigations, title updates, and load failures.
+/// Observes events for every running web contents view: loading changes,
+/// main-frame navigations, title updates, load failures, page-search results,
+/// and close.
 pub fn App::on_view_event(
   self : App,
   handler : async (ViewHandle, ViewEvent) -> Unit noraise,
@@ -390,8 +391,8 @@ pub fn App::on_view_event(
 }
 
 ///|
-/// Observes lifecycle events for every main browser page: loading changes,
-/// main-frame navigations, title updates, and load failures.
+/// Observes events for every main browser page: loading changes, main-frame
+/// navigations, title updates, load failures, and page-search results.
 pub fn App::on_browser_event(
   self : App,
   handler : async (BrowserHandle, BrowserEvent) -> Unit noraise,

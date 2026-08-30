@@ -450,6 +450,8 @@ pub struct BrowserHandle {
   load_browser_html : (String, String) -> Unit raise WindowSessionError
   eval_browser_script : (String) -> Unit raise WindowSessionError
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
+  find_browser_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
+  stop_browser_find : (Bool) -> Unit raise WindowSessionError
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_browser_zoom_percent : () -> Int raise WindowSessionError
   set_browser_audio_muted : (Bool) -> Unit raise WindowSessionError
@@ -503,6 +505,8 @@ pub struct ViewHandle {
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
   send_view_command : (String, Int?) -> Unit raise WindowSessionError
+  find_view_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
+  stop_view_find : (Bool) -> Unit raise WindowSessionError
   read_view_navigation_state : () -> (Bool, Bool) raise WindowSessionError
   read_view_state : () -> ViewState raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
@@ -586,13 +590,14 @@ pub extend WindowEvent with Eq::{not_equal, equal}
 pub extend WindowEvent with Debug::{to_repr}
 
 ///|
-/// An observed change to a running web contents view, following the Electron
-/// `webContents` lifecycle events.
+/// An observed change to a running web contents view, following Electron
+/// `webContents` lifecycle and page-search events.
 pub(all) enum ViewEvent {
   LoadingChanged(is_loading~ : Bool)
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  FoundInPage(result~ : FindInPageResult)
   Closed
 } derive(Debug, Eq)
 
@@ -601,6 +606,26 @@ pub extend ViewEvent with Eq::{not_equal, equal}
 
 ///|
 pub extend ViewEvent with Debug::{to_repr}
+
+///|
+/// One update from an active page search. The selection rectangle uses the
+/// target web contents coordinate space.
+pub(all) struct FindInPageResult {
+  request_id : Int
+  active_match_ordinal : Int
+  matches : Int
+  selection_x : Int
+  selection_y : Int
+  selection_width : Int
+  selection_height : Int
+  final_update : Bool
+} derive(Debug, Eq)
+
+///|
+pub extend FindInPageResult with Eq::{not_equal, equal}
+
+///|
+pub extend FindInPageResult with Debug::{to_repr}
 
 ///|
 /// The result of an asynchronous native close request.
@@ -780,6 +805,7 @@ pub(all) enum BrowserEvent {
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  FoundInPage(result~ : FindInPageResult)
 } derive(Debug, Eq)
 
 ///|
