@@ -191,11 +191,30 @@ pub extend NativeResourceRequest with Eq::{not_equal, equal}
 pub extend NativeResourceRequest with Debug::{to_repr}
 
 ///|
+pub(all) struct NativeFindInPageResult {
+  request_id : Int
+  active_match_ordinal : Int
+  matches : Int
+  selection_x : Int
+  selection_y : Int
+  selection_width : Int
+  selection_height : Int
+  final_update : Bool
+} derive(Debug, Eq)
+
+///|
+pub extend NativeFindInPageResult with Eq::{not_equal, equal}
+
+///|
+pub extend NativeFindInPageResult with Debug::{to_repr}
+
+///|
 enum NativeViewEvent {
   LoadingChanged(Bool)
   Navigated(String)
   TitleUpdated(String)
   LoadFailed(String, Int, String)
+  FindResult(NativeFindInPageResult)
   Closed
 } derive(Debug, Eq)
 
@@ -382,6 +401,7 @@ enum NativeBrowserEvent {
   Navigated(String)
   TitleUpdated(String)
   LoadFailed(String, Int, String)
+  FindResult(NativeFindInPageResult)
 } derive(Debug, Eq)
 
 ///|
@@ -699,10 +719,12 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     BrowserEvent(_, Navigated(_)) => "browser_navigated"
     BrowserEvent(_, TitleUpdated(_)) => "browser_title_updated"
     BrowserEvent(_, LoadFailed(_, _, _)) => "browser_load_failed"
+    BrowserEvent(_, FindResult(_)) => "browser_found_in_page"
     ViewEvent(_, _, LoadingChanged(_)) => "view_loading_changed"
     ViewEvent(_, _, Navigated(_)) => "view_navigated"
     ViewEvent(_, _, TitleUpdated(_)) => "view_title_updated"
     ViewEvent(_, _, LoadFailed(_, _, _)) => "view_load_failed"
+    ViewEvent(_, _, FindResult(_)) => "view_found_in_page"
     ViewEvent(_, _, Closed) => "view_closed"
     ResourceRequested(_) => "resource_requested"
     ResourceRequestCancelled(_) => "resource_request_cancelled"
@@ -873,6 +895,17 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_code: Some(error_code),
         error_text: Some(error_text),
       })
+    _ => None
+  }
+}
+
+///|
+pub fn RuntimeEvent::find_in_page_result(
+  self : RuntimeEvent,
+) -> NativeFindInPageResult? {
+  match self {
+    BrowserEvent(_, FindResult(result)) | ViewEvent(_, _, FindResult(result)) =>
+      Some(result)
     _ => None
   }
 }

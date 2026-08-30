@@ -164,6 +164,28 @@ void proton_view_events_load_failed(proton_view_events_t *events,
   proton_view_events_enqueue(events, event, 0);
 }
 
+void proton_view_events_find_result(
+    proton_view_events_t *events, int32_t request_id, int32_t count,
+    int32_t x, int32_t y, int32_t width, int32_t height,
+    int32_t active_match_ordinal, int32_t final_update) {
+  if (events == NULL) {
+    return;
+  }
+  proton_event_t *event = proton_event_create(PROTON_EVENT_VIEW_FIND_RESULT);
+  if (event == NULL) {
+    return;
+  }
+  event->request_id = request_id;
+  event->int_a = count;
+  event->int_b = active_match_ordinal;
+  event->int_c = x;
+  event->int64_a = y;
+  event->int64_b = width;
+  event->revision = height;
+  event->bool_a = final_update != 0 ? 1 : 0;
+  proton_view_events_enqueue(events, event, 0);
+}
+
 void proton_view_events_closed(proton_view_events_t *events) {
   proton_view_events_enqueue(
       events, proton_event_create(PROTON_EVENT_VIEW_CLOSED), 1);

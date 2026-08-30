@@ -162,6 +162,45 @@ test "browser page events preserve window ids and payloads" {
 }
 
 ///|
+test "find result events preserve targets and match details" {
+  let result = NativeFindInPageResult::{
+    request_id: 4,
+    active_match_ordinal: 2,
+    matches: 6,
+    selection_x: 10,
+    selection_y: 20,
+    selection_width: 30,
+    selection_height: 12,
+    final_update: true,
+  }
+  let browser = RuntimeEvent::BrowserEvent(7L, FindResult(result))
+  assert_eq(browser.event_type(), "browser_found_in_page")
+  assert_eq(browser.find_in_page_result(), Some(result))
+  let view = RuntimeEvent::ViewEvent(7L, 11L, FindResult(result))
+  assert_eq(view.event_type(), "view_found_in_page")
+  assert_eq(view.window_id(), Some(7L))
+  assert_eq(view.view_id(), Some(11L))
+  assert_eq(view.find_in_page_result(), Some(result))
+}
+
+///|
+test "find rejects empty text before native dispatch" {
+  let window = Window::{
+    handle: @native_ffi.window_null(),
+    id: 0L,
+    lifecycle: WindowLive,
+  }
+  let error = expect_native_error(() => {
+    ignore(window.find_in_page("", true, false, false))
+  })
+  match error {
+    InvalidArgument(message~) =>
+      assert_eq(message, "find text must not be empty")
+    _ => fail("expected invalid argument")
+  }
+}
+
+///|
 test "native ABI version and availability" {
   inspect(abi_version(), content="1")
 }

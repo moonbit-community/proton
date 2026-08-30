@@ -6,6 +6,7 @@
 #include "include/capi/cef_download_item_capi.h"
 #include "include/internal/cef_string.h"
 
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,6 +57,8 @@ struct proton_browser_session {
   char *url;
   char *title;
   int32_t is_loading;
+  int32_t next_find_request_id;
+  int32_t active_find_request_id;
 };
 
 static void proton_browser_set_message(char *error, size_t error_len,
@@ -1006,4 +1009,113 @@ int32_t proton_browser_is_audio_muted(
   *out_muted = host->is_audio_muted(host) ? 1 : 0;
   host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
+}
+
+int32_t proton_browser_find_in_page(
+    proton_browser_session_t *session, cef_browser_t *browser,
+    const char *text, int32_t forward, int32_t match_case,
+    int32_t find_next, int32_t *out_request_id, char *error,
+    size_t error_len) {
+  if (session == NULL || browser == NULL || text == NULL || text[0] == '\0' ||
+      out_request_id == NULL) {
+    proton_browser_set_message(
+        error, error_len,
+        "browser session, browser, non-empty text, and request output are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if ((forward != 0 && forward != 1) ||
+      (match_case != 0 && match_case != 1) ||
+      (find_next != 0 && find_next != 1)) {
+    proton_browser_set_message(error, error_len,
+                               "find flags must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL || host->find == NULL ||
+      (find_next && host->stop_finding == NULL)) {
+    if (host != NULL) {
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    proton_browser_set_message(error, error_len,
+                               "browser find is unavailable");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  cef_string_t search_text = {0};
+  if (!cef_string_utf8_to_utf16(text, strlen(text), &search_text)) {
+    host->base.release((cef_base_ref_counted_t *)host);
+    proton_browser_set_message(error, error_len,
+                               "failed to encode find text as UTF-16");
+    return PROTON_ERR_ENGINE;
+  }
+  /* Electron uses findNext to start a new session. CEF infers sessions and
+     uses its final flag to request an active match. */
+  if (find_next) {
+    host->stop_finding(host, 1);
+  }
+  if (session->next_find_request_id == INT32_MAX) {
+    session->next_find_request_id = 1;
+  } else {
+    session->next_find_request_id++;
+  }
+  session->active_find_request_id = session->next_find_request_id;
+  *out_request_id = session->active_find_request_id;
+  host->find(host, &search_text, forward, match_case, 1);
+  cef_string_clear(&search_text);
+  host->base.release((cef_base_ref_counted_t *)host);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_stop_find_in_page(
+    cef_browser_t *browser, int32_t clear_selection, char *error,
+    size_t error_len) {
+  if (browser == NULL ||
+      (clear_selection != 0 && clear_selection != 1)) {
+    proton_browser_set_message(
+        error, error_len,
+        "browser is required and clear_selection must be 0 or 1");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL || host->stop_finding == NULL) {
+    if (host != NULL) {
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    proton_browser_set_message(error, error_len,
+                               "browser find is unavailable");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  host->stop_finding(host, clear_selection);
+  host->base.release((cef_base_ref_counted_t *)host);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_session_find_request_id(
+    proton_browser_session_t *session, int32_t cef_identifier) {
+  if (session != NULL && session->active_find_request_id > 0) {
+    return session->active_find_request_id;
+  }
+  return cef_identifier;
+}
+
+void proton_browser_session_find_result(
+    proton_browser_session_t *session, int32_t cef_identifier,
+    int32_t count, int32_t x, int32_t y, int32_t width,
+    int32_t height, int32_t active_match_ordinal, int32_t final_update) {
+  if (session == NULL) {
+    return;
+  }
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_FIND_RESULT, session->window);
+  if (event != NULL) {
+    event->request_id =
+        proton_browser_session_find_request_id(session, cef_identifier);
+    event->int_a = count;
+    event->int_b = active_match_ordinal;
+    event->int_c = x;
+    event->int64_a = y;
+    event->int64_b = width;
+    event->revision = height;
+    event->bool_a = final_update != 0 ? 1 : 0;
+  }
+  (void)proton_browser_enqueue_event(session, event);
 }

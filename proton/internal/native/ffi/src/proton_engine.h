@@ -317,6 +317,13 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
 int32_t proton_engine_window_browser_command_json(
     proton_engine_window_t *window, const char *command_json,
     char *error, size_t error_len);
+int32_t proton_engine_window_find_in_page(
+    proton_engine_window_t *window, const char *text, int32_t forward,
+    int32_t match_case, int32_t find_next, int32_t *out_request_id,
+    char *error, size_t error_len);
+int32_t proton_engine_window_stop_find_in_page(
+    proton_engine_window_t *window, int32_t clear_selection, char *error,
+    size_t error_len);
 int32_t proton_engine_window_get_navigation_state(
     proton_engine_window_t *window, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len);
@@ -447,6 +454,13 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
                                                 const char *command_json,
                                                 char *error,
                                                 size_t error_len);
+int32_t proton_engine_view_find_in_page(
+    proton_engine_view_t *view, const char *text, int32_t forward,
+    int32_t match_case, int32_t find_next, int32_t *out_request_id,
+    char *error, size_t error_len);
+int32_t proton_engine_view_stop_find_in_page(
+    proton_engine_view_t *view, int32_t clear_selection, char *error,
+    size_t error_len);
 int32_t proton_engine_view_get_navigation_state(
     proton_engine_view_t *view, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len);
