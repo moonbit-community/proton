@@ -247,8 +247,8 @@ static proton_engine_client_t *proton_engine_view_client_create(
   client->view = view;
   // Views wire the life span, load, display, and render handlers: life span
   // drives the close state machine, load/display feed the view event stream,
-  // and the render handler gives headless (OSR) views a viewport. Navigation
-  // Find results are view-scoped. Navigation policy, bridge, downloads, and
+  // and the render handler gives headless (OSR) views a viewport. Find results
+  // are view-scoped. Navigation policy, bridge, downloads, and
   // permissions stay window-scoped for now.
   client->client.get_life_span_handler =
       proton_engine_client_get_life_span_handler;
