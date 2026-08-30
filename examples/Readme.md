@@ -123,6 +123,9 @@ moon -C examples run 01_run --target native
   Includes focus/fullscreen/shadow plus mouse ignoring, background color,
   kiosk, workspace visibility, enabled-state, content-size, menu, icon,
   parent/modal, and native button-visibility controls.
+- `70_find_in_page`: manual Electron-style page search review for both the main
+  browser and a web contents view, including direction, case matching, result
+  events, and stop behavior.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

@@ -365,6 +365,7 @@ async fn main {
           error=Some("load failed: " + error_text),
         )
       LoadingChanged(..) => ()
+      FoundInPage(..) => ()
       Closed => panel_slot.val = None
     }
   })
