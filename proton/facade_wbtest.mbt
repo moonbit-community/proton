@@ -89,6 +89,9 @@ fn test_window_handle(
   browser_find_calls? : Array[String],
   browser_download_calls? : Array[String],
   browser_print_calls? : Array[String],
+  browser_control_calls? : Array[String],
+  browser_focused? : Bool = false,
+  browser_devtools_opened? : Bool = false,
   window_state? : WindowState,
 ) -> WindowHandle {
   let browser = BrowserHandle::{
@@ -97,7 +100,18 @@ fn test_window_handle(
     load_browser_url: fn(_url) {  },
     load_browser_html: fn(_html, _base_url) {  },
     eval_browser_script: fn(_script) {  },
-    send_browser_command: fn(_command, _download_id) {  },
+    focus_browser: fn() {
+      match browser_control_calls {
+        Some(calls) => calls.push("focus")
+        None => ()
+      }
+    },
+    send_browser_command: fn(command, _download_id) {
+      match browser_control_calls {
+        Some(calls) => calls.push(command)
+        None => ()
+      }
+    },
     download_browser_url: fn(url) {
       match browser_download_calls {
         Some(calls) => calls.push(url)
@@ -144,6 +158,8 @@ fn test_window_handle(
     },
     read_browser_audio_muted: fn() { browser_audio_muted },
     read_browser_navigation_state: fn() { (true, false) },
+    read_browser_focused: fn() { browser_focused },
+    read_browser_devtools_opened: fn() { browser_devtools_opened },
     read_browser_state: fn() {
       {
         url: "https://example.test/",
@@ -2380,7 +2396,8 @@ fn test_view_handle(
     load_view_url: fn(url) { calls.push("load_url:\{url}") },
     load_view_html: fn(_html, _base_url) {  },
     eval_view_script: fn(_script) {  },
-    send_view_command: fn(_command, _download_id) {  },
+    focus_view: fn() { calls.push("focus") },
+    send_view_command: fn(command, _download_id) { calls.push(command) },
     find_view_in_page: fn(text, forward, match_case, find_next) {
       calls.push("find:\{text}:\{forward}:\{match_case}:\{find_next}")
       9
@@ -2389,6 +2406,8 @@ fn test_view_handle(
       calls.push("stop_find:\{clear_selection}")
     },
     read_view_navigation_state: fn() { (true, false) },
+    read_view_focused: fn() { true },
+    read_view_devtools_opened: fn() { false },
     read_view_state: fn() {
       { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1, }
     },
@@ -2416,6 +2435,12 @@ test "view handle routes operations through its closures" {
   view.stop_find_in_page(clear_selection=false)
   assert_true(view.can_go_back())
   assert_false(view.can_go_forward())
+  view.focus()
+  assert_true(view.is_focused())
+  view.open_devtools()
+  view.toggle_devtools()
+  view.close_devtools()
+  assert_false(view.is_devtools_opened())
   let state = view.state()
   inspect(state.width, content="300")
   inspect(state.z_order, content="1")
@@ -2432,6 +2457,10 @@ test "view handle routes operations through its closures" {
       #|  "load_url:https://example.com/",
       #|  "find:Proton:false:true:true",
       #|  "stop_find:false",
+      #|  "focus",
+      #|  "open_devtools",
+      #|  "toggle_devtools",
+      #|  "close_devtools",
       #|  "close",
       #|]
     ),
@@ -2447,6 +2476,29 @@ test "browser handle exposes the current page state" {
   assert_false(state.is_loading)
   assert_true(state.can_go_back)
   assert_false(state.can_go_forward)
+}
+
+///|
+test "browser handle routes focus and DevTools controls" {
+  let calls : Array[String] = []
+  let window = test_window_handle(
+    "main",
+    17L,
+    browser_control_calls=calls,
+    browser_focused=true,
+    browser_devtools_opened=true,
+  )
+  let browser = window.browser()
+  browser.focus()
+  assert_true(browser.is_focused())
+  browser.open_devtools()
+  browser.toggle_devtools()
+  browser.close_devtools()
+  assert_true(browser.is_devtools_opened())
+  debug_inspect(
+    calls,
+    content="[\"focus\", \"open_devtools\", \"toggle_devtools\", \"close_devtools\"]",
+  )
 }
 
 ///|

@@ -1904,6 +1904,48 @@ int32_t proton_window_browser_command_json(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+int32_t proton_window_get_browser_focus_state(
+    proton_window_handle_t window, int32_t *out_focused) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (out_focused == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "browser focus output is required");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser focus state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_browser_focus_state(
+      slot->engine_window, out_focused, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_get_devtools_state(
+    proton_window_handle_t window, int32_t *out_opened) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (out_opened == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "DevTools state output is required");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "DevTools state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_devtools_state(
+      slot->engine_window, out_opened, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_get_navigation_state(
     proton_window_handle_t window, int32_t *out_can_go_back,
     int32_t *out_can_go_forward) {
@@ -2979,6 +3021,48 @@ int32_t proton_view_browser_command_json(proton_view_handle_t view,
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_get_browser_focus_state(
+    proton_view_handle_t view, int32_t *out_focused) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) return status;
+  if (out_focused == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "browser focus output is required");
+  }
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser focus state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_get_browser_focus_state(
+      slot->engine_view, out_focused, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_get_devtools_state(
+    proton_view_handle_t view, int32_t *out_opened) {
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) return status;
+  if (out_opened == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "DevTools state output is required");
+  }
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "DevTools state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_get_devtools_state(
+      slot->engine_view, out_opened, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

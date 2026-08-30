@@ -34,6 +34,26 @@ static proton_engine_window_t *g_dock_progress_owner = NULL;
 static NSImageView *g_dock_progress_content = nil;
 static NSProgressIndicator *g_dock_progress_indicator = nil;
 
+int proton_engine_browser_view_is_focused(NSView *browser_view) {
+  if (![NSThread isMainThread]) {
+    __block int focused = 0;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+      focused = proton_engine_browser_view_is_focused(browser_view);
+    });
+    return focused;
+  }
+  if (browser_view == nil || browser_view.window == nil ||
+      !browser_view.window.isKeyWindow) {
+    return 0;
+  }
+  NSResponder *responder = browser_view.window.firstResponder;
+  if (responder == browser_view) {
+    return 1;
+  }
+  return [responder isKindOfClass:[NSView class]] &&
+         [(NSView *)responder isDescendantOf:browser_view];
+}
+
 static void proton_engine_apply_size_constraints(
     proton_engine_window_t *window) {
   if (window == NULL || window->window == nil) {
@@ -2180,6 +2200,39 @@ int32_t proton_engine_window_browser_command_json(
   return proton_browser_session_command_json(
       window->browser_session, window->browser, command_json, error,
       error_len);
+}
+
+int32_t proton_engine_window_get_browser_focus_state(
+    proton_engine_window_t *window, int32_t *out_focused,
+    char *error, size_t error_len) {
+  if (window == NULL || window->browser_session == NULL ||
+      window->browser == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (out_focused == NULL) {
+    proton_engine_set_message(error, error_len, "focus output is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    return proton_browser_headless_is_focused(
+        window->browser, out_focused, error, error_len);
+  }
+  *out_focused = proton_engine_browser_view_is_focused(window->browser_view);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_get_devtools_state(
+    proton_engine_window_t *window, int32_t *out_opened,
+    char *error, size_t error_len) {
+  if (window == NULL || window->browser == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_is_devtools_opened(
+      window->browser, out_opened, error, error_len);
 }
 
 int32_t proton_engine_window_get_navigation_state(

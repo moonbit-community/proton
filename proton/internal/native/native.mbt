@@ -2114,6 +2114,29 @@ pub fn Window::browser_command(
 }
 
 ///|
+/// Returns whether the main browser currently owns web-content focus.
+pub fn Window::browser_is_focused(self : Window) -> Bool raise NativeError {
+  let focused : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_get_browser_focus_state_ffi(
+      self.live_handle(),
+      focused,
+    ),
+  )
+  focused.val != 0
+}
+
+///|
+/// Returns whether the main browser currently has an associated DevTools view.
+pub fn Window::is_devtools_opened(self : Window) -> Bool raise NativeError {
+  let opened : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_get_devtools_state_ffi(self.live_handle(), opened),
+  )
+  opened.val != 0
+}
+
+///|
 pub fn Window::download_url(
   self : Window,
   url : String,
@@ -3065,7 +3088,8 @@ pub fn View::eval(self : View, script : String) -> Unit raise NativeError {
 
 ///|
 /// Sends a browser control command to the view: `back`, `forward`, `reload`,
-/// `reload_ignore_cache`, `stop`, `open_devtools`, or `close_devtools`.
+/// `reload_ignore_cache`, `stop`, `focus`, `open_devtools`, `close_devtools`,
+/// or `toggle_devtools`.
 pub fn View::browser_command(
   self : View,
   command : String,
@@ -3086,6 +3110,29 @@ pub fn View::browser_command(
       @ffi.to_cstr(Json::object(fields).stringify()),
     ),
   )
+}
+
+///|
+/// Returns whether this view currently owns web-content focus.
+pub fn View::browser_is_focused(self : View) -> Bool raise NativeError {
+  let focused : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_view_get_browser_focus_state_ffi(
+      self.live_handle(),
+      focused,
+    ),
+  )
+  focused.val != 0
+}
+
+///|
+/// Returns whether this view currently has an associated DevTools view.
+pub fn View::is_devtools_opened(self : View) -> Bool raise NativeError {
+  let opened : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_view_get_devtools_state_ffi(self.live_handle(), opened),
+  )
+  opened.val != 0
 }
 
 ///|

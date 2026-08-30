@@ -652,6 +652,45 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
                                              error, error_len);
 }
 
+int32_t proton_engine_view_get_browser_focus_state(
+    proton_engine_view_t *view, int32_t *out_focused,
+    char *error, size_t error_len) {
+  if (view == NULL || view->closed || view->browser_session == NULL ||
+      view->browser == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (out_focused == NULL) {
+    proton_engine_set_message(error, error_len, "focus output is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (view->window != NULL && view->window->headless) {
+    return proton_browser_headless_is_focused(
+        view->browser, out_focused, error, error_len);
+  }
+  if (view->display == NULL || view->xwindow == None) {
+    proton_engine_set_message(error, error_len,
+                              "browser window is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  *out_focused =
+      proton_engine_x11_window_is_focused(view->display, view->xwindow);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_view_get_devtools_state(
+    proton_engine_view_t *view, int32_t *out_opened,
+    char *error, size_t error_len) {
+  if (view == NULL || view->closed || view->browser == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_is_devtools_opened(
+      view->browser, out_opened, error, error_len);
+}
+
 int32_t proton_engine_view_get_navigation_state(
     proton_engine_view_t *view, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len) {

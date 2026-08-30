@@ -1,11 +1,22 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonbit-community/proton/examples/54_devtools"
 
+import {
+  "moonbitlang/core/json",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
+type ControlReply derive(ToJson, @json.FromJson)
+pub fn ControlReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ControlReply::to_json(Self) -> Json
+
+type ControlRequest derive(ToJson, @json.FromJson)
+pub fn ControlRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ControlRequest::to_json(Self) -> Json
 
 // Type aliases
 

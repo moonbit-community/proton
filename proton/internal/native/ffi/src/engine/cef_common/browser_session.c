@@ -999,8 +999,18 @@ int32_t proton_browser_session_command_json(
       return PROTON_ERR_STALE_BROWSER_REQUEST;
     }
     download->callback->cancel(download->callback);
+  } else if (strcmp(command, "focus") == 0) {
+    cef_browser_host_t *host = browser->get_host(browser);
+    if (host == NULL) {
+      proton_browser_set_message(error, error_len,
+                                 "browser host is unavailable");
+      return PROTON_ERR_ENGINE;
+    }
+    host->set_focus(host, 1);
+    host->base.release((cef_base_ref_counted_t *)host);
   } else if (strcmp(command, "open_devtools") == 0 ||
-             strcmp(command, "close_devtools") == 0) {
+             strcmp(command, "close_devtools") == 0 ||
+             strcmp(command, "toggle_devtools") == 0) {
     if (!session->policy.devtools) {
       proton_browser_set_message(error, error_len,
                                  "DevTools are disabled by browser policy");
@@ -1012,7 +1022,10 @@ int32_t proton_browser_session_command_json(
                                  "browser host is unavailable");
       return PROTON_ERR_ENGINE;
     }
-    if (strcmp(command, "close_devtools") == 0) {
+    int close_devtools = strcmp(command, "close_devtools") == 0 ||
+                         (strcmp(command, "toggle_devtools") == 0 &&
+                          host->has_dev_tools(host));
+    if (close_devtools) {
       host->close_dev_tools(host);
     } else {
       cef_window_info_t window_info = {0};
@@ -1041,6 +1054,46 @@ int32_t proton_browser_navigation_state(
   }
   *out_can_go_back = browser->can_go_back(browser) ? 1 : 0;
   *out_can_go_forward = browser->can_go_forward(browser) ? 1 : 0;
+  return PROTON_OK;
+}
+
+/* Frame focus identifies the active frame inside a browser, so it is only a
+   valid browser-level fallback when no native host window exists. */
+int32_t proton_browser_headless_is_focused(
+    cef_browser_t *browser, int32_t *out_focused, char *error,
+    size_t error_len) {
+  if (browser == NULL || out_focused == NULL) {
+    proton_browser_set_message(error, error_len,
+                               "browser and focus output are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_frame_t *frame = browser->get_main_frame(browser);
+  if (frame == NULL) {
+    proton_browser_set_message(error, error_len,
+                               "main frame is unavailable");
+    return PROTON_ERR_ENGINE;
+  }
+  *out_focused = frame->is_focused(frame) ? 1 : 0;
+  frame->base.release((cef_base_ref_counted_t *)frame);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_is_devtools_opened(
+    cef_browser_t *browser, int32_t *out_opened,
+    char *error, size_t error_len) {
+  if (browser == NULL || out_opened == NULL) {
+    proton_browser_set_message(error, error_len,
+                               "browser and DevTools output are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL) {
+    proton_browser_set_message(error, error_len,
+                               "browser host is unavailable");
+    return PROTON_ERR_ENGINE;
+  }
+  *out_opened = host->has_dev_tools(host) ? 1 : 0;
+  host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }
 

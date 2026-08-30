@@ -1,9 +1,13 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/core/json",
+  "moonbit-community/proton_contract",
   "moonbit-community/proton",
 }
 
 supported_targets = "native"
+
+warnings = "-unused_async"
 
 pkgtype(kind: "executable")
 

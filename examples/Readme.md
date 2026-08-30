@@ -86,8 +86,9 @@ moon -C examples run 01_run --target native
   sidebar in sync. The manual review tones verify main-browser and view mute.
 - `53_view_minimal`: the minimal declarative web contents view example:
   `with_view` plus `@proton.view`, no lifecycle hooks required.
-- `54_devtools`: opens CEF DevTools programmatically through
-  `BrowserHandle::open_devtools` and closes it with the window lifecycle.
+- `54_devtools`: manual Electron-style focus and DevTools review for both the
+  main browser and a web contents view, including open, close, toggle, and
+  synchronous state queries.
 - `55_desktop_showcase`: presentation-ready macOS desktop capability console
   combining native dialogs, clipboard access, notifications, and tray menus.
 - `56_i18n`: one explicit application locale observed through MoonBit command

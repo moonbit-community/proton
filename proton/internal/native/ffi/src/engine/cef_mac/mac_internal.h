@@ -298,6 +298,7 @@ void proton_engine_signal_wait_source(uint32_t ready_mask);
 void proton_engine_browser_signal(void *user_data);
 void proton_engine_browser_release(cef_browser_t *browser);
 void proton_engine_window_finalize_if_ready(proton_engine_window_t *window);
+int proton_engine_browser_view_is_focused(NSView *browser_view);
 proton_engine_view_t *proton_engine_view_from_native_id(uint64_t native_id);
 proton_engine_window_t *proton_engine_window_from_browser(
     cef_browser_t *browser);

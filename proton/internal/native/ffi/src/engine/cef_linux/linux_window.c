@@ -50,6 +50,55 @@
 #include <stdlib.h>
 #include <string.h>
 
+int proton_engine_x11_window_is_focused(Display *display,
+                                        Window browser_window) {
+  if (display == NULL || browser_window == None) {
+    return 0;
+  }
+  Window focused = None;
+  int revert_to = RevertToNone;
+  XGetInputFocus(display, &focused, &revert_to);
+  if (focused == None || focused == PointerRoot) {
+    return 0;
+  }
+
+  GdkDisplay *gdk_display = gdk_x11_lookup_xdisplay(display);
+  if (gdk_display != NULL) {
+    gdk_x11_display_error_trap_push(gdk_display);
+  }
+  int is_focused = 0;
+  Window current = focused;
+  while (current != None) {
+    if (current == browser_window) {
+      is_focused = 1;
+      break;
+    }
+    Window root = None;
+    Window parent = None;
+    Window *children = NULL;
+    unsigned int child_count = 0;
+    const int queried = XQueryTree(display, current, &root, &parent, &children,
+                                   &child_count);
+    if (children != NULL) {
+      XFree(children);
+    }
+    if (!queried) {
+      break;
+    }
+    if (parent == None || parent == current) {
+      break;
+    }
+    current = parent;
+  }
+  if (gdk_display != NULL) {
+    XSync(display, False);
+    if (gdk_x11_display_error_trap_pop(gdk_display) != 0) {
+      is_focused = 0;
+    }
+  }
+  return is_focused;
+}
+
 static void proton_engine_apply_size_constraints(
     proton_engine_window_t *window) {
   if (window == NULL || window->window == NULL || window->headless) {
@@ -1607,6 +1656,58 @@ int32_t proton_engine_window_browser_command_json(
   return proton_browser_session_command_json(
       window->browser_session, window->browser, command_json, error,
       error_len);
+}
+
+int32_t proton_engine_window_get_browser_focus_state(
+    proton_engine_window_t *window, int32_t *out_focused,
+    char *error, size_t error_len) {
+  if (window == NULL || window->browser_session == NULL ||
+      window->browser == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (out_focused == NULL) {
+    proton_engine_set_message(error, error_len, "focus output is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    return proton_browser_headless_is_focused(
+        window->browser, out_focused, error, error_len);
+  }
+  cef_browser_host_t *host = window->browser->get_host(window->browser);
+  if (host == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "browser host is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  const Window browser_window = (Window)host->get_window_handle(host);
+  host->base.release((cef_base_ref_counted_t *)host);
+  GdkWindow *host_window = window->browser_host == NULL
+                               ? NULL
+                               : gtk_widget_get_window(window->browser_host);
+  Display *display = host_window == NULL ? NULL
+                                         : GDK_WINDOW_XDISPLAY(host_window);
+  if (display == NULL || browser_window == None) {
+    proton_engine_set_message(error, error_len,
+                              "browser window is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  *out_focused =
+      proton_engine_x11_window_is_focused(display, browser_window);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_get_devtools_state(
+    proton_engine_window_t *window, int32_t *out_opened,
+    char *error, size_t error_len) {
+  if (window == NULL || window->browser == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_is_devtools_opened(
+      window->browser, out_opened, error, error_len);
 }
 
 int32_t proton_engine_window_get_navigation_state(
