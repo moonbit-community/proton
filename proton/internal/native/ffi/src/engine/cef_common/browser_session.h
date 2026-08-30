@@ -31,7 +31,6 @@ typedef struct proton_browser_session proton_browser_session_t;
 typedef struct proton_event proton_event_t;
 
 typedef void (*proton_browser_signal_fn)(void *user_data);
-
 proton_browser_session_t *proton_browser_session_create(
     const proton_browser_policy_t *policy, proton_browser_signal_fn signal,
     void *signal_user_data);
@@ -68,6 +67,12 @@ int32_t proton_browser_session_command_json(
 int32_t proton_browser_navigation_state(
     cef_browser_t *browser, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len);
+int32_t proton_browser_is_focused(
+    cef_browser_t *browser, int32_t *out_focused, char *error,
+    size_t error_len);
+int32_t proton_browser_is_devtools_opened(
+    cef_browser_t *browser, int32_t *out_opened,
+    char *error, size_t error_len);
 int32_t proton_browser_set_zoom_percent(
     cef_browser_t *browser, int32_t zoom_percent,
     char *error, size_t error_len);

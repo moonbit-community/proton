@@ -659,6 +659,20 @@ pub extern "C" fn proton_window_browser_command_json_ffi(
 ) -> Int = "proton_window_browser_command_json"
 
 ///|
+#borrow(out_focused)
+pub extern "C" fn proton_window_get_browser_focus_state_ffi(
+  window : WindowHandle,
+  out_focused : Ref[Int],
+) -> Int = "proton_window_get_browser_focus_state"
+
+///|
+#borrow(out_opened)
+pub extern "C" fn proton_window_get_devtools_state_ffi(
+  window : WindowHandle,
+  out_opened : Ref[Int],
+) -> Int = "proton_window_get_devtools_state"
+
+///|
 #borrow(url)
 pub extern "C" fn proton_window_download_url_ffi(
   window : WindowHandle,
@@ -973,6 +987,20 @@ pub extern "C" fn proton_view_browser_command_json_ffi(
   view : ViewHandle,
   command_json : Bytes,
 ) -> Int = "proton_view_browser_command_json"
+
+///|
+#borrow(out_focused)
+pub extern "C" fn proton_view_get_browser_focus_state_ffi(
+  view : ViewHandle,
+  out_focused : Ref[Int],
+) -> Int = "proton_view_get_browser_focus_state"
+
+///|
+#borrow(out_opened)
+pub extern "C" fn proton_view_get_devtools_state_ffi(
+  view : ViewHandle,
+  out_opened : Ref[Int],
+) -> Int = "proton_view_get_devtools_state"
 
 ///|
 #borrow(text, out_request_id)
