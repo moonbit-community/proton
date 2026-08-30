@@ -201,6 +201,21 @@ test "find rejects empty text before native dispatch" {
 }
 
 ///|
+test "programmatic download rejects an empty URL before native dispatch" {
+  let window = Window::{
+    handle: @native_ffi.window_null(),
+    id: 0L,
+    lifecycle: WindowLive,
+  }
+  let error = expect_native_error(() => window.download_url(""))
+  match error {
+    InvalidArgument(message~) =>
+      assert_eq(message, "download URL must not be empty")
+    _ => fail("expected invalid argument")
+  }
+}
+
+///|
 test "native ABI version and availability" {
   inspect(abi_version(), content="1")
 }

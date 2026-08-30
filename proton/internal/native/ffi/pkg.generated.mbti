@@ -149,6 +149,8 @@ pub fn proton_view_destroy_ffi(ViewHandle) -> Int
 
 pub fn proton_view_eval_ffi(ViewHandle, Bytes) -> Int
 
+pub fn proton_view_find_in_page_ffi(ViewHandle, Bytes, Int, Int, Int, @ref.Ref[Int]) -> Int
+
 pub fn proton_view_get_navigation_state_ffi(ViewHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
 pub fn proton_view_get_state_ffi(ViewHandle, FixedArray[Int], Int) -> Int
@@ -168,6 +170,8 @@ pub fn proton_view_set_visible_ffi(ViewHandle, Int) -> Int
 pub fn proton_view_set_z_order_ffi(ViewHandle, Int) -> Int
 
 pub fn proton_view_set_zoom_percent_ffi(ViewHandle, Int) -> Int
+
+pub fn proton_view_stop_find_in_page_ffi(ViewHandle, Int) -> Int
 
 pub fn proton_window_begin_choose_directory_dialog_ffi(WindowHandle, Bytes, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
 
@@ -199,9 +203,13 @@ pub fn proton_window_cookie_set_ffi(WindowHandle, Bytes, Bytes, Bytes, Bytes, By
 
 pub fn proton_window_destroy_ffi(WindowHandle) -> Int
 
+pub fn proton_window_download_url_ffi(WindowHandle, Bytes) -> Int
+
 pub fn proton_window_emit_bridge_event_json_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_eval_ffi(WindowHandle, Bytes) -> Int
+
+pub fn proton_window_find_in_page_ffi(WindowHandle, Bytes, Int, Int, Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_flash_frame_ffi(WindowHandle, Int) -> Int
 
@@ -302,6 +310,8 @@ pub fn proton_window_set_zoom_percent_ffi(WindowHandle, Int) -> Int
 pub fn proton_window_show_ffi(WindowHandle) -> Int
 
 pub fn proton_window_show_inactive_ffi(WindowHandle) -> Int
+
+pub fn proton_window_stop_find_in_page_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_take_bridge_failure_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 

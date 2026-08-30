@@ -1923,6 +1923,31 @@ int32_t proton_window_get_navigation_state(
   return PROTON_OK;
 }
 
+int32_t proton_window_download_url(
+    proton_window_handle_t window, const char *url) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (url == NULL || url[0] == '\0') {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "non-empty download URL is required");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "programmatic download requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_download_url(
+      slot->engine_window, url, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_find_in_page(
     proton_window_handle_t window, const char *text, int32_t forward,
     int32_t match_case, int32_t find_next, int32_t *out_request_id) {

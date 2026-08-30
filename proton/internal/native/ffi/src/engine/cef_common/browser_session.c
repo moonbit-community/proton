@@ -1011,6 +1011,35 @@ int32_t proton_browser_is_audio_muted(
   return PROTON_OK;
 }
 
+int32_t proton_browser_download_url(
+    cef_browser_t *browser, const char *url, char *error, size_t error_len) {
+  if (browser == NULL || url == NULL || url[0] == '\0') {
+    proton_browser_set_message(error, error_len,
+                               "browser and non-empty URL are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL || host->start_download == NULL) {
+    if (host != NULL) {
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    proton_browser_set_message(error, error_len,
+                               "programmatic download is unavailable");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  cef_string_t download_url = {0};
+  if (!cef_string_utf8_to_utf16(url, strlen(url), &download_url)) {
+    host->base.release((cef_base_ref_counted_t *)host);
+    proton_browser_set_message(error, error_len,
+                               "failed to encode download URL as UTF-16");
+    return PROTON_ERR_ENGINE;
+  }
+  host->start_download(host, &download_url);
+  cef_string_clear(&download_url);
+  host->base.release((cef_base_ref_counted_t *)host);
+  return PROTON_OK;
+}
+
 int32_t proton_browser_find_in_page(
     proton_browser_session_t *session, cef_browser_t *browser,
     const char *text, int32_t forward, int32_t match_case,

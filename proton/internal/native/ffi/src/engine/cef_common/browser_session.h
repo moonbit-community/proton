@@ -76,6 +76,8 @@ int32_t proton_browser_set_audio_muted(
 int32_t proton_browser_is_audio_muted(
     cef_browser_t *browser, int32_t *out_muted, char *error,
     size_t error_len);
+int32_t proton_browser_download_url(
+    cef_browser_t *browser, const char *url, char *error, size_t error_len);
 int32_t proton_browser_find_in_page(
     proton_browser_session_t *session, cef_browser_t *browser,
     const char *text, int32_t forward, int32_t match_case,

@@ -2108,6 +2108,22 @@ pub fn Window::browser_command(
 }
 
 ///|
+pub fn Window::download_url(
+  self : Window,
+  url : String,
+) -> Unit raise NativeError {
+  if url.is_empty() {
+    raise invalid_argument("download URL must not be empty")
+  }
+  check_status(
+    @native_ffi.proton_window_download_url_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(url),
+    ),
+  )
+}
+
+///|
 pub fn Window::find_in_page(
   self : Window,
   text : String,

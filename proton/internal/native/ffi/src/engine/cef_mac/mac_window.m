@@ -2193,6 +2193,16 @@ int32_t proton_engine_window_get_navigation_state(
       window->browser, out_can_go_back, out_can_go_forward, error, error_len);
 }
 
+int32_t proton_engine_window_download_url(
+    proton_engine_window_t *window, const char *url, char *error,
+    size_t error_len) {
+  if (window == NULL || window->browser == NULL) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_download_url(window->browser, url, error, error_len);
+}
+
 int32_t proton_engine_window_find_in_page(
     proton_engine_window_t *window, const char *text, int32_t forward,
     int32_t match_case, int32_t find_next, int32_t *out_request_id,
