@@ -169,6 +169,7 @@ enum RuntimeEvent {
   NotificationClicked(String?)
   BrowserRequest(Int64, NativeBrowserRequest)
   BrowserDownloadUpdated(Int64, NativeDownloadUpdate)
+  BrowserPdfPrinted(Int64, NativePdfPrintResult)
   BrowserEvent(Int64, NativeBrowserEvent)
   ViewEvent(Int64, Int64, NativeViewEvent)
   ResourceRequested(NativeResourceRequest)
@@ -207,6 +208,33 @@ pub extend NativeFindInPageResult with Eq::{not_equal, equal}
 
 ///|
 pub extend NativeFindInPageResult with Debug::{to_repr}
+
+///|
+pub(all) struct PdfPrintSettings {
+  landscape : Bool
+  print_background : Bool
+  scale : Double
+  paper_width : Double
+  paper_height : Double
+  prefer_css_page_size : Bool
+  margin_type : Int
+  margin_top : Double
+  margin_right : Double
+  margin_bottom : Double
+  margin_left : Double
+  page_ranges : String
+  display_header_footer : Bool
+  header_template : String
+  footer_template : String
+  generate_tagged_pdf : Bool
+  generate_document_outline : Bool
+} derive(Debug, Eq)
+
+///|
+pub extend PdfPrintSettings with Eq::{not_equal, equal}
+
+///|
+pub extend PdfPrintSettings with Debug::{to_repr}
 
 ///|
 enum NativeViewEvent {
@@ -301,6 +329,19 @@ pub extend NativeDownloadUpdate with Eq::{not_equal, equal}
 
 ///|
 pub extend NativeDownloadUpdate with Debug::{to_repr}
+
+///|
+pub(all) struct NativePdfPrintResult {
+  request_id : Int
+  path : String
+  success : Bool
+} derive(Debug, Eq)
+
+///|
+pub extend NativePdfPrintResult with Eq::{not_equal, equal}
+
+///|
+pub extend NativePdfPrintResult with Debug::{to_repr}
 
 ///|
 pub(all) struct BridgeLifecycleState {
@@ -715,6 +756,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     BrowserRequest(_, Certificate(..)) => "browser_certificate_error"
     BrowserRequest(_, Media(..)) => "browser_media_permission_requested"
     BrowserDownloadUpdated(_, _) => "browser_download_updated"
+    BrowserPdfPrinted(_, _) => "browser_pdf_print_finished"
     BrowserEvent(_, LoadingChanged(_)) => "browser_loading_changed"
     BrowserEvent(_, Navigated(_)) => "browser_navigated"
     BrowserEvent(_, TitleUpdated(_)) => "browser_title_updated"
@@ -749,6 +791,7 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BridgeLifecycleChanged(window, _)
     | BrowserRequest(window, _)
     | BrowserDownloadUpdated(window, _)
+    | BrowserPdfPrinted(window, _)
     | BrowserEvent(window, _)
     | ViewEvent(window, _, _) => Some(window)
     ResourceRequested(request) => Some(request.window)
@@ -962,6 +1005,16 @@ pub fn RuntimeEvent::browser_download_update(
 ) -> NativeDownloadUpdate? {
   match self {
     BrowserDownloadUpdated(_, update) => Some(update)
+    _ => None
+  }
+}
+
+///|
+pub fn RuntimeEvent::pdf_print_result(
+  self : RuntimeEvent,
+) -> NativePdfPrintResult? {
+  match self {
+    BrowserPdfPrinted(_, result) => Some(result)
     _ => None
   }
 }

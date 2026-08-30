@@ -1948,6 +1948,65 @@ int32_t proton_window_download_url(
   return PROTON_OK;
 }
 
+int32_t proton_window_print(proton_window_handle_t window) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "printing requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_print(
+      slot->engine_window, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_print_to_pdf(
+    proton_window_handle_t window, const char *path, int32_t landscape,
+    int32_t print_background, double scale, double paper_width,
+    double paper_height, int32_t prefer_css_page_size, int32_t margin_type,
+    double margin_top, double margin_right, double margin_bottom,
+    double margin_left, const char *page_ranges,
+    int32_t display_header_footer, const char *header_template,
+    const char *footer_template, int32_t generate_tagged_pdf,
+    int32_t generate_document_outline, int32_t *out_request_id) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (path == NULL || path[0] == '\0' || page_ranges == NULL ||
+      header_template == NULL || footer_template == NULL ||
+      out_request_id == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "PDF path, settings strings, and request output are required");
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "PDF printing requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_print_to_pdf(
+      slot->engine_window, path, landscape, print_background, scale,
+      paper_width, paper_height, prefer_css_page_size, margin_type,
+      margin_top, margin_right, margin_bottom, margin_left, page_ranges,
+      display_header_footer, header_template, footer_template,
+      generate_tagged_pdf, generate_document_outline, out_request_id,
+      engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_find_in_page(
     proton_window_handle_t window, const char *text, int32_t forward,
     int32_t match_case, int32_t find_next, int32_t *out_request_id) {

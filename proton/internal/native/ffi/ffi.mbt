@@ -666,6 +666,34 @@ pub extern "C" fn proton_window_download_url_ffi(
 ) -> Int = "proton_window_download_url"
 
 ///|
+pub extern "C" fn proton_window_print_ffi(window : WindowHandle) -> Int = "proton_window_print"
+
+///|
+#borrow(path, page_ranges, header_template, footer_template, out_request_id)
+pub extern "C" fn proton_window_print_to_pdf_ffi(
+  window : WindowHandle,
+  path : Bytes,
+  landscape : Int,
+  print_background : Int,
+  scale : Double,
+  paper_width : Double,
+  paper_height : Double,
+  prefer_css_page_size : Int,
+  margin_type : Int,
+  margin_top : Double,
+  margin_right : Double,
+  margin_bottom : Double,
+  margin_left : Double,
+  page_ranges : Bytes,
+  display_header_footer : Int,
+  header_template : Bytes,
+  footer_template : Bytes,
+  generate_tagged_pdf : Int,
+  generate_document_outline : Int,
+  out_request_id : Ref[Int],
+) -> Int = "proton_window_print_to_pdf"
+
+///|
 #borrow(text, out_request_id)
 pub extern "C" fn proton_window_find_in_page_ffi(
   window : WindowHandle,

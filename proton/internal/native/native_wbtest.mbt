@@ -184,6 +184,19 @@ test "find result events preserve targets and match details" {
 }
 
 ///|
+test "PDF print events preserve window and completion details" {
+  let result = NativePdfPrintResult::{
+    request_id: 5,
+    path: "/tmp/review.pdf",
+    success: true,
+  }
+  let event = RuntimeEvent::BrowserPdfPrinted(7L, result)
+  assert_eq(event.event_type(), "browser_pdf_print_finished")
+  assert_eq(event.window_id(), Some(7L))
+  assert_eq(event.pdf_print_result(), Some(result))
+}
+
+///|
 test "find rejects empty text before native dispatch" {
   let window = Window::{
     handle: @native_ffi.window_null(),
@@ -211,6 +224,55 @@ test "programmatic download rejects an empty URL before native dispatch" {
   match error {
     InvalidArgument(message~) =>
       assert_eq(message, "download URL must not be empty")
+    _ => fail("expected invalid argument")
+  }
+}
+
+///|
+fn default_pdf_settings() -> PdfPrintSettings {
+  {
+    landscape: false,
+    print_background: false,
+    scale: 1.0,
+    paper_width: 8.5,
+    paper_height: 11.0,
+    prefer_css_page_size: false,
+    margin_type: 0,
+    margin_top: 0.0,
+    margin_right: 0.0,
+    margin_bottom: 0.0,
+    margin_left: 0.0,
+    page_ranges: "",
+    display_header_footer: false,
+    header_template: "",
+    footer_template: "",
+    generate_tagged_pdf: false,
+    generate_document_outline: false,
+  }
+}
+
+///|
+test "PDF printing validates path and scale before native dispatch" {
+  let window = Window::{
+    handle: @native_ffi.window_null(),
+    id: 0L,
+    lifecycle: WindowLive,
+  }
+  let empty_path = expect_native_error(() => {
+    ignore(window.print_to_pdf("", default_pdf_settings()))
+  })
+  match empty_path {
+    InvalidArgument(message~) =>
+      assert_eq(message, "PDF output path must not be empty")
+    _ => fail("expected invalid argument")
+  }
+  let settings = default_pdf_settings()
+  let invalid_scale = expect_native_error(() => {
+    ignore(window.print_to_pdf("review.pdf", { ..settings, scale: 0.09, }))
+  })
+  match invalid_scale {
+    InvalidArgument(message~) =>
+      assert_eq(message, "PDF scale must be between 0.1 and 2")
     _ => fail("expected invalid argument")
   }
 }
