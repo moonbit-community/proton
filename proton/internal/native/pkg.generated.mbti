@@ -228,6 +228,17 @@ pub fn BrowserPolicyMode::equal(Self, Self) -> Bool
 pub fn BrowserPolicyMode::not_equal(Self, Self) -> Bool
 pub fn BrowserPolicyMode::to_repr(Self) -> @debug.Repr
 
+pub(all) struct BrowserState {
+  url : String
+  title : String
+  is_loading : Bool
+  can_go_back : Bool
+  can_go_forward : Bool
+} derive(Eq, @debug.Debug)
+pub fn BrowserState::equal(Self, Self) -> Bool
+pub fn BrowserState::not_equal(Self, Self) -> Bool
+pub fn BrowserState::to_repr(Self) -> @debug.Repr
+
 pub(all) enum CookieSameSite {
   Unspecified
   NoRestriction
@@ -261,7 +272,7 @@ pub fn MenuBar::not_equal(Self, Self) -> Bool
 pub fn MenuBar::to_repr(Self) -> @debug.Repr
 
 type MenuItem derive(Eq, @debug.Debug)
-pub fn MenuItem::command(String, String, key? : String) -> Self
+pub fn MenuItem::command(String, String, key? : String, enabled? : Bool, visible? : Bool, checked? : Bool) -> Self
 pub fn MenuItem::equal(Self, Self) -> Bool
 pub fn MenuItem::not_equal(Self, Self) -> Bool
 pub fn MenuItem::role(MenuItemRole, label? : String, key? : String) -> Self
@@ -299,6 +310,11 @@ pub(all) enum MenuRole {
 pub fn MenuRole::equal(Self, Self) -> Bool
 pub fn MenuRole::not_equal(Self, Self) -> Bool
 pub fn MenuRole::to_repr(Self) -> @debug.Repr
+
+type NativeBrowserEvent derive(Eq, @debug.Debug)
+pub fn NativeBrowserEvent::equal(Self, Self) -> Bool
+pub fn NativeBrowserEvent::not_equal(Self, Self) -> Bool
+pub fn NativeBrowserEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) enum NativeBrowserRequest {
   Navigation(request_id~ : Int64, url~ : String, http_method~ : String, user_gesture~ : Bool, redirect~ : Bool)
@@ -414,6 +430,7 @@ type RuntimeEvent derive(Eq, @debug.Debug)
 pub fn RuntimeEvent::bridge_request(Self) -> BridgeRequest?
 pub fn RuntimeEvent::bridge_request_cancellation(Self) -> Int64?
 pub fn RuntimeEvent::browser_download_update(Self) -> NativeDownloadUpdate?
+pub fn RuntimeEvent::browser_event(Self) -> ViewEventInfo?
 pub fn RuntimeEvent::browser_request(Self) -> NativeBrowserRequest?
 pub fn RuntimeEvent::cookie_get_completion(Self) -> NativeCookieGetCompletion?
 pub fn RuntimeEvent::dialog_completion(Self) -> NativeDialogCompletion?
@@ -512,8 +529,10 @@ pub fn View::browser_command(Self, String, download_id? : Int) -> Unit raise Nat
 pub fn View::destroy(Self) -> Unit raise NativeError
 pub fn View::eval(Self, String) -> Unit raise NativeError
 pub fn View::id(Self) -> Int64
+pub fn View::is_audio_muted(Self) -> Bool raise NativeError
 pub fn View::load_url(Self, String) -> Unit raise NativeError
 pub fn View::navigation_state(Self) -> (Bool, Bool) raise NativeError
+pub fn View::set_audio_muted(Self, Bool) -> Unit raise NativeError
 pub fn View::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise NativeError
 pub fn View::set_visible(Self, Bool) -> Unit raise NativeError
 pub fn View::set_z_order(Self, Int) -> Unit raise NativeError
@@ -555,6 +574,7 @@ pub fn Window::Window(Runtime, config? : WindowConfig) -> Self raise NativeError
 pub fn Window::as_ref(Self) -> WindowRef
 pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState raise NativeError
 pub fn Window::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
+pub fn Window::browser_state(Self) -> BrowserState raise NativeError
 pub fn Window::clear_cache(Self) -> Unit raise NativeError
 pub fn Window::close(Self) -> Unit raise NativeError
 pub fn Window::content_size(Self) -> (Int, Int) raise NativeError
@@ -569,6 +589,7 @@ pub fn Window::flash_frame(Self, Bool) -> Unit raise NativeError
 pub fn Window::focus(Self) -> Unit raise NativeError
 pub fn Window::hide(Self) -> Unit raise NativeError
 pub fn Window::id(Self) -> Int64
+pub fn Window::is_audio_muted(Self) -> Bool raise NativeError
 pub fn Window::load_url(Self, String) -> Unit raise NativeError
 pub fn Window::maximize(Self) -> Unit raise NativeError
 pub fn Window::minimize(Self) -> Unit raise NativeError
@@ -579,6 +600,7 @@ pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeErro
 pub fn Window::restore(Self) -> Unit raise NativeError
 pub fn Window::set_always_on_top(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_aspect_ratio(Self, Double) -> Unit raise NativeError
+pub fn Window::set_audio_muted(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_background_color(Self, String) -> Unit raise NativeError
 pub fn Window::set_button_visibility(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_closable(Self, Bool) -> Unit raise NativeError

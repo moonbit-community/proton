@@ -201,6 +201,7 @@ struct proton_engine_view {
   int32_t height;
   int32_t z_order;
   int32_t zoom_percent;
+  int audio_muted;
   int visible;
   uint64_t native_id;
   char *initial_url;

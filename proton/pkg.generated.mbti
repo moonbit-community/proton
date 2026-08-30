@@ -185,6 +185,7 @@ pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
 pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
+pub fn App::on_browser_event(Self, async (BrowserHandle, BrowserEvent) -> Unit noraise) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
 pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise) -> Self
@@ -238,6 +239,16 @@ pub fn BridgeDiagnostic::equal(Self, Self) -> Bool
 pub fn BridgeDiagnostic::not_equal(Self, Self) -> Bool
 pub fn BridgeDiagnostic::to_repr(Self) -> @debug.Repr
 
+pub(all) enum BrowserEvent {
+  LoadingChanged(is_loading~ : Bool)
+  Navigated(url~ : String)
+  TitleUpdated(title~ : String)
+  LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+} derive(Eq, @debug.Debug)
+pub fn BrowserEvent::equal(Self, Self) -> Bool
+pub fn BrowserEvent::not_equal(Self, Self) -> Bool
+pub fn BrowserEvent::to_repr(Self) -> @debug.Repr
+
 pub struct BrowserHandle {
   id : String
   native_id : Int64
@@ -247,7 +258,11 @@ pub struct BrowserHandle {
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_browser_zoom_percent : () -> Int raise WindowSessionError
+  set_browser_audio_muted : (Bool) -> Unit raise WindowSessionError
+  read_browser_audio_muted : () -> Bool raise WindowSessionError
   read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
+  read_browser_state : () -> BrowserState raise WindowSessionError
+  session_handle : SessionHandle
 }
 pub fn BrowserHandle::back(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::can_go_back(Self) -> Bool raise WindowSessionError
@@ -256,11 +271,15 @@ pub fn BrowserHandle::cancel_download(Self, Int) -> Unit raise WindowSessionErro
 pub fn BrowserHandle::close_devtools(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::eval(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::forward(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::is_audio_muted(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::load_html(Self, String, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::load_url(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::open_devtools(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
+pub fn BrowserHandle::session(Self) -> SessionHandle
+pub fn BrowserHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionError
 pub fn BrowserHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
+pub fn BrowserHandle::state(Self) -> BrowserState raise WindowSessionError
 pub fn BrowserHandle::stop(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::window_id(Self) -> String
 pub fn BrowserHandle::zoom_percent(Self) -> Int raise WindowSessionError
@@ -273,6 +292,17 @@ pub fn BrowserPermissionDecision::equal(Self, Self) -> Bool
 pub fn BrowserPermissionDecision::not_equal(Self, Self) -> Bool
 pub fn BrowserPermissionDecision::to_repr(Self) -> @debug.Repr
 
+pub(all) struct BrowserState {
+  url : String
+  title : String
+  is_loading : Bool
+  can_go_back : Bool
+  can_go_forward : Bool
+} derive(Eq, @debug.Debug)
+pub fn BrowserState::equal(Self, Self) -> Bool
+pub fn BrowserState::not_equal(Self, Self) -> Bool
+pub fn BrowserState::to_repr(Self) -> @debug.Repr
+
 pub(all) struct CertificateError {
   url : String
   error_code : Int
@@ -280,6 +310,30 @@ pub(all) struct CertificateError {
 pub fn CertificateError::equal(Self, Self) -> Bool
 pub fn CertificateError::not_equal(Self, Self) -> Bool
 pub fn CertificateError::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Cookie {
+  name : String
+  value : String
+  domain : String
+  path : String
+  secure : Bool
+  http_only : Bool
+  same_site : CookieSameSite
+  expiration_date : Double?
+} derive(Eq, @debug.Debug)
+pub fn Cookie::equal(Self, Self) -> Bool
+pub fn Cookie::not_equal(Self, Self) -> Bool
+pub fn Cookie::to_repr(Self) -> @debug.Repr
+
+pub(all) enum CookieSameSite {
+  Unspecified
+  NoRestriction
+  Lax
+  Strict
+} derive(Eq, @debug.Debug)
+pub fn CookieSameSite::equal(Self, Self) -> Bool
+pub fn CookieSameSite::not_equal(Self, Self) -> Bool
+pub fn CookieSameSite::to_repr(Self) -> @debug.Repr
 
 pub(all) enum DownloadDecision {
   Deny
@@ -347,8 +401,11 @@ pub struct MenuItem {
   key : String?
   role : MenuItemRole?
   submenu : Menu?
+  enabled : Bool
+  visible : Bool
+  checked : Bool?
 }
-pub fn MenuItem::command(String, String, key? : String) -> Self
+pub fn MenuItem::command(String, String, key? : String, enabled? : Bool, visible? : Bool, checked? : Bool) -> Self
 pub fn MenuItem::role(MenuItemRole, label? : String, key? : String) -> Self
 pub fn MenuItem::separator() -> Self
 pub fn MenuItem::submenu(String, items~ : Array[Self]) -> Self
@@ -468,6 +525,22 @@ pub fn ScreenInfo::equal(Self, Self) -> Bool
 pub fn ScreenInfo::not_equal(Self, Self) -> Bool
 pub fn ScreenInfo::to_repr(Self) -> @debug.Repr
 
+pub struct SessionHandle {
+  id : String
+  native_id : Int64
+  read_cookies : async (String?, Bool) -> Array[Cookie] raise WindowSessionError
+  write_cookie : (String, String, String, String?, String?, Bool, Bool, CookieSameSite) -> Unit raise WindowSessionError
+  remove_cookies : (String?, String?) -> Unit raise WindowSessionError
+  flush_cookie_store : () -> Unit raise WindowSessionError
+  clear_http_cache : () -> Unit raise WindowSessionError
+}
+pub fn SessionHandle::clear_cache(Self) -> Unit raise WindowSessionError
+pub fn SessionHandle::delete_cookies(Self, url? : String, name? : String) -> Unit raise WindowSessionError
+pub fn SessionHandle::flush_cookies(Self) -> Unit raise WindowSessionError
+pub async fn SessionHandle::get_cookies(Self, url? : String, include_http_only? : Bool) -> Array[Cookie] raise WindowSessionError
+pub fn SessionHandle::set_cookie(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : CookieSameSite) -> Unit raise WindowSessionError
+pub fn SessionHandle::window_id(Self) -> String
+
 pub(all) enum TitlebarStyle {
   Default
   Overlay
@@ -521,6 +594,8 @@ pub struct ViewHandle {
   set_view_z_order : (Int) -> Unit raise WindowSessionError
   set_view_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_view_zoom_percent : () -> Int raise WindowSessionError
+  set_view_audio_muted : (Bool) -> Unit raise WindowSessionError
+  read_view_audio_muted : () -> Bool raise WindowSessionError
   load_view_url : (String) -> Unit raise WindowSessionError
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
@@ -537,10 +612,12 @@ pub fn ViewHandle::close_devtools(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::eval(Self, String) -> Unit raise WindowSessionError
 pub fn ViewHandle::forward(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::id(Self) -> String
+pub fn ViewHandle::is_audio_muted(Self) -> Bool raise WindowSessionError
 pub fn ViewHandle::load_html(Self, String, String) -> Unit raise WindowSessionError
 pub fn ViewHandle::load_url(Self, String) -> Unit raise WindowSessionError
 pub fn ViewHandle::open_devtools(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
+pub fn ViewHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_visible(Self, Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_z_order(Self, Int) -> Unit raise WindowSessionError

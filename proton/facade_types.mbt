@@ -53,6 +53,9 @@ struct App {
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
+  browser_event_handlers : Array[
+    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  ]
   mut window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   mut navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
   mut popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
@@ -328,6 +331,9 @@ priv struct RuntimeSession {
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
+  browser_event_handlers : Array[
+    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  ]
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   window_tasks : @async.TaskGroup[Unit]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
@@ -374,7 +380,26 @@ priv struct DialogCompletionStore {
 priv struct RuntimeEventPump {
   runtime : @native.Runtime
   dialog_completions : DialogCompletionStore
+  cookie_completions : CookieCompletionStore
   session_events : Array[@native.RuntimeEvent]
+}
+
+///|
+priv enum CookieCompletionState {
+  CookieWaiting
+  CookieCompleted(Result[String, @native.NativeError])
+}
+
+///|
+priv struct PendingCookieCompletion {
+  request_id : Int64
+  mut state : CookieCompletionState
+  changed : @async.CondVar
+}
+
+///|
+priv struct CookieCompletionStore {
+  pending : Array[PendingCookieCompletion]
 }
 
 ///|
@@ -427,7 +452,33 @@ pub struct BrowserHandle {
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_browser_zoom_percent : () -> Int raise WindowSessionError
+  set_browser_audio_muted : (Bool) -> Unit raise WindowSessionError
+  read_browser_audio_muted : () -> Bool raise WindowSessionError
   read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
+  read_browser_state : () -> BrowserState raise WindowSessionError
+  session_handle : SessionHandle
+}
+
+///|
+/// A non-owning reference to the request context used by one window's main
+/// browser, corresponding to Electron's `webContents.session`.
+pub struct SessionHandle {
+  id : String
+  native_id : Int64
+  read_cookies : async (String?, Bool) -> Array[Cookie] raise WindowSessionError
+  write_cookie : (
+    String,
+    String,
+    String,
+    String?,
+    String?,
+    Bool,
+    Bool,
+    CookieSameSite,
+  ) -> Unit raise WindowSessionError
+  remove_cookies : (String?, String?) -> Unit raise WindowSessionError
+  flush_cookie_store : () -> Unit raise WindowSessionError
+  clear_http_cache : () -> Unit raise WindowSessionError
 }
 
 ///|
@@ -446,6 +497,8 @@ pub struct ViewHandle {
   set_view_z_order : (Int) -> Unit raise WindowSessionError
   set_view_zoom_percent : (Int) -> Unit raise WindowSessionError
   read_view_zoom_percent : () -> Int raise WindowSessionError
+  set_view_audio_muted : (Bool) -> Unit raise WindowSessionError
+  read_view_audio_muted : () -> Bool raise WindowSessionError
   load_view_url : (String) -> Unit raise WindowSessionError
   load_view_html : (String, String) -> Unit raise WindowSessionError
   eval_view_script : (String) -> Unit raise WindowSessionError
@@ -721,6 +774,21 @@ priv enum AppLifecycleState {
 }
 
 ///|
+/// An observed lifecycle change for a window's main browser page.
+pub(all) enum BrowserEvent {
+  LoadingChanged(is_loading~ : Bool)
+  Navigated(url~ : String)
+  TitleUpdated(title~ : String)
+  LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+} derive(Debug, Eq)
+
+///|
+pub extend BrowserEvent with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserEvent with Debug::{to_repr}
+
+///|
 priv enum BridgeRequestLifecycleState {
   Running = 0
   Responding = 1
@@ -733,6 +801,60 @@ priv enum BridgeRequestLifecycleState {
 priv struct AppLifecycle {
   mut state : AppLifecycleState
 }
+
+///|
+/// SameSite policy for a browser cookie.
+pub(all) enum CookieSameSite {
+  Unspecified
+  NoRestriction
+  Lax
+  Strict
+} derive(Debug, Eq)
+
+///|
+pub extend CookieSameSite with Eq::{not_equal, equal}
+
+///|
+pub extend CookieSameSite with Debug::{to_repr}
+
+///|
+/// One cookie returned by the browser session.
+pub(all) struct Cookie {
+  name : String
+  value : String
+  domain : String
+  path : String
+  secure : Bool
+  http_only : Bool
+  same_site : CookieSameSite
+  expiration_date : Double?
+} derive(Debug, Eq)
+
+///|
+pub extend Cookie with Eq::{not_equal, equal}
+
+///|
+pub extend Cookie with Debug::{to_repr}
+
+///|
+priv struct NativeCookieRecord {
+  name : String
+  value : String
+  domain : String
+  path : String
+  secure : Bool
+  http_only : Bool
+  same_site : String
+  has_expires : Bool
+  expires : Double?
+  creation : Double
+  last_access : Double
+} derive(FromJson)
+
+///|
+priv suberror CookieDecodeError {
+  CookieDecodeError(String)
+} derive(Debug)
 
 ///|
 /// Failures while resolving and validating an application's configuration.

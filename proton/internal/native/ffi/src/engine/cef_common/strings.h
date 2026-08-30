@@ -29,6 +29,10 @@ static char *proton_engine_userfree_to_utf8(cef_string_userfree_t value) {
   if (value == NULL) {
     return NULL;
   }
+  if (value->str == NULL || value->length == 0) {
+    cef_string_userfree_free(value);
+    return proton_engine_strdup("");
+  }
   cef_string_utf8_t utf8 = {0};
   char *copy = NULL;
   if (cef_string_to_utf8(value->str, value->length, &utf8) != 0 &&
@@ -43,6 +47,9 @@ static char *proton_engine_userfree_to_utf8(cef_string_userfree_t value) {
 static char *proton_engine_cef_string_to_utf8(const cef_string_t *value) {
   if (value == NULL) {
     return NULL;
+  }
+  if (value->str == NULL || value->length == 0) {
+    return proton_engine_strdup("");
   }
   cef_string_utf8_t utf8 = {0};
   char *copy = NULL;

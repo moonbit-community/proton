@@ -105,6 +105,33 @@ fn WindowState::from_native(state : @native.WindowState) -> WindowState {
 }
 
 ///|
+/// A point-in-time snapshot of a window's main browser page.
+pub(all) struct BrowserState {
+  url : String
+  title : String
+  is_loading : Bool
+  can_go_back : Bool
+  can_go_forward : Bool
+} derive(Debug, Eq)
+
+///|
+pub extend BrowserState with Eq::{not_equal, equal}
+
+///|
+pub extend BrowserState with Debug::{to_repr}
+
+///|
+fn BrowserState::from_native(state : @native.BrowserState) -> BrowserState {
+  {
+    url: state.url,
+    title: state.title,
+    is_loading: state.is_loading,
+    can_go_back: state.can_go_back,
+    can_go_forward: state.can_go_forward,
+  }
+}
+
+///|
 /// Information about one connected display.
 pub(all) struct ScreenInfo {
   id : Int
@@ -324,13 +351,22 @@ pub struct MenuItem {
   key : String?
   role : MenuItemRole?
   submenu : Menu?
+  enabled : Bool
+  visible : Bool
+  checked : Bool?
 }
 
 ///|
+/// Creates a command item. `enabled` and `visible` control native
+/// presentation. Passing `checked` creates a checkbox command item; omitting it
+/// creates a normal command item.
 pub fn MenuItem::command(
   id : String,
   label : String,
   key? : String,
+  enabled? : Bool = true,
+  visible? : Bool = true,
+  checked? : Bool,
 ) -> MenuItem {
   {
     kind: menu_item_command,
@@ -339,6 +375,9 @@ pub fn MenuItem::command(
     key,
     role: None,
     submenu: None,
+    enabled,
+    visible,
+    checked,
   }
 }
 
@@ -351,6 +390,9 @@ pub fn MenuItem::separator() -> MenuItem {
     key: None,
     role: None,
     submenu: None,
+    enabled: true,
+    visible: true,
+    checked: None,
   }
 }
 
@@ -367,6 +409,9 @@ pub fn MenuItem::role(
     key,
     role: Some(role),
     submenu: None,
+    enabled: true,
+    visible: true,
+    checked: None,
   }
 }
 
@@ -380,6 +425,9 @@ pub fn MenuItem::submenu(label : String, items~ : Array[MenuItem]) -> MenuItem {
     key: None,
     role: None,
     submenu: Some({ label: Some(label), role: None, items: Some(items.copy()), }),
+    enabled: true,
+    visible: true,
+    checked: None,
   }
 }
 
@@ -391,6 +439,9 @@ fn MenuItem::to_native(self : MenuItem) -> @native.MenuItem {
         self.id.unwrap_or(""),
         self.label.unwrap_or(""),
         key?=self.key,
+        enabled=self.enabled,
+        visible=self.visible,
+        checked?=self.checked,
       )
     1 => @native.MenuItem::separator()
     3 => {

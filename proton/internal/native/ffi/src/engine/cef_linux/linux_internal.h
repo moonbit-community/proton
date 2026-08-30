@@ -141,6 +141,8 @@ cef_life_span_handler_t *CEF_CALLBACK
 proton_engine_client_get_life_span_handler(cef_client_t *self);
 cef_load_handler_t *CEF_CALLBACK
 proton_engine_client_get_load_handler(cef_client_t *self);
+cef_display_handler_t *CEF_CALLBACK
+proton_engine_client_get_display_handler(cef_client_t *self);
 cef_render_handler_t *CEF_CALLBACK
 proton_engine_client_get_render_handler(cef_client_t *self);
 
@@ -186,6 +188,7 @@ struct proton_engine_view {
   int32_t height;
   int32_t z_order;
   int32_t zoom_percent;
+  int audio_muted;
   int visible;
   uint64_t native_id;
   char initial_url[PROTON_ENGINE_MAX_URL_BYTES];

@@ -19,6 +19,9 @@ fn RuntimeSession::RuntimeSession(
   last_window_closed_policy : LastWindowClosedPolicy,
   window_tasks : @async.TaskGroup[Unit],
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise],
+  browser_event_handlers : Array[
+    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  ],
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?,
   window_lifecycle_hooks : Array[WindowLifecycleHook],
   lifecycle_failures : Array[AppCleanupError],
@@ -49,6 +52,7 @@ fn RuntimeSession::RuntimeSession(
     launch_input_handlers,
     window_event_handlers,
     view_event_handlers,
+    browser_event_handlers,
     window_close_handler,
     window_tasks,
     window_lifecycle_hooks,
@@ -428,6 +432,28 @@ fn RuntimeSession::view_handle(
           )
       }
     },
+    set_view_audio_muted: muted => {
+      self.control_view(
+        window_id,
+        window_native_id,
+        id,
+        native_id,
+        "set audio mute of",
+        view => view.set_audio_muted(muted),
+      )
+    },
+    read_view_audio_muted: () => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      running.view.is_audio_muted() catch {
+        error =>
+          raise window_operation_failed(
+            "read audio mute of view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
     load_view_url: url => {
       self.control_view(
         window_id,
@@ -660,6 +686,7 @@ fn RuntimeSession::browser_handle(
 ) -> BrowserHandle {
   let id = window.id
   let native_id = window.window.id()
+  let session_handle = self.session_handle(window)
   BrowserHandle::{
     id,
     native_id,
@@ -699,6 +726,24 @@ fn RuntimeSession::browser_handle(
           )
       }
     },
+    set_browser_audio_muted: muted => {
+      self.control_window(id, native_id, "set browser audio mute", window => {
+        window.set_audio_muted(muted)
+      })
+    },
+    read_browser_audio_muted: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      running.window.is_audio_muted() catch {
+        error =>
+          raise window_operation_failed(
+            "read browser audio mute in window " + id,
+            error,
+          )
+      }
+    },
     read_browser_navigation_state: () => {
       let running = match self.find_active_window(id) {
         Some(running) if running.window.id() == native_id => running
@@ -711,6 +756,81 @@ fn RuntimeSession::browser_handle(
             error,
           )
       }
+    },
+    read_browser_state: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      BrowserState::from_native(running.window.browser_state()) catch {
+        error =>
+          raise window_operation_failed(
+            "read browser state in window " + id,
+            error,
+          )
+      }
+    },
+    session_handle,
+  }
+}
+
+///|
+fn RuntimeSession::session_handle(
+  self : RuntimeSession,
+  window : RunningWindow,
+) -> SessionHandle {
+  let id = window.id
+  let native_id = window.window.id()
+  SessionHandle::{
+    id,
+    native_id,
+    read_cookies: (url, include_http_only) => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      let request_id = running.window.cookie_begin_get(url, include_http_only) catch {
+        error =>
+          raise window_operation_failed("read cookies in window " + id, error)
+      }
+      let payload = self.event_pump.cookie_completions.wait(request_id)
+      decode_cookies(payload) catch {
+        CookieDecodeError(detail) =>
+          raise OperationFailed(
+            action="decode cookies in window " + id,
+            status=-1,
+            detail~,
+          )
+      }
+    },
+    write_cookie: (url, name, value, domain, path, secure, http_only, same_site) => {
+      self.control_window(id, native_id, "set cookie in", window => {
+        window.cookie_set(
+          url,
+          name,
+          value,
+          domain?,
+          path?,
+          secure~,
+          http_only~,
+          same_site=same_site.to_native(),
+        )
+      })
+    },
+    remove_cookies: (url, name) => {
+      self.control_window(id, native_id, "delete cookies in", window => {
+        window.cookie_delete(url, name)
+      })
+    },
+    flush_cookie_store: () => {
+      self.control_window(id, native_id, "flush cookies in", window => {
+        window.cookie_flush()
+      })
+    },
+    clear_http_cache: () => {
+      self.control_window(id, native_id, "clear cache in", window => {
+        window.clear_cache()
+      })
     },
   }
 }
@@ -1913,6 +2033,23 @@ pub fn ViewHandle::zoom_percent(
 }
 
 ///|
+/// Mutes or unmutes audio produced by this view's page.
+pub fn ViewHandle::set_audio_muted(
+  self : ViewHandle,
+  muted : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_view_audio_muted)(muted)
+}
+
+///|
+/// Returns whether audio produced by this view's page is muted.
+pub fn ViewHandle::is_audio_muted(
+  self : ViewHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_view_audio_muted)()
+}
+
+///|
 /// Navigates the view's page, the Electron `view.webContents.loadURL`
 /// equivalent.
 pub fn ViewHandle::load_url(
@@ -2078,6 +2215,23 @@ pub fn BrowserHandle::zoom_percent(
 }
 
 ///|
+/// Mutes or unmutes audio produced by the main browser page.
+pub fn BrowserHandle::set_audio_muted(
+  self : BrowserHandle,
+  muted : Bool,
+) -> Unit raise WindowSessionError {
+  (self.set_browser_audio_muted)(muted)
+}
+
+///|
+/// Returns whether audio produced by the main browser page is muted.
+pub fn BrowserHandle::is_audio_muted(
+  self : BrowserHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_browser_audio_muted)()
+}
+
+///|
 /// Returns whether the main browser can navigate to a previous history entry.
 pub fn BrowserHandle::can_go_back(
   self : BrowserHandle,
@@ -2091,6 +2245,20 @@ pub fn BrowserHandle::can_go_forward(
   self : BrowserHandle,
 ) -> Bool raise WindowSessionError {
   (self.read_browser_navigation_state)().1
+}
+
+///|
+/// Reads the current main browser page state.
+pub fn BrowserHandle::state(
+  self : BrowserHandle,
+) -> BrowserState raise WindowSessionError {
+  (self.read_browser_state)()
+}
+
+///|
+/// Returns the browser session used by this main page.
+pub fn BrowserHandle::session(self : BrowserHandle) -> SessionHandle {
+  self.session_handle
 }
 
 ///|
@@ -2459,16 +2627,17 @@ fn RuntimeSession::dispatch_view_event(
       let handle = self.view_handle(running, view)
       let view_event = match event.event_type() {
         "view_loading_changed" =>
-          LoadingChanged(is_loading=info.is_loading.unwrap_or(false))
-        "view_navigated" => Navigated(url=info.url.unwrap_or(""))
-        "view_title_updated" => TitleUpdated(title=info.title.unwrap_or(""))
+          ViewEvent::LoadingChanged(is_loading=info.is_loading.unwrap_or(false))
+        "view_navigated" => ViewEvent::Navigated(url=info.url.unwrap_or(""))
+        "view_title_updated" =>
+          ViewEvent::TitleUpdated(title=info.title.unwrap_or(""))
         "view_load_failed" =>
-          LoadFailed(
+          ViewEvent::LoadFailed(
             url=info.url.unwrap_or(""),
             error_code=info.error_code.unwrap_or(0),
             error_text=info.error_text.unwrap_or(""),
           )
-        "view_closed" => Closed
+        "view_closed" => ViewEvent::Closed
         _ => return
       }
       if closes_view {
@@ -2499,6 +2668,41 @@ fn RuntimeSession::dispatch_browser_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
 ) -> Unit {
+  match (event.window_id(), event.browser_event()) {
+    (Some(window_id), Some(info)) =>
+      match self.find_window_by_native_id(window_id) {
+        Some(window) => {
+          let browser = self.browser_handle(window)
+          let observed = match event.event_type() {
+            "browser_loading_changed" =>
+              BrowserEvent::LoadingChanged(
+                is_loading=info.is_loading.unwrap_or(false),
+              )
+            "browser_navigated" =>
+              BrowserEvent::Navigated(url=info.url.unwrap_or(""))
+            "browser_title_updated" =>
+              BrowserEvent::TitleUpdated(title=info.title.unwrap_or(""))
+            "browser_load_failed" =>
+              BrowserEvent::LoadFailed(
+                url=info.url.unwrap_or(""),
+                error_code=info.error_code.unwrap_or(0),
+                error_text=info.error_text.unwrap_or(""),
+              )
+            _ => return
+          }
+          for handler in self.browser_event_handlers {
+            ignore(
+              self.window_tasks.spawn(
+                () => handler(browser, observed),
+                no_wait=true,
+              ),
+            )
+          }
+        }
+        None => ()
+      }
+    _ => ()
+  }
   match event.browser_request() {
     Some(request) => self.start_browser_request(event.window_id(), request)
     None => ()

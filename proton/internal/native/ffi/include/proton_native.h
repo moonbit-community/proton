@@ -214,6 +214,10 @@ int32_t proton_window_set_enabled(proton_window_handle_t window,
                                   int32_t enabled);
 int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
                                                   int32_t zoom_percent);
+int32_t proton_window_set_audio_muted(proton_window_handle_t window,
+                                      int32_t muted);
+int32_t proton_window_is_audio_muted(proton_window_handle_t window,
+                                     int32_t *out_muted);
 /* Matches Electron's progress value semantics: negative clears the indicator,
    [0, 1] is determinate, and values above 1 are indeterminate. */
 int32_t proton_window_set_progress_bar(proton_window_handle_t window,
@@ -239,6 +243,14 @@ int32_t proton_window_browser_command_json(
 int32_t proton_window_get_navigation_state(
     proton_window_handle_t window, int32_t *out_can_go_back,
     int32_t *out_can_go_forward);
+int32_t proton_window_get_browser_url(
+    proton_window_handle_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len);
+int32_t proton_window_get_browser_title(
+    proton_window_handle_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len);
+int32_t proton_window_get_browser_loading(
+    proton_window_handle_t window, int32_t *out_is_loading);
 int32_t proton_window_respond_browser_request_json(
     proton_window_handle_t window, const char *response_json);
 int32_t proton_window_emit_bridge_event_json(
@@ -395,6 +407,10 @@ int32_t proton_view_set_zoom_percent(proton_view_handle_t view,
                                      int32_t zoom_percent);
 int32_t proton_view_get_zoom_percent(proton_view_handle_t view,
                                      int32_t *out_zoom_percent);
+int32_t proton_view_set_audio_muted(proton_view_handle_t view,
+                                    int32_t muted);
+int32_t proton_view_is_audio_muted(proton_view_handle_t view,
+                                   int32_t *out_muted);
 int32_t proton_view_load_url(proton_view_handle_t view,
                                         const char *url);
 int32_t proton_view_eval(proton_view_handle_t view, const char *script);

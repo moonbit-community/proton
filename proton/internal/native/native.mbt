@@ -722,6 +722,26 @@ fn append_menu_config_items(
           runtime_config_string(item.label),
           runtime_config_string(item.key),
           runtime_config_string(menu_item_role_name(item.role)),
+          if item.enabled {
+            1
+          } else {
+            0
+          },
+          if item.visible {
+            1
+          } else {
+            0
+          },
+          if item.checked is Some(_) {
+            1
+          } else {
+            0
+          },
+          if item.checked.unwrap_or(false) {
+            1
+          } else {
+            0
+          },
         )
         if add_status < 0 {
           return add_status
@@ -1033,6 +1053,27 @@ fn decode_native_runtime_event(
       )
     28 => QuitRequested
     29 => ViewEvent(window, @native_ffi.event_int64(event, 1), Closed)
+    30 =>
+      BrowserEvent(window, LoadingChanged(@native_ffi.event_int(event, 3) != 0))
+    31 =>
+      BrowserEvent(
+        window,
+        Navigated(require_native_event_text(event, 0, "browser navigation")),
+      )
+    32 =>
+      BrowserEvent(
+        window,
+        TitleUpdated(require_native_event_text(event, 0, "browser title")),
+      )
+    33 =>
+      BrowserEvent(
+        window,
+        LoadFailed(
+          require_native_event_text(event, 0, "browser load URL"),
+          @native_ffi.event_int(event, 0),
+          require_native_event_text(event, 1, "browser load error"),
+        ),
+      )
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -1836,6 +1877,32 @@ pub fn Window::set_zoom_percent(
 }
 
 ///|
+pub fn Window::set_audio_muted(
+  self : Window,
+  muted : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_audio_muted_ffi(
+      self.live_handle(),
+      if muted {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn Window::is_audio_muted(self : Window) -> Bool raise NativeError {
+  let muted : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_is_audio_muted_ffi(self.live_handle(), muted),
+  )
+  muted.val != 0
+}
+
+///|
 /// Sets the platform progress indicator for this window.
 ///
 /// A negative value clears the indicator, values from `0.0` through `1.0`
@@ -1899,6 +1966,32 @@ pub fn Window::navigation_state(
     ),
   )
   (can_go_back.val != 0, can_go_forward.val != 0)
+}
+
+///|
+/// Reads the current main browser page state.
+pub fn Window::browser_state(self : Window) -> BrowserState raise NativeError {
+  let handle = self.live_handle()
+  let url = require_native_text("browser URL", (buffer, buffer_len, required) => {
+    @native_ffi.proton_window_get_browser_url_ffi(
+      handle, buffer, buffer_len, required,
+    )
+  })
+  let title = require_native_text("browser title", (
+    buffer,
+    buffer_len,
+    required,
+  ) => {
+    @native_ffi.proton_window_get_browser_title_ffi(
+      handle, buffer, buffer_len, required,
+    )
+  })
+  let is_loading : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_window_get_browser_loading_ffi(handle, is_loading),
+  )
+  let (can_go_back, can_go_forward) = self.navigation_state()
+  { url, title, is_loading: is_loading.val != 0, can_go_back, can_go_forward, }
 }
 
 ///|
@@ -2703,6 +2796,32 @@ pub fn View::zoom_percent(self : View) -> Int raise NativeError {
     ),
   )
   zoom_percent.val
+}
+
+///|
+pub fn View::set_audio_muted(
+  self : View,
+  muted : Bool,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_view_set_audio_muted_ffi(
+      self.live_handle(),
+      if muted {
+        1
+      } else {
+        0
+      },
+    ),
+  )
+}
+
+///|
+pub fn View::is_audio_muted(self : View) -> Bool raise NativeError {
+  let muted : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_view_is_audio_muted_ffi(self.live_handle(), muted),
+  )
+  muted.val != 0
 }
 
 ///|

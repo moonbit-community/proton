@@ -85,6 +85,7 @@ struct proton_view_slot {
   int32_t height;
   int32_t z_order;
   int32_t zoom_percent;
+  bool audio_muted;
   bool visible;
   proton_view_slot_t *next;
 };

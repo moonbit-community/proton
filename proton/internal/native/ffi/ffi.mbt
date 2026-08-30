@@ -209,6 +209,10 @@ pub extern "C" fn menu_config_add_item(
   label : Bytes,
   key : Bytes,
   role : Bytes,
+  enabled : Int,
+  visible : Int,
+  checkable : Int,
+  checked : Int,
 ) -> Int = "proton_internal_menu_config_add_item"
 
 ///|
@@ -623,6 +627,19 @@ pub extern "C" fn proton_window_set_zoom_percent_ffi(
 ) -> Int = "proton_window_set_zoom_percent"
 
 ///|
+pub extern "C" fn proton_window_set_audio_muted_ffi(
+  window : WindowHandle,
+  muted : Int,
+) -> Int = "proton_window_set_audio_muted"
+
+///|
+#borrow(out_muted)
+pub extern "C" fn proton_window_is_audio_muted_ffi(
+  window : WindowHandle,
+  out_muted : Ref[Int],
+) -> Int = "proton_window_is_audio_muted"
+
+///|
 pub extern "C" fn proton_window_set_progress_bar_ffi(
   window : WindowHandle,
   progress : Double,
@@ -648,6 +665,31 @@ pub extern "C" fn proton_window_get_navigation_state_ffi(
   out_can_go_back : Ref[Int],
   out_can_go_forward : Ref[Int],
 ) -> Int = "proton_window_get_navigation_state"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_window_get_browser_url_ffi(
+  window : WindowHandle,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_get_browser_url"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_window_get_browser_title_ffi(
+  window : WindowHandle,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_get_browser_title"
+
+///|
+#borrow(out_is_loading)
+pub extern "C" fn proton_window_get_browser_loading_ffi(
+  window : WindowHandle,
+  out_is_loading : Ref[Int],
+) -> Int = "proton_window_get_browser_loading"
 
 ///|
 #borrow(response_json)
@@ -837,6 +879,19 @@ pub extern "C" fn proton_view_get_zoom_percent_ffi(
   view : ViewHandle,
   out_zoom_percent : Ref[Int],
 ) -> Int = "proton_view_get_zoom_percent"
+
+///|
+pub extern "C" fn proton_view_set_audio_muted_ffi(
+  view : ViewHandle,
+  muted : Int,
+) -> Int = "proton_view_set_audio_muted"
+
+///|
+#borrow(out_muted)
+pub extern "C" fn proton_view_is_audio_muted_ffi(
+  view : ViewHandle,
+  out_muted : Ref[Int],
+) -> Int = "proton_view_is_audio_muted"
 
 ///|
 #borrow(url)

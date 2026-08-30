@@ -84,6 +84,8 @@ fn test_window_handle(
   maximum_size_calls? : Array[(Int, Int)],
   content_size_calls? : Array[(Int, Int)],
   content_size? : (Int, Int),
+  browser_audio_calls? : Array[Bool],
+  browser_audio_muted? : Bool = false,
   window_state? : WindowState,
 ) -> WindowHandle {
   let browser = BrowserHandle::{
@@ -95,7 +97,43 @@ fn test_window_handle(
     send_browser_command: fn(_command, _download_id) {  },
     set_browser_zoom_percent: fn(_zoom_percent) {  },
     read_browser_zoom_percent: fn() { 100 },
+    set_browser_audio_muted: muted => {
+      match browser_audio_calls {
+        Some(calls) => calls.push(muted)
+        None => ()
+      }
+    },
+    read_browser_audio_muted: fn() { browser_audio_muted },
     read_browser_navigation_state: fn() { (true, false) },
+    read_browser_state: fn() {
+      {
+        url: "https://example.test/",
+        title: "Example",
+        is_loading: false,
+        can_go_back: true,
+        can_go_forward: false,
+      }
+    },
+    session_handle: SessionHandle::{
+      id,
+      native_id,
+      read_cookies: (_url, _include_http_only) => [],
+      write_cookie: fn(
+        _url,
+        _name,
+        _value,
+        _domain,
+        _path,
+        _secure,
+        _http_only,
+        _same_site,
+      ) {
+
+      },
+      remove_cookies: fn(_url, _name) {  },
+      flush_cookie_store: fn() {  },
+      clear_http_cache: fn() {  },
+    },
   }
   WindowHandle::{
     id,
@@ -1787,6 +1825,40 @@ async test "dialog completion propagates native failure" {
 }
 
 ///|
+async test "cookie completion wakes only its registered waiter" {
+  let completions = CookieCompletionStore()
+  assert_false(completions.route_completion(None))
+  @async.with_task_group(group => {
+    let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
+    while completions.pending.is_empty() {
+      @async.pause()
+    }
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeCookieGetCompletion::{
+          request_id: 42L,
+          window: 7L,
+          result: Ok("[]"),
+        }),
+      ),
+    )
+    assert_true(waiting.try_wait() is None)
+    assert_true(
+      completions.route_completion(
+        Some(@native.NativeCookieGetCompletion::{
+          request_id: 41L,
+          window: 7L,
+          result: Ok("[{\"name\":\"selected\"}]"),
+        }),
+      ),
+    )
+    assert_eq(waiting.wait(), "[{\"name\":\"selected\"}]")
+    group.return_immediately(())
+  })
+  assert_true(completions.pending.is_empty())
+}
+
+///|
 async test "application lifecycle startup rolls back completed hooks" {
   let calls : Array[String] = []
   let cleanup_failures : Array[AppCleanupError] = []
@@ -2264,6 +2336,8 @@ fn test_view_handle(
       calls.push("set_zoom_percent:\{zoom_percent}")
     },
     read_view_zoom_percent: fn() { 125 },
+    set_view_audio_muted: fn(muted) { calls.push("set_audio_muted:\{muted}") },
+    read_view_audio_muted: fn() { true },
     load_view_url: fn(url) { calls.push("load_url:\{url}") },
     load_view_html: fn(_html, _base_url) {  },
     eval_view_script: fn(_script) {  },
@@ -2286,6 +2360,8 @@ test "view handle routes operations through its closures" {
   view.set_z_order(2)
   view.set_zoom_percent(125)
   inspect(view.zoom_percent(), content="125")
+  view.set_audio_muted(true)
+  assert_true(view.is_audio_muted())
   view.load_url("https://example.com/")
   assert_true(view.can_go_back())
   assert_false(view.can_go_forward())
@@ -2301,8 +2377,119 @@ test "view handle routes operations through its closures" {
       #|  "set_visible:false",
       #|  "set_z_order:2",
       #|  "set_zoom_percent:125",
+      #|  "set_audio_muted:true",
       #|  "load_url:https://example.com/",
       #|  "close",
+      #|]
+    ),
+  )
+}
+
+///|
+test "browser handle exposes the current page state" {
+  let window = test_window_handle("main", 17L)
+  let state = window.browser().state()
+  assert_eq(state.url, "https://example.test/")
+  assert_eq(state.title, "Example")
+  assert_false(state.is_loading)
+  assert_true(state.can_go_back)
+  assert_false(state.can_go_forward)
+}
+
+///|
+test "browser handle controls and reads audio mute state" {
+  let calls : Array[Bool] = []
+  let browser = test_window_handle(
+    "main",
+    17L,
+    browser_audio_calls=calls,
+    browser_audio_muted=true,
+  ).browser()
+  browser.set_audio_muted(true)
+  assert_eq(calls, [true])
+  assert_true(browser.is_audio_muted())
+}
+
+///|
+test "app builder registers main browser lifecycle handlers" {
+  let app = html("Browser events", "<p>events</p>").on_browser_event(fn(
+    _browser,
+    _event,
+  ) noraise {
+
+  })
+  assert_eq(app.browser_event_handlers.length(), 1)
+}
+
+///|
+test "cookie payloads decode Electron-style session fields" {
+  let payload =
+    #|[{"name":"token","value":"abc","domain":"example.test","path":"/","secure":true,"http_only":true,"same_site":"lax","has_expires":true,"expires":11644473600000000,"creation":11644473600000000,"last_access":11644473600000000}]
+    #|
+  let cookies = decode_cookies(payload) catch {
+    CookieDecodeError(detail) => fail(detail)
+  }
+  assert_eq(cookies.length(), 1)
+  let cookie = cookies[0]
+  assert_eq(cookie.name, "token")
+  assert_eq(cookie.value, "abc")
+  assert_eq(cookie.same_site, CookieSameSite::Lax)
+  assert_eq(cookie.expiration_date, Some(0.0))
+}
+
+///|
+async test "session handle routes cookie and cache operations" {
+  let calls : Array[String] = []
+  let session = SessionHandle::{
+    id: "main",
+    native_id: 17L,
+    read_cookies: (url, include_http_only) => {
+      calls.push("get:\{url.unwrap_or("*")}:http_only=\{include_http_only}")
+      []
+    },
+    write_cookie: (
+      url,
+      name,
+      value,
+      _domain,
+      _path,
+      secure,
+      http_only,
+      same_site,
+    ) => {
+      calls.push(
+        "set:\{url}:\{name}=\{value}:secure=\{secure}:http_only=\{http_only}:same_site=\{Repr(same_site)}",
+      )
+    },
+    remove_cookies: (url, name) => {
+      calls.push("delete:\{url.unwrap_or("*")}:\{name.unwrap_or("*")}")
+    },
+    flush_cookie_store: () => calls.push("flush"),
+    clear_http_cache: () => calls.push("clear_cache"),
+  }
+  ignore(
+    session.get_cookies(url="https://example.test/", include_http_only=true),
+  )
+  session.set_cookie(
+    "https://example.test/",
+    "token",
+    "abc",
+    secure=true,
+    http_only=true,
+    same_site=CookieSameSite::Strict,
+  )
+  session.delete_cookies(url="https://example.test/", name="token")
+  session.flush_cookies()
+  session.clear_cache()
+  debug_inspect(
+    calls,
+    content=(
+      #|[
+      #|  "get:https://example.test/:http_only=true",
+      #|  "set:https://example.test/:token=abc:secure=true:http_only=true:same_site=Strict",
+      #|  "delete:https://example.test/:token",
+      #|  "flush",
+      #|  "clear_cache",
       #|]
     ),
   )
@@ -2705,7 +2892,13 @@ test "custom menu labels never imply a standard role" {
   let resolved = resolve_menu(
     @native.MenuBar(menus=[
       @native.Menu("Edit", items=[
-        @native.MenuItem::command("custom.edit", "Custom Edit"),
+        @native.MenuItem::command(
+          "custom.edit",
+          "Custom Edit",
+          enabled=false,
+          visible=false,
+          checked=false,
+        ),
       ]),
     ]),
     preferences,
@@ -2716,10 +2909,24 @@ test "custom menu labels never imply a standard role" {
   let (role, label, items) = definitions[0].definition()
   assert_eq(role, None)
   assert_eq(label, Some("Edit"))
-  let (_, command_id, command_label, _, item_role, _) = items.unwrap()[0].definition()
+  let command = items.unwrap()[0]
+  let (_, command_id, command_label, _, item_role, _) = command.definition()
   assert_eq(command_id, Some("custom.edit"))
   assert_eq(command_label, Some("Custom Edit"))
   assert_eq(item_role, None)
+  assert_eq(command.state_definition(), (false, false, Some(false)))
+}
+
+///|
+test "public menu command state converts to the native definition" {
+  let command = MenuItem::command(
+    "custom.state",
+    "Stateful Command",
+    enabled=false,
+    visible=false,
+    checked=true,
+  ).to_native()
+  assert_eq(command.state_definition(), (false, false, Some(true)))
 }
 
 ///|

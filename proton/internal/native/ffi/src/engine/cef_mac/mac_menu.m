@@ -34,6 +34,7 @@ static void proton_engine_enqueue_menu_command(
 
 @interface ProtonMenuCommandTarget : NSObject
 - (void)performMenuCommand:(id)sender;
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem;
 @end
 
 @implementation ProtonMenuCommandTarget
@@ -50,6 +51,10 @@ static void proton_engine_enqueue_menu_command(
     proton_engine_enqueue_menu_command((NSString *)represented,
                                        focused_window);
   }
+}
+
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
+  return [menuItem isEnabled];
 }
 @end
 
@@ -250,6 +255,9 @@ static int proton_engine_add_custom_menu_item(NSMenu *menu,
                                               NSString *app_name,
                                               char *error,
                                               size_t error_len) {
+  if (!item->visible) {
+    return 1;
+  }
   if (item->kind == PROTON_MENU_ITEM_SUBMENU) {
     NSString *label = proton_engine_menu_text(item->label);
     if (label == nil || item->submenu == NULL) {
@@ -288,6 +296,11 @@ static int proton_engine_add_custom_menu_item(NSMenu *menu,
         menu, label, @selector(performMenuCommand:), key != nil ? key : @"");
     [menu_item setTarget:g_menu_command_target];
     [menu_item setRepresentedObject:command_id];
+    [menu_item setEnabled:item->enabled ? YES : NO];
+    if (item->checkable) {
+      [menu_item setState:item->checked ? NSControlStateValueOn
+                                        : NSControlStateValueOff];
+    }
     return 1;
   }
   if (item->kind == PROTON_MENU_ITEM_ROLE) {

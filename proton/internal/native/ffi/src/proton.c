@@ -1575,6 +1575,56 @@ int32_t proton_window_set_zoom_percent(proton_window_handle_t window,
   return proton_window_apply_action(window, &action);
 }
 
+int32_t proton_window_set_audio_muted(proton_window_handle_t window,
+                                      int32_t muted) {
+  if (muted != 0 && muted != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "muted must be 0 or 1");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser audio requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_audio_muted(
+      slot->engine_window, muted, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_is_audio_muted(proton_window_handle_t window,
+                                     int32_t *out_muted) {
+  if (out_muted == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_muted is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser audio requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_is_audio_muted(
+      slot->engine_window, out_muted, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_set_progress_bar(proton_window_handle_t window,
                                        double progress) {
   if (isnan(progress)) {
@@ -1871,6 +1921,67 @@ int32_t proton_window_get_navigation_state(
   if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
   g_last_error[0] = '\0';
   return PROTON_OK;
+}
+
+int32_t proton_window_get_browser_url(proton_window_handle_t window,
+                                       char *buffer, int32_t buffer_len,
+                                       int32_t *out_required_len) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_browser_url(
+      slot->engine_window, buffer, buffer_len, out_required_len, engine_error,
+      sizeof(engine_error));
+  return status == PROTON_OK
+             ? proton_set_error(PROTON_OK, NULL)
+             : proton_set_error(status, engine_error);
+}
+
+int32_t proton_window_get_browser_title(proton_window_handle_t window,
+                                         char *buffer, int32_t buffer_len,
+                                         int32_t *out_required_len) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_browser_title(
+      slot->engine_window, buffer, buffer_len, out_required_len, engine_error,
+      sizeof(engine_error));
+  return status == PROTON_OK
+             ? proton_set_error(PROTON_OK, NULL)
+             : proton_set_error(status, engine_error);
+}
+
+int32_t proton_window_get_browser_loading(proton_window_handle_t window,
+                                           int32_t *out_is_loading) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "browser state requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_browser_loading(
+      slot->engine_window, out_is_loading, engine_error, sizeof(engine_error));
+  return status == PROTON_OK
+             ? proton_set_error(PROTON_OK, NULL)
+             : proton_set_error(status, engine_error);
 }
 
 int32_t proton_window_respond_browser_request_json(
@@ -2617,6 +2728,56 @@ int32_t proton_view_get_zoom_percent(proton_view_handle_t view,
     return status;
   }
   *out_zoom_percent = slot->zoom_percent;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_set_audio_muted(proton_view_handle_t view,
+                                    int32_t muted) {
+  if (muted != 0 && muted != 1) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "muted must be 0 or 1");
+  }
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_set_audio_muted(
+        slot->engine_view, muted, engine_error, sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+  }
+  slot->audio_muted = muted != 0;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_is_audio_muted(proton_view_handle_t view,
+                                   int32_t *out_muted) {
+  if (out_muted == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_muted is required");
+  }
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_view != NULL) {
+    char engine_error[512] = {0};
+    status = proton_engine_view_is_audio_muted(
+        slot->engine_view, out_muted, engine_error, sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+    slot->audio_muted = *out_muted != 0;
+  } else {
+    *out_muted = slot->audio_muted ? 1 : 0;
+  }
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

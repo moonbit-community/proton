@@ -93,9 +93,17 @@ fn resolve_menu_item(
   application_name : String,
 ) -> @native.MenuItem {
   let (kind, id, label, key, role, submenu) = item.definition()
+  let (enabled, visible, checked) = item.state_definition()
   match kind {
     "command" =>
-      @native.MenuItem::command(id.unwrap_or(""), label.unwrap_or(""), key?)
+      @native.MenuItem::command(
+        id.unwrap_or(""),
+        label.unwrap_or(""),
+        key?,
+        enabled~,
+        visible~,
+        checked?,
+      )
     "separator" => @native.MenuItem::separator()
     "submenu" => {
       let (_, sub_label, sub_items) = submenu.unwrap().definition()

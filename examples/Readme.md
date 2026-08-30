@@ -73,16 +73,17 @@ moon -C examples run 01_run --target native
   JavaScript helpers and events.
 - `48_titlebar_overlay`: cross-platform overlay demo with native window
   controls and compact web-rendered application chrome.
-- `49_app_menu`: app-level typed native menu roles and menu command events with
+- `49_app_menu`: app-level typed native menu roles, dynamic command states, and menu command events with
   the optional focused window id.
 - `50_browser_control`: asynchronous navigation, popup, download, certificate,
-  media-permission, and download-progress browser policy handlers.
+  media-permission, download-progress policy handlers, plus observable main
+  browser page events, state snapshots, cookie-store access, and cache control.
 - `51_child_process_close_repro`: long-lived child process and pending bridge
   request for macOS close-lifecycle regression testing.
 - `52_web_contents_view`: Codex-style built-in browser: an asset-loaded
   sidebar host page drives an embedded web contents view through a command
-  extension, with independent zoom controls and view events keeping the
-  sidebar in sync.
+  extension, with independent zoom/audio controls and view events keeping the
+  sidebar in sync. The manual review tones verify main-browser and view mute.
 - `53_view_minimal`: the minimal declarative web contents view example:
   `with_view` plus `@proton.view`, no lifecycle hooks required.
 - `54_devtools`: opens CEF DevTools programmatically through

@@ -2,8 +2,14 @@
 fn RuntimeEventPump::RuntimeEventPump(
   runtime : @native.Runtime,
   dialog_completions : DialogCompletionStore,
+  cookie_completions : CookieCompletionStore,
 ) -> RuntimeEventPump {
-  RuntimeEventPump::{ runtime, dialog_completions, session_events: [], }
+  RuntimeEventPump::{
+    runtime,
+    dialog_completions,
+    cookie_completions,
+    session_events: [],
+  }
 }
 
 ///|
@@ -23,7 +29,10 @@ fn RuntimeEventPump::poll_native_events(
       None => polling = false
       Some(event) => {
         did_work = true
-        if !self.dialog_completions.route_completion(event.dialog_completion()) {
+        if !self.dialog_completions.route_completion(event.dialog_completion()) &&
+          !self.cookie_completions.route_completion(
+            event.cookie_get_completion(),
+          ) {
           self.session_events.push(event)
         }
       }

@@ -1157,14 +1157,22 @@ static void CEF_CALLBACK proton_engine_on_load_start(
   (void)self;
   (void)transition_type;
   proton_engine_view_t *view = proton_engine_view_from_browser(browser);
-  if (view == NULL || frame == NULL || !frame->is_main(frame)) {
+  if (frame == NULL || !frame->is_main(frame)) {
     return;
   }
   char *url = proton_engine_userfree_to_utf8(frame->get_url(frame));
   if (url != NULL && strcmp(url, "about:blank") != 0) {
-    proton_view_events_navigated(view->events, url);
-    proton_view_events_loading_changed(view->events, 1);
-    proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
+    if (view != NULL) {
+      proton_view_events_navigated(view->events, url);
+      proton_view_events_loading_changed(view->events, 1);
+      proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
+    } else {
+      proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+      proton_browser_session_navigated(
+          window != NULL ? window->browser_session : NULL, url);
+      proton_browser_session_loading_changed(
+          window != NULL ? window->browser_session : NULL, url, 1);
+    }
   }
   free(url);
 }
@@ -1187,6 +1195,9 @@ static void CEF_CALLBACK proton_engine_on_load_end(
   }
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   char *url = proton_engine_userfree_to_utf8(frame->get_url(frame));
+  if (window != NULL) {
+    proton_browser_session_loading_changed(window->browser_session, url, 0);
+  }
   if (window != NULL && window->bridge_config_json != NULL && url != NULL &&
       strcmp(url, "about:blank") != 0) {
     (void)proton_engine_bridge_send_lifecycle_probe(frame);
@@ -1216,6 +1227,9 @@ static void CEF_CALLBACK proton_engine_on_load_error(
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
   char *message = proton_engine_cef_string_to_utf8(errorText);
   char *url = proton_engine_cef_string_to_utf8(failedUrl);
+  proton_browser_session_load_failed(
+      window != NULL ? window->browser_session : NULL, url,
+      (int32_t)errorCode, message);
   if (window != NULL && window->bridge_config_json != NULL && url != NULL) {
     proton_engine_bridge_lifecycle_report_load_failure(
         &window->bridge_lifecycle, url,
@@ -1344,6 +1358,8 @@ proton_engine_client_t *proton_engine_client_create(
   client->client.get_life_span_handler =
       proton_engine_client_get_life_span_handler;
   client->client.get_load_handler = proton_engine_client_get_load_handler;
+  client->client.get_display_handler =
+      proton_engine_client_get_display_handler;
   client->client.get_drag_handler = proton_engine_client_get_drag_handler;
   client->client.get_request_handler =
       proton_engine_client_get_request_handler;
