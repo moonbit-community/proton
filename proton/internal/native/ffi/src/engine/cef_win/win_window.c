@@ -55,6 +55,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+int proton_engine_browser_hwnd_is_focused(HWND browser_hwnd) {
+  const HWND focused = GetFocus();
+  return browser_hwnd != NULL && focused != NULL &&
+         (focused == browser_hwnd || IsChild(browser_hwnd, focused));
+}
+
 static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
                                                   UINT msg,
                                                   WPARAM wparam,
@@ -1825,8 +1831,29 @@ int32_t proton_engine_window_get_browser_focus_state(
                               "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  return proton_browser_is_focused(
-      window->browser, out_focused, error, error_len);
+  if (out_focused == NULL) {
+    proton_engine_set_message(error, error_len, "focus output is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    return proton_browser_headless_is_focused(
+        window->browser, out_focused, error, error_len);
+  }
+  cef_browser_host_t *host = window->browser->get_host(window->browser);
+  if (host == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "browser host is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  const HWND browser_hwnd = host->get_window_handle(host);
+  host->base.release((cef_base_ref_counted_t *)host);
+  if (browser_hwnd == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "browser window is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  *out_focused = proton_engine_browser_hwnd_is_focused(browser_hwnd);
+  return PROTON_OK;
 }
 
 int32_t proton_engine_window_get_devtools_state(

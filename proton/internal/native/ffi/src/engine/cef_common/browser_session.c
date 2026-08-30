@@ -1057,7 +1057,9 @@ int32_t proton_browser_navigation_state(
   return PROTON_OK;
 }
 
-int32_t proton_browser_is_focused(
+/* Frame focus identifies the active frame inside a browser, so it is only a
+   valid browser-level fallback when no native host window exists. */
+int32_t proton_browser_headless_is_focused(
     cef_browser_t *browser, int32_t *out_focused, char *error,
     size_t error_len) {
   if (browser == NULL || out_focused == NULL) {

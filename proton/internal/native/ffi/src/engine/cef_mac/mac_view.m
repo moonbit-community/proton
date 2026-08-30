@@ -824,8 +824,16 @@ int32_t proton_engine_view_get_browser_focus_state(
                               "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  return proton_browser_is_focused(
-      view->browser, out_focused, error, error_len);
+  if (out_focused == NULL) {
+    proton_engine_set_message(error, error_len, "focus output is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (view->window != NULL && view->window->headless) {
+    return proton_browser_headless_is_focused(
+        view->browser, out_focused, error, error_len);
+  }
+  *out_focused = proton_engine_browser_view_is_focused(view->browser_view);
+  return PROTON_OK;
 }
 
 int32_t proton_engine_view_get_devtools_state(

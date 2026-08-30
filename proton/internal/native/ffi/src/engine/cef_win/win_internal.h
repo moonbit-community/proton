@@ -133,6 +133,7 @@ int proton_engine_browser_id(cef_browser_t *browser);
 void proton_engine_browser_release(cef_browser_t *browser);
 proton_engine_view_t *proton_engine_find_view_by_browser_id(int browser_id);
 void proton_engine_window_defer_free(proton_engine_window_t *window);
+int proton_engine_browser_hwnd_is_focused(HWND browser_hwnd);
 void proton_win_menu_dispatch_command(proton_engine_window_t *window,
                                       UINT command_id);
 int32_t proton_win_menu_apply_to_window(

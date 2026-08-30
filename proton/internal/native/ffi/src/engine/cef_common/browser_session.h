@@ -67,7 +67,7 @@ int32_t proton_browser_session_command_json(
 int32_t proton_browser_navigation_state(
     cef_browser_t *browser, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len);
-int32_t proton_browser_is_focused(
+int32_t proton_browser_headless_is_focused(
     cef_browser_t *browser, int32_t *out_focused, char *error,
     size_t error_len);
 int32_t proton_browser_is_devtools_opened(

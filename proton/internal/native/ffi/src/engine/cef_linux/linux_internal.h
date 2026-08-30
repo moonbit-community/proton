@@ -136,6 +136,7 @@ int proton_engine_browser_id(cef_browser_t *browser);
 void proton_engine_browser_release(cef_browser_t *browser);
 proton_engine_view_t *proton_engine_view_from_browser(cef_browser_t *browser);
 void proton_engine_window_defer_free(proton_engine_window_t *window);
+int proton_engine_x11_window_is_focused(Display *display, Window browser_window);
 
 cef_life_span_handler_t *CEF_CALLBACK
 proton_engine_client_get_life_span_handler(cef_client_t *self);
