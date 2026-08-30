@@ -574,11 +574,13 @@ pub fn UpdateStage::write(Self, Bytes) -> Unit raise NativeError
 type View
 pub fn View::View(Window, ViewConfig) -> Self raise NativeError
 pub fn View::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
+pub fn View::browser_is_focused(Self) -> Bool raise NativeError
 pub fn View::destroy(Self) -> Unit raise NativeError
 pub fn View::eval(Self, String) -> Unit raise NativeError
 pub fn View::find_in_page(Self, String, Bool, Bool, Bool) -> Int raise NativeError
 pub fn View::id(Self) -> Int64
 pub fn View::is_audio_muted(Self) -> Bool raise NativeError
+pub fn View::is_devtools_opened(Self) -> Bool raise NativeError
 pub fn View::load_url(Self, String) -> Unit raise NativeError
 pub fn View::navigation_state(Self) -> (Bool, Bool) raise NativeError
 pub fn View::set_audio_muted(Self, Bool) -> Unit raise NativeError
@@ -624,6 +626,7 @@ pub fn Window::Window(Runtime, config? : WindowConfig) -> Self raise NativeError
 pub fn Window::as_ref(Self) -> WindowRef
 pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState raise NativeError
 pub fn Window::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
+pub fn Window::browser_is_focused(Self) -> Bool raise NativeError
 pub fn Window::browser_state(Self) -> BrowserState raise NativeError
 pub fn Window::clear_cache(Self) -> Unit raise NativeError
 pub fn Window::close(Self) -> Unit raise NativeError
@@ -642,6 +645,7 @@ pub fn Window::focus(Self) -> Unit raise NativeError
 pub fn Window::hide(Self) -> Unit raise NativeError
 pub fn Window::id(Self) -> Int64
 pub fn Window::is_audio_muted(Self) -> Bool raise NativeError
+pub fn Window::is_devtools_opened(Self) -> Bool raise NativeError
 pub fn Window::load_url(Self, String) -> Unit raise NativeError
 pub fn Window::maximize(Self) -> Unit raise NativeError
 pub fn Window::minimize(Self) -> Unit raise NativeError

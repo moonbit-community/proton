@@ -151,6 +151,10 @@ pub fn proton_view_eval_ffi(ViewHandle, Bytes) -> Int
 
 pub fn proton_view_find_in_page_ffi(ViewHandle, Bytes, Int, Int, Int, @ref.Ref[Int]) -> Int
 
+pub fn proton_view_get_browser_focus_state_ffi(ViewHandle, @ref.Ref[Int]) -> Int
+
+pub fn proton_view_get_devtools_state_ffi(ViewHandle, @ref.Ref[Int]) -> Int
+
 pub fn proton_view_get_navigation_state_ffi(ViewHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
 pub fn proton_view_get_state_ffi(ViewHandle, FixedArray[Int], Int) -> Int
@@ -215,6 +219,8 @@ pub fn proton_window_flash_frame_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_focus_ffi(WindowHandle) -> Int
 
+pub fn proton_window_get_browser_focus_state_ffi(WindowHandle, @ref.Ref[Int]) -> Int
+
 pub fn proton_window_get_browser_loading_ffi(WindowHandle, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_get_browser_title_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
@@ -222,6 +228,8 @@ pub fn proton_window_get_browser_title_ffi(WindowHandle, FixedArray[Byte], Int, 
 pub fn proton_window_get_browser_url_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_get_content_size_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+
+pub fn proton_window_get_devtools_state_ffi(WindowHandle, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_get_navigation_state_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
