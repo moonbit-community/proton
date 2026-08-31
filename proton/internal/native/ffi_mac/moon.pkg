@@ -10,6 +10,7 @@ options(
     "mac_notification.objc.c",
     "mac_runtime.objc.c",
     "mac_screen.objc.c",
+    "mac_system_path.objc.c",
     "mac_view.objc.c",
     "mac_window.objc.c",
   ],

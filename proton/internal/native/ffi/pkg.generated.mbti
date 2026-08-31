@@ -125,6 +125,8 @@ pub fn proton_runtime_signal_wakeup_ffi() -> Unit
 
 pub fn proton_screen_enumerate_ffi(FixedArray[Int], Int, @ref.Ref[Int]) -> Int
 
+pub fn proton_system_path_ffi(Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
 pub fn proton_system_preferred_languages_json_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_update_cleanup_previous_ffi(FixedArray[Byte], Int) -> Int

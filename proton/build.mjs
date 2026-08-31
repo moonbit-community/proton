@@ -101,7 +101,7 @@ function platformConfig(cefRoot) {
       loaderFlags: "",
       linkFlags: [
         quote(path.join(cefRoot, "Release", "libcef.lib")),
-        "user32.lib shell32.lib shlwapi.lib ole32.lib comctl32.lib",
+        "user32.lib shell32.lib shlwapi.lib ole32.lib uuid.lib comctl32.lib",
         "dwmapi.lib shcore.lib gdi32.lib advapi32.lib",
       ].join(" "),
     };

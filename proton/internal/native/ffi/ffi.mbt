@@ -79,6 +79,15 @@ pub extern "C" fn proton_system_preferred_languages_json_ffi(
 ) -> Int = "proton_system_preferred_languages_json"
 
 ///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_system_path_ffi(
+  kind : Int,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_system_path"
+
+///|
 #borrow(identifier, activation_json, out_instance, out_primary)
 pub extern "C" fn proton_app_instance_acquire_ffi(
   identifier : Bytes,

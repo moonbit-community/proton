@@ -108,6 +108,29 @@ test "native text reader handles no event after resizing" {
 }
 
 ///|
+test "common system paths are absolute" {
+  for
+    kind in [
+      SystemPathKind::Desktop,
+      SystemPathKind::Documents,
+      SystemPathKind::Downloads,
+      SystemPathKind::Music,
+      SystemPathKind::Pictures,
+      SystemPathKind::Videos,
+    ] {
+    let value : @path.Path = system_path(kind)
+    assert_true(value.is_absolute())
+  }
+}
+
+///|
+#cfg(platform="windows")
+test "Windows recent system path is absolute" {
+  let value : @path.Path = system_path(SystemPathKind::Recent)
+  assert_true(value.is_absolute())
+}
+
+///|
 test "notification clicks preserve optional payloads" {
   let with_payload = RuntimeEvent::NotificationClicked(Some("open-item"))
   assert_eq(with_payload.event_type(), "notification_clicked")
