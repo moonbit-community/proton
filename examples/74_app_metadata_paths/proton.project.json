@@ -1,0 +1,15 @@
+{
+  "identifier": "community.moonbit.proton.app-metadata-paths",
+  "backend": {
+    "path": "../..",
+    "package": "examples/74_app_metadata_paths"
+  },
+  "package": {
+    "product_name": "Proton App Metadata",
+    "version": "1.2.3",
+    "formats": [
+      "app"
+    ],
+    "output": "../../dist"
+  }
+}
