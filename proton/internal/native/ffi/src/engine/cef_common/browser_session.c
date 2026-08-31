@@ -65,6 +65,7 @@ typedef struct proton_browser_navigation_bypass {
 
 struct proton_browser_session {
   proton_browser_policy_t policy;
+  proton_browser_lifecycle_t *lifecycle;
   proton_window_id_t window;
   uint64_t next_request_id;
   proton_browser_pending_t *pending;
@@ -295,6 +296,14 @@ void proton_browser_session_bind_window(proton_browser_session_t *session,
                                          proton_window_id_t window) {
   if (session != NULL) {
     session->window = window;
+  }
+}
+
+void proton_browser_session_bind_lifecycle(
+    proton_browser_session_t *session,
+    proton_browser_lifecycle_t *lifecycle) {
+  if (session != NULL) {
+    session->lifecycle = lifecycle;
   }
 }
 
@@ -1061,25 +1070,8 @@ int32_t proton_browser_session_command_json(
                                  "DevTools are disabled by browser policy");
       return PROTON_ERR_UNSUPPORTED;
     }
-    cef_browser_host_t *host = browser->get_host(browser);
-    if (host == NULL) {
-      proton_browser_set_message(error, error_len,
-                                 "browser host is unavailable");
-      return PROTON_ERR_ENGINE;
-    }
-    int close_devtools = strcmp(command, "close_devtools") == 0 ||
-                         (strcmp(command, "toggle_devtools") == 0 &&
-                          host->has_dev_tools(host));
-    if (close_devtools) {
-      host->close_dev_tools(host);
-    } else {
-      cef_window_info_t window_info = {0};
-      cef_browser_settings_t settings = {0};
-      window_info.size = sizeof(window_info);
-      settings.size = sizeof(settings);
-      host->show_dev_tools(host, &window_info, NULL, &settings, NULL);
-    }
-    host->base.release((cef_base_ref_counted_t *)host);
+    return proton_browser_lifecycle_devtools_command(
+        session->lifecycle, command, error, error_len);
   } else {
     proton_browser_set_message(error, error_len,
                                "unknown browser command");

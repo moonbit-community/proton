@@ -5,6 +5,7 @@
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
 #include "../cef_common/bridge_lifecycle.h"
+#include "../cef_common/browser_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
 #include "../cef_common/window_state.h"
@@ -60,6 +61,7 @@ struct proton_engine_runtime {
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_menu_bar_t *menu_definition;
+  proton_browser_registry_t *browsers;
 };
 
 struct proton_engine_window {
@@ -69,6 +71,7 @@ struct proton_engine_window {
   cef_client_t *client;
   cef_browser_t *browser;
   int browser_id;
+  proton_browser_lifecycle_t *browser_lifecycle;
   char *bridge_config_json;
   int32_t max_bridge_payload_bytes;
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
@@ -107,7 +110,6 @@ struct proton_engine_window {
   proton_win_titlebar_region_t *draggable_regions;
   size_t draggable_region_count;
   int draggable_regions_reported;
-  int browser_close_requested;
   int close_interception_enabled;
   int close_authorized;
   int close_request_pending;
@@ -130,7 +132,8 @@ void proton_engine_signal_wait_source(proton_engine_runtime_t *runtime,
                                       uint32_t ready_mask);
 void proton_engine_browser_signal(void *user_data);
 int proton_engine_browser_id(cef_browser_t *browser);
-void proton_engine_browser_release(cef_browser_t *browser);
+proton_browser_lifecycle_t *proton_engine_browser_lifecycle(
+    cef_browser_t *browser);
 proton_engine_view_t *proton_engine_find_view_by_browser_id(int browser_id);
 void proton_engine_window_defer_free(proton_engine_window_t *window);
 int proton_engine_browser_hwnd_is_focused(HWND browser_hwnd);
@@ -237,6 +240,7 @@ struct proton_engine_client {
   proton_engine_ref_counted_t refs;
   proton_engine_window_t *window;
   proton_engine_view_t *view;
+  proton_browser_lifecycle_t *browser_lifecycle;
 };
 
 /* A web contents view: an extra child browser hosted inside a window's client
@@ -249,6 +253,7 @@ struct proton_engine_view {
   proton_engine_client_t *client;
   cef_browser_t *browser;
   int browser_id;
+  proton_browser_lifecycle_t *browser_lifecycle;
   HWND hwnd;
   int32_t x;
   int32_t y;
@@ -264,8 +269,6 @@ struct proton_engine_view {
   proton_view_events_t *events;
   int has_background_color;
   uint32_t background_color;
-  int browser_close_requested;
-  int browser_before_close_seen;
   int finalize_after_browser_close;
   int finalized;
   int closed;
@@ -306,7 +309,10 @@ void proton_engine_bridge_pending_remove_browser(
     proton_engine_runtime_t *runtime,
     int browser_id);
 proton_engine_client_t *proton_engine_client_new(
-    proton_engine_window_t *window);
+    proton_engine_window_t *window,
+    proton_browser_lifecycle_t *browser_lifecycle);
+cef_client_t *proton_engine_browser_client_factory(
+    void *context, proton_browser_lifecycle_t *browser_lifecycle);
 int CEF_CALLBACK proton_engine_client_release(cef_base_ref_counted_t *base);
 int proton_engine_utf8_to_wide(const char *value,
                                wchar_t *buffer,

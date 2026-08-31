@@ -453,7 +453,10 @@ static void proton_engine_window_free_storage(proton_engine_window_t *window) {
     window->menu_accel_group = NULL;
   }
   proton_engine_window_free_views(window);
-  free(window->client);
+  if (window->client != NULL) {
+    window->client->window = NULL;
+  }
+  proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
   free(window->bridge_config_json);
   proton_browser_session_destroy(window->browser_session);
   free(window->draggable_regions);
@@ -801,12 +804,22 @@ int32_t proton_engine_runtime_create(
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
   runtime->next_bridge_request_id = 1;
+  runtime->browsers = proton_browser_registry_create(
+      proton_engine_browser_client_factory, runtime);
+  if (runtime->browsers == NULL) {
+    free(runtime);
+    proton_engine_remove_temporary_profile();
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate browser registry");
+    return PROTON_ERR_ENGINE;
+  }
   snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
            config.dialog_ok_label);
   snprintf(runtime->dialog_cancel_label,
            sizeof(runtime->dialog_cancel_label), "%s",
            config.dialog_cancel_label);
   if (!proton_engine_setup_wait_source(error, error_len)) {
+    proton_browser_registry_destroy(runtime->browsers);
     proton_engine_runtime_dispose_menu(runtime);
     free(runtime);
     proton_engine_remove_temporary_profile();
@@ -852,6 +865,7 @@ int32_t proton_engine_runtime_create(
   cef_string_clear(&settings.root_cache_path);
   proton_engine_free_main_args(&main_args);
   if (!cef_initialized) {
+    proton_browser_registry_destroy(runtime->browsers);
     proton_engine_runtime_dispose_menu(runtime);
     free(runtime);
     g_active_runtime = NULL;
@@ -865,6 +879,7 @@ int32_t proton_engine_runtime_create(
    * process-global state and helper threads. */
   if (!proton_engine_ensure_gtk(error, error_len)) {
     proton_engine_cef_shutdown();
+    proton_browser_registry_destroy(runtime->browsers);
     proton_engine_runtime_dispose_menu(runtime);
     free(runtime);
     g_active_runtime = NULL;
@@ -874,6 +889,7 @@ int32_t proton_engine_runtime_create(
   g_proton_cef_runtime_active = 1;
   if (!proton_engine_register_scheme_factory()) {
     proton_engine_cef_shutdown();
+    proton_browser_registry_destroy(runtime->browsers);
     proton_engine_runtime_dispose_menu(runtime);
     free(runtime);
     g_active_runtime = NULL;
@@ -898,7 +914,12 @@ static int proton_engine_runtime_has_windows(
 }
 
 int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
-  return runtime != NULL && !proton_engine_runtime_has_windows(runtime);
+  if (runtime == NULL) {
+    return 0;
+  }
+  proton_browser_registry_begin_shutdown(runtime->browsers);
+  return !proton_engine_runtime_has_windows(runtime) &&
+         proton_browser_registry_shutdown_ready(runtime->browsers);
 }
 
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
@@ -920,6 +941,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_free_closed_windows();
     runtime->owns_cef_runtime = 0;
   }
+  proton_browser_registry_destroy(runtime->browsers);
   proton_engine_runtime_dispose_menu(runtime);
   if (g_active_runtime == runtime) {
     g_active_runtime = NULL;

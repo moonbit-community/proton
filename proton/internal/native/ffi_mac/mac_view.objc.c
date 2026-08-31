@@ -130,10 +130,9 @@ void proton_engine_window_layout_views(proton_engine_window_t *window) {
 }
 
 static void proton_engine_view_release_browser(proton_engine_view_t *view) {
-  if (view != NULL && view->browser != NULL) {
-    cef_browser_t *browser = view->browser;
+  if (view != NULL) {
     view->browser = NULL;
-    proton_engine_browser_release(browser);
+    view->browser_id = 0;
   }
 }
 
@@ -142,16 +141,8 @@ static int proton_engine_view_request_browser_close(proton_engine_view_t *view,
   if (view == NULL || view->browser == NULL) {
     return 0;
   }
-  if (view->browser_close_requested && !force_close) {
-    return 1;
-  }
-  view->browser_close_requested = 1;
-  cef_browser_host_t *host = view->browser->get_host(view->browser);
-  if (host == NULL) {
-    return 0;
-  }
-  host->close_browser(host, force_close);
-  host->base.release((cef_base_ref_counted_t *)host);
+  proton_browser_lifecycle_request_close(view->browser_lifecycle,
+                                         force_close);
   // For windowed rendering the browser only dies once its host view leaves
   // the view hierarchy (CefBrowserHostView dealloc -> WindowDestroyed). The
   // detach is owned by do_close, which runs inside the close handshake above
@@ -191,7 +182,10 @@ void proton_engine_window_free_views(proton_engine_window_t *window) {
     proton_engine_view_t *next = view->next;
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
-    free(view->client);
+    if (view->client != NULL) {
+      view->client->view = NULL;
+    }
+    proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
     free(view->initial_url);
     free(view);
     view = next;
@@ -206,7 +200,10 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
   if (view->browser_create_scheduled || view->initial_navigation_pending) {
     return;
   }
-  if (view->browser_id != 0 && !view->browser_before_close_seen) {
+  proton_browser_lifecycle_state_t browser_state =
+      proton_browser_lifecycle_state(view->browser_lifecycle);
+  if (browser_state != PROTON_BROWSER_CLOSED &&
+      browser_state != PROTON_BROWSER_CREATION_FAILED) {
     return;
   }
   // Resource cleanup only. The struct stays in the window's view list and is
@@ -215,6 +212,7 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
   if (view->client != NULL) {
     view->client->view = NULL;
   }
+  proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
   if (view->browser_view != nil) {
     [view->browser_view removeFromSuperview];
     view->browser_view = nil;
@@ -236,7 +234,6 @@ void proton_engine_window_close_views(proton_engine_window_t *window) {
         proton_engine_view_request_browser_close(view, 1);
         proton_engine_view_mark_closed(view);
         proton_engine_view_defer_finalize(view);
-        proton_engine_view_release_browser(view);
       } else {
         proton_engine_view_mark_closed(view);
         proton_engine_view_defer_finalize(view);
@@ -287,6 +284,7 @@ static int32_t proton_engine_view_create_browser(proton_engine_view_t *view,
   cef_string_clear(&window_info.window_name);
   cef_string_clear(&url);
   if (!accepted) {
+    proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
     proton_engine_set_message(error, error_len, "view browser creation failed");
     return PROTON_ERR_ENGINE;
   }
@@ -386,9 +384,9 @@ void proton_engine_view_on_after_created(proton_engine_view_t *view,
   }
   proton_engine_window_t *window = view->window;
   cef_browser_host_t *host = browser->get_host(browser);
-  browser->base.add_ref((cef_base_ref_counted_t *)browser);
-  view->browser = browser;
-  view->browser_id = browser->get_identifier(browser);
+  view->browser = proton_browser_lifecycle_browser(view->browser_lifecycle);
+  view->browser_id =
+      proton_browser_lifecycle_browser_id(view->browser_lifecycle);
   view->browser_create_scheduled = 0;
   if (host != NULL) {
     double factor = (double)view->zoom_percent / 100.0;
@@ -416,7 +414,6 @@ void proton_engine_view_on_after_created(proton_engine_view_t *view,
   if (view->closed || view->finalize_after_browser_close) {
     view->initial_navigation_pending = 0;
     proton_engine_view_request_browser_close(view, 1);
-    proton_engine_view_release_browser(view);
     proton_engine_view_finalize_if_ready(view);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return;
@@ -431,11 +428,10 @@ void proton_engine_view_on_after_created(proton_engine_view_t *view,
 
 void proton_engine_view_on_before_close(proton_engine_view_t *view,
                                         cef_browser_t *browser) {
-  (void)browser;
   if (view == NULL) {
     return;
   }
-  view->browser_before_close_seen = 1;
+  proton_browser_lifecycle_on_before_close(view->browser_lifecycle, browser);
   proton_engine_view_mark_closed(view);
   proton_view_events_closed(view->events);
   proton_engine_view_release_browser(view);
@@ -451,7 +447,8 @@ void proton_engine_view_on_before_close(proton_engine_view_t *view,
 }
 
 static proton_engine_client_t *proton_engine_view_client_create(
-    proton_engine_view_t *view) {
+    proton_engine_view_t *view,
+    proton_browser_lifecycle_t *browser_lifecycle) {
   proton_engine_client_t *client =
       (proton_engine_client_t *)calloc(1, sizeof(*client));
   if (client == NULL) {
@@ -459,7 +456,9 @@ static proton_engine_client_t *proton_engine_view_client_create(
   }
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
+  client->client.base.release = proton_engine_client_release;
   client->view = view;
+  client->browser_lifecycle = browser_lifecycle;
   // Views wire the life span, load, display, and render handlers: life span
   // drives the close state machine, load/display feed the view event stream,
   // and the render handler gives headless (OSR) views a viewport. Find results
@@ -519,16 +518,31 @@ int32_t proton_engine_view_create(
   view->zoom_percent = 100;
   view->audio_muted = 0;
   view->visible = config.visible;
-  view->client = proton_engine_view_client_create(view);
+  view->browser_lifecycle = proton_browser_lifecycle_create(
+      window->runtime->browsers, PROTON_BROWSER_ROLE_VIEW, view, NULL);
+  if (view->browser_lifecycle == NULL) {
+    free(view);
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate browser lifecycle");
+    return PROTON_ERR_ENGINE;
+  }
+  view->client = proton_engine_view_client_create(
+      view, view->browser_lifecycle);
   if (view->client == NULL) {
+    proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
+    proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
     free(view);
     proton_engine_set_message(error, error_len, "failed to allocate client");
     return PROTON_ERR_ENGINE;
   }
+  proton_browser_lifecycle_set_client(view->browser_lifecycle,
+                                      &view->client->client);
   view->initial_url = proton_engine_strdup(
       config.initial_url[0] != '\0' ? config.initial_url : "about:blank");
   if (view->initial_url == NULL) {
-    free(view->client);
+    view->client->view = NULL;
+    proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
+    proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
     free(view);
     proton_engine_set_message(error, error_len,
                               "failed to copy initial browser url");
@@ -550,12 +564,16 @@ int32_t proton_engine_view_create(
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
     free(view->initial_url);
-    free(view->client);
+    view->client->view = NULL;
+    proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
+    proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
     free(view);
     proton_engine_set_message(error, error_len,
                               "failed to allocate view state");
     return PROTON_ERR_ENGINE;
   }
+  proton_browser_session_bind_lifecycle(view->browser_session,
+                                        view->browser_lifecycle);
   proton_view_events_bind(view->events, config.public_view,
                           config.public_window);
   view->has_background_color = config.has_background_color;
@@ -587,7 +605,6 @@ int32_t proton_engine_view_destroy(proton_engine_view_t *view,
     }
     proton_engine_view_mark_closed(view);
     proton_engine_view_defer_finalize(view);
-    proton_engine_view_release_browser(view);
     proton_engine_view_finalize_if_ready(view);
     return PROTON_OK;
   }

@@ -829,6 +829,17 @@ int32_t proton_engine_runtime_create(
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
   runtime->next_bridge_request_id = 1;
+  runtime->browsers = proton_browser_registry_create(
+      proton_engine_browser_client_factory, runtime);
+  if (runtime->browsers == NULL) {
+    free(runtime);
+    proton_engine_cef_shutdown();
+    proton_engine_reset_external_message_pump();
+    g_proton_cef_runtime_active = 0;
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate browser registry");
+    return PROTON_ERR_ENGINE;
+  }
   snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
            config.dialog_ok_label);
   snprintf(runtime->dialog_cancel_label,
@@ -839,6 +850,8 @@ int32_t proton_engine_runtime_create(
     proton_engine_cef_shutdown();
     proton_engine_reset_external_message_pump();
     g_proton_cef_runtime_active = 0;
+    proton_browser_registry_destroy(runtime->browsers);
+    free(runtime);
     proton_engine_set_message(error, error_len,
                               "failed to register proton scheme handler");
     return PROTON_ERR_ENGINE;
@@ -868,13 +881,19 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_reset_external_message_pump();
     runtime->owns_cef_runtime = 0;
   }
+  proton_browser_registry_destroy(runtime->browsers);
   g_proton_cef_runtime_active = 0;
   free(runtime);
   return PROTON_OK;
 }
 
 int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
-  return runtime != NULL && !proton_engine_runtime_has_windows(runtime);
+  if (runtime == NULL) {
+    return 0;
+  }
+  proton_browser_registry_begin_shutdown(runtime->browsers);
+  return !proton_engine_runtime_has_windows(runtime) &&
+         proton_browser_registry_shutdown_ready(runtime->browsers);
 }
 
 static void proton_engine_pump_appkit_cef_once(void) {

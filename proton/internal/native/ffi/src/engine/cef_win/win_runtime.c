@@ -591,6 +591,17 @@ int32_t proton_engine_runtime_create(
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
   runtime->next_bridge_request_id = 1;
+  runtime->browsers = proton_browser_registry_create(
+      proton_engine_browser_client_factory, runtime);
+  if (runtime->browsers == NULL) {
+    free(runtime);
+    proton_engine_cef_shutdown();
+    g_proton_cef_runtime_active = 0;
+    proton_engine_release_pump_event();
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate browser registry");
+    return PROTON_ERR_ENGINE;
+  }
   snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
            config.dialog_ok_label);
   snprintf(runtime->dialog_cancel_label,
@@ -613,6 +624,7 @@ static void proton_engine_dispose_runtime_state(
   }
   g_proton_cef_runtime_active = 0;
   proton_menu_bar_destroy(runtime->menu_definition);
+  proton_browser_registry_destroy(runtime->browsers);
   free(runtime);
 }
 
@@ -620,8 +632,10 @@ int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
   if (runtime == NULL) {
     return 0;
   }
+  proton_browser_registry_begin_shutdown(runtime->browsers);
   if (!g_proton_engine_window_lock_initialized) {
-    return g_proton_engine_windows == NULL;
+    return g_proton_engine_windows == NULL &&
+           proton_browser_registry_shutdown_ready(runtime->browsers);
   }
   int32_t ready = 1;
   EnterCriticalSection(&g_proton_engine_window_lock);
@@ -633,7 +647,8 @@ int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
     }
   }
   LeaveCriticalSection(&g_proton_engine_window_lock);
-  return ready && proton_engine_closed_windows_ready_for_shutdown();
+  return ready && proton_engine_closed_windows_ready_for_shutdown() &&
+         proton_browser_registry_shutdown_ready(runtime->browsers);
 }
 
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
@@ -644,6 +659,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_engine_dialog_cancel_runtime(runtime);
+  proton_browser_registry_begin_shutdown(runtime->browsers);
   if (runtime->owns_cef_runtime) {
     if (!proton_engine_runtime_destroy_ready(runtime)) {
       proton_engine_set_message(error, error_len,

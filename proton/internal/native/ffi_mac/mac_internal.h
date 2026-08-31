@@ -6,6 +6,7 @@
 #include "../ffi/src/proton_event.h"
 
 #include "../ffi/src/engine/cef_common/bridge_lifecycle.h"
+#include "../ffi/src/engine/cef_common/browser_lifecycle.h"
 #include "../ffi/src/engine/cef_common/browser_session.h"
 #include "../ffi/src/engine/cef_common/view_events.h"
 
@@ -124,6 +125,7 @@ struct proton_engine_runtime {
   int64_t next_bridge_request_id;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  proton_browser_registry_t *browsers;
 };
 
 struct proton_engine_window {
@@ -133,7 +135,6 @@ struct proton_engine_window {
   NSView *browser_view;
   id delegate;
   int appkit_closing;
-  int browser_close_requested;
   int cef_allows_appkit_close;
   int close_interception_enabled;
   int close_authorized;
@@ -145,6 +146,7 @@ struct proton_engine_window {
   proton_engine_client_t *client;
   cef_browser_t *browser;
   int browser_id;
+  proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
   char *bridge_config_json;
   int32_t max_bridge_payload_bytes;
@@ -154,7 +156,6 @@ struct proton_engine_window {
   int browser_create_pending;
   int browser_create_scheduled;
   int window_listed;
-  int browser_before_close_seen;
   int finalize_after_browser_close;
   uint64_t native_id;
   int width;
@@ -187,6 +188,7 @@ struct proton_engine_client {
   proton_engine_ref_counted_t refs;
   proton_engine_window_t *window;
   proton_engine_view_t *view;
+  proton_browser_lifecycle_t *browser_lifecycle;
 };
 
 struct proton_engine_view {
@@ -194,6 +196,7 @@ struct proton_engine_view {
   proton_engine_client_t *client;
   cef_browser_t *browser;
   int browser_id;
+  proton_browser_lifecycle_t *browser_lifecycle;
   NSView *browser_view;
   int32_t x;
   int32_t y;
@@ -208,8 +211,6 @@ struct proton_engine_view {
   int initial_navigation_pending;
   int browser_create_pending;
   int browser_create_scheduled;
-  int browser_close_requested;
-  int browser_before_close_seen;
   int finalize_after_browser_close;
   int finalized;
   int closed;
@@ -228,7 +229,12 @@ void proton_engine_init_handlers(void);
 cef_app_t *proton_engine_cef_app(void);
 int proton_engine_register_scheme_factory(void);
 proton_engine_client_t *proton_engine_client_create(
-    proton_engine_window_t *window);
+    proton_engine_window_t *window,
+    proton_browser_lifecycle_t *browser_lifecycle);
+int CEF_CALLBACK proton_engine_client_release(
+    cef_base_ref_counted_t *base);
+cef_client_t *proton_engine_browser_client_factory(
+    void *context, proton_browser_lifecycle_t *browser_lifecycle);
 void proton_engine_bridge_pending_remove_browser(
     proton_engine_runtime_t *runtime,
     int browser_id);
@@ -296,7 +302,6 @@ void proton_engine_window_free_views(proton_engine_window_t *window);
 void proton_engine_view_finalize_if_ready(proton_engine_view_t *view);
 void proton_engine_signal_wait_source(uint32_t ready_mask);
 void proton_engine_browser_signal(void *user_data);
-void proton_engine_browser_release(cef_browser_t *browser);
 void proton_engine_window_finalize_if_ready(proton_engine_window_t *window);
 int proton_engine_browser_view_is_focused(NSView *browser_view);
 proton_engine_view_t *proton_engine_view_from_native_id(uint64_t native_id);

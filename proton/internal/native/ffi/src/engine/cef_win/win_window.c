@@ -328,11 +328,15 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
               host->is_ready_to_be_closed(host)) {
             allow_close = 1;
           } else if (host->try_close_browser != NULL) {
+            proton_browser_lifecycle_note_close_requested(
+                window->browser_lifecycle, 0);
             allow_close = host->try_close_browser(host);
-          } else if (!window->browser_close_requested) {
-            host->close_browser(host, 0);
+          } else if (proton_browser_lifecycle_state(
+                         window->browser_lifecycle) !=
+                     PROTON_BROWSER_CLOSING) {
+            proton_browser_lifecycle_request_close(
+                window->browser_lifecycle, 0);
           }
-          window->browser_close_requested = 1;
           host->base.release((cef_base_ref_counted_t *)host);
           if (!allow_close) {
             return 0;
@@ -458,7 +462,7 @@ static int32_t proton_engine_window_create_browser(
       extra_info_value != NULL
           ? extra_info_value->get_dictionary(extra_info_value)
           : NULL;
-  window->browser = cef_browser_host_create_browser_sync(
+  cef_browser_t *created_browser = cef_browser_host_create_browser_sync(
       &window_info, window->client, &url, &browser_settings, extra_info, NULL);
   if (extra_info_value != NULL) {
     extra_info_value->base.release((cef_base_ref_counted_t *)extra_info_value);
@@ -466,11 +470,17 @@ static int32_t proton_engine_window_create_browser(
   cef_string_clear(&window_info.window_name);
   cef_string_clear(&url);
 
-  if (window->browser == NULL) {
+  if (created_browser == NULL) {
+    proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
     proton_engine_set_message(error, error_len, "browser creation failed");
     return PROTON_ERR_ENGINE;
   }
-  window->browser_id = proton_engine_browser_id(window->browser);
+  proton_browser_lifecycle_adopt_created(window->browser_lifecycle,
+                                         created_browser);
+  window->browser =
+      proton_browser_lifecycle_browser(window->browser_lifecycle);
+  window->browser_id =
+      proton_browser_lifecycle_browser_id(window->browser_lifecycle);
   proton_engine_resize_browser(window, browser_width, browser_height);
   return PROTON_OK;
 }
@@ -537,23 +547,34 @@ int32_t proton_engine_window_create(
   window->max_bridge_payload_bytes = config.max_bridge_payload_bytes;
   window->browser_session = proton_browser_session_create(
       &config.browser_policy, proton_engine_browser_signal, window);
-  if (window->browser_session == NULL) {
+  window->browser_lifecycle = proton_browser_lifecycle_create(
+      runtime->browsers, PROTON_BROWSER_ROLE_MAIN, window, NULL);
+  if (window->browser_session == NULL || window->browser_lifecycle == NULL) {
+    proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
     free(window->bridge_config_json);
+    proton_browser_session_destroy(window->browser_session);
     free(window);
     proton_engine_set_message(error, error_len,
-                              "failed to allocate browser session");
+                              "failed to allocate browser state");
     return PROTON_ERR_ENGINE;
   }
   proton_browser_session_bind_window(window->browser_session,
                                      config.public_window);
-  window->client = (cef_client_t *)proton_engine_client_new(window);
+  proton_browser_session_bind_lifecycle(window->browser_session,
+                                        window->browser_lifecycle);
+  window->client = (cef_client_t *)proton_engine_client_new(
+      window, window->browser_lifecycle);
   if (window->client == NULL) {
+    proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
+    proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
     proton_browser_session_destroy(window->browser_session);
     free(window->bridge_config_json);
     free(window);
     proton_engine_set_message(error, error_len, "failed to allocate client");
     return PROTON_ERR_ENGINE;
   }
+  proton_browser_lifecycle_set_client(window->browser_lifecycle,
+                                      window->client);
 
   if (!window->headless) {
     wchar_t wide_title[512];
@@ -572,8 +593,9 @@ int32_t proton_engine_window_create(
         CW_USEDEFAULT, config.width, config.height, NULL, NULL,
         GetModuleHandleW(NULL), window);
     if (window->hwnd == NULL) {
-      ((cef_base_ref_counted_t *)window->client)
-          ->release((cef_base_ref_counted_t *)window->client);
+      ((proton_engine_client_t *)window->client)->window = NULL;
+      proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
+      proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
       proton_browser_session_destroy(window->browser_session);
       free(window->bridge_config_json);
       free(window);
@@ -593,8 +615,9 @@ int32_t proton_engine_window_create(
       if (menu_status != PROTON_OK) {
         DestroyWindow(window->hwnd);
         window->hwnd = NULL;
-        ((cef_base_ref_counted_t *)window->client)
-            ->release((cef_base_ref_counted_t *)window->client);
+        ((proton_engine_client_t *)window->client)->window = NULL;
+        proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
+        proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
         proton_browser_session_destroy(window->browser_session);
         free(window->bridge_config_json);
         free(window);
@@ -610,8 +633,8 @@ int32_t proton_engine_window_create(
     if (window->hwnd != NULL) {
       DestroyWindow(window->hwnd);
     }
-    ((cef_base_ref_counted_t *)window->client)
-        ->release((cef_base_ref_counted_t *)window->client);
+    ((proton_engine_client_t *)window->client)->window = NULL;
+    proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
     free(window->bridge_config_json);
     proton_browser_session_destroy(window->browser_session);
     free(window->draggable_regions);
@@ -632,19 +655,11 @@ int32_t proton_engine_window_destroy(proton_engine_window_t *window,
   }
   proton_engine_dialog_cancel_window(window);
   if (window->browser != NULL) {
-    cef_browser_host_t *host = window->browser->get_host(window->browser);
-    if (host == NULL) {
-      proton_engine_set_message(error, error_len,
-                                "browser host is not available for close");
-      return PROTON_ERR_ENGINE;
-    }
     window->destroy_requested = 1;
     proton_engine_window_close_views(window);
     proton_engine_bridge_pending_remove_browser(window->runtime,
                                                 window->browser_id);
-    window->browser_close_requested = 1;
-    host->close_browser(host, 1);
-    host->base.release((cef_base_ref_counted_t *)host);
+    proton_browser_lifecycle_request_close(window->browser_lifecycle, 1);
     return PROTON_OK;
   }
   window->destroy_requested = 1;
@@ -1094,8 +1109,7 @@ int32_t proton_engine_window_close(proton_engine_window_t *window,
                                   "browser host is not available for close");
         return PROTON_ERR_ENGINE;
       }
-      window->browser_close_requested = 1;
-      host->close_browser(host, 0);
+      proton_browser_lifecycle_request_close(window->browser_lifecycle, 0);
       host->base.release((cef_base_ref_counted_t *)host);
     } else {
       window->closed = 1;

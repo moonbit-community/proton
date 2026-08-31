@@ -110,6 +110,8 @@ static int CEF_CALLBACK proton_engine_on_before_popup(
     cef_dictionary_value_t **extra_info, int *no_javascript_access);
 static void CEF_CALLBACK proton_engine_on_before_close(
     cef_life_span_handler_t *self, cef_browser_t *browser);
+static void CEF_CALLBACK proton_engine_on_after_created(
+    cef_life_span_handler_t *self, cef_browser_t *browser);
 static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
     cef_drag_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
     size_t regions_count, const cef_draggable_region_t *regions);
@@ -887,6 +889,8 @@ void proton_engine_init_app(void) {
       proton_engine_on_load_error;
   g_proton_engine_life_span_handler.handler.on_before_popup =
       proton_engine_on_before_popup;
+  g_proton_engine_life_span_handler.handler.on_after_created =
+      proton_engine_on_after_created;
   g_proton_engine_life_span_handler.handler.on_before_close =
       proton_engine_on_before_close;
   g_proton_engine_life_span_handler.handler.do_close = proton_engine_do_close;
@@ -971,10 +975,24 @@ int proton_engine_utf8_to_wide(const char *value,
   return written;
 }
 
-void proton_engine_browser_release(cef_browser_t *browser) {
-  if (browser != NULL) {
-    browser->base.release((cef_base_ref_counted_t *)browser);
+proton_browser_lifecycle_t *proton_engine_browser_lifecycle(
+    cef_browser_t *browser) {
+  if (browser == NULL) {
+    return NULL;
   }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL) {
+    return NULL;
+  }
+  cef_client_t *cef_client = host->get_client(host);
+  proton_browser_lifecycle_t *lifecycle = NULL;
+  if (cef_client != NULL) {
+    proton_engine_client_t *client = (proton_engine_client_t *)cef_client;
+    lifecycle = client->browser_lifecycle;
+    cef_client->base.release((cef_base_ref_counted_t *)cef_client);
+  }
+  host->base.release((cef_base_ref_counted_t *)host);
+  return lifecycle;
 }
 
 static proton_engine_window_t *proton_engine_window_from_browser_client(
@@ -1123,18 +1141,19 @@ int CEF_CALLBACK proton_engine_client_release(
 }
 
 proton_engine_client_t *proton_engine_client_new(
-    proton_engine_window_t *window) {
+    proton_engine_window_t *window,
+    proton_browser_lifecycle_t *browser_lifecycle) {
   proton_engine_client_t *client =
       (proton_engine_client_t *)calloc(1, sizeof(*client));
   if (client == NULL) {
     return NULL;
   }
   client->window = window;
+  client->browser_lifecycle = browser_lifecycle;
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
-  // The client must outlive the browser: CEF releases its own reference only
-  // after OnBeforeClose returns, so ownership is tracked by the refcount and
-  // the final release frees the allocation instead of an eager free().
+  // The registry keeps the initial client reference until CEF shutdown; CEF
+  // may hold additional references through and beyond OnBeforeClose.
   client->client.base.release = proton_engine_client_release;
   client->client.on_process_message_received =
       proton_engine_client_on_process_message_received;
@@ -1153,6 +1172,23 @@ proton_engine_client_t *proton_engine_client_new(
       proton_engine_client_get_permission_handler;
   client->client.get_render_handler = proton_engine_client_get_render_handler;
   return client;
+}
+
+cef_client_t *proton_engine_browser_client_factory(
+    void *context, proton_browser_lifecycle_t *browser_lifecycle) {
+  (void)context;
+  proton_engine_client_t *client =
+      (proton_engine_client_t *)calloc(1, sizeof(*client));
+  if (client == NULL) {
+    return NULL;
+  }
+  proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
+                                 sizeof(client->client), &client->refs);
+  client->client.base.release = proton_engine_client_release;
+  client->browser_lifecycle = browser_lifecycle;
+  client->client.get_life_span_handler =
+      proton_engine_client_get_life_span_handler;
+  return &client->client;
 }
 
 void proton_engine_window_defer_free(proton_engine_window_t *window) {
@@ -1183,14 +1219,9 @@ static void proton_engine_window_free_storage(
     window->background_brush = NULL;
   }
   if (window->client != NULL) {
-    // Drop only the engine's reference. CEF releases its client reference
-    // after OnBeforeClose, and the last release frees the client.
-    cef_base_ref_counted_t *client_base =
-        (cef_base_ref_counted_t *)window->client;
     ((proton_engine_client_t *)window->client)->window = NULL;
-    window->client = NULL;
-    client_base->release(client_base);
   }
+  proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
   free(window->bridge_config_json);
   proton_browser_session_destroy(window->browser_session);
   free(window->draggable_regions);
@@ -1255,18 +1286,26 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     cef_life_span_handler_t *self,
     cef_browser_t *browser) {
   (void)self;
-  proton_engine_view_t *view =
-      proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
-  if (view != NULL) {
+  proton_browser_lifecycle_t *lifecycle =
+      proton_engine_browser_lifecycle(browser);
+  if (lifecycle == NULL) {
+    return;
+  }
+  proton_browser_role_t role = proton_browser_lifecycle_role(lifecycle);
+  if (role == PROTON_BROWSER_ROLE_VIEW) {
+    proton_engine_view_t *view =
+        (proton_engine_view_t *)proton_browser_lifecycle_owner(lifecycle);
+    if (view == NULL) {
+      proton_browser_lifecycle_on_before_close(lifecycle, browser);
+      return;
+    }
     proton_engine_runtime_t *runtime = view->window->runtime;
-    view->browser_before_close_seen = 1;
+    proton_browser_lifecycle_on_before_close(lifecycle, browser);
     view->closed = 1;
     proton_view_events_closed(view->events);
     view->hwnd = NULL;
-    if (view->browser != NULL) {
-      proton_engine_browser_release(view->browser);
-      view->browser = NULL;
-    }
+    view->browser = NULL;
+    view->browser_id = 0;
     // A page-initiated close (JS window.close) reaches here without a prior
     // engine destroy; let the cleanup state machine finish so the struct can
     // be reclaimed with its owning window.
@@ -1275,19 +1314,24 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
     return;
   }
+  if (role == PROTON_BROWSER_ROLE_DEVTOOLS) {
+    proton_browser_lifecycle_on_before_close(lifecycle, browser);
+    proton_engine_runtime_t *runtime =
+        (proton_engine_runtime_t *)proton_browser_lifecycle_context(lifecycle);
+    proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
+    return;
+  }
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      (proton_engine_window_t *)proton_browser_lifecycle_owner(lifecycle);
+  proton_browser_lifecycle_on_before_close(lifecycle, browser);
   if (window == NULL) {
     return;
   }
   proton_engine_bridge_pending_remove_browser(window->runtime,
                                               window->browser_id);
-  if (window->browser != NULL) {
-    proton_engine_browser_release(window->browser);
-    window->browser = NULL;
-  }
+  window->browser = NULL;
+  window->browser_id = 0;
   window->closed = 1;
-  window->browser_close_requested = 1;
   if (window->hwnd != NULL) {
     // CEF keeps unwinding the browser teardown after this callback returns,
     // and on the external message pump route it can still touch frame-window
@@ -1297,6 +1341,27 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   }
   proton_engine_signal_wait_source(window->runtime, PROTON_WAIT_PLATFORM);
   proton_engine_window_finalize_if_ready(window);
+}
+
+static void CEF_CALLBACK proton_engine_on_after_created(
+    cef_life_span_handler_t *self,
+    cef_browser_t *browser) {
+  (void)self;
+  proton_browser_lifecycle_t *lifecycle =
+      proton_engine_browser_lifecycle(browser);
+  if (lifecycle == NULL) {
+    cef_browser_host_t *host = browser != NULL ? browser->get_host(browser)
+                                                : NULL;
+    if (host != NULL) {
+      host->close_browser(host, 1);
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    return;
+  }
+  proton_browser_lifecycle_on_after_created(lifecycle, browser);
+  proton_engine_runtime_t *runtime =
+      (proton_engine_runtime_t *)proton_browser_lifecycle_context(lifecycle);
+  proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
 }
 
 cef_life_span_handler_t *CEF_CALLBACK
