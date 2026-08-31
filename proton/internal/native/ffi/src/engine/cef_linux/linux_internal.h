@@ -4,6 +4,7 @@
 /* Private contracts shared by the Linux engine translation units. */
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
+#include "../cef_common/bridge_client.h"
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_lifecycle.h"
 #include "../cef_common/browser_session.h"
@@ -33,10 +34,6 @@
 #include "include/capi/cef_render_process_handler_capi.h"
 #include "include/capi/cef_request_handler_capi.h"
 #include "include/capi/cef_scheme_capi.h"
-
-#define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
-#define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
-#define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
 
 enum {
   PROTON_X11_MOVERESIZE_SIZE_TOP_LEFT = 0,
@@ -204,10 +201,6 @@ struct proton_engine_view {
 void proton_engine_init_handlers(void);
 cef_app_t *proton_engine_cef_app(void);
 int proton_engine_register_scheme_factory(void);
-void proton_engine_bridge_pending_clear_all(void);
-void proton_engine_bridge_pending_remove_browser(
-    proton_engine_runtime_t *runtime,
-    int browser_id);
 proton_engine_client_t *proton_engine_client_create(
     proton_browser_lifecycle_t *browser_lifecycle);
 int CEF_CALLBACK proton_engine_client_release(

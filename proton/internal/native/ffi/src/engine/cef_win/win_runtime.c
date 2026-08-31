@@ -294,45 +294,6 @@ void proton_engine_window_list_remove(proton_engine_window_t *window) {
   LeaveCriticalSection(&g_proton_engine_window_lock);
 }
 
-int proton_engine_runtime_enqueue_bridge_request(
-    proton_engine_runtime_t *runtime, int64_t request_id,
-    int64_t public_window, const char *op, const char *payload,
-    const char *page_instance, const char *source_origin) {
-  if (runtime == NULL || request_id <= 0 || public_window <= 0 ||
-      op == NULL || payload == NULL || page_instance == NULL ||
-      source_origin == NULL) {
-    return 0;
-  }
-  proton_event_t *event = proton_event_create(PROTON_EVENT_BRIDGE_REQUEST);
-  if (event == NULL) {
-    return 0;
-  }
-  event->request_id = request_id;
-  event->window = public_window;
-  const char *items[] = {op, payload, page_instance, source_origin};
-  if (!proton_event_set_items(event, items, 4) ||
-      !proton_event_try_publish(event)) {
-    proton_event_destroy(event);
-    return 0;
-  }
-  return 1;
-}
-
-int proton_engine_runtime_enqueue_bridge_cancellation(
-    proton_engine_runtime_t *runtime,
-    int64_t request_id) {
-  if (runtime == NULL || request_id <= 0) {
-    return 0;
-  }
-  proton_event_t *event =
-      proton_event_create(PROTON_EVENT_BRIDGE_REQUEST_CANCELLED);
-  if (event == NULL) {
-    return 0;
-  }
-  event->request_id = request_id;
-  return proton_event_publish(event);
-}
-
 int proton_engine_browser_id(cef_browser_t *browser) {
   return browser != NULL ? browser->get_identifier(browser) : 0;
 }

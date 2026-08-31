@@ -4,6 +4,7 @@
 /* Private contracts shared by the Windows engine translation units. */
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
+#include "../cef_common/bridge_client.h"
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_lifecycle.h"
 #include "../cef_common/browser_session.h"
@@ -16,9 +17,6 @@
 #include "win_titlebar.h"
 
 #define PROTON_ENGINE_WINDOW_CLASS L"ProtonNativeWindow"
-#define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
-#define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
-#define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
 #define PROTON_ENGINE_WM_DESTROY_SELF (WM_USER + 0x31)
 #define PROTON_ENGINE_WM_DESTROY_CHILD (WM_USER + 0x32)
 
@@ -38,14 +36,6 @@
 #include "include/capi/cef_scheme_capi.h"
 
 typedef struct proton_engine_client proton_engine_client_t;
-typedef struct proton_engine_bridge_pending {
-  int64_t request_id;
-  int browser_id;
-  int renderer_pending_id;
-  char *page_instance;
-  cef_frame_t *frame;
-  struct proton_engine_bridge_pending *next;
-} proton_engine_bridge_pending_t;
 
 struct proton_engine_runtime {
   int owns_cef_runtime;
@@ -269,13 +259,6 @@ struct proton_engine_view {
 void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms);
 int proton_engine_runtime_initialized(void);
 int32_t proton_engine_runtime_remote_debugging_port(void);
-int proton_engine_runtime_enqueue_bridge_request(
-    proton_engine_runtime_t *runtime, int64_t request_id,
-    int64_t public_window, const char *op, const char *payload,
-    const char *page_instance, const char *source_origin);
-int proton_engine_runtime_enqueue_bridge_cancellation(
-    proton_engine_runtime_t *runtime,
-    int64_t request_id);
 proton_engine_window_t *proton_engine_windows_head(void);
 void proton_engine_window_list_add(proton_engine_window_t *window);
 void proton_engine_window_list_remove(proton_engine_window_t *window);
@@ -285,7 +268,6 @@ void proton_engine_check_cef_api_hash(void);
 void proton_engine_set_command_line_paths(
     const proton_engine_runtime_config_t *config);
 int proton_engine_register_scheme_factory(void);
-void proton_engine_bridge_pending_clear_all(void);
 void proton_engine_free_closed_windows(void);
 int proton_engine_closed_windows_ready_for_shutdown(void);
 void proton_engine_overlay_subclass_browser(proton_engine_window_t *window,
@@ -296,9 +278,6 @@ LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam);
 void proton_engine_resize_browser(proton_engine_window_t *window,
                                   int width,
                                   int height);
-void proton_engine_bridge_pending_remove_browser(
-    proton_engine_runtime_t *runtime,
-    int browser_id);
 proton_engine_client_t *proton_engine_client_new(
     proton_browser_lifecycle_t *browser_lifecycle);
 cef_client_t *proton_engine_browser_client_factory(
