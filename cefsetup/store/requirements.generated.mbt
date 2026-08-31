@@ -16,8 +16,8 @@ let runtime_layout_version = 1
 fn win32_x64_platform() -> ProtonPlatform {
   {
     id: "win32-x64",
-    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal",
-    default_cef_sha256: "c105f69c0d4dc14331be12cee967eeb73fa4897a6ecde244051318491cd381c7",
+    default_cef_name: "cef_binary_151.3.24+g2384915+chromium-151.0.7922.174_windows64_minimal",
+    default_cef_sha256: "e41de3bdb024e330236cb6269636210f3f36d3a0aca6d6b394388ebd4253a2d2",
     supported: true,
   }
 }
@@ -26,8 +26,8 @@ fn win32_x64_platform() -> ProtonPlatform {
 fn darwin_arm64_platform() -> ProtonPlatform {
   {
     id: "darwin-arm64",
-    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
-    default_cef_sha256: "02d8e0d53efe11bae97c101193cffcb5b6f899d1015908609db381ff6f96633a",
+    default_cef_name: "cef_binary_151.3.24+g2384915+chromium-151.0.7922.174_macosarm64_minimal",
+    default_cef_sha256: "3557fa980ce83103ec488dd2e5cc6cc51d2b890718c41005b3ef15ca5944a811",
     supported: true,
   }
 }
@@ -36,7 +36,7 @@ fn darwin_arm64_platform() -> ProtonPlatform {
 fn darwin_x64_platform() -> ProtonPlatform {
   {
     id: "darwin-x64",
-    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosx64_minimal",
+    default_cef_name: "cef_binary_151.3.24+g2384915+chromium-151.0.7922.174_macosx64_minimal",
     default_cef_sha256: "",
     supported: false,
   }
@@ -46,8 +46,8 @@ fn darwin_x64_platform() -> ProtonPlatform {
 fn linux_x64_platform() -> ProtonPlatform {
   {
     id: "linux-x64",
-    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_linux64_minimal",
-    default_cef_sha256: "a2cef000527e9952bae470a292f12384c790523dadcbbcbee807743a539c6de0",
+    default_cef_name: "cef_binary_151.3.24+g2384915+chromium-151.0.7922.174_linux64_minimal",
+    default_cef_sha256: "db53c43fdace8b7ee4af0f005120116d6973aa9d8eb7702c0617badf9be8684e",
     supported: true,
   }
 }
