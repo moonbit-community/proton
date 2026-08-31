@@ -134,8 +134,9 @@ test "moon build-only output rejects missing or ambiguous artifacts" {
 
 ///|
 test "native Moon commands select a source-built runtime on Unix" {
-  @debug.assert_eq(native_moon_process_env_for(false, None), {
-    "MOON_CC": "clang",
+  @debug.assert_eq(native_moon_process_env_for(false, None), { "MOON_CC": "cc" })
+  @debug.assert_eq(native_moon_process_env_for(false, Some("gcc")), {
+    "MOON_CC": "gcc",
   })
   @debug.assert_eq(native_moon_process_env_for(false, Some("clang")), {
     "MOON_CC": "clang",

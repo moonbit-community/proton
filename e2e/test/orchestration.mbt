@@ -114,7 +114,7 @@ async fn app_process_env(
     // interposing on CEF and libc allocations in the same Unix process.
     result["MOON_CC"] = match @env.get_env_var("MOON_CC") {
       Some(value) if value.trim() != "" => value
-      _ => "clang"
+      _ => "cc"
     }
     result["LD_LIBRARY_PATH"] = prepend_env_path(
       lib_dir,
