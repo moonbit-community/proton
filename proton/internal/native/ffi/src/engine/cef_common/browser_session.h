@@ -9,6 +9,8 @@
 #include "include/capi/cef_request_capi.h"
 #include "include/capi/cef_request_handler_capi.h"
 
+#include "browser_lifecycle.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -37,6 +39,9 @@ proton_browser_session_t *proton_browser_session_create(
 void proton_browser_session_destroy(proton_browser_session_t *session);
 void proton_browser_session_bind_window(proton_browser_session_t *session,
                                          proton_window_id_t window);
+void proton_browser_session_bind_lifecycle(
+    proton_browser_session_t *session,
+    proton_browser_lifecycle_t *lifecycle);
 
 void proton_browser_session_loading_changed(proton_browser_session_t *session,
                                              const char *url,

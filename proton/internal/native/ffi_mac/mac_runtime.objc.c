@@ -517,7 +517,7 @@ void CEF_CALLBACK proton_engine_osr_get_view_rect(
   if (view == NULL) {
     // CEF can query the viewport while browser creation is still running,
     // before the view records its browser id; resolve via the client then.
-    view = proton_engine_view_from_browser_client(browser);
+    view = proton_engine_view_from_browser(browser);
   }
   if (view != NULL) {
     rect->width = view->width > 0 ? view->width : 1;
@@ -525,7 +525,7 @@ void CEF_CALLBACK proton_engine_osr_get_view_rect(
     return;
   }
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_from_browser(browser);
   rect->width = window != NULL && window->width > 0 ? window->width : 1;
   rect->height = window != NULL && window->height > 0 ? window->height : 1;
 }
@@ -554,7 +554,7 @@ void CEF_CALLBACK proton_engine_osr_on_popup_show(
     int show) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_from_browser(browser);
   if (window != NULL) {
     window->osr_popup_visible = show ? 1 : 0;
   }
@@ -566,7 +566,7 @@ void CEF_CALLBACK proton_engine_osr_on_popup_size(
     const cef_rect_t *rect) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_from_browser(browser);
   if (window != NULL && rect != NULL) {
     window->osr_popup_rect = *rect;
   }
@@ -829,6 +829,17 @@ int32_t proton_engine_runtime_create(
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
   runtime->next_bridge_request_id = 1;
+  runtime->browsers = proton_browser_registry_create(
+      proton_engine_browser_client_factory, runtime);
+  if (runtime->browsers == NULL) {
+    free(runtime);
+    proton_engine_cef_shutdown();
+    proton_engine_reset_external_message_pump();
+    g_proton_cef_runtime_active = 0;
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate browser registry");
+    return PROTON_ERR_ENGINE;
+  }
   snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
            config.dialog_ok_label);
   snprintf(runtime->dialog_cancel_label,
@@ -839,6 +850,8 @@ int32_t proton_engine_runtime_create(
     proton_engine_cef_shutdown();
     proton_engine_reset_external_message_pump();
     g_proton_cef_runtime_active = 0;
+    proton_browser_registry_destroy(runtime->browsers);
+    free(runtime);
     proton_engine_set_message(error, error_len,
                               "failed to register proton scheme handler");
     return PROTON_ERR_ENGINE;
@@ -868,13 +881,19 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     proton_engine_reset_external_message_pump();
     runtime->owns_cef_runtime = 0;
   }
+  proton_browser_registry_destroy(runtime->browsers);
   g_proton_cef_runtime_active = 0;
   free(runtime);
   return PROTON_OK;
 }
 
 int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
-  return runtime != NULL && !proton_engine_runtime_has_windows(runtime);
+  if (runtime == NULL) {
+    return 0;
+  }
+  proton_browser_registry_begin_shutdown(runtime->browsers);
+  return !proton_engine_runtime_has_windows(runtime) &&
+         proton_browser_registry_shutdown_ready(runtime->browsers);
 }
 
 static void proton_engine_pump_appkit_cef_once(void) {

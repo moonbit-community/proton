@@ -11,8 +11,15 @@ async fn run_devtools_scenario_page_probe(
   tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
+  browser_web_socket_url : String,
   timeout : Int,
-) -> Unit {
+) -> ShutdownProbeResult {
+  let (host, devtools) = wait_for_devtools_targets(app, target, timeout)
+  let browser = @client.CdpClient::connect_with_timeout(
+    tasks,
+    browser_web_socket_url,
+    timeout_ms=timeout,
+  )
   let page = connect_spawned_page(
     tasks,
     app,
@@ -32,5 +39,54 @@ async fn run_devtools_scenario_page_probe(
   ) else {
     fail("Proton bridge was injected into a DevTools isolated context")
   }
+  guard host.target_id != devtools.target_id else {
+    fail("DevTools must have an independent CEF browser target")
+  }
+
+  let snapshot = snapshot_scenario_process_tree(app)
   page.close()
+  close_page_target(browser, host.target_id)
+  let shutdown = wait_for_scenario_app_shutdown(
+    app, target, snapshot, process_shutdown_timeout_ms,
+  )
+  println(
+    "MoonBit 54_devtools lifecycle passed: helpers=" +
+    shutdown.helper_processes.to_string(),
+  )
+  shutdown
+}
+
+///|
+async fn wait_for_devtools_targets(
+  app : SpawnedScenarioApp,
+  target : String,
+  timeout : Int,
+) -> (@client.CdpDiscoveredTarget, @client.CdpDiscoveredTarget) {
+  let cdp_target = cdp_target_from(target)
+  let mut elapsed = 0
+  while elapsed <= timeout {
+    let targets = discover_targets_for_poll(cdp_target)
+    let mut host : @client.CdpDiscoveredTarget? = None
+    let mut devtools : @client.CdpDiscoveredTarget? = None
+    for item in targets {
+      if item.title == "Proton DevTools API" {
+        host = Some(item)
+      } else if item.url.has_prefix("devtools://") {
+        devtools = Some(item)
+      }
+    }
+    match (host, devtools) {
+      (Some(host), Some(devtools)) => return (host, devtools)
+      _ => {
+        @async.sleep(cdp_start_poll_timeout_ms)
+        elapsed = elapsed + cdp_start_poll_timeout_ms
+      }
+    }
+  }
+  fail(
+    "CEF host and DevTools targets did not become ready within " +
+    timeout.to_string() +
+    "ms" +
+    app_diagnostic_suffix(app),
+  )
 }

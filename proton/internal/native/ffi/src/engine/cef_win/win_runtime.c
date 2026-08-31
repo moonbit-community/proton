@@ -348,27 +348,36 @@ void proton_engine_window_unlock(void) {
 
 proton_engine_window_t *proton_engine_window_lookup_browser(
     cef_browser_t *browser) {
-  int browser_id = proton_engine_browser_id(browser);
-  if (browser_id == 0) {
+  proton_browser_lifecycle_t *lifecycle =
+      proton_engine_browser_lifecycle(browser);
+  if (lifecycle == NULL ||
+      proton_browser_lifecycle_role(lifecycle) != PROTON_BROWSER_ROLE_MAIN) {
     return NULL;
   }
-  for (proton_engine_window_t *window = g_proton_engine_windows;
-       window != NULL; window = window->next) {
-    if (window->browser_id == browser_id) {
-      return window;
-    }
-  }
-  return NULL;
+  return (proton_engine_window_t *)proton_browser_lifecycle_owner(lifecycle);
 }
 
 cef_browser_t *proton_engine_window_browser(proton_engine_window_t *window) {
-  return window != NULL ? window->browser : NULL;
+  return window != NULL
+             ? proton_browser_lifecycle_browser(window->browser_lifecycle)
+             : NULL;
+}
+
+cef_browser_t *proton_engine_view_browser(proton_engine_view_t *view) {
+  return view != NULL
+             ? proton_browser_lifecycle_browser(view->browser_lifecycle)
+             : NULL;
 }
 
 proton_engine_view_t *proton_engine_window_lookup_view_browser(
     cef_browser_t *browser) {
-  return proton_engine_find_view_by_browser_id(
-      proton_engine_browser_id(browser));
+  proton_browser_lifecycle_t *lifecycle =
+      proton_engine_browser_lifecycle(browser);
+  if (lifecycle == NULL ||
+      proton_browser_lifecycle_role(lifecycle) != PROTON_BROWSER_ROLE_VIEW) {
+    return NULL;
+  }
+  return (proton_engine_view_t *)proton_browser_lifecycle_owner(lifecycle);
 }
 
 proton_window_id_t proton_engine_view_window_public_id(
@@ -391,45 +400,6 @@ proton_view_id_t proton_engine_view_public_id(proton_engine_view_t *view) {
   }
   return view_id;
 }
-
-proton_engine_view_t *proton_engine_find_view_by_browser_id(int browser_id) {
-  if (browser_id == 0 || !g_proton_engine_window_lock_initialized) {
-    return NULL;
-  }
-  proton_engine_view_t *found = NULL;
-  EnterCriticalSection(&g_proton_engine_window_lock);
-  for (proton_engine_window_t *window = g_proton_engine_windows;
-       window != NULL && found == NULL; window = window->next) {
-    for (proton_engine_view_t *view = window->views; view != NULL;
-         view = view->next) {
-      if (view->browser_id == browser_id) {
-        found = view;
-        break;
-      }
-    }
-  }
-  LeaveCriticalSection(&g_proton_engine_window_lock);
-  return found;
-}
-
-proton_engine_window_t *proton_engine_find_window_by_browser_id(int browser_id) {
-  if (browser_id == 0 || !g_proton_engine_window_lock_initialized) {
-    return NULL;
-  }
-  proton_engine_window_t *found = NULL;
-  EnterCriticalSection(&g_proton_engine_window_lock);
-  for (proton_engine_window_t *window = g_proton_engine_windows;
-       window != NULL; window = window->next) {
-    if (window->browser_id == browser_id) {
-      found = window;
-      break;
-    }
-  }
-  LeaveCriticalSection(&g_proton_engine_window_lock);
-  return found;
-}
-
-
 
 
 static void proton_engine_remove_temporary_profile(void) {
@@ -591,6 +561,17 @@ int32_t proton_engine_runtime_create(
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
   runtime->next_bridge_request_id = 1;
+  runtime->browsers = proton_browser_registry_create(
+      proton_engine_browser_client_factory, runtime);
+  if (runtime->browsers == NULL) {
+    free(runtime);
+    proton_engine_cef_shutdown();
+    g_proton_cef_runtime_active = 0;
+    proton_engine_release_pump_event();
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate browser registry");
+    return PROTON_ERR_ENGINE;
+  }
   snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
            config.dialog_ok_label);
   snprintf(runtime->dialog_cancel_label,
@@ -613,6 +594,7 @@ static void proton_engine_dispose_runtime_state(
   }
   g_proton_cef_runtime_active = 0;
   proton_menu_bar_destroy(runtime->menu_definition);
+  proton_browser_registry_destroy(runtime->browsers);
   free(runtime);
 }
 
@@ -620,8 +602,10 @@ int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
   if (runtime == NULL) {
     return 0;
   }
+  proton_browser_registry_begin_shutdown(runtime->browsers);
   if (!g_proton_engine_window_lock_initialized) {
-    return g_proton_engine_windows == NULL;
+    return g_proton_engine_windows == NULL &&
+           proton_browser_registry_shutdown_ready(runtime->browsers);
   }
   int32_t ready = 1;
   EnterCriticalSection(&g_proton_engine_window_lock);
@@ -633,7 +617,8 @@ int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
     }
   }
   LeaveCriticalSection(&g_proton_engine_window_lock);
-  return ready && proton_engine_closed_windows_ready_for_shutdown();
+  return ready && proton_engine_closed_windows_ready_for_shutdown() &&
+         proton_browser_registry_shutdown_ready(runtime->browsers);
 }
 
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
@@ -644,6 +629,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_engine_dialog_cancel_runtime(runtime);
+  proton_browser_registry_begin_shutdown(runtime->browsers);
   if (runtime->owns_cef_runtime) {
     if (!proton_engine_runtime_destroy_ready(runtime)) {
       proton_engine_set_message(error, error_len,

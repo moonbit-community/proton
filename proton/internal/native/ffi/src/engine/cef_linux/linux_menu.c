@@ -350,15 +350,15 @@ static void proton_engine_menu_command_activated(const char *command_id,
 static void proton_engine_menu_apply_edit_role(
     proton_engine_window_t *window,
     const char *role) {
-  if (window == NULL || window->browser == NULL || role == NULL) {
+  if (window == NULL || proton_engine_window_browser(window) == NULL || role == NULL) {
     return;
   }
   cef_frame_t *frame =
-      window->browser->get_focused_frame != NULL
-          ? window->browser->get_focused_frame(window->browser)
+      proton_engine_window_browser(window)->get_focused_frame != NULL
+          ? proton_engine_window_browser(window)->get_focused_frame(proton_engine_window_browser(window))
           : NULL;
   if (frame == NULL) {
-    frame = window->browser->get_main_frame(window->browser);
+    frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
   }
   if (frame == NULL) {
     return;

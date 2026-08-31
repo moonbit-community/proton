@@ -1,6 +1,7 @@
 #ifndef PROTON_ENGINE_CEF_COMMON_BRIDGE_JSON_H
 #define PROTON_ENGINE_CEF_COMMON_BRIDGE_JSON_H
 
+#include "../../proton_json.h"
 #include "bridge_policy.h"
 
 #include <stdio.h>

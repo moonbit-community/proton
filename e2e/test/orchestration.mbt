@@ -595,17 +595,15 @@ async fn run_scenario_probe_once(
         timeout,
       )
     } else if name == "54_devtools" {
-      run_devtools_scenario_page_probe(group, app, target, timeout)
+      let shutdown = run_devtools_scenario_page_probe(
+        group, app, target, browser_web_socket_url, timeout,
+      )
       match app_exit_code(app.process) {
-        Some(code) =>
-          fail(
-            "scenario app exited before the probe completed: code=" +
-            code.to_string() +
-            app_output_suffix(app.output_path),
-          )
-        None => ()
+        Some(0) => ()
+        Some(code) => fail("scenario app exited with code=" + code.to_string())
+        None => fail("scenario app remained alive after DevTools shutdown")
       }
-      finish_scenario_app(app, target)
+      shutdown
     } else if name == "56_i18n" {
       run_i18n_scenario_page_probe(group, app, target, timeout)
       match app_exit_code(app.process) {

@@ -5,6 +5,7 @@
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
 #include "../cef_common/bridge_lifecycle.h"
+#include "../cef_common/browser_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
 #include "../cef_common/window_state.h"
@@ -66,6 +67,7 @@ struct proton_engine_runtime {
   proton_linux_menu_bar_t *menu_definition;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
+  proton_browser_registry_t *browsers;
 };
 
 struct proton_engine_window {
@@ -85,9 +87,7 @@ struct proton_engine_window {
   char titlebar_maximize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
-  proton_engine_client_t *client;
-  cef_browser_t *browser;
-  int browser_id;
+  proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
   char *bridge_config_json;
   int32_t max_bridge_payload_bytes;
@@ -133,7 +133,8 @@ void proton_engine_dialog_cancel_window(proton_engine_window_t *window);
 void proton_engine_signal_wait_source(uint32_t ready_mask);
 void proton_engine_browser_signal(void *user_data);
 int proton_engine_browser_id(cef_browser_t *browser);
-void proton_engine_browser_release(cef_browser_t *browser);
+proton_browser_lifecycle_t *proton_engine_browser_lifecycle(
+    cef_browser_t *browser);
 proton_engine_view_t *proton_engine_view_from_browser(cef_browser_t *browser);
 void proton_engine_window_defer_free(proton_engine_window_t *window);
 int proton_engine_x11_window_is_focused(Display *display, Window browser_window);
@@ -167,8 +168,7 @@ typedef struct {
 struct proton_engine_client {
   cef_client_t client;
   proton_engine_ref_counted_t refs;
-  proton_engine_window_t *window;
-  proton_engine_view_t *view;
+  proton_browser_lifecycle_t *browser_lifecycle;
 };
 
 /* A web contents view: an extra child browser hosted inside a window's
@@ -178,9 +178,7 @@ struct proton_engine_client {
    how the view was closed. */
 struct proton_engine_view {
   proton_engine_window_t *window;
-  proton_engine_client_t *client;
-  cef_browser_t *browser;
-  int browser_id;
+  proton_browser_lifecycle_t *browser_lifecycle;
   cef_window_handle_t xwindow;
   Display *display;
   int32_t x;
@@ -197,8 +195,6 @@ struct proton_engine_view {
   proton_view_events_t *events;
   int has_background_color;
   uint32_t background_color;
-  int browser_close_requested;
-  int browser_before_close_seen;
   int finalize_after_browser_close;
   int finalized;
   int closed;
@@ -213,7 +209,11 @@ void proton_engine_bridge_pending_remove_browser(
     proton_engine_runtime_t *runtime,
     int browser_id);
 proton_engine_client_t *proton_engine_client_create(
-    proton_engine_window_t *window);
+    proton_browser_lifecycle_t *browser_lifecycle);
+int CEF_CALLBACK proton_engine_client_release(
+    cef_base_ref_counted_t *base);
+cef_client_t *proton_engine_browser_client_factory(
+    void *context, proton_browser_lifecycle_t *browser_lifecycle);
 void proton_engine_window_mark_closed(proton_engine_window_t *window);
 void proton_engine_overlay_update_input_shape(proton_engine_window_t *window);
 void proton_engine_overlay_update_maximize_button(
@@ -235,10 +235,6 @@ void proton_engine_append_switch_with_value(cef_command_line_t *command_line,
                                             const char *value);
 void proton_engine_window_list_add(proton_engine_window_t *window);
 proton_engine_window_t *proton_engine_window_from_browser(
-    cef_browser_t *browser);
-proton_engine_window_t *proton_engine_window_from_browser_client(
-    cef_browser_t *browser);
-proton_engine_view_t *proton_engine_view_from_browser_client(
     cef_browser_t *browser);
 void proton_engine_overlay_release_input_windows(
     proton_engine_window_t *window);

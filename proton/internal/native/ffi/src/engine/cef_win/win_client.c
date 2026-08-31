@@ -110,6 +110,8 @@ static int CEF_CALLBACK proton_engine_on_before_popup(
     cef_dictionary_value_t **extra_info, int *no_javascript_access);
 static void CEF_CALLBACK proton_engine_on_before_close(
     cef_life_span_handler_t *self, cef_browser_t *browser);
+static void CEF_CALLBACK proton_engine_on_after_created(
+    cef_life_span_handler_t *self, cef_browser_t *browser);
 static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
     cef_drag_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
     size_t regions_count, const cef_draggable_region_t *regions);
@@ -632,7 +634,7 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
   free(message_name);
   int browser_id = proton_engine_browser_id(browser);
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(browser_id);
+      proton_engine_window_lookup_browser(browser);
   if (is_lifecycle) {
     cef_list_value_t *args = message->get_argument_list(message);
     if (window != NULL && frame->is_main(frame) && args != NULL &&
@@ -887,6 +889,8 @@ void proton_engine_init_app(void) {
       proton_engine_on_load_error;
   g_proton_engine_life_span_handler.handler.on_before_popup =
       proton_engine_on_before_popup;
+  g_proton_engine_life_span_handler.handler.on_after_created =
+      proton_engine_on_after_created;
   g_proton_engine_life_span_handler.handler.on_before_close =
       proton_engine_on_before_close;
   g_proton_engine_life_span_handler.handler.do_close = proton_engine_do_close;
@@ -971,13 +975,7 @@ int proton_engine_utf8_to_wide(const char *value,
   return written;
 }
 
-void proton_engine_browser_release(cef_browser_t *browser) {
-  if (browser != NULL) {
-    browser->base.release((cef_base_ref_counted_t *)browser);
-  }
-}
-
-static proton_engine_window_t *proton_engine_window_from_browser_client(
+proton_browser_lifecycle_t *proton_engine_browser_lifecycle(
     cef_browser_t *browser) {
   if (browser == NULL) {
     return NULL;
@@ -987,37 +985,14 @@ static proton_engine_window_t *proton_engine_window_from_browser_client(
     return NULL;
   }
   cef_client_t *cef_client = host->get_client(host);
-  proton_engine_window_t *window = NULL;
+  proton_browser_lifecycle_t *lifecycle = NULL;
   if (cef_client != NULL) {
     proton_engine_client_t *client = (proton_engine_client_t *)cef_client;
-    window = client->window;
+    lifecycle = client->browser_lifecycle;
     cef_client->base.release((cef_base_ref_counted_t *)cef_client);
   }
   host->base.release((cef_base_ref_counted_t *)host);
-  return window;
-}
-
-// Resolves a view through the browser's client. Unlike the browser-id list
-// scan this also works while cef_browser_host_create_browser_sync is still
-// running, before the view records its browser id.
-static proton_engine_view_t *proton_engine_view_from_browser_client(
-    cef_browser_t *browser) {
-  if (browser == NULL) {
-    return NULL;
-  }
-  cef_browser_host_t *host = browser->get_host(browser);
-  if (host == NULL) {
-    return NULL;
-  }
-  cef_client_t *cef_client = host->get_client(host);
-  proton_engine_view_t *view = NULL;
-  if (cef_client != NULL) {
-    proton_engine_client_t *client = (proton_engine_client_t *)cef_client;
-    view = client->view;
-    cef_client->base.release((cef_base_ref_counted_t *)cef_client);
-  }
-  host->base.release((cef_base_ref_counted_t *)host);
-  return view;
+  return lifecycle;
 }
 
 static void CEF_CALLBACK proton_engine_osr_get_view_rect(
@@ -1031,11 +1006,11 @@ static void CEF_CALLBACK proton_engine_osr_get_view_rect(
   rect->x = 0;
   rect->y = 0;
   proton_engine_view_t *view =
-      proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_view_browser(browser);
   if (view == NULL) {
     // CEF can query the viewport while create_browser_sync is still running,
     // before the view records its browser id; resolve via the client then.
-    view = proton_engine_view_from_browser_client(browser);
+    view = proton_engine_window_lookup_view_browser(browser);
   }
   if (view != NULL) {
     rect->width = view->width > 0 ? view->width : 1;
@@ -1043,7 +1018,7 @@ static void CEF_CALLBACK proton_engine_osr_get_view_rect(
     return;
   }
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_lookup_browser(browser);
   rect->width = window != NULL && window->width > 0 ? window->width : 1;
   rect->height = window != NULL && window->height > 0 ? window->height : 1;
 }
@@ -1073,7 +1048,7 @@ static void CEF_CALLBACK proton_engine_osr_on_popup_show(
     int show) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_lookup_browser(browser);
   if (window != NULL) {
     window->osr_popup_visible = show ? 1 : 0;
   }
@@ -1085,7 +1060,7 @@ static void CEF_CALLBACK proton_engine_osr_on_popup_size(
     const cef_rect_t *rect) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_lookup_browser(browser);
   if (window != NULL && rect != NULL) {
     window->osr_popup_rect = *rect;
   }
@@ -1123,18 +1098,17 @@ int CEF_CALLBACK proton_engine_client_release(
 }
 
 proton_engine_client_t *proton_engine_client_new(
-    proton_engine_window_t *window) {
+    proton_browser_lifecycle_t *browser_lifecycle) {
   proton_engine_client_t *client =
       (proton_engine_client_t *)calloc(1, sizeof(*client));
   if (client == NULL) {
     return NULL;
   }
-  client->window = window;
+  client->browser_lifecycle = browser_lifecycle;
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
-  // The client must outlive the browser: CEF releases its own reference only
-  // after OnBeforeClose returns, so ownership is tracked by the refcount and
-  // the final release frees the allocation instead of an eager free().
+  // The registry keeps the initial client reference until CEF shutdown; CEF
+  // may hold additional references through and beyond OnBeforeClose.
   client->client.base.release = proton_engine_client_release;
   client->client.on_process_message_received =
       proton_engine_client_on_process_message_received;
@@ -1153,6 +1127,23 @@ proton_engine_client_t *proton_engine_client_new(
       proton_engine_client_get_permission_handler;
   client->client.get_render_handler = proton_engine_client_get_render_handler;
   return client;
+}
+
+cef_client_t *proton_engine_browser_client_factory(
+    void *context, proton_browser_lifecycle_t *browser_lifecycle) {
+  (void)context;
+  proton_engine_client_t *client =
+      (proton_engine_client_t *)calloc(1, sizeof(*client));
+  if (client == NULL) {
+    return NULL;
+  }
+  proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
+                                 sizeof(client->client), &client->refs);
+  client->client.base.release = proton_engine_client_release;
+  client->browser_lifecycle = browser_lifecycle;
+  client->client.get_life_span_handler =
+      proton_engine_client_get_life_span_handler;
+  return &client->client;
 }
 
 void proton_engine_window_defer_free(proton_engine_window_t *window) {
@@ -1182,15 +1173,7 @@ static void proton_engine_window_free_storage(
     DeleteObject(window->background_brush);
     window->background_brush = NULL;
   }
-  if (window->client != NULL) {
-    // Drop only the engine's reference. CEF releases its client reference
-    // after OnBeforeClose, and the last release frees the client.
-    cef_base_ref_counted_t *client_base =
-        (cef_base_ref_counted_t *)window->client;
-    ((proton_engine_client_t *)window->client)->window = NULL;
-    window->client = NULL;
-    client_base->release(client_base);
-  }
+  proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
   free(window->bridge_config_json);
   proton_browser_session_destroy(window->browser_session);
   free(window->draggable_regions);
@@ -1245,7 +1228,7 @@ static int CEF_CALLBACK proton_engine_on_before_popup(
   (void)extra_info;
   (void)no_javascript_access;
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   return proton_browser_session_before_popup(
       window != NULL ? window->browser_session : NULL, target_url,
       target_disposition, user_gesture);
@@ -1255,18 +1238,24 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     cef_life_span_handler_t *self,
     cef_browser_t *browser) {
   (void)self;
-  proton_engine_view_t *view =
-      proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
-  if (view != NULL) {
+  proton_browser_lifecycle_t *lifecycle =
+      proton_engine_browser_lifecycle(browser);
+  if (lifecycle == NULL) {
+    return;
+  }
+  proton_browser_role_t role = proton_browser_lifecycle_role(lifecycle);
+  if (role == PROTON_BROWSER_ROLE_VIEW) {
+    proton_engine_view_t *view =
+        (proton_engine_view_t *)proton_browser_lifecycle_owner(lifecycle);
+    if (view == NULL) {
+      proton_browser_lifecycle_on_before_close(lifecycle, browser);
+      return;
+    }
     proton_engine_runtime_t *runtime = view->window->runtime;
-    view->browser_before_close_seen = 1;
+    proton_browser_lifecycle_on_before_close(lifecycle, browser);
     view->closed = 1;
     proton_view_events_closed(view->events);
     view->hwnd = NULL;
-    if (view->browser != NULL) {
-      proton_engine_browser_release(view->browser);
-      view->browser = NULL;
-    }
     // A page-initiated close (JS window.close) reaches here without a prior
     // engine destroy; let the cleanup state machine finish so the struct can
     // be reclaimed with its owning window.
@@ -1275,19 +1264,24 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
     return;
   }
+  if (role == PROTON_BROWSER_ROLE_DEVTOOLS) {
+    proton_browser_lifecycle_on_before_close(lifecycle, browser);
+    proton_engine_runtime_t *runtime =
+        (proton_engine_runtime_t *)proton_browser_lifecycle_context(lifecycle);
+    proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
+    return;
+  }
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      (proton_engine_window_t *)proton_browser_lifecycle_owner(lifecycle);
+  if (window != NULL) {
+    proton_engine_bridge_pending_remove_browser(
+        window->runtime, proton_browser_lifecycle_browser_id(lifecycle));
+  }
+  proton_browser_lifecycle_on_before_close(lifecycle, browser);
   if (window == NULL) {
     return;
   }
-  proton_engine_bridge_pending_remove_browser(window->runtime,
-                                              window->browser_id);
-  if (window->browser != NULL) {
-    proton_engine_browser_release(window->browser);
-    window->browser = NULL;
-  }
   window->closed = 1;
-  window->browser_close_requested = 1;
   if (window->hwnd != NULL) {
     // CEF keeps unwinding the browser teardown after this callback returns,
     // and on the external message pump route it can still touch frame-window
@@ -1297,6 +1291,27 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   }
   proton_engine_signal_wait_source(window->runtime, PROTON_WAIT_PLATFORM);
   proton_engine_window_finalize_if_ready(window);
+}
+
+static void CEF_CALLBACK proton_engine_on_after_created(
+    cef_life_span_handler_t *self,
+    cef_browser_t *browser) {
+  (void)self;
+  proton_browser_lifecycle_t *lifecycle =
+      proton_engine_browser_lifecycle(browser);
+  if (lifecycle == NULL) {
+    cef_browser_host_t *host = browser != NULL ? browser->get_host(browser)
+                                                : NULL;
+    if (host != NULL) {
+      host->close_browser(host, 1);
+      host->base.release((cef_base_ref_counted_t *)host);
+    }
+    return;
+  }
+  proton_browser_lifecycle_on_after_created(lifecycle, browser);
+  proton_engine_runtime_t *runtime =
+      (proton_engine_runtime_t *)proton_browser_lifecycle_context(lifecycle);
+  proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
 }
 
 cef_life_span_handler_t *CEF_CALLBACK
@@ -1316,7 +1331,7 @@ static void CEF_CALLBACK proton_engine_on_draggable_regions_changed(
     return;
   }
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   if (window == NULL || !window->titlebar_overlay) {
     return;
   }
@@ -1365,7 +1380,7 @@ static void CEF_CALLBACK proton_engine_on_loading_state_change(
   (void)canGoBack;
   (void)canGoForward;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_lookup_browser(browser);
   if (!isLoading && window != NULL && window->headless) {
     // The resize notification sent during synchronous browser creation can
     // precede compositor readiness. Invalidate after loading settles so a
@@ -1390,7 +1405,7 @@ static void CEF_CALLBACK proton_engine_on_load_start(
   char *url = frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
                             : NULL;
   proton_engine_view_t *view =
-      proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_view_browser(browser);
   if (view != NULL) {
     if (frame != NULL && frame->is_main(frame) && url != NULL &&
         strcmp(url, "about:blank") != 0) {
@@ -1405,7 +1420,7 @@ static void CEF_CALLBACK proton_engine_on_load_start(
   if (frame != NULL && frame->is_main(frame) && url != NULL &&
       strcmp(url, "about:blank") != 0) {
     proton_engine_window_t *window =
-        proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+        proton_engine_window_lookup_browser(browser);
     proton_browser_session_navigated(
         window != NULL ? window->browser_session : NULL, url);
     proton_browser_session_loading_changed(
@@ -1424,7 +1439,7 @@ static void CEF_CALLBACK proton_engine_on_load_end(
   char *url = frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
                             : NULL;
   proton_engine_view_t *view =
-      proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_view_browser(browser);
   if (view != NULL) {
     if (frame != NULL && frame->is_main(frame)) {
       proton_view_events_loading_changed(view->events, 0);
@@ -1435,7 +1450,7 @@ static void CEF_CALLBACK proton_engine_on_load_end(
     return;
   }
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   if (window != NULL && frame != NULL && frame->is_main(frame)) {
     proton_browser_session_loading_changed(window->browser_session, url, 0);
   }
@@ -1458,7 +1473,7 @@ static void CEF_CALLBACK proton_engine_on_load_error(
   char *text = proton_engine_cef_string_to_utf8(errorText);
   char *url = proton_engine_cef_string_to_utf8(failedUrl);
   proton_engine_view_t *view =
-      proton_engine_find_view_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_view_browser(browser);
   if (view != NULL) {
     if (frame != NULL && frame->is_main(frame)) {
       proton_view_events_load_failed(view->events, url, (int32_t)errorCode,
@@ -1471,7 +1486,7 @@ static void CEF_CALLBACK proton_engine_on_load_error(
     return;
   }
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   if (frame != NULL && frame->is_main(frame)) {
     proton_browser_session_load_failed(
         window != NULL ? window->browser_session : NULL, url,
@@ -1493,7 +1508,7 @@ static int CEF_CALLBACK proton_engine_on_before_browse(
     cef_request_t *request, int user_gesture, int is_redirect) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   return proton_browser_session_before_browse(
       window != NULL ? window->browser_session : NULL, frame, request,
       user_gesture, is_redirect);
@@ -1506,7 +1521,7 @@ static int CEF_CALLBACK proton_engine_on_certificate_error(
   (void)self;
   (void)ssl_info;
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   return proton_browser_session_certificate_error(
       window != NULL ? window->browser_session : NULL, cert_error,
       request_url, callback);
@@ -1519,7 +1534,7 @@ static int CEF_CALLBACK proton_engine_can_download(
   (void)url;
   (void)request_method;
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   return proton_browser_session_can_download(
       window != NULL ? window->browser_session : NULL);
 }
@@ -1530,7 +1545,7 @@ static int CEF_CALLBACK proton_engine_on_before_download(
     cef_before_download_callback_t *callback) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   return proton_browser_session_before_download(
       window != NULL ? window->browser_session : NULL, download_item,
       suggested_name, callback);
@@ -1542,7 +1557,7 @@ static void CEF_CALLBACK proton_engine_on_download_updated(
     cef_download_item_callback_t *callback) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   proton_browser_session_download_updated(
       window != NULL ? window->browser_session : NULL, download_item,
       callback);
@@ -1558,7 +1573,7 @@ static void CEF_CALLBACK proton_engine_on_find_result(
   int width = selection_rect != NULL ? selection_rect->width : 0;
   int height = selection_rect != NULL ? selection_rect->height : 0;
   int browser_id = proton_engine_browser_id(browser);
-  proton_engine_view_t *view = proton_engine_find_view_by_browser_id(browser_id);
+  proton_engine_view_t *view = proton_engine_window_lookup_view_browser(browser);
   if (view != NULL) {
     proton_view_events_find_result(
         view->events,
@@ -1568,7 +1583,7 @@ static void CEF_CALLBACK proton_engine_on_find_result(
     return;
   }
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(browser_id);
+      proton_engine_window_lookup_browser(browser);
   proton_browser_session_find_result(
       window != NULL ? window->browser_session : NULL, identifier, count,
       x, y, width, height, active_match_ordinal, final_update);
@@ -1581,7 +1596,7 @@ static int CEF_CALLBACK proton_engine_on_media_permission(
   (void)self;
   (void)frame;
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   return proton_browser_session_media_permission(
       window != NULL ? window->browser_session : NULL, requesting_origin,
       requested_permissions, callback);
@@ -1593,7 +1608,7 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
     const cef_string_t *error_string) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_find_window_by_browser_id(proton_engine_browser_id(browser));
+      proton_engine_window_lookup_browser(browser);
   if (window == NULL || window->bridge_config_json == NULL || window->closed) {
     return;
   }
@@ -1667,12 +1682,23 @@ proton_engine_client_get_render_handler(cef_client_t *self) {
   if (client == NULL) {
     return NULL;
   }
-  if (client->view != NULL) {
-    if (client->view->window == NULL || !client->view->window->headless) {
+  proton_browser_lifecycle_t *lifecycle = client->browser_lifecycle;
+  if (lifecycle == NULL ||
+      proton_browser_lifecycle_role(lifecycle) == PROTON_BROWSER_ROLE_DEVTOOLS) {
+    return NULL;
+  }
+  if (proton_browser_lifecycle_role(lifecycle) == PROTON_BROWSER_ROLE_VIEW) {
+    proton_engine_view_t *view =
+        (proton_engine_view_t *)proton_browser_lifecycle_owner(lifecycle);
+    if (view == NULL || view->window == NULL || !view->window->headless) {
       return NULL;
     }
-  } else if (client->window == NULL || !client->window->headless) {
-    return NULL;
+  } else {
+    proton_engine_window_t *window =
+        (proton_engine_window_t *)proton_browser_lifecycle_owner(lifecycle);
+    if (window == NULL || !window->headless) {
+      return NULL;
+    }
   }
   g_proton_engine_render_handler.handler.base.add_ref(
       (cef_base_ref_counted_t *)&g_proton_engine_render_handler.handler);

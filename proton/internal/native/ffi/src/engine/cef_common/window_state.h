@@ -28,6 +28,7 @@ proton_engine_window_t *proton_engine_window_lookup_browser(
    refcount unchanged; callers that need to hold it across a message loop
    iteration must call base.add_ref and base.release. */
 cef_browser_t *proton_engine_window_browser(proton_engine_window_t *window);
+cef_browser_t *proton_engine_view_browser(proton_engine_view_t *view);
 proton_window_id_t proton_engine_window_public_id(
     proton_engine_window_t *window);
 
