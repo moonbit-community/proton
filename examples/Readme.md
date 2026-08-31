@@ -135,7 +135,8 @@ moon -C examples run 01_run --target native
   and select-all review for both the main browser and a web contents view.
 - `74_app_metadata_paths`: manual Electron-style application product name,
   version, packaged-state, application-root, standard-path, and configured user
-  directory review.
+  directory review, including startup path overrides for user data, browser
+  session data, downloads, and logs.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only
