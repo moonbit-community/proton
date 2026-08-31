@@ -25,7 +25,12 @@ enum Msg {
 
 ///|
 fn initial_model() -> Model {
-  { draft: "", snapshot: { version: 0, todos: [] }, loading: true, error: None }
+  {
+    draft: "",
+    snapshot: { version: 0, todos: [], },
+    loading: true,
+    error: None,
+  }
 }
 
 ///|
@@ -42,7 +47,7 @@ fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
   match msg {
     Load =>
       (
-        { ..model, loading: true, error: None },
+        { ..model, loading: true, error: None, },
         @proton_rabbita.invoke(
           @shared.list_todos,
           (),
@@ -54,27 +59,27 @@ fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
     Create if model.draft.trim().is_empty() => (model, @rabbita.none)
     Create =>
       (
-        { ..model, draft: "", error: None },
+        { ..model, draft: "", error: None, },
         @proton_rabbita.invoke(
           @shared.create_todo,
-          { title: model.draft },
+          { title: model.draft, },
           snapshot => emit(SnapshotReceived(snapshot)),
           error => emit(CommandFailed(error)),
         ),
       )
     SetCompleted(id, completed) =>
       (
-        { ..model, error: None },
+        { ..model, error: None, },
         @proton_rabbita.invoke(
           @shared.set_todo_completed,
-          { id, completed },
+          { id, completed, },
           snapshot => emit(SnapshotReceived(snapshot)),
           error => emit(CommandFailed(error)),
         ),
       )
     Delete(id) =>
       (
-        { ..model, error: None },
+        { ..model, error: None, },
         @proton_rabbita.invoke(
           @shared.delete_todo,
           { id, },
@@ -83,10 +88,10 @@ fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
         ),
       )
     SnapshotReceived(snapshot) =>
-      ({ ..model, snapshot, loading: false, error: None }, @rabbita.none)
+      ({ ..model, snapshot, loading: false, error: None, }, @rabbita.none)
     CommandFailed(error) =>
       (
-        { ..model, loading: false, error: Some(failure_message(error)) },
+        { ..model, loading: false, error: Some(failure_message(error)), },
         @rabbita.none,
       )
   }

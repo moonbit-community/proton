@@ -758,7 +758,14 @@ async function main() {
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   run(
     "moonx",
-    ["--target", "native", warrenCoordinate, "build"],
+    [
+      "--target",
+      "native",
+      warrenCoordinate,
+      "build",
+      "--browser-entry",
+      "main",
+    ],
     { cwd: frontendDir },
   );
   run(
@@ -768,7 +775,7 @@ async function main() {
   );
   makeSourceSmokeCodegenStale();
   setFrontendPackageRevision("first");
-  localCli(["-C", projectDir, "package", "--release", "--target", "app", "--sign"], {
+  localCli(["-C", projectDir, "package", "--release", "--format", "app", "--sign"], {
     env: runtimeEnv({
       PROTON_MACOS_ALLOW_ADHOC: "1",
       PROTON_MACOS_SIGNING_IDENTITY: "-",
@@ -779,7 +786,7 @@ async function main() {
   let packaged = verifyPackagedApp();
   await runPackagedAppSmoke(packaged.executable, "first");
   setFrontendPackageRevision("second");
-  localCli(["-C", projectDir, "package", "--release", "--target", "app", "--sign"], {
+  localCli(["-C", projectDir, "package", "--release", "--format", "app", "--sign"], {
     env: runtimeEnv({
       PROTON_MACOS_ALLOW_ADHOC: "1",
       PROTON_MACOS_SIGNING_IDENTITY: "-",

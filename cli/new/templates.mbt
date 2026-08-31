@@ -253,10 +253,10 @@ fn project_config_file(
           "dev_url": "http://127.0.0.1:4300",
           "before_dev": "moonx --target native moonbit-community/warren@" +
           context.warren_version +
-          " dev --direct --port 4300",
+          " dev --browser-entry main --direct --port 4300",
           "before_build": "moonx --target native moonbit-community/warren@" +
           context.warren_version +
-          " build",
+          " build --browser-entry main",
           "dist": "dist",
         },
         "package": package_config,
