@@ -86,6 +86,17 @@ int32_t proton_runtime_platform_id(char *buffer,
                                    int32_t *out_required_len);
 int32_t proton_system_preferred_languages_json(
     char *buffer, int32_t buffer_len, int32_t *out_required_len);
+enum {
+  PROTON_SYSTEM_PATH_DESKTOP = 1,
+  PROTON_SYSTEM_PATH_DOCUMENTS = 2,
+  PROTON_SYSTEM_PATH_DOWNLOADS = 3,
+  PROTON_SYSTEM_PATH_MUSIC = 4,
+  PROTON_SYSTEM_PATH_PICTURES = 5,
+  PROTON_SYSTEM_PATH_VIDEOS = 6,
+  PROTON_SYSTEM_PATH_RECENT = 7
+};
+int32_t proton_system_path(int32_t kind, char *buffer, int32_t buffer_len,
+                           int32_t *out_required_len);
 int32_t proton_app_instance_acquire(
     const char *identifier, const char *activation_json,
     proton_app_instance_id_t *out_instance, int32_t *out_primary);

@@ -134,7 +134,8 @@ moon -C examples run 01_run --target native
 - `73_editing_commands`: manual Electron-style undo, redo, clipboard, delete,
   and select-all review for both the main browser and a web contents view.
 - `74_app_metadata_paths`: manual Electron-style application product name,
-  version, packaged-state, application-root, and standard-path review.
+  version, packaged-state, application-root, standard-path, and configured user
+  directory review.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

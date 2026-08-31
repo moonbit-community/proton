@@ -48,6 +48,8 @@ pub fn screens() -> Array[ScreenInfo] raise NativeError
 
 pub fn signal_wakeup() -> Unit
 
+pub fn system_path(SystemPathKind) -> String raise NativeError
+
 pub fn system_preferred_language_tags() -> Array[String] raise NativeError
 
 pub fn update_cleanup_previous() -> Unit raise NativeError
@@ -549,6 +551,19 @@ pub(all) struct ScreenInfo {
 pub fn ScreenInfo::equal(Self, Self) -> Bool
 pub fn ScreenInfo::not_equal(Self, Self) -> Bool
 pub fn ScreenInfo::to_repr(Self) -> @debug.Repr
+
+pub(all) enum SystemPathKind {
+  Desktop
+  Documents
+  Downloads
+  Music
+  Pictures
+  Videos
+  Recent
+} derive(Eq, @debug.Debug)
+pub fn SystemPathKind::equal(Self, Self) -> Bool
+pub fn SystemPathKind::not_equal(Self, Self) -> Bool
+pub fn SystemPathKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TitlebarStyle {
   Default

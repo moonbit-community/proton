@@ -56,6 +56,48 @@ pub fn system_preferred_language_tags() -> Array[String] raise NativeError {
 }
 
 ///|
+fn SystemPathKind::native_code(self : SystemPathKind) -> Int {
+  match self {
+    Desktop => 1
+    Documents => 2
+    Downloads => 3
+    Music => 4
+    Pictures => 5
+    Videos => 6
+    Recent => 7
+  }
+}
+
+///|
+fn SystemPathKind::label(self : SystemPathKind) -> String {
+  match self {
+    Desktop => "desktop"
+    Documents => "documents"
+    Downloads => "downloads"
+    Music => "music"
+    Pictures => "pictures"
+    Videos => "videos"
+    Recent => "recent"
+  }
+}
+
+///|
+pub fn system_path(kind : SystemPathKind) -> String raise NativeError {
+  require_native_text("system " + kind.label() + " path", (
+    buffer,
+    buffer_len,
+    required,
+  ) => {
+    @native_ffi.proton_system_path_ffi(
+      kind.native_code(),
+      buffer,
+      buffer_len,
+      required,
+    )
+  })
+}
+
+///|
 /// Enumerates all connected displays.
 ///
 /// Returns an array of `ScreenInfo` describing each monitor's bounds, work

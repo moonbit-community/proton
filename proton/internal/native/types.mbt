@@ -111,6 +111,23 @@ pub extend RuntimeInfo with Eq::{not_equal, equal}
 pub extend RuntimeInfo with Debug::{to_repr}
 
 ///|
+pub(all) enum SystemPathKind {
+  Desktop
+  Documents
+  Downloads
+  Music
+  Pictures
+  Videos
+  Recent
+} derive(Debug, Eq)
+
+///|
+pub extend SystemPathKind with Eq::{not_equal, equal}
+
+///|
+pub extend SystemPathKind with Debug::{to_repr}
+
+///|
 pub(all) struct RuntimeWaitReady {
   mask : Int
 } derive(Debug, Eq)

@@ -152,3 +152,31 @@ test "application root and packaged state share the package manifest probe" {
   assert_eq(app_path(), resource_dir())
   assert_eq(is_packaged(), packaged_application_manifest_path() is Some(_))
 }
+
+///|
+test "platform-specific standard paths report availability" {
+  let app = html("Paths", "<main>Paths</main>")
+  let platform = @native.runtime_info().platform
+  if platform == "macos" {
+    try app.path(AppPathKind::Assets) catch {
+      UnsupportedPath(kind="assets", platform="macos") => ()
+      _ => fail("expected assets to be unavailable on macOS")
+    } noraise {
+      _ => fail("expected assets lookup to fail on macOS")
+    }
+  } else {
+    let assets : @mbpath.Path = app.path(AppPathKind::Assets)
+    assert_true(assets.is_absolute())
+  }
+  if platform == "windows" {
+    let recent : @mbpath.Path = app.path(AppPathKind::Recent)
+    assert_true(recent.is_absolute())
+  } else {
+    try app.path(AppPathKind::Recent) catch {
+      UnsupportedPath(kind="recent", platform=_) => ()
+      _ => fail("expected recent to be unavailable outside Windows")
+    } noraise {
+      _ => fail("expected recent lookup to fail outside Windows")
+    }
+  }
+}

@@ -29,3 +29,24 @@ test "explicit applications report missing managed package metadata" {
     _ => fail("expected application version lookup to fail")
   }
 }
+
+///|
+test "public common user paths are absolute" {
+  let app = @proton.html("Paths", "<main>Paths</main>")
+  for
+    kind in [
+      @proton.AppPathKind::Desktop,
+      @proton.AppPathKind::Documents,
+      @proton.AppPathKind::Downloads,
+      @proton.AppPathKind::Music,
+      @proton.AppPathKind::Pictures,
+      @proton.AppPathKind::Videos,
+    ] {
+    let value : @mbpath.Path = app.path(kind)
+    assert_true(value.is_absolute())
+  }
+  assert_eq(
+    app.path(@proton.AppPathKind::Module),
+    app.path(@proton.AppPathKind::Executable),
+  )
+}

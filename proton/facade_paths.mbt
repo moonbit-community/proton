@@ -6,6 +6,8 @@ pub(all) suberror AppPathError {
   MissingHomeDirectory(platform~ : String)
   MissingEnvironmentPath(name~ : String, platform~ : String)
   MissingExecutablePath
+  UnsupportedPath(kind~ : String, platform~ : String)
+  SystemPath(kind~ : String, status~ : Int, detail~ : String)
   PlatformProbe(status~ : Int, detail~ : String)
 } derive(Debug, Eq)
 
@@ -26,6 +28,15 @@ pub fn AppPathError::message(self : AppPathError) -> String {
     MissingEnvironmentPath(name~, platform~) =>
       "cannot resolve " + name + " on " + platform
     MissingExecutablePath => "cannot resolve the application executable path"
+    UnsupportedPath(kind~, platform~) =>
+      "application path " + kind + " is not available on " + platform
+    SystemPath(kind~, status~, detail~) =>
+      "cannot resolve application path " +
+      kind +
+      " (" +
+      status.to_string() +
+      "): " +
+      detail
     PlatformProbe(status~, detail~) =>
       "cannot determine the Proton platform (" +
       status.to_string() +
@@ -45,6 +56,15 @@ pub(all) enum AppPathKind {
   Temp
   Executable
   Logs
+  Assets
+  Module
+  Desktop
+  Documents
+  Downloads
+  Music
+  Pictures
+  Videos
+  Recent
 } derive(Debug, Eq)
 
 ///|
@@ -209,6 +229,28 @@ pub fn App::path(self : App, kind : AppPathKind) -> String raise AppPathError {
         @env.get_env_var("LOCALAPPDATA"),
         @env.get_env_var("XDG_STATE_HOME"),
       )
+    Assets => {
+      guard platform == "windows" || platform == "linux" else {
+        raise UnsupportedPath(kind="assets", platform~)
+      }
+      executable_dir()
+    }
+    Module => executable_path()
+    Desktop => resolve_system_path(@native.SystemPathKind::Desktop, "desktop")
+    Documents =>
+      resolve_system_path(@native.SystemPathKind::Documents, "documents")
+    Downloads =>
+      resolve_system_path(@native.SystemPathKind::Downloads, "downloads")
+    Music => resolve_system_path(@native.SystemPathKind::Music, "music")
+    Pictures =>
+      resolve_system_path(@native.SystemPathKind::Pictures, "pictures")
+    Videos => resolve_system_path(@native.SystemPathKind::Videos, "videos")
+    Recent => {
+      guard platform == "windows" else {
+        raise UnsupportedPath(kind="recent", platform~)
+      }
+      resolve_system_path(@native.SystemPathKind::Recent, "recent")
+    }
   }
 }
 
@@ -219,6 +261,27 @@ fn executable_path() -> String raise AppPathError {
   }
   let path : @mbpath.Path = executable
   path.resolve().to_string()
+}
+
+///|
+fn executable_dir() -> String raise AppPathError {
+  let executable : @mbpath.Path = executable_path()
+  executable.dirname().normalize().to_string()
+}
+
+///|
+fn resolve_system_path(
+  kind : @native.SystemPathKind,
+  label : String,
+) -> String raise AppPathError {
+  @native.system_path(kind) catch {
+    error =>
+      raise SystemPath(
+        kind=label,
+        status=error.status(),
+        detail=error.message(),
+      )
+  }
 }
 
 ///|

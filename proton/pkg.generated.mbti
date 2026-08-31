@@ -91,6 +91,8 @@ pub(all) suberror AppPathError {
   MissingHomeDirectory(platform~ : String)
   MissingEnvironmentPath(name~ : String, platform~ : String)
   MissingExecutablePath
+  UnsupportedPath(kind~ : String, platform~ : String)
+  SystemPath(kind~ : String, status~ : Int, detail~ : String)
   PlatformProbe(status~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn AppPathError::equal(Self, Self) -> Bool
@@ -237,6 +239,15 @@ pub(all) enum AppPathKind {
   Temp
   Executable
   Logs
+  Assets
+  Module
+  Desktop
+  Documents
+  Downloads
+  Music
+  Pictures
+  Videos
+  Recent
 } derive(Eq, @debug.Debug)
 pub fn AppPathKind::equal(Self, Self) -> Bool
 pub fn AppPathKind::not_equal(Self, Self) -> Bool
