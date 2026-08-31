@@ -1,6 +1,5 @@
 #include "browser_session.h"
 
-#include "../../proton_json.h"
 #include "../../proton_event.h"
 
 #include "include/capi/cef_download_item_capi.h"
@@ -822,59 +821,18 @@ int proton_browser_session_media_permission(
   return 1;
 }
 
-static int proton_browser_response_fields(
-    const char *response_json, uint64_t *out_request_id, char *action,
-    size_t action_len, char **out_path) {
-  proton_json_doc_t doc = {0};
-  proton_json_value_t root = {0};
-  proton_json_value_t request_id = {0};
-  proton_json_value_t action_value = {0};
-  int64_t parsed_id = 0;
-  if (!proton_json_parse(&doc, response_json) ||
-      !proton_json_root_object(&doc, &root) ||
-      !proton_json_object_get(&doc, root, "request_id", &request_id) ||
-      !proton_json_read_int64_string_or_number(&doc, request_id, &parsed_id) ||
-      parsed_id <= 0 ||
-      !proton_json_object_get(&doc, root, "action", &action_value) ||
-      !proton_json_read_string(&doc, action_value, action, action_len)) {
-    proton_json_dispose(&doc);
-    return 0;
-  }
-  proton_json_value_t path = {0};
-  if (out_path != NULL &&
-      proton_json_object_get(&doc, root, "path", &path)) {
-    *out_path = proton_json_copy_string(&doc, path);
-    if (*out_path == NULL) {
-      proton_json_dispose(&doc);
-      return 0;
-    }
-  }
-  *out_request_id = (uint64_t)parsed_id;
-  proton_json_dispose(&doc);
-  return 1;
-}
-
-int32_t proton_browser_session_respond_json(
-    proton_browser_session_t *session, const char *response_json,
-    char *error, size_t error_len) {
-  if (session == NULL || response_json == NULL) {
+int32_t proton_browser_session_respond(
+    proton_browser_session_t *session, uint64_t request_id,
+    const char *action, const char *path, char *error, size_t error_len) {
+  if (session == NULL || request_id == 0 || action == NULL ||
+      action[0] == '\0') {
     proton_browser_set_message(error, error_len,
-                               "browser session and response are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  uint64_t request_id = 0;
-  char action[32] = {0};
-  char *path = NULL;
-  if (!proton_browser_response_fields(response_json, &request_id, action,
-                                      sizeof(action), &path)) {
-    proton_browser_set_message(error, error_len,
-                               "browser response JSON is invalid");
+                               "browser session and response fields are required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_browser_pending_t *pending =
       proton_browser_pending_take(session, request_id);
   if (pending == NULL) {
-    free(path);
     proton_browser_set_message(error, error_len,
                                "browser request is no longer pending");
     return PROTON_ERR_STALE_BROWSER_REQUEST;
@@ -942,35 +900,8 @@ int32_t proton_browser_session_respond_json(
     proton_browser_set_message(error, error_len,
                                "browser response action is invalid");
   }
-  free(path);
   proton_browser_pending_release(pending);
   return status;
-}
-
-static int proton_browser_read_command(const char *command_json,
-                                       char *command, size_t command_len,
-                                       uint32_t *out_download_id) {
-  proton_json_doc_t doc = {0};
-  proton_json_value_t root = {0};
-  proton_json_value_t command_value = {0};
-  if (!proton_json_parse(&doc, command_json) ||
-      !proton_json_root_object(&doc, &root) ||
-      !proton_json_object_get(&doc, root, "command", &command_value) ||
-      !proton_json_read_string(&doc, command_value, command, command_len)) {
-    proton_json_dispose(&doc);
-    return 0;
-  }
-  proton_json_value_t id = {0};
-  int32_t parsed_id = 0;
-  if (proton_json_object_get(&doc, root, "download_id", &id)) {
-    if (!proton_json_read_int32(&doc, id, &parsed_id) || parsed_id < 0) {
-      proton_json_dispose(&doc);
-      return 0;
-    }
-    *out_download_id = (uint32_t)parsed_id;
-  }
-  proton_json_dispose(&doc);
-  return 1;
 }
 
 static int32_t proton_browser_execute_edit_command(
@@ -1008,20 +939,13 @@ static int32_t proton_browser_execute_edit_command(
   return PROTON_OK;
 }
 
-int32_t proton_browser_session_command_json(
+int32_t proton_browser_session_command(
     proton_browser_session_t *session, cef_browser_t *browser,
-    const char *command_json, char *error, size_t error_len) {
-  if (session == NULL || browser == NULL || command_json == NULL) {
+    const char *command, int32_t download_id, char *error, size_t error_len) {
+  if (session == NULL || browser == NULL || command == NULL ||
+      command[0] == '\0' || download_id < -1) {
     proton_browser_set_message(error, error_len,
                                "browser session, browser, and command are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  char command[40] = {0};
-  uint32_t download_id = 0;
-  if (!proton_browser_read_command(command_json, command, sizeof(command),
-                                   &download_id)) {
-    proton_browser_set_message(error, error_len,
-                               "browser command JSON is invalid");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (strcmp(command, "back") == 0) {
@@ -1035,8 +959,13 @@ int32_t proton_browser_session_command_json(
   } else if (strcmp(command, "stop") == 0) {
     browser->stop_load(browser);
   } else if (strcmp(command, "cancel_download") == 0) {
+    if (download_id < 0) {
+      proton_browser_set_message(error, error_len,
+                                 "cancel_download requires a download id");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
     proton_browser_download_t *download =
-        proton_browser_download_find(session, download_id);
+        proton_browser_download_find(session, (uint32_t)download_id);
     if (download == NULL) {
       proton_browser_set_message(error, error_len,
                                  "download is no longer active");

@@ -8,7 +8,6 @@
 #include "linux_internal.h"
 #include "../../proton_config.h"
 #include "../../proton_event.h"
-#include "../../proton_json.h"
 #include "linux_menu.h"
 #include "linux_titlebar.h"
 
@@ -354,7 +353,6 @@ static bool proton_engine_dir_exists(const char *path) {
 }
 
 #include "../cef_common/strings.h"
-#include "../cef_common/json_fields.h"
 
 void proton_engine_append_switch(cef_command_line_t *command_line,
                                  const char *name) {
@@ -393,7 +391,7 @@ void proton_engine_append_switch_with_value(
 #undef PROTON_ENGINE_REF_DECREMENT
 #undef PROTON_ENGINE_REF_LOAD
 #undef PROTON_ENGINE_REF_STORE
-#include "../cef_common/bridge_json.h"
+#include "../cef_common/bridge_request.h"
 
 int proton_engine_browser_id(cef_browser_t *browser) {
   return browser != NULL ? browser->get_identifier(browser) : 0;
@@ -454,7 +452,7 @@ static void proton_engine_window_free_storage(proton_engine_window_t *window) {
   }
   proton_engine_window_free_views(window);
   proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
-  free(window->bridge_config_json);
+  proton_internal_bridge_config_destroy(window->bridge_config);
   proton_browser_session_destroy(window->browser_session);
   free(window->draggable_regions);
   proton_engine_overlay_release_input_windows(window);

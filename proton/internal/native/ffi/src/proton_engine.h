@@ -2,6 +2,7 @@
 #define PROTON_ENGINE_H
 
 #include "proton_native.h"
+#include "proton_bridge_config.h"
 #include "engine/cef_common/browser_session.h"
 #include "proton_menu.h"
 
@@ -50,7 +51,7 @@ typedef struct {
   char titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_policy_t browser_policy;
-  const char *bridge_config_json;
+  proton_bridge_config_t *bridge_config;
   int32_t max_bridge_payload_bytes;
 } proton_engine_window_config_t;
 
@@ -314,8 +315,8 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,
                                   size_t error_len);
-int32_t proton_engine_window_browser_command_json(
-    proton_engine_window_t *window, const char *command_json,
+int32_t proton_engine_window_browser_command(
+    proton_engine_window_t *window, const char *command, int32_t download_id,
     char *error, size_t error_len);
 int32_t proton_engine_window_get_browser_focus_state(
     proton_engine_window_t *window, int32_t *out_focused,
@@ -363,8 +364,9 @@ int32_t proton_engine_window_get_browser_title(
 int32_t proton_engine_window_get_browser_loading(
     proton_engine_window_t *window, int32_t *out_is_loading, char *error,
     size_t error_len);
-int32_t proton_engine_window_respond_browser_request_json(
-    proton_engine_window_t *window, const char *response_json,
+int32_t proton_engine_window_respond_browser_request(
+    proton_engine_window_t *window, uint64_t request_id, const char *action,
+    const char *path,
     char *error, size_t error_len);
 int32_t proton_engine_window_emit_bridge_event_json(
     proton_engine_window_t *window,
@@ -373,12 +375,22 @@ int32_t proton_engine_window_emit_bridge_event_json(
     size_t error_len);
 uint64_t proton_engine_window_bridge_revision(
     proton_engine_window_t *window);
-int32_t proton_engine_window_bridge_state_json(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len);
-int32_t proton_engine_window_take_bridge_failure_json(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len);
+int32_t proton_engine_window_bridge_state_field(
+    proton_engine_window_t *window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len);
+int32_t proton_engine_window_bridge_failure_present(
+    proton_engine_window_t *window, int32_t *out_present, char *error,
+    size_t error_len);
+int32_t proton_engine_window_bridge_failure_field(
+    proton_engine_window_t *window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len);
+int32_t proton_engine_window_bridge_failure_int_field(
+    proton_engine_window_t *window, int32_t field, int32_t *out_value,
+    int32_t *out_present, char *error, size_t error_len);
+int32_t proton_engine_window_clear_bridge_failure(
+    proton_engine_window_t *window, char *error, size_t error_len);
 int32_t proton_engine_window_begin_message_dialog(
     proton_engine_window_t *window,
     const char *title_utf8,
@@ -471,8 +483,9 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
                                 const char *script,
                                 char *error,
                                 size_t error_len);
-int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
-                                                const char *command_json,
+int32_t proton_engine_view_browser_command(proton_engine_view_t *view,
+                                                const char *command,
+                                                int32_t download_id,
                                                 char *error,
                                                 size_t error_len);
 int32_t proton_engine_view_get_browser_focus_state(
@@ -495,7 +508,7 @@ int32_t proton_engine_view_get_navigation_state(
    CEF cookie manager through the window's browser host request context. Cookie
    get completion is published to the runtime event queue; set, delete, flush,
    and clear_cache are fire-and-forget. */
-int32_t proton_engine_window_cookie_begin_get_json(
+int32_t proton_engine_window_cookie_begin_get(
     proton_engine_window_t *window, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id, char *error,
     size_t error_len);

@@ -967,15 +967,7 @@ fn RuntimeSession::session_handle(
         error =>
           raise window_operation_failed("read cookies in window " + id, error)
       }
-      let payload = self.event_pump.cookie_completions.wait(request_id)
-      decode_cookies(payload) catch {
-        CookieDecodeError(detail) =>
-          raise OperationFailed(
-            action="decode cookies in window " + id,
-            status=-1,
-            detail~,
-          )
-      }
+      cookies_from_native(self.event_pump.cookie_completions.wait(request_id))
     },
     write_cookie: (url, name, value, domain, path, secure, http_only, same_site) => {
       self.control_window(id, native_id, "set cookie in", window => {
@@ -3578,28 +3570,49 @@ fn RuntimeSession::dispatch_launch_input_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
 ) -> Unit raise AppRunError {
-  match event.launch_input() {
-    Some(native_input) => {
-      guard !self.is_quitting() else { return }
-      let input = match native_input {
-        @native.RuntimeLaunchInput::OpenUrls(urls) =>
-          RuntimeLaunchInput::OpenUrls(urls)
-        @native.RuntimeLaunchInput::OpenFiles(files) =>
-          RuntimeLaunchInput::OpenFiles(files)
-        @native.RuntimeLaunchInput::Reopen => RuntimeLaunchInput::Reopen
+  match event.app_activation() {
+    Some(activation) => {
+      let urls = activation.urls()
+      if !urls.is_empty() {
+        self.dispatch_launch_input(RuntimeLaunchInput::OpenUrls(urls))
       }
-      self.activate_for_launch_input()
-      let context = self.application_context()
-      for handler in self.launch_input_handlers {
-        ignore(
-          self.application_tasks.spawn(
-            () => handler(context, input),
-            no_wait=true,
-          ),
-        )
+      let files = activation.files()
+      if !files.is_empty() {
+        self.dispatch_launch_input(RuntimeLaunchInput::OpenFiles(files))
+      }
+      if activation.reopen() {
+        self.dispatch_launch_input(RuntimeLaunchInput::Reopen)
       }
     }
-    None => ()
+    None =>
+      match event.launch_input() {
+        Some(native_input) =>
+          self.dispatch_launch_input(
+            match native_input {
+              @native.RuntimeLaunchInput::OpenUrls(urls) =>
+                RuntimeLaunchInput::OpenUrls(urls)
+              @native.RuntimeLaunchInput::OpenFiles(files) =>
+                RuntimeLaunchInput::OpenFiles(files)
+              @native.RuntimeLaunchInput::Reopen => RuntimeLaunchInput::Reopen
+            },
+          )
+        None => ()
+      }
+  }
+}
+
+///|
+fn RuntimeSession::dispatch_launch_input(
+  self : RuntimeSession,
+  input : RuntimeLaunchInput,
+) -> Unit raise AppRunError {
+  guard !self.is_quitting() else { return }
+  self.activate_for_launch_input()
+  let context = self.application_context()
+  for handler in self.launch_input_handlers {
+    ignore(
+      self.application_tasks.spawn(() => handler(context, input), no_wait=true),
+    )
   }
 }
 

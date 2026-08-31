@@ -89,7 +89,7 @@ struct proton_engine_window {
   char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
-  char *bridge_config_json;
+  proton_bridge_config_t *bridge_config;
   int32_t max_bridge_payload_bytes;
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
   int width;

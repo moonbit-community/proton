@@ -106,12 +106,16 @@ pub(all) struct AppActivation {
   urls : Array[String]
   files : Array[String]
   reopen : Bool
-} derive(Eq, ToJson, @debug.Debug)
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn AppActivation::AppActivation(urls? : Array[String], files? : Array[String], reopen? : Bool) -> Self
 pub fn AppActivation::equal(Self, Self) -> Bool
+pub fn AppActivation::files(Self) -> Array[String]
+pub fn AppActivation::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn AppActivation::not_equal(Self, Self) -> Bool
+pub fn AppActivation::reopen(Self) -> Bool
 pub fn AppActivation::to_json(Self) -> Json
 pub fn AppActivation::to_repr(Self) -> @debug.Repr
+pub fn AppActivation::urls(Self) -> Array[String]
 
 type AppInstance
 pub fn AppInstance::acquire(String, AppActivation) -> AppInstanceAcquire raise NativeError
@@ -133,7 +137,6 @@ pub fn BridgeConfig::not_equal(Self, Self) -> Bool
 pub fn BridgeConfig::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BridgeDiagnostic {
-  abi_version : Int
   stage : String
   code : String
   message : String
@@ -147,9 +150,8 @@ pub(all) struct BridgeDiagnostic {
   stack : String?
   additional_failure_count : Int?
   details_truncated : Bool
-} derive(Eq, @debug.Debug, @json.FromJson)
+} derive(Eq, @debug.Debug)
 pub fn BridgeDiagnostic::equal(Self, Self) -> Bool
-pub fn BridgeDiagnostic::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn BridgeDiagnostic::not_equal(Self, Self) -> Bool
 pub fn BridgeDiagnostic::to_repr(Self) -> @debug.Repr
 
@@ -184,15 +186,13 @@ pub fn BridgeInitializationUnit::not_equal(Self, Self) -> Bool
 pub fn BridgeInitializationUnit::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BridgeLifecycleState {
-  abi_version : Int
   revision : String
   outcome : String
   page_instance : String
   url : String
   failure_pending : Bool
-} derive(Eq, @debug.Debug, @json.FromJson)
+} derive(Eq, @debug.Debug)
 pub fn BridgeLifecycleState::equal(Self, Self) -> Bool
-pub fn BridgeLifecycleState::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn BridgeLifecycleState::not_equal(Self, Self) -> Bool
 pub fn BridgeLifecycleState::to_repr(Self) -> @debug.Repr
 
@@ -344,11 +344,25 @@ pub fn NativeBrowserRequest::to_repr(Self) -> @debug.Repr
 pub(all) struct NativeCookieGetCompletion {
   request_id : Int64
   window : Int64
-  result : Result[String, NativeError]
+  result : Result[Array[NativeCookieRecord], NativeError]
 } derive(Eq, @debug.Debug)
 pub fn NativeCookieGetCompletion::equal(Self, Self) -> Bool
 pub fn NativeCookieGetCompletion::not_equal(Self, Self) -> Bool
 pub fn NativeCookieGetCompletion::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NativeCookieRecord {
+  name : String
+  value : String
+  domain : String
+  path : String
+  secure : Bool
+  http_only : Bool
+  same_site : CookieSameSite
+  expires : Int64?
+} derive(Eq, @debug.Debug)
+pub fn NativeCookieRecord::equal(Self, Self) -> Bool
+pub fn NativeCookieRecord::not_equal(Self, Self) -> Bool
+pub fn NativeCookieRecord::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NativeDialogCompletion {
   dialog : Int64
@@ -487,6 +501,7 @@ pub fn RuntimeConfig::not_equal(Self, Self) -> Bool
 pub fn RuntimeConfig::to_repr(Self) -> @debug.Repr
 
 type RuntimeEvent derive(Eq, @debug.Debug)
+pub fn RuntimeEvent::app_activation(Self) -> AppActivation?
 pub fn RuntimeEvent::bridge_request(Self) -> BridgeRequest?
 pub fn RuntimeEvent::bridge_request_cancellation(Self) -> Int64?
 pub fn RuntimeEvent::browser_download_update(Self) -> NativeDownloadUpdate?

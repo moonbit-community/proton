@@ -4,7 +4,6 @@
 
 #include "../ffi/src/proton_config.h"
 #include "../ffi/src/proton_event.h"
-#include "../ffi/src/proton_json.h"
 #include "../ffi/src/engine/cef_common/browser_session.h"
 #include "../ffi/src/engine/cef_common/message.h"
 #include "../ffi/src/engine/cef_common/scheme.h"

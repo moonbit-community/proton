@@ -3,9 +3,8 @@
 #include "linux_internal.h"
 #include "../../proton_config.h"
 #include "../../proton_event.h"
-#include "../../proton_json.h"
 
-#include "../cef_common/bridge_json.h"
+#include "../cef_common/bridge_request.h"
 #include "../cef_common/bridge_renderer.h"
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
@@ -107,22 +106,27 @@ int proton_engine_register_scheme_factory(void) {
 }
 
 static int proton_engine_runtime_enqueue_bridge_request(
-    proton_engine_runtime_t *runtime,
-    char *request_json) {
-  if (runtime == NULL || request_json == NULL) {
+    proton_engine_runtime_t *runtime, int64_t request_id,
+    int64_t public_window, const char *op, const char *payload,
+    const char *page_instance, const char *source_origin) {
+  if (runtime == NULL || request_id <= 0 || public_window <= 0 ||
+      op == NULL || payload == NULL || page_instance == NULL ||
+      source_origin == NULL) {
     return 0;
   }
   proton_event_t *event = proton_event_create(PROTON_EVENT_BRIDGE_REQUEST);
   if (event == NULL) {
     return 0;
   }
-  event->text_a = request_json;
-  if (proton_event_try_publish(event)) {
-    return 1;
+  event->request_id = request_id;
+  event->window = public_window;
+  const char *items[] = {op, payload, page_instance, source_origin};
+  if (!proton_event_set_items(event, items, 4) ||
+      !proton_event_try_publish(event)) {
+    proton_event_destroy(event);
+    return 0;
   }
-  event->text_a = NULL;
-  proton_event_destroy(event);
-  return 0;
+  return 1;
 }
 
 static int proton_engine_runtime_enqueue_bridge_cancellation(
@@ -1128,31 +1132,18 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
   if (is_lifecycle) {
     cef_list_value_t *args = message->get_argument_list(message);
     if (window != NULL && frame->is_main(frame) && args != NULL &&
-        args->get_size(args) >= 4) {
-      char *outcome = proton_engine_userfree_to_utf8(args->get_string(args, 0));
-      char *page_instance =
-          proton_engine_userfree_to_utf8(args->get_string(args, 1));
-      char *url = proton_engine_userfree_to_utf8(args->get_string(args, 2));
-      char *diagnostic =
-          proton_engine_userfree_to_utf8(args->get_string(args, 3));
+        args->get_size(args) >= 14) {
       cef_frame_t *main_frame = browser->get_main_frame(browser);
       char *current_url =
           main_frame != NULL
               ? proton_engine_userfree_to_utf8(main_frame->get_url(main_frame))
               : NULL;
-      if (proton_engine_urls_same_document(url, current_url)) {
-        proton_engine_bridge_lifecycle_update(
-            &window->bridge_lifecycle, outcome, page_instance, current_url,
-            diagnostic != NULL && diagnostic[0] != '\0' ? diagnostic : NULL);
-      }
+      (void)proton_engine_bridge_lifecycle_update_from_message(
+          &window->bridge_lifecycle, args, current_url);
       free(current_url);
       if (main_frame != NULL) {
         main_frame->base.release((cef_base_ref_counted_t *)main_frame);
       }
-      free(outcome);
-      free(page_instance);
-      free(url);
-      free(diagnostic);
       proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     }
     if (args != NULL) {
@@ -1212,16 +1203,15 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
 
   char *frame_url = proton_engine_userfree_to_utf8(frame->get_url(frame));
   int64_t request_id = 0;
-  char *request_json = NULL;
+  char *source_origin = NULL;
   proton_engine_bridge_request_status_t build_status =
       window == NULL || window->runtime == NULL
           ? PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED
-          : proton_engine_bridge_build_request_json(
-                window->bridge_config_json, frame_url, op, payload_json,
+          : proton_engine_bridge_build_request(
+                window->bridge_config, frame_url, op, payload_json,
                 page_instance, window->max_bridge_payload_bytes,
-                window->public_window_id,
                 &window->runtime->next_bridge_request_id, &request_id,
-                &request_json);
+                &source_origin);
   if (build_status != PROTON_ENGINE_BRIDGE_REQUEST_OK) {
     proton_engine_reject_renderer_request(
         frame, renderer_pending_id,
@@ -1237,14 +1227,17 @@ static int CEF_CALLBACK proton_engine_client_on_process_message_received(
                                         renderer_pending_id, page_instance,
                                         frame) ||
       !proton_engine_runtime_enqueue_bridge_request(window->runtime,
-                                                   request_json)) {
+                                                   request_id,
+                                                   window->public_window_id, op,
+                                                   payload_json, page_instance,
+                                                   source_origin)) {
     proton_engine_bridge_pending_t *pending =
         proton_engine_bridge_pending_take(request_id);
     proton_engine_bridge_pending_free(pending);
-    free(request_json);
     proton_engine_reject_renderer_request(frame, renderer_pending_id,
                                           "bridge request queue is full");
   }
+  free(source_origin);
   free(op);
   free(payload_json);
   free(page_instance);
@@ -1300,7 +1293,7 @@ static void CEF_CALLBACK proton_engine_on_load_end(
   if (window != NULL) {
     proton_browser_session_loading_changed(window->browser_session, url, 0);
   }
-  if (window != NULL && window->bridge_config_json != NULL && url != NULL &&
+  if (window != NULL && window->bridge_config != NULL && url != NULL &&
       strcmp(url, "about:blank") != 0) {
     (void)proton_engine_bridge_send_lifecycle_probe(frame);
   }
@@ -1332,7 +1325,7 @@ static void CEF_CALLBACK proton_engine_on_load_error(
   proton_browser_session_load_failed(
       window != NULL ? window->browser_session : NULL, url,
       (int32_t)errorCode, message);
-  if (window != NULL && window->bridge_config_json != NULL && url != NULL) {
+  if (window != NULL && window->bridge_config != NULL && url != NULL) {
     proton_engine_bridge_lifecycle_report_load_failure(
         &window->bridge_lifecycle, url,
         message != NULL && message[0] != '\0' ? message
@@ -1440,7 +1433,7 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
     const cef_string_t *error_string) {
   (void)self;
   proton_engine_window_t *window = proton_engine_window_from_browser(browser);
-  if (window == NULL || window->bridge_config_json == NULL || window->closing) {
+  if (window == NULL || window->bridge_config == NULL || window->closing) {
     return;
   }
   cef_frame_t *frame = browser != NULL ? browser->get_main_frame(browser) : NULL;

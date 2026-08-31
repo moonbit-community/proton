@@ -69,7 +69,7 @@ struct proton_engine_window {
   proton_engine_runtime_t *runtime;
   proton_window_id_t public_window_id;
   proton_browser_lifecycle_t *browser_lifecycle;
-  char *bridge_config_json;
+  proton_bridge_config_t *bridge_config;
   int32_t max_bridge_payload_bytes;
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
   int width;
@@ -270,8 +270,9 @@ void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms);
 int proton_engine_runtime_initialized(void);
 int32_t proton_engine_runtime_remote_debugging_port(void);
 int proton_engine_runtime_enqueue_bridge_request(
-    proton_engine_runtime_t *runtime,
-    char *request_json);
+    proton_engine_runtime_t *runtime, int64_t request_id,
+    int64_t public_window, const char *op, const char *payload,
+    const char *page_instance, const char *source_origin);
 int proton_engine_runtime_enqueue_bridge_cancellation(
     proton_engine_runtime_t *runtime,
     int64_t request_id);

@@ -6,7 +6,6 @@
 
 #include "proton_internal.h"
 #include "proton_event.h"
-#include "proton_json.h"
 #include "proton_state.h"
 
 #include <stdbool.h>
@@ -75,20 +74,6 @@ typedef struct {
 #endif
 } proton_app_instance_slot_t;
 
-typedef struct {
-  const proton_json_doc_t *doc;
-  bool valid;
-} proton_app_instance_string_array_validation_t;
-
-typedef struct {
-  const proton_json_doc_t *doc;
-  bool valid;
-  bool has_abi_version;
-  bool has_urls;
-  bool has_files;
-  bool has_reopen;
-} proton_app_instance_activation_validation_t;
-
 static proton_app_instance_slot_t
     g_app_instances[PROTON_APP_INSTANCE_CAPACITY];
 
@@ -154,106 +139,6 @@ proton_app_instance_get(int64_t handle, char *error, size_t error_len) {
   return slot;
 }
 
-static bool proton_app_instance_validate_string_item(
-    proton_json_value_t value, void *user_data) {
-  proton_app_instance_string_array_validation_t *validation =
-      (proton_app_instance_string_array_validation_t *)user_data;
-  char *text = proton_json_copy_string(validation->doc, value);
-  if (text == NULL) {
-    validation->valid = false;
-    return false;
-  }
-  free(text);
-  return true;
-}
-
-static bool proton_app_instance_validate_activation_field(
-    const char *key, proton_json_value_t value, void *user_data) {
-  proton_app_instance_activation_validation_t *validation =
-      (proton_app_instance_activation_validation_t *)user_data;
-  if (strcmp(key, "abi_version") == 0) {
-    if (validation->has_abi_version) {
-      validation->valid = false;
-      return false;
-    }
-    int32_t abi_version = 0;
-    validation->has_abi_version = true;
-    validation->valid =
-        proton_json_read_int32(validation->doc, value, &abi_version) &&
-        abi_version == 1;
-    return validation->valid;
-  }
-  if (strcmp(key, "urls") == 0 || strcmp(key, "files") == 0) {
-    bool *seen =
-        strcmp(key, "urls") == 0 ? &validation->has_urls
-                                 : &validation->has_files;
-    if (*seen) {
-      validation->valid = false;
-      return false;
-    }
-    *seen = true;
-    if (!proton_json_is_array(validation->doc, value)) {
-      validation->valid = false;
-      return false;
-    }
-    proton_app_instance_string_array_validation_t items = {
-        .doc = validation->doc,
-        .valid = true,
-    };
-    if (!proton_json_array_each(validation->doc, value,
-                                proton_app_instance_validate_string_item,
-                                &items) ||
-        !items.valid) {
-      validation->valid = false;
-      return false;
-    }
-    return true;
-  }
-  if (strcmp(key, "reopen") == 0) {
-    if (validation->has_reopen) {
-      validation->valid = false;
-      return false;
-    }
-    validation->has_reopen = true;
-    bool reopen = false;
-    if (!proton_json_read_bool(validation->doc, value, &reopen)) {
-      validation->valid = false;
-      return false;
-    }
-    return true;
-  }
-  validation->valid = false;
-  return false;
-}
-
-static bool proton_app_instance_validate_activation(
-    const char *activation_json) {
-  proton_json_doc_t doc;
-  if (!proton_json_parse(&doc, activation_json) ||
-      !proton_json_is_single_value(&doc)) {
-    return false;
-  }
-  proton_json_value_t root;
-  proton_app_instance_activation_validation_t validation = {
-      .doc = &doc,
-      .valid = true,
-      .has_abi_version = false,
-      .has_urls = false,
-      .has_files = false,
-      .has_reopen = false,
-  };
-  bool valid =
-      proton_json_root_object(&doc, &root) &&
-      proton_json_object_each(&doc, root,
-                              proton_app_instance_validate_activation_field,
-                              &validation) &&
-      validation.valid && validation.has_abi_version &&
-      validation.has_urls && validation.has_files &&
-      validation.has_reopen;
-  proton_json_dispose(&doc);
-  return valid;
-}
-
 static void proton_app_instance_lock(proton_app_instance_slot_t *slot) {
 #ifdef _WIN32
   EnterCriticalSection(&slot->lock);
@@ -283,144 +168,40 @@ static bool proton_app_instance_enqueue_owned(
   return true;
 }
 
-typedef struct {
-  const proton_json_doc_t *doc;
-  char **items;
-  int32_t count;
-  bool valid;
-} proton_app_instance_item_collector_t;
-
-static bool proton_app_instance_collect_item(proton_json_value_t value,
-                                             void *user_data) {
-  proton_app_instance_item_collector_t *collector =
-      (proton_app_instance_item_collector_t *)user_data;
-  char *item = proton_json_copy_string(collector->doc, value);
-  if (item == NULL) {
-    collector->valid = false;
-    return false;
-  }
-  char **items = (char **)realloc(
-      collector->items, (size_t)(collector->count + 1) * sizeof(char *));
-  if (items == NULL) {
-    free(item);
-    collector->valid = false;
-    return false;
-  }
-  collector->items = items;
-  collector->items[collector->count++] = item;
-  return true;
-}
-
-static bool proton_app_instance_create_items_event(
-    const proton_json_doc_t *doc, proton_json_value_t value,
-    proton_event_kind_t kind, proton_event_t **out_event) {
-  *out_event = NULL;
-  proton_app_instance_item_collector_t collector = {
-      .doc = doc,
-      .valid = true,
-  };
-  if (!proton_json_array_each(doc, value, proton_app_instance_collect_item,
-                              &collector) ||
-      !collector.valid) {
-    for (int32_t i = 0; i < collector.count; i++) {
-      free(collector.items[i]);
-    }
-    free(collector.items);
-    return false;
-  }
-  if (collector.count == 0) {
-    free(collector.items);
-    return true;
-  }
-  proton_event_t *event = proton_event_create(kind);
-  if (event == NULL) {
-    for (int32_t i = 0; i < collector.count; i++) {
-      free(collector.items[i]);
-    }
-    free(collector.items);
-    return false;
-  }
-  event->items = collector.items;
-  event->item_count = collector.count;
-  *out_event = event;
-  return true;
-}
-
 static bool proton_app_instance_enqueue_activation(
-    proton_app_instance_slot_t *slot, const char *activation_json,
+    proton_app_instance_slot_t *slot, const char *activation_payload,
     bool reopen_when_empty) {
-  proton_json_doc_t doc;
-  if (!proton_json_parse(&doc, activation_json) ||
-      !proton_json_is_single_value(&doc)) {
+  if (slot == NULL || activation_payload == NULL ||
+      activation_payload[0] == '\0' ||
+      strlen(activation_payload) > PROTON_APP_INSTANCE_MAX_MESSAGE_BYTES) {
     return false;
   }
-  proton_json_value_t root;
-  bool ok = proton_json_root_object(&doc, &root);
-  proton_event_t *events[3] = {NULL, NULL, NULL};
-  size_t event_count = 0;
-  const char *field_names[] = {"urls", "files"};
-  const proton_event_kind_t event_kinds[] = {
-      PROTON_EVENT_OPEN_URLS,
-      PROTON_EVENT_OPEN_FILES,
-  };
-  for (size_t i = 0; ok && i < 2; i++) {
-    proton_json_value_t value;
-    if (!proton_json_object_get(&doc, root, field_names[i], &value)) {
-      continue;
-    }
-    proton_event_t *event = NULL;
-    ok = proton_app_instance_create_items_event(
-        &doc, value, event_kinds[i], &event);
-    if (event != NULL) {
-      events[event_count++] = event;
-    }
-  }
-  if (ok) {
-    proton_json_value_t reopen_value;
-    bool reopen = false;
-    if (proton_json_object_get(&doc, root, "reopen", &reopen_value)) {
-      ok = proton_json_read_bool(&doc, reopen_value, &reopen);
-    }
-    if (ok && (reopen || (reopen_when_empty && event_count == 0))) {
-      events[event_count] = proton_event_create(PROTON_EVENT_REOPEN);
-      ok = events[event_count] != NULL;
-      if (ok) {
-        event_count++;
-      }
-    }
-  }
-  proton_json_dispose(&doc);
-  if (!ok) {
-    for (size_t i = 0; i < event_count; i++) {
-      proton_event_destroy(events[i]);
-    }
+  proton_event_t *event = proton_event_create(PROTON_EVENT_APP_ACTIVATION);
+  if (event == NULL || !proton_event_set_text(&event->text_a,
+                                               activation_payload)) {
+    proton_event_destroy(event);
     return false;
   }
+  event->bool_a = reopen_when_empty ? 1 : 0;
 
   proton_app_instance_lock(slot);
   bool attached = slot->runtime != NULL;
-  if (!attached &&
-      event_count > PROTON_APP_INSTANCE_EVENT_CAPACITY - slot->event_count) {
-    ok = false;
+  bool queued = true;
+  if (!attached && slot->event_count == PROTON_APP_INSTANCE_EVENT_CAPACITY) {
+    queued = false;
   } else if (!attached) {
-    for (size_t i = 0; i < event_count; i++) {
-      (void)proton_app_instance_enqueue_owned(slot, events[i]);
-      events[i] = NULL;
-    }
+    queued = proton_app_instance_enqueue_owned(slot, event);
+    event = NULL;
   }
   proton_app_instance_unlock(slot);
-  if (ok && attached) {
-    for (size_t i = 0; i < event_count; i++) {
-      if (!proton_event_publish(events[i])) {
-        ok = false;
-      }
-      events[i] = NULL;
-    }
+  if (queued && attached && !proton_event_publish(event)) {
+    queued = false;
   }
-  for (size_t i = 0; i < event_count; i++) {
-    proton_event_destroy(events[i]);
+  if (attached) {
+    event = NULL;
   }
-  return ok;
+  proton_event_destroy(event);
+  return queued;
 }
 
 static proton_app_instance_slot_t *proton_app_instance_allocate(
@@ -696,8 +477,7 @@ static DWORD WINAPI proton_app_instance_server_thread(void *data) {
       if (payload != NULL &&
           read_result == PROTON_APP_INSTANCE_IO_COMPLETE) {
         payload[length] = '\0';
-        if (proton_app_instance_validate_activation(payload) &&
-            proton_app_instance_enqueue_activation(slot, payload, true)) {
+        if (proton_app_instance_enqueue_activation(slot, payload, true)) {
           ack = 1;
         }
       }
@@ -946,8 +726,7 @@ static void *proton_app_instance_server_thread(void *data) {
         if (payload != NULL &&
             proton_app_instance_read_exact(client, payload, length)) {
           payload[length] = '\0';
-          if (proton_app_instance_validate_activation(payload) &&
-              proton_app_instance_enqueue_activation(slot, payload, true)) {
+          if (proton_app_instance_enqueue_activation(slot, payload, true)) {
             ack = 1;
           }
         }
@@ -1232,11 +1011,10 @@ int32_t proton_app_instance_acquire_impl(
         error, error_len, "app identifier must contain 1 to 255 bytes");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (activation_json == NULL ||
-      strlen(activation_json) >= PROTON_APP_INSTANCE_MAX_MESSAGE_BYTES ||
-      !proton_app_instance_validate_activation(activation_json)) {
+  if (activation_json == NULL || activation_json[0] == '\0' ||
+      strlen(activation_json) >= PROTON_APP_INSTANCE_MAX_MESSAGE_BYTES) {
     proton_app_instance_set_message(error, error_len,
-                                    "invalid app activation JSON");
+                                    "invalid app activation payload");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   uint32_t index = 0;

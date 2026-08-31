@@ -5,7 +5,6 @@
 #include "proton_config.h"
 
 #include "proton_internal.h"
-#include "proton_json.h"
 
 #include <ctype.h>
 #include <stdbool.h>
@@ -30,7 +29,6 @@
 #define PROTON_PATH_SEPARATOR "/"
 #endif
 
-#define PROTON_MAX_BRIDGE_OP_NAME_BYTES 128
 #define PROTON_MAX_PATH_BYTES 4096
 
 #ifdef __APPLE__
@@ -55,160 +53,6 @@ static bool proton_path_is_absolute(const char *path) {
   return path[0] == '/';
 #endif
 }
-
-static bool proton_json_key_allowed(const char *key,
-                                    const char *const *allowed_keys,
-                                    size_t allowed_key_count) {
-  for (size_t i = 0; i < allowed_key_count; i++) {
-    if (strcmp(key, allowed_keys[i]) == 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
-typedef struct {
-  const proton_json_doc_t *doc;
-  const char *config_name;
-  const char *const *allowed_keys;
-  size_t allowed_key_count;
-  int32_t expected_abi_version;
-  bool has_abi_version;
-  int32_t status;
-} proton_abi_validation_t;
-
-static bool proton_validate_abi_field_type(const proton_json_doc_t *doc,
-                                           const char *config_name,
-                                           const char *key,
-                                           proton_json_value_t value) {
-  char text[PROTON_MAX_PATH_BYTES];
-  int32_t integer = 0;
-  bool valid = true;
-  if (strcmp(key, "abi_version") == 0) {
-    return true;
-  }
-  if (strcmp(config_name, "bridge") == 0) {
-    if (strcmp(key, "namespace") == 0) {
-      valid = proton_json_read_string(doc, value, text, sizeof(text));
-    } else if (strcmp(key, "grants") == 0) {
-      valid = proton_json_is_array(doc, value);
-    } else if (strcmp(key, "max_payload_bytes") == 0) {
-      valid = proton_json_read_int32(doc, value, &integer) && integer > 0;
-    }
-  } else if (strcmp(config_name, "bridge event") == 0) {
-    if (strcmp(key, "kind") == 0 || strcmp(key, "extension") == 0 ||
-        strcmp(key, "name") == 0 || strcmp(key, "page_instance") == 0) {
-      valid = proton_json_read_string(doc, value, text, sizeof(text));
-    }
-  }
-  if (!valid) {
-    char message[192];
-    snprintf(message, sizeof(message), "%s field has invalid type or range: %s",
-             config_name, key);
-    proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-  }
-  return valid;
-}
-
-static bool proton_validate_abi_field(const char *key,
-                                      proton_json_value_t value,
-                                      void *user_data) {
-  proton_abi_validation_t *validation = (proton_abi_validation_t *)user_data;
-  if (!proton_json_key_allowed(key, validation->allowed_keys,
-                               validation->allowed_key_count)) {
-    char message[192];
-    snprintf(message, sizeof(message), "%s config contains unknown field: %s",
-             validation->config_name, key);
-    validation->status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-    return false;
-  }
-  if (strcmp(key, "abi_version") == 0) {
-    int32_t abi_version = 0;
-    validation->has_abi_version = true;
-    if (!proton_json_read_int32(validation->doc, value, &abi_version) ||
-        abi_version != validation->expected_abi_version) {
-      char message[160];
-      snprintf(message, sizeof(message),
-               "%s config abi_version must be set to %d",
-               validation->config_name, validation->expected_abi_version);
-      validation->status =
-          proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-      return false;
-    }
-  }
-  if (!proton_validate_abi_field_type(validation->doc,
-                                      validation->config_name, key, value)) {
-    validation->status = PROTON_ERR_INVALID_ARGUMENT;
-    return false;
-  }
-  return true;
-}
-
-static int32_t proton_validate_abi_config(
-    const char *config_json,
-    const char *config_name,
-    const char *const *allowed_keys,
-    size_t allowed_key_count,
-    int32_t expected_abi_version) {
-  if (config_json == NULL) {
-    char message[128];
-    snprintf(message, sizeof(message), "%s config_json is required",
-             config_name);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-  }
-
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  if (!proton_json_parse(&doc, config_json)) {
-    if (doc.trailing_comma) {
-      char message[160];
-      snprintf(message, sizeof(message), "%s config has a trailing comma",
-               config_name);
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-    }
-    char message[160];
-    snprintf(message, sizeof(message), "%s config must be valid JSON",
-             config_name);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-  }
-  if (!proton_json_root_object(&doc, &root)) {
-    proton_json_dispose(&doc);
-    char message[160];
-    snprintf(message, sizeof(message), "%s config must be a JSON object",
-             config_name);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-  }
-
-  proton_abi_validation_t validation = {
-      &doc, config_name, allowed_keys, allowed_key_count,
-      expected_abi_version, false, PROTON_OK};
-  bool valid = proton_json_object_each(&doc, root, proton_validate_abi_field,
-                                       &validation);
-  if (!valid && validation.status == PROTON_OK) {
-    char message[160];
-    snprintf(message, sizeof(message), "%s config has an invalid field",
-             config_name);
-    validation.status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-  }
-  if (validation.status == PROTON_OK && !validation.has_abi_version) {
-    char message[160];
-    snprintf(message, sizeof(message),
-             "%s config must contain \"abi_version\": %d", config_name,
-             expected_abi_version);
-    validation.status = proton_set_error(PROTON_ERR_INVALID_ARGUMENT, message);
-  }
-  proton_json_dispose(&doc);
-  return validation.status;
-}
-
-static const char *const proton_bridge_event_keys[] = {
-    "abi_version",
-    "kind",
-    "extension",
-    "name",
-    "payload",
-    "page_instance",
-};
 
 static bool proton_path_exists(const char *path) {
   if (path == NULL || path[0] == '\0') {
@@ -850,10 +694,6 @@ int32_t proton_config_prepare_window(
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "window browser policy is invalid");
   }
-  const char *bridge_config_json = proton_bridge_config_json(bridge_config);
-  if (bridge_config != NULL && bridge_config_json == NULL) {
-    return PROTON_ERR_ENGINE;
-  }
   proton_engine_window_config_t config;
   memset(&config, 0, sizeof(config));
   if (!proton_copy_config_text(config.title, sizeof(config.title), title) ||
@@ -903,10 +743,7 @@ int32_t proton_config_prepare_window(
       (proton_browser_policy_mode_t)certificate_policy;
   config.browser_policy.media = (proton_browser_policy_mode_t)media_policy;
   config.browser_policy.devtools = devtools != 0;
-  config.bridge_config_json =
-      bridge_config_json != NULL && bridge_config_json[0] != '\0'
-          ? bridge_config_json
-          : NULL;
+  config.bridge_config = bridge_config;
   config.max_bridge_payload_bytes =
       proton_bridge_config_max_payload_bytes(bridge_config);
   *out_config = config;
@@ -972,52 +809,5 @@ int32_t proton_config_prepare_view(
     config.has_background_color = 1;
   }
   *out_config = config;
-  return PROTON_OK;
-}
-
-int32_t proton_config_validate_bridge_event(const char *event_json) {
-  int32_t status = proton_validate_abi_config(
-      event_json, "bridge event", proton_bridge_event_keys,
-      sizeof(proton_bridge_event_keys) / sizeof(proton_bridge_event_keys[0]),
-      PROTON_ABI_VERSION);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t value;
-  char kind[32];
-  char name[PROTON_MAX_BRIDGE_OP_NAME_BYTES];
-  if (!proton_json_parse(&doc, event_json) ||
-      !proton_json_root_object(&doc, &root)) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge event must be a JSON object");
-  }
-  if (!proton_json_object_get(&doc, root, "kind", &value) ||
-      !proton_json_read_string(&doc, value, kind, sizeof(kind)) ||
-      (strcmp(kind, "frontend") != 0 && strcmp(kind, "extension") != 0)) {
-    proton_json_dispose(&doc);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge event kind must be frontend or extension");
-  }
-  if (!proton_json_object_get(&doc, root, "name", &value) ||
-      !proton_json_read_string(&doc, value, name, sizeof(name)) ||
-      name[0] == '\0') {
-    proton_json_dispose(&doc);
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge event requires a non-empty name");
-  }
-  if (strcmp(kind, "extension") == 0) {
-    char extension[PROTON_MAX_BRIDGE_OP_NAME_BYTES];
-    if (!proton_json_object_get(&doc, root, "extension", &value) ||
-        !proton_json_read_string(&doc, value, extension,
-                                 sizeof(extension)) ||
-        extension[0] == '\0') {
-      proton_json_dispose(&doc);
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "extension bridge event requires extension");
-    }
-  }
-  proton_json_dispose(&doc);
   return PROTON_OK;
 }

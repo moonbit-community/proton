@@ -4,7 +4,6 @@
 
 #include "../ffi/src/proton_config.h"
 #include "../ffi/src/proton_event.h"
-#include "../ffi/src/proton_json.h"
 #include "../ffi/src/engine/cef_common/browser_session.h"
 #include "../ffi/src/engine/cef_common/message.h"
 #define PROTON_ENGINE_REF_INCREMENT(refs) \
@@ -806,8 +805,9 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
   return PROTON_OK;
 }
 
-int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
-                                                const char *command_json,
+int32_t proton_engine_view_browser_command(proton_engine_view_t *view,
+                                                const char *command,
+                                                int32_t download_id,
                                                 char *error,
                                                 size_t error_len) {
 
@@ -816,9 +816,9 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  return proton_browser_session_command_json(view->browser_session,
-                                             proton_engine_view_browser(view), command_json,
-                                             error, error_len);
+  return proton_browser_session_command(view->browser_session,
+                                        proton_engine_view_browser(view), command,
+                                        download_id, error, error_len);
 }
 
 int32_t proton_engine_view_get_browser_focus_state(

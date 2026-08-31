@@ -1,6 +1,8 @@
 #ifndef PROTON_ENGINE_CEF_COMMON_BRIDGE_RENDERER_H
 #define PROTON_ENGINE_CEF_COMMON_BRIDGE_RENDERER_H
 
+#include "../../proton_bridge_config.h"
+
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_parser_capi.h"
 #include "include/capi/cef_process_message_capi.h"
@@ -18,8 +20,8 @@
   "proton.bridge.lifecycle.probe"
 #define PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION "__protonNativeInvokeOp"
 
-cef_value_t *proton_engine_bridge_renderer_extra_info_value(
-    const char *bridge_config_json);
+cef_dictionary_value_t *proton_engine_bridge_renderer_extra_info(
+    const proton_bridge_config_t *bridge_config);
 
 int proton_engine_bridge_send_event(cef_browser_t *browser,
                                     const char *event_json);
