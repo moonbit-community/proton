@@ -682,6 +682,7 @@ int32_t proton_engine_window_create(
   status = proton_engine_window_create_browser(window, config.initial_url, error,
                                                error_len);
   if (status != PROTON_OK) {
+    proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
     if (window->window != NULL) {
       gtk_widget_destroy(window->window);
     }

@@ -441,6 +441,7 @@ int32_t proton_engine_view_create(
   proton_engine_view_list_add(window, view);
   status = proton_engine_view_create_browser(view, error, error_len);
   if (status != PROTON_OK) {
+    proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
     // The browser never started, so the view finalizes immediately; the
     // struct stays owned by the window list and is reclaimed with it.
     view->closed = 1;
