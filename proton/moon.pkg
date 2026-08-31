@@ -34,6 +34,8 @@ options(
   "is-main": false,
   targets: {
     "exports.mbt": [ "native" ],
+    "facade_app_metadata.mbt": [ "native" ],
+    "facade_app_info_wbtest.mbt": [ "native" ],
     "facade_bridge.mbt": [ "native" ],
     "facade_builders.mbt": [ "native" ],
     "facade_context.mbt": [ "native" ],
