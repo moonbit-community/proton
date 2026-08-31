@@ -68,9 +68,6 @@ struct proton_engine_window {
   HWND hwnd;
   proton_engine_runtime_t *runtime;
   proton_window_id_t public_window_id;
-  cef_client_t *client;
-  cef_browser_t *browser;
-  int browser_id;
   proton_browser_lifecycle_t *browser_lifecycle;
   char *bridge_config_json;
   int32_t max_bridge_payload_bytes;
@@ -134,7 +131,6 @@ void proton_engine_browser_signal(void *user_data);
 int proton_engine_browser_id(cef_browser_t *browser);
 proton_browser_lifecycle_t *proton_engine_browser_lifecycle(
     cef_browser_t *browser);
-proton_engine_view_t *proton_engine_find_view_by_browser_id(int browser_id);
 void proton_engine_window_defer_free(proton_engine_window_t *window);
 int proton_engine_browser_hwnd_is_focused(HWND browser_hwnd);
 void proton_win_menu_dispatch_command(proton_engine_window_t *window,
@@ -238,8 +234,6 @@ typedef struct {
 struct proton_engine_client {
   cef_client_t client;
   proton_engine_ref_counted_t refs;
-  proton_engine_window_t *window;
-  proton_engine_view_t *view;
   proton_browser_lifecycle_t *browser_lifecycle;
 };
 
@@ -250,9 +244,6 @@ struct proton_engine_client {
    was closed. */
 struct proton_engine_view {
   proton_engine_window_t *window;
-  proton_engine_client_t *client;
-  cef_browser_t *browser;
-  int browser_id;
   proton_browser_lifecycle_t *browser_lifecycle;
   HWND hwnd;
   int32_t x;
@@ -284,7 +275,6 @@ int proton_engine_runtime_enqueue_bridge_request(
 int proton_engine_runtime_enqueue_bridge_cancellation(
     proton_engine_runtime_t *runtime,
     int64_t request_id);
-proton_engine_window_t *proton_engine_find_window_by_browser_id(int browser_id);
 proton_engine_window_t *proton_engine_windows_head(void);
 void proton_engine_window_list_add(proton_engine_window_t *window);
 void proton_engine_window_list_remove(proton_engine_window_t *window);
@@ -309,7 +299,6 @@ void proton_engine_bridge_pending_remove_browser(
     proton_engine_runtime_t *runtime,
     int browser_id);
 proton_engine_client_t *proton_engine_client_new(
-    proton_engine_window_t *window,
     proton_browser_lifecycle_t *browser_lifecycle);
 cef_client_t *proton_engine_browser_client_factory(
     void *context, proton_browser_lifecycle_t *browser_lifecycle);

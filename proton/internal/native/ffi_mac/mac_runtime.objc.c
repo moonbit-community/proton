@@ -517,7 +517,7 @@ void CEF_CALLBACK proton_engine_osr_get_view_rect(
   if (view == NULL) {
     // CEF can query the viewport while browser creation is still running,
     // before the view records its browser id; resolve via the client then.
-    view = proton_engine_view_from_browser_client(browser);
+    view = proton_engine_view_from_browser(browser);
   }
   if (view != NULL) {
     rect->width = view->width > 0 ? view->width : 1;
@@ -525,7 +525,7 @@ void CEF_CALLBACK proton_engine_osr_get_view_rect(
     return;
   }
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_from_browser(browser);
   rect->width = window != NULL && window->width > 0 ? window->width : 1;
   rect->height = window != NULL && window->height > 0 ? window->height : 1;
 }
@@ -554,7 +554,7 @@ void CEF_CALLBACK proton_engine_osr_on_popup_show(
     int show) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_from_browser(browser);
   if (window != NULL) {
     window->osr_popup_visible = show ? 1 : 0;
   }
@@ -566,7 +566,7 @@ void CEF_CALLBACK proton_engine_osr_on_popup_size(
     const cef_rect_t *rect) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_from_browser(browser);
   if (window != NULL && rect != NULL) {
     window->osr_popup_rect = *rect;
   }

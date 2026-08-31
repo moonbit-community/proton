@@ -300,6 +300,11 @@ proton_browser_lifecycle_browser(const proton_browser_lifecycle_t *lifecycle) {
   return lifecycle != NULL ? lifecycle->browser : NULL;
 }
 
+cef_client_t *
+proton_browser_lifecycle_client(const proton_browser_lifecycle_t *lifecycle) {
+  return lifecycle != NULL ? lifecycle->client : NULL;
+}
+
 int proton_browser_lifecycle_browser_id(
     const proton_browser_lifecycle_t *lifecycle) {
   return lifecycle != NULL ? lifecycle->browser_id : 0;

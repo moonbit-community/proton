@@ -143,9 +143,6 @@ struct proton_engine_window {
   int programmatic_close_pending;
   uint64_t close_request_id;
   proton_browser_session_t *browser_session;
-  proton_engine_client_t *client;
-  cef_browser_t *browser;
-  int browser_id;
   proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
   char *bridge_config_json;
@@ -186,16 +183,11 @@ struct proton_engine_window {
 struct proton_engine_client {
   cef_client_t client;
   proton_engine_ref_counted_t refs;
-  proton_engine_window_t *window;
-  proton_engine_view_t *view;
   proton_browser_lifecycle_t *browser_lifecycle;
 };
 
 struct proton_engine_view {
   proton_engine_window_t *window;
-  proton_engine_client_t *client;
-  cef_browser_t *browser;
-  int browser_id;
   proton_browser_lifecycle_t *browser_lifecycle;
   NSView *browser_view;
   int32_t x;
@@ -229,7 +221,6 @@ void proton_engine_init_handlers(void);
 cef_app_t *proton_engine_cef_app(void);
 int proton_engine_register_scheme_factory(void);
 proton_engine_client_t *proton_engine_client_create(
-    proton_engine_window_t *window,
     proton_browser_lifecycle_t *browser_lifecycle);
 int CEF_CALLBACK proton_engine_client_release(
     cef_base_ref_counted_t *base);
@@ -249,7 +240,6 @@ void proton_engine_runtime_create_pending_browsers(
     proton_engine_runtime_t *runtime);
 int proton_engine_runtime_has_windows(proton_engine_runtime_t *runtime);
 proton_engine_client_t *proton_engine_client_from_base(cef_client_t *client);
-void proton_engine_window_release_browser(proton_engine_window_t *window);
 int proton_engine_send_bridge_response_to_frame(
     cef_frame_t *frame,
     int pending_id,
@@ -307,10 +297,8 @@ int proton_engine_browser_view_is_focused(NSView *browser_view);
 proton_engine_view_t *proton_engine_view_from_native_id(uint64_t native_id);
 proton_engine_window_t *proton_engine_window_from_browser(
     cef_browser_t *browser);
-proton_engine_window_t *proton_engine_window_from_browser_client(
-    cef_browser_t *browser);
 proton_engine_view_t *proton_engine_view_from_browser(cef_browser_t *browser);
-proton_engine_view_t *proton_engine_view_from_browser_client(
+proton_browser_lifecycle_t *proton_engine_browser_lifecycle(
     cef_browser_t *browser);
 int proton_engine_runtime_initialized(void);
 uint64_t proton_engine_allocate_view_native_id(void);

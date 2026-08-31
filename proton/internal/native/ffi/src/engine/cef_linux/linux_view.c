@@ -62,9 +62,6 @@ void proton_engine_window_free_views(proton_engine_window_t *window) {
     proton_engine_view_t *next = view->next;
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
-    if (view->client != NULL) {
-      view->client->view = NULL;
-    }
     proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
     free(view);
     view = next;
@@ -81,9 +78,6 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
   if (browser_state != PROTON_BROWSER_CLOSED &&
       browser_state != PROTON_BROWSER_CREATION_FAILED) {
     return;
-  }
-  if (view->client != NULL) {
-    view->client->view = NULL;
   }
   proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
   view->xwindow = 0;
@@ -121,7 +115,7 @@ void proton_engine_window_close_views(proton_engine_window_t *window) {
     if (!view->closed) {
       view->closed = 1;
       view->finalize_after_browser_close = 1;
-      if (view->browser != NULL) {
+      if (proton_engine_view_browser(view) != NULL) {
         proton_browser_lifecycle_request_close(view->browser_lifecycle, 1);
       }
     } else if (!view->finalize_after_browser_close) {
@@ -244,7 +238,6 @@ void proton_engine_view_handlers_init(void) {
 }
 
 static proton_engine_client_t *proton_engine_view_client_create(
-    proton_engine_view_t *view,
     proton_browser_lifecycle_t *browser_lifecycle) {
   proton_engine_client_t *client =
       (proton_engine_client_t *)calloc(1, sizeof(*client));
@@ -254,7 +247,6 @@ static proton_engine_client_t *proton_engine_view_client_create(
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
   client->client.base.release = proton_engine_client_release;
-  client->view = view;
   client->browser_lifecycle = browser_lifecycle;
   // Views wire the life span, load, display, and render handlers: life span
   // drives the close state machine, load/display feed the view event stream,
@@ -265,8 +257,15 @@ static proton_engine_client_t *proton_engine_view_client_create(
       proton_engine_client_get_life_span_handler;
   client->client.get_load_handler = proton_engine_client_get_load_handler;
   client->client.get_display_handler = proton_engine_client_get_display_handler;
-  client->client.get_find_handler =
-      view->window->client->client.get_find_handler;
+  proton_engine_view_t *view =
+      (proton_engine_view_t *)proton_browser_lifecycle_owner(browser_lifecycle);
+  cef_client_t *window_client = view != NULL && view->window != NULL
+                                    ? proton_browser_lifecycle_client(
+                                          view->window->browser_lifecycle)
+                                    : NULL;
+  client->client.get_find_handler = window_client != NULL
+                                        ? window_client->get_find_handler
+                                        : NULL;
   client->client.get_render_handler = proton_engine_client_get_render_handler;
   return client;
 }
@@ -309,7 +308,7 @@ static int32_t proton_engine_view_create_browser(
   proton_engine_set_string(&window_info.window_name, "ProtonView");
   proton_engine_set_string(&url, "about:blank");
   cef_browser_t *created_browser = cef_browser_host_create_browser_sync(
-      &window_info, &view->client->client, &url, &browser_settings, NULL,
+      &window_info, proton_browser_lifecycle_client(view->browser_lifecycle), &url, &browser_settings, NULL,
       NULL);
   cef_string_clear(&window_info.window_name);
   cef_string_clear(&url);
@@ -320,10 +319,7 @@ static int32_t proton_engine_view_create_browser(
   }
   proton_browser_lifecycle_adopt_created(view->browser_lifecycle,
                                          created_browser);
-  view->browser = proton_browser_lifecycle_browser(view->browser_lifecycle);
-  view->browser_id =
-      proton_browser_lifecycle_browser_id(view->browser_lifecycle);
-  cef_browser_host_t *host = view->browser->get_host(view->browser);
+  cef_browser_host_t *host = proton_engine_view_browser(view)->get_host(proton_engine_view_browser(view));
   if (host != NULL) {
     double factor = (double)view->zoom_percent / 100.0;
     host->set_zoom_level(host, log(factor) / log(1.2));
@@ -345,7 +341,7 @@ static int32_t proton_engine_view_create_browser(
   proton_engine_window_layout_views(window);
   if (view->initial_url[0] != '\0' &&
       strcmp(view->initial_url, "about:blank") != 0) {
-    cef_frame_t *frame = view->browser->get_main_frame(view->browser);
+    cef_frame_t *frame = proton_engine_view_browser(view)->get_main_frame(proton_engine_view_browser(view));
     if (frame != NULL) {
       cef_string_t initial = {0};
       proton_engine_set_string(&initial, view->initial_url);
@@ -410,8 +406,8 @@ int32_t proton_engine_view_create(
                               "failed to allocate browser lifecycle");
     return PROTON_ERR_ENGINE;
   }
-  view->client = proton_engine_view_client_create(
-      view, view->browser_lifecycle);
+  proton_engine_client_t *client = proton_engine_view_client_create(
+      view->browser_lifecycle);
   proton_browser_policy_t view_policy = {PROTON_BROWSER_POLICY_ALLOW,
                                          PROTON_BROWSER_POLICY_DENY,
                                          PROTON_BROWSER_POLICY_DENY,
@@ -421,14 +417,13 @@ int32_t proton_engine_view_create(
   view->browser_session = proton_browser_session_create(
       &view_policy, proton_engine_browser_signal, NULL);
   view->events = proton_view_events_create();
-  if (view->client == NULL || view->browser_session == NULL ||
+  if (client == NULL || view->browser_session == NULL ||
       view->events == NULL) {
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
-    if (view->client != NULL) {
-      view->client->view = NULL;
+    if (client != NULL) {
       proton_browser_lifecycle_set_client(view->browser_lifecycle,
-                                          &view->client->client);
+                                          &client->client);
     }
     proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
     proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
@@ -438,7 +433,7 @@ int32_t proton_engine_view_create(
     return PROTON_ERR_ENGINE;
   }
   proton_browser_lifecycle_set_client(view->browser_lifecycle,
-                                      &view->client->client);
+                                      &client->client);
   proton_browser_session_bind_lifecycle(view->browser_session,
                                         view->browser_lifecycle);
   proton_view_events_bind(view->events, config.public_view,
@@ -470,7 +465,7 @@ int32_t proton_engine_view_destroy(proton_engine_view_t *view,
   }
   view->closed = 1;
   view->finalize_after_browser_close = 1;
-  if (view->browser != NULL) {
+  if (proton_engine_view_browser(view) != NULL) {
     proton_browser_lifecycle_request_close(view->browser_lifecycle, 1);
   }
   proton_engine_view_finalize_if_ready(view);
@@ -498,8 +493,8 @@ int32_t proton_engine_view_set_bounds(proton_engine_view_t *view,
   view->width = width;
   view->height = height;
   if (view->window != NULL && view->window->headless) {
-    if (view->browser != NULL) {
-      cef_browser_host_t *host = view->browser->get_host(view->browser);
+    if (proton_engine_view_browser(view) != NULL) {
+      cef_browser_host_t *host = proton_engine_view_browser(view)->get_host(proton_engine_view_browser(view));
       if (host != NULL) {
         host->was_resized(host);
         host->base.release((cef_base_ref_counted_t *)host);
@@ -522,8 +517,8 @@ int32_t proton_engine_view_set_visible(proton_engine_view_t *view,
   }
   view->visible = visible ? 1 : 0;
   if (view->window != NULL && view->window->headless) {
-    if (view->browser != NULL) {
-      cef_browser_host_t *host = view->browser->get_host(view->browser);
+    if (proton_engine_view_browser(view) != NULL) {
+      cef_browser_host_t *host = proton_engine_view_browser(view)->get_host(proton_engine_view_browser(view));
       if (host != NULL && host->was_hidden != NULL) {
         host->was_hidden(host, view->visible ? 0 : 1);
         host->base.release((cef_base_ref_counted_t *)host);
@@ -563,7 +558,7 @@ int32_t proton_engine_view_set_zoom_percent(proton_engine_view_t *view,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   int32_t status = proton_browser_set_zoom_percent(
-      view->browser, zoom_percent, error, error_len);
+      proton_engine_view_browser(view), zoom_percent, error, error_len);
   if (status != PROTON_OK) {
     return status;
   }
@@ -579,9 +574,9 @@ int32_t proton_engine_view_set_audio_muted(proton_engine_view_t *view,
     proton_engine_set_message(error, error_len, "view is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (view->browser != NULL) {
+  if (proton_engine_view_browser(view) != NULL) {
     int32_t status = proton_browser_set_audio_muted(
-        view->browser, muted, error, error_len);
+        proton_engine_view_browser(view), muted, error, error_len);
     if (status != PROTON_OK) {
       return status;
     }
@@ -598,9 +593,9 @@ int32_t proton_engine_view_is_audio_muted(proton_engine_view_t *view,
                               "view and muted output are required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (view->browser != NULL) {
+  if (proton_engine_view_browser(view) != NULL) {
     int32_t status = proton_browser_is_audio_muted(
-        view->browser, out_muted, error, error_len);
+        proton_engine_view_browser(view), out_muted, error, error_len);
     if (status != PROTON_OK) {
       return status;
     }
@@ -619,11 +614,11 @@ int32_t proton_engine_view_load_url(proton_engine_view_t *view,
     proton_engine_set_message(error, error_len, "view is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (view->browser == NULL) {
+  if (proton_engine_view_browser(view) == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  cef_frame_t *frame = view->browser->get_main_frame(view->browser);
+  cef_frame_t *frame = proton_engine_view_browser(view)->get_main_frame(proton_engine_view_browser(view));
   if (frame == NULL) {
     proton_engine_set_message(error, error_len, "main frame is not available");
     return PROTON_ERR_ENGINE;
@@ -641,11 +636,11 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
                                 const char *script,
                                 char *error,
                                 size_t error_len) {
-  if (view == NULL || view->closed || view->browser == NULL) {
+  if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  cef_frame_t *frame = view->browser->get_main_frame(view->browser);
+  cef_frame_t *frame = proton_engine_view_browser(view)->get_main_frame(proton_engine_view_browser(view));
   if (frame == NULL) {
     proton_engine_set_message(error, error_len, "main frame is not available");
     return PROTON_ERR_ENGINE;
@@ -667,12 +662,12 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
                                                 char *error,
                                                 size_t error_len) {
   if (view == NULL || view->closed || view->browser_session == NULL ||
-      view->browser == NULL) {
+      proton_engine_view_browser(view) == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
   return proton_browser_session_command_json(view->browser_session,
-                                             view->browser, command_json,
+                                             proton_engine_view_browser(view), command_json,
                                              error, error_len);
 }
 
@@ -680,7 +675,7 @@ int32_t proton_engine_view_get_browser_focus_state(
     proton_engine_view_t *view, int32_t *out_focused,
     char *error, size_t error_len) {
   if (view == NULL || view->closed || view->browser_session == NULL ||
-      view->browser == NULL) {
+      proton_engine_view_browser(view) == NULL) {
     proton_engine_set_message(error, error_len,
                               "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
@@ -691,7 +686,7 @@ int32_t proton_engine_view_get_browser_focus_state(
   }
   if (view->window != NULL && view->window->headless) {
     return proton_browser_headless_is_focused(
-        view->browser, out_focused, error, error_len);
+        proton_engine_view_browser(view), out_focused, error, error_len);
   }
   if (view->display == NULL || view->xwindow == None) {
     proton_engine_set_message(error, error_len,
@@ -706,24 +701,24 @@ int32_t proton_engine_view_get_browser_focus_state(
 int32_t proton_engine_view_get_devtools_state(
     proton_engine_view_t *view, int32_t *out_opened,
     char *error, size_t error_len) {
-  if (view == NULL || view->closed || view->browser == NULL) {
+  if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
     proton_engine_set_message(error, error_len,
                               "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
   return proton_browser_is_devtools_opened(
-      view->browser, out_opened, error, error_len);
+      proton_engine_view_browser(view), out_opened, error, error_len);
 }
 
 int32_t proton_engine_view_get_navigation_state(
     proton_engine_view_t *view, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len) {
-  if (view == NULL || view->closed || view->browser == NULL) {
+  if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
   return proton_browser_navigation_state(
-      view->browser, out_can_go_back, out_can_go_forward, error, error_len);
+      proton_engine_view_browser(view), out_can_go_back, out_can_go_forward, error, error_len);
 }
 
 int32_t proton_engine_view_find_in_page(
@@ -731,24 +726,24 @@ int32_t proton_engine_view_find_in_page(
     int32_t match_case, int32_t find_next, int32_t *out_request_id,
     char *error, size_t error_len) {
   if (view == NULL || view->closed || view->browser_session == NULL ||
-      view->browser == NULL) {
+      proton_engine_view_browser(view) == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
   return proton_browser_find_in_page(
-      view->browser_session, view->browser, text, forward, match_case,
+      view->browser_session, proton_engine_view_browser(view), text, forward, match_case,
       find_next, out_request_id, error, error_len);
 }
 
 int32_t proton_engine_view_stop_find_in_page(
     proton_engine_view_t *view, int32_t clear_selection, char *error,
     size_t error_len) {
-  if (view == NULL || view->closed || view->browser == NULL) {
+  if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
   return proton_browser_stop_find_in_page(
-      view->browser, clear_selection, error, error_len);
+      proton_engine_view_browser(view), clear_selection, error, error_len);
 }
 
 #endif

@@ -348,27 +348,36 @@ void proton_engine_window_unlock(void) {
 
 proton_engine_window_t *proton_engine_window_lookup_browser(
     cef_browser_t *browser) {
-  int browser_id = proton_engine_browser_id(browser);
-  if (browser_id == 0) {
+  proton_browser_lifecycle_t *lifecycle =
+      proton_engine_browser_lifecycle(browser);
+  if (lifecycle == NULL ||
+      proton_browser_lifecycle_role(lifecycle) != PROTON_BROWSER_ROLE_MAIN) {
     return NULL;
   }
-  for (proton_engine_window_t *window = g_proton_engine_windows;
-       window != NULL; window = window->next) {
-    if (window->browser_id == browser_id) {
-      return window;
-    }
-  }
-  return NULL;
+  return (proton_engine_window_t *)proton_browser_lifecycle_owner(lifecycle);
 }
 
 cef_browser_t *proton_engine_window_browser(proton_engine_window_t *window) {
-  return window != NULL ? window->browser : NULL;
+  return window != NULL
+             ? proton_browser_lifecycle_browser(window->browser_lifecycle)
+             : NULL;
+}
+
+cef_browser_t *proton_engine_view_browser(proton_engine_view_t *view) {
+  return view != NULL
+             ? proton_browser_lifecycle_browser(view->browser_lifecycle)
+             : NULL;
 }
 
 proton_engine_view_t *proton_engine_window_lookup_view_browser(
     cef_browser_t *browser) {
-  return proton_engine_find_view_by_browser_id(
-      proton_engine_browser_id(browser));
+  proton_browser_lifecycle_t *lifecycle =
+      proton_engine_browser_lifecycle(browser);
+  if (lifecycle == NULL ||
+      proton_browser_lifecycle_role(lifecycle) != PROTON_BROWSER_ROLE_VIEW) {
+    return NULL;
+  }
+  return (proton_engine_view_t *)proton_browser_lifecycle_owner(lifecycle);
 }
 
 proton_window_id_t proton_engine_view_window_public_id(
@@ -391,45 +400,6 @@ proton_view_id_t proton_engine_view_public_id(proton_engine_view_t *view) {
   }
   return view_id;
 }
-
-proton_engine_view_t *proton_engine_find_view_by_browser_id(int browser_id) {
-  if (browser_id == 0 || !g_proton_engine_window_lock_initialized) {
-    return NULL;
-  }
-  proton_engine_view_t *found = NULL;
-  EnterCriticalSection(&g_proton_engine_window_lock);
-  for (proton_engine_window_t *window = g_proton_engine_windows;
-       window != NULL && found == NULL; window = window->next) {
-    for (proton_engine_view_t *view = window->views; view != NULL;
-         view = view->next) {
-      if (view->browser_id == browser_id) {
-        found = view;
-        break;
-      }
-    }
-  }
-  LeaveCriticalSection(&g_proton_engine_window_lock);
-  return found;
-}
-
-proton_engine_window_t *proton_engine_find_window_by_browser_id(int browser_id) {
-  if (browser_id == 0 || !g_proton_engine_window_lock_initialized) {
-    return NULL;
-  }
-  proton_engine_window_t *found = NULL;
-  EnterCriticalSection(&g_proton_engine_window_lock);
-  for (proton_engine_window_t *window = g_proton_engine_windows;
-       window != NULL; window = window->next) {
-    if (window->browser_id == browser_id) {
-      found = window;
-      break;
-    }
-  }
-  LeaveCriticalSection(&g_proton_engine_window_lock);
-  return found;
-}
-
-
 
 
 static void proton_engine_remove_temporary_profile(void) {

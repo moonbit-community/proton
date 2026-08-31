@@ -337,15 +337,15 @@ static int32_t proton_win_menu_append_definition(
 
 static void proton_win_menu_apply_edit_role(proton_engine_window_t *window,
                                              const char *role) {
-  if (window == NULL || window->browser == NULL || role == NULL) {
+  if (window == NULL || proton_engine_window_browser(window) == NULL || role == NULL) {
     return;
   }
   cef_frame_t *frame =
-      window->browser->get_focused_frame != NULL
-          ? window->browser->get_focused_frame(window->browser)
+      proton_engine_window_browser(window)->get_focused_frame != NULL
+          ? proton_engine_window_browser(window)->get_focused_frame(proton_engine_window_browser(window))
           : NULL;
   if (frame == NULL) {
-    frame = window->browser->get_main_frame(window->browser);
+    frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
   }
   if (frame == NULL) {
     return;
@@ -465,7 +465,7 @@ int32_t proton_engine_window_popup_menu(
                               "popup menu requires at least one menu");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (window->hwnd == NULL || window->browser == NULL) {
+  if (window->hwnd == NULL || proton_engine_window_browser(window) == NULL) {
     proton_engine_set_message(error, error_len,
                               "window is not ready for a popup menu");
     return PROTON_ERR_INVALID_ARGUMENT;

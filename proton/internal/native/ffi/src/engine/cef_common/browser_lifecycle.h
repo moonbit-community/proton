@@ -67,6 +67,8 @@ void proton_browser_lifecycle_clear_owner(
     proton_browser_lifecycle_t *lifecycle);
 cef_browser_t *
 proton_browser_lifecycle_browser(const proton_browser_lifecycle_t *lifecycle);
+cef_client_t *
+proton_browser_lifecycle_client(const proton_browser_lifecycle_t *lifecycle);
 int proton_browser_lifecycle_browser_id(
     const proton_browser_lifecycle_t *lifecycle);
 

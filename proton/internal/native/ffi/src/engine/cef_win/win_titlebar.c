@@ -333,10 +333,10 @@ void proton_engine_overlay_subclass_browser(
 void proton_engine_resize_browser(proton_engine_window_t *window,
                                   int width,
                                   int height) {
-  if (window == NULL || window->browser == NULL) {
+  if (window == NULL || proton_engine_window_browser(window) == NULL) {
     return;
   }
-  cef_browser_host_t *host = window->browser->get_host(window->browser);
+  cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
   if (host == NULL) {
     return;
   }

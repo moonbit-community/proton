@@ -368,7 +368,7 @@ static void CEF_CALLBACK proton_engine_osr_get_view_rect(
   if (view == NULL) {
     // CEF can query the viewport while create_browser_sync is still running,
     // before the view records its browser id; resolve via the client then.
-    view = proton_engine_view_from_browser_client(browser);
+    view = proton_engine_view_from_browser(browser);
   }
   if (view != NULL) {
     rect->width = view->width > 0 ? view->width : 1;
@@ -376,7 +376,7 @@ static void CEF_CALLBACK proton_engine_osr_get_view_rect(
     return;
   }
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_from_browser(browser);
   rect->width = window != NULL && window->width > 0 ? window->width : 1;
   rect->height = window != NULL && window->height > 0 ? window->height : 1;
 }
@@ -405,7 +405,7 @@ static void CEF_CALLBACK proton_engine_osr_on_popup_show(
     int show) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_from_browser(browser);
   if (window != NULL) {
     window->osr_popup_visible = show ? 1 : 0;
   }
@@ -417,7 +417,7 @@ static void CEF_CALLBACK proton_engine_osr_on_popup_size(
     const cef_rect_t *rect) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser_client(browser);
+      proton_engine_window_from_browser(browser);
   if (window != NULL && rect != NULL) {
     window->osr_popup_rect = *rect;
   }
@@ -494,8 +494,6 @@ static void CEF_CALLBACK proton_engine_on_before_close(
     view->closed = 1;
     proton_view_events_closed(view->events);
     view->xwindow = 0;
-    view->browser = NULL;
-    view->browser_id = 0;
     // A page-initiated close (JS window.close) reaches here without a prior
     // engine destroy; let the cleanup state machine finish so the struct can
     // be reclaimed with its owning window.
@@ -511,6 +509,10 @@ static void CEF_CALLBACK proton_engine_on_before_close(
   }
   proton_engine_window_t *window =
       (proton_engine_window_t *)proton_browser_lifecycle_owner(lifecycle);
+  if (window != NULL) {
+    proton_engine_bridge_pending_remove_browser(
+        window->runtime, proton_browser_lifecycle_browser_id(lifecycle));
+  }
   proton_browser_lifecycle_on_before_close(lifecycle, browser);
   if (window != NULL) {
     proton_engine_window_close_views(window);
@@ -651,12 +653,23 @@ proton_engine_client_get_render_handler(cef_client_t *self) {
   if (client == NULL) {
     return NULL;
   }
-  if (client->view != NULL) {
-    if (client->view->window == NULL || !client->view->window->headless) {
+  proton_browser_lifecycle_t *lifecycle = client->browser_lifecycle;
+  if (lifecycle == NULL ||
+      proton_browser_lifecycle_role(lifecycle) == PROTON_BROWSER_ROLE_DEVTOOLS) {
+    return NULL;
+  }
+  if (proton_browser_lifecycle_role(lifecycle) == PROTON_BROWSER_ROLE_VIEW) {
+    proton_engine_view_t *view =
+        (proton_engine_view_t *)proton_browser_lifecycle_owner(lifecycle);
+    if (view == NULL || view->window == NULL || !view->window->headless) {
       return NULL;
     }
-  } else if (client->window == NULL || !client->window->headless) {
-    return NULL;
+  } else {
+    proton_engine_window_t *window =
+        (proton_engine_window_t *)proton_browser_lifecycle_owner(lifecycle);
+    if (window == NULL || !window->headless) {
+      return NULL;
+    }
   }
   g_render_handler.handler.base.add_ref(
       (cef_base_ref_counted_t *)&g_render_handler.handler);
@@ -1472,7 +1485,6 @@ int CEF_CALLBACK proton_engine_client_release(
 }
 
 proton_engine_client_t *proton_engine_client_create(
-    proton_engine_window_t *window,
     proton_browser_lifecycle_t *browser_lifecycle) {
   proton_engine_client_t *client =
       (proton_engine_client_t *)calloc(1, sizeof(*client));
@@ -1482,7 +1494,6 @@ proton_engine_client_t *proton_engine_client_create(
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
   client->client.base.release = proton_engine_client_release;
-  client->window = window;
   client->browser_lifecycle = browser_lifecycle;
   client->client.get_life_span_handler =
       proton_engine_client_get_life_span_handler;
@@ -1547,9 +1558,7 @@ void proton_engine_window_mark_closed(proton_engine_window_t *window) {
   }
   window->closed = 1;
   proton_engine_bridge_pending_remove_browser(window->runtime,
-                                              window->browser_id);
-  window->browser = NULL;
-  window->browser_id = 0;
+      proton_browser_lifecycle_browser_id(window->browser_lifecycle));
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 }
 

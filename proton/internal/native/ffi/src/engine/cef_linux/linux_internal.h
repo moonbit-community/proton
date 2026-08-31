@@ -87,9 +87,6 @@ struct proton_engine_window {
   char titlebar_maximize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
-  proton_engine_client_t *client;
-  cef_browser_t *browser;
-  int browser_id;
   proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
   char *bridge_config_json;
@@ -171,8 +168,6 @@ typedef struct {
 struct proton_engine_client {
   cef_client_t client;
   proton_engine_ref_counted_t refs;
-  proton_engine_window_t *window;
-  proton_engine_view_t *view;
   proton_browser_lifecycle_t *browser_lifecycle;
 };
 
@@ -183,9 +178,6 @@ struct proton_engine_client {
    how the view was closed. */
 struct proton_engine_view {
   proton_engine_window_t *window;
-  proton_engine_client_t *client;
-  cef_browser_t *browser;
-  int browser_id;
   proton_browser_lifecycle_t *browser_lifecycle;
   cef_window_handle_t xwindow;
   Display *display;
@@ -217,7 +209,6 @@ void proton_engine_bridge_pending_remove_browser(
     proton_engine_runtime_t *runtime,
     int browser_id);
 proton_engine_client_t *proton_engine_client_create(
-    proton_engine_window_t *window,
     proton_browser_lifecycle_t *browser_lifecycle);
 int CEF_CALLBACK proton_engine_client_release(
     cef_base_ref_counted_t *base);
@@ -244,10 +235,6 @@ void proton_engine_append_switch_with_value(cef_command_line_t *command_line,
                                             const char *value);
 void proton_engine_window_list_add(proton_engine_window_t *window);
 proton_engine_window_t *proton_engine_window_from_browser(
-    cef_browser_t *browser);
-proton_engine_window_t *proton_engine_window_from_browser_client(
-    cef_browser_t *browser);
-proton_engine_view_t *proton_engine_view_from_browser_client(
     cef_browser_t *browser);
 void proton_engine_overlay_release_input_windows(
     proton_engine_window_t *window);
