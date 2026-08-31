@@ -16,3 +16,16 @@ test "public system language query returns canonical locales" {
     )
   }
 }
+
+///|
+test "explicit applications report missing managed package metadata" {
+  let app = @proton.html("Direct", "<main>Direct</main>").identifier(
+    "dev.proton.direct",
+  )
+  try app.version() catch {
+    @proton.MissingPackageMetadata => ()
+    _ => fail("expected missing package metadata")
+  } noraise {
+    _ => fail("expected application version lookup to fail")
+  }
+}

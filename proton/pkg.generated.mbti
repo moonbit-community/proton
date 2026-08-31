@@ -14,6 +14,8 @@ import {
 }
 
 // Values
+pub fn app_path() -> String
+
 pub fn asset(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub async fn check_for_update() -> UpdateCheck
@@ -21,6 +23,8 @@ pub async fn check_for_update() -> UpdateCheck
 pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
+
+pub fn is_packaged() -> Bool
 
 pub fn resource_dir() -> String
 
@@ -69,10 +73,24 @@ pub fn AppEntryError::output(Self, &Logger) -> Unit
 pub fn AppEntryError::to_repr(Self) -> @debug.Repr
 pub fn AppEntryError::to_string(Self) -> String
 
+pub(all) suberror AppMetadataError {
+  MissingPackageMetadata
+  MissingField(field~ : String)
+  InvalidMetadata(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn AppMetadataError::equal(Self, Self) -> Bool
+pub fn AppMetadataError::message(Self) -> String
+pub fn AppMetadataError::not_equal(Self, Self) -> Bool
+pub fn AppMetadataError::output(Self, &Logger) -> Unit
+pub fn AppMetadataError::to_repr(Self) -> @debug.Repr
+pub fn AppMetadataError::to_string(Self) -> String
+
 pub(all) suberror AppPathError {
   MissingApplicationIdentifier
   InvalidIdentifier(identifier~ : String)
   MissingHomeDirectory(platform~ : String)
+  MissingEnvironmentPath(name~ : String, platform~ : String)
+  MissingExecutablePath
   PlatformProbe(status~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn AppPathError::equal(Self, Self) -> Bool
@@ -185,6 +203,7 @@ pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
 pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
+pub fn App::name(Self) -> String raise AppMetadataError
 pub fn App::on_browser_event(Self, async (BrowserHandle, BrowserEvent) -> Unit noraise) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
@@ -197,6 +216,7 @@ pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> 
 pub fn App::on_view_event(Self, async (ViewHandle, ViewEvent) -> Unit noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
+pub fn App::path(Self, AppPathKind) -> String raise AppPathError
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
 pub fn App::single_instance(Self, enabled? : Bool) -> Self
@@ -205,8 +225,22 @@ pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, TitlebarStyle) -> Self
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
 pub fn App::url_scheme(Self, String) -> Self
+pub fn App::version(Self) -> String raise AppMetadataError
 pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Self
 pub fn App::with_view(Self, String, ViewConfig) -> Self
+
+pub(all) enum AppPathKind {
+  Home
+  AppData
+  UserData
+  SessionData
+  Temp
+  Executable
+  Logs
+} derive(Eq, @debug.Debug)
+pub fn AppPathKind::equal(Self, Self) -> Bool
+pub fn AppPathKind::not_equal(Self, Self) -> Bool
+pub fn AppPathKind::to_repr(Self) -> @debug.Repr
 
 pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
