@@ -723,9 +723,6 @@ static int32_t proton_engine_window_create_browser(
   int accepted = cef_browser_host_create_browser(
       &window_info, proton_browser_lifecycle_client(window->browser_lifecycle), &url, &browser_settings,
       extra_info, NULL);
-  if (extra_info != NULL) {
-    extra_info->base.release((cef_base_ref_counted_t *)extra_info);
-  }
   cef_string_clear(&window_info.window_name);
   cef_string_clear(&url);
   if (!accepted) {

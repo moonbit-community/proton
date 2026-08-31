@@ -20,6 +20,8 @@
   "proton.bridge.lifecycle.probe"
 #define PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION "__protonNativeInvokeOp"
 
+// Returns a transfer reference consumed by
+// cef_browser_host_create_browser[_sync].
 cef_dictionary_value_t *proton_engine_bridge_renderer_extra_info(
     const proton_bridge_config_t *bridge_config);
 
