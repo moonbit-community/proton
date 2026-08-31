@@ -40,8 +40,11 @@ of falling back to the window title or Proton library version.
 `@proton.app_path()` returns the application resource root and
 `@proton.is_packaged()` distinguishes packaged execution. `App::path` accepts a
 typed `AppPathKind` for home, application data, user data, browser session data,
-temporary files, the executable, and logs. Persistent application paths use the
-reverse-DNS identifier, so changing a display name does not move user state.
+temporary files, the executable/module, logs, and configured desktop, documents,
+downloads, music, pictures, and videos directories. `Assets` is available on
+Windows and Linux, and `Recent` is available on Windows. Persistent application
+paths use the reverse-DNS identifier, so changing a display name does not move
+user state.
 
 ## Entry points
 

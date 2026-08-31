@@ -30,10 +30,10 @@ Status markers:
 - [x] `getPath('exe')`
 - [~] `getPath('logs')`: resolves Proton's structured logging directory, which
   intentionally follows platform logging conventions
-- [ ] `getPath('assets')` (Windows and Linux)
-- [ ] `getPath('module')`
-- [ ] `getPath('desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos')`
-- [ ] `getPath('recent')` (Windows)
+- [x] `getPath('assets')` (Windows and Linux)
+- [x] `getPath('module')`
+- [x] `getPath('desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos')`
+- [x] `getPath('recent')` (Windows)
 - [ ] `getPath('crashDumps')`
 - [ ] `setPath(name, path)`
 - [ ] `setAppLogsPath(path)`
