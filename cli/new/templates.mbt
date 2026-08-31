@@ -1,20 +1,20 @@
 ///|
-let default_proton_version = "0.2.3"
+let default_proton_version = "0.2.4"
 
 ///|
-let default_proton_codegen_version = "0.2.3"
+let default_proton_codegen_version = "0.2.4"
 
 ///|
-let default_proton_cli_version = "0.2.3"
+let default_proton_cli_version = "0.2.4"
 
 ///|
-let default_proton_contract_version = "0.2.3"
+let default_proton_contract_version = "0.2.4"
 
 ///|
-let default_proton_client_version = "0.2.3"
+let default_proton_client_version = "0.2.4"
 
 ///|
-let default_proton_rabbita_version = "0.2.3"
+let default_proton_rabbita_version = "0.2.4"
 
 ///|
 let default_rabbita_version = "0.15.4"

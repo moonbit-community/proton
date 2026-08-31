@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_contract"
 
-version = "0.2.3"
+version = "0.2.4"
 
 readme = "README.mbt.md"
 

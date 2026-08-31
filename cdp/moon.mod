@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_cdp"
 
-version = "0.2.3"
+version = "0.2.4"
 
 readme = "README.mbt.md"
 
