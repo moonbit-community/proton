@@ -17,6 +17,14 @@ fn path_row(label : String, value : String) -> String {
 }
 
 ///|
+fn display_path(app : @proton.App, kind : @proton.AppPathKind) -> String {
+  app.path(kind) catch {
+    @proton.UnsupportedPath(..) => "Not available on this platform"
+    error => abort(error.message())
+  }
+}
+
+///|
 fn review_page(
   name : String,
   version : String,
@@ -52,11 +60,17 @@ async fn main {
     (@proton.AppPathKind::Temp, "Temp"),
     (@proton.AppPathKind::Executable, "Executable"),
     (@proton.AppPathKind::Logs, "Logs"),
+    (@proton.AppPathKind::Assets, "Assets"),
+    (@proton.AppPathKind::Module, "Module"),
+    (@proton.AppPathKind::Desktop, "Desktop"),
+    (@proton.AppPathKind::Documents, "Documents"),
+    (@proton.AppPathKind::Downloads, "Downloads"),
+    (@proton.AppPathKind::Music, "Music"),
+    (@proton.AppPathKind::Pictures, "Pictures"),
+    (@proton.AppPathKind::Videos, "Videos"),
+    (@proton.AppPathKind::Recent, "Recent"),
   ]
-  let paths = kinds.map(entry => {
-    let value = app.path(entry.0) catch { error => abort(error.message()) }
-    (entry.1, value)
-  })
+  let paths = kinds.map(entry => (entry.1, display_path(app, entry.0)))
   app
   .entry_html(
     review_page(name, version, @proton.is_packaged(), @proton.app_path(), paths),

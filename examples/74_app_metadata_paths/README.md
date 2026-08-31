@@ -13,7 +13,10 @@ PROTON_NO_UPDATE_CHECK=1 moon -C cli run . -- dev -C .. \
 Verify that the product name is `Proton App Metadata`, the version is `1.2.3`,
 and the execution mode is `Development`. Every listed path must be absolute;
 user data, session data, and logs must contain the application identifier or
-its platform-specific storage hierarchy.
+its platform-specific storage hierarchy. Desktop, documents, downloads, music,
+pictures, and videos must match the operating system's configured user folders.
+`Module` must equal `Executable`; `Assets` is unavailable on macOS, and
+`Recent` is available only on Windows.
 
 Build the packaged form:
 
