@@ -1,7 +1,7 @@
 #ifndef PROTON_ENGINE_CEF_MAC_MENU_H
 #define PROTON_ENGINE_CEF_MAC_MENU_H
 
-#include "../../proton_engine.h"
+#include "../ffi/src/proton_engine.h"
 
 #include <stddef.h>
 #include <stdint.h>

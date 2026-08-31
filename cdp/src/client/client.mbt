@@ -500,9 +500,10 @@ pub async fn[X] connect_cdp_page_target_with_timeout(
 ///|
 /// Closes the connection and waits for its reader task to terminate.
 ///
-/// Closing first cancels the reader while the socket is still registered with
-/// the async runtime. The reader owns the final WebSocket close after its
-/// pending read has unwound. The last-message diagnostics remain available.
+/// Closing first sends the WebSocket close frame, then cancels the reader while
+/// the socket is still registered with the async runtime. The reader owns the
+/// final transport close after its pending read has unwound. The last-message
+/// diagnostics remain available.
 ///
 /// Example:
 /// ```
@@ -512,6 +513,9 @@ pub async fn CdpClient::close(self : CdpClient) -> Unit {
   if self.lifecycle is Open {
     self.lifecycle = Closing
     self.notify_connection_closed()
+    self.ws.send_close() catch {
+      _ => ()
+    }
     match self.reader {
       Some(reader) => reader.cancel()
       None => self.finish_reader()

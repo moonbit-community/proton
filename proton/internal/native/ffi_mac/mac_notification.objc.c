@@ -1,7 +1,7 @@
 #if defined(__APPLE__)
 
-#include "../../proton_engine.h"
-#include "../../proton_event.h"
+#include "../ffi/src/proton_engine.h"
+#include "../ffi/src/proton_event.h"
 
 #import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>

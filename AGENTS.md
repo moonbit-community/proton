@@ -27,7 +27,8 @@ developer must perform them.
   app API (`html`, `url`, `file`, `asset`, `config`), command-extension bridge
   wiring, and application lifecycle.
 - `proton/internal/native/`: private MoonBit ownership, state, event, and error
-  layer over platform stubs in `proton/internal/native/ffi/`.
+  layer over the portable C stubs in `proton/internal/native/ffi/` and the
+  isolated macOS Objective-C stubs in `proton/internal/native/ffi_mac/`.
 - `proton/internal/cef_process/`: source-built MoonBit executable used as CEF's
   subprocess helper. It is packaged beside the application executable.
 - `proton/manifest/`, `proton/bootstrap/`, `proton/catalog/`,

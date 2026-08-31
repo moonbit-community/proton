@@ -1,0 +1,20 @@
+supported_targets = "native"
+
+options(
+  "is-main": false,
+  "native-stub": [
+    "mac_client.objc.c",
+    "mac_dialog.objc.c",
+    "mac_launch_input.objc.c",
+    "mac_menu.objc.c",
+    "mac_notification.objc.c",
+    "mac_runtime.objc.c",
+    "mac_screen.objc.c",
+    "mac_view.objc.c",
+    "mac_window.objc.c",
+  ],
+  link: {
+    "native": { "stub-cc-flags": "${build.PROTON_MAC_OBJC_STUB_CC_FLAGS}" },
+  },
+  targets: { "ffi_mac.mbt": [ "native" ] },
+)

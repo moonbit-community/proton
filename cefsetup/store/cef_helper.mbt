@@ -48,7 +48,7 @@ fn helper_moon_environment() -> Map[String, String] {
   if @path.sep != '\\' {
     environment["MOON_CC"] = match @env.get_env_var("MOON_CC") {
       Some(value) if value.trim() != "" => value
-      _ => "clang"
+      _ => "cc"
     }
   }
   environment

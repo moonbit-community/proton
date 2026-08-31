@@ -68,21 +68,18 @@ function pkgConfig(args) {
   return result.stdout.trim();
 }
 
-function platformConfig(cefRoot, env) {
+function platformConfig(cefRoot) {
   const commonStubFlags = appendFlags(
     `-DCEF_API_VERSION=${cefApiVersion}`,
     `-I${quote(path.join(ffiRoot, "include"))}`,
     `-I${quote(cefRoot)}`,
   );
-  const requestedCc = envValue(env, "MOON_CC").trim();
-
   if (process.platform === "darwin") {
     return {
-      stubCc: requestedCc || "clang",
-      stubFlags: appendFlags("-fblocks", commonStubFlags),
-      loaderCc: requestedCc || "clang++",
+      stubFlags: commonStubFlags,
+      macObjcFlags: appendFlags("-ObjC -fblocks", commonStubFlags),
       loaderFlags: appendFlags(
-        "-std=c++17 -DWRAPPING_CEF_SHARED=1",
+        "-ObjC++ -std=c++17 -DWRAPPING_CEF_SHARED=1",
         `-I${quote(cefRoot)}`,
       ),
       linkFlags: [
@@ -99,10 +96,9 @@ function platformConfig(cefRoot, env) {
 
   if (process.platform === "win32") {
     return {
-      stubCc: requestedCc || "clang",
       stubFlags: commonStubFlags,
-      loaderCc: requestedCc || "clang++",
-      loaderFlags: "-std=c++17",
+      macObjcFlags: "",
+      loaderFlags: "",
       linkFlags: [
         quote(path.join(cefRoot, "Release", "libcef.lib")),
         "user32.lib shell32.lib shlwapi.lib ole32.lib comctl32.lib",
@@ -116,10 +112,9 @@ function platformConfig(cefRoot, env) {
     const libs = pkgConfig(["--libs", "gtk+-3.0", "x11"]);
     const releaseDir = path.join(cefRoot, "Release");
     return {
-      stubCc: requestedCc || "clang",
       stubFlags: appendFlags("-DOS_LINUX=1 -DCEF_X11=1", commonStubFlags, cflags),
-      loaderCc: envValue(env, "CXX").trim() || "clang++",
-      loaderFlags: "-std=c++17",
+      macObjcFlags: "",
+      loaderFlags: "",
       linkFlags: appendFlags(
         `-L${quote(releaseDir)} -lcef -Wl,-rpath,${quote(releaseDir)}`,
         libs,
@@ -139,12 +134,11 @@ export function createNativeLinkConfig(env = readPayloadEnv()) {
     return { vars: {}, link_configs: [] };
   }
   const cefRoot = cefSdkRoot(env);
-  const config = platformConfig(cefRoot, env);
+  const config = platformConfig(cefRoot);
   return {
     vars: {
-      PROTON_NATIVE_STUB_CC: config.stubCc,
       PROTON_NATIVE_STUB_CC_FLAGS: config.stubFlags,
-      PROTON_CEF_LOADER_CC: config.loaderCc,
+      PROTON_MAC_OBJC_STUB_CC_FLAGS: config.macObjcFlags,
       PROTON_CEF_LOADER_CC_FLAGS: config.loaderFlags,
     },
     link_configs: [

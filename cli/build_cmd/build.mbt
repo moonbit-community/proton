@@ -283,9 +283,7 @@ fn native_moon_process_env_for(
     // would otherwise interpose on CEF and libc allocations.
     env["MOON_CC"] = match configured_cc {
       Some(value) if value.trim() != "" => value
-      // Proton's shared native-stub package contains Objective-C sources even
-      // on Linux, so its portable host-compiler default must be Clang.
-      _ => "clang"
+      _ => "cc"
     }
   }
   env

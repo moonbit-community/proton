@@ -2,9 +2,9 @@
 
 #include "mac_dialog.h"
 
+#include "../ffi/src/proton_engine.h"
+#include "../ffi/src/proton_event.h"
 #include "mac_window.h"
-#include "../../proton_engine.h"
-#include "../../proton_event.h"
 
 #import <Cocoa/Cocoa.h>
 
@@ -31,24 +31,21 @@ static int64_t g_next_dialog_id = 1;
 static proton_engine_dialog_request_t *g_dialog_requests = NULL;
 static pthread_mutex_t g_dialog_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static void proton_engine_set_message(char *error,
-                                      size_t error_len,
+static void proton_engine_set_message(char *error, size_t error_len,
                                       const char *message) {
   if (error != NULL && error_len > 0) {
     snprintf(error, error_len, "%s", message != NULL ? message : "");
   }
 }
 
-static NSString *proton_engine_string_from_utf8(
-    const char *value,
-    int32_t value_len) {
+static NSString *proton_engine_string_from_utf8(const char *value,
+                                                int32_t value_len) {
   if (value == NULL || value_len <= 0) {
     return @"";
   }
-  NSString *text = [[NSString alloc]
-      initWithBytes:value
-             length:(NSUInteger)value_len
-           encoding:NSUTF8StringEncoding];
+  NSString *text = [[NSString alloc] initWithBytes:value
+                                            length:(NSUInteger)value_len
+                                          encoding:NSUTF8StringEncoding];
   return text != nil ? [text autorelease] : @"";
 }
 
@@ -65,8 +62,7 @@ static void proton_engine_dialog_unlock(void) {
 }
 
 static proton_engine_dialog_request_t *
-proton_engine_dialog_request_remove_locked(int owner_kind,
-                                           uintptr_t owner_id,
+proton_engine_dialog_request_remove_locked(int owner_kind, uintptr_t owner_id,
                                            int64_t id) {
   proton_engine_dialog_request_t **cursor = &g_dialog_requests;
   while (*cursor != NULL) {
@@ -82,16 +78,16 @@ proton_engine_dialog_request_remove_locked(int owner_kind,
   return NULL;
 }
 
-static void proton_engine_dialog_request_free(
-    proton_engine_dialog_request_t *request) {
+static void
+proton_engine_dialog_request_free(proton_engine_dialog_request_t *request) {
   if (request == NULL) {
     return;
   }
   free(request);
 }
 
-static void proton_engine_dialog_request_retain(
-    proton_engine_dialog_request_t *request) {
+static void
+proton_engine_dialog_request_retain(proton_engine_dialog_request_t *request) {
   if (request == NULL) {
     return;
   }
@@ -100,8 +96,8 @@ static void proton_engine_dialog_request_retain(
   proton_engine_dialog_unlock();
 }
 
-static void proton_engine_dialog_request_release(
-    proton_engine_dialog_request_t *request) {
+static void
+proton_engine_dialog_request_release(proton_engine_dialog_request_t *request) {
   if (request == NULL) {
     return;
   }
@@ -121,13 +117,9 @@ enum {
 };
 
 static int32_t proton_engine_dialog_request_create_for_owner(
-    int owner_kind,
-    uintptr_t owner_id,
-    int64_t event_window,
-    proton_engine_dialog_request_t **out_request,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
+    int owner_kind, uintptr_t owner_id, int64_t event_window,
+    proton_engine_dialog_request_t **out_request, int64_t *out_dialog,
+    char *error, size_t error_len) {
   if (out_request == NULL || out_dialog == NULL) {
     proton_engine_set_message(error, error_len, "out_dialog is required");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -135,7 +127,8 @@ static int32_t proton_engine_dialog_request_create_for_owner(
   *out_request = NULL;
   *out_dialog = PROTON_INVALID_HANDLE;
   if (owner_id == 0) {
-    proton_engine_set_message(error, error_len, "dialog owner is not initialized");
+    proton_engine_set_message(error, error_len,
+                              "dialog owner is not initialized");
     return PROTON_ERR_INVALID_HANDLE;
   }
 
@@ -167,14 +160,11 @@ static int32_t proton_engine_dialog_request_create_for_owner(
 
 static int32_t proton_engine_dialog_request_create(
     proton_engine_window_t *window,
-    proton_engine_dialog_request_t **out_request,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
+    proton_engine_dialog_request_t **out_request, int64_t *out_dialog,
+    char *error, size_t error_len) {
   if (proton_engine_window_is_headless(window)) {
     proton_engine_set_message(
-        error, error_len,
-        "native dialogs are not supported in headless mode");
+        error, error_len, "native dialogs are not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
   if (window == NULL || proton_engine_window_get_native_window(window) == nil) {
@@ -188,11 +178,10 @@ static int32_t proton_engine_dialog_request_create(
       error_len);
 }
 
-static void proton_engine_dialog_complete(
-    proton_engine_dialog_request_t *request,
-    int32_t status,
-    const char *result,
-    const char *error_message) {
+static void
+proton_engine_dialog_complete(proton_engine_dialog_request_t *request,
+                              int32_t status, const char *result,
+                              const char *error_message) {
   if (request == NULL) {
     return;
   }
@@ -213,9 +202,8 @@ static void proton_engine_dialog_complete(
     event->request_id = request->id;
     event->int_a = status;
     if (!proton_event_set_text(&event->text_a,
-                               status == PROTON_OK && result != NULL
-                                   ? result
-                                   : "") ||
+                               status == PROTON_OK && result != NULL ? result
+                                                                     : "") ||
         !proton_event_set_text(&event->text_b,
                                error_message != NULL ? error_message : "")) {
       proton_event_destroy(event);
@@ -229,7 +217,7 @@ static void proton_engine_dialog_complete(
 static NSAlertStyle proton_engine_alert_style(int32_t level);
 
 @interface ProtonRuntimeAlertController : NSObject {
- @private
+@private
   proton_engine_dialog_request_t *request_;
   NSAlert *alert_;
   NSModalSession session_;
@@ -237,10 +225,10 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
   BOOL finished_;
 }
 - (instancetype)initWithRequest:(proton_engine_dialog_request_t *)request
-                           title:(NSString *)title
-                         message:(NSString *)message
-                           level:(int32_t)level
-                         okLabel:(NSString *)ok_label;
+                          title:(NSString *)title
+                        message:(NSString *)message
+                          level:(int32_t)level
+                        okLabel:(NSString *)ok_label;
 - (void)show;
 - (void)tick;
 - (void)finish;
@@ -250,10 +238,10 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
 
 @implementation ProtonRuntimeAlertController
 - (instancetype)initWithRequest:(proton_engine_dialog_request_t *)request
-                           title:(NSString *)title
-                         message:(NSString *)message
-                           level:(int32_t)level
-                         okLabel:(NSString *)ok_label {
+                          title:(NSString *)title
+                        message:(NSString *)message
+                          level:(int32_t)level
+                        okLabel:(NSString *)ok_label {
   self = [super init];
   if (self != nil) {
     request_ = request;
@@ -342,9 +330,9 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
 @end
 
 static char *proton_engine_dialog_result_from_string(NSString *value) {
-  NSData *data = [(value != nil ? value : @"")
-      dataUsingEncoding:NSUTF8StringEncoding
-   allowLossyConversion:NO];
+  NSData *data =
+      [(value != nil ? value : @"") dataUsingEncoding:NSUTF8StringEncoding
+                                 allowLossyConversion:NO];
   if (data == nil || [data length] > (NSUInteger)(INT32_MAX - 1)) {
     return NULL;
   }
@@ -359,9 +347,9 @@ static char *proton_engine_dialog_result_from_string(NSString *value) {
   return copy;
 }
 
-static void proton_engine_dialog_complete_string(
-    proton_engine_dialog_request_t *request,
-    NSString *value) {
+static void
+proton_engine_dialog_complete_string(proton_engine_dialog_request_t *request,
+                                     NSString *value) {
   char *result = proton_engine_dialog_result_from_string(value);
   if (result == NULL) {
     proton_engine_dialog_complete(request, PROTON_ERR_ENGINE, NULL,
@@ -427,11 +415,11 @@ void proton_engine_dialog_dispose_runtime(void *runtime) {
   }
 }
 
-static int32_t proton_engine_dialog_begin_on_parent(
-    proton_engine_window_t *window,
-    proton_engine_dialog_request_t *request,
-    void (^start_dialog)(NSWindow *parent),
-    void (^cleanup_without_start)(void)) {
+static int32_t
+proton_engine_dialog_begin_on_parent(proton_engine_window_t *window,
+                                     proton_engine_dialog_request_t *request,
+                                     void (^start_dialog)(NSWindow *parent),
+                                     void (^cleanup_without_start)(void)) {
   if (window == NULL || request == NULL || start_dialog == nil) {
     return PROTON_ERR_INVALID_ARGUMENT;
   }
@@ -482,23 +470,16 @@ static NSAlertStyle proton_engine_alert_style(int32_t level) {
 }
 
 int32_t proton_engine_runtime_begin_message_dialog(
-    proton_engine_runtime_t *runtime,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
+    proton_engine_runtime_t *runtime, const char *title_utf8, int32_t title_len,
+    const char *message_utf8, int32_t message_len, int32_t level,
+    int64_t *out_dialog, char *error, size_t error_len) {
 
   if (proton_engine_runtime_is_headless(runtime)) {
     if (out_dialog != NULL) {
       *out_dialog = PROTON_INVALID_HANDLE;
     }
     proton_engine_set_message(
-        error, error_len,
-        "native dialogs are not supported in headless mode");
+        error, error_len, "native dialogs are not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
   if (proton_engine_runtime_dialog_ok_label(runtime)[0] == '\0') {
@@ -520,10 +501,10 @@ int32_t proton_engine_runtime_begin_message_dialog(
   proton_engine_dialog_request_retain(request);
   ProtonRuntimeAlertController *controller =
       [[ProtonRuntimeAlertController alloc] initWithRequest:request
-                                                     title:title
-                                                   message:message
-                                                     level:level
-                                                   okLabel:ok_label];
+                                                      title:title
+                                                    message:message
+                                                      level:level
+                                                    okLabel:ok_label];
   if (controller == nil) {
     proton_engine_dialog_complete(request, PROTON_ERR_PLATFORM, NULL,
                                   "failed to create runtime alert");
@@ -565,12 +546,11 @@ enum {
   PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY = 2,
 };
 
-static NSSavePanel *proton_engine_make_file_panel(int32_t mode,
-                                                  NSString *title,
+static NSSavePanel *proton_engine_make_file_panel(int32_t mode, NSString *title,
                                                   NSString *path) {
   BOOL save_mode = mode == PROTON_ENGINE_FILE_DIALOG_SAVE;
-  NSSavePanel *panel = save_mode ? [NSSavePanel savePanel]
-                                 : [NSOpenPanel openPanel];
+  NSSavePanel *panel =
+      save_mode ? [NSSavePanel savePanel] : [NSOpenPanel openPanel];
   if ([title length] > 0) {
     [panel setTitle:title];
   }
@@ -587,15 +567,9 @@ static NSSavePanel *proton_engine_make_file_panel(int32_t mode,
 }
 
 int32_t proton_engine_window_begin_message_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
+    proton_engine_window_t *window, const char *title_utf8, int32_t title_len,
+    const char *message_utf8, int32_t message_len, int32_t level,
+    int64_t *out_dialog, char *error, size_t error_len) {
 
   proton_engine_runtime_t *runtime = proton_engine_window_get_runtime(window);
   if (proton_engine_runtime_dialog_ok_label(runtime)[0] == '\0') {
@@ -609,11 +583,13 @@ int32_t proton_engine_window_begin_message_dialog(
   if (status != PROTON_OK) {
     return status;
   }
-  NSString *title = [proton_engine_string_from_utf8(title_utf8, title_len) retain];
+  NSString *title =
+      [proton_engine_string_from_utf8(title_utf8, title_len) retain];
   NSString *message =
       [proton_engine_string_from_utf8(message_utf8, message_len) retain];
   status = proton_engine_dialog_begin_on_parent(
-      window, request, ^(NSWindow *parent) {
+      window, request,
+      ^(NSWindow *parent) {
         NSAlert *alert = [[[NSAlert alloc] init] autorelease];
         [alert setMessageText:title];
         [alert setInformativeText:message];
@@ -635,7 +611,8 @@ int32_t proton_engine_window_begin_message_dialog(
                         [parent release];
                         proton_engine_dialog_request_release(request);
                       }];
-      }, ^{
+      },
+      ^{
         [title release];
         [message release];
       });
@@ -648,15 +625,9 @@ int32_t proton_engine_window_begin_message_dialog(
 }
 
 int32_t proton_engine_window_begin_confirm_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *message_utf8,
-    int32_t message_len,
-    int32_t level,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
+    proton_engine_window_t *window, const char *title_utf8, int32_t title_len,
+    const char *message_utf8, int32_t message_len, int32_t level,
+    int64_t *out_dialog, char *error, size_t error_len) {
 
   proton_engine_runtime_t *runtime = proton_engine_window_get_runtime(window);
   if (proton_engine_runtime_dialog_ok_label(runtime)[0] == '\0' ||
@@ -671,11 +642,13 @@ int32_t proton_engine_window_begin_confirm_dialog(
   if (status != PROTON_OK) {
     return status;
   }
-  NSString *title = [proton_engine_string_from_utf8(title_utf8, title_len) retain];
+  NSString *title =
+      [proton_engine_string_from_utf8(title_utf8, title_len) retain];
   NSString *message =
       [proton_engine_string_from_utf8(message_utf8, message_len) retain];
   status = proton_engine_dialog_begin_on_parent(
-      window, request, ^(NSWindow *parent) {
+      window, request,
+      ^(NSWindow *parent) {
         NSAlert *alert = [[[NSAlert alloc] init] autorelease];
         [alert setMessageText:title];
         [alert setInformativeText:message];
@@ -701,7 +674,8 @@ int32_t proton_engine_window_begin_confirm_dialog(
                         [parent release];
                         proton_engine_dialog_request_release(request);
                       }];
-      }, ^{
+      },
+      ^{
         [title release];
         [message release];
       });
@@ -714,25 +688,21 @@ int32_t proton_engine_window_begin_confirm_dialog(
 }
 
 static int32_t proton_engine_window_begin_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    int32_t mode,
-    int64_t *out_dialog,
-    char *error,
-    size_t error_len) {
+    proton_engine_window_t *window, const char *title_utf8, int32_t title_len,
+    const char *path_utf8, int32_t path_len, int32_t mode, int64_t *out_dialog,
+    char *error, size_t error_len) {
   proton_engine_dialog_request_t *request = NULL;
   int32_t status = proton_engine_dialog_request_create(
       window, &request, out_dialog, error, error_len);
   if (status != PROTON_OK) {
     return status;
   }
-  NSString *title = [proton_engine_string_from_utf8(title_utf8, title_len) retain];
+  NSString *title =
+      [proton_engine_string_from_utf8(title_utf8, title_len) retain];
   NSString *path = [proton_engine_string_from_utf8(path_utf8, path_len) retain];
   status = proton_engine_dialog_begin_on_parent(
-      window, request, ^(NSWindow *parent) {
+      window, request,
+      ^(NSWindow *parent) {
         NSSavePanel *panel = proton_engine_make_file_panel(mode, title, path);
         request->platform_state = [panel retain];
         [panel beginSheetModalForWindow:parent
@@ -750,7 +720,8 @@ static int32_t proton_engine_window_begin_file_dialog(
                         [parent release];
                         proton_engine_dialog_request_release(request);
                       }];
-      }, ^{
+      },
+      ^{
         [title release];
         [path release];
       });
@@ -763,13 +734,8 @@ static int32_t proton_engine_window_begin_file_dialog(
 }
 
 int32_t proton_engine_window_begin_open_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    int64_t *out_dialog,
-    char *error,
+    proton_engine_window_t *window, const char *title_utf8, int32_t title_len,
+    const char *path_utf8, int32_t path_len, int64_t *out_dialog, char *error,
     size_t error_len) {
 
   return proton_engine_window_begin_file_dialog(
@@ -778,13 +744,8 @@ int32_t proton_engine_window_begin_open_file_dialog(
 }
 
 int32_t proton_engine_window_begin_save_file_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    int64_t *out_dialog,
-    char *error,
+    proton_engine_window_t *window, const char *title_utf8, int32_t title_len,
+    const char *path_utf8, int32_t path_len, int64_t *out_dialog, char *error,
     size_t error_len) {
 
   return proton_engine_window_begin_file_dialog(
@@ -793,31 +754,23 @@ int32_t proton_engine_window_begin_save_file_dialog(
 }
 
 int32_t proton_engine_window_begin_choose_directory_dialog(
-    proton_engine_window_t *window,
-    const char *title_utf8,
-    int32_t title_len,
-    const char *path_utf8,
-    int32_t path_len,
-    int64_t *out_dialog,
-    char *error,
+    proton_engine_window_t *window, const char *title_utf8, int32_t title_len,
+    const char *path_utf8, int32_t path_len, int64_t *out_dialog, char *error,
     size_t error_len) {
 
   return proton_engine_window_begin_file_dialog(
       window, title_utf8, title_len, path_utf8, path_len,
-      PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY, out_dialog, error,
-      error_len);
+      PROTON_ENGINE_FILE_DIALOG_CHOOSE_DIRECTORY, out_dialog, error, error_len);
 }
 
 int32_t proton_engine_window_cancel_dialog(proton_engine_window_t *window,
-                                           int64_t dialog,
-                                           char *error,
+                                           int64_t dialog, char *error,
                                            size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_HANDLE;
   }
-  uintptr_t owner_id =
-      (uintptr_t)proton_engine_window_native_id(window);
+  uintptr_t owner_id = (uintptr_t)proton_engine_window_native_id(window);
   proton_engine_dialog_lock();
   proton_engine_dialog_request_t *request =
       proton_engine_dialog_request_remove_locked(

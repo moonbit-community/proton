@@ -3,4 +3,7 @@
 #include "libcef_dll/wrapper/cef_scoped_library_loader_mac.mm"
 #endif
 
-extern "C" void proton_cef_loader_link_anchor(void) {}
+#if defined(__cplusplus)
+extern "C"
+#endif
+void proton_cef_loader_link_anchor(void) {}

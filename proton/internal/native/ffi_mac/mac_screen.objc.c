@@ -2,13 +2,13 @@
 
 #include "mac_internal.h"
 
-#include "../../proton_config.h"
-#include "../../proton_event.h"
-#include "../../proton_json.h"
-#include "../cef_common/browser_session.h"
-#include "../cef_common/message.h"
-#include "../cef_common/scheme.h"
-#include "../cef_common/view_events.h"
+#include "../ffi/src/proton_config.h"
+#include "../ffi/src/proton_event.h"
+#include "../ffi/src/proton_json.h"
+#include "../ffi/src/engine/cef_common/browser_session.h"
+#include "../ffi/src/engine/cef_common/message.h"
+#include "../ffi/src/engine/cef_common/scheme.h"
+#include "../ffi/src/engine/cef_common/view_events.h"
 
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_frame_capi.h"

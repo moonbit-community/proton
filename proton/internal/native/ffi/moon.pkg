@@ -1,5 +1,6 @@
 import {
   "moonbit-community/proton/internal/native/cef_loader",
+  "moonbit-community/proton/internal/native/ffi_mac" @mac_engine,
   "moonbit-community/proton_ffi",
 }
 
@@ -27,15 +28,6 @@ options(
     "src/engine/cef_common/profile_storage.c",
     "src/engine/cef_common/scheme.c",
     "src/engine/cef_common/view_events.c",
-    "src/engine/cef_mac/mac_client.m",
-    "src/engine/cef_mac/mac_dialog.m",
-    "src/engine/cef_mac/mac_launch_input.m",
-    "src/engine/cef_mac/mac_menu.m",
-    "src/engine/cef_mac/mac_notification.m",
-    "src/engine/cef_mac/mac_runtime.m",
-    "src/engine/cef_mac/mac_screen.m",
-    "src/engine/cef_mac/mac_view.m",
-    "src/engine/cef_mac/mac_window.m",
     "src/engine/cef_win/win_client.c",
     "src/engine/cef_win/win_dialog.c",
     "src/engine/cef_win/win_menu.c",
@@ -56,10 +48,7 @@ options(
     "src/engine/cef_linux/linux_window.c",
   ],
   link: {
-    "native": {
-      "stub-cc": "${build.PROTON_NATIVE_STUB_CC}",
-      "stub-cc-flags": "${build.PROTON_NATIVE_STUB_CC_FLAGS}",
-    },
+    "native": { "stub-cc-flags": "${build.PROTON_NATIVE_STUB_CC_FLAGS}" },
   },
   targets: { "ffi.mbt": [ "native" ] },
 )
