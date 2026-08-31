@@ -92,6 +92,7 @@ pub(all) suberror AppPathError {
   MissingEnvironmentPath(name~ : String, platform~ : String)
   MissingExecutablePath
   UnsupportedPath(kind~ : String, platform~ : String)
+  InvalidPathOverride(kind~ : String, path~ : String, reason~ : String)
   SystemPath(kind~ : String, status~ : Int, detail~ : String)
   PlatformProbe(status~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
@@ -221,6 +222,8 @@ pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit nora
 pub fn App::path(Self, AppPathKind) -> String raise AppPathError
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
+pub fn App::set_app_logs_path(Self, path? : String) -> Self raise AppPathError
+pub fn App::set_path(Self, AppPathKind, String) -> Self raise AppPathError
 pub fn App::single_instance(Self, enabled? : Bool) -> Self
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
 pub fn App::title(Self, String) -> Self
