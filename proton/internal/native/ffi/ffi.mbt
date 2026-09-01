@@ -88,6 +88,53 @@ pub extern "C" fn proton_system_path_ffi(
 ) -> Int = "proton_system_path"
 
 ///|
+#borrow(scheme, identifier, executable, arguments, out_changed)
+pub extern "C" fn proton_protocol_client_set_ffi(
+  scheme : Bytes,
+  identifier : Bytes,
+  executable : Bytes,
+  arguments : Bytes,
+  arguments_len : Int,
+  out_changed : Ref[Int],
+) -> Int = "proton_protocol_client_set"
+
+///|
+#borrow(scheme, identifier, executable, arguments, out_removed)
+pub extern "C" fn proton_protocol_client_remove_ffi(
+  scheme : Bytes,
+  identifier : Bytes,
+  executable : Bytes,
+  arguments : Bytes,
+  arguments_len : Int,
+  out_removed : Ref[Int],
+) -> Int = "proton_protocol_client_remove"
+
+///|
+#borrow(scheme, identifier, executable, arguments, out_is_default)
+pub extern "C" fn proton_protocol_client_is_default_ffi(
+  scheme : Bytes,
+  identifier : Bytes,
+  executable : Bytes,
+  arguments : Bytes,
+  arguments_len : Int,
+  out_is_default : Ref[Int],
+) -> Int = "proton_protocol_client_is_default"
+
+///|
+#borrow(executable, arguments)
+pub extern "C" fn proton_process_schedule_relaunch_ffi(
+  executable : Bytes,
+  arguments : Bytes,
+  arguments_len : Int,
+) -> Int = "proton_process_schedule_relaunch"
+
+///|
+pub extern "C" fn proton_process_run_relaunches_ffi() -> Int = "proton_process_run_relaunches"
+
+///|
+pub extern "C" fn proton_process_exit_ffi(exit_code : Int) -> Unit = "proton_process_exit"
+
+///|
 #borrow(identifier, activation_json, out_instance, out_primary)
 pub extern "C" fn proton_app_instance_acquire_ffi(
   identifier : Bytes,
