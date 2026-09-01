@@ -567,7 +567,7 @@ pub(all) struct WindowState {
   maximized : Bool
   fullscreen : Bool
   always_on_top : Bool
-  theme : String
+  theme : WindowTheme
 } derive(Debug, Eq)
 
 ///|
@@ -1278,6 +1278,28 @@ pub extend TitlebarStyle with Eq::{not_equal, equal}
 pub extend TitlebarStyle with Debug::{to_repr}
 
 ///|
+pub(all) enum WindowTheme {
+  System = 0
+  Light = 1
+  Dark = 2
+} derive(Debug, Eq)
+
+///|
+pub extend WindowTheme with Eq::{not_equal, equal}
+
+///|
+pub extend WindowTheme with Debug::{to_repr}
+
+///|
+fn WindowTheme::native_value(self : WindowTheme) -> Int {
+  match self {
+    System => 0
+    Light => 1
+    Dark => 2
+  }
+}
+
+///|
 /// Process-wide cache for `runtime_info`: the loaded runtime's identity and
 /// feature set cannot change within a process, so feature probes reuse the
 /// first successful result. Failures are not cached — callers keep the
@@ -1405,6 +1427,7 @@ struct WindowConfig {
   initial_url : String
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
+  theme : WindowTheme
   browser : BrowserPolicy
   bridge : BridgeConfig?
   framework_titlebar_minimize_label : String?
@@ -1495,6 +1518,7 @@ pub fn WindowConfig::WindowConfig(
   initial_url? : String = "about:blank",
   size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
+  theme? : WindowTheme = WindowTheme::System,
   browser? : BrowserPolicy = BrowserPolicy(),
   bridge? : BridgeConfig,
 ) -> WindowConfig {
@@ -1505,6 +1529,7 @@ pub fn WindowConfig::WindowConfig(
     initial_url,
     size_hint,
     titlebar_style,
+    theme,
     browser,
     bridge,
     framework_titlebar_minimize_label: Some("Minimize"),
@@ -1554,6 +1579,7 @@ pub fn WindowConfig::with_framework_titlebar_labels(
     initial_url: self.initial_url,
     size_hint: self.size_hint,
     titlebar_style: self.titlebar_style,
+    theme: self.theme,
     browser: self.browser,
     bridge: self.bridge,
     framework_titlebar_minimize_label: Some(minimize),

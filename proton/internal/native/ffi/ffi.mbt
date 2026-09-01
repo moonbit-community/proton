@@ -454,6 +454,7 @@ pub extern "C" fn window_create(
   initial_url : Bytes,
   size_hint : Int,
   titlebar_overlay : Int,
+  theme : Int,
   navigation_policy : Int,
   titlebar_minimize_label : Bytes,
   titlebar_maximize_label : Bytes,
@@ -722,6 +723,12 @@ pub extern "C" fn proton_window_set_background_color_ffi(
   window : WindowHandle,
   color : Bytes,
 ) -> Int = "proton_window_set_background_color"
+
+///|
+pub extern "C" fn proton_window_set_theme_ffi(
+  window : WindowHandle,
+  theme : Int,
+) -> Int = "proton_window_set_theme"
 
 ///|
 pub extern "C" fn proton_window_set_visible_on_all_workspaces_ffi(

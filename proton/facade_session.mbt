@@ -327,6 +327,17 @@ fn RuntimeSession::window_handle(
         window.set_background_color(color)
       })
     },
+    set_window_theme: theme => {
+      self.control_window(id, native_id, "set theme", window => {
+        window.set_theme(
+          match theme {
+            WindowTheme::System => @native.WindowTheme::System
+            WindowTheme::Light => @native.WindowTheme::Light
+            WindowTheme::Dark => @native.WindowTheme::Dark
+          },
+        )
+      })
+    },
     set_window_visible_on_all_workspaces: visible => {
       self.control_window(id, native_id, "set workspace visibility", window => {
         window.set_visible_on_all_workspaces(visible)
@@ -2008,6 +2019,19 @@ pub fn WindowHandle::set_background_color(
   color : String,
 ) -> Unit raise WindowSessionError {
   (self.set_window_background_color)(color)
+}
+
+///|
+/// Sets the native window chrome theme.
+///
+/// `System` follows platform appearance changes. Explicit `Light` and `Dark`
+/// remain stable until changed again and raise `WindowSessionError` on
+/// platforms without per-window native theme support.
+pub fn WindowHandle::set_theme(
+  self : WindowHandle,
+  theme : WindowTheme,
+) -> Unit raise WindowSessionError {
+  (self.set_window_theme)(theme)
 }
 
 ///|

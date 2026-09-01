@@ -12,6 +12,20 @@ pub extend TitlebarStyle with Eq::{not_equal, equal}
 pub extend TitlebarStyle with Debug::{to_repr}
 
 ///|
+/// Controls the native window chrome theme.
+pub(all) enum WindowTheme {
+  System
+  Light
+  Dark
+} derive(Debug, Eq)
+
+///|
+pub extend WindowTheme with Eq::{not_equal, equal}
+
+///|
+pub extend WindowTheme with Debug::{to_repr}
+
+///|
 /// Controls how configured window dimensions constrain native resizing.
 pub(all) enum WindowSizeHint {
   Unconstrained
@@ -76,7 +90,7 @@ pub(all) struct WindowState {
   maximized : Bool
   fullscreen : Bool
   always_on_top : Bool
-  theme : String
+  theme : WindowTheme
 } derive(Debug, Eq)
 
 ///|
@@ -100,7 +114,11 @@ fn WindowState::from_native(state : @native.WindowState) -> WindowState {
     maximized: state.maximized,
     fullscreen: state.fullscreen,
     always_on_top: state.always_on_top,
-    theme: state.theme,
+    theme: match state.theme {
+      @native.WindowTheme::System => WindowTheme::System
+      @native.WindowTheme::Light => WindowTheme::Light
+      @native.WindowTheme::Dark => WindowTheme::Dark
+    },
   }
 }
 

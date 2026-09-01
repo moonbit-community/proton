@@ -776,6 +776,7 @@ int32_t proton_engine_window_create(
   window->max_width = config.size_hint == 3 ? config.width : 0;
   window->max_height = config.size_hint == 3 ? config.height : 0;
   window->zoom_percent = 100;
+  window->theme = config.theme;
   window->maximizable = 1;
   window->closable = 1;
   window->fullscreenable = 1;
@@ -852,6 +853,20 @@ int32_t proton_engine_window_create(
     [window->window setRestorable:NO];
     [window->window disableSnapshotRestoration];
     [window->window setTitle:title != nil ? title : @"Proton"];
+    switch (window->theme) {
+    case PROTON_WINDOW_THEME_LIGHT:
+      [window->window
+          setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameAqua]];
+      break;
+    case PROTON_WINDOW_THEME_DARK:
+      [window->window setAppearance:
+                          [NSAppearance
+                              appearanceNamed:NSAppearanceNameDarkAqua]];
+      break;
+    case PROTON_WINDOW_THEME_SYSTEM:
+      [window->window setAppearance:nil];
+      break;
+    }
     proton_engine_apply_size_constraints(window);
     if (config.titlebar_overlay) {
       [window->window setTitleVisibility:NSWindowTitleHidden];
@@ -1908,6 +1923,40 @@ int32_t proton_engine_window_set_background_color(
   window->content_view.wantsLayer = YES;
   window->content_view.layer.backgroundColor =
       [NSColor colorWithRed:red green:green blue:blue alpha:alpha].CGColor;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_theme(
+    proton_engine_window_t *window, proton_window_theme_t theme, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (theme < PROTON_WINDOW_THEME_SYSTEM || theme > PROTON_WINDOW_THEME_DARK) {
+    proton_engine_set_message(error, error_len, "window theme is invalid");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window theme is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  switch (theme) {
+  case PROTON_WINDOW_THEME_LIGHT:
+    [window->window
+        setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameAqua]];
+    break;
+  case PROTON_WINDOW_THEME_DARK:
+    [window->window
+        setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]];
+    break;
+  case PROTON_WINDOW_THEME_SYSTEM:
+    [window->window setAppearance:nil];
+    break;
+  }
+  window->theme = theme;
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 

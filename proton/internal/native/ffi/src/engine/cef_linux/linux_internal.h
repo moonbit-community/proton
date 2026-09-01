@@ -102,6 +102,7 @@ struct proton_engine_window {
   cef_rect_t osr_popup_rect;
   int size_hint;
   int titlebar_overlay;
+  proton_window_theme_t theme;
   int always_on_top;
   int fullscreenable;
   int enabled;

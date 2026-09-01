@@ -47,6 +47,8 @@
 #define WDA_EXCLUDEFROMCAPTURE 0x00000011
 #endif
 
+#define PROTON_DWMWA_USE_IMMERSIVE_DARK_MODE 20
+
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -58,6 +60,47 @@ int proton_engine_browser_hwnd_is_focused(HWND browser_hwnd) {
   const HWND focused = GetFocus();
   return browser_hwnd != NULL && focused != NULL &&
          (focused == browser_hwnd || IsChild(browser_hwnd, focused));
+}
+
+static proton_window_theme_t proton_engine_windows_system_theme(void) {
+  DWORD light = 1;
+  DWORD size = sizeof(light);
+  LSTATUS status = RegGetValueW(
+      HKEY_CURRENT_USER,
+      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+      L"AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &light, &size);
+  return status == ERROR_SUCCESS && light == 0 ? PROTON_WINDOW_THEME_DARK
+                                               : PROTON_WINDOW_THEME_LIGHT;
+}
+
+static proton_window_theme_t
+proton_engine_window_effective_theme(const proton_engine_window_t *window) {
+  if (window != NULL && window->theme != PROTON_WINDOW_THEME_SYSTEM) {
+    return window->theme;
+  }
+  return proton_engine_windows_system_theme();
+}
+
+static int32_t proton_engine_window_apply_theme(
+    proton_engine_window_t *window, char *error, size_t error_len) {
+  if (window == NULL || window->hwnd == NULL) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  const BOOL use_dark_caption =
+      proton_engine_window_effective_theme(window) == PROTON_WINDOW_THEME_DARK;
+  HRESULT result = DwmSetWindowAttribute(
+      window->hwnd, PROTON_DWMWA_USE_IMMERSIVE_DARK_MODE, &use_dark_caption,
+      sizeof(use_dark_caption));
+  if (FAILED(result)) {
+    if (window->theme == PROTON_WINDOW_THEME_SYSTEM) {
+      return PROTON_OK;
+    }
+    proton_engine_set_message(error, error_len,
+                              "failed to update native window theme");
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
 }
 
 static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
@@ -275,6 +318,9 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
   case WM_THEMECHANGED:
   case WM_SETTINGCHANGE:
     if (window != NULL) {
+      if (window->theme == PROTON_WINDOW_THEME_SYSTEM) {
+        (void)proton_engine_window_apply_theme(window, NULL, 0);
+      }
       proton_engine_signal_wait_source(window->runtime,
                                        PROTON_WAIT_PLATFORM);
     }
@@ -525,6 +571,7 @@ int32_t proton_engine_window_create(
   window->max_width = config.size_hint == 3 ? config.width : 0;
   window->max_height = config.size_hint == 3 ? config.height : 0;
   window->titlebar_overlay = config.titlebar_overlay;
+  window->theme = config.theme;
   window->zoom_percent = 100;
   window->windowed_placement.length = sizeof(WINDOWPLACEMENT);
   window->runtime = runtime;
@@ -587,6 +634,18 @@ int32_t proton_engine_window_create(
       free(window);
       proton_engine_set_message(error, error_len, "window creation failed");
       return PROTON_ERR_PLATFORM;
+    }
+    int32_t theme_status =
+        proton_engine_window_apply_theme(window, error, error_len);
+    if (theme_status != PROTON_OK) {
+      DestroyWindow(window->hwnd);
+      window->hwnd = NULL;
+      proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
+      proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
+      proton_browser_session_destroy(window->browser_session);
+      proton_internal_bridge_config_destroy(window->bridge_config);
+      free(window);
+      return theme_status;
     }
     if (window->titlebar_overlay) {
       proton_engine_overlay_apply_frame(window->hwnd);
@@ -1604,6 +1663,35 @@ int32_t proton_engine_window_set_background_color(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_theme(
+    proton_engine_window_t *window, proton_window_theme_t theme, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (theme < PROTON_WINDOW_THEME_SYSTEM || theme > PROTON_WINDOW_THEME_DARK) {
+    proton_engine_set_message(error, error_len, "window theme is invalid");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window theme is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  proton_window_theme_t previous = window->theme;
+  window->theme = theme;
+  int32_t status = proton_engine_window_apply_theme(window, error, error_len);
+  if (status != PROTON_OK) {
+    window->theme = previous;
+    return status;
+  }
+  RedrawWindow(window->hwnd, NULL, NULL,
+               RDW_INVALIDATE | RDW_FRAME | RDW_UPDATENOW);
+  proton_engine_signal_wait_source(window->runtime, PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_visible_on_all_workspaces(
     proton_engine_window_t *window, int32_t visible, char *error,
     size_t error_len) {
@@ -1640,19 +1728,6 @@ int32_t proton_engine_window_set_enabled(proton_engine_window_t *window,
   EnableWindow(window->hwnd, enabled != 0);
   window->enabled = enabled;
   return PROTON_OK;
-}
-
-static int proton_engine_windows_theme(void) {
-  DWORD light = 1;
-  DWORD size = sizeof(light);
-  LSTATUS status = RegGetValueW(
-      HKEY_CURRENT_USER,
-      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-      L"AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &light, &size);
-  if (status != ERROR_SUCCESS) {
-    return 0;
-  }
-  return light != 0 ? 1 : 2;
 }
 
 int32_t proton_engine_window_get_state(
@@ -1708,7 +1783,7 @@ int32_t proton_engine_window_get_state(
   out_state->maximized = IsZoomed(window->hwnd) ? 1 : 0;
   out_state->fullscreen = window->fullscreen;
   out_state->always_on_top = window->always_on_top;
-  out_state->theme = proton_engine_windows_theme();
+  out_state->theme = proton_engine_window_effective_theme(window);
   return PROTON_OK;
 }
 

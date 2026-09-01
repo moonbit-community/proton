@@ -353,7 +353,7 @@ test "typed window state fields map to a snapshot" {
   inspect(state.zoom_percent, content="125")
   inspect(state.focused, content="true")
   inspect(state.always_on_top, content="true")
-  inspect(state.theme, content="dark")
+  assert_eq(state.theme, WindowTheme::Dark)
 }
 
 ///|
@@ -442,6 +442,7 @@ test "window config preserves typed native ABI values" {
     title="Typed",
     width=320,
     height=240,
+    theme=WindowTheme::Dark,
     browser=BrowserPolicy(
       navigation=BrowserPolicyMode::Ask,
       popup=BrowserPolicyMode::Ask,
@@ -455,6 +456,7 @@ test "window config preserves typed native ABI values" {
   assert_eq(window_config.title, "Typed")
   assert_eq(window_config.width, 320)
   assert_eq(window_config.height, 240)
+  assert_eq(window_config.theme, WindowTheme::Dark)
   assert_eq(window_config.browser.navigation, BrowserPolicyMode::Ask)
   assert_eq(window_config.browser.popup, BrowserPolicyMode::Ask)
   assert_true(window_config.browser.devtools)

@@ -244,6 +244,8 @@ int32_t proton_window_set_ignore_mouse_events(proton_window_handle_t window,
                                               int32_t forward);
 int32_t proton_window_set_background_color(proton_window_handle_t window,
                                            const char *color);
+int32_t proton_window_set_theme(proton_window_handle_t window,
+                                int32_t theme);
 int32_t proton_window_set_visible_on_all_workspaces(
     proton_window_handle_t window, int32_t visible);
 int32_t proton_window_set_enabled(proton_window_handle_t window,

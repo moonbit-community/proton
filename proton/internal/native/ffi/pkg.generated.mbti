@@ -351,6 +351,8 @@ pub fn proton_window_set_size_ffi(WindowHandle, Int, Int) -> Int
 
 pub fn proton_window_set_skip_taskbar_ffi(WindowHandle, Int) -> Int
 
+pub fn proton_window_set_theme_ffi(WindowHandle, Int) -> Int
+
 pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_set_visible_on_all_workspaces_ffi(WindowHandle, Int) -> Int
@@ -379,7 +381,7 @@ pub fn view_logical_id(ViewHandle) -> Int64
 
 pub fn view_null() -> ViewHandle
 
-pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, @ref.Ref[WindowHandle]) -> Int
+pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, @ref.Ref[WindowHandle]) -> Int
 
 pub fn window_logical_id(WindowHandle) -> Int64
 

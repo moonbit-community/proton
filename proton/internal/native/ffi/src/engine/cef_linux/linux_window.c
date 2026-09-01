@@ -477,6 +477,12 @@ int32_t proton_engine_window_create(
         "titlebar overlay is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
+  if (!runtime->headless && config.theme != PROTON_WINDOW_THEME_SYSTEM) {
+    proton_engine_set_message(
+        error, error_len,
+        "explicit window themes are not supported on Linux");
+    return PROTON_ERR_UNSUPPORTED;
+  }
 
   proton_engine_window_t *window =
       (proton_engine_window_t *)calloc(1, sizeof(*window));
@@ -496,6 +502,7 @@ int32_t proton_engine_window_create(
   window->headless = runtime->headless;
   window->size_hint = config.size_hint;
   window->titlebar_overlay = config.titlebar_overlay;
+  window->theme = config.theme;
   snprintf(window->titlebar_minimize_label,
            sizeof(window->titlebar_minimize_label), "%s",
            config.titlebar_minimize_label);
@@ -1331,6 +1338,33 @@ int32_t proton_engine_window_set_background_color(
                                        &native_color);
   gtk_widget_override_background_color(window->root_box, GTK_STATE_FLAG_NORMAL,
                                        &native_color);
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_theme(
+    proton_engine_window_t *window, proton_window_theme_t theme, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (theme < PROTON_WINDOW_THEME_SYSTEM || theme > PROTON_WINDOW_THEME_DARK) {
+    proton_engine_set_message(error, error_len, "window theme is invalid");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window theme is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (theme != PROTON_WINDOW_THEME_SYSTEM) {
+    proton_engine_set_message(
+        error, error_len,
+        "explicit window themes are not supported on Linux");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->theme = theme;
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
 

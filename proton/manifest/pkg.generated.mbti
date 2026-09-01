@@ -62,8 +62,9 @@ pub struct WindowManifest {
   height : Int
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
+  theme : WindowTheme
 } derive(Eq, @debug.Debug)
-pub fn WindowManifest::WindowManifest(String, Int, Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle) -> Self
+pub fn WindowManifest::WindowManifest(String, Int, Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowTheme) -> Self
 pub fn WindowManifest::equal(Self, Self) -> Bool
 pub fn WindowManifest::not_equal(Self, Self) -> Bool
 pub fn WindowManifest::output(Self, &Logger) -> Unit
@@ -83,6 +84,18 @@ pub fn WindowSizeHint::output(Self, &Logger) -> Unit
 pub fn WindowSizeHint::to_repr(Self) -> @debug.Repr
 pub fn WindowSizeHint::to_string(Self) -> String
 pub impl Show for WindowSizeHint
+
+pub(all) enum WindowTheme {
+  System
+  Light
+  Dark
+} derive(Eq, @debug.Debug)
+pub fn WindowTheme::equal(Self, Self) -> Bool
+pub fn WindowTheme::not_equal(Self, Self) -> Bool
+pub fn WindowTheme::output(Self, &Logger) -> Unit
+pub fn WindowTheme::to_repr(Self) -> @debug.Repr
+pub fn WindowTheme::to_string(Self) -> String
+pub impl Show for WindowTheme
 
 // Type aliases
 
