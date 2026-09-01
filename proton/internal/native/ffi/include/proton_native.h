@@ -97,6 +97,29 @@ enum {
 };
 int32_t proton_system_path(int32_t kind, char *buffer, int32_t buffer_len,
                            int32_t *out_required_len);
+int32_t proton_protocol_client_set(const char *scheme,
+                                   const char *identifier,
+                                   const char *executable,
+                                   const char *arguments,
+                                   int32_t arguments_len,
+                                   int32_t *out_changed);
+int32_t proton_protocol_client_remove(const char *scheme,
+                                      const char *identifier,
+                                      const char *executable,
+                                      const char *arguments,
+                                      int32_t arguments_len,
+                                      int32_t *out_removed);
+int32_t proton_protocol_client_is_default(const char *scheme,
+                                          const char *identifier,
+                                          const char *executable,
+                                          const char *arguments,
+                                          int32_t arguments_len,
+                                          int32_t *out_is_default);
+int32_t proton_process_schedule_relaunch(const char *executable,
+                                         const char *arguments,
+                                         int32_t arguments_len);
+int32_t proton_process_run_relaunches(void);
+void proton_process_exit(int32_t exit_code);
 int32_t proton_app_instance_acquire(
     const char *identifier, const char *activation_json,
     proton_app_instance_id_t *out_instance, int32_t *out_primary);

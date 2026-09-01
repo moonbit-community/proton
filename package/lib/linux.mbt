@@ -35,27 +35,46 @@ fn linux_desktop_entry(spec : PackageSpec, name : String) -> String {
     #|Type=Application
     #|Terminal=false
     #|Categories=Utility;
+  let mime_types = if spec.url_schemes.length() == 0 {
+    ""
+  } else {
+    "\nMimeType=" +
+    spec.url_schemes.map(scheme => "x-scheme-handler/" + scheme).join(";") +
+    ";"
+  }
   prefix +
   "\nName=" +
   spec.product_name +
   "\n" +
   "Exec=" +
   name +
+  " %U" +
   "\n" +
   "Icon=" +
   name +
   "\n" +
   "X-AppImage-Version=" +
   spec.version +
+  mime_types +
   "\n"
 }
 
 ///|
-fn linux_apprun(name : String) -> String {
+fn linux_desktop_name(spec : PackageSpec) -> String {
+  spec.identifier + ".desktop"
+}
+
+///|
+fn linux_apprun(name : String, desktop_name : String) -> String {
   let prefix =
     #|#!/bin/sh
     #|HERE="$APPDIR"
-  prefix + "\nexec \"$HERE/usr/bin/" + name + "\" \"$@\"\n"
+  prefix +
+  "\nexport CHROME_DESKTOP=\"" +
+  desktop_name +
+  "\"\nexec \"$HERE/usr/bin/" +
+  name +
+  "\" \"$@\"\n"
 }
 
 ///|
@@ -97,11 +116,11 @@ async fn package_linux(
   copy_file(icon, path_join(appdir, name + ".png"))
   copy_file(icon, path_join(appdir, ".DirIcon"))
   write_text(
-    path_join(appdir, name + ".desktop"),
+    path_join(appdir, linux_desktop_name(spec)),
     linux_desktop_entry(spec, name),
   )
   let apprun = path_join(appdir, "AppRun")
-  write_text(apprun, linux_apprun(name))
+  write_text(apprun, linux_apprun(name, linux_desktop_name(spec)))
   @async_fs.chmod(apprun, 0o755)
   prepare(PackageLayout::{
     root: appdir,

@@ -18,6 +18,20 @@ pictures, and videos must match the operating system's configured user folders.
 `Module` must equal `Executable`; `Assets` is unavailable on macOS, and
 `Recent` is available only on Windows.
 
+Review path overrides with an existing temporary directory:
+
+```sh
+override_root="$(mktemp -d)"
+PROTON_APP_PATH_OVERRIDE_ROOT="$override_root" \
+  PROTON_NO_UPDATE_CHECK=1 moon -C cli run . -- dev -C .. \
+  --config examples/74_app_metadata_paths/proton.project.json
+```
+
+Verify that path mode shows `Custom overrides`, the `Override root` row matches
+the temporary directory, `User data` and `Downloads` equal that root,
+`Session data` is its `browser` child, and `Logs` is its `logs` child. Proton
+must create the browser profile and logs directory when runtime startup begins.
+
 Build the packaged form:
 
 ```sh
@@ -31,5 +45,9 @@ Run the artifact under `dist/` and verify that the execution mode changes to
 `Packaged`, while the product name and version remain unchanged. The app path
 must point inside the packaged resource layout and the executable path must
 point at the packaged binary.
+
+Launch the packaged executable with `PROTON_APP_PATH_OVERRIDE_ROOT` set to the
+same existing directory and repeat the override checks. Environment-variable
+syntax and the packaged executable path differ by platform.
 
 Repeat the development and packaged checks on macOS, Windows, and Linux.

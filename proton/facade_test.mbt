@@ -50,3 +50,25 @@ test "public common user paths are absolute" {
     app.path(@proton.AppPathKind::Executable),
   )
 }
+
+///|
+test "public path override builders update resolved paths" {
+  let app = @proton.html("Paths", "<main>Paths</main>").identifier(
+    "dev.proton.public-path-overrides",
+  )
+  let temp = app.path(@proton.AppPathKind::Temp)
+  let app = app
+    .set_path(@proton.AppPathKind::UserData, temp)
+    .set_app_logs_path(
+      path=@mbpath.Path(temp).join("proton-public-logs").normalize().to_string(),
+    )
+  assert_eq(app.data_dir(), temp)
+  assert_eq(
+    app.path(@proton.AppPathKind::SessionData),
+    @mbpath.Path(temp).join("browser").normalize().to_string(),
+  )
+  assert_eq(
+    app.path(@proton.AppPathKind::Logs),
+    @mbpath.Path(temp).join("proton-public-logs").normalize().to_string(),
+  )
+}

@@ -46,6 +46,31 @@ Windows and Linux, and `Recent` is available on Windows. Persistent application
 paths use the reverse-DNS identifier, so changing a display name does not move
 user state.
 
+`App::set_path` overrides any supported standard path before startup and
+requires an existing absolute path. `App::set_app_logs_path` accepts an
+absolute directory that Proton creates during startup; omitting the path selects
+Electron's default logs location. `UserData` overrides feed the default
+`SessionData` path, while an explicit `SessionData` override becomes the CEF
+browser profile location for single-instance applications.
+
+## Protocol and process control
+
+Declare application URL schemes with `App::url_scheme`. A running
+`ApplicationContext` can then set, remove, or query the current application as
+the default handler with `set_as_default_protocol_client`,
+`remove_default_protocol_client`, and `is_default_protocol_client`. macOS
+requires the packaged `CFBundleURLTypes` declaration; Linux requires the
+generated desktop entry to be installed. Electron does not expose protocol
+removal on Linux, so Proton returns `false` there as well.
+
+`ApplicationContext::relaunch` schedules a replacement process without
+stopping the current one. With no options it preserves the current command
+line; `RelaunchOptions` can replace the executable or arguments. Call `quit`
+for orderly shutdown or `exit` for immediate Electron-style termination that
+skips close interception and lifecycle cleanup. Scheduled relaunches are
+started after orderly cleanup or immediately before `exit` terminates the
+process.
+
 ## Entry points
 
 - `@proton.html(title, html, ...)` — inline HTML document.

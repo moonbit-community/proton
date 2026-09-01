@@ -34,6 +34,18 @@ pub fn notification_show(String, String, payload? : String) -> Unit raise Native
 
 pub fn notification_supported() -> Bool raise NativeError
 
+pub fn process_exit(Int) -> Unit
+
+pub fn process_run_relaunches() -> Unit raise NativeError
+
+pub fn process_schedule_relaunch(String, Array[String]) -> Unit raise NativeError
+
+pub fn protocol_client_is_default(String, String, String, Array[String]) -> Bool raise NativeError
+
+pub fn protocol_client_remove(String, String, String, Array[String]) -> Bool raise NativeError
+
+pub fn protocol_client_set(String, String, String, Array[String]) -> Bool raise NativeError
+
 pub fn runtime_info() -> RuntimeInfo raise NativeError
 
 pub let runtime_wait_all : Int

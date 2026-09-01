@@ -36,6 +36,9 @@ struct App {
   mut application_identity : ApplicationIdentitySource?
   mut single_instance_enabled : Bool
   mut explicit_locale : @locale.Locale?
+  path_overrides : Map[String, String]
+  mut electron_default_logs_path : Bool
+  mut create_logs_path : Bool
   mut bridge_startup_timeout_value_ms : Int
   mut last_window_closed_policy_value : LastWindowClosedPolicy
   mut menu : MenuBar?
@@ -145,6 +148,32 @@ priv struct ResolvedUpdateChannel {
   public_keys : Array[String]
   check_on_launch : Bool
   freshness_days : Int
+}
+
+///|
+/// Optional command override for `ApplicationContext::relaunch`.
+///
+/// With neither field set, Proton repeats the current executable and command
+/// line. Setting either field switches to Electron's override behavior: the
+/// executable still defaults to the current executable, while omitted
+/// arguments become an empty array.
+pub(all) struct RelaunchOptions {
+  executable : String?
+  arguments : Array[String]?
+} derive(Debug, Eq)
+
+///|
+pub extend RelaunchOptions with Eq::{not_equal, equal}
+
+///|
+pub extend RelaunchOptions with Debug::{to_repr}
+
+///|
+pub fn RelaunchOptions::RelaunchOptions(
+  executable? : String,
+  arguments? : Array[String],
+) -> RelaunchOptions {
+  RelaunchOptions::{ executable, arguments, }
 }
 
 ///|
@@ -352,6 +381,10 @@ priv struct RuntimeSession {
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
   close_coordinator : CloseCoordinator
+  application_identifier : String
+  application_executable : String
+  application_arguments : Array[String]
+  url_schemes : Array[String]
 }
 
 ///|
@@ -998,6 +1031,21 @@ pub(all) suberror AppConfigurationError {
   InvalidEntryUrl(url~ : String, reason~ : String)
   InvalidRendererCapability(detail~ : String)
 } derive(Debug)
+
+///|
+/// Failures from application-level desktop and process controls.
+pub(all) suberror AppControlError {
+  InvalidProtocolScheme(scheme~ : String)
+  UndeclaredProtocolScheme(scheme~ : String)
+  InvalidExecutable(path~ : String)
+  NativeControlFailure(action~ : String, status~ : Int, detail~ : String)
+} derive(Debug, Eq)
+
+///|
+pub extend AppControlError with Eq::{not_equal, equal}
+
+///|
+pub extend AppControlError with Debug::{to_repr}
 
 ///|
 pub extend AppConfigurationError with Debug::{to_repr}

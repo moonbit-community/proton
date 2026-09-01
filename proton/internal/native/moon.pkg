@@ -21,6 +21,7 @@ options(
     "ffi_constants.mbt": [ "native" ],
     "types.mbt": [ "native" ],
     "native.mbt": [ "native" ],
+    "app_control.mbt": [ "native" ],
     "native_text.mbt": [ "native" ],
     "update.mbt": [ "native" ],
     "update_wbtest.mbt": [ "native" ],

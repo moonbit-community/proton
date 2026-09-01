@@ -1,7 +1,8 @@
 import {
   "moonbitlang/async",
   "moonbitlang/core/env",
-  "moonbitlang/x/path" @mbpath,
+  "moonbitlang/core/json",
+  "moonbit-community/proton_contract",
   "moonbit-community/proton",
 }
 

@@ -40,6 +40,38 @@ fn windows_uninstall_registry_key(plan : PackageSpec) -> String {
 }
 
 ///|
+fn windows_protocol_install_script(
+  plan : PackageSpec,
+  executable : String,
+) -> String {
+  let builder = StringBuilder()
+  for scheme in plan.url_schemes {
+    let scheme = windows_installer_quote(scheme)
+    builder <+
+      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}" "" "URL:\{scheme}"
+    builder.write_char('\n')
+    builder <+
+      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}" "URL Protocol" ""
+    builder.write_char('\n')
+    builder <+
+      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}\\shell\\open\\command" "" "$\\"$INSTDIR\\\{executable}$\\" $\\"%1$\\""
+    builder.write_char('\n')
+  }
+  builder.to_string()
+}
+
+///|
+fn windows_protocol_uninstall_script(plan : PackageSpec) -> String {
+  let builder = StringBuilder()
+  for scheme in plan.url_schemes {
+    builder <+
+      $|  DeleteRegKey HKCU "Software\\Classes\\\{windows_installer_quote(scheme)}"
+    builder.write_char('\n')
+  }
+  builder.to_string()
+}
+
+///|
 /// `VIProductVersion` rejects anything that is not exactly four numeric
 /// fields, so a semantic version has to be padded and any pre-release suffix
 /// dropped. The human-readable version still ships in `FileVersion`.
@@ -185,6 +217,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  WriteRegDWORD HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoModify" 1
     $|  WriteRegDWORD HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoRepair" 1
     $|
+  builder.write_char('\n')
+  builder.write_string(windows_protocol_install_script(plan, executable))
+  builder <+
     $|  CreateShortCut "$SMPROGRAMS\\\{product}.lnk" "$INSTDIR\\\{executable}"
     $|  ${If} $ProtonUpdate == "1"
     $|    Exec '"$INSTDIR\\\{executable}"'
@@ -202,6 +237,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  RMDir /r "$INSTDIR.proton-next"
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}"
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}"
+  builder.write_char('\n')
+  builder.write_string(windows_protocol_uninstall_script(plan))
+  builder <+
     $|SectionEnd
     $|
   builder.to_string()
@@ -229,7 +267,7 @@ async fn create_windows_installer(
         detail="\{script}: \{@debug.render(Repr(error))}",
       )
   }
-  let (code, _) = @process.collect_output_merged(windows_installer_tool, [
+  let (code, output) = @process.collect_output_merged(windows_installer_tool, [
     "/V2", script,
   ]) catch {
     _ =>
@@ -241,7 +279,10 @@ async fn create_windows_installer(
   guard code == 0 else {
     raise WindowsPackagingError::ToolFailure(
       stage="create Windows installer",
-      detail="exit code \{code}",
+      detail="exit code " +
+        code.to_string() +
+        ": " +
+        (output.text() catch { _ => "non-UTF-8 output" }),
     )
   }
   guard path_exists(staging) else {
