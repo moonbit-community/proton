@@ -1,6 +1,7 @@
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
 #include "cookie_state_lifetime.h"
+#include "cookie_cache.h"
 #include "message.h"
 #include "window_state.h"
 
@@ -9,6 +10,7 @@
 #include "include/capi/cef_request_context_capi.h"
 #include "include/internal/cef_string.h"
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,6 +44,73 @@ typedef struct {
 
 #include "ref_count.h"
 
+typedef struct {
+  char *name;
+  char *value;
+  char *domain;
+  char *path;
+  int32_t secure;
+  int32_t http_only;
+  int32_t same_site;
+  int32_t has_expires;
+  int64_t expires;
+} proton_cookie_record_t;
+
+struct proton_cookie_snapshot {
+  proton_cookie_record_t *records;
+  int32_t count;
+  int32_t capacity;
+};
+
+void proton_cookie_snapshot_destroy(void *raw_snapshot) {
+  proton_cookie_snapshot_t *snapshot =
+      (proton_cookie_snapshot_t *)raw_snapshot;
+  if (snapshot == NULL) {
+    return;
+  }
+  for (int32_t index = 0; index < snapshot->count; index++) {
+    proton_cookie_record_t *record = &snapshot->records[index];
+    free(record->name);
+    free(record->value);
+    free(record->domain);
+    free(record->path);
+  }
+  free(snapshot->records);
+  free(snapshot);
+}
+
+static int proton_cookie_snapshot_reserve(proton_cookie_snapshot_t *snapshot,
+                                          int32_t capacity) {
+  if (capacity <= snapshot->capacity) {
+    return 1;
+  }
+  int32_t next_capacity = snapshot->capacity == 0 ? 8 : snapshot->capacity;
+  while (next_capacity < capacity) {
+    if (next_capacity > INT32_MAX / 2) {
+      return 0;
+    }
+    next_capacity *= 2;
+  }
+  proton_cookie_record_t *records = (proton_cookie_record_t *)realloc(
+      snapshot->records, (size_t)next_capacity * sizeof(*records));
+  if (records == NULL) {
+    return 0;
+  }
+  snapshot->records = records;
+  snapshot->capacity = next_capacity;
+  return 1;
+}
+
+static int proton_cookie_snapshot_append(proton_cookie_snapshot_t *snapshot,
+                                         proton_cookie_record_t record) {
+  if (snapshot == NULL || snapshot->count == INT32_MAX ||
+      !proton_cookie_snapshot_reserve(snapshot, snapshot->count + 1)) {
+    return 0;
+  }
+  snapshot->records[snapshot->count++] = record;
+  return 1;
+}
+
 /* ------------------------------------------------------------------ */
 /* Per-window cookie-get state                                        */
 /* ------------------------------------------------------------------ */
@@ -56,9 +125,7 @@ typedef struct proton_cookie_get_state {
   int completion_emitted;
   int32_t status;
   char error[256];
-  char *json;               /* accumulated JSON array body                */
-  size_t json_len;          /* bytes used in json                         */
-  size_t json_cap;          /* allocated capacity of json                 */
+  proton_cookie_snapshot_t *snapshot;
   struct proton_cookie_get_state *next;
 } proton_cookie_get_state_t;
 
@@ -69,7 +136,7 @@ static void proton_cookie_get_state_destroy(proton_cookie_get_state_t *state) {
   if (state == NULL) {
     return;
   }
-  free(state->json);
+  proton_cookie_snapshot_destroy(state->snapshot);
   free(state);
 }
 
@@ -99,6 +166,12 @@ static proton_cookie_get_state_t *proton_cookie_get_state_create(
   proton_cookie_get_state_t *state =
       (proton_cookie_get_state_t *)calloc(1, sizeof(*state));
   if (state == NULL) {
+    return NULL;
+  }
+  state->snapshot =
+      (proton_cookie_snapshot_t *)calloc(1, sizeof(*state->snapshot));
+  if (state->snapshot == NULL) {
+    free(state);
     return NULL;
   }
   proton_cookie_state_lifetime_init(&state->refs, &state->detached);
@@ -148,26 +221,16 @@ static void proton_cookie_get_state_emit(proton_cookie_get_state_t *state) {
     event->request_id = state->request_id;
     event->int_a = state->status;
     if (state->status == PROTON_OK) {
-      size_t result_len = state->json_len + 3;
-      char *result = (char *)malloc(result_len);
-      if (result == NULL) {
+      if (!proton_event_set_payload(event, state->snapshot,
+                                    proton_cookie_snapshot_destroy)) {
         event->int_a = PROTON_ERR_ENGINE;
+        proton_cookie_snapshot_destroy(state->snapshot);
+        state->snapshot = NULL;
         (void)proton_event_set_text(&event->text_a, "");
         (void)proton_event_set_text(&event->text_b,
                                     "failed to allocate cookie result");
       } else {
-        result[0] = '[';
-        if (state->json_len > 0) {
-          memcpy(result + 1, state->json, state->json_len);
-        }
-        result[state->json_len + 1] = ']';
-        result[state->json_len + 2] = '\0';
-        if (!proton_event_set_text(&event->text_a, result) ||
-            !proton_event_set_text(&event->text_b, "")) {
-          proton_event_destroy(event);
-          event = NULL;
-        }
-        free(result);
+        state->snapshot = NULL;
       }
     } else if (!proton_event_set_text(&event->text_a, "") ||
                !proton_event_set_text(&event->text_b, state->error)) {
@@ -180,83 +243,6 @@ static void proton_cookie_get_state_emit(proton_cookie_get_state_t *state) {
   }
 }
 
-static int proton_cookie_json_reserve(proton_cookie_get_state_t *state,
-                                      size_t extra) {
-  if (state->status != PROTON_OK) {
-    return 0;
-  }
-  if (state->json_len + extra + 1 <= state->json_cap) {
-    return 1;
-  }
-  size_t need = state->json_cap == 0 ? 256 : state->json_cap;
-  while (need < state->json_len + extra + 1) {
-    need *= 2;
-  }
-  char *grown = (char *)realloc(state->json, need);
-  if (grown == NULL) {
-    proton_cookie_get_state_fail(state, PROTON_ERR_ENGINE,
-                                 "failed to allocate cookie result");
-    return 0;
-  }
-  state->json = grown;
-  state->json_cap = need;
-  return 1;
-}
-
-static int proton_cookie_json_append(proton_cookie_get_state_t *state,
-                                     const char *text, size_t len) {
-  if (state->status != PROTON_OK) {
-    return 0;
-  }
-  if (!proton_cookie_json_reserve(state, len)) {
-    return 0;
-  }
-  memcpy(state->json + state->json_len, text, len);
-  state->json_len += len;
-  state->json[state->json_len] = '\0';
-  return 1;
-}
-
-static int proton_cookie_json_append_escaped(proton_cookie_get_state_t *state,
-                                             const char *value) {
-  if (value == NULL) {
-    return proton_cookie_json_append(state, "\"\"", 2);
-  }
-  if (!proton_cookie_json_append(state, "\"", 1)) {
-    return 0;
-  }
-  for (const unsigned char *cursor = (const unsigned char *)value;
-       *cursor != '\0'; cursor++) {
-    char buf[7];
-    const char *esc = NULL;
-    switch (*cursor) {
-    case '"':  esc = "\\\""; break;
-    case '\\': esc = "\\\\"; break;
-    case '\b': esc = "\\b";  break;
-    case '\f': esc = "\\f";  break;
-    case '\n': esc = "\\n";  break;
-    case '\r': esc = "\\r";  break;
-    case '\t': esc = "\\t";  break;
-    default:
-      if (*cursor < 0x20) {
-        snprintf(buf, sizeof(buf), "\\u%04x", *cursor);
-        esc = buf;
-      }
-      break;
-    }
-    if (esc != NULL) {
-      if (!proton_cookie_json_append(state, esc, strlen(esc))) {
-        return 0;
-      }
-    } else {
-      if (!proton_cookie_json_append(state, (const char *)cursor, 1)) {
-        return 0;
-      }
-    }
-  }
-  return proton_cookie_json_append(state, "\"", 1);
-}
-
 /* ------------------------------------------------------------------ */
 /* CEF cookie visitor                                                 */
 /* ------------------------------------------------------------------ */
@@ -267,28 +253,22 @@ typedef struct {
   proton_cookie_get_state_t *state; /* visitor-owned state reference */
 } proton_cookie_visitor_impl_t;
 
-static const char *
-proton_cookie_same_site_name(cef_cookie_same_site_t same_site) {
-  switch (same_site) {
-  case CEF_COOKIE_SAME_SITE_NO_RESTRICTION: return "no_restriction";
-  case CEF_COOKIE_SAME_SITE_LAX_MODE:       return "lax";
-  case CEF_COOKIE_SAME_SITE_STRICT_MODE:    return "strict";
-  default:                                  return "unspecified";
-  }
-}
-
 static char *proton_cookie_cef_string_to_utf8(const cef_string_t *value) {
   if (value == NULL) {
     return NULL;
   }
   cef_string_utf8_t utf8 = {0};
   char *copy = NULL;
-  if (cef_string_to_utf8(value->str, value->length, &utf8) != 0 &&
-      utf8.str != NULL) {
+  if (cef_string_to_utf8(value->str, value->length, &utf8) != 0) {
     copy = (char *)malloc(utf8.length + 1);
-    if (copy != NULL) {
-      memcpy(copy, utf8.str, utf8.length);
+    if (copy != NULL && (utf8.length == 0 || utf8.str != NULL)) {
+      if (utf8.length > 0) {
+        memcpy(copy, utf8.str, utf8.length);
+      }
       copy[utf8.length] = '\0';
+    } else {
+      free(copy);
+      copy = NULL;
     }
   }
   cef_string_utf8_clear(&utf8);
@@ -298,6 +278,7 @@ static char *proton_cookie_cef_string_to_utf8(const cef_string_t *value) {
 static int CEF_CALLBACK proton_cookie_visitor_visit(
     cef_cookie_visitor_t *self, const cef_cookie_t *cookie, int count,
     int total, int *delete_cookie) {
+  (void)count;
   (void)total;
   if (delete_cookie != NULL) {
     *delete_cookie = 0;
@@ -321,73 +302,26 @@ static int CEF_CALLBACK proton_cookie_visitor_visit(
   char *domain = proton_cookie_cef_string_to_utf8(&cookie->domain);
   char *path = proton_cookie_cef_string_to_utf8(&cookie->path);
 
-  /* Prepend a comma for every cookie after the first. */
-  if (count > 0) {
-    proton_cookie_json_append(state, ",", 1);
+  proton_cookie_record_t record = {
+      .name = name,
+      .value = value,
+      .domain = domain,
+      .path = path,
+      .secure = cookie->secure != 0,
+      .http_only = cookie->httponly != 0,
+      .same_site = (int32_t)cookie->same_site,
+      .has_expires = cookie->has_expires != 0,
+      .expires = cookie->expires.val,
+  };
+  if (name == NULL || value == NULL || domain == NULL || path == NULL ||
+      !proton_cookie_snapshot_append(state->snapshot, record)) {
+    free(name);
+    free(value);
+    free(domain);
+    free(path);
+    proton_cookie_get_state_fail(state, PROTON_ERR_ENGINE,
+                                 "failed to allocate cookie result");
   }
-
-  char fragment[128];
-  proton_cookie_json_append(state, "{", 1);
-  proton_cookie_json_append_escaped(state, "name");
-  proton_cookie_json_append(state, ":", 1);
-  proton_cookie_json_append_escaped(state, name);
-  proton_cookie_json_append(state, ",", 1);
-  proton_cookie_json_append_escaped(state, "value");
-  proton_cookie_json_append(state, ":", 1);
-  proton_cookie_json_append_escaped(state, value);
-  proton_cookie_json_append(state, ",", 1);
-  proton_cookie_json_append_escaped(state, "domain");
-  proton_cookie_json_append(state, ":", 1);
-  proton_cookie_json_append_escaped(state, domain);
-  proton_cookie_json_append(state, ",", 1);
-  proton_cookie_json_append_escaped(state, "path");
-  proton_cookie_json_append(state, ":", 1);
-  proton_cookie_json_append_escaped(state, path);
-  proton_cookie_json_append(state, ",", 1);
-  proton_cookie_json_append_escaped(state, "secure");
-  proton_cookie_json_append(state, ":", 1);
-  snprintf(fragment, sizeof(fragment), "%s", cookie->secure ? "true" : "false");
-  proton_cookie_json_append(state, fragment, strlen(fragment));
-  proton_cookie_json_append(state, ",", 1);
-  proton_cookie_json_append_escaped(state, "http_only");
-  proton_cookie_json_append(state, ":", 1);
-  snprintf(fragment, sizeof(fragment), "%s", cookie->httponly ? "true" : "false");
-  proton_cookie_json_append(state, fragment, strlen(fragment));
-  proton_cookie_json_append(state, ",", 1);
-  proton_cookie_json_append_escaped(state, "same_site");
-  proton_cookie_json_append(state, ":", 1);
-  proton_cookie_json_append_escaped(state,
-                                   proton_cookie_same_site_name(cookie->same_site));
-  proton_cookie_json_append(state, ",", 1);
-  proton_cookie_json_append_escaped(state, "has_expires");
-  proton_cookie_json_append(state, ":", 1);
-  snprintf(fragment, sizeof(fragment), "%s", cookie->has_expires ? "true" : "false");
-  proton_cookie_json_append(state, fragment, strlen(fragment));
-  if (cookie->has_expires) {
-    proton_cookie_json_append(state, ",", 1);
-    proton_cookie_json_append_escaped(state, "expires");
-    proton_cookie_json_append(state, ":", 1);
-    snprintf(fragment, sizeof(fragment), "%lld",
-             (long long)cookie->expires.val);
-    proton_cookie_json_append(state, fragment, strlen(fragment));
-  }
-  proton_cookie_json_append(state, ",", 1);
-  proton_cookie_json_append_escaped(state, "creation");
-  proton_cookie_json_append(state, ":", 1);
-  snprintf(fragment, sizeof(fragment), "%lld", (long long)cookie->creation.val);
-  proton_cookie_json_append(state, fragment, strlen(fragment));
-  proton_cookie_json_append(state, ",", 1);
-  proton_cookie_json_append_escaped(state, "last_access");
-  proton_cookie_json_append(state, ":", 1);
-  snprintf(fragment, sizeof(fragment), "%lld",
-           (long long)cookie->last_access.val);
-  proton_cookie_json_append(state, fragment, strlen(fragment));
-  proton_cookie_json_append(state, "}", 1);
-
-  free(name);
-  free(value);
-  free(domain);
-  free(path);
   return state->status == PROTON_OK; /* continue visiting */
 }
 
@@ -444,6 +378,82 @@ proton_cookie_visitor_create(proton_cookie_get_state_t *state) {
   return &impl->visitor;
 }
 
+static const proton_cookie_record_t *proton_cookie_snapshot_record(
+    const proton_cookie_snapshot_t *snapshot, int32_t index) {
+  return snapshot != NULL && index >= 0 && index < snapshot->count
+             ? &snapshot->records[index]
+             : NULL;
+}
+
+int32_t proton_cookie_snapshot_count(const proton_cookie_snapshot_t *snapshot,
+                                     int32_t *out_count) {
+  if (snapshot == NULL || out_count == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_count = snapshot->count;
+  return PROTON_OK;
+}
+
+int32_t proton_cookie_snapshot_copy_string_field(
+    const proton_cookie_snapshot_t *snapshot, int32_t index, int32_t field,
+    char *buffer, int32_t buffer_len, int32_t *out_required_len) {
+  const proton_cookie_record_t *record =
+      proton_cookie_snapshot_record(snapshot, index);
+  if (record == NULL || out_required_len == NULL || buffer_len < 0 ||
+      (buffer == NULL && buffer_len != 0)) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  const char *value = NULL;
+  switch (field) {
+  case 0: value = record->name; break;
+  case 1: value = record->value; break;
+  case 2: value = record->domain; break;
+  case 3: value = record->path; break;
+  default: return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  size_t length = strlen(value != NULL ? value : "");
+  if (length > INT32_MAX) {
+    return PROTON_ERR_ENGINE;
+  }
+  *out_required_len = (int32_t)length;
+  if (buffer == NULL || buffer_len <= (int32_t)length) {
+    return PROTON_ERR_BUFFER_TOO_SMALL;
+  }
+  memcpy(buffer, value != NULL ? value : "", length + 1);
+  return PROTON_OK;
+}
+
+int32_t proton_cookie_snapshot_int_field(const proton_cookie_snapshot_t *snapshot,
+                                         int32_t index, int32_t field,
+                                         int32_t *out_value) {
+  const proton_cookie_record_t *record =
+      proton_cookie_snapshot_record(snapshot, index);
+  if (record == NULL || out_value == NULL) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  switch (field) {
+  case 0: *out_value = record->secure; break;
+  case 1: *out_value = record->http_only; break;
+  case 2: *out_value = record->same_site; break;
+  case 3: *out_value = record->has_expires; break;
+  default: return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_cookie_snapshot_int64_field(
+    const proton_cookie_snapshot_t *snapshot, int32_t index, int32_t field,
+    int64_t *out_value, int32_t *out_present) {
+  const proton_cookie_record_t *record =
+      proton_cookie_snapshot_record(snapshot, index);
+  if (record == NULL || out_value == NULL || out_present == NULL || field != 0) {
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_value = record->expires;
+  *out_present = record->has_expires;
+  return PROTON_OK;
+}
+
 /* ------------------------------------------------------------------ */
 /* Engine API                                                         */
 /* ------------------------------------------------------------------ */
@@ -481,7 +491,7 @@ proton_cookie_manager_from_window(proton_engine_window_t *window,
   return manager;
 }
 
-int32_t proton_engine_window_cookie_begin_get_json(
+int32_t proton_engine_window_cookie_begin_get(
     proton_engine_window_t *window, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id, char *error,
     size_t error_len) {

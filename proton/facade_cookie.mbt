@@ -52,7 +52,7 @@ fn CookieCompletionStore::route_completion(
 async fn CookieCompletionStore::wait(
   self : CookieCompletionStore,
   request_id : Int64,
-) -> String raise WindowSessionError {
+) -> Array[@native.NativeCookieRecord] raise WindowSessionError {
   let completion = self.register(request_id)
   defer self.remove(request_id)
   while completion.state is CookieWaiting {
@@ -80,54 +80,39 @@ fn CookieSameSite::to_native(self : CookieSameSite) -> @native.CookieSameSite {
 
 ///|
 fn cookie_same_site_from_native(
-  value : String,
-) -> CookieSameSite raise CookieDecodeError {
+  value : @native.CookieSameSite,
+) -> CookieSameSite {
   match value {
-    "unspecified" => Unspecified
-    "no_restriction" => NoRestriction
-    "lax" => Lax
-    "strict" => Strict
-    other => raise CookieDecodeError("unknown cookie SameSite value: " + other)
+    @native.CookieSameSite::Unspecified => Unspecified
+    @native.CookieSameSite::NoRestriction => NoRestriction
+    @native.CookieSameSite::Lax => Lax
+    @native.CookieSameSite::Strict => Strict
   }
 }
 
 ///|
-fn cookie_expiration_date(record : NativeCookieRecord) -> Double? {
-  if !record.has_expires {
-    None
-  } else {
-    match record.expires {
-      Some(expires) =>
-        // CEF stores base time as microseconds since the Windows epoch.
-        Some((expires - 11644473600000000.0) / 1000000.0)
-      None => None
-    }
+fn cookie_expiration_date(record : @native.NativeCookieRecord) -> Double? {
+  match record.expires {
+    Some(expires) =>
+      // CEF stores base time as microseconds since the Windows epoch.
+      Some((expires.to_double() - 11644473600000000.0) / 1000000.0)
+    None => None
   }
 }
 
 ///|
-fn decode_cookies(payload : String) -> Array[Cookie] raise CookieDecodeError {
-  let json = @json.parse(payload) catch {
-    error =>
-      raise CookieDecodeError("invalid cookie JSON: " + error.to_string())
-  }
-  let records : Array[NativeCookieRecord] = @json.from_json(json) catch {
-    error =>
-      raise CookieDecodeError("invalid cookie payload: " + error.to_string())
-  }
+fn cookies_from_native(
+  records : Array[@native.NativeCookieRecord],
+) -> Array[Cookie] {
   records.map(record => {
-    ignore(record.creation)
-    ignore(record.last_access)
-    {
-      name: record.name,
-      value: record.value,
-      domain: record.domain,
-      path: record.path,
-      secure: record.secure,
-      http_only: record.http_only,
-      same_site: cookie_same_site_from_native(record.same_site),
-      expiration_date: cookie_expiration_date(record),
-    }
+    name: record.name,
+    value: record.value,
+    domain: record.domain,
+    path: record.path,
+    secure: record.secure,
+    http_only: record.http_only,
+    same_site: cookie_same_site_from_native(record.same_site),
+    expiration_date: cookie_expiration_date(record),
   })
 }
 

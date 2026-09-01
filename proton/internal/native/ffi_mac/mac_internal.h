@@ -5,6 +5,7 @@
 #include "../ffi/src/proton_engine.h"
 #include "../ffi/src/proton_event.h"
 
+#include "../ffi/src/engine/cef_common/bridge_client.h"
 #include "../ffi/src/engine/cef_common/bridge_lifecycle.h"
 #include "../ffi/src/engine/cef_common/browser_lifecycle.h"
 #include "../ffi/src/engine/cef_common/browser_session.h"
@@ -32,10 +33,6 @@
 #include <dispatch/dispatch.h>
 #include <stdatomic.h>
 #include <stdint.h>
-
-#define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
-#define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
-#define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
 
 /* AppKit operations invoked from a worker are marshalled to the main queue. */
 #define PROTON_ENGINE_RETURN_ON_MAIN(body)                     \
@@ -145,7 +142,7 @@ struct proton_engine_window {
   proton_browser_session_t *browser_session;
   proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
-  char *bridge_config_json;
+  proton_bridge_config_t *bridge_config;
   int32_t max_bridge_payload_bytes;
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
   char *initial_url;
@@ -226,10 +223,6 @@ int CEF_CALLBACK proton_engine_client_release(
     cef_base_ref_counted_t *base);
 cef_client_t *proton_engine_browser_client_factory(
     void *context, proton_browser_lifecycle_t *browser_lifecycle);
-void proton_engine_bridge_pending_remove_browser(
-    proton_engine_runtime_t *runtime,
-    int browser_id);
-void proton_engine_bridge_pending_clear_all(void);
 void proton_engine_window_mark_closed(proton_engine_window_t *window);
 int proton_engine_window_request_browser_close(proton_engine_window_t *window,
                                                int force_close);
@@ -240,12 +233,6 @@ void proton_engine_runtime_create_pending_browsers(
     proton_engine_runtime_t *runtime);
 int proton_engine_runtime_has_windows(proton_engine_runtime_t *runtime);
 proton_engine_client_t *proton_engine_client_from_base(cef_client_t *client);
-int proton_engine_send_bridge_response_to_frame(
-    cef_frame_t *frame,
-    int pending_id,
-    int ok,
-    const char *value_json,
-    const char *error_json);
 void CEF_CALLBACK proton_engine_on_register_custom_schemes(
     cef_app_t *self,
     cef_scheme_registrar_t *registrar);

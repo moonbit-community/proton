@@ -1,6 +1,5 @@
 #include "bridge_renderer.h"
 
-#include "../../proton_json.h"
 #include "bridge_lifecycle.h"
 #include "bridge_policy.h"
 
@@ -21,11 +20,12 @@
 typedef struct proton_engine_bridge_browser_config {
   int browser_id;
   size_t instance_count;
-  char *config_json;
+  cef_dictionary_value_t *config;
   char *lifecycle_outcome;
   char *lifecycle_page_instance;
   char *lifecycle_url;
-  char *lifecycle_diagnostic_json;
+  proton_engine_bridge_diagnostic_t lifecycle_diagnostic;
+  int has_lifecycle_diagnostic;
   struct proton_engine_bridge_browser_config *next;
 } proton_engine_bridge_browser_config_t;
 
@@ -40,6 +40,9 @@ typedef struct proton_engine_bridge_context {
 static proton_engine_bridge_browser_config_t *g_browser_configs = NULL;
 static proton_engine_bridge_context_t *g_contexts = NULL;
 static uint64_t g_next_page_instance = 1;
+
+static char *proton_engine_bridge_dictionary_string(
+    cef_dictionary_value_t *dictionary, const char *key);
 
 static char *proton_engine_bridge_strdup(const char *value) {
   const char *source = value != NULL ? value : "";
@@ -151,119 +154,6 @@ static char *proton_engine_bridge_new_page_instance(void) {
   return copy;
 }
 
-typedef struct {
-  char *buffer;
-  size_t capacity;
-  size_t length;
-  int truncated;
-  int overflowed;
-} proton_engine_bridge_json_writer_t;
-
-static void proton_engine_bridge_json_raw(
-    proton_engine_bridge_json_writer_t *writer, const char *value) {
-  size_t len = strlen(value);
-  if (writer->length + len >= writer->capacity) {
-    writer->truncated = 1;
-    writer->overflowed = 1;
-    return;
-  }
-  memcpy(writer->buffer + writer->length, value, len);
-  writer->length += len;
-  writer->buffer[writer->length] = '\0';
-}
-
-static void proton_engine_bridge_json_string(
-    proton_engine_bridge_json_writer_t *writer, const char *value) {
-  proton_engine_bridge_json_raw(writer, "\"");
-  const unsigned char *cursor =
-      (const unsigned char *)(value != NULL ? value : "");
-  while (*cursor != '\0') {
-    char escaped[7] = {0};
-    switch (*cursor) {
-    case '\"':
-      memcpy(escaped, "\\\"", 3);
-      break;
-    case '\\':
-      memcpy(escaped, "\\\\", 3);
-      break;
-    case '\n':
-      memcpy(escaped, "\\n", 3);
-      break;
-    case '\r':
-      memcpy(escaped, "\\r", 3);
-      break;
-    case '\t':
-      memcpy(escaped, "\\t", 3);
-      break;
-    default:
-      if (*cursor < 0x20) {
-        snprintf(escaped, sizeof(escaped), "\\u%04x", *cursor);
-      } else {
-        escaped[0] = (char)*cursor;
-      }
-      break;
-    }
-    size_t escaped_len = strlen(escaped);
-    if (writer->length + escaped_len + 2 >= writer->capacity) {
-      writer->truncated = 1;
-      break;
-    }
-    proton_engine_bridge_json_raw(writer, escaped);
-    cursor++;
-  }
-  proton_engine_bridge_json_raw(writer, "\"");
-}
-
-static void proton_engine_bridge_json_limited_string(
-    proton_engine_bridge_json_writer_t *writer, const char *value,
-    size_t max_bytes) {
-  const char *source = value != NULL ? value : "";
-  size_t source_len = strlen(source);
-  if (source_len <= max_bytes) {
-    proton_engine_bridge_json_string(writer, source);
-    return;
-  }
-  size_t prefix_len = max_bytes;
-  while (prefix_len > 0 &&
-         (((const unsigned char *)source)[prefix_len] & 0xc0) == 0x80) {
-    prefix_len--;
-  }
-  char *prefix = (char *)malloc(prefix_len + 1);
-  if (prefix == NULL) {
-    writer->truncated = 1;
-    proton_engine_bridge_json_string(writer, "");
-    return;
-  }
-  memcpy(prefix, source, prefix_len);
-  prefix[prefix_len] = '\0';
-  writer->truncated = 1;
-  proton_engine_bridge_json_string(writer, prefix);
-  free(prefix);
-}
-
-static void proton_engine_bridge_json_optional_string(
-    proton_engine_bridge_json_writer_t *writer, const char *field_name,
-    const char *value, size_t max_bytes) {
-  if (value == NULL || value[0] == '\0') {
-    return;
-  }
-  size_t checkpoint = writer->length;
-  int was_truncated = writer->truncated;
-  int was_overflowed = writer->overflowed;
-  writer->overflowed = 0;
-  proton_engine_bridge_json_raw(writer, ",\"");
-  proton_engine_bridge_json_raw(writer, field_name);
-  proton_engine_bridge_json_raw(writer, "\":");
-  proton_engine_bridge_json_limited_string(writer, value, max_bytes);
-  int field_overflowed = writer->overflowed;
-  if (field_overflowed) {
-    writer->length = checkpoint;
-    writer->buffer[checkpoint] = '\0';
-  }
-  writer->truncated = was_truncated || writer->truncated;
-  writer->overflowed = was_overflowed || field_overflowed;
-}
-
 static char *proton_engine_bridge_exception_string(
     cef_v8_exception_t *exception,
     cef_string_userfree_t(CEF_CALLBACK *getter)(cef_v8_exception_t *)) {
@@ -272,15 +162,10 @@ static char *proton_engine_bridge_exception_string(
              : NULL;
 }
 
-static char *proton_engine_bridge_diagnostic_json(
-    const char *stage, const char *code, const char *message,
-    const char *page_instance, const char *url, const char *owner,
+static int proton_engine_bridge_diagnostic_from_exception(
+    proton_engine_bridge_diagnostic_t *diagnostic, const char *stage,
+    const char *code, const char *message, const char *owner,
     const char *source_url, cef_v8_exception_t *exception) {
-  enum { capacity = 65536 };
-  char *json = (char *)calloc(capacity, 1);
-  if (json == NULL) {
-    return NULL;
-  }
   char *exception_message = proton_engine_bridge_exception_string(
       exception, exception != NULL ? exception->get_message : NULL);
   char *source_line = proton_engine_bridge_exception_string(
@@ -288,47 +173,29 @@ static char *proton_engine_bridge_diagnostic_json(
   char *resource = proton_engine_bridge_exception_string(
       exception, exception != NULL ? exception->get_script_resource_name
                                    : NULL);
-  proton_engine_bridge_json_writer_t writer = {json, capacity - 64, 0, 0, 0};
-  proton_engine_bridge_json_raw(&writer, "{\"abi_version\":1,\"stage\":");
-  proton_engine_bridge_json_limited_string(&writer, stage, 64);
-  proton_engine_bridge_json_raw(&writer, ",\"code\":");
-  proton_engine_bridge_json_limited_string(&writer, code, 128);
-  proton_engine_bridge_json_raw(&writer, ",\"message\":");
-  proton_engine_bridge_json_limited_string(
-      &writer, exception_message != NULL ? exception_message : message, 4096);
-  proton_engine_bridge_json_raw(&writer, ",\"page_instance\":");
-  proton_engine_bridge_json_limited_string(&writer, page_instance, 128);
-  proton_engine_bridge_json_raw(&writer, ",\"url\":");
-  proton_engine_bridge_json_limited_string(&writer, url, 4096);
-  proton_engine_bridge_json_optional_string(&writer, "owner", owner, 1024);
-  const char *resolved_source_url = resource != NULL && resource[0] != '\0'
-                                        ? resource
-                                        : source_url;
-  proton_engine_bridge_json_optional_string(
-      &writer, "source_url", resolved_source_url, 4096);
-  proton_engine_bridge_json_optional_string(&writer, "source_line", source_line,
-                                            4096);
-  if (exception != NULL) {
-    char location[96];
-    snprintf(location, sizeof(location),
-             ",\"line\":%d,\"column\":%d",
-             exception->get_line_number(exception),
-             exception->get_start_column(exception));
-    proton_engine_bridge_json_raw(&writer, location);
-  }
-  writer.capacity = capacity;
-  proton_engine_bridge_json_raw(
-      &writer, writer.truncated ? ",\"details_truncated\":true}"
-                                : ",\"details_truncated\":false}");
+  proton_engine_bridge_diagnostic_input_t input = {
+      .stage = stage,
+      .code = code,
+      .message = exception_message != NULL ? exception_message : message,
+      .owner = owner,
+      .source_url = resource != NULL && resource[0] != '\0' ? resource
+                                                               : source_url,
+      .source_line = source_line,
+      .line = exception != NULL ? exception->get_line_number(exception) : 0,
+      .column = exception != NULL ? exception->get_start_column(exception) : 0,
+      .has_line = exception != NULL,
+      .has_column = exception != NULL,
+  };
+  int recorded = proton_engine_bridge_diagnostic_set(diagnostic, &input);
   free(exception_message);
   free(source_line);
   free(resource);
-  return json;
+  return recorded;
 }
 
 static void proton_engine_bridge_record_lifecycle(
     cef_frame_t *frame, const char *outcome, const char *page_instance,
-    const char *url, const char *diagnostic_json) {
+    const char *url, const proton_engine_bridge_diagnostic_t *diagnostic) {
   cef_browser_t *browser = frame->get_browser(frame);
   proton_engine_bridge_browser_config_t *config =
       proton_engine_bridge_find_browser_config(browser);
@@ -336,25 +203,27 @@ static void proton_engine_bridge_record_lifecycle(
     char *next_outcome = proton_engine_bridge_strdup(outcome);
     char *next_page_instance = proton_engine_bridge_strdup(page_instance);
     char *next_url = proton_engine_bridge_strdup(url);
-    char *next_diagnostic = diagnostic_json != NULL
-                                ? proton_engine_bridge_strdup(diagnostic_json)
-                                : NULL;
+    proton_engine_bridge_diagnostic_t next_diagnostic;
+    proton_engine_bridge_diagnostic_init(&next_diagnostic);
+    int copied_diagnostic =
+        diagnostic == NULL ||
+        proton_engine_bridge_diagnostic_copy(&next_diagnostic, diagnostic);
     if (next_outcome != NULL && next_page_instance != NULL &&
-        next_url != NULL &&
-        (diagnostic_json == NULL || next_diagnostic != NULL)) {
+        next_url != NULL && copied_diagnostic) {
       free(config->lifecycle_outcome);
       free(config->lifecycle_page_instance);
       free(config->lifecycle_url);
-      free(config->lifecycle_diagnostic_json);
+      proton_engine_bridge_diagnostic_dispose(&config->lifecycle_diagnostic);
       config->lifecycle_outcome = next_outcome;
       config->lifecycle_page_instance = next_page_instance;
       config->lifecycle_url = next_url;
-      config->lifecycle_diagnostic_json = next_diagnostic;
+      config->lifecycle_diagnostic = next_diagnostic;
+      config->has_lifecycle_diagnostic = diagnostic != NULL;
     } else {
       free(next_outcome);
       free(next_page_instance);
       free(next_url);
-      free(next_diagnostic);
+      proton_engine_bridge_diagnostic_dispose(&next_diagnostic);
     }
   }
   if (browser != NULL) {
@@ -364,7 +233,7 @@ static void proton_engine_bridge_record_lifecycle(
 
 static void proton_engine_bridge_send_lifecycle(
     cef_frame_t *frame, const char *outcome, const char *page_instance,
-    const char *url, const char *diagnostic_json) {
+    const char *url, const proton_engine_bridge_diagnostic_t *diagnostic) {
   if (frame == NULL || outcome == NULL || page_instance == NULL || url == NULL) {
     return;
   }
@@ -375,19 +244,45 @@ static void proton_engine_bridge_send_lifecycle(
   cef_string_clear(&message_name);
   if (message == NULL) {
     proton_engine_bridge_record_lifecycle(frame, outcome, page_instance, url,
-                                          diagnostic_json);
+                                          diagnostic);
     return;
   }
   cef_list_value_t *args = message->get_argument_list(message);
-  int populated = args != NULL && args->set_size(args, 4);
-  const char *values[] = {outcome, page_instance, url,
-                          diagnostic_json != NULL ? diagnostic_json : ""};
-  for (size_t index = 0; populated && index < 4; index++) {
+  int populated = args != NULL && args->set_size(args, 14);
+  const char *values[] = {
+      outcome,
+      page_instance,
+      url,
+      diagnostic != NULL ? diagnostic->stage : "",
+      diagnostic != NULL ? diagnostic->code : "",
+      diagnostic != NULL ? diagnostic->message : "",
+      diagnostic != NULL ? diagnostic->owner : "",
+      diagnostic != NULL ? diagnostic->source_url : "",
+      diagnostic != NULL ? diagnostic->source_line : "",
+      diagnostic != NULL ? diagnostic->stack : "",
+  };
+  for (size_t index = 0; populated && index < 3; index++) {
     cef_string_t value = {0};
     proton_engine_bridge_set_string(&value, values[index]);
     populated = args->set_string(args, index, &value);
     cef_string_clear(&value);
   }
+  populated = populated && args->set_bool(args, 3, diagnostic != NULL);
+  for (size_t index = 3; populated && index < 10; index++) {
+    cef_string_t value = {0};
+    proton_engine_bridge_set_string(&value, values[index]);
+    populated = args->set_string(args, index + 1, &value);
+    cef_string_clear(&value);
+  }
+  populated = populated && args->set_int(args, 11, diagnostic != NULL && diagnostic->has_line
+                                                       ? diagnostic->line
+                                                       : 0);
+  populated = populated && args->set_int(args, 12, diagnostic != NULL && diagnostic->has_column
+                                                       ? diagnostic->column
+                                                       : 0);
+  populated = populated && args->set_bool(
+                             args, 13,
+                             diagnostic != NULL && diagnostic->details_truncated);
   if (args != NULL) {
     args->base.release((cef_base_ref_counted_t *)args);
   }
@@ -397,18 +292,21 @@ static void proton_engine_bridge_send_lifecycle(
     message->base.release((cef_base_ref_counted_t *)message);
   }
   proton_engine_bridge_record_lifecycle(frame, outcome, page_instance, url,
-                                        diagnostic_json);
+                                        diagnostic);
 }
 
-typedef struct {
-  const proton_json_doc_t *doc;
-  cef_v8_context_t *context;
-  cef_frame_t *frame;
-  const char *page_instance;
-  const char *url;
-  size_t index;
-  int failed;
-} proton_engine_bridge_initialization_t;
+static void proton_engine_bridge_send_failure(
+    cef_frame_t *frame, const char *page_instance, const char *url,
+    const char *stage, const char *code, const char *message,
+    const char *owner, const char *source_url, cef_v8_exception_t *exception) {
+  proton_engine_bridge_diagnostic_t diagnostic;
+  proton_engine_bridge_diagnostic_init(&diagnostic);
+  int recorded = proton_engine_bridge_diagnostic_from_exception(
+      &diagnostic, stage, code, message, owner, source_url, exception);
+  proton_engine_bridge_send_lifecycle(
+      frame, "failed", page_instance, url, recorded ? &diagnostic : NULL);
+  proton_engine_bridge_diagnostic_dispose(&diagnostic);
+}
 
 static void proton_engine_bridge_source_component(char *out, size_t out_len,
                                                   const char *value) {
@@ -429,33 +327,18 @@ static void proton_engine_bridge_source_component(char *out, size_t out_len,
   out[offset] = '\0';
 }
 
-static bool proton_engine_bridge_initialize_unit(proton_json_value_t value,
-                                                 void *user_data) {
-  proton_engine_bridge_initialization_t *initialization =
-      (proton_engine_bridge_initialization_t *)user_data;
-  proton_json_value_t owner_value;
-  proton_json_value_t name_value;
-  proton_json_value_t source_value;
-  char *owner = NULL;
-  char *name = NULL;
-  char *source = NULL;
-  const proton_json_doc_t *doc = initialization->doc;
-  if (!proton_json_is_object(doc, value) ||
-      !proton_json_object_get(doc, value, "owner", &owner_value) ||
-      !proton_json_object_get(doc, value, "name", &name_value) ||
-      !proton_json_object_get(doc, value, "source", &source_value)) {
-    initialization->failed = 1;
-    return false;
-  }
-  owner = proton_json_copy_string(doc, owner_value);
-  name = proton_json_copy_string(doc, name_value);
-  source = proton_json_copy_string(doc, source_value);
+static int proton_engine_bridge_initialize_unit(
+    cef_dictionary_value_t *unit, cef_v8_context_t *context,
+    cef_frame_t *frame, const char *page_instance, const char *url,
+    size_t index) {
+  char *owner = proton_engine_bridge_dictionary_string(unit, "owner");
+  char *name = proton_engine_bridge_dictionary_string(unit, "name");
+  char *source = proton_engine_bridge_dictionary_string(unit, "source");
   if (owner == NULL || name == NULL || source == NULL) {
     free(owner);
     free(name);
     free(source);
-    initialization->failed = 1;
-    return false;
+    return 0;
   }
   char owner_component[96];
   char name_component[96];
@@ -466,30 +349,25 @@ static bool proton_engine_bridge_initialize_unit(proton_json_value_t value,
   char source_url[256];
   snprintf(source_url, sizeof(source_url),
            "proton://bridge/initialization/%zu/%s/%s.js",
-           initialization->index++, owner_component, name_component);
+           index, owner_component, name_component);
   cef_string_t code = {0};
   cef_string_t script_url = {0};
   proton_engine_bridge_set_string(&code, source);
   proton_engine_bridge_set_string(&script_url, source_url);
   cef_v8_value_t *result = NULL;
   cef_v8_exception_t *exception = NULL;
-  int evaluated = initialization->context->eval(
-      initialization->context, &code, &script_url, 1, &result, &exception);
+  int evaluated = context->eval(context, &code, &script_url, 1, &result,
+                                &exception);
   cef_string_clear(&code);
   cef_string_clear(&script_url);
   if (result != NULL) {
     result->base.release((cef_base_ref_counted_t *)result);
   }
   if (!evaluated || exception != NULL) {
-    char *diagnostic = proton_engine_bridge_diagnostic_json(
-        "initialization", "bridge_initialization_failed",
-        "bridge initialization failed", initialization->page_instance,
-        initialization->url, owner, source_url, exception);
-    proton_engine_bridge_send_lifecycle(
-        initialization->frame, "failed", initialization->page_instance,
-        initialization->url, diagnostic);
-    free(diagnostic);
-    initialization->failed = 1;
+    proton_engine_bridge_send_failure(
+        frame, page_instance, url, "initialization",
+        "bridge_initialization_failed", "bridge initialization failed", owner,
+        source_url, exception);
   }
   if (exception != NULL) {
     exception->base.release((cef_base_ref_counted_t *)exception);
@@ -497,36 +375,39 @@ static bool proton_engine_bridge_initialize_unit(proton_json_value_t value,
   free(owner);
   free(name);
   free(source);
-  return initialization->failed == 0;
+  return evaluated && exception == NULL;
 }
 
 static int proton_engine_bridge_initialize_units(
-    const char *grant_json, cef_v8_context_t *context, cef_frame_t *frame,
+    cef_dictionary_value_t *grant, cef_v8_context_t *context,
+    cef_frame_t *frame,
     const char *page_instance, const char *url) {
-  if (grant_json == NULL) {
+  if (grant == NULL) {
     return 0;
   }
-  proton_json_doc_t doc;
-  proton_json_value_t root;
-  proton_json_value_t units;
-  if (!proton_json_parse(&doc, grant_json)) {
+  cef_string_t units_key = {0};
+  proton_engine_bridge_set_string(&units_key, "initialization_units");
+  cef_list_value_t *units = grant->get_list(grant, &units_key);
+  cef_string_clear(&units_key);
+  if (units == NULL) {
     return 0;
   }
   int initialized = 1;
-  if (proton_json_root_object(&doc, &root) &&
-      proton_json_object_get(&doc, root, "initialization_units", &units)) {
-    if (!proton_json_is_array(&doc, units)) {
+  size_t count = units->get_size(units);
+  for (size_t index = 0; index < count; index++) {
+    cef_dictionary_value_t *unit = units->get_dictionary(units, index);
+    if (!proton_engine_bridge_initialize_unit(unit, context, frame,
+                                              page_instance, url, index)) {
       initialized = 0;
-    } else {
-      proton_engine_bridge_initialization_t initialization = {
-          &doc, context, frame, page_instance, url, 0, 0};
-      proton_json_array_each(&doc, units,
-                             proton_engine_bridge_initialize_unit,
-                             &initialization);
-      initialized = !initialization.failed;
+    }
+    if (unit != NULL) {
+      unit->base.release((cef_base_ref_counted_t *)unit);
+    }
+    if (!initialized) {
+      break;
     }
   }
-  proton_json_dispose(&doc);
+  units->base.release((cef_base_ref_counted_t *)units);
   return initialized;
 }
 
@@ -665,31 +546,272 @@ static proton_engine_bridge_context_t *proton_engine_bridge_find_context(
   return NULL;
 }
 
-cef_value_t *proton_engine_bridge_renderer_extra_info_value(
-    const char *bridge_config_json) {
-  static const char prefix[] = "{\"bridge\":";
-  static const char suffix[] = "}";
-  if (bridge_config_json == NULL) {
+static int proton_engine_bridge_dictionary_set_string(
+    cef_dictionary_value_t *dictionary, const char *key, const char *value) {
+  if (dictionary == NULL || key == NULL || value == NULL) {
+    return 0;
+  }
+  cef_string_t key_string = {0};
+  cef_string_t value_string = {0};
+  proton_engine_bridge_set_string(&key_string, key);
+  proton_engine_bridge_set_string(&value_string, value);
+  int set = dictionary->set_string(dictionary, &key_string, &value_string);
+  cef_string_clear(&key_string);
+  cef_string_clear(&value_string);
+  return set;
+}
+
+static int proton_engine_bridge_dictionary_set_dictionary(
+    cef_dictionary_value_t *dictionary, const char *key,
+    cef_dictionary_value_t *value) {
+  if (dictionary == NULL || key == NULL || value == NULL) {
+    return 0;
+  }
+  cef_string_t key_string = {0};
+  proton_engine_bridge_set_string(&key_string, key);
+  int set = dictionary->set_dictionary(dictionary, &key_string, value);
+  cef_string_clear(&key_string);
+  return set;
+}
+
+static int proton_engine_bridge_dictionary_set_list(cef_dictionary_value_t *dictionary,
+                                                     const char *key,
+                                                     cef_list_value_t *value) {
+  if (dictionary == NULL || key == NULL || value == NULL) {
+    return 0;
+  }
+  cef_string_t key_string = {0};
+  proton_engine_bridge_set_string(&key_string, key);
+  int set = dictionary->set_list(dictionary, &key_string, value);
+  cef_string_clear(&key_string);
+  return set;
+}
+
+static cef_list_value_t *proton_engine_bridge_config_ops(
+    const proton_bridge_config_t *config, size_t grant_index) {
+  size_t count = proton_bridge_config_grant_op_count(config, grant_index);
+  cef_list_value_t *ops = cef_list_value_create();
+  if (ops == NULL || !ops->set_size(ops, count)) {
+    if (ops != NULL) {
+      ops->base.release((cef_base_ref_counted_t *)ops);
+    }
     return NULL;
   }
-  size_t config_len = strlen(bridge_config_json);
-  size_t json_len = sizeof(prefix) - 1 + config_len + sizeof(suffix) - 1;
-  if (json_len < config_len) {
+  for (size_t index = 0; index < count; index++) {
+    const char *name = proton_bridge_config_grant_op(config, grant_index, index);
+    cef_dictionary_value_t *op = cef_dictionary_value_create();
+    if (op == NULL || name == NULL ||
+        !proton_engine_bridge_dictionary_set_string(op, "name", name) ||
+        !ops->set_dictionary(ops, index, op)) {
+      if (op != NULL) {
+        op->base.release((cef_base_ref_counted_t *)op);
+      }
+      ops->base.release((cef_base_ref_counted_t *)ops);
+      return NULL;
+    }
+  }
+  return ops;
+}
+
+static cef_list_value_t *proton_engine_bridge_config_extensions(
+    const proton_bridge_config_t *config, size_t grant_index) {
+  size_t count = proton_bridge_config_grant_extension_count(config, grant_index);
+  cef_list_value_t *extensions = cef_list_value_create();
+  if (extensions == NULL || !extensions->set_size(extensions, count)) {
+    if (extensions != NULL) {
+      extensions->base.release((cef_base_ref_counted_t *)extensions);
+    }
     return NULL;
   }
-  char *json = (char *)malloc(json_len + 1);
-  if (json == NULL) {
+  for (size_t index = 0; index < count; index++) {
+    const char *name = proton_bridge_config_grant_extension_namespace(
+        config, grant_index, index);
+    size_t api_count = proton_bridge_config_grant_extension_api_count(
+        config, grant_index, index);
+    cef_dictionary_value_t *extension = cef_dictionary_value_create();
+    cef_list_value_t *apis = cef_list_value_create();
+    if (extension == NULL || apis == NULL || name == NULL ||
+        !apis->set_size(apis, api_count) ||
+        !proton_engine_bridge_dictionary_set_string(extension, "namespace",
+                                                     name)) {
+      if (extension != NULL) {
+        extension->base.release((cef_base_ref_counted_t *)extension);
+      }
+      if (apis != NULL) {
+        apis->base.release((cef_base_ref_counted_t *)apis);
+      }
+      extensions->base.release((cef_base_ref_counted_t *)extensions);
+      return NULL;
+    }
+    for (size_t api_index = 0; api_index < api_count; api_index++) {
+      const char *api = proton_bridge_config_grant_extension_api(
+          config, grant_index, index, api_index);
+      cef_string_t api_string = {0};
+      proton_engine_bridge_set_string(&api_string, api);
+      int set = api != NULL && apis->set_string(apis, api_index, &api_string);
+      cef_string_clear(&api_string);
+      if (!set) {
+        extension->base.release((cef_base_ref_counted_t *)extension);
+        apis->base.release((cef_base_ref_counted_t *)apis);
+        extensions->base.release((cef_base_ref_counted_t *)extensions);
+        return NULL;
+      }
+    }
+    if (!proton_engine_bridge_dictionary_set_list(extension, "apis", apis)) {
+      extension->base.release((cef_base_ref_counted_t *)extension);
+      apis->base.release((cef_base_ref_counted_t *)apis);
+      extensions->base.release((cef_base_ref_counted_t *)extensions);
+      return NULL;
+    }
+    apis = NULL;
+    if (!extensions->set_dictionary(extensions, index, extension)) {
+      extension->base.release((cef_base_ref_counted_t *)extension);
+      extensions->base.release((cef_base_ref_counted_t *)extensions);
+      return NULL;
+    }
+  }
+  return extensions;
+}
+
+static cef_list_value_t *proton_engine_bridge_config_initialization_units(
+    const proton_bridge_config_t *config, size_t grant_index) {
+  size_t count = proton_bridge_config_grant_initialization_unit_count(
+      config, grant_index);
+  cef_list_value_t *units = cef_list_value_create();
+  if (units == NULL || !units->set_size(units, count)) {
+    if (units != NULL) {
+      units->base.release((cef_base_ref_counted_t *)units);
+    }
     return NULL;
   }
-  memcpy(json, prefix, sizeof(prefix) - 1);
-  memcpy(json + sizeof(prefix) - 1, bridge_config_json, config_len);
-  memcpy(json + sizeof(prefix) - 1 + config_len, suffix, sizeof(suffix));
-  cef_string_t json_string = {0};
-  (void)cef_string_utf8_to_utf16(json, json_len, &json_string);
-  free(json);
-  cef_value_t *value = cef_parse_json(&json_string, JSON_PARSER_RFC);
-  cef_string_clear(&json_string);
-  return value;
+  for (size_t index = 0; index < count; index++) {
+    const char *owner = proton_bridge_config_grant_initialization_owner(
+        config, grant_index, index);
+    const char *name = proton_bridge_config_grant_initialization_name(
+        config, grant_index, index);
+    const char *source = proton_bridge_config_grant_initialization_source(
+        config, grant_index, index);
+    cef_dictionary_value_t *unit = cef_dictionary_value_create();
+    if (unit == NULL || owner == NULL || name == NULL || source == NULL ||
+        !proton_engine_bridge_dictionary_set_string(unit, "owner", owner) ||
+        !proton_engine_bridge_dictionary_set_string(unit, "name", name) ||
+        !proton_engine_bridge_dictionary_set_string(unit, "source", source) ||
+        !units->set_dictionary(units, index, unit)) {
+      if (unit != NULL) {
+        unit->base.release((cef_base_ref_counted_t *)unit);
+      }
+      units->base.release((cef_base_ref_counted_t *)units);
+      return NULL;
+    }
+  }
+  return units;
+}
+
+cef_dictionary_value_t *proton_engine_bridge_renderer_extra_info(
+    const proton_bridge_config_t *config) {
+  if (config == NULL) {
+    return NULL;
+  }
+  size_t grant_count = proton_bridge_config_grant_count(config);
+  cef_dictionary_value_t *root = cef_dictionary_value_create();
+  cef_dictionary_value_t *bridge = cef_dictionary_value_create();
+  cef_list_value_t *grants = cef_list_value_create();
+  if (root == NULL || bridge == NULL || grants == NULL ||
+      !grants->set_size(grants, grant_count)) {
+    if (root != NULL) {
+      root->base.release((cef_base_ref_counted_t *)root);
+    }
+    if (bridge != NULL) {
+      bridge->base.release((cef_base_ref_counted_t *)bridge);
+    }
+    if (grants != NULL) {
+      grants->base.release((cef_base_ref_counted_t *)grants);
+    }
+    return NULL;
+  }
+  for (size_t index = 0; index < grant_count; index++) {
+    const char *source_origin =
+        proton_bridge_config_grant_source_origin(config, index);
+    cef_dictionary_value_t *grant = cef_dictionary_value_create();
+    cef_list_value_t *ops = proton_engine_bridge_config_ops(config, index);
+    cef_list_value_t *extensions =
+        proton_engine_bridge_config_extensions(config, index);
+    cef_list_value_t *units =
+        proton_engine_bridge_config_initialization_units(config, index);
+    if (grant == NULL || source_origin == NULL || ops == NULL ||
+        extensions == NULL || units == NULL ||
+        !proton_engine_bridge_dictionary_set_string(grant, "source_origin",
+                                                     source_origin)) {
+      if (grant != NULL) {
+        grant->base.release((cef_base_ref_counted_t *)grant);
+      }
+      if (ops != NULL) {
+        ops->base.release((cef_base_ref_counted_t *)ops);
+      }
+      if (extensions != NULL) {
+        extensions->base.release((cef_base_ref_counted_t *)extensions);
+      }
+      if (units != NULL) {
+        units->base.release((cef_base_ref_counted_t *)units);
+      }
+      root->base.release((cef_base_ref_counted_t *)root);
+      bridge->base.release((cef_base_ref_counted_t *)bridge);
+      grants->base.release((cef_base_ref_counted_t *)grants);
+      return NULL;
+    }
+    if (!proton_engine_bridge_dictionary_set_list(grant, "ops", ops)) {
+      grant->base.release((cef_base_ref_counted_t *)grant);
+      ops->base.release((cef_base_ref_counted_t *)ops);
+      extensions->base.release((cef_base_ref_counted_t *)extensions);
+      units->base.release((cef_base_ref_counted_t *)units);
+      root->base.release((cef_base_ref_counted_t *)root);
+      bridge->base.release((cef_base_ref_counted_t *)bridge);
+      grants->base.release((cef_base_ref_counted_t *)grants);
+      return NULL;
+    }
+    ops = NULL;
+    if (!proton_engine_bridge_dictionary_set_list(grant, "extensions",
+                                                   extensions)) {
+      grant->base.release((cef_base_ref_counted_t *)grant);
+      extensions->base.release((cef_base_ref_counted_t *)extensions);
+      units->base.release((cef_base_ref_counted_t *)units);
+      root->base.release((cef_base_ref_counted_t *)root);
+      bridge->base.release((cef_base_ref_counted_t *)bridge);
+      grants->base.release((cef_base_ref_counted_t *)grants);
+      return NULL;
+    }
+    extensions = NULL;
+    if (!proton_engine_bridge_dictionary_set_list(grant, "initialization_units",
+                                                   units)) {
+      grant->base.release((cef_base_ref_counted_t *)grant);
+      units->base.release((cef_base_ref_counted_t *)units);
+      root->base.release((cef_base_ref_counted_t *)root);
+      bridge->base.release((cef_base_ref_counted_t *)bridge);
+      grants->base.release((cef_base_ref_counted_t *)grants);
+      return NULL;
+    }
+    units = NULL;
+    if (!grants->set_dictionary(grants, index, grant)) {
+      grant->base.release((cef_base_ref_counted_t *)grant);
+      root->base.release((cef_base_ref_counted_t *)root);
+      bridge->base.release((cef_base_ref_counted_t *)bridge);
+      grants->base.release((cef_base_ref_counted_t *)grants);
+      return NULL;
+    }
+  }
+  if (!proton_engine_bridge_dictionary_set_list(bridge, "grants", grants)) {
+    root->base.release((cef_base_ref_counted_t *)root);
+    bridge->base.release((cef_base_ref_counted_t *)bridge);
+    grants->base.release((cef_base_ref_counted_t *)grants);
+    return NULL;
+  }
+  grants = NULL;
+  if (!proton_engine_bridge_dictionary_set_dictionary(root, "bridge", bridge)) {
+    root->base.release((cef_base_ref_counted_t *)root);
+    bridge->base.release((cef_base_ref_counted_t *)bridge);
+    return NULL;
+  }
+  return root;
 }
 
 int proton_engine_bridge_send_event(cef_browser_t *browser,
@@ -751,9 +873,11 @@ int proton_engine_bridge_send_lifecycle_probe(cef_frame_t *frame) {
 
 static int proton_engine_bridge_store_browser_config(
     cef_browser_t *browser,
-    char *config_json) {
-  if (browser == NULL || config_json == NULL) {
-    free(config_json);
+    cef_dictionary_value_t *config) {
+  if (browser == NULL || config == NULL) {
+    if (config != NULL) {
+      config->base.release((cef_base_ref_counted_t *)config);
+    }
     return 0;
   }
   proton_engine_bridge_browser_config_t *existing =
@@ -761,23 +885,312 @@ static int proton_engine_bridge_store_browser_config(
   if (existing != NULL) {
     /* During cross-origin navigation CEF may create a replacement browser with
        the same identifier before destroying the old renderer incarnation. */
-    free(existing->config_json);
-    existing->config_json = config_json;
+    existing->config->base.release((cef_base_ref_counted_t *)existing->config);
+    existing->config = config;
     existing->instance_count++;
     return 1;
   }
   proton_engine_bridge_browser_config_t *entry =
       (proton_engine_bridge_browser_config_t *)calloc(1, sizeof(*entry));
   if (entry == NULL) {
-    free(config_json);
+    config->base.release((cef_base_ref_counted_t *)config);
     return 0;
   }
   entry->browser_id = browser->get_identifier(browser);
   entry->instance_count = 1;
-  entry->config_json = config_json;
+  entry->config = config;
   entry->next = g_browser_configs;
   g_browser_configs = entry;
   return 1;
+}
+
+static char *proton_engine_bridge_dictionary_string(
+    cef_dictionary_value_t *dictionary, const char *key) {
+  if (dictionary == NULL || key == NULL) {
+    return NULL;
+  }
+  cef_string_t key_string = {0};
+  proton_engine_bridge_set_string(&key_string, key);
+  cef_string_userfree_t value = dictionary->get_string(dictionary, &key_string);
+  cef_string_clear(&key_string);
+  return proton_engine_bridge_userfree_to_utf8(value);
+}
+
+static cef_dictionary_value_t *proton_engine_bridge_renderer_find_grant(
+    cef_dictionary_value_t *config, const char *url) {
+  char *source_origin = proton_engine_bridge_source_origin(url);
+  if (config == NULL || source_origin == NULL) {
+    free(source_origin);
+    return NULL;
+  }
+  cef_string_t grants_key = {0};
+  proton_engine_bridge_set_string(&grants_key, "grants");
+  cef_list_value_t *grants = config->get_list(config, &grants_key);
+  cef_string_clear(&grants_key);
+  if (grants == NULL) {
+    free(source_origin);
+    return NULL;
+  }
+  cef_dictionary_value_t *match = NULL;
+  size_t count = grants->get_size(grants);
+  for (size_t index = 0; index < count; index++) {
+    cef_dictionary_value_t *grant = grants->get_dictionary(grants, index);
+    char *candidate = proton_engine_bridge_dictionary_string(
+        grant, "source_origin");
+    if (candidate != NULL && strcmp(candidate, source_origin) == 0) {
+      match = grant;
+      grant = NULL;
+    }
+    free(candidate);
+    if (grant != NULL) {
+      grant->base.release((cef_base_ref_counted_t *)grant);
+    }
+    if (match != NULL) {
+      break;
+    }
+  }
+  grants->base.release((cef_base_ref_counted_t *)grants);
+  free(source_origin);
+  return match;
+}
+
+static int proton_engine_bridge_renderer_config_allows_page(
+    cef_dictionary_value_t *config, const char *url) {
+  cef_dictionary_value_t *grant =
+      proton_engine_bridge_renderer_find_grant(config, url);
+  int allowed = grant != NULL;
+  if (grant != NULL) {
+    grant->base.release((cef_base_ref_counted_t *)grant);
+  }
+  return allowed;
+}
+
+static cef_v8_value_t *proton_engine_bridge_v8_string(const char *value) {
+  cef_string_t string = {0};
+  proton_engine_bridge_set_string(&string, value);
+  cef_v8_value_t *result = cef_v8_value_create_string(&string);
+  cef_string_clear(&string);
+  return result;
+}
+
+static int proton_engine_bridge_v8_set_key(cef_v8_value_t *object,
+                                           const char *key,
+                                           cef_v8_value_t *value) {
+  if (object == NULL || key == NULL || value == NULL) {
+    return 0;
+  }
+  cef_string_t key_string = {0};
+  proton_engine_bridge_set_string(&key_string, key);
+  int set = object->set_value_bykey(object, &key_string, value,
+                                    V8_PROPERTY_ATTRIBUTE_NONE);
+  cef_string_clear(&key_string);
+  if (!set) {
+    value->base.release((cef_base_ref_counted_t *)value);
+  }
+  return set;
+}
+
+static int proton_engine_bridge_v8_set_index(cef_v8_value_t *array, int index,
+                                             cef_v8_value_t *value) {
+  if (array == NULL || value == NULL) {
+    return 0;
+  }
+  int set = array->set_value_byindex(array, index, value);
+  if (!set) {
+    value->base.release((cef_base_ref_counted_t *)value);
+  }
+  return set;
+}
+
+static cef_v8_value_t *proton_engine_bridge_v8_string_list(
+    cef_list_value_t *values) {
+  if (values == NULL || values->get_size(values) > INT32_MAX) {
+    return NULL;
+  }
+  size_t count = values->get_size(values);
+  cef_v8_value_t *array = cef_v8_value_create_array((int)count);
+  if (array == NULL) {
+    return NULL;
+  }
+  for (size_t index = 0; index < count; index++) {
+    char *item = proton_engine_bridge_userfree_to_utf8(
+        values->get_string(values, index));
+    cef_v8_value_t *value = proton_engine_bridge_v8_string(item);
+    free(item);
+    if (value == NULL ||
+        !proton_engine_bridge_v8_set_index(array, (int)index, value)) {
+      array->base.release((cef_base_ref_counted_t *)array);
+      return NULL;
+    }
+  }
+  return array;
+}
+
+static cef_v8_value_t *proton_engine_bridge_v8_unit(
+    cef_dictionary_value_t *unit) {
+  static const char *const keys[] = {"owner", "name", "source"};
+  cef_v8_value_t *result = cef_v8_value_create_object(NULL, NULL);
+  if (result == NULL) {
+    return NULL;
+  }
+  for (size_t index = 0; index < sizeof(keys) / sizeof(keys[0]); index++) {
+    char *text = proton_engine_bridge_dictionary_string(unit, keys[index]);
+    cef_v8_value_t *value = proton_engine_bridge_v8_string(text);
+    free(text);
+    if (value == NULL ||
+        !proton_engine_bridge_v8_set_key(result, keys[index], value)) {
+      result->base.release((cef_base_ref_counted_t *)result);
+      return NULL;
+    }
+  }
+  return result;
+}
+
+static cef_v8_value_t *proton_engine_bridge_v8_units(cef_list_value_t *units) {
+  if (units == NULL || units->get_size(units) > INT32_MAX) {
+    return NULL;
+  }
+  size_t count = units->get_size(units);
+  cef_v8_value_t *array = cef_v8_value_create_array((int)count);
+  if (array == NULL) {
+    return NULL;
+  }
+  for (size_t index = 0; index < count; index++) {
+    cef_dictionary_value_t *unit = units->get_dictionary(units, index);
+    cef_v8_value_t *value = proton_engine_bridge_v8_unit(unit);
+    if (unit != NULL) {
+      unit->base.release((cef_base_ref_counted_t *)unit);
+    }
+    if (value == NULL ||
+        !proton_engine_bridge_v8_set_index(array, (int)index, value)) {
+      array->base.release((cef_base_ref_counted_t *)array);
+      return NULL;
+    }
+  }
+  return array;
+}
+
+static cef_v8_value_t *proton_engine_bridge_v8_ops(cef_list_value_t *ops) {
+  if (ops == NULL || ops->get_size(ops) > INT32_MAX) {
+    return NULL;
+  }
+  size_t count = ops->get_size(ops);
+  cef_v8_value_t *array = cef_v8_value_create_array((int)count);
+  if (array == NULL) {
+    return NULL;
+  }
+  for (size_t index = 0; index < count; index++) {
+    cef_dictionary_value_t *op = ops->get_dictionary(ops, index);
+    char *name = proton_engine_bridge_dictionary_string(op, "name");
+    cef_v8_value_t *object = cef_v8_value_create_object(NULL, NULL);
+    cef_v8_value_t *value = proton_engine_bridge_v8_string(name);
+    free(name);
+    if (op != NULL) {
+      op->base.release((cef_base_ref_counted_t *)op);
+    }
+    if (object == NULL || value == NULL ||
+        !proton_engine_bridge_v8_set_key(object, "name", value) ||
+        !proton_engine_bridge_v8_set_index(array, (int)index, object)) {
+      if (object != NULL) {
+        object->base.release((cef_base_ref_counted_t *)object);
+      }
+      array->base.release((cef_base_ref_counted_t *)array);
+      return NULL;
+    }
+  }
+  return array;
+}
+
+static cef_v8_value_t *proton_engine_bridge_v8_extensions(
+    cef_list_value_t *extensions) {
+  if (extensions == NULL || extensions->get_size(extensions) > INT32_MAX) {
+    return NULL;
+  }
+  size_t count = extensions->get_size(extensions);
+  cef_v8_value_t *array = cef_v8_value_create_array((int)count);
+  if (array == NULL) {
+    return NULL;
+  }
+  for (size_t index = 0; index < count; index++) {
+    cef_dictionary_value_t *extension =
+        extensions->get_dictionary(extensions, index);
+    char *name = proton_engine_bridge_dictionary_string(extension, "namespace");
+    cef_string_t apis_key = {0};
+    proton_engine_bridge_set_string(&apis_key, "apis");
+    cef_list_value_t *apis = extension != NULL
+                                 ? extension->get_list(extension, &apis_key)
+                                 : NULL;
+    cef_string_clear(&apis_key);
+    cef_v8_value_t *object = cef_v8_value_create_object(NULL, NULL);
+    cef_v8_value_t *name_value = proton_engine_bridge_v8_string(name);
+    cef_v8_value_t *apis_value = proton_engine_bridge_v8_string_list(apis);
+    free(name);
+    if (apis != NULL) {
+      apis->base.release((cef_base_ref_counted_t *)apis);
+    }
+    if (extension != NULL) {
+      extension->base.release((cef_base_ref_counted_t *)extension);
+    }
+    if (object == NULL || name_value == NULL || apis_value == NULL ||
+        !proton_engine_bridge_v8_set_key(object, "namespace", name_value) ||
+        !proton_engine_bridge_v8_set_key(object, "apis", apis_value) ||
+        !proton_engine_bridge_v8_set_index(array, (int)index, object)) {
+      if (object != NULL) {
+        object->base.release((cef_base_ref_counted_t *)object);
+      }
+      array->base.release((cef_base_ref_counted_t *)array);
+      return NULL;
+    }
+  }
+  return array;
+}
+
+static cef_v8_value_t *proton_engine_bridge_v8_grant(
+    cef_dictionary_value_t *grant) {
+  cef_v8_value_t *result = cef_v8_value_create_object(NULL, NULL);
+  char *source_origin = proton_engine_bridge_dictionary_string(
+      grant, "source_origin");
+  cef_string_t ops_key = {0};
+  cef_string_t extensions_key = {0};
+  cef_string_t units_key = {0};
+  proton_engine_bridge_set_string(&ops_key, "ops");
+  proton_engine_bridge_set_string(&extensions_key, "extensions");
+  proton_engine_bridge_set_string(&units_key, "initialization_units");
+  cef_list_value_t *ops = grant != NULL ? grant->get_list(grant, &ops_key) : NULL;
+  cef_list_value_t *extensions =
+      grant != NULL ? grant->get_list(grant, &extensions_key) : NULL;
+  cef_list_value_t *units =
+      grant != NULL ? grant->get_list(grant, &units_key) : NULL;
+  cef_string_clear(&ops_key);
+  cef_string_clear(&extensions_key);
+  cef_string_clear(&units_key);
+  cef_v8_value_t *origin_value = proton_engine_bridge_v8_string(source_origin);
+  cef_v8_value_t *ops_value = proton_engine_bridge_v8_ops(ops);
+  cef_v8_value_t *extensions_value = proton_engine_bridge_v8_extensions(extensions);
+  cef_v8_value_t *units_value = proton_engine_bridge_v8_units(units);
+  free(source_origin);
+  if (ops != NULL) {
+    ops->base.release((cef_base_ref_counted_t *)ops);
+  }
+  if (extensions != NULL) {
+    extensions->base.release((cef_base_ref_counted_t *)extensions);
+  }
+  if (units != NULL) {
+    units->base.release((cef_base_ref_counted_t *)units);
+  }
+  if (result == NULL || origin_value == NULL || ops_value == NULL ||
+      extensions_value == NULL || units_value == NULL ||
+      !proton_engine_bridge_v8_set_key(result, "source_origin", origin_value) ||
+      !proton_engine_bridge_v8_set_key(result, "ops", ops_value) ||
+      !proton_engine_bridge_v8_set_key(result, "extensions", extensions_value) ||
+      !proton_engine_bridge_v8_set_key(result, "initialization_units",
+                                        units_value)) {
+    if (result != NULL) {
+      result->base.release((cef_base_ref_counted_t *)result);
+    }
+    return NULL;
+  }
+  return result;
 }
 
 void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_created(
@@ -790,15 +1203,14 @@ void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_created(
   }
   cef_string_t key = {0};
   proton_engine_bridge_set_string(&key, "bridge");
-  cef_value_t *bridge_value = extra_info->get_value(extra_info, &key);
+  cef_dictionary_value_t *bridge = extra_info->get_dictionary(extra_info, &key);
   cef_string_clear(&key);
-  if (bridge_value == NULL) {
+  if (bridge == NULL) {
     return;
   }
-  cef_string_userfree_t config =
-      cef_write_json(bridge_value, JSON_WRITER_DEFAULT);
-  char *config_json = proton_engine_bridge_userfree_to_utf8(config);
-  (void)proton_engine_bridge_store_browser_config(browser, config_json);
+  cef_dictionary_value_t *config = bridge->copy(bridge, 0);
+  bridge->base.release((cef_base_ref_counted_t *)bridge);
+  (void)proton_engine_bridge_store_browser_config(browser, config);
 }
 
 void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_destroyed(
@@ -815,11 +1227,11 @@ void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_destroyed(
         return;
       }
       *config_cursor = entry->next;
-      free(entry->config_json);
+      entry->config->base.release((cef_base_ref_counted_t *)entry->config);
       free(entry->lifecycle_outcome);
       free(entry->lifecycle_page_instance);
       free(entry->lifecycle_url);
-      free(entry->lifecycle_diagnostic_json);
+      proton_engine_bridge_diagnostic_dispose(&entry->lifecycle_diagnostic);
       free(entry);
       break;
     }
@@ -850,7 +1262,7 @@ void proton_engine_bridge_renderer_on_context_created(
   }
   proton_engine_bridge_browser_config_t *browser_config =
       proton_engine_bridge_find_browser_config(browser);
-  if (browser_config == NULL || browser_config->config_json == NULL) {
+  if (browser_config == NULL || browser_config->config == NULL) {
     return;
   }
 
@@ -863,9 +1275,9 @@ void proton_engine_bridge_renderer_on_context_created(
   }
   proton_engine_bridge_send_lifecycle(frame, "pending", page_instance, url,
                                       NULL);
-  char *grant_json = proton_engine_bridge_config_copy_grant(
-      browser_config->config_json, url);
-  if (grant_json == NULL) {
+  cef_dictionary_value_t *grant = proton_engine_bridge_renderer_find_grant(
+      browser_config->config, url);
+  if (grant == NULL) {
     proton_engine_bridge_send_lifecycle(frame, "ineligible", page_instance,
                                         url, NULL);
     free(url);
@@ -873,16 +1285,12 @@ void proton_engine_bridge_renderer_on_context_created(
     return;
   }
   if (!context->enter(context)) {
-    char *diagnostic = proton_engine_bridge_diagnostic_json(
-        "prepare", "bridge_context_enter_failed",
-        "failed to enter the main frame JavaScript context", page_instance,
-        url, NULL, NULL, NULL);
-    proton_engine_bridge_send_lifecycle(frame, "failed", page_instance, url,
-                                        diagnostic);
-    free(diagnostic);
+    proton_engine_bridge_send_failure(
+        frame, page_instance, url, "prepare", "bridge_context_enter_failed",
+        "failed to enter the main frame JavaScript context", NULL, NULL, NULL);
     free(url);
     free(page_instance);
-    free(grant_json);
+    grant->base.release((cef_base_ref_counted_t *)grant);
     return;
   }
 
@@ -896,83 +1304,55 @@ void proton_engine_bridge_renderer_on_context_created(
   cef_string_clear(&native_name);
 
   cef_v8_value_t *global = context->get_global(context);
-  cef_string_t native_key = {0};
-  proton_engine_bridge_set_string(&native_key,
-                                  PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION);
-  int native_installed =
-      global != NULL && native_invoke != NULL &&
-      global->set_value_bykey(global, &native_key, native_invoke,
-                              V8_PROPERTY_ATTRIBUTE_DONTENUM);
-  if (native_installed) {
-    native_invoke = NULL;
-  }
-
-  static const char invocation_separator[] =
-      "(globalThis." PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION ",";
-  static const char invocation_page_separator[] = ",\"";
-  static const char invocation_suffix[] = "\")";
-  size_t grant_len = strlen(grant_json);
-  size_t page_instance_len = strlen(page_instance);
-  size_t invocation_len = proton_engine_bridge_bootstrap_source_len +
-                          sizeof(invocation_separator) - 1 + grant_len +
-                          sizeof(invocation_page_separator) - 1 +
-                          page_instance_len + sizeof(invocation_suffix) - 1;
-  char *invocation = NULL;
-  if (native_installed && invocation_len >= grant_len) {
-    invocation = (char *)malloc(invocation_len + 1);
-  }
-  if (invocation != NULL) {
-    size_t offset = 0;
-    memcpy(invocation + offset, proton_engine_bridge_bootstrap_source,
-           proton_engine_bridge_bootstrap_source_len);
-    offset += proton_engine_bridge_bootstrap_source_len;
-    memcpy(invocation + offset, invocation_separator,
-           sizeof(invocation_separator) - 1);
-    offset += sizeof(invocation_separator) - 1;
-    memcpy(invocation + offset, grant_json, grant_len);
-    offset += grant_len;
-    memcpy(invocation + offset, invocation_page_separator,
-           sizeof(invocation_page_separator) - 1);
-    offset += sizeof(invocation_page_separator) - 1;
-    memcpy(invocation + offset, page_instance, page_instance_len);
-    offset += page_instance_len;
-    memcpy(invocation + offset, invocation_suffix,
-           sizeof(invocation_suffix) - 1);
-    offset += sizeof(invocation_suffix) - 1;
-    invocation[offset] = '\0';
-  }
-
   cef_string_t source = {0};
   cef_string_t source_url = {0};
-  proton_engine_bridge_set_string(&source,
-                                  invocation != NULL ? invocation : "");
+  proton_engine_bridge_set_string(
+      &source, (const char *)proton_engine_bridge_bootstrap_source);
   proton_engine_bridge_set_string(&source_url,
                                   "proton://bridge/bootstrap.js");
-  cef_v8_value_t *dispatcher = NULL;
+  cef_v8_value_t *installer = NULL;
   cef_v8_exception_t *exception = NULL;
-  int evaluated = context->eval(context, &source, &source_url, 1, &dispatcher,
+  int evaluated = context->eval(context, &source, &source_url, 1, &installer,
                                 &exception);
   cef_string_clear(&source);
   cef_string_clear(&source_url);
-  free(invocation);
-  if (global != NULL) {
-    global->delete_value_bykey(global, &native_key);
+  cef_v8_value_t *grant_value = proton_engine_bridge_v8_grant(grant);
+  cef_v8_value_t *page_instance_value =
+      proton_engine_bridge_v8_string(page_instance);
+  cef_v8_value_t *dispatcher = NULL;
+  if (evaluated && exception == NULL && installer != NULL &&
+      installer->is_function(installer) && global != NULL &&
+      native_invoke != NULL && grant_value != NULL &&
+      page_instance_value != NULL) {
+    cef_v8_value_t *arguments[] = {native_invoke, grant_value,
+                                   page_instance_value};
+    native_invoke = NULL;
+    grant_value = NULL;
+    page_instance_value = NULL;
+    dispatcher = proton_engine_bridge_execute(installer, context, global, 3,
+                                               arguments);
   }
-  cef_string_clear(&native_key);
+  if (installer != NULL) {
+    installer->base.release((cef_base_ref_counted_t *)installer);
+  }
+  if (grant_value != NULL) {
+    grant_value->base.release((cef_base_ref_counted_t *)grant_value);
+  }
+  if (page_instance_value != NULL) {
+    page_instance_value->base.release(
+        (cef_base_ref_counted_t *)page_instance_value);
+  }
   if ((!evaluated || exception != NULL) && dispatcher != NULL) {
     dispatcher->base.release((cef_base_ref_counted_t *)dispatcher);
     dispatcher = NULL;
   }
   if (!evaluated || exception != NULL || dispatcher == NULL ||
       !dispatcher->is_object(dispatcher)) {
-    char *diagnostic = proton_engine_bridge_diagnostic_json(
-        "bootstrap", "bridge_bootstrap_failed",
+    proton_engine_bridge_send_failure(
+        frame, page_instance, url, "bootstrap", "bridge_bootstrap_failed",
         dispatcher == NULL ? "bridge bootstrap returned no dispatcher"
                            : "bridge bootstrap returned an invalid dispatcher",
-        page_instance, url, NULL, "proton://bridge/bootstrap.js", exception);
-    proton_engine_bridge_send_lifecycle(frame, "failed", page_instance, url,
-                                        diagnostic);
-    free(diagnostic);
+        NULL, "proton://bridge/bootstrap.js", exception);
   } else {
     proton_engine_bridge_context_t *entry =
         (proton_engine_bridge_context_t *)calloc(1, sizeof(*entry));
@@ -1001,19 +1381,16 @@ void proton_engine_bridge_renderer_on_context_created(
       dispatcher = NULL;
       page_instance = NULL;
       int initialized = proton_engine_bridge_initialize_units(
-          grant_json, context, frame, entry->page_instance, url);
+          grant, context, frame, entry->page_instance, url);
       if (initialized) {
         proton_engine_bridge_send_lifecycle(
             frame, "ready", entry->page_instance, url, NULL);
       }
     } else {
-      char *diagnostic = proton_engine_bridge_diagnostic_json(
-          "prepare", "bridge_context_allocation_failed",
-          "failed to allocate bridge context state", page_instance, url, NULL,
-          NULL, NULL);
-      proton_engine_bridge_send_lifecycle(frame, "failed", page_instance, url,
-                                          diagnostic);
-      free(diagnostic);
+      proton_engine_bridge_send_failure(
+          frame, page_instance, url, "prepare",
+          "bridge_context_allocation_failed",
+          "failed to allocate bridge context state", NULL, NULL, NULL);
     }
   }
   if (exception != NULL) {
@@ -1021,7 +1398,7 @@ void proton_engine_bridge_renderer_on_context_created(
   }
   free(page_instance);
   free(url);
-  free(grant_json);
+  grant->base.release((cef_base_ref_counted_t *)grant);
   if (dispatcher != NULL) {
     dispatcher->base.release((cef_base_ref_counted_t *)dispatcher);
   }
@@ -1151,7 +1528,7 @@ static int proton_engine_bridge_handle_lifecycle_probe(
     cef_browser_t *browser, cef_frame_t *frame) {
   proton_engine_bridge_browser_config_t *config =
       proton_engine_bridge_find_browser_config(browser);
-  if (config == NULL || config->config_json == NULL) {
+  if (config == NULL || config->config == NULL) {
     return 1;
   }
   char *url = proton_engine_bridge_frame_url(frame);
@@ -1166,7 +1543,8 @@ static int proton_engine_bridge_handle_lifecycle_probe(
       strcmp(config->lifecycle_outcome, "pending") != 0) {
     proton_engine_bridge_send_lifecycle(
         frame, config->lifecycle_outcome, config->lifecycle_page_instance, url,
-        config->lifecycle_diagnostic_json);
+        config->has_lifecycle_diagnostic ? &config->lifecycle_diagnostic
+                                         : NULL);
     free(url);
     return 1;
   }
@@ -1180,17 +1558,14 @@ static int proton_engine_bridge_handle_lifecycle_probe(
   }
   proton_engine_bridge_send_lifecycle(frame, "pending", page_instance, url,
                                       NULL);
-  if (!proton_engine_bridge_config_allows_page(config->config_json, url)) {
+  if (!proton_engine_bridge_renderer_config_allows_page(config->config, url)) {
     proton_engine_bridge_send_lifecycle(frame, "ineligible", page_instance,
                                         url, NULL);
   } else {
-    char *diagnostic = proton_engine_bridge_diagnostic_json(
-        "prepare", "bridge_lifecycle_missing",
+    proton_engine_bridge_send_failure(
+        frame, page_instance, url, "prepare", "bridge_lifecycle_missing",
         "main frame finished loading without a terminal bridge lifecycle outcome",
-        page_instance, url, NULL, NULL, NULL);
-    proton_engine_bridge_send_lifecycle(frame, "failed", page_instance, url,
-                                        diagnostic);
-    free(diagnostic);
+        NULL, NULL, NULL);
   }
   free(page_instance);
   free(url);

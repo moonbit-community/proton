@@ -420,7 +420,9 @@ priv struct RuntimeEventPump {
 ///|
 priv enum CookieCompletionState {
   CookieWaiting
-  CookieCompleted(Result[String, @native.NativeError])
+  CookieCompleted(
+    Result[Array[@native.NativeCookieRecord], @native.NativeError]
+  )
 }
 
 ///|
@@ -993,24 +995,6 @@ pub extend Cookie with Eq::{not_equal, equal}
 pub extend Cookie with Debug::{to_repr}
 
 ///|
-priv struct NativeCookieRecord {
-  name : String
-  value : String
-  domain : String
-  path : String
-  secure : Bool
-  http_only : Bool
-  same_site : String
-  has_expires : Bool
-  expires : Double?
-  creation : Double
-  last_access : Double
-} derive(FromJson)
-
-///|
-priv suberror CookieDecodeError {
-  CookieDecodeError(String)
-} derive(Debug)
 
 ///|
 /// Failures while resolving and validating an application's configuration.

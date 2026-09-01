@@ -37,22 +37,23 @@ pub fn runtime_info() -> RuntimeInfo raise NativeError {
 /// Platform adapters may return platform-native locale syntax. The public
 /// facade owns validation and canonicalization into `Locale` values.
 pub fn system_preferred_language_tags() -> Array[String] raise NativeError {
-  let text = require_native_text("system preferred languages", (
-    buffer,
-    buffer_len,
-    required,
-  ) => {
-    @native_ffi.proton_system_preferred_languages_json_ffi(
-      buffer, buffer_len, required,
+  let count = Ref(0)
+  check_status(@native_ffi.proton_system_preferred_language_count_ffi(count))
+  let result = []
+  for index = 0; index < count.val; index = index + 1 {
+    result.push(
+      require_native_text("system preferred language", (
+        buffer,
+        buffer_len,
+        required,
+      ) => {
+        @native_ffi.proton_system_preferred_language_at_ffi(
+          index, buffer, buffer_len, required,
+        )
+      }),
     )
-  })
-  @json.from_json(decode_native_json(text, "system preferred languages")) catch {
-    error =>
-      raise InvalidPayload(
-        context="system preferred languages",
-        message="expected string array: " + error.to_string(),
-      )
   }
+  result
 }
 
 ///|
@@ -301,17 +302,6 @@ fn decode_native_json(text : String, label : String) -> Json raise NativeError {
 }
 
 ///|
-fn decode_string_json(json : Json, label : String) -> String raise NativeError {
-  @json.from_json(json) catch {
-    error =>
-      raise InvalidPayload(
-        context=label,
-        message="expected string: " + error.to_string(),
-      )
-  }
-}
-
-///|
 /// Rejects payloads whose `abi_version` does not match the schema version
 /// this binding implements.
 fn expect_abi_version(found : Int, context : String) -> Unit raise NativeError {
@@ -324,21 +314,6 @@ fn expect_abi_version(found : Int, context : String) -> Unit raise NativeError {
 }
 
 ///|
-/// Validates an optional `abi_version` field: absent is accepted (older
-/// runtimes do not emit one), but a present field must be the number 1.
-fn decode_optional_abi_version(
-  object : Map[String, Json],
-  context : String,
-) -> Unit raise NativeError {
-  match object {
-    { "abi_version"? : None, .. } => ()
-    { "abi_version": Number(version, ..), .. } =>
-      expect_abi_version(version.to_int(), context)
-    _ => raise InvalidPayload(context~, message="expected number abi_version")
-  }
-}
-
-///|
 fn runtime_event_missing(event_type : String, field : String) -> NativeError {
   InvalidPayload(
     context="runtime event " + event_type,
@@ -347,64 +322,56 @@ fn runtime_event_missing(event_type : String, field : String) -> NativeError {
 }
 
 ///|
-fn decode_int64_json(json : Json, label : String) -> Int64 raise NativeError {
-  @json.from_json(json) catch {
-    error =>
-      raise InvalidPayload(
-        context=label,
-        message="expected int64: " + error.to_string(),
-      )
+fn decode_bridge_request(
+  request_id : Int64,
+  window : Int64,
+  items : Array[String],
+) -> BridgeRequest raise NativeError {
+  guard request_id > 0 else {
+    raise InvalidPayload(context="bridge request", message="invalid request_id")
+  }
+  guard window > 0 else {
+    raise InvalidPayload(context="bridge request", message="invalid window")
+  }
+  guard items.length() == 4 else {
+    raise InvalidPayload(
+      context="bridge request",
+      message="expected four transport fields",
+    )
+  }
+  BridgeRequest::{
+    request_id,
+    window,
+    op: items[0],
+    payload: decode_native_json(items[1], "bridge request payload"),
+    page_instance: Some(items[2]),
+    source_origin: items[3],
   }
 }
 
 ///|
-fn decode_bridge_request_json(text : String) -> BridgeRequest raise NativeError {
-  let json = decode_native_json(text, "bridge request")
-  let object = match json {
-    Object(object) => object
-    _ =>
-      raise InvalidPayload(context="bridge request", message="expected object")
+fn decode_app_activation(
+  text : String,
+  reopen_when_empty : Bool,
+) -> AppActivation raise NativeError {
+  let activation : AppActivation = @json.from_json(
+    decode_native_json(text, "app activation"),
+  ) catch {
+    error =>
+      raise InvalidPayload(context="app activation", message=error.to_string())
   }
-  decode_optional_abi_version(object, "bridge request")
-  guard object is { "request_id": request_id_json, .. } else {
-    raise InvalidPayload(context="bridge request", message="missing request_id")
-  }
-  guard object is { "window": window_json, .. } else {
-    raise InvalidPayload(context="bridge request", message="missing window")
-  }
-  guard object is { "op": op_json, .. } else {
-    raise InvalidPayload(context="bridge request", message="missing op")
-  }
-  guard object
-    is {
-      "payload"? : payload_json,
-      "page_instance"? : page_instance_json,
-      "source_origin"? : source_origin_json,
-      ..
-    }
-  let payload = payload_json.unwrap_or(Json::empty_object())
-  let page_instance = match page_instance_json {
-    Some(String(value)) => Some(value)
-    _ => None
-  }
-  let source_origin = match source_origin_json {
-    Some(value) => decode_string_json(value, "bridge request source_origin")
-    None =>
-      raise InvalidPayload(
-        context="bridge request",
-        message="missing source_origin",
-      )
-  }
-  let request_id = decode_int64_json(request_id_json, "bridge request_id")
-  let window = decode_int64_json(window_json, "bridge request window")
-  let op = decode_string_json(op_json, "bridge request op")
-  BridgeRequest::{
-    request_id,
-    window,
-    op,
-    payload,
-    page_instance,
-    source_origin,
+  expect_abi_version(activation.abi_version, "app activation")
+  let reopen = activation.reopen ||
+    (
+      reopen_when_empty &&
+      activation.urls.is_empty() &&
+      activation.files.is_empty()
+    )
+  AppActivation::{
+    abi_version: activation.abi_version,
+    urls: activation.urls,
+    files: activation.files,
+    reopen,
   }
 }
 
@@ -863,6 +830,90 @@ fn native_event_items(
 }
 
 ///|
+fn native_cookie_snapshot_string(
+  snapshot : @native_ffi.CookieSnapshotHandle,
+  index : Int,
+  field : Int,
+) -> String raise NativeError {
+  require_native_text("cookie field", (buffer, buffer_len, required) => {
+    @native_ffi.cookie_snapshot_string_field(
+      snapshot, index, field, buffer, buffer_len, required,
+    )
+  })
+}
+
+///|
+fn native_cookie_snapshot_int(
+  snapshot : @native_ffi.CookieSnapshotHandle,
+  index : Int,
+  field : Int,
+) -> Int raise NativeError {
+  let value = Ref(0)
+  check_status(
+    @native_ffi.cookie_snapshot_int_field(snapshot, index, field, value),
+  )
+  value.val
+}
+
+///|
+fn native_cookie_snapshot_expires(
+  snapshot : @native_ffi.CookieSnapshotHandle,
+  index : Int,
+) -> Int64? raise NativeError {
+  let value = Ref(0L)
+  let present = Ref(0)
+  check_status(
+    @native_ffi.cookie_snapshot_int64_field(snapshot, index, 0, value, present),
+  )
+  if present.val == 0 {
+    None
+  } else {
+    Some(value.val)
+  }
+}
+
+///|
+fn native_cookie_same_site(value : Int) -> CookieSameSite raise NativeError {
+  match value {
+    0 => CookieSameSite::Unspecified
+    1 => CookieSameSite::NoRestriction
+    2 => CookieSameSite::Lax
+    3 => CookieSameSite::Strict
+    _ =>
+      raise InvalidPayload(
+        context="cookie same_site",
+        message="native query returned an invalid value",
+      )
+  }
+}
+
+///|
+fn decode_native_cookie_snapshot(
+  event : @native_ffi.EventHandle,
+) -> Array[NativeCookieRecord] raise NativeError {
+  let snapshot = @native_ffi.event_take_cookie_snapshot(event)
+  defer @native_ffi.cookie_snapshot_destroy(snapshot)
+  let count = Ref(0)
+  check_status(@native_ffi.cookie_snapshot_count(snapshot, count))
+  let records = []
+  for index = 0; index < count.val; index = index + 1 {
+    records.push(NativeCookieRecord::{
+      name: native_cookie_snapshot_string(snapshot, index, 0),
+      value: native_cookie_snapshot_string(snapshot, index, 1),
+      domain: native_cookie_snapshot_string(snapshot, index, 2),
+      path: native_cookie_snapshot_string(snapshot, index, 3),
+      secure: native_cookie_snapshot_int(snapshot, index, 0) != 0,
+      http_only: native_cookie_snapshot_int(snapshot, index, 1) != 0,
+      same_site: native_cookie_same_site(
+        native_cookie_snapshot_int(snapshot, index, 2),
+      ),
+      expires: native_cookie_snapshot_expires(snapshot, index),
+    })
+  }
+  records
+}
+
+///|
 fn window_state_from_fields(field : (Int) -> Int) -> WindowState {
   let theme = match field(20) {
     1 => "light"
@@ -929,6 +980,13 @@ fn decode_native_runtime_event(
     8 => LaunchInput(OpenUrls(native_event_items(event)))
     9 => LaunchInput(OpenFiles(native_event_items(event)))
     10 => LaunchInput(Reopen)
+    37 =>
+      AppActivationReceived(
+        decode_app_activation(
+          require_native_event_text(event, 0, "app activation"),
+          @native_ffi.event_int(event, 3) != 0,
+        ),
+      )
     11 =>
       NotificationResult(
         if @native_ffi.event_int(event, 3) != 0 {
@@ -1028,8 +1086,10 @@ fn decode_native_runtime_event(
       )
     22 =>
       BridgeRequestReceived(
-        decode_bridge_request_json(
-          require_native_event_text(event, 0, "bridge request"),
+        decode_bridge_request(
+          @native_ffi.event_int64(event, 2),
+          window,
+          native_event_items(event),
         ),
       )
     23 => {
@@ -1059,7 +1119,7 @@ fn decode_native_runtime_event(
         request_id: @native_ffi.event_int64(event, 2),
         window,
         result: if status == 0 {
-          Ok(require_native_event_text(event, 0, "cookie result"))
+          Ok(decode_native_cookie_snapshot(event))
         } else {
           Err(
             Status(
@@ -2142,19 +2202,11 @@ pub fn Window::browser_command(
   command : String,
   download_id? : Int,
 ) -> Unit raise NativeError {
-  let fields : Map[String, Json] = { "command": command }
-  match download_id {
-    Some(download_id) =>
-      fields["download_id"] = Json::number(
-        download_id.to_double(),
-        repr=download_id.to_string(),
-      )
-    None => ()
-  }
   check_status(
-    @native_ffi.proton_window_browser_command_json_ffi(
+    @native_ffi.proton_window_browser_command_ffi(
       self.live_handle(),
-      @ffi.to_cstr(Json::object(fields).stringify()),
+      @ffi.to_cstr(command),
+      download_id.unwrap_or(-1),
     ),
   )
 }
@@ -2339,18 +2391,12 @@ pub fn Window::respond_browser_request(
   action : String,
   path? : String,
 ) -> Unit raise NativeError {
-  let fields : Map[String, Json] = {
-    "request_id": request_id.to_string(),
-    "action": action,
-  }
-  match path {
-    Some(path) => fields["path"] = Json(path)
-    None => ()
-  }
   check_status(
-    @native_ffi.proton_window_respond_browser_request_json_ffi(
+    @native_ffi.proton_window_respond_browser_request_ffi(
       self.live_handle(),
-      @ffi.to_cstr(Json::object(fields).stringify()),
+      request_id,
+      @ffi.to_cstr(action),
+      @ffi.to_cstr(path.unwrap_or("")),
     ),
   )
 }
@@ -2369,77 +2415,144 @@ pub fn Window::emit_bridge_event_json(
 }
 
 ///|
-fn window_bridge_json(
+fn window_bridge_text_field(
   window : Window,
   context : String,
-  query : (@native_ffi.WindowHandle, FixedArray[Byte], Int, Ref[Int]) -> Int,
-) -> String? raise NativeError {
+  field : Int,
+  query : (@native_ffi.WindowHandle, Int, FixedArray[Byte], Int, Ref[Int]) -> Int,
+) -> String raise NativeError {
   let handle = window.live_handle()
-  read_native_text(context, (buffer, buffer_len, required) => {
-    query(handle, buffer, buffer_len, required)
+  require_native_text(context, (buffer, buffer_len, required) => {
+    query(handle, field, buffer, buffer_len, required)
   })
-}
-
-///|
-fn decode_bridge_lifecycle_state(
-  text : String,
-) -> BridgeLifecycleState raise NativeError {
-  let json = decode_native_json(text, "bridge lifecycle state")
-  let state : BridgeLifecycleState = @json.from_json(json) catch {
-    error =>
-      raise InvalidPayload(
-        context="bridge lifecycle state",
-        message=error.to_string(),
-      )
-  }
-  expect_abi_version(state.abi_version, "bridge lifecycle state")
-  state
 }
 
 ///|
 pub fn Window::bridge_lifecycle_state(
   self : Window,
 ) -> BridgeLifecycleState raise NativeError {
-  let text = match
-    window_bridge_json(
-      self, "bridge lifecycle state", @native_ffi.proton_window_bridge_state_json_ffi,
-    ) {
-    Some(text) => text
-    None =>
-      raise InvalidPayload(
-        context="bridge lifecycle state",
-        message="missing payload",
-      )
+  let revision = Ref(0L)
+  check_status(
+    @native_ffi.proton_window_bridge_revision_ffi(self.live_handle(), revision),
+  )
+  let outcome = window_bridge_text_field(
+    self, "bridge lifecycle outcome", 0, @native_ffi.proton_window_bridge_state_field_ffi,
+  )
+  let page_instance = window_bridge_text_field(
+    self, "bridge lifecycle page instance", 1, @native_ffi.proton_window_bridge_state_field_ffi,
+  )
+  let url = window_bridge_text_field(
+    self, "bridge lifecycle URL", 2, @native_ffi.proton_window_bridge_state_field_ffi,
+  )
+  let failure_pending = Ref(0)
+  check_status(
+    @native_ffi.proton_window_bridge_failure_present_ffi(
+      self.live_handle(),
+      failure_pending,
+    ),
+  )
+  BridgeLifecycleState::{
+    revision: revision.val.to_string(),
+    outcome,
+    page_instance,
+    url,
+    failure_pending: failure_pending.val != 0,
   }
-  decode_bridge_lifecycle_state(text)
 }
 
 ///|
-fn decode_bridge_diagnostic(
-  text : String,
-) -> BridgeDiagnostic raise NativeError {
-  let json = decode_native_json(text, "bridge diagnostic")
-  let diagnostic : BridgeDiagnostic = @json.from_json(json) catch {
-    error =>
-      raise InvalidPayload(
-        context="bridge diagnostic",
-        message=error.to_string(),
-      )
+fn window_bridge_failure_field(
+  window : Window,
+  context : String,
+  field : Int,
+) -> String raise NativeError {
+  window_bridge_text_field(
+    window, context, field, @native_ffi.proton_window_bridge_failure_field_ffi,
+  )
+}
+
+///|
+fn window_bridge_optional_failure_field(
+  window : Window,
+  context : String,
+  field : Int,
+) -> String? raise NativeError {
+  let value = window_bridge_failure_field(window, context, field)
+  if value.is_empty() {
+    None
+  } else {
+    Some(value)
   }
-  expect_abi_version(diagnostic.abi_version, "bridge diagnostic")
-  diagnostic
+}
+
+///|
+fn window_bridge_optional_failure_int(
+  window : Window,
+  field : Int,
+) -> Int? raise NativeError {
+  let value = Ref(0)
+  let present = Ref(0)
+  check_status(
+    @native_ffi.proton_window_bridge_failure_int_field_ffi(
+      window.live_handle(),
+      field,
+      value,
+      present,
+    ),
+  )
+  if present.val == 0 {
+    None
+  } else {
+    Some(value.val)
+  }
 }
 
 ///|
 pub fn Window::take_bridge_failure(
   self : Window,
 ) -> BridgeDiagnostic? raise NativeError {
-  match
-    window_bridge_json(
-      self, "bridge diagnostic", @native_ffi.proton_window_take_bridge_failure_json_ffi,
-    ) {
-    None => None
-    Some(text) => Some(decode_bridge_diagnostic(text))
+  let present = Ref(0)
+  check_status(
+    @native_ffi.proton_window_bridge_failure_present_ffi(
+      self.live_handle(),
+      present,
+    ),
+  )
+  if present.val == 0 {
+    None
+  } else {
+    let diagnostic = BridgeDiagnostic::{
+      stage: window_bridge_failure_field(self, "bridge diagnostic stage", 0),
+      code: window_bridge_failure_field(self, "bridge diagnostic code", 1),
+      message: window_bridge_failure_field(self, "bridge diagnostic message", 2),
+      page_instance: window_bridge_failure_field(
+        self, "bridge diagnostic page instance", 3,
+      ),
+      url: window_bridge_failure_field(self, "bridge diagnostic URL", 4),
+      owner: window_bridge_optional_failure_field(
+        self, "bridge diagnostic owner", 5,
+      ),
+      source_url: window_bridge_optional_failure_field(
+        self, "bridge diagnostic source URL", 6,
+      ),
+      source_line: window_bridge_optional_failure_field(
+        self, "bridge diagnostic source line", 7,
+      ),
+      line: window_bridge_optional_failure_int(self, 0),
+      column: window_bridge_optional_failure_int(self, 1),
+      stack: window_bridge_optional_failure_field(
+        self, "bridge diagnostic stack", 8,
+      ),
+      additional_failure_count: window_bridge_optional_failure_int(self, 2),
+      details_truncated: match window_bridge_optional_failure_int(self, 3) {
+        Some(value) => value != 0
+        None => false
+      },
+    }
+    check_status(
+      @native_ffi.proton_window_clear_bridge_failure_ffi(self.live_handle()),
+    )
+    Some(diagnostic)
   }
 }
 
@@ -2457,7 +2570,7 @@ pub fn Window::cookie_begin_get(
   }
   let request_id = Ref(proton_invalid_handle)
   check_status(
-    @native_ffi.proton_window_cookie_begin_get_json_ffi(
+    @native_ffi.proton_window_cookie_begin_get_ffi(
       self.live_handle(),
       url_bytes,
       if include_http_only {
@@ -3142,19 +3255,11 @@ pub fn View::browser_command(
   command : String,
   download_id? : Int,
 ) -> Unit raise NativeError {
-  let fields : Map[String, Json] = { "command": command }
-  match download_id {
-    Some(download_id) =>
-      fields["download_id"] = Json::number(
-        download_id.to_double(),
-        repr=download_id.to_string(),
-      )
-    None => ()
-  }
   check_status(
-    @native_ffi.proton_view_browser_command_json_ffi(
+    @native_ffi.proton_view_browser_command_ffi(
       self.live_handle(),
-      @ffi.to_cstr(Json::object(fields).stringify()),
+      @ffi.to_cstr(command),
+      download_id.unwrap_or(-1),
     ),
   )
 }

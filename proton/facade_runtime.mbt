@@ -688,7 +688,6 @@ fn bridge_protocol_diagnostic(
   message : String,
 ) -> @native.BridgeDiagnostic {
   @native.BridgeDiagnostic::{
-    abi_version: 1,
     stage: "prepare",
     code,
     message,

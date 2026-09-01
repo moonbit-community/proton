@@ -771,7 +771,6 @@ async test "headless mode rejects native menus before runtime startup" {
 ///|
 test "bridge startup timeout retains the last lifecycle state" {
   let state = @native.BridgeLifecycleState::{
-    abi_version: 1,
     revision: "7",
     outcome: "pending",
     page_instance: "page-1",
@@ -1931,6 +1930,16 @@ async test "dialog completion propagates native failure" {
 ///|
 async test "cookie completion wakes only its registered waiter" {
   let completions = CookieCompletionStore()
+  let selected = @native.NativeCookieRecord::{
+    name: "selected",
+    value: "",
+    domain: "",
+    path: "/",
+    secure: false,
+    http_only: false,
+    same_site: @native.CookieSameSite::Unspecified,
+    expires: None,
+  }
   assert_false(completions.route_completion(None))
   @async.with_task_group(group => {
     let waiting = group.spawn(no_wait=true, () => completions.wait(41L))
@@ -1942,7 +1951,7 @@ async test "cookie completion wakes only its registered waiter" {
         Some(@native.NativeCookieGetCompletion::{
           request_id: 42L,
           window: 7L,
-          result: Ok("[]"),
+          result: Ok([]),
         }),
       ),
     )
@@ -1952,11 +1961,11 @@ async test "cookie completion wakes only its registered waiter" {
         Some(@native.NativeCookieGetCompletion::{
           request_id: 41L,
           window: 7L,
-          result: Ok("[{\"name\":\"selected\"}]"),
+          result: Ok([selected]),
         }),
       ),
     )
-    assert_eq(waiting.wait(), "[{\"name\":\"selected\"}]")
+    assert_eq(waiting.wait(), [selected])
     group.return_immediately(())
   })
   assert_true(completions.pending.is_empty())
@@ -2652,13 +2661,19 @@ test "app builder registers main browser lifecycle handlers" {
 }
 
 ///|
-test "cookie payloads decode Electron-style session fields" {
-  let payload =
-    #|[{"name":"token","value":"abc","domain":"example.test","path":"/","secure":true,"http_only":true,"same_site":"lax","has_expires":true,"expires":11644473600000000,"creation":11644473600000000,"last_access":11644473600000000}]
-    #|
-  let cookies = decode_cookies(payload) catch {
-    CookieDecodeError(detail) => fail(detail)
-  }
+test "cookie records preserve Electron-style session fields" {
+  let cookies = cookies_from_native([
+    @native.NativeCookieRecord::{
+      name: "token",
+      value: "abc",
+      domain: "example.test",
+      path: "/",
+      secure: true,
+      http_only: true,
+      same_site: @native.CookieSameSite::Lax,
+      expires: Some(11644473600000000L),
+    },
+  ])
   assert_eq(cookies.length(), 1)
   let cookie = cookies[0]
   assert_eq(cookie.name, "token")

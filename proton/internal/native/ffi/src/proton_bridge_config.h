@@ -25,10 +25,43 @@ PROTON_INTERNAL int32_t proton_internal_bridge_config_add_extension_api(
 PROTON_INTERNAL int32_t proton_internal_bridge_config_add_initialization_unit(
     proton_bridge_config_t *config, int32_t grant_index, const char *owner,
     const char *name, const char *source);
-PROTON_INTERNAL const char *proton_bridge_config_json(
-    proton_bridge_config_t *config);
+PROTON_INTERNAL void proton_bridge_config_retain(proton_bridge_config_t *config);
 PROTON_INTERNAL int32_t proton_bridge_config_max_payload_bytes(
     const proton_bridge_config_t *config);
+PROTON_INTERNAL int proton_bridge_config_has_grant(
+    const proton_bridge_config_t *config, const char *source_origin);
+PROTON_INTERNAL int proton_bridge_config_grant_allows_op(
+    const proton_bridge_config_t *config, const char *source_origin,
+    const char *op);
+PROTON_INTERNAL int proton_bridge_config_declares_op(
+    const proton_bridge_config_t *config, const char *op);
+PROTON_INTERNAL size_t proton_bridge_config_grant_count(
+    const proton_bridge_config_t *config);
+PROTON_INTERNAL const char *proton_bridge_config_grant_source_origin(
+    const proton_bridge_config_t *config, size_t grant_index);
+PROTON_INTERNAL size_t proton_bridge_config_grant_op_count(
+    const proton_bridge_config_t *config, size_t grant_index);
+PROTON_INTERNAL const char *proton_bridge_config_grant_op(
+    const proton_bridge_config_t *config, size_t grant_index, size_t op_index);
+PROTON_INTERNAL size_t proton_bridge_config_grant_extension_count(
+    const proton_bridge_config_t *config, size_t grant_index);
+PROTON_INTERNAL const char *proton_bridge_config_grant_extension_namespace(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t extension_index);
+PROTON_INTERNAL size_t proton_bridge_config_grant_extension_api_count(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t extension_index);
+PROTON_INTERNAL const char *proton_bridge_config_grant_extension_api(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t extension_index, size_t api_index);
+PROTON_INTERNAL size_t proton_bridge_config_grant_initialization_unit_count(
+    const proton_bridge_config_t *config, size_t grant_index);
+PROTON_INTERNAL const char *proton_bridge_config_grant_initialization_owner(
+    const proton_bridge_config_t *config, size_t grant_index, size_t unit_index);
+PROTON_INTERNAL const char *proton_bridge_config_grant_initialization_name(
+    const proton_bridge_config_t *config, size_t grant_index, size_t unit_index);
+PROTON_INTERNAL const char *proton_bridge_config_grant_initialization_source(
+    const proton_bridge_config_t *config, size_t grant_index, size_t unit_index);
 PROTON_INTERNAL void proton_internal_bridge_config_destroy(
     proton_bridge_config_t *config);
 

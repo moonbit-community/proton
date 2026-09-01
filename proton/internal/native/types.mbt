@@ -145,7 +145,7 @@ pub(all) struct AppActivation {
   urls : Array[String]
   files : Array[String]
   reopen : Bool
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq, ToJson, FromJson)
 
 ///|
 pub extend AppActivation with Eq::{not_equal, equal}
@@ -155,6 +155,9 @@ pub extend AppActivation with Debug::{to_repr}
 
 ///|
 pub extend AppActivation with ToJson::{to_json}
+
+///|
+pub extend AppActivation with FromJson::{from_json}
 
 ///|
 /// Result of claiming an operating-system application identity.
@@ -182,6 +185,7 @@ enum RuntimeEvent {
   CookieGetCompleted(NativeCookieGetCompletion)
   MenuCommand(String, Int64?)
   LaunchInput(RuntimeLaunchInput)
+  AppActivationReceived(AppActivation)
   NotificationResult(NativeNotificationResult)
   NotificationClicked(String?)
   BrowserRequest(Int64, NativeBrowserRequest)
@@ -362,13 +366,12 @@ pub extend NativePdfPrintResult with Debug::{to_repr}
 
 ///|
 pub(all) struct BridgeLifecycleState {
-  abi_version : Int
   revision : String
   outcome : String
   page_instance : String
   url : String
   failure_pending : Bool
-} derive(Debug, Eq, FromJson)
+} derive(Debug, Eq)
 
 ///|
 pub extend BridgeLifecycleState with Eq::{not_equal, equal}
@@ -377,11 +380,7 @@ pub extend BridgeLifecycleState with Eq::{not_equal, equal}
 pub extend BridgeLifecycleState with Debug::{to_repr}
 
 ///|
-pub extend BridgeLifecycleState with FromJson::{from_json}
-
-///|
 pub(all) struct BridgeDiagnostic {
-  abi_version : Int
   stage : String
   code : String
   message : String
@@ -395,16 +394,13 @@ pub(all) struct BridgeDiagnostic {
   stack : String?
   additional_failure_count : Int?
   details_truncated : Bool
-} derive(Debug, Eq, FromJson)
+} derive(Debug, Eq)
 
 ///|
 pub extend BridgeDiagnostic with Eq::{not_equal, equal}
 
 ///|
 pub extend BridgeDiagnostic with Debug::{to_repr}
-
-///|
-pub extend BridgeDiagnostic with FromJson::{from_json}
 
 ///|
 pub(all) struct BridgeRequest {
@@ -485,7 +481,7 @@ pub extend NativeDialogCompletion with Debug::{to_repr}
 pub(all) struct NativeCookieGetCompletion {
   request_id : Int64
   window : Int64
-  result : Result[String, NativeError]
+  result : Result[Array[NativeCookieRecord], NativeError]
 } derive(Debug, Eq)
 
 ///|
@@ -493,6 +489,24 @@ pub extend NativeCookieGetCompletion with Eq::{not_equal, equal}
 
 ///|
 pub extend NativeCookieGetCompletion with Debug::{to_repr}
+
+///|
+pub(all) struct NativeCookieRecord {
+  name : String
+  value : String
+  domain : String
+  path : String
+  secure : Bool
+  http_only : Bool
+  same_site : CookieSameSite
+  expires : Int64?
+} derive(Debug, Eq)
+
+///|
+pub extend NativeCookieRecord with Eq::{not_equal, equal}
+
+///|
+pub extend NativeCookieRecord with Debug::{to_repr}
 
 ///|
 pub(all) enum CookieSameSite {
@@ -765,6 +779,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     LaunchInput(OpenUrls(_)) => "open_urls"
     LaunchInput(OpenFiles(_)) => "open_files"
     LaunchInput(Reopen) => "reopen"
+    AppActivationReceived(_) => "app_activation"
     NotificationResult(_) => "notification_result"
     NotificationClicked(_) => "notification_clicked"
     BrowserRequest(_, Navigation(..)) => "browser_navigation_requested"
@@ -819,6 +834,7 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BridgeRequestCancelled(_)
     | ResourceRequestCancelled(_)
     | LaunchInput(_)
+    | AppActivationReceived(_)
     | NotificationResult(_)
     | NotificationClicked(_)
     | QuitRequested => None
@@ -1094,6 +1110,29 @@ pub fn RuntimeEvent::launch_input(self : RuntimeEvent) -> RuntimeLaunchInput? {
     LaunchInput(input) => Some(input)
     _ => None
   }
+}
+
+///|
+pub fn RuntimeEvent::app_activation(self : RuntimeEvent) -> AppActivation? {
+  match self {
+    AppActivationReceived(activation) => Some(activation)
+    _ => None
+  }
+}
+
+///|
+pub fn AppActivation::urls(self : AppActivation) -> Array[String] {
+  self.urls.copy()
+}
+
+///|
+pub fn AppActivation::files(self : AppActivation) -> Array[String] {
+  self.files.copy()
+}
+
+///|
+pub fn AppActivation::reopen(self : AppActivation) -> Bool {
+  self.reopen
 }
 
 ///|

@@ -4,7 +4,6 @@
 #include "win_internal.h"
 #include "../../proton_config.h"
 #include "../../proton_event.h"
-#include "../../proton_json.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -248,7 +247,6 @@ static bool proton_engine_path_parent(char *path) {
 }
 
 #include "../cef_common/strings.h"
-#include "../cef_common/json_fields.h"
 
 #define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
 #define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
@@ -259,7 +257,7 @@ static bool proton_engine_path_parent(char *path) {
 #undef PROTON_ENGINE_REF_DECREMENT
 #undef PROTON_ENGINE_REF_LOAD
 #undef PROTON_ENGINE_REF_STORE
-#include "../cef_common/bridge_json.h"
+#include "../cef_common/bridge_request.h"
 
 static void proton_engine_init_window_lock(void) {
   if (!g_proton_engine_window_lock_initialized) {
@@ -294,40 +292,6 @@ void proton_engine_window_list_remove(proton_engine_window_t *window) {
     cursor = &(*cursor)->next;
   }
   LeaveCriticalSection(&g_proton_engine_window_lock);
-}
-
-int proton_engine_runtime_enqueue_bridge_request(
-    proton_engine_runtime_t *runtime,
-    char *request_json) {
-  if (runtime == NULL || request_json == NULL) {
-    return 0;
-  }
-  proton_event_t *event = proton_event_create(PROTON_EVENT_BRIDGE_REQUEST);
-  if (event == NULL) {
-    return 0;
-  }
-  event->text_a = request_json;
-  if (proton_event_try_publish(event)) {
-    return 1;
-  }
-  event->text_a = NULL;
-  proton_event_destroy(event);
-  return 0;
-}
-
-int proton_engine_runtime_enqueue_bridge_cancellation(
-    proton_engine_runtime_t *runtime,
-    int64_t request_id) {
-  if (runtime == NULL || request_id <= 0) {
-    return 0;
-  }
-  proton_event_t *event =
-      proton_event_create(PROTON_EVENT_BRIDGE_REQUEST_CANCELLED);
-  if (event == NULL) {
-    return 0;
-  }
-  event->request_id = request_id;
-  return proton_event_publish(event);
 }
 
 int proton_engine_browser_id(cef_browser_t *browser) {

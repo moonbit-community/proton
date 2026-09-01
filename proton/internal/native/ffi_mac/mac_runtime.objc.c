@@ -3,7 +3,6 @@
 #include "../ffi/src/proton_engine.h"
 #include "../ffi/src/proton_config.h"
 #include "../ffi/src/proton_event.h"
-#include "../ffi/src/proton_json.h"
 
 #include "mac_dialog.h"
 #include "mac_internal.h"
@@ -364,7 +363,6 @@ void proton_engine_unload_cef_library(void) {
 }
 
 #include "../ffi/src/engine/cef_common/strings.h"
-#include "../ffi/src/engine/cef_common/json_fields.h"
 
 static void proton_engine_append_switch(cef_command_line_t *command_line,
                                         const char *name) {
@@ -463,7 +461,7 @@ static void proton_engine_disable_feature(cef_command_line_t *command_line,
 #undef PROTON_ENGINE_REF_DECREMENT
 #undef PROTON_ENGINE_REF_LOAD
 #undef PROTON_ENGINE_REF_STORE
-#include "../ffi/src/engine/cef_common/bridge_json.h"
+#include "../ffi/src/engine/cef_common/bridge_request.h"
 
 void CEF_CALLBACK proton_engine_on_register_custom_schemes(
     cef_app_t *self,
