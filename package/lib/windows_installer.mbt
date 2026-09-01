@@ -217,9 +217,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  WriteRegDWORD HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoModify" 1
     $|  WriteRegDWORD HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoRepair" 1
     $|
+  builder.write_char('\n')
   builder.write_string(windows_protocol_install_script(plan, executable))
   builder <+
-    $|
     $|  CreateShortCut "$SMPROGRAMS\\\{product}.lnk" "$INSTDIR\\\{executable}"
     $|  ${If} $ProtonUpdate == "1"
     $|    Exec '"$INSTDIR\\\{executable}"'
@@ -237,6 +237,7 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  RMDir /r "$INSTDIR.proton-next"
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}"
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}"
+  builder.write_char('\n')
   builder.write_string(windows_protocol_uninstall_script(plan))
   builder <+
     $|SectionEnd

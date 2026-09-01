@@ -154,7 +154,10 @@ test "Windows icon embedding reports the native-only operation" {
 }
 
 ///|
-fn package_test_spec(formats : Array[PackageFormat]) -> PackageSpec {
+fn package_test_spec(
+  formats : Array[PackageFormat],
+  url_schemes? : Array[String] = ["devtoys"],
+) -> PackageSpec {
   PackageSpec(
     "/tmp/demo",
     "Demo App",
@@ -162,7 +165,7 @@ fn package_test_spec(formats : Array[PackageFormat]) -> PackageSpec {
     "1.2.3",
     formats,
     "/tmp/dist",
-    url_schemes=["devtoys"],
+    url_schemes~,
   )
 }
 
@@ -209,8 +212,7 @@ test "NSIS versions and quoting follow installer syntax" {
 
 ///|
 test "NSIS script carries package identity and update behavior" {
-  let spec = package_test_spec([App, Nsis])
-  spec.url_schemes.push("demo-app")
+  let spec = package_test_spec([App, Nsis], url_schemes=["devtoys", "demo-app"])
   let script = windows_installer_script(spec, "C:\\stage\\Demo App")
   assert_true(script.contains("Name \"Demo App\""))
   assert_true(script.contains("VIProductVersion \"1.2.3.0\""))
@@ -233,7 +235,17 @@ test "NSIS script carries package identity and update behavior" {
   assert_true(
     script.contains(
       "DeleteRegKey HKCU \"Software\\Classes\\devtoys\"\n" +
-      "  DeleteRegKey HKCU \"Software\\Classes\\demo-app\"\nSectionEnd",
+      "  DeleteRegKey HKCU \"Software\\Classes\\demo-app\"\n" +
+      "SectionEnd",
+    ),
+  )
+  let empty_script = windows_installer_script(
+    package_test_spec([App, Nsis], url_schemes=[]),
+    "C:\\stage\\Demo App",
+  )
+  assert_true(
+    empty_script.contains(
+      "DeleteRegKey HKLM \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\dev.proton.demo\"\nSectionEnd",
     ),
   )
   assert_true(
