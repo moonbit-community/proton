@@ -56,6 +56,7 @@ pub fn PackageFileSystemError::to_repr(Self) -> @debug.Repr
 pub(all) suberror PackagePlanError {
   InvalidProductName(reason~ : String)
   InvalidIdentifier(identifier~ : String, reason~ : String)
+  InvalidUrlScheme(scheme~ : String, reason~ : String)
   InvalidVersion(version~ : String, reason~ : String)
   UnsupportedFormat(format~ : String)
   DuplicateFormat(format~ : String)

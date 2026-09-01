@@ -451,6 +451,55 @@ async test "application context forwards orderly quit requests" {
 }
 
 ///|
+async test "application context validates protocol declarations and relaunch options" {
+  @async.with_task_group(group => {
+    let context = ApplicationContext(
+      group,
+      test_window_manager(),
+      @locale.LocalePreferences::resolve(None, []),
+      application_identifier="dev.proton.control",
+      application_executable="/Applications/Control.app/Contents/MacOS/control",
+      application_arguments=["--profile", "default"],
+      url_schemes=["proton-control"],
+    )
+    assert_eq(
+      context.protocol_client_values(" PROTON-CONTROL ", None),
+      ("proton-control", "/Applications/Control.app/Contents/MacOS/control"),
+    )
+    try ignore(context.protocol_client_values("other", None)) catch {
+      UndeclaredProtocolScheme(scheme="other") => ()
+      error => fail("unexpected protocol error: " + error.message())
+    } noraise {
+      _ => fail("expected undeclared protocol rejection")
+    }
+    for invalid in ["", "1bad", "bad/scheme", "bad scheme"] {
+      try ignore(context.protocol_client_values(invalid, None)) catch {
+        InvalidProtocolScheme(..) => ()
+        error => fail("unexpected protocol error: " + error.message())
+      } noraise {
+        _ => fail("expected invalid protocol rejection")
+      }
+    }
+    assert_eq(
+      context.relaunch_command(None),
+      (
+        "/Applications/Control.app/Contents/MacOS/control",
+        ["--profile", "default"],
+      ),
+    )
+    assert_eq(
+      context.relaunch_command(Some(RelaunchOptions(arguments=["--fresh"]))),
+      ("/Applications/Control.app/Contents/MacOS/control", ["--fresh"]),
+    )
+    assert_eq(
+      context.relaunch_command(Some(RelaunchOptions(executable="/tmp/helper"))),
+      ("/tmp/helper", []),
+    )
+    group.return_immediately(())
+  })
+}
+
+///|
 fn test_extension_capability(
   spec : @proton_command.AppCommandExtensionSpec,
   scope? : Json = Json::empty_object(),

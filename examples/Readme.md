@@ -137,6 +137,9 @@ moon -C examples run 01_run --target native
   version, packaged-state, application-root, standard-path, and configured user
   directory review, including startup path overrides for user data, browser
   session data, downloads, and logs.
+- `75_app_protocol_process`: manual Electron-style default protocol client,
+  immediate exit-code, and scheduled relaunch review with explicit system
+  mutation controls.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

@@ -4,6 +4,7 @@ options(
   "is-main": false,
   "native-stub": [
     "mac_client.objc.c",
+    "mac_app_control.objc.c",
     "mac_dialog.objc.c",
     "mac_launch_input.objc.c",
     "mac_menu.objc.c",

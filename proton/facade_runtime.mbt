@@ -19,6 +19,20 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     error => raise ConfigurationError(error)
   }
   let locale_preferences = resolve_locale_preferences(self.explicit_locale)
+  let application_executable = executable_path() catch {
+    error =>
+      raise RuntimeOperationFailed(
+        action="resolve application executable",
+        status=-1,
+        detail=error.message(),
+      )
+  }
+  let process_arguments = @env.args()
+  let application_arguments = if process_arguments.length() > 1 {
+    process_arguments[1:].to_owned()
+  } else {
+    []
+  }
   let app_instance = match acquire_app_instance(resolved) {
     Some(@native.AppInstanceAcquire::Forwarded) => {
       @xlog.info(category="proton.runtime") <?
@@ -61,12 +75,19 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     download_event_handlers=self.download_event_handlers,
     update_channel=resolved.update_channel,
     update_handlers=self.update_handlers,
+    application_identifier=resolved.application_identifier,
+    application_executable~,
+    application_arguments~,
+    url_schemes=resolved.url_schemes,
   ) catch {
     error => raise logged_runtime_failure(error)
   }
   match app_instance {
     Some(instance) => destroy_app_instance(instance)
     None => ()
+  }
+  @native.process_run_relaunches() catch {
+    error => raise native_run_error("relaunch application", error)
   }
   @xlog.info(category="proton.runtime") <?
     { "message": "application runtime stopped" }
@@ -146,6 +167,10 @@ async fn run_manifest(
   ] = [],
   update_channel? : ResolvedUpdateChannel? = None,
   update_handlers? : Array[async (PendingUpdate) -> Unit noraise] = [],
+  application_identifier? : String = "",
+  application_executable? : String = "",
+  application_arguments? : Array[String] = [],
+  url_schemes? : Array[String] = [],
 ) -> Unit raise AppRunError {
   let plans = planned_windows(manifest) catch {
     error => raise ConfigurationError(error)
@@ -341,12 +366,36 @@ async fn run_manifest(
     @async.with_task_group(application_tasks => {
       @async.with_task_group(window_tasks => {
         let session = RuntimeSession(
-          runtime, event_pump, locale_preferences, definitions, windows, command_host,
-          wakeup, forward_menu_events, bridge_enabled, launch_input_handlers, window_event_handlers,
-          application_tasks, last_window_closed_policy, window_tasks, view_event_handlers,
-          browser_event_handlers, window_close_handler, window_lifecycle_hooks, lifecycle_failures,
-          bridge_startup_timeout_ms, navigation_handler, popup_handler, download_handler,
-          certificate_handler, media_handler, download_event_handlers,
+          runtime,
+          event_pump,
+          locale_preferences,
+          definitions,
+          windows,
+          command_host,
+          wakeup,
+          forward_menu_events,
+          bridge_enabled,
+          launch_input_handlers,
+          window_event_handlers,
+          application_tasks,
+          last_window_closed_policy,
+          window_tasks,
+          view_event_handlers,
+          browser_event_handlers,
+          window_close_handler,
+          window_lifecycle_hooks,
+          lifecycle_failures,
+          bridge_startup_timeout_ms,
+          navigation_handler,
+          popup_handler,
+          download_handler,
+          certificate_handler,
+          media_handler,
+          download_event_handlers,
+          application_identifier~,
+          application_executable~,
+          application_arguments~,
+          url_schemes~,
         )
         let application_context = session.application_context()
         let application_start = application_tasks.spawn(

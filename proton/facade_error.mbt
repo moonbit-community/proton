@@ -265,3 +265,30 @@ impl Show for AppRunError with fn output(self, logger) {
 
 ///|
 pub extend AppRunError with Show::{to_string, output}
+
+///|
+pub fn AppControlError::message(self : AppControlError) -> String {
+  match self {
+    InvalidProtocolScheme(scheme~) =>
+      "invalid application protocol scheme: " + scheme
+    UndeclaredProtocolScheme(scheme~) =>
+      "application protocol scheme is not declared with App::url_scheme: " +
+      scheme
+    InvalidExecutable(path~) => "invalid application executable path: " + path
+    NativeControlFailure(action~, status~, detail~) =>
+      "application failed to " +
+      action +
+      " (" +
+      status.to_string() +
+      "): " +
+      detail
+  }
+}
+
+///|
+impl Show for AppControlError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+pub extend AppControlError with Show::{to_string, output}

@@ -2,6 +2,7 @@
 pub(all) suberror PackagePlanError {
   InvalidProductName(reason~ : String)
   InvalidIdentifier(identifier~ : String, reason~ : String)
+  InvalidUrlScheme(scheme~ : String, reason~ : String)
   InvalidVersion(version~ : String, reason~ : String)
   UnsupportedFormat(format~ : String)
   DuplicateFormat(format~ : String)
@@ -24,6 +25,8 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
     InvalidProductName(reason~) => "invalid product_name: " + reason
     InvalidIdentifier(identifier~, reason~) =>
       "invalid identifier " + identifier + ": " + reason
+    InvalidUrlScheme(scheme~, reason~) =>
+      "invalid URL scheme " + scheme + ": " + reason
     InvalidVersion(version~, reason~) =>
       "invalid version " + version + ": " + reason
     UnsupportedFormat(format~) => "unsupported package format: " + format

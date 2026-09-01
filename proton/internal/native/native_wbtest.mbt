@@ -39,6 +39,15 @@ fn native_text_test_copy(
 }
 
 ///|
+test "application control argument blobs preserve utf8 boundaries" {
+  assert_eq(app_control_argument_blob([]), b"")
+  assert_eq(
+    app_control_argument_blob(["--mode", "窗口", ""]),
+    b"--mode\x00\xe7\xaa\x97\xe5\x8f\xa3\x00\x00",
+  )
+}
+
+///|
 test "native text reader retries when the payload grows" {
   let calls = Ref(0)
   let final_text = "{\"url\":\"proton://app/a/much/longer/path\"}"

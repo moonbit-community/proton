@@ -154,6 +154,7 @@ fn validate_spec(spec : PackageSpec) -> PackageSpec raise PackagePlanError {
   let product_name = validate_product_name(spec.product_name)
   let identifier = validate_identifier(spec.identifier)
   let version = validate_package_version(spec.version)
+  let url_schemes = validate_url_schemes(spec.url_schemes)
   for payload in spec.payloads {
     validate_relative_destination(payload.destination)
   }
@@ -162,8 +163,44 @@ fn validate_spec(spec : PackageSpec) -> PackageSpec raise PackagePlanError {
     product_name,
     identifier,
     version,
+    url_schemes,
     sign: spec.sign || spec.notarize,
   }
+}
+
+///|
+fn validate_url_schemes(
+  schemes : Array[String],
+) -> Array[String] raise PackagePlanError {
+  let normalized : Array[String] = []
+  for scheme in schemes {
+    let scheme = scheme.trim().to_owned().to_lower()
+    guard scheme.length() > 0 else {
+      raise InvalidUrlScheme(scheme~, reason="value is required")
+    }
+    for index, char in scheme {
+      let valid = if index == 0 {
+        char.is_ascii_alphabetic()
+      } else {
+        char.is_ascii_alphabetic() ||
+        char.is_ascii_digit() ||
+        char == '+' ||
+        char == '-' ||
+        char == '.'
+      }
+      guard valid else {
+        raise InvalidUrlScheme(
+          scheme~,
+          reason="contains an unsupported character",
+        )
+      }
+    }
+    guard !normalized.contains(scheme) else {
+      raise InvalidUrlScheme(scheme~, reason="is declared more than once")
+    }
+    normalized.push(scheme)
+  }
+  normalized
 }
 
 ///|
