@@ -8,5 +8,6 @@ supported_targets = "native"
 pkgtype(kind: "executable")
 
 options(
+  "native-stub": [ "windows_subsystem.c" ],
   targets: { "main.mbt": [ "native" ] },
 )
