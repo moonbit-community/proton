@@ -1,31 +1,31 @@
 ///|
-let default_proton_version = "0.2.3"
+let default_proton_version = "0.2.4"
 
 ///|
-let default_proton_codegen_version = "0.2.3"
+let default_proton_codegen_version = "0.2.4"
 
 ///|
-let default_proton_cli_version = "0.2.3"
+let default_proton_cli_version = "0.2.4"
 
 ///|
-let default_proton_contract_version = "0.2.3"
+let default_proton_contract_version = "0.2.4"
 
 ///|
-let default_proton_client_version = "0.2.3"
+let default_proton_client_version = "0.2.4"
 
 ///|
-let default_proton_rabbita_version = "0.2.3"
+let default_proton_rabbita_version = "0.2.4"
 
 ///|
-let default_rabbita_version = "0.14.1"
+let default_rabbita_version = "0.15.4"
 
 ///|
-let default_warren_version = "0.2.7"
+let default_warren_version = "0.3.2"
 
 ///|
 /// Scaffolded backends need this directly: `async fn main` is only available to
 /// a package that imports `moonbitlang/async`.
-let default_async_version = "0.21.0"
+let default_async_version = "0.21.2"
 
 ///|
 let default_template_name = "isomorphic"
@@ -253,10 +253,10 @@ fn project_config_file(
           "dev_url": "http://127.0.0.1:4300",
           "before_dev": "moonx --target native moonbit-community/warren@" +
           context.warren_version +
-          " dev --direct --port 4300",
+          " dev --browser-entry main --direct --port 4300",
           "before_build": "moonx --target native moonbit-community/warren@" +
           context.warren_version +
-          " build",
+          " build --browser-entry main",
           "dist": "dist",
         },
         "package": package_config,

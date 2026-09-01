@@ -16,38 +16,53 @@ pub extend CountChanged with FromJson::{from_json}
 
 ///|
 struct TestScheduler {
-  hooks_value : @cmd.Hooks
+  queued_commands : Ref[Int]
 }
 
 ///|
 fn TestScheduler::TestScheduler() -> TestScheduler {
-  TestScheduler::{
-    hooks_value: @cmd.Hooks::{ url_request: None, url_changed: None, },
-  }
+  TestScheduler::{ queued_commands: Ref(0), }
 }
 
 ///|
-impl @cmd.Scheduler for TestScheduler with fn run_effect(self, _kind, execute) {
-  execute(self)
+impl @cmd.Context for TestScheduler with fn get_origin(_self) {
+  "https://example.test"
 }
 
 ///|
-impl @cmd.Scheduler for TestScheduler with fn queue_message(
+impl @cmd.Context for TestScheduler with fn inject_url_changed(_self, _url) {
+  @cmd.none
+}
+
+///|
+impl @cmd.Context for TestScheduler with fn inject_url_request(_self, _url) {
+  @cmd.none
+}
+
+///|
+impl @cmd.Scheduler for TestScheduler with fn queue_command(self, _command) {
+  self.queued_commands.val += 1
+}
+
+///|
+impl @cmd.Scheduler for TestScheduler with fn set_url_changed_injector(
   _self,
-  _id,
-  _message,
+  _injector,
 ) {
-
+  ()
 }
 
 ///|
-impl @cmd.Scheduler for TestScheduler with fn drain_message(_self) {
-
+impl @cmd.Scheduler for TestScheduler with fn set_url_request_injector(
+  _self,
+  _injector,
+) {
+  ()
 }
 
 ///|
-impl @cmd.Scheduler for TestScheduler with fn hooks(self) {
-  self.hooks_value
+fn TestScheduler::queued_count(self : TestScheduler) -> Int {
+  self.queued_commands.val
 }
 
 ///|
@@ -106,32 +121,43 @@ extern "js" fn fake_has_listener() -> Bool =
 
 ///|
 extern "js" fn fake_has_abort_signal() -> Bool =
-  #| () => Boolean(globalThis.__protonRabbitaTest.signal)
+  #| () => Boolean(globalThis.__protonRabbitaTest?.signal)
 
 ///|
-test "invoke schedules bridge callbacks without entering async from an effect" {
+test "invoke queues bridge work without entering async from an effect" {
   install_fake_bridge("{\"value\":\"pong\"}")
   let scheduler = TestScheduler()
   let echo : @proton_contract.Command[Unit, EchoResponse] = @proton_contract.command(
     "echo",
   )
-  let response = Ref("")
-  let failure_code = Ref("")
   @cmd.Scheduler::add(
     scheduler,
-    invoke(
+    invoke(echo, (), _value => @cmd.none, _error => @cmd.none),
+  )
+  assert_eq(scheduler.queued_count(), 1)
+  assert_false(fake_has_abort_signal())
+
+  remove_fake_bridge()
+  @cmd.Scheduler::add(
+    scheduler,
+    invoke(echo, (), _ => @cmd.none, _error => @cmd.none),
+  )
+  assert_eq(scheduler.queued_count(), 2)
+  assert_false(fake_has_abort_signal())
+
+  install_fake_bridge("{\"value\":\"pong\"}")
+  let response = Ref("")
+  let failure_code = Ref("")
+  ignore(
+    @proton_client.invoke_with_callbacks(
       echo,
       (),
-      value => {
-        response.val = value.value
-        @cmd.none
-      },
+      value => response.val = value.value,
       error => {
         failure_code.val = match error {
           @proton_client.BridgeUnavailable => "bridge_unavailable"
           _ => "unexpected"
         }
-        @cmd.none
       },
     ),
   )
@@ -140,14 +166,12 @@ test "invoke schedules bridge callbacks without entering async from an effect" {
   assert_true(fake_has_abort_signal())
 
   remove_fake_bridge()
-  @cmd.Scheduler::add(
-    scheduler,
-    invoke(echo, (), _ => @cmd.none, error => {
+  ignore(
+    @proton_client.invoke_with_callbacks(echo, (), _value => (), error => {
       failure_code.val = match error {
         @proton_client.BridgeUnavailable => "bridge_unavailable"
         _ => "unexpected"
       }
-      @cmd.none
     }),
   )
   assert_eq(failure_code.val, "bridge_unavailable")
@@ -196,7 +220,9 @@ test "subscription updates taggers without reinstalling its listener" {
   emit_fake_event("{\"count\":7}")
   assert_eq(first_count.val, 0)
   assert_eq(second_count.val, 7)
+  assert_eq(scheduler.queued_count(), 1)
   emit_fake_event("not json")
+  assert_eq(scheduler.queued_count(), 2)
   assert_eq(failures.val, 1)
   assert_true(fake_has_listener())
 
@@ -222,6 +248,7 @@ test "failed subscription remains terminal until it is reloaded" {
     },
   })
   let failed = load_event_subscription(changed, route, tagger_slot, scheduler).unwrap()
+  assert_eq(scheduler.queued_count(), 1)
   assert_eq(failures.val, 1)
 
   install_fake_bridge("{}")

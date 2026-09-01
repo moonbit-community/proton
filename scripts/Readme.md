@@ -41,18 +41,15 @@ It also checks the published-module dependency chain from `proton_config` into
 node ./scripts/verify_release_metadata.mjs
 ```
 
-## `bump_version.mbtx`
+## Workspace version synchronization
 
-Bumps every module in `moon.work` to one lockstep release version. The script
-refuses to run when module versions have drifted and updates internal dependency
-requirements between workspace modules. It runs on MoonBit's default WASM
-target, uses `moonbitlang/async` for filesystem operations, and parses workspace
-manifests through `moonbitlang/moon_config`.
+Use `Milky2018/lockstep` from the repository root to synchronize every explicit
+member of `moon.work` to one release version. Pass the full target
+`MAJOR.MINOR.PATCH` version; do not edit individual module versions or internal
+requirements by hand.
 
 ```sh
-moon run scripts/bump_version.mbtx -- patch
-moon run scripts/bump_version.mbtx -- minor
-moon run scripts/bump_version.mbtx -- major
+moonx Milky2018/lockstep <version>
 ```
 
 Bridge E2E coverage lives in the `e2e/` MoonBit module. Run the complete

@@ -205,6 +205,16 @@ test "project config preserves application identity" {
 }
 
 ///|
+test "isomorphic project config pins Warren browser entry" {
+  let context = template_context(
+    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+  )
+  let content = project_config_file(context, "isomorphic").content
+  assert_true(content.contains("dev --browser-entry main"))
+  assert_true(content.contains("build --browser-entry main"))
+}
+
+///|
 test "minimal project config uses a single backend module" {
   let context = template_context(
     "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
