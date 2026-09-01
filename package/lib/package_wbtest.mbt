@@ -231,6 +231,11 @@ test "NSIS script carries package identity and update behavior" {
   )
   assert_true(
     script.contains(
+      "DeleteRegKey HKCU \"Software\\Classes\\devtoys\"\nSectionEnd",
+    ),
+  )
+  assert_true(
+    script.contains(
       "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\dev.proton.demo",
     ),
   )

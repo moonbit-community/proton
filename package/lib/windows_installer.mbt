@@ -54,7 +54,11 @@ fn windows_protocol_install_script(
     builder <+
       $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}\\shell\\open\\command" "" "$\\"$INSTDIR\\\{executable}$\\" $\\"%1$\\""
   }
-  builder.to_string()
+  if plan.url_schemes.length() == 0 {
+    ""
+  } else {
+    builder.to_string() + "\n"
+  }
 }
 
 ///|
@@ -64,7 +68,11 @@ fn windows_protocol_uninstall_script(plan : PackageSpec) -> String {
     builder <+
       $|  DeleteRegKey HKCU "Software\\Classes\\\{windows_installer_quote(scheme)}"
   }
-  builder.to_string()
+  if plan.url_schemes.length() == 0 {
+    ""
+  } else {
+    builder.to_string() + "\n"
+  }
 }
 
 ///|
