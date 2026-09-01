@@ -121,6 +121,7 @@ typedef struct proton_cookie_get_state {
   proton_cookie_state_detached_t detached; /* no longer visible to callers */
   int64_t request_id;
   int64_t event_window;
+  int include_http_only;
   int accepted;
   int completion_emitted;
   int32_t status;
@@ -159,7 +160,7 @@ proton_cookie_get_state_find(proton_engine_window_t *window) {
 }
 
 static proton_cookie_get_state_t *proton_cookie_get_state_create(
-    proton_engine_window_t *window) {
+    proton_engine_window_t *window, int include_http_only) {
   if (proton_cookie_get_state_find(window) != NULL) {
     return NULL;
   }
@@ -176,6 +177,7 @@ static proton_cookie_get_state_t *proton_cookie_get_state_create(
   }
   proton_cookie_state_lifetime_init(&state->refs, &state->detached);
   state->window = window;
+  state->include_http_only = include_http_only;
   state->request_id = g_next_cookie_request_id++;
   if (g_next_cookie_request_id <= 0) {
     g_next_cookie_request_id = 1;
@@ -295,6 +297,9 @@ static int CEF_CALLBACK proton_cookie_visitor_visit(
   }
   if (state->status != PROTON_OK) {
     return 0;
+  }
+  if (!state->include_http_only && cookie->httponly != 0) {
+    return 1;
   }
 
   char *name = proton_cookie_cef_string_to_utf8(&cookie->name);
@@ -512,7 +517,7 @@ int32_t proton_engine_window_cookie_begin_get(
   }
 
   proton_cookie_get_state_t *state =
-      proton_cookie_get_state_create(window);
+      proton_cookie_get_state_create(window, include_http_only != 0);
   if (state == NULL) {
     manager->base.release((cef_base_ref_counted_t *)manager);
     proton_engine_set_message(error, error_len,
