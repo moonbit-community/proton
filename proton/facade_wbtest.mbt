@@ -76,7 +76,7 @@ fn test_window_handle(
   has_shadow_calls? : Array[Bool],
   ignore_mouse_events_calls? : Array[(Bool, Bool)],
   background_color_calls? : Array[String],
-  theme_calls? : Array[WindowTheme],
+  theme_calls? : Array[WindowThemePreference],
   visible_on_all_workspaces_calls? : Array[Bool],
   enabled_calls? : Array[Bool],
   kiosk_calls? : Array[Bool],
@@ -1054,7 +1054,7 @@ fn test_activation_window_state(
     maximized: false,
     fullscreen: false,
     always_on_top: false,
-    theme: @native.WindowTheme::System,
+    theme: @native.WindowTheme::Light,
   }
 }
 
@@ -2140,7 +2140,7 @@ test "direct launches use the working directory as their resource directory" {
 ///|
 test "typed facade appends validated secondary windows" {
   let configured = html("Main", "<main>Main</main>")
-    .theme(WindowTheme::Light)
+    .theme(WindowThemePreference::Light)
     .title("Themed Main")
     .size(width=800, height=600)
     .titlebar_style(TitlebarStyle::Overlay)
@@ -2151,18 +2151,24 @@ test "typed facade appends validated secondary windows" {
       width=480,
       height=360,
       size_hint=WindowSizeHint::Fixed,
-      theme=WindowTheme::Dark,
+      theme=WindowThemePreference::Dark,
       open_on_start=false,
     )
   let manifest = configured.inline_manifest()
-  assert_eq(manifest.window.theme, @manifest.WindowTheme::Light)
+  assert_eq(
+    manifest.window.theme_preference,
+    @manifest.WindowThemePreference::Light,
+  )
   assert_eq(manifest.windows.length(), 1)
   assert_eq(manifest.windows[0].id, "settings")
   assert_eq(
     manifest.windows[0].window.size_hint,
     @manifest.WindowSizeHint::Fixed,
   )
-  assert_eq(manifest.windows[0].window.theme, @manifest.WindowTheme::Dark)
+  assert_eq(
+    manifest.windows[0].window.theme_preference,
+    @manifest.WindowThemePreference::Dark,
+  )
   assert_false(manifest.windows[0].open_on_start)
   let plans = planned_windows(manifest)
   assert_eq(plans.map(fn(plan) { plan.id }), ["main", "settings"])
@@ -2915,10 +2921,10 @@ test "window background color routes values through the handle" {
 
 ///|
 test "window theme routes typed values through the handle" {
-  let calls : Array[WindowTheme] = []
+  let calls : Array[WindowThemePreference] = []
   let window = test_window_handle("main", 17L, theme_calls=calls)
-  window.set_theme(WindowTheme::Light)
-  window.set_theme(WindowTheme::System)
+  window.set_theme(WindowThemePreference::Light)
+  window.set_theme(WindowThemePreference::System)
   debug_inspect(calls, content="[Light, System]")
 }
 
@@ -2988,7 +2994,7 @@ test "window center uses the current monitor work area and frame size" {
     maximized: false,
     fullscreen: false,
     always_on_top: false,
-    theme: WindowTheme::System,
+    theme: WindowTheme::Light,
   })
   window.center()
   debug_inspect(position_calls, content="[(560, 240)]")
@@ -3021,7 +3027,7 @@ test "window bounds read and write use Electron coordinate order" {
     maximized: false,
     fullscreen: false,
     always_on_top: false,
-    theme: WindowTheme::System,
+    theme: WindowTheme::Light,
   })
   assert_eq(window.bounds(), (120, 80, 800, 600))
   window.set_bounds(x=40, y=50, width=640, height=480)

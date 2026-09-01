@@ -554,6 +554,8 @@ pub extend WindowMonitor with Debug::{to_repr}
 
 ///|
 /// A point-in-time native window state snapshot.
+///
+/// `theme` is the effective theme after resolving `theme_preference`.
 pub(all) struct WindowState {
   x : Int
   y : Int
@@ -1279,7 +1281,6 @@ pub extend TitlebarStyle with Debug::{to_repr}
 
 ///|
 pub(all) enum WindowTheme {
-  System = 0
   Light = 1
   Dark = 2
 } derive(Debug, Eq)
@@ -1291,7 +1292,20 @@ pub extend WindowTheme with Eq::{not_equal, equal}
 pub extend WindowTheme with Debug::{to_repr}
 
 ///|
-fn WindowTheme::native_value(self : WindowTheme) -> Int {
+pub(all) enum WindowThemePreference {
+  System = 0
+  Light = 1
+  Dark = 2
+} derive(Debug, Eq)
+
+///|
+pub extend WindowThemePreference with Eq::{not_equal, equal}
+
+///|
+pub extend WindowThemePreference with Debug::{to_repr}
+
+///|
+fn WindowThemePreference::native_value(self : WindowThemePreference) -> Int {
   match self {
     System => 0
     Light => 1
@@ -1427,7 +1441,7 @@ struct WindowConfig {
   initial_url : String
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
-  theme : WindowTheme
+  theme_preference : WindowThemePreference
   browser : BrowserPolicy
   bridge : BridgeConfig?
   framework_titlebar_minimize_label : String?
@@ -1518,7 +1532,7 @@ pub fn WindowConfig::WindowConfig(
   initial_url? : String = "about:blank",
   size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
-  theme? : WindowTheme = WindowTheme::System,
+  theme? : WindowThemePreference = WindowThemePreference::System,
   browser? : BrowserPolicy = BrowserPolicy(),
   bridge? : BridgeConfig,
 ) -> WindowConfig {
@@ -1529,7 +1543,7 @@ pub fn WindowConfig::WindowConfig(
     initial_url,
     size_hint,
     titlebar_style,
-    theme,
+    theme_preference: theme,
     browser,
     bridge,
     framework_titlebar_minimize_label: Some("Minimize"),
@@ -1579,7 +1593,7 @@ pub fn WindowConfig::with_framework_titlebar_labels(
     initial_url: self.initial_url,
     size_hint: self.size_hint,
     titlebar_style: self.titlebar_style,
-    theme: self.theme,
+    theme_preference: self.theme_preference,
     browser: self.browser,
     bridge: self.bridge,
     framework_titlebar_minimize_label: Some(minimize),

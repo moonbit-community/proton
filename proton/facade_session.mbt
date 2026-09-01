@@ -331,9 +331,10 @@ fn RuntimeSession::window_handle(
       self.control_window(id, native_id, "set theme", window => {
         window.set_theme(
           match theme {
-            WindowTheme::System => @native.WindowTheme::System
-            WindowTheme::Light => @native.WindowTheme::Light
-            WindowTheme::Dark => @native.WindowTheme::Dark
+            WindowThemePreference::System =>
+              @native.WindowThemePreference::System
+            WindowThemePreference::Light => @native.WindowThemePreference::Light
+            WindowThemePreference::Dark => @native.WindowThemePreference::Dark
           },
         )
       })
@@ -2029,7 +2030,7 @@ pub fn WindowHandle::set_background_color(
 /// platforms without per-window native theme support.
 pub fn WindowHandle::set_theme(
   self : WindowHandle,
-  theme : WindowTheme,
+  theme : WindowThemePreference,
 ) -> Unit raise WindowSessionError {
   (self.set_window_theme)(theme)
 }

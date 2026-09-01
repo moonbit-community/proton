@@ -442,7 +442,7 @@ test "window config preserves typed native ABI values" {
     title="Typed",
     width=320,
     height=240,
-    theme=WindowTheme::Dark,
+    theme=WindowThemePreference::Dark,
     browser=BrowserPolicy(
       navigation=BrowserPolicyMode::Ask,
       popup=BrowserPolicyMode::Ask,
@@ -456,7 +456,7 @@ test "window config preserves typed native ABI values" {
   assert_eq(window_config.title, "Typed")
   assert_eq(window_config.width, 320)
   assert_eq(window_config.height, 240)
-  assert_eq(window_config.theme, WindowTheme::Dark)
+  assert_eq(window_config.theme_preference, WindowThemePreference::Dark)
   assert_eq(window_config.browser.navigation, BrowserPolicyMode::Ask)
   assert_eq(window_config.browser.popup, BrowserPolicyMode::Ask)
   assert_true(window_config.browser.devtools)

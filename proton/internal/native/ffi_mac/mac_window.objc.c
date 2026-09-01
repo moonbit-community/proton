@@ -69,6 +69,41 @@ static void proton_engine_apply_size_constraints(
                      : NSMakeSize(CGFLOAT_MAX, CGFLOAT_MAX)];
 }
 
+static void proton_engine_window_apply_theme_preference(
+    proton_engine_window_t *window) {
+  if (window == NULL || window->window == nil) {
+    return;
+  }
+  switch (window->theme_preference) {
+  case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
+    [window->window
+        setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameAqua]];
+    break;
+  case PROTON_WINDOW_THEME_PREFERENCE_DARK:
+    [window->window
+        setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]];
+    break;
+  case PROTON_WINDOW_THEME_PREFERENCE_SYSTEM:
+    [window->window setAppearance:nil];
+    break;
+  }
+}
+
+static proton_window_theme_t proton_engine_window_effective_theme(
+    const proton_engine_window_t *window) {
+  NSAppearance *appearance =
+      window != NULL && window->window != nil
+          ? window->window.effectiveAppearance
+          : NSApp.effectiveAppearance;
+  NSAppearanceName match = [appearance
+      bestMatchFromAppearancesWithNames:@[
+        NSAppearanceNameAqua, NSAppearanceNameDarkAqua
+      ]];
+  return [match isEqualToString:NSAppearanceNameDarkAqua]
+             ? PROTON_WINDOW_THEME_DARK
+             : PROTON_WINDOW_THEME_LIGHT;
+}
+
 static void proton_engine_dock_progress_clear(void) {
   if (g_dock_progress_indicator != nil) {
     [g_dock_progress_indicator stopAnimation:nil];
@@ -776,7 +811,7 @@ int32_t proton_engine_window_create(
   window->max_width = config.size_hint == 3 ? config.width : 0;
   window->max_height = config.size_hint == 3 ? config.height : 0;
   window->zoom_percent = 100;
-  window->theme = config.theme;
+  window->theme_preference = config.theme_preference;
   window->maximizable = 1;
   window->closable = 1;
   window->fullscreenable = 1;
@@ -853,20 +888,7 @@ int32_t proton_engine_window_create(
     [window->window setRestorable:NO];
     [window->window disableSnapshotRestoration];
     [window->window setTitle:title != nil ? title : @"Proton"];
-    switch (window->theme) {
-    case PROTON_WINDOW_THEME_LIGHT:
-      [window->window
-          setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameAqua]];
-      break;
-    case PROTON_WINDOW_THEME_DARK:
-      [window->window setAppearance:
-                          [NSAppearance
-                              appearanceNamed:NSAppearanceNameDarkAqua]];
-      break;
-    case PROTON_WINDOW_THEME_SYSTEM:
-      [window->window setAppearance:nil];
-      break;
-    }
+    proton_engine_window_apply_theme_preference(window);
     proton_engine_apply_size_constraints(window);
     if (config.titlebar_overlay) {
       [window->window setTitleVisibility:NSWindowTitleHidden];
@@ -1927,13 +1949,15 @@ int32_t proton_engine_window_set_background_color(
 }
 
 int32_t proton_engine_window_set_theme(
-    proton_engine_window_t *window, proton_window_theme_t theme, char *error,
+    proton_engine_window_t *window,
+    proton_window_theme_preference_t theme_preference, char *error,
     size_t error_len) {
   if (window == NULL || (!window->headless && window->window == nil)) {
     proton_engine_set_message(error, error_len, "window is not initialized");
     return PROTON_ERR_INVALID_HANDLE;
   }
-  if (theme < PROTON_WINDOW_THEME_SYSTEM || theme > PROTON_WINDOW_THEME_DARK) {
+  if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||
+      theme_preference > PROTON_WINDOW_THEME_PREFERENCE_DARK) {
     proton_engine_set_message(error, error_len, "window theme is invalid");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
@@ -1942,20 +1966,11 @@ int32_t proton_engine_window_set_theme(
                               "window theme is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
-  switch (theme) {
-  case PROTON_WINDOW_THEME_LIGHT:
-    [window->window
-        setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameAqua]];
-    break;
-  case PROTON_WINDOW_THEME_DARK:
-    [window->window
-        setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]];
-    break;
-  case PROTON_WINDOW_THEME_SYSTEM:
-    [window->window setAppearance:nil];
-    break;
+  if (window->theme_preference == theme_preference) {
+    return PROTON_OK;
   }
-  window->theme = theme;
+  window->theme_preference = theme_preference;
+  proton_engine_window_apply_theme_preference(window);
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
@@ -2020,6 +2035,7 @@ int32_t proton_engine_window_get_state(
   out_state->zoom_percent =
       window->zoom_percent > 0 ? window->zoom_percent : 100;
   out_state->scale_factor_percent = 100;
+  out_state->theme = proton_engine_window_effective_theme(window);
   if (window->headless) {
     out_state->width = window->width;
     out_state->height = window->height;
@@ -2060,12 +2076,6 @@ int32_t proton_engine_window_get_state(
       (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0 ? 1 : 0;
   out_state->always_on_top =
       window->window.level > NSNormalWindowLevel ? 1 : 0;
-  NSAppearance *appearance = window->window.effectiveAppearance;
-  NSAppearanceName match = [appearance
-      bestMatchFromAppearancesWithNames:@[
-        NSAppearanceNameAqua, NSAppearanceNameDarkAqua
-      ]];
-  out_state->theme = [match isEqualToString:NSAppearanceNameDarkAqua] ? 2 : 1;
   return PROTON_OK;
 }
 

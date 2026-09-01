@@ -89,7 +89,8 @@ struct proton_engine_window {
   int max_height;
   double aspect_ratio;
   int titlebar_overlay;
-  proton_window_theme_t theme;
+  proton_window_theme_preference_t theme_preference;
+  proton_window_theme_t current_theme;
   int fullscreen;
   int always_on_top;
   int zoom_percent;

@@ -916,9 +916,8 @@ fn decode_native_cookie_snapshot(
 ///|
 fn window_state_from_fields(field : (Int) -> Int) -> WindowState {
   let theme = match field(20) {
-    1 => WindowTheme::Light
     2 => WindowTheme::Dark
-    _ => WindowTheme::System
+    _ => WindowTheme::Light
   }
   {
     x: field(0),
@@ -1375,7 +1374,7 @@ pub fn Window::Window(
     @ffi.to_cstr(config.initial_url),
     window_size_hint_code(config.size_hint),
     runtime_config_bool(config.titlebar_style is TitlebarStyle::Overlay),
-    config.theme.native_value(),
+    config.theme_preference.native_value(),
     browser_policy_code(config.browser.navigation),
     runtime_config_string(config.framework_titlebar_minimize_label),
     runtime_config_string(config.framework_titlebar_maximize_label),
@@ -1967,7 +1966,7 @@ pub fn Window::set_background_color(
 ///|
 pub fn Window::set_theme(
   self : Window,
-  theme : WindowTheme,
+  theme : WindowThemePreference,
 ) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_window_set_theme_ffi(

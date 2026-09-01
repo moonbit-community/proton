@@ -42,24 +42,24 @@ pub impl Show for TitlebarStyle with fn output(self, logger) {
 }
 
 ///|
-/// Controls the native window chrome theme.
-pub(all) enum WindowTheme {
+/// Controls how Proton chooses the native window chrome theme.
+pub(all) enum WindowThemePreference {
   System
   Light
   Dark
 } derive(Debug, Eq)
 
 ///|
-pub extend WindowTheme with Eq::{not_equal, equal}
+pub extend WindowThemePreference with Eq::{not_equal, equal}
 
 ///|
-pub extend WindowTheme with Debug::{to_repr}
+pub extend WindowThemePreference with Debug::{to_repr}
 
 ///|
-pub extend WindowTheme with Show::{to_string, output}
+pub extend WindowThemePreference with Show::{to_string, output}
 
 ///|
-pub impl Show for WindowTheme with fn output(self, logger) {
+pub impl Show for WindowThemePreference with fn output(self, logger) {
   match self {
     System => logger.write_string("System")
     Light => logger.write_string("Light")
@@ -85,7 +85,7 @@ pub struct WindowManifest {
   height : Int
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
-  theme : WindowTheme
+  theme_preference : WindowThemePreference
 } derive(Debug, Eq)
 
 ///|
@@ -109,8 +109,8 @@ pub impl Show for WindowManifest with fn output(self, logger) {
   logger.write_object(self.size_hint)
   logger.write_string(", titlebar_style: ")
   logger.write_object(self.titlebar_style)
-  logger.write_string(", theme: ")
-  logger.write_object(self.theme)
+  logger.write_string(", theme_preference: ")
+  logger.write_object(self.theme_preference)
   logger.write_string(" }")
 }
 
@@ -155,9 +155,16 @@ pub fn WindowManifest::WindowManifest(
   height : Int,
   size_hint? : WindowSizeHint = WindowSizeHint::None,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
-  theme? : WindowTheme = WindowTheme::System,
+  theme? : WindowThemePreference = WindowThemePreference::System,
 ) -> WindowManifest {
-  WindowManifest::{ title, width, height, size_hint, titlebar_style, theme, }
+  WindowManifest::{
+    title,
+    width,
+    height,
+    size_hint,
+    titlebar_style,
+    theme_preference: theme,
+  }
 }
 
 ///|

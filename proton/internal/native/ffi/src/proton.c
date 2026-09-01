@@ -700,7 +700,8 @@ int32_t proton_runtime_respond_bridge_request(
 int32_t proton_internal_window_create(
     proton_runtime_handle_t runtime, const char *title, int32_t width,
     int32_t height, const char *initial_url, int32_t size_hint,
-    int32_t titlebar_overlay, int32_t theme, int32_t navigation_policy,
+    int32_t titlebar_overlay, int32_t theme_preference,
+    int32_t navigation_policy,
     const char *titlebar_minimize_label, const char *titlebar_maximize_label,
     const char *titlebar_restore_label, const char *titlebar_close_label,
     int32_t popup_policy, int32_t download_policy,
@@ -718,10 +719,10 @@ int32_t proton_internal_window_create(
   proton_engine_window_config_t config;
   status = proton_config_prepare_window(
       title, width, height, initial_url, size_hint, titlebar_overlay,
-      theme, navigation_policy, titlebar_minimize_label, titlebar_maximize_label,
-      titlebar_restore_label, titlebar_close_label, popup_policy,
-      download_policy, certificate_policy, media_policy, devtools,
-      bridge_config, &config);
+      theme_preference, navigation_policy, titlebar_minimize_label,
+      titlebar_maximize_label, titlebar_restore_label, titlebar_close_label,
+      popup_policy, download_policy, certificate_policy, media_policy,
+      devtools, bridge_config, &config);
   if (status != PROTON_OK) {
     return status;
   }
@@ -1559,9 +1560,10 @@ int32_t proton_window_set_background_color(proton_window_handle_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_set_theme(proton_window_handle_t window, int32_t theme) {
-  if (theme < PROTON_WINDOW_THEME_SYSTEM ||
-      theme > PROTON_WINDOW_THEME_DARK) {
+int32_t proton_window_set_theme(proton_window_handle_t window,
+                                int32_t theme_preference) {
+  if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||
+      theme_preference > PROTON_WINDOW_THEME_PREFERENCE_DARK) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "window theme is invalid");
   }
@@ -1574,8 +1576,9 @@ int32_t proton_window_set_theme(proton_window_handle_t window, int32_t theme) {
   }
   char engine_error[512] = {0};
   status = proton_engine_window_set_theme(
-      slot->engine_window, (proton_window_theme_t)theme, engine_error,
-      sizeof(engine_error));
+      slot->engine_window,
+      (proton_window_theme_preference_t)theme_preference,
+      engine_error, sizeof(engine_error));
   if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
   g_last_error[0] = '\0';
   return PROTON_OK;

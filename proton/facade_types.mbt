@@ -599,7 +599,7 @@ pub struct WindowHandle {
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
   set_window_ignore_mouse_events : (Bool, Bool) -> Unit raise WindowSessionError
   set_window_background_color : (String) -> Unit raise WindowSessionError
-  set_window_theme : (WindowTheme) -> Unit raise WindowSessionError
+  set_window_theme : (WindowThemePreference) -> Unit raise WindowSessionError
   set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
   set_window_enabled : (Bool) -> Unit raise WindowSessionError
   set_window_menu : (MenuBar?) -> Unit raise WindowSessionError

@@ -98,6 +98,26 @@ int proton_engine_x11_window_is_focused(Display *display,
   return is_focused;
 }
 
+static proton_window_theme_t proton_engine_window_effective_theme(
+    const proton_engine_window_t *window) {
+  if (window != NULL) {
+    switch (window->theme_preference) {
+    case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
+      return PROTON_WINDOW_THEME_LIGHT;
+    case PROTON_WINDOW_THEME_PREFERENCE_DARK:
+      return PROTON_WINDOW_THEME_DARK;
+    case PROTON_WINDOW_THEME_PREFERENCE_SYSTEM:
+      break;
+    }
+  }
+  gboolean dark = FALSE;
+  GtkSettings *settings = gtk_settings_get_default();
+  if (settings != NULL) {
+    g_object_get(settings, "gtk-application-prefer-dark-theme", &dark, NULL);
+  }
+  return dark ? PROTON_WINDOW_THEME_DARK : PROTON_WINDOW_THEME_LIGHT;
+}
+
 static void proton_engine_apply_size_constraints(
     proton_engine_window_t *window) {
   if (window == NULL || window->window == NULL || window->headless) {
@@ -477,7 +497,8 @@ int32_t proton_engine_window_create(
         "titlebar overlay is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
-  if (!runtime->headless && config.theme != PROTON_WINDOW_THEME_SYSTEM) {
+  if (!runtime->headless && config.theme_preference !=
+                                PROTON_WINDOW_THEME_PREFERENCE_SYSTEM) {
     proton_engine_set_message(
         error, error_len,
         "explicit window themes are not supported on Linux");
@@ -502,7 +523,7 @@ int32_t proton_engine_window_create(
   window->headless = runtime->headless;
   window->size_hint = config.size_hint;
   window->titlebar_overlay = config.titlebar_overlay;
-  window->theme = config.theme;
+  window->theme_preference = config.theme_preference;
   snprintf(window->titlebar_minimize_label,
            sizeof(window->titlebar_minimize_label), "%s",
            config.titlebar_minimize_label);
@@ -1342,13 +1363,15 @@ int32_t proton_engine_window_set_background_color(
 }
 
 int32_t proton_engine_window_set_theme(
-    proton_engine_window_t *window, proton_window_theme_t theme, char *error,
+    proton_engine_window_t *window,
+    proton_window_theme_preference_t theme_preference, char *error,
     size_t error_len) {
   if (window == NULL || (!window->headless && window->window == NULL)) {
     proton_engine_set_message(error, error_len, "window is not initialized");
     return PROTON_ERR_INVALID_HANDLE;
   }
-  if (theme < PROTON_WINDOW_THEME_SYSTEM || theme > PROTON_WINDOW_THEME_DARK) {
+  if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||
+      theme_preference > PROTON_WINDOW_THEME_PREFERENCE_DARK) {
     proton_engine_set_message(error, error_len, "window theme is invalid");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
@@ -1357,13 +1380,13 @@ int32_t proton_engine_window_set_theme(
                               "window theme is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
-  if (theme != PROTON_WINDOW_THEME_SYSTEM) {
+  if (theme_preference != PROTON_WINDOW_THEME_PREFERENCE_SYSTEM) {
     proton_engine_set_message(
         error, error_len,
         "explicit window themes are not supported on Linux");
     return PROTON_ERR_UNSUPPORTED;
   }
-  window->theme = theme;
+  window->theme_preference = theme_preference;
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return PROTON_OK;
 }
@@ -1537,6 +1560,7 @@ int32_t proton_engine_window_get_state(
   out_state->zoom_percent =
       window->zoom_percent > 0 ? window->zoom_percent : 100;
   out_state->scale_factor_percent = 100;
+  out_state->theme = proton_engine_window_effective_theme(window);
   if (window->headless) {
     out_state->width = window->width;
     out_state->height = window->height;
@@ -1584,12 +1608,6 @@ int32_t proton_engine_window_get_state(
   out_state->focused =
       gtk_window_has_toplevel_focus(GTK_WINDOW(window->window)) ? 1 : 0;
   out_state->always_on_top = window->always_on_top;
-  gboolean dark = FALSE;
-  GtkSettings *settings = gtk_settings_get_default();
-  if (settings != NULL) {
-    g_object_get(settings, "gtk-application-prefer-dark-theme", &dark, NULL);
-    out_state->theme = dark ? 2 : 1;
-  }
   return PROTON_OK;
 }
 

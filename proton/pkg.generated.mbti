@@ -200,7 +200,7 @@ pub fn WindowSessionError::to_string(Self) -> String
 
 // Types and methods
 type App
-pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowTheme, open_on_start? : Bool) -> Self
+pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, open_on_start? : Bool) -> Self
 pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Self
@@ -239,7 +239,7 @@ pub fn App::set_app_logs_path(Self, path? : String) -> Self raise AppPathError
 pub fn App::set_path(Self, AppPathKind, String) -> Self raise AppPathError
 pub fn App::single_instance(Self, enabled? : Bool) -> Self
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
-pub fn App::theme(Self, WindowTheme) -> Self
+pub fn App::theme(Self, WindowThemePreference) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, TitlebarStyle) -> Self
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
@@ -891,7 +891,7 @@ pub struct WindowHandle {
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
   set_window_ignore_mouse_events : (Bool, Bool) -> Unit raise WindowSessionError
   set_window_background_color : (String) -> Unit raise WindowSessionError
-  set_window_theme : (WindowTheme) -> Unit raise WindowSessionError
+  set_window_theme : (WindowThemePreference) -> Unit raise WindowSessionError
   set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
   set_window_enabled : (Bool) -> Unit raise WindowSessionError
   set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
@@ -950,7 +950,7 @@ pub fn WindowHandle::set_progress_bar(Self, Double) -> Unit raise WindowSessionE
 pub fn WindowHandle::set_resizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_skip_taskbar(Self, Bool) -> Unit raise WindowSessionError
-pub fn WindowHandle::set_theme(Self, WindowTheme) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_theme(Self, WindowThemePreference) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_title(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_visible_on_all_workspaces(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_window_button_visibility(Self, Bool) -> Unit raise WindowSessionError
@@ -1014,13 +1014,21 @@ pub fn WindowState::not_equal(Self, Self) -> Bool
 pub fn WindowState::to_repr(Self) -> @debug.Repr
 
 pub(all) enum WindowTheme {
-  System
   Light
   Dark
 } derive(Eq, @debug.Debug)
 pub fn WindowTheme::equal(Self, Self) -> Bool
 pub fn WindowTheme::not_equal(Self, Self) -> Bool
 pub fn WindowTheme::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WindowThemePreference {
+  System
+  Light
+  Dark
+} derive(Eq, @debug.Debug)
+pub fn WindowThemePreference::equal(Self, Self) -> Bool
+pub fn WindowThemePreference::not_equal(Self, Self) -> Bool
+pub fn WindowThemePreference::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub using @manifest {type AppEntry}
