@@ -1,0 +1,18 @@
+{
+  "identifier": "community.moonbit.proton.app-protocol-process",
+  "backend": {
+    "path": "../..",
+    "package": "examples/75_app_protocol_process"
+  },
+  "package": {
+    "product_name": "Proton App Control",
+    "version": "1.0.0",
+    "formats": [
+      "app"
+    ],
+    "output": "../../dist",
+    "url_schemes": [
+      "proton-control-review"
+    ]
+  }
+}
