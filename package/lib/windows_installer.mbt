@@ -49,16 +49,15 @@ fn windows_protocol_install_script(
     let scheme = windows_installer_quote(scheme)
     builder <+
       $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}" "" "URL:\{scheme}"
+    builder.write_char('\n')
     builder <+
       $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}" "URL Protocol" ""
+    builder.write_char('\n')
     builder <+
       $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}\\shell\\open\\command" "" "$\\"$INSTDIR\\\{executable}$\\" $\\"%1$\\""
+    builder.write_char('\n')
   }
-  if plan.url_schemes.length() == 0 {
-    ""
-  } else {
-    builder.to_string() + "\n"
-  }
+  builder.to_string()
 }
 
 ///|
@@ -67,12 +66,9 @@ fn windows_protocol_uninstall_script(plan : PackageSpec) -> String {
   for scheme in plan.url_schemes {
     builder <+
       $|  DeleteRegKey HKCU "Software\\Classes\\\{windows_installer_quote(scheme)}"
+    builder.write_char('\n')
   }
-  if plan.url_schemes.length() == 0 {
-    ""
-  } else {
-    builder.to_string() + "\n"
-  }
+  builder.to_string()
 }
 
 ///|

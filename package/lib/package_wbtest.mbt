@@ -210,6 +210,7 @@ test "NSIS versions and quoting follow installer syntax" {
 ///|
 test "NSIS script carries package identity and update behavior" {
   let spec = package_test_spec([App, Nsis])
+  spec.url_schemes.push("demo-app")
   let script = windows_installer_script(spec, "C:\\stage\\Demo App")
   assert_true(script.contains("Name \"Demo App\""))
   assert_true(script.contains("VIProductVersion \"1.2.3.0\""))
@@ -231,7 +232,8 @@ test "NSIS script carries package identity and update behavior" {
   )
   assert_true(
     script.contains(
-      "DeleteRegKey HKCU \"Software\\Classes\\devtoys\"\nSectionEnd",
+      "DeleteRegKey HKCU \"Software\\Classes\\devtoys\"\n" +
+      "  DeleteRegKey HKCU \"Software\\Classes\\demo-app\"\nSectionEnd",
     ),
   )
   assert_true(
