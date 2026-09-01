@@ -262,7 +262,7 @@ async fn create_windows_installer(
         detail="\{script}: \{@debug.render(Repr(error))}",
       )
   }
-  let (code, _) = @process.collect_output_merged(windows_installer_tool, [
+  let (code, output) = @process.collect_output_merged(windows_installer_tool, [
     "/V2", script,
   ]) catch {
     _ =>
@@ -274,7 +274,10 @@ async fn create_windows_installer(
   guard code == 0 else {
     raise WindowsPackagingError::ToolFailure(
       stage="create Windows installer",
-      detail="exit code \{code}",
+      detail="exit code " +
+        code.to_string() +
+        ": " +
+        (output.text() catch { _ => "non-UTF-8 output" }),
     )
   }
   guard path_exists(staging) else {
