@@ -152,7 +152,7 @@ function verifyGeneratedTree() {
 function useLocalCodegenPackage() {
   const backendModPath = path.join(projectDir, "backend", "moon.mod");
   const source = fs.readFileSync(backendModPath, "utf8");
-  const localCommand = `moon runwasm '${path.join(repoRoot, "codegen")}'`;
+  const localCommand = `moon run '${path.join(repoRoot, "codegen")}' --target wasm --`;
   const updated = source.replace(`moonx ${codegenCoordinate}`, localCommand);
   assert(updated !== source, "generated backend is missing the codegen command");
   assert(
@@ -171,8 +171,11 @@ function verifySourceSmokeCodegen() {
   );
   const fresh = path.join(tempRoot, "commands.fresh.mbt");
   run("moon", [
-    "runwasm",
+    "run",
     path.join(repoRoot, "codegen"),
+    "--target",
+    "wasm",
+    "--",
     path.join(projectDir, "backend", "todo", "commands.mbt"),
     "-o",
     fresh,
