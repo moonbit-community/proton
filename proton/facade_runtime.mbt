@@ -601,6 +601,14 @@ fn native_window_config(
       @manifest.TitlebarStyle::Default => @native.TitlebarStyle::Default
       @manifest.TitlebarStyle::Overlay => @native.TitlebarStyle::Overlay
     },
+    theme=match window.theme_preference {
+      @manifest.WindowThemePreference::System =>
+        @native.WindowThemePreference::System
+      @manifest.WindowThemePreference::Light =>
+        @native.WindowThemePreference::Light
+      @manifest.WindowThemePreference::Dark =>
+        @native.WindowThemePreference::Dark
+    },
     browser~,
     bridge?,
   ).with_framework_titlebar_labels(

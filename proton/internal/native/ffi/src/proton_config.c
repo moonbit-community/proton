@@ -664,7 +664,8 @@ static bool proton_browser_policy_mode_valid(int32_t mode) {
 
 int32_t proton_config_prepare_window(
     const char *title, int32_t width, int32_t height, const char *initial_url,
-    int32_t size_hint, int32_t titlebar_overlay, int32_t navigation_policy,
+    int32_t size_hint, int32_t titlebar_overlay, int32_t theme_preference,
+    int32_t navigation_policy,
     const char *titlebar_minimize_label, const char *titlebar_maximize_label,
     const char *titlebar_restore_label, const char *titlebar_close_label,
     int32_t popup_policy, int32_t download_policy,
@@ -682,6 +683,11 @@ int32_t proton_config_prepare_window(
   if (size_hint < 0 || size_hint > 3) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "window size hint is invalid");
+  }
+  if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||
+      theme_preference > PROTON_WINDOW_THEME_PREFERENCE_DARK) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "window theme is invalid");
   }
   if (!proton_browser_policy_mode_valid(navigation_policy) ||
       !proton_browser_policy_mode_valid(popup_policy) ||
@@ -706,6 +712,8 @@ int32_t proton_config_prepare_window(
   config.height = height;
   config.size_hint = size_hint;
   config.titlebar_overlay = titlebar_overlay != 0;
+  config.theme_preference =
+      (proton_window_theme_preference_t)theme_preference;
   if ((titlebar_minimize_label != NULL && titlebar_minimize_label[0] != '\0' &&
        !proton_copy_config_text(config.titlebar_minimize_label,
                                 sizeof(config.titlebar_minimize_label),

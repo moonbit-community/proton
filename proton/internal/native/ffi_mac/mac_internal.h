@@ -160,6 +160,7 @@ struct proton_engine_window {
   int max_height;
   double aspect_ratio;
   int zoom_percent;
+  proton_window_theme_preference_t theme_preference;
   NSInteger attention_request_id;
   int headless;
   int maximizable;

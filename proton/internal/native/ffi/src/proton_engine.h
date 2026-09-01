@@ -38,6 +38,17 @@ typedef struct {
   int32_t persist_session_cookies;
 } proton_engine_runtime_config_t;
 
+typedef enum {
+  PROTON_WINDOW_THEME_LIGHT = 1,
+  PROTON_WINDOW_THEME_DARK = 2,
+} proton_window_theme_t;
+
+typedef enum {
+  PROTON_WINDOW_THEME_PREFERENCE_SYSTEM = 0,
+  PROTON_WINDOW_THEME_PREFERENCE_LIGHT = 1,
+  PROTON_WINDOW_THEME_PREFERENCE_DARK = 2,
+} proton_window_theme_preference_t;
+
 typedef struct {
   proton_window_id_t public_window;
   char title[512];
@@ -46,6 +57,7 @@ typedef struct {
   int32_t height;
   int32_t size_hint;
   int32_t titlebar_overlay;
+  proton_window_theme_preference_t theme_preference;
   char titlebar_minimize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char titlebar_maximize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
@@ -278,6 +290,10 @@ int32_t proton_engine_window_set_ignore_mouse_events(
     char *error, size_t error_len);
 int32_t proton_engine_window_set_background_color(
     proton_engine_window_t *window, uint32_t color, char *error,
+    size_t error_len);
+int32_t proton_engine_window_set_theme(
+    proton_engine_window_t *window,
+    proton_window_theme_preference_t theme_preference, char *error,
     size_t error_len);
 int32_t proton_engine_window_set_visible_on_all_workspaces(
     proton_engine_window_t *window, int32_t visible, char *error,

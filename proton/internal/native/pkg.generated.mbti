@@ -727,6 +727,7 @@ pub fn Window::set_progress_bar(Self, Double) -> Unit raise NativeError
 pub fn Window::set_resizable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_size(Self, Int, Int) -> Unit raise NativeError
 pub fn Window::set_skip_taskbar(Self, Bool) -> Unit raise NativeError
+pub fn Window::set_theme(Self, WindowThemePreference) -> Unit raise NativeError
 pub fn Window::set_title(Self, String) -> Unit raise NativeError
 pub fn Window::set_visible_on_all_workspaces(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_zoom_percent(Self, Int) -> Unit raise NativeError
@@ -737,7 +738,7 @@ pub fn Window::stop_find_in_page(Self, Bool) -> Unit raise NativeError
 pub fn Window::take_bridge_failure(Self) -> BridgeDiagnostic? raise NativeError
 
 type WindowConfig derive(Eq, @debug.Debug)
-pub fn WindowConfig::WindowConfig(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, browser? : BrowserPolicy, bridge? : BridgeConfig) -> Self
+pub fn WindowConfig::WindowConfig(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, browser? : BrowserPolicy, bridge? : BridgeConfig) -> Self
 pub fn WindowConfig::equal(Self, Self) -> Bool
 pub fn WindowConfig::not_equal(Self, Self) -> Bool
 pub fn WindowConfig::to_repr(Self) -> @debug.Repr
@@ -794,11 +795,28 @@ pub(all) struct WindowState {
   maximized : Bool
   fullscreen : Bool
   always_on_top : Bool
-  theme : String
+  theme : WindowTheme
 } derive(Eq, @debug.Debug)
 pub fn WindowState::equal(Self, Self) -> Bool
 pub fn WindowState::not_equal(Self, Self) -> Bool
 pub fn WindowState::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WindowTheme {
+  Light
+  Dark
+} derive(Eq, @debug.Debug)
+pub fn WindowTheme::equal(Self, Self) -> Bool
+pub fn WindowTheme::not_equal(Self, Self) -> Bool
+pub fn WindowTheme::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WindowThemePreference {
+  System
+  Light
+  Dark
+} derive(Eq, @debug.Debug)
+pub fn WindowThemePreference::equal(Self, Self) -> Bool
+pub fn WindowThemePreference::not_equal(Self, Self) -> Bool
+pub fn WindowThemePreference::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
