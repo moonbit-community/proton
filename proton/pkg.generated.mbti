@@ -63,6 +63,19 @@ pub fn AppConfigurationError::output(Self, &Logger) -> Unit
 pub fn AppConfigurationError::to_repr(Self) -> @debug.Repr
 pub fn AppConfigurationError::to_string(Self) -> String
 
+pub(all) suberror AppControlError {
+  InvalidProtocolScheme(scheme~ : String)
+  UndeclaredProtocolScheme(scheme~ : String)
+  InvalidExecutable(path~ : String)
+  NativeControlFailure(action~ : String, status~ : Int, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn AppControlError::equal(Self, Self) -> Bool
+pub fn AppControlError::message(Self) -> String
+pub fn AppControlError::not_equal(Self, Self) -> Bool
+pub fn AppControlError::output(Self, &Logger) -> Unit
+pub fn AppControlError::to_repr(Self) -> @debug.Repr
+pub fn AppControlError::to_string(Self) -> String
+
 pub(all) suberror AppEntryError {
   ReadFailed(path~ : String, detail~ : String)
   PlatformLoad(action~ : String, status~ : Int, detail~ : String)
@@ -261,10 +274,19 @@ pub struct ApplicationContext {
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
   request_quit : () -> Unit
+  application_identifier : String
+  application_executable : String
+  application_arguments : Array[String]
+  url_schemes : Array[String]
 }
+pub fn ApplicationContext::exit(Self, exit_code? : Int) -> Unit
+pub fn ApplicationContext::is_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn ApplicationContext::quit(Self) -> Unit
+pub fn ApplicationContext::relaunch(Self, options? : RelaunchOptions) -> Unit raise AppControlError
+pub fn ApplicationContext::remove_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
+pub fn ApplicationContext::set_as_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::windows(Self) -> WindowManager
 
@@ -618,6 +640,15 @@ pub(all) struct PopupRequest {
 pub fn PopupRequest::equal(Self, Self) -> Bool
 pub fn PopupRequest::not_equal(Self, Self) -> Bool
 pub fn PopupRequest::to_repr(Self) -> @debug.Repr
+
+pub(all) struct RelaunchOptions {
+  executable : String?
+  arguments : Array[String]?
+} derive(Eq, @debug.Debug)
+pub fn RelaunchOptions::RelaunchOptions(executable? : String, arguments? : Array[String]) -> Self
+pub fn RelaunchOptions::equal(Self, Self) -> Bool
+pub fn RelaunchOptions::not_equal(Self, Self) -> Bool
+pub fn RelaunchOptions::to_repr(Self) -> @debug.Repr
 
 pub struct RendererTarget {
   window : String

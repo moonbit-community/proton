@@ -34,6 +34,10 @@ fn RuntimeSession::RuntimeSession(
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ],
+  application_identifier? : String = "",
+  application_executable? : String = "",
+  application_arguments? : Array[String] = [],
+  url_schemes? : Array[String] = [],
 ) -> RuntimeSession {
   RuntimeSession::{
     runtime,
@@ -69,6 +73,10 @@ fn RuntimeSession::RuntimeSession(
     media_handler,
     download_event_handlers,
     close_coordinator: CloseCoordinator(),
+    application_identifier,
+    application_executable,
+    application_arguments,
+    url_schemes,
   }
 }
 
@@ -148,6 +156,10 @@ fn RuntimeSession::application_context(
     self.window_manager(),
     self.locale_preferences,
     request_quit=() => self.request_quit(),
+    application_identifier=self.application_identifier,
+    application_executable=self.application_executable,
+    application_arguments=self.application_arguments,
+    url_schemes=self.url_schemes,
   )
 }
 

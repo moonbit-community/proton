@@ -151,6 +151,32 @@ priv struct ResolvedUpdateChannel {
 }
 
 ///|
+/// Optional command override for `ApplicationContext::relaunch`.
+///
+/// With neither field set, Proton repeats the current executable and command
+/// line. Setting either field switches to Electron's override behavior: the
+/// executable still defaults to the current executable, while omitted
+/// arguments become an empty array.
+pub(all) struct RelaunchOptions {
+  executable : String?
+  arguments : Array[String]?
+} derive(Debug, Eq)
+
+///|
+pub extend RelaunchOptions with Eq::{not_equal, equal}
+
+///|
+pub extend RelaunchOptions with Debug::{to_repr}
+
+///|
+pub fn RelaunchOptions::RelaunchOptions(
+  executable? : String,
+  arguments? : Array[String],
+) -> RelaunchOptions {
+  RelaunchOptions::{ executable, arguments, }
+}
+
+///|
 priv struct BridgeDispatchTask {
   request_id : Int64
   window : Int64
@@ -355,6 +381,10 @@ priv struct RuntimeSession {
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
   close_coordinator : CloseCoordinator
+  application_identifier : String
+  application_executable : String
+  application_arguments : Array[String]
+  url_schemes : Array[String]
 }
 
 ///|
@@ -1001,6 +1031,21 @@ pub(all) suberror AppConfigurationError {
   InvalidEntryUrl(url~ : String, reason~ : String)
   InvalidRendererCapability(detail~ : String)
 } derive(Debug)
+
+///|
+/// Failures from application-level desktop and process controls.
+pub(all) suberror AppControlError {
+  InvalidProtocolScheme(scheme~ : String)
+  UndeclaredProtocolScheme(scheme~ : String)
+  InvalidExecutable(path~ : String)
+  NativeControlFailure(action~ : String, status~ : Int, detail~ : String)
+} derive(Debug, Eq)
+
+///|
+pub extend AppControlError with Eq::{not_equal, equal}
+
+///|
+pub extend AppControlError with Debug::{to_repr}
 
 ///|
 pub extend AppConfigurationError with Debug::{to_repr}

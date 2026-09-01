@@ -226,11 +226,12 @@ pub fn App::menu(self : App, menu : MenuBar) -> App {
 }
 
 ///|
-/// Registers an application URL scheme for single-instance launch forwarding.
-/// OS registration belongs to the package configuration.
+/// Declares an application URL scheme for launch forwarding and protocol-client
+/// controls. Package configuration must declare the same scheme so distributed
+/// applications contain the required platform metadata.
 pub fn App::url_scheme(self : App, scheme : String) -> App {
   let scheme = scheme.trim().to_owned().to_lower()
-  if scheme == "" || scheme.contains(":") || scheme.contains("/") {
+  if !app_url_scheme_is_valid(scheme) {
     self.validation_errors.push(
       InvalidSetting(name="url_scheme", message="must be a scheme name"),
     )
@@ -238,6 +239,24 @@ pub fn App::url_scheme(self : App, scheme : String) -> App {
     self.url_schemes.push(scheme)
   }
   self
+}
+
+///|
+fn app_url_scheme_is_valid(scheme : String) -> Bool {
+  guard scheme.length() > 0 else { return false }
+  for index, char in scheme {
+    let valid = if index == 0 {
+      char.is_ascii_alphabetic()
+    } else {
+      char.is_ascii_alphabetic() ||
+      char.is_ascii_digit() ||
+      char == '+' ||
+      char == '-' ||
+      char == '.'
+    }
+    guard valid else { return false }
+  }
+  true
 }
 
 ///|
