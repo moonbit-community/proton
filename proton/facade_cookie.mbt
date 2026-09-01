@@ -124,6 +124,7 @@ pub fn SessionHandle::window_id(self : SessionHandle) -> String {
 
 ///|
 /// Returns cookies visible to the session, optionally restricted to one URL.
+/// HTTP-only cookies are excluded unless `include_http_only` is `true`.
 pub async fn SessionHandle::get_cookies(
   self : SessionHandle,
   url? : String,
