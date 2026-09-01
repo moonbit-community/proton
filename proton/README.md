@@ -46,6 +46,13 @@ Windows and Linux, and `Recent` is available on Windows. Persistent application
 paths use the reverse-DNS identifier, so changing a display name does not move
 user state.
 
+`App::set_path` overrides any supported standard path before startup and
+requires an existing absolute path. `App::set_app_logs_path` accepts an
+absolute directory that Proton creates during startup; omitting the path selects
+Electron's default logs location. `UserData` overrides feed the default
+`SessionData` path, while an explicit `SessionData` override becomes the CEF
+browser profile location for single-instance applications.
+
 ## Entry points
 
 - `@proton.html(title, html, ...)` — inline HTML document.

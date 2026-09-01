@@ -7,11 +7,15 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     None => ()
   }
   let resolved = self.resolved_app_config()
-  let logging = start_runtime_logging(resolved.application_identifier)
+  let log_directory = resolve_runtime_app_path(self, AppPathKind::Logs)
+  if self.create_logs_path {
+    ensure_log_directory(log_directory)
+  }
+  let logging = start_runtime_logging(log_directory)
   defer logging.close()
   @xlog.info(category="proton.runtime") <?
     { "message": "application runtime starting" }
-  let browser_data_dir = resolve_browser_data_dir(resolved) catch {
+  let browser_data_dir = resolve_browser_data_dir(self, resolved) catch {
     error => raise ConfigurationError(error)
   }
   let locale_preferences = resolve_locale_preferences(self.explicit_locale)
@@ -463,13 +467,31 @@ fn requires_renderer_bridge(
 /// single-instance route. Multi-instance runtimes receive native-owned
 /// temporary profiles instead.
 fn resolve_browser_data_dir(
+  app : App,
   config : ResolvedAppConfig,
 ) -> String? raise AppConfigurationError {
   guard config.instance_identifier is Some(_) else { return None }
-  let path = browser_data_dir(config.application_identifier) catch {
-    error => raise InvalidSetting(name="identifier", message=error.message())
+  let path = app.session_data_path(config.application_identifier) catch {
+    error =>
+      raise InvalidSetting(name="paths.sessionData", message=error.message())
   }
   Some(path)
+}
+
+///|
+fn resolve_runtime_app_path(
+  app : App,
+  kind : AppPathKind,
+) -> String raise AppRunError {
+  app.path(kind) catch {
+    error =>
+      raise ConfigurationError(
+        InvalidSetting(
+          name="paths." + kind.electron_name(),
+          message=error.message(),
+        ),
+      )
+  }
 }
 
 ///|

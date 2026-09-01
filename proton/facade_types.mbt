@@ -36,6 +36,9 @@ struct App {
   mut application_identity : ApplicationIdentitySource?
   mut single_instance_enabled : Bool
   mut explicit_locale : @locale.Locale?
+  path_overrides : Map[String, String]
+  mut electron_default_logs_path : Bool
+  mut create_logs_path : Bool
   mut bridge_startup_timeout_value_ms : Int
   mut last_window_closed_policy_value : LastWindowClosedPolicy
   mut menu : MenuBar?

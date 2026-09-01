@@ -180,3 +180,91 @@ test "platform-specific standard paths report availability" {
     }
   }
 }
+
+///|
+test "path overrides preserve dependent application paths" {
+  let app = html("Paths", "<main>Paths</main>").identifier(
+    "dev.proton.path-overrides",
+  )
+  let root = app.path(AppPathKind::Temp)
+  let overridden = app.set_path(AppPathKind::UserData, root)
+  assert_eq(overridden.path(AppPathKind::UserData), root)
+  assert_eq(overridden.data_dir(), root)
+  assert_eq(
+    overridden.path(AppPathKind::SessionData),
+    @mbpath.Path(root).join("browser").normalize().to_string(),
+  )
+}
+
+///|
+test "session data overrides are consumed by single-instance runtime config" {
+  let app = html("Paths", "<main>Paths</main>")
+    .identifier("dev.proton.session-override")
+    .single_instance()
+  let root = app.path(AppPathKind::Temp)
+  let app = app.set_path(AppPathKind::SessionData, root)
+  assert_eq(
+    resolve_browser_data_dir(app, app.resolved_app_config()),
+    Some(root),
+  )
+}
+
+///|
+test "application log path supports custom and Electron defaults" {
+  let custom = html("Paths", "<main>Paths</main>").identifier(
+    "dev.proton.log-override",
+  )
+  let temp = custom.path(AppPathKind::Temp)
+  let custom_path = @mbpath.Path(temp)
+    .join("proton-custom-log-path")
+    .normalize()
+    .to_string()
+  let custom = custom.set_app_logs_path(path=custom_path)
+  assert_eq(custom.path(AppPathKind::Logs), custom_path)
+  assert_true(custom.create_logs_path)
+
+  let defaults = html("Paths", "<main>Paths</main>")
+    .identifier("dev.proton.default-logs")
+    .set_path(AppPathKind::UserData, temp)
+    .set_app_logs_path()
+  let platform = @native.runtime_info().platform
+  let expected = if platform == "macos" {
+    app_log_dir_for_platform(
+      platform,
+      "dev.proton.default-logs",
+      @env.get_env_var("HOME"),
+      @env.get_env_var("LOCALAPPDATA"),
+      @env.get_env_var("XDG_STATE_HOME"),
+    )
+  } else {
+    @mbpath.Path(temp).join("logs").normalize().to_string()
+  }
+  assert_eq(defaults.path(AppPathKind::Logs), expected)
+}
+
+///|
+test "path overrides reject relative and missing paths" {
+  let app = html("Paths", "<main>Paths</main>")
+  try app.set_path(AppPathKind::Home, "relative/path") catch {
+    InvalidPathOverride(kind="home", reason="path must be absolute", ..) => ()
+    _ => fail("expected a relative path validation error")
+  } noraise {
+    _ => fail("expected relative path override to fail")
+  }
+  let missing = @mbpath.Path(app.path(AppPathKind::Executable))
+    .join("missing-path")
+    .to_string()
+  try app.set_path(AppPathKind::Home, missing) catch {
+    InvalidPathOverride(kind="home", reason="path does not exist", ..) => ()
+    _ => fail("expected a missing path validation error")
+  } noraise {
+    _ => fail("expected missing path override to fail")
+  }
+  let executable = app.path(AppPathKind::Executable)
+  try app.set_path(AppPathKind::Home, executable) catch {
+    InvalidPathOverride(kind="home", reason="path is not a directory", ..) => ()
+    _ => fail("expected a directory path validation error")
+  } noraise {
+    _ => fail("expected file-backed directory override to fail")
+  }
+}

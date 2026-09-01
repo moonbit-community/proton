@@ -1,6 +1,6 @@
 ///|
 async fn start_runtime_logging(
-  application_identifier : String,
+  directory : String,
 ) -> @logging.RuntimeLogging raise AppRunError {
   let config = @xlog.Config::from_env(level=@xlog.Warn) catch {
     error =>
@@ -21,9 +21,6 @@ async fn start_runtime_logging(
         raise LoggingInitializationFailed(
           detail="file logging requires packaged application metadata",
         )
-      }
-      let directory = app_log_dir(application_identifier) catch {
-        error => raise LoggingInitializationFailed(detail=error.message())
       }
       ensure_log_directory(directory)
       let filename = "proton-" +
