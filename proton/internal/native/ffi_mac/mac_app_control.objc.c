@@ -1,3 +1,5 @@
+#if defined(__APPLE__)
+
 #import <AppKit/AppKit.h>
 #import <CoreServices/CoreServices.h>
 
@@ -287,3 +289,5 @@ void proton_process_exit(int32_t exit_code) {
   (void)proton_process_run_relaunches();
   _exit(exit_code);
 }
+
+#endif
