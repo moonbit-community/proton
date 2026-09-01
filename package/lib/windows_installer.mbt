@@ -40,6 +40,34 @@ fn windows_uninstall_registry_key(plan : PackageSpec) -> String {
 }
 
 ///|
+fn windows_protocol_install_script(
+  plan : PackageSpec,
+  executable : String,
+) -> String {
+  let builder = StringBuilder()
+  for scheme in plan.url_schemes {
+    let scheme = windows_installer_quote(scheme)
+    builder <+
+      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}" "" "URL:\{scheme}"
+    builder <+
+      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}" "URL Protocol" ""
+    builder <+
+      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}\\shell\\open\\command" "" "$\\"$INSTDIR\\\{executable}$\\" $\\"%1$\\""
+  }
+  builder.to_string()
+}
+
+///|
+fn windows_protocol_uninstall_script(plan : PackageSpec) -> String {
+  let builder = StringBuilder()
+  for scheme in plan.url_schemes {
+    builder <+
+      $|  DeleteRegKey HKCU "Software\\Classes\\\{windows_installer_quote(scheme)}"
+  }
+  builder.to_string()
+}
+
+///|
 /// `VIProductVersion` rejects anything that is not exactly four numeric
 /// fields, so a semantic version has to be padded and any pre-release suffix
 /// dropped. The human-readable version still ships in `FileVersion`.
@@ -185,6 +213,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  WriteRegDWORD HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoModify" 1
     $|  WriteRegDWORD HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoRepair" 1
     $|
+  builder.write_string(windows_protocol_install_script(plan, executable))
+  builder <+
+    $|
     $|  CreateShortCut "$SMPROGRAMS\\\{product}.lnk" "$INSTDIR\\\{executable}"
     $|  ${If} $ProtonUpdate == "1"
     $|    Exec '"$INSTDIR\\\{executable}"'
@@ -202,6 +233,8 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  RMDir /r "$INSTDIR.proton-next"
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}"
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}"
+  builder.write_string(windows_protocol_uninstall_script(plan))
+  builder <+
     $|SectionEnd
     $|
   builder.to_string()

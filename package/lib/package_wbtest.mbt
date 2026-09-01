@@ -50,6 +50,19 @@ test "package metadata rejects path-unsafe values" {
 }
 
 ///|
+test "package URL schemes are normalized before entering native metadata" {
+  assert_eq(validate_url_schemes([" Demo+App "]), ["demo+app"])
+  for schemes in [["1bad"], ["bad/scheme"], ["demo", "DEMO"]] {
+    try ignore(validate_url_schemes(schemes)) catch {
+      InvalidUrlScheme(..) => ()
+      _ => abort("expected an invalid URL scheme")
+    } noraise {
+      _ => abort("expected an invalid URL scheme")
+    }
+  }
+}
+
+///|
 test "package versions cannot escape package paths" {
   for version in ["1.2", "v1", "2026.08", "1.2.3-beta.1+build.5"] {
     assert_eq(validate_package_version(version), version)
@@ -143,7 +156,13 @@ test "Windows icon embedding reports the native-only operation" {
 ///|
 fn package_test_spec(formats : Array[PackageFormat]) -> PackageSpec {
   PackageSpec(
-    "/tmp/demo", "Demo App", "dev.proton.demo", "1.2.3", formats, "/tmp/dist",
+    "/tmp/demo",
+    "Demo App",
+    "dev.proton.demo",
+    "1.2.3",
+    formats,
+    "/tmp/dist",
+    url_schemes=["devtoys"],
   )
 }
 
@@ -204,6 +223,14 @@ test "NSIS script carries package identity and update behavior" {
   assert_true(script.contains("Exec '\"$INSTDIR\\demo-app.exe\"'"))
   assert_true(
     script.contains(
+      "WriteRegStr HKCU \"Software\\Classes\\devtoys\" \"URL Protocol\" \"\"",
+    ),
+  )
+  assert_true(
+    script.contains("DeleteRegKey HKCU \"Software\\Classes\\devtoys\""),
+  )
+  assert_true(
+    script.contains(
       "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\dev.proton.demo",
     ),
   )
@@ -222,19 +249,23 @@ test "AppImage metadata points at the staged executable" {
       $|Terminal=false
       $|Categories=Utility;
       $|Name=Demo App
-      $|Exec=demo-app
+      $|Exec=demo-app %U
       $|Icon=demo-app
       $|X-AppImage-Version=1.2.3
+      $|MimeType=x-scheme-handler/devtoys;
       $|
     ),
   )
-  let apprun = linux_apprun("demo-app")
+  assert_eq(linux_desktop_name(spec), "dev.proton.demo.desktop")
+  let apprun = linux_apprun("demo-app", linux_desktop_name(spec))
   assert_true(apprun.contains("HERE=\"$APPDIR\""))
+  assert_true(apprun.contains("CHROME_DESKTOP=\"dev.proton.demo.desktop\""))
   inspect(
     apprun,
     content=(
       $|#!/bin/sh
       $|HERE="$APPDIR"
+      $|export CHROME_DESKTOP="dev.proton.demo.desktop"
       $|exec "$HERE/usr/bin/demo-app" "$@"
       $|
     ),
