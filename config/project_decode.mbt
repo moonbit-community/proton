@@ -131,7 +131,7 @@ fn decode_package(
     Some(Object(values)) => {
       validate_object_fields(values, "package", [
         "product_name", "version", "formats", "icons", "resources", "sign", "url_schemes",
-        "document_types", "output",
+        "document_types", "output", "platforms",
       ])
       let formats = optional_string_array(values, "formats", "package.formats")
       let icons = rebased_paths(
@@ -156,7 +156,7 @@ fn decode_package(
           icons~,
           resources~,
           url_schemes~,
-          sign=decode_sign(values, base_dir),
+          sign=decode_sign(values, base_dir, "package.sign"),
           document_types=decode_document_types(values),
           output=rebase_project_path(
             optional_string(values, "output", "package.output").unwrap_or(
@@ -165,12 +165,74 @@ fn decode_package(
             base_dir,
             "package.output",
           ),
+          platforms=decode_package_platforms(values, base_dir),
         ),
       )
     }
     Some(_) =>
       raise InvalidField(
         path="proton.project.json.package",
+        expectation="must be an object",
+      )
+  }
+}
+
+///|
+fn decode_package_platforms(
+  fields : Map[String, Json],
+  base_dir : String,
+) -> ProjectPackagePlatforms raise ProjectConfigError {
+  match fields.get("platforms") {
+    None => ProjectPackagePlatforms()
+    Some(Object(values)) => {
+      validate_object_fields(values, "package.platforms", [
+        "macos", "windows", "linux",
+      ])
+      let macos = decode_platform_package(values, "macos", base_dir)
+      let windows = decode_platform_package(values, "windows", base_dir)
+      let linux = decode_platform_package(values, "linux", base_dir)
+      ProjectPackagePlatforms(macos?, windows?, linux?)
+    }
+    Some(_) =>
+      raise InvalidField(
+        path="package.platforms",
+        expectation="must be an object",
+      )
+  }
+}
+
+///|
+fn decode_platform_package(
+  fields : Map[String, Json],
+  platform : String,
+  base_dir : String,
+) -> ProjectPlatformPackageConfig? raise ProjectConfigError {
+  match fields.get(platform) {
+    None => None
+    Some(Object(values)) => {
+      let label = "package.platforms." + platform
+      validate_object_fields(values, label, ["formats", "resources", "sign"])
+      let formats = if values.contains("formats") {
+        Some(optional_string_array(values, "formats", label + ".formats"))
+      } else {
+        None
+      }
+      let sign = decode_sign(values, base_dir, label + ".sign")
+      Some(
+        ProjectPlatformPackageConfig(
+          formats?,
+          resources=rebased_paths(
+            optional_string_array(values, "resources", label + ".resources"),
+            base_dir,
+            label + ".resources",
+          ),
+          sign?,
+        ),
+      )
+    }
+    Some(_) =>
+      raise InvalidField(
+        path="package.platforms." + platform,
         expectation="must be an object",
       )
   }
@@ -222,30 +284,32 @@ pub fn validate_application_identifier(
 fn decode_sign(
   fields : Map[String, Json],
   base_dir : String,
+  label : String,
 ) -> ProjectSignConfig? raise ProjectConfigError {
   match fields.get("sign") {
     None => None
     Some(Object(values)) => {
-      validate_object_fields(values, "package.sign", ["binaries"])
+      validate_object_fields(values, label, ["binaries"])
       let binaries = optional_string_array(
-        values, "binaries", "package.sign.binaries",
+        values,
+        "binaries",
+        label + ".binaries",
       )
       for path in binaries {
         if path.contains("*") {
           raise InvalidField(
-            path="package.sign.binaries",
+            path=label + ".binaries",
             expectation="must not contain glob patterns",
           )
         }
       }
       Some(
         ProjectSignConfig(
-          binaries=rebased_paths(binaries, base_dir, "package.sign.binaries"),
+          binaries=rebased_paths(binaries, base_dir, label + ".binaries"),
         ),
       )
     }
-    Some(_) =>
-      raise InvalidField(path="package.sign", expectation="must be an object")
+    Some(_) => raise InvalidField(path=label, expectation="must be an object")
   }
 }
 

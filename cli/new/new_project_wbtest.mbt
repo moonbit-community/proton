@@ -205,6 +205,19 @@ test "project config preserves application identity" {
 }
 
 ///|
+test "project config uses host-native package format defaults" {
+  let context = template_context(
+    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+  )
+  let config = @json.parse(project_config_file(context, "isomorphic").content) catch {
+    error => abort(error.to_string())
+  }
+  guard config is { "package": { "formats"? : None, .. }, .. } else {
+    abort("generated project config fixed package formats to one platform")
+  }
+}
+
+///|
 test "isomorphic project config pins Warren browser entry" {
   let context = template_context(
     "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,

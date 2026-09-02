@@ -157,7 +157,11 @@ controls. See [examples/Readme.md](examples/Readme.md).
   "package": {
     "product_name": "My App",
     "version": "1.0.0",
-    "formats": ["app", "zip"],
+    "platforms": {
+      "macos": { "formats": ["app", "dmg"] },
+      "windows": { "formats": ["app", "zip", "nsis"] },
+      "linux": { "formats": ["appimage"] }
+    },
     "output": "dist"
   }
 }
@@ -214,13 +218,20 @@ Supported host-native formats are:
 - Windows: `app`, `zip`, and `nsis`
 - Linux: `appimage`
 
-Use repeated `--format` options or `package.formats` in
-`proton.project.json`. Output is written to `dist` by default.
+Use repeated `--format` options, the shared `package.formats` field, or
+`package.platforms.<platform>.formats` in `proton.project.json`. A platform
+format list replaces the shared list; omitting both selects the current host's
+defaults. Output is written to `dist` by default.
 
 `package.resources` copies sidecar files into the application resources
 directory. Backend code resolves the same files before and after packaging with
-`@proton.resource_dir()`. `package.sign.binaries` names copied executables that
-must be included in platform signing.
+`@proton.resource_dir()`. Platform resources are appended from
+`package.platforms.<platform>.resources`. `package.sign.binaries` names copied
+executables that must be included in platform signing, and platform-specific
+signing targets can be appended under the matching platform block. Supported
+platform keys are `macos`, `windows`, and `linux`; platform blocks accept only
+`formats`, `resources`, and `sign`. Explicit command-line options retain the
+highest priority.
 
 On macOS, `--sign` signs the application and `--notarize` submits, staples, and
 validates distributable artifacts. URL schemes and document types are written

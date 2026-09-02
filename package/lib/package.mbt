@@ -1,12 +1,17 @@
 ///|
-priv enum PackageHost {
+/// The desktop platform supported by the current host-native packager.
+pub(all) enum PackageHost {
   Macos
   Windows
   Linux
 } derive(Eq)
 
 ///|
-async fn current_package_host() -> PackageHost {
+pub extend PackageHost with Eq::{not_equal, equal}
+
+///|
+/// Returns the desktop platform of the current packaging host.
+pub async fn current_package_host() -> PackageHost {
   if @path.sep == '\\' {
     Windows
   } else if path_exists("/System/Library/CoreServices/SystemVersion.plist") {
