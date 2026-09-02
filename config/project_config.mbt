@@ -109,6 +109,104 @@ pub fn ProjectSignConfig::binaries(self : ProjectSignConfig) -> Array[String] {
 }
 
 ///|
+/// Package inputs that apply only to one desktop platform.
+pub(all) struct ProjectPlatformPackageConfig {
+  formats : Array[String]?
+  resources : Array[String]
+  sign : ProjectSignConfig?
+} derive(Eq, Debug)
+
+///|
+pub extend ProjectPlatformPackageConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectPlatformPackageConfig with Debug::{to_repr}
+
+///|
+pub fn ProjectPlatformPackageConfig::ProjectPlatformPackageConfig(
+  formats? : Array[String],
+  resources? : Array[String] = [],
+  sign? : ProjectSignConfig,
+) -> ProjectPlatformPackageConfig {
+  ProjectPlatformPackageConfig::{
+    formats: match formats {
+      Some(formats) => Some(formats.copy())
+      None => None
+    },
+    resources: resources.copy(),
+    sign,
+  }
+}
+
+///|
+pub fn ProjectPlatformPackageConfig::formats(
+  self : ProjectPlatformPackageConfig,
+) -> Array[String]? {
+  match self.formats {
+    Some(formats) => Some(formats.copy())
+    None => None
+  }
+}
+
+///|
+pub fn ProjectPlatformPackageConfig::resources(
+  self : ProjectPlatformPackageConfig,
+) -> Array[String] {
+  self.resources.copy()
+}
+
+///|
+pub fn ProjectPlatformPackageConfig::sign(
+  self : ProjectPlatformPackageConfig,
+) -> ProjectSignConfig? {
+  self.sign
+}
+
+///|
+/// Optional package overrides for each supported desktop platform.
+pub(all) struct ProjectPackagePlatforms {
+  macos : ProjectPlatformPackageConfig?
+  windows : ProjectPlatformPackageConfig?
+  linux : ProjectPlatformPackageConfig?
+} derive(Eq, Debug)
+
+///|
+pub extend ProjectPackagePlatforms with Eq::{not_equal, equal}
+
+///|
+pub extend ProjectPackagePlatforms with Debug::{to_repr}
+
+///|
+pub fn ProjectPackagePlatforms::ProjectPackagePlatforms(
+  macos? : ProjectPlatformPackageConfig,
+  windows? : ProjectPlatformPackageConfig,
+  linux? : ProjectPlatformPackageConfig,
+) -> ProjectPackagePlatforms {
+  ProjectPackagePlatforms::{ macos, windows, linux, }
+}
+
+///|
+pub fn ProjectPackagePlatforms::macos(
+  self : ProjectPackagePlatforms,
+) -> ProjectPlatformPackageConfig? {
+  self.macos
+}
+
+///|
+pub fn ProjectPackagePlatforms::windows(
+  self : ProjectPackagePlatforms,
+) -> ProjectPlatformPackageConfig? {
+  self.windows
+}
+
+///|
+pub fn ProjectPackagePlatforms::linux(
+  self : ProjectPackagePlatforms,
+) -> ProjectPlatformPackageConfig? {
+  self.linux
+}
+
+///|
 pub(all) struct ProjectDocumentType {
   name : String
   extensions : Array[String]
@@ -149,6 +247,7 @@ pub(all) struct ProjectPackageConfig {
   url_schemes : Array[String]
   document_types : Array[ProjectDocumentType]
   output : String
+  platforms : ProjectPackagePlatforms
 } derive(Eq, Debug)
 
 ///|
@@ -168,6 +267,7 @@ pub fn ProjectPackageConfig::ProjectPackageConfig(
   url_schemes? : Array[String] = [],
   document_types? : Array[ProjectDocumentType] = [],
   output? : String = "dist",
+  platforms? : ProjectPackagePlatforms = ProjectPackagePlatforms(),
 ) -> ProjectPackageConfig {
   ProjectPackageConfig::{
     product_name,
@@ -179,6 +279,7 @@ pub fn ProjectPackageConfig::ProjectPackageConfig(
     url_schemes: url_schemes.copy(),
     document_types: document_types.copy(),
     output,
+    platforms,
   }
 }
 
@@ -232,6 +333,13 @@ pub fn ProjectPackageConfig::document_types(
 ///|
 pub fn ProjectPackageConfig::output(self : ProjectPackageConfig) -> String {
   self.output
+}
+
+///|
+pub fn ProjectPackageConfig::platforms(
+  self : ProjectPackageConfig,
+) -> ProjectPackagePlatforms {
+  self.platforms
 }
 
 ///|

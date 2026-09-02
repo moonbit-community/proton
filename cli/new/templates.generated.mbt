@@ -867,16 +867,20 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  "package": {
           #|    "product_name": "My App",
           #|    "version": "0.1.0",
-          #|    "formats": ["app", "zip"],
           #|    "output": "dist"
           #|  }
           #|}
           #|```
           #|
+          #|When `formats` is omitted, Proton selects the current host's default package
+          #|formats. Use `package.platforms` for platform-specific formats, resources, or
+          #|signing targets.
+          #|
           #|Window behavior, the asset entry, single-instance handling, and renderer
           #|permissions are declared by the Proton `App` builder in `backend/app/main.mbt`.
           #|
-          #|Inspect the resolved package plan, then create the application and zip archive:
+          #|Inspect the resolved package plan, then create the current host's native
+          #|artifacts:
           #|
           #|```sh
           #|proton_cli package --dry-run
