@@ -490,7 +490,10 @@ static void CEF_CALLBACK proton_engine_on_title_change(
     const cef_string_t *title) {
   (void)self;
   proton_engine_view_t *view = proton_engine_view_from_browser(browser);
-  char *title_utf8 = proton_engine_cef_string_to_utf8(title);
+  char *title_utf8 = proton_engine_cef_title_to_utf8(title);
+  if (title_utf8 == NULL) {
+    return;
+  }
   if (view != NULL) {
     proton_view_events_title_updated(view->events, title_utf8);
     free(title_utf8);

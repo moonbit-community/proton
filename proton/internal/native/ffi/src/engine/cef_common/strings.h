@@ -61,4 +61,11 @@ static char *proton_engine_cef_string_to_utf8(const cef_string_t *value) {
   return copy;
 }
 
+static char *proton_engine_cef_title_to_utf8(const cef_string_t *value) {
+  if (value == NULL) {
+    return proton_engine_strdup("");
+  }
+  return proton_engine_cef_string_to_utf8(value);
+}
+
 #endif
