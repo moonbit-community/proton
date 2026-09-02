@@ -445,7 +445,7 @@ test "window config preserves typed native ABI values" {
     theme=WindowThemePreference::Dark,
     browser=BrowserPolicy(
       navigation=BrowserPolicyMode::Ask,
-      popup=BrowserPolicyMode::Ask,
+      new_window=BrowserPolicyMode::Ask,
       download=BrowserPolicyMode::Ask,
       certificate=BrowserPolicyMode::Ask,
       media=BrowserPolicyMode::Ask,
@@ -458,7 +458,7 @@ test "window config preserves typed native ABI values" {
   assert_eq(window_config.height, 240)
   assert_eq(window_config.theme_preference, WindowThemePreference::Dark)
   assert_eq(window_config.browser.navigation, BrowserPolicyMode::Ask)
-  assert_eq(window_config.browser.popup, BrowserPolicyMode::Ask)
+  assert_eq(window_config.browser.new_window, BrowserPolicyMode::Ask)
   assert_true(window_config.browser.devtools)
   assert_true(window_config.bridge is Some(_))
   assert_eq(window_config.framework_titlebar_minimize_label, Some("Minimize"))

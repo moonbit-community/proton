@@ -24,7 +24,7 @@ PROTON_INTERNAL int32_t proton_config_prepare_window(
     int32_t navigation_policy,
     const char *titlebar_minimize_label, const char *titlebar_maximize_label,
     const char *titlebar_restore_label, const char *titlebar_close_label,
-    int32_t popup_policy, int32_t download_policy,
+    int32_t new_window_policy, int32_t download_policy,
     int32_t certificate_policy, int32_t media_policy, int32_t devtools,
     proton_bridge_config_t *bridge_config,
     proton_engine_window_config_t *out_config);

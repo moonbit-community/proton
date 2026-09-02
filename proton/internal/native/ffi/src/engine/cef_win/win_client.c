@@ -153,6 +153,10 @@ static void CEF_CALLBACK proton_engine_on_load_error(
 static int CEF_CALLBACK proton_engine_on_before_browse(
     cef_request_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
     cef_request_t *request, int user_gesture, int is_redirect);
+static int CEF_CALLBACK proton_engine_on_open_url_from_tab(
+    cef_request_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    const cef_string_t *target_url,
+    cef_window_open_disposition_t target_disposition, int user_gesture);
 static int CEF_CALLBACK proton_engine_on_certificate_error(
     cef_request_handler_t *self, cef_browser_t *browser,
     cef_errorcode_t cert_error, const cef_string_t *request_url,
@@ -421,6 +425,8 @@ void proton_engine_init_app(void) {
       proton_engine_on_render_process_terminated;
   g_proton_engine_request_handler.handler.on_before_browse =
       proton_engine_on_before_browse;
+  g_proton_engine_request_handler.handler.on_open_urlfrom_tab =
+      proton_engine_on_open_url_from_tab;
   g_proton_engine_request_handler.handler.on_certificate_error =
       proton_engine_on_certificate_error;
   g_proton_engine_download_handler.handler.can_download =
@@ -528,11 +534,6 @@ static void CEF_CALLBACK proton_engine_osr_get_view_rect(
   rect->y = 0;
   proton_engine_view_t *view =
       proton_engine_window_lookup_view_browser(browser);
-  if (view == NULL) {
-    // CEF can query the viewport while create_browser_sync is still running,
-    // before the view records its browser id; resolve via the client then.
-    view = proton_engine_window_lookup_view_browser(browser);
-  }
   if (view != NULL) {
     rect->width = view->width > 0 ? view->width : 1;
     rect->height = view->height > 0 ? view->height : 1;
@@ -742,6 +743,7 @@ static int CEF_CALLBACK proton_engine_on_before_popup(
   (void)frame;
   (void)popup_id;
   (void)target_frame_name;
+  (void)target_disposition;
   (void)popup_features;
   (void)window_info;
   (void)client;
@@ -750,9 +752,9 @@ static int CEF_CALLBACK proton_engine_on_before_popup(
   (void)no_javascript_access;
   proton_engine_window_t *window =
       proton_engine_window_lookup_browser(browser);
-  return proton_browser_session_before_popup(
+  return proton_browser_session_request_new_window(
       window != NULL ? window->browser_session : NULL, target_url,
-      target_disposition, user_gesture);
+      user_gesture);
 }
 
 static void CEF_CALLBACK proton_engine_on_before_close(
@@ -1033,6 +1035,19 @@ static int CEF_CALLBACK proton_engine_on_before_browse(
   return proton_browser_session_before_browse(
       window != NULL ? window->browser_session : NULL, frame, request,
       user_gesture, is_redirect);
+}
+
+static int CEF_CALLBACK proton_engine_on_open_url_from_tab(
+    cef_request_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    const cef_string_t *target_url,
+    cef_window_open_disposition_t target_disposition, int user_gesture) {
+  (void)self;
+  (void)frame;
+  proton_engine_window_t *window =
+      proton_engine_window_lookup_browser(browser);
+  return proton_browser_session_open_url_from_tab(
+      window != NULL ? window->browser_session : NULL, target_url,
+      target_disposition, user_gesture);
 }
 
 static int CEF_CALLBACK proton_engine_on_certificate_error(

@@ -472,7 +472,7 @@ static void proton_engine_free_closed_windows(void) {
   }
 }
 
-proton_engine_window_t *proton_engine_window_from_browser(
+proton_engine_window_t *proton_engine_window_lookup_browser(
     cef_browser_t *browser) {
   proton_browser_lifecycle_t *lifecycle =
       proton_engine_browser_lifecycle(browser);
@@ -483,7 +483,8 @@ proton_engine_window_t *proton_engine_window_from_browser(
   return (proton_engine_window_t *)proton_browser_lifecycle_owner(lifecycle);
 }
 
-proton_engine_view_t *proton_engine_view_from_browser(cef_browser_t *browser) {
+proton_engine_view_t *proton_engine_window_lookup_view_browser(
+    cef_browser_t *browser) {
   proton_browser_lifecycle_t *lifecycle =
       proton_engine_browser_lifecycle(browser);
   if (lifecycle == NULL ||
@@ -510,11 +511,6 @@ void proton_engine_window_unlock(void) {
   pthread_mutex_unlock(&g_window_lock);
 }
 
-proton_engine_window_t *proton_engine_window_lookup_browser(
-    cef_browser_t *browser) {
-  return proton_engine_window_from_browser(browser);
-}
-
 cef_browser_t *proton_engine_window_browser(proton_engine_window_t *window) {
   return window != NULL
              ? proton_browser_lifecycle_browser(window->browser_lifecycle)
@@ -525,11 +521,6 @@ cef_browser_t *proton_engine_view_browser(proton_engine_view_t *view) {
   return view != NULL
              ? proton_browser_lifecycle_browser(view->browser_lifecycle)
              : NULL;
-}
-
-proton_engine_view_t *proton_engine_window_lookup_view_browser(
-    cef_browser_t *browser) {
-  return proton_engine_view_from_browser(browser);
 }
 
 proton_window_id_t proton_engine_view_window_public_id(

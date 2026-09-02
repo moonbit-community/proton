@@ -222,13 +222,13 @@ pub fn BridgeResponse::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BrowserPolicy {
   navigation : BrowserPolicyMode
-  popup : BrowserPolicyMode
+  new_window : BrowserPolicyMode
   download : BrowserPolicyMode
   certificate : BrowserPolicyMode
   media : BrowserPolicyMode
   devtools : Bool
 } derive(Eq, @debug.Debug)
-pub fn BrowserPolicy::BrowserPolicy(navigation? : BrowserPolicyMode, popup? : BrowserPolicyMode, download? : BrowserPolicyMode, certificate? : BrowserPolicyMode, media? : BrowserPolicyMode, devtools? : Bool) -> Self
+pub fn BrowserPolicy::BrowserPolicy(navigation? : BrowserPolicyMode, new_window? : BrowserPolicyMode, download? : BrowserPolicyMode, certificate? : BrowserPolicyMode, media? : BrowserPolicyMode, devtools? : Bool) -> Self
 pub fn BrowserPolicy::equal(Self, Self) -> Bool
 pub fn BrowserPolicy::not_equal(Self, Self) -> Bool
 pub fn BrowserPolicy::to_repr(Self) -> @debug.Repr
@@ -332,7 +332,7 @@ pub fn NativeBrowserEvent::to_repr(Self) -> @debug.Repr
 
 pub(all) enum NativeBrowserRequest {
   Navigation(request_id~ : Int64, url~ : String, http_method~ : String, user_gesture~ : Bool, redirect~ : Bool)
-  Popup(request_id~ : Int64, url~ : String, disposition~ : Int, user_gesture~ : Bool)
+  NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
   Download(request_id~ : Int64, download_id~ : Int, url~ : String, suggested_name~ : String)
   Certificate(request_id~ : Int64, url~ : String, error_code~ : Int)
   Media(request_id~ : Int64, origin~ : String, permissions~ : Int)

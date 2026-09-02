@@ -22,7 +22,7 @@ typedef enum {
 
 typedef struct {
   proton_browser_policy_mode_t navigation;
-  proton_browser_policy_mode_t popup;
+  proton_browser_policy_mode_t new_window;
   proton_browser_policy_mode_t download;
   proton_browser_policy_mode_t certificate;
   proton_browser_policy_mode_t media;
@@ -119,7 +119,10 @@ void proton_browser_session_find_result(
 int proton_browser_session_before_browse(
     proton_browser_session_t *session, cef_frame_t *frame,
     cef_request_t *request, int user_gesture, int is_redirect);
-int proton_browser_session_before_popup(
+int proton_browser_session_request_new_window(
+    proton_browser_session_t *session, const cef_string_t *target_url,
+    int user_gesture);
+int proton_browser_session_open_url_from_tab(
     proton_browser_session_t *session, const cef_string_t *target_url,
     cef_window_open_disposition_t target_disposition, int user_gesture);
 int proton_browser_session_can_download(

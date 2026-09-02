@@ -20,7 +20,7 @@
 
 typedef enum {
   PROTON_BROWSER_REQUEST_NAVIGATION = 1,
-  PROTON_BROWSER_REQUEST_POPUP = 2,
+  PROTON_BROWSER_REQUEST_NEW_WINDOW = 2,
   PROTON_BROWSER_REQUEST_DOWNLOAD = 3,
   PROTON_BROWSER_REQUEST_CERTIFICATE = 4,
   PROTON_BROWSER_REQUEST_MEDIA = 5,
@@ -626,10 +626,11 @@ int proton_browser_session_before_browse(
   return 1;
 }
 
-int proton_browser_session_before_popup(
+int proton_browser_session_request_new_window(
     proton_browser_session_t *session, const cef_string_t *target_url,
-    cef_window_open_disposition_t target_disposition, int user_gesture) {
-  if (session == NULL || session->policy.popup != PROTON_BROWSER_POLICY_ASK) {
+    int user_gesture) {
+  if (session == NULL ||
+      session->policy.new_window != PROTON_BROWSER_POLICY_ASK) {
     return 1;
   }
   char *url = proton_browser_cef_string_to_utf8(target_url);
@@ -637,15 +638,15 @@ int proton_browser_session_before_popup(
     return 1;
   }
   proton_browser_pending_t *pending =
-      proton_browser_pending_new(session, PROTON_BROWSER_REQUEST_POPUP, url);
+      proton_browser_pending_new(
+          session, PROTON_BROWSER_REQUEST_NEW_WINDOW, url);
   free(url);
   if (pending == NULL) {
     return 1;
   }
   proton_event_t *event = proton_browser_request_event(
-      session, pending, PROTON_EVENT_BROWSER_POPUP_REQUESTED);
+      session, pending, PROTON_EVENT_BROWSER_NEW_WINDOW_REQUESTED);
   if (event != NULL) {
-    event->int_a = (int32_t)target_disposition;
     event->bool_a = user_gesture;
   }
   if (!proton_browser_enqueue_event(session, event)) {
@@ -653,6 +654,25 @@ int proton_browser_session_before_popup(
     proton_browser_pending_release(pending);
   }
   return 1;
+}
+
+int proton_browser_session_open_url_from_tab(
+    proton_browser_session_t *session, const cef_string_t *target_url,
+    cef_window_open_disposition_t target_disposition, int user_gesture) {
+  /* Current-tab requests continue through OnBeforeBrowse. Only dispositions
+   * representable by Proton's new-window policy are forwarded to MoonBit. */
+  switch (target_disposition) {
+  case CEF_WOD_CURRENT_TAB:
+    return 0;
+  case CEF_WOD_NEW_FOREGROUND_TAB:
+  case CEF_WOD_NEW_BACKGROUND_TAB:
+  case CEF_WOD_NEW_POPUP:
+  case CEF_WOD_NEW_WINDOW:
+    return proton_browser_session_request_new_window(
+        session, target_url, user_gesture);
+  default:
+    return 1;
+  }
 }
 
 int proton_browser_session_can_download(
@@ -931,10 +951,10 @@ int32_t proton_browser_session_respond(
       status = PROTON_ERR_INVALID_ARGUMENT;
     }
     break;
-  case PROTON_BROWSER_REQUEST_POPUP:
+  case PROTON_BROWSER_REQUEST_NEW_WINDOW:
     if (strcmp(action, "current") == 0) {
-      /* Popup callbacks do not provide a durable target frame. The caller
-       * should use the normal window load API after acknowledging the request. */
+      /* New-window callbacks do not provide a durable target frame. The caller
+       * uses the normal window load API after acknowledging the request. */
     } else if (strcmp(action, "deny") != 0) {
       status = PROTON_ERR_INVALID_ARGUMENT;
     }

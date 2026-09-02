@@ -246,11 +246,11 @@ fn validate_window_config(config : WindowConfig) -> Unit raise NativeError {
   if config.width <= 0 || config.height <= 0 {
     raise invalid_argument("width and height must be positive")
   }
-  if config.browser.popup is BrowserPolicyMode::Allow ||
+  if config.browser.new_window is BrowserPolicyMode::Allow ||
     config.browser.certificate is BrowserPolicyMode::Allow ||
     config.browser.media is BrowserPolicyMode::Allow {
     raise invalid_argument(
-      "popup, certificate, and media policies cannot allow without review",
+      "new-window, certificate, and media policies cannot allow without review",
     )
   }
 }
@@ -1010,10 +1010,9 @@ fn decode_native_runtime_event(
     13 =>
       BrowserRequest(
         window,
-        Popup(
+        NewWindow(
           request_id=@native_ffi.event_int64(event, 2),
-          url=require_native_event_text(event, 0, "browser popup"),
-          disposition=@native_ffi.event_int(event, 0),
+          url=require_native_event_text(event, 0, "browser new window"),
           user_gesture=@native_ffi.event_int(event, 3) != 0,
         ),
       )
@@ -1380,7 +1379,7 @@ pub fn Window::Window(
     runtime_config_string(config.framework_titlebar_maximize_label),
     runtime_config_string(config.framework_titlebar_restore_label),
     runtime_config_string(config.framework_titlebar_close_label),
-    browser_policy_code(config.browser.popup),
+    browser_policy_code(config.browser.new_window),
     browser_policy_code(config.browser.download),
     browser_policy_code(config.browser.certificate),
     browser_policy_code(config.browser.media),

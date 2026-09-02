@@ -10,6 +10,7 @@
 #include "../ffi/src/engine/cef_common/browser_lifecycle.h"
 #include "../ffi/src/engine/cef_common/browser_session.h"
 #include "../ffi/src/engine/cef_common/view_events.h"
+#include "../ffi/src/engine/cef_common/window_state.h"
 
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_app_capi.h"
@@ -283,9 +284,6 @@ void proton_engine_browser_signal(void *user_data);
 void proton_engine_window_finalize_if_ready(proton_engine_window_t *window);
 int proton_engine_browser_view_is_focused(NSView *browser_view);
 proton_engine_view_t *proton_engine_view_from_native_id(uint64_t native_id);
-proton_engine_window_t *proton_engine_window_from_browser(
-    cef_browser_t *browser);
-proton_engine_view_t *proton_engine_view_from_browser(cef_browser_t *browser);
 proton_browser_lifecycle_t *proton_engine_browser_lifecycle(
     cef_browser_t *browser);
 int proton_engine_runtime_initialized(void);

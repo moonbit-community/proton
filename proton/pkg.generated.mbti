@@ -227,7 +227,7 @@ pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> 
 pub fn App::on_launch_input(Self, async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise) -> Self
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
-pub fn App::on_popup_request(Self, async (BrowserHandle, PopupRequest) -> PopupDecision noraise) -> Self
+pub fn App::on_new_window_request(Self, async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub fn App::on_view_event(Self, async (ViewHandle, ViewEvent) -> Unit noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
@@ -571,6 +571,23 @@ pub fn NavigationRequest::equal(Self, Self) -> Bool
 pub fn NavigationRequest::not_equal(Self, Self) -> Bool
 pub fn NavigationRequest::to_repr(Self) -> @debug.Repr
 
+pub(all) enum NewWindowDecision {
+  Deny
+  OpenInCurrent
+  OpenInWindow(String)
+} derive(Eq, @debug.Debug)
+pub fn NewWindowDecision::equal(Self, Self) -> Bool
+pub fn NewWindowDecision::not_equal(Self, Self) -> Bool
+pub fn NewWindowDecision::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NewWindowRequest {
+  url : String
+  user_gesture : Bool
+} derive(Eq, @debug.Debug)
+pub fn NewWindowRequest::equal(Self, Self) -> Bool
+pub fn NewWindowRequest::not_equal(Self, Self) -> Bool
+pub fn NewWindowRequest::to_repr(Self) -> @debug.Repr
+
 pub(all) enum PdfPrintMargins {
   Default
   NoMargins
@@ -623,24 +640,6 @@ pub fn PendingUpdate::restart(Self) -> Unit raise
 pub fn PendingUpdate::revision(Self) -> UInt64
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
-
-pub(all) enum PopupDecision {
-  Deny
-  OpenInCurrent
-  OpenInWindow(String)
-} derive(Eq, @debug.Debug)
-pub fn PopupDecision::equal(Self, Self) -> Bool
-pub fn PopupDecision::not_equal(Self, Self) -> Bool
-pub fn PopupDecision::to_repr(Self) -> @debug.Repr
-
-pub(all) struct PopupRequest {
-  url : String
-  disposition : Int
-  user_gesture : Bool
-} derive(Eq, @debug.Debug)
-pub fn PopupRequest::equal(Self, Self) -> Bool
-pub fn PopupRequest::not_equal(Self, Self) -> Bool
-pub fn PopupRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RelaunchOptions {
   executable : String?

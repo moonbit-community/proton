@@ -61,7 +61,7 @@ struct App {
   ]
   mut window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   mut navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
-  mut popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
+  mut new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?
   mut download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
   mut certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
   mut media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
@@ -373,7 +373,7 @@ priv struct RuntimeSession {
   pending_browser_requests : Array[PendingBrowserRequest]
   pending_resource_requests : Array[PendingResourceRequest]
   navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
-  popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
+  new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?
   download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
   certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
   media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
@@ -799,30 +799,29 @@ pub extend NavigationDecision with Eq::{not_equal, equal}
 pub extend NavigationDecision with Debug::{to_repr}
 
 ///|
-pub(all) struct PopupRequest {
+pub(all) struct NewWindowRequest {
   url : String
-  disposition : Int
   user_gesture : Bool
 } derive(Debug, Eq)
 
 ///|
-pub extend PopupRequest with Eq::{not_equal, equal}
+pub extend NewWindowRequest with Eq::{not_equal, equal}
 
 ///|
-pub extend PopupRequest with Debug::{to_repr}
+pub extend NewWindowRequest with Debug::{to_repr}
 
 ///|
-pub(all) enum PopupDecision {
+pub(all) enum NewWindowDecision {
   Deny
   OpenInCurrent
   OpenInWindow(String)
 } derive(Debug, Eq)
 
 ///|
-pub extend PopupDecision with Eq::{not_equal, equal}
+pub extend NewWindowDecision with Eq::{not_equal, equal}
 
 ///|
-pub extend PopupDecision with Debug::{to_repr}
+pub extend NewWindowDecision with Debug::{to_repr}
 
 ///|
 pub(all) struct DownloadRequest {

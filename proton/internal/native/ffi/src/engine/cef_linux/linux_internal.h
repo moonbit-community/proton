@@ -133,7 +133,6 @@ void proton_engine_browser_signal(void *user_data);
 int proton_engine_browser_id(cef_browser_t *browser);
 proton_browser_lifecycle_t *proton_engine_browser_lifecycle(
     cef_browser_t *browser);
-proton_engine_view_t *proton_engine_view_from_browser(cef_browser_t *browser);
 void proton_engine_window_defer_free(proton_engine_window_t *window);
 int proton_engine_x11_window_is_focused(Display *display, Window browser_window);
 
@@ -228,8 +227,6 @@ void proton_engine_append_switch_with_value(cef_command_line_t *command_line,
                                             const char *name,
                                             const char *value);
 void proton_engine_window_list_add(proton_engine_window_t *window);
-proton_engine_window_t *proton_engine_window_from_browser(
-    cef_browser_t *browser);
 void proton_engine_overlay_release_input_windows(
     proton_engine_window_t *window);
 GdkFilterReturn proton_engine_x11_event_filter(GdkXEvent *xevent,
