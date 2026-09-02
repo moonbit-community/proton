@@ -208,7 +208,8 @@ void CEF_CALLBACK proton_engine_on_title_change(
     cef_browser_t *browser,
     const cef_string_t *title) {
   (void)self;
-  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  proton_engine_view_t *view =
+      proton_engine_window_lookup_view_browser(browser);
   char *title_utf8 = proton_engine_cef_string_to_utf8(title);
   if (view != NULL) {
     proton_view_events_title_updated(view->events, title_utf8);
@@ -216,7 +217,7 @@ void CEF_CALLBACK proton_engine_on_title_change(
     proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
     return;
   }
-  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  proton_engine_window_t *window = proton_engine_window_lookup_browser(browser);
   proton_browser_session_title_updated(
       window != NULL ? window->browser_session : NULL, title_utf8);
   free(title_utf8);

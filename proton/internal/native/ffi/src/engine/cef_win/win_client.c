@@ -534,11 +534,6 @@ static void CEF_CALLBACK proton_engine_osr_get_view_rect(
   rect->y = 0;
   proton_engine_view_t *view =
       proton_engine_window_lookup_view_browser(browser);
-  if (view == NULL) {
-    // CEF can query the viewport while create_browser_sync is still running,
-    // before the view records its browser id; resolve via the client then.
-    view = proton_engine_window_lookup_view_browser(browser);
-  }
   if (view != NULL) {
     rect->width = view->width > 0 ? view->width : 1;
     rect->height = view->height > 0 ? view->height : 1;
