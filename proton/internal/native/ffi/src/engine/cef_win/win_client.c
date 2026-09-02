@@ -1048,7 +1048,8 @@ static int CEF_CALLBACK proton_engine_on_open_url_from_tab(
     cef_window_open_disposition_t target_disposition, int user_gesture) {
   (void)self;
   (void)frame;
-  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  proton_engine_window_t *window =
+      proton_engine_window_lookup_browser(browser);
   return proton_browser_session_open_url_from_tab(
       window != NULL ? window->browser_session : NULL, target_url,
       target_disposition, user_gesture);
