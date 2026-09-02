@@ -40,11 +40,17 @@ fn windows_uninstall_registry_key(plan : PackageSpec) -> String {
 }
 
 ///|
+fn windows_protocol_command(executable : String) -> String {
+  "$\\\"$INSTDIR\\\{executable}$\\\" $\\\"%1$\\\""
+}
+
+///|
 fn windows_protocol_install_script(
   plan : PackageSpec,
   executable : String,
 ) -> String {
   let builder = StringBuilder()
+  let command = windows_protocol_command(executable)
   for scheme in plan.url_schemes {
     let scheme = windows_installer_quote(scheme)
     builder <+
@@ -54,18 +60,32 @@ fn windows_protocol_install_script(
       $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}" "URL Protocol" ""
     builder.write_char('\n')
     builder <+
-      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}\\shell\\open\\command" "" "$\\"$INSTDIR\\\{executable}$\\" $\\"%1$\\""
+      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}\\shell\\open\\command" "" "\{command}"
     builder.write_char('\n')
   }
   builder.to_string()
 }
 
 ///|
-fn windows_protocol_uninstall_script(plan : PackageSpec) -> String {
+fn windows_protocol_uninstall_script(
+  plan : PackageSpec,
+  executable : String,
+) -> String {
   let builder = StringBuilder()
+  let command = windows_protocol_command(executable)
   for scheme in plan.url_schemes {
+    let scheme = windows_installer_quote(scheme)
     builder <+
-      $|  DeleteRegKey HKCU "Software\\Classes\\\{windows_installer_quote(scheme)}"
+      $|  ReadRegStr $0 HKCU "Software\\Classes\\\{scheme}\\shell\\open\\command" ""
+    builder.write_char('\n')
+    builder <+
+      $|  ${If} $0 == "\{command}"
+    builder.write_char('\n')
+    builder <+
+      $|    DeleteRegKey HKCU "Software\\Classes\\\{scheme}"
+    builder.write_char('\n')
+    builder <+
+      #|  ${EndIf}
     builder.write_char('\n')
   }
   builder.to_string()
@@ -238,7 +258,7 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}"
     $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}"
   builder.write_char('\n')
-  builder.write_string(windows_protocol_uninstall_script(plan))
+  builder.write_string(windows_protocol_uninstall_script(plan, executable))
   builder <+
     $|SectionEnd
     $|

@@ -3,7 +3,6 @@
 #include "../ffi/src/proton_engine.h"
 #include "../ffi/src/proton_config.h"
 #include "../ffi/src/proton_event.h"
-#include "../ffi/src/proton_json.h"
 
 #include "mac_dialog.h"
 #include "mac_internal.h"
@@ -364,7 +363,6 @@ void proton_engine_unload_cef_library(void) {
 }
 
 #include "../ffi/src/engine/cef_common/strings.h"
-#include "../ffi/src/engine/cef_common/json_fields.h"
 
 static void proton_engine_append_switch(cef_command_line_t *command_line,
                                         const char *name) {
@@ -463,7 +461,7 @@ static void proton_engine_disable_feature(cef_command_line_t *command_line,
 #undef PROTON_ENGINE_REF_DECREMENT
 #undef PROTON_ENGINE_REF_LOAD
 #undef PROTON_ENGINE_REF_STORE
-#include "../ffi/src/engine/cef_common/bridge_json.h"
+#include "../ffi/src/engine/cef_common/bridge_request.h"
 
 void CEF_CALLBACK proton_engine_on_register_custom_schemes(
     cef_app_t *self,
@@ -513,19 +511,15 @@ void CEF_CALLBACK proton_engine_osr_get_view_rect(
   }
   rect->x = 0;
   rect->y = 0;
-  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
-  if (view == NULL) {
-    // CEF can query the viewport while browser creation is still running,
-    // before the view records its browser id; resolve via the client then.
-    view = proton_engine_view_from_browser(browser);
-  }
+  proton_engine_view_t *view =
+      proton_engine_window_lookup_view_browser(browser);
   if (view != NULL) {
     rect->width = view->width > 0 ? view->width : 1;
     rect->height = view->height > 0 ? view->height : 1;
     return;
   }
   proton_engine_window_t *window =
-      proton_engine_window_from_browser(browser);
+      proton_engine_window_lookup_browser(browser);
   rect->width = window != NULL && window->width > 0 ? window->width : 1;
   rect->height = window != NULL && window->height > 0 ? window->height : 1;
 }
@@ -554,7 +548,7 @@ void CEF_CALLBACK proton_engine_osr_on_popup_show(
     int show) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser(browser);
+      proton_engine_window_lookup_browser(browser);
   if (window != NULL) {
     window->osr_popup_visible = show ? 1 : 0;
   }
@@ -566,7 +560,7 @@ void CEF_CALLBACK proton_engine_osr_on_popup_size(
     const cef_rect_t *rect) {
   (void)self;
   proton_engine_window_t *window =
-      proton_engine_window_from_browser(browser);
+      proton_engine_window_lookup_browser(browser);
   if (window != NULL && rect != NULL) {
     window->osr_popup_rect = *rect;
   }

@@ -24,7 +24,7 @@ jobs:
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s pre-release
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: moon version
@@ -64,13 +64,13 @@ jobs:
       - name: Install MoonBit
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s nightly
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s pre-release
           echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
       - name: Install MoonBit on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
-          MOONBIT_INSTALL_VERSION: nightly
+          MOONBIT_INSTALL_VERSION: pre-release
         run: |
           Set-ExecutionPolicy RemoteSigned -Scope CurrentUser; irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
           "$env:USERPROFILE\.moon\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
@@ -134,12 +134,19 @@ jobs:
           $helperBin = Join-Path $env:RUNNER_TEMP "proton-helper"
           $helperBuild = Join-Path $env:RUNNER_TEMP "proton-helper-build"
           moon --target-dir $helperBuild install --path proton/internal/cef_process --bin $helperBin
+          $helper = Join-Path $helperBin "cef_process.exe"
+          $image = [System.IO.File]::ReadAllBytes($helper)
+          $peOffset = [System.BitConverter]::ToInt32($image, 0x3c)
+          $subsystem = [System.BitConverter]::ToUInt16($image, $peOffset + 92)
+          if ($subsystem -ne 2) {
+            throw "cef_process.exe must use the Windows GUI subsystem; found $subsystem"
+          }
           # windows-latest runners have no usable D3D device; force ANGLE's
           # SwiftShader path so the engine's GPU process can start at all.
           $env:ANGLE_DEFAULT_PLATFORM = "swiftshader"
           "ANGLE_DEFAULT_PLATFORM=swiftshader" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "PROTON_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "PROTON_HELPER_PATH=$(Join-Path $helperBin 'cef_process.exe')" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "PROTON_HELPER_PATH=$helper" | Out-File -FilePath $env:GITHUB_ENV -Append
           Join-Path $runtime "bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Test Windows NSIS packaging

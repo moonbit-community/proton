@@ -27,7 +27,7 @@ fn RuntimeSession::RuntimeSession(
   lifecycle_failures : Array[AppCleanupError],
   bridge_startup_timeout_ms : Int,
   navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?,
-  popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?,
+  new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?,
   download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?,
   certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?,
   media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?,
@@ -67,7 +67,7 @@ fn RuntimeSession::RuntimeSession(
     pending_browser_requests: [],
     pending_resource_requests: [],
     navigation_handler,
-    popup_handler,
+    new_window_handler,
     download_handler,
     certificate_handler,
     media_handler,
@@ -325,6 +325,18 @@ fn RuntimeSession::window_handle(
     set_window_background_color: color => {
       self.control_window(id, native_id, "set background color", window => {
         window.set_background_color(color)
+      })
+    },
+    set_window_theme: theme => {
+      self.control_window(id, native_id, "set theme", window => {
+        window.set_theme(
+          match theme {
+            WindowThemePreference::System =>
+              @native.WindowThemePreference::System
+            WindowThemePreference::Light => @native.WindowThemePreference::Light
+            WindowThemePreference::Dark => @native.WindowThemePreference::Dark
+          },
+        )
       })
     },
     set_window_visible_on_all_workspaces: visible => {
@@ -967,15 +979,7 @@ fn RuntimeSession::session_handle(
         error =>
           raise window_operation_failed("read cookies in window " + id, error)
       }
-      let payload = self.event_pump.cookie_completions.wait(request_id)
-      decode_cookies(payload) catch {
-        CookieDecodeError(detail) =>
-          raise OperationFailed(
-            action="decode cookies in window " + id,
-            status=-1,
-            detail~,
-          )
-      }
+      cookies_from_native(self.event_pump.cookie_completions.wait(request_id))
     },
     write_cookie: (url, name, value, domain, path, secure, http_only, same_site) => {
       self.control_window(id, native_id, "set cookie in", window => {
@@ -2016,6 +2020,19 @@ pub fn WindowHandle::set_background_color(
   color : String,
 ) -> Unit raise WindowSessionError {
   (self.set_window_background_color)(color)
+}
+
+///|
+/// Sets the native window chrome theme.
+///
+/// `System` follows platform appearance changes. Explicit `Light` and `Dark`
+/// remain stable until changed again and raise `WindowSessionError` on
+/// platforms without per-window native theme support.
+pub fn WindowHandle::set_theme(
+  self : WindowHandle,
+  theme : WindowThemePreference,
+) -> Unit raise WindowSessionError {
+  (self.set_window_theme)(theme)
 }
 
 ///|
@@ -3204,7 +3221,7 @@ fn RuntimeSession::start_browser_request(
   let browser = self.browser_handle(window)
   let request_id = match request {
     Navigation(request_id~, ..)
-    | Popup(request_id~, ..)
+    | NewWindow(request_id~, ..)
     | Download(request_id~, ..)
     | Certificate(request_id~, ..)
     | Media(request_id~, ..) => request_id
@@ -3225,19 +3242,18 @@ fn RuntimeSession::start_browser_request(
               }
             None => BrowserResponse::{ action: "deny", path: None, }
           }
-        Popup(url~, disposition~, user_gesture~, ..) => {
-          let decision = match self.popup_handler {
-            Some(handler) =>
-              handler(browser, { url, disposition, user_gesture, })
-            None => PopupDecision::Deny
+        NewWindow(url~, user_gesture~, ..) => {
+          let decision = match self.new_window_handler {
+            Some(handler) => handler(browser, { url, user_gesture, })
+            None => NewWindowDecision::Deny
           }
           match decision {
-            PopupDecision::Deny => ()
-            PopupDecision::OpenInCurrent =>
+            NewWindowDecision::Deny => ()
+            NewWindowDecision::OpenInCurrent =>
               browser.load_url(url) catch {
                 _ => ()
               }
-            PopupDecision::OpenInWindow(id) => {
+            NewWindowDecision::OpenInWindow(id) => {
               let opened = Some(self.window_manager().open(id)) catch {
                 _ => None
               }
@@ -3578,28 +3594,49 @@ fn RuntimeSession::dispatch_launch_input_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
 ) -> Unit raise AppRunError {
-  match event.launch_input() {
-    Some(native_input) => {
-      guard !self.is_quitting() else { return }
-      let input = match native_input {
-        @native.RuntimeLaunchInput::OpenUrls(urls) =>
-          RuntimeLaunchInput::OpenUrls(urls)
-        @native.RuntimeLaunchInput::OpenFiles(files) =>
-          RuntimeLaunchInput::OpenFiles(files)
-        @native.RuntimeLaunchInput::Reopen => RuntimeLaunchInput::Reopen
+  match event.app_activation() {
+    Some(activation) => {
+      let urls = activation.urls()
+      if !urls.is_empty() {
+        self.dispatch_launch_input(RuntimeLaunchInput::OpenUrls(urls))
       }
-      self.activate_for_launch_input()
-      let context = self.application_context()
-      for handler in self.launch_input_handlers {
-        ignore(
-          self.application_tasks.spawn(
-            () => handler(context, input),
-            no_wait=true,
-          ),
-        )
+      let files = activation.files()
+      if !files.is_empty() {
+        self.dispatch_launch_input(RuntimeLaunchInput::OpenFiles(files))
+      }
+      if activation.reopen() {
+        self.dispatch_launch_input(RuntimeLaunchInput::Reopen)
       }
     }
-    None => ()
+    None =>
+      match event.launch_input() {
+        Some(native_input) =>
+          self.dispatch_launch_input(
+            match native_input {
+              @native.RuntimeLaunchInput::OpenUrls(urls) =>
+                RuntimeLaunchInput::OpenUrls(urls)
+              @native.RuntimeLaunchInput::OpenFiles(files) =>
+                RuntimeLaunchInput::OpenFiles(files)
+              @native.RuntimeLaunchInput::Reopen => RuntimeLaunchInput::Reopen
+            },
+          )
+        None => ()
+      }
+  }
+}
+
+///|
+fn RuntimeSession::dispatch_launch_input(
+  self : RuntimeSession,
+  input : RuntimeLaunchInput,
+) -> Unit raise AppRunError {
+  guard !self.is_quitting() else { return }
+  self.activate_for_launch_input()
+  let context = self.application_context()
+  for handler in self.launch_input_handlers {
+    ignore(
+      self.application_tasks.spawn(() => handler(context, input), no_wait=true),
+    )
   }
 }
 

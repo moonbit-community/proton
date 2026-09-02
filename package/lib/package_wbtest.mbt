@@ -224,21 +224,6 @@ test "NSIS script carries package identity and update behavior" {
   assert_true(script.contains("Rename \"$INSTDIR.proton-next\" \"$INSTDIR\""))
   assert_true(script.contains("File /r \"C:\\stage\\Demo App\\*.*\""))
   assert_true(script.contains("Exec '\"$INSTDIR\\demo-app.exe\"'"))
-  assert_true(
-    script.contains(
-      "WriteRegStr HKCU \"Software\\Classes\\devtoys\" \"URL Protocol\" \"\"",
-    ),
-  )
-  assert_true(
-    script.contains("DeleteRegKey HKCU \"Software\\Classes\\devtoys\""),
-  )
-  assert_true(
-    script.contains(
-      "DeleteRegKey HKCU \"Software\\Classes\\devtoys\"\n" +
-      "  DeleteRegKey HKCU \"Software\\Classes\\demo-app\"\n" +
-      "SectionEnd",
-    ),
-  )
   let empty_script = windows_installer_script(
     package_test_spec([App, Nsis], url_schemes=[]),
     "C:\\stage\\Demo App",
@@ -254,6 +239,30 @@ test "NSIS script carries package identity and update behavior" {
     ),
   )
   assert_true(windows_installer_path(spec).has_suffix("demo-app-setup.exe"))
+}
+
+///|
+test "NSIS URL scheme scripts share an owned command" {
+  let spec = package_test_spec([App, Nsis], url_schemes=["devtoys"])
+  inspect(
+    windows_protocol_install_script(spec, "demo-app.exe"),
+    content=(
+      #|  WriteRegStr HKCU "Software\Classes\devtoys" "" "URL:devtoys"
+      #|  WriteRegStr HKCU "Software\Classes\devtoys" "URL Protocol" ""
+      #|  WriteRegStr HKCU "Software\Classes\devtoys\shell\open\command" "" "$\"$INSTDIR\demo-app.exe$\" $\"%1$\""
+      #|
+    ),
+  )
+  inspect(
+    windows_protocol_uninstall_script(spec, "demo-app.exe"),
+    content=(
+      #|  ReadRegStr $0 HKCU "Software\Classes\devtoys\shell\open\command" ""
+      #|  ${If} $0 == "$\"$INSTDIR\demo-app.exe$\" $\"%1$\""
+      #|    DeleteRegKey HKCU "Software\Classes\devtoys"
+      #|  ${EndIf}
+      #|
+    ),
+  )
 }
 
 ///|

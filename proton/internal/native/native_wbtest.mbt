@@ -353,7 +353,7 @@ test "typed window state fields map to a snapshot" {
   inspect(state.zoom_percent, content="125")
   inspect(state.focused, content="true")
   inspect(state.always_on_top, content="true")
-  inspect(state.theme, content="dark")
+  assert_eq(state.theme, WindowTheme::Dark)
 }
 
 ///|
@@ -442,9 +442,10 @@ test "window config preserves typed native ABI values" {
     title="Typed",
     width=320,
     height=240,
+    theme=WindowThemePreference::Dark,
     browser=BrowserPolicy(
       navigation=BrowserPolicyMode::Ask,
-      popup=BrowserPolicyMode::Ask,
+      new_window=BrowserPolicyMode::Ask,
       download=BrowserPolicyMode::Ask,
       certificate=BrowserPolicyMode::Ask,
       media=BrowserPolicyMode::Ask,
@@ -455,8 +456,9 @@ test "window config preserves typed native ABI values" {
   assert_eq(window_config.title, "Typed")
   assert_eq(window_config.width, 320)
   assert_eq(window_config.height, 240)
+  assert_eq(window_config.theme_preference, WindowThemePreference::Dark)
   assert_eq(window_config.browser.navigation, BrowserPolicyMode::Ask)
-  assert_eq(window_config.browser.popup, BrowserPolicyMode::Ask)
+  assert_eq(window_config.browser.new_window, BrowserPolicyMode::Ask)
   assert_true(window_config.browser.devtools)
   assert_true(window_config.bridge is Some(_))
   assert_eq(window_config.framework_titlebar_minimize_label, Some("Minimize"))
@@ -493,16 +495,14 @@ test "bridge config retains typed renderer policy" {
 
 ///|
 test "bridge request keeps transport metadata outside the payload" {
-  let request = decode_bridge_request_json(
-    "{\"abi_version\":1,\"request_id\":\"7\",\"window\":\"11\"," +
-    "\"op\":\"ext:add/sum\",\"payload\":{\"left\":20,\"right\":22}," +
-    "\"page_instance\":\"page-1\",\"source_origin\":\"app\"}",
-  )
+  let request = decode_bridge_request(7, 11, [
+    "ext:add/sum", "{\"left\":20,\"right\":22}", "123-1", "app",
+  ])
   inspect(request.request_id(), content="7")
   inspect(request.window(), content="11")
   inspect(request.op(), content="ext:add/sum")
   assert_eq(request.payload(), ({ "left": 20, "right": 22 } : Json))
-  assert_eq(request.page_instance(), Some("page-1"))
+  assert_eq(request.page_instance(), Some("123-1"))
   assert_eq(request.source_origin(), "app")
 }
 
@@ -589,51 +589,17 @@ test "app activation JSON keeps stable schema fields" {
 }
 
 ///|
-test "bridge lifecycle state payload requires abi_version 1" {
+test "bridge request rejects malformed transport fields" {
   let error = expect_native_error(() => {
-    decode_bridge_lifecycle_state(
-      "{\"abi_version\":2,\"revision\":\"7\",\"outcome\":\"ready\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"failure_pending\":false}",
-    )
+    decode_bridge_request(7, 11, ["ext:add/sum"])
   })
   inspect(error.status(), content="-1")
-  assert_true(error.message().contains("abi_version"))
-  let state = decode_bridge_lifecycle_state(
-    "{\"abi_version\":1,\"revision\":\"7\",\"outcome\":\"ready\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"failure_pending\":false}",
-  )
-  inspect(state.revision, content="7")
-}
-
-///|
-test "bridge diagnostic payload requires abi_version 1" {
-  let error = expect_native_error(() => {
-    decode_bridge_diagnostic(
-      "{\"abi_version\":2,\"stage\":\"load\",\"code\":\"x\",\"message\":\"m\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"details_truncated\":false}",
-    )
+  assert_true(error.message().contains("transport fields"))
+  let payload_error = expect_native_error(() => {
+    decode_bridge_request(7, 11, ["ext:add/sum", "not-json", "123-1", "app"])
   })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("abi_version"))
-  let diagnostic = decode_bridge_diagnostic(
-    "{\"abi_version\":1,\"stage\":\"load\",\"code\":\"x\",\"message\":\"m\",\"page_instance\":\"page-1\",\"url\":\"proton://app/\",\"details_truncated\":false}",
-  )
-  inspect(diagnostic.stage, content="load")
-}
-
-///|
-test "bridge request validates abi_version when present" {
-  let error = expect_native_error(() => {
-    decode_bridge_request_json(
-      "{\"abi_version\":2,\"request_id\":\"7\",\"window\":\"11\",\"op\":\"ext:add/sum\"}",
-    )
-  })
-  inspect(error.status(), content="-1")
-  assert_true(error.message().contains("abi_version"))
-  let type_error = expect_native_error(() => {
-    decode_bridge_request_json(
-      "{\"abi_version\":\"1\",\"request_id\":\"7\",\"window\":\"11\",\"op\":\"ext:add/sum\"}",
-    )
-  })
-  inspect(type_error.status(), content="-1")
-  assert_true(type_error.message().contains("abi_version"))
+  inspect(payload_error.status(), content="-1")
+  assert_true(payload_error.message().contains("bridge request payload"))
 }
 
 ///|

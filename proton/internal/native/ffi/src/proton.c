@@ -2,6 +2,7 @@
 #include "proton_app_instance.h"
 #include "proton_config.h"
 #include "proton_engine.h"
+#include "engine/cef_common/cookie_cache.h"
 #include "proton_internal.h"
 #include "proton_state.h"
 
@@ -619,6 +620,44 @@ int32_t proton_internal_event_item(const proton_event_t *event, int32_t index,
                                          buffer_len, out_required_len);
 }
 
+proton_cookie_snapshot_t *
+proton_internal_event_take_cookie_snapshot(proton_event_t *event) {
+  if (event == NULL || event->kind != PROTON_EVENT_COOKIE_GET_COMPLETED) {
+    return NULL;
+  }
+  return (proton_cookie_snapshot_t *)proton_event_take_payload(event);
+}
+
+void proton_internal_cookie_snapshot_destroy(proton_cookie_snapshot_t *snapshot) {
+  proton_cookie_snapshot_destroy(snapshot);
+}
+
+int32_t proton_internal_cookie_snapshot_count(
+    const proton_cookie_snapshot_t *snapshot, int32_t *out_count) {
+  return proton_cookie_snapshot_count(snapshot, out_count);
+}
+
+int32_t proton_internal_cookie_snapshot_string_field(
+    const proton_cookie_snapshot_t *snapshot, int32_t index, int32_t field,
+    char *buffer, int32_t buffer_len, int32_t *out_required_len) {
+  return proton_cookie_snapshot_copy_string_field(snapshot, index, field,
+                                                  buffer, buffer_len,
+                                                  out_required_len);
+}
+
+int32_t proton_internal_cookie_snapshot_int_field(
+    const proton_cookie_snapshot_t *snapshot, int32_t index, int32_t field,
+    int32_t *out_value) {
+  return proton_cookie_snapshot_int_field(snapshot, index, field, out_value);
+}
+
+int32_t proton_internal_cookie_snapshot_int64_field(
+    const proton_cookie_snapshot_t *snapshot, int32_t index, int32_t field,
+    int64_t *out_value, int32_t *out_present) {
+  return proton_cookie_snapshot_int64_field(snapshot, index, field, out_value,
+                                            out_present);
+}
+
 void proton_internal_event_destroy(proton_event_t *event) {
   proton_event_destroy(event);
 }
@@ -661,10 +700,11 @@ int32_t proton_runtime_respond_bridge_request(
 int32_t proton_internal_window_create(
     proton_runtime_handle_t runtime, const char *title, int32_t width,
     int32_t height, const char *initial_url, int32_t size_hint,
-    int32_t titlebar_overlay, int32_t navigation_policy,
+    int32_t titlebar_overlay, int32_t theme_preference,
+    int32_t navigation_policy,
     const char *titlebar_minimize_label, const char *titlebar_maximize_label,
     const char *titlebar_restore_label, const char *titlebar_close_label,
-    int32_t popup_policy, int32_t download_policy,
+    int32_t new_window_policy, int32_t download_policy,
     int32_t certificate_policy, int32_t media_policy, int32_t devtools,
     proton_bridge_config_t *bridge_config, proton_window_handle_t *out_window) {
   proton_runtime_slot_t *runtime_slot = NULL;
@@ -679,10 +719,10 @@ int32_t proton_internal_window_create(
   proton_engine_window_config_t config;
   status = proton_config_prepare_window(
       title, width, height, initial_url, size_hint, titlebar_overlay,
-      navigation_policy, titlebar_minimize_label, titlebar_maximize_label,
-      titlebar_restore_label, titlebar_close_label, popup_policy,
-      download_policy, certificate_policy, media_policy, devtools,
-      bridge_config, &config);
+      theme_preference, navigation_policy, titlebar_minimize_label,
+      titlebar_maximize_label, titlebar_restore_label, titlebar_close_label,
+      new_window_policy, download_policy, certificate_policy, media_policy,
+      devtools, bridge_config, &config);
   if (status != PROTON_OK) {
     return status;
   }
@@ -1520,6 +1560,30 @@ int32_t proton_window_set_background_color(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+int32_t proton_window_set_theme(proton_window_handle_t window,
+                                int32_t theme_preference) {
+  if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||
+      theme_preference > PROTON_WINDOW_THEME_PREFERENCE_DARK) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "window theme is invalid");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window theme requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_theme(
+      slot->engine_window,
+      (proton_window_theme_preference_t)theme_preference,
+      engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_set_visible_on_all_workspaces(
     proton_window_handle_t window, int32_t visible) {
   if (visible != 0 && visible != 1) {
@@ -1879,24 +1943,26 @@ int32_t proton_window_eval(proton_window_handle_t window, const char *script) {
   return PROTON_OK;
 }
 
-int32_t proton_window_browser_command_json(proton_window_handle_t window,
-                                           const char *command_json) {
+int32_t proton_window_browser_command(proton_window_handle_t window,
+                                      const char *command,
+                                      int32_t download_id) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  if (command_json == NULL) {
+  if (command == NULL || command[0] == '\0' || download_id < -1) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "browser command JSON is required");
+                            "browser command fields are invalid");
   }
   if (slot->engine_window == NULL) {
     return proton_set_error(PROTON_ERR_UNSUPPORTED,
                             "browser commands require native engine");
   }
   char engine_error[512] = {0};
-  status = proton_engine_window_browser_command_json(
-      slot->engine_window, command_json, engine_error, sizeof(engine_error));
+  status = proton_engine_window_browser_command(
+      slot->engine_window, command, download_id, engine_error,
+      sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
@@ -2160,24 +2226,26 @@ int32_t proton_window_get_browser_loading(proton_window_handle_t window,
              : proton_set_error(status, engine_error);
 }
 
-int32_t proton_window_respond_browser_request_json(
-    proton_window_handle_t window, const char *response_json) {
+int32_t proton_window_respond_browser_request(
+    proton_window_handle_t window, int64_t request_id, const char *action,
+    const char *path) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  if (response_json == NULL) {
+  if (request_id <= 0 || action == NULL || action[0] == '\0' || path == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "browser response JSON is required");
+                            "browser response fields are invalid");
   }
   if (slot->engine_window == NULL) {
     return proton_set_error(PROTON_ERR_UNSUPPORTED,
                             "browser responses require native engine");
   }
   char engine_error[512] = {0};
-  status = proton_engine_window_respond_browser_request_json(
-      slot->engine_window, response_json, engine_error, sizeof(engine_error));
+  status = proton_engine_window_respond_browser_request(
+      slot->engine_window, (uint64_t)request_id, action, path, engine_error,
+      sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
@@ -2189,10 +2257,6 @@ int32_t proton_window_emit_bridge_event_json(proton_window_handle_t window,
                                               const char *event_json) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  status = proton_config_validate_bridge_event(event_json);
   if (status != PROTON_OK) {
     return status;
   }
@@ -2266,11 +2330,11 @@ static int32_t proton_validate_begin_dialog(int64_t *out_dialog) {
   return PROTON_OK;
 }
 
-static int32_t proton_window_bridge_json(
-    proton_window_handle_t window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len,
-    int32_t (*query)(proton_engine_window_t *, char *, int32_t, int32_t *,
-                     char *, size_t)) {
+static int32_t proton_window_bridge_text_field(
+    proton_window_handle_t window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len,
+    int32_t (*query)(proton_engine_window_t *, int32_t, char *, int32_t,
+                     int32_t *, char *, size_t)) {
   if (out_required_len == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_required_len is required");
@@ -2278,7 +2342,7 @@ static int32_t proton_window_bridge_json(
   *out_required_len = 0;
   if (buffer_len < 0 || (buffer_len > 0 && buffer == NULL)) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "bridge JSON buffer is invalid");
+                            "bridge text buffer is invalid");
   }
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -2290,8 +2354,8 @@ static int32_t proton_window_bridge_json(
                             "bridge lifecycle requires native engine");
   }
   char engine_error[512] = {0};
-  status = query(slot->engine_window, buffer, buffer_len, out_required_len,
-                 engine_error, sizeof(engine_error));
+  status = query(slot->engine_window, field, buffer, buffer_len,
+                 out_required_len, engine_error, sizeof(engine_error));
   if (status < 0) {
     return proton_set_engine_status(status, engine_error);
   }
@@ -2299,20 +2363,121 @@ static int32_t proton_window_bridge_json(
   return status;
 }
 
-int32_t proton_window_bridge_state_json(proton_window_handle_t window,
-                                        char *buffer, int32_t buffer_len,
-                                        int32_t *out_required_len) {
-  return proton_window_bridge_json(window, buffer, buffer_len,
-                                   out_required_len,
-                                   proton_engine_window_bridge_state_json);
+int32_t proton_window_bridge_revision(proton_window_handle_t window,
+                                      int64_t *out_revision) {
+  if (out_revision == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_revision is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "bridge lifecycle requires native engine");
+  }
+  *out_revision = (int64_t)proton_engine_window_bridge_revision(
+      slot->engine_window);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
 }
 
-int32_t proton_window_take_bridge_failure_json(
-    proton_window_handle_t window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len) {
-  return proton_window_bridge_json(
-      window, buffer, buffer_len, out_required_len,
-      proton_engine_window_take_bridge_failure_json);
+int32_t proton_window_bridge_state_field(
+    proton_window_handle_t window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len) {
+  return proton_window_bridge_text_field(
+      window, field, buffer, buffer_len, out_required_len,
+      proton_engine_window_bridge_state_field);
+}
+
+int32_t proton_window_bridge_failure_field(
+    proton_window_handle_t window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len) {
+  return proton_window_bridge_text_field(
+      window, field, buffer, buffer_len, out_required_len,
+      proton_engine_window_bridge_failure_field);
+}
+
+static int32_t proton_window_bridge_failure_query(
+    proton_window_handle_t window,
+    int32_t (*query)(proton_engine_window_t *, int32_t *, char *, size_t),
+    int32_t *out_value) {
+  if (out_value == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge output is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "bridge lifecycle requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = query(slot->engine_window, out_value, engine_error,
+                 sizeof(engine_error));
+  if (status < 0) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return status;
+}
+
+int32_t proton_window_bridge_failure_present(proton_window_handle_t window,
+                                             int32_t *out_present) {
+  return proton_window_bridge_failure_query(
+      window, proton_engine_window_bridge_failure_present, out_present);
+}
+
+int32_t proton_window_bridge_failure_int_field(
+    proton_window_handle_t window, int32_t field, int32_t *out_value,
+    int32_t *out_present) {
+  if (out_value == NULL || out_present == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "bridge output is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "bridge lifecycle requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_bridge_failure_int_field(
+      slot->engine_window, field, out_value, out_present, engine_error,
+      sizeof(engine_error));
+  if (status < 0) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return status;
+}
+
+int32_t proton_window_clear_bridge_failure(proton_window_handle_t window) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "bridge lifecycle requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_clear_bridge_failure(
+      slot->engine_window, engine_error, sizeof(engine_error));
+  if (status < 0) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return status;
 }
 
 int32_t proton_runtime_begin_message_dialog(
@@ -2588,10 +2753,10 @@ int32_t proton_window_cancel_dialog(proton_window_handle_t window,
   return PROTON_OK;
 }
 
-int32_t proton_window_cookie_begin_get_json(proton_window_handle_t window,
-                                            const char *url_utf8,
-                                            int32_t include_http_only,
-                                            int64_t *out_request_id) {
+int32_t proton_window_cookie_begin_get(proton_window_handle_t window,
+                                       const char *url_utf8,
+                                       int32_t include_http_only,
+                                       int64_t *out_request_id) {
   if (out_request_id == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "out_request_id is required");
@@ -2607,7 +2772,7 @@ int32_t proton_window_cookie_begin_get_json(proton_window_handle_t window,
                             "cookie operations require native engine");
   }
   char engine_error[512] = {0};
-  status = proton_engine_window_cookie_begin_get_json(
+  status = proton_engine_window_cookie_begin_get(
       slot->engine_window, url_utf8, include_http_only, out_request_id,
       engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
@@ -3000,24 +3165,26 @@ int32_t proton_view_eval(proton_view_handle_t view, const char *script) {
   return PROTON_OK;
 }
 
-int32_t proton_view_browser_command_json(proton_view_handle_t view,
-                                         const char *command_json) {
+int32_t proton_view_browser_command(proton_view_handle_t view,
+                                    const char *command,
+                                    int32_t download_id) {
   proton_view_slot_t *slot = NULL;
   int32_t status = proton_get_view(view, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  if (command_json == NULL) {
+  if (command == NULL || command[0] == '\0' || download_id < -1) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "browser command JSON is required");
+                            "browser command fields are invalid");
   }
   if (slot->engine_view == NULL) {
     return proton_set_error(PROTON_ERR_UNSUPPORTED,
                             "browser commands require native engine");
   }
   char engine_error[512] = {0};
-  status = proton_engine_view_browser_command_json(
-      slot->engine_view, command_json, engine_error, sizeof(engine_error));
+  status = proton_engine_view_browser_command(
+      slot->engine_view, command, download_id, engine_error,
+      sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }

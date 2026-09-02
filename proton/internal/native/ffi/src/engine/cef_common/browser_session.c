@@ -1,6 +1,5 @@
 #include "browser_session.h"
 
-#include "../../proton_json.h"
 #include "../../proton_event.h"
 
 #include "include/capi/cef_download_item_capi.h"
@@ -21,7 +20,7 @@
 
 typedef enum {
   PROTON_BROWSER_REQUEST_NAVIGATION = 1,
-  PROTON_BROWSER_REQUEST_POPUP = 2,
+  PROTON_BROWSER_REQUEST_NEW_WINDOW = 2,
   PROTON_BROWSER_REQUEST_DOWNLOAD = 3,
   PROTON_BROWSER_REQUEST_CERTIFICATE = 4,
   PROTON_BROWSER_REQUEST_MEDIA = 5,
@@ -35,16 +34,29 @@ typedef struct proton_browser_pending {
   cef_frame_t *frame;
   cef_request_t *request;
   cef_before_download_callback_t *download;
+  uint32_t download_id;
   cef_callback_t *certificate;
   cef_media_access_callback_t *media;
   struct proton_browser_pending *next;
 } proton_browser_pending_t;
 
+typedef enum {
+  PROTON_BROWSER_DOWNLOAD_ACTIVE = 0,
+  PROTON_BROWSER_DOWNLOAD_CANCEL_REQUESTED = 1,
+  PROTON_BROWSER_DOWNLOAD_CANCEL_SENT = 2,
+} proton_browser_download_state_t;
+
 typedef struct proton_browser_download {
   uint32_t id;
   cef_download_item_callback_t *callback;
+  proton_browser_download_state_t state;
   struct proton_browser_download *next;
 } proton_browser_download_t;
+
+static void proton_browser_download_request_cancel(
+    proton_browser_download_t *download);
+static void proton_browser_pending_reject(
+    proton_browser_session_t *session, proton_browser_pending_t *pending);
 
 typedef struct proton_pdf_print_callback {
   cef_pdf_print_callback_t callback;
@@ -260,21 +272,18 @@ void proton_browser_session_destroy(proton_browser_session_t *session) {
   proton_browser_pending_t *pending = session->pending;
   while (pending != NULL) {
     proton_browser_pending_t *next = pending->next;
-    if (pending->certificate != NULL) {
-      pending->certificate->cancel(pending->certificate);
-    }
-    if (pending->media != NULL) {
-      pending->media->cancel(pending->media);
-    }
+    proton_browser_pending_reject(session, pending);
     proton_browser_pending_release(pending);
     pending = next;
   }
   proton_browser_download_t *download = session->downloads;
   while (download != NULL) {
     proton_browser_download_t *next = download->next;
-    download->callback->cancel(download->callback);
-    download->callback->base.release(
-        (cef_base_ref_counted_t *)download->callback);
+    proton_browser_download_request_cancel(download);
+    if (download->callback != NULL) {
+      download->callback->base.release(
+          (cef_base_ref_counted_t *)download->callback);
+    }
     free(download);
     download = next;
   }
@@ -472,6 +481,20 @@ static proton_browser_pending_t *proton_browser_pending_take(
   return pending;
 }
 
+static proton_browser_pending_t *proton_browser_pending_take_download(
+    proton_browser_session_t *session, uint32_t download_id) {
+  proton_browser_pending_t *pending = session->pending;
+  while (pending != NULL &&
+         (pending->kind != PROTON_BROWSER_REQUEST_DOWNLOAD ||
+          pending->download_id != download_id)) {
+    pending = pending->next;
+  }
+  if (pending != NULL) {
+    proton_browser_pending_remove(session, pending);
+  }
+  return pending;
+}
+
 static proton_event_t *proton_browser_request_event(
     proton_browser_session_t *session, proton_browser_pending_t *pending,
     proton_event_kind_t kind) {
@@ -603,10 +626,11 @@ int proton_browser_session_before_browse(
   return 1;
 }
 
-int proton_browser_session_before_popup(
+int proton_browser_session_request_new_window(
     proton_browser_session_t *session, const cef_string_t *target_url,
-    cef_window_open_disposition_t target_disposition, int user_gesture) {
-  if (session == NULL || session->policy.popup != PROTON_BROWSER_POLICY_ASK) {
+    int user_gesture) {
+  if (session == NULL ||
+      session->policy.new_window != PROTON_BROWSER_POLICY_ASK) {
     return 1;
   }
   char *url = proton_browser_cef_string_to_utf8(target_url);
@@ -614,15 +638,15 @@ int proton_browser_session_before_popup(
     return 1;
   }
   proton_browser_pending_t *pending =
-      proton_browser_pending_new(session, PROTON_BROWSER_REQUEST_POPUP, url);
+      proton_browser_pending_new(
+          session, PROTON_BROWSER_REQUEST_NEW_WINDOW, url);
   free(url);
   if (pending == NULL) {
     return 1;
   }
   proton_event_t *event = proton_browser_request_event(
-      session, pending, PROTON_EVENT_BROWSER_POPUP_REQUESTED);
+      session, pending, PROTON_EVENT_BROWSER_NEW_WINDOW_REQUESTED);
   if (event != NULL) {
-    event->int_a = (int32_t)target_disposition;
     event->bool_a = user_gesture;
   }
   if (!proton_browser_enqueue_event(session, event)) {
@@ -630,6 +654,25 @@ int proton_browser_session_before_popup(
     proton_browser_pending_release(pending);
   }
   return 1;
+}
+
+int proton_browser_session_open_url_from_tab(
+    proton_browser_session_t *session, const cef_string_t *target_url,
+    cef_window_open_disposition_t target_disposition, int user_gesture) {
+  /* Current-tab requests continue through OnBeforeBrowse. Only dispositions
+   * representable by Proton's new-window policy are forwarded to MoonBit. */
+  switch (target_disposition) {
+  case CEF_WOD_CURRENT_TAB:
+    return 0;
+  case CEF_WOD_NEW_FOREGROUND_TAB:
+  case CEF_WOD_NEW_BACKGROUND_TAB:
+  case CEF_WOD_NEW_POPUP:
+  case CEF_WOD_NEW_WINDOW:
+    return proton_browser_session_request_new_window(
+        session, target_url, user_gesture);
+  default:
+    return 1;
+  }
 }
 
 int proton_browser_session_can_download(
@@ -651,8 +694,12 @@ int proton_browser_session_before_download(
     return 1;
   }
   if (session->policy.download != PROTON_BROWSER_POLICY_ASK) {
-    return 1;
+    return 0;
   }
+  uint32_t download_id =
+      download_item != NULL && download_item->get_id != NULL
+          ? download_item->get_id(download_item)
+          : 0;
   char *url =
       download_item != NULL && download_item->get_url != NULL
           ? proton_browser_userfree_to_utf8(download_item->get_url(download_item))
@@ -661,21 +708,18 @@ int proton_browser_session_before_download(
   if (url == NULL || name == NULL) {
     free(url);
     free(name);
-    return 1;
+    return 0;
   }
   proton_browser_pending_t *pending =
       proton_browser_pending_new(session, PROTON_BROWSER_REQUEST_DOWNLOAD, url);
   free(url);
   if (pending == NULL) {
     free(name);
-    return 1;
+    return 0;
   }
   pending->download = callback;
+  pending->download_id = download_id;
   callback->base.add_ref((cef_base_ref_counted_t *)callback);
-  uint32_t download_id =
-      download_item != NULL && download_item->get_id != NULL
-          ? download_item->get_id(download_item)
-          : 0;
   proton_event_t *event = proton_browser_request_event(
       session, pending, PROTON_EVENT_BROWSER_DOWNLOAD_REQUESTED);
   int valid = event != NULL && proton_event_set_text(&event->text_b, name);
@@ -689,6 +733,7 @@ int proton_browser_session_before_download(
     }
     proton_browser_pending_remove(session, pending);
     proton_browser_pending_release(pending);
+    return 0;
   }
   return 1;
 }
@@ -702,6 +747,48 @@ static proton_browser_download_t *proton_browser_download_find(
   return download;
 }
 
+static proton_browser_download_t *proton_browser_download_get_or_create(
+    proton_browser_session_t *session, uint32_t id) {
+  proton_browser_download_t *download =
+      proton_browser_download_find(session, id);
+  if (download != NULL) {
+    return download;
+  }
+  download = (proton_browser_download_t *)calloc(1, sizeof(*download));
+  if (download != NULL) {
+    download->id = id;
+    download->next = session->downloads;
+    session->downloads = download;
+  }
+  return download;
+}
+
+static void proton_browser_download_request_cancel(
+    proton_browser_download_t *download) {
+  if (download == NULL ||
+      download->state == PROTON_BROWSER_DOWNLOAD_CANCEL_SENT) {
+    return;
+  }
+  download->state = PROTON_BROWSER_DOWNLOAD_CANCEL_REQUESTED;
+  if (download->callback != NULL) {
+    download->callback->cancel(download->callback);
+    download->state = PROTON_BROWSER_DOWNLOAD_CANCEL_SENT;
+  }
+}
+
+static void proton_browser_pending_reject(
+    proton_browser_session_t *session, proton_browser_pending_t *pending) {
+  if (pending->kind == PROTON_BROWSER_REQUEST_DOWNLOAD) {
+    proton_browser_download_request_cancel(
+        proton_browser_download_get_or_create(
+            session, pending->download_id));
+  } else if (pending->certificate != NULL) {
+    pending->certificate->cancel(pending->certificate);
+  } else if (pending->media != NULL) {
+    pending->media->cancel(pending->media);
+  }
+}
+
 void proton_browser_session_download_updated(
     proton_browser_session_t *session, cef_download_item_t *download_item,
     cef_download_item_callback_t *callback) {
@@ -712,14 +799,14 @@ void proton_browser_session_download_updated(
   proton_browser_download_t *download =
       proton_browser_download_find(session, id);
   if (download == NULL && download_item->is_in_progress(download_item)) {
-    download =
-        (proton_browser_download_t *)calloc(1, sizeof(*download));
-    if (download != NULL) {
-      download->id = id;
-      download->callback = callback;
-      callback->base.add_ref((cef_base_ref_counted_t *)callback);
-      download->next = session->downloads;
-      session->downloads = download;
+    download = proton_browser_download_get_or_create(session, id);
+  }
+  if (download != NULL && download->callback == NULL &&
+      download_item->is_in_progress(download_item)) {
+    download->callback = callback;
+    callback->base.add_ref((cef_base_ref_counted_t *)callback);
+    if (download->state == PROTON_BROWSER_DOWNLOAD_CANCEL_REQUESTED) {
+      proton_browser_download_request_cancel(download);
     }
   }
   const char *state = download_item->is_complete(download_item)
@@ -749,8 +836,10 @@ void proton_browser_session_download_updated(
     if (*cursor != NULL) {
       *cursor = download->next;
     }
-    download->callback->base.release(
-        (cef_base_ref_counted_t *)download->callback);
+    if (download->callback != NULL) {
+      download->callback->base.release(
+          (cef_base_ref_counted_t *)download->callback);
+    }
     free(download);
   }
 }
@@ -822,62 +911,27 @@ int proton_browser_session_media_permission(
   return 1;
 }
 
-static int proton_browser_response_fields(
-    const char *response_json, uint64_t *out_request_id, char *action,
-    size_t action_len, char **out_path) {
-  proton_json_doc_t doc = {0};
-  proton_json_value_t root = {0};
-  proton_json_value_t request_id = {0};
-  proton_json_value_t action_value = {0};
-  int64_t parsed_id = 0;
-  if (!proton_json_parse(&doc, response_json) ||
-      !proton_json_root_object(&doc, &root) ||
-      !proton_json_object_get(&doc, root, "request_id", &request_id) ||
-      !proton_json_read_int64_string_or_number(&doc, request_id, &parsed_id) ||
-      parsed_id <= 0 ||
-      !proton_json_object_get(&doc, root, "action", &action_value) ||
-      !proton_json_read_string(&doc, action_value, action, action_len)) {
-    proton_json_dispose(&doc);
-    return 0;
-  }
-  proton_json_value_t path = {0};
-  if (out_path != NULL &&
-      proton_json_object_get(&doc, root, "path", &path)) {
-    *out_path = proton_json_copy_string(&doc, path);
-    if (*out_path == NULL) {
-      proton_json_dispose(&doc);
-      return 0;
-    }
-  }
-  *out_request_id = (uint64_t)parsed_id;
-  proton_json_dispose(&doc);
-  return 1;
-}
-
-int32_t proton_browser_session_respond_json(
-    proton_browser_session_t *session, const char *response_json,
-    char *error, size_t error_len) {
-  if (session == NULL || response_json == NULL) {
+int32_t proton_browser_session_respond(
+    proton_browser_session_t *session, uint64_t request_id,
+    const char *action, const char *path, char *error, size_t error_len) {
+  if (session == NULL || request_id == 0) {
     proton_browser_set_message(error, error_len,
-                               "browser session and response are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  uint64_t request_id = 0;
-  char action[32] = {0};
-  char *path = NULL;
-  if (!proton_browser_response_fields(response_json, &request_id, action,
-                                      sizeof(action), &path)) {
-    proton_browser_set_message(error, error_len,
-                               "browser response JSON is invalid");
+                               "browser session and response fields are required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_browser_pending_t *pending =
       proton_browser_pending_take(session, request_id);
   if (pending == NULL) {
-    free(path);
     proton_browser_set_message(error, error_len,
                                "browser request is no longer pending");
     return PROTON_ERR_STALE_BROWSER_REQUEST;
+  }
+  if (action == NULL || action[0] == '\0') {
+    proton_browser_pending_reject(session, pending);
+    proton_browser_pending_release(pending);
+    proton_browser_set_message(error, error_len,
+                               "browser response action is invalid");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
   int32_t status = PROTON_OK;
   switch (pending->kind) {
@@ -897,10 +951,10 @@ int32_t proton_browser_session_respond_json(
       status = PROTON_ERR_INVALID_ARGUMENT;
     }
     break;
-  case PROTON_BROWSER_REQUEST_POPUP:
+  case PROTON_BROWSER_REQUEST_NEW_WINDOW:
     if (strcmp(action, "current") == 0) {
-      /* Popup callbacks do not provide a durable target frame. The caller
-       * should use the normal window load API after acknowledging the request. */
+      /* New-window callbacks do not provide a durable target frame. The caller
+       * uses the normal window load API after acknowledging the request. */
     } else if (strcmp(action, "deny") != 0) {
       status = PROTON_ERR_INVALID_ARGUMENT;
     }
@@ -914,7 +968,11 @@ int32_t proton_browser_session_respond_json(
       pending->download->cont(pending->download, &destination,
                               path == NULL || path[0] == '\0');
       cef_string_clear(&destination);
-    } else if (strcmp(action, "deny") != 0) {
+    } else if (strcmp(action, "deny") == 0) {
+      proton_browser_download_request_cancel(
+          proton_browser_download_get_or_create(
+              session, pending->download_id));
+    } else {
       status = PROTON_ERR_INVALID_ARGUMENT;
     }
     break;
@@ -939,38 +997,12 @@ int32_t proton_browser_session_respond_json(
     break;
   }
   if (status != PROTON_OK) {
+    proton_browser_pending_reject(session, pending);
     proton_browser_set_message(error, error_len,
                                "browser response action is invalid");
   }
-  free(path);
   proton_browser_pending_release(pending);
   return status;
-}
-
-static int proton_browser_read_command(const char *command_json,
-                                       char *command, size_t command_len,
-                                       uint32_t *out_download_id) {
-  proton_json_doc_t doc = {0};
-  proton_json_value_t root = {0};
-  proton_json_value_t command_value = {0};
-  if (!proton_json_parse(&doc, command_json) ||
-      !proton_json_root_object(&doc, &root) ||
-      !proton_json_object_get(&doc, root, "command", &command_value) ||
-      !proton_json_read_string(&doc, command_value, command, command_len)) {
-    proton_json_dispose(&doc);
-    return 0;
-  }
-  proton_json_value_t id = {0};
-  int32_t parsed_id = 0;
-  if (proton_json_object_get(&doc, root, "download_id", &id)) {
-    if (!proton_json_read_int32(&doc, id, &parsed_id) || parsed_id < 0) {
-      proton_json_dispose(&doc);
-      return 0;
-    }
-    *out_download_id = (uint32_t)parsed_id;
-  }
-  proton_json_dispose(&doc);
-  return 1;
 }
 
 static int32_t proton_browser_execute_edit_command(
@@ -1008,20 +1040,13 @@ static int32_t proton_browser_execute_edit_command(
   return PROTON_OK;
 }
 
-int32_t proton_browser_session_command_json(
+int32_t proton_browser_session_command(
     proton_browser_session_t *session, cef_browser_t *browser,
-    const char *command_json, char *error, size_t error_len) {
-  if (session == NULL || browser == NULL || command_json == NULL) {
+    const char *command, int32_t download_id, char *error, size_t error_len) {
+  if (session == NULL || browser == NULL || command == NULL ||
+      command[0] == '\0' || download_id < -1) {
     proton_browser_set_message(error, error_len,
                                "browser session, browser, and command are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  char command[40] = {0};
-  uint32_t download_id = 0;
-  if (!proton_browser_read_command(command_json, command, sizeof(command),
-                                   &download_id)) {
-    proton_browser_set_message(error, error_len,
-                               "browser command JSON is invalid");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (strcmp(command, "back") == 0) {
@@ -1035,14 +1060,23 @@ int32_t proton_browser_session_command_json(
   } else if (strcmp(command, "stop") == 0) {
     browser->stop_load(browser);
   } else if (strcmp(command, "cancel_download") == 0) {
+    if (download_id < 0) {
+      proton_browser_set_message(error, error_len,
+                                 "cancel_download requires a download id");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
     proton_browser_download_t *download =
-        proton_browser_download_find(session, download_id);
+        proton_browser_download_find(session, (uint32_t)download_id);
     if (download == NULL) {
       proton_browser_set_message(error, error_len,
                                  "download is no longer active");
       return PROTON_ERR_STALE_BROWSER_REQUEST;
     }
-    download->callback->cancel(download->callback);
+    proton_browser_download_request_cancel(download);
+    proton_browser_pending_t *pending =
+        proton_browser_pending_take_download(
+            session, (uint32_t)download_id);
+    proton_browser_pending_release(pending);
   } else if (strcmp(command, "focus") == 0) {
     cef_browser_host_t *host = browser->get_host(browser);
     if (host == NULL) {

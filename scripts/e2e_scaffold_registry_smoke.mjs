@@ -106,7 +106,7 @@ function useLocalCodegenPackage() {
   const backendModPath = path.join(projectDir, "backend", "moon.mod");
   const source = fs.readFileSync(backendModPath, "utf8");
   const coordinate = `moonx moonbit-community/proton_codegen@${moduleVersion("codegen/moon.mod")}`;
-  const localCommand = `moon runwasm '${path.join(repoRoot, "codegen")}'`;
+  const localCommand = `moon run '${path.join(repoRoot, "codegen")}' --target wasm --`;
   const updated = source.replace(coordinate, localCommand);
   if (updated === source || updated.includes(coordinate)) {
     throw new Error("could not select the local codegen package");

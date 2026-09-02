@@ -29,7 +29,7 @@ typedef enum proton_event_kind {
   PROTON_EVENT_REOPEN = 10,
   PROTON_EVENT_NOTIFICATION_RESULT = 11,
   PROTON_EVENT_BROWSER_NAVIGATION_REQUESTED = 12,
-  PROTON_EVENT_BROWSER_POPUP_REQUESTED = 13,
+  PROTON_EVENT_BROWSER_NEW_WINDOW_REQUESTED = 13,
   PROTON_EVENT_BROWSER_DOWNLOAD_REQUESTED = 14,
   PROTON_EVENT_BROWSER_CERTIFICATE_ERROR = 15,
   PROTON_EVENT_BROWSER_MEDIA_PERMISSION_REQUESTED = 16,
@@ -53,6 +53,7 @@ typedef enum proton_event_kind {
   PROTON_EVENT_BROWSER_FIND_RESULT = 34,
   PROTON_EVENT_VIEW_FIND_RESULT = 35,
   PROTON_EVENT_BROWSER_PDF_PRINT_FINISHED = 36,
+  PROTON_EVENT_APP_ACTIVATION = 37,
 } proton_event_kind_t;
 
 typedef struct proton_event {
@@ -74,6 +75,8 @@ typedef struct proton_event {
   char *text_c;
   char **items;
   int32_t item_count;
+  void *payload;
+  void (*destroy_payload)(void *payload);
   struct proton_event *next;
 } proton_event_t;
 
@@ -93,6 +96,9 @@ PROTON_INTERNAL bool proton_event_set_text(char **field, const char *value);
 PROTON_INTERNAL bool proton_event_set_items(proton_event_t *event,
                                             const char *const *items,
                                             int32_t item_count);
+PROTON_INTERNAL bool proton_event_set_payload(
+    proton_event_t *event, void *payload, void (*destroy_payload)(void *));
+PROTON_INTERNAL void *proton_event_take_payload(proton_event_t *event);
 PROTON_INTERNAL void proton_event_destroy(proton_event_t *event);
 
 PROTON_INTERNAL bool proton_event_queue_init(proton_event_queue_t *queue);

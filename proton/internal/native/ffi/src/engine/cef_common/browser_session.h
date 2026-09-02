@@ -22,7 +22,7 @@ typedef enum {
 
 typedef struct {
   proton_browser_policy_mode_t navigation;
-  proton_browser_policy_mode_t popup;
+  proton_browser_policy_mode_t new_window;
   proton_browser_policy_mode_t download;
   proton_browser_policy_mode_t certificate;
   proton_browser_policy_mode_t media;
@@ -63,12 +63,12 @@ int32_t proton_browser_session_copy_title(proton_browser_session_t *session,
 int32_t proton_browser_session_is_loading(
     proton_browser_session_t *session);
 
-int32_t proton_browser_session_respond_json(
-    proton_browser_session_t *session, const char *response_json,
-    char *error, size_t error_len);
-int32_t proton_browser_session_command_json(
+int32_t proton_browser_session_respond(
+    proton_browser_session_t *session, uint64_t request_id,
+    const char *action, const char *path, char *error, size_t error_len);
+int32_t proton_browser_session_command(
     proton_browser_session_t *session, cef_browser_t *browser,
-    const char *command_json, char *error, size_t error_len);
+    const char *command, int32_t download_id, char *error, size_t error_len);
 int32_t proton_browser_navigation_state(
     cef_browser_t *browser, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len);
@@ -119,7 +119,10 @@ void proton_browser_session_find_result(
 int proton_browser_session_before_browse(
     proton_browser_session_t *session, cef_frame_t *frame,
     cef_request_t *request, int user_gesture, int is_redirect);
-int proton_browser_session_before_popup(
+int proton_browser_session_request_new_window(
+    proton_browser_session_t *session, const cef_string_t *target_url,
+    int user_gesture);
+int proton_browser_session_open_url_from_tab(
     proton_browser_session_t *session, const cef_string_t *target_url,
     cef_window_open_disposition_t target_disposition, int user_gesture);
 int proton_browser_session_can_download(

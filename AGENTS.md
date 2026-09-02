@@ -123,10 +123,10 @@ native checks before handing off larger refactors.
   `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and finally
   `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not published.
 - All modules in `moon.work` use one lockstep version. Prepare a lockstep release only
-  through `moon run scripts/bump_version.mbtx -- patch`, `minor`, or `major`;
-  do not edit individual lockstep module versions by hand. The script discovers
-  modules through `moon.work`, updates the lockstep versions and internal
-  requirements, and refuses to run if that set has drifted from the shared version.
+  through `moonx Milky2018/lockstep <version>`, where `<version>` is the explicit
+  target `MAJOR.MINOR.PATCH`; do not edit individual lockstep module versions by
+  hand. Run the command from the repository root containing `moon.work`. It updates
+  the workspace module versions and internal requirements as one transaction.
 - Run the release checks before the first publish:
 
   ```sh

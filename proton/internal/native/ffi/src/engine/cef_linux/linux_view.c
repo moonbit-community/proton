@@ -208,7 +208,8 @@ void CEF_CALLBACK proton_engine_on_title_change(
     cef_browser_t *browser,
     const cef_string_t *title) {
   (void)self;
-  proton_engine_view_t *view = proton_engine_view_from_browser(browser);
+  proton_engine_view_t *view =
+      proton_engine_window_lookup_view_browser(browser);
   char *title_utf8 = proton_engine_cef_title_to_utf8(title);
   if (title_utf8 == NULL) {
     return;
@@ -219,7 +220,7 @@ void CEF_CALLBACK proton_engine_on_title_change(
     proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
     return;
   }
-  proton_engine_window_t *window = proton_engine_window_from_browser(browser);
+  proton_engine_window_t *window = proton_engine_window_lookup_browser(browser);
   proton_browser_session_title_updated(
       window != NULL ? window->browser_session : NULL, title_utf8);
   free(title_utf8);
@@ -661,8 +662,9 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
   return PROTON_OK;
 }
 
-int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
-                                                const char *command_json,
+int32_t proton_engine_view_browser_command(proton_engine_view_t *view,
+                                                const char *command,
+                                                int32_t download_id,
                                                 char *error,
                                                 size_t error_len) {
   if (view == NULL || view->closed || view->browser_session == NULL ||
@@ -670,9 +672,9 @@ int32_t proton_engine_view_browser_command_json(proton_engine_view_t *view,
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  return proton_browser_session_command_json(view->browser_session,
-                                             proton_engine_view_browser(view), command_json,
-                                             error, error_len);
+  return proton_browser_session_command(view->browser_session,
+                                        proton_engine_view_browser(view), command,
+                                        download_id, error, error_len);
 }
 
 int32_t proton_engine_view_get_browser_focus_state(

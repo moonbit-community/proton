@@ -35,7 +35,7 @@ fn App::App(
     browser_event_handlers: [],
     window_close_handler: None,
     navigation_handler: None,
-    popup_handler: None,
+    new_window_handler: None,
     download_handler: None,
     certificate_handler: None,
     media_handler: None,

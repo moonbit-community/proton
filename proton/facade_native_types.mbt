@@ -12,6 +12,33 @@ pub extend TitlebarStyle with Eq::{not_equal, equal}
 pub extend TitlebarStyle with Debug::{to_repr}
 
 ///|
+/// Describes the effective native window chrome theme.
+pub(all) enum WindowTheme {
+  Light
+  Dark
+} derive(Debug, Eq)
+
+///|
+pub extend WindowTheme with Eq::{not_equal, equal}
+
+///|
+pub extend WindowTheme with Debug::{to_repr}
+
+///|
+/// Controls how Proton chooses the native window chrome theme.
+pub(all) enum WindowThemePreference {
+  System
+  Light
+  Dark
+} derive(Debug, Eq)
+
+///|
+pub extend WindowThemePreference with Eq::{not_equal, equal}
+
+///|
+pub extend WindowThemePreference with Debug::{to_repr}
+
+///|
 /// Controls how configured window dimensions constrain native resizing.
 pub(all) enum WindowSizeHint {
   Unconstrained
@@ -63,6 +90,9 @@ fn WindowMonitor::from_native(monitor : @native.WindowMonitor) -> WindowMonitor 
 
 ///|
 /// A point-in-time snapshot of a native window.
+///
+/// `theme` is the effective `Light` or `Dark` theme after resolving the
+/// window's configured `WindowThemePreference`.
 pub(all) struct WindowState {
   x : Int
   y : Int
@@ -76,7 +106,7 @@ pub(all) struct WindowState {
   maximized : Bool
   fullscreen : Bool
   always_on_top : Bool
-  theme : String
+  theme : WindowTheme
 } derive(Debug, Eq)
 
 ///|
@@ -100,7 +130,10 @@ fn WindowState::from_native(state : @native.WindowState) -> WindowState {
     maximized: state.maximized,
     fullscreen: state.fullscreen,
     always_on_top: state.always_on_top,
-    theme: state.theme,
+    theme: match state.theme {
+      @native.WindowTheme::Light => WindowTheme::Light
+      @native.WindowTheme::Dark => WindowTheme::Dark
+    },
   }
 }
 

@@ -1,11 +1,11 @@
 name = "moonbit-community/proton_rabbita"
 
-version = "0.2.3"
+version = "0.2.5"
 
 import {
-  "moonbit-community/proton_client@0.2.3",
-  "moonbit-community/proton_contract@0.2.3",
-  "moonbit-community/rabbita@0.14.1",
+  "moonbit-community/proton_client@0.2.5",
+  "moonbit-community/proton_contract@0.2.5",
+  "moonbit-community/rabbita@0.15.4",
 }
 
 readme = "README.mbt.md"

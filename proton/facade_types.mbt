@@ -61,7 +61,7 @@ struct App {
   ]
   mut window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   mut navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
-  mut popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
+  mut new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?
   mut download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
   mut certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
   mut media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
@@ -373,7 +373,7 @@ priv struct RuntimeSession {
   pending_browser_requests : Array[PendingBrowserRequest]
   pending_resource_requests : Array[PendingResourceRequest]
   navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
-  popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?
+  new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?
   download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
   certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
   media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
@@ -420,7 +420,9 @@ priv struct RuntimeEventPump {
 ///|
 priv enum CookieCompletionState {
   CookieWaiting
-  CookieCompleted(Result[String, @native.NativeError])
+  CookieCompleted(
+    Result[Array[@native.NativeCookieRecord], @native.NativeError]
+  )
 }
 
 ///|
@@ -597,6 +599,7 @@ pub struct WindowHandle {
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
   set_window_ignore_mouse_events : (Bool, Bool) -> Unit raise WindowSessionError
   set_window_background_color : (String) -> Unit raise WindowSessionError
+  set_window_theme : (WindowThemePreference) -> Unit raise WindowSessionError
   set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
   set_window_enabled : (Bool) -> Unit raise WindowSessionError
   set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
@@ -796,30 +799,29 @@ pub extend NavigationDecision with Eq::{not_equal, equal}
 pub extend NavigationDecision with Debug::{to_repr}
 
 ///|
-pub(all) struct PopupRequest {
+pub(all) struct NewWindowRequest {
   url : String
-  disposition : Int
   user_gesture : Bool
 } derive(Debug, Eq)
 
 ///|
-pub extend PopupRequest with Eq::{not_equal, equal}
+pub extend NewWindowRequest with Eq::{not_equal, equal}
 
 ///|
-pub extend PopupRequest with Debug::{to_repr}
+pub extend NewWindowRequest with Debug::{to_repr}
 
 ///|
-pub(all) enum PopupDecision {
+pub(all) enum NewWindowDecision {
   Deny
   OpenInCurrent
   OpenInWindow(String)
 } derive(Debug, Eq)
 
 ///|
-pub extend PopupDecision with Eq::{not_equal, equal}
+pub extend NewWindowDecision with Eq::{not_equal, equal}
 
 ///|
-pub extend PopupDecision with Debug::{to_repr}
+pub extend NewWindowDecision with Debug::{to_repr}
 
 ///|
 pub(all) struct DownloadRequest {
@@ -993,24 +995,6 @@ pub extend Cookie with Eq::{not_equal, equal}
 pub extend Cookie with Debug::{to_repr}
 
 ///|
-priv struct NativeCookieRecord {
-  name : String
-  value : String
-  domain : String
-  path : String
-  secure : Bool
-  http_only : Bool
-  same_site : String
-  has_expires : Bool
-  expires : Double?
-  creation : Double
-  last_access : Double
-} derive(FromJson)
-
-///|
-priv suberror CookieDecodeError {
-  CookieDecodeError(String)
-} derive(Debug)
 
 ///|
 /// Failures while resolving and validating an application's configuration.

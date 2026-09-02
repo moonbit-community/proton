@@ -10,6 +10,8 @@ pub async fn build(PackageSpec) -> Array[String]
 
 pub async fn build_with(PackageSpec, PackageCustomization, async (PackageLayout) -> Unit) -> Array[String]
 
+pub async fn current_package_host() -> PackageHost
+
 pub fn macos_versions(String) -> (String, String) raise PackagePlanError
 
 pub async fn resolve_package_formats(Array[PackageFormat]) -> Array[PackageFormat]
@@ -140,6 +142,14 @@ pub fn PackageFormat::not_equal(Self, Self) -> Bool
 pub fn PackageFormat::parse(String) -> Self raise PackagePlanError
 pub fn PackageFormat::to_repr(Self) -> @debug.Repr
 pub fn PackageFormat::to_string(Self) -> String
+
+pub(all) enum PackageHost {
+  Macos
+  Windows
+  Linux
+} derive(Eq)
+pub fn PackageHost::equal(Self, Self) -> Bool
+pub fn PackageHost::not_equal(Self, Self) -> Bool
 
 pub struct PackageLayout {
   root : String

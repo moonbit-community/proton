@@ -49,6 +49,65 @@ test "project config contains only CLI build and package settings" {
 }
 
 ///|
+test "project package decodes platform-specific inputs" {
+  let source =
+    #|{
+    #|  "identifier": "com.example.todo",
+    #|  "package": {
+    #|    "product_name": "Todo",
+    #|    "version": "1.2.3",
+    #|    "formats": ["app"],
+    #|    "resources": ["assets/common"],
+    #|    "sign": { "binaries": ["helpers/common"] },
+    #|    "platforms": {
+    #|      "macos": {
+    #|        "formats": ["app", "dmg"],
+    #|        "resources": ["assets/macos"],
+    #|        "sign": { "binaries": ["helpers/macos"] }
+    #|      },
+    #|      "windows": {
+    #|        "formats": ["app", "zip", "nsis"],
+    #|        "resources": ["assets/windows"]
+    #|      },
+    #|      "linux": { "formats": [] }
+    #|    }
+    #|  }
+    #|}
+  let config = load_project_config_from_text(source, "/workspace/todo")
+  let platforms = config.package_config().unwrap().platforms()
+  let macos = platforms.macos().unwrap()
+  assert_eq(macos.formats(), Some(["app", "dmg"]))
+  assert_eq(macos.resources(), [
+    @mbpath.Path("/workspace/todo/assets/macos").resolve().to_string(),
+  ])
+  assert_eq(macos.sign().unwrap().binaries(), [
+    @mbpath.Path("/workspace/todo/helpers/macos").resolve().to_string(),
+  ])
+  assert_eq(
+    platforms.windows().unwrap().formats(),
+    Some(["app", "zip", "nsis"]),
+  )
+  assert_eq(platforms.linux().unwrap().formats(), Some([]))
+}
+
+///|
+test "project package rejects unknown platform overrides" {
+  let source =
+    #|{
+    #|  "identifier": "com.example.todo",
+    #|  "package": {
+    #|    "product_name": "Todo",
+    #|    "version": "1.2.3",
+    #|    "platforms": { "android": { "formats": ["app"] } }
+    #|  }
+    #|}
+  let error = expect_config_error(() => {
+    ignore(load_project_config_from_text(source, "/workspace/todo"))
+  })
+  assert_eq(error, UnknownField(path="package.platforms.android"))
+}
+
+///|
 test "project config rejects unknown top-level fields" {
   let source =
     #|{ "identifier": "com.example.todo", "window": { "title": "Todo" } }

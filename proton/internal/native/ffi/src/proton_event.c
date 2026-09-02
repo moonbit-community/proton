@@ -121,6 +121,27 @@ bool proton_event_set_items(proton_event_t *event,
   return true;
 }
 
+bool proton_event_set_payload(proton_event_t *event, void *payload,
+                              void (*destroy_payload)(void *)) {
+  if (event == NULL || payload == NULL || destroy_payload == NULL ||
+      event->payload != NULL) {
+    return false;
+  }
+  event->payload = payload;
+  event->destroy_payload = destroy_payload;
+  return true;
+}
+
+void *proton_event_take_payload(proton_event_t *event) {
+  if (event == NULL) {
+    return NULL;
+  }
+  void *payload = event->payload;
+  event->payload = NULL;
+  event->destroy_payload = NULL;
+  return payload;
+}
+
 void proton_event_destroy(proton_event_t *event) {
   if (event == NULL) {
     return;
@@ -132,6 +153,9 @@ void proton_event_destroy(proton_event_t *event) {
     free(event->items[i]);
   }
   free(event->items);
+  if (event->destroy_payload != NULL) {
+    event->destroy_payload(event->payload);
+  }
   free(event);
 }
 

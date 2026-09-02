@@ -70,9 +70,9 @@ async fn main {
     println("navigation: \{request.http_method} \{request.url}")
     @proton.NavigationDecision::Allow
   })
-  .on_popup_request(fn(_browser, request) {
-    println("popup: \{request.url}")
-    @proton.PopupDecision::OpenInCurrent
+  .on_new_window_request(fn(_browser, request) {
+    println("new window: \{request.url}")
+    @proton.NewWindowDecision::OpenInCurrent
   })
   .on_download_request(fn(_browser, request) {
     println("download: \{request.suggested_name}")

@@ -247,7 +247,12 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|///|
           #|fn initial_model() -> Model {
-          #|  { draft: "", snapshot: { version: 0, todos: [] }, loading: true, error: None }
+          #|  {
+          #|    draft: "",
+          #|    snapshot: { version: 0, todos: [], },
+          #|    loading: true,
+          #|    error: None,
+          #|  }
           #|}
           #|
           #|///|
@@ -264,7 +269,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  match msg {
           #|    Load =>
           #|      (
-          #|        { ..model, loading: true, error: None },
+          #|        { ..model, loading: true, error: None, },
           #|        @proton_rabbita.invoke(
           #|          @shared.list_todos,
           #|          (),
@@ -276,27 +281,27 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|    Create if model.draft.trim().is_empty() => (model, @rabbita.none)
           #|    Create =>
           #|      (
-          #|        { ..model, draft: "", error: None },
+          #|        { ..model, draft: "", error: None, },
           #|        @proton_rabbita.invoke(
           #|          @shared.create_todo,
-          #|          { title: model.draft },
+          #|          { title: model.draft, },
           #|          snapshot => emit(SnapshotReceived(snapshot)),
           #|          error => emit(CommandFailed(error)),
           #|        ),
           #|      )
           #|    SetCompleted(id, completed) =>
           #|      (
-          #|        { ..model, error: None },
+          #|        { ..model, error: None, },
           #|        @proton_rabbita.invoke(
           #|          @shared.set_todo_completed,
-          #|          { id, completed },
+          #|          { id, completed, },
           #|          snapshot => emit(SnapshotReceived(snapshot)),
           #|          error => emit(CommandFailed(error)),
           #|        ),
           #|      )
           #|    Delete(id) =>
           #|      (
-          #|        { ..model, error: None },
+          #|        { ..model, error: None, },
           #|        @proton_rabbita.invoke(
           #|          @shared.delete_todo,
           #|          { id, },
@@ -305,10 +310,10 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|        ),
           #|      )
           #|    SnapshotReceived(snapshot) =>
-          #|      ({ ..model, snapshot, loading: false, error: None }, @rabbita.none)
+          #|      ({ ..model, snapshot, loading: false, error: None, }, @rabbita.none)
           #|    CommandFailed(error) =>
           #|      (
-          #|        { ..model, loading: false, error: Some(failure_message(error)) },
+          #|        { ..model, loading: false, error: Some(failure_message(error)), },
           #|        @rabbita.none,
           #|      )
           #|  }
@@ -671,19 +676,19 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|///|
           #|pub fn Backend::Backend() -> Backend {
-          #|  Backend::{ next_id: 1, version: 0, todos: [] }
+          #|  Backend::{ next_id: 1, version: 0, todos: [], }
           #|}
           #|
           #|///|
           #|fn Backend::snapshot(self : Backend) -> @shared.TodoSnapshot {
-          #|  { version: self.version, todos: self.todos.copy() }
+          #|  { version: self.version, todos: self.todos.copy(), }
           #|}
           #|
           #|///|
           #|fn Backend::create(self : Backend, title : String) -> @shared.TodoSnapshot {
           #|  let title = title.trim().to_owned()
           #|  if !title.is_empty() {
-          #|    self.todos.push({ id: self.next_id, title, completed: false })
+          #|    self.todos.push({ id: self.next_id, title, completed: false, })
           #|    self.next_id += 1
           #|    self.version += 1
           #|  }
@@ -862,16 +867,20 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  "package": {
           #|    "product_name": "My App",
           #|    "version": "0.1.0",
-          #|    "formats": ["app", "zip"],
           #|    "output": "dist"
           #|  }
           #|}
           #|```
           #|
+          #|When `formats` is omitted, Proton selects the current host's default package
+          #|formats. Use `package.platforms` for platform-specific formats, resources, or
+          #|signing targets.
+          #|
           #|Window behavior, the asset entry, single-instance handling, and renderer
           #|permissions are declared by the Proton `App` builder in `backend/app/main.mbt`.
           #|
-          #|Inspect the resolved package plan, then create the application and zip archive:
+          #|Inspect the resolved package plan, then create the current host's native
+          #|artifacts:
           #|
           #|```sh
           #|proton_cli package --dry-run

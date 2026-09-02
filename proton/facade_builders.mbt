@@ -160,6 +160,7 @@ pub fn App::title(self : App, title : String) -> App {
     self.window.height,
     size_hint=self.window.size_hint,
     titlebar_style=self.window.titlebar_style,
+    theme=self.window.theme_preference,
   )
   self
 }
@@ -173,6 +174,7 @@ pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
     height,
     size_hint=self.window.size_hint,
     titlebar_style=self.window.titlebar_style,
+    theme=self.window.theme_preference,
   )
   self
 }
@@ -190,6 +192,24 @@ pub fn App::titlebar_style(self : App, style : TitlebarStyle) -> App {
       Default => @manifest.TitlebarStyle::Default
       Overlay => @manifest.TitlebarStyle::Overlay
     },
+    theme=self.window.theme_preference,
+  )
+  self
+}
+
+///|
+/// Sets the primary window's native chrome theme.
+///
+/// Explicit `Light` and `Dark` themes require platform support. `System` is
+/// portable and follows the platform's effective application appearance.
+pub fn App::theme(self : App, theme : WindowThemePreference) -> App {
+  self.window = @manifest.WindowManifest(
+    self.window.title,
+    self.window.width,
+    self.window.height,
+    size_hint=self.window.size_hint,
+    titlebar_style=self.window.titlebar_style,
+    theme=manifest_window_theme(theme),
   )
   self
 }
@@ -445,13 +465,14 @@ pub fn App::on_navigation_request(
 }
 
 ///|
-/// Reviews `window.open` and new-tab requests. New Proton windows must already
-/// be declared with `add_window(..., open_on_start=false)`.
-pub fn App::on_popup_request(
+/// Reviews requests for a new browsing context, including `window.open`,
+/// target-blank links, and modified link clicks. New Proton windows must
+/// already be declared with `add_window(..., open_on_start=false)`.
+pub fn App::on_new_window_request(
   self : App,
-  handler : async (BrowserHandle, PopupRequest) -> PopupDecision noraise,
+  handler : async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise,
 ) -> App {
-  self.popup_handler = Some(handler)
+  self.new_window_handler = Some(handler)
   self
 }
 
@@ -507,6 +528,7 @@ pub fn App::add_window(
   height? : Int = 700,
   size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
+  theme? : WindowThemePreference = WindowThemePreference::System,
   open_on_start? : Bool = true,
 ) -> App {
   let normalized_id = id.trim().to_owned()
@@ -541,6 +563,7 @@ pub fn App::add_window(
         height,
         size_hint=manifest_window_size_hint(size_hint),
         titlebar_style=manifest_titlebar_style(titlebar_style),
+        theme=manifest_window_theme(theme),
       ),
       entry,
       open_on_start~,
@@ -564,6 +587,17 @@ fn manifest_titlebar_style(style : TitlebarStyle) -> @manifest.TitlebarStyle {
   match style {
     TitlebarStyle::Default => @manifest.TitlebarStyle::Default
     TitlebarStyle::Overlay => @manifest.TitlebarStyle::Overlay
+  }
+}
+
+///|
+fn manifest_window_theme(
+  theme : WindowThemePreference,
+) -> @manifest.WindowThemePreference {
+  match theme {
+    WindowThemePreference::System => @manifest.WindowThemePreference::System
+    WindowThemePreference::Light => @manifest.WindowThemePreference::Light
+    WindowThemePreference::Dark => @manifest.WindowThemePreference::Dark
   }
 }
 

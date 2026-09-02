@@ -1,11 +1,10 @@
-(function installMoonBitBridge(nativeInvoke, rawGrant, pageInstance) {
+(function installMoonBitBridge(nativeInvoke, config, pageInstance) {
   "use strict";
 
   if (typeof nativeInvoke !== "function") {
     throw new TypeError("Proton bridge requires a native invoke function");
   }
 
-  const config = typeof rawGrant === "string" ? JSON.parse(rawGrant) : rawGrant;
   if (!config || typeof config !== "object") {
     throw new TypeError("Proton bridge grant must be an object");
   }

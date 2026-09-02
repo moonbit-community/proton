@@ -23,6 +23,16 @@ pub fn bridge_config_destroy(BridgeConfigHandle) -> Unit
 
 pub fn bridge_config_null() -> BridgeConfigHandle
 
+pub fn cookie_snapshot_count(CookieSnapshotHandle, @ref.Ref[Int]) -> Int
+
+pub fn cookie_snapshot_destroy(CookieSnapshotHandle) -> Unit
+
+pub fn cookie_snapshot_int64_field(CookieSnapshotHandle, Int, Int, @ref.Ref[Int64], @ref.Ref[Int]) -> Int
+
+pub fn cookie_snapshot_int_field(CookieSnapshotHandle, Int, Int, @ref.Ref[Int]) -> Int
+
+pub fn cookie_snapshot_string_field(CookieSnapshotHandle, Int, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
 pub fn ensure_cef_loader_linked() -> Unit
 
 pub fn event_destroy(EventHandle) -> Unit
@@ -38,6 +48,8 @@ pub fn event_item_count(EventHandle) -> Int
 pub fn event_kind(EventHandle) -> Int
 
 pub fn event_null() -> EventHandle
+
+pub fn event_take_cookie_snapshot(EventHandle) -> CookieSnapshotHandle
 
 pub fn event_text(EventHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
@@ -139,7 +151,9 @@ pub fn proton_screen_enumerate_ffi(FixedArray[Int], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_system_path_ffi(Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
-pub fn proton_system_preferred_languages_json_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_system_preferred_language_at_ffi(Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_system_preferred_language_count_ffi(@ref.Ref[Int]) -> Int
 
 pub fn proton_update_cleanup_previous_ffi(FixedArray[Byte], Int) -> Int
 
@@ -157,7 +171,7 @@ pub fn proton_update_stage_install_ffi(Int64, @ref.Ref[Int], FixedArray[Byte], I
 
 pub fn proton_update_stage_write_ffi(Int64, Bytes, Int, FixedArray[Byte], Int) -> Int
 
-pub fn proton_view_browser_command_json_ffi(ViewHandle, Bytes) -> Int
+pub fn proton_view_browser_command_ffi(ViewHandle, Bytes, Int) -> Int
 
 pub fn proton_view_destroy_ffi(ViewHandle) -> Int
 
@@ -201,17 +215,27 @@ pub fn proton_window_begin_open_file_dialog_ffi(WindowHandle, Bytes, Int, Bytes,
 
 pub fn proton_window_begin_save_file_dialog_ffi(WindowHandle, Bytes, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
 
-pub fn proton_window_bridge_state_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_bridge_failure_field_ffi(WindowHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
-pub fn proton_window_browser_command_json_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_bridge_failure_int_field_ffi(WindowHandle, Int, @ref.Ref[Int], @ref.Ref[Int]) -> Int
+
+pub fn proton_window_bridge_failure_present_ffi(WindowHandle, @ref.Ref[Int]) -> Int
+
+pub fn proton_window_bridge_revision_ffi(WindowHandle, @ref.Ref[Int64]) -> Int
+
+pub fn proton_window_bridge_state_field_ffi(WindowHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_window_browser_command_ffi(WindowHandle, Bytes, Int) -> Int
 
 pub fn proton_window_cancel_dialog_ffi(WindowHandle, Int64) -> Int
+
+pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int
 
 pub fn proton_window_clear_cache_ffi(WindowHandle) -> Int
 
 pub fn proton_window_close_ffi(WindowHandle) -> Int
 
-pub fn proton_window_cookie_begin_get_json_ffi(WindowHandle, Bytes, Int, @ref.Ref[Int64]) -> Int
+pub fn proton_window_cookie_begin_get_ffi(WindowHandle, Bytes, Int, @ref.Ref[Int64]) -> Int
 
 pub fn proton_window_cookie_delete_ffi(WindowHandle, Bytes, Bytes) -> Int
 
@@ -263,7 +287,7 @@ pub fn proton_window_print_ffi(WindowHandle) -> Int
 
 pub fn proton_window_print_to_pdf_ffi(WindowHandle, Bytes, Int, Int, Double, Double, Double, Int, Int, Double, Double, Double, Double, Bytes, Int, Bytes, Bytes, Int, Int, @ref.Ref[Int]) -> Int
 
-pub fn proton_window_respond_browser_request_json_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_respond_browser_request_ffi(WindowHandle, Int64, Bytes, Bytes) -> Int
 
 pub fn proton_window_respond_close_request_ffi(WindowHandle, Int64, Int) -> Int
 
@@ -327,6 +351,8 @@ pub fn proton_window_set_size_ffi(WindowHandle, Int, Int) -> Int
 
 pub fn proton_window_set_skip_taskbar_ffi(WindowHandle, Int) -> Int
 
+pub fn proton_window_set_theme_ffi(WindowHandle, Int) -> Int
+
 pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_set_visible_on_all_workspaces_ffi(WindowHandle, Int) -> Int
@@ -338,8 +364,6 @@ pub fn proton_window_show_ffi(WindowHandle) -> Int
 pub fn proton_window_show_inactive_ffi(WindowHandle) -> Int
 
 pub fn proton_window_stop_find_in_page_ffi(WindowHandle, Int) -> Int
-
-pub fn proton_window_take_bridge_failure_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn runtime_complete_resource_request(RuntimeHandle, Int64, Int, Bytes, Bytes, Int) -> Int
 
@@ -357,7 +381,7 @@ pub fn view_logical_id(ViewHandle) -> Int64
 
 pub fn view_null() -> ViewHandle
 
-pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, @ref.Ref[WindowHandle]) -> Int
+pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, @ref.Ref[WindowHandle]) -> Int
 
 pub fn window_logical_id(WindowHandle) -> Int64
 
@@ -368,6 +392,9 @@ pub fn window_null() -> WindowHandle
 // Types and methods
 #external
 pub type BridgeConfigHandle
+
+#external
+pub type CookieSnapshotHandle
 
 #external
 pub type EventHandle

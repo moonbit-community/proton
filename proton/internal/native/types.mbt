@@ -145,7 +145,7 @@ pub(all) struct AppActivation {
   urls : Array[String]
   files : Array[String]
   reopen : Bool
-} derive(Debug, Eq, ToJson)
+} derive(Debug, Eq, ToJson, FromJson)
 
 ///|
 pub extend AppActivation with Eq::{not_equal, equal}
@@ -155,6 +155,9 @@ pub extend AppActivation with Debug::{to_repr}
 
 ///|
 pub extend AppActivation with ToJson::{to_json}
+
+///|
+pub extend AppActivation with FromJson::{from_json}
 
 ///|
 /// Result of claiming an operating-system application identity.
@@ -182,6 +185,7 @@ enum RuntimeEvent {
   CookieGetCompleted(NativeCookieGetCompletion)
   MenuCommand(String, Int64?)
   LaunchInput(RuntimeLaunchInput)
+  AppActivationReceived(AppActivation)
   NotificationResult(NativeNotificationResult)
   NotificationClicked(String?)
   BrowserRequest(Int64, NativeBrowserRequest)
@@ -310,12 +314,7 @@ pub(all) enum NativeBrowserRequest {
     user_gesture~ : Bool,
     redirect~ : Bool
   )
-  Popup(
-    request_id~ : Int64,
-    url~ : String,
-    disposition~ : Int,
-    user_gesture~ : Bool
-  )
+  NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
   Download(
     request_id~ : Int64,
     download_id~ : Int,
@@ -362,13 +361,12 @@ pub extend NativePdfPrintResult with Debug::{to_repr}
 
 ///|
 pub(all) struct BridgeLifecycleState {
-  abi_version : Int
   revision : String
   outcome : String
   page_instance : String
   url : String
   failure_pending : Bool
-} derive(Debug, Eq, FromJson)
+} derive(Debug, Eq)
 
 ///|
 pub extend BridgeLifecycleState with Eq::{not_equal, equal}
@@ -377,11 +375,7 @@ pub extend BridgeLifecycleState with Eq::{not_equal, equal}
 pub extend BridgeLifecycleState with Debug::{to_repr}
 
 ///|
-pub extend BridgeLifecycleState with FromJson::{from_json}
-
-///|
 pub(all) struct BridgeDiagnostic {
-  abi_version : Int
   stage : String
   code : String
   message : String
@@ -395,16 +389,13 @@ pub(all) struct BridgeDiagnostic {
   stack : String?
   additional_failure_count : Int?
   details_truncated : Bool
-} derive(Debug, Eq, FromJson)
+} derive(Debug, Eq)
 
 ///|
 pub extend BridgeDiagnostic with Eq::{not_equal, equal}
 
 ///|
 pub extend BridgeDiagnostic with Debug::{to_repr}
-
-///|
-pub extend BridgeDiagnostic with FromJson::{from_json}
 
 ///|
 pub(all) struct BridgeRequest {
@@ -485,7 +476,7 @@ pub extend NativeDialogCompletion with Debug::{to_repr}
 pub(all) struct NativeCookieGetCompletion {
   request_id : Int64
   window : Int64
-  result : Result[String, NativeError]
+  result : Result[Array[NativeCookieRecord], NativeError]
 } derive(Debug, Eq)
 
 ///|
@@ -493,6 +484,24 @@ pub extend NativeCookieGetCompletion with Eq::{not_equal, equal}
 
 ///|
 pub extend NativeCookieGetCompletion with Debug::{to_repr}
+
+///|
+pub(all) struct NativeCookieRecord {
+  name : String
+  value : String
+  domain : String
+  path : String
+  secure : Bool
+  http_only : Bool
+  same_site : CookieSameSite
+  expires : Int64?
+} derive(Debug, Eq)
+
+///|
+pub extend NativeCookieRecord with Eq::{not_equal, equal}
+
+///|
+pub extend NativeCookieRecord with Debug::{to_repr}
 
 ///|
 pub(all) enum CookieSameSite {
@@ -540,6 +549,8 @@ pub extend WindowMonitor with Debug::{to_repr}
 
 ///|
 /// A point-in-time native window state snapshot.
+///
+/// `theme` is the effective theme after resolving `theme_preference`.
 pub(all) struct WindowState {
   x : Int
   y : Int
@@ -553,7 +564,7 @@ pub(all) struct WindowState {
   maximized : Bool
   fullscreen : Bool
   always_on_top : Bool
-  theme : String
+  theme : WindowTheme
 } derive(Debug, Eq)
 
 ///|
@@ -765,10 +776,11 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     LaunchInput(OpenUrls(_)) => "open_urls"
     LaunchInput(OpenFiles(_)) => "open_files"
     LaunchInput(Reopen) => "reopen"
+    AppActivationReceived(_) => "app_activation"
     NotificationResult(_) => "notification_result"
     NotificationClicked(_) => "notification_clicked"
     BrowserRequest(_, Navigation(..)) => "browser_navigation_requested"
-    BrowserRequest(_, Popup(..)) => "browser_popup_requested"
+    BrowserRequest(_, NewWindow(..)) => "browser_new_window_requested"
     BrowserRequest(_, Download(..)) => "browser_download_requested"
     BrowserRequest(_, Certificate(..)) => "browser_certificate_error"
     BrowserRequest(_, Media(..)) => "browser_media_permission_requested"
@@ -819,6 +831,7 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BridgeRequestCancelled(_)
     | ResourceRequestCancelled(_)
     | LaunchInput(_)
+    | AppActivationReceived(_)
     | NotificationResult(_)
     | NotificationClicked(_)
     | QuitRequested => None
@@ -1097,6 +1110,29 @@ pub fn RuntimeEvent::launch_input(self : RuntimeEvent) -> RuntimeLaunchInput? {
 }
 
 ///|
+pub fn RuntimeEvent::app_activation(self : RuntimeEvent) -> AppActivation? {
+  match self {
+    AppActivationReceived(activation) => Some(activation)
+    _ => None
+  }
+}
+
+///|
+pub fn AppActivation::urls(self : AppActivation) -> Array[String] {
+  self.urls.copy()
+}
+
+///|
+pub fn AppActivation::files(self : AppActivation) -> Array[String] {
+  self.files.copy()
+}
+
+///|
+pub fn AppActivation::reopen(self : AppActivation) -> Bool {
+  self.reopen
+}
+
+///|
 pub fn RuntimeEvent::notification_result(
   self : RuntimeEvent,
 ) -> NativeNotificationResult? {
@@ -1239,6 +1275,40 @@ pub extend TitlebarStyle with Eq::{not_equal, equal}
 pub extend TitlebarStyle with Debug::{to_repr}
 
 ///|
+pub(all) enum WindowTheme {
+  Light = 1
+  Dark = 2
+} derive(Debug, Eq)
+
+///|
+pub extend WindowTheme with Eq::{not_equal, equal}
+
+///|
+pub extend WindowTheme with Debug::{to_repr}
+
+///|
+pub(all) enum WindowThemePreference {
+  System = 0
+  Light = 1
+  Dark = 2
+} derive(Debug, Eq)
+
+///|
+pub extend WindowThemePreference with Eq::{not_equal, equal}
+
+///|
+pub extend WindowThemePreference with Debug::{to_repr}
+
+///|
+fn WindowThemePreference::native_value(self : WindowThemePreference) -> Int {
+  match self {
+    System => 0
+    Light => 1
+    Dark => 2
+  }
+}
+
+///|
 /// Process-wide cache for `runtime_info`: the loaded runtime's identity and
 /// feature set cannot change within a process, so feature probes reuse the
 /// first successful result. Failures are not cached — callers keep the
@@ -1290,7 +1360,7 @@ pub extend BrowserPolicyMode with Debug::{to_repr}
 ///|
 pub(all) struct BrowserPolicy {
   navigation : BrowserPolicyMode
-  popup : BrowserPolicyMode
+  new_window : BrowserPolicyMode
   download : BrowserPolicyMode
   certificate : BrowserPolicyMode
   media : BrowserPolicyMode
@@ -1306,13 +1376,13 @@ pub extend BrowserPolicy with Debug::{to_repr}
 ///|
 pub fn BrowserPolicy::BrowserPolicy(
   navigation? : BrowserPolicyMode = BrowserPolicyMode::Allow,
-  popup? : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  new_window? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   download? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   certificate? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   media? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   devtools? : Bool = false,
 ) -> BrowserPolicy {
-  { navigation, popup, download, certificate, media, devtools, }
+  { navigation, new_window, download, certificate, media, devtools, }
 }
 
 ///|
@@ -1366,6 +1436,7 @@ struct WindowConfig {
   initial_url : String
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
+  theme_preference : WindowThemePreference
   browser : BrowserPolicy
   bridge : BridgeConfig?
   framework_titlebar_minimize_label : String?
@@ -1456,6 +1527,7 @@ pub fn WindowConfig::WindowConfig(
   initial_url? : String = "about:blank",
   size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
+  theme? : WindowThemePreference = WindowThemePreference::System,
   browser? : BrowserPolicy = BrowserPolicy(),
   bridge? : BridgeConfig,
 ) -> WindowConfig {
@@ -1466,6 +1538,7 @@ pub fn WindowConfig::WindowConfig(
     initial_url,
     size_hint,
     titlebar_style,
+    theme_preference: theme,
     browser,
     bridge,
     framework_titlebar_minimize_label: Some("Minimize"),
@@ -1515,6 +1588,7 @@ pub fn WindowConfig::with_framework_titlebar_labels(
     initial_url: self.initial_url,
     size_hint: self.size_hint,
     titlebar_style: self.titlebar_style,
+    theme_preference: self.theme_preference,
     browser: self.browser,
     bridge: self.bridge,
     framework_titlebar_minimize_label: Some(minimize),

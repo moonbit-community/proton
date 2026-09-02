@@ -4,6 +4,7 @@
 /* Private contracts shared by the Linux engine translation units. */
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
+#include "../cef_common/bridge_client.h"
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_lifecycle.h"
 #include "../cef_common/browser_session.h"
@@ -33,10 +34,6 @@
 #include "include/capi/cef_render_process_handler_capi.h"
 #include "include/capi/cef_request_handler_capi.h"
 #include "include/capi/cef_scheme_capi.h"
-
-#define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
-#define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
-#define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
 
 enum {
   PROTON_X11_MOVERESIZE_SIZE_TOP_LEFT = 0,
@@ -89,7 +86,7 @@ struct proton_engine_window {
   char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
-  char *bridge_config_json;
+  proton_bridge_config_t *bridge_config;
   int32_t max_bridge_payload_bytes;
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
   int width;
@@ -105,6 +102,7 @@ struct proton_engine_window {
   cef_rect_t osr_popup_rect;
   int size_hint;
   int titlebar_overlay;
+  proton_window_theme_preference_t theme_preference;
   int always_on_top;
   int fullscreenable;
   int enabled;
@@ -135,7 +133,6 @@ void proton_engine_browser_signal(void *user_data);
 int proton_engine_browser_id(cef_browser_t *browser);
 proton_browser_lifecycle_t *proton_engine_browser_lifecycle(
     cef_browser_t *browser);
-proton_engine_view_t *proton_engine_view_from_browser(cef_browser_t *browser);
 void proton_engine_window_defer_free(proton_engine_window_t *window);
 int proton_engine_x11_window_is_focused(Display *display, Window browser_window);
 
@@ -204,10 +201,6 @@ struct proton_engine_view {
 void proton_engine_init_handlers(void);
 cef_app_t *proton_engine_cef_app(void);
 int proton_engine_register_scheme_factory(void);
-void proton_engine_bridge_pending_clear_all(void);
-void proton_engine_bridge_pending_remove_browser(
-    proton_engine_runtime_t *runtime,
-    int browser_id);
 proton_engine_client_t *proton_engine_client_create(
     proton_browser_lifecycle_t *browser_lifecycle);
 int CEF_CALLBACK proton_engine_client_release(
@@ -234,8 +227,6 @@ void proton_engine_append_switch_with_value(cef_command_line_t *command_line,
                                             const char *name,
                                             const char *value);
 void proton_engine_window_list_add(proton_engine_window_t *window);
-proton_engine_window_t *proton_engine_window_from_browser(
-    cef_browser_t *browser);
 void proton_engine_overlay_release_input_windows(
     proton_engine_window_t *window);
 GdkFilterReturn proton_engine_x11_event_filter(GdkXEvent *xevent,

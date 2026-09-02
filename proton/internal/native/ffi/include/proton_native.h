@@ -84,8 +84,6 @@ int64_t proton_view_logical_id(proton_view_handle_t view);
 int32_t proton_runtime_platform_id(char *buffer,
                                    int32_t buffer_len,
                                    int32_t *out_required_len);
-int32_t proton_system_preferred_languages_json(
-    char *buffer, int32_t buffer_len, int32_t *out_required_len);
 enum {
   PROTON_SYSTEM_PATH_DESKTOP = 1,
   PROTON_SYSTEM_PATH_DOCUMENTS = 2,
@@ -120,6 +118,10 @@ int32_t proton_process_schedule_relaunch(const char *executable,
                                          int32_t arguments_len);
 int32_t proton_process_run_relaunches(void);
 void proton_process_exit(int32_t exit_code);
+int32_t proton_system_preferred_language_count(int32_t *out_count);
+int32_t proton_system_preferred_language_at(int32_t index, char *buffer,
+                                            int32_t buffer_len,
+                                            int32_t *out_required_len);
 int32_t proton_app_instance_acquire(
     const char *identifier, const char *activation_json,
     proton_app_instance_id_t *out_instance, int32_t *out_primary);
@@ -242,6 +244,8 @@ int32_t proton_window_set_ignore_mouse_events(proton_window_handle_t window,
                                               int32_t forward);
 int32_t proton_window_set_background_color(proton_window_handle_t window,
                                            const char *color);
+int32_t proton_window_set_theme(proton_window_handle_t window,
+                                int32_t theme_preference);
 int32_t proton_window_set_visible_on_all_workspaces(
     proton_window_handle_t window, int32_t visible);
 int32_t proton_window_set_enabled(proton_window_handle_t window,
@@ -272,8 +276,8 @@ int32_t proton_window_load_url(proton_window_handle_t window,
                                           const char *url);
 int32_t proton_window_eval(proton_window_handle_t window,
                                       const char *script);
-int32_t proton_window_browser_command_json(
-    proton_window_handle_t window, const char *command_json);
+int32_t proton_window_browser_command(
+    proton_window_handle_t window, const char *command, int32_t download_id);
 int32_t proton_window_get_browser_focus_state(
     proton_window_handle_t window, int32_t *out_focused);
 int32_t proton_window_get_devtools_state(
@@ -306,16 +310,25 @@ int32_t proton_window_get_browser_title(
     int32_t *out_required_len);
 int32_t proton_window_get_browser_loading(
     proton_window_handle_t window, int32_t *out_is_loading);
-int32_t proton_window_respond_browser_request_json(
-    proton_window_handle_t window, const char *response_json);
+int32_t proton_window_respond_browser_request(
+    proton_window_handle_t window, int64_t request_id, const char *action,
+    const char *path);
 int32_t proton_window_emit_bridge_event_json(
     proton_window_handle_t window, const char *event_json);
-int32_t proton_window_bridge_state_json(
-    proton_window_handle_t window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len);
-int32_t proton_window_take_bridge_failure_json(
-    proton_window_handle_t window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len);
+int32_t proton_window_bridge_revision(proton_window_handle_t window,
+                                      int64_t *out_revision);
+int32_t proton_window_bridge_state_field(
+    proton_window_handle_t window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len);
+int32_t proton_window_bridge_failure_present(proton_window_handle_t window,
+                                             int32_t *out_present);
+int32_t proton_window_bridge_failure_field(
+    proton_window_handle_t window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len);
+int32_t proton_window_bridge_failure_int_field(
+    proton_window_handle_t window, int32_t field, int32_t *out_value,
+    int32_t *out_present);
+int32_t proton_window_clear_bridge_failure(proton_window_handle_t window);
 int32_t proton_window_begin_message_dialog(
     proton_window_handle_t window, const char *title_utf8,
     int32_t title_len, const char *message_utf8, int32_t message_len,
@@ -350,7 +363,7 @@ int32_t proton_window_cancel_dialog(proton_window_handle_t window,
 /* Begin retrieving cookies. Completion is delivered through the runtime event
    queue with the returned request id. Returns PROTON_ERR_BUSY if a cookie get
    is already in progress for this window. */
-int32_t proton_window_cookie_begin_get_json(
+int32_t proton_window_cookie_begin_get(
     proton_window_handle_t window, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id);
 
@@ -469,8 +482,8 @@ int32_t proton_view_is_audio_muted(proton_view_handle_t view,
 int32_t proton_view_load_url(proton_view_handle_t view,
                                         const char *url);
 int32_t proton_view_eval(proton_view_handle_t view, const char *script);
-int32_t proton_view_browser_command_json(
-    proton_view_handle_t view, const char *command_json);
+int32_t proton_view_browser_command(
+    proton_view_handle_t view, const char *command, int32_t download_id);
 int32_t proton_view_get_browser_focus_state(
     proton_view_handle_t view, int32_t *out_focused);
 int32_t proton_view_get_devtools_state(

@@ -3,7 +3,7 @@
 
 ///|
 pub fn release_version() -> String {
-  "0.2.3"
+  "0.2.5"
 }
 
 ///|
@@ -16,8 +16,8 @@ let runtime_layout_version = 1
 fn win32_x64_platform() -> ProtonPlatform {
   {
     id: "win32-x64",
-    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_windows64_minimal",
-    default_cef_sha256: "c105f69c0d4dc14331be12cee967eeb73fa4897a6ecde244051318491cd381c7",
+    default_cef_name: "cef_binary_150.0.19+gcf60f42+chromium-150.0.7871.252_windows64_minimal",
+    default_cef_sha256: "169847f3d000ded924c619e4d2d042ca3c44d2a5a0398dfdf521c70d34739761",
     supported: true,
   }
 }
@@ -26,8 +26,8 @@ fn win32_x64_platform() -> ProtonPlatform {
 fn darwin_arm64_platform() -> ProtonPlatform {
   {
     id: "darwin-arm64",
-    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosarm64_minimal",
-    default_cef_sha256: "02d8e0d53efe11bae97c101193cffcb5b6f899d1015908609db381ff6f96633a",
+    default_cef_name: "cef_binary_150.0.19+gcf60f42+chromium-150.0.7871.252_macosarm64_minimal",
+    default_cef_sha256: "61c92f95b4eb75e124be27021033201635dc84573e3aa2ada5ecdcd405c21a44",
     supported: true,
   }
 }
@@ -36,7 +36,7 @@ fn darwin_arm64_platform() -> ProtonPlatform {
 fn darwin_x64_platform() -> ProtonPlatform {
   {
     id: "darwin-x64",
-    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_macosx64_minimal",
+    default_cef_name: "cef_binary_150.0.19+gcf60f42+chromium-150.0.7871.252_macosx64_minimal",
     default_cef_sha256: "",
     supported: false,
   }
@@ -46,8 +46,8 @@ fn darwin_x64_platform() -> ProtonPlatform {
 fn linux_x64_platform() -> ProtonPlatform {
   {
     id: "linux-x64",
-    default_cef_name: "cef_binary_147.0.14+g76d2442+chromium-147.0.7727.138_linux64_minimal",
-    default_cef_sha256: "a2cef000527e9952bae470a292f12384c790523dadcbbcbee807743a539c6de0",
+    default_cef_name: "cef_binary_150.0.19+gcf60f42+chromium-150.0.7871.252_linux64_minimal",
+    default_cef_sha256: "40297c49123deb48c26b254863d284df53800913dab1826950320c05a6e1aaf2",
     supported: true,
   }
 }

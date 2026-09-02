@@ -20,10 +20,11 @@ PROTON_INTERNAL int32_t proton_config_probe_runtime(
     const proton_engine_runtime_config_t *config);
 PROTON_INTERNAL int32_t proton_config_prepare_window(
     const char *title, int32_t width, int32_t height, const char *initial_url,
-    int32_t size_hint, int32_t titlebar_overlay, int32_t navigation_policy,
+    int32_t size_hint, int32_t titlebar_overlay, int32_t theme_preference,
+    int32_t navigation_policy,
     const char *titlebar_minimize_label, const char *titlebar_maximize_label,
     const char *titlebar_restore_label, const char *titlebar_close_label,
-    int32_t popup_policy, int32_t download_policy,
+    int32_t new_window_policy, int32_t download_policy,
     int32_t certificate_policy, int32_t media_policy, int32_t devtools,
     proton_bridge_config_t *bridge_config,
     proton_engine_window_config_t *out_config);
@@ -41,7 +42,4 @@ proton_config_default_runtime_root(char *out, size_t out_len);
 PROTON_INTERNAL bool proton_config_macos_bundle_helper_path(
     const char *executable_path, char *out, size_t out_len);
 #endif
-PROTON_INTERNAL int32_t
-proton_config_validate_bridge_event(const char *event_json);
-
 #endif

@@ -200,7 +200,7 @@ pub fn WindowSessionError::to_string(Self) -> String
 
 // Types and methods
 type App
-pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, open_on_start? : Bool) -> Self
+pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, open_on_start? : Bool) -> Self
 pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Self
@@ -227,7 +227,7 @@ pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> 
 pub fn App::on_launch_input(Self, async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise) -> Self
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
-pub fn App::on_popup_request(Self, async (BrowserHandle, PopupRequest) -> PopupDecision noraise) -> Self
+pub fn App::on_new_window_request(Self, async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub fn App::on_view_event(Self, async (ViewHandle, ViewEvent) -> Unit noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
@@ -239,6 +239,7 @@ pub fn App::set_app_logs_path(Self, path? : String) -> Self raise AppPathError
 pub fn App::set_path(Self, AppPathKind, String) -> Self raise AppPathError
 pub fn App::single_instance(Self, enabled? : Bool) -> Self
 pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
+pub fn App::theme(Self, WindowThemePreference) -> Self
 pub fn App::title(Self, String) -> Self
 pub fn App::titlebar_style(Self, TitlebarStyle) -> Self
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
@@ -570,6 +571,23 @@ pub fn NavigationRequest::equal(Self, Self) -> Bool
 pub fn NavigationRequest::not_equal(Self, Self) -> Bool
 pub fn NavigationRequest::to_repr(Self) -> @debug.Repr
 
+pub(all) enum NewWindowDecision {
+  Deny
+  OpenInCurrent
+  OpenInWindow(String)
+} derive(Eq, @debug.Debug)
+pub fn NewWindowDecision::equal(Self, Self) -> Bool
+pub fn NewWindowDecision::not_equal(Self, Self) -> Bool
+pub fn NewWindowDecision::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NewWindowRequest {
+  url : String
+  user_gesture : Bool
+} derive(Eq, @debug.Debug)
+pub fn NewWindowRequest::equal(Self, Self) -> Bool
+pub fn NewWindowRequest::not_equal(Self, Self) -> Bool
+pub fn NewWindowRequest::to_repr(Self) -> @debug.Repr
+
 pub(all) enum PdfPrintMargins {
   Default
   NoMargins
@@ -622,24 +640,6 @@ pub fn PendingUpdate::restart(Self) -> Unit raise
 pub fn PendingUpdate::revision(Self) -> UInt64
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
-
-pub(all) enum PopupDecision {
-  Deny
-  OpenInCurrent
-  OpenInWindow(String)
-} derive(Eq, @debug.Debug)
-pub fn PopupDecision::equal(Self, Self) -> Bool
-pub fn PopupDecision::not_equal(Self, Self) -> Bool
-pub fn PopupDecision::to_repr(Self) -> @debug.Repr
-
-pub(all) struct PopupRequest {
-  url : String
-  disposition : Int
-  user_gesture : Bool
-} derive(Eq, @debug.Debug)
-pub fn PopupRequest::equal(Self, Self) -> Bool
-pub fn PopupRequest::not_equal(Self, Self) -> Bool
-pub fn PopupRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RelaunchOptions {
   executable : String?
@@ -890,6 +890,7 @@ pub struct WindowHandle {
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
   set_window_ignore_mouse_events : (Bool, Bool) -> Unit raise WindowSessionError
   set_window_background_color : (String) -> Unit raise WindowSessionError
+  set_window_theme : (WindowThemePreference) -> Unit raise WindowSessionError
   set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
   set_window_enabled : (Bool) -> Unit raise WindowSessionError
   set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
@@ -948,6 +949,7 @@ pub fn WindowHandle::set_progress_bar(Self, Double) -> Unit raise WindowSessionE
 pub fn WindowHandle::set_resizable(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_size(Self, Int, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_skip_taskbar(Self, Bool) -> Unit raise WindowSessionError
+pub fn WindowHandle::set_theme(Self, WindowThemePreference) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_title(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_visible_on_all_workspaces(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_window_button_visibility(Self, Bool) -> Unit raise WindowSessionError
@@ -1004,11 +1006,28 @@ pub(all) struct WindowState {
   maximized : Bool
   fullscreen : Bool
   always_on_top : Bool
-  theme : String
+  theme : WindowTheme
 } derive(Eq, @debug.Debug)
 pub fn WindowState::equal(Self, Self) -> Bool
 pub fn WindowState::not_equal(Self, Self) -> Bool
 pub fn WindowState::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WindowTheme {
+  Light
+  Dark
+} derive(Eq, @debug.Debug)
+pub fn WindowTheme::equal(Self, Self) -> Bool
+pub fn WindowTheme::not_equal(Self, Self) -> Bool
+pub fn WindowTheme::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WindowThemePreference {
+  System
+  Light
+  Dark
+} derive(Eq, @debug.Debug)
+pub fn WindowThemePreference::equal(Self, Self) -> Bool
+pub fn WindowThemePreference::not_equal(Self, Self) -> Bool
+pub fn WindowThemePreference::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 pub using @manifest {type AppEntry}

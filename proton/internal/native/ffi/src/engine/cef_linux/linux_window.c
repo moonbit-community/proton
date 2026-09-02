@@ -3,9 +3,8 @@
 #include "linux_internal.h"
 #include "../../proton_config.h"
 #include "../../proton_event.h"
-#include "../../proton_json.h"
 
-#include "../cef_common/bridge_json.h"
+#include "../cef_common/bridge_request.h"
 #include "../cef_common/bridge_renderer.h"
 #include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
@@ -97,6 +96,26 @@ int proton_engine_x11_window_is_focused(Display *display,
     }
   }
   return is_focused;
+}
+
+static proton_window_theme_t proton_engine_window_effective_theme(
+    const proton_engine_window_t *window) {
+  if (window != NULL) {
+    switch (window->theme_preference) {
+    case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
+      return PROTON_WINDOW_THEME_LIGHT;
+    case PROTON_WINDOW_THEME_PREFERENCE_DARK:
+      return PROTON_WINDOW_THEME_DARK;
+    case PROTON_WINDOW_THEME_PREFERENCE_SYSTEM:
+      break;
+    }
+  }
+  gboolean dark = FALSE;
+  GtkSettings *settings = gtk_settings_get_default();
+  if (settings != NULL) {
+    g_object_get(settings, "gtk-application-prefer-dark-theme", &dark, NULL);
+  }
+  return dark ? PROTON_WINDOW_THEME_DARK : PROTON_WINDOW_THEME_LIGHT;
 }
 
 static void proton_engine_apply_size_constraints(
@@ -437,18 +456,11 @@ static int32_t proton_engine_window_create_browser(
                                ? initial_url
                                : "about:blank");
 
-  cef_value_t *extra_info_value =
-      proton_engine_bridge_renderer_extra_info_value(window->bridge_config_json);
   cef_dictionary_value_t *extra_info =
-      extra_info_value != NULL
-          ? extra_info_value->get_dictionary(extra_info_value)
-          : NULL;
+      proton_engine_bridge_renderer_extra_info(window->bridge_config);
   cef_browser_t *created_browser = cef_browser_host_create_browser_sync(
       &window_info, proton_browser_lifecycle_client(window->browser_lifecycle), &url, &browser_settings,
       extra_info, NULL);
-  if (extra_info_value != NULL) {
-    extra_info_value->base.release((cef_base_ref_counted_t *)extra_info_value);
-  }
   cef_string_clear(&window_info.window_name);
   cef_string_clear(&url);
   if (created_browser == NULL) {
@@ -485,6 +497,13 @@ int32_t proton_engine_window_create(
         "titlebar overlay is not supported in headless mode");
     return PROTON_ERR_UNSUPPORTED;
   }
+  if (!runtime->headless && config.theme_preference !=
+                                PROTON_WINDOW_THEME_PREFERENCE_SYSTEM) {
+    proton_engine_set_message(
+        error, error_len,
+        "explicit window themes are not supported on Linux");
+    return PROTON_ERR_UNSUPPORTED;
+  }
 
   proton_engine_window_t *window =
       (proton_engine_window_t *)calloc(1, sizeof(*window));
@@ -504,6 +523,7 @@ int32_t proton_engine_window_create(
   window->headless = runtime->headless;
   window->size_hint = config.size_hint;
   window->titlebar_overlay = config.titlebar_overlay;
+  window->theme_preference = config.theme_preference;
   snprintf(window->titlebar_minimize_label,
            sizeof(window->titlebar_minimize_label), "%s",
            config.titlebar_minimize_label);
@@ -519,10 +539,8 @@ int32_t proton_engine_window_create(
   window->zoom_percent = 100;
   window->fullscreenable = 1;
   window->enabled = 1;
-  window->bridge_config_json =
-      config.bridge_config_json != NULL
-          ? proton_engine_strdup(config.bridge_config_json)
-          : NULL;
+  window->bridge_config = config.bridge_config;
+  proton_bridge_config_retain(window->bridge_config);
   window->max_bridge_payload_bytes = config.max_bridge_payload_bytes;
   window->browser_session = proton_browser_session_create(
       &config.browser_policy, proton_engine_browser_signal, NULL);
@@ -530,7 +548,7 @@ int32_t proton_engine_window_create(
       runtime->browsers, PROTON_BROWSER_ROLE_MAIN, window, NULL);
   if (window->browser_session == NULL || window->browser_lifecycle == NULL) {
     proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
-    free(window->bridge_config_json);
+    proton_internal_bridge_config_destroy(window->bridge_config);
     proton_browser_session_destroy(window->browser_session);
     free(window);
     proton_engine_set_message(error, error_len,
@@ -547,7 +565,7 @@ int32_t proton_engine_window_create(
     proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
     proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
     proton_browser_session_destroy(window->browser_session);
-    free(window->bridge_config_json);
+    proton_internal_bridge_config_destroy(window->bridge_config);
     free(window);
     proton_engine_set_message(error, error_len, "failed to allocate client");
     return PROTON_ERR_ENGINE;
@@ -561,7 +579,7 @@ int32_t proton_engine_window_create(
       proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
       proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
       proton_browser_session_destroy(window->browser_session);
-      free(window->bridge_config_json);
+      proton_internal_bridge_config_destroy(window->bridge_config);
       free(window);
       proton_engine_set_message(error, error_len, "window creation failed");
       return PROTON_ERR_PLATFORM;
@@ -572,7 +590,7 @@ int32_t proton_engine_window_create(
       proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
       proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
       proton_browser_session_destroy(window->browser_session);
-      free(window->bridge_config_json);
+      proton_internal_bridge_config_destroy(window->bridge_config);
       free(window);
       proton_engine_set_message(error, error_len,
                                 "window root container creation failed");
@@ -595,7 +613,7 @@ int32_t proton_engine_window_create(
         proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
         proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
         proton_browser_session_destroy(window->browser_session);
-        free(window->bridge_config_json);
+        proton_internal_bridge_config_destroy(window->bridge_config);
         free(window);
         proton_engine_set_message(error, error_len,
                                   "overlay container creation failed");
@@ -608,7 +626,7 @@ int32_t proton_engine_window_create(
       proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
       proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
       proton_browser_session_destroy(window->browser_session);
-      free(window->bridge_config_json);
+      proton_internal_bridge_config_destroy(window->bridge_config);
       free(window);
       proton_engine_set_message(error, error_len,
                                 "browser host widget creation failed");
@@ -622,7 +640,7 @@ int32_t proton_engine_window_create(
         proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
         proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
         proton_browser_session_destroy(window->browser_session);
-        free(window->bridge_config_json);
+        proton_internal_bridge_config_destroy(window->bridge_config);
         free(window);
         proton_engine_set_message(error, error_len,
                                   "overlay window controls creation failed");
@@ -643,7 +661,7 @@ int32_t proton_engine_window_create(
         proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
         proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
         proton_browser_session_destroy(window->browser_session);
-        free(window->bridge_config_json);
+        proton_internal_bridge_config_destroy(window->bridge_config);
         free(window);
         return status;
       }
@@ -688,7 +706,7 @@ int32_t proton_engine_window_create(
     }
     proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
     proton_browser_session_destroy(window->browser_session);
-    free(window->bridge_config_json);
+    proton_internal_bridge_config_destroy(window->bridge_config);
     free(window);
     return status;
   }
@@ -1344,6 +1362,35 @@ int32_t proton_engine_window_set_background_color(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_theme(
+    proton_engine_window_t *window,
+    proton_window_theme_preference_t theme_preference, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||
+      theme_preference > PROTON_WINDOW_THEME_PREFERENCE_DARK) {
+    proton_engine_set_message(error, error_len, "window theme is invalid");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(error, error_len,
+                              "window theme is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  if (theme_preference != PROTON_WINDOW_THEME_PREFERENCE_SYSTEM) {
+    proton_engine_set_message(
+        error, error_len,
+        "explicit window themes are not supported on Linux");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  window->theme_preference = theme_preference;
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_visible_on_all_workspaces(
     proton_engine_window_t *window, int32_t visible, char *error,
     size_t error_len) {
@@ -1513,6 +1560,7 @@ int32_t proton_engine_window_get_state(
   out_state->zoom_percent =
       window->zoom_percent > 0 ? window->zoom_percent : 100;
   out_state->scale_factor_percent = 100;
+  out_state->theme = proton_engine_window_effective_theme(window);
   if (window->headless) {
     out_state->width = window->width;
     out_state->height = window->height;
@@ -1560,12 +1608,6 @@ int32_t proton_engine_window_get_state(
   out_state->focused =
       gtk_window_has_toplevel_focus(GTK_WINDOW(window->window)) ? 1 : 0;
   out_state->always_on_top = window->always_on_top;
-  gboolean dark = FALSE;
-  GtkSettings *settings = gtk_settings_get_default();
-  if (settings != NULL) {
-    g_object_get(settings, "gtk-application-prefer-dark-theme", &dark, NULL);
-    out_state->theme = dark ? 2 : 1;
-  }
   return PROTON_OK;
 }
 
@@ -1660,17 +1702,17 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_browser_command_json(
-    proton_engine_window_t *window, const char *command_json,
+int32_t proton_engine_window_browser_command(
+    proton_engine_window_t *window, const char *command, int32_t download_id,
     char *error, size_t error_len) {
   if (window == NULL || window->browser_session == NULL ||
       proton_engine_window_browser(window) == NULL) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  return proton_browser_session_command_json(
-      window->browser_session, proton_engine_window_browser(window), command_json, error,
-      error_len);
+  return proton_browser_session_command(
+      window->browser_session, proton_engine_window_browser(window), command,
+      download_id, error, error_len);
 }
 
 int32_t proton_engine_window_get_browser_focus_state(
@@ -1872,16 +1914,17 @@ int32_t proton_engine_window_get_browser_loading(
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_respond_browser_request_json(
-    proton_engine_window_t *window, const char *response_json,
+int32_t proton_engine_window_respond_browser_request(
+    proton_engine_window_t *window, uint64_t request_id, const char *action,
+    const char *path,
     char *error, size_t error_len) {
   if (window == NULL || window->browser_session == NULL) {
     proton_engine_set_message(error, error_len,
                               "browser session is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  return proton_browser_session_respond_json(
-      window->browser_session, response_json, error, error_len);
+  return proton_browser_session_respond(window->browser_session, request_id,
+                                        action, path, error, error_len);
 }
 
 int32_t proton_engine_window_emit_bridge_event_json(
@@ -1890,7 +1933,7 @@ int32_t proton_engine_window_emit_bridge_event_json(
     char *error,
     size_t error_len) {
   if (window == NULL || proton_engine_window_browser(window) == NULL ||
-      window->bridge_config_json == NULL) {
+      window->bridge_config == NULL) {
     proton_engine_set_message(error, error_len, "bridge is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
@@ -1913,26 +1956,60 @@ uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
              : 0;
 }
 
-int32_t proton_engine_window_bridge_state_json(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len) {
+int32_t proton_engine_window_bridge_state_field(
+    proton_engine_window_t *window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_HANDLE;
   }
-  return proton_engine_bridge_lifecycle_state_json(
-      &window->bridge_lifecycle, buffer, buffer_len, out_required_len);
+  return proton_engine_bridge_lifecycle_copy_state_field(
+      &window->bridge_lifecycle, field, buffer, buffer_len, out_required_len);
 }
 
-int32_t proton_engine_window_take_bridge_failure_json(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
-    int32_t *out_required_len, char *error, size_t error_len) {
+int32_t proton_engine_window_bridge_failure_present(
+    proton_engine_window_t *window, int32_t *out_present, char *error,
+    size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_HANDLE;
   }
-  return proton_engine_bridge_lifecycle_take_failure_json(
-      &window->bridge_lifecycle, buffer, buffer_len, out_required_len);
+  return proton_engine_bridge_lifecycle_failure_present(
+      &window->bridge_lifecycle, out_present);
+}
+
+int32_t proton_engine_window_bridge_failure_field(
+    proton_engine_window_t *window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return proton_engine_bridge_lifecycle_copy_failure_field(
+      &window->bridge_lifecycle, field, buffer, buffer_len, out_required_len);
+}
+
+int32_t proton_engine_window_bridge_failure_int_field(
+    proton_engine_window_t *window, int32_t field, int32_t *out_value,
+    int32_t *out_present, char *error, size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return proton_engine_bridge_lifecycle_failure_int_field(
+      &window->bridge_lifecycle, field, out_value, out_present);
+}
+
+int32_t proton_engine_window_clear_bridge_failure(
+    proton_engine_window_t *window, char *error, size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  proton_engine_bridge_lifecycle_clear_failure(&window->bridge_lifecycle);
+  return PROTON_OK;
 }
 
 #endif

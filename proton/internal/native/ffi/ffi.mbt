@@ -26,6 +26,10 @@ pub type EventHandle
 
 ///|
 #external
+pub type CookieSnapshotHandle
+
+///|
+#external
 pub type MenuConfigHandle
 
 ///|
@@ -71,12 +75,19 @@ pub extern "C" fn proton_runtime_platform_id_ffi(
 ) -> Int = "proton_runtime_platform_id"
 
 ///|
+#borrow(out_count)
+pub extern "C" fn proton_system_preferred_language_count_ffi(
+  out_count : Ref[Int],
+) -> Int = "proton_system_preferred_language_count"
+
+///|
 #borrow(buffer, out_required_len)
-pub extern "C" fn proton_system_preferred_languages_json_ffi(
+pub extern "C" fn proton_system_preferred_language_at_ffi(
+  index : Int,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
-) -> Int = "proton_system_preferred_languages_json"
+) -> Int = "proton_system_preferred_language_at"
 
 ///|
 #borrow(buffer, out_required_len)
@@ -342,6 +353,53 @@ pub extern "C" fn event_item(
 ) -> Int = "proton_internal_event_item"
 
 ///|
+pub extern "C" fn event_take_cookie_snapshot(
+  event : EventHandle,
+) -> CookieSnapshotHandle = "proton_internal_event_take_cookie_snapshot"
+
+///|
+pub extern "C" fn cookie_snapshot_destroy(
+  snapshot : CookieSnapshotHandle,
+) -> Unit = "proton_internal_cookie_snapshot_destroy"
+
+///|
+#borrow(out_count)
+pub extern "C" fn cookie_snapshot_count(
+  snapshot : CookieSnapshotHandle,
+  out_count : Ref[Int],
+) -> Int = "proton_internal_cookie_snapshot_count"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn cookie_snapshot_string_field(
+  snapshot : CookieSnapshotHandle,
+  index : Int,
+  field : Int,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_internal_cookie_snapshot_string_field"
+
+///|
+#borrow(out_value)
+pub extern "C" fn cookie_snapshot_int_field(
+  snapshot : CookieSnapshotHandle,
+  index : Int,
+  field : Int,
+  out_value : Ref[Int],
+) -> Int = "proton_internal_cookie_snapshot_int_field"
+
+///|
+#borrow(out_value, out_present)
+pub extern "C" fn cookie_snapshot_int64_field(
+  snapshot : CookieSnapshotHandle,
+  index : Int,
+  field : Int,
+  out_value : Ref[Int64],
+  out_present : Ref[Int],
+) -> Int = "proton_internal_cookie_snapshot_int64_field"
+
+///|
 pub extern "C" fn event_destroy(event : EventHandle) -> Unit = "proton_internal_event_destroy"
 
 ///|
@@ -396,12 +454,13 @@ pub extern "C" fn window_create(
   initial_url : Bytes,
   size_hint : Int,
   titlebar_overlay : Int,
+  theme_preference : Int,
   navigation_policy : Int,
   titlebar_minimize_label : Bytes,
   titlebar_maximize_label : Bytes,
   titlebar_restore_label : Bytes,
   titlebar_close_label : Bytes,
-  popup_policy : Int,
+  new_window_policy : Int,
   download_policy : Int,
   certificate_policy : Int,
   media_policy : Int,
@@ -666,6 +725,12 @@ pub extern "C" fn proton_window_set_background_color_ffi(
 ) -> Int = "proton_window_set_background_color"
 
 ///|
+pub extern "C" fn proton_window_set_theme_ffi(
+  window : WindowHandle,
+  theme_preference : Int,
+) -> Int = "proton_window_set_theme"
+
+///|
 pub extern "C" fn proton_window_set_visible_on_all_workspaces_ffi(
   window : WindowHandle,
   visible : Int,
@@ -709,11 +774,12 @@ pub extern "C" fn proton_window_flash_frame_ffi(
 ) -> Int = "proton_window_flash_frame"
 
 ///|
-#borrow(command_json)
-pub extern "C" fn proton_window_browser_command_json_ffi(
+#borrow(command)
+pub extern "C" fn proton_window_browser_command_ffi(
   window : WindowHandle,
-  command_json : Bytes,
-) -> Int = "proton_window_browser_command_json"
+  command : Bytes,
+  download_id : Int,
+) -> Int = "proton_window_browser_command"
 
 ///|
 #borrow(out_focused)
@@ -815,11 +881,13 @@ pub extern "C" fn proton_window_get_browser_loading_ffi(
 ) -> Int = "proton_window_get_browser_loading"
 
 ///|
-#borrow(response_json)
-pub extern "C" fn proton_window_respond_browser_request_json_ffi(
+#borrow(action, path)
+pub extern "C" fn proton_window_respond_browser_request_ffi(
   window : WindowHandle,
-  response_json : Bytes,
-) -> Int = "proton_window_respond_browser_request_json"
+  request_id : Int64,
+  action : Bytes,
+  path : Bytes,
+) -> Int = "proton_window_respond_browser_request"
 
 ///|
 #borrow(out_fields)
@@ -864,22 +932,52 @@ pub extern "C" fn proton_window_emit_bridge_event_json_ffi(
 ) -> Int = "proton_window_emit_bridge_event_json"
 
 ///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn proton_window_bridge_state_json_ffi(
+#borrow(out_revision)
+pub extern "C" fn proton_window_bridge_revision_ffi(
   window : WindowHandle,
-  buffer : FixedArray[Byte],
-  buffer_len : Int,
-  out_required_len : Ref[Int],
-) -> Int = "proton_window_bridge_state_json"
+  out_revision : Ref[Int64],
+) -> Int = "proton_window_bridge_revision"
 
 ///|
 #borrow(buffer, out_required_len)
-pub extern "C" fn proton_window_take_bridge_failure_json_ffi(
+pub extern "C" fn proton_window_bridge_state_field_ffi(
   window : WindowHandle,
+  field : Int,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
-) -> Int = "proton_window_take_bridge_failure_json"
+) -> Int = "proton_window_bridge_state_field"
+
+///|
+#borrow(out_present)
+pub extern "C" fn proton_window_bridge_failure_present_ffi(
+  window : WindowHandle,
+  out_present : Ref[Int],
+) -> Int = "proton_window_bridge_failure_present"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_window_bridge_failure_field_ffi(
+  window : WindowHandle,
+  field : Int,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_bridge_failure_field"
+
+///|
+#borrow(out_value, out_present)
+pub extern "C" fn proton_window_bridge_failure_int_field_ffi(
+  window : WindowHandle,
+  field : Int,
+  out_value : Ref[Int],
+  out_present : Ref[Int],
+) -> Int = "proton_window_bridge_failure_int_field"
+
+///|
+pub extern "C" fn proton_window_clear_bridge_failure_ffi(
+  window : WindowHandle,
+) -> Int = "proton_window_clear_bridge_failure"
 
 ///|
 #borrow(title, message, out_dialog)
@@ -1039,11 +1137,12 @@ pub extern "C" fn proton_view_eval_ffi(
 ) -> Int = "proton_view_eval"
 
 ///|
-#borrow(command_json)
-pub extern "C" fn proton_view_browser_command_json_ffi(
+#borrow(command)
+pub extern "C" fn proton_view_browser_command_ffi(
   view : ViewHandle,
-  command_json : Bytes,
-) -> Int = "proton_view_browser_command_json"
+  command : Bytes,
+  download_id : Int,
+) -> Int = "proton_view_browser_command"
 
 ///|
 #borrow(out_focused)
@@ -1094,12 +1193,12 @@ pub extern "C" fn proton_screen_enumerate_ffi(
 
 ///|
 #borrow(url_utf8, out_request_id)
-pub extern "C" fn proton_window_cookie_begin_get_json_ffi(
+pub extern "C" fn proton_window_cookie_begin_get_ffi(
   window : WindowHandle,
   url_utf8 : Bytes,
   include_http_only : Int,
   out_request_id : Ref[Int64],
-) -> Int = "proton_window_cookie_begin_get_json"
+) -> Int = "proton_window_cookie_begin_get"
 
 ///|
 #borrow(url_utf8, name_utf8, value_utf8, domain_utf8, path_utf8)

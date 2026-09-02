@@ -37,17 +37,11 @@ typedef struct {
 } proton_bridge_grant_t;
 
 struct proton_bridge_config {
+  size_t ref_count;
   int32_t max_payload_bytes;
   proton_bridge_grant_t *grants;
   size_t grant_count;
-  char *json;
 };
-
-typedef struct {
-  char *data;
-  size_t len;
-  size_t capacity;
-} proton_bridge_json_builder_t;
 
 static char *proton_bridge_copy(const char *value) {
   if (value == NULL) {
@@ -136,6 +130,25 @@ static proton_bridge_grant_t *proton_bridge_get_grant(
   return &config->grants[grant_index];
 }
 
+static const proton_bridge_grant_t *proton_bridge_get_const_grant(
+    const proton_bridge_config_t *config, size_t grant_index) {
+  if (config == NULL || grant_index >= config->grant_count) {
+    return NULL;
+  }
+  return &config->grants[grant_index];
+}
+
+static const proton_bridge_extension_t *proton_bridge_get_const_extension(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t extension_index) {
+  const proton_bridge_grant_t *grant =
+      proton_bridge_get_const_grant(config, grant_index);
+  if (grant == NULL || extension_index >= grant->extension_count) {
+    return NULL;
+  }
+  return &grant->extensions[extension_index];
+}
+
 proton_bridge_config_t *proton_internal_bridge_config_null(void) {
   return NULL;
 }
@@ -154,6 +167,7 @@ int32_t proton_internal_bridge_config_create(
                             "failed to allocate bridge configuration");
   }
   config->max_payload_bytes = max_payload_bytes;
+  config->ref_count = 1;
   *out_config = config;
   return PROTON_OK;
 }
@@ -284,167 +298,10 @@ int32_t proton_internal_bridge_config_add_initialization_unit(
   return PROTON_OK;
 }
 
-static int proton_bridge_json_reserve(proton_bridge_json_builder_t *builder,
-                                      size_t extra) {
-  if (builder->len + extra + 1 <= builder->capacity) {
-    return 1;
+void proton_bridge_config_retain(proton_bridge_config_t *config) {
+  if (config != NULL) {
+    config->ref_count++;
   }
-  size_t capacity = builder->capacity == 0 ? 256 : builder->capacity;
-  while (capacity < builder->len + extra + 1) {
-    if (capacity > SIZE_MAX / 2) {
-      return 0;
-    }
-    capacity *= 2;
-  }
-  char *data = (char *)realloc(builder->data, capacity);
-  if (data == NULL) {
-    return 0;
-  }
-  builder->data = data;
-  builder->capacity = capacity;
-  return 1;
-}
-
-static int proton_bridge_json_append(proton_bridge_json_builder_t *builder,
-                                     const char *value) {
-  size_t len = strlen(value);
-  if (!proton_bridge_json_reserve(builder, len)) {
-    return 0;
-  }
-  memcpy(builder->data + builder->len, value, len);
-  builder->len += len;
-  builder->data[builder->len] = '\0';
-  return 1;
-}
-
-static int proton_bridge_json_append_string(
-    proton_bridge_json_builder_t *builder, const char *value) {
-  if (!proton_bridge_json_append(builder, "\"")) {
-    return 0;
-  }
-  for (const unsigned char *cursor = (const unsigned char *)value; *cursor;
-       cursor++) {
-    char escaped[7] = {0};
-    const char *fragment = escaped;
-    if (*cursor == '"') {
-      fragment = "\\\"";
-    } else if (*cursor == '\\') {
-      fragment = "\\\\";
-    } else if (*cursor == '\n') {
-      fragment = "\\n";
-    } else if (*cursor == '\r') {
-      fragment = "\\r";
-    } else if (*cursor == '\t') {
-      fragment = "\\t";
-    } else if (*cursor < 0x20) {
-      snprintf(escaped, sizeof(escaped), "\\u%04x", (unsigned)*cursor);
-    } else {
-      escaped[0] = (char)*cursor;
-    }
-    if (!proton_bridge_json_append(builder, fragment)) {
-      return 0;
-    }
-  }
-  return proton_bridge_json_append(builder, "\"");
-}
-
-static int proton_bridge_json_append_strings(
-    proton_bridge_json_builder_t *builder,
-    const proton_bridge_strings_t *strings, int object_items) {
-  if (!proton_bridge_json_append(builder, "[")) {
-    return 0;
-  }
-  for (size_t index = 0; index < strings->count; index++) {
-    if ((index > 0 && !proton_bridge_json_append(builder, ",")) ||
-        (object_items && !proton_bridge_json_append(builder, "{\"name\":")) ||
-        !proton_bridge_json_append_string(builder, strings->values[index]) ||
-        (object_items && !proton_bridge_json_append(builder, "}"))) {
-      return 0;
-    }
-  }
-  return proton_bridge_json_append(builder, "]");
-}
-
-static int proton_bridge_json_render(proton_bridge_config_t *config) {
-  proton_bridge_json_builder_t builder = {0};
-  char max_payload[32];
-  snprintf(max_payload, sizeof(max_payload), "%d", config->max_payload_bytes);
-  if (!proton_bridge_json_append(
-          &builder,
-          "{\"abi_version\":2,\"namespace\":\"__MoonBit__\",\"grants\":[")) {
-    goto failed;
-  }
-  for (size_t grant_index = 0; grant_index < config->grant_count;
-       grant_index++) {
-    proton_bridge_grant_t *grant = &config->grants[grant_index];
-    if ((grant_index > 0 && !proton_bridge_json_append(&builder, ",")) ||
-        !proton_bridge_json_append(&builder, "{\"source_origin\":") ||
-        !proton_bridge_json_append_string(&builder, grant->source_origin) ||
-        !proton_bridge_json_append(&builder, ",\"ops\":") ||
-        !proton_bridge_json_append_strings(&builder, &grant->ops, 1) ||
-        !proton_bridge_json_append(&builder, ",\"extensions\":[")) {
-      goto failed;
-    }
-    for (size_t extension_index = 0;
-         extension_index < grant->extension_count; extension_index++) {
-      proton_bridge_extension_t *extension =
-          &grant->extensions[extension_index];
-      if ((extension_index > 0 &&
-           !proton_bridge_json_append(&builder, ",")) ||
-          !proton_bridge_json_append(&builder, "{\"namespace\":") ||
-          !proton_bridge_json_append_string(&builder,
-                                            extension->js_namespace) ||
-          !proton_bridge_json_append(&builder, ",\"apis\":") ||
-          !proton_bridge_json_append_strings(&builder, &extension->apis, 0) ||
-          !proton_bridge_json_append(&builder, "}")) {
-        goto failed;
-      }
-    }
-    if (!proton_bridge_json_append(&builder, "],\"initialization_units\":[")) {
-      goto failed;
-    }
-    for (size_t unit_index = 0;
-         unit_index < grant->initialization_unit_count; unit_index++) {
-      proton_bridge_initialization_unit_t *unit =
-          &grant->initialization_units[unit_index];
-      if ((unit_index > 0 && !proton_bridge_json_append(&builder, ",")) ||
-          !proton_bridge_json_append(&builder, "{\"owner\":") ||
-          !proton_bridge_json_append_string(&builder, unit->owner) ||
-          !proton_bridge_json_append(&builder, ",\"name\":") ||
-          !proton_bridge_json_append_string(&builder, unit->name) ||
-          !proton_bridge_json_append(&builder, ",\"source\":") ||
-          !proton_bridge_json_append_string(&builder, unit->source) ||
-          !proton_bridge_json_append(&builder, "}")) {
-        goto failed;
-      }
-    }
-    if (!proton_bridge_json_append(&builder, "]}")) {
-      goto failed;
-    }
-  }
-  if (!proton_bridge_json_append(&builder, "],\"max_payload_bytes\":") ||
-      !proton_bridge_json_append(&builder, max_payload) ||
-      !proton_bridge_json_append(&builder, "}")) {
-    goto failed;
-  }
-  config->json = builder.data;
-  return 1;
-
-failed:
-  free(builder.data);
-  return 0;
-}
-
-const char *proton_bridge_config_json(proton_bridge_config_t *config) {
-  if (config == NULL) {
-    return NULL;
-  }
-  if (config->json == NULL && !proton_bridge_json_render(config)) {
-    proton_set_error(PROTON_ERR_ENGINE,
-                     "failed to render bridge configuration");
-    return NULL;
-  }
-  return config->json;
 }
 
 int32_t proton_bridge_config_max_payload_bytes(
@@ -452,8 +309,158 @@ int32_t proton_bridge_config_max_payload_bytes(
   return config != NULL ? config->max_payload_bytes : 0;
 }
 
+int proton_bridge_config_has_grant(const proton_bridge_config_t *config,
+                                   const char *source_origin) {
+  if (config == NULL || source_origin == NULL) {
+    return 0;
+  }
+  for (size_t index = 0; index < config->grant_count; index++) {
+    if (strcmp(config->grants[index].source_origin, source_origin) == 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int proton_bridge_config_grant_allows_op(
+    const proton_bridge_config_t *config, const char *source_origin,
+    const char *op) {
+  if (config == NULL || source_origin == NULL || op == NULL) {
+    return 0;
+  }
+  for (size_t grant_index = 0; grant_index < config->grant_count;
+       grant_index++) {
+    const proton_bridge_grant_t *grant = &config->grants[grant_index];
+    if (strcmp(grant->source_origin, source_origin) != 0) {
+      continue;
+    }
+    for (size_t op_index = 0; op_index < grant->ops.count; op_index++) {
+      if (strcmp(grant->ops.values[op_index], op) == 0) {
+        return 1;
+      }
+    }
+    return 0;
+  }
+  return 0;
+}
+
+int proton_bridge_config_declares_op(const proton_bridge_config_t *config,
+                                     const char *op) {
+  if (config == NULL || op == NULL) {
+    return 0;
+  }
+  for (size_t grant_index = 0; grant_index < config->grant_count;
+       grant_index++) {
+    const proton_bridge_grant_t *grant = &config->grants[grant_index];
+    for (size_t op_index = 0; op_index < grant->ops.count; op_index++) {
+      if (strcmp(grant->ops.values[op_index], op) == 0) {
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+size_t proton_bridge_config_grant_count(const proton_bridge_config_t *config) {
+  return config != NULL ? config->grant_count : 0;
+}
+
+const char *proton_bridge_config_grant_source_origin(
+    const proton_bridge_config_t *config, size_t grant_index) {
+  const proton_bridge_grant_t *grant =
+      proton_bridge_get_const_grant(config, grant_index);
+  return grant != NULL ? grant->source_origin : NULL;
+}
+
+size_t proton_bridge_config_grant_op_count(const proton_bridge_config_t *config,
+                                           size_t grant_index) {
+  const proton_bridge_grant_t *grant =
+      proton_bridge_get_const_grant(config, grant_index);
+  return grant != NULL ? grant->ops.count : 0;
+}
+
+const char *proton_bridge_config_grant_op(const proton_bridge_config_t *config,
+                                          size_t grant_index,
+                                          size_t op_index) {
+  const proton_bridge_grant_t *grant =
+      proton_bridge_get_const_grant(config, grant_index);
+  return grant != NULL && op_index < grant->ops.count
+             ? grant->ops.values[op_index]
+             : NULL;
+}
+
+size_t proton_bridge_config_grant_extension_count(
+    const proton_bridge_config_t *config, size_t grant_index) {
+  const proton_bridge_grant_t *grant =
+      proton_bridge_get_const_grant(config, grant_index);
+  return grant != NULL ? grant->extension_count : 0;
+}
+
+const char *proton_bridge_config_grant_extension_namespace(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t extension_index) {
+  const proton_bridge_extension_t *extension = proton_bridge_get_const_extension(
+      config, grant_index, extension_index);
+  return extension != NULL ? extension->js_namespace : NULL;
+}
+
+size_t proton_bridge_config_grant_extension_api_count(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t extension_index) {
+  const proton_bridge_extension_t *extension = proton_bridge_get_const_extension(
+      config, grant_index, extension_index);
+  return extension != NULL ? extension->apis.count : 0;
+}
+
+const char *proton_bridge_config_grant_extension_api(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t extension_index, size_t api_index) {
+  const proton_bridge_extension_t *extension = proton_bridge_get_const_extension(
+      config, grant_index, extension_index);
+  return extension != NULL && api_index < extension->apis.count
+             ? extension->apis.values[api_index]
+             : NULL;
+}
+
+size_t proton_bridge_config_grant_initialization_unit_count(
+    const proton_bridge_config_t *config, size_t grant_index) {
+  const proton_bridge_grant_t *grant =
+      proton_bridge_get_const_grant(config, grant_index);
+  return grant != NULL ? grant->initialization_unit_count : 0;
+}
+
+const char *proton_bridge_config_grant_initialization_owner(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t unit_index) {
+  const proton_bridge_grant_t *grant =
+      proton_bridge_get_const_grant(config, grant_index);
+  return grant != NULL && unit_index < grant->initialization_unit_count
+             ? grant->initialization_units[unit_index].owner
+             : NULL;
+}
+
+const char *proton_bridge_config_grant_initialization_name(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t unit_index) {
+  const proton_bridge_grant_t *grant =
+      proton_bridge_get_const_grant(config, grant_index);
+  return grant != NULL && unit_index < grant->initialization_unit_count
+             ? grant->initialization_units[unit_index].name
+             : NULL;
+}
+
+const char *proton_bridge_config_grant_initialization_source(
+    const proton_bridge_config_t *config, size_t grant_index,
+    size_t unit_index) {
+  const proton_bridge_grant_t *grant =
+      proton_bridge_get_const_grant(config, grant_index);
+  return grant != NULL && unit_index < grant->initialization_unit_count
+             ? grant->initialization_units[unit_index].source
+             : NULL;
+}
+
 void proton_internal_bridge_config_destroy(proton_bridge_config_t *config) {
-  if (config == NULL) {
+  if (config == NULL || config->ref_count == 0 || --config->ref_count != 0) {
     return;
   }
   for (size_t grant_index = 0; grant_index < config->grant_count;
@@ -487,6 +494,5 @@ void proton_internal_bridge_config_destroy(proton_bridge_config_t *config) {
     free(grant->initialization_units);
   }
   free(config->grants);
-  free(config->json);
   free(config);
 }

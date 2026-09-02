@@ -20,7 +20,7 @@ const codegenVersion = fs
   .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 assert(codegenVersion, "codegen/moon.mod is missing its version");
 const codegenCoordinate = `moonbit-community/proton_codegen@${codegenVersion}`;
-const warrenCoordinate = "moonbit-community/warren@0.2.7";
+const warrenCoordinate = "moonbit-community/warren@0.3.2";
 let appProcess = null;
 let staticServer = null;
 let succeeded = false;
@@ -152,7 +152,7 @@ function verifyGeneratedTree() {
 function useLocalCodegenPackage() {
   const backendModPath = path.join(projectDir, "backend", "moon.mod");
   const source = fs.readFileSync(backendModPath, "utf8");
-  const localCommand = `moon runwasm '${path.join(repoRoot, "codegen")}'`;
+  const localCommand = `moon run '${path.join(repoRoot, "codegen")}' --target wasm --`;
   const updated = source.replace(`moonx ${codegenCoordinate}`, localCommand);
   assert(updated !== source, "generated backend is missing the codegen command");
   assert(
@@ -171,8 +171,11 @@ function verifySourceSmokeCodegen() {
   );
   const fresh = path.join(tempRoot, "commands.fresh.mbt");
   run("moon", [
-    "runwasm",
+    "run",
     path.join(repoRoot, "codegen"),
+    "--target",
+    "wasm",
+    "--",
     path.join(projectDir, "backend", "todo", "commands.mbt"),
     "-o",
     fresh,
@@ -758,7 +761,14 @@ async function main() {
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   run(
     "moonx",
-    ["--target", "native", warrenCoordinate, "build"],
+    [
+      "--target",
+      "native",
+      warrenCoordinate,
+      "build",
+      "--browser-entry",
+      "main",
+    ],
     { cwd: frontendDir },
   );
   run(
@@ -768,7 +778,7 @@ async function main() {
   );
   makeSourceSmokeCodegenStale();
   setFrontendPackageRevision("first");
-  localCli(["-C", projectDir, "package", "--release", "--target", "app", "--sign"], {
+  localCli(["-C", projectDir, "package", "--release", "--format", "app", "--sign"], {
     env: runtimeEnv({
       PROTON_MACOS_ALLOW_ADHOC: "1",
       PROTON_MACOS_SIGNING_IDENTITY: "-",
@@ -779,7 +789,7 @@ async function main() {
   let packaged = verifyPackagedApp();
   await runPackagedAppSmoke(packaged.executable, "first");
   setFrontendPackageRevision("second");
-  localCli(["-C", projectDir, "package", "--release", "--target", "app", "--sign"], {
+  localCli(["-C", projectDir, "package", "--release", "--format", "app", "--sign"], {
     env: runtimeEnv({
       PROTON_MACOS_ALLOW_ADHOC: "1",
       PROTON_MACOS_SIGNING_IDENTITY: "-",
