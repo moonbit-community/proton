@@ -68,7 +68,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     browser_event_handlers=self.browser_event_handlers,
     window_close_handler=self.window_close_handler,
     navigation_handler=self.navigation_handler,
-    popup_handler=self.popup_handler,
+    new_window_handler=self.new_window_handler,
     download_handler=self.download_handler,
     certificate_handler=self.certificate_handler,
     media_handler=self.media_handler,
@@ -158,7 +158,7 @@ async fn run_manifest(
   ] = [],
   window_close_handler? : (async (WindowHandle) -> WindowCloseDecision noraise)? = None,
   navigation_handler? : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)? = None,
-  popup_handler? : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)? = None,
+  new_window_handler? : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)? = None,
   download_handler? : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)? = None,
   certificate_handler? : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)? = None,
   media_handler? : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)? = None,
@@ -313,7 +313,7 @@ async fn run_manifest(
       } else {
         @native.BrowserPolicyMode::Allow
       },
-      popup=if popup_handler is Some(_) {
+      new_window=if new_window_handler is Some(_) {
         @native.BrowserPolicyMode::Ask
       } else {
         @native.BrowserPolicyMode::Deny
@@ -387,7 +387,7 @@ async fn run_manifest(
           lifecycle_failures,
           bridge_startup_timeout_ms,
           navigation_handler,
-          popup_handler,
+          new_window_handler,
           download_handler,
           certificate_handler,
           media_handler,

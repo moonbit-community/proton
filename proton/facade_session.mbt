@@ -27,7 +27,7 @@ fn RuntimeSession::RuntimeSession(
   lifecycle_failures : Array[AppCleanupError],
   bridge_startup_timeout_ms : Int,
   navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?,
-  popup_handler : (async (BrowserHandle, PopupRequest) -> PopupDecision noraise)?,
+  new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?,
   download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?,
   certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?,
   media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?,
@@ -67,7 +67,7 @@ fn RuntimeSession::RuntimeSession(
     pending_browser_requests: [],
     pending_resource_requests: [],
     navigation_handler,
-    popup_handler,
+    new_window_handler,
     download_handler,
     certificate_handler,
     media_handler,
@@ -3221,7 +3221,7 @@ fn RuntimeSession::start_browser_request(
   let browser = self.browser_handle(window)
   let request_id = match request {
     Navigation(request_id~, ..)
-    | Popup(request_id~, ..)
+    | NewWindow(request_id~, ..)
     | Download(request_id~, ..)
     | Certificate(request_id~, ..)
     | Media(request_id~, ..) => request_id
@@ -3242,19 +3242,18 @@ fn RuntimeSession::start_browser_request(
               }
             None => BrowserResponse::{ action: "deny", path: None, }
           }
-        Popup(url~, disposition~, user_gesture~, ..) => {
-          let decision = match self.popup_handler {
-            Some(handler) =>
-              handler(browser, { url, disposition, user_gesture, })
-            None => PopupDecision::Deny
+        NewWindow(url~, user_gesture~, ..) => {
+          let decision = match self.new_window_handler {
+            Some(handler) => handler(browser, { url, user_gesture, })
+            None => NewWindowDecision::Deny
           }
           match decision {
-            PopupDecision::Deny => ()
-            PopupDecision::OpenInCurrent =>
+            NewWindowDecision::Deny => ()
+            NewWindowDecision::OpenInCurrent =>
               browser.load_url(url) catch {
                 _ => ()
               }
-            PopupDecision::OpenInWindow(id) => {
+            NewWindowDecision::OpenInWindow(id) => {
               let opened = Some(self.window_manager().open(id)) catch {
                 _ => None
               }

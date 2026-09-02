@@ -75,7 +75,7 @@ moon -C examples run 01_run --target native
   controls and compact web-rendered application chrome.
 - `49_app_menu`: app-level typed native menu roles, dynamic command states, and menu command events with
   the optional focused window id.
-- `50_browser_control`: asynchronous navigation, popup, download, certificate,
+- `50_browser_control`: asynchronous navigation, new-window, download, certificate,
   media-permission, download-progress policy handlers, plus observable main
   browser page events, state snapshots, cookie-store access, and cache control.
 - `51_child_process_close_repro`: long-lived child process and pending bridge

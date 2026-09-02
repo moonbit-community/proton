@@ -465,13 +465,14 @@ pub fn App::on_navigation_request(
 }
 
 ///|
-/// Reviews `window.open` and new-tab requests. New Proton windows must already
-/// be declared with `add_window(..., open_on_start=false)`.
-pub fn App::on_popup_request(
+/// Reviews requests for a new browsing context, including `window.open`,
+/// target-blank links, and modified link clicks. New Proton windows must
+/// already be declared with `add_window(..., open_on_start=false)`.
+pub fn App::on_new_window_request(
   self : App,
-  handler : async (BrowserHandle, PopupRequest) -> PopupDecision noraise,
+  handler : async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise,
 ) -> App {
-  self.popup_handler = Some(handler)
+  self.new_window_handler = Some(handler)
   self
 }
 

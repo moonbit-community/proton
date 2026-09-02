@@ -668,7 +668,7 @@ int32_t proton_config_prepare_window(
     int32_t navigation_policy,
     const char *titlebar_minimize_label, const char *titlebar_maximize_label,
     const char *titlebar_restore_label, const char *titlebar_close_label,
-    int32_t popup_policy, int32_t download_policy,
+    int32_t new_window_policy, int32_t download_policy,
     int32_t certificate_policy, int32_t media_policy, int32_t devtools,
     proton_bridge_config_t *bridge_config,
     proton_engine_window_config_t *out_config) {
@@ -690,11 +690,11 @@ int32_t proton_config_prepare_window(
                             "window theme is invalid");
   }
   if (!proton_browser_policy_mode_valid(navigation_policy) ||
-      !proton_browser_policy_mode_valid(popup_policy) ||
+      !proton_browser_policy_mode_valid(new_window_policy) ||
       !proton_browser_policy_mode_valid(download_policy) ||
       !proton_browser_policy_mode_valid(certificate_policy) ||
       !proton_browser_policy_mode_valid(media_policy) ||
-      popup_policy == PROTON_BROWSER_POLICY_ALLOW ||
+      new_window_policy == PROTON_BROWSER_POLICY_ALLOW ||
       certificate_policy == PROTON_BROWSER_POLICY_ALLOW ||
       media_policy == PROTON_BROWSER_POLICY_ALLOW) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -744,7 +744,8 @@ int32_t proton_config_prepare_window(
   }
   config.browser_policy.navigation =
       (proton_browser_policy_mode_t)navigation_policy;
-  config.browser_policy.popup = (proton_browser_policy_mode_t)popup_policy;
+  config.browser_policy.new_window =
+      (proton_browser_policy_mode_t)new_window_policy;
   config.browser_policy.download =
       (proton_browser_policy_mode_t)download_policy;
   config.browser_policy.certificate =

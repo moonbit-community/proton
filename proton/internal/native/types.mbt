@@ -314,12 +314,7 @@ pub(all) enum NativeBrowserRequest {
     user_gesture~ : Bool,
     redirect~ : Bool
   )
-  Popup(
-    request_id~ : Int64,
-    url~ : String,
-    disposition~ : Int,
-    user_gesture~ : Bool
-  )
+  NewWindow(request_id~ : Int64, url~ : String, user_gesture~ : Bool)
   Download(
     request_id~ : Int64,
     download_id~ : Int,
@@ -785,7 +780,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     NotificationResult(_) => "notification_result"
     NotificationClicked(_) => "notification_clicked"
     BrowserRequest(_, Navigation(..)) => "browser_navigation_requested"
-    BrowserRequest(_, Popup(..)) => "browser_popup_requested"
+    BrowserRequest(_, NewWindow(..)) => "browser_new_window_requested"
     BrowserRequest(_, Download(..)) => "browser_download_requested"
     BrowserRequest(_, Certificate(..)) => "browser_certificate_error"
     BrowserRequest(_, Media(..)) => "browser_media_permission_requested"
@@ -1365,7 +1360,7 @@ pub extend BrowserPolicyMode with Debug::{to_repr}
 ///|
 pub(all) struct BrowserPolicy {
   navigation : BrowserPolicyMode
-  popup : BrowserPolicyMode
+  new_window : BrowserPolicyMode
   download : BrowserPolicyMode
   certificate : BrowserPolicyMode
   media : BrowserPolicyMode
@@ -1381,13 +1376,13 @@ pub extend BrowserPolicy with Debug::{to_repr}
 ///|
 pub fn BrowserPolicy::BrowserPolicy(
   navigation? : BrowserPolicyMode = BrowserPolicyMode::Allow,
-  popup? : BrowserPolicyMode = BrowserPolicyMode::Deny,
+  new_window? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   download? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   certificate? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   media? : BrowserPolicyMode = BrowserPolicyMode::Deny,
   devtools? : Bool = false,
 ) -> BrowserPolicy {
-  { navigation, popup, download, certificate, media, devtools, }
+  { navigation, new_window, download, certificate, media, devtools, }
 }
 
 ///|

@@ -704,7 +704,7 @@ int32_t proton_internal_window_create(
     int32_t navigation_policy,
     const char *titlebar_minimize_label, const char *titlebar_maximize_label,
     const char *titlebar_restore_label, const char *titlebar_close_label,
-    int32_t popup_policy, int32_t download_policy,
+    int32_t new_window_policy, int32_t download_policy,
     int32_t certificate_policy, int32_t media_policy, int32_t devtools,
     proton_bridge_config_t *bridge_config, proton_window_handle_t *out_window) {
   proton_runtime_slot_t *runtime_slot = NULL;
@@ -721,7 +721,7 @@ int32_t proton_internal_window_create(
       title, width, height, initial_url, size_hint, titlebar_overlay,
       theme_preference, navigation_policy, titlebar_minimize_label,
       titlebar_maximize_label, titlebar_restore_label, titlebar_close_label,
-      popup_policy, download_policy, certificate_policy, media_policy,
+      new_window_policy, download_policy, certificate_policy, media_policy,
       devtools, bridge_config, &config);
   if (status != PROTON_OK) {
     return status;

@@ -460,7 +460,7 @@ pub extern "C" fn window_create(
   titlebar_maximize_label : Bytes,
   titlebar_restore_label : Bytes,
   titlebar_close_label : Bytes,
-  popup_policy : Int,
+  new_window_policy : Int,
   download_policy : Int,
   certificate_policy : Int,
   media_policy : Int,
