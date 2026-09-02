@@ -51,6 +51,19 @@ struct PackagePlan {
 } derive(Debug, Eq)
 
 ///|
+struct ResolvedPlatformPackageConfig {
+  formats : Array[String]
+  resources : Array[String]
+  sign_binaries : Array[String]
+} derive(Debug, Eq)
+
+///|
+pub extend ResolvedPlatformPackageConfig with Eq::{not_equal, equal}
+
+///|
+pub extend ResolvedPlatformPackageConfig with Debug::{to_repr}
+
+///|
 pub extend PackagePlan with Eq::{not_equal, equal}
 
 ///|
@@ -208,14 +221,18 @@ async fn build_package_plan(
     Some(package_config) => package_config
     None => raise PackageConfigError::PackageMissing
   }
+  let platform_config = resolve_platform_package_config(
+    package_config,
+    @packager.current_package_host(),
+  )
   let product_name = @packager.validate_product_name(
     raw.package_args.product_name.unwrap_or(package_config.product_name),
   )
   let identifier = @packager.validate_identifier(project.identifier())
   let configured_formats = if raw.package_args.formats.length() > 0 {
     raw.package_args.formats.copy()
-  } else if package_config.formats.length() > 0 {
-    package_config.formats.map(value => @packager.PackageFormat::parse(value))
+  } else if platform_config.formats.length() > 0 {
+    platform_config.formats.map(value => @packager.PackageFormat::parse(value))
   } else {
     []
   }
@@ -258,11 +275,8 @@ async fn build_package_plan(
     release: raw.release,
     base_dir,
     frontend_dist,
-    resources: package_config.resources(),
-    sign_binaries: match package_config.sign() {
-      Some(sign) => sign.binaries()
-      None => []
-    },
+    resources: platform_config.resources,
+    sign_binaries: platform_config.sign_binaries,
     icons: if raw.package_args.icons.length() > 0 {
       raw.package_args.icons.map(icon => @fsutil.resolve_path(base_dir, icon))
     } else {
@@ -276,6 +290,48 @@ async fn build_package_plan(
     document_types: package_config.document_types(),
     sign: raw.package_args.sign,
     notarize: raw.package_args.notarize,
+  }
+}
+
+///|
+fn resolve_platform_package_config(
+  package_config : @proton_config.ProjectPackageConfig,
+  platform : @packager.PackageHost,
+) -> ResolvedPlatformPackageConfig {
+  let platforms = package_config.platforms()
+  let platform_config = match platform {
+    @packager.PackageHost::Macos => platforms.macos()
+    @packager.PackageHost::Windows => platforms.windows()
+    @packager.PackageHost::Linux => platforms.linux()
+  }
+  let formats = match platform_config {
+    Some(config) => config.formats().unwrap_or(package_config.formats())
+    None => package_config.formats()
+  }
+  let resources = package_config.resources()
+  let sign_binaries = match package_config.sign() {
+    Some(sign) => sign.binaries()
+    None => []
+  }
+  match platform_config {
+    Some(config) => {
+      append_unique(resources, config.resources())
+      match config.sign() {
+        Some(sign) => append_unique(sign_binaries, sign.binaries())
+        None => ()
+      }
+    }
+    None => ()
+  }
+  ResolvedPlatformPackageConfig::{ formats, resources, sign_binaries, }
+}
+
+///|
+fn append_unique(values : Array[String], additions : Array[String]) -> Unit {
+  for value in additions {
+    if !values.contains(value) {
+      values.push(value)
+    }
   }
 }
 

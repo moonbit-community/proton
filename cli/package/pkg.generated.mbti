@@ -52,6 +52,11 @@ pub fn RawPackageOptions::equal(Self, Self) -> Bool
 pub fn RawPackageOptions::not_equal(Self, Self) -> Bool
 pub fn RawPackageOptions::to_repr(Self) -> @debug.Repr
 
+type ResolvedPlatformPackageConfig derive(Eq, @debug.Debug)
+pub fn ResolvedPlatformPackageConfig::equal(Self, Self) -> Bool
+pub fn ResolvedPlatformPackageConfig::not_equal(Self, Self) -> Bool
+pub fn ResolvedPlatformPackageConfig::to_repr(Self) -> @debug.Repr
+
 // Type aliases
 
 // Traits

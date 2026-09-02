@@ -234,7 +234,6 @@ fn project_config_file(
   let package_config : Json = {
     "product_name": context.title,
     "version": "0.1.0",
-    "formats": ["app", "zip"],
     "output": "dist",
   }
   let config : Json = match template {

@@ -27,6 +27,61 @@ test "parse package args accepts repeated formats and overrides" {
 }
 
 ///|
+test "project package resolves platform overrides exactly" {
+  let package_config = @proton_config.ProjectPackageConfig(
+    "Demo",
+    "1.2.3",
+    formats=["app"],
+    resources=["assets/common"],
+    sign=Some(@proton_config.ProjectSignConfig(binaries=["helpers/common"])),
+    platforms=@proton_config.ProjectPackagePlatforms(
+      macos=@proton_config.ProjectPlatformPackageConfig(
+        formats=["app", "dmg"],
+        resources=["assets/macos"],
+        sign=@proton_config.ProjectSignConfig(binaries=["helpers/macos"]),
+      ),
+      windows=@proton_config.ProjectPlatformPackageConfig(resources=[
+        "assets/windows",
+      ]),
+      linux=@proton_config.ProjectPlatformPackageConfig(formats=[]),
+    ),
+  )
+  assert_eq(
+    resolve_platform_package_config(
+      package_config,
+      @packager.PackageHost::Macos,
+    ),
+    ResolvedPlatformPackageConfig::{
+      formats: ["app", "dmg"],
+      resources: ["assets/common", "assets/macos"],
+      sign_binaries: ["helpers/common", "helpers/macos"],
+    },
+  )
+  assert_eq(
+    resolve_platform_package_config(
+      package_config,
+      @packager.PackageHost::Windows,
+    ),
+    ResolvedPlatformPackageConfig::{
+      formats: ["app"],
+      resources: ["assets/common", "assets/windows"],
+      sign_binaries: ["helpers/common"],
+    },
+  )
+  assert_eq(
+    resolve_platform_package_config(
+      package_config,
+      @packager.PackageHost::Linux,
+    ),
+    ResolvedPlatformPackageConfig::{
+      formats: [],
+      resources: ["assets/common"],
+      sign_binaries: ["helpers/common"],
+    },
+  )
+}
+
+///|
 test "project packaging rejects an identifier override" {
   try parse_package_args(["--identifier", "com.example.demo"]) catch {
     error =>

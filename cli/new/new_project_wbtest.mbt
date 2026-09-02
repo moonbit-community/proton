@@ -205,6 +205,77 @@ test "project config preserves application identity" {
 }
 
 ///|
+test "project config uses host-native package format defaults" {
+  let context = template_context(
+    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+  )
+  let config = @json.parse(project_config_file(context, "isomorphic").content) catch {
+    error => abort(error.to_string())
+  }
+  guard config is { "package": { "formats"? : None, .. }, .. } else {
+    abort("generated project config fixed package formats to one platform")
+  }
+}
+
+///|
+test "isomorphic README documents host-native package defaults" {
+  let context = template_context(
+    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+  )
+  let mut readme : String? = None
+  for spec in generated_isomorphic_template_specs() {
+    if spec.output_path == "README.md" {
+      readme = Some(render_template(spec, context).content)
+    }
+  }
+  guard readme is Some(readme) else {
+    abort("isomorphic template did not include README.md")
+  }
+  let package_and_rest = match readme.split_once("## Package\n\n") {
+    Some((_, package_and_rest)) => package_and_rest
+    None => abort("isomorphic README did not include the Package section")
+  }
+  let package_section = match package_and_rest.split_once("\n## Layout\n") {
+    Some((package_section, _)) => package_section
+    None => abort("isomorphic README did not terminate the Package section")
+  }
+  inspect(
+    package_section.to_owned(),
+    content=(
+      #|The top-level `identifier` is the application's canonical identity. The
+      #|`package` block contains the remaining static packaging metadata:
+      #|
+      #|```json
+      #|{
+      #|  "identifier": "com.example.my-app",
+      #|  "package": {
+      #|    "product_name": "My App",
+      #|    "version": "0.1.0",
+      #|    "output": "dist"
+      #|  }
+      #|}
+      #|```
+      #|
+      #|When `formats` is omitted, Proton selects the current host's default package
+      #|formats. Use `package.platforms` for platform-specific formats, resources, or
+      #|signing targets.
+      #|
+      #|Window behavior, the asset entry, single-instance handling, and renderer
+      #|permissions are declared by the Proton `App` builder in `backend/app/main.mbt`.
+      #|
+      #|Inspect the resolved package plan, then create the current host's native
+      #|artifacts:
+      #|
+      #|```sh
+      #|proton_cli package --dry-run
+      #|proton_cli package --release
+      #|```
+      #|
+    ),
+  )
+}
+
+///|
 test "isomorphic project config pins Warren browser entry" {
   let context = template_context(
     "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
