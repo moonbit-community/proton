@@ -7,13 +7,13 @@ fn env_or(name : String, default : String) -> String {
 }
 
 ///|
-let cdp_start_poll_timeout_ms = 250
+let cdp_discovery_poll_timeout_ms = 250
 
 ///|
 async fn discover_targets_for_poll(
   target : @client.CdpTarget,
 ) -> Array[@client.CdpDiscoveredTarget] {
-  let result = @async.with_timeout_opt(cdp_start_poll_timeout_ms, () => {
+  let result = @async.with_timeout_opt(cdp_discovery_poll_timeout_ms, () => {
     @client.discover_targets(target)
   }) catch {
     _ => None

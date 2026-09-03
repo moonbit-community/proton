@@ -539,8 +539,8 @@ async fn[X] connect_page_matching_expression(
   description : String,
   timeout : Int,
 ) -> @page.Page {
-  let mut elapsed = 0
-  while elapsed <= timeout {
+  let deadline = @async.now() + timeout.to_int64()
+  while @async.now() <= deadline {
     let targets = discover_targets_for_poll(cdp_target_from(target))
     for info in targets {
       if info.target_type == "page" &&
@@ -548,24 +548,25 @@ async fn[X] connect_page_matching_expression(
           page_url_matches(info.url, url) ||
           (allow_prefix && info.url.has_prefix(url))
         ) {
-        let page = Some(
-          @page.Page::connect(
-            tasks,
-            cdp_target_from(target),
-            target_id=info.target_id,
-            timeout_ms=cdp_start_poll_timeout_ms,
-          ),
-        ) catch {
-          _ => None
+        let page = match info.web_socket_debugger_url {
+          Some(web_socket_url) =>
+            Some(
+              @page.Page::connect_web_socket(
+                tasks,
+                web_socket_url,
+                timeout_ms=timeout,
+              ),
+            ) catch {
+              _ => None
+            }
+          None => None
         }
         match page {
           Some(page) => {
             let ready = Some(
-              run_e2e_operation_with_timeout(
-                cdp_start_poll_timeout_ms,
-                description,
-                () => evaluate_bool(page, expression, false),
-              ),
+              run_e2e_operation_with_timeout(timeout, description, () => {
+                evaluate_bool(page, expression, false)
+              }),
             ) catch {
               _ => None
             }
@@ -579,7 +580,6 @@ async fn[X] connect_page_matching_expression(
       }
     }
     @async.sleep(100)
-    elapsed = elapsed + 100
   }
   fail("timed out waiting for " + description)
 }
