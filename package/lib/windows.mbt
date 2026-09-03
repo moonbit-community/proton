@@ -108,7 +108,7 @@ async fn verify_windows_executable(path : String) -> Unit {
 
 ///|
 async fn create_windows_zip(source : String, destination : String) -> Unit {
-  let staging = destination + ".staging"
+  let staging = destination + ".staging.zip"
   remove_tree(staging)
   errdefer (remove_tree(staging) catch { _ => () })
   let script =
