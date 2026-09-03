@@ -95,6 +95,7 @@ pub(all) struct ProjectPackageConfig {
   version : String
   formats : Array[String]
   icons : Array[String]
+  prepare : String?
   resources : Array[String]
   sign : ProjectSignConfig?
   url_schemes : Array[String]
@@ -102,7 +103,7 @@ pub(all) struct ProjectPackageConfig {
   output : String
   platforms : ProjectPackagePlatforms
 } derive(Eq, @debug.Debug)
-pub fn ProjectPackageConfig::ProjectPackageConfig(String, String, formats? : Array[String], icons? : Array[String], resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String, platforms? : ProjectPackagePlatforms) -> Self
+pub fn ProjectPackageConfig::ProjectPackageConfig(String, String, formats? : Array[String], icons? : Array[String], prepare? : String?, resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String, platforms? : ProjectPackagePlatforms) -> Self
 pub fn ProjectPackageConfig::document_types(Self) -> Array[ProjectDocumentType]
 pub fn ProjectPackageConfig::equal(Self, Self) -> Bool
 pub fn ProjectPackageConfig::formats(Self) -> Array[String]
@@ -110,6 +111,7 @@ pub fn ProjectPackageConfig::icons(Self) -> Array[String]
 pub fn ProjectPackageConfig::not_equal(Self, Self) -> Bool
 pub fn ProjectPackageConfig::output(Self) -> String
 pub fn ProjectPackageConfig::platforms(Self) -> ProjectPackagePlatforms
+pub fn ProjectPackageConfig::prepare(Self) -> String?
 pub fn ProjectPackageConfig::resources(Self) -> Array[String]
 pub fn ProjectPackageConfig::sign(Self) -> ProjectSignConfig?
 pub fn ProjectPackageConfig::to_repr(Self) -> @debug.Repr

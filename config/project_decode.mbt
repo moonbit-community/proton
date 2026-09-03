@@ -130,8 +130,8 @@ fn decode_package(
     None => None
     Some(Object(values)) => {
       validate_object_fields(values, "package", [
-        "product_name", "version", "formats", "icons", "resources", "sign", "url_schemes",
-        "document_types", "output", "platforms",
+        "product_name", "version", "formats", "icons", "prepare", "resources", "sign",
+        "url_schemes", "document_types", "output", "platforms",
       ])
       let formats = optional_string_array(values, "formats", "package.formats")
       let icons = rebased_paths(
@@ -154,6 +154,7 @@ fn decode_package(
           required_string(values, "version", "package.version"),
           formats~,
           icons~,
+          prepare=optional_string(values, "prepare", "package.prepare"),
           resources~,
           url_schemes~,
           sign=decode_sign(values, base_dir, "package.sign"),

@@ -233,6 +233,13 @@ platform keys are `macos`, `windows`, and `linux`; platform blocks accept only
 `formats`, `resources`, and `sign`. Explicit command-line options retain the
 highest priority.
 
+Use `package.prepare` when the application must generate package-only resources
+or additional binaries. Proton runs this command once from the project root
+after building the frontend and application executable, then validates and
+packages the declared inputs. The command is not run by `proton_cli build` or
+`proton_cli package --dry-run`; the generic `proton_package` tool never runs
+project commands.
+
 On macOS, `--sign` signs the application and `--notarize` submits, staples, and
 validates distributable artifacts. URL schemes and document types are written
 to the macOS application metadata. Current Windows and Linux packages do not

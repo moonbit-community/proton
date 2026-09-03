@@ -41,6 +41,7 @@ struct PackagePlan {
   release : Bool
   base_dir : String
   frontend_dist : String?
+  prepare : String?
   resources : Array[String]
   sign_binaries : Array[String]
   icons : Array[String]
@@ -275,6 +276,7 @@ async fn build_package_plan(
     release: raw.release,
     base_dir,
     frontend_dist,
+    prepare: package_config.prepare(),
     resources: platform_config.resources,
     sign_binaries: platform_config.sign_binaries,
     icons: if raw.package_args.icons.length() > 0 {
@@ -352,6 +354,7 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
     "  formats: " + plan.formats.map(format => format.to_string()).join(", "),
   )
   println("  output: " + plan.output)
+  println("  prepare: " + plan.prepare.unwrap_or("none"))
   let sign_binaries = if plan.sign_binaries.length() == 0 {
     "none"
   } else {
@@ -379,6 +382,7 @@ async fn execute_package_plan(plan : PackagePlan) -> (Array[String], String) {
   if !@fsutil.path_exists(executable) || !@fsutil.path_is_file(executable) {
     raise @packager.PackagePlanError::MissingExecutable(path=executable)
   }
+  run_package_prepare(plan)
   let document_types = plan.document_types.map(document_type => {
     @packager.DocumentType(
       document_type.name,
@@ -422,6 +426,40 @@ async fn run_package_build(plan : PackagePlan) -> String {
     plan.config_path,
     plan.release,
   )
+}
+
+///|
+async fn run_package_prepare(plan : PackagePlan) -> Unit {
+  match plan.prepare {
+    None => ()
+    Some(command) => {
+      @output.info("Preparing package: " + command)
+      @output.info("Package prepare cwd: " + plan.base_dir)
+      let (program, args) = package_shell_command(command)
+      let code = @process.run(program, args, cwd=plan.base_dir) catch {
+        error =>
+          raise @build.BuildProcessError::Start(
+            command="package.prepare '" + command + "'",
+            detail=@debug.render(Repr(error)),
+          )
+      }
+      if code != 0 {
+        raise @build.BuildProcessError::Exit(
+          command="package.prepare '" + command + "'",
+          code~,
+        )
+      }
+    }
+  }
+}
+
+///|
+fn package_shell_command(command : String) -> (String, Array[String]) {
+  if @path.sep == '\\' {
+    ("cmd", ["/c", command])
+  } else {
+    ("sh", ["-c", command])
+  }
 }
 
 ///|
