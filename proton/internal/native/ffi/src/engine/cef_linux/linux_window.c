@@ -218,6 +218,76 @@ static void proton_engine_on_window_destroy(GtkWidget *widget,
   }
 }
 
+static proton_engine_titlebar_area_t
+proton_engine_window_titlebar_area(
+    proton_engine_window_t *window) {
+  proton_engine_titlebar_area_t area = {
+      .zoom_percent =
+          window != NULL && window->zoom_percent > 0 ? window->zoom_percent
+                                                     : 100,
+  };
+  if (window == NULL || !window->titlebar_overlay || window->window == NULL ||
+      window->browser_host == NULL || window->overlay_controls == NULL) {
+    return area;
+  }
+  GdkWindow *gdk_window = gtk_widget_get_window(window->window);
+  if (gdk_window == NULL ||
+      (gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_FULLSCREEN) != 0) {
+    return area;
+  }
+  int viewport_width = gtk_widget_get_allocated_width(window->browser_host);
+  int viewport_height = gtk_widget_get_allocated_height(window->browser_host);
+  int controls_x = 0;
+  int controls_y = 0;
+  int controls_width =
+      gtk_widget_get_allocated_width(window->overlay_controls);
+  int controls_height =
+      gtk_widget_get_allocated_height(window->overlay_controls);
+  if (viewport_width <= 0 || viewport_height <= 0 || controls_width <= 0 ||
+      controls_height <= 0 ||
+      !gtk_widget_translate_coordinates(window->overlay_controls,
+                                        window->browser_host, 0, 0,
+                                        &controls_x, &controls_y)) {
+    return area;
+  }
+  int left_margin = MAX(0, controls_x);
+  int right_margin =
+      MAX(0, viewport_width - controls_x - controls_width);
+  int left_space = controls_x;
+  int right_space = viewport_width - controls_x - controls_width;
+  if (left_space >= right_space) {
+    area.x = 0;
+    area.width = MAX(0, controls_x - right_margin);
+  } else {
+    area.x = MIN(viewport_width,
+                 controls_x + controls_width + left_margin);
+    area.width = MAX(0, viewport_width - area.x);
+  }
+  area.y = 0;
+  area.height = MIN(
+      viewport_height, MAX(0, controls_y * 2 + controls_height));
+  return area;
+}
+
+int32_t proton_engine_window_get_titlebar_area(
+    proton_engine_window_t *window, int32_t *out_x, int32_t *out_y,
+    int32_t *out_width, int32_t *out_height, int32_t *out_zoom_percent,
+    char *error, size_t error_len) {
+  if (window == NULL || out_x == NULL || out_y == NULL ||
+      out_width == NULL || out_height == NULL || out_zoom_percent == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_engine_titlebar_area_t area =
+      proton_engine_window_titlebar_area(window);
+  *out_x = area.x;
+  *out_y = area.y;
+  *out_width = area.width;
+  *out_height = area.height;
+  *out_zoom_percent = area.zoom_percent;
+  return PROTON_OK;
+}
+
 void proton_engine_sync_browser_bounds(proton_engine_window_t *window) {
   if (window == NULL || proton_engine_window_browser(window) == NULL) {
     return;

@@ -198,6 +198,11 @@ int32_t proton_window_set_content_size(proton_window_handle_t window,
 int32_t proton_window_get_content_size(proton_window_handle_t window,
                                        int32_t *out_width,
                                        int32_t *out_height);
+int32_t proton_window_get_titlebar_area(proton_window_handle_t window,
+                                        int32_t *out_x, int32_t *out_y,
+                                        int32_t *out_width,
+                                        int32_t *out_height,
+                                        int32_t *out_zoom_percent);
 int32_t proton_window_minimize(proton_window_handle_t window);
 int32_t proton_window_maximize(proton_window_handle_t window);
 int32_t proton_window_restore(proton_window_handle_t window);

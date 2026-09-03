@@ -586,6 +586,17 @@ pub extern "C" fn proton_window_get_content_size_ffi(
 ) -> Int = "proton_window_get_content_size"
 
 ///|
+#borrow(out_x, out_y, out_width, out_height, out_zoom_percent)
+pub extern "C" fn proton_window_get_titlebar_area_ffi(
+  window : WindowHandle,
+  out_x : Ref[Int],
+  out_y : Ref[Int],
+  out_width : Ref[Int],
+  out_height : Ref[Int],
+  out_zoom_percent : Ref[Int],
+) -> Int = "proton_window_get_titlebar_area"
+
+///|
 pub extern "C" fn proton_window_minimize_ffi(window : WindowHandle) -> Int = "proton_window_minimize"
 
 ///|

@@ -527,11 +527,12 @@ fn test_extension_capability(
 fn test_build_command_host(
   command_capabilities : Array[AppCommandCapability],
   extension_capabilities : Array[ExtensionCapabilityBinding],
+  titlebar_area_targets? : Array[RendererTarget] = [],
 ) -> CommandHostBuild raise AppRunError {
   let catalog = command_extension_catalog(extension_capabilities) catch {
     error => raise ConfigurationError(error)
   }
-  build_command_host(command_capabilities, catalog)
+  build_command_host(command_capabilities, catalog, titlebar_area_targets~)
 }
 
 ///|
@@ -594,6 +595,30 @@ test "command proxy rejects unsafe JS property names" {
   assert_true(command_proxy_name_is_invalid("@@iterator"))
   assert_false(command_proxy_name_is_invalid("add"))
   assert_false(command_proxy_name_is_invalid("slowAdd"))
+}
+
+///|
+test "titlebar query reserves only the bridge root property" {
+  let nested = test_command_spec("examples/files", "files", ["getTitlebarArea"])
+  let config = unwrap_configuration(() => {
+    bridge_frontend_config_for_extension("examples/files", nested)
+  })
+  assert_eq(config.extensions, [
+    @native.BridgeExtensionConfig("files", apis=["getTitlebarArea"]),
+  ])
+  let root = test_command_spec(
+    "examples/titlebar-conflict",
+    "getTitlebarArea",
+    ["read"],
+  )
+  match
+    expect_configuration_error(() => {
+      bridge_frontend_config_for_extension("examples/titlebar-conflict", root)
+    }) {
+    InvalidJavaScriptNamespace(js_namespace~) =>
+      assert_eq(js_namespace, "getTitlebarArea")
+    error => fail(error.message())
+  }
 }
 
 ///|
@@ -1401,6 +1426,38 @@ test "omitted renderer capabilities are a valid empty policy" {
     [],
   )
   assert_eq(policy.grants.length(), 0)
+}
+
+///|
+test "titlebar area registers only for overlay renderer targets" {
+  let build = unwrap_app_run(() => {
+    test_build_command_host([], [], titlebar_area_targets=[
+      RendererTarget::entry(window="main"),
+    ])
+  })
+  let registered_ops = match build.runtime {
+    Some(runtime) => runtime.host.registered_ops()
+    None => []
+  }
+  assert_eq(registered_ops, ["proton:window/get-titlebar-area"])
+  let policy = resolve_window_permission_policy(
+    "main",
+    BridgePagePolicy::{ entry_origin: None, },
+    build.app_capabilities,
+    [],
+  )
+  assert_eq(policy.grants.length(), 1)
+  assert_eq(policy.grants[0].source_origin, "app")
+  assert_eq(policy.grants[0].ops, ["proton:window/get-titlebar-area"])
+  let native_grants = unwrap_configuration(() => policy.native_grants(Map([])))
+  assert_eq(native_grants, [
+    @native.BridgeGrantConfig("app", ops=["proton:window/get-titlebar-area"], initialization_units=[
+      @native.BridgeInitializationUnit(
+        "proton", "titlebar-area", titlebar_area_bridge_source,
+      ),
+    ]),
+  ])
+  ignore(close_command_host(build.runtime))
 }
 
 ///|

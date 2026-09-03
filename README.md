@@ -134,8 +134,13 @@ focus. Proton follows each platform's accessibility policy by default; use
 `.accessibility(@proton.AccessibilityMode::AlwaysEnabled)` when the tree must
 remain available for the whole runtime, including automation.
 
-Titlebar overlay uses `TitlebarStyle::Overlay` and is implemented on macOS and
-Windows. Interactive controls inside a draggable region must use
+Titlebar overlay uses `TitlebarStyle::Overlay` on macOS, Windows, and Linux.
+Overlay pages can query the current usable area with
+`await window.__MoonBit__.getTitlebarArea()`. It returns an
+`{ x, y, width, height }` object in CSS pixels, or `null` while no overlay area
+is available. Query it when laying out the titlebar and after window resize;
+the application remains responsible for applying the result to its CSS.
+Interactive controls inside a draggable region must use
 `-webkit-app-region: no-drag`. See `examples/48_titlebar_overlay`.
 
 The runnable examples cover the full window API, including context menus,

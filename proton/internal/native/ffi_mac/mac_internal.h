@@ -168,6 +168,8 @@ struct proton_engine_window {
   int max_height;
   double aspect_ratio;
   int zoom_percent;
+  int titlebar_overlay;
+  int window_button_visible;
   proton_window_theme_preference_t theme_preference;
   NSInteger attention_request_id;
   int headless;

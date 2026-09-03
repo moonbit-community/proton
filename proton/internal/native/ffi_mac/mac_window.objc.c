@@ -486,6 +486,93 @@ static void proton_engine_window_update_zoom_button(
   }
 }
 
+static proton_engine_titlebar_area_t
+proton_engine_window_titlebar_area(
+    proton_engine_window_t *window) {
+  proton_engine_titlebar_area_t area = {
+      .zoom_percent =
+          window != NULL && window->zoom_percent > 0 ? window->zoom_percent
+                                                     : 100,
+  };
+  if (window == NULL || !window->titlebar_overlay || window->window == nil ||
+      window->content_view == nil ||
+      (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0) {
+    return area;
+  }
+  NSRect content_bounds = window->content_view.bounds;
+  if (NSWidth(content_bounds) <= 0.0 || NSHeight(content_bounds) <= 0.0) {
+    return area;
+  }
+  const NSWindowButton button_types[] = {
+      NSWindowCloseButton, NSWindowMiniaturizeButton, NSWindowZoomButton};
+  NSRect cluster = NSZeroRect;
+  int found = 0;
+  for (size_t index = 0;
+       index < sizeof(button_types) / sizeof(button_types[0]); index++) {
+    NSButton *button =
+        [window->window standardWindowButton:button_types[index]];
+    if (button == nil || button.superview == nil) {
+      continue;
+    }
+    NSRect rect = [window->content_view convertRect:button.bounds
+                                           fromView:button];
+    if (NSWidth(rect) <= 0.0 || NSHeight(rect) <= 0.0) {
+      continue;
+    }
+    cluster = found ? NSUnionRect(cluster, rect) : rect;
+    found = 1;
+  }
+  if (!found) {
+    return area;
+  }
+  CGFloat content_width = NSWidth(content_bounds);
+  CGFloat content_height = NSHeight(content_bounds);
+  CGFloat left_margin = MAX(0.0, NSMinX(cluster) - NSMinX(content_bounds));
+  CGFloat right_margin =
+      MAX(0.0, NSMaxX(content_bounds) - NSMaxX(cluster));
+  CGFloat safe_left;
+  CGFloat safe_right;
+  if (!window->window_button_visible) {
+    safe_left = NSMinX(content_bounds);
+    safe_right = NSMaxX(content_bounds);
+  } else if (left_margin >= right_margin) {
+    safe_left = NSMinX(content_bounds);
+    safe_right = NSMinX(cluster) - right_margin;
+  } else {
+    safe_left = NSMaxX(cluster) + left_margin;
+    safe_right = NSMaxX(content_bounds);
+  }
+  CGFloat top_margin =
+      MAX(0.0, NSMaxY(content_bounds) - NSMaxY(cluster));
+  CGFloat titlebar_height =
+      MIN(content_height,
+          MAX(0.0, content_height - NSMinY(cluster) + top_margin));
+  area.x = (int)llround(MAX(0.0, safe_left - NSMinX(content_bounds)));
+  area.y = 0;
+  area.width = (int)llround(MAX(0.0, safe_right - safe_left));
+  area.height = (int)llround(titlebar_height);
+  return area;
+}
+
+int32_t proton_engine_window_get_titlebar_area(
+    proton_engine_window_t *window, int32_t *out_x, int32_t *out_y,
+    int32_t *out_width, int32_t *out_height, int32_t *out_zoom_percent,
+    char *error, size_t error_len) {
+  if (window == NULL || out_x == NULL || out_y == NULL ||
+      out_width == NULL || out_height == NULL || out_zoom_percent == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_engine_titlebar_area_t area =
+      proton_engine_window_titlebar_area(window);
+  *out_x = area.x;
+  *out_y = area.y;
+  *out_width = area.width;
+  *out_height = area.height;
+  *out_zoom_percent = area.zoom_percent;
+  return PROTON_OK;
+}
+
 @interface ProtonWindow : NSWindow {
   BOOL proton_focusable;
   BOOL proton_enabled;
@@ -801,6 +888,8 @@ int32_t proton_engine_window_create(
   window->max_width = config.size_hint == 3 ? config.width : 0;
   window->max_height = config.size_hint == 3 ? config.height : 0;
   window->zoom_percent = 100;
+  window->titlebar_overlay = config.titlebar_overlay;
+  window->window_button_visible = 1;
   window->theme_preference = config.theme_preference;
   window->maximizable = 1;
   window->closable = 1;
@@ -1618,6 +1707,7 @@ int32_t proton_engine_window_set_button_visibility(
     NSButton *button = [window->window standardWindowButton:buttons[index]];
     if (button != nil) button.hidden = visible == 0;
   }
+  window->window_button_visible = visible;
   return PROTON_OK;
 }
 

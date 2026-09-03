@@ -20,9 +20,11 @@ let resource : String =
   #|    :root {
   #|      color-scheme: light;
   #|      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-  #|      --titlebar-height: 30px;
-  #|      --leading-controls-reserve: 96px;
-  #|      --caption-controls-reserve: 10px;
+  #|      --fallback-titlebar-height: 30px;
+  #|      --titlebar-x: 0px;
+  #|      --titlebar-y: 0px;
+  #|      --titlebar-width: 100%;
+  #|      --titlebar-height: var(--fallback-titlebar-height);
   #|      --window-background: #fff;
   #|      --titlebar-background: #f8f8fa;
   #|      --titlebar-border: #e1e2e4;
@@ -39,9 +41,6 @@ let resource : String =
   #|    :root.is-windows {
   #|      color-scheme: dark;
   #|      font-family: "Segoe UI", sans-serif;
-  #|      --titlebar-height: 32px;
-  #|      --leading-controls-reserve: 16px;
-  #|      --caption-controls-reserve: 150px;
   #|      --window-background: #181818;
   #|      --titlebar-background: #2b2b2b;
   #|      --titlebar-border: #151515;
@@ -57,9 +56,6 @@ let resource : String =
   #|
   #|    :root.is-linux {
   #|      font-family: Ubuntu, Cantarell, system-ui, sans-serif;
-  #|      --titlebar-height: 40px;
-  #|      --leading-controls-reserve: 16px;
-  #|      --caption-controls-reserve: 122px;
   #|      --titlebar-background: #f6f5f4;
   #|      --titlebar-border: #d6d3d0;
   #|    }
@@ -83,15 +79,23 @@ let resource : String =
   #|
   #|    .titlebar {
   #|      height: var(--titlebar-height);
-  #|      display: flex;
-  #|      align-items: center;
-  #|      gap: 13px;
-  #|      padding: 3px var(--caption-controls-reserve) 3px
-  #|        var(--leading-controls-reserve);
+  #|      position: relative;
   #|      color: var(--chrome-text);
   #|      background: var(--titlebar-background);
   #|      border-bottom: 1px solid var(--titlebar-border);
   #|      user-select: none;
+  #|    }
+  #|
+  #|    .titlebar-content {
+  #|      position: absolute;
+  #|      left: var(--titlebar-x);
+  #|      top: var(--titlebar-y);
+  #|      width: var(--titlebar-width);
+  #|      height: var(--titlebar-height);
+  #|      display: flex;
+  #|      align-items: center;
+  #|      gap: 13px;
+  #|      padding: 3px 12px;
   #|      -webkit-app-region: drag;
   #|    }
   #|
@@ -207,31 +211,55 @@ let resource : String =
   #|</head>
   #|<body>
   #|  <header class="titlebar">
-  #|    <div class="history" aria-label="Navigation controls">
-  #|      <svg viewBox="0 0 20 20"><path d="m13 3-7 7 7 7"/></svg>
-  #|      <svg class="disabled" viewBox="0 0 20 20"><path d="m7 3 7 7-7 7"/></svg>
-  #|    </div>
-  #|    <div class="command">
-  #|      <div class="branch">fix-titlebar</div>
-  #|      <div class="count"><i class="dot"></i>6</div>
-  #|    </div>
-  #|    <div class="actions" aria-label="Window actions">
-  #|      <svg viewBox="0 0 20 20"><path d="M3 4h6v12H3zM11 4h6v5h-6zM11 11h6v5h-6z"/></svg>
-  #|      <span class="divider"></span>
-  #|      <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="7.5" r="2.2"/><path d="M5.8 15.2c.9-2.4 2.3-3.5 4.2-3.5s3.3 1.1 4.2 3.5"/></svg>
-  #|      <svg viewBox="0 0 20 20"><path d="m10 2.5 1.5 2 2.5-.2.7 2.4 2.2 1.2-1 2.3 1 2.3-2.2 1.2-.7 2.4-2.5-.2-1.5 2-1.5-2-2.5.2-.7-2.4-2.2-1.2 1-2.3-1-2.3 2.2-1.2.7-2.4 2.5.2z"/><circle cx="10" cy="10" r="2"/></svg>
+  #|    <div class="titlebar-content">
+  #|      <div class="history" aria-label="Navigation controls">
+  #|        <svg viewBox="0 0 20 20"><path d="m13 3-7 7 7 7"/></svg>
+  #|        <svg class="disabled" viewBox="0 0 20 20"><path d="m7 3 7 7-7 7"/></svg>
+  #|      </div>
+  #|      <div class="command">
+  #|        <div class="branch">fix-titlebar</div>
+  #|        <div class="count"><i class="dot"></i>6</div>
+  #|      </div>
+  #|      <div class="actions" aria-label="Window actions">
+  #|        <svg viewBox="0 0 20 20"><path d="M3 4h6v12H3zM11 4h6v5h-6zM11 11h6v5h-6z"/></svg>
+  #|        <span class="divider"></span>
+  #|        <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="7.5" r="2.2"/><path d="M5.8 15.2c.9-2.4 2.3-3.5 4.2-3.5s3.3 1.1 4.2 3.5"/></svg>
+  #|        <svg viewBox="0 0 20 20"><path d="m10 2.5 1.5 2 2.5-.2.7 2.4 2.2 1.2-1 2.3 1 2.3-2.2 1.2-.7 2.4-2.5-.2-1.5 2-1.5-2-2.5.2-.7-2.4-2.2-1.2 1-2.3-1-2.3 2.2-1.2.7-2.4 2.5.2z"/><circle cx="10" cy="10" r="2"/></svg>
+  #|      </div>
   #|    </div>
   #|  </header>
   #|  <main>
   #|    <div>
   #|      <h1>Native titlebar overlay</h1>
-  #|      <p>Web content extends beneath the native window controls</p>
+  #|      <p id="geometry">Web content extends beneath the native window controls</p>
   #|    </div>
   #|  </main>
   #|  <script>
-  #|    // Assign after DOM creation so CEF emits the initial region update.
+  #|    const root = document.documentElement;
+  #|    const output = document.querySelector('#geometry');
+  #|    const showGeometry = async () => {
+  #|      const area = await window.__MoonBit__.getTitlebarArea();
+  #|      if (!area) {
+  #|        root.style.removeProperty('--titlebar-x');
+  #|        root.style.removeProperty('--titlebar-y');
+  #|        root.style.removeProperty('--titlebar-width');
+  #|        root.style.removeProperty('--titlebar-height');
+  #|        output.textContent = 'Titlebar area is not available';
+  #|        return;
+  #|      }
+  #|      root.style.setProperty('--titlebar-x', `${area.x}px`);
+  #|      root.style.setProperty('--titlebar-y', `${area.y}px`);
+  #|      root.style.setProperty('--titlebar-width', `${area.width}px`);
+  #|      root.style.setProperty('--titlebar-height', `${area.height}px`);
+  #|      output.textContent =
+  #|        `Usable titlebar: ${area.x}, ${area.y}, ${area.width} × ${area.height}`;
+  #|    };
+  #|    showGeometry();
+  #|    window.addEventListener('resize', showGeometry);
+  #|
+  #|    // Assign after DOM creation so CEF emits the initial draggable regions.
   #|    setTimeout(() => {
-  #|      document.querySelector('.titlebar').style.webkitAppRegion = 'drag';
+  #|      document.querySelector('.titlebar-content').style.webkitAppRegion = 'drag';
   #|    }, 0);
   #|  </script>
   #|</body>

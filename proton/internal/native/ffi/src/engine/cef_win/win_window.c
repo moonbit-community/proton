@@ -511,6 +511,84 @@ proton_engine_client_get_permission_handler(cef_client_t *self);
 cef_render_handler_t *CEF_CALLBACK
 proton_engine_client_get_render_handler(cef_client_t *self);
 
+static int proton_engine_window_device_to_dip(HWND hwnd, int value) {
+  UINT dpi = GetDpiForWindow(hwnd);
+  if (dpi == 0) {
+    dpi = USER_DEFAULT_SCREEN_DPI;
+  }
+  return MulDiv(value, USER_DEFAULT_SCREEN_DPI, (int)dpi);
+}
+
+static proton_engine_titlebar_area_t
+proton_engine_window_titlebar_area(
+    proton_engine_window_t *window) {
+  proton_engine_titlebar_area_t area = {
+      .zoom_percent =
+          window != NULL && window->zoom_percent > 0 ? window->zoom_percent
+                                                     : 100,
+  };
+  if (window == NULL || !window->titlebar_overlay || window->hwnd == NULL ||
+      window->fullscreen) {
+    return area;
+  }
+  RECT client = {0};
+  if (!GetClientRect(window->hwnd, &client) || client.right <= client.left ||
+      client.bottom <= client.top) {
+    return area;
+  }
+  RECT controls = {0};
+  if (!proton_engine_overlay_caption_buttons_rect(window->hwnd, &controls)) {
+    UINT dpi = GetDpiForWindow(window->hwnd);
+    if (dpi == 0) {
+      dpi = USER_DEFAULT_SCREEN_DPI;
+    }
+    int button_width = GetSystemMetricsForDpi(SM_CXSIZE, dpi);
+    controls.left = max(client.left, client.right - button_width * 3);
+    controls.top = client.top;
+    controls.right = client.right;
+    controls.bottom = min(
+        client.bottom,
+        client.top + proton_engine_overlay_caption_band_height(window->hwnd));
+  }
+  controls.left = max(client.left, min(client.right, controls.left));
+  controls.right = max(client.left, min(client.right, controls.right));
+  int left_space = controls.left - client.left;
+  int right_space = client.right - controls.right;
+  int safe_left = left_space >= right_space ? client.left : controls.right;
+  int safe_right = left_space >= right_space ? controls.left : client.right;
+  int safe_height = min(
+      client.bottom - client.top,
+      max(controls.bottom - client.top,
+          proton_engine_overlay_caption_band_height(window->hwnd)));
+  area.x = proton_engine_window_device_to_dip(
+      window->hwnd, safe_left - client.left);
+  area.y = 0;
+  area.width = proton_engine_window_device_to_dip(
+      window->hwnd, safe_right - safe_left);
+  area.height =
+      proton_engine_window_device_to_dip(window->hwnd, safe_height);
+  return area;
+}
+
+int32_t proton_engine_window_get_titlebar_area(
+    proton_engine_window_t *window, int32_t *out_x, int32_t *out_y,
+    int32_t *out_width, int32_t *out_height, int32_t *out_zoom_percent,
+    char *error, size_t error_len) {
+  if (window == NULL || out_x == NULL || out_y == NULL ||
+      out_width == NULL || out_height == NULL || out_zoom_percent == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  proton_engine_titlebar_area_t area =
+      proton_engine_window_titlebar_area(window);
+  *out_x = area.x;
+  *out_y = area.y;
+  *out_width = area.width;
+  *out_height = area.height;
+  *out_zoom_percent = area.zoom_percent;
+  return PROTON_OK;
+}
+
 static int32_t proton_engine_window_create_browser(
     proton_engine_window_t *window,
     const char *initial_url,

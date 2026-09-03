@@ -1058,6 +1058,32 @@ int32_t proton_window_get_content_size(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+int32_t proton_window_get_titlebar_area(proton_window_handle_t window,
+                                        int32_t *out_x, int32_t *out_y,
+                                        int32_t *out_width,
+                                        int32_t *out_height,
+                                        int32_t *out_zoom_percent) {
+  if (out_x == NULL || out_y == NULL || out_width == NULL ||
+      out_height == NULL || out_zoom_percent == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "titlebar area outputs are required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "titlebar area requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_get_titlebar_area(
+      slot->engine_window, out_x, out_y, out_width, out_height,
+      out_zoom_percent, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 static int32_t
 proton_window_apply_action(proton_window_handle_t window,
                            const proton_engine_window_action_t *action) {

@@ -28,6 +28,7 @@ pub struct CommandWindow {
   open_file_dialog : async (String?, String?) -> String?
   save_file_dialog : async (String?, String?) -> String?
   choose_directory_dialog : async (String?, String?) -> String?
+  get_titlebar_area : () -> Json raise
 }
 
 ///|
@@ -38,6 +39,7 @@ pub fn CommandWindow::CommandWindow(
   open_file_dialog : async (String?, String?) -> String?,
   save_file_dialog : async (String?, String?) -> String?,
   choose_directory_dialog : async (String?, String?) -> String?,
+  get_titlebar_area? : () -> Json raise = fn() { Json::null() },
 ) -> CommandWindow {
   {
     show_message_dialog,
@@ -45,6 +47,7 @@ pub fn CommandWindow::CommandWindow(
     open_file_dialog,
     save_file_dialog,
     choose_directory_dialog,
+    get_titlebar_area,
   }
 }
 
@@ -93,6 +96,12 @@ pub async fn CommandWindow::choose_directory(
   path : String?,
 ) -> String? {
   (self.choose_directory_dialog)(title, path)
+}
+
+///|
+#doc(hidden)
+pub fn CommandWindow::titlebar_area(self : CommandWindow) -> Json raise {
+  (self.get_titlebar_area)()
 }
 
 ///|
