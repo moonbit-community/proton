@@ -153,7 +153,7 @@ independent `set_zoom_percent` and `zoom_percent` controls for their own browser
 
 ## Logging
 
-Use `tonyfettes/xlog@0.4.1` directly for application logs. Proton configures the
+Use `tonyfettes/xlog@0.4.2` directly for application logs. Proton configures the
 global logger before native runtime creation. Packaged applications write to
 their platform log directory; direct launches and `proton_cli dev` use stderr.
 `MOON_XLOG` controls filtering and `PROTON_LOG_OUTPUT` selects `file` or
