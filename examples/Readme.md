@@ -140,6 +140,9 @@ moon -C examples run 01_run --target native
 - `75_app_protocol_process`: manual Electron-style default protocol client,
   immediate exit-code, and scheduled relaunch review with explicit system
   mutation controls.
+- `76_process_extension`: renderer-facing child-process review covering spawn,
+  PID reporting, natural exit and wait, explicit kill followed by wait, and
+  process activity events.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only
