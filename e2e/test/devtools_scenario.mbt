@@ -78,8 +78,8 @@ async fn wait_for_devtools_targets(
     match (host, devtools) {
       (Some(host), Some(devtools)) => return (host, devtools)
       _ => {
-        @async.sleep(cdp_start_poll_timeout_ms)
-        elapsed = elapsed + cdp_start_poll_timeout_ms
+        @async.sleep(cdp_discovery_poll_timeout_ms)
+        elapsed = elapsed + cdp_discovery_poll_timeout_ms
       }
     }
   }

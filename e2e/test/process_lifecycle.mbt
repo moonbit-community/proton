@@ -345,7 +345,7 @@ async fn wait_for_cdp_endpoint_stop(endpoint : String, timeout : Int) -> Unit {
       ignore(
         @client.wait_for_browser_endpoint(
           endpoint,
-          timeout_ms=cdp_start_poll_timeout_ms,
+          timeout_ms=cdp_discovery_poll_timeout_ms,
         ),
       )
       true
@@ -355,7 +355,7 @@ async fn wait_for_cdp_endpoint_stop(endpoint : String, timeout : Int) -> Unit {
     if !running {
       return
     }
-    elapsed = elapsed + cdp_start_poll_timeout_ms
+    elapsed = elapsed + cdp_discovery_poll_timeout_ms
   }
   fail("CDP endpoint did not stop: " + endpoint)
 }
@@ -496,46 +496,65 @@ async fn connect_spawned_page(
   timeout : Int,
   title? : String,
 ) -> @page.Page {
-  let mut elapsed = 0
-  while elapsed <= timeout {
+  let deadline = @async.now() + timeout.to_int64()
+  let mut last_error : String? = None
+  while @async.now() <= deadline {
     match app_exit_code(app.process) {
       Some(code) =>
         fail(
-          "scenario app exited before a page target was ready: code=" +
+          "scenario app exited before the page connection: code=" +
           code.to_string() +
-          app_output_suffix(app.output_path),
+          app_diagnostic_suffix(app),
         )
       None => ()
     }
-    let page = Some(
-      run_e2e_operation_with_timeout(
-        cdp_start_poll_timeout_ms,
-        "CDP page connection probe",
-        () => {
-          @page.Page::connect(
-            tasks,
-            cdp_target_from(target),
-            title?,
-            timeout_ms=cdp_start_poll_timeout_ms,
-          )
-        },
-      ),
-    ) catch {
-      _ => None
-    }
-    match page {
-      Some(page) => return page
-      None => {
-        @async.sleep(100)
-        elapsed = elapsed + 100
+    let targets = discover_targets_for_poll(cdp_target_from(target))
+    let mut web_socket_url : String? = None
+    for info in targets {
+      if info.target_type == "page" &&
+        (title is None || title == Some(info.title)) {
+        match info.web_socket_debugger_url {
+          Some(url) => {
+            web_socket_url = Some(url)
+            break
+          }
+          None => ()
+        }
       }
     }
+    match web_socket_url {
+      Some(web_socket_url) => {
+        let page = Some(
+          @page.Page::connect_web_socket(
+            tasks,
+            web_socket_url,
+            timeout_ms=timeout,
+          ),
+        ) catch {
+          error => {
+            last_error = Some(error.to_string())
+            None
+          }
+        }
+        match page {
+          Some(page) => return page
+          None => ()
+        }
+      }
+      None => ()
+    }
+    @async.sleep(100)
+  }
+  let error_suffix = match last_error {
+    Some(error) => "\nLast CDP connection error: " + error
+    None => ""
   }
   fail(
-    "CDP page target did not become ready within " +
+    "CDP page target did not become connectable within " +
     timeout.to_string() +
     "ms" +
-    app_output_suffix(app.output_path),
+    error_suffix +
+    app_diagnostic_suffix(app),
   )
 }
 

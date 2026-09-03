@@ -383,12 +383,12 @@ async fn wait_for_spawned_app_cdp(
     }
     let browser_web_socket_url = Some(
       run_e2e_operation_with_timeout(
-        cdp_start_poll_timeout_ms,
+        cdp_discovery_poll_timeout_ms,
         "CDP browser endpoint probe",
         () => {
           @client.wait_for_browser_endpoint(
             endpoint,
-            timeout_ms=cdp_start_poll_timeout_ms,
+            timeout_ms=cdp_discovery_poll_timeout_ms,
           )
         },
       ),
@@ -406,7 +406,7 @@ async fn wait_for_spawned_app_cdp(
         @async.sleep(100)
         elapsed = elapsed + 100
       }
-      None => elapsed = elapsed + cdp_start_poll_timeout_ms
+      None => elapsed = elapsed + cdp_discovery_poll_timeout_ms
     }
   }
   if browser_ready {
@@ -512,8 +512,8 @@ async fn wait_for_page_target_closed(
     if !targets.any(info => info.target_id == target_id) {
       return
     }
-    @async.sleep(cdp_start_poll_timeout_ms)
-    elapsed = elapsed + cdp_start_poll_timeout_ms
+    @async.sleep(cdp_discovery_poll_timeout_ms)
+    elapsed = elapsed + cdp_discovery_poll_timeout_ms
   }
   fail(
     "CDP page target did not close within " +

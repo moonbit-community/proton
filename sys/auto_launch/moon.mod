@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_auto_launch"
 
-version = "0.2.6"
+version = "0.2.7"
 
 readme = "README.md"
 
