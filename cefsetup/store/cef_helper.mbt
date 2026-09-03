@@ -42,14 +42,32 @@ async fn default_helper_paths() -> (String, String, String) {
 }
 
 ///|
-fn helper_moon_environment() -> Map[String, String] {
-  let environment = @env.get_env_vars()
+async fn helper_moon_environment() -> Map[String, String] noraise {
+  let macos = is_macos_host() catch { _ => false }
+  helper_moon_environment_for(
+    @env.get_env_vars(),
+    windows=@path.sep == '\\',
+    macos~,
+    configured_cc=@env.get_env_var("MOON_CC"),
+  )
+}
+
+///|
+fn helper_moon_environment_for(
+  environment : Map[String, String],
+  windows~ : Bool,
+  macos~ : Bool,
+  configured_cc~ : String?,
+) -> Map[String, String] {
   environment["PROTON_CEF_SETUP_BOOTSTRAP"] = "0"
-  if @path.sep != '\\' {
-    environment["MOON_CC"] = match @env.get_env_var("MOON_CC") {
+  if !windows {
+    environment["MOON_CC"] = match configured_cc {
       Some(value) if value.trim() != "" => value
       _ => "cc"
     }
+  }
+  if macos {
+    environment["MACOSX_DEPLOYMENT_TARGET"] = "12.0"
   }
   environment
 }
@@ -137,7 +155,16 @@ test "helper cache identity includes platform and Proton version" {
 ///|
 test "helper build uses the normal Proton native link configuration" {
   assert_eq(
-    helper_moon_environment().get("PROTON_CEF_SETUP_BOOTSTRAP"),
-    Some("0"),
+    helper_moon_environment_for(
+      {},
+      windows=false,
+      macos=true,
+      configured_cc=None,
+    ),
+    {
+      "MACOSX_DEPLOYMENT_TARGET": "12.0",
+      "MOON_CC": "cc",
+      "PROTON_CEF_SETUP_BOOTSTRAP": "0",
+    },
   )
 }
