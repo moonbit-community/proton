@@ -12,6 +12,7 @@ import {
 
 const moduleRoot = path.dirname(fileURLToPath(import.meta.url));
 const ffiRoot = path.join(moduleRoot, "internal", "native", "ffi");
+const macosDeploymentTarget = "12.0";
 
 function readPayloadEnv() {
   const raw = fs.readFileSync(0, "utf8").trim();
@@ -75,14 +76,21 @@ function platformConfig(cefRoot) {
     `-I${quote(cefRoot)}`,
   );
   if (process.platform === "darwin") {
+    const deploymentFlag = `-mmacosx-version-min=${macosDeploymentTarget}`;
     return {
-      stubFlags: commonStubFlags,
-      macObjcFlags: appendFlags("-ObjC -fblocks", commonStubFlags),
+      stubFlags: appendFlags(deploymentFlag, commonStubFlags),
+      macObjcFlags: appendFlags(
+        deploymentFlag,
+        "-ObjC -fblocks",
+        commonStubFlags,
+      ),
       loaderFlags: appendFlags(
+        deploymentFlag,
         "-ObjC++ -std=c++17 -DWRAPPING_CEF_SHARED=1",
         `-I${quote(cefRoot)}`,
       ),
       linkFlags: [
+        deploymentFlag,
         "-framework Cocoa",
         "-framework AppKit",
         "-framework Foundation",

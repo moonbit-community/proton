@@ -274,6 +274,7 @@ async fn project_build_invocation(
 ///|
 fn native_moon_process_env_for(
   windows : Bool,
+  macos : Bool,
   configured_cc : String?,
 ) -> Map[String, String] {
   let env : Map[String, String] = Map([])
@@ -286,13 +287,25 @@ fn native_moon_process_env_for(
       _ => "cc"
     }
   }
+  if macos {
+    env["MACOSX_DEPLOYMENT_TARGET"] = "12.0"
+  }
   env
 }
 
 ///|
 /// Returns the environment required for a Proton native Moon command.
-pub fn native_moon_process_env() -> Map[String, String] {
-  native_moon_process_env_for(@path.sep == '\\', @env.get_env_var("MOON_CC"))
+pub async fn native_moon_process_env() -> Map[String, String] noraise {
+  let macos = @fsutil.path_exists(
+    "/System/Library/CoreServices/SystemVersion.plist",
+  ) catch {
+    _ => false
+  }
+  native_moon_process_env_for(
+    @path.sep == '\\',
+    macos,
+    @env.get_env_var("MOON_CC"),
+  )
 }
 
 ///|

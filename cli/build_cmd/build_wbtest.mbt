@@ -134,14 +134,24 @@ test "moon build-only output rejects missing or ambiguous artifacts" {
 
 ///|
 test "native Moon commands select a source-built runtime on Unix" {
-  @debug.assert_eq(native_moon_process_env_for(false, None), { "MOON_CC": "cc" })
-  @debug.assert_eq(native_moon_process_env_for(false, Some("gcc")), {
+  @debug.assert_eq(native_moon_process_env_for(false, false, None), {
+    "MOON_CC": "cc",
+  })
+  @debug.assert_eq(native_moon_process_env_for(false, false, Some("gcc")), {
     "MOON_CC": "gcc",
   })
-  @debug.assert_eq(native_moon_process_env_for(false, Some("clang")), {
+  @debug.assert_eq(native_moon_process_env_for(false, false, Some("clang")), {
     "MOON_CC": "clang",
   })
-  @debug.assert_eq(native_moon_process_env_for(true, None), Map([]))
+  @debug.assert_eq(native_moon_process_env_for(true, false, None), Map([]))
+}
+
+///|
+test "native Moon commands target macOS 12" {
+  @debug.assert_eq(native_moon_process_env_for(false, true, None), {
+    "MACOSX_DEPLOYMENT_TARGET": "12.0",
+    "MOON_CC": "cc",
+  })
 }
 
 ///|
