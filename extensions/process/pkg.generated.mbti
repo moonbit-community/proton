@@ -1,0 +1,30 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_ext/process"
+
+import {
+  "moonbit-community/proton/command",
+  "moonbit-community/proton/extension",
+  "moonbit-community/proton_contract",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn capability() -> @extension.RendererCapability
+
+pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
+
+// Errors
+type ProcessExtensionError derive(Eq, @debug.Debug)
+pub fn ProcessExtensionError::equal(Self, Self) -> Bool
+pub fn ProcessExtensionError::not_equal(Self, Self) -> Bool
+pub fn ProcessExtensionError::output(Self, &Logger) -> Unit
+pub fn ProcessExtensionError::to_repr(Self) -> @debug.Repr
+pub fn ProcessExtensionError::to_string(Self) -> String
+
+// Types and methods
+
+// Type aliases
+
+// Traits
