@@ -390,6 +390,51 @@ pub async fn run_devtools() -> Unit {
 }
 
 ///|
+pub async fn run_windowed_close() -> Unit {
+  @proton.html(
+    "Proton Windowed Close",
+    "<h1>Windowed close lifecycle</h1>",
+    width=640,
+    height=480,
+  )
+  .window_lifecycle(
+    on_ready=context => {
+      let handle = context.handle()
+      ignore(
+        context
+        .task_group()
+        .spawn(
+          () => {
+            let mut attempts = 0
+            while !handle.is_visible() && attempts < 100 {
+              @async.sleep(10)
+              attempts = attempts + 1
+            }
+            guard handle.is_visible() else {
+              abort("window did not become visible before close")
+            }
+            handle.focus()
+            attempts = 0
+            while !handle.is_focused() && attempts < 100 {
+              @async.sleep(10)
+              attempts = attempts + 1
+            }
+            guard handle.is_focused() else {
+              abort("window did not become focused before close")
+            }
+            handle.close()
+          },
+          no_wait=true,
+        ),
+      )
+    },
+    on_close=fn(_) { () },
+  )
+  .identifier("dev.proton.e2e-fixtures")
+  .run_or_abort()
+}
+
+///|
 let i18n_resource : String =
   #|<!doctype html>
   #|<html><head><meta charset="utf-8"><title>Proton I18n E2E</title></head>
