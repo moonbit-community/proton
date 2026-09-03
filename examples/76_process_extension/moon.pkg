@@ -1,0 +1,17 @@
+import {
+  "moonbitlang/async",
+  "moonbit-community/proton_ext/process",
+  "moonbit-community/proton",
+}
+
+supported_targets = "native"
+
+dev_build(rule: "embed", input: "app.html", output: "app.mbt")
+
+formatter(ignore: [ "app.mbt" ])
+
+pkgtype(kind: "executable")
+
+options(
+  targets: { "main.mbt": [ "native" ] },
+)

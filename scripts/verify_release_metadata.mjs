@@ -92,7 +92,6 @@ const workspaceModuleManifests = [
   "sys/keepawake/moon.mod",
   "sys/microphone/moon.mod",
   "sys/power_monitor/moon.mod",
-  "sys/process/moon.mod",
   "sys/screen_monitor/moon.mod",
   "sys/shell/moon.mod",
   "sys/tray/moon.mod",

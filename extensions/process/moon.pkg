@@ -1,6 +1,8 @@
 import {
+  "moonbitlang/async",
+  "moonbitlang/async/process" @async_process,
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
-  "moonbit-community/proton_process" @sys_process,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",
@@ -12,5 +14,9 @@ supported_targets = "native"
 formatter(ignore: [ "extension.g.mbt" ])
 
 options(
-  targets: { "extension.g.mbt": [ "native" ], "extension.mbt": [ "native" ] },
+  targets: {
+    "extension.g.mbt": [ "native" ],
+    "extension.mbt": [ "native" ],
+    "extension_wbtest.mbt": [ "native" ],
+  },
 )

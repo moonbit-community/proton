@@ -9,10 +9,25 @@ let kill_command = @process_contract.kill
 
 ///|
 /// Active child processes keyed by an incrementing integer id.
-let processes : Ref[Map[Int, @sys_process.Process]] = Ref(Map([]))
+let processes : Ref[Map[Int, @async_process.Process]] = Ref(Map([]))
 
 ///|
 let next_process_id : Ref[Int] = Ref(1)
+
+///|
+async fn[X] spawn_process(
+  group : @async.TaskGroup[X],
+  request : @process_contract.SpawnRequest,
+) -> @async_process.Process {
+  @async_process.spawn(
+    group,
+    request.command,
+    request.args,
+    cwd?=request.cwd.map(cwd => cwd[:]),
+    cancel_handler=@async_process.hard_cancel(),
+    no_wait=true,
+  )
+}
 
 ///|
 /// Spawns a child process and registers it in the process map.
@@ -21,17 +36,13 @@ async fn spawn(
   context : @proton.CommandContext,
   request : @process_contract.SpawnRequest,
 ) -> @process_contract.SpawnReply {
-  let process = @sys_process.Process::spawn(
-    request.command,
-    args=request.args,
-    cwd=request.cwd,
-  ) catch {
-    error => raise SpawnFailed(detail=error.to_string())
+  let process = spawn_process(context.task_group(), request) catch {
+    error => raise SpawnFailed(detail=@debug.render(Repr(error)))
   }
   let id = next_process_id.val
   next_process_id.val = id + 1
   processes.val[id] = process
-  let pid = process.pid()
+  let pid = process.pid
   context.emit(@process_contract.activity, @process_contract.ProcessActivity::{
     operation: "spawn",
     process_id: id,
@@ -48,10 +59,9 @@ async fn wait(
 ) -> @process_contract.WaitReply {
   let process = lookup_process(request.process_id)
   let exit_code = process.wait() catch {
-    error => raise WaitFailed(detail=error.to_string())
+    error => raise WaitFailed(detail=@debug.render(Repr(error)))
   }
   processes.val.remove(request.process_id)
-  process.close()
   context.emit(@process_contract.activity, @process_contract.ProcessActivity::{
     operation: "wait",
     process_id: request.process_id,
@@ -67,8 +77,9 @@ async fn kill(
   request : @process_contract.KillRequest,
 ) -> @process_contract.KillReply {
   let process = lookup_process(request.process_id)
-  process.kill() catch {
-    error => raise KillFailed(detail=error.to_string())
+  let @async_process.CancellationHandler(kill_process) = @async_process.hard_cancel()
+  kill_process(process.pid) catch {
+    error => raise KillFailed(detail=@debug.render(Repr(error)))
   }
   context.emit(@process_contract.activity, @process_contract.ProcessActivity::{
     operation: "kill",
@@ -80,7 +91,7 @@ async fn kill(
 ///|
 fn lookup_process(
   process_id : Int,
-) -> @sys_process.Process raise ProcessExtensionError {
+) -> @async_process.Process raise ProcessExtensionError {
   match processes.val.get(process_id) {
     Some(process) => process
     None => raise UnknownProcess(process_id~)
@@ -90,7 +101,7 @@ fn lookup_process(
 ///|
 fn cleanup_processes() -> Unit {
   for _id, process in processes.val {
-    process.close()
+    process.cancel()
   }
   processes.val.clear()
 }
