@@ -12,5 +12,8 @@ supported_targets = "native"
 options(
   "is-main": false,
   "native-stub": [ "logging_io.c" ],
+  link: {
+    "native": { "stub-cc-flags": "${build.PROTON_DEPLOYMENT_TARGET_CC_FLAGS}" },
+  },
   targets: { "logging.mbt": [ "native" ], "logging_wbtest.mbt": [ "native" ] },
 )
