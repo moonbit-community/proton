@@ -321,6 +321,14 @@ jobs:
               --diagnostic-limit 200 -- --self-hosted
           fi
 
+      - name: Run macOS windowed close e2e
+        if: ${{ matrix.os == 'macos-latest' }}
+        timeout-minutes: 5
+        env:
+          PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
+          MOON_CC: cc
+        run: moon -C e2e run test --target native --diagnostic-limit 200 -- --windowed-close
+
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}
         run: find ./_build -type f -perm -111 | xargs ls -lh

@@ -442,18 +442,21 @@ static void proton_engine_window_commit_appkit_close(
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 
   // A windowed CEF browser completes close only after CefBrowserHostView is
-  // destroyed. Detach and release the host view explicitly so its dealloc can
-  // deliver WindowDestroyed; replacing the parent content view alone leaves
-  // the browser partially closed.
+  // destroyed. AppKit may still route responder and hierarchy callbacks to
+  // the browser view during windowWillClose, so detach it from both before
+  // dropping the retain that lets its dealloc deliver WindowDestroyed.
+  [native_window makeFirstResponder:nil];
   if (browser_view != nil) {
     [browser_view removeFromSuperview];
-    [browser_view release];
   }
   window->browser_view = nil;
   [native_window setDelegate:nil];
   NSView *empty_content_view = [[NSView alloc] initWithFrame:NSZeroRect];
   [native_window setContentView:empty_content_view];
   [empty_content_view release];
+  if (browser_view != nil) {
+    [browser_view release];
+  }
   [native_window autorelease];
 }
 
@@ -627,9 +630,6 @@ static void proton_engine_window_update_zoom_button(
     proton_browser_lifecycle_request_close(window->browser_lifecycle, 0);
   }
   host->base.release((cef_base_ref_counted_t *)host);
-  if (allow_close) {
-    proton_engine_window_commit_appkit_close(window, native_window);
-  }
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return allow_close ? YES : NO;
 }

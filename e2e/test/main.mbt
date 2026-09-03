@@ -4,6 +4,11 @@ async fn main {
     run_scenario_app_child()
     return
   }
+  if @env.args().contains("--windowed-close") {
+    run_windowed_close_probe(repository_root(), timeout_ms())
+    println("Windowed-close Proton E2E passed")
+    return
+  }
   if @env.args().contains("--self-hosted") {
     run_self_hosted_scenarios()
     println("Self-hosted Proton E2E passed")
