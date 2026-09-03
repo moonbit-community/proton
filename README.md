@@ -134,9 +134,16 @@ focus. Proton follows each platform's accessibility policy by default; use
 `.accessibility(@proton.AccessibilityMode::AlwaysEnabled)` when the tree must
 remain available for the whole runtime, including automation.
 
-Titlebar overlay uses `TitlebarStyle::Overlay` and is implemented on macOS and
-Windows. Interactive controls inside a draggable region must use
-`-webkit-app-region: no-drag`. See `examples/48_titlebar_overlay`.
+Titlebar overlay uses `TitlebarStyle::Overlay` on macOS, Windows, and Linux.
+Overlay pages can read the live usable area through
+`navigator.windowControlsOverlay`, including `visible`,
+`getTitlebarAreaRect()`, and the `geometrychange` event. The same geometry is
+available to CSS as `--proton-titlebar-area-x`,
+`--proton-titlebar-area-y`, `--proton-titlebar-area-width`, and
+`--proton-titlebar-area-height`. CEF does not expose Chromium's embedder hook
+for the standard `env(titlebar-area-*)` variables. Interactive controls inside
+a draggable region must use `-webkit-app-region: no-drag`. See
+`examples/48_titlebar_overlay`.
 
 The runnable examples cover the full window API, including context menus,
 progress, attention, resizing, content protection, and minimize/maximize

@@ -16,9 +16,7 @@
     :root {
       color-scheme: light;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-      --titlebar-height: 30px;
-      --leading-controls-reserve: 96px;
-      --caption-controls-reserve: 10px;
+      --fallback-titlebar-height: 30px;
       --window-background: #fff;
       --titlebar-background: #f8f8fa;
       --titlebar-border: #e1e2e4;
@@ -35,9 +33,6 @@
     :root.is-windows {
       color-scheme: dark;
       font-family: "Segoe UI", sans-serif;
-      --titlebar-height: 32px;
-      --leading-controls-reserve: 16px;
-      --caption-controls-reserve: 150px;
       --window-background: #181818;
       --titlebar-background: #2b2b2b;
       --titlebar-border: #151515;
@@ -53,9 +48,6 @@
 
     :root.is-linux {
       font-family: Ubuntu, Cantarell, system-ui, sans-serif;
-      --titlebar-height: 40px;
-      --leading-controls-reserve: 16px;
-      --caption-controls-reserve: 122px;
       --titlebar-background: #f6f5f4;
       --titlebar-border: #d6d3d0;
     }
@@ -78,16 +70,30 @@
     }
 
     .titlebar {
-      height: var(--titlebar-height);
-      display: flex;
-      align-items: center;
-      gap: 13px;
-      padding: 3px var(--caption-controls-reserve) 3px
-        var(--leading-controls-reserve);
+      height: var(
+        --proton-titlebar-area-height,
+        var(--fallback-titlebar-height)
+      );
+      position: relative;
       color: var(--chrome-text);
       background: var(--titlebar-background);
       border-bottom: 1px solid var(--titlebar-border);
       user-select: none;
+    }
+
+    .titlebar-content {
+      position: absolute;
+      left: var(--proton-titlebar-area-x, 0px);
+      top: var(--proton-titlebar-area-y, 0px);
+      width: var(--proton-titlebar-area-width, 100%);
+      height: var(
+        --proton-titlebar-area-height,
+        var(--fallback-titlebar-height)
+      );
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 3px 12px;
       -webkit-app-region: drag;
     }
 
@@ -180,7 +186,12 @@
     }
 
     main {
-      height: calc(100% - var(--titlebar-height));
+      height: calc(
+        100% - var(
+          --proton-titlebar-area-height,
+          var(--fallback-titlebar-height)
+        )
+      );
       display: grid;
       place-items: center;
       padding: 48px 32px 64px;
@@ -203,31 +214,44 @@
 </head>
 <body>
   <header class="titlebar">
-    <div class="history" aria-label="Navigation controls">
-      <svg viewBox="0 0 20 20"><path d="m13 3-7 7 7 7"/></svg>
-      <svg class="disabled" viewBox="0 0 20 20"><path d="m7 3 7 7-7 7"/></svg>
-    </div>
-    <div class="command">
-      <div class="branch">fix-titlebar</div>
-      <div class="count"><i class="dot"></i>6</div>
-    </div>
-    <div class="actions" aria-label="Window actions">
-      <svg viewBox="0 0 20 20"><path d="M3 4h6v12H3zM11 4h6v5h-6zM11 11h6v5h-6z"/></svg>
-      <span class="divider"></span>
-      <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="7.5" r="2.2"/><path d="M5.8 15.2c.9-2.4 2.3-3.5 4.2-3.5s3.3 1.1 4.2 3.5"/></svg>
-      <svg viewBox="0 0 20 20"><path d="m10 2.5 1.5 2 2.5-.2.7 2.4 2.2 1.2-1 2.3 1 2.3-2.2 1.2-.7 2.4-2.5-.2-1.5 2-1.5-2-2.5.2-.7-2.4-2.2-1.2 1-2.3-1-2.3 2.2-1.2.7-2.4 2.5.2z"/><circle cx="10" cy="10" r="2"/></svg>
+    <div class="titlebar-content">
+      <div class="history" aria-label="Navigation controls">
+        <svg viewBox="0 0 20 20"><path d="m13 3-7 7 7 7"/></svg>
+        <svg class="disabled" viewBox="0 0 20 20"><path d="m7 3 7 7-7 7"/></svg>
+      </div>
+      <div class="command">
+        <div class="branch">fix-titlebar</div>
+        <div class="count"><i class="dot"></i>6</div>
+      </div>
+      <div class="actions" aria-label="Window actions">
+        <svg viewBox="0 0 20 20"><path d="M3 4h6v12H3zM11 4h6v5h-6zM11 11h6v5h-6z"/></svg>
+        <span class="divider"></span>
+        <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><circle cx="10" cy="7.5" r="2.2"/><path d="M5.8 15.2c.9-2.4 2.3-3.5 4.2-3.5s3.3 1.1 4.2 3.5"/></svg>
+        <svg viewBox="0 0 20 20"><path d="m10 2.5 1.5 2 2.5-.2.7 2.4 2.2 1.2-1 2.3 1 2.3-2.2 1.2-.7 2.4-2.5-.2-1.5 2-1.5-2-2.5.2-.7-2.4-2.2-1.2 1-2.3-1-2.3 2.2-1.2.7-2.4 2.5.2z"/><circle cx="10" cy="10" r="2"/></svg>
+      </div>
     </div>
   </header>
   <main>
     <div>
       <h1>Native titlebar overlay</h1>
-      <p>Web content extends beneath the native window controls</p>
+      <p id="geometry">Web content extends beneath the native window controls</p>
     </div>
   </main>
   <script>
-    // Assign after DOM creation so CEF emits the initial region update.
+    const overlay = navigator.windowControlsOverlay;
+    const output = document.querySelector('#geometry');
+    const showGeometry = () => {
+      const { x, y, width, height } = overlay.getTitlebarAreaRect();
+      output.textContent = overlay.visible
+        ? `Usable titlebar: ${x}, ${y}, ${width} × ${height}`
+        : 'Window controls overlay is not visible';
+    };
+    overlay.addEventListener('geometrychange', showGeometry);
+    showGeometry();
+
+    // Assign after DOM creation so CEF emits the initial draggable regions.
     setTimeout(() => {
-      document.querySelector('.titlebar').style.webkitAppRegion = 'drag';
+      document.querySelector('.titlebar-content').style.webkitAppRegion = 'drag';
     }, 0);
   </script>
 </body>

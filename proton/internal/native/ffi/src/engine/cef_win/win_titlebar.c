@@ -138,7 +138,7 @@ int proton_engine_overlay_frame_top_thickness(HWND hwnd) {
          GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
 }
 
-static int proton_engine_overlay_caption_band_height(HWND hwnd) {
+int proton_engine_overlay_caption_band_height(HWND hwnd) {
   UINT dpi = GetDpiForWindow(hwnd);
   if (dpi == 0) {
     dpi = USER_DEFAULT_SCREEN_DPI;
@@ -147,7 +147,7 @@ static int proton_engine_overlay_caption_band_height(HWND hwnd) {
          GetSystemMetricsForDpi(SM_CYCAPTION, dpi);
 }
 
-static int proton_engine_overlay_caption_buttons_rect(HWND hwnd, RECT *out) {
+int proton_engine_overlay_caption_buttons_rect(HWND hwnd, RECT *out) {
   if (hwnd == NULL || out == NULL) {
     return 0;
   }
@@ -372,6 +372,7 @@ void proton_engine_resize_browser(proton_engine_window_t *window,
     }
   }
   host->base.release((cef_base_ref_counted_t *)host);
+  proton_engine_window_update_controls_overlay(window);
 }
 
 LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam) {

@@ -511,6 +511,95 @@ proton_engine_client_get_permission_handler(cef_client_t *self);
 cef_render_handler_t *CEF_CALLBACK
 proton_engine_client_get_render_handler(cef_client_t *self);
 
+static int proton_engine_window_controls_overlay_geometry_equal(
+    const proton_engine_window_controls_overlay_geometry_t *left,
+    const proton_engine_window_controls_overlay_geometry_t *right) {
+  return left->visible == right->visible && left->x == right->x &&
+         left->y == right->y && left->width == right->width &&
+         left->height == right->height &&
+         left->zoom_percent == right->zoom_percent;
+}
+
+static int proton_engine_window_device_to_dip(HWND hwnd, int value) {
+  UINT dpi = GetDpiForWindow(hwnd);
+  if (dpi == 0) {
+    dpi = USER_DEFAULT_SCREEN_DPI;
+  }
+  return MulDiv(value, USER_DEFAULT_SCREEN_DPI, (int)dpi);
+}
+
+static proton_engine_window_controls_overlay_geometry_t
+proton_engine_window_controls_overlay_geometry(
+    proton_engine_window_t *window) {
+  proton_engine_window_controls_overlay_geometry_t geometry = {
+      .zoom_percent =
+          window != NULL && window->zoom_percent > 0 ? window->zoom_percent
+                                                     : 100,
+  };
+  if (window == NULL || !window->titlebar_overlay || window->hwnd == NULL ||
+      window->fullscreen) {
+    return geometry;
+  }
+  RECT client = {0};
+  if (!GetClientRect(window->hwnd, &client) || client.right <= client.left ||
+      client.bottom <= client.top) {
+    return geometry;
+  }
+  RECT controls = {0};
+  if (!proton_engine_overlay_caption_buttons_rect(window->hwnd, &controls)) {
+    UINT dpi = GetDpiForWindow(window->hwnd);
+    if (dpi == 0) {
+      dpi = USER_DEFAULT_SCREEN_DPI;
+    }
+    int button_width = GetSystemMetricsForDpi(SM_CXSIZE, dpi);
+    controls.left = max(client.left, client.right - button_width * 3);
+    controls.top = client.top;
+    controls.right = client.right;
+    controls.bottom = min(
+        client.bottom,
+        client.top + proton_engine_overlay_caption_band_height(window->hwnd));
+  }
+  controls.left = max(client.left, min(client.right, controls.left));
+  controls.right = max(client.left, min(client.right, controls.right));
+  int left_space = controls.left - client.left;
+  int right_space = client.right - controls.right;
+  int safe_left = left_space >= right_space ? client.left : controls.right;
+  int safe_right = left_space >= right_space ? controls.left : client.right;
+  int safe_height = min(
+      client.bottom - client.top,
+      max(controls.bottom - client.top,
+          proton_engine_overlay_caption_band_height(window->hwnd)));
+  geometry.visible = safe_right > safe_left && safe_height > 0;
+  geometry.x = proton_engine_window_device_to_dip(
+      window->hwnd, safe_left - client.left);
+  geometry.y = 0;
+  geometry.width = proton_engine_window_device_to_dip(
+      window->hwnd, safe_right - safe_left);
+  geometry.height =
+      proton_engine_window_device_to_dip(window->hwnd, safe_height);
+  return geometry;
+}
+
+void proton_engine_window_update_controls_overlay(
+    proton_engine_window_t *window) {
+  if (window == NULL || !window->titlebar_overlay) {
+    return;
+  }
+  proton_engine_window_controls_overlay_geometry_t geometry =
+      proton_engine_window_controls_overlay_geometry(window);
+  if (window->window_controls_overlay_geometry_initialized &&
+      proton_engine_window_controls_overlay_geometry_equal(
+          &window->window_controls_overlay_geometry, &geometry)) {
+    return;
+  }
+  window->window_controls_overlay_geometry = geometry;
+  window->window_controls_overlay_geometry_initialized = 1;
+  cef_browser_t *browser = proton_engine_window_browser(window);
+  if (browser != NULL) {
+    (void)proton_engine_window_controls_overlay_send(browser, &geometry);
+  }
+}
+
 static int32_t proton_engine_window_create_browser(
     proton_engine_window_t *window,
     const char *initial_url,
@@ -557,8 +646,17 @@ static int32_t proton_engine_window_create_browser(
                                ? initial_url
                                : "about:blank");
 
+  const proton_engine_window_controls_overlay_geometry_t *overlay_geometry =
+      NULL;
+  if (window->titlebar_overlay) {
+    window->window_controls_overlay_geometry =
+        proton_engine_window_controls_overlay_geometry(window);
+    window->window_controls_overlay_geometry_initialized = 1;
+    overlay_geometry = &window->window_controls_overlay_geometry;
+  }
   cef_dictionary_value_t *extra_info =
-      proton_engine_bridge_renderer_extra_info(window->bridge_config);
+      proton_engine_bridge_renderer_extra_info(window->bridge_config,
+                                               overlay_geometry);
   cef_browser_t *created_browser = cef_browser_host_create_browser_sync(
       &window_info, proton_browser_lifecycle_client(window->browser_lifecycle), &url, &browser_settings, extra_info, NULL);
   cef_string_clear(&window_info.window_name);
@@ -1473,6 +1571,7 @@ int32_t proton_engine_window_apply(
     host->set_zoom_level(host, log(factor) / log(1.2));
     host->base.release((cef_base_ref_counted_t *)host);
     window->zoom_percent = action->value;
+    proton_engine_window_update_controls_overlay(window);
     proton_engine_signal_wait_source(window->runtime, PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
