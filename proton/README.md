@@ -169,6 +169,28 @@ Native dialogs, menus, title bars, and other window-bound UI are unavailable in
 headless mode. In particular, open, save, and directory dialogs fail with an
 unsupported-operation error instead of displaying unparented system UI.
 
+## Accessibility
+
+Proton uses Chromium's accessibility tree for web content. Use semantic HTML,
+ARIA, keyboard navigation, and visible focus in the renderer; Proton does not
+maintain a second backend-owned node tree. Native menus, dialogs, and window
+controls use their platform toolkit's accessibility implementation.
+
+Accessibility is automatic by default. macOS follows VoiceOver, Switch Control,
+and accessibility clients that request an enhanced user interface. Windows
+enables accessibility when a screen reader is reported or an accessibility
+client queries the window. Linux keeps the tree enabled because GTK 3 has no
+reliable process-local activity signal. Headless mode also keeps the tree
+enabled for automation. To keep it enabled unconditionally in a windowed
+application, configure the app before startup:
+
+```moonbit
+@proton.html("Accessible", "<main><h1>Hello</h1></main>")
+.identifier("dev.proton.accessible")
+.accessibility(@proton.AccessibilityMode::AlwaysEnabled)
+.run_or_abort()
+```
+
 ## Application locale
 
 `App::locale` selects an immutable application locale before native runtime

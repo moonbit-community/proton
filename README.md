@@ -128,6 +128,12 @@ bounds, visibility, z-order, navigation, DevTools, and lifecycle events. See
 Native application menus and native context menus are available on macOS,
 Windows, and Linux.
 
+Web accessibility uses Chromium's native accessibility tree. Applications
+should express semantics with HTML, ARIA, keyboard navigation, and visible
+focus. Proton follows each platform's accessibility policy by default; use
+`.accessibility(@proton.AccessibilityMode::AlwaysEnabled)` when the tree must
+remain available for the whole runtime, including automation.
+
 Titlebar overlay uses `TitlebarStyle::Overlay` and is implemented on macOS and
 Windows. Interactive controls inside a draggable region must use
 `-webkit-app-region: no-drag`. See `examples/48_titlebar_overlay`.

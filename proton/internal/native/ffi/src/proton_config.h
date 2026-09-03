@@ -14,6 +14,7 @@ PROTON_INTERNAL int32_t proton_config_prepare_runtime(
     const char *locale, const char *accept_languages,
     const char *dialog_ok_label, const char *dialog_cancel_label,
     int32_t remote_debugging_port, int32_t headless,
+    int32_t accessibility_mode,
     int32_t persist_session_cookies,
     proton_engine_runtime_config_t *out_config);
 PROTON_INTERNAL int32_t proton_config_probe_runtime(

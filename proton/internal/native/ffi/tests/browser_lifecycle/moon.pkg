@@ -1,0 +1,13 @@
+import {
+  "moonbit-community/proton/internal/native/ffi",
+  "moonbitlang/core/encoding/utf8",
+}
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "browser_lifecycle_test.c" ],
+  link: {
+    "native": { "stub-cc-flags": "${build.PROTON_NATIVE_STUB_CC_FLAGS}" },
+  },
+)

@@ -197,6 +197,7 @@ pub extern "C" fn runtime_create(
   dialog_cancel_label : Bytes,
   remote_debugging_port : Int,
   headless : Int,
+  accessibility_mode : Int,
   persist_session_cookies : Int,
   out_runtime : Ref[RuntimeHandle],
 ) -> Int = "proton_internal_runtime_create"

@@ -32,6 +32,8 @@ proton_browser_registry_create(proton_browser_client_factory_fn client_factory,
                                void *context);
 void proton_browser_registry_begin_shutdown(
     proton_browser_registry_t *registry);
+void proton_browser_registry_set_accessibility_state(
+    proton_browser_registry_t *registry, cef_state_t state);
 int proton_browser_registry_shutdown_ready(
     const proton_browser_registry_t *registry);
 void proton_browser_registry_destroy(proton_browser_registry_t *registry);

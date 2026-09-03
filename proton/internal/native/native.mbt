@@ -404,6 +404,14 @@ fn runtime_config_remote_debugging(value : RemoteDebugging) -> Int {
 }
 
 ///|
+fn runtime_config_accessibility(value : AccessibilityMode) -> Int {
+  match value {
+    Automatic => 0
+    AlwaysEnabled => 1
+  }
+}
+
+///|
 fn validate_runtime_config(config : RuntimeConfig) -> Unit raise NativeError {
   match config.remote_debugging {
     Fixed(port) if port < 1024 || port > 65535 =>
@@ -483,6 +491,7 @@ pub fn Runtime::Runtime(
     runtime_config_string(config.framework_dialog_cancel_label),
     runtime_config_remote_debugging(config.remote_debugging),
     runtime_config_bool(config.headless),
+    runtime_config_accessibility(config.accessibility_mode),
     runtime_config_bool(config.persist_session_cookies),
     out_runtime,
   )

@@ -199,7 +199,16 @@ pub fn WindowSessionError::to_repr(Self) -> @debug.Repr
 pub fn WindowSessionError::to_string(Self) -> String
 
 // Types and methods
+pub(all) enum AccessibilityMode {
+  Automatic
+  AlwaysEnabled
+} derive(Eq, @debug.Debug)
+pub fn AccessibilityMode::equal(Self, Self) -> Bool
+pub fn AccessibilityMode::not_equal(Self, Self) -> Bool
+pub fn AccessibilityMode::to_repr(Self) -> @debug.Repr
+
 type App
+pub fn App::accessibility(Self, AccessibilityMode) -> Self
 pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, open_on_start? : Bool) -> Self
 pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self

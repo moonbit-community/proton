@@ -120,11 +120,18 @@ typedef struct {
 struct proton_engine_runtime {
   int owns_cef_runtime;
   int headless;
+  id accessibility_observer;
   int64_t next_bridge_request_id;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_registry_t *browsers;
 };
+
+int32_t proton_engine_runtime_start_accessibility(
+    proton_engine_runtime_t *runtime, int32_t mode, char *error,
+    size_t error_len);
+void proton_engine_runtime_stop_accessibility(proton_engine_runtime_t *runtime);
+void proton_engine_accessibility_set_enhanced_user_interface(int enabled);
 
 struct proton_engine_window {
   proton_engine_runtime_t *runtime;

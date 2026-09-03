@@ -180,6 +180,11 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     }
     break;
   }
+  case WM_GETOBJECT:
+    if (window != NULL && (LONG)lparam == OBJID_CLIENT) {
+      proton_engine_runtime_accessibility_requested(window->runtime);
+    }
+    break;
   case WM_NCCALCSIZE:
     if (window != NULL && window->titlebar_overlay && wparam == TRUE) {
       NCCALCSIZE_PARAMS *params = (NCCALCSIZE_PARAMS *)lparam;

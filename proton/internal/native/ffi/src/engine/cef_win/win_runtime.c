@@ -524,6 +524,7 @@ int32_t proton_engine_runtime_create(
   }
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
+  runtime->accessibility_mode = config.accessibility_mode;
   runtime->next_bridge_request_id = 1;
   runtime->browsers = proton_browser_registry_create(
       proton_engine_browser_client_factory, runtime);
@@ -536,6 +537,16 @@ int32_t proton_engine_runtime_create(
                               "failed to allocate browser registry");
     return PROTON_ERR_ENGINE;
   }
+  BOOL screen_reader = FALSE;
+  cef_state_t accessibility_state = STATE_DISABLED;
+  if (runtime->accessibility_mode == PROTON_ACCESSIBILITY_ALWAYS_ENABLED ||
+      runtime->headless ||
+      (SystemParametersInfoW(SPI_GETSCREENREADER, 0, &screen_reader, 0) &&
+       screen_reader)) {
+    accessibility_state = STATE_ENABLED;
+  }
+  proton_browser_registry_set_accessibility_state(runtime->browsers,
+                                                  accessibility_state);
   snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
            config.dialog_ok_label);
   snprintf(runtime->dialog_cancel_label,
@@ -560,6 +571,15 @@ static void proton_engine_dispose_runtime_state(
   proton_menu_bar_destroy(runtime->menu_definition);
   proton_browser_registry_destroy(runtime->browsers);
   free(runtime);
+}
+
+void proton_engine_runtime_accessibility_requested(
+    proton_engine_runtime_t *runtime) {
+  if (runtime != NULL &&
+      runtime->accessibility_mode == PROTON_ACCESSIBILITY_AUTOMATIC) {
+    proton_browser_registry_set_accessibility_state(runtime->browsers,
+                                                    STATE_ENABLED);
+  }
 }
 
 int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {

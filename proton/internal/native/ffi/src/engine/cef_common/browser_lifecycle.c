@@ -24,6 +24,7 @@ struct proton_browser_registry {
   proton_browser_lifecycle_t *browsers;
   proton_browser_client_factory_fn client_factory;
   void *context;
+  cef_state_t accessibility_state;
   int shutting_down;
 };
 
@@ -52,6 +53,22 @@ static void proton_browser_lifecycle_close_bound_browser(
   cef_browser_host_t *host = lifecycle->browser->get_host(lifecycle->browser);
   if (host != NULL) {
     host->close_browser(host, lifecycle->force_close);
+    host->base.release((cef_base_ref_counted_t *)host);
+  }
+}
+
+static void proton_browser_lifecycle_apply_accessibility_state(
+    proton_browser_lifecycle_t *lifecycle) {
+  if (lifecycle == NULL || lifecycle->registry == NULL ||
+      lifecycle->browser == NULL || lifecycle->state != PROTON_BROWSER_LIVE) {
+    return;
+  }
+  cef_browser_host_t *host = lifecycle->browser->get_host(lifecycle->browser);
+  if (host != NULL) {
+    if (host->set_accessibility_state != NULL) {
+      host->set_accessibility_state(host,
+                                    lifecycle->registry->accessibility_state);
+    }
     host->base.release((cef_base_ref_counted_t *)host);
   }
 }
@@ -85,6 +102,18 @@ void proton_browser_registry_begin_shutdown(
     if (browser->role != PROTON_BROWSER_ROLE_DEVTOOLS) {
       proton_browser_lifecycle_request_close(browser, 1);
     }
+  }
+}
+
+void proton_browser_registry_set_accessibility_state(
+    proton_browser_registry_t *registry, cef_state_t state) {
+  if (registry == NULL || registry->accessibility_state == state) {
+    return;
+  }
+  registry->accessibility_state = state;
+  for (proton_browser_lifecycle_t *browser = registry->browsers;
+       browser != NULL; browser = browser->next) {
+    proton_browser_lifecycle_apply_accessibility_state(browser);
   }
 }
 
@@ -182,6 +211,7 @@ void proton_browser_lifecycle_adopt_created(
   lifecycle->browser_id = browser->get_identifier(browser);
   if (lifecycle->state == PROTON_BROWSER_CREATING) {
     lifecycle->state = PROTON_BROWSER_LIVE;
+    proton_browser_lifecycle_apply_accessibility_state(lifecycle);
   } else if (lifecycle->state == PROTON_BROWSER_CLOSING) {
     proton_browser_lifecycle_close_bound_browser(lifecycle);
   }
@@ -197,6 +227,7 @@ void proton_browser_lifecycle_on_after_created(
   lifecycle->browser_id = browser->get_identifier(browser);
   if (lifecycle->state == PROTON_BROWSER_CREATING) {
     lifecycle->state = PROTON_BROWSER_LIVE;
+    proton_browser_lifecycle_apply_accessibility_state(lifecycle);
   } else if (lifecycle->state == PROTON_BROWSER_CLOSING) {
     proton_browser_lifecycle_close_bound_browser(lifecycle);
   }
