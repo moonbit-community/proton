@@ -851,6 +851,18 @@ pub fn WindowContext::windows(Self) -> WindowManager
 
 pub(all) enum WindowEvent {
   StateChanged(WindowState)
+  Moved
+  Resized
+  Show
+  Hide
+  Focus
+  Blur
+  Minimize
+  Restore
+  Maximize
+  Unmaximize
+  EnterFullScreen
+  LeaveFullScreen
 } derive(Eq, @debug.Debug)
 pub fn WindowEvent::equal(Self, Self) -> Bool
 pub fn WindowEvent::not_equal(Self, Self) -> Bool
@@ -924,10 +936,15 @@ pub fn WindowHandle::flash_frame(Self, Bool) -> Unit raise WindowSessionError
 pub fn WindowHandle::focus(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::hide(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::id(Self) -> String
+pub fn WindowHandle::is_always_on_top(Self) -> Bool raise WindowSessionError
 pub fn WindowHandle::is_focused(Self) -> Bool raise WindowSessionError
+pub fn WindowHandle::is_fullscreen(Self) -> Bool raise WindowSessionError
+pub fn WindowHandle::is_maximized(Self) -> Bool raise WindowSessionError
+pub fn WindowHandle::is_minimized(Self) -> Bool raise WindowSessionError
 pub fn WindowHandle::is_visible(Self) -> Bool raise WindowSessionError
 pub fn WindowHandle::maximize(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::minimize(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::position(Self) -> (Int, Int) raise WindowSessionError
 pub fn WindowHandle::remove_view(Self, String) -> Unit raise WindowSessionError
 pub fn WindowHandle::restore(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::set_always_on_top(Self, Bool) -> Unit raise WindowSessionError
@@ -965,6 +982,7 @@ pub fn WindowHandle::set_window_button_visibility(Self, Bool) -> Unit raise Wind
 pub fn WindowHandle::set_zoom_percent(Self, Int) -> Unit raise WindowSessionError
 pub fn WindowHandle::show(Self) -> Unit raise WindowSessionError
 pub fn WindowHandle::show_inactive(Self) -> Unit raise WindowSessionError
+pub fn WindowHandle::size(Self) -> (Int, Int) raise WindowSessionError
 pub fn WindowHandle::state(Self) -> WindowState raise WindowSessionError
 pub fn WindowHandle::view(Self, String) -> ViewHandle?
 pub fn WindowHandle::views(Self) -> Array[ViewHandle]

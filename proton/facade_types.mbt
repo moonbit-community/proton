@@ -226,6 +226,7 @@ priv struct RunningWindow {
   asset_root : String?
   mut bridge_ready : Bool
   mut state : SessionWindowState
+  mut observed_state : WindowState?
 }
 
 ///|
@@ -657,6 +658,18 @@ pub struct WindowManager {
 /// An observed change to a running native window.
 pub(all) enum WindowEvent {
   StateChanged(WindowState)
+  Moved
+  Resized
+  Show
+  Hide
+  Focus
+  Blur
+  Minimize
+  Restore
+  Maximize
+  Unmaximize
+  EnterFullScreen
+  LeaveFullScreen
 } derive(Debug, Eq)
 
 ///|
@@ -664,6 +677,54 @@ pub extend WindowEvent with Eq::{not_equal, equal}
 
 ///|
 pub extend WindowEvent with Debug::{to_repr}
+
+///|
+/// Derives Electron-style window transition events from two state snapshots.
+/// The full `StateChanged` snapshot is always emitted after transition events.
+fn window_state_events(
+  previous : WindowState?,
+  current : WindowState,
+) -> Array[WindowEvent] {
+  let events : Array[WindowEvent] = []
+  match previous {
+    None => ()
+    Some(previous) => {
+      if previous.x != current.x || previous.y != current.y {
+        events.push(Moved)
+      }
+      if previous.width != current.width || previous.height != current.height {
+        events.push(Resized)
+      }
+      if !previous.visible && current.visible {
+        events.push(Show)
+      } else if previous.visible && !current.visible {
+        events.push(Hide)
+      }
+      if !previous.focused && current.focused {
+        events.push(Focus)
+      } else if previous.focused && !current.focused {
+        events.push(Blur)
+      }
+      if !previous.minimized && current.minimized {
+        events.push(Minimize)
+      } else if previous.minimized && !current.minimized {
+        events.push(Restore)
+      }
+      if !previous.maximized && current.maximized {
+        events.push(Maximize)
+      } else if previous.maximized && !current.maximized {
+        events.push(Unmaximize)
+      }
+      if !previous.fullscreen && current.fullscreen {
+        events.push(EnterFullScreen)
+      } else if previous.fullscreen && !current.fullscreen {
+        events.push(LeaveFullScreen)
+      }
+    }
+  }
+  events.push(StateChanged(current))
+  events
+}
 
 ///|
 /// An observed change to a running web contents view, following Electron

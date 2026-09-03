@@ -1279,6 +1279,7 @@ fn RuntimeSession::create_window(
     asset_root,
     bridge_ready: !self.monitor_bridge,
     state: WindowStarting,
+    observed_state: None,
   }
   errdefer (created_window.destroy() catch {
     error =>
@@ -1714,6 +1715,24 @@ pub fn WindowHandle::bounds(
 }
 
 ///|
+/// Returns the window's `(x, y)` position in logical screen pixels.
+pub fn WindowHandle::position(
+  self : WindowHandle,
+) -> (Int, Int) raise WindowSessionError {
+  let state = (self.read_window_state)()
+  (state.x, state.y)
+}
+
+///|
+/// Returns the window's `(width, height)` frame size in logical pixels.
+pub fn WindowHandle::size(
+  self : WindowHandle,
+) -> (Int, Int) raise WindowSessionError {
+  let state = (self.read_window_state)()
+  (state.width, state.height)
+}
+
+///|
 /// Sets `(x, y, width, height)` in logical screen pixels, matching Electron's
 /// `setBounds` coordinate order.
 pub fn WindowHandle::set_bounds(
@@ -1746,6 +1765,38 @@ pub fn WindowHandle::restore(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
   (self.restore_window)()
+}
+
+///|
+/// Reports whether the window is currently minimized.
+pub fn WindowHandle::is_minimized(
+  self : WindowHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_window_state)().minimized
+}
+
+///|
+/// Reports whether the window is currently maximized.
+pub fn WindowHandle::is_maximized(
+  self : WindowHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_window_state)().maximized
+}
+
+///|
+/// Reports whether the window is currently fullscreen.
+pub fn WindowHandle::is_fullscreen(
+  self : WindowHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_window_state)().fullscreen
+}
+
+///|
+/// Reports whether the window is currently kept above other windows.
+pub fn WindowHandle::is_always_on_top(
+  self : WindowHandle,
+) -> Bool raise WindowSessionError {
+  (self.read_window_state)().always_on_top
 }
 
 ///|
@@ -3025,15 +3076,18 @@ fn RuntimeSession::dispatch_window_event(
       match self.find_window_by_native_id(window_id) {
         Some(window) => {
           let handle = self.window_handle(window)
-          for handler in self.window_event_handlers {
-            ignore(
-              self.window_tasks.spawn(
-                () => {
-                  handler(handle, StateChanged(WindowState::from_native(state)))
-                },
-                no_wait=true,
-              ),
-            )
+          let current = WindowState::from_native(state)
+          let events = window_state_events(window.observed_state, current)
+          window.observed_state = Some(current)
+          for event in events {
+            for handler in self.window_event_handlers {
+              ignore(
+                self.window_tasks.spawn(
+                  () => handler(handle, event),
+                  no_wait=true,
+                ),
+              )
+            }
           }
         }
         None => ()
