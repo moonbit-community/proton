@@ -78,6 +78,7 @@ function platformConfig(cefRoot) {
   if (process.platform === "darwin") {
     const deploymentFlag = `-mmacosx-version-min=${macosDeploymentTarget}`;
     return {
+      deploymentTargetFlags: deploymentFlag,
       stubFlags: appendFlags(deploymentFlag, commonStubFlags),
       macObjcFlags: appendFlags(
         deploymentFlag,
@@ -104,6 +105,7 @@ function platformConfig(cefRoot) {
 
   if (process.platform === "win32") {
     return {
+      deploymentTargetFlags: "",
       stubFlags: commonStubFlags,
       macObjcFlags: "",
       loaderFlags: "",
@@ -120,6 +122,7 @@ function platformConfig(cefRoot) {
     const libs = pkgConfig(["--libs", "gtk+-3.0", "x11"]);
     const releaseDir = path.join(cefRoot, "Release");
     return {
+      deploymentTargetFlags: "",
       stubFlags: appendFlags("-DOS_LINUX=1 -DCEF_X11=1", commonStubFlags, cflags),
       macObjcFlags: "",
       loaderFlags: "",
@@ -145,6 +148,7 @@ export function createNativeLinkConfig(env = readPayloadEnv()) {
   const config = platformConfig(cefRoot);
   return {
     vars: {
+      PROTON_DEPLOYMENT_TARGET_CC_FLAGS: config.deploymentTargetFlags,
       PROTON_NATIVE_STUB_CC_FLAGS: config.stubFlags,
       PROTON_MAC_OBJC_STUB_CC_FLAGS: config.macObjcFlags,
       PROTON_CEF_LOADER_CC_FLAGS: config.loaderFlags,
