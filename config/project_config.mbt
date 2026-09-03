@@ -236,12 +236,14 @@ pub fn ProjectDocumentType::extensions(
 }
 
 ///|
-/// Static metadata and payload inputs consumed by `proton_cli package`.
+/// Package metadata, input preparation, and payloads consumed by
+/// `proton_cli package`.
 pub(all) struct ProjectPackageConfig {
   product_name : String
   version : String
   formats : Array[String]
   icons : Array[String]
+  prepare : String?
   resources : Array[String]
   sign : ProjectSignConfig?
   url_schemes : Array[String]
@@ -262,6 +264,7 @@ pub fn ProjectPackageConfig::ProjectPackageConfig(
   version : String,
   formats? : Array[String] = [],
   icons? : Array[String] = [],
+  prepare? : String? = None,
   resources? : Array[String] = [],
   sign? : ProjectSignConfig? = None,
   url_schemes? : Array[String] = [],
@@ -274,6 +277,7 @@ pub fn ProjectPackageConfig::ProjectPackageConfig(
     version,
     formats: formats.copy(),
     icons: icons.copy(),
+    prepare,
     resources: resources.copy(),
     sign,
     url_schemes: url_schemes.copy(),
@@ -300,6 +304,11 @@ pub fn ProjectPackageConfig::icons(
   self : ProjectPackageConfig,
 ) -> Array[String] {
   self.icons.copy()
+}
+
+///|
+pub fn ProjectPackageConfig::prepare(self : ProjectPackageConfig) -> String? {
+  self.prepare
 }
 
 ///|

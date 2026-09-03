@@ -27,6 +27,7 @@ test "project config contains only CLI build and package settings" {
     #|    "version": "1.2.3",
     #|    "formats": ["app", "zip"],
     #|    "icons": ["icons/app.icns"],
+    #|    "prepare": "moon run package/prepare --target native",
     #|    "resources": ["assets"],
     #|    "output": "dist"
     #|  }
@@ -46,6 +47,10 @@ test "project config contains only CLI build and package settings" {
   assert_eq(package_config.version(), "1.2.3")
   assert_eq(package_config.formats(), ["app", "zip"])
   assert_true(package_config.icons()[0].has_suffix("icons/app.icns"))
+  assert_eq(
+    package_config.prepare(),
+    Some("moon run package/prepare --target native"),
+  )
 }
 
 ///|

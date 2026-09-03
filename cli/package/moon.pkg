@@ -6,6 +6,7 @@ import {
   "moonbit-community/proton_updater" @updater,
   "moonbit-community/proton_cli/build_cmd" @build,
   "moonbit-community/proton_cli/fsutil",
+  "moonbit-community/proton_cli/output",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/core/argparse",
