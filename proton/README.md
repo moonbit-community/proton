@@ -152,7 +152,7 @@ on macOS and is a successful no-op on other platforms. Web contents views expose
 independent `set_zoom_percent` and `zoom_percent` controls for their own browser.
 
 Window state changes are delivered to `.on_window_event(...)` as a full
-`StateChanged` snapshot plus transition events such as `Moved`, `Resized`,
+`StateChanged` snapshot plus transition events such as `ReadyToShow`, `Moved`, `Resized`,
 `Show`, `Hide`, `Focus`, `Blur`, `Minimize`, `Restore`, `Maximize`, `Unmaximize`,
 `EnterFullScreen`, and `LeaveFullScreen`. The first native snapshot only emits
 `StateChanged`, because no previous state exists for transition detection.

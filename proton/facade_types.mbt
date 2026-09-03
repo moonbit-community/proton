@@ -658,6 +658,7 @@ pub struct WindowManager {
 /// An observed change to a running native window.
 pub(all) enum WindowEvent {
   StateChanged(WindowState)
+  ReadyToShow
   Moved
   Resized
   Show
@@ -687,7 +688,7 @@ fn window_state_events(
 ) -> Array[WindowEvent] {
   let events : Array[WindowEvent] = []
   match previous {
-    None => ()
+    None => if current.visible { events.push(ReadyToShow) }
     Some(previous) => {
       if previous.x != current.x || previous.y != current.y {
         events.push(Moved)

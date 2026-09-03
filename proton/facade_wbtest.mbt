@@ -3192,6 +3192,39 @@ test "window state transitions derive Electron-style events" {
 }
 
 ///|
+test "first visible window state emits ready to show" {
+  let monitor = WindowMonitor::{
+    x: 0,
+    y: 0,
+    width: 1920,
+    height: 1080,
+    work_x: 0,
+    work_y: 0,
+    work_width: 1920,
+    work_height: 1080,
+    scale_factor_percent: 100,
+  }
+  let state = WindowState::{
+    x: 0,
+    y: 0,
+    width: 640,
+    height: 480,
+    monitor,
+    zoom_percent: 100,
+    visible: true,
+    focused: false,
+    minimized: false,
+    maximized: false,
+    fullscreen: false,
+    always_on_top: false,
+    theme: WindowTheme::Light,
+  }
+  let events = window_state_events(None, state)
+  assert_eq(events[0], WindowEvent::ReadyToShow)
+  assert_eq(events[1], WindowEvent::StateChanged(state))
+}
+
+///|
 test "window state transitions derive restore after minimize" {
   let monitor = WindowMonitor::{
     x: 0,
