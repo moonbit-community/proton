@@ -102,8 +102,9 @@ pub struct CommandWindow {
   open_file_dialog : async (String?, String?) -> String?
   save_file_dialog : async (String?, String?) -> String?
   choose_directory_dialog : async (String?, String?) -> String?
+  get_titlebar_area : () -> Json raise
 }
-pub fn CommandWindow::CommandWindow(async (String?, String, String) -> Unit, async (String?, String, String) -> Bool, async (String?, String?) -> String?, async (String?, String?) -> String?, async (String?, String?) -> String?) -> Self
+pub fn CommandWindow::CommandWindow(async (String?, String, String) -> Unit, async (String?, String, String) -> Bool, async (String?, String?) -> String?, async (String?, String?) -> String?, async (String?, String?) -> String?, get_titlebar_area? : () -> Json raise) -> Self
 pub async fn CommandWindow::choose_directory(Self, String?, String?) -> String?
 pub async fn CommandWindow::confirm(Self, String?, String, String) -> Bool
 pub async fn CommandWindow::open_file(Self, String?, String?) -> String?

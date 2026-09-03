@@ -273,6 +273,8 @@ pub fn proton_window_get_navigation_state_ffi(WindowHandle, @ref.Ref[Int], @ref.
 
 pub fn proton_window_get_state_ffi(WindowHandle, FixedArray[Int], Int) -> Int
 
+pub fn proton_window_get_titlebar_area_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+
 pub fn proton_window_hide_ffi(WindowHandle) -> Int
 
 pub fn proton_window_is_audio_muted_ffi(WindowHandle, @ref.Ref[Int]) -> Int

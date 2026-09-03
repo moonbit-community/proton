@@ -589,13 +589,36 @@ test "command proxy rejects unsafe JS property names" {
   assert_true(command_proxy_name_is_invalid("   "))
   assert_true(command_proxy_name_is_invalid("core"))
   assert_true(command_proxy_name_is_invalid("events"))
-  assert_eq(command_proxy_name_is_invalid("getTitlebarArea"), true)
   assert_true(command_proxy_name_is_invalid("__proto__"))
   assert_true(command_proxy_name_is_invalid("prototype"))
   assert_true(command_proxy_name_is_invalid("constructor"))
   assert_true(command_proxy_name_is_invalid("@@iterator"))
   assert_false(command_proxy_name_is_invalid("add"))
   assert_false(command_proxy_name_is_invalid("slowAdd"))
+}
+
+///|
+test "titlebar query reserves only the bridge root property" {
+  let nested = test_command_spec("examples/files", "files", ["getTitlebarArea"])
+  let config = unwrap_configuration(() => {
+    bridge_frontend_config_for_extension("examples/files", nested)
+  })
+  assert_eq(config.extensions, [
+    @native.BridgeExtensionConfig("files", apis=["getTitlebarArea"]),
+  ])
+  let root = test_command_spec(
+    "examples/titlebar-conflict",
+    "getTitlebarArea",
+    ["read"],
+  )
+  match
+    expect_configuration_error(() => {
+      bridge_frontend_config_for_extension("examples/titlebar-conflict", root)
+    }) {
+    InvalidJavaScriptNamespace(js_namespace~) =>
+      assert_eq(js_namespace, "getTitlebarArea")
+    error => fail(error.message())
+  }
 }
 
 ///|

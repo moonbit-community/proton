@@ -294,7 +294,7 @@ fn append_bridge_extension_frontend(
   initialization_units : Array[@native.BridgeInitializationUnit],
 ) -> Unit raise AppConfigurationError {
   let js_namespace = spec.js_namespace()
-  if command_proxy_name_is_invalid(js_namespace) {
+  if command_proxy_root_name_is_invalid(js_namespace) {
     raise InvalidJavaScriptNamespace(js_namespace~)
   }
   let apis : Array[String] = []
@@ -319,14 +319,18 @@ fn append_bridge_extension_frontend(
 }
 
 ///|
+fn command_proxy_root_name_is_invalid(name : String) -> Bool {
+  name == "getTitlebarArea" || command_proxy_name_is_invalid(name)
+}
+
+///|
 /// Reports whether a name cannot be exposed as a bridge proxy on the renderer
-/// root object. Framework-owned bridge properties are reserved too.
+/// object.
 fn command_proxy_name_is_invalid(name : String) -> Bool {
   name.trim().to_owned() == "" ||
   name == "core" ||
   name == "events" ||
   name == "app" ||
-  name == "getTitlebarArea" ||
   @proton_command.app_command_js_property_is_reserved(name)
 }
 
@@ -581,7 +585,7 @@ fn command_window_capability(
         Some(result)
       }
     },
-    fn() raise {
+    get_titlebar_area=fn() raise {
       match window.titlebar_area() {
         Some(area) => area.to_json()
         None => Json::null()

@@ -600,6 +600,14 @@ pub fn SystemPathKind::equal(Self, Self) -> Bool
 pub fn SystemPathKind::not_equal(Self, Self) -> Bool
 pub fn SystemPathKind::to_repr(Self) -> @debug.Repr
 
+pub(all) struct TitlebarArea {
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+} derive(ToJson)
+pub fn TitlebarArea::to_json(Self) -> Json
+
 pub(all) enum TitlebarStyle {
   Default
   Overlay
@@ -775,6 +783,7 @@ pub fn WindowRef::begin_save_file_dialog(Self, String?, String?) -> Int64 raise 
 pub fn WindowRef::cancel_dialog(Self, Int64) -> Unit raise NativeError
 pub fn WindowRef::equal(Self, Self) -> Bool
 pub fn WindowRef::not_equal(Self, Self) -> Bool
+pub fn WindowRef::titlebar_area(Self) -> TitlebarArea? raise NativeError
 pub fn WindowRef::to_repr(Self) -> @debug.Repr
 pub fn WindowRef::unsafe_from_handle(@ffi.WindowHandle) -> Self
 pub impl Eq for WindowRef

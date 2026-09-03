@@ -39,7 +39,7 @@ pub fn CommandWindow::CommandWindow(
   open_file_dialog : async (String?, String?) -> String?,
   save_file_dialog : async (String?, String?) -> String?,
   choose_directory_dialog : async (String?, String?) -> String?,
-  get_titlebar_area : () -> Json raise,
+  get_titlebar_area? : () -> Json raise = fn() { Json::null() },
 ) -> CommandWindow {
   {
     show_message_dialog,

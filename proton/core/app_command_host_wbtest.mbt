@@ -26,6 +26,18 @@ fn quiet_app_command_host(
 }
 
 ///|
+test "command window keeps the legacy constructor shape" {
+  let window = CommandWindow(
+    (_title, _message, _level) => (),
+    (_title, _message, _level) => false,
+    (_title, _path) => None,
+    (_title, _path) => None,
+    (_title, _path) => None,
+  )
+  assert_eq(window.titlebar_area(), Json::null())
+}
+
+///|
 test "app command host starts open and empty" {
   let host = AppCommandHost()
   @debug.assert_eq(host.registered_ops(), [])
