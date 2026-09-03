@@ -139,6 +139,18 @@ pub extend RuntimeWaitReady with Eq::{not_equal, equal}
 pub extend RuntimeWaitReady with Debug::{to_repr}
 
 ///|
+pub(all) enum AccessibilityMode {
+  Automatic = 0
+  AlwaysEnabled = 1
+} derive(Debug, Eq)
+
+///|
+pub extend AccessibilityMode with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityMode with Debug::{to_repr}
+
+///|
 /// Inputs forwarded by a second operating-system application instance.
 pub(all) struct AppActivation {
   abi_version : Int
@@ -1409,6 +1421,7 @@ pub extend RemoteDebugging with Debug::{to_repr}
 struct RuntimeConfig {
   use_bundled : Bool
   headless : Bool
+  accessibility_mode : AccessibilityMode
   persist_session_cookies : Bool
   runtime_root : String?
   helper_path : String?
@@ -1468,11 +1481,13 @@ pub fn RuntimeConfig::RuntimeConfig(
   accept_languages? : Array[@locale.Locale] = [],
   remote_debugging? : RemoteDebugging = Disabled,
   headless? : Bool = false,
+  accessibility_mode? : AccessibilityMode = Automatic,
   persist_session_cookies? : Bool = true,
 ) -> RuntimeConfig {
   {
     use_bundled: false,
     headless,
+    accessibility_mode,
     persist_session_cookies,
     runtime_root,
     helper_path,
@@ -1500,11 +1515,13 @@ pub fn RuntimeConfig::bundled(
   accept_languages? : Array[@locale.Locale] = [],
   remote_debugging? : RemoteDebugging = Disabled,
   headless? : Bool = false,
+  accessibility_mode? : AccessibilityMode = Automatic,
   persist_session_cookies? : Bool = true,
 ) -> RuntimeConfig {
   {
     use_bundled: true,
     headless,
+    accessibility_mode,
     persist_session_cookies,
     runtime_root: None,
     helper_path,
@@ -1558,6 +1575,7 @@ pub fn RuntimeConfig::with_framework_dialog_labels(
   {
     use_bundled: self.use_bundled,
     headless: self.headless,
+    accessibility_mode: self.accessibility_mode,
     persist_session_cookies: self.persist_session_cookies,
     runtime_root: self.runtime_root,
     helper_path: self.helper_path,

@@ -178,6 +178,7 @@ int32_t proton_internal_execute_process(
       use_bundled, runtime_root, helper_path, resources_dir, locales_dir,
       cache_dir, locale, accept_languages, dialog_ok_label,
       dialog_cancel_label, remote_debugging_port, headless,
+      PROTON_ACCESSIBILITY_AUTOMATIC,
       persist_session_cookies, &config);
   if (status != PROTON_OK) {
     return status;
@@ -198,6 +199,7 @@ int32_t proton_internal_runtime_create(
     const char *locale, const char *accept_languages,
     const char *dialog_ok_label, const char *dialog_cancel_label,
     int32_t remote_debugging_port, int32_t headless,
+    int32_t accessibility_mode,
     int32_t persist_session_cookies, proton_runtime_handle_t *out_runtime) {
   if (out_runtime == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -209,6 +211,7 @@ int32_t proton_internal_runtime_create(
       use_bundled, runtime_root, helper_path, resources_dir, locales_dir,
       cache_dir, locale, accept_languages, dialog_ok_label,
       dialog_cancel_label, remote_debugging_port, headless,
+      accessibility_mode,
       persist_session_cookies, &config);
   if (status != PROTON_OK) {
     return status;

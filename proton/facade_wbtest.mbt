@@ -713,6 +713,14 @@ test "headless mode defaults off and is configurable" {
 }
 
 ///|
+test "accessibility mode defaults to automatic and is configurable" {
+  let default_app = html("Accessibility", "<main>content</main>")
+  assert_eq(default_app.accessibility_mode_value, AccessibilityMode::Automatic)
+  let enabled = default_app.accessibility(AccessibilityMode::AlwaysEnabled)
+  assert_eq(enabled.accessibility_mode_value, AccessibilityMode::AlwaysEnabled)
+}
+
+///|
 async test "headless mode rejects titlebar overlay before runtime startup" {
   let manifest = @manifest.AppManifest(
     @manifest.WindowManifest(
@@ -734,6 +742,7 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     None,
     30000,
     true,
+    AccessibilityMode::Automatic,
     @locale.LocalePreferences::resolve(None, []),
   ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
@@ -763,6 +772,7 @@ async test "headless mode rejects native menus before runtime startup" {
     Some(menu.to_native()),
     30000,
     true,
+    AccessibilityMode::Automatic,
     @locale.LocalePreferences::resolve(None, []),
   ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {

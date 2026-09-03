@@ -614,6 +614,16 @@ void CEF_CALLBACK proton_engine_osr_on_paint(
   }
   [super terminate:sender];
 }
+
+- (void)accessibilitySetValue:(id)value forAttribute:(NSString *)attribute {
+  if ([attribute isEqualToString:@"AXEnhancedUserInterface"]) {
+    proton_engine_accessibility_set_enhanced_user_interface([value boolValue]);
+  }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  [super accessibilitySetValue:value forAttribute:attribute];
+#pragma clang diagnostic pop
+}
 @end
 
 static void proton_engine_ensure_appkit(void) {
@@ -850,6 +860,16 @@ int32_t proton_engine_runtime_create(
                               "failed to register proton scheme handler");
     return PROTON_ERR_ENGINE;
   }
+  int32_t accessibility_status = proton_engine_runtime_start_accessibility(
+      runtime, config.accessibility_mode, error, error_len);
+  if (accessibility_status != PROTON_OK) {
+    proton_browser_registry_destroy(runtime->browsers);
+    free(runtime);
+    proton_engine_cef_shutdown();
+    proton_engine_reset_external_message_pump();
+    g_proton_cef_runtime_active = 0;
+    return accessibility_status;
+  }
   *out_runtime = runtime;
   return PROTON_OK;
 }
@@ -862,6 +882,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
 
+  proton_engine_runtime_stop_accessibility(runtime);
   proton_engine_dialog_dispose_runtime(runtime);
   proton_engine_menu_clear_runtime(runtime);
   if (runtime->owns_cef_runtime) {

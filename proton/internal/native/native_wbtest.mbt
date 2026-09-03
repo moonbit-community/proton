@@ -401,10 +401,12 @@ test "runtime config preserves typed native ABI values" {
     ],
     remote_debugging=RemoteDebugging::Ephemeral,
     headless=true,
+    accessibility_mode=AccessibilityMode::AlwaysEnabled,
   )
   assert_eq(runtime_config.helper_path, Some("cef_process.exe"))
   assert_eq(runtime_config.cache_dir, Some(cache_dir))
   assert_true(runtime_config.headless)
+  assert_eq(runtime_config.accessibility_mode, AccessibilityMode::AlwaysEnabled)
   assert_true(runtime_config.persist_session_cookies)
   assert_eq(runtime_config.locale, Some("zh-CN"))
   assert_eq(runtime_config.accept_languages, ["zh-CN", "en-US"])
@@ -416,6 +418,7 @@ test "runtime config preserves typed native ABI values" {
   assert_eq(bundled.runtime_root, None)
   assert_eq(bundled.helper_path, None)
   assert_false(bundled.headless)
+  assert_eq(bundled.accessibility_mode, AccessibilityMode::Automatic)
   assert_true(bundled.persist_session_cookies)
   assert_true(RuntimeConfig::bundled(headless=true).headless)
   assert_false(

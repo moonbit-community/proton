@@ -753,6 +753,10 @@ int32_t proton_engine_runtime_create(
                               "failed to allocate browser registry");
     return PROTON_ERR_ENGINE;
   }
+  /* GTK 3 has no reliable process-local assistive-technology activity signal.
+     Keep the tree available rather than silently making the app inaccessible. */
+  proton_browser_registry_set_accessibility_state(runtime->browsers,
+                                                  STATE_ENABLED);
   snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
            config.dialog_ok_label);
   snprintf(runtime->dialog_cancel_label,

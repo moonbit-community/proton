@@ -40,6 +40,7 @@ typedef struct proton_engine_client proton_engine_client_t;
 struct proton_engine_runtime {
   int owns_cef_runtime;
   int headless;
+  int accessibility_mode;
   /* Set once by the first asset document and never changed, so every window
      in a runtime resolves application resources against the same root. */
   int64_t next_bridge_request_id;
@@ -53,6 +54,9 @@ struct proton_engine_runtime {
   proton_menu_bar_t *menu_definition;
   proton_browser_registry_t *browsers;
 };
+
+void proton_engine_runtime_accessibility_requested(
+    proton_engine_runtime_t *runtime);
 
 struct proton_engine_window {
   HWND hwnd;

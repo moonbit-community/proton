@@ -13,6 +13,7 @@ fn App::App(
     windows: [],
     debug_level_value: debug,
     headless_value: false,
+    accessibility_mode_value: AccessibilityMode::Automatic,
     application_identity: None,
     single_instance_enabled: false,
     explicit_locale: None,

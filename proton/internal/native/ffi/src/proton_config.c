@@ -495,6 +495,7 @@ int32_t proton_config_prepare_runtime(
     const char *locale, const char *accept_languages,
     const char *dialog_ok_label, const char *dialog_cancel_label,
     int32_t remote_debugging_port, int32_t headless,
+    int32_t accessibility_mode,
     int32_t persist_session_cookies,
     proton_engine_runtime_config_t *out_config) {
   if (out_config == NULL) {
@@ -508,6 +509,11 @@ int32_t proton_config_prepare_runtime(
         PROTON_ERR_INVALID_ARGUMENT,
         "runtime remote debugging must be disabled, ephemeral, or use a port "
         "between 1024 and 65535");
+  }
+  if (accessibility_mode != PROTON_ACCESSIBILITY_AUTOMATIC &&
+      accessibility_mode != PROTON_ACCESSIBILITY_ALWAYS_ENABLED) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "invalid accessibility mode");
   }
   if (cache_dir != NULL && cache_dir[0] != '\0' &&
       !proton_path_is_absolute(cache_dir)) {
@@ -597,6 +603,7 @@ int32_t proton_config_prepare_runtime(
   }
   config.remote_debugging_port = remote_debugging_port;
   config.headless = headless != 0;
+  config.accessibility_mode = accessibility_mode;
   config.persist_session_cookies =
       config.cache_dir[0] != '\0' && persist_session_cookies != 0;
   *out_config = config;

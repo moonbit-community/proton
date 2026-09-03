@@ -22,6 +22,11 @@ enum {
   PROTON_REMOTE_DEBUGGING_DISABLED = 0,
 };
 
+enum {
+  PROTON_ACCESSIBILITY_AUTOMATIC = 0,
+  PROTON_ACCESSIBILITY_ALWAYS_ENABLED = 1,
+};
+
 typedef struct {
   char runtime_root[PROTON_ENGINE_MAX_PATH_BYTES];
   char helper_path[PROTON_ENGINE_MAX_PATH_BYTES];
@@ -35,6 +40,7 @@ typedef struct {
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   int32_t remote_debugging_port;
   int32_t headless;
+  int32_t accessibility_mode;
   int32_t persist_session_cookies;
 } proton_engine_runtime_config_t;
 

@@ -56,6 +56,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     self.menu.map(menu => menu.to_native()),
     self.bridge_startup_timeout_value_ms,
     self.resolved_headless(),
+    self.accessibility_mode_value,
     locale_preferences,
     browser_data_dir?,
     application_name=resolved.application_name,
@@ -91,6 +92,16 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
   }
   @xlog.info(category="proton.runtime") <?
     { "message": "application runtime stopped" }
+}
+
+///|
+fn AccessibilityMode::to_native(
+  self : AccessibilityMode,
+) -> @native.AccessibilityMode {
+  match self {
+    Automatic => @native.AccessibilityMode::Automatic
+    AlwaysEnabled => @native.AccessibilityMode::AlwaysEnabled
+  }
 }
 
 ///|
@@ -140,6 +151,7 @@ async fn run_manifest(
   menu : @native.MenuBar?,
   bridge_startup_timeout_ms : Int,
   headless : Bool,
+  accessibility_mode : AccessibilityMode,
   locale_preferences : @locale.LocalePreferences,
   browser_data_dir? : String,
   application_name? : String = "Proton",
@@ -211,6 +223,7 @@ async fn run_manifest(
       accept_languages=locale_preferences.accept_languages(),
       remote_debugging~,
       headless~,
+      accessibility_mode=accessibility_mode.to_native(),
     ).with_framework_dialog_labels(catalog.dialog_ok, catalog.dialog_cancel),
   ) catch {
     error => raise native_run_error("create runtime", error)

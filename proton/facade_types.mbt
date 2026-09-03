@@ -26,6 +26,19 @@ pub extend LastWindowClosedPolicy with Eq::{not_equal, equal}
 pub extend LastWindowClosedPolicy with Debug::{to_repr}
 
 ///|
+/// Controls when Proton enables the browser accessibility tree.
+pub(all) enum AccessibilityMode {
+  Automatic
+  AlwaysEnabled
+} derive(Eq, Debug)
+
+///|
+pub extend AccessibilityMode with Eq::{not_equal, equal}
+
+///|
+pub extend AccessibilityMode with Debug::{to_repr}
+
+///|
 /// High-level application facade for ordinary Proton apps.
 struct App {
   mut window : @manifest.WindowManifest
@@ -33,6 +46,7 @@ struct App {
   windows : Array[@manifest.AppWindowManifest]
   mut debug_level_value : Int
   mut headless_value : Bool
+  mut accessibility_mode_value : AccessibilityMode
   mut application_identity : ApplicationIdentitySource?
   mut single_instance_enabled : Bool
   mut explicit_locale : @locale.Locale?

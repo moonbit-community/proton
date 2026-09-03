@@ -101,6 +101,14 @@ pub fn NativeError::to_repr(Self) -> @debug.Repr
 pub fn NativeError::to_string(Self) -> String
 
 // Types and methods
+pub(all) enum AccessibilityMode {
+  Automatic
+  AlwaysEnabled
+} derive(Eq, @debug.Debug)
+pub fn AccessibilityMode::equal(Self, Self) -> Bool
+pub fn AccessibilityMode::not_equal(Self, Self) -> Bool
+pub fn AccessibilityMode::to_repr(Self) -> @debug.Repr
+
 pub(all) struct AppActivation {
   abi_version : Int
   urls : Array[String]
@@ -494,8 +502,8 @@ pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Unit raise Nativ
 pub fn Runtime::set_menu(Self, MenuBar) -> Unit raise NativeError
 
 type RuntimeConfig derive(Eq, @debug.Debug)
-pub fn RuntimeConfig::RuntimeConfig(runtime_root? : String, helper_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging? : RemoteDebugging, headless? : Bool, persist_session_cookies? : Bool) -> Self
-pub fn RuntimeConfig::bundled(helper_path? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging? : RemoteDebugging, headless? : Bool, persist_session_cookies? : Bool) -> Self
+pub fn RuntimeConfig::RuntimeConfig(runtime_root? : String, helper_path? : String, resources_dir? : String, locales_dir? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging? : RemoteDebugging, headless? : Bool, accessibility_mode? : AccessibilityMode, persist_session_cookies? : Bool) -> Self
+pub fn RuntimeConfig::bundled(helper_path? : String, cache_dir? : String, locale? : @locale.Locale, accept_languages? : Array[@locale.Locale], remote_debugging? : RemoteDebugging, headless? : Bool, accessibility_mode? : AccessibilityMode, persist_session_cookies? : Bool) -> Self
 pub fn RuntimeConfig::equal(Self, Self) -> Bool
 pub fn RuntimeConfig::not_equal(Self, Self) -> Bool
 pub fn RuntimeConfig::to_repr(Self) -> @debug.Repr

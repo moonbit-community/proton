@@ -130,6 +130,16 @@ pub fn App::headless(self : App, enabled? : Bool = true) -> App {
 }
 
 ///|
+/// Controls when Proton enables Chromium's accessibility tree.
+///
+/// `Automatic` follows assistive-technology activity where the platform can
+/// report it. `AlwaysEnabled` keeps the tree available for the whole runtime.
+pub fn App::accessibility(self : App, mode : AccessibilityMode) -> App {
+  self.accessibility_mode_value = mode
+  self
+}
+
+///|
 /// Selects the immutable locale used by this application runtime.
 pub fn App::locale(self : App, locale : @locale.Locale) -> App {
   self.explicit_locale = Some(locale)

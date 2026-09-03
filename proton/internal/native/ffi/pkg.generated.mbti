@@ -367,7 +367,7 @@ pub fn proton_window_stop_find_in_page_ffi(WindowHandle, Int) -> Int
 
 pub fn runtime_complete_resource_request(RuntimeHandle, Int64, Int, Bytes, Bytes, Int) -> Int
 
-pub fn runtime_create(Int, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, @ref.Ref[RuntimeHandle]) -> Int
+pub fn runtime_create(Int, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, @ref.Ref[RuntimeHandle]) -> Int
 
 pub fn runtime_null() -> RuntimeHandle
 
