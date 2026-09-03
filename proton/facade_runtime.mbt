@@ -287,8 +287,16 @@ async fn run_manifest(
     ) catch {
       error => raise ConfigurationError(error)
     }
+    let titlebar_area_targets : Array[RendererTarget] = []
+    for plan in plans {
+      if plan.window.titlebar_style == @manifest.TitlebarStyle::Overlay {
+        titlebar_area_targets.push(RendererTarget::entry(window=plan.id))
+      }
+    }
     let command_build = build_command_host(
-      command_capabilities, extension_catalog,
+      command_capabilities,
+      extension_catalog,
+      titlebar_area_targets~,
     )
     command_host = command_build.runtime
     let policies : Array[BridgePagePolicy] = []

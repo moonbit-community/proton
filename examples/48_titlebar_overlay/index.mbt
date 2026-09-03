@@ -21,6 +21,10 @@ let resource : String =
   #|      color-scheme: light;
   #|      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   #|      --fallback-titlebar-height: 30px;
+  #|      --titlebar-x: 0px;
+  #|      --titlebar-y: 0px;
+  #|      --titlebar-width: 100%;
+  #|      --titlebar-height: var(--fallback-titlebar-height);
   #|      --window-background: #fff;
   #|      --titlebar-background: #f8f8fa;
   #|      --titlebar-border: #e1e2e4;
@@ -74,10 +78,7 @@ let resource : String =
   #|    }
   #|
   #|    .titlebar {
-  #|      height: var(
-  #|        --proton-titlebar-area-height,
-  #|        var(--fallback-titlebar-height)
-  #|      );
+  #|      height: var(--titlebar-height);
   #|      position: relative;
   #|      color: var(--chrome-text);
   #|      background: var(--titlebar-background);
@@ -87,13 +88,10 @@ let resource : String =
   #|
   #|    .titlebar-content {
   #|      position: absolute;
-  #|      left: var(--proton-titlebar-area-x, 0px);
-  #|      top: var(--proton-titlebar-area-y, 0px);
-  #|      width: var(--proton-titlebar-area-width, 100%);
-  #|      height: var(
-  #|        --proton-titlebar-area-height,
-  #|        var(--fallback-titlebar-height)
-  #|      );
+  #|      left: var(--titlebar-x);
+  #|      top: var(--titlebar-y);
+  #|      width: var(--titlebar-width);
+  #|      height: var(--titlebar-height);
   #|      display: flex;
   #|      align-items: center;
   #|      gap: 13px;
@@ -190,12 +188,7 @@ let resource : String =
   #|    }
   #|
   #|    main {
-  #|      height: calc(
-  #|        100% - var(
-  #|          --proton-titlebar-area-height,
-  #|          var(--fallback-titlebar-height)
-  #|        )
-  #|      );
+  #|      height: calc(100% - var(--titlebar-height));
   #|      display: grid;
   #|      place-items: center;
   #|      padding: 48px 32px 64px;
@@ -242,16 +235,27 @@ let resource : String =
   #|    </div>
   #|  </main>
   #|  <script>
-  #|    const overlay = navigator.windowControlsOverlay;
+  #|    const root = document.documentElement;
   #|    const output = document.querySelector('#geometry');
-  #|    const showGeometry = () => {
-  #|      const { x, y, width, height } = overlay.getTitlebarAreaRect();
-  #|      output.textContent = overlay.visible
-  #|        ? `Usable titlebar: ${x}, ${y}, ${width} × ${height}`
-  #|        : 'Window controls overlay is not visible';
+  #|    const showGeometry = async () => {
+  #|      const area = await window.__MoonBit__.getTitlebarArea();
+  #|      if (!area) {
+  #|        root.style.removeProperty('--titlebar-x');
+  #|        root.style.removeProperty('--titlebar-y');
+  #|        root.style.removeProperty('--titlebar-width');
+  #|        root.style.removeProperty('--titlebar-height');
+  #|        output.textContent = 'Titlebar area is not available';
+  #|        return;
+  #|      }
+  #|      root.style.setProperty('--titlebar-x', `${area.x}px`);
+  #|      root.style.setProperty('--titlebar-y', `${area.y}px`);
+  #|      root.style.setProperty('--titlebar-width', `${area.width}px`);
+  #|      root.style.setProperty('--titlebar-height', `${area.height}px`);
+  #|      output.textContent =
+  #|        `Usable titlebar: ${area.x}, ${area.y}, ${area.width} × ${area.height}`;
   #|    };
-  #|    overlay.addEventListener('geometrychange', showGeometry);
   #|    showGeometry();
+  #|    window.addEventListener('resize', showGeometry);
   #|
   #|    // Assign after DOM creation so CEF emits the initial draggable regions.
   #|    setTimeout(() => {

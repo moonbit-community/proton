@@ -18,31 +18,16 @@
 #define PROTON_ENGINE_BRIDGE_LIFECYCLE_MESSAGE "proton.bridge.lifecycle"
 #define PROTON_ENGINE_BRIDGE_LIFECYCLE_PROBE_MESSAGE \
   "proton.bridge.lifecycle.probe"
-#define PROTON_ENGINE_WINDOW_CONTROLS_OVERLAY_MESSAGE \
-  "proton.window_controls_overlay.geometry"
 #define PROTON_ENGINE_BRIDGE_NATIVE_FUNCTION "__protonNativeInvokeOp"
-
-typedef struct proton_engine_window_controls_overlay_geometry {
-  int visible;
-  int x;
-  int y;
-  int width;
-  int height;
-  int zoom_percent;
-} proton_engine_window_controls_overlay_geometry_t;
 
 // Returns a transfer reference consumed by
 // cef_browser_host_create_browser[_sync].
 cef_dictionary_value_t *proton_engine_bridge_renderer_extra_info(
-    const proton_bridge_config_t *bridge_config,
-    const proton_engine_window_controls_overlay_geometry_t *overlay_geometry);
+    const proton_bridge_config_t *bridge_config);
 
 int proton_engine_bridge_send_event(cef_browser_t *browser,
                                     const char *event_json);
 int proton_engine_bridge_send_lifecycle_probe(cef_frame_t *frame);
-int proton_engine_window_controls_overlay_send(
-    cef_browser_t *browser,
-    const proton_engine_window_controls_overlay_geometry_t *geometry);
 
 void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_created(
     cef_render_process_handler_t *self,

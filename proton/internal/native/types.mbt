@@ -1247,6 +1247,17 @@ struct WindowRef {
 }
 
 ///|
+pub(all) struct TitlebarArea {
+  x : Double
+  y : Double
+  width : Double
+  height : Double
+} derive(ToJson)
+
+///|
+pub extend TitlebarArea with ToJson::{to_json}
+
+///|
 pub impl Eq for WindowRef with fn equal(self : WindowRef, other : WindowRef) -> Bool {
   self.id == other.id
 }

@@ -289,7 +289,6 @@ static void CEF_CALLBACK proton_engine_on_after_created(
   // The main browser view must stay below any web contents views, including
   // views created before this browser finished loading.
   proton_engine_window_layout_views(window);
-  proton_engine_window_update_controls_overlay(window);
 
   if (window->closed || window->finalize_after_browser_close) {
     window->initial_navigation_pending = 0;

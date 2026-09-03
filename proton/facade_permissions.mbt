@@ -196,6 +196,13 @@ fn WindowPermissionPolicy::native_grants(
         initialization_units.push(unit)
       }
     }
+    if ops.contains(titlebar_area_op) {
+      initialization_units.push(
+        @native.BridgeInitializationUnit(
+          "proton", "titlebar-area", titlebar_area_bridge_source,
+        ),
+      )
+    }
     native_grants.push(
       @native.BridgeGrantConfig(
         source_origin,

@@ -203,8 +203,6 @@ gboolean proton_engine_overlay_window_state(
       (proton_engine_window_t *)user_data);
   proton_engine_overlay_update_input_shape(
       (proton_engine_window_t *)user_data);
-  proton_engine_window_update_controls_overlay(
-      (proton_engine_window_t *)user_data);
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   return FALSE;
 }

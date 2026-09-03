@@ -13,6 +13,14 @@ typedef struct proton_engine_runtime proton_engine_runtime_t;
 typedef struct proton_engine_window proton_engine_window_t;
 typedef struct proton_engine_view proton_engine_view_t;
 
+typedef struct {
+  int32_t x;
+  int32_t y;
+  int32_t width;
+  int32_t height;
+  int32_t zoom_percent;
+} proton_engine_titlebar_area_t;
+
 #define PROTON_ENGINE_MAX_PATH_BYTES 4096
 #define PROTON_ENGINE_MAX_URL_BYTES 131072
 #define PROTON_ENGINE_MAX_LABEL_BYTES 256
@@ -248,6 +256,10 @@ int32_t proton_engine_window_set_content_size(
     char *error, size_t error_len);
 int32_t proton_engine_window_get_content_size(
     proton_engine_window_t *window, int32_t *out_width, int32_t *out_height,
+    char *error, size_t error_len);
+int32_t proton_engine_window_get_titlebar_area(
+    proton_engine_window_t *window, int32_t *out_x, int32_t *out_y,
+    int32_t *out_width, int32_t *out_height, int32_t *out_zoom_percent,
     char *error, size_t error_len);
 int32_t proton_engine_window_set_minimum_size(
     proton_engine_window_t *window, int32_t width, int32_t height,

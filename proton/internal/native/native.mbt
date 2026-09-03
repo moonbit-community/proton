@@ -1593,6 +1593,39 @@ pub fn Window::content_size(self : Window) -> (Int, Int) raise NativeError {
 }
 
 ///|
+pub fn WindowRef::titlebar_area(
+  self : WindowRef,
+) -> TitlebarArea? raise NativeError {
+  let x = Ref(0)
+  let y = Ref(0)
+  let width = Ref(0)
+  let height = Ref(0)
+  let zoom_percent = Ref(100)
+  check_status(
+    @native_ffi.proton_window_get_titlebar_area_ffi(
+      self.handle,
+      x,
+      y,
+      width,
+      height,
+      zoom_percent,
+    ),
+  )
+  guard width.val > 0 && height.val > 0 else { return None }
+  let zoom = if zoom_percent.val > 0 {
+    zoom_percent.val.to_double() / 100.0
+  } else {
+    1.0
+  }
+  Some(TitlebarArea::{
+    x: x.val.to_double() / zoom,
+    y: y.val.to_double() / zoom,
+    width: width.val.to_double() / zoom,
+    height: height.val.to_double() / zoom,
+  })
+}
+
+///|
 pub fn Window::minimize(self : Window) -> Unit raise NativeError {
   check_status(@native_ffi.proton_window_minimize_ffi(self.live_handle()))
 }

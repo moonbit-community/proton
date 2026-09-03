@@ -37,26 +37,8 @@ typedef struct proton_engine_bridge_context {
   struct proton_engine_bridge_context *next;
 } proton_engine_bridge_context_t;
 
-typedef struct proton_engine_window_controls_overlay_browser {
-  int browser_id;
-  size_t instance_count;
-  proton_engine_window_controls_overlay_geometry_t geometry;
-  struct proton_engine_window_controls_overlay_browser *next;
-} proton_engine_window_controls_overlay_browser_t;
-
-typedef struct proton_engine_window_controls_overlay_context {
-  int browser_id;
-  cef_v8_context_t *context;
-  cef_v8_value_t *dispatcher;
-  struct proton_engine_window_controls_overlay_context *next;
-} proton_engine_window_controls_overlay_context_t;
-
 static proton_engine_bridge_browser_config_t *g_browser_configs = NULL;
 static proton_engine_bridge_context_t *g_contexts = NULL;
-static proton_engine_window_controls_overlay_browser_t *g_overlay_browsers =
-    NULL;
-static proton_engine_window_controls_overlay_context_t *g_overlay_contexts =
-    NULL;
 static uint64_t g_next_page_instance = 1;
 
 static char *proton_engine_bridge_dictionary_string(
@@ -579,18 +561,6 @@ static int proton_engine_bridge_dictionary_set_string(
   return set;
 }
 
-static int proton_engine_bridge_dictionary_set_int(
-    cef_dictionary_value_t *dictionary, const char *key, int value) {
-  if (dictionary == NULL || key == NULL) {
-    return 0;
-  }
-  cef_string_t key_string = {0};
-  proton_engine_bridge_set_string(&key_string, key);
-  int set = dictionary->set_int(dictionary, &key_string, value);
-  cef_string_clear(&key_string);
-  return set;
-}
-
 static int proton_engine_bridge_dictionary_set_dictionary(
     cef_dictionary_value_t *dictionary, const char *key,
     cef_dictionary_value_t *value) {
@@ -737,7 +707,7 @@ static cef_list_value_t *proton_engine_bridge_config_initialization_units(
   return units;
 }
 
-static cef_dictionary_value_t *proton_engine_bridge_extra_info(
+cef_dictionary_value_t *proton_engine_bridge_renderer_extra_info(
     const proton_bridge_config_t *config) {
   if (config == NULL) {
     return NULL;
@@ -844,41 +814,6 @@ static cef_dictionary_value_t *proton_engine_bridge_extra_info(
   return root;
 }
 
-cef_dictionary_value_t *proton_engine_bridge_renderer_extra_info(
-    const proton_bridge_config_t *config,
-    const proton_engine_window_controls_overlay_geometry_t *geometry) {
-  cef_dictionary_value_t *root = proton_engine_bridge_extra_info(config);
-  if (geometry == NULL) {
-    return root;
-  }
-  if (root == NULL) {
-    root = cef_dictionary_value_create();
-  }
-  cef_dictionary_value_t *overlay = cef_dictionary_value_create();
-  if (root == NULL || overlay == NULL ||
-      !proton_engine_bridge_dictionary_set_int(overlay, "visible",
-                                               geometry->visible) ||
-      !proton_engine_bridge_dictionary_set_int(overlay, "x", geometry->x) ||
-      !proton_engine_bridge_dictionary_set_int(overlay, "y", geometry->y) ||
-      !proton_engine_bridge_dictionary_set_int(overlay, "width",
-                                               geometry->width) ||
-      !proton_engine_bridge_dictionary_set_int(overlay, "height",
-                                               geometry->height) ||
-      !proton_engine_bridge_dictionary_set_int(overlay, "zoom_percent",
-                                               geometry->zoom_percent) ||
-      !proton_engine_bridge_dictionary_set_dictionary(
-          root, "window_controls_overlay", overlay)) {
-    if (root != NULL) {
-      root->base.release((cef_base_ref_counted_t *)root);
-    }
-    if (overlay != NULL) {
-      overlay->base.release((cef_base_ref_counted_t *)overlay);
-    }
-    return NULL;
-  }
-  return root;
-}
-
 int proton_engine_bridge_send_event(cef_browser_t *browser,
                                     const char *event_json) {
   if (browser == NULL || event_json == NULL) {
@@ -907,48 +842,6 @@ int proton_engine_bridge_send_event(cef_browser_t *browser,
       populated = args->set_string(args, 0, &event);
       cef_string_clear(&event);
     }
-    args->base.release((cef_base_ref_counted_t *)args);
-    if (populated) {
-      frame->send_process_message(frame, PID_RENDERER, message);
-      sent = 1;
-    }
-  }
-  if (!sent) {
-    message->base.release((cef_base_ref_counted_t *)message);
-  }
-  frame->base.release((cef_base_ref_counted_t *)frame);
-  return sent;
-}
-
-int proton_engine_window_controls_overlay_send(
-    cef_browser_t *browser,
-    const proton_engine_window_controls_overlay_geometry_t *geometry) {
-  if (browser == NULL || geometry == NULL) {
-    return 0;
-  }
-  cef_frame_t *frame = browser->get_main_frame(browser);
-  if (frame == NULL) {
-    return 0;
-  }
-  cef_string_t message_name = {0};
-  proton_engine_bridge_set_string(
-      &message_name, PROTON_ENGINE_WINDOW_CONTROLS_OVERLAY_MESSAGE);
-  cef_process_message_t *message = cef_process_message_create(&message_name);
-  cef_string_clear(&message_name);
-  if (message == NULL) {
-    frame->base.release((cef_base_ref_counted_t *)frame);
-    return 0;
-  }
-  cef_list_value_t *args = message->get_argument_list(message);
-  int sent = 0;
-  if (args != NULL) {
-    int populated = args->set_size(args, 6) &&
-                    args->set_bool(args, 0, geometry->visible) &&
-                    args->set_int(args, 1, geometry->x) &&
-                    args->set_int(args, 2, geometry->y) &&
-                    args->set_int(args, 3, geometry->width) &&
-                    args->set_int(args, 4, geometry->height) &&
-                    args->set_int(args, 5, geometry->zoom_percent);
     args->base.release((cef_base_ref_counted_t *)args);
     if (populated) {
       frame->send_process_message(frame, PID_RENDERER, message);
@@ -1009,182 +902,6 @@ static int proton_engine_bridge_store_browser_config(
   entry->next = g_browser_configs;
   g_browser_configs = entry;
   return 1;
-}
-
-static proton_engine_window_controls_overlay_browser_t *
-proton_engine_window_controls_overlay_find_browser(cef_browser_t *browser) {
-  if (browser == NULL) {
-    return NULL;
-  }
-  int browser_id = browser->get_identifier(browser);
-  for (proton_engine_window_controls_overlay_browser_t *entry =
-           g_overlay_browsers;
-       entry != NULL; entry = entry->next) {
-    if (entry->browser_id == browser_id) {
-      return entry;
-    }
-  }
-  return NULL;
-}
-
-static proton_engine_window_controls_overlay_context_t *
-proton_engine_window_controls_overlay_find_context(cef_browser_t *browser) {
-  if (browser == NULL) {
-    return NULL;
-  }
-  int browser_id = browser->get_identifier(browser);
-  for (proton_engine_window_controls_overlay_context_t *entry =
-           g_overlay_contexts;
-       entry != NULL; entry = entry->next) {
-    if (entry->browser_id == browser_id) {
-      return entry;
-    }
-  }
-  return NULL;
-}
-
-static int proton_engine_window_controls_overlay_store_browser(
-    cef_browser_t *browser,
-    const proton_engine_window_controls_overlay_geometry_t *geometry) {
-  if (browser == NULL || geometry == NULL) {
-    return 0;
-  }
-  proton_engine_window_controls_overlay_browser_t *existing =
-      proton_engine_window_controls_overlay_find_browser(browser);
-  if (existing != NULL) {
-    existing->geometry = *geometry;
-    existing->instance_count++;
-    return 1;
-  }
-  proton_engine_window_controls_overlay_browser_t *entry =
-      (proton_engine_window_controls_overlay_browser_t *)calloc(
-          1, sizeof(*entry));
-  if (entry == NULL) {
-    return 0;
-  }
-  entry->browser_id = browser->get_identifier(browser);
-  entry->instance_count = 1;
-  entry->geometry = *geometry;
-  entry->next = g_overlay_browsers;
-  g_overlay_browsers = entry;
-  return 1;
-}
-
-static void proton_engine_window_controls_overlay_release_context(
-    proton_engine_window_controls_overlay_context_t *entry) {
-  if (entry == NULL) {
-    return;
-  }
-  if (entry->context != NULL && entry->dispatcher != NULL &&
-      entry->context->is_valid(entry->context) &&
-      entry->context->enter(entry->context)) {
-    cef_v8_value_t *dispose = proton_engine_bridge_get_property(
-        entry->dispatcher, "dispose");
-    if (dispose != NULL && dispose->is_function(dispose)) {
-      cef_v8_value_t *result = proton_engine_bridge_execute(
-          dispose, entry->context, entry->dispatcher, 0, NULL);
-      if (result != NULL) {
-        result->base.release((cef_base_ref_counted_t *)result);
-      }
-    }
-    if (dispose != NULL) {
-      dispose->base.release((cef_base_ref_counted_t *)dispose);
-    }
-    entry->context->exit(entry->context);
-  }
-  if (entry->dispatcher != NULL) {
-    entry->dispatcher->base.release(
-        (cef_base_ref_counted_t *)entry->dispatcher);
-  }
-  if (entry->context != NULL) {
-    entry->context->base.release((cef_base_ref_counted_t *)entry->context);
-  }
-  free(entry);
-}
-
-static int proton_engine_window_controls_overlay_install(
-    cef_browser_t *browser, cef_v8_context_t *context,
-    const proton_engine_window_controls_overlay_geometry_t *geometry) {
-  if (browser == NULL || context == NULL || geometry == NULL ||
-      !context->enter(context)) {
-    return 0;
-  }
-  cef_string_t source = {0};
-  cef_string_t source_url = {0};
-  proton_engine_bridge_set_string(
-      &source, (const char *)proton_engine_window_controls_overlay_source);
-  proton_engine_bridge_set_string(
-      &source_url, "proton://window-controls-overlay/bootstrap.js");
-  cef_v8_value_t *installer = NULL;
-  cef_v8_exception_t *exception = NULL;
-  int evaluated = context->eval(context, &source, &source_url, 1, &installer,
-                                &exception);
-  cef_string_clear(&source);
-  cef_string_clear(&source_url);
-  cef_v8_value_t *global = context->get_global(context);
-  cef_v8_value_t *arguments[] = {
-      cef_v8_value_create_bool(geometry->visible),
-      cef_v8_value_create_int(geometry->x),
-      cef_v8_value_create_int(geometry->y),
-      cef_v8_value_create_int(geometry->width),
-      cef_v8_value_create_int(geometry->height),
-      cef_v8_value_create_int(geometry->zoom_percent),
-  };
-  cef_v8_value_t *dispatcher = NULL;
-  if (evaluated && exception == NULL && installer != NULL &&
-      installer->is_function(installer) && global != NULL) {
-    dispatcher = proton_engine_bridge_execute(installer, context, global, 6,
-                                               arguments);
-    memset(arguments, 0, sizeof(arguments));
-  }
-  for (size_t index = 0; index < 6; index++) {
-    if (arguments[index] != NULL) {
-      arguments[index]->base.release(
-          (cef_base_ref_counted_t *)arguments[index]);
-    }
-  }
-  if (installer != NULL) {
-    installer->base.release((cef_base_ref_counted_t *)installer);
-  }
-  if (exception != NULL) {
-    exception->base.release((cef_base_ref_counted_t *)exception);
-  }
-  if (global != NULL) {
-    global->base.release((cef_base_ref_counted_t *)global);
-  }
-  int installed = dispatcher != NULL && dispatcher->is_object(dispatcher);
-  if (installed) {
-    proton_engine_window_controls_overlay_context_t *entry =
-        (proton_engine_window_controls_overlay_context_t *)calloc(
-            1, sizeof(*entry));
-    installed = entry != NULL;
-    if (entry != NULL) {
-      int browser_id = browser->get_identifier(browser);
-      proton_engine_window_controls_overlay_context_t **cursor =
-          &g_overlay_contexts;
-      while (*cursor != NULL) {
-        proton_engine_window_controls_overlay_context_t *existing = *cursor;
-        if (existing->browser_id == browser_id) {
-          *cursor = existing->next;
-          proton_engine_window_controls_overlay_release_context(existing);
-          break;
-        }
-        cursor = &existing->next;
-      }
-      context->base.add_ref((cef_base_ref_counted_t *)context);
-      entry->browser_id = browser_id;
-      entry->context = context;
-      entry->dispatcher = dispatcher;
-      entry->next = g_overlay_contexts;
-      g_overlay_contexts = entry;
-      dispatcher = NULL;
-    }
-  }
-  if (dispatcher != NULL) {
-    dispatcher->base.release((cef_base_ref_counted_t *)dispatcher);
-  }
-  context->exit(context);
-  return installed;
 }
 
 static char *proton_engine_bridge_dictionary_string(
@@ -1485,45 +1202,15 @@ void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_created(
     return;
   }
   cef_string_t key = {0};
-  proton_engine_bridge_set_string(&key, "window_controls_overlay");
-  cef_dictionary_value_t *overlay =
-      extra_info->get_dictionary(extra_info, &key);
-  cef_string_clear(&key);
-  if (overlay != NULL) {
-    cef_string_t field = {0};
-    proton_engine_window_controls_overlay_geometry_t geometry = {0};
-    proton_engine_bridge_set_string(&field, "visible");
-    geometry.visible = overlay->get_int(overlay, &field);
-    cef_string_clear(&field);
-    proton_engine_bridge_set_string(&field, "x");
-    geometry.x = overlay->get_int(overlay, &field);
-    cef_string_clear(&field);
-    proton_engine_bridge_set_string(&field, "y");
-    geometry.y = overlay->get_int(overlay, &field);
-    cef_string_clear(&field);
-    proton_engine_bridge_set_string(&field, "width");
-    geometry.width = overlay->get_int(overlay, &field);
-    cef_string_clear(&field);
-    proton_engine_bridge_set_string(&field, "height");
-    geometry.height = overlay->get_int(overlay, &field);
-    cef_string_clear(&field);
-    proton_engine_bridge_set_string(&field, "zoom_percent");
-    geometry.zoom_percent = overlay->get_int(overlay, &field);
-    cef_string_clear(&field);
-    (void)proton_engine_window_controls_overlay_store_browser(browser,
-                                                               &geometry);
-    overlay->base.release((cef_base_ref_counted_t *)overlay);
-  }
-
   proton_engine_bridge_set_string(&key, "bridge");
-  cef_dictionary_value_t *bridge =
-      extra_info->get_dictionary(extra_info, &key);
+  cef_dictionary_value_t *bridge = extra_info->get_dictionary(extra_info, &key);
   cef_string_clear(&key);
-  if (bridge != NULL) {
-    cef_dictionary_value_t *config = bridge->copy(bridge, 0);
-    bridge->base.release((cef_base_ref_counted_t *)bridge);
-    (void)proton_engine_bridge_store_browser_config(browser, config);
+  if (bridge == NULL) {
+    return;
   }
+  cef_dictionary_value_t *config = bridge->copy(bridge, 0);
+  bridge->base.release((cef_base_ref_counted_t *)bridge);
+  (void)proton_engine_bridge_store_browser_config(browser, config);
 }
 
 void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_destroyed(
@@ -1531,28 +1218,16 @@ void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_destroyed(
     cef_browser_t *browser) {
   (void)self;
   int browser_id = browser != NULL ? browser->get_identifier(browser) : 0;
-  proton_engine_bridge_browser_config_t *bridge_state =
-      proton_engine_bridge_find_browser_config(browser);
-  proton_engine_window_controls_overlay_browser_t *overlay_state =
-      proton_engine_window_controls_overlay_find_browser(browser);
-  if ((bridge_state != NULL && bridge_state->instance_count > 1) ||
-      (overlay_state != NULL && overlay_state->instance_count > 1)) {
-    if (bridge_state != NULL && bridge_state->instance_count > 1) {
-      bridge_state->instance_count--;
-    }
-    if (overlay_state != NULL && overlay_state->instance_count > 1) {
-      overlay_state->instance_count--;
-    }
-    return;
-  }
   proton_engine_bridge_browser_config_t **config_cursor = &g_browser_configs;
   while (*config_cursor != NULL) {
     proton_engine_bridge_browser_config_t *entry = *config_cursor;
     if (entry->browser_id == browser_id) {
-      *config_cursor = entry->next;
-      if (entry->config != NULL) {
-        entry->config->base.release((cef_base_ref_counted_t *)entry->config);
+      if (entry->instance_count > 1) {
+        entry->instance_count--;
+        return;
       }
+      *config_cursor = entry->next;
+      entry->config->base.release((cef_base_ref_counted_t *)entry->config);
       free(entry->lifecycle_outcome);
       free(entry->lifecycle_page_instance);
       free(entry->lifecycle_url);
@@ -1573,30 +1248,6 @@ void CEF_CALLBACK proton_engine_bridge_renderer_on_browser_destroyed(
     }
     context_cursor = &entry->next;
   }
-  proton_engine_window_controls_overlay_browser_t **overlay_browser_cursor =
-      &g_overlay_browsers;
-  while (*overlay_browser_cursor != NULL) {
-    proton_engine_window_controls_overlay_browser_t *entry =
-        *overlay_browser_cursor;
-    if (entry->browser_id == browser_id) {
-      *overlay_browser_cursor = entry->next;
-      free(entry);
-      break;
-    }
-    overlay_browser_cursor = &entry->next;
-  }
-  proton_engine_window_controls_overlay_context_t **overlay_context_cursor =
-      &g_overlay_contexts;
-  while (*overlay_context_cursor != NULL) {
-    proton_engine_window_controls_overlay_context_t *entry =
-        *overlay_context_cursor;
-    if (entry->browser_id == browser_id) {
-      *overlay_context_cursor = entry->next;
-      proton_engine_window_controls_overlay_release_context(entry);
-      continue;
-    }
-    overlay_context_cursor = &entry->next;
-  }
 }
 
 void proton_engine_bridge_renderer_on_context_created(
@@ -1605,19 +1256,13 @@ void proton_engine_bridge_renderer_on_context_created(
     cef_v8_context_t *context,
     cef_v8_handler_t *native_invoke_handler) {
   if (browser == NULL || frame == NULL || context == NULL ||
+      native_invoke_handler == NULL ||
       !proton_engine_bridge_is_default_context(frame, context)) {
     return;
   }
-  proton_engine_window_controls_overlay_browser_t *overlay =
-      proton_engine_window_controls_overlay_find_browser(browser);
-  if (overlay != NULL) {
-    (void)proton_engine_window_controls_overlay_install(
-        browser, context, &overlay->geometry);
-  }
   proton_engine_bridge_browser_config_t *browser_config =
       proton_engine_bridge_find_browser_config(browser);
-  if (native_invoke_handler == NULL || browser_config == NULL ||
-      browser_config->config == NULL) {
+  if (browser_config == NULL || browser_config->config == NULL) {
     return;
   }
 
@@ -1796,18 +1441,6 @@ void proton_engine_bridge_renderer_on_context_released(
 
   proton_engine_bridge_send_context_disposed(frame, page_instance);
   free(page_instance);
-
-  proton_engine_window_controls_overlay_context_t **overlay_cursor =
-      &g_overlay_contexts;
-  while (*overlay_cursor != NULL) {
-    proton_engine_window_controls_overlay_context_t *entry = *overlay_cursor;
-    if (entry->context == context) {
-      *overlay_cursor = entry->next;
-      proton_engine_window_controls_overlay_release_context(entry);
-      break;
-    }
-    overlay_cursor = &entry->next;
-  }
 }
 
 static int proton_engine_bridge_dispatch_response(
@@ -1891,54 +1524,6 @@ static int proton_engine_bridge_dispatch_event(
   return 1;
 }
 
-static int proton_engine_window_controls_overlay_dispatch(
-    cef_browser_t *browser, cef_list_value_t *args) {
-  if (browser == NULL || args == NULL || args->get_size(args) < 6) {
-    return 1;
-  }
-  proton_engine_window_controls_overlay_geometry_t geometry = {
-      .visible = args->get_bool(args, 0),
-      .x = args->get_int(args, 1),
-      .y = args->get_int(args, 2),
-      .width = args->get_int(args, 3),
-      .height = args->get_int(args, 4),
-      .zoom_percent = args->get_int(args, 5),
-  };
-  proton_engine_window_controls_overlay_browser_t *browser_state =
-      proton_engine_window_controls_overlay_find_browser(browser);
-  if (browser_state != NULL) {
-    browser_state->geometry = geometry;
-  }
-  proton_engine_window_controls_overlay_context_t *entry =
-      proton_engine_window_controls_overlay_find_context(browser);
-  if (entry == NULL || !entry->context->is_valid(entry->context) ||
-      !entry->context->enter(entry->context)) {
-    return 1;
-  }
-  cef_v8_value_t *update = proton_engine_bridge_get_property(
-      entry->dispatcher, "update");
-  if (update != NULL && update->is_function(update)) {
-    cef_v8_value_t *arguments[] = {
-        cef_v8_value_create_bool(geometry.visible),
-        cef_v8_value_create_int(geometry.x),
-        cef_v8_value_create_int(geometry.y),
-        cef_v8_value_create_int(geometry.width),
-        cef_v8_value_create_int(geometry.height),
-        cef_v8_value_create_int(geometry.zoom_percent),
-    };
-    cef_v8_value_t *result = proton_engine_bridge_execute(
-        update, entry->context, entry->dispatcher, 6, arguments);
-    if (result != NULL) {
-      result->base.release((cef_base_ref_counted_t *)result);
-    }
-  }
-  if (update != NULL) {
-    update->base.release((cef_base_ref_counted_t *)update);
-  }
-  entry->context->exit(entry->context);
-  return 1;
-}
-
 static int proton_engine_bridge_handle_lifecycle_probe(
     cef_browser_t *browser, cef_frame_t *frame) {
   proton_engine_bridge_browser_config_t *config =
@@ -2006,29 +1591,22 @@ int proton_engine_bridge_renderer_on_process_message_received(
   int is_event = strcmp(message_name, PROTON_ENGINE_BRIDGE_EVENT_MESSAGE) == 0;
   int is_lifecycle_probe =
       strcmp(message_name, PROTON_ENGINE_BRIDGE_LIFECYCLE_PROBE_MESSAGE) == 0;
-  int is_window_controls_overlay =
-      strcmp(message_name, PROTON_ENGINE_WINDOW_CONTROLS_OVERLAY_MESSAGE) == 0;
   free(message_name);
   if (is_lifecycle_probe) {
     return proton_engine_bridge_handle_lifecycle_probe(browser, frame);
   }
-  if (!is_response && !is_event && !is_window_controls_overlay) {
+  if (!is_response && !is_event) {
     return 0;
   }
   cef_list_value_t *args = message->get_argument_list(message);
   if (args == NULL) {
     return 1;
   }
-  int handled;
-  if (is_window_controls_overlay) {
-    handled = proton_engine_window_controls_overlay_dispatch(browser, args);
-  } else {
-    proton_engine_bridge_context_t *entry =
-        proton_engine_bridge_find_context(browser);
-    handled = is_response
-                  ? proton_engine_bridge_dispatch_response(entry, args)
-                  : proton_engine_bridge_dispatch_event(entry, args);
-  }
+  proton_engine_bridge_context_t *entry =
+      proton_engine_bridge_find_context(browser);
+  int handled = is_response
+                    ? proton_engine_bridge_dispatch_response(entry, args)
+                    : proton_engine_bridge_dispatch_event(entry, args);
   args->base.release((cef_base_ref_counted_t *)args);
   return handled;
 }

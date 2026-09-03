@@ -2,6 +2,7 @@
 fn build_command_host(
   command_capabilities : Array[AppCommandCapability],
   command_extensions : CommandExtensionCatalog,
+  titlebar_area_targets? : Array[RendererTarget] = [],
 ) -> CommandHostBuild raise AppRunError {
   let host = @core.AppCommandHost(
     expose_error_details=proton_dev_mode_enabled(),
@@ -15,6 +16,29 @@ fn build_command_host(
   let app_capabilities : Array[RegisteredAppCommandCapability] = []
   let mut has_commands = false
   let registrar = @proton_command.CommandRegistrar(host)
+  if !titlebar_area_targets.is_empty() {
+    host.op_async_with_context(titlebar_area_op, fn(
+      context,
+      _request : Unit,
+    ) raise {
+      match context.window() {
+        Some(window) => window.titlebar_area()
+        None => Json::null()
+      }
+    }) catch {
+      error => {
+        ignore(close_command_host_runtime(host, destroy_hooks))
+        raise CommandExtensionLifecycleError(
+          ApplicationRegistrationFailed(detail=@debug.render(Repr(error))),
+        )
+      }
+    }
+    has_commands = true
+    app_capabilities.push(RegisteredAppCommandCapability::{
+      ops: [titlebar_area_op],
+      targets: titlebar_area_targets.copy(),
+    })
+  }
   for capability in command_capabilities {
     let registered_before = host.registered_ops().length()
     (capability.register)(registrar) catch {
@@ -296,13 +320,13 @@ fn append_bridge_extension_frontend(
 
 ///|
 /// Reports whether a name cannot be exposed as a bridge proxy on the renderer
-/// root object. `app` is reserved alongside `core` and `events` because the
-/// bridge publishes granted application commands under it.
+/// root object. Framework-owned bridge properties are reserved too.
 fn command_proxy_name_is_invalid(name : String) -> Bool {
   name.trim().to_owned() == "" ||
   name == "core" ||
   name == "events" ||
   name == "app" ||
+  name == "getTitlebarArea" ||
   @proton_command.app_command_js_property_is_reserved(name)
 }
 
@@ -555,6 +579,12 @@ fn command_window_capability(
         None
       } else {
         Some(result)
+      }
+    },
+    fn() raise {
+      match window.titlebar_area() {
+        Some(area) => area.to_json()
+        None => Json::null()
       }
     },
   )

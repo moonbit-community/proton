@@ -6,7 +6,6 @@
 #include "../../proton_event.h"
 #include "../cef_common/bridge_client.h"
 #include "../cef_common/bridge_lifecycle.h"
-#include "../cef_common/bridge_renderer.h"
 #include "../cef_common/browser_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
@@ -103,9 +102,6 @@ struct proton_engine_window {
   cef_rect_t osr_popup_rect;
   int size_hint;
   int titlebar_overlay;
-  int window_controls_overlay_geometry_initialized;
-  proton_engine_window_controls_overlay_geometry_t
-      window_controls_overlay_geometry;
   proton_window_theme_preference_t theme_preference;
   int always_on_top;
   int fullscreenable;
@@ -161,8 +157,6 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view);
 void proton_engine_window_close_views(proton_engine_window_t *window);
 void proton_engine_window_free_views(proton_engine_window_t *window);
 void proton_engine_window_layout_views(proton_engine_window_t *window);
-void proton_engine_window_update_controls_overlay(
-    proton_engine_window_t *window);
 
 typedef struct {
   atomic_int refs;

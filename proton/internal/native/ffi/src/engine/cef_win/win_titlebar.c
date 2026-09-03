@@ -372,7 +372,6 @@ void proton_engine_resize_browser(proton_engine_window_t *window,
     }
   }
   host->base.release((cef_base_ref_counted_t *)host);
-  proton_engine_window_update_controls_overlay(window);
 }
 
 LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam) {

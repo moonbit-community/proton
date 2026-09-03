@@ -144,6 +144,23 @@ priv struct CommandHostBuild {
 let default_bridge_startup_timeout_ms = 30000
 
 ///|
+let titlebar_area_op = "proton:window/get-titlebar-area"
+
+///|
+let titlebar_area_bridge_source =
+  #|Object.defineProperty(globalThis.__MoonBit__, "getTitlebarArea", {
+  #|  configurable: true,
+  #|  enumerable: true,
+  #|  value() {
+  #|    return globalThis.__MoonBit__.core.invokeOp(
+  #|      "proton:window/get-titlebar-area",
+  #|      null,
+  #|    );
+  #|  },
+  #|});
+  #|
+
+///|
 priv struct ResolvedAppConfig {
   manifest : @manifest.AppManifest
   application_name : String

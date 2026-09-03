@@ -218,31 +218,22 @@ static void proton_engine_on_window_destroy(GtkWidget *widget,
   }
 }
 
-static int proton_engine_window_controls_overlay_geometry_equal(
-    const proton_engine_window_controls_overlay_geometry_t *left,
-    const proton_engine_window_controls_overlay_geometry_t *right) {
-  return left->visible == right->visible && left->x == right->x &&
-         left->y == right->y && left->width == right->width &&
-         left->height == right->height &&
-         left->zoom_percent == right->zoom_percent;
-}
-
-static proton_engine_window_controls_overlay_geometry_t
-proton_engine_window_controls_overlay_geometry(
+static proton_engine_titlebar_area_t
+proton_engine_window_titlebar_area(
     proton_engine_window_t *window) {
-  proton_engine_window_controls_overlay_geometry_t geometry = {
+  proton_engine_titlebar_area_t area = {
       .zoom_percent =
           window != NULL && window->zoom_percent > 0 ? window->zoom_percent
                                                      : 100,
   };
   if (window == NULL || !window->titlebar_overlay || window->window == NULL ||
       window->browser_host == NULL || window->overlay_controls == NULL) {
-    return geometry;
+    return area;
   }
   GdkWindow *gdk_window = gtk_widget_get_window(window->window);
   if (gdk_window == NULL ||
       (gdk_window_get_state(gdk_window) & GDK_WINDOW_STATE_FULLSCREEN) != 0) {
-    return geometry;
+    return area;
   }
   int viewport_width = gtk_widget_get_allocated_width(window->browser_host);
   int viewport_height = gtk_widget_get_allocated_height(window->browser_host);
@@ -257,7 +248,7 @@ proton_engine_window_controls_overlay_geometry(
       !gtk_widget_translate_coordinates(window->overlay_controls,
                                         window->browser_host, 0, 0,
                                         &controls_x, &controls_y)) {
-    return geometry;
+    return area;
   }
   int left_margin = MAX(0, controls_x);
   int right_margin =
@@ -265,38 +256,36 @@ proton_engine_window_controls_overlay_geometry(
   int left_space = controls_x;
   int right_space = viewport_width - controls_x - controls_width;
   if (left_space >= right_space) {
-    geometry.x = 0;
-    geometry.width = MAX(0, controls_x - right_margin);
+    area.x = 0;
+    area.width = MAX(0, controls_x - right_margin);
   } else {
-    geometry.x = MIN(viewport_width,
-                     controls_x + controls_width + left_margin);
-    geometry.width = MAX(0, viewport_width - geometry.x);
+    area.x = MIN(viewport_width,
+                 controls_x + controls_width + left_margin);
+    area.width = MAX(0, viewport_width - area.x);
   }
-  geometry.y = 0;
-  geometry.height = MIN(
+  area.y = 0;
+  area.height = MIN(
       viewport_height, MAX(0, controls_y * 2 + controls_height));
-  geometry.visible = geometry.width > 0 && geometry.height > 0;
-  return geometry;
+  return area;
 }
 
-void proton_engine_window_update_controls_overlay(
-    proton_engine_window_t *window) {
-  if (window == NULL || !window->titlebar_overlay) {
-    return;
+int32_t proton_engine_window_get_titlebar_area(
+    proton_engine_window_t *window, int32_t *out_x, int32_t *out_y,
+    int32_t *out_width, int32_t *out_height, int32_t *out_zoom_percent,
+    char *error, size_t error_len) {
+  if (window == NULL || out_x == NULL || out_y == NULL ||
+      out_width == NULL || out_height == NULL || out_zoom_percent == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
-  proton_engine_window_controls_overlay_geometry_t geometry =
-      proton_engine_window_controls_overlay_geometry(window);
-  if (window->window_controls_overlay_geometry_initialized &&
-      proton_engine_window_controls_overlay_geometry_equal(
-          &window->window_controls_overlay_geometry, &geometry)) {
-    return;
-  }
-  window->window_controls_overlay_geometry = geometry;
-  window->window_controls_overlay_geometry_initialized = 1;
-  cef_browser_t *browser = proton_engine_window_browser(window);
-  if (browser != NULL) {
-    (void)proton_engine_window_controls_overlay_send(browser, &geometry);
-  }
+  proton_engine_titlebar_area_t area =
+      proton_engine_window_titlebar_area(window);
+  *out_x = area.x;
+  *out_y = area.y;
+  *out_width = area.width;
+  *out_height = area.height;
+  *out_zoom_percent = area.zoom_percent;
+  return PROTON_OK;
 }
 
 void proton_engine_sync_browser_bounds(proton_engine_window_t *window) {
@@ -359,7 +348,6 @@ void proton_engine_sync_browser_bounds(proton_engine_window_t *window) {
       gdk_window_raise(controls_window);
     }
   }
-  proton_engine_window_update_controls_overlay(window);
 }
 
 static void proton_engine_browser_host_size_allocate(GtkWidget *widget,
@@ -403,7 +391,6 @@ static void proton_engine_window_state_notify(GObject *object,
   (void)parameter;
   proton_engine_window_t *window = (proton_engine_window_t *)user_data;
   if (window != NULL) {
-    proton_engine_window_update_controls_overlay(window);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
   }
 }
@@ -539,17 +526,8 @@ static int32_t proton_engine_window_create_browser(
                                ? initial_url
                                : "about:blank");
 
-  const proton_engine_window_controls_overlay_geometry_t *overlay_geometry =
-      NULL;
-  if (window->titlebar_overlay) {
-    window->window_controls_overlay_geometry =
-        proton_engine_window_controls_overlay_geometry(window);
-    window->window_controls_overlay_geometry_initialized = 1;
-    overlay_geometry = &window->window_controls_overlay_geometry;
-  }
   cef_dictionary_value_t *extra_info =
-      proton_engine_bridge_renderer_extra_info(window->bridge_config,
-                                               overlay_geometry);
+      proton_engine_bridge_renderer_extra_info(window->bridge_config);
   cef_browser_t *created_browser = cef_browser_host_create_browser_sync(
       &window_info, proton_browser_lifecycle_client(window->browser_lifecycle), &url, &browser_settings,
       extra_info, NULL);
@@ -1588,7 +1566,6 @@ int32_t proton_engine_window_apply(
     host->set_zoom_level(host, log(factor) / log(1.2));
     host->base.release((cef_base_ref_counted_t *)host);
     window->zoom_percent = action->value;
-    proton_engine_window_update_controls_overlay(window);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }

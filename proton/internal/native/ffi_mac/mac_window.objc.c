@@ -486,19 +486,10 @@ static void proton_engine_window_update_zoom_button(
   }
 }
 
-static int proton_engine_window_controls_overlay_geometry_equal(
-    const proton_engine_window_controls_overlay_geometry_t *left,
-    const proton_engine_window_controls_overlay_geometry_t *right) {
-  return left->visible == right->visible && left->x == right->x &&
-         left->y == right->y && left->width == right->width &&
-         left->height == right->height &&
-         left->zoom_percent == right->zoom_percent;
-}
-
-static proton_engine_window_controls_overlay_geometry_t
-proton_engine_window_controls_overlay_geometry(
+static proton_engine_titlebar_area_t
+proton_engine_window_titlebar_area(
     proton_engine_window_t *window) {
-  proton_engine_window_controls_overlay_geometry_t geometry = {
+  proton_engine_titlebar_area_t area = {
       .zoom_percent =
           window != NULL && window->zoom_percent > 0 ? window->zoom_percent
                                                      : 100,
@@ -506,11 +497,11 @@ proton_engine_window_controls_overlay_geometry(
   if (window == NULL || !window->titlebar_overlay || window->window == nil ||
       window->content_view == nil ||
       (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0) {
-    return geometry;
+    return area;
   }
   NSRect content_bounds = window->content_view.bounds;
   if (NSWidth(content_bounds) <= 0.0 || NSHeight(content_bounds) <= 0.0) {
-    return geometry;
+    return area;
   }
   const NSWindowButton button_types[] = {
       NSWindowCloseButton, NSWindowMiniaturizeButton, NSWindowZoomButton};
@@ -532,7 +523,7 @@ proton_engine_window_controls_overlay_geometry(
     found = 1;
   }
   if (!found) {
-    return geometry;
+    return area;
   }
   CGFloat content_width = NSWidth(content_bounds);
   CGFloat content_height = NSHeight(content_bounds);
@@ -556,32 +547,30 @@ proton_engine_window_controls_overlay_geometry(
   CGFloat titlebar_height =
       MIN(content_height,
           MAX(0.0, content_height - NSMinY(cluster) + top_margin));
-  geometry.x = (int)llround(MAX(0.0, safe_left - NSMinX(content_bounds)));
-  geometry.y = 0;
-  geometry.width = (int)llround(MAX(0.0, safe_right - safe_left));
-  geometry.height = (int)llround(titlebar_height);
-  geometry.visible = geometry.width > 0 && geometry.height > 0;
-  return geometry;
+  area.x = (int)llround(MAX(0.0, safe_left - NSMinX(content_bounds)));
+  area.y = 0;
+  area.width = (int)llround(MAX(0.0, safe_right - safe_left));
+  area.height = (int)llround(titlebar_height);
+  return area;
 }
 
-void proton_engine_window_update_controls_overlay(
-    proton_engine_window_t *window) {
-  if (window == NULL || !window->titlebar_overlay) {
-    return;
+int32_t proton_engine_window_get_titlebar_area(
+    proton_engine_window_t *window, int32_t *out_x, int32_t *out_y,
+    int32_t *out_width, int32_t *out_height, int32_t *out_zoom_percent,
+    char *error, size_t error_len) {
+  if (window == NULL || out_x == NULL || out_y == NULL ||
+      out_width == NULL || out_height == NULL || out_zoom_percent == NULL) {
+    proton_engine_set_message(error, error_len, "window and outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
   }
-  proton_engine_window_controls_overlay_geometry_t geometry =
-      proton_engine_window_controls_overlay_geometry(window);
-  if (window->window_controls_overlay_geometry_initialized &&
-      proton_engine_window_controls_overlay_geometry_equal(
-          &window->window_controls_overlay_geometry, &geometry)) {
-    return;
-  }
-  window->window_controls_overlay_geometry = geometry;
-  window->window_controls_overlay_geometry_initialized = 1;
-  cef_browser_t *browser = proton_engine_window_browser(window);
-  if (browser != NULL) {
-    (void)proton_engine_window_controls_overlay_send(browser, &geometry);
-  }
+  proton_engine_titlebar_area_t area =
+      proton_engine_window_titlebar_area(window);
+  *out_x = area.x;
+  *out_y = area.y;
+  *out_width = area.width;
+  *out_height = area.height;
+  *out_zoom_percent = area.zoom_percent;
+  return PROTON_OK;
 }
 
 @interface ProtonWindow : NSWindow {
@@ -634,7 +623,6 @@ void proton_engine_window_update_controls_overlay(
 @implementation ProtonWindowDelegate
 - (void)windowStateDidChange:(NSNotification *)notification {
   (void)notification;
-  proton_engine_window_update_controls_overlay(window);
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 }
 
@@ -842,17 +830,8 @@ static int32_t proton_engine_window_create_browser(
                            initial_url != NULL && initial_url[0] != '\0'
                                ? initial_url
                                : "about:blank");
-  const proton_engine_window_controls_overlay_geometry_t *overlay_geometry =
-      NULL;
-  if (window->titlebar_overlay) {
-    window->window_controls_overlay_geometry =
-        proton_engine_window_controls_overlay_geometry(window);
-    window->window_controls_overlay_geometry_initialized = 1;
-    overlay_geometry = &window->window_controls_overlay_geometry;
-  }
   cef_dictionary_value_t *extra_info =
-      proton_engine_bridge_renderer_extra_info(window->bridge_config,
-                                               overlay_geometry);
+      proton_engine_bridge_renderer_extra_info(window->bridge_config);
   int accepted = cef_browser_host_create_browser(
       &window_info, proton_browser_lifecycle_client(window->browser_lifecycle), &url, &browser_settings,
       extra_info, NULL);
@@ -1729,7 +1708,6 @@ int32_t proton_engine_window_set_button_visibility(
     if (button != nil) button.hidden = visible == 0;
   }
   window->window_button_visible = visible;
-  proton_engine_window_update_controls_overlay(window);
   return PROTON_OK;
 }
 
@@ -1862,7 +1840,6 @@ int32_t proton_engine_window_apply(
     host->set_zoom_level(host, log(factor) / log(1.2));
     host->base.release((cef_base_ref_counted_t *)host);
     window->zoom_percent = action->value;
-    proton_engine_window_update_controls_overlay(window);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
