@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_ffi"
 
-version = "0.2.6"
+version = "0.2.7"
 
 import {
   "moonbitlang/x@0.5.1",
