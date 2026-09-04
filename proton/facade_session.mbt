@@ -1280,6 +1280,7 @@ fn RuntimeSession::create_window(
     bridge_ready: !self.monitor_bridge,
     state: WindowStarting,
     observed_state: None,
+    observed_browser_loading: None,
   }
   errdefer (created_window.destroy() catch {
     error =>
@@ -3200,12 +3201,32 @@ fn RuntimeSession::dispatch_browser_event(
           let browser = self.browser_handle(window)
           let observed = match
             (event.event_type(), info, find_result, pdf_result) {
-            ("browser_loading_changed", Some(info), _, _) =>
-              Some(
-                BrowserEvent::LoadingChanged(
-                  is_loading=info.is_loading.unwrap_or(false),
-                ),
-              )
+            ("browser_loading_changed", Some(info), _, _) => {
+              let is_loading = info.is_loading.unwrap_or(false)
+              let transition = match window.observed_browser_loading {
+                None => []
+                Some(previous) =>
+                  if !previous && is_loading {
+                    [BrowserEvent::DidStartLoading]
+                  } else if previous && !is_loading {
+                    [BrowserEvent::DidFinishLoad]
+                  } else {
+                    []
+                  }
+              }
+              window.observed_browser_loading = Some(is_loading)
+              for transition_event in transition {
+                for handler in self.browser_event_handlers {
+                  ignore(
+                    self.window_tasks.spawn(
+                      () => handler(browser, transition_event),
+                      no_wait=true,
+                    ),
+                  )
+                }
+              }
+              Some(BrowserEvent::LoadingChanged(is_loading~))
+            }
             ("browser_navigated", Some(info), _, _) =>
               Some(BrowserEvent::Navigated(url=info.url.unwrap_or("")))
             ("browser_title_updated", Some(info), _, _) =>
