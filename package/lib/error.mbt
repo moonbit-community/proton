@@ -5,6 +5,7 @@ pub(all) suberror PackagePlanError {
   InvalidUrlScheme(scheme~ : String, reason~ : String)
   InvalidVersion(version~ : String, reason~ : String)
   UnsupportedFormat(format~ : String)
+  UnsupportedNsisInstallMode(value~ : String)
   DuplicateFormat(format~ : String)
   UnsupportedFormatForPlatform(format~ : String, platform~ : String)
   MissingExecutable(path~ : String)
@@ -30,6 +31,10 @@ pub fn PackagePlanError::message(self : PackagePlanError) -> String {
     InvalidVersion(version~, reason~) =>
       "invalid version " + version + ": " + reason
     UnsupportedFormat(format~) => "unsupported package format: " + format
+    UnsupportedNsisInstallMode(value~) =>
+      "unsupported NSIS install mode: " +
+      value +
+      " (expected currentUser, perMachine, or both)"
     DuplicateFormat(format~) => "duplicate package format: " + format
     UnsupportedFormatForPlatform(format~, platform~) =>
       "package format " + format + " is not supported on " + platform

@@ -40,6 +40,31 @@ Supported host-native formats are macOS `app`, `zip`, and `dmg`; Windows
 When no format is specified, macOS and Windows produce `app` and `zip`, while
 Linux produces `appimage`.
 
+For Windows NSIS, `--nsis-install-mode` (or `nsis_install_mode` in the JSON
+configuration) accepts the same mode names as Tauri:
+
+| Mode | Permissions and scope |
+| --- | --- |
+| `currentUser` (default) | No elevation; `%LOCALAPPDATA%`; current-user registration and shortcuts. |
+| `perMachine` | Administrator privileges; Program Files; machine-wide registration and shortcuts. |
+| `both` | NSIS MultiUser selection page; highest available privileges, potentially prompting for elevation. |
+
+The library equivalent is `PackageSpec(..., nsis_install_mode=PerMachine)`.
+The mode affects only NSIS installers, not portable directories or ZIP files.
+Command-line options override JSON configuration. Installation and uninstall
+records, URL schemes, and shortcuts all follow the selected scope.
+
+Applications distributed using Proton's previous machine-wide default must
+explicitly select `perMachine` for subsequent releases. Fixed modes reuse
+installation paths within their own scope; they do not automatically migrate
+an existing machine-wide installation to the current user. The existing NSIS
+registry view is retained so `perMachine` can find those older installations.
+In `both` mode, `/CurrentUser` and `/AllUsers` select the scope for unattended
+installation; `/D=...` may override the directory and must be the last argument.
+Automatic updates pass the running application's directory. In `both` mode,
+the installer matches that directory to its registered scope and aborts if the
+scope is missing or ambiguous, rather than updating a different installation.
+
 The executable and `lib` package support both the wasm and native MoonBit
 targets. Windows executable icon embedding uses a native C stub; requesting an
 `.ico` while running the wasm build reports that unsupported operation instead

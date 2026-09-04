@@ -157,6 +157,7 @@ test "Windows icon embedding reports the native-only operation" {
 fn package_test_spec(
   formats : Array[PackageFormat],
   url_schemes? : Array[String] = ["devtoys"],
+  nsis_install_mode? : NsisInstallMode = CurrentUser,
 ) -> PackageSpec {
   PackageSpec(
     "/tmp/demo",
@@ -166,6 +167,7 @@ fn package_test_spec(
     formats,
     "/tmp/dist",
     url_schemes~,
+    nsis_install_mode~,
   )
 }
 
@@ -230,7 +232,7 @@ test "NSIS script carries package identity and update behavior" {
   )
   assert_true(
     empty_script.contains(
-      "DeleteRegKey HKLM \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\dev.proton.demo\"\nSectionEnd",
+      "DeleteRegKey SHCTX \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\dev.proton.demo\"\nSectionEnd",
     ),
   )
   assert_true(
@@ -242,23 +244,84 @@ test "NSIS script carries package identity and update behavior" {
 }
 
 ///|
+test "NSIS staging transaction leaves the working directory before moving or removing it" {
+  let script = windows_installer_script(
+    package_test_spec([App, Nsis]),
+    "C:\\stage\\Demo App",
+  )
+  let (_, install) = script.split_once("Section \"Install\"\n").unwrap()
+  let (transaction, _) = install
+    .to_owned()
+    .split_once("  WriteRegStr SHCTX")
+    .unwrap()
+  inspect(
+    transaction.to_owned(),
+    content=(
+      #|  ; Expand the complete release beside the installed tree before moving
+      #|  ; either one. A failed extraction therefore leaves the old app intact.
+      #|  RMDir /r "$INSTDIR.proton-next"
+      #|  SetOutPath "$INSTDIR.proton-next"
+      #|  ClearErrors
+      #|  File /r "C:\stage\Demo App\*.*"
+      #|  IfErrors install_failed
+      #|  ClearErrors
+      #|  WriteUninstaller "$INSTDIR.proton-next\Uninstall.exe"
+      #|  IfErrors install_failed
+      #|  ; SetOutPath also changes the working directory, which Windows locks.
+      #|  SetOutPath "$TEMP"
+      #|
+      #|  ; Reaching a later update proves the current tree started successfully,
+      #|  ; so its predecessor is no longer needed as the recovery copy.
+      #|  RMDir /r "$INSTDIR.proton-previous"
+      #|  IfFileExists "$INSTDIR\*.*" 0 promote_update
+      #|  ; The updater names the exact process tree it is replacing. A manual
+      #|  ; reinstall has no such token and falls back to the executable name.
+      #|  ${If} $ProtonUpdate == "1"
+      #|    nsExec::Exec 'taskkill /F /T /PID "$ProtonUpdatePid"'
+      #|  ${Else}
+      #|    nsExec::Exec 'taskkill /F /T /IM "demo-app.exe"'
+      #|  ${EndIf}
+      #|  Pop $0
+      #|  Sleep 500
+      #|  ClearErrors
+      #|  Rename "$INSTDIR" "$INSTDIR.proton-previous"
+      #|  IfErrors install_failed
+      #|promote_update:
+      #|  ClearErrors
+      #|  Rename "$INSTDIR.proton-next" "$INSTDIR"
+      #|  IfErrors 0 install_complete
+      #|  Rename "$INSTDIR.proton-previous" "$INSTDIR"
+      #|  Abort "The new installation could not be moved into place."
+      #|install_failed:
+      #|  SetOutPath "$TEMP"
+      #|  RMDir /r "$INSTDIR.proton-next"
+      #|  Abort "The update could not be installed."
+      #|install_complete:
+      #|  SetOutPath "$INSTDIR"
+      #|
+      #|
+    ),
+  )
+}
+
+///|
 test "NSIS URL scheme scripts share an owned command" {
   let spec = package_test_spec([App, Nsis], url_schemes=["devtoys"])
   inspect(
     windows_protocol_install_script(spec, "demo-app.exe"),
     content=(
-      #|  WriteRegStr HKCU "Software\Classes\devtoys" "" "URL:devtoys"
-      #|  WriteRegStr HKCU "Software\Classes\devtoys" "URL Protocol" ""
-      #|  WriteRegStr HKCU "Software\Classes\devtoys\shell\open\command" "" "$\"$INSTDIR\demo-app.exe$\" $\"%1$\""
+      #|  WriteRegStr SHCTX "Software\Classes\devtoys" "" "URL:devtoys"
+      #|  WriteRegStr SHCTX "Software\Classes\devtoys" "URL Protocol" ""
+      #|  WriteRegStr SHCTX "Software\Classes\devtoys\shell\open\command" "" "$\"$INSTDIR\demo-app.exe$\" $\"%1$\""
       #|
     ),
   )
   inspect(
     windows_protocol_uninstall_script(spec, "demo-app.exe"),
     content=(
-      #|  ReadRegStr $0 HKCU "Software\Classes\devtoys\shell\open\command" ""
+      #|  ReadRegStr $0 SHCTX "Software\Classes\devtoys\shell\open\command" ""
       #|  ${If} $0 == "$\"$INSTDIR\demo-app.exe$\" $\"%1$\""
-      #|    DeleteRegKey HKCU "Software\Classes\devtoys"
+      #|    DeleteRegKey SHCTX "Software\Classes\devtoys"
       #|  ${EndIf}
       #|
     ),

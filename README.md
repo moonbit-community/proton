@@ -240,9 +240,39 @@ directory. Backend code resolves the same files before and after packaging with
 `package.platforms.<platform>.resources`. `package.sign.binaries` names copied
 executables that must be included in platform signing, and platform-specific
 signing targets can be appended under the matching platform block. Supported
-platform keys are `macos`, `windows`, and `linux`; platform blocks accept only
-`formats`, `resources`, and `sign`. Explicit command-line options retain the
-highest priority.
+platform keys are `macos`, `windows`, and `linux`; platform blocks accept
+`formats`, `resources`, and `sign`. The Windows block also accepts
+`nsis_install_mode`. Explicit command-line options retain the highest priority.
+
+Windows NSIS installers default to `currentUser`: no administrator privileges,
+installation under `%LOCALAPPDATA%`, and registration for the current user.
+Set `package.platforms.windows.nsis_install_mode` to `perMachine` for an
+administrator-only installation under Program Files with machine-wide
+registration, or to `both` to let the installer user choose. Like Tauri, `both`
+uses NSIS MultiUser and requests the highest available privileges, so it can
+show a UAC prompt even when the user chooses a per-user installation.
+`--nsis-install-mode currentUser|perMachine|both` overrides the project setting.
+
+**Existing releases:** Proton previously always generated machine-wide NSIS
+installers. Applications already distributed that way must explicitly retain
+`perMachine` in subsequent releases to update the existing installation:
+
+```json
+{
+  "package": {
+    "platforms": {
+      "windows": {
+        "formats": ["nsis"],
+        "nsis_install_mode": "perMachine"
+      }
+    }
+  }
+}
+```
+
+This is a fragment to merge into the existing project configuration. Fixed
+installation modes do not migrate installations between user and machine
+scope. Existing installation paths are reused within the selected scope.
 
 Use `package.prepare` when the application must generate package-only resources
 or additional binaries. Proton runs this command once from the project root

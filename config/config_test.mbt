@@ -113,6 +113,78 @@ test "project package rejects unknown platform overrides" {
 }
 
 ///|
+test "NSIS install modes belong only to the Windows package configuration" {
+  for mode in ["currentUser", "perMachine", "both"] {
+    let config = load_project_config_from_json(
+      {
+        "identifier": "com.example.demo",
+        "package": {
+          "product_name": "Demo",
+          "version": "1.0.0",
+          "platforms": { "windows": { "nsis_install_mode": mode } },
+        },
+      },
+      ".",
+    )
+    assert_eq(
+      config
+      .package_config()
+      .unwrap()
+      .platforms()
+      .windows()
+      .unwrap()
+      .nsis_install_mode(),
+      Some(mode),
+    )
+  }
+  let invalid = expect_config_error(() => {
+    ignore(
+      load_project_config_from_json(
+        {
+          "identifier": "com.example.demo",
+          "package": {
+            "product_name": "Demo",
+            "version": "1.0.0",
+            "platforms": { "windows": { "nsis_install_mode": "admin" } },
+          },
+        },
+        ".",
+      ),
+    )
+  })
+  assert_eq(
+    invalid,
+    UnsupportedValue(
+      path="package.platforms.windows.nsis_install_mode",
+      value="admin",
+    ),
+  )
+  for platform in ["macos", "linux"] {
+    let platforms : Map[String, Json] = Map([])
+    platforms[platform] = { "nsis_install_mode": "perMachine" }
+    let invalid = expect_config_error(() => {
+      ignore(
+        load_project_config_from_json(
+          {
+            "identifier": "com.example.demo",
+            "package": {
+              "product_name": "Demo",
+              "version": "1.0.0",
+              "platforms": platforms.to_json(),
+            },
+          },
+          ".",
+        ),
+      )
+    })
+    assert_eq(
+      invalid,
+      UnknownField(path="package.platforms." + platform + ".nsis_install_mode"),
+    )
+  }
+}
+
+///|
 test "project config rejects unknown top-level fields" {
   let source =
     #|{ "identifier": "com.example.todo", "window": { "title": "Todo" } }

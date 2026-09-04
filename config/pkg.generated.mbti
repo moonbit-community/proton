@@ -135,11 +135,13 @@ pub(all) struct ProjectPlatformPackageConfig {
   formats : Array[String]?
   resources : Array[String]
   sign : ProjectSignConfig?
+  nsis_install_mode : String?
 } derive(Eq, @debug.Debug)
-pub fn ProjectPlatformPackageConfig::ProjectPlatformPackageConfig(formats? : Array[String], resources? : Array[String], sign? : ProjectSignConfig) -> Self
+pub fn ProjectPlatformPackageConfig::ProjectPlatformPackageConfig(formats? : Array[String], resources? : Array[String], sign? : ProjectSignConfig, nsis_install_mode? : String) -> Self
 pub fn ProjectPlatformPackageConfig::equal(Self, Self) -> Bool
 pub fn ProjectPlatformPackageConfig::formats(Self) -> Array[String]?
 pub fn ProjectPlatformPackageConfig::not_equal(Self, Self) -> Bool
+pub fn ProjectPlatformPackageConfig::nsis_install_mode(Self) -> String?
 pub fn ProjectPlatformPackageConfig::resources(Self) -> Array[String]
 pub fn ProjectPlatformPackageConfig::sign(Self) -> ProjectSignConfig?
 pub fn ProjectPlatformPackageConfig::to_repr(Self) -> @debug.Repr

@@ -9,6 +9,7 @@ pub(all) struct PackageArguments {
   output : String?
   icons : Array[String]
   url_schemes : Array[String]
+  nsis_install_mode : @package.NsisInstallMode?
   sign : Bool
   notarize : Bool
 } derive(Debug, Eq)
@@ -40,6 +41,10 @@ pub fn options(include_identifier? : Bool = true) -> Array[@argparse.OptionArg] 
       about="Output format: app, zip, dmg, nsis, or appimage; may be repeated",
     ),
     OptionArg("output", about="Artifact output directory"),
+    OptionArg(
+      "nsis-install-mode",
+      about="NSIS installation scope: currentUser (default), perMachine, or both",
+    ),
     OptionArg("icon", action=Append, about="Platform icon; may be repeated"),
     OptionArg(
       "url-scheme",
@@ -71,6 +76,9 @@ pub fn from_matches(
     output: first(matches.values, "output"),
     icons: values(matches.values, "icon"),
     url_schemes: values(matches.values, "url-scheme"),
+    nsis_install_mode: first(matches.values, "nsis-install-mode").map(
+      @package.NsisInstallMode::parse,
+    ),
     sign: matches.flags.get("sign").unwrap_or(false) ||
     matches.flags.get("notarize").unwrap_or(false),
     notarize: matches.flags.get("notarize").unwrap_or(false),

@@ -4,6 +4,41 @@ fn parse_package_args(args : Array[String]) -> RawPackageOptions raise {
 }
 
 ///|
+test "NSIS mode resolves CLI override before Windows configuration and default" {
+  let defaults = @proton_config.ProjectPackageConfig("Demo", "1.0.0")
+  let arguments = parse_package_args([]).package_args
+  assert_eq(
+    resolve_nsis_install_mode(arguments, defaults),
+    @packager.NsisInstallMode::CurrentUser,
+  )
+  for
+    entry in [
+      ("currentUser", @packager.NsisInstallMode::CurrentUser),
+      ("perMachine", @packager.NsisInstallMode::PerMachine),
+      ("both", @packager.NsisInstallMode::Both),
+    ] {
+    let (name, mode) = entry
+    let configured = @proton_config.ProjectPackageConfig(
+      "Demo",
+      "1.0.0",
+      platforms=@proton_config.ProjectPackagePlatforms(
+        windows=@proton_config.ProjectPlatformPackageConfig(
+          nsis_install_mode=name,
+        ),
+      ),
+    )
+    assert_eq(resolve_nsis_install_mode(arguments, configured), mode)
+    let cli_arguments = parse_package_args([
+        "--nsis-install-mode", "currentUser",
+      ]).package_args
+    assert_eq(
+      resolve_nsis_install_mode(cli_arguments, configured),
+      @packager.NsisInstallMode::CurrentUser,
+    )
+  }
+}
+
+///|
 test "parse package args accepts repeated formats and overrides" {
   let raw = parse_package_args([
     "--package", "desktop", "--format", "app", "--format", "zip", "--format", "dmg",

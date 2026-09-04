@@ -54,13 +54,13 @@ fn windows_protocol_install_script(
   for scheme in plan.url_schemes {
     let scheme = windows_installer_quote(scheme)
     builder <+
-      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}" "" "URL:\{scheme}"
+      $|  WriteRegStr SHCTX "Software\\Classes\\\{scheme}" "" "URL:\{scheme}"
     builder.write_char('\n')
     builder <+
-      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}" "URL Protocol" ""
+      $|  WriteRegStr SHCTX "Software\\Classes\\\{scheme}" "URL Protocol" ""
     builder.write_char('\n')
     builder <+
-      $|  WriteRegStr HKCU "Software\\Classes\\\{scheme}\\shell\\open\\command" "" "\{command}"
+      $|  WriteRegStr SHCTX "Software\\Classes\\\{scheme}\\shell\\open\\command" "" "\{command}"
     builder.write_char('\n')
   }
   builder.to_string()
@@ -76,13 +76,13 @@ fn windows_protocol_uninstall_script(
   for scheme in plan.url_schemes {
     let scheme = windows_installer_quote(scheme)
     builder <+
-      $|  ReadRegStr $0 HKCU "Software\\Classes\\\{scheme}\\shell\\open\\command" ""
+      $|  ReadRegStr $0 SHCTX "Software\\Classes\\\{scheme}\\shell\\open\\command" ""
     builder.write_char('\n')
     builder <+
       $|  ${If} $0 == "\{command}"
     builder.write_char('\n')
     builder <+
-      $|    DeleteRegKey HKCU "Software\\Classes\\\{scheme}"
+      $|    DeleteRegKey SHCTX "Software\\Classes\\\{scheme}"
     builder.write_char('\n')
     builder <+
       #|  ${EndIf}
@@ -146,7 +146,6 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|Unicode true
     #|ManifestDPIAware true
     #|SetCompressor /SOLID lzma
-    #|RequestExecutionLevel admin
     #|
     #|!include "FileFunc.nsh"
     #|!include "LogicLib.nsh"
@@ -158,8 +157,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
   builder <+
     $|Name "\{product}"
     $|OutFile "\{windows_installer_quote(windows_installer_staging_path(plan))}"
-    $|InstallDir "$PROGRAMFILES64\\\{product}"
-    $|InstallDirRegKey HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}" "InstallDir"
+    $|
+  builder.write_string(windows_install_mode_header(plan))
+  builder <+
     $|
     $|VIProductVersion "\{windows_installer_version_quad(plan.version)}"
     $|VIAddVersionKey "ProductName" "\{product}"
@@ -169,6 +169,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|
   builder <+
     #|Function .onInit
+    #|
+  builder.write_string(windows_install_mode_init(plan, false))
+  builder <+
     #|  ${GetParameters} $R0
     #|  ${GetOptions} $R0 "/PROTON-UPDATE=" $ProtonUpdate
     #|  ${GetOptions} $R0 "/PROTON-PID=" $ProtonUpdatePid
@@ -176,9 +179,23 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|  ${AndIf} $ProtonUpdatePid == ""
     #|    Abort "The update process id is missing."
     #|  ${EndIf}
+    #|
+  builder.write_string(windows_install_mode_update_init(plan))
+  builder <+
+    #|FunctionEnd
+    #|
+    #|Function un.onInit
+    #|
+  builder.write_string(windows_install_mode_init(plan, true))
+  builder <+
     #|FunctionEnd
     #|
     #|!define MUI_ABORTWARNING
+    #|
+  if plan.nsis_install_mode == Both {
+    builder.write_string("!insertmacro MULTIUSER_PAGE_INSTALLMODE\n")
+  }
+  builder <+
     #|!insertmacro MUI_PAGE_DIRECTORY
     #|!insertmacro MUI_PAGE_INSTFILES
     #|!insertmacro MUI_UNPAGE_CONFIRM
@@ -198,6 +215,8 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  ClearErrors
     $|  WriteUninstaller "$INSTDIR.proton-next\\Uninstall.exe"
     $|  IfErrors install_failed
+    $|  ; SetOutPath also changes the working directory, which Windows locks.
+    $|  SetOutPath "$TEMP"
     $|
     $|  ; Reaching a later update proves the current tree started successfully,
     $|  ; so its predecessor is no longer needed as the recovery copy.
@@ -222,20 +241,21 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  Rename "$INSTDIR.proton-previous" "$INSTDIR"
     $|  Abort "The new installation could not be moved into place."
     $|install_failed:
+    $|  SetOutPath "$TEMP"
     $|  RMDir /r "$INSTDIR.proton-next"
     $|  Abort "The update could not be installed."
     $|install_complete:
     $|  SetOutPath "$INSTDIR"
     $|
-    $|  WriteRegStr HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}" "InstallDir" "$INSTDIR"
-    $|  WriteRegStr HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}" "Version" "\{windows_installer_quote(plan.version)}"
-    $|  WriteRegStr HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayName" "\{product}"
-    $|  WriteRegStr HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayVersion" "\{windows_installer_quote(plan.version)}"
-    $|  WriteRegStr HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "UninstallString" "$\\"$INSTDIR\\Uninstall.exe$\\""
-    $|  WriteRegStr HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "InstallLocation" "$INSTDIR"
-    $|  WriteRegStr HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayIcon" "$INSTDIR\\\{executable}"
-    $|  WriteRegDWORD HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoModify" 1
-    $|  WriteRegDWORD HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoRepair" 1
+    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_installer_registry_key(plan))}" "InstallDir" "$INSTDIR"
+    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_installer_registry_key(plan))}" "Version" "\{windows_installer_quote(plan.version)}"
+    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayName" "\{product}"
+    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayVersion" "\{windows_installer_quote(plan.version)}"
+    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "UninstallString" "$\\"$INSTDIR\\Uninstall.exe$\\"\{if plan.nsis_install_mode == Both { " /$MultiUser.InstallMode" } else { "" }}"
+    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "InstallLocation" "$INSTDIR"
+    $|  WriteRegStr SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "DisplayIcon" "$INSTDIR\\\{executable}"
+    $|  WriteRegDWORD SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoModify" 1
+    $|  WriteRegDWORD SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}" "NoRepair" 1
     $|
   builder.write_char('\n')
   builder.write_string(windows_protocol_install_script(plan, executable))
@@ -255,8 +275,8 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  RMDir /r "$INSTDIR"
     $|  RMDir /r "$INSTDIR.proton-previous"
     $|  RMDir /r "$INSTDIR.proton-next"
-    $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_installer_registry_key(plan))}"
-    $|  DeleteRegKey HKLM "\{windows_installer_quote(windows_uninstall_registry_key(plan))}"
+    $|  DeleteRegKey SHCTX "\{windows_installer_quote(windows_installer_registry_key(plan))}"
+    $|  DeleteRegKey SHCTX "\{windows_installer_quote(windows_uninstall_registry_key(plan))}"
   builder.write_char('\n')
   builder.write_string(windows_protocol_uninstall_script(plan, executable))
   builder <+

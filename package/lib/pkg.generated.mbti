@@ -61,6 +61,7 @@ pub(all) suberror PackagePlanError {
   InvalidUrlScheme(scheme~ : String, reason~ : String)
   InvalidVersion(version~ : String, reason~ : String)
   UnsupportedFormat(format~ : String)
+  UnsupportedNsisInstallMode(value~ : String)
   DuplicateFormat(format~ : String)
   UnsupportedFormatForPlatform(format~ : String, platform~ : String)
   MissingExecutable(path~ : String)
@@ -121,6 +122,17 @@ pub struct MacosSignTarget {
 }
 pub fn MacosSignTarget::MacosSignTarget(String, runtime_options? : Bool, entitlements? : Bool, identifier? : String) -> Self
 
+pub(all) enum NsisInstallMode {
+  CurrentUser
+  PerMachine
+  Both
+} derive(Eq, @debug.Debug)
+pub fn NsisInstallMode::equal(Self, Self) -> Bool
+pub fn NsisInstallMode::not_equal(Self, Self) -> Bool
+pub fn NsisInstallMode::parse(String) -> Self raise PackagePlanError
+pub fn NsisInstallMode::to_repr(Self) -> @debug.Repr
+pub fn NsisInstallMode::to_string(Self) -> String
+
 pub struct PackageCustomization {
   macos_plist_strings : Array[MacosPlistString]
   macos_sign_targets : Array[MacosSignTarget]
@@ -175,10 +187,11 @@ pub struct PackageSpec {
   icons : Array[String]
   url_schemes : Array[String]
   document_types : Array[DocumentType]
+  nsis_install_mode : NsisInstallMode
   sign : Bool
   notarize : Bool
 } derive(Eq, @debug.Debug)
-pub fn PackageSpec::PackageSpec(String, String, String, String, Array[PackageFormat], String, payloads? : Array[Payload], icons? : Array[String], url_schemes? : Array[String], document_types? : Array[DocumentType], sign? : Bool, notarize? : Bool) -> Self
+pub fn PackageSpec::PackageSpec(String, String, String, String, Array[PackageFormat], String, payloads? : Array[Payload], icons? : Array[String], url_schemes? : Array[String], document_types? : Array[DocumentType], nsis_install_mode? : NsisInstallMode, sign? : Bool, notarize? : Bool) -> Self
 pub fn PackageSpec::equal(Self, Self) -> Bool
 pub fn PackageSpec::not_equal(Self, Self) -> Bool
 pub fn PackageSpec::to_repr(Self) -> @debug.Repr

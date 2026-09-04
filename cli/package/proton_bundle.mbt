@@ -18,6 +18,7 @@ async fn package_spec(
     icons=spec.package_spec.icons,
     url_schemes=spec.package_spec.url_schemes,
     document_types=spec.package_spec.document_types,
+    nsis_install_mode=spec.package_spec.nsis_install_mode,
     sign=spec.package_spec.sign,
     notarize=spec.package_spec.notarize,
   )
