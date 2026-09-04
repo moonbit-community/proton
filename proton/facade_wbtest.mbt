@@ -3103,6 +3103,176 @@ test "window bounds read and write use Electron coordinate order" {
 }
 
 ///|
+test "window state queries expose Electron geometry and flags" {
+  let window = test_window_handle("main", 17L, window_state=WindowState::{
+    x: 120,
+    y: 80,
+    width: 800,
+    height: 600,
+    monitor: WindowMonitor::{
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+      work_x: 0,
+      work_y: 0,
+      work_width: 1920,
+      work_height: 1080,
+      scale_factor_percent: 100,
+    },
+    zoom_percent: 100,
+    visible: true,
+    focused: true,
+    minimized: true,
+    maximized: false,
+    fullscreen: true,
+    always_on_top: true,
+    theme: WindowTheme::Dark,
+  })
+  assert_eq(window.position(), (120, 80))
+  assert_eq(window.size(), (800, 600))
+  assert_true(window.is_minimized())
+  assert_false(window.is_maximized())
+  assert_true(window.is_fullscreen())
+  assert_true(window.is_always_on_top())
+}
+
+///|
+test "window state transitions derive Electron-style events" {
+  let monitor = WindowMonitor::{
+    x: 0,
+    y: 0,
+    width: 1920,
+    height: 1080,
+    work_x: 0,
+    work_y: 0,
+    work_width: 1920,
+    work_height: 1080,
+    scale_factor_percent: 100,
+  }
+  let previous = WindowState::{
+    x: 10,
+    y: 20,
+    width: 640,
+    height: 480,
+    monitor,
+    zoom_percent: 100,
+    visible: false,
+    focused: false,
+    minimized: false,
+    maximized: false,
+    fullscreen: false,
+    always_on_top: false,
+    theme: WindowTheme::Light,
+  }
+  let current = WindowState::{
+    x: 30,
+    y: 20,
+    width: 800,
+    height: 480,
+    monitor,
+    zoom_percent: 100,
+    visible: true,
+    focused: true,
+    minimized: false,
+    maximized: true,
+    fullscreen: true,
+    always_on_top: false,
+    theme: WindowTheme::Light,
+  }
+  let events = window_state_events(Some(previous), current)
+  assert_eq(events.length(), 7)
+  assert_eq(events[0], WindowEvent::Moved)
+  assert_eq(events[1], WindowEvent::Resized)
+  assert_eq(events[2], WindowEvent::Show)
+  assert_eq(events[3], WindowEvent::Focus)
+  assert_eq(events[4], WindowEvent::Maximize)
+  assert_eq(events[5], WindowEvent::EnterFullScreen)
+  assert_eq(events[6], WindowEvent::StateChanged(current))
+}
+
+///|
+test "first visible window state emits ready to show" {
+  let monitor = WindowMonitor::{
+    x: 0,
+    y: 0,
+    width: 1920,
+    height: 1080,
+    work_x: 0,
+    work_y: 0,
+    work_width: 1920,
+    work_height: 1080,
+    scale_factor_percent: 100,
+  }
+  let state = WindowState::{
+    x: 0,
+    y: 0,
+    width: 640,
+    height: 480,
+    monitor,
+    zoom_percent: 100,
+    visible: true,
+    focused: false,
+    minimized: false,
+    maximized: false,
+    fullscreen: false,
+    always_on_top: false,
+    theme: WindowTheme::Light,
+  }
+  let events = window_state_events(None, state)
+  assert_eq(events[0], WindowEvent::ReadyToShow)
+  assert_eq(events[1], WindowEvent::StateChanged(state))
+}
+
+///|
+test "window state transitions derive restore after minimize" {
+  let monitor = WindowMonitor::{
+    x: 0,
+    y: 0,
+    width: 1920,
+    height: 1080,
+    work_x: 0,
+    work_y: 0,
+    work_width: 1920,
+    work_height: 1080,
+    scale_factor_percent: 100,
+  }
+  let previous = WindowState::{
+    x: 0,
+    y: 0,
+    width: 640,
+    height: 480,
+    monitor,
+    zoom_percent: 100,
+    visible: true,
+    focused: false,
+    minimized: true,
+    maximized: false,
+    fullscreen: false,
+    always_on_top: false,
+    theme: WindowTheme::Light,
+  }
+  let current = WindowState::{
+    x: previous.x,
+    y: previous.y,
+    width: previous.width,
+    height: previous.height,
+    monitor: previous.monitor,
+    zoom_percent: previous.zoom_percent,
+    visible: previous.visible,
+    focused: previous.focused,
+    minimized: false,
+    maximized: previous.maximized,
+    fullscreen: previous.fullscreen,
+    always_on_top: previous.always_on_top,
+    theme: previous.theme,
+  }
+  let events = window_state_events(Some(previous), current)
+  assert_eq(events[0], WindowEvent::Restore)
+  assert_eq(events[1], WindowEvent::StateChanged(current))
+}
+
+///|
 test "window size limits route live constraints through the handle" {
   let minimum_calls : Array[(Int, Int)] = []
   let maximum_calls : Array[(Int, Int)] = []

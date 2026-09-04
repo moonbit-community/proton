@@ -350,6 +350,7 @@ async fn main {
             }
           None => ()
         }
+      _ => ()
     }
   })
   .on_view_event(async fn(_view, event) noraise {
