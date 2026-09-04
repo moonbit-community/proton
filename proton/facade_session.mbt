@@ -3064,6 +3064,24 @@ fn RuntimeSession::dispatch_window_event(
 ) -> Unit raise AppRunError {
   if event.is_window_closed() {
     let window_id = event.window_id()
+    match window_id {
+      Some(window_id) =>
+        match self.find_window_by_native_id(window_id) {
+          Some(window) => {
+            let handle = self.window_handle(window)
+            for handler in self.window_event_handlers {
+              ignore(
+                self.window_tasks.spawn(
+                  () => handler(handle, Closed),
+                  no_wait=true,
+                ),
+              )
+            }
+          }
+          None => ()
+        }
+      None => ()
+    }
     runtime_session_cancel_window_bridge_tasks(self.pending_bridge, window_id)
     self.close_coordinator.cancel(window_id)
     self.cancel_browser_requests(window_id)

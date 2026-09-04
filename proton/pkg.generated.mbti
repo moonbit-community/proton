@@ -851,6 +851,7 @@ pub fn WindowContext::windows(Self) -> WindowManager
 
 pub(all) enum WindowEvent {
   StateChanged(WindowState)
+  Closed
   ReadyToShow
   Moved
   Resized

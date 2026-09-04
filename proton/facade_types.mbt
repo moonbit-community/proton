@@ -658,6 +658,7 @@ pub struct WindowManager {
 /// An observed change to a running native window.
 pub(all) enum WindowEvent {
   StateChanged(WindowState)
+  Closed
   ReadyToShow
   Moved
   Resized

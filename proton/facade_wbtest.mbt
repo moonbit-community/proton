@@ -3273,6 +3273,11 @@ test "window state transitions derive restore after minimize" {
 }
 
 ///|
+test "window closed is a public window event" {
+  assert_eq(WindowEvent::Closed, WindowEvent::Closed)
+}
+
+///|
 test "window size limits route live constraints through the handle" {
   let minimum_calls : Array[(Int, Int)] = []
   let maximum_calls : Array[(Int, Int)] = []
