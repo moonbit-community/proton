@@ -16,6 +16,7 @@ members = [
   "./e2e",
   "./sys/auto_launch",
   "./sys/clipboard",
+  "./sys/safe_storage",
   "./sys/ffi",
   "./sys/global_hotkey",
   "./sys/keepawake",

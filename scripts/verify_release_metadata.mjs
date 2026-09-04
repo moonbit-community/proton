@@ -87,6 +87,7 @@ const workspaceModuleManifests = [
   "package/moon.mod",
   "sys/auto_launch/moon.mod",
   "sys/clipboard/moon.mod",
+  "sys/safe_storage/moon.mod",
   "sys/ffi/moon.mod",
   "sys/global_hotkey/moon.mod",
   "sys/keepawake/moon.mod",

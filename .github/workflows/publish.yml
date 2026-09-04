@@ -21,6 +21,7 @@ on:
           - sys/shell
           - sys/auto_launch
           - sys/clipboard
+          - sys/safe_storage
           - sys/global_hotkey
           - sys/keepawake
           - sys/microphone
@@ -122,6 +123,7 @@ jobs:
           publish_module sys/shell moonbit-community/proton_shell
           publish_module sys/auto_launch moonbit-community/proton_auto_launch
           publish_module sys/clipboard moonbit-community/proton_clipboard
+          publish_module sys/safe_storage moonbit-community/proton_safe_storage
           publish_module sys/global_hotkey moonbit-community/proton_global_hotkey
           publish_module sys/keepawake moonbit-community/proton_keepawake
           publish_module sys/microphone moonbit-community/proton_microphone
