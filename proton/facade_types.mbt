@@ -227,6 +227,7 @@ priv struct RunningWindow {
   mut bridge_ready : Bool
   mut state : SessionWindowState
   mut observed_state : WindowState?
+  mut observed_browser_loading : Bool?
 }
 
 ///|
@@ -1027,6 +1028,8 @@ priv enum AppLifecycleState {
 /// An observed lifecycle change for a window's main browser page.
 pub(all) enum BrowserEvent {
   LoadingChanged(is_loading~ : Bool)
+  DidStartLoading
+  DidFinishLoad
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)

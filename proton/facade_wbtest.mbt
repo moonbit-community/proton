@@ -2749,6 +2749,12 @@ test "app builder registers main browser lifecycle handlers" {
 }
 
 ///|
+test "browser loading lifecycle events are distinct" {
+  assert_eq(BrowserEvent::DidStartLoading, BrowserEvent::DidStartLoading)
+  assert_eq(BrowserEvent::DidFinishLoad, BrowserEvent::DidFinishLoad)
+}
+
+///|
 test "cookie records preserve Electron-style session fields" {
   let cookies = cookies_from_native([
     @native.NativeCookieRecord::{

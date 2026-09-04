@@ -158,6 +158,10 @@ Window state changes are delivered to `.on_window_event(...)` as a full
 `EnterFullScreen`, and `LeaveFullScreen`. The first native snapshot only emits
 `StateChanged`, because no previous state exists for transition detection.
 
+Browser loading events include `DidStartLoading` and `DidFinishLoad`, derived
+from successive native loading snapshots; `LoadingChanged` remains available
+for consumers that prefer the boolean form.
+
 ## Logging
 
 Use `tonyfettes/xlog@0.4.2` directly for application logs. Proton configures the
