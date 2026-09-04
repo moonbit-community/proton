@@ -235,6 +235,7 @@ priv struct RunningView {
   id : String
   view : @native.View
   mut document : ResourceDocument?
+  mut observed_loading : Bool?
 }
 
 ///|
@@ -734,6 +735,8 @@ fn window_state_events(
 /// `webContents` lifecycle and page-search events.
 pub(all) enum ViewEvent {
   LoadingChanged(is_loading~ : Bool)
+  DidStartLoading
+  DidFinishLoad
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)

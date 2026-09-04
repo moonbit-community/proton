@@ -2755,6 +2755,12 @@ test "browser loading lifecycle events are distinct" {
 }
 
 ///|
+test "view loading lifecycle events are distinct" {
+  assert_eq(ViewEvent::DidStartLoading, ViewEvent::DidStartLoading)
+  assert_eq(ViewEvent::DidFinishLoad, ViewEvent::DidFinishLoad)
+}
+
+///|
 test "cookie records preserve Electron-style session fields" {
   let cookies = cookies_from_native([
     @native.NativeCookieRecord::{
