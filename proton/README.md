@@ -162,6 +162,10 @@ Browser loading events include `DidStartLoading` and `DidFinishLoad`, derived
 from successive native loading snapshots; `LoadingChanged` remains available
 for consumers that prefer the boolean form.
 
+Web contents views expose the same loading lifecycle events through
+`ViewEvent::DidStartLoading` and `ViewEvent::DidFinishLoad`; their
+`LoadingChanged` event remains available as the boolean form.
+
 ## Logging
 
 Use `tonyfettes/xlog@0.4.2` directly for application logs. Proton configures the

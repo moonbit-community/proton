@@ -80,6 +80,8 @@ fn web_contents_view_event_line(event : @proton.ViewEvent) -> String {
   match event {
     LoadingChanged(is_loading~) =>
       "view_loading_changed loading=" + is_loading.to_string()
+    DidStartLoading => "view_did_start_loading"
+    DidFinishLoad => "view_did_finish_load"
     Navigated(url~) => "view_navigated url=" + url
     TitleUpdated(title~) => "view_title_updated title=" + title
     LoadFailed(url~, error_code~, error_text~) =>

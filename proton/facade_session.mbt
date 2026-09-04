@@ -690,6 +690,7 @@ fn add_view_to_running_window(
     id: view_id,
     view: created,
     document: None,
+    observed_loading: None,
   }
   running.views.push(running_view)
   running_view
@@ -3143,8 +3144,32 @@ fn RuntimeSession::dispatch_view_event(
       let handle = self.view_handle(running, view)
       let view_event = match
         (event.event_type(), event.view_event(), event.find_in_page_result()) {
-        ("view_loading_changed", Some(info), _) =>
-          ViewEvent::LoadingChanged(is_loading=info.is_loading.unwrap_or(false))
+        ("view_loading_changed", Some(info), _) => {
+          let is_loading = info.is_loading.unwrap_or(false)
+          let transition = match view.observed_loading {
+            None => []
+            Some(previous) =>
+              if !previous && is_loading {
+                [ViewEvent::DidStartLoading]
+              } else if previous && !is_loading {
+                [ViewEvent::DidFinishLoad]
+              } else {
+                []
+              }
+          }
+          view.observed_loading = Some(is_loading)
+          for transition_event in transition {
+            for handler in self.view_event_handlers {
+              ignore(
+                self.window_tasks.spawn(
+                  () => handler(handle, transition_event),
+                  no_wait=true,
+                ),
+              )
+            }
+          }
+          ViewEvent::LoadingChanged(is_loading~)
+        }
         ("view_navigated", Some(info), _) =>
           ViewEvent::Navigated(url=info.url.unwrap_or(""))
         ("view_title_updated", Some(info), _) =>
