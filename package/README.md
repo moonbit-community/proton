@@ -61,6 +61,9 @@ an existing machine-wide installation to the current user. The existing NSIS
 registry view is retained so `perMachine` can find those older installations.
 In `both` mode, `/CurrentUser` and `/AllUsers` select the scope for unattended
 installation; `/D=...` may override the directory and must be the last argument.
+Automatic updates pass the running application's directory. In `both` mode,
+the installer matches that directory to its registered scope and aborts if the
+scope is missing or ambiguous, rather than updating a different installation.
 
 The executable and `lib` package support both the wasm and native MoonBit
 targets. Windows executable icon embedding uses a native C stub; requesting an

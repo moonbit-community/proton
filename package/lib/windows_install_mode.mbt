@@ -85,3 +85,35 @@ fn windows_install_mode_init(plan : PackageSpec, uninstall : Bool) -> String {
     }
   }
 }
+
+///|
+/// Bind silent updates to the caller's /D directory, not MultiUser's default.
+fn windows_install_mode_update_init(plan : PackageSpec) -> String {
+  if plan.nsis_install_mode != Both {
+    return ""
+  }
+  let product = windows_installer_quote(plan.product_name)
+  let key = windows_installer_quote(windows_installer_registry_key(plan))
+  (
+    $|  ${If} $ProtonUpdate == "1"
+    $|    ${If} $ProtonInstallDirOverride == "placeholder\{'\\'}\{product}"
+    $|      Abort "The update installation directory is missing."
+    $|    ${EndIf}
+    $|    ReadRegStr $0 HKCU "\{key}" "InstallDir"
+    $|    ReadRegStr $1 HKLM "\{key}" "InstallDir"
+    $|    ${If} $0 == $ProtonInstallDirOverride
+    $|    ${AndIf} $1 != $ProtonInstallDirOverride
+    $|      Call MultiUser.InstallMode.CurrentUser
+    $|    ${ElseIf} $1 == $ProtonInstallDirOverride
+    $|    ${AndIf} $0 != $ProtonInstallDirOverride
+    $|      Call MultiUser.InstallMode.AllUsers
+    $|      ${If} $MultiUser.InstallMode != "AllUsers"
+    $|        Abort "The update requires administrator privileges."
+    $|      ${EndIf}
+    $|    ${Else}
+    $|      Abort "The update installation scope could not be determined."
+    $|    ${EndIf}
+    $|  ${EndIf}
+    $|
+  )
+}

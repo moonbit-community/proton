@@ -195,6 +195,25 @@ test "NSIS installation scopes wire permissions contexts and pages" {
       #|  ${AndIf} $ProtonUpdatePid == ""
       #|    Abort "The update process id is missing."
       #|  ${EndIf}
+      #|  ${If} $ProtonUpdate == "1"
+      #|    ${If} $ProtonInstallDirOverride == "placeholder\Demo App"
+      #|      Abort "The update installation directory is missing."
+      #|    ${EndIf}
+      #|    ReadRegStr $0 HKCU "Software\dev.proton.demo" "InstallDir"
+      #|    ReadRegStr $1 HKLM "Software\dev.proton.demo" "InstallDir"
+      #|    ${If} $0 == $ProtonInstallDirOverride
+      #|    ${AndIf} $1 != $ProtonInstallDirOverride
+      #|      Call MultiUser.InstallMode.CurrentUser
+      #|    ${ElseIf} $1 == $ProtonInstallDirOverride
+      #|    ${AndIf} $0 != $ProtonInstallDirOverride
+      #|      Call MultiUser.InstallMode.AllUsers
+      #|      ${If} $MultiUser.InstallMode != "AllUsers"
+      #|        Abort "The update requires administrator privileges."
+      #|      ${EndIf}
+      #|    ${Else}
+      #|      Abort "The update installation scope could not be determined."
+      #|    ${EndIf}
+      #|  ${EndIf}
       #|FunctionEnd
       #|
       #|Function un.onInit

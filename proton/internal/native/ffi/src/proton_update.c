@@ -1579,10 +1579,26 @@ int32_t proton_update_relaunch(char *error, int32_t error_len) {
                               "no Windows installer is ready");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  wchar_t parameters[128];
-  _snwprintf(parameters, sizeof(parameters) / sizeof(parameters[0]),
-             L"/S /PROTON-UPDATE=1 /PROTON-PID=%lu",
-             (unsigned long)GetCurrentProcessId());
+  wchar_t exe_path[PROTON_UPDATE_MAX_PATH];
+  wchar_t install_dir[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_running_exe(exe_path, PROTON_UPDATE_MAX_PATH) ||
+      !proton_update_parent_path_w(exe_path, install_dir,
+                                   PROTON_UPDATE_MAX_PATH)) {
+    proton_update_set_message(error, error_len,
+                              "failed to determine the update installation directory");
+    return PROTON_ERR_PLATFORM;
+  }
+  /* NSIS requires /D last and unquoted, including paths containing spaces.
+     Both-mode installers also use this directory to recover the install scope. */
+  wchar_t parameters[PROTON_UPDATE_MAX_PATH + 128];
+  int written = _snwprintf(parameters, sizeof(parameters) / sizeof(parameters[0]),
+                           L"/S /PROTON-UPDATE=1 /PROTON-PID=%lu /D=%ls",
+                           (unsigned long)GetCurrentProcessId(), install_dir);
+  if (written < 0 || (size_t)written >= sizeof(parameters) / sizeof(parameters[0])) {
+    proton_update_set_message(error, error_len,
+                              "the update installer arguments are too long");
+    return PROTON_ERR_PLATFORM;
+  }
   SHELLEXECUTEINFOW execute;
   ZeroMemory(&execute, sizeof(execute));
   execute.cbSize = sizeof(execute);

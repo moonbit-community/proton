@@ -179,6 +179,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|  ${AndIf} $ProtonUpdatePid == ""
     #|    Abort "The update process id is missing."
     #|  ${EndIf}
+    #|
+  builder.write_string(windows_install_mode_update_init(plan))
+  builder <+
     #|FunctionEnd
     #|
     #|Function un.onInit
