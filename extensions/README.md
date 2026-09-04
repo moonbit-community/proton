@@ -68,6 +68,7 @@ to another renderer target is rejected for the calling page.
 - `microphone`: microphone discovery/capture helper definitions
 - `power_monitor`: power, idle, and session-event helper definitions
 - `screen_monitor`: display queries, cursor position, and display-topology events
+- `net`: typed renderer-to-host HTTP requests with response status, headers, and body
 
 ## Extension Metadata
 
