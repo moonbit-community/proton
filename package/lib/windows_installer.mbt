@@ -198,6 +198,8 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  ClearErrors
     $|  WriteUninstaller "$INSTDIR.proton-next\\Uninstall.exe"
     $|  IfErrors install_failed
+    $|  ; SetOutPath also changes the working directory, which Windows locks.
+    $|  SetOutPath "$TEMP"
     $|
     $|  ; Reaching a later update proves the current tree started successfully,
     $|  ; so its predecessor is no longer needed as the recovery copy.
@@ -222,6 +224,7 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  Rename "$INSTDIR.proton-previous" "$INSTDIR"
     $|  Abort "The new installation could not be moved into place."
     $|install_failed:
+    $|  SetOutPath "$TEMP"
     $|  RMDir /r "$INSTDIR.proton-next"
     $|  Abort "The update could not be installed."
     $|install_complete:
