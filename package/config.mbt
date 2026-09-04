@@ -25,6 +25,7 @@ priv struct PackageConfig {
   icons : Array[String]?
   url_schemes : Array[String]?
   document_types : Array[ConfigDocumentType]?
+  nsis_install_mode : String?
   sign : Bool?
   notarize : Bool?
 } derive(FromJson, Default)

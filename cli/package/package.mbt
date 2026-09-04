@@ -47,6 +47,7 @@ struct PackagePlan {
   icons : Array[String]
   url_schemes : Array[String]
   document_types : Array[@proton_config.ProjectDocumentType]
+  nsis_install_mode : @packager.NsisInstallMode
   sign : Bool
   notarize : Bool
 } derive(Debug, Eq)
@@ -263,6 +264,10 @@ async fn build_package_plan(
     Some(frontend) => frontend.dist()
     None => None
   }
+  let nsis_install_mode = resolve_nsis_install_mode(
+    raw.package_args,
+    package_config,
+  )
   PackagePlan::{
     root: backend_root,
     app_package,
@@ -290,6 +295,7 @@ async fn build_package_plan(
       package_config.url_schemes()
     },
     document_types: package_config.document_types(),
+    nsis_install_mode,
     sign: raw.package_args.sign,
     notarize: raw.package_args.notarize,
   }
@@ -329,6 +335,25 @@ fn resolve_platform_package_config(
 }
 
 ///|
+fn resolve_nsis_install_mode(
+  arguments : @package_args.PackageArguments,
+  package_config : @proton_config.ProjectPackageConfig,
+) -> @packager.NsisInstallMode raise @packager.PackagePlanError {
+  match arguments.nsis_install_mode {
+    Some(mode) => mode
+    None =>
+      match package_config.platforms().windows() {
+        Some(windows) =>
+          windows
+          .nsis_install_mode()
+          .map(@packager.NsisInstallMode::parse)
+          .unwrap_or(CurrentUser)
+        None => CurrentUser
+      }
+  }
+}
+
+///|
 fn append_unique(values : Array[String], additions : Array[String]) -> Unit {
   for value in additions {
     if !values.contains(value) {
@@ -354,6 +379,9 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
     "  formats: " + plan.formats.map(format => format.to_string()).join(", "),
   )
   println("  output: " + plan.output)
+  if plan.formats.contains(@packager.PackageFormat::Nsis) {
+    println("  NSIS install mode: " + plan.nsis_install_mode.to_string())
+  }
   println("  prepare: " + plan.prepare.unwrap_or("none"))
   let sign_binaries = if plan.sign_binaries.length() == 0 {
     "none"
@@ -400,6 +428,7 @@ async fn execute_package_plan(plan : PackagePlan) -> (Array[String], String) {
     icons=plan.icons,
     url_schemes=plan.url_schemes,
     document_types~,
+    nsis_install_mode=plan.nsis_install_mode,
     sign=plan.sign,
     notarize=plan.notarize,
   )

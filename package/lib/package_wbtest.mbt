@@ -157,6 +157,7 @@ test "Windows icon embedding reports the native-only operation" {
 fn package_test_spec(
   formats : Array[PackageFormat],
   url_schemes? : Array[String] = ["devtoys"],
+  nsis_install_mode? : NsisInstallMode = CurrentUser,
 ) -> PackageSpec {
   PackageSpec(
     "/tmp/demo",
@@ -166,6 +167,7 @@ fn package_test_spec(
     formats,
     "/tmp/dist",
     url_schemes~,
+    nsis_install_mode~,
   )
 }
 
@@ -230,7 +232,7 @@ test "NSIS script carries package identity and update behavior" {
   )
   assert_true(
     empty_script.contains(
-      "DeleteRegKey HKLM \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\dev.proton.demo\"\nSectionEnd",
+      "DeleteRegKey SHCTX \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\dev.proton.demo\"\nSectionEnd",
     ),
   )
   assert_true(
@@ -250,7 +252,7 @@ test "NSIS staging transaction leaves the working directory before moving or rem
   let (_, install) = script.split_once("Section \"Install\"\n").unwrap()
   let (transaction, _) = install
     .to_owned()
-    .split_once("  WriteRegStr HKLM")
+    .split_once("  WriteRegStr SHCTX")
     .unwrap()
   inspect(
     transaction.to_owned(),
@@ -308,18 +310,18 @@ test "NSIS URL scheme scripts share an owned command" {
   inspect(
     windows_protocol_install_script(spec, "demo-app.exe"),
     content=(
-      #|  WriteRegStr HKCU "Software\Classes\devtoys" "" "URL:devtoys"
-      #|  WriteRegStr HKCU "Software\Classes\devtoys" "URL Protocol" ""
-      #|  WriteRegStr HKCU "Software\Classes\devtoys\shell\open\command" "" "$\"$INSTDIR\demo-app.exe$\" $\"%1$\""
+      #|  WriteRegStr SHCTX "Software\Classes\devtoys" "" "URL:devtoys"
+      #|  WriteRegStr SHCTX "Software\Classes\devtoys" "URL Protocol" ""
+      #|  WriteRegStr SHCTX "Software\Classes\devtoys\shell\open\command" "" "$\"$INSTDIR\demo-app.exe$\" $\"%1$\""
       #|
     ),
   )
   inspect(
     windows_protocol_uninstall_script(spec, "demo-app.exe"),
     content=(
-      #|  ReadRegStr $0 HKCU "Software\Classes\devtoys\shell\open\command" ""
+      #|  ReadRegStr $0 SHCTX "Software\Classes\devtoys\shell\open\command" ""
       #|  ${If} $0 == "$\"$INSTDIR\demo-app.exe$\" $\"%1$\""
-      #|    DeleteRegKey HKCU "Software\Classes\devtoys"
+      #|    DeleteRegKey SHCTX "Software\Classes\devtoys"
       #|  ${EndIf}
       #|
     ),

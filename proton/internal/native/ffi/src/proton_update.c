@@ -1587,7 +1587,8 @@ int32_t proton_update_relaunch(char *error, int32_t error_len) {
   ZeroMemory(&execute, sizeof(execute));
   execute.cbSize = sizeof(execute);
   execute.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
-  execute.lpVerb = L"runas";
+  /* Let the installer's manifest request elevation for its install mode. */
+  execute.lpVerb = L"open";
   execute.lpFile = proton_update_pending_installer_path;
   execute.lpParameters = parameters;
   execute.nShow = SW_HIDE;

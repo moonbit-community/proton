@@ -24,3 +24,27 @@ test "shared package arguments parse metadata and repeated values" {
   assert_true(arguments.sign)
   assert_true(arguments.notarize)
 }
+
+///|
+test "NSIS install mode arguments are optional and validated" {
+  assert_eq(parse_arguments([]).nsis_install_mode, None)
+  for
+    entry in [
+      ("currentUser", @package.NsisInstallMode::CurrentUser),
+      ("perMachine", @package.NsisInstallMode::PerMachine),
+      ("both", @package.NsisInstallMode::Both),
+    ] {
+    let (name, mode) = entry
+    assert_eq(
+      parse_arguments(["--nsis-install-mode", name]).nsis_install_mode,
+      Some(mode),
+    )
+  }
+  try parse_arguments(["--nsis-install-mode", "admin"]) catch {
+    @package.PackagePlanError::UnsupportedNsisInstallMode(value~) =>
+      assert_eq(value, "admin")
+    _ => fail("expected an invalid NSIS mode")
+  } noraise {
+    _ => fail("expected argument parsing to fail")
+  }
+}

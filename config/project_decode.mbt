@@ -212,7 +212,25 @@ fn decode_platform_package(
     None => None
     Some(Object(values)) => {
       let label = "package.platforms." + platform
-      validate_object_fields(values, label, ["formats", "resources", "sign"])
+      validate_object_fields(
+        values,
+        label,
+        if platform == "windows" {
+          ["formats", "resources", "sign", "nsis_install_mode"]
+        } else {
+          ["formats", "resources", "sign"]
+        },
+      )
+      let nsis_install_mode = optional_string(
+        values,
+        "nsis_install_mode",
+        label + ".nsis_install_mode",
+      )
+      match nsis_install_mode {
+        Some("currentUser" | "perMachine" | "both") | None => ()
+        Some(value) =>
+          raise UnsupportedValue(path=label + ".nsis_install_mode", value~)
+      }
       let formats = if values.contains("formats") {
         Some(optional_string_array(values, "formats", label + ".formats"))
       } else {
@@ -228,6 +246,7 @@ fn decode_platform_package(
             label + ".resources",
           ),
           sign?,
+          nsis_install_mode?,
         ),
       )
     }

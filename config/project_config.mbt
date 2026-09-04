@@ -114,6 +114,7 @@ pub(all) struct ProjectPlatformPackageConfig {
   formats : Array[String]?
   resources : Array[String]
   sign : ProjectSignConfig?
+  nsis_install_mode : String?
 } derive(Eq, Debug)
 
 ///|
@@ -127,6 +128,7 @@ pub fn ProjectPlatformPackageConfig::ProjectPlatformPackageConfig(
   formats? : Array[String],
   resources? : Array[String] = [],
   sign? : ProjectSignConfig,
+  nsis_install_mode? : String,
 ) -> ProjectPlatformPackageConfig {
   ProjectPlatformPackageConfig::{
     formats: match formats {
@@ -135,6 +137,7 @@ pub fn ProjectPlatformPackageConfig::ProjectPlatformPackageConfig(
     },
     resources: resources.copy(),
     sign,
+    nsis_install_mode,
   }
 }
 
@@ -160,6 +163,14 @@ pub fn ProjectPlatformPackageConfig::sign(
   self : ProjectPlatformPackageConfig,
 ) -> ProjectSignConfig? {
   self.sign
+}
+
+///|
+/// Windows-only NSIS mode: currentUser, perMachine, or both.
+pub fn ProjectPlatformPackageConfig::nsis_install_mode(
+  self : ProjectPlatformPackageConfig,
+) -> String? {
+  self.nsis_install_mode
 }
 
 ///|

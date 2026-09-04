@@ -42,6 +42,13 @@ async fn package_spec(matches : @argparse.Matches) -> @package.PackageSpec {
     icons~,
     url_schemes~,
     document_types=config.document_type_specs(),
+    nsis_install_mode=match arguments.nsis_install_mode {
+      Some(mode) => mode
+      None =>
+        config.nsis_install_mode
+        .map(@package.NsisInstallMode::parse)
+        .unwrap_or(CurrentUser)
+    },
     sign=arguments.sign || config.sign.unwrap_or(false),
     notarize=arguments.notarize || config.notarize.unwrap_or(false),
   )

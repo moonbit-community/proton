@@ -230,6 +230,41 @@ pub fn PackageCustomization::PackageCustomization(
 }
 
 ///|
+/// Windows NSIS installation scope. `Both` lets the installer user choose.
+pub(all) enum NsisInstallMode {
+  CurrentUser
+  PerMachine
+  Both
+} derive(Debug, Eq)
+
+///|
+pub extend NsisInstallMode with Eq::{not_equal, equal}
+
+///|
+pub extend NsisInstallMode with Debug::{to_repr}
+
+///|
+pub fn NsisInstallMode::parse(
+  value : String,
+) -> NsisInstallMode raise PackagePlanError {
+  match value {
+    "currentUser" => CurrentUser
+    "perMachine" => PerMachine
+    "both" => Both
+    _ => raise UnsupportedNsisInstallMode(value~)
+  }
+}
+
+///|
+pub fn NsisInstallMode::to_string(self : NsisInstallMode) -> String {
+  match self {
+    CurrentUser => "currentUser"
+    PerMachine => "perMachine"
+    Both => "both"
+  }
+}
+
+///|
 /// Complete input to the host-native packager.
 pub struct PackageSpec {
   executable : String
@@ -242,6 +277,7 @@ pub struct PackageSpec {
   icons : Array[String]
   url_schemes : Array[String]
   document_types : Array[DocumentType]
+  nsis_install_mode : NsisInstallMode
   sign : Bool
   notarize : Bool
 } derive(Debug, Eq)
@@ -264,6 +300,7 @@ pub fn PackageSpec::PackageSpec(
   icons? : Array[String] = [],
   url_schemes? : Array[String] = [],
   document_types? : Array[DocumentType] = [],
+  nsis_install_mode? : NsisInstallMode = CurrentUser,
   sign? : Bool = false,
   notarize? : Bool = false,
 ) -> PackageSpec {
@@ -278,6 +315,7 @@ pub fn PackageSpec::PackageSpec(
     icons,
     url_schemes,
     document_types,
+    nsis_install_mode,
     sign: sign || notarize,
     notarize,
   }

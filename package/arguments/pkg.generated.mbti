@@ -25,6 +25,7 @@ pub(all) struct PackageArguments {
   output : String?
   icons : Array[String]
   url_schemes : Array[String]
+  nsis_install_mode : @lib.NsisInstallMode?
   sign : Bool
   notarize : Bool
 } derive(Eq, @debug.Debug)
