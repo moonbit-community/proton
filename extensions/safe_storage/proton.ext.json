@@ -1,0 +1,7 @@
+{
+  "id": "moonbit-community/proton-safe-storage",
+  "namespace": "safeStorage",
+  "version": "0.1.19",
+  "moonbit_import_path": "moonbit-community/proton_ext/safe_storage",
+  "package": "@moonbit-community/proton-safe-storage"
+}

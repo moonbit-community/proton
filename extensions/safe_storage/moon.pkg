@@ -1,0 +1,17 @@
+import {
+  "moonbitlang/core/json",
+  "moonbit-community/proton_safe_storage" @sys_safe_storage,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/safe_storage/contract" @safe_storage_contract,
+  "moonbitlang/core/debug",
+}
+
+supported_targets = "native"
+
+formatter(ignore: [ "extension.g.mbt" ])
+
+options(
+  targets: { "extension.g.mbt": [ "native" ], "extension.mbt": [ "native" ] },
+)
