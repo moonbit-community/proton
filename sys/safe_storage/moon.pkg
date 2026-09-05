@@ -8,9 +8,4 @@ supported_targets = "native"
 options(
   "native-stub": [ "safe_storage_native.c" ],
   targets: { "safe_storage.mbt": [ "native" ] },
-  link: {
-    "native": {
-      "stub-cc-flags": "-framework Security -framework CoreFoundation",
-    },
-  },
 )
