@@ -1,0 +1,11 @@
+import {
+  "moonbitlang/core/encoding/base64",
+  "moonbitlang/core/encoding/utf8",
+}
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "safe_storage_native.c" ],
+  targets: { "safe_storage.mbt": [ "native" ] },
+)

@@ -87,6 +87,7 @@ try {
     "path",
     "power_monitor",
     "screen_monitor",
+    "safe_storage",
     "shell",
     "tray",
     "updater",
