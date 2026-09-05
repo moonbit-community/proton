@@ -27,13 +27,37 @@ fn split_url(url : String) -> (String, String) raise NetError {
   } else {
     raise InvalidUrl(detail="URL must start with http:// or https://")
   }
-  match rest.find("/") {
-    Some(slash) => {
-      let host = rest[:slash].to_owned()
-      let path = rest[slash:].to_owned()
+  let delimiter = match (rest.find("/"), rest.find("?"), rest.find("#")) {
+    (None, None, None) => None
+    (Some(index), None, None) => Some(index)
+    (None, Some(index), None) => Some(index)
+    (None, None, Some(index)) => Some(index)
+    (Some(first), Some(second), None) =>
+      Some(if first < second { first } else { second })
+    (Some(first), None, Some(second)) =>
+      Some(if first < second { first } else { second })
+    (None, Some(first), Some(second)) =>
+      Some(if first < second { first } else { second })
+    (Some(first), Some(second), Some(third)) => {
+      let first_two = if first < second { first } else { second }
+      Some(if first_two < third { first_two } else { third })
+    }
+  }
+  match delimiter {
+    Some(delimiter) => {
+      let host = rest[:delimiter].to_owned()
+      let path = rest[delimiter:].to_owned()
+      if host.is_empty() {
+        raise InvalidUrl(detail="URL host must not be empty")
+      }
       (prefix + host + "/", path)
     }
-    None => (url + "/", "/")
+    None => {
+      if rest.is_empty() {
+        raise InvalidUrl(detail="URL host must not be empty")
+      }
+      (prefix + rest + "/", "/")
+    }
   }
 }
 
