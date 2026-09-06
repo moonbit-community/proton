@@ -547,7 +547,9 @@ int32_t proton_engine_view_create(
                                          PROTON_BROWSER_POLICY_DENY,
                                          1};
   view->browser_session = proton_browser_session_create(
-      &view_policy, proton_engine_browser_signal, NULL);
+      &view_policy,
+      proton_browser_session_web_request_config(window->browser_session),
+      proton_engine_browser_signal, NULL);
   view->events = proton_view_events_create();
   if (view->browser_session == NULL || view->events == NULL) {
     proton_browser_session_destroy(view->browser_session);

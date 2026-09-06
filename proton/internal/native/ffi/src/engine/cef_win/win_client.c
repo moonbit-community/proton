@@ -153,6 +153,11 @@ static void CEF_CALLBACK proton_engine_on_load_error(
 static int CEF_CALLBACK proton_engine_on_before_browse(
     cef_request_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
     cef_request_t *request, int user_gesture, int is_redirect);
+static cef_resource_request_handler_t *CEF_CALLBACK
+proton_engine_get_resource_request_handler(
+    cef_request_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    cef_request_t *request, int is_navigation, int is_download,
+    const cef_string_t *request_initiator, int *disable_default_handling);
 static int CEF_CALLBACK proton_engine_on_open_url_from_tab(
     cef_request_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
     const cef_string_t *target_url,
@@ -425,6 +430,8 @@ void proton_engine_init_app(void) {
       proton_engine_on_render_process_terminated;
   g_proton_engine_request_handler.handler.on_before_browse =
       proton_engine_on_before_browse;
+  g_proton_engine_request_handler.handler.get_resource_request_handler =
+      proton_engine_get_resource_request_handler;
   g_proton_engine_request_handler.handler.on_open_urlfrom_tab =
       proton_engine_on_open_url_from_tab;
   g_proton_engine_request_handler.handler.on_certificate_error =
@@ -1035,6 +1042,30 @@ static int CEF_CALLBACK proton_engine_on_before_browse(
   return proton_browser_session_before_browse(
       window != NULL ? window->browser_session : NULL, frame, request,
       user_gesture, is_redirect);
+}
+
+static cef_resource_request_handler_t *CEF_CALLBACK
+proton_engine_get_resource_request_handler(
+    cef_request_handler_t *self, cef_browser_t *browser, cef_frame_t *frame,
+    cef_request_t *request, int is_navigation, int is_download,
+    const cef_string_t *request_initiator, int *disable_default_handling) {
+  (void)self;
+  (void)frame;
+  (void)request;
+  (void)is_navigation;
+  (void)is_download;
+  (void)request_initiator;
+  (void)disable_default_handling;
+  proton_engine_window_t *window =
+      proton_engine_window_lookup_browser(browser);
+  proton_browser_session_t *session =
+      window != NULL ? window->browser_session : NULL;
+  if (session == NULL) {
+    proton_engine_view_t *view =
+        proton_engine_window_lookup_view_browser(browser);
+    session = view != NULL ? view->browser_session : NULL;
+  }
+  return proton_browser_session_resource_handler(session);
 }
 
 static int CEF_CALLBACK proton_engine_on_open_url_from_tab(

@@ -2,12 +2,14 @@
 #define PROTON_ENGINE_CEF_COMMON_BROWSER_SESSION_H
 
 #include "proton_native.h"
+#include "../../proton_web_request_config.h"
 
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_download_handler_capi.h"
 #include "include/capi/cef_permission_handler_capi.h"
 #include "include/capi/cef_request_capi.h"
 #include "include/capi/cef_request_handler_capi.h"
+#include "include/capi/cef_resource_request_handler_capi.h"
 
 #include "browser_lifecycle.h"
 
@@ -34,14 +36,22 @@ typedef struct proton_event proton_event_t;
 
 typedef void (*proton_browser_signal_fn)(void *user_data);
 proton_browser_session_t *proton_browser_session_create(
-    const proton_browser_policy_t *policy, proton_browser_signal_fn signal,
-    void *signal_user_data);
+    const proton_browser_policy_t *policy,
+    proton_web_request_config_t *web_request_config,
+    proton_browser_signal_fn signal, void *signal_user_data);
+cef_resource_request_handler_t *proton_browser_session_resource_handler(
+    proton_browser_session_t *session);
+proton_web_request_config_t *proton_browser_session_web_request_config(
+    proton_browser_session_t *session);
 void proton_browser_session_destroy(proton_browser_session_t *session);
 void proton_browser_session_bind_window(proton_browser_session_t *session,
                                          proton_window_id_t window);
 void proton_browser_session_bind_lifecycle(
     proton_browser_session_t *session,
     proton_browser_lifecycle_t *lifecycle);
+
+int proton_browser_session_before_resource_load(
+    proton_browser_session_t *session, const char *url);
 
 void proton_browser_session_loading_changed(proton_browser_session_t *session,
                                              const char *url,

@@ -19,6 +19,7 @@ options(
     "src/proton_state.c",
     "src/proton_system_path.c",
     "src/proton_update.c",
+    "src/proton_web_request_config.c",
     "src/proton.c",
     "src/engine/cef_common/bridge_client.c",
     "src/engine/cef_common/bridge_lifecycle.c",

@@ -69,3 +69,12 @@ pub fn download_command_beats_allow_trace() -> String {
   let _ = @ffi.proton_abi_version_ffi()
   @utf8.decode_lossy(download_command_beats_allow_trace_ffi())
 }
+
+///|
+extern "C" fn web_request_cancel_trace_ffi() -> Bytes = "proton_test_web_request_cancel_trace"
+
+///|
+pub fn web_request_cancel_trace() -> String {
+  let _ = @ffi.proton_abi_version_ffi()
+  @utf8.decode_lossy(web_request_cancel_trace_ffi())
+}

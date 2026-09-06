@@ -1,4 +1,5 @@
 #include "../../src/engine/cef_common/browser_session.h"
+#include "../../src/proton_web_request_config.h"
 #include "../../src/proton_event.h"
 
 #include "moonbit.h"
@@ -168,7 +169,7 @@ static moonbit_bytes_t proton_test_download_deny_trace(
 
   proton_event_dispatch_begin();
   proton_browser_session_t *session =
-      proton_browser_session_create(&policy, NULL, NULL);
+      proton_browser_session_create(&policy, NULL, NULL, NULL);
   cef_string_t suggested_name = {0};
   (void)proton_browser_session_before_download(
       session, &download.item, &suggested_name, &before.callback);
@@ -227,7 +228,7 @@ proton_test_denied_download_policy_trace(void) {
   proton_test_before_init(&before);
   proton_test_download_init(&download, 42);
   proton_browser_session_t *session =
-      proton_browser_session_create(&policy, NULL, NULL);
+      proton_browser_session_create(&policy, NULL, NULL, NULL);
   cef_string_t suggested_name = {0};
   int handled = proton_browser_session_before_download(
       session, &download.item, &suggested_name, &before.callback);
@@ -253,7 +254,7 @@ proton_test_unpublished_download_request_trace(void) {
   proton_test_before_init(&before);
   proton_test_download_init(&download, 43);
   proton_browser_session_t *session =
-      proton_browser_session_create(&policy, NULL, NULL);
+      proton_browser_session_create(&policy, NULL, NULL, NULL);
   cef_string_t suggested_name = {0};
   int handled = proton_browser_session_before_download(
       session, &download.item, &suggested_name, &before.callback);
@@ -283,7 +284,7 @@ proton_test_download_single_completion_trace(void) {
   proton_test_download_init(&download, 44);
   proton_event_dispatch_begin();
   proton_browser_session_t *session =
-      proton_browser_session_create(&policy, NULL, NULL);
+      proton_browser_session_create(&policy, NULL, NULL, NULL);
   cef_string_t suggested_name = {0};
   (void)proton_browser_session_before_download(
       session, &download.item, &suggested_name, &before.callback);
@@ -323,7 +324,7 @@ proton_test_download_command_beats_allow_trace(void) {
   proton_test_download_init(&download, 45);
   proton_event_dispatch_begin();
   proton_browser_session_t *session =
-      proton_browser_session_create(&policy, NULL, NULL);
+      proton_browser_session_create(&policy, NULL, NULL, NULL);
   cef_string_t suggested_name = {0};
   (void)proton_browser_session_before_download(
       session, &download.item, &suggested_name, &before.callback);
@@ -342,6 +343,34 @@ proton_test_download_command_beats_allow_trace(void) {
       before.continue_calls, before.release_calls, item_callback.cancel_calls,
       item_callback.release_calls, command, status);
   if (written < 0 || (size_t)written >= sizeof(trace)) {
+    return proton_test_copy_trace("trace-error");
+  }
+  return proton_test_copy_trace(trace);
+}
+
+MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_web_request_cancel_trace(void) {
+  proton_web_request_config_t *config = NULL;
+  int32_t create = proton_internal_web_request_config_create(&config);
+  int32_t add = proton_internal_web_request_config_add_cancel_prefix(
+      config, "https://blocked.example/assets/");
+  int32_t duplicate = proton_internal_web_request_config_add_cancel_prefix(
+      config, "https://blocked.example/assets/");
+  int32_t empty =
+      proton_internal_web_request_config_add_cancel_prefix(config, "");
+  int matching = proton_web_request_config_should_cancel(
+      config, "https://blocked.example/assets/app.js");
+  int nonmatching = proton_web_request_config_should_cancel(
+      config, "https://allowed.example/app.js");
+  int case_sensitive = proton_web_request_config_should_cancel(
+      config, "https://BLOCKED.example/assets/app.js");
+  char trace[160];
+  int written = snprintf(trace, sizeof(trace),
+                         "matching=%d,nonmatching=%d,case_sensitive=%d,empty=%d,duplicate=%d",
+                         matching, nonmatching, case_sensitive, empty,
+                         duplicate);
+  proton_internal_web_request_config_destroy(config);
+  if (create != 0 || add != 0 || written < 0 ||
+      (size_t)written >= sizeof(trace)) {
     return proton_test_copy_trace("trace-error");
   }
   return proton_test_copy_trace(trace);
