@@ -267,8 +267,12 @@ pub fn ScreenMonitor::cursor_point(
 /// Returns the current native window source snapshot as JSON. The payload is
 /// consumed by the desktop-capturer extension; unsupported platforms return a
 /// structured `supported: false` payload.
-pub fn ScreenMonitor::window_sources_json(_self : ScreenMonitor) -> Bytes {
-  native_window_sources_json()
+pub fn ScreenMonitor::window_sources_json(
+  _self : ScreenMonitor,
+  width : Int,
+  height : Int,
+) -> Bytes {
+  native_window_sources_json(width, height)
 }
 
 ///|
