@@ -29,7 +29,7 @@ extern "C" fn native_enumerate_json(handle : State) -> Bytes = "moonbit_screen_m
 extern "C" fn native_cursor_point_json(handle : State) -> Bytes = "moonbit_screen_monitor_cursor_point_json"
 
 ///|
-extern "C" fn native_window_sources_json() -> Bytes = "moonbit_screen_monitor_window_sources_json"
+extern "C" fn native_window_sources_json(width : Int, height : Int) -> Bytes = "moonbit_screen_monitor_window_sources_json"
 
 ///|
 #borrow(handle)

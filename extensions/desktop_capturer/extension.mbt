@@ -76,16 +76,18 @@ fn get_sources(
     if source_type == "screen" {
       wants_screens.val = true
     }
-    if source_type != "screen" {
+    if source_type != "screen" && source_type != "window" {
       raise Unsupported(
         operation="source type",
-        detail="only the screen source type is currently supported",
+        detail="only the screen and window source types are currently supported",
       )
     }
   }
   match request.thumbnail_width {
     Some(width) if width <= 0 =>
       raise QueryFailed(detail="thumbnail width must be positive when supplied")
+    Some(width) if width > 4096 =>
+      raise QueryFailed(detail="thumbnail width must not exceed 4096")
     _ => ()
   }
   match request.thumbnail_height {
@@ -93,6 +95,8 @@ fn get_sources(
       raise QueryFailed(
         detail="thumbnail height must be positive when supplied",
       )
+    Some(height) if height > 4096 =>
+      raise QueryFailed(detail="thumbnail height must not exceed 4096")
     _ => ()
   }
   let monitor = @sys_screen_monitor.ScreenMonitor() catch {
@@ -110,7 +114,11 @@ fn get_sources(
     []
   }
   let window_sources = if wants_windows.val {
-    let text = @utf8.decode_lossy(monitor.window_sources_json()[:])
+    let thumbnail_width = request.thumbnail_width.unwrap_or(0)
+    let thumbnail_height = request.thumbnail_height.unwrap_or(0)
+    let text = @utf8.decode_lossy(
+      monitor.window_sources_json(thumbnail_width, thumbnail_height)[:],
+    )
     let wire : WindowSourcesWire = @json.from_json(@json.parse(text)) catch {
       _ => raise QueryFailed(detail="native window source payload is invalid")
     }
