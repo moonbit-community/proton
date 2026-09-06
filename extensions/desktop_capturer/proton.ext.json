@@ -1,0 +1,6 @@
+{
+  "id": "moonbit-community/proton-desktop-capturer",
+  "namespace": "desktopCapturer",
+  "moonbit_import_path": "moonbit-community/proton_ext/desktop_capturer",
+  "package": "@moonbit-community/proton-desktop-capturer"
+}

@@ -78,6 +78,7 @@ try {
   const codegenExtensions = [
     "auto_launch",
     "clipboard",
+    "desktop_capturer",
     "dialog",
     "fs",
     "global_hotkey",

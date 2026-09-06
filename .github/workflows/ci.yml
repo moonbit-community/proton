@@ -224,6 +224,7 @@ jobs:
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a moon -C extensions test -p moonbit-community/proton_ext \
               moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard \
+              moonbit-community/proton_ext/desktop_capturer \
               moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
               moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
               moonbit-community/proton_ext/microphone \
@@ -238,6 +239,7 @@ jobs:
           else
             moon -C extensions test -p moonbit-community/proton_ext \
               moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard \
+              moonbit-community/proton_ext/desktop_capturer \
               moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
               moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
               moonbit-community/proton_ext/microphone \
@@ -264,6 +266,7 @@ jobs:
             "moonbit-community/proton_ext"
             "moonbit-community/proton_ext/auto_launch"
             "moonbit-community/proton_ext/clipboard"
+            "moonbit-community/proton_ext/desktop_capturer"
             "moonbit-community/proton_ext/dialog"
             "moonbit-community/proton_ext/fs"
             "moonbit-community/proton_ext/global_hotkey"
