@@ -4,6 +4,7 @@
 #include <dlfcn.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* Screen enumeration, cursor location, and hot-plug reconfiguration arrive
@@ -48,6 +49,14 @@ typedef proton_cg_error (*proton_cg_display_remove_reconfiguration_fn)(
 typedef proton_cf_type_ref (*proton_cg_event_create_fn)(uint32_t);
 typedef proton_cg_point_t (*proton_cg_event_get_location_fn)(proton_cf_type_ref);
 typedef void (*proton_cf_release_fn)(proton_cf_type_ref);
+typedef proton_cf_type_ref (*proton_cg_display_create_image_fn)(
+    proton_cg_direct_display_id);
+typedef proton_cf_type_ref (*proton_cg_color_space_create_device_rgb_fn)(void);
+typedef proton_cf_type_ref (*proton_cg_bitmap_context_create_fn)(
+    void *, size_t, size_t, size_t, size_t, proton_cf_type_ref, uint32_t);
+typedef void (*proton_cg_context_draw_image_fn)(proton_cf_type_ref,
+                                                proton_cg_rect,
+                                                proton_cf_type_ref);
 
 static struct {
   proton_cg_get_active_display_list_fn get_active_display_list;
@@ -60,6 +69,10 @@ static struct {
   proton_cg_event_create_fn event_create;
   proton_cg_event_get_location_fn event_get_location;
   proton_cf_release_fn release;
+  proton_cg_display_create_image_fn display_create_image;
+  proton_cg_color_space_create_device_rgb_fn color_space_create_device_rgb;
+  proton_cg_bitmap_context_create_fn bitmap_context_create;
+  proton_cg_context_draw_image_fn context_draw_image;
   int32_t loaded;
   int32_t ready;
 } g_mac;
@@ -117,6 +130,16 @@ static int32_t screen_monitor_load_mac_symbols(void) {
       (proton_cg_event_get_location_fn)dlsym(core_graphics,
                                              "CGEventGetLocation");
   g_mac.release = (proton_cf_release_fn)dlsym(core_foundation, "CFRelease");
+  g_mac.display_create_image = (proton_cg_display_create_image_fn)dlsym(
+      core_graphics, "CGDisplayCreateImage");
+  g_mac.color_space_create_device_rgb =
+      (proton_cg_color_space_create_device_rgb_fn)dlsym(
+          core_graphics, "CGColorSpaceCreateDeviceRGB");
+  g_mac.bitmap_context_create =
+      (proton_cg_bitmap_context_create_fn)dlsym(core_graphics,
+                                                "CGBitmapContextCreate");
+  g_mac.context_draw_image = (proton_cg_context_draw_image_fn)dlsym(
+      core_graphics, "CGContextDrawImage");
   g_mac.ready = g_mac.get_active_display_list != NULL &&
                 g_mac.display_bounds != NULL &&
                 g_mac.display_is_main != NULL && g_mac.pixels_wide != NULL &&
@@ -126,6 +149,91 @@ static int32_t screen_monitor_load_mac_symbols(void) {
                 g_mac.event_create != NULL && g_mac.event_get_location != NULL &&
                 g_mac.release != NULL;
   return g_mac.ready;
+}
+
+static const char screen_monitor_base64_table[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+MOONBIT_FFI_EXPORT
+moonbit_bytes_t moonbit_screen_monitor_display_thumbnail(int32_t display_id,
+                                                         int32_t width,
+                                                         int32_t height) {
+  if (width <= 0 || height <= 0 || !screen_monitor_load_mac_symbols() ||
+      g_mac.display_create_image == NULL ||
+      g_mac.color_space_create_device_rgb == NULL ||
+      g_mac.bitmap_context_create == NULL || g_mac.context_draw_image == NULL) {
+    return moonbit_make_bytes(0, 0);
+  }
+  size_t pixel_size = (size_t)width * (size_t)height * 4;
+  if (pixel_size / 4 != (size_t)width * (size_t)height) {
+    return moonbit_make_bytes(0, 0);
+  }
+  unsigned char *pixels = (unsigned char *)calloc(1, pixel_size);
+  proton_cf_type_ref image =
+      g_mac.display_create_image((proton_cg_direct_display_id)display_id);
+  proton_cf_type_ref color_space = g_mac.color_space_create_device_rgb();
+  proton_cf_type_ref context = NULL;
+  if (pixels != NULL && image != NULL && color_space != NULL) {
+    context = g_mac.bitmap_context_create(pixels, (size_t)width,
+                                          (size_t)height, 8,
+                                          (size_t)width * 4, color_space,
+                                          1u | 0x4000u);
+  }
+  if (context == NULL) {
+    if (image != NULL) g_mac.release(image);
+    if (color_space != NULL) g_mac.release(color_space);
+    free(pixels);
+    return moonbit_make_bytes(0, 0);
+  }
+  proton_cg_rect bounds = {0, 0, (proton_cg_float)width,
+                           (proton_cg_float)height};
+  g_mac.context_draw_image(context, bounds, image);
+  for (size_t i = 0; i < pixel_size; i += 4) {
+    unsigned char red = pixels[i];
+    pixels[i] = pixels[i + 2];
+    pixels[i + 2] = red;
+  }
+  size_t raw_size = 54 + pixel_size;
+  size_t encoded_size = ((raw_size + 2) / 3) * 4;
+  unsigned char *raw = (unsigned char *)calloc(1, raw_size);
+  moonbit_bytes_t result = moonbit_make_bytes(0, 0);
+  if (raw != NULL && raw_size <= UINT32_MAX) {
+    uint32_t file_size = (uint32_t)raw_size;
+    uint32_t offset = 54;
+    uint32_t header_size = 40;
+    int32_t bitmap_height = -height;
+    uint16_t planes = 1;
+    uint16_t bits = 32;
+    uint32_t image_size = (uint32_t)pixel_size;
+    raw[0] = 'B'; raw[1] = 'M';
+    memcpy(raw + 2, &file_size, 4); memcpy(raw + 10, &offset, 4);
+    memcpy(raw + 14, &header_size, 4); memcpy(raw + 18, &width, 4);
+    memcpy(raw + 22, &bitmap_height, 4); memcpy(raw + 26, &planes, 2);
+    memcpy(raw + 28, &bits, 2); memcpy(raw + 34, &image_size, 4);
+    memcpy(raw + 54, pixels, pixel_size);
+    result = moonbit_make_bytes((int32_t)(22 + encoded_size), 0);
+    memcpy(result, "data:image/bmp;base64,", 22);
+    size_t out = 22;
+    for (size_t i = 0; i < raw_size; i += 3) {
+      uint32_t value = (uint32_t)raw[i] << 16;
+      if (i + 1 < raw_size) value |= (uint32_t)raw[i + 1] << 8;
+      if (i + 2 < raw_size) value |= raw[i + 2];
+      result[out++] = screen_monitor_base64_table[(value >> 18) & 63];
+      result[out++] = screen_monitor_base64_table[(value >> 12) & 63];
+      result[out++] = i + 1 < raw_size
+                          ? screen_monitor_base64_table[(value >> 6) & 63]
+                          : '=';
+      result[out++] = i + 2 < raw_size
+                          ? screen_monitor_base64_table[value & 63]
+                          : '=';
+    }
+  }
+  free(raw);
+  g_mac.release(context);
+  g_mac.release(color_space);
+  g_mac.release(image);
+  free(pixels);
+  return result;
 }
 
 void screen_monitor_platform_init(screen_monitor_state_t *state) {

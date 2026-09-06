@@ -32,6 +32,13 @@ extern "C" fn native_cursor_point_json(handle : State) -> Bytes = "moonbit_scree
 extern "C" fn native_window_sources_json(width : Int, height : Int) -> Bytes = "moonbit_screen_monitor_window_sources_json"
 
 ///|
+extern "C" fn native_display_thumbnail(
+  display_id : Int,
+  width : Int,
+  height : Int,
+) -> Bytes = "moonbit_screen_monitor_display_thumbnail"
+
+///|
 #borrow(handle)
 extern "C" fn native_nearest_display_json(
   handle : State,

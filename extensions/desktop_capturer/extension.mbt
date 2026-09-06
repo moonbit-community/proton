@@ -39,6 +39,7 @@ fn window_source_from_wire(
 ///|
 fn source_from_display(
   d : @sys_screen_monitor.DisplayInfo,
+  thumbnail : String?,
 ) -> @desktop_capturer_contract.Source {
   @desktop_capturer_contract.Source::{
     id: "screen:" + d.id.to_string(),
@@ -52,7 +53,7 @@ fn source_from_display(
     y: d.bounds.y,
     width: d.bounds.width,
     height: d.bounds.height,
-    thumbnail: None,
+    thumbnail,
   }
 }
 
@@ -109,7 +110,25 @@ fn get_sources(
     }
   }
   let screen_sources = if wants_screens.val {
-    displays.map(source_from_display)
+    let thumbnail_width = request.thumbnail_width.unwrap_or(0)
+    let thumbnail_height = request.thumbnail_height.unwrap_or(0)
+    displays.map(fn(display) {
+      let thumbnail = if thumbnail_width > 0 && thumbnail_height > 0 {
+        let bytes = monitor.display_thumbnail(
+          display.id,
+          thumbnail_width,
+          thumbnail_height,
+        )
+        if bytes.length() > 0 {
+          Some(@utf8.decode_lossy(bytes[:]))
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+      source_from_display(display, thumbnail)
+    })
   } else {
     []
   }

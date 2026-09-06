@@ -66,6 +66,7 @@ pub fn ScreenMonitor::ScreenMonitor() -> Self raise ScreenMonitorError
 pub fn ScreenMonitor::cursor_point(Self) -> Point raise ScreenMonitorError
 pub fn ScreenMonitor::destroy(Self) -> Unit
 pub fn ScreenMonitor::display_nearest_point(Self, Int, Int) -> DisplayInfo raise ScreenMonitorError
+pub fn ScreenMonitor::display_thumbnail(Self, Int, Int, Int) -> Bytes
 pub fn ScreenMonitor::displays(Self) -> Array[DisplayInfo] raise ScreenMonitorError
 pub fn ScreenMonitor::drain_events(Self) -> Array[ScreenMonitorEvent]
 pub fn ScreenMonitor::primary_display(Self) -> DisplayInfo raise ScreenMonitorError
