@@ -276,6 +276,18 @@ pub fn ScreenMonitor::window_sources_json(
 }
 
 ///|
+/// Captures a display thumbnail as a BMP data URL. An empty byte string means
+/// that capture is unavailable or was denied by the operating system.
+pub fn ScreenMonitor::display_thumbnail(
+  _self : ScreenMonitor,
+  display_id : Int,
+  width : Int,
+  height : Int,
+) -> Bytes {
+  native_display_thumbnail(display_id, width, height)
+}
+
+///|
 /// Starts the event watch backend. The backend is best-effort: a platform that
 /// cannot watch (for example Linux without an X11 display or RandR) records the
 /// failure on the native side and returns `BackendUnavailable`, leaving polling
