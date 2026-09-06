@@ -156,7 +156,7 @@ moonbit_bytes_t moonbit_screen_monitor_window_sources_json(int32_t width, int32_
 #endif
 }
 
-#ifndef __APPLE__
+#if !defined(_WIN32) && !defined(__APPLE__)
 MOONBIT_FFI_EXPORT
 moonbit_bytes_t moonbit_screen_monitor_display_thumbnail(int32_t display_id,
                                                          int32_t width,
