@@ -10,6 +10,10 @@ pub(all) struct Source {
   id : String
   name : String
   display_id : String
+  x : Int
+  y : Int
+  width : Int
+  height : Int
   thumbnail : String?
 } derive(ToJson, FromJson, Debug, Eq)
 

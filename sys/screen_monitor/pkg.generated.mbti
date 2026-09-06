@@ -71,6 +71,7 @@ pub fn ScreenMonitor::drain_events(Self) -> Array[ScreenMonitorEvent]
 pub fn ScreenMonitor::primary_display(Self) -> DisplayInfo raise ScreenMonitorError
 pub fn ScreenMonitor::start_watching(Self) -> Unit raise ScreenMonitorError
 pub fn ScreenMonitor::stop_watching(Self) -> Unit raise ScreenMonitorError
+pub fn ScreenMonitor::window_sources_json(Self) -> Bytes
 
 pub enum ScreenMonitorEvent {
   DisplayAdded

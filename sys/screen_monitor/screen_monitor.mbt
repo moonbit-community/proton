@@ -264,6 +264,14 @@ pub fn ScreenMonitor::cursor_point(
 }
 
 ///|
+/// Returns the current native window source snapshot as JSON. The payload is
+/// consumed by the desktop-capturer extension; unsupported platforms return a
+/// structured `supported: false` payload.
+pub fn ScreenMonitor::window_sources_json(_self : ScreenMonitor) -> Bytes {
+  native_window_sources_json()
+}
+
+///|
 /// Starts the event watch backend. The backend is best-effort: a platform that
 /// cannot watch (for example Linux without an X11 display or RandR) records the
 /// failure on the native side and returns `BackendUnavailable`, leaving polling
