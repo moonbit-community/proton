@@ -1,0 +1,19 @@
+import {
+  "moonbit-community/proton_screen_monitor" @sys_screen_monitor,
+  "moonbit-community/proton",
+  "moonbit-community/proton/extension" @proton_extension,
+  "moonbit-community/proton_contract",
+  "moonbit-community/proton_ext/desktop_capturer/contract" @desktop_capturer_contract,
+}
+
+supported_targets = "native"
+
+formatter(ignore: [ "extension.g.mbt" ])
+
+options(
+  targets: {
+    "extension.g.mbt": [ "native" ],
+    "extension.mbt": [ "native" ],
+    "extension_wbtest.mbt": [ "native" ],
+  },
+)
