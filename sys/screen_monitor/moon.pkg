@@ -12,5 +12,6 @@ options(
     "native_windows.c",
     "native_macos.c",
     "native_linux.c",
+    "native_windows_sources.c",
   ],
 )

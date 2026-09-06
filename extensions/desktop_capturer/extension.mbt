@@ -2,6 +2,41 @@
 let get_sources_command = @desktop_capturer_contract.get_sources
 
 ///|
+struct WindowSourcesWire {
+  supported : Bool
+  sources : Array[WindowSourceWire]
+  error : String?
+} derive(FromJson)
+
+///|
+struct WindowSourceWire {
+  id : String
+  display_id : String
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  thumbnail : String?
+  name : String
+} derive(FromJson)
+
+///|
+fn window_source_from_wire(
+  source : WindowSourceWire,
+) -> @desktop_capturer_contract.Source {
+  @desktop_capturer_contract.Source::{
+    id: source.id,
+    name: source.name,
+    display_id: source.display_id,
+    x: source.x,
+    y: source.y,
+    width: source.width,
+    height: source.height,
+    thumbnail: source.thumbnail,
+  }
+}
+
+///|
 fn source_from_display(
   d : @sys_screen_monitor.DisplayInfo,
 ) -> @desktop_capturer_contract.Source {
@@ -13,6 +48,10 @@ fn source_from_display(
       "Display " + d.id.to_string()
     },
     display_id: d.id.to_string(),
+    x: d.bounds.x,
+    y: d.bounds.y,
+    width: d.bounds.width,
+    height: d.bounds.height,
     thumbnail: None,
   }
 }
@@ -28,12 +67,14 @@ fn get_sources(
       detail="at least one source type is required",
     )
   }
+  let wants_windows = Ref(false)
+  let wants_screens = Ref(false)
   for source_type in request.types {
     if source_type == "window" {
-      raise Unsupported(
-        operation="window",
-        detail="window sources are not available in the initial desktopCapturer slice",
-      )
+      wants_windows.val = true
+    }
+    if source_type == "screen" {
+      wants_screens.val = true
     }
     if source_type != "screen" {
       raise Unsupported(
@@ -63,9 +104,29 @@ fn get_sources(
       raise QueryFailed(detail=error.to_string())
     }
   }
+  let screen_sources = if wants_screens.val {
+    displays.map(source_from_display)
+  } else {
+    []
+  }
+  let window_sources = if wants_windows.val {
+    let text = @utf8.decode_lossy(monitor.window_sources_json()[:])
+    let wire : WindowSourcesWire = @json.from_json(@json.parse(text)) catch {
+      _ => raise QueryFailed(detail="native window source payload is invalid")
+    }
+    if !wire.supported {
+      raise Unsupported(
+        operation="window",
+        detail=wire.error.unwrap_or("window sources are unavailable"),
+      )
+    }
+    wire.sources.map(window_source_from_wire)
+  } else {
+    []
+  }
   monitor.destroy()
   @desktop_capturer_contract.GetSourcesReply::{
-    sources: displays.map(source_from_display),
+    sources: screen_sources + window_sources,
   }
 }
 

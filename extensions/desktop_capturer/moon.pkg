@@ -1,4 +1,6 @@
 import {
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
   "moonbit-community/proton_screen_monitor" @sys_screen_monitor,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
