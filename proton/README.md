@@ -174,6 +174,11 @@ their platform log directory; direct launches and `proton_cli dev` use stderr.
 `MOON_XLOG` controls filtering and `PROTON_LOG_OUTPUT` selects `file` or
 `stderr`; file output requires packaged application metadata. Application
 categories should use `app.*`; `proton.*` is reserved for framework diagnostics.
+Logging is initialized once per process and remains active after `App::run`
+returns or raises, so application error handling continues writing to the same
+output. Subsequent runs preserve the current handler and filtering settings.
+Runtime failures are logged with their full diagnostics before displaying an
+error dialog.
 
 ## Headless mode
 

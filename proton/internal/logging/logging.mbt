@@ -14,10 +14,6 @@ extern "C" fn file_is_open(file : FileHandle) -> Bool = "proton_logging_file_is_
 extern "C" fn write_file(file : FileHandle, data : Bytes) -> Int = "proton_logging_write_file"
 
 ///|
-#borrow(file)
-extern "C" fn close_file(file : FileHandle) -> Unit = "proton_logging_close_file"
-
-///|
 #borrow(data)
 extern "C" fn write_stderr(data : Bytes) -> Int = "proton_logging_write_stderr"
 
@@ -84,40 +80,19 @@ pub(all) enum Output {
 }
 
 ///|
-pub struct RuntimeLogging {
-  close_handler : () -> Unit
-  mut closed : Bool
-}
-
-///|
-pub fn RuntimeLogging::RuntimeLogging(
+/// Install process-wide logging. The global logger retains the handler after
+/// this call returns; replacing it allows the file's GC finalizer to close it.
+pub fn configure(
   output : Output,
   config : @xlog.Config,
-) -> RuntimeLogging raise LoggingError {
-  let logger = @xlog.global()
-  match output {
-    Stderr => {
-      logger.set_config(config)
-      logger.set_handler(StderrHandler::{ failed: false, })
-      RuntimeLogging::{ close_handler: fn() { () }, closed: false, }
-    }
-    File(path) => {
-      let file = FileHandler(path)
-      logger.set_config(config)
-      logger.set_handler(file)
-      RuntimeLogging::{
-        close_handler: fn() { close_file(file.file) },
-        closed: false,
-      }
-    }
+) -> Unit raise LoggingError {
+  let handler : &@xlog.Handler = match output {
+    Stderr => (StderrHandler::{ failed: false, } : &@xlog.Handler)
+    File(path) => (FileHandler(path) : &@xlog.Handler)
   }
-}
-
-///|
-pub fn RuntimeLogging::close(self : RuntimeLogging) -> Unit {
-  guard !self.closed else { return }
-  self.closed = true
-  (self.close_handler)()
+  let logger = @xlog.global()
+  logger.set_config(config)
+  logger.set_handler(handler)
 }
 
 ///|

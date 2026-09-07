@@ -1,7 +1,9 @@
 ///|
-async fn start_runtime_logging(
-  directory : String,
-) -> @logging.RuntimeLogging raise AppRunError {
+let runtime_logging_started : Ref[Bool] = Ref(false)
+
+///|
+async fn start_runtime_logging(directory : String) -> Unit raise AppRunError {
+  guard !runtime_logging_started.val else { return }
   let config = @xlog.Config::from_env(level=@xlog.Warn) catch {
     error =>
       raise LoggingInitializationFailed(
@@ -35,10 +37,11 @@ async fn start_runtime_logging(
         detail="PROTON_LOG_OUTPUT must be stderr or file, got: " + value,
       )
   }
-  @logging.RuntimeLogging(selected, config) catch {
+  @logging.configure(selected, config) catch {
     error =>
       raise LoggingInitializationFailed(detail=@debug.render(Repr(error)))
   }
+  runtime_logging_started.val = true
 }
 
 ///|
