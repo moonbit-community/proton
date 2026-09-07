@@ -13,19 +13,19 @@ test "response headers preserve their original spelling" {
 }
 
 ///|
-test "split_url preserves query and fragment paths without a slash" {
-  assert_eq(
-    split_url("https://example.test?query=1") catch {
-      _ => ("", "")
-    },
-    ("https://example.test/", "?query=1"),
-  )
-  assert_eq(
-    split_url("https://example.test#section") catch {
-      _ => ("", "")
-    },
-    ("https://example.test/", "#section"),
-  )
+test "split_url produces origin-form targets without fragments" {
+  for
+    pair in [
+      ("https://example.test?query=1", "/?query=1"),
+      ("https://example.test#section", "/"),
+      ("https://example.test?query=1#section", "/?query=1"),
+      ("https://example.test/path?query=1#section", "/path?query=1"),
+      ("https://example.test/path#section?ignored=1", "/path"),
+      ("https://example.test/path%23part?q=%23", "/path%23part?q=%23"),
+    ] {
+    let (url, expected) = pair
+    assert_eq(split_url(url), ("https://example.test/", expected))
+  }
 }
 
 ///|

@@ -20,6 +20,10 @@ fn parse_method(meth : String) -> @http.RequestMethod raise NetError {
 /// Splits a URL into `(base_url, path)` where `base_url` has a trailing slash
 /// and is suitable for `@http.Client::Client`.
 fn split_url(url : String) -> (String, String) raise NetError {
+  let url = match url.split_once("#") {
+    Some((without_fragment, _)) => without_fragment.to_owned()
+    None => url
+  }
   let (prefix, rest) = if url.has_prefix("https://") {
     ("https://", url[8:].to_owned())
   } else if url.has_prefix("http://") {
@@ -27,26 +31,17 @@ fn split_url(url : String) -> (String, String) raise NetError {
   } else {
     raise InvalidUrl(detail="URL must start with http:// or https://")
   }
-  let delimiter = match (rest.find("/"), rest.find("?"), rest.find("#")) {
-    (None, None, None) => None
-    (Some(index), None, None) => Some(index)
-    (None, Some(index), None) => Some(index)
-    (None, None, Some(index)) => Some(index)
-    (Some(first), Some(second), None) =>
+  let delimiter = match (rest.find("/"), rest.find("?")) {
+    (None, None) => None
+    (Some(index), None) | (None, Some(index)) => Some(index)
+    (Some(first), Some(second)) =>
       Some(if first < second { first } else { second })
-    (Some(first), None, Some(second)) =>
-      Some(if first < second { first } else { second })
-    (None, Some(first), Some(second)) =>
-      Some(if first < second { first } else { second })
-    (Some(first), Some(second), Some(third)) => {
-      let first_two = if first < second { first } else { second }
-      Some(if first_two < third { first_two } else { third })
-    }
   }
   match delimiter {
     Some(delimiter) => {
       let host = rest[:delimiter].to_owned()
-      let path = rest[delimiter:].to_owned()
+      let suffix = rest[delimiter:].to_owned()
+      let path = if suffix.has_prefix("/") { suffix } else { "/" + suffix }
       if host.is_empty() {
         raise InvalidUrl(detail="URL host must not be empty")
       }
