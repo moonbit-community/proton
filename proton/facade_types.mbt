@@ -1081,6 +1081,8 @@ pub(all) enum BrowserEvent {
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
   FoundInPage(result~ : FindInPageResult)
   PdfPrinted(result~ : PdfPrintResult)
+  ResourceResponse(url~ : String, status_code~ : Int)
+  ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
 } derive(Debug, Eq)
 
 ///|
