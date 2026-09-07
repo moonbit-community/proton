@@ -187,6 +187,25 @@ static cef_return_value_t CEF_CALLBACK proton_browser_on_before_resource_load(
       cef_string_clear(&destination);
     }
   }
+  if (result != 0 && request->set_header_by_name != NULL) {
+    size_t header_count = proton_web_request_config_header_count(
+        handler->session->web_request_config, url_utf8);
+    for (size_t index = 0; index < header_count; index++) {
+      const char *name = proton_web_request_config_header_name_at(
+          handler->session->web_request_config, url_utf8, index);
+      const char *value = proton_web_request_config_header_value_at(
+          handler->session->web_request_config, url_utf8, index);
+      cef_string_t name_string = {0};
+      cef_string_t value_string = {0};
+      if (name != NULL && value != NULL &&
+          cef_string_utf8_to_utf16(name, strlen(name), &name_string) &&
+          cef_string_utf8_to_utf16(value, strlen(value), &value_string)) {
+        request->set_header_by_name(request, &name_string, &value_string, 1);
+      }
+      cef_string_clear(&name_string);
+      cef_string_clear(&value_string);
+    }
+  }
   if (url != NULL) {
     cef_string_userfree_free(url);
   }

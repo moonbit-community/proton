@@ -743,6 +743,22 @@ test "web request redirect prefixes are validated and resolved" {
 }
 
 ///|
+test "web request header prefixes are validated and resolved" {
+  let app = html("Test", "<html></html>")
+    .identifier("dev.proton.web-request-header")
+    .web_request_header_prefix("https://api.example/", "X-Proton-Mode", "test")
+  assert_eq(app.resolved_app_config().web_request_header_prefixes, [
+    ("https://api.example/", "X-Proton-Mode", "test"),
+  ])
+  assert_true(
+    app
+    .web_request_header_prefix("https://api.example/", "X-Proton-Mode", "other")
+    .validation_error()
+    is Some(_),
+  )
+}
+
+///|
 test "debug mode uses an ephemeral endpoint unless a fixed port is explicit" {
   assert_eq(
     resolve_remote_debugging(0, None),
