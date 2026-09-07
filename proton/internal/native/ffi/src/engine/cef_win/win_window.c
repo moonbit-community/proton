@@ -714,7 +714,8 @@ int32_t proton_engine_window_create(
   proton_bridge_config_retain(window->bridge_config);
   window->max_bridge_payload_bytes = config.max_bridge_payload_bytes;
   window->browser_session = proton_browser_session_create(
-      &config.browser_policy, proton_engine_browser_signal, window);
+      &config.browser_policy, config.web_request_config,
+      proton_engine_browser_signal, window);
   window->browser_lifecycle = proton_browser_lifecycle_create(
       runtime->browsers, PROTON_BROWSER_ROLE_MAIN, window, NULL);
   if (window->browser_session == NULL || window->browser_lifecycle == NULL) {

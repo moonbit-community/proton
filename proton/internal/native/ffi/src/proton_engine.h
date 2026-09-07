@@ -5,6 +5,7 @@
 #include "proton_bridge_config.h"
 #include "engine/cef_common/browser_session.h"
 #include "proton_menu.h"
+#include "proton_web_request_config.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -77,6 +78,7 @@ typedef struct {
   char titlebar_restore_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_policy_t browser_policy;
+  proton_web_request_config_t *web_request_config;
   proton_bridge_config_t *bridge_config;
   int32_t max_bridge_payload_bytes;
 } proton_engine_window_config_t;

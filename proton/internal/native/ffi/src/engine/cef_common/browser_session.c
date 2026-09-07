@@ -77,6 +77,7 @@ typedef struct proton_browser_navigation_bypass {
 
 struct proton_browser_session {
   proton_browser_policy_t policy;
+  proton_web_request_config_t *web_request_config;
   proton_browser_lifecycle_t *lifecycle;
   proton_window_id_t window;
   uint64_t next_request_id;
@@ -94,6 +95,143 @@ struct proton_browser_session {
 };
 
 static char *proton_browser_cef_string_to_utf8(const cef_string_t *value);
+
+typedef struct proton_browser_resource_handler {
+  cef_resource_request_handler_t handler;
+#ifdef _WIN32
+  volatile LONG refs;
+#else
+  atomic_int refs;
+#endif
+  proton_browser_session_t *session;
+} proton_browser_resource_handler_t;
+
+static proton_browser_resource_handler_t *
+proton_browser_resource_handler_from_base(cef_base_ref_counted_t *base) {
+  return (proton_browser_resource_handler_t *)base;
+}
+
+static void CEF_CALLBACK proton_browser_resource_handler_add_ref(
+    cef_base_ref_counted_t *base) {
+  proton_browser_resource_handler_t *handler =
+      proton_browser_resource_handler_from_base(base);
+#ifdef _WIN32
+  (void)InterlockedIncrement(&handler->refs);
+#else
+  (void)atomic_fetch_add_explicit(&handler->refs, 1, memory_order_relaxed);
+#endif
+}
+
+static int CEF_CALLBACK proton_browser_resource_handler_release(
+    cef_base_ref_counted_t *base) {
+  proton_browser_resource_handler_t *handler =
+      proton_browser_resource_handler_from_base(base);
+#ifdef _WIN32
+  LONG refs = InterlockedDecrement(&handler->refs);
+#else
+  int refs = atomic_fetch_sub_explicit(
+                 &handler->refs, 1, memory_order_acq_rel) -
+             1;
+#endif
+  if (refs == 0) {
+    free(handler);
+    return 1;
+  }
+  return 0;
+}
+
+static int CEF_CALLBACK proton_browser_resource_handler_has_one_ref(
+    cef_base_ref_counted_t *base) {
+  proton_browser_resource_handler_t *handler =
+      proton_browser_resource_handler_from_base(base);
+#ifdef _WIN32
+  return handler->refs == 1;
+#else
+  return atomic_load_explicit(&handler->refs, memory_order_acquire) == 1;
+#endif
+}
+
+static int CEF_CALLBACK proton_browser_resource_handler_has_at_least_one_ref(
+    cef_base_ref_counted_t *base) {
+  proton_browser_resource_handler_t *handler =
+      proton_browser_resource_handler_from_base(base);
+#ifdef _WIN32
+  return handler->refs > 0;
+#else
+  return atomic_load_explicit(&handler->refs, memory_order_acquire) > 0;
+#endif
+}
+
+static cef_return_value_t CEF_CALLBACK proton_browser_on_before_resource_load(
+    cef_resource_request_handler_t *self, cef_browser_t *browser,
+    cef_frame_t *frame, cef_request_t *request, cef_callback_t *callback) {
+  (void)browser;
+  (void)frame;
+  (void)callback;
+  proton_browser_resource_handler_t *handler =
+      (proton_browser_resource_handler_t *)self;
+  if (request == NULL || request->get_url == NULL) {
+    return RV_CONTINUE;
+  }
+  cef_string_userfree_t url = request->get_url(request);
+  char *url_utf8 = proton_browser_cef_string_to_utf8(url);
+  int result = proton_browser_session_before_resource_load(handler->session,
+                                                           url_utf8);
+  if (url != NULL) {
+    cef_string_userfree_free(url);
+  }
+  free(url_utf8);
+  return result == 0 ? RV_CANCEL : RV_CONTINUE;
+}
+
+static void proton_browser_resource_handler_init(
+    proton_browser_resource_handler_t *handler,
+    proton_browser_session_t *session) {
+  memset(handler, 0, sizeof(*handler));
+  handler->handler.base.size = sizeof(handler->handler);
+  handler->handler.base.add_ref = proton_browser_resource_handler_add_ref;
+  handler->handler.base.release = proton_browser_resource_handler_release;
+  handler->handler.base.has_one_ref =
+      proton_browser_resource_handler_has_one_ref;
+  handler->handler.base.has_at_least_one_ref =
+      proton_browser_resource_handler_has_at_least_one_ref;
+  handler->handler.on_before_resource_load =
+      proton_browser_on_before_resource_load;
+#ifdef _WIN32
+  handler->refs = 1;
+#else
+  atomic_init(&handler->refs, 1);
+#endif
+  handler->session = session;
+}
+
+cef_resource_request_handler_t *proton_browser_session_resource_handler(
+    proton_browser_session_t *session) {
+  if (session == NULL) {
+    return NULL;
+  }
+  proton_browser_resource_handler_t *handler =
+      (proton_browser_resource_handler_t *)calloc(1, sizeof(*handler));
+  if (handler == NULL) {
+    return NULL;
+  }
+  proton_browser_resource_handler_init(handler, session);
+  return &handler->handler;
+}
+
+proton_web_request_config_t *proton_browser_session_web_request_config(
+    proton_browser_session_t *session) {
+  return session != NULL ? session->web_request_config : NULL;
+}
+
+int proton_browser_session_before_resource_load(
+    proton_browser_session_t *session, const char *url) {
+  return session != NULL &&
+                 proton_web_request_config_should_cancel(
+                     session->web_request_config, url)
+             ? 0
+             : 1;
+}
 
 static proton_pdf_print_callback_t *proton_pdf_print_callback_from_base(
     cef_base_ref_counted_t *base) {
@@ -224,14 +362,17 @@ static int proton_browser_enqueue_event(proton_browser_session_t *session,
 }
 
 proton_browser_session_t *proton_browser_session_create(
-    const proton_browser_policy_t *policy, proton_browser_signal_fn signal,
-    void *signal_user_data) {
+    const proton_browser_policy_t *policy,
+    proton_web_request_config_t *web_request_config,
+    proton_browser_signal_fn signal, void *signal_user_data) {
   proton_browser_session_t *session =
       (proton_browser_session_t *)calloc(1, sizeof(*session));
   if (session == NULL) {
     return NULL;
   }
   session->policy = *policy;
+  session->web_request_config = web_request_config;
+  proton_web_request_config_retain(web_request_config);
   session->next_request_id = 1;
   session->next_pdf_request_id = 1;
   session->signal = signal;
@@ -298,6 +439,7 @@ void proton_browser_session_destroy(proton_browser_session_t *session) {
   }
   free(session->url);
   free(session->title);
+  proton_internal_web_request_config_destroy(session->web_request_config);
   free(session);
 }
 

@@ -73,3 +73,11 @@ test "download deny is remembered until its item callback arrives" {
     ),
   )
 }
+
+///|
+test "web request cancellation matches URL prefixes" {
+  inspect(
+    web_request_cancel_trace(),
+    content="matching=1,nonmatching=0,case_sensitive=0,empty=-1,duplicate=-1",
+  )
+}
