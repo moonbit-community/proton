@@ -336,6 +336,37 @@ pub fn App::web_request_redirect_prefix(
 }
 
 ///|
+/// Overrides a request header for URLs matching `url_prefix`.
+pub fn App::web_request_header_prefix(
+  self : App,
+  url_prefix : String,
+  header_name : String,
+  header_value : String,
+) -> App {
+  let url_prefix = url_prefix.trim().to_owned()
+  let header_name = header_name.trim().to_owned()
+  if url_prefix == "" || header_name == "" {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="web_request_header_prefix",
+        message="prefix and header name must not be empty",
+      ),
+    )
+  } else if self.web_request_header_prefixes.any(item => {
+      item.0 == url_prefix && item.1 == header_name
+    }) {
+    self.validation_errors.push(
+      InvalidSetting(name="web_request_header_prefix", message="is duplicated"),
+    )
+  } else {
+    self.web_request_header_prefixes.push(
+      (url_prefix, header_name, header_value),
+    )
+  }
+  self
+}
+
+///|
 fn app_url_scheme_is_valid(scheme : String) -> Bool {
   guard scheme.length() > 0 else { return false }
   for index, char in scheme {

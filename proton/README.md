@@ -168,6 +168,8 @@ applies to every window and web contents view created by the application.
 `App::web_request_redirect_prefix` provides the corresponding fixed-target
 rewrite for matching requests; cancellation takes precedence when both rules
 match.
+Use `App::web_request_header_prefix` to override a named request header for
+matching URLs before the request is sent.
 
 Web contents views expose the same loading lifecycle events through
 `ViewEvent::DidStartLoading` and `ViewEvent::DidFinishLoad`; their
