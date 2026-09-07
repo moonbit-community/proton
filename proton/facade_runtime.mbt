@@ -93,10 +93,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     @xlog.info(category="proton.runtime") <?
       { "message": "application runtime stopped" }
   } catch {
-    error => {
-      failure_log.report_remaining(error)
-      raise error
-    }
+    error => raise failure_log.logged_remaining(error)
   }
 }
 
@@ -135,15 +132,16 @@ fn RuntimeFailureLog::report_primary(
 }
 
 ///|
-fn RuntimeFailureLog::report_remaining(
+fn RuntimeFailureLog::logged_remaining(
   self : RuntimeFailureLog,
   error : AppRunError,
-) -> Unit {
+) -> AppRunError {
   if !self.primary_logged {
     log_runtime_failure(error)
   } else if error is CleanupFailed(failures~, ..) {
     log_runtime_failure(CleanupFailed(primary=None, failures~))
   }
+  error
 }
 
 ///|

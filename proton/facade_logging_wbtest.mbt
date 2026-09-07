@@ -37,12 +37,14 @@ test "runtime failure logging retains operation status and reason without duplic
     entry.fields.get("error"),
     Some(Json::string("runtime failed during create window (-7): owner closed")),
   )
-  failure_log.report_remaining(error)
+  ignore(failure_log.logged_remaining(error))
   assert_eq(capture.entries.length(), 1)
-  failure_log.report_remaining(
-    CleanupFailed(primary=Some(error.message()), failures=[
-      RuntimeDestroy(status=-8, detail="runtime busy"),
-    ]),
+  ignore(
+    failure_log.logged_remaining(
+      CleanupFailed(primary=Some(error.message()), failures=[
+        RuntimeDestroy(status=-8, detail="runtime busy"),
+      ]),
+    ),
   )
   assert_eq(capture.entries.length(), 2)
   assert_eq(
@@ -73,7 +75,7 @@ test "runtime failures outside the dialog path retain complete diagnostics" {
   let error = ConfigurationError(
     InvalidSetting(name="browser_data_dir", message="not a directory"),
   )
-  failure_log.report_remaining(error)
+  ignore(failure_log.logged_remaining(error))
   assert_eq(capture.entries.length(), 1)
   assert_eq(
     capture.entries[0].fields.get("error"),

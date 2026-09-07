@@ -9,6 +9,9 @@ struct WindowSourcesWire {
 } derive(FromJson)
 
 ///|
+pub extend WindowSourcesWire with FromJson::{from_json}
+
+///|
 struct WindowSourceWire {
   id : String
   display_id : String
@@ -19,6 +22,9 @@ struct WindowSourceWire {
   thumbnail : String?
   name : String
 } derive(FromJson)
+
+///|
+pub extend WindowSourceWire with FromJson::{from_json}
 
 ///|
 fn window_source_from_wire(
