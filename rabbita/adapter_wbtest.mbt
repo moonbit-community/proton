@@ -51,11 +51,6 @@ impl @cmd.Scheduler for TestScheduler with fn set_url_request_injector(
 }
 
 ///|
-fn TestScheduler::queued_count(self : TestScheduler) -> Int {
-  self.queued_commands.val
-}
-
-///|
 fn test_event_payload(
   client : @proton_client.Client,
   received : (String) -> @cmd.Cmd,
@@ -159,40 +154,4 @@ test "installation failure reports once and a new installation can retry" {
   let retried = load_event_subscription(payload, scheduler).unwrap()
   assert_eq(attempts.val, 2)
   (retried.unload)(scheduler)
-}
-
-///|
-test "managed request unload cancels once and suppresses late completions" {
-  let complete : Ref[(String) -> Unit] = Ref(_ => ())
-  let cancelled = Ref(0)
-  let received = Ref("")
-  let client = @proton_client.Client(
-    invoke=(_, _, success, _) => {
-      complete.val = success
-      () => cancelled.val += 1
-    },
-    subscribe=(_, _) => () => (),
-  )
-  let command : @proton_contract.Command[Unit, String] = @proton_contract.command(
-    "search",
-  )
-  let scheduler = TestScheduler()
-  let payload = ManagedRequest(start=enqueue => {
-    client.invoke_with_callbacks(
-      command,
-      (),
-      value => {
-        received.val = value
-        enqueue(@cmd.none)
-      },
-      _ => enqueue(@cmd.none),
-    )
-  })
-  let running = load_request(payload, scheduler).unwrap()
-  (running.unload)(scheduler)
-  (running.unload)(scheduler)
-  (complete.val)("\"stale\"")
-  assert_eq(cancelled.val, 1)
-  assert_eq(received.val, "")
-  assert_eq(scheduler.queued_count(), 0)
 }

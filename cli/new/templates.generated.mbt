@@ -171,7 +171,10 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|pub(all) struct ListTodosRequest {
           #|  query : String
-          #|} derive(ToJson, FromJson)
+          #|} derive(ToJson, FromJson, Eq)
+          #|
+          #|///|
+          #|pub extend ListTodosRequest with Eq::{equal, not_equal}
           #|
           #|///|
           #|pub extend ListTodosRequest with ToJson::{to_json}
@@ -217,6 +220,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|import {
           #|  "{{shared_module}}@0.1.0",
+          #|  "moonbit-community/proton_contract@{{proton_contract_version}}",
           #|  "moonbit-community/proton_client@{{proton_client_version}}",
           #|  "moonbit-community/proton_rabbita@{{proton_rabbita_version}}",
           #|  "moonbit-community/rabbita@{{rabbita_version}}",
@@ -379,8 +383,8 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|fn view(
           #|  emit : Emit[Msg],
           #|  model : Model,
-          #|  state : @query.State[String, @shared.TodoSnapshot],
-          #|  set_query : (String) -> Cmd,
+          #|  state : @query.State[@shared.ListTodosRequest, @shared.TodoSnapshot],
+          #|  set_query : (@shared.ListTodosRequest) -> Cmd,
           #|  refresh : Cmd,
           #|) -> Html {
           #|  let snapshot = match state.data() {
@@ -401,7 +405,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|      @query.Ready(input~, ..) =>
           #|        p(
           #|          class="status",
-          #|          if input.trim().is_empty() {
+          #|          if input.query.trim().is_empty() {
           #|            "No todos yet."
           #|          } else {
           #|            "No matching todos."
@@ -431,7 +435,9 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|      input(input_type=Submit, value="Add todo"),
           #|    ]),
           #|    div(class="todo-toolbar", [
-          #|      input(value=state.input(), placeholder="Search todos", on_input=set_query),
+          #|      input(value=state.input().query, placeholder="Search todos", on_input=text => {
+          #|        set_query({ query: text, })
+          #|      }),
           #|      button(
           #|        type_="button",
           #|        on_click=refresh,
@@ -451,23 +457,9 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|fn todo_app() -> @rabbita.Val[Html] {
           #|  let todos = @query.create(
-          #|    initial="",
-          #|    load=(query, done) => {
-          #|      @proton_client.invoke_with_callbacks(
-          #|        @shared.list_todos,
-          #|        { query, },
-          #|        value => done(Ok(value)),
-          #|        error => done(Err(error)),
-          #|      )
-          #|    },
-          #|    watch=(changed, failed) => {
-          #|      let listener = @proton_client.subscribe(
-          #|        @shared.todos_changed,
-          #|        _ => changed(),
-          #|        failed,
-          #|      )
-          #|      () => listener.close()
-          #|    },
+          #|    @shared.list_todos,
+          #|    initial={ query: "", },
+          #|    invalidated_by=@shared.todos_changed,
           #|  )
           #|  let (model, emit) = @rabbita.create_state(initial_model(), update=(
           #|    model,
@@ -1088,6 +1080,8 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  "moonbit-community/rabbita/cmd",
           #|  "moonbit-community/rabbita/sub",
           #|  "moonbit-community/proton_client",
+          #|  "moonbit-community/proton_contract",
+          #|  "moonbitlang/core/json",
           #|}
           #|
           #|supported_targets = "js"
@@ -1194,6 +1188,35 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  let ready = update(retry, Listening(retry.listener))
           #|  let stale = update(ready, Invalidated(0))
           #|  assert_false(stale.dirty)
+          #|}
+          #|
+          #|///|
+          #|test "typed invalidations decode their payload and close independently" {
+          #|  let delivered : Ref[(String) -> Unit] = Ref(_ => ())
+          #|  let closed = Ref(0)
+          #|  let notices = Ref(0)
+          #|  let errors = Ref(0)
+          #|  let client = @proton_client.Client(invoke=(_, _, _, _) => () => (), subscribe=(
+          #|    _,
+          #|    received,
+          #|  ) => {
+          #|    delivered.val = received
+          #|    () => closed.val += 1
+          #|  })
+          #|  let event : @proton_contract.Event[Int] = @proton_contract.event("changed")
+          #|  let source : &Invalidation = event
+          #|  let subscription = source.subscribe(client, () => notices.val += 1, _ => {
+          #|    errors.val += 1
+          #|  })
+          #|  (delivered.val)("invalid")
+          #|  (delivered.val)("1")
+          #|  assert_eq(errors.val, 1)
+          #|  assert_eq(notices.val, 1)
+          #|  subscription.close()
+          #|  subscription.close()
+          #|  (delivered.val)("2")
+          #|  assert_eq(closed.val, 1)
+          #|  assert_eq(notices.val, 1)
           #|}
           #|
       ),
@@ -1401,18 +1424,37 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|///|
-          #|/// Create this query while building a Rabbita component. Each query owns its
-          #|/// state store, listener and request. Input changes are explicit commands;
-          #|/// no caller-provided keys, generations or listener-order flags are needed.
-          #|/// watch must finish installing before returning; failures require refresh.
-          #|/// Callback boundaries avoid requiring a moonbitlang/async task context.
-          #|pub fn[I : Eq, V : Eq] create(
+          #|/// An event used as an invalidation source, regardless of its payload type.
+          #|/// Application callers pass their typed event descriptor directly.
+          #|pub trait Invalidation {
+          #|  fn subscribe(
+          #|    Self,
+          #|    @proton_client.Client,
+          #|    () -> Unit,
+          #|    (@proton_client.ClientFailure) -> Unit,
+          #|  ) -> @proton_client.Subscription raise @proton_client.ClientFailure
+          #|}
+          #|
+          #|///|
+          #|pub impl[P : @json.FromJson] Invalidation for @proton_contract.Event[P] with fn subscribe(
+          #|  self,
+          #|  client,
+          #|  changed,
+          #|  failed,
+          #|) {
+          #|  client.subscribe(self, _ => changed(), failed)
+          #|}
+          #|
+          #|///|
+          #|/// Create this query while building a Rabbita component. The command determines
+          #|/// input and result types; an optional event invalidates the current result.
+          #|/// Each instance owns its listener and request. Pass a client for isolated tests.
+          #|/// Input changes are explicit commands; cancellation and readiness are internal.
+          #|pub fn[I : Eq + ToJson, V : Eq + @json.FromJson] create(
+          #|  command : @proton_contract.Command[I, V],
           #|  initial~ : I,
-          #|  load~ : (I, (Result[V, @proton_client.ClientFailure]) -> Unit) -> () -> Unit,
-          #|  watch? : (() -> Unit, (@proton_client.ClientFailure) -> Unit) -> (() -> Unit) raise @proton_client.ClientFailure = (
-          #|    _,
-          #|    _,
-          #|  ) => () => (),
+          #|  invalidated_by? : &Invalidation,
+          #|  client? : @proton_client.Client = @proton_client.desktop,
           #|) -> Query[I, V] {
           #|  let (model, emit) = @rabbita.create_state(
           #|    initial_model(initial),
@@ -1423,19 +1465,25 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|          let active = Ref(true)
           #|          let failed = Ref(false)
           #|          let close = try {
-          #|            let close = watch(
-          #|              () => {
-          #|                if active.val {
-          #|                  scheduler.add(emit(Invalidated(model.listener)))
-          #|                }
-          #|              },
-          #|              error => {
-          #|                if active.val {
-          #|                  failed.val = true
-          #|                  scheduler.add(emit(ListenFailed(model.listener, error)))
-          #|                }
-          #|              },
-          #|            )
+          #|            let close = if invalidated_by is Some(event) {
+          #|              let subscription = event.subscribe(
+          #|                client,
+          #|                () => {
+          #|                  if active.val {
+          #|                    scheduler.add(emit(Invalidated(model.listener)))
+          #|                  }
+          #|                },
+          #|                error => {
+          #|                  if active.val {
+          #|                    failed.val = true
+          #|                    scheduler.add(emit(ListenFailed(model.listener, error)))
+          #|                  }
+          #|                },
+          #|              )
+          #|              () => subscription.close()
+          #|            } else {
+          #|              () => ()
+          #|            }
           #|            if !failed.val {
           #|              scheduler.add(emit(Listening(model.listener)))
           #|            }
@@ -1454,12 +1502,18 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|        if model.listening && model.pending {
           #|          owned("read:" + model.generation.to_string(), scheduler => {
           #|            let active = Ref(true)
-          #|            let cancel = load(model.input, result => {
+          #|            fn complete(result : Result[V, @proton_client.ClientFailure]) {
           #|              if active.val {
           #|                active.val = false
           #|                scheduler.add(emit(Completed(model.generation, result)))
           #|              }
-          #|            })
+          #|            }
+          #|            let cancel = client.invoke_with_callbacks(
+          #|              command,
+          #|              model.input,
+          #|              value => complete(Ok(value)),
+          #|              error => complete(Err(error)),
+          #|            )
           #|            () => {
           #|              if active.val {
           #|                active.val = false
@@ -1488,39 +1542,42 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
       template_source: (
           #|# Application-local query prototype
           #|
-          #|This module is an experiment shipped as application source, not a stable public
-          #|Proton API. Todo owns drafts, write commands, and business errors; this module
-          #|owns query scheduling and presentation state. The repository's directory-browser
-          #|smoke fixture consumes this exact module with a different input/result shape,
-          #|real directory reads, and no invalidation event or snapshot version.
+          #|This module is application source, not a stable public Proton API. Todo owns
+          #|drafts, write commands, and business errors; this module owns query scheduling
+          #|and presentation state. The repository's directory-browser smoke fixture uses
+          #|this exact module for real directory reads without an invalidation event or
+          #|snapshot version.
           #|
           #|Create one query while building a Rabbita component:
           #|
           #|```moonbit
-          #|let results = @query.create(
-          #|  initial="",
-          #|  load=(input, done) => @proton_client.invoke_with_callbacks(
-          #|    @shared.list_todos, { query: input },
-          #|    value => done(Ok(value)), error => done(Err(error)),
-          #|  ),
-          #|  watch=(changed, failed) => {
-          #|    let listener = @proton_client.subscribe(@shared.todos_changed, _ => changed(), failed)
-          #|    () => listener.close()
-          #|  },
+          #|let todos = @query.create(
+          #|  @shared.list_todos,
+          #|  initial={ query: "" },
+          #|  invalidated_by=@shared.todos_changed,
           #|)
           #|```
+          #|
+          #|A query with no invalidation event is just:
+          #|
+          #|```moonbit
+          #|let directory = @query.create(@shared.list_directory, initial="alpha")
+          #|```
+          #|
+          #|The command determines input and result types. Pass `client=...` to use an
+          #|independent client in a test or browser preview; otherwise the desktop client
+          #|is used. Typed invocation, event decoding, cancellation and cleanup are internal.
           #|
           #|- `state` is a Rabbita value containing `Loading`, `Ready`, or `Failed`.
           #|- `set_input(value)` returns a command. A different input cancels/replaces the
           #|  current read. The same input does nothing; use `refresh` to explicitly retry.
-          #|- `refresh` returns a command that reloads the current input, or retries listener
-          #|  installation if it failed. Failures do not create automatic retry loops.
-          #|- `watch` is optional. Installation must complete synchronously before returning
-          #|  its cleanup function. Readiness is handled internally before the first read.
-          #|  The invalidation callback means only that a fresh read is needed; events do
-          #|  not deliver query state. Watch failures suspend reads until explicit refresh.
-          #|- `load` returns its cancellation function. Completion is accepted once; late
-          #|  callbacks and queued results from superseded generations are ignored.
+          #|- `refresh` returns a command that reloads the current input, or retries event
+          #|  subscription if it failed. Failures do not create automatic retry loops.
+          #|- The optional event subscription is installed before the first read. Event
+          #|  payloads are decoded, then treated as invalidation notices, not query results.
+          #|  Subscription/decoding failures suspend reads until explicit refresh.
+          #|- Completion is accepted once; late callbacks and queued results from
+          #|  superseded generations are ignored.
           #|- Query destruction releases its listener and cancels a pending read.
           #|
           #|`Loading` and `Failed` can retain `(input, value)` from the last successful read.

@@ -95,3 +95,32 @@ test "listener failure cancels the current generation and stale notifications st
   let stale = update(ready, Invalidated(0))
   assert_false(stale.dirty)
 }
+
+///|
+test "typed invalidations decode their payload and close independently" {
+  let delivered : Ref[(String) -> Unit] = Ref(_ => ())
+  let closed = Ref(0)
+  let notices = Ref(0)
+  let errors = Ref(0)
+  let client = @proton_client.Client(invoke=(_, _, _, _) => () => (), subscribe=(
+    _,
+    received,
+  ) => {
+    delivered.val = received
+    () => closed.val += 1
+  })
+  let event : @proton_contract.Event[Int] = @proton_contract.event("changed")
+  let source : &Invalidation = event
+  let subscription = source.subscribe(client, () => notices.val += 1, _ => {
+    errors.val += 1
+  })
+  (delivered.val)("invalid")
+  (delivered.val)("1")
+  assert_eq(errors.val, 1)
+  assert_eq(notices.val, 1)
+  subscription.close()
+  subscription.close()
+  (delivered.val)("2")
+  assert_eq(closed.val, 1)
+  assert_eq(notices.val, 1)
+}

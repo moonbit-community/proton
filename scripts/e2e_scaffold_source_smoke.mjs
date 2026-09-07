@@ -180,9 +180,16 @@ function installDirectoryFixture() {
   fs.writeFileSync(path.join(root, "beta", "beta.txt"), "beta");
   fs.writeFileSync(path.join(root, "slow", "slow.txt"), "slow");
   const app = path.join(projectDir, "backend", "app", "main.mbt");
-  fs.writeFileSync(app, fs.readFileSync(app, "utf8").replace(
+  fs.writeFileSync(app, fs.readFileSync(app, "utf8")
+    .replace('  let backend = @todo.Backend()', '  let backend = @todo.Backend()\n  let test_windows : Map[String, @proton.WindowHandle] = Map([])')
+    .replace('on_ready=context => backend.attach(context)', 'on_ready=context => { let id = backend.attach(context); test_windows[id] = context.handle(); id }')
+    .replace('backend.detach(id)', 'test_windows.remove(id)\n    backend.detach(id)')
+    .replace(
     'backend.register_commands(registrar)',
     `backend.register_commands(registrar)
+      registrar.bind(@shared.focus_test_window, (context, _request) => {
+        if test_windows.get(context.window_id()) is Some(window) { window.focus() }
+      })
       registrar.bind(@shared.list_directory, (_context, directory) => {
         if directory == "slow" { @async.sleep(1000) }
         @fs.readdir(${JSON.stringify(root)} + "/" + directory, sort=true)
@@ -590,6 +597,12 @@ async function probeBridgeUnavailable(client) {
   assert(!state.body.includes("No todos yet.") && !state.body.includes("No matching todos."), "failed initial load must not display an empty result");
 }
 
+async function focusTestWindow(client) {
+  // requestAnimationFrame can pause while a native window is occluded. Focus
+  // the actual host window before checking UI; DevTools focus is insufficient.
+  await client.evaluate('window.__MoonBit__.core.invokeOp("app:focus_test_window", null)', true);
+}
+
 async function probeDirectoryBrowser(client) {
   const url = await client.evaluate('new URL("directory.html", location.href).href');
   await client.send("Page.navigate", {url});
@@ -607,7 +620,16 @@ async function probeDirectoryBrowser(client) {
       return invoke(route, raw, options);
     };
   })()`);
-  const click = label => client.evaluate(`Array.from(document.querySelectorAll("button")).find(button => button.textContent === ${JSON.stringify(label)}).click()`);
+  // Exercise directory controls through browser mouse input.
+  const click = async label => {
+    const point = await client.evaluate(`(() => {
+      const button = Array.from(document.querySelectorAll("button")).find(button => button.textContent === ${JSON.stringify(label)});
+      const bounds = button.getBoundingClientRect();
+      return {x:bounds.x + bounds.width / 2, y:bounds.y + bounds.height / 2};
+    })()`);
+    await client.send("Input.dispatchMouseEvent", {type:"mousePressed", button:"left", clickCount:1, ...point});
+    await client.send("Input.dispatchMouseEvent", {type:"mouseReleased", button:"left", clickCount:1, ...point});
+  };
   await click("Open slow");
   await waitForExpression(client, 'document.body.innerText.includes("Loading slow") && document.body.innerText.includes("Directory: alpha") && document.body.innerText.includes("alpha.txt")', "retained data identifies its original directory");
   await click("Open beta");
@@ -764,6 +786,7 @@ async function runPackagedAppSmoke(executable, expectedRevision) {
       `document.body.dataset.packageRevision === ${JSON.stringify(expectedRevision)}`,
       `packaged frontend revision ${expectedRevision}`,
     );
+    await focusTestWindow(client);
     await probeTodoBridge(client);
     await client.evaluate('document.querySelector("form").dispatchEvent(new Event("submit", {bubbles:true, cancelable:true}))');
     await waitForExpression(client, 'document.body.innerText.includes("Enter a non-empty title.")', "typed business rejection");
@@ -788,7 +811,9 @@ async function runPackagedAppSmoke(executable, expectedRevision) {
       await second.send("Runtime.enable");
       await waitForExpression(second, 'Boolean(window.__MoonBit__?.core?.invokeOp)', "second bridge");
       await client.evaluate('window.__MoonBit__.core.invokeOp("app:create_todo", {title:"Shared across windows"})', true);
+      await focusTestWindow(second);
       await waitForExpression(second, 'document.body.innerText.includes("Shared across windows")', "cross-window invalidation");
+      await focusTestWindow(client);
       await waitForExpression(client, 'document.body.innerText.includes("Shared across windows")', "initial list before delayed search");
       await client.evaluate(`(() => {
         const core = window.__MoonBit__.core;

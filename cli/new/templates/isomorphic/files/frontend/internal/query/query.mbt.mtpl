@@ -197,18 +197,37 @@ fn owned(key : String, start : (&@cmd.Scheduler) -> () -> Unit) -> @sub.Sub {
 }
 
 ///|
-/// Create this query while building a Rabbita component. Each query owns its
-/// state store, listener and request. Input changes are explicit commands;
-/// no caller-provided keys, generations or listener-order flags are needed.
-/// watch must finish installing before returning; failures require refresh.
-/// Callback boundaries avoid requiring a moonbitlang/async task context.
-pub fn[I : Eq, V : Eq] create(
+/// An event used as an invalidation source, regardless of its payload type.
+/// Application callers pass their typed event descriptor directly.
+pub trait Invalidation {
+  fn subscribe(
+    Self,
+    @proton_client.Client,
+    () -> Unit,
+    (@proton_client.ClientFailure) -> Unit,
+  ) -> @proton_client.Subscription raise @proton_client.ClientFailure
+}
+
+///|
+pub impl[P : @json.FromJson] Invalidation for @proton_contract.Event[P] with fn subscribe(
+  self,
+  client,
+  changed,
+  failed,
+) {
+  client.subscribe(self, _ => changed(), failed)
+}
+
+///|
+/// Create this query while building a Rabbita component. The command determines
+/// input and result types; an optional event invalidates the current result.
+/// Each instance owns its listener and request. Pass a client for isolated tests.
+/// Input changes are explicit commands; cancellation and readiness are internal.
+pub fn[I : Eq + ToJson, V : Eq + @json.FromJson] create(
+  command : @proton_contract.Command[I, V],
   initial~ : I,
-  load~ : (I, (Result[V, @proton_client.ClientFailure]) -> Unit) -> () -> Unit,
-  watch? : (() -> Unit, (@proton_client.ClientFailure) -> Unit) -> (() -> Unit) raise @proton_client.ClientFailure = (
-    _,
-    _,
-  ) => () => (),
+  invalidated_by? : &Invalidation,
+  client? : @proton_client.Client = @proton_client.desktop,
 ) -> Query[I, V] {
   let (model, emit) = @rabbita.create_state(
     initial_model(initial),
@@ -219,19 +238,25 @@ pub fn[I : Eq, V : Eq] create(
           let active = Ref(true)
           let failed = Ref(false)
           let close = try {
-            let close = watch(
-              () => {
-                if active.val {
-                  scheduler.add(emit(Invalidated(model.listener)))
-                }
-              },
-              error => {
-                if active.val {
-                  failed.val = true
-                  scheduler.add(emit(ListenFailed(model.listener, error)))
-                }
-              },
-            )
+            let close = if invalidated_by is Some(event) {
+              let subscription = event.subscribe(
+                client,
+                () => {
+                  if active.val {
+                    scheduler.add(emit(Invalidated(model.listener)))
+                  }
+                },
+                error => {
+                  if active.val {
+                    failed.val = true
+                    scheduler.add(emit(ListenFailed(model.listener, error)))
+                  }
+                },
+              )
+              () => subscription.close()
+            } else {
+              () => ()
+            }
             if !failed.val {
               scheduler.add(emit(Listening(model.listener)))
             }
@@ -250,12 +275,18 @@ pub fn[I : Eq, V : Eq] create(
         if model.listening && model.pending {
           owned("read:" + model.generation.to_string(), scheduler => {
             let active = Ref(true)
-            let cancel = load(model.input, result => {
+            fn complete(result : Result[V, @proton_client.ClientFailure]) {
               if active.val {
                 active.val = false
                 scheduler.add(emit(Completed(model.generation, result)))
               }
-            })
+            }
+            let cancel = client.invoke_with_callbacks(
+              command,
+              model.input,
+              value => complete(Ok(value)),
+              error => complete(Err(error)),
+            )
             () => {
               if active.val {
                 active.val = false

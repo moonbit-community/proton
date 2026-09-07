@@ -49,17 +49,16 @@ the same event within one scope. Increase retry to explicitly retry an
 installation failure. The optional ready command runs after successful listener
 installation, so initial queries need not race subscription setup.
 
-Use request for reads tied to component/query lifetime. Supply a stable key and
-a revision that changes whenever the input changes or the request is retried.
-Removing or replacing the subscription cancels it and suppresses late
-callbacks. A completed request is not restarted by unrelated model updates.
-Callbacks capture the originating request state; include the revision in
-application messages to reject completions already queued before replacement.
+For reads tied to component/query lifetime, the default scaffold uses its
+application-local internal/query module. It accepts a typed command, initial
+input, and an optional invalidation event. Request generations, readiness,
+cancellation, and stale completion guards are implementation details of that
+module, not parameters that every application model must maintain.
 
 invoke remains a one-shot effect, suitable for explicit writes; it is not
-cancelled when a component is removed. Cancelling request observation does not roll back backend mutations. Both functions accept an
-optional client for isolated tests or browser previews.
+cancelled when a component is removed. Cancelling observation does not roll back
+backend mutations. invoke and subscribe accept an optional client for isolated
+tests or browser previews.
 
-The default Todo scaffold demonstrates explicit backend bindings, typed
-business outcomes, listener-first initialization, invalidation-driven reads,
-revision guards, and separately owned window event destinations.
+The Todo scaffold demonstrates explicit backend bindings, typed business
+outcomes, managed queries, and separately owned window event destinations.

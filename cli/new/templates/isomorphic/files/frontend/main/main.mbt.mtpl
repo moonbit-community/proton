@@ -120,8 +120,8 @@ fn todo_row(emit : Emit[Msg], todo : @shared.TodoItem) -> Html {
 fn view(
   emit : Emit[Msg],
   model : Model,
-  state : @query.State[String, @shared.TodoSnapshot],
-  set_query : (String) -> Cmd,
+  state : @query.State[@shared.ListTodosRequest, @shared.TodoSnapshot],
+  set_query : (@shared.ListTodosRequest) -> Cmd,
   refresh : Cmd,
 ) -> Html {
   let snapshot = match state.data() {
@@ -142,7 +142,7 @@ fn view(
       @query.Ready(input~, ..) =>
         p(
           class="status",
-          if input.trim().is_empty() {
+          if input.query.trim().is_empty() {
             "No todos yet."
           } else {
             "No matching todos."
@@ -172,7 +172,9 @@ fn view(
       input(input_type=Submit, value="Add todo"),
     ]),
     div(class="todo-toolbar", [
-      input(value=state.input(), placeholder="Search todos", on_input=set_query),
+      input(value=state.input().query, placeholder="Search todos", on_input=text => {
+        set_query({ query: text, })
+      }),
       button(
         type_="button",
         on_click=refresh,
@@ -192,23 +194,9 @@ fn view(
 ///|
 fn todo_app() -> @rabbita.Val[Html] {
   let todos = @query.create(
-    initial="",
-    load=(query, done) => {
-      @proton_client.invoke_with_callbacks(
-        @shared.list_todos,
-        { query, },
-        value => done(Ok(value)),
-        error => done(Err(error)),
-      )
-    },
-    watch=(changed, failed) => {
-      let listener = @proton_client.subscribe(
-        @shared.todos_changed,
-        _ => changed(),
-        failed,
-      )
-      () => listener.close()
-    },
+    @shared.list_todos,
+    initial={ query: "", },
+    invalidated_by=@shared.todos_changed,
   )
   let (model, emit) = @rabbita.create_state(initial_model(), update=(
     model,

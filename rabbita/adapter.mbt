@@ -16,8 +16,8 @@ priv suberror EventSubscription {
 }
 
 ///|
-/// Invokes a command as a one-shot async effect. Use request for work whose
-/// cancellation and result lifetime must follow a component or query.
+/// Invokes a command as a one-shot effect, suitable for explicit writes.
+/// This command does not own component-scoped query state.
 pub fn[Request : ToJson, Response : @json.FromJson] invoke(
   command : @proton_contract.Command[Request, Response],
   request : Request,
@@ -27,7 +27,7 @@ pub fn[Request : ToJson, Response : @json.FromJson] invoke(
 ) -> @cmd.Cmd {
   @cmd.custom_cmd(scheduler => {
     // Rabbita runs raw JS async functions outside moonbitlang/async's task
-    // context. Use the callback boundary; managed reads belong to request.
+    // context. Use the callback boundary for this one-shot effect.
     ignore(
       client.invoke_with_callbacks(
         command,

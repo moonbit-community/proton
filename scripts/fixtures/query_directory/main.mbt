@@ -2,15 +2,7 @@
 /// A second consumer of the generated application's internal query module.
 /// The backend lists real, disposable directories created by the smoke test.
 fn directory_browser() -> @rabbita.Val[@html.Html] {
-  let directory = @query.create(
-    initial="alpha",
-    load=(path, done) => @proton_client.invoke_with_callbacks(
-      @shared.list_directory,
-      path,
-      entries => done(Ok(entries)),
-      error => done(Err(error)),
-    ),
-  )
+  let directory = @query.create(@shared.list_directory, initial="alpha")
   directory.state.view(state => {
     let content = match state.data() {
       Some((path, entries)) => @html.div([

@@ -116,7 +116,10 @@ pub let todos_changed : @proton_contract.Event[TodosChanged] = @proton_contract.
 ///|
 pub(all) struct ListTodosRequest {
   query : String
-} derive(ToJson, FromJson)
+} derive(ToJson, FromJson, Eq)
+
+///|
+pub extend ListTodosRequest with Eq::{equal, not_equal}
 
 ///|
 pub extend ListTodosRequest with ToJson::{to_json}

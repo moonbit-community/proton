@@ -10,3 +10,7 @@ The page has no version numbers or invalidation event. It exercises explicit
 input changes, retained data with its original path, empty versus failed reads,
 retry, and component destruction while a request is pending. Todo separately
 exercises event invalidation and listener-before-query initialization.
+
+The fixture also exposes a test-only command to focus its native host window.
+The smoke test activates the window whose DOM it checks so native occlusion
+cannot suspend the animation frames that render query state.

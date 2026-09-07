@@ -1,38 +1,41 @@
 # Application-local query prototype
 
-This module is an experiment shipped as application source, not a stable public
-Proton API. Todo owns drafts, write commands, and business errors; this module
-owns query scheduling and presentation state. The repository's directory-browser
-smoke fixture consumes this exact module with a different input/result shape,
-real directory reads, and no invalidation event or snapshot version.
+This module is application source, not a stable public Proton API. Todo owns
+drafts, write commands, and business errors; this module owns query scheduling
+and presentation state. The repository's directory-browser smoke fixture uses
+this exact module for real directory reads without an invalidation event or
+snapshot version.
 
 Create one query while building a Rabbita component:
 
 ```moonbit
-let results = @query.create(
-  initial="",
-  load=(input, done) => @proton_client.invoke_with_callbacks(
-    @shared.list_todos, { query: input },
-    value => done(Ok(value)), error => done(Err(error)),
-  ),
-  watch=(changed, failed) => {
-    let listener = @proton_client.subscribe(@shared.todos_changed, _ => changed(), failed)
-    () => listener.close()
-  },
+let todos = @query.create(
+  @shared.list_todos,
+  initial={ query: "" },
+  invalidated_by=@shared.todos_changed,
 )
 ```
+
+A query with no invalidation event is just:
+
+```moonbit
+let directory = @query.create(@shared.list_directory, initial="alpha")
+```
+
+The command determines input and result types. Pass `client=...` to use an
+independent client in a test or browser preview; otherwise the desktop client
+is used. Typed invocation, event decoding, cancellation and cleanup are internal.
 
 - `state` is a Rabbita value containing `Loading`, `Ready`, or `Failed`.
 - `set_input(value)` returns a command. A different input cancels/replaces the
   current read. The same input does nothing; use `refresh` to explicitly retry.
-- `refresh` returns a command that reloads the current input, or retries listener
-  installation if it failed. Failures do not create automatic retry loops.
-- `watch` is optional. Installation must complete synchronously before returning
-  its cleanup function. Readiness is handled internally before the first read.
-  The invalidation callback means only that a fresh read is needed; events do
-  not deliver query state. Watch failures suspend reads until explicit refresh.
-- `load` returns its cancellation function. Completion is accepted once; late
-  callbacks and queued results from superseded generations are ignored.
+- `refresh` returns a command that reloads the current input, or retries event
+  subscription if it failed. Failures do not create automatic retry loops.
+- The optional event subscription is installed before the first read. Event
+  payloads are decoded, then treated as invalidation notices, not query results.
+  Subscription/decoding failures suspend reads until explicit refresh.
+- Completion is accepted once; late callbacks and queued results from
+  superseded generations are ignored.
 - Query destruction releases its listener and cancels a pending read.
 
 `Loading` and `Failed` can retain `(input, value)` from the last successful read.
