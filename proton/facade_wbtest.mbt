@@ -698,6 +698,27 @@ test "bridge startup timeout is finite and configurable" {
 }
 
 ///|
+test "web request cancellation prefixes are validated and resolved" {
+  let app = html("Test", "<html></html>")
+    .identifier("dev.proton.web-request")
+    .web_request_cancel_prefix("https://blocked.example/")
+  assert_eq(app.resolved_app_config().web_request_cancel_prefixes, [
+    "https://blocked.example/",
+  ])
+  match app.web_request_cancel_prefix("").validation_error() {
+    Some(InvalidSetting(name~, message~)) => {
+      assert_eq(name, "web_request_cancel_prefix")
+      assert_eq(message, "must not be empty")
+    }
+    _ => fail("expected empty prefix validation error")
+  }
+  assert_true(
+    app.web_request_cancel_prefix("https://blocked.example/").validation_error()
+    is Some(_),
+  )
+}
+
+///|
 test "debug mode uses an ephemeral endpoint unless a fixed port is explicit" {
   assert_eq(
     resolve_remote_debugging(0, None),
