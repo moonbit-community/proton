@@ -5,10 +5,17 @@
 
 enum { PROTON_WEB_REQUEST_MAX_CANCEL_PREFIXES = 128 };
 
+typedef struct {
+  char *prefix;
+  char *target;
+} proton_web_request_redirect_t;
+
 struct proton_web_request_config {
   size_t ref_count;
   char **cancel_prefixes;
   size_t cancel_prefix_count;
+  proton_web_request_redirect_t *redirects;
+  size_t redirect_count;
 };
 
 static char *proton_web_request_copy(const char *value) {
@@ -18,6 +25,40 @@ static char *proton_web_request_copy(const char *value) {
     memcpy(copy, value, length + 1);
   }
   return copy;
+}
+
+int32_t proton_internal_web_request_config_add_redirect_prefix(
+    proton_web_request_config_t *config, const char *url_prefix,
+    const char *target_url) {
+  if (config == NULL || url_prefix == NULL || target_url == NULL ||
+      url_prefix[0] == '\0' || target_url[0] == '\0') {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "web request redirect values must not be empty");
+  }
+  if (config->redirect_count >= PROTON_WEB_REQUEST_MAX_CANCEL_PREFIXES) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "web request redirect prefix limit exceeded");
+  }
+  for (size_t index = 0; index < config->redirect_count; index++) {
+    if (strcmp(config->redirects[index].prefix, url_prefix) == 0) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "web request redirect prefix is duplicated");
+    }
+  }
+  proton_web_request_redirect_t *redirects = (proton_web_request_redirect_t *)realloc(
+      config->redirects, (config->redirect_count + 1) * sizeof(*redirects));
+  char *prefix = proton_web_request_copy(url_prefix);
+  char *target = proton_web_request_copy(target_url);
+  if (redirects == NULL || prefix == NULL || target == NULL) {
+    free(prefix);
+    free(target);
+    return proton_set_error(PROTON_ERR_ENGINE,
+                            "failed to allocate web request redirect");
+  }
+  config->redirects = redirects;
+  config->redirects[config->redirect_count].prefix = prefix;
+  config->redirects[config->redirect_count++].target = target;
+  return PROTON_OK;
 }
 
 proton_web_request_config_t *proton_internal_web_request_config_null(void) {
@@ -91,6 +132,17 @@ int proton_web_request_config_should_cancel(
   return 0;
 }
 
+const char *proton_web_request_config_redirect_url(
+    const proton_web_request_config_t *config, const char *url) {
+  if (config == NULL || url == NULL) return NULL;
+  for (size_t index = 0; index < config->redirect_count; index++) {
+    size_t length = strlen(config->redirects[index].prefix);
+    if (strncmp(url, config->redirects[index].prefix, length) == 0)
+      return config->redirects[index].target;
+  }
+  return NULL;
+}
+
 void proton_internal_web_request_config_destroy(
     proton_web_request_config_t *config) {
   if (config == NULL || config->ref_count == 0 || --config->ref_count != 0) {
@@ -100,5 +152,10 @@ void proton_internal_web_request_config_destroy(
     free(config->cancel_prefixes[index]);
   }
   free(config->cancel_prefixes);
+  for (size_t index = 0; index < config->redirect_count; index++) {
+    free(config->redirects[index].prefix);
+    free(config->redirects[index].target);
+  }
+  free(config->redirects);
   free(config);
 }

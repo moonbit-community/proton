@@ -1369,8 +1369,9 @@ fn build_bridge_config(
 ///|
 fn build_web_request_config(
   prefixes : Array[String],
+  redirects : Array[(String, String)],
 ) -> @native_ffi.WebRequestConfigHandle raise NativeError {
-  if prefixes.length() == 0 {
+  if prefixes.length() == 0 && redirects.length() == 0 {
     return @native_ffi.web_request_config_null()
   }
   let out_config = Ref(@native_ffi.web_request_config_null())
@@ -1383,6 +1384,19 @@ fn build_web_request_config(
     let status = @native_ffi.web_request_config_add_cancel_prefix(
       handle,
       @ffi.to_cstr(prefix),
+    )
+    if status < 0 {
+      @native_ffi.web_request_config_destroy(handle)
+      raise native_error(status)
+    }
+  }
+  for item in redirects {
+    let prefix = item.0
+    let target = item.1
+    let status = @native_ffi.web_request_config_add_redirect_prefix(
+      handle,
+      @ffi.to_cstr(prefix),
+      @ffi.to_cstr(target),
     )
     if status < 0 {
       @native_ffi.web_request_config_destroy(handle)
@@ -1402,6 +1416,7 @@ pub fn Window::Window(
   let bridge_config = build_bridge_config(config.bridge)
   let web_request_config = build_web_request_config(
     config.web_request_cancel_prefixes,
+    config.web_request_redirect_prefixes,
   )
   let status = @native_ffi.window_create(
     runtime.active_handle(),
