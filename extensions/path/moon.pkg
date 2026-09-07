@@ -1,5 +1,4 @@
 import {
-  "moonbitlang/core/json",
   "moonbitlang/x/path" @mbpath,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
