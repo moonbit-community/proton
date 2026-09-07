@@ -162,6 +162,13 @@ Browser loading events include `DidStartLoading` and `DidFinishLoad`, derived
 from successive native loading snapshots; `LoadingChanged` remains available
 for consumers that prefer the boolean form.
 
+Use `App::web_request_cancel_prefix` to declare synchronous request blocking
+rules before startup. Matching is case-sensitive, uses URL prefixes, and
+applies to every window and web contents view created by the application.
+`App::web_request_redirect_prefix` provides the corresponding fixed-target
+rewrite for matching requests; cancellation takes precedence when both rules
+match.
+
 Web contents views expose the same loading lifecycle events through
 `ViewEvent::DidStartLoading` and `ViewEvent::DidFinishLoad`; their
 `LoadingChanged` event remains available as the boolean form.

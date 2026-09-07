@@ -38,6 +38,8 @@ fn RuntimeSession::RuntimeSession(
   application_executable? : String = "",
   application_arguments? : Array[String] = [],
   url_schemes? : Array[String] = [],
+  web_request_cancel_prefixes? : Array[String] = [],
+  web_request_redirect_prefixes? : Array[(String, String)] = [],
 ) -> RuntimeSession {
   RuntimeSession::{
     runtime,
@@ -77,6 +79,8 @@ fn RuntimeSession::RuntimeSession(
     application_executable,
     application_arguments,
     url_schemes,
+    web_request_cancel_prefixes,
+    web_request_redirect_prefixes,
   }
 }
 
@@ -1262,6 +1266,8 @@ fn RuntimeSession::create_window(
       definition.bridge,
       definition.browser_policy,
       self.locale_preferences,
+      self.web_request_cancel_prefixes,
+      self.web_request_redirect_prefixes,
     ),
   ) catch {
     error => raise native_run_error("create window " + plan.id, error)

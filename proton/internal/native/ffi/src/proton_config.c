@@ -678,6 +678,7 @@ int32_t proton_config_prepare_window(
     int32_t new_window_policy, int32_t download_policy,
     int32_t certificate_policy, int32_t media_policy, int32_t devtools,
     proton_bridge_config_t *bridge_config,
+    proton_web_request_config_t *web_request_config,
     proton_engine_window_config_t *out_config) {
   if (out_config == NULL || title == NULL || initial_url == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
@@ -721,6 +722,7 @@ int32_t proton_config_prepare_window(
   config.titlebar_overlay = titlebar_overlay != 0;
   config.theme_preference =
       (proton_window_theme_preference_t)theme_preference;
+  config.web_request_config = web_request_config;
   if ((titlebar_minimize_label != NULL && titlebar_minimize_label[0] != '\0' &&
        !proton_copy_config_text(config.titlebar_minimize_label,
                                 sizeof(config.titlebar_minimize_label),

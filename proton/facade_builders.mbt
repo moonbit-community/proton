@@ -272,6 +272,70 @@ pub fn App::url_scheme(self : App, scheme : String) -> App {
 }
 
 ///|
+/// Cancels browser requests whose URL starts with `url_prefix`.
+///
+/// Matching is case-sensitive and applies to every browser session created
+/// by this application, including secondary windows and web contents views.
+pub fn App::web_request_cancel_prefix(self : App, url_prefix : String) -> App {
+  let url_prefix = url_prefix.trim().to_owned()
+  if url_prefix == "" {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="web_request_cancel_prefix",
+        message="must not be empty",
+      ),
+    )
+  } else if self.web_request_cancel_prefixes.contains(url_prefix) {
+    self.validation_errors.push(
+      InvalidSetting(name="web_request_cancel_prefix", message="is duplicated"),
+    )
+  } else if self.web_request_cancel_prefixes.length() >= 128 {
+    self.validation_errors.push(
+      InvalidSetting(name="web_request_cancel_prefix", message="limit exceeded"),
+    )
+  } else {
+    self.web_request_cancel_prefixes.push(url_prefix)
+  }
+  self
+}
+
+///|
+/// Redirects matching browser requests to `target_url` before loading.
+pub fn App::web_request_redirect_prefix(
+  self : App,
+  url_prefix : String,
+  target_url : String,
+) -> App {
+  let url_prefix = url_prefix.trim().to_owned()
+  let target_url = target_url.trim().to_owned()
+  if url_prefix == "" || target_url == "" {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="web_request_redirect_prefix",
+        message="prefix and target URL must not be empty",
+      ),
+    )
+  } else if self.web_request_redirect_prefixes.any(item => item.0 == url_prefix) {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="web_request_redirect_prefix",
+        message="is duplicated",
+      ),
+    )
+  } else if self.web_request_redirect_prefixes.length() >= 128 {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="web_request_redirect_prefix",
+        message="limit exceeded",
+      ),
+    )
+  } else {
+    self.web_request_redirect_prefixes.push((url_prefix, target_url))
+  }
+  self
+}
+
+///|
 fn app_url_scheme_is_valid(scheme : String) -> Bool {
   guard scheme.length() > 0 else { return false }
   for index, char in scheme {
