@@ -51,11 +51,30 @@ h1 {
   font-weight: 750;
 }
 
-form {
+form,
+.todo-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   padding: 22px 30px;
+}
+
+form {
+  padding-bottom: 12px;
+}
+
+.todo-toolbar {
+  padding-top: 0;
+}
+
+.todo-toolbar input {
+  min-width: 0;
+  width: 100%;
+}
+
+input[type="submit"],
+.todo-toolbar button {
+  min-width: 124px;
 }
 
 input,
@@ -140,8 +159,20 @@ input[type="submit"] {
     padding-right: 18px;
   }
 
+  form,
+  .todo-toolbar {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
   form {
     grid-template-columns: 1fr;
-    padding: 18px;
+    padding-top: 18px;
+  }
+
+  .status,
+  .error {
+    padding-left: 18px;
+    padding-right: 18px;
   }
 }

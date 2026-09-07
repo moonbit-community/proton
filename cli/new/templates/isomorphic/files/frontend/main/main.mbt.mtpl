@@ -7,63 +7,50 @@ using @html {button, div, form, h1, input, li, p, span, ul}
 ///|
 struct Model {
   draft : String
-  snapshot : @shared.TodoSnapshot
-  loading : Bool
   error : String?
 } derive(Eq)
 
 ///|
 enum Msg {
-  Load
   DraftChanged(String)
   Create
   SetCompleted(Int, Bool)
   Delete(Int)
-  SnapshotReceived(@shared.TodoSnapshot)
+  MutationReceived(@shared.MutationReply)
+  Created(String, @shared.MutationReply)
   CommandFailed(@proton_client.ClientFailure)
 }
 
 ///|
 fn initial_model() -> Model {
-  {
-    draft: "",
-    snapshot: { version: 0, todos: [], },
-    loading: true,
-    error: None,
-  }
+  { draft: "", error: None, }
 }
 
 ///|
 fn failure_message(error : @proton_client.ClientFailure) -> String {
   match error {
     @proton_client.BridgeUnavailable =>
-      "The Proton bridge is unavailable. Start this page with `proton_cli dev`."
+      "The Proton bridge is unavailable. Start this page with proton_cli dev."
     _ => error.message()
   }
 }
 
 ///|
-fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
+fn update(
+  model : Model,
+  msg : Msg,
+  emit : Emit[Msg],
+  refresh : Cmd,
+) -> (Model, Cmd) {
   match msg {
-    Load =>
-      (
-        { ..model, loading: true, error: None, },
-        @proton_rabbita.invoke(
-          @shared.list_todos,
-          (),
-          snapshot => emit(SnapshotReceived(snapshot)),
-          error => emit(CommandFailed(error)),
-        ),
-      )
     DraftChanged(draft) => ({ ..model, draft, }, @rabbita.none)
-    Create if model.draft.trim().is_empty() => (model, @rabbita.none)
     Create =>
       (
-        { ..model, draft: "", error: None, },
+        { ..model, error: None, },
         @proton_rabbita.invoke(
           @shared.create_todo,
           { title: model.draft, },
-          snapshot => emit(SnapshotReceived(snapshot)),
+          reply => emit(Created(model.draft, reply)),
           error => emit(CommandFailed(error)),
         ),
       )
@@ -73,7 +60,7 @@ fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
         @proton_rabbita.invoke(
           @shared.set_todo_completed,
           { id, completed, },
-          snapshot => emit(SnapshotReceived(snapshot)),
+          reply => emit(MutationReceived(reply)),
           error => emit(CommandFailed(error)),
         ),
       )
@@ -83,27 +70,27 @@ fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
         @proton_rabbita.invoke(
           @shared.delete_todo,
           { id, },
-          snapshot => emit(SnapshotReceived(snapshot)),
+          reply => emit(MutationReceived(reply)),
           error => emit(CommandFailed(error)),
         ),
       )
-    SnapshotReceived(snapshot) =>
-      ({ ..model, snapshot, loading: false, error: None, }, @rabbita.none)
+    Created(title, reply) => {
+      let model = if reply is @shared.Changed(..) && model.draft == title {
+        { ..model, draft: "", }
+      } else {
+        model
+      }
+      update(model, MutationReceived(reply), emit, refresh)
+    }
+    MutationReceived(@shared.InvalidTitle) =>
+      ({ ..model, error: Some("Enter a non-empty title."), }, @rabbita.none)
+    MutationReceived(@shared.MissingTodo) =>
+      ({ ..model, error: Some("This todo no longer exists."), }, refresh)
+    MutationReceived(@shared.Changed(..)) =>
+      ({ ..model, error: None, }, refresh)
     CommandFailed(error) =>
-      (
-        { ..model, loading: false, error: Some(failure_message(error)), },
-        @rabbita.none,
-      )
+      ({ ..model, error: Some(failure_message(error)), }, @rabbita.none)
   }
-}
-
-///|
-fn subscriptions(_model : Model, emit : Emit[Msg]) -> @sub.Sub {
-  @proton_rabbita.subscribe(
-    @shared.todos_changed,
-    snapshot => emit(SnapshotReceived(snapshot)),
-    error => emit(CommandFailed(error)),
-  )
 }
 
 ///|
@@ -130,17 +117,42 @@ fn todo_row(emit : Emit[Msg], todo : @shared.TodoItem) -> Html {
 }
 
 ///|
-fn view(emit : Emit[Msg], model : Model) -> Html {
+fn view(
+  emit : Emit[Msg],
+  model : Model,
+  state : @query.State[@shared.ListTodosRequest, @shared.TodoSnapshot],
+  set_query : (@shared.ListTodosRequest) -> Cmd,
+  refresh : Cmd,
+) -> Html {
+  let snapshot = match state.data() {
+    Some((_, snapshot)) => snapshot
+    None => @shared.TodoSnapshot::{ version: 0, todos: [], }
+  }
+  let loading = state is @query.Loading(..)
   let rows : Array[Html] = []
-  for todo in model.snapshot.todos {
+  for todo in snapshot.todos {
     rows.push(todo_row(emit, todo))
   }
-  let content = if model.loading {
-    p(class="status", "Loading todos...")
-  } else if rows.is_empty() {
-    p(class="status", "No todos yet.")
-  } else {
+  let content = if !rows.is_empty() {
     ul(class="todo-list", rows)
+  } else {
+    match state {
+      @query.Loading(..) => p(class="status", "Loading todos...")
+      @query.Failed(..) => @html.nothing
+      @query.Ready(input~, ..) =>
+        p(
+          class="status",
+          if input.query.trim().is_empty() {
+            "No todos yet."
+          } else {
+            "No matching todos."
+          },
+        )
+    }
+  }
+  let query_error = match state {
+    @query.Failed(error~, ..) => p(class="error", failure_message(error))
+    _ => @html.nothing
   }
   let error = match model.error {
     Some(message) => p(class="error", message)
@@ -149,7 +161,7 @@ fn view(emit : Emit[Msg], model : Model) -> Html {
   div(class="app-shell", [
     div(class="app-header", [
       div([span(class="eyebrow", "PROTON + RABBITA"), h1({{title_mbt}})]),
-      span(class="version", "Revision " + model.snapshot.version.to_string()),
+      span(class="version", "Revision " + snapshot.version.to_string()),
     ]),
     form(on_submit=emit(Create), [
       input(
@@ -159,19 +171,41 @@ fn view(emit : Emit[Msg], model : Model) -> Html {
       ),
       input(input_type=Submit, value="Add todo"),
     ]),
+    div(class="todo-toolbar", [
+      input(value=state.input().query, placeholder="Search todos", on_input=text => {
+        set_query({ query: text, })
+      }),
+      button(
+        type_="button",
+        on_click=refresh,
+        if loading {
+          "Refreshing..."
+        } else {
+          "Refresh"
+        },
+      ),
+    ]),
     error,
+    query_error,
     content,
   ])
 }
 
 ///|
 fn todo_app() -> @rabbita.Val[Html] {
-  let (model, emit) = @rabbita.create_state_with_init(
-    init=emit => (initial_model(), emit(Load)),
-    update~,
-    subscriptions~,
+  let todos = @query.create(
+    @shared.list_todos,
+    initial={ query: "", },
+    invalidated_by=@shared.todos_changed,
   )
-  model.view(model => view(emit, model))
+  let (model, emit) = @rabbita.create_state(initial_model(), update=(
+    model,
+    msg,
+    emit,
+  ) => update(model, msg, emit, todos.refresh))
+  model.view2(todos.state, (model, state) => {
+    view(emit, model, state, todos.set_input, todos.refresh)
+  })
 }
 
 ///|

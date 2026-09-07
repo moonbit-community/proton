@@ -1,44 +1,26 @@
 ///|
-using @shared {create_todo, delete_todo, list_todos, set_todo_completed}
-
-///|
-#proton.command(contract=list_todos)
-fn Backend::list_todos(self : Backend) -> @shared.TodoSnapshot {
-  self.snapshot()
-}
-
-///|
-#proton.command(contract=create_todo)
-async fn Backend::create_todo(
+/// Explicit bindings let the compiler check each implementation against its
+/// shared descriptor without an application code-generation step.
+pub fn Backend::register_commands(
   self : Backend,
-  context : @proton.CommandContext,
-  request : @shared.CreateTodoRequest,
-) -> @shared.TodoSnapshot {
-  let snapshot = self.create(request.title)
-  context.emit(@shared.todos_changed, snapshot)
-  snapshot
-}
-
-///|
-#proton.command(contract=set_todo_completed)
-async fn Backend::set_todo_completed(
-  self : Backend,
-  context : @proton.CommandContext,
-  request : @shared.SetTodoCompletedRequest,
-) -> @shared.TodoSnapshot {
-  let snapshot = self.set_completed(request.id, request.completed)
-  context.emit(@shared.todos_changed, snapshot)
-  snapshot
-}
-
-///|
-#proton.command(contract=delete_todo)
-async fn Backend::delete_todo(
-  self : Backend,
-  context : @proton.CommandContext,
-  request : @shared.DeleteTodoRequest,
-) -> @shared.TodoSnapshot {
-  let snapshot = self.delete(request.id)
-  context.emit(@shared.todos_changed, snapshot)
-  snapshot
+  registrar : @proton.CommandRegistrar,
+) -> Unit raise {
+  registrar.bind(@shared.list_todos, (_context, request) => {
+    self.snapshot(request.query)
+  })
+  registrar.bind(@shared.create_todo, (_context, request) => {
+    let reply = self.create(request.title)
+    self.notify(reply)
+    reply
+  })
+  registrar.bind(@shared.set_todo_completed, (_context, request) => {
+    let reply = self.set_completed(request.id, request.completed)
+    self.notify(reply)
+    reply
+  })
+  registrar.bind(@shared.delete_todo, (_context, request) => {
+    let reply = self.delete(request.id)
+    self.notify(reply)
+    reply
+  })
 }

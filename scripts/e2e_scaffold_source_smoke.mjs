@@ -15,11 +15,6 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-scaffold-e2e-"));
 const projectDir = path.join(tempRoot, "todo");
 const frontendDir = path.join(projectDir, "frontend");
 const frontendDist = path.join(frontendDir, "dist");
-const codegenVersion = fs
-  .readFileSync(path.join(repoRoot, "codegen", "moon.mod"), "utf8")
-  .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
-assert(codegenVersion, "codegen/moon.mod is missing its version");
-const codegenCoordinate = `moonbit-community/proton_codegen@${codegenVersion}`;
 const warrenCoordinate = "moonbit-community/warren@0.3.2";
 let appProcess = null;
 let staticServer = null;
@@ -112,9 +107,15 @@ function verifyGeneratedTree() {
     "backend/app/moon.pkg",
     "backend/moon.mod",
     "backend/todo/backend.mbt",
+    "backend/todo/backend_wbtest.mbt",
     "backend/todo/commands.mbt",
     "backend/todo/moon.pkg",
+    "frontend/internal/query/README.md",
+    "frontend/internal/query/moon.pkg",
+    "frontend/internal/query/query.mbt",
+    "frontend/internal/query/query_wbtest.mbt",
     "frontend/main/main.mbt",
+    "frontend/main/model_wbtest.mbt",
     "frontend/main/moon.pkg",
     "frontend/moon.mod",
     "frontend/public/index.html",
@@ -144,62 +145,67 @@ function verifyGeneratedTree() {
     "generated backend must not depend on a CLI binary shim",
   );
   assert(
-    !todoPackage.includes("$mooncake_bin"),
-    "generated backend must not run the CLI through $mooncake_bin",
+    !/dev_build|proton_codegen/.test(todoPackage + backendMod),
+    "generated application must use explicit command bindings",
   );
 }
 
-function useLocalCodegenPackage() {
-  const backendModPath = path.join(projectDir, "backend", "moon.mod");
-  const source = fs.readFileSync(backendModPath, "utf8");
-  const localCommand = `moon run '${path.join(repoRoot, "codegen")}' --target wasm --`;
-  const updated = source.replace(`moonx ${codegenCoordinate}`, localCommand);
-  assert(updated !== source, "generated backend is missing the codegen command");
-  assert(
-    !updated.includes(`moonx ${codegenCoordinate}`),
-    "generated backend contains multiple codegen commands",
+function enableSecondWindow() {
+  const file = path.join(projectDir, "backend", "app", "main.mbt");
+  const source = fs.readFileSync(file, "utf8");
+  const updated = source.replace(
+    ".load_config()",
+    '.add_window("secondary", "Todo E2E Secondary", @proton.AppEntry::Asset("frontend/dist/index.html"))\n  .load_config()',
+  ).replace(
+    ".commands(fn(registrar) raise { backend.register_commands(registrar) })",
+    '.commands(fn(registrar) raise { backend.register_commands(registrar) }, targets=[@proton.RendererTarget::entry(), @proton.RendererTarget::entry(window="secondary")])',
   );
-  fs.writeFileSync(backendModPath, updated);
+  assert(updated !== source, "could not enable the second validation window");
+  fs.writeFileSync(file, updated);
 }
 
-function verifySourceSmokeCodegen() {
-  const generated = path.join(
-    projectDir,
-    "backend",
-    "todo",
-    "commands.g.mbt",
-  );
-  const fresh = path.join(tempRoot, "commands.fresh.mbt");
-  run("moon", [
-    "run",
-    path.join(repoRoot, "codegen"),
-    "--target",
-    "wasm",
-    "--",
-    path.join(projectDir, "backend", "todo", "commands.mbt"),
-    "-o",
-    fresh,
-  ]);
-  assert(
-    fs.readFileSync(generated, "utf8") === fs.readFileSync(fresh, "utf8"),
-    "Moon prebuild output differs from direct WASM codegen",
-  );
+function installDirectoryFixture() {
+  const fixture = path.join(repoRoot, "scripts", "fixtures", "query_directory");
+  const target = path.join(frontendDir, "directory");
+  fs.mkdirSync(target);
+  fs.copyFileSync(path.join(fixture, "main.mbt"), path.join(target, "main.mbt"));
+  fs.copyFileSync(path.join(fixture, "directory_contract.mbt"), path.join(projectDir, "shared", "directory_contract.mbt"));
+  const imports = fs.readFileSync(path.join(frontendDir, "main", "moon.pkg"), "utf8");
+  fs.writeFileSync(path.join(target, "moon.pkg"), imports.replace('  "moonbit-community/proton_rabbita",\n', ''));
+  const appPackage = path.join(projectDir, "backend", "app", "moon.pkg");
+  fs.writeFileSync(appPackage, fs.readFileSync(appPackage, "utf8").replace("import {", 'import {\n  "moonbitlang/async/fs",\n  "e2e/todo_shared" @shared,'));
+  const root = path.join(tempRoot, "directories");
+  for (const name of ["alpha", "beta", "empty", "slow"]) fs.mkdirSync(path.join(root, name), {recursive:true});
+  fs.writeFileSync(path.join(root, "alpha", "alpha.txt"), "alpha");
+  fs.writeFileSync(path.join(root, "beta", "beta.txt"), "beta");
+  fs.writeFileSync(path.join(root, "slow", "slow.txt"), "slow");
+  const app = path.join(projectDir, "backend", "app", "main.mbt");
+  fs.writeFileSync(app, fs.readFileSync(app, "utf8")
+    .replace('  let backend = @todo.Backend()', '  let backend = @todo.Backend()\n  let test_windows : Map[String, @proton.WindowHandle] = Map([])')
+    .replace('on_ready=context => backend.attach(context)', 'on_ready=context => { let id = backend.attach(context); test_windows[id] = context.handle(); id }')
+    .replace('backend.detach(id)', 'test_windows.remove(id)\n    backend.detach(id)')
+    .replace(
+    'backend.register_commands(registrar)',
+    `backend.register_commands(registrar)
+      registrar.bind(@shared.focus_test_window, (context, _request) => {
+        if test_windows.get(context.window_id()) is Some(window) { window.focus() }
+      })
+      registrar.bind(@shared.list_directory, (_context, directory) => {
+        if directory == "slow" { @async.sleep(1000) }
+        @fs.readdir(${JSON.stringify(root)} + "/" + directory, sort=true)
+      })`,
+  ));
 }
 
-function makeSourceSmokeCodegenStale() {
-  fs.writeFileSync(
-    path.join(projectDir, "backend", "todo", "commands.g.mbt"),
-    "stale registrar\n",
-  );
-}
-
-function verifySourceSmokeCodegenRefreshed() {
-  const generated = path.join(projectDir, "backend", "todo", "commands.g.mbt");
-  const fresh = path.join(tempRoot, "commands.fresh.mbt");
-  assert(
-    fs.readFileSync(generated, "utf8") === fs.readFileSync(fresh, "utf8"),
-    "Moon package build did not refresh commands.g.mbt",
-  );
+function buildDirectoryFixture() {
+  const output = run("moon", ["-C", "frontend", "run", "directory", "--target", "js", "--release", "--build-only"], {cwd:projectDir, capture:true}).trim();
+  const artifacts = output.split("\n").filter(line => line.startsWith("{"))
+    .map(line => JSON.parse(line)).find(value => Array.isArray(value.artifacts_path));
+  const built = artifacts?.artifacts_path.find(file => file.endsWith(".js"));
+  assert(built && isFile(built), `missing directory frontend output: ${output}`);
+  const publicDir = path.join(frontendDir, "public");
+  fs.copyFileSync(built, path.join(publicDir, "directory.js"));
+  fs.writeFileSync(path.join(publicDir, "directory.html"), '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Directory browser</title><link rel="stylesheet" href="./styles.css"></head><body><main id="app"></main><script src="./directory.js"></script></body></html>');
 }
 
 function connectLocalSourceModules() {
@@ -368,6 +374,7 @@ class CdpClient {
       const message = JSON.parse(event.data);
       const pending = this.pending.get(message.id);
       if (!pending) {
+        if (message.method === "Runtime.exceptionThrown") console.error(JSON.stringify(message.params));
         return;
       }
       this.pending.delete(message.id);
@@ -428,10 +435,14 @@ async function waitForPage(cdpPort) {
 }
 
 async function waitForExpression(client, expression, description) {
-  await waitUntil(
-    async () => (await client.evaluate(expression)) === true,
-    description,
-  );
+  try {
+    await waitUntil(
+      async () => (await client.evaluate(expression)) === true,
+      description,
+    );
+  } catch (error) {
+    throw new Error(`${error.message}\nPage: ${await client.evaluate("document.body.innerText")}`);
+  }
 }
 
 async function probeTodoBridge(client) {
@@ -452,7 +463,7 @@ async function probeTodoBridge(client) {
           "app:todos_changed",
           (payload) => events.push(JSON.parse(payload)),
         );
-        const initial = await invoke("app:list_todos", null);
+        const initial = await invoke("app:list_todos", { query: "" });
         let remoteFailure;
         try {
           await invoke("app:create_todo", null);
@@ -463,19 +474,22 @@ async function probeTodoBridge(client) {
             message: error && error.message,
           };
         }
-        const created = await invoke("app:create_todo", {
+        const createReply = await invoke("app:create_todo", {
           title: "Verify typed bridge",
         });
+        const created = await invoke("app:list_todos", { query: "" });
         await new Promise((resolve) => setTimeout(resolve, 100));
         const createdBody = document.body.innerText;
-        const completed = await invoke("app:set_todo_completed", {
+        const completeReply = await invoke("app:set_todo_completed", {
           id: created.todos[0].id,
           completed: true,
         });
-        const deleted = await invoke("app:delete_todo", {
+        const completed = await invoke("app:list_todos", { query: "" });
+        const deleteReply = await invoke("app:delete_todo", {
           id: created.todos[0].id,
         });
         await new Promise((resolve) => setTimeout(resolve, 100));
+        const deleted = await invoke("app:list_todos", { query: "" });
         unsubscribe();
         return {
           initial,
@@ -580,6 +594,66 @@ async function probeBridgeUnavailable(client) {
     })`,
   );
   assert(state.hasBridge === false, "ordinary HTTP page unexpectedly has a bridge");
+  assert(!state.body.includes("No todos yet.") && !state.body.includes("No matching todos."), "failed initial load must not display an empty result");
+}
+
+async function focusTestWindow(client) {
+  // requestAnimationFrame can pause while a native window is occluded. Focus
+  // the actual host window before checking UI; DevTools focus is insufficient.
+  await client.evaluate('window.__MoonBit__.core.invokeOp("app:focus_test_window", null)', true);
+}
+
+async function probeDirectoryBrowser(client) {
+  const url = await client.evaluate('new URL("directory.html", location.href).href');
+  await client.send("Page.navigate", {url});
+  await waitForExpression(client, 'document.body.innerText.includes("alpha.txt")', "initial real directory read");
+  await client.evaluate(`(() => {
+    const core = window.__MoonBit__.core;
+    const invoke = core.invokeJson.bind(core);
+    window.__directoryReads = 0;
+    window.__directoryAborts = 0;
+    core.invokeJson = (route, raw, options) => {
+      if (route === "app:list_directory") {
+        window.__directoryReads++;
+        options.signal.addEventListener("abort", () => window.__directoryAborts++);
+      }
+      return invoke(route, raw, options);
+    };
+  })()`);
+  // Exercise directory controls through browser mouse input.
+  const click = async label => {
+    const point = await client.evaluate(`(() => {
+      const button = Array.from(document.querySelectorAll("button")).find(button => button.textContent === ${JSON.stringify(label)});
+      const bounds = button.getBoundingClientRect();
+      return {x:bounds.x + bounds.width / 2, y:bounds.y + bounds.height / 2};
+    })()`);
+    await client.send("Input.dispatchMouseEvent", {type:"mousePressed", button:"left", clickCount:1, ...point});
+    await client.send("Input.dispatchMouseEvent", {type:"mouseReleased", button:"left", clickCount:1, ...point});
+  };
+  await click("Open slow");
+  await waitForExpression(client, 'document.body.innerText.includes("Loading slow") && document.body.innerText.includes("Directory: alpha") && document.body.innerText.includes("alpha.txt")', "retained data identifies its original directory");
+  await click("Open beta");
+  await waitForExpression(client, 'document.body.innerText.includes("beta.txt") && window.__directoryAborts === 1', "directory replacement cancels previous read");
+  await sleep(1100);
+  assert(await client.evaluate('!document.body.innerText.includes("slow.txt")'), "late directory response replaced current data");
+  await click("Open missing");
+  await waitForExpression(client, 'document.body.innerText.includes("Cannot read missing") && document.body.innerText.includes("Directory: beta")', "failed navigation preserves the previous directory");
+  assert(await client.evaluate('!document.body.innerText.includes("Empty directory.")'), "failed directory read looks empty");
+  const reads = await client.evaluate('window.__directoryReads');
+  await sleep(150);
+  assert(await client.evaluate('window.__directoryReads') === reads, "failure triggered an automatic retry loop");
+  await click("Reload directory");
+  await waitForExpression(client, `window.__directoryReads === ${reads + 1} && document.body.innerText.includes("Cannot read missing")`, "explicit directory retry");
+  await click("Open empty");
+  await waitForExpression(client, 'document.body.innerText.includes("Empty directory.") && !document.body.innerText.includes("Cannot read")', "successful empty directory");
+  await click("Open slow");
+  await waitForExpression(client, 'document.body.innerText.includes("Loading slow")', "pending directory before component disposal");
+  await click("Close browser");
+  await waitForExpression(client, 'document.body.innerText.includes("Directory browser closed.") && window.__directoryAborts === 2', "component disposal cancels its query");
+  await sleep(1100);
+  assert(await client.evaluate('!document.body.innerText.includes("slow.txt")'), "disposed query delivered late data");
+  await click("Open browser");
+  await waitForExpression(client, 'document.body.innerText.includes("alpha.txt")', "fresh component owns a fresh query");
 }
 
 function collectOutput(child) {
@@ -712,7 +786,70 @@ async function runPackagedAppSmoke(executable, expectedRevision) {
       `document.body.dataset.packageRevision === ${JSON.stringify(expectedRevision)}`,
       `packaged frontend revision ${expectedRevision}`,
     );
+    await focusTestWindow(client);
     await probeTodoBridge(client);
+    await client.evaluate('document.querySelector("form").dispatchEvent(new Event("submit", {bubbles:true, cancelable:true}))');
+    await waitForExpression(client, 'document.body.innerText.includes("Enter a non-empty title.")', "typed business rejection");
+    await client.evaluate(`(() => {
+      const input = document.querySelector('input[placeholder="What needs doing?"]');
+      input.value = "Created through Rabbita";
+      input.dispatchEvent(new Event("input", {bubbles:true}));
+      document.querySelector("form").dispatchEvent(new Event("submit", {bubbles:true, cancelable:true}));
+    })()`);
+    await waitForExpression(client, 'document.body.innerText.includes("Created through Rabbita")', "Rabbita async write effect");
+    await client.evaluate('document.querySelector(".delete-button").click()');
+    await waitForExpression(client, '!document.body.innerText.includes("Created through Rabbita")', "Rabbita delete effect");
+    const secondPage = await waitUntil(async () => {
+      const response = await fetch("http://127.0.0.1:" + cdpPort + "/json/list");
+      const pages = await response.json();
+      return pages.find(target => target.type === "page" && target.id !== page.id &&
+        target.webSocketDebuggerUrl && target.url.includes("index.html"));
+    }, "the second Todo window");
+    const second = new CdpClient(secondPage.webSocketDebuggerUrl);
+    await second.open();
+    try {
+      await second.send("Runtime.enable");
+      await waitForExpression(second, 'Boolean(window.__MoonBit__?.core?.invokeOp)', "second bridge");
+      await client.evaluate('window.__MoonBit__.core.invokeOp("app:create_todo", {title:"Shared across windows"})', true);
+      await focusTestWindow(second);
+      await waitForExpression(second, 'document.body.innerText.includes("Shared across windows")', "cross-window invalidation");
+      await focusTestWindow(client);
+      await waitForExpression(client, 'document.body.innerText.includes("Shared across windows")', "initial list before delayed search");
+      await client.evaluate(`(() => {
+        const core = window.__MoonBit__.core;
+        const original = core.invokeJson.bind(core);
+        window.__searchAbortCount = 0;
+        core.invokeJson = (route, raw, options) => {
+          const result = original(route, raw, options);
+          if (route === "app:list_todos" && JSON.parse(raw).query === "Shared") {
+            options.signal.addEventListener("abort", () => window.__searchAbortCount++);
+            return result.then(value => new Promise(resolve => setTimeout(() => resolve(value), 300)));
+          }
+          return result;
+        };
+        const input = document.querySelector('input[placeholder="Search todos"]');
+        input.value = "Shared";
+        input.dispatchEvent(new Event("input", {bubbles:true}));
+      })()`);
+      await sleep(50);
+      assert(await client.evaluate('document.querySelectorAll(".todo-row").length > 0 && document.body.innerText.includes("Shared across windows")'), "refresh must retain the current list");
+      await client.evaluate(`(() => {
+        const input = document.querySelector('input[placeholder="Search todos"]');
+        input.value = "no matches";
+        input.dispatchEvent(new Event("input", {bubbles:true}));
+      })()`);
+      await sleep(400);
+      await waitForExpression(client, 'window.__searchAbortCount > 0 && document.querySelectorAll(".todo-row").length === 0 && document.body.innerText.includes("No matching todos.")', "cancelled search cannot overwrite the latest query");
+      await client.evaluate(`(() => {
+        const input = document.querySelector('input[placeholder="Search todos"]');
+        input.value = "";
+        input.dispatchEvent(new Event("input", {bubbles:true}));
+      })()`);
+      await waitForExpression(client, 'document.body.innerText.includes("Shared across windows")', "reset search");
+      await second.evaluate('(async () => { const data = await window.__MoonBit__.core.invokeOp("app:list_todos", {query:""}); await window.__MoonBit__.core.invokeOp("app:delete_todo", {id:data.todos[0].id}); })()', true);
+      await waitForExpression(client, '!document.body.innerText.includes("Shared across windows")', "reverse cross-window invalidation");
+    } finally { second.close(); }
+    await probeDirectoryBrowser(client);
     await probeBridgeUnavailable(client);
     await closeApplication(cdpPort);
   } finally {
@@ -752,12 +889,15 @@ async function main() {
   ]);
   verifyGeneratedTree();
   run("moon", ["fmt", "--check"], { cwd: projectDir });
-  useLocalCodegenPackage();
   connectLocalSourceModules();
+  enableSecondWindow();
+  installDirectoryFixture();
+  run("moon", ["fmt"], { cwd: projectDir });
   localCli(["-C", projectDir, "cef", "setup"]);
 
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
-  verifySourceSmokeCodegen();
+  run("moon", ["-C", "frontend", "test", "--target", "js"], { cwd: projectDir });
+  run("moon", ["-C", "backend", "test", "todo", "--target", "native"], { cwd: projectDir });
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   run(
     "moonx",
@@ -776,7 +916,7 @@ async function main() {
     ["-C", "backend", "build", "app", "--target", "native", "--diagnostic-limit", "80"],
     { cwd: projectDir, env: runtimeEnv() },
   );
-  makeSourceSmokeCodegenStale();
+  buildDirectoryFixture();
   setFrontendPackageRevision("first");
   localCli(["-C", projectDir, "package", "--release", "--format", "app", "--sign"], {
     env: runtimeEnv({
@@ -785,7 +925,6 @@ async function main() {
     }),
     timeout: 600000,
   });
-  verifySourceSmokeCodegenRefreshed();
   let packaged = verifyPackagedApp();
   await runPackagedAppSmoke(packaged.executable, "first");
   setFrontendPackageRevision("second");

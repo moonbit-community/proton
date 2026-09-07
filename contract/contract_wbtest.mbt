@@ -49,17 +49,15 @@ test "descriptor validation reports empty extension members" {
 }
 
 ///|
-test "event validation rejects duplicate route declarations" {
+test "event descriptors can be reconstructed without registration state" {
   let first : Event[Int] = event("duplicate_event_route")
-  let duplicate : Event[String] = event("duplicate_event_route")
+  let repeated : Event[Int] = event("duplicate_event_route")
   first.validate()
-  first.validate()
-  duplicate.validate() catch {
-    ContractDefinitionError::DuplicateEventRoute(
-      route="app:duplicate_event_route"
-    ) => ()
-    _ => abort("expected DuplicateEventRoute")
-  }
+  repeated.validate()
+  assert_eq(
+    first.contract_route().operation_name(),
+    repeated.contract_route().operation_name(),
+  )
 }
 
 ///|

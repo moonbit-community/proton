@@ -325,7 +325,8 @@ pub fn AppCommandRequestContext::task_group(
 
 ///|
 /// Emits a typed event to the renderer page that issued this command.
-pub async fn[Payload : ToJson] AppCommandRequestContext::emit(
+#alias(emit)
+pub async fn[Payload : ToJson] AppCommandRequestContext::emit_to_caller(
   self : AppCommandRequestContext,
   event : @proton_contract.Event[Payload],
   payload : Payload,
