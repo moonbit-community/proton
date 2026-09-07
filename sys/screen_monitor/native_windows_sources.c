@@ -29,16 +29,29 @@ static char *capture_thumbnail(HWND hwnd, int width, int height) {
   int source_height = rect.bottom - rect.top;
   if (source_width <= 0 || source_height <= 0) return NULL;
   HDC source = GetWindowDC(hwnd);
+  if (source == NULL) return NULL;
+  HDC capture = CreateCompatibleDC(source);
   HDC target = CreateCompatibleDC(source);
+  HBITMAP full_bitmap = CreateCompatibleBitmap(source, source_width, source_height);
   HBITMAP bitmap = CreateCompatibleBitmap(source, width, height);
-  if (source == NULL || target == NULL || bitmap == NULL) {
-    if (bitmap) DeleteObject(bitmap); if (target) DeleteDC(target); if (source) ReleaseDC(hwnd, source);
+  if (capture == NULL || target == NULL || full_bitmap == NULL || bitmap == NULL) {
+    if (full_bitmap) DeleteObject(full_bitmap);
+    if (bitmap) DeleteObject(bitmap);
+    if (capture) DeleteDC(capture);
+    if (target) DeleteDC(target);
+    ReleaseDC(hwnd, source);
     return NULL;
   }
+  HGDIOBJ old_capture = SelectObject(capture, full_bitmap);
   HGDIOBJ old = SelectObject(target, bitmap);
+  BOOL printed = PrintWindow(hwnd, capture, 2);
   SetStretchBltMode(target, HALFTONE);
-  BOOL captured = PrintWindow(hwnd, target, 2);
-  if (!captured) captured = StretchBlt(target, 0, 0, width, height, source, 0, 0, source_width, source_height, SRCCOPY);
+  SetBrushOrgEx(target, 0, 0, NULL);
+  BOOL captured = StretchBlt(target, 0, 0, width, height,
+                            printed ? capture : source,
+                            0, 0, source_width, source_height, SRCCOPY);
+  // GetDIBits requires the bitmap to be deselected from every DC.
+  SelectObject(target, old);
   BITMAPINFO info; memset(&info, 0, sizeof(info));
   info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER); info.bmiHeader.biWidth = width;
   info.bmiHeader.biHeight = -height; info.bmiHeader.biPlanes = 1; info.bmiHeader.biBitCount = 32;
@@ -65,7 +78,14 @@ static char *capture_thumbnail(HWND hwnd, int width, int height) {
       }
     }
   }
-  free(pixels); SelectObject(target, old); DeleteObject(bitmap); DeleteDC(target); ReleaseDC(hwnd, source); return result;
+  free(pixels);
+  SelectObject(capture, old_capture);
+  DeleteObject(full_bitmap);
+  DeleteObject(bitmap);
+  DeleteDC(capture);
+  DeleteDC(target);
+  ReleaseDC(hwnd, source);
+  return result;
 }
 
 static int append_text(window_sources_buffer_t *buffer, const char *text) {

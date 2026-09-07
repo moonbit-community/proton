@@ -26,6 +26,7 @@ fn App::App(
     url_schemes: [],
     web_request_cancel_prefixes: [],
     web_request_redirect_prefixes: [],
+    web_request_header_prefixes: [],
     document_extensions: [],
     update_channel: None,
     command_capabilities: [],
@@ -98,6 +99,7 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
     url_schemes: self.url_schemes.copy(),
     web_request_cancel_prefixes: self.web_request_cancel_prefixes.copy(),
     web_request_redirect_prefixes: self.web_request_redirect_prefixes.copy(),
+    web_request_header_prefixes: self.web_request_header_prefixes.copy(),
     document_extensions: self.document_extensions.copy(),
     update_channel: if proton_dev_mode_enabled() {
       None

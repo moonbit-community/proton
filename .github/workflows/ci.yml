@@ -218,6 +218,10 @@ jobs:
           moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
           moon -C e2e build --target native --diagnostic-limit 80
 
+      - name: Test standalone macOS safe storage cipher
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: node scripts/test_safe_storage_macos.mjs
+
       - name: Test extensions on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
@@ -227,7 +231,7 @@ jobs:
               moonbit-community/proton_ext/desktop_capturer \
               moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
               moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
-              moonbit-community/proton_ext/microphone \
+              moonbit-community/proton_ext/microphone moonbit-community/proton_ext/net \
               moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
               moonbit-community/proton_ext/safe_storage \
               moonbit-community/proton_ext/process \
@@ -242,7 +246,7 @@ jobs:
               moonbit-community/proton_ext/desktop_capturer \
               moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
               moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
-              moonbit-community/proton_ext/microphone \
+              moonbit-community/proton_ext/microphone moonbit-community/proton_ext/net \
               moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
               moonbit-community/proton_ext/safe_storage \
               moonbit-community/proton_ext/process \
@@ -272,6 +276,7 @@ jobs:
             "moonbit-community/proton_ext/global_hotkey"
             "moonbit-community/proton_ext/keepawake"
             "moonbit-community/proton_ext/microphone"
+            "moonbit-community/proton_ext/net"
             "moonbit-community/proton_ext/notification"
             "moonbit-community/proton_ext/safe_storage"
             "moonbit-community/proton_ext/path"

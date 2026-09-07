@@ -103,7 +103,7 @@ typedef struct proton_browser_resource_handler {
 #else
   atomic_int refs;
 #endif
-  proton_browser_session_t *session;
+  proton_web_request_config_t *config;
 } proton_browser_resource_handler_t;
 
 static proton_browser_resource_handler_t *
@@ -134,6 +134,7 @@ static int CEF_CALLBACK proton_browser_resource_handler_release(
              1;
 #endif
   if (refs == 0) {
+    proton_internal_web_request_config_destroy(handler->config);
     free(handler);
     return 1;
   }
@@ -175,16 +176,35 @@ static cef_return_value_t CEF_CALLBACK proton_browser_on_before_resource_load(
   }
   cef_string_userfree_t url = request->get_url(request);
   char *url_utf8 = proton_browser_cef_string_to_utf8(url);
-  int result = proton_browser_session_before_resource_load(handler->session,
-                                                           url_utf8);
+  int result = !proton_web_request_config_should_cancel(handler->config,
+                                                       url_utf8);
   const char *redirect_url = proton_web_request_config_redirect_url(
-      handler->session->web_request_config, url_utf8);
+      handler->config, url_utf8);
   if (result != 0 && redirect_url != NULL && request->set_url != NULL) {
     cef_string_t destination = {0};
     if (cef_string_utf8_to_utf16(redirect_url, strlen(redirect_url),
                                  &destination)) {
       request->set_url(request, &destination);
       cef_string_clear(&destination);
+    }
+  }
+  if (result != 0 && request->set_header_by_name != NULL) {
+    size_t header_count = proton_web_request_config_header_count(
+        handler->config, url_utf8);
+    for (size_t index = 0; index < header_count; index++) {
+      const char *name = proton_web_request_config_header_name_at(
+          handler->config, url_utf8, index);
+      const char *value = proton_web_request_config_header_value_at(
+          handler->config, url_utf8, index);
+      cef_string_t name_string = {0};
+      cef_string_t value_string = {0};
+      if (name != NULL && value != NULL &&
+          cef_string_utf8_to_utf16(name, strlen(name), &name_string) &&
+          cef_string_utf8_to_utf16(value, strlen(value), &value_string)) {
+        request->set_header_by_name(request, &name_string, &value_string, 1);
+      }
+      cef_string_clear(&name_string);
+      cef_string_clear(&value_string);
     }
   }
   if (url != NULL) {
@@ -196,7 +216,7 @@ static cef_return_value_t CEF_CALLBACK proton_browser_on_before_resource_load(
 
 static void proton_browser_resource_handler_init(
     proton_browser_resource_handler_t *handler,
-    proton_browser_session_t *session) {
+    proton_web_request_config_t *config) {
   memset(handler, 0, sizeof(*handler));
   handler->handler.base.size = sizeof(handler->handler);
   handler->handler.base.add_ref = proton_browser_resource_handler_add_ref;
@@ -212,12 +232,13 @@ static void proton_browser_resource_handler_init(
 #else
   atomic_init(&handler->refs, 1);
 #endif
-  handler->session = session;
+  handler->config = config;
+  proton_web_request_config_retain(config);
 }
 
-cef_resource_request_handler_t *proton_browser_session_resource_handler(
-    proton_browser_session_t *session) {
-  if (session == NULL) {
+cef_resource_request_handler_t *proton_browser_resource_handler_create(
+    proton_web_request_config_t *config) {
+  if (config == NULL) {
     return NULL;
   }
   proton_browser_resource_handler_t *handler =
@@ -225,22 +246,13 @@ cef_resource_request_handler_t *proton_browser_session_resource_handler(
   if (handler == NULL) {
     return NULL;
   }
-  proton_browser_resource_handler_init(handler, session);
+  proton_browser_resource_handler_init(handler, config);
   return &handler->handler;
 }
 
 proton_web_request_config_t *proton_browser_session_web_request_config(
     proton_browser_session_t *session) {
   return session != NULL ? session->web_request_config : NULL;
-}
-
-int proton_browser_session_before_resource_load(
-    proton_browser_session_t *session, const char *url) {
-  return session != NULL &&
-                 proton_web_request_config_should_cancel(
-                     session->web_request_config, url)
-             ? 0
-             : 1;
 }
 
 static proton_pdf_print_callback_t *proton_pdf_print_callback_from_base(

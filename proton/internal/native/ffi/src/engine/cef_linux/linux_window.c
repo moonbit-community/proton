@@ -631,7 +631,7 @@ int32_t proton_engine_window_create(
   proton_browser_session_bind_lifecycle(window->browser_session,
                                         window->browser_lifecycle);
   proton_engine_client_t *client = proton_engine_client_create(
-      window->browser_lifecycle);
+      window->browser_lifecycle, config.web_request_config);
   if (client == NULL) {
     proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
     proton_browser_lifecycle_clear_owner(window->browser_lifecycle);

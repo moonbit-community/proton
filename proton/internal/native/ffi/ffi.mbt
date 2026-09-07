@@ -554,6 +554,15 @@ pub extern "C" fn web_request_config_add_redirect_prefix(
 ) -> Int = "proton_internal_web_request_config_add_redirect_prefix"
 
 ///|
+#borrow(url_prefix, header_name, header_value)
+pub extern "C" fn web_request_config_add_header_prefix(
+  config : WebRequestConfigHandle,
+  url_prefix : Bytes,
+  header_name : Bytes,
+  header_value : Bytes,
+) -> Int = "proton_internal_web_request_config_add_header_prefix"
+
+///|
 pub extern "C" fn web_request_config_destroy(
   config : WebRequestConfigHandle,
 ) -> Unit = "proton_internal_web_request_config_destroy"

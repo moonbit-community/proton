@@ -39,8 +39,8 @@ proton_browser_session_t *proton_browser_session_create(
     const proton_browser_policy_t *policy,
     proton_web_request_config_t *web_request_config,
     proton_browser_signal_fn signal, void *signal_user_data);
-cef_resource_request_handler_t *proton_browser_session_resource_handler(
-    proton_browser_session_t *session);
+cef_resource_request_handler_t *proton_browser_resource_handler_create(
+    proton_web_request_config_t *config);
 proton_web_request_config_t *proton_browser_session_web_request_config(
     proton_browser_session_t *session);
 void proton_browser_session_destroy(proton_browser_session_t *session);
@@ -50,8 +50,6 @@ void proton_browser_session_bind_lifecycle(
     proton_browser_session_t *session,
     proton_browser_lifecycle_t *lifecycle);
 
-int proton_browser_session_before_resource_load(
-    proton_browser_session_t *session, const char *url);
 
 void proton_browser_session_loading_changed(proton_browser_session_t *session,
                                              const char *url,

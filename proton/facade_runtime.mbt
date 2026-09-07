@@ -84,6 +84,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       failure_log~,
       web_request_cancel_prefixes=resolved.web_request_cancel_prefixes,
       web_request_redirect_prefixes=resolved.web_request_redirect_prefixes,
+      web_request_header_prefixes=resolved.web_request_header_prefixes,
     )
     match app_instance {
       Some(instance) => destroy_app_instance(instance)
@@ -220,6 +221,7 @@ async fn run_manifest(
   },
   web_request_cancel_prefixes? : Array[String] = [],
   web_request_redirect_prefixes? : Array[(String, String)] = [],
+  web_request_header_prefixes? : Array[(String, String, String)] = [],
 ) -> Unit raise AppRunError {
   let plans = planned_windows(manifest) catch {
     error => raise ConfigurationError(error)
@@ -456,6 +458,7 @@ async fn run_manifest(
           url_schemes~,
           web_request_cancel_prefixes~,
           web_request_redirect_prefixes~,
+          web_request_header_prefixes~,
         )
         let application_context = session.application_context()
         let application_start = application_tasks.spawn(
@@ -647,6 +650,7 @@ fn native_window_config(
   preferences : @locale.LocalePreferences,
   web_request_cancel_prefixes : Array[String],
   web_request_redirect_prefixes : Array[(String, String)],
+  web_request_header_prefixes : Array[(String, String, String)],
 ) -> @native.WindowConfig {
   let catalog = framework_catalog(preferences)
   @native.WindowConfig(
@@ -676,6 +680,7 @@ fn native_window_config(
     bridge?,
     web_request_cancel_prefixes~,
     web_request_redirect_prefixes~,
+    web_request_header_prefixes~,
   ).with_framework_titlebar_labels(
     catalog.titlebar_minimize,
     catalog.titlebar_maximize,
