@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_safe_storage"
 
-version = "0.2.8"
+version = "0.2.9"
 
 readme = "README.md"
 
