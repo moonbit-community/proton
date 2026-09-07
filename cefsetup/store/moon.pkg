@@ -4,7 +4,6 @@ import {
   "moonbitlang/async/process",
   "moonbitlang/async/stdio",
   "moonbitlang/core/debug",
-  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/x/crypto",

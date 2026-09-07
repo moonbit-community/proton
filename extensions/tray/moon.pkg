@@ -1,5 +1,4 @@
 import {
-  "moonbitlang/core/json",
   "moonbit-community/proton_tray" @sys_tray,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,

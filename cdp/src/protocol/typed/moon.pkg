@@ -5,7 +5,6 @@ import {
 }
 
 import {
-  "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbit-community/proton_cdp/protocol",
 } for "test"
