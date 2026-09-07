@@ -89,3 +89,11 @@ test "resource handlers survive session and configuration owner teardown" {
     content="continued=1,first_release=0,last_release=1",
   )
 }
+
+///|
+test "header names use ASCII case-insensitive comparison but paths and values do not" {
+  inspect(
+    header_case_trace(),
+    content="first=0,duplicate=-1,different_path=0,value=Token AbC",
+  )
+}

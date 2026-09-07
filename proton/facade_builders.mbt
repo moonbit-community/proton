@@ -353,7 +353,7 @@ pub fn App::web_request_header_prefix(
       ),
     )
   } else if self.web_request_header_prefixes.any(item => {
-      item.0 == url_prefix && item.1 == header_name
+      item.0 == url_prefix && item.1.equal_ignore_ascii_case(header_name)
     }) {
     self.validation_errors.push(
       InvalidSetting(name="web_request_header_prefix", message="is duplicated"),

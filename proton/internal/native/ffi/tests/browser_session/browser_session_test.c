@@ -412,3 +412,24 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_resource_handler_lifetime_trace(v
            continued, first_release, last_release);
   return proton_test_copy_trace(trace);
 }
+
+MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_header_case_trace(void) {
+  proton_web_request_config_t *config = NULL;
+  if (proton_internal_web_request_config_create(&config) != PROTON_OK) {
+    return proton_test_copy_trace("setup-error");
+  }
+  int first = proton_internal_web_request_config_add_header_prefix(
+      config, "https://api.example/Path/", "Authorization", "Token AbC");
+  int duplicate = proton_internal_web_request_config_add_header_prefix(
+      config, "https://api.example/Path/", "aUtHoRiZaTiOn", "other");
+  int different_path = proton_internal_web_request_config_add_header_prefix(
+      config, "https://api.example/path/", "authorization", "second");
+  const char *value = proton_web_request_config_header_value(
+      config, "https://api.example/Path/data", "AUTHORIZATION");
+  char trace[160];
+  snprintf(trace, sizeof(trace),
+           "first=%d,duplicate=%d,different_path=%d,value=%s",
+           first, duplicate, different_path, value != NULL ? value : "(null)");
+  proton_internal_web_request_config_destroy(config);
+  return proton_test_copy_trace(trace);
+}

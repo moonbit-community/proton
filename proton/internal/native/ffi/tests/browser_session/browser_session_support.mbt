@@ -87,3 +87,12 @@ pub fn resource_handler_lifetime_trace() -> String {
   let _ = @ffi.proton_abi_version_ffi()
   @utf8.decode_lossy(resource_handler_lifetime_trace_ffi())
 }
+
+///|
+extern "C" fn header_case_trace_ffi() -> Bytes = "proton_test_header_case_trace"
+
+///|
+pub fn header_case_trace() -> String {
+  let _ = @ffi.proton_abi_version_ffi()
+  @utf8.decode_lossy(header_case_trace_ffi())
+}

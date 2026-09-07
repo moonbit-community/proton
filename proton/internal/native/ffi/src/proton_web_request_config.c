@@ -41,6 +41,19 @@ static char *proton_web_request_copy(const char *value) {
   return copy;
 }
 
+// HTTP field names are ASCII case-insensitive, independent of the locale.
+static int proton_web_request_header_name_equal(const char *left,
+                                                 const char *right) {
+  while (*left != '\0' && *right != '\0') {
+    unsigned char a = (unsigned char)*left++;
+    unsigned char b = (unsigned char)*right++;
+    if (a >= 'A' && a <= 'Z') a += 'a' - 'A';
+    if (b >= 'A' && b <= 'Z') b += 'a' - 'A';
+    if (a != b) return 0;
+  }
+  return *left == *right;
+}
+
 int32_t proton_internal_web_request_config_add_header_prefix(
     proton_web_request_config_t *config, const char *url_prefix,
     const char *header_name, const char *header_value) {
@@ -50,7 +63,7 @@ int32_t proton_internal_web_request_config_add_header_prefix(
                             "web request header values are invalid");
   for (size_t i = 0; i < config->header_count; i++)
     if (strcmp(config->headers[i].prefix, url_prefix) == 0 &&
-        strcmp(config->headers[i].name, header_name) == 0)
+        proton_web_request_header_name_equal(config->headers[i].name, header_name))
       return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                               "web request header rule is duplicated");
   proton_web_request_header_t *headers = (proton_web_request_header_t *)realloc(
@@ -200,7 +213,7 @@ const char *proton_web_request_config_header_value(
   for (size_t i = 0; i < config->header_count; i++) {
     size_t length = strlen(config->headers[i].prefix);
     if (strncmp(url, config->headers[i].prefix, length) == 0 &&
-        strcmp(header_name, config->headers[i].name) == 0)
+        proton_web_request_header_name_equal(header_name, config->headers[i].name))
       return config->headers[i].value;
   }
   return NULL;

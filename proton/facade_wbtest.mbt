@@ -3623,3 +3623,24 @@ test "POSIX system locales are normalized only on Linux" {
     ["en-US"],
   )
 }
+
+///|
+test "web request header names reject ASCII case-insensitive duplicates" {
+  let app = html("Test", "<html></html>")
+    .identifier("dev.proton.header-case")
+    .web_request_header_prefix(
+      "https://api.example/Path/", "Authorization", "first",
+    )
+    .web_request_header_prefix(
+      "https://api.example/path/", "authorization", "second",
+    )
+  assert_true(app.validation_error() is None)
+  assert_true(
+    app
+    .web_request_header_prefix(
+      "https://api.example/Path/", "aUtHoRiZaTiOn", "third",
+    )
+    .validation_error()
+    is Some(_),
+  )
+}
