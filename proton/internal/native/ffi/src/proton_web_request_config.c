@@ -3,6 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <stdatomic.h>
+#endif
+
 enum { PROTON_WEB_REQUEST_MAX_CANCEL_PREFIXES = 128 };
 
 typedef struct {
@@ -12,7 +18,12 @@ typedef struct {
 typedef struct { char *prefix; char *name; char *value; } proton_web_request_header_t;
 
 struct proton_web_request_config {
-  size_t ref_count;
+  // Rules are populated on the owner thread before publishing to CEF.
+#ifdef _WIN32
+  volatile LONG ref_count;
+#else
+  atomic_int ref_count;
+#endif
   char **cancel_prefixes;
   size_t cancel_prefix_count;
   proton_web_request_redirect_t *redirects;
@@ -108,7 +119,11 @@ int32_t proton_internal_web_request_config_create(
     return proton_set_error(PROTON_ERR_ENGINE,
                             "failed to allocate web request configuration");
   }
+#ifdef _WIN32
   config->ref_count = 1;
+#else
+  atomic_init(&config->ref_count, 1);
+#endif
   *out_config = config;
   return PROTON_OK;
 }
@@ -145,7 +160,11 @@ int32_t proton_internal_web_request_config_add_cancel_prefix(
 
 void proton_web_request_config_retain(proton_web_request_config_t *config) {
   if (config != NULL) {
-    config->ref_count++;
+#ifdef _WIN32
+    (void)InterlockedIncrement(&config->ref_count);
+#else
+    (void)atomic_fetch_add_explicit(&config->ref_count, 1, memory_order_relaxed);
+#endif
   }
 }
 
@@ -227,9 +246,13 @@ const char *proton_web_request_config_header_value_at(
 
 void proton_internal_web_request_config_destroy(
     proton_web_request_config_t *config) {
-  if (config == NULL || config->ref_count == 0 || --config->ref_count != 0) {
-    return;
-  }
+  if (config == NULL) return;
+#ifdef _WIN32
+  if (InterlockedDecrement(&config->ref_count) != 0) return;
+#else
+  if (atomic_fetch_sub_explicit(&config->ref_count, 1,
+                                memory_order_acq_rel) != 1) return;
+#endif
   for (size_t index = 0; index < config->cancel_prefix_count; index++) {
     free(config->cancel_prefixes[index]);
   }

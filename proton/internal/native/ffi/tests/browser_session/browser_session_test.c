@@ -375,3 +375,40 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_web_request_cancel_trace(void) {
   }
   return proton_test_copy_trace(trace);
 }
+
+static cef_string_userfree_t CEF_CALLBACK proton_test_empty_request_url(
+    cef_request_t *self) {
+  (void)self;
+  return NULL;
+}
+
+MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_resource_handler_lifetime_trace(void) {
+  proton_web_request_config_t *config = NULL;
+  proton_browser_policy_t policy = {0};
+  if (proton_internal_web_request_config_create(&config) != PROTON_OK ||
+      proton_internal_web_request_config_add_cancel_prefix(
+          config, "https://blocked.example/") != PROTON_OK) {
+    proton_internal_web_request_config_destroy(config);
+    return proton_test_copy_trace("setup-error");
+  }
+  proton_browser_session_t *session =
+      proton_browser_session_create(&policy, config, NULL, NULL);
+  cef_resource_request_handler_t *handler =
+      proton_browser_resource_handler_create(config);
+  proton_internal_web_request_config_destroy(config);
+  proton_browser_session_destroy(session);
+  if (handler == NULL) return proton_test_copy_trace("handler-error");
+
+  // CEF may retain the handler after its UI-owned session is gone.
+  cef_request_t request = {0};
+  request.get_url = proton_test_empty_request_url;
+  handler->base.add_ref(&handler->base);
+  int first_release = handler->base.release(&handler->base);
+  int continued = handler->on_before_resource_load(
+      handler, NULL, NULL, &request, NULL) == RV_CONTINUE;
+  int last_release = handler->base.release(&handler->base);
+  char trace[100];
+  snprintf(trace, sizeof(trace), "continued=%d,first_release=%d,last_release=%d",
+           continued, first_release, last_release);
+  return proton_test_copy_trace(trace);
+}

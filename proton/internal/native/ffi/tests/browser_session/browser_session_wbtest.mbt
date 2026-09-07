@@ -81,3 +81,11 @@ test "web request cancellation matches URL prefixes" {
     content="matching=1,nonmatching=0,case_sensitive=0,empty=-1,duplicate=-1",
   )
 }
+
+///|
+test "resource handlers survive session and configuration owner teardown" {
+  inspect(
+    resource_handler_lifetime_trace(),
+    content="continued=1,first_release=0,last_release=1",
+  )
+}
