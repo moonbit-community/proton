@@ -82,3 +82,22 @@ proton_cli package --release
   current through `moonx moonbit-community/proton_codegen`.
 - `backend/app/main.mbt` assembles and runs the application.
 - `dist/` contains packaged application artifacts.
+
+## Contract and state flow
+
+Commands are bound explicitly in backend/todo/commands.mbt; the application
+requires no code-generation build rule. Shared response enums distinguish
+business rejection from transport failures.
+
+Each ready window attaches its own event emitter and detaches it on close.
+Writes return a business result and notify those explicit destinations that
+the data changed. Frontends install the listener before querying snapshots,
+coalesce invalidations during reads, and reject outdated request revisions.
+Search requests are managed subscriptions: changing the search cancels the
+previous read, and leaving the owning component releases it. Refresh also
+retries a failed listener installation.
+
+Run the generated backend and frontend regression tests with:
+
+    moon -C backend test todo --target native
+    moon -C frontend test main --target js

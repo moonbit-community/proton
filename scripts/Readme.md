@@ -59,9 +59,10 @@ required.
 ## `e2e_scaffold_source_smoke.mjs`
 
 Generates the default three-module Todo project outside the repository and
-checks its committed code generation, local-source compilation, Warren
+checks its explicit command bindings, local-source compilation, Warren
 frontend build, native backend build, ad-hoc signed macOS app package, typed
-commands, live events, ordinary-browser `BridgeUnavailable` state, and clean
+commands, typed business errors, independent window invalidations, cancelled
+searches, ordinary-browser `BridgeUnavailable` state, and clean
 process shutdown. This is a source-integration test: it replaces unpublished
 registry dependencies in the temporary project with modules from this checkout.
 It does not prove that the generated registry dependencies are published.

@@ -5,5 +5,8 @@ async fn main {
   .load_config()
   .single_instance()
   .commands(fn(registrar) raise { backend.register_commands(registrar) })
+  .window_lifecycle(on_ready=context => backend.attach(context), on_close=id => {
+    backend.detach(id)
+  })
   .run_or_abort()
 }

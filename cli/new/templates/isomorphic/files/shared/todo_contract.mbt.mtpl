@@ -88,27 +88,64 @@ pub extend DeleteTodoRequest with Eq::{not_equal, equal}
 pub extend DeleteTodoRequest with Debug::{to_repr}
 
 ///|
-pub let list_todos : @proton_contract.Command[Unit, TodoSnapshot] = @proton_contract.command(
+pub let list_todos : @proton_contract.Command[ListTodosRequest, TodoSnapshot] = @proton_contract.command(
   "list_todos",
 )
 
 ///|
-pub let create_todo : @proton_contract.Command[CreateTodoRequest, TodoSnapshot] = @proton_contract.command(
+pub let create_todo : @proton_contract.Command[CreateTodoRequest, MutationReply] = @proton_contract.command(
   "create_todo",
 )
 
 ///|
 pub let set_todo_completed : @proton_contract.Command[
   SetTodoCompletedRequest,
-  TodoSnapshot,
+  MutationReply,
 ] = @proton_contract.command("set_todo_completed")
 
 ///|
-pub let delete_todo : @proton_contract.Command[DeleteTodoRequest, TodoSnapshot] = @proton_contract.command(
+pub let delete_todo : @proton_contract.Command[DeleteTodoRequest, MutationReply] = @proton_contract.command(
   "delete_todo",
 )
 
 ///|
-pub let todos_changed : @proton_contract.Event[TodoSnapshot] = @proton_contract.event(
+pub let todos_changed : @proton_contract.Event[TodosChanged] = @proton_contract.event(
   "todos_changed",
 )
+
+///|
+pub(all) struct ListTodosRequest {
+  query : String
+} derive(ToJson, FromJson)
+
+///|
+pub extend ListTodosRequest with ToJson::{to_json}
+
+///|
+pub extend ListTodosRequest with FromJson::{from_json}
+
+///|
+/// Expected business outcomes are data, separate from transport failures.
+pub(all) enum MutationReply {
+  Changed(version~ : Int)
+  InvalidTitle
+  MissingTodo
+} derive(ToJson, FromJson)
+
+///|
+pub extend MutationReply with ToJson::{to_json}
+
+///|
+pub extend MutationReply with FromJson::{from_json}
+
+///|
+/// A live invalidation notice. Query a fresh snapshot after receiving it.
+pub(all) struct TodosChanged {
+  version : Int
+} derive(ToJson, FromJson)
+
+///|
+pub extend TodosChanged with ToJson::{to_json}
+
+///|
+pub extend TodosChanged with FromJson::{from_json}

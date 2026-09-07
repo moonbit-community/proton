@@ -143,30 +143,67 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|pub extend DeleteTodoRequest with Debug::{to_repr}
           #|
           #|///|
-          #|pub let list_todos : @proton_contract.Command[Unit, TodoSnapshot] = @proton_contract.command(
+          #|pub let list_todos : @proton_contract.Command[ListTodosRequest, TodoSnapshot] = @proton_contract.command(
           #|  "list_todos",
           #|)
           #|
           #|///|
-          #|pub let create_todo : @proton_contract.Command[CreateTodoRequest, TodoSnapshot] = @proton_contract.command(
+          #|pub let create_todo : @proton_contract.Command[CreateTodoRequest, MutationReply] = @proton_contract.command(
           #|  "create_todo",
           #|)
           #|
           #|///|
           #|pub let set_todo_completed : @proton_contract.Command[
           #|  SetTodoCompletedRequest,
-          #|  TodoSnapshot,
+          #|  MutationReply,
           #|] = @proton_contract.command("set_todo_completed")
           #|
           #|///|
-          #|pub let delete_todo : @proton_contract.Command[DeleteTodoRequest, TodoSnapshot] = @proton_contract.command(
+          #|pub let delete_todo : @proton_contract.Command[DeleteTodoRequest, MutationReply] = @proton_contract.command(
           #|  "delete_todo",
           #|)
           #|
           #|///|
-          #|pub let todos_changed : @proton_contract.Event[TodoSnapshot] = @proton_contract.event(
+          #|pub let todos_changed : @proton_contract.Event[TodosChanged] = @proton_contract.event(
           #|  "todos_changed",
           #|)
+          #|
+          #|///|
+          #|pub(all) struct ListTodosRequest {
+          #|  query : String
+          #|} derive(ToJson, FromJson)
+          #|
+          #|///|
+          #|pub extend ListTodosRequest with ToJson::{to_json}
+          #|
+          #|///|
+          #|pub extend ListTodosRequest with FromJson::{from_json}
+          #|
+          #|///|
+          #|/// Expected business outcomes are data, separate from transport failures.
+          #|pub(all) enum MutationReply {
+          #|  Changed(version~ : Int)
+          #|  InvalidTitle
+          #|  MissingTodo
+          #|} derive(ToJson, FromJson)
+          #|
+          #|///|
+          #|pub extend MutationReply with ToJson::{to_json}
+          #|
+          #|///|
+          #|pub extend MutationReply with FromJson::{from_json}
+          #|
+          #|///|
+          #|/// A live invalidation notice. Query a fresh snapshot after receiving it.
+          #|pub(all) struct TodosChanged {
+          #|  version : Int
+          #|} derive(ToJson, FromJson)
+          #|
+          #|///|
+          #|pub extend TodosChanged with ToJson::{to_json}
+          #|
+          #|///|
+          #|pub extend TodosChanged with FromJson::{from_json}
           #|
       ),
     },
@@ -229,28 +266,46 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|struct Model {
           #|  draft : String
+          #|  query : String
+          #|  revision : Int
           #|  snapshot : @shared.TodoSnapshot
+          #|  has_snapshot : Bool
+          #|  listening : Bool
           #|  loading : Bool
+          #|  dirty : Bool
+          #|  retry : Int
           #|  error : String?
           #|} derive(Eq)
           #|
           #|///|
           #|enum Msg {
-          #|  Load
           #|  DraftChanged(String)
+          #|  QueryChanged(String)
           #|  Create
           #|  SetCompleted(Int, Bool)
           #|  Delete(Int)
-          #|  SnapshotReceived(@shared.TodoSnapshot)
+          #|  SnapshotReceived(Int, @shared.TodoSnapshot)
+          #|  QueryFailed(Int, @proton_client.ClientFailure)
+          #|  MutationReceived(@shared.MutationReply)
+          #|  Created(String, @shared.MutationReply)
+          #|  Invalidated(@shared.TodosChanged)
           #|  CommandFailed(@proton_client.ClientFailure)
+          #|  Retry
+          #|  ListenerReady
           #|}
           #|
           #|///|
           #|fn initial_model() -> Model {
           #|  {
           #|    draft: "",
+          #|    query: "",
+          #|    revision: 0,
           #|    snapshot: { version: 0, todos: [], },
-          #|    loading: true,
+          #|    has_snapshot: false,
+          #|    listening: false,
+          #|    loading: false,
+          #|    dirty: false,
+          #|    retry: 0,
           #|    error: None,
           #|  }
           #|}
@@ -259,33 +314,45 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|fn failure_message(error : @proton_client.ClientFailure) -> String {
           #|  match error {
           #|    @proton_client.BridgeUnavailable =>
-          #|      "The Proton bridge is unavailable. Start this page with `proton_cli dev`."
+          #|      "The Proton bridge is unavailable. Start this page with proton_cli dev."
           #|    _ => error.message()
+          #|  }
+          #|}
+          #|
+          #|///|
+          #|/// Coalesce invalidations while a query is running; a follow-up query closes
+          #|/// the race between reading a snapshot and receiving another invalidation.
+          #|fn invalidate(model : Model) -> Model {
+          #|  if model.loading {
+          #|    { ..model, dirty: true, }
+          #|  } else {
+          #|    { ..model, revision: model.revision + 1, loading: true, error: None, }
           #|  }
           #|}
           #|
           #|///|
           #|fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
           #|  match msg {
-          #|    Load =>
-          #|      (
-          #|        { ..model, loading: true, error: None, },
-          #|        @proton_rabbita.invoke(
-          #|          @shared.list_todos,
-          #|          (),
-          #|          snapshot => emit(SnapshotReceived(snapshot)),
-          #|          error => emit(CommandFailed(error)),
-          #|        ),
-          #|      )
           #|    DraftChanged(draft) => ({ ..model, draft, }, @rabbita.none)
-          #|    Create if model.draft.trim().is_empty() => (model, @rabbita.none)
+          #|    QueryChanged(query) =>
+          #|      (
+          #|        {
+          #|          ..model,
+          #|          query,
+          #|          revision: model.revision + 1,
+          #|          loading: true,
+          #|          dirty: false,
+          #|          error: None,
+          #|        },
+          #|        @rabbita.none,
+          #|      )
           #|    Create =>
           #|      (
-          #|        { ..model, draft: "", error: None, },
+          #|        { ..model, error: None, },
           #|        @proton_rabbita.invoke(
           #|          @shared.create_todo,
           #|          { title: model.draft, },
-          #|          snapshot => emit(SnapshotReceived(snapshot)),
+          #|          reply => emit(Created(model.draft, reply)),
           #|          error => emit(CommandFailed(error)),
           #|        ),
           #|      )
@@ -295,7 +362,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|        @proton_rabbita.invoke(
           #|          @shared.set_todo_completed,
           #|          { id, completed, },
-          #|          snapshot => emit(SnapshotReceived(snapshot)),
+          #|          reply => emit(MutationReceived(reply)),
           #|          error => emit(CommandFailed(error)),
           #|        ),
           #|      )
@@ -305,27 +372,105 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|        @proton_rabbita.invoke(
           #|          @shared.delete_todo,
           #|          { id, },
-          #|          snapshot => emit(SnapshotReceived(snapshot)),
+          #|          reply => emit(MutationReceived(reply)),
           #|          error => emit(CommandFailed(error)),
           #|        ),
           #|      )
-          #|    SnapshotReceived(snapshot) =>
-          #|      ({ ..model, snapshot, loading: false, error: None, }, @rabbita.none)
-          #|    CommandFailed(error) =>
+          #|    Created(title, reply) => {
+          #|      let model = if reply is @shared.Changed(..) && model.draft == title {
+          #|        { ..model, draft: "", }
+          #|      } else {
+          #|        model
+          #|      }
+          #|      update(model, MutationReceived(reply), emit)
+          #|    }
+          #|    MutationReceived(@shared.InvalidTitle) =>
+          #|      ({ ..model, error: Some("Enter a non-empty title."), }, @rabbita.none)
+          #|    MutationReceived(@shared.MissingTodo) =>
           #|      (
-          #|        { ..model, loading: false, error: Some(failure_message(error)), },
+          #|        { ..invalidate(model), error: Some("This todo no longer exists."), },
+          #|        @rabbita.none,
+          #|      )
+          #|    MutationReceived(@shared.Changed(..)) => (invalidate(model), @rabbita.none)
+          #|    Invalidated(notice) =>
+          #|      if notice.version > model.snapshot.version {
+          #|        (invalidate(model), @rabbita.none)
+          #|      } else {
+          #|        (model, @rabbita.none)
+          #|      }
+          #|    SnapshotReceived(revision, snapshot) => {
+          #|      guard revision == model.revision else { return (model, @rabbita.none) }
+          #|      let model = if snapshot.version >= model.snapshot.version {
+          #|        { ..model, snapshot, has_snapshot: true, loading: false, error: None, }
+          #|      } else {
+          #|        { ..model, loading: false, }
+          #|      }
+          #|      if model.dirty {
+          #|        (invalidate({ ..model, dirty: false, }), @rabbita.none)
+          #|      } else {
+          #|        (model, @rabbita.none)
+          #|      }
+          #|    }
+          #|    QueryFailed(revision, error) =>
+          #|      if revision != model.revision {
+          #|        (model, @rabbita.none)
+          #|      } else {
+          #|        (
+          #|          { ..model, loading: false, error: Some(failure_message(error)), },
+          #|          @rabbita.none,
+          #|        )
+          #|      }
+          #|    CommandFailed(error) =>
+          #|      ({ ..model, error: Some(failure_message(error)), }, @rabbita.none)
+          #|    ListenerReady =>
+          #|      (
+          #|        {
+          #|          ..model,
+          #|          listening: true,
+          #|          loading: true,
+          #|          revision: model.revision + 1,
+          #|          dirty: false,
+          #|        },
+          #|        @rabbita.none,
+          #|      )
+          #|    Retry =>
+          #|      (
+          #|        {
+          #|          ..model,
+          #|          retry: model.retry + 1,
+          #|          listening: false,
+          #|          loading: false,
+          #|          dirty: false,
+          #|          error: None,
+          #|        },
           #|        @rabbita.none,
           #|      )
           #|  }
           #|}
           #|
           #|///|
-          #|fn subscriptions(_model : Model, emit : Emit[Msg]) -> @sub.Sub {
-          #|  @proton_rabbita.subscribe(
-          #|    @shared.todos_changed,
-          #|    snapshot => emit(SnapshotReceived(snapshot)),
-          #|    error => emit(CommandFailed(error)),
-          #|  )
+          #|fn subscriptions(model : Model, emit : Emit[Msg]) -> @sub.Sub {
+          #|  @sub.batch([
+          #|    @proton_rabbita.subscribe(
+          #|      @shared.todos_changed,
+          #|      notice => emit(Invalidated(notice)),
+          #|      error => emit(CommandFailed(error)),
+          #|      retry=model.retry,
+          #|      ready=emit(ListenerReady),
+          #|    ),
+          #|    if model.listening && model.loading {
+          #|      @proton_rabbita.request(
+          #|        @shared.list_todos,
+          #|        { query: model.query, },
+          #|        snapshot => emit(SnapshotReceived(model.revision, snapshot)),
+          #|        error => emit(QueryFailed(model.revision, error)),
+          #|        key="todos",
+          #|        revision=model.revision,
+          #|      )
+          #|    } else {
+          #|      @sub.none
+          #|    },
+          #|  ])
           #|}
           #|
           #|///|
@@ -357,12 +502,16 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  for todo in model.snapshot.todos {
           #|    rows.push(todo_row(emit, todo))
           #|  }
-          #|  let content = if model.loading {
-          #|    p(class="status", "Loading todos...")
-          #|  } else if rows.is_empty() {
-          #|    p(class="status", "No todos yet.")
-          #|  } else {
+          #|  let content = if !rows.is_empty() {
           #|    ul(class="todo-list", rows)
+          #|  } else if model.loading || (!model.has_snapshot && model.error is None) {
+          #|    p(class="status", "Loading todos...")
+          #|  } else if model.error is Some(_) || !model.has_snapshot {
+          #|    @html.nothing
+          #|  } else if !model.query.trim().is_empty() {
+          #|    p(class="status", "No matching todos.")
+          #|  } else {
+          #|    p(class="status", "No todos yet.")
           #|  }
           #|  let error = match model.error {
           #|    Some(message) => p(class="error", message)
@@ -381,6 +530,22 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|      ),
           #|      input(input_type=Submit, value="Add todo"),
           #|    ]),
+          #|    div(class="todo-toolbar", [
+          #|      input(
+          #|        value=model.query,
+          #|        placeholder="Search todos",
+          #|        on_input=emit.map(value => QueryChanged(value)),
+          #|      ),
+          #|      button(
+          #|        type_="button",
+          #|        on_click=emit(Retry),
+          #|        if model.loading {
+          #|          "Refreshing..."
+          #|        } else {
+          #|          "Refresh"
+          #|        },
+          #|      ),
+          #|    ]),
           #|    error,
           #|    content,
           #|  ])
@@ -389,7 +554,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|fn todo_app() -> @rabbita.Val[Html] {
           #|  let (model, emit) = @rabbita.create_state_with_init(
-          #|    init=emit => (initial_model(), emit(Load)),
+          #|    init=_emit => (initial_model(), @rabbita.none),
           #|    update~,
           #|    subscriptions~,
           #|  )
@@ -480,11 +645,30 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  font-weight: 750;
           #|}
           #|
-          #|form {
+          #|form,
+          #|.todo-toolbar {
           #|  display: grid;
           #|  grid-template-columns: minmax(0, 1fr) auto;
           #|  gap: 10px;
           #|  padding: 22px 30px;
+          #|}
+          #|
+          #|form {
+          #|  padding-bottom: 12px;
+          #|}
+          #|
+          #|.todo-toolbar {
+          #|  padding-top: 0;
+          #|}
+          #|
+          #|.todo-toolbar input {
+          #|  min-width: 0;
+          #|  width: 100%;
+          #|}
+          #|
+          #|input[type="submit"],
+          #|.todo-toolbar button {
+          #|  min-width: 124px;
           #|}
           #|
           #|input,
@@ -569,9 +753,21 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|    padding-right: 18px;
           #|  }
           #|
+          #|  form,
+          #|  .todo-toolbar {
+          #|    padding-left: 18px;
+          #|    padding-right: 18px;
+          #|  }
+          #|
           #|  form {
           #|    grid-template-columns: 1fr;
-          #|    padding: 18px;
+          #|    padding-top: 18px;
+          #|  }
+          #|
+          #|  .status,
+          #|  .error {
+          #|    padding-left: 18px;
+          #|    padding-right: 18px;
           #|  }
           #|}
           #|
@@ -595,11 +791,6 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|license = "Apache-2.0"
           #|
           #|description = "Proton backend for {{title}}."
-          #|
-          #|rule(
-          #|  name: "proton_codegen",
-          #|  command: "moonx moonbit-community/proton_codegen@{{proton_codegen_version}} -C \"$mod_dir\" \"$input\" -o \"$output\"",
-          #|)
           #|
           #|options(
           #|  warn_list: "",
@@ -636,6 +827,9 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  .load_config()
           #|  .single_instance()
           #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
+          #|  .window_lifecycle(on_ready=context => backend.attach(context), on_close=id => {
+          #|    backend.detach(id)
+          #|  })
           #|  .run_or_abort()
           #|}
           #|
@@ -646,20 +840,11 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
       template_name: "isomorphic/backend/todo/moon.pkg.mtpl",
       template_source: (
           #|import {
-          #|  "moonbitlang/core/json",
           #|  "moonbit-community/proton",
           #|  "{{shared_module}}" @shared,
           #|}
           #|
           #|supported_targets = "native"
-          #|
-          #|dev_build(
-          #|  rule: "proton_codegen",
-          #|  input: "commands.mbt",
-          #|  output: "commands.g.mbt",
-          #|)
-          #|
-          #|formatter(ignore: [ "commands.g.mbt" ])
           #|
       ),
     },
@@ -672,27 +857,49 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  mut next_id : Int
           #|  mut version : Int
           #|  todos : Array[@shared.TodoItem]
+          #|  listeners : Map[String, @proton.WindowEventEmitter]
           #|}
           #|
           #|///|
           #|pub fn Backend::Backend() -> Backend {
-          #|  Backend::{ next_id: 1, version: 0, todos: [], }
+          #|  Backend::{ next_id: 1, version: 0, todos: [], listeners: Map([]), }
           #|}
           #|
           #|///|
-          #|fn Backend::snapshot(self : Backend) -> @shared.TodoSnapshot {
-          #|  { version: self.version, todos: self.todos.copy(), }
+          #|/// Each window owns its event destination until its lifecycle ends.
+          #|pub fn Backend::attach(
+          #|  self : Backend,
+          #|  context : @proton.WindowContext,
+          #|) -> String {
+          #|  let id = context.handle().id()
+          #|  self.listeners[id] = context.events()
+          #|  id
           #|}
           #|
           #|///|
-          #|fn Backend::create(self : Backend, title : String) -> @shared.TodoSnapshot {
-          #|  let title = title.trim().to_owned()
-          #|  if !title.is_empty() {
-          #|    self.todos.push({ id: self.next_id, title, completed: false, })
-          #|    self.next_id += 1
-          #|    self.version += 1
+          #|pub fn Backend::detach(self : Backend, id : String) -> Unit {
+          #|  self.listeners.remove(id)
+          #|}
+          #|
+          #|///|
+          #|fn Backend::snapshot(self : Backend, query : String) -> @shared.TodoSnapshot {
+          #|  let query = query.trim().to_owned().to_lower()
+          #|  {
+          #|    version: self.version,
+          #|    todos: self.todos.filter(todo => todo.title.to_lower().contains(query)),
           #|  }
-          #|  self.snapshot()
+          #|}
+          #|
+          #|///|
+          #|fn Backend::create(self : Backend, title : String) -> @shared.MutationReply {
+          #|  let title = title.trim().to_owned()
+          #|  if title.is_empty() {
+          #|    return @shared.InvalidTitle
+          #|  }
+          #|  self.todos.push({ id: self.next_id, title, completed: false, })
+          #|  self.next_id += 1
+          #|  self.version += 1
+          #|  @shared.Changed(version=self.version)
           #|}
           #|
           #|///|
@@ -700,28 +907,44 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  self : Backend,
           #|  id : Int,
           #|  completed : Bool,
-          #|) -> @shared.TodoSnapshot {
+          #|) -> @shared.MutationReply {
           #|  for index = 0; index < self.todos.length(); index = index + 1 {
           #|    let todo = self.todos[index]
-          #|    if todo.id == id && todo.completed != completed {
-          #|      self.todos[index] = { ..todo, completed, }
-          #|      self.version += 1
-          #|      break
+          #|    if todo.id == id {
+          #|      if todo.completed != completed {
+          #|        self.todos[index] = { ..todo, completed, }
+          #|        self.version += 1
+          #|      }
+          #|      return @shared.Changed(version=self.version)
           #|    }
           #|  }
-          #|  self.snapshot()
+          #|  @shared.MissingTodo
           #|}
           #|
           #|///|
-          #|fn Backend::delete(self : Backend, id : Int) -> @shared.TodoSnapshot {
+          #|fn Backend::delete(self : Backend, id : Int) -> @shared.MutationReply {
           #|  for index = 0; index < self.todos.length(); index = index + 1 {
           #|    if self.todos[index].id == id {
           #|      ignore(self.todos.remove(index))
           #|      self.version += 1
-          #|      break
+          #|      return @shared.Changed(version=self.version)
           #|    }
           #|  }
-          #|  self.snapshot()
+          #|  @shared.MissingTodo
+          #|}
+          #|
+          #|///|
+          #|/// Notify explicitly attached windows; this is not reliable state delivery.
+          #|async fn Backend::notify(self : Backend, reply : @shared.MutationReply) -> Unit {
+          #|  if reply is @shared.Changed(version~) {
+          #|    let destinations : Array[@proton.WindowEventEmitter] = []
+          #|    for _, events in self.listeners {
+          #|      destinations.push(events)
+          #|    }
+          #|    for events in destinations {
+          #|      events.emit(@shared.todos_changed, { version, })
+          #|    }
+          #|  }
           #|}
           #|
       ),
@@ -731,48 +954,30 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
       template_name: "isomorphic/backend/todo/commands.mbt.mtpl",
       template_source: (
           #|///|
-          #|using @shared {create_todo, delete_todo, list_todos, set_todo_completed}
-          #|
-          #|///|
-          #|#proton.command(contract=list_todos)
-          #|fn Backend::list_todos(self : Backend) -> @shared.TodoSnapshot {
-          #|  self.snapshot()
-          #|}
-          #|
-          #|///|
-          #|#proton.command(contract=create_todo)
-          #|async fn Backend::create_todo(
+          #|/// Explicit bindings let the compiler check each implementation against its
+          #|/// shared descriptor without an application code-generation step.
+          #|pub fn Backend::register_commands(
           #|  self : Backend,
-          #|  context : @proton.CommandContext,
-          #|  request : @shared.CreateTodoRequest,
-          #|) -> @shared.TodoSnapshot {
-          #|  let snapshot = self.create(request.title)
-          #|  context.emit(@shared.todos_changed, snapshot)
-          #|  snapshot
-          #|}
-          #|
-          #|///|
-          #|#proton.command(contract=set_todo_completed)
-          #|async fn Backend::set_todo_completed(
-          #|  self : Backend,
-          #|  context : @proton.CommandContext,
-          #|  request : @shared.SetTodoCompletedRequest,
-          #|) -> @shared.TodoSnapshot {
-          #|  let snapshot = self.set_completed(request.id, request.completed)
-          #|  context.emit(@shared.todos_changed, snapshot)
-          #|  snapshot
-          #|}
-          #|
-          #|///|
-          #|#proton.command(contract=delete_todo)
-          #|async fn Backend::delete_todo(
-          #|  self : Backend,
-          #|  context : @proton.CommandContext,
-          #|  request : @shared.DeleteTodoRequest,
-          #|) -> @shared.TodoSnapshot {
-          #|  let snapshot = self.delete(request.id)
-          #|  context.emit(@shared.todos_changed, snapshot)
-          #|  snapshot
+          #|  registrar : @proton.CommandRegistrar,
+          #|) -> Unit raise {
+          #|  registrar.bind(@shared.list_todos, (_context, request) => {
+          #|    self.snapshot(request.query)
+          #|  })
+          #|  registrar.bind(@shared.create_todo, (_context, request) => {
+          #|    let reply = self.create(request.title)
+          #|    self.notify(reply)
+          #|    reply
+          #|  })
+          #|  registrar.bind(@shared.set_todo_completed, (_context, request) => {
+          #|    let reply = self.set_completed(request.id, request.completed)
+          #|    self.notify(reply)
+          #|    reply
+          #|  })
+          #|  registrar.bind(@shared.delete_todo, (_context, request) => {
+          #|    let reply = self.delete(request.id)
+          #|    self.notify(reply)
+          #|    reply
+          #|  })
           #|}
           #|
       ),
@@ -802,9 +1007,9 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|- `backend/` is a native Proton module.
           #|- `proton.project.json` is required by `proton_cli dev`, `build`, and `package`.
           #|- Keep command and event names in `shared/todo_contract.mbt`.
-          #|- The Moon prebuild rule regenerates the typed bridge through
-          #|  `moonx moonbit-community/proton_codegen`; do not invoke codegen from application
-          #|  runtime code.
+          #|- Bind shared commands explicitly in backend/todo/commands.mbt.
+          #|- Write commands return business outcomes. Events invalidate snapshots; queries
+          #|  are component-owned subscriptions with revision guards for stale results.
           #|- Do not reintroduce the old WebSocket app runtime route.
           #|
       ),
@@ -898,6 +1103,25 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|- `backend/app/main.mbt` assembles and runs the application.
           #|- `dist/` contains packaged application artifacts.
           #|
+          #|## Contract and state flow
+          #|
+          #|Commands are bound explicitly in backend/todo/commands.mbt; the application
+          #|requires no code-generation build rule. Shared response enums distinguish
+          #|business rejection from transport failures.
+          #|
+          #|Each ready window attaches its own event emitter and detaches it on close.
+          #|Writes return a business result and notify those explicit destinations that
+          #|the data changed. Frontends install the listener before querying snapshots,
+          #|coalesce invalidations during reads, and reject outdated request revisions.
+          #|Search requests are managed subscriptions: changing the search cancels the
+          #|previous read, and leaving the owning component releases it. Refresh also
+          #|retries a failed listener installation.
+          #|
+          #|Run the generated backend and frontend regression tests with:
+          #|
+          #|    moon -C backend test todo --target native
+          #|    moon -C frontend test main --target js
+          #|
       ),
     },
     {
@@ -911,6 +1135,130 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|.moonagent/
           #|frontend/dist/
           #|backend/todo/commands.g.mbt
+          #|
+      ),
+    },
+    {
+      output_path: "backend/todo/backend_wbtest.mbt",
+      template_name: "isomorphic/backend/todo/backend_wbtest.mbt.mtpl",
+      template_source: (
+          #|///|
+          #|test "business failures do not mutate state and queries return filtered snapshots" {
+          #|  let backend = Backend()
+          #|  assert_true(backend.create("  ") is @shared.InvalidTitle)
+          #|  assert_eq(backend.snapshot("").version, 0)
+          #|  assert_true(backend.set_completed(99, true) is @shared.MissingTodo)
+          #|  assert_true(backend.delete(99) is @shared.MissingTodo)
+          #|  assert_true(backend.create("Alpha") is @shared.Changed(version=1))
+          #|  assert_true(backend.create("Beta") is @shared.Changed(version=2))
+          #|  let result = backend.snapshot("ALP")
+          #|  assert_eq(result.version, 2)
+          #|  assert_eq(result.todos.length(), 1)
+          #|  assert_eq(result.todos[0].title, "Alpha")
+          #|}
+          #|
+      ),
+    },
+    {
+      output_path: "frontend/main/model_wbtest.mbt",
+      template_name: "isomorphic/frontend/main/model_wbtest.mbt.mtpl",
+      template_source: (
+          #|///|
+          #|fn test_update(model : Model, msg : Msg) -> Model {
+          #|  let (next, _) = update(model, msg, _ => @rabbita.none)
+          #|  next
+          #|}
+          #|
+          #|///|
+          #|test "queries wait for the event listener and reject superseded results" {
+          #|  let initial = initial_model()
+          #|  assert_false(initial.loading)
+          #|  assert_false(initial.listening)
+          #|  let ready = test_update(initial, ListenerReady)
+          #|  assert_true(ready.loading && ready.listening)
+          #|  let searching = test_update(ready, QueryChanged("new"))
+          #|  let stale = test_update(
+          #|    searching,
+          #|    SnapshotReceived(ready.revision, {
+          #|      version: 9,
+          #|      todos: [{ id: 1, title: "old query", completed: false, }],
+          #|    }),
+          #|  )
+          #|  assert_eq(stale.snapshot.version, 0)
+          #|  assert_true(stale.loading)
+          #|  let current = test_update(
+          #|    stale,
+          #|    SnapshotReceived(searching.revision, {
+          #|      version: 10,
+          #|      todos: [{ id: 2, title: "new query", completed: false, }],
+          #|    }),
+          #|  )
+          #|  assert_eq(current.snapshot.todos[0].title, "new query")
+          #|  assert_false(current.loading)
+          #|}
+          #|
+          #|///|
+          #|test "invalidations during a read coalesce into a follow-up query" {
+          #|  let reading = test_update(initial_model(), ListenerReady)
+          #|  let dirty = test_update(
+          #|    test_update(reading, Invalidated({ version: 1, })),
+          #|    Invalidated({ version: 2, }),
+          #|  )
+          #|  assert_eq(dirty.revision, reading.revision)
+          #|  assert_true(dirty.dirty)
+          #|  let next = test_update(
+          #|    dirty,
+          #|    SnapshotReceived(reading.revision, { version: 1, todos: [], }),
+          #|  )
+          #|  assert_eq(next.revision, reading.revision + 1)
+          #|  assert_true(next.loading)
+          #|  assert_false(next.dirty)
+          #|  let fresh = test_update(
+          #|    next,
+          #|    SnapshotReceived(next.revision, { version: 2, todos: [], }),
+          #|  )
+          #|  assert_false(fresh.loading)
+          #|}
+          #|
+          #|///|
+          #|test "business failures and old create replies preserve newer user input" {
+          #|  let model = { ..initial_model(), draft: "new draft", }
+          #|  let failed = test_update(model, Created("submitted", @shared.InvalidTitle))
+          #|  assert_eq(failed.draft, "new draft")
+          #|  assert_eq(failed.error, Some("Enter a non-empty title."))
+          #|  let succeeded = test_update(
+          #|    model,
+          #|    Created("submitted", @shared.Changed(version=1)),
+          #|  )
+          #|  assert_eq(succeeded.draft, "new draft")
+          #|}
+          #|
+          #|///|
+          #|test "failed initial reads are not empty snapshots and refresh retains data" {
+          #|  let initial = test_update(initial_model(), ListenerReady)
+          #|  let failed = test_update(
+          #|    initial,
+          #|    QueryFailed(initial.revision, @proton_client.BridgeUnavailable),
+          #|  )
+          #|  assert_false(failed.has_snapshot)
+          #|  let loaded = test_update(
+          #|    initial,
+          #|    SnapshotReceived(initial.revision, {
+          #|      version: 1,
+          #|      todos: [{ id: 1, title: "Keep visible", completed: false, }],
+          #|    }),
+          #|  )
+          #|  assert_true(loaded.has_snapshot)
+          #|  let refreshing = test_update(loaded, QueryChanged("new query"))
+          #|  assert_true(refreshing.loading)
+          #|  assert_eq(refreshing.snapshot.todos[0].title, "Keep visible")
+          #|  let empty = test_update(
+          #|    refreshing,
+          #|    SnapshotReceived(refreshing.revision, { version: 1, todos: [], }),
+          #|  )
+          #|  assert_true(empty.has_snapshot)
+          #|  assert_true(empty.snapshot.todos.is_empty())
+          #|}
           #|
       ),
     },

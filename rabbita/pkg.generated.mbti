@@ -10,9 +10,11 @@ import {
 }
 
 // Values
-pub fn[Request : ToJson, Response : @json.FromJson] invoke(@proton_contract.Command[Request, Response], Request, (Response) -> @cmd.Cmd, (@proton_client.ClientFailure) -> @cmd.Cmd) -> @cmd.Cmd
+pub fn[Request : ToJson, Response : @json.FromJson] invoke(@proton_contract.Command[Request, Response], Request, (Response) -> @cmd.Cmd, (@proton_client.ClientFailure) -> @cmd.Cmd, client? : @proton_client.Client) -> @cmd.Cmd
 
-pub fn[Payload : @json.FromJson] subscribe(@proton_contract.Event[Payload], (Payload) -> @cmd.Cmd, (@proton_client.ClientFailure) -> @cmd.Cmd) -> @sub.Sub
+pub fn[Request : ToJson, Response : @json.FromJson] request(@proton_contract.Command[Request, Response], Request, (Response) -> @cmd.Cmd, (@proton_client.ClientFailure) -> @cmd.Cmd, key~ : String, revision~ : Int, client? : @proton_client.Client) -> @sub.Sub
+
+pub fn[Payload : @json.FromJson] subscribe(@proton_contract.Event[Payload], (Payload) -> @cmd.Cmd, (@proton_client.ClientFailure) -> @cmd.Cmd, key? : String, retry? : Int, ready? : @cmd.Cmd, client? : @proton_client.Client) -> @sub.Sub
 
 // Errors
 

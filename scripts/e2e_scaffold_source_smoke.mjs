@@ -15,11 +15,6 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-scaffold-e2e-"));
 const projectDir = path.join(tempRoot, "todo");
 const frontendDir = path.join(projectDir, "frontend");
 const frontendDist = path.join(frontendDir, "dist");
-const codegenVersion = fs
-  .readFileSync(path.join(repoRoot, "codegen", "moon.mod"), "utf8")
-  .match(/^version\s*=\s*"([^"]+)"/m)?.[1];
-assert(codegenVersion, "codegen/moon.mod is missing its version");
-const codegenCoordinate = `moonbit-community/proton_codegen@${codegenVersion}`;
 const warrenCoordinate = "moonbit-community/warren@0.3.2";
 let appProcess = null;
 let staticServer = null;
@@ -112,9 +107,11 @@ function verifyGeneratedTree() {
     "backend/app/moon.pkg",
     "backend/moon.mod",
     "backend/todo/backend.mbt",
+    "backend/todo/backend_wbtest.mbt",
     "backend/todo/commands.mbt",
     "backend/todo/moon.pkg",
     "frontend/main/main.mbt",
+    "frontend/main/model_wbtest.mbt",
     "frontend/main/moon.pkg",
     "frontend/moon.mod",
     "frontend/public/index.html",
@@ -144,62 +141,23 @@ function verifyGeneratedTree() {
     "generated backend must not depend on a CLI binary shim",
   );
   assert(
-    !todoPackage.includes("$mooncake_bin"),
-    "generated backend must not run the CLI through $mooncake_bin",
+    !/dev_build|proton_codegen/.test(todoPackage + backendMod),
+    "generated application must use explicit command bindings",
   );
 }
 
-function useLocalCodegenPackage() {
-  const backendModPath = path.join(projectDir, "backend", "moon.mod");
-  const source = fs.readFileSync(backendModPath, "utf8");
-  const localCommand = `moon run '${path.join(repoRoot, "codegen")}' --target wasm --`;
-  const updated = source.replace(`moonx ${codegenCoordinate}`, localCommand);
-  assert(updated !== source, "generated backend is missing the codegen command");
-  assert(
-    !updated.includes(`moonx ${codegenCoordinate}`),
-    "generated backend contains multiple codegen commands",
+function enableSecondWindow() {
+  const file = path.join(projectDir, "backend", "app", "main.mbt");
+  const source = fs.readFileSync(file, "utf8");
+  const updated = source.replace(
+    ".load_config()",
+    '.add_window("secondary", "Todo E2E Secondary", @proton.AppEntry::Asset("frontend/dist/index.html"))\n  .load_config()',
+  ).replace(
+    ".commands(fn(registrar) raise { backend.register_commands(registrar) })",
+    '.commands(fn(registrar) raise { backend.register_commands(registrar) }, targets=[@proton.RendererTarget::entry(), @proton.RendererTarget::entry(window="secondary")])',
   );
-  fs.writeFileSync(backendModPath, updated);
-}
-
-function verifySourceSmokeCodegen() {
-  const generated = path.join(
-    projectDir,
-    "backend",
-    "todo",
-    "commands.g.mbt",
-  );
-  const fresh = path.join(tempRoot, "commands.fresh.mbt");
-  run("moon", [
-    "run",
-    path.join(repoRoot, "codegen"),
-    "--target",
-    "wasm",
-    "--",
-    path.join(projectDir, "backend", "todo", "commands.mbt"),
-    "-o",
-    fresh,
-  ]);
-  assert(
-    fs.readFileSync(generated, "utf8") === fs.readFileSync(fresh, "utf8"),
-    "Moon prebuild output differs from direct WASM codegen",
-  );
-}
-
-function makeSourceSmokeCodegenStale() {
-  fs.writeFileSync(
-    path.join(projectDir, "backend", "todo", "commands.g.mbt"),
-    "stale registrar\n",
-  );
-}
-
-function verifySourceSmokeCodegenRefreshed() {
-  const generated = path.join(projectDir, "backend", "todo", "commands.g.mbt");
-  const fresh = path.join(tempRoot, "commands.fresh.mbt");
-  assert(
-    fs.readFileSync(generated, "utf8") === fs.readFileSync(fresh, "utf8"),
-    "Moon package build did not refresh commands.g.mbt",
-  );
+  assert(updated !== source, "could not enable the second validation window");
+  fs.writeFileSync(file, updated);
 }
 
 function connectLocalSourceModules() {
@@ -368,6 +326,7 @@ class CdpClient {
       const message = JSON.parse(event.data);
       const pending = this.pending.get(message.id);
       if (!pending) {
+        if (message.method === "Runtime.exceptionThrown") console.error(JSON.stringify(message.params));
         return;
       }
       this.pending.delete(message.id);
@@ -428,10 +387,14 @@ async function waitForPage(cdpPort) {
 }
 
 async function waitForExpression(client, expression, description) {
-  await waitUntil(
-    async () => (await client.evaluate(expression)) === true,
-    description,
-  );
+  try {
+    await waitUntil(
+      async () => (await client.evaluate(expression)) === true,
+      description,
+    );
+  } catch (error) {
+    throw new Error(`${error.message}\nPage: ${await client.evaluate("document.body.innerText")}`);
+  }
 }
 
 async function probeTodoBridge(client) {
@@ -452,7 +415,7 @@ async function probeTodoBridge(client) {
           "app:todos_changed",
           (payload) => events.push(JSON.parse(payload)),
         );
-        const initial = await invoke("app:list_todos", null);
+        const initial = await invoke("app:list_todos", { query: "" });
         let remoteFailure;
         try {
           await invoke("app:create_todo", null);
@@ -463,19 +426,22 @@ async function probeTodoBridge(client) {
             message: error && error.message,
           };
         }
-        const created = await invoke("app:create_todo", {
+        const createReply = await invoke("app:create_todo", {
           title: "Verify typed bridge",
         });
+        const created = await invoke("app:list_todos", { query: "" });
         await new Promise((resolve) => setTimeout(resolve, 100));
         const createdBody = document.body.innerText;
-        const completed = await invoke("app:set_todo_completed", {
+        const completeReply = await invoke("app:set_todo_completed", {
           id: created.todos[0].id,
           completed: true,
         });
-        const deleted = await invoke("app:delete_todo", {
+        const completed = await invoke("app:list_todos", { query: "" });
+        const deleteReply = await invoke("app:delete_todo", {
           id: created.todos[0].id,
         });
         await new Promise((resolve) => setTimeout(resolve, 100));
+        const deleted = await invoke("app:list_todos", { query: "" });
         unsubscribe();
         return {
           initial,
@@ -580,6 +546,7 @@ async function probeBridgeUnavailable(client) {
     })`,
   );
   assert(state.hasBridge === false, "ordinary HTTP page unexpectedly has a bridge");
+  assert(!state.body.includes("No todos yet.") && !state.body.includes("No matching todos."), "failed initial load must not display an empty result");
 }
 
 function collectOutput(child) {
@@ -713,6 +680,65 @@ async function runPackagedAppSmoke(executable, expectedRevision) {
       `packaged frontend revision ${expectedRevision}`,
     );
     await probeTodoBridge(client);
+    await client.evaluate('document.querySelector("form").dispatchEvent(new Event("submit", {bubbles:true, cancelable:true}))');
+    await waitForExpression(client, 'document.body.innerText.includes("Enter a non-empty title.")', "typed business rejection");
+    await client.evaluate(`(() => {
+      const input = document.querySelector('input[placeholder="What needs doing?"]');
+      input.value = "Created through Rabbita";
+      input.dispatchEvent(new Event("input", {bubbles:true}));
+      document.querySelector("form").dispatchEvent(new Event("submit", {bubbles:true, cancelable:true}));
+    })()`);
+    await waitForExpression(client, 'document.body.innerText.includes("Created through Rabbita")', "Rabbita async write effect");
+    await client.evaluate('document.querySelector(".delete-button").click()');
+    await waitForExpression(client, '!document.body.innerText.includes("Created through Rabbita")', "Rabbita delete effect");
+    const secondPage = await waitUntil(async () => {
+      const response = await fetch("http://127.0.0.1:" + cdpPort + "/json/list");
+      const pages = await response.json();
+      return pages.find(target => target.type === "page" && target.id !== page.id &&
+        target.webSocketDebuggerUrl && target.url.includes("index.html"));
+    }, "the second Todo window");
+    const second = new CdpClient(secondPage.webSocketDebuggerUrl);
+    await second.open();
+    try {
+      await second.send("Runtime.enable");
+      await waitForExpression(second, 'Boolean(window.__MoonBit__?.core?.invokeOp)', "second bridge");
+      await client.evaluate('window.__MoonBit__.core.invokeOp("app:create_todo", {title:"Shared across windows"})', true);
+      await waitForExpression(second, 'document.body.innerText.includes("Shared across windows")', "cross-window invalidation");
+      await waitForExpression(client, 'document.body.innerText.includes("Shared across windows")', "initial list before delayed search");
+      await client.evaluate(`(() => {
+        const core = window.__MoonBit__.core;
+        const original = core.invokeJson.bind(core);
+        window.__searchAbortCount = 0;
+        core.invokeJson = (route, raw, options) => {
+          const result = original(route, raw, options);
+          if (route === "app:list_todos" && JSON.parse(raw).query === "Shared") {
+            options.signal.addEventListener("abort", () => window.__searchAbortCount++);
+            return result.then(value => new Promise(resolve => setTimeout(() => resolve(value), 300)));
+          }
+          return result;
+        };
+        const input = document.querySelector('input[placeholder="Search todos"]');
+        input.value = "Shared";
+        input.dispatchEvent(new Event("input", {bubbles:true}));
+      })()`);
+      await sleep(50);
+      assert(await client.evaluate('document.querySelectorAll(".todo-row").length > 0 && document.body.innerText.includes("Shared across windows")'), "refresh must retain the current list");
+      await client.evaluate(`(() => {
+        const input = document.querySelector('input[placeholder="Search todos"]');
+        input.value = "no matches";
+        input.dispatchEvent(new Event("input", {bubbles:true}));
+      })()`);
+      await sleep(400);
+      await waitForExpression(client, 'window.__searchAbortCount > 0 && document.querySelectorAll(".todo-row").length === 0 && document.body.innerText.includes("No matching todos.")', "cancelled search cannot overwrite the latest query");
+      await client.evaluate(`(() => {
+        const input = document.querySelector('input[placeholder="Search todos"]');
+        input.value = "";
+        input.dispatchEvent(new Event("input", {bubbles:true}));
+      })()`);
+      await waitForExpression(client, 'document.body.innerText.includes("Shared across windows")', "reset search");
+      await second.evaluate('(async () => { const data = await window.__MoonBit__.core.invokeOp("app:list_todos", {query:""}); await window.__MoonBit__.core.invokeOp("app:delete_todo", {id:data.todos[0].id}); })()', true);
+      await waitForExpression(client, '!document.body.innerText.includes("Shared across windows")', "reverse cross-window invalidation");
+    } finally { second.close(); }
     await probeBridgeUnavailable(client);
     await closeApplication(cdpPort);
   } finally {
@@ -752,12 +778,14 @@ async function main() {
   ]);
   verifyGeneratedTree();
   run("moon", ["fmt", "--check"], { cwd: projectDir });
-  useLocalCodegenPackage();
   connectLocalSourceModules();
+  enableSecondWindow();
+  run("moon", ["fmt"], { cwd: projectDir });
   localCli(["-C", projectDir, "cef", "setup"]);
 
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], { cwd: projectDir });
-  verifySourceSmokeCodegen();
+  run("moon", ["-C", "frontend", "test", "main", "--target", "js"], { cwd: projectDir });
+  run("moon", ["-C", "backend", "test", "todo", "--target", "native"], { cwd: projectDir });
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   run(
     "moonx",
@@ -776,7 +804,6 @@ async function main() {
     ["-C", "backend", "build", "app", "--target", "native", "--diagnostic-limit", "80"],
     { cwd: projectDir, env: runtimeEnv() },
   );
-  makeSourceSmokeCodegenStale();
   setFrontendPackageRevision("first");
   localCli(["-C", projectDir, "package", "--release", "--format", "app", "--sign"], {
     env: runtimeEnv({
@@ -785,7 +812,6 @@ async function main() {
     }),
     timeout: 600000,
   });
-  verifySourceSmokeCodegenRefreshed();
   let packaged = verifyPackagedApp();
   await runPackagedAppSmoke(packaged.executable, "first");
   setFrontendPackageRevision("second");

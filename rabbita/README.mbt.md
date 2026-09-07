@@ -40,9 +40,26 @@ test {
 }
 ```
 
-An event subscription installation failure is reported through its failure
-callback once. Rabbita retains a terminal subscription for that key instead of
-retrying after every model update, which prevents a failure-message feedback
-loop. To retry explicitly, omit the subscription for one update and then add it
-again. The Proton bridge is expected to be available before application
-frontend code starts.
+## Ownership and request effects
+
+subscribe creates a description with no installation side effects. Rabbita
+installs it in the owning state scope; each installed listener has independent
+callbacks and cleanup. Use different key values for multiple subscriptions to
+the same event within one scope. Increase retry to explicitly retry an
+installation failure. The optional ready command runs after successful listener
+installation, so initial queries need not race subscription setup.
+
+Use request for reads tied to component/query lifetime. Supply a stable key and
+a revision that changes whenever the input changes or the request is retried.
+Removing or replacing the subscription cancels it and suppresses late
+callbacks. A completed request is not restarted by unrelated model updates.
+Callbacks capture the originating request state; include the revision in
+application messages to reject completions already queued before replacement.
+
+invoke remains a one-shot effect, suitable for explicit writes; it is not
+cancelled when a component is removed. Cancelling request observation does not roll back backend mutations. Both functions accept an
+optional client for isolated tests or browser previews.
+
+The default Todo scaffold demonstrates explicit backend bindings, typed
+business outcomes, listener-first initialization, invalidation-driven reads,
+revision guards, and separately owned window event destinations.

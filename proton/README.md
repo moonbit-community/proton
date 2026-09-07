@@ -95,8 +95,8 @@ packages expose typed values consumed by `.capability(...)`.
 
 `@proton.CommandRegistrar` binds contract command descriptors to async
 handlers; each handler receives a `@proton.CommandContext` and the decoded
-request payload. The backend emits events to the renderer with
-`CommandContext::emit(event, payload)`. JavaScript invokes commands and
+request payload. The backend emits events to the requesting page with
+`CommandContext::emit_to_caller(event, payload)`. JavaScript invokes commands and
 subscribes to events through the bridge installed on `window`: commands are
 called by their contract operation name through `core.invokeOp`, and backend
 events arrive on the `events` channel. For a contract with namespace `app`:
@@ -237,3 +237,13 @@ framework failure shell.
 - Runnable demos live in the repository's `examples/` directory.
 - The CLI covers the project workflow: `proton_cli new`, `proton_cli cef setup`,
   `proton_cli dev`, `proton_cli build`, and `proton_cli package`.
+
+
+Typed commands and events are inert shared descriptors. Ordinary applications
+can bind implementations directly with CommandRegistrar::bind; command codegen
+is optional. Use response enums for expected business outcomes and ClientFailure
+for transport or unexpected execution failures. CommandContext::emit_to_caller
+targets the issuing page (emit remains an alias); WindowContext::events returns
+an explicit destination for that window. Broadcast by retaining only the
+destinations your application intends to notify and releasing them with their
+window lifecycle. Events are live, best-effort notifications, not replayable state.

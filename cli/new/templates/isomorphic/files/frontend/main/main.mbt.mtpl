@@ -7,28 +7,46 @@ using @html {button, div, form, h1, input, li, p, span, ul}
 ///|
 struct Model {
   draft : String
+  query : String
+  revision : Int
   snapshot : @shared.TodoSnapshot
+  has_snapshot : Bool
+  listening : Bool
   loading : Bool
+  dirty : Bool
+  retry : Int
   error : String?
 } derive(Eq)
 
 ///|
 enum Msg {
-  Load
   DraftChanged(String)
+  QueryChanged(String)
   Create
   SetCompleted(Int, Bool)
   Delete(Int)
-  SnapshotReceived(@shared.TodoSnapshot)
+  SnapshotReceived(Int, @shared.TodoSnapshot)
+  QueryFailed(Int, @proton_client.ClientFailure)
+  MutationReceived(@shared.MutationReply)
+  Created(String, @shared.MutationReply)
+  Invalidated(@shared.TodosChanged)
   CommandFailed(@proton_client.ClientFailure)
+  Retry
+  ListenerReady
 }
 
 ///|
 fn initial_model() -> Model {
   {
     draft: "",
+    query: "",
+    revision: 0,
     snapshot: { version: 0, todos: [], },
-    loading: true,
+    has_snapshot: false,
+    listening: false,
+    loading: false,
+    dirty: false,
+    retry: 0,
     error: None,
   }
 }
@@ -37,33 +55,45 @@ fn initial_model() -> Model {
 fn failure_message(error : @proton_client.ClientFailure) -> String {
   match error {
     @proton_client.BridgeUnavailable =>
-      "The Proton bridge is unavailable. Start this page with `proton_cli dev`."
+      "The Proton bridge is unavailable. Start this page with proton_cli dev."
     _ => error.message()
+  }
+}
+
+///|
+/// Coalesce invalidations while a query is running; a follow-up query closes
+/// the race between reading a snapshot and receiving another invalidation.
+fn invalidate(model : Model) -> Model {
+  if model.loading {
+    { ..model, dirty: true, }
+  } else {
+    { ..model, revision: model.revision + 1, loading: true, error: None, }
   }
 }
 
 ///|
 fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
   match msg {
-    Load =>
-      (
-        { ..model, loading: true, error: None, },
-        @proton_rabbita.invoke(
-          @shared.list_todos,
-          (),
-          snapshot => emit(SnapshotReceived(snapshot)),
-          error => emit(CommandFailed(error)),
-        ),
-      )
     DraftChanged(draft) => ({ ..model, draft, }, @rabbita.none)
-    Create if model.draft.trim().is_empty() => (model, @rabbita.none)
+    QueryChanged(query) =>
+      (
+        {
+          ..model,
+          query,
+          revision: model.revision + 1,
+          loading: true,
+          dirty: false,
+          error: None,
+        },
+        @rabbita.none,
+      )
     Create =>
       (
-        { ..model, draft: "", error: None, },
+        { ..model, error: None, },
         @proton_rabbita.invoke(
           @shared.create_todo,
           { title: model.draft, },
-          snapshot => emit(SnapshotReceived(snapshot)),
+          reply => emit(Created(model.draft, reply)),
           error => emit(CommandFailed(error)),
         ),
       )
@@ -73,7 +103,7 @@ fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
         @proton_rabbita.invoke(
           @shared.set_todo_completed,
           { id, completed, },
-          snapshot => emit(SnapshotReceived(snapshot)),
+          reply => emit(MutationReceived(reply)),
           error => emit(CommandFailed(error)),
         ),
       )
@@ -83,27 +113,105 @@ fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
         @proton_rabbita.invoke(
           @shared.delete_todo,
           { id, },
-          snapshot => emit(SnapshotReceived(snapshot)),
+          reply => emit(MutationReceived(reply)),
           error => emit(CommandFailed(error)),
         ),
       )
-    SnapshotReceived(snapshot) =>
-      ({ ..model, snapshot, loading: false, error: None, }, @rabbita.none)
-    CommandFailed(error) =>
+    Created(title, reply) => {
+      let model = if reply is @shared.Changed(..) && model.draft == title {
+        { ..model, draft: "", }
+      } else {
+        model
+      }
+      update(model, MutationReceived(reply), emit)
+    }
+    MutationReceived(@shared.InvalidTitle) =>
+      ({ ..model, error: Some("Enter a non-empty title."), }, @rabbita.none)
+    MutationReceived(@shared.MissingTodo) =>
       (
-        { ..model, loading: false, error: Some(failure_message(error)), },
+        { ..invalidate(model), error: Some("This todo no longer exists."), },
+        @rabbita.none,
+      )
+    MutationReceived(@shared.Changed(..)) => (invalidate(model), @rabbita.none)
+    Invalidated(notice) =>
+      if notice.version > model.snapshot.version {
+        (invalidate(model), @rabbita.none)
+      } else {
+        (model, @rabbita.none)
+      }
+    SnapshotReceived(revision, snapshot) => {
+      guard revision == model.revision else { return (model, @rabbita.none) }
+      let model = if snapshot.version >= model.snapshot.version {
+        { ..model, snapshot, has_snapshot: true, loading: false, error: None, }
+      } else {
+        { ..model, loading: false, }
+      }
+      if model.dirty {
+        (invalidate({ ..model, dirty: false, }), @rabbita.none)
+      } else {
+        (model, @rabbita.none)
+      }
+    }
+    QueryFailed(revision, error) =>
+      if revision != model.revision {
+        (model, @rabbita.none)
+      } else {
+        (
+          { ..model, loading: false, error: Some(failure_message(error)), },
+          @rabbita.none,
+        )
+      }
+    CommandFailed(error) =>
+      ({ ..model, error: Some(failure_message(error)), }, @rabbita.none)
+    ListenerReady =>
+      (
+        {
+          ..model,
+          listening: true,
+          loading: true,
+          revision: model.revision + 1,
+          dirty: false,
+        },
+        @rabbita.none,
+      )
+    Retry =>
+      (
+        {
+          ..model,
+          retry: model.retry + 1,
+          listening: false,
+          loading: false,
+          dirty: false,
+          error: None,
+        },
         @rabbita.none,
       )
   }
 }
 
 ///|
-fn subscriptions(_model : Model, emit : Emit[Msg]) -> @sub.Sub {
-  @proton_rabbita.subscribe(
-    @shared.todos_changed,
-    snapshot => emit(SnapshotReceived(snapshot)),
-    error => emit(CommandFailed(error)),
-  )
+fn subscriptions(model : Model, emit : Emit[Msg]) -> @sub.Sub {
+  @sub.batch([
+    @proton_rabbita.subscribe(
+      @shared.todos_changed,
+      notice => emit(Invalidated(notice)),
+      error => emit(CommandFailed(error)),
+      retry=model.retry,
+      ready=emit(ListenerReady),
+    ),
+    if model.listening && model.loading {
+      @proton_rabbita.request(
+        @shared.list_todos,
+        { query: model.query, },
+        snapshot => emit(SnapshotReceived(model.revision, snapshot)),
+        error => emit(QueryFailed(model.revision, error)),
+        key="todos",
+        revision=model.revision,
+      )
+    } else {
+      @sub.none
+    },
+  ])
 }
 
 ///|
@@ -135,12 +243,16 @@ fn view(emit : Emit[Msg], model : Model) -> Html {
   for todo in model.snapshot.todos {
     rows.push(todo_row(emit, todo))
   }
-  let content = if model.loading {
-    p(class="status", "Loading todos...")
-  } else if rows.is_empty() {
-    p(class="status", "No todos yet.")
-  } else {
+  let content = if !rows.is_empty() {
     ul(class="todo-list", rows)
+  } else if model.loading || (!model.has_snapshot && model.error is None) {
+    p(class="status", "Loading todos...")
+  } else if model.error is Some(_) || !model.has_snapshot {
+    @html.nothing
+  } else if !model.query.trim().is_empty() {
+    p(class="status", "No matching todos.")
+  } else {
+    p(class="status", "No todos yet.")
   }
   let error = match model.error {
     Some(message) => p(class="error", message)
@@ -159,6 +271,22 @@ fn view(emit : Emit[Msg], model : Model) -> Html {
       ),
       input(input_type=Submit, value="Add todo"),
     ]),
+    div(class="todo-toolbar", [
+      input(
+        value=model.query,
+        placeholder="Search todos",
+        on_input=emit.map(value => QueryChanged(value)),
+      ),
+      button(
+        type_="button",
+        on_click=emit(Retry),
+        if model.loading {
+          "Refreshing..."
+        } else {
+          "Refresh"
+        },
+      ),
+    ]),
     error,
     content,
   ])
@@ -167,7 +295,7 @@ fn view(emit : Emit[Msg], model : Model) -> Html {
 ///|
 fn todo_app() -> @rabbita.Val[Html] {
   let (model, emit) = @rabbita.create_state_with_init(
-    init=emit => (initial_model(), emit(Load)),
+    init=_emit => (initial_model(), @rabbita.none),
     update~,
     subscriptions~,
   )
