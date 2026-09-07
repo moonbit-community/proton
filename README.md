@@ -75,7 +75,12 @@ async fn main {
 ```
 
 The frontend invokes these commands through `proton_client` or the typed
-Rabbita integration. It can also subscribe to events emitted by the backend.
+Rabbita integration. Application command bindings are explicit and need no
+code-generation rule. Response enums model expected business outcomes.
+The default template subscribes before querying, refreshes snapshots after
+invalidation events, and cancels superseded searches through component-owned
+request subscriptions. Window event destinations are attached and detached
+with their lifecycle.
 
 ## Capabilities
 

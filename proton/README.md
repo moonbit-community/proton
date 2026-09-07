@@ -95,8 +95,8 @@ packages expose typed values consumed by `.capability(...)`.
 
 `@proton.CommandRegistrar` binds contract command descriptors to async
 handlers; each handler receives a `@proton.CommandContext` and the decoded
-request payload. The backend emits events to the renderer with
-`CommandContext::emit(event, payload)`. JavaScript invokes commands and
+request payload. The backend emits events to the requesting page with
+`CommandContext::emit_to_caller(event, payload)`. JavaScript invokes commands and
 subscribes to events through the bridge installed on `window`: commands are
 called by their contract operation name through `core.invokeOp`, and backend
 events arrive on the `events` channel. For a contract with namespace `app`:
@@ -168,6 +168,8 @@ applies to every window and web contents view created by the application.
 `App::web_request_redirect_prefix` provides the corresponding fixed-target
 rewrite for matching requests; cancellation takes precedence when both rules
 match.
+Use `App::web_request_header_prefix` to override a named request header for
+matching URLs before the request is sent.
 
 Web contents views expose the same loading lifecycle events through
 `ViewEvent::DidStartLoading` and `ViewEvent::DidFinishLoad`; their
@@ -178,9 +180,17 @@ Web contents views expose the same loading lifecycle events through
 Use `tonyfettes/xlog@0.4.2` directly for application logs. Proton configures the
 global logger before native runtime creation. Packaged applications write to
 their platform log directory; direct launches and `proton_cli dev` use stderr.
-`MOON_XLOG` controls filtering and `PROTON_LOG_OUTPUT` selects `file` or
+xlog initializes filtering from `MOON_XLOG` (default: `Info`). Proton preserves
+the global logger's level and category rules, including application overrides,
+and follows xlog's handling of invalid `MOON_XLOG` values.
+`PROTON_LOG_OUTPUT` selects `file` or
 `stderr`; file output requires packaged application metadata. Application
 categories should use `app.*`; `proton.*` is reserved for framework diagnostics.
+Logging is initialized once per process and remains active after `App::run`
+returns or raises, so application error handling continues writing to the same
+output. Subsequent runs preserve the current handler and filtering settings.
+Runtime failures are logged with their full diagnostics before displaying an
+error dialog.
 
 ## Headless mode
 
@@ -227,3 +237,13 @@ framework failure shell.
 - Runnable demos live in the repository's `examples/` directory.
 - The CLI covers the project workflow: `proton_cli new`, `proton_cli cef setup`,
   `proton_cli dev`, `proton_cli build`, and `proton_cli package`.
+
+
+Typed commands and events are inert shared descriptors. Ordinary applications
+can bind implementations directly with CommandRegistrar::bind; command codegen
+is optional. Use response enums for expected business outcomes and ClientFailure
+for transport or unexpected execution failures. CommandContext::emit_to_caller
+targets the issuing page (emit remains an alias); WindowContext::events returns
+an explicit destination for that window. Broadcast by retaining only the
+destinations your application intends to notify and releasing them with their
+window lifecycle. Events are live, best-effort notifications, not replayable state.

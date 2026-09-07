@@ -96,22 +96,9 @@ function verifyGeneratedDependencies() {
   if (backend.includes("bin-deps")) {
     throw new Error("backend/moon.mod must not depend on a CLI binary shim");
   }
-  const codegen = `moonx moonbit-community/proton_codegen@${moduleVersion("codegen/moon.mod")}`;
-  if (!backend.includes(codegen)) {
-    throw new Error(`backend/moon.mod is missing ${codegen}`);
+  if (/proton_codegen|dev_build/.test(backend)) {
+    throw new Error("the application scaffold must not require codegen");
   }
-}
-
-function useLocalCodegenPackage() {
-  const backendModPath = path.join(projectDir, "backend", "moon.mod");
-  const source = fs.readFileSync(backendModPath, "utf8");
-  const coordinate = `moonx moonbit-community/proton_codegen@${moduleVersion("codegen/moon.mod")}`;
-  const localCommand = `moon run '${path.join(repoRoot, "codegen")}' --target wasm --`;
-  const updated = source.replace(coordinate, localCommand);
-  if (updated === source || updated.includes(coordinate)) {
-    throw new Error("could not select the local codegen package");
-  }
-  fs.writeFileSync(backendModPath, updated);
 }
 
 try {
@@ -132,13 +119,9 @@ try {
     "-y",
   ]);
   verifyGeneratedDependencies();
-  useLocalCodegenPackage();
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], {
     cwd: projectDir,
   });
-  if (!fs.existsSync(path.join(projectDir, "backend/todo/commands.g.mbt"))) {
-    throw new Error("Moon prebuild did not generate backend/todo/commands.g.mbt");
-  }
   succeeded = true;
   console.log("Registry scaffold smoke passed.");
 } finally {

@@ -71,7 +71,9 @@ moonbit_bytes_t mb_safe_storage_encrypt(moonbit_bytes_t value) {
   if (!CryptProtectData(&input, L"Proton safe storage", NULL, NULL, NULL, 0, &output)) { mb_set_error("CryptProtectData failed"); return mb_bytes(NULL, 0); }
   moonbit_bytes_t result = mb_bytes(output.pbData, output.cbData); LocalFree(output.pbData); mb_set_success(); return result;
 #elif defined(__APPLE__)
-  unsigned char key[32], iv[16]; size_t moved = 0, out_len = length + 16;
+  unsigned char key[32], iv[16];
+  // Reserve the IV separately from the ciphertext and its full padding block.
+  size_t moved = 0, out_len = sizeof(iv) + length + kCCBlockSizeAES128;
   if (!keychain_key(key) || SecRandomCopyBytes(kSecRandomDefault, 16, iv) != errSecSuccess) { mb_set_error("failed to initialize safe storage cipher"); return mb_bytes(NULL, 0); }
   unsigned char *out = malloc(out_len); if (out == NULL) { mb_set_error("safe storage allocation failed"); return mb_bytes(NULL, 0); }
   CCCryptorStatus status = CCCrypt(kCCEncrypt, kCCAlgorithmAES, kCCOptionPKCS7Padding, key, 32, iv, value, length, out + 16, out_len - 16, &moved);

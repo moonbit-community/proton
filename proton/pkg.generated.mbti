@@ -254,6 +254,9 @@ pub fn App::titlebar_style(Self, TitlebarStyle) -> Self
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
 pub fn App::url_scheme(Self, String) -> Self
 pub fn App::version(Self) -> String raise AppMetadataError
+pub fn App::web_request_cancel_prefix(Self, String) -> Self
+pub fn App::web_request_header_prefix(Self, String, String, String) -> Self
+pub fn App::web_request_redirect_prefix(Self, String, String) -> Self
 pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Self
 pub fn App::with_view(Self, String, ViewConfig) -> Self
 
@@ -746,6 +749,8 @@ pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, v
 
 pub(all) enum ViewEvent {
   LoadingChanged(is_loading~ : Bool)
+  DidStartLoading
+  DidFinishLoad
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)

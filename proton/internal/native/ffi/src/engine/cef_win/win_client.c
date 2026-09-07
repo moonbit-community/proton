@@ -620,6 +620,8 @@ int CEF_CALLBACK proton_engine_client_release(
       (proton_engine_ref_counted_t *)((char *)base + base->size);
   LONG value = InterlockedDecrement(&refs->refs);
   if (value <= 0) {
+    proton_engine_client_t *client = (proton_engine_client_t *)base;
+    proton_internal_web_request_config_destroy(client->web_request_config);
     free(base);
     return 1;
   }
@@ -627,13 +629,16 @@ int CEF_CALLBACK proton_engine_client_release(
 }
 
 proton_engine_client_t *proton_engine_client_new(
-    proton_browser_lifecycle_t *browser_lifecycle) {
+    proton_browser_lifecycle_t *browser_lifecycle,
+    proton_web_request_config_t *web_request_config) {
   proton_engine_client_t *client =
       (proton_engine_client_t *)calloc(1, sizeof(*client));
   if (client == NULL) {
     return NULL;
   }
   client->browser_lifecycle = browser_lifecycle;
+  client->web_request_config = web_request_config;
+  proton_web_request_config_retain(web_request_config);
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
   // The registry keeps the initial client reference until CEF shutdown; CEF
@@ -1056,16 +1061,19 @@ proton_engine_get_resource_request_handler(
   (void)is_download;
   (void)request_initiator;
   (void)disable_default_handling;
-  proton_engine_window_t *window =
-      proton_engine_window_lookup_browser(browser);
-  proton_browser_session_t *session =
-      window != NULL ? window->browser_session : NULL;
-  if (session == NULL) {
-    proton_engine_view_t *view =
-        proton_engine_window_lookup_view_browser(browser);
-    session = view != NULL ? view->browser_session : NULL;
+  // GetClient returns a retained CEF reference, so configuration acquisition
+  // cannot race window/session teardown on the UI thread.
+  cef_browser_host_t *host = browser != NULL ? browser->get_host(browser) : NULL;
+  if (host == NULL) return NULL;
+  cef_client_t *cef_client = host->get_client(host);
+  cef_resource_request_handler_t *handler = NULL;
+  if (cef_client != NULL) {
+    proton_engine_client_t *client = (proton_engine_client_t *)cef_client;
+    handler = proton_browser_resource_handler_create(client->web_request_config);
+    cef_client->base.release((cef_base_ref_counted_t *)cef_client);
   }
-  return proton_browser_session_resource_handler(session);
+  host->base.release((cef_base_ref_counted_t *)host);
+  return handler;
 }
 
 static int CEF_CALLBACK proton_engine_on_open_url_from_tab(

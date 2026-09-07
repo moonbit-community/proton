@@ -4,7 +4,7 @@ import {
   "moonbit-community/proton_rabbita",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/html",
-  "moonbit-community/rabbita/sub",
+  "{{frontend_module}}/internal/query",
 }
 
 supported_targets = "js"

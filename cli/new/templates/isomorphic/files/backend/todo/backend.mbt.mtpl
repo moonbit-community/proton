@@ -3,27 +3,49 @@ pub struct Backend {
   mut next_id : Int
   mut version : Int
   todos : Array[@shared.TodoItem]
+  listeners : Map[String, @proton.WindowEventEmitter]
 }
 
 ///|
 pub fn Backend::Backend() -> Backend {
-  Backend::{ next_id: 1, version: 0, todos: [], }
+  Backend::{ next_id: 1, version: 0, todos: [], listeners: Map([]), }
 }
 
 ///|
-fn Backend::snapshot(self : Backend) -> @shared.TodoSnapshot {
-  { version: self.version, todos: self.todos.copy(), }
+/// Each window owns its event destination until its lifecycle ends.
+pub fn Backend::attach(
+  self : Backend,
+  context : @proton.WindowContext,
+) -> String {
+  let id = context.handle().id()
+  self.listeners[id] = context.events()
+  id
 }
 
 ///|
-fn Backend::create(self : Backend, title : String) -> @shared.TodoSnapshot {
-  let title = title.trim().to_owned()
-  if !title.is_empty() {
-    self.todos.push({ id: self.next_id, title, completed: false, })
-    self.next_id += 1
-    self.version += 1
+pub fn Backend::detach(self : Backend, id : String) -> Unit {
+  self.listeners.remove(id)
+}
+
+///|
+fn Backend::snapshot(self : Backend, query : String) -> @shared.TodoSnapshot {
+  let query = query.trim().to_owned().to_lower()
+  {
+    version: self.version,
+    todos: self.todos.filter(todo => todo.title.to_lower().contains(query)),
   }
-  self.snapshot()
+}
+
+///|
+fn Backend::create(self : Backend, title : String) -> @shared.MutationReply {
+  let title = title.trim().to_owned()
+  if title.is_empty() {
+    return @shared.InvalidTitle
+  }
+  self.todos.push({ id: self.next_id, title, completed: false, })
+  self.next_id += 1
+  self.version += 1
+  @shared.Changed(version=self.version)
 }
 
 ///|
@@ -31,26 +53,42 @@ fn Backend::set_completed(
   self : Backend,
   id : Int,
   completed : Bool,
-) -> @shared.TodoSnapshot {
+) -> @shared.MutationReply {
   for index = 0; index < self.todos.length(); index = index + 1 {
     let todo = self.todos[index]
-    if todo.id == id && todo.completed != completed {
-      self.todos[index] = { ..todo, completed, }
-      self.version += 1
-      break
+    if todo.id == id {
+      if todo.completed != completed {
+        self.todos[index] = { ..todo, completed, }
+        self.version += 1
+      }
+      return @shared.Changed(version=self.version)
     }
   }
-  self.snapshot()
+  @shared.MissingTodo
 }
 
 ///|
-fn Backend::delete(self : Backend, id : Int) -> @shared.TodoSnapshot {
+fn Backend::delete(self : Backend, id : Int) -> @shared.MutationReply {
   for index = 0; index < self.todos.length(); index = index + 1 {
     if self.todos[index].id == id {
       ignore(self.todos.remove(index))
       self.version += 1
-      break
+      return @shared.Changed(version=self.version)
     }
   }
-  self.snapshot()
+  @shared.MissingTodo
+}
+
+///|
+/// Notify explicitly attached windows; this is not reliable state delivery.
+async fn Backend::notify(self : Backend, reply : @shared.MutationReply) -> Unit {
+  if reply is @shared.Changed(version~) {
+    let destinations : Array[@proton.WindowEventEmitter] = []
+    for _, events in self.listeners {
+      destinations.push(events)
+    }
+    for events in destinations {
+      events.emit(@shared.todos_changed, { version, })
+    }
+  }
 }

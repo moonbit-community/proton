@@ -59,6 +59,7 @@ struct App {
   url_schemes : Array[String]
   web_request_cancel_prefixes : Array[String]
   web_request_redirect_prefixes : Array[(String, String)]
+  web_request_header_prefixes : Array[(String, String, String)]
   document_extensions : Array[String]
   mut update_channel : ResolvedUpdateChannel?
   command_capabilities : Array[AppCommandCapability]
@@ -172,6 +173,7 @@ priv struct ResolvedAppConfig {
   url_schemes : Array[String]
   web_request_cancel_prefixes : Array[String]
   web_request_redirect_prefixes : Array[(String, String)]
+  web_request_header_prefixes : Array[(String, String, String)]
   document_extensions : Array[String]
   /// The update channel and the identity it updates, when configured by code.
   update_channel : ResolvedUpdateChannel?
@@ -425,6 +427,7 @@ priv struct RuntimeSession {
   url_schemes : Array[String]
   web_request_cancel_prefixes : Array[String]
   web_request_redirect_prefixes : Array[(String, String)]
+  web_request_header_prefixes : Array[(String, String, String)]
 }
 
 ///|

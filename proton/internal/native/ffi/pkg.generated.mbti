@@ -383,7 +383,19 @@ pub fn view_logical_id(ViewHandle) -> Int64
 
 pub fn view_null() -> ViewHandle
 
-pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, @ref.Ref[WindowHandle]) -> Int
+pub fn web_request_config_add_cancel_prefix(WebRequestConfigHandle, Bytes) -> Int
+
+pub fn web_request_config_add_header_prefix(WebRequestConfigHandle, Bytes, Bytes, Bytes) -> Int
+
+pub fn web_request_config_add_redirect_prefix(WebRequestConfigHandle, Bytes, Bytes) -> Int
+
+pub fn web_request_config_create(@ref.Ref[WebRequestConfigHandle]) -> Int
+
+pub fn web_request_config_destroy(WebRequestConfigHandle) -> Unit
+
+pub fn web_request_config_null() -> WebRequestConfigHandle
+
+pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, WebRequestConfigHandle, @ref.Ref[WindowHandle]) -> Int
 
 pub fn window_logical_id(WindowHandle) -> Int64
 
@@ -412,6 +424,9 @@ pub type RuntimeHandle
 
 #external
 pub type ViewHandle
+
+#external
+pub type WebRequestConfigHandle
 
 #external
 pub type WindowHandle

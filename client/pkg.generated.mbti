@@ -8,7 +8,11 @@ import {
 }
 
 // Values
+pub let desktop : Client
+
 pub async fn[Request : ToJson, Response : @json.FromJson] invoke(@proton_contract.Command[Request, Response], Request) -> Response raise ClientFailure
+
+pub fn[Request : ToJson, Response : @json.FromJson] invoke_with_callbacks(@proton_contract.Command[Request, Response], Request, (Response) -> Unit, (ClientFailure) -> Unit) -> () -> Unit
 
 pub fn[Payload : @json.FromJson] subscribe(@proton_contract.Event[Payload], (Payload) -> Unit, (ClientFailure) -> Unit) -> Subscription raise ClientFailure
 
@@ -30,6 +34,15 @@ pub fn ClientFailure::to_repr(Self) -> @debug.Repr
 pub fn ClientFailure::to_string(Self) -> String
 
 // Types and methods
+pub struct Client {
+  start_request : (String, String, (String) -> Unit, (ClientFailure) -> Unit) -> () -> Unit
+  start_listener : (String, (String) -> Unit) -> (() -> Unit) raise ClientFailure
+}
+pub fn Client::Client(invoke~ : (String, String, (String) -> Unit, (ClientFailure) -> Unit) -> () -> Unit, subscribe~ : (String, (String) -> Unit) -> (() -> Unit) raise ClientFailure) -> Self
+pub async fn[Request : ToJson, Response : @json.FromJson] Client::invoke(Self, @proton_contract.Command[Request, Response], Request) -> Response raise ClientFailure
+pub fn[Request : ToJson, Response : @json.FromJson] Client::invoke_with_callbacks(Self, @proton_contract.Command[Request, Response], Request, (Response) -> Unit, (ClientFailure) -> Unit) -> () -> Unit
+pub fn[Payload : @json.FromJson] Client::subscribe(Self, @proton_contract.Event[Payload], (Payload) -> Unit, (ClientFailure) -> Unit) -> Subscription raise ClientFailure
+
 pub struct Subscription {
   mut closed : Bool
   close_listener : () -> Unit

@@ -81,3 +81,19 @@ test "web request cancellation matches URL prefixes" {
     content="matching=1,nonmatching=0,case_sensitive=0,empty=-1,duplicate=-1",
   )
 }
+
+///|
+test "resource handlers survive session and configuration owner teardown" {
+  inspect(
+    resource_handler_lifetime_trace(),
+    content="continued=1,first_release=0,last_release=1",
+  )
+}
+
+///|
+test "header names use ASCII case-insensitive comparison but paths and values do not" {
+  inspect(
+    header_case_trace(),
+    content="first=0,duplicate=-1,different_path=0,value=Token AbC",
+  )
+}
