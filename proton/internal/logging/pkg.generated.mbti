@@ -3,10 +3,11 @@ package "moonbit-community/proton/internal/logging"
 
 import {
   "moonbitlang/core/debug",
-  "tonyfettes/xlog",
 }
 
 // Values
+pub fn configure(Output) -> Unit raise LoggingError
+
 pub fn current_process_id() -> Int
 
 // Errors
@@ -21,13 +22,6 @@ pub(all) enum Output {
   Stderr
   File(String)
 }
-
-pub struct RuntimeLogging {
-  close_handler : () -> Unit
-  mut closed : Bool
-}
-pub fn RuntimeLogging::RuntimeLogging(Output, @xlog.Config) -> Self raise LoggingError
-pub fn RuntimeLogging::close(Self) -> Unit
 
 // Type aliases
 

@@ -109,11 +109,6 @@ MOONBIT_FFI_EXPORT int32_t proton_logging_write_file(
   return fflush(handle->file) == 0 ? 0 : -1;
 }
 
-MOONBIT_FFI_EXPORT void
-proton_logging_close_file(proton_logging_file_t *handle) {
-  proton_logging_close_handle(handle);
-}
-
 MOONBIT_FFI_EXPORT int32_t proton_logging_write_stderr(moonbit_bytes_t data) {
   int32_t length = Moonbit_array_length(data);
   if (length > 0 &&
