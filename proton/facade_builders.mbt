@@ -272,6 +272,34 @@ pub fn App::url_scheme(self : App, scheme : String) -> App {
 }
 
 ///|
+/// Cancels browser requests whose URL starts with `url_prefix`.
+///
+/// Matching is case-sensitive and applies to every browser session created
+/// by this application, including secondary windows and web contents views.
+pub fn App::web_request_cancel_prefix(self : App, url_prefix : String) -> App {
+  let url_prefix = url_prefix.trim().to_owned()
+  if url_prefix == "" {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="web_request_cancel_prefix",
+        message="must not be empty",
+      ),
+    )
+  } else if self.web_request_cancel_prefixes.contains(url_prefix) {
+    self.validation_errors.push(
+      InvalidSetting(name="web_request_cancel_prefix", message="is duplicated"),
+    )
+  } else if self.web_request_cancel_prefixes.length() >= 128 {
+    self.validation_errors.push(
+      InvalidSetting(name="web_request_cancel_prefix", message="limit exceeded"),
+    )
+  } else {
+    self.web_request_cancel_prefixes.push(url_prefix)
+  }
+  self
+}
+
+///|
 fn app_url_scheme_is_valid(scheme : String) -> Bool {
   guard scheme.length() > 0 else { return false }
   for index, char in scheme {

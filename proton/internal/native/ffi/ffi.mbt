@@ -37,6 +37,10 @@ pub type MenuConfigHandle
 pub type BridgeConfigHandle
 
 ///|
+#external
+pub type WebRequestConfigHandle
+
+///|
 pub extern "C" fn runtime_null() -> RuntimeHandle = "proton_runtime_null"
 
 ///|
@@ -56,6 +60,9 @@ pub extern "C" fn menu_config_null() -> MenuConfigHandle = "proton_internal_menu
 
 ///|
 pub extern "C" fn bridge_config_null() -> BridgeConfigHandle = "proton_internal_bridge_config_null"
+
+///|
+pub extern "C" fn web_request_config_null() -> WebRequestConfigHandle = "proton_internal_web_request_config_null"
 
 ///|
 pub extern "C" fn window_logical_id(window : WindowHandle) -> Int64 = "proton_window_logical_id"
@@ -467,6 +474,7 @@ pub extern "C" fn window_create(
   media_policy : Int,
   devtools : Int,
   bridge_config : BridgeConfigHandle,
+  web_request_config : WebRequestConfigHandle,
   out_window : Ref[WindowHandle],
 ) -> Int = "proton_internal_window_create"
 
@@ -523,6 +531,24 @@ pub extern "C" fn bridge_config_add_initialization_unit(
 
 ///|
 pub extern "C" fn bridge_config_destroy(config : BridgeConfigHandle) -> Unit = "proton_internal_bridge_config_destroy"
+
+///|
+#borrow(out_config)
+pub extern "C" fn web_request_config_create(
+  out_config : Ref[WebRequestConfigHandle],
+) -> Int = "proton_internal_web_request_config_create"
+
+///|
+#borrow(url_prefix)
+pub extern "C" fn web_request_config_add_cancel_prefix(
+  config : WebRequestConfigHandle,
+  url_prefix : Bytes,
+) -> Int = "proton_internal_web_request_config_add_cancel_prefix"
+
+///|
+pub extern "C" fn web_request_config_destroy(
+  config : WebRequestConfigHandle,
+) -> Unit = "proton_internal_web_request_config_destroy"
 
 ///|
 pub extern "C" fn proton_window_destroy_ffi(window : WindowHandle) -> Int = "proton_window_destroy"

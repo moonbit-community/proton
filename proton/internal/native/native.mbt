@@ -1367,6 +1367,32 @@ fn build_bridge_config(
 }
 
 ///|
+fn build_web_request_config(
+  prefixes : Array[String],
+) -> @native_ffi.WebRequestConfigHandle raise NativeError {
+  if prefixes.length() == 0 {
+    return @native_ffi.web_request_config_null()
+  }
+  let out_config = Ref(@native_ffi.web_request_config_null())
+  let status = @native_ffi.web_request_config_create(out_config)
+  if status < 0 {
+    raise native_error(status)
+  }
+  let handle = out_config.val
+  for prefix in prefixes {
+    let status = @native_ffi.web_request_config_add_cancel_prefix(
+      handle,
+      @ffi.to_cstr(prefix),
+    )
+    if status < 0 {
+      @native_ffi.web_request_config_destroy(handle)
+      raise native_error(status)
+    }
+  }
+  handle
+}
+
+///|
 pub fn Window::Window(
   runtime : Runtime,
   config? : WindowConfig = WindowConfig(),
@@ -1374,6 +1400,9 @@ pub fn Window::Window(
   validate_window_config(config)
   let out_window = Ref(@native_ffi.window_null())
   let bridge_config = build_bridge_config(config.bridge)
+  let web_request_config = build_web_request_config(
+    config.web_request_cancel_prefixes,
+  )
   let status = @native_ffi.window_create(
     runtime.active_handle(),
     @ffi.to_cstr(config.title),
@@ -1394,9 +1423,11 @@ pub fn Window::Window(
     browser_policy_code(config.browser.media),
     runtime_config_bool(config.browser.devtools),
     bridge_config,
+    web_request_config,
     out_window,
   )
   @native_ffi.bridge_config_destroy(bridge_config)
+  @native_ffi.web_request_config_destroy(web_request_config)
   if status < 0 {
     raise native_error(status)
   } else {

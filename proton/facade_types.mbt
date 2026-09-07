@@ -57,6 +57,7 @@ struct App {
   mut last_window_closed_policy_value : LastWindowClosedPolicy
   mut menu : MenuBar?
   url_schemes : Array[String]
+  web_request_cancel_prefixes : Array[String]
   document_extensions : Array[String]
   mut update_channel : ResolvedUpdateChannel?
   command_capabilities : Array[AppCommandCapability]
@@ -168,6 +169,7 @@ priv struct ResolvedAppConfig {
   application_identifier : String
   instance_identifier : String?
   url_schemes : Array[String]
+  web_request_cancel_prefixes : Array[String]
   document_extensions : Array[String]
   /// The update channel and the identity it updates, when configured by code.
   update_channel : ResolvedUpdateChannel?
@@ -419,6 +421,7 @@ priv struct RuntimeSession {
   application_executable : String
   application_arguments : Array[String]
   url_schemes : Array[String]
+  web_request_cancel_prefixes : Array[String]
 }
 
 ///|
