@@ -177,6 +177,16 @@ static cef_return_value_t CEF_CALLBACK proton_browser_on_before_resource_load(
   char *url_utf8 = proton_browser_cef_string_to_utf8(url);
   int result = proton_browser_session_before_resource_load(handler->session,
                                                            url_utf8);
+  const char *redirect_url = proton_web_request_config_redirect_url(
+      handler->session->web_request_config, url_utf8);
+  if (result != 0 && redirect_url != NULL && request->set_url != NULL) {
+    cef_string_t destination = {0};
+    if (cef_string_utf8_to_utf16(redirect_url, strlen(redirect_url),
+                                 &destination)) {
+      request->set_url(request, &destination);
+      cef_string_clear(&destination);
+    }
+  }
   if (url != NULL) {
     cef_string_userfree_free(url);
   }

@@ -300,6 +300,42 @@ pub fn App::web_request_cancel_prefix(self : App, url_prefix : String) -> App {
 }
 
 ///|
+/// Redirects matching browser requests to `target_url` before loading.
+pub fn App::web_request_redirect_prefix(
+  self : App,
+  url_prefix : String,
+  target_url : String,
+) -> App {
+  let url_prefix = url_prefix.trim().to_owned()
+  let target_url = target_url.trim().to_owned()
+  if url_prefix == "" || target_url == "" {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="web_request_redirect_prefix",
+        message="prefix and target URL must not be empty",
+      ),
+    )
+  } else if self.web_request_redirect_prefixes.any(item => item.0 == url_prefix) {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="web_request_redirect_prefix",
+        message="is duplicated",
+      ),
+    )
+  } else if self.web_request_redirect_prefixes.length() >= 128 {
+    self.validation_errors.push(
+      InvalidSetting(
+        name="web_request_redirect_prefix",
+        message="limit exceeded",
+      ),
+    )
+  } else {
+    self.web_request_redirect_prefixes.push((url_prefix, target_url))
+  }
+  self
+}
+
+///|
 fn app_url_scheme_is_valid(scheme : String) -> Bool {
   guard scheme.length() > 0 else { return false }
   for index, char in scheme {

@@ -1464,6 +1464,7 @@ struct WindowConfig {
   browser : BrowserPolicy
   bridge : BridgeConfig?
   web_request_cancel_prefixes : Array[String]
+  web_request_redirect_prefixes : Array[(String, String)]
   framework_titlebar_minimize_label : String?
   framework_titlebar_maximize_label : String?
   framework_titlebar_restore_label : String?
@@ -1560,6 +1561,7 @@ pub fn WindowConfig::WindowConfig(
   browser? : BrowserPolicy = BrowserPolicy(),
   bridge? : BridgeConfig,
   web_request_cancel_prefixes? : Array[String] = [],
+  web_request_redirect_prefixes? : Array[(String, String)] = [],
 ) -> WindowConfig {
   {
     title,
@@ -1572,6 +1574,7 @@ pub fn WindowConfig::WindowConfig(
     browser,
     bridge,
     web_request_cancel_prefixes,
+    web_request_redirect_prefixes,
     framework_titlebar_minimize_label: Some("Minimize"),
     framework_titlebar_maximize_label: Some("Maximize"),
     framework_titlebar_restore_label: Some("Restore"),
@@ -1624,6 +1627,7 @@ pub fn WindowConfig::with_framework_titlebar_labels(
     browser: self.browser,
     bridge: self.bridge,
     web_request_cancel_prefixes: self.web_request_cancel_prefixes,
+    web_request_redirect_prefixes: self.web_request_redirect_prefixes,
     framework_titlebar_minimize_label: Some(minimize),
     framework_titlebar_maximize_label: Some(maximize),
     framework_titlebar_restore_label: Some(restore),
