@@ -4,13 +4,6 @@ let runtime_logging_started : Ref[Bool] = Ref(false)
 ///|
 async fn start_runtime_logging(directory : String) -> Unit raise AppRunError {
   guard !runtime_logging_started.val else { return }
-  let config = @xlog.Config::from_env(level=@xlog.Warn) catch {
-    error =>
-      raise LoggingInitializationFailed(
-        detail="invalid MOON_XLOG configuration: " +
-          xlog_config_error_message(error),
-      )
-  }
   let packaged = packaged_application_manifest_path() is Some(_)
   let output = match @env.get_env_var("PROTON_LOG_OUTPUT") {
     None => if packaged { "file" } else { "stderr" }
@@ -37,7 +30,7 @@ async fn start_runtime_logging(directory : String) -> Unit raise AppRunError {
         detail="PROTON_LOG_OUTPUT must be stderr or file, got: " + value,
       )
   }
-  @logging.configure(selected, config) catch {
+  @logging.configure(selected) catch {
     error =>
       raise LoggingInitializationFailed(detail=@debug.render(Repr(error)))
   }
@@ -77,14 +70,5 @@ async fn ensure_log_directory(path : String) -> Unit raise AppRunError {
 fn log_path_is_directory(path : String) -> Bool {
   @mbfs.is_dir(path) catch {
     _ => false
-  }
-}
-
-///|
-fn xlog_config_error_message(error : @xlog.ConfigError) -> String {
-  match error {
-    @xlog.ConfigError::InvalidCategory(value) => "invalid category: " + value
-    @xlog.ConfigError::InvalidDirective(value) => "invalid directive: " + value
-    @xlog.ConfigError::InvalidLevel(value) => "invalid level: " + value
   }
 }

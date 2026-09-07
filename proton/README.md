@@ -171,7 +171,10 @@ Web contents views expose the same loading lifecycle events through
 Use `tonyfettes/xlog@0.4.2` directly for application logs. Proton configures the
 global logger before native runtime creation. Packaged applications write to
 their platform log directory; direct launches and `proton_cli dev` use stderr.
-`MOON_XLOG` controls filtering and `PROTON_LOG_OUTPUT` selects `file` or
+xlog initializes filtering from `MOON_XLOG` (default: `Info`). Proton preserves
+the global logger's level and category rules, including application overrides,
+and follows xlog's handling of invalid `MOON_XLOG` values.
+`PROTON_LOG_OUTPUT` selects `file` or
 `stderr`; file output requires packaged application metadata. Application
 categories should use `app.*`; `proton.*` is reserved for framework diagnostics.
 Logging is initialized once per process and remains active after `App::run`

@@ -3,11 +3,10 @@ package "moonbit-community/proton/internal/logging"
 
 import {
   "moonbitlang/core/debug",
-  "tonyfettes/xlog",
 }
 
 // Values
-pub fn configure(Output, @xlog.Config) -> Unit raise LoggingError
+pub fn configure(Output) -> Unit raise LoggingError
 
 pub fn current_process_id() -> Int
 

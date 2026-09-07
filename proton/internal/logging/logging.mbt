@@ -80,18 +80,15 @@ pub(all) enum Output {
 }
 
 ///|
-/// Install process-wide logging. The global logger retains the handler after
+/// Install process-wide output without changing filtering settings.
+/// The global logger retains the handler after
 /// this call returns; replacing it allows the file's GC finalizer to close it.
-pub fn configure(
-  output : Output,
-  config : @xlog.Config,
-) -> Unit raise LoggingError {
+pub fn configure(output : Output) -> Unit raise LoggingError {
   let handler : &@xlog.Handler = match output {
     Stderr => (StderrHandler::{ failed: false, } : &@xlog.Handler)
     File(path) => (FileHandler(path) : &@xlog.Handler)
   }
   let logger = @xlog.global()
-  logger.set_config(config)
   logger.set_handler(handler)
 }
 

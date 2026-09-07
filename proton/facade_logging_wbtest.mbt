@@ -110,3 +110,39 @@ async test "repeated runtime logging startup preserves application changes" {
     Some(Json::string("application handler retained")),
   )
 }
+
+///|
+async test "first runtime logging startup preserves root and category filtering" {
+  let logger = @xlog.global()
+  let was_started = runtime_logging_started.val
+  defer {
+    runtime_logging_started.val = was_started
+    logger.set_handler(@xlog.Stdout())
+    logger.set_config(@xlog.Config())
+  }
+  for level in [@xlog.Debug, @xlog.Error] {
+    let config = @xlog.Config(level=@xlog.Warn)
+    config.set_category_level("app.verbose", @xlog.Trace)
+    config.set_category_level("app.quiet", @xlog.Fatal)
+    logger.set_config(config)
+    logger.set_level(level)
+    runtime_logging_started.val = false
+    start_runtime_logging("")
+    let capture = RuntimeLogCapture::{ entries: [], }
+    logger.set_handler(capture)
+    @xlog.debug() <? { "message": "root debug" }
+    @xlog.warn() <? { "message": "root warn" }
+    @xlog.error() <? { "message": "root error" }
+    @xlog.trace(category="app.verbose.child") <? { "message": "category trace" }
+    @xlog.error(category="app.quiet.child") <? { "message": "filtered" }
+    let messages = capture.entries.map(entry => {
+      entry.fields.get("message").unwrap()
+    })
+    let expected : Array[Json] = if level == @xlog.Debug {
+      ["root debug", "root warn", "root error", "category trace"]
+    } else {
+      ["root error", "category trace"]
+    }
+    assert_eq(messages, expected)
+  }
+}

@@ -15,7 +15,7 @@ suberror LoggingProbeError {
 
 ///|
 fn run_logging_probe(path : String, fail~ : Bool) -> Unit raise {
-  configure(Output::File(path), @xlog.Config(level=@xlog.Warn))
+  configure(Output::File(path))
   @xlog.warn(category="proton.test") <? { "message": "runtime probe" }
   if fail {
     raise Failed("runtime failed during create window (-7): owner closed")
@@ -29,6 +29,7 @@ test "file logging remains active after runtime return and error propagation" {
     logger.set_handler(@xlog.Stdout())
     logger.set_config(@xlog.Config())
   }
+  logger.set_config(@xlog.Config(level=@xlog.Warn))
   for fail in [false, true] {
     let path = ".proton-logging-test-" +
       current_process_id().to_string() +
@@ -69,7 +70,7 @@ test "failed logging initialization preserves the current handler and filtering"
   logger.set_handler(capture)
   logger.set_config(@xlog.Config(level=@xlog.Error))
   let failed = try {
-    configure(Output::File(""), @xlog.Config(level=@xlog.Trace))
+    configure(Output::File(""))
     false
   } catch {
     OpenFile(..) => true
