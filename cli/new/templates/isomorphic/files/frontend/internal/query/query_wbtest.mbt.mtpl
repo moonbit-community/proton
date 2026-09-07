@@ -1,0 +1,126 @@
+///|
+test "listener installation precedes reads and failures wait for explicit retry" {
+  let initial : Model[String, Array[String]] = initial_model("alpha")
+  assert_false(initial.listening)
+  let failed = update(
+    initial,
+    ListenFailed(0, @proton_client.BridgeUnavailable),
+  )
+  assert_true(failed.state() is Failed(previous=None, ..))
+  assert_false(failed.pending)
+  let retry = update(failed, Refresh)
+  assert_eq(retry.listener, 1)
+  assert_false(retry.listening)
+  let stale = update(retry, Listening(0))
+  assert_false(stale.listening)
+  let ready = update(stale, Listening(1))
+  assert_true(ready.listening && ready.pending)
+}
+
+///|
+test "input changes reject queued old success and failure including ABA inputs" {
+  let start : Model[String, String] = update(
+    initial_model("alpha"),
+    Listening(0),
+  )
+  let other = update(start, InputChanged("beta"))
+  let back = update(other, InputChanged("alpha"))
+  let stale = update(back, Completed(start.generation, Ok("old alpha")))
+  assert_true(stale.previous is None)
+  let failed = update(
+    stale,
+    Completed(other.generation, Err(@proton_client.BridgeUnavailable)),
+  )
+  assert_true(failed.error is None)
+  let fresh = update(failed, Completed(back.generation, Ok("new alpha")))
+  assert_eq(fresh.previous, Some(("alpha", "new alpha")))
+  assert_false(fresh.pending)
+  let duplicate = update(fresh, Completed(back.generation, Ok("duplicate")))
+  assert_eq(duplicate.previous, fresh.previous)
+}
+
+///|
+test "invalidations coalesce and completed queries stay idle" {
+  let start : Model[String, Int] = update(initial_model("query"), Listening(0))
+  let dirty = update(update(start, Invalidated(0)), Invalidated(0))
+  assert_eq(dirty.generation, start.generation)
+  let next = update(dirty, Completed(start.generation, Ok(1)))
+  assert_true(next.pending)
+  assert_eq(next.generation, start.generation + 1)
+  let fresh = update(next, Completed(next.generation, Ok(2)))
+  assert_false(fresh.pending)
+  let unchanged = update(fresh, InputChanged("query"))
+  assert_eq(unchanged.generation, fresh.generation)
+  assert_false(unchanged.pending)
+}
+
+///|
+test "previous data keeps its input through navigation and refresh failures" {
+  let start : Model[String, Array[String]] = update(
+    initial_model("alpha"),
+    Listening(0),
+  )
+  let loaded = update(start, Completed(start.generation, Ok(["a.txt"])))
+  let navigating = update(loaded, InputChanged("beta"))
+  assert_eq(navigating.state().input(), "beta")
+  assert_eq(navigating.state().data(), Some(("alpha", ["a.txt"])))
+  let failed = update(
+    navigating,
+    Completed(navigating.generation, Err(@proton_client.BridgeUnavailable)),
+  )
+  assert_true(failed.state() is Failed(..))
+  assert_eq(failed.state().data(), Some(("alpha", ["a.txt"])))
+  assert_false(failed.pending)
+  let retry = update(failed, Refresh)
+  let empty = update(retry, Completed(retry.generation, Ok([])))
+  assert_true(empty.state() is Ready(..))
+  assert_eq(empty.state().data(), Some(("beta", [])))
+}
+
+///|
+test "listener failure cancels the current generation and stale notifications stay ignored" {
+  let start : Model[String, String] = update(
+    initial_model("query"),
+    Listening(0),
+  )
+  let failed = update(
+    start,
+    ListenFailed(0, @proton_client.EventDecode(message="bad event")),
+  )
+  let late = update(failed, Completed(start.generation, Ok("late")))
+  assert_true(late.previous is None)
+  assert_false(late.pending)
+  let retry = update(late, Refresh)
+  let ready = update(retry, Listening(retry.listener))
+  let stale = update(ready, Invalidated(0))
+  assert_false(stale.dirty)
+}
+
+///|
+test "typed invalidations decode their payload and close independently" {
+  let delivered : Ref[(String) -> Unit] = Ref(_ => ())
+  let closed = Ref(0)
+  let notices = Ref(0)
+  let errors = Ref(0)
+  let client = @proton_client.Client(invoke=(_, _, _, _) => () => (), subscribe=(
+    _,
+    received,
+  ) => {
+    delivered.val = received
+    () => closed.val += 1
+  })
+  let event : @proton_contract.Event[Int] = @proton_contract.event("changed")
+  let source : &Invalidation = event
+  let subscription = source.subscribe(client, () => notices.val += 1, _ => {
+    errors.val += 1
+  })
+  (delivered.val)("invalid")
+  (delivered.val)("1")
+  assert_eq(errors.val, 1)
+  assert_eq(notices.val, 1)
+  subscription.close()
+  subscription.close()
+  (delivered.val)("2")
+  assert_eq(closed.val, 1)
+  assert_eq(notices.val, 1)
+}

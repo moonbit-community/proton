@@ -231,6 +231,8 @@ struct proton_engine_client {
   cef_client_t client;
   proton_engine_ref_counted_t refs;
   proton_browser_lifecycle_t *browser_lifecycle;
+  // Immutable startup rules; retained independently of the UI owner.
+  proton_web_request_config_t *web_request_config;
 };
 
 /* A web contents view: an extra child browser hosted inside a window's client
@@ -285,7 +287,8 @@ void proton_engine_resize_browser(proton_engine_window_t *window,
                                   int width,
                                   int height);
 proton_engine_client_t *proton_engine_client_new(
-    proton_browser_lifecycle_t *browser_lifecycle);
+    proton_browser_lifecycle_t *browser_lifecycle,
+    proton_web_request_config_t *web_request_config);
 cef_client_t *proton_engine_browser_client_factory(
     void *context, proton_browser_lifecycle_t *browser_lifecycle);
 int CEF_CALLBACK proton_engine_client_release(cef_base_ref_counted_t *base);

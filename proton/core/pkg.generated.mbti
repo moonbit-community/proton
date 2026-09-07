@@ -83,7 +83,8 @@ pub struct AppCommandRequestContext {
   locale_preferences : @locale.LocalePreferences
 }
 pub fn AppCommandRequestContext::AppCommandRequestContext(@async.TaskGroup[Unit], @locale.LocalePreferences, window? : CommandWindow, window_id? : String, source_origin? : String, page_instance? : String?, permission_extension? : String, permission_scope? : Json, wake_signal? : RuntimeWakeSignal, emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise) -> Self
-pub async fn[Payload : ToJson] AppCommandRequestContext::emit(Self, @proton_contract.Event[Payload], Payload) -> Unit
+#alias(emit)
+pub async fn[Payload : ToJson] AppCommandRequestContext::emit_to_caller(Self, @proton_contract.Event[Payload], Payload) -> Unit
 pub fn AppCommandRequestContext::locale(Self) -> @locale.Locale
 pub fn AppCommandRequestContext::page_instance(Self) -> String?
 pub fn AppCommandRequestContext::permission_scope(Self, String) -> Json raise CommandPermissionError

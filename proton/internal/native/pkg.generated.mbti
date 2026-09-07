@@ -754,7 +754,7 @@ pub fn Window::stop_find_in_page(Self, Bool) -> Unit raise NativeError
 pub fn Window::take_bridge_failure(Self) -> BridgeDiagnostic? raise NativeError
 
 type WindowConfig derive(Eq, @debug.Debug)
-pub fn WindowConfig::WindowConfig(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, browser? : BrowserPolicy, bridge? : BridgeConfig) -> Self
+pub fn WindowConfig::WindowConfig(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, browser? : BrowserPolicy, bridge? : BridgeConfig, web_request_cancel_prefixes? : Array[String], web_request_redirect_prefixes? : Array[(String, String)], web_request_header_prefixes? : Array[(String, String, String)]) -> Self
 pub fn WindowConfig::equal(Self, Self) -> Bool
 pub fn WindowConfig::not_equal(Self, Self) -> Bool
 pub fn WindowConfig::to_repr(Self) -> @debug.Repr

@@ -19,7 +19,8 @@ This is a MoonBit Proton native desktop app.
 - `backend/` is a native Proton module.
 - `proton.project.json` is required by `proton_cli dev`, `build`, and `package`.
 - Keep command and event names in `shared/todo_contract.mbt`.
-- The Moon prebuild rule regenerates the typed bridge through
-  `moonx moonbit-community/proton_codegen`; do not invoke codegen from application
-  runtime code.
+- Bind shared commands explicitly in backend/todo/commands.mbt.
+- Write commands return business outcomes. Events invalidate snapshots; queries
+  use the application-local internal/query module. Keep request generations,
+  listener readiness, and invalidation coalescing out of the Todo model.
 - Do not reintroduce the old WebSocket app runtime route.

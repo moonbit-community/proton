@@ -11,89 +11,93 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
   if self.create_logs_path {
     ensure_log_directory(log_directory)
   }
-  let logging = start_runtime_logging(log_directory)
-  defer logging.close()
-  @xlog.info(category="proton.runtime") <?
-    { "message": "application runtime starting" }
-  let browser_data_dir = resolve_browser_data_dir(self, resolved) catch {
-    error => raise ConfigurationError(error)
-  }
-  let locale_preferences = resolve_locale_preferences(self.explicit_locale)
-  let application_executable = executable_path() catch {
-    error =>
-      raise RuntimeOperationFailed(
-        action="resolve application executable",
-        status=-1,
-        detail=error.message(),
-      )
-  }
-  let process_arguments = @env.args()
-  let application_arguments = if process_arguments.length() > 1 {
-    process_arguments[1:].to_owned()
-  } else {
-    []
-  }
-  let app_instance = match acquire_app_instance(resolved) {
-    Some(@native.AppInstanceAcquire::Forwarded) => {
-      @xlog.info(category="proton.runtime") <?
-        { "message": "application activation forwarded to primary instance" }
-      return
+  start_runtime_logging(log_directory)
+  let failure_log = RuntimeFailureLog::{ primary_logged: false, }
+  try {
+    @xlog.info(category="proton.runtime") <?
+      { "message": "application runtime starting" }
+    let browser_data_dir = resolve_browser_data_dir(self, resolved) catch {
+      error => raise ConfigurationError(error)
     }
-    Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
-    None => None
+    let locale_preferences = resolve_locale_preferences(self.explicit_locale)
+    let application_executable = executable_path() catch {
+      error =>
+        raise RuntimeOperationFailed(
+          action="resolve application executable",
+          status=-1,
+          detail=error.message(),
+        )
+    }
+    let process_arguments = @env.args()
+    let application_arguments = if process_arguments.length() > 1 {
+      process_arguments[1:].to_owned()
+    } else {
+      []
+    }
+    let app_instance = match acquire_app_instance(resolved) {
+      Some(@native.AppInstanceAcquire::Forwarded) => {
+        @xlog.info(category="proton.runtime") <?
+          { "message": "application activation forwarded to primary instance" }
+        return
+      }
+      Some(@native.AppInstanceAcquire::Primary(instance)) => Some(instance)
+      None => None
+    }
+    errdefer (match app_instance {
+      Some(instance) => destroy_app_instance(instance) catch { _ => () }
+      None => ()
+    })
+    run_manifest(
+      resolved.manifest,
+      resolved.permission_base_path,
+      self.command_capabilities,
+      self.extension_capabilities,
+      self.application_lifecycle_hooks,
+      self.window_lifecycle_hooks,
+      self.menu.map(menu => menu.to_native()),
+      self.bridge_startup_timeout_value_ms,
+      self.resolved_headless(),
+      self.accessibility_mode_value,
+      locale_preferences,
+      browser_data_dir?,
+      application_name=resolved.application_name,
+      app_instance~,
+      last_window_closed_policy=self.last_window_closed_policy_value,
+      launch_input_handlers=self.launch_input_handlers,
+      planned_views=self.planned_views.map(view => (view.0, view.1.to_native())),
+      window_event_handlers=self.window_event_handlers,
+      view_event_handlers=self.view_event_handlers,
+      browser_event_handlers=self.browser_event_handlers,
+      window_close_handler=self.window_close_handler,
+      navigation_handler=self.navigation_handler,
+      new_window_handler=self.new_window_handler,
+      download_handler=self.download_handler,
+      certificate_handler=self.certificate_handler,
+      media_handler=self.media_handler,
+      download_event_handlers=self.download_event_handlers,
+      update_channel=resolved.update_channel,
+      update_handlers=self.update_handlers,
+      application_identifier=resolved.application_identifier,
+      application_executable~,
+      application_arguments~,
+      url_schemes=resolved.url_schemes,
+      failure_log~,
+      web_request_cancel_prefixes=resolved.web_request_cancel_prefixes,
+      web_request_redirect_prefixes=resolved.web_request_redirect_prefixes,
+      web_request_header_prefixes=resolved.web_request_header_prefixes,
+    )
+    match app_instance {
+      Some(instance) => destroy_app_instance(instance)
+      None => ()
+    }
+    @native.process_run_relaunches() catch {
+      error => raise native_run_error("relaunch application", error)
+    }
+    @xlog.info(category="proton.runtime") <?
+      { "message": "application runtime stopped" }
+  } catch {
+    error => raise failure_log.logged_remaining(error)
   }
-  errdefer (match app_instance {
-    Some(instance) => destroy_app_instance(instance) catch { _ => () }
-    None => ()
-  })
-  run_manifest(
-    resolved.manifest,
-    resolved.permission_base_path,
-    self.command_capabilities,
-    self.extension_capabilities,
-    self.application_lifecycle_hooks,
-    self.window_lifecycle_hooks,
-    self.menu.map(menu => menu.to_native()),
-    self.bridge_startup_timeout_value_ms,
-    self.resolved_headless(),
-    self.accessibility_mode_value,
-    locale_preferences,
-    browser_data_dir?,
-    application_name=resolved.application_name,
-    app_instance~,
-    last_window_closed_policy=self.last_window_closed_policy_value,
-    launch_input_handlers=self.launch_input_handlers,
-    planned_views=self.planned_views.map(view => (view.0, view.1.to_native())),
-    window_event_handlers=self.window_event_handlers,
-    view_event_handlers=self.view_event_handlers,
-    browser_event_handlers=self.browser_event_handlers,
-    window_close_handler=self.window_close_handler,
-    navigation_handler=self.navigation_handler,
-    new_window_handler=self.new_window_handler,
-    download_handler=self.download_handler,
-    certificate_handler=self.certificate_handler,
-    media_handler=self.media_handler,
-    download_event_handlers=self.download_event_handlers,
-    update_channel=resolved.update_channel,
-    update_handlers=self.update_handlers,
-    application_identifier=resolved.application_identifier,
-    application_executable~,
-    application_arguments~,
-    url_schemes=resolved.url_schemes,
-    web_request_cancel_prefixes=resolved.web_request_cancel_prefixes,
-    web_request_redirect_prefixes=resolved.web_request_redirect_prefixes,
-  ) catch {
-    error => raise logged_runtime_failure(error)
-  }
-  match app_instance {
-    Some(instance) => destroy_app_instance(instance)
-    None => ()
-  }
-  @native.process_run_relaunches() catch {
-    error => raise native_run_error("relaunch application", error)
-  }
-  @xlog.info(category="proton.runtime") <?
-    { "message": "application runtime stopped" }
 }
 
 ///|
@@ -107,12 +111,39 @@ fn AccessibilityMode::to_native(
 }
 
 ///|
-fn logged_runtime_failure(error : AppRunError) -> AppRunError {
+fn log_runtime_failure(error : AppRunError) -> Unit {
   @xlog.error(category="proton.runtime") <?
     {
       "message": "application runtime failed",
       "code": app_run_error_log_code(error),
+      "error": error.message(),
     }
+}
+
+///|
+priv struct RuntimeFailureLog {
+  mut primary_logged : Bool
+}
+
+///|
+fn RuntimeFailureLog::report_primary(
+  self : RuntimeFailureLog,
+  error : AppRunError,
+) -> Unit {
+  log_runtime_failure(error)
+  self.primary_logged = true
+}
+
+///|
+fn RuntimeFailureLog::logged_remaining(
+  self : RuntimeFailureLog,
+  error : AppRunError,
+) -> AppRunError {
+  if !self.primary_logged {
+    log_runtime_failure(error)
+  } else if error is CleanupFailed(failures~, ..) {
+    log_runtime_failure(CleanupFailed(primary=None, failures~))
+  }
   error
 }
 
@@ -185,8 +216,12 @@ async fn run_manifest(
   application_executable? : String = "",
   application_arguments? : Array[String] = [],
   url_schemes? : Array[String] = [],
+  failure_log? : RuntimeFailureLog = RuntimeFailureLog::{
+    primary_logged: false,
+  },
   web_request_cancel_prefixes? : Array[String] = [],
   web_request_redirect_prefixes? : Array[(String, String)] = [],
+  web_request_header_prefixes? : Array[(String, String, String)] = [],
 ) -> Unit raise AppRunError {
   let plans = planned_windows(manifest) catch {
     error => raise ConfigurationError(error)
@@ -423,6 +458,7 @@ async fn run_manifest(
           url_schemes~,
           web_request_cancel_prefixes~,
           web_request_redirect_prefixes~,
+          web_request_header_prefixes~,
         )
         let application_context = session.application_context()
         let application_start = application_tasks.spawn(
@@ -482,6 +518,7 @@ async fn run_manifest(
   } catch {
     error => {
       let primary = normalize_async_run_error(error)
+      failure_log.report_primary(primary)
       if !headless {
         show_app_run_failure(
           runtime,
@@ -613,6 +650,7 @@ fn native_window_config(
   preferences : @locale.LocalePreferences,
   web_request_cancel_prefixes : Array[String],
   web_request_redirect_prefixes : Array[(String, String)],
+  web_request_header_prefixes : Array[(String, String, String)],
 ) -> @native.WindowConfig {
   let catalog = framework_catalog(preferences)
   @native.WindowConfig(
@@ -642,6 +680,7 @@ fn native_window_config(
     bridge?,
     web_request_cancel_prefixes~,
     web_request_redirect_prefixes~,
+    web_request_header_prefixes~,
   ).with_framework_titlebar_labels(
     catalog.titlebar_minimize,
     catalog.titlebar_maximize,
