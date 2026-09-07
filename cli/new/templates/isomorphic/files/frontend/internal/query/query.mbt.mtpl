@@ -1,0 +1,277 @@
+///|
+/// Application-local prototype, not a public Proton API. Previous data retains
+/// its input so a caller cannot mistake one directory/query's data for another.
+pub(all) enum State[Input, Value] {
+  Loading(input~ : Input, previous~ : (Input, Value)?)
+  Ready(input~ : Input, value~ : Value)
+  Failed(
+    input~ : Input,
+    error~ : @proton_client.ClientFailure,
+    previous~ : (Input, Value)?
+  )
+} derive(Eq)
+
+///|
+pub extend State with Eq::{equal, not_equal}
+
+///|
+pub fn[I, V] State::data(self : State[I, V]) -> (I, V)? {
+  match self {
+    Ready(input~, value~) => Some((input, value))
+    Loading(previous~, ..) | Failed(previous~, ..) => previous
+  }
+}
+
+///|
+pub fn[I, V] State::input(self : State[I, V]) -> I {
+  match self {
+    Loading(input~, ..) | Ready(input~, ..) | Failed(input~, ..) => input
+  }
+}
+
+///|
+pub struct Query[Input, Value] {
+  state : @rabbita.Val[State[Input, Value]]
+  set_input : (Input) -> @cmd.Cmd
+  refresh : @cmd.Cmd
+}
+
+///|
+priv struct Model[I, V] {
+  input : I
+  previous : (I, V)?
+  generation : Int
+  listener : Int
+  listening : Bool
+  pending : Bool
+  dirty : Bool
+  error : @proton_client.ClientFailure?
+} derive(Eq)
+
+///|
+priv enum Msg[I, V] {
+  InputChanged(I)
+  Refresh
+  Listening(Int)
+  ListenFailed(Int, @proton_client.ClientFailure)
+  Invalidated(Int)
+  Completed(Int, Result[V, @proton_client.ClientFailure])
+}
+
+///|
+fn[I, V] initial_model(input : I) -> Model[I, V] {
+  {
+    input,
+    previous: None,
+    generation: 0,
+    listener: 0,
+    listening: false,
+    pending: true,
+    dirty: false,
+    error: None,
+  }
+}
+
+///|
+fn[I, V] Model::state(self : Model[I, V]) -> State[I, V] {
+  if self.error is Some(error) {
+    Failed(input=self.input, error~, previous=self.previous)
+  } else if self.pending {
+    Loading(input=self.input, previous=self.previous)
+  } else if self.previous is Some((input, value)) {
+    Ready(input~, value~)
+  } else {
+    Loading(input=self.input, previous=None)
+  }
+}
+
+///|
+fn[I : Eq, V] update(model : Model[I, V], msg : Msg[I, V]) -> Model[I, V] {
+  match msg {
+    InputChanged(input) => {
+      if input == model.input {
+        return model
+      }
+      {
+        ..model,
+        input,
+        generation: model.generation + 1,
+        dirty: false,
+        pending: model.listening || model.error is None,
+        error: if model.listening {
+          None
+        } else {
+          model.error
+        },
+      }
+    }
+    Refresh =>
+      {
+        ..model,
+        generation: model.generation + 1,
+        pending: true,
+        dirty: false,
+        error: None,
+        listener: if model.listening {
+          model.listener
+        } else {
+          model.listener + 1
+        },
+      }
+    Listening(epoch) => {
+      guard epoch == model.listener else { return model }
+      {
+        ..model,
+        listening: true,
+        pending: true,
+        generation: model.generation + 1,
+        error: None,
+      }
+    }
+    ListenFailed(epoch, error) => {
+      guard epoch == model.listener else { return model }
+      {
+        ..model,
+        listening: false,
+        pending: false,
+        dirty: false,
+        generation: model.generation + 1,
+        error: Some(error),
+      }
+    }
+    Invalidated(epoch) => {
+      guard epoch == model.listener && model.listening else { return model }
+      if model.pending {
+        { ..model, dirty: true, }
+      } else {
+        {
+          ..model,
+          generation: model.generation + 1,
+          pending: true,
+          error: None,
+        }
+      }
+    }
+    Completed(generation, result) => {
+      guard generation == model.generation && model.pending && model.listening else {
+        return model
+      }
+      match result {
+        Ok(value) =>
+          {
+            ..model,
+            previous: Some((model.input, value)),
+            pending: model.dirty,
+            generation: if model.dirty {
+              model.generation + 1
+            } else {
+              model.generation
+            },
+            dirty: false,
+            error: None,
+          }
+        Err(error) =>
+          { ..model, pending: false, dirty: false, error: Some(error), }
+      }
+    }
+  }
+}
+
+///|
+priv suberror Installation {
+  Installation(start~ : (&@cmd.Scheduler) -> () -> Unit)
+}
+
+///|
+fn owned(key : String, start : (&@cmd.Scheduler) -> () -> Unit) -> @sub.Sub {
+  @sub.custom_sub(
+    key,
+    @sub.Local,
+    Installation(start~),
+    @sub.SubLoader((payload, scheduler) => {
+      guard payload is Installation(start~) else { return None }
+      let close = start(scheduler)
+      Some({ unload: _ => close(), update_tagger: _ => (), })
+    }),
+  )
+}
+
+///|
+/// Create this query while building a Rabbita component. Each query owns its
+/// state store, listener and request. Input changes are explicit commands;
+/// no caller-provided keys, generations or listener-order flags are needed.
+/// watch must finish installing before returning; failures require refresh.
+/// Callback boundaries avoid requiring a moonbitlang/async task context.
+pub fn[I : Eq, V : Eq] create(
+  initial~ : I,
+  load~ : (I, (Result[V, @proton_client.ClientFailure]) -> Unit) -> () -> Unit,
+  watch? : (() -> Unit, (@proton_client.ClientFailure) -> Unit) -> (() -> Unit) raise @proton_client.ClientFailure = (
+    _,
+    _,
+  ) => () => (),
+) -> Query[I, V] {
+  let (model, emit) = @rabbita.create_state(
+    initial_model(initial),
+    update=(model, msg, _) => (update(model, msg), @cmd.none),
+    subscriptions=(model, emit) => {
+      @sub.batch([
+        owned("listener:" + model.listener.to_string(), scheduler => {
+          let active = Ref(true)
+          let failed = Ref(false)
+          let close = try {
+            let close = watch(
+              () => {
+                if active.val {
+                  scheduler.add(emit(Invalidated(model.listener)))
+                }
+              },
+              error => {
+                if active.val {
+                  failed.val = true
+                  scheduler.add(emit(ListenFailed(model.listener, error)))
+                }
+              },
+            )
+            if !failed.val {
+              scheduler.add(emit(Listening(model.listener)))
+            }
+            close
+          } catch {
+            error => {
+              scheduler.add(emit(ListenFailed(model.listener, error)))
+              () => ()
+            }
+          }
+          () => {
+            active.val = false
+            close()
+          }
+        }),
+        if model.listening && model.pending {
+          owned("read:" + model.generation.to_string(), scheduler => {
+            let active = Ref(true)
+            let cancel = load(model.input, result => {
+              if active.val {
+                active.val = false
+                scheduler.add(emit(Completed(model.generation, result)))
+              }
+            })
+            () => {
+              if active.val {
+                active.val = false
+                cancel()
+              }
+            }
+          })
+        } else {
+          @sub.none
+        },
+      ])
+    },
+  )
+  {
+    state: model.map(model => model.state()),
+    set_input: input => emit(InputChanged(input)),
+    refresh: emit(Refresh),
+  }
+}

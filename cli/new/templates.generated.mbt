@@ -244,7 +244,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  "moonbit-community/proton_rabbita",
           #|  "moonbit-community/rabbita",
           #|  "moonbit-community/rabbita/html",
-          #|  "moonbit-community/rabbita/sub",
+          #|  "{{frontend_module}}/internal/query",
           #|}
           #|
           #|supported_targets = "js"
@@ -266,48 +266,23 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|///|
           #|struct Model {
           #|  draft : String
-          #|  query : String
-          #|  revision : Int
-          #|  snapshot : @shared.TodoSnapshot
-          #|  has_snapshot : Bool
-          #|  listening : Bool
-          #|  loading : Bool
-          #|  dirty : Bool
-          #|  retry : Int
           #|  error : String?
           #|} derive(Eq)
           #|
           #|///|
           #|enum Msg {
           #|  DraftChanged(String)
-          #|  QueryChanged(String)
           #|  Create
           #|  SetCompleted(Int, Bool)
           #|  Delete(Int)
-          #|  SnapshotReceived(Int, @shared.TodoSnapshot)
-          #|  QueryFailed(Int, @proton_client.ClientFailure)
           #|  MutationReceived(@shared.MutationReply)
           #|  Created(String, @shared.MutationReply)
-          #|  Invalidated(@shared.TodosChanged)
           #|  CommandFailed(@proton_client.ClientFailure)
-          #|  Retry
-          #|  ListenerReady
           #|}
           #|
           #|///|
           #|fn initial_model() -> Model {
-          #|  {
-          #|    draft: "",
-          #|    query: "",
-          #|    revision: 0,
-          #|    snapshot: { version: 0, todos: [], },
-          #|    has_snapshot: false,
-          #|    listening: false,
-          #|    loading: false,
-          #|    dirty: false,
-          #|    retry: 0,
-          #|    error: None,
-          #|  }
+          #|  { draft: "", error: None, }
           #|}
           #|
           #|///|
@@ -320,32 +295,14 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|///|
-          #|/// Coalesce invalidations while a query is running; a follow-up query closes
-          #|/// the race between reading a snapshot and receiving another invalidation.
-          #|fn invalidate(model : Model) -> Model {
-          #|  if model.loading {
-          #|    { ..model, dirty: true, }
-          #|  } else {
-          #|    { ..model, revision: model.revision + 1, loading: true, error: None, }
-          #|  }
-          #|}
-          #|
-          #|///|
-          #|fn update(model : Model, msg : Msg, emit : Emit[Msg]) -> (Model, Cmd) {
+          #|fn update(
+          #|  model : Model,
+          #|  msg : Msg,
+          #|  emit : Emit[Msg],
+          #|  refresh : Cmd,
+          #|) -> (Model, Cmd) {
           #|  match msg {
           #|    DraftChanged(draft) => ({ ..model, draft, }, @rabbita.none)
-          #|    QueryChanged(query) =>
-          #|      (
-          #|        {
-          #|          ..model,
-          #|          query,
-          #|          revision: model.revision + 1,
-          #|          loading: true,
-          #|          dirty: false,
-          #|          error: None,
-          #|        },
-          #|        @rabbita.none,
-          #|      )
           #|    Create =>
           #|      (
           #|        { ..model, error: None, },
@@ -382,95 +339,17 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|      } else {
           #|        model
           #|      }
-          #|      update(model, MutationReceived(reply), emit)
+          #|      update(model, MutationReceived(reply), emit, refresh)
           #|    }
           #|    MutationReceived(@shared.InvalidTitle) =>
           #|      ({ ..model, error: Some("Enter a non-empty title."), }, @rabbita.none)
           #|    MutationReceived(@shared.MissingTodo) =>
-          #|      (
-          #|        { ..invalidate(model), error: Some("This todo no longer exists."), },
-          #|        @rabbita.none,
-          #|      )
-          #|    MutationReceived(@shared.Changed(..)) => (invalidate(model), @rabbita.none)
-          #|    Invalidated(notice) =>
-          #|      if notice.version > model.snapshot.version {
-          #|        (invalidate(model), @rabbita.none)
-          #|      } else {
-          #|        (model, @rabbita.none)
-          #|      }
-          #|    SnapshotReceived(revision, snapshot) => {
-          #|      guard revision == model.revision else { return (model, @rabbita.none) }
-          #|      let model = if snapshot.version >= model.snapshot.version {
-          #|        { ..model, snapshot, has_snapshot: true, loading: false, error: None, }
-          #|      } else {
-          #|        { ..model, loading: false, }
-          #|      }
-          #|      if model.dirty {
-          #|        (invalidate({ ..model, dirty: false, }), @rabbita.none)
-          #|      } else {
-          #|        (model, @rabbita.none)
-          #|      }
-          #|    }
-          #|    QueryFailed(revision, error) =>
-          #|      if revision != model.revision {
-          #|        (model, @rabbita.none)
-          #|      } else {
-          #|        (
-          #|          { ..model, loading: false, error: Some(failure_message(error)), },
-          #|          @rabbita.none,
-          #|        )
-          #|      }
+          #|      ({ ..model, error: Some("This todo no longer exists."), }, refresh)
+          #|    MutationReceived(@shared.Changed(..)) =>
+          #|      ({ ..model, error: None, }, refresh)
           #|    CommandFailed(error) =>
           #|      ({ ..model, error: Some(failure_message(error)), }, @rabbita.none)
-          #|    ListenerReady =>
-          #|      (
-          #|        {
-          #|          ..model,
-          #|          listening: true,
-          #|          loading: true,
-          #|          revision: model.revision + 1,
-          #|          dirty: false,
-          #|        },
-          #|        @rabbita.none,
-          #|      )
-          #|    Retry =>
-          #|      (
-          #|        {
-          #|          ..model,
-          #|          retry: model.retry + 1,
-          #|          listening: false,
-          #|          loading: false,
-          #|          dirty: false,
-          #|          error: None,
-          #|        },
-          #|        @rabbita.none,
-          #|      )
           #|  }
-          #|}
-          #|
-          #|///|
-          #|fn subscriptions(model : Model, emit : Emit[Msg]) -> @sub.Sub {
-          #|  @sub.batch([
-          #|    @proton_rabbita.subscribe(
-          #|      @shared.todos_changed,
-          #|      notice => emit(Invalidated(notice)),
-          #|      error => emit(CommandFailed(error)),
-          #|      retry=model.retry,
-          #|      ready=emit(ListenerReady),
-          #|    ),
-          #|    if model.listening && model.loading {
-          #|      @proton_rabbita.request(
-          #|        @shared.list_todos,
-          #|        { query: model.query, },
-          #|        snapshot => emit(SnapshotReceived(model.revision, snapshot)),
-          #|        error => emit(QueryFailed(model.revision, error)),
-          #|        key="todos",
-          #|        revision=model.revision,
-          #|      )
-          #|    } else {
-          #|      @sub.none
-          #|    },
-          #|  ])
           #|}
           #|
           #|///|
@@ -497,21 +376,42 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|}
           #|
           #|///|
-          #|fn view(emit : Emit[Msg], model : Model) -> Html {
+          #|fn view(
+          #|  emit : Emit[Msg],
+          #|  model : Model,
+          #|  state : @query.State[String, @shared.TodoSnapshot],
+          #|  set_query : (String) -> Cmd,
+          #|  refresh : Cmd,
+          #|) -> Html {
+          #|  let snapshot = match state.data() {
+          #|    Some((_, snapshot)) => snapshot
+          #|    None => @shared.TodoSnapshot::{ version: 0, todos: [], }
+          #|  }
+          #|  let loading = state is @query.Loading(..)
           #|  let rows : Array[Html] = []
-          #|  for todo in model.snapshot.todos {
+          #|  for todo in snapshot.todos {
           #|    rows.push(todo_row(emit, todo))
           #|  }
           #|  let content = if !rows.is_empty() {
           #|    ul(class="todo-list", rows)
-          #|  } else if model.loading || (!model.has_snapshot && model.error is None) {
-          #|    p(class="status", "Loading todos...")
-          #|  } else if model.error is Some(_) || !model.has_snapshot {
-          #|    @html.nothing
-          #|  } else if !model.query.trim().is_empty() {
-          #|    p(class="status", "No matching todos.")
           #|  } else {
-          #|    p(class="status", "No todos yet.")
+          #|    match state {
+          #|      @query.Loading(..) => p(class="status", "Loading todos...")
+          #|      @query.Failed(..) => @html.nothing
+          #|      @query.Ready(input~, ..) =>
+          #|        p(
+          #|          class="status",
+          #|          if input.trim().is_empty() {
+          #|            "No todos yet."
+          #|          } else {
+          #|            "No matching todos."
+          #|          },
+          #|        )
+          #|    }
+          #|  }
+          #|  let query_error = match state {
+          #|    @query.Failed(error~, ..) => p(class="error", failure_message(error))
+          #|    _ => @html.nothing
           #|  }
           #|  let error = match model.error {
           #|    Some(message) => p(class="error", message)
@@ -520,7 +420,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|  div(class="app-shell", [
           #|    div(class="app-header", [
           #|      div([span(class="eyebrow", "PROTON + RABBITA"), h1({{title_mbt}})]),
-          #|      span(class="version", "Revision " + model.snapshot.version.to_string()),
+          #|      span(class="version", "Revision " + snapshot.version.to_string()),
           #|    ]),
           #|    form(on_submit=emit(Create), [
           #|      input(
@@ -531,15 +431,11 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|      input(input_type=Submit, value="Add todo"),
           #|    ]),
           #|    div(class="todo-toolbar", [
-          #|      input(
-          #|        value=model.query,
-          #|        placeholder="Search todos",
-          #|        on_input=emit.map(value => QueryChanged(value)),
-          #|      ),
+          #|      input(value=state.input(), placeholder="Search todos", on_input=set_query),
           #|      button(
           #|        type_="button",
-          #|        on_click=emit(Retry),
-          #|        if model.loading {
+          #|        on_click=refresh,
+          #|        if loading {
           #|          "Refreshing..."
           #|        } else {
           #|          "Refresh"
@@ -547,18 +443,40 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|      ),
           #|    ]),
           #|    error,
+          #|    query_error,
           #|    content,
           #|  ])
           #|}
           #|
           #|///|
           #|fn todo_app() -> @rabbita.Val[Html] {
-          #|  let (model, emit) = @rabbita.create_state_with_init(
-          #|    init=_emit => (initial_model(), @rabbita.none),
-          #|    update~,
-          #|    subscriptions~,
+          #|  let todos = @query.create(
+          #|    initial="",
+          #|    load=(query, done) => {
+          #|      @proton_client.invoke_with_callbacks(
+          #|        @shared.list_todos,
+          #|        { query, },
+          #|        value => done(Ok(value)),
+          #|        error => done(Err(error)),
+          #|      )
+          #|    },
+          #|    watch=(changed, failed) => {
+          #|      let listener = @proton_client.subscribe(
+          #|        @shared.todos_changed,
+          #|        _ => changed(),
+          #|        failed,
+          #|      )
+          #|      () => listener.close()
+          #|    },
           #|  )
-          #|  model.view(model => view(emit, model))
+          #|  let (model, emit) = @rabbita.create_state(initial_model(), update=(
+          #|    model,
+          #|    msg,
+          #|    emit,
+          #|  ) => update(model, msg, emit, todos.refresh))
+          #|  model.view2(todos.state, (model, state) => {
+          #|    view(emit, model, state, todos.set_input, todos.refresh)
+          #|  })
           #|}
           #|
           #|///|
@@ -1009,7 +927,8 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|- Keep command and event names in `shared/todo_contract.mbt`.
           #|- Bind shared commands explicitly in backend/todo/commands.mbt.
           #|- Write commands return business outcomes. Events invalidate snapshots; queries
-          #|  are component-owned subscriptions with revision guards for stale results.
+          #|  use the application-local internal/query module. Keep request generations,
+          #|  listener readiness, and invalidation coalescing out of the Todo model.
           #|- Do not reintroduce the old WebSocket app runtime route.
           #|
       ),
@@ -1111,16 +1030,17 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|Each ready window attaches its own event emitter and detaches it on close.
           #|Writes return a business result and notify those explicit destinations that
-          #|the data changed. Frontends install the listener before querying snapshots,
-          #|coalesce invalidations during reads, and reject outdated request revisions.
-          #|Search requests are managed subscriptions: changing the search cancels the
-          #|previous read, and leaving the owning component releases it. Refresh also
-          #|retries a failed listener installation.
+          #|the data changed. The application-local frontend/internal/query module owns
+          #|listener-first initialization, cancellation, invalidation coalescing, and stale
+          #|completion guards. The Todo model contains only its draft and business error.
+          #|Input changes use set_input; refresh retries the read or a failed listener.
+          #|Loading and failure retain previous data with its original query input. This
+          #|module is an internal prototype, not a stable Proton API; see its README.
           #|
           #|Run the generated backend and frontend regression tests with:
           #|
           #|    moon -C backend test todo --target native
-          #|    moon -C frontend test main --target js
+          #|    moon -C frontend test --target js
           #|
       ),
     },
@@ -1160,64 +1080,476 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
       ),
     },
     {
+      output_path: "frontend/internal/query/moon.pkg",
+      template_name: "isomorphic/frontend/internal/query/moon.pkg.mtpl",
+      template_source: (
+          #|import {
+          #|  "moonbit-community/rabbita",
+          #|  "moonbit-community/rabbita/cmd",
+          #|  "moonbit-community/rabbita/sub",
+          #|  "moonbit-community/proton_client",
+          #|}
+          #|
+          #|supported_targets = "js"
+          #|
+      ),
+    },
+    {
+      output_path: "frontend/internal/query/query_wbtest.mbt",
+      template_name: "isomorphic/frontend/internal/query/query_wbtest.mbt.mtpl",
+      template_source: (
+          #|///|
+          #|test "listener installation precedes reads and failures wait for explicit retry" {
+          #|  let initial : Model[String, Array[String]] = initial_model("alpha")
+          #|  assert_false(initial.listening)
+          #|  let failed = update(
+          #|    initial,
+          #|    ListenFailed(0, @proton_client.BridgeUnavailable),
+          #|  )
+          #|  assert_true(failed.state() is Failed(previous=None, ..))
+          #|  assert_false(failed.pending)
+          #|  let retry = update(failed, Refresh)
+          #|  assert_eq(retry.listener, 1)
+          #|  assert_false(retry.listening)
+          #|  let stale = update(retry, Listening(0))
+          #|  assert_false(stale.listening)
+          #|  let ready = update(stale, Listening(1))
+          #|  assert_true(ready.listening && ready.pending)
+          #|}
+          #|
+          #|///|
+          #|test "input changes reject queued old success and failure including ABA inputs" {
+          #|  let start : Model[String, String] = update(
+          #|    initial_model("alpha"),
+          #|    Listening(0),
+          #|  )
+          #|  let other = update(start, InputChanged("beta"))
+          #|  let back = update(other, InputChanged("alpha"))
+          #|  let stale = update(back, Completed(start.generation, Ok("old alpha")))
+          #|  assert_true(stale.previous is None)
+          #|  let failed = update(
+          #|    stale,
+          #|    Completed(other.generation, Err(@proton_client.BridgeUnavailable)),
+          #|  )
+          #|  assert_true(failed.error is None)
+          #|  let fresh = update(failed, Completed(back.generation, Ok("new alpha")))
+          #|  assert_eq(fresh.previous, Some(("alpha", "new alpha")))
+          #|  assert_false(fresh.pending)
+          #|  let duplicate = update(fresh, Completed(back.generation, Ok("duplicate")))
+          #|  assert_eq(duplicate.previous, fresh.previous)
+          #|}
+          #|
+          #|///|
+          #|test "invalidations coalesce and completed queries stay idle" {
+          #|  let start : Model[String, Int] = update(initial_model("query"), Listening(0))
+          #|  let dirty = update(update(start, Invalidated(0)), Invalidated(0))
+          #|  assert_eq(dirty.generation, start.generation)
+          #|  let next = update(dirty, Completed(start.generation, Ok(1)))
+          #|  assert_true(next.pending)
+          #|  assert_eq(next.generation, start.generation + 1)
+          #|  let fresh = update(next, Completed(next.generation, Ok(2)))
+          #|  assert_false(fresh.pending)
+          #|  let unchanged = update(fresh, InputChanged("query"))
+          #|  assert_eq(unchanged.generation, fresh.generation)
+          #|  assert_false(unchanged.pending)
+          #|}
+          #|
+          #|///|
+          #|test "previous data keeps its input through navigation and refresh failures" {
+          #|  let start : Model[String, Array[String]] = update(
+          #|    initial_model("alpha"),
+          #|    Listening(0),
+          #|  )
+          #|  let loaded = update(start, Completed(start.generation, Ok(["a.txt"])))
+          #|  let navigating = update(loaded, InputChanged("beta"))
+          #|  assert_eq(navigating.state().input(), "beta")
+          #|  assert_eq(navigating.state().data(), Some(("alpha", ["a.txt"])))
+          #|  let failed = update(
+          #|    navigating,
+          #|    Completed(navigating.generation, Err(@proton_client.BridgeUnavailable)),
+          #|  )
+          #|  assert_true(failed.state() is Failed(..))
+          #|  assert_eq(failed.state().data(), Some(("alpha", ["a.txt"])))
+          #|  assert_false(failed.pending)
+          #|  let retry = update(failed, Refresh)
+          #|  let empty = update(retry, Completed(retry.generation, Ok([])))
+          #|  assert_true(empty.state() is Ready(..))
+          #|  assert_eq(empty.state().data(), Some(("beta", [])))
+          #|}
+          #|
+          #|///|
+          #|test "listener failure cancels the current generation and stale notifications stay ignored" {
+          #|  let start : Model[String, String] = update(
+          #|    initial_model("query"),
+          #|    Listening(0),
+          #|  )
+          #|  let failed = update(
+          #|    start,
+          #|    ListenFailed(0, @proton_client.EventDecode(message="bad event")),
+          #|  )
+          #|  let late = update(failed, Completed(start.generation, Ok("late")))
+          #|  assert_true(late.previous is None)
+          #|  assert_false(late.pending)
+          #|  let retry = update(late, Refresh)
+          #|  let ready = update(retry, Listening(retry.listener))
+          #|  let stale = update(ready, Invalidated(0))
+          #|  assert_false(stale.dirty)
+          #|}
+          #|
+      ),
+    },
+    {
+      output_path: "frontend/internal/query/query.mbt",
+      template_name: "isomorphic/frontend/internal/query/query.mbt.mtpl",
+      template_source: (
+          #|///|
+          #|/// Application-local prototype, not a public Proton API. Previous data retains
+          #|/// its input so a caller cannot mistake one directory/query's data for another.
+          #|pub(all) enum State[Input, Value] {
+          #|  Loading(input~ : Input, previous~ : (Input, Value)?)
+          #|  Ready(input~ : Input, value~ : Value)
+          #|  Failed(
+          #|    input~ : Input,
+          #|    error~ : @proton_client.ClientFailure,
+          #|    previous~ : (Input, Value)?
+          #|  )
+          #|} derive(Eq)
+          #|
+          #|///|
+          #|pub extend State with Eq::{equal, not_equal}
+          #|
+          #|///|
+          #|pub fn[I, V] State::data(self : State[I, V]) -> (I, V)? {
+          #|  match self {
+          #|    Ready(input~, value~) => Some((input, value))
+          #|    Loading(previous~, ..) | Failed(previous~, ..) => previous
+          #|  }
+          #|}
+          #|
+          #|///|
+          #|pub fn[I, V] State::input(self : State[I, V]) -> I {
+          #|  match self {
+          #|    Loading(input~, ..) | Ready(input~, ..) | Failed(input~, ..) => input
+          #|  }
+          #|}
+          #|
+          #|///|
+          #|pub struct Query[Input, Value] {
+          #|  state : @rabbita.Val[State[Input, Value]]
+          #|  set_input : (Input) -> @cmd.Cmd
+          #|  refresh : @cmd.Cmd
+          #|}
+          #|
+          #|///|
+          #|priv struct Model[I, V] {
+          #|  input : I
+          #|  previous : (I, V)?
+          #|  generation : Int
+          #|  listener : Int
+          #|  listening : Bool
+          #|  pending : Bool
+          #|  dirty : Bool
+          #|  error : @proton_client.ClientFailure?
+          #|} derive(Eq)
+          #|
+          #|///|
+          #|priv enum Msg[I, V] {
+          #|  InputChanged(I)
+          #|  Refresh
+          #|  Listening(Int)
+          #|  ListenFailed(Int, @proton_client.ClientFailure)
+          #|  Invalidated(Int)
+          #|  Completed(Int, Result[V, @proton_client.ClientFailure])
+          #|}
+          #|
+          #|///|
+          #|fn[I, V] initial_model(input : I) -> Model[I, V] {
+          #|  {
+          #|    input,
+          #|    previous: None,
+          #|    generation: 0,
+          #|    listener: 0,
+          #|    listening: false,
+          #|    pending: true,
+          #|    dirty: false,
+          #|    error: None,
+          #|  }
+          #|}
+          #|
+          #|///|
+          #|fn[I, V] Model::state(self : Model[I, V]) -> State[I, V] {
+          #|  if self.error is Some(error) {
+          #|    Failed(input=self.input, error~, previous=self.previous)
+          #|  } else if self.pending {
+          #|    Loading(input=self.input, previous=self.previous)
+          #|  } else if self.previous is Some((input, value)) {
+          #|    Ready(input~, value~)
+          #|  } else {
+          #|    Loading(input=self.input, previous=None)
+          #|  }
+          #|}
+          #|
+          #|///|
+          #|fn[I : Eq, V] update(model : Model[I, V], msg : Msg[I, V]) -> Model[I, V] {
+          #|  match msg {
+          #|    InputChanged(input) => {
+          #|      if input == model.input {
+          #|        return model
+          #|      }
+          #|      {
+          #|        ..model,
+          #|        input,
+          #|        generation: model.generation + 1,
+          #|        dirty: false,
+          #|        pending: model.listening || model.error is None,
+          #|        error: if model.listening {
+          #|          None
+          #|        } else {
+          #|          model.error
+          #|        },
+          #|      }
+          #|    }
+          #|    Refresh =>
+          #|      {
+          #|        ..model,
+          #|        generation: model.generation + 1,
+          #|        pending: true,
+          #|        dirty: false,
+          #|        error: None,
+          #|        listener: if model.listening {
+          #|          model.listener
+          #|        } else {
+          #|          model.listener + 1
+          #|        },
+          #|      }
+          #|    Listening(epoch) => {
+          #|      guard epoch == model.listener else { return model }
+          #|      {
+          #|        ..model,
+          #|        listening: true,
+          #|        pending: true,
+          #|        generation: model.generation + 1,
+          #|        error: None,
+          #|      }
+          #|    }
+          #|    ListenFailed(epoch, error) => {
+          #|      guard epoch == model.listener else { return model }
+          #|      {
+          #|        ..model,
+          #|        listening: false,
+          #|        pending: false,
+          #|        dirty: false,
+          #|        generation: model.generation + 1,
+          #|        error: Some(error),
+          #|      }
+          #|    }
+          #|    Invalidated(epoch) => {
+          #|      guard epoch == model.listener && model.listening else { return model }
+          #|      if model.pending {
+          #|        { ..model, dirty: true, }
+          #|      } else {
+          #|        {
+          #|          ..model,
+          #|          generation: model.generation + 1,
+          #|          pending: true,
+          #|          error: None,
+          #|        }
+          #|      }
+          #|    }
+          #|    Completed(generation, result) => {
+          #|      guard generation == model.generation && model.pending && model.listening else {
+          #|        return model
+          #|      }
+          #|      match result {
+          #|        Ok(value) =>
+          #|          {
+          #|            ..model,
+          #|            previous: Some((model.input, value)),
+          #|            pending: model.dirty,
+          #|            generation: if model.dirty {
+          #|              model.generation + 1
+          #|            } else {
+          #|              model.generation
+          #|            },
+          #|            dirty: false,
+          #|            error: None,
+          #|          }
+          #|        Err(error) =>
+          #|          { ..model, pending: false, dirty: false, error: Some(error), }
+          #|      }
+          #|    }
+          #|  }
+          #|}
+          #|
+          #|///|
+          #|priv suberror Installation {
+          #|  Installation(start~ : (&@cmd.Scheduler) -> () -> Unit)
+          #|}
+          #|
+          #|///|
+          #|fn owned(key : String, start : (&@cmd.Scheduler) -> () -> Unit) -> @sub.Sub {
+          #|  @sub.custom_sub(
+          #|    key,
+          #|    @sub.Local,
+          #|    Installation(start~),
+          #|    @sub.SubLoader((payload, scheduler) => {
+          #|      guard payload is Installation(start~) else { return None }
+          #|      let close = start(scheduler)
+          #|      Some({ unload: _ => close(), update_tagger: _ => (), })
+          #|    }),
+          #|  )
+          #|}
+          #|
+          #|///|
+          #|/// Create this query while building a Rabbita component. Each query owns its
+          #|/// state store, listener and request. Input changes are explicit commands;
+          #|/// no caller-provided keys, generations or listener-order flags are needed.
+          #|/// watch must finish installing before returning; failures require refresh.
+          #|/// Callback boundaries avoid requiring a moonbitlang/async task context.
+          #|pub fn[I : Eq, V : Eq] create(
+          #|  initial~ : I,
+          #|  load~ : (I, (Result[V, @proton_client.ClientFailure]) -> Unit) -> () -> Unit,
+          #|  watch? : (() -> Unit, (@proton_client.ClientFailure) -> Unit) -> (() -> Unit) raise @proton_client.ClientFailure = (
+          #|    _,
+          #|    _,
+          #|  ) => () => (),
+          #|) -> Query[I, V] {
+          #|  let (model, emit) = @rabbita.create_state(
+          #|    initial_model(initial),
+          #|    update=(model, msg, _) => (update(model, msg), @cmd.none),
+          #|    subscriptions=(model, emit) => {
+          #|      @sub.batch([
+          #|        owned("listener:" + model.listener.to_string(), scheduler => {
+          #|          let active = Ref(true)
+          #|          let failed = Ref(false)
+          #|          let close = try {
+          #|            let close = watch(
+          #|              () => {
+          #|                if active.val {
+          #|                  scheduler.add(emit(Invalidated(model.listener)))
+          #|                }
+          #|              },
+          #|              error => {
+          #|                if active.val {
+          #|                  failed.val = true
+          #|                  scheduler.add(emit(ListenFailed(model.listener, error)))
+          #|                }
+          #|              },
+          #|            )
+          #|            if !failed.val {
+          #|              scheduler.add(emit(Listening(model.listener)))
+          #|            }
+          #|            close
+          #|          } catch {
+          #|            error => {
+          #|              scheduler.add(emit(ListenFailed(model.listener, error)))
+          #|              () => ()
+          #|            }
+          #|          }
+          #|          () => {
+          #|            active.val = false
+          #|            close()
+          #|          }
+          #|        }),
+          #|        if model.listening && model.pending {
+          #|          owned("read:" + model.generation.to_string(), scheduler => {
+          #|            let active = Ref(true)
+          #|            let cancel = load(model.input, result => {
+          #|              if active.val {
+          #|                active.val = false
+          #|                scheduler.add(emit(Completed(model.generation, result)))
+          #|              }
+          #|            })
+          #|            () => {
+          #|              if active.val {
+          #|                active.val = false
+          #|                cancel()
+          #|              }
+          #|            }
+          #|          })
+          #|        } else {
+          #|          @sub.none
+          #|        },
+          #|      ])
+          #|    },
+          #|  )
+          #|  {
+          #|    state: model.map(model => model.state()),
+          #|    set_input: input => emit(InputChanged(input)),
+          #|    refresh: emit(Refresh),
+          #|  }
+          #|}
+          #|
+      ),
+    },
+    {
+      output_path: "frontend/internal/query/README.md",
+      template_name: "isomorphic/frontend/internal/query/README.md.mtpl",
+      template_source: (
+          #|# Application-local query prototype
+          #|
+          #|This module is an experiment shipped as application source, not a stable public
+          #|Proton API. Todo owns drafts, write commands, and business errors; this module
+          #|owns query scheduling and presentation state. The repository's directory-browser
+          #|smoke fixture consumes this exact module with a different input/result shape,
+          #|real directory reads, and no invalidation event or snapshot version.
+          #|
+          #|Create one query while building a Rabbita component:
+          #|
+          #|```moonbit
+          #|let results = @query.create(
+          #|  initial="",
+          #|  load=(input, done) => @proton_client.invoke_with_callbacks(
+          #|    @shared.list_todos, { query: input },
+          #|    value => done(Ok(value)), error => done(Err(error)),
+          #|  ),
+          #|  watch=(changed, failed) => {
+          #|    let listener = @proton_client.subscribe(@shared.todos_changed, _ => changed(), failed)
+          #|    () => listener.close()
+          #|  },
+          #|)
+          #|```
+          #|
+          #|- `state` is a Rabbita value containing `Loading`, `Ready`, or `Failed`.
+          #|- `set_input(value)` returns a command. A different input cancels/replaces the
+          #|  current read. The same input does nothing; use `refresh` to explicitly retry.
+          #|- `refresh` returns a command that reloads the current input, or retries listener
+          #|  installation if it failed. Failures do not create automatic retry loops.
+          #|- `watch` is optional. Installation must complete synchronously before returning
+          #|  its cleanup function. Readiness is handled internally before the first read.
+          #|  The invalidation callback means only that a fresh read is needed; events do
+          #|  not deliver query state. Watch failures suspend reads until explicit refresh.
+          #|- `load` returns its cancellation function. Completion is accepted once; late
+          #|  callbacks and queued results from superseded generations are ignored.
+          #|- Query destruction releases its listener and cancels a pending read.
+          #|
+          #|`Loading` and `Failed` can retain `(input, value)` from the last successful read.
+          #|`state.input()` is the requested input; `state.data()` retains the original input
+          #|of displayed data. A directory view should label that original path while a new
+          #|path is loading. Empty successful results are `Ready`, never inferred from an
+          #|error or absence of data. Application write errors are kept separately so a
+          #|background read cannot erase them.
+          #|
+          #|Invalidations during a read coalesce into one follow-up after success. A failed
+          #|read stops and waits for refresh, changed input, or a later invalidation. There
+          #|is no cache shared between queries, implicit dependency tracking, background
+          #|retry policy, or business-version ordering. The application decides what to
+          #|invalidate and where to deliver events; notifications remain best effort.
+          #|
+          #|The explicit input command is intentional: Rabbita's current
+          #|`create_state_with_input` does not refresh subscriptions when its input alone
+          #|changes. Do not conceal that limitation with side effects in a render function.
+          #|
+      ),
+    },
+    {
       output_path: "frontend/main/model_wbtest.mbt",
       template_name: "isomorphic/frontend/main/model_wbtest.mbt.mtpl",
       template_source: (
           #|///|
           #|fn test_update(model : Model, msg : Msg) -> Model {
-          #|  let (next, _) = update(model, msg, _ => @rabbita.none)
+          #|  let (next, _) = update(model, msg, _ => @rabbita.none, @rabbita.none)
           #|  next
-          #|}
-          #|
-          #|///|
-          #|test "queries wait for the event listener and reject superseded results" {
-          #|  let initial = initial_model()
-          #|  assert_false(initial.loading)
-          #|  assert_false(initial.listening)
-          #|  let ready = test_update(initial, ListenerReady)
-          #|  assert_true(ready.loading && ready.listening)
-          #|  let searching = test_update(ready, QueryChanged("new"))
-          #|  let stale = test_update(
-          #|    searching,
-          #|    SnapshotReceived(ready.revision, {
-          #|      version: 9,
-          #|      todos: [{ id: 1, title: "old query", completed: false, }],
-          #|    }),
-          #|  )
-          #|  assert_eq(stale.snapshot.version, 0)
-          #|  assert_true(stale.loading)
-          #|  let current = test_update(
-          #|    stale,
-          #|    SnapshotReceived(searching.revision, {
-          #|      version: 10,
-          #|      todos: [{ id: 2, title: "new query", completed: false, }],
-          #|    }),
-          #|  )
-          #|  assert_eq(current.snapshot.todos[0].title, "new query")
-          #|  assert_false(current.loading)
-          #|}
-          #|
-          #|///|
-          #|test "invalidations during a read coalesce into a follow-up query" {
-          #|  let reading = test_update(initial_model(), ListenerReady)
-          #|  let dirty = test_update(
-          #|    test_update(reading, Invalidated({ version: 1, })),
-          #|    Invalidated({ version: 2, }),
-          #|  )
-          #|  assert_eq(dirty.revision, reading.revision)
-          #|  assert_true(dirty.dirty)
-          #|  let next = test_update(
-          #|    dirty,
-          #|    SnapshotReceived(reading.revision, { version: 1, todos: [], }),
-          #|  )
-          #|  assert_eq(next.revision, reading.revision + 1)
-          #|  assert_true(next.loading)
-          #|  assert_false(next.dirty)
-          #|  let fresh = test_update(
-          #|    next,
-          #|    SnapshotReceived(next.revision, { version: 2, todos: [], }),
-          #|  )
-          #|  assert_false(fresh.loading)
           #|}
           #|
           #|///|
@@ -1231,33 +1563,6 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|    Created("submitted", @shared.Changed(version=1)),
           #|  )
           #|  assert_eq(succeeded.draft, "new draft")
-          #|}
-          #|
-          #|///|
-          #|test "failed initial reads are not empty snapshots and refresh retains data" {
-          #|  let initial = test_update(initial_model(), ListenerReady)
-          #|  let failed = test_update(
-          #|    initial,
-          #|    QueryFailed(initial.revision, @proton_client.BridgeUnavailable),
-          #|  )
-          #|  assert_false(failed.has_snapshot)
-          #|  let loaded = test_update(
-          #|    initial,
-          #|    SnapshotReceived(initial.revision, {
-          #|      version: 1,
-          #|      todos: [{ id: 1, title: "Keep visible", completed: false, }],
-          #|    }),
-          #|  )
-          #|  assert_true(loaded.has_snapshot)
-          #|  let refreshing = test_update(loaded, QueryChanged("new query"))
-          #|  assert_true(refreshing.loading)
-          #|  assert_eq(refreshing.snapshot.todos[0].title, "Keep visible")
-          #|  let empty = test_update(
-          #|    refreshing,
-          #|    SnapshotReceived(refreshing.revision, { version: 1, todos: [], }),
-          #|  )
-          #|  assert_true(empty.has_snapshot)
-          #|  assert_true(empty.snapshot.todos.is_empty())
           #|}
           #|
       ),

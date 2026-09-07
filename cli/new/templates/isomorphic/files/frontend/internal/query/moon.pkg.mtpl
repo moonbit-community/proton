@@ -1,0 +1,8 @@
+import {
+  "moonbit-community/rabbita",
+  "moonbit-community/rabbita/cmd",
+  "moonbit-community/rabbita/sub",
+  "moonbit-community/proton_client",
+}
+
+supported_targets = "js"

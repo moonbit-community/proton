@@ -1,58 +1,7 @@
 ///|
 fn test_update(model : Model, msg : Msg) -> Model {
-  let (next, _) = update(model, msg, _ => @rabbita.none)
+  let (next, _) = update(model, msg, _ => @rabbita.none, @rabbita.none)
   next
-}
-
-///|
-test "queries wait for the event listener and reject superseded results" {
-  let initial = initial_model()
-  assert_false(initial.loading)
-  assert_false(initial.listening)
-  let ready = test_update(initial, ListenerReady)
-  assert_true(ready.loading && ready.listening)
-  let searching = test_update(ready, QueryChanged("new"))
-  let stale = test_update(
-    searching,
-    SnapshotReceived(ready.revision, {
-      version: 9,
-      todos: [{ id: 1, title: "old query", completed: false, }],
-    }),
-  )
-  assert_eq(stale.snapshot.version, 0)
-  assert_true(stale.loading)
-  let current = test_update(
-    stale,
-    SnapshotReceived(searching.revision, {
-      version: 10,
-      todos: [{ id: 2, title: "new query", completed: false, }],
-    }),
-  )
-  assert_eq(current.snapshot.todos[0].title, "new query")
-  assert_false(current.loading)
-}
-
-///|
-test "invalidations during a read coalesce into a follow-up query" {
-  let reading = test_update(initial_model(), ListenerReady)
-  let dirty = test_update(
-    test_update(reading, Invalidated({ version: 1, })),
-    Invalidated({ version: 2, }),
-  )
-  assert_eq(dirty.revision, reading.revision)
-  assert_true(dirty.dirty)
-  let next = test_update(
-    dirty,
-    SnapshotReceived(reading.revision, { version: 1, todos: [], }),
-  )
-  assert_eq(next.revision, reading.revision + 1)
-  assert_true(next.loading)
-  assert_false(next.dirty)
-  let fresh = test_update(
-    next,
-    SnapshotReceived(next.revision, { version: 2, todos: [], }),
-  )
-  assert_false(fresh.loading)
 }
 
 ///|
@@ -66,31 +15,4 @@ test "business failures and old create replies preserve newer user input" {
     Created("submitted", @shared.Changed(version=1)),
   )
   assert_eq(succeeded.draft, "new draft")
-}
-
-///|
-test "failed initial reads are not empty snapshots and refresh retains data" {
-  let initial = test_update(initial_model(), ListenerReady)
-  let failed = test_update(
-    initial,
-    QueryFailed(initial.revision, @proton_client.BridgeUnavailable),
-  )
-  assert_false(failed.has_snapshot)
-  let loaded = test_update(
-    initial,
-    SnapshotReceived(initial.revision, {
-      version: 1,
-      todos: [{ id: 1, title: "Keep visible", completed: false, }],
-    }),
-  )
-  assert_true(loaded.has_snapshot)
-  let refreshing = test_update(loaded, QueryChanged("new query"))
-  assert_true(refreshing.loading)
-  assert_eq(refreshing.snapshot.todos[0].title, "Keep visible")
-  let empty = test_update(
-    refreshing,
-    SnapshotReceived(refreshing.revision, { version: 1, todos: [], }),
-  )
-  assert_true(empty.has_snapshot)
-  assert_true(empty.snapshot.todos.is_empty())
 }

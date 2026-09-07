@@ -21,5 +21,6 @@ This is a MoonBit Proton native desktop app.
 - Keep command and event names in `shared/todo_contract.mbt`.
 - Bind shared commands explicitly in backend/todo/commands.mbt.
 - Write commands return business outcomes. Events invalidate snapshots; queries
-  are component-owned subscriptions with revision guards for stale results.
+  use the application-local internal/query module. Keep request generations,
+  listener readiness, and invalidation coalescing out of the Todo model.
 - Do not reintroduce the old WebSocket app runtime route.

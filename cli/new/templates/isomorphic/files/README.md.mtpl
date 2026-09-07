@@ -91,13 +91,14 @@ business rejection from transport failures.
 
 Each ready window attaches its own event emitter and detaches it on close.
 Writes return a business result and notify those explicit destinations that
-the data changed. Frontends install the listener before querying snapshots,
-coalesce invalidations during reads, and reject outdated request revisions.
-Search requests are managed subscriptions: changing the search cancels the
-previous read, and leaving the owning component releases it. Refresh also
-retries a failed listener installation.
+the data changed. The application-local frontend/internal/query module owns
+listener-first initialization, cancellation, invalidation coalescing, and stale
+completion guards. The Todo model contains only its draft and business error.
+Input changes use set_input; refresh retries the read or a failed listener.
+Loading and failure retain previous data with its original query input. This
+module is an internal prototype, not a stable Proton API; see its README.
 
 Run the generated backend and frontend regression tests with:
 
     moon -C backend test todo --target native
-    moon -C frontend test main --target js
+    moon -C frontend test --target js

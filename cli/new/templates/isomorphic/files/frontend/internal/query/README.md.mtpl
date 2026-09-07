@@ -1,0 +1,53 @@
+# Application-local query prototype
+
+This module is an experiment shipped as application source, not a stable public
+Proton API. Todo owns drafts, write commands, and business errors; this module
+owns query scheduling and presentation state. The repository's directory-browser
+smoke fixture consumes this exact module with a different input/result shape,
+real directory reads, and no invalidation event or snapshot version.
+
+Create one query while building a Rabbita component:
+
+```moonbit
+let results = @query.create(
+  initial="",
+  load=(input, done) => @proton_client.invoke_with_callbacks(
+    @shared.list_todos, { query: input },
+    value => done(Ok(value)), error => done(Err(error)),
+  ),
+  watch=(changed, failed) => {
+    let listener = @proton_client.subscribe(@shared.todos_changed, _ => changed(), failed)
+    () => listener.close()
+  },
+)
+```
+
+- `state` is a Rabbita value containing `Loading`, `Ready`, or `Failed`.
+- `set_input(value)` returns a command. A different input cancels/replaces the
+  current read. The same input does nothing; use `refresh` to explicitly retry.
+- `refresh` returns a command that reloads the current input, or retries listener
+  installation if it failed. Failures do not create automatic retry loops.
+- `watch` is optional. Installation must complete synchronously before returning
+  its cleanup function. Readiness is handled internally before the first read.
+  The invalidation callback means only that a fresh read is needed; events do
+  not deliver query state. Watch failures suspend reads until explicit refresh.
+- `load` returns its cancellation function. Completion is accepted once; late
+  callbacks and queued results from superseded generations are ignored.
+- Query destruction releases its listener and cancels a pending read.
+
+`Loading` and `Failed` can retain `(input, value)` from the last successful read.
+`state.input()` is the requested input; `state.data()` retains the original input
+of displayed data. A directory view should label that original path while a new
+path is loading. Empty successful results are `Ready`, never inferred from an
+error or absence of data. Application write errors are kept separately so a
+background read cannot erase them.
+
+Invalidations during a read coalesce into one follow-up after success. A failed
+read stops and waits for refresh, changed input, or a later invalidation. There
+is no cache shared between queries, implicit dependency tracking, background
+retry policy, or business-version ordering. The application decides what to
+invalidate and where to deliver events; notifications remain best effort.
+
+The explicit input command is intentional: Rabbita's current
+`create_state_with_input` does not refresh subscriptions when its input alone
+changes. Do not conceal that limitation with side effects in a render function.
