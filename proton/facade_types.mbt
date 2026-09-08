@@ -39,6 +39,20 @@ pub extend AccessibilityMode with Eq::{not_equal, equal}
 pub extend AccessibilityMode with Debug::{to_repr}
 
 ///|
+/// Selects browser storage that can be cleared from a live Proton session.
+pub(all) enum StorageDataKind {
+  Cookies
+  HttpCache
+  AllSupported
+} derive(Eq, Debug)
+
+///|
+pub extend StorageDataKind with Eq::{not_equal, equal}
+
+///|
+pub extend StorageDataKind with Debug::{to_repr}
+
+///|
 /// High-level application facade for ordinary Proton apps.
 struct App {
   mut window : @manifest.WindowManifest
@@ -565,6 +579,7 @@ pub struct SessionHandle {
   remove_cookies : (String?, String?) -> Unit raise WindowSessionError
   flush_cookie_store : () -> Unit raise WindowSessionError
   clear_http_cache : () -> Unit raise WindowSessionError
+  clear_storage_data : (StorageDataKind) -> Unit raise WindowSessionError
 }
 
 ///|

@@ -247,3 +247,7 @@ targets the issuing page (emit remains an alias); WindowContext::events returns
 an explicit destination for that window. Broadcast by retaining only the
 destinations your application intends to notify and releasing them with their
 window lifecycle. Events are live, best-effort notifications, not replayable state.
+
+`SessionHandle::clear_storage_data` supports `Cookies`, `HttpCache`, and
+`AllSupported`. Profile-directory categories such as IndexedDB and
+localStorage are intentionally not cleared while a CEF session is live.

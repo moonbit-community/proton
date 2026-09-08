@@ -705,13 +705,24 @@ pub struct SessionHandle {
   remove_cookies : (String?, String?) -> Unit raise WindowSessionError
   flush_cookie_store : () -> Unit raise WindowSessionError
   clear_http_cache : () -> Unit raise WindowSessionError
+  clear_storage_data : (StorageDataKind) -> Unit raise WindowSessionError
 }
 pub fn SessionHandle::clear_cache(Self) -> Unit raise WindowSessionError
+pub fn SessionHandle::clear_storage_data(Self, StorageDataKind) -> Unit raise WindowSessionError
 pub fn SessionHandle::delete_cookies(Self, url? : String, name? : String) -> Unit raise WindowSessionError
 pub fn SessionHandle::flush_cookies(Self) -> Unit raise WindowSessionError
 pub async fn SessionHandle::get_cookies(Self, url? : String, include_http_only? : Bool) -> Array[Cookie] raise WindowSessionError
 pub fn SessionHandle::set_cookie(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : CookieSameSite) -> Unit raise WindowSessionError
 pub fn SessionHandle::window_id(Self) -> String
+
+pub(all) enum StorageDataKind {
+  Cookies
+  HttpCache
+  AllSupported
+} derive(Eq, @debug.Debug)
+pub fn StorageDataKind::equal(Self, Self) -> Bool
+pub fn StorageDataKind::not_equal(Self, Self) -> Bool
+pub fn StorageDataKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TitlebarStyle {
   Default
