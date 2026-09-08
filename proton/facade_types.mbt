@@ -1083,6 +1083,12 @@ pub(all) enum BrowserEvent {
   PdfPrinted(result~ : PdfPrintResult)
   ResourceResponse(url~ : String, status_code~ : Int)
   ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
+  RendererProcessTerminated(
+    url~ : String,
+    status~ : Int,
+    error_code~ : Int,
+    detail~ : String
+  )
 } derive(Debug, Eq)
 
 ///|

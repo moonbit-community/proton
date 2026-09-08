@@ -1197,6 +1197,16 @@ fn decode_native_runtime_event(
           final_update: @native_ffi.event_int(event, 3) != 0,
         }),
       )
+    40 =>
+      BrowserEvent(
+        window,
+        RendererProcessTerminated(
+          require_native_event_text(event, 0, "renderer termination URL"),
+          @native_ffi.event_int(event, 0),
+          @native_ffi.event_int(event, 1),
+          require_native_event_text(event, 1, "renderer termination detail"),
+        ),
+      )
     35 =>
       ViewEvent(
         window,

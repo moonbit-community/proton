@@ -62,6 +62,9 @@ void proton_browser_session_load_failed(proton_browser_session_t *session,
                                         const char *url,
                                         int32_t error_code,
                                         const char *error_text);
+void proton_browser_session_renderer_terminated(
+    proton_browser_session_t *session, int32_t status, int32_t error_code,
+    const char *url, const char *error_text);
 int32_t proton_browser_session_copy_url(proton_browser_session_t *session,
                                         char *buffer, int32_t buffer_len,
                                         int32_t *out_required_len);
