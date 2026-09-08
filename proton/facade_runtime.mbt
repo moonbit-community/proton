@@ -74,6 +74,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       download_handler=self.download_handler,
       certificate_handler=self.certificate_handler,
       media_handler=self.media_handler,
+      permission_handler=self.permission_handler,
       download_event_handlers=self.download_event_handlers,
       update_channel=resolved.update_channel,
       update_handlers=self.update_handlers,
@@ -207,6 +208,7 @@ async fn run_manifest(
   download_handler? : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)? = None,
   certificate_handler? : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)? = None,
   media_handler? : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)? = None,
+  permission_handler? : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)? = None,
   download_event_handlers? : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ] = [],
@@ -451,6 +453,7 @@ async fn run_manifest(
           download_handler,
           certificate_handler,
           media_handler,
+          permission_handler,
           download_event_handlers,
           application_identifier~,
           application_executable~,

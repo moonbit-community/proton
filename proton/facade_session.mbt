@@ -31,6 +31,7 @@ fn RuntimeSession::RuntimeSession(
   download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?,
   certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?,
   media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?,
+  permission_handler : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?,
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ],
@@ -74,6 +75,7 @@ fn RuntimeSession::RuntimeSession(
     download_handler,
     certificate_handler,
     media_handler,
+    permission_handler,
     download_event_handlers,
     close_coordinator: CloseCoordinator(),
     application_identifier,
@@ -3422,26 +3424,54 @@ fn RuntimeSession::start_browser_request(
             None => BrowserResponse::{ action: "deny", path: None, }
           }
         Certificate(url~, error_code~, ..) =>
-          match self.certificate_handler {
+          match self.permission_handler {
             Some(handler) =>
-              match handler(browser, { url, error_code, }) {
+              match
+                handler(
+                  browser,
+                  PermissionRequest::Certificate({ url, error_code, }),
+                ) {
                 BrowserPermissionDecision::Allow =>
                   BrowserResponse::{ action: "allow", path: None, }
                 BrowserPermissionDecision::Deny =>
                   BrowserResponse::{ action: "deny", path: None, }
               }
-            None => BrowserResponse::{ action: "deny", path: None, }
+            None =>
+              match self.certificate_handler {
+                Some(handler) =>
+                  match handler(browser, { url, error_code, }) {
+                    BrowserPermissionDecision::Allow =>
+                      BrowserResponse::{ action: "allow", path: None, }
+                    BrowserPermissionDecision::Deny =>
+                      BrowserResponse::{ action: "deny", path: None, }
+                  }
+                None => BrowserResponse::{ action: "deny", path: None, }
+              }
           }
         Media(origin~, permissions~, ..) =>
-          match self.media_handler {
+          match self.permission_handler {
             Some(handler) =>
-              match handler(browser, { origin, permissions, }) {
+              match
+                handler(
+                  browser,
+                  PermissionRequest::Media({ origin, permissions, }),
+                ) {
                 BrowserPermissionDecision::Allow =>
                   BrowserResponse::{ action: "allow", path: None, }
                 BrowserPermissionDecision::Deny =>
                   BrowserResponse::{ action: "deny", path: None, }
               }
-            None => BrowserResponse::{ action: "deny", path: None, }
+            None =>
+              match self.media_handler {
+                Some(handler) =>
+                  match handler(browser, { origin, permissions, }) {
+                    BrowserPermissionDecision::Allow =>
+                      BrowserResponse::{ action: "allow", path: None, }
+                    BrowserPermissionDecision::Deny =>
+                      BrowserResponse::{ action: "deny", path: None, }
+                  }
+                None => BrowserResponse::{ action: "deny", path: None, }
+              }
           }
       }
     },

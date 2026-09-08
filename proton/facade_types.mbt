@@ -97,6 +97,7 @@ struct App {
   mut download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
   mut certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
   mut media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
+  mut permission_handler : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
@@ -433,6 +434,7 @@ priv struct RuntimeSession {
   download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
   certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
   media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
+  permission_handler : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
@@ -996,6 +998,19 @@ pub extend MediaPermissionRequest with Eq::{not_equal, equal}
 
 ///|
 pub extend MediaPermissionRequest with Debug::{to_repr}
+
+///|
+/// A browser permission request delivered to the unified policy handler.
+pub(all) enum PermissionRequest {
+  Certificate(CertificateError)
+  Media(MediaPermissionRequest)
+} derive(Debug, Eq)
+
+///|
+pub extend PermissionRequest with Eq::{not_equal, equal}
+
+///|
+pub extend PermissionRequest with Debug::{to_repr}
 
 ///|
 pub(all) enum BrowserPermissionDecision {
