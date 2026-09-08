@@ -3318,6 +3318,8 @@ fn RuntimeSession::dispatch_browser_event(
                   url=info.url.unwrap_or(""),
                   status=info.error_code.unwrap_or(0),
                   received_bytes=info.received_bytes.unwrap_or(0L),
+                ),
+              )
             ("browser_renderer_process_terminated", _, Some(details), _, _) =>
               Some(
                 BrowserEvent::RendererProcessTerminated(
