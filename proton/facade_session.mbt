@@ -1017,6 +1017,21 @@ fn RuntimeSession::session_handle(
         window.clear_cache()
       })
     },
+    clear_storage_data: kind => {
+      self.control_window(id, native_id, "clear storage in", window => {
+        match kind {
+          Cookies | AllSupported => {
+            window.cookie_delete(None, None)
+            window.cookie_flush()
+          }
+          HttpCache => ()
+        }
+        match kind {
+          HttpCache | AllSupported => window.clear_cache()
+          Cookies => ()
+        }
+      })
+    },
   }
 }
 

@@ -176,3 +176,12 @@ pub fn SessionHandle::clear_cache(
 ) -> Unit raise WindowSessionError {
   (self.clear_http_cache)()
 }
+
+///|
+/// Clears the selected live session storage categories.
+pub fn SessionHandle::clear_storage_data(
+  self : SessionHandle,
+  kind : StorageDataKind,
+) -> Unit raise WindowSessionError {
+  (self.clear_storage_data)(kind)
+}
