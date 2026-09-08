@@ -44,7 +44,10 @@ temporary files, the executable/module, logs, and configured desktop, documents,
 downloads, music, pictures, and videos directories. `Assets` is available on
 Windows and Linux, and `Recent` is available on Windows. Persistent application
 paths use the reverse-DNS identifier, so changing a display name does not move
-user state.
+user state. Use `App::session_partition` with `.single_instance()` to place the
+browser profile in an isolated `sessionData/<partition>` directory. Cookies,
+cache, IndexedDB, and other Chromium profile state are separated between
+partitions. Partition names are limited to letters, digits, `.`, `-`, and `_`.
 
 `App::set_path` overrides any supported standard path before startup and
 requires an existing absolute path. `App::set_app_logs_path` accepts an

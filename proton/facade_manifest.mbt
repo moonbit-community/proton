@@ -16,6 +16,7 @@ fn App::App(
     accessibility_mode_value: AccessibilityMode::Automatic,
     application_identity: None,
     single_instance_enabled: false,
+    session_partition_value: None,
     explicit_locale: None,
     path_overrides: Map([]),
     electron_default_logs_path: false,
@@ -96,6 +97,7 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
     } else {
       None
     },
+    session_partition: self.session_partition_value,
     url_schemes: self.url_schemes.copy(),
     web_request_cancel_prefixes: self.web_request_cancel_prefixes.copy(),
     web_request_redirect_prefixes: self.web_request_redirect_prefixes.copy(),

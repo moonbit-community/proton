@@ -699,6 +699,19 @@ test "bridge startup timeout is finite and configurable" {
 }
 
 ///|
+test "session partitions validate and resolve beneath session data" {
+  let app = html("Partition", "<main />")
+    .identifier("dev.proton.partition")
+    .single_instance()
+    .session_partition("account_1")
+  let config = app.resolved_app_config()
+  assert_eq(config.session_partition, Some("account_1"))
+  assert_true(session_partition_is_valid("account-1.v2"))
+  assert_false(session_partition_is_valid("../account"))
+  assert_false(session_partition_is_valid("account/name"))
+}
+
+///|
 test "storage data kinds are stable and explicit" {
   assert_eq(StorageDataKind::Cookies, StorageDataKind::Cookies)
   assert_eq(StorageDataKind::HttpCache, StorageDataKind::HttpCache)

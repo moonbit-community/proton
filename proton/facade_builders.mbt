@@ -155,6 +155,14 @@ pub fn App::single_instance(self : App, enabled? : Bool = true) -> App {
 }
 
 ///|
+/// Uses an isolated persistent browser profile below the application's
+/// sessionData directory.
+pub fn App::session_partition(self : App, partition : String) -> App {
+  self.session_partition_value = Some(partition.trim().to_owned())
+  self
+}
+
+///|
 /// Sets the maximum time allowed for the native bridge to become ready.
 pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> App {
   self.bridge_startup_timeout_value_ms = timeout_ms

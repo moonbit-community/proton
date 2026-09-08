@@ -588,7 +588,35 @@ fn resolve_browser_data_dir(
     error =>
       raise InvalidSetting(name="paths.sessionData", message=error.message())
   }
-  Some(path)
+  match config.session_partition {
+    None => Some(path)
+    Some(partition) => {
+      guard session_partition_is_valid(partition) else {
+        raise InvalidSetting(
+          name="session_partition",
+          message="must contain only letters, digits, '.', '-', or '_'",
+        )
+      }
+      Some(@mbpath.Path(path).join(partition).to_string())
+    }
+  }
+}
+
+///|
+fn session_partition_is_valid(partition : String) -> Bool {
+  guard partition.length() > 0 && partition.length() <= 96 else { return false }
+  for character in partition {
+    let code = character.to_int()
+    if !((code >= 'a'.to_int() && code <= 'z'.to_int()) ||
+      (code >= 'A'.to_int() && code <= 'Z'.to_int()) ||
+      (code >= '0'.to_int() && code <= '9'.to_int()) ||
+      character == '.' ||
+      character == '-' ||
+      character == '_') {
+      return false
+    }
+  }
+  true
 }
 
 ///|
