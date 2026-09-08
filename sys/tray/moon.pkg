@@ -1,7 +1,6 @@
 import {
   "moonbit-community/proton_ffi" @ffi,
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/env",
   "moonbitlang/core/json",
 }
 

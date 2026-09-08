@@ -15,8 +15,16 @@
 #include <CommonCrypto/CommonRandom.h>
 #endif
 
-static _Thread_local char mb_safe_storage_error[512];
-static _Thread_local int mb_safe_storage_operation_status;
+#if defined(_MSC_VER)
+#define MB_THREAD_LOCAL __declspec(thread)
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define MB_THREAD_LOCAL _Thread_local
+#else
+#define MB_THREAD_LOCAL
+#endif
+
+static MB_THREAD_LOCAL char mb_safe_storage_error[512];
+static MB_THREAD_LOCAL int mb_safe_storage_operation_status;
 static void mb_set_error(const char *message) {
   mb_safe_storage_operation_status = 0;
   snprintf(mb_safe_storage_error, sizeof(mb_safe_storage_error), "%s", message);
