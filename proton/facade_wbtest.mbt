@@ -712,6 +712,20 @@ test "session partitions validate and resolve beneath session data" {
 }
 
 ///|
+test "permission requests expose a unified certificate and media policy" {
+  let certificate = PermissionRequest::Certificate({
+    url: "https://example.test",
+    error_code: -200,
+  })
+  let media = PermissionRequest::Media({
+    origin: "https://example.test",
+    permissions: 3,
+  })
+  assert_true(certificate is PermissionRequest::Certificate(_))
+  assert_true(media is PermissionRequest::Media(_))
+}
+
+///|
 test "storage data kinds are stable and explicit" {
   assert_eq(StorageDataKind::Cookies, StorageDataKind::Cookies)
   assert_eq(StorageDataKind::HttpCache, StorageDataKind::HttpCache)

@@ -621,6 +621,16 @@ pub fn App::on_media_permission_request(
 }
 
 ///|
+/// Applies one policy to certificate and media permission requests.
+pub fn App::on_permission_request(
+  self : App,
+  handler : async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise,
+) -> App {
+  self.permission_handler = Some(handler)
+  self
+}
+
+///|
 /// Observes download progress and terminal states.
 pub fn App::on_download_event(
   self : App,

@@ -44,6 +44,7 @@ fn App::App(
     download_handler: None,
     certificate_handler: None,
     media_handler: None,
+    permission_handler: None,
     download_event_handlers: [],
     update_handlers: [],
     window_lifecycle_hooks: [],
