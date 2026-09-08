@@ -463,6 +463,8 @@ enum NativeBrowserEvent {
   TitleUpdated(String)
   LoadFailed(String, Int, String)
   FindResult(NativeFindInPageResult)
+  ResourceResponse(String, Int)
+  ResourceCompleted(String, Int, Int64)
 } derive(Debug, Eq)
 
 ///|
@@ -803,6 +805,8 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     BrowserEvent(_, TitleUpdated(_)) => "browser_title_updated"
     BrowserEvent(_, LoadFailed(_, _, _)) => "browser_load_failed"
     BrowserEvent(_, FindResult(_)) => "browser_found_in_page"
+    BrowserEvent(_, ResourceResponse(_, _)) => "browser_resource_response"
+    BrowserEvent(_, ResourceCompleted(_, _, _)) => "browser_resource_completed"
     ViewEvent(_, _, LoadingChanged(_)) => "view_loading_changed"
     ViewEvent(_, _, Navigated(_)) => "view_navigated"
     ViewEvent(_, _, TitleUpdated(_)) => "view_title_updated"
@@ -888,6 +892,7 @@ pub(all) struct ViewEventInfo {
   is_loading : Bool?
   error_code : Int?
   error_text : String?
+  received_bytes : Int64?
 } derive(Debug, Eq)
 
 ///|
@@ -907,6 +912,7 @@ pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: Some(is_loading),
         error_code: None,
         error_text: None,
+        received_bytes: None,
       })
     ViewEvent(_, _, Navigated(url)) =>
       Some({
@@ -915,6 +921,7 @@ pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: None,
         error_code: None,
         error_text: None,
+        received_bytes: None,
       })
     ViewEvent(_, _, TitleUpdated(title)) =>
       Some({
@@ -923,6 +930,7 @@ pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: None,
         error_code: None,
         error_text: None,
+        received_bytes: None,
       })
     ViewEvent(_, _, LoadFailed(url, error_code, error_text)) =>
       Some({
@@ -931,6 +939,7 @@ pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: None,
         error_code: Some(error_code),
         error_text: Some(error_text),
+        received_bytes: None,
       })
     ViewEvent(_, _, Closed) =>
       Some({
@@ -939,6 +948,7 @@ pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: None,
         error_code: None,
         error_text: None,
+        received_bytes: None,
       })
     _ => None
   }
@@ -955,6 +965,7 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: Some(is_loading),
         error_code: None,
         error_text: None,
+        received_bytes: None,
       })
     BrowserEvent(_, Navigated(url)) =>
       Some({
@@ -963,6 +974,7 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: None,
         error_code: None,
         error_text: None,
+        received_bytes: None,
       })
     BrowserEvent(_, TitleUpdated(title)) =>
       Some({
@@ -971,6 +983,7 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: None,
         error_code: None,
         error_text: None,
+        received_bytes: None,
       })
     BrowserEvent(_, LoadFailed(url, error_code, error_text)) =>
       Some({
@@ -979,6 +992,25 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         is_loading: None,
         error_code: Some(error_code),
         error_text: Some(error_text),
+        received_bytes: None,
+      })
+    BrowserEvent(_, ResourceResponse(url, status)) =>
+      Some({
+        url: Some(url),
+        title: None,
+        is_loading: None,
+        error_code: Some(status),
+        error_text: None,
+        received_bytes: None,
+      })
+    BrowserEvent(_, ResourceCompleted(url, status, bytes)) =>
+      Some({
+        url: Some(url),
+        title: None,
+        is_loading: None,
+        error_code: Some(status),
+        error_text: None,
+        received_bytes: Some(bytes),
       })
     _ => None
   }

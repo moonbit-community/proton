@@ -104,6 +104,7 @@ typedef struct proton_browser_resource_handler {
   atomic_int refs;
 #endif
   proton_web_request_config_t *config;
+  proton_window_id_t window;
 } proton_browser_resource_handler_t;
 
 static proton_browser_resource_handler_t *
@@ -214,9 +215,62 @@ static cef_return_value_t CEF_CALLBACK proton_browser_on_before_resource_load(
   return result == 0 ? RV_CANCEL : RV_CONTINUE;
 }
 
+static int CEF_CALLBACK proton_browser_on_resource_response(
+    cef_resource_request_handler_t *self, cef_browser_t *browser,
+    cef_frame_t *frame, cef_request_t *request, cef_response_t *response) {
+  (void)browser;
+  (void)frame;
+  proton_browser_resource_handler_t *handler =
+      (proton_browser_resource_handler_t *)self;
+  if (request == NULL || response == NULL ||
+      request->get_url == NULL || response->get_status == NULL)
+    return 0;
+  cef_string_userfree_t url = request->get_url(request);
+  char *url_utf8 = proton_browser_cef_string_to_utf8(url);
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_RESOURCE_RESPONSE, handler->window);
+  if (event != NULL && url_utf8 != NULL &&
+      proton_event_set_text(&event->text_a, url_utf8)) {
+    event->int_a = response->get_status(response);
+    (void)proton_event_publish(event);
+  } else {
+    proton_event_destroy(event);
+  }
+  if (url != NULL) cef_string_userfree_free(url);
+  free(url_utf8);
+  return 0;
+}
+
+static void CEF_CALLBACK proton_browser_on_resource_load_complete(
+    cef_resource_request_handler_t *self, cef_browser_t *browser,
+    cef_frame_t *frame, cef_request_t *request, cef_response_t *response,
+    cef_urlrequest_status_t status, int64_t received_content_length) {
+  (void)browser;
+  (void)frame;
+  (void)response;
+  proton_browser_resource_handler_t *handler =
+      (proton_browser_resource_handler_t *)self;
+  if (request == NULL || request->get_url == NULL)
+    return;
+  cef_string_userfree_t url = request->get_url(request);
+  char *url_utf8 = proton_browser_cef_string_to_utf8(url);
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_RESOURCE_COMPLETED, handler->window);
+  if (event != NULL && url_utf8 != NULL &&
+      proton_event_set_text(&event->text_a, url_utf8)) {
+    event->int_a = (int32_t)status;
+    event->int64_a = received_content_length;
+    (void)proton_event_publish(event);
+  } else {
+    proton_event_destroy(event);
+  }
+  if (url != NULL) cef_string_userfree_free(url);
+  free(url_utf8);
+}
+
 static void proton_browser_resource_handler_init(
     proton_browser_resource_handler_t *handler,
-    proton_web_request_config_t *config) {
+    proton_web_request_config_t *config, proton_window_id_t window) {
   memset(handler, 0, sizeof(*handler));
   handler->handler.base.size = sizeof(handler->handler);
   handler->handler.base.add_ref = proton_browser_resource_handler_add_ref;
@@ -227,17 +281,21 @@ static void proton_browser_resource_handler_init(
       proton_browser_resource_handler_has_at_least_one_ref;
   handler->handler.on_before_resource_load =
       proton_browser_on_before_resource_load;
+  handler->handler.on_resource_response = proton_browser_on_resource_response;
+  handler->handler.on_resource_load_complete =
+      proton_browser_on_resource_load_complete;
 #ifdef _WIN32
   handler->refs = 1;
 #else
   atomic_init(&handler->refs, 1);
 #endif
   handler->config = config;
+  handler->window = window;
   proton_web_request_config_retain(config);
 }
 
 cef_resource_request_handler_t *proton_browser_resource_handler_create(
-    proton_web_request_config_t *config) {
+    proton_web_request_config_t *config, proton_window_id_t window) {
   if (config == NULL) {
     return NULL;
   }
@@ -246,7 +304,7 @@ cef_resource_request_handler_t *proton_browser_resource_handler_create(
   if (handler == NULL) {
     return NULL;
   }
-  proton_browser_resource_handler_init(handler, config);
+  proton_browser_resource_handler_init(handler, config, window);
   return &handler->handler;
 }
 

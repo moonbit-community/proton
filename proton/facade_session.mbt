@@ -3304,6 +3304,21 @@ fn RuntimeSession::dispatch_browser_event(
                   success: result.success,
                 }),
               )
+            ("browser_resource_response", Some(info), _, _) =>
+              Some(
+                BrowserEvent::ResourceResponse(
+                  url=info.url.unwrap_or(""),
+                  status_code=info.error_code.unwrap_or(0),
+                ),
+              )
+            ("browser_resource_completed", Some(info), _, _) =>
+              Some(
+                BrowserEvent::ResourceCompleted(
+                  url=info.url.unwrap_or(""),
+                  status=info.error_code.unwrap_or(0),
+                  received_bytes=info.received_bytes.unwrap_or(0L),
+                ),
+              )
             _ => None
           }
           match observed {

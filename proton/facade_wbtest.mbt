@@ -794,6 +794,26 @@ test "web request header prefixes are validated and resolved" {
 }
 
 ///|
+test "browser resource observation events carry response metadata" {
+  assert_eq(
+    BrowserEvent::ResourceResponse(url="https://example.test/", status_code=204),
+    BrowserEvent::ResourceResponse(url="https://example.test/", status_code=204),
+  )
+  assert_eq(
+    BrowserEvent::ResourceCompleted(
+      url="https://example.test/",
+      status=0,
+      received_bytes=42L,
+    ),
+    BrowserEvent::ResourceCompleted(
+      url="https://example.test/",
+      status=0,
+      received_bytes=42L,
+    ),
+  )
+}
+
+///|
 test "debug mode uses an ephemeral endpoint unless a fixed port is explicit" {
   assert_eq(
     resolve_remote_debugging(0, None),

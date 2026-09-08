@@ -1073,7 +1073,9 @@ proton_engine_get_resource_request_handler(
   cef_resource_request_handler_t *handler = NULL;
   if (cef_client != NULL) {
     proton_engine_client_t *client = (proton_engine_client_t *)cef_client;
-    handler = proton_browser_resource_handler_create(client->web_request_config);
+    proton_engine_window_t *window = proton_engine_window_lookup_browser(browser);
+    handler = proton_browser_resource_handler_create(client->web_request_config,
+                                                     window != NULL ? window->public_window_id : 0);
     cef_client->base.release((cef_base_ref_counted_t *)cef_client);
   }
   host->base.release((cef_base_ref_counted_t *)host);

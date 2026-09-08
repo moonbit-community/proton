@@ -182,6 +182,11 @@ match.
 Use `App::web_request_header_prefix` to override a named request header for
 matching URLs before the request is sent.
 
+Browser event handlers also receive `ResourceResponse` with the response URL
+and HTTP status, followed by `ResourceCompleted` with the completion status and
+received byte count. These are observations only and do not block the IO
+thread.
+
 Web contents views expose the same loading lifecycle events through
 `ViewEvent::DidStartLoading` and `ViewEvent::DidFinishLoad`; their
 `LoadingChanged` event remains available as the boolean form.

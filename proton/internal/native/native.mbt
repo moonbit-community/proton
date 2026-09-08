@@ -1212,6 +1212,23 @@ fn decode_native_runtime_event(
           final_update: @native_ffi.event_int(event, 3) != 0,
         }),
       )
+    38 =>
+      BrowserEvent(
+        window,
+        ResourceResponse(
+          require_native_event_text(event, 0, "resource response"),
+          @native_ffi.event_int(event, 0),
+        ),
+      )
+    39 =>
+      BrowserEvent(
+        window,
+        ResourceCompleted(
+          require_native_event_text(event, 0, "resource completion"),
+          @native_ffi.event_int(event, 0),
+          @native_ffi.event_int64(event, 4),
+        ),
+      )
     36 =>
       BrowserPdfPrinted(window, {
         request_id: @native_ffi.event_int64(event, 2).to_int(),
