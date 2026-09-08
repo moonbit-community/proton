@@ -63,6 +63,7 @@ struct App {
   mut accessibility_mode_value : AccessibilityMode
   mut application_identity : ApplicationIdentitySource?
   mut single_instance_enabled : Bool
+  mut session_partition_value : String?
   mut explicit_locale : @locale.Locale?
   path_overrides : Map[String, String]
   mut electron_default_logs_path : Bool
@@ -185,6 +186,7 @@ priv struct ResolvedAppConfig {
   application_identifier : String
   instance_identifier : String?
   url_schemes : Array[String]
+  session_partition : String?
   web_request_cancel_prefixes : Array[String]
   web_request_redirect_prefixes : Array[(String, String)]
   web_request_header_prefixes : Array[(String, String, String)]
