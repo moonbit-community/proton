@@ -64,6 +64,8 @@ struct App {
   mut application_identity : ApplicationIdentitySource?
   mut single_instance_enabled : Bool
   mut session_partition_value : String?
+  mut proxy_server_value : String?
+  mut proxy_bypass_value : String?
   mut explicit_locale : @locale.Locale?
   path_overrides : Map[String, String]
   mut electron_default_logs_path : Bool

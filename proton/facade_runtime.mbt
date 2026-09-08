@@ -99,6 +99,14 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
   } catch {
     error => raise failure_log.logged_remaining(error)
   }
+  match self.proxy_server_value {
+    Some(server) => @env.set_env_var("PROTON_PROXY_SERVER", server)
+    None => ()
+  }
+  match self.proxy_bypass_value {
+    Some(bypass) => @env.set_env_var("PROTON_PROXY_BYPASS", bypass)
+    None => ()
+  }
 }
 
 ///|

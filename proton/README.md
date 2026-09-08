@@ -53,6 +53,10 @@ Use `App::on_permission_request` to apply one policy to certificate and media
 permission requests. It takes precedence over the specialized handlers; when
 no handler is configured, Proton denies both request types by default.
 
+Use `App::proxy` to configure a startup-wide Chromium proxy. Proton passes the
+server and optional bypass list to CEF before startup; changing proxy settings
+while the application is running is not supported.
+
 `App::set_path` overrides any supported standard path before startup and
 requires an existing absolute path. `App::set_app_logs_path` accepts an
 absolute directory that Proton creates during startup; omitting the path selects

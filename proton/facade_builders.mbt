@@ -163,6 +163,15 @@ pub fn App::session_partition(self : App, partition : String) -> App {
 }
 
 ///|
+/// Configures a startup-wide Chromium proxy. This is read when the native
+/// runtime starts and cannot be changed while the app is running.
+pub fn App::proxy(self : App, server : String, bypass? : String) -> App {
+  self.proxy_server_value = Some(server.trim().to_owned())
+  self.proxy_bypass_value = bypass.map(value => value.trim().to_owned())
+  self
+}
+
+///|
 /// Sets the maximum time allowed for the native bridge to become ready.
 pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> App {
   self.bridge_startup_timeout_value_ms = timeout_ms

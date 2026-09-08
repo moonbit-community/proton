@@ -17,6 +17,8 @@ fn App::App(
     application_identity: None,
     single_instance_enabled: false,
     session_partition_value: None,
+    proxy_server_value: None,
+    proxy_bypass_value: None,
     explicit_locale: None,
     path_overrides: Map([]),
     electron_default_logs_path: false,
