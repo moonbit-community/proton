@@ -91,6 +91,15 @@ fn web_contents_view_event_line(event : @proton.ViewEvent) -> String {
       error_code.to_string() +
       " error_text=" +
       error_text
+    RendererProcessTerminated(url~, status~, error_code~, detail~) =>
+      "view_renderer_process_terminated url=" +
+      url +
+      " status=" +
+      status.to_string() +
+      " error_code=" +
+      error_code.to_string() +
+      " detail=" +
+      detail
     FoundInPage(result~) =>
       "view_found_in_page matches=" + result.matches.to_string()
     Closed => "view_closed"

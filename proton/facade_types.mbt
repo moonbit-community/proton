@@ -770,6 +770,12 @@ pub(all) enum ViewEvent {
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  RendererProcessTerminated(
+    url~ : String,
+    status~ : Int,
+    error_code~ : Int,
+    detail~ : String
+  )
   FoundInPage(result~ : FindInPageResult)
   Closed
 } derive(Debug, Eq)

@@ -334,6 +334,8 @@ pub(all) enum BrowserEvent {
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
   FoundInPage(result~ : FindInPageResult)
   PdfPrinted(result~ : PdfPrintResult)
+  ResourceResponse(url~ : String, status_code~ : Int)
+  ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
   RendererProcessTerminated(url~ : String, status~ : Int, error_code~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn BrowserEvent::equal(Self, Self) -> Bool
@@ -777,6 +779,7 @@ pub(all) enum ViewEvent {
   Navigated(url~ : String)
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
+  RendererProcessTerminated(url~ : String, status~ : Int, error_code~ : Int, detail~ : String)
   FoundInPage(result~ : FindInPageResult)
   Closed
 } derive(Eq, @debug.Debug)

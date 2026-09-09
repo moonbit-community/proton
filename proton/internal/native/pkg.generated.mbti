@@ -548,6 +548,7 @@ pub fn RuntimeEvent::resource_request_cancellation(Self) -> Int64?
 pub fn RuntimeEvent::to_repr(Self) -> @debug.Repr
 pub fn RuntimeEvent::view_event(Self) -> ViewEventInfo?
 pub fn RuntimeEvent::view_id(Self) -> Int64?
+pub fn RuntimeEvent::view_renderer_process_termination(Self) -> RendererProcessTerminationInfo?
 pub fn RuntimeEvent::window_close_request(Self) -> Int64?
 pub fn RuntimeEvent::window_id(Self) -> Int64?
 pub fn RuntimeEvent::window_state_change(Self) -> WindowState?
@@ -673,6 +674,7 @@ pub(all) struct ViewEventInfo {
   is_loading : Bool?
   error_code : Int?
   error_text : String?
+  received_bytes : Int64?
 } derive(Eq, @debug.Debug)
 pub fn ViewEventInfo::equal(Self, Self) -> Bool
 pub fn ViewEventInfo::not_equal(Self, Self) -> Bool

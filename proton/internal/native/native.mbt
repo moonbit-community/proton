@@ -1091,6 +1091,19 @@ fn decode_native_runtime_event(
           require_native_event_text(event, 1, "view load error"),
         ),
       )
+    41 =>
+      ViewEvent(
+        window,
+        @native_ffi.event_int64(event, 1),
+        RendererProcessTerminated(
+          require_native_event_text(event, 0, "view renderer termination URL"),
+          @native_ffi.event_int(event, 0),
+          @native_ffi.event_int(event, 1),
+          require_native_event_text(
+            event, 1, "view renderer termination detail",
+          ),
+        ),
+      )
     22 =>
       BridgeRequestReceived(
         decode_bridge_request(

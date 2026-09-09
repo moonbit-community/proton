@@ -164,6 +164,24 @@ void proton_view_events_load_failed(proton_view_events_t *events,
   proton_view_events_enqueue(events, event, 0);
 }
 
+void proton_view_events_renderer_terminated(
+    proton_view_events_t *events, int32_t status, int32_t error_code,
+    const char *url, const char *error_text) {
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_VIEW_RENDERER_TERMINATED);
+  if (event != NULL &&
+      (!proton_event_set_text(&event->text_a, url) ||
+       !proton_event_set_text(&event->text_b, error_text))) {
+    proton_event_destroy(event);
+    event = NULL;
+  }
+  if (event != NULL) {
+    event->int_a = status;
+    event->int_b = error_code;
+  }
+  proton_view_events_enqueue(events, event, 0);
+}
+
 void proton_view_events_find_result(
     proton_view_events_t *events, int32_t request_id, int32_t count,
     int32_t x, int32_t y, int32_t width, int32_t height,

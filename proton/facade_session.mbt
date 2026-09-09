@@ -3169,8 +3169,13 @@ fn RuntimeSession::dispatch_view_event(
     if view.view.id() == view_native_id {
       let handle = self.view_handle(running, view)
       let view_event = match
-        (event.event_type(), event.view_event(), event.find_in_page_result()) {
-        ("view_loading_changed", Some(info), _) => {
+        (
+          event.event_type(),
+          event.view_event(),
+          event.view_renderer_process_termination(),
+          event.find_in_page_result(),
+        ) {
+        ("view_loading_changed", Some(info), _, _) => {
           let is_loading = info.is_loading.unwrap_or(false)
           let transition = match view.observed_loading {
             None => []
@@ -3196,19 +3201,26 @@ fn RuntimeSession::dispatch_view_event(
           }
           ViewEvent::LoadingChanged(is_loading~)
         }
-        ("view_navigated", Some(info), _) =>
+        ("view_navigated", Some(info), _, _) =>
           ViewEvent::Navigated(url=info.url.unwrap_or(""))
-        ("view_title_updated", Some(info), _) =>
+        ("view_title_updated", Some(info), _, _) =>
           ViewEvent::TitleUpdated(title=info.title.unwrap_or(""))
-        ("view_load_failed", Some(info), _) =>
+        ("view_load_failed", Some(info), _, _) =>
           ViewEvent::LoadFailed(
             url=info.url.unwrap_or(""),
             error_code=info.error_code.unwrap_or(0),
             error_text=info.error_text.unwrap_or(""),
           )
-        ("view_found_in_page", _, Some(result)) =>
+        ("view_found_in_page", _, _, Some(result)) =>
           ViewEvent::FoundInPage(result=FindInPageResult::from_native(result))
-        ("view_closed", Some(_), _) => ViewEvent::Closed
+        ("view_renderer_process_terminated", _, Some(details), _) =>
+          ViewEvent::RendererProcessTerminated(
+            url=details.url,
+            status=details.status,
+            error_code=details.error_code,
+            detail=details.detail,
+          )
+        ("view_closed", Some(_), _, _) => ViewEvent::Closed
         _ => return
       }
       if closes_view {
