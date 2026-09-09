@@ -1284,6 +1284,11 @@ pub extern "C" fn proton_window_cookie_flush_ffi(window : WindowHandle) -> Int =
 pub extern "C" fn proton_window_clear_cache_ffi(window : WindowHandle) -> Int = "proton_window_clear_cache"
 
 ///|
+pub extern "C" fn proton_window_clear_auth_cache_ffi(
+  window : WindowHandle,
+) -> Int = "proton_window_clear_auth_cache"
+
+///|
 #borrow(out_image)
 pub extern "C" fn proton_image_create_empty_ffi(
   out_image : Ref[ImageHandle],

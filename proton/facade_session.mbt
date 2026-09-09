@@ -1019,6 +1019,11 @@ fn RuntimeSession::session_handle(
         window.clear_cache()
       })
     },
+    clear_http_auth_cache: () => {
+      self.control_window(id, native_id, "clear auth cache in", window => {
+        window.clear_auth_cache()
+      })
+    },
     clear_storage_data: kind => {
       self.control_window(id, native_id, "clear storage in", window => {
         match kind {

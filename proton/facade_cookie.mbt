@@ -178,6 +178,14 @@ pub fn SessionHandle::clear_cache(
 }
 
 ///|
+/// Clears cached HTTP authentication credentials for this session.
+pub fn SessionHandle::clear_auth_cache(
+  self : SessionHandle,
+) -> Unit raise WindowSessionError {
+  (self.clear_http_auth_cache)()
+}
+
+///|
 /// Clears the selected live session storage categories.
 pub fn SessionHandle::clear_storage_data(
   self : SessionHandle,
