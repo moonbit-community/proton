@@ -31,7 +31,9 @@ fn decrypt(
 
 ///|
 #proton.command(contract=availability_command)
-fn availability(_request : Json) -> @safe_storage_contract.AvailabilityReply {
+fn availability(
+  _request : @proton_contract.EmptyRequest,
+) -> @safe_storage_contract.AvailabilityReply {
   @safe_storage_contract.AvailabilityReply::{
     available: @sys_safe_storage.is_available(),
   }

@@ -52,6 +52,9 @@ pub fn decrypt_string(value : String) -> Result[String, String] {
   if operation_ok_ffi() == 0 {
     Err(error_message("safe storage decryption failed"))
   } else {
-    Ok(@utf8.decode_lossy(decrypted[:]))
+    let value = @utf8.decode(decrypted[:]) catch {
+      _ => return Err("safe storage decrypted payload is not valid UTF-8")
+    }
+    Ok(value)
   }
 }
