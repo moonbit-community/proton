@@ -35,3 +35,12 @@ fn write_clipboard_text(
     Err(error) => raise WriteFailed(detail=error)
   }
 }
+
+///|
+fn clear_clipboard() -> @clipboard_contract.ClearReply raise ClipboardError {
+  ensure_supported()
+  match @sys_clipboard.write_text("") {
+    Ok(_) => @clipboard_contract.ClearReply::{ cleared: true, }
+    Err(error) => raise WriteFailed(detail=error)
+  }
+}

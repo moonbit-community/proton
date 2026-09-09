@@ -6,6 +6,7 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
   [
     read_text_command.contract_route(),
     write_text_command.contract_route(),
+    clear_command.contract_route(),
   ]
 }
 
@@ -20,5 +21,9 @@ pub fn register_commands(
   registrar.bind(
     write_text_command,
     (context, request) => write_text(context, request),
+  )
+  registrar.bind(
+    clear_command,
+    (context, request) => clear(context, request),
   )
 }
