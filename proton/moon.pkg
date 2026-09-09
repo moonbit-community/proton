@@ -52,6 +52,8 @@ options(
     "facade_menu.mbt": [ "native" ],
     "facade_manifest.mbt": [ "native" ],
     "facade_native_types.mbt": [ "native" ],
+    "facade_native_image.mbt": [ "native" ],
+    "facade_native_image_wbtest.mbt": [ "native" ],
     "facade_notification.mbt": [ "native" ],
     "facade_paths.mbt": [ "native" ],
     "facade_permissions.mbt": [ "native" ],
