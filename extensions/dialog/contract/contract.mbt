@@ -18,6 +18,25 @@ pub extend MessageRequest with ToJson::{to_json}
 pub extend MessageRequest with FromJson::{from_json}
 
 ///|
+/// Request for Electron's `showErrorBox` convenience dialog.
+pub(all) struct ErrorBoxRequest {
+  title : String
+  content : String
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend ErrorBoxRequest with Eq::{not_equal, equal}
+
+///|
+pub extend ErrorBoxRequest with Debug::{to_repr}
+
+///|
+pub extend ErrorBoxRequest with ToJson::{to_json}
+
+///|
+pub extend ErrorBoxRequest with FromJson::{from_json}
+
+///|
 pub(all) struct FileDialogRequest {
   title : String?
   path : String?
@@ -113,6 +132,11 @@ pub let message : @proton_contract.Command[MessageRequest, MessageReply] = exten
 ///|
 pub let confirm : @proton_contract.Command[MessageRequest, ConfirmReply] = extension.command(
   "confirm",
+)
+
+///|
+pub let error_box : @proton_contract.Command[ErrorBoxRequest, MessageReply] = extension.command(
+  "showErrorBox",
 )
 
 ///|
