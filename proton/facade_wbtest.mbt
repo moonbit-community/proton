@@ -797,6 +797,18 @@ test "web request header prefixes are validated and resolved" {
 ///|
 test "browser resource observation events carry response metadata" {
   assert_eq(
+    BrowserEvent::ResourceRequested(
+      url="https://example.test/data",
+      request_method="POST",
+      will_cancel=false,
+    ),
+    BrowserEvent::ResourceRequested(
+      url="https://example.test/data",
+      request_method="POST",
+      will_cancel=false,
+    ),
+  )
+  assert_eq(
     BrowserEvent::ResourceResponse(url="https://example.test/", status_code=204),
     BrowserEvent::ResourceResponse(url="https://example.test/", status_code=204),
   )

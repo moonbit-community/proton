@@ -336,6 +336,7 @@ pub(all) enum BrowserEvent {
   PdfPrinted(result~ : PdfPrintResult)
   ResourceResponse(url~ : String, status_code~ : Int)
   ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
+  ResourceRequested(url~ : String, request_method~ : String, will_cancel~ : Bool)
   RendererProcessTerminated(url~ : String, status~ : Int, error_code~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn BrowserEvent::equal(Self, Self) -> Bool

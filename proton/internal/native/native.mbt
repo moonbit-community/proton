@@ -1252,6 +1252,15 @@ fn decode_native_runtime_event(
           @native_ffi.event_int64(event, 4),
         ),
       )
+    42 =>
+      BrowserEvent(
+        window,
+        ResourceRequested(
+          require_native_event_text(event, 0, "resource request URL"),
+          require_native_event_text(event, 1, "resource request method"),
+          @native_ffi.event_int(event, 3) != 0,
+        ),
+      )
     36 =>
       BrowserPdfPrinted(window, {
         request_id: @native_ffi.event_int64(event, 2).to_int(),

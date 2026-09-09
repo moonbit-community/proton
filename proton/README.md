@@ -91,6 +91,15 @@ process.
 - `@proton.file(title, path, ...)` — an HTML file on disk.
 - `@proton.asset(title, path, ...)` — an HTML asset shipped with the app.
 
+Configure Chromium network policy with `App::web_request_cancel_prefix`,
+`App::web_request_redirect_prefix`, and `App::web_request_header_prefix`.
+Subscribe with `App::on_browser_event` to observe `BrowserEvent::ResourceRequested`
+before a request is sent, `ResourceResponse` when headers arrive, and
+`ResourceCompleted` when it finishes. The request event includes its URL, HTTP
+method, and whether the configured synchronous policy will cancel it. A
+non-zero completion status represents an error; request callbacks are
+observational and do not expose mutable CEF objects across the native boundary.
+
 ## Commands and events
 
 Register typed commands on the app builder:

@@ -1090,6 +1090,13 @@ pub(all) enum BrowserEvent {
   PdfPrinted(result~ : PdfPrintResult)
   ResourceResponse(url~ : String, status_code~ : Int)
   ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
+  /// A network resource request observed before Chromium sends it.
+  /// `will_cancel` reports whether the configured synchronous policy blocks it.
+  ResourceRequested(
+    url~ : String,
+    request_method~ : String,
+    will_cancel~ : Bool
+  )
   RendererProcessTerminated(
     url~ : String,
     status~ : Int,
