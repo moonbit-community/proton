@@ -699,6 +699,7 @@ pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState raise Native
 pub fn Window::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
 pub fn Window::browser_is_focused(Self) -> Bool raise NativeError
 pub fn Window::browser_state(Self) -> BrowserState raise NativeError
+pub fn Window::clear_auth_cache(Self) -> Unit raise NativeError
 pub fn Window::clear_cache(Self) -> Unit raise NativeError
 pub fn Window::close(Self) -> Unit raise NativeError
 pub fn Window::content_size(Self) -> (Int, Int) raise NativeError

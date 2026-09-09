@@ -189,6 +189,7 @@ fn test_window_handle(
       remove_cookies: fn(_url, _name) {  },
       flush_cookie_store: fn() {  },
       clear_http_cache: fn() {  },
+      clear_http_auth_cache: fn() {  },
       clear_storage_data: fn(_kind) {  },
     },
   }
@@ -2927,6 +2928,7 @@ async test "session handle routes cookie and cache operations" {
     },
     flush_cookie_store: () => calls.push("flush"),
     clear_http_cache: () => calls.push("clear_cache"),
+    clear_http_auth_cache: () => calls.push("clear_auth_cache"),
     clear_storage_data: _kind => calls.push("clear_storage"),
   }
   ignore(
@@ -2943,6 +2945,7 @@ async test "session handle routes cookie and cache operations" {
   session.delete_cookies(url="https://example.test/", name="token")
   session.flush_cookies()
   session.clear_cache()
+  session.clear_auth_cache()
   session.clear_storage_data(StorageDataKind::AllSupported)
   debug_inspect(
     calls,
@@ -2953,6 +2956,7 @@ async test "session handle routes cookie and cache operations" {
       #|  "delete:https://example.test/:token",
       #|  "flush",
       #|  "clear_cache",
+      #|  "clear_auth_cache",
       #|  "clear_storage",
       #|]
     ),

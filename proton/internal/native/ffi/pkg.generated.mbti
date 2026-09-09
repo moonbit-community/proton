@@ -229,6 +229,8 @@ pub fn proton_window_browser_command_ffi(WindowHandle, Bytes, Int) -> Int
 
 pub fn proton_window_cancel_dialog_ffi(WindowHandle, Int64) -> Int
 
+pub fn proton_window_clear_auth_cache_ffi(WindowHandle) -> Int
+
 pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int
 
 pub fn proton_window_clear_cache_ffi(WindowHandle) -> Int

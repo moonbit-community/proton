@@ -738,6 +738,34 @@ int32_t proton_engine_window_clear_cache(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_clear_auth_cache(proton_engine_window_t *window,
+                                              char *error, size_t error_len) {
+  if (window == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_t *browser = proton_engine_window_browser(window);
+  if (browser == NULL) {
+    proton_engine_set_message(error, error_len, "window browser is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  cef_browser_host_t *host = browser->get_host(browser);
+  if (host == NULL) {
+    proton_engine_set_message(error, error_len, "browser host is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  cef_request_context_t *context = host->get_request_context(host);
+  if (context == NULL) {
+    host->base.release((cef_base_ref_counted_t *)host);
+    proton_engine_set_message(error, error_len, "request context is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  context->clear_http_auth_credentials(context, NULL);
+  context->base.base.release((cef_base_ref_counted_t *)context);
+  host->base.release((cef_base_ref_counted_t *)host);
+  return PROTON_OK;
+}
+
 void proton_engine_window_cookie_cleanup(proton_engine_window_t *window) {
   if (window == NULL) {
     return;

@@ -2913,6 +2913,21 @@ int32_t proton_window_clear_cache(proton_window_handle_t window) {
   return PROTON_OK;
 }
 
+int32_t proton_window_clear_auth_cache(proton_window_handle_t window) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED, "auth cache requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_clear_auth_cache(slot->engine_window, engine_error,
+                                                  sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_internal_view_create(
     proton_window_handle_t window, int32_t x, int32_t y, int32_t width,
     int32_t height, int32_t visible, int32_t z_order, const char *initial_url,

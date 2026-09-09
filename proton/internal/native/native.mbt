@@ -2819,6 +2819,14 @@ pub fn Window::clear_cache(self : Window) -> Unit raise NativeError {
 }
 
 ///|
+/// Clears cached HTTP authentication credentials for the request context.
+pub fn Window::clear_auth_cache(self : Window) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_clear_auth_cache_ffi(self.live_handle()),
+  )
+}
+
+///|
 /// Creates an empty native image. Use `add_png`, `add_jpeg`, or `add_bitmap`
 /// to add a representation at a given scale factor, then query with `is_empty`
 /// or `size`, and export with `to_png`, `to_jpeg`, or `to_bitmap`.
