@@ -8,6 +8,7 @@ The module mirrors Electron's `screen` module:
 - `ScreenMonitor::displays()` — `screen.getAllDisplays()`
 - `ScreenMonitor::primary_display()` — `screen.getPrimaryDisplay()`
 - `ScreenMonitor::display_nearest_point(x, y)` — `screen.getDisplayNearestPoint(...)`
+- `getDisplayMatching(rect)` — display with the greatest rectangle overlap
 - `ScreenMonitor::cursor_point()` — `screen.getCursorScreenPoint()`
 - `DisplayAdded` / `DisplayRemoved` / `DisplayMetricsChanged` events —
   `screen.on('display-added' | 'display-removed' | 'display-metrics-changed')`

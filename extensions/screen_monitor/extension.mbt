@@ -8,6 +8,9 @@ let get_primary_display_command = @screen_monitor_contract.get_primary_display
 let get_display_nearest_point_command = @screen_monitor_contract.get_display_nearest_point
 
 ///|
+let get_display_matching_command = @screen_monitor_contract.get_display_matching
+
+///|
 let get_cursor_point_command = @screen_monitor_contract.get_cursor_point
 
 ///|
@@ -128,6 +131,86 @@ async fn get_display_nearest_point(
       )
   }
   emit_activity(context, "getDisplayNearestPoint")
+  @screen_monitor_contract.DisplayReply::{
+    display: display_to_contract(display),
+  }
+}
+
+///|
+fn overlap_length(
+  a_start : Int,
+  a_size : Int,
+  b_start : Int,
+  b_size : Int,
+) -> Int {
+  let a_end = a_start + a_size
+  let b_end = b_start + b_size
+  let start = if a_start > b_start { a_start } else { b_start }
+  let end = if a_end < b_end { a_end } else { b_end }
+  if end > start {
+    end - start
+  } else {
+    0
+  }
+}
+
+///|
+fn matching_display(
+  displays : Array[@sys_screen_monitor.DisplayInfo],
+  request : @screen_monitor_contract.MatchingRectRequest,
+) -> @sys_screen_monitor.DisplayInfo? {
+  let best : Ref[@sys_screen_monitor.DisplayInfo?] = Ref(None)
+  let best_area = Ref(0)
+  for display in displays {
+    let width = overlap_length(
+      request.x,
+      request.width,
+      display.bounds.x,
+      display.bounds.width,
+    )
+    let height = overlap_length(
+      request.y,
+      request.height,
+      display.bounds.y,
+      display.bounds.height,
+    )
+    let area = width * height
+    if area > best_area.val {
+      best_area.val = area
+      best.val = Some(display)
+    }
+  }
+  best.val
+}
+
+///|
+/// Returns the display with the greatest intersection with a rectangle.
+#proton.command(contract=get_display_matching_command)
+async fn get_display_matching(
+  context : @proton.CommandContext,
+  request : @screen_monitor_contract.MatchingRectRequest,
+) -> @screen_monitor_contract.DisplayReply {
+  guard request.width > 0 && request.height > 0 else {
+    raise QueryFailed(
+      operation="display_matching",
+      detail="rectangle width and height must be positive",
+    )
+  }
+  let monitor = ensure_monitor()
+  let displays = monitor.displays() catch {
+    error =>
+      raise QueryFailed(operation="display_matching", detail=error.to_string())
+  }
+  let display = matching_display(displays, request).unwrap_or(
+    monitor.primary_display() catch {
+      error =>
+        raise QueryFailed(
+          operation="display_matching",
+          detail=error.to_string(),
+        )
+    },
+  )
+  emit_activity(context, "getDisplayMatching")
   @screen_monitor_contract.DisplayReply::{
     display: display_to_contract(display),
   }
