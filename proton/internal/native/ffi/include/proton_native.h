@@ -394,6 +394,7 @@ int32_t proton_window_cookie_flush(proton_window_handle_t window);
 int32_t proton_window_clear_cache(proton_window_handle_t window);
 int32_t proton_window_clear_auth_cache(proton_window_handle_t window);
 int32_t proton_window_clear_certificate_exceptions(proton_window_handle_t window);
+int32_t proton_window_close_all_connections(proton_window_handle_t window);
 
 /* Enumerates connected displays into caller-owned integer storage. Each
    display occupies 11 fields in the order consumed by the MoonBit wrapper. */

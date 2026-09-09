@@ -2848,6 +2848,14 @@ pub fn Window::clear_certificate_exceptions(
 }
 
 ///|
+/// Closes active and idle Chromium connections for this window's session.
+pub fn Window::close_all_connections(self : Window) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_close_all_connections_ffi(self.live_handle()),
+  )
+}
+
+///|
 /// Creates an empty native image. Use `add_png`, `add_jpeg`, or `add_bitmap`
 /// to add a representation at a given scale factor, then query with `is_empty`
 /// or `size`, and export with `to_png`, `to_jpeg`, or `to_bitmap`.
