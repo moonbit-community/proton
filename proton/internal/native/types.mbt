@@ -465,6 +465,7 @@ enum NativeBrowserEvent {
   FindResult(NativeFindInPageResult)
   ResourceResponse(String, Int)
   ResourceCompleted(String, Int, Int64)
+  RendererProcessTerminated(String, Int, Int, String)
 } derive(Debug, Eq)
 
 ///|
@@ -807,6 +808,8 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     BrowserEvent(_, FindResult(_)) => "browser_found_in_page"
     BrowserEvent(_, ResourceResponse(_, _)) => "browser_resource_response"
     BrowserEvent(_, ResourceCompleted(_, _, _)) => "browser_resource_completed"
+    BrowserEvent(_, RendererProcessTerminated(_, _, _, _)) =>
+      "browser_renderer_process_terminated"
     ViewEvent(_, _, LoadingChanged(_)) => "view_loading_changed"
     ViewEvent(_, _, Navigated(_)) => "view_navigated"
     ViewEvent(_, _, TitleUpdated(_)) => "view_title_updated"
@@ -955,6 +958,21 @@ pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
 }
 
 ///|
+/// The payload of a renderer process termination event.
+pub(all) struct RendererProcessTerminationInfo {
+  url : String
+  status : Int
+  error_code : Int
+  detail : String
+} derive(Debug, Eq)
+
+///|
+pub extend RendererProcessTerminationInfo with Eq::{not_equal, equal}
+
+///|
+pub extend RendererProcessTerminationInfo with Debug::{to_repr}
+
+///|
 /// Returns the main browser event payload when this event carries one.
 pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
   match self {
@@ -1012,6 +1030,18 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_text: None,
         received_bytes: Some(bytes),
       })
+    _ => None
+  }
+}
+
+///|
+/// Returns renderer termination details when this event carries them.
+pub fn RuntimeEvent::renderer_process_termination(
+  self : RuntimeEvent,
+) -> RendererProcessTerminationInfo? {
+  match self {
+    BrowserEvent(_, RendererProcessTerminated(url, status, error_code, detail)) =>
+      Some({ url, status, error_code, detail, })
     _ => None
   }
 }

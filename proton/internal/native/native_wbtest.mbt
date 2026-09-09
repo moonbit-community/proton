@@ -194,6 +194,24 @@ test "browser page events preserve window ids and payloads" {
 }
 
 ///|
+test "renderer termination events preserve status and error code separately" {
+  let event = RuntimeEvent::BrowserEvent(
+    7L,
+    NativeBrowserEvent::RendererProcessTerminated(
+      "https://example.test/app", 2, -7, "render process crashed",
+    ),
+  )
+  assert_eq(event.event_type(), "browser_renderer_process_terminated")
+  guard event.renderer_process_termination() is Some(info) else {
+    fail("expected renderer termination payload")
+  }
+  assert_eq(info.url, "https://example.test/app")
+  assert_eq(info.status, 2)
+  assert_eq(info.error_code, -7)
+  assert_eq(info.detail, "render process crashed")
+}
+
+///|
 test "find result events preserve targets and match details" {
   let result = NativeFindInPageResult::{
     request_id: 4,

@@ -3243,16 +3243,17 @@ fn RuntimeSession::dispatch_browser_event(
     (
       event.window_id(),
       event.browser_event(),
+      event.renderer_process_termination(),
       event.find_in_page_result(),
       event.pdf_print_result(),
     ) {
-    (Some(window_id), info, find_result, pdf_result) =>
+    (Some(window_id), info, termination, find_result, pdf_result) =>
       match self.find_window_by_native_id(window_id) {
         Some(window) => {
           let browser = self.browser_handle(window)
           let observed = match
-            (event.event_type(), info, find_result, pdf_result) {
-            ("browser_loading_changed", Some(info), _, _) => {
+            (event.event_type(), info, termination, find_result, pdf_result) {
+            ("browser_loading_changed", Some(info), _, _, _) => {
               let is_loading = info.is_loading.unwrap_or(false)
               let transition = match window.observed_browser_loading {
                 None => []
@@ -3278,11 +3279,11 @@ fn RuntimeSession::dispatch_browser_event(
               }
               Some(BrowserEvent::LoadingChanged(is_loading~))
             }
-            ("browser_navigated", Some(info), _, _) =>
+            ("browser_navigated", Some(info), _, _, _) =>
               Some(BrowserEvent::Navigated(url=info.url.unwrap_or("")))
-            ("browser_title_updated", Some(info), _, _) =>
+            ("browser_title_updated", Some(info), _, _, _) =>
               Some(BrowserEvent::TitleUpdated(title=info.title.unwrap_or("")))
-            ("browser_load_failed", Some(info), _, _) =>
+            ("browser_load_failed", Some(info), _, _, _) =>
               Some(
                 BrowserEvent::LoadFailed(
                   url=info.url.unwrap_or(""),
@@ -3290,13 +3291,13 @@ fn RuntimeSession::dispatch_browser_event(
                   error_text=info.error_text.unwrap_or(""),
                 ),
               )
-            ("browser_found_in_page", _, Some(result), _) =>
+            ("browser_found_in_page", _, _, Some(result), _) =>
               Some(
                 BrowserEvent::FoundInPage(
                   result=FindInPageResult::from_native(result),
                 ),
               )
-            ("browser_pdf_print_finished", _, _, Some(result)) =>
+            ("browser_pdf_print_finished", _, _, _, Some(result)) =>
               Some(
                 BrowserEvent::PdfPrinted(result={
                   request_id: result.request_id,
@@ -3304,19 +3305,28 @@ fn RuntimeSession::dispatch_browser_event(
                   success: result.success,
                 }),
               )
-            ("browser_resource_response", Some(info), _, _) =>
+            ("browser_resource_response", Some(info), _, _, _) =>
               Some(
                 BrowserEvent::ResourceResponse(
                   url=info.url.unwrap_or(""),
                   status_code=info.error_code.unwrap_or(0),
                 ),
               )
-            ("browser_resource_completed", Some(info), _, _) =>
+            ("browser_resource_completed", Some(info), _, _, _) =>
               Some(
                 BrowserEvent::ResourceCompleted(
                   url=info.url.unwrap_or(""),
                   status=info.error_code.unwrap_or(0),
                   received_bytes=info.received_bytes.unwrap_or(0L),
+                ),
+              )
+            ("browser_renderer_process_terminated", _, Some(details), _, _) =>
+              Some(
+                BrowserEvent::RendererProcessTerminated(
+                  url=details.url,
+                  status=details.status,
+                  error_code=details.error_code,
+                  detail=details.detail,
                 ),
               )
             _ => None

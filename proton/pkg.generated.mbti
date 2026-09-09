@@ -237,13 +237,16 @@ pub fn App::on_launch_input(Self, async (ApplicationContext, RuntimeLaunchInput)
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_new_window_request(Self, async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
+pub fn App::on_permission_request(Self, async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub fn App::on_view_event(Self, async (ViewHandle, ViewEvent) -> Unit noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
 pub fn App::path(Self, AppPathKind) -> String raise AppPathError
+pub fn App::proxy(Self, String, bypass? : String) -> Self
 pub async fn App::run(Self) -> Unit raise AppRunError
 pub async fn App::run_or_abort(Self) -> Unit
+pub fn App::session_partition(Self, String) -> Self
 pub fn App::set_app_logs_path(Self, path? : String) -> Self raise AppPathError
 pub fn App::set_path(Self, AppPathKind, String) -> Self raise AppPathError
 pub fn App::single_instance(Self, enabled? : Bool) -> Self
@@ -331,6 +334,7 @@ pub(all) enum BrowserEvent {
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
   FoundInPage(result~ : FindInPageResult)
   PdfPrinted(result~ : PdfPrintResult)
+  RendererProcessTerminated(url~ : String, status~ : Int, error_code~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn BrowserEvent::equal(Self, Self) -> Bool
 pub fn BrowserEvent::not_equal(Self, Self) -> Bool
@@ -654,6 +658,14 @@ pub fn PendingUpdate::restart(Self) -> Unit raise
 pub fn PendingUpdate::revision(Self) -> UInt64
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
+
+pub(all) enum PermissionRequest {
+  Certificate(CertificateError)
+  Media(MediaPermissionRequest)
+} derive(Eq, @debug.Debug)
+pub fn PermissionRequest::equal(Self, Self) -> Bool
+pub fn PermissionRequest::not_equal(Self, Self) -> Bool
+pub fn PermissionRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct RelaunchOptions {
   executable : String?

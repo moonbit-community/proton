@@ -618,6 +618,27 @@ void proton_browser_session_load_failed(proton_browser_session_t *session,
   (void)proton_browser_enqueue_event(session, event);
 }
 
+void proton_browser_session_renderer_terminated(
+    proton_browser_session_t *session, int32_t status, int32_t error_code,
+    const char *url, const char *error_text) {
+  if (session == NULL) {
+    return;
+  }
+  proton_event_t *event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_RENDERER_TERMINATED, session->window);
+  if (event != NULL &&
+      (!proton_event_set_text(&event->text_a, url) ||
+       !proton_event_set_text(&event->text_b, error_text))) {
+    proton_event_destroy(event);
+    event = NULL;
+  }
+  if (event != NULL) {
+    event->int_a = status;
+    event->int_b = error_code;
+  }
+  (void)proton_browser_enqueue_event(session, event);
+}
+
 static int32_t proton_browser_session_copy_text(const char *text,
                                                 char *buffer,
                                                 int32_t buffer_len,
