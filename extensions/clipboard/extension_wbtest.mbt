@@ -14,6 +14,14 @@ test "clipboard metadata constants match generated app command extension" {
   let spec = extension().command_spec()
   assert_eq(spec.js_namespace(), "clipboard")
   assert_eq(spec.op_names(), [
-    "ext:clipboard/readText", "ext:clipboard/writeText",
+    "ext:clipboard/readText", "ext:clipboard/writeText", "ext:clipboard/clear",
   ])
+}
+
+///|
+test "clipboard clear contract uses an empty request and boolean reply" {
+  let request = @clipboard_contract.ClearRequest::{ }
+  inspect(request.to_json(), content="Object({})")
+  let reply = @clipboard_contract.ClearReply::{ cleared: true, }
+  inspect(reply.to_json(), content="Object({cleared: True})")
 }
