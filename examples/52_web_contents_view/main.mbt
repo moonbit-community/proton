@@ -369,6 +369,7 @@ async fn main {
       DidStartLoading => ()
       DidFinishLoad => ()
       FoundInPage(..) => ()
+      RendererProcessTerminated(..) => ()
       Closed => panel_slot.val = None
     }
   })

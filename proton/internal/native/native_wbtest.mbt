@@ -212,6 +212,27 @@ test "renderer termination events preserve status and error code separately" {
 }
 
 ///|
+test "view renderer termination events preserve view identity and details" {
+  let event = RuntimeEvent::ViewEvent(
+    7L,
+    11L,
+    NativeViewEvent::RendererProcessTerminated(
+      "https://example.test/view", 1, -9, "view renderer stopped",
+    ),
+  )
+  assert_eq(event.event_type(), "view_renderer_process_terminated")
+  assert_eq(event.window_id(), Some(7L))
+  assert_eq(event.view_id(), Some(11L))
+  guard event.view_renderer_process_termination() is Some(info) else {
+    fail("expected view renderer termination payload")
+  }
+  assert_eq(info.url, "https://example.test/view")
+  assert_eq(info.status, 1)
+  assert_eq(info.error_code, -9)
+  assert_eq(info.detail, "view renderer stopped")
+}
+
+///|
 test "find result events preserve targets and match details" {
   let result = NativeFindInPageResult::{
     request_id: 4,

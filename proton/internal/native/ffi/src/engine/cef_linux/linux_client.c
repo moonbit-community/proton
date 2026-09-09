@@ -974,6 +974,18 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
     cef_termination_status_t status, int error_code,
     const cef_string_t *error_string) {
   (void)self;
+  proton_engine_view_t *view = proton_engine_window_lookup_view_browser(browser);
+  if (view != NULL) {
+    cef_frame_t *view_frame = browser != NULL ? browser->get_main_frame(browser) : NULL;
+    char *view_url = view_frame != NULL ? proton_engine_userfree_to_utf8(view_frame->get_url(view_frame)) : NULL;
+    char *view_detail = proton_engine_cef_string_to_utf8(error_string);
+    proton_view_events_renderer_terminated(view->events, (int32_t)status,
+        error_code, view_url != NULL ? view_url : "", view_detail != NULL ? view_detail : "");
+    free(view_detail); free(view_url);
+    if (view_frame != NULL) view_frame->base.release((cef_base_ref_counted_t *)view_frame);
+    proton_engine_signal_wait_source(PROTON_WAIT_EVENT);
+    return;
+  }
   proton_engine_window_t *window = proton_engine_window_lookup_browser(browser);
   if (window == NULL || window->bridge_config == NULL || window->closing) {
     return;

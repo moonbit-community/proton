@@ -275,6 +275,7 @@ enum NativeViewEvent {
   Navigated(String)
   TitleUpdated(String)
   LoadFailed(String, Int, String)
+  RendererProcessTerminated(String, Int, Int, String)
   FindResult(NativeFindInPageResult)
   Closed
 } derive(Debug, Eq)
@@ -814,6 +815,8 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     ViewEvent(_, _, Navigated(_)) => "view_navigated"
     ViewEvent(_, _, TitleUpdated(_)) => "view_title_updated"
     ViewEvent(_, _, LoadFailed(_, _, _)) => "view_load_failed"
+    ViewEvent(_, _, RendererProcessTerminated(_, _, _, _)) =>
+      "view_renderer_process_terminated"
     ViewEvent(_, _, FindResult(_)) => "view_found_in_page"
     ViewEvent(_, _, Closed) => "view_closed"
     ResourceRequested(_) => "resource_requested"
@@ -958,7 +961,6 @@ pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
 }
 
 ///|
-/// The payload of a renderer process termination event.
 pub(all) struct RendererProcessTerminationInfo {
   url : String
   status : Int
@@ -971,6 +973,17 @@ pub extend RendererProcessTerminationInfo with Eq::{not_equal, equal}
 
 ///|
 pub extend RendererProcessTerminationInfo with Debug::{to_repr}
+
+///|
+pub fn RuntimeEvent::view_renderer_process_termination(
+  self : RuntimeEvent,
+) -> RendererProcessTerminationInfo? {
+  match self {
+    ViewEvent(_, _, RendererProcessTerminated(url, status, error_code, detail)) =>
+      Some({ url, status, error_code, detail, })
+    _ => None
+  }
+}
 
 ///|
 /// Returns the main browser event payload when this event carries one.

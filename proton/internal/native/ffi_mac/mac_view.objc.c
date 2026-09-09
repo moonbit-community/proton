@@ -462,6 +462,9 @@ static proton_engine_client_t *proton_engine_view_client_create(
   client->client.get_find_handler = window_client != NULL
                                         ? window_client->get_find_handler
                                         : NULL;
+  client->client.get_request_handler = window_client != NULL
+                                           ? window_client->get_request_handler
+                                           : NULL;
   client->client.get_render_handler = proton_engine_client_get_render_handler;
   return client;
 }

@@ -190,6 +190,11 @@ thread.
 Web contents views expose the same loading lifecycle events through
 `ViewEvent::DidStartLoading` and `ViewEvent::DidFinishLoad`; their
 `LoadingChanged` event remains available as the boolean form.
+If a view's renderer terminates, handlers receive
+`ViewEvent::RendererProcessTerminated` with the page URL, CEF termination
+status, CEF error code, and diagnostic detail. Proton reports this event
+through the normal wake-driven event queue and does not automatically reload
+the view; applications may explicitly call `ViewHandle::reload`.
 
 ## Logging
 
