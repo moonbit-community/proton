@@ -5,6 +5,9 @@ let register_command = @global_hotkey_contract.register
 let unregister_command = @global_hotkey_contract.unregister
 
 ///|
+let is_registered_command = @global_hotkey_contract.is_registered
+
+///|
 let list_command = @global_hotkey_contract.list
 
 ///|
@@ -56,6 +59,23 @@ async fn unregister(
     context,
     unregister_hotkey(app_command_manager_handle(), request.accelerator),
     "unregister",
+    request.accelerator,
+  )
+}
+
+///|
+/// Reports whether one accelerator is currently registered.
+#proton.command(contract=is_registered_command)
+async fn is_registered(
+  context : @proton.CommandContext,
+  request : @global_hotkey_contract.GlobalHotkeyRequest,
+) -> @global_hotkey_contract.GlobalHotkeyReply {
+  let accelerators = list_hotkeys(app_command_manager_handle()).accelerators
+  let registered = accelerators.contains(request.accelerator)
+  emit_command_result(
+    context,
+    @global_hotkey_contract.GlobalHotkeyReply::{ registered, },
+    "isRegistered",
     request.accelerator,
   )
 }

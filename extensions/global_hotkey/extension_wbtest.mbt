@@ -4,6 +4,7 @@ test "global hotkey metadata constants match generated app command extension" {
   let capability = capability()
   let spec = capability.command_spec()
   assert_eq(spec.js_namespace(), "globalHotkey")
+  assert_true(spec.op_names().contains("ext:globalHotkey/isRegistered"))
   assert_false(spec.op_names().contains("ext:globalHotkey/drainTriggered"))
   assert_eq(spec.scripts(), [])
   assert_true(capability.event_source() is Some(_))

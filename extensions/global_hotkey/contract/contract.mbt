@@ -97,6 +97,12 @@ pub let unregister : @proton_contract.Command[
 ] = extension.command("unregister")
 
 ///|
+pub let is_registered : @proton_contract.Command[
+  GlobalHotkeyRequest,
+  GlobalHotkeyReply,
+] = extension.command("isRegistered")
+
+///|
 pub let list : @proton_contract.Command[
   @proton_contract.EmptyRequest,
   GlobalHotkeyListReply,
