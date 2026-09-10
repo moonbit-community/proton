@@ -1882,8 +1882,13 @@ pub fn WindowHandle::center(
 ) -> Unit raise WindowSessionError {
   let state = self.state()
   let monitor = state.monitor
-  let x = monitor.work_x + (monitor.work_width - state.width) / 2
-  let y = monitor.work_y + (monitor.work_height - state.height) / 2
+  let (width, height) = @native.window_size_in_screen_coordinates(
+    state.width,
+    state.height,
+    monitor.scale_factor_percent,
+  )
+  let x = monitor.work_x + (monitor.work_width - width) / 2
+  let y = monitor.work_y + (monitor.work_height - height) / 2
   self.set_position(x, y)
 }
 
