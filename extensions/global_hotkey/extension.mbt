@@ -5,6 +5,12 @@ let register_command = @global_hotkey_contract.register
 let unregister_command = @global_hotkey_contract.unregister
 
 ///|
+let is_registered_command = @global_hotkey_contract.is_registered
+
+///|
+let unregister_all_command = @global_hotkey_contract.unregister_all
+
+///|
 let list_command = @global_hotkey_contract.list
 
 ///|
@@ -58,6 +64,39 @@ async fn unregister(
     "unregister",
     request.accelerator,
   )
+}
+
+///|
+/// Reports whether one accelerator is currently registered.
+#proton.command(contract=is_registered_command)
+async fn is_registered(
+  context : @proton.CommandContext,
+  request : @global_hotkey_contract.GlobalHotkeyRequest,
+) -> @global_hotkey_contract.GlobalHotkeyReply {
+  let accelerators = list_hotkeys(app_command_manager_handle()).accelerators
+  let registered = accelerators.contains(request.accelerator)
+  emit_command_result(
+    context,
+    @global_hotkey_contract.GlobalHotkeyReply::{ registered, },
+    "isRegistered",
+    request.accelerator,
+  )
+}
+
+///|
+/// Unregisters every global hotkey owned by this extension instance.
+#proton.command(contract=unregister_all_command)
+async fn unregister_all(
+  context : @proton.CommandContext,
+  _request : @proton_contract.EmptyRequest,
+) -> @global_hotkey_contract.UnregisterAllReply {
+  let manager = app_command_manager_handle()
+  let accelerators = manager.list()
+  for accelerator in accelerators {
+    ignore(unregister_hotkey(manager, accelerator))
+  }
+  emit_command_activity(context, "unregisterAll", "")
+  @global_hotkey_contract.UnregisterAllReply::{ count: accelerators.length(), }
 }
 
 ///|
