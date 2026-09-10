@@ -6,6 +6,7 @@ import {
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension",
   "moonbit-community/proton/internal/locale",
+  "moonbit-community/proton/internal/native",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/updater",
   "moonbit-community/proton_contract",
@@ -25,6 +26,8 @@ pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn is_packaged() -> Bool
+
+pub fn native_image() -> NativeImage raise NativeImageError
 
 pub fn resource_dir() -> String
 
@@ -154,6 +157,16 @@ pub fn LifecycleHookError::message(Self) -> String
 pub fn LifecycleHookError::output(Self, &Logger) -> Unit
 pub fn LifecycleHookError::to_repr(Self) -> @debug.Repr
 pub fn LifecycleHookError::to_string(Self) -> String
+
+pub(all) suberror NativeImageError {
+  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn NativeImageError::equal(Self, Self) -> Bool
+pub fn NativeImageError::message(Self) -> String
+pub fn NativeImageError::not_equal(Self, Self) -> Bool
+pub fn NativeImageError::output(Self, &Logger) -> Unit
+pub fn NativeImageError::to_repr(Self) -> @debug.Repr
+pub fn NativeImageError::to_string(Self) -> String
 
 pub(all) suberror NotificationDeliveryError {
   NativeFailure(status~ : Int, detail~ : String)
@@ -573,6 +586,19 @@ pub(all) enum MenuRole {
 pub fn MenuRole::equal(Self, Self) -> Bool
 pub fn MenuRole::not_equal(Self, Self) -> Bool
 pub fn MenuRole::to_repr(Self) -> @debug.Repr
+
+pub struct NativeImage {
+  image : @native.NativeImage
+}
+pub fn NativeImage::add_bitmap(Self, Bytes, Int, Int, scale_factor? : Double) -> Unit raise NativeImageError
+pub fn NativeImage::add_jpeg(Self, Bytes, scale_factor? : Double) -> Unit raise NativeImageError
+pub fn NativeImage::add_png(Self, Bytes, scale_factor? : Double) -> Unit raise NativeImageError
+pub fn NativeImage::destroy(Self) -> Unit raise NativeImageError
+pub fn NativeImage::is_empty(Self) -> Bool raise NativeImageError
+pub fn NativeImage::size(Self) -> (Int, Int) raise NativeImageError
+pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int, Int) raise NativeImageError
+pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int) -> (Bytes, Int, Int) raise NativeImageError
+pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int, Int) raise NativeImageError
 
 pub(all) enum NavigationDecision {
   Allow

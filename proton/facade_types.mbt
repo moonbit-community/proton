@@ -53,6 +53,40 @@ pub extend StorageDataKind with Eq::{not_equal, equal}
 pub extend StorageDataKind with Debug::{to_repr}
 
 ///|
+/// An Electron-style native image with one or more scale representations.
+pub struct NativeImage {
+  image : @native.NativeImage
+}
+
+///|
+/// A failure while creating, reading, or converting a native image.
+pub(all) suberror NativeImageError {
+  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+} derive(Debug, Eq)
+
+///|
+pub extend NativeImageError with Eq::{not_equal, equal}
+
+///|
+pub extend NativeImageError with Debug::{to_repr}
+
+///|
+pub fn NativeImageError::message(self : NativeImageError) -> String {
+  match self {
+    OperationFailed(action~, status~, detail~) =>
+      action + " failed (" + status.to_string() + "): " + detail
+  }
+}
+
+///|
+impl Show for NativeImageError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+pub extend NativeImageError with Show::{to_string, output}
+
+///|
 /// High-level application facade for ordinary Proton apps.
 struct App {
   mut window : @manifest.WindowManifest
