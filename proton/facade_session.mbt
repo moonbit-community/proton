@@ -3334,6 +3334,14 @@ fn RuntimeSession::dispatch_browser_event(
                   status_code=info.error_code.unwrap_or(0),
                 ),
               )
+            ("browser_resource_requested", Some(info), _, _, _) =>
+              Some(
+                BrowserEvent::ResourceRequested(
+                  url=info.url.unwrap_or(""),
+                  request_method=info.title.unwrap_or(""),
+                  will_cancel=info.is_loading.unwrap_or(false),
+                ),
+              )
             ("browser_resource_completed", Some(info), _, _, _) =>
               Some(
                 BrowserEvent::ResourceCompleted(
