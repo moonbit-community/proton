@@ -701,6 +701,7 @@ pub fn Window::browser_is_focused(Self) -> Bool raise NativeError
 pub fn Window::browser_state(Self) -> BrowserState raise NativeError
 pub fn Window::clear_auth_cache(Self) -> Unit raise NativeError
 pub fn Window::clear_cache(Self) -> Unit raise NativeError
+pub fn Window::clear_certificate_exceptions(Self) -> Unit raise NativeError
 pub fn Window::close(Self) -> Unit raise NativeError
 pub fn Window::content_size(Self) -> (Int, Int) raise NativeError
 pub fn Window::cookie_begin_get(Self, String?, Bool) -> Int64 raise NativeError

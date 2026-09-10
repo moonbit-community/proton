@@ -586,6 +586,7 @@ pub struct SessionHandle {
   flush_cookie_store : () -> Unit raise WindowSessionError
   clear_http_cache : () -> Unit raise WindowSessionError
   clear_http_auth_cache : () -> Unit raise WindowSessionError
+  clear_certificate_exceptions : () -> Unit raise WindowSessionError
   clear_storage_data : (StorageDataKind) -> Unit raise WindowSessionError
 }
 
