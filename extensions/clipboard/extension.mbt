@@ -5,6 +5,9 @@ let read_text_command = @clipboard_contract.read_text
 let write_text_command = @clipboard_contract.write_text
 
 ///|
+let clear_command = @clipboard_contract.clear
+
+///|
 /// Reads plain text from the native clipboard.
 #proton.command(contract=read_text_command)
 async fn read_text(
@@ -30,6 +33,21 @@ async fn write_text(
   context.emit(@clipboard_contract.activity, @clipboard_contract.ClipboardActivity::{
     operation: "writeText",
     text_length: Some(request.text.length()),
+  })
+  reply
+}
+
+///|
+/// Clears the native clipboard.
+#proton.command(contract=clear_command)
+async fn clear(
+  context : @proton.CommandContext,
+  _request : @clipboard_contract.ClearRequest,
+) -> @clipboard_contract.ClearReply {
+  let reply = clear_clipboard()
+  context.emit(@clipboard_contract.activity, @clipboard_contract.ClipboardActivity::{
+    operation: "clear",
+    text_length: Some(0),
   })
   reply
 }

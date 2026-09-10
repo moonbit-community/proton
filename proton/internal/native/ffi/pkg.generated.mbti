@@ -235,6 +235,9 @@ pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int
 
 pub fn proton_window_clear_cache_ffi(WindowHandle) -> Int
 
+pub fn proton_window_clear_certificate_exceptions_ffi(WindowHandle) -> Int
+pub fn proton_window_close_all_connections_ffi(WindowHandle) -> Int
+
 pub fn proton_window_close_ffi(WindowHandle) -> Int
 
 pub fn proton_window_cookie_begin_get_ffi(WindowHandle, Bytes, Int, @ref.Ref[Int64]) -> Int

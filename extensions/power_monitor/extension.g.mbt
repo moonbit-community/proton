@@ -5,6 +5,7 @@
 pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute] {
   [
     get_idle_time_command.contract_route(),
+    get_idle_state_command.contract_route(),
     get_power_source_command.contract_route(),
   ]
 }
@@ -16,6 +17,10 @@ pub fn register_commands(
   registrar.bind(
     get_idle_time_command,
     (context, request) => get_idle_time(context, request),
+  )
+  registrar.bind(
+    get_idle_state_command,
+    (context, request) => get_idle_state(context, request),
   )
   registrar.bind(
     get_power_source_command,

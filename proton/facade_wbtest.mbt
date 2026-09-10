@@ -190,6 +190,8 @@ fn test_window_handle(
       flush_cookie_store: fn() {  },
       clear_http_cache: fn() {  },
       clear_http_auth_cache: fn() {  },
+      clear_certificate_exceptions: fn() {  },
+      close_all_connections: fn() {  },
       clear_storage_data: fn(_kind) {  },
     },
   }
@@ -796,6 +798,18 @@ test "web request header prefixes are validated and resolved" {
 
 ///|
 test "browser resource observation events carry response metadata" {
+  assert_eq(
+    BrowserEvent::ResourceRequested(
+      url="https://example.test/data",
+      request_method="POST",
+      will_cancel=false,
+    ),
+    BrowserEvent::ResourceRequested(
+      url="https://example.test/data",
+      request_method="POST",
+      will_cancel=false,
+    ),
+  )
   assert_eq(
     BrowserEvent::ResourceResponse(url="https://example.test/", status_code=204),
     BrowserEvent::ResourceResponse(url="https://example.test/", status_code=204),
@@ -2929,6 +2943,8 @@ async test "session handle routes cookie and cache operations" {
     flush_cookie_store: () => calls.push("flush"),
     clear_http_cache: () => calls.push("clear_cache"),
     clear_http_auth_cache: () => calls.push("clear_auth_cache"),
+    clear_certificate_exceptions: () => calls.push("clear_cert_exceptions"),
+    close_all_connections: () => calls.push("close_connections"),
     clear_storage_data: _kind => calls.push("clear_storage"),
   }
   ignore(
@@ -2946,6 +2962,8 @@ async test "session handle routes cookie and cache operations" {
   session.flush_cookies()
   session.clear_cache()
   session.clear_auth_cache()
+  session.clear_certificate_exceptions()
+  session.close_all_connections()
   session.clear_storage_data(StorageDataKind::AllSupported)
   debug_inspect(
     calls,
@@ -2957,6 +2975,8 @@ async test "session handle routes cookie and cache operations" {
       #|  "flush",
       #|  "clear_cache",
       #|  "clear_auth_cache",
+      #|  "clear_cert_exceptions",
+      #|  "close_connections",
       #|  "clear_storage",
       #|]
     ),

@@ -137,6 +137,27 @@ pub extend NearestPointRequest with ToJson::{to_json}
 pub extend NearestPointRequest with FromJson::{from_json}
 
 ///|
+/// Request rectangle for `getDisplayMatching`.
+pub(all) struct MatchingRectRequest {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend MatchingRectRequest with Eq::{not_equal, equal}
+
+///|
+pub extend MatchingRectRequest with Debug::{to_repr}
+
+///|
+pub extend MatchingRectRequest with ToJson::{to_json}
+
+///|
+pub extend MatchingRectRequest with FromJson::{from_json}
+
+///|
 /// Telemetry for screen query commands, so renderers can observe which screen
 /// APIs were exercised. Follows the activity-event convention shared by the
 /// other `proton_ext` command extensions.
@@ -173,6 +194,12 @@ pub let get_display_nearest_point : @proton_contract.Command[
   NearestPointRequest,
   DisplayReply,
 ] = extension.command("getDisplayNearestPoint")
+
+///|
+pub let get_display_matching : @proton_contract.Command[
+  MatchingRectRequest,
+  DisplayReply,
+] = extension.command("getDisplayMatching")
 
 ///|
 pub let get_cursor_point : @proton_contract.Command[

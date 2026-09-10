@@ -6,6 +6,7 @@ import {
   "moonbit-community/proton/core",
   "moonbit-community/proton/extension",
   "moonbit-community/proton/internal/locale",
+  "moonbit-community/proton/internal/native",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/updater",
   "moonbit-community/proton_contract",
@@ -25,6 +26,8 @@ pub fn file(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
 
 pub fn is_packaged() -> Bool
+
+pub fn native_image() -> NativeImage raise NativeImageError
 
 pub fn resource_dir() -> String
 
@@ -154,6 +157,16 @@ pub fn LifecycleHookError::message(Self) -> String
 pub fn LifecycleHookError::output(Self, &Logger) -> Unit
 pub fn LifecycleHookError::to_repr(Self) -> @debug.Repr
 pub fn LifecycleHookError::to_string(Self) -> String
+
+pub(all) suberror NativeImageError {
+  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn NativeImageError::equal(Self, Self) -> Bool
+pub fn NativeImageError::message(Self) -> String
+pub fn NativeImageError::not_equal(Self, Self) -> Bool
+pub fn NativeImageError::output(Self, &Logger) -> Unit
+pub fn NativeImageError::to_repr(Self) -> @debug.Repr
+pub fn NativeImageError::to_string(Self) -> String
 
 pub(all) suberror NotificationDeliveryError {
   NativeFailure(status~ : Int, detail~ : String)
@@ -336,6 +349,7 @@ pub(all) enum BrowserEvent {
   PdfPrinted(result~ : PdfPrintResult)
   ResourceResponse(url~ : String, status_code~ : Int)
   ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
+  ResourceRequested(url~ : String, request_method~ : String, will_cancel~ : Bool)
   RendererProcessTerminated(url~ : String, status~ : Int, error_code~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn BrowserEvent::equal(Self, Self) -> Bool
@@ -573,6 +587,19 @@ pub fn MenuRole::equal(Self, Self) -> Bool
 pub fn MenuRole::not_equal(Self, Self) -> Bool
 pub fn MenuRole::to_repr(Self) -> @debug.Repr
 
+pub struct NativeImage {
+  image : @native.NativeImage
+}
+pub fn NativeImage::add_bitmap(Self, Bytes, Int, Int, scale_factor? : Double) -> Unit raise NativeImageError
+pub fn NativeImage::add_jpeg(Self, Bytes, scale_factor? : Double) -> Unit raise NativeImageError
+pub fn NativeImage::add_png(Self, Bytes, scale_factor? : Double) -> Unit raise NativeImageError
+pub fn NativeImage::destroy(Self) -> Unit raise NativeImageError
+pub fn NativeImage::is_empty(Self) -> Bool raise NativeImageError
+pub fn NativeImage::size(Self) -> (Int, Int) raise NativeImageError
+pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int, Int) raise NativeImageError
+pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int) -> (Bytes, Int, Int) raise NativeImageError
+pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int, Int) raise NativeImageError
+
 pub(all) enum NavigationDecision {
   Allow
   Deny
@@ -720,11 +747,15 @@ pub struct SessionHandle {
   flush_cookie_store : () -> Unit raise WindowSessionError
   clear_http_cache : () -> Unit raise WindowSessionError
   clear_http_auth_cache : () -> Unit raise WindowSessionError
+  clear_certificate_exceptions : () -> Unit raise WindowSessionError
+  close_all_connections : () -> Unit raise WindowSessionError
   clear_storage_data : (StorageDataKind) -> Unit raise WindowSessionError
 }
 pub fn SessionHandle::clear_auth_cache(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::clear_cache(Self) -> Unit raise WindowSessionError
+pub fn SessionHandle::clear_certificate_exceptions(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::clear_storage_data(Self, StorageDataKind) -> Unit raise WindowSessionError
+pub fn SessionHandle::close_all_connections(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::delete_cookies(Self, url? : String, name? : String) -> Unit raise WindowSessionError
 pub fn SessionHandle::flush_cookies(Self) -> Unit raise WindowSessionError
 pub async fn SessionHandle::get_cookies(Self, url? : String, include_http_only? : Bool) -> Array[Cookie] raise WindowSessionError

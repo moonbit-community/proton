@@ -33,6 +33,22 @@ pub extend WriteTextRequest with ToJson::{to_json}
 pub extend WriteTextRequest with FromJson::{from_json}
 
 ///|
+/// Request to clear the native clipboard.
+pub(all) struct ClearRequest {} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend ClearRequest with Eq::{not_equal, equal}
+
+///|
+pub extend ClearRequest with Debug::{to_repr}
+
+///|
+pub extend ClearRequest with ToJson::{to_json}
+
+///|
+pub extend ClearRequest with FromJson::{from_json}
+
+///|
 /// Current plain-text clipboard contents.
 pub(all) struct ReadTextReply {
   text : String?
@@ -69,6 +85,24 @@ pub extend WriteTextReply with ToJson::{to_json}
 pub extend WriteTextReply with FromJson::{from_json}
 
 ///|
+/// Result of clearing the clipboard.
+pub(all) struct ClearReply {
+  cleared : Bool
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend ClearReply with Eq::{not_equal, equal}
+
+///|
+pub extend ClearReply with Debug::{to_repr}
+
+///|
+pub extend ClearReply with ToJson::{to_json}
+
+///|
+pub extend ClearReply with FromJson::{from_json}
+
+///|
 /// One completed clipboard operation.
 pub(all) struct ClipboardActivity {
   operation : String
@@ -95,6 +129,11 @@ pub let read_text : @proton_contract.Command[ReadTextRequest, ReadTextReply] = e
 ///|
 pub let write_text : @proton_contract.Command[WriteTextRequest, WriteTextReply] = extension.command(
   "writeText",
+)
+
+///|
+pub let clear : @proton_contract.Command[ClearRequest, ClearReply] = extension.command(
+  "clear",
 )
 
 ///|

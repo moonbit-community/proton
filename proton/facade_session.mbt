@@ -1024,6 +1024,16 @@ fn RuntimeSession::session_handle(
         window.clear_auth_cache()
       })
     },
+    clear_certificate_exceptions: () => {
+      self.control_window(id, native_id, "clear certificate exceptions in", window => {
+        window.clear_certificate_exceptions()
+      })
+    },
+    close_all_connections: () => {
+      self.control_window(id, native_id, "close connections in", window => {
+        window.close_all_connections()
+      })
+    },
     clear_storage_data: kind => {
       self.control_window(id, native_id, "clear storage in", window => {
         match kind {
@@ -3327,6 +3337,14 @@ fn RuntimeSession::dispatch_browser_event(
                 BrowserEvent::ResourceResponse(
                   url=info.url.unwrap_or(""),
                   status_code=info.error_code.unwrap_or(0),
+                ),
+              )
+            ("browser_resource_requested", Some(info), _, _, _) =>
+              Some(
+                BrowserEvent::ResourceRequested(
+                  url=info.url.unwrap_or(""),
+                  request_method=info.title.unwrap_or(""),
+                  will_cancel=info.is_loading.unwrap_or(false),
                 ),
               )
             ("browser_resource_completed", Some(info), _, _, _) =>

@@ -56,13 +56,13 @@ to another renderer target is rejected for the calling page.
 
 - `fs`: host filesystem helper definitions
 - `path`: path transform helper definitions
-- `dialog`: native dialog helper definitions
-- `clipboard`: clipboard helper definitions
+- `dialog`: native message, error, confirmation, and file dialogs
+- `clipboard`: read, write, and clear plain text in the system clipboard
 - `shell`: open/reveal host path helper definitions
 - `notification`: macOS system notifications and notification-click events
 - `tray`: native tray icon lifecycle, tooltip/icon updates, flat context menus,
   and tray/menu events
-- `global_hotkey`: global hotkey helper definitions
+- `global_hotkey`: register, unregister, inspect, clear, and receive global hotkeys
 - `auto_launch`: startup-entry helper definitions
 - `keepawake`: keep-awake helper definitions
 - `microphone`: microphone discovery/capture helper definitions

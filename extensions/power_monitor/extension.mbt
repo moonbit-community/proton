@@ -2,6 +2,9 @@
 let get_idle_time_command = @power_monitor_contract.get_idle_time
 
 ///|
+let get_idle_state_command = @power_monitor_contract.get_idle_state
+
+///|
 let get_power_source_command = @power_monitor_contract.get_power_source
 
 ///|
@@ -49,6 +52,35 @@ async fn get_idle_time(
     operation: "get_idle_time",
   })
   @power_monitor_contract.IdleTimeReply::{ idle_seconds: seconds, }
+}
+
+///|
+/// Classifies the current system idle state using a threshold in seconds.
+#proton.command(contract=get_idle_state_command)
+async fn get_idle_state(
+  context : @proton.CommandContext,
+  request : @power_monitor_contract.IdleStateRequest,
+) -> @power_monitor_contract.IdleStateReply {
+  guard request.idle_threshold >= 0 else {
+    raise QueryFailed(
+      operation="idle_state",
+      detail="idle threshold must not be negative",
+    )
+  }
+  let monitor = ensure_monitor()
+  let seconds = monitor.idle_seconds() catch {
+    error => raise QueryFailed(operation="idle_state", detail=error.to_string())
+  }
+  context.emit(@power_monitor_contract.activity, @power_monitor_contract.PowerMonitorActivity::{
+    operation: "get_system_idle_state",
+  })
+  @power_monitor_contract.IdleStateReply::{
+    state: if seconds >= request.idle_threshold {
+      "idle"
+    } else {
+      "active"
+    },
+  }
 }
 
 ///|

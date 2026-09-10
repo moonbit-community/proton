@@ -16,6 +16,42 @@ pub extend IdleTimeReply with ToJson::{to_json}
 pub extend IdleTimeReply with FromJson::{from_json}
 
 ///|
+/// Request for Electron-compatible idle-state classification.
+pub(all) struct IdleStateRequest {
+  idle_threshold : Int
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend IdleStateRequest with Eq::{not_equal, equal}
+
+///|
+pub extend IdleStateRequest with Debug::{to_repr}
+
+///|
+pub extend IdleStateRequest with ToJson::{to_json}
+
+///|
+pub extend IdleStateRequest with FromJson::{from_json}
+
+///|
+/// Current idle state, either `active` or `idle`.
+pub(all) struct IdleStateReply {
+  state : String
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend IdleStateReply with Eq::{not_equal, equal}
+
+///|
+pub extend IdleStateReply with Debug::{to_repr}
+
+///|
+pub extend IdleStateReply with ToJson::{to_json}
+
+///|
+pub extend IdleStateReply with FromJson::{from_json}
+
+///|
 pub(all) struct PowerSourceReply {
   source : String
   battery_percent : Int?
@@ -73,6 +109,12 @@ pub let get_idle_time : @proton_contract.Command[
   @proton_contract.EmptyRequest,
   IdleTimeReply,
 ] = extension.command("getIdleTime")
+
+///|
+pub let get_idle_state : @proton_contract.Command[
+  IdleStateRequest,
+  IdleStateReply,
+] = extension.command("getSystemIdleState")
 
 ///|
 pub let get_power_source : @proton_contract.Command[
