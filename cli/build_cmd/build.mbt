@@ -184,18 +184,24 @@ pub async fn build_executable(
   app_package : String,
   config_path : String,
   release : Bool,
+  icons? : Array[String],
 ) -> String {
-  let invocation = prepare_build(cwd, RawBuildOptions::{
-    app_package: Some(app_package),
-    config_path: Some(config_path),
-    moon_target_dir: None,
-    run_frontend_build: true,
-    moon_args: [],
-  })
+  let invocation = prepare_build(
+    cwd,
+    RawBuildOptions::{
+      app_package: Some(app_package),
+      config_path: Some(config_path),
+      moon_target_dir: None,
+      run_frontend_build: true,
+      moon_args: [],
+    },
+    icons?,
+  )
   let executable = run_moon_build_only(
     invocation.backend_path,
     invocation.app_package,
     release,
+    invocation.windows_resource,
   )
   executable
 }
@@ -208,6 +214,7 @@ async fn run_with_options(cwd : String, raw : RawBuildOptions) -> Unit {
     invocation.app_package,
     invocation.moon_args,
     invocation.moon_target_dir,
+    invocation.windows_resource,
   )
 }
 
@@ -217,17 +224,22 @@ priv struct BuildInvocation {
   app_package : String
   moon_target_dir : String?
   moon_args : Array[String]
+  windows_resource : WindowsAppResource?
 }
 
 ///|
-async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
+async fn prepare_build(
+  cwd : String,
+  raw : RawBuildOptions,
+  icons? : Array[String],
+) -> BuildInvocation {
   let (cwd, config) = load_build_project(cwd, raw)
   validate_release_config(config)
   if raw.run_frontend_build {
     run_frontend_build(config.base_dir(), config)
   }
   validate_release_files(config.base_dir(), config)
-  project_build_invocation(cwd, config, raw)
+  project_build_invocation(cwd, config, raw, icons?)
 }
 
 ///|
@@ -246,6 +258,7 @@ async fn project_build_invocation(
   cwd : String,
   config : @proton_config.ProjectConfig,
   raw : RawBuildOptions,
+  icons? : Array[String],
 ) -> BuildInvocation {
   let backend = config.backend()
   let backend_path = resolve_backend_path(
@@ -268,6 +281,12 @@ async fn project_build_invocation(
     app_package,
     moon_target_dir,
     moon_args: raw.moon_args,
+    windows_resource: windows_app_resource(
+      @path.sep == '\\',
+      config,
+      icons,
+      moon_target_dir,
+    ),
   }
 }
 
@@ -522,6 +541,7 @@ async fn run_moon_build(
   app_package : String,
   moon_args : Array[String],
   moon_target_dir : String?,
+  windows_resource : WindowsAppResource?,
 ) -> Unit {
   let args = moon_build_args_with_target_dir(
     app_package, moon_args, moon_target_dir,
@@ -531,7 +551,7 @@ async fn run_moon_build(
     "moon",
     args,
     cwd=root,
-    extra_env=native_moon_process_env(),
+    extra_env=app_build_process_env(windows_resource),
   ) catch {
     err =>
       raise BuildProcessError::Start(
@@ -624,6 +644,7 @@ async fn run_moon_build_only(
   root : String,
   app_package : String,
   release : Bool,
+  windows_resource : WindowsAppResource?,
 ) -> String {
   let args = moon_build_only_args(app_package, release)
   @output.info("Building Proton executable: moon " + args.join(" "))
@@ -631,7 +652,7 @@ async fn run_moon_build_only(
     "moon",
     args,
     cwd=root,
-    extra_env=native_moon_process_env(),
+    extra_env=app_build_process_env(windows_resource),
   ) catch {
     error =>
       raise BuildProcessError::Start(
