@@ -102,6 +102,14 @@ method, and whether the configured synchronous policy will cancel it. A
 non-zero completion status represents an error; request callbacks are
 observational and do not expose mutable CEF objects across the native boundary.
 
+## Native images
+
+`@proton.native_image()` creates an Electron-style image container. Add PNG,
+JPEG, or raw RGBA bitmap representations with an explicit scale factor, query
+its logical size, and export the closest representation with `to_png`,
+`to_jpeg`, or `to_bitmap`. Call `destroy` when the image is no longer needed;
+repeated destruction is safe.
+
 ## Commands and events
 
 Register typed commands on the app builder:
