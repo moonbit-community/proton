@@ -1024,6 +1024,11 @@ fn RuntimeSession::session_handle(
         window.clear_auth_cache()
       })
     },
+    clear_certificate_exceptions: () => {
+      self.control_window(id, native_id, "clear certificate exceptions in", window => {
+        window.clear_certificate_exceptions()
+      })
+    },
     clear_storage_data: kind => {
       self.control_window(id, native_id, "clear storage in", window => {
         match kind {

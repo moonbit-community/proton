@@ -50,6 +50,8 @@ cache, IndexedDB, and other Chromium profile state are separated between
 partitions. Partition names are limited to letters, digits, `.`, `-`, and `_`.
 `SessionHandle::clear_auth_cache` clears Chromium's cached HTTP authentication
 credentials without clearing cookies or the HTTP cache.
+`SessionHandle::clear_certificate_exceptions` clears remembered certificate
+exception decisions for the same request context.
 
 Use `App::on_permission_request` to apply one policy to certificate and media
 permission requests. It takes precedence over the specialized handlers; when

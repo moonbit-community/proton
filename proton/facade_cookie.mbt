@@ -186,6 +186,14 @@ pub fn SessionHandle::clear_auth_cache(
 }
 
 ///|
+/// Clears stored certificate exception decisions for this session.
+pub fn SessionHandle::clear_certificate_exceptions(
+  self : SessionHandle,
+) -> Unit raise WindowSessionError {
+  (self.clear_certificate_exceptions)()
+}
+
+///|
 /// Clears the selected live session storage categories.
 pub fn SessionHandle::clear_storage_data(
   self : SessionHandle,
