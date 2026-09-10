@@ -564,6 +564,8 @@ int32_t proton_engine_window_clear_cache(proton_engine_window_t *window,
                                          char *error, size_t error_len);
 int32_t proton_engine_window_clear_auth_cache(proton_engine_window_t *window,
                                               char *error, size_t error_len);
+int32_t proton_engine_window_clear_certificate_exceptions(
+    proton_engine_window_t *window, char *error, size_t error_len);
 
 /* Releases any pending cookie-get state associated with the window. Called
    during window destruction so async cookie visits do not outlive their

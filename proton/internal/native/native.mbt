@@ -1252,6 +1252,15 @@ fn decode_native_runtime_event(
           @native_ffi.event_int64(event, 4),
         ),
       )
+    42 =>
+      BrowserEvent(
+        window,
+        ResourceRequested(
+          require_native_event_text(event, 0, "resource request URL"),
+          require_native_event_text(event, 1, "resource request method"),
+          @native_ffi.event_int(event, 3) != 0,
+        ),
+      )
     36 =>
       BrowserPdfPrinted(window, {
         request_id: @native_ffi.event_int64(event, 2).to_int(),
@@ -2823,6 +2832,18 @@ pub fn Window::clear_cache(self : Window) -> Unit raise NativeError {
 pub fn Window::clear_auth_cache(self : Window) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_window_clear_auth_cache_ffi(self.live_handle()),
+  )
+}
+
+///|
+/// Clears stored certificate exception decisions for the request context.
+pub fn Window::clear_certificate_exceptions(
+  self : Window,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_clear_certificate_exceptions_ffi(
+      self.live_handle(),
+    ),
   )
 }
 

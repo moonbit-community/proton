@@ -466,6 +466,7 @@ enum NativeBrowserEvent {
   FindResult(NativeFindInPageResult)
   ResourceResponse(String, Int)
   ResourceCompleted(String, Int, Int64)
+  ResourceRequested(String, String, Bool)
   RendererProcessTerminated(String, Int, Int, String)
 } derive(Debug, Eq)
 
@@ -809,6 +810,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     BrowserEvent(_, FindResult(_)) => "browser_found_in_page"
     BrowserEvent(_, ResourceResponse(_, _)) => "browser_resource_response"
     BrowserEvent(_, ResourceCompleted(_, _, _)) => "browser_resource_completed"
+    BrowserEvent(_, ResourceRequested(_, _, _)) => "browser_resource_requested"
     BrowserEvent(_, RendererProcessTerminated(_, _, _, _)) =>
       "browser_renderer_process_terminated"
     ViewEvent(_, _, LoadingChanged(_)) => "view_loading_changed"
@@ -1042,6 +1044,15 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_code: Some(status),
         error_text: None,
         received_bytes: Some(bytes),
+      })
+    BrowserEvent(_, ResourceRequested(url, request_method, will_cancel)) =>
+      Some({
+        url: Some(url),
+        title: Some(request_method),
+        is_loading: Some(will_cancel),
+        error_code: None,
+        error_text: None,
+        received_bytes: None,
       })
     _ => None
   }

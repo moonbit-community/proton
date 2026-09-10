@@ -95,6 +95,8 @@ struct proton_browser_session {
 };
 
 static char *proton_browser_cef_string_to_utf8(const cef_string_t *value);
+static char *proton_browser_copy_string(const char *value);
+static char *proton_browser_userfree_to_utf8(cef_string_userfree_t value);
 
 typedef struct proton_browser_resource_handler {
   cef_resource_request_handler_t handler;
@@ -179,6 +181,21 @@ static cef_return_value_t CEF_CALLBACK proton_browser_on_before_resource_load(
   char *url_utf8 = proton_browser_cef_string_to_utf8(url);
   int result = !proton_web_request_config_should_cancel(handler->config,
                                                        url_utf8);
+  char *method = request->get_method != NULL
+                     ? proton_browser_userfree_to_utf8(
+                           request->get_method(request))
+                     : proton_browser_copy_string("");
+  proton_event_t *request_event = proton_event_create_window(
+      PROTON_EVENT_BROWSER_RESOURCE_REQUESTED, handler->window);
+  if (request_event != NULL && url_utf8 != NULL && method != NULL &&
+      proton_event_set_text(&request_event->text_a, url_utf8) &&
+      proton_event_set_text(&request_event->text_b, method)) {
+    request_event->bool_a = result == 0 ? 1 : 0;
+    (void)proton_event_publish(request_event);
+  } else {
+    proton_event_destroy(request_event);
+  }
+  free(method);
   const char *redirect_url = proton_web_request_config_redirect_url(
       handler->config, url_utf8);
   if (result != 0 && redirect_url != NULL && request->set_url != NULL) {
