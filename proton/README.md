@@ -52,6 +52,8 @@ partitions. Partition names are limited to letters, digits, `.`, `-`, and `_`.
 credentials without clearing cookies or the HTTP cache.
 `SessionHandle::clear_certificate_exceptions` clears remembered certificate
 exception decisions for the same request context.
+`SessionHandle::close_all_connections` closes active and idle Chromium network
+connections for the session without clearing cookies or cache data.
 
 Use `App::on_permission_request` to apply one policy to certificate and media
 permission requests. It takes precedence over the specialized handlers; when

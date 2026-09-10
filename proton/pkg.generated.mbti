@@ -748,12 +748,14 @@ pub struct SessionHandle {
   clear_http_cache : () -> Unit raise WindowSessionError
   clear_http_auth_cache : () -> Unit raise WindowSessionError
   clear_certificate_exceptions : () -> Unit raise WindowSessionError
+  close_all_connections : () -> Unit raise WindowSessionError
   clear_storage_data : (StorageDataKind) -> Unit raise WindowSessionError
 }
 pub fn SessionHandle::clear_auth_cache(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::clear_cache(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::clear_certificate_exceptions(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::clear_storage_data(Self, StorageDataKind) -> Unit raise WindowSessionError
+pub fn SessionHandle::close_all_connections(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::delete_cookies(Self, url? : String, name? : String) -> Unit raise WindowSessionError
 pub fn SessionHandle::flush_cookies(Self) -> Unit raise WindowSessionError
 pub async fn SessionHandle::get_cookies(Self, url? : String, include_http_only? : Bool) -> Array[Cookie] raise WindowSessionError

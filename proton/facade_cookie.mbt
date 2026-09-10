@@ -194,6 +194,14 @@ pub fn SessionHandle::clear_certificate_exceptions(
 }
 
 ///|
+/// Closes active and idle Chromium network connections for this session.
+pub fn SessionHandle::close_all_connections(
+  self : SessionHandle,
+) -> Unit raise WindowSessionError {
+  (self.close_all_connections)()
+}
+
+///|
 /// Clears the selected live session storage categories.
 pub fn SessionHandle::clear_storage_data(
   self : SessionHandle,

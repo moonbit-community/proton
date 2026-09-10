@@ -1029,6 +1029,11 @@ fn RuntimeSession::session_handle(
         window.clear_certificate_exceptions()
       })
     },
+    close_all_connections: () => {
+      self.control_window(id, native_id, "close connections in", window => {
+        window.close_all_connections()
+      })
+    },
     clear_storage_data: kind => {
       self.control_window(id, native_id, "clear storage in", window => {
         match kind {

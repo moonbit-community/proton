@@ -1294,6 +1294,11 @@ pub extern "C" fn proton_window_clear_certificate_exceptions_ffi(
 ) -> Int = "proton_window_clear_certificate_exceptions"
 
 ///|
+pub extern "C" fn proton_window_close_all_connections_ffi(
+  window : WindowHandle,
+) -> Int = "proton_window_close_all_connections"
+
+///|
 #borrow(out_image)
 pub extern "C" fn proton_image_create_empty_ffi(
   out_image : Ref[ImageHandle],
