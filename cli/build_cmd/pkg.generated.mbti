@@ -8,7 +8,7 @@ import {
 }
 
 // Values
-pub async fn build_executable(String, String, String, Bool) -> String
+pub async fn build_executable(String, String, String, Bool, icons? : Array[String]) -> String
 
 pub fn command() -> @argparse.Command
 

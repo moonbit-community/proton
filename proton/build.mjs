@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { compileWindowsIcon } from "./windows_resources.mjs";
 import {
   cefApiVersion,
   runtimeLayoutVersion,
@@ -146,6 +147,20 @@ export function createNativeLinkConfig(env = readPayloadEnv()) {
   }
   const cefRoot = cefSdkRoot(env);
   const config = platformConfig(cefRoot);
+  const linkConfigs = [{
+    package: "moonbit-community/proton/internal/native/ffi",
+    link_flags: config.linkFlags,
+  }];
+  if (process.platform === "win32") {
+    const resource = compileWindowsIcon(
+      env.PROTON_WINDOWS_APP_RESOURCE ?? process.env.PROTON_WINDOWS_APP_RESOURCE,
+      { ...process.env, ...env },
+    );
+    if (resource !== undefined) {
+      // The public app facade is not imported by the CEF subprocess helper.
+      linkConfigs.push({ package: "moonbit-community/proton", link_flags: quote(resource) });
+    }
+  }
   return {
     vars: {
       PROTON_DEPLOYMENT_TARGET_CC_FLAGS: config.deploymentTargetFlags,
@@ -153,12 +168,7 @@ export function createNativeLinkConfig(env = readPayloadEnv()) {
       PROTON_MAC_OBJC_STUB_CC_FLAGS: config.macObjcFlags,
       PROTON_CEF_LOADER_CC_FLAGS: config.loaderFlags,
     },
-    link_configs: [
-      {
-        package: "moonbit-community/proton/internal/native/ffi",
-        link_flags: config.linkFlags,
-      },
-    ],
+    link_configs: linkConfigs,
   };
 }
 
