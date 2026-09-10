@@ -5,6 +5,9 @@ let message_command = @dialog_contract.message
 let confirm_command = @dialog_contract.confirm
 
 ///|
+let error_box_command = @dialog_contract.error_box
+
+///|
 let open_file_command = @dialog_contract.open_file
 
 ///|
@@ -54,6 +57,21 @@ async fn confirm(
     "confirm",
     level=request.level,
   )
+}
+
+///|
+/// Shows a blocking error dialog with Electron-compatible title/content fields.
+#proton.command(contract=error_box_command)
+async fn error_box(
+  context : @proton.CommandContext,
+  request : @dialog_contract.ErrorBoxRequest,
+) -> @dialog_contract.MessageReply {
+  let reply = show_message_dialog(context, @dialog_contract.MessageRequest::{
+    message: request.content,
+    title: Some(request.title),
+    level: Some("error"),
+  })
+  emit_command_result(context, reply, "showErrorBox", level=Some("error"))
 }
 
 ///|
