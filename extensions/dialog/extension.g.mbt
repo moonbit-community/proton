@@ -6,6 +6,7 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
   [
     message_command.contract_route(),
     confirm_command.contract_route(),
+    error_box_command.contract_route(),
     open_file_command.contract_route(),
     save_file_command.contract_route(),
   ]
@@ -22,6 +23,10 @@ pub fn register_commands(
   registrar.bind(
     confirm_command,
     (context, request) => confirm(context, request),
+  )
+  registrar.bind(
+    error_box_command,
+    (context, request) => error_box(context, request),
   )
   registrar.bind(
     open_file_command,

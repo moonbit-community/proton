@@ -336,6 +336,7 @@ pub(all) enum BrowserEvent {
   PdfPrinted(result~ : PdfPrintResult)
   ResourceResponse(url~ : String, status_code~ : Int)
   ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
+  ResourceRequested(url~ : String, request_method~ : String, will_cancel~ : Bool)
   RendererProcessTerminated(url~ : String, status~ : Int, error_code~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn BrowserEvent::equal(Self, Self) -> Bool
@@ -720,10 +721,12 @@ pub struct SessionHandle {
   flush_cookie_store : () -> Unit raise WindowSessionError
   clear_http_cache : () -> Unit raise WindowSessionError
   clear_http_auth_cache : () -> Unit raise WindowSessionError
+  clear_certificate_exceptions : () -> Unit raise WindowSessionError
   clear_storage_data : (StorageDataKind) -> Unit raise WindowSessionError
 }
 pub fn SessionHandle::clear_auth_cache(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::clear_cache(Self) -> Unit raise WindowSessionError
+pub fn SessionHandle::clear_certificate_exceptions(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::clear_storage_data(Self, StorageDataKind) -> Unit raise WindowSessionError
 pub fn SessionHandle::delete_cookies(Self, url? : String, name? : String) -> Unit raise WindowSessionError
 pub fn SessionHandle::flush_cookies(Self) -> Unit raise WindowSessionError
