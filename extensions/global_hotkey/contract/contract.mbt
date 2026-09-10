@@ -33,6 +33,23 @@ pub extend GlobalHotkeyReply with ToJson::{to_json}
 pub extend GlobalHotkeyReply with FromJson::{from_json}
 
 ///|
+pub(all) struct UnregisterAllReply {
+  count : Int
+} derive(ToJson, FromJson, Debug, Eq)
+
+///|
+pub extend UnregisterAllReply with Eq::{not_equal, equal}
+
+///|
+pub extend UnregisterAllReply with Debug::{to_repr}
+
+///|
+pub extend UnregisterAllReply with ToJson::{to_json}
+
+///|
+pub extend UnregisterAllReply with FromJson::{from_json}
+
+///|
 pub(all) struct GlobalHotkeyListReply {
   accelerators : Array[String]
 } derive(ToJson, FromJson, Debug, Eq)
@@ -101,6 +118,12 @@ pub let is_registered : @proton_contract.Command[
   GlobalHotkeyRequest,
   GlobalHotkeyReply,
 ] = extension.command("isRegistered")
+
+///|
+pub let unregister_all : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  UnregisterAllReply,
+] = extension.command("unregisterAll")
 
 ///|
 pub let list : @proton_contract.Command[

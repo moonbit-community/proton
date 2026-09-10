@@ -62,7 +62,7 @@ to another renderer target is rejected for the calling page.
 - `notification`: macOS system notifications and notification-click events
 - `tray`: native tray icon lifecycle, tooltip/icon updates, flat context menus,
   and tray/menu events
-- `global_hotkey`: register, unregister, inspect, and receive global hotkeys
+- `global_hotkey`: register, unregister, inspect, clear, and receive global hotkeys
 - `auto_launch`: startup-entry helper definitions
 - `keepawake`: keep-awake helper definitions
 - `microphone`: microphone discovery/capture helper definitions
