@@ -130,6 +130,7 @@ struct RawBuildOptions {
   app_package : String?
   config_path : String?
   moon_target_dir : String?
+  icons : Array[String]?
   run_frontend_build : Bool
   moon_args : Array[String]
 } derive(Debug, Eq)
@@ -186,17 +187,14 @@ pub async fn build_executable(
   release : Bool,
   icons? : Array[String],
 ) -> String {
-  let invocation = prepare_build(
-    cwd,
-    RawBuildOptions::{
-      app_package: Some(app_package),
-      config_path: Some(config_path),
-      moon_target_dir: None,
-      run_frontend_build: true,
-      moon_args: [],
-    },
-    icons?,
-  )
+  let invocation = prepare_build(cwd, RawBuildOptions::{
+    app_package: Some(app_package),
+    config_path: Some(config_path),
+    moon_target_dir: None,
+    icons,
+    run_frontend_build: true,
+    moon_args: [],
+  })
   let executable = run_moon_build_only(
     invocation.backend_path,
     invocation.app_package,
@@ -228,18 +226,14 @@ priv struct BuildInvocation {
 }
 
 ///|
-async fn prepare_build(
-  cwd : String,
-  raw : RawBuildOptions,
-  icons? : Array[String],
-) -> BuildInvocation {
+async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
   let (cwd, config) = load_build_project(cwd, raw)
   validate_release_config(config)
   if raw.run_frontend_build {
     run_frontend_build(config.base_dir(), config)
   }
   validate_release_files(config.base_dir(), config)
-  project_build_invocation(cwd, config, raw, icons?)
+  project_build_invocation(cwd, config, raw)
 }
 
 ///|
@@ -258,7 +252,6 @@ async fn project_build_invocation(
   cwd : String,
   config : @proton_config.ProjectConfig,
   raw : RawBuildOptions,
-  icons? : Array[String],
 ) -> BuildInvocation {
   let backend = config.backend()
   let backend_path = resolve_backend_path(
@@ -284,7 +277,7 @@ async fn project_build_invocation(
     windows_resource: windows_app_resource(
       @path.sep == '\\',
       config,
-      icons,
+      raw.icons,
       moon_target_dir,
     ),
   }
@@ -354,6 +347,7 @@ fn build_options_from_matches(
     app_package: app_package.get(0),
     config_path: config_path.get(0),
     moon_target_dir: moon_target_dir.get(0),
+    icons: None,
     run_frontend_build: !no_frontend,
     moon_args,
   }

@@ -18,6 +18,7 @@ test "parse build args defaults and moon args" {
   @debug.assert_eq(raw.app_package, None)
   @debug.assert_eq(raw.config_path, None)
   @debug.assert_eq(raw.moon_target_dir, None)
+  @debug.assert_eq(raw.icons, None)
   @debug.assert_eq(raw.run_frontend_build, true)
   @debug.assert_eq(raw.moon_args, ["--warn-list", "+a"])
 }
@@ -180,6 +181,7 @@ async test "project resolution does not require frontend build output" {
     app_package: None,
     config_path: None,
     moon_target_dir: None,
+    icons: None,
     run_frontend_build: false,
     moon_args: [],
   })
