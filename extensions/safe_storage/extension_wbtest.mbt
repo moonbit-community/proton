@@ -6,3 +6,9 @@ test "safe storage extension metadata" {
     "ext:safeStorage/encryptString", "ext:safeStorage/decryptString", "ext:safeStorage/isAvailable",
   ])
 }
+
+///|
+test "safe storage availability uses an empty request" {
+  let request = @proton_contract.EmptyRequest::{ }
+  inspect(request.to_json(), content="Object({})")
+}

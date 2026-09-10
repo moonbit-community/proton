@@ -94,6 +94,7 @@ pub let decrypt : @proton_contract.Command[DecryptRequest, DecryptReply] = exten
 )
 
 ///|
-pub let availability : @proton_contract.Command[Json, AvailabilityReply] = extension.command(
-  "isAvailable",
-)
+pub let availability : @proton_contract.Command[
+  @proton_contract.EmptyRequest,
+  AvailabilityReply,
+] = extension.command("isAvailable")
