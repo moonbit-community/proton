@@ -7,6 +7,7 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
     get_all_displays_command.contract_route(),
     get_primary_display_command.contract_route(),
     get_display_nearest_point_command.contract_route(),
+    get_display_matching_command.contract_route(),
     get_cursor_point_command.contract_route(),
   ]
 }
@@ -26,6 +27,10 @@ pub fn register_commands(
   registrar.bind(
     get_display_nearest_point_command,
     (context, request) => get_display_nearest_point(context, request),
+  )
+  registrar.bind(
+    get_display_matching_command,
+    (context, request) => get_display_matching(context, request),
   )
   registrar.bind(
     get_cursor_point_command,
