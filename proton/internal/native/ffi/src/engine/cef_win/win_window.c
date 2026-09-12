@@ -233,23 +233,31 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
         }
       }
       if (!window->resizable) {
-        minmax->ptMinTrackSize.x = window->width;
-        minmax->ptMinTrackSize.y = window->height;
+        minmax->ptMinTrackSize.x =
+            proton_engine_window_dip_to_device(hwnd, window->width);
+        minmax->ptMinTrackSize.y =
+            proton_engine_window_dip_to_device(hwnd, window->height);
         handled = true;
       }
       if (window->resizable && window->min_width > 0) {
-        minmax->ptMinTrackSize.x = window->min_width;
-        minmax->ptMinTrackSize.y = window->min_height;
+        minmax->ptMinTrackSize.x =
+            proton_engine_window_dip_to_device(hwnd, window->min_width);
+        minmax->ptMinTrackSize.y =
+            proton_engine_window_dip_to_device(hwnd, window->min_height);
         handled = true;
       }
       if (window->resizable && window->max_width > 0) {
-        minmax->ptMaxTrackSize.x = window->max_width;
-        minmax->ptMaxTrackSize.y = window->max_height;
+        minmax->ptMaxTrackSize.x =
+            proton_engine_window_dip_to_device(hwnd, window->max_width);
+        minmax->ptMaxTrackSize.y =
+            proton_engine_window_dip_to_device(hwnd, window->max_height);
         handled = true;
       }
       if (!window->resizable) {
-        minmax->ptMaxTrackSize.x = window->width;
-        minmax->ptMaxTrackSize.y = window->height;
+        minmax->ptMaxTrackSize.x =
+            proton_engine_window_dip_to_device(hwnd, window->width);
+        minmax->ptMaxTrackSize.y =
+            proton_engine_window_dip_to_device(hwnd, window->height);
         handled = true;
       }
       if (handled) {
@@ -261,18 +269,21 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     if (window != NULL) {
       proton_engine_signal_wait_source(window->runtime,
                                        PROTON_WAIT_PLATFORM);
-    }
-    if (window != NULL && window->titlebar_overlay) {
+      /* Move to the OS-suggested rectangle so the window keeps its logical
+       * size on the new DPI; applying it once per change avoids repeated
+       * rescaling. Applies to every window, not just overlay titlebars. */
       RECT *suggested = (RECT *)lparam;
       SetWindowPos(hwnd, NULL, suggested->left, suggested->top,
                    suggested->right - suggested->left,
                    suggested->bottom - suggested->top,
                    SWP_NOZORDER | SWP_NOACTIVATE);
-      proton_engine_overlay_apply_frame(hwnd);
-      RECT client;
-      if (GetClientRect(hwnd, &client)) {
-        proton_engine_resize_browser(window, client.right - client.left,
-                                     client.bottom - client.top);
+      if (window->titlebar_overlay) {
+        proton_engine_overlay_apply_frame(hwnd);
+        RECT client;
+        if (GetClientRect(hwnd, &client)) {
+          proton_engine_resize_browser(window, client.right - client.left,
+                                       client.bottom - client.top);
+        }
       }
       return 0;
     }
@@ -517,6 +528,45 @@ static int proton_engine_window_device_to_dip(HWND hwnd, int value) {
     dpi = USER_DEFAULT_SCREEN_DPI;
   }
   return MulDiv(value, USER_DEFAULT_SCREEN_DPI, (int)dpi);
+}
+
+static int proton_engine_window_dip_to_device(HWND hwnd, int value) {
+  UINT dpi = GetDpiForWindow(hwnd);
+  if (dpi == 0) {
+    dpi = USER_DEFAULT_SCREEN_DPI;
+  }
+  return MulDiv(value, (int)dpi, USER_DEFAULT_SCREEN_DPI);
+}
+
+/* Scale a logical (DIP) window size to the physical pixels of the monitor
+ * the window landed on, clamped to that monitor's work area. Sizes come from
+ * the facade contract, which documents window dimensions in logical pixels;
+ * Win32 sizing APIs take physical pixels. */
+static void proton_engine_window_apply_initial_dpi_size(
+    proton_engine_window_t *window) {
+  int device_width =
+      proton_engine_window_dip_to_device(window->hwnd, window->width);
+  int device_height =
+      proton_engine_window_dip_to_device(window->hwnd, window->height);
+  HMONITOR monitor =
+      MonitorFromWindow(window->hwnd, MONITOR_DEFAULTTONEAREST);
+  MONITORINFO info;
+  memset(&info, 0, sizeof(info));
+  info.cbSize = sizeof(info);
+  if (monitor != NULL && GetMonitorInfoW(monitor, &info)) {
+    int work_width = info.rcWork.right - info.rcWork.left;
+    int work_height = info.rcWork.bottom - info.rcWork.top;
+    if (device_width > work_width) {
+      device_width = work_width;
+    }
+    if (device_height > work_height) {
+      device_height = work_height;
+    }
+  }
+  if (device_width != window->width || device_height != window->height) {
+    SetWindowPos(window->hwnd, NULL, 0, 0, device_width, device_height,
+                 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+  }
 }
 
 static proton_engine_titlebar_area_t
@@ -770,6 +820,7 @@ int32_t proton_engine_window_create(
       proton_engine_set_message(error, error_len, "window creation failed");
       return PROTON_ERR_PLATFORM;
     }
+    proton_engine_window_apply_initial_dpi_size(window);
     proton_engine_window_refresh_non_client_theme(window, 0);
     if (window->titlebar_overlay) {
       proton_engine_overlay_apply_frame(window->hwnd);
@@ -1426,7 +1477,9 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
   if (window->headless) {
     proton_engine_resize_browser(window, width, height);
   } else {
-    SetWindowPos(window->hwnd, NULL, 0, 0, width, height,
+    SetWindowPos(window->hwnd, NULL, 0, 0,
+                 proton_engine_window_dip_to_device(window->hwnd, width),
+                 proton_engine_window_dip_to_device(window->hwnd, height),
                  SWP_NOMOVE | SWP_NOZORDER);
   }
   return PROTON_OK;
@@ -1452,7 +1505,11 @@ int32_t proton_engine_window_set_content_size(
   RECT desired = {0, 0, width, height};
   DWORD style = (DWORD)GetWindowLongPtrW(window->hwnd, GWL_STYLE);
   DWORD ex_style = (DWORD)GetWindowLongPtrW(window->hwnd, GWL_EXSTYLE);
-  if (!AdjustWindowRectEx(&desired, style, FALSE, ex_style)) {
+  UINT dpi = GetDpiForWindow(window->hwnd);
+  if (dpi == 0) {
+    dpi = USER_DEFAULT_SCREEN_DPI;
+  }
+  if (!AdjustWindowRectExForDpi(&desired, style, FALSE, ex_style, (int)dpi)) {
     proton_engine_set_message(error, error_len, "failed to calculate window frame");
     return PROTON_ERR_PLATFORM;
   }
@@ -1478,8 +1535,10 @@ int32_t proton_engine_window_get_content_size(
     proton_engine_set_message(error, error_len, "failed to read client area");
     return PROTON_ERR_PLATFORM;
   }
-  *out_width = rect.right - rect.left;
-  *out_height = rect.bottom - rect.top;
+  *out_width = proton_engine_window_device_to_dip(window->hwnd,
+                                                  rect.right - rect.left);
+  *out_height = proton_engine_window_device_to_dip(window->hwnd,
+                                                   rect.bottom - rect.top);
   return PROTON_OK;
 }
 
