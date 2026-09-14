@@ -23,6 +23,10 @@ let proton_err_stale_browser_request = -14
 let proton_err_update_busy = -15
 
 ///|
+/// Taskbar thumbnail-toolbar capacity, matching PROTON_THUMBAR_MAX_BUTTONS.
+let proton_thumbar_max_buttons = 7
+
+///|
 let proton_err_update_rollback = -16
 
 ///|

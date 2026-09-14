@@ -215,6 +215,7 @@ enum RuntimeEvent {
   LaunchInput(RuntimeLaunchInput)
   AppActivationReceived(AppActivation)
   NativeThemeChanged(NativeThemeSnapshot)
+  TaskbarButtonClicked(Int64, String)
   NotificationResult(NativeNotificationResult)
   NotificationClicked(String?)
   BrowserRequest(Int64, NativeBrowserRequest)
@@ -812,6 +813,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     LaunchInput(Reopen) => "reopen"
     AppActivationReceived(_) => "app_activation"
     NativeThemeChanged(_) => "native_theme_changed"
+    TaskbarButtonClicked(_, _) => "taskbar_button_clicked"
     NotificationResult(_) => "notification_result"
     NotificationClicked(_) => "notification_clicked"
     BrowserRequest(_, Navigation(..)) => "browser_navigation_requested"
@@ -864,7 +866,8 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BrowserDownloadUpdated(window, _)
     | BrowserPdfPrinted(window, _)
     | BrowserEvent(window, _)
-    | ViewEvent(window, _, _) => Some(window)
+    | ViewEvent(window, _, _)
+    | TaskbarButtonClicked(window, _) => Some(window)
     ResourceRequested(request) => Some(request.window)
     MenuCommand(_, window) => window
     DialogCompleted(completion) => completion.window
@@ -1248,6 +1251,16 @@ pub fn RuntimeEvent::native_theme_change(
 }
 
 ///|
+/// Returns the button identifier when this event reports a taskbar
+/// thumbnail-toolbar click. The owning window comes from `window_id()`.
+pub fn RuntimeEvent::taskbar_button_id(self : RuntimeEvent) -> String? {
+  match self {
+    TaskbarButtonClicked(_, id) => Some(id)
+    _ => None
+  }
+}
+
+///|
 pub fn AppActivation::urls(self : AppActivation) -> Array[String] {
   self.urls.copy()
 }
@@ -1477,6 +1490,45 @@ fn ProgressMode::native_value(self : ProgressMode) -> Int {
     Paused => 4
     Cleared => 5
   }
+}
+
+///|
+/// Taskbar thumbnail-toolbar button flags, mirroring Electron's `flags` array.
+/// A button is enabled unless `Disabled` or `NonInteractive` is present.
+pub(all) enum ThumbarButtonFlag {
+  Disabled
+  DismissOnClick
+  NoBackground
+  Hidden
+  NonInteractive
+} derive(Debug, Eq)
+
+///|
+pub extend ThumbarButtonFlag with Eq::{not_equal, equal}
+
+///|
+pub extend ThumbarButtonFlag with Debug::{to_repr}
+
+///|
+/// Native flag bits, matching the PROTON_THUMBAR_FLAG_* values in the C ABI.
+fn ThumbarButtonFlag::native_value(self : ThumbarButtonFlag) -> Int {
+  match self {
+    Disabled => 0x1
+    DismissOnClick => 0x2
+    NoBackground => 0x4
+    Hidden => 0x8
+    NonInteractive => 0x10
+  }
+}
+
+///|
+/// One taskbar thumbnail-toolbar button. `id` identifies the button in the
+/// click event the application receives.
+pub(all) struct ThumbarButton {
+  id : String
+  icon : NativeImage
+  tooltip : String
+  flags : Array[ThumbarButtonFlag]
 }
 
 ///|

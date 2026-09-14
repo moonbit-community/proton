@@ -148,7 +148,8 @@ moon -C examples run 01_run --target native
   updated event raised by an operating system appearance change.
 - `78_taskbar_status`: manual Electron-style taskbar status review covering
   progress modes, the overlay icon built from a native image, and the thumbnail
-  tooltip on the Windows taskbar button.
+  tooltip on the Windows taskbar button, plus a thumbnail toolbar whose button
+  clicks reach the application handler.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

@@ -139,6 +139,7 @@ struct App {
   ]
   update_handlers : Array[async (PendingUpdate) -> Unit noraise]
   native_theme_handlers : Array[async (NativeTheme) -> Unit noraise]
+  thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
   validation_errors : Array[AppConfigurationError]
 }
@@ -451,6 +452,7 @@ priv struct RuntimeSession {
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ]
   native_theme_handlers : Array[async (NativeTheme) -> Unit noraise]
+  thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
@@ -710,6 +712,7 @@ pub struct WindowHandle {
   set_window_progress_bar : (Double, ProgressBarMode) -> Unit raise WindowSessionError
   set_window_overlay_icon : (@native.NativeImage?, String) -> Unit raise WindowSessionError
   set_window_thumbnail_tooltip : (String) -> Unit raise WindowSessionError
+  set_window_thumbar_buttons : (Array[@native.ThumbarButton]) -> Bool raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError
   popup_window_menu : (Menu, Int, Int) -> Unit raise WindowSessionError
   read_window_state : () -> WindowState raise WindowSessionError

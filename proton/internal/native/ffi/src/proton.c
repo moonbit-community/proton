@@ -1811,6 +1811,147 @@ int32_t proton_window_set_thumbnail_tooltip(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+/* One queued button. The builder owns the copies of `id` and `tooltip`, and
+   the icon stays a handle until the list is applied, so an application may
+   destroy its own image only after the buttons were set. */
+typedef struct {
+  char *id;
+  proton_image_handle_t icon;
+  char *tooltip;
+  int32_t flags;
+} proton_thumbar_button_t;
+
+struct proton_thumbar_builder {
+  proton_thumbar_button_t *items;
+  int32_t count;
+};
+
+proton_thumbar_builder_t *proton_thumbar_builder_null(void) { return NULL; }
+
+int32_t proton_thumbar_builder_create(proton_thumbar_builder_t **out_builder) {
+  if (out_builder == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_builder is required");
+  }
+  *out_builder = NULL;
+  proton_thumbar_builder_t *builder = (proton_thumbar_builder_t *)calloc(
+      1, sizeof(proton_thumbar_builder_t));
+  if (builder == NULL) {
+    return proton_set_error(PROTON_ERR_PLATFORM,
+                            "failed to allocate the button builder");
+  }
+  builder->items = (proton_thumbar_button_t *)calloc(
+      PROTON_THUMBAR_MAX_BUTTONS, sizeof(proton_thumbar_button_t));
+  if (builder->items == NULL) {
+    free(builder);
+    return proton_set_error(PROTON_ERR_PLATFORM,
+                            "failed to allocate the button list");
+  }
+  *out_builder = builder;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_thumbar_builder_add(proton_thumbar_builder_t *builder,
+                                   const char *id, proton_image_handle_t icon,
+                                   const char *tooltip, int32_t flags) {
+  if (builder == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "builder is required");
+  }
+  if (id == NULL || id[0] == '\0') {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "thumbar button id is required");
+  }
+  if (builder->count >= PROTON_THUMBAR_MAX_BUTTONS) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "thumbar button limit is 7");
+  }
+  if (flags < 0 || (flags & ~0x1f) != 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "thumbar button flags are invalid");
+  }
+  proton_thumbar_button_t *item = &builder->items[builder->count];
+  item->id = proton_strdup(id);
+  if (item->id == NULL) {
+    return proton_set_error(PROTON_ERR_PLATFORM,
+                            "failed to copy the button id");
+  }
+  if (tooltip != NULL && tooltip[0] != '\0') {
+    item->tooltip = proton_strdup(tooltip);
+    if (item->tooltip == NULL) {
+      free(item->id);
+      item->id = NULL;
+      return proton_set_error(PROTON_ERR_PLATFORM,
+                              "failed to copy the button tooltip");
+    }
+  }
+  item->icon = icon;
+  item->flags = flags;
+  builder->count++;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+void proton_thumbar_builder_destroy(proton_thumbar_builder_t *builder) {
+  if (builder == NULL) {
+    return;
+  }
+  for (int32_t index = 0; index < builder->count; index++) {
+    free(builder->items[index].id);
+    free(builder->items[index].tooltip);
+  }
+  free(builder->items);
+  free(builder);
+}
+
+int32_t proton_window_set_thumbar_buttons(proton_window_handle_t window,
+                                          proton_thumbar_builder_t *buttons,
+                                          int32_t *out_applied) {
+  if (out_applied == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_applied is required");
+  }
+  *out_applied = 0;
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "thumbar buttons require native engine");
+  }
+  proton_engine_thumbar_button_t engine_buttons[PROTON_THUMBAR_MAX_BUTTONS];
+  memset(engine_buttons, 0, sizeof(engine_buttons));
+  int32_t button_count = buttons != NULL ? buttons->count : 0;
+  for (int32_t index = 0; index < button_count; index++) {
+    proton_thumbar_button_t *item = &buttons->items[index];
+    proton_engine_image_t *engine_image = NULL;
+    if (item->icon != NULL) {
+      proton_image_slot_t *image_slot = NULL;
+      status = proton_get_image(item->icon, &image_slot);
+      if (status != PROTON_OK) {
+        return status;
+      }
+      engine_image = image_slot->engine_image;
+    }
+    engine_buttons[index].id = item->id;
+    engine_buttons[index].icon = engine_image;
+    engine_buttons[index].tooltip = item->tooltip;
+    engine_buttons[index].flags = item->flags;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_thumbar_buttons(
+      slot->engine_window, engine_buttons, button_count, out_applied,
+      engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_flash_frame(proton_window_handle_t window,
                                   int32_t flash) {
   if (flash != 0 && flash != 1) {

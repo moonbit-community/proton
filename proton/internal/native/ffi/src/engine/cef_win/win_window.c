@@ -52,6 +52,11 @@
 #define PROTON_WINDOWS_DARK_MODE_ATTRIBUTE_TRANSITION_BUILD 18985
 #define PROTON_DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 19
 #define PROTON_DWMWA_USE_IMMERSIVE_DARK_MODE 20
+// The taskbar reports a thumbnail-toolbar click through WM_COMMAND with this
+// notification code, and the button id in the low word of wParam. The base id
+// is the value Electron uses so a click maps back to one button slot.
+#define PROTON_THUMBAR_CLICKED 0x1800
+#define PROTON_THUMBAR_BUTTON_ID_BASE 40001
 
 #include <math.h>
 #include <stdbool.h>
@@ -536,10 +541,30 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     }
     break;
   case WM_COMMAND:
-    if (window != NULL && HIWORD(wparam) == 0 &&
-        window->app_menu_bindings != NULL) {
-      proton_win_menu_dispatch_command(window, LOWORD(wparam));
-      return 0;
+    if (window != NULL) {
+      if (HIWORD(wparam) == PROTON_THUMBAR_CLICKED) {
+        const int index = (int)LOWORD(wparam) - PROTON_THUMBAR_BUTTON_ID_BASE;
+        if (index >= 0 && index < PROTON_THUMBAR_MAX_BUTTONS &&
+            window->thumbar_ids[index] != NULL) {
+          proton_event_t *event =
+              proton_event_create_window(PROTON_EVENT_TASKBAR_BUTTON_CLICKED,
+                                         window->public_window_id);
+          if (event != NULL) {
+            if (!proton_event_set_text(&event->text_a,
+                                       window->thumbar_ids[index]) ||
+                !proton_event_publish(event)) {
+              proton_event_destroy(event);
+            }
+            proton_engine_signal_wait_source(window->runtime,
+                                             PROTON_WAIT_PLATFORM);
+          }
+        }
+        return 0;
+      }
+      if (HIWORD(wparam) == 0 && window->app_menu_bindings != NULL) {
+        proton_win_menu_dispatch_command(window, LOWORD(wparam));
+        return 0;
+      }
     }
     break;
   case WM_DESTROY:
@@ -549,6 +574,11 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
         DestroyIcon(window->window_icon);
         window->window_icon = NULL;
       }
+      for (int index = 0; index < PROTON_THUMBAR_MAX_BUTTONS; index++) {
+        free(window->thumbar_ids[index]);
+        window->thumbar_ids[index] = NULL;
+      }
+      window->thumbar_buttons_added = 0;
       if (window->modal_parent && window->parent_hwnd != NULL &&
           IsWindow(window->parent_hwnd)) {
         EnableWindow(window->parent_hwnd, TRUE);
@@ -1684,6 +1714,66 @@ static TBPFLAG proton_engine_taskbar_progress_flag(double progress,
   }
 }
 
+// Creates a taskbar icon from premultiplied BGRA pixels, the layout both
+// CreateIconIndirect and CreateDIBSection expect.
+static HICON proton_engine_taskbar_icon_from_bgra(const uint8_t *source,
+                                                  int32_t width,
+                                                  int32_t height, char *error,
+                                                  size_t error_len) {
+  if (source == NULL || width <= 0 || height <= 0) {
+    proton_engine_set_message(error, error_len,
+                              "icon pixels are required");
+    return NULL;
+  }
+  BITMAPV5HEADER header = {0};
+  header.bV5Size = sizeof(header);
+  header.bV5Width = width;
+  header.bV5Height = -height;
+  header.bV5Planes = 1;
+  header.bV5BitCount = 32;
+  header.bV5Compression = BI_BITFIELDS;
+  header.bV5RedMask = 0x00ff0000;
+  header.bV5GreenMask = 0x0000ff00;
+  header.bV5BlueMask = 0x000000ff;
+  header.bV5AlphaMask = 0xff000000;
+  void *bits = NULL;
+  HDC screen = GetDC(NULL);
+  if (screen == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to acquire a screen device context");
+    return NULL;
+  }
+  HBITMAP color = CreateDIBSection(screen, (BITMAPINFO *)&header,
+                                   DIB_RGB_COLORS, &bits, NULL, 0);
+  ReleaseDC(NULL, screen);
+  if (color == NULL || bits == NULL) {
+    if (color != NULL) {
+      DeleteObject(color);
+    }
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate overlay icon pixels");
+    return NULL;
+  }
+  memcpy(bits, source, (size_t)width * (size_t)height * 4);
+  uint8_t mask_bits[64] = {0};
+  HBITMAP mask = CreateBitmap(width, height, 1, 1, mask_bits);
+  ICONINFO icon_info = {0};
+  icon_info.fIcon = TRUE;
+  icon_info.hbmColor = color;
+  icon_info.hbmMask = mask;
+  HICON icon = CreateIconIndirect(&icon_info);
+  DeleteObject(color);
+  if (mask != NULL) {
+    DeleteObject(mask);
+  }
+  if (icon == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create the overlay icon");
+    return NULL;
+  }
+  return icon;
+}
+
 // Builds the 16x16 taskbar overlay icon from premultiplied RGBA pixels.
 // Electron resizes the image to the overlay width, centers it, and clips the
 // canvas to a circle because Windows scales small taskbar icons badly; the
@@ -1751,60 +1841,14 @@ static HICON proton_engine_taskbar_overlay_icon_from_rgba(
       }
       uint8_t *target =
           canvas + (((size_t)(y + y_offset) * size + (size_t)x) * 4);
-      // Premultiplied BGRA, the layout CreateIconIndirect expects.
       target[0] = (uint8_t)((double)blue / samples * coverage + 0.5);
       target[1] = (uint8_t)((double)green / samples * coverage + 0.5);
       target[2] = (uint8_t)((double)red / samples * coverage + 0.5);
       target[3] = (uint8_t)((double)alpha / samples * coverage + 0.5);
     }
   }
-  BITMAPV5HEADER header = {0};
-  header.bV5Size = sizeof(header);
-  header.bV5Width = size;
-  header.bV5Height = -size;
-  header.bV5Planes = 1;
-  header.bV5BitCount = 32;
-  header.bV5Compression = BI_BITFIELDS;
-  header.bV5RedMask = 0x00ff0000;
-  header.bV5GreenMask = 0x0000ff00;
-  header.bV5BlueMask = 0x000000ff;
-  header.bV5AlphaMask = 0xff000000;
-  void *bits = NULL;
-  HDC screen = GetDC(NULL);
-  if (screen == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "failed to acquire a screen device context");
-    return NULL;
-  }
-  HBITMAP color = CreateDIBSection(screen, (BITMAPINFO *)&header,
-                                   DIB_RGB_COLORS, &bits, NULL, 0);
-  ReleaseDC(NULL, screen);
-  if (color == NULL || bits == NULL) {
-    if (color != NULL) {
-      DeleteObject(color);
-    }
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate overlay icon pixels");
-    return NULL;
-  }
-  memcpy(bits, canvas, sizeof(canvas));
-  uint8_t mask_bits[64] = {0};
-  HBITMAP mask = CreateBitmap(size, size, 1, 1, mask_bits);
-  ICONINFO icon_info = {0};
-  icon_info.fIcon = TRUE;
-  icon_info.hbmColor = color;
-  icon_info.hbmMask = mask;
-  HICON icon = CreateIconIndirect(&icon_info);
-  DeleteObject(color);
-  if (mask != NULL) {
-    DeleteObject(mask);
-  }
-  if (icon == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "failed to create the overlay icon");
-    return NULL;
-  }
-  return icon;
+  return proton_engine_taskbar_icon_from_bgra(canvas, size, size, error,
+                                              error_len);
 }
 
 static HICON proton_engine_taskbar_overlay_icon(proton_engine_image_t *image,
@@ -1973,6 +2017,202 @@ int32_t proton_engine_window_set_thumbnail_tooltip(
                               "failed to update the taskbar thumbnail tooltip");
     return PROTON_ERR_PLATFORM;
   }
+  return PROTON_OK;
+}
+
+static HICON proton_engine_taskbar_button_icon(proton_engine_image_t *image,
+                                              char *error, size_t error_len) {
+  int32_t required_len = 0;
+  int32_t width = 0;
+  int32_t height = 0;
+  char bitmap_error[256] = {0};
+  int32_t status = proton_engine_image_to_bitmap(
+      image, 1.0f, NULL, 0, &required_len, &width, &height, bitmap_error,
+      sizeof(bitmap_error));
+  if (status != PROTON_ERR_BUFFER_TOO_SMALL || required_len <= 0 ||
+      width <= 0 || height <= 0 ||
+      (int64_t)required_len < (int64_t)width * (int64_t)height * 4) {
+    proton_engine_set_message(error, error_len,
+                              "button image has no usable bitmap");
+    return NULL;
+  }
+  uint8_t *rgba = (uint8_t *)malloc((size_t)required_len);
+  if (rgba == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate button image pixels");
+    return NULL;
+  }
+  status = proton_engine_image_to_bitmap(image, 1.0f, rgba, required_len, NULL,
+                                         NULL, NULL, bitmap_error,
+                                         sizeof(bitmap_error));
+  if (status != PROTON_OK) {
+    free(rgba);
+    proton_engine_set_message(error, error_len,
+                              "failed to read button image pixels");
+    return NULL;
+  }
+  // The thumbnail toolbar shows the bitmap at its natural size, the same way
+  // Electron hands `CreateHICONFromSkBitmap` the unscaled representation.
+  for (int32_t index = 0; index < width * height; index++) {
+    uint8_t red = rgba[index * 4];
+    rgba[index * 4] = rgba[index * 4 + 2];
+    rgba[index * 4 + 2] = red;
+  }
+  HICON icon = proton_engine_taskbar_icon_from_bgra(rgba, width, height,
+                                                    error, error_len);
+  free(rgba);
+  return icon;
+}
+
+static THUMBBUTTONFLAGS proton_engine_taskbar_button_flags(int32_t flags) {
+  THUMBBUTTONFLAGS result = THBF_ENABLED;
+  if ((flags & PROTON_THUMBAR_FLAG_DISABLED) != 0) {
+    result |= THBF_DISABLED;
+  }
+  if ((flags & PROTON_THUMBAR_FLAG_DISMISS_ON_CLICK) != 0) {
+    result |= THBF_DISMISSONCLICK;
+  }
+  if ((flags & PROTON_THUMBAR_FLAG_NO_BACKGROUND) != 0) {
+    result |= THBF_NOBACKGROUND;
+  }
+  if ((flags & PROTON_THUMBAR_FLAG_HIDDEN) != 0) {
+    result |= THBF_HIDDEN;
+  }
+  if ((flags & PROTON_THUMBAR_FLAG_NON_INTERACTIVE) != 0) {
+    result |= THBF_NONINTERACTIVE;
+  }
+  return result;
+}
+
+int32_t proton_engine_window_set_thumbar_buttons(
+    proton_engine_window_t *window,
+    const proton_engine_thumbar_button_t *buttons, int32_t button_count,
+    int32_t *out_applied, char *error, size_t error_len) {
+  if (out_applied == NULL) {
+    proton_engine_set_message(error, error_len, "out_applied is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_applied = 0;
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (button_count < 0 || button_count > PROTON_THUMBAR_MAX_BUTTONS) {
+    proton_engine_set_message(error, error_len,
+                              "thumbar button limit is 7");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "taskbar buttons are not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  // The identifiers are copied before the taskbar is touched so a failure
+  // cannot leave the window reporting stale button identities.
+  char *ids[PROTON_THUMBAR_MAX_BUTTONS] = {0};
+  for (int32_t index = 0; index < button_count; index++) {
+    if (buttons[index].id == NULL || buttons[index].id[0] == '\0') {
+      proton_engine_set_message(error, error_len,
+                                "thumbar button id is required");
+      for (int32_t free_index = 0; free_index < index; free_index++) {
+        free(ids[free_index]);
+      }
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    ids[index] = proton_engine_strdup(buttons[index].id);
+    if (ids[index] == NULL) {
+      for (int32_t free_index = 0; free_index < index; free_index++) {
+        free(ids[free_index]);
+      }
+      proton_engine_set_message(error, error_len,
+                                "failed to copy the button id");
+      return PROTON_ERR_PLATFORM;
+    }
+  }
+  HICON icons[PROTON_THUMBAR_MAX_BUTTONS] = {0};
+  for (int32_t index = 0; index < button_count; index++) {
+    if (buttons[index].icon == NULL) {
+      continue;
+    }
+    icons[index] = proton_engine_taskbar_button_icon(buttons[index].icon,
+                                                     error, error_len);
+    if (icons[index] == NULL) {
+      for (int32_t free_index = 0; free_index < index; free_index++) {
+        if (icons[free_index] != NULL) {
+          DestroyIcon(icons[free_index]);
+        }
+      }
+      for (int32_t free_index = 0; free_index < button_count; free_index++) {
+        free(ids[free_index]);
+      }
+      return PROTON_ERR_PLATFORM;
+    }
+  }
+  ITaskbarList3 *taskbar = proton_engine_window_taskbar3(error, error_len);
+  if (taskbar == NULL) {
+    for (int32_t index = 0; index < button_count; index++) {
+      if (icons[index] != NULL) {
+        DestroyIcon(icons[index]);
+      }
+      free(ids[index]);
+    }
+    return PROTON_ERR_PLATFORM;
+  }
+  // The number of buttons cannot change once the toolbar exists, so every slot
+  // is claimed on the first call and unused slots stay hidden. That is the same
+  // rule Electron applies so a later call can grow the button list.
+  THUMBBUTTON entries[PROTON_THUMBAR_MAX_BUTTONS];
+  memset(entries, 0, sizeof(entries));
+  for (int32_t index = 0; index < PROTON_THUMBAR_MAX_BUTTONS; index++) {
+    THUMBBUTTON *entry = &entries[index];
+    entry->iId = PROTON_THUMBAR_BUTTON_ID_BASE + (UINT)index;
+    entry->dwMask = THB_FLAGS;
+    if (index >= button_count) {
+      entry->dwFlags = THBF_HIDDEN;
+      continue;
+    }
+    entry->dwFlags = proton_engine_taskbar_button_flags(buttons[index].flags);
+    if (icons[index] != NULL) {
+      entry->dwMask |= THB_ICON;
+      entry->hIcon = icons[index];
+    }
+    if (buttons[index].tooltip != NULL && buttons[index].tooltip[0] != '\0') {
+      wchar_t wide_tooltip[260] = {0};
+      if (proton_engine_taskbar_text(
+              buttons[index].tooltip, wide_tooltip,
+              (int)(sizeof(wide_tooltip) / sizeof(wide_tooltip[0]))) > 0) {
+        entry->dwMask |= THB_TOOLTIP;
+        memcpy(entry->szTip, wide_tooltip, sizeof(entry->szTip));
+      }
+    }
+  }
+  HRESULT result =
+      window->thumbar_buttons_added
+          ? taskbar->lpVtbl->ThumbBarUpdateButtons(
+                taskbar, window->hwnd, PROTON_THUMBAR_MAX_BUTTONS, entries)
+          : taskbar->lpVtbl->ThumbBarAddButtons(
+                taskbar, window->hwnd, PROTON_THUMBAR_MAX_BUTTONS, entries);
+  taskbar->lpVtbl->Release(taskbar);
+  for (int32_t index = 0; index < button_count; index++) {
+    if (icons[index] != NULL) {
+      DestroyIcon(icons[index]);
+    }
+  }
+  if (FAILED(result)) {
+    for (int32_t index = 0; index < button_count; index++) {
+      free(ids[index]);
+    }
+    proton_engine_set_message(error, error_len,
+                              "failed to update the taskbar buttons");
+    return PROTON_ERR_PLATFORM;
+  }
+  window->thumbar_buttons_added = 1;
+  for (int32_t index = 0; index < PROTON_THUMBAR_MAX_BUTTONS; index++) {
+    free(window->thumbar_ids[index]);
+    window->thumbar_ids[index] = ids[index];
+  }
+  *out_applied = 1;
   return PROTON_OK;
 }
 

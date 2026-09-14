@@ -514,6 +514,22 @@ pub fn App::on_native_theme_change(
 }
 
 ///|
+/// Registers a handler for taskbar thumbnail-toolbar clicks.
+///
+/// The handler runs on the application task group with the window that owns
+/// the toolbar and the `id` of the button that was clicked. Electron attaches
+/// one callback per button; Proton reports the identifier instead so rebuilding
+/// the toolbar cannot silently retarget a click. Windows raises the event;
+/// other platforms never do, because the thumbnail toolbar is Windows only.
+pub fn App::on_thumbar_button_click(
+  self : App,
+  handler : async (WindowHandle, String) -> Unit noraise,
+) -> App {
+  self.thumbar_button_handlers.push(handler)
+  self
+}
+
+///|
 /// Chooses whether closing the last window exits the application or leaves it
 /// running so a later launch input can open another window.
 pub fn App::last_window_closed_policy(

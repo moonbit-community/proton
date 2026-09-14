@@ -1300,6 +1300,11 @@ fn decode_native_runtime_event(
           @native_ffi.event_int(event, 0),
         ),
       )
+    44 =>
+      TaskbarButtonClicked(
+        window,
+        require_native_event_text(event, 0, "taskbar button click"),
+      )
     kind =>
       raise InvalidPayload(
         context="runtime event",
@@ -2294,6 +2299,81 @@ pub fn Window::set_thumbnail_tooltip(
       @ffi.to_cstr(tooltip),
     ),
   )
+}
+
+///|
+/// Native flag bits for a taskbar button. Electron rejects unknown flags, so
+/// the typed values map one to one onto the C ABI bits.
+fn thumbar_flags_value(flags : Array[ThumbarButtonFlag]) -> Int {
+  let mut value = 0
+  for flag in flags {
+    value = value | flag.native_value()
+  }
+  value
+}
+
+///|
+/// Builds the native button list. The images resolve before the builder
+/// exists, so a destroyed image cannot leave a partially filled list behind.
+fn build_thumbar_builder(
+  buttons : Array[ThumbarButton],
+) -> @native_ffi.ThumbarBuilderHandle raise NativeError {
+  let entries : Array[(String, @native_ffi.ImageHandle, String, Int)] = []
+  for button in buttons {
+    entries.push(
+      (
+        button.id,
+        button.icon.live_handle(),
+        button.tooltip,
+        thumbar_flags_value(button.flags),
+      ),
+    )
+  }
+  let out_builder = Ref(@native_ffi.thumbar_builder_null())
+  let create_status = @native_ffi.thumbar_builder_create(out_builder)
+  if create_status < 0 {
+    raise native_error(create_status)
+  }
+  let handle = out_builder.val
+  for entry in entries {
+    let status = @native_ffi.thumbar_builder_add(
+      handle,
+      @ffi.to_cstr(entry.0),
+      entry.1,
+      @ffi.to_cstr(entry.2),
+      entry.3,
+    )
+    if status < 0 {
+      @native_ffi.thumbar_builder_destroy(handle)
+      raise native_error(status)
+    }
+  }
+  handle
+}
+
+///|
+/// Replaces the Windows taskbar thumbnail toolbar. Up to seven buttons are
+/// supported, an empty list clears the buttons that were added before, and the
+/// result reports whether the platform showed them: Electron marks the toolbar
+/// as Windows only and reports that it was not applied elsewhere.
+pub fn Window::set_thumbar_buttons(
+  self : Window,
+  buttons : Array[ThumbarButton],
+) -> Bool raise NativeError {
+  if buttons.length() > proton_thumbar_max_buttons {
+    raise invalid_argument("thumbar button limit is 7")
+  }
+  let builder = build_thumbar_builder(buttons)
+  defer @native_ffi.thumbar_builder_destroy(builder)
+  let out_applied = Ref(0)
+  check_status(
+    @native_ffi.proton_window_set_thumbar_buttons_ffi(
+      self.live_handle(),
+      builder,
+      out_applied,
+    ),
+  )
+  out_applied.val != 0
 }
 
 ///|
