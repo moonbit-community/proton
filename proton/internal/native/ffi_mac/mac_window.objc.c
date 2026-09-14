@@ -104,6 +104,24 @@ static proton_window_theme_t proton_engine_window_effective_theme(
              : PROTON_WINDOW_THEME_LIGHT;
 }
 
+int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
+                                         int32_t *out_high_contrast_colors,
+                                         char *error,
+                                         size_t error_len) {
+  if (out_dark_colors == NULL || out_high_contrast_colors == NULL) {
+    proton_engine_set_message(error, error_len, "theme outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_dark_colors =
+      proton_engine_window_effective_theme(NULL) == PROTON_WINDOW_THEME_DARK
+          ? 1
+          : 0;
+  *out_high_contrast_colors =
+      NSWorkspace.sharedWorkspace.accessibilityDisplayShouldIncreaseContrast ? 1
+                                                                            : 0;
+  return PROTON_OK;
+}
+
 static void proton_engine_dock_progress_clear(void) {
   if (g_dock_progress_indicator != nil) {
     [g_dock_progress_indicator stopAnimation:nil];

@@ -29,6 +29,8 @@ pub fn is_packaged() -> Bool
 
 pub fn native_image() -> NativeImage raise NativeImageError
 
+pub fn native_theme() -> NativeTheme raise NativeThemeError
+
 pub fn resource_dir() -> String
 
 pub fn screens() -> Array[ScreenInfo] raise ScreenQueryError
@@ -167,6 +169,10 @@ pub fn NativeImageError::not_equal(Self, Self) -> Bool
 pub fn NativeImageError::output(Self, &Logger) -> Unit
 pub fn NativeImageError::to_repr(Self) -> @debug.Repr
 pub fn NativeImageError::to_string(Self) -> String
+
+pub(all) suberror NativeThemeError {
+  NativeThemeUnavailable(status~ : Int, detail~ : String)
+}
 
 pub(all) suberror NotificationDeliveryError {
   NativeFailure(status~ : Int, detail~ : String)
@@ -599,6 +605,13 @@ pub fn NativeImage::size(Self) -> (Int, Int) raise NativeImageError
 pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int, Int) raise NativeImageError
 pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int) -> (Bytes, Int, Int) raise NativeImageError
 pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int, Int) raise NativeImageError
+
+pub(all) struct NativeTheme {
+  dark_colors : Bool
+  high_contrast_colors : Bool
+}
+pub fn NativeTheme::should_use_dark_colors(Self) -> Bool
+pub fn NativeTheme::should_use_high_contrast_colors(Self) -> Bool
 
 pub(all) enum NavigationDecision {
   Allow

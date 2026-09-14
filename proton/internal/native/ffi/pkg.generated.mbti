@@ -111,6 +111,8 @@ pub fn proton_image_to_png_ffi(ImageHandle, Double, Int, FixedArray[Byte], Int, 
 
 pub fn proton_last_error_message_ffi(FixedArray[Byte], Int) -> Int
 
+pub fn proton_native_theme_query_ffi(@ref.Ref[Int], @ref.Ref[Int]) -> Int
+
 pub fn proton_notification_cleanup_ffi() -> Int
 
 pub fn proton_notification_is_supported_ffi(@ref.Ref[Int]) -> Int
@@ -236,6 +238,7 @@ pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int
 pub fn proton_window_clear_cache_ffi(WindowHandle) -> Int
 
 pub fn proton_window_clear_certificate_exceptions_ffi(WindowHandle) -> Int
+
 pub fn proton_window_close_all_connections_ffi(WindowHandle) -> Int
 
 pub fn proton_window_close_ffi(WindowHandle) -> Int

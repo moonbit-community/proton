@@ -2592,6 +2592,26 @@ int32_t proton_notification_cleanup(void) {
   return proton_set_engine_status(status, engine_error);
 }
 
+int32_t proton_native_theme_query(int32_t *out_dark_colors,
+                                  int32_t *out_high_contrast_colors) {
+  if (out_dark_colors == NULL || out_high_contrast_colors == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "theme outputs are required");
+  }
+  int32_t dark_colors = 0;
+  int32_t high_contrast_colors = 0;
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_native_theme_query(
+      &dark_colors, &high_contrast_colors, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  *out_dark_colors = dark_colors;
+  *out_high_contrast_colors = high_contrast_colors;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_begin_message_dialog(
     proton_window_handle_t window,
     const char *title_utf8,
