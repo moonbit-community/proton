@@ -1450,6 +1450,36 @@ fn WindowThemePreference::native_value(self : WindowThemePreference) -> Int {
 }
 
 ///|
+/// Explicit progress states, mirroring Electron's `NativeWindow::ProgressState`.
+/// `Automatic` keeps the progress value semantics instead of forcing a state.
+pub(all) enum ProgressMode {
+  Automatic
+  Normal
+  Indeterminate
+  Error
+  Paused
+  Cleared
+} derive(Debug, Eq)
+
+///|
+pub extend ProgressMode with Eq::{not_equal, equal}
+
+///|
+pub extend ProgressMode with Debug::{to_repr}
+
+///|
+fn ProgressMode::native_value(self : ProgressMode) -> Int {
+  match self {
+    Automatic => 0
+    Normal => 1
+    Indeterminate => 2
+    Error => 3
+    Paused => 4
+    Cleared => 5
+  }
+}
+
+///|
 /// Process-wide cache for `runtime_info`: the loaded runtime's identity and
 /// feature set cannot change within a process, so feature probes reuse the
 /// first successful result. Failures are not cached — callers keep the

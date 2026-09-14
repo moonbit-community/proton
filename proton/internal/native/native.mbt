@@ -2240,16 +2240,59 @@ pub fn Window::is_audio_muted(self : Window) -> Bool raise NativeError {
 ///
 /// A negative value clears the indicator, values from `0.0` through `1.0`
 /// display determinate progress, and a value above `1.0` displays an
-/// indeterminate indicator.
+/// indeterminate indicator. `mode` selects an explicit state instead of the
+/// value-derived one; only Windows renders it.
 pub fn Window::set_progress_bar(
   self : Window,
   progress : Double,
+  mode : ProgressMode,
 ) -> Unit raise NativeError {
   if progress.is_nan() {
     raise invalid_argument("progress must not be NaN")
   }
   check_status(
-    @native_ffi.proton_window_set_progress_bar_ffi(self.live_handle(), progress),
+    @native_ffi.proton_window_set_progress_bar_ffi(
+      self.live_handle(),
+      progress,
+      mode.native_value(),
+    ),
+  )
+}
+
+///|
+/// Sets or clears the Windows taskbar overlay icon. `overlay` is `None` to
+/// clear it; `description` is read by screen readers. Other platforms accept
+/// the call and do nothing, matching Electron.
+pub fn Window::set_overlay_icon(
+  self : Window,
+  overlay : NativeImage?,
+  description : String,
+) -> Unit raise NativeError {
+  let handle = match overlay {
+    Some(image) => image.live_handle()
+    None => @native_ffi.image_null()
+  }
+  check_status(
+    @native_ffi.proton_window_set_overlay_icon_ffi(
+      self.live_handle(),
+      handle,
+      @ffi.to_cstr(description),
+    ),
+  )
+}
+
+///|
+/// Sets the Windows taskbar thumbnail tooltip. Other platforms accept the call
+/// and do nothing, matching Electron.
+pub fn Window::set_thumbnail_tooltip(
+  self : Window,
+  tooltip : String,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_set_thumbnail_tooltip_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(tooltip),
+    ),
   )
 }
 

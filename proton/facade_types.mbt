@@ -707,7 +707,9 @@ pub struct WindowHandle {
   set_window_enabled : (Bool) -> Unit raise WindowSessionError
   set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
   set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
-  set_window_progress_bar : (Double) -> Unit raise WindowSessionError
+  set_window_progress_bar : (Double, ProgressBarMode) -> Unit raise WindowSessionError
+  set_window_overlay_icon : (@native.NativeImage?, String) -> Unit raise WindowSessionError
+  set_window_thumbnail_tooltip : (String) -> Unit raise WindowSessionError
   flash_window_frame : (Bool) -> Unit raise WindowSessionError
   popup_window_menu : (Menu, Int, Int) -> Unit raise WindowSessionError
   read_window_state : () -> WindowState raise WindowSessionError

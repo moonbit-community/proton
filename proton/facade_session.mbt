@@ -375,9 +375,19 @@ fn RuntimeSession::window_handle(
         window.set_zoom_percent(zoom_percent)
       })
     },
-    set_window_progress_bar: progress => {
+    set_window_progress_bar: (progress, mode) => {
       self.control_window(id, native_id, "set progress bar", window => {
-        window.set_progress_bar(progress)
+        window.set_progress_bar(progress, mode.to_native())
+      })
+    },
+    set_window_overlay_icon: (overlay, description) => {
+      self.control_window(id, native_id, "set overlay icon", window => {
+        window.set_overlay_icon(overlay, description)
+      })
+    },
+    set_window_thumbnail_tooltip: tooltip => {
+      self.control_window(id, native_id, "set thumbnail tooltip", window => {
+        window.set_thumbnail_tooltip(tooltip)
       })
     },
     flash_window_frame: flash => {
@@ -2188,15 +2198,47 @@ pub fn WindowHandle::zoom_percent(
 ///
 /// Pass a negative value to clear the indicator, a value from `0.0` through
 /// `1.0` for determinate progress, or a value above `1.0` for indeterminate
-/// progress. The current native implementation displays this in the macOS
-/// Dock as one application-level indicator; the most recent window call wins,
-/// and any negative value clears it. Unsupported platforms raise
+/// progress. `mode` mirrors Electron's `mode` option and selects an explicit
+/// state instead; only Windows renders it.
+///
+/// macOS displays this in the Dock as one application-level indicator, so the
+/// most recent window call wins and any negative value clears it. Windows
+/// displays it on the taskbar button, where the error and paused states keep
+/// showing the value. Linux has no implementation and raises
 /// `WindowSessionError`.
 pub fn WindowHandle::set_progress_bar(
   self : WindowHandle,
   progress : Double,
+  mode? : ProgressBarMode = ProgressBarMode::Automatic,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_progress_bar)(progress)
+  (self.set_window_progress_bar)(progress, mode)
+}
+
+///|
+/// Sets or clears the taskbar overlay icon shown in the bottom right of the
+/// window's taskbar button.
+///
+/// Pass `None` to clear the overlay. `description` is read by accessibility
+/// screen readers. Windows scales the image to the 16x16 overlay area, keeps
+/// the aspect ratio, and clips it to a circle; other platforms accept the call
+/// and do nothing, matching Electron.
+pub fn WindowHandle::set_overlay_icon(
+  self : WindowHandle,
+  overlay : NativeImage?,
+  description : String,
+) -> Unit raise WindowSessionError {
+  (self.set_window_overlay_icon)(overlay.map(image => image.image), description)
+}
+
+///|
+/// Sets the tooltip shown when the pointer rests over the window's taskbar
+/// thumbnail. Only Windows displays it; other platforms accept the call and do
+/// nothing, matching Electron.
+pub fn WindowHandle::set_thumbnail_tooltip(
+  self : WindowHandle,
+  tooltip : String,
+) -> Unit raise WindowSessionError {
+  (self.set_window_thumbnail_tooltip)(tooltip)
 }
 
 ///|

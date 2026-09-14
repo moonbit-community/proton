@@ -1781,12 +1781,15 @@ int32_t proton_engine_window_set_focusable(
 }
 
 int32_t proton_engine_window_set_progress_bar(
-    proton_engine_window_t *window, double progress, char *error,
+    proton_engine_window_t *window, double progress, int32_t mode, char *error,
     size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  // Electron marks the progress mode as Windows only: the Dock indicator has
+  // no error or paused state, so the value alone drives the indicator here.
+  (void)mode;
   if (isnan(progress)) {
     proton_engine_set_message(error, error_len,
                               "progress must not be NaN");
@@ -1817,6 +1820,36 @@ int32_t proton_engine_window_set_progress_bar(
   }
   [[NSApp dockTile] display];
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  return PROTON_OK;
+}
+
+// Electron marks the taskbar overlay icon and the thumbnail tooltip as Windows
+// only and does nothing elsewhere, so these calls report success without
+// touching the window.
+int32_t proton_engine_window_set_overlay_icon(
+    proton_engine_window_t *window, proton_engine_image_t *overlay,
+    const char *description, char *error, size_t error_len) {
+  (void)overlay;
+  (void)description;
+  (void)error;
+  (void)error_len;
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_thumbnail_tooltip(
+    proton_engine_window_t *window, const char *tooltip, char *error,
+    size_t error_len) {
+  (void)tooltip;
+  (void)error;
+  (void)error_len;
+  if (window == NULL || (!window->headless && window->window == nil)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
   return PROTON_OK;
 }
 

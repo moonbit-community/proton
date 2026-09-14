@@ -13,6 +13,7 @@
 typedef struct proton_engine_runtime proton_engine_runtime_t;
 typedef struct proton_engine_window proton_engine_window_t;
 typedef struct proton_engine_view proton_engine_view_t;
+typedef struct proton_engine_image proton_engine_image_t;
 
 typedef struct {
   int32_t x;
@@ -63,6 +64,19 @@ typedef enum {
   PROTON_WINDOW_THEME_PREFERENCE_LIGHT = 1,
   PROTON_WINDOW_THEME_PREFERENCE_DARK = 2,
 } proton_window_theme_preference_t;
+
+/* Mirrors Electron's NativeWindow::ProgressState. `AUTOMATIC` keeps the
+   progress value semantics: negative clears the indicator, [0, 1] is
+   determinate, and values above 1 are indeterminate. The explicit states
+   override them, and only Windows renders them. */
+typedef enum {
+  PROTON_PROGRESS_MODE_AUTOMATIC = 0,
+  PROTON_PROGRESS_MODE_NORMAL = 1,
+  PROTON_PROGRESS_MODE_INDETERMINATE = 2,
+  PROTON_PROGRESS_MODE_ERROR = 3,
+  PROTON_PROGRESS_MODE_PAUSED = 4,
+  PROTON_PROGRESS_MODE_NONE = 5,
+} proton_progress_mode_t;
 
 typedef struct {
   proton_window_id_t public_window;
@@ -322,7 +336,17 @@ int32_t proton_engine_window_set_enabled(proton_engine_window_t *window,
                                          int32_t enabled, char *error,
                                          size_t error_len);
 int32_t proton_engine_window_set_progress_bar(
-    proton_engine_window_t *window, double progress, char *error,
+    proton_engine_window_t *window, double progress, int32_t mode, char *error,
+    size_t error_len);
+/* Windows sets or clears the taskbar overlay icon; a NULL overlay clears it.
+   Other platforms accept the call and do nothing, matching Electron. */
+int32_t proton_engine_window_set_overlay_icon(
+    proton_engine_window_t *window, proton_engine_image_t *overlay,
+    const char *description, char *error, size_t error_len);
+/* Windows sets the taskbar thumbnail tooltip. Other platforms accept the call
+   and do nothing, matching Electron. */
+int32_t proton_engine_window_set_thumbnail_tooltip(
+    proton_engine_window_t *window, const char *tooltip, char *error,
     size_t error_len);
 int32_t proton_engine_window_flash_frame(
     proton_engine_window_t *window, int32_t flash, char *error,
@@ -577,8 +601,6 @@ void proton_engine_window_cookie_cleanup(proton_engine_window_t *window);
 /* Native image management. Images are standalone CEF image objects not tied
    to a runtime or window. The engine layer owns the cef_image_t reference
    count; the state layer stores the raw pointer and treats it as opaque. */
-typedef struct proton_engine_image proton_engine_image_t;
-
 int32_t proton_engine_image_create(proton_engine_image_t **out_image,
                                    char *error, size_t error_len);
 void proton_engine_image_release(proton_engine_image_t *image);
