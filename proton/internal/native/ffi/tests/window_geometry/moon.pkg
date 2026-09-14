@@ -1,0 +1,12 @@
+import {
+  "moonbit-community/proton/internal/native/ffi",
+} for "wbtest"
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "window_geometry_test.c" ],
+  link: {
+    "native": { "stub-cc-flags": "${build.PROTON_NATIVE_STUB_CC_FLAGS}" },
+  },
+)

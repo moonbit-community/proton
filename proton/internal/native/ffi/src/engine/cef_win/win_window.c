@@ -1,6 +1,7 @@
 #if defined(_WIN32)
 
 #include "win_internal.h"
+#include "win_geometry.h"
 #include "../../proton_config.h"
 #include "../../proton_event.h"
 
@@ -213,6 +214,7 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
   case WM_GETMINMAXINFO:
     if (window != NULL) {
       bool handled = false;
+      UINT dpi = proton_win_window_dpi(hwnd);
       MINMAXINFO *minmax = (MINMAXINFO *)lparam;
       if (window->titlebar_overlay) {
       HMONITOR monitor =
@@ -233,23 +235,23 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
         }
       }
       if (!window->resizable) {
-        minmax->ptMinTrackSize.x = window->width;
-        minmax->ptMinTrackSize.y = window->height;
+        minmax->ptMinTrackSize.x = proton_win_pixels(window->width, dpi);
+        minmax->ptMinTrackSize.y = proton_win_pixels(window->height, dpi);
         handled = true;
       }
       if (window->resizable && window->min_width > 0) {
-        minmax->ptMinTrackSize.x = window->min_width;
-        minmax->ptMinTrackSize.y = window->min_height;
+        minmax->ptMinTrackSize.x = proton_win_pixels(window->min_width, dpi);
+        minmax->ptMinTrackSize.y = proton_win_pixels(window->min_height, dpi);
         handled = true;
       }
       if (window->resizable && window->max_width > 0) {
-        minmax->ptMaxTrackSize.x = window->max_width;
-        minmax->ptMaxTrackSize.y = window->max_height;
+        minmax->ptMaxTrackSize.x = proton_win_pixels(window->max_width, dpi);
+        minmax->ptMaxTrackSize.y = proton_win_pixels(window->max_height, dpi);
         handled = true;
       }
       if (!window->resizable) {
-        minmax->ptMaxTrackSize.x = window->width;
-        minmax->ptMaxTrackSize.y = window->height;
+        minmax->ptMaxTrackSize.x = proton_win_pixels(window->width, dpi);
+        minmax->ptMaxTrackSize.y = proton_win_pixels(window->height, dpi);
         handled = true;
       }
       if (handled) {
@@ -262,13 +264,15 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
       proton_engine_signal_wait_source(window->runtime,
                                        PROTON_WAIT_PLATFORM);
     }
-    if (window != NULL && window->titlebar_overlay) {
+    if (window != NULL) {
       RECT *suggested = (RECT *)lparam;
       SetWindowPos(hwnd, NULL, suggested->left, suggested->top,
                    suggested->right - suggested->left,
                    suggested->bottom - suggested->top,
                    SWP_NOZORDER | SWP_NOACTIVATE);
-      proton_engine_overlay_apply_frame(hwnd);
+      if (window->titlebar_overlay) {
+        proton_engine_overlay_apply_frame(hwnd);
+      }
       RECT client;
       if (GetClientRect(hwnd, &client)) {
         proton_engine_resize_browser(window, client.right - client.left,
@@ -768,6 +772,22 @@ int32_t proton_engine_window_create(
       proton_internal_bridge_config_destroy(window->bridge_config);
       free(window);
       proton_engine_set_message(error, error_len, "window creation failed");
+      return PROTON_ERR_PLATFORM;
+    }
+    /* CreateWindowEx chooses the monitor while the window is still hidden.
+     * Resolve its actual DPI before showing it; CEF/Win32 use physical pixels,
+     * whereas the application config and size constraints use logical pixels. */
+    if (!proton_win_initialize_geometry(window->hwnd, config.width,
+                                         config.height, config.size_hint)) {
+      DestroyWindow(window->hwnd);
+      window->hwnd = NULL;
+      proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
+      proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
+      proton_browser_session_destroy(window->browser_session);
+      proton_internal_bridge_config_destroy(window->bridge_config);
+      free(window);
+      proton_engine_set_message(error, error_len,
+                                "failed to initialize window geometry");
       return PROTON_ERR_PLATFORM;
     }
     proton_engine_window_refresh_non_client_theme(window, 0);
@@ -1421,13 +1441,23 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                               "width and height must be positive");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
+  int previous_width = window->width;
+  int previous_height = window->height;
   window->width = width;
   window->height = height;
   if (window->headless) {
     proton_engine_resize_browser(window, width, height);
   } else {
-    SetWindowPos(window->hwnd, NULL, 0, 0, width, height,
-                 SWP_NOMOVE | SWP_NOZORDER);
+    UINT dpi = proton_win_window_dpi(window->hwnd);
+    if (!SetWindowPos(window->hwnd, NULL, 0, 0,
+                       proton_win_pixels(width, dpi),
+                       proton_win_pixels(height, dpi),
+                       SWP_NOMOVE | SWP_NOZORDER)) {
+      window->width = previous_width;
+      window->height = previous_height;
+      proton_engine_set_message(error, error_len, "failed to resize window");
+      return PROTON_ERR_PLATFORM;
+    }
   }
   return PROTON_OK;
 }
@@ -1449,16 +1479,37 @@ int32_t proton_engine_window_set_content_size(
     proton_engine_resize_browser(window, width, height);
     return PROTON_OK;
   }
-  RECT desired = {0, 0, width, height};
-  DWORD style = (DWORD)GetWindowLongPtrW(window->hwnd, GWL_STYLE);
-  DWORD ex_style = (DWORD)GetWindowLongPtrW(window->hwnd, GWL_EXSTYLE);
-  if (!AdjustWindowRectEx(&desired, style, FALSE, ex_style)) {
-    proton_engine_set_message(error, error_len, "failed to calculate window frame");
+  UINT dpi = proton_win_window_dpi(window->hwnd);
+  RECT frame, client;
+  /* Measure the current non-client area, including a menu and the custom
+   * overlay frame. AdjustWindowRectEx would add a caption the overlay removes. */
+  if (!GetWindowRect(window->hwnd, &frame) ||
+      !GetClientRect(window->hwnd, &client)) {
+    proton_engine_set_message(error, error_len, "failed to read window frame");
     return PROTON_ERR_PLATFORM;
   }
-  return proton_engine_window_set_size(window, desired.right - desired.left,
-                                       desired.bottom - desired.top, error,
-                                       error_len);
+  int64_t desired_width = (int64_t)proton_win_pixels(width, dpi) +
+                          (frame.right - frame.left) - (client.right - client.left);
+  int64_t desired_height = (int64_t)proton_win_pixels(height, dpi) +
+                           (frame.bottom - frame.top) - (client.bottom - client.top);
+  if (desired_width > INT_MAX || desired_height > INT_MAX) {
+    proton_engine_set_message(error, error_len, "content size exceeds window limits");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  int frame_width = (int)desired_width;
+  int frame_height = (int)desired_height;
+  int previous_width = window->width;
+  int previous_height = window->height;
+  window->width = proton_win_logical(frame_width, dpi);
+  window->height = proton_win_logical(frame_height, dpi);
+  if (!SetWindowPos(window->hwnd, NULL, 0, 0, frame_width, frame_height,
+                     SWP_NOMOVE | SWP_NOZORDER)) {
+    window->width = previous_width;
+    window->height = previous_height;
+    proton_engine_set_message(error, error_len, "failed to resize content area");
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
 }
 
 int32_t proton_engine_window_get_content_size(
@@ -1478,8 +1529,9 @@ int32_t proton_engine_window_get_content_size(
     proton_engine_set_message(error, error_len, "failed to read client area");
     return PROTON_ERR_PLATFORM;
   }
-  *out_width = rect.right - rect.left;
-  *out_height = rect.bottom - rect.top;
+  UINT dpi = proton_win_window_dpi(window->hwnd);
+  *out_width = proton_win_logical(rect.right - rect.left, dpi);
+  *out_height = proton_win_logical(rect.bottom - rect.top, dpi);
   return PROTON_OK;
 }
 
@@ -1637,8 +1689,9 @@ int32_t proton_engine_window_apply(
                                   "failed to read current window frame");
         return PROTON_ERR_PLATFORM;
       }
-      window->width = frame.right - frame.left;
-      window->height = frame.bottom - frame.top;
+      UINT dpi = proton_win_window_dpi(window->hwnd);
+      window->width = proton_win_logical(frame.right - frame.left, dpi);
+      window->height = proton_win_logical(frame.bottom - frame.top, dpi);
     }
     DWORD style = window->fullscreen
                       ? window->windowed_style
@@ -1886,8 +1939,9 @@ int32_t proton_engine_window_get_state(
   }
   out_state->x = frame.left;
   out_state->y = frame.top;
-  out_state->width = frame.right - frame.left;
-  out_state->height = frame.bottom - frame.top;
+  UINT dpi = proton_win_window_dpi(window->hwnd);
+  out_state->width = proton_win_logical(frame.right - frame.left, dpi);
+  out_state->height = proton_win_logical(frame.bottom - frame.top, dpi);
   out_state->monitor_x = info.rcMonitor.left;
   out_state->monitor_y = info.rcMonitor.top;
   out_state->monitor_width = info.rcMonitor.right - info.rcMonitor.left;
@@ -1896,7 +1950,6 @@ int32_t proton_engine_window_get_state(
   out_state->work_y = info.rcWork.top;
   out_state->work_width = info.rcWork.right - info.rcWork.left;
   out_state->work_height = info.rcWork.bottom - info.rcWork.top;
-  UINT dpi = GetDpiForWindow(window->hwnd);
   out_state->scale_factor_percent =
       dpi > 0 ? (int32_t)((dpi * 100 + 48) / 96) : 100;
   out_state->visible = IsWindowVisible(window->hwnd) ? 1 : 0;
