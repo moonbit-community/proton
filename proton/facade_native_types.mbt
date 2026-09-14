@@ -267,6 +267,48 @@ fn ViewState::from_native(state : @native.ViewState) -> ViewState {
 }
 
 ///|
+/// Describes the operating system appearance reported by the native theme
+/// query.
+pub(all) struct NativeTheme {
+  dark_colors : Bool
+  high_contrast_colors : Bool
+}
+
+///|
+/// Raised when the operating system appearance cannot be read.
+pub(all) suberror NativeThemeError {
+  NativeThemeUnavailable(status~ : Int, detail~ : String)
+}
+
+///|
+pub fn NativeTheme::should_use_dark_colors(self : NativeTheme) -> Bool {
+  self.dark_colors
+}
+
+///|
+pub fn NativeTheme::should_use_high_contrast_colors(self : NativeTheme) -> Bool {
+  self.high_contrast_colors
+}
+
+///|
+/// Reports the operating system appearance Proton follows.
+///
+/// Mirrors Electron's `nativeTheme` query surface: it is window independent
+/// and does not require a running session. Renderer `prefers-color-scheme`
+/// keeps following the operating system, because the current CEF public API
+/// exposes no renderer color-scheme override.
+pub fn native_theme() -> NativeTheme raise NativeThemeError {
+  let (dark_colors, high_contrast_colors) = @native.native_theme_query() catch {
+    error =>
+      raise NativeThemeUnavailable(
+        status=error.status(),
+        detail=error.message(),
+      )
+  }
+  { dark_colors, high_contrast_colors, }
+}
+
+///|
 /// Configuration for a web contents view hosted inside a window.
 pub struct ViewConfig {
   x : Int

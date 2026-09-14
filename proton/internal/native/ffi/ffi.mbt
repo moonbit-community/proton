@@ -450,6 +450,13 @@ pub extern "C" fn proton_notification_show_ffi(
 pub extern "C" fn proton_notification_set_badge_count_ffi(count : Int) -> Int = "proton_notification_set_badge_count"
 
 ///|
+#borrow(out_dark_colors, out_high_contrast_colors)
+pub extern "C" fn proton_native_theme_query_ffi(
+  out_dark_colors : Ref[Int],
+  out_high_contrast_colors : Ref[Int],
+) -> Int = "proton_native_theme_query"
+
+///|
 pub extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notification_cleanup"
 
 ///|

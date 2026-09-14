@@ -98,6 +98,29 @@ int proton_engine_x11_window_is_focused(Display *display,
   return is_focused;
 }
 
+int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
+                                         int32_t *out_high_contrast_colors,
+                                         char *error,
+                                         size_t error_len) {
+  if (out_dark_colors == NULL || out_high_contrast_colors == NULL) {
+    proton_engine_set_message(error, error_len, "theme outputs are required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  gboolean dark = FALSE;
+  gchar *theme_name = NULL;
+  GtkSettings *settings = gtk_settings_get_default();
+  if (settings != NULL) {
+    g_object_get(settings, "gtk-application-prefer-dark-theme", &dark,
+                 "gtk-theme-name", &theme_name, NULL);
+  }
+  const gboolean high_contrast =
+      theme_name != NULL && g_str_has_prefix(theme_name, "HighContrast");
+  g_free(theme_name);
+  *out_dark_colors = dark ? 1 : 0;
+  *out_high_contrast_colors = high_contrast ? 1 : 0;
+  return PROTON_OK;
+}
+
 static proton_window_theme_t proton_engine_window_effective_theme(
     const proton_engine_window_t *window) {
   if (window != NULL) {
