@@ -271,6 +271,62 @@ application, configure the app before startup:
 .run_or_abort()
 ```
 
+## Native theme
+
+`native_theme()` reports the appearance Proton follows and needs no running
+session. It mirrors Electron's `nativeTheme` query surface:
+
+```moonbit
+let theme = @proton.native_theme() catch {
+  error => abort(error.message())
+}
+let dark = theme.should_use_dark_colors()
+let high_contrast = theme.should_use_high_contrast_colors()
+let source = theme.theme_source()
+```
+
+`native_theme_set_source` assigns the application-level source, mirroring
+`nativeTheme.themeSource`. `System` follows the operating system; `Light` and
+`Dark` win over it for every window that does not configure its own theme.
+Per-window `WindowHandle::set_window_theme` stays authoritative for that
+window's chrome.
+
+```moonbit
+@proton.native_theme_set_source(@proton.WindowThemePreference::Dark) catch {
+  error => abort(error.message())
+}
+```
+
+`App::on_native_theme_change` registers the application-level equivalent of
+Electron's `nativeTheme.on("updated")`. It runs when the operating system
+appearance changes (system theme, high contrast) or when the application moves
+`themeSource`. The handler runs on the application task group and receives the
+new snapshot; Electron hands the event no payload, so Proton supplies one
+instead of making every handler re-read a value that may already have moved on.
+One event is raised per observable change: repeating system broadcasts and
+redundant `themeSource` writes do not raise another.
+
+```moonbit
+@proton.html("Theme aware", "<main><h1>Hello</h1></main>")
+.on_native_theme_change(fn(theme) noraise {
+  // theme.should_use_dark_colors(), theme.should_use_high_contrast_colors()
+})
+.run_or_abort()
+```
+
+Renderer `prefers-color-scheme` keeps following the operating system: the
+current CEF public API exposes no renderer color-scheme override. A
+`themeSource` override therefore changes the application snapshot and the
+native window chrome, not the page media query. `examples/77_native_theme`
+contains the manual review flow, including a native readback after every
+override.
+
+Platform notes: macOS follows the application-level effective appearance and
+the accessibility contrast option; Linux follows GTK's theme name and
+prefer-dark setting. Windows announces the change through the top-level window
+message broadcast, so an application that runs with no window at all reports
+the change when a window exists again.
+
 ## Application locale
 
 `App::locale` selects an immutable application locale before native runtime

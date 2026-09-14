@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/77_native_theme"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type SetSourceRequest derive(ToJson, @json.FromJson)
+pub fn SetSourceRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SetSourceRequest::to_json(Self) -> Json
+
+type ThemeState derive(ToJson, @json.FromJson)
+pub fn ThemeState::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ThemeState::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

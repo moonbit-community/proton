@@ -143,6 +143,9 @@ moon -C examples run 01_run --target native
 - `76_process_extension`: renderer-facing child-process review covering spawn,
   PID reporting, natural exit and wait, explicit kill followed by wait, and
   process activity events.
+- `77_native_theme`: manual Electron-style `nativeTheme` review covering the
+  appearance query, `themeSource` overrides with a native readback, and the
+  updated event raised by an operating system appearance change.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only
