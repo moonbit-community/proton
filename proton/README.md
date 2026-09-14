@@ -262,7 +262,57 @@ rests over the Windows taskbar thumbnail. The overlay icon and the thumbnail
 tooltip are Windows-only in Electron; Proton accepts those calls on macOS and
 Linux and does nothing, which keeps cross-platform application code free of
 platform checks. `examples/78_taskbar_status` is the manual review flow for all
-three APIs.
+four APIs.
+
+### Taskbar thumbnail toolbar
+
+`WindowHandle::set_thumbar_buttons` replaces the buttons shown with the taskbar
+thumbnail. Each button carries the `NativeImage` it shows, an optional tooltip,
+its `flags`, and the `id` that a click reports:
+
+```moonbit
+let previous = @proton.native_image()
+previous.add_png(previous_png, 16, 16)
+let applied = window.set_thumbar_buttons([
+  @proton.ThumbarButton::{
+    id: "previous",
+    icon: previous,
+    tooltip: "Previous",
+    flags: [],
+  },
+  @proton.ThumbarButton::{
+    id: "play",
+    icon: play,
+    tooltip: "Play or pause",
+    flags: [@proton.ThumbarButtonFlag::NoBackground],
+  },
+])
+```
+
+Electron's limits and flags apply: at most seven buttons, `Disabled`,
+`DismissOnClick`, `NoBackground`, `Hidden`, and `NonInteractive` as flags, and
+an empty array clears the buttons. Windows claims the button slots with the
+first successful call, so a later call can replace or hide buttons but cannot
+remove the toolbar, exactly as Electron documents.
+
+```moonbit
+@proton.html("Player", player_html)
+.on_thumbar_button_click(fn(window, button_id) noraise {
+  match button_id {
+    "previous" => play_previous(window)
+    "next" => play_next(window)
+    _ => toggle_playback(window)
+  }
+})
+.run_or_abort()
+```
+
+`set_thumbar_buttons` returns whether the platform showed the buttons: Windows
+returns the taskbar result and macOS and Linux return `false`, the same result
+Electron reports for its Windows-only thumbnail toolbar. Electron attaches one
+callback per button; Proton reports the button `id` through
+`App::on_thumbar_button_click` instead, so rebuilding the toolbar cannot
+silently retarget a click.
 
 ## Logging
 

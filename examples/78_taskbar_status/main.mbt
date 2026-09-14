@@ -27,6 +27,17 @@ struct TooltipRequest {
 } derive(ToJson, FromJson)
 
 ///|
+struct ButtonsRequest {
+  visible : Bool
+} derive(ToJson, FromJson)
+
+///|
+pub extend ButtonsRequest with ToJson::{to_json}
+
+///|
+pub extend ButtonsRequest with FromJson::{from_json}
+
+///|
 pub extend TooltipRequest with ToJson::{to_json}
 
 ///|
@@ -66,10 +77,23 @@ let set_tooltip_command : @proton_contract.Command[TooltipRequest, Reply] = task
 )
 
 ///|
+let set_buttons_command : @proton_contract.Command[ButtonsRequest, Reply] = taskbar_contract.command(
+  "setButtons",
+)
+
+///|
 let window_slot : Ref[@proton.WindowHandle?] = { val: None, }
 
 ///|
+let browser_slot : Ref[@proton.BrowserHandle?] = { val: None, }
+
+///|
 let overlay_image : Ref[@proton.NativeImage?] = { val: None, }
+
+///|
+/// The toolbar images outlive every call, so the example releases them when the
+/// window closes instead of rebuilding them on each request.
+let thumbar_images : Ref[Array[@proton.NativeImage]?] = { val: None, }
 
 ///|
 fn reply(ok : Bool, message : String) -> Reply {
@@ -142,6 +166,104 @@ fn release_overlay_icon() -> Unit {
 }
 
 ///|
+/// Draws the small white glyph a toolbar button shows. Pixels are premultiplied
+/// RGBA, the layout `NativeImage::add_bitmap` expects.
+fn glyph_bitmap(kind : String) -> (Bytes, Int, Int) {
+  let size = 16
+  let pixels = FixedArray::make(size * size * 4, b'\x00')
+  for y = 0; y < size; y = y + 1 {
+    for x = 0; x < size; x = x + 1 {
+      let filled = match kind {
+        "previous" => glyph_triangle_left(x, y)
+        "play" => glyph_triangle_right(x, y)
+        _ => glyph_triangle_right(x, y) || glyph_triangle_right(x - 6, y)
+      }
+      if filled {
+        let offset = (y * size + x) * 4
+        pixels[offset] = b'\xff'
+        pixels[offset + 1] = b'\xff'
+        pixels[offset + 2] = b'\xff'
+        pixels[offset + 3] = b'\xff'
+      }
+    }
+  }
+  (Bytes::from_array(pixels), size, size)
+}
+
+///|
+/// Distance of a row from the triangle's widest row, so the play and skip
+/// glyphs share one shape.
+fn glyph_row_inset(y : Int) -> Int {
+  if y < 8 {
+    7 - y
+  } else {
+    y - 8
+  }
+}
+
+///|
+fn glyph_triangle_right(x : Int, y : Int) -> Bool {
+  x >= 4 && x <= 11 - glyph_row_inset(y)
+}
+
+///|
+fn glyph_triangle_left(x : Int, y : Int) -> Bool {
+  x <= 11 && x >= 4 + glyph_row_inset(y)
+}
+
+///|
+fn thumbar_icon(
+  kind : String,
+) -> @proton.NativeImage raise @proton.NativeImageError {
+  let image = @proton.native_image()
+  let (data, width, height) = glyph_bitmap(kind)
+  image.add_bitmap(data, width, height)
+  image
+}
+
+///|
+/// Creates the three toolbar images once. The middle button uses
+/// `NoBackground`, so the review can compare the flag against the other two.
+fn thumbar_buttons() -> Array[@proton.ThumbarButton] raise @proton.NativeImageError {
+  let images = match thumbar_images.val {
+    Some(images) => images
+    None => {
+      let images = [
+        thumbar_icon("previous"),
+        thumbar_icon("play"),
+        thumbar_icon("next"),
+      ]
+      thumbar_images.val = Some(images)
+      images
+    }
+  }
+  [
+    { id: "previous", icon: images[0], tooltip: "Previous track", flags: [], },
+    {
+      id: "play",
+      icon: images[1],
+      tooltip: "Play or pause",
+      flags: [@proton.ThumbarButtonFlag::NoBackground],
+    },
+    { id: "next", icon: images[2], tooltip: "Next track", flags: [], },
+  ]
+}
+
+///|
+fn release_thumbar_icons() -> Unit {
+  match thumbar_images.val {
+    Some(images) =>
+      for image in images {
+        image.destroy() catch {
+          _ => ()
+        }
+      }
+    None => ()
+  }
+  thumbar_images.val = None
+}
+
+///|
 fn set_progress(request : ProgressRequest) -> Reply {
   let mode = match progress_mode_from_name(request.mode) {
     Some(mode) => mode
@@ -204,6 +326,60 @@ fn set_tooltip(request : TooltipRequest) -> Reply {
 }
 
 ///|
+fn set_buttons(request : ButtonsRequest) -> Reply {
+  let buttons = if request.visible {
+    thumbar_buttons() catch {
+      error => return reply(false, error.message())
+    }
+  } else {
+    []
+  }
+  let applied = match window_slot.val {
+    Some(window) =>
+      window.set_thumbar_buttons(buttons) catch {
+        error => return reply(false, error.message())
+      }
+    None => return reply(false, "window is not ready")
+  }
+  if !applied {
+    return reply(false, "this platform does not show a taskbar toolbar")
+  }
+  reply(
+    true,
+    if request.visible {
+      "toolbar shown; click its buttons and watch this log"
+    } else {
+      "toolbar buttons cleared"
+    },
+  )
+}
+
+///|
+fn js_escape(text : String) -> String {
+  text
+  .replace_all(old="\\", new="\\\\")
+  .replace_all(old="\"", new="\\\"")
+  .replace_all(old="\n", new="\\n")
+  .replace_all(old="\r", new="\\r")
+}
+
+///|
+/// Reports a native taskbar button click in the review page.
+fn report_click(id : String) -> Unit {
+  match browser_slot.val {
+    Some(browser) =>
+      browser.eval(
+        "window.taskbarStatus.record(\"taskbar button clicked: " +
+        js_escape(id) +
+        "\");",
+      ) catch {
+        _ => ()
+      }
+    None => ()
+  }
+}
+
+///|
 fn register_commands(registrar : @proton.CommandRegistrar) -> Unit raise {
   registrar.bind(set_progress_command, (_context, request) => {
     set_progress(request)
@@ -213,6 +389,9 @@ fn register_commands(registrar : @proton.CommandRegistrar) -> Unit raise {
   })
   registrar.bind(set_tooltip_command, (_context, request) => {
     set_tooltip(request)
+  })
+  registrar.bind(set_buttons_command, (_context, request) => {
+    set_buttons(request)
   })
 }
 
@@ -229,11 +408,13 @@ fn page() -> String {
     $|<div class="row"><button id="overlay-on">Show badge</button><button id="overlay-off">Clear badge</button></div>
     $|<h2>Thumbnail tooltip</h2><p>Shown when the pointer rests over the taskbar thumbnail.</p>
     $|<div class="row"><input id="tooltip" value="Proton taskbar status"><button id="tooltip-apply">Apply tooltip</button></div>
+    $|<h2>Thumbnail toolbar</h2><p>Three buttons with generated glyphs. The middle button uses the <code>nobackground</code> flag, so it has no button border.</p>
+    $|<div class="row"><button id="buttons-on">Show buttons</button><button id="buttons-off">Clear buttons</button></div>
     $|<p id="status" role="status" aria-live="polite">Ready.</p>
     $|<ul id="log"></ul>
     $|<p class="note">Hover the taskbar button after each step: the progress bar sits under the icon, the badge is the red disc in the corner, and the tooltip appears over the thumbnail. macOS and Linux accept the overlay and tooltip calls without changing anything, matching Electron.</p>
     $|</main>
-    $|<script>const status=document.querySelector('#status'),log=document.querySelector('#log');const invoke=(name,payload)=>window.__MoonBit__.core.invokeOp('ext:taskbarStatus/'+name,payload);function record(message){status.textContent=message;const item=document.createElement('li');item.textContent=message;log.prepend(item);while(log.children.length>8)log.lastElementChild.remove()}async function send(name,payload){try{const data=await invoke(name,payload);record(data.ok?data.message:'failed: '+data.message)}catch(error){record(String(error))}}document.querySelectorAll('[data-progress]').forEach(button=>button.addEventListener('click',()=>void send('setProgress',{value:Number(button.dataset.progress),mode:button.dataset.mode})));document.querySelector('#overlay-on').addEventListener('click',()=>void send('setOverlay',{visible:true}));document.querySelector('#overlay-off').addEventListener('click',()=>void send('setOverlay',{visible:false}));document.querySelector('#tooltip-apply').addEventListener('click',()=>void send('setTooltip',{text:document.querySelector('#tooltip').value}));</script>
+    $|<script>const status=document.querySelector('#status'),log=document.querySelector('#log');const invoke=(name,payload)=>window.__MoonBit__.core.invokeOp('ext:taskbarStatus/'+name,payload);function record(message){status.textContent=message;const item=document.createElement('li');item.textContent=message;log.prepend(item);while(log.children.length>8)log.lastElementChild.remove()}window.taskbarStatus={record};async function send(name,payload){try{const data=await invoke(name,payload);record(data.ok?data.message:'failed: '+data.message)}catch(error){record(String(error))}}document.querySelectorAll('[data-progress]').forEach(button=>button.addEventListener('click',()=>void send('setProgress',{value:Number(button.dataset.progress),mode:button.dataset.mode})));document.querySelector('#overlay-on').addEventListener('click',()=>void send('setOverlay',{visible:true}));document.querySelector('#overlay-off').addEventListener('click',()=>void send('setOverlay',{visible:false}));document.querySelector('#tooltip-apply').addEventListener('click',()=>void send('setTooltip',{text:document.querySelector('#tooltip').value}));document.querySelector('#buttons-on').addEventListener('click',()=>void send('setButtons',{visible:true}));document.querySelector('#buttons-off').addEventListener('click',()=>void send('setButtons',{visible:false}));</script>
     $|</body></html>
   )
 }
@@ -243,15 +424,19 @@ async fn main {
   @proton.html("Taskbar Status", page(), width=900, height=760, debug=true)
   .identifier("dev.proton.78-taskbar-status")
   .commands(register_commands)
+  .on_thumbar_button_click(fn(_window, id) noraise { report_click(id) })
   .window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)
+      browser_slot.val = Some(window.browser())
       window
     },
     on_close=fn(_window) {
       window_slot.val = None
+      browser_slot.val = None
       release_overlay_icon()
+      release_thumbar_icons()
     },
   )
   .run_or_abort()

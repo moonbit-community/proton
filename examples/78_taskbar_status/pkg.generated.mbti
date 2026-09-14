@@ -10,6 +10,10 @@ import {
 // Errors
 
 // Types and methods
+type ButtonsRequest derive(ToJson, @json.FromJson)
+pub fn ButtonsRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ButtonsRequest::to_json(Self) -> Json
+
 type OverlayRequest derive(ToJson, @json.FromJson)
 pub fn OverlayRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn OverlayRequest::to_json(Self) -> Json
