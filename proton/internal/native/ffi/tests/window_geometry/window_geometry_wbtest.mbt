@@ -13,6 +13,10 @@ extern "C" fn placement_test() -> Int = "proton_test_window_initial_placement"
 
 ///|
 #cfg(platform="windows")
+extern "C" fn tracking_size_test() -> Int = "proton_test_window_tracking_sizes"
+
+///|
+#cfg(platform="windows")
 extern "C" fn native_size_test(overlay : Int) -> Int = "proton_test_window_native_sizes"
 
 ///|
@@ -25,6 +29,12 @@ test "Windows sizes round trip at 100, 150, and 250 percent" {
 #cfg(platform="windows")
 test "initial placement fits the work area and respects explicit size hints" {
   assert_eq(placement_test(), 0)
+}
+
+///|
+#cfg(platform="windows")
+test "tracking sizes scale fixed, minimum, and maximum hints" {
+  assert_eq(tracking_size_test(), 0)
 }
 
 ///|
