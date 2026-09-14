@@ -1,0 +1,33 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/internal/native/ffi/tests/browser_session"
+
+// Values
+pub fn denied_download_policy_trace() -> String
+
+pub fn download_command_beats_allow_trace() -> String
+
+pub fn download_deny_after_update_trace() -> String
+
+pub fn download_deny_before_update_trace() -> String
+
+pub fn download_empty_response_trace() -> String
+
+pub fn download_invalid_response_trace() -> String
+
+pub fn download_single_completion_trace() -> String
+
+pub fn header_case_trace() -> String
+
+pub fn resource_handler_lifetime_trace() -> String
+
+pub fn unpublished_download_request_trace() -> String
+
+pub fn web_request_cancel_trace() -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

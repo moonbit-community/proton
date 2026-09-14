@@ -98,11 +98,15 @@ int proton_engine_x11_window_is_focused(Display *display,
   return is_focused;
 }
 
+static int32_t g_native_theme_source = PROTON_WINDOW_THEME_PREFERENCE_SYSTEM;
+
 int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
                                          int32_t *out_high_contrast_colors,
+                                         int32_t *out_source,
                                          char *error,
                                          size_t error_len) {
-  if (out_dark_colors == NULL || out_high_contrast_colors == NULL) {
+  if (out_dark_colors == NULL || out_high_contrast_colors == NULL ||
+      out_source == NULL) {
     proton_engine_set_message(error, error_len, "theme outputs are required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
@@ -116,8 +120,33 @@ int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
   const gboolean high_contrast =
       theme_name != NULL && g_str_has_prefix(theme_name, "HighContrast");
   g_free(theme_name);
-  *out_dark_colors = dark ? 1 : 0;
+  int32_t dark_colors = dark ? 1 : 0;
+  switch (g_native_theme_source) {
+  case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
+    dark_colors = 0;
+    break;
+  case PROTON_WINDOW_THEME_PREFERENCE_DARK:
+    dark_colors = 1;
+    break;
+  default:
+    break;
+  }
+  *out_dark_colors = dark_colors;
   *out_high_contrast_colors = high_contrast ? 1 : 0;
+  *out_source = g_native_theme_source;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_native_theme_set_source(int32_t source,
+                                              char *error,
+                                              size_t error_len) {
+  if (source != PROTON_WINDOW_THEME_PREFERENCE_SYSTEM &&
+      source != PROTON_WINDOW_THEME_PREFERENCE_LIGHT &&
+      source != PROTON_WINDOW_THEME_PREFERENCE_DARK) {
+    proton_engine_set_message(error, error_len, "unknown theme source");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  g_native_theme_source = source;
   return PROTON_OK;
 }
 

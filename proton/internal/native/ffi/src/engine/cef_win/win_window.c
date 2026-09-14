@@ -109,17 +109,46 @@ static proton_window_theme_t proton_engine_windows_system_theme(void) {
              : PROTON_WINDOW_THEME_LIGHT;
 }
 
+static int32_t g_native_theme_source = PROTON_WINDOW_THEME_PREFERENCE_SYSTEM;
+
 int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
                                          int32_t *out_high_contrast_colors,
+                                         int32_t *out_source,
                                          char *error,
                                          size_t error_len) {
-  if (out_dark_colors == NULL || out_high_contrast_colors == NULL) {
+  if (out_dark_colors == NULL || out_high_contrast_colors == NULL ||
+      out_source == NULL) {
     proton_engine_set_message(error, error_len, "theme outputs are required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  *out_dark_colors =
+  int32_t dark_colors =
       proton_engine_windows_system_theme() == PROTON_WINDOW_THEME_DARK ? 1 : 0;
+  switch (g_native_theme_source) {
+  case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
+    dark_colors = 0;
+    break;
+  case PROTON_WINDOW_THEME_PREFERENCE_DARK:
+    dark_colors = 1;
+    break;
+  default:
+    break;
+  }
+  *out_dark_colors = dark_colors;
   *out_high_contrast_colors = proton_engine_windows_high_contrast() ? 1 : 0;
+  *out_source = g_native_theme_source;
+  return PROTON_OK;
+}
+
+int32_t proton_engine_native_theme_set_source(int32_t source,
+                                              char *error,
+                                              size_t error_len) {
+  if (source != PROTON_WINDOW_THEME_PREFERENCE_SYSTEM &&
+      source != PROTON_WINDOW_THEME_PREFERENCE_LIGHT &&
+      source != PROTON_WINDOW_THEME_PREFERENCE_DARK) {
+    proton_engine_set_message(error, error_len, "unknown theme source");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  g_native_theme_source = source;
   return PROTON_OK;
 }
 

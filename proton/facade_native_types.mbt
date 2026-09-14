@@ -272,6 +272,7 @@ fn ViewState::from_native(state : @native.ViewState) -> ViewState {
 pub(all) struct NativeTheme {
   dark_colors : Bool
   high_contrast_colors : Bool
+  source : WindowThemePreference
 }
 
 ///|
@@ -291,6 +292,51 @@ pub fn NativeTheme::should_use_high_contrast_colors(self : NativeTheme) -> Bool 
 }
 
 ///|
+/// Reports the application theme source that drives the snapshot, matching
+/// Electron's `nativeTheme.themeSource`.
+pub fn NativeTheme::theme_source(self : NativeTheme) -> WindowThemePreference {
+  self.source
+}
+
+///|
+fn native_theme_source_code(source : WindowThemePreference) -> Int {
+  match source {
+    WindowThemePreference::System => 0
+    WindowThemePreference::Light => 1
+    WindowThemePreference::Dark => 2
+  }
+}
+
+///|
+fn native_theme_source_from_code(code : Int) -> WindowThemePreference {
+  match code {
+    1 => WindowThemePreference::Light
+    2 => WindowThemePreference::Dark
+    _ => WindowThemePreference::System
+  }
+}
+
+///|
+/// Overrides the application-level theme source, matching Electron's
+/// `nativeTheme.themeSource`.
+///
+/// `Light` and `Dark` win over the operating system value reported by
+/// `native_theme()`; `System` restores the operating system value. Per-window
+/// `WindowHandle::set_window_theme` stays authoritative for that window's
+/// chrome.
+pub fn native_theme_set_source(
+  source : WindowThemePreference,
+) -> Unit raise NativeThemeError {
+  @native.native_theme_set_source(native_theme_source_code(source)) catch {
+    error =>
+      raise NativeThemeUnavailable(
+        status=error.status(),
+        detail=error.message(),
+      )
+  }
+}
+
+///|
 /// Reports the operating system appearance Proton follows.
 ///
 /// Mirrors Electron's `nativeTheme` query surface: it is window independent
@@ -298,14 +344,18 @@ pub fn NativeTheme::should_use_high_contrast_colors(self : NativeTheme) -> Bool 
 /// keeps following the operating system, because the current CEF public API
 /// exposes no renderer color-scheme override.
 pub fn native_theme() -> NativeTheme raise NativeThemeError {
-  let (dark_colors, high_contrast_colors) = @native.native_theme_query() catch {
+  let (dark_colors, high_contrast_colors, source) = @native.native_theme_query() catch {
     error =>
       raise NativeThemeUnavailable(
         status=error.status(),
         detail=error.message(),
       )
   }
-  { dark_colors, high_contrast_colors, }
+  {
+    dark_colors,
+    high_contrast_colors,
+    source: native_theme_source_from_code(source),
+  }
 }
 
 ///|
