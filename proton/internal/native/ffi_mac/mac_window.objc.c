@@ -148,6 +148,7 @@ int32_t proton_engine_native_theme_set_source(int32_t source,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   g_native_theme_source = source;
+  proton_engine_publish_native_theme_change();
   return PROTON_OK;
 }
 

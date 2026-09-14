@@ -874,6 +874,7 @@ int32_t proton_engine_runtime_create(
     g_proton_cef_runtime_active = 0;
     return accessibility_status;
   }
+  proton_engine_native_theme_start_observing();
   *out_runtime = runtime;
   return PROTON_OK;
 }
@@ -886,6 +887,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
 
+  proton_engine_native_theme_stop_observing();
   proton_engine_runtime_stop_accessibility(runtime);
   proton_engine_dialog_dispose_runtime(runtime);
   proton_engine_menu_clear_runtime(runtime);

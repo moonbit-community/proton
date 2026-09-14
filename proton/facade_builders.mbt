@@ -496,6 +496,24 @@ pub fn App::on_launch_input(
 }
 
 ///|
+/// Registers an application-level handler for operating system appearance
+/// changes.
+///
+/// Mirrors Electron's `nativeTheme.on("updated")`, which fires when the
+/// operating system appearance changes or when `native_theme_set_source`
+/// moves the application-level source. The handler runs on the application
+/// task group and never on the startup path. Electron hands the event no
+/// payload; the new snapshot is passed instead, so the handler does not have
+/// to read a value that may already have moved on.
+pub fn App::on_native_theme_change(
+  self : App,
+  handler : async (NativeTheme) -> Unit noraise,
+) -> App {
+  self.native_theme_handlers.push(handler)
+  self
+}
+
+///|
 /// Chooses whether closing the last window exits the application or leaves it
 /// running so a later launch input can open another window.
 pub fn App::last_window_closed_policy(

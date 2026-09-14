@@ -59,6 +59,7 @@ typedef enum proton_event_kind {
   PROTON_EVENT_BROWSER_RENDERER_TERMINATED = 40,
   PROTON_EVENT_VIEW_RENDERER_TERMINATED = 41,
   PROTON_EVENT_BROWSER_RESOURCE_REQUESTED = 42,
+  PROTON_EVENT_NATIVE_THEME_CHANGED = 43,
 } proton_event_kind_t;
 
 typedef struct proton_event {

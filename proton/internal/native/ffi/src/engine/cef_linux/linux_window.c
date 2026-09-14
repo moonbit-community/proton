@@ -99,6 +99,10 @@ int proton_engine_x11_window_is_focused(Display *display,
 }
 
 static int32_t g_native_theme_source = PROTON_WINDOW_THEME_PREFERENCE_SYSTEM;
+static int32_t g_native_theme_published = 0;
+static int32_t g_native_theme_dark_colors = 0;
+static int32_t g_native_theme_high_contrast_colors = 0;
+static int32_t g_native_theme_published_source = 0;
 
 int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
                                          int32_t *out_high_contrast_colors,
@@ -137,6 +141,44 @@ int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
   return PROTON_OK;
 }
 
+// Electron raises `nativeTheme.on("updated")` once per observable appearance
+// change. GTK reports a theme or prefer-dark change through the style update
+// of every mapped widget, so the snapshot is compared against the last one
+// this process published before an event is queued.
+static void proton_engine_publish_native_theme_change(void) {
+  int32_t dark_colors = 0;
+  int32_t high_contrast_colors = 0;
+  int32_t source = 0;
+  char error[256] = {0};
+  if (proton_engine_native_theme_query(&dark_colors, &high_contrast_colors,
+                                       &source, error, sizeof(error)) !=
+      PROTON_OK) {
+    return;
+  }
+  if (g_native_theme_published && dark_colors == g_native_theme_dark_colors &&
+      high_contrast_colors == g_native_theme_high_contrast_colors &&
+      source == g_native_theme_published_source) {
+    return;
+  }
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_NATIVE_THEME_CHANGED);
+  if (event == NULL) {
+    return;
+  }
+  event->int_a = source;
+  event->bool_a = dark_colors != 0 ? 1 : 0;
+  event->bool_b = high_contrast_colors != 0 ? 1 : 0;
+  if (!proton_event_publish(event)) {
+    proton_event_destroy(event);
+    return;
+  }
+  g_native_theme_published = 1;
+  g_native_theme_dark_colors = dark_colors;
+  g_native_theme_high_contrast_colors = high_contrast_colors;
+  g_native_theme_published_source = source;
+  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+}
+
 int32_t proton_engine_native_theme_set_source(int32_t source,
                                               char *error,
                                               size_t error_len) {
@@ -147,6 +189,7 @@ int32_t proton_engine_native_theme_set_source(int32_t source,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   g_native_theme_source = source;
+  proton_engine_publish_native_theme_change();
   return PROTON_OK;
 }
 
@@ -468,6 +511,16 @@ static void proton_engine_window_style_updated(GtkWidget *widget,
                                                gpointer user_data) {
   (void)widget;
   proton_engine_window_state_notify(NULL, NULL, user_data);
+  proton_engine_publish_native_theme_change();
+}
+
+static void proton_engine_theme_settings_notify(GObject *object,
+                                                GParamSpec *parameter,
+                                                gpointer user_data) {
+  (void)object;
+  (void)parameter;
+  (void)user_data;
+  proton_engine_publish_native_theme_change();
 }
 
 static void proton_engine_use_default_x11_visual(GtkWidget *widget) {
@@ -515,6 +568,18 @@ int proton_engine_ensure_gtk(char *error, size_t error_len) {
     GdkDisplay *display = gdk_display_get_default();
     if (display == NULL || !GDK_IS_X11_DISPLAY(display)) {
       available = 0;
+    }
+  }
+  if (available) {
+    // GtkSettings owns the appearance snapshot, and it changes before any
+    // window exists, so the process observes it directly instead of relying on
+    // a mapped widget. The per-window style update stays as a second trigger.
+    GtkSettings *settings = gtk_settings_get_default();
+    if (settings != NULL) {
+      g_signal_connect(settings, "notify::gtk-theme-name",
+                       G_CALLBACK(proton_engine_theme_settings_notify), NULL);
+      g_signal_connect(settings, "notify::gtk-application-prefer-dark-theme",
+                       G_CALLBACK(proton_engine_theme_settings_notify), NULL);
     }
   }
   initialized = 1;

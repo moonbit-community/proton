@@ -175,6 +175,9 @@ pub fn NativeImageError::to_string(Self) -> String
 pub(all) suberror NativeThemeError {
   NativeThemeUnavailable(status~ : Int, detail~ : String)
 }
+pub fn NativeThemeError::message(Self) -> String
+pub fn NativeThemeError::output(Self, &Logger) -> Unit
+pub fn NativeThemeError::to_string(Self) -> String
 
 pub(all) suberror NotificationDeliveryError {
   NativeFailure(status~ : Int, detail~ : String)
@@ -256,6 +259,7 @@ pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit
 pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise) -> Self
 pub fn App::on_launch_input(Self, async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise) -> Self
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
+pub fn App::on_native_theme_change(Self, async (NativeTheme) -> Unit noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_new_window_request(Self, async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 pub fn App::on_permission_request(Self, async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise) -> Self

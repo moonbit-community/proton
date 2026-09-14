@@ -194,6 +194,25 @@ impl Show for ScreenQueryError with fn output(self, logger) {
 pub extend ScreenQueryError with Show::{to_string, output}
 
 ///|
+pub fn NativeThemeError::message(self : NativeThemeError) -> String {
+  match self {
+    NativeThemeUnavailable(status~, detail~) =>
+      "failed to read the operating system appearance (" +
+      status.to_string() +
+      "): " +
+      detail
+  }
+}
+
+///|
+impl Show for NativeThemeError with fn output(self, logger) {
+  logger.write_string(self.message())
+}
+
+///|
+pub extend NativeThemeError with Show::{to_string, output}
+
+///|
 fn cleanup_failure_message(
   primary : String?,
   failures : Array[AppCleanupError],
