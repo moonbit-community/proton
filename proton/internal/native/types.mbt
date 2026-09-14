@@ -185,6 +185,22 @@ struct AppInstance {
 }
 
 ///|
+/// Appearance snapshot carried by a native theme change event. The values are
+/// the same ones `native_theme_query` reports, captured when the operating
+/// system appearance changed so the event needs no second query.
+pub(all) struct NativeThemeSnapshot {
+  dark_colors : Bool
+  high_contrast_colors : Bool
+  source : WindowThemePreference
+} derive(Debug, Eq)
+
+///|
+pub extend NativeThemeSnapshot with Eq::{not_equal, equal}
+
+///|
+pub extend NativeThemeSnapshot with Debug::{to_repr}
+
+///|
 enum RuntimeEvent {
   WindowCreated(Int64)
   WindowClosed(Int64)
@@ -198,6 +214,7 @@ enum RuntimeEvent {
   MenuCommand(String, Int64?)
   LaunchInput(RuntimeLaunchInput)
   AppActivationReceived(AppActivation)
+  NativeThemeChanged(NativeThemeSnapshot)
   NotificationResult(NativeNotificationResult)
   NotificationClicked(String?)
   BrowserRequest(Int64, NativeBrowserRequest)
@@ -794,6 +811,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     LaunchInput(OpenFiles(_)) => "open_files"
     LaunchInput(Reopen) => "reopen"
     AppActivationReceived(_) => "app_activation"
+    NativeThemeChanged(_) => "native_theme_changed"
     NotificationResult(_) => "notification_result"
     NotificationClicked(_) => "notification_clicked"
     BrowserRequest(_, Navigation(..)) => "browser_navigation_requested"
@@ -856,6 +874,7 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | ResourceRequestCancelled(_)
     | LaunchInput(_)
     | AppActivationReceived(_)
+    | NativeThemeChanged(_)
     | NotificationResult(_)
     | NotificationClicked(_)
     | QuitRequested => None
@@ -1211,6 +1230,19 @@ pub fn RuntimeEvent::launch_input(self : RuntimeEvent) -> RuntimeLaunchInput? {
 pub fn RuntimeEvent::app_activation(self : RuntimeEvent) -> AppActivation? {
   match self {
     AppActivationReceived(activation) => Some(activation)
+    _ => None
+  }
+}
+
+///|
+/// Returns the appearance snapshot when this event reports a native theme
+/// change, which is the application-level equivalent of Electron's
+/// `nativeTheme.on("updated")`.
+pub fn RuntimeEvent::native_theme_change(
+  self : RuntimeEvent,
+) -> NativeThemeSnapshot? {
+  match self {
+    NativeThemeChanged(snapshot) => Some(snapshot)
     _ => None
   }
 }

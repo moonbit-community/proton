@@ -2880,6 +2880,28 @@ test "app builder registers main browser lifecycle handlers" {
 }
 
 ///|
+test "app builder registers native theme change handlers" {
+  let app = html("Native theme", "<p>theme</p>").on_native_theme_change(fn(
+    _theme,
+  ) noraise {
+
+  })
+  assert_eq(app.native_theme_handlers.length(), 1)
+}
+
+///|
+test "native theme snapshots convert to the public appearance type" {
+  let theme = NativeTheme::from_native({
+    dark_colors: true,
+    high_contrast_colors: false,
+    source: @native.WindowThemePreference::Dark,
+  })
+  assert_true(theme.should_use_dark_colors())
+  assert_false(theme.should_use_high_contrast_colors())
+  assert_eq(theme.theme_source(), WindowThemePreference::Dark)
+}
+
+///|
 test "browser loading lifecycle events are distinct" {
   assert_eq(BrowserEvent::DidStartLoading, BrowserEvent::DidStartLoading)
   assert_eq(BrowserEvent::DidFinishLoad, BrowserEvent::DidFinishLoad)

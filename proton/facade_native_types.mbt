@@ -299,6 +299,21 @@ pub fn NativeTheme::theme_source(self : NativeTheme) -> WindowThemePreference {
 }
 
 ///|
+fn NativeTheme::from_native(
+  snapshot : @native.NativeThemeSnapshot,
+) -> NativeTheme {
+  {
+    dark_colors: snapshot.dark_colors,
+    high_contrast_colors: snapshot.high_contrast_colors,
+    source: match snapshot.source {
+      @native.WindowThemePreference::System => WindowThemePreference::System
+      @native.WindowThemePreference::Light => WindowThemePreference::Light
+      @native.WindowThemePreference::Dark => WindowThemePreference::Dark
+    },
+  }
+}
+
+///|
 fn native_theme_source_code(source : WindowThemePreference) -> Int {
   match source {
     WindowThemePreference::System => 0

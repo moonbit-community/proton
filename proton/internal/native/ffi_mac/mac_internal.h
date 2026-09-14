@@ -133,6 +133,13 @@ int32_t proton_engine_runtime_start_accessibility(
 void proton_engine_runtime_stop_accessibility(proton_engine_runtime_t *runtime);
 void proton_engine_accessibility_set_enhanced_user_interface(int enabled);
 
+// Publishes the application-level `nativeTheme` change event when the
+// observable appearance differs from the last published snapshot. Defined in
+// mac_theme.objc.c and shared by the theme source setter.
+void proton_engine_publish_native_theme_change(void);
+void proton_engine_native_theme_start_observing(void);
+void proton_engine_native_theme_stop_observing(void);
+
 struct proton_engine_window {
   proton_engine_runtime_t *runtime;
   NSWindow *window;

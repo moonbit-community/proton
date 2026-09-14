@@ -12,6 +12,7 @@ fn RuntimeSession::RuntimeSession(
   launch_input_handlers : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ],
+  native_theme_handlers : Array[async (NativeTheme) -> Unit noraise],
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ],
@@ -58,6 +59,7 @@ fn RuntimeSession::RuntimeSession(
     application_tasks,
     last_window_closed_policy,
     launch_input_handlers,
+    native_theme_handlers,
     window_event_handlers,
     view_event_handlers,
     browser_event_handlers,
@@ -3097,6 +3099,7 @@ fn RuntimeSession::dispatch_runtime_event(
   self.dispatch_resource_event(event)
   self.dispatch_notification_event(event)
   self.dispatch_launch_input_event(event)
+  self.dispatch_native_theme_event(event)
   self.dispatch_menu_event(event)
   match event.bridge_request() {
     Some(request) => self.start_bridge_request(request)
@@ -3944,6 +3947,24 @@ fn try_activate_for_launch_input(
     }
   }
   true
+}
+
+///|
+/// Forwards an operating system appearance change to the application
+/// handlers, mirroring Electron's `nativeTheme.on("updated")`.
+fn RuntimeSession::dispatch_native_theme_event(
+  self : RuntimeSession,
+  event : @native.RuntimeEvent,
+) -> Unit {
+  match event.native_theme_change() {
+    Some(snapshot) => {
+      let theme = NativeTheme::from_native(snapshot)
+      for handler in self.native_theme_handlers {
+        ignore(self.application_tasks.spawn(() => handler(theme), no_wait=true))
+      }
+    }
+    None => ()
+  }
 }
 
 ///|

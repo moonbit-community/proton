@@ -110,6 +110,10 @@ static proton_window_theme_t proton_engine_windows_system_theme(void) {
 }
 
 static int32_t g_native_theme_source = PROTON_WINDOW_THEME_PREFERENCE_SYSTEM;
+static int32_t g_native_theme_published = 0;
+static int32_t g_native_theme_dark_colors = 0;
+static int32_t g_native_theme_high_contrast_colors = 0;
+static int32_t g_native_theme_published_source = 0;
 
 int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
                                          int32_t *out_high_contrast_colors,
@@ -139,6 +143,46 @@ int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
   return PROTON_OK;
 }
 
+// Electron raises `nativeTheme.on("updated")` once per observable appearance
+// change. The snapshot is compared against the last one this process
+// published, so the system-wide WM_SETTINGCHANGE broadcast, repeated window
+// messages, and a redundant themeSource write each collapse to one event.
+// `runtime` only selects the wait source that wakes the application loop.
+static void proton_engine_publish_native_theme_change(
+    proton_engine_runtime_t *runtime) {
+  int32_t dark_colors = 0;
+  int32_t high_contrast_colors = 0;
+  int32_t source = 0;
+  char error[256] = {0};
+  if (proton_engine_native_theme_query(&dark_colors, &high_contrast_colors,
+                                       &source, error, sizeof(error)) !=
+      PROTON_OK) {
+    return;
+  }
+  if (g_native_theme_published && dark_colors == g_native_theme_dark_colors &&
+      high_contrast_colors == g_native_theme_high_contrast_colors &&
+      source == g_native_theme_published_source) {
+    return;
+  }
+  proton_event_t *event =
+      proton_event_create(PROTON_EVENT_NATIVE_THEME_CHANGED);
+  if (event == NULL) {
+    return;
+  }
+  event->int_a = source;
+  event->bool_a = dark_colors != 0 ? 1 : 0;
+  event->bool_b = high_contrast_colors != 0 ? 1 : 0;
+  if (!proton_event_publish(event)) {
+    proton_event_destroy(event);
+    return;
+  }
+  g_native_theme_published = 1;
+  g_native_theme_dark_colors = dark_colors;
+  g_native_theme_high_contrast_colors = high_contrast_colors;
+  g_native_theme_published_source = source;
+  proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
+}
+
 int32_t proton_engine_native_theme_set_source(int32_t source,
                                               char *error,
                                               size_t error_len) {
@@ -149,6 +193,7 @@ int32_t proton_engine_native_theme_set_source(int32_t source,
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   g_native_theme_source = source;
+  proton_engine_publish_native_theme_change(NULL);
   return PROTON_OK;
 }
 
@@ -402,6 +447,15 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
     break;
   case WM_MOVE:
   case WM_DISPLAYCHANGE:
+    if (window != NULL) {
+      if (window->theme_preference ==
+          PROTON_WINDOW_THEME_PREFERENCE_SYSTEM) {
+        proton_engine_window_refresh_non_client_theme(window, 0);
+      }
+      proton_engine_signal_wait_source(window->runtime,
+                                       PROTON_WAIT_PLATFORM);
+    }
+    break;
   case WM_THEMECHANGED:
   case WM_SETTINGCHANGE:
     if (window != NULL) {
@@ -409,6 +463,7 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
           PROTON_WINDOW_THEME_PREFERENCE_SYSTEM) {
         proton_engine_window_refresh_non_client_theme(window, 0);
       }
+      proton_engine_publish_native_theme_change(window->runtime);
       proton_engine_signal_wait_source(window->runtime,
                                        PROTON_WAIT_PLATFORM);
     }
