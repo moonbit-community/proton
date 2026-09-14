@@ -367,6 +367,8 @@ pub fn proton_window_set_skip_taskbar_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_set_theme_ffi(WindowHandle, Int) -> Int
 
+pub fn proton_window_set_thumbar_buttons_ffi(WindowHandle, ThumbarBuilderHandle, @ref.Ref[Int]) -> Int
+
 pub fn proton_window_set_thumbnail_tooltip_ffi(WindowHandle, Bytes) -> Int
 
 pub fn proton_window_set_title_ffi(WindowHandle, Bytes) -> Int
@@ -390,6 +392,14 @@ pub fn runtime_null() -> RuntimeHandle
 pub fn runtime_poll_event(RuntimeHandle, @ref.Ref[EventHandle]) -> Int
 
 pub fn runtime_set_menu(RuntimeHandle, MenuConfigHandle) -> Int
+
+pub fn thumbar_builder_add(ThumbarBuilderHandle, Bytes, ImageHandle, Bytes, Int) -> Int
+
+pub fn thumbar_builder_create(@ref.Ref[ThumbarBuilderHandle]) -> Int
+
+pub fn thumbar_builder_destroy(ThumbarBuilderHandle) -> Unit
+
+pub fn thumbar_builder_null() -> ThumbarBuilderHandle
 
 pub fn view_create(WindowHandle, Int, Int, Int, Int, Int, Int, Bytes, Bytes, @ref.Ref[ViewHandle]) -> Int
 
@@ -435,6 +445,9 @@ pub type MenuConfigHandle
 
 #external
 pub type RuntimeHandle
+
+#external
+pub type ThumbarBuilderHandle
 
 #external
 pub type ViewHandle

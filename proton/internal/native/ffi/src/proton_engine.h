@@ -348,6 +348,23 @@ int32_t proton_engine_window_set_overlay_icon(
 int32_t proton_engine_window_set_thumbnail_tooltip(
     proton_engine_window_t *window, const char *tooltip, char *error,
     size_t error_len);
+
+typedef struct {
+  const char *id;
+  proton_engine_image_t *icon;
+  const char *tooltip;
+  int32_t flags;
+} proton_engine_thumbar_button_t;
+
+/* Windows adds or updates the taskbar thumbnail toolbar, claiming every button
+   slot the first time so later calls can grow the list, exactly like Electron.
+   `out_applied` reports whether the taskbar accepted the request; other
+   platforms leave it at zero because Electron marks the toolbar as Windows
+   only. */
+int32_t proton_engine_window_set_thumbar_buttons(
+    proton_engine_window_t *window,
+    const proton_engine_thumbar_button_t *buttons, int32_t button_count,
+    int32_t *out_applied, char *error, size_t error_len);
 int32_t proton_engine_window_flash_frame(
     proton_engine_window_t *window, int32_t flash, char *error,
     size_t error_len);

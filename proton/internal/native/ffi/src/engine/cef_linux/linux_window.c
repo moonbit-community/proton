@@ -1665,6 +1665,30 @@ int32_t proton_engine_window_set_thumbnail_tooltip(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_thumbar_buttons(
+    proton_engine_window_t *window,
+    const proton_engine_thumbar_button_t *buttons, int32_t button_count,
+    int32_t *out_applied, char *error, size_t error_len) {
+  (void)buttons;
+  if (out_applied == NULL) {
+    proton_engine_set_message(error, error_len, "out_applied is required");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  *out_applied = 0;
+  if (window == NULL || (!window->headless && window->window == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (button_count < 0 || button_count > PROTON_THUMBAR_MAX_BUTTONS) {
+    proton_engine_set_message(error, error_len,
+                              "thumbar button limit is 7");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  // Electron marks the thumbnail toolbar as Windows only and reports that the
+  // buttons were not applied instead of failing.
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_flash_frame(
     proton_engine_window_t *window, int32_t flash, char *error,
     size_t error_len) {

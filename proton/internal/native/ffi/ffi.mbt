@@ -34,6 +34,10 @@ pub type MenuConfigHandle
 
 ///|
 #external
+pub type ThumbarBuilderHandle
+
+///|
+#external
 pub type BridgeConfigHandle
 
 ///|
@@ -848,6 +852,38 @@ pub extern "C" fn proton_window_set_thumbnail_tooltip_ffi(
   window : WindowHandle,
   tooltip : Bytes,
 ) -> Int = "proton_window_set_thumbnail_tooltip"
+
+///|
+pub extern "C" fn thumbar_builder_null() -> ThumbarBuilderHandle = "proton_thumbar_builder_null"
+
+///|
+#borrow(out_builder)
+pub extern "C" fn thumbar_builder_create(
+  out_builder : Ref[ThumbarBuilderHandle],
+) -> Int = "proton_thumbar_builder_create"
+
+///|
+#borrow(id, tooltip)
+pub extern "C" fn thumbar_builder_add(
+  builder : ThumbarBuilderHandle,
+  id : Bytes,
+  icon : ImageHandle,
+  tooltip : Bytes,
+  flags : Int,
+) -> Int = "proton_thumbar_builder_add"
+
+///|
+pub extern "C" fn thumbar_builder_destroy(
+  builder : ThumbarBuilderHandle,
+) -> Unit = "proton_thumbar_builder_destroy"
+
+///|
+#borrow(out_applied)
+pub extern "C" fn proton_window_set_thumbar_buttons_ffi(
+  window : WindowHandle,
+  buttons : ThumbarBuilderHandle,
+  out_applied : Ref[Int],
+) -> Int = "proton_window_set_thumbar_buttons"
 
 ///|
 pub extern "C" fn proton_window_flash_frame_ffi(

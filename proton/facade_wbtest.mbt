@@ -65,6 +65,8 @@ fn test_window_handle(
   progress_mode_calls? : Array[ProgressBarMode],
   overlay_icon_calls? : Array[(Bool, String)],
   thumbnail_tooltip_calls? : Array[String],
+  thumbar_button_calls? : Array[Int],
+  thumbar_button_result? : Bool = false,
   flash_calls? : Array[Bool],
   resizable_calls? : Array[Bool],
   movable_calls? : Array[Bool],
@@ -383,6 +385,13 @@ fn test_window_handle(
         Some(calls) => calls.push(tooltip)
         None => ()
       }
+    },
+    set_window_thumbar_buttons: buttons => {
+      match thumbar_button_calls {
+        Some(calls) => calls.push(buttons.length())
+        None => ()
+      }
+      thumbar_button_result
     },
     flash_window_frame: flash => {
       match flash_calls {
@@ -3087,6 +3096,32 @@ test "taskbar status text routes through the window handle" {
   window.set_thumbnail_tooltip("Proton taskbar status")
   debug_inspect(overlay_calls, content="[(false, \"no unread items\")]")
   debug_inspect(tooltip_calls, content="[\"Proton taskbar status\"]")
+}
+
+///|
+test "taskbar buttons route through the window handle" {
+  let calls : Array[Int] = []
+  let accepted = test_window_handle(
+    "main",
+    17L,
+    thumbar_button_calls=calls,
+    thumbar_button_result=true,
+  )
+  assert_true(accepted.set_thumbar_buttons([]))
+  assert_eq(calls, [0])
+  let rejected = test_window_handle("main", 17L, thumbar_button_result=false)
+  assert_false(rejected.set_thumbar_buttons([]))
+}
+
+///|
+test "app builder registers taskbar button handlers" {
+  let app = html("Taskbar buttons", "<p>buttons</p>").on_thumbar_button_click(fn(
+    _window,
+    _id,
+  ) noraise {
+
+  })
+  assert_eq(app.thumbar_button_handlers.length(), 1)
 }
 
 ///|

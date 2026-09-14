@@ -13,6 +13,7 @@ fn RuntimeSession::RuntimeSession(
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ],
   native_theme_handlers : Array[async (NativeTheme) -> Unit noraise],
+  thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise],
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ],
@@ -60,6 +61,7 @@ fn RuntimeSession::RuntimeSession(
     last_window_closed_policy,
     launch_input_handlers,
     native_theme_handlers,
+    thumbar_button_handlers,
     window_event_handlers,
     view_event_handlers,
     browser_event_handlers,
@@ -389,6 +391,9 @@ fn RuntimeSession::window_handle(
       self.control_window(id, native_id, "set thumbnail tooltip", window => {
         window.set_thumbnail_tooltip(tooltip)
       })
+    },
+    set_window_thumbar_buttons: buttons => {
+      self.set_window_thumbar_buttons(id, native_id, buttons)
     },
     flash_window_frame: flash => {
       self.control_window(id, native_id, "flash frame", window => {
@@ -2242,6 +2247,27 @@ pub fn WindowHandle::set_thumbnail_tooltip(
 }
 
 ///|
+/// Replaces the taskbar thumbnail toolbar, the row of buttons shown under the
+/// window's taskbar thumbnail. Up to seven buttons are supported, and an empty
+/// array clears the buttons that were added before.
+///
+/// The result reports whether the platform showed the buttons. Windows returns
+/// the taskbar result; macOS and Linux return `false` because Electron marks
+/// the thumbnail toolbar as Windows only. Invalid input — more than seven
+/// buttons, an empty `id`, or a released image — raises
+/// `WindowSessionError`.
+///
+/// The button slots are claimed by the first successful call, which is a
+/// Windows limitation Electron documents as well: a later call can replace or
+/// hide buttons, but it cannot remove the toolbar.
+pub fn WindowHandle::set_thumbar_buttons(
+  self : WindowHandle,
+  buttons : Array[ThumbarButton],
+) -> Bool raise WindowSessionError {
+  (self.set_window_thumbar_buttons)(buttons.map(button => button.to_native()))
+}
+
+///|
 /// Starts or stops flashing the window to attract the user's attention.
 ///
 /// On macOS, `true` continuously bounces the application Dock icon until the
@@ -3142,6 +3168,7 @@ fn RuntimeSession::dispatch_runtime_event(
   self.dispatch_notification_event(event)
   self.dispatch_launch_input_event(event)
   self.dispatch_native_theme_event(event)
+  self.dispatch_thumbar_button_event(event)
   self.dispatch_menu_event(event)
   match event.bridge_request() {
     Some(request) => self.start_bridge_request(request)
@@ -3989,6 +4016,56 @@ fn try_activate_for_launch_input(
     }
   }
   true
+}
+
+///|
+/// Applies the thumbnail-toolbar buttons and reports whether the taskbar
+/// showed them.
+fn RuntimeSession::set_window_thumbar_buttons(
+  self : RuntimeSession,
+  id : String,
+  native_id : Int64,
+  buttons : Array[@native.ThumbarButton],
+) -> Bool raise WindowSessionError {
+  let running = match self.find_active_window(id) {
+    Some(running) if running.window.id() == native_id => running
+    _ => raise StaleWindow(id~)
+  }
+  running.window.set_thumbar_buttons(buttons) catch {
+    error =>
+      raise window_operation_failed("set taskbar buttons in " + id, error)
+  }
+}
+
+///|
+/// Forwards a taskbar thumbnail-toolbar click to the application handlers with
+/// the window that owns the toolbar and the button identifier.
+fn RuntimeSession::dispatch_thumbar_button_event(
+  self : RuntimeSession,
+  event : @native.RuntimeEvent,
+) -> Unit {
+  match event.taskbar_button_id() {
+    Some(button_id) =>
+      match event.window_id() {
+        Some(window_id) =>
+          match self.find_window_by_native_id(window_id) {
+            Some(window) => {
+              let handle = self.window_handle(window)
+              for handler in self.thumbar_button_handlers {
+                ignore(
+                  self.application_tasks.spawn(
+                    () => handler(handle, button_id),
+                    no_wait=true,
+                  ),
+                )
+              }
+            }
+            None => ()
+          }
+        None => ()
+      }
+    None => ()
+  }
 }
 
 ///|

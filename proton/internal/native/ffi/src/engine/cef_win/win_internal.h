@@ -88,6 +88,11 @@ struct proton_engine_window {
   HWND parent_hwnd;
   int modal_parent;
   HICON window_icon;
+  /* Taskbar thumbnail-toolbar state. The button slots are claimed once, so the
+     engine only needs to remember that they exist and which identifier each
+     slot reports back on a click. */
+  int thumbar_buttons_added;
+  char *thumbar_ids[PROTON_THUMBAR_MAX_BUTTONS];
   HBRUSH background_brush;
   int min_width;
   int min_height;

@@ -277,6 +277,35 @@ int32_t proton_window_set_overlay_icon(proton_window_handle_t window,
    and do nothing, matching Electron. */
 int32_t proton_window_set_thumbnail_tooltip(proton_window_handle_t window,
                                             const char *tooltip);
+/* Taskbar thumbnail toolbar (Windows only). Electron marks the toolbar as
+   Windows only and reports that it was not applied elsewhere. At most
+   PROTON_THUMBAR_MAX_BUTTONS buttons are supported, and an empty list clears
+   the buttons that were added before. */
+#define PROTON_THUMBAR_MAX_BUTTONS 7
+/* THUMBBUTTONFLAGS bits Proton exposes; THBF_ENABLED is the default and is
+   therefore not part of the mask. */
+#define PROTON_THUMBAR_FLAG_DISABLED 0x1
+#define PROTON_THUMBAR_FLAG_DISMISS_ON_CLICK 0x2
+#define PROTON_THUMBAR_FLAG_NO_BACKGROUND 0x4
+#define PROTON_THUMBAR_FLAG_HIDDEN 0x8
+#define PROTON_THUMBAR_FLAG_NON_INTERACTIVE 0x10
+
+typedef struct proton_thumbar_builder proton_thumbar_builder_t;
+
+proton_thumbar_builder_t *proton_thumbar_builder_null(void);
+/* Builds the button list. The builder keeps its own copies of the identifier
+   and the tooltip, so the caller may release those buffers after the call.
+   `icon` may be null for a button without an icon. */
+int32_t proton_thumbar_builder_create(proton_thumbar_builder_t **out_builder);
+int32_t proton_thumbar_builder_add(proton_thumbar_builder_t *builder,
+                                   const char *id, proton_image_handle_t icon,
+                                   const char *tooltip, int32_t flags);
+void proton_thumbar_builder_destroy(proton_thumbar_builder_t *builder);
+/* Applies the buttons to the window and writes whether the platform showed
+   them. A null builder clears the toolbar. */
+int32_t proton_window_set_thumbar_buttons(proton_window_handle_t window,
+                                          proton_thumbar_builder_t *buttons,
+                                          int32_t *out_applied);
 /* Matches Electron's flashFrame flag semantics. */
 int32_t proton_window_flash_frame(proton_window_handle_t window,
                                   int32_t flash);

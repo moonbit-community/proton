@@ -443,6 +443,54 @@ test "window overlay icon rejects a destroyed image before native access" {
 }
 
 ///|
+test "thumbar button flags keep the native bit values" {
+  assert_eq(ThumbarButtonFlag::Disabled.native_value(), 0x1)
+  assert_eq(ThumbarButtonFlag::DismissOnClick.native_value(), 0x2)
+  assert_eq(ThumbarButtonFlag::NoBackground.native_value(), 0x4)
+  assert_eq(ThumbarButtonFlag::Hidden.native_value(), 0x8)
+  assert_eq(ThumbarButtonFlag::NonInteractive.native_value(), 0x10)
+  assert_eq(thumbar_flags_value([Disabled, Hidden]), 0x9)
+  assert_eq(thumbar_flags_value([]), 0x0)
+}
+
+///|
+test "thumbar buttons reject more than seven buttons" {
+  let window = Window::{
+    handle: @native_ffi.window_null(),
+    id: 0L,
+    lifecycle: WindowLive,
+  }
+  let image = NativeImage::{
+    handle: @native_ffi.image_null(),
+    lifecycle: ImageDestroyed,
+  }
+  let buttons : Array[ThumbarButton] = []
+  for index = 0; index < 8; index = index + 1 {
+    buttons.push({
+      id: "button-" + index.to_string(),
+      icon: image,
+      tooltip: "",
+      flags: [],
+    })
+  }
+  let error = expect_native_error(() => window.set_thumbar_buttons(buttons))
+  match error {
+    InvalidArgument(message~) => assert_eq(message, "thumbar button limit is 7")
+    _ => fail("expected the button limit to be rejected")
+  }
+}
+
+///|
+test "taskbar button clicks carry the window and button id" {
+  let event = RuntimeEvent::TaskbarButtonClicked(7L, "previous")
+  assert_eq(event.event_type(), "taskbar_button_clicked")
+  assert_eq(event.window_id(), Some(7L))
+  assert_eq(event.taskbar_button_id(), Some("previous"))
+  assert_eq(RuntimeEvent::QuitRequested.taskbar_button_id(), None)
+  assert_eq(RuntimeEvent::QuitRequested.window_id(), None)
+}
+
+///|
 test "window opacity rejects NaN before native handle access" {
   let window = Window::{
     handle: @native_ffi.window_null(),

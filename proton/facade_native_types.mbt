@@ -74,6 +74,59 @@ fn ProgressBarMode::to_native(self : ProgressBarMode) -> @native.ProgressMode {
 }
 
 ///|
+/// Taskbar thumbnail-toolbar button flags, mirroring Electron's `flags` array.
+/// A button is enabled unless `Disabled` or `NonInteractive` is present.
+pub(all) enum ThumbarButtonFlag {
+  Disabled
+  DismissOnClick
+  NoBackground
+  Hidden
+  NonInteractive
+} derive(Debug, Eq)
+
+///|
+pub extend ThumbarButtonFlag with Eq::{not_equal, equal}
+
+///|
+pub extend ThumbarButtonFlag with Debug::{to_repr}
+
+///|
+fn ThumbarButtonFlag::to_native(
+  self : ThumbarButtonFlag,
+) -> @native.ThumbarButtonFlag {
+  match self {
+    Disabled => @native.ThumbarButtonFlag::Disabled
+    DismissOnClick => @native.ThumbarButtonFlag::DismissOnClick
+    NoBackground => @native.ThumbarButtonFlag::NoBackground
+    Hidden => @native.ThumbarButtonFlag::Hidden
+    NonInteractive => @native.ThumbarButtonFlag::NonInteractive
+  }
+}
+
+///|
+/// One button of the Windows taskbar thumbnail toolbar.
+///
+/// `id` identifies the button in `App::on_thumbar_button_click`, so rebuilding
+/// the toolbar never changes what a click reports. `tooltip` is optional text
+/// for the button, and `flags` controls its state.
+pub(all) struct ThumbarButton {
+  id : String
+  icon : NativeImage
+  tooltip : String
+  flags : Array[ThumbarButtonFlag]
+}
+
+///|
+fn ThumbarButton::to_native(self : ThumbarButton) -> @native.ThumbarButton {
+  {
+    id: self.id,
+    icon: self.icon.image,
+    tooltip: self.tooltip,
+    flags: self.flags.map(flag => flag.to_native()),
+  }
+}
+
+///|
 /// Controls how configured window dimensions constrain native resizing.
 pub(all) enum WindowSizeHint {
   Unconstrained
