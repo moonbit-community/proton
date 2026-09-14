@@ -1,0 +1,31 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/78_taskbar_status"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type OverlayRequest derive(ToJson, @json.FromJson)
+pub fn OverlayRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn OverlayRequest::to_json(Self) -> Json
+
+type ProgressRequest derive(ToJson, @json.FromJson)
+pub fn ProgressRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ProgressRequest::to_json(Self) -> Json
+
+type Reply derive(ToJson, @json.FromJson)
+pub fn Reply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Reply::to_json(Self) -> Json
+
+type TooltipRequest derive(ToJson, @json.FromJson)
+pub fn TooltipRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TooltipRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

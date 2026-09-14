@@ -262,9 +262,21 @@ int32_t proton_window_set_audio_muted(proton_window_handle_t window,
 int32_t proton_window_is_audio_muted(proton_window_handle_t window,
                                      int32_t *out_muted);
 /* Matches Electron's progress value semantics: negative clears the indicator,
-   [0, 1] is determinate, and values above 1 are indeterminate. */
+   [0, 1] is determinate, and values above 1 are indeterminate. `mode` is one
+   of the PROTON_PROGRESS_MODE_* states; AUTOMATIC derives the state from the
+   value, and only Windows renders the explicit states. */
 int32_t proton_window_set_progress_bar(proton_window_handle_t window,
-                                       double progress);
+                                       double progress,
+                                       int32_t mode);
+/* Windows displays a 16x16 taskbar overlay icon and clears it with a null
+   image. Other platforms accept the call and do nothing, matching Electron. */
+int32_t proton_window_set_overlay_icon(proton_window_handle_t window,
+                                       proton_image_handle_t overlay,
+                                       const char *description);
+/* Windows sets the taskbar thumbnail tooltip. Other platforms accept the call
+   and do nothing, matching Electron. */
+int32_t proton_window_set_thumbnail_tooltip(proton_window_handle_t window,
+                                            const char *tooltip);
 /* Matches Electron's flashFrame flag semantics. */
 int32_t proton_window_flash_frame(proton_window_handle_t window,
                                   int32_t flash);

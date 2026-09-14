@@ -39,6 +39,41 @@ pub extend WindowThemePreference with Eq::{not_equal, equal}
 pub extend WindowThemePreference with Debug::{to_repr}
 
 ///|
+/// Explicit progress states for `WindowHandle::set_progress_bar`, mirroring
+/// Electron's `mode` option. Only Windows renders the explicit states; macOS
+/// and Linux derive the indicator from the progress value alone.
+pub(all) enum ProgressBarMode {
+  /// Derives the state from the value: a negative value clears the indicator,
+  /// `0.0` through `1.0` is determinate, and values above `1.0` are
+  /// indeterminate.
+  Automatic
+  Normal
+  Indeterminate
+  Error
+  Paused
+  /// Removes the indicator without changing the last reported value.
+  Cleared
+} derive(Debug, Eq)
+
+///|
+pub extend ProgressBarMode with Eq::{not_equal, equal}
+
+///|
+pub extend ProgressBarMode with Debug::{to_repr}
+
+///|
+fn ProgressBarMode::to_native(self : ProgressBarMode) -> @native.ProgressMode {
+  match self {
+    Automatic => @native.ProgressMode::Automatic
+    Normal => @native.ProgressMode::Normal
+    Indeterminate => @native.ProgressMode::Indeterminate
+    Error => @native.ProgressMode::Error
+    Paused => @native.ProgressMode::Paused
+    Cleared => @native.ProgressMode::Cleared
+  }
+}
+
+///|
 /// Controls how configured window dimensions constrain native resizing.
 pub(all) enum WindowSizeHint {
   Unconstrained

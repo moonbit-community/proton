@@ -223,6 +223,47 @@ status, CEF error code, and diagnostic detail. Proton reports this event
 through the normal wake-driven event queue and does not automatically reload
 the view; applications may explicitly call `ViewHandle::reload`.
 
+## Taskbar status
+
+`WindowHandle::set_progress_bar` reports window progress on the platform's
+application surface. A negative value clears the indicator, `0.0` through `1.0`
+is determinate, and a value above `1.0` is indeterminate. The optional `mode`
+mirrors Electron's `mode` option and selects an explicit state instead:
+
+```moonbit
+window.set_progress_bar(0.4)                                        // determinate
+window.set_progress_bar(0.4, mode=@proton.ProgressBarMode::Paused)  // paused
+window.set_progress_bar(-1.0, mode=@proton.ProgressBarMode::Cleared) // cleared
+```
+
+Windows shows the indicator on the taskbar button, where `Normal`,
+`Indeterminate`, `Error`, and `Paused` map to Electron's taskbar states and
+`Cleared` removes it. macOS shows it in the Dock as one application-level
+indicator, where the most recent window call wins and no mode applies. Linux
+has no implementation and raises `WindowSessionError`.
+
+`WindowHandle::set_overlay_icon` shows a badge in the bottom right corner of the
+Windows taskbar icon. The overlay is a `NativeImage` built through
+`@proton.native_image()` and `None` clears it:
+
+```moonbit
+let overlay = @proton.native_image()
+overlay.add_png(png_bytes, 16, 16)
+window.set_overlay_icon(Some(overlay), "unread messages")
+window.set_overlay_icon(None, "")
+```
+
+Windows scales the image to the 16x16 overlay area, keeps the aspect ratio, and
+clips it to a circle, matching Electron's rendering. Accessibility screen
+readers use the description.
+
+`WindowHandle::set_thumbnail_tooltip` sets the text shown while the pointer
+rests over the Windows taskbar thumbnail. The overlay icon and the thumbnail
+tooltip are Windows-only in Electron; Proton accepts those calls on macOS and
+Linux and does nothing, which keeps cross-platform application code free of
+platform checks. `examples/78_taskbar_status` is the manual review flow for all
+three APIs.
+
 ## Logging
 
 Use `tonyfettes/xlog@0.4.2` directly for application logs. Proton configures the

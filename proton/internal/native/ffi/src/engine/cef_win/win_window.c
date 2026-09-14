@@ -1619,18 +1619,361 @@ int32_t proton_engine_window_get_content_size(
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_set_progress_bar(
-    proton_engine_window_t *window, double progress, char *error,
+#define PROTON_TASKBAR_OVERLAY_SIZE 16
+
+// Creates the taskbar list used by every taskbar status call. The object is
+// created per call, the same pattern the taskbar visibility call uses, so no
+// window-owned COM state has to survive teardown.
+static ITaskbarList3 *proton_engine_window_taskbar3(char *error,
+                                                    size_t error_len) {
+  ITaskbarList3 *taskbar = NULL;
+  HRESULT result = CoCreateInstance(&CLSID_TaskbarList, NULL,
+                                    CLSCTX_INPROC_SERVER, &IID_ITaskbarList3,
+                                    (void **)&taskbar);
+  if (FAILED(result) || taskbar == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create taskbar list");
+    return NULL;
+  }
+  result = taskbar->lpVtbl->HrInit(taskbar);
+  if (FAILED(result)) {
+    taskbar->lpVtbl->Release(taskbar);
+    proton_engine_set_message(error, error_len,
+                              "failed to initialize taskbar list");
+    return NULL;
+  }
+  return taskbar;
+}
+
+// proton_engine_utf8_to_wide substitutes a default window title for empty
+// input, so taskbar text converts here instead: an empty tooltip stays empty.
+static int proton_engine_taskbar_text(const char *value, wchar_t *buffer,
+                                      int buffer_len) {
+  if (buffer == NULL || buffer_len <= 0) {
+    return 0;
+  }
+  if (value == NULL) {
+    value = "";
+  }
+  int written = MultiByteToWideChar(CP_UTF8, 0, value, -1, buffer, buffer_len);
+  if (written <= 0) {
+    buffer[0] = L'\0';
+    return 0;
+  }
+  return written;
+}
+
+// Mirrors Electron's TaskbarHost::SetProgressBar: the progress value keeps its
+// documented meaning unless the caller asks for an explicit state, and the
+// error and paused states keep showing the value.
+static TBPFLAG proton_engine_taskbar_progress_flag(double progress,
+                                                   int32_t mode) {
+  if (progress > 1.0 || mode == PROTON_PROGRESS_MODE_INDETERMINATE) {
+    return TBPF_INDETERMINATE;
+  }
+  if (progress < 0.0 || mode == PROTON_PROGRESS_MODE_NONE) {
+    return TBPF_NOPROGRESS;
+  }
+  switch (mode) {
+  case PROTON_PROGRESS_MODE_ERROR:
+    return TBPF_ERROR;
+  case PROTON_PROGRESS_MODE_PAUSED:
+    return TBPF_PAUSED;
+  default:
+    return TBPF_NORMAL;
+  }
+}
+
+// Builds the 16x16 taskbar overlay icon from premultiplied RGBA pixels.
+// Electron resizes the image to the overlay width, centers it, and clips the
+// canvas to a circle because Windows scales small taskbar icons badly; the
+// same rule is applied here so overlay icons stay legible.
+static HICON proton_engine_taskbar_overlay_icon_from_rgba(
+    const uint8_t *source, int32_t width, int32_t height, char *error,
     size_t error_len) {
-  (void)progress;
+  const int size = PROTON_TASKBAR_OVERLAY_SIZE;
+  int scaled_height = (int)ceil((double)size * (double)height / (double)width);
+  if (scaled_height < 1) {
+    scaled_height = 1;
+  }
+  if (scaled_height > size) {
+    scaled_height = size;
+  }
+  uint8_t canvas[PROTON_TASKBAR_OVERLAY_SIZE * PROTON_TASKBAR_OVERLAY_SIZE *
+                 4] = {0};
+  const int y_offset = (size - scaled_height) / 2;
+  const double center = (double)size / 2.0;
+  for (int y = 0; y < scaled_height; y++) {
+    const int source_y0 = (int)((int64_t)y * height / scaled_height);
+    int source_y1 = (int)((int64_t)(y + 1) * height / scaled_height);
+    if (source_y1 <= source_y0) {
+      source_y1 = source_y0 + 1;
+    }
+    for (int x = 0; x < size; x++) {
+      const int source_x0 = (int)((int64_t)x * width / size);
+      int source_x1 = (int)((int64_t)(x + 1) * width / size);
+      if (source_x1 <= source_x0) {
+        source_x1 = source_x0 + 1;
+      }
+      uint32_t red = 0;
+      uint32_t green = 0;
+      uint32_t blue = 0;
+      uint32_t alpha = 0;
+      int samples = 0;
+      for (int source_y = source_y0;
+           source_y < source_y1 && source_y < height; source_y++) {
+        for (int source_x = source_x0;
+             source_x < source_x1 && source_x < width; source_x++) {
+          const uint8_t *pixel =
+              source + ((size_t)source_y * (size_t)width + (size_t)source_x) * 4;
+          red += pixel[0];
+          green += pixel[1];
+          blue += pixel[2];
+          alpha += pixel[3];
+          samples++;
+        }
+      }
+      if (samples == 0) {
+        continue;
+      }
+      // The target pixel is far smaller than most source images, so the box
+      // average above avoids dropping detail the way nearest sampling would.
+      const double pixel_x = (double)x + 0.5;
+      const double pixel_y = (double)(y + y_offset) + 0.5;
+      const double dx = pixel_x - center;
+      const double dy = pixel_y - center;
+      double coverage = center + 0.5 - sqrt(dx * dx + dy * dy);
+      if (coverage <= 0.0) {
+        continue;
+      }
+      if (coverage > 1.0) {
+        coverage = 1.0;
+      }
+      uint8_t *target =
+          canvas + (((size_t)(y + y_offset) * size + (size_t)x) * 4);
+      // Premultiplied BGRA, the layout CreateIconIndirect expects.
+      target[0] = (uint8_t)((double)blue / samples * coverage + 0.5);
+      target[1] = (uint8_t)((double)green / samples * coverage + 0.5);
+      target[2] = (uint8_t)((double)red / samples * coverage + 0.5);
+      target[3] = (uint8_t)((double)alpha / samples * coverage + 0.5);
+    }
+  }
+  BITMAPV5HEADER header = {0};
+  header.bV5Size = sizeof(header);
+  header.bV5Width = size;
+  header.bV5Height = -size;
+  header.bV5Planes = 1;
+  header.bV5BitCount = 32;
+  header.bV5Compression = BI_BITFIELDS;
+  header.bV5RedMask = 0x00ff0000;
+  header.bV5GreenMask = 0x0000ff00;
+  header.bV5BlueMask = 0x000000ff;
+  header.bV5AlphaMask = 0xff000000;
+  void *bits = NULL;
+  HDC screen = GetDC(NULL);
+  if (screen == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to acquire a screen device context");
+    return NULL;
+  }
+  HBITMAP color = CreateDIBSection(screen, (BITMAPINFO *)&header,
+                                   DIB_RGB_COLORS, &bits, NULL, 0);
+  ReleaseDC(NULL, screen);
+  if (color == NULL || bits == NULL) {
+    if (color != NULL) {
+      DeleteObject(color);
+    }
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate overlay icon pixels");
+    return NULL;
+  }
+  memcpy(bits, canvas, sizeof(canvas));
+  uint8_t mask_bits[64] = {0};
+  HBITMAP mask = CreateBitmap(size, size, 1, 1, mask_bits);
+  ICONINFO icon_info = {0};
+  icon_info.fIcon = TRUE;
+  icon_info.hbmColor = color;
+  icon_info.hbmMask = mask;
+  HICON icon = CreateIconIndirect(&icon_info);
+  DeleteObject(color);
+  if (mask != NULL) {
+    DeleteObject(mask);
+  }
+  if (icon == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to create the overlay icon");
+    return NULL;
+  }
+  return icon;
+}
+
+static HICON proton_engine_taskbar_overlay_icon(proton_engine_image_t *image,
+                                               char *error,
+                                               size_t error_len) {
+  int32_t required_len = 0;
+  int32_t width = 0;
+  int32_t height = 0;
+  char bitmap_error[256] = {0};
+  int32_t status = proton_engine_image_to_bitmap(
+      image, 1.0f, NULL, 0, &required_len, &width, &height, bitmap_error,
+      sizeof(bitmap_error));
+  if (status != PROTON_ERR_BUFFER_TOO_SMALL || required_len <= 0 ||
+      width <= 0 || height <= 0 ||
+      (int64_t)required_len < (int64_t)width * (int64_t)height * 4) {
+    proton_engine_set_message(error, error_len,
+                              "overlay image has no usable bitmap");
+    return NULL;
+  }
+  uint8_t *source = (uint8_t *)malloc((size_t)required_len);
+  if (source == NULL) {
+    proton_engine_set_message(error, error_len,
+                              "failed to allocate overlay image pixels");
+    return NULL;
+  }
+  status = proton_engine_image_to_bitmap(image, 1.0f, source, required_len,
+                                         NULL, NULL, NULL, bitmap_error,
+                                         sizeof(bitmap_error));
+  if (status != PROTON_OK) {
+    free(source);
+    proton_engine_set_message(error, error_len,
+                              "failed to read overlay image pixels");
+    return NULL;
+  }
+  HICON icon = proton_engine_taskbar_overlay_icon_from_rgba(
+      source, width, height, error, error_len);
+  free(source);
+  return icon;
+}
+
+int32_t proton_engine_window_set_progress_bar(
+    proton_engine_window_t *window, double progress, int32_t mode, char *error,
+    size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  proton_engine_set_message(
-      error, error_len,
-      "window progress is not implemented on Windows");
-  return PROTON_ERR_UNSUPPORTED;
+  if (isnan(progress)) {
+    proton_engine_set_message(error, error_len, "progress must not be NaN");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (mode < PROTON_PROGRESS_MODE_AUTOMATIC ||
+      mode > PROTON_PROGRESS_MODE_NONE) {
+    proton_engine_set_message(error, error_len, "progress mode is invalid");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window progress is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  ITaskbarList3 *taskbar = proton_engine_window_taskbar3(error, error_len);
+  if (taskbar == NULL) {
+    return PROTON_ERR_PLATFORM;
+  }
+  const TBPFLAG flag = proton_engine_taskbar_progress_flag(progress, mode);
+  HRESULT result =
+      taskbar->lpVtbl->SetProgressState(taskbar, window->hwnd, flag);
+  if (SUCCEEDED(result) && flag != TBPF_INDETERMINATE &&
+      flag != TBPF_NOPROGRESS) {
+    // SetProgressValue overrides an indeterminate state, so the value is only
+    // written for the states that display one.
+    int value = (int)(progress * 100.0);
+    if (value < 0) {
+      value = 0;
+    }
+    result =
+        taskbar->lpVtbl->SetProgressValue(taskbar, window->hwnd, (ULONGLONG)value,
+                                          100);
+  }
+  taskbar->lpVtbl->Release(taskbar);
+  if (FAILED(result)) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update taskbar progress");
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_overlay_icon(
+    proton_engine_window_t *window, proton_engine_image_t *overlay,
+    const char *description, char *error, size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window overlay icon is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  wchar_t wide_description[PROTON_ENGINE_MAX_LABEL_BYTES];
+  proton_engine_taskbar_text(
+      description, wide_description,
+      (int)(sizeof(wide_description) / sizeof(wide_description[0])));
+  HICON icon = NULL;
+  if (overlay != NULL) {
+    icon = proton_engine_taskbar_overlay_icon(overlay, error, error_len);
+    if (icon == NULL) {
+      return PROTON_ERR_PLATFORM;
+    }
+  }
+  ITaskbarList3 *taskbar = proton_engine_window_taskbar3(error, error_len);
+  if (taskbar == NULL) {
+    if (icon != NULL) {
+      DestroyIcon(icon);
+    }
+    return PROTON_ERR_PLATFORM;
+  }
+  // The taskbar copies the icon, so it is released as soon as the call
+  // returns, the same lifetime rule Electron applies.
+  HRESULT result =
+      taskbar->lpVtbl->SetOverlayIcon(taskbar, window->hwnd, icon,
+                                      wide_description);
+  taskbar->lpVtbl->Release(taskbar);
+  if (icon != NULL) {
+    DestroyIcon(icon);
+  }
+  if (FAILED(result)) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update the taskbar overlay icon");
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
+}
+
+int32_t proton_engine_window_set_thumbnail_tooltip(
+    proton_engine_window_t *window, const char *tooltip, char *error,
+    size_t error_len) {
+  if (window == NULL || (!window->headless && window->hwnd == NULL)) {
+    proton_engine_set_message(error, error_len, "window is not initialized");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  if (window->headless) {
+    proton_engine_set_message(
+        error, error_len,
+        "window thumbnail tooltip is not supported in headless mode");
+    return PROTON_ERR_UNSUPPORTED;
+  }
+  wchar_t wide_tooltip[PROTON_ENGINE_MAX_LABEL_BYTES];
+  proton_engine_taskbar_text(
+      tooltip, wide_tooltip,
+      (int)(sizeof(wide_tooltip) / sizeof(wide_tooltip[0])));
+  ITaskbarList3 *taskbar = proton_engine_window_taskbar3(error, error_len);
+  if (taskbar == NULL) {
+    return PROTON_ERR_PLATFORM;
+  }
+  HRESULT result =
+      taskbar->lpVtbl->SetThumbnailTooltip(taskbar, window->hwnd,
+                                           wide_tooltip);
+  taskbar->lpVtbl->Release(taskbar);
+  if (FAILED(result)) {
+    proton_engine_set_message(error, error_len,
+                              "failed to update the taskbar thumbnail tooltip");
+    return PROTON_ERR_PLATFORM;
+  }
+  return PROTON_OK;
 }
 
 int32_t proton_engine_window_flash_frame(

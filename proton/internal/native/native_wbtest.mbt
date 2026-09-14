@@ -402,12 +402,43 @@ test "window progress rejects NaN before native handle access" {
     id: 0L,
     lifecycle: WindowLive,
   }
-  try window.set_progress_bar(0.0 / 0.0) catch {
+  try window.set_progress_bar(0.0 / 0.0, ProgressMode::Automatic) catch {
     InvalidArgument(message~) =>
       inspect(message, content="progress must not be NaN")
     _ => fail("expected invalid progress")
   } noraise {
     _ => fail("expected invalid progress")
+  }
+}
+
+///|
+test "progress modes keep the native state codes" {
+  assert_eq(ProgressMode::Automatic.native_value(), 0)
+  assert_eq(ProgressMode::Normal.native_value(), 1)
+  assert_eq(ProgressMode::Indeterminate.native_value(), 2)
+  assert_eq(ProgressMode::Error.native_value(), 3)
+  assert_eq(ProgressMode::Paused.native_value(), 4)
+  assert_eq(ProgressMode::Cleared.native_value(), 5)
+}
+
+///|
+test "window overlay icon rejects a destroyed image before native access" {
+  let window = Window::{
+    handle: @native_ffi.window_null(),
+    id: 0L,
+    lifecycle: WindowLive,
+  }
+  let image = NativeImage::{
+    handle: @native_ffi.image_null(),
+    lifecycle: ImageDestroyed,
+  }
+  try window.set_overlay_icon(Some(image), "unread items") catch {
+    error => {
+      assert_true(error.is_invalid_state())
+      assert_eq(error.message(), "image is destroyed")
+    }
+  } noraise {
+    _ => fail("expected destroyed image error")
   }
 }
 

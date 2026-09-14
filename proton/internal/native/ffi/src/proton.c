@@ -1721,10 +1721,15 @@ int32_t proton_window_is_audio_muted(proton_window_handle_t window,
 }
 
 int32_t proton_window_set_progress_bar(proton_window_handle_t window,
-                                       double progress) {
+                                       double progress, int32_t mode) {
   if (isnan(progress)) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "progress must not be NaN");
+  }
+  if (mode < PROTON_PROGRESS_MODE_AUTOMATIC ||
+      mode > PROTON_PROGRESS_MODE_NONE) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "progress mode is invalid");
   }
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
@@ -1737,7 +1742,68 @@ int32_t proton_window_set_progress_bar(proton_window_handle_t window,
   }
   char engine_error[512] = {0};
   status = proton_engine_window_set_progress_bar(
-      slot->engine_window, progress, engine_error, sizeof(engine_error));
+      slot->engine_window, progress, mode, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_overlay_icon(proton_window_handle_t window,
+                                       proton_image_handle_t overlay,
+                                       const char *description) {
+  if (description == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "overlay description is required");
+  }
+  proton_window_slot_t *window_slot = NULL;
+  int32_t status = proton_get_window(window, &window_slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (window_slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window overlay icon requires native engine");
+  }
+  proton_engine_image_t *engine_image = NULL;
+  if (overlay != NULL) {
+    proton_image_slot_t *image_slot = NULL;
+    status = proton_get_image(overlay, &image_slot);
+    if (status != PROTON_OK) {
+      return status;
+    }
+    engine_image = image_slot->engine_image;
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_overlay_icon(
+      window_slot->engine_window, engine_image, description, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_thumbnail_tooltip(proton_window_handle_t window,
+                                            const char *tooltip) {
+  if (tooltip == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "tooltip is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "window thumbnail tooltip requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_set_thumbnail_tooltip(
+      slot->engine_window, tooltip, engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }

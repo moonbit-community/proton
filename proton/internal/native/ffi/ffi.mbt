@@ -831,7 +831,23 @@ pub extern "C" fn proton_window_is_audio_muted_ffi(
 pub extern "C" fn proton_window_set_progress_bar_ffi(
   window : WindowHandle,
   progress : Double,
+  mode : Int,
 ) -> Int = "proton_window_set_progress_bar"
+
+///|
+#borrow(description)
+pub extern "C" fn proton_window_set_overlay_icon_ffi(
+  window : WindowHandle,
+  overlay : ImageHandle,
+  description : Bytes,
+) -> Int = "proton_window_set_overlay_icon"
+
+///|
+#borrow(tooltip)
+pub extern "C" fn proton_window_set_thumbnail_tooltip_ffi(
+  window : WindowHandle,
+  tooltip : Bytes,
+) -> Int = "proton_window_set_thumbnail_tooltip"
 
 ///|
 pub extern "C" fn proton_window_flash_frame_ffi(

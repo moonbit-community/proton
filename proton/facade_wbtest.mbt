@@ -62,6 +62,9 @@ fn test_window_handle(
   size_calls? : Array[(Int, Int)],
   popup_calls? : Array[String],
   progress_calls? : Array[Double],
+  progress_mode_calls? : Array[ProgressBarMode],
+  overlay_icon_calls? : Array[(Bool, String)],
+  thumbnail_tooltip_calls? : Array[String],
   flash_calls? : Array[Bool],
   resizable_calls? : Array[Bool],
   movable_calls? : Array[Bool],
@@ -353,9 +356,31 @@ fn test_window_handle(
       }
     },
     set_window_zoom_percent: fn(_zoom_percent) {  },
-    set_window_progress_bar: progress => {
+    set_window_progress_bar: (progress, mode) => {
       match progress_calls {
         Some(calls) => calls.push(progress)
+        None => ()
+      }
+      match progress_mode_calls {
+        Some(calls) => calls.push(mode)
+        None => ()
+      }
+    },
+    set_window_overlay_icon: (overlay, description) => {
+      match overlay_icon_calls {
+        Some(calls) =>
+          calls.push(
+            match overlay {
+              Some(_) => (true, description)
+              None => (false, description)
+            },
+          )
+        None => ()
+      }
+    },
+    set_window_thumbnail_tooltip: tooltip => {
+      match thumbnail_tooltip_calls {
+        Some(calls) => calls.push(tooltip)
         None => ()
       }
     },
@@ -3036,6 +3061,32 @@ test "window progress routes Electron-compatible values through the handle" {
   window.set_progress_bar(2.0)
   window.set_progress_bar(-1.0)
   debug_inspect(calls, content="[0.42, 2, -1]")
+}
+
+///|
+test "window progress routes explicit modes through the handle" {
+  let calls : Array[ProgressBarMode] = []
+  let window = test_window_handle("main", 17L, progress_mode_calls=calls)
+  window.set_progress_bar(0.5)
+  window.set_progress_bar(0.5, mode=ProgressBarMode::Paused)
+  window.set_progress_bar(0.5, mode=ProgressBarMode::Error)
+  debug_inspect(calls, content="[Automatic, Paused, Error]")
+}
+
+///|
+test "taskbar status text routes through the window handle" {
+  let overlay_calls : Array[(Bool, String)] = []
+  let tooltip_calls : Array[String] = []
+  let window = test_window_handle(
+    "main",
+    17L,
+    overlay_icon_calls=overlay_calls,
+    thumbnail_tooltip_calls=tooltip_calls,
+  )
+  window.set_overlay_icon(None, "no unread items")
+  window.set_thumbnail_tooltip("Proton taskbar status")
+  debug_inspect(overlay_calls, content="[(false, \"no unread items\")]")
+  debug_inspect(tooltip_calls, content="[\"Proton taskbar status\"]")
 }
 
 ///|
