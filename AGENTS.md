@@ -198,6 +198,15 @@ native checks before handing off larger refactors.
 - `proton/build.mjs` is the only MoonBit native-link integration point. It
   resolves the release's generated CEF requirement in the immutable store and
   supplies compiler and linker configuration to the private source packages.
+- Windows project builds pass a private `PROTON_WINDOWS_APP_RESOURCE` JSON
+  request only to the application Moon subprocess. The native-link hook compiles
+  the ICO with `rc.exe` and attaches the resource to the root app facade, not
+  the shared native FFI package or CEF helper. Generated resources are keyed by
+  icon content under the application's build directory. CLI packaging omits
+  ICOs from the subsequent standalone packager request because they are already
+  linked; standalone `proton_package` retains its prebuilt-executable behavior.
+- Validate this path with `node --test proton/windows_resources.test.mjs` and,
+  after CEF setup on Windows, `node scripts/windows_icon_smoke.mjs`.
 - Keep private FFI functions MoonBit-friendly: status codes, external pointers,
   UTF-8 strings, and typed MoonBit wrappers. Do not expose them publicly.
 - Runtime, window, view, bridge, and menu configuration crosses the private FFI

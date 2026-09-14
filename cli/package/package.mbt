@@ -425,7 +425,7 @@ async fn execute_package_plan(plan : PackagePlan) -> (Array[String], String) {
     plan.version,
     plan.formats,
     plan.output,
-    icons=plan.icons,
+    icons=icons_after_app_build(plan.icons, windows=@path.sep == '\\'),
     url_schemes=plan.url_schemes,
     document_types~,
     nsis_install_mode=plan.nsis_install_mode,
@@ -454,7 +454,19 @@ async fn run_package_build(plan : PackagePlan) -> String {
     plan.app_package,
     plan.config_path,
     plan.release,
+    icons=plan.icons,
   )
+}
+
+///|
+fn icons_after_app_build(
+  icons : Array[String],
+  windows~ : Bool,
+) -> Array[String] {
+  // The CLI just built the host with its Windows icon linked in. Keep the
+  // standalone packager's native editor for externally built executables;
+  // do not request a second edit (which its Wasm backend cannot perform).
+  icons.filter(icon => !windows || !icon.to_lower().has_suffix(".ico"))
 }
 
 ///|

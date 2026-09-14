@@ -107,6 +107,9 @@ jobs:
       - name: Test bridge bootstrap JS
         run: node --test proton/internal/native/ffi/tests/bridge_bootstrap.test.mjs
 
+      - name: Test Windows resource generation
+        run: node --test proton/windows_resources.test.mjs
+
       - name: Configure CEF runtime and build helper on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
@@ -148,6 +151,10 @@ jobs:
           "PROTON_RUNTIME_ROOT=$runtime" | Out-File -FilePath $env:GITHUB_ENV -Append
           "PROTON_HELPER_PATH=$helper" | Out-File -FilePath $env:GITHUB_ENV -Append
           Join-Path $runtime "bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Test Windows icons through the Wasm CLI
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: node scripts/windows_icon_smoke.mjs
 
       - name: Test Windows NSIS packaging
         if: ${{ matrix.os == 'windows-latest' }}
