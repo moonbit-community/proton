@@ -31,6 +31,8 @@ pub fn native_image() -> NativeImage raise NativeImageError
 
 pub fn native_theme() -> NativeTheme raise NativeThemeError
 
+pub fn native_theme_set_source(WindowThemePreference) -> Unit raise NativeThemeError
+
 pub fn resource_dir() -> String
 
 pub fn screens() -> Array[ScreenInfo] raise ScreenQueryError
@@ -609,9 +611,11 @@ pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bo
 pub(all) struct NativeTheme {
   dark_colors : Bool
   high_contrast_colors : Bool
+  source : WindowThemePreference
 }
 pub fn NativeTheme::should_use_dark_colors(Self) -> Bool
 pub fn NativeTheme::should_use_high_contrast_colors(Self) -> Bool
+pub fn NativeTheme::theme_source(Self) -> WindowThemePreference
 
 pub(all) enum NavigationDecision {
   Allow

@@ -26,7 +26,9 @@ pub fn host_loop_poll(timeout_ms? : Int) -> RuntimeWaitReady raise NativeError
 
 pub fn last_error_message() -> String
 
-pub fn native_theme_query() -> (Bool, Bool) raise NativeError
+pub fn native_theme_query() -> (Bool, Bool, Int) raise NativeError
+
+pub fn native_theme_set_source(Int) -> Unit raise NativeError
 
 pub fn notification_cleanup() -> Unit raise NativeError
 

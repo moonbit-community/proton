@@ -564,7 +564,9 @@ int32_t proton_last_error_message(char *buffer,
 
 /* nativeTheme: reports the operating system appearance. */
 int32_t proton_native_theme_query(int32_t *out_dark_colors,
-                                  int32_t *out_high_contrast_colors);
+                                  int32_t *out_high_contrast_colors,
+                                  int32_t *out_source);
+int32_t proton_native_theme_set_source(int32_t source);
 
 #ifdef __cplusplus
 }

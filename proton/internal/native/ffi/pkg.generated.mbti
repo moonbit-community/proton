@@ -111,7 +111,9 @@ pub fn proton_image_to_png_ffi(ImageHandle, Double, Int, FixedArray[Byte], Int, 
 
 pub fn proton_last_error_message_ffi(FixedArray[Byte], Int) -> Int
 
-pub fn proton_native_theme_query_ffi(@ref.Ref[Int], @ref.Ref[Int]) -> Int
+pub fn proton_native_theme_query_ffi(@ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+
+pub fn proton_native_theme_set_source_ffi(Int) -> Int
 
 pub fn proton_notification_cleanup_ffi() -> Int
 
