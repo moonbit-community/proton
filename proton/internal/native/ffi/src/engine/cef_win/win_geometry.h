@@ -2,6 +2,7 @@
 #define PROTON_WIN_GEOMETRY_H
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <windows.h>
 
@@ -19,6 +20,38 @@ static inline int proton_win_pixels(int logical, UINT dpi) {
 
 static inline int proton_win_logical(int pixels, UINT dpi) {
   return MulDiv(pixels, USER_DEFAULT_SCREEN_DPI, (int)dpi);
+}
+
+/* Applies the fixed/minimum/maximum tracking constraints in device pixels.
+ * Returns true when the window proc owns the message because a constraint or
+ * the fixed frame size was applied. */
+static inline bool proton_win_tracking_sizes(int resizable, int width,
+                                             int height, int min_width,
+                                             int min_height, int max_width,
+                                             int max_height, UINT dpi,
+                                             MINMAXINFO *minmax) {
+  bool handled = false;
+  if (!resizable) {
+    minmax->ptMinTrackSize.x = proton_win_pixels(width, dpi);
+    minmax->ptMinTrackSize.y = proton_win_pixels(height, dpi);
+    handled = true;
+  }
+  if (resizable && min_width > 0) {
+    minmax->ptMinTrackSize.x = proton_win_pixels(min_width, dpi);
+    minmax->ptMinTrackSize.y = proton_win_pixels(min_height, dpi);
+    handled = true;
+  }
+  if (resizable && max_width > 0) {
+    minmax->ptMaxTrackSize.x = proton_win_pixels(max_width, dpi);
+    minmax->ptMaxTrackSize.y = proton_win_pixels(max_height, dpi);
+    handled = true;
+  }
+  if (!resizable) {
+    minmax->ptMaxTrackSize.x = proton_win_pixels(width, dpi);
+    minmax->ptMaxTrackSize.y = proton_win_pixels(height, dpi);
+    handled = true;
+  }
+  return handled;
 }
 
 /* Fit a new, unconstrained window without assuming the monitor starts at 0,0.

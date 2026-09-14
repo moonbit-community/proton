@@ -234,24 +234,10 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
           handled = true;
         }
       }
-      if (!window->resizable) {
-        minmax->ptMinTrackSize.x = proton_win_pixels(window->width, dpi);
-        minmax->ptMinTrackSize.y = proton_win_pixels(window->height, dpi);
-        handled = true;
-      }
-      if (window->resizable && window->min_width > 0) {
-        minmax->ptMinTrackSize.x = proton_win_pixels(window->min_width, dpi);
-        minmax->ptMinTrackSize.y = proton_win_pixels(window->min_height, dpi);
-        handled = true;
-      }
-      if (window->resizable && window->max_width > 0) {
-        minmax->ptMaxTrackSize.x = proton_win_pixels(window->max_width, dpi);
-        minmax->ptMaxTrackSize.y = proton_win_pixels(window->max_height, dpi);
-        handled = true;
-      }
-      if (!window->resizable) {
-        minmax->ptMaxTrackSize.x = proton_win_pixels(window->width, dpi);
-        minmax->ptMaxTrackSize.y = proton_win_pixels(window->height, dpi);
+      if (proton_win_tracking_sizes(
+              window->resizable, window->width, window->height,
+              window->min_width, window->min_height, window->max_width,
+              window->max_height, dpi, minmax)) {
         handled = true;
       }
       if (handled) {

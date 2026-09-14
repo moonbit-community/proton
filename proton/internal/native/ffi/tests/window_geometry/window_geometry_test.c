@@ -30,6 +30,43 @@ cleanup:
   return result;
 }
 
+/* The tracking sizes the window proc hands to the system live in device
+ * pixels, so a fixed window and explicit min/max hints must scale with the
+ * window DPI instead of being passed through as logical lengths. */
+int32_t proton_test_window_tracking_sizes(void) {
+  int result = 0;
+  MINMAXINFO fixed = {0};
+  MINMAXINFO minimum = {0};
+  MINMAXINFO maximum = {0};
+  MINMAXINFO unconstrained = {0};
+
+  /* A fixed window pins both tracking sizes to the scaled frame. */
+  CHECK(proton_win_tracking_sizes(0, 1120, 760, 0, 0, 0, 0, 240, &fixed));
+  CHECK(fixed.ptMinTrackSize.x == 2800 && fixed.ptMinTrackSize.y == 1900);
+  CHECK(fixed.ptMaxTrackSize.x == 2800 && fixed.ptMaxTrackSize.y == 1900);
+
+  /* An explicit minimum hint scales at 150%. */
+  CHECK(proton_win_tracking_sizes(1, 1000, 700, 800, 600, 0, 0, 144, &minimum));
+  CHECK(minimum.ptMinTrackSize.x == 1200 && minimum.ptMinTrackSize.y == 900);
+  CHECK(minimum.ptMaxTrackSize.x == 0 && minimum.ptMaxTrackSize.y == 0);
+
+  /* An explicit maximum hint scales at 100%. */
+  CHECK(proton_win_tracking_sizes(1, 1000, 700, 0, 0, 1600, 900, 96, &maximum));
+  CHECK(maximum.ptMaxTrackSize.x == 1600 && maximum.ptMaxTrackSize.y == 900);
+  CHECK(maximum.ptMinTrackSize.x == 0 && maximum.ptMinTrackSize.y == 0);
+
+  /* A resizable window without hints keeps the system defaults. */
+  CHECK(
+      !proton_win_tracking_sizes(1, 1000, 700, 0, 0, 0, 0, 96, &unconstrained));
+  CHECK(unconstrained.ptMinTrackSize.x == 0 &&
+        unconstrained.ptMinTrackSize.y == 0);
+  CHECK(unconstrained.ptMaxTrackSize.x == 0 &&
+        unconstrained.ptMaxTrackSize.y == 0);
+
+cleanup:
+  return result;
+}
+
 int32_t proton_test_window_initial_placement(void) {
   int result = 0;
   RECT work = {-1920, 40, 0, 1080};
