@@ -78,6 +78,8 @@ pub fn update_stage_begin_for_current_app(Int64, UInt64) -> UpdateStage raise Na
 
 pub fn web_contents_view_supported() -> Bool
 
+pub fn window_size_in_screen_coordinates(Int, Int, Int) -> (Int, Int)
+
 // Errors
 pub(all) suberror NativeError {
   Status(status~ : Int, message~ : String)

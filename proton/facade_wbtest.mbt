@@ -3223,6 +3223,39 @@ test "window center uses the current monitor work area and frame size" {
 }
 
 ///|
+#cfg(platform="windows")
+test "window center converts logical lengths without scaling monitor origins" {
+  let position_calls : Array[(Int, Int)] = []
+  let window = test_window_handle("main", 17L, position_calls~, window_state=WindowState::{
+    x: -3000,
+    y: 100,
+    width: 800,
+    height: 600,
+    monitor: WindowMonitor::{
+      x: -3840,
+      y: 0,
+      width: 3840,
+      height: 2160,
+      work_x: -3840,
+      work_y: 40,
+      work_width: 3840,
+      work_height: 2120,
+      scale_factor_percent: 250,
+    },
+    zoom_percent: 100,
+    visible: true,
+    focused: true,
+    minimized: false,
+    maximized: false,
+    fullscreen: false,
+    always_on_top: false,
+    theme: WindowTheme::Light,
+  })
+  window.center()
+  assert_eq(position_calls, [(-2920, 350)])
+}
+
+///|
 test "window bounds read and write use Electron coordinate order" {
   let position_calls : Array[(Int, Int)] = []
   let size_calls : Array[(Int, Int)] = []

@@ -179,6 +179,10 @@ preserving Electron's no-op behavior on macOS and Linux.
 unconstrained, matching Electron.
 `WindowHandle::set_content_size` adjusts the renderer area while accounting for
 the native frame. `content_size` reads that area back in logical pixels.
+Window frame sizes, content sizes, and minimum/maximum size constraints use
+logical pixels on Windows too. Proton converts these lengths using the window's
+current DPI. Initial unconstrained windows are fitted to their monitor's work
+area before they are shown; explicit fixed/minimum size hints take precedence.
 `set_menu` replaces or clears the runtime menu, `set_icon` loads a native icon
 from a file path, and `set_parent` establishes a native owner/transient or modal
 relationship. `set_window_button_visibility` controls standard title-bar buttons

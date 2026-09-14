@@ -66,6 +66,8 @@ struct proton_engine_window {
   proton_bridge_config_t *bridge_config;
   int32_t max_bridge_payload_bytes;
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
+  /* Logical frame dimensions, including fixed-size tracking constraints.
+   * HWND/CEF rectangles and saved WINDOWPLACEMENT remain physical pixels. */
   int width;
   int height;
   int headless;
