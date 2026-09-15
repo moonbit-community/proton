@@ -686,6 +686,7 @@ async fn run_self_hosted_scenarios() -> Unit {
   let root = repository_root()
   let timeout = timeout_ms()
   run_scenario_probe(root, "41_app_commands", timeout)
+  run_single_instance_probe(root, timeout)
   run_pending_lifecycle_probe(root, timeout)
   run_scenario_probe(root, "38_async_extension_add", timeout)
   run_scenario_probe(root, "39_sync_async_extensions", timeout)

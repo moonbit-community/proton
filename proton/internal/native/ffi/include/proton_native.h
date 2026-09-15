@@ -130,6 +130,11 @@ int32_t proton_app_instance_attach_runtime(
 int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
+/* Application-loop disposition: 1 accepted, 0 rejected/expired, <0 error. */
+int32_t proton_runtime_respond_app_activation(proton_runtime_handle_t runtime,
+                                              int64_t request_id, int32_t accept);
+int32_t proton_runtime_stop_app_activations(proton_runtime_handle_t runtime);
+
 int32_t proton_runtime_begin_destroy(proton_runtime_handle_t runtime);
 int32_t proton_runtime_destroy_ready(proton_runtime_handle_t runtime,
                                      int32_t *out_ready);

@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <poll.h>
 #include <stdatomic.h>
 #include <sys/file.h>
 #include <sys/socket.h>
@@ -34,6 +35,23 @@
 #include <time.h>
 #include <unistd.h>
 #endif
+
+// One budget covers connect, request transfer and application confirmation.
+#ifndef PROTON_APP_INSTANCE_TIMEOUT_MS
+#define PROTON_APP_INSTANCE_TIMEOUT_MS 5000
+#endif
+
+enum {
+  PROTON_INSTANCE_STARTING,
+  PROTON_INSTANCE_READY,
+  PROTON_INSTANCE_STOPPING,
+};
+enum {
+  PROTON_INSTANCE_REJECTED = 0,
+  PROTON_INSTANCE_ACCEPTED = 1,
+  PROTON_INSTANCE_SHUTTING_DOWN = 2,
+  PROTON_INSTANCE_UNCONFIRMED = 3,
+};
 
 #define PROTON_APP_INSTANCE_CAPACITY 8
 #define PROTON_APP_INSTANCE_EVENT_CAPACITY 32
@@ -48,12 +66,18 @@ typedef struct {
   bool occupied;
   bool destroyed;
   bool owns_endpoint;
+  int phase;
+  int64_t next_request_id;
+  int64_t pending_request_id;
+  int64_t pending_deadline;
+  unsigned char pending_ack;
   proton_event_t *events[PROTON_APP_INSTANCE_EVENT_CAPACITY];
   uint32_t event_head;
   uint32_t event_count;
   proton_engine_runtime_t *runtime;
 #ifdef _WIN32
   CRITICAL_SECTION lock;
+  CONDITION_VARIABLE confirmation;
   bool lock_initialized;
   HANDLE mutex;
   HANDLE thread;
@@ -62,6 +86,7 @@ typedef struct {
   wchar_t pipe_name[128];
 #else
   pthread_mutex_t lock;
+  pthread_cond_t confirmation;
   bool lock_initialized;
   pthread_t thread;
   bool thread_started;
@@ -77,11 +102,69 @@ typedef struct {
 static proton_app_instance_slot_t
     g_app_instances[PROTON_APP_INSTANCE_CAPACITY];
 
+static int64_t proton_app_instance_now_ms(void) {
+#ifdef _WIN32
+  return (int64_t)GetTickCount64();
+#else
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return (int64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+#endif
+}
+
+static int proton_app_instance_remaining_ms(int64_t deadline) {
+  int64_t remaining = deadline - proton_app_instance_now_ms();
+  return remaining > 0 ? (int)remaining : 0;
+}
+
+static void proton_app_instance_notify_confirmation(proton_app_instance_slot_t *slot) {
+#ifdef _WIN32
+  WakeAllConditionVariable(&slot->confirmation);
+#else
+  pthread_cond_broadcast(&slot->confirmation);
+#endif
+}
+
+// Called with the slot lock held. Every wait uses the same monotonic deadline.
+static void proton_app_instance_wait_confirmation(proton_app_instance_slot_t *slot,
+                                                  int64_t deadline) {
+#ifdef _WIN32
+  SleepConditionVariableCS(&slot->confirmation, &slot->lock,
+                           (DWORD)proton_app_instance_remaining_ms(deadline));
+#elif defined(__APPLE__)
+  int remaining = proton_app_instance_remaining_ms(deadline);
+  struct timespec relative = {remaining / 1000, (remaining % 1000) * 1000000L};
+  pthread_cond_timedwait_relative_np(&slot->confirmation, &slot->lock, &relative);
+#else
+  struct timespec absolute = {deadline / 1000, (deadline % 1000) * 1000000L};
+  pthread_cond_timedwait(&slot->confirmation, &slot->lock, &absolute);
+#endif
+}
+
 static void proton_app_instance_set_message(char *error, size_t error_len,
                                             const char *message) {
   if (error != NULL && error_len > 0) {
     snprintf(error, error_len, "%s", message != NULL ? message : "");
   }
+}
+
+static int32_t proton_app_instance_forward_result(
+    bool sent, bool received, unsigned char ack, char *error, size_t error_len) {
+  if (received && ack == PROTON_INSTANCE_ACCEPTED) {
+    return PROTON_OK;
+  }
+  const char *message;
+  if (!sent) {
+    message = "activation transfer failed or timed out; no confirmation received";
+  } else if (!received || ack == PROTON_INSTANCE_UNCONFIRMED) {
+    message = "primary instance did not confirm activation (connection closed or forwarding deadline expired)";
+  } else if (ack == PROTON_INSTANCE_SHUTTING_DOWN) {
+    message = "primary instance is shutting down";
+  } else {
+    message = "primary instance rejected activation";
+  }
+  proton_app_instance_set_message(error, error_len, message);
+  return PROTON_ERR_PLATFORM;
 }
 
 static uint64_t proton_app_instance_hash(const char *value) {
@@ -170,7 +253,7 @@ static bool proton_app_instance_enqueue_owned(
 
 static bool proton_app_instance_enqueue_activation(
     proton_app_instance_slot_t *slot, const char *activation_payload,
-    bool reopen_when_empty) {
+    bool reopen_when_empty, int64_t request_id) {
   if (slot == NULL || activation_payload == NULL ||
       activation_payload[0] == '\0' ||
       strlen(activation_payload) > PROTON_APP_INSTANCE_MAX_MESSAGE_BYTES) {
@@ -183,25 +266,89 @@ static bool proton_app_instance_enqueue_activation(
     return false;
   }
   event->bool_a = reopen_when_empty ? 1 : 0;
+  event->request_id = request_id;
 
   proton_app_instance_lock(slot);
-  bool attached = slot->runtime != NULL;
-  bool queued = true;
-  if (!attached && slot->event_count == PROTON_APP_INSTANCE_EVENT_CAPACITY) {
-    queued = false;
-  } else if (!attached) {
-    queued = proton_app_instance_enqueue_owned(slot, event);
-    event = NULL;
+  bool queued = false;
+  if (slot->phase != PROTON_INSTANCE_STOPPING) {
+    if (slot->runtime == NULL) {
+      queued = proton_app_instance_enqueue_owned(slot, event);
+      if (queued) event = NULL;
+    } else {
+      // publish consumes the event on both success and failure.
+      queued = proton_event_publish(event);
+      event = NULL;
+    }
   }
   proton_app_instance_unlock(slot);
-  if (queued && attached && !proton_event_publish(event)) {
-    queued = false;
-  }
-  if (attached) {
-    event = NULL;
-  }
   proton_event_destroy(event);
   return queued;
+}
+
+// The listener handles one request at a time. Its token prevents a late event
+// from acknowledging a later connection after the original request expires.
+static unsigned char proton_app_instance_forward_activation(
+    proton_app_instance_slot_t *slot, const char *payload, int64_t deadline) {
+  proton_app_instance_lock(slot);
+  if (slot->phase == PROTON_INSTANCE_STOPPING) {
+    proton_app_instance_unlock(slot);
+    return PROTON_INSTANCE_SHUTTING_DOWN;
+  }
+  int64_t request_id = ++slot->next_request_id;
+  slot->pending_request_id = request_id;
+  slot->pending_deadline = deadline;
+  slot->pending_ack = PROTON_INSTANCE_UNCONFIRMED;
+  proton_app_instance_unlock(slot);
+  bool queued = proton_app_instance_enqueue_activation(slot, payload, true, request_id);
+  proton_app_instance_lock(slot);
+  while (queued && slot->phase != PROTON_INSTANCE_STOPPING &&
+         slot->pending_ack == PROTON_INSTANCE_UNCONFIRMED &&
+         proton_app_instance_remaining_ms(deadline) > 0) {
+    proton_app_instance_wait_confirmation(slot, deadline);
+  }
+  unsigned char ack = slot->pending_ack;
+  if (ack != PROTON_INSTANCE_ACCEPTED) {
+    if (slot->phase == PROTON_INSTANCE_STOPPING) {
+      ack = PROTON_INSTANCE_SHUTTING_DOWN;
+    } else if (!queued) {
+      ack = PROTON_INSTANCE_REJECTED;
+    }
+  }
+  slot->pending_request_id = 0;
+  proton_app_instance_unlock(slot);
+  return ack;
+}
+
+int32_t proton_app_instance_respond_activation_impl(int64_t instance,
+                                                   int64_t request_id, int32_t accept) {
+  char ignored[1];
+  proton_app_instance_slot_t *slot = proton_app_instance_get(instance, ignored, sizeof(ignored));
+  if (slot == NULL) {
+    return 0;
+  }
+  proton_app_instance_lock(slot);
+  bool pending = request_id != 0 && request_id == slot->pending_request_id &&
+      slot->pending_ack == PROTON_INSTANCE_UNCONFIRMED &&
+      slot->phase == PROTON_INSTANCE_READY &&
+      proton_app_instance_remaining_ms(slot->pending_deadline) > 0;
+  if (pending) {
+    slot->pending_ack = accept ? PROTON_INSTANCE_ACCEPTED : PROTON_INSTANCE_REJECTED;
+    proton_app_instance_notify_confirmation(slot);
+  }
+  proton_app_instance_unlock(slot);
+  return pending && accept ? 1 : 0;
+}
+
+void proton_app_instance_stop_accepting_impl(int64_t instance) {
+  char ignored[1];
+  proton_app_instance_slot_t *slot = proton_app_instance_get(instance, ignored, sizeof(ignored));
+  if (slot == NULL) {
+    return;
+  }
+  proton_app_instance_lock(slot);
+  slot->phase = PROTON_INSTANCE_STOPPING;
+  proton_app_instance_notify_confirmation(slot);
+  proton_app_instance_unlock(slot);
 }
 
 static proton_app_instance_slot_t *proton_app_instance_allocate(
@@ -219,8 +366,10 @@ static proton_app_instance_slot_t *proton_app_instance_allocate(
     slot->generation = generation;
     slot->occupied = true;
     slot->destroyed = false;
+    slot->phase = PROTON_INSTANCE_STARTING;
 #ifdef _WIN32
     InitializeCriticalSection(&slot->lock);
+    InitializeConditionVariable(&slot->confirmation);
     slot->lock_initialized = true;
 #else
     if (pthread_mutex_init(&slot->lock, NULL) != 0) {
@@ -230,6 +379,19 @@ static proton_app_instance_slot_t *proton_app_instance_allocate(
       return NULL;
     }
     slot->lock_initialized = true;
+    pthread_condattr_t attributes;
+    pthread_condattr_init(&attributes);
+#ifndef __APPLE__
+    pthread_condattr_setclock(&attributes, CLOCK_MONOTONIC);
+#endif
+    int condition_status = pthread_cond_init(&slot->confirmation, &attributes);
+    pthread_condattr_destroy(&attributes);
+    if (condition_status != 0) {
+      pthread_mutex_destroy(&slot->lock);
+      memset(slot, 0, sizeof(*slot));
+      proton_app_instance_set_message(error, error_len, "failed to initialize instance confirmation");
+      return NULL;
+    }
     slot->ownership_fd = -1;
     slot->listen_fd = -1;
     slot->client_fd = -1;
@@ -311,58 +473,34 @@ static bool proton_app_instance_create_security_descriptor(
   return ok;
 }
 
-static bool proton_app_instance_read_exact(HANDLE pipe, void *buffer,
-                                           DWORD length) {
-  unsigned char *cursor = (unsigned char *)buffer;
-  while (length > 0) {
-    DWORD read = 0;
-    if (!ReadFile(pipe, cursor, length, &read, NULL) || read == 0) {
-      return false;
-    }
-    cursor += read;
-    length -= read;
-  }
-  return true;
-}
-
-static bool proton_app_instance_write_exact(HANDLE pipe, const void *buffer,
-                                            DWORD length) {
-  const unsigned char *cursor = (const unsigned char *)buffer;
-  while (length > 0) {
-    DWORD written = 0;
-    if (!WriteFile(pipe, cursor, length, &written, NULL) || written == 0) {
-      return false;
-    }
-    cursor += written;
-    length -= written;
-  }
-  return true;
-}
-
 typedef enum proton_app_instance_io_result {
   PROTON_APP_INSTANCE_IO_COMPLETE = 0,
   PROTON_APP_INSTANCE_IO_STOPPED = 1,
   PROTON_APP_INSTANCE_IO_FAILED = 2,
+  PROTON_APP_INSTANCE_IO_TIMED_OUT = 3,
 } proton_app_instance_io_result_t;
 
 // Server operations must remain cancellable so instance destruction can always
 // join the listener thread, regardless of which pipe operation is pending.
-static proton_app_instance_io_result_t proton_app_instance_wait_for_server_io(
+static proton_app_instance_io_result_t proton_app_instance_wait_for_io(
     proton_app_instance_slot_t *slot, HANDLE pipe, OVERLAPPED *operation,
-    DWORD *transferred) {
-  HANDLE events[2] = {slot->stop_event, operation->hEvent};
-  DWORD wait_result = WaitForMultipleObjects(2, events, FALSE, INFINITE);
-  if (wait_result == WAIT_OBJECT_0 + 1) {
+    DWORD *transferred, int64_t deadline) {
+  HANDLE events[2] = {operation->hEvent, slot ? slot->stop_event : NULL};
+  DWORD timeout = deadline == 0 ? INFINITE : (DWORD)proton_app_instance_remaining_ms(deadline);
+  DWORD result = WaitForMultipleObjects(slot ? 2 : 1, events, FALSE, timeout);
+  if (result == WAIT_OBJECT_0) {
     return GetOverlappedResult(pipe, operation, transferred, FALSE)
-               ? PROTON_APP_INSTANCE_IO_COMPLETE
-               : PROTON_APP_INSTANCE_IO_FAILED;
+        ? PROTON_APP_INSTANCE_IO_COMPLETE : PROTON_APP_INSTANCE_IO_FAILED;
   }
-
+  // Drain cancellation before the stack OVERLAPPED and caller buffer go away.
   (void)CancelIoEx(pipe, operation);
   DWORD ignored = 0;
   (void)GetOverlappedResult(pipe, operation, &ignored, TRUE);
-  return wait_result == WAIT_OBJECT_0 ? PROTON_APP_INSTANCE_IO_STOPPED
-                                     : PROTON_APP_INSTANCE_IO_FAILED;
+  if (result == WAIT_TIMEOUT) {
+    return PROTON_APP_INSTANCE_IO_TIMED_OUT;
+  }
+  return slot && result == WAIT_OBJECT_0 + 1
+      ? PROTON_APP_INSTANCE_IO_STOPPED : PROTON_APP_INSTANCE_IO_FAILED;
 }
 
 static proton_app_instance_io_result_t proton_app_instance_server_connect(
@@ -382,8 +520,8 @@ static proton_app_instance_io_result_t proton_app_instance_server_connect(
     DWORD connect_error = GetLastError();
     if (connect_error == ERROR_IO_PENDING) {
       DWORD ignored = 0;
-      result = proton_app_instance_wait_for_server_io(
-          slot, pipe, &operation, &ignored);
+      result = proton_app_instance_wait_for_io(
+          slot, pipe, &operation, &ignored, 0);
     } else if (connect_error != ERROR_PIPE_CONNECTED) {
       result = PROTON_APP_INSTANCE_IO_FAILED;
     }
@@ -392,13 +530,16 @@ static proton_app_instance_io_result_t proton_app_instance_server_connect(
   return result;
 }
 
-static proton_app_instance_io_result_t proton_app_instance_server_io_exact(
+static proton_app_instance_io_result_t proton_app_instance_io_exact(
     proton_app_instance_slot_t *slot, HANDLE pipe, void *buffer, DWORD length,
-    bool write) {
+    bool write, int64_t deadline) {
   unsigned char *cursor = (unsigned char *)buffer;
   while (length > 0) {
-    if (WaitForSingleObject(slot->stop_event, 0) == WAIT_OBJECT_0) {
+    if (slot && WaitForSingleObject(slot->stop_event, 0) == WAIT_OBJECT_0) {
       return PROTON_APP_INSTANCE_IO_STOPPED;
+    }
+    if (proton_app_instance_remaining_ms(deadline) == 0) {
+      return PROTON_APP_INSTANCE_IO_TIMED_OUT;
     }
     HANDLE event = CreateEventW(NULL, TRUE, FALSE, NULL);
     if (event == NULL) {
@@ -416,8 +557,8 @@ static proton_app_instance_io_result_t proton_app_instance_server_io_exact(
         result = PROTON_APP_INSTANCE_IO_FAILED;
       }
     } else if (GetLastError() == ERROR_IO_PENDING) {
-      result = proton_app_instance_wait_for_server_io(
-          slot, pipe, &operation, &transferred);
+      result = proton_app_instance_wait_for_io(
+          slot, pipe, &operation, &transferred, deadline);
     } else {
       result = PROTON_APP_INSTANCE_IO_FAILED;
     }
@@ -462,24 +603,23 @@ static DWORD WINAPI proton_app_instance_server_thread(void *data) {
       }
       continue;
     }
+    int64_t deadline = proton_app_instance_now_ms() + PROTON_APP_INSTANCE_TIMEOUT_MS;
     uint32_t length = 0;
     unsigned char ack = 0;
     proton_app_instance_io_result_t read_result =
-        proton_app_instance_server_io_exact(
-            slot, pipe, &length, sizeof(length), false);
+        proton_app_instance_io_exact(
+            slot, pipe, &length, sizeof(length), false, deadline);
     if (read_result == PROTON_APP_INSTANCE_IO_COMPLETE &&
         length > 0 && length < PROTON_APP_INSTANCE_MAX_MESSAGE_BYTES) {
       char *payload = (char *)malloc((size_t)length + 1);
       if (payload != NULL) {
-        read_result = proton_app_instance_server_io_exact(
-            slot, pipe, payload, length, false);
+        read_result = proton_app_instance_io_exact(
+            slot, pipe, payload, length, false, deadline);
       }
       if (payload != NULL &&
           read_result == PROTON_APP_INSTANCE_IO_COMPLETE) {
         payload[length] = '\0';
-        if (proton_app_instance_enqueue_activation(slot, payload, true)) {
-          ack = 1;
-        }
+        ack = proton_app_instance_forward_activation(slot, payload, deadline);
       }
       free(payload);
     }
@@ -488,17 +628,17 @@ static DWORD WINAPI proton_app_instance_server_thread(void *data) {
       return 0;
     }
     proton_app_instance_io_result_t write_result =
-        proton_app_instance_server_io_exact(
-            slot, pipe, &ack, sizeof(ack), true);
+        proton_app_instance_io_exact(
+            slot, pipe, &ack, sizeof(ack), true, deadline);
     if (write_result == PROTON_APP_INSTANCE_IO_STOPPED) {
       CloseHandle(pipe);
       return 0;
     }
-    if (write_result == PROTON_APP_INSTANCE_IO_COMPLETE && ack == 1) {
+    if (write_result == PROTON_APP_INSTANCE_IO_COMPLETE) {
       unsigned char receipt = 0;
       proton_app_instance_io_result_t receipt_result =
-          proton_app_instance_server_io_exact(
-              slot, pipe, &receipt, sizeof(receipt), false);
+          proton_app_instance_io_exact(
+              slot, pipe, &receipt, sizeof(receipt), false, deadline);
       if (receipt_result == PROTON_APP_INSTANCE_IO_STOPPED) {
         CloseHandle(pipe);
         return 0;
@@ -512,25 +652,29 @@ static DWORD WINAPI proton_app_instance_server_thread(void *data) {
 static int32_t proton_app_instance_forward_windows(
     const wchar_t *pipe_name, const char *activation_json, char *error,
     size_t error_len) {
+  int64_t deadline = proton_app_instance_now_ms() + PROTON_APP_INSTANCE_TIMEOUT_MS;
   HANDLE pipe = INVALID_HANDLE_VALUE;
-  for (int attempt = 0; attempt < 500; attempt++) {
+  while (proton_app_instance_remaining_ms(deadline) > 0) {
     pipe = CreateFileW(pipe_name, GENERIC_READ | GENERIC_WRITE, 0, NULL,
-                       OPEN_EXISTING, 0, NULL);
+                       OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
     if (pipe != INVALID_HANDLE_VALUE) {
       break;
     }
     DWORD connect_error = GetLastError();
+    DWORD delay = (DWORD)proton_app_instance_remaining_ms(deadline);
+    if (delay > 10) delay = 10;
+    if (delay == 0) break;
     if (connect_error == ERROR_PIPE_BUSY) {
-      (void)WaitNamedPipeW(pipe_name, 10);
+      (void)WaitNamedPipeW(pipe_name, delay);
     } else if (connect_error == ERROR_FILE_NOT_FOUND) {
-      Sleep(10);
+      Sleep(delay);
     } else {
       break;
     }
   }
   if (pipe == INVALID_HANDLE_VALUE) {
     proton_app_instance_set_message(error, error_len,
-                                    "primary instance did not open its pipe");
+                                    "failed to connect to primary instance before forwarding deadline");
     return PROTON_ERR_PLATFORM;
   }
   ULONG primary_process_id = 0;
@@ -539,22 +683,20 @@ static int32_t proton_app_instance_forward_windows(
   }
   size_t length = strlen(activation_json);
   uint32_t wire_length = (uint32_t)length;
-  unsigned char ack = 0;
-  bool ok =
-      proton_app_instance_write_exact(pipe, &wire_length, sizeof(wire_length)) &&
-      proton_app_instance_write_exact(pipe, activation_json, wire_length) &&
-      proton_app_instance_read_exact(pipe, &ack, sizeof(ack)) && ack == 1;
-  if (ok) {
+  unsigned char ack = PROTON_INSTANCE_UNCONFIRMED;
+  bool sent = proton_app_instance_io_exact(NULL, pipe, &wire_length,
+      sizeof(wire_length), true, deadline) == PROTON_APP_INSTANCE_IO_COMPLETE &&
+      proton_app_instance_io_exact(NULL, pipe, (void *)activation_json,
+      wire_length, true, deadline) == PROTON_APP_INSTANCE_IO_COMPLETE;
+  bool received = sent && proton_app_instance_io_exact(NULL, pipe, &ack,
+      sizeof(ack), false, deadline) == PROTON_APP_INSTANCE_IO_COMPLETE;
+  if (received) {
     unsigned char receipt = 1;
-    (void)proton_app_instance_write_exact(pipe, &receipt, sizeof(receipt));
+    (void)proton_app_instance_io_exact(NULL, pipe, &receipt,
+                                             sizeof(receipt), true, deadline);
   }
   CloseHandle(pipe);
-  if (!ok) {
-    proton_app_instance_set_message(error, error_len,
-                                    "primary instance rejected activation");
-    return PROTON_ERR_PLATFORM;
-  }
-  return PROTON_OK;
+  return proton_app_instance_forward_result(sent, received, ack, error, error_len);
 }
 
 static int32_t proton_app_instance_acquire_platform(
@@ -644,34 +786,67 @@ static void proton_app_instance_stop_platform(
 
 #else
 
-static bool proton_app_instance_read_exact(int fd, void *buffer,
-                                           size_t length) {
-  unsigned char *cursor = (unsigned char *)buffer;
-  while (length > 0) {
-    ssize_t read_count = recv(fd, cursor, length, 0);
-    if (read_count <= 0) {
+static bool proton_app_instance_nonblocking(int fd) {
+  int flags = fcntl(fd, F_GETFL, 0);
+  return flags >= 0 && fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0;
+}
+
+static bool proton_app_instance_wait_socket(int fd, short events, int64_t deadline) {
+  for (;;) {
+    int remaining = proton_app_instance_remaining_ms(deadline);
+    if (remaining == 0) {
+      errno = ETIMEDOUT;
       return false;
     }
-    cursor += (size_t)read_count;
-    length -= (size_t)read_count;
+    struct pollfd pending = {fd, events, 0};
+    int ready = poll(&pending, 1, remaining);
+    if (ready > 0) return true; // recv/send/SO_ERROR diagnoses EOF and errors.
+    if (ready == 0) {
+      errno = ETIMEDOUT;
+      return false;
+    }
+    if (errno != EINTR) {
+      return false;
+    }
+  }
+}
+
+static bool proton_app_instance_read_exact(int fd, void *buffer,
+                                           size_t length, int64_t deadline) {
+  unsigned char *cursor = buffer;
+  while (length > 0) {
+    if (!proton_app_instance_wait_socket(fd, POLLIN, deadline)) {
+      return false;
+    }
+    ssize_t count = recv(fd, cursor, length, 0);
+    if (count < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) continue;
+    if (count <= 0) {
+      return false;
+    }
+    cursor += count;
+    length -= (size_t)count;
   }
   return true;
 }
 
 static bool proton_app_instance_write_exact(int fd, const void *buffer,
-                                            size_t length) {
-  const unsigned char *cursor = (const unsigned char *)buffer;
+                                            size_t length, int64_t deadline) {
+  const unsigned char *cursor = buffer;
   while (length > 0) {
-#ifdef MSG_NOSIGNAL
-    ssize_t written = send(fd, cursor, length, MSG_NOSIGNAL);
-#else
-    ssize_t written = send(fd, cursor, length, 0);
-#endif
-    if (written <= 0) {
+    if (!proton_app_instance_wait_socket(fd, POLLOUT, deadline)) {
       return false;
     }
-    cursor += (size_t)written;
-    length -= (size_t)written;
+#ifdef MSG_NOSIGNAL
+    ssize_t count = send(fd, cursor, length, MSG_NOSIGNAL);
+#else
+    ssize_t count = send(fd, cursor, length, 0);
+#endif
+    if (count < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) continue;
+    if (count <= 0) {
+      return false;
+    }
+    cursor += count;
+    length -= (size_t)count;
   }
   return true;
 }
@@ -702,6 +877,11 @@ static void *proton_app_instance_server_thread(void *data) {
       }
       continue;
     }
+    if (!proton_app_instance_nonblocking(client)) {
+      close(client);
+      continue;
+    }
+    int64_t deadline = proton_app_instance_now_ms() + PROTON_APP_INSTANCE_TIMEOUT_MS;
     proton_app_instance_lock(slot);
     if (atomic_load_explicit(&slot->stopping, memory_order_acquire)) {
       proton_app_instance_unlock(slot);
@@ -719,21 +899,19 @@ static void *proton_app_instance_server_thread(void *data) {
     unsigned char ack = 0;
     if (proton_app_instance_peer_is_current_user(client) &&
         proton_app_instance_read_exact(client, &wire_length,
-                                       sizeof(wire_length))) {
+                                       sizeof(wire_length), deadline)) {
       uint32_t length = ntohl(wire_length);
       if (length > 0 && length < PROTON_APP_INSTANCE_MAX_MESSAGE_BYTES) {
         char *payload = (char *)malloc((size_t)length + 1);
         if (payload != NULL &&
-            proton_app_instance_read_exact(client, payload, length)) {
+            proton_app_instance_read_exact(client, payload, length, deadline)) {
           payload[length] = '\0';
-          if (proton_app_instance_enqueue_activation(slot, payload, true)) {
-            ack = 1;
-          }
+          ack = proton_app_instance_forward_activation(slot, payload, deadline);
         }
         free(payload);
       }
     }
-    (void)proton_app_instance_write_exact(client, &ack, sizeof(ack));
+    (void)proton_app_instance_write_exact(client, &ack, sizeof(ack), deadline);
     proton_app_instance_lock(slot);
     if (slot->client_fd == client) {
       slot->client_fd = -1;
@@ -744,70 +922,77 @@ static void *proton_app_instance_server_thread(void *data) {
   return NULL;
 }
 
-static int proton_app_instance_connect(const char *socket_path) {
+static int proton_app_instance_connect(const char *socket_path, int64_t deadline) {
   int fd = socket(AF_UNIX, SOCK_STREAM, 0);
   if (fd < 0) {
+    return -1;
+  }
+  if (!proton_app_instance_nonblocking(fd)) {
+    close(fd);
     return -1;
   }
 #ifdef SO_NOSIGPIPE
   int enabled = 1;
   (void)setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enabled, sizeof(enabled));
 #endif
-  struct sockaddr_un address;
-  memset(&address, 0, sizeof(address));
+  struct sockaddr_un address = {0};
   address.sun_family = AF_UNIX;
   snprintf(address.sun_path, sizeof(address.sun_path), "%s", socket_path);
-  if (connect(fd, (struct sockaddr *)&address, sizeof(address)) != 0) {
-    int connect_error = errno;
-    close(fd);
-    errno = connect_error;
-    return -1;
+  if (connect(fd, (struct sockaddr *)&address, sizeof(address)) == 0) {
+    return fd;
   }
-  return fd;
+  int connect_error = errno;
+  if (connect_error == EINPROGRESS) {
+    if (proton_app_instance_wait_socket(fd, POLLOUT, deadline)) {
+      socklen_t size = sizeof(connect_error);
+      if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &connect_error, &size) != 0) connect_error = errno;
+      if (connect_error == 0) {
+        return fd;
+      }
+    } else connect_error = errno;
+  }
+  close(fd);
+  errno = connect_error;
+  return -1;
 }
 
-static int proton_app_instance_connect_with_retry(
-    const char *socket_path) {
-  const struct timespec retry_delay = {
-      .tv_sec = 0,
-      .tv_nsec = 10 * 1000 * 1000,
-  };
-  for (int attempt = 0; attempt < 500; attempt++) {
-    int fd = proton_app_instance_connect(socket_path);
+static int proton_app_instance_connect_with_retry(const char *socket_path,
+                                                  int64_t deadline) {
+  while (proton_app_instance_remaining_ms(deadline) > 0) {
+    int fd = proton_app_instance_connect(socket_path, deadline);
     if (fd >= 0) {
       return fd;
     }
-    if (errno != ENOENT && errno != ECONNREFUSED) {
+    if (errno != ENOENT && errno != ECONNREFUSED && errno != EAGAIN && errno != EINTR) {
       return -1;
     }
-    nanosleep(&retry_delay, NULL);
+    int delay = proton_app_instance_remaining_ms(deadline);
+    if (delay > 10) delay = 10;
+    // Only endpoint startup/backlog retry sleeps; data I/O waits on readiness.
+    (void)poll(NULL, 0, delay);
   }
+  errno = ETIMEDOUT;
   return -1;
 }
 
 static int32_t proton_app_instance_forward_posix(
     const char *socket_path, const char *activation_json, char *error,
     size_t error_len) {
-  int fd = proton_app_instance_connect_with_retry(socket_path);
+  int64_t deadline = proton_app_instance_now_ms() + PROTON_APP_INSTANCE_TIMEOUT_MS;
+  int fd = proton_app_instance_connect_with_retry(socket_path, deadline);
   if (fd < 0) {
     proton_app_instance_set_message(error, error_len,
-                                    "failed to connect to primary instance");
+        errno == ETIMEDOUT ? "timed out connecting to primary instance" : "failed to connect to primary instance");
     return PROTON_ERR_PLATFORM;
   }
   size_t length = strlen(activation_json);
   uint32_t wire_length = htonl((uint32_t)length);
-  unsigned char ack = 0;
-  bool ok =
-      proton_app_instance_write_exact(fd, &wire_length, sizeof(wire_length)) &&
-      proton_app_instance_write_exact(fd, activation_json, length) &&
-      proton_app_instance_read_exact(fd, &ack, sizeof(ack)) && ack == 1;
+  unsigned char ack = PROTON_INSTANCE_UNCONFIRMED;
+  bool sent = proton_app_instance_write_exact(fd, &wire_length, sizeof(wire_length), deadline) &&
+      proton_app_instance_write_exact(fd, activation_json, length, deadline);
+  bool received = sent && proton_app_instance_read_exact(fd, &ack, sizeof(ack), deadline);
   close(fd);
-  if (!ok) {
-    proton_app_instance_set_message(error, error_len,
-                                    "primary instance rejected activation");
-    return PROTON_ERR_PLATFORM;
-  }
-  return PROTON_OK;
+  return proton_app_instance_forward_result(sent, received, ack, error, error_len);
 }
 
 static bool proton_app_instance_remove_owned_socket(
@@ -974,6 +1159,10 @@ static void proton_app_instance_stop_platform(
 
 static void proton_app_instance_dispose_slot(
     proton_app_instance_slot_t *slot) {
+  proton_app_instance_lock(slot);
+  slot->phase = PROTON_INSTANCE_STOPPING;
+  proton_app_instance_notify_confirmation(slot);
+  proton_app_instance_unlock(slot);
   proton_app_instance_stop_platform(slot);
   proton_app_instance_lock(slot);
   slot->runtime = NULL;
@@ -986,6 +1175,7 @@ static void proton_app_instance_dispose_slot(
   }
 #else
   if (slot->lock_initialized) {
+    pthread_cond_destroy(&slot->confirmation);
     pthread_mutex_destroy(&slot->lock);
     slot->lock_initialized = false;
   }
@@ -1035,7 +1225,7 @@ int32_t proton_app_instance_acquire_impl(
     *out_primary = 0;
     return PROTON_OK;
   }
-  if (!proton_app_instance_enqueue_activation(slot, activation_json, false)) {
+  if (!proton_app_instance_enqueue_activation(slot, activation_json, false, 0)) {
     proton_app_instance_dispose_slot(slot);
     proton_app_instance_set_message(error, error_len,
                                     "failed to queue initial activation");
@@ -1065,6 +1255,12 @@ int32_t proton_app_instance_attach_runtime_impl(
         error, error_len, "app instance is already attached to a runtime");
     return PROTON_ERR_ALREADY_INITIALIZED;
   }
+  if (slot->phase == PROTON_INSTANCE_STOPPING) {
+    proton_app_instance_unlock(slot);
+    proton_app_instance_set_message(error, error_len, "app instance is shutting down");
+    return PROTON_ERR_DESTROYED;
+  }
+  slot->phase = PROTON_INSTANCE_READY;
   slot->runtime = runtime;
   while (slot->event_count > 0) {
     proton_event_t *event = slot->events[slot->event_head];
@@ -1092,6 +1288,8 @@ void proton_app_instance_detach_runtime_impl(int64_t instance) {
     return;
   }
   proton_app_instance_lock(slot);
+  slot->phase = PROTON_INSTANCE_STOPPING;
+  proton_app_instance_notify_confirmation(slot);
   slot->runtime = NULL;
   proton_app_instance_unlock(slot);
 }

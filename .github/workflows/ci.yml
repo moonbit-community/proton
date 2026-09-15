@@ -179,6 +179,9 @@ jobs:
       - name: Verify generated files
         run: node scripts/verify_generated.mjs
 
+      - name: Test single-instance forwarding faults
+        run: node --test proton/internal/native/ffi/tests/app_instance.test.mjs
+
       - name: Check framework modules
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
