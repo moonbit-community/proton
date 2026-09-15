@@ -3,7 +3,7 @@
 
 ///|
 pub fn release_version() -> String {
-  "0.2.10"
+  "0.2.11"
 }
 
 ///|
