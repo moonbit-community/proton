@@ -58,6 +58,11 @@ struct proton_engine_runtime {
 void proton_engine_runtime_accessibility_requested(
     proton_engine_runtime_t *runtime);
 
+/* Registers PROTON_ENGINE_WINDOW_CLASS with the real window procedure. Window
+ * creation calls this on demand; the window-geometry tests call it to drive a
+ * synthetic WM_DPICHANGED through that same procedure. */
+void proton_engine_register_window_class(void);
+
 struct proton_engine_window {
   HWND hwnd;
   proton_engine_runtime_t *runtime;

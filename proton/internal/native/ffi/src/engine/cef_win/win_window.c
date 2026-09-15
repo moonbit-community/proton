@@ -599,7 +599,10 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
   return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
 
-static void proton_engine_register_window_class(void) {
+/* Registered on demand by window creation; also used by the window-geometry
+ * tests, which drive the real window procedure with a synthetic
+ * WM_DPICHANGED. */
+void proton_engine_register_window_class(void) {
   static int registered = 0;
   if (registered) {
     return;
