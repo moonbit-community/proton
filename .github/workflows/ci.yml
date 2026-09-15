@@ -107,6 +107,10 @@ jobs:
       - name: Test bridge bootstrap JS
         run: node --test proton/internal/native/ffi/tests/bridge_bootstrap.test.mjs
 
+      - name: Test macOS retained update cleanup
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: node --test proton/internal/native/ffi/tests/update_cleanup.test.mjs
+
       - name: Test Windows resource generation
         run: node --test proton/windows_resources.test.mjs
 

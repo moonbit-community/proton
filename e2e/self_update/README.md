@@ -25,7 +25,11 @@ cannot cover the things that only exist in a real installation:
   to `relaunched.txt`, and that line is the only evidence — by then the process
   that started it has exited,
 - after recording that successful start, the replacement removes the older
-  bundle that the atomic swap retained for launch recovery.
+  bundle retained in `.Updatee.app.proton-update/previous.app` for launch recovery.
+
+Deletion faults, restartable cleanup, ownership checks, and commit-lock
+contention are covered separately by
+`node --test proton/internal/native/ffi/tests/update_cleanup.test.mjs`.
 
 A passing run leaves `started 0.1.0` followed by `started 0.2.0`.
 
