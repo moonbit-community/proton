@@ -314,6 +314,65 @@ callback per button; Proton reports the button `id` through
 `App::on_thumbar_button_click` instead, so rebuilding the toolbar cannot
 silently retarget a click.
 
+### Jump list
+
+`set_jump_list` replaces the application's custom Windows jump list, or removes
+it when the argument is `None`. It mirrors `app.setJumpList`, including the
+category kinds and the result values:
+
+```moonbit
+let result = @proton.set_jump_list(Some([
+  @proton.JumpListCategory::{
+    kind: @proton.JumpListCategoryKind::Tasks,
+    name: "",
+    items: [
+      @proton.JumpListItem::{
+        kind: @proton.JumpListItemKind::Task,
+        path: executable,
+        arguments: "--play",
+        title: "Play or pause",
+        description: "Starts playback in a new instance",
+        icon_path: executable,
+        icon_index: 0,
+        working_directory: "",
+      },
+      // A separator is only allowed in the Tasks category.
+      @proton.JumpListItem::{
+        kind: @proton.JumpListItemKind::Separator,
+        path: "",
+        arguments: "",
+        title: "",
+        description: "",
+        icon_path: "",
+        icon_index: 0,
+        working_directory: "",
+      },
+    ],
+  },
+  @proton.JumpListCategory::{
+    kind: @proton.JumpListCategoryKind::Custom,
+    name: "Recent sessions",
+    items: [...],
+  },
+])) catch {
+  error => abort(error.message())
+}
+```
+
+The result reports what Windows did. `Ok` means the list was applied; `Error`
+means one or more categories or items failed; `InvalidSeparator` means a
+separator appeared outside the Tasks category; `FileTypeRegistrationError`
+means a file link has no registered handler; and
+`CustomCategoryAccessDenied` means Windows blocked custom categories through
+its privacy setting or group policy. `Unsupported` is Proton's own result for
+macOS and Linux, where Electron leaves the API undefined.
+
+The list belongs to the application's AppUserModelID. An installed application
+registers that identity in its installer; without one Windows derives it from
+the executable path, which is the same identity the taskbar button uses. Users
+can remove items from custom categories, and Windows ignores any category that
+re-adds a removed item until the next successful call.
+
 ## Logging
 
 Use `tonyfettes/xlog@0.4.2` directly for application logs. Proton configures the

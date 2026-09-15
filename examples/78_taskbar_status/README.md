@@ -33,6 +33,19 @@ Review the application and the Windows taskbar button:
    application handler receiving the button id.
 10. Choose **Clear buttons** and click where a button used to be. The toolbar
     should be empty and no further click should reach the application.
+11. Choose **Apply tasks**, then right-click the taskbar button. The jump list
+    should show a **Tasks** group with **Play or pause**, a separator, and
+    **Open settings**. Clicking one of them starts another instance of this
+    example with that argument.
+12. Choose **Apply tasks + custom**. On a machine where Windows allows custom
+    categories, the list should also show **Recent sessions** with two entries
+    and the status line reports success. When the user has turned off
+    "Show recently opened items in Start, Jump Lists, and File Explorer",
+    Windows blocks custom categories: the status line reports
+    `Windows blocked the custom category`, the Tasks group still appears, and
+    that result is exactly Electron's `customCategoryAccessDeniedError`.
+13. Choose **Remove jump list**. The custom list should disappear and the
+    right-click menu should fall back to what Windows manages.
 
 Every step reports the applied call in the status line, and each accepted call
 is appended to the log, so a rejected call is visible without guessing.
@@ -51,3 +64,10 @@ attaches one callback per button; Proton reports the button `id` through
 `App::on_thumbar_button_click` instead, so rebuilding the toolbar cannot
 silently retarget a click. That call reports `false` on macOS and Linux, the
 same result Electron returns there.
+
+The jump list section mirrors `app.setJumpList`: the result strings become the
+`JumpListResult` values, so `InvalidSeparator` and
+`FileTypeRegistrationError` are reported the same way. File links are not part
+of this example because the example is not a registered handler for any file
+type; adding one would report `FileTypeRegistrationError`, which is what the
+result is for.
