@@ -59,6 +59,16 @@ pub fn execute_process(Int, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Byt
 
 pub fn image_null() -> ImageHandle
 
+pub fn jump_list_builder_add_category(JumpListBuilderHandle, Int, Bytes) -> Int
+
+pub fn jump_list_builder_add_item(JumpListBuilderHandle, Int, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Bytes) -> Int
+
+pub fn jump_list_builder_create(@ref.Ref[JumpListBuilderHandle]) -> Int
+
+pub fn jump_list_builder_destroy(JumpListBuilderHandle) -> Unit
+
+pub fn jump_list_builder_null() -> JumpListBuilderHandle
+
 pub fn menu_config_add_item(MenuConfigHandle, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int) -> Int
 
 pub fn menu_config_add_menu(MenuConfigHandle, Bytes, Int, @ref.Ref[Int]) -> Int
@@ -108,6 +118,8 @@ pub fn proton_image_to_bitmap_ffi(ImageHandle, Double, FixedArray[Byte], Int, @r
 pub fn proton_image_to_jpeg_ffi(ImageHandle, Double, Int, FixedArray[Byte], Int, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
 pub fn proton_image_to_png_ffi(ImageHandle, Double, Int, FixedArray[Byte], Int, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+
+pub fn proton_jump_list_apply_ffi(JumpListBuilderHandle, @ref.Ref[Int]) -> Int
 
 pub fn proton_last_error_message_ffi(FixedArray[Byte], Int) -> Int
 
@@ -439,6 +451,9 @@ pub type EventHandle
 
 #external
 pub type ImageHandle
+
+#external
+pub type JumpListBuilderHandle
 
 #external
 pub type MenuConfigHandle

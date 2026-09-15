@@ -127,6 +127,190 @@ fn ThumbarButton::to_native(self : ThumbarButton) -> @native.ThumbarButton {
 }
 
 ///|
+/// One item inside a custom jump list category.
+///
+/// Empty strings mean "not set", which is how Electron treats omitted
+/// properties: a task needs `path` and `title`, a file link needs `path`, and a
+/// separator needs neither.
+pub(all) struct JumpListItem {
+  kind : JumpListItemKind
+  path : String
+  arguments : String
+  title : String
+  description : String
+  icon_path : String
+  icon_index : Int
+  working_directory : String
+}
+
+///|
+/// The kind of a jump list item, mirroring Electron's `type` property.
+pub(all) enum JumpListItemKind {
+  /// Launches `path` with `arguments`, shown as `title`.
+  Task
+  /// Separates items in the standard Tasks category; other categories reject
+  /// it.
+  Separator
+  /// Opens `path` with the application that registered that file type.
+  File
+} derive(Debug, Eq)
+
+///|
+pub extend JumpListItemKind with Eq::{not_equal, equal}
+
+///|
+pub extend JumpListItemKind with Debug::{to_repr}
+
+///|
+fn JumpListItemKind::to_native(
+  self : JumpListItemKind,
+) -> @native.JumpListItemKind {
+  match self {
+    Task => @native.JumpListItemKind::Task
+    Separator => @native.JumpListItemKind::Separator
+    File => @native.JumpListItemKind::File
+  }
+}
+
+///|
+/// One category of the custom jump list, mirroring Electron's
+/// `JumpListCategory`.
+pub(all) struct JumpListCategory {
+  kind : JumpListCategoryKind
+  /// Required when `kind` is `Custom`, ignored otherwise.
+  name : String
+  /// Used by `Tasks` and `Custom`; `Recent` and `Frequent` are managed by
+  /// Windows.
+  items : Array[JumpListItem]
+}
+
+///|
+/// The kind of a jump list category, mirroring Electron's `type` property.
+pub(all) enum JumpListCategoryKind {
+  /// The standard Tasks category, always shown at the bottom.
+  Tasks
+  /// An application-named category holding tasks and file links.
+  Custom
+  /// The Windows-managed recent files category.
+  Recent
+  /// The Windows-managed frequently used category.
+  Frequent
+} derive(Debug, Eq)
+
+///|
+pub extend JumpListCategoryKind with Eq::{not_equal, equal}
+
+///|
+pub extend JumpListCategoryKind with Debug::{to_repr}
+
+///|
+fn JumpListCategoryKind::to_native(
+  self : JumpListCategoryKind,
+) -> @native.JumpListCategoryKind {
+  match self {
+    Tasks => @native.JumpListCategoryKind::Tasks
+    Custom => @native.JumpListCategoryKind::Custom
+    Recent => @native.JumpListCategoryKind::Recent
+    Frequent => @native.JumpListCategoryKind::Frequent
+  }
+}
+
+///|
+fn JumpListCategory::to_native(
+  self : JumpListCategory,
+) -> @native.JumpListCategory {
+  {
+    kind: self.kind.to_native(),
+    name: self.name,
+    items: self.items.map(item => item.to_native()),
+  }
+}
+
+///|
+fn JumpListItem::to_native(self : JumpListItem) -> @native.JumpListItem {
+  {
+    kind: self.kind.to_native(),
+    path: self.path,
+    arguments: self.arguments,
+    title: self.title,
+    description: self.description,
+    icon_path: self.icon_path,
+    icon_index: self.icon_index,
+    working_directory: self.working_directory,
+  }
+}
+
+///|
+/// The result of a jump list update, mirroring the strings Electron returns
+/// from `setJumpList`.
+pub(all) enum JumpListResult {
+  /// Nothing went wrong.
+  Ok
+  /// One or more categories or items failed.
+  Error
+  /// A separator was added to a category other than Tasks.
+  InvalidSeparator
+  /// A file link was added for a file type the application does not handle.
+  FileTypeRegistrationError
+  /// Windows denied custom categories through privacy or group policy.
+  CustomCategoryAccessDenied
+  /// The platform has no jump list. Proton reports this instead of Electron's
+  /// undefined method on macOS and Linux.
+  Unsupported
+} derive(Debug, Eq)
+
+///|
+pub extend JumpListResult with Eq::{not_equal, equal}
+
+///|
+pub extend JumpListResult with Debug::{to_repr}
+
+///|
+fn JumpListResult::from_native(
+  result : @native.JumpListResult,
+) -> JumpListResult {
+  match result {
+    @native.JumpListResult::Ok => Ok
+    @native.JumpListResult::Error => Error
+    @native.JumpListResult::InvalidSeparator => InvalidSeparator
+    @native.JumpListResult::FileTypeRegistrationError =>
+      FileTypeRegistrationError
+    @native.JumpListResult::CustomCategoryAccessDenied =>
+      CustomCategoryAccessDenied
+    @native.JumpListResult::Unsupported => Unsupported
+  }
+}
+
+///|
+/// Replaces the application's custom Windows jump list, or removes it when
+/// `categories` is `None`.
+///
+/// Mirrors Electron's `app.setJumpList`. The result reports what Windows did:
+/// `Ok`, `Error`, `InvalidSeparator` when a separator appears outside the Tasks
+/// category, `FileTypeRegistrationError` when a file link has no registered
+/// handler, and `CustomCategoryAccessDenied` when privacy or group policy
+/// settings block custom categories. macOS and Linux report `Unsupported`,
+/// where Electron leaves the method undefined.
+///
+/// The list belongs to the application's AppUserModelID. An installed
+/// application registers that identity in its installer; without one Windows
+/// derives it from the executable path, which is the same identity the taskbar
+/// button uses. Users can remove items from custom categories, and Windows
+/// ignores any category that re-adds a removed item until the next successful
+/// call.
+pub fn set_jump_list(
+  categories : Array[JumpListCategory]?,
+) -> JumpListResult raise AppControlError {
+  let native_categories = match categories {
+    Some(groups) => Some(groups.map(category => category.to_native()))
+    None => None
+  }
+  JumpListResult::from_native(@native.jump_list_apply(native_categories)) catch {
+    error => raise app_control_native_error("set jump list", error)
+  }
+}
+
+///|
 /// Controls how configured window dimensions constrain native resizing.
 pub(all) enum WindowSizeHint {
   Unconstrained

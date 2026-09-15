@@ -1532,6 +1532,103 @@ pub(all) struct ThumbarButton {
 }
 
 ///|
+/// One item inside a custom jump list category.
+pub(all) struct JumpListItem {
+  kind : JumpListItemKind
+  path : String
+  arguments : String
+  title : String
+  description : String
+  icon_path : String
+  icon_index : Int
+  working_directory : String
+}
+
+///|
+pub(all) enum JumpListItemKind {
+  Task
+  Separator
+  File
+} derive(Debug, Eq)
+
+///|
+pub extend JumpListItemKind with Eq::{not_equal, equal}
+
+///|
+pub extend JumpListItemKind with Debug::{to_repr}
+
+///|
+fn JumpListItemKind::native_value(self : JumpListItemKind) -> Int {
+  match self {
+    Task => 0
+    Separator => 1
+    File => 2
+  }
+}
+
+///|
+/// One category of the custom jump list.
+pub(all) struct JumpListCategory {
+  kind : JumpListCategoryKind
+  name : String
+  items : Array[JumpListItem]
+}
+
+///|
+pub(all) enum JumpListCategoryKind {
+  Tasks
+  Custom
+  Recent
+  Frequent
+} derive(Debug, Eq)
+
+///|
+pub extend JumpListCategoryKind with Eq::{not_equal, equal}
+
+///|
+pub extend JumpListCategoryKind with Debug::{to_repr}
+
+///|
+fn JumpListCategoryKind::native_value(self : JumpListCategoryKind) -> Int {
+  match self {
+    Tasks => 0
+    Custom => 1
+    Recent => 2
+    Frequent => 3
+  }
+}
+
+///|
+/// The result Windows reports for a jump list update, matching the strings
+/// Electron returns from `setJumpList`.
+pub(all) enum JumpListResult {
+  Ok
+  Error
+  InvalidSeparator
+  FileTypeRegistrationError
+  CustomCategoryAccessDenied
+  Unsupported
+} derive(Debug, Eq)
+
+///|
+pub extend JumpListResult with Eq::{not_equal, equal}
+
+///|
+pub extend JumpListResult with Debug::{to_repr}
+
+///|
+fn jump_list_result_from_code(code : Int) -> JumpListResult {
+  match code {
+    0 => Ok
+    2 => InvalidSeparator
+    3 => FileTypeRegistrationError
+    4 => CustomCategoryAccessDenied
+    5 => Unsupported
+    _ => Error
+  }
+}
+
+///|
 /// Process-wide cache for `runtime_info`: the loaded runtime's identity and
 /// feature set cannot change within a process, so feature probes reuse the
 /// first successful result. Failures are not cached — callers keep the

@@ -32,6 +32,17 @@ struct ButtonsRequest {
 } derive(ToJson, FromJson)
 
 ///|
+struct JumpListRequest {
+  mode : String
+} derive(ToJson, FromJson)
+
+///|
+pub extend JumpListRequest with ToJson::{to_json}
+
+///|
+pub extend JumpListRequest with FromJson::{from_json}
+
+///|
 pub extend ButtonsRequest with ToJson::{to_json}
 
 ///|
@@ -82,6 +93,11 @@ let set_buttons_command : @proton_contract.Command[ButtonsRequest, Reply] = task
 )
 
 ///|
+let set_jump_list_command : @proton_contract.Command[JumpListRequest, Reply] = taskbar_contract.command(
+  "setJumpList",
+)
+
+///|
 let window_slot : Ref[@proton.WindowHandle?] = { val: None, }
 
 ///|
@@ -94,6 +110,10 @@ let overlay_image : Ref[@proton.NativeImage?] = { val: None, }
 /// The toolbar images outlive every call, so the example releases them when the
 /// window closes instead of rebuilding them on each request.
 let thumbar_images : Ref[Array[@proton.NativeImage]?] = { val: None, }
+
+///|
+/// The jump list tasks launch this example again with the argument they carry.
+let executable_path : Ref[String] = { val: "", }
 
 ///|
 fn reply(ok : Bool, message : String) -> Reply {
@@ -355,6 +375,114 @@ fn set_buttons(request : ButtonsRequest) -> Reply {
 }
 
 ///|
+/// The standard Tasks category an application of this kind would ship: two
+/// tasks separated by the one category that accepts a separator.
+fn jump_list_tasks() -> @proton.JumpListCategory {
+  let program = executable_path.val
+  {
+    kind: @proton.JumpListCategoryKind::Tasks,
+    name: "",
+    items: [
+      {
+        kind: @proton.JumpListItemKind::Task,
+        path: program,
+        arguments: "--play",
+        title: "Play or pause",
+        description: "Starts playback in a new instance",
+        icon_path: program,
+        icon_index: 0,
+        working_directory: "",
+      },
+      {
+        kind: @proton.JumpListItemKind::Separator,
+        path: "",
+        arguments: "",
+        title: "",
+        description: "",
+        icon_path: "",
+        icon_index: 0,
+        working_directory: "",
+      },
+      {
+        kind: @proton.JumpListItemKind::Task,
+        path: program,
+        arguments: "--settings",
+        title: "Open settings",
+        description: "Opens the settings window",
+        icon_path: program,
+        icon_index: 0,
+        working_directory: "",
+      },
+    ],
+  }
+}
+
+///|
+/// A custom category. Windows hides custom categories when the user turns the
+/// "recently opened items" privacy setting off, and reports that as
+/// `CustomCategoryAccessDenied`.
+fn jump_list_custom() -> @proton.JumpListCategory {
+  let program = executable_path.val
+  {
+    kind: @proton.JumpListCategoryKind::Custom,
+    name: "Recent sessions",
+    items: [
+      {
+        kind: @proton.JumpListItemKind::Task,
+        path: program,
+        arguments: "--session=1",
+        title: "Yesterday's session",
+        description: "",
+        icon_path: "",
+        icon_index: 0,
+        working_directory: "",
+      },
+      {
+        kind: @proton.JumpListItemKind::Task,
+        path: program,
+        arguments: "--session=2",
+        title: "This morning's session",
+        description: "",
+        icon_path: "",
+        icon_index: 0,
+        working_directory: "",
+      },
+    ],
+  }
+}
+
+///|
+fn set_jump_list(request : JumpListRequest) -> Reply {
+  let categories = match request.mode {
+    "tasks" => Some([jump_list_tasks()])
+    "custom" => Some([jump_list_tasks(), jump_list_custom()])
+    "remove" => None
+    _ => return reply(false, "unknown jump list mode: " + request.mode)
+  }
+  let result = @proton.set_jump_list(categories) catch {
+    error => return reply(false, error.message())
+  }
+  match result {
+    @proton.JumpListResult::Ok =>
+      reply(
+        true,
+        if request.mode == "remove" {
+          "custom jump list removed"
+        } else {
+          "jump list set; right-click the taskbar button"
+        },
+      )
+    @proton.JumpListResult::Unsupported =>
+      reply(false, "this platform has no jump list")
+    @proton.JumpListResult::CustomCategoryAccessDenied =>
+      reply(
+        false, "Windows blocked the custom category; enable recently opened items to review it",
+      )
+    other => reply(false, "jump list result: " + other.to_repr().to_string())
+  }
+}
+
+///|
 fn js_escape(text : String) -> String {
   text
   .replace_all(old="\\", new="\\\\")
@@ -393,6 +521,9 @@ fn register_commands(registrar : @proton.CommandRegistrar) -> Unit raise {
   registrar.bind(set_buttons_command, (_context, request) => {
     set_buttons(request)
   })
+  registrar.bind(set_jump_list_command, (_context, request) => {
+    set_jump_list(request)
+  })
 }
 
 ///|
@@ -410,18 +541,30 @@ fn page() -> String {
     $|<div class="row"><input id="tooltip" value="Proton taskbar status"><button id="tooltip-apply">Apply tooltip</button></div>
     $|<h2>Thumbnail toolbar</h2><p>Three buttons with generated glyphs. The middle button uses the <code>nobackground</code> flag, so it has no button border.</p>
     $|<div class="row"><button id="buttons-on">Show buttons</button><button id="buttons-off">Clear buttons</button></div>
+    $|<h2>Jump list</h2><p>Tasks category with a separator, plus a custom "Recent sessions" category. Right-click the taskbar button to review it.</p>
+    $|<div class="row"><button id="jumplist-tasks">Apply tasks</button><button id="jumplist-custom">Apply tasks + custom</button><button id="jumplist-remove">Remove jump list</button></div>
     $|<p id="status" role="status" aria-live="polite">Ready.</p>
     $|<ul id="log"></ul>
     $|<p class="note">Hover the taskbar button after each step: the progress bar sits under the icon, the badge is the red disc in the corner, and the tooltip appears over the thumbnail. macOS and Linux accept the overlay and tooltip calls without changing anything, matching Electron.</p>
     $|</main>
-    $|<script>const status=document.querySelector('#status'),log=document.querySelector('#log');const invoke=(name,payload)=>window.__MoonBit__.core.invokeOp('ext:taskbarStatus/'+name,payload);function record(message){status.textContent=message;const item=document.createElement('li');item.textContent=message;log.prepend(item);while(log.children.length>8)log.lastElementChild.remove()}window.taskbarStatus={record};async function send(name,payload){try{const data=await invoke(name,payload);record(data.ok?data.message:'failed: '+data.message)}catch(error){record(String(error))}}document.querySelectorAll('[data-progress]').forEach(button=>button.addEventListener('click',()=>void send('setProgress',{value:Number(button.dataset.progress),mode:button.dataset.mode})));document.querySelector('#overlay-on').addEventListener('click',()=>void send('setOverlay',{visible:true}));document.querySelector('#overlay-off').addEventListener('click',()=>void send('setOverlay',{visible:false}));document.querySelector('#tooltip-apply').addEventListener('click',()=>void send('setTooltip',{text:document.querySelector('#tooltip').value}));document.querySelector('#buttons-on').addEventListener('click',()=>void send('setButtons',{visible:true}));document.querySelector('#buttons-off').addEventListener('click',()=>void send('setButtons',{visible:false}));</script>
+    $|<script>const status=document.querySelector('#status'),log=document.querySelector('#log');const invoke=(name,payload)=>window.__MoonBit__.core.invokeOp('ext:taskbarStatus/'+name,payload);function record(message){status.textContent=message;const item=document.createElement('li');item.textContent=message;log.prepend(item);while(log.children.length>8)log.lastElementChild.remove()}window.taskbarStatus={record};async function send(name,payload){try{const data=await invoke(name,payload);record(data.ok?data.message:'failed: '+data.message)}catch(error){record(String(error))}}document.querySelectorAll('[data-progress]').forEach(button=>button.addEventListener('click',()=>void send('setProgress',{value:Number(button.dataset.progress),mode:button.dataset.mode})));document.querySelector('#overlay-on').addEventListener('click',()=>void send('setOverlay',{visible:true}));document.querySelector('#overlay-off').addEventListener('click',()=>void send('setOverlay',{visible:false}));document.querySelector('#tooltip-apply').addEventListener('click',()=>void send('setTooltip',{text:document.querySelector('#tooltip').value}));document.querySelector('#buttons-on').addEventListener('click',()=>void send('setButtons',{visible:true}));document.querySelector('#buttons-off').addEventListener('click',()=>void send('setButtons',{visible:false}));document.querySelector('#jumplist-tasks').addEventListener('click',()=>void send('setJumpList',{mode:'tasks'}));document.querySelector('#jumplist-custom').addEventListener('click',()=>void send('setJumpList',{mode:'custom'}));document.querySelector('#jumplist-remove').addEventListener('click',()=>void send('setJumpList',{mode:'remove'}));</script>
     $|</body></html>
   )
 }
 
 ///|
 async fn main {
-  @proton.html("Taskbar Status", page(), width=900, height=760, debug=true)
+  let app = @proton.html(
+    "Taskbar Status",
+    page(),
+    width=900,
+    height=760,
+    debug=true,
+  )
+  executable_path.val = app.path(@proton.AppPathKind::Executable) catch {
+    _ => ""
+  }
+  app
   .identifier("dev.proton.78-taskbar-status")
   .commands(register_commands)
   .on_thumbar_button_click(fn(_window, id) noraise { report_click(id) })
