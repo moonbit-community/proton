@@ -72,7 +72,7 @@ async function command(child, text, response) {
 }
 async function accepted(t, owner, id, request = 1) {
   const child = launch(t, id);
-  await until(() => owner.output.includes(`QUEUED ${request}\n`), () => owner.output);
+  await until(() => new RegExp(`QUEUED ${request}\\r?\\n`).test(owner.output), () => owner.output);
   owner.stdin.write('pump\n');
   await until(() => child.exitCode !== null, () => child.output);
   assert.equal(child.exitCode, 0, child.output);
@@ -90,7 +90,7 @@ test('startup buffers an activation until a runtime is attached', { timeout: 100
   await new Promise(resolve => setTimeout(resolve, 100));
   assert.equal(secondary.exitCode, null, secondary.output);
   await command(child, 'attach', 'ATTACH 0');
-  await until(() => child.output.includes('QUEUED 1\n'), () => child.output);
+  await until(() => /QUEUED 1\r?\n/.test(child.output), () => child.output);
   child.stdin.write('pump\n');
   await until(() => secondary.exitCode !== null, () => secondary.output);
   assert.equal(secondary.exitCode, 0, secondary.output);
@@ -99,7 +99,7 @@ test('stopping rejects pending and new activations without releasing ownership',
   const { child, id } = await primary(t);
   await command(child, 'attach', 'ATTACH 0');
   const pending = launch(t, id);
-  await until(() => child.output.includes('QUEUED 1\n'), () => child.output);
+  await until(() => /QUEUED 1\r?\n/.test(child.output), () => child.output);
   await command(child, 'stop', 'STOPPED');
   await until(() => pending.exitCode !== null, () => pending.output);
   assert.equal(pending.exitCode, 1);
