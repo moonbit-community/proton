@@ -963,27 +963,14 @@ fn native_window_state(event : @native_ffi.EventHandle) -> WindowState {
 }
 
 ///|
-/// Maps the native theme source code to its typed value. Unknown codes fall
-/// back to `System`, the same rule the appearance query applies.
-fn native_theme_source(code : Int) -> WindowThemePreference {
-  match code {
-    1 => WindowThemePreference::Light
-    2 => WindowThemePreference::Dark
-    _ => WindowThemePreference::System
-  }
-}
-
-///|
 /// Decodes the appearance snapshot a native theme change event carries.
 fn native_theme_snapshot(
   dark_colors : Int,
   high_contrast_colors : Int,
-  source : Int,
 ) -> NativeThemeSnapshot {
   {
     dark_colors: dark_colors != 0,
     high_contrast_colors: high_contrast_colors != 0,
-    source: native_theme_source(source),
   }
 }
 
@@ -1297,7 +1284,6 @@ fn decode_native_runtime_event(
         native_theme_snapshot(
           @native_ffi.event_int(event, 3),
           @native_ffi.event_int(event, 4),
-          @native_ffi.event_int(event, 0),
         ),
       )
     44 =>

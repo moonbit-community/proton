@@ -64,7 +64,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       app_instance~,
       last_window_closed_policy=self.last_window_closed_policy_value,
       launch_input_handlers=self.launch_input_handlers,
-      native_theme_handlers=self.native_theme_handlers,
+      system_appearance_handlers=self.system_appearance_handlers,
       thumbar_button_handlers=self.thumbar_button_handlers,
       planned_views=self.planned_views.map(view => (view.0, view.1.to_native())),
       window_event_handlers=self.window_event_handlers,
@@ -205,7 +205,7 @@ async fn run_manifest(
   launch_input_handlers? : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ] = [],
-  native_theme_handlers? : Array[async (NativeTheme) -> Unit noraise] = [],
+  system_appearance_handlers? : Array[async (SystemAppearance) -> Unit noraise] = [],
   thumbar_button_handlers? : Array[async (WindowHandle, String) -> Unit noraise] = [],
   window_event_handlers? : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
@@ -450,7 +450,7 @@ async fn run_manifest(
           forward_menu_events,
           bridge_enabled,
           launch_input_handlers,
-          native_theme_handlers,
+          system_appearance_handlers,
           thumbar_button_handlers,
           window_event_handlers,
           application_tasks,

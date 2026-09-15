@@ -143,9 +143,7 @@ moon -C examples run 01_run --target native
 - `76_process_extension`: renderer-facing child-process review covering spawn,
   PID reporting, natural exit and wait, explicit kill followed by wait, and
   process activity events.
-- `77_native_theme`: manual Electron-style `nativeTheme` review covering the
-  appearance query, `themeSource` overrides with a native readback, and the
-  updated event raised by an operating system appearance change.
+- `77_native_theme`: system appearance query and change events, independent of window theme overrides.
 - `78_taskbar_status`: manual Electron-style taskbar status review covering
   progress modes, the overlay icon built from a native image, and the thumbnail
   tooltip on the Windows taskbar button, plus a thumbnail toolbar whose button

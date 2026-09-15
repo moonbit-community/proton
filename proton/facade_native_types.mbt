@@ -539,110 +539,64 @@ fn ViewState::from_native(state : @native.ViewState) -> ViewState {
 }
 
 ///|
-/// Describes the operating system appearance reported by the native theme
-/// query.
-pub(all) struct NativeTheme {
-  dark_colors : Bool
-  high_contrast_colors : Bool
-  source : WindowThemePreference
+/// The light or dark color scheme reported by the operating system.
+pub(all) enum ColorScheme {
+  Light
+  Dark
+} derive(Eq, Debug)
+
+///|
+/// A read-only snapshot of system appearance, independent of window preferences.
+pub(all) struct SystemAppearance {
+  color_scheme : ColorScheme
+  high_contrast : Bool
+} derive(Eq, Debug)
+
+///|
+pub extend ColorScheme with Eq::{not_equal, equal}
+
+///|
+pub extend ColorScheme with Debug::{to_repr}
+
+///|
+pub extend SystemAppearance with Eq::{not_equal, equal}
+
+///|
+pub extend SystemAppearance with Debug::{to_repr}
+
+///|
+/// Raised when system appearance cannot be read.
+pub(all) suberror SystemAppearanceError {
+  SystemAppearanceUnavailable(status~ : Int, detail~ : String)
 }
 
 ///|
-/// Raised when the operating system appearance cannot be read.
-pub(all) suberror NativeThemeError {
-  NativeThemeUnavailable(status~ : Int, detail~ : String)
-}
-
-///|
-pub fn NativeTheme::should_use_dark_colors(self : NativeTheme) -> Bool {
-  self.dark_colors
-}
-
-///|
-pub fn NativeTheme::should_use_high_contrast_colors(self : NativeTheme) -> Bool {
-  self.high_contrast_colors
-}
-
-///|
-/// Reports the application theme source that drives the snapshot, matching
-/// Electron's `nativeTheme.themeSource`.
-pub fn NativeTheme::theme_source(self : NativeTheme) -> WindowThemePreference {
-  self.source
-}
-
-///|
-fn NativeTheme::from_native(
+fn SystemAppearance::from_native(
   snapshot : @native.NativeThemeSnapshot,
-) -> NativeTheme {
+) -> SystemAppearance {
   {
-    dark_colors: snapshot.dark_colors,
-    high_contrast_colors: snapshot.high_contrast_colors,
-    source: match snapshot.source {
-      @native.WindowThemePreference::System => WindowThemePreference::System
-      @native.WindowThemePreference::Light => WindowThemePreference::Light
-      @native.WindowThemePreference::Dark => WindowThemePreference::Dark
+    color_scheme: if snapshot.dark_colors {
+      Dark
+    } else {
+      Light
     },
+    high_contrast: snapshot.high_contrast_colors,
   }
 }
 
 ///|
-fn native_theme_source_code(source : WindowThemePreference) -> Int {
-  match source {
-    WindowThemePreference::System => 0
-    WindowThemePreference::Light => 1
-    WindowThemePreference::Dark => 2
-  }
-}
-
-///|
-fn native_theme_source_from_code(code : Int) -> WindowThemePreference {
-  match code {
-    1 => WindowThemePreference::Light
-    2 => WindowThemePreference::Dark
-    _ => WindowThemePreference::System
-  }
-}
-
-///|
-/// Overrides the application-level theme source, matching Electron's
-/// `nativeTheme.themeSource`.
-///
-/// `Light` and `Dark` win over the operating system value reported by
-/// `native_theme()`; `System` restores the operating system value. Per-window
-/// `WindowHandle::set_window_theme` stays authoritative for that window's
-/// chrome.
-pub fn native_theme_set_source(
-  source : WindowThemePreference,
-) -> Unit raise NativeThemeError {
-  @native.native_theme_set_source(native_theme_source_code(source)) catch {
+/// Reads the current system appearance without requiring a running session.
+/// Window theme preferences do not affect this snapshot. An unavailable native
+/// appearance source raises an error instead of reporting a default light theme.
+pub fn system_appearance() -> SystemAppearance raise SystemAppearanceError {
+  let (dark_colors, high_contrast_colors) = @native.native_theme_query() catch {
     error =>
-      raise NativeThemeUnavailable(
+      raise SystemAppearanceUnavailable(
         status=error.status(),
         detail=error.message(),
       )
   }
-}
-
-///|
-/// Reports the operating system appearance Proton follows.
-///
-/// Mirrors Electron's `nativeTheme` query surface: it is window independent
-/// and does not require a running session. Renderer `prefers-color-scheme`
-/// keeps following the operating system, because the current CEF public API
-/// exposes no renderer color-scheme override.
-pub fn native_theme() -> NativeTheme raise NativeThemeError {
-  let (dark_colors, high_contrast_colors, source) = @native.native_theme_query() catch {
-    error =>
-      raise NativeThemeUnavailable(
-        status=error.status(),
-        detail=error.message(),
-      )
-  }
-  {
-    dark_colors,
-    high_contrast_colors,
-    source: native_theme_source_from_code(source),
-  }
+  SystemAppearance::from_native({ dark_colors, high_contrast_colors, })
 }
 
 ///|

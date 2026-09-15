@@ -12,7 +12,7 @@ fn RuntimeSession::RuntimeSession(
   launch_input_handlers : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ],
-  native_theme_handlers : Array[async (NativeTheme) -> Unit noraise],
+  system_appearance_handlers : Array[async (SystemAppearance) -> Unit noraise],
   thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise],
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
@@ -60,7 +60,7 @@ fn RuntimeSession::RuntimeSession(
     application_tasks,
     last_window_closed_policy,
     launch_input_handlers,
-    native_theme_handlers,
+    system_appearance_handlers,
     thumbar_button_handlers,
     window_event_handlers,
     view_event_handlers,
@@ -3183,7 +3183,7 @@ fn RuntimeSession::dispatch_runtime_event(
   self.dispatch_resource_event(event)
   self.dispatch_notification_event(event)
   self.dispatch_launch_input_event(event)
-  self.dispatch_native_theme_event(event)
+  self.dispatch_system_appearance_event(event)
   self.dispatch_thumbar_button_event(event)
   self.dispatch_menu_event(event)
   match event.bridge_request() {
@@ -4086,15 +4086,15 @@ fn RuntimeSession::dispatch_thumbar_button_event(
 
 ///|
 /// Forwards an operating system appearance change to the application
-/// handlers, mirroring Electron's `nativeTheme.on("updated")`.
-fn RuntimeSession::dispatch_native_theme_event(
+/// handlers with the captured system appearance snapshot.
+fn RuntimeSession::dispatch_system_appearance_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
 ) -> Unit {
   match event.native_theme_change() {
     Some(snapshot) => {
-      let theme = NativeTheme::from_native(snapshot)
-      for handler in self.native_theme_handlers {
+      let theme = SystemAppearance::from_native(snapshot)
+      for handler in self.system_appearance_handlers {
         ignore(self.application_tasks.spawn(() => handler(theme), no_wait=true))
       }
     }

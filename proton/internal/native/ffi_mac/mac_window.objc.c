@@ -74,18 +74,22 @@ static void proton_engine_window_apply_theme_preference(
   if (window == NULL || window->window == nil) {
     return;
   }
-  switch (window->theme_preference) {
-  case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
-    [window->window
-        setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameAqua]];
-    break;
-  case PROTON_WINDOW_THEME_PREFERENCE_DARK:
-    [window->window
-        setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]];
-    break;
-  case PROTON_WINDOW_THEME_PREFERENCE_SYSTEM:
-    [window->window setAppearance:nil];
-    break;
+  // This can run directly from MoonBit, outside the event-pump pool.
+  // Drain AppKit temporary references before a subsequent window close.
+  @autoreleasepool {
+    switch (window->theme_preference) {
+    case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
+      [window->window
+          setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameAqua]];
+      break;
+    case PROTON_WINDOW_THEME_PREFERENCE_DARK:
+      [window->window
+          setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameDarkAqua]];
+      break;
+    case PROTON_WINDOW_THEME_PREFERENCE_SYSTEM:
+      [window->window setAppearance:nil];
+      break;
+    }
   }
 }
 
@@ -104,51 +108,26 @@ static proton_window_theme_t proton_engine_window_effective_theme(
              : PROTON_WINDOW_THEME_LIGHT;
 }
 
-static int32_t g_native_theme_source = PROTON_WINDOW_THEME_PREFERENCE_SYSTEM;
-
 int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
                                          int32_t *out_high_contrast_colors,
-                                         int32_t *out_source,
                                          char *error,
                                          size_t error_len) {
-  if (out_dark_colors == NULL || out_high_contrast_colors == NULL ||
-      out_source == NULL) {
+  if (out_dark_colors == NULL || out_high_contrast_colors == NULL) {
     proton_engine_set_message(error, error_len, "theme outputs are required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  int32_t dark_colors =
-      proton_engine_window_effective_theme(NULL) == PROTON_WINDOW_THEME_DARK
-          ? 1
-          : 0;
-  switch (g_native_theme_source) {
-  case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
-    dark_colors = 0;
-    break;
-  case PROTON_WINDOW_THEME_PREFERENCE_DARK:
-    dark_colors = 1;
-    break;
-  default:
-    break;
+  @autoreleasepool {
+    // Read the global preference, independent of NSApp and per-window appearance.
+    // A missing AppleInterfaceStyle is the system's default light appearance.
+    NSDictionary *preferences = [[NSUserDefaults standardUserDefaults]
+        persistentDomainForName:NSGlobalDomain];
+    int32_t dark_colors = [preferences[@"AppleInterfaceStyle"]
+        isEqualToString:@"Dark"] ? 1 : 0;
+    *out_dark_colors = dark_colors;
+    *out_high_contrast_colors =
+        NSWorkspace.sharedWorkspace.accessibilityDisplayShouldIncreaseContrast ? 1
+                                                                              : 0;
   }
-  *out_dark_colors = dark_colors;
-  *out_high_contrast_colors =
-      NSWorkspace.sharedWorkspace.accessibilityDisplayShouldIncreaseContrast ? 1
-                                                                            : 0;
-  *out_source = g_native_theme_source;
-  return PROTON_OK;
-}
-
-int32_t proton_engine_native_theme_set_source(int32_t source,
-                                              char *error,
-                                              size_t error_len) {
-  if (source != PROTON_WINDOW_THEME_PREFERENCE_SYSTEM &&
-      source != PROTON_WINDOW_THEME_PREFERENCE_LIGHT &&
-      source != PROTON_WINDOW_THEME_PREFERENCE_DARK) {
-    proton_engine_set_message(error, error_len, "unknown theme source");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  g_native_theme_source = source;
-  proton_engine_publish_native_theme_change();
   return PROTON_OK;
 }
 
@@ -1141,7 +1120,6 @@ int32_t proton_engine_window_create(
     [(ProtonWindow *)window->window setButtonOwner:window];
     [window->window layoutIfNeeded];
   }
-
 
   window->initial_url =
       proton_engine_strdup(config.initial_url[0] != '\0' ? config.initial_url
@@ -2818,6 +2796,5 @@ int32_t proton_engine_window_clear_bridge_failure(
   proton_engine_bridge_lifecycle_clear_failure(&window->bridge_lifecycle);
   return PROTON_OK;
 }
-
 
 #endif

@@ -29,15 +29,13 @@ pub fn is_packaged() -> Bool
 
 pub fn native_image() -> NativeImage raise NativeImageError
 
-pub fn native_theme() -> NativeTheme raise NativeThemeError
-
-pub fn native_theme_set_source(WindowThemePreference) -> Unit raise NativeThemeError
-
 pub fn resource_dir() -> String
 
 pub fn screens() -> Array[ScreenInfo] raise ScreenQueryError
 
 pub fn set_jump_list(Array[JumpListCategory]?) -> JumpListResult raise AppControlError
+
+pub fn system_appearance() -> SystemAppearance raise SystemAppearanceError
 
 pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError
 
@@ -174,13 +172,6 @@ pub fn NativeImageError::output(Self, &Logger) -> Unit
 pub fn NativeImageError::to_repr(Self) -> @debug.Repr
 pub fn NativeImageError::to_string(Self) -> String
 
-pub(all) suberror NativeThemeError {
-  NativeThemeUnavailable(status~ : Int, detail~ : String)
-}
-pub fn NativeThemeError::message(Self) -> String
-pub fn NativeThemeError::output(Self, &Logger) -> Unit
-pub fn NativeThemeError::to_string(Self) -> String
-
 pub(all) suberror NotificationDeliveryError {
   NativeFailure(status~ : Int, detail~ : String)
   WaitInterrupted(detail~ : String)
@@ -198,6 +189,13 @@ pub fn ScreenQueryError::message(Self) -> String
 pub fn ScreenQueryError::output(Self, &Logger) -> Unit
 pub fn ScreenQueryError::to_repr(Self) -> @debug.Repr
 pub fn ScreenQueryError::to_string(Self) -> String
+
+pub(all) suberror SystemAppearanceError {
+  SystemAppearanceUnavailable(status~ : Int, detail~ : String)
+}
+pub fn SystemAppearanceError::message(Self) -> String
+pub fn SystemAppearanceError::output(Self, &Logger) -> Unit
+pub fn SystemAppearanceError::to_string(Self) -> String
 
 pub(all) suberror SystemLocaleError {
   NativeQuery(status~ : Int, detail~ : String)
@@ -261,10 +259,10 @@ pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit
 pub fn App::on_download_request(Self, async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise) -> Self
 pub fn App::on_launch_input(Self, async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise) -> Self
 pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise) -> Self
-pub fn App::on_native_theme_change(Self, async (NativeTheme) -> Unit noraise) -> Self
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_new_window_request(Self, async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 pub fn App::on_permission_request(Self, async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise) -> Self
+pub fn App::on_system_appearance_change(Self, async (SystemAppearance) -> Unit noraise) -> Self
 pub fn App::on_thumbar_button_click(Self, async (WindowHandle, String) -> Unit noraise) -> Self
 pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub fn App::on_view_event(Self, async (ViewHandle, ViewEvent) -> Unit noraise) -> Self
@@ -458,6 +456,14 @@ pub(all) struct CertificateError {
 pub fn CertificateError::equal(Self, Self) -> Bool
 pub fn CertificateError::not_equal(Self, Self) -> Bool
 pub fn CertificateError::to_repr(Self) -> @debug.Repr
+
+pub(all) enum ColorScheme {
+  Light
+  Dark
+} derive(Eq, @debug.Debug)
+pub fn ColorScheme::equal(Self, Self) -> Bool
+pub fn ColorScheme::not_equal(Self, Self) -> Bool
+pub fn ColorScheme::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Cookie {
   name : String
@@ -664,15 +670,6 @@ pub fn NativeImage::to_bitmap(Self, scale_factor? : Double) -> (Bytes, Int, Int)
 pub fn NativeImage::to_jpeg(Self, scale_factor? : Double, quality? : Int) -> (Bytes, Int, Int) raise NativeImageError
 pub fn NativeImage::to_png(Self, scale_factor? : Double, with_transparency? : Bool) -> (Bytes, Int, Int) raise NativeImageError
 
-pub(all) struct NativeTheme {
-  dark_colors : Bool
-  high_contrast_colors : Bool
-  source : WindowThemePreference
-}
-pub fn NativeTheme::should_use_dark_colors(Self) -> Bool
-pub fn NativeTheme::should_use_high_contrast_colors(Self) -> Bool
-pub fn NativeTheme::theme_source(Self) -> WindowThemePreference
-
 pub(all) enum NavigationDecision {
   Allow
   Deny
@@ -855,6 +852,14 @@ pub(all) enum StorageDataKind {
 pub fn StorageDataKind::equal(Self, Self) -> Bool
 pub fn StorageDataKind::not_equal(Self, Self) -> Bool
 pub fn StorageDataKind::to_repr(Self) -> @debug.Repr
+
+pub(all) struct SystemAppearance {
+  color_scheme : ColorScheme
+  high_contrast : Bool
+} derive(Eq, @debug.Debug)
+pub fn SystemAppearance::equal(Self, Self) -> Bool
+pub fn SystemAppearance::not_equal(Self, Self) -> Bool
+pub fn SystemAppearance::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ThumbarButton {
   id : String

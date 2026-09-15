@@ -655,11 +655,9 @@ int32_t proton_image_to_bitmap(proton_image_handle_t image,
 int32_t proton_last_error_message(char *buffer,
                                              int32_t buffer_len);
 
-/* nativeTheme: reports the operating system appearance. */
+/* System appearance: reports the operating system appearance. */
 int32_t proton_native_theme_query(int32_t *out_dark_colors,
-                                  int32_t *out_high_contrast_colors,
-                                  int32_t *out_source);
-int32_t proton_native_theme_set_source(int32_t source);
+                                  int32_t *out_high_contrast_colors);
 
 #ifdef __cplusplus
 }

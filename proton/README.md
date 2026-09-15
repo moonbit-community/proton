@@ -421,61 +421,50 @@ application, configure the app before startup:
 .run_or_abort()
 ```
 
-## Native theme
+## System appearance
 
-`native_theme()` reports the appearance Proton follows and needs no running
-session. It mirrors Electron's `nativeTheme` query surface:
-
-```moonbit
-let theme = @proton.native_theme() catch {
-  error => abort(error.message())
-}
-let dark = theme.should_use_dark_colors()
-let high_contrast = theme.should_use_high_contrast_colors()
-let source = theme.theme_source()
-```
-
-`native_theme_set_source` assigns the application-level source, mirroring
-`nativeTheme.themeSource`. `System` follows the operating system; `Light` and
-`Dark` win over it for every window that does not configure its own theme.
-Per-window `WindowHandle::set_window_theme` stays authoritative for that
-window's chrome.
+`system_appearance()` reads a system appearance snapshot independently of
+window theme preferences. No running session is required; unavailable platform
+settings raise `SystemAppearanceError` instead of returning a light fallback.
 
 ```moonbit
-@proton.native_theme_set_source(@proton.WindowThemePreference::Dark) catch {
+let appearance = @proton.system_appearance() catch {
   error => abort(error.message())
 }
+let dark = appearance.color_scheme == @proton.ColorScheme::Dark
+let high_contrast = appearance.high_contrast
 ```
 
-`App::on_native_theme_change` registers the application-level equivalent of
-Electron's `nativeTheme.on("updated")`. It runs when the operating system
-appearance changes (system theme, high contrast) or when the application moves
-`themeSource`. The handler runs on the application task group and receives the
-new snapshot; Electron hands the event no payload, so Proton supplies one
-instead of making every handler re-read a value that may already have moved on.
-One event is raised per observable change: repeating system broadcasts and
-redundant `themeSource` writes do not raise another.
+`App::on_system_appearance_change` receives a snapshot when the system color
+scheme or contrast changes. Registration does not invoke the handler: query
+explicitly for the initial state. Duplicate native notifications are coalesced.
+Handlers run on the application task group.
 
 ```moonbit
 @proton.html("Theme aware", "<main><h1>Hello</h1></main>")
-.on_native_theme_change(fn(theme) noraise {
-  // theme.should_use_dark_colors(), theme.should_use_high_contrast_colors()
+.on_system_appearance_change(fn(appearance) noraise {
+  // Apply appearance.color_scheme and appearance.high_contrast to custom UI.
 })
 .run_or_abort()
 ```
 
-Renderer `prefers-color-scheme` keeps following the operating system: the
-current CEF public API exposes no renderer color-scheme override. A
-`themeSource` override therefore changes the application snapshot and the
-native window chrome, not the page media query. `examples/77_native_theme`
-contains the manual review flow, including a native readback after every
-override.
+Applications own their light/dark/system preference. Configure native window
+chrome with `App::theme` or `WindowHandle::set_theme`; these do not alter
+system appearance or emit system appearance events. Pages can follow the system
+with CSS `prefers-color-scheme`, or apply an application-owned theme explicitly.
+Proton does not synchronize a window preference into page CSS.
 
-Platform notes: macOS follows the application-level effective appearance and
-the accessibility contrast option; Linux follows GTK's theme name and
-prefer-dark setting. Windows announces the change through the top-level window
-message broadcast, so an application that runs with no window at all reports
-the change when a window exists again.
+Migration: `system_appearance()` replaces `native_theme()` and
+`on_system_appearance_change` replaces `on_native_theme_change`. The snapshot
+has `color_scheme` and `high_contrast` fields instead of getters and a `source`.
+`native_theme_set_source()` is removed: it only overrode reported state, without
+applying an application theme. Store that preference in application state.
+
+Platform notes: macOS reads the global appearance preference and accessibility
+contrast option. Linux reads GTK's theme name and prefer-dark setting; without
+GTK settings the query fails. Windows observes changes through window messages,
+so notifications require a native window. See `examples/77_native_theme` for a
+window override and system appearance review.
 
 ## Application locale
 
