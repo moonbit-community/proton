@@ -704,6 +704,8 @@ int32_t proton_internal_window_create(
     proton_runtime_handle_t runtime, const char *title, int32_t width,
     int32_t height, const char *initial_url, int32_t size_hint,
     int32_t titlebar_overlay, int32_t theme_preference,
+    int32_t button_position_custom, int32_t button_position_x,
+    int32_t button_position_y,
     int32_t navigation_policy,
     const char *titlebar_minimize_label, const char *titlebar_maximize_label,
     const char *titlebar_restore_label, const char *titlebar_close_label,
@@ -731,6 +733,9 @@ int32_t proton_internal_window_create(
   if (status != PROTON_OK) {
     return status;
   }
+  config.button_position_custom = button_position_custom;
+  config.button_position_x = button_position_x;
+  config.button_position_y = button_position_y;
   int64_t logical_id = proton_runtime_reserve_window_id(runtime_slot);
   config.public_window = logical_id;
 
@@ -1454,6 +1459,49 @@ int32_t proton_window_set_closable(proton_window_handle_t window,
       slot->engine_window, closable, engine_error, sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_set_button_position(
+    proton_window_handle_t window, int32_t custom, int32_t x, int32_t y) {
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED, "native engine required");
+  }
+  char error[512] = {0};
+  status = proton_engine_window_set_button_position(
+      slot->engine_window, custom, x, y, error, sizeof(error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_get_button_position(
+    proton_window_handle_t window, int32_t *custom, int32_t *x, int32_t *y) {
+  if (custom == NULL || x == NULL || y == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "output position is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED, "native engine required");
+  }
+  char error[512] = {0};
+  status = proton_engine_window_get_button_position(
+      slot->engine_window, custom, x, y, error, sizeof(error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, error);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;

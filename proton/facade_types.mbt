@@ -699,6 +699,8 @@ pub struct WindowHandle {
   set_window_maximizable : (Bool) -> Unit raise WindowSessionError
   set_window_closable : (Bool) -> Unit raise WindowSessionError
   set_window_button_visibility : (Bool) -> Unit raise WindowSessionError
+  write_window_button_position : (WindowButtonPosition?) -> Unit raise WindowSessionError
+  read_window_button_position : () -> WindowButtonPosition? raise WindowSessionError
   set_window_focusable : (Bool) -> Unit raise WindowSessionError
   set_window_fullscreenable : (Bool) -> Unit raise WindowSessionError
   set_window_has_shadow : (Bool) -> Unit raise WindowSessionError

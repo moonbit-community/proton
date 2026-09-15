@@ -86,6 +86,9 @@ typedef struct {
   int32_t height;
   int32_t size_hint;
   int32_t titlebar_overlay;
+  int32_t button_position_custom;
+  int32_t button_position_x;
+  int32_t button_position_y;
   proton_window_theme_preference_t theme_preference;
   char titlebar_minimize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char titlebar_maximize_label[PROTON_ENGINE_MAX_LABEL_BYTES];
@@ -307,6 +310,12 @@ int32_t proton_engine_window_set_maximizable(
 int32_t proton_engine_window_set_closable(
     proton_engine_window_t *window, int32_t closable, char *error,
     size_t error_len);
+int32_t proton_engine_window_set_button_position(
+    proton_engine_window_t *window, int32_t custom, int32_t x, int32_t y,
+    char *error, size_t error_len);
+int32_t proton_engine_window_get_button_position(
+    proton_engine_window_t *window, int32_t *custom, int32_t *x, int32_t *y,
+    char *error, size_t error_len);
 int32_t proton_engine_window_set_button_visibility(
     proton_engine_window_t *window, int32_t visible, char *error,
     size_t error_len);
@@ -693,5 +702,7 @@ int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
 int32_t proton_engine_native_theme_set_source(int32_t source,
                                               char *error,
                                               size_t error_len);
+
+
 
 #endif

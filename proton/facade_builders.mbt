@@ -186,6 +186,7 @@ pub fn App::title(self : App, title : String) -> App {
     self.window.width,
     self.window.height,
     size_hint=self.window.size_hint,
+    traffic_light_position?=self.window.traffic_light_position,
     titlebar_style=self.window.titlebar_style,
     theme=self.window.theme_preference,
   )
@@ -200,6 +201,7 @@ pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
     width,
     height,
     size_hint=self.window.size_hint,
+    traffic_light_position?=self.window.traffic_light_position,
     titlebar_style=self.window.titlebar_style,
     theme=self.window.theme_preference,
   )
@@ -215,6 +217,7 @@ pub fn App::titlebar_style(self : App, style : TitlebarStyle) -> App {
     self.window.width,
     self.window.height,
     size_hint=self.window.size_hint,
+    traffic_light_position?=self.window.traffic_light_position,
     titlebar_style=match style {
       Default => @manifest.TitlebarStyle::Default
       Overlay => @manifest.TitlebarStyle::Overlay
@@ -235,6 +238,7 @@ pub fn App::theme(self : App, theme : WindowThemePreference) -> App {
     self.window.width,
     self.window.height,
     size_hint=self.window.size_hint,
+    traffic_light_position?=self.window.traffic_light_position,
     titlebar_style=self.window.titlebar_style,
     theme=manifest_window_theme(theme),
   )
@@ -695,6 +699,7 @@ pub fn App::add_window(
   size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
   theme? : WindowThemePreference = WindowThemePreference::System,
+  traffic_light_position? : WindowButtonPosition,
   open_on_start? : Bool = true,
 ) -> App {
   let normalized_id = id.trim().to_owned()
@@ -730,6 +735,7 @@ pub fn App::add_window(
         size_hint=manifest_window_size_hint(size_hint),
         titlebar_style=manifest_titlebar_style(titlebar_style),
         theme=manifest_window_theme(theme),
+        traffic_light_position?=traffic_light_position.map(p => (p.x, p.y)),
       ),
       entry,
       open_on_start~,
@@ -887,4 +893,20 @@ fn renderer_capability_targets(
     Some(targets) => targets.copy()
     None => [RendererTarget::entry()]
   }
+}
+
+///|
+/// Places the macOS Overlay window buttons in logical pixels from the top left.
+/// Other titlebar styles and platforms ignore this setting.
+pub fn App::traffic_light_position(self : App, x~ : Int, y~ : Int) -> App {
+  self.window = @manifest.WindowManifest(
+    self.window.title,
+    self.window.width,
+    self.window.height,
+    size_hint=self.window.size_hint,
+    titlebar_style=self.window.titlebar_style,
+    theme=self.window.theme_preference,
+    traffic_light_position=(x, y),
+  )
+  self
 }

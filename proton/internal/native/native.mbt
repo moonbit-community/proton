@@ -1528,6 +1528,9 @@ pub fn Window::Window(
     window_size_hint_code(config.size_hint),
     runtime_config_bool(config.titlebar_style is TitlebarStyle::Overlay),
     config.theme_preference.native_value(),
+    runtime_config_bool(config.traffic_light_position is Some(_)),
+    config.traffic_light_position.map(p => p.0).unwrap_or(0),
+    config.traffic_light_position.map(p => p.1).unwrap_or(0),
     browser_policy_code(config.browser.navigation),
     runtime_config_string(config.framework_titlebar_minimize_label),
     runtime_config_string(config.framework_titlebar_maximize_label),
@@ -3686,4 +3689,36 @@ pub fn View::stop_find_in_page(
       },
     ),
   )
+}
+
+///|
+/// Sets an optional window-local button position; unsupported styles are no-ops.
+pub fn Window::set_button_position(
+  self : Window,
+  position : (Int, Int)?,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.window_set_button_position(
+      self.live_handle(),
+      runtime_config_bool(position is Some(_)),
+      position.map(p => p.0).unwrap_or(0),
+      position.map(p => p.1).unwrap_or(0),
+    ),
+  )
+}
+
+///|
+/// Reads the configured button position, rather than system default geometry.
+pub fn Window::button_position(self : Window) -> (Int, Int)? raise NativeError {
+  let custom = Ref(0)
+  let x = Ref(0)
+  let y = Ref(0)
+  check_status(
+    @native_ffi.window_get_button_position(self.live_handle(), custom, x, y),
+  )
+  if custom.val == 0 {
+    None
+  } else {
+    Some((x.val, y.val))
+  }
 }

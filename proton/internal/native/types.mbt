@@ -1757,6 +1757,7 @@ struct WindowConfig {
   initial_url : String
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
+  traffic_light_position : (Int, Int)?
   theme_preference : WindowThemePreference
   browser : BrowserPolicy
   bridge : BridgeConfig?
@@ -1855,6 +1856,7 @@ pub fn WindowConfig::WindowConfig(
   initial_url? : String = "about:blank",
   size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
+  traffic_light_position? : (Int, Int),
   theme? : WindowThemePreference = WindowThemePreference::System,
   browser? : BrowserPolicy = BrowserPolicy(),
   bridge? : BridgeConfig,
@@ -1869,6 +1871,7 @@ pub fn WindowConfig::WindowConfig(
     initial_url,
     size_hint,
     titlebar_style,
+    traffic_light_position,
     theme_preference: theme,
     browser,
     bridge,
@@ -1923,6 +1926,7 @@ pub fn WindowConfig::with_framework_titlebar_labels(
     initial_url: self.initial_url,
     size_hint: self.size_hint,
     titlebar_style: self.titlebar_style,
+    traffic_light_position: self.traffic_light_position,
     theme_preference: self.theme_preference,
     browser: self.browser,
     bridge: self.bridge,

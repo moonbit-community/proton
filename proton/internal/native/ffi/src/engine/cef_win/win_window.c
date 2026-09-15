@@ -1313,6 +1313,29 @@ int32_t proton_engine_window_set_closable(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_button_position(
+    proton_engine_window_t *window, int32_t custom, int32_t x, int32_t y,
+    char *error, size_t error_len) {
+  (void)window;
+  (void)custom;
+  (void)x;
+  (void)y;
+  (void)error;
+  (void)error_len;
+  return PROTON_OK;
+}
+int32_t proton_engine_window_get_button_position(
+    proton_engine_window_t *window, int32_t *custom, int32_t *x, int32_t *y,
+    char *error, size_t error_len) {
+  (void)window;
+  (void)error;
+  (void)error_len;
+  *custom = 0;
+  *x = 0;
+  *y = 0;
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_button_visibility(
     proton_engine_window_t *window, int32_t visible, char *error,
     size_t error_len) {
@@ -3031,5 +3054,6 @@ int32_t proton_engine_window_clear_bridge_failure(
   proton_engine_bridge_lifecycle_clear_failure(&window->bridge_lifecycle);
   return PROTON_OK;
 }
+
 
 #endif

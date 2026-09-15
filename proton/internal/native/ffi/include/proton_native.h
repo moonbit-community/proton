@@ -236,6 +236,11 @@ int32_t proton_window_set_maximizable(proton_window_handle_t window,
                                       int32_t maximizable);
 int32_t proton_window_set_closable(proton_window_handle_t window,
                                    int32_t closable);
+/* Optional window-local position of the standard macOS overlay buttons. */
+int32_t proton_window_set_button_position(
+    proton_window_handle_t window, int32_t custom, int32_t x, int32_t y);
+int32_t proton_window_get_button_position(
+    proton_window_handle_t window, int32_t *custom, int32_t *x, int32_t *y);
 int32_t proton_window_set_button_visibility(proton_window_handle_t window,
                                             int32_t visible);
 int32_t proton_window_set_focusable(proton_window_handle_t window,

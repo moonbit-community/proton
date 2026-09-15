@@ -796,6 +796,7 @@ pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState raise Native
 pub fn Window::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
 pub fn Window::browser_is_focused(Self) -> Bool raise NativeError
 pub fn Window::browser_state(Self) -> BrowserState raise NativeError
+pub fn Window::button_position(Self) -> (Int, Int)? raise NativeError
 pub fn Window::clear_auth_cache(Self) -> Unit raise NativeError
 pub fn Window::clear_cache(Self) -> Unit raise NativeError
 pub fn Window::clear_certificate_exceptions(Self) -> Unit raise NativeError
@@ -831,6 +832,7 @@ pub fn Window::set_always_on_top(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_aspect_ratio(Self, Double) -> Unit raise NativeError
 pub fn Window::set_audio_muted(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_background_color(Self, String) -> Unit raise NativeError
+pub fn Window::set_button_position(Self, (Int, Int)?) -> Unit raise NativeError
 pub fn Window::set_button_visibility(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_closable(Self, Bool) -> Unit raise NativeError
 pub fn Window::set_close_interception(Self, Bool) -> Unit raise NativeError
@@ -870,7 +872,7 @@ pub fn Window::stop_find_in_page(Self, Bool) -> Unit raise NativeError
 pub fn Window::take_bridge_failure(Self) -> BridgeDiagnostic? raise NativeError
 
 type WindowConfig derive(Eq, @debug.Debug)
-pub fn WindowConfig::WindowConfig(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, browser? : BrowserPolicy, bridge? : BridgeConfig, web_request_cancel_prefixes? : Array[String], web_request_redirect_prefixes? : Array[(String, String)], web_request_header_prefixes? : Array[(String, String, String)]) -> Self
+pub fn WindowConfig::WindowConfig(title? : String, width? : Int, height? : Int, initial_url? : String, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, traffic_light_position? : (Int, Int), theme? : WindowThemePreference, browser? : BrowserPolicy, bridge? : BridgeConfig, web_request_cancel_prefixes? : Array[String], web_request_redirect_prefixes? : Array[(String, String)], web_request_header_prefixes? : Array[(String, String, String)]) -> Self
 pub fn WindowConfig::equal(Self, Self) -> Bool
 pub fn WindowConfig::not_equal(Self, Self) -> Bool
 pub fn WindowConfig::to_repr(Self) -> @debug.Repr

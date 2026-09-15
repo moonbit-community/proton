@@ -309,6 +309,22 @@ fn RuntimeSession::window_handle(
         window.set_closable(closable)
       })
     },
+    write_window_button_position: position => {
+      self.control_window(id, native_id, "set window button position", window => {
+        window.set_button_position(position.map(p => (p.x, p.y)))
+      })
+    },
+    read_window_button_position: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.window.id() == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      let position = running.window.button_position() catch {
+        error =>
+          raise window_operation_failed("read window button position", error)
+      }
+      position.map(p => WindowButtonPosition::{ x: p.0, y: p.1, })
+    },
     set_window_button_visibility: visible => {
       self.control_window(id, native_id, "set window button visibility", window => {
         window.set_button_visibility(visible)
@@ -4562,4 +4578,23 @@ fn RuntimeSession::forward_menu_command(
       forward_menu_command(window.window, command_id, focused_window)
     _ => ()
   }
+}
+
+///|
+/// Sets the macOS Overlay button position. None restores the system layout.
+/// Other styles and platforms accept this as a no-op.
+pub fn WindowHandle::set_window_button_position(
+  self : WindowHandle,
+  position : WindowButtonPosition?,
+) -> Unit raise WindowSessionError {
+  (self.write_window_button_position)(position)
+}
+
+///|
+/// Returns the custom macOS Overlay position, or None for the system layout
+/// and platforms/styles without custom positioning.
+pub fn WindowHandle::window_button_position(
+  self : WindowHandle,
+) -> WindowButtonPosition? raise WindowSessionError {
+  (self.read_window_button_position)()
 }

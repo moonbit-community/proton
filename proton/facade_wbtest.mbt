@@ -218,6 +218,8 @@ fn test_window_handle(
       }
     },
     set_window_button_visibility: fn(_visible) {  },
+    write_window_button_position: fn(_) {  },
+    read_window_button_position: fn() { None },
     set_window_content_size: (width, height) => {
       match content_size_calls {
         Some(calls) => calls.push((width, height))
@@ -3866,4 +3868,22 @@ test "web request header names reject ASCII case-insensitive duplicates" {
     .validation_error()
     is Some(_),
   )
+}
+
+///|
+test "traffic light position survives primary builder changes" {
+  let app = html("Buttons", "<p>Buttons</p>")
+    .traffic_light_position(x=16, y=18)
+    .title("Renamed")
+    .size(width=800, height=600)
+    .titlebar_style(Overlay)
+    .theme(Dark)
+  assert_eq(app.window.traffic_light_position, Some((16, 18)))
+  app.add_window("second", "Second", Html("second"), titlebar_style=Overlay, traffic_light_position={
+    x: 24,
+    y: 30,
+  })
+  |> ignore
+  assert_eq(app.windows[0].window.traffic_light_position, Some((24, 30)))
+  assert_eq(app.window.traffic_light_position, Some((16, 18)))
 }

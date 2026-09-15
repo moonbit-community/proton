@@ -700,6 +700,7 @@ fn native_window_config(
   let catalog = framework_catalog(preferences)
   @native.WindowConfig(
     title=window.title,
+    traffic_light_position?=window.traffic_light_position,
     width=window.width,
     height=window.height,
     initial_url="about:blank",

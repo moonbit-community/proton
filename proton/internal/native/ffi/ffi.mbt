@@ -482,6 +482,9 @@ pub extern "C" fn window_create(
   size_hint : Int,
   titlebar_overlay : Int,
   theme_preference : Int,
+  button_position_custom : Int,
+  button_position_x : Int,
+  button_position_y : Int,
   navigation_policy : Int,
   titlebar_minimize_label : Bytes,
   titlebar_maximize_label : Bytes,
@@ -1564,3 +1567,20 @@ pub extern "C" fn proton_update_relaunch_ffi(
   error : FixedArray[Byte],
   error_len : Int,
 ) -> Int = "proton_update_relaunch"
+
+///|
+pub extern "C" fn window_set_button_position(
+  window : WindowHandle,
+  custom : Int,
+  x : Int,
+  y : Int,
+) -> Int = "proton_window_set_button_position"
+
+///|
+#borrow(custom, x, y)
+pub extern "C" fn window_get_button_position(
+  window : WindowHandle,
+  custom : Ref[Int],
+  x : Ref[Int],
+  y : Ref[Int],
+) -> Int = "proton_window_get_button_position"

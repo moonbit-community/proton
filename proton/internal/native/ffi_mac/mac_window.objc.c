@@ -624,12 +624,23 @@ int32_t proton_engine_window_get_titlebar_area(
 @interface ProtonWindow : NSWindow {
   BOOL proton_focusable;
   BOOL proton_enabled;
+  BOOL laying_out_buttons;
+  BOOL saved_button_layout;
+  CGFloat default_container_height;
+  NSRect default_button_frames[3];
+  proton_engine_window_t *button_owner;
 }
+- (void)layoutProtonButtons;
+- (void)setButtonOwner:(proton_engine_window_t *)owner;
 - (void)setProtonFocusable:(BOOL)focusable;
 - (void)setProtonEnabled:(BOOL)enabled;
 @end
 
 @implementation ProtonWindow
+- (void)close {
+  button_owner = NULL;
+  [super close];
+}
 - (instancetype)initWithContentRect:(NSRect)contentRect
                           styleMask:(NSWindowStyleMask)style
                             backing:(NSBackingStoreType)backingStoreType
@@ -643,6 +654,94 @@ int32_t proton_engine_window_get_titlebar_area(
     proton_enabled = YES;
   }
   return self;
+}
+
+- (void)setButtonOwner:(proton_engine_window_t *)owner {
+  button_owner = owner;
+}
+
+- (void)layoutProtonButtons {
+  proton_engine_window_t *owner = button_owner;
+  if (laying_out_buttons || owner == NULL || !owner->titlebar_overlay ||
+      owner->content_view == nil || (self.styleMask & NSWindowStyleMaskFullScreen)) {
+    return;
+  }
+  if (!owner->button_position_custom && !saved_button_layout) {
+    return;
+  }
+  laying_out_buttons = YES;
+  const NSWindowButton types[] = {NSWindowCloseButton, NSWindowMiniaturizeButton,
+                                 NSWindowZoomButton};
+  NSButton *buttons[3];
+  for (int i = 0; i < 3; i++) {
+    buttons[i] = [self standardWindowButton:types[i]];
+  }
+  // Resize the titlebar container as well as moving its buttons: otherwise
+  // AppKit clips hit testing to the original titlebar height.
+  NSView *button_parent = buttons[0].superview;
+  NSView *container = button_parent.superview;
+  if (container == nil || buttons[1].superview != button_parent ||
+      buttons[2].superview != button_parent) {
+    laying_out_buttons = NO;
+    return;
+  }
+  if (!saved_button_layout) {
+    default_container_height = NSHeight(container.frame);
+    for (int i = 0; i < 3; i++) {
+      default_button_frames[i] =
+          [container convertRect:buttons[i].bounds fromView:buttons[i]];
+    }
+    saved_button_layout = YES;
+  }
+  NSRect frame = container.frame;
+  CGFloat height = default_container_height;
+  if (owner->button_position_custom) {
+    height = MAX(height,
+                 owner->button_position_y + NSHeight(default_button_frames[0]));
+  }
+  frame.origin.y += NSHeight(frame) - height;
+  frame.size.height = height;
+  [container setFrame:frame];
+  for (int i = 0; i < 3; i++) {
+    NSRect rect = default_button_frames[i];
+    rect.origin.y += height - default_container_height;
+    [buttons[i] setFrame:[button_parent convertRect:rect fromView:container]];
+  }
+  if (owner->button_position_custom) {
+    NSRect cluster =
+        [owner->content_view convertRect:buttons[0].bounds fromView:buttons[0]];
+    for (int i = 1; i < 3; i++) {
+      cluster = NSUnionRect(cluster, [owner->content_view
+          convertRect:buttons[i].bounds fromView:buttons[i]]);
+    }
+    NSRect bounds = owner->content_view.bounds;
+    CGFloat dx = NSMinX(bounds) + owner->button_position_x - NSMinX(cluster);
+    CGFloat dy = NSMaxY(bounds) - owner->button_position_y - NSMaxY(cluster);
+    for (int i = 0; i < 3; i++) {
+      NSRect rect =
+          [owner->content_view convertRect:buttons[i].bounds fromView:buttons[i]];
+      rect.origin.x += dx;
+      rect.origin.y += dy;
+      [buttons[i] setFrame:[button_parent convertRect:rect
+                                            fromView:owner->content_view]];
+    }
+  }
+  laying_out_buttons = NO;
+}
+
+- (void)layoutIfNeeded {
+  [super layoutIfNeeded];
+  [self layoutProtonButtons];
+}
+
+- (void)setFrame:(NSRect)frame display:(BOOL)display {
+  [super setFrame:frame display:display];
+  [self layoutProtonButtons];
+}
+
+- (void)orderWindow:(NSWindowOrderingMode)place relativeTo:(NSInteger)other {
+  [self layoutIfNeeded];
+  [super orderWindow:place relativeTo:other];
 }
 
 - (BOOL)canBecomeKeyWindow {
@@ -671,6 +770,7 @@ int32_t proton_engine_window_get_titlebar_area(
 @implementation ProtonWindowDelegate
 - (void)windowStateDidChange:(NSNotification *)notification {
   (void)notification;
+  if (window != NULL) [window->window layoutIfNeeded];
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 }
 
@@ -938,6 +1038,9 @@ int32_t proton_engine_window_create(
   window->zoom_percent = 100;
   window->titlebar_overlay = config.titlebar_overlay;
   window->window_button_visible = 1;
+  window->button_position_custom = config.button_position_custom;
+  window->button_position_x = config.button_position_x;
+  window->button_position_y = config.button_position_y;
   window->theme_preference = config.theme_preference;
   window->maximizable = 1;
   window->closable = 1;
@@ -1035,6 +1138,8 @@ int32_t proton_engine_window_create(
     delegate->window = window;
     window->delegate = delegate;
     [window->window setDelegate:delegate];
+    [(ProtonWindow *)window->window setButtonOwner:window];
+    [window->window layoutIfNeeded];
   }
 
 
@@ -1734,6 +1839,31 @@ int32_t proton_engine_window_set_closable(
   return PROTON_OK;
 }
 
+int32_t proton_engine_window_set_button_position(
+    proton_engine_window_t *window, int32_t custom, int32_t x, int32_t y,
+    char *error, size_t error_len) {
+  (void)error;
+  (void)error_len;
+  if (!window->headless && window->titlebar_overlay) {
+    window->button_position_custom = custom;
+    window->button_position_x = x;
+    window->button_position_y = y;
+    [window->window layoutIfNeeded];
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  }
+  return PROTON_OK;
+}
+int32_t proton_engine_window_get_button_position(
+    proton_engine_window_t *window, int32_t *custom, int32_t *x, int32_t *y,
+    char *error, size_t error_len) {
+  (void)error;
+  (void)error_len;
+  *custom = !window->headless && window->titlebar_overlay && window->button_position_custom;
+  *x = *custom ? window->button_position_x : 0;
+  *y = *custom ? window->button_position_y : 0;
+  return PROTON_OK;
+}
+
 int32_t proton_engine_window_set_button_visibility(
     proton_engine_window_t *window, int32_t visible, char *error,
     size_t error_len) {
@@ -1757,6 +1887,7 @@ int32_t proton_engine_window_set_button_visibility(
     if (button != nil) button.hidden = visible == 0;
   }
   window->window_button_visible = visible;
+  [window->window layoutIfNeeded];
   return PROTON_OK;
 }
 
