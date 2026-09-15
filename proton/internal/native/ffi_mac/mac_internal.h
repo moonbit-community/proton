@@ -177,6 +177,9 @@ struct proton_engine_window {
   int zoom_percent;
   int titlebar_overlay;
   int window_button_visible;
+  int button_position_custom;
+  int button_position_x;
+  int button_position_y;
   proton_window_theme_preference_t theme_preference;
   NSInteger attention_request_id;
   int headless;

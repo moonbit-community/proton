@@ -151,6 +151,7 @@ moon -C examples run 01_run --target native
   tooltip on the Windows taskbar button, plus a thumbnail toolbar whose button
   clicks reach the application handler, and a custom jump list whose Tasks and
   custom categories are applied and removed from the page.
+- [79_traffic_light_position](79_traffic_light_position/README.md): macOS Overlay native button positioning, reset, and lifecycle checks.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

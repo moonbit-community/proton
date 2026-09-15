@@ -1,0 +1,12 @@
+import {
+  "moonbit-community/proton/internal/native/ffi",
+} for "wbtest"
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "button_position.objc.c" ],
+  link: {
+    "native": { "stub-cc-flags": "${build.PROTON_MAC_OBJC_STUB_CC_FLAGS}" },
+  },
+)

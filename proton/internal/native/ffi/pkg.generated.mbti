@@ -431,11 +431,15 @@ pub fn web_request_config_destroy(WebRequestConfigHandle) -> Unit
 
 pub fn web_request_config_null() -> WebRequestConfigHandle
 
-pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, WebRequestConfigHandle, @ref.Ref[WindowHandle]) -> Int
+pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Int, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, WebRequestConfigHandle, @ref.Ref[WindowHandle]) -> Int
+
+pub fn window_get_button_position(WindowHandle, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
 pub fn window_logical_id(WindowHandle) -> Int64
 
 pub fn window_null() -> WindowHandle
+
+pub fn window_set_button_position(WindowHandle, Int, Int, Int) -> Int
 
 // Errors
 

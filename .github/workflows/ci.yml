@@ -354,6 +354,10 @@ jobs:
               --diagnostic-limit 200 -- --self-hosted
           fi
 
+      - name: Test macOS native button layout
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: moon -C proton test internal/native/ffi_mac/tests/button_position --target native --diagnostic-limit 80
+
       - name: Run macOS windowed close e2e
         if: ${{ matrix.os == 'macos-latest' }}
         timeout-minutes: 5

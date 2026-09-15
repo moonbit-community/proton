@@ -505,3 +505,22 @@ window lifecycle. Events are live, best-effort notifications, not replayable sta
 `SessionHandle::clear_storage_data` supports `Cookies`, `HttpCache`, and
 `AllSupported`. Profile-directory categories such as IndexedDB and
 localStorage are intentionally not cleared while a CEF session is live.
+
+## macOS traffic light position
+
+For Overlay windows, `.traffic_light_position(x=16, y=18)` sets the native
+button group's top-left position in logical pixels (AppKit points). Button size
+and spacing remain system-controlled. Additional windows accept
+`traffic_light_position={ x: 16, y: 18 }` in `add_window`.
+
+`WindowHandle::set_window_button_position(Some({ x: 24, y: 30 }))` changes the
+position; `None` restores the system layout. `window_button_position()` returns
+the custom setting or `None` for the system default. `(0, 0)` is a real custom
+position, not a reset sentinel. Windows, Linux, and ordinary macOS titlebars
+accept position settings as no-ops and return `None`. Live-handle and owner-thread
+validation still applies.
+
+The custom setting is retained during native fullscreen, where AppKit owns the
+controls, and restored on return. The existing frontend `getTitlebarArea()`
+query uses measured native button bounds, so content should use that query
+instead of deriving reserved space from the configured position.

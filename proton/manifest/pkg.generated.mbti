@@ -63,8 +63,9 @@ pub struct WindowManifest {
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
   theme_preference : WindowThemePreference
+  traffic_light_position : (Int, Int)?
 } derive(Eq, @debug.Debug)
-pub fn WindowManifest::WindowManifest(String, Int, Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference) -> Self
+pub fn WindowManifest::WindowManifest(String, Int, Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, traffic_light_position? : (Int, Int)) -> Self
 pub fn WindowManifest::equal(Self, Self) -> Bool
 pub fn WindowManifest::not_equal(Self, Self) -> Bool
 pub fn WindowManifest::output(Self, &Logger) -> Unit

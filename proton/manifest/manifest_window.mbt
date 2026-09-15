@@ -86,6 +86,7 @@ pub struct WindowManifest {
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
   theme_preference : WindowThemePreference
+  traffic_light_position : (Int, Int)?
 } derive(Debug, Eq)
 
 ///|
@@ -111,6 +112,14 @@ pub impl Show for WindowManifest with fn output(self, logger) {
   logger.write_object(self.titlebar_style)
   logger.write_string(", theme_preference: ")
   logger.write_object(self.theme_preference)
+  if self.traffic_light_position is Some(position) {
+    logger.write_string(", traffic_light_position: ")
+    logger.write_string("(")
+    logger.write_string(position.0.to_string())
+    logger.write_string(", ")
+    logger.write_string(position.1.to_string())
+    logger.write_string(")")
+  }
   logger.write_string(" }")
 }
 
@@ -156,6 +165,7 @@ pub fn WindowManifest::WindowManifest(
   size_hint? : WindowSizeHint = WindowSizeHint::None,
   titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
   theme? : WindowThemePreference = WindowThemePreference::System,
+  traffic_light_position? : (Int, Int),
 ) -> WindowManifest {
   WindowManifest::{
     title,
@@ -164,6 +174,7 @@ pub fn WindowManifest::WindowManifest(
     size_hint,
     titlebar_style,
     theme_preference: theme,
+    traffic_light_position,
   }
 }
 

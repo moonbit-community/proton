@@ -989,3 +989,16 @@ fn BridgeDiagnostic::from_native(
     details_truncated: diagnostic.details_truncated,
   }
 }
+
+///|
+/// Top-left position of the native button group, in window-local logical pixels.
+pub(all) struct WindowButtonPosition {
+  x : Int
+  y : Int
+} derive(Debug, Eq)
+
+///|
+pub extend WindowButtonPosition with Eq::{equal, not_equal}
+
+///|
+pub extend WindowButtonPosition with Debug::{to_repr}
