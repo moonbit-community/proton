@@ -38,6 +38,10 @@ pub type ThumbarBuilderHandle
 
 ///|
 #external
+pub type JumpListBuilderHandle
+
+///|
+#external
 pub type BridgeConfigHandle
 
 ///|
@@ -884,6 +888,49 @@ pub extern "C" fn proton_window_set_thumbar_buttons_ffi(
   buttons : ThumbarBuilderHandle,
   out_applied : Ref[Int],
 ) -> Int = "proton_window_set_thumbar_buttons"
+
+///|
+pub extern "C" fn jump_list_builder_null() -> JumpListBuilderHandle = "proton_jump_list_builder_null"
+
+///|
+#borrow(out_builder)
+pub extern "C" fn jump_list_builder_create(
+  out_builder : Ref[JumpListBuilderHandle],
+) -> Int = "proton_jump_list_builder_create"
+
+///|
+#borrow(name)
+pub extern "C" fn jump_list_builder_add_category(
+  builder : JumpListBuilderHandle,
+  kind : Int,
+  name : Bytes,
+) -> Int = "proton_jump_list_builder_add_category"
+
+///|
+#borrow(path, arguments, title, description, icon_path, working_directory)
+pub extern "C" fn jump_list_builder_add_item(
+  builder : JumpListBuilderHandle,
+  kind : Int,
+  path : Bytes,
+  arguments : Bytes,
+  title : Bytes,
+  description : Bytes,
+  icon_path : Bytes,
+  icon_index : Int,
+  working_directory : Bytes,
+) -> Int = "proton_jump_list_builder_add_item"
+
+///|
+pub extern "C" fn jump_list_builder_destroy(
+  builder : JumpListBuilderHandle,
+) -> Unit = "proton_jump_list_builder_destroy"
+
+///|
+#borrow(out_result)
+pub extern "C" fn proton_jump_list_apply_ffi(
+  categories : JumpListBuilderHandle,
+  out_result : Ref[Int],
+) -> Int = "proton_jump_list_apply"
 
 ///|
 pub extern "C" fn proton_window_flash_frame_ffi(

@@ -1,7 +1,6 @@
-#if !defined(__APPLE__)
-
 #include "proton_internal.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,13 +8,18 @@
 
 #if defined(_WIN32)
 #include <windows.h>
-#else
+#include <shlobj.h>
+#include <shobjidl.h>
+#include <propkey.h>
+#elif !defined(__APPLE__)
 #include <gio/gdesktopappinfo.h>
 #include <gio/gio.h>
 #include <spawn.h>
 #include <unistd.h>
 extern char **environ;
 #endif
+
+#if !defined(__APPLE__)
 
 typedef struct proton_relaunch_plan {
   char *executable;
@@ -616,3 +620,529 @@ void proton_process_exit(int32_t exit_code) {
 }
 
 #endif
+
+/* Jump list support. The builder mirrors the menu configuration builder: it
+   owns copies of every string and hands the finished list to one apply call,
+   so the FFI keeps passing typed scalars. */
+typedef struct proton_jump_list_item {
+  int32_t kind;
+  char *path;
+  char *arguments;
+  char *title;
+  char *description;
+  char *icon_path;
+  int32_t icon_index;
+  char *working_directory;
+} proton_jump_list_item_t;
+
+typedef struct proton_jump_list_category {
+  int32_t kind;
+  char *name;
+  proton_jump_list_item_t *items;
+  size_t item_count;
+  size_t item_capacity;
+} proton_jump_list_category_t;
+
+struct proton_jump_list_builder {
+  proton_jump_list_category_t *categories;
+  size_t category_count;
+  size_t category_capacity;
+  /* Items append to the most recent category, in the order the builder
+     receives them. */
+  proton_jump_list_category_t *current;
+};
+
+proton_jump_list_builder_t *proton_jump_list_builder_null(void) {
+  return NULL;
+}
+
+static char *proton_jump_list_duplicate(const char *value) {
+  if (value == NULL || value[0] == '\0') {
+    return NULL;
+  }
+  size_t length = strlen(value);
+  char *copy = (char *)malloc(length + 1);
+  if (copy == NULL) {
+    return NULL;
+  }
+  memcpy(copy, value, length + 1);
+  return copy;
+}
+
+static void proton_jump_list_free_item(proton_jump_list_item_t *item) {
+  free(item->path);
+  free(item->arguments);
+  free(item->title);
+  free(item->description);
+  free(item->icon_path);
+  free(item->working_directory);
+}
+
+int32_t proton_jump_list_builder_create(
+    proton_jump_list_builder_t **out_builder) {
+  if (out_builder == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_builder is required");
+  }
+  *out_builder = NULL;
+  proton_jump_list_builder_t *builder = (proton_jump_list_builder_t *)calloc(
+      1, sizeof(proton_jump_list_builder_t));
+  if (builder == NULL) {
+    return proton_set_error(PROTON_ERR_PLATFORM,
+                            "failed to allocate the jump list builder");
+  }
+  *out_builder = builder;
+  proton_set_error(PROTON_OK, NULL);
+  return PROTON_OK;
+}
+
+int32_t proton_jump_list_builder_add_category(
+    proton_jump_list_builder_t *builder, int32_t kind, const char *name) {
+  if (builder == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "builder is required");
+  }
+  if (kind < PROTON_JUMP_LIST_CATEGORY_TASKS ||
+      kind > PROTON_JUMP_LIST_CATEGORY_FREQUENT) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "jump list category kind is invalid");
+  }
+  if (kind == PROTON_JUMP_LIST_CATEGORY_CUSTOM &&
+      (name == NULL || name[0] == '\0')) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "a custom jump list category requires a name");
+  }
+  if (builder->category_count == builder->category_capacity) {
+    size_t capacity = builder->category_capacity == 0
+                          ? 4
+                          : builder->category_capacity * 2;
+    proton_jump_list_category_t *categories =
+        (proton_jump_list_category_t *)realloc(
+            builder->categories, capacity * sizeof(proton_jump_list_category_t));
+    if (categories == NULL) {
+      return proton_set_error(PROTON_ERR_PLATFORM,
+                              "failed to grow the jump list categories");
+    }
+    builder->categories = categories;
+    builder->category_capacity = capacity;
+  }
+  proton_jump_list_category_t *category =
+      &builder->categories[builder->category_count];
+  memset(category, 0, sizeof(*category));
+  category->kind = kind;
+  category->name = proton_jump_list_duplicate(name);
+  if (kind == PROTON_JUMP_LIST_CATEGORY_CUSTOM && category->name == NULL) {
+    return proton_set_error(PROTON_ERR_PLATFORM,
+                            "failed to copy the jump list category name");
+  }
+  builder->category_count++;
+  builder->current = category;
+  proton_set_error(PROTON_OK, NULL);
+  return PROTON_OK;
+}
+
+int32_t proton_jump_list_builder_add_item(
+    proton_jump_list_builder_t *builder, int32_t kind, const char *path,
+    const char *arguments, const char *title, const char *description,
+    const char *icon_path, int32_t icon_index,
+    const char *working_directory) {
+  if (builder == NULL || builder->current == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "a jump list category is required before an item");
+  }
+  if (kind < PROTON_JUMP_LIST_ITEM_TASK ||
+      kind > PROTON_JUMP_LIST_ITEM_FILE) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "jump list item kind is invalid");
+  }
+  if (kind != PROTON_JUMP_LIST_ITEM_SEPARATOR &&
+      (path == NULL || path[0] == '\0')) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "jump list item path is required");
+  }
+  proton_jump_list_category_t *category = builder->current;
+  if (category->item_count == category->item_capacity) {
+    size_t capacity = category->item_capacity == 0
+                          ? 4
+                          : category->item_capacity * 2;
+    proton_jump_list_item_t *items = (proton_jump_list_item_t *)realloc(
+        category->items, capacity * sizeof(proton_jump_list_item_t));
+    if (items == NULL) {
+      return proton_set_error(PROTON_ERR_PLATFORM,
+                              "failed to grow the jump list items");
+    }
+    category->items = items;
+    category->item_capacity = capacity;
+  }
+  proton_jump_list_item_t *item = &category->items[category->item_count];
+  memset(item, 0, sizeof(*item));
+  item->kind = kind;
+  item->path = proton_jump_list_duplicate(path);
+  item->arguments = proton_jump_list_duplicate(arguments);
+  item->title = proton_jump_list_duplicate(title);
+  item->description = proton_jump_list_duplicate(description);
+  item->icon_path = proton_jump_list_duplicate(icon_path);
+  item->icon_index = icon_index;
+  item->working_directory = proton_jump_list_duplicate(working_directory);
+  if (kind != PROTON_JUMP_LIST_ITEM_SEPARATOR && item->path == NULL) {
+    proton_jump_list_free_item(item);
+    return proton_set_error(PROTON_ERR_PLATFORM,
+                            "failed to copy the jump list item path");
+  }
+  category->item_count++;
+  proton_set_error(PROTON_OK, NULL);
+  return PROTON_OK;
+}
+
+void proton_jump_list_builder_destroy(proton_jump_list_builder_t *builder) {
+  if (builder == NULL) {
+    return;
+  }
+  for (size_t index = 0; index < builder->category_count; index++) {
+    proton_jump_list_category_t *category = &builder->categories[index];
+    for (size_t item_index = 0; item_index < category->item_count;
+         item_index++) {
+      proton_jump_list_free_item(&category->items[item_index]);
+    }
+    free(category->items);
+    free(category->name);
+  }
+  free(builder->categories);
+  free(builder);
+}
+
+#if defined(_WIN32)
+
+static wchar_t *proton_jump_list_wide(const char *value) {
+  if (value == NULL || value[0] == '\0') {
+    return NULL;
+  }
+  int length = MultiByteToWideChar(CP_UTF8, 0, value, -1, NULL, 0);
+  if (length <= 0) {
+    return NULL;
+  }
+  wchar_t *wide = (wchar_t *)malloc((size_t)length * sizeof(wchar_t));
+  if (wide == NULL) {
+    return NULL;
+  }
+  if (MultiByteToWideChar(CP_UTF8, 0, value, -1, wide, length) <= 0) {
+    free(wide);
+    return NULL;
+  }
+  return wide;
+}
+
+/* The longest description Windows accepts before it silently drops the item. */
+#define PROTON_JUMP_LIST_MAX_DESCRIPTION 260
+
+static bool proton_jump_list_set_title(IShellLinkW *link, const wchar_t *title) {
+  if (title == NULL) {
+    return true;
+  }
+  IPropertyStore *store = NULL;
+  if (FAILED(link->lpVtbl->QueryInterface(link, &IID_IPropertyStore,
+                                          (void **)&store)) ||
+      store == NULL) {
+    return false;
+  }
+  PROPVARIANT value;
+  memset(&value, 0, sizeof(value));
+  value.vt = VT_LPWSTR;
+  /* The store copies the string during SetValue, so the caller keeps the
+     buffer. */
+  value.pwszVal = (LPWSTR)title;
+  HRESULT result = store->lpVtbl->SetValue(store, &PKEY_Title, &value);
+  if (SUCCEEDED(result)) {
+    result = store->lpVtbl->Commit(store);
+  }
+  store->lpVtbl->Release(store);
+  return SUCCEEDED(result);
+}
+
+static bool proton_jump_list_append_task(const proton_jump_list_item_t *item,
+                                         IObjectCollection *collection) {
+  if (item->description != NULL) {
+    int description_length =
+        MultiByteToWideChar(CP_UTF8, 0, item->description, -1, NULL, 0);
+    if (description_length - 1 > PROTON_JUMP_LIST_MAX_DESCRIPTION) {
+      return false;
+    }
+  }
+  IShellLinkW *link = NULL;
+  HRESULT result = CoCreateInstance(&CLSID_ShellLink, NULL,
+                                    CLSCTX_INPROC_SERVER, &IID_IShellLinkW,
+                                    (void **)&link);
+  if (FAILED(result) || link == NULL) {
+    return false;
+  }
+  wchar_t *path = proton_jump_list_wide(item->path);
+  wchar_t *arguments = proton_jump_list_wide(item->arguments);
+  wchar_t *description = proton_jump_list_wide(item->description);
+  wchar_t *working_directory = proton_jump_list_wide(item->working_directory);
+  wchar_t *icon_path = proton_jump_list_wide(item->icon_path);
+  wchar_t *title = proton_jump_list_wide(item->title);
+  bool appended = path != NULL &&
+                  SUCCEEDED(link->lpVtbl->SetPath(link, path)) &&
+                  (arguments == NULL ||
+                   SUCCEEDED(link->lpVtbl->SetArguments(link, arguments))) &&
+                  (description == NULL ||
+                   SUCCEEDED(link->lpVtbl->SetDescription(link, description))) &&
+                  (working_directory == NULL ||
+                   SUCCEEDED(link->lpVtbl->SetWorkingDirectory(
+                       link, working_directory))) &&
+                  (icon_path == NULL ||
+                   SUCCEEDED(link->lpVtbl->SetIconLocation(
+                       link, icon_path, item->icon_index))) &&
+                  proton_jump_list_set_title(link, title);
+  if (appended) {
+    appended = SUCCEEDED(collection->lpVtbl->AddObject(
+        collection, (IUnknown *)link));
+  }
+  free(path);
+  free(arguments);
+  free(description);
+  free(working_directory);
+  free(icon_path);
+  free(title);
+  link->lpVtbl->Release(link);
+  return appended;
+}
+
+static bool proton_jump_list_append_separator(IObjectCollection *collection) {
+  IShellLinkW *link = NULL;
+  HRESULT result = CoCreateInstance(&CLSID_ShellLink, NULL,
+                                    CLSCTX_INPROC_SERVER, &IID_IShellLinkW,
+                                    (void **)&link);
+  if (FAILED(result) || link == NULL) {
+    return false;
+  }
+  IPropertyStore *store = NULL;
+  bool appended = false;
+  if (SUCCEEDED(link->lpVtbl->QueryInterface(link, &IID_IPropertyStore,
+                                             (void **)&store)) &&
+      store != NULL) {
+    PROPVARIANT value;
+    memset(&value, 0, sizeof(value));
+    value.vt = VT_BOOL;
+    value.boolVal = VARIANT_TRUE;
+    result =
+        store->lpVtbl->SetValue(store, &PKEY_AppUserModel_IsDestListSeparator,
+                                &value);
+    if (SUCCEEDED(result)) {
+      result = store->lpVtbl->Commit(store);
+    }
+    if (SUCCEEDED(result)) {
+      appended = SUCCEEDED(
+          collection->lpVtbl->AddObject(collection, (IUnknown *)link));
+    }
+    store->lpVtbl->Release(store);
+  }
+  link->lpVtbl->Release(link);
+  return appended;
+}
+
+static bool proton_jump_list_append_file(const proton_jump_list_item_t *item,
+                                         IObjectCollection *collection) {
+  wchar_t *path = proton_jump_list_wide(item->path);
+  if (path == NULL) {
+    return false;
+  }
+  IShellItem *file = NULL;
+  bool appended = false;
+  if (SUCCEEDED(SHCreateItemFromParsingName(path, NULL, &IID_IShellItem,
+                                            (void **)&file)) &&
+      file != NULL) {
+    appended = SUCCEEDED(
+        collection->lpVtbl->AddObject(collection, (IUnknown *)file));
+    file->lpVtbl->Release(file);
+  }
+  free(path);
+  return appended;
+}
+
+/* Appends one category and reports the Electron result code for it. Items that
+   fail individually are dropped, the rule Electron documents: it is better to
+   show part of the category than none of it. */
+static int32_t proton_jump_list_append_category(
+    ICustomDestinationList *destinations,
+    const proton_jump_list_category_t *category) {
+  if (category->kind == PROTON_JUMP_LIST_CATEGORY_RECENT) {
+    return SUCCEEDED(destinations->lpVtbl->AppendKnownCategory(
+               destinations, KDC_RECENT))
+               ? PROTON_JUMP_LIST_OK
+               : PROTON_JUMP_LIST_ERROR;
+  }
+  if (category->kind == PROTON_JUMP_LIST_CATEGORY_FREQUENT) {
+    return SUCCEEDED(destinations->lpVtbl->AppendKnownCategory(
+               destinations, KDC_FREQUENT))
+               ? PROTON_JUMP_LIST_OK
+               : PROTON_JUMP_LIST_ERROR;
+  }
+  if (category->item_count == 0) {
+    return PROTON_JUMP_LIST_OK;
+  }
+  IObjectCollection *collection = NULL;
+  if (FAILED(CoCreateInstance(&CLSID_EnumerableObjectCollection, NULL,
+                              CLSCTX_INPROC_SERVER, &IID_IObjectCollection,
+                              (void **)&collection)) ||
+      collection == NULL) {
+    return PROTON_JUMP_LIST_ERROR;
+  }
+  int32_t result = PROTON_JUMP_LIST_OK;
+  size_t appended_count = 0;
+  for (size_t index = 0; index < category->item_count; index++) {
+    const proton_jump_list_item_t *item = &category->items[index];
+    bool appended = false;
+    switch (item->kind) {
+    case PROTON_JUMP_LIST_ITEM_TASK:
+      appended = proton_jump_list_append_task(item, collection);
+      break;
+    case PROTON_JUMP_LIST_ITEM_SEPARATOR:
+      if (category->kind != PROTON_JUMP_LIST_CATEGORY_TASKS) {
+        result = PROTON_JUMP_LIST_INVALID_SEPARATOR;
+      } else {
+        appended = proton_jump_list_append_separator(collection);
+      }
+      break;
+    case PROTON_JUMP_LIST_ITEM_FILE:
+      appended = proton_jump_list_append_file(item, collection);
+      break;
+    default:
+      break;
+    }
+    if (appended) {
+      appended_count++;
+    }
+  }
+  if (appended_count == 0) {
+    collection->lpVtbl->Release(collection);
+    return result;
+  }
+  if (appended_count < category->item_count && result == PROTON_JUMP_LIST_OK) {
+    result = PROTON_JUMP_LIST_ERROR;
+  }
+  IObjectArray *items = NULL;
+  HRESULT hr = collection->lpVtbl->QueryInterface(collection, &IID_IObjectArray,
+                                                  (void **)&items);
+  collection->lpVtbl->Release(collection);
+  if (FAILED(hr) || items == NULL) {
+    return PROTON_JUMP_LIST_ERROR;
+  }
+  if (category->kind == PROTON_JUMP_LIST_CATEGORY_TASKS) {
+    hr = destinations->lpVtbl->AddUserTasks(destinations, items);
+    if (FAILED(hr) && result == PROTON_JUMP_LIST_OK) {
+      result = PROTON_JUMP_LIST_ERROR;
+    }
+  } else {
+    wchar_t *name = proton_jump_list_wide(category->name);
+    if (name == NULL) {
+      items->lpVtbl->Release(items);
+      return PROTON_JUMP_LIST_ERROR;
+    }
+    hr = destinations->lpVtbl->AppendCategory(destinations, name, items);
+    free(name);
+    if (FAILED(hr)) {
+      if (hr == (HRESULT)0x80040F03) {
+        result = PROTON_JUMP_LIST_FILE_TYPE_REGISTRATION_ERROR;
+      } else if (hr == E_ACCESSDENIED) {
+        result = PROTON_JUMP_LIST_CUSTOM_CATEGORY_ACCESS_DENIED;
+      } else if (result == PROTON_JUMP_LIST_OK) {
+        result = PROTON_JUMP_LIST_ERROR;
+      }
+    }
+  }
+  items->lpVtbl->Release(items);
+  return result;
+}
+
+static int32_t proton_jump_list_apply_platform(
+    proton_jump_list_builder_t *builder, int32_t *out_result) {
+  *out_result = PROTON_JUMP_LIST_ERROR;
+  ICustomDestinationList *destinations = NULL;
+  if (FAILED(CoCreateInstance(&CLSID_DestinationList, NULL,
+                              CLSCTX_INPROC_SERVER, &IID_ICustomDestinationList,
+                              (void **)&destinations)) ||
+      destinations == NULL) {
+    return PROTON_OK;
+  }
+  /* The jump list belongs to the AppUserModelID of the process, which is what
+     the taskbar button uses too. An installed application registers that
+     identity; without one Windows derives it from the executable path, and
+     leaving the destination list unset keeps both in step. */
+  PWSTR explicit_app_id = NULL;
+  if (SUCCEEDED(GetCurrentProcessExplicitAppUserModelID(&explicit_app_id)) &&
+      explicit_app_id != NULL && explicit_app_id[0] != L'\0') {
+    if (FAILED(destinations->lpVtbl->SetAppID(destinations,
+                                              explicit_app_id))) {
+      CoTaskMemFree(explicit_app_id);
+      destinations->lpVtbl->Release(destinations);
+      return PROTON_OK;
+    }
+  }
+  CoTaskMemFree(explicit_app_id);
+  if (builder == NULL) {
+    *out_result = SUCCEEDED(destinations->lpVtbl->DeleteList(destinations, NULL))
+                      ? PROTON_JUMP_LIST_OK
+                      : PROTON_JUMP_LIST_ERROR;
+    destinations->lpVtbl->Release(destinations);
+    return PROTON_OK;
+  }
+  UINT min_slots = 0;
+  IObjectArray *removed = NULL;
+  if (FAILED(destinations->lpVtbl->BeginList(destinations, &min_slots,
+                                             &IID_IObjectArray,
+                                             (void **)&removed))) {
+    destinations->lpVtbl->Release(destinations);
+    return PROTON_OK;
+  }
+  if (removed != NULL) {
+    removed->lpVtbl->Release(removed);
+  }
+  int32_t result = PROTON_JUMP_LIST_OK;
+  for (size_t index = 0; index < builder->category_count; index++) {
+    int32_t latest =
+        proton_jump_list_append_category(destinations,
+                                         &builder->categories[index]);
+    /* Keep the first specific error, the rule Electron applies so the result
+       is the most useful one. */
+    if ((result == PROTON_JUMP_LIST_OK || result == PROTON_JUMP_LIST_ERROR) &&
+        latest != PROTON_JUMP_LIST_OK) {
+      result = latest;
+    }
+  }
+  /* Some categories may have failed, but a partial list is better than none,
+     so the transaction still commits unless it committed nothing. */
+  if (FAILED(destinations->lpVtbl->CommitList(destinations)) &&
+      result == PROTON_JUMP_LIST_OK) {
+    result = PROTON_JUMP_LIST_ERROR;
+  }
+  destinations->lpVtbl->Release(destinations);
+  *out_result = result;
+  return PROTON_OK;
+}
+
+#else
+
+static int32_t proton_jump_list_apply_platform(
+    proton_jump_list_builder_t *builder, int32_t *out_result) {
+  (void)builder;
+  *out_result = PROTON_JUMP_LIST_UNSUPPORTED;
+  return PROTON_OK;
+}
+
+#endif
+
+int32_t proton_jump_list_apply(proton_jump_list_builder_t *categories,
+                               int32_t *out_result) {
+  if (out_result == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_result is required");
+  }
+  *out_result = PROTON_JUMP_LIST_ERROR;
+  int32_t status = proton_jump_list_apply_platform(categories, out_result);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  proton_set_error(PROTON_OK, NULL);
+  return PROTON_OK;
+}

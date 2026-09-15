@@ -306,6 +306,53 @@ void proton_thumbar_builder_destroy(proton_thumbar_builder_t *builder);
 int32_t proton_window_set_thumbar_buttons(proton_window_handle_t window,
                                           proton_thumbar_builder_t *buttons,
                                           int32_t *out_applied);
+
+/* Custom jump lists (Windows only). Electron marks setJumpList and
+   getJumpListSettings as Windows constructs; the result values below match the
+   strings Electron returns, with UNSUPPORTED as Proton's own code for the
+   platforms that have no jump list. */
+typedef enum {
+  PROTON_JUMP_LIST_CATEGORY_TASKS = 0,
+  PROTON_JUMP_LIST_CATEGORY_CUSTOM = 1,
+  PROTON_JUMP_LIST_CATEGORY_RECENT = 2,
+  PROTON_JUMP_LIST_CATEGORY_FREQUENT = 3,
+} proton_jump_list_category_kind_t;
+
+typedef enum {
+  PROTON_JUMP_LIST_ITEM_TASK = 0,
+  PROTON_JUMP_LIST_ITEM_SEPARATOR = 1,
+  PROTON_JUMP_LIST_ITEM_FILE = 2,
+} proton_jump_list_item_kind_t;
+
+enum {
+  PROTON_JUMP_LIST_OK = 0,
+  PROTON_JUMP_LIST_ERROR = 1,
+  PROTON_JUMP_LIST_INVALID_SEPARATOR = 2,
+  PROTON_JUMP_LIST_FILE_TYPE_REGISTRATION_ERROR = 3,
+  PROTON_JUMP_LIST_CUSTOM_CATEGORY_ACCESS_DENIED = 4,
+  PROTON_JUMP_LIST_UNSUPPORTED = 5,
+};
+
+typedef struct proton_jump_list_builder proton_jump_list_builder_t;
+
+proton_jump_list_builder_t *proton_jump_list_builder_null(void);
+int32_t proton_jump_list_builder_create(
+    proton_jump_list_builder_t **out_builder);
+/* Categories append in call order and items append to the most recent
+   category. A custom category requires a name; the Tasks category ignores it
+   and Recent/Frequent take neither a name nor items. */
+int32_t proton_jump_list_builder_add_category(
+    proton_jump_list_builder_t *builder, int32_t kind, const char *name);
+int32_t proton_jump_list_builder_add_item(
+    proton_jump_list_builder_t *builder, int32_t kind, const char *path,
+    const char *arguments, const char *title, const char *description,
+    const char *icon_path, int32_t icon_index,
+    const char *working_directory);
+void proton_jump_list_builder_destroy(proton_jump_list_builder_t *builder);
+/* Applies the categories, or removes the custom jump list when the builder is
+   null. `out_result` receives one of the PROTON_JUMP_LIST_* results. */
+int32_t proton_jump_list_apply(proton_jump_list_builder_t *categories,
+                               int32_t *out_result);
 /* Matches Electron's flashFrame flag semantics. */
 int32_t proton_window_flash_frame(proton_window_handle_t window,
                                   int32_t flash);

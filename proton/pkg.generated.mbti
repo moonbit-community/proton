@@ -37,6 +37,8 @@ pub fn resource_dir() -> String
 
 pub fn screens() -> Array[ScreenInfo] raise ScreenQueryError
 
+pub fn set_jump_list(Array[JumpListCategory]?) -> JumpListResult raise AppControlError
+
 pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError
 
 pub fn url(String, String, width? : Int, height? : Int, debug? : Bool, resizable? : Bool) -> App
@@ -522,6 +524,54 @@ pub(all) struct FindInPageResult {
 pub fn FindInPageResult::equal(Self, Self) -> Bool
 pub fn FindInPageResult::not_equal(Self, Self) -> Bool
 pub fn FindInPageResult::to_repr(Self) -> @debug.Repr
+
+pub(all) struct JumpListCategory {
+  kind : JumpListCategoryKind
+  name : String
+  items : Array[JumpListItem]
+}
+
+pub(all) enum JumpListCategoryKind {
+  Tasks
+  Custom
+  Recent
+  Frequent
+} derive(Eq, @debug.Debug)
+pub fn JumpListCategoryKind::equal(Self, Self) -> Bool
+pub fn JumpListCategoryKind::not_equal(Self, Self) -> Bool
+pub fn JumpListCategoryKind::to_repr(Self) -> @debug.Repr
+
+pub(all) struct JumpListItem {
+  kind : JumpListItemKind
+  path : String
+  arguments : String
+  title : String
+  description : String
+  icon_path : String
+  icon_index : Int
+  working_directory : String
+}
+
+pub(all) enum JumpListItemKind {
+  Task
+  Separator
+  File
+} derive(Eq, @debug.Debug)
+pub fn JumpListItemKind::equal(Self, Self) -> Bool
+pub fn JumpListItemKind::not_equal(Self, Self) -> Bool
+pub fn JumpListItemKind::to_repr(Self) -> @debug.Repr
+
+pub(all) enum JumpListResult {
+  Ok
+  Error
+  InvalidSeparator
+  FileTypeRegistrationError
+  CustomCategoryAccessDenied
+  Unsupported
+} derive(Eq, @debug.Debug)
+pub fn JumpListResult::equal(Self, Self) -> Bool
+pub fn JumpListResult::not_equal(Self, Self) -> Bool
+pub fn JumpListResult::to_repr(Self) -> @debug.Repr
 
 pub(all) enum LastWindowClosedPolicy {
   Quit

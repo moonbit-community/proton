@@ -491,6 +491,68 @@ test "taskbar button clicks carry the window and button id" {
 }
 
 ///|
+test "jump list result codes keep the Electron meanings" {
+  assert_eq(jump_list_result_from_code(0), JumpListResult::Ok)
+  assert_eq(jump_list_result_from_code(1), JumpListResult::Error)
+  assert_eq(jump_list_result_from_code(2), JumpListResult::InvalidSeparator)
+  assert_eq(
+    jump_list_result_from_code(3),
+    JumpListResult::FileTypeRegistrationError,
+  )
+  assert_eq(
+    jump_list_result_from_code(4),
+    JumpListResult::CustomCategoryAccessDenied,
+  )
+  assert_eq(jump_list_result_from_code(5), JumpListResult::Unsupported)
+  assert_eq(jump_list_result_from_code(9), JumpListResult::Error)
+}
+
+///|
+test "custom jump list categories require a name" {
+  let error = expect_native_error(() => {
+    jump_list_apply(
+      Some([{ kind: JumpListCategoryKind::Custom, name: "", items: [], }]),
+    )
+  })
+  match error {
+    Status(message~, ..) =>
+      assert_eq(message, "a custom jump list category requires a name")
+    _ => fail("unexpected: " + error.message())
+  }
+}
+
+///|
+test "jump list items require a path" {
+  let error = expect_native_error(() => {
+    jump_list_apply(
+      Some([
+        {
+          kind: JumpListCategoryKind::Tasks,
+          name: "",
+          items: [
+            {
+              kind: JumpListItemKind::Task,
+              path: "",
+              arguments: "",
+              title: "Play",
+              description: "",
+              icon_path: "",
+              icon_index: 0,
+              working_directory: "",
+            },
+          ],
+        },
+      ]),
+    )
+  })
+  match error {
+    Status(message~, ..) =>
+      assert_eq(message, "jump list item path is required")
+    _ => fail("unexpected: " + error.message())
+  }
+}
+
+///|
 test "window opacity rejects NaN before native handle access" {
   let window = Window::{
     handle: @native_ffi.window_null(),
