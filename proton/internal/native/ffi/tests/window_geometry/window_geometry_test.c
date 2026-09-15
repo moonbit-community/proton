@@ -180,4 +180,72 @@ cleanup:
   return result;
 }
 
+/* A DPI change hands the window proc a frame already expressed in the new
+ * monitor's pixels. The proc must adopt that rectangle verbatim, leave the
+ * logical bookkeeping alone, and still convert later logical requests from the
+ * new DPI instead of scaling the frame it was just given a second time. */
+int32_t proton_test_window_dpi_change(void) {
+  int result = 0;
+  HWND hwnd = NULL;
+  DPI_AWARENESS_CONTEXT previous =
+      SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+  CHECK(previous != NULL);
+  proton_engine_register_window_class();
+
+  proton_engine_window_t window = {0};
+  window.resizable = 1;
+  hwnd = CreateWindowExW(0, PROTON_ENGINE_WINDOW_CLASS,
+                         L"Proton DPI change test", WS_OVERLAPPEDWINDOW,
+                         CW_USEDEFAULT, CW_USEDEFAULT, 400, 300, NULL, NULL,
+                         GetModuleHandleW(NULL), &window);
+  CHECK(hwnd != NULL);
+  CHECK(window.hwnd == hwnd);
+  window.width = 1120;
+  window.height = 760;
+
+  /* SetWindowPos clamps a target frame that does not fit the work area, so
+   * derive the requested rectangle from the work area rather than hard-coding
+   * one: the assertion is that a fitting suggestion is adopted verbatim, not
+   * that the window can be forced past the screen. */
+  MONITORINFO info = {.cbSize = sizeof(MONITORINFO)};
+  CHECK(GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST),
+                        &info));
+  int work_width = info.rcWork.right - info.rcWork.left;
+  int work_height = info.rcWork.bottom - info.rcWork.top;
+  /* Fail loudly rather than silently degenerate on a display-less runner. */
+  CHECK(work_width >= 200 && work_height >= 200);
+  RECT suggested = {info.rcWork.left + work_width / 10,
+                    info.rcWork.top + work_height / 10,
+                    info.rcWork.left + work_width / 10 + work_width * 3 / 5,
+                    info.rcWork.top + work_height / 10 + work_height * 3 / 5};
+  SendMessageW(hwnd, WM_DPICHANGED, MAKEWPARAM(240, 240), (LPARAM)&suggested);
+
+  RECT frame;
+  CHECK(GetWindowRect(hwnd, &frame));
+  CHECK(EqualRect(&frame, &suggested));
+  /* The rectangle is already physical, so the logical size is untouched. */
+  CHECK(window.width == 1120 && window.height == 760);
+
+  /* A following logical-size request starts from the current DPI, so the size
+   * the caller asked for is the size it gets — no compounding scale factor.
+   * Half the work area stays inside it at any DPI. */
+  UINT dpi = proton_win_window_dpi(hwnd);
+  CHECK(dpi >= 96);
+  int logical_width = proton_win_logical(work_width / 2, dpi);
+  int logical_height = proton_win_logical(work_height / 2, dpi);
+  char error[256] = {0};
+  CHECK(proton_engine_window_set_size(&window, logical_width, logical_height,
+                                      error,
+                                      sizeof(error)) == PROTON_OK);
+  CHECK(GetWindowRect(hwnd, &frame));
+  CHECK(frame.right - frame.left == proton_win_pixels(logical_width, dpi));
+  CHECK(frame.bottom - frame.top == proton_win_pixels(logical_height, dpi));
+cleanup:
+  if (hwnd != NULL)
+    DestroyWindow(hwnd);
+  if (previous != NULL)
+    SetThreadDpiAwarenessContext(previous);
+  return result;
+}
+
 #endif

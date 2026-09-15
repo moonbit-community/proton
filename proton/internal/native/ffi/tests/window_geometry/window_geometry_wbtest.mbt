@@ -21,6 +21,10 @@ extern "C" fn native_size_test(overlay : Int) -> Int = "proton_test_window_nativ
 
 ///|
 #cfg(platform="windows")
+extern "C" fn dpi_change_test() -> Int = "proton_test_window_dpi_change"
+
+///|
+#cfg(platform="windows")
 test "Windows sizes round trip at 100, 150, and 250 percent" {
   assert_eq(conversion_test(), 0)
 }
@@ -47,4 +51,10 @@ test "native window frame and content sizes use logical pixels" {
 #cfg(platform="windows")
 test "overlay content sizing measures the actual non-client area" {
   assert_eq(native_size_test(1), 0)
+}
+
+///|
+#cfg(platform="windows")
+test "a DPI change adopts the suggested frame without rescaling it" {
+  assert_eq(dpi_change_test(), 0)
 }
