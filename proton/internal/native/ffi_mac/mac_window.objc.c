@@ -1271,7 +1271,10 @@ int32_t proton_engine_window_close(proton_engine_window_t *window,
 
 int32_t proton_engine_window_is_closed(proton_engine_window_t *window) {
 
-  return window == NULL || window->closed;
+  // AppKit can finish closing before CEF's OnBeforeClose callback. Stop
+  // polling native window state in that interval; browser finalization still
+  // waits for the independent CEF lifecycle in finalize_if_ready.
+  return proton_engine_window_is_closed_or_missing(window);
 }
 
 int32_t proton_engine_window_popup_menu(
@@ -1918,6 +1921,14 @@ static int32_t proton_engine_macos_top_y(NSRect frame) {
   return (int32_t)llround(proton_engine_primary_screen_top() - NSMaxY(frame));
 }
 
+static void proton_engine_toggle_fullscreen(NSWindow *window) {
+  // Synchronous FFI calls run outside the event-pump autorelease pool.
+  // Drain temporary AppKit references so they cannot keep the CEF view alive.
+  @autoreleasepool {
+    [window toggleFullScreen:nil];
+  }
+}
+
 int32_t proton_engine_window_apply(
     proton_engine_window_t *window,
     const proton_engine_window_action_t *action,
@@ -1969,7 +1980,7 @@ int32_t proton_engine_window_apply(
     break;
   case PROTON_ENGINE_WINDOW_RESTORE:
     if ((window->window.styleMask & NSWindowStyleMaskFullScreen) != 0) {
-      [window->window toggleFullScreen:nil];
+      proton_engine_toggle_fullscreen(window->window);
     }
     if ([window->window isMiniaturized]) {
       [window->window deminiaturize:nil];
@@ -1983,7 +1994,7 @@ int32_t proton_engine_window_apply(
     const BOOL fullscreen =
         (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0;
     if (fullscreen != (action->value != 0)) {
-      [window->window toggleFullScreen:nil];
+      proton_engine_toggle_fullscreen(window->window);
     }
     break;
   }
@@ -1998,7 +2009,7 @@ int32_t proton_engine_window_apply(
       [NSApp setPresentationOptions:NSApplicationPresentationDefault];
     }
     if (fullscreen != (action->value != 0)) {
-      [window->window toggleFullScreen:nil];
+      proton_engine_toggle_fullscreen(window->window);
     }
     break;
   }
