@@ -194,9 +194,9 @@ impl Show for ScreenQueryError with fn output(self, logger) {
 pub extend ScreenQueryError with Show::{to_string, output}
 
 ///|
-pub fn NativeThemeError::message(self : NativeThemeError) -> String {
+pub fn SystemAppearanceError::message(self : SystemAppearanceError) -> String {
   match self {
-    NativeThemeUnavailable(status~, detail~) =>
+    SystemAppearanceUnavailable(status~, detail~) =>
       "failed to read the operating system appearance (" +
       status.to_string() +
       "): " +
@@ -205,12 +205,12 @@ pub fn NativeThemeError::message(self : NativeThemeError) -> String {
 }
 
 ///|
-impl Show for NativeThemeError with fn output(self, logger) {
+impl Show for SystemAppearanceError with fn output(self, logger) {
   logger.write_string(self.message())
 }
 
 ///|
-pub extend NativeThemeError with Show::{to_string, output}
+pub extend SystemAppearanceError with Show::{to_string, output}
 
 ///|
 fn cleanup_failure_message(

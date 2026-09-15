@@ -114,59 +114,63 @@ static proton_window_theme_t proton_engine_windows_system_theme(void) {
              : PROTON_WINDOW_THEME_LIGHT;
 }
 
-static int32_t g_native_theme_source = PROTON_WINDOW_THEME_PREFERENCE_SYSTEM;
 static int32_t g_native_theme_published = 0;
 static int32_t g_native_theme_dark_colors = 0;
 static int32_t g_native_theme_high_contrast_colors = 0;
-static int32_t g_native_theme_published_source = 0;
 
 int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
                                          int32_t *out_high_contrast_colors,
-                                         int32_t *out_source,
                                          char *error,
                                          size_t error_len) {
-  if (out_dark_colors == NULL || out_high_contrast_colors == NULL ||
-      out_source == NULL) {
+  if (out_dark_colors == NULL || out_high_contrast_colors == NULL) {
     proton_engine_set_message(error, error_len, "theme outputs are required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  int32_t dark_colors =
-      proton_engine_windows_system_theme() == PROTON_WINDOW_THEME_DARK ? 1 : 0;
-  switch (g_native_theme_source) {
-  case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
-    dark_colors = 0;
-    break;
-  case PROTON_WINDOW_THEME_PREFERENCE_DARK:
-    dark_colors = 1;
-    break;
-  default:
-    break;
+  HIGHCONTRASTW contrast = {0};
+  contrast.cbSize = sizeof(contrast);
+  if (!SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0)) {
+    proton_engine_set_message(error, error_len, "failed to read system contrast");
+    return PROTON_ERR_PLATFORM;
   }
-  *out_dark_colors = dark_colors;
-  *out_high_contrast_colors = proton_engine_windows_high_contrast() ? 1 : 0;
-  *out_source = g_native_theme_source;
+  DWORD light = 1;
+  DWORD size = sizeof(light);
+  LSTATUS status = RegGetValueW(
+      HKEY_CURRENT_USER,
+      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+      L"AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &light, &size);
+  if (status != ERROR_SUCCESS && status != ERROR_FILE_NOT_FOUND &&
+      status != ERROR_PATH_NOT_FOUND) {
+    proton_engine_set_message(error, error_len, "failed to read system color scheme");
+    return PROTON_ERR_PLATFORM;
+  }
+  *out_dark_colors = light == 0 ? 1 : 0;
+  *out_high_contrast_colors = (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0;
   return PROTON_OK;
 }
 
-// Electron raises `nativeTheme.on("updated")` once per observable appearance
+// Publish once per observable system appearance
 // change. The snapshot is compared against the last one this process
 // published, so the system-wide WM_SETTINGCHANGE broadcast, repeated window
-// messages, and a redundant themeSource write each collapse to one event.
+// messages collapse to one event.
 // `runtime` only selects the wait source that wakes the application loop.
 static void proton_engine_publish_native_theme_change(
     proton_engine_runtime_t *runtime) {
   int32_t dark_colors = 0;
   int32_t high_contrast_colors = 0;
-  int32_t source = 0;
   char error[256] = {0};
   if (proton_engine_native_theme_query(&dark_colors, &high_contrast_colors,
-                                       &source, error, sizeof(error)) !=
+                                       error, sizeof(error)) !=
       PROTON_OK) {
     return;
   }
+  if (!g_native_theme_published) {
+    g_native_theme_published = 1;
+    g_native_theme_dark_colors = dark_colors;
+    g_native_theme_high_contrast_colors = high_contrast_colors;
+    return;
+  }
   if (g_native_theme_published && dark_colors == g_native_theme_dark_colors &&
-      high_contrast_colors == g_native_theme_high_contrast_colors &&
-      source == g_native_theme_published_source) {
+      high_contrast_colors == g_native_theme_high_contrast_colors) {
     return;
   }
   proton_event_t *event =
@@ -174,7 +178,6 @@ static void proton_engine_publish_native_theme_change(
   if (event == NULL) {
     return;
   }
-  event->int_a = source;
   event->bool_a = dark_colors != 0 ? 1 : 0;
   event->bool_b = high_contrast_colors != 0 ? 1 : 0;
   if (!proton_event_publish(event)) {
@@ -184,22 +187,7 @@ static void proton_engine_publish_native_theme_change(
   g_native_theme_published = 1;
   g_native_theme_dark_colors = dark_colors;
   g_native_theme_high_contrast_colors = high_contrast_colors;
-  g_native_theme_published_source = source;
   proton_engine_signal_wait_source(runtime, PROTON_WAIT_PLATFORM);
-}
-
-int32_t proton_engine_native_theme_set_source(int32_t source,
-                                              char *error,
-                                              size_t error_len) {
-  if (source != PROTON_WINDOW_THEME_PREFERENCE_SYSTEM &&
-      source != PROTON_WINDOW_THEME_PREFERENCE_LIGHT &&
-      source != PROTON_WINDOW_THEME_PREFERENCE_DARK) {
-    proton_engine_set_message(error, error_len, "unknown theme source");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  g_native_theme_source = source;
-  proton_engine_publish_native_theme_change(NULL);
-  return PROTON_OK;
 }
 
 static proton_window_theme_t
@@ -778,6 +766,7 @@ int32_t proton_engine_window_create(
     proton_engine_runtime_t *runtime,
     const proton_engine_window_config_t *input_config,
     proton_engine_window_t **out_window, char *error, size_t error_len) {
+  proton_engine_publish_native_theme_change(runtime);
   if (out_window == NULL) {
     proton_engine_set_message(error, error_len, "out_window is required");
     return PROTON_ERR_INVALID_ARGUMENT;

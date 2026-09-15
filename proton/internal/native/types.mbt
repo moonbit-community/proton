@@ -191,7 +191,6 @@ struct AppInstance {
 pub(all) struct NativeThemeSnapshot {
   dark_colors : Bool
   high_contrast_colors : Bool
-  source : WindowThemePreference
 } derive(Debug, Eq)
 
 ///|
@@ -1238,9 +1237,7 @@ pub fn RuntimeEvent::app_activation(self : RuntimeEvent) -> AppActivation? {
 }
 
 ///|
-/// Returns the appearance snapshot when this event reports a native theme
-/// change, which is the application-level equivalent of Electron's
-/// `nativeTheme.on("updated")`.
+/// Returns the snapshot captured when the operating system appearance changed.
 pub fn RuntimeEvent::native_theme_change(
   self : RuntimeEvent,
 ) -> NativeThemeSnapshot? {

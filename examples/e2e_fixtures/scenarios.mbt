@@ -390,13 +390,28 @@ pub async fn run_devtools() -> Unit {
 }
 
 ///|
+#cfg(platform="linux")
+fn appearance_window_preferences() -> Array[@proton.WindowThemePreference] {
+  // Linux supports following the system, but not per-window overrides.
+  [System]
+}
+
+///|
+#cfg(not(platform="linux"))
+fn appearance_window_preferences() -> Array[@proton.WindowThemePreference] {
+  [Dark, Light, System]
+}
+
+///|
 pub async fn run_windowed_close() -> Unit {
+  let appearance_events = Ref(0)
   @proton.html(
     "Proton Windowed Close",
     "<h1>Windowed close lifecycle</h1>",
     width=640,
     height=480,
   )
+  .on_system_appearance_change(fn(_) noraise { appearance_events.val += 1 })
   .window_lifecycle(
     on_ready=context => {
       let handle = context.handle()
@@ -421,6 +436,17 @@ pub async fn run_windowed_close() -> Unit {
             }
             guard handle.is_focused() else {
               abort("window did not become focused before close")
+            }
+            // Window preferences must not override system queries or produce
+            // system appearance events, including the initial registration.
+            @async.sleep(100)
+            assert_eq(appearance_events.val, 0)
+            let system = @proton.system_appearance()
+            for preference in appearance_window_preferences() {
+              handle.set_theme(preference)
+              @async.sleep(100)
+              assert_eq(@proton.system_appearance(), system)
+              assert_eq(appearance_events.val, 0)
             }
             handle.close()
           },

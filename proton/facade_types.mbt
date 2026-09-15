@@ -138,7 +138,7 @@ struct App {
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ]
   update_handlers : Array[async (PendingUpdate) -> Unit noraise]
-  native_theme_handlers : Array[async (NativeTheme) -> Unit noraise]
+  system_appearance_handlers : Array[async (SystemAppearance) -> Unit noraise]
   thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
   validation_errors : Array[AppConfigurationError]
@@ -451,7 +451,7 @@ priv struct RuntimeSession {
   launch_input_handlers : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ]
-  native_theme_handlers : Array[async (NativeTheme) -> Unit noraise]
+  system_appearance_handlers : Array[async (SystemAppearance) -> Unit noraise]
   thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,

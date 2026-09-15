@@ -691,18 +691,10 @@ int32_t proton_engine_screen_enumerate(
     char *error,
     size_t error_len);
 
-/* System appearance query backing the facade's nativeTheme snapshot. */
+/* System appearance query backing the facade's system appearance snapshot. */
 int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
                                          int32_t *out_high_contrast_colors,
-                                         int32_t *out_source,
                                          char *error,
                                          size_t error_len);
-
-/* Application-level theme source override (System, Light, or Dark). */
-int32_t proton_engine_native_theme_set_source(int32_t source,
-                                              char *error,
-                                              size_t error_len);
-
-
 
 #endif

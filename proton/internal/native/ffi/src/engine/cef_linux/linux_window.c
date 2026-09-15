@@ -98,66 +98,60 @@ int proton_engine_x11_window_is_focused(Display *display,
   return is_focused;
 }
 
-static int32_t g_native_theme_source = PROTON_WINDOW_THEME_PREFERENCE_SYSTEM;
 static int32_t g_native_theme_published = 0;
 static int32_t g_native_theme_dark_colors = 0;
 static int32_t g_native_theme_high_contrast_colors = 0;
-static int32_t g_native_theme_published_source = 0;
 
 int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
                                          int32_t *out_high_contrast_colors,
-                                         int32_t *out_source,
                                          char *error,
                                          size_t error_len) {
-  if (out_dark_colors == NULL || out_high_contrast_colors == NULL ||
-      out_source == NULL) {
+  if (out_dark_colors == NULL || out_high_contrast_colors == NULL) {
     proton_engine_set_message(error, error_len, "theme outputs are required");
     return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  if (!proton_engine_ensure_gtk(error, error_len)) {
+    return PROTON_ERR_NOT_INITIALIZED;
   }
   gboolean dark = FALSE;
   gchar *theme_name = NULL;
   GtkSettings *settings = gtk_settings_get_default();
-  if (settings != NULL) {
-    g_object_get(settings, "gtk-application-prefer-dark-theme", &dark,
-                 "gtk-theme-name", &theme_name, NULL);
+  if (settings == NULL) {
+    proton_engine_set_message(error, error_len, "GTK system appearance is unavailable");
+    return PROTON_ERR_NOT_INITIALIZED;
   }
+  g_object_get(settings, "gtk-application-prefer-dark-theme", &dark,
+               "gtk-theme-name", &theme_name, NULL);
   const gboolean high_contrast =
       theme_name != NULL && g_str_has_prefix(theme_name, "HighContrast");
   g_free(theme_name);
   int32_t dark_colors = dark ? 1 : 0;
-  switch (g_native_theme_source) {
-  case PROTON_WINDOW_THEME_PREFERENCE_LIGHT:
-    dark_colors = 0;
-    break;
-  case PROTON_WINDOW_THEME_PREFERENCE_DARK:
-    dark_colors = 1;
-    break;
-  default:
-    break;
-  }
   *out_dark_colors = dark_colors;
   *out_high_contrast_colors = high_contrast ? 1 : 0;
-  *out_source = g_native_theme_source;
   return PROTON_OK;
 }
 
-// Electron raises `nativeTheme.on("updated")` once per observable appearance
+// Publish once per observable system appearance
 // change. GTK reports a theme or prefer-dark change through the style update
 // of every mapped widget, so the snapshot is compared against the last one
 // this process published before an event is queued.
 static void proton_engine_publish_native_theme_change(void) {
   int32_t dark_colors = 0;
   int32_t high_contrast_colors = 0;
-  int32_t source = 0;
   char error[256] = {0};
   if (proton_engine_native_theme_query(&dark_colors, &high_contrast_colors,
-                                       &source, error, sizeof(error)) !=
+                                       error, sizeof(error)) !=
       PROTON_OK) {
     return;
   }
+  if (!g_native_theme_published) {
+    g_native_theme_published = 1;
+    g_native_theme_dark_colors = dark_colors;
+    g_native_theme_high_contrast_colors = high_contrast_colors;
+    return;
+  }
   if (g_native_theme_published && dark_colors == g_native_theme_dark_colors &&
-      high_contrast_colors == g_native_theme_high_contrast_colors &&
-      source == g_native_theme_published_source) {
+      high_contrast_colors == g_native_theme_high_contrast_colors) {
     return;
   }
   proton_event_t *event =
@@ -165,7 +159,6 @@ static void proton_engine_publish_native_theme_change(void) {
   if (event == NULL) {
     return;
   }
-  event->int_a = source;
   event->bool_a = dark_colors != 0 ? 1 : 0;
   event->bool_b = high_contrast_colors != 0 ? 1 : 0;
   if (!proton_event_publish(event)) {
@@ -175,22 +168,7 @@ static void proton_engine_publish_native_theme_change(void) {
   g_native_theme_published = 1;
   g_native_theme_dark_colors = dark_colors;
   g_native_theme_high_contrast_colors = high_contrast_colors;
-  g_native_theme_published_source = source;
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-}
-
-int32_t proton_engine_native_theme_set_source(int32_t source,
-                                              char *error,
-                                              size_t error_len) {
-  if (source != PROTON_WINDOW_THEME_PREFERENCE_SYSTEM &&
-      source != PROTON_WINDOW_THEME_PREFERENCE_LIGHT &&
-      source != PROTON_WINDOW_THEME_PREFERENCE_DARK) {
-    proton_engine_set_message(error, error_len, "unknown theme source");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  g_native_theme_source = source;
-  proton_engine_publish_native_theme_change();
-  return PROTON_OK;
 }
 
 static proton_window_theme_t proton_engine_window_effective_theme(
@@ -570,10 +548,12 @@ int proton_engine_ensure_gtk(char *error, size_t error_len) {
       available = 0;
     }
   }
+  initialized = 1;
   if (available) {
     // GtkSettings owns the appearance snapshot, and it changes before any
     // window exists, so the process observes it directly instead of relying on
     // a mapped widget. The per-window style update stays as a second trigger.
+    proton_engine_publish_native_theme_change();
     GtkSettings *settings = gtk_settings_get_default();
     if (settings != NULL) {
       g_signal_connect(settings, "notify::gtk-theme-name",
@@ -582,7 +562,6 @@ int proton_engine_ensure_gtk(char *error, size_t error_len) {
                        G_CALLBACK(proton_engine_theme_settings_notify), NULL);
     }
   }
-  initialized = 1;
   if (!available) {
     proton_engine_set_message(error, error_len,
                               "GTK X11 initialization failed");

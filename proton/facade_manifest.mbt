@@ -49,7 +49,7 @@ fn App::App(
     permission_handler: None,
     download_event_handlers: [],
     update_handlers: [],
-    native_theme_handlers: [],
+    system_appearance_handlers: [],
     thumbar_button_handlers: [],
     window_lifecycle_hooks: [],
     validation_errors: [],

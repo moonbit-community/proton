@@ -2916,25 +2916,29 @@ test "app builder registers main browser lifecycle handlers" {
 }
 
 ///|
-test "app builder registers native theme change handlers" {
-  let app = html("Native theme", "<p>theme</p>").on_native_theme_change(fn(
+test "app builder registers system appearance change handlers" {
+  let app = html("Native theme", "<p>theme</p>").on_system_appearance_change(fn(
     _theme,
   ) noraise {
 
   })
-  assert_eq(app.native_theme_handlers.length(), 1)
+  assert_eq(app.system_appearance_handlers.length(), 1)
 }
 
 ///|
-test "native theme snapshots convert to the public appearance type" {
-  let theme = NativeTheme::from_native({
+test "system appearance snapshots preserve both color schemes and contrast" {
+  let dark = SystemAppearance::from_native({
     dark_colors: true,
     high_contrast_colors: false,
-    source: @native.WindowThemePreference::Dark,
   })
-  assert_true(theme.should_use_dark_colors())
-  assert_false(theme.should_use_high_contrast_colors())
-  assert_eq(theme.theme_source(), WindowThemePreference::Dark)
+  assert_eq(dark.color_scheme, Dark)
+  assert_false(dark.high_contrast)
+  let light = SystemAppearance::from_native({
+    dark_colors: false,
+    high_contrast_colors: true,
+  })
+  assert_eq(light.color_scheme, Light)
+  assert_true(light.high_contrast)
 }
 
 ///|
