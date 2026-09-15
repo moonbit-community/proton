@@ -31,6 +31,9 @@ CEF runtime from the immutable user-wide store. Each isolated scenario installs 
 from the same Proton source as the application through `moon install --path`.
 The suite covers:
 
+- single-instance forwarding through the real application loop, followed by
+  primary/secondary and CEF helper shutdown (`--single-instance`);
+
 - `38_async_extension_add`, `39_sync_async_extensions`, and
   `42_attribute_codegen_commands` command-extension proxies;
 - `40_event_broadcast` event delivery and reload isolation;

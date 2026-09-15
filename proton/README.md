@@ -48,6 +48,15 @@ user state. Use `App::session_partition` with `.single_instance()` to place the
 browser profile in an isolated `sessionData/<partition>` directory. Cookies,
 cache, IndexedDB, and other Chromium profile state are separated between
 partitions. Partition names are limited to letters, digits, `.`, `-`, and `_`.
+With `.single_instance()`, subsequent launches exit successfully only after the
+primary application event loop accepts their activation. Forwarding has a
+five-second total deadline. A stopping primary rejects new activations while
+retaining ownership until runtime cleanup finishes. Connection, transfer, and
+confirmation failures surface as `AppRunError`; Proton does not kill the primary,
+bypass its lock, or automatically resend an activation. A missing confirmation
+is not proof that no application action occurred. Success confirms acceptance,
+not completion of an asynchronous launch handler or visibility of a window.
+
 `SessionHandle::clear_auth_cache` clears Chromium's cached HTTP authentication
 credentials without clearing cookies or the HTTP cache.
 `SessionHandle::clear_certificate_exceptions` clears remembered certificate

@@ -212,7 +212,7 @@ enum RuntimeEvent {
   CookieGetCompleted(NativeCookieGetCompletion)
   MenuCommand(String, Int64?)
   LaunchInput(RuntimeLaunchInput)
-  AppActivationReceived(AppActivation)
+  AppActivationReceived(AppActivation, Int64)
   NativeThemeChanged(NativeThemeSnapshot)
   TaskbarButtonClicked(Int64, String)
   NotificationResult(NativeNotificationResult)
@@ -810,7 +810,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     LaunchInput(OpenUrls(_)) => "open_urls"
     LaunchInput(OpenFiles(_)) => "open_files"
     LaunchInput(Reopen) => "reopen"
-    AppActivationReceived(_) => "app_activation"
+    AppActivationReceived(_, _) => "app_activation"
     NativeThemeChanged(_) => "native_theme_changed"
     TaskbarButtonClicked(_, _) => "taskbar_button_clicked"
     NotificationResult(_) => "notification_result"
@@ -875,7 +875,7 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BridgeRequestCancelled(_)
     | ResourceRequestCancelled(_)
     | LaunchInput(_)
-    | AppActivationReceived(_)
+    | AppActivationReceived(_, _)
     | NativeThemeChanged(_)
     | NotificationResult(_)
     | NotificationClicked(_)
@@ -1231,8 +1231,17 @@ pub fn RuntimeEvent::launch_input(self : RuntimeEvent) -> RuntimeLaunchInput? {
 ///|
 pub fn RuntimeEvent::app_activation(self : RuntimeEvent) -> AppActivation? {
   match self {
-    AppActivationReceived(activation) => Some(activation)
+    AppActivationReceived(activation, _) => Some(activation)
     _ => None
+  }
+}
+
+///|
+/// Returns zero for locally generated launch input without a forwarding peer.
+pub fn RuntimeEvent::app_activation_request_id(self : RuntimeEvent) -> Int64 {
+  match self {
+    AppActivationReceived(_, request_id) => request_id
+    _ => 0
   }
 }
 

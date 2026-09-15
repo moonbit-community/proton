@@ -10,6 +10,7 @@ async fn run_scenario_app_child() -> Unit {
     Some("45_bridge_multi_window") => @e2e_fixtures.run_multi_window()
     Some("52_web_contents_view") => @e2e_fixtures.run_web_contents_view()
     Some("54_devtools") => @e2e_fixtures.run_devtools()
+    Some("single_instance") => @e2e_fixtures.run_single_instance()
     Some("windowed_close") => @e2e_fixtures.run_windowed_close()
     Some("56_i18n") => @e2e_fixtures.run_i18n()
     Some("46_asset_sidecar_resources") => @e2e_fixtures.run_asset_sidecar()

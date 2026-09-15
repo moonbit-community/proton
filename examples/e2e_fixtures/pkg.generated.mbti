@@ -26,9 +26,13 @@ pub async fn run_i18n() -> Unit
 
 pub async fn run_multi_window() -> Unit
 
+pub async fn run_single_instance() -> Unit
+
 pub async fn run_sync_async_extensions() -> Unit
 
 pub async fn run_web_contents_view() -> Unit
+
+pub async fn run_windowed_close() -> Unit
 
 // Errors
 

@@ -176,6 +176,18 @@ pub extern "C" fn proton_app_instance_attach_runtime_ffi(
 ) -> Int = "proton_app_instance_attach_runtime"
 
 ///|
+pub extern "C" fn proton_runtime_respond_app_activation_ffi(
+  runtime : RuntimeHandle,
+  request_id : Int64,
+  accept : Int,
+) -> Int = "proton_runtime_respond_app_activation"
+
+///|
+pub extern "C" fn proton_runtime_stop_app_activations_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_runtime_stop_app_activations"
+
+///|
 pub extern "C" fn proton_app_instance_destroy_ffi(instance : Int64) -> Int = "proton_app_instance_destroy"
 
 ///|

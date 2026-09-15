@@ -3921,6 +3921,16 @@ fn RuntimeSession::dispatch_launch_input_event(
 ) -> Unit raise AppRunError {
   match event.app_activation() {
     Some(activation) => {
+      let request_id = event.app_activation_request_id()
+      if request_id != 0 {
+        let accepted = self.runtime.respond_app_activation(
+          request_id,
+          !self.is_quitting(),
+        ) catch {
+          error => raise native_run_error("respond to app activation", error)
+        }
+        guard accepted else { return }
+      }
       let urls = activation.urls()
       if !urls.is_empty() {
         self.dispatch_launch_input(RuntimeLaunchInput::OpenUrls(urls))
@@ -4470,6 +4480,9 @@ fn RuntimeSession::respond_close_decision(
 fn RuntimeSession::commit_application_close(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
+  self.runtime.stop_app_activations() catch {
+    error => raise native_run_error("stop app activations", error)
+  }
   self.close_coordinator.state = CloseCommitted
   self.close_coordinator.pending.clear()
   for running in self.windows {

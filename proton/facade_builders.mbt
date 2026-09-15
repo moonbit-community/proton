@@ -148,7 +148,11 @@ pub fn App::locale(self : App, locale : @locale.Locale) -> App {
 
 ///|
 /// Ensures only one operating-system process owns this application identity.
-/// Later processes forward their URL, document, or reopen activation and exit.
+/// Later processes forward their URL, document, or reopen activation and exit
+/// after the primary application loop accepts it. Forwarding has a five-second
+/// deadline and raises `AppRunError` if confirmation is unavailable or the
+/// primary is stopping. Success does not wait for asynchronous launch handlers.
+/// A timeout never starts another owner or terminates the existing process.
 pub fn App::single_instance(self : App, enabled? : Bool = true) -> App {
   self.single_instance_enabled = enabled
   self

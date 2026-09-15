@@ -201,6 +201,35 @@ pub fn AppInstance::attach_runtime(
 }
 
 ///|
+/// Acknowledges a forwarded activation on the owner event loop. Expired or
+/// rejected requests return false and must not be dispatched later.
+pub fn Runtime::respond_app_activation(
+  self : Runtime,
+  request_id : Int64,
+  accept : Bool,
+) -> Bool raise NativeError {
+  let status = @native_ffi.proton_runtime_respond_app_activation_ffi(
+    self.active_handle(),
+    request_id,
+    if accept {
+      1
+    } else {
+      0
+    },
+  )
+  check_status(status)
+  status == 1
+}
+
+///|
+/// Rejects new activations without releasing instance ownership.
+pub fn Runtime::stop_app_activations(self : Runtime) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_runtime_stop_app_activations_ffi(self.active_handle()),
+  )
+}
+
+///|
 pub fn AppInstance::destroy(self : AppInstance) -> Unit raise NativeError {
   if self.destroyed {
     return
@@ -1006,6 +1035,7 @@ fn decode_native_runtime_event(
           require_native_event_text(event, 0, "app activation"),
           @native_ffi.event_int(event, 3) != 0,
         ),
+        @native_ffi.event_int64(event, 2),
       )
     11 =>
       NotificationResult(

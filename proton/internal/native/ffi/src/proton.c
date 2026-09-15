@@ -154,6 +154,25 @@ int32_t proton_app_instance_attach_runtime(
   return PROTON_OK;
 }
 
+int32_t proton_runtime_respond_app_activation(proton_runtime_handle_t runtime,
+                                              int64_t request_id, int32_t accept) {
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->app_instance == PROTON_INVALID_HANDLE) return 0;
+  return proton_app_instance_respond_activation_impl(slot->app_instance, request_id, accept);
+}
+
+int32_t proton_runtime_stop_app_activations(proton_runtime_handle_t runtime) {
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) return status;
+  if (slot->app_instance != PROTON_INVALID_HANDLE) {
+    proton_app_instance_stop_accepting_impl(slot->app_instance);
+  }
+  return PROTON_OK;
+}
+
 int32_t proton_app_instance_destroy(proton_app_instance_id_t instance) {
   char instance_error[512] = {0};
   int32_t status = proton_app_instance_destroy_impl(

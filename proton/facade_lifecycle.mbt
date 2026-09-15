@@ -80,6 +80,12 @@ async fn app_cleanup(
 ) -> Array[AppCleanupError] noraise {
   lifecycle.begin_draining()
   let failures = lifecycle_failures.copy()
+  runtime.stop_app_activations() catch {
+    error =>
+      failures.push(
+        RuntimeDestroy(status=error.status(), detail=error.message()),
+      )
+  }
   for error in close_command_host(command_host) {
     failures.push(CommandExtension(error))
   }
