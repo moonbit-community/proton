@@ -203,7 +203,21 @@ int32_t proton_test_window_dpi_change(void) {
   window.width = 1120;
   window.height = 760;
 
-  RECT suggested = {100, 60, 100 + 1000, 60 + 800};
+  /* SetWindowPos clamps a target frame that does not fit the work area, so
+   * derive the requested rectangle from the work area rather than hard-coding
+   * one: the assertion is that a fitting suggestion is adopted verbatim, not
+   * that the window can be forced past the screen. */
+  MONITORINFO info = {.cbSize = sizeof(MONITORINFO)};
+  CHECK(GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST),
+                        &info));
+  int work_width = info.rcWork.right - info.rcWork.left;
+  int work_height = info.rcWork.bottom - info.rcWork.top;
+  /* Fail loudly rather than silently degenerate on a display-less runner. */
+  CHECK(work_width >= 200 && work_height >= 200);
+  RECT suggested = {info.rcWork.left + work_width / 10,
+                    info.rcWork.top + work_height / 10,
+                    info.rcWork.left + work_width / 10 + work_width * 3 / 5,
+                    info.rcWork.top + work_height / 10 + work_height * 3 / 5};
   SendMessageW(hwnd, WM_DPICHANGED, MAKEWPARAM(240, 240), (LPARAM)&suggested);
 
   RECT frame;
@@ -213,15 +227,19 @@ int32_t proton_test_window_dpi_change(void) {
   CHECK(window.width == 1120 && window.height == 760);
 
   /* A following logical-size request starts from the current DPI, so the size
-   * the caller asked for is the size it gets — no compounding scale factor. */
-  char error[256] = {0};
-  CHECK(proton_engine_window_set_size(&window, 800, 600, error,
-                                      sizeof(error)) == PROTON_OK);
+   * the caller asked for is the size it gets — no compounding scale factor.
+   * Half the work area stays inside it at any DPI. */
   UINT dpi = proton_win_window_dpi(hwnd);
   CHECK(dpi >= 96);
+  int logical_width = proton_win_logical(work_width / 2, dpi);
+  int logical_height = proton_win_logical(work_height / 2, dpi);
+  char error[256] = {0};
+  CHECK(proton_engine_window_set_size(&window, logical_width, logical_height,
+                                      error,
+                                      sizeof(error)) == PROTON_OK);
   CHECK(GetWindowRect(hwnd, &frame));
-  CHECK(frame.right - frame.left == proton_win_pixels(800, dpi));
-  CHECK(frame.bottom - frame.top == proton_win_pixels(600, dpi));
+  CHECK(frame.right - frame.left == proton_win_pixels(logical_width, dpi));
+  CHECK(frame.bottom - frame.top == proton_win_pixels(logical_height, dpi));
 cleanup:
   if (hwnd != NULL)
     DestroyWindow(hwnd);
