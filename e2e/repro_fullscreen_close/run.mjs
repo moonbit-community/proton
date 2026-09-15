@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 if (process.platform !== 'darwin') throw new Error('This reproduction requires macOS.');
+const modes = ['--direct-close', '--restore', '--kiosk'].filter(mode => process.argv.includes(mode));
+if (modes.length > 1) throw new Error('Choose only one close mode.');
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const output = mkdtempSync(join(tmpdir(), 'proton-fullscreen-close-'));
 console.log(`Artifacts: ${output}`);
@@ -18,7 +20,7 @@ moon(['install', '--path', 'proton/internal/cef_process', '--bin', join(output, 
 const binary = resolve(root, '_build/native/debug/build/moonbit-community/proton/e2e/repro_fullscreen_close/repro_fullscreen_close.exe');
 const log = join(output, 'app.log');
 const fd = openSync(log, 'w');
-const child = spawn(binary, process.argv.includes('--direct-close') ? ['--direct-close'] : [], {
+const child = spawn(binary, modes, {
   cwd: root,
   detached: true,
   env: { ...process.env, PROTON_HEADLESS: '0', PROTON_HELPER_PATH: join(output, 'helper/cef_process'), PROTON_REMOTE_DEBUGGING_PORT: '0' },
@@ -48,7 +50,7 @@ try {
     .map(row => ({ pid: Number(row[1]), ppid: Number(row[2]), command: row[4] }));
   const text = readFileSync(log, 'utf8');
   const summary = {
-    mode: process.argv.includes('--direct-close') ? 'direct-close' : 'fullscreen-round-trip',
+    mode: modes[0]?.slice(2) ?? 'fullscreen-round-trip',
     exit: result,
     normalExitMarker: text.includes('REPRO: application exited normally'),
     matchingError: text.includes('runtime failed during poll event (-2): window is not initialized'),

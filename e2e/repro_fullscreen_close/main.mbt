@@ -20,11 +20,27 @@ async fn main {
           @async.sleep(1500)
           if !@env.args().contains("--direct-close") {
             println("REPRO: enter fullscreen")
-            window.set_fullscreen(true)
+            if @env.args().contains("--kiosk") {
+              window.set_kiosk(true)
+            } else {
+              window.set_fullscreen(true)
+            }
             @async.sleep(3000)
+            guard window.is_fullscreen() else {
+              abort("window did not enter fullscreen")
+            }
             println("REPRO: exit fullscreen")
-            window.set_fullscreen(false)
+            if @env.args().contains("--kiosk") {
+              window.set_kiosk(false)
+            } else if @env.args().contains("--restore") {
+              window.restore()
+            } else {
+              window.set_fullscreen(false)
+            }
             @async.sleep(3000)
+            guard !window.is_fullscreen() else {
+              abort("window did not exit fullscreen")
+            }
           }
           println("REPRO: window.close()")
           window.browser().eval("window.close()")

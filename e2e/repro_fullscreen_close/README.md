@@ -1,7 +1,8 @@
 # macOS fullscreen / close reproduction
 
-This branch starts from main `850b4564` (Proton 0.2.10). It contains no traffic
-light positioning changes from PR #304 and makes no runtime fixes.
+This branch starts from main `850b4564` (Proton 0.2.10). The reproduction does not use traffic
+light positioning from PR #304. On the fix branch, it also serves as a
+regression test for the repaired native lifecycle.
 
 ## Run
 
@@ -37,6 +38,17 @@ For comparison, skip the fullscreen round trip:
 ```sh
 node e2e/repro_fullscreen_close/run.mjs --direct-close
 ```
+
+Exercise the other fullscreen exit paths:
+
+```sh
+node e2e/repro_fullscreen_close/run.mjs --restore
+node e2e/repro_fullscreen_close/run.mjs --kiosk
+```
+
+`--restore` enters fullscreen normally and exits through `WindowHandle::restore`.
+`--kiosk` enters and exits through `WindowHandle::set_kiosk`. Each fullscreen
+mode verifies that the window entered and left fullscreen before closing.
 
 The fixed waits make the sequence easy to inspect; this is a diagnostic
 reproduction, not proof of identical animation timing on every Mac.
@@ -84,3 +96,19 @@ then `get_state closed=0 appkit_closing=1`, followed by the error and only later
 Temporarily bypassing the invalid state read removed the error but did not make
 the process exit in a separate experiment. Eliminating this message alone is
 therefore insufficient evidence that window/CEF cleanup has been repaired.
+
+## Fix
+
+All three `toggleFullScreen:` call paths use a local autorelease pool. These
+synchronous FFI calls occur outside the event-pump pool; temporary AppKit
+references created during fullscreen otherwise keep the CEF host view alive
+past native window closure. The browser then cannot complete its close and
+subprocess shutdown remains pending.
+
+Native-window closure is also recognized when the AppKit window pointer is
+cleared, so state polling does not access a window that has already gone away.
+This does not bypass CEF teardown: browser finalization still waits for the
+independent browser lifecycle to reach its terminal state.
+
+The macOS CI job runs fullscreen, restore, and kiosk modes. The existing
+windowed-close test and `--direct-close` provide non-fullscreen controls.
