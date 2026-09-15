@@ -114,7 +114,8 @@ attempt=0
 while [ "$attempt" -lt 10 ]; do
   if [ -f "$work/install/relaunched.txt" ] &&
     grep -q '0\.2\.0' "$work/install/relaunched.txt" &&
-    [ "$(find "$work/install" -maxdepth 1 -type d -name '*.app.previous-*' | wc -l | tr -d ' ')" = 0 ]; then
+    [ ! -e "$work/install/.Updatee.app.proton-update/previous.app" ] &&
+    [ ! -e "$work/install/.Updatee.app.proton-update/deleting.app" ]; then
     break
   fi
   attempt=$((attempt + 1))
@@ -124,7 +125,7 @@ done
 echo "installed version after:  $(cat "$work/install/Updatee.app/Contents/Resources/version")"
 echo "launch log:"
 sed 's/^/  /' "$work/install/relaunched.txt"
-previous_count=$(find "$work/install" -maxdepth 1 -type d -name '*.app.previous-*' | wc -l | tr -d ' ')
+previous_count=$(find "$work/install/.Updatee.app.proton-update" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')
 echo "kept previous bundles: $previous_count"
 test "$previous_count" = 0
 echo "staging entries left:  $(find "$work/install" -maxdepth 1 -name '.proton-update-*' | wc -l | tr -d ' ')"

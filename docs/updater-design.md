@@ -447,13 +447,33 @@ for `open` so that a missing or malformed bundle is reported rather than
 swallowed, and promises nothing beyond that. An application that needs to know
 the new version started has to learn it from the new version.
 
-The replaced bundle is kept beside the install location until the replacement
-completes application startup. The new process then removes older retained
-bundles while holding the same commit lock used by installation. Cleanup only
-accepts Proton's reserved sibling name, a matching code-signing identity, and a
-strictly older revision; a cleanup failure is reported but cannot turn an
-otherwise successful launch into a startup failure. Two conditions must be
-reported clearly rather than worked around: an application installed somewhere
+The replaced bundle is kept in a private, same-volume directory beside the
+installation: `.App.app.proton-update/previous.app`. This hidden directory is
+owned by the updater from the first rename; cleanup never scans or adopts
+historical `.previous-*` or `.backup` siblings. Hidden storage also keeps a
+partially deleted bundle out of Moon's package discovery in development trees.
+
+After the replacement completes application startup, it checks that the retained
+revision is older and atomically renames `previous.app` to `deleting.app` under
+the existing installation commit lock. Recursive deletion only touches this
+confirmed state. A later launch resumes an interrupted deletion without needing
+the removed Info.plist or a valid signature. Installation still verifies the
+incoming signature, application identity, and monotonic revision; those checks
+are not deletion predicates. Another update cannot replace a pending recovery
+copy or incomplete cleanup. No transaction log or arbitrary deletion paths are
+introduced: the private directory and its two fixed names encode ownership and
+state. The empty directory remains for reuse; launching an app that has never
+updated creates no retained state or cleanup lock file.
+
+The installer still uses two same-volume renames. If installing the replacement
+fails, it attempts to restore `previous.app`. A process crash between those
+renames leaves the intact recovery copy in the hidden directory; automatic
+recovery while the application is absent requires an external installer and is
+not provided by this in-process update route.
+
+Cleanup failures report their cause but cannot turn an otherwise successful
+launch into a startup failure. Two conditions must be reported clearly rather
+than worked around: an application installed somewhere
 the user cannot write, and an application still running from a quarantined or
 translocated location.
 

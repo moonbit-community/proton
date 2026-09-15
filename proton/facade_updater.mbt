@@ -223,9 +223,12 @@ fn start_update_check(
 /// not turn that successful launch into a failure.
 fn cleanup_previous_update() -> Unit {
   @native.update_cleanup_previous() catch {
-    _ =>
+    error =>
       @xlog.warn(category="proton.updater") <?
-        { "message": "previous update cleanup failed" }
+        {
+          "message": "previous update cleanup failed",
+          "detail": error.to_string(),
+        }
   }
 }
 

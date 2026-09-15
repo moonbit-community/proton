@@ -1748,8 +1748,8 @@ static int proton_update_find_bundle(const char *directory, char *out,
 
 /* Removes one physical directory tree without following symlinks or crossing
    into another filesystem. Staging paths come directly from mkdtemp; retained
-   bundle paths pass the reserved-name, signature, and revision checks below
-   before reaching this function. */
+   bundle paths belong to the private per-installation directory and have
+   already transitioned to the deleting state before reaching this function. */
 static int proton_update_remove_tree(const char *directory) {
   char *paths[] = {(char *)directory, NULL};
   FTS *tree = fts_open(paths, FTS_PHYSICAL | FTS_NOCHDIR | FTS_XDEV, NULL);
@@ -2410,44 +2410,83 @@ static int proton_update_verify_bundle(const char *staged, const char *installed
   return 1;
 }
 
-/* mkdtemp replaces exactly six trailing X characters with letters or digits.
-   Requiring that exact shape prevents a broad prefix scan from turning into a
-   deletion API for directories the updater did not reserve. */
-static int proton_update_is_previous_name(const char *name,
-                                          const char *bundle_name) {
-  size_t bundle_len = strlen(bundle_name);
-  static const char suffix[] = ".previous-";
-  size_t prefix_len = bundle_len + sizeof(suffix) - 1;
-  if (strlen(name) != prefix_len + 6 ||
-      strncmp(name, bundle_name, bundle_len) != 0 ||
-      strncmp(name + bundle_len, suffix, sizeof(suffix) - 1) != 0) {
+/* One private directory per installation owns both retained states. Names
+   encode the only transition: previous.app is still a recovery copy;
+   deleting.app has been confirmed obsolete and may be partially deleted.
+   Historical sibling bundles are deliberately not adopted by this protocol. */
+static int proton_update_retained_path(const char *current, char *path,
+                                       size_t capacity) {
+  char parent[PROTON_UPDATE_MAX_PATH];
+  const char *name = strrchr(current, '/');
+  if (name == NULL ||
+      !proton_update_parent_path(current, parent, sizeof(parent))) {
     return 0;
   }
-  for (size_t index = prefix_len; index < prefix_len + 6; index++) {
-    char value = name[index];
-    if (!((value >= 'a' && value <= 'z') ||
-          (value >= 'A' && value <= 'Z') ||
-          (value >= '0' && value <= '9'))) {
-      return 0;
-    }
-  }
-  return 1;
+  int written = snprintf(path, capacity, "%s/.%s.proton-update", parent, name + 1);
+  return written >= 0 && (size_t)written < capacity;
 }
 
-int32_t proton_update_cleanup_previous(char *error,
-                                                  int32_t error_len) {
+/* Called under the installation's existing commit lock. Never follow a link
+   or adopt a directory writable by another user. Keep this directory in place
+   after cleanup; only its two fixed children belong to the cleanup protocol. */
+static int proton_update_open_retained(const char *current, int create,
+                                       char *path, char *error, int32_t error_len) {
+  if (!proton_update_retained_path(current, path, PROTON_UPDATE_MAX_PATH)) {
+    proton_update_set_message(error, error_len,
+                              "the retained update path is too long");
+    return -1;
+  }
+  if (create && mkdir(path, S_IRWXU) != 0 && errno != EEXIST) {
+    proton_update_set_message(error, error_len,
+                              "cannot create the retained update directory");
+    return -1;
+  }
+  int fd = open(path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+  struct stat info;
+  struct stat installed;
+  if (fd < 0 || fstat(fd, &info) != 0 || stat(current, &installed) != 0 ||
+      info.st_uid != geteuid() || (info.st_mode & (S_IRWXG | S_IRWXO)) != 0 ||
+      info.st_dev != installed.st_dev) {
+    if (fd >= 0) {
+      close(fd);
+    }
+    proton_update_set_message(error, error_len,
+        "the retained update directory must be private, owned, and on the "
+        "installation filesystem");
+    return -1;
+  }
+  return fd;
+}
+
+/* An absent entry is 0, an owned physical directory is 1, anything else is -1.
+   In particular, a symlink must never redirect recursive cleanup. */
+static int proton_update_retained_entry(int fd, const char *name) {
+  struct stat info;
+  struct stat parent;
+  if (fstatat(fd, name, &info, AT_SYMLINK_NOFOLLOW) != 0) {
+    return errno == ENOENT ? 0 : -1;
+  }
+  return fstat(fd, &parent) == 0 && S_ISDIR(info.st_mode) &&
+                 info.st_uid == geteuid() && info.st_dev == parent.st_dev
+             ? 1
+             : -1;
+}
+
+int32_t proton_update_cleanup_previous(char *error, int32_t error_len) {
   char current[PROTON_UPDATE_MAX_PATH];
   if (!proton_update_running_bundle(current, sizeof(current))) {
-    /* Development executables do not run from an application bundle and have
-       no retained update artifact. Startup cleanup is intentionally a no-op
-       for them. */
     return PROTON_OK;
   }
-
-  uint64_t current_revision = 0;
-  if (!proton_update_bundle_revision(current, 1, &current_revision, error,
-                                     error_len)) {
-    return PROTON_ERR_INVALID_ARGUMENT;
+  char storage[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_retained_path(current, storage, sizeof(storage))) {
+    proton_update_set_message(error, error_len,
+                              "the retained update path is too long");
+    return PROTON_ERR_PLATFORM;
+  }
+  struct stat info;
+  if (lstat(storage, &info) != 0 && errno == ENOENT) {
+    /* Merely launching a bundle must not create update state or lock files. */
+    return PROTON_OK;
   }
   int lock_fd = -1;
   int32_t status = proton_update_acquire_commit_lock(
@@ -2455,58 +2494,56 @@ int32_t proton_update_cleanup_previous(char *error,
   if (status != PROTON_OK) {
     return status;
   }
-
-  char parent[PROTON_UPDATE_MAX_PATH];
-  if (!proton_update_parent_path(current, parent, sizeof(parent))) {
+  int fd = proton_update_open_retained(current, 0, storage, error, error_len);
+  if (fd < 0) {
     close(lock_fd);
+    return PROTON_ERR_PLATFORM;
+  }
+  char previous[PROTON_UPDATE_MAX_PATH];
+  char deleting[PROTON_UPDATE_MAX_PATH];
+  int previous_length = snprintf(previous, sizeof(previous),
+                                 "%s/previous.app", storage);
+  int deleting_length = snprintf(deleting, sizeof(deleting),
+                                 "%s/deleting.app", storage);
+  int retained = proton_update_retained_entry(fd, "previous.app");
+  int pending = proton_update_retained_entry(fd, "deleting.app");
+  if (previous_length < 0 || (size_t)previous_length >= sizeof(previous) ||
+      deleting_length < 0 || (size_t)deleting_length >= sizeof(deleting) ||
+      retained < 0 || pending < 0 || (retained && pending)) {
     proton_update_set_message(error, error_len,
-                              "the application parent path is invalid");
-    return PROTON_ERR_PLATFORM;
-  }
-  const char *bundle_name = strrchr(current, '/');
-  bundle_name = bundle_name == NULL ? current : bundle_name + 1;
-  struct dirent **entries = NULL;
-  int entry_count = scandir(parent, &entries, NULL, alphasort);
-  if (entry_count < 0) {
-    close(lock_fd);
-    proton_update_set_message(
-        error, error_len,
-        "the application directory cannot be scanned for previous versions");
-    return PROTON_ERR_PLATFORM;
-  }
-
-  int cleanup_failed = 0;
-  for (int index = 0; index < entry_count; index++) {
-    const char *name = entries[index]->d_name;
-    if (proton_update_is_previous_name(name, bundle_name)) {
-      char candidate[PROTON_UPDATE_MAX_PATH];
-      int written = snprintf(candidate, sizeof(candidate), "%s/%s", parent,
-                             name);
-      if (written >= 0 && (size_t)written < sizeof(candidate) &&
-          proton_update_is_directory(candidate)) {
-        char ignored[512];
-        uint64_t candidate_revision = 0;
-        if (proton_update_verify_bundle(candidate, current, ignored,
-                                        sizeof(ignored)) &&
-            proton_update_bundle_revision(candidate, 1, &candidate_revision,
-                                          ignored, sizeof(ignored)) &&
-            candidate_revision < current_revision &&
-            !proton_update_remove_tree(candidate)) {
-          cleanup_failed = 1;
-        }
+                              "the retained update state is invalid");
+    status = PROTON_ERR_PLATFORM;
+  } else if (retained) {
+    uint64_t current_revision = 0;
+    uint64_t previous_revision = 0;
+    if (!proton_update_bundle_revision(current, 1, &current_revision,
+                                       error, error_len) ||
+        !proton_update_bundle_revision(previous, 1, &previous_revision,
+                                       error, error_len)) {
+      status = PROTON_ERR_INVALID_ARGUMENT;
+    } else if (previous_revision < current_revision) {
+      /* Commit eligibility before touching contents. A later attempt resumes
+         deleting.app without requiring its already-removed Info.plist or seal. */
+      if (renameat(fd, "previous.app", fd, "deleting.app") != 0) {
+        proton_update_set_message(
+            error, error_len, "cannot mark the previous application for deletion");
+        status = PROTON_ERR_PLATFORM;
+      } else {
+        pending = 1;
       }
     }
-    free(entries[index]);
   }
-  free(entries);
+  if (status == PROTON_OK && pending && !proton_update_remove_tree(deleting)) {
+    char detail[PROTON_UPDATE_MAX_PATH + 128];
+    snprintf(detail, sizeof(detail),
+             "previous update cleanup failed at %s; cleanup will resume on "
+             "the next launch", deleting);
+    proton_update_set_message(error, error_len, detail);
+    status = PROTON_ERR_PLATFORM;
+  }
+  close(fd);
   close(lock_fd);
-  if (cleanup_failed) {
-    proton_update_set_message(
-        error, error_len,
-        "an older application bundle could not be removed");
-    return PROTON_ERR_PLATFORM;
-  }
-  return PROTON_OK;
+  return status;
 }
 
 static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
@@ -2514,33 +2551,35 @@ static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
                                             int *preserve_staging, char *error,
                                             int32_t error_len) {
   *preserve_staging = 0;
+  char storage[PROTON_UPDATE_MAX_PATH];
+  int fd = proton_update_open_retained(current, 1, storage, error, error_len);
+  if (fd < 0) {
+    return PROTON_ERR_PLATFORM;
+  }
+  int retained = proton_update_retained_entry(fd, "previous.app");
+  int pending = proton_update_retained_entry(fd, "deleting.app");
+  if (retained != 0 || pending != 0) {
+    close(fd);
+    proton_update_set_message(error, error_len,
+        "a previous update still needs startup confirmation or cleanup "
+        "before another installation");
+    return PROTON_ERR_UPDATE_BUSY;
+  }
   char previous[PROTON_UPDATE_MAX_PATH];
-  int written = snprintf(previous, sizeof(previous), "%s.previous-XXXXXX",
-                         current);
+  int written = snprintf(previous, sizeof(previous), "%s/previous.app", storage);
   if (written < 0 || (size_t)written >= sizeof(previous)) {
+    close(fd);
     proton_update_set_message(error, error_len,
-                              "the replaced bundle path is too long");
+                              "the retained application path is too long");
     return PROTON_ERR_PLATFORM;
   }
-  /* mkdtemp, not a name built from the process id: a second update in the same
-     process would reuse that name, and renaming a directory onto a non-empty
-     one fails. Here the name is reserved atomically, and because what it
-     reserves is an empty directory, the reservation doubles as the
-     destination — renaming onto an empty directory replaces it. */
-  if (mkdtemp(previous) == NULL) {
-    proton_update_set_message(error, error_len,
-                              "cannot reserve a place for the replaced "
-                              "application");
-    return PROTON_ERR_PLATFORM;
-  }
+  close(fd);
 
-  /* Two renames on one volume. A crash before the first leaves the old
-     application in place; a crash after the second leaves the new one. The
-     only window is between them, and it is closed by moving the old bundle
-     back. Nothing ever observes a half-written bundle, because neither rename
-     copies anything. */
+  /* Two renames on one volume, with no partial bundle copies. If the second
+     rename fails, restore the old application. A process crash between the
+     renames leaves the intact recovery copy in the retained directory; this
+     in-process installer cannot restore it until another process intervenes. */
   if (rename(current, previous) != 0) {
-    (void)rmdir(previous);
     proton_update_set_message(error, error_len,
                               "cannot move the installed application aside");
     return PROTON_ERR_PLATFORM;
@@ -2553,7 +2592,8 @@ static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
       proton_update_set_message(
           error, error_len,
           "the update could not be installed and the previous application "
-          "could not be restored; it remains beside the install location");
+          "could not be restored; it remains in the hidden retained update "
+          "directory");
       return PROTON_ERR_PLATFORM;
     }
     proton_update_set_message(error, error_len,
