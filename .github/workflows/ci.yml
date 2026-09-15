@@ -366,6 +366,14 @@ jobs:
           MOON_CC: cc
         run: moon -C e2e run test --target native --diagnostic-limit 200 -- --windowed-close
 
+      - name: Run macOS fullscreen close regressions
+        if: ${{ matrix.os == 'macos-latest' }}
+        timeout-minutes: 5
+        run: |
+          node e2e/repro_fullscreen_close/run.mjs
+          node e2e/repro_fullscreen_close/run.mjs --restore
+          node e2e/repro_fullscreen_close/run.mjs --kiosk
+
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}
         run: find ./_build -type f -perm -111 | xargs ls -lh
