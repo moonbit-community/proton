@@ -16,7 +16,6 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #elif defined(__APPLE__)
-#include <dlfcn.h>
 #include <limits.h>
 #include <pthread.h>
 #endif
@@ -1553,25 +1552,16 @@ static int32_t moonbit_tray_linux_commit_menu(moonbit_tray_state_t *state) {
 #endif
 
 #if defined(__APPLE__)
-typedef void *moonbit_tray_id;
-typedef void *moonbit_tray_sel;
-typedef signed char moonbit_tray_bool;
+#include <objc/runtime.h>
+#include <objc/message.h>
+
+typedef id moonbit_tray_id;
+typedef SEL moonbit_tray_sel;
+typedef BOOL moonbit_tray_bool;
 
 typedef struct moonbit_tray_macos_backend {
   int32_t initialized;
-  void *objc_lib;
-  void *appkit_lib;
-  moonbit_tray_id (*objc_getClass)(const char *);
-  moonbit_tray_id (*objc_lookUpClass)(const char *);
-  moonbit_tray_id (*objc_allocateClassPair)(moonbit_tray_id, const char *, size_t);
-  void (*objc_registerClassPair)(moonbit_tray_id);
-  moonbit_tray_sel (*sel_registerName)(const char *);
-  int (*class_addIvar)(moonbit_tray_id, const char *, size_t, uint8_t, const char *);
-  int (*class_addMethod)(moonbit_tray_id, moonbit_tray_sel, void *, const char *);
-  void *(*object_getInstanceVariable)(moonbit_tray_id, const char *, void **);
-  void *(*object_setInstanceVariable)(moonbit_tray_id, const char *, void *);
-  void *objc_msgSend;
-  moonbit_tray_id menu_target_class;
+  Class menu_target_class;
 } moonbit_tray_macos_backend_t;
 
 static moonbit_tray_macos_backend_t moonbit_tray_macos_backend;
@@ -1582,44 +1572,44 @@ static void moonbit_tray_macos_menu_action(
     moonbit_tray_id sender);
 
 static int32_t moonbit_tray_macos_ensure_menu_target_class(void) {
-  moonbit_tray_id existing;
-  moonbit_tray_id superclass;
-  moonbit_tray_id target_class;
+  Class existing;
+  Class superclass;
+  Class target_class;
   uint8_t pointer_alignment = sizeof(void *) == 8 ? 3 : 2;
   if (moonbit_tray_macos_backend.menu_target_class != NULL) {
     return 1;
   }
-  existing = moonbit_tray_macos_backend.objc_lookUpClass(
+  existing = objc_lookUpClass(
       "MoonBitTrayMenuTarget");
   if (existing != NULL) {
     moonbit_tray_macos_backend.menu_target_class = existing;
     return 1;
   }
-  superclass = moonbit_tray_macos_backend.objc_getClass("NSObject");
+  superclass = objc_getClass("NSObject");
   if (superclass == NULL) {
     return 0;
   }
-  target_class = moonbit_tray_macos_backend.objc_allocateClassPair(
+  target_class = objc_allocateClassPair(
       superclass,
       "MoonBitTrayMenuTarget",
       0);
   if (target_class == NULL) {
     return 0;
   }
-  if (!moonbit_tray_macos_backend.class_addIvar(
+  if (!class_addIvar(
           target_class,
           "state",
           sizeof(void *),
           pointer_alignment,
           "^v") ||
-      !moonbit_tray_macos_backend.class_addMethod(
+      !class_addMethod(
           target_class,
-          moonbit_tray_macos_backend.sel_registerName("moonbitTrayMenuAction:"),
-          (void *)moonbit_tray_macos_menu_action,
+          sel_registerName("moonbitTrayMenuAction:"),
+          (IMP)moonbit_tray_macos_menu_action,
           "v@:@")) {
     return 0;
   }
-  moonbit_tray_macos_backend.objc_registerClassPair(target_class);
+  objc_registerClassPair(target_class);
   moonbit_tray_macos_backend.menu_target_class = target_class;
   return 1;
 }
@@ -1629,80 +1619,6 @@ static int32_t moonbit_tray_macos_backend_init(void) {
     return 1;
   }
   if (moonbit_tray_macos_backend.initialized < 0) {
-    return 0;
-  }
-  moonbit_tray_macos_backend.objc_lib =
-      dlopen("/usr/lib/libobjc.A.dylib", RTLD_LAZY | RTLD_GLOBAL);
-  if (moonbit_tray_macos_backend.objc_lib == NULL) {
-    moonbit_tray_macos_backend.objc_lib =
-        dlopen("/usr/lib/libobjc.dylib", RTLD_LAZY | RTLD_GLOBAL);
-  }
-  moonbit_tray_macos_backend.appkit_lib =
-      dlopen(
-          "/System/Library/Frameworks/AppKit.framework/AppKit",
-          RTLD_LAZY | RTLD_GLOBAL);
-  if (moonbit_tray_macos_backend.objc_lib == NULL ||
-      moonbit_tray_macos_backend.appkit_lib == NULL) {
-    moonbit_tray_set_message(
-        moonbit_tray_support_message,
-        sizeof(moonbit_tray_support_message),
-        "AppKit or Objective-C runtime could not be loaded");
-    moonbit_tray_macos_backend.initialized = -1;
-    return 0;
-  }
-  moonbit_tray_macos_backend.objc_getClass =
-      (moonbit_tray_id(*)(const char *))dlsym(
-          moonbit_tray_macos_backend.objc_lib,
-          "objc_getClass");
-  moonbit_tray_macos_backend.objc_lookUpClass =
-      (moonbit_tray_id(*)(const char *))dlsym(
-          moonbit_tray_macos_backend.objc_lib,
-          "objc_lookUpClass");
-  moonbit_tray_macos_backend.objc_allocateClassPair =
-      (moonbit_tray_id(*)(moonbit_tray_id, const char *, size_t))dlsym(
-          moonbit_tray_macos_backend.objc_lib,
-          "objc_allocateClassPair");
-  moonbit_tray_macos_backend.objc_registerClassPair =
-      (void (*)(moonbit_tray_id))dlsym(
-          moonbit_tray_macos_backend.objc_lib,
-          "objc_registerClassPair");
-  moonbit_tray_macos_backend.sel_registerName =
-      (moonbit_tray_sel(*)(const char *))dlsym(
-          moonbit_tray_macos_backend.objc_lib,
-          "sel_registerName");
-  moonbit_tray_macos_backend.class_addIvar =
-      (int (*)(moonbit_tray_id, const char *, size_t, uint8_t, const char *))dlsym(
-          moonbit_tray_macos_backend.objc_lib,
-          "class_addIvar");
-  moonbit_tray_macos_backend.class_addMethod =
-      (int (*)(moonbit_tray_id, moonbit_tray_sel, void *, const char *))dlsym(
-          moonbit_tray_macos_backend.objc_lib,
-          "class_addMethod");
-  moonbit_tray_macos_backend.object_getInstanceVariable =
-      (void *(*)(moonbit_tray_id, const char *, void **))dlsym(
-          moonbit_tray_macos_backend.objc_lib,
-          "object_getInstanceVariable");
-  moonbit_tray_macos_backend.object_setInstanceVariable =
-      (void *(*)(moonbit_tray_id, const char *, void *))dlsym(
-          moonbit_tray_macos_backend.objc_lib,
-          "object_setInstanceVariable");
-  moonbit_tray_macos_backend.objc_msgSend =
-      dlsym(moonbit_tray_macos_backend.objc_lib, "objc_msgSend");
-  if (moonbit_tray_macos_backend.objc_getClass == NULL ||
-      moonbit_tray_macos_backend.objc_lookUpClass == NULL ||
-      moonbit_tray_macos_backend.objc_allocateClassPair == NULL ||
-      moonbit_tray_macos_backend.objc_registerClassPair == NULL ||
-      moonbit_tray_macos_backend.sel_registerName == NULL ||
-      moonbit_tray_macos_backend.class_addIvar == NULL ||
-      moonbit_tray_macos_backend.class_addMethod == NULL ||
-      moonbit_tray_macos_backend.object_getInstanceVariable == NULL ||
-      moonbit_tray_macos_backend.object_setInstanceVariable == NULL ||
-      moonbit_tray_macos_backend.objc_msgSend == NULL) {
-    moonbit_tray_set_message(
-        moonbit_tray_support_message,
-        sizeof(moonbit_tray_support_message),
-        "failed to resolve Objective-C runtime entry points");
-    moonbit_tray_macos_backend.initialized = -1;
     return 0;
   }
   if (!moonbit_tray_macos_ensure_menu_target_class()) {
@@ -1721,18 +1637,18 @@ static int32_t moonbit_tray_macos_backend_init(void) {
 }
 
 static moonbit_tray_sel moonbit_tray_macos_sel(const char *name) {
-  return moonbit_tray_macos_backend.sel_registerName(name);
+  return sel_registerName(name);
 }
 
 static moonbit_tray_id moonbit_tray_macos_class(const char *name) {
-  return moonbit_tray_macos_backend.objc_getClass(name);
+  return (id)objc_getClass(name);
 }
 
 static moonbit_tray_id moonbit_tray_macos_send_id(
     moonbit_tray_id object,
     const char *selector_name) {
   return ((moonbit_tray_id(*)(moonbit_tray_id, moonbit_tray_sel))
-              moonbit_tray_macos_backend.objc_msgSend)(
+              objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name));
 }
@@ -1742,7 +1658,7 @@ static moonbit_tray_id moonbit_tray_macos_send_id_id(
     const char *selector_name,
     moonbit_tray_id arg) {
   return ((moonbit_tray_id(*)(moonbit_tray_id, moonbit_tray_sel, moonbit_tray_id))
-              moonbit_tray_macos_backend.objc_msgSend)(
+              objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name),
       arg);
@@ -1755,7 +1671,7 @@ static moonbit_tray_id moonbit_tray_macos_send_id_id_sel_id(
     moonbit_tray_sel arg2,
     moonbit_tray_id arg3) {
   return ((moonbit_tray_id(*)(moonbit_tray_id, moonbit_tray_sel, moonbit_tray_id, moonbit_tray_sel, moonbit_tray_id))
-              moonbit_tray_macos_backend.objc_msgSend)(
+              objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name),
       arg1,
@@ -1768,7 +1684,7 @@ static moonbit_tray_id moonbit_tray_macos_send_id_cstring(
     const char *selector_name,
     const char *arg) {
   return ((moonbit_tray_id(*)(moonbit_tray_id, moonbit_tray_sel, const char *))
-              moonbit_tray_macos_backend.objc_msgSend)(
+              objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name),
       arg);
@@ -1779,7 +1695,7 @@ static moonbit_tray_id moonbit_tray_macos_send_id_double(
     const char *selector_name,
     double arg) {
   return ((moonbit_tray_id(*)(moonbit_tray_id, moonbit_tray_sel, double))
-              moonbit_tray_macos_backend.objc_msgSend)(
+              objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name),
       arg);
@@ -1793,7 +1709,7 @@ static moonbit_tray_id moonbit_tray_macos_send_id_ulong_id_id_bool(
     moonbit_tray_id arg3,
     moonbit_tray_bool arg4) {
   return ((moonbit_tray_id(*)(moonbit_tray_id, moonbit_tray_sel, unsigned long, moonbit_tray_id, moonbit_tray_id, moonbit_tray_bool))
-              moonbit_tray_macos_backend.objc_msgSend)(
+              objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name),
       arg1,
@@ -1806,7 +1722,7 @@ static void moonbit_tray_macos_send_void(
     moonbit_tray_id object,
     const char *selector_name) {
   ((void (*)(moonbit_tray_id, moonbit_tray_sel))
-       moonbit_tray_macos_backend.objc_msgSend)(
+       objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name));
 }
@@ -1815,7 +1731,7 @@ static const char *moonbit_tray_macos_send_cstring(
     moonbit_tray_id object,
     const char *selector_name) {
   return ((const char *(*)(moonbit_tray_id, moonbit_tray_sel))
-              moonbit_tray_macos_backend.objc_msgSend)(
+              objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name));
 }
@@ -1825,7 +1741,7 @@ static void moonbit_tray_macos_send_void_id(
     const char *selector_name,
     moonbit_tray_id arg) {
   ((void (*)(moonbit_tray_id, moonbit_tray_sel, moonbit_tray_id))
-       moonbit_tray_macos_backend.objc_msgSend)(
+       objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name),
       arg);
@@ -1836,7 +1752,7 @@ static void moonbit_tray_macos_send_void_long(
     const char *selector_name,
     long arg) {
   ((void (*)(moonbit_tray_id, moonbit_tray_sel, long))
-       moonbit_tray_macos_backend.objc_msgSend)(
+       objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name),
       arg);
@@ -1847,7 +1763,7 @@ static void moonbit_tray_macos_send_void_bool(
     const char *selector_name,
     moonbit_tray_bool arg) {
   ((void (*)(moonbit_tray_id, moonbit_tray_sel, moonbit_tray_bool))
-       moonbit_tray_macos_backend.objc_msgSend)(
+       objc_msgSend)(
       object,
       moonbit_tray_macos_sel(selector_name),
       arg);
@@ -1986,7 +1902,7 @@ static void moonbit_tray_macos_menu_action(
   if (target == NULL || sender == NULL) {
     return;
   }
-  moonbit_tray_macos_backend.object_getInstanceVariable(
+  object_getInstanceVariable(
       target,
       "state",
       (void **)&state);
@@ -2003,12 +1919,12 @@ static moonbit_tray_id moonbit_tray_macos_create_menu_target(
     moonbit_tray_state_t *state) {
   moonbit_tray_id target =
       moonbit_tray_macos_send_id(
-          moonbit_tray_macos_backend.menu_target_class,
+          (id)moonbit_tray_macos_backend.menu_target_class,
           "new");
   if (target == NULL) {
     return NULL;
   }
-  moonbit_tray_macos_backend.object_setInstanceVariable(
+  object_setInstanceVariable(
       target,
       "state",
       state);
@@ -2284,7 +2200,7 @@ static void moonbit_tray_macos_release_state(moonbit_tray_state_t *state) {
   }
   moonbit_tray_macos_release_menu((moonbit_tray_id *)&state->menu);
   if (state->menu_target != NULL) {
-    moonbit_tray_macos_backend.object_setInstanceVariable(
+    object_setInstanceVariable(
         (moonbit_tray_id)state->menu_target,
         "state",
         NULL);

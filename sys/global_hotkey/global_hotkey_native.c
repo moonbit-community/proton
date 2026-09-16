@@ -108,119 +108,6 @@ static mb_global_hotkey_event_wakeup_fn mb_push_trigger_locked(
 static void mb_set_error_message(const char *message);
 
 #ifdef __APPLE__
-typedef struct mb_macos_api {
-  void *app_services;
-  void *core_foundation;
-  int loaded;
-  int initialized;
-  CFMachPortRef (*CGEventTapCreate)(CGEventTapLocation, CGEventTapPlacement,
-                                    CGEventTapOptions, CGEventMask,
-                                    CGEventTapCallBack, void *);
-  void (*CGEventTapEnable)(CFMachPortRef, bool);
-  CGEventFlags (*CGEventGetFlags)(CGEventRef);
-  int64_t (*CGEventGetIntegerValueField)(CGEventRef, CGEventField);
-  CFRunLoopSourceRef (*CFMachPortCreateRunLoopSource)(CFAllocatorRef,
-                                                      CFMachPortRef, CFIndex);
-  CFRunLoopObserverRef (*CFRunLoopObserverCreate)(
-      CFAllocatorRef,
-      CFOptionFlags,
-      Boolean,
-      CFIndex,
-      CFRunLoopObserverCallBack,
-      CFRunLoopObserverContext *);
-  CFRunLoopRef (*CFRunLoopGetCurrent)(void);
-  void (*CFRunLoopAddSource)(CFRunLoopRef, CFRunLoopSourceRef, CFStringRef);
-  void (*CFRunLoopAddObserver)(CFRunLoopRef, CFRunLoopObserverRef, CFStringRef);
-  void (*CFRunLoopRun)(void);
-  void (*CFRunLoopStop)(CFRunLoopRef);
-  void (*CFRunLoopWakeUp)(CFRunLoopRef);
-  CFTypeRef (*CFRetain)(CFTypeRef);
-  void (*CFRelease)(CFTypeRef);
-  CFStringRef (*CFStringCreateWithCString)(CFAllocatorRef, const char *,
-                                          CFStringEncoding);
-} mb_macos_api_t;
-
-static mb_macos_api_t mb_macos_api;
-
-static int mb_macos_load_api(void) {
-  if (mb_macos_api.initialized) {
-    return mb_macos_api.loaded;
-  }
-
-  memset(&mb_macos_api, 0, sizeof(mb_macos_api));
-  mb_macos_api.initialized = 1;
-  mb_macos_api.app_services = dlopen(
-      "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices",
-      RTLD_LAZY | RTLD_LOCAL);
-  mb_macos_api.core_foundation = dlopen(
-      "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation",
-      RTLD_LAZY | RTLD_LOCAL);
-  if (mb_macos_api.app_services == NULL || mb_macos_api.core_foundation == NULL) {
-    return 0;
-  }
-
-  mb_macos_api.CGEventTapCreate =
-      (CFMachPortRef(*)(CGEventTapLocation, CGEventTapPlacement,
-                        CGEventTapOptions, CGEventMask, CGEventTapCallBack,
-                        void *))dlsym(mb_macos_api.app_services, "CGEventTapCreate");
-  mb_macos_api.CGEventTapEnable =
-      (void (*)(CFMachPortRef, bool))dlsym(mb_macos_api.app_services, "CGEventTapEnable");
-  mb_macos_api.CGEventGetFlags =
-      (CGEventFlags(*)(CGEventRef))dlsym(mb_macos_api.app_services, "CGEventGetFlags");
-  mb_macos_api.CGEventGetIntegerValueField =
-      (int64_t(*)(CGEventRef, CGEventField))dlsym(
-          mb_macos_api.app_services, "CGEventGetIntegerValueField");
-  mb_macos_api.CFMachPortCreateRunLoopSource =
-      (CFRunLoopSourceRef(*)(CFAllocatorRef, CFMachPortRef, CFIndex))dlsym(
-          mb_macos_api.core_foundation, "CFMachPortCreateRunLoopSource");
-  mb_macos_api.CFRunLoopObserverCreate =
-      (CFRunLoopObserverRef(*)(CFAllocatorRef, CFOptionFlags, Boolean, CFIndex,
-                               CFRunLoopObserverCallBack,
-                               CFRunLoopObserverContext *))dlsym(
-          mb_macos_api.core_foundation, "CFRunLoopObserverCreate");
-  mb_macos_api.CFRunLoopGetCurrent =
-      (CFRunLoopRef(*)(void))dlsym(mb_macos_api.core_foundation, "CFRunLoopGetCurrent");
-  mb_macos_api.CFRunLoopAddSource =
-      (void (*)(CFRunLoopRef, CFRunLoopSourceRef, CFStringRef))dlsym(
-          mb_macos_api.core_foundation, "CFRunLoopAddSource");
-  mb_macos_api.CFRunLoopAddObserver =
-      (void (*)(CFRunLoopRef, CFRunLoopObserverRef, CFStringRef))dlsym(
-          mb_macos_api.core_foundation, "CFRunLoopAddObserver");
-  mb_macos_api.CFRunLoopRun =
-      (void (*)(void))dlsym(mb_macos_api.core_foundation, "CFRunLoopRun");
-  mb_macos_api.CFRunLoopStop =
-      (void (*)(CFRunLoopRef))dlsym(mb_macos_api.core_foundation, "CFRunLoopStop");
-  mb_macos_api.CFRunLoopWakeUp =
-      (void (*)(CFRunLoopRef))dlsym(mb_macos_api.core_foundation, "CFRunLoopWakeUp");
-  mb_macos_api.CFRetain =
-      (CFTypeRef(*)(CFTypeRef))dlsym(mb_macos_api.core_foundation, "CFRetain");
-  mb_macos_api.CFRelease =
-      (void (*)(CFTypeRef))dlsym(mb_macos_api.core_foundation, "CFRelease");
-  mb_macos_api.CFStringCreateWithCString =
-      (CFStringRef(*)(CFAllocatorRef, const char *, CFStringEncoding))dlsym(
-          mb_macos_api.core_foundation, "CFStringCreateWithCString");
-
-  if (mb_macos_api.CGEventTapCreate == NULL ||
-      mb_macos_api.CGEventTapEnable == NULL ||
-      mb_macos_api.CGEventGetFlags == NULL ||
-      mb_macos_api.CGEventGetIntegerValueField == NULL ||
-      mb_macos_api.CFMachPortCreateRunLoopSource == NULL ||
-      mb_macos_api.CFRunLoopObserverCreate == NULL ||
-      mb_macos_api.CFRunLoopGetCurrent == NULL ||
-      mb_macos_api.CFRunLoopAddSource == NULL ||
-      mb_macos_api.CFRunLoopAddObserver == NULL ||
-      mb_macos_api.CFRunLoopRun == NULL ||
-      mb_macos_api.CFRunLoopStop == NULL ||
-      mb_macos_api.CFRunLoopWakeUp == NULL ||
-      mb_macos_api.CFRetain == NULL || mb_macos_api.CFRelease == NULL ||
-      mb_macos_api.CFStringCreateWithCString == NULL) {
-    return 0;
-  }
-
-  mb_macos_api.loaded = 1;
-  return 1;
-}
-
 static uint32_t mb_macos_modifiers_from_flags(CGEventFlags flags) {
   uint32_t mask = 0;
   if ((flags & kCGEventFlagMaskAlternate) != 0) {
@@ -462,7 +349,7 @@ static CGEventRef mb_macos_event_callback(CGEventTapProxy proxy,
   if (type == kCGEventTapDisabledByTimeout ||
       type == kCGEventTapDisabledByUserInput) {
     if (state->event_tap != NULL) {
-      mb_macos_api.CGEventTapEnable(state->event_tap, true);
+      CGEventTapEnable(state->event_tap, true);
     }
     return event;
   }
@@ -471,17 +358,17 @@ static CGEventRef mb_macos_event_callback(CGEventTapProxy proxy,
     return event;
   }
 
-  if (mb_macos_api.CGEventGetIntegerValueField(event, kCGKeyboardEventAutorepeat) != 0) {
+  if (CGEventGetIntegerValueField(event, kCGKeyboardEventAutorepeat) != 0) {
     return event;
   }
 
   mb_global_hotkey_event_wakeup_fn wakeup = NULL;
   pthread_mutex_lock(&state->lock);
   {
-    uint32_t keycode = (uint32_t)mb_macos_api.CGEventGetIntegerValueField(
+    uint32_t keycode = (uint32_t)CGEventGetIntegerValueField(
         event, kCGKeyboardEventKeycode);
     uint32_t modifiers =
-        mb_macos_modifiers_from_flags(mb_macos_api.CGEventGetFlags(event));
+        mb_macos_modifiers_from_flags(CGEventGetFlags(event));
     mb_registration_t *cursor = state->registrations;
     while (cursor != NULL) {
       if (cursor->keycode == keycode && cursor->modifiers == modifiers) {
@@ -520,16 +407,8 @@ static void *mb_macos_thread_main(void *raw_state) {
   CFRunLoopRef run_loop = NULL;
   CFStringRef mode = NULL;
 
-  if (!mb_macos_load_api()) {
-    pthread_mutex_lock(&state->lock);
-    mb_state_set_startup_error(state, "failed to load macOS event frameworks");
-    state->ready = 1;
-    pthread_cond_signal(&state->ready_cond);
-    pthread_mutex_unlock(&state->lock);
-    return NULL;
-  }
 
-  event_tap = mb_macos_api.CGEventTapCreate(
+  event_tap = CGEventTapCreate(
       kCGSessionEventTap, kCGHeadInsertEventTap, kCGEventTapOptionListenOnly,
       ((CGEventMask)1) << kCGEventKeyDown,
       mb_macos_event_callback, state);
@@ -544,18 +423,18 @@ static void *mb_macos_thread_main(void *raw_state) {
     return NULL;
   }
 
-  source = mb_macos_api.CFMachPortCreateRunLoopSource(NULL, event_tap, 0);
+  source = CFMachPortCreateRunLoopSource(NULL, event_tap, 0);
   if (source == NULL) {
     pthread_mutex_lock(&state->lock);
     mb_state_set_startup_error(state, "failed to create the macOS run loop source");
     state->ready = 1;
     pthread_cond_signal(&state->ready_cond);
     pthread_mutex_unlock(&state->lock);
-    mb_macos_api.CFRelease(event_tap);
+    CFRelease(event_tap);
     return NULL;
   }
 
-  mode = mb_macos_api.CFStringCreateWithCString(NULL, "kCFRunLoopDefaultMode",
+  mode = CFStringCreateWithCString(NULL, "kCFRunLoopDefaultMode",
                                                 kCFStringEncodingUTF8);
   if (mode == NULL) {
     pthread_mutex_lock(&state->lock);
@@ -563,17 +442,17 @@ static void *mb_macos_thread_main(void *raw_state) {
     state->ready = 1;
     pthread_cond_signal(&state->ready_cond);
     pthread_mutex_unlock(&state->lock);
-    mb_macos_api.CFRelease(source);
-    mb_macos_api.CFRelease(event_tap);
+    CFRelease(source);
+    CFRelease(event_tap);
     return NULL;
   }
 
-  run_loop = mb_macos_api.CFRunLoopGetCurrent();
-  mb_macos_api.CFRetain(run_loop);
+  run_loop = CFRunLoopGetCurrent();
+  CFRetain(run_loop);
 
   {
     CFRunLoopObserverContext observer_context = {0, state, NULL, NULL, NULL};
-    startup_observer = mb_macos_api.CFRunLoopObserverCreate(
+    startup_observer = CFRunLoopObserverCreate(
         NULL, kCFRunLoopEntry, false, 0, mb_macos_run_loop_ready_callback,
         &observer_context);
   }
@@ -583,10 +462,10 @@ static void *mb_macos_thread_main(void *raw_state) {
     state->ready = 1;
     pthread_cond_signal(&state->ready_cond);
     pthread_mutex_unlock(&state->lock);
-    mb_macos_api.CFRelease(run_loop);
-    mb_macos_api.CFRelease(mode);
-    mb_macos_api.CFRelease(source);
-    mb_macos_api.CFRelease(event_tap);
+    CFRelease(run_loop);
+    CFRelease(mode);
+    CFRelease(source);
+    CFRelease(event_tap);
     return NULL;
   }
 
@@ -595,13 +474,13 @@ static void *mb_macos_thread_main(void *raw_state) {
   state->run_loop = run_loop;
   pthread_mutex_unlock(&state->lock);
 
-  mb_macos_api.CFRunLoopAddSource(run_loop, source, mode);
-  mb_macos_api.CFRunLoopAddObserver(run_loop, startup_observer, mode);
-  mb_macos_api.CGEventTapEnable(event_tap, true);
-  mb_macos_api.CFRelease(startup_observer);
+  CFRunLoopAddSource(run_loop, source, mode);
+  CFRunLoopAddObserver(run_loop, startup_observer, mode);
+  CGEventTapEnable(event_tap, true);
+  CFRelease(startup_observer);
   startup_observer = NULL;
-  mb_macos_api.CFRelease(source);
-  mb_macos_api.CFRunLoopRun();
+  CFRelease(source);
+  CFRunLoopRun();
 
   pthread_mutex_lock(&state->lock);
   state->running = 0;
@@ -609,9 +488,9 @@ static void *mb_macos_thread_main(void *raw_state) {
   state->run_loop = NULL;
   pthread_mutex_unlock(&state->lock);
 
-  mb_macos_api.CFRelease(mode);
-  mb_macos_api.CFRelease(run_loop);
-  mb_macos_api.CFRelease(event_tap);
+  CFRelease(mode);
+  CFRelease(run_loop);
+  CFRelease(event_tap);
   return NULL;
 }
 #endif
@@ -1576,10 +1455,6 @@ MOONBIT_FFI_EXPORT int32_t mb_global_hotkey_platform_supported(void) {
   mb_set_error_message("");
   return 1;
 #elif defined(__APPLE__)
-  if (!mb_macos_load_api()) {
-    mb_set_error_message("failed to load the macOS event frameworks");
-    return 0;
-  }
   mb_set_error_message("");
   return 1;
 #else
@@ -1679,11 +1554,6 @@ MOONBIT_FFI_EXPORT mb_global_hotkey_state_t *mb_global_hotkey_create(void) {
   mb_set_error_message("");
   return state;
 #elif defined(__APPLE__)
-  if (!mb_macos_load_api()) {
-    free(state);
-    mb_set_error_message("failed to load the macOS event frameworks");
-    return NULL;
-  }
   if (!mb_init_sync_primitives(&state->lock, &state->ready_cond)) {
     free(state);
     mb_set_error_message("failed to initialize macOS synchronization primitives");
@@ -1772,13 +1642,13 @@ MOONBIT_FFI_EXPORT void mb_global_hotkey_destroy(
     CFRunLoopRef run_loop = NULL;
     pthread_mutex_lock(&state->lock);
     if (state->run_loop != NULL) {
-      run_loop = (CFRunLoopRef)mb_macos_api.CFRetain(state->run_loop);
+      run_loop = (CFRunLoopRef)CFRetain(state->run_loop);
     }
     pthread_mutex_unlock(&state->lock);
     if (run_loop != NULL) {
-      mb_macos_api.CFRunLoopStop(run_loop);
-      mb_macos_api.CFRunLoopWakeUp(run_loop);
-      mb_macos_api.CFRelease(run_loop);
+      CFRunLoopStop(run_loop);
+      CFRunLoopWakeUp(run_loop);
+      CFRelease(run_loop);
     }
     pthread_join(state->thread, NULL);
   }
