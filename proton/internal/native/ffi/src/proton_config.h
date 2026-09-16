@@ -30,11 +30,10 @@ PROTON_INTERNAL int32_t proton_config_prepare_window(
     proton_bridge_config_t *bridge_config,
     proton_web_request_config_t *web_request_config,
     proton_engine_window_config_t *out_config);
-PROTON_INTERNAL bool proton_parse_color_argb(const char *text,
-                                             uint32_t *out_color);
 PROTON_INTERNAL int32_t proton_config_prepare_view(
     int32_t x, int32_t y, int32_t width, int32_t height, int32_t visible,
-    int32_t z_order, const char *initial_url, const char *background_color,
+    int32_t z_order, const char *initial_url, int32_t has_background_color,
+    uint32_t background_color,
     proton_engine_view_config_t *out_config);
 PROTON_INTERNAL bool
 proton_config_default_helper_path(char *out, size_t out_len);

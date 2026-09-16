@@ -515,7 +515,7 @@ test "custom jump list categories require a name" {
     )
   })
   match error {
-    Status(message~, ..) =>
+    InvalidArgument(message~) =>
       assert_eq(message, "a custom jump list category requires a name")
     _ => fail("unexpected: " + error.message())
   }
@@ -546,7 +546,7 @@ test "jump list items require a path" {
     )
   })
   match error {
-    Status(message~, ..) =>
+    InvalidArgument(message~) =>
       assert_eq(message, "jump list item path is required")
     _ => fail("unexpected: " + error.message())
   }
@@ -789,5 +789,187 @@ test "bridge request rejects malformed transport fields" {
 fn init {
   host_loop_begin() catch {
     error => abort("failed to start native test host loop: " + error.message())
+  }
+}
+
+///|
+test "menu construction traverses nested menus and sibling roots" {
+  ignore(
+    build_menu_config(
+      MenuBar(menus=[
+        Menu("File", items=[
+          MenuItem::submenu("More", items=[
+            MenuItem::submenu("Nested", items=[
+              MenuItem::command("open", "Open"),
+            ]),
+            MenuItem::command("close", "Close"),
+          ]),
+          MenuItem::separator(),
+        ]),
+        Menu("Edit", items=[MenuItem::role(Copy)]),
+      ]),
+    ),
+  )
+}
+
+///|
+test "menu construction errors and inactive owners preserve diagnostics" {
+  let invalid = MenuBar(menus=[
+    Menu("File", items=[
+      MenuItem::command("open", "Open"),
+      MenuItem::command("", "Invalid"),
+    ]),
+  ])
+  let error = expect_native_error(() => ignore(build_menu_config(invalid)))
+  assert_eq(error.message(), "menu command requires id and label")
+  let menu = MenuBar(menus=[
+    Menu("File", items=[MenuItem::command("open", "Open")]),
+  ])
+  let runtime = Runtime::{
+    handle: @native_ffi.runtime_null(),
+    lifecycle: RuntimeDestroyed,
+  }
+  let window = Window::{
+    handle: @native_ffi.window_null(),
+    id: 0L,
+    lifecycle: WindowDestroyed,
+  }
+  assert_eq(
+    expect_native_error(() => runtime.set_menu(menu)).message(),
+    "runtime is destroying or destroyed",
+  )
+  assert_eq(
+    expect_native_error(() => window.popup_menu(menu, 0, 0)).message(),
+    "window is closing or destroyed",
+  )
+}
+
+///|
+test "managed config builders preserve partial failure diagnostics" {
+  let bridge = BridgeConfig(grants=[
+    BridgeGrantConfig("app", ops=["invoke", "invoke"]),
+  ])
+  assert_eq(
+    expect_native_error(() => ignore(build_bridge_config(Some(bridge)))).message(),
+    "bridge op name is duplicated",
+  )
+  assert_eq(
+    expect_native_error(() => {
+      ignore(
+        build_web_request_config(["https://blocked/", "https://blocked/"], [], []),
+      )
+    }).message(),
+    "web request URL prefix is duplicated",
+  )
+  let runtime = Runtime::{
+    handle: @native_ffi.runtime_null(),
+    lifecycle: RuntimeDestroyed,
+  }
+  // Both configurations have been built when active_handle raises.
+  let config = WindowConfig(
+    bridge=BridgeConfig(grants=[BridgeGrantConfig("app", ops=["invoke"])]),
+  )
+  assert_eq(
+    expect_native_error(() => ignore(Window::Window(runtime, config~))).message(),
+    "runtime is destroying or destroyed",
+  )
+}
+
+///|
+test "web request validation precedes native rule storage" {
+  for
+    entry in [
+      ([""], "web request URL prefix must not be empty"),
+      (
+        ["https://blocked/", "https://blocked/"],
+        "web request URL prefix is duplicated",
+      ),
+    ] {
+    let (prefixes, message) = entry
+    let error = expect_native_error(() => {
+      validate_web_request_config(prefixes, [], [])
+    })
+    assert_eq(error.status(), -1)
+    assert_eq(error.message(), message)
+  }
+  let headers = [
+    ("https://api.example/Path/", "Authorization", "Token AbC"),
+    ("https://api.example/Path/", "aUtHoRiZaTiOn", "other"),
+  ]
+  let error = expect_native_error(() => {
+    validate_web_request_config([], [], headers)
+  })
+  assert_eq(error.status(), -1)
+  assert_eq(error.message(), "web request header rule is duplicated")
+  validate_web_request_config([], [], [
+    headers[0],
+    ("https://api.example/path/", "authorization", "second"),
+  ])
+  let redirects = [
+    ("https://old/", "https://new/"),
+    ("https://old/", "https://other/"),
+  ]
+  assert_eq(
+    expect_native_error(() => validate_web_request_config([], redirects, [])).message(),
+    "web request redirect prefix is duplicated",
+  )
+  let prefixes = Array::makei(129, i => "https://host/" + i.to_string())
+  assert_eq(
+    expect_native_error(() => validate_web_request_config(prefixes, [], [])).message(),
+    "web request cancellation prefix limit exceeded",
+  )
+}
+
+///|
+test "bridge validation owns names origins limits and duplicate namespaces" {
+  for
+    origin in [
+      "", "ftp://host", "https://", "https://host/path", "http://host?q",
+    ] {
+    let config = BridgeConfig(grants=[BridgeGrantConfig(origin, ops=[])])
+    assert_eq(
+      expect_native_error(() => validate_bridge_config(config)).message(),
+      "bridge source_origin is invalid",
+    )
+  }
+  for name in ["", "two words", "quote\"", "slash\\", "中文", "op\u0000tail"] {
+    let config = BridgeConfig(grants=[BridgeGrantConfig("app", ops=[name])])
+    assert_eq(
+      expect_native_error(() => validate_bridge_config(config)).message(),
+      "bridge op name is invalid",
+    )
+  }
+  let config = BridgeConfig(grants=[
+    BridgeGrantConfig("app", ops=[], extensions=[
+      BridgeExtensionConfig("test", apis=["call"]),
+      BridgeExtensionConfig("test", apis=[]),
+    ]),
+  ])
+  assert_eq(
+    expect_native_error(() => validate_bridge_config(config)).message(),
+    "bridge extension namespace is duplicated",
+  )
+  let ops = Array::makei(257, i => "op" + i.to_string())
+  let config = BridgeConfig(grants=[BridgeGrantConfig("app", ops~)])
+  assert_eq(
+    expect_native_error(() => validate_bridge_config(config)).message(),
+    "bridge op name list is too large",
+  )
+  let config = BridgeConfig(grants=[], max_payload_bytes=1048577)
+  assert_eq(
+    expect_native_error(() => validate_bridge_config(config)).message(),
+    "bridge max_payload_bytes is invalid",
+  )
+}
+
+///|
+test "ARGB parsing is shared by window and view configuration" {
+  assert_eq(parse_color_argb("#123456", "color"), 0xff123456)
+  assert_eq(parse_color_argb("#8012aBcD", "color"), 0x8012abcd)
+  assert_eq(parse_color_argb("#00000000", "color"), 0)
+  for value in ["", "#123", "123456", "#12345g", "#123456 ", "#123456\u0000"] {
+    let error = expect_native_error(() => parse_color_argb(value, "color"))
+    assert_eq(error.status(), -1)
+    assert_eq(error.message(), "color must be #RRGGBB or #AARRGGBB")
   }
 }

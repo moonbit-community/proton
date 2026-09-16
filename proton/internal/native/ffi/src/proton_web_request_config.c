@@ -1,5 +1,6 @@
 #include "proton_web_request_config.h"
 
+#include <moonbit.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -8,8 +9,6 @@
 #else
 #include <stdatomic.h>
 #endif
-
-enum { PROTON_WEB_REQUEST_MAX_CANCEL_PREFIXES = 128 };
 
 typedef struct {
   char *prefix;
@@ -55,27 +54,19 @@ static int proton_web_request_header_name_equal(const char *left,
 }
 
 int32_t proton_internal_web_request_config_add_header_prefix(
-    proton_web_request_config_t *config, const char *url_prefix,
+    proton_web_request_config_owner_t *owner, const char *url_prefix,
     const char *header_name, const char *header_value) {
-  if (config == NULL || url_prefix == NULL || header_name == NULL ||
-      header_value == NULL || url_prefix[0] == '\0' || header_name[0] == '\0')
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "web request header values are invalid");
-  for (size_t i = 0; i < config->header_count; i++)
-    if (strcmp(config->headers[i].prefix, url_prefix) == 0 &&
-        proton_web_request_header_name_equal(config->headers[i].name, header_name))
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "web request header rule is duplicated");
+  proton_web_request_config_t *config = owner->value;
   proton_web_request_header_t *headers = (proton_web_request_header_t *)realloc(
       config->headers, (config->header_count + 1) * sizeof(*headers));
   char *prefix = proton_web_request_copy(url_prefix);
   char *name = proton_web_request_copy(header_name);
   char *value = proton_web_request_copy(header_value);
+  if (headers != NULL) config->headers = headers;
   if (headers == NULL || prefix == NULL || name == NULL || value == NULL) {
     free(prefix); free(name); free(value);
     return proton_set_error(PROTON_ERR_ENGINE, "failed to allocate web request header rule");
   }
-  config->headers = headers;
   config->headers[config->header_count].prefix = prefix;
   config->headers[config->header_count].name = name;
   config->headers[config->header_count++].value = value;
@@ -83,90 +74,68 @@ int32_t proton_internal_web_request_config_add_header_prefix(
 }
 
 int32_t proton_internal_web_request_config_add_redirect_prefix(
-    proton_web_request_config_t *config, const char *url_prefix,
+    proton_web_request_config_owner_t *owner, const char *url_prefix,
     const char *target_url) {
-  if (config == NULL || url_prefix == NULL || target_url == NULL ||
-      url_prefix[0] == '\0' || target_url[0] == '\0') {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "web request redirect values must not be empty");
-  }
-  if (config->redirect_count >= PROTON_WEB_REQUEST_MAX_CANCEL_PREFIXES) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "web request redirect prefix limit exceeded");
-  }
-  for (size_t index = 0; index < config->redirect_count; index++) {
-    if (strcmp(config->redirects[index].prefix, url_prefix) == 0) {
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "web request redirect prefix is duplicated");
-    }
-  }
+  proton_web_request_config_t *config = owner->value;
   proton_web_request_redirect_t *redirects = (proton_web_request_redirect_t *)realloc(
       config->redirects, (config->redirect_count + 1) * sizeof(*redirects));
   char *prefix = proton_web_request_copy(url_prefix);
   char *target = proton_web_request_copy(target_url);
+  if (redirects != NULL) config->redirects = redirects;
   if (redirects == NULL || prefix == NULL || target == NULL) {
     free(prefix);
     free(target);
     return proton_set_error(PROTON_ERR_ENGINE,
                             "failed to allocate web request redirect");
   }
-  config->redirects = redirects;
   config->redirects[config->redirect_count].prefix = prefix;
   config->redirects[config->redirect_count++].target = target;
   return PROTON_OK;
 }
 
-proton_web_request_config_t *proton_internal_web_request_config_null(void) {
-  return NULL;
+static void proton_web_request_config_finalize(void *payload) {
+  proton_web_request_config_owner_t *owner = payload;
+  proton_internal_web_request_config_destroy(owner->value);
 }
 
-int32_t proton_internal_web_request_config_create(
-    proton_web_request_config_t **out_config) {
-  if (out_config == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "web request config output is required");
-  }
-  proton_web_request_config_t *config =
-      (proton_web_request_config_t *)calloc(1, sizeof(*config));
-  if (config == NULL) {
-    return proton_set_error(PROTON_ERR_ENGINE,
-                            "failed to allocate web request configuration");
+proton_web_request_config_owner_t *proton_internal_web_request_config_empty(void) {
+  proton_web_request_config_owner_t *owner = moonbit_make_external_object(
+      proton_web_request_config_finalize, sizeof(*owner));
+  owner->value = NULL;
+  return owner;
+}
+
+proton_web_request_config_owner_t *proton_internal_web_request_config_create(
+    int32_t *out_status) {
+  proton_web_request_config_owner_t *owner = proton_internal_web_request_config_empty();
+  owner->value = calloc(1, sizeof(*owner->value));
+  if (owner->value == NULL) {
+    *out_status = proton_set_error(PROTON_ERR_ENGINE,
+                                  "failed to allocate web request configuration");
+    return owner;
   }
 #ifdef _WIN32
-  config->ref_count = 1;
+  owner->value->ref_count = 1;
 #else
-  atomic_init(&config->ref_count, 1);
+  atomic_init(&owner->value->ref_count, 1);
 #endif
-  *out_config = config;
-  return PROTON_OK;
+  *out_status = PROTON_OK;
+  return owner;
 }
 
 int32_t proton_internal_web_request_config_add_cancel_prefix(
-    proton_web_request_config_t *config, const char *url_prefix) {
-  if (config == NULL || url_prefix == NULL || url_prefix[0] == '\0') {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "web request URL prefix must not be empty");
-  }
-  if (config->cancel_prefix_count >= PROTON_WEB_REQUEST_MAX_CANCEL_PREFIXES) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "web request cancellation prefix limit exceeded");
-  }
-  for (size_t index = 0; index < config->cancel_prefix_count; index++) {
-    if (strcmp(config->cancel_prefixes[index], url_prefix) == 0) {
-      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                              "web request URL prefix is duplicated");
-    }
-  }
+    proton_web_request_config_owner_t *owner, const char *url_prefix) {
+  proton_web_request_config_t *config = owner->value;
   char **prefixes = (char **)realloc(
       config->cancel_prefixes,
       (config->cancel_prefix_count + 1) * sizeof(*prefixes));
   char *copy = proton_web_request_copy(url_prefix);
+  if (prefixes != NULL) config->cancel_prefixes = prefixes;
   if (prefixes == NULL || copy == NULL) {
     free(copy);
     return proton_set_error(PROTON_ERR_ENGINE,
                             "failed to allocate web request URL prefix");
   }
-  config->cancel_prefixes = prefixes;
   config->cancel_prefixes[config->cancel_prefix_count++] = copy;
   return PROTON_OK;
 }

@@ -6,7 +6,6 @@
 
 #include "proton_internal.h"
 
-#include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -36,23 +35,6 @@ static bool proton_macos_current_executable_path(char *out, size_t out_len);
 static bool proton_config_macos_bundle_contents_path(
     const char *executable_path, char *out, size_t out_len);
 #endif
-
-static bool proton_path_is_absolute(const char *path) {
-  if (path == NULL || path[0] == '\0') {
-    return false;
-  }
-#ifdef _WIN32
-  bool drive_absolute =
-      ((path[0] >= 'A' && path[0] <= 'Z') ||
-       (path[0] >= 'a' && path[0] <= 'z')) &&
-      path[1] == ':' && (path[2] == '/' || path[2] == '\\');
-  bool unc_absolute = (path[0] == '/' && path[1] == '/') ||
-                      (path[0] == '\\' && path[1] == '\\');
-  return drive_absolute || unc_absolute;
-#else
-  return path[0] == '/';
-#endif
-}
 
 static bool proton_path_exists(const char *path) {
   if (path == NULL || path[0] == '\0') {
@@ -502,25 +484,6 @@ int32_t proton_config_prepare_runtime(
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "runtime config output is required");
   }
-  if (remote_debugging_port != PROTON_REMOTE_DEBUGGING_EPHEMERAL &&
-      remote_debugging_port != PROTON_REMOTE_DEBUGGING_DISABLED &&
-      (remote_debugging_port < 1024 || remote_debugging_port > 65535)) {
-    return proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "runtime remote debugging must be disabled, ephemeral, or use a port "
-        "between 1024 and 65535");
-  }
-  if (accessibility_mode != PROTON_ACCESSIBILITY_AUTOMATIC &&
-      accessibility_mode != PROTON_ACCESSIBILITY_ALWAYS_ENABLED) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "invalid accessibility mode");
-  }
-  if (cache_dir != NULL && cache_dir[0] != '\0' &&
-      !proton_path_is_absolute(cache_dir)) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "runtime cache_dir must be an absolute path");
-  }
-
   proton_engine_runtime_config_t config;
   memset(&config, 0, sizeof(config));
   if (!proton_copy_runtime_path(config.runtime_root,
@@ -664,11 +627,6 @@ static bool proton_copy_config_text(char *out, size_t out_len,
   return written >= 0 && (size_t)written < out_len;
 }
 
-static bool proton_browser_policy_mode_valid(int32_t mode) {
-  return mode >= PROTON_BROWSER_POLICY_ALLOW &&
-         mode <= PROTON_BROWSER_POLICY_ASK;
-}
-
 int32_t proton_config_prepare_window(
     const char *title, int32_t width, int32_t height, const char *initial_url,
     int32_t size_hint, int32_t titlebar_overlay, int32_t theme_preference,
@@ -683,30 +641,6 @@ int32_t proton_config_prepare_window(
   if (out_config == NULL || title == NULL || initial_url == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "window config is required");
-  }
-  if (width <= 0 || height <= 0) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "window width and height must be positive");
-  }
-  if (size_hint < 0 || size_hint > 3) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "window size hint is invalid");
-  }
-  if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||
-      theme_preference > PROTON_WINDOW_THEME_PREFERENCE_DARK) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "window theme is invalid");
-  }
-  if (!proton_browser_policy_mode_valid(navigation_policy) ||
-      !proton_browser_policy_mode_valid(new_window_policy) ||
-      !proton_browser_policy_mode_valid(download_policy) ||
-      !proton_browser_policy_mode_valid(certificate_policy) ||
-      !proton_browser_policy_mode_valid(media_policy) ||
-      new_window_policy == PROTON_BROWSER_POLICY_ALLOW ||
-      certificate_policy == PROTON_BROWSER_POLICY_ALLOW ||
-      media_policy == PROTON_BROWSER_POLICY_ALLOW) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "window browser policy is invalid");
   }
   proton_engine_window_config_t config;
   memset(&config, 0, sizeof(config));
@@ -742,15 +676,6 @@ int32_t proton_config_prepare_window(
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "window titlebar label is too long");
   }
-  if (config.titlebar_overlay &&
-      (config.titlebar_minimize_label[0] == '\0' ||
-       config.titlebar_maximize_label[0] == '\0' ||
-       config.titlebar_restore_label[0] == '\0' ||
-       config.titlebar_close_label[0] == '\0')) {
-    return proton_set_error(
-        PROTON_ERR_INVALID_ARGUMENT,
-        "window titlebar overlay requires framework control labels");
-  }
   config.browser_policy.navigation =
       (proton_browser_policy_mode_t)navigation_policy;
   config.browser_policy.new_window =
@@ -768,41 +693,14 @@ int32_t proton_config_prepare_window(
   return PROTON_OK;
 }
 
-bool proton_parse_color_argb(const char *text, uint32_t *out_color) {
-  if (text == NULL || text[0] == '\0') {
-    return false;
-  }
-  if (text[0] != '#') {
-    return false;
-  }
-  size_t len = strlen(text);
-  if (len != 7 && len != 9) {
-    return false;
-  }
-  for (size_t index = 1; index < len; index++) {
-    if (!isxdigit((unsigned char)text[index])) {
-      return false;
-    }
-  }
-  unsigned long value = strtoul(text + 1, NULL, 16);
-  if (len == 7) {
-    value |= 0xFF000000UL;
-  }
-  *out_color = (uint32_t)value;
-  return true;
-}
-
 int32_t proton_config_prepare_view(
     int32_t x, int32_t y, int32_t width, int32_t height, int32_t visible,
-    int32_t z_order, const char *initial_url, const char *background_color,
+    int32_t z_order, const char *initial_url, int32_t has_background_color,
+    uint32_t background_color,
     proton_engine_view_config_t *out_config) {
   if (out_config == NULL || initial_url == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "view config is required");
-  }
-  if (width <= 0 || height <= 0) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "view width and height must be positive");
   }
   proton_engine_view_config_t config;
   memset(&config, 0, sizeof(config));
@@ -817,15 +715,8 @@ int32_t proton_config_prepare_view(
   config.height = height;
   config.visible = visible != 0;
   config.z_order = z_order;
-  if (background_color != NULL && background_color[0] != '\0') {
-    if (!proton_parse_color_argb(background_color,
-                                 &config.background_color)) {
-      return proton_set_error(
-          PROTON_ERR_INVALID_ARGUMENT,
-          "view background_color must be #RRGGBB or #AARRGGBB");
-    }
-    config.has_background_color = 1;
-  }
+  config.has_background_color = has_background_color;
+  config.background_color = background_color;
   *out_config = config;
   return PROTON_OK;
 }

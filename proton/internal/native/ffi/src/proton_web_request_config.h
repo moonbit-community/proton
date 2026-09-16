@@ -8,17 +8,23 @@
 
 typedef struct proton_web_request_config proton_web_request_config_t;
 
-PROTON_INTERNAL proton_web_request_config_t *
-proton_internal_web_request_config_null(void);
-PROTON_INTERNAL int32_t proton_internal_web_request_config_create(
-    proton_web_request_config_t **out_config);
+/* MoonBit owns one native reference; CEF retains only the native value. */
+typedef struct {
+  proton_web_request_config_t *value;
+} proton_web_request_config_owner_t;
+
+PROTON_INTERNAL proton_web_request_config_owner_t *
+proton_internal_web_request_config_empty(void);
+PROTON_INTERNAL proton_web_request_config_owner_t *
+proton_internal_web_request_config_create(
+    int32_t *out_status);
 PROTON_INTERNAL int32_t proton_internal_web_request_config_add_cancel_prefix(
-    proton_web_request_config_t *config, const char *url_prefix);
+    proton_web_request_config_owner_t *owner, const char *url_prefix);
 PROTON_INTERNAL int32_t proton_internal_web_request_config_add_redirect_prefix(
-    proton_web_request_config_t *config, const char *url_prefix,
+    proton_web_request_config_owner_t *owner, const char *url_prefix,
     const char *target_url);
 PROTON_INTERNAL int32_t proton_internal_web_request_config_add_header_prefix(
-    proton_web_request_config_t *config, const char *url_prefix,
+    proton_web_request_config_owner_t *owner, const char *url_prefix,
     const char *header_name, const char *header_value);
 PROTON_INTERNAL void proton_web_request_config_retain(
     proton_web_request_config_t *config);

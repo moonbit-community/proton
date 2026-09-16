@@ -1,5 +1,6 @@
 #include "proton_event.h"
 
+#include <moonbit.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -132,17 +133,7 @@ bool proton_event_set_payload(proton_event_t *event, void *payload,
   return true;
 }
 
-void *proton_event_take_payload(proton_event_t *event) {
-  if (event == NULL) {
-    return NULL;
-  }
-  void *payload = event->payload;
-  event->payload = NULL;
-  event->destroy_payload = NULL;
-  return payload;
-}
-
-void proton_event_destroy(proton_event_t *event) {
+void proton_event_clear(proton_event_t *event) {
   if (event == NULL) {
     return;
   }
@@ -156,7 +147,24 @@ void proton_event_destroy(proton_event_t *event) {
   if (event->destroy_payload != NULL) {
     event->destroy_payload(event->payload);
   }
+  memset(event, 0, sizeof(*event));
+}
+
+void proton_event_destroy(proton_event_t *event) {
+  proton_event_clear(event);
   free(event);
+}
+
+static void proton_event_finalize(void *payload) {
+  proton_event_clear(payload);
+}
+
+/* Only the owner thread allocates managed events; queued events stay native. */
+proton_event_t *proton_internal_event_create(void) {
+  proton_event_t *event = moonbit_make_external_object(
+      proton_event_finalize, sizeof(*event));
+  memset(event, 0, sizeof(*event));
+  return event;
 }
 
 bool proton_event_queue_init(proton_event_queue_t *queue) {

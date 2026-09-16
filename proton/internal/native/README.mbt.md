@@ -17,8 +17,17 @@ test "native boundary is linked" {
 }
 ```
 
-Runtime configuration is validated in MoonBit and passed to native code through
-a typed private FFI.
+MoonBit validates runtime, window, view, bridge, and web request configuration,
+parses colors, and traverses menu and Jump List definitions. The typed private
+FFI receives validated values and explicit parent/category selections. C owns
+native storage and platform calls; rule matching invoked on CEF threads stays
+native and never calls into MoonBit.
+
+Pure-memory builders and dequeued events are managed MoonBit values. Cookie
+snapshots remain owned by their event. Bridge and web request holders release
+one native reference; CEF retains only native values, with atomic reference
+counts for cross-thread web request access. Queued events stay C-owned until
+polled. Runtime, window, view, and CEF image teardown remains explicit.
 
 Portable C sources belong to the private `ffi` package. macOS Objective-C
 sources belong to the separate `ffi_mac` package, whose package-local compiler

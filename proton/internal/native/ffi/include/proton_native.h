@@ -258,7 +258,7 @@ int32_t proton_window_set_ignore_mouse_events(proton_window_handle_t window,
                                               int32_t ignore,
                                               int32_t forward);
 int32_t proton_window_set_background_color(proton_window_handle_t window,
-                                           const char *color);
+                                           uint32_t color);
 int32_t proton_window_set_theme(proton_window_handle_t window,
                                 int32_t theme_preference);
 int32_t proton_window_set_visible_on_all_workspaces(
@@ -302,15 +302,14 @@ int32_t proton_window_set_thumbnail_tooltip(proton_window_handle_t window,
 
 typedef struct proton_thumbar_builder proton_thumbar_builder_t;
 
-proton_thumbar_builder_t *proton_thumbar_builder_null(void);
-/* Builds the button list. The builder keeps its own copies of the identifier
+/* MoonBit-managed builder; its finalizer releases the copied strings.
+   The builder keeps its own copies of the identifier
    and the tooltip, so the caller may release those buffers after the call.
    `icon` may be null for a button without an icon. */
-int32_t proton_thumbar_builder_create(proton_thumbar_builder_t **out_builder);
+proton_thumbar_builder_t *proton_thumbar_builder_create(void);
 int32_t proton_thumbar_builder_add(proton_thumbar_builder_t *builder,
                                    const char *id, proton_image_handle_t icon,
                                    const char *tooltip, int32_t flags);
-void proton_thumbar_builder_destroy(proton_thumbar_builder_t *builder);
 /* Applies the buttons to the window and writes whether the platform showed
    them. A null builder clears the toolbar. */
 int32_t proton_window_set_thumbar_buttons(proton_window_handle_t window,
@@ -345,22 +344,20 @@ enum {
 
 typedef struct proton_jump_list_builder proton_jump_list_builder_t;
 
-proton_jump_list_builder_t *proton_jump_list_builder_null(void);
-int32_t proton_jump_list_builder_create(
-    proton_jump_list_builder_t **out_builder);
-/* Categories append in call order and items append to the most recent
-   category. A custom category requires a name; the Tasks category ignores it
-   and Recent/Frequent take neither a name nor items. */
+/* MoonBit-managed builder; native consumers borrow it synchronously. */
+proton_jump_list_builder_t *proton_jump_list_builder_create(void);
+/* MoonBit selects each item's category explicitly. */
 int32_t proton_jump_list_builder_add_category(
     proton_jump_list_builder_t *builder, int32_t kind, const char *name);
 int32_t proton_jump_list_builder_add_item(
-    proton_jump_list_builder_t *builder, int32_t kind, const char *path,
+    proton_jump_list_builder_t *builder, int32_t category_index,
+    int32_t kind, const char *path,
     const char *arguments, const char *title, const char *description,
     const char *icon_path, int32_t icon_index,
     const char *working_directory);
-void proton_jump_list_builder_destroy(proton_jump_list_builder_t *builder);
 /* Applies the categories, or removes the custom jump list when the builder is
    null. `out_result` receives one of the PROTON_JUMP_LIST_* results. */
+int32_t proton_jump_list_clear(int32_t *out_result);
 int32_t proton_jump_list_apply(proton_jump_list_builder_t *categories,
                                int32_t *out_result);
 /* Matches Electron's flashFrame flag semantics. */
