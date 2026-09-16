@@ -3,6 +3,7 @@
 #include "../../proton_engine.h"
 
 #include <dlfcn.h>
+#include <glib-object.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -12,16 +13,12 @@ typedef int (*proton_notify_init_t)(const char *);
 typedef void *(*proton_notification_new_t)(const char *, const char *, const char *);
 typedef int (*proton_notification_show_t)(void *, void **);
 typedef void (*proton_notification_set_timeout_t)(void *, int);
-typedef void (*proton_g_object_unref_t)(void *);
-typedef int (*proton_g_type_init_t)(void);
 
 static void *g_notify_lib = NULL;
-static void *g_gobject_lib = NULL;
 static proton_notify_init_t g_notify_init = NULL;
 static proton_notification_new_t g_notify_new = NULL;
 static proton_notification_show_t g_notify_show = NULL;
 static proton_notification_set_timeout_t g_notify_set_timeout = NULL;
-static proton_g_object_unref_t g_g_object_unref = NULL;
 static int32_t g_notify_initialized = 0;
 static int32_t g_notify_probe_attempted = 0;
 static int32_t g_notify_probe_ok = 0;
@@ -34,7 +31,7 @@ static void proton_notification_set_message(char *error,
   }
 }
 
-// Loads libgobject/libnotify and resolves the required symbols. This does NOT
+// Loads optional libnotify and resolves the required symbols. This does NOT
 // call notify_init, which requires a notification daemon that may be absent in
 // headless/CI environments; loading the libraries is enough to report the
 // capability as supported (notifications are just silently dropped when no
@@ -44,13 +41,6 @@ static int32_t proton_notification_load_libraries(char *error,
   if (g_notify_lib != NULL) {
     return PROTON_OK;
   }
-  g_gobject_lib = dlopen("libgobject-2.0.so.0", RTLD_NOW | RTLD_GLOBAL);
-  if (g_gobject_lib == NULL) {
-    proton_notification_set_message(
-        error, error_len,
-        "libgobject-2.0.so.0 is required for notifications");
-    return PROTON_ERR_UNSUPPORTED;
-  }
   g_notify_lib = dlopen("libnotify.so.4", RTLD_NOW);
   if (g_notify_lib == NULL) {
     g_notify_lib = dlopen("libnotify.so", RTLD_NOW);
@@ -59,30 +49,19 @@ static int32_t proton_notification_load_libraries(char *error,
     proton_notification_set_message(
         error, error_len,
         "libnotify is required for notifications on Linux");
-    dlclose(g_gobject_lib);
-    g_gobject_lib = NULL;
     return PROTON_ERR_UNSUPPORTED;
   }
   g_notify_init = (proton_notify_init_t)dlsym(g_notify_lib, "notify_init");
   g_notify_new = (proton_notification_new_t)dlsym(g_notify_lib, "notify_notification_new");
   g_notify_show = (proton_notification_show_t)dlsym(g_notify_lib, "notify_notification_show");
   g_notify_set_timeout = (proton_notification_set_timeout_t)dlsym(g_notify_lib, "notify_notification_set_timeout");
-  g_g_object_unref = (proton_g_object_unref_t)dlsym(g_gobject_lib, "g_object_unref");
-  if (g_notify_init == NULL || g_notify_new == NULL || g_notify_show == NULL ||
-      g_g_object_unref == NULL) {
+  if (g_notify_init == NULL || g_notify_new == NULL || g_notify_show == NULL) {
     proton_notification_set_message(
         error, error_len,
         "libnotify symbols could not be resolved");
     dlclose(g_notify_lib);
-    dlclose(g_gobject_lib);
     g_notify_lib = NULL;
-    g_gobject_lib = NULL;
     return PROTON_ERR_UNSUPPORTED;
-  }
-  proton_g_type_init_t g_type_init =
-      (proton_g_type_init_t)dlsym(g_gobject_lib, "g_type_init");
-  if (g_type_init != NULL) {
-    g_type_init();
   }
   return PROTON_OK;
 }
@@ -110,9 +89,7 @@ static int32_t proton_notification_load_libnotify(char *error,
     proton_notification_set_message(error, error_len,
                                     "notify_init failed");
     dlclose(g_notify_lib);
-    dlclose(g_gobject_lib);
     g_notify_lib = NULL;
-    g_gobject_lib = NULL;
     return PROTON_ERR_PLATFORM;
   }
   g_notify_initialized = 1;
@@ -164,7 +141,7 @@ int32_t proton_engine_notification_show(const char *title_utf8,
   }
   void *gerror = NULL;
   int shown = g_notify_show(notification, &gerror);
-  g_g_object_unref(notification);
+  g_object_unref(notification);
   if (!shown) {
     proton_notification_set_message(
         error, error_len,
@@ -199,15 +176,10 @@ int32_t proton_engine_notification_cleanup(char *error, size_t error_len) {
     dlclose(g_notify_lib);
     g_notify_lib = NULL;
   }
-  if (g_gobject_lib != NULL) {
-    dlclose(g_gobject_lib);
-    g_gobject_lib = NULL;
-  }
   g_notify_init = NULL;
   g_notify_new = NULL;
   g_notify_show = NULL;
   g_notify_set_timeout = NULL;
-  g_g_object_unref = NULL;
   return PROTON_OK;
 }
 

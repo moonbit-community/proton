@@ -6,5 +6,6 @@ import {
 supported_targets = "native"
 
 options(
+  link: { "native": { "stub-cc-flags": "${build.LINUX_STUB_FLAGS}" } },
   "native-stub": [ "global_hotkey_native.c" ],
 )

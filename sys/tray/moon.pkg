@@ -7,5 +7,6 @@ import {
 supported_targets = "native"
 
 options(
+  link: { "native": { "stub-cc-flags": "${build.LINUX_STUB_FLAGS}" } },
   "native-stub": [ "tray_native.c" ],
 )

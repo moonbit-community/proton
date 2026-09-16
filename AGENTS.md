@@ -202,10 +202,11 @@ native checks before handing off larger refactors.
   build hooks, so they also link when used without the Proton facade. Use SDK
   headers and direct calls for supported macOS frameworks and Windows APIs;
   do not recreate system declarations or add symbol tables for these APIs.
+  Linux X11/RandR and GTK/GObject use SDK headers and direct linking too.
   Keep dynamic loading only for optional dependencies or explicit compatibility
-  paths: Linux's X11/RandR, D-Bus, ALSA and tray/notification backends can be
-  absent, and the legacy macOS display-thumbnail API is unavailable in newer
-  SDKs. CEF retains its separate runtime loading contract.
+  paths: D-Bus, ALSA, AppIndicator and libnotify can be absent, and the legacy
+  macOS display-thumbnail API is unavailable in newer SDKs. CEF retains its
+  separate runtime loading contract.
 - Windows project builds pass a private `PROTON_WINDOWS_APP_RESOURCE` JSON
   request only to the application Moon subprocess. The native-link hook compiles
   the ICO with `rc.exe` and attaches the resource to the root app facade, not

@@ -13,6 +13,7 @@
 #endif
 #elif defined(__linux__)
 #include <dlfcn.h>
+#include <gtk/gtk.h>
 #include <pthread.h>
 #include <sys/stat.h>
 #elif defined(__APPLE__)
@@ -808,33 +809,9 @@ static int32_t moonbit_tray_win_commit_menu(moonbit_tray_state_t *state) {
 #endif
 
 #if defined(__linux__)
-typedef void (*moonbit_tray_linux_gcallback_t)(void);
-typedef void (*moonbit_tray_linux_destroy_notify_t)(void *, void *);
-
 typedef struct moonbit_tray_linux_backend {
   int32_t initialized;
-  void *gtk_lib;
   void *indicator_lib;
-  int (*gtk_init_check)(int *, char ***);
-  void *(*gtk_menu_new)(void);
-  void *(*gtk_menu_item_new_with_label)(const char *);
-  void *(*gtk_check_menu_item_new_with_label)(const char *);
-  void *(*gtk_separator_menu_item_new)(void);
-  void (*gtk_menu_shell_append)(void *, void *);
-  int (*gtk_main_iteration_do)(int);
-  void (*gtk_widget_set_sensitive)(void *, int);
-  void (*gtk_widget_show_all)(void *);
-  void (*gtk_check_menu_item_set_active)(void *, int);
-  void (*gtk_menu_item_set_submenu)(void *, void *);
-  void (*gtk_widget_destroy)(void *);
-  void (*g_object_unref)(void *);
-  unsigned long (*g_signal_connect_data)(
-      void *,
-      const char *,
-      moonbit_tray_linux_gcallback_t,
-      void *,
-      moonbit_tray_linux_destroy_notify_t,
-      int);
   void *(*app_indicator_new)(const char *, const char *, int);
   void (*app_indicator_set_status)(void *, int);
   void (*app_indicator_set_menu)(void *, void *);
@@ -872,7 +849,7 @@ static void moonbit_tray_linux_menu_item_activate(
 
 static void moonbit_tray_linux_free_signal_data(
     void *data,
-    void *closure) {
+    GClosure *closure) {
   (void)closure;
   free(data);
 }
@@ -912,11 +889,6 @@ static int32_t moonbit_tray_linux_load_symbol(
 }
 
 static int32_t moonbit_tray_linux_backend_init(void) {
-  static const char *const gtk_names[] = {
-      "libgtk-3.so.0",
-      "libgtk-3.so",
-      NULL,
-  };
   static const char *const indicator_names[] = {
       "libayatana-appindicator3.so.1",
       "libayatana-appindicator3.so",
@@ -926,19 +898,6 @@ static int32_t moonbit_tray_linux_backend_init(void) {
   };
   if (moonbit_tray_linux_backend.initialized > 0) {
     return 1;
-  }
-  if (moonbit_tray_linux_backend.initialized < 0) {
-    return 0;
-  }
-  if (!moonbit_tray_linux_open_library(
-          gtk_names,
-          &moonbit_tray_linux_backend.gtk_lib)) {
-    moonbit_tray_set_message(
-        moonbit_tray_support_message,
-        sizeof(moonbit_tray_support_message),
-        "GTK 3 runtime not found (expected libgtk-3)");
-    moonbit_tray_linux_backend.initialized = 0;
-    return 0;
   }
   if (!moonbit_tray_linux_open_library(
           indicator_names,
@@ -951,66 +910,6 @@ static int32_t moonbit_tray_linux_backend_init(void) {
     return 0;
   }
   if (!moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_init_check,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_init_check",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_menu_new,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_menu_new",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_menu_item_new_with_label,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_menu_item_new_with_label",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_check_menu_item_new_with_label,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_check_menu_item_new_with_label",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_separator_menu_item_new,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_separator_menu_item_new",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_menu_shell_append,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_menu_shell_append",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_main_iteration_do,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_main_iteration_do",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_widget_set_sensitive,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_widget_set_sensitive",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_widget_show_all,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_widget_show_all",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_check_menu_item_set_active,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_check_menu_item_set_active",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_menu_item_set_submenu,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_menu_item_set_submenu",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
-          (void **)&moonbit_tray_linux_backend.gtk_widget_destroy,
-          moonbit_tray_linux_backend.gtk_lib,
-          "gtk_widget_destroy",
-          1) ||
-      !moonbit_tray_linux_load_symbol(
           (void **)&moonbit_tray_linux_backend.app_indicator_new,
           moonbit_tray_linux_backend.indicator_lib,
           "app_indicator_new",
@@ -1048,25 +947,7 @@ static int32_t moonbit_tray_linux_backend_init(void) {
       moonbit_tray_linux_backend.indicator_lib,
       "app_indicator_set_title",
       0);
-  moonbit_tray_linux_backend.g_object_unref =
-      (void (*)(void *))dlsym(RTLD_DEFAULT, "g_object_unref");
-  moonbit_tray_linux_backend.g_signal_connect_data =
-      (unsigned long (*)(
-          void *,
-          const char *,
-          moonbit_tray_linux_gcallback_t,
-          void *,
-          moonbit_tray_linux_destroy_notify_t,
-          int))dlsym(RTLD_DEFAULT, "g_signal_connect_data");
-  if (moonbit_tray_linux_backend.g_signal_connect_data == NULL) {
-    moonbit_tray_set_message(
-        moonbit_tray_support_message,
-        sizeof(moonbit_tray_support_message),
-        "failed to resolve g_signal_connect_data");
-    moonbit_tray_linux_backend.initialized = -1;
-    return 0;
-  }
-  if (!moonbit_tray_linux_backend.gtk_init_check(NULL, NULL)) {
+  if (!gtk_init_check(NULL, NULL)) {
     moonbit_tray_set_message(
         moonbit_tray_support_message,
         sizeof(moonbit_tray_support_message),
@@ -1301,11 +1182,7 @@ static void moonbit_tray_linux_destroy_menu_widget(void **menu) {
   if (menu == NULL || *menu == NULL) {
     return;
   }
-  if (moonbit_tray_linux_backend.gtk_widget_destroy != NULL) {
-    moonbit_tray_linux_backend.gtk_widget_destroy(*menu);
-  } else if (moonbit_tray_linux_backend.g_object_unref != NULL) {
-    moonbit_tray_linux_backend.g_object_unref(*menu);
-  }
+  gtk_widget_destroy(*menu);
   *menu = NULL;
 }
 
@@ -1334,7 +1211,7 @@ static int32_t moonbit_tray_linux_begin_menu(moonbit_tray_state_t *state) {
     return 0;
   }
   moonbit_tray_linux_destroy_pending_menu(state);
-  state->pending_menu = moonbit_tray_linux_backend.gtk_menu_new();
+  state->pending_menu = gtk_menu_new();
   if (state->pending_menu == NULL) {
     moonbit_tray_set_message(
         state->last_error,
@@ -1390,8 +1267,8 @@ static int32_t moonbit_tray_linux_append_clickable_menu_item(
     return 0;
   }
   item = checkbox
-      ? moonbit_tray_linux_backend.gtk_check_menu_item_new_with_label(label)
-      : moonbit_tray_linux_backend.gtk_menu_item_new_with_label(label);
+      ? gtk_check_menu_item_new_with_label(label)
+      : gtk_menu_item_new_with_label(label);
   if (item == NULL) {
     moonbit_tray_set_message(
         state->last_error,
@@ -1403,7 +1280,7 @@ static int32_t moonbit_tray_linux_append_clickable_menu_item(
       1,
       sizeof(moonbit_tray_linux_menu_event_t));
   if (event_data == NULL) {
-    moonbit_tray_linux_backend.gtk_widget_destroy(item);
+    gtk_widget_destroy(item);
     moonbit_tray_set_message(
         state->last_error,
         sizeof(state->last_error),
@@ -1413,19 +1290,19 @@ static int32_t moonbit_tray_linux_append_clickable_menu_item(
   event_data->state = state;
   snprintf(event_data->item_id, sizeof(event_data->item_id), "%s", id);
   if (checked) {
-    moonbit_tray_linux_backend.gtk_check_menu_item_set_active(item, 1);
+    gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), 1);
   }
   if (!enabled) {
-    moonbit_tray_linux_backend.gtk_widget_set_sensitive(item, 0);
+    gtk_widget_set_sensitive(item, 0);
   }
-  moonbit_tray_linux_backend.g_signal_connect_data(
+  g_signal_connect_data(
       item,
       "activate",
-      (moonbit_tray_linux_gcallback_t)moonbit_tray_linux_menu_item_activate,
+      G_CALLBACK(moonbit_tray_linux_menu_item_activate),
       event_data,
       moonbit_tray_linux_free_signal_data,
       0);
-  moonbit_tray_linux_backend.gtk_menu_shell_append(menu, item);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
   state->pending_menu_item_count++;
   return 1;
 }
@@ -1441,7 +1318,7 @@ static int32_t moonbit_tray_linux_add_separator(
         "tray menu transaction is not active");
     return 0;
   }
-  item = moonbit_tray_linux_backend.gtk_separator_menu_item_new();
+  item = gtk_separator_menu_item_new();
   if (item == NULL) {
     moonbit_tray_set_message(
         state->last_error,
@@ -1449,7 +1326,7 @@ static int32_t moonbit_tray_linux_add_separator(
         "failed to create GTK tray menu separator");
     return 0;
   }
-  moonbit_tray_linux_backend.gtk_menu_shell_append(menu, item);
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
   return 1;
 }
 
@@ -1482,14 +1359,14 @@ static int32_t moonbit_tray_linux_begin_submenu(
         "tray submenu label must not be empty");
     return 0;
   }
-  item = moonbit_tray_linux_backend.gtk_menu_item_new_with_label(label);
-  submenu = moonbit_tray_linux_backend.gtk_menu_new();
+  item = gtk_menu_item_new_with_label(label);
+  submenu = gtk_menu_new();
   if (item == NULL || submenu == NULL) {
     if (item != NULL) {
-      moonbit_tray_linux_backend.gtk_widget_destroy(item);
+      gtk_widget_destroy(item);
     }
     if (submenu != NULL) {
-      moonbit_tray_linux_backend.gtk_widget_destroy(submenu);
+      gtk_widget_destroy(submenu);
     }
     moonbit_tray_set_message(
         state->last_error,
@@ -1498,10 +1375,10 @@ static int32_t moonbit_tray_linux_begin_submenu(
     return 0;
   }
   if (!enabled) {
-    moonbit_tray_linux_backend.gtk_widget_set_sensitive(item, 0);
+    gtk_widget_set_sensitive(item, 0);
   }
-  moonbit_tray_linux_backend.gtk_menu_item_set_submenu(item, submenu);
-  moonbit_tray_linux_backend.gtk_menu_shell_append(parent, item);
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), submenu);
+  gtk_menu_shell_append(GTK_MENU_SHELL(parent), item);
   state->menu_stack[state->menu_depth] = submenu;
   state->menu_depth++;
   return 1;
@@ -1539,7 +1416,7 @@ static int32_t moonbit_tray_linux_commit_menu(moonbit_tray_state_t *state) {
   state->pending_menu_item_count = 0;
   memset(state->menu_stack, 0, sizeof(state->menu_stack));
   state->menu_depth = 0;
-  moonbit_tray_linux_backend.gtk_widget_show_all(state->menu);
+  gtk_widget_show_all(state->menu);
   moonbit_tray_linux_backend.app_indicator_set_menu(
       state->indicator,
       state->menu);
@@ -2292,10 +2169,8 @@ static void moonbit_tray_teardown_state(moonbit_tray_state_t *state) {
   }
   moonbit_tray_linux_destroy_pending_menu(state);
   moonbit_tray_linux_destroy_menu_widget(&state->menu);
-  if (moonbit_tray_linux_backend.g_object_unref != NULL) {
-    if (state->indicator != NULL) {
-      moonbit_tray_linux_backend.g_object_unref(state->indicator);
-    }
+  if (state->indicator != NULL) {
+    g_object_unref(state->indicator);
   }
 #elif defined(__APPLE__)
   moonbit_tray_macos_release_state(state);
@@ -2397,7 +2272,7 @@ MOONBIT_FFI_EXPORT int64_t moonbit_tray_create(
         "failed to allocate tray state");
     return 0;
   }
-  state->menu = moonbit_tray_linux_backend.gtk_menu_new();
+  state->menu = gtk_menu_new();
   if (state->menu == NULL) {
     moonbit_tray_set_message(
         moonbit_tray_create_error,
@@ -2428,9 +2303,7 @@ MOONBIT_FFI_EXPORT int64_t moonbit_tray_create(
         moonbit_tray_create_error,
         sizeof(moonbit_tray_create_error),
         state->last_error);
-    if (moonbit_tray_linux_backend.g_object_unref != NULL) {
-      moonbit_tray_linux_backend.g_object_unref(state->indicator);
-    }
+    g_object_unref(state->indicator);
     moonbit_tray_linux_destroy_menu_widget(&state->menu);
     free(state);
     return 0;
@@ -2957,7 +2830,7 @@ MOONBIT_FFI_EXPORT int32_t moonbit_tray_pump(
   return 1;
 #elif defined(__linux__)
   (void)state;
-  moonbit_tray_linux_backend.gtk_main_iteration_do(blocking ? 1 : 0);
+  gtk_main_iteration_do(blocking ? 1 : 0);
   return 1;
 #elif defined(__APPLE__)
   {

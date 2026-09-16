@@ -97,7 +97,8 @@ Operational notes:
 
 - Windows: ordinary Visual Studio native toolchain is enough.
 - macOS: the system SDK must provide `ApplicationServices`, `Carbon`, and `CoreFoundation`.
-- Linux: install the X11 development headers to build, for example `libx11-dev` on Debian or Ubuntu.
+- Linux: install `pkg-config` and X11 development files (libX11 1.7 or newer),
+  for example `pkg-config libx11-dev` on Debian or Ubuntu. X11 is linked directly.
 
 ## Development
 

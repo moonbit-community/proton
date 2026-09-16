@@ -26,7 +26,7 @@ This package supports the `native` target only.
 - Cross-platform v1 context menus with normal, separator, checkbox, and submenu items
 - Cross-platform v1 menu item click events
 - Cross-platform lifecycle backends for Windows, Linux, and macOS
-- No compile-time Linux or macOS GUI dependency in the package itself
+- Direct system linking for GTK 3 on Linux and AppKit on macOS
 
 ## Quick Start
 
@@ -151,8 +151,8 @@ than 128 UTF-8 bytes, and must not contain NUL bytes or surrounding whitespace.
 | Platform | Backend | Notes |
 | --- | --- | --- |
 | Windows | Win32 notification area | Uses a hidden message window plus `Shell_NotifyIconW`. |
-| Linux | GTK 3 + AppIndicator | GUI runtime is loaded dynamically at runtime. |
-| macOS | AppKit `NSStatusItem` | AppKit is loaded through the Objective-C runtime. |
+| Linux | GTK 3 + AppIndicator | GTK is linked directly; AppIndicator is selected at runtime. |
+| macOS | AppKit `NSStatusItem` | AppKit is linked directly. |
 
 ### Windows
 
@@ -163,9 +163,10 @@ than 128 UTF-8 bytes, and must not contain NUL bytes or surrounding whitespace.
 
 ### Linux
 
-- Requires a desktop session with GTK 3 available.
+- Building requires `pkg-config` and GTK 3 development files (`libgtk-3-dev` on Debian/Ubuntu).
+- Running requires GTK 3 and an available desktop session.
 - Requires either `libayatana-appindicator3` or `libappindicator3` at runtime.
-- The package does not hard-link those libraries at build time; it probes them at runtime.
+- Only AppIndicator is probed dynamically; either implementation can provide the tray backend.
 - Tooltip updates are mapped to the AppIndicator title because Linux tray APIs do not expose one consistent tooltip concept.
 - Supports nested context menus and menu item click events.
 
