@@ -19,3 +19,7 @@ description = "Microphone capture device and session helpers."
 preferred_target = "native"
 
 source = "."
+
+options(
+  "--moonbit-unstable-prebuild": "build.mjs",
+)

@@ -9,7 +9,6 @@ The root facade does not expose these values or raw native handles.
 ```mbt check
 ///|
 test "native boundary is linked" {
-  inspect(abi_version(), content="1")
   let info = runtime_info()
   assert_true(info.platform.length() > 0)
   assert_true(info.features.contains("event_polling"))
@@ -48,6 +47,10 @@ The default configuration resolves the CEF runtime and matching helper from the
 packaged application or the environment installed by Proton tooling. Explicit
 runtime configs must include both `runtime_root` and `helper_path`; creating the
 runtime validates the complete configuration before initializing CEF.
+The runtime root uses the assembled store/bundle layout: `bin/libcef.dll` on
+Windows, `bin/libcef.so` on Linux, and
+`Frameworks/Chromium Embedded Framework.framework` on macOS. Raw CEF SDK
+directories and former Proton prebuilt layouts are not runtime roots.
 
 The root facade installs the process-wide native host loop directly into the
 MoonBit async scheduler before application code starts. There is no second

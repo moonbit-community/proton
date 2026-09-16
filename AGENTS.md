@@ -195,9 +195,18 @@ native checks before handing off larger refactors.
   helpers. Platform ids should stay predictable: `win32-x64`, `darwin-arm64`,
   and `linux-x64`; add `darwin-x64` only when it is supported.
 - CEF is a native implementation detail. Do not expose CEF in public facade names.
-- `proton/build.mjs` is the only MoonBit native-link integration point. It
+- `proton/build.mjs` is the CEF runtime's MoonBit native-link integration point. It
   resolves the release's generated CEF requirement in the immutable store and
   supplies compiler and linker configuration to the private source packages.
+- System capability modules declare their own platform link flags in module
+  build hooks, so they also link when used without the Proton facade. Use SDK
+  headers and direct calls for supported macOS frameworks and Windows APIs;
+  do not recreate system declarations or add symbol tables for these APIs.
+  Linux X11/RandR and GTK/GObject use SDK headers and direct linking too.
+  Keep dynamic loading only for optional dependencies or explicit compatibility
+  paths: D-Bus, ALSA, AppIndicator and libnotify can be absent, and the legacy
+  macOS display-thumbnail API is unavailable in newer SDKs. CEF retains its
+  separate runtime loading contract.
 - Windows project builds pass a private `PROTON_WINDOWS_APP_RESOURCE` JSON
   request only to the application Moon subprocess. The native-link hook compiles
   the ICO with `rc.exe` and attaches the resource to the root app facade, not

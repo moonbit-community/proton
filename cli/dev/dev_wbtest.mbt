@@ -86,7 +86,7 @@ async test "dev selects xlog info on stderr unless the caller overrides it" {
   let runtime = DevRuntime::{
     root: "/runtime",
     bin_dir: "/runtime/bin",
-    lib_dir: "/runtime/lib",
+    platform: "darwin-arm64",
   }
   let child = dev_process_env(
     runtime,
@@ -107,6 +107,38 @@ async test "dev selects xlog info on stderr unless the caller overrides it" {
     child.get("PROTON_LOG_OUTPUT"),
     Some(@env.get_env_var("PROTON_LOG_OUTPUT").unwrap_or("stderr")),
   )
+}
+
+///|
+async test "dev injects only the selected platform's CEF library paths" {
+  for platform in ["darwin-arm64", "linux-x64", "win32-x64"] {
+    let runtime = DevRuntime::{
+      root: "/runtime with spaces",
+      bin_dir: "/runtime with spaces/bin",
+      platform,
+    }
+    let child = dev_process_env(runtime, "/helper", None, "/project", "/config")
+    assert_eq(child.get("DYLD_LIBRARY_PATH"), None)
+    if platform == "linux-x64" {
+      assert_eq(
+        child.get("LD_LIBRARY_PATH"),
+        Some(
+          prepend_env_path(
+            runtime.bin_dir,
+            current_env_value("LD_LIBRARY_PATH"),
+          ),
+        ),
+      )
+      assert_eq(
+        child.get("LD_PRELOAD"),
+        Some(prepend_env_path("libcef.so", current_env_value("LD_PRELOAD"))),
+      )
+    } else {
+      assert_eq(child.get("LD_LIBRARY_PATH"), None)
+      assert_eq(child.get("LD_PRELOAD"), None)
+    }
+    assert_eq(child.contains(path_env_key()), platform == "win32-x64")
+  }
 }
 
 ///|

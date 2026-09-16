@@ -78,7 +78,8 @@ static char *proton_strdup(const char *text) {
   return copy;
 }
 
-int32_t proton_abi_version(void) { return PROTON_ABI_VERSION; }
+/* Native-only test fixtures reference this to retain the runtime dependency. */
+void proton_native_link_anchor(void) {}
 
 proton_runtime_handle_t proton_runtime_null(void) { return NULL; }
 

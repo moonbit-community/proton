@@ -38,6 +38,9 @@ static void power_monitor_destroy_state(power_monitor_state_t *state) {
   power_monitor_platform_stop_watching(state);
   power_monitor_release_events(state);
   power_monitor_lock_destroy(state);
+#if defined(__APPLE__)
+  pthread_cond_destroy(&state->ready_cond);
+#endif
 }
 
 void power_monitor_lock_init(power_monitor_state_t *state) {

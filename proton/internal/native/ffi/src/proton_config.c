@@ -396,72 +396,6 @@ static int32_t proton_require_dir(const char *path, const char *label) {
   return PROTON_OK;
 }
 
-static int32_t proton_find_engine_library(const char *runtime_root,
-                                          char *engine_lib,
-                                          size_t engine_lib_len) {
-#ifdef _WIN32
-  char release_dir[PROTON_MAX_PATH_BYTES] = {0};
-  char bin_dir[PROTON_MAX_PATH_BYTES] = {0};
-  if (proton_join_path(release_dir, sizeof(release_dir), runtime_root,
-                       "Release") &&
-      proton_join_path(engine_lib, engine_lib_len, release_dir,
-                       "libcef.dll") &&
-      proton_path_exists(engine_lib)) {
-    return PROTON_OK;
-  }
-  if (proton_join_path(bin_dir, sizeof(bin_dir), runtime_root, "bin") &&
-      proton_join_path(engine_lib, engine_lib_len, bin_dir, "libcef.dll") &&
-      proton_path_exists(engine_lib)) {
-    return PROTON_OK;
-  }
-  if (proton_join_path(engine_lib, engine_lib_len, runtime_root,
-                       "libcef.dll")) {
-    return PROTON_OK;
-  }
-  return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                          "runtime engine library path is too long");
-#elif defined(__APPLE__)
-  char framework_dir[PROTON_MAX_PATH_BYTES] = {0};
-  if (proton_join_path(framework_dir, sizeof(framework_dir), runtime_root,
-                       "Chromium Embedded Framework.framework") &&
-      proton_join_path(engine_lib, engine_lib_len, framework_dir,
-                       "Chromium Embedded Framework") &&
-      proton_path_exists(engine_lib)) {
-    return PROTON_OK;
-  }
-  char frameworks_dir[PROTON_MAX_PATH_BYTES] = {0};
-  if (proton_join_path(frameworks_dir, sizeof(frameworks_dir), runtime_root,
-                       "Frameworks") &&
-      proton_join_path(framework_dir, sizeof(framework_dir), frameworks_dir,
-                       "Chromium Embedded Framework.framework") &&
-      proton_join_path(engine_lib, engine_lib_len, framework_dir,
-                       "Chromium Embedded Framework")) {
-    return PROTON_OK;
-  }
-  return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                          "runtime framework path is too long");
-#else
-  char bin_dir[PROTON_MAX_PATH_BYTES] = {0};
-  char lib_dir[PROTON_MAX_PATH_BYTES] = {0};
-  if (proton_join_path(engine_lib, engine_lib_len, runtime_root,
-                       "libcef.so") &&
-      proton_path_exists(engine_lib)) {
-    return PROTON_OK;
-  }
-  if (proton_join_path(bin_dir, sizeof(bin_dir), runtime_root, "bin") &&
-      proton_join_path(engine_lib, engine_lib_len, bin_dir, "libcef.so") &&
-      proton_path_exists(engine_lib)) {
-    return PROTON_OK;
-  }
-  if (proton_join_path(lib_dir, sizeof(lib_dir), runtime_root, "lib") &&
-      proton_join_path(engine_lib, engine_lib_len, lib_dir, "libcef.so")) {
-    return PROTON_OK;
-  }
-  return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                          "runtime engine library path is too long");
-#endif
-}
-
 static bool proton_copy_runtime_path(char *out, size_t out_len,
                                      const char *value) {
   if (out == NULL || out_len == 0 || value == NULL || value[0] == '\0') {
@@ -581,10 +515,21 @@ int32_t proton_config_probe_runtime(
   }
   char engine_lib[PROTON_MAX_PATH_BYTES] = {0};
   char icu_data[PROTON_MAX_PATH_BYTES] = {0};
-  int32_t status = proton_find_engine_library(
-      config->runtime_root, engine_lib, sizeof(engine_lib));
-  if (status != PROTON_OK) {
-    return status;
+  /* Probe the same installed layout consumed by the platform engines. */
+#ifdef __APPLE__
+  bool engine_path_ok = proton_join_path(
+      engine_lib, sizeof(engine_lib), config->framework_dir,
+      "Chromium Embedded Framework");
+#elif defined(_WIN32)
+  bool engine_path_ok = proton_join_path(
+      engine_lib, sizeof(engine_lib), config->runtime_root, "bin\\libcef.dll");
+#else
+  bool engine_path_ok = proton_join_path(
+      engine_lib, sizeof(engine_lib), config->runtime_root, "bin/libcef.so");
+#endif
+  if (!engine_path_ok) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "runtime engine library path is too long");
   }
   if (!proton_join_path(icu_data, sizeof(icu_data), config->resources_dir,
                         "icudtl.dat")) {
@@ -592,7 +537,7 @@ int32_t proton_config_probe_runtime(
                             "runtime icu data path is too long");
   }
 
-  status = proton_require_file(engine_lib, "runtime engine library");
+  int32_t status = proton_require_file(engine_lib, "runtime engine library");
   if (status != PROTON_OK) {
     return status;
   }

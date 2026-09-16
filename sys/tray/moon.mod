@@ -21,3 +21,7 @@ preferred_target = "native"
 supported_targets = "+native"
 
 source = "."
+
+options(
+  "--moonbit-unstable-prebuild": "build.mjs",
+)
