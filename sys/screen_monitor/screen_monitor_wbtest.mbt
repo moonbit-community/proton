@@ -88,3 +88,20 @@ fn is_none(o : DisplaysWire?) -> Bool {
     Some(_) => false
   }
 }
+
+///|
+test "destroyed screen monitor cannot restart watching" {
+  // Exercise lifecycle validation even when the display backend is unavailable.
+  let monitor = ScreenMonitor::{ handle: native_create(), }
+  monitor.destroy()
+  try monitor.start_watching() catch {
+    OperationFailed(operation~, detail~) => {
+      assert_eq(operation, "start_watching")
+      assert_eq(detail, "screen monitor has been destroyed")
+    }
+    error => fail("unexpected error: \{error}")
+  } noraise {
+    _ => fail("destroyed monitor restarted watching")
+  }
+  monitor.destroy()
+}

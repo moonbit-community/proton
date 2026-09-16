@@ -430,11 +430,13 @@ int32_t screen_monitor_platform_start_watching(screen_monitor_state_t *state) {
 }
 
 int32_t screen_monitor_platform_stop_watching(screen_monitor_state_t *state) {
-  if (g_shared_state == state && g_mac.remove_reconfiguration != NULL) {
-    g_mac.remove_reconfiguration(screen_monitor_reconfiguration_callback,
-                                 state);
+  if (g_shared_state == state) {
+    if (g_mac.remove_reconfiguration != NULL) {
+      g_mac.remove_reconfiguration(screen_monitor_reconfiguration_callback,
+                                   state);
+    }
+    g_shared_state = NULL;
   }
-  g_shared_state = NULL;
   state->watch_started = 0;
   return screen_monitor_STATUS_OK;
 }

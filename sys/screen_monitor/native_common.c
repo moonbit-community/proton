@@ -214,8 +214,12 @@ int32_t moonbit_screen_monitor_start_watching(void *handle) {
   if (handle == NULL) {
     return screen_monitor_STATUS_OPERATION_FAILED;
   }
-  return screen_monitor_platform_start_watching(
-      (screen_monitor_state_t *)handle);
+  screen_monitor_state_t *state = (screen_monitor_state_t *)handle;
+  if (state->destroyed) {
+    screen_monitor_set_error(state, "screen monitor has been destroyed");
+    return screen_monitor_STATUS_OPERATION_FAILED;
+  }
+  return screen_monitor_platform_start_watching(state);
 }
 
 MOONBIT_FFI_EXPORT
