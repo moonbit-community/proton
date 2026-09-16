@@ -703,8 +703,8 @@ async test "runtime probe rejects legacy CEF library layouts" {
   let root = @async_fs.tmpdir(prefix="proton-runtime-layout-")
   defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
   let (legacy_dirs, library, installed_dir) = match runtime_info().platform {
-    "win32-x64" => (["", "Release"], "libcef.dll", "bin")
-    "linux-x64" => (["", "lib"], "libcef.so", "bin")
+    "windows" => (["", "Release"], "libcef.dll", "bin")
+    "linux" => (["", "lib"], "libcef.so", "bin")
     _ =>
       (
         ["Chromium Embedded Framework.framework"],
