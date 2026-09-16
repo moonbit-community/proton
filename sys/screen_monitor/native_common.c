@@ -105,7 +105,7 @@ void screen_monitor_push_event(screen_monitor_state_t *state, int32_t event) {
 void screen_monitor_set_event_wakeup(
     screen_monitor_state_t *state,
     screen_monitor_event_wakeup_fn wakeup) {
-  if (state == NULL) {
+  if (state == NULL || state->destroyed) {
     return;
   }
   screen_monitor_lock_acquire(state);
@@ -115,7 +115,7 @@ void screen_monitor_set_event_wakeup(
 
 int32_t screen_monitor_take_event(screen_monitor_state_t *state,
                                   int32_t *out_event) {
-  if (state == NULL || out_event == NULL) {
+  if (state == NULL || state->destroyed || out_event == NULL) {
     return screen_monitor_STATUS_OPERATION_FAILED;
   }
   int32_t status = screen_monitor_STATUS_EMPTY;
@@ -214,8 +214,12 @@ int32_t moonbit_screen_monitor_start_watching(void *handle) {
   if (handle == NULL) {
     return screen_monitor_STATUS_OPERATION_FAILED;
   }
-  return screen_monitor_platform_start_watching(
-      (screen_monitor_state_t *)handle);
+  screen_monitor_state_t *state = (screen_monitor_state_t *)handle;
+  if (state->destroyed) {
+    screen_monitor_set_error(state, "screen monitor has been destroyed");
+    return screen_monitor_STATUS_OPERATION_FAILED;
+  }
+  return screen_monitor_platform_start_watching(state);
 }
 
 MOONBIT_FFI_EXPORT

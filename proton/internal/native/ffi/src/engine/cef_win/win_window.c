@@ -181,7 +181,6 @@ static void proton_engine_publish_native_theme_change(
   event->bool_a = dark_colors != 0 ? 1 : 0;
   event->bool_b = high_contrast_colors != 0 ? 1 : 0;
   if (!proton_event_publish(event)) {
-    proton_event_destroy(event);
     return;
   }
   g_native_theme_published = 1;
@@ -539,9 +538,10 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
                                          window->public_window_id);
           if (event != NULL) {
             if (!proton_event_set_text(&event->text_a,
-                                       window->thumbar_ids[index]) ||
-                !proton_event_publish(event)) {
+                                       window->thumbar_ids[index])) {
               proton_event_destroy(event);
+            } else {
+              (void)proton_event_publish(event);
             }
             proton_engine_signal_wait_source(window->runtime,
                                              PROTON_WAIT_PLATFORM);

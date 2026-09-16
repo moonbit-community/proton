@@ -162,7 +162,6 @@ static void proton_engine_publish_native_theme_change(void) {
   event->bool_a = dark_colors != 0 ? 1 : 0;
   event->bool_b = high_contrast_colors != 0 ? 1 : 0;
   if (!proton_event_publish(event)) {
-    proton_event_destroy(event);
     return;
   }
   g_native_theme_published = 1;

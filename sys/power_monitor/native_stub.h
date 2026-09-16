@@ -83,7 +83,6 @@ typedef struct power_monitor_state {
   int ready;
   volatile int32_t thread_started;
   void *run_loop;
-  void *observer_target;
   void *power_source;
   void *notify_port;
   uint32_t root_port;
