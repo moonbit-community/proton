@@ -1,6 +1,7 @@
 #include "native_stub.h"
 
 #ifdef __APPLE__
+#include <IOKit/pwr_mgt/IOPMLib.h>
 #include <dlfcn.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -242,22 +243,17 @@ int32_t power_monitor_platform_query_source(power_monitor_state_t *state) {
 typedef uint32_t proton_mach_port_t;
 typedef uint32_t proton_natural_t;
 
-typedef void (*proton_io_power_callback_fn)(
-    void *refcon, proton_mach_port_t connection, proton_natural_t message_type,
-    void *argument);
-
-typedef proton_mach_port_t (*proton_io_register_system_power_fn)(
-    void *refcon, void **notifier, void *notify_port,
-    proton_io_power_callback_fn callback);
-typedef proton_mach_port_t (*proton_io_deregister_system_power_fn)(
-    proton_mach_port_t *root_port);
-typedef proton_mach_port_t (*proton_io_allow_power_change_fn)(
-    proton_mach_port_t root_port, intptr_t notification);
-typedef void *(*proton_io_notification_port_create_fn)(
-    proton_mach_port_t master_port);
-typedef void (*proton_io_notification_port_destroy_fn)(void *notify_port);
-typedef proton_cf_type_ref (*proton_io_notification_port_run_loop_source_fn)(
-    void *notify_port);
+/* Derive IOKit function types from the SDK so dynamic loading cannot hide
+   signature mismatches at call sites. */
+typedef __typeof__(&IORegisterForSystemPower) proton_io_register_system_power_fn;
+typedef __typeof__(&IODeregisterForSystemPower)
+    proton_io_deregister_system_power_fn;
+typedef __typeof__(&IOAllowPowerChange) proton_io_allow_power_change_fn;
+typedef __typeof__(&IOServiceClose) proton_io_service_close_fn;
+typedef __typeof__(&IONotificationPortDestroy)
+    proton_io_notification_port_destroy_fn;
+typedef __typeof__(&IONotificationPortGetRunLoopSource)
+    proton_io_notification_port_run_loop_source_fn;
 typedef proton_cf_type_ref (*proton_iops_notification_run_loop_source_fn)(
     void (*callback)(void *context), void *context);
 
@@ -284,7 +280,7 @@ static struct {
   proton_io_register_system_power_fn io_register_system_power;
   proton_io_deregister_system_power_fn io_deregister_system_power;
   proton_io_allow_power_change_fn io_allow_power_change;
-  proton_io_notification_port_create_fn io_notification_port_create;
+  proton_io_service_close_fn io_service_close;
   proton_io_notification_port_destroy_fn io_notification_port_destroy;
   proton_io_notification_port_run_loop_source_fn
       io_notification_port_run_loop_source;
@@ -338,9 +334,8 @@ static int32_t power_monitor_load_watch_symbols(void) {
           io_kit, "IODeregisterForSystemPower");
   g_power_watch.io_allow_power_change =
       (proton_io_allow_power_change_fn)dlsym(io_kit, "IOAllowPowerChange");
-  g_power_watch.io_notification_port_create =
-      (proton_io_notification_port_create_fn)dlsym(io_kit,
-                                                   "IONotificationPortCreate");
+  g_power_watch.io_service_close =
+      (proton_io_service_close_fn)dlsym(io_kit, "IOServiceClose");
   g_power_watch.io_notification_port_destroy =
       (proton_io_notification_port_destroy_fn)dlsym(
           io_kit, "IONotificationPortDestroy");
@@ -376,7 +371,7 @@ static int32_t power_monitor_load_watch_symbols(void) {
       g_power_watch.io_register_system_power != NULL &&
       g_power_watch.io_deregister_system_power != NULL &&
       g_power_watch.io_allow_power_change != NULL &&
-      g_power_watch.io_notification_port_create != NULL &&
+      g_power_watch.io_service_close != NULL &&
       g_power_watch.io_notification_port_destroy != NULL &&
       g_power_watch.io_notification_port_run_loop_source != NULL &&
       g_power_watch.io_power_source_run_loop_source != NULL &&
@@ -473,8 +468,21 @@ static void *power_monitor_macos_watch_thread_main(void *param) {
   }
 
   proton_cf_type_ref run_loop = g_power_watch.run_loop_get_current();
-  void *notify_port =
-      g_power_watch.io_notification_port_create(0 /* kIOMasterPortDefault */);
+  IONotificationPortRef notify_port = NULL;
+  io_object_t notifier = IO_OBJECT_NULL;
+  io_connect_t root_port = g_power_watch.io_register_system_power(
+      state, &notify_port, power_monitor_io_power_callback, &notifier);
+  state->notify_port = notify_port;
+  state->notify_ref = notifier;
+  state->root_port = root_port;
+  if (root_port == IO_OBJECT_NULL) {
+    power_monitor_set_watch_error(state, "system power registration failed");
+    pthread_mutex_lock(&state->event_lock);
+    state->ready = 1;
+    pthread_cond_signal(&state->ready_cond);
+    pthread_mutex_unlock(&state->event_lock);
+    return NULL;
+  }
   proton_cf_type_ref run_loop_source = NULL;
   proton_cf_type_ref power_source = NULL;
   if (notify_port != NULL) {
@@ -483,13 +491,6 @@ static void *power_monitor_macos_watch_thread_main(void *param) {
     if (run_loop_source != NULL) {
       g_power_watch.run_loop_add_source(run_loop, run_loop_source, NULL);
     }
-    uint32_t notifier = 0;
-    uint32_t root_port = g_power_watch.io_register_system_power(
-        state, (void **)&notifier, notify_port,
-        power_monitor_io_power_callback);
-    state->notify_port = notify_port;
-    state->notify_ref = notifier;
-    state->root_port = root_port;
     power_source = g_power_watch.io_power_source_run_loop_source(
         power_monitor_iops_source_callback, state);
     if (power_source != NULL) {
@@ -499,7 +500,6 @@ static void *power_monitor_macos_watch_thread_main(void *param) {
 
   pthread_mutex_lock(&state->event_lock);
   state->run_loop = (void *)run_loop;
-  state->observer_target = (void *)run_loop_source;
   state->power_source = (void *)power_source;
   state->watch_started = 1;
   state->ready = 1;
@@ -577,19 +577,18 @@ int32_t power_monitor_platform_stop_watching(power_monitor_state_t *state) {
     state->thread_started = 0;
   }
 
+  if (state->notify_ref != IO_OBJECT_NULL) {
+    g_power_watch.io_deregister_system_power(&state->notify_ref);
+    state->notify_ref = IO_OBJECT_NULL;
+  }
   if (state->notify_port != NULL) {
+    /* The port owns and releases the borrowed run-loop source. */
     g_power_watch.io_notification_port_destroy(state->notify_port);
     state->notify_port = NULL;
   }
-  if (state->root_port != 0) {
-    g_power_watch.io_deregister_system_power(&state->root_port);
-    state->root_port = 0;
-  }
-  if (state->observer_target != NULL) {
-    g_power_watch.run_loop_source_invalidate(
-        (proton_cf_type_ref)state->observer_target);
-    g_power_watch.release((proton_cf_type_ref)state->observer_target);
-    state->observer_target = NULL;
+  if (state->root_port != IO_OBJECT_NULL) {
+    g_power_watch.io_service_close(state->root_port);
+    state->root_port = IO_OBJECT_NULL;
   }
   if (state->power_source != NULL) {
     g_power_watch.run_loop_source_invalidate(
