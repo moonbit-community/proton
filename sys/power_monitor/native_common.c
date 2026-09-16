@@ -105,7 +105,7 @@ void power_monitor_push_event(power_monitor_state_t *state, int32_t event) {
 void power_monitor_set_event_wakeup(
     power_monitor_state_t *state,
     power_monitor_event_wakeup_fn wakeup) {
-  if (state == NULL) {
+  if (state == NULL || state->destroyed) {
     return;
   }
   power_monitor_lock_acquire(state);
@@ -115,7 +115,7 @@ void power_monitor_set_event_wakeup(
 
 int32_t power_monitor_take_event(power_monitor_state_t *state,
                                  int32_t *out_event) {
-  if (state == NULL || out_event == NULL) {
+  if (state == NULL || state->destroyed || out_event == NULL) {
     return power_monitor_STATUS_OPERATION_FAILED;
   }
   int32_t status = power_monitor_STATUS_EMPTY;
@@ -257,8 +257,12 @@ int32_t moonbit_power_monitor_start_watching(void *handle) {
   if (handle == NULL) {
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  return power_monitor_platform_start_watching(
-      (power_monitor_state_t *)handle);
+  power_monitor_state_t *state = (power_monitor_state_t *)handle;
+  if (state->destroyed) {
+    power_monitor_set_error(state, "power monitor has been destroyed");
+    return power_monitor_STATUS_OPERATION_FAILED;
+  }
+  return power_monitor_platform_start_watching(state);
 }
 
 MOONBIT_FFI_EXPORT

@@ -554,7 +554,9 @@ int32_t power_monitor_platform_start_watching(power_monitor_state_t *state) {
 }
 
 int32_t power_monitor_platform_stop_watching(power_monitor_state_t *state) {
-  g_notify_state = NULL;
+  if (g_notify_state == state) {
+    g_notify_state = NULL;
+  }
   if (g_power_watch.notify_cancel != NULL) {
     if (state->lock_token != 0) {
       g_power_watch.notify_cancel(state->lock_token);

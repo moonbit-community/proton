@@ -103,5 +103,10 @@ test "destroyed screen monitor cannot restart watching" {
   } noraise {
     _ => fail("destroyed monitor restarted watching")
   }
+  assert_eq(
+    native_take_event(monitor.handle, Ref(0)),
+    native_status_operation_failed,
+  )
+  assert_true(monitor.drain_events().is_empty())
   monitor.destroy()
 }
