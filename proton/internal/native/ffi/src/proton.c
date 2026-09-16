@@ -7,6 +7,7 @@
 #include "proton_state.h"
 
 #include <math.h>
+#include <moonbit.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -86,8 +87,6 @@ proton_window_handle_t proton_window_null(void) { return NULL; }
 proton_view_handle_t proton_view_null(void) { return NULL; }
 
 proton_image_handle_t proton_image_null(void) { return NULL; }
-
-proton_event_t *proton_internal_event_null(void) { return NULL; }
 
 int64_t proton_window_logical_id(proton_window_handle_t window) {
   return window != NULL ? window->logical_id : 0;
@@ -507,17 +506,17 @@ int32_t proton_internal_menu_popup(proton_window_handle_t window, int32_t x,
 }
 
 int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
-                                           proton_event_t **out_event) {
+                                           proton_event_t *event) {
   proton_runtime_slot_t *slot = NULL;
   int32_t status = proton_get_runtime(runtime, &slot);
   if (status != PROTON_OK) {
     return status;
   }
-  if (out_event == NULL) {
+  if (event == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_event is required");
+                            "event is required");
   }
-  *out_event = NULL;
+  proton_event_clear(event);
   proton_runtime_sync_engine_closed_windows(slot);
   if (!proton_runtime_has_events(slot)) {
     status = proton_runtime_sync_engine_window_states(slot);
@@ -526,10 +525,12 @@ int32_t proton_internal_runtime_poll_event(proton_runtime_handle_t runtime,
     }
   }
   proton_runtime_sync_engine_bridge_lifecycle(slot);
-  *out_event = proton_runtime_poll_event(slot);
-  if (*out_event == NULL) {
+  proton_event_t *queued = proton_runtime_poll_event(slot);
+  if (queued == NULL) {
     return PROTON_EVENT_NONE;
   }
+  *event = *queued;
+  free(queued);
   g_last_error[0] = '\0';
   return PROTON_OK;
 }
@@ -641,46 +642,38 @@ int32_t proton_internal_event_item(const proton_event_t *event, int32_t index,
                                          buffer_len, out_required_len);
 }
 
-proton_cookie_snapshot_t *
-proton_internal_event_take_cookie_snapshot(proton_event_t *event) {
-  if (event == NULL || event->kind != PROTON_EVENT_COOKIE_GET_COMPLETED) {
-    return NULL;
-  }
-  return (proton_cookie_snapshot_t *)proton_event_take_payload(event);
-}
-
-void proton_internal_cookie_snapshot_destroy(proton_cookie_snapshot_t *snapshot) {
-  proton_cookie_snapshot_destroy(snapshot);
-}
-
-int32_t proton_internal_cookie_snapshot_count(
-    const proton_cookie_snapshot_t *snapshot, int32_t *out_count) {
+int32_t proton_internal_event_cookie_count(
+    const proton_event_t *event, int32_t *out_count) {
+  const proton_cookie_snapshot_t *snapshot =
+      event->kind == PROTON_EVENT_COOKIE_GET_COMPLETED ? event->payload : NULL;
   return proton_cookie_snapshot_count(snapshot, out_count);
 }
 
-int32_t proton_internal_cookie_snapshot_string_field(
-    const proton_cookie_snapshot_t *snapshot, int32_t index, int32_t field,
+int32_t proton_internal_event_cookie_string_field(
+    const proton_event_t *event, int32_t index, int32_t field,
     char *buffer, int32_t buffer_len, int32_t *out_required_len) {
+  const proton_cookie_snapshot_t *snapshot =
+      event->kind == PROTON_EVENT_COOKIE_GET_COMPLETED ? event->payload : NULL;
   return proton_cookie_snapshot_copy_string_field(snapshot, index, field,
                                                   buffer, buffer_len,
                                                   out_required_len);
 }
 
-int32_t proton_internal_cookie_snapshot_int_field(
-    const proton_cookie_snapshot_t *snapshot, int32_t index, int32_t field,
+int32_t proton_internal_event_cookie_int_field(
+    const proton_event_t *event, int32_t index, int32_t field,
     int32_t *out_value) {
+  const proton_cookie_snapshot_t *snapshot =
+      event->kind == PROTON_EVENT_COOKIE_GET_COMPLETED ? event->payload : NULL;
   return proton_cookie_snapshot_int_field(snapshot, index, field, out_value);
 }
 
-int32_t proton_internal_cookie_snapshot_int64_field(
-    const proton_cookie_snapshot_t *snapshot, int32_t index, int32_t field,
+int32_t proton_internal_event_cookie_int64_field(
+    const proton_event_t *event, int32_t index, int32_t field,
     int64_t *out_value, int32_t *out_present) {
+  const proton_cookie_snapshot_t *snapshot =
+      event->kind == PROTON_EVENT_COOKIE_GET_COMPLETED ? event->payload : NULL;
   return proton_cookie_snapshot_int64_field(snapshot, index, field, out_value,
                                             out_present);
-}
-
-void proton_internal_event_destroy(proton_event_t *event) {
-  proton_event_destroy(event);
 }
 
 int32_t proton_runtime_respond_bridge_request(
@@ -729,8 +722,8 @@ int32_t proton_internal_window_create(
     const char *titlebar_restore_label, const char *titlebar_close_label,
     int32_t new_window_policy, int32_t download_policy,
     int32_t certificate_policy, int32_t media_policy, int32_t devtools,
-    proton_bridge_config_t *bridge_config,
-    proton_web_request_config_t *web_request_config,
+    proton_bridge_config_owner_t *bridge_config,
+    proton_web_request_config_owner_t *web_request_config,
     proton_window_handle_t *out_window) {
   proton_runtime_slot_t *runtime_slot = NULL;
   int32_t status = proton_get_runtime(runtime, &runtime_slot);
@@ -747,7 +740,7 @@ int32_t proton_internal_window_create(
       theme_preference, navigation_policy, titlebar_minimize_label,
       titlebar_maximize_label, titlebar_restore_label, titlebar_close_label,
       new_window_policy, download_policy, certificate_policy, media_policy,
-      devtools, bridge_config, web_request_config, &config);
+      devtools, bridge_config->value, web_request_config->value, &config);
   if (status != PROTON_OK) {
     return status;
   }
@@ -1636,12 +1629,7 @@ int32_t proton_window_set_ignore_mouse_events(proton_window_handle_t window,
 }
 
 int32_t proton_window_set_background_color(proton_window_handle_t window,
-                                           const char *color) {
-  uint32_t parsed_color = 0;
-  if (!proton_parse_color_argb(color, &parsed_color)) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "background color must be #RRGGBB or #AARRGGBB");
-  }
+                                           uint32_t color) {
   proton_window_slot_t *slot = NULL;
   int32_t status = proton_get_window(window, &slot);
   if (status != PROTON_OK) return status;
@@ -1651,7 +1639,7 @@ int32_t proton_window_set_background_color(proton_window_handle_t window,
   }
   char engine_error[512] = {0};
   status = proton_engine_window_set_background_color(
-      slot->engine_window, parsed_color, engine_error, sizeof(engine_error));
+      slot->engine_window, color, engine_error, sizeof(engine_error));
   if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
   g_last_error[0] = '\0';
   return PROTON_OK;
@@ -1888,34 +1876,17 @@ typedef struct {
 } proton_thumbar_button_t;
 
 struct proton_thumbar_builder {
-  proton_thumbar_button_t *items;
+  proton_thumbar_button_t items[PROTON_THUMBAR_MAX_BUTTONS];
   int32_t count;
 };
 
-proton_thumbar_builder_t *proton_thumbar_builder_null(void) { return NULL; }
+static void proton_thumbar_builder_finalize(void *payload);
 
-int32_t proton_thumbar_builder_create(proton_thumbar_builder_t **out_builder) {
-  if (out_builder == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_builder is required");
-  }
-  *out_builder = NULL;
-  proton_thumbar_builder_t *builder = (proton_thumbar_builder_t *)calloc(
-      1, sizeof(proton_thumbar_builder_t));
-  if (builder == NULL) {
-    return proton_set_error(PROTON_ERR_PLATFORM,
-                            "failed to allocate the button builder");
-  }
-  builder->items = (proton_thumbar_button_t *)calloc(
-      PROTON_THUMBAR_MAX_BUTTONS, sizeof(proton_thumbar_button_t));
-  if (builder->items == NULL) {
-    free(builder);
-    return proton_set_error(PROTON_ERR_PLATFORM,
-                            "failed to allocate the button list");
-  }
-  *out_builder = builder;
-  g_last_error[0] = '\0';
-  return PROTON_OK;
+proton_thumbar_builder_t *proton_thumbar_builder_create(void) {
+  proton_thumbar_builder_t *builder = moonbit_make_external_object(
+      proton_thumbar_builder_finalize, sizeof(*builder));
+  memset(builder, 0, sizeof(*builder));
+  return builder;
 }
 
 int32_t proton_thumbar_builder_add(proton_thumbar_builder_t *builder,
@@ -1925,17 +1896,9 @@ int32_t proton_thumbar_builder_add(proton_thumbar_builder_t *builder,
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "builder is required");
   }
-  if (id == NULL || id[0] == '\0') {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "thumbar button id is required");
-  }
   if (builder->count >= PROTON_THUMBAR_MAX_BUTTONS) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "thumbar button limit is 7");
-  }
-  if (flags < 0 || (flags & ~0x1f) != 0) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "thumbar button flags are invalid");
   }
   proton_thumbar_button_t *item = &builder->items[builder->count];
   item->id = proton_strdup(id);
@@ -1959,16 +1922,12 @@ int32_t proton_thumbar_builder_add(proton_thumbar_builder_t *builder,
   return PROTON_OK;
 }
 
-void proton_thumbar_builder_destroy(proton_thumbar_builder_t *builder) {
-  if (builder == NULL) {
-    return;
-  }
+static void proton_thumbar_builder_finalize(void *payload) {
+  proton_thumbar_builder_t *builder = payload;
   for (int32_t index = 0; index < builder->count; index++) {
     free(builder->items[index].id);
     free(builder->items[index].tooltip);
   }
-  free(builder->items);
-  free(builder);
 }
 
 int32_t proton_window_set_thumbar_buttons(proton_window_handle_t window,
@@ -3256,7 +3215,8 @@ int32_t proton_window_close_all_connections(proton_window_handle_t window) {
 int32_t proton_internal_view_create(
     proton_window_handle_t window, int32_t x, int32_t y, int32_t width,
     int32_t height, int32_t visible, int32_t z_order, const char *initial_url,
-    const char *background_color, proton_view_handle_t *out_view) {
+    int32_t has_background_color, uint32_t background_color,
+    proton_view_handle_t *out_view) {
   proton_window_slot_t *window_slot = NULL;
   int32_t status = proton_get_window(window, &window_slot);
   if (status != PROTON_OK) {
@@ -3268,7 +3228,7 @@ int32_t proton_internal_view_create(
   }
   proton_engine_view_config_t config;
   status = proton_config_prepare_view(
-      x, y, width, height, visible, z_order, initial_url, background_color,
+      x, y, width, height, visible, z_order, initial_url, has_background_color, background_color,
       &config);
   if (status != PROTON_OK) {
     return status;

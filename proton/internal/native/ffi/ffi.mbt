@@ -21,31 +21,28 @@ pub type ViewHandle
 pub type ImageHandle
 
 ///|
-#external
 pub type EventHandle
 
 ///|
 #external
-pub type CookieSnapshotHandle
+pub type MenuNode
 
 ///|
-#external
+pub extern "C" fn menu_node_null() -> MenuNode = "proton_internal_menu_node_null"
+
+///|
 pub type MenuConfigHandle
 
 ///|
-#external
 pub type ThumbarBuilderHandle
 
 ///|
-#external
 pub type JumpListBuilderHandle
 
 ///|
-#external
 pub type BridgeConfigHandle
 
 ///|
-#external
 pub type WebRequestConfigHandle
 
 ///|
@@ -61,16 +58,13 @@ pub extern "C" fn view_null() -> ViewHandle = "proton_view_null"
 pub extern "C" fn image_null() -> ImageHandle = "proton_image_null"
 
 ///|
-pub extern "C" fn event_null() -> EventHandle = "proton_internal_event_null"
+pub extern "C" fn event_create() -> EventHandle = "proton_internal_event_create"
 
 ///|
-pub extern "C" fn menu_config_null() -> MenuConfigHandle = "proton_internal_menu_config_null"
+pub extern "C" fn bridge_config_empty() -> BridgeConfigHandle = "proton_internal_bridge_config_empty"
 
 ///|
-pub extern "C" fn bridge_config_null() -> BridgeConfigHandle = "proton_internal_bridge_config_null"
-
-///|
-pub extern "C" fn web_request_config_null() -> WebRequestConfigHandle = "proton_internal_web_request_config_null"
+pub extern "C" fn web_request_config_empty() -> WebRequestConfigHandle = "proton_internal_web_request_config_empty"
 
 ///|
 pub extern "C" fn window_logical_id(window : WindowHandle) -> Int64 = "proton_window_logical_id"
@@ -270,12 +264,14 @@ pub extern "C" fn proton_host_loop_poll_ffi(
 pub extern "C" fn proton_host_loop_end_ffi() -> Unit = "proton_host_loop_end"
 
 ///|
+#borrow(menu)
 pub extern "C" fn runtime_set_menu(
   runtime : RuntimeHandle,
   menu : MenuConfigHandle,
 ) -> Int = "proton_internal_runtime_set_menu"
 
 ///|
+#borrow(menu)
 pub extern "C" fn menu_popup(
   window : WindowHandle,
   x : Int,
@@ -284,22 +280,22 @@ pub extern "C" fn menu_popup(
 ) -> Int = "proton_internal_menu_popup"
 
 ///|
-#borrow(out_menu)
-pub extern "C" fn menu_config_create(out_menu : Ref[MenuConfigHandle]) -> Int = "proton_internal_menu_config_create"
+pub extern "C" fn menu_config_create() -> MenuConfigHandle = "proton_internal_menu_config_create"
 
 ///|
-#borrow(label, out_menu_index)
+#borrow(menu, label, out_menu)
 pub extern "C" fn menu_config_add_menu(
   menu : MenuConfigHandle,
   label : Bytes,
   role : Int,
-  out_menu_index : Ref[Int],
+  out_menu : Ref[MenuNode],
 ) -> Int = "proton_internal_menu_config_add_menu"
 
 ///|
-#borrow(id, label, key, role)
+#borrow(menu, id, label, key, role, out_submenu)
 pub extern "C" fn menu_config_add_item(
   menu : MenuConfigHandle,
+  target : MenuNode,
   kind : Int,
   id : Bytes,
   label : Bytes,
@@ -309,26 +305,14 @@ pub extern "C" fn menu_config_add_item(
   visible : Int,
   checkable : Int,
   checked : Int,
+  out_submenu : Ref[MenuNode],
 ) -> Int = "proton_internal_menu_config_add_item"
 
 ///|
-#borrow(label)
-pub extern "C" fn menu_config_begin_submenu(
-  menu : MenuConfigHandle,
-  label : Bytes,
-) -> Int = "proton_internal_menu_config_begin_submenu"
-
-///|
-pub extern "C" fn menu_config_end_submenu(menu : MenuConfigHandle) -> Int = "proton_internal_menu_config_end_submenu"
-
-///|
-pub extern "C" fn menu_config_destroy(menu : MenuConfigHandle) -> Unit = "proton_internal_menu_config_destroy"
-
-///|
-#borrow(out_event)
+#borrow(event)
 pub extern "C" fn runtime_poll_event(
   runtime : RuntimeHandle,
-  out_event : Ref[EventHandle],
+  event : EventHandle,
 ) -> Int = "proton_internal_runtime_poll_event"
 
 ///|
@@ -343,22 +327,26 @@ pub extern "C" fn runtime_complete_resource_request(
 ) -> Int = "proton_runtime_complete_resource_request"
 
 ///|
+#borrow(event)
 pub extern "C" fn event_kind(event : EventHandle) -> Int = "proton_internal_event_kind"
 
 ///|
+#borrow(event)
 pub extern "C" fn event_int64(event : EventHandle, field : Int) -> Int64 = "proton_internal_event_int64"
 
 ///|
+#borrow(event)
 pub extern "C" fn event_int(event : EventHandle, field : Int) -> Int = "proton_internal_event_int"
 
 ///|
+#borrow(event)
 pub extern "C" fn event_window_state_field(
   event : EventHandle,
   field : Int,
 ) -> Int = "proton_internal_event_window_state_field"
 
 ///|
-#borrow(buffer, out_required_len)
+#borrow(event, buffer, out_required_len)
 pub extern "C" fn event_text(
   event : EventHandle,
   field : Int,
@@ -368,10 +356,11 @@ pub extern "C" fn event_text(
 ) -> Int = "proton_internal_event_text"
 
 ///|
+#borrow(event)
 pub extern "C" fn event_item_count(event : EventHandle) -> Int = "proton_internal_event_item_count"
 
 ///|
-#borrow(buffer, out_required_len)
+#borrow(event, buffer, out_required_len)
 pub extern "C" fn event_item(
   event : EventHandle,
   index : Int,
@@ -381,54 +370,41 @@ pub extern "C" fn event_item(
 ) -> Int = "proton_internal_event_item"
 
 ///|
-pub extern "C" fn event_take_cookie_snapshot(
+#borrow(event, out_count)
+pub extern "C" fn event_cookie_count(
   event : EventHandle,
-) -> CookieSnapshotHandle = "proton_internal_event_take_cookie_snapshot"
-
-///|
-pub extern "C" fn cookie_snapshot_destroy(
-  snapshot : CookieSnapshotHandle,
-) -> Unit = "proton_internal_cookie_snapshot_destroy"
-
-///|
-#borrow(out_count)
-pub extern "C" fn cookie_snapshot_count(
-  snapshot : CookieSnapshotHandle,
   out_count : Ref[Int],
-) -> Int = "proton_internal_cookie_snapshot_count"
+) -> Int = "proton_internal_event_cookie_count"
 
 ///|
-#borrow(buffer, out_required_len)
-pub extern "C" fn cookie_snapshot_string_field(
-  snapshot : CookieSnapshotHandle,
+#borrow(event, buffer, out_required_len)
+pub extern "C" fn event_cookie_string_field(
+  event : EventHandle,
   index : Int,
   field : Int,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
-) -> Int = "proton_internal_cookie_snapshot_string_field"
+) -> Int = "proton_internal_event_cookie_string_field"
 
 ///|
-#borrow(out_value)
-pub extern "C" fn cookie_snapshot_int_field(
-  snapshot : CookieSnapshotHandle,
+#borrow(event, out_value)
+pub extern "C" fn event_cookie_int_field(
+  event : EventHandle,
   index : Int,
   field : Int,
   out_value : Ref[Int],
-) -> Int = "proton_internal_cookie_snapshot_int_field"
+) -> Int = "proton_internal_event_cookie_int_field"
 
 ///|
-#borrow(out_value, out_present)
-pub extern "C" fn cookie_snapshot_int64_field(
-  snapshot : CookieSnapshotHandle,
+#borrow(event, out_value, out_present)
+pub extern "C" fn event_cookie_int64_field(
+  event : EventHandle,
   index : Int,
   field : Int,
   out_value : Ref[Int64],
   out_present : Ref[Int],
-) -> Int = "proton_internal_cookie_snapshot_int64_field"
-
-///|
-pub extern "C" fn event_destroy(event : EventHandle) -> Unit = "proton_internal_event_destroy"
+) -> Int = "proton_internal_event_cookie_int64_field"
 
 ///|
 #borrow(body_json)
@@ -480,7 +456,7 @@ pub extern "C" fn proton_native_theme_query_ffi(
 pub extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notification_cleanup"
 
 ///|
-#borrow(title, initial_url, titlebar_minimize_label, titlebar_maximize_label, titlebar_restore_label, titlebar_close_label, out_window)
+#borrow(title, initial_url, titlebar_minimize_label, titlebar_maximize_label, titlebar_restore_label, titlebar_close_label, bridge_config, web_request_config, out_window)
 pub extern "C" fn window_create(
   runtime : RuntimeHandle,
   title : Bytes,
@@ -509,48 +485,32 @@ pub extern "C" fn window_create(
 ) -> Int = "proton_internal_window_create"
 
 ///|
-#borrow(out_config)
+#borrow(out_status)
 pub extern "C" fn bridge_config_create(
   max_payload_bytes : Int,
-  out_config : Ref[BridgeConfigHandle],
-) -> Int = "proton_internal_bridge_config_create"
+  out_status : Ref[Int],
+) -> BridgeConfigHandle = "proton_internal_bridge_config_create"
 
 ///|
-#borrow(source_origin, out_grant_index)
+#borrow(config, source_origin, ops, out_grant_index)
 pub extern "C" fn bridge_config_add_grant(
   config : BridgeConfigHandle,
   source_origin : Bytes,
+  ops : FixedArray[Bytes],
   out_grant_index : Ref[Int],
 ) -> Int = "proton_internal_bridge_config_add_grant"
 
 ///|
-#borrow(name)
-pub extern "C" fn bridge_config_add_op(
-  config : BridgeConfigHandle,
-  grant_index : Int,
-  name : Bytes,
-) -> Int = "proton_internal_bridge_config_add_op"
-
-///|
-#borrow(js_namespace, out_extension_index)
+#borrow(config, js_namespace, apis)
 pub extern "C" fn bridge_config_add_extension(
   config : BridgeConfigHandle,
   grant_index : Int,
   js_namespace : Bytes,
-  out_extension_index : Ref[Int],
+  apis : FixedArray[Bytes],
 ) -> Int = "proton_internal_bridge_config_add_extension"
 
 ///|
-#borrow(api)
-pub extern "C" fn bridge_config_add_extension_api(
-  config : BridgeConfigHandle,
-  grant_index : Int,
-  extension_index : Int,
-  api : Bytes,
-) -> Int = "proton_internal_bridge_config_add_extension_api"
-
-///|
-#borrow(owner, name, source)
+#borrow(config, owner, name, source)
 pub extern "C" fn bridge_config_add_initialization_unit(
   config : BridgeConfigHandle,
   grant_index : Int,
@@ -560,23 +520,20 @@ pub extern "C" fn bridge_config_add_initialization_unit(
 ) -> Int = "proton_internal_bridge_config_add_initialization_unit"
 
 ///|
-pub extern "C" fn bridge_config_destroy(config : BridgeConfigHandle) -> Unit = "proton_internal_bridge_config_destroy"
-
-///|
-#borrow(out_config)
+#borrow(out_status)
 pub extern "C" fn web_request_config_create(
-  out_config : Ref[WebRequestConfigHandle],
-) -> Int = "proton_internal_web_request_config_create"
+  out_status : Ref[Int],
+) -> WebRequestConfigHandle = "proton_internal_web_request_config_create"
 
 ///|
-#borrow(url_prefix)
+#borrow(config, url_prefix)
 pub extern "C" fn web_request_config_add_cancel_prefix(
   config : WebRequestConfigHandle,
   url_prefix : Bytes,
 ) -> Int = "proton_internal_web_request_config_add_cancel_prefix"
 
 ///|
-#borrow(url_prefix, target_url)
+#borrow(config, url_prefix, target_url)
 pub extern "C" fn web_request_config_add_redirect_prefix(
   config : WebRequestConfigHandle,
   url_prefix : Bytes,
@@ -584,18 +541,13 @@ pub extern "C" fn web_request_config_add_redirect_prefix(
 ) -> Int = "proton_internal_web_request_config_add_redirect_prefix"
 
 ///|
-#borrow(url_prefix, header_name, header_value)
+#borrow(config, url_prefix, header_name, header_value)
 pub extern "C" fn web_request_config_add_header_prefix(
   config : WebRequestConfigHandle,
   url_prefix : Bytes,
   header_name : Bytes,
   header_value : Bytes,
 ) -> Int = "proton_internal_web_request_config_add_header_prefix"
-
-///|
-pub extern "C" fn web_request_config_destroy(
-  config : WebRequestConfigHandle,
-) -> Unit = "proton_internal_web_request_config_destroy"
 
 ///|
 pub extern "C" fn proton_window_destroy_ffi(window : WindowHandle) -> Int = "proton_window_destroy"
@@ -803,10 +755,9 @@ pub extern "C" fn proton_window_set_ignore_mouse_events_ffi(
 ) -> Int = "proton_window_set_ignore_mouse_events"
 
 ///|
-#borrow(color)
 pub extern "C" fn proton_window_set_background_color_ffi(
   window : WindowHandle,
-  color : Bytes,
+  color : UInt,
 ) -> Int = "proton_window_set_background_color"
 
 ///|
@@ -869,16 +820,10 @@ pub extern "C" fn proton_window_set_thumbnail_tooltip_ffi(
 ) -> Int = "proton_window_set_thumbnail_tooltip"
 
 ///|
-pub extern "C" fn thumbar_builder_null() -> ThumbarBuilderHandle = "proton_thumbar_builder_null"
+pub extern "C" fn thumbar_builder_create() -> ThumbarBuilderHandle = "proton_thumbar_builder_create"
 
 ///|
-#borrow(out_builder)
-pub extern "C" fn thumbar_builder_create(
-  out_builder : Ref[ThumbarBuilderHandle],
-) -> Int = "proton_thumbar_builder_create"
-
-///|
-#borrow(id, tooltip)
+#borrow(builder, id, tooltip)
 pub extern "C" fn thumbar_builder_add(
   builder : ThumbarBuilderHandle,
   id : Bytes,
@@ -888,12 +833,7 @@ pub extern "C" fn thumbar_builder_add(
 ) -> Int = "proton_thumbar_builder_add"
 
 ///|
-pub extern "C" fn thumbar_builder_destroy(
-  builder : ThumbarBuilderHandle,
-) -> Unit = "proton_thumbar_builder_destroy"
-
-///|
-#borrow(out_applied)
+#borrow(buttons, out_applied)
 pub extern "C" fn proton_window_set_thumbar_buttons_ffi(
   window : WindowHandle,
   buttons : ThumbarBuilderHandle,
@@ -901,16 +841,10 @@ pub extern "C" fn proton_window_set_thumbar_buttons_ffi(
 ) -> Int = "proton_window_set_thumbar_buttons"
 
 ///|
-pub extern "C" fn jump_list_builder_null() -> JumpListBuilderHandle = "proton_jump_list_builder_null"
+pub extern "C" fn jump_list_builder_create() -> JumpListBuilderHandle = "proton_jump_list_builder_create"
 
 ///|
-#borrow(out_builder)
-pub extern "C" fn jump_list_builder_create(
-  out_builder : Ref[JumpListBuilderHandle],
-) -> Int = "proton_jump_list_builder_create"
-
-///|
-#borrow(name)
+#borrow(builder, name)
 pub extern "C" fn jump_list_builder_add_category(
   builder : JumpListBuilderHandle,
   kind : Int,
@@ -918,9 +852,10 @@ pub extern "C" fn jump_list_builder_add_category(
 ) -> Int = "proton_jump_list_builder_add_category"
 
 ///|
-#borrow(path, arguments, title, description, icon_path, working_directory)
+#borrow(builder, path, arguments, title, description, icon_path, working_directory)
 pub extern "C" fn jump_list_builder_add_item(
   builder : JumpListBuilderHandle,
+  category_index : Int,
   kind : Int,
   path : Bytes,
   arguments : Bytes,
@@ -932,12 +867,11 @@ pub extern "C" fn jump_list_builder_add_item(
 ) -> Int = "proton_jump_list_builder_add_item"
 
 ///|
-pub extern "C" fn jump_list_builder_destroy(
-  builder : JumpListBuilderHandle,
-) -> Unit = "proton_jump_list_builder_destroy"
+#borrow(out_result)
+pub extern "C" fn proton_jump_list_clear_ffi(out_result : Ref[Int]) -> Int = "proton_jump_list_clear"
 
 ///|
-#borrow(out_result)
+#borrow(categories, out_result)
 pub extern "C" fn proton_jump_list_apply_ffi(
   categories : JumpListBuilderHandle,
   out_result : Ref[Int],
@@ -1226,7 +1160,7 @@ pub extern "C" fn proton_last_error_message_ffi(
 ) -> Int = "proton_last_error_message"
 
 ///|
-#borrow(initial_url, background_color, out_view)
+#borrow(initial_url, out_view)
 pub extern "C" fn view_create(
   window : WindowHandle,
   x : Int,
@@ -1236,7 +1170,8 @@ pub extern "C" fn view_create(
   visible : Int,
   z_order : Int,
   initial_url : Bytes,
-  background_color : Bytes,
+  has_background_color : Int,
+  background_color : UInt,
   out_view : Ref[ViewHandle],
 ) -> Int = "proton_internal_view_create"
 

@@ -272,6 +272,17 @@ fn invalid_argument(message : String) -> NativeError {
 
 ///|
 fn validate_window_config(config : WindowConfig) -> Unit raise NativeError {
+  if config.titlebar_style is Overlay &&
+    (
+      config.framework_titlebar_minimize_label.unwrap_or("").is_empty() ||
+      config.framework_titlebar_maximize_label.unwrap_or("").is_empty() ||
+      config.framework_titlebar_restore_label.unwrap_or("").is_empty() ||
+      config.framework_titlebar_close_label.unwrap_or("").is_empty()
+    ) {
+    raise invalid_argument(
+      "window titlebar overlay requires framework control labels",
+    )
+  }
   if config.width <= 0 || config.height <= 0 {
     raise invalid_argument("width and height must be positive")
   }
@@ -700,103 +711,58 @@ fn menu_item_role_name(role : MenuItemRole?) -> String? {
 fn build_menu_config(
   menu : MenuBar,
 ) -> @native_ffi.MenuConfigHandle raise NativeError {
-  let out_menu = Ref(@native_ffi.menu_config_null())
-  let create_status = @native_ffi.menu_config_create(out_menu)
-  if create_status < 0 {
-    raise native_error(create_status)
-  }
-  let handle = out_menu.val
   for definition in menu.menus {
-    let menu_index = Ref(0)
-    let menu_status = @native_ffi.menu_config_add_menu(
-      handle,
-      runtime_config_string(definition.label),
-      menu_role_code(definition.role),
-      menu_index,
+    validate_menu(definition, false)
+  }
+  let handle = @native_ffi.menu_config_create()
+  for definition in menu.menus {
+    let target = Ref(@native_ffi.menu_node_null())
+    check_status(
+      @native_ffi.menu_config_add_menu(
+        handle,
+        runtime_config_string(definition.label),
+        menu_role_code(definition.role),
+        target,
+      ),
     )
-    if menu_status < 0 {
-      @native_ffi.menu_config_destroy(handle)
-      raise native_error(menu_status)
-    }
-    let items_status = append_menu_config_items(
-      handle,
-      definition.items.unwrap_or([]),
-    )
-    if items_status < 0 {
-      @native_ffi.menu_config_destroy(handle)
-      raise native_error(items_status)
-    }
+    append_menu_config_items(handle, target.val, definition.items.unwrap_or([]))
   }
   handle
 }
 
 ///|
-/// Recursively appends menu items to the current builder target, bracketing
-/// nested submenus with begin/end submenu calls on the native config handle.
-/// Returns the first negative status, or `0` on success.
 fn append_menu_config_items(
-  handle : @native_ffi.MenuConfigHandle,
+  owner : @native_ffi.MenuConfigHandle,
+  target : @native_ffi.MenuNode,
   items : Array[MenuItem],
-) -> Int {
+) -> Unit raise NativeError {
   for item in items {
-    match item.kind {
-      Submenu => {
-        let sub_menu = item.submenu.unwrap()
-        let begin_status = @native_ffi.menu_config_begin_submenu(
-          handle,
-          runtime_config_string(sub_menu.label),
-        )
-        if begin_status < 0 {
-          return begin_status
-        }
-        let child_status = append_menu_config_items(
-          handle,
-          sub_menu.items.unwrap_or([]),
-        )
-        if child_status < 0 {
-          return child_status
-        }
-        let end_status = @native_ffi.menu_config_end_submenu(handle)
-        if end_status < 0 {
-          return end_status
-        }
-      }
-      _ => {
-        let add_status = @native_ffi.menu_config_add_item(
-          handle,
-          menu_item_kind_code(item.kind),
-          runtime_config_string(item.id),
-          runtime_config_string(item.label),
-          runtime_config_string(item.key),
-          runtime_config_string(menu_item_role_name(item.role)),
-          if item.enabled {
-            1
-          } else {
-            0
-          },
-          if item.visible {
-            1
-          } else {
-            0
-          },
-          if item.checked is Some(_) {
-            1
-          } else {
-            0
-          },
-          if item.checked.unwrap_or(false) {
-            1
-          } else {
-            0
-          },
-        )
-        if add_status < 0 {
-          return add_status
-        }
-      }
+    let submenu = if item.kind is Submenu { item.submenu } else { None }
+    let label = match submenu {
+      Some(menu) => menu.label
+      None => item.label
+    }
+    let child = Ref(@native_ffi.menu_node_null())
+    check_status(
+      @native_ffi.menu_config_add_item(
+        owner,
+        target,
+        menu_item_kind_code(item.kind),
+        runtime_config_string(item.id),
+        runtime_config_string(label),
+        runtime_config_string(item.key),
+        runtime_config_string(menu_item_role_name(item.role)),
+        runtime_config_bool(item.enabled),
+        runtime_config_bool(item.visible),
+        runtime_config_bool(item.checked is Some(_)),
+        runtime_config_bool(item.checked.unwrap_or(false)),
+        child,
+      ),
+    )
+    if submenu is Some(menu) {
+      append_menu_config_items(owner, child.val, menu.items.unwrap_or([]))
     }
   }
-  0
 }
 
 ///|
@@ -807,7 +773,6 @@ pub fn Runtime::set_menu(
 ) -> Unit raise NativeError {
   let config = build_menu_config(menu)
   let status = @native_ffi.runtime_set_menu(self.active_handle(), config)
-  @native_ffi.menu_config_destroy(config)
   check_status(status)
 }
 
@@ -824,7 +789,6 @@ pub fn Window::popup_menu(
 ) -> Unit raise NativeError {
   let config = build_menu_config(menu)
   let status = @native_ffi.menu_popup(self.live_handle(), x, y, config)
-  @native_ffi.menu_config_destroy(config)
   check_status(status)
 }
 
@@ -869,39 +833,37 @@ fn native_event_items(
 
 ///|
 fn native_cookie_snapshot_string(
-  snapshot : @native_ffi.CookieSnapshotHandle,
+  event : @native_ffi.EventHandle,
   index : Int,
   field : Int,
 ) -> String raise NativeError {
   require_native_text("cookie field", (buffer, buffer_len, required) => {
-    @native_ffi.cookie_snapshot_string_field(
-      snapshot, index, field, buffer, buffer_len, required,
+    @native_ffi.event_cookie_string_field(
+      event, index, field, buffer, buffer_len, required,
     )
   })
 }
 
 ///|
 fn native_cookie_snapshot_int(
-  snapshot : @native_ffi.CookieSnapshotHandle,
+  event : @native_ffi.EventHandle,
   index : Int,
   field : Int,
 ) -> Int raise NativeError {
   let value = Ref(0)
-  check_status(
-    @native_ffi.cookie_snapshot_int_field(snapshot, index, field, value),
-  )
+  check_status(@native_ffi.event_cookie_int_field(event, index, field, value))
   value.val
 }
 
 ///|
 fn native_cookie_snapshot_expires(
-  snapshot : @native_ffi.CookieSnapshotHandle,
+  event : @native_ffi.EventHandle,
   index : Int,
 ) -> Int64? raise NativeError {
   let value = Ref(0L)
   let present = Ref(0)
   check_status(
-    @native_ffi.cookie_snapshot_int64_field(snapshot, index, 0, value, present),
+    @native_ffi.event_cookie_int64_field(event, index, 0, value, present),
   )
   if present.val == 0 {
     None
@@ -929,23 +891,21 @@ fn native_cookie_same_site(value : Int) -> CookieSameSite raise NativeError {
 fn decode_native_cookie_snapshot(
   event : @native_ffi.EventHandle,
 ) -> Array[NativeCookieRecord] raise NativeError {
-  let snapshot = @native_ffi.event_take_cookie_snapshot(event)
-  defer @native_ffi.cookie_snapshot_destroy(snapshot)
   let count = Ref(0)
-  check_status(@native_ffi.cookie_snapshot_count(snapshot, count))
+  check_status(@native_ffi.event_cookie_count(event, count))
   let records = []
   for index = 0; index < count.val; index = index + 1 {
     records.push(NativeCookieRecord::{
-      name: native_cookie_snapshot_string(snapshot, index, 0),
-      value: native_cookie_snapshot_string(snapshot, index, 1),
-      domain: native_cookie_snapshot_string(snapshot, index, 2),
-      path: native_cookie_snapshot_string(snapshot, index, 3),
-      secure: native_cookie_snapshot_int(snapshot, index, 0) != 0,
-      http_only: native_cookie_snapshot_int(snapshot, index, 1) != 0,
+      name: native_cookie_snapshot_string(event, index, 0),
+      value: native_cookie_snapshot_string(event, index, 1),
+      domain: native_cookie_snapshot_string(event, index, 2),
+      path: native_cookie_snapshot_string(event, index, 3),
+      secure: native_cookie_snapshot_int(event, index, 0) != 0,
+      http_only: native_cookie_snapshot_int(event, index, 1) != 0,
       same_site: native_cookie_same_site(
-        native_cookie_snapshot_int(snapshot, index, 2),
+        native_cookie_snapshot_int(event, index, 2),
       ),
-      expires: native_cookie_snapshot_expires(snapshot, index),
+      expires: native_cookie_snapshot_expires(event, index),
     })
   }
   records
@@ -1331,16 +1291,15 @@ fn decode_native_runtime_event(
 
 ///|
 pub fn Runtime::poll_event(self : Runtime) -> RuntimeEvent? raise NativeError {
-  let out_event = Ref(@native_ffi.event_null())
-  let status = @native_ffi.runtime_poll_event(self.active_handle(), out_event)
+  let event = @native_ffi.event_create()
+  let status = @native_ffi.runtime_poll_event(self.active_handle(), event)
   if status == proton_event_none {
     return None
   }
   if status < 0 {
     raise native_error(status)
   }
-  defer @native_ffi.event_destroy(out_event.val)
-  Some(decode_native_runtime_event(out_event.val))
+  Some(decode_native_runtime_event(event))
 }
 
 ///|
@@ -1386,76 +1345,41 @@ pub fn Runtime::complete_resource_request(
 }
 
 ///|
-fn bridge_config_check(
-  config : @native_ffi.BridgeConfigHandle,
-  status : Int,
-) -> Unit raise NativeError {
-  if status < 0 {
-    @native_ffi.bridge_config_destroy(config)
-    raise native_error(status)
-  }
-}
-
-///|
 fn build_bridge_config(
   config : BridgeConfig?,
 ) -> @native_ffi.BridgeConfigHandle raise NativeError {
-  guard config is Some(config) else { return @native_ffi.bridge_config_null() }
-  let out_config = Ref(@native_ffi.bridge_config_null())
-  let create_status = @native_ffi.bridge_config_create(
+  guard config is Some(config) else { return @native_ffi.bridge_config_empty() }
+  validate_bridge_config(config)
+  let status = Ref(0)
+  let handle = @native_ffi.bridge_config_create(
     config.max_payload_bytes,
-    out_config,
+    status,
   )
-  if create_status < 0 {
-    raise native_error(create_status)
-  }
-  let handle = out_config.val
+  check_status(status.val)
   for grant in config.grants {
     let grant_index = Ref(0)
-    bridge_config_check(
-      handle,
+    check_status(
       @native_ffi.bridge_config_add_grant(
         handle,
         @ffi.to_cstr(grant.source_origin),
+        FixedArray::makei(grant.ops.length(), i => @ffi.to_cstr(grant.ops[i])),
         grant_index,
       ),
     )
-    for op in grant.ops {
-      bridge_config_check(
-        handle,
-        @native_ffi.bridge_config_add_op(
-          handle,
-          grant_index.val,
-          @ffi.to_cstr(op),
-        ),
-      )
-    }
     for extension in grant.extensions {
-      let extension_index = Ref(0)
-      bridge_config_check(
-        handle,
+      check_status(
         @native_ffi.bridge_config_add_extension(
           handle,
           grant_index.val,
           @ffi.to_cstr(extension.js_namespace),
-          extension_index,
+          FixedArray::makei(extension.apis.length(), i => {
+            @ffi.to_cstr(extension.apis[i])
+          }),
         ),
       )
-      for api in extension.apis {
-        bridge_config_check(
-          handle,
-          @native_ffi.bridge_config_add_extension_api(
-            handle,
-            grant_index.val,
-            extension_index.val,
-            @ffi.to_cstr(api),
-          ),
-        )
-      }
     }
     for unit in grant.initialization_units {
-      bridge_config_check(
-        handle,
+      check_status(
         @native_ffi.bridge_config_add_initialization_unit(
           handle,
           grant_index.val,
@@ -1475,22 +1399,19 @@ fn build_web_request_config(
   redirects : Array[(String, String)],
   headers : Array[(String, String, String)],
 ) -> @native_ffi.WebRequestConfigHandle raise NativeError {
+  validate_web_request_config(prefixes, redirects, headers)
   if prefixes.length() == 0 && redirects.length() == 0 && headers.length() == 0 {
-    return @native_ffi.web_request_config_null()
+    return @native_ffi.web_request_config_empty()
   }
-  let out_config = Ref(@native_ffi.web_request_config_null())
-  let status = @native_ffi.web_request_config_create(out_config)
-  if status < 0 {
-    raise native_error(status)
-  }
-  let handle = out_config.val
+  let status = Ref(0)
+  let handle = @native_ffi.web_request_config_create(status)
+  check_status(status.val)
   for prefix in prefixes {
     let status = @native_ffi.web_request_config_add_cancel_prefix(
       handle,
       @ffi.to_cstr(prefix),
     )
     if status < 0 {
-      @native_ffi.web_request_config_destroy(handle)
       raise native_error(status)
     }
   }
@@ -1503,7 +1424,6 @@ fn build_web_request_config(
       @ffi.to_cstr(target),
     )
     if status < 0 {
-      @native_ffi.web_request_config_destroy(handle)
       raise native_error(status)
     }
   }
@@ -1515,7 +1435,6 @@ fn build_web_request_config(
       @ffi.to_cstr(item.2),
     )
     if status < 0 {
-      @native_ffi.web_request_config_destroy(handle)
       raise native_error(status)
     }
   }
@@ -1561,8 +1480,6 @@ pub fn Window::Window(
     web_request_config,
     out_window,
   )
-  @native_ffi.bridge_config_destroy(bridge_config)
-  @native_ffi.web_request_config_destroy(web_request_config)
   if status < 0 {
     raise native_error(status)
   } else {
@@ -2165,7 +2082,7 @@ pub fn Window::set_background_color(
   check_status(
     @native_ffi.proton_window_set_background_color_ffi(
       self.live_handle(),
-      @utf8.encode(color),
+      parse_color_argb(color, "background color"),
     ),
   )
 }
@@ -2339,6 +2256,9 @@ fn build_thumbar_builder(
 ) -> @native_ffi.ThumbarBuilderHandle raise NativeError {
   let entries : Array[(String, @native_ffi.ImageHandle, String, Int)] = []
   for button in buttons {
+    if button.id.is_empty() {
+      raise invalid_argument("thumbar button id is required")
+    }
     entries.push(
       (
         button.id,
@@ -2348,12 +2268,7 @@ fn build_thumbar_builder(
       ),
     )
   }
-  let out_builder = Ref(@native_ffi.thumbar_builder_null())
-  let create_status = @native_ffi.thumbar_builder_create(out_builder)
-  if create_status < 0 {
-    raise native_error(create_status)
-  }
-  let handle = out_builder.val
+  let handle = @native_ffi.thumbar_builder_create()
   for entry in entries {
     let status = @native_ffi.thumbar_builder_add(
       handle,
@@ -2363,7 +2278,6 @@ fn build_thumbar_builder(
       entry.3,
     )
     if status < 0 {
-      @native_ffi.thumbar_builder_destroy(handle)
       raise native_error(status)
     }
   }
@@ -2383,7 +2297,6 @@ pub fn Window::set_thumbar_buttons(
     raise invalid_argument("thumbar button limit is 7")
   }
   let builder = build_thumbar_builder(buttons)
-  defer @native_ffi.thumbar_builder_destroy(builder)
   let out_applied = Ref(0)
   check_status(
     @native_ffi.proton_window_set_thumbar_buttons_ffi(
@@ -3398,6 +3311,11 @@ pub fn View::View(
   config : ViewConfig,
 ) -> View raise NativeError {
   validate_view_config(config)
+  let color = match config.background_color {
+    Some(text) if !text.is_empty() =>
+      Some(parse_color_argb(text, "view background_color"))
+    _ => None
+  }
   let out_view = Ref(@native_ffi.view_null())
   let status = @native_ffi.view_create(
     window.live_handle(),
@@ -3408,7 +3326,8 @@ pub fn View::View(
     runtime_config_bool(config.visible),
     config.z_order,
     @ffi.to_cstr(config.initial_url),
-    runtime_config_string(config.background_color),
+    runtime_config_bool(color is Some(_)),
+    color.unwrap_or(0),
     out_view,
   )
   if status < 0 {

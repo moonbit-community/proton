@@ -1,5 +1,6 @@
 #include "proton_internal.h"
 
+#include <moonbit.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -647,14 +648,7 @@ struct proton_jump_list_builder {
   proton_jump_list_category_t *categories;
   size_t category_count;
   size_t category_capacity;
-  /* Items append to the most recent category, in the order the builder
-     receives them. */
-  proton_jump_list_category_t *current;
 };
-
-proton_jump_list_builder_t *proton_jump_list_builder_null(void) {
-  return NULL;
-}
 
 static char *proton_jump_list_duplicate(const char *value) {
   if (value == NULL || value[0] == '\0') {
@@ -678,22 +672,13 @@ static void proton_jump_list_free_item(proton_jump_list_item_t *item) {
   free(item->working_directory);
 }
 
-int32_t proton_jump_list_builder_create(
-    proton_jump_list_builder_t **out_builder) {
-  if (out_builder == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_builder is required");
-  }
-  *out_builder = NULL;
-  proton_jump_list_builder_t *builder = (proton_jump_list_builder_t *)calloc(
-      1, sizeof(proton_jump_list_builder_t));
-  if (builder == NULL) {
-    return proton_set_error(PROTON_ERR_PLATFORM,
-                            "failed to allocate the jump list builder");
-  }
-  *out_builder = builder;
-  proton_set_error(PROTON_OK, NULL);
-  return PROTON_OK;
+static void proton_jump_list_builder_finalize(void *payload);
+
+proton_jump_list_builder_t *proton_jump_list_builder_create(void) {
+  proton_jump_list_builder_t *builder = moonbit_make_external_object(
+      proton_jump_list_builder_finalize, sizeof(*builder));
+  memset(builder, 0, sizeof(*builder));
+  return builder;
 }
 
 int32_t proton_jump_list_builder_add_category(
@@ -701,16 +686,6 @@ int32_t proton_jump_list_builder_add_category(
   if (builder == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "builder is required");
-  }
-  if (kind < PROTON_JUMP_LIST_CATEGORY_TASKS ||
-      kind > PROTON_JUMP_LIST_CATEGORY_FREQUENT) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "jump list category kind is invalid");
-  }
-  if (kind == PROTON_JUMP_LIST_CATEGORY_CUSTOM &&
-      (name == NULL || name[0] == '\0')) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "a custom jump list category requires a name");
   }
   if (builder->category_count == builder->category_capacity) {
     size_t capacity = builder->category_capacity == 0
@@ -736,31 +711,21 @@ int32_t proton_jump_list_builder_add_category(
                             "failed to copy the jump list category name");
   }
   builder->category_count++;
-  builder->current = category;
   proton_set_error(PROTON_OK, NULL);
   return PROTON_OK;
 }
 
 int32_t proton_jump_list_builder_add_item(
-    proton_jump_list_builder_t *builder, int32_t kind, const char *path,
+    proton_jump_list_builder_t *builder, int32_t category_index,
+    int32_t kind, const char *path,
     const char *arguments, const char *title, const char *description,
     const char *icon_path, int32_t icon_index,
     const char *working_directory) {
-  if (builder == NULL || builder->current == NULL) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "a jump list category is required before an item");
+  if (builder == NULL || category_index < 0 ||
+      (size_t)category_index >= builder->category_count) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "jump list category index is invalid");
   }
-  if (kind < PROTON_JUMP_LIST_ITEM_TASK ||
-      kind > PROTON_JUMP_LIST_ITEM_FILE) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "jump list item kind is invalid");
-  }
-  if (kind != PROTON_JUMP_LIST_ITEM_SEPARATOR &&
-      (path == NULL || path[0] == '\0')) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "jump list item path is required");
-  }
-  proton_jump_list_category_t *category = builder->current;
+  proton_jump_list_category_t *category = &builder->categories[category_index];
   if (category->item_count == category->item_capacity) {
     size_t capacity = category->item_capacity == 0
                           ? 4
@@ -794,10 +759,8 @@ int32_t proton_jump_list_builder_add_item(
   return PROTON_OK;
 }
 
-void proton_jump_list_builder_destroy(proton_jump_list_builder_t *builder) {
-  if (builder == NULL) {
-    return;
-  }
+static void proton_jump_list_builder_finalize(void *payload) {
+  proton_jump_list_builder_t *builder = payload;
   for (size_t index = 0; index < builder->category_count; index++) {
     proton_jump_list_category_t *category = &builder->categories[index];
     for (size_t item_index = 0; item_index < category->item_count;
@@ -808,7 +771,6 @@ void proton_jump_list_builder_destroy(proton_jump_list_builder_t *builder) {
     free(category->name);
   }
   free(builder->categories);
-  free(builder);
 }
 
 #if defined(_WIN32)
@@ -1145,4 +1107,8 @@ int32_t proton_jump_list_apply(proton_jump_list_builder_t *categories,
   }
   proton_set_error(PROTON_OK, NULL);
   return PROTON_OK;
+}
+
+int32_t proton_jump_list_clear(int32_t *out_result) {
+  return proton_jump_list_apply(NULL, out_result);
 }

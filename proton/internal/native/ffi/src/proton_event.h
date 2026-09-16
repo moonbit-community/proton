@@ -105,7 +105,8 @@ PROTON_INTERNAL bool proton_event_set_items(proton_event_t *event,
                                             int32_t item_count);
 PROTON_INTERNAL bool proton_event_set_payload(
     proton_event_t *event, void *payload, void (*destroy_payload)(void *));
-PROTON_INTERNAL void *proton_event_take_payload(proton_event_t *event);
+PROTON_INTERNAL proton_event_t *proton_internal_event_create(void);
+PROTON_INTERNAL void proton_event_clear(proton_event_t *event);
 PROTON_INTERNAL void proton_event_destroy(proton_event_t *event);
 
 PROTON_INTERNAL bool proton_event_queue_init(proton_event_queue_t *queue);

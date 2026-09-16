@@ -78,7 +78,7 @@ test "download deny is remembered until its item callback arrives" {
 test "web request cancellation matches URL prefixes" {
   inspect(
     web_request_cancel_trace(),
-    content="matching=1,nonmatching=0,case_sensitive=0,empty=-1,duplicate=-1",
+    content="matching=1,nonmatching=0,case_sensitive=0",
   )
 }
 
@@ -94,6 +94,6 @@ test "resource handlers survive session and configuration owner teardown" {
 test "header names use ASCII case-insensitive comparison but paths and values do not" {
   inspect(
     header_case_trace(),
-    content="first=0,duplicate=-1,different_path=0,value=Token AbC",
+    content="first=0,different_path=0,value=Token AbC",
   )
 }

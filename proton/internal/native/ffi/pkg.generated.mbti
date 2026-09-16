@@ -7,35 +7,27 @@ import {
 }
 
 // Values
-pub fn bridge_config_add_extension(BridgeConfigHandle, Int, Bytes, @ref.Ref[Int]) -> Int
+pub fn bridge_config_add_extension(BridgeConfigHandle, Int, Bytes, FixedArray[Bytes]) -> Int
 
-pub fn bridge_config_add_extension_api(BridgeConfigHandle, Int, Int, Bytes) -> Int
-
-pub fn bridge_config_add_grant(BridgeConfigHandle, Bytes, @ref.Ref[Int]) -> Int
+pub fn bridge_config_add_grant(BridgeConfigHandle, Bytes, FixedArray[Bytes], @ref.Ref[Int]) -> Int
 
 pub fn bridge_config_add_initialization_unit(BridgeConfigHandle, Int, Bytes, Bytes, Bytes) -> Int
 
-pub fn bridge_config_add_op(BridgeConfigHandle, Int, Bytes) -> Int
+pub fn bridge_config_create(Int, @ref.Ref[Int]) -> BridgeConfigHandle
 
-pub fn bridge_config_create(Int, @ref.Ref[BridgeConfigHandle]) -> Int
-
-pub fn bridge_config_destroy(BridgeConfigHandle) -> Unit
-
-pub fn bridge_config_null() -> BridgeConfigHandle
-
-pub fn cookie_snapshot_count(CookieSnapshotHandle, @ref.Ref[Int]) -> Int
-
-pub fn cookie_snapshot_destroy(CookieSnapshotHandle) -> Unit
-
-pub fn cookie_snapshot_int64_field(CookieSnapshotHandle, Int, Int, @ref.Ref[Int64], @ref.Ref[Int]) -> Int
-
-pub fn cookie_snapshot_int_field(CookieSnapshotHandle, Int, Int, @ref.Ref[Int]) -> Int
-
-pub fn cookie_snapshot_string_field(CookieSnapshotHandle, Int, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn bridge_config_empty() -> BridgeConfigHandle
 
 pub fn ensure_cef_loader_linked() -> Unit
 
-pub fn event_destroy(EventHandle) -> Unit
+pub fn event_cookie_count(EventHandle, @ref.Ref[Int]) -> Int
+
+pub fn event_cookie_int64_field(EventHandle, Int, Int, @ref.Ref[Int64], @ref.Ref[Int]) -> Int
+
+pub fn event_cookie_int_field(EventHandle, Int, Int, @ref.Ref[Int]) -> Int
+
+pub fn event_cookie_string_field(EventHandle, Int, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
+pub fn event_create() -> EventHandle
 
 pub fn event_int(EventHandle, Int) -> Int
 
@@ -47,10 +39,6 @@ pub fn event_item_count(EventHandle) -> Int
 
 pub fn event_kind(EventHandle) -> Int
 
-pub fn event_null() -> EventHandle
-
-pub fn event_take_cookie_snapshot(EventHandle) -> CookieSnapshotHandle
-
 pub fn event_text(EventHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn event_window_state_field(EventHandle, Int) -> Int
@@ -61,27 +49,17 @@ pub fn image_null() -> ImageHandle
 
 pub fn jump_list_builder_add_category(JumpListBuilderHandle, Int, Bytes) -> Int
 
-pub fn jump_list_builder_add_item(JumpListBuilderHandle, Int, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Bytes) -> Int
+pub fn jump_list_builder_add_item(JumpListBuilderHandle, Int, Int, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Bytes) -> Int
 
-pub fn jump_list_builder_create(@ref.Ref[JumpListBuilderHandle]) -> Int
+pub fn jump_list_builder_create() -> JumpListBuilderHandle
 
-pub fn jump_list_builder_destroy(JumpListBuilderHandle) -> Unit
+pub fn menu_config_add_item(MenuConfigHandle, MenuNode, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, @ref.Ref[MenuNode]) -> Int
 
-pub fn jump_list_builder_null() -> JumpListBuilderHandle
+pub fn menu_config_add_menu(MenuConfigHandle, Bytes, Int, @ref.Ref[MenuNode]) -> Int
 
-pub fn menu_config_add_item(MenuConfigHandle, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int) -> Int
+pub fn menu_config_create() -> MenuConfigHandle
 
-pub fn menu_config_add_menu(MenuConfigHandle, Bytes, Int, @ref.Ref[Int]) -> Int
-
-pub fn menu_config_begin_submenu(MenuConfigHandle, Bytes) -> Int
-
-pub fn menu_config_create(@ref.Ref[MenuConfigHandle]) -> Int
-
-pub fn menu_config_destroy(MenuConfigHandle) -> Unit
-
-pub fn menu_config_end_submenu(MenuConfigHandle) -> Int
-
-pub fn menu_config_null() -> MenuConfigHandle
+pub fn menu_node_null() -> MenuNode
 
 pub fn menu_popup(WindowHandle, Int, Int, MenuConfigHandle) -> Int
 
@@ -120,6 +98,8 @@ pub fn proton_image_to_jpeg_ffi(ImageHandle, Double, Int, FixedArray[Byte], Int,
 pub fn proton_image_to_png_ffi(ImageHandle, Double, Int, FixedArray[Byte], Int, @ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
 pub fn proton_jump_list_apply_ffi(JumpListBuilderHandle, @ref.Ref[Int]) -> Int
+
+pub fn proton_jump_list_clear_ffi(@ref.Ref[Int]) -> Int
 
 pub fn proton_last_error_message_ffi(FixedArray[Byte], Int) -> Int
 
@@ -325,7 +305,7 @@ pub fn proton_window_set_aspect_ratio_ffi(WindowHandle, Double) -> Int
 
 pub fn proton_window_set_audio_muted_ffi(WindowHandle, Int) -> Int
 
-pub fn proton_window_set_background_color_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_set_background_color_ffi(WindowHandle, UInt) -> Int
 
 pub fn proton_window_set_button_visibility_ffi(WindowHandle, Int) -> Int
 
@@ -403,19 +383,15 @@ pub fn runtime_create(Int, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Bytes, Byte
 
 pub fn runtime_null() -> RuntimeHandle
 
-pub fn runtime_poll_event(RuntimeHandle, @ref.Ref[EventHandle]) -> Int
+pub fn runtime_poll_event(RuntimeHandle, EventHandle) -> Int
 
 pub fn runtime_set_menu(RuntimeHandle, MenuConfigHandle) -> Int
 
 pub fn thumbar_builder_add(ThumbarBuilderHandle, Bytes, ImageHandle, Bytes, Int) -> Int
 
-pub fn thumbar_builder_create(@ref.Ref[ThumbarBuilderHandle]) -> Int
+pub fn thumbar_builder_create() -> ThumbarBuilderHandle
 
-pub fn thumbar_builder_destroy(ThumbarBuilderHandle) -> Unit
-
-pub fn thumbar_builder_null() -> ThumbarBuilderHandle
-
-pub fn view_create(WindowHandle, Int, Int, Int, Int, Int, Int, Bytes, Bytes, @ref.Ref[ViewHandle]) -> Int
+pub fn view_create(WindowHandle, Int, Int, Int, Int, Int, Int, Bytes, Int, UInt, @ref.Ref[ViewHandle]) -> Int
 
 pub fn view_logical_id(ViewHandle) -> Int64
 
@@ -427,11 +403,9 @@ pub fn web_request_config_add_header_prefix(WebRequestConfigHandle, Bytes, Bytes
 
 pub fn web_request_config_add_redirect_prefix(WebRequestConfigHandle, Bytes, Bytes) -> Int
 
-pub fn web_request_config_create(@ref.Ref[WebRequestConfigHandle]) -> Int
+pub fn web_request_config_create(@ref.Ref[Int]) -> WebRequestConfigHandle
 
-pub fn web_request_config_destroy(WebRequestConfigHandle) -> Unit
-
-pub fn web_request_config_null() -> WebRequestConfigHandle
+pub fn web_request_config_empty() -> WebRequestConfigHandle
 
 pub fn window_create(RuntimeHandle, Bytes, Int, Int, Bytes, Int, Int, Int, Int, Int, Int, Int, Bytes, Bytes, Bytes, Bytes, Int, Int, Int, Int, Int, BridgeConfigHandle, WebRequestConfigHandle, @ref.Ref[WindowHandle]) -> Int
 
@@ -446,34 +420,28 @@ pub fn window_set_button_position(WindowHandle, Int, Int, Int) -> Int
 // Errors
 
 // Types and methods
-#external
 pub type BridgeConfigHandle
 
-#external
-pub type CookieSnapshotHandle
-
-#external
 pub type EventHandle
 
 #external
 pub type ImageHandle
 
-#external
 pub type JumpListBuilderHandle
 
-#external
 pub type MenuConfigHandle
+
+#external
+pub type MenuNode
 
 #external
 pub type RuntimeHandle
 
-#external
 pub type ThumbarBuilderHandle
 
 #external
 pub type ViewHandle
 
-#external
 pub type WebRequestConfigHandle
 
 #external

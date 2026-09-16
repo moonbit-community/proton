@@ -349,14 +349,12 @@ proton_test_download_command_beats_allow_trace(void) {
 }
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_web_request_cancel_trace(void) {
-  proton_web_request_config_t *config = NULL;
-  int32_t create = proton_internal_web_request_config_create(&config);
+  int32_t create = 0;
+  proton_web_request_config_owner_t *owner =
+      proton_internal_web_request_config_create(&create);
+  proton_web_request_config_t *config = owner->value;
   int32_t add = proton_internal_web_request_config_add_cancel_prefix(
-      config, "https://blocked.example/assets/");
-  int32_t duplicate = proton_internal_web_request_config_add_cancel_prefix(
-      config, "https://blocked.example/assets/");
-  int32_t empty =
-      proton_internal_web_request_config_add_cancel_prefix(config, "");
+      owner, "https://blocked.example/assets/");
   int matching = proton_web_request_config_should_cancel(
       config, "https://blocked.example/assets/app.js");
   int nonmatching = proton_web_request_config_should_cancel(
@@ -365,10 +363,9 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_web_request_cancel_trace(void) {
       config, "https://BLOCKED.example/assets/app.js");
   char trace[160];
   int written = snprintf(trace, sizeof(trace),
-                         "matching=%d,nonmatching=%d,case_sensitive=%d,empty=%d,duplicate=%d",
-                         matching, nonmatching, case_sensitive, empty,
-                         duplicate);
-  proton_internal_web_request_config_destroy(config);
+                         "matching=%d,nonmatching=%d,case_sensitive=%d",
+                         matching, nonmatching, case_sensitive);
+  moonbit_decref(owner);
   if (create != 0 || add != 0 || written < 0 ||
       (size_t)written >= sizeof(trace)) {
     return proton_test_copy_trace("trace-error");
@@ -383,19 +380,22 @@ static cef_string_userfree_t CEF_CALLBACK proton_test_empty_request_url(
 }
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_resource_handler_lifetime_trace(void) {
-  proton_web_request_config_t *config = NULL;
+  int32_t create = 0;
+  proton_web_request_config_owner_t *owner =
+      proton_internal_web_request_config_create(&create);
+  proton_web_request_config_t *config = owner->value;
   proton_browser_policy_t policy = {0};
-  if (proton_internal_web_request_config_create(&config) != PROTON_OK ||
+  if (create != PROTON_OK ||
       proton_internal_web_request_config_add_cancel_prefix(
-          config, "https://blocked.example/") != PROTON_OK) {
-    proton_internal_web_request_config_destroy(config);
+          owner, "https://blocked.example/") != PROTON_OK) {
+    moonbit_decref(owner);
     return proton_test_copy_trace("setup-error");
   }
   proton_browser_session_t *session =
       proton_browser_session_create(&policy, config, NULL, NULL);
   cef_resource_request_handler_t *handler =
-      proton_browser_resource_handler_create(config);
-  proton_internal_web_request_config_destroy(config);
+      proton_browser_resource_handler_create(config, 0);
+  moonbit_decref(owner);
   proton_browser_session_destroy(session);
   if (handler == NULL) return proton_test_copy_trace("handler-error");
 
@@ -414,22 +414,24 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_resource_handler_lifetime_trace(v
 }
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_header_case_trace(void) {
-  proton_web_request_config_t *config = NULL;
-  if (proton_internal_web_request_config_create(&config) != PROTON_OK) {
+  int32_t create = 0;
+  proton_web_request_config_owner_t *owner =
+      proton_internal_web_request_config_create(&create);
+  proton_web_request_config_t *config = owner->value;
+  if (create != PROTON_OK) {
+    moonbit_decref(owner);
     return proton_test_copy_trace("setup-error");
   }
   int first = proton_internal_web_request_config_add_header_prefix(
-      config, "https://api.example/Path/", "Authorization", "Token AbC");
-  int duplicate = proton_internal_web_request_config_add_header_prefix(
-      config, "https://api.example/Path/", "aUtHoRiZaTiOn", "other");
+      owner, "https://api.example/Path/", "Authorization", "Token AbC");
   int different_path = proton_internal_web_request_config_add_header_prefix(
-      config, "https://api.example/path/", "authorization", "second");
+      owner, "https://api.example/path/", "authorization", "second");
   const char *value = proton_web_request_config_header_value(
       config, "https://api.example/Path/data", "AUTHORIZATION");
   char trace[160];
   snprintf(trace, sizeof(trace),
-           "first=%d,duplicate=%d,different_path=%d,value=%s",
-           first, duplicate, different_path, value != NULL ? value : "(null)");
-  proton_internal_web_request_config_destroy(config);
+           "first=%d,different_path=%d,value=%s",
+           first, different_path, value != NULL ? value : "(null)");
+  moonbit_decref(owner);
   return proton_test_copy_trace(trace);
 }

@@ -102,25 +102,30 @@ pub fn process_exit(exit_code : Int) -> Unit {
 fn build_jump_list_builder(
   categories : Array[JumpListCategory],
 ) -> @native_ffi.JumpListBuilderHandle raise NativeError {
-  let out_builder = Ref(@native_ffi.jump_list_builder_null())
-  let create_status = @native_ffi.jump_list_builder_create(out_builder)
-  if create_status < 0 {
-    raise native_error(create_status)
-  }
-  let handle = out_builder.val
   for category in categories {
+    if category.kind is Custom && category.name.is_empty() {
+      raise invalid_argument("a custom jump list category requires a name")
+    }
+    for item in category.items {
+      if !(item.kind is Separator) && item.path.is_empty() {
+        raise invalid_argument("jump list item path is required")
+      }
+    }
+  }
+  let handle = @native_ffi.jump_list_builder_create()
+  for category_index, category in categories {
     let category_status = @native_ffi.jump_list_builder_add_category(
       handle,
       category.kind.native_value(),
       @ffi.to_cstr(category.name),
     )
     if category_status < 0 {
-      @native_ffi.jump_list_builder_destroy(handle)
       raise native_error(category_status)
     }
     for item in category.items {
       let item_status = @native_ffi.jump_list_builder_add_item(
         handle,
+        category_index,
         item.kind.native_value(),
         @ffi.to_cstr(item.path),
         @ffi.to_cstr(item.arguments),
@@ -131,7 +136,6 @@ fn build_jump_list_builder(
         @ffi.to_cstr(item.working_directory),
       )
       if item_status < 0 {
-        @native_ffi.jump_list_builder_destroy(handle)
         raise native_error(item_status)
       }
     }
@@ -145,12 +149,13 @@ fn build_jump_list_builder(
 pub fn jump_list_apply(
   categories : Array[JumpListCategory]?,
 ) -> JumpListResult raise NativeError {
-  let builder = match categories {
-    Some(categories) => build_jump_list_builder(categories)
-    None => @native_ffi.jump_list_builder_null()
-  }
-  defer @native_ffi.jump_list_builder_destroy(builder)
   let out_result = Ref(0)
-  check_status(@native_ffi.proton_jump_list_apply_ffi(builder, out_result))
+  match categories {
+    Some(categories) => {
+      let builder = build_jump_list_builder(categories)
+      check_status(@native_ffi.proton_jump_list_apply_ffi(builder, out_result))
+    }
+    None => check_status(@native_ffi.proton_jump_list_clear_ffi(out_result))
+  }
   jump_list_result_from_code(out_result.val)
 }
