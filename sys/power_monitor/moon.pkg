@@ -6,6 +6,7 @@ import {
 supported_targets = "native"
 
 options(
+  link: { "native": { "stub-cc-flags": "${build.MACOS_STUB_FLAGS}" } },
   "native-stub": [
     "native_common.c",
     "native_windows.c",

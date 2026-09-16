@@ -1,6 +1,7 @@
 #if defined(_WIN32)
 
 #include "win_internal.h"
+#include <shellscalingapi.h>
 
 #include "../../proton_config.h"
 #include "../../proton_event.h"
@@ -64,23 +65,9 @@ static BOOL CALLBACK proton_screen_enum_callback(HMONITOR monitor, HDC hdc,
   screen->work_height = info.rcWork.bottom - info.rcWork.top;
   screen->is_primary = (info.dwFlags & MONITORINFOF_PRIMARY) ? 1 : 0;
 
-  /* GetDpiForMonitor lives in shcore.dll; load it dynamically so the build
-     does not require linking shcore.lib and stays compatible with older
-     Windows where the export may be absent. */
   UINT dpi_x = 96;
   UINT dpi_y = 96;
-  HMODULE shcore = LoadLibraryW(L"shcore.dll");
-  if (shcore != NULL) {
-    typedef HRESULT(WINAPI *proton_get_dpi_for_monitor_proc)(HMONITOR, int,
-                                                              UINT *, UINT *);
-    proton_get_dpi_for_monitor_proc get_dpi =
-        (proton_get_dpi_for_monitor_proc)GetProcAddress(shcore,
-                                                        "GetDpiForMonitor");
-    if (get_dpi != NULL) {
-      get_dpi(monitor, 0, &dpi_x, &dpi_y);
-    }
-    FreeLibrary(shcore);
-  }
+  GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &dpi_x, &dpi_y);
   screen->scale_factor_percent = (int32_t)((dpi_x * 100 + 48) / 96);
 
   ctx->count++;

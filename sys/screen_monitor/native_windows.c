@@ -11,13 +11,7 @@
 #include <windows.h>
 #include <dbt.h>
 
-/* Scale factor query lives in shcore.dll (Windows 8.1+). Load it lazily so the
-   backend also runs on downlevel systems, falling back to 100%. */
-typedef HRESULT(WINAPI *proton_get_dpi_for_monitor_fn)(HMONITOR, int *,
-                                                       UINT *, UINT *);
-
-static proton_get_dpi_for_monitor_fn g_get_dpi_for_monitor = NULL;
-static int32_t g_dpi_loaded = 0;
+#include <shellscalingapi.h>
 
 /* Interface class GUID for display adapters
    (GUID_DEVINTERFACE_DISPLAY_ADAPTER = {1CA05180-A699-450A-9A0C-DE4FBE3DDD89}).
@@ -30,21 +24,8 @@ static const GUID screen_monitor_display_interface_guid = { 0x1CA05180, 0xA699,
                                                                       0xD8,
                                                                       0x89 } };
 
-static void screen_monitor_ensure_dpi_loaded(void) {
-  if (g_dpi_loaded) {
-    return;
-  }
-  g_dpi_loaded = 1;
-  HMODULE shcore = LoadLibraryW(L"shcore.dll");
-  if (shcore != NULL) {
-    g_get_dpi_for_monitor = (proton_get_dpi_for_monitor_fn)GetProcAddress(
-        shcore, "GetDpiForMonitor");
-  }
-}
-
 void screen_monitor_platform_init(screen_monitor_state_t *state) {
   (void)state;
-  screen_monitor_ensure_dpi_loaded();
 }
 
 static BOOL CALLBACK screen_monitor_enum_monitor_proc(HMONITOR hmonitor,
@@ -75,10 +56,10 @@ static BOOL CALLBACK screen_monitor_enum_monitor_proc(HMONITOR hmonitor,
   d->work_height = (int32_t)(info.rcWork.bottom - info.rcWork.top);
   d->is_primary = (info.dwFlags & MONITORINFOF_PRIMARY) != 0;
   d->scale_factor_percent = 100;
-  if (g_get_dpi_for_monitor != NULL) {
+  {
     UINT dpi_x = 0;
     UINT dpi_y = 0;
-    if (g_get_dpi_for_monitor(hmonitor, 0 /* MDT_EFFECTIVE_DPI */, &dpi_x,
+    if (GetDpiForMonitor(hmonitor, MDT_EFFECTIVE_DPI, &dpi_x,
                               &dpi_y) == S_OK &&
         dpi_x != 0) {
       d->scale_factor_percent = (int32_t)((dpi_x * 100) / 96);
