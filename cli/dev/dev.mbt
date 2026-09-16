@@ -38,7 +38,7 @@ pub extend RawDevOptions with Debug::{to_repr}
 struct DevRuntime {
   root : String
   bin_dir : String
-  lib_dir : String
+  platform : String
 } derive(Debug, Eq)
 
 ///|
@@ -368,7 +368,11 @@ async fn resolve_dev_installation() -> (DevRuntime, String) {
     _ => @cef_store.resolve_default_helper()
   }
   (
-    dev_runtime_from_root(runtime.runtime_root(), "Proton runtime store"),
+    dev_runtime_from_root(
+      runtime.runtime_root(),
+      runtime.platform(),
+      "Proton runtime store",
+    ),
     helper,
   )
 }
@@ -376,14 +380,14 @@ async fn resolve_dev_installation() -> (DevRuntime, String) {
 ///|
 async fn dev_runtime_from_root(
   runtime_root : String,
+  platform : String,
   label : String,
 ) -> DevRuntime {
   let bin_dir = @fsutil.path_join(runtime_root, "bin")
-  let lib_dir = @fsutil.path_join(runtime_root, "lib")
   if !@fsutil.path_exists(runtime_root) {
     raise DirectoryMissing(label~, path=runtime_root)
   }
-  DevRuntime::{ root: runtime_root, bin_dir, lib_dir, }
+  DevRuntime::{ root: runtime_root, bin_dir, platform, }
 }
 
 ///|
@@ -398,7 +402,7 @@ fn validate_frontend_dev_url(
 }
 
 ///|
-async fn dev_process_env(
+fn dev_process_env(
   runtime : DevRuntime,
   helper_path : String,
   frontend_url : String?,
@@ -420,25 +424,23 @@ async fn dev_process_env(
     Some(url) => env["PROTON_FRONTEND_URL"] = url
     None => ()
   }
-  let path_key = path_env_key()
-  env[path_key] = prepend_env_path(runtime.bin_dir, current_env_value(path_key))
-  if @path.sep != '\\' {
+  if runtime.platform.has_prefix("win32-") {
+    let path_key = path_env_key()
+    env[path_key] = prepend_env_path(
+      runtime.bin_dir,
+      current_env_value(path_key),
+    )
+  } else if runtime.platform.has_prefix("linux-") {
     env["LD_LIBRARY_PATH"] = prepend_env_path(
-      runtime.lib_dir,
-      prepend_env_path(runtime.bin_dir, current_env_value("LD_LIBRARY_PATH")),
+      runtime.bin_dir,
+      current_env_value("LD_LIBRARY_PATH"),
     )
-    env["DYLD_LIBRARY_PATH"] = prepend_env_path(
-      runtime.lib_dir,
-      prepend_env_path(runtime.bin_dir, current_env_value("DYLD_LIBRARY_PATH")),
+    // Keep the preload entry free of path separators so runtime roots
+    // containing spaces remain valid. LD_LIBRARY_PATH resolves this name.
+    env["LD_PRELOAD"] = prepend_env_path(
+      "libcef.so",
+      current_env_value("LD_PRELOAD"),
     )
-    if @fsutil.path_exists(@fsutil.path_join(runtime.bin_dir, "libcef.so")) {
-      // Keep the preload entry free of path separators so Linux runtime roots
-      // containing spaces remain valid. LD_LIBRARY_PATH resolves this name.
-      env["LD_PRELOAD"] = prepend_env_path(
-        "libcef.so",
-        current_env_value("LD_PRELOAD"),
-      )
-    }
   }
   env
 }

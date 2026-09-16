@@ -73,7 +73,7 @@ pub extern "C" fn window_logical_id(window : WindowHandle) -> Int64 = "proton_wi
 pub extern "C" fn view_logical_id(view : ViewHandle) -> Int64 = "proton_view_logical_id"
 
 ///|
-pub extern "C" fn proton_abi_version_ffi() -> Int = "proton_abi_version"
+pub extern "C" fn link_runtime() -> Unit = "proton_native_link_anchor"
 
 ///|
 #borrow(buffer, out_required_len)

@@ -1,6 +1,6 @@
 ///|
 test "button fixture links the native runtime" {
-  assert_eq(@ffi.proton_abi_version_ffi(), 1)
+  @ffi.link_runtime()
 }
 
 ///|

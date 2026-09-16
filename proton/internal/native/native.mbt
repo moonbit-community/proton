@@ -1,9 +1,4 @@
 ///|
-pub fn abi_version() -> Int {
-  @native_ffi.proton_abi_version_ffi()
-}
-
-///|
 fn runtime_platform_id() -> String raise NativeError {
   require_native_text("runtime platform id", (buffer, buffer_len, required) => {
     @native_ffi.proton_runtime_platform_id_ffi(buffer, buffer_len, required)

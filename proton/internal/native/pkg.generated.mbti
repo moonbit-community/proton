@@ -10,8 +10,6 @@ import {
 }
 
 // Values
-pub fn abi_version() -> Int
-
 pub fn bridge_permission_grants_supported() -> Bool
 
 pub fn event_wakeup_callback() -> @proton_ffi.EventWakeup

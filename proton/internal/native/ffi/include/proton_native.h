@@ -7,7 +7,6 @@
 extern "C" {
 #endif
 
-#define PROTON_ABI_VERSION 1
 #define PROTON_INVALID_HANDLE 0
 
 #define PROTON_WAIT_NONE 0u
@@ -74,7 +73,7 @@ enum {
   PROTON_UPDATE_ALREADY_INSTALLED = 1
 };
 
-int32_t proton_abi_version(void);
+void proton_native_link_anchor(void);
 proton_runtime_handle_t proton_runtime_null(void);
 proton_window_handle_t proton_window_null(void);
 proton_view_handle_t proton_view_null(void);

@@ -349,11 +349,6 @@ test "PDF printing validates path and scale before native dispatch" {
 }
 
 ///|
-test "native ABI version and availability" {
-  inspect(abi_version(), content="1")
-}
-
-///|
 test "runtime info reports source-built platform metadata" {
   let typed = runtime_info()
   assert_true(typed.platform.length() > 0)
@@ -701,6 +696,49 @@ test "runtime create does not fake engine configs" {
   })
   inspect(error.status(), content="-7")
   assert_true(error.message().contains("runtime engine library"))
+}
+
+///|
+async test "runtime probe rejects legacy CEF library layouts" {
+  let root = @async_fs.tmpdir(prefix="proton-runtime-layout-")
+  defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+  let (legacy_dirs, library, installed_dir) = match runtime_info().platform {
+    "win32-x64" => (["", "Release"], "libcef.dll", "bin")
+    "linux-x64" => (["", "lib"], "libcef.so", "bin")
+    _ =>
+      (
+        ["Chromium Embedded Framework.framework"],
+        "Chromium Embedded Framework",
+        "Frameworks/Chromium Embedded Framework.framework",
+      )
+  }
+  for dir in legacy_dirs {
+    let path = @path.Path(root).join(@path.Path(dir)).to_string()
+    if dir != "" {
+      @async_fs.mkdir(path)
+    }
+    @async_fs.write_file(
+      @path.Path(path).join(@path.Path(library)).to_string(),
+      "legacy library placeholder",
+      create_mode=CreateOrTruncate,
+    )
+  }
+  let error = expect_native_error(() => {
+    Runtime(
+      config=RuntimeConfig(runtime_root=root, helper_path="missing-helper"),
+    )
+  })
+  assert_true(error.message().contains("runtime engine library"))
+  assert_true(
+    error
+    .message()
+    .contains(
+      @path.Path(root)
+      .join(@path.Path(installed_dir))
+      .join(@path.Path(library))
+      .to_string(),
+    ),
+  )
 }
 
 ///|

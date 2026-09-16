@@ -24,49 +24,49 @@ extern "C" fn download_command_beats_allow_trace_ffi() -> Bytes = "proton_test_d
 
 ///|
 pub fn download_deny_after_update_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(download_deny_after_update_trace_ffi())
 }
 
 ///|
 pub fn download_deny_before_update_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(download_deny_before_update_trace_ffi())
 }
 
 ///|
 pub fn download_invalid_response_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(download_invalid_response_trace_ffi())
 }
 
 ///|
 pub fn download_empty_response_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(download_empty_response_trace_ffi())
 }
 
 ///|
 pub fn denied_download_policy_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(denied_download_policy_trace_ffi())
 }
 
 ///|
 pub fn unpublished_download_request_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(unpublished_download_request_trace_ffi())
 }
 
 ///|
 pub fn download_single_completion_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(download_single_completion_trace_ffi())
 }
 
 ///|
 pub fn download_command_beats_allow_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(download_command_beats_allow_trace_ffi())
 }
 
@@ -75,7 +75,7 @@ extern "C" fn web_request_cancel_trace_ffi() -> Bytes = "proton_test_web_request
 
 ///|
 pub fn web_request_cancel_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(web_request_cancel_trace_ffi())
 }
 
@@ -84,7 +84,7 @@ extern "C" fn resource_handler_lifetime_trace_ffi() -> Bytes = "proton_test_reso
 
 ///|
 pub fn resource_handler_lifetime_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(resource_handler_lifetime_trace_ffi())
 }
 
@@ -93,6 +93,6 @@ extern "C" fn header_case_trace_ffi() -> Bytes = "proton_test_header_case_trace"
 
 ///|
 pub fn header_case_trace() -> String {
-  let _ = @ffi.proton_abi_version_ffi()
+  @ffi.link_runtime()
   @utf8.decode_lossy(header_case_trace_ffi())
 }
