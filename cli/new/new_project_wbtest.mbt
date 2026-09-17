@@ -276,13 +276,13 @@ test "isomorphic README documents host-native package defaults" {
 }
 
 ///|
-test "isomorphic project config pins Warren browser entry" {
+test "isomorphic project config uses installed Warren" {
   let context = template_context(
     "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
   )
   let content = project_config_file(context, "isomorphic").content
-  assert_true(content.contains("dev --browser-entry main"))
-  assert_true(content.contains("build --browser-entry main"))
+  assert_true(content.contains("warren dev --browser-entry main"))
+  assert_true(content.contains("warren build --browser-entry main"))
 }
 
 ///|

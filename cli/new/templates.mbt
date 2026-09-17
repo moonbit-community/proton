@@ -250,12 +250,8 @@ fn project_config_file(
         "frontend": {
           "path": "frontend",
           "dev_url": "http://127.0.0.1:4300",
-          "before_dev": "moonx --target native moonbit-community/warren@" +
-          context.warren_version +
-          " dev --browser-entry main --direct --port 4300",
-          "before_build": "moonx --target native moonbit-community/warren@" +
-          context.warren_version +
-          " build --browser-entry main",
+          "before_dev": "warren dev --browser-entry main --direct --port 4300",
+          "before_build": "warren build --browser-entry main",
           "dist": "dist",
         },
         "package": package_config,

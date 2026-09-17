@@ -69,7 +69,7 @@ process shutdown. This is a source-integration test: it replaces unpublished
 registry dependencies in the temporary project with modules from this checkout.
 It does not prove that the generated registry dependencies are published.
 
-Warren is resolved by `moonx` from the generated project configuration. The
+The script installs the pinned Warren version with `moon install`. The
 script configures the shared CEF runtime itself:
 
 ```sh
