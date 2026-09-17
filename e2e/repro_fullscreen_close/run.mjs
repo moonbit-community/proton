@@ -7,6 +7,14 @@ import { fileURLToPath } from 'node:url';
 if (process.platform !== 'darwin') throw new Error('This reproduction requires macOS.');
 const modes = ['--direct-close', '--restore', '--kiosk'].filter(mode => process.argv.includes(mode));
 if (modes.length > 1) throw new Error('Choose only one close mode.');
+const options = process.argv.slice(2);
+const allowed = ['--direct-close', '--restore', '--kiosk', '--views=1', '--views=2',
+  '--close-child-first', '--show-inactive', '--refocus', '--native-close'];
+if (options.some(option => !allowed.includes(option))) throw new Error('Unknown option.');
+if (options.includes('--views=1') && options.includes('--views=2')) throw new Error('Choose one view count.');
+if (options.includes('--close-child-first') && !options.some(option => option.startsWith('--views='))) {
+  throw new Error('--close-child-first requires --views=1 or --views=2.');
+}
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const output = mkdtempSync(join(tmpdir(), 'proton-fullscreen-close-'));
 console.log(`Artifacts: ${output}`);
@@ -20,7 +28,7 @@ moon(['install', '--path', 'proton/internal/cef_process', '--bin', join(output, 
 const binary = resolve(root, '_build/native/debug/build/moonbit-community/proton/e2e/repro_fullscreen_close/repro_fullscreen_close.exe');
 const log = join(output, 'app.log');
 const fd = openSync(log, 'w');
-const child = spawn(binary, modes, {
+const child = spawn(binary, options, {
   cwd: root,
   detached: true,
   env: { ...process.env, PROTON_HEADLESS: '0', PROTON_HELPER_PATH: join(output, 'helper/cef_process'), PROTON_REMOTE_DEBUGGING_PORT: '0' },
@@ -51,6 +59,7 @@ try {
   const text = readFileSync(log, 'utf8');
   const summary = {
     mode: modes[0]?.slice(2) ?? 'fullscreen-round-trip',
+    options,
     exit: result,
     normalExitMarker: text.includes('REPRO: application exited normally'),
     matchingError: text.includes('runtime failed during poll event (-2): window is not initialized'),

@@ -63,3 +63,23 @@ window's main browser. Engine support is reported through the
 `web_contents_view` runtime feature. Applications access views through the root
 facade's `WindowHandle` and `ViewHandle`; they never construct the private
 ownership objects directly.
+
+## macOS resource boundaries
+
+Synchronous calls from MoonBit run outside the event-pump autorelease pool.
+Window and view operations that enter AppKit or CEF establish a local
+`@autoreleasepool`; it must cover the operation that creates temporary objects,
+not merely later teardown. Event-pump and main-queue callbacks need a pool on
+the thread executing them too. Do not let borrowed Objective-C results escape
+a pool: copy into caller-owned buffers or explicitly retain owned results.
+
+CEF browser host views obtained from `get_window_handle` are borrowed. The
+AppKit hierarchy holds them; Proton must not send them an unmatched `release`.
+Closing detaches the host while its pointer is valid and clears the pointer.
+Main-window teardown also detaches remaining child hosts, including those whose
+CEF close callback is deferred. Browser finalization still waits for CEF's
+`on_before_close`; neither a hidden window nor a cleared pointer proves closure.
+
+The opt-in graphical regression in `e2e/repro_fullscreen_close` exercises real
+host-view destruction and verifies application and helper exit. Headless tests
+cannot validate this ownership path.

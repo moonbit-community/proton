@@ -381,15 +381,9 @@ static int CEF_CALLBACK proton_engine_do_close(cef_life_span_handler_t *self,
       // CEF destroy the browser object immediately.
       return 0;
     }
-    // Defensive: a windowed view with no host view pointer — either it was
-    // never captured (the browser host or its window handle was unavailable
-    // at creation), or windowWillClose already cleared it while the NSWindow
-    // teardown is still pending. CEF only asks do_close before
-    // WindowDestroyed, so no dealloc handshake can complete this teardown
-    // from here — but returning false is strictly worse: CEF's default would
-    // performClose: the owning NSWindow, which the window delegate cancels.
-    // Cancel the default and log the wedge; in the windowWillClose interleave
-    // the pending teardown still completes via WindowDestroyed.
+    // Main-window teardown may already have detached this host. Its pending
+    // destruction delivers WindowDestroyed; never close the owning NSWindow
+    // as CEF's default action for a child browser.
     return 1;
   }
   proton_engine_window_t *window =

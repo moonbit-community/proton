@@ -380,6 +380,11 @@ jobs:
           node e2e/repro_fullscreen_close/run.mjs
           node e2e/repro_fullscreen_close/run.mjs --restore
           node e2e/repro_fullscreen_close/run.mjs --kiosk
+          node e2e/repro_fullscreen_close/run.mjs --direct-close --native-close
+          node e2e/repro_fullscreen_close/run.mjs --direct-close --native-close --views=1
+          node e2e/repro_fullscreen_close/run.mjs --direct-close --native-close --views=2 --show-inactive
+          node e2e/repro_fullscreen_close/run.mjs --direct-close --native-close --views=2 --refocus --close-child-first
+          node e2e/repro_fullscreen_close/run.mjs --views=1
 
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}

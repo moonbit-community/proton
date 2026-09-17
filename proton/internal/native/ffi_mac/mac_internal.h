@@ -144,6 +144,7 @@ struct proton_engine_window {
   proton_engine_runtime_t *runtime;
   NSWindow *window;
   NSView *content_view;
+  // Borrowed from CEF; the AppKit hierarchy owns the host view. Never release.
   NSView *browser_view;
   id delegate;
   int appkit_closing;
@@ -209,6 +210,7 @@ struct proton_engine_client {
 struct proton_engine_view {
   proton_engine_window_t *window;
   proton_browser_lifecycle_t *browser_lifecycle;
+  // Borrowed from CEF; the AppKit hierarchy owns the host view. Never release.
   NSView *browser_view;
   int32_t x;
   int32_t y;

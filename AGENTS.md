@@ -259,6 +259,12 @@ native checks before handing off larger refactors.
   paths, and MoonBit wrappers translate status codes into typed errors.
 - The facade installs Proton's external event loop before async starts. Native
   callbacks enqueue records and wake that loop; they never enter MoonBit.
+- macOS synchronous AppKit/CEF calls do not inherit the event-pump autorelease
+  pool. Give native UI entry points a local pool, and ensure dispatched blocks
+  have one on their execution thread. Document Objective-C ownership; CEF host
+  views returned by `get_window_handle` are borrowed and must not receive an
+  unmatched `release`. Validate close changes with the opt-in graphical
+  `e2e/repro_fullscreen_close` runner, including child views and helper exit.
 - Runtime, window, and view objects are private external pointers. Their explicit
   destroy operations validate owner-thread access and lifecycle state; GC
   finalizers never destroy CEF or UI objects.
