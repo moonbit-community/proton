@@ -7,5 +7,6 @@ src = "content/en"
 build-dir = "dist"
 
 [output.html]
+theme = "theme"
 site-url = "/proton/"
 git-repository-url = "https://github.com/moonbit-community/proton"
