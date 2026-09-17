@@ -4,7 +4,6 @@ import {
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",
   "moonbit-community/proton_ext/safe_storage/contract" @safe_storage_contract,
-  "moonbitlang/core/debug",
 }
 
 supported_targets = "native"

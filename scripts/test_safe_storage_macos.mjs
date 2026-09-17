@@ -24,30 +24,38 @@ try {
 #include <Security/Security.h>
 #include <stdlib.h>
 #include <string.h>
-static OSStatus test_find_key(CFTypeRef keychain, UInt32 service_len,
-    const char *service, UInt32 account_len, const char *account,
-    UInt32 *length, void **data, SecKeychainItemRef *item) {
-  (void)keychain; (void)service_len; (void)service;
-  (void)account_len; (void)account; (void)item;
-  *length = 32;
-  *data = malloc(32);
-  if (*data == NULL) return errSecAllocate;
-  memset(*data, 0x42, 32);
+#include <assert.h>
+static unsigned char test_key[32];
+static int test_key_exists;
+static void check_key_query(CFDictionaryRef query) {
+  assert(CFEqual(CFDictionaryGetValue(query, kSecClass), kSecClassGenericPassword));
+  assert(CFEqual(CFDictionaryGetValue(query, kSecAttrService),
+                 CFSTR("moonbit-community.proton.safe-storage")));
+  assert(CFEqual(CFDictionaryGetValue(query, kSecAttrAccount), CFSTR("default")));
+  assert(CFDictionaryGetValue(query, kSecUseDataProtectionKeychain) == kCFBooleanFalse);
+}
+static OSStatus test_find_key(CFDictionaryRef query, CFTypeRef *result) {
+  check_key_query(query);
+  assert(CFDictionaryGetValue(query, kSecReturnData) == kCFBooleanTrue);
+  assert(CFEqual(CFDictionaryGetValue(query, kSecMatchLimit), kSecMatchLimitOne));
+  *result = NULL;
+  if (!test_key_exists) return errSecItemNotFound;
+  *result = CFDataCreate(NULL, test_key, 32);
   return errSecSuccess;
 }
-static OSStatus test_free_key(SecKeychainAttributeList *attributes, void *data) {
-  (void)attributes; free(data); return errSecSuccess;
+static OSStatus test_add_key(CFDictionaryRef query, CFTypeRef *result) {
+  check_key_query(query);
+  assert(result == NULL && !test_key_exists);
+  assert(!CFDictionaryContainsKey(query, kSecReturnData));
+  assert(!CFDictionaryContainsKey(query, kSecMatchLimit));
+  CFDataRef data = CFDictionaryGetValue(query, kSecValueData);
+  assert(CFDataGetLength(data) == 32);
+  memcpy(test_key, CFDataGetBytePtr(data), 32);
+  test_key_exists = 1;
+  return errSecSuccess;
 }
-static OSStatus test_add_key(SecKeychainRef keychain, UInt32 service_len,
-    const char *service, UInt32 account_len, const char *account,
-    UInt32 length, const void *data, SecKeychainItemRef *item) {
-  (void)keychain; (void)service_len; (void)service;
-  (void)account_len; (void)account; (void)length; (void)data; (void)item;
-  abort();
-}
-#define SecKeychainFindGenericPassword test_find_key
-#define SecKeychainItemFreeContent test_free_key
-#define SecKeychainAddGenericPassword test_add_key
+#define SecItemCopyMatching test_find_key
+#define SecItemAdd test_add_key
 `;
   writeFileSync(source, keychainFixture + readFileSync(source, "utf8"));
   writeFileSync(path.join(temporary, "cipher_test.mbt"), `

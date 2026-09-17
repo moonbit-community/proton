@@ -10,5 +10,5 @@ test "safe storage extension metadata" {
 ///|
 test "safe storage availability uses an empty request" {
   let request = @proton_contract.EmptyRequest::{ }
-  inspect(request.to_json(), content="Object({})")
+  json_inspect(request.to_json(), content={})
 }

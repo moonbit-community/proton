@@ -1,7 +1,6 @@
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/json",
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/x/path" @mbpath,

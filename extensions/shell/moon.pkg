@@ -6,10 +6,6 @@ import {
   "moonbit-community/proton_ext/shell/contract" @shell_contract,
 }
 
-import {
-  "moonbitlang/core/debug",
-} for "wbtest"
-
 supported_targets = "native"
 
 formatter(ignore: [ "extension.g.mbt" ])

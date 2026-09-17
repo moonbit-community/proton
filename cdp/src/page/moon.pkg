@@ -1,7 +1,5 @@
 import {
   "moonbitlang/async",
-  "moonbitlang/core/debug",
-  "moonbitlang/core/json",
   "moonbit-community/proton_cdp/client",
   "moonbit-community/proton_cdp/protocol",
   "moonbit-community/proton_cdp/protocol/typed",

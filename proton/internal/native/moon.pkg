@@ -2,8 +2,6 @@ import {
   "moonbit-community/proton/internal/native/ffi" @native_ffi,
   "moonbit-community/proton_ffi" @ffi,
   "moonbit-community/proton/internal/locale",
-  "moonbitlang/core/debug",
-  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",
   "moonbitlang/x/path",
 }
@@ -11,6 +9,7 @@ import {
 import {
   "moonbitlang/async",
   "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/core/debug",
 } for "wbtest"
 
 supported_targets = "native"

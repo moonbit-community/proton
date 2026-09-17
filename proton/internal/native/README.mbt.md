@@ -64,6 +64,22 @@ window's main browser. Engine support is reported through the
 facade's `WindowHandle` and `ViewHandle`; they never construct the private
 ownership objects directly.
 
+## macOS deployment target
+
+Proton uses the compiler's deployment target rather than overriding it for
+only its own native stubs and the final link. To target an older macOS release,
+set `MACOSX_DEPLOYMENT_TARGET` for the entire Moon build, including dependencies
+and helper installation. Rebuild from a clean build directory when changing
+this value. For example:
+
+```sh
+MACOSX_DEPLOYMENT_TARGET=12.0 moon -C examples build --target native
+```
+
+This applies the same target to every compiler invocation. The selected CEF
+runtime and all dependencies must also support that OS version;
+a successful build alone does not establish runtime compatibility.
+
 ## macOS resource boundaries
 
 Synchronous calls from MoonBit run outside the event-pump autorelease pool.

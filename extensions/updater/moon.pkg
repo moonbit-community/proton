@@ -1,6 +1,4 @@
 import {
-  "moonbitlang/core/debug",
-  "moonbitlang/core/json",
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
   "moonbit-community/proton_contract",
@@ -8,7 +6,6 @@ import {
 }
 
 import {
-  "moonbitlang/core/debug",
   "moonbitlang/async",
 } for "wbtest"
 
