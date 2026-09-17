@@ -680,29 +680,32 @@ int32_t proton_engine_window_get_titlebar_area(
   }
   frame.origin.y += NSHeight(frame) - height;
   frame.size.height = height;
-  [container setFrame:frame];
+  if (!NSEqualRects(container.frame, frame)) {
+    [container setFrame:frame];
+  }
+  // Compute the final frames without moving the live buttons through their
+  // defaults: those intermediate writes schedule another AppKit layout pass.
+  NSRect targets[3];
   for (int i = 0; i < 3; i++) {
     NSRect rect = default_button_frames[i];
     rect.origin.y += height - default_container_height;
-    [buttons[i] setFrame:[button_parent convertRect:rect fromView:container]];
+    targets[i] = [owner->content_view convertRect:rect fromView:container];
   }
   if (owner->button_position_custom) {
-    NSRect cluster =
-        [owner->content_view convertRect:buttons[0].bounds fromView:buttons[0]];
-    for (int i = 1; i < 3; i++) {
-      cluster = NSUnionRect(cluster, [owner->content_view
-          convertRect:buttons[i].bounds fromView:buttons[i]]);
-    }
+    NSRect cluster = NSUnionRect(NSUnionRect(targets[0], targets[1]), targets[2]);
     NSRect bounds = owner->content_view.bounds;
     CGFloat dx = NSMinX(bounds) + owner->button_position_x - NSMinX(cluster);
     CGFloat dy = NSMaxY(bounds) - owner->button_position_y - NSMaxY(cluster);
     for (int i = 0; i < 3; i++) {
-      NSRect rect =
-          [owner->content_view convertRect:buttons[i].bounds fromView:buttons[i]];
-      rect.origin.x += dx;
-      rect.origin.y += dy;
-      [buttons[i] setFrame:[button_parent convertRect:rect
-                                            fromView:owner->content_view]];
+      targets[i].origin.x += dx;
+      targets[i].origin.y += dy;
+    }
+  }
+  for (int i = 0; i < 3; i++) {
+    NSRect target = [button_parent convertRect:targets[i]
+                                    fromView:owner->content_view];
+    if (!NSEqualRects(buttons[i].frame, target)) {
+      [buttons[i] setFrame:target];
     }
   }
   laying_out_buttons = NO;
