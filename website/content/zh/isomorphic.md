@@ -14,6 +14,7 @@
 proton_cli new todo-app --template isomorphic --yes
 cd todo-app
 moon update
+moon install moonbit-community/warren@0.3.2
 proton_cli cef setup
 proton_cli dev
 ```

@@ -6,7 +6,13 @@ Proton 可以加载内联 HTML、URL、本地文件或打包资源，不强制�
 
 ## 项目配置
 
-isomorphic 模板生成的 **`proton.project.json`** 具有以下结构。下面的 Warren 命令与 Proton 0.2.11 模板中指定的版本一致：
+isomorphic 模板使用以下 **`proton.project.json`** 配置。运行前端命令前，先安装一次 Warren：
+
+```sh
+moon install moonbit-community/warren@0.3.2
+```
+
+配置直接调用已安装的 `warren` 命令：
 
 ```json
 {
@@ -18,8 +24,8 @@ isomorphic 模板生成的 **`proton.project.json`** 具有以下结构。下面
   "frontend": {
     "path": "frontend",
     "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "moonx --target native moonbit-community/warren@0.3.2 dev --browser-entry main --direct --port 4300",
-    "before_build": "moonx --target native moonbit-community/warren@0.3.2 build --browser-entry main",
+    "before_dev": "warren dev --browser-entry main --direct --port 4300",
+    "before_build": "warren build --browser-entry main",
     "dist": "dist"
   },
   "package": {

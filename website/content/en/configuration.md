@@ -6,7 +6,13 @@ Proton can load inline HTML, a URL, a local file, or bundled assets. A separate 
 
 ## The project configuration
 
-The isomorphic template generates **`proton.project.json`** with this shape. The commands below are the versioned Warren commands supplied by Proton 0.2.11:
+The isomorphic template generates **`proton.project.json`** with this shape. Install Warren once before running the frontend commands:
+
+```sh
+moon install moonbit-community/warren@0.3.2
+```
+
+The configuration calls the installed `warren` executable:
 
 ```json
 {
@@ -18,8 +24,8 @@ The isomorphic template generates **`proton.project.json`** with this shape. The
   "frontend": {
     "path": "frontend",
     "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "moonx --target native moonbit-community/warren@0.3.2 dev --browser-entry main --direct --port 4300",
-    "before_build": "moonx --target native moonbit-community/warren@0.3.2 build --browser-entry main",
+    "before_dev": "warren dev --browser-entry main --direct --port 4300",
+    "before_build": "warren build --browser-entry main",
     "dist": "dist"
   },
   "package": {

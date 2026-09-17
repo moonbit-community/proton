@@ -941,6 +941,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|```sh
           #|moon update
+          #|moon install moonbit-community/warren@{{warren_version}}
           #|proton_cli cef setup
           #|```
           #|
@@ -965,7 +966,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|proton_cli build
           #|```
           #|
-          #|`build` runs Warren {{warren_version}} through `moonx` in `frontend/`, validates
+          #|`build` runs the installed Warren in `frontend/`, validates
           #|`frontend/dist`, and builds `backend/app` for the native target.
           #|
           #|```sh

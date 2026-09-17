@@ -868,7 +868,8 @@ async function main() {
     fail("the scaffold package and lifecycle smoke currently requires macOS");
   }
   run("moon", ["--version"], { capture: true });
-  run("moonx", ["--target", "native", warrenCoordinate, "--help"], {
+  run("moon", ["install", warrenCoordinate]);
+  run("warren", ["--help"], {
     capture: true,
   });
 
