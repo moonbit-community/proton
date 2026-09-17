@@ -1,0 +1,11 @@
+[book]
+title = "Proton 0.2.11"
+language = "en"
+src = "content/en"
+
+[build]
+build-dir = "dist"
+
+[output.html]
+site-url = "/proton/"
+git-repository-url = "https://github.com/moonbit-community/proton"

@@ -9,6 +9,8 @@ Supported source-built native backends:
 - macOS Apple Silicon
 - Linux x64
 
+[English guides](website/content/en/index.md) · [中文指南](website/content/zh/index.md)
+
 ## Quick start
 
 Install the CLI and create a project:

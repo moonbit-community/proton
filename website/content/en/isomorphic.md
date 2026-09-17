@@ -1,0 +1,200 @@
+# Build a complete Todo application
+
+[中文](zh/isomorphic.html)
+
+This tutorial uses the isomorphic template to connect a shared contract, native state, and a Rabbita UI. You will first run the generated Todo app, then add **Complete all** and **Reopen all** operations across all three modules.
+
+Complete [prerequisites](installation.md), including Node.js for Warren's build tooling. You do not need to modify the earlier minimal app.
+
+## Create and explore the app
+
+From outside another MoonBit workspace:
+
+```sh
+proton_cli new todo-app --template isomorphic --yes
+cd todo-app
+moon update
+proton_cli cef setup
+proton_cli dev
+```
+
+Add “Alpha” and “Beta”, mark one complete, and search for it. The generated app already supports create, complete, delete, and filtered queries. It keeps the list in memory, so restarting clears the data.
+
+Close the application before editing. Keep the generated module names and package imports; all changes below extend the existing template.
+
+## Understand the existing flow
+
+Open these files together:
+
+- **`shared/todo_contract.mbt`** defines the requests, `TodoItem`, `TodoSnapshot`, `MutationReply`, and descriptors.
+- **`backend/todo/backend.mbt`** stores the list and revision and implements mutations.
+- **`backend/todo/commands.mbt`** binds descriptors to methods.
+- **`frontend/main/main.mbt`** owns the draft, UI messages, and Rabbita view.
+- **`backend/app/main.mbt`** starts the app, installs commands, and attaches/detaches each window's event destination.
+
+For an existing create action, `Create` invokes `create_todo`; the backend validates and mutates; `MutationReply` reports success or a business rejection. `todos_changed` invalidates the frontend snapshot and triggers a query.
+
+The frontend's draft is local UI state. The backend list is authoritative application state. The new action must mutate the full backend list, not just the rows currently visible under a search filter.
+
+## 1. Extend the shared contract
+
+Append to **`shared/todo_contract.mbt`**:
+
+```moonbit
+///|
+pub(all) struct SetAllCompletedRequest {
+  completed : Bool
+} derive(ToJson, FromJson)
+
+///|
+pub extend SetAllCompletedRequest with ToJson::{to_json}
+
+///|
+pub extend SetAllCompletedRequest with FromJson::{from_json}
+
+///|
+pub let set_all_completed : @proton_contract.Command[
+  SetAllCompletedRequest,
+  MutationReply,
+] = @proton_contract.command("set_all_completed")
+```
+
+The boolean chooses completion or reopening. We reuse the template's `MutationReply`, so the existing response handling remains useful. Both targets import this same descriptor.
+
+## 2. Implement the state change
+
+Append to **`backend/todo/backend.mbt`**:
+
+```moonbit
+///|
+fn Backend::set_all_completed(
+  self : Backend,
+  completed : Bool,
+) -> @shared.MutationReply {
+  let mut changed = false
+  for index = 0; index < self.todos.length(); index = index + 1 {
+    let todo = self.todos[index]
+    if todo.completed != completed {
+      self.todos[index] = { ..todo, completed, }
+      changed = true
+    }
+  }
+  if changed {
+    self.version += 1
+  }
+  @shared.Changed(version=self.version)
+}
+```
+
+This operation traverses the full list and advances the revision once if anything changed. Repeating the same operation leaves the revision unchanged. It returns the current version even for an empty list.
+
+## 3. Register the handler and send invalidation
+
+Inside the existing **`Backend::register_commands`** method in **`backend/todo/commands.mbt`**, add another binding beside the existing bindings:
+
+```moonbit
+registrar.bind(@shared.set_all_completed, (_context, request) => {
+  let reply = self.set_all_completed(request.completed)
+  self.notify(reply)
+  reply
+})
+```
+
+Keep the old bindings. `self.notify` is the generated backend's existing helper: it sends `todos_changed` to the event destinations attached by the app's window lifecycle.
+
+No new event type is needed. The state changed in the same way as another Todo mutation, so existing observers should refetch the same query.
+
+## 4. Connect the frontend action
+
+All changes in this step are in **`frontend/main/main.mbt`**.
+
+Add one variant inside the existing `enum Msg`:
+
+```moonbit
+SetAllCompleted(Bool)
+```
+
+Add this arm inside `update`'s existing `match msg`:
+
+```moonbit
+SetAllCompleted(completed) =>
+  (
+    { ..model, error: None, },
+    @proton_rabbita.invoke(
+      @shared.set_all_completed,
+      { completed, },
+      reply => emit(MutationReceived(reply)),
+      error => emit(CommandFailed(error)),
+    ),
+  )
+```
+
+`model`, `emit`, `MutationReceived`, and `CommandFailed` already exist in this function and module. The success path reuses the template's mutation response handling; the error path keeps bridge failures visible.
+
+Inside `view`, find `div(class="todo-toolbar", [...])`. Append these two buttons to its child array, after the existing Refresh button:
+
+```moonbit
+button(
+  type_="button",
+  on_click=emit(SetAllCompleted(true)),
+  "Complete all",
+),
+button(
+  type_="button",
+  on_click=emit(SetAllCompleted(false)),
+  "Reopen all",
+),
+```
+
+The template already imports `button`, so no new import is needed. The boolean in the message travels through the request to the backend.
+
+## 5. Check the behavior
+
+Append this regression check to **`backend/todo/backend_wbtest.mbt`**:
+
+```moonbit
+///|
+test "bulk completion changes the whole list once" {
+  let backend = Backend()
+  ignore(backend.create("Alpha"))
+  ignore(backend.create("Beta"))
+  assert_true(backend.set_all_completed(true) is @shared.Changed(version=3))
+  assert_true(backend.snapshot("").todos.all(todo => todo.completed))
+  assert_true(backend.set_all_completed(true) is @shared.Changed(version=3))
+  assert_true(backend.set_all_completed(false) is @shared.Changed(version=4))
+  assert_true(backend.snapshot("").todos.all(todo => !todo.completed))
+}
+```
+
+From the project root:
+
+```sh
+moon check --target js,native
+moon -C backend test todo --target native
+moon -C frontend test --target js
+proton_cli dev
+```
+
+Add two todos. **Complete all** should complete both, and **Reopen all** should reopen both. Search for only one todo and repeat the operation, then clear the filter: both items should have changed. Repeating Complete all should not advance the revision again.
+
+If the backend changes but the display does not, check that you retained `self.notify` and the window attach/detach hooks. If the new command is unavailable, check its registration and restart the backend.
+
+## How the UI stays current
+
+The template's `todo_app` creates a query for `list_todos` invalidated by `todos_changed`. Its application-local query helper subscribes before fetching and cancels superseded requests when input changes.
+
+The mutation response refreshes the initiating UI; the event invalidates observers. These can overlap, so the helper tracks request generations and avoids letting an older result overwrite a newer search. This is application code in `frontend/internal/query`, not another server or a public Proton state-management framework.
+
+## Build the finished application
+
+Stop development, then run:
+
+```sh
+proton_cli build
+proton_cli package --dry-run
+proton_cli package --release
+```
+
+Launch the packaged app without the development server and repeat the two-button check. See [build and distribute](packaging.md) for platform formats and signing.
+
+Persistent storage is deliberately outside this example. If you add it, keep loading, validation, and writes in the backend, and preserve the same command/event interface to the frontend.
