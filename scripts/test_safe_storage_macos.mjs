@@ -32,7 +32,7 @@ static void check_key_query(CFDictionaryRef query) {
   assert(CFEqual(CFDictionaryGetValue(query, kSecAttrService),
                  CFSTR("moonbit-community.proton.safe-storage")));
   assert(CFEqual(CFDictionaryGetValue(query, kSecAttrAccount), CFSTR("default")));
-  assert(!CFDictionaryContainsKey(query, kSecUseDataProtectionKeychain));
+  assert(CFDictionaryGetValue(query, kSecUseDataProtectionKeychain) == kCFBooleanFalse);
 }
 static OSStatus test_find_key(CFDictionaryRef query, CFTypeRef *result) {
   check_key_query(query);

@@ -51,8 +51,9 @@ static int keychain_key(unsigned char key[32]) {
   for (size_t i = 0; i < sizeof(attributes) / sizeof(attributes[0]); i++) {
     CFDictionarySetValue(query, attributes[i], values[i]);
   }
-  // Keep the existing service/account and the default macOS Keychain backend
+  // Keep the existing service/account and the file-based macOS Keychain backend
   // so previously encrypted data continues to use the same key.
+  CFDictionarySetValue(query, kSecUseDataProtectionKeychain, kCFBooleanFalse);
   CFTypeRef result = NULL;
   OSStatus status = SecItemCopyMatching(query, &result);
   if (status == errSecSuccess) {
