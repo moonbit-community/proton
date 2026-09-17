@@ -12,6 +12,8 @@ isomorphic 模板使用以下 **`proton.project.json`** 配置。运行前端命
 moon install moonbit-community/warren@0.3.2
 ```
 
+已发布的 CLI 0.3.0 生成的是 `moonx --target native` 命令。请只将 `frontend.before_dev` 和 `frontend.before_build` 替换成下方的值，保留其他项目配置。仓库 main 已包含此修正，但已发布的 CLI 0.3.0 尚未包含。Warren 0.3.2 没有已发布的 Wasm 可执行文件，因此不能只删除 `--target native`。
+
 配置直接调用已安装的 `warren` 命令：
 
 ```json

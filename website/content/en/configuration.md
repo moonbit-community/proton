@@ -6,11 +6,13 @@ Proton can load inline HTML, a URL, a local file, or bundled assets. A separate 
 
 ## The project configuration
 
-The isomorphic template generates **`proton.project.json`** with this shape. Install Warren once before running the frontend commands:
+The isomorphic project uses **`proton.project.json`**. Install Warren once before running the frontend commands:
 
 ```sh
 moon install moonbit-community/warren@0.3.2
 ```
+
+The published CLI 0.3.0 generates `moonx --target native` commands. Replace only `frontend.before_dev` and `frontend.before_build` with the values below, preserving your other configuration. This change is already in repository main, but is not included in the published CLI 0.3.0. Warren 0.3.2 has no published Wasm executable, so removing only `--target native` is not sufficient.
 
 The configuration calls the installed `warren` executable:
 

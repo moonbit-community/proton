@@ -6,7 +6,7 @@ Before creating an application, install MoonBit and the native build tools for y
 
 ## macOS
 
-Proton 0.2.11 supports Apple Silicon. Install Xcode Command Line Tools from Terminal:
+Proton 0.3.0 supports Apple Silicon. Install Xcode Command Line Tools from Terminal:
 
 ```sh
 xcode-select --install
@@ -51,11 +51,11 @@ Install the [MoonBit toolchain](https://www.moonbitlang.com/download/) and add i
 
 ```sh
 moon version
-moon install moonbit-community/proton_cli@0.2.11
+moon install moonbit-community/proton_cli@0.3.0
 proton_cli --version
 ```
 
-The last command should report `0.2.11`. If `proton_cli` cannot be found, check that MoonBit's binary directory is on PATH. If another version runs, check for an older executable earlier on PATH.
+The last command should report `0.3.0`. If `proton_cli` cannot be found, check that MoonBit's binary directory is on PATH. If another version runs, check for an older executable earlier on PATH.
 
 For the isomorphic tutorial, also install [Node.js](https://nodejs.org/en/download). Its Warren build invokes npm tooling to minimize JavaScript:
 
@@ -64,7 +64,14 @@ node --version
 npm --version
 ```
 
-You do not need to install Warren globally; the template specifies it in its build commands.
+Install the frontend tool once, then verify that it is on PATH:
+
+```sh
+moon install moonbit-community/warren@0.3.2
+warren --help
+```
+
+The published Proton CLI 0.3.0 still generates deprecated `moonx --target native` frontend commands. After creating an isomorphic project, replace those two commands as shown in [frontend configuration](configuration.md). The minimal template does not need Warren.
 
 ## Install the runtime after creating a project
 

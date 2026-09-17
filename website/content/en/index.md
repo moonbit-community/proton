@@ -33,10 +33,10 @@ The [architecture guide](architecture.md) explains where your code runs and whic
 
 ## Supported platforms
 
-Proton 0.2.11 supports macOS on Apple Silicon, Windows x64, and Linux x64. Build and package on the target operating system. Individual native capabilities can have narrower platform support.
+Proton 0.3.0 supports macOS on Apple Silicon, Windows x64, and Linux x64. Build and package on the target operating system. Individual native capabilities can have narrower platform support.
 
-These guides assume basic MoonBit knowledge and cover the published **0.2.11** release. Keep the CLI and Proton packages on that version while following the examples.
+These guides assume basic MoonBit knowledge and cover the published **0.3.0** release. Keep the CLI and Proton packages on that version while following the examples.
 
 ## Reference
 
-Use the [Proton API](https://mooncakes.io/docs/moonbit-community/proton@0.2.11/) and [extensions API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.2.11/) for signatures and available options. The [repository example catalog](https://github.com/moonbit-community/proton/blob/main/examples/Readme.md) provides focused demonstrations; it follows main and may include unreleased changes.
+Use the [Proton API](https://mooncakes.io/docs/moonbit-community/proton@0.3.0/) and [extensions API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/) for signatures and available options. The [repository example catalog](https://github.com/moonbit-community/proton/blob/main/examples/Readme.md) provides focused demonstrations; it follows main and may include unreleased changes.
