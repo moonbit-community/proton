@@ -6,7 +6,7 @@
 
 ## macOS
 
-Proton 0.2.11 支持 Apple Silicon。在终端中安装 Xcode Command Line Tools：
+Proton 0.3.0 支持 Apple Silicon。在终端中安装 Xcode Command Line Tools：
 
 ```sh
 xcode-select --install
@@ -51,11 +51,11 @@ sudo apt-get install -y build-essential pkg-config libx11-dev libxrandr-dev \
 
 ```sh
 moon version
-moon install moonbit-community/proton_cli@0.2.11
+moon install moonbit-community/proton_cli@0.3.0
 proton_cli --version
 ```
 
-最后一个命令应输出 `0.2.11`。如果找不到 `proton_cli`，检查 MoonBit 的二进制目录是否已加入 PATH；如果运行了其他版本，检查 PATH 中是否存在优先级更高的旧程序。
+最后一个命令应输出 `0.3.0`。如果找不到 `proton_cli`，检查 MoonBit 的二进制目录是否已加入 PATH；如果运行了其他版本，检查 PATH 中是否存在优先级更高的旧程序。
 
 跟随 isomorphic 教程时，还需要安装 [Node.js](https://nodejs.org/en/download)。Warren 构建会调用 npm 工具压缩 JavaScript：
 
@@ -64,7 +64,14 @@ node --version
 npm --version
 ```
 
-无需全局安装 Warren，模板已在构建命令中指定它。
+安装一次前端工具，并确认 PATH 中可以找到它：
+
+```sh
+moon install moonbit-community/warren@0.3.2
+warren --help
+```
+
+已发布的 Proton CLI 0.3.0 仍生成已弃用的 `moonx --target native` 前端命令。创建 isomorphic 项目后，请按[前端配置](configuration.md)替换这两条命令。minimal 模板不需要 Warren。
 
 ## 创建项目后安装运行时
 

@@ -68,7 +68,7 @@ Application command bindings are ordinary code. You do not need to add a command
 
 ## Generated output
 
-Moon writes build output under `_build/` and resolved dependencies under `.mooncakes/`. Warren writes the frontend build under `frontend/dist/`; the packager writes distributables under the configured output directory, normally root `dist/`.
+Moon writes build output under `_build/` and manages downloaded dependencies in its cache. Warren writes the frontend build under `frontend/dist/`; the packager writes distributables under the configured output directory, normally root `dist/`.
 
 Do not edit these outputs. Edit the source or project configuration and rebuild. The runtime and helper installed by setup are shared user-level files, not project source.
 

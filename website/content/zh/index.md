@@ -33,10 +33,10 @@ Proton 会在分发产物中携带 Chromium 运行时，让前端在各支持平
 
 ## 支持的平台
 
-Proton 0.2.11 支持 macOS Apple Silicon、Windows x64 和 Linux x64。请在目标操作系统上构建和打包。某项原生能力支持的平台可能少于框架本身。
+Proton 0.3.0 支持 macOS Apple Silicon、Windows x64 和 Linux x64。请在目标操作系统上构建和打包。某项原生能力支持的平台可能少于框架本身。
 
-本指南假设你已掌握 MoonBit 基础，内容对应已发布的 **0.2.11**。跟随示例时，请让 CLI 与 Proton 各包保持在该版本。
+本指南假设你已掌握 MoonBit 基础，内容对应已发布的 **0.3.0**。跟随示例时，请让 CLI 与 Proton 各包保持在该版本。
 
 ## 参考资料
 
-通过 [Proton API](https://mooncakes.io/docs/moonbit-community/proton@0.2.11/) 和[扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.2.11/)查询签名与可选配置。[仓库示例目录](https://github.com/moonbit-community/proton/blob/main/examples/Readme.md)提供各项功能演示，但会跟随 main 更新，可能包含尚未发布的变化。
+通过 [Proton API](https://mooncakes.io/docs/moonbit-community/proton@0.3.0/) 和[扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/)查询签名与可选配置。[仓库示例目录](https://github.com/moonbit-community/proton/blob/main/examples/Readme.md)提供各项功能演示，但会跟随 main 更新，可能包含尚未发布的变化。

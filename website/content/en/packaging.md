@@ -16,7 +16,7 @@ In the existing `package` object of **`proton.project.json`**, set your applicat
 }
 ```
 
-Merge these fields rather than replacing the whole project file. Keep the root `identifier` stable across releases. `package.version` is your app version; it does not need to equal Proton 0.2.11.
+Merge these fields rather than replacing the whole project file. Keep the root `identifier` stable across releases. `package.version` is your app version; it does not need to equal Proton 0.3.0.
 
 ## Build for release
 

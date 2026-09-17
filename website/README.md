@@ -12,7 +12,7 @@ points to the corresponding generated HTML page.
 
 Keep guides task-oriented: state prerequisites, name the files to change,
 provide the smallest complete example, and explain the expected result.
-Examples document Proton 0.2.11; verify them with published dependencies.
+Examples document Proton 0.3.0; verify them with published dependencies.
 
 ## Preview
 

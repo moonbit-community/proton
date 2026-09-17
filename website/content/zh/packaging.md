@@ -16,7 +16,7 @@
 }
 ```
 
-合并这些字段，不要替换整个项目文件。跨版本保持根级 `identifier` 稳定。`package.version` 是你的应用版本，不需要与 Proton 0.2.11 相同。
+合并这些字段，不要替换整个项目文件。跨版本保持根级 `identifier` 稳定。`package.version` 是你的应用版本，不需要与 Proton 0.3.0 相同。
 
 ## 构建发布版本
 
