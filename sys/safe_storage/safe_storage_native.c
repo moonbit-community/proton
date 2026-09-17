@@ -40,18 +40,52 @@ static moonbit_bytes_t mb_bytes(const unsigned char *data, size_t len) {
 }
 
 #if defined(__APPLE__)
-static const char *k_service = "moonbit-community.proton.safe-storage";
-static const char *k_account = "default";
 static int keychain_key(unsigned char key[32]) {
-  UInt32 length = 0; void *data = NULL;
-  OSStatus status = SecKeychainFindGenericPassword(NULL, (UInt32)strlen(k_service), k_service,
-      (UInt32)strlen(k_account), k_account, &length, &data, NULL);
-  if (status == errSecSuccess && length == 32) { memcpy(key, data, 32); SecKeychainItemFreeContent(NULL, data); return 1; }
-  if (data != NULL) SecKeychainItemFreeContent(NULL, data);
-  if (SecRandomCopyBytes(kSecRandomDefault, 32, key) != errSecSuccess) { mb_set_error("failed to generate safe storage key"); return 0; }
-  status = SecKeychainAddGenericPassword(NULL, (UInt32)strlen(k_service), k_service,
-      (UInt32)strlen(k_account), k_account, 32, key, NULL);
-  if (status != errSecSuccess) { mb_set_error("failed to store safe storage key in Keychain"); return 0; }
+  const void *attributes[] = { kSecClass, kSecAttrService, kSecAttrAccount,
+                               kSecReturnData, kSecMatchLimit };
+  const void *values[] = { kSecClassGenericPassword,
+      CFSTR("moonbit-community.proton.safe-storage"), CFSTR("default"),
+      kCFBooleanTrue, kSecMatchLimitOne };
+  CFMutableDictionaryRef query = CFDictionaryCreateMutable(
+      NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+  for (size_t i = 0; i < sizeof(attributes) / sizeof(attributes[0]); i++) {
+    CFDictionarySetValue(query, attributes[i], values[i]);
+  }
+  // Keep the existing service/account and the default macOS Keychain backend
+  // so previously encrypted data continues to use the same key.
+  CFTypeRef result = NULL;
+  OSStatus status = SecItemCopyMatching(query, &result);
+  if (status == errSecSuccess) {
+    int valid = result != NULL && CFGetTypeID(result) == CFDataGetTypeID() &&
+                CFDataGetLength((CFDataRef)result) == 32;
+    if (valid) memcpy(key, CFDataGetBytePtr((CFDataRef)result), 32);
+    if (result != NULL) CFRelease(result);
+    CFRelease(query);
+    if (!valid) mb_set_error("invalid safe storage key in Keychain");
+    return valid;
+  }
+  if (result != NULL) CFRelease(result);
+  if (status != errSecItemNotFound) {
+    CFRelease(query);
+    mb_set_error("failed to read safe storage key from Keychain");
+    return 0;
+  }
+  if (SecRandomCopyBytes(kSecRandomDefault, 32, key) != errSecSuccess) {
+    CFRelease(query);
+    mb_set_error("failed to generate safe storage key");
+    return 0;
+  }
+  CFDictionaryRemoveValue(query, kSecReturnData);
+  CFDictionaryRemoveValue(query, kSecMatchLimit);
+  CFDataRef data = CFDataCreate(NULL, key, 32);
+  CFDictionarySetValue(query, kSecValueData, data);
+  status = SecItemAdd(query, NULL);
+  CFRelease(data);
+  CFRelease(query);
+  if (status != errSecSuccess) {
+    mb_set_error("failed to store safe storage key in Keychain");
+    return 0;
+  }
   return 1;
 }
 #endif

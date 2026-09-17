@@ -21,7 +21,7 @@ test "clipboard metadata constants match generated app command extension" {
 ///|
 test "clipboard clear contract uses an empty request and boolean reply" {
   let request = @clipboard_contract.ClearRequest::{ }
-  inspect(request.to_json(), content="Object({})")
+  json_inspect(request.to_json(), content={})
   let reply = @clipboard_contract.ClearReply::{ cleared: true, }
-  inspect(reply.to_json(), content="Object({cleared: True})")
+  json_inspect(reply.to_json(), content={ "cleared": true })
 }

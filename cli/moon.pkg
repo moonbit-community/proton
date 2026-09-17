@@ -4,7 +4,6 @@ import {
   "moonbitlang/core/argparse",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
-  "moonbitlang/core/string",
   "moonbitlang/x/sys",
   "moonbit-community/proton_cli/cef",
   "moonbit-community/proton_cli/build_cmd" @build,
