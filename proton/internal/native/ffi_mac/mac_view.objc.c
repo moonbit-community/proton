@@ -473,138 +473,140 @@ int32_t proton_engine_view_create(
     proton_engine_window_t *window,
     const proton_engine_view_config_t *input_config,
     proton_engine_view_t **out_view, char *error, size_t error_len) {
+  @autoreleasepool {
+    if (out_view == NULL) {
+      proton_engine_set_message(error, error_len, "out_view is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    *out_view = NULL;
+    if (window == NULL || input_config == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "window and view config are required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->closed) {
+      proton_engine_set_message(error, error_len, "window is closed");
+      return PROTON_ERR_DESTROYED;
+    }
+    if (!proton_engine_runtime_initialized()) {
+      proton_engine_set_message(error, error_len, "runtime is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    proton_engine_view_config_t config = *input_config;
 
-  if (out_view == NULL) {
-    proton_engine_set_message(error, error_len, "out_view is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
+    proton_engine_view_t *view =
+        (proton_engine_view_t *)calloc(1, sizeof(*view));
+    if (view == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "failed to allocate view state");
+      return PROTON_ERR_ENGINE;
+    }
+    view->window = window;
+    view->native_id = proton_engine_allocate_view_native_id();
+    view->x = config.x;
+    view->y = config.y;
+    view->width = config.width;
+    view->height = config.height;
+    view->z_order = config.z_order;
+    view->zoom_percent = 100;
+    view->audio_muted = 0;
+    view->visible = config.visible;
+    view->browser_lifecycle = proton_browser_lifecycle_create(
+        window->runtime->browsers, PROTON_BROWSER_ROLE_VIEW, view, NULL);
+    if (view->browser_lifecycle == NULL) {
+      free(view);
+      proton_engine_set_message(error, error_len,
+                                "failed to allocate browser lifecycle");
+      return PROTON_ERR_ENGINE;
+    }
+    proton_engine_client_t *client = proton_engine_view_client_create(
+        view->browser_lifecycle);
+    if (client == NULL) {
+      proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
+      proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
+      free(view);
+      proton_engine_set_message(error, error_len, "failed to allocate client");
+      return PROTON_ERR_ENGINE;
+    }
+    proton_browser_lifecycle_set_client(view->browser_lifecycle,
+                                        &client->client);
+    view->initial_url = proton_engine_strdup(
+        config.initial_url[0] != '\0' ? config.initial_url : "about:blank");
+    if (view->initial_url == NULL) {
+      proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
+      proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
+      free(view);
+      proton_engine_set_message(error, error_len,
+                                "failed to copy initial browser url");
+      return PROTON_ERR_ENGINE;
+    }
+    // Views own a browser session with a fixed, non-interactive policy so the
+    // usual browser commands (back/forward/reload/stop/devtools) work per view;
+    // ASK flows are never used here.
+    proton_browser_policy_t view_policy = {PROTON_BROWSER_POLICY_ALLOW,
+                                           PROTON_BROWSER_POLICY_DENY,
+                                           PROTON_BROWSER_POLICY_DENY,
+                                           PROTON_BROWSER_POLICY_DENY,
+                                           PROTON_BROWSER_POLICY_DENY,
+                                           1};
+    view->browser_session = proton_browser_session_create(
+        &view_policy,
+        proton_browser_session_web_request_config(window->browser_session),
+        proton_engine_browser_signal, NULL);
+    view->events = proton_view_events_create();
+    if (view->browser_session == NULL || view->events == NULL) {
+      proton_browser_session_destroy(view->browser_session);
+      proton_view_events_destroy(view->events);
+      free(view->initial_url);
+      proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
+      proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
+      free(view);
+      proton_engine_set_message(error, error_len,
+                                "failed to allocate view state");
+      return PROTON_ERR_ENGINE;
+    }
+    proton_browser_session_bind_lifecycle(view->browser_session,
+                                          view->browser_lifecycle);
+    proton_view_events_bind(view->events, config.public_view,
+                            config.public_window);
+    view->has_background_color = config.has_background_color;
+    view->background_color = config.background_color;
+    view->browser_create_pending = 1;
+    proton_engine_view_list_add(window, view);
+    proton_engine_view_schedule_browser_create(view);
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    *out_view = view;
+    return PROTON_OK;
   }
-  *out_view = NULL;
-  if (window == NULL || input_config == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "window and view config are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->closed) {
-    proton_engine_set_message(error, error_len, "window is closed");
-    return PROTON_ERR_DESTROYED;
-  }
-  if (!proton_engine_runtime_initialized()) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  proton_engine_view_config_t config = *input_config;
-
-  proton_engine_view_t *view =
-      (proton_engine_view_t *)calloc(1, sizeof(*view));
-  if (view == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate view state");
-    return PROTON_ERR_ENGINE;
-  }
-  view->window = window;
-  view->native_id = proton_engine_allocate_view_native_id();
-  view->x = config.x;
-  view->y = config.y;
-  view->width = config.width;
-  view->height = config.height;
-  view->z_order = config.z_order;
-  view->zoom_percent = 100;
-  view->audio_muted = 0;
-  view->visible = config.visible;
-  view->browser_lifecycle = proton_browser_lifecycle_create(
-      window->runtime->browsers, PROTON_BROWSER_ROLE_VIEW, view, NULL);
-  if (view->browser_lifecycle == NULL) {
-    free(view);
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate browser lifecycle");
-    return PROTON_ERR_ENGINE;
-  }
-  proton_engine_client_t *client = proton_engine_view_client_create(
-      view->browser_lifecycle);
-  if (client == NULL) {
-    proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
-    proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
-    free(view);
-    proton_engine_set_message(error, error_len, "failed to allocate client");
-    return PROTON_ERR_ENGINE;
-  }
-  proton_browser_lifecycle_set_client(view->browser_lifecycle,
-                                      &client->client);
-  view->initial_url = proton_engine_strdup(
-      config.initial_url[0] != '\0' ? config.initial_url : "about:blank");
-  if (view->initial_url == NULL) {
-    proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
-    proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
-    free(view);
-    proton_engine_set_message(error, error_len,
-                              "failed to copy initial browser url");
-    return PROTON_ERR_ENGINE;
-  }
-  // Views own a browser session with a fixed, non-interactive policy so the
-  // usual browser commands (back/forward/reload/stop/devtools) work per view;
-  // ASK flows are never used here.
-  proton_browser_policy_t view_policy = {PROTON_BROWSER_POLICY_ALLOW,
-                                         PROTON_BROWSER_POLICY_DENY,
-                                         PROTON_BROWSER_POLICY_DENY,
-                                         PROTON_BROWSER_POLICY_DENY,
-                                         PROTON_BROWSER_POLICY_DENY,
-                                         1};
-  view->browser_session = proton_browser_session_create(
-      &view_policy,
-      proton_browser_session_web_request_config(window->browser_session),
-      proton_engine_browser_signal, NULL);
-  view->events = proton_view_events_create();
-  if (view->browser_session == NULL || view->events == NULL) {
-    proton_browser_session_destroy(view->browser_session);
-    proton_view_events_destroy(view->events);
-    free(view->initial_url);
-    proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
-    proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
-    free(view);
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate view state");
-    return PROTON_ERR_ENGINE;
-  }
-  proton_browser_session_bind_lifecycle(view->browser_session,
-                                        view->browser_lifecycle);
-  proton_view_events_bind(view->events, config.public_view,
-                          config.public_window);
-  view->has_background_color = config.has_background_color;
-  view->background_color = config.background_color;
-  view->browser_create_pending = 1;
-  proton_engine_view_list_add(window, view);
-  proton_engine_view_schedule_browser_create(view);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  *out_view = view;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_destroy(proton_engine_view_t *view,
                                    char *error,
                                    size_t error_len) {
-
-  if (view == NULL) {
-    proton_engine_set_message(error, error_len, "view is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (view->closed) {
-    return PROTON_OK;
-  }
-  if (proton_engine_view_browser(view) != NULL) {
-    if (!proton_engine_view_request_browser_close(view, 1)) {
-      proton_engine_set_message(error, error_len,
-                                "browser host is not available for close");
-      return PROTON_ERR_ENGINE;
+  @autoreleasepool {
+    if (view == NULL) {
+      proton_engine_set_message(error, error_len, "view is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (view->closed) {
+      return PROTON_OK;
+    }
+    if (proton_engine_view_browser(view) != NULL) {
+      if (!proton_engine_view_request_browser_close(view, 1)) {
+        proton_engine_set_message(error, error_len,
+                                  "browser host is not available for close");
+        return PROTON_ERR_ENGINE;
+      }
+      proton_engine_view_mark_closed(view);
+      proton_engine_view_defer_finalize(view);
+      proton_engine_view_finalize_if_ready(view);
+      return PROTON_OK;
     }
     proton_engine_view_mark_closed(view);
     proton_engine_view_defer_finalize(view);
     proton_engine_view_finalize_if_ready(view);
     return PROTON_OK;
   }
-  proton_engine_view_mark_closed(view);
-  proton_engine_view_defer_finalize(view);
-  proton_engine_view_finalize_if_ready(view);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_set_bounds(proton_engine_view_t *view,
@@ -614,200 +616,211 @@ int32_t proton_engine_view_set_bounds(proton_engine_view_t *view,
                                       int32_t height,
                                       char *error,
                                       size_t error_len) {
-
-  if (view == NULL || view->closed) {
-    proton_engine_set_message(error, error_len, "view is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (width <= 0 || height <= 0) {
-    proton_engine_set_message(error, error_len,
-                              "view width and height must be positive");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  view->x = x;
-  view->y = y;
-  view->width = width;
-  view->height = height;
-  if (view->window != NULL && view->window->headless) {
-    if (proton_engine_view_browser(view) != NULL) {
-      cef_browser_host_t *host = proton_engine_view_browser(view)->get_host(proton_engine_view_browser(view));
-      if (host != NULL) {
-        host->was_resized(host);
-        host->base.release((cef_base_ref_counted_t *)host);
-      }
+  @autoreleasepool {
+    if (view == NULL || view->closed) {
+      proton_engine_set_message(error, error_len, "view is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-  } else {
-    proton_engine_view_apply_frame(view);
+    if (width <= 0 || height <= 0) {
+      proton_engine_set_message(error, error_len,
+                                "view width and height must be positive");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    view->x = x;
+    view->y = y;
+    view->width = width;
+    view->height = height;
+    if (view->window != NULL && view->window->headless) {
+      if (proton_engine_view_browser(view) != NULL) {
+        cef_browser_host_t *host = proton_engine_view_browser(view)->get_host(proton_engine_view_browser(view));
+        if (host != NULL) {
+          host->was_resized(host);
+          host->base.release((cef_base_ref_counted_t *)host);
+        }
+      }
+    } else {
+      proton_engine_view_apply_frame(view);
+    }
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
   }
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_set_visible(proton_engine_view_t *view,
                                        int32_t visible,
                                        char *error,
                                        size_t error_len) {
-
-  if (view == NULL || view->closed) {
-    proton_engine_set_message(error, error_len, "view is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  view->visible = visible ? 1 : 0;
-  if (view->window != NULL && view->window->headless) {
-    if (proton_engine_view_browser(view) != NULL) {
-      cef_browser_host_t *host = proton_engine_view_browser(view)->get_host(proton_engine_view_browser(view));
-      if (host != NULL && host->was_hidden != NULL) {
-        host->was_hidden(host, view->visible ? 0 : 1);
-        host->base.release((cef_base_ref_counted_t *)host);
-      }
+  @autoreleasepool {
+    if (view == NULL || view->closed) {
+      proton_engine_set_message(error, error_len, "view is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-  } else if (view->browser_view != nil) {
-    [view->browser_view setHidden:view->visible ? NO : YES];
+    view->visible = visible ? 1 : 0;
+    if (view->window != NULL && view->window->headless) {
+      if (proton_engine_view_browser(view) != NULL) {
+        cef_browser_host_t *host = proton_engine_view_browser(view)->get_host(proton_engine_view_browser(view));
+        if (host != NULL && host->was_hidden != NULL) {
+          host->was_hidden(host, view->visible ? 0 : 1);
+          host->base.release((cef_base_ref_counted_t *)host);
+        }
+      }
+    } else if (view->browser_view != nil) {
+      [view->browser_view setHidden:view->visible ? NO : YES];
+    }
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
   }
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_set_z_order(proton_engine_view_t *view,
                                        int32_t z_order,
                                        char *error,
                                        size_t error_len) {
-
-  if (view == NULL || view->closed) {
-    proton_engine_set_message(error, error_len, "view is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  @autoreleasepool {
+    if (view == NULL || view->closed) {
+      proton_engine_set_message(error, error_len, "view is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    view->z_order = z_order;
+    proton_engine_window_layout_views(view->window);
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
   }
-  view->z_order = z_order;
-  proton_engine_window_layout_views(view->window);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_set_zoom_percent(proton_engine_view_t *view,
                                             int32_t zoom_percent,
                                             char *error,
                                             size_t error_len) {
-  if (view == NULL || view->closed) {
-    proton_engine_set_message(error, error_len, "view is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (proton_engine_view_browser(view) != NULL) {
-    int32_t status = proton_browser_set_zoom_percent(
-        proton_engine_view_browser(view), zoom_percent, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
+  @autoreleasepool {
+    if (view == NULL || view->closed) {
+      proton_engine_set_message(error, error_len, "view is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
+    if (proton_engine_view_browser(view) != NULL) {
+      int32_t status = proton_browser_set_zoom_percent(
+          proton_engine_view_browser(view), zoom_percent, error, error_len);
+      if (status != PROTON_OK) {
+        return status;
+      }
+    }
+    view->zoom_percent = zoom_percent;
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
   }
-  view->zoom_percent = zoom_percent;
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_set_audio_muted(proton_engine_view_t *view,
                                            int32_t muted, char *error,
                                            size_t error_len) {
-  if (view == NULL || view->closed) {
-    proton_engine_set_message(error, error_len, "view is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (proton_engine_view_browser(view) != NULL) {
-    int32_t status = proton_browser_set_audio_muted(
-        proton_engine_view_browser(view), muted, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
+  @autoreleasepool {
+    if (view == NULL || view->closed) {
+      proton_engine_set_message(error, error_len, "view is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
+    if (proton_engine_view_browser(view) != NULL) {
+      int32_t status = proton_browser_set_audio_muted(
+          proton_engine_view_browser(view), muted, error, error_len);
+      if (status != PROTON_OK) {
+        return status;
+      }
+    }
+    view->audio_muted = muted != 0;
+    return PROTON_OK;
   }
-  view->audio_muted = muted != 0;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_is_audio_muted(proton_engine_view_t *view,
                                           int32_t *out_muted, char *error,
                                           size_t error_len) {
-  if (view == NULL || view->closed || out_muted == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "view and muted output are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (proton_engine_view_browser(view) != NULL) {
-    int32_t status = proton_browser_is_audio_muted(
-        proton_engine_view_browser(view), out_muted, error, error_len);
-    if (status != PROTON_OK) {
-      return status;
+  @autoreleasepool {
+    if (view == NULL || view->closed || out_muted == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "view and muted output are required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-    view->audio_muted = *out_muted != 0;
-  } else {
-    *out_muted = view->audio_muted ? 1 : 0;
+    if (proton_engine_view_browser(view) != NULL) {
+      int32_t status = proton_browser_is_audio_muted(
+          proton_engine_view_browser(view), out_muted, error, error_len);
+      if (status != PROTON_OK) {
+        return status;
+      }
+      view->audio_muted = *out_muted != 0;
+    } else {
+      *out_muted = view->audio_muted ? 1 : 0;
+    }
+    return PROTON_OK;
   }
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_load_url(proton_engine_view_t *view,
                                     const char *url,
                                     char *error,
                                     size_t error_len) {
-
-  if (view == NULL || view->closed) {
-    proton_engine_set_message(error, error_len, "view is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if ((proton_engine_view_browser(view) == NULL &&
-       (view->browser_create_pending || view->browser_create_scheduled)) ||
-      view->initial_navigation_pending) {
-    char *url_copy =
-        proton_engine_strdup(url != NULL && url[0] != '\0' ? url : "about:blank");
-    if (url_copy == NULL) {
-      proton_engine_set_message(error, error_len,
-                                "failed to copy pending browser url");
+  @autoreleasepool {
+    if (view == NULL || view->closed) {
+      proton_engine_set_message(error, error_len, "view is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if ((proton_engine_view_browser(view) == NULL &&
+         (view->browser_create_pending || view->browser_create_scheduled)) ||
+        view->initial_navigation_pending) {
+      char *url_copy =
+          proton_engine_strdup(url != NULL && url[0] != '\0' ? url : "about:blank");
+      if (url_copy == NULL) {
+        proton_engine_set_message(error, error_len,
+                                  "failed to copy pending browser url");
+        return PROTON_ERR_ENGINE;
+      }
+      free(view->initial_url);
+      view->initial_url = url_copy;
+      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+      return PROTON_OK;
+    }
+    if (proton_engine_view_browser(view) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    cef_frame_t *frame = proton_engine_view_browser(view)->get_main_frame(proton_engine_view_browser(view));
+    if (frame == NULL) {
+      proton_engine_set_message(error, error_len, "main frame is not available");
       return PROTON_ERR_ENGINE;
     }
-    free(view->initial_url);
-    view->initial_url = url_copy;
+    cef_string_t cef_url = {0};
+    proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
+    frame->load_url(frame, &cef_url);
+    cef_string_clear(&cef_url);
+    frame->base.release((cef_base_ref_counted_t *)frame);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
-  if (proton_engine_view_browser(view) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  cef_frame_t *frame = proton_engine_view_browser(view)->get_main_frame(proton_engine_view_browser(view));
-  if (frame == NULL) {
-    proton_engine_set_message(error, error_len, "main frame is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_string_t cef_url = {0};
-  proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
-  frame->load_url(frame, &cef_url);
-  cef_string_clear(&cef_url);
-  frame->base.release((cef_base_ref_counted_t *)frame);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_eval(proton_engine_view_t *view,
                                 const char *script,
                                 char *error,
                                 size_t error_len) {
-
-  if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    cef_frame_t *frame = proton_engine_view_browser(view)->get_main_frame(proton_engine_view_browser(view));
+    if (frame == NULL) {
+      proton_engine_set_message(error, error_len, "main frame is not available");
+      return PROTON_ERR_ENGINE;
+    }
+    cef_string_t code = {0};
+    cef_string_t script_url = {0};
+    proton_engine_set_string(&code, script != NULL ? script : "");
+    proton_engine_set_string(&script_url, "proton://eval.js");
+    frame->execute_java_script(frame, &code, &script_url, 1);
+    cef_string_clear(&code);
+    cef_string_clear(&script_url);
+    frame->base.release((cef_base_ref_counted_t *)frame);
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
   }
-  cef_frame_t *frame = proton_engine_view_browser(view)->get_main_frame(proton_engine_view_browser(view));
-  if (frame == NULL) {
-    proton_engine_set_message(error, error_len, "main frame is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_string_t code = {0};
-  cef_string_t script_url = {0};
-  proton_engine_set_string(&code, script != NULL ? script : "");
-  proton_engine_set_string(&script_url, "proton://eval.js");
-  frame->execute_java_script(frame, &code, &script_url, 1);
-  cef_string_clear(&code);
-  cef_string_clear(&script_url);
-  frame->base.release((cef_base_ref_counted_t *)frame);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_browser_command(proton_engine_view_t *view,
@@ -815,84 +828,95 @@ int32_t proton_engine_view_browser_command(proton_engine_view_t *view,
                                                 int32_t download_id,
                                                 char *error,
                                                 size_t error_len) {
-
-  if (view == NULL || view->closed || view->browser_session == NULL ||
-      proton_engine_view_browser(view) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (view == NULL || view->closed || view->browser_session == NULL ||
+        proton_engine_view_browser(view) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_session_command(view->browser_session,
+                                          proton_engine_view_browser(view), command,
+                                          download_id, error, error_len);
   }
-  return proton_browser_session_command(view->browser_session,
-                                        proton_engine_view_browser(view), command,
-                                        download_id, error, error_len);
 }
 
 int32_t proton_engine_view_get_browser_focus_state(
     proton_engine_view_t *view, int32_t *out_focused,
     char *error, size_t error_len) {
-  if (view == NULL || view->closed || view->browser_session == NULL ||
-      proton_engine_view_browser(view) == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (view == NULL || view->closed || view->browser_session == NULL ||
+        proton_engine_view_browser(view) == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    if (out_focused == NULL) {
+      proton_engine_set_message(error, error_len, "focus output is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (view->window != NULL && view->window->headless) {
+      return proton_browser_headless_is_focused(
+          proton_engine_view_browser(view), out_focused, error, error_len);
+    }
+    *out_focused = proton_engine_browser_view_is_focused(view->browser_view);
+    return PROTON_OK;
   }
-  if (out_focused == NULL) {
-    proton_engine_set_message(error, error_len, "focus output is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (view->window != NULL && view->window->headless) {
-    return proton_browser_headless_is_focused(
-        proton_engine_view_browser(view), out_focused, error, error_len);
-  }
-  *out_focused = proton_engine_browser_view_is_focused(view->browser_view);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_view_get_devtools_state(
     proton_engine_view_t *view, int32_t *out_opened,
     char *error, size_t error_len) {
-  if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_is_devtools_opened(
+        proton_engine_view_browser(view), out_opened, error, error_len);
   }
-  return proton_browser_is_devtools_opened(
-      proton_engine_view_browser(view), out_opened, error, error_len);
 }
 
 int32_t proton_engine_view_get_navigation_state(
     proton_engine_view_t *view, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len) {
-  if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_navigation_state(
+        proton_engine_view_browser(view), out_can_go_back, out_can_go_forward, error, error_len);
   }
-  return proton_browser_navigation_state(
-      proton_engine_view_browser(view), out_can_go_back, out_can_go_forward, error, error_len);
 }
 
 int32_t proton_engine_view_find_in_page(
     proton_engine_view_t *view, const char *text, int32_t forward,
     int32_t match_case, int32_t find_next, int32_t *out_request_id,
     char *error, size_t error_len) {
-  if (view == NULL || view->closed || view->browser_session == NULL ||
-      proton_engine_view_browser(view) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (view == NULL || view->closed || view->browser_session == NULL ||
+        proton_engine_view_browser(view) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_find_in_page(
+        view->browser_session, proton_engine_view_browser(view), text, forward, match_case,
+        find_next, out_request_id, error, error_len);
   }
-  return proton_browser_find_in_page(
-      view->browser_session, proton_engine_view_browser(view), text, forward, match_case,
-      find_next, out_request_id, error, error_len);
 }
 
 int32_t proton_engine_view_stop_find_in_page(
     proton_engine_view_t *view, int32_t clear_selection, char *error,
     size_t error_len) {
-  if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (view == NULL || view->closed || proton_engine_view_browser(view) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_stop_find_in_page(
+        proton_engine_view_browser(view), clear_selection, error, error_len);
   }
-  return proton_browser_stop_find_in_page(
-      proton_engine_view_browser(view), clear_selection, error, error_len);
 }
 
 #endif

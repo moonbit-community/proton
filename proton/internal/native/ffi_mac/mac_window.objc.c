@@ -453,11 +453,13 @@ static void proton_engine_window_commit_appkit_close(
   }
   window->appkit_closing = 1;
   proton_engine_window_close_views(window);
-  // Clear borrowed child-view pointers first so deferred close callbacks never
-  // message AppKit objects released while the main browser view is detached.
+  // Detach child hosts while their borrowed pointers are still valid. A
+  // deferred do_close must not depend on the old content view being destroyed.
   for (proton_engine_view_t *view = window->views; view != NULL;
        view = view->next) {
+    NSView *child_host = view->browser_view;
     view->browser_view = nil;
+    [child_host removeFromSuperview];
   }
   if (proton_engine_window_browser(window) != NULL) {
     proton_engine_bridge_pending_remove_browser(window->runtime,
@@ -470,8 +472,8 @@ static void proton_engine_window_commit_appkit_close(
 
   // A windowed CEF browser completes close only after CefBrowserHostView is
   // destroyed. AppKit may still route responder and hierarchy callbacks to
-  // the browser view during windowWillClose, so detach it from both before
-  // dropping the retain that lets its dealloc deliver WindowDestroyed.
+  // the browser view during windowWillClose, so detach it from both. The
+  // host pointer is borrowed from CEF: Proton owns no retain to release.
   [native_window makeFirstResponder:nil];
   if (browser_view != nil) {
     [browser_view removeFromSuperview];
@@ -481,9 +483,6 @@ static void proton_engine_window_commit_appkit_close(
   NSView *empty_content_view = [[NSView alloc] initWithFrame:NSZeroRect];
   [native_window setContentView:empty_content_view];
   [empty_content_view release];
-  if (browser_view != nil) {
-    [browser_view release];
-  }
   [native_window autorelease];
 }
 
@@ -585,19 +584,21 @@ int32_t proton_engine_window_get_titlebar_area(
     proton_engine_window_t *window, int32_t *out_x, int32_t *out_y,
     int32_t *out_width, int32_t *out_height, int32_t *out_zoom_percent,
     char *error, size_t error_len) {
-  if (window == NULL || out_x == NULL || out_y == NULL ||
-      out_width == NULL || out_height == NULL || out_zoom_percent == NULL) {
-    proton_engine_set_message(error, error_len, "window and outputs are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  @autoreleasepool {
+    if (window == NULL || out_x == NULL || out_y == NULL ||
+        out_width == NULL || out_height == NULL || out_zoom_percent == NULL) {
+      proton_engine_set_message(error, error_len, "window and outputs are required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    proton_engine_titlebar_area_t area =
+        proton_engine_window_titlebar_area(window);
+    *out_x = area.x;
+    *out_y = area.y;
+    *out_width = area.width;
+    *out_height = area.height;
+    *out_zoom_percent = area.zoom_percent;
+    return PROTON_OK;
   }
-  proton_engine_titlebar_area_t area =
-      proton_engine_window_titlebar_area(window);
-  *out_x = area.x;
-  *out_y = area.y;
-  *out_width = area.width;
-  *out_height = area.height;
-  *out_zoom_percent = area.zoom_percent;
-  return PROTON_OK;
 }
 
 @interface ProtonWindow : NSWindow {
@@ -979,175 +980,176 @@ int32_t proton_engine_window_create(
     proton_engine_runtime_t *runtime,
     const proton_engine_window_config_t *input_config,
     proton_engine_window_t **out_window, char *error, size_t error_len) {
-
-  if (out_window == NULL) {
-    proton_engine_set_message(error, error_len, "out_window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_window = NULL;
-  if (runtime == NULL || input_config == NULL ||
-      !proton_engine_runtime_initialized()) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  proton_engine_window_config_t config = *input_config;
-  if (runtime->headless && config.titlebar_overlay) {
-    proton_engine_set_message(
-        error, error_len,
-        "titlebar overlay is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-
-  proton_engine_window_t *window =
-      (proton_engine_window_t *)calloc(1, sizeof(*window));
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate window state");
-    return PROTON_ERR_ENGINE;
-  }
-  window->runtime = runtime;
-  window->public_window_id = config.public_window;
-  window->native_id = g_next_window_native_id++;
-  if (g_next_window_native_id == 0) {
-    g_next_window_native_id = 1;
-  }
-  window->width = config.width;
-  window->height = config.height;
-  window->min_width = config.size_hint == 2 ? config.width : 0;
-  window->min_height = config.size_hint == 2 ? config.height : 0;
-  window->max_width = config.size_hint == 3 ? config.width : 0;
-  window->max_height = config.size_hint == 3 ? config.height : 0;
-  window->zoom_percent = 100;
-  window->titlebar_overlay = config.titlebar_overlay;
-  window->window_button_visible = 1;
-  window->button_position_custom = config.button_position_custom;
-  window->button_position_x = config.button_position_x;
-  window->button_position_y = config.button_position_y;
-  window->theme_preference = config.theme_preference;
-  window->maximizable = 1;
-  window->closable = 1;
-  window->fullscreenable = 1;
-  window->enabled = 1;
-  window->headless = runtime->headless;
-  window->bridge_config = config.bridge_config;
-  proton_bridge_config_retain(window->bridge_config);
-  window->max_bridge_payload_bytes = config.max_bridge_payload_bytes;
-  window->browser_session = proton_browser_session_create(
-      &config.browser_policy, config.web_request_config,
-      proton_engine_browser_signal, NULL);
-  window->browser_lifecycle = proton_browser_lifecycle_create(
-      runtime->browsers, PROTON_BROWSER_ROLE_MAIN, window, NULL);
-  if (window->browser_session == NULL || window->browser_lifecycle == NULL) {
-    proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
-    proton_internal_bridge_config_destroy(window->bridge_config);
-    proton_browser_session_destroy(window->browser_session);
-    free(window);
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate browser state");
-    return PROTON_ERR_ENGINE;
-  }
-  proton_browser_session_bind_window(window->browser_session,
-                                     config.public_window);
-  proton_browser_session_bind_lifecycle(window->browser_session,
-                                        window->browser_lifecycle);
-  proton_engine_client_t *client = proton_engine_client_create(
-      window->browser_lifecycle, config.web_request_config);
-  if (client == NULL) {
-    proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
-    proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
-    proton_browser_session_destroy(window->browser_session);
-    proton_internal_bridge_config_destroy(window->bridge_config);
-    free(window);
-    proton_engine_set_message(error, error_len, "failed to allocate client");
-    return PROTON_ERR_ENGINE;
-  }
-  proton_browser_lifecycle_set_client(window->browser_lifecycle,
-                                      &client->client);
-
-  ProtonWindowDelegate *delegate = nil;
-  if (!window->headless) {
-    NSRect rect = NSMakeRect(0, 0, config.width, config.height);
-    NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
-                       NSWindowStyleMaskMiniaturizable;
-    if (config.size_hint != 1) {
-      style |= NSWindowStyleMaskResizable;
+  @autoreleasepool {
+    if (out_window == NULL) {
+      proton_engine_set_message(error, error_len, "out_window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-    if (config.titlebar_overlay) {
-      style |= NSWindowStyleMaskFullSizeContentView;
+    *out_window = NULL;
+    if (runtime == NULL || input_config == NULL ||
+        !proton_engine_runtime_initialized()) {
+      proton_engine_set_message(error, error_len, "runtime is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
     }
-    NSString *title = [NSString stringWithUTF8String:config.title];
-    window->window = [[ProtonWindow alloc] initWithContentRect:rect
-                                                 styleMask:style
-                                                   backing:NSBackingStoreBuffered
-                                                     defer:NO];
-    if (window->window == nil) {
+    proton_engine_window_config_t config = *input_config;
+    if (runtime->headless && config.titlebar_overlay) {
+      proton_engine_set_message(
+          error, error_len,
+          "titlebar overlay is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+
+    proton_engine_window_t *window =
+        (proton_engine_window_t *)calloc(1, sizeof(*window));
+    if (window == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "failed to allocate window state");
+      return PROTON_ERR_ENGINE;
+    }
+    window->runtime = runtime;
+    window->public_window_id = config.public_window;
+    window->native_id = g_next_window_native_id++;
+    if (g_next_window_native_id == 0) {
+      g_next_window_native_id = 1;
+    }
+    window->width = config.width;
+    window->height = config.height;
+    window->min_width = config.size_hint == 2 ? config.width : 0;
+    window->min_height = config.size_hint == 2 ? config.height : 0;
+    window->max_width = config.size_hint == 3 ? config.width : 0;
+    window->max_height = config.size_hint == 3 ? config.height : 0;
+    window->zoom_percent = 100;
+    window->titlebar_overlay = config.titlebar_overlay;
+    window->window_button_visible = 1;
+    window->button_position_custom = config.button_position_custom;
+    window->button_position_x = config.button_position_x;
+    window->button_position_y = config.button_position_y;
+    window->theme_preference = config.theme_preference;
+    window->maximizable = 1;
+    window->closable = 1;
+    window->fullscreenable = 1;
+    window->enabled = 1;
+    window->headless = runtime->headless;
+    window->bridge_config = config.bridge_config;
+    proton_bridge_config_retain(window->bridge_config);
+    window->max_bridge_payload_bytes = config.max_bridge_payload_bytes;
+    window->browser_session = proton_browser_session_create(
+        &config.browser_policy, config.web_request_config,
+        proton_engine_browser_signal, NULL);
+    window->browser_lifecycle = proton_browser_lifecycle_create(
+        runtime->browsers, PROTON_BROWSER_ROLE_MAIN, window, NULL);
+    if (window->browser_session == NULL || window->browser_lifecycle == NULL) {
+      proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
+      proton_internal_bridge_config_destroy(window->bridge_config);
+      proton_browser_session_destroy(window->browser_session);
+      free(window);
+      proton_engine_set_message(error, error_len,
+                                "failed to allocate browser state");
+      return PROTON_ERR_ENGINE;
+    }
+    proton_browser_session_bind_window(window->browser_session,
+                                       config.public_window);
+    proton_browser_session_bind_lifecycle(window->browser_session,
+                                          window->browser_lifecycle);
+    proton_engine_client_t *client = proton_engine_client_create(
+        window->browser_lifecycle, config.web_request_config);
+    if (client == NULL) {
       proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
       proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
       proton_browser_session_destroy(window->browser_session);
       proton_internal_bridge_config_destroy(window->bridge_config);
       free(window);
-      proton_engine_set_message(error, error_len, "window creation failed");
-      return PROTON_ERR_PLATFORM;
+      proton_engine_set_message(error, error_len, "failed to allocate client");
+      return PROTON_ERR_ENGINE;
     }
-    // The close delegate tears down the CEF view hierarchy before releasing
-    // the window from the message-pump autorelease pool. Releasing directly in
-    // AppKit's close callback can destroy CEF state while that callback is
-    // still on the stack.
-    [window->window setReleasedWhenClosed:NO];
-    // Proton owns window restoration through its application manifest and
-    // runtime session. Letting AppKit persist the same windows creates a second
-    // lifecycle owner and can block startup on its crash-recovery UI before
-    // Proton has created a window of its own.
-    [window->window setRestorable:NO];
-    [window->window disableSnapshotRestoration];
-    [window->window setTitle:title != nil ? title : @"Proton"];
-    proton_engine_window_apply_theme_preference(window);
-    proton_engine_apply_size_constraints(window);
-    if (config.titlebar_overlay) {
-      [window->window setTitleVisibility:NSWindowTitleHidden];
-      [window->window setTitlebarAppearsTransparent:YES];
-    }
-    [window->window center];
-    ProtonContentView *content_view = [[ProtonContentView alloc]
-        initWithFrame:[[window->window contentView] bounds]];
-    content_view->window = window;
-    [content_view setAutoresizingMask:NSViewWidthSizable |
-                                      NSViewHeightSizable];
-    [window->window setContentView:content_view];
-    window->content_view = content_view;
-    [content_view release];
-    delegate = [[ProtonWindowDelegate alloc] init];
-    delegate->window = window;
-    window->delegate = delegate;
-    [window->window setDelegate:delegate];
-    [(ProtonWindow *)window->window setButtonOwner:window];
-    [window->window layoutIfNeeded];
-  }
+    proton_browser_lifecycle_set_client(window->browser_lifecycle,
+                                        &client->client);
 
-  window->initial_url =
-      proton_engine_strdup(config.initial_url[0] != '\0' ? config.initial_url
-                                                         : "about:blank");
-  if (window->initial_url == NULL) {
-    if (window->window != nil) {
-      [window->window close];
+    ProtonWindowDelegate *delegate = nil;
+    if (!window->headless) {
+      NSRect rect = NSMakeRect(0, 0, config.width, config.height);
+      NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
+                         NSWindowStyleMaskMiniaturizable;
+      if (config.size_hint != 1) {
+        style |= NSWindowStyleMaskResizable;
+      }
+      if (config.titlebar_overlay) {
+        style |= NSWindowStyleMaskFullSizeContentView;
+      }
+      NSString *title = [NSString stringWithUTF8String:config.title];
+      window->window = [[ProtonWindow alloc] initWithContentRect:rect
+                                                   styleMask:style
+                                                     backing:NSBackingStoreBuffered
+                                                       defer:NO];
+      if (window->window == nil) {
+        proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
+        proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
+        proton_browser_session_destroy(window->browser_session);
+        proton_internal_bridge_config_destroy(window->bridge_config);
+        free(window);
+        proton_engine_set_message(error, error_len, "window creation failed");
+        return PROTON_ERR_PLATFORM;
+      }
+      // The close delegate tears down the CEF view hierarchy before releasing
+      // the window from the message-pump autorelease pool. Releasing directly in
+      // AppKit's close callback can destroy CEF state while that callback is
+      // still on the stack.
+      [window->window setReleasedWhenClosed:NO];
+      // Proton owns window restoration through its application manifest and
+      // runtime session. Letting AppKit persist the same windows creates a second
+      // lifecycle owner and can block startup on its crash-recovery UI before
+      // Proton has created a window of its own.
+      [window->window setRestorable:NO];
+      [window->window disableSnapshotRestoration];
+      [window->window setTitle:title != nil ? title : @"Proton"];
+      proton_engine_window_apply_theme_preference(window);
+      proton_engine_apply_size_constraints(window);
+      if (config.titlebar_overlay) {
+        [window->window setTitleVisibility:NSWindowTitleHidden];
+        [window->window setTitlebarAppearsTransparent:YES];
+      }
+      [window->window center];
+      ProtonContentView *content_view = [[ProtonContentView alloc]
+          initWithFrame:[[window->window contentView] bounds]];
+      content_view->window = window;
+      [content_view setAutoresizingMask:NSViewWidthSizable |
+                                        NSViewHeightSizable];
+      [window->window setContentView:content_view];
+      window->content_view = content_view;
+      [content_view release];
+      delegate = [[ProtonWindowDelegate alloc] init];
+      delegate->window = window;
+      window->delegate = delegate;
+      [window->window setDelegate:delegate];
+      [(ProtonWindow *)window->window setButtonOwner:window];
+      [window->window layoutIfNeeded];
     }
-    if (delegate != nil) {
-      [delegate release];
+
+    window->initial_url =
+        proton_engine_strdup(config.initial_url[0] != '\0' ? config.initial_url
+                                                           : "about:blank");
+    if (window->initial_url == NULL) {
+      if (window->window != nil) {
+        [window->window close];
+      }
+      if (delegate != nil) {
+        [delegate release];
+      }
+      proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
+      proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
+      proton_browser_session_destroy(window->browser_session);
+      proton_internal_bridge_config_destroy(window->bridge_config);
+      free(window);
+      proton_engine_set_message(error, error_len,
+                                "failed to copy initial browser url");
+      return PROTON_ERR_ENGINE;
     }
-    proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
-    proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
-    proton_browser_session_destroy(window->browser_session);
-    proton_internal_bridge_config_destroy(window->bridge_config);
-    free(window);
-    proton_engine_set_message(error, error_len,
-                              "failed to copy initial browser url");
-    return PROTON_ERR_ENGINE;
+    window->browser_create_pending = 1;
+    proton_engine_window_list_add(window);
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    *out_window = window;
+    return PROTON_OK;
   }
-  window->browser_create_pending = 1;
-  proton_engine_window_list_add(window);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  *out_window = window;
-  return PROTON_OK;
 }
 
 static void proton_engine_window_free(proton_engine_window_t *window) {
@@ -1233,126 +1235,132 @@ void proton_engine_window_finalize_if_ready(
 int32_t proton_engine_window_destroy(proton_engine_window_t *window,
                                      char *error,
                                      size_t error_len) {
-
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  proton_engine_window_close_views(window);
-  if (proton_engine_window_browser(window) != NULL) {
-    if (!proton_engine_window_request_browser_close(window, 1)) {
-      proton_engine_set_message(error, error_len,
-                                "browser host is not available for close");
-      return PROTON_ERR_ENGINE;
+  @autoreleasepool {
+    if (window == NULL) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    proton_engine_window_close_views(window);
+    if (proton_engine_window_browser(window) != NULL) {
+      if (!proton_engine_window_request_browser_close(window, 1)) {
+        proton_engine_set_message(error, error_len,
+                                  "browser host is not available for close");
+        return PROTON_ERR_ENGINE;
+      }
+      proton_engine_window_mark_closed(window);
+      proton_engine_window_defer_finalize(window);
+      proton_engine_window_finalize_if_ready(window);
+      return PROTON_OK;
     }
     proton_engine_window_mark_closed(window);
     proton_engine_window_defer_finalize(window);
     proton_engine_window_finalize_if_ready(window);
     return PROTON_OK;
   }
-  proton_engine_window_mark_closed(window);
-  proton_engine_window_defer_finalize(window);
-  proton_engine_window_finalize_if_ready(window);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_show(proton_engine_window_t *window,
                                   char *error,
                                   size_t error_len) {
-
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    window->headless_hidden = 0;
-    if (proton_engine_window_browser(window) != NULL) {
-      cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
-      if (host != NULL) {
-        host->was_hidden(host, 0);
-        host->base.release((cef_base_ref_counted_t *)host);
-      }
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-  } else {
-    [window->window makeKeyAndOrderFront:nil];
-    [NSApp activateIgnoringOtherApps:YES];
+    if (window->headless) {
+      window->headless_hidden = 0;
+      if (proton_engine_window_browser(window) != NULL) {
+        cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
+        if (host != NULL) {
+          host->was_hidden(host, 0);
+          host->base.release((cef_base_ref_counted_t *)host);
+        }
+      }
+    } else {
+      [window->window makeKeyAndOrderFront:nil];
+      [NSApp activateIgnoringOtherApps:YES];
+    }
+    return PROTON_OK;
   }
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_show_inactive(proton_engine_window_t *window,
                                            char *error, size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) return proton_engine_window_show(window, error, error_len);
+    [window->window orderFront:nil];
+    return PROTON_OK;
   }
-  if (window->headless) return proton_engine_window_show(window, error, error_len);
-  [window->window orderFront:nil];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_hide(proton_engine_window_t *window,
                                   char *error,
                                   size_t error_len) {
-
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    window->headless_hidden = 1;
-    if (proton_engine_window_browser(window) != NULL) {
-      cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
-      if (host != NULL) {
-        host->was_hidden(host, 1);
-        host->base.release((cef_base_ref_counted_t *)host);
-      }
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-  } else {
-    [window->window orderOut:nil];
+    if (window->headless) {
+      window->headless_hidden = 1;
+      if (proton_engine_window_browser(window) != NULL) {
+        cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
+        if (host != NULL) {
+          host->was_hidden(host, 1);
+          host->base.release((cef_base_ref_counted_t *)host);
+        }
+      }
+    } else {
+      [window->window orderOut:nil];
+    }
+    return PROTON_OK;
   }
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_close(proton_engine_window_t *window,
                                    char *error,
                                    size_t error_len) {
-
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless && window->close_interception_enabled &&
-      !window->close_authorized) {
-    if (!window->close_request_pending) {
-      window->close_request_id++;
-      if (window->close_request_id == 0) {
-        window->close_request_id = 1;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless && window->close_interception_enabled &&
+        !window->close_authorized) {
+      if (!window->close_request_pending) {
+        window->close_request_id++;
+        if (window->close_request_id == 0) {
+          window->close_request_id = 1;
+        }
+        window->close_request_pending = 1;
+        (void)proton_event_publish_window_close_requested(
+            window->public_window_id, window->close_request_id);
+        proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
       }
-      window->close_request_pending = 1;
-      (void)proton_event_publish_window_close_requested(
-          window->public_window_id, window->close_request_id);
-      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+      return PROTON_OK;
     }
-    return PROTON_OK;
-  }
-  if (!window->headless) {
-    window->programmatic_close_pending = 1;
-    proton_engine_window_apply_closable_style(window);
-    [window->window performClose:nil];
-    return PROTON_OK;
-  }
-  if (proton_engine_window_browser(window) != NULL) {
-    if (!proton_engine_window_request_browser_close(window, 0)) {
-      proton_engine_set_message(error, error_len,
-                                "browser host is not available for close");
-      return PROTON_ERR_ENGINE;
+    if (!window->headless) {
+      window->programmatic_close_pending = 1;
+      proton_engine_window_apply_closable_style(window);
+      [window->window performClose:nil];
+      return PROTON_OK;
     }
+    if (proton_engine_window_browser(window) != NULL) {
+      if (!proton_engine_window_request_browser_close(window, 0)) {
+        proton_engine_set_message(error, error_len,
+                                  "browser host is not available for close");
+        return PROTON_ERR_ENGINE;
+      }
+      return PROTON_OK;
+    }
+    proton_engine_window_mark_closed(window);
+    window->browser_create_pending = 0;
     return PROTON_OK;
   }
-  proton_engine_window_mark_closed(window);
-  window->browser_create_pending = 0;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_is_closed(proton_engine_window_t *window) {
@@ -1366,147 +1374,157 @@ int32_t proton_engine_window_is_closed(proton_engine_window_t *window) {
 int32_t proton_engine_window_popup_menu(
     proton_engine_window_t *window, int32_t x, int32_t y,
     const proton_menu_bar_t *menu_bar, char *error, size_t error_len) {
-  if (window == NULL || !proton_engine_runtime_initialized()) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || !proton_engine_runtime_initialized()) {
+      proton_engine_set_message(error, error_len, "runtime is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    if (menu_bar == NULL || menu_bar->menu_count == 0) {
+      proton_engine_set_message(error, error_len,
+                                "popup menu requires at least one menu");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->browser_view == nil) {
+      proton_engine_set_message(error, error_len,
+                                "window is not ready for a popup menu");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    NSView *view = window->browser_view;
+    __block int32_t status = PROTON_OK;
+    char main_error[512] = {0};
+    char *main_error_buffer = main_error;
+    /* Context menus can be the only menu surface in an application. Keep the
+       runtime route installed while AppKit dispatches the synchronous popup so
+       command items use the same event path as the application menu. */
+    proton_engine_menu_set_runtime(window->runtime);
+    void (^work)(void) = ^{
+      @autoreleasepool {
+        status = proton_engine_menu_popup_on_main(
+            (__bridge void *)view, x, y, menu_bar, main_error_buffer,
+            sizeof(main_error));
+      }
+    };
+    if ([NSThread isMainThread]) {
+      work();
+    } else {
+      dispatch_sync(dispatch_get_main_queue(), work);
+    }
+    if (status != PROTON_OK) {
+      proton_engine_set_message(error, error_len, main_error);
+    }
+    return status;
   }
-  if (menu_bar == NULL || menu_bar->menu_count == 0) {
-    proton_engine_set_message(error, error_len,
-                              "popup menu requires at least one menu");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->browser_view == nil) {
-    proton_engine_set_message(error, error_len,
-                              "window is not ready for a popup menu");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  NSView *view = window->browser_view;
-  __block int32_t status = PROTON_OK;
-  char main_error[512] = {0};
-  char *main_error_buffer = main_error;
-  /* Context menus can be the only menu surface in an application. Keep the
-     runtime route installed while AppKit dispatches the synchronous popup so
-     command items use the same event path as the application menu. */
-  proton_engine_menu_set_runtime(window->runtime);
-  void (^work)(void) = ^{
-    status = proton_engine_menu_popup_on_main(
-        (__bridge void *)view, x, y, menu_bar, main_error_buffer,
-        sizeof(main_error));
-  };
-  if ([NSThread isMainThread]) {
-    work();
-  } else {
-    dispatch_sync(dispatch_get_main_queue(), work);
-  }
-  if (status != PROTON_OK) {
-    proton_engine_set_message(error, error_len, main_error);
-  }
-  return status;
 }
 
 int32_t proton_engine_window_focus(proton_engine_window_t *window,
                                    char *error,
                                    size_t error_len) {
-
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    window->headless_focused = 1;
-    if (proton_engine_window_browser(window) != NULL) {
-      cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
-      if (host != NULL) {
-        host->set_focus(host, 1);
-        host->base.release((cef_base_ref_counted_t *)host);
-      }
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-  } else {
-    [NSApp activateIgnoringOtherApps:YES];
-    [window->window makeKeyAndOrderFront:nil];
+    if (window->headless) {
+      window->headless_focused = 1;
+      if (proton_engine_window_browser(window) != NULL) {
+        cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
+        if (host != NULL) {
+          host->set_focus(host, 1);
+          host->base.release((cef_base_ref_counted_t *)host);
+        }
+      }
+    } else {
+      [NSApp activateIgnoringOtherApps:YES];
+      [window->window makeKeyAndOrderFront:nil];
+    }
+    return PROTON_OK;
   }
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_title(proton_engine_window_t *window,
                                        const char *title,
                                        char *error,
                                        size_t error_len) {
-
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window title is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    NSString *value = [NSString stringWithUTF8String:title != NULL ? title : ""];
+    [window->window setTitle:value != nil ? value : @""];
+    return PROTON_OK;
   }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window title is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  NSString *value = [NSString stringWithUTF8String:title != NULL ? title : ""];
-  [window->window setTitle:value != nil ? value : @""];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_icon(proton_engine_window_t *window,
                                       const char *path, char *error,
                                       size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (path == NULL || path[0] == '\0') {
+      proton_engine_set_message(error, error_len, "icon path is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window icon is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    NSString *value = [NSString stringWithUTF8String:path];
+    NSImage *image = [[NSImage alloc] initWithContentsOfFile:value];
+    if (image == nil) {
+      proton_engine_set_message(error, error_len, "failed to load window icon");
+      return PROTON_ERR_PLATFORM;
+    }
+    [window->window setMiniwindowImage:image];
+    [image release];
+    return PROTON_OK;
   }
-  if (path == NULL || path[0] == '\0') {
-    proton_engine_set_message(error, error_len, "icon path is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window icon is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  NSString *value = [NSString stringWithUTF8String:path];
-  NSImage *image = [[NSImage alloc] initWithContentsOfFile:value];
-  if (image == nil) {
-    proton_engine_set_message(error, error_len, "failed to load window icon");
-    return PROTON_ERR_PLATFORM;
-  }
-  [window->window setMiniwindowImage:image];
-  [image release];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_parent(proton_engine_window_t *window,
                                         proton_engine_window_t *parent,
                                         int32_t modal, char *error,
                                         size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (modal != 0 && modal != 1) {
+      proton_engine_set_message(error, error_len, "modal must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window parenting is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    NSWindow *native = window->window;
+    NSWindow *sheet_parent = native.sheetParent;
+    if (sheet_parent != nil) [sheet_parent endSheet:native];
+    NSWindow *child_parent = native.parentWindow;
+    if (child_parent != nil) [child_parent removeChildWindow:native];
+    if (parent == NULL) return PROTON_OK;
+    if (parent->window == nil) {
+      proton_engine_set_message(error, error_len, "parent window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (modal) {
+      [parent->window beginSheet:native completionHandler:nil];
+    } else {
+      [parent->window addChildWindow:native ordered:NSWindowAbove];
+    }
+    return PROTON_OK;
   }
-  if (modal != 0 && modal != 1) {
-    proton_engine_set_message(error, error_len, "modal must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window parenting is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  NSWindow *native = window->window;
-  NSWindow *sheet_parent = native.sheetParent;
-  if (sheet_parent != nil) [sheet_parent endSheet:native];
-  NSWindow *child_parent = native.parentWindow;
-  if (child_parent != nil) [child_parent removeChildWindow:native];
-  if (parent == NULL) return PROTON_OK;
-  if (parent->window == nil) {
-    proton_engine_set_message(error, error_len, "parent window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (modal) {
-    [parent->window beginSheet:native completionHandler:nil];
-  } else {
-    [parent->window addChildWindow:native ordered:NSWindowAbove];
-  }
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_size(proton_engine_window_t *window,
@@ -1514,204 +1532,219 @@ int32_t proton_engine_window_set_size(proton_engine_window_t *window,
                                       int32_t height,
                                       char *error,
                                       size_t error_len) {
-
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (width <= 0 || height <= 0) {
-    proton_engine_set_message(error, error_len,
-                              "width and height must be positive");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  window->width = width;
-  window->height = height;
-  if (window->headless) {
-    if (proton_engine_window_browser(window) != NULL) {
-      cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
-      if (host != NULL) {
-        host->was_resized(host);
-        host->base.release((cef_base_ref_counted_t *)host);
-      }
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-  } else {
-    NSRect frame = [window->window frame];
-    frame.size.width = width;
-    frame.size.height = height;
-    [window->window setFrame:frame display:YES animate:NO];
+    if (width <= 0 || height <= 0) {
+      proton_engine_set_message(error, error_len,
+                                "width and height must be positive");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    window->width = width;
+    window->height = height;
+    if (window->headless) {
+      if (proton_engine_window_browser(window) != NULL) {
+        cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
+        if (host != NULL) {
+          host->was_resized(host);
+          host->base.release((cef_base_ref_counted_t *)host);
+        }
+      }
+    } else {
+      NSRect frame = [window->window frame];
+      frame.size.width = width;
+      frame.size.height = height;
+      [window->window setFrame:frame display:YES animate:NO];
+    }
+    return PROTON_OK;
   }
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_content_size(
     proton_engine_window_t *window, int32_t width, int32_t height,
     char *error, size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (width <= 0 || height <= 0) {
-    proton_engine_set_message(error, error_len,
-                              "width and height must be positive");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    window->width = width;
-    window->height = height;
-    if (proton_engine_window_browser(window) != NULL) {
-      cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
-      if (host != NULL) {
-        host->was_resized(host);
-        host->base.release((cef_base_ref_counted_t *)host);
-      }
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
     }
+    if (width <= 0 || height <= 0) {
+      proton_engine_set_message(error, error_len,
+                                "width and height must be positive");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      window->width = width;
+      window->height = height;
+      if (proton_engine_window_browser(window) != NULL) {
+        cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
+        if (host != NULL) {
+          host->was_resized(host);
+          host->base.release((cef_base_ref_counted_t *)host);
+        }
+      }
+      return PROTON_OK;
+    }
+    [window->window setContentSize:NSMakeSize(width, height)];
     return PROTON_OK;
   }
-  [window->window setContentSize:NSMakeSize(width, height)];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_get_content_size(
     proton_engine_window_t *window, int32_t *out_width, int32_t *out_height,
     char *error, size_t error_len) {
-  if (window == NULL || out_width == NULL || out_height == NULL) {
-    proton_engine_set_message(error, error_len, "window and outputs are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    *out_width = window->width;
-    *out_height = window->height;
+  @autoreleasepool {
+    if (window == NULL || out_width == NULL || out_height == NULL) {
+      proton_engine_set_message(error, error_len, "window and outputs are required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      *out_width = window->width;
+      *out_height = window->height;
+      return PROTON_OK;
+    }
+    if (window->window == nil) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    NSRect bounds = window->window.contentView.bounds;
+    *out_width = (int32_t)llround(bounds.size.width);
+    *out_height = (int32_t)llround(bounds.size.height);
     return PROTON_OK;
   }
-  if (window->window == nil) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  NSRect bounds = window->window.contentView.bounds;
-  *out_width = (int32_t)llround(bounds.size.width);
-  *out_height = (int32_t)llround(bounds.size.height);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_minimum_size(
     proton_engine_window_t *window, int32_t width, int32_t height,
     char *error, size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (window->headless) {
+      proton_engine_set_message(
+          error, error_len,
+          "window size constraints are not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    if (width > 0 && window->max_width > 0 &&
+        (width > window->max_width || height > window->max_height)) {
+      proton_engine_set_message(error, error_len,
+                                "minimum size exceeds maximum size");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    window->min_width = width;
+    window->min_height = height;
+    proton_engine_apply_size_constraints(window);
+    return PROTON_OK;
   }
-  if (window->headless) {
-    proton_engine_set_message(
-        error, error_len,
-        "window size constraints are not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  if (width > 0 && window->max_width > 0 &&
-      (width > window->max_width || height > window->max_height)) {
-    proton_engine_set_message(error, error_len,
-                              "minimum size exceeds maximum size");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  window->min_width = width;
-  window->min_height = height;
-  proton_engine_apply_size_constraints(window);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_maximum_size(
     proton_engine_window_t *window, int32_t width, int32_t height,
     char *error, size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (window->headless) {
+      proton_engine_set_message(
+          error, error_len,
+          "window size constraints are not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    if (width > 0 && window->min_width > 0 &&
+        (width < window->min_width || height < window->min_height)) {
+      proton_engine_set_message(error, error_len,
+                                "maximum size is below minimum size");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    window->max_width = width;
+    window->max_height = height;
+    proton_engine_apply_size_constraints(window);
+    return PROTON_OK;
   }
-  if (window->headless) {
-    proton_engine_set_message(
-        error, error_len,
-        "window size constraints are not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  if (width > 0 && window->min_width > 0 &&
-      (width < window->min_width || height < window->min_height)) {
-    proton_engine_set_message(error, error_len,
-                              "maximum size is below minimum size");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  window->max_width = width;
-  window->max_height = height;
-  proton_engine_apply_size_constraints(window);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_aspect_ratio(
     proton_engine_window_t *window, double aspect_ratio, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (isnan(aspect_ratio) || aspect_ratio < 0.0) {
+      proton_engine_set_message(error, error_len,
+                                "aspect ratio must be non-negative");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(
+          error, error_len,
+          "window aspect ratio is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    window->aspect_ratio = aspect_ratio;
+    if (aspect_ratio > 0.0) {
+      [window->window setContentAspectRatio:NSMakeSize(aspect_ratio, 1.0)];
+    } else {
+      [window->window setResizeIncrements:NSMakeSize(1.0, 1.0)];
+    }
+    return PROTON_OK;
   }
-  if (isnan(aspect_ratio) || aspect_ratio < 0.0) {
-    proton_engine_set_message(error, error_len,
-                              "aspect ratio must be non-negative");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(
-        error, error_len,
-        "window aspect ratio is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  window->aspect_ratio = aspect_ratio;
-  if (aspect_ratio > 0.0) {
-    [window->window setContentAspectRatio:NSMakeSize(aspect_ratio, 1.0)];
-  } else {
-    [window->window setResizeIncrements:NSMakeSize(1.0, 1.0)];
-  }
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_movable(proton_engine_window_t *window,
                                          int32_t movable, char *error,
                                          size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (movable != 0 && movable != 1) {
+      proton_engine_set_message(error, error_len,
+                                "movable must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(
+          error, error_len,
+          "window movement is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    [window->window setMovable:movable != 0];
+    return PROTON_OK;
   }
-  if (movable != 0 && movable != 1) {
-    proton_engine_set_message(error, error_len,
-                              "movable must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(
-        error, error_len,
-        "window movement is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  [window->window setMovable:movable != 0];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_opacity(proton_engine_window_t *window,
                                          double opacity, char *error,
                                          size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (isnan(opacity)) {
+      proton_engine_set_message(error, error_len,
+                                "opacity must not be NaN");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window opacity is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    const double bounded_opacity = opacity < 0.0 ? 0.0 : (opacity > 1.0 ? 1.0 : opacity);
+    [window->window setAlphaValue:bounded_opacity];
+    return PROTON_OK;
   }
-  if (isnan(opacity)) {
-    proton_engine_set_message(error, error_len,
-                              "opacity must not be NaN");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window opacity is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  const double bounded_opacity = opacity < 0.0 ? 0.0 : (opacity > 1.0 ? 1.0 : opacity);
-  [window->window setAlphaValue:bounded_opacity];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_skip_taskbar(proton_engine_window_t *window,
@@ -1738,104 +1771,114 @@ int32_t proton_engine_window_set_skip_taskbar(proton_engine_window_t *window,
 int32_t proton_engine_window_set_content_protection(
     proton_engine_window_t *window, int32_t enabled, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (enabled != 0 && enabled != 1) {
+      proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "content protection is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    window->window.sharingType = enabled ? NSWindowSharingNone : NSWindowSharingReadOnly;
+    return PROTON_OK;
   }
-  if (enabled != 0 && enabled != 1) {
-    proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "content protection is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  window->window.sharingType = enabled ? NSWindowSharingNone : NSWindowSharingReadOnly;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_minimizable(
     proton_engine_window_t *window, int32_t minimizable, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (minimizable != 0 && minimizable != 1) {
+      proton_engine_set_message(error, error_len, "minimizable must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window minimizability is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    NSWindowStyleMask style = window->window.styleMask;
+    if (minimizable) {
+      style |= NSWindowStyleMaskMiniaturizable;
+    } else {
+      style &= ~NSWindowStyleMaskMiniaturizable;
+    }
+    window->window.styleMask = style;
+    return PROTON_OK;
   }
-  if (minimizable != 0 && minimizable != 1) {
-    proton_engine_set_message(error, error_len, "minimizable must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window minimizability is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  NSWindowStyleMask style = window->window.styleMask;
-  if (minimizable) {
-    style |= NSWindowStyleMaskMiniaturizable;
-  } else {
-    style &= ~NSWindowStyleMaskMiniaturizable;
-  }
-  window->window.styleMask = style;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_maximizable(
     proton_engine_window_t *window, int32_t maximizable, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (maximizable != 0 && maximizable != 1) {
+      proton_engine_set_message(error, error_len, "maximizable must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window maximizability is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    window->maximizable = maximizable;
+    proton_engine_window_update_zoom_button(window);
+    return PROTON_OK;
   }
-  if (maximizable != 0 && maximizable != 1) {
-    proton_engine_set_message(error, error_len, "maximizable must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window maximizability is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  window->maximizable = maximizable;
-  proton_engine_window_update_zoom_button(window);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_closable(
     proton_engine_window_t *window, int32_t closable, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (closable != 0 && closable != 1) {
+      proton_engine_set_message(error, error_len, "closable must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window closability is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    window->closable = closable;
+    proton_engine_window_apply_closable_style(window);
+    return PROTON_OK;
   }
-  if (closable != 0 && closable != 1) {
-    proton_engine_set_message(error, error_len, "closable must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window closability is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  window->closable = closable;
-  proton_engine_window_apply_closable_style(window);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_button_position(
     proton_engine_window_t *window, int32_t custom, int32_t x, int32_t y,
     char *error, size_t error_len) {
-  (void)error;
-  (void)error_len;
-  if (!window->headless && window->titlebar_overlay) {
-    window->button_position_custom = custom;
-    window->button_position_x = x;
-    window->button_position_y = y;
-    [window->window layoutIfNeeded];
-    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+  @autoreleasepool {
+    (void)error;
+    (void)error_len;
+    if (!window->headless && window->titlebar_overlay) {
+      window->button_position_custom = custom;
+      window->button_position_x = x;
+      window->button_position_y = y;
+      [window->window layoutIfNeeded];
+      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    }
+    return PROTON_OK;
   }
-  return PROTON_OK;
 }
 int32_t proton_engine_window_get_button_position(
     proton_engine_window_t *window, int32_t *custom, int32_t *x, int32_t *y,
@@ -1851,91 +1894,97 @@ int32_t proton_engine_window_get_button_position(
 int32_t proton_engine_window_set_button_visibility(
     proton_engine_window_t *window, int32_t visible, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (visible != 0 && visible != 1) {
+      proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window buttons are not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    const NSWindowButton buttons[] = {
+        NSWindowCloseButton, NSWindowMiniaturizeButton, NSWindowZoomButton};
+    for (size_t index = 0; index < sizeof(buttons) / sizeof(buttons[0]); index++) {
+      NSButton *button = [window->window standardWindowButton:buttons[index]];
+      if (button != nil) button.hidden = visible == 0;
+    }
+    window->window_button_visible = visible;
+    [window->window layoutIfNeeded];
+    return PROTON_OK;
   }
-  if (visible != 0 && visible != 1) {
-    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window buttons are not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  const NSWindowButton buttons[] = {
-      NSWindowCloseButton, NSWindowMiniaturizeButton, NSWindowZoomButton};
-  for (size_t index = 0; index < sizeof(buttons) / sizeof(buttons[0]); index++) {
-    NSButton *button = [window->window standardWindowButton:buttons[index]];
-    if (button != nil) button.hidden = visible == 0;
-  }
-  window->window_button_visible = visible;
-  [window->window layoutIfNeeded];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_focusable(
     proton_engine_window_t *window, int32_t focusable, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (focusable != 0 && focusable != 1) {
+      proton_engine_set_message(error, error_len, "focusable must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window focusability is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    [(ProtonWindow *)window->window setProtonFocusable:focusable != 0];
+    return PROTON_OK;
   }
-  if (focusable != 0 && focusable != 1) {
-    proton_engine_set_message(error, error_len, "focusable must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window focusability is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  [(ProtonWindow *)window->window setProtonFocusable:focusable != 0];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_progress_bar(
     proton_engine_window_t *window, double progress, int32_t mode, char *error,
     size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  // Electron marks the progress mode as Windows only: the Dock indicator has
-  // no error or paused state, so the value alone drives the indicator here.
-  (void)mode;
-  if (isnan(progress)) {
-    proton_engine_set_message(error, error_len,
-                              "progress must not be NaN");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(
-        error, error_len,
-        "window progress is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  if (progress < 0.0) {
-    proton_engine_dock_progress_clear();
+  @autoreleasepool {
+    if (window == NULL) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    // Electron marks the progress mode as Windows only: the Dock indicator has
+    // no error or paused state, so the value alone drives the indicator here.
+    (void)mode;
+    if (isnan(progress)) {
+      proton_engine_set_message(error, error_len,
+                                "progress must not be NaN");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(
+          error, error_len,
+          "window progress is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    if (progress < 0.0) {
+      proton_engine_dock_progress_clear();
+      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+      return PROTON_OK;
+    }
+    if (!proton_engine_dock_progress_prepare(error, error_len)) {
+      return PROTON_ERR_PLATFORM;
+    }
+    g_dock_progress_owner = window;
+    if (progress > 1.0) {
+      g_dock_progress_indicator.indeterminate = YES;
+      [g_dock_progress_indicator startAnimation:nil];
+    } else {
+      [g_dock_progress_indicator stopAnimation:nil];
+      g_dock_progress_indicator.indeterminate = NO;
+      g_dock_progress_indicator.doubleValue = progress;
+    }
+    [[NSApp dockTile] display];
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
-  if (!proton_engine_dock_progress_prepare(error, error_len)) {
-    return PROTON_ERR_PLATFORM;
-  }
-  g_dock_progress_owner = window;
-  if (progress > 1.0) {
-    g_dock_progress_indicator.indeterminate = YES;
-    [g_dock_progress_indicator startAnimation:nil];
-  } else {
-    [g_dock_progress_indicator stopAnimation:nil];
-    g_dock_progress_indicator.indeterminate = NO;
-    g_dock_progress_indicator.doubleValue = progress;
-  }
-  [[NSApp dockTile] display];
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 // Electron marks the taskbar overlay icon and the thumbnail tooltip as Windows
@@ -1995,32 +2044,34 @@ int32_t proton_engine_window_set_thumbar_buttons(
 int32_t proton_engine_window_flash_frame(
     proton_engine_window_t *window, int32_t flash, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (flash != 0 && flash != 1) {
-    proton_engine_set_message(error, error_len, "flash must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(
-        error, error_len,
-        "window attention is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  if (flash) {
-    if (window->attention_request_id != 0) {
-      [NSApp cancelUserAttentionRequest:window->attention_request_id];
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-    window->attention_request_id =
-        [NSApp requestUserAttention:NSCriticalRequest];
-  } else if (window->attention_request_id != 0) {
-    [NSApp cancelUserAttentionRequest:window->attention_request_id];
-    window->attention_request_id = 0;
+    if (flash != 0 && flash != 1) {
+      proton_engine_set_message(error, error_len, "flash must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(
+          error, error_len,
+          "window attention is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    if (flash) {
+      if (window->attention_request_id != 0) {
+        [NSApp cancelUserAttentionRequest:window->attention_request_id];
+      }
+      window->attention_request_id =
+          [NSApp requestUserAttention:NSCriticalRequest];
+    } else if (window->attention_request_id != 0) {
+      [NSApp cancelUserAttentionRequest:window->attention_request_id];
+      window->attention_request_id = 0;
+    }
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
   }
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 static CGFloat proton_engine_primary_screen_top(void) {
@@ -2033,300 +2084,307 @@ static int32_t proton_engine_macos_top_y(NSRect frame) {
   return (int32_t)llround(proton_engine_primary_screen_top() - NSMaxY(frame));
 }
 
-static void proton_engine_toggle_fullscreen(NSWindow *window) {
-  // Synchronous FFI calls run outside the event-pump autorelease pool.
-  // Drain temporary AppKit references so they cannot keep the CEF view alive.
-  @autoreleasepool {
-    [window toggleFullScreen:nil];
-  }
-}
-
 int32_t proton_engine_window_apply(
     proton_engine_window_t *window,
     const proton_engine_window_action_t *action,
     char *error,
     size_t error_len) {
-
-  if (window == NULL || action == NULL ||
-      (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len,
-                              "window and action are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (action->kind == PROTON_ENGINE_WINDOW_SET_ZOOM_PERCENT) {
-    if (proton_engine_window_browser(window) == NULL) {
+  @autoreleasepool {
+    if (window == NULL || action == NULL ||
+        (!window->headless && window->window == nil)) {
       proton_engine_set_message(error, error_len,
-                                "browser is not initialized");
-      return PROTON_ERR_NOT_INITIALIZED;
+                                "window and action are required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-    cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
-    if (host == NULL) {
+    if (action->kind == PROTON_ENGINE_WINDOW_SET_ZOOM_PERCENT) {
+      if (proton_engine_window_browser(window) == NULL) {
+        proton_engine_set_message(error, error_len,
+                                  "browser is not initialized");
+        return PROTON_ERR_NOT_INITIALIZED;
+      }
+      cef_browser_host_t *host = proton_engine_window_browser(window)->get_host(proton_engine_window_browser(window));
+      if (host == NULL) {
+        proton_engine_set_message(error, error_len,
+                                  "browser host is not available");
+        return PROTON_ERR_ENGINE;
+      }
+      const double factor = (double)action->value / 100.0;
+      host->set_zoom_level(host, log(factor) / log(1.2));
+      host->base.release((cef_base_ref_counted_t *)host);
+      window->zoom_percent = action->value;
+      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+      return PROTON_OK;
+    }
+    if (window->headless) {
+      proton_engine_set_message(
+          error, error_len,
+          "native window operation is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    switch (action->kind) {
+    case PROTON_ENGINE_WINDOW_MINIMIZE:
+      [window->window miniaturize:nil];
+      break;
+    case PROTON_ENGINE_WINDOW_MAXIMIZE:
+      if ([window->window isMiniaturized]) {
+        [window->window deminiaturize:nil];
+      }
+      if (![window->window isZoomed]) {
+        [window->window zoom:nil];
+      }
+      break;
+    case PROTON_ENGINE_WINDOW_RESTORE:
+      if ((window->window.styleMask & NSWindowStyleMaskFullScreen) != 0) {
+        [window->window toggleFullScreen:nil];
+      }
+      if ([window->window isMiniaturized]) {
+        [window->window deminiaturize:nil];
+      }
+      if ([window->window isZoomed]) {
+        [window->window zoom:nil];
+      }
+      break;
+    case PROTON_ENGINE_WINDOW_SET_FULLSCREEN: {
+      if (!window->fullscreenable && action->value != 0) break;
+      const BOOL fullscreen =
+          (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0;
+      if (fullscreen != (action->value != 0)) {
+        [window->window toggleFullScreen:nil];
+      }
+      break;
+    }
+    case PROTON_ENGINE_WINDOW_SET_KIOSK: {
+      const BOOL fullscreen =
+          (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0;
+      if (action->value != 0) {
+        [NSApp setPresentationOptions:(NSApplicationPresentationAutoHideDock |
+                                       NSApplicationPresentationAutoHideMenuBar |
+                                       NSApplicationPresentationFullScreen)];
+      } else {
+        [NSApp setPresentationOptions:NSApplicationPresentationDefault];
+      }
+      if (fullscreen != (action->value != 0)) {
+        [window->window toggleFullScreen:nil];
+      }
+      break;
+    }
+    case PROTON_ENGINE_WINDOW_SET_POSITION: {
+      NSRect frame = window->window.frame;
+      const CGFloat cocoa_y =
+          proton_engine_primary_screen_top() - action->y - frame.size.height;
+      [window->window
+          setFrameOrigin:NSMakePoint((CGFloat)action->x, cocoa_y)];
+      break;
+    }
+    case PROTON_ENGINE_WINDOW_SET_ALWAYS_ON_TOP:
+      window->window.level =
+          action->value != 0 ? NSFloatingWindowLevel : NSNormalWindowLevel;
+      break;
+    case PROTON_ENGINE_WINDOW_SET_RESIZABLE: {
+      NSWindowStyleMask style = window->window.styleMask;
+      if (action->value != 0) {
+        style |= NSWindowStyleMaskResizable;
+      } else {
+        style &= ~NSWindowStyleMaskResizable;
+      }
+      window->window.styleMask = style;
+      proton_engine_window_update_zoom_button(window);
+      break;
+    }
+    default:
       proton_engine_set_message(error, error_len,
-                                "browser host is not available");
-      return PROTON_ERR_ENGINE;
+                                "unknown window action");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-    const double factor = (double)action->value / 100.0;
-    host->set_zoom_level(host, log(factor) / log(1.2));
-    host->base.release((cef_base_ref_counted_t *)host);
-    window->zoom_percent = action->value;
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
-  if (window->headless) {
-    proton_engine_set_message(
-        error, error_len,
-        "native window operation is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  switch (action->kind) {
-  case PROTON_ENGINE_WINDOW_MINIMIZE:
-    [window->window miniaturize:nil];
-    break;
-  case PROTON_ENGINE_WINDOW_MAXIMIZE:
-    if ([window->window isMiniaturized]) {
-      [window->window deminiaturize:nil];
-    }
-    if (![window->window isZoomed]) {
-      [window->window zoom:nil];
-    }
-    break;
-  case PROTON_ENGINE_WINDOW_RESTORE:
-    if ((window->window.styleMask & NSWindowStyleMaskFullScreen) != 0) {
-      proton_engine_toggle_fullscreen(window->window);
-    }
-    if ([window->window isMiniaturized]) {
-      [window->window deminiaturize:nil];
-    }
-    if ([window->window isZoomed]) {
-      [window->window zoom:nil];
-    }
-    break;
-  case PROTON_ENGINE_WINDOW_SET_FULLSCREEN: {
-    if (!window->fullscreenable && action->value != 0) break;
-    const BOOL fullscreen =
-        (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0;
-    if (fullscreen != (action->value != 0)) {
-      proton_engine_toggle_fullscreen(window->window);
-    }
-    break;
-  }
-  case PROTON_ENGINE_WINDOW_SET_KIOSK: {
-    const BOOL fullscreen =
-        (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0;
-    if (action->value != 0) {
-      [NSApp setPresentationOptions:(NSApplicationPresentationAutoHideDock |
-                                     NSApplicationPresentationAutoHideMenuBar |
-                                     NSApplicationPresentationFullScreen)];
-    } else {
-      [NSApp setPresentationOptions:NSApplicationPresentationDefault];
-    }
-    if (fullscreen != (action->value != 0)) {
-      proton_engine_toggle_fullscreen(window->window);
-    }
-    break;
-  }
-  case PROTON_ENGINE_WINDOW_SET_POSITION: {
-    NSRect frame = window->window.frame;
-    const CGFloat cocoa_y =
-        proton_engine_primary_screen_top() - action->y - frame.size.height;
-    [window->window
-        setFrameOrigin:NSMakePoint((CGFloat)action->x, cocoa_y)];
-    break;
-  }
-  case PROTON_ENGINE_WINDOW_SET_ALWAYS_ON_TOP:
-    window->window.level =
-        action->value != 0 ? NSFloatingWindowLevel : NSNormalWindowLevel;
-    break;
-  case PROTON_ENGINE_WINDOW_SET_RESIZABLE: {
-    NSWindowStyleMask style = window->window.styleMask;
-    if (action->value != 0) {
-      style |= NSWindowStyleMaskResizable;
-    } else {
-      style &= ~NSWindowStyleMaskResizable;
-    }
-    window->window.styleMask = style;
-    proton_engine_window_update_zoom_button(window);
-    break;
-  }
-  default:
-    proton_engine_set_message(error, error_len,
-                              "unknown window action");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_fullscreenable(
     proton_engine_window_t *window, int32_t fullscreenable, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (fullscreenable != 0 && fullscreenable != 1) {
+      proton_engine_set_message(error, error_len,
+                                "fullscreenable must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window fullscreenability is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    window->fullscreenable = fullscreenable;
+    NSWindowCollectionBehavior behavior = window->window.collectionBehavior;
+    if (fullscreenable) {
+      behavior |= NSWindowCollectionBehaviorFullScreenPrimary;
+      behavior &= ~NSWindowCollectionBehaviorFullScreenAuxiliary;
+    } else {
+      behavior &= ~NSWindowCollectionBehaviorFullScreenPrimary;
+      behavior |= NSWindowCollectionBehaviorFullScreenAuxiliary;
+    }
+    window->window.collectionBehavior = behavior;
+    proton_engine_window_update_zoom_button(window);
+    return PROTON_OK;
   }
-  if (fullscreenable != 0 && fullscreenable != 1) {
-    proton_engine_set_message(error, error_len,
-                              "fullscreenable must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window fullscreenability is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  window->fullscreenable = fullscreenable;
-  NSWindowCollectionBehavior behavior = window->window.collectionBehavior;
-  if (fullscreenable) {
-    behavior |= NSWindowCollectionBehaviorFullScreenPrimary;
-    behavior &= ~NSWindowCollectionBehaviorFullScreenAuxiliary;
-  } else {
-    behavior &= ~NSWindowCollectionBehaviorFullScreenPrimary;
-    behavior |= NSWindowCollectionBehaviorFullScreenAuxiliary;
-  }
-  window->window.collectionBehavior = behavior;
-  proton_engine_window_update_zoom_button(window);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_has_shadow(
     proton_engine_window_t *window, int32_t has_shadow, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (has_shadow != 0 && has_shadow != 1) {
+      proton_engine_set_message(error, error_len, "has_shadow must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window shadow is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    window->window.hasShadow = has_shadow != 0;
+    return PROTON_OK;
   }
-  if (has_shadow != 0 && has_shadow != 1) {
-    proton_engine_set_message(error, error_len, "has_shadow must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window shadow is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  window->window.hasShadow = has_shadow != 0;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_ignore_mouse_events(
     proton_engine_window_t *window, int32_t ignore, int32_t forward,
     char *error, size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (ignore != 0 && ignore != 1) {
+      proton_engine_set_message(error, error_len, "ignore must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (forward != 0 && forward != 1) {
+      proton_engine_set_message(error, error_len, "forward must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "mouse event handling is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    window->ignore_mouse_events = ignore;
+    window->ignore_mouse_forward = ignore ? forward : 0;
+    [window->window
+        setIgnoresMouseEvents:ignore != 0 || window->enabled == 0];
+    return PROTON_OK;
   }
-  if (ignore != 0 && ignore != 1) {
-    proton_engine_set_message(error, error_len, "ignore must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (forward != 0 && forward != 1) {
-    proton_engine_set_message(error, error_len, "forward must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "mouse event handling is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  window->ignore_mouse_events = ignore;
-  window->ignore_mouse_forward = ignore ? forward : 0;
-  [window->window
-      setIgnoresMouseEvents:ignore != 0 || window->enabled == 0];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_background_color(
     proton_engine_window_t *window, uint32_t color, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window background is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    const CGFloat alpha = (CGFloat)((color >> 24) & 0xff) / 255.0;
+    const CGFloat red = (CGFloat)((color >> 16) & 0xff) / 255.0;
+    const CGFloat green = (CGFloat)((color >> 8) & 0xff) / 255.0;
+    const CGFloat blue = (CGFloat)(color & 0xff) / 255.0;
+    window->content_view.wantsLayer = YES;
+    window->content_view.layer.backgroundColor =
+        [NSColor colorWithRed:red green:green blue:blue alpha:alpha].CGColor;
+    return PROTON_OK;
   }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window background is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  const CGFloat alpha = (CGFloat)((color >> 24) & 0xff) / 255.0;
-  const CGFloat red = (CGFloat)((color >> 16) & 0xff) / 255.0;
-  const CGFloat green = (CGFloat)((color >> 8) & 0xff) / 255.0;
-  const CGFloat blue = (CGFloat)(color & 0xff) / 255.0;
-  window->content_view.wantsLayer = YES;
-  window->content_view.layer.backgroundColor =
-      [NSColor colorWithRed:red green:green blue:blue alpha:alpha].CGColor;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_theme(
     proton_engine_window_t *window,
     proton_window_theme_preference_t theme_preference, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||
-      theme_preference > PROTON_WINDOW_THEME_PREFERENCE_DARK) {
-    proton_engine_set_message(error, error_len, "window theme is invalid");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "window theme is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  if (window->theme_preference == theme_preference) {
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (theme_preference < PROTON_WINDOW_THEME_PREFERENCE_SYSTEM ||
+        theme_preference > PROTON_WINDOW_THEME_PREFERENCE_DARK) {
+      proton_engine_set_message(error, error_len, "window theme is invalid");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "window theme is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    if (window->theme_preference == theme_preference) {
+      return PROTON_OK;
+    }
+    window->theme_preference = theme_preference;
+    proton_engine_window_apply_theme_preference(window);
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
-  window->theme_preference = theme_preference;
-  proton_engine_window_apply_theme_preference(window);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_visible_on_all_workspaces(
     proton_engine_window_t *window, int32_t visible, char *error,
     size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (visible != 0 && visible != 1) {
+      proton_engine_set_message(error, error_len, "visible must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      proton_engine_set_message(error, error_len,
+                                "workspace visibility is not supported in headless mode");
+      return PROTON_ERR_UNSUPPORTED;
+    }
+    NSWindowCollectionBehavior behavior = window->window.collectionBehavior;
+    if (visible) {
+      behavior |= NSWindowCollectionBehaviorCanJoinAllSpaces;
+    } else {
+      behavior &= ~NSWindowCollectionBehaviorCanJoinAllSpaces;
+    }
+    window->window.collectionBehavior = behavior;
+    return PROTON_OK;
   }
-  if (visible != 0 && visible != 1) {
-    proton_engine_set_message(error, error_len, "visible must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    proton_engine_set_message(error, error_len,
-                              "workspace visibility is not supported in headless mode");
-    return PROTON_ERR_UNSUPPORTED;
-  }
-  NSWindowCollectionBehavior behavior = window->window.collectionBehavior;
-  if (visible) {
-    behavior |= NSWindowCollectionBehaviorCanJoinAllSpaces;
-  } else {
-    behavior &= ~NSWindowCollectionBehaviorCanJoinAllSpaces;
-  }
-  window->window.collectionBehavior = behavior;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_enabled(proton_engine_window_t *window,
                                          int32_t enabled, char *error,
                                          size_t error_len) {
-  if (window == NULL || (!window->headless && window->window == nil)) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
+  @autoreleasepool {
+    if (window == NULL || (!window->headless && window->window == nil)) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    if (enabled != 0 && enabled != 1) {
+      proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) return PROTON_OK;
+    window->enabled = enabled;
+    [(ProtonWindow *)window->window setProtonEnabled:enabled != 0];
+    [window->window setIgnoresMouseEvents:enabled == 0 || window->ignore_mouse_events != 0];
+    if (!enabled && [window->window isKeyWindow]) [window->window resignKeyWindow];
+    return PROTON_OK;
   }
-  if (enabled != 0 && enabled != 1) {
-    proton_engine_set_message(error, error_len, "enabled must be 0 or 1");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) return PROTON_OK;
-  window->enabled = enabled;
-  [(ProtonWindow *)window->window setProtonEnabled:enabled != 0];
-  [window->window setIgnoresMouseEvents:enabled == 0 || window->ignore_mouse_events != 0];
-  if (!enabled && [window->window isKeyWindow]) [window->window resignKeyWindow];
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_get_state(
@@ -2334,254 +2392,270 @@ int32_t proton_engine_window_get_state(
     proton_engine_window_state_t *out_state,
     char *error,
     size_t error_len) {
-
-  if (window == NULL || out_state == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "window and out_state are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  memset(out_state, 0, sizeof(*out_state));
-  out_state->zoom_percent =
-      window->zoom_percent > 0 ? window->zoom_percent : 100;
-  out_state->scale_factor_percent = 100;
-  out_state->theme = proton_engine_window_effective_theme(window);
-  if (window->headless) {
-    out_state->width = window->width;
-    out_state->height = window->height;
-    out_state->visible = !window->headless_hidden;
-    out_state->focused = window->headless_focused;
+  @autoreleasepool {
+    if (window == NULL || out_state == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "window and out_state are required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    memset(out_state, 0, sizeof(*out_state));
+    out_state->zoom_percent =
+        window->zoom_percent > 0 ? window->zoom_percent : 100;
+    out_state->scale_factor_percent = 100;
+    out_state->theme = proton_engine_window_effective_theme(window);
+    if (window->headless) {
+      out_state->width = window->width;
+      out_state->height = window->height;
+      out_state->visible = !window->headless_hidden;
+      out_state->focused = window->headless_focused;
+      return PROTON_OK;
+    }
+    if (window->window == nil) {
+      proton_engine_set_message(error, error_len, "window is not initialized");
+      return PROTON_ERR_INVALID_HANDLE;
+    }
+    const NSRect frame = window->window.frame;
+    NSScreen *screen = window->window.screen;
+    if (screen == nil) {
+      screen = [NSScreen mainScreen];
+    }
+    const NSRect monitor = screen != nil ? screen.frame : NSZeroRect;
+    const NSRect work = screen != nil ? screen.visibleFrame : NSZeroRect;
+    out_state->x = (int32_t)llround(frame.origin.x);
+    out_state->y = proton_engine_macos_top_y(frame);
+    out_state->width = (int32_t)llround(frame.size.width);
+    out_state->height = (int32_t)llround(frame.size.height);
+    out_state->monitor_x = (int32_t)llround(monitor.origin.x);
+    out_state->monitor_y = proton_engine_macos_top_y(monitor);
+    out_state->monitor_width = (int32_t)llround(monitor.size.width);
+    out_state->monitor_height = (int32_t)llround(monitor.size.height);
+    out_state->work_x = (int32_t)llround(work.origin.x);
+    out_state->work_y = proton_engine_macos_top_y(work);
+    out_state->work_width = (int32_t)llround(work.size.width);
+    out_state->work_height = (int32_t)llround(work.size.height);
+    out_state->scale_factor_percent =
+        (int32_t)llround(window->window.backingScaleFactor * 100.0);
+    out_state->visible = window->window.isVisible ? 1 : 0;
+    out_state->focused = window->window.isKeyWindow ? 1 : 0;
+    out_state->minimized = window->window.isMiniaturized ? 1 : 0;
+    out_state->maximized = window->window.isZoomed ? 1 : 0;
+    out_state->fullscreen =
+        (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0 ? 1 : 0;
+    out_state->always_on_top =
+        window->window.level > NSNormalWindowLevel ? 1 : 0;
     return PROTON_OK;
   }
-  if (window->window == nil) {
-    proton_engine_set_message(error, error_len, "window is not initialized");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  const NSRect frame = window->window.frame;
-  NSScreen *screen = window->window.screen;
-  if (screen == nil) {
-    screen = [NSScreen mainScreen];
-  }
-  const NSRect monitor = screen != nil ? screen.frame : NSZeroRect;
-  const NSRect work = screen != nil ? screen.visibleFrame : NSZeroRect;
-  out_state->x = (int32_t)llround(frame.origin.x);
-  out_state->y = proton_engine_macos_top_y(frame);
-  out_state->width = (int32_t)llround(frame.size.width);
-  out_state->height = (int32_t)llround(frame.size.height);
-  out_state->monitor_x = (int32_t)llround(monitor.origin.x);
-  out_state->monitor_y = proton_engine_macos_top_y(monitor);
-  out_state->monitor_width = (int32_t)llround(monitor.size.width);
-  out_state->monitor_height = (int32_t)llround(monitor.size.height);
-  out_state->work_x = (int32_t)llround(work.origin.x);
-  out_state->work_y = proton_engine_macos_top_y(work);
-  out_state->work_width = (int32_t)llround(work.size.width);
-  out_state->work_height = (int32_t)llround(work.size.height);
-  out_state->scale_factor_percent =
-      (int32_t)llround(window->window.backingScaleFactor * 100.0);
-  out_state->visible = window->window.isVisible ? 1 : 0;
-  out_state->focused = window->window.isKeyWindow ? 1 : 0;
-  out_state->minimized = window->window.isMiniaturized ? 1 : 0;
-  out_state->maximized = window->window.isZoomed ? 1 : 0;
-  out_state->fullscreen =
-      (window->window.styleMask & NSWindowStyleMaskFullScreen) != 0 ? 1 : 0;
-  out_state->always_on_top =
-      window->window.level > NSNormalWindowLevel ? 1 : 0;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_set_close_interception(
     proton_engine_window_t *window, int32_t enabled, char *error,
     size_t error_len) {
-
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  @autoreleasepool {
+    if (window == NULL) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    window->close_interception_enabled = enabled != 0;
+    if (window->close_interception_enabled) {
+      window->close_authorized = 0;
+    }
+    if (!window->close_interception_enabled) {
+      window->close_request_pending = 0;
+      window->programmatic_close_pending = 0;
+      proton_engine_window_apply_closable_style(window);
+    }
+    return PROTON_OK;
   }
-  window->close_interception_enabled = enabled != 0;
-  if (window->close_interception_enabled) {
-    window->close_authorized = 0;
-  }
-  if (!window->close_interception_enabled) {
-    window->close_request_pending = 0;
-    window->programmatic_close_pending = 0;
-    proton_engine_window_apply_closable_style(window);
-  }
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_respond_close_request(
     proton_engine_window_t *window, uint64_t request_id, int32_t allow,
     char *error, size_t error_len) {
-
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (!window->close_request_pending ||
-      window->close_request_id != request_id) {
-    proton_engine_set_message(error, error_len,
-                              "window close request is no longer pending");
-    return PROTON_ERR_STALE_WINDOW_REQUEST;
-  }
-  window->close_request_pending = 0;
-  if (allow && !window->closed) {
-    window->close_authorized = 1;
-    if (window->headless) {
-      return proton_engine_window_close(window, error, error_len);
+  @autoreleasepool {
+    if (window == NULL) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-    [window->window performClose:nil];
-  } else if (!allow) {
-    window->close_authorized = 0;
-    window->programmatic_close_pending = 0;
-    proton_engine_window_apply_closable_style(window);
+    if (!window->close_request_pending ||
+        window->close_request_id != request_id) {
+      proton_engine_set_message(error, error_len,
+                                "window close request is no longer pending");
+      return PROTON_ERR_STALE_WINDOW_REQUEST;
+    }
+    window->close_request_pending = 0;
+    if (allow && !window->closed) {
+      window->close_authorized = 1;
+      if (window->headless) {
+        return proton_engine_window_close(window, error, error_len);
+      }
+      [window->window performClose:nil];
+    } else if (!allow) {
+      window->close_authorized = 0;
+      window->programmatic_close_pending = 0;
+      proton_engine_window_apply_closable_style(window);
+    }
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
   }
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_load_url(proton_engine_window_t *window,
                                       const char *url,
                                       char *error,
                                       size_t error_len) {
-
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if ((proton_engine_window_browser(window) == NULL &&
-       (window->browser_create_pending || window->browser_create_scheduled)) ||
-      window->initial_navigation_pending) {
-    char *url_copy =
-        proton_engine_strdup(url != NULL && url[0] != '\0' ? url : "about:blank");
-    if (url_copy == NULL) {
-      proton_engine_set_message(error, error_len,
-                                "failed to copy pending browser url");
+  @autoreleasepool {
+    if (window == NULL) {
+      proton_engine_set_message(error, error_len, "window is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if ((proton_engine_window_browser(window) == NULL &&
+         (window->browser_create_pending || window->browser_create_scheduled)) ||
+        window->initial_navigation_pending) {
+      char *url_copy =
+          proton_engine_strdup(url != NULL && url[0] != '\0' ? url : "about:blank");
+      if (url_copy == NULL) {
+        proton_engine_set_message(error, error_len,
+                                  "failed to copy pending browser url");
+        return PROTON_ERR_ENGINE;
+      }
+      free(window->initial_url);
+      window->initial_url = url_copy;
+      proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+      return PROTON_OK;
+    }
+    if (proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    cef_frame_t *frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
+    if (frame == NULL) {
+      proton_engine_set_message(error, error_len, "main frame is not available");
       return PROTON_ERR_ENGINE;
     }
-    free(window->initial_url);
-    window->initial_url = url_copy;
+    cef_string_t cef_url = {0};
+    proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
+    frame->load_url(frame, &cef_url);
+    cef_string_clear(&cef_url);
+    frame->base.release((cef_base_ref_counted_t *)frame);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
-  if (proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  cef_frame_t *frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
-  if (frame == NULL) {
-    proton_engine_set_message(error, error_len, "main frame is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_string_t cef_url = {0};
-  proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
-  frame->load_url(frame, &cef_url);
-  cef_string_clear(&cef_url);
-  frame->base.release((cef_base_ref_counted_t *)frame);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,
                                   size_t error_len) {
-
-  if (window == NULL || proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    cef_frame_t *frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
+    if (frame == NULL) {
+      proton_engine_set_message(error, error_len, "main frame is not available");
+      return PROTON_ERR_ENGINE;
+    }
+    cef_string_t code = {0};
+    cef_string_t script_url = {0};
+    proton_engine_set_string(&code, script != NULL ? script : "");
+    proton_engine_set_string(&script_url, "proton://eval.js");
+    frame->execute_java_script(frame, &code, &script_url, 1);
+    cef_string_clear(&code);
+    cef_string_clear(&script_url);
+    frame->base.release((cef_base_ref_counted_t *)frame);
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
   }
-  cef_frame_t *frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
-  if (frame == NULL) {
-    proton_engine_set_message(error, error_len, "main frame is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_string_t code = {0};
-  cef_string_t script_url = {0};
-  proton_engine_set_string(&code, script != NULL ? script : "");
-  proton_engine_set_string(&script_url, "proton://eval.js");
-  frame->execute_java_script(frame, &code, &script_url, 1);
-  cef_string_clear(&code);
-  cef_string_clear(&script_url);
-  frame->base.release((cef_base_ref_counted_t *)frame);
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_browser_command(
     proton_engine_window_t *window, const char *command, int32_t download_id,
     char *error, size_t error_len) {
-
-  if (window == NULL || window->browser_session == NULL ||
-      proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || window->browser_session == NULL ||
+        proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_session_command(
+        window->browser_session, proton_engine_window_browser(window), command,
+        download_id, error, error_len);
   }
-  return proton_browser_session_command(
-      window->browser_session, proton_engine_window_browser(window), command,
-      download_id, error, error_len);
 }
 
 int32_t proton_engine_window_get_browser_focus_state(
     proton_engine_window_t *window, int32_t *out_focused,
     char *error, size_t error_len) {
-  if (window == NULL || window->browser_session == NULL ||
-      proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || window->browser_session == NULL ||
+        proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    if (out_focused == NULL) {
+      proton_engine_set_message(error, error_len, "focus output is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    if (window->headless) {
+      return proton_browser_headless_is_focused(
+          proton_engine_window_browser(window), out_focused, error, error_len);
+    }
+    *out_focused = proton_engine_browser_view_is_focused(window->browser_view);
+    return PROTON_OK;
   }
-  if (out_focused == NULL) {
-    proton_engine_set_message(error, error_len, "focus output is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  if (window->headless) {
-    return proton_browser_headless_is_focused(
-        proton_engine_window_browser(window), out_focused, error, error_len);
-  }
-  *out_focused = proton_engine_browser_view_is_focused(window->browser_view);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_get_devtools_state(
     proton_engine_window_t *window, int32_t *out_opened,
     char *error, size_t error_len) {
-  if (window == NULL || proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_is_devtools_opened(
+        proton_engine_window_browser(window), out_opened, error, error_len);
   }
-  return proton_browser_is_devtools_opened(
-      proton_engine_window_browser(window), out_opened, error, error_len);
 }
 
 int32_t proton_engine_window_get_navigation_state(
     proton_engine_window_t *window, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len) {
-  if (window == NULL || proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_navigation_state(
+        proton_engine_window_browser(window), out_can_go_back, out_can_go_forward, error, error_len);
   }
-  return proton_browser_navigation_state(
-      proton_engine_window_browser(window), out_can_go_back, out_can_go_forward, error, error_len);
 }
 
 int32_t proton_engine_window_download_url(
     proton_engine_window_t *window, const char *url, char *error,
     size_t error_len) {
-  if (window == NULL || proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_download_url(proton_engine_window_browser(window), url, error, error_len);
   }
-  return proton_browser_download_url(proton_engine_window_browser(window), url, error, error_len);
 }
 
 int32_t proton_engine_window_print(
     proton_engine_window_t *window, char *error, size_t error_len) {
-  if (window == NULL || proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_print(proton_engine_window_browser(window), error, error_len);
   }
-  return proton_browser_print(proton_engine_window_browser(window), error, error_len);
 }
 
 int32_t proton_engine_window_print_to_pdf(
@@ -2594,125 +2668,142 @@ int32_t proton_engine_window_print_to_pdf(
     const char *footer_template, int32_t generate_tagged_pdf,
     int32_t generate_document_outline, int32_t *out_request_id,
     char *error, size_t error_len) {
-  if (window == NULL || proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_print_to_pdf(
+        window->browser_session, proton_engine_window_browser(window), path, landscape,
+        print_background, scale, paper_width, paper_height,
+        prefer_css_page_size, margin_type, margin_top, margin_right,
+        margin_bottom, margin_left, page_ranges, display_header_footer,
+        header_template, footer_template, generate_tagged_pdf,
+        generate_document_outline, out_request_id, error, error_len);
   }
-  return proton_browser_print_to_pdf(
-      window->browser_session, proton_engine_window_browser(window), path, landscape,
-      print_background, scale, paper_width, paper_height,
-      prefer_css_page_size, margin_type, margin_top, margin_right,
-      margin_bottom, margin_left, page_ranges, display_header_footer,
-      header_template, footer_template, generate_tagged_pdf,
-      generate_document_outline, out_request_id, error, error_len);
 }
 
 int32_t proton_engine_window_find_in_page(
     proton_engine_window_t *window, const char *text, int32_t forward,
     int32_t match_case, int32_t find_next, int32_t *out_request_id,
     char *error, size_t error_len) {
-  if (window == NULL || window->browser_session == NULL ||
-      proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || window->browser_session == NULL ||
+        proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_find_in_page(
+        window->browser_session, proton_engine_window_browser(window), text, forward, match_case,
+        find_next, out_request_id, error, error_len);
   }
-  return proton_browser_find_in_page(
-      window->browser_session, proton_engine_window_browser(window), text, forward, match_case,
-      find_next, out_request_id, error, error_len);
 }
 
 int32_t proton_engine_window_stop_find_in_page(
     proton_engine_window_t *window, int32_t clear_selection, char *error,
     size_t error_len) {
-  if (window == NULL || proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_stop_find_in_page(
+        proton_engine_window_browser(window), clear_selection, error, error_len);
   }
-  return proton_browser_stop_find_in_page(
-      proton_engine_window_browser(window), clear_selection, error, error_len);
 }
 
 int32_t proton_engine_window_set_audio_muted(
     proton_engine_window_t *window, int32_t muted, char *error,
     size_t error_len) {
-  if (window == NULL || proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_set_audio_muted(
+        proton_engine_window_browser(window), muted, error, error_len);
   }
-  return proton_browser_set_audio_muted(
-      proton_engine_window_browser(window), muted, error, error_len);
 }
 
 int32_t proton_engine_window_is_audio_muted(
     proton_engine_window_t *window, int32_t *out_muted, char *error,
     size_t error_len) {
-  if (window == NULL || proton_engine_window_browser(window) == NULL) {
-    proton_engine_set_message(error, error_len, "browser is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+      proton_engine_set_message(error, error_len, "browser is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_is_audio_muted(
+        proton_engine_window_browser(window), out_muted, error, error_len);
   }
-  return proton_browser_is_audio_muted(
-      proton_engine_window_browser(window), out_muted, error, error_len);
 }
 
 int32_t proton_engine_window_get_browser_url(
     proton_engine_window_t *window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len) {
-  if (window == NULL || window->browser_session == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser session is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || window->browser_session == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser session is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    int32_t status = proton_browser_session_copy_url(
+        window->browser_session, buffer, buffer_len, out_required_len);
+    if (status != PROTON_OK) {
+      proton_engine_set_message(error, error_len,
+                                "browser URL buffer is too small");
+    }
+    return status;
   }
-  int32_t status = proton_browser_session_copy_url(
-      window->browser_session, buffer, buffer_len, out_required_len);
-  if (status != PROTON_OK) {
-    proton_engine_set_message(error, error_len,
-                              "browser URL buffer is too small");
-  }
-  return status;
 }
 
 int32_t proton_engine_window_get_browser_title(
     proton_engine_window_t *window, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len) {
-  if (window == NULL || window->browser_session == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser session is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || window->browser_session == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser session is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    int32_t status = proton_browser_session_copy_title(
+        window->browser_session, buffer, buffer_len, out_required_len);
+    if (status != PROTON_OK) {
+      proton_engine_set_message(error, error_len,
+                                "browser title buffer is too small");
+    }
+    return status;
   }
-  int32_t status = proton_browser_session_copy_title(
-      window->browser_session, buffer, buffer_len, out_required_len);
-  if (status != PROTON_OK) {
-    proton_engine_set_message(error, error_len,
-                              "browser title buffer is too small");
-  }
-  return status;
 }
 
 int32_t proton_engine_window_get_browser_loading(
     proton_engine_window_t *window, int32_t *out_is_loading, char *error,
     size_t error_len) {
-  if (window == NULL || window->browser_session == NULL ||
-      out_is_loading == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser session and loading output are required");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  @autoreleasepool {
+    if (window == NULL || window->browser_session == NULL ||
+        out_is_loading == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser session and loading output are required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    *out_is_loading = proton_browser_session_is_loading(window->browser_session);
+    return PROTON_OK;
   }
-  *out_is_loading = proton_browser_session_is_loading(window->browser_session);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_window_respond_browser_request(
     proton_engine_window_t *window, uint64_t request_id, const char *action,
     const char *path,
     char *error, size_t error_len) {
-
-  if (window == NULL || window->browser_session == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser session is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || window->browser_session == NULL) {
+      proton_engine_set_message(error, error_len,
+                                "browser session is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    return proton_browser_session_respond(window->browser_session, request_id,
+                                          action, path, error, error_len);
   }
-  return proton_browser_session_respond(window->browser_session, request_id,
-                                        action, path, error, error_len);
 }
 
 int32_t proton_engine_window_emit_bridge_event_json(
@@ -2720,19 +2811,20 @@ int32_t proton_engine_window_emit_bridge_event_json(
     const char *event_json,
     char *error,
     size_t error_len) {
-
-  if (window == NULL || proton_engine_window_browser(window) == NULL ||
-      window->bridge_config == NULL) {
-    proton_engine_set_message(error, error_len, "bridge is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (window == NULL || proton_engine_window_browser(window) == NULL ||
+        window->bridge_config == NULL) {
+      proton_engine_set_message(error, error_len, "bridge is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    if (!proton_engine_bridge_send_event(proton_engine_window_browser(window), event_json)) {
+      proton_engine_set_message(error, error_len,
+                                "failed to send bridge event to renderer");
+      return PROTON_ERR_ENGINE;
+    }
+    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
+    return PROTON_OK;
   }
-  if (!proton_engine_bridge_send_event(proton_engine_window_browser(window), event_json)) {
-    proton_engine_set_message(error, error_len,
-                              "failed to send bridge event to renderer");
-    return PROTON_ERR_ENGINE;
-  }
-  proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  return PROTON_OK;
 }
 
 uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
