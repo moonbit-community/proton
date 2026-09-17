@@ -50,8 +50,7 @@ async test "Linux updater replaces AppImages transactionally" {
   defer update_test_reset()
 
   for target in 2..<=12 {
-    let payload = "release-" + target.to_string()
-    let bytes = @utf8.encode(payload)
+    let bytes = b"release-" + Bytes::from_array([target.to_byte()])
     let stage = update_stage_begin(
       root,
       bytes.length().to_int64(),
@@ -59,7 +58,7 @@ async test "Linux updater replaces AppImages transactionally" {
     )
     stage.write(bytes)
     assert_eq(stage.install(), Installed)
-    assert_eq(@async_fs.read_file(appimage).text(), payload)
+    assert_eq(@async_fs.read_file(appimage).binary(), bytes)
     let previous = appimage + ".proton-previous"
     assert_true(@async_fs.exists(previous))
     assert_eq(update_current_revision(), target.to_uint64())
@@ -85,7 +84,7 @@ async test "Windows updater prepares NSIS installers" {
     update_test_reset()
   }
 
-  let bytes = @utf8.encode("signed-installer")
+  let bytes = b"signed-installer"
   let stage = update_stage_begin(root, bytes.length().to_int64(), 2UL)
   stage.write(bytes)
   assert_eq(stage.install(), Installed)
