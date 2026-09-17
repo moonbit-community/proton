@@ -99,7 +99,8 @@ therefore insufficient evidence that window/CEF cleanup has been repaired.
 
 ## Fix
 
-All three `toggleFullScreen:` call paths use a local autorelease pool. These
+Window actions, including all three `toggleFullScreen:` paths, use a local
+autorelease pool. These
 synchronous FFI calls occur outside the event-pump pool; temporary AppKit
 references created during fullscreen otherwise keep the CEF host view alive
 past native window closure. The browser then cannot complete its close and
@@ -112,3 +113,31 @@ independent browser lifecycle to reach its terminal state.
 
 The macOS CI job runs fullscreen, restore, and kiosk modes. The existing
 windowed-close test and `--direct-close` provide non-fullscreen controls.
+
+## Child-browser shutdown regression (#316)
+
+These commands open real windows. Run them deliberately in a graphical session;
+do not run them during unrelated desktop work. The existing runner checks both
+normal application return and the absence of remaining helper processes before
+any forced cleanup.
+
+```sh
+# No-child control, then one and two live child browsers.
+node e2e/repro_fullscreen_close/run.mjs --direct-close --native-close
+node e2e/repro_fullscreen_close/run.mjs --direct-close --native-close --views=1
+node e2e/repro_fullscreen_close/run.mjs --direct-close --native-close --views=2 --show-inactive
+# Close children first; re-show through focus instead of show.
+node e2e/repro_fullscreen_close/run.mjs --direct-close --native-close --views=2 --refocus --close-child-first
+# Combine child ownership with fullscreen transitions and renderer close.
+node e2e/repro_fullscreen_close/run.mjs --views=1
+```
+
+Children use static data URLs. The application waits for all children to load
+before exercising the selected operations. `--native-close` calls the public
+`WindowHandle::close` API; without it, closing originates in the main renderer.
+The runner accepts the same child options with `--restore` and `--kiosk`.
+
+The window and view native entry points now scope their AppKit/CEF temporary
+objects with autorelease pools, including synchronous display operations.
+Fullscreen uses that same operation boundary. Host handles remain borrowed:
+closing detaches them without an extra release of an unowned reference.

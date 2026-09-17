@@ -722,84 +722,100 @@ int32_t proton_engine_execute_process(
 int32_t proton_engine_runtime_create(
     const proton_engine_runtime_config_t *input_config,
     proton_engine_runtime_t **out_runtime, char *error, size_t error_len) {
+  @autoreleasepool {
+    if (out_runtime == NULL) {
+      proton_engine_set_message(error, error_len, "out_runtime is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    *out_runtime = NULL;
+    if (g_proton_cef_runtime_active) {
+      proton_engine_set_message(error, error_len, "runtime is already active");
+      return PROTON_ERR_ALREADY_INITIALIZED;
+    }
 
-  if (out_runtime == NULL) {
-    proton_engine_set_message(error, error_len, "out_runtime is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  *out_runtime = NULL;
-  if (g_proton_cef_runtime_active) {
-    proton_engine_set_message(error, error_len, "runtime is already active");
-    return PROTON_ERR_ALREADY_INITIALIZED;
-  }
+    if (input_config == NULL) {
+      proton_engine_set_message(error, error_len, "runtime config is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
+    proton_engine_runtime_config_t config = *input_config;
+    g_proton_remote_debugging_port = config.remote_debugging_port;
 
-  if (input_config == NULL) {
-    proton_engine_set_message(error, error_len, "runtime config is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-  proton_engine_runtime_config_t config = *input_config;
-  g_proton_remote_debugging_port = config.remote_debugging_port;
+    int temporary_profile = config.cache_dir[0] == '\0';
+    if (temporary_profile) {
+      if (!proton_profile_storage_create_temporary(
+              config.cache_dir, sizeof(config.cache_dir), error, error_len)) {
+        return PROTON_ERR_ENGINE;
+      }
+      snprintf(g_proton_temporary_profile_path,
+               sizeof(g_proton_temporary_profile_path), "%s", config.cache_dir);
+      config.persist_session_cookies = 0;
+    }
 
-  int temporary_profile = config.cache_dir[0] == '\0';
-  if (temporary_profile) {
-    if (!proton_profile_storage_create_temporary(
-            config.cache_dir, sizeof(config.cache_dir), error, error_len)) {
+    if (!proton_engine_load_cef_library(&config, error, error_len)) {
+      proton_engine_remove_temporary_profile();
       return PROTON_ERR_ENGINE;
     }
-    snprintf(g_proton_temporary_profile_path,
-             sizeof(g_proton_temporary_profile_path), "%s", config.cache_dir);
-    config.persist_session_cookies = 0;
-  }
-
-  if (!proton_engine_load_cef_library(&config, error, error_len)) {
-    proton_engine_remove_temporary_profile();
-    return PROTON_ERR_ENGINE;
-  }
-  proton_engine_ensure_appkit();
-  proton_engine_init_handlers();
-  proton_engine_check_cef_api_hash();
-  proton_engine_reset_external_message_pump();
-  atomic_store_explicit(&g_external_message_pump_enabled, true,
-                        memory_order_release);
-  if (!proton_engine_setup_wait_source(error, error_len)) {
+    proton_engine_ensure_appkit();
+    proton_engine_init_handlers();
+    proton_engine_check_cef_api_hash();
     proton_engine_reset_external_message_pump();
-    proton_engine_unload_cef_library();
-    proton_engine_remove_temporary_profile();
-    return PROTON_ERR_ENGINE;
-  }
+    atomic_store_explicit(&g_external_message_pump_enabled, true,
+                          memory_order_release);
+    if (!proton_engine_setup_wait_source(error, error_len)) {
+      proton_engine_reset_external_message_pump();
+      proton_engine_unload_cef_library();
+      proton_engine_remove_temporary_profile();
+      return PROTON_ERR_ENGINE;
+    }
 
-  cef_main_args_t args;
-  cef_settings_t settings;
-  memset(&args, 0, sizeof(args));
-  args.argc = *_NSGetArgc();
-  args.argv = *_NSGetArgv();
-  memset(&settings, 0, sizeof(settings));
-  settings.size = sizeof(settings);
-  settings.no_sandbox = 1;
-  settings.multi_threaded_message_loop = 0;
-  settings.external_message_pump = 1;
-  settings.windowless_rendering_enabled = config.headless;
-  settings.log_severity = proton_engine_cef_log_severity_from_env();
-  settings.remote_debugging_port = config.remote_debugging_port > 0
-                                       ? config.remote_debugging_port
-                                       : PROTON_REMOTE_DEBUGGING_DISABLED;
-  settings.persist_session_cookies = config.persist_session_cookies;
-  proton_engine_set_string(&settings.browser_subprocess_path,
-                           config.helper_path);
-  proton_engine_set_string(&settings.framework_dir_path, config.framework_dir);
-  proton_engine_set_string(&settings.resources_dir_path, config.resources_dir);
-  if (config.locales_dir[0] != '\0') {
-    proton_engine_set_string(&settings.locales_dir_path, config.locales_dir);
-  }
-  proton_engine_set_string(&settings.locale, config.locale);
-  proton_engine_set_string(&settings.accept_language_list,
-                           config.accept_languages);
-  proton_engine_set_string(&settings.root_cache_path, config.cache_dir);
-  if (!temporary_profile) {
-    proton_engine_set_string(&settings.cache_path, config.cache_dir);
-  }
+    cef_main_args_t args;
+    cef_settings_t settings;
+    memset(&args, 0, sizeof(args));
+    args.argc = *_NSGetArgc();
+    args.argv = *_NSGetArgv();
+    memset(&settings, 0, sizeof(settings));
+    settings.size = sizeof(settings);
+    settings.no_sandbox = 1;
+    settings.multi_threaded_message_loop = 0;
+    settings.external_message_pump = 1;
+    settings.windowless_rendering_enabled = config.headless;
+    settings.log_severity = proton_engine_cef_log_severity_from_env();
+    settings.remote_debugging_port = config.remote_debugging_port > 0
+                                         ? config.remote_debugging_port
+                                         : PROTON_REMOTE_DEBUGGING_DISABLED;
+    settings.persist_session_cookies = config.persist_session_cookies;
+    proton_engine_set_string(&settings.browser_subprocess_path,
+                             config.helper_path);
+    proton_engine_set_string(&settings.framework_dir_path, config.framework_dir);
+    proton_engine_set_string(&settings.resources_dir_path, config.resources_dir);
+    if (config.locales_dir[0] != '\0') {
+      proton_engine_set_string(&settings.locales_dir_path, config.locales_dir);
+    }
+    proton_engine_set_string(&settings.locale, config.locale);
+    proton_engine_set_string(&settings.accept_language_list,
+                             config.accept_languages);
+    proton_engine_set_string(&settings.root_cache_path, config.cache_dir);
+    if (!temporary_profile) {
+      proton_engine_set_string(&settings.cache_path, config.cache_dir);
+    }
 
-  if (!cef_initialize(&args, &settings, proton_engine_cef_app(), NULL)) {
+    if (!cef_initialize(&args, &settings, proton_engine_cef_app(), NULL)) {
+      cef_string_clear(&settings.browser_subprocess_path);
+      cef_string_clear(&settings.framework_dir_path);
+      cef_string_clear(&settings.resources_dir_path);
+      cef_string_clear(&settings.locales_dir_path);
+      cef_string_clear(&settings.locale);
+      cef_string_clear(&settings.accept_language_list);
+      cef_string_clear(&settings.cache_path);
+      cef_string_clear(&settings.root_cache_path);
+      proton_engine_reset_external_message_pump();
+      proton_engine_unload_cef_library();
+      proton_engine_remove_temporary_profile();
+      proton_engine_set_message(error, error_len, "cef_initialize failed");
+      return PROTON_ERR_ENGINE;
+    }
+    g_proton_cef_initialized = 1;
+
     cef_string_clear(&settings.browser_subprocess_path);
     cef_string_clear(&settings.framework_dir_path);
     cef_string_clear(&settings.resources_dir_path);
@@ -808,104 +824,91 @@ int32_t proton_engine_runtime_create(
     cef_string_clear(&settings.accept_language_list);
     cef_string_clear(&settings.cache_path);
     cef_string_clear(&settings.root_cache_path);
-    proton_engine_reset_external_message_pump();
-    proton_engine_unload_cef_library();
-    proton_engine_remove_temporary_profile();
-    proton_engine_set_message(error, error_len, "cef_initialize failed");
-    return PROTON_ERR_ENGINE;
-  }
-  g_proton_cef_initialized = 1;
 
-  cef_string_clear(&settings.browser_subprocess_path);
-  cef_string_clear(&settings.framework_dir_path);
-  cef_string_clear(&settings.resources_dir_path);
-  cef_string_clear(&settings.locales_dir_path);
-  cef_string_clear(&settings.locale);
-  cef_string_clear(&settings.accept_language_list);
-  cef_string_clear(&settings.cache_path);
-  cef_string_clear(&settings.root_cache_path);
-
-  proton_engine_runtime_t *runtime =
-      (proton_engine_runtime_t *)calloc(1, sizeof(*runtime));
-  if (runtime == NULL) {
-    proton_engine_cef_shutdown();
-    proton_engine_reset_external_message_pump();
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate runtime state");
-    return PROTON_ERR_ENGINE;
+    proton_engine_runtime_t *runtime =
+        (proton_engine_runtime_t *)calloc(1, sizeof(*runtime));
+    if (runtime == NULL) {
+      proton_engine_cef_shutdown();
+      proton_engine_reset_external_message_pump();
+      proton_engine_set_message(error, error_len,
+                                "failed to allocate runtime state");
+      return PROTON_ERR_ENGINE;
+    }
+    runtime->owns_cef_runtime = 1;
+    runtime->headless = config.headless;
+    runtime->next_bridge_request_id = 1;
+    runtime->browsers = proton_browser_registry_create(
+        proton_engine_browser_client_factory, runtime);
+    if (runtime->browsers == NULL) {
+      free(runtime);
+      proton_engine_cef_shutdown();
+      proton_engine_reset_external_message_pump();
+      g_proton_cef_runtime_active = 0;
+      proton_engine_set_message(error, error_len,
+                                "failed to allocate browser registry");
+      return PROTON_ERR_ENGINE;
+    }
+    snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
+             config.dialog_ok_label);
+    snprintf(runtime->dialog_cancel_label,
+             sizeof(runtime->dialog_cancel_label), "%s",
+             config.dialog_cancel_label);
+    g_proton_cef_runtime_active = 1;
+    if (!proton_engine_register_scheme_factory()) {
+      proton_engine_cef_shutdown();
+      proton_engine_reset_external_message_pump();
+      g_proton_cef_runtime_active = 0;
+      proton_browser_registry_destroy(runtime->browsers);
+      free(runtime);
+      proton_engine_set_message(error, error_len,
+                                "failed to register proton scheme handler");
+      return PROTON_ERR_ENGINE;
+    }
+    int32_t accessibility_status = proton_engine_runtime_start_accessibility(
+        runtime, config.accessibility_mode, error, error_len);
+    if (accessibility_status != PROTON_OK) {
+      proton_browser_registry_destroy(runtime->browsers);
+      free(runtime);
+      proton_engine_cef_shutdown();
+      proton_engine_reset_external_message_pump();
+      g_proton_cef_runtime_active = 0;
+      return accessibility_status;
+    }
+    proton_engine_native_theme_start_observing();
+    *out_runtime = runtime;
+    return PROTON_OK;
   }
-  runtime->owns_cef_runtime = 1;
-  runtime->headless = config.headless;
-  runtime->next_bridge_request_id = 1;
-  runtime->browsers = proton_browser_registry_create(
-      proton_engine_browser_client_factory, runtime);
-  if (runtime->browsers == NULL) {
-    free(runtime);
-    proton_engine_cef_shutdown();
-    proton_engine_reset_external_message_pump();
-    g_proton_cef_runtime_active = 0;
-    proton_engine_set_message(error, error_len,
-                              "failed to allocate browser registry");
-    return PROTON_ERR_ENGINE;
-  }
-  snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
-           config.dialog_ok_label);
-  snprintf(runtime->dialog_cancel_label,
-           sizeof(runtime->dialog_cancel_label), "%s",
-           config.dialog_cancel_label);
-  g_proton_cef_runtime_active = 1;
-  if (!proton_engine_register_scheme_factory()) {
-    proton_engine_cef_shutdown();
-    proton_engine_reset_external_message_pump();
-    g_proton_cef_runtime_active = 0;
-    proton_browser_registry_destroy(runtime->browsers);
-    free(runtime);
-    proton_engine_set_message(error, error_len,
-                              "failed to register proton scheme handler");
-    return PROTON_ERR_ENGINE;
-  }
-  int32_t accessibility_status = proton_engine_runtime_start_accessibility(
-      runtime, config.accessibility_mode, error, error_len);
-  if (accessibility_status != PROTON_OK) {
-    proton_browser_registry_destroy(runtime->browsers);
-    free(runtime);
-    proton_engine_cef_shutdown();
-    proton_engine_reset_external_message_pump();
-    g_proton_cef_runtime_active = 0;
-    return accessibility_status;
-  }
-  proton_engine_native_theme_start_observing();
-  *out_runtime = runtime;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                       char *error,
                                       size_t error_len) {
-  if (runtime == NULL) {
-    proton_engine_set_message(error, error_len, "runtime is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-
-  proton_engine_native_theme_stop_observing();
-  proton_engine_runtime_stop_accessibility(runtime);
-  proton_engine_dialog_dispose_runtime(runtime);
-  proton_engine_menu_clear_runtime(runtime);
-  if (runtime->owns_cef_runtime) {
-    if (!proton_engine_runtime_destroy_ready(runtime)) {
-      proton_engine_set_message(error, error_len,
-                                "runtime still owns closing browser windows");
-      return PROTON_ERR_BUSY;
+  @autoreleasepool {
+    if (runtime == NULL) {
+      proton_engine_set_message(error, error_len, "runtime is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
     }
-    proton_engine_bridge_pending_clear_all();
-    proton_engine_cef_shutdown();
-    proton_engine_reset_external_message_pump();
-    runtime->owns_cef_runtime = 0;
+
+    proton_engine_native_theme_stop_observing();
+    proton_engine_runtime_stop_accessibility(runtime);
+    proton_engine_dialog_dispose_runtime(runtime);
+    proton_engine_menu_clear_runtime(runtime);
+    if (runtime->owns_cef_runtime) {
+      if (!proton_engine_runtime_destroy_ready(runtime)) {
+        proton_engine_set_message(error, error_len,
+                                  "runtime still owns closing browser windows");
+        return PROTON_ERR_BUSY;
+      }
+      proton_engine_bridge_pending_clear_all();
+      proton_engine_cef_shutdown();
+      proton_engine_reset_external_message_pump();
+      runtime->owns_cef_runtime = 0;
+    }
+    proton_browser_registry_destroy(runtime->browsers);
+    g_proton_cef_runtime_active = 0;
+    free(runtime);
+    return PROTON_OK;
   }
-  proton_browser_registry_destroy(runtime->browsers);
-  g_proton_cef_runtime_active = 0;
-  free(runtime);
-  return PROTON_OK;
 }
 
 int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime) {
@@ -962,13 +965,15 @@ int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_runtime_t *runtime,
     char *error,
     size_t error_len) {
-  if (runtime == NULL || !g_proton_cef_initialized) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
+  @autoreleasepool {
+    if (runtime == NULL || !g_proton_cef_initialized) {
+      proton_engine_set_message(error, error_len, "runtime is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    proton_engine_runtime_create_pending_browsers(runtime);
+    proton_engine_run_external_message_pump_once();
+    return PROTON_OK;
   }
-  proton_engine_runtime_create_pending_browsers(runtime);
-  proton_engine_run_external_message_pump_once();
-  return PROTON_OK;
 }
 
 static uint32_t proton_engine_runtime_ready_mask(
@@ -1046,96 +1051,97 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
                                    uint32_t *out_ready_mask,
                                    char *error,
                                    size_t error_len) {
-
-  if (out_ready_mask != NULL) {
-    *out_ready_mask = PROTON_WAIT_NONE;
-  }
-  // A NULL runtime waits for host-loop wakeups alone. The host loop is running
-  // before the first engine runtime exists -- application code does file IO
-  // while it is still deciding what runtime to build -- and a wait that
-  // refused to block until then would leave those wakeups nowhere to land.
-  if (runtime != NULL && !g_proton_cef_initialized) {
-    proton_engine_set_message(error, error_len, "runtime is not initialized");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  if (g_wait_source == NULL) {
-    proton_engine_set_message(error, error_len, "host loop is not running");
-    return PROTON_ERR_NOT_INITIALIZED;
-  }
-  if (out_ready_mask == NULL) {
-    proton_engine_set_message(error, error_len, "out_ready_mask is required");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
-
-  proton_engine_runtime_create_pending_browsers(runtime);
-  uint32_t ready_mask = proton_engine_runtime_ready_mask(runtime, interest_mask);
-
-  // Negative means PROTON_WAIT_TIMEOUT_INFINITE; the ABI rejects every other
-  // negative value before reaching here. -1 stays out of the arithmetic below
-  // so it cannot be mistaken for a duration. Already-ready native work makes
-  // this a non-blocking turn, but does not skip CoreFoundation: an immediate
-  // CEF schedule can otherwise keep returning early forever and starve the
-  // AppKit sources that destroy a closing browser's view hierarchy.
-  int wait_forever = timeout_ms < 0 && ready_mask == PROTON_WAIT_NONE;
-  int64_t wait_timeout =
-      timeout_ms < 0 || ready_mask != PROTON_WAIT_NONE ? 0
-                                                       : (int64_t)timeout_ms;
-  int waiting_for_platform_pump = 0;
-  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0 &&
-      g_proton_cef_initialized) {
-    int64_t pump_delay = PROTON_ENGINE_MAX_MESSAGE_PUMP_DELAY_MS;
-    int64_t scheduled_delay = proton_engine_get_scheduled_pump_delay_ms();
-    if (scheduled_delay >= 0 && scheduled_delay < pump_delay) {
-      pump_delay = scheduled_delay;
-    }
-    if (wait_forever || pump_delay <= wait_timeout) {
-      wait_timeout = pump_delay;
-      wait_forever = 0;
-      waiting_for_platform_pump = 1;
-    }
-  }
-
-  // Nothing is cleared before waiting. Bits set while the host was running its
-  // own code -- not inside this wait -- are the ones that matter most, and
-  // clearing first would throw them away; the exchange below is what consumes
-  // them. Re-reporting a bit the host has already handled only costs it a
-  // spurious poll, while dropping one costs it the notification entirely.
-  CFRunLoopRunResult run_result = kCFRunLoopRunTimedOut;
-  CFAbsoluteTime start_time = CFAbsoluteTimeGetCurrent();
-  // CFRunLoopRunInMode has no "forever", so an interval far beyond any
-  // process lifetime stands in for it. Unlike a sentinel this one is only
-  // ever reached by a run loop with no sources left to signal it, which is
-  // a hung host either way.
-  CFTimeInterval seconds =
-      wait_forever ? 1.0e9 : ((CFTimeInterval)wait_timeout) / 1000.0;
-  // Same reasoning as the pump: run-loop sources and timers autorelease,
-  // and no outer pool exists on the host's main thread.
   @autoreleasepool {
-    run_result = CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, true);
-  }
-  CFAbsoluteTime elapsed = CFAbsoluteTimeGetCurrent() - start_time;
+    if (out_ready_mask != NULL) {
+      *out_ready_mask = PROTON_WAIT_NONE;
+    }
+    // A NULL runtime waits for host-loop wakeups alone. The host loop is running
+    // before the first engine runtime exists -- application code does file IO
+    // while it is still deciding what runtime to build -- and a wait that
+    // refused to block until then would leave those wakeups nowhere to land.
+    if (runtime != NULL && !g_proton_cef_initialized) {
+      proton_engine_set_message(error, error_len, "runtime is not initialized");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    if (g_wait_source == NULL) {
+      proton_engine_set_message(error, error_len, "host loop is not running");
+      return PROTON_ERR_NOT_INITIALIZED;
+    }
+    if (out_ready_mask == NULL) {
+      proton_engine_set_message(error, error_len, "out_ready_mask is required");
+      return PROTON_ERR_INVALID_ARGUMENT;
+    }
 
-  uint32_t signaled_mask = atomic_exchange_explicit(
-      &g_wait_source_ready_mask, PROTON_WAIT_NONE, memory_order_acquire);
-  ready_mask |= signaled_mask & interest_mask;
-  if ((interest_mask & PROTON_WAIT_PLATFORM) != 0) {
-    if (run_result == kCFRunLoopRunHandledSource ||
-        run_result == kCFRunLoopRunStopped) {
-      int event_only_source =
-          (signaled_mask & PROTON_WAIT_EVENT) != 0 &&
-          (signaled_mask & PROTON_WAIT_PLATFORM) == 0;
-      if (!event_only_source) {
+    proton_engine_runtime_create_pending_browsers(runtime);
+    uint32_t ready_mask = proton_engine_runtime_ready_mask(runtime, interest_mask);
+
+    // Negative means PROTON_WAIT_TIMEOUT_INFINITE; the ABI rejects every other
+    // negative value before reaching here. -1 stays out of the arithmetic below
+    // so it cannot be mistaken for a duration. Already-ready native work makes
+    // this a non-blocking turn, but does not skip CoreFoundation: an immediate
+    // CEF schedule can otherwise keep returning early forever and starve the
+    // AppKit sources that destroy a closing browser's view hierarchy.
+    int wait_forever = timeout_ms < 0 && ready_mask == PROTON_WAIT_NONE;
+    int64_t wait_timeout =
+        timeout_ms < 0 || ready_mask != PROTON_WAIT_NONE ? 0
+                                                         : (int64_t)timeout_ms;
+    int waiting_for_platform_pump = 0;
+    if ((interest_mask & PROTON_WAIT_PLATFORM) != 0 &&
+        g_proton_cef_initialized) {
+      int64_t pump_delay = PROTON_ENGINE_MAX_MESSAGE_PUMP_DELAY_MS;
+      int64_t scheduled_delay = proton_engine_get_scheduled_pump_delay_ms();
+      if (scheduled_delay >= 0 && scheduled_delay < pump_delay) {
+        pump_delay = scheduled_delay;
+      }
+      if (wait_forever || pump_delay <= wait_timeout) {
+        wait_timeout = pump_delay;
+        wait_forever = 0;
+        waiting_for_platform_pump = 1;
+      }
+    }
+
+    // Nothing is cleared before waiting. Bits set while the host was running its
+    // own code -- not inside this wait -- are the ones that matter most, and
+    // clearing first would throw them away; the exchange below is what consumes
+    // them. Re-reporting a bit the host has already handled only costs it a
+    // spurious poll, while dropping one costs it the notification entirely.
+    CFRunLoopRunResult run_result = kCFRunLoopRunTimedOut;
+    CFAbsoluteTime start_time = CFAbsoluteTimeGetCurrent();
+    // CFRunLoopRunInMode has no "forever", so an interval far beyond any
+    // process lifetime stands in for it. Unlike a sentinel this one is only
+    // ever reached by a run loop with no sources left to signal it, which is
+    // a hung host either way.
+    CFTimeInterval seconds =
+        wait_forever ? 1.0e9 : ((CFTimeInterval)wait_timeout) / 1000.0;
+    // Same reasoning as the pump: run-loop sources and timers autorelease,
+    // and no outer pool exists on the host's main thread.
+    @autoreleasepool {
+      run_result = CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, true);
+    }
+    CFAbsoluteTime elapsed = CFAbsoluteTimeGetCurrent() - start_time;
+
+    uint32_t signaled_mask = atomic_exchange_explicit(
+        &g_wait_source_ready_mask, PROTON_WAIT_NONE, memory_order_acquire);
+    ready_mask |= signaled_mask & interest_mask;
+    if ((interest_mask & PROTON_WAIT_PLATFORM) != 0) {
+      if (run_result == kCFRunLoopRunHandledSource ||
+          run_result == kCFRunLoopRunStopped) {
+        int event_only_source =
+            (signaled_mask & PROTON_WAIT_EVENT) != 0 &&
+            (signaled_mask & PROTON_WAIT_PLATFORM) == 0;
+        if (!event_only_source) {
+          ready_mask |= PROTON_WAIT_PLATFORM;
+        }
+      } else if (waiting_for_platform_pump &&
+                 elapsed * 1000.0 >= (CFAbsoluteTime)wait_timeout) {
         ready_mask |= PROTON_WAIT_PLATFORM;
       }
-    } else if (waiting_for_platform_pump &&
-               elapsed * 1000.0 >= (CFAbsoluteTime)wait_timeout) {
-      ready_mask |= PROTON_WAIT_PLATFORM;
     }
+    ready_mask |= proton_engine_runtime_ready_mask(runtime, interest_mask);
+    ready_mask &= interest_mask;
+    *out_ready_mask = ready_mask;
+    return PROTON_OK;
   }
-  ready_mask |= proton_engine_runtime_ready_mask(runtime, interest_mask);
-  ready_mask &= interest_mask;
-  *out_ready_mask = ready_mask;
-  return PROTON_OK;
 }
 
 int32_t proton_engine_runtime_set_menu(
@@ -1160,8 +1166,10 @@ int32_t proton_engine_runtime_set_menu(
   char main_error[512] = {0};
   char *main_error_buffer = main_error;
   void (^work)(void) = ^{
-    status = proton_engine_menu_set_on_main(
-        menu_bar, main_error_buffer, sizeof(main_error));
+    @autoreleasepool {
+      status = proton_engine_menu_set_on_main(
+          menu_bar, main_error_buffer, sizeof(main_error));
+    }
   };
   if ([NSThread isMainThread]) {
     work();
