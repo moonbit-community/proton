@@ -47,8 +47,9 @@ The default configuration resolves the CEF runtime and matching helper from the
 packaged application or the environment installed by Proton tooling. Explicit
 runtime configs must include both `runtime_root` and `helper_path`; creating the
 runtime validates the complete configuration before initializing CEF.
-The runtime root uses the assembled store/bundle layout: `bin/libcef.dll` on
-Windows, `bin/libcef.so` on Linux, and
+The runtime root uses the assembled store/bundle layout: `bin/libcef.dll` in the
+Windows store or `libcef.dll` beside the executable in a Windows package,
+`bin/libcef.so` on Linux, and
 `Frameworks/Chromium Embedded Framework.framework` on macOS. Raw CEF SDK
 directories and former Proton prebuilt layouts are not runtime roots.
 
