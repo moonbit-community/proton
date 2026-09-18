@@ -523,6 +523,15 @@ int32_t proton_config_probe_runtime(
 #elif defined(_WIN32)
   bool engine_path_ok = proton_join_path(
       engine_lib, sizeof(engine_lib), config->runtime_root, "bin\\libcef.dll");
+  /* The store uses bin/, while Windows packages place DLLs beside the EXE. */
+  if (engine_path_ok && !proton_path_exists(engine_lib)) {
+    char packaged_lib[PROTON_MAX_PATH_BYTES] = {0};
+    if (proton_join_path(packaged_lib, sizeof(packaged_lib),
+                         config->runtime_root, "libcef.dll") &&
+        proton_path_exists(packaged_lib)) {
+      memcpy(engine_lib, packaged_lib, strlen(packaged_lib) + 1);
+    }
+  }
 #else
   bool engine_path_ok = proton_join_path(
       engine_lib, sizeof(engine_lib), config->runtime_root, "bin/libcef.so");

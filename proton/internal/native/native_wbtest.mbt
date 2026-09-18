@@ -703,7 +703,7 @@ async test "runtime probe rejects legacy CEF library layouts" {
   let root = @async_fs.tmpdir(prefix="proton-runtime-layout-")
   defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
   let (legacy_dirs, library, installed_dir) = match runtime_info().platform {
-    "windows" => (["", "Release"], "libcef.dll", "bin")
+    "windows" => (["Release"], "libcef.dll", "bin")
     "linux" => (["", "lib"], "libcef.so", "bin")
     _ =>
       (
@@ -739,6 +739,37 @@ async test "runtime probe rejects legacy CEF library layouts" {
       .to_string(),
     ),
   )
+}
+
+///|
+async test "runtime probe accepts Windows store and packaged library layouts" {
+  if runtime_info().platform != "windows" {
+    return
+  }
+  for dir in ["bin", ""] {
+    let root = @async_fs.tmpdir(prefix="proton-runtime-layout-")
+    defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
+    let library_dir = @path.Path(root).join(@path.Path(dir)).to_string()
+    if dir != "" {
+      @async_fs.mkdir(library_dir)
+    }
+    @async_fs.write_file(
+      @path.Path(library_dir).join(@path.Path("libcef.dll")).to_string(),
+      "library placeholder",
+      create_mode=CreateOrTruncate,
+    )
+    let config = RuntimeConfig(
+      runtime_root=root,
+      helper_path=@path.Path(root)
+        .join(@path.Path("missing-helper.exe"))
+        .to_string(),
+    )
+    // Stop at the next probe check, without initializing CEF or opening windows.
+    let runtime_error = expect_native_error(() => Runtime(config~))
+    assert_true(runtime_error.message().contains("runtime helper executable"))
+    let process_error = expect_native_error(() => execute_process(config~))
+    assert_true(process_error.message().contains("runtime helper executable"))
+  }
 }
 
 ///|
