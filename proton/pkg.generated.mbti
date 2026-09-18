@@ -823,7 +823,7 @@ pub fn ScreenInfo::to_repr(Self) -> @debug.Repr
 pub struct SessionHandle {
   id : String
   native_id : Int64
-  read_cookies : async (String?, Bool) -> Array[Cookie] raise WindowSessionError
+  read_cookies : async (String?, Bool) -> Array[Cookie]
   write_cookie : (String, String, String, String?, String?, Bool, Bool, CookieSameSite) -> Unit raise WindowSessionError
   remove_cookies : (String?, String?) -> Unit raise WindowSessionError
   flush_cookie_store : () -> Unit raise WindowSessionError
@@ -840,7 +840,7 @@ pub fn SessionHandle::clear_storage_data(Self, StorageDataKind) -> Unit raise Wi
 pub fn SessionHandle::close_all_connections(Self) -> Unit raise WindowSessionError
 pub fn SessionHandle::delete_cookies(Self, url? : String, name? : String) -> Unit raise WindowSessionError
 pub fn SessionHandle::flush_cookies(Self) -> Unit raise WindowSessionError
-pub async fn SessionHandle::get_cookies(Self, url? : String, include_http_only? : Bool) -> Array[Cookie] raise WindowSessionError
+pub async fn SessionHandle::get_cookies(Self, url? : String, include_http_only? : Bool) -> Array[Cookie]
 pub fn SessionHandle::set_cookie(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : CookieSameSite) -> Unit raise WindowSessionError
 pub fn SessionHandle::window_id(Self) -> String
 
@@ -1183,11 +1183,11 @@ pub fn WindowHandle::window_button_position(Self) -> WindowButtonPosition? raise
 pub fn WindowHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
 pub struct WindowManager {
-  open_window : async (String) -> WindowHandle raise WindowSessionError
+  open_window : async (String) -> WindowHandle
   find_window : (String) -> WindowHandle?
 }
 pub fn WindowManager::find(Self, String) -> WindowHandle?
-pub async fn WindowManager::open(Self, String) -> WindowHandle raise WindowSessionError
+pub async fn WindowManager::open(Self, String) -> WindowHandle
 
 pub(all) struct WindowMonitor {
   x : Int

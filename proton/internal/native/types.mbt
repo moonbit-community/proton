@@ -1374,6 +1374,7 @@ struct Window {
   mut handle : @native_ffi.WindowHandle
   id : Int64
   mut lifecycle : WindowLifecycleState
+  mut close_interception_enabled : Bool
 }
 
 ///|

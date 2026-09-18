@@ -24,6 +24,8 @@ pub async fn run_event_broadcast() -> Unit
 
 pub async fn run_i18n() -> Unit
 
+pub async fn run_lifecycle_regression(String) -> Unit
+
 pub async fn run_multi_window() -> Unit
 
 pub async fn run_single_instance() -> Unit

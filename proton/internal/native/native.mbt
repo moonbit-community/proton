@@ -1479,6 +1479,7 @@ pub fn Window::Window(
       handle: out_window.val,
       id: @native_ffi.window_logical_id(out_window.val),
       lifecycle: WindowLive,
+      close_interception_enabled: false,
     }
   }
 }
@@ -1558,7 +1559,7 @@ pub fn Window::close(self : Window) -> Unit raise NativeError {
   let status = @native_ffi.proton_window_close_ffi(self.handle)
   if status < 0 {
     raise native_error(status)
-  } else {
+  } else if !self.close_interception_enabled {
     self.lifecycle = WindowCloseRequested
   }
 }
@@ -2389,6 +2390,7 @@ pub fn Window::set_close_interception(
       },
     ),
   )
+  self.close_interception_enabled = enabled
 }
 
 ///|

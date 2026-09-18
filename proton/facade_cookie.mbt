@@ -52,13 +52,11 @@ fn CookieCompletionStore::route_completion(
 async fn CookieCompletionStore::wait(
   self : CookieCompletionStore,
   request_id : Int64,
-) -> Array[@native.NativeCookieRecord] raise WindowSessionError {
+) -> Array[@native.NativeCookieRecord] {
   let completion = self.register(request_id)
   defer self.remove(request_id)
   while completion.state is CookieWaiting {
-    completion.changed.wait() catch {
-      _ => raise Cancelled
-    }
+    completion.changed.wait()
   }
   match completion.state {
     CookieCompleted(Ok(payload)) => payload
@@ -125,11 +123,13 @@ pub fn SessionHandle::window_id(self : SessionHandle) -> String {
 ///|
 /// Returns cookies visible to the session, optionally restricted to one URL.
 /// HTTP-only cookies are excluded unless `include_http_only` is `true`.
+/// Task cancellation propagates unchanged; operation failures retain
+/// their `WindowSessionError` classification.
 pub async fn SessionHandle::get_cookies(
   self : SessionHandle,
   url? : String,
   include_http_only? : Bool = false,
-) -> Array[Cookie] raise WindowSessionError {
+) -> Array[Cookie] {
   (self.read_cookies)(url, include_http_only)
 }
 

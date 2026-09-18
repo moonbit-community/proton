@@ -498,9 +498,7 @@ async fn run_manifest(
           }
         }
         if bridge_enabled {
-          session.wait_for_bridge_startup(bridge_startup_timeout_ms) catch {
-            error => raise normalize_async_run_error(error)
-          }
+          session.wait_for_bridge_startup(bridge_startup_timeout_ms)
           if !session.is_quitting() {
             @xlog.info(category="proton.bridge") <?
               {
@@ -513,18 +511,29 @@ async fn run_manifest(
           // A source may enqueue synchronously from start(). Initial windows must
           // be able to receive those events before native production begins.
           session.start_extension_event_sources()
-          for running in windows {
-            if !running.is_closed() {
-              session.activate_window(running)
-            }
+          let initial_windows = windows.copy()
+          let activation = window_tasks.spawn(
+            () => {
+              defer session.wakeup.signal.notify()
+              for running in initial_windows {
+                if !running.is_closed() {
+                  session.activate_window(running)
+                }
+              }
+            },
+            no_wait=true,
+            allow_failure=true,
+          )
+          session.drive_until_complete(activation)
+          if !session.is_quitting() {
+            lifecycle.begin_running()
+            cleanup_previous_update()
+            start_update_check(
+              update_channel, update_handlers, application_tasks,
+            )
           }
-          lifecycle.begin_running()
-          cleanup_previous_update()
-          start_update_check(update_channel, update_handlers, application_tasks)
         }
-        session.run() catch {
-          error => raise normalize_async_run_error(error)
-        }
+        session.run()
         lifecycle.observe_window_closed()
         window_tasks.return_immediately(())
       })
@@ -1075,13 +1084,9 @@ fn WindowLifetime::finish_start(
 }
 
 ///|
-async fn WindowLifetime::wait_until_ready(
-  self : WindowLifetime,
-) -> Unit raise AppRunError {
+async fn WindowLifetime::wait_until_ready(self : WindowLifetime) -> Unit {
   while !self.ready {
-    self.ready_signal.wait() catch {
-      error => raise normalize_async_run_error(error)
-    }
+    self.ready_signal.wait()
   }
   match self.startup_error {
     Some(error) => raise error
@@ -1138,8 +1143,17 @@ async fn run_window_lifecycle_scope(
     running.lifetime.wait_until_closed()
     tasks.return_immediately(())
   }) catch {
-    error =>
+    error => {
+      if @async.is_cancellation_error(error) {
+        raise error
+      }
+      if running.lifetime.ready {
+        raise UnexpectedTaskFailure(
+          detail="window " + running.id + ": " + @debug.render(Repr(error)),
+        )
+      }
       running.lifetime.finish_start(Some(normalize_async_run_error(error)))
+    }
   }
 }
 

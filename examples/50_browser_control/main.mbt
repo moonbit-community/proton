@@ -47,7 +47,7 @@ async fn review_session(browser : @proton.BrowserHandle) -> Unit noraise {
     include_http_only=true,
   ) catch {
     error => {
-      println("get cookies failed: \{error.message()}")
+      println("get cookies failed: \{error.to_string()}")
       return
     }
   }

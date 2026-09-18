@@ -75,7 +75,9 @@ async fn wait_for_failure_dialog(
   defer events.dialog_completions.remove(dialog)
   drive_wakeup_until(wakeup, () => !(completion.state is Waiting), () => {
     events.poll_native_events()
-  })
+  }) catch {
+    error => raise normalize_async_run_error(error)
+  }
   match completion.state {
     Completed(Ok(_)) => ()
     Completed(Err(error)) =>

@@ -273,6 +273,7 @@ test "find rejects empty text before native dispatch" {
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
+    close_interception_enabled: false,
   }
   let error = expect_native_error(() => {
     ignore(window.find_in_page("", true, false, false))
@@ -290,6 +291,7 @@ test "programmatic download rejects an empty URL before native dispatch" {
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
+    close_interception_enabled: false,
   }
   let error = expect_native_error(() => window.download_url(""))
   match error {
@@ -328,6 +330,7 @@ test "PDF printing validates path and scale before native dispatch" {
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
+    close_interception_enabled: false,
   }
   let empty_path = expect_native_error(() => {
     ignore(window.print_to_pdf("", default_pdf_settings()))
@@ -396,6 +399,7 @@ test "window progress rejects NaN before native handle access" {
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
+    close_interception_enabled: false,
   }
   try window.set_progress_bar(0.0 / 0.0, ProgressMode::Automatic) catch {
     InvalidArgument(message~) =>
@@ -422,6 +426,7 @@ test "window overlay icon rejects a destroyed image before native access" {
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
+    close_interception_enabled: false,
   }
   let image = NativeImage::{
     handle: @native_ffi.image_null(),
@@ -454,6 +459,7 @@ test "thumbar buttons reject more than seven buttons" {
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
+    close_interception_enabled: false,
   }
   let image = NativeImage::{
     handle: @native_ffi.image_null(),
@@ -553,6 +559,7 @@ test "window opacity rejects NaN before native handle access" {
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
+    close_interception_enabled: false,
   }
   try window.set_opacity(0.0 / 0.0) catch {
     InvalidArgument(message~) =>
@@ -792,6 +799,7 @@ test "invalid handle returns structured native error" {
     handle: @native_ffi.window_null(),
     id: proton_invalid_handle,
     lifecycle: WindowLive,
+    close_interception_enabled: false,
   }
   let error = expect_native_error(() => window.show())
   inspect(error.status(), content="-2")
@@ -902,6 +910,7 @@ test "menu construction errors and inactive owners preserve diagnostics" {
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowDestroyed,
+    close_interception_enabled: false,
   }
   assert_eq(
     expect_native_error(() => runtime.set_menu(menu)).message(),

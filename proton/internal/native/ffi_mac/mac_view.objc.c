@@ -157,6 +157,11 @@ static void proton_engine_view_mark_closed(proton_engine_view_t *view) {
   if (view == NULL) {
     return;
   }
+  // No CEF callback will arrive for a creation that was never submitted.
+  if (view->browser_create_pending) {
+    view->browser_create_pending = 0;
+    proton_browser_lifecycle_creation_failed(view->browser_lifecycle);
+  }
   view->closed = 1;
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 }

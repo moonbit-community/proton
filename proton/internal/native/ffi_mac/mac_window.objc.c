@@ -438,6 +438,11 @@ void proton_engine_window_mark_closed(proton_engine_window_t *window) {
   if (window == NULL) {
     return;
   }
+  // No CEF callback will arrive for a creation that was never submitted.
+  if (window->browser_create_pending) {
+    window->browser_create_pending = 0;
+    proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
+  }
   window->closed = 1;
   proton_engine_bridge_pending_remove_browser(window->runtime,
       proton_browser_lifecycle_browser_id(window->browser_lifecycle));
