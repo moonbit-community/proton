@@ -60,15 +60,13 @@ const char *proton_engine_bridge_request_reject_message(
   }
 }
 
-proton_engine_bridge_request_status_t proton_engine_bridge_build_request(
+proton_engine_bridge_request_status_t proton_engine_bridge_validate_request(
     const proton_bridge_config_t *bridge_config, const char *frame_url,
     const char *op, const char *payload, const char *page_instance,
-    int64_t *io_next_request_id,
-    int64_t *out_request_id, char **out_source_origin) {
-  if (out_request_id == NULL || out_source_origin == NULL) {
+    char **out_source_origin) {
+  if (out_source_origin == NULL) {
     return PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED;
   }
-  *out_request_id = 0;
   *out_source_origin = NULL;
   if (bridge_config == NULL ||
       !proton_engine_bridge_config_allows_page(bridge_config, frame_url)) {
@@ -89,14 +87,6 @@ proton_engine_bridge_request_status_t proton_engine_bridge_build_request(
   if (!proton_engine_bridge_page_instance_is_valid(page_instance)) {
     free(source_origin);
     return PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED;
-  }
-  if (io_next_request_id == NULL) {
-    free(source_origin);
-    return PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED;
-  }
-  *out_request_id = (*io_next_request_id)++;
-  if (*io_next_request_id <= 0) {
-    *io_next_request_id = 1;
   }
   *out_source_origin = source_origin;
   return PROTON_ENGINE_BRIDGE_REQUEST_OK;

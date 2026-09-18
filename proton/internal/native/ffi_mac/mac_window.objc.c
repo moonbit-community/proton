@@ -4,7 +4,6 @@
 
 #include "../ffi/src/proton_config.h"
 #include "../ffi/src/proton_event.h"
-#include "../ffi/src/engine/cef_common/bridge_lifecycle.h"
 #include "../ffi/src/engine/cef_common/browser_session.h"
 #include "../ffi/src/engine/cef_common/bridge_renderer.h"
 #include "../ffi/src/engine/cef_common/message.h"
@@ -962,7 +961,7 @@ static int32_t proton_engine_window_create_browser(
                                ? initial_url
                                : "about:blank");
   cef_dictionary_value_t *extra_info =
-      proton_engine_bridge_renderer_extra_info(window->bridge_config);
+      proton_engine_bridge_host_renderer_info(window->bridge);
   int accepted = cef_browser_host_create_browser(
       &window_info, proton_browser_lifecycle_client(window->browser_lifecycle), &url, &browser_settings,
       extra_info, NULL);
@@ -1030,16 +1029,17 @@ int32_t proton_engine_window_create(
     window->fullscreenable = 1;
     window->enabled = 1;
     window->headless = runtime->headless;
-    window->bridge_config = config.bridge_config;
-    proton_bridge_config_retain(window->bridge_config);
+    window->bridge = proton_engine_bridge_host_create(
+        runtime, config.public_window, config.bridge_config);
     window->browser_session = proton_browser_session_create(
         &config.browser_policy, config.web_request_config,
         proton_engine_browser_signal, NULL);
     window->browser_lifecycle = proton_browser_lifecycle_create(
         runtime->browsers, PROTON_BROWSER_ROLE_MAIN, window, NULL);
-    if (window->browser_session == NULL || window->browser_lifecycle == NULL) {
+    if (window->bridge == NULL || window->browser_session == NULL ||
+        window->browser_lifecycle == NULL) {
       proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
-      proton_internal_bridge_config_destroy(window->bridge_config);
+      proton_engine_bridge_host_destroy(window->bridge);
       proton_browser_session_destroy(window->browser_session);
       free(window);
       proton_engine_set_message(error, error_len,
@@ -1056,7 +1056,7 @@ int32_t proton_engine_window_create(
       proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
       proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
       proton_browser_session_destroy(window->browser_session);
-      proton_internal_bridge_config_destroy(window->bridge_config);
+      proton_engine_bridge_host_destroy(window->bridge);
       free(window);
       proton_engine_set_message(error, error_len, "failed to allocate client");
       return PROTON_ERR_ENGINE;
@@ -1084,7 +1084,7 @@ int32_t proton_engine_window_create(
         proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
         proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
         proton_browser_session_destroy(window->browser_session);
-        proton_internal_bridge_config_destroy(window->bridge_config);
+        proton_engine_bridge_host_destroy(window->bridge);
         free(window);
         proton_engine_set_message(error, error_len, "window creation failed");
         return PROTON_ERR_PLATFORM;
@@ -1137,7 +1137,7 @@ int32_t proton_engine_window_create(
       proton_browser_lifecycle_creation_failed(window->browser_lifecycle);
       proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
       proton_browser_session_destroy(window->browser_session);
-      proton_internal_bridge_config_destroy(window->bridge_config);
+      proton_engine_bridge_host_destroy(window->bridge);
       free(window);
       proton_engine_set_message(error, error_len,
                                 "failed to copy initial browser url");
@@ -1169,10 +1169,9 @@ static void proton_engine_window_free(proton_engine_window_t *window) {
   proton_engine_window_lock();
   proton_engine_window_free_views(window);
   proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
-  proton_internal_bridge_config_destroy(window->bridge_config);
+  proton_engine_bridge_host_destroy(window->bridge);
   free(window->initial_url);
   proton_browser_session_destroy(window->browser_session);
-  proton_engine_bridge_lifecycle_dispose(&window->bridge_lifecycle);
   free(window);
   proton_engine_window_unlock();
 }
@@ -2806,89 +2805,14 @@ int32_t proton_engine_window_respond_browser_request(
 }
 
 int32_t proton_engine_window_emit_bridge_event_json(
-    proton_engine_window_t *window,
-    const char *event_json,
-    char *error,
-    size_t error_len) {
+    proton_engine_window_t *window, const char *event_json,
+    char *error, size_t error_len) {
   @autoreleasepool {
-    if (window == NULL || proton_engine_window_browser(window) == NULL ||
-        window->bridge_config == NULL) {
-      proton_engine_set_message(error, error_len, "bridge is not initialized");
-      return PROTON_ERR_NOT_INITIALIZED;
-    }
-    if (!proton_engine_bridge_send_event(proton_engine_window_browser(window), event_json)) {
-      proton_engine_set_message(error, error_len,
-                                "failed to send bridge event to renderer");
-      return PROTON_ERR_ENGINE;
-    }
-    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-    return PROTON_OK;
+    return proton_engine_bridge_host_emit(
+        proton_engine_window_bridge_host(window),
+        window != NULL ? proton_engine_window_browser(window) : NULL,
+        event_json, error, error_len);
   }
-}
-
-uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
-
-  return window != NULL
-             ? proton_engine_bridge_lifecycle_revision(&window->bridge_lifecycle)
-             : 0;
-}
-
-int32_t proton_engine_window_bridge_state_field(
-    proton_engine_window_t *window, int32_t field, char *buffer,
-    int32_t buffer_len, int32_t *out_required_len, char *error,
-    size_t error_len) {
-
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  return proton_engine_bridge_lifecycle_copy_state_field(
-      &window->bridge_lifecycle, field, buffer, buffer_len, out_required_len);
-}
-
-int32_t proton_engine_window_bridge_failure_present(
-    proton_engine_window_t *window, int32_t *out_present, char *error,
-    size_t error_len) {
-
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  return proton_engine_bridge_lifecycle_failure_present(
-      &window->bridge_lifecycle, out_present);
-}
-
-int32_t proton_engine_window_bridge_failure_field(
-    proton_engine_window_t *window, int32_t field, char *buffer,
-    int32_t buffer_len, int32_t *out_required_len, char *error,
-    size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  return proton_engine_bridge_lifecycle_copy_failure_field(
-      &window->bridge_lifecycle, field, buffer, buffer_len, out_required_len);
-}
-
-int32_t proton_engine_window_bridge_failure_int_field(
-    proton_engine_window_t *window, int32_t field, int32_t *out_value,
-    int32_t *out_present, char *error, size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  return proton_engine_bridge_lifecycle_failure_int_field(
-      &window->bridge_lifecycle, field, out_value, out_present);
-}
-
-int32_t proton_engine_window_clear_bridge_failure(
-    proton_engine_window_t *window, char *error, size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
-    return PROTON_ERR_INVALID_HANDLE;
-  }
-  proton_engine_bridge_lifecycle_clear_failure(&window->bridge_lifecycle);
-  return PROTON_OK;
 }
 
 #endif

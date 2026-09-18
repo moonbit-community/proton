@@ -6,7 +6,6 @@
 
 #include "../cef_common/bridge_client.h"
 #include "../cef_common/bridge_renderer.h"
-#include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/message.h"
 #include "../cef_common/profile_storage.h"
@@ -87,19 +86,9 @@ static proton_engine_permission_handler_t g_permission_handler;
 static proton_engine_render_handler_t g_render_handler;
 static proton_engine_scheme_factory_t g_scheme_factory;
 
-int proton_engine_bridge_resolve_host(cef_browser_t *browser,
-                                      proton_engine_bridge_host_t *out_host) {
-  proton_engine_window_t *window = proton_engine_window_lookup_browser(browser);
-  if (window == NULL || window->runtime == NULL || out_host == NULL) {
-    return 0;
-  }
-  memset(out_host, 0, sizeof(*out_host));
-  out_host->runtime = window->runtime;
-  out_host->public_window = window->public_window_id;
-  out_host->bridge_config = window->bridge_config;
-  out_host->next_request_id = &window->runtime->next_bridge_request_id;
-  out_host->lifecycle = &window->bridge_lifecycle;
-  return 1;
+proton_engine_bridge_host_t *proton_engine_window_bridge_host(
+    proton_engine_window_t *window) {
+  return window != NULL ? window->bridge : NULL;
 }
 
 void proton_engine_bridge_signal(proton_engine_runtime_t *runtime) {
@@ -107,7 +96,7 @@ void proton_engine_bridge_signal(proton_engine_runtime_t *runtime) {
   proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
 }
 
-void proton_engine_bridge_response_sent(proton_engine_runtime_t *runtime) {
+void proton_engine_bridge_message_sent(proton_engine_runtime_t *runtime) {
   (void)runtime;
 }
 
@@ -791,10 +780,8 @@ static void CEF_CALLBACK proton_engine_on_load_end(
   if (window != NULL) {
     proton_browser_session_loading_changed(window->browser_session, url, 0);
   }
-  if (window != NULL && window->bridge_config != NULL && url != NULL &&
-      strcmp(url, "about:blank") != 0) {
-    (void)proton_engine_bridge_send_lifecycle_probe(frame);
-  }
+  proton_engine_bridge_host_load_finished(
+      proton_engine_window_bridge_host(window), frame, url);
   free(url);
 }
 
@@ -824,13 +811,9 @@ static void CEF_CALLBACK proton_engine_on_load_error(
   proton_browser_session_load_failed(
       window != NULL ? window->browser_session : NULL, url,
       (int32_t)errorCode, message);
-  if (window != NULL && window->bridge_config != NULL && url != NULL) {
-    proton_engine_bridge_lifecycle_report_load_failure(
-        &window->bridge_lifecycle, url,
-        message != NULL && message[0] != '\0' ? message
-                                               : "main frame failed to load",
-        errorCode == ERR_ABORTED);
-  }
+  proton_engine_bridge_host_load_failed(
+      proton_engine_window_bridge_host(window), frame, url, message,
+      errorCode == ERR_ABORTED);
   free(message);
   free(url);
 }
@@ -986,7 +969,8 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
     return;
   }
   proton_engine_window_t *window = proton_engine_window_lookup_browser(browser);
-  if (window == NULL || window->bridge_config == NULL || window->closing) {
+  if (window == NULL || !proton_engine_bridge_host_enabled(window->bridge) ||
+      window->closing) {
     return;
   }
   cef_frame_t *frame = browser != NULL ? browser->get_main_frame(browser) : NULL;
@@ -997,22 +981,8 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
   proton_browser_session_renderer_terminated(
       window->browser_session, (int32_t)status, error_code,
       url != NULL ? url : "", detail != NULL ? detail : "");
-  if (url != NULL &&
-      !(window->bridge_lifecycle.outcome != NULL &&
-        strcmp(window->bridge_lifecycle.outcome, "ineligible") == 0 &&
-        window->bridge_lifecycle.url != NULL &&
-        strcmp(window->bridge_lifecycle.url, url) == 0)) {
-    char message[1024];
-    snprintf(message, sizeof(message),
-             "renderer process terminated (status=%d, error=%d)%s%s",
-             (int)status, error_code,
-             detail != NULL && detail[0] != '\0' ? ": " : "",
-             detail != NULL ? detail : "");
-    proton_engine_bridge_lifecycle_report_browser_failure(
-        &window->bridge_lifecycle, url, "renderer_process_terminated", message,
-        0);
-    proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
-  }
+  proton_engine_bridge_host_renderer_terminated(
+      window->bridge, url, (int)status, error_code, detail);
   free(detail);
   free(url);
   if (frame != NULL) {

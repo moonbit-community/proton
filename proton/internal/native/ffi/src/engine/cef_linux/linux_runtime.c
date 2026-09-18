@@ -44,7 +44,6 @@
 #include "include/internal/cef_string.h"
 
 #include "../cef_common/bridge_renderer.h"
-#include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/message.h"
 #include "../cef_common/profile_storage.h"
@@ -452,11 +451,10 @@ static void proton_engine_window_free_storage(proton_engine_window_t *window) {
   }
   proton_engine_window_free_views(window);
   proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
-  proton_internal_bridge_config_destroy(window->bridge_config);
+  proton_engine_bridge_host_destroy(window->bridge);
   proton_browser_session_destroy(window->browser_session);
   free(window->draggable_regions);
   proton_engine_overlay_release_input_windows(window);
-  proton_engine_bridge_lifecycle_dispose(&window->bridge_lifecycle);
   free(window);
   pthread_mutex_unlock(&g_window_lock);
 }
@@ -743,14 +741,16 @@ int32_t proton_engine_runtime_create(
   }
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
-  runtime->next_bridge_request_id = 1;
+  runtime->bridge_requests = proton_engine_bridge_requests_create();
   runtime->browsers = proton_browser_registry_create(
       proton_engine_browser_client_factory, runtime);
-  if (runtime->browsers == NULL) {
+  if (runtime->browsers == NULL || runtime->bridge_requests == NULL) {
+    proton_browser_registry_destroy(runtime->browsers);
+    proton_engine_bridge_requests_destroy(runtime->bridge_requests);
     free(runtime);
     proton_engine_remove_temporary_profile();
     proton_engine_set_message(error, error_len,
-                              "failed to allocate browser registry");
+                              "failed to allocate browser runtime state");
     return PROTON_ERR_ENGINE;
   }
   /* GTK 3 has no reliable process-local assistive-technology activity signal.
@@ -765,6 +765,7 @@ int32_t proton_engine_runtime_create(
   if (!proton_engine_setup_wait_source(error, error_len)) {
     proton_browser_registry_destroy(runtime->browsers);
     proton_engine_runtime_dispose_menu(runtime);
+    proton_engine_bridge_requests_destroy(runtime->bridge_requests);
     free(runtime);
     proton_engine_remove_temporary_profile();
     return PROTON_ERR_PLATFORM;
@@ -811,6 +812,7 @@ int32_t proton_engine_runtime_create(
   if (!cef_initialized) {
     proton_browser_registry_destroy(runtime->browsers);
     proton_engine_runtime_dispose_menu(runtime);
+    proton_engine_bridge_requests_destroy(runtime->bridge_requests);
     free(runtime);
     g_active_runtime = NULL;
     proton_engine_remove_temporary_profile();
@@ -825,6 +827,7 @@ int32_t proton_engine_runtime_create(
     proton_engine_cef_shutdown();
     proton_browser_registry_destroy(runtime->browsers);
     proton_engine_runtime_dispose_menu(runtime);
+    proton_engine_bridge_requests_destroy(runtime->bridge_requests);
     free(runtime);
     g_active_runtime = NULL;
     return PROTON_ERR_PLATFORM;
@@ -835,6 +838,7 @@ int32_t proton_engine_runtime_create(
     proton_engine_cef_shutdown();
     proton_browser_registry_destroy(runtime->browsers);
     proton_engine_runtime_dispose_menu(runtime);
+    proton_engine_bridge_requests_destroy(runtime->bridge_requests);
     free(runtime);
     g_active_runtime = NULL;
     g_proton_cef_runtime_active = 0;
@@ -880,7 +884,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                 "runtime still owns closing browser windows");
       return PROTON_ERR_BUSY;
     }
-    proton_engine_bridge_pending_clear_all();
+    proton_engine_bridge_requests_clear(runtime->bridge_requests);
     proton_engine_cef_shutdown();
     proton_engine_free_closed_windows();
     runtime->owns_cef_runtime = 0;
@@ -891,6 +895,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
     g_active_runtime = NULL;
   }
   g_proton_cef_runtime_active = 0;
+  proton_engine_bridge_requests_destroy(runtime->bridge_requests);
   free(runtime);
   return PROTON_OK;
 }
@@ -1072,6 +1077,12 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   ready_mask &= interest_mask;
   *out_ready_mask = ready_mask;
   return PROTON_OK;
+}
+
+/* Borrowed by bridge operations on the runtime owner thread. */
+proton_engine_bridge_requests_t *proton_engine_runtime_bridge_requests(
+    proton_engine_runtime_t *runtime) {
+  return runtime != NULL ? runtime->bridge_requests : NULL;
 }
 
 #endif

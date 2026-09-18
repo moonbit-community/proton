@@ -6,7 +6,6 @@
 #include "../ffi/src/proton_event.h"
 
 #include "../ffi/src/engine/cef_common/bridge_client.h"
-#include "../ffi/src/engine/cef_common/bridge_lifecycle.h"
 #include "../ffi/src/engine/cef_common/browser_lifecycle.h"
 #include "../ffi/src/engine/cef_common/browser_session.h"
 #include "../ffi/src/engine/cef_common/view_events.h"
@@ -121,7 +120,7 @@ struct proton_engine_runtime {
   int owns_cef_runtime;
   int headless;
   id accessibility_observer;
-  int64_t next_bridge_request_id;
+  proton_engine_bridge_requests_t *bridge_requests;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_registry_t *browsers;
@@ -158,8 +157,7 @@ struct proton_engine_window {
   proton_browser_session_t *browser_session;
   proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
-  proton_bridge_config_t *bridge_config;
-  proton_engine_bridge_lifecycle_t bridge_lifecycle;
+  proton_engine_bridge_host_t *bridge;
   char *initial_url;
   int initial_navigation_pending;
   int browser_create_pending;
