@@ -1,13 +1,13 @@
 name = "moonbit-community/proton"
 
-version = "0.3.0"
+version = "0.3.1"
 
 import {
-  "moonbit-community/proton_ffi@0.3.0",
-  "moonbit-community/proton_config@0.3.0",
-  "moonbit-community/proton_contract@0.3.0",
-  "moonbit-community/proton_updater@0.3.0",
-  "moonbit-community/proton_rsa@0.3.0",
+  "moonbit-community/proton_ffi@0.3.1",
+  "moonbit-community/proton_config@0.3.1",
+  "moonbit-community/proton_contract@0.3.1",
+  "moonbit-community/proton_updater@0.3.1",
+  "moonbit-community/proton_rsa@0.3.1",
   "moonbitlang/async@0.21.2",
   "moonbitlang/x@0.5.1",
   "moonbitlang/lexer@0.3.15",
