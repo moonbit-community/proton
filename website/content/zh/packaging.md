@@ -1,91 +1,59 @@
-# 构建与分发
+# 打包参考
 
 [English](../packaging.html)
 
-构建生成可执行文件和前端输出，打包再将它们与运行时、helper、声明的资源组合为平台分发产物。Proton 项目应使用 **Proton CLI** 完成这个流程。
+Proton CLI 将项目组装为分发产物，包含可执行文件、前端资源、CEF 运行时、匹配的 helper 和声明的资源。后端可执行文件本身不是完整分发包。打包面向当前宿主平台。
 
-## 准备应用元数据
+## 元数据
 
-在 **`proton.project.json`** 已有的 `package` 对象中设置应用名称和版本：
+以下字段属于 `proton.project.json` 的 `package` 对象。
 
-```json
-{
-  "product_name": "Todo App",
-  "version": "0.1.0",
-  "output": "dist"
-}
-```
+| 字段 | 类型 | 默认值与含义 |
+| --- | --- | --- |
+| `product_name` | string | 必填，显示名称 |
+| `version` | string | 必填，应用版本，独立于 Proton 版本 |
+| `formats` | string array | 省略时使用宿主平台默认格式 |
+| `icons` | string array | 空；图标路径相对于配置文件目录 |
+| `prepare` | string | 无；准备命令 |
+| `resources` | string array | 空；附加打包资源 |
+| `sign.binaries` | string array | 空；额外选择签名的二进制文件 |
+| `url_schemes` | string array | 空；应用注册的 URL scheme |
+| `document_types` | object array | 空；文档关联 |
+| `output` | string | `dist`，相对于配置文件目录 |
+| `platforms` | object | 可选的 `macos`、`windows`、`linux` 覆盖 |
 
-合并这些字段，不要替换整个项目文件。跨版本保持根级 `identifier` 稳定。`package.version` 是你的应用版本，不需要与 Proton 0.3.0 相同。
+文档类型包含必填的 `name`、`extensions`，`role` 默认为 `Viewer`。规范应用标识位于顶层 `identifier`，不是 package 字段。修改产品名称不会改变应用身份。
 
-## 构建发布版本
+## 平台覆盖
 
-在项目根目录执行：
+各平台对象接受 `formats`、`resources`、`sign`。Windows 还接受 `nsis_install_mode`。平台格式列表替换共享列表，平台资源与共享资源合并。路径值以项目配置文件目录为基准。
 
-```sh
-proton_cli build -- --release
-```
+| 平台 | 格式 | 默认值 |
+| --- | --- | --- |
+| macOS Apple Silicon | `app`、`zip`、`dmg` | `app`、`zip` |
+| Windows x64 | `app`、`zip`、`nsis` | `app`、`zip` |
+| Linux x64 | `appimage` | `appimage` |
 
-CLI 先构建配置的前端，再构建原生后端。`--` 后的 `--release` 传给 Moon。命令成功说明构建通过，还没有生成最终安装器。
+Windows 使用 Windows SDK 资源编译器将配置的 ICO 内容编译进应用可执行文件。NSIS 产物还要求安装 NSIS。
 
-## 检查并打包
+## NSIS 安装模式
 
-```sh
-proton_cli package --release --dry-run
-proton_cli package --release
-```
+| 值 | 行为 |
+| --- | --- |
+| `currentUser` | 默认；当前用户，不要求管理员安装 |
+| `perMachine` | 所有用户，需要提权 |
+| `both` | 安装器提供范围选择；即使选择当前用户也可能提示提权 |
 
-dry run 显示选中的后端、元数据、格式、输出路径和签名选项，不执行完整构建、打包与签名流程。第二个命令实际构建并组装产物。
-
-未另行配置时，产物写入 `dist`。具体路径请查看命令输出。
-
-## 选择平台格式
-
-在准备支持的目标操作系统上构建，这些命令不提供交叉编译流程。
-
-- **macOS Apple Silicon：** `app` 生成应用包，`zip` 生成归档，`dmg` 生成磁盘映像。
-- **Windows x64：** `app` 生成应用目录，`zip` 生成便携归档，`nsis` 生成安装器。
-- **Linux x64：** `appimage` 生成 AppImage，需要在准备支持的 Linux 环境中验证。
-
-macOS、Windows 默认使用 app 和 zip，Linux 默认使用 appimage。可以通过重复的 `--format` 参数覆盖单次调用，也可以将以下片段合并进已有的 `package` 对象：
-
-```json
-{
-  "platforms": {
-    "macos": { "formats": ["app", "dmg"] },
-    "windows": { "formats": ["nsis"], "nsis_install_mode": "currentUser" },
-    "linux": { "formats": ["appimage"] }
-  }
-}
-```
-
-平台列表会替换共享的 `package.formats` 列表。生成 Windows 安装器前先安装 NSIS，可执行文件图标则需要 Windows SDK 资源编译器。
-
-## Windows 安装范围
-
-默认的 `currentUser` 面向当前用户安装，无需管理员权限。`perMachine` 提权后面向所有用户安装。`both` 允许在安装时选择范围，即使选择当前用户安装也可能请求提权。
-
-如果应用旧版使用机器级安装器，后续更新应显式保留 `perMachine`。修改这个设置不会将已有安装从一个范围迁移到另一个范围。
+修改模式不是安装范围迁移。更新已有的机器级安装时，应保持其预期安装范围。
 
 ## 签名与公证
 
-本地打包本身不会建立可信的发布者身份。在 macOS 上，`--sign` 请求签名，`--notarize` 使用已配置凭据提交公证、装订并验证分发产物。
+`--release` 控制构建模式，不意味着签名。macOS 上，`--sign` 请求签名；`--notarize` 使用配置的凭据请求公证、装订和验证。身份与凭据选项由 `proton_cli package --help` 列出。
 
-公开发布前，先检查当前的签名选项：
+未签名或本地签名的产物不代表受信任的发布者身份。凭据属于部署配置，不属于应用源码。
 
-```sh
-proton_cli package --help
-```
+## 运行时资源行为
 
-为目标平台配置自己的签名身份与凭据，不要把私有签名凭据写入应用源码。具体支持选项见[打包参考](https://github.com/moonbit-community/proton#packaging)；仓库文档可能领先于本指南对应版本。
+打包前端资源不依赖开发服务器。后端资源路径通过 `resource_dir()` 解析。安装资源可能只读，持久应用数据不应写入其中。
 
-## 验证真正要分发的产物
-
-停止开发服务器，在源码目录之外启动打包应用，检查：
-
-1. 前端能从打包资源加载，不需要 localhost 服务器。
-2. 命令和所需原生能力正常工作。
-3. 能读取声明的附加资源，可写数据使用预期位置。
-4. 关闭窗口和显式退出符合应用的生命周期策略。
-
-对于 Todo 教程，在打包应用中添加待办项并使用 Complete all/Reopen all，再分发产物。构建检查和打包 dry run 都不会执行这一步实际运行验证。
+`--dry-run` 校验并展示打包计划，不证明实际打包、签名或产物运行成功。[Todo 教程](tutorial/isomorphic.md)包含应用构建与打包练习。

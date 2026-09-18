@@ -1,97 +1,72 @@
-# 配置前端与资源
+# 项目配置
 
 [English](../configuration.html)
 
-Proton 可以加载内联 HTML、URL、本地文件或打包资源，不强制使用独立前端工具。本章解释 isomorphic 模板的可用配置，以及开发入口如何对应打包后的入口。
+`proton.project.json` 包含应用身份及 CLI 构建／打包元数据。顶层是 JSON 对象，只接受以下四个字段；未知字段会被拒绝。窗口状态、命令注册和能力声明属于 MoonBit 应用构建器，不属于此配置文件。
 
-## 项目配置
+## 顶层字段
 
-isomorphic 模板使用以下 **`proton.project.json`** 配置。运行前端命令前，先安装一次 Warren：
+| 字段 | 类型 | 要求与含义 |
+| --- | --- | --- |
+| `identifier` | string | 必填，经过校验的应用标识 |
+| `backend` | object | 解码时可省略，提供 CLI 后端位置与入口 |
+| `frontend` | object | 可省略，前端命令及资源配置 |
+| `package` | object | 可省略，分发元数据；基于元数据打包时需要 |
 
-```sh
-moon install moonbit-community/warren@0.3.2
-```
-
-已发布的 CLI 0.3.0 生成的是 `moonx --target native` 命令。请只将 `frontend.before_dev` 和 `frontend.before_build` 替换成下方的值，保留其他项目配置。仓库 main 已包含此修正，但已发布的 CLI 0.3.0 尚未包含。Warren 0.3.2 没有已发布的 Wasm 可执行文件，因此不能只删除 `--target native`。
-
-配置直接调用已安装的 `warren` 命令：
-
-```json
-{
-  "identifier": "com.example.todo-app",
-  "backend": {
-    "path": ".",
-    "package": "backend/app"
-  },
-  "frontend": {
-    "path": "frontend",
-    "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "warren dev --browser-entry main --direct --port 4300",
-    "before_build": "warren build --browser-entry main",
-    "dist": "dist"
-  },
-  "package": {
-    "product_name": "Todo App",
-    "version": "0.1.0",
-    "output": "dist"
-  }
-}
-```
-
-请保留你为应用选择的 identifier。这份配置适用于 isomorphic 工作区；minimal 项目构建的是 `app` 包，没有 `frontend` 部分。
-
-## 开发流程如何运行
-
-在项目根目录执行 `proton_cli dev` 后，CLI 会：
-
-1. 在 `frontend.path` 中运行 `frontend.before_dev`。
-2. 等待 `frontend.dev_url` 可访问。
-3. 在 `backend.path` 中构建 `backend.package`，并让原生应用使用开发 URL 启动。
-
-配置中的 URL 和服务器端口必须一致。当 CLI 负责启动服务器时，会拒绝已被占用的端点。如果你自行管理前端服务器，使用：
-
-```sh
-proton_cli dev --no-frontend
-```
-
-此时前端必须已经能通过配置的 URL 访问。普通浏览器中的预览不包含原生 bridge。
-
-## 生产资源如何加载
-
-后端入口仍然保留为：
-
-```moonbit
-@proton.asset("Todo App", "frontend/dist/index.html")
-```
-
-这是模板已有构建器链中的入口表达式，不是完整的 `main`。
-
-`proton_cli build` 执行 `frontend.before_build`、检查 `frontend.dist`，再构建原生后端。前端命令在 `frontend.path` 中运行，所以其中的 `dist` 对应项目里的 `frontend/dist`。
-
-不要将生产 asset 入口替换为硬编码的开发 URL。打包应用必须能在没有开发服务器时加载自己的构建文件。
-
-## 使用其他前端
-
-任何能生成 HTML、CSS 和 JavaScript 的前端都可以提供界面。将前端命令、URL 和输出目录替换为所选工具的配置，并相应修改后端 asset 路径。
-
-Proton CLI 不会替你配置前端框架。需要确保生产输出能从打包后的资源位置工作，包括样式、脚本、图片及前端路由 URL。请测试实际打包应用，开发服务器运行成功并不能验证这些路径。
-
-## 携带附加文件
-
-后端需要读取的文件，可以在已有的 `package` 对象中添加资源路径：
+最小配置形状为：
 
 ```json
 {
-  "resources": ["assets"]
+  "identifier": "com.example.app",
+  "backend": { "path": ".", "package": "app" }
 }
 ```
 
-这是需要合并的片段，不是完整项目文件。在项目根目录创建 `assets/` 并放入文件，打包时会复制声明的资源。后端以 `@proton.resource_dir()` 为基准定位 `assets/...`，开发和打包运行均采用这一方式。
+## 后端
 
-持久化、可写的用户数据应放在安装资源目录之外。修改元数据后执行 `proton_cli package --dry-run`，分发前再验证实际打包结果。
+存在 `backend` 时，两个字段均为必填。
 
-## 标识与运行时配置
+| 字段 | 类型 | 解释 |
+| --- | --- | --- |
+| `path` | string | 相对于配置文件目录解析的目录 |
+| `package` | string | 在该目录执行 Moon 时使用的包选择器 |
 
-`identifier` 是稳定标识，`product_name` 是显示文字，`package.version` 是你自己的应用版本，三者都不同于 Proton 的依赖版本。
+## 前端
 
-使用 `.load_config()` 加载受管理的元数据；不使用受管理配置的应用可以改用 `.identifier(...)`。窗口选项、命令绑定和 capability 仍放在 MoonBit 构建器中，不放在这份 JSON 中。
+解码时，所有前端字段均可省略。具体 CLI 命令会提出额外要求。
+
+| 字段 | 类型 | 默认值与解释 |
+| --- | --- | --- |
+| `path` | string | 省略时为配置文件目录；前端命令的工作目录 |
+| `dev_url` | string | 无默认值；开发页面 URL |
+| `before_dev` | string | 无默认值；前端服务器命令 |
+| `before_build` | string | 无默认值；前端构建命令 |
+| `dist` | string | 无默认值；指定 `frontend.path` 时，相对于该目录解析的输出目录 |
+
+`dev` 管理配置的开发 URL 时要求提供前端命令。`--no-frontend` 连接外部管理的服务器。`build` 先执行配置的构建命令，再验证前端输出并构建后端。CLI 负责启动服务器时，会拒绝已被占用的开发端点。
+
+## 路径与资源
+
+后端／前端路径、打包图标、资源和输出目录相对于配置文件目录解析。`frontend.dist` 相对于前端目录解析。绝对路径保持绝对路径。
+
+`@proton.resource_dir()` 是应用资源基准目录：开发时 CLI 提供项目根目录；打包后为应用资源目录；没有托管元数据的直接运行使用启动工作目录。安装资源不属于持久可写数据存储。
+
+## 打包字段
+
+`package` 的完整字段、平台覆盖规则和产物格式见[打包参考](packaging.md)。
+
+## 0.3.0 的 Warren 命令
+
+已发布的 CLI 0.3.0 生成已弃用的 native `moonx` 命令。替代方式是调用已安装的 `moonbit-community/warren@0.3.2` 可执行文件，前端字段为：
+
+```json
+{
+  "path": "frontend",
+  "dev_url": "http://127.0.0.1:4300",
+  "before_dev": "warren dev --browser-entry main --direct --port 4300",
+  "before_build": "warren build --browser-entry main",
+  "dist": "dist"
+}
+```
+
+该对象是 `frontend` 的值，不是完整项目配置。修正后的生成器已进入 main，尚未包含在已发布的 CLI 0.3.0 中。Warren 0.3.2 没有已发布的 Wasm 可执行文件，因此不能仅删除 native 目标参数。安装要求见[运行环境](installation.md)。

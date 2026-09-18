@@ -1,109 +1,42 @@
-# 从前端调用后端
+# 命令
 
 [English](../commands-events.html)
 
-命令让前端请求原生后端执行操作。本章为[最小项目](first-app.md)添加一个可运行的问候表单，先用普通 JavaScript 展示原生通信边界；[Todo 教程](isomorphic.md)则使用共享 MoonBit 类型和 Rabbita。
+命令是跨渲染器与宿主边界的类型化请求／响应操作。载荷经过序列化；共享 MoonBit 类型不会共享内存，也不会让前端直接执行后端代码。
 
-## 添加契约依赖
+## 契约与绑定
 
-在 **`moon.mod`** 已有的 `import { ... }` 块中加入下面一项，保留其他依赖：
+| API | 约定 |
+| --- | --- |
+| `proton_contract.command[Request, Response](name)` | 声明类型化应用路由，不注册处理器 |
+| `App.commands(register, targets?)` | 为指定渲染器目标安装应用命令绑定 |
+| `CommandRegistrar.bind(command, handler)` | 绑定接收 `(CommandContext, Request)`、返回 `Response` 的异步处理器 |
+| `proton_client.invoke(command, request)` | 前端异步调用，返回 `Response` 或抛出 `ClientFailure` |
+| `proton_rabbita.invoke(...)` | 将成功与失败映射到 Rabbita 命令 |
 
-```text
-"moonbit-community/proton_contract@0.3.0",
-```
+后端要求 `Request` 实现 `FromJson`、`Response` 实现 `ToJson`；前端要求相反方向的转换。契约与注册错误不同于运行中请求的失败。应用路由名称必须合法且唯一；绑定和调用时都会验证描述符。
 
-将 **`app/moon.pkg`** 替换为：
+处理器上下文标识调用方，并提供 `emit_to_caller`。处理器可以等待后端异步工作。校验不通过等业务结果可以建模为响应类型，而不是通信失败。
 
-```text
-import {
-  "moonbitlang/core/json",
-  "moonbitlang/async",
-  "moonbit-community/proton",
-  "moonbit-community/proton_contract",
-}
+## JavaScript 接口
 
-supported_targets = "native"
+注入的 bridge 将应用方法暴露为 `window.__MoonBit__.app.<name>(request)`。调用返回 Promise，失败时 reject。应用路由使用 `app:`，扩展操作使用 `ext:`。普通浏览器页面没有注入的原生 bridge。
 
-pkgtype(kind: "executable")
-```
+## 取消
 
-在项目根目录运行 `moon update`。模块依赖让库可用，包导入则让入口能使用 `@proton_contract`。
+`proton_client.invoke_with_callbacks` 返回取消函数，用于取消响应观察并请求取消通信；迟到的响应会被忽略。异步 `invoke` 所在任务取消时，也会取消待完成请求。取消不保证撤销后端已经执行的操作。
 
-## 定义、注册并调用命令
+## 客户端错误
 
-将 **`app/main.mbt`** 替换为下面的完整示例：
+| 变体 | 含义 |
+| --- | --- |
+| `BridgeUnavailable` | 原生 bridge 不存在 |
+| `InvalidContract` | 命令或事件描述符不合法 |
+| `RemoteFailure` | 后端拒绝，携带 code、message 和可选 detail |
+| `TransportFailure` | 通信失败 |
+| `ResponseDecode` | 响应无法解码为声明的类型 |
+| `RequestCancelled` | 待完成请求被取消 |
 
-```moonbit
-///|
-struct GreetRequest {
-  name : String
-} derive(FromJson, ToJson)
+命令向调用方返回结果，[事件](events.md)向观察者传递通知；两者都不意味着应用数据已经持久化。
 
-///|
-let greet : @proton_contract.Command[GreetRequest, String] =
-  @proton_contract.command("greet")
-
-///|
-async fn main {
-  let html =
-    #|<!doctype html>
-    #|<html lang="en">
-    #|<meta charset="utf-8">
-    #|<title>Greeting</title>
-    #|<style>body { font: 18px system-ui; padding: 32px; }</style>
-    #|<label>Name <input id="name" value="MoonBit"></label>
-    #|<button id="greet">Greet</button>
-    #|<p id="result" role="status"></p>
-    #|<script>
-    #|  document.querySelector("#greet").onclick = async () => {
-    #|    const result = document.querySelector("#result");
-    #|    try {
-    #|      result.textContent = await window.__MoonBit__.app.greet({
-    #|        name: document.querySelector("#name").value
-    #|      });
-    #|    } catch (error) {
-    #|      result.textContent = String(error);
-    #|    }
-    #|  };
-    #|</script>
-    #|</html>
-  @proton.html("Greeting", html)
-  .load_config()
-  .commands(fn(registrar) raise {
-    registrar.bind(greet, (_context, request) => {
-      "Hello, " + request.name + "!"
-    })
-  })
-  .run_or_abort()
-}
-```
-
-执行 `proton_cli dev`。输入“Ada”，点击 **Greet**，页面应显示“Hello, Ada!”。
-
-这里有三个相互连接的部分：
-
-1. `GreetRequest` 描述 JSON 请求，`greet` 声明路由及响应类型。
-2. `.commands(...)` 通过 `registrar.bind` 注册处理器，处理器接收调用方上下文和解码后的请求。
-3. `window.__MoonBit__.app.greet(...)` 返回一个表示响应的 JavaScript promise，页面等待结果并处理拒绝。
-
-仅声明描述符并不会注册处理器。应用中的命令名称需要保持唯一。
-
-## 参数与返回值
-
-对象属性 `name` 对应请求字段。操作需要更多输入时，在请求中添加可序列化字段。返回值可以是字符串、数字、数组，也可以是实现 `ToJson` 的结构体。
-
-原生处理器运行在后端，适合执行业务校验和原生操作。渲染器不能借此直接调用任意 MoonBit 函数。
-
-## 错误处理
-
-请求格式错误、命令不存在或处理器失败，都会使 JavaScript promise 被拒绝。保留调用外层的 `try/catch`，并显示有用的错误信息。
-
-预期的业务结果应作为响应数据。例如 Todo 模板返回 `Changed`、`InvalidTitle` 或 `MissingTodo`，前端将它们与描述 bridge、传输和解码失败的 `ClientFailure` 分开处理。
-
-不要因为前端按钮回调已经执行，就假定请求成功。依赖操作成功的界面更新，应等待返回结果。
-
-## 异步操作与调用方上下文
-
-命令处理器可以执行异步操作。上下文用于识别调用方，也可以向其发送类型化事件。[向前端发送事件](events.md)会在这个示例上继续修改。
-
-如果在普通浏览器打开页面，`window.__MoonBit__` 不存在。请使用 `proton_cli dev` 启动桌面应用，而不是仅打开前端 URL。
+完整签名见[客户端 API](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.0/)。逐步示例位于独立的[命令教程](tutorial/commands-events.md)。

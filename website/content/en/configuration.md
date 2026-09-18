@@ -1,97 +1,72 @@
-# Configuring the frontend and assets
+# Project configuration
 
 [中文](zh/configuration.html)
 
-Proton can load inline HTML, a URL, a local file, or bundled assets. A separate frontend tool is optional. This guide explains the isomorphic template's working configuration and how its development and packaged entries fit together.
+`proton.project.json` contains application identity and CLI build/package metadata. It is a JSON object with four recognized top-level fields. Unknown fields are rejected. Window state, command registration and capabilities belong to the MoonBit application builder, not this file.
 
-## The project configuration
+## Top-level fields
 
-The isomorphic project uses **`proton.project.json`**. Install Warren once before running the frontend commands:
+| Field | Type | Requirement / meaning |
+| --- | --- | --- |
+| `identifier` | string | Required, validated application identifier |
+| `backend` | object | Optional at decoding; provides the CLI backend location and entry |
+| `frontend` | object | Optional frontend command and asset configuration |
+| `package` | object | Optional distribution metadata; required for metadata-driven packaging |
 
-```sh
-moon install moonbit-community/warren@0.3.2
-```
-
-The published CLI 0.3.0 generates `moonx --target native` commands. Replace only `frontend.before_dev` and `frontend.before_build` with the values below, preserving your other configuration. This change is already in repository main, but is not included in the published CLI 0.3.0. Warren 0.3.2 has no published Wasm executable, so removing only `--target native` is not sufficient.
-
-The configuration calls the installed `warren` executable:
-
-```json
-{
-  "identifier": "com.example.todo-app",
-  "backend": {
-    "path": ".",
-    "package": "backend/app"
-  },
-  "frontend": {
-    "path": "frontend",
-    "dev_url": "http://127.0.0.1:4300",
-    "before_dev": "warren dev --browser-entry main --direct --port 4300",
-    "before_build": "warren build --browser-entry main",
-    "dist": "dist"
-  },
-  "package": {
-    "product_name": "Todo App",
-    "version": "0.1.0",
-    "output": "dist"
-  }
-}
-```
-
-Keep the identifier you chose for your application. This configuration is for the isomorphic workspace; the minimal project instead builds its `app` package and has no `frontend` section.
-
-## How development works
-
-From the project root, `proton_cli dev`:
-
-1. Runs `frontend.before_dev` from `frontend.path`.
-2. Waits for `frontend.dev_url` to become available.
-3. Builds `backend.package` from `backend.path` and starts the native app using that URL.
-
-Keep the configured URL and the server port in agreement. The CLI rejects an already occupied endpoint when it is responsible for starting the server. If you run the frontend separately, use:
-
-```sh
-proton_cli dev --no-frontend
-```
-
-The frontend must already be reachable at the configured URL. An ordinary browser preview does not include the native bridge.
-
-## How production assets work
-
-The backend entry remains:
-
-```moonbit
-@proton.asset("Todo App", "frontend/dist/index.html")
-```
-
-This is the entry expression inside the template's existing builder chain, not a complete `main`.
-
-`proton_cli build` runs `frontend.before_build`, checks `frontend.dist`, then builds the native backend. The frontend command runs inside `frontend.path`, so its `dist` resolves to `frontend/dist` in the project.
-
-Do not replace the production asset entry with a hardcoded development URL. A packaged application must load its built files without your development server.
-
-## Use a different frontend
-
-Any frontend that produces HTML, CSS, and JavaScript can provide the web UI. Replace the frontend commands, URL, and output directory with those of your chosen tool, and update the backend asset path accordingly.
-
-Proton's CLI does not supply your frontend framework's configuration. Ensure its production output works from the packaged asset location, including stylesheet, script, image, and client-side route URLs. Test the packaged application; a successful development server does not verify those paths.
-
-## Bundle additional files
-
-For files read by the backend, add resource paths inside the existing `package` object:
+A minimal configuration shape is:
 
 ```json
 {
-  "resources": ["assets"]
+  "identifier": "com.example.app",
+  "backend": { "path": ".", "package": "app" }
 }
 ```
 
-This is a fragment to merge, not the full project file. Create `assets/` at the project root and place the files there. Packaging copies the declared resources. Backend code resolves `assets/...` relative to `@proton.resource_dir()` in both development and packaged execution.
+## Backend
 
-Keep persistent, writable user data outside the installed application resources. Run `proton_cli package --dry-run` after changing metadata, and test the actual packaged output before distributing it.
+When `backend` is present, both fields are required.
 
-## Identity and runtime configuration
+| Field | Type | Interpretation |
+| --- | --- | --- |
+| `path` | string | Directory, resolved relative to the configuration directory |
+| `package` | string | Moon package selector used from that directory |
 
-`identifier` is stable identity; `product_name` is display text; `package.version` is your application's release version. These are distinct from Proton's dependency version.
+## Frontend
 
-Use `.load_config()` to consume managed metadata. An unmanaged application can use `.identifier(...)` instead. Window options, command bindings, and capabilities stay in the MoonBit builder, not this JSON.
+All frontend fields are optional at decoding. Individual CLI commands impose additional requirements.
+
+| Field | Type | Default / interpretation |
+| --- | --- | --- |
+| `path` | string | Configuration directory if omitted; command working directory |
+| `dev_url` | string | No default; development page URL |
+| `before_dev` | string | No default; frontend server command |
+| `before_build` | string | No default; frontend build command |
+| `dist` | string | No default; output directory, relative to `frontend.path` when specified |
+
+`dev` requires a frontend command when it manages a configured development URL. `--no-frontend` connects to an externally managed server. `build` runs the configured build command before validating the frontend output and building the backend. An existing occupied development endpoint is rejected when the CLI is responsible for starting its server.
+
+## Paths and resources
+
+Backend/frontend paths, package icons, package resources and package output are resolved from the configuration directory. `frontend.dist` is resolved from the frontend directory. Absolute paths remain absolute.
+
+`@proton.resource_dir()` is the application resource base: the CLI supplies the project root in development; packaged applications use their resources directory; direct runs without managed metadata use the startup working directory. Installed resources are not a persistent writable data store.
+
+## Package
+
+The full `package` field reference, platform override rules and artifact formats are documented in [packaging](packaging.md).
+
+## Warren commands in 0.3.0
+
+The published CLI 0.3.0 emits deprecated native `moonx` commands. The supported replacement is an installed `moonbit-community/warren@0.3.2` executable with these frontend fields:
+
+```json
+{
+  "path": "frontend",
+  "dev_url": "http://127.0.0.1:4300",
+  "before_dev": "warren dev --browser-entry main --direct --port 4300",
+  "before_build": "warren build --browser-entry main",
+  "dist": "dist"
+}
+```
+
+This object is the value of `frontend`, not a complete project configuration. The corrected generator is in main but not the published CLI 0.3.0. Warren 0.3.2 has no published Wasm executable; removing only the native target flag does not work. Installation requirements are listed in [environment](installation.md).
