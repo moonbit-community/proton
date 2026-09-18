@@ -48,7 +48,7 @@ Changing the mode is not an installation-scope migration. Updates to an existing
 
 ## Signing and notarization
 
-`--release` controls build mode and does not imply signing. On macOS, `--sign` requests signing; `--notarize` requests notarization, stapling and validation using configured credentials. Available identity and credential options are listed by `proton_cli package --help`.
+`--release` controls build mode and does not imply signing. On macOS, `--sign` requests signing; `--notarize` requests notarization, stapling and validation using configured credentials. Identity and credential environment variables are listed in the [CLI reference](cli.md#signing-environment).
 
 An unsigned or locally signed artifact does not establish a trusted publisher identity. Credentials are deployment configuration, not application source.
 
