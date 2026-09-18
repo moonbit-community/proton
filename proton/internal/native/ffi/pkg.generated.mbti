@@ -13,7 +13,7 @@ pub fn bridge_config_add_grant(BridgeConfigHandle, Bytes, FixedArray[Bytes], @re
 
 pub fn bridge_config_add_initialization_unit(BridgeConfigHandle, Int, Bytes, Bytes, Bytes) -> Int
 
-pub fn bridge_config_create(Int, @ref.Ref[Int]) -> BridgeConfigHandle
+pub fn bridge_config_create(@ref.Ref[Int]) -> BridgeConfigHandle
 
 pub fn bridge_config_empty() -> BridgeConfigHandle
 

@@ -22,6 +22,10 @@ The handler context identifies the caller and supports `emit_to_caller`. A handl
 
 The injected bridge exposes application methods as `window.__MoonBit__.app.<name>(request)`. Calls return promises; failures reject them. Application routes use `app:`; extension operations use `ext:`. An ordinary browser page has no injected native bridge.
 
+## Payload size
+
+Proton does not impose a fixed payload-size limit on commands. Payloads are serialized as JSON and remain subject to memory and underlying transport constraints. Large messages increase serialization, copying and parsing costs.
+
 ## Cancellation
 
 `proton_client.invoke_with_callbacks` returns a cancellation function. It cancels response observation and requests transport cancellation; late responses are ignored. Async `invoke` also cancels the pending request when its task is cancelled. Cancellation is not a rollback guarantee for work already performed by the backend.

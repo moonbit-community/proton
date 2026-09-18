@@ -159,7 +159,6 @@ struct proton_engine_window {
   proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
   proton_bridge_config_t *bridge_config;
-  int32_t max_bridge_payload_bytes;
   proton_engine_bridge_lifecycle_t bridge_lifecycle;
   char *initial_url;
   int initial_navigation_pending;

@@ -330,8 +330,7 @@ int CEF_CALLBACK proton_engine_bridge_v8_execute(
   int is_cancel = action != NULL && strcmp(action, "cancel") == 0;
   if ((!is_request && !is_cancel) ||
       (is_request && (!proton_engine_bridge_op_is_valid(op) ||
-                      !proton_engine_bridge_payload_is_valid(
-                          payload_json, PROTON_ENGINE_MAX_BRIDGE_BYTES))) ||
+                      payload_json == NULL)) ||
       !proton_engine_bridge_page_instance_is_valid(page_instance)) {
     free(action);
     free(op);
@@ -501,7 +500,7 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
           ? PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED
           : proton_engine_bridge_build_request(
                 host.bridge_config, frame_url, op, payload_json, page_instance,
-                host.max_payload_bytes, host.next_request_id, &request_id,
+                host.next_request_id, &request_id,
                 &source_origin);
   if (build_status != PROTON_ENGINE_BRIDGE_REQUEST_OK) {
     proton_engine_reject_renderer_request(

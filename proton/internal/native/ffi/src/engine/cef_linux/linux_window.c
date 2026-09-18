@@ -706,7 +706,6 @@ int32_t proton_engine_window_create(
   window->enabled = 1;
   window->bridge_config = config.bridge_config;
   proton_bridge_config_retain(window->bridge_config);
-  window->max_bridge_payload_bytes = config.max_bridge_payload_bytes;
   window->browser_session = proton_browser_session_create(
       &config.browser_policy, config.web_request_config,
       proton_engine_browser_signal, NULL);

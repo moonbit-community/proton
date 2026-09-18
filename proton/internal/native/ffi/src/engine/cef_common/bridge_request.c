@@ -37,11 +37,6 @@ int proton_engine_bridge_page_instance_is_valid(const char *page_instance) {
   return 1;
 }
 
-int proton_engine_bridge_payload_is_valid(const char *payload,
-                                          size_t max_bytes) {
-  return payload != NULL && strlen(payload) <= max_bytes;
-}
-
 const char *proton_engine_bridge_request_reject_message(
     proton_engine_bridge_request_status_t status) {
   switch (status) {
@@ -54,7 +49,7 @@ const char *proton_engine_bridge_request_reject_message(
   case PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED:
     return "bridge op is not allowed";
   case PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED:
-    return "bridge payload is too large";
+    return "bridge payload is missing";
   case PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED:
     return "bridge page instance is invalid";
   case PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED:
@@ -68,7 +63,7 @@ const char *proton_engine_bridge_request_reject_message(
 proton_engine_bridge_request_status_t proton_engine_bridge_build_request(
     const proton_bridge_config_t *bridge_config, const char *frame_url,
     const char *op, const char *payload, const char *page_instance,
-    int32_t max_payload_bytes, int64_t *io_next_request_id,
+    int64_t *io_next_request_id,
     int64_t *out_request_id, char **out_source_origin) {
   if (out_request_id == NULL || out_source_origin == NULL) {
     return PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED;
@@ -87,8 +82,7 @@ proton_engine_bridge_request_status_t proton_engine_bridge_build_request(
                ? PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED
                : PROTON_ENGINE_BRIDGE_REQUEST_OP_UNKNOWN;
   }
-  if (!proton_engine_bridge_payload_is_valid(payload,
-                                             (size_t)max_payload_bytes)) {
+  if (payload == NULL) {
     free(source_origin);
     return PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED;
   }

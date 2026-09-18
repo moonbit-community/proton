@@ -31,8 +31,7 @@ struct AppCommandsProbeResult {
   unknown_message : String
   fail_rejected : Bool
   fail_message : String
-  large_payload_rejected : Bool
-  large_payload_message : String
+  large_payload_roundtrip : Bool
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
@@ -248,15 +247,10 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
       #|    fail_rejected = true;
       #|    fail_message = String(error && error.message ? error.message : error);
       #|  }
-      #|  let large_payload_rejected = false;
-      #|  let large_payload_message = "";
-      #|  try {
-      #|    await invoke("ext:appCommands/ping", {
-      #|      oversized: "x".repeat(1048577),
-      #|    });
-      #|  } catch (error) {
-      #|    large_payload_rejected = true;
-      #|    large_payload_message = String(error && error.message ? error.message : error);
+      #|  let large_payload_roundtrip = true;
+      #|  for (const name of ["x".repeat(1048577), "汉字🙂".repeat(150000)]) {
+      #|    const reply = await invoke("ext:appCommands/ping", { name });
+      #|    large_payload_roundtrip &&= reply.message === `Hello ${name} from the app command layer`;
       #|  }
       #|  return {
       #|    url: location.href,
@@ -271,8 +265,7 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
       #|    unknown_message,
       #|    fail_rejected,
       #|    fail_message,
-      #|    large_payload_rejected,
-      #|    large_payload_message,
+      #|    large_payload_roundtrip,
       #|  };
       #|})()
     ),
@@ -303,12 +296,8 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
     result.fail_message.contains("op ext:appCommands/fail failed") else {
     fail("failing command did not reject correctly: " + value.stringify())
   }
-  guard result.large_payload_rejected &&
-    (
-      result.large_payload_message.contains("invalid bridge request") ||
-      result.large_payload_message.contains("bridge payload is too large")
-    ) else {
-    fail("oversized payload did not reject correctly: " + value.stringify())
+  guard result.large_payload_roundtrip else {
+    fail("large payload did not round-trip intact: " + value.stringify())
   }
 }
 

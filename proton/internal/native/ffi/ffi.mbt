@@ -487,7 +487,6 @@ pub extern "C" fn window_create(
 ///|
 #borrow(out_status)
 pub extern "C" fn bridge_config_create(
-  max_payload_bytes : Int,
   out_status : Ref[Int],
 ) -> BridgeConfigHandle = "proton_internal_bridge_config_create"
 

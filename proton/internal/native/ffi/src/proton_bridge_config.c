@@ -31,7 +31,6 @@ typedef struct {
 
 struct proton_bridge_config {
   size_t ref_count;
-  int32_t max_payload_bytes;
   proton_bridge_grant_t *grants;
   size_t grant_count;
 };
@@ -105,7 +104,7 @@ proton_bridge_config_owner_t *proton_internal_bridge_config_empty(void) {
 }
 
 proton_bridge_config_owner_t *proton_internal_bridge_config_create(
-    int32_t max_payload_bytes, int32_t *out_status) {
+    int32_t *out_status) {
   proton_bridge_config_owner_t *owner = proton_internal_bridge_config_empty();
   owner->value = calloc(1, sizeof(*owner->value));
   if (owner->value == NULL) {
@@ -113,7 +112,6 @@ proton_bridge_config_owner_t *proton_internal_bridge_config_create(
                                   "failed to allocate bridge configuration");
     return owner;
   }
-  owner->value->max_payload_bytes = max_payload_bytes;
   owner->value->ref_count = 1;
   *out_status = PROTON_OK;
   return owner;
@@ -201,11 +199,6 @@ void proton_bridge_config_retain(proton_bridge_config_t *config) {
   if (config != NULL) {
     config->ref_count++;
   }
-}
-
-int32_t proton_bridge_config_max_payload_bytes(
-    const proton_bridge_config_t *config) {
-  return config != NULL ? config->max_payload_bytes : 0;
 }
 
 int proton_bridge_config_has_grant(const proton_bridge_config_t *config,

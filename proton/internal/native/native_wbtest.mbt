@@ -993,11 +993,6 @@ test "bridge validation owns names origins limits and duplicate namespaces" {
     expect_native_error(() => validate_bridge_config(config)).message(),
     "bridge op name list is too large",
   )
-  let config = BridgeConfig(grants=[], max_payload_bytes=1048577)
-  assert_eq(
-    expect_native_error(() => validate_bridge_config(config)).message(),
-    "bridge max_payload_bytes is invalid",
-  )
 }
 
 ///|

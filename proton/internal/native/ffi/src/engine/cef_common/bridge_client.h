@@ -16,7 +16,6 @@ typedef struct {
   proton_engine_runtime_t *runtime;
   proton_window_id_t public_window;
   proton_bridge_config_t *bridge_config;
-  int32_t max_payload_bytes;
   int64_t *next_request_id;
   proton_engine_bridge_lifecycle_t *lifecycle;
 } proton_engine_bridge_host_t;

@@ -24,12 +24,9 @@ fn scenario_probe_expression(name : String) -> String raise {
         #|  } catch (error) {
         #|    if (!String(error && error.message ? error.message : error).includes("op ext:appCommands/fail failed")) return false;
         #|  }
-        #|  try {
-        #|    await invoke("ext:appCommands/ping", { oversized: "x".repeat(1048577) });
-        #|    return false;
-        #|  } catch (error) {
-        #|    const message = String(error && error.message ? error.message : error);
-        #|    if (!message.includes("invalid bridge request") && !message.includes("bridge payload is too large")) return false;
+        #|  for (const name of ["x".repeat(1048577), "汉字🙂".repeat(150000)]) {
+        #|    const reply = await invoke("ext:appCommands/ping", { name });
+        #|    if (reply.message !== `Hello ${name} from the app command layer`) return false;
         #|  }
         #|  return true;
         #|})()

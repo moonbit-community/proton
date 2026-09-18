@@ -97,7 +97,6 @@ typedef struct {
   proton_browser_policy_t browser_policy;
   proton_web_request_config_t *web_request_config;
   proton_bridge_config_t *bridge_config;
-  int32_t max_bridge_payload_bytes;
 } proton_engine_window_config_t;
 
 typedef struct {
