@@ -13,12 +13,21 @@
 
 /* Owned by one platform window, borrowed by callbacks on the CEF UI thread.
  * The host retains its immutable config and owns all bridge lifecycle state.
- * Its runtime and request-id source must outlive it. */
+ * Its runtime and request state must outlive it. */
 typedef struct proton_engine_bridge_host proton_engine_bridge_host_t;
+
+/* Runtime-owned request IDs and pending CEF frame references. Clear pending
+ * references before CEF shutdown; destroy state after its window hosts. */
+typedef struct proton_engine_bridge_requests proton_engine_bridge_requests_t;
+proton_engine_bridge_requests_t *proton_engine_bridge_requests_create(void);
+void proton_engine_bridge_requests_clear(proton_engine_bridge_requests_t *requests);
+void proton_engine_bridge_requests_destroy(proton_engine_bridge_requests_t *requests);
+proton_engine_bridge_requests_t *proton_engine_runtime_bridge_requests(
+    proton_engine_runtime_t *runtime);
 
 proton_engine_bridge_host_t *proton_engine_bridge_host_create(
     proton_engine_runtime_t *runtime, proton_window_id_t public_window,
-    proton_bridge_config_t *config, int64_t *next_request_id);
+    proton_bridge_config_t *config);
 void proton_engine_bridge_host_destroy(proton_engine_bridge_host_t *host);
 int proton_engine_bridge_host_enabled(const proton_engine_bridge_host_t *host);
 cef_dictionary_value_t *proton_engine_bridge_host_renderer_info(
@@ -56,6 +65,5 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
 
 void proton_engine_bridge_pending_remove_browser(
     proton_engine_runtime_t *runtime, int browser_id);
-void proton_engine_bridge_pending_clear_all(void);
 
 #endif

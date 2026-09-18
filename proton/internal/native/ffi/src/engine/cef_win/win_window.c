@@ -820,8 +820,7 @@ int32_t proton_engine_window_create(
   window->runtime = runtime;
   window->public_window_id = config.public_window;
   window->bridge = proton_engine_bridge_host_create(
-      runtime, config.public_window, config.bridge_config,
-      &runtime->next_bridge_request_id);
+      runtime, config.public_window, config.bridge_config);
   window->browser_session = proton_browser_session_create(
       &config.browser_policy, config.web_request_config,
       proton_engine_browser_signal, window);

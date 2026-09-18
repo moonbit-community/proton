@@ -59,7 +59,7 @@ struct proton_engine_runtime {
   int headless;
   /* Set once by the first asset document and never changed, so every window
      in a runtime resolves application resources against the same root. */
-  int64_t next_bridge_request_id;
+  proton_engine_bridge_requests_t *bridge_requests;
   proton_linux_menu_bar_t *menu_definition;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];

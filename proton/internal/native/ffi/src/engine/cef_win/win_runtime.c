@@ -524,16 +524,18 @@ int32_t proton_engine_runtime_create(
   runtime->owns_cef_runtime = 1;
   runtime->headless = config.headless;
   runtime->accessibility_mode = config.accessibility_mode;
-  runtime->next_bridge_request_id = 1;
+  runtime->bridge_requests = proton_engine_bridge_requests_create();
   runtime->browsers = proton_browser_registry_create(
       proton_engine_browser_client_factory, runtime);
-  if (runtime->browsers == NULL) {
+  if (runtime->browsers == NULL || runtime->bridge_requests == NULL) {
+    proton_browser_registry_destroy(runtime->browsers);
+    proton_engine_bridge_requests_destroy(runtime->bridge_requests);
     free(runtime);
     proton_engine_cef_shutdown();
     g_proton_cef_runtime_active = 0;
     proton_engine_release_pump_event();
     proton_engine_set_message(error, error_len,
-                              "failed to allocate browser registry");
+                              "failed to allocate browser runtime state");
     return PROTON_ERR_ENGINE;
   }
   BOOL screen_reader = FALSE;
@@ -560,7 +562,6 @@ int32_t proton_engine_runtime_create(
 
 static void proton_engine_dispose_runtime_state(
     proton_engine_runtime_t *runtime) {
-  proton_engine_bridge_pending_clear_all();
   proton_engine_release_pump_event();
   proton_engine_reset_scheduled_pump();
   if (g_proton_engine_active_runtime == runtime) {
@@ -569,6 +570,7 @@ static void proton_engine_dispose_runtime_state(
   g_proton_cef_runtime_active = 0;
   proton_menu_bar_destroy(runtime->menu_definition);
   proton_browser_registry_destroy(runtime->browsers);
+  proton_engine_bridge_requests_destroy(runtime->bridge_requests);
   free(runtime);
 }
 
@@ -619,6 +621,7 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                 "runtime still owns closing browser windows");
       return PROTON_ERR_BUSY;
     }
+    proton_engine_bridge_requests_clear(runtime->bridge_requests);
     proton_engine_cef_shutdown();
     proton_engine_free_closed_windows();
     runtime->owns_cef_runtime = 0;
@@ -809,6 +812,12 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
   }
   *out_ready_mask = ready_mask & interest_mask;
   return PROTON_OK;
+}
+
+/* Borrowed by bridge operations on the runtime owner thread. */
+proton_engine_bridge_requests_t *proton_engine_runtime_bridge_requests(
+    proton_engine_runtime_t *runtime) {
+  return runtime != NULL ? runtime->bridge_requests : NULL;
 }
 
 #endif

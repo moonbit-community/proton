@@ -835,16 +835,18 @@ int32_t proton_engine_runtime_create(
     }
     runtime->owns_cef_runtime = 1;
     runtime->headless = config.headless;
-    runtime->next_bridge_request_id = 1;
+    runtime->bridge_requests = proton_engine_bridge_requests_create();
     runtime->browsers = proton_browser_registry_create(
         proton_engine_browser_client_factory, runtime);
-    if (runtime->browsers == NULL) {
+    if (runtime->browsers == NULL || runtime->bridge_requests == NULL) {
+      proton_browser_registry_destroy(runtime->browsers);
+      proton_engine_bridge_requests_destroy(runtime->bridge_requests);
       free(runtime);
       proton_engine_cef_shutdown();
       proton_engine_reset_external_message_pump();
       g_proton_cef_runtime_active = 0;
       proton_engine_set_message(error, error_len,
-                                "failed to allocate browser registry");
+                                "failed to allocate browser runtime state");
       return PROTON_ERR_ENGINE;
     }
     snprintf(runtime->dialog_ok_label, sizeof(runtime->dialog_ok_label), "%s",
@@ -858,6 +860,7 @@ int32_t proton_engine_runtime_create(
       proton_engine_reset_external_message_pump();
       g_proton_cef_runtime_active = 0;
       proton_browser_registry_destroy(runtime->browsers);
+      proton_engine_bridge_requests_destroy(runtime->bridge_requests);
       free(runtime);
       proton_engine_set_message(error, error_len,
                                 "failed to register proton scheme handler");
@@ -867,6 +870,7 @@ int32_t proton_engine_runtime_create(
         runtime, config.accessibility_mode, error, error_len);
     if (accessibility_status != PROTON_OK) {
       proton_browser_registry_destroy(runtime->browsers);
+      proton_engine_bridge_requests_destroy(runtime->bridge_requests);
       free(runtime);
       proton_engine_cef_shutdown();
       proton_engine_reset_external_message_pump();
@@ -898,13 +902,14 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                   "runtime still owns closing browser windows");
         return PROTON_ERR_BUSY;
       }
-      proton_engine_bridge_pending_clear_all();
+      proton_engine_bridge_requests_clear(runtime->bridge_requests);
       proton_engine_cef_shutdown();
       proton_engine_reset_external_message_pump();
       runtime->owns_cef_runtime = 0;
     }
     proton_browser_registry_destroy(runtime->browsers);
     g_proton_cef_runtime_active = 0;
+    proton_engine_bridge_requests_destroy(runtime->bridge_requests);
     free(runtime);
     return PROTON_OK;
   }
@@ -1182,6 +1187,13 @@ int32_t proton_engine_runtime_set_menu(
   }
   return status;
 }
+
+/* Borrowed by bridge operations on the runtime owner thread. */
+proton_engine_bridge_requests_t *proton_engine_runtime_bridge_requests(
+    proton_engine_runtime_t *runtime) {
+  return runtime != NULL ? runtime->bridge_requests : NULL;
+}
+
 #endif
 
 void proton_mac_engine_link_anchor(void) {}

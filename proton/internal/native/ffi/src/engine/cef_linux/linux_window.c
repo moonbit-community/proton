@@ -704,8 +704,7 @@ int32_t proton_engine_window_create(
   window->fullscreenable = 1;
   window->enabled = 1;
   window->bridge = proton_engine_bridge_host_create(
-      runtime, config.public_window, config.bridge_config,
-      &runtime->next_bridge_request_id);
+      runtime, config.public_window, config.bridge_config);
   window->browser_session = proton_browser_session_create(
       &config.browser_policy, config.web_request_config,
       proton_engine_browser_signal, NULL);

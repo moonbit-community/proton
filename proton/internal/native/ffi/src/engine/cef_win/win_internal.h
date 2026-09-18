@@ -42,7 +42,7 @@ struct proton_engine_runtime {
   int accessibility_mode;
   /* Set once by the first asset document and never changed, so every window
      in a runtime resolves application resources against the same root. */
-  int64_t next_bridge_request_id;
+  proton_engine_bridge_requests_t *bridge_requests;
   CRITICAL_SECTION wakeup_lock;
   int wakeup_lock_initialized;
   HANDLE wakeup_write;

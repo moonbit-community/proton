@@ -120,7 +120,7 @@ struct proton_engine_runtime {
   int owns_cef_runtime;
   int headless;
   id accessibility_observer;
-  int64_t next_bridge_request_id;
+  proton_engine_bridge_requests_t *bridge_requests;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_registry_t *browsers;

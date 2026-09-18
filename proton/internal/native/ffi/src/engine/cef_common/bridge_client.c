@@ -19,13 +19,13 @@ struct proton_engine_bridge_host {
   proton_engine_runtime_t *runtime;
   proton_window_id_t public_window;
   proton_bridge_config_t *bridge_config;
-  int64_t *next_request_id;
+  proton_engine_bridge_requests_t *requests;
   proton_engine_bridge_lifecycle_t lifecycle;
 };
 
 proton_engine_bridge_host_t *proton_engine_bridge_host_create(
     proton_engine_runtime_t *runtime, proton_window_id_t public_window,
-    proton_bridge_config_t *config, int64_t *next_request_id) {
+    proton_bridge_config_t *config) {
   proton_engine_bridge_host_t *host = calloc(1, sizeof(*host));
   if (host == NULL) {
     return NULL;
@@ -33,7 +33,7 @@ proton_engine_bridge_host_t *proton_engine_bridge_host_create(
   host->runtime = runtime;
   host->public_window = public_window;
   host->bridge_config = config;
-  host->next_request_id = next_request_id;
+  host->requests = proton_engine_runtime_bridge_requests(runtime);
   proton_bridge_config_retain(config);
   proton_engine_bridge_lifecycle_init(&host->lifecycle);
   return host;
@@ -122,7 +122,18 @@ typedef struct proton_engine_bridge_pending {
   struct proton_engine_bridge_pending *next;
 } proton_engine_bridge_pending_t;
 
-static proton_engine_bridge_pending_t *g_bridge_pending;
+struct proton_engine_bridge_requests {
+  int64_t next_request_id;
+  proton_engine_bridge_pending_t *pending;
+};
+
+proton_engine_bridge_requests_t *proton_engine_bridge_requests_create(void) {
+  proton_engine_bridge_requests_t *requests = calloc(1, sizeof(*requests));
+  if (requests != NULL) {
+    requests->next_request_id = 1;
+  }
+  return requests;
+}
 
 int proton_engine_runtime_enqueue_bridge_request(
     proton_engine_runtime_t *runtime, int64_t request_id,
@@ -161,9 +172,10 @@ int proton_engine_runtime_enqueue_bridge_cancellation(
   return proton_event_publish(event);
 }
 
-static size_t proton_engine_bridge_pending_count(void) {
+static size_t proton_engine_bridge_pending_count(
+    const proton_engine_bridge_requests_t *requests) {
   size_t count = 0;
-  for (proton_engine_bridge_pending_t *pending = g_bridge_pending;
+  for (proton_engine_bridge_pending_t *pending = requests->pending;
        pending != NULL; pending = pending->next) {
     count++;
   }
@@ -182,14 +194,14 @@ proton_engine_bridge_pending_free(proton_engine_bridge_pending_t *pending) {
   free(pending);
 }
 
-static int proton_engine_bridge_pending_add(int64_t request_id, int browser_id,
-                                            int renderer_pending_id,
-                                            const char *page_instance,
-                                            cef_frame_t *frame) {
+static int proton_engine_bridge_pending_add(
+    proton_engine_bridge_requests_t *requests, int64_t *out_request_id,
+    int browser_id, int renderer_pending_id, const char *page_instance,
+    cef_frame_t *frame) {
   if (frame == NULL || page_instance == NULL || page_instance[0] == '\0') {
     return 0;
   }
-  if (proton_engine_bridge_pending_count() >=
+  if (proton_engine_bridge_pending_count(requests) >=
       PROTON_ENGINE_MAX_BRIDGE_PENDING) {
     return 0;
   }
@@ -198,7 +210,6 @@ static int proton_engine_bridge_pending_add(int64_t request_id, int browser_id,
   if (pending == NULL) {
     return 0;
   }
-  pending->request_id = request_id;
   pending->browser_id = browser_id;
   pending->renderer_pending_id = renderer_pending_id;
   pending->page_instance = proton_engine_strdup(page_instance);
@@ -206,10 +217,14 @@ static int proton_engine_bridge_pending_add(int64_t request_id, int browser_id,
     free(pending);
     return 0;
   }
+  pending->request_id = requests->next_request_id;
+  requests->next_request_id = pending->request_id == INT64_MAX
+                                 ? 1 : pending->request_id + 1;
+  *out_request_id = pending->request_id;
   frame->base.add_ref((cef_base_ref_counted_t *)frame);
   pending->frame = frame;
-  pending->next = g_bridge_pending;
-  g_bridge_pending = pending;
+  pending->next = requests->pending;
+  requests->pending = pending;
   return 1;
 }
 
@@ -217,10 +232,15 @@ static int proton_engine_bridge_pending_cancel(proton_engine_runtime_t *runtime,
                                                int browser_id,
                                                int renderer_pending_id,
                                                const char *page_instance) {
+  proton_engine_bridge_requests_t *requests =
+      proton_engine_runtime_bridge_requests(runtime);
+  if (requests == NULL) {
+    return 0;
+  }
   if (page_instance == NULL || page_instance[0] == '\0') {
     return 0;
   }
-  proton_engine_bridge_pending_t **cursor = &g_bridge_pending;
+  proton_engine_bridge_pending_t **cursor = &requests->pending;
   while (*cursor != NULL) {
     proton_engine_bridge_pending_t *pending = *cursor;
     if (pending->browser_id == browser_id &&
@@ -242,11 +262,16 @@ static void
 proton_engine_bridge_pending_remove_context(proton_engine_runtime_t *runtime,
                                             int browser_id,
                                             const char *page_instance) {
+  proton_engine_bridge_requests_t *requests =
+      proton_engine_runtime_bridge_requests(runtime);
+  if (requests == NULL) {
+    return;
+  }
   /* A stale context release must not cancel requests from its replacement. */
   if (page_instance == NULL || page_instance[0] == '\0') {
     return;
   }
-  proton_engine_bridge_pending_t **cursor = &g_bridge_pending;
+  proton_engine_bridge_pending_t **cursor = &requests->pending;
   while (*cursor != NULL) {
     proton_engine_bridge_pending_t *pending = *cursor;
     if (pending->browser_id == browser_id &&
@@ -263,8 +288,12 @@ proton_engine_bridge_pending_remove_context(proton_engine_runtime_t *runtime,
 }
 
 static proton_engine_bridge_pending_t *
-proton_engine_bridge_pending_take(int64_t request_id) {
-  proton_engine_bridge_pending_t **cursor = &g_bridge_pending;
+proton_engine_bridge_pending_take(proton_engine_bridge_requests_t *requests,
+                                  int64_t request_id) {
+  if (requests == NULL) {
+    return NULL;
+  }
+  proton_engine_bridge_pending_t **cursor = &requests->pending;
   while (*cursor != NULL) {
     proton_engine_bridge_pending_t *pending = *cursor;
     if (pending->request_id == request_id) {
@@ -279,7 +308,12 @@ proton_engine_bridge_pending_take(int64_t request_id) {
 
 void proton_engine_bridge_pending_remove_browser(
     proton_engine_runtime_t *runtime, int browser_id) {
-  proton_engine_bridge_pending_t **cursor = &g_bridge_pending;
+  proton_engine_bridge_requests_t *requests =
+      proton_engine_runtime_bridge_requests(runtime);
+  if (requests == NULL) {
+    return;
+  }
+  proton_engine_bridge_pending_t **cursor = &requests->pending;
   while (*cursor != NULL) {
     proton_engine_bridge_pending_t *pending = *cursor;
     if (pending->browser_id == browser_id) {
@@ -293,14 +327,24 @@ void proton_engine_bridge_pending_remove_browser(
   }
 }
 
-void proton_engine_bridge_pending_clear_all(void) {
-  proton_engine_bridge_pending_t *pending = g_bridge_pending;
-  g_bridge_pending = NULL;
+void proton_engine_bridge_requests_clear(
+    proton_engine_bridge_requests_t *requests) {
+  if (requests == NULL) {
+    return;
+  }
+  proton_engine_bridge_pending_t *pending = requests->pending;
+  requests->pending = NULL;
   while (pending != NULL) {
     proton_engine_bridge_pending_t *next = pending->next;
     proton_engine_bridge_pending_free(pending);
     pending = next;
   }
+}
+
+void proton_engine_bridge_requests_destroy(
+    proton_engine_bridge_requests_t *requests) {
+  proton_engine_bridge_requests_clear(requests);
+  free(requests);
 }
 
 static int proton_engine_send_bridge_response_to_frame(cef_frame_t *frame,
@@ -600,9 +644,8 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
   proton_engine_bridge_request_status_t build_status =
       !has_host || host->runtime == NULL
           ? PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED
-          : proton_engine_bridge_build_request(
+          : proton_engine_bridge_validate_request(
                 host->bridge_config, frame_url, op, payload_json, page_instance,
-                host->next_request_id, &request_id,
                 &source_origin);
   if (build_status != PROTON_ENGINE_BRIDGE_REQUEST_OK) {
     proton_engine_reject_renderer_request(
@@ -616,12 +659,13 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
   }
   free(frame_url);
   if (!proton_engine_bridge_pending_add(
-          request_id, browser_id, renderer_pending_id, page_instance, frame) ||
+          host->requests, &request_id, browser_id, renderer_pending_id,
+          page_instance, frame) ||
       !proton_engine_runtime_enqueue_bridge_request(
           host->runtime, request_id, host->public_window, op, payload_json,
           page_instance, source_origin)) {
     proton_engine_bridge_pending_t *pending =
-        proton_engine_bridge_pending_take(request_id);
+        proton_engine_bridge_pending_take(host->requests, request_id);
     proton_engine_bridge_pending_free(pending);
     proton_engine_reject_renderer_request(frame, renderer_pending_id,
                                           "bridge request queue is full");
@@ -641,7 +685,8 @@ int32_t proton_engine_runtime_respond_bridge_request(
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   proton_engine_bridge_pending_t *pending =
-      proton_engine_bridge_pending_take(request_id);
+      proton_engine_bridge_pending_take(
+          proton_engine_runtime_bridge_requests(runtime), request_id);
   if (pending == NULL) {
     proton_engine_set_message(error, error_len,
                               "bridge request is no longer pending");
