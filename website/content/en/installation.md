@@ -1,88 +1,40 @@
-# Prerequisites
+# Environment requirements
 
 [中文](zh/installation.html)
 
-Before creating an application, install MoonBit and the native build tools for your operating system. The minimal template needs no frontend build tool; the isomorphic template adds Warren.
+Proton 0.3.0 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
 
-## macOS
+| Platform | Architecture | Build requirements |
+| --- | --- | --- |
+| macOS | Apple Silicon | Xcode Command Line Tools, `clang` |
+| Windows | x64 | Visual Studio C++ Build Tools, MSVC and Windows SDK; developer terminal |
+| Linux | x64 | C/C++ build tools, pkg-config, X11/RandR and GTK development libraries; graphical environment for execution |
 
-Proton 0.3.0 supports Apple Silicon. Install Xcode Command Line Tools from Terminal:
+On Ubuntu 24.04, the dependency set includes `build-essential`, `pkg-config`, `libx11-dev`, `libxrandr-dev`, `libgtk-3-dev`, `libwebkit2gtk-4.1-dev`, `libnotify-dev`, `libnss3`, `libgbm1` and `libasound2t64`. Package names and runtime compatibility vary by distribution.
 
-```sh
-xcode-select --install
-```
+NSIS is required only for NSIS output. Signing identities and notarization credentials are distribution requirements, not prerequisites for local development.
 
-Complete the installer, then confirm that the compiler is available:
+## Tool commands
 
-```sh
-clang --version
-```
+| Tool | Role | Installation or inspection |
+| --- | --- | --- |
+| MoonBit | Compiler, package manager and runtime tools | [Official installation](https://www.moonbitlang.com/download/); `moon version` |
+| Proton CLI | Project development and packaging | `moon install moonbit-community/proton_cli@0.3.0`; `proton_cli --version` |
+| Warren | Isomorphic frontend dev server and build | `moon install moonbit-community/warren@0.3.2`; `warren --help` |
+| Node.js / npm | Warren's JavaScript build tooling | [Node.js installation](https://nodejs.org/en/download); `node --version`, `npm --version` |
 
-You do not need a signing identity to develop locally. Signing and notarization belong to [distribution](packaging.md).
+MoonBit's binary directory must be on PATH. Minimal applications with inline HTML do not require Warren or Node.js. `moonx`'s deprecated native mode is not required by the documented frontend commands; published CLI 0.3.0 needs the [configuration adjustment](configuration.md#warren-commands-in-030).
 
-## Windows
+## Runtime installation
 
-Use a 64-bit Windows development environment. Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022), selecting **Desktop development with C++**, MSVC x64/x86 build tools, and a Windows SDK.
+`proton_cli cef setup` resolves the release's Chromium runtime and matching source-built helper. Its initial run needs network access and may take several minutes. Arbitrary CEF downloads do not satisfy the release contract.
 
-Open **Developer PowerShell for Visual Studio** or **x64 Native Tools Command Prompt**, then check:
+| Location | Content |
+| --- | --- |
+| `~/.proton/store/` | Immutable shared CEF SDK/runtime installations |
+| `~/.proton/helpers/` | Helpers selected by platform and Proton version |
+| `PROTON_RUNTIME_STORE` | Optional absolute override for runtime storage |
 
-```text
-cl
-```
+Runtime/helper files are not copied into project source. They are assembled into distributable applications during packaging. CLI and Proton module versions must agree. `proton_cli doctor` checks project configuration, tools, runtime and helper without changing them.
 
-The command should print the Microsoft C/C++ compiler banner. If it is not found, use the developer terminal rather than an ordinary terminal. The SDK also provides the resource compiler used for executable icons. NSIS is only needed when producing an NSIS installer.
-
-## Linux
-
-Use an x64 graphical desktop. For an Ubuntu 24.04 development environment, install the build and desktop libraries:
-
-```sh
-sudo apt-get update
-sudo apt-get install -y build-essential pkg-config libx11-dev libxrandr-dev \
-  libgtk-3-dev libwebkit2gtk-4.1-dev libnotify-dev \
-  libnss3 libgbm1 libasound2t64
-```
-
-Other distributions use different package names. These packages provide a development environment; they are not a promise that every Linux distribution can run the resulting package. Test your application on the distributions you intend to support.
-
-## MoonBit and the Proton CLI
-
-Install the [MoonBit toolchain](https://www.moonbitlang.com/download/) and add its binary directory to PATH. Open a new terminal after installation. Confirm the tools work, then install the CLI version used by this guide:
-
-```sh
-moon version
-moon install moonbit-community/proton_cli@0.3.0
-proton_cli --version
-```
-
-The last command should report `0.3.0`. If `proton_cli` cannot be found, check that MoonBit's binary directory is on PATH. If another version runs, check for an older executable earlier on PATH.
-
-For the isomorphic tutorial, also install [Node.js](https://nodejs.org/en/download). Its Warren build invokes npm tooling to minimize JavaScript:
-
-```sh
-node --version
-npm --version
-```
-
-Install the frontend tool once, then verify that it is on PATH:
-
-```sh
-moon install moonbit-community/warren@0.3.2
-warren --help
-```
-
-The published Proton CLI 0.3.0 still generates deprecated `moonx --target native` frontend commands. After creating an isomorphic project, replace those two commands as shown in [frontend configuration](configuration.md). The minimal template does not need Warren.
-
-## Install the runtime after creating a project
-
-[Create a project](first-app.md) first, then run from that project directory:
-
-```sh
-moon update
-proton_cli cef setup
-proton_cli doctor
-```
-
-Setup downloads the matching Chromium runtime and subprocess helper. It requires network access and can take several minutes the first time. Projects share immutable installations in `~/.proton/store` and `~/.proton/helpers`.
-
-Doctor checks the project, toolchain, runtime, and helper without modifying them. Resolve its findings before starting development. Keep `proton_cli`, `proton`, and `proton_*` packages on the same release; an arbitrary CEF download is not a substitute for setup.
+Project creation and first execution are covered only in the [minimal tutorial](tutorial/first-app.md).

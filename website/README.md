@@ -10,8 +10,11 @@ code examples aligned. Add chapters to each language's `SUMMARY.md` and use
 `.md` links between articles. The language link at the top of each article
 points to the corresponding generated HTML page.
 
-Keep guides task-oriented: state prerequisites, name the files to change,
-provide the smallest complete example, and explain the expected result.
+Tutorials live only in `content/<language>/tutorial/` and the Tutorial navigation
+section. They state prerequisites, file edits and expected results. All other
+pages are independently readable technical documentation: define concepts, API
+contracts, configuration types/defaults, lifecycle, failure behavior and platform
+limits. Do not make reference pages depend on completing a tutorial project.
 Examples document Proton 0.3.0; verify them with published dependencies.
 
 ## Preview

@@ -20,11 +20,11 @@ hello-proton/
 - **`app/main.mbt`** defines the async entry, HTML, and application builder.
 - **`proton.project.json`** tells the CLI which package to run and how to identify/package the app.
 
-Adding a module dependency does not automatically import it into every package. For example, the [command guide](commands-events.md) adds both a `proton_contract` module dependency and a package import.
+Module dependencies and package imports are separate. A dependency makes a module available; a package import selects the APIs and aliases used by that package.
 
 ## The isomorphic project
 
-Create a separate project with `--template isomorphic` when you want a MoonBit frontend:
+The `isomorphic` template has three modules connected by a workspace:
 
 ```text
 todo-app/
@@ -72,4 +72,4 @@ Moon writes build output under `_build/` and manages downloaded dependencies in 
 
 Do not edit these outputs. Edit the source or project configuration and rebuild. The runtime and helper installed by setup are shared user-level files, not project source.
 
-Continue with [architecture and processes](architecture.md), or follow the [Todo tutorial](isomorphic.md) to modify a complete application.
+The execution boundaries are described in [architecture and processes](architecture.md).

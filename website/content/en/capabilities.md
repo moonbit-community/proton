@@ -1,104 +1,32 @@
-# Using native capabilities
+# Extensions and capabilities
 
 [中文](zh/capabilities.html)
 
-Extensions expose reusable host operations to the renderer. A capability installs an extension's backend handlers and grants access to a specific scope. This guide reads one local text file from the minimal application.
+Extensions register reusable host operations. A renderer capability installs an extension's backend and grants a permission scope to selected renderer targets. Adding `proton_ext` as a module dependency only makes code available; it does not install handlers or grant access.
 
-## Add the filesystem extension
+## Registration and targets
 
-In the minimal project's **`moon.mod`**, add this dependency inside `import { ... }`:
+`App.capability(capability, targets?)` configures installation and access. With no explicit targets, the grant applies to the main entry. `RendererTarget.entry(window=...)` and `RendererTarget.bundled(window=...)` select entry or bundled-page targets for a named window. Permissions do not implicitly become global merely because windows belong to one application.
 
-```text
-"moonbit-community/proton_ext@0.3.0",
-```
+Application commands use `app:` routes; extension operations use `ext:<extension>/<operation>`. JavaScript can invoke an installed operation through `window.__MoonBit__.core.invokeOp(route, request)`, which returns a promise.
 
-Use these imports in **`app/moon.pkg`**, then run `moon update`:
+## Filesystem scope
 
-```text
-import {
-  "moonbitlang/async",
-  "moonbit-community/proton",
-  "moonbit-community/proton_ext/fs",
-}
+`proton_ext/fs.capability` accepts `PermissionRoot` values pairing a host directory with permitted operations. The scope is configured by the backend; renderer requests cannot widen it.
 
-supported_targets = "native"
+| Property | Behavior |
+| --- | --- |
+| Relative root or request path | Resolved against `resource_dir()` |
+| Path outside allowed roots | Rejected, including symlink escapes |
+| Operation absent from root grant | Not authorized by that grant |
+| Text payloads | UTF-8 |
 
-pkgtype(kind: "executable")
-```
+Supported filesystem operation names include `read_file`, `write_file`, `mkdir`, `readdir`, `remove`, `rmdir`, `rename`, `realpath`, `exists`, `kind` and `size`. Canonical path checks and operations are serialized within the extension.
 
-## Prepare a file
+## Availability and errors
 
-Create a directory named **`workspace`** at the project root. Inside it, create **`message.txt`** containing:
+A missing capability leaves its route unavailable. An installed extension can still reject a request because of scope, invalid arguments, a platform limitation or an operating-system failure. These failures are reported through the command bridge; installation does not imply that every native operation will succeed.
 
-```text
-Hello from the filesystem.
-```
+Filesystem, dialogs, clipboard, shell, tray and other capabilities have different scope types and platform coverage. The notification extension in 0.3.0 targets macOS. Framework platform support is not a capability support matrix.
 
-Replace **`app/main.mbt`** with:
-
-```moonbit
-///|
-async fn main {
-  let html =
-    #|<!doctype html>
-    #|<html lang="en">
-    #|<meta charset="utf-8">
-    #|<title>Read a file</title>
-    #|<button id="read">Read message.txt</button>
-    #|<pre id="result" role="status"></pre>
-    #|<script>
-    #|  document.querySelector("#read").onclick = async () => {
-    #|    const result = document.querySelector("#result");
-    #|    try {
-    #|      const reply = await window.__MoonBit__.core.invokeOp(
-    #|        "ext:fs/read_file", { path: "./workspace/message.txt" }
-    #|      );
-    #|      result.textContent = reply.content;
-    #|    } catch (error) {
-    #|      result.textContent = String(error);
-    #|    }
-    #|  };
-    #|</script>
-    #|</html>
-  @proton.html("Read a file", html)
-  .load_config()
-  .capability(
-    @fs.capability([
-      @fs.PermissionRoot("./workspace", ["read_file"]),
-    ]),
-  )
-  .run_or_abort()
-}
-```
-
-Run `proton_cli dev` and click **Read message.txt**. The page should display the file contents. This is an actual host filesystem read, not a browser file picker.
-
-## Understand the grant
-
-The capability has three relevant choices:
-
-- **Operation:** only `read_file` is allowed; this page cannot use this grant to write or delete.
-- **Root:** only paths inside `./workspace` are allowed.
-- **Target:** with no explicit `targets`, the grant applies to the main window entry.
-
-The low-level route `ext:fs/read_file` belongs to the filesystem extension. Application commands use the separate `app:` route space. You do not register the filesystem handler yourself.
-
-Relative roots and requests resolve against `@proton.resource_dir()`, which the CLI configures for the application. Do not assume they resolve against an arbitrary terminal working directory.
-
-## Check failures deliberately
-
-Change the request path to a missing file within `workspace`: the call should fail and the catch block should show the error. Change it to a file outside the allowed root: the grant should reject access.
-
-Removing `.capability(...)` does not stop the app from starting, but the route becomes unavailable. Adding an extension dependency alone is not a permission grant.
-
-## Multiple windows and persistent files
-
-For a second window, select explicit `RendererTarget::entry(window="...")` or `RendererTarget::bundled(window="...")` targets when adding the capability. Grant each page only what its feature requires.
-
-The local workspace directory is useful for this development exercise. Installed resources may be read-only; use an appropriate writable application-data or user-selected directory for persistent files. Package files you intentionally ship via [resources configuration](configuration.md).
-
-## Other capabilities
-
-Dialogs, clipboard, shell, tray, and other extensions follow the same explicit installation/grant model, but each defines its own scope and platform support. The notification extension in this release targets macOS; do not infer platform support from the framework's overall platform list.
-
-Consult the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/) for the capability builder and request/response types you need.
+Complete builders and request/response types are in the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/). A complete exercise is in the [file access tutorial](tutorial/capabilities.md).

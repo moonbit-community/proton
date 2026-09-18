@@ -1,91 +1,59 @@
-# Build and distribute
+# Packaging reference
 
 [中文](zh/packaging.html)
 
-A build produces your executable and frontend output. Packaging assembles them with the runtime, helper, and declared resources into a platform-specific distributable. Use the **Proton CLI** for a Proton project.
+The Proton CLI packages a project into a distributable containing its executable, frontend assets, CEF runtime, matching helper and declared resources. A backend executable alone is not a complete distribution. Packaging targets the host platform.
 
-## Prepare application metadata
+## Metadata
 
-In the existing `package` object of **`proton.project.json`**, set your application name and version:
+These fields belong to the `package` object in `proton.project.json`.
 
-```json
-{
-  "product_name": "Todo App",
-  "version": "0.1.0",
-  "output": "dist"
-}
-```
+| Field | Type | Default / meaning |
+| --- | --- | --- |
+| `product_name` | string | Required display name |
+| `version` | string | Required application version; independent of Proton's version |
+| `formats` | string array | Host defaults when omitted |
+| `icons` | string array | Empty; icon paths relative to configuration directory |
+| `prepare` | string | Absent; preparation command |
+| `resources` | string array | Empty; additional packaged resources |
+| `sign.binaries` | string array | Empty; additional binaries selected for signing |
+| `url_schemes` | string array | Empty; registered application URL schemes |
+| `document_types` | object array | Empty; document associations |
+| `output` | string | `dist`, relative to configuration directory |
+| `platforms` | object | Optional `macos`, `windows`, `linux` overrides |
 
-Merge these fields rather than replacing the whole project file. Keep the root `identifier` stable across releases. `package.version` is your app version; it does not need to equal Proton 0.3.0.
+A document type contains required `name` and `extensions`; `role` defaults to `Viewer`. The canonical identifier is the top-level `identifier`, not a package field. Changing the product name does not change application identity.
 
-## Build for release
+## Platform overrides
 
-From the project root:
+Each platform object accepts `formats`, `resources` and `sign`. Windows additionally accepts `nsis_install_mode`. A platform format list replaces the shared list. Platform resources are combined with shared resources. Path values use the project configuration directory as their base.
 
-```sh
-proton_cli build -- --release
-```
+| Platform | Formats | Default |
+| --- | --- | --- |
+| macOS Apple Silicon | `app`, `zip`, `dmg` | `app`, `zip` |
+| Windows x64 | `app`, `zip`, `nsis` | `app`, `zip` |
+| Linux x64 | `appimage` | `appimage` |
 
-The CLI builds the configured frontend before the native backend. The `--release` after `--` is passed to Moon. A successful command is a build check; it has not produced the final installer.
+On Windows, configured ICO content is compiled into the application executable using the Windows SDK resource compiler. NSIS output additionally requires NSIS.
 
-## Review and package
+## NSIS installation mode
 
-```sh
-proton_cli package --release --dry-run
-proton_cli package --release
-```
+| Value | Behavior |
+| --- | --- |
+| `currentUser` | Default; current user, no administrator installation required |
+| `perMachine` | All users, elevation required |
+| `both` | Installer offers a scope choice; may prompt for elevation even for current-user installation |
 
-The dry run prints the selected backend, metadata, formats, output, and signing choices. It does not execute the full build/packaging/signing flow. The second command builds and assembles the actual artifacts.
-
-Outputs go to `dist` unless configured otherwise. Inspect the command's output for their exact paths.
-
-## Choose a platform format
-
-Build on the intended target operating system. Proton does not turn these commands into a cross-compilation workflow.
-
-- **macOS Apple Silicon:** `app` creates an app bundle, `zip` an archive, and `dmg` a disk image.
-- **Windows x64:** `app` creates an application directory, `zip` a portable archive, and `nsis` an installer.
-- **Linux x64:** `appimage` creates an AppImage. Validate it on the Linux environments you support.
-
-Defaults are app and zip on macOS/Windows, and appimage on Linux. Override a single invocation with repeated `--format` flags, or merge this fragment into the existing `package` object:
-
-```json
-{
-  "platforms": {
-    "macos": { "formats": ["app", "dmg"] },
-    "windows": { "formats": ["nsis"], "nsis_install_mode": "currentUser" },
-    "linux": { "formats": ["appimage"] }
-  }
-}
-```
-
-Each platform list replaces the shared `package.formats` list. Install NSIS before requesting the Windows installer; the Windows SDK resource compiler is needed for executable icons.
-
-## Windows installation scope
-
-`currentUser` is the default: installation for the current user without administrator privileges. `perMachine` installs for all users with elevation. `both` lets the installer choose scope and can prompt for elevation even for a current-user installation.
-
-If an earlier app release used a machine-wide installer, retain `perMachine` explicitly for its updates. Changing the setting does not migrate an existing installation between scopes.
+Changing the mode is not an installation-scope migration. Updates to an existing machine-wide installation should retain its intended scope.
 
 ## Signing and notarization
 
-Local packaging does not by itself establish a trusted publisher identity. On macOS, `--sign` requests signing; `--notarize` submits, staples, and validates distributable artifacts using configured credentials.
+`--release` controls build mode and does not imply signing. On macOS, `--sign` requests signing; `--notarize` requests notarization, stapling and validation using configured credentials. Identity and credential environment variables are listed in the [CLI reference](cli.md#signing-environment).
 
-Before a public release, inspect the current signing options:
+An unsigned or locally signed artifact does not establish a trusted publisher identity. Credentials are deployment configuration, not application source.
 
-```sh
-proton_cli package --help
-```
+## Runtime resource behavior
 
-Configure your own signing identity and credentials for the target platform. Do not put private signing credentials into application source. See the [packaging reference](https://github.com/moonbit-community/proton#packaging) for the supported options; repository documentation can move ahead of this guide's release.
+Packaged frontend files load without the development server. Backend resource paths resolve through `resource_dir()`. Installed resources may be read-only; persistent application data belongs outside them.
 
-## Verify the artifact you will ship
-
-Stop the development server and launch the packaged application outside the source checkout. Check:
-
-1. The frontend loads its packaged assets without a localhost server.
-2. Commands and required native capabilities work.
-3. Declared sidecar resources can be read, and writable data uses the intended location.
-4. Window close and explicit quit behavior match the application's lifecycle policy.
-
-For the Todo tutorial, add items and use Complete all/Reopen all in the packaged app. Only then distribute the artifact. Build checks and a packaging dry run do not exercise that final runtime.
+`--dry-run` validates and displays the packaging plan. It does not prove that packaging, signing or the packaged runtime works. The [Todo tutorial](tutorial/isomorphic.md) includes the application build and package exercise.

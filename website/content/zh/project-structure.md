@@ -20,11 +20,11 @@ hello-proton/
 - **`app/main.mbt`** 定义 async 入口、HTML 和应用构建器。
 - **`proton.project.json`** 告诉 CLI 要运行哪个包，以及如何标识和打包应用。
 
-添加模块依赖不会自动将其导入每个包。例如，[命令一章](commands-events.md)会同时添加 `proton_contract` 模块依赖和包导入。
+模块依赖和包导入是两个层次。模块依赖使模块可用；包导入选择该包需要的 API 与别名。
 
 ## Isomorphic 项目
 
-希望用 MoonBit 编写前端时，使用 `--template isomorphic` 创建另一个项目：
+`isomorphic` 模板采用 MoonBit 前端，包含三个模块：
 
 ```text
 todo-app/
@@ -72,4 +72,4 @@ Moon 将构建产物写入 `_build/`，并管理依赖下载缓存。Warren 将�
 
 不要直接修改这些产物，应修改源码或项目配置后重新构建。setup 安装的运行时和 helper 是用户级共享文件，不属于项目源码。
 
-接下来可以了解[架构与进程模型](architecture.md)，或通过 [Todo 教程](isomorphic.md)修改一个完整应用。
+相关文档：[架构与进程模型](architecture.md)。完整应用练习见独立的 [Todo 教程](tutorial/isomorphic.md)。

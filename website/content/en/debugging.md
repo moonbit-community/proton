@@ -1,64 +1,45 @@
-# Running and debugging
+# Diagnostics reference
 
 [中文](zh/debugging.html)
 
-Frontend rendering, command handling, and native startup fail in different places. Start by identifying which part failed, then inspect that layer.
+Diagnostics come from distinct layers: project/toolchain validation, native startup and lifecycle, bridge requests, and frontend rendering. A successful frontend preview does not verify native operations; a successful build does not verify packaged execution.
 
-## Run the development application
+## Diagnostic interfaces
 
-From the directory containing `proton.project.json`:
+| Interface | Scope |
+| --- | --- |
+| `proton_cli doctor` | Read-only project, toolchain, runtime and helper checks |
+| `proton_cli --version` / `moon version` | Tool versions |
+| `BrowserHandle.open_devtools()` | Chromium inspector for a browser |
+| `App.run()` | Typed application execution errors |
+| `App.run_or_abort()` | Error reporting followed by abort on failure |
+| `ClientFailure` | Frontend contract, bridge, transport and decoding failures |
 
-```sh
-proton_cli doctor
-proton_cli dev
-```
+`WindowHandle.browser()` provides the browser handle. DevTools belongs to that browser's lifetime. Opening it from a window-ready hook must preserve any existing hook state and cleanup behavior.
 
-Doctor checks configuration, toolchain, runtime, and helper availability without changing the project. If it reports a missing runtime, run `proton_cli cef setup`.
+## Logs
 
-With the minimal template, stop and rerun the app after editing the embedded page or backend. With isomorphic, Warren serves the frontend; frontend refresh behavior comes from that tool. Restart the native app after changing native backend code.
+Proton uses `tonyfettes/xlog`. Development output uses stderr; packaged applications use the platform log directory. Application categories use `app.*`; framework categories use `proton.*`. Application level and category settings are preserved.
 
-When an existing frontend server owns the configured port, either stop it or intentionally use `proton_cli dev --no-frontend`. Do not leave several dev commands competing for one endpoint.
+| Environment variable | Effect |
+| --- | --- |
+| `MOON_XLOG` | xlog filtering |
+| `PROTON_LOG_OUTPUT=stderr` | Select stderr output, including for terminal-launched packaged apps |
+| `PROTON_CEF_LOG` | Temporary switch for separate CEF internal diagnostics; disabled by default |
 
-## Open browser developer tools
+File output depends on packaged metadata. CEF diagnostics are not the application logging interface.
 
-To verify the inspector without relying on platform shortcuts, use this complete **`app/main.mbt`** in a minimal project:
+## Failure classification
 
-```moonbit
-///|
-async fn main {
-  @proton.html("Debugging", "<h1>Inspect this page</h1>", debug=true)
-  .load_config()
-  .window_lifecycle(
-    on_ready=context => { context.handle().browser().open_devtools() },
-    on_close=_ => (),
-  )
-  .run_or_abort()
-}
-```
+| Symptom | Relevant boundary |
+| --- | --- |
+| Missing runtime/helper | Setup-managed release and platform selection |
+| Frontend command not found | Installed tool and PATH; Warren is installed separately |
+| Native moonx deprecation | CLI 0.3.0 generated frontend commands; see [configuration](configuration.md) |
+| Bridge unavailable | Page is outside the Proton renderer environment |
+| Unknown operation | Missing command binding or capability |
+| Decode failure | Request/response type and serialized payload mismatch |
+| Window gone but process remains | Lifecycle policy, active child browsers and cleanup completion |
+| Packaged page missing assets | Asset paths, frontend output and resource assembly |
 
-Start it with `proton_cli dev`. The ready callback opens DevTools for the main browser. Use the Elements panel for the DOM and CSS, and Console for frontend exceptions. Remove this automatic inspector hook when you finish debugging.
-
-In an existing application, keep its lifecycle logic and add the `open_devtools()` call to its ready handler rather than replacing the handler.
-
-## Diagnose command failures
-
-- **Bridge unavailable:** the page is probably in a regular browser. Open it through Proton.
-- **Unknown/unavailable operation:** confirm the backend binds the command or grants the extension capability.
-- **Decode failure:** compare the serialized field names and types with the request/response contract.
-- **Business rejection:** inspect the response data, such as `InvalidTitle`, instead of treating it as a transport error.
-
-Keep frontend catch/failure callbacks visible during debugging. Read backend terminal output for the operation's detailed error.
-
-## Read application logs
-
-Proton uses `tonyfettes/xlog`. Development output goes to stderr; packaged applications write to their platform log directory. Application categories use `app.*`; the framework uses `proton.*`.
-
-Set `MOON_XLOG` in the process environment to adjust xlog filtering. Proton preserves application level and category settings. `PROTON_LOG_OUTPUT=stderr` is useful when launching a packaged app from a terminal; file output requires packaged metadata.
-
-CEF's internal logs are separate and disabled by default. Use `PROTON_CEF_LOG` only when investigating Chromium/runtime behavior, not as the normal application logging interface.
-
-## Check before reporting
-
-For minimal, run `moon check --target native`. For isomorphic, run `moon check --target js,native`. Include the exact command, full error, Proton version, MoonBit version, OS/architecture, and whether the failure occurs in development or only after packaging.
-
-A successful browser preview does not verify native commands. A successful build does not verify a packaged app. Reduce the reproduction to the failing layer before opening an [issue](https://github.com/moonbit-community/proton/issues).
+A useful report includes the exact command, full error, Proton/MoonBit versions, OS and architecture, development versus packaged mode, and the smallest reproduction. Process termination must be distinguished from normal shutdown completion.

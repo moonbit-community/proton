@@ -10,3 +10,7 @@ build-dir = "dist"
 theme = "theme"
 site-url = "/proton/"
 git-repository-url = "https://github.com/moonbit-community/proton"
+
+[output.html.redirect]
+"first-app.html" = "tutorial/first-app.html"
+"isomorphic.html" = "tutorial/isomorphic.html"

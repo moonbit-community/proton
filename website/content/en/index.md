@@ -1,42 +1,41 @@
-# Build desktop applications with MoonBit
+# Proton documentation
 
 [中文](zh/index.html)
 
-Proton combines a native MoonBit backend with a Chromium web frontend. You can start with plain HTML or use Rabbita to write both sides in MoonBit.
+Proton is a desktop application framework with a native MoonBit host and a Chromium frontend. Applications can use HTML/JavaScript or a MoonBit frontend compiled to JavaScript. The public application API is `moonbit-community/proton`.
 
-[Get started →](installation.md) · [Build the Todo example](isomorphic.md)
+This documentation describes published **0.3.0**. CLI and `proton_*` dependencies share that release version. The current documentation includes the manual Warren configuration required by CLI 0.3.0; the corrected generator is in main but has not been released.
 
-```moonbit
-async fn main {
-  @proton.html("Hello Proton", "<h1>Hello from MoonBit</h1>")
-  .load_config()
-  .run_or_abort()
-}
-```
+## Documentation map
 
-This entry runs inside a generated minimal project. [Create a project](first-app.md) supplies the package imports, dependencies, and application identity.
+| Area | Contents |
+| --- | --- |
+| [Architecture](architecture.md) | Processes, execution environments, ownership and transport |
+| [Project layout](project-structure.md) | Modules, package imports, configuration and generated output |
+| [Environment](installation.md) | Supported platforms, required tools and runtime installations |
+| [Application lifecycle](lifecycle.md) | Entry sources, identity, startup and shutdown |
+| [Project configuration](configuration.md) | Configuration fields, defaults and path resolution |
+| [CLI](cli.md) | Commands, execution behavior and failures |
+| [Commands](commands-events.md) and [events](events.md) | Types, registration, delivery, cancellation and errors |
+| [Windows](windows.md) | Window declarations, handles, child views and close behavior |
+| [Capabilities](capabilities.md) | Extension installation, renderer targets and permission scopes |
+| [Packaging](packaging.md) | Artifacts, platform overrides, signing and resources |
+| [Diagnostics](debugging.md) | Logs, DevTools and failure classification |
 
-## Why Proton?
+[Tutorial](tutorial/index.md) contains the step-by-step exercises: minimal application, commands, events, windows, file access and the complete Todo application. Reference pages can be read independently; they do not require a tutorial project.
 
-Write application logic and native integrations in MoonBit, render your interface with web technologies, and communicate through commands and events. With the isomorphic template, the backend and Rabbita frontend share MoonBit request and response types.
+## Platform scope
 
-Proton bundles the Chromium runtime with distributed applications. This gives the frontend a Chromium environment on each supported platform, with the corresponding runtime size and subprocesses. It does not use the operating system's installed webview.
+Supported development targets are macOS Apple Silicon, Windows x64 and Linux x64. Native capability availability varies by platform. Builds and packages are produced on their target operating system.
 
-## Choose a starting point
+Distributed applications include Chromium and the matching subprocess helper. Runtime size and subprocesses are part of this model; Proton does not use the system webview.
 
-- **New to Proton:** prepare your environment, [create a minimal app](first-app.md), then understand its [project structure](project-structure.md).
-- **Adding a feature:** learn to [call the backend](commands-events.md), [send events](events.md), or [access native capabilities](capabilities.md).
-- **Writing both sides in MoonBit:** follow the [complete Todo example](isomorphic.md) using the isomorphic template.
-- **Ready to ship:** [build and distribute](packaging.md) an application.
+## API references
 
-The [architecture guide](architecture.md) explains where your code runs and which state belongs on each side.
+- [Application API](https://mooncakes.io/docs/moonbit-community/proton@0.3.0/)
+- [Extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/)
+- [Typed contracts](https://mooncakes.io/docs/moonbit-community/proton_contract@0.3.0/)
+- [Frontend client](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.0/)
+- [Rabbita integration](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.0/)
 
-## Supported platforms
-
-Proton 0.3.0 supports macOS on Apple Silicon, Windows x64, and Linux x64. Build and package on the target operating system. Individual native capabilities can have narrower platform support.
-
-These guides assume basic MoonBit knowledge and cover the published **0.3.0** release. Keep the CLI and Proton packages on that version while following the examples.
-
-## Reference
-
-Use the [Proton API](https://mooncakes.io/docs/moonbit-community/proton@0.3.0/) and [extensions API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/) for signatures and available options. The [repository example catalog](https://github.com/moonbit-community/proton/blob/main/examples/Readme.md) provides focused demonstrations; it follows main and may include unreleased changes.
+Generated API documentation provides full signatures; these reference pages describe behavior and relationships between APIs.
