@@ -94,7 +94,6 @@ int proton_engine_bridge_resolve_host(cef_browser_t *browser,
   out_host->runtime = window->runtime;
   out_host->public_window = window->public_window_id;
   out_host->bridge_config = window->bridge_config;
-  out_host->max_payload_bytes = window->max_bridge_payload_bytes;
   out_host->next_request_id = &window->runtime->next_bridge_request_id;
   out_host->lifecycle = &window->bridge_lifecycle;
   return 1;

@@ -1346,10 +1346,7 @@ fn build_bridge_config(
   guard config is Some(config) else { return @native_ffi.bridge_config_empty() }
   validate_bridge_config(config)
   let status = Ref(0)
-  let handle = @native_ffi.bridge_config_create(
-    config.max_payload_bytes,
-    status,
-  )
+  let handle = @native_ffi.bridge_config_create(status)
   check_status(status.val)
   for grant in config.grants {
     let grant_index = Ref(0)

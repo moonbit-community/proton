@@ -17,7 +17,7 @@ PROTON_INTERNAL proton_bridge_config_owner_t *
 proton_internal_bridge_config_empty(void);
 PROTON_INTERNAL proton_bridge_config_owner_t *
 proton_internal_bridge_config_create(
-    int32_t max_payload_bytes, int32_t *out_status);
+    int32_t *out_status);
 PROTON_INTERNAL int32_t proton_internal_bridge_config_add_grant(
     proton_bridge_config_owner_t *handle, const char *source_origin,
     const char *const *ops, int32_t *out_grant_index);
@@ -28,8 +28,6 @@ PROTON_INTERNAL int32_t proton_internal_bridge_config_add_initialization_unit(
     proton_bridge_config_owner_t *handle, int32_t grant_index, const char *owner,
     const char *name, const char *source);
 PROTON_INTERNAL void proton_bridge_config_retain(proton_bridge_config_t *config);
-PROTON_INTERNAL int32_t proton_bridge_config_max_payload_bytes(
-    const proton_bridge_config_t *config);
 PROTON_INTERNAL int proton_bridge_config_has_grant(
     const proton_bridge_config_t *config, const char *source_origin);
 PROTON_INTERNAL int proton_bridge_config_grant_allows_op(

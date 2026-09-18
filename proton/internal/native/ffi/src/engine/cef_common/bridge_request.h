@@ -7,7 +7,6 @@
 #include <stdint.h>
 
 #define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
-#define PROTON_ENGINE_MAX_BRIDGE_BYTES 1048576
 #define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
 
 typedef enum {
@@ -22,8 +21,6 @@ typedef enum {
 
 int proton_engine_bridge_op_is_valid(const char *op);
 int proton_engine_bridge_page_instance_is_valid(const char *page_instance);
-int proton_engine_bridge_payload_is_valid(const char *payload,
-                                          size_t max_bytes);
 const char *proton_engine_bridge_request_reject_message(
     proton_engine_bridge_request_status_t status);
 
@@ -35,7 +32,7 @@ const char *proton_engine_bridge_request_reject_message(
 proton_engine_bridge_request_status_t proton_engine_bridge_build_request(
     const proton_bridge_config_t *bridge_config, const char *frame_url,
     const char *op, const char *payload, const char *page_instance,
-    int32_t max_payload_bytes, int64_t *io_next_request_id,
+    int64_t *io_next_request_id,
     int64_t *out_request_id, char **out_source_origin);
 
 #endif

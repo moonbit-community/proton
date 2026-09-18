@@ -26,9 +26,6 @@ fn validate_bridge_names(
 
 ///|
 fn validate_bridge_config(config : BridgeConfig) -> Unit raise NativeError {
-  if config.max_payload_bytes <= 0 || config.max_payload_bytes > 1048576 {
-    raise invalid_argument("bridge max_payload_bytes is invalid")
-  }
   let origins : Array[String] = []
   for grant in config.grants {
     let origin = grant.source_origin

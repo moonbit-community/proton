@@ -632,8 +632,6 @@ int32_t proton_config_prepare_window(
   config.browser_policy.media = (proton_browser_policy_mode_t)media_policy;
   config.browser_policy.devtools = devtools != 0;
   config.bridge_config = bridge_config;
-  config.max_bridge_payload_bytes =
-      proton_bridge_config_max_payload_bytes(bridge_config);
   *out_config = config;
   return PROTON_OK;
 }

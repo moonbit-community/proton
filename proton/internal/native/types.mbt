@@ -742,7 +742,6 @@ pub extend MenuItemRole with Debug::{to_repr}
 
 ///|
 pub(all) struct BridgeConfig {
-  max_payload_bytes : Int
   grants : Array[BridgeGrantConfig]
 } derive(Debug, Eq)
 
@@ -2094,9 +2093,8 @@ pub fn WindowRef::invalid() -> WindowRef {
 ///|
 pub fn BridgeConfig::BridgeConfig(
   grants~ : Array[BridgeGrantConfig],
-  max_payload_bytes? : Int = 1048576,
 ) -> BridgeConfig {
-  { max_payload_bytes, grants: grants.map(fn(grant) { grant.copy() }), }
+  { grants: grants.map(fn(grant) { grant.copy() }), }
 }
 
 ///|

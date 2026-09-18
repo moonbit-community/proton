@@ -22,6 +22,10 @@
 
 注入的 bridge 将应用方法暴露为 `window.__MoonBit__.app.<name>(request)`。调用返回 Promise，失败时 reject。应用路由使用 `app:`，扩展操作使用 `ext:`。普通浏览器页面没有注入的原生 bridge。
 
+## 载荷大小
+
+Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列化，仍受可用内存与底层传输约束。大消息会增加序列化、复制和解析开销。
+
 ## 取消
 
 `proton_client.invoke_with_callbacks` 返回取消函数，用于取消响应观察并请求取消通信；迟到的响应会被忽略。异步 `invoke` 所在任务取消时，也会取消待完成请求。取消不保证撤销后端已经执行的操作。
