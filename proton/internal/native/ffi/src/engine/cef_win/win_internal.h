@@ -5,7 +5,6 @@
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
 #include "../cef_common/bridge_client.h"
-#include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
@@ -68,8 +67,7 @@ struct proton_engine_window {
   proton_engine_runtime_t *runtime;
   proton_window_id_t public_window_id;
   proton_browser_lifecycle_t *browser_lifecycle;
-  proton_bridge_config_t *bridge_config;
-  proton_engine_bridge_lifecycle_t bridge_lifecycle;
+  proton_engine_bridge_host_t *bridge;
   /* Logical frame dimensions, including fixed-size tracking constraints.
    * HWND/CEF rectangles and saved WINDOWPLACEMENT remain physical pixels. */
   int width;

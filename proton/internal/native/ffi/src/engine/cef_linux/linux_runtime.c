@@ -44,7 +44,6 @@
 #include "include/internal/cef_string.h"
 
 #include "../cef_common/bridge_renderer.h"
-#include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/message.h"
 #include "../cef_common/profile_storage.h"
@@ -452,11 +451,10 @@ static void proton_engine_window_free_storage(proton_engine_window_t *window) {
   }
   proton_engine_window_free_views(window);
   proton_browser_lifecycle_clear_owner(window->browser_lifecycle);
-  proton_internal_bridge_config_destroy(window->bridge_config);
+  proton_engine_bridge_host_destroy(window->bridge);
   proton_browser_session_destroy(window->browser_session);
   free(window->draggable_regions);
   proton_engine_overlay_release_input_windows(window);
-  proton_engine_bridge_lifecycle_dispose(&window->bridge_lifecycle);
   free(window);
   pthread_mutex_unlock(&g_window_lock);
 }

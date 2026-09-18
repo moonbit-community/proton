@@ -1,16 +1,117 @@
 #include "bridge_client.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "../../proton_event.h"
 #include "bridge_policy.h"
+#include "bridge_lifecycle.h"
+#include "window_state.h"
 #include "bridge_renderer.h"
 #include "message.h"
 #include "strings.h"
 
 #include "include/capi/cef_frame_capi.h"
 #include "include/capi/cef_values_capi.h"
+
+struct proton_engine_bridge_host {
+  proton_engine_runtime_t *runtime;
+  proton_window_id_t public_window;
+  proton_bridge_config_t *bridge_config;
+  int64_t *next_request_id;
+  proton_engine_bridge_lifecycle_t lifecycle;
+};
+
+proton_engine_bridge_host_t *proton_engine_bridge_host_create(
+    proton_engine_runtime_t *runtime, proton_window_id_t public_window,
+    proton_bridge_config_t *config, int64_t *next_request_id) {
+  proton_engine_bridge_host_t *host = calloc(1, sizeof(*host));
+  if (host == NULL) {
+    return NULL;
+  }
+  host->runtime = runtime;
+  host->public_window = public_window;
+  host->bridge_config = config;
+  host->next_request_id = next_request_id;
+  proton_bridge_config_retain(config);
+  proton_engine_bridge_lifecycle_init(&host->lifecycle);
+  return host;
+}
+
+void proton_engine_bridge_host_destroy(proton_engine_bridge_host_t *host) {
+  if (host == NULL) {
+    return;
+  }
+  proton_internal_bridge_config_destroy(host->bridge_config);
+  proton_engine_bridge_lifecycle_dispose(&host->lifecycle);
+  free(host);
+}
+
+int proton_engine_bridge_host_enabled(const proton_engine_bridge_host_t *host) {
+  return host != NULL && host->bridge_config != NULL;
+}
+
+cef_dictionary_value_t *proton_engine_bridge_host_renderer_info(
+    const proton_engine_bridge_host_t *host) {
+  return proton_engine_bridge_renderer_extra_info(
+      host != NULL ? host->bridge_config : NULL);
+}
+
+void proton_engine_bridge_host_load_finished(proton_engine_bridge_host_t *host,
+    cef_frame_t *frame, const char *url) {
+  if (proton_engine_bridge_host_enabled(host) && frame != NULL &&
+      frame->is_main(frame) && url != NULL && strcmp(url, "about:blank") != 0) {
+    (void)proton_engine_bridge_send_lifecycle_probe(frame);
+  }
+}
+
+void proton_engine_bridge_host_load_failed(proton_engine_bridge_host_t *host,
+    cef_frame_t *frame, const char *url, const char *message, int cancelled) {
+  if (proton_engine_bridge_host_enabled(host) && frame != NULL &&
+      frame->is_main(frame) && url != NULL) {
+    proton_engine_bridge_lifecycle_report_load_failure(
+        &host->lifecycle, url,
+        message != NULL && message[0] != '\0' ? message : "main frame failed to load",
+        cancelled);
+  }
+}
+
+void proton_engine_bridge_host_renderer_terminated(proton_engine_bridge_host_t *host,
+    const char *url, int status, int error_code, const char *detail) {
+  if (!proton_engine_bridge_host_enabled(host) || url == NULL) {
+    return;
+  }
+  const proton_engine_bridge_lifecycle_t *lifecycle = &host->lifecycle;
+  if (lifecycle->outcome != NULL && strcmp(lifecycle->outcome, "ineligible") == 0 &&
+      lifecycle->url != NULL && strcmp(lifecycle->url, url) == 0) {
+    return;
+  }
+  char message[1024];
+  snprintf(message, sizeof(message),
+           "renderer process terminated (status=%d, error=%d)%s%s",
+           status, error_code,
+           detail != NULL && detail[0] != '\0' ? ": " : "",
+           detail != NULL ? detail : "");
+  proton_engine_bridge_lifecycle_report_browser_failure(
+      &host->lifecycle, url, "renderer_process_terminated", message, 0);
+  proton_engine_bridge_signal(host->runtime);
+}
+
+int32_t proton_engine_bridge_host_emit(proton_engine_bridge_host_t *host,
+    cef_browser_t *browser, const char *event_json, char *error, size_t error_len) {
+  if (!proton_engine_bridge_host_enabled(host) || browser == NULL) {
+    proton_engine_set_message(error, error_len, "bridge is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (!proton_engine_bridge_send_event(browser, event_json)) {
+    proton_engine_set_message(error, error_len,
+                              "failed to send bridge event to renderer");
+    return PROTON_ERR_ENGINE;
+  }
+  proton_engine_bridge_message_sent(host->runtime);
+  return PROTON_OK;
+}
 
 typedef struct proton_engine_bridge_pending {
   int64_t request_id;
@@ -417,11 +518,12 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
   free(message_name);
 
   int browser_id = browser->get_identifier(browser);
-  proton_engine_bridge_host_t host = {0};
-  int has_host = proton_engine_bridge_resolve_host(browser, &host);
+  proton_engine_bridge_host_t *host = proton_engine_window_bridge_host(
+      proton_engine_window_lookup_browser(browser));
+  int has_host = host != NULL;
   if (is_lifecycle) {
     cef_list_value_t *args = message->get_argument_list(message);
-    if (has_host && host.lifecycle != NULL && frame->is_main(frame) &&
+    if (has_host && frame->is_main(frame) &&
         args != NULL && args->get_size(args) >= 14) {
       cef_frame_t *main_frame = browser->get_main_frame(browser);
       char *current_url =
@@ -429,12 +531,12 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
               ? proton_engine_userfree_to_utf8(main_frame->get_url(main_frame))
               : NULL;
       (void)proton_engine_bridge_lifecycle_update_from_message(
-          host.lifecycle, args, current_url);
+          &host->lifecycle, args, current_url);
       free(current_url);
       if (main_frame != NULL) {
         main_frame->base.release((cef_base_ref_counted_t *)main_frame);
       }
-      proton_engine_bridge_signal(host.runtime);
+      proton_engine_bridge_signal(host->runtime);
     }
     if (args != NULL) {
       args->base.release((cef_base_ref_counted_t *)args);
@@ -450,7 +552,7 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
     if (args != NULL) {
       args->base.release((cef_base_ref_counted_t *)args);
     }
-    proton_engine_bridge_pending_remove_context(has_host ? host.runtime : NULL,
+    proton_engine_bridge_pending_remove_context(has_host ? host->runtime : NULL,
                                                 browser_id, page_instance);
     free(page_instance);
     return 1;
@@ -474,7 +576,7 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
       proton_engine_userfree_to_utf8(args->get_string(args, 4));
   args->base.release((cef_base_ref_counted_t *)args);
   if (action != NULL && strcmp(action, "cancel") == 0) {
-    (void)proton_engine_bridge_pending_cancel(has_host ? host.runtime : NULL,
+    (void)proton_engine_bridge_pending_cancel(has_host ? host->runtime : NULL,
                                               browser_id, renderer_pending_id,
                                               page_instance);
     free(action);
@@ -496,11 +598,11 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
   int64_t request_id = 0;
   char *source_origin = NULL;
   proton_engine_bridge_request_status_t build_status =
-      !has_host || host.runtime == NULL
+      !has_host || host->runtime == NULL
           ? PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED
           : proton_engine_bridge_build_request(
-                host.bridge_config, frame_url, op, payload_json, page_instance,
-                host.next_request_id, &request_id,
+                host->bridge_config, frame_url, op, payload_json, page_instance,
+                host->next_request_id, &request_id,
                 &source_origin);
   if (build_status != PROTON_ENGINE_BRIDGE_REQUEST_OK) {
     proton_engine_reject_renderer_request(
@@ -516,7 +618,7 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
   if (!proton_engine_bridge_pending_add(
           request_id, browser_id, renderer_pending_id, page_instance, frame) ||
       !proton_engine_runtime_enqueue_bridge_request(
-          host.runtime, request_id, host.public_window, op, payload_json,
+          host->runtime, request_id, host->public_window, op, payload_json,
           page_instance, source_origin)) {
     proton_engine_bridge_pending_t *pending =
         proton_engine_bridge_pending_take(request_id);
@@ -554,6 +656,74 @@ int32_t proton_engine_runtime_respond_bridge_request(
                               "failed to send bridge response to renderer");
     return PROTON_ERR_STALE_BRIDGE_RESPONSE;
   }
-  proton_engine_bridge_response_sent(runtime);
+  proton_engine_bridge_message_sent(runtime);
+  return PROTON_OK;
+}
+
+uint64_t proton_engine_window_bridge_revision(proton_engine_window_t *window) {
+  proton_engine_bridge_host_t *host = proton_engine_window_bridge_host(window);
+  return host != NULL
+             ? proton_engine_bridge_lifecycle_revision(&host->lifecycle)
+             : 0;
+}
+
+int32_t proton_engine_window_bridge_state_field(
+    proton_engine_window_t *window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len) {
+  proton_engine_bridge_host_t *host = proton_engine_window_bridge_host(window);
+  if (host == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return proton_engine_bridge_lifecycle_copy_state_field(
+      &host->lifecycle, field, buffer, buffer_len, out_required_len);
+}
+
+int32_t proton_engine_window_bridge_failure_present(
+    proton_engine_window_t *window, int32_t *out_present, char *error,
+    size_t error_len) {
+  proton_engine_bridge_host_t *host = proton_engine_window_bridge_host(window);
+  if (host == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return proton_engine_bridge_lifecycle_failure_present(
+      &host->lifecycle, out_present);
+}
+
+int32_t proton_engine_window_bridge_failure_field(
+    proton_engine_window_t *window, int32_t field, char *buffer,
+    int32_t buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len) {
+  proton_engine_bridge_host_t *host = proton_engine_window_bridge_host(window);
+  if (host == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return proton_engine_bridge_lifecycle_copy_failure_field(
+      &host->lifecycle, field, buffer, buffer_len, out_required_len);
+}
+
+int32_t proton_engine_window_bridge_failure_int_field(
+    proton_engine_window_t *window, int32_t field, int32_t *out_value,
+    int32_t *out_present, char *error, size_t error_len) {
+  proton_engine_bridge_host_t *host = proton_engine_window_bridge_host(window);
+  if (host == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  return proton_engine_bridge_lifecycle_failure_int_field(
+      &host->lifecycle, field, out_value, out_present);
+}
+
+int32_t proton_engine_window_clear_bridge_failure(
+    proton_engine_window_t *window, char *error, size_t error_len) {
+  proton_engine_bridge_host_t *host = proton_engine_window_bridge_host(window);
+  if (host == NULL) {
+    proton_engine_set_message(error, error_len, "window is required");
+    return PROTON_ERR_INVALID_HANDLE;
+  }
+  proton_engine_bridge_lifecycle_clear_failure(&host->lifecycle);
   return PROTON_OK;
 }

@@ -5,7 +5,6 @@
 #include "../../proton_engine.h"
 #include "../../proton_event.h"
 #include "../cef_common/bridge_client.h"
-#include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
@@ -86,8 +85,7 @@ struct proton_engine_window {
   char titlebar_close_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_lifecycle_t *browser_lifecycle;
   proton_window_id_t public_window_id;
-  proton_bridge_config_t *bridge_config;
-  proton_engine_bridge_lifecycle_t bridge_lifecycle;
+  proton_engine_bridge_host_t *bridge;
   int width;
   int height;
   int min_width;

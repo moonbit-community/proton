@@ -38,7 +38,6 @@
 #include "include/internal/cef_string.h"
 
 #include "../cef_common/bridge_renderer.h"
-#include "../cef_common/bridge_lifecycle.h"
 #include "../cef_common/browser_session.h"
 #include "../cef_common/message.h"
 #include "../cef_common/profile_storage.h"
