@@ -39,7 +39,7 @@ priv suberror FacadeLifecycleTestError {
 } derive(Debug)
 
 ///|
-async fn test_open_window(id : String) -> WindowHandle raise WindowSessionError {
+async fn test_open_window(id : String) -> WindowHandle {
   @async.pause() catch {
     _ => raise UnknownWindow(id~)
   }
@@ -2210,6 +2210,26 @@ async test "cookie completion wakes only its registered waiter" {
     group.return_immediately(())
   })
   assert_true(completions.pending.is_empty())
+}
+
+///|
+async test "cancelling window and cookie waiters preserves task group cancellation" {
+  let cookies = CookieCompletionStore()
+  let window = WindowOpenCompletion()
+  @async.with_task_group(group => {
+    let window_waiter = group.spawn(() => ignore(window.wait()), no_wait=true)
+    let cookie_waiter = group.spawn(
+      () => ignore(cookies.wait(41L)),
+      no_wait=true,
+    )
+    while cookies.pending.is_empty() {
+      @async.pause()
+    }
+    window_waiter.cancel()
+    cookie_waiter.cancel()
+    // Waiting for this group's children must not turn cancellation into failure.
+  })
+  assert_true(cookies.pending.is_empty())
 }
 
 ///|

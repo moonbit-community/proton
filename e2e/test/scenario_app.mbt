@@ -16,6 +16,8 @@ async fn run_scenario_app_child() -> Unit {
     Some("46_asset_sidecar_resources") => @e2e_fixtures.run_asset_sidecar()
     Some("42_attribute_codegen_commands") =>
       @e2e_fixtures.run_attribute_codegen_commands()
+    Some(child) if child.has_prefix("lifecycle:") =>
+      @e2e_fixtures.run_lifecycle_regression(child[10:].to_owned())
     Some(child) => fail("unsupported E2E app child scenario: " + child)
   }
 }

@@ -124,7 +124,12 @@ async fn app_cleanup(
       if !ready {
         wakeup.wait_after(revision) catch {
           error => {
-            failures.push(RuntimeDestroy(status=-1, detail=error.message()))
+            failures.push(
+              RuntimeDestroy(
+                status=-1,
+                detail=normalize_async_run_error(error).message(),
+              ),
+            )
             ready = true
           }
         }

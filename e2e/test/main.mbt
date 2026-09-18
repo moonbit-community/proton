@@ -4,6 +4,10 @@ async fn main {
     run_scenario_app_child()
     return
   }
+  if @env.args().contains("--lifecycle-regressions") {
+    run_lifecycle_regressions(repository_root(), timeout_ms())
+    return
+  }
   if @env.args().contains("--single-instance") {
     run_single_instance_probe(repository_root(), timeout_ms())
     println("Single-instance Proton E2E passed")

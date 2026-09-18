@@ -635,7 +635,10 @@ fn RuntimeSession::view_handle(
           )
       }
     },
-    close_view: () => self.remove_window_view(window_id, window_native_id, id),
+    close_view: () => {
+      ignore(self.resolve_view(window_id, window_native_id, id, native_id))
+      self.remove_window_view(window_id, window_native_id, id)
+    },
   }
 }
 
@@ -1137,7 +1140,9 @@ fn RuntimeSession::close_window(
   running.window.close() catch {
     error => raise window_operation_failed("close window " + id, error)
   }
-  running.state = WindowCloseRequested
+  if self.window_close_handler is None {
+    running.state = WindowCloseRequested
+  }
 }
 
 ///|
@@ -1399,7 +1404,7 @@ fn RuntimeSession::create_window(
 async fn RuntimeSession::activate_window(
   self : RuntimeSession,
   running : RunningWindow,
-) -> Unit raise AppRunError {
+) -> Unit {
   if running.lifetime.ready {
     running.lifetime.wait_until_ready()
     return
@@ -1423,7 +1428,6 @@ async fn RuntimeSession::activate_window(
         )
       },
       no_wait=true,
-      allow_failure=true,
     ),
   )
   running.lifetime.wait_until_ready()
@@ -1440,7 +1444,7 @@ async fn RuntimeSession::activate_window(
 async fn RuntimeSession::request_open_window(
   self : RuntimeSession,
   id : String,
-) -> WindowHandle raise WindowSessionError {
+) -> WindowHandle {
   if self.is_quitting() {
     raise ApplicationQuitting
   }
@@ -1483,11 +1487,9 @@ fn WindowOpenCompletion::fail(
 ///|
 async fn WindowOpenCompletion::wait(
   self : WindowOpenCompletion,
-) -> WindowHandle raise WindowSessionError {
+) -> WindowHandle {
   while self.state is WindowOpenPending {
-    self.changed.wait() catch {
-      _ => raise Cancelled
-    }
+    self.changed.wait()
   }
   match self.state {
     WindowOpenSucceeded(handle) => handle
@@ -1661,10 +1663,12 @@ fn RuntimeSession::fail_window_open(
 
 ///|
 /// Opens one declared window that is not currently active.
+/// Business failures raise `WindowSessionError`; task cancellation propagates
+/// unchanged to the owning async task group.
 pub async fn WindowManager::open(
   self : WindowManager,
   id : String,
-) -> WindowHandle raise WindowSessionError {
+) -> WindowHandle {
   (self.open_window)(id)
 }
 
@@ -2946,7 +2950,7 @@ fn RuntimeSession::command_host(self : RuntimeSession) -> @core.AppCommandHost? 
 async fn RuntimeSession::wait_for_bridge_startup(
   self : RuntimeSession,
   timeout_ms : Int,
-) -> Unit raise AppRunError {
+) -> Unit {
   let completed = @async.with_timeout_opt(timeout_ms, () => {
     drive_wakeup_until(
       self.wakeup,
@@ -2956,9 +2960,7 @@ async fn RuntimeSession::wait_for_bridge_startup(
       },
       () => self.pump_once(monitor_bridge=false),
     )
-  }) catch {
-    error => raise normalize_async_run_error(error)
-  }
+  })
   match completed {
     Some(_) => ()
     None => {
@@ -2980,7 +2982,7 @@ async fn RuntimeSession::wait_for_bridge_startup(
 }
 
 ///|
-async fn RuntimeSession::run(self : RuntimeSession) -> Unit raise AppRunError {
+async fn RuntimeSession::run(self : RuntimeSession) -> Unit {
   drive_wakeup_until(self.wakeup, () => self.quit_complete(), () => {
     self.pump_once(monitor_bridge=self.monitor_bridge)
   })
@@ -2994,10 +2996,14 @@ async fn RuntimeSession::run(self : RuntimeSession) -> Unit raise AppRunError {
 async fn RuntimeSession::drive_until_complete(
   self : RuntimeSession,
   task : @async.Task[Unit],
-) -> Unit raise AppRunError {
+) -> Unit {
   drive_wakeup_until(
     self.wakeup,
     () => {
+      if self.quit_complete() {
+        task.cancel()
+        return true
+      }
       let completed = task.try_wait() catch {
         error => raise normalize_async_run_error(error)
       }
@@ -3845,7 +3851,7 @@ fn RuntimeSession::start_window_close_request(
     }
     None => ()
   }
-  window.state = WindowCloseRequested
+  // A pending decision does not revoke access to the live window.
   let handle = self.window_handle(window)
   let task = self.window_tasks.spawn(
     () => {

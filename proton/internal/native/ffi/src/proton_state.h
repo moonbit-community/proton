@@ -62,6 +62,7 @@ struct proton_window_slot {
   proton_window_lifecycle_t lifecycle;
   bool visible;
   bool closed_event_sent;
+  bool close_interception_enabled;
   bool state_valid;
   uint64_t bridge_notified_revision;
   int64_t logical_id;

@@ -43,7 +43,7 @@ async fn main {
   .on_launch_input(async fn(context, input) noraise {
     if input is Reopen && context.windows().find("main") is None {
       ignore(context.windows().open("main")) catch {
-        error => println("failed to reopen main window: " + error.message())
+        error => println("failed to reopen main window: " + error.to_string())
       }
     }
   })

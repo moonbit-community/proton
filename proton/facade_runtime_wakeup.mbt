@@ -27,10 +27,8 @@ fn RuntimeWakeup::revision(self : RuntimeWakeup) -> Int64 {
 async fn RuntimeWakeup::wait_after(
   self : RuntimeWakeup,
   revision : Int64,
-) -> Unit raise AppRunError {
-  self.signal.wait_for_change(revision) catch {
-    error => raise normalize_async_run_error(error)
-  }
+) -> Unit {
+  self.signal.wait_for_change(revision)
 }
 
 ///|
@@ -43,7 +41,7 @@ async fn drive_wakeup_until(
   wakeup : RuntimeWakeup,
   complete : () -> Bool raise AppRunError,
   advance : () -> Bool raise AppRunError,
-) -> Unit raise AppRunError {
+) -> Unit {
   while true {
     let revision = wakeup.revision()
     if complete() {
@@ -54,9 +52,7 @@ async fn drive_wakeup_until(
       return
     }
     if did_work {
-      @async.pause() catch {
-        error => raise normalize_async_run_error(error)
-      }
+      @async.pause()
     } else {
       wakeup.wait_after(revision)
     }

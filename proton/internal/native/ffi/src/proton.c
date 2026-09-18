@@ -889,7 +889,9 @@ int32_t proton_window_close(proton_window_handle_t window) {
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
     }
-    proton_window_slot_request_close(slot);
+    if (!slot->close_interception_enabled) {
+      proton_window_slot_request_close(slot);
+    }
   } else {
     proton_runtime_slot_t *runtime = NULL;
     status = proton_get_runtime(slot->runtime, &runtime);
@@ -2116,6 +2118,7 @@ int32_t proton_window_set_close_interception(proton_window_handle_t window,
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
+  slot->close_interception_enabled = enabled != 0;
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

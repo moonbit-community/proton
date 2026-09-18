@@ -609,7 +609,7 @@ pub struct BrowserHandle {
 pub struct SessionHandle {
   id : String
   native_id : Int64
-  read_cookies : async (String?, Bool) -> Array[Cookie] raise WindowSessionError
+  read_cookies : async (String?, Bool) -> Array[Cookie]
   write_cookie : (
     String,
     String,
@@ -728,7 +728,7 @@ pub struct WindowHandle {
 ///|
 /// Opens and locates windows declared by the application manifest.
 pub struct WindowManager {
-  open_window : async (String) -> WindowHandle raise WindowSessionError
+  open_window : async (String) -> WindowHandle
   find_window : (String) -> WindowHandle?
 }
 

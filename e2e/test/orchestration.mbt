@@ -99,6 +99,7 @@ async fn app_process_env(
     "PROTON_HELPER_PATH": helper_path,
     "PROTON_REMOTE_DEBUGGING_PORT": cdp_port.to_string(),
     "PROTON_HEADLESS": "1",
+    "PROTON_E2E_LIFECYCLE_GATE": join_path(output_root, "lifecycle-go"),
     "PROTON_E2E_ASSET_SIDECAR_ENTRY": join_path(
       root, "examples/46_asset_sidecar_resources/app/app.html",
     ),
@@ -688,6 +689,7 @@ async fn run_self_hosted_scenarios() -> Unit {
   run_scenario_probe(root, "41_app_commands", timeout)
   run_single_instance_probe(root, timeout)
   run_pending_lifecycle_probe(root, timeout)
+  run_lifecycle_regressions(root, timeout)
   run_scenario_probe(root, "38_async_extension_add", timeout)
   run_scenario_probe(root, "39_sync_async_extensions", timeout)
   run_scenario_probe(root, "40_event_broadcast", timeout)
