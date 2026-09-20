@@ -23,7 +23,7 @@
 /// ```mbt check
 /// test {
 ///   assert_eq(
-///     Scope::PreventSystemAndDisplaySleep.to_string(),
+///     @proton_keepawake.Scope::PreventSystemAndDisplaySleep.to_string(),
 ///     "PreventSystemAndDisplaySleep",
 ///   )
 /// }

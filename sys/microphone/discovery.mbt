@@ -39,7 +39,7 @@ fn parsed_device(name : String, id_number : Int) -> MicrophoneDevice {
 /// # Example
 /// ```mbt check
 /// test "parse_listing assigns dense ids and drops monitors" {
-///   let devices = MicrophoneDevice::parse_listing(
+///   let devices = @proton_microphone.MicrophoneDevice::parse_listing(
 ///     "Built-in Mic\nMonitor of Output\nUSB Mic\n",
 ///   )
 ///   assert_eq(devices.length(), 2)

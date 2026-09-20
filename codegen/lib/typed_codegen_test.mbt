@@ -1,6 +1,6 @@
 ///|
 test "typed codegen renders free and receiver registrars" {
-  let generated = generate_typed_commands_from_sources([
+  let generated = @lib.generate_typed_commands_from_sources([
     (
       "commands.mbt",
       (
@@ -73,7 +73,7 @@ test "typed codegen renders free and receiver registrars" {
 
 ///|
 test "typed codegen combines explicit source inputs" {
-  let generated = generate_typed_commands_from_sources([
+  let generated = @lib.generate_typed_commands_from_sources([
     (
       "read.mbt",
       (
@@ -105,7 +105,7 @@ test "typed codegen combines explicit source inputs" {
 
 ///|
 test "typed codegen emits extension routes without duplicating identity" {
-  let generated = generate_typed_commands_from_sources(
+  let generated = @lib.generate_typed_commands_from_sources(
     [
       (
         "extension.mbt",
@@ -132,7 +132,7 @@ test "typed codegen emits extension routes without duplicating identity" {
 
 ///|
 test "extension identity generation renders moon ext identity" {
-  let generated = generate_extension_identity(
+  let generated = @lib.generate_extension_identity(
     "moonbit-community/proton-clipboard",
     "clipboard",
     binding_name="extension",
@@ -150,7 +150,7 @@ test "extension identity generation renders moon ext identity" {
 
 ///|
 test "typed codegen parses extend declarations" {
-  let generated = generate_typed_commands_from_sources([
+  let generated = @lib.generate_typed_commands_from_sources([
     (
       "commands.mbt",
       (
@@ -171,7 +171,7 @@ test "typed codegen parses extend declarations" {
 test "typed codegen requires an unqualified contract reference" {
   try {
     ignore(
-      generate_typed_commands_from_sources([
+      @lib.generate_typed_commands_from_sources([
         (
           "commands.mbt",
           (
@@ -184,7 +184,7 @@ test "typed codegen requires an unqualified contract reference" {
     )
     fail("expected unqualified contract reference error")
   } catch {
-    CommandCodegenError::Attribute(
+    @lib.CommandCodegenError::Attribute(
       kind="command",
       detail="MoonBit attributes cannot contain package-qualified values; import the contract with `using` and pass its unqualified name"
     ) => ()

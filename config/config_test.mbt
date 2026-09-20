@@ -1,7 +1,7 @@
 ///|
 fn expect_config_error(
-  action : () -> Unit raise ProjectConfigError,
-) -> ProjectConfigError {
+  action : () -> Unit raise @proton_config.ProjectConfigError,
+) -> @proton_config.ProjectConfigError {
   try action() catch {
     error => error
   } noraise {
@@ -32,7 +32,9 @@ test "project config contains only CLI build and package settings" {
     #|    "output": "dist"
     #|  }
     #|}
-  let config = load_project_config_from_text(source, "/workspace/todo")
+  let config = @proton_config.load_project_config_from_text(
+    source, "/workspace/todo",
+  )
   assert_eq(config.identifier(), "com.example.todo")
   assert_eq(config.backend().unwrap().app_package(), "app")
   let dist = config
@@ -78,7 +80,9 @@ test "project package decodes platform-specific inputs" {
     #|    }
     #|  }
     #|}
-  let config = load_project_config_from_text(source, "/workspace/todo")
+  let config = @proton_config.load_project_config_from_text(
+    source, "/workspace/todo",
+  )
   let platforms = config.package_config().unwrap().platforms()
   let macos = platforms.macos().unwrap()
   assert_eq(macos.formats(), Some(["app", "dmg"]))
@@ -107,7 +111,9 @@ test "project package rejects unknown platform overrides" {
     #|  }
     #|}
   let error = expect_config_error(() => {
-    ignore(load_project_config_from_text(source, "/workspace/todo"))
+    ignore(
+      @proton_config.load_project_config_from_text(source, "/workspace/todo"),
+    )
   })
   assert_eq(error, UnknownField(path="package.platforms.android"))
 }
@@ -115,7 +121,7 @@ test "project package rejects unknown platform overrides" {
 ///|
 test "NSIS install modes belong only to the Windows package configuration" {
   for mode in ["currentUser", "perMachine", "both"] {
-    let config = load_project_config_from_json(
+    let config = @proton_config.load_project_config_from_json(
       {
         "identifier": "com.example.demo",
         "package": {
@@ -139,7 +145,7 @@ test "NSIS install modes belong only to the Windows package configuration" {
   }
   let invalid = expect_config_error(() => {
     ignore(
-      load_project_config_from_json(
+      @proton_config.load_project_config_from_json(
         {
           "identifier": "com.example.demo",
           "package": {
@@ -164,7 +170,7 @@ test "NSIS install modes belong only to the Windows package configuration" {
     platforms[platform] = { "nsis_install_mode": "perMachine" }
     let invalid = expect_config_error(() => {
       ignore(
-        load_project_config_from_json(
+        @proton_config.load_project_config_from_json(
           {
             "identifier": "com.example.demo",
             "package": {
@@ -189,7 +195,9 @@ test "project config rejects unknown top-level fields" {
   let source =
     #|{ "identifier": "com.example.todo", "window": { "title": "Todo" } }
   let error = expect_config_error(() => {
-    ignore(load_project_config_from_text(source, "/workspace/todo"))
+    ignore(
+      @proton_config.load_project_config_from_text(source, "/workspace/todo"),
+    )
   })
   assert_eq(error, UnknownField(path="proton.project.json.window"))
 }
@@ -197,12 +205,14 @@ test "project config rejects unknown top-level fields" {
 ///|
 test "project config requires a valid application identity" {
   let missing = expect_config_error(() => {
-    ignore(load_project_config_from_text("{}", "/workspace/todo"))
+    ignore(
+      @proton_config.load_project_config_from_text("{}", "/workspace/todo"),
+    )
   })
   assert_eq(missing, MissingField(path="identifier"))
   let invalid = expect_config_error(() => {
     ignore(
-      load_project_config_from_text(
+      @proton_config.load_project_config_from_text(
         "{ \"identifier\": \"not-an-identifier\" }", "/workspace/todo",
       ),
     )
@@ -228,7 +238,9 @@ test "project package cannot define a second application identity" {
     #|  }
     #|}
   let error = expect_config_error(() => {
-    ignore(load_project_config_from_text(source, "/workspace/todo"))
+    ignore(
+      @proton_config.load_project_config_from_text(source, "/workspace/todo"),
+    )
   })
   assert_eq(error, UnknownField(path="package.identifier"))
 }
@@ -240,7 +252,9 @@ test "project config sections must be objects" {
       section +
       "\": false }"
     let error = expect_config_error(() => {
-      ignore(load_project_config_from_text(source, "/workspace/todo"))
+      ignore(
+        @proton_config.load_project_config_from_text(source, "/workspace/todo"),
+      )
     })
     assert_eq(
       error,
@@ -261,7 +275,11 @@ test "project paths reject absolute and platform-specific spelling" {
     ] {
     ignore(
       expect_config_error(() => {
-        ignore(load_project_config_from_text(source, "/workspace/todo"))
+        ignore(
+          @proton_config.load_project_config_from_text(
+            source, "/workspace/todo",
+          ),
+        )
       }),
     )
   }

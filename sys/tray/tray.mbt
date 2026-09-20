@@ -152,7 +152,7 @@ pub fn TrayEvent::item_id(self : TrayEvent) -> String? {
 /// # Example
 /// ```mbt check
 /// test "is_supported probes capability without creating a tray" {
-///   let _ : Bool = is_supported()
+///   let _ : Bool = @proton_tray.is_supported()
 /// }
 /// ```
 pub fn is_supported() -> Bool {

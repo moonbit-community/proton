@@ -5,7 +5,10 @@ Native-only keep-awake guards for MoonBit on Windows, Linux, and macOS.
 ```mbt check
 ///|
 test {
-  assert_eq(Scope::PreventSystemSleep.to_string(), "PreventSystemSleep")
+  assert_eq(
+    @proton_keepawake.Scope::PreventSystemSleep.to_string(),
+    "PreventSystemSleep",
+  )
 }
 ```
 

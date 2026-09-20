@@ -13,7 +13,8 @@ pub fn generate_typed_commands_from_sources(
   let commands : Array[ParsedTypedCommand] = []
   for source_entry in sources {
     let (path, source) = source_entry
-    let (ast, reports) = @parser.parse_string(source)
+    let { tokens, .. } = @lexer.tokens_from_string(source, comment=true)
+    let (ast, reports) = @parser.parse(tokens)
     guard reports.is_empty() else {
       raise CodegenInputError::SourceParse(path~)
     }
