@@ -37,10 +37,6 @@ on:
 permissions:
   contents: read
 
-env:
-  # Keep release validation on the same parser-compatible toolchain as CI.
-  MOONBIT_INSTALL_VERSION: "0.10.13+cbb11c36f"
-
 concurrency:
   group: publish-mooncakes
   cancel-in-progress: false
@@ -65,7 +61,7 @@ jobs:
 
       - name: Install MoonBit
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s "$MOONBIT_INSTALL_VERSION"
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: Show MoonBit version

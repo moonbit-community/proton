@@ -4,8 +4,8 @@ version = "0.3.1"
 
 import {
   "moonbitlang/async@0.21.2",
-  "moonbitlang/lexer@0.3.15",
-  "moonbitlang/parser@0.3.18",
+  "moonbitlang/lexer@0.3.16",
+  "moonbitlang/parser@0.3.19",
   "moonbitlang/x@0.5.1",
 }
 
