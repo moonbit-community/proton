@@ -489,11 +489,9 @@ async fn run_manifest(
           no_wait=true,
           allow_failure=true,
         )
-        session.drive_until_complete(application_start)
+        let startup = session.drive_until_complete(application_start)
         active_update_channel.val = update_channel
-        // Startup may finish because quit completed and its task was cancelled.
-        // Do not create new windows after that close pass has already run.
-        if !session.is_quitting() {
+        if startup is Completed {
           for definition in definitions {
             if definition.plan.open_on_start &&
               session.find_active_window(definition.plan.id) is None {
@@ -528,8 +526,7 @@ async fn run_manifest(
             no_wait=true,
             allow_failure=true,
           )
-          session.drive_until_complete(activation)
-          if !session.is_quitting() {
+          if session.drive_until_complete(activation) is Completed {
             lifecycle.begin_running()
             cleanup_previous_update()
             start_update_check(

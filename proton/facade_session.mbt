@@ -2993,10 +2993,16 @@ async fn RuntimeSession::run(self : RuntimeSession) -> Unit {
 }
 
 ///|
+priv enum StartupTaskOutcome {
+  Completed
+  Stopped
+}
+
+///|
 async fn RuntimeSession::drive_until_complete(
   self : RuntimeSession,
   task : @async.Task[Unit],
-) -> Unit {
+) -> StartupTaskOutcome {
   drive_wakeup_until(
     self.wakeup,
     () => {
@@ -3007,10 +3013,17 @@ async fn RuntimeSession::drive_until_complete(
       let completed = task.try_wait() catch {
         error => raise normalize_async_run_error(error)
       }
-      completed is Some(_)
+      // A completed hook does not resolve an outstanding quit decision.
+      // Denial resumes startup; commitment must finish shutdown first.
+      completed is Some(_) && self.close_coordinator.state == CloseRunning
     },
     () => self.pump_once(monitor_bridge=self.monitor_bridge),
   )
+  if self.quit_complete() {
+    Stopped
+  } else {
+    Completed
+  }
 }
 
 ///|

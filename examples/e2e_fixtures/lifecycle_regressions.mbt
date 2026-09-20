@@ -12,6 +12,8 @@ async fn lifecycle_probe_gate() -> Unit {
 pub async fn run_lifecycle_regression(name : String) -> Unit {
   if name == "startup-quit" ||
     name == "startup-quit-window" ||
+    name == "startup-quit-denied" ||
+    name == "startup-quit-allowed" ||
     name == "initial-ready-quit" {
     run_startup_quit_regression(name)
     return
@@ -232,56 +234,97 @@ async fn run_startup_quit_regression(name : String) -> Unit {
   let window_ready = Ref(0)
   let window_closed = Ref(0)
   let later_hook_started = Ref(false)
-  @proton.html("Startup quit", "<h1>Startup quit</h1>")
-  .identifier("dev.proton.startup-quit")
-  .add_window(
-    "secondary",
-    "Secondary",
-    @proton.AppEntry::Html("<h1>Secondary</h1>"),
-    open_on_start=false,
-  )
-  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
-    completed_hook_cleanup.val += 1
-  })
-  .app_lifecycle(
-    on_start=context => {
-      if name == "initial-ready-quit" {
-        return
-      }
-      defer {
-        startup_cancelled.val = true
-      }
-      if name == "startup-quit-window" {
-        ignore(context.windows().open("secondary"))
-      }
-      lifecycle_probe_gate()
-      context.quit()
-      @async.sleep(10000)
-      fail("startup continued after quit")
-    },
-    on_shutdown=_ => pending_hook_cleanup.val += 1,
-  )
-  .app_lifecycle(on_start=_ => later_hook_started.val = true, on_shutdown=_ => {
-    ()
-  })
-  .window_lifecycle(
-    on_ready=_ => {
-      window_ready.val += 1
-      if name == "initial-ready-quit" {
+  let close_requests = Ref(0)
+  let confirm_quit = name == "startup-quit-denied" ||
+    name == "startup-quit-allowed"
+  let app = @proton.html("Startup quit", "<h1>Startup quit</h1>")
+    .identifier("dev.proton.startup-quit")
+    .add_window(
+      "secondary",
+      "Secondary",
+      @proton.AppEntry::Html("<h1>Secondary</h1>"),
+      open_on_start=false,
+    )
+    .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+      completed_hook_cleanup.val += 1
+    })
+    .app_lifecycle(
+      on_start=context => {
+        if name == "initial-ready-quit" {
+          return
+        }
         defer {
-          window_cancelled.val = true
+          startup_cancelled.val = true
+        }
+        if name == "startup-quit-window" || confirm_quit {
+          ignore(context.windows().open("secondary"))
         }
         lifecycle_probe_gate()
-        application.val.unwrap().quit()
+        context.quit()
+        if confirm_quit {
+          return
+        }
         @async.sleep(10000)
-        fail("window activation continued after quit")
+        fail("startup continued after quit")
+      },
+      on_shutdown=_ => pending_hook_cleanup.val += 1,
+    )
+    .app_lifecycle(on_start=_ => later_hook_started.val = true, on_shutdown=_ => {
+      ()
+    })
+    .window_lifecycle(
+      on_ready=context => {
+        window_ready.val += 1
+        if name == "startup-quit-denied" && context.handle().id() == "main" {
+          assert_eq(close_requests.val, 1)
+          application.val.unwrap().quit()
+        }
+        if name == "initial-ready-quit" {
+          defer {
+            window_cancelled.val = true
+          }
+          lifecycle_probe_gate()
+          application.val.unwrap().quit()
+          @async.sleep(10000)
+          fail("window activation continued after quit")
+        }
+      },
+      on_close=_ => window_closed.val += 1,
+    )
+  let app = if confirm_quit {
+    app.on_window_close_request(_ => {
+      close_requests.val += 1
+      if close_requests.val == 1 {
+        @async.sleep(300) catch {
+          _ => ()
+        }
+        if name == "startup-quit-denied" {
+          @proton.WindowCloseDecision::Deny
+        } else {
+          Allow
+        }
+      } else {
+        Allow
       }
-    },
-    on_close=_ => window_closed.val += 1,
-  )
-  .run()
+    })
+  } else {
+    app
+  }
+  app.run()
   assert_eq(completed_hook_cleanup.val, 1)
-  if name == "initial-ready-quit" {
+  if name == "startup-quit-allowed" {
+    assert_true(later_hook_started.val)
+    assert_eq(pending_hook_cleanup.val, 1)
+    assert_eq(window_ready.val, 1)
+    assert_eq(window_closed.val, 1)
+    assert_eq(close_requests.val, 1)
+  } else if name == "startup-quit-denied" {
+    assert_true(later_hook_started.val)
+    assert_eq(pending_hook_cleanup.val, 1)
+    assert_eq(window_ready.val, 2)
+    assert_eq(window_closed.val, 2)
+    assert_eq(close_requests.val, 3)
+  } else if name == "initial-ready-quit" {
     assert_true(later_hook_started.val)
     assert_true(window_cancelled.val)
     assert_eq(pending_hook_cleanup.val, 1)
