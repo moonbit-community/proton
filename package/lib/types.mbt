@@ -205,6 +205,7 @@ pub fn MacosSignTarget::MacosSignTarget(
 ///|
 /// Host-specific additions to the otherwise portable package specification.
 pub struct PackageCustomization {
+  windows_icon_embedded : Bool
   macos_plist_strings : Array[MacosPlistString]
   macos_sign_targets : Array[MacosSignTarget]
   windows_sign_targets : Array[String]
@@ -213,7 +214,10 @@ pub struct PackageCustomization {
 }
 
 ///|
+/// Set `windows_icon_embedded` when the executable already contains its icon.
+/// Package icon paths remain available without modifying the executable again.
 pub fn PackageCustomization::PackageCustomization(
+  windows_icon_embedded? : Bool = false,
   macos_plist_strings? : Array[MacosPlistString] = [],
   macos_sign_targets? : Array[MacosSignTarget] = [],
   windows_sign_targets? : Array[String] = [],
@@ -221,6 +225,7 @@ pub fn PackageCustomization::PackageCustomization(
   linux_resources_path? : String,
 ) -> PackageCustomization {
   PackageCustomization::{
+    windows_icon_embedded,
     macos_plist_strings,
     macos_sign_targets,
     windows_sign_targets,

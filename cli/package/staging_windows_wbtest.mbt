@@ -3,29 +3,23 @@ fn windows_test_spec(
   root : String,
   targets : Array[String],
   sign : Bool,
-) -> ProtonBundleSpec {
-  let package_spec = @packager.PackageSpec(
-    resolve_path(root, "app.exe"),
-    "Demo App",
-    "dev.proton.demo",
-    "1.0.0",
-    targets.map(target => {
+) -> PackagePlan {
+  PackagePlan::{
+    ..test_staging_plan(root),
+    product_name: "Demo App",
+    version: "1.0.0",
+    formats: targets.map(target => {
       match target {
         "app" => @packager.PackageFormat::App
         "zip" => @packager.PackageFormat::Zip
         _ => abort("unsupported test target")
       }
     }),
-    resolve_path(root, "output with spaces"),
-    sign~,
-  )
-  ProtonBundleSpec::{
-    package_spec,
-    base_dir: root,
+    output: resolve_path(root, "output with spaces"),
+    sign,
     update_revision: 0UL,
     frontend_dist: Some(resolve_path(root, "frontend/dist")),
     resources: [resolve_path(root, "bundle resources/**")],
-    sign_binaries: [],
   }
 }
 
@@ -44,7 +38,7 @@ test "Windows signing rejects binaries outside the project" {
   let spec = windows_test_spec("/tmp/proton-package", ["app"], true)
   spec.sign_binaries.push("/tmp/worker.exe")
   try ignore(windows_package_sign_targets(spec)) catch {
-    BundlePlanError::InputOutsideBase(path="/tmp/worker.exe") => ()
+    StagingPlanError::InputOutsideBase(path="/tmp/worker.exe") => ()
     _ => abort("expected an outside-project error")
   } noraise {
     _ => abort("expected the signing target to be rejected")

@@ -411,36 +411,7 @@ async fn execute_package_plan(plan : PackagePlan) -> (Array[String], String) {
     raise @packager.PackagePlanError::MissingExecutable(path=executable)
   }
   run_package_prepare(plan)
-  let document_types = plan.document_types.map(document_type => {
-    @packager.DocumentType(
-      document_type.name,
-      document_type.extensions.copy(),
-      role=document_type.role,
-    )
-  })
-  let package_spec = @packager.PackageSpec(
-    executable,
-    plan.product_name,
-    plan.identifier,
-    plan.version,
-    plan.formats,
-    plan.output,
-    icons=icons_after_app_build(plan.icons, windows=@path.sep == '\\'),
-    url_schemes=plan.url_schemes,
-    document_types~,
-    nsis_install_mode=plan.nsis_install_mode,
-    sign=plan.sign,
-    notarize=plan.notarize,
-  )
-  let spec = ProtonBundleSpec::{
-    package_spec,
-    base_dir: plan.base_dir,
-    update_revision: plan.update_revision,
-    frontend_dist: plan.frontend_dist,
-    resources: plan.resources,
-    sign_binaries: plan.sign_binaries,
-  }
-  let (artifacts, platform) = build_proton_package(spec)
+  let (artifacts, platform) = package_built_application(plan, executable)
   for artifact in artifacts {
     println("Packaged: " + artifact)
   }
@@ -456,17 +427,6 @@ async fn run_package_build(plan : PackagePlan) -> String {
     plan.release,
     icons=plan.icons,
   )
-}
-
-///|
-fn icons_after_app_build(
-  icons : Array[String],
-  windows~ : Bool,
-) -> Array[String] {
-  // The CLI just built the host with its Windows icon linked in. Keep the
-  // standalone packager's native editor for externally built executables;
-  // do not request a second edit (which its Wasm backend cannot perform).
-  icons.filter(icon => !windows || !icon.to_lower().has_suffix(".ico"))
 }
 
 ///|

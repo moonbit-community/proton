@@ -48,7 +48,7 @@ async fn require_windows_runtime_layout(runtime : String) -> Unit {
     missing.push(locales)
   }
   guard missing.length() == 0 else {
-    raise WindowsBundleError::InvalidRuntime(
+    raise WindowsStagingError::InvalidRuntime(
       detail="active Windows Proton runtime is incomplete; missing:\n" +
         missing.join("\n"),
     )
@@ -86,7 +86,7 @@ async fn validate_windows_portable_layout(
     missing.push(locales)
   }
   guard missing.length() == 0 else {
-    raise WindowsBundleError::InvalidLayout(
+    raise WindowsStagingError::InvalidLayout(
       detail="staged portable layout is incomplete; missing:\n" +
         missing.join("\n"),
     )
@@ -97,7 +97,7 @@ async fn validate_windows_portable_layout(
     ] {
     let path = resolve_path(output, forbidden)
     guard !path_exists(path) else {
-      raise WindowsBundleError::InvalidLayout(
+      raise WindowsStagingError::InvalidLayout(
         detail="staged portable layout contains a build-only or sample artifact: " +
           path,
       )

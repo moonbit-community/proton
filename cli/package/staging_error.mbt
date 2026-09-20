@@ -1,5 +1,5 @@
 ///|
-priv suberror BundlePlanError {
+priv suberror StagingPlanError {
   UnsupportedResourceGlob(path~ : String)
   MissingInput(path~ : String)
   NotLaunchableMachO(path~ : String, filetype~ : Int)
@@ -7,14 +7,14 @@ priv suberror BundlePlanError {
 }
 
 ///|
-priv suberror BundleRuntimeError {
+priv suberror StagingRuntimeError {
   ExecutableMissing(path~ : String)
   HelperMissing(path~ : String)
   UnsupportedPlatform(platform~ : String)
 }
 
 ///|
-priv suberror BundleFileSystemError {
+priv suberror StagingFileSystemError {
   CreateDirectory(path~ : String, detail~ : String)
   Copy(source~ : String, destination~ : String, detail~ : String)
   Read(path~ : String, detail~ : String)
@@ -22,12 +22,12 @@ priv suberror BundleFileSystemError {
 }
 
 ///|
-priv suberror BundleToolError {
+priv suberror StagingToolError {
   Exit(tool~ : String, code~ : Int, detail~ : String)
 }
 
 ///|
-priv suberror WindowsBundleError {
+priv suberror WindowsStagingError {
   InvalidRuntime(detail~ : String)
   InvalidLayout(detail~ : String)
 }
@@ -38,7 +38,7 @@ priv suberror LinuxBundleError {
 }
 
 ///|
-fn BundlePlanError::message(self : BundlePlanError) -> String {
+fn StagingPlanError::message(self : StagingPlanError) -> String {
   match self {
     UnsupportedResourceGlob(path~) =>
       "unsupported bundle resource glob: " + path
@@ -54,7 +54,7 @@ fn BundlePlanError::message(self : BundlePlanError) -> String {
 }
 
 ///|
-fn BundleRuntimeError::message(self : BundleRuntimeError) -> String {
+fn StagingRuntimeError::message(self : StagingRuntimeError) -> String {
   match self {
     ExecutableMissing(path~) => "application executable is missing: " + path
     HelperMissing(path~) => "Proton helper executable is missing: " + path
@@ -64,7 +64,7 @@ fn BundleRuntimeError::message(self : BundleRuntimeError) -> String {
 }
 
 ///|
-fn BundleFileSystemError::message(self : BundleFileSystemError) -> String {
+fn StagingFileSystemError::message(self : StagingFileSystemError) -> String {
   match self {
     CreateDirectory(path~, detail~) =>
       "failed to create directory " + path + ": " + detail
@@ -76,7 +76,7 @@ fn BundleFileSystemError::message(self : BundleFileSystemError) -> String {
 }
 
 ///|
-fn BundleToolError::message(self : BundleToolError) -> String {
+fn StagingToolError::message(self : StagingToolError) -> String {
   match self {
     Exit(tool~, code~, detail~) =>
       tool + " exited with code " + code.to_string() + ": " + detail
@@ -84,7 +84,7 @@ fn BundleToolError::message(self : BundleToolError) -> String {
 }
 
 ///|
-fn WindowsBundleError::message(self : WindowsBundleError) -> String {
+fn WindowsStagingError::message(self : WindowsStagingError) -> String {
   match self {
     InvalidRuntime(detail~) => "invalid Windows Proton runtime: " + detail
     InvalidLayout(detail~) => "invalid Windows bundle layout: " + detail
@@ -99,27 +99,27 @@ fn LinuxBundleError::message(self : LinuxBundleError) -> String {
 }
 
 ///|
-impl Show for BundlePlanError with fn output(self, logger) {
+impl Show for StagingPlanError with fn output(self, logger) {
   logger.write_string(self.message())
 }
 
 ///|
-impl Show for BundleRuntimeError with fn output(self, logger) {
+impl Show for StagingRuntimeError with fn output(self, logger) {
   logger.write_string(self.message())
 }
 
 ///|
-impl Show for BundleFileSystemError with fn output(self, logger) {
+impl Show for StagingFileSystemError with fn output(self, logger) {
   logger.write_string(self.message())
 }
 
 ///|
-impl Show for BundleToolError with fn output(self, logger) {
+impl Show for StagingToolError with fn output(self, logger) {
   logger.write_string(self.message())
 }
 
 ///|
-impl Show for WindowsBundleError with fn output(self, logger) {
+impl Show for WindowsStagingError with fn output(self, logger) {
   logger.write_string(self.message())
 }
 

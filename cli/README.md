@@ -17,3 +17,20 @@ into the application executable using the Windows SDK resource compiler. This
 works with the default Wasm CLI; no native CLI installation is required.
 `package --icon` overrides the configured icon. The Windows SDK must be
 installed, as required for the application's native MoonBit build.
+
+## Packaging implementation
+
+`package/package.mbt` resolves project configuration into one `PackagePlan`,
+then builds the application and runs the project's prepare command.
+`package/staging*.mbt` consumes that plan to resolve CEF and its helper,
+collect payloads, and construct the standalone packager input once.
+
+The `proton_package/lib` library creates the platform staging layout and calls
+Proton's staging callback before signing. That callback prepares helper apps,
+loader paths, and update metadata. The packager then signs and emits the requested
+artifacts. It does not discover Proton projects or resolve CEF installations.
+
+Windows builds link the icon into the application executable. The CLI preserves
+all icon paths in the packaging input and marks the executable icon as already
+embedded, so the packager does not edit it again. Standalone `proton_package`
+keeps its existing icon-embedding behavior for prebuilt executables.

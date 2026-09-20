@@ -76,9 +76,9 @@ fn glob_tree_root(value : String) -> String? {
 }
 
 ///|
-fn bundle_host_from_platform(
+fn staging_host_from_platform(
   platform : String,
-) -> BundleHost raise BundleRuntimeError {
+) -> StagingHost raise StagingRuntimeError {
   if platform.has_prefix("darwin-") {
     Macos
   } else if platform.has_prefix("win32-") {
@@ -102,7 +102,7 @@ async fn ensure_dir(path : String) -> Unit {
       if path_exists(path) {
         return
       }
-      raise BundleFileSystemError::CreateDirectory(
+      raise StagingFileSystemError::CreateDirectory(
         path~,
         detail=@debug.render(Repr(error)),
       )
@@ -115,14 +115,14 @@ async fn copy_macos_file(source : String, destination : String) -> Unit {
   ensure_dir(path_parent(destination))
   let code = @process.run("ditto", [source, destination]) catch {
     error =>
-      raise BundleFileSystemError::Copy(
+      raise StagingFileSystemError::Copy(
         source~,
         destination~,
         detail=@debug.render(Repr(error)),
       )
   }
   guard code == 0 else {
-    raise BundleToolError::Exit(tool="ditto", code~, detail=source)
+    raise StagingToolError::Exit(tool="ditto", code~, detail=source)
   }
 }
 
@@ -130,7 +130,7 @@ async fn copy_macos_file(source : String, destination : String) -> Unit {
 async fn write_text(path : String, text : String) -> Unit {
   @async_fs.write_file(path, text, create_mode=CreateOrTruncate) catch {
     error =>
-      raise BundleFileSystemError::Write(
+      raise StagingFileSystemError::Write(
         path~,
         detail=@debug.render(Repr(error)),
       )
@@ -172,14 +172,14 @@ fn macho_thin_filetype(data : Bytes) -> Int? {
 async fn require_launchable_macho(path : String) -> Unit {
   let data = @async_fs.read_file(path) catch {
     error =>
-      raise BundleFileSystemError::Read(
+      raise StagingFileSystemError::Read(
         path~,
         detail=@debug.render(Repr(error)),
       )
   }
   guard macho_thin_filetype(data.binary()) is Some(filetype) else { return }
   guard filetype != MachoExecute else { return }
-  raise BundlePlanError::NotLaunchableMachO(path~, filetype~)
+  raise StagingPlanError::NotLaunchableMachO(path~, filetype~)
 }
 
 ///|
@@ -229,12 +229,10 @@ fn macos_helper_specs(
 
 ///|
 fn helper_info_plist(
-  spec : ProtonBundleSpec,
+  spec : PackagePlan,
   helper : MacosHelperSpec,
 ) -> String raise @packager.PackagePlanError {
-  let (macos_version, bundle_version) = @packager.macos_versions(
-    spec.package_spec.version,
-  )
+  let (macos_version, bundle_version) = @packager.macos_versions(spec.version)
   let template =
     #|<?xml version="1.0" encoding="UTF-8"?>
     #|<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -257,7 +255,7 @@ fn helper_info_plist(
 
 ///|
 async fn stage_update_revision(
-  spec : ProtonBundleSpec,
+  spec : PackagePlan,
   destination : String,
 ) -> Unit {
   write_text(
@@ -268,31 +266,29 @@ async fn stage_update_revision(
 
 ///|
 async fn write_package_manifest(
-  spec : ProtonBundleSpec,
+  spec : PackagePlan,
   destination : String,
   kind : String,
-  host : BundleHost,
+  host : StagingHost,
 ) -> Unit {
   let bundle_version = match host {
-    Macos => @packager.macos_versions(spec.package_spec.version).1
-    Windows | Linux => spec.package_spec.version
+    Macos => @packager.macos_versions(spec.version).1
+    Windows | Linux => spec.version
   }
   let manifest : Json = {
     "schema_version": 1,
     "kind": kind,
-    "product_name": spec.package_spec.product_name,
-    "identifier": spec.package_spec.identifier,
-    "version": spec.package_spec.version,
+    "product_name": spec.product_name,
+    "identifier": spec.identifier,
+    "version": spec.version,
     "bundle_version": bundle_version,
-    "targets": spec.package_spec.formats.map(fn(format) { format.to_string() }),
-    "url_schemes": spec.package_spec.url_schemes,
-    "document_types": spec.package_spec.document_types.map(fn(
-      document_type,
-    ) -> Json {
+    "targets": spec.formats.map(fn(format) { format.to_string() }),
+    "url_schemes": spec.url_schemes,
+    "document_types": spec.document_types.map(fn(document_type) -> Json {
       {
-        "name": document_type.name(),
-        "extensions": document_type.extensions(),
-        "role": document_type.role(),
+        "name": document_type.name,
+        "extensions": document_type.extensions,
+        "role": document_type.role,
       }
     }),
   }
