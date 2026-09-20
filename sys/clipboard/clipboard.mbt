@@ -137,7 +137,7 @@ fn write_text_with(
 /// # Example
 /// ```mbt check
 /// test "is_supported reports capability without touching clipboard" {
-///   let supported = is_supported()
+///   let supported = @proton_clipboard.is_supported()
 ///   match supported {
 ///     true => ()
 ///     false => ()
@@ -161,7 +161,7 @@ pub fn is_supported() -> Bool {
 /// # Example
 /// ```mbt check
 /// test "ensure_supported gives a result-oriented capability check" {
-///   match ensure_supported() {
+///   match @proton_clipboard.ensure_supported() {
 ///     Ok(_) => ()
 ///     Err(message) => assert_true(!message.is_empty())
 ///   }
@@ -188,7 +188,7 @@ pub fn ensure_supported() -> Result[Unit, String] {
 /// # Example
 /// ```mbt check
 /// test "read_text returns text, emptiness, or an error" {
-///   match read_text() {
+///   match @proton_clipboard.read_text() {
 ///     Ok(Some(text)) => assert_true(text.length() >= 0)
 ///     Ok(None) => ()
 ///     Err(message) => assert_true(!message.is_empty())
@@ -214,7 +214,7 @@ pub fn read_text() -> Result[String?, String] {
 /// # Example
 /// ```mbt check
 /// test "write_text accepts a string and reports success or failure" {
-///   match write_text("") {
+///   match @proton_clipboard.write_text("") {
 ///     Ok(_) => ()
 ///     Err(message) => assert_true(!message.is_empty())
 ///   }

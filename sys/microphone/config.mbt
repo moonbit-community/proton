@@ -30,7 +30,9 @@ fn min_sample_rate(value : Int) -> Int {
 /// # Example
 /// ```mbt check
 /// test "CaptureConfig applies conservative defaults" {
-///   let config = CaptureConfig::CaptureConfig(sample_rate_hz=44_100)
+///   let config = @proton_microphone.CaptureConfig::CaptureConfig(
+///     sample_rate_hz=44_100,
+///   )
 ///   assert_eq(config.channels, 1)
 ///   assert_eq(config.sample_rate_hz, 44_100)
 /// }
@@ -61,8 +63,8 @@ pub fn CaptureConfig::CaptureConfig(
 /// # Example
 /// ```mbt check
 /// test "bytes_per_sample reflects the format width" {
-///   assert_eq(SampleFormat::I16.bytes_per_sample(), 2)
-///   assert_eq(SampleFormat::F32.bytes_per_sample(), 4)
+///   assert_eq(@proton_microphone.SampleFormat::I16.bytes_per_sample(), 2)
+///   assert_eq(@proton_microphone.SampleFormat::F32.bytes_per_sample(), 4)
 /// }
 /// ```
 pub fn SampleFormat::bytes_per_sample(self : SampleFormat) -> Int {
@@ -84,7 +86,10 @@ pub fn SampleFormat::bytes_per_sample(self : SampleFormat) -> Int {
 /// # Example
 /// ```mbt check
 /// test "normalized clamps channels and sample rate to safe bounds" {
-///   let config = CaptureConfig::CaptureConfig(channels=0, sample_rate_hz=4_000).normalized()
+///   let config = @proton_microphone.CaptureConfig::CaptureConfig(
+///     channels=0,
+///     sample_rate_hz=4_000,
+///   ).normalized()
 ///   assert_eq(config.channels, 1)
 ///   assert_eq(config.sample_rate_hz, 8_000)
 /// }
@@ -110,7 +115,7 @@ pub fn CaptureConfig::normalized(self : CaptureConfig) -> CaptureConfig {
 /// ```mbt check
 /// test "recommended_chunk_frames is ten milliseconds of audio" {
 ///   assert_eq(
-///     CaptureConfig::CaptureConfig(sample_rate_hz=48_000).recommended_chunk_frames(),
+///     @proton_microphone.CaptureConfig::CaptureConfig(sample_rate_hz=48_000).recommended_chunk_frames(),
 ///     480,
 ///   )
 /// }
@@ -129,9 +134,11 @@ pub fn CaptureConfig::recommended_chunk_frames(self : CaptureConfig) -> Int {
 /// # Example
 /// ```mbt check
 /// test "uses_voice_processing reflects requested flags" {
-///   assert_false(CaptureConfig::CaptureConfig().uses_voice_processing())
+///   assert_false(
+///     @proton_microphone.CaptureConfig::CaptureConfig().uses_voice_processing(),
+///   )
 ///   assert_true(
-///     CaptureConfig::CaptureConfig(noise_suppression=true).uses_voice_processing(),
+///     @proton_microphone.CaptureConfig::CaptureConfig(noise_suppression=true).uses_voice_processing(),
 ///   )
 /// }
 /// ```

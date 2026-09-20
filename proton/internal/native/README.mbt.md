@@ -9,7 +9,7 @@ The root facade does not expose these values or raw native handles.
 ```mbt check
 ///|
 test "native boundary is linked" {
-  let info = runtime_info()
+  let info = @native.runtime_info()
   assert_true(info.platform.length() > 0)
   assert_true(info.features.contains("event_polling"))
   assert_true(info.features.contains("bridge_events"))

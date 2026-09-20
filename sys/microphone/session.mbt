@@ -24,7 +24,7 @@ pub fn MicrophoneDevice::is_live(self : MicrophoneDevice) -> Bool {
 /// # Example
 /// ```mbt check
 /// test "label returns a stable lowercase string" {
-///   assert_eq(CaptureState::Recording.label(), "recording")
+///   assert_eq(@proton_microphone.CaptureState::Recording.label(), "recording")
 /// }
 /// ```
 pub fn CaptureState::label(self : CaptureState) -> String {
