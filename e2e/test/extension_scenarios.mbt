@@ -127,7 +127,10 @@ async fn run_extension_scenario_page_probe(
   name : String,
   timeout : Int,
 ) -> Unit {
+  let mut phase = "page connection"
+  errdefer println("E2E extension failed: scenario=" + name + " phase=" + phase)
   let page = connect_spawned_page(tasks, app, target, timeout)
+  phase = "bridge readiness"
   wait_for_ready(page, scenario_ready_expression(name), timeout)
   let bridge_expression = match name {
     "38_async_extension_add" =>
@@ -144,6 +147,7 @@ async fn run_extension_scenario_page_probe(
     "bridge for " + name,
     timeout,
   )
+  phase = "command evaluation"
   run_extension_scenario_probe(name, page)
 }
 

@@ -71,8 +71,12 @@ async fn finish_scenario_app_with_exit_timeout(
   target : String,
   exit_timeout : Int,
 ) -> ShutdownProbeResult {
+  let mut phase = "process snapshot"
+  errdefer println("E2E shutdown failed: phase=" + phase)
   let snapshot = snapshot_scenario_process_tree(app)
+  phase = "CDP close request"
   close_browser(target, process_shutdown_timeout_ms)
+  phase = "process and endpoint shutdown verification"
   wait_for_scenario_app_shutdown(app, target, snapshot, exit_timeout)
 }
 
