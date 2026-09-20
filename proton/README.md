@@ -472,6 +472,50 @@ GTK settings the query fails. Windows observes changes through window messages,
 so notifications require a native window. See `examples/77_native_theme` for a
 window override and system appearance review.
 
+## System preferences
+
+Four read-only queries expose the system state Electron's `systemPreferences`
+module reports. They need no running session, and each one raises
+`SystemPreferencesError` instead of returning a default when the platform does
+not own the query.
+
+```moonbit
+let accent = @proton.system_accent_color()
+let animation = @proton.system_animation_settings()
+let microphone = @proton.system_media_access_status(
+  @proton.MediaAccessKind::Microphone,
+)
+let trusted = @proton.system_is_trusted_accessibility_client(false)
+```
+
+- `system_accent_color()` returns RGBA hexadecimal digits without a leading
+  `#`, the form `getAccentColor` returns. An empty value reports a platform or
+  configuration without an accent color. Windows reads the DWM accent value
+  through the same conversion Electron uses, so the stored alpha becomes full
+  alpha; macOS keeps the color's own alpha; Linux reports an empty value because
+  Proton does not read the XDG desktop portal yet.
+- `system_animation_settings()` reports `should_render_rich_animation`,
+  `scroll_animations_enabled_by_system`, and `prefers_reduced_motion`. Windows
+  reads `SPI_GETCLIENTAREAANIMATION` and falls back to the session type when the
+  parameter is unavailable; macOS reads the accessibility display options;
+  Linux reads GTK's `gtk-enable-animations` and otherwise reports animations as
+  enabled, which is Chromium's Linux behavior.
+- `system_media_access_status(kind)` reports `granted`, `denied`, `restricted`,
+  `not-determined`, or `unknown` for `microphone`, `camera`, and `screen`.
+  Windows reads the capability access consent store that the privacy settings
+  write, including the machine policy that makes a device restricted; macOS
+  reads the AVFoundation authorization and the screen-recording preflight;
+  Linux reports an unsupported error, matching Electron's platform support.
+- `system_is_trusted_accessibility_client(prompt)` is macOS only and maps to
+  `AXIsProcessTrustedWithOptions`. Passing `true` lets macOS show its own prompt
+  and register the application; other platforms report an unsupported error.
+
+See `examples/80_system_preferences` for a live readback of all four queries.
+Not implemented yet: the `getColor` and `getSystemColor` palettes,
+`askForMediaAccess`, the macOS notification and user-default bridges, and the
+`accent-color-changed` and `color-changed` change events. Query again after
+changing a system setting until those events land.
+
 ## Application locale
 
 `App::locale` selects an immutable application locale before native runtime

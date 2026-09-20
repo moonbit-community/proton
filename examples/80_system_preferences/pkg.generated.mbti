@@ -1,0 +1,31 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/examples/80_system_preferences"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+type ReadRequest derive(ToJson, @json.FromJson)
+pub fn ReadRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ReadRequest::to_json(Self) -> Json
+
+type Snapshot derive(ToJson, @json.FromJson)
+pub fn Snapshot::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Snapshot::to_json(Self) -> Json
+
+type TrustReply derive(ToJson, @json.FromJson)
+pub fn TrustReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrustReply::to_json(Self) -> Json
+
+type TrustRequest derive(ToJson, @json.FromJson)
+pub fn TrustRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn TrustRequest::to_json(Self) -> Json
+
+// Type aliases
+
+// Traits

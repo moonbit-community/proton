@@ -34,6 +34,7 @@
 #endif
 
 #define PROTON_MAX_DIALOG_TEXT_BYTES 1048576
+#define PROTON_SYSTEM_TEXT_BYTES 64
 #define PROTON_WINDOW_STATE_FIELD_COUNT 21
 #define PROTON_SCREEN_FIELD_COUNT 11
 #define PROTON_VIEW_STATE_FIELD_COUNT 6
@@ -2844,6 +2845,119 @@ int32_t proton_native_theme_query(int32_t *out_dark_colors,
   }
   *out_dark_colors = dark_colors;
   *out_high_contrast_colors = high_contrast_colors;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+/* Copies a system preference value into a caller-owned buffer. The required
+   length excludes the terminator and the caller must provide room for it, the
+   same two-call contract as proton_system_path. An empty value is valid: it
+   reports a query without a configured value. */
+static int32_t proton_write_system_text(const char *value,
+                                        char *buffer,
+                                        int32_t buffer_len,
+                                        int32_t *out_required_len) {
+  if (value == NULL) {
+    return proton_set_error(PROTON_ERR_PLATFORM,
+                            "system preference query returned no value");
+  }
+  size_t required = strlen(value);
+  if (required > INT32_MAX) {
+    return proton_set_error(PROTON_ERR_PLATFORM,
+                            "system preference value is too long");
+  }
+  *out_required_len = (int32_t)required;
+  if (buffer == NULL || buffer_len <= (int32_t)required) {
+    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
+                            "system preference buffer is too small");
+  }
+  memcpy(buffer, value, required + 1);
+  return proton_set_error(PROTON_OK, NULL);
+}
+
+int32_t proton_system_accent_color(char *buffer,
+                                   int32_t buffer_len,
+                                   int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "accent color output is required");
+  }
+  char accent[PROTON_SYSTEM_TEXT_BYTES] = {0};
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_system_accent_color(
+      accent, (int32_t)sizeof(accent), engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  return proton_write_system_text(accent, buffer, buffer_len, out_required_len);
+}
+
+int32_t proton_system_animation_settings(int32_t *out_rich_animation,
+                                         int32_t *out_scroll_animations,
+                                         int32_t *out_reduced_motion) {
+  if (out_rich_animation == NULL || out_scroll_animations == NULL ||
+      out_reduced_motion == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "animation setting outputs are required");
+  }
+  int32_t rich_animation = 0;
+  int32_t scroll_animations = 0;
+  int32_t reduced_motion = 0;
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_system_animation_settings(
+      &rich_animation, &scroll_animations, &reduced_motion, engine_error,
+      sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  *out_rich_animation = rich_animation != 0 ? 1 : 0;
+  *out_scroll_animations = scroll_animations != 0 ? 1 : 0;
+  *out_reduced_motion = reduced_motion != 0 ? 1 : 0;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_system_media_access_status(int32_t media, int32_t *out_status) {
+  if (out_status == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "media access status output is required");
+  }
+  if (media < PROTON_MEDIA_ACCESS_MICROPHONE ||
+      media > PROTON_MEDIA_ACCESS_SCREEN) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "media access kind is invalid");
+  }
+  int32_t value = PROTON_MEDIA_ACCESS_STATUS_UNKNOWN;
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_system_media_access_status(
+      media, &value, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  if (value < PROTON_MEDIA_ACCESS_STATUS_UNKNOWN ||
+      value > PROTON_MEDIA_ACCESS_STATUS_RESTRICTED) {
+    return proton_set_error(PROTON_ERR_PLATFORM,
+                            "media access status is invalid");
+  }
+  *out_status = value;
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_system_accessibility_client_trusted(int32_t prompt,
+                                                   int32_t *out_trusted) {
+  if (out_trusted == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "accessibility trust output is required");
+  }
+  int32_t trusted = 0;
+  char engine_error[512] = {0};
+  int32_t status = proton_engine_system_accessibility_client_trusted(
+      prompt != 0 ? 1 : 0, &trusted, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  *out_trusted = trusted != 0 ? 1 : 0;
   g_last_error[0] = '\0';
   return PROTON_OK;
 }

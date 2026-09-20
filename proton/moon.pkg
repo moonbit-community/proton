@@ -60,6 +60,7 @@ options(
     "facade_runtime.mbt": [ "native" ],
     "facade_runtime_events.mbt": [ "native" ],
     "facade_session.mbt": [ "native" ],
+    "facade_system_preferences.mbt": [ "native" ],
     "facade_test.mbt": [ "native" ],
     "facade_runtime_wakeup.mbt": [ "native" ],
     "facade_runner.mbt": [ "native" ],
