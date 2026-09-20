@@ -579,11 +579,25 @@ async fn run_scenario_probe_once(
     let app = spawn_scenario_app(group, root, output_root, name, port)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
+    let mut phase = "CDP discovery"
+    errdefer println(
+      "E2E failed: scenario=" +
+      name +
+      " phase=" +
+      phase +
+      " app_exit=" +
+      app_exit_code(app.process)
+      .map(code => code.to_string())
+      .unwrap_or("running") +
+      app_diagnostic_suffix(app),
+    )
+    println("E2E starting: " + name)
     let browser_web_socket_url = wait_for_spawned_app_cdp(
       app,
       cdp_http_endpoint_from(target),
       timeout,
     )
+    phase = "page probe"
     let shutdown = if name == "45_bridge_multi_window" {
       run_multi_window_scenario_probe(group, app, target, timeout)
     } else if name == "52_web_contents_view" {
@@ -616,6 +630,8 @@ async fn run_scenario_probe_once(
           )
         None => ()
       }
+      phase = "application shutdown"
+      println("E2E page probe passed: " + name)
       finish_scenario_app(app, target)
     } else {
       if name == "41_app_commands" {
@@ -636,6 +652,8 @@ async fn run_scenario_probe_once(
           )
         None => ()
       }
+      phase = "application shutdown"
+      println("E2E page probe passed: " + name)
       finish_scenario_app(app, target)
     }
     println(

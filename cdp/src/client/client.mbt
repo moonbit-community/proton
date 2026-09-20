@@ -975,14 +975,36 @@ pub async fn CdpClient::recv_cdp_event(
 ///|
 async fn CdpClient::read_messages(self : CdpClient) -> Unit {
   defer self.finish_reader()
-  for ;; {
-    let message = self.ws.recv()
-    let text = message.read_all().text()
-    match @protocol.parse_cdp_incoming(@json.parse(text)) {
-      Response(response) => self.complete_response(response)
-      Event(event) => self.record_cdp_event(event)
+  let error = try {
+    let _ : Unit = for ;; {
+      let message = self.ws.recv()
+      let text = message.read_all().text()
+      match @protocol.parse_cdp_incoming(@json.parse(text)) {
+        Response(response) => self.complete_response(response)
+        Event(event) => self.record_cdp_event(event)
+      }
+    }
+  } catch {
+    error => error
+  } noraise {
+    _ => return
+  }
+  if self.lifecycle is Open && !@async.is_cancellation_error(error) {
+    println("CDP reader stopped: " + error.to_string())
+    if self.last_cdp_request is Some(command) {
+      println(
+        "CDP last command: id=" +
+        command.id.to_string() +
+        " method=" +
+        command.method_name +
+        " session=" +
+        command.session_id.unwrap_or("none") +
+        " pending=" +
+        self.pending_commands.length().to_string(),
+      )
     }
   }
+  raise error
 }
 
 ///|
