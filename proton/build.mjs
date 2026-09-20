@@ -93,6 +93,8 @@ function platformConfig(cefRoot) {
         "-framework AppKit",
         "-framework Foundation",
         "-framework UserNotifications",
+        "-framework AVFoundation",
+        "-framework ApplicationServices",
         "-framework CoreFoundation",
         "-framework Security",
         "-lc++",

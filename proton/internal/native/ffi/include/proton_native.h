@@ -660,6 +660,44 @@ int32_t proton_last_error_message(char *buffer,
 int32_t proton_native_theme_query(int32_t *out_dark_colors,
                                   int32_t *out_high_contrast_colors);
 
+/* System preferences: read-only system state that Electron exposes through
+   its systemPreferences module. */
+
+enum {
+  PROTON_MEDIA_ACCESS_MICROPHONE = 1,
+  PROTON_MEDIA_ACCESS_CAMERA = 2,
+  PROTON_MEDIA_ACCESS_SCREEN = 3
+};
+
+enum {
+  PROTON_MEDIA_ACCESS_STATUS_UNKNOWN = 0,
+  PROTON_MEDIA_ACCESS_STATUS_NOT_DETERMINED = 1,
+  PROTON_MEDIA_ACCESS_STATUS_GRANTED = 2,
+  PROTON_MEDIA_ACCESS_STATUS_DENIED = 3,
+  PROTON_MEDIA_ACCESS_STATUS_RESTRICTED = 4
+};
+
+/* Writes the system accent color as RGBA hexadecimal digits without a leading
+   '#', the form Electron's getAccentColor uses. An empty value reports a
+   platform or configuration without an accent color. */
+int32_t proton_system_accent_color(char *buffer,
+                                   int32_t buffer_len,
+                                   int32_t *out_required_len);
+
+/* Reports system animation guidance: rich animations, system scroll
+   animations, and the reduced-motion preference. */
+int32_t proton_system_animation_settings(int32_t *out_rich_animation,
+                                         int32_t *out_scroll_animations,
+                                         int32_t *out_reduced_motion);
+
+/* Reports the user consent status for a media capture kind. */
+int32_t proton_system_media_access_status(int32_t media, int32_t *out_status);
+
+/* Reports whether the process is a trusted accessibility client. Only macOS
+   implements the query; other platforms report PROTON_ERR_UNSUPPORTED. */
+int32_t proton_system_accessibility_client_trusted(int32_t prompt,
+                                                   int32_t *out_trusted);
+
 #ifdef __cplusplus
 }
 #endif

@@ -696,4 +696,30 @@ int32_t proton_engine_native_theme_query(int32_t *out_dark_colors,
                                          char *error,
                                          size_t error_len);
 
+/* System preferences queries backing the facade's system preference surface.
+   Values follow Electron's systemPreferences module. Every entry point is
+   implemented once per platform and reports PROTON_ERR_UNSUPPORTED for a
+   query the platform does not offer. */
+int32_t proton_engine_system_accent_color(char *buffer,
+                                          int32_t buffer_len,
+                                          char *error,
+                                          size_t error_len);
+
+int32_t proton_engine_system_animation_settings(
+    int32_t *out_rich_animation,
+    int32_t *out_scroll_animations,
+    int32_t *out_reduced_motion,
+    char *error,
+    size_t error_len);
+
+int32_t proton_engine_system_media_access_status(int32_t media,
+                                                 int32_t *out_status,
+                                                 char *error,
+                                                 size_t error_len);
+
+int32_t proton_engine_system_accessibility_client_trusted(int32_t prompt,
+                                                          int32_t *out_trusted,
+                                                          char *error,
+                                                          size_t error_len);
+
 #endif

@@ -35,7 +35,15 @@ pub fn screens() -> Array[ScreenInfo] raise ScreenQueryError
 
 pub fn set_jump_list(Array[JumpListCategory]?) -> JumpListResult raise AppControlError
 
+pub fn system_accent_color() -> String raise SystemPreferencesError
+
+pub fn system_animation_settings() -> AnimationSettings raise SystemPreferencesError
+
 pub fn system_appearance() -> SystemAppearance raise SystemAppearanceError
+
+pub fn system_is_trusted_accessibility_client(Bool) -> Bool raise SystemPreferencesError
+
+pub fn system_media_access_status(MediaAccessKind) -> MediaAccessStatus raise SystemPreferencesError
 
 pub fn system_preferred_languages() -> Array[@locale.Locale] raise SystemLocaleError
 
@@ -205,6 +213,16 @@ pub fn SystemLocaleError::output(Self, &Logger) -> Unit
 pub fn SystemLocaleError::to_repr(Self) -> @debug.Repr
 pub fn SystemLocaleError::to_string(Self) -> String
 
+pub(all) suberror SystemPreferencesError {
+  SystemPreferencesUnavailable(query~ : String, status~ : Int, detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn SystemPreferencesError::equal(Self, Self) -> Bool
+pub fn SystemPreferencesError::message(Self) -> String
+pub fn SystemPreferencesError::not_equal(Self, Self) -> Bool
+pub fn SystemPreferencesError::output(Self, &Logger) -> Unit
+pub fn SystemPreferencesError::to_repr(Self) -> @debug.Repr
+pub fn SystemPreferencesError::to_string(Self) -> String
+
 pub(all) suberror WindowSessionError {
   UnknownWindow(id~ : String)
   AlreadyOpen(id~ : String)
@@ -230,6 +248,15 @@ pub(all) enum AccessibilityMode {
 pub fn AccessibilityMode::equal(Self, Self) -> Bool
 pub fn AccessibilityMode::not_equal(Self, Self) -> Bool
 pub fn AccessibilityMode::to_repr(Self) -> @debug.Repr
+
+pub(all) struct AnimationSettings {
+  should_render_rich_animation : Bool
+  scroll_animations_enabled_by_system : Bool
+  prefers_reduced_motion : Bool
+} derive(Eq, @debug.Debug)
+pub fn AnimationSettings::equal(Self, Self) -> Bool
+pub fn AnimationSettings::not_equal(Self, Self) -> Bool
+pub fn AnimationSettings::to_repr(Self) -> @debug.Repr
 
 type App
 pub fn App::accessibility(Self, AccessibilityMode) -> Self
@@ -587,6 +614,26 @@ pub(all) enum LastWindowClosedPolicy {
 pub fn LastWindowClosedPolicy::equal(Self, Self) -> Bool
 pub fn LastWindowClosedPolicy::not_equal(Self, Self) -> Bool
 pub fn LastWindowClosedPolicy::to_repr(Self) -> @debug.Repr
+
+pub(all) enum MediaAccessKind {
+  Microphone
+  Camera
+  Screen
+} derive(Eq, @debug.Debug)
+pub fn MediaAccessKind::equal(Self, Self) -> Bool
+pub fn MediaAccessKind::not_equal(Self, Self) -> Bool
+pub fn MediaAccessKind::to_repr(Self) -> @debug.Repr
+
+pub(all) enum MediaAccessStatus {
+  Unknown
+  NotDetermined
+  Granted
+  Denied
+  Restricted
+} derive(Eq, @debug.Debug)
+pub fn MediaAccessStatus::equal(Self, Self) -> Bool
+pub fn MediaAccessStatus::not_equal(Self, Self) -> Bool
+pub fn MediaAccessStatus::to_repr(Self) -> @debug.Repr
 
 pub(all) struct MediaPermissionRequest {
   origin : String
