@@ -1556,12 +1556,16 @@ fn RuntimeSession::process_window_commands(self : RuntimeSession) -> Bool {
 }
 
 ///|
-fn RuntimeSession::advance_window_opens(self : RuntimeSession) -> Bool {
+fn RuntimeSession::advance_window_opens(
+  self : RuntimeSession,
+) -> Bool raise AppRunError {
   let remaining : Array[PendingWindowOpen] = []
   let mut did_work = false
   for pending in self.pending_window_opens {
     if pending.completion.state is WindowOpenFailed(_) {
-      self.discard_window_open(pending)
+      self.discard_window_open(pending) catch {
+        error => raise CleanupFailed(primary=None, failures=[error])
+      }
       did_work = true
       continue
     }
@@ -1659,7 +1663,7 @@ fn RuntimeSession::advance_window_opens(self : RuntimeSession) -> Bool {
 fn RuntimeSession::discard_window_open(
   self : RuntimeSession,
   pending : PendingWindowOpen,
-) -> Unit {
+) -> Unit raise AppCleanupError {
   pending.timeout.cancel()
   match pending.activation {
     Some(task) => task.cancel()
@@ -1669,19 +1673,7 @@ fn RuntimeSession::discard_window_open(
     Some(task) => task.cancel()
     None => ()
   }
-  pending.running.window.destroy() catch {
-    _ => ()
-  }
-  pending.running.state = WindowClosed
-  pending.running.lifetime.close()
-  // Destruction clears the native ID, so the later close event cannot retire
-  // this record. Remove the exact instance without touching a replacement.
-  for index, running in self.windows {
-    if physical_equal(running, pending.running) {
-      ignore(self.windows.remove(index))
-      break
-    }
-  }
+  self.retire_window(pending.running)
 }
 
 ///|
@@ -1689,9 +1681,12 @@ fn RuntimeSession::fail_window_open(
   self : RuntimeSession,
   pending : PendingWindowOpen,
   error : AppRunError,
-) -> Unit {
-  self.discard_window_open(pending)
+) -> Unit raise AppRunError {
   pending.completion.fail(StartupFailed(id=pending.id, error~))
+  self.discard_window_open(pending) catch {
+    cleanup =>
+      raise CleanupFailed(primary=Some(error.message()), failures=[cleanup])
+  }
 }
 
 ///|
@@ -4337,22 +4332,36 @@ fn RuntimeSession::retire_closed_window(
   window_id : Int64?,
 ) -> Unit raise AppRunError {
   guard window_id is Some(window_id) else { return }
-  let mut index = -1
-  for i, running in self.windows {
-    if running.window.id() == window_id {
-      index = i
-      break
-    }
+  guard self.find_window_by_native_id(window_id) is Some(running) else {
+    return
   }
-  guard index >= 0 else { return }
-  let running = self.windows[index]
+  self.retire_window(running) catch {
+    error => raise CleanupFailed(primary=None, failures=[error])
+  }
+}
+
+///|
+fn RuntimeSession::retire_window(
+  self : RuntimeSession,
+  running : RunningWindow,
+) -> Unit raise AppCleanupError {
   running.state = WindowClosed
   running.lifetime.close()
   running.window.destroy() catch {
     error =>
-      raise native_run_error("destroy closed window " + running.id, error)
+      raise WindowDestroy(
+        status=error.status(),
+        detail="destroy window " + running.id + ": " + error.message(),
+      )
   }
-  ignore(self.windows.remove(index))
+  // Destruction clears the native ID. Unregister only this instance after
+  // success; on failure, retain it for app_cleanup to retry destruction.
+  for index, registered in self.windows {
+    if physical_equal(registered, running) {
+      ignore(self.windows.remove(index))
+      break
+    }
+  }
   @xlog.info(category="proton.window") <?
     { "message": "window closed", "window": running.id }
 }
