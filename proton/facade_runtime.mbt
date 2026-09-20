@@ -489,22 +489,24 @@ async fn run_manifest(
           no_wait=true,
           allow_failure=true,
         )
-        session.drive_until_complete(application_start)
+        let startup = session.drive_until_complete(application_start)
         active_update_channel.val = update_channel
-        for definition in definitions {
-          if definition.plan.open_on_start &&
-            session.find_active_window(definition.plan.id) is None {
-            ignore(session.create_window(definition))
+        if startup is Completed {
+          for definition in definitions {
+            if definition.plan.open_on_start &&
+              session.find_active_window(definition.plan.id) is None {
+              ignore(session.create_window(definition))
+            }
           }
-        }
-        if bridge_enabled {
-          session.wait_for_bridge_startup(bridge_startup_timeout_ms)
-          if !session.is_quitting() {
-            @xlog.info(category="proton.bridge") <?
-              {
-                "message": "renderer bridge ready",
-                "window_count": windows.length(),
-              }
+          if bridge_enabled {
+            session.wait_for_bridge_startup(bridge_startup_timeout_ms)
+            if !session.is_quitting() {
+              @xlog.info(category="proton.bridge") <?
+                {
+                  "message": "renderer bridge ready",
+                  "window_count": windows.length(),
+                }
+            }
           }
         }
         if !session.is_quitting() {
@@ -524,8 +526,7 @@ async fn run_manifest(
             no_wait=true,
             allow_failure=true,
           )
-          session.drive_until_complete(activation)
-          if !session.is_quitting() {
+          if session.drive_until_complete(activation) is Completed {
             lifecycle.begin_running()
             cleanup_previous_update()
             start_update_check(
