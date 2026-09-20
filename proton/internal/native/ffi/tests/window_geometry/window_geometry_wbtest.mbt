@@ -58,3 +58,23 @@ test "overlay content sizing measures the actual non-client area" {
 test "a DPI change adopts the suggested frame without rescaling it" {
   assert_eq(dpi_change_test(), 0)
 }
+
+///|
+#cfg(platform="windows")
+extern "C" fn titlebar_native_hit_test() -> Int = "proton_test_titlebar_native_hit_test"
+
+///|
+#cfg(platform="windows")
+test "overlay hit testing keeps the whole sidebar button clickable" {
+  assert_eq(titlebar_native_hit_test(), 0)
+}
+
+///|
+#cfg(platform="windows")
+extern "C" fn titlebar_dpi_regions_test() -> Int = "proton_test_titlebar_dpi_regions"
+
+///|
+#cfg(platform="windows")
+test "titlebar button pixels and edges respect 100 through 250 percent DPI" {
+  assert_eq(titlebar_dpi_regions_test(), 0)
+}
