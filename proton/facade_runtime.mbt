@@ -1064,6 +1064,7 @@ fn take_runtime_bridge_failure(
 ///|
 fn WindowLifetime::WindowLifetime() -> WindowLifetime {
   WindowLifetime::{
+    task: None,
     ready: false,
     closed: false,
     startup_error: None,

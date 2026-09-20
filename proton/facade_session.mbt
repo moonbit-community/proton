@@ -1414,9 +1414,12 @@ async fn RuntimeSession::activate_window(
   )
   let manager = self.window_manager()
   let handle = self.window_handle(running)
-  ignore(
+  running.lifetime.task = Some(
     self.window_tasks.spawn(
       () => {
+        defer {
+          running.lifetime.task = None
+        }
         run_window_lifecycle_scope(
           running,
           handle,
@@ -1451,6 +1454,7 @@ async fn RuntimeSession::request_open_window(
   let completion = WindowOpenCompletion()
   self.window_commands.push(Open(id, completion))
   self.wakeup.signal.notify()
+  defer self.wakeup.signal.notify()
   completion.wait()
 }
 
@@ -1488,6 +1492,9 @@ fn WindowOpenCompletion::fail(
 async fn WindowOpenCompletion::wait(
   self : WindowOpenCompletion,
 ) -> WindowHandle {
+  // Cancellation before success belongs to the opening operation, not just
+  // its waiter. Preserve the async cancellation error for the caller.
+  defer self.fail(Cancelled)
   while self.state is WindowOpenPending {
     self.changed.wait()
   }
@@ -1505,6 +1512,7 @@ fn RuntimeSession::process_window_commands(self : RuntimeSession) -> Bool {
   self.window_commands.clear()
   for command in commands {
     let Open(id, completion) = command
+    guard completion.state is WindowOpenPending else { continue }
     if self.is_quitting() {
       completion.fail(ApplicationQuitting)
       continue
@@ -1552,6 +1560,11 @@ fn RuntimeSession::advance_window_opens(self : RuntimeSession) -> Bool {
   let remaining : Array[PendingWindowOpen] = []
   let mut did_work = false
   for pending in self.pending_window_opens {
+    if pending.completion.state is WindowOpenFailed(_) {
+      self.discard_window_open(pending)
+      did_work = true
+      continue
+    }
     let timed_out = pending.timeout.try_wait() catch { _ => Some(()) }
     if timed_out is Some(_) {
       did_work = true
@@ -1643,13 +1656,16 @@ fn RuntimeSession::advance_window_opens(self : RuntimeSession) -> Bool {
 }
 
 ///|
-fn RuntimeSession::fail_window_open(
+fn RuntimeSession::discard_window_open(
   _self : RuntimeSession,
   pending : PendingWindowOpen,
-  error : AppRunError,
 ) -> Unit {
   pending.timeout.cancel()
   match pending.activation {
+    Some(task) => task.cancel()
+    None => ()
+  }
+  match pending.running.lifetime.task {
     Some(task) => task.cancel()
     None => ()
   }
@@ -1658,13 +1674,25 @@ fn RuntimeSession::fail_window_open(
   }
   pending.running.state = WindowClosed
   pending.running.lifetime.close()
+}
+
+///|
+fn RuntimeSession::fail_window_open(
+  self : RuntimeSession,
+  pending : PendingWindowOpen,
+  error : AppRunError,
+) -> Unit {
+  self.discard_window_open(pending)
   pending.completion.fail(StartupFailed(id=pending.id, error~))
 }
 
 ///|
 /// Opens one declared window that is not currently active.
 /// Business failures raise `WindowSessionError`; task cancellation propagates
-/// unchanged to the owning async task group.
+/// unchanged to the owning async task group. Before activation succeeds,
+/// cancellation discards queued work or closes the instance created by this
+/// operation. Once activation success is committed, the application owns the
+/// window; later caller cancellation does not close it.
 pub async fn WindowManager::open(
   self : WindowManager,
   id : String,

@@ -23,6 +23,8 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
   let sibling_stopped = Ref(false)
   let loaded_views : Array[String] = []
   let secondary_started = Ref(false)
+  let secondary_stopped = Ref(false)
+  let secondary_completed = Ref(false)
   let close_count = Ref(0)
   let close_error = Ref("")
   let cleaned = Ref(false)
@@ -65,7 +67,15 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
       on_ready=context => {
         if context.handle().id() == "secondary" {
           secondary_started.val = true
-          @async.sleep(300)
+          if name == "cancel-open" && !secondary_stopped.val {
+            defer {
+              secondary_stopped.val = true
+            }
+            @async.sleep(10000)
+            secondary_completed.val = true
+          } else {
+            @async.sleep(300)
+          }
           return
         }
         let window = context.handle()
@@ -145,10 +155,21 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                   while !secondary_started.val {
                     @async.sleep(10)
                   }
+                  let old = context.windows().find("secondary")
                   task.cancel()
                   @async.sleep(500)
-                  if context.windows().find("secondary") is Some(secondary) {
-                    secondary.close()
+                  if name == "cancel-open" {
+                    assert_true(secondary_stopped.val)
+                    assert_false(secondary_completed.val)
+                    assert_true(context.windows().find("secondary") is None)
+                    let fresh = context.windows().open("secondary")
+                    if old is Some(old) {
+                      old.close() catch {
+                        _ => ()
+                      }
+                    }
+                    fresh.browser().eval("void 0")
+                    fresh.close()
                   }
                 }
                 "task-failure" => {

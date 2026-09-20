@@ -2230,6 +2230,34 @@ async test "cancelling window and cookie waiters preserves task group cancellati
     // Waiting for this group's children must not turn cancellation into failure.
   })
   assert_true(cookies.pending.is_empty())
+  assert_true(window.state is WindowOpenFailed(Cancelled))
+  // A cancelled queued operation cannot later publish activation success.
+  window.succeed(test_window_handle("secondary", 7L))
+  assert_true(window.state is WindowOpenFailed(Cancelled))
+}
+
+///|
+async test "window activation success wins over later waiter cancellation" {
+  let completion = WindowOpenCompletion()
+  @async.with_task_group(group => {
+    let entered = Ref(false)
+    let waiter = group.spawn(
+      () => {
+        entered.val = true
+        ignore(completion.wait())
+      },
+      no_wait=true,
+    )
+    while !entered.val {
+      @async.pause()
+    }
+    completion.succeed(test_window_handle("secondary", 7L))
+    waiter.cancel()
+  })
+  guard completion.state is WindowOpenSucceeded(handle) else {
+    fail("late cancellation discarded a committed window")
+  }
+  assert_eq(handle.id(), "secondary")
 }
 
 ///|

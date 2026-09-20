@@ -357,6 +357,7 @@ priv enum SessionWindowState {
 
 ///|
 priv struct WindowLifetime {
+  mut task : @async.Task[Unit]?
   mut ready : Bool
   mut closed : Bool
   mut startup_error : AppRunError?
