@@ -40,16 +40,19 @@ test "Windows reports screen capture access as granted" {
 }
 
 ///|
-test "accessibility client trust fails when the platform does not own it" {
+test "accessibility client trust answers on macOS and fails elsewhere" {
   let platform = runtime_platform_id()
-  let trusted = system_accessibility_client_trusted(false) catch {
+  let answers = try system_accessibility_client_trusted(false) catch {
     error => {
       assert_false(platform.has_prefix("darwin-"))
       assert_eq(error.status(), system_preferences_unsupported)
-      return
+      false
     }
+  } noraise {
+    _trusted => true
   }
-  assert_true(platform.has_prefix("darwin-"))
-  // A freshly built test binary is not a registered accessibility client.
-  assert_false(trusted)
+  // macOS owns the query and answers it; the trust state itself depends on
+  // whether the calling process was granted Accessibility access, so the test
+  // asserts the platform matrix instead of a machine-specific value.
+  assert_eq(answers, platform.has_prefix("darwin-"))
 }
