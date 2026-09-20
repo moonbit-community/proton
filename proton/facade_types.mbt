@@ -387,6 +387,7 @@ priv struct PreparedWindow {
 priv struct CommandHostRuntime {
   host : @core.AppCommandHost
   destroy_hooks : Array[CommandExtensionDestroyHook]
+  start_hooks : Array[(@async.TaskGroup[Unit]) -> Unit raise AppRunError]
   event_sources : Array[CommandExtensionEventSource]
   mut closed : Bool
 }

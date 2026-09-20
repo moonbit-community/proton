@@ -8,6 +8,7 @@ struct Extension {
   dependencies : Array[String]
   resolve_permission : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError
   event_source : EventSource?
+  on_start : (@async.TaskGroup[Unit]) -> Unit raise
   on_destroy : () -> Unit raise
 }
 
@@ -60,6 +61,11 @@ pub struct RendererCapability {
 ///|
 /// Builds an installable extension from typed command descriptors.
 ///
+/// `on_start` runs after registration, before application startup hooks, and
+/// receives the application-owned task group for work spanning command requests.
+/// Its tasks are canceled and joined during application shutdown, before
+/// `on_destroy` releases the extension's remaining state.
+///
 /// Validation is deferred until application configuration so invalid static
 /// extension metadata follows the facade's ordinary adaptation error path.
 pub fn typed(
@@ -89,6 +95,7 @@ pub fn typed(
     scope
   },
   event_source? : EventSource,
+  on_start? : (@async.TaskGroup[Unit]) -> Unit raise = fn(_tasks) {  },
   on_destroy? : () -> Unit raise = fn() {  },
 ) -> Extension {
   Extension::{
@@ -100,6 +107,7 @@ pub fn typed(
     dependencies: dependencies.map(dependency => dependency),
     resolve_permission,
     event_source,
+    on_start,
     on_destroy,
   }
 }
@@ -244,6 +252,7 @@ pub fn Extension::command_spec(
     scripts=self.scripts,
     dependencies=self.dependencies,
     resolve_permission=self.resolve_permission,
+    on_start=self.on_start,
     on_destroy=self.on_destroy,
   ) catch {
     error =>

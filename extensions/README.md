@@ -60,6 +60,15 @@ to another renderer target is rejected for the calling page.
 - `screen_monitor`: display queries, cursor position, and display-topology events
 - `desktop_capturer`: screen-source enumeration for Electron-style desktop capture flows
 - `net`: typed renderer-to-host HTTP requests with response status, headers, and body
+- `process`: spawn child processes and wait for or terminate them in later requests
+
+## Process lifetime
+
+Children spawned through the process extension belong to that extension's
+application lifetime, so returning from `spawn` does not terminate them.
+`wait` collects the exit status and removes the process handle; `kill` terminates
+the child and leaves its handle available for `wait`. Application shutdown cancels
+and reaps remaining children, then clears the extension's process registry.
 
 ## Tray Notes
 
