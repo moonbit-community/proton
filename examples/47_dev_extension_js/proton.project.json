@@ -6,10 +6,10 @@
   },
   "frontend": {
     "path": "frontend",
-    "dev_url": "http://127.0.0.1:5173",
+    "dev_url": "http://127.0.0.1:4300",
     "dist": "dist",
-    "before_dev": "npm run dev -- --host 127.0.0.1 --strictPort",
-    "before_build": "npm run build"
+    "before_dev": "warren dev --browser-entry main --direct --port 4300",
+    "before_build": "warren build --browser-entry main"
   },
   "package": {
     "product_name": "Proton Dev Extension JS",

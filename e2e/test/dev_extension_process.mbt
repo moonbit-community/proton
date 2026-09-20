@@ -1,7 +1,5 @@
 ///|
 struct DevExtensionFrontendState {
-  node_modules_dir : String
-  had_node_modules : Bool
   dist_dir : String
   had_dist : Bool
 }
@@ -9,62 +7,9 @@ struct DevExtensionFrontendState {
 ///|
 fn dev_extension_frontend_state(root : String) -> DevExtensionFrontendState {
   let frontend_dir = join_path(root, "examples/47_dev_extension_js/frontend")
-  let node_modules_dir = join_path(frontend_dir, "node_modules")
   let dist_dir = join_path(frontend_dir, "dist")
-  let had_node_modules = @mbfs.path_exists(node_modules_dir)
   let had_dist = @mbfs.path_exists(dist_dir)
-  DevExtensionFrontendState::{
-    node_modules_dir,
-    had_node_modules,
-    dist_dir,
-    had_dist,
-  }
-}
-
-///|
-async fn ensure_dev_extension_frontend(
-  root : String,
-  output_root : String,
-  timeout : Int,
-) -> Unit {
-  let frontend_dir = join_path(root, "examples/47_dev_extension_js/frontend")
-  let vite = dev_extension_vite_binary(frontend_dir)
-  if !@mbfs.path_exists(vite) {
-    let (program, args) = dev_extension_npm_command([
-      "ci", "--no-audit", "--no-fund",
-    ])
-    run_dev_extension_command(
-      output_root,
-      "47-npm-ci",
-      program,
-      args,
-      frontend_dir,
-      Map([]),
-      dev_extension_command_timeout(timeout),
-    )
-  }
-  guard @mbfs.path_exists(vite) else {
-    fail("Vite executable was not installed: " + vite)
-  }
-}
-
-///|
-fn dev_extension_vite_binary(frontend_dir : String) -> String {
-  let executable = if @path.sep == '\\' { "vite.cmd" } else { "vite" }
-  join_path(frontend_dir, "node_modules/.bin/" + executable)
-}
-
-///|
-fn dev_extension_npm_command(args : Array[String]) -> (String, Array[String]) {
-  if @path.sep == '\\' {
-    let command_args = ["/c", "npm.cmd"]
-    for arg in args {
-      command_args.push(arg)
-    }
-    ("cmd", command_args)
-  } else {
-    ("npm", args)
-  }
+  DevExtensionFrontendState::{ dist_dir, had_dist, }
 }
 
 ///|
@@ -243,9 +188,8 @@ async fn spawn_dev_extension_cli_app(
     create_mode=@fs.CreateOrTruncate,
   )
   let frontend_url = "http://127.0.0.1:" + frontend_port.to_string()
-  let frontend_command = "npm run dev -- --host 127.0.0.1 --port " +
-    frontend_port.to_string() +
-    " --strictPort"
+  let frontend_command = "warren dev --browser-entry main --direct --port " +
+    frontend_port.to_string()
   let args = [
     "-C",
     join_path(root, "cli"),
@@ -474,15 +418,7 @@ async fn run_dev_extension_scenario_once(
   timeout : Int,
 ) -> Unit {
   let frontend = dev_extension_frontend_state(root)
-  defer {
-    if !frontend.had_node_modules {
-      remove_dev_extension_tree(frontend.node_modules_dir)
-    }
-    if !frontend.had_dist {
-      remove_dev_extension_tree(frontend.dist_dir)
-    }
-  }
-  ensure_dev_extension_frontend(root, output_root, timeout)
+  defer (if !frontend.had_dist { remove_dev_extension_tree(frontend.dist_dir) })
   let frontend_port = choose_cdp_port()
   run_e2e_operation_with_timeout(
     timeout,

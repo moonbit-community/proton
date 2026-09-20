@@ -12,6 +12,7 @@ members = [
   "./cli",
   "./config",
   "./examples",
+  "./examples/47_dev_extension_js/frontend",
   "./extensions",
   "./e2e",
   "./sys/auto_launch",

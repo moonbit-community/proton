@@ -495,10 +495,7 @@ async function main() {
   if (process.platform !== "darwin") {
     fail("macOS package smoke requires a macOS host");
   }
-  requirePath(
-    path.join(exampleDir, "frontend", "node_modules"),
-    "run `npm ci` in examples/47_dev_extension_js/frontend first",
-  );
+  run("warren", ["--help"]);
   run(
     "moon",
     [

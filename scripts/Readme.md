@@ -80,11 +80,11 @@ signature plus the plist, entitlements, archive, and staging cleanup, then
 extracts the zip to a temporary directory and confirms that the real CEF bundle
 starts with three nested Helper.app processes.
 
-Set up the darwin runtime and frontend dependencies first, then run:
+Set up the darwin runtime and Warren first, then run:
 
 ```sh
 moon -C cli run . -- -C .. cef setup
-npm --prefix examples/47_dev_extension_js/frontend ci
+moon install moonbit-community/warren@0.3.2
 node ./scripts/macos_package_smoke.mjs
 ```
 
@@ -100,7 +100,8 @@ the runtime layout and zip, extracts to a path containing spaces, launches the
 real CEF application, confirms the CDP page comes from the extracted package,
 and checks the helper executable path and cleanup.
 
-Set up the `win32-x64` runtime first:
+Set up the `win32-x64` runtime and install Warren with
+`moon install moonbit-community/warren@0.3.2` first:
 
 ```powershell
 moon -C cli run . -- -C .. cef setup

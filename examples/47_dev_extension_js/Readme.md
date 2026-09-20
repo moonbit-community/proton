@@ -1,36 +1,41 @@
-# Dev Extension JS With Vite
+# Dev Extension JS With Warren
 
-Smoke example for extension JavaScript injection on frontend dev-server pages.
+Smoke example for extension JavaScript injection into a MoonBit frontend served
+and built by Warren. The frontend has no npm dependencies.
 
 ```powershell
-cd examples
-pushd 47_dev_extension_js/frontend
-npm install
-popd
-proton_cli dev --package 47_dev_extension_js
+moon install moonbit-community/warren@0.3.2
+proton_cli -C . dev --config examples/47_dev_extension_js/proton.project.json
 ```
 
 When running the CLI directly from this repository instead of an installed
 `proton_cli`, keep the Proton CLI cwd at the repository root:
 
 ```powershell
-$repo = (Resolve-Path ..).Path
-moon -C ..\cli run . -- -C $repo dev --package examples/47_dev_extension_js
+$repo = (Get-Location).Path
+moon -C cli run . -- -C $repo dev --config examples/47_dev_extension_js/proton.project.json
 ```
 
-The CLI reads the package-local `proton.project.json`, uses
-`frontend.before_dev` to start Vite from the configured `frontend.path`, then
+Run these commands from the repository root. The CLI reads the example's
+`proton.project.json`, uses `frontend.before_dev` to start Warren from
+the configured `frontend.path`, then
 overrides the code-declared asset entry with `frontend.dev_url` in development.
-The Vite page receives `window.__MoonBit__.ticker` from native
+Warren compiles `frontend/main` to JavaScript and serves `frontend/public` at
+`http://127.0.0.1:4300`. The page receives `window.__MoonBit__.ticker` from native
 bridge injection; it does not load a Proton script manually.
 
 For a production build:
 
 ```powershell
-cd examples
-proton_cli build --package 47_dev_extension_js
+proton_cli -C . build --config examples/47_dev_extension_js/proton.project.json
 ```
 
 `proton_cli build` runs `frontend.before_build`, validates
 `frontend/dist/index.html`, then builds the native MoonBit app. In production
-the app loads that Vite output through Proton's `proton://` asset route.
+the app loads Warren's output through Proton's `proton://` asset route.
+
+Run the development and production E2E probes with:
+
+```sh
+moon -C e2e run test --target native -- --dev-extension
+```

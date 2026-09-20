@@ -153,7 +153,7 @@ async fn run_dev_extension_production_page_probe(
 
 ///|
 fn dev_extension_ready_expression() -> String {
-  "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on && document.querySelector('#bridge-status')?.dataset.ready === 'true')"
+  "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on && document.querySelector('#bridge-status')?.dataset.ready === 'true' && document.querySelector('#bridge-status')?.dataset.frontend === 'warren')"
 }
 
 ///|
@@ -316,6 +316,8 @@ async fn run_dev_extension_reload_probe(
       #|Boolean(
       #|  window.__MoonBit__?.ticker?.start &&
       #|  window.__MoonBit__?.ticker?.on &&
+      #|  document.querySelector('#bridge-status')?.dataset.ready === 'true' &&
+      #|  document.querySelector('#bridge-status')?.dataset.frontend === 'warren' &&
       #|  performance.getEntriesByType("navigation")[0]?.type === "reload"
       #|)
     ),

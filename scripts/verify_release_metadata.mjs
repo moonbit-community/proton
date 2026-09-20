@@ -102,6 +102,7 @@ const workspaceModuleManifests = [
   "extensions/moon.mod",
   "cli/moon.mod",
   "examples/moon.mod",
+  "examples/47_dev_extension_js/frontend/moon.mod",
   "e2e/moon.mod",
 ];
 
