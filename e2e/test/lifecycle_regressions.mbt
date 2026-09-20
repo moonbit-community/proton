@@ -9,8 +9,8 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
       [
         "startup-quit", "startup-quit-window", "startup-quit-denied", "startup-quit-allowed",
         "initial-ready-quit", "loaded-view-close", "queued-view-close", "stale-view-close",
-        "initial-open", "cancel-sleep", "cancel-open", "task-success", "task-failure",
-        "close-decision",
+        "cancel-during-startup", "initial-open", "cancel-sleep", "cancel-open", "task-success",
+        "task-failure", "close-decision",
       ]
   }
   let failures : Array[String] = []

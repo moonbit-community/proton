@@ -1657,7 +1657,7 @@ fn RuntimeSession::advance_window_opens(self : RuntimeSession) -> Bool {
 
 ///|
 fn RuntimeSession::discard_window_open(
-  _self : RuntimeSession,
+  self : RuntimeSession,
   pending : PendingWindowOpen,
 ) -> Unit {
   pending.timeout.cancel()
@@ -1674,6 +1674,14 @@ fn RuntimeSession::discard_window_open(
   }
   pending.running.state = WindowClosed
   pending.running.lifetime.close()
+  // Destruction clears the native ID, so the later close event cannot retire
+  // this record. Remove the exact instance without touching a replacement.
+  for index, running in self.windows {
+    if physical_equal(running, pending.running) {
+      ignore(self.windows.remove(index))
+      break
+    }
+  }
 }
 
 ///|
