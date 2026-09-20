@@ -7,8 +7,9 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
     Some(name) => [name]
     None =>
       [
-        "loaded-view-close", "queued-view-close", "stale-view-close", "initial-open",
-        "cancel-sleep", "cancel-open", "task-success", "task-failure", "close-decision",
+        "startup-quit", "startup-quit-window", "initial-ready-quit", "loaded-view-close",
+        "queued-view-close", "stale-view-close", "initial-open", "cancel-sleep",
+        "cancel-open", "task-success", "task-failure", "close-decision",
       ]
   }
   let failures : Array[String] = []

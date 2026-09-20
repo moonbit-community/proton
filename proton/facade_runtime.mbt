@@ -491,20 +491,24 @@ async fn run_manifest(
         )
         session.drive_until_complete(application_start)
         active_update_channel.val = update_channel
-        for definition in definitions {
-          if definition.plan.open_on_start &&
-            session.find_active_window(definition.plan.id) is None {
-            ignore(session.create_window(definition))
+        // Startup may finish because quit completed and its task was cancelled.
+        // Do not create new windows after that close pass has already run.
+        if !session.is_quitting() {
+          for definition in definitions {
+            if definition.plan.open_on_start &&
+              session.find_active_window(definition.plan.id) is None {
+              ignore(session.create_window(definition))
+            }
           }
-        }
-        if bridge_enabled {
-          session.wait_for_bridge_startup(bridge_startup_timeout_ms)
-          if !session.is_quitting() {
-            @xlog.info(category="proton.bridge") <?
-              {
-                "message": "renderer bridge ready",
-                "window_count": windows.length(),
-              }
+          if bridge_enabled {
+            session.wait_for_bridge_startup(bridge_startup_timeout_ms)
+            if !session.is_quitting() {
+              @xlog.info(category="proton.bridge") <?
+                {
+                  "message": "renderer bridge ready",
+                  "window_count": windows.length(),
+                }
+            }
           }
         }
         if !session.is_quitting() {

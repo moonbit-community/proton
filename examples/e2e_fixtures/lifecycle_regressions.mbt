@@ -10,6 +10,12 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "startup-quit" ||
+    name == "startup-quit-window" ||
+    name == "initial-ready-quit" {
+    run_startup_quit_regression(name)
+    return
+  }
   let application : Ref[@proton.ApplicationContext?] = Ref(None)
   let injected = Ref(false)
   let sibling_stopped = Ref(false)
@@ -212,6 +218,83 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
   if name == "close-decision" {
     assert_eq(close_error.val, "")
     assert_eq(close_count.val, 2)
+  }
+  println("LIFECYCLE_PASSED " + name)
+}
+
+///|
+async fn run_startup_quit_regression(name : String) -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let completed_hook_cleanup = Ref(0)
+  let pending_hook_cleanup = Ref(0)
+  let startup_cancelled = Ref(false)
+  let window_cancelled = Ref(false)
+  let window_ready = Ref(0)
+  let window_closed = Ref(0)
+  let later_hook_started = Ref(false)
+  @proton.html("Startup quit", "<h1>Startup quit</h1>")
+  .identifier("dev.proton.startup-quit")
+  .add_window(
+    "secondary",
+    "Secondary",
+    @proton.AppEntry::Html("<h1>Secondary</h1>"),
+    open_on_start=false,
+  )
+  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+    completed_hook_cleanup.val += 1
+  })
+  .app_lifecycle(
+    on_start=context => {
+      if name == "initial-ready-quit" {
+        return
+      }
+      defer {
+        startup_cancelled.val = true
+      }
+      if name == "startup-quit-window" {
+        ignore(context.windows().open("secondary"))
+      }
+      lifecycle_probe_gate()
+      context.quit()
+      @async.sleep(10000)
+      fail("startup continued after quit")
+    },
+    on_shutdown=_ => pending_hook_cleanup.val += 1,
+  )
+  .app_lifecycle(on_start=_ => later_hook_started.val = true, on_shutdown=_ => {
+    ()
+  })
+  .window_lifecycle(
+    on_ready=_ => {
+      window_ready.val += 1
+      if name == "initial-ready-quit" {
+        defer {
+          window_cancelled.val = true
+        }
+        lifecycle_probe_gate()
+        application.val.unwrap().quit()
+        @async.sleep(10000)
+        fail("window activation continued after quit")
+      }
+    },
+    on_close=_ => window_closed.val += 1,
+  )
+  .run()
+  assert_eq(completed_hook_cleanup.val, 1)
+  if name == "initial-ready-quit" {
+    assert_true(later_hook_started.val)
+    assert_true(window_cancelled.val)
+    assert_eq(pending_hook_cleanup.val, 1)
+    assert_eq(window_ready.val, 1)
+    // The interrupted window hook never returned an activation to clean up.
+    assert_eq(window_closed.val, 0)
+  } else {
+    assert_true(startup_cancelled.val)
+    assert_false(later_hook_started.val)
+    assert_eq(pending_hook_cleanup.val, 0)
+    let count = if name == "startup-quit-window" { 1 } else { 0 }
+    assert_eq(window_ready.val, count)
+    assert_eq(window_closed.val, count)
   }
   println("LIFECYCLE_PASSED " + name)
 }
