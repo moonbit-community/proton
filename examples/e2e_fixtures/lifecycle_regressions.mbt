@@ -10,6 +10,10 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "cancel-during-startup" {
+    run_cancel_during_startup_regression()
+    return
+  }
   if name == "startup-quit" ||
     name == "startup-quit-window" ||
     name == "startup-quit-denied" ||
@@ -23,6 +27,8 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
   let sibling_stopped = Ref(false)
   let loaded_views : Array[String] = []
   let secondary_started = Ref(false)
+  let secondary_stopped = Ref(false)
+  let secondary_completed = Ref(false)
   let close_count = Ref(0)
   let close_error = Ref("")
   let cleaned = Ref(false)
@@ -65,7 +71,15 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
       on_ready=context => {
         if context.handle().id() == "secondary" {
           secondary_started.val = true
-          @async.sleep(300)
+          if name == "cancel-open" && !secondary_stopped.val {
+            defer {
+              secondary_stopped.val = true
+            }
+            @async.sleep(10000)
+            secondary_completed.val = true
+          } else {
+            @async.sleep(300)
+          }
           return
         }
         let window = context.handle()
@@ -145,10 +159,21 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                   while !secondary_started.val {
                     @async.sleep(10)
                   }
+                  let old = context.windows().find("secondary")
                   task.cancel()
                   @async.sleep(500)
-                  if context.windows().find("secondary") is Some(secondary) {
-                    secondary.close()
+                  if name == "cancel-open" {
+                    assert_true(secondary_stopped.val)
+                    assert_false(secondary_completed.val)
+                    assert_true(context.windows().find("secondary") is None)
+                    let fresh = context.windows().open("secondary")
+                    if old is Some(old) {
+                      old.close() catch {
+                        _ => ()
+                      }
+                    }
+                    fresh.browser().eval("void 0")
+                    fresh.close()
                   }
                 }
                 "task-failure" => {
@@ -340,4 +365,54 @@ async fn run_startup_quit_regression(name : String) -> Unit {
     assert_eq(window_closed.val, count)
   }
   println("LIFECYCLE_PASSED " + name)
+}
+
+///|
+async fn run_cancel_during_startup_regression() -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let secondary_ready = Ref(false)
+  let main_ready = Ref(false)
+
+  @proton.html("Startup cancellation", "<h1>Main</h1>")
+  .identifier("dev.proton.e2e-startup-cancel")
+  .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+  .add_window(
+    "secondary",
+    "Secondary",
+    @proton.AppEntry::Html("<h1>Secondary</h1>"),
+    open_on_start=false,
+  )
+  .app_lifecycle(
+    on_start=context => {
+      application.val = Some(context)
+      lifecycle_probe_gate()
+      let opening = context
+        .task_group()
+        .spawn(() => ignore(context.windows().open("secondary")), no_wait=true)
+      while context.windows().find("secondary") is None {
+        @async.sleep(1)
+      }
+      opening.cancel()
+      opening.wait() catch {
+        error => assert_true(@async.is_cancellation_error(error))
+      }
+      assert_false(secondary_ready.val)
+    },
+    on_shutdown=_ => (),
+  )
+  .window_lifecycle(
+    on_ready=context => {
+      if context.handle().id() == "secondary" {
+        secondary_ready.val = true
+      } else {
+        main_ready.val = true
+        application.val.unwrap().quit()
+      }
+    },
+    on_close=_ => (),
+  )
+  .run()
+  assert_true(main_ready.val)
+  assert_false(secondary_ready.val)
+  println("LIFECYCLE_PASSED cancel-during-startup")
 }
