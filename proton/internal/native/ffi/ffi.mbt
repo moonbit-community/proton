@@ -456,6 +456,36 @@ pub extern "C" fn proton_native_theme_query_ffi(
 pub extern "C" fn proton_notification_cleanup_ffi() -> Int = "proton_notification_cleanup"
 
 ///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_system_accent_color_ffi(
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_system_accent_color"
+
+///|
+#borrow(out_rich_animation, out_scroll_animations, out_reduced_motion)
+pub extern "C" fn proton_system_animation_settings_ffi(
+  out_rich_animation : Ref[Int],
+  out_scroll_animations : Ref[Int],
+  out_reduced_motion : Ref[Int],
+) -> Int = "proton_system_animation_settings"
+
+///|
+#borrow(out_status)
+pub extern "C" fn proton_system_media_access_status_ffi(
+  media : Int,
+  out_status : Ref[Int],
+) -> Int = "proton_system_media_access_status"
+
+///|
+#borrow(out_trusted)
+pub extern "C" fn proton_system_accessibility_client_trusted_ffi(
+  prompt : Int,
+  out_trusted : Ref[Int],
+) -> Int = "proton_system_accessibility_client_trusted"
+
+///|
 #borrow(title, initial_url, titlebar_minimize_label, titlebar_maximize_label, titlebar_restore_label, titlebar_close_label, bridge_config, web_request_config, out_window)
 pub extern "C" fn window_create(
   runtime : RuntimeHandle,

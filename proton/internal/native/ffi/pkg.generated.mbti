@@ -147,6 +147,14 @@ pub fn proton_runtime_stop_app_activations_ffi(RuntimeHandle) -> Int
 
 pub fn proton_screen_enumerate_ffi(FixedArray[Int], Int, @ref.Ref[Int]) -> Int
 
+pub fn proton_system_accent_color_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_system_accessibility_client_trusted_ffi(Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_system_animation_settings_ffi(@ref.Ref[Int], @ref.Ref[Int], @ref.Ref[Int]) -> Int
+
+pub fn proton_system_media_access_status_ffi(Int, @ref.Ref[Int]) -> Int
+
 pub fn proton_system_path_ffi(Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_system_preferred_language_at_ffi(Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
