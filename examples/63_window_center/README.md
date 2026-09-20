@@ -21,6 +21,4 @@ Review the native window frame:
 5. On Windows with display scaling above 100%, confirm the native frame and
    reported coordinates remain consistent.
 
-The API uses the existing native window state snapshot and position operation;
-no second runtime path or platform-specific centering ABI is introduced.
 Headless runtimes cannot be centered because they have no native frame.

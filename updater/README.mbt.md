@@ -2,17 +2,10 @@
 
 The update manifest schema, shared by the Proton runtime and `proton_cli`.
 
-The runtime reads manifests; the CLI writes them. Putting the schema in its own
-module keeps one definition of the format rather than two that drift, and lets
-the CLI depend on it without depending on the whole runtime.
-
 ## Scope
 
 Decoding and ordering. This module has no network access, no filesystem access,
-and no cryptography — it does not verify signatures, only carries them. That
-separation is deliberate: decoding a manifest proves it is well formed and
-nothing more, and a type that could be mistaken for a trusted manifest is worse
-than one that obviously is not.
+and no cryptography. Parsing does not verify signatures.
 
 The caller is responsible, in order, for: verifying the manifest signature,
 rejecting a `revision` that is not strictly newer than the installed one, and
@@ -45,17 +38,10 @@ pre-release or build suffix. It is display metadata, not the install ordering;
 the strict shape keeps manifests predictable while `revision` decides whether
 an artifact may replace the installed application.
 
-`Timestamp` accepts only `YYYY-MM-DDTHH:MM:SSZ`. Every field is fixed width in
-that form, so lexicographic order is chronological order and `is_before` needs
-no calendar arithmetic. Numeric offsets are refused because comparing them would
-require converting them, and a freshness check that silently mis-converts is a
-check that has quietly stopped working.
+`Timestamp` accepts only `YYYY-MM-DDTHH:MM:SSZ`; numeric offsets are refused.
 
 ## Encodings
 
-`sha256` and `signature` are hexadecimal, lowercase, and strictly validated:
-one encoding across the manifest and the key format means one strict decoder
-rather than two that can disagree.
+`sha256` and `signature` must be lowercase hexadecimal.
 
-Artifact URLs must be `https`. The signature is checked regardless, so this is
-not what makes an update safe; it removes an opportunity rather than a defence.
+Artifact URLs must use `https`.

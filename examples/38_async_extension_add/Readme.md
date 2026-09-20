@@ -12,10 +12,3 @@ Build:
 ```sh
 moon -C examples build 38_async_extension_add --target native
 ```
-
-E2E smoke:
-
-```sh
-moon -C e2e test -p moonbit-community/proton/e2e/test --target native \
-  --no-parallelize --filter '*38_async_extension_add*'
-```

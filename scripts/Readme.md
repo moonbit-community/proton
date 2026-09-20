@@ -27,10 +27,6 @@ Run this before publishing `proton` or `proton_ext`, and after changing any of:
 - `extensions/fs/assets/*.js`
 - `extensions/path/assets/*.js`
 
-Published library packages consume committed generated files directly; do not
-put `dev_build` or repository-relative codegen rules back into `proton` or
-`proton_ext` package metadata.
-
 ## `verify_release_metadata.mjs`
 
 Checks that the `proton new` template default version matches `proton/moon.mod`.
@@ -40,21 +36,6 @@ It also checks the published-module dependency chain from `proton_config` into
 ```sh
 node ./scripts/verify_release_metadata.mjs
 ```
-
-## Workspace version synchronization
-
-Use `Milky2018/lockstep` from the repository root to synchronize every explicit
-member of `moon.work` to one release version. Pass the full target
-`MAJOR.MINOR.PATCH` version; do not edit individual module versions or internal
-requirements by hand.
-
-```sh
-moonx Milky2018/lockstep <version>
-```
-
-Bridge E2E coverage lives in the `e2e/` MoonBit module. Run the complete
-self-hosted suite with `moon -C e2e test`; no JavaScript bridge-smoke wrapper is
-required.
 
 ## `e2e_scaffold_source_smoke.mjs`
 

@@ -14,9 +14,6 @@ same async command bridge used by the other native Proton extensions.
 - Activity event metadata.
 - Metadata used by catalog and code generation checks.
 
-Keep new operations close to the shape of `moonbitlang/async/fs` and avoid
-adding JavaScript helpers or hand-rolled filesystem behavior.
-
 ## Safety Notes
 
 - Add it with `@fs.capability(...)`; each `PermissionRoot` pairs one host

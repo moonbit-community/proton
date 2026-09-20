@@ -47,19 +47,10 @@ test "probe clipboard support and read text" {
 
 On Linux, at least one supported clipboard tool must be available on `PATH`.
 
-## Examples
-
-```bash
-moon run --manifest-path examples/moon.mod.json check_support
-moon run --manifest-path examples/moon.mod.json read_text
-moon run --manifest-path examples/moon.mod.json write_text
-```
-
 ## Test
 
 ```bash
 moon test --target native
-moon check --manifest-path examples/moon.mod.json --target native
 ```
 
 Integration test:

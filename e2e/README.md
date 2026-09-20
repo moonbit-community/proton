@@ -21,11 +21,10 @@ verifies that the application, helper process tree, and CDP endpoint stop:
 
 ```sh
 moon -C cefsetup run . --target native
-moon -C e2e test -p moonbit-community/proton/e2e/test \
-  --target native --no-parallelize --diagnostic-limit 200
+moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```
 
-Keep the package filter and `--no-parallelize`: E2E tests own native processes,
+Run one suite at a time: E2E scenarios own native processes,
 CDP ports, frontend servers, and runtime logs. The tests resolve the required
 CEF runtime from the immutable user-wide store. Each isolated scenario installs a release helper
 from the same Proton source as the application through `moon install --path`.
@@ -79,8 +78,7 @@ The current Linux engine still initializes GTK/X11. Run the same probe under a
 virtual X server when no display is available:
 
 ```sh
-xvfb-run -a moon -C e2e test -p moonbit-community/proton/e2e/test \
-  --target native --no-parallelize --diagnostic-limit 200
+xvfb-run -a moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```
 
 ## Lifecycle regressions

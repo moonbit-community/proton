@@ -1,7 +1,6 @@
 # moonbit-community/proton_cdp
 
 ![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
-![Non-generated library coverage](https://img.shields.io/badge/non--generated%20library%20coverage-100%25-brightgreen.svg)
 
 MoonBit library for the Chrome DevTools Protocol (CDP).
 
@@ -31,12 +30,6 @@ MoonBit library for the Chrome DevTools Protocol (CDP).
 Start at [docs/README.mbt.md](docs/README.mbt.md).
 
 ## Quick Start
-
-Install deps:
-
-```bash
-moon install
-```
 
 Start Chrome with remote debugging:
 
@@ -87,17 +80,6 @@ Typed command builders live in `moonbit-community/proton_cdp/protocol/typed`, fo
 - Schema-aware: `send_schema_command`.
 - Remote-schema-aware: `send_remote_schema_command`.
 - Typed: generated builders + `send_cdp_message`.
-
-## Examples
-
-```powershell
-$env:MBT_CDP_TARGET = "9222"
-$env:MBT_CDP_EXAMPLE = "discover_version"
-moon -C examples run cmd
-
-$env:MBT_CDP_EXAMPLE = "runtime_evaluate"
-moon -C examples run cmd
-```
 
 ## Checks
 

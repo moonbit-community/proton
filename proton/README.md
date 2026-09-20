@@ -16,11 +16,8 @@ async fn main {
 }
 ```
 
-`main` is async because Proton hands its own event loop to `moonbitlang/async`
-during process initialization; from then on every line of MoonBit runs on the
-main thread and only async's waiting half moves to a thread of its own. Nothing
-has to be installed by hand, but the package must import `moonbitlang/async` for
-`async fn main` to be available at all. `@proton.html` accepts optional
+Import `moonbitlang/async` to use `async fn main`. Proton manages the application
+event loop automatically. `@proton.html` accepts optional
 `width?`, `height?`, `debug?`, and `resizable?` arguments.
 
 Every application requires a stable reverse-DNS identity. Managed projects use

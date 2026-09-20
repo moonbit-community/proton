@@ -65,7 +65,6 @@ moon fmt
 moon check --target native
 moon test --target native
 
-# Coverage for the main package only; excludes src/examples/*
 moon test --target native --enable-coverage
 moon coverage analyze -p moonbit-community/proton_auto_launch -- -f summary
 moon info --target native
@@ -76,14 +75,6 @@ Optional side-effect integration test:
 ```bash
 $env:MOONBIT_AUTO_LAUNCH_RUN_INTEGRATION_TESTS = "1"
 moon test --target native --filter "integration*"
-```
-
-## Examples
-
-```bash
-moon run src/examples/check_status --target native
-moon run src/examples/enable --target native
-moon run src/examples/disable --target native
 ```
 
 ## License

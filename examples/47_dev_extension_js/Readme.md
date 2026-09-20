@@ -34,17 +34,3 @@ proton_cli build --package 47_dev_extension_js
 `proton_cli build` runs `frontend.before_build`, validates
 `frontend/dist/index.html`, then builds the native MoonBit app. In production
 the app loads that Vite output through Proton's `proton://` asset route.
-
-The repository E2E suite runs the same route through the local CLI:
-
-```powershell
-cd ..
-moon -C e2e test -p moonbit-community/proton/e2e/test --target native `
-  --no-parallelize --filter '*47_dev_extension_js*'
-```
-
-The test overrides the dev command to use a temporary Vite port, passes an
-isolated Moon target directory through the local CLI, and then exercises the
-production `proton_cli build` route. If `node_modules` is missing, the test
-installs the locked frontend dependencies and removes test-owned dependencies
-and build output after the run.
