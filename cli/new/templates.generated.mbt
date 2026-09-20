@@ -1009,9 +1009,6 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|- `shared/todo_contract.mbt` is the cross-target contract source of truth.
           #|- `frontend/main/main.mbt` handles Rabbita state, commands, and live events.
           #|- `backend/todo/` owns state and typed command handlers.
-          #|- `backend/todo/commands.g.mbt` is generated from `commands.mbt` by the Moon
-          #|  prebuild rule. Ordinary `moon check`, `build`, and `run` commands keep it
-          #|  current through `moonx moonbit-community/proton_codegen`.
           #|- `backend/app/main.mbt` assembles and runs the application.
           #|- `dist/` contains packaged application artifacts.
           #|
@@ -1545,9 +1542,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|
           #|This module is application source, not a stable public Proton API. Todo owns
           #|drafts, write commands, and business errors; this module owns query scheduling
-          #|and presentation state. The repository's directory-browser smoke fixture uses
-          #|this exact module for real directory reads without an invalidation event or
-          #|snapshot version.
+          #|and presentation state.
           #|
           #|Create one query while building a Rabbita component:
           #|

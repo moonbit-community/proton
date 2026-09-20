@@ -1,33 +1,40 @@
 ///|
-fn test_bundle_spec(
+fn test_staging_plan(
   root : String,
   sign_binaries? : Array[String] = [],
-) -> ProtonBundleSpec {
-  let package_spec = @packager.PackageSpec(
-    resolve_path(root, "app"),
-    "Demo & App",
-    "dev.proton.demo",
-    "1.2.3",
-    [@packager.PackageFormat::App],
-    resolve_path(root, "dist"),
-  )
-  ProtonBundleSpec::{
-    package_spec,
+) -> PackagePlan {
+  PackagePlan::{
+    root,
+    app_package: "app",
+    config_path: resolve_path(root, "proton.project.json"),
+    product_name: "Demo & App",
+    identifier: "dev.proton.demo",
+    version: "1.2.3",
+    formats: [@packager.PackageFormat::App],
+    output: resolve_path(root, "dist"),
     base_dir: root,
     update_revision: 42UL,
     frontend_dist: None,
     resources: [],
     sign_binaries,
+    release: true,
+    prepare: None,
+    icons: [],
+    url_schemes: [],
+    document_types: [],
+    nsis_install_mode: @packager.NsisInstallMode::CurrentUser,
+    sign: false,
+    notarize: false,
   }
 }
 
 ///|
 test "resolved runtime platform selects the Proton package layout" {
-  assert_true(bundle_host_from_platform("darwin-arm64") == Macos)
-  assert_true(bundle_host_from_platform("win32-x64") == Windows)
-  assert_true(bundle_host_from_platform("linux-x64") == Linux)
-  try ignore(bundle_host_from_platform("freebsd-x64")) catch {
-    BundleRuntimeError::UnsupportedPlatform(platform~) =>
+  assert_true(staging_host_from_platform("darwin-arm64") == Macos)
+  assert_true(staging_host_from_platform("win32-x64") == Windows)
+  assert_true(staging_host_from_platform("linux-x64") == Linux)
+  try ignore(staging_host_from_platform("freebsd-x64")) catch {
+    StagingRuntimeError::UnsupportedPlatform(platform~) =>
       assert_eq(platform, "freebsd-x64")
     _ => abort("expected an unsupported platform error")
   } noraise {
@@ -53,11 +60,8 @@ test "macOS bundle defines the complete CEF helper family" {
 
 ///|
 test "macOS helper plist matches its bundle identity" {
-  let spec = test_bundle_spec(".")
-  let helper = macos_helper_specs(
-      spec.package_spec.product_name,
-      spec.package_spec.identifier,
-    )[4]
+  let spec = test_staging_plan(".")
+  let helper = macos_helper_specs(spec.product_name, spec.identifier)[4]
   let plist = helper_info_plist(spec, helper)
   assert_true(
     plist.contains(
@@ -95,7 +99,7 @@ test "unrecognized executable formats are not rejected as Mach-O" {
 ///|
 test "Mach-O rejection reports the discovered filetype" {
   inspect(
-    BundlePlanError::NotLaunchableMachO(
+    StagingPlanError::NotLaunchableMachO(
       path="SeekMoon.app/Contents/MacOS/seekmoon",
       filetype=0xa,
     ).message(),

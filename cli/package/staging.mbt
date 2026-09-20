@@ -1,61 +1,72 @@
 ///|
-async fn package_spec(
-  spec : ProtonBundleSpec,
+async fn resolved_package_spec(
+  spec : PackagePlan,
+  executable : String,
   runtime : String,
   cef_process : String,
-  host : BundleHost,
+  host : StagingHost,
 ) -> @packager.PackageSpec {
-  let payloads = spec.package_spec.payloads.copy()
-  payloads.append(package_payloads(spec, runtime, cef_process, host))
+  let payloads = package_payloads(spec, runtime, cef_process, host)
   @packager.PackageSpec(
-    spec.package_spec.executable,
-    spec.package_spec.product_name,
-    spec.package_spec.identifier,
-    spec.package_spec.version,
-    spec.package_spec.formats,
-    spec.package_spec.output,
+    executable,
+    spec.product_name,
+    spec.identifier,
+    spec.version,
+    spec.formats,
+    spec.output,
     payloads~,
-    icons=spec.package_spec.icons,
-    url_schemes=spec.package_spec.url_schemes,
-    document_types=spec.package_spec.document_types,
-    nsis_install_mode=spec.package_spec.nsis_install_mode,
-    sign=spec.package_spec.sign,
-    notarize=spec.package_spec.notarize,
+    icons=spec.icons,
+    url_schemes=spec.url_schemes,
+    document_types=spec.document_types.map(document_type => {
+      @packager.DocumentType(
+        document_type.name,
+        document_type.extensions.copy(),
+        role=document_type.role,
+      )
+    }),
+    nsis_install_mode=spec.nsis_install_mode,
+    sign=spec.sign,
+    notarize=spec.notarize,
   )
 }
 
 ///|
 /// Packages an already-built Proton application using the active immutable
 /// runtime and helper installation.
-async fn build_proton_package(
-  spec : ProtonBundleSpec,
+async fn package_built_application(
+  spec : PackagePlan,
+  executable : String,
 ) -> (Array[String], String) {
-  guard path_is_file(spec.package_spec.executable) else {
-    raise BundleRuntimeError::ExecutableMissing(
-      path=spec.package_spec.executable,
-    )
+  guard path_is_file(executable) else {
+    raise StagingRuntimeError::ExecutableMissing(path=executable)
   }
   let installation = @cef_store.resolve_default()
   let cef_process = @cef_store.resolve_default_helper()
   guard path_is_file(cef_process) else {
-    raise BundleRuntimeError::HelperMissing(path=cef_process)
+    raise StagingRuntimeError::HelperMissing(path=cef_process)
   }
   let platform = installation.platform()
-  let host = bundle_host_from_platform(platform)
+  let host = staging_host_from_platform(platform)
   let artifacts = @packager.build_with(
-    package_spec(spec, installation.runtime_root(), cef_process, host),
+    resolved_package_spec(
+      spec,
+      executable,
+      installation.runtime_root(),
+      cef_process,
+      host,
+    ),
     package_customization(spec),
-    async fn(layout) { prepare_proton_package(spec, cef_process, layout, host) },
+    async fn(layout) { stage_proton_runtime(spec, cef_process, layout, host) },
   )
   (artifacts, platform)
 }
 
 ///|
 async fn package_payloads(
-  spec : ProtonBundleSpec,
+  spec : PackagePlan,
   runtime : String,
   cef_process : String,
-  host : BundleHost,
+  host : StagingHost,
 ) -> Array[@packager.Payload] {
   let payloads : Array[@packager.Payload] = []
   match host {
@@ -122,7 +133,7 @@ async fn package_payloads(
 
 ///|
 async fn project_payloads(
-  spec : ProtonBundleSpec,
+  spec : PackagePlan,
   location : @packager.PayloadLocation,
 ) -> Array[@packager.Payload] {
   let inputs : Array[String] = []
@@ -139,15 +150,15 @@ async fn project_payloads(
     let source = match glob_tree_root(input) {
       Some(root) => root
       None if input.contains("*") =>
-        raise BundlePlanError::UnsupportedResourceGlob(path=input)
+        raise StagingPlanError::UnsupportedResourceGlob(path=input)
       None => input
     }
     guard path_exists(source) else {
-      raise BundlePlanError::MissingInput(path=input)
+      raise StagingPlanError::MissingInput(path=input)
     }
     let relative = match relative_to_base(spec.base_dir, source) {
       Some(relative) => relative
-      None => raise BundlePlanError::InputOutsideBase(path=input)
+      None => raise StagingPlanError::InputOutsideBase(path=input)
     }
     payloads.push(@packager.Payload(source, relative, location~))
   }
@@ -156,9 +167,10 @@ async fn project_payloads(
 
 ///|
 fn package_customization(
-  spec : ProtonBundleSpec,
-) -> @packager.PackageCustomization raise BundlePlanError {
+  spec : PackagePlan,
+) -> @packager.PackageCustomization raise StagingPlanError {
   @packager.PackageCustomization(
+    windows_icon_embedded=true,
     macos_plist_strings=[
       @packager.MacosPlistString(
         "ProtonUpdateRevision",
@@ -174,8 +186,8 @@ fn package_customization(
 
 ///|
 fn macos_package_sign_targets(
-  spec : ProtonBundleSpec,
-) -> Array[@packager.MacosSignTarget] raise BundlePlanError {
+  spec : PackagePlan,
+) -> Array[@packager.MacosSignTarget] raise StagingPlanError {
   let prefix = "Contents/Resources/proton"
   let framework = prefix + "/Frameworks/Chromium Embedded Framework.framework"
   let targets = [
@@ -197,14 +209,10 @@ fn macos_package_sign_targets(
             entitlements=true,
           ),
         )
-      None => raise BundlePlanError::InputOutsideBase(path=binary)
+      None => raise StagingPlanError::InputOutsideBase(path=binary)
     }
   }
-  for
-    helper in macos_helper_specs(
-      spec.package_spec.product_name,
-      spec.package_spec.identifier,
-    ) {
+  for helper in macos_helper_specs(spec.product_name, spec.identifier) {
     targets.push(
       @packager.MacosSignTarget(
         "Contents/Frameworks/" + helper.bundle_name + ".app",
@@ -217,8 +225,8 @@ fn macos_package_sign_targets(
 
 ///|
 fn windows_package_sign_targets(
-  spec : ProtonBundleSpec,
-) -> Array[String] raise BundlePlanError {
+  spec : PackagePlan,
+) -> Array[String] raise StagingPlanError {
   let targets = ["cef_process.exe"]
   for binary in spec.sign_binaries {
     match relative_to_base(spec.base_dir, binary) {
@@ -228,18 +236,18 @@ fn windows_package_sign_targets(
           targets.push(target)
         }
       }
-      None => raise BundlePlanError::InputOutsideBase(path=binary)
+      None => raise StagingPlanError::InputOutsideBase(path=binary)
     }
   }
   targets
 }
 
 ///|
-async fn prepare_proton_package(
-  spec : ProtonBundleSpec,
+async fn stage_proton_runtime(
+  spec : PackagePlan,
   cef_process : String,
   layout : @packager.PackageLayout,
-  host : BundleHost,
+  host : StagingHost,
 ) -> Unit {
   let metadata_root = match host {
     Windows => layout.root()
@@ -253,13 +261,13 @@ async fn prepare_proton_package(
   }
   write_package_manifest(spec, metadata_root, kind, host)
   match host {
-    Macos => prepare_macos_proton_package(spec, cef_process, layout)
+    Macos => stage_macos_helpers(spec, cef_process, layout)
     Windows =>
       validate_windows_portable_layout(layout.root(), layout.executable())
     Linux => {
       let staged_helper = resolve_path(layout.executables(), "cef_process")
       guard path_is_file(staged_helper) else {
-        raise BundleRuntimeError::HelperMissing(path=staged_helper)
+        raise StagingRuntimeError::HelperMissing(path=staged_helper)
       }
       set_linux_rpath(layout.executable(), linux_package_rpath)
       set_linux_rpath(staged_helper, linux_package_rpath)
@@ -272,17 +280,13 @@ async fn prepare_proton_package(
 }
 
 ///|
-async fn prepare_macos_proton_package(
-  spec : ProtonBundleSpec,
+async fn stage_macos_helpers(
+  spec : PackagePlan,
   cef_process : String,
   layout : @packager.PackageLayout,
 ) -> Unit {
   require_launchable_macho(layout.executable())
-  for
-    helper in macos_helper_specs(
-      spec.package_spec.product_name,
-      spec.package_spec.identifier,
-    ) {
+  for helper in macos_helper_specs(spec.product_name, spec.identifier) {
     let helper_app = resolve_path(
       layout.libraries(),
       helper.bundle_name + ".app",

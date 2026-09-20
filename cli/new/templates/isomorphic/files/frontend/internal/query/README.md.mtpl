@@ -2,9 +2,7 @@
 
 This module is application source, not a stable public Proton API. Todo owns
 drafts, write commands, and business errors; this module owns query scheduling
-and presentation state. The repository's directory-browser smoke fixture uses
-this exact module for real directory reads without an invalidation event or
-snapshot version.
+and presentation state.
 
 Create one query while building a Rabbita component:
 

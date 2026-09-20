@@ -7,6 +7,10 @@ import {
   "moonbitlang/x/path",
 }
 
+import {
+  "moonbitlang/async",
+} for "wbtest"
+
 supported_targets = "native+wasm"
 
 options(

@@ -112,6 +112,9 @@ pub async fn build(spec : PackageSpec) -> Array[String] {
 ///|
 /// Packages an executable and allows framework-specific staging before the
 /// package is signed and converted into its requested artifacts.
+/// The packager owns the staging directory: it copies the executable and payloads,
+/// calls `prepare` with their final layout, then signs and creates the artifacts.
+/// Preparation must finish all framework-specific writes before returning.
 pub async fn build_with(
   spec : PackageSpec,
   customization : PackageCustomization,
@@ -497,7 +500,7 @@ async fn copy_payloads(
 ///|
 async fn write_text(path : String, text : String) -> Unit {
   ensure_dir(path_parent(path))
-  @async_fs.write_file(path, text, create_mode=CreateOrTruncate) catch {
+  @async_fs.write_file(path, @utf8.encode(text), create_mode=CreateOrTruncate) catch {
     error =>
       raise PackageFileSystemError::Write(
         path~,

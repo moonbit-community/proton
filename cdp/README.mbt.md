@@ -1,6 +1,5 @@
 # moonbit-community/proton_cdp
 
-![Non-generated library coverage](https://img.shields.io/badge/non--generated%20library%20coverage-100%25-brightgreen.svg)
 
 MoonBit library for the Chrome DevTools Protocol (CDP).
 

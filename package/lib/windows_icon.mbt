@@ -26,7 +26,12 @@ fn first_windows_icon(icons : Array[String]) -> String? {
 
 ///|
 #cfg(target="native")
-async fn stage_windows_icon(spec : PackageSpec, executable : String) -> Unit {
+async fn stage_windows_icon(
+  spec : PackageSpec,
+  executable : String,
+  embedded? : Bool = false,
+) -> Unit {
+  guard !embedded else { return }
   guard first_windows_icon(spec.icons) is Some(icon) else { return }
   guard path_is_file(icon) else {
     raise PackagePlanError::MissingIcon(path=icon)
@@ -62,7 +67,9 @@ async fn stage_windows_icon(spec : PackageSpec, executable : String) -> Unit {
 fn stage_windows_icon(
   spec : PackageSpec,
   _executable : String,
+  embedded? : Bool = false,
 ) -> Unit raise WindowsPackagingError {
+  guard !embedded else { return }
   guard first_windows_icon(spec.icons) is Some(_) else { return }
   raise WindowsPackagingError::ToolFailure(
     stage="embed Windows application icon",

@@ -8,10 +8,6 @@ device discovery and capture-session metadata. It uses small C native stubs for 
 
 ## Platform Support
 
-The package is intentionally native-only. `moon.mod.json` sets
-`"preferred-target": "native"`, and `src/moon.pkg` limits the package to the
-native backend.
-
 Discovery uses one platform audio API per operating system:
 
 | Platform | Discovery API |
@@ -76,16 +72,6 @@ test "parse listing" {
   inspect(devices.length(), content="2")
   inspect(devices[0].session_label(), content="mic-0:idle:Built-in Microphone")
 }
-```
-
-## Examples
-
-Runnable examples live under `src/examples` so the repository keeps MoonBit
-source in the configured source tree.
-
-```bash
-moon run src/examples/list_devices --target native
-moon run src/examples/parse_listing --target native
 ```
 
 ## License

@@ -6,9 +6,6 @@
 `keepawake` is a native-only MoonBit module that exposes a small, readable API
 for keeping a machine awake while long-running work is in progress.
 
-This first iteration focuses on a minimal public surface that is easy to
-maintain and easy to extend:
-
 - `acquire` returns a guard that starts the native keep-awake request.
 - `Guard::release` ends the request and is safe to call more than once.
 - `with_keepawake` wraps scoped work and releases automatically.
@@ -65,14 +62,11 @@ for declaring thread-level execution requirements.
 
 ### macOS
 
-The macOS backend creates IOKit power assertions. The implementation loads the
-required frameworks dynamically so the package does not need platform-specific
-linker flags for this minimal version.
+The macOS backend creates IOKit power assertions.
 
 ### Linux
 
-The Linux backend uses `systemd-inhibit` as the smallest maintainable
-cross-distribution starting point for this first version.
+The Linux backend uses `systemd-inhibit`.
 
 - `PreventSystemSleep` maps to `sleep`
 - `PreventDisplaySleep` maps to `idle`
@@ -81,17 +75,6 @@ cross-distribution starting point for this first version.
 In headless or non-systemd environments the module may raise
 `BackendUnavailable` with a descriptive message instead of pretending the
 request succeeded.
-
-## Examples
-
-Run the example module from the repository root:
-
-```bash
-moon -C examples run basic
-```
-
-The example acquires a guard, keeps the machine awake for roughly five seconds,
-and then releases it.
 
 ## License
 

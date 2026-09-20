@@ -169,6 +169,7 @@ than 128 UTF-8 bytes, and must not contain NUL bytes or surrounding whitespace.
 - Only AppIndicator is probed dynamically; either implementation can provide the tray backend.
 - Tooltip updates are mapped to the AppIndicator title because Linux tray APIs do not expose one consistent tooltip concept.
 - Supports nested context menus and menu item click events.
+- Tray-icon `Click`, `RightClick`, and `DoubleClick` events are Windows-only.
 
 ### macOS
 
@@ -203,25 +204,6 @@ loop {
 If your app already owns a native GUI loop, do not call blocking `pump()` from
 the same thread. Integrate non-blocking `pump(blocking=false)` only at a point
 where it is acceptable for the tray library to advance pending native messages.
-
-## Current Scope
-
-This package currently covers tray icon lifecycle management and v1 interaction:
-
-- support detection
-- creation
-- icon updates
-- tooltip updates
-- visibility changes
-- cross-platform v1 context menu replacement with submenu support
-- cross-platform v1 menu item click events
-- Windows v1 click, right-click, and double-click tray events
-- event pumping
-- destruction
-
-Linux AppIndicator exposes menu item activation but not a consistent tray icon
-click stream, so `Click`, `RightClick`, and `DoubleClick` events are currently
-Windows-only.
 
 ## Testing
 

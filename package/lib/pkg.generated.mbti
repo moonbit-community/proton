@@ -134,13 +134,14 @@ pub fn NsisInstallMode::to_repr(Self) -> @debug.Repr
 pub fn NsisInstallMode::to_string(Self) -> String
 
 pub struct PackageCustomization {
+  windows_icon_embedded : Bool
   macos_plist_strings : Array[MacosPlistString]
   macos_sign_targets : Array[MacosSignTarget]
   windows_sign_targets : Array[String]
   windows_verify_targets : Array[String]
   linux_resources_path : String?
 }
-pub fn PackageCustomization::PackageCustomization(macos_plist_strings? : Array[MacosPlistString], macos_sign_targets? : Array[MacosSignTarget], windows_sign_targets? : Array[String], windows_verify_targets? : Array[String], linux_resources_path? : String) -> Self
+pub fn PackageCustomization::PackageCustomization(windows_icon_embedded? : Bool, macos_plist_strings? : Array[MacosPlistString], macos_sign_targets? : Array[MacosSignTarget], windows_sign_targets? : Array[String], windows_verify_targets? : Array[String], linux_resources_path? : String) -> Self
 
 pub(all) enum PackageFormat {
   App

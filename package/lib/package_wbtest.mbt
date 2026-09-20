@@ -362,3 +362,19 @@ test "AppImage metadata points at the staged executable" {
     ),
   )
 }
+
+///|
+async test "already embedded Windows icons do not require an icon writer" {
+  let spec = PackageSpec(
+    "demo.exe",
+    "Demo",
+    "dev.proton.demo",
+    "1.0.0",
+    [App],
+    "dist",
+    icons=["/missing/app.ico"],
+  )
+  assert_false(PackageCustomization().windows_icon_embedded)
+  stage_windows_icon(spec, "/missing/demo.exe", embedded=true)
+  assert_eq(spec.icons, ["/missing/app.ico"])
+}

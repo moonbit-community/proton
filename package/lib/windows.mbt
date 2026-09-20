@@ -160,7 +160,11 @@ async fn package_windows(
   let staged_executable = path_join(staging, name)
   copy_file(spec.executable, staged_executable)
   copy_payloads(spec, path_join(staging, "Resources"), staging, staging)
-  stage_windows_icon(spec, staged_executable)
+  stage_windows_icon(
+    spec,
+    staged_executable,
+    embedded=customization.windows_icon_embedded,
+  )
   let layout = PackageLayout::{
     root: staging,
     executable: staged_executable,

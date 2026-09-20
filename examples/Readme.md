@@ -155,8 +155,7 @@ All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only
 when an example needs CLI frontend/build or package metadata.
 
-Tray v1 is implemented by the `tray` extension through `moonbit-community/proton_tray`; Proton
-native C does not expose a tray ABI. Windows is the baseline for tray-icon
+Windows is the baseline for tray-icon
 click/right-click/double-click events. Menu item clicks are the portable event
 path across Windows, Linux, and macOS when the desktop backend supports menu
 activation. Linux needs GTK 3 plus AppIndicator or Ayatana AppIndicator in the
