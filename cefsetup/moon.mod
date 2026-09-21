@@ -1,6 +1,6 @@
 name = "moonbit-community/proton_cefsetup"
 
-version = "0.3.2"
+version = "0.3.3"
 
 import {
   "moonbitlang/async@0.22.1",
