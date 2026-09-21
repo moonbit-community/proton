@@ -248,4 +248,101 @@ cleanup:
   return result;
 }
 
+int32_t proton_test_titlebar_dpi_regions(void) {
+  int result = 0;
+  const UINT dpis[] = {96, 120, 144, 192, 240};
+  const proton_win_titlebar_region_t regions[] = {
+      {0, 0, 600, 46, 1}, {14, 9, 28, 28, 0}};
+  const proton_win_titlebar_region_t reversed[] = {regions[1], regions[0]};
+  for (int i = 0; i < 5; ++i) {
+    const UINT dpi = dpis[i];
+    /* Inspect every physical pixel of the button, not only its center. */
+    const int left = (14 * dpi + 95) / 96;
+    const int top = (9 * dpi + 95) / 96;
+    const int right = (42 * dpi + 95) / 96;
+    const int bottom = (37 * dpi + 95) / 96;
+    for (int x = left; x < right; ++x) {
+      for (int y = top; y < bottom; ++y) {
+        POINT point = {x, y};
+        CHECK(!proton_win_titlebar_point_in_draggable_regions(
+            point, dpi, 2, regions));
+        CHECK(!proton_win_titlebar_point_in_draggable_regions(
+            point, dpi, 2, reversed));
+      }
+    }
+    const POINT outside[] = {
+        {left - 1, top}, {right, top}, {left, top - 1}, {left, bottom}};
+    for (int j = 0; j < 4; ++j) {
+      CHECK(proton_win_titlebar_point_in_draggable_regions(
+          outside[j], dpi, 2, regions));
+    }
+    POINT negative = {-1, top};
+    CHECK(!proton_win_titlebar_point_in_draggable_regions(
+        negative, dpi, 2, regions));
+    POINT below = {left, (46 * dpi + 95) / 96};
+    CHECK(!proton_win_titlebar_point_in_draggable_regions(
+        below, dpi, 2, regions));
+  }
+cleanup:
+  return result;
+}
+
+/* Exercise the real overlay hit-test with screen-pixel mouse coordinates,
+ * while CEF's cached regions remain in view DIPs. No browser or visible
+ * window is needed to cover the Win32/renderer coordinate boundary. */
+int32_t proton_test_titlebar_native_hit_test(void) {
+  int result = 0;
+  HWND hwnd = NULL;
+  ATOM window_class = 0;
+  HINSTANCE instance = GetModuleHandleW(NULL);
+  DPI_AWARENESS_CONTEXT previous =
+      SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+  CHECK(previous != NULL);
+  WNDCLASSW cls = {0};
+  cls.lpfnWndProc = geometry_window_proc;
+  cls.hInstance = instance;
+  cls.lpszClassName = L"ProtonTitlebarHitTest";
+  window_class = RegisterClassW(&cls);
+  CHECK(window_class != 0);
+  proton_win_titlebar_region_t regions[] = {
+      {0, 0, 600, 46, 1}, {14, 9, 28, 28, 0}};
+  proton_engine_window_t window = {0};
+  window.titlebar_overlay = 1;
+  window.draggable_regions_reported = 1;
+  window.draggable_regions = regions;
+  window.draggable_region_count = 2;
+  hwnd = CreateWindowExW(0, cls.lpszClassName, L"Proton titlebar test",
+                         WS_OVERLAPPEDWINDOW, 100, 100, 900, 400, NULL, NULL,
+                         instance, &window);
+  CHECK(hwnd != NULL);
+  window.hwnd = hwnd;
+  CHECK(!IsWindowVisible(hwnd));
+  const UINT dpi = GetDpiForWindow(hwnd);
+  CHECK(dpi >= USER_DEFAULT_SCREEN_DPI);
+  const int xs[] = {15, 28, 41};
+  const int ys[] = {10, 23, 36};
+  for (int x = 0; x < 3; ++x) {
+    for (int y = 0; y < 3; ++y) {
+      POINT point = {proton_win_pixels(xs[x], dpi),
+                     proton_win_pixels(ys[y], dpi)};
+      CHECK(ClientToScreen(hwnd, &point));
+      CHECK(proton_engine_overlay_hit_test(
+                hwnd, MAKELPARAM(point.x, point.y)) == HTCLIENT);
+    }
+  }
+  POINT empty_chrome = {proton_win_pixels(80, dpi),
+                        proton_win_pixels(23, dpi)};
+  CHECK(ClientToScreen(hwnd, &empty_chrome));
+  CHECK(proton_engine_overlay_hit_test(
+            hwnd, MAKELPARAM(empty_chrome.x, empty_chrome.y)) == HTCAPTION);
+cleanup:
+  if (hwnd != NULL)
+    DestroyWindow(hwnd);
+  if (window_class != 0)
+    UnregisterClassW(L"ProtonTitlebarHitTest", instance);
+  if (previous != NULL)
+    SetThreadDpiAwarenessContext(previous);
+  return result;
+}
+
 #endif
