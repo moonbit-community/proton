@@ -104,6 +104,9 @@ jobs:
         with:
           node-version: 24
 
+      - name: Install Warren
+        run: moon install moonbit-community/warren@0.3.2
+
       - name: Test bridge bootstrap JS
         run: node --test proton/internal/native/ffi/tests/bridge_bootstrap.test.mjs
 

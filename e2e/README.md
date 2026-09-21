@@ -21,6 +21,7 @@ verifies that the application, helper process tree, and CDP endpoint stop:
 
 ```sh
 moon -C cefsetup run . --target native
+moon install moonbit-community/warren@0.3.2
 moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```
 
@@ -41,8 +42,8 @@ The suite covers:
 - `45_bridge_multi_window` routing, distinct targets/handles, and close
   lifecycle;
 - `46_asset_sidecar_resources` HTML/CSS/JS sidecars and generated proxies;
-- `47_dev_extension_js` CLI/Vite dev startup, reload, non-Proton origins,
-  production asset routing, and frontend dependency/build cleanup.
+- `47_dev_extension_js` CLI/Warren dev startup, reload, non-Proton origins,
+  production asset routing, and frontend build cleanup.
 
 The executable driver is useful when an application is already running with
 remote debugging enabled:
@@ -51,9 +52,15 @@ remote debugging enabled:
 MBT_PROTON_E2E_SCENARIO=41_app_commands MBT_CDP_TARGET=9222 moon -C e2e run test --target native
 ```
 
-For the Vite scenario, the driver expects a loopback HTTP page whose frontend
+For the Warren scenario, the driver expects a loopback HTTP page whose frontend
 has set the `#bridge-status` readiness marker. The self-hosted suite starts the
-frontend itself and cleans up test-owned dependencies and build output.
+frontend itself and cleans up test-owned production output. Warren compiles the
+MoonBit frontend without npm dependencies. Run this scenario
+alone with:
+
+```sh
+moon -C e2e run test --target native -- --dev-extension
+```
 
 The headless path uses CEF windowless rendering (OSR). It does not create a
 hidden native top-level window and does not enable Chromium's `--headless`

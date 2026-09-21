@@ -13,6 +13,7 @@ pub fn generate_typed_commands_from_sources(
   let commands : Array[ParsedTypedCommand] = []
   for source_entry in sources {
     let (path, source) = source_entry
+    // Codegen only needs the AST, without docstring attachment or the Yacc parser.
     let { tokens, .. } = @lexer.tokens_from_string(source, comment=true)
     let (ast, reports) = @parser.parse(tokens)
     guard reports.is_empty() else {

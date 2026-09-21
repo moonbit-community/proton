@@ -69,7 +69,7 @@ moon -C examples run 01_run --target native
   through the App builder.
 - `45_bridge_multi_window`: typed facade multi-window bridge E2E example.
 - `46_asset_sidecar_resources`: `@proton.asset` HTML with sibling JS/CSS files.
-- `47_dev_extension_js`: Vite dev-server injection smoke for extension
+- `47_dev_extension_js`: Warren dev-server injection smoke for extension
   JavaScript helpers and events.
 - `48_titlebar_overlay`: cross-platform overlay demo with native window
   controls and compact web-rendered application chrome.

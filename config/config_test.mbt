@@ -48,7 +48,11 @@ test "project config contains only CLI build and package settings" {
   assert_eq(package_config.product_name, "Todo")
   assert_eq(package_config.version(), "1.2.3")
   assert_eq(package_config.formats(), ["app", "zip"])
-  assert_true(package_config.icons()[0].has_suffix("icons/app.icns"))
+  assert_true(
+    package_config.icons()[0]
+    .replace_all(old="\\", new="/")
+    .has_suffix("icons/app.icns"),
+  )
   assert_eq(
     package_config.prepare(),
     Some("moon run package/prepare --target native"),
@@ -81,7 +85,8 @@ test "project package decodes platform-specific inputs" {
     #|  }
     #|}
   let config = @proton_config.load_project_config_from_text(
-    source, "/workspace/todo",
+    source,
+    @mbpath.Path("/workspace/todo").resolve().to_string(),
   )
   let platforms = config.package_config().unwrap().platforms()
   let macos = platforms.macos().unwrap()

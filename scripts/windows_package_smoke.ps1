@@ -248,15 +248,10 @@ try {
     }
 
     $Moon = Require-Command "moon"
-    $Npm = Require-Command "npm.cmd"
+    $null = Require-Command "warren"
     $SignTool = Require-Command "signtool.exe"
     $CertUtil = Require-Command "certutil.exe"
     Require-Path (Join-Path $ExampleDir "proton.project.json") "Package smoke example is missing."
-
-    $nodeModules = Join-Path $ExampleDir "frontend\node_modules"
-    if (-not (Test-Path -LiteralPath $nodeModules)) {
-        Invoke-External $Npm @("--prefix", (Join-Path $ExampleDir "frontend"), "ci")
-    }
 
     $TempRoot = Join-Path ([IO.Path]::GetTempPath()) ("Proton Windows Package Smoke " + [Guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $TempRoot -Force | Out-Null

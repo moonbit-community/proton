@@ -24,8 +24,7 @@ fn scenario_ready_expression(name : String) -> String raise {
       "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on)"
     "46_asset_sidecar_resources" =>
       "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.add?.add && window.__MoonBit__?.add?.addLater && window.__MoonBit__?.add?.reportProbe && document.querySelector('#log')?.textContent === 'Bridge ready.')"
-    "47_dev_extension_js" =>
-      "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.ticker?.start && window.__MoonBit__?.ticker?.on && document.querySelector('#bridge-status')?.dataset.ready === 'true')"
+    "47_dev_extension_js" => dev_extension_ready_expression()
     "42_attribute_codegen_commands" =>
       "Boolean(window.__MoonBit__?.core?.invokeOp && window.__MoonBit__?.add?.slowAdd && window.__MoonBit__?.events?.on)"
     "52_web_contents_view" =>
