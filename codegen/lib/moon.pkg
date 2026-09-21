@@ -2,12 +2,9 @@ import {
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
-  "moonbitlang/core/list",
   "moonbitlang/core/string",
   "moonbitlang/lexer",
-  "moonbitlang/parser/handrolled_parser" @parser,
-  "moonbitlang/parser/attribute",
-  "moonbitlang/parser/syntax",
+  "moonbitlang/lexer/tokens",
   "moonbitlang/x/path" @mbpath,
 }
 
