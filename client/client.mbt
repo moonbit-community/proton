@@ -31,9 +31,7 @@ pub async fn[Request : ToJson, Response : @json.FromJson] Client::invoke(
   )
   defer cancel()
   while outcome.val is None {
-    ready.wait() catch {
-      _ => raise RequestCancelled
-    }
+    ready.wait()
   }
   match outcome.val {
     Some(Ok(value)) => value

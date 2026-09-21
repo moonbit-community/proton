@@ -347,7 +347,7 @@ async fn start_application_lifecycle_hooks(
           ApplicationStart(index~, detail=@debug.render(Repr(error))),
         )
     }
-    group.add_defer(async fn() {
+    group.add_defer(async fn() nocancel {
       @async.protect_from_cancel(activation.shutdown) catch {
         error =>
           cleanup_failures.push(
@@ -374,7 +374,7 @@ async fn start_window_lifecycle_hooks(
           WindowReady(index~, detail=@debug.render(Repr(error))),
         )
     }
-    group.add_defer(async fn() {
+    group.add_defer(async fn() nocancel {
       @async.protect_from_cancel(activation.close) catch {
         error =>
           cleanup_failures.push(

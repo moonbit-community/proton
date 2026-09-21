@@ -3,7 +3,7 @@ name = "moonbit-community/proton_ffi"
 version = "0.3.2"
 
 import {
-  "moonbitlang/x@0.5.1",
+  "moonbitlang/x@0.5.5",
 }
 
 readme = "README.mbt.md"

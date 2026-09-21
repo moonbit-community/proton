@@ -3,8 +3,8 @@ name = "moonbit-community/proton/e2e"
 version = "0.3.2"
 
 import {
-  "moonbitlang/async@0.21.2",
-  "moonbitlang/x@0.5.1",
+  "moonbitlang/async@0.22.1",
+  "moonbitlang/x@0.5.5",
   "moonbit-community/proton_cdp@0.3.2",
   "moonbit-community/proton@0.3.2",
   "moonbit-community/proton_cefsetup@0.3.2",

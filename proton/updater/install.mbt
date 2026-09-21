@@ -24,9 +24,7 @@ async fn coordinate_install(
   current_revision : () -> UInt64 raise UpdateError,
   apply : async () -> InstallOutcome raise UpdateError,
 ) -> InstallOutcome raise UpdateError {
-  update_install_mutex.acquire() catch {
-    error => raise InstallInterrupted(detail=@debug.render(Repr(error)))
-  }
+  update_install_mutex.acquire()
   defer update_install_mutex.release()
   let installed_revision = current_revision()
   if target_revision < installed_revision {

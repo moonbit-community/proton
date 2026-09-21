@@ -382,9 +382,7 @@ async fn run_startup_quit_regression(name : String) -> Unit {
     app.on_window_close_request(_ => {
       close_requests.val += 1
       if close_requests.val == 1 {
-        @async.sleep(300) catch {
-          _ => ()
-        }
+        @async.sleep(300)
         if name == "startup-quit-denied" {
           @proton.WindowCloseDecision::Deny
         } else {
@@ -456,7 +454,7 @@ async fn run_cancel_during_startup_regression() -> Unit {
       }
       opening.cancel()
       opening.wait() catch {
-        error => assert_true(@async.is_cancellation_error(error))
+        error => assert_true(error is @async.TaskCancelled)
       }
       assert_false(secondary_ready.val)
     },

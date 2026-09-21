@@ -4,7 +4,7 @@ Smoke example for extension JavaScript injection into a MoonBit frontend served
 and built by Warren. The frontend has no npm dependencies.
 
 ```powershell
-moon install moonbit-community/warren@0.3.2
+moon install moonbit-community/warren@0.3.3
 proton_cli -C . dev --config examples/47_dev_extension_js/proton.project.json
 ```
 

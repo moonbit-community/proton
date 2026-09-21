@@ -58,14 +58,12 @@ async test "concurrent process requests apply one revision once" {
   let release_signal = @async.CondVar::Cond()
   @async.with_task_group(group => {
     let first = group.spawn(no_wait=true, () => {
-      coordinate_install(2UL, fn() { current.val }, async fn() -> InstallOutcome raise UpdateError {
+      coordinate_install(2UL, fn() { current.val }, async fn() -> InstallOutcome noraise {
         apply_count.val = apply_count.val + 1
         entered.val = true
         entered_signal.broadcast()
         while !release.val {
-          release_signal.wait() catch {
-            error => raise InstallInterrupted(detail=@debug.render(Repr(error)))
-          }
+          release_signal.wait()
         }
         current.val = 2UL
         Installed

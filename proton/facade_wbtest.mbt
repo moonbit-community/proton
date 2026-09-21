@@ -40,9 +40,7 @@ priv suberror FacadeLifecycleTestError {
 
 ///|
 async fn test_open_window(id : String) -> WindowHandle {
-  @async.pause() catch {
-    _ => raise UnknownWindow(id~)
-  }
+  @async.pause()
   raise UnknownWindow(id~)
 }
 

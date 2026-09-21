@@ -57,7 +57,7 @@ The full `package` field reference, platform override rules and artifact formats
 
 ## Warren commands in 0.3.0
 
-The published CLI 0.3.0 emits deprecated native `moonx` commands. The supported replacement is an installed `moonbit-community/warren@0.3.2` executable with these frontend fields:
+The published CLI 0.3.0 emits deprecated native `moonx` commands. The supported replacement is an installed `moonbit-community/warren@0.3.3` executable with these frontend fields:
 
 ```json
 {

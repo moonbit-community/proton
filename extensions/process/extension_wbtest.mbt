@@ -96,11 +96,7 @@ async test "owner shutdown reaps children and clears the registry" {
     owner_tasks.return_immediately(())
   })
   // Exiting the owning task group joins the process cancellation task.
-  try ignore(child.val.unwrap().try_wait()) catch {
-    error => assert_true(@async.is_cancellation_error(error))
-  } noraise {
-    _ => fail("expected child cancellation at owner shutdown")
-  }
+  assert_true(child.val.unwrap().try_wait() is Some(_))
   @async.with_task_group(probe_tasks => {
     let probe = spawn_process(probe_tasks, {
       command: "node",

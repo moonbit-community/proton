@@ -335,7 +335,7 @@ fn[X] CdpClient::from_websocket(
   client.reader = Some(
     tasks.spawn(() => client.read_messages(), no_wait=true, allow_failure=true),
   )
-  tasks.add_defer(() => client.close())
+  tasks.add_defer(() => @async.protect_from_cancel(() => client.close()))
   client
 }
 
@@ -989,7 +989,7 @@ async fn CdpClient::read_messages(self : CdpClient) -> Unit {
   } noraise {
     _ => return
   }
-  if self.lifecycle is Open && !@async.is_cancellation_error(error) {
+  if self.lifecycle is Open {
     println("CDP reader stopped: " + error.to_string())
     if self.last_cdp_request is Some(command) {
       println(

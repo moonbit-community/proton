@@ -1151,9 +1151,6 @@ async fn run_window_lifecycle_scope(
     tasks.return_immediately(())
   }) catch {
     error => {
-      if @async.is_cancellation_error(error) {
-        raise error
-      }
       if running.lifetime.ready {
         raise UnexpectedTaskFailure(
           detail="window " + running.id + ": " + @debug.render(Repr(error)),

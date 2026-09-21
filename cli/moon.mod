@@ -8,9 +8,9 @@ import {
   "moonbit-community/proton_cefsetup@0.3.2",
   "moonbit-community/proton_rsa@0.3.2",
   "moonbit-community/proton_updater@0.3.2",
-  "moonbitlang/x@0.5.1",
-  "moonbitlang/moon_config@0.3.15",
-  "moonbitlang/async@0.21.2",
+  "moonbitlang/x@0.5.5",
+  "moonbitlang/moon_config@0.4.0",
+  "moonbitlang/async@0.22.1",
 }
 
 readme = "README.md"

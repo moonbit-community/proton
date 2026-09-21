@@ -17,15 +17,15 @@ let default_proton_client_version = "0.3.2"
 let default_proton_rabbita_version = "0.3.2"
 
 ///|
-let default_rabbita_version = "0.15.4"
+let default_rabbita_version = "0.16.2"
 
 ///|
-let default_warren_version = "0.3.2"
+let default_warren_version = "0.3.3"
 
 ///|
 /// Scaffolded backends need this directly: `async fn main` is only available to
 /// a package that imports `moonbitlang/async`.
-let default_async_version = "0.21.2"
+let default_async_version = "0.22.1"
 
 ///|
 let default_template_name = "isomorphic"
