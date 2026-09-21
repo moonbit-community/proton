@@ -84,7 +84,7 @@ Set up the darwin runtime and Warren first, then run:
 
 ```sh
 moon -C cli run . -- -C .. cef setup
-moon install moonbit-community/warren@0.3.2
+moon install moonbit-community/warren@0.3.3
 node ./scripts/macos_package_smoke.mjs
 ```
 
@@ -101,7 +101,7 @@ real CEF application, confirms the CDP page comes from the extracted package,
 and checks the helper executable path and cleanup.
 
 Set up the `win32-x64` runtime and install Warren with
-`moon install moonbit-community/warren@0.3.2` first:
+`moon install moonbit-community/warren@0.3.3` first:
 
 ```powershell
 moon -C cli run . -- -C .. cef setup

@@ -4,8 +4,8 @@ version = "0.3.2"
 
 import {
   "moonbit-community/proton_ffi@0.3.2",
-  "moonbitlang/x@0.5.1",
-  "moonbitlang/async@0.21.2",
+  "moonbitlang/x@0.5.5",
+  "moonbitlang/async@0.22.1",
   "moonbit-community/proton_clipboard@0.3.2",
   "moonbit-community/proton_safe_storage@0.3.2",
   "moonbit-community/proton_tray@0.3.2",

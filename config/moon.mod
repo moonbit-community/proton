@@ -3,7 +3,7 @@ name = "moonbit-community/proton_config"
 version = "0.3.2"
 
 import {
-  "moonbitlang/x@0.5.1",
+  "moonbitlang/x@0.5.5",
 }
 
 repository = "https://github.com/moonbit-community/proton"

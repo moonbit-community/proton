@@ -20,7 +20,7 @@ moon install moonbit-community/proton_cli
 proton_cli new my-app --yes
 cd my-app
 moon update
-moon install moonbit-community/warren@0.3.2
+moon install moonbit-community/warren@0.3.3
 proton_cli cef setup
 proton_cli dev
 ```

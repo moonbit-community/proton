@@ -1491,7 +1491,7 @@ async fn WindowOpenCompletion::wait(
   self : WindowOpenCompletion,
 ) -> WindowHandle {
   // Cancellation before success belongs to the opening operation, not just
-  // its waiter. Preserve the async cancellation error for the caller.
+  // its waiter. Preserve cancellation of the calling task.
   defer self.fail(Cancelled)
   while self.state is WindowOpenPending {
     self.changed.wait()
@@ -1535,9 +1535,7 @@ fn RuntimeSession::process_window_commands(self : RuntimeSession) -> Bool {
     let timeout = self.window_tasks.spawn(
       () => {
         defer self.wakeup.signal.notify()
-        @async.sleep(self.bridge_startup_timeout_ms) catch {
-          _ => ()
-        }
+        @async.sleep(self.bridge_startup_timeout_ms)
       },
       no_wait=true,
       allow_failure=true,

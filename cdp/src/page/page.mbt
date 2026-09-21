@@ -109,7 +109,7 @@ async fn[X] Page::initialize_scoped(
 ) -> Page {
   errdefer client.close()
   let page = Page::initialize(client, timeout_ms)
-  tasks.add_defer(() => page.close())
+  tasks.add_defer(() => @async.protect_from_cancel(() => page.close()))
   page
 }
 

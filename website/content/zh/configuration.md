@@ -57,7 +57,7 @@
 
 ## 0.3.0 的 Warren 命令
 
-已发布的 CLI 0.3.0 生成已弃用的 native `moonx` 命令。替代方式是调用已安装的 `moonbit-community/warren@0.3.2` 可执行文件，前端字段为：
+已发布的 CLI 0.3.0 生成已弃用的 native `moonx` 命令。替代方式是调用已安装的 `moonbit-community/warren@0.3.3` 可执行文件，前端字段为：
 
 ```json
 {

@@ -27,7 +27,7 @@ test {
     "ping",
   )
   let request = PingRequest::{ value: "hello", }
-  let command = invoke(
+  let command = @proton_rabbita.invoke(
     ping,
     request,
     reply => {

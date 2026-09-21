@@ -188,7 +188,7 @@ fn collect_extension_descriptor_files_from_directory(
 fn read_extension_search_directory(
   directory : String,
 ) -> Array[String] raise ExtensionCatalogError {
-  @mbfs.read_dir(directory) catch {
+  @mbfs.read_dir(directory).to_owned() catch {
     error =>
       raise DirectoryReadFailed(
         path=directory,
