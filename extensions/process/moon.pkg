@@ -4,17 +4,19 @@ import {
   "moonbitlang/core/debug",
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
-  "moonbit-community/proton_contract",
   "moonbit-community/proton_ext/process/contract" @process_contract,
 }
 
 supported_targets = "native"
 
-formatter(ignore: [ "extension.g.mbt" ])
+import {
+  "moonbit-community/proton/core",
+  "moonbit-community/proton/ipc",
+  "moonbitlang/core/json",
+} for "wbtest"
 
 options(
   targets: {
-    "extension.g.mbt": [ "native" ],
     "extension.mbt": [ "native" ],
     "extension_wbtest.mbt": [ "native" ],
   },

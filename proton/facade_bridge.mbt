@@ -12,6 +12,7 @@ fn build_command_host(
     },
   )
   let destroy_hooks : Array[CommandExtensionDestroyHook] = []
+  let start_hooks : Array[(@async.TaskGroup[Unit]) -> Unit raise AppRunError] = []
   let event_sources : Array[CommandExtensionEventSource] = []
   let app_capabilities : Array[RegisteredAppCommandCapability] = []
   let mut has_commands = false
@@ -89,6 +90,16 @@ fn build_command_host(
         }
       }
     }
+    start_hooks.push(tasks => {
+      spec.start(tasks) catch {
+        error =>
+          raise RuntimeOperationFailed(
+            action="start extension " + id,
+            status=-1,
+            detail=@debug.render(Repr(error)),
+          )
+      }
+    })
     match command_extensions.event_sources.get(id) {
       Some(source) =>
         event_sources.push(CommandExtensionEventSource::{
@@ -107,6 +118,7 @@ fn build_command_host(
       runtime: Some(CommandHostRuntime::{
         host,
         destroy_hooks,
+        start_hooks,
         event_sources,
         closed: false,
       }),

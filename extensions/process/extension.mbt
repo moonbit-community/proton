@@ -8,11 +8,16 @@ let wait_command = @process_contract.wait
 let kill_command = @process_contract.kill
 
 ///|
-/// Active child processes keyed by an incrementing integer id.
-let processes : Ref[Map[Int, @async_process.Process]] = Ref(Map([]))
+priv struct ProcessOwner {
+  processes : Map[Int, @async_process.Process]
+  mut next_id : Int
+  mut tasks : @async.TaskGroup[Unit]?
+}
 
 ///|
-let next_process_id : Ref[Int] = Ref(1)
+fn ProcessOwner::ProcessOwner() -> ProcessOwner {
+  { processes: {}, next_id: 1, tasks: None, }
+}
 
 ///|
 async fn[X] spawn_process(
@@ -31,17 +36,20 @@ async fn[X] spawn_process(
 
 ///|
 /// Spawns a child process and registers it in the process map.
-#proton.command(contract=spawn_command)
-async fn spawn(
+async fn ProcessOwner::spawn(
+  self : ProcessOwner,
   context : @proton.CommandContext,
   request : @process_contract.SpawnRequest,
 ) -> @process_contract.SpawnReply {
-  let process = spawn_process(context.task_group(), request) catch {
+  guard self.tasks is Some(tasks) else {
+    raise SpawnFailed(detail="process extension is not running")
+  }
+  let process = spawn_process(tasks, request) catch {
     error => raise SpawnFailed(detail=@debug.render(Repr(error)))
   }
-  let id = next_process_id.val
-  next_process_id.val = id + 1
-  processes.val[id] = process
+  let id = self.next_id
+  self.next_id = id + 1
+  self.processes[id] = process
   let pid = process.pid
   context.emit(@process_contract.activity, @process_contract.ProcessActivity::{
     operation: "spawn",
@@ -52,16 +60,16 @@ async fn spawn(
 
 ///|
 /// Waits for a child process to exit and returns its exit code.
-#proton.command(contract=wait_command)
-async fn wait(
+async fn ProcessOwner::wait(
+  self : ProcessOwner,
   context : @proton.CommandContext,
   request : @process_contract.WaitRequest,
 ) -> @process_contract.WaitReply {
-  let process = lookup_process(request.process_id)
+  let process = self.lookup_process(request.process_id)
   let exit_code = process.wait() catch {
     error => raise WaitFailed(detail=@debug.render(Repr(error)))
   }
-  processes.val.remove(request.process_id)
+  self.processes.remove(request.process_id)
   context.emit(@process_contract.activity, @process_contract.ProcessActivity::{
     operation: "wait",
     process_id: request.process_id,
@@ -71,12 +79,12 @@ async fn wait(
 
 ///|
 /// Terminates a child process.
-#proton.command(contract=kill_command)
-async fn kill(
+async fn ProcessOwner::kill(
+  self : ProcessOwner,
   context : @proton.CommandContext,
   request : @process_contract.KillRequest,
 ) -> @process_contract.KillReply {
-  let process = lookup_process(request.process_id)
+  let process = self.lookup_process(request.process_id)
   let @async_process.CancellationHandler(kill_process) = @async_process.hard_cancel()
   kill_process(process.pid) catch {
     error => raise KillFailed(detail=@debug.render(Repr(error)))
@@ -89,30 +97,48 @@ async fn kill(
 }
 
 ///|
-fn lookup_process(
+fn ProcessOwner::lookup_process(
+  self : ProcessOwner,
   process_id : Int,
 ) -> @async_process.Process raise ProcessExtensionError {
-  match processes.val.get(process_id) {
+  match self.processes.get(process_id) {
     Some(process) => process
     None => raise UnknownProcess(process_id~)
   }
 }
 
 ///|
-fn cleanup_processes() -> Unit {
-  for _id, process in processes.val {
+fn ProcessOwner::close(self : ProcessOwner) -> Unit {
+  self.tasks = None
+  for _id, process in self.processes {
     process.cancel()
   }
-  processes.val.clear()
+  self.processes.clear()
 }
 
 ///|
 fn extension() -> @proton_extension.Extension {
+  let owner = ProcessOwner()
   @proton_extension.typed(
     @process_contract.extension,
-    generated_extension_command_routes(),
-    fn(registrar) raise { register_commands(registrar) },
-    on_destroy=fn() { cleanup_processes() },
+    [
+      spawn_command.contract_route(),
+      wait_command.contract_route(),
+      kill_command.contract_route(),
+    ],
+    fn(registrar) raise {
+      registrar.bind(spawn_command, (context, request) => {
+        owner.spawn(context, request)
+      })
+      registrar.bind(wait_command, (context, request) => {
+        owner.wait(context, request)
+      })
+      registrar.bind(kill_command, (context, request) => {
+        owner.kill(context, request)
+      })
+    },
+    on_start=tasks => owner.tasks = Some(tasks),
+    on_destroy=() => owner.close(),
   )
 }
 

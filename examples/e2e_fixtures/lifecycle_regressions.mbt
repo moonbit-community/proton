@@ -10,6 +10,10 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "process-lifetime" {
+    run_process_lifetime_regression()
+    return
+  }
   if name == "cancel-during-startup" {
     run_cancel_during_startup_regression()
     return
@@ -415,4 +419,50 @@ async fn run_cancel_during_startup_regression() -> Unit {
   assert_true(main_ready.val)
   assert_false(secondary_ready.val)
   println("LIFECYCLE_PASSED cancel-during-startup")
+}
+
+///|
+async fn run_process_lifetime_regression() -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let completed = Ref(false)
+  let finish : @proton_contract.Command[Int, Unit] = @proton_contract.command(
+    "finish",
+  )
+  @proton.html("Process lifetime", "<h1>Process lifetime</h1>")
+  .identifier("dev.proton.process-lifetime")
+  .capability(@process_extension.capability())
+  .commands(registrar => {
+    registrar.bind(finish, (_context, exit_code) => {
+      assert_eq(exit_code, 7)
+      completed.val = true
+      application.val.unwrap().quit()
+    })
+  })
+  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+    ()
+  })
+  .window_lifecycle(
+    on_ready=context => {
+      lifecycle_probe_gate()
+      context
+      .handle()
+      .browser()
+      .eval(
+        (
+          #|void (async () => {
+          #|  const child = await window.__MoonBit__.process.spawn({
+          #|    command: "node",
+          #|    args: ["-e", "setTimeout(() => process.exit(7), 500)"]
+          #|  });
+          #|  const result = await window.__MoonBit__.process.wait({process_id: child.process_id});
+          #|  await window.__MoonBit__.app.finish(result.exit_code);
+          #|})();
+        ),
+      )
+    },
+    on_close=_ => (),
+  )
+  .run()
+  assert_true(completed.val)
+  println("LIFECYCLE_PASSED process-lifetime")
 }

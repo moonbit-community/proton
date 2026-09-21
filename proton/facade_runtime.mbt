@@ -438,6 +438,11 @@ async fn run_manifest(
       })
     }
     @async.with_task_group(application_tasks => {
+      if command_host is Some(host) {
+        for start in host.start_hooks {
+          start(application_tasks)
+        }
+      }
       @async.with_task_group(window_tasks => {
         let session = RuntimeSession(
           runtime,
