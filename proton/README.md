@@ -229,6 +229,14 @@ status, CEF error code, and diagnostic detail. Proton reports this event
 through the normal wake-driven event queue and does not automatically reload
 the view; applications may explicitly call `ViewHandle::reload`.
 
+While the parent window remains alive, closing a view with `ViewHandle::close`,
+`WindowHandle::remove_view`, or the page's `window.close()` delivers
+`ViewEvent::Closed` once after native closure. Programmatic removal immediately
+removes the view from lookup and rejects further operations. Its declarative ID
+may be reused; an old close event still refers to the old, unusable handle.
+Closing the parent ends all child lifetimes. Use the parent window's close
+notification for that cleanup rather than waiting for every child's `Closed`.
+
 ## Taskbar status
 
 `WindowHandle::set_progress_bar` reports window progress on the platform's

@@ -206,6 +206,9 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
   // Resource cleanup only. The struct stays in the window's view list and is
   // freed by proton_engine_window_free once every view has finalized, which
   // keeps native ABI view slots valid for the whole window lifetime.
+  // Creation cancellation has no OnBeforeClose callback. The event queue
+  // deduplicates this terminal notification with ordinary browser closure.
+  proton_view_events_closed(view->events);
   proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
   if (view->browser_view != nil) {
     [view->browser_view removeFromSuperview];

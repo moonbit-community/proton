@@ -441,7 +441,7 @@ fn RuntimeSession::view_handle(
   let window_id = window.id
   let window_native_id = window.window.id()
   let id = view.id
-  let native_id = view.view.id()
+  let native_id = view.native_id
   ViewHandle::{
     id,
     native_id,
@@ -658,7 +658,7 @@ fn RuntimeSession::resolve_view(
     _ => raise StaleWindow(id=window_id)
   }
   for view in running.views {
-    if view.id == view_id {
+    if view.id == view_id && view.view.id() != 0 {
       if view.view.id() != view_native_id {
         raise StaleView(id=view_id)
       }
@@ -719,7 +719,7 @@ fn add_view_to_running_window(
     )
   }
   for view in running.views {
-    if view.id == view_id {
+    if view.id == view_id && view.view.id() != 0 {
       raise AlreadyExists(id=view_id)
     }
   }
@@ -732,6 +732,7 @@ fn add_view_to_running_window(
   }
   let running_view = RunningView::{
     id: view_id,
+    native_id: created.id(),
     view: created,
     document: None,
     observed_loading: None,
@@ -751,25 +752,20 @@ fn RuntimeSession::remove_window_view(
     Some(running) if running.window.id() == window_native_id => running
     _ => raise StaleWindow(id=window_id)
   }
-  let mut index = -1
-  for i, view in running.views {
-    if view.id == view_id {
-      index = i
-      break
+  for view in running.views {
+    if view.id == view_id && view.view.id() != 0 {
+      view.view.destroy() catch {
+        error =>
+          raise window_operation_failed(
+            "remove view " + view_id + " from window " + window_id,
+            error,
+          )
+      }
+      // Keep the event recipient until the native close notification arrives.
+      return
     }
   }
-  if index < 0 {
-    raise UnknownView(id=view_id)
-  }
-  let view = running.views[index]
-  view.view.destroy() catch {
-    error =>
-      raise window_operation_failed(
-        "remove view " + view_id + " from window " + window_id,
-        error,
-      )
-  }
-  ignore(running.views.remove(index))
+  raise UnknownView(id=view_id)
 }
 
 ///|
@@ -780,7 +776,9 @@ fn RuntimeSession::list_window_views(
 ) -> Array[ViewHandle] {
   match self.find_active_window(window_id) {
     Some(running) if running.window.id() == window_native_id =>
-      running.views.map(view => self.view_handle(running, view))
+      running.views
+      .filter(view => view.view.id() != 0)
+      .map(view => self.view_handle(running, view))
     _ => []
   }
 }
@@ -795,7 +793,7 @@ fn RuntimeSession::find_window_view(
   match self.find_active_window(window_id) {
     Some(running) if running.window.id() == window_native_id =>
       for view in running.views {
-        if view.id == view_id {
+        if view.id == view_id && view.view.id() != 0 {
           return Some(self.view_handle(running, view))
         }
       } nobreak {
@@ -2666,6 +2664,9 @@ pub fn ViewHandle::state(
 
 ///|
 /// Removes and destroys the view, the Electron `removeChildView` equivalent.
+/// The view immediately becomes unavailable for operations and lookup. Its
+/// native close notification is delivered later through `App::on_view_event`
+/// if the parent window remains alive. The declarative id may be reused.
 pub fn ViewHandle::close(self : ViewHandle) -> Unit raise WindowSessionError {
   (self.close_view)()
 }
@@ -3324,7 +3325,10 @@ fn RuntimeSession::dispatch_view_event(
     None => return
   }
   for index, view in running.views {
-    if view.view.id() == view_native_id {
+    if view.native_id == view_native_id {
+      if !closes_view && view.view.id() == 0 {
+        return
+      }
       let handle = self.view_handle(running, view)
       let view_event = match
         (

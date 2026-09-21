@@ -580,6 +580,11 @@ pub fn App::with_view(self : App, id : String, config : ViewConfig) -> App {
 /// Observes events for every running web contents view: loading changes,
 /// main-frame navigations, title updates, load failures, page-search results,
 /// and close.
+/// While the parent window remains alive, closing a view through its handle,
+/// `remove_view`, or its page delivers `Closed` once after native closure.
+/// The event handle retains its identity but cannot operate the closed view.
+/// Parent-window shutdown ends all child lifetimes; use the window's close
+/// notification for that cleanup rather than awaiting each child's `Closed`.
 pub fn App::on_view_event(
   self : App,
   handler : async (ViewHandle, ViewEvent) -> Unit noraise,

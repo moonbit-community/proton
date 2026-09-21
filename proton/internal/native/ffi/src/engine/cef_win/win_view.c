@@ -79,6 +79,9 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
       browser_state != PROTON_BROWSER_CREATION_FAILED) {
     return;
   }
+  // Creation cancellation has no OnBeforeClose callback. The event queue
+  // deduplicates this terminal notification with ordinary browser closure.
+  proton_view_events_closed(view->events);
   proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
   view->hwnd = NULL;
   view->finalized = 1;
