@@ -35,20 +35,26 @@ LRESULT proton_win_titlebar_caption_button_hit(POINT point,
 
 int proton_win_titlebar_point_in_draggable_regions(
     POINT point,
+    UINT dpi,
     size_t region_count,
     const proton_win_titlebar_region_t *regions) {
   if (region_count == 0 || regions == NULL) {
     return 0;
   }
+  /* WM_NCHITTEST arrives in device pixels, but CEF reports view DIPs.
+   * Keep fractional coordinates: rounding to the nearest DIP can move the
+   * last physical pixel of a no-drag button outside its half-open bounds.
+   * Convert at hit time so moving between monitors uses the current DPI. */
+  const double x = (double)point.x * USER_DEFAULT_SCREEN_DPI / dpi;
+  const double y = (double)point.y * USER_DEFAULT_SCREEN_DPI / dpi;
   int draggable = 0;
   for (size_t i = 0; i < region_count; i++) {
     const proton_win_titlebar_region_t *region = &regions[i];
     const int64_t right = (int64_t)region->x + region->width;
     const int64_t bottom = (int64_t)region->y + region->height;
     const int inside =
-        region->width > 0 && region->height > 0 && point.x >= region->x &&
-        (int64_t)point.x < right && point.y >= region->y &&
-        (int64_t)point.y < bottom;
+        region->width > 0 && region->height > 0 && x >= region->x &&
+        x < right && y >= region->y && y < bottom;
     if (inside && region->draggable) {
       draggable = 1;
     }
@@ -61,9 +67,8 @@ int proton_win_titlebar_point_in_draggable_regions(
     const int64_t right = (int64_t)region->x + region->width;
     const int64_t bottom = (int64_t)region->y + region->height;
     const int inside =
-        region->width > 0 && region->height > 0 && point.x >= region->x &&
-        (int64_t)point.x < right && point.y >= region->y &&
-        (int64_t)point.y < bottom;
+        region->width > 0 && region->height > 0 && x >= region->x &&
+        x < right && y >= region->y && y < bottom;
     if (inside && !region->draggable) {
       return 0;
     }
@@ -435,7 +440,7 @@ LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam) {
   LRESULT hit = proton_win_titlebar_hit_test(&input);
   if (hit == HTCLIENT && window != NULL &&
       proton_win_titlebar_point_in_draggable_regions(
-          client_point, window->draggable_region_count,
+          client_point, dpi, window->draggable_region_count,
           window->draggable_regions)) {
     return HTCAPTION;
   }

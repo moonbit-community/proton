@@ -36,8 +36,11 @@ LRESULT proton_win_titlebar_hit_test(
 LRESULT proton_win_titlebar_caption_button_hit(POINT point,
                                                const RECT *button_bounds);
 
+/* The mouse point is in client device pixels; CEF regions are in view DIPs.
+ * dpi is the current, nonzero window DPI (not the browser zoom). */
 int proton_win_titlebar_point_in_draggable_regions(
     POINT point,
+    UINT dpi,
     size_t region_count,
     const proton_win_titlebar_region_t *regions);
 
