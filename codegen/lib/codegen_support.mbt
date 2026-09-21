@@ -95,6 +95,42 @@ fn proton_ext_codegen_required_string(
 }
 
 ///|
+fn type_expr_text(
+  ty : @moonbitlang/parser/syntax.Type,
+  context~ : String,
+) -> String raise {
+  match ty {
+    Name(constr_id~, tys~, ..) =>
+      if tys is Empty {
+        long_ident_text(constr_id.id)
+      } else {
+        "\{long_ident_text(constr_id.id)}[\{type_list_text(tys, context~)}]"
+      }
+    Option(ty=inner, ..) => type_expr_text(inner, context~) + "?"
+    Tuple(tys~, ..) => "(\{type_list_text(tys, context~)})"
+    _ => raise CommandCodegenError::UnsupportedType(context~)
+  }
+}
+
+///|
+fn long_ident_text(id : @moonbitlang/parser/syntax.LongIdent) -> String {
+  match id {
+    Ident(name~) => name
+    Dot(pkg~, id=target) => "@" + pkg + "." + target
+  }
+}
+
+///|
+fn type_list_text(
+  tys : @list.List[@moonbitlang/parser/syntax.Type],
+  context~ : String,
+) -> String raise {
+  let parts : Array[String] = []
+  tys.each(fn(ty) raise { parts.push(type_expr_text(ty, context~)) })
+  parts.join(", ")
+}
+
+///|
 fn path_dirname(path : String) -> String {
   let native_path : @mbpath.Path = path
   native_path.dirname().to_string()

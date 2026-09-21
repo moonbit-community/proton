@@ -13,12 +13,12 @@ pub fn generate_typed_commands_from_sources(
   let commands : Array[ParsedTypedCommand] = []
   for source_entry in sources {
     let (path, source) = source_entry
-    let { tokens, errors, .. } = @lexer.tokens_from_string(
-      source,
-      comment=false,
-    )
-    guard errors.is_empty() else { raise CodegenInputError::SourceParse(path~) }
-    commands.append(parse_typed_commands(tokens.map(t => t.0), path))
+    let { tokens, .. } = @lexer.tokens_from_string(source, comment=true)
+    let (ast, reports) = @parser.parse(tokens)
+    guard reports.is_empty() else {
+      raise CodegenInputError::SourceParse(path~)
+    }
+    commands.append(parse_typed_commands(ast))
   }
   guard commands.length() > 0 else { raise CommandCodegenError::MissingCommand }
   validate_typed_contract_duplicates(commands)
@@ -84,6 +84,47 @@ pub async fn generate_extension_identity_from_file(
 }
 
 ///|
+fn parse_typed_commands(
+  ast : @list.List[@moonbitlang/parser/syntax.Impl],
+) -> Array[ParsedTypedCommand] raise {
+  let commands : Array[ParsedTypedCommand] = []
+  ast.each(fn(item) raise {
+    match item {
+      TopFuncDef(fun_decl~, ..) =>
+        match typed_contract_attribute(fun_decl.attrs) {
+          Some(contract_expression) =>
+            commands.push(
+              parse_typed_command_from_func(fun_decl, contract_expression),
+            )
+          None => ()
+        }
+      _ => ()
+    }
+  })
+  commands
+}
+
+///|
+fn typed_contract_attribute(
+  attrs : @list.List[@moonbitlang/parser/attribute.Attribute],
+) -> String? raise {
+  let mut contract : String? = None
+  attrs.each(fn(attr) raise {
+    let raw = attr.raw
+    if raw.has_prefix("#proton.command") {
+      guard contract is None else {
+        raise CommandCodegenError::Attribute(
+          kind="command",
+          detail="only one #proton.command attribute is allowed",
+        )
+      }
+      contract = Some(parse_contract_attribute(raw))
+    }
+  })
+  contract
+}
+
+///|
 fn parse_contract_attribute(raw : String) -> String raise {
   let prefix = "#proton.command"
   guard raw.has_prefix(prefix + "(") && raw.has_suffix(")") else {
@@ -146,13 +187,28 @@ fn validate_contract_expression(expression : String) -> Unit raise {
 }
 
 ///|
-fn make_typed_command(
-  function_name : String,
-  receiver_type : String?,
-  params : Array[(String, String)],
+fn parse_typed_command_from_func(
+  func : @moonbitlang/parser/syntax.FunDecl,
   contract_expression : String,
 ) -> ParsedTypedCommand raise {
+  let function_name = func.name.name
   validate_identifier("command function name", function_name)
+  let receiver_type = match func.type_name {
+    Some(type_name) => {
+      guard !type_name.is_object else {
+        raise CommandCodegenError::Command(
+          function_name~,
+          detail="object receiver methods are not supported",
+        )
+      }
+      Some(long_ident_text(type_name.name))
+    }
+    None => None
+  }
+  let params = match func.decl_params {
+    Some(params) => parse_typed_params(function_name, params)
+    None => []
+  }
   let first_handler_param = match receiver_type {
     Some(receiver) => {
       guard params.length() > 0 &&
@@ -200,6 +256,44 @@ fn make_typed_command(
     accepts_context,
     has_request: handler_params.length() > request_index,
   }
+}
+
+///|
+fn parse_typed_params(
+  function_name : String,
+  params : @list.List[@moonbitlang/parser/syntax.Parameter],
+) -> Array[(String, String)] raise {
+  let parsed : Array[(String, String)] = []
+  params.each(fn(param) raise {
+    match param {
+      Positional(binder={ name, .. }, ty=Some(ty)) =>
+        parsed.push(
+          (
+            name,
+            type_expr_text(
+              ty,
+              context="command parameter " + function_name + "." + name,
+            ),
+          ),
+        )
+      DiscardPositional(..) =>
+        raise CommandCodegenError::Command(
+          function_name~,
+          detail="discard parameters are not supported",
+        )
+      Labelled(..) =>
+        raise CommandCodegenError::Command(
+          function_name~,
+          detail="labeled and optional parameters are not supported",
+        )
+      _ =>
+        raise CommandCodegenError::Command(
+          function_name~,
+          detail="parameters must use `name : Type`",
+        )
+    }
+  })
+  parsed
 }
 
 ///|
