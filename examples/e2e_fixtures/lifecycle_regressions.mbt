@@ -30,6 +30,8 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
   let injected = Ref(false)
   let sibling_stopped = Ref(false)
   let loaded_views : Array[String] = []
+  let closed_views : Array[String] = []
+  let closed_handles_rejected = Ref(true)
   let secondary_started = Ref(false)
   let secondary_stopped = Ref(false)
   let secondary_completed = Ref(false)
@@ -67,6 +69,16 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
       open_on_start=false,
     )
     .on_view_event((view, event) => {
+      if event is Closed {
+        closed_views.push(view.id())
+        let rejected = try {
+          view.eval("void 0")
+          false
+        } catch {
+          _ => true
+        }
+        closed_handles_rejected.val = closed_handles_rejected.val && rejected
+      }
       if event is DidFinishLoad {
         loaded_views.push(view.id())
       }
@@ -118,7 +130,9 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
               match name {
                 "queued-view-close"
                 | "loaded-view-close"
-                | "stale-view-close" => {
+                | "stale-view-close"
+                | "remove-view-close"
+                | "page-view-close" => {
                   let old = window.add_view(
                     "tab",
                     @proton.view("data:text/html,old", width=100, height=100),
@@ -128,7 +142,17 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                       @async.sleep(10)
                     }
                   }
-                  old.close()
+                  if name == "page-view-close" {
+                    old.eval("window.close()")
+                  } else if name == "remove-view-close" {
+                    window.remove_view("tab")
+                  } else {
+                    old.close()
+                  }
+                  if name != "page-view-close" {
+                    assert_true(window.view("tab") is None)
+                    assert_eq(window.views().length(), 0)
+                  }
                   if name == "stale-view-close" {
                     loaded_views.clear()
                     let fresh = window.add_view(
@@ -141,9 +165,43 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                     old.close() catch {
                       _ => ()
                     }
+                    while closed_views.length() < 1 {
+                      @async.sleep(10)
+                    }
                     fresh.eval("void 0")
                     fresh.close()
                   }
+                  let expected = if name == "stale-view-close" { 2 } else { 1 }
+                  while closed_views.length() < expected {
+                    @async.sleep(10)
+                  }
+                  @async.sleep(100)
+                  assert_eq(closed_views.length(), expected)
+                  assert_true(closed_handles_rejected.val)
+                }
+                "parent-view-close" => {
+                  let parent = context.windows().open("secondary")
+                  let child = parent.add_view(
+                    "child",
+                    @proton.view("data:text/html,child", width=100, height=100),
+                  )
+                  while !loaded_views.contains("child") {
+                    @async.sleep(10)
+                  }
+                  parent.close()
+                  while context.windows().find("secondary") is Some(_) {
+                    @async.sleep(10)
+                  }
+                  let rejected = try {
+                    child.eval("void 0")
+                    false
+                  } catch {
+                    _ => true
+                  }
+                  assert_true(rejected)
+                  @async.sleep(100)
+                  assert_true(closed_views.length() <= 1)
+                  assert_true(closed_handles_rejected.val)
                 }
                 "cancel-open" | "cancel-sleep" => {
                   let task = application.val

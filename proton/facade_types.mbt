@@ -293,6 +293,8 @@ priv struct RunningWindow {
 
 ///|
 priv struct RunningView {
+  // Event identity survives native wrapper destruction.
+  native_id : Int64
   id : String
   view : @native.View
   mut document : ResourceDocument?
