@@ -34,6 +34,7 @@ pub struct AppCommandExtensionSpec {
   dependencies : Array[String]
   register : (CommandRegistrar) -> Unit raise
   resolve_permission : (Json, String) -> Json raise PermissionScopeValidationError
+  on_start : (@async.TaskGroup[Unit]) -> Unit raise
   on_destroy : () -> Unit raise
 }
 
@@ -102,6 +103,7 @@ pub fn AppCommandExtensionSpec::typed(
   scripts? : Array[String] = [],
   dependencies? : Array[String] = [],
   resolve_permission? : (Json, String) -> Json raise PermissionScopeValidationError,
+  on_start? : (@async.TaskGroup[Unit]) -> Unit raise = fn(_tasks) {  },
   on_destroy? : () -> Unit raise = fn() {  },
 ) -> AppCommandExtensionSpec raise ExtensionSpecError {
   contract.validate() catch {
@@ -148,6 +150,7 @@ pub fn AppCommandExtensionSpec::typed(
     dependencies: copy_strings(dependencies),
     register,
     resolve_permission,
+    on_start,
     on_destroy,
   }
 }
@@ -363,6 +366,7 @@ fn copy_app_command_extension_spec(
     dependencies: copy_strings(spec.dependencies),
     register: spec.register,
     resolve_permission: spec.resolve_permission,
+    on_start: spec.on_start,
     on_destroy: spec.on_destroy,
   }
 }
@@ -391,4 +395,14 @@ fn copy_ipc_extension_descriptors(
 ///|
 fn copy_strings(values : Array[String]) -> Array[String] {
   values.map(fn(value) { value })
+}
+
+///|
+/// Starts extension-owned work in the application's task lifetime.
+/// Called after registration and before application startup hooks.
+pub fn AppCommandExtensionSpec::start(
+  self : AppCommandExtensionSpec,
+  tasks : @async.TaskGroup[Unit],
+) -> Unit raise {
+  (self.on_start)(tasks)
 }
