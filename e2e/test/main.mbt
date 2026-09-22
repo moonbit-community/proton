@@ -23,6 +23,11 @@ async fn main {
     println("Windowed-close Proton E2E passed")
     return
   }
+  if @env.args().contains("--quit-chain") {
+    run_quit_chain_probe(repository_root(), timeout_ms())
+    println("Quit-chain Proton E2E passed")
+    return
+  }
   if @env.args().contains("--self-hosted") {
     run_self_hosted_scenarios()
     println("Self-hosted Proton E2E passed")

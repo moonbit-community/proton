@@ -12,6 +12,7 @@ async fn run_scenario_app_child() -> Unit {
     Some("54_devtools") => @e2e_fixtures.run_devtools()
     Some("single_instance") => @e2e_fixtures.run_single_instance()
     Some("windowed_close") => @e2e_fixtures.run_windowed_close()
+    Some("quit_chain") => @e2e_fixtures.run_quit_chain()
     Some("56_i18n") => @e2e_fixtures.run_i18n()
     Some("46_asset_sidecar_resources") => @e2e_fixtures.run_asset_sidecar()
     Some("42_attribute_codegen_commands") =>

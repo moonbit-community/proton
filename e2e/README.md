@@ -33,6 +33,8 @@ The suite covers:
 
 - single-instance forwarding through the real application loop, followed by
   primary/secondary and CEF helper shutdown (`--single-instance`);
+- the cancelable quit chain, forced exits, and process exit codes
+  (`--quit-chain`);
 
 - `38_async_extension_add`, `39_sync_async_extensions`, and
   `42_attribute_codegen_commands` command-extension proxies;
@@ -102,3 +104,18 @@ failures, and intercepted close decisions. The runner also executes control case
 requires explicit success markers, and checks application and helper shutdown.
 They are included in `--self-hosted`. Set `PROTON_E2E_LIFECYCLE_CASE` to a case name
 from `test/lifecycle_regressions.mbt` to run one scenario.
+
+## Quit event chain
+
+Run the isolated quit-chain probe, which starts one headless application per
+case, releases the quit request through a gate file, and asserts the recorded
+chain steps and the process exit status:
+
+```sh
+moon -C e2e run test --target native -- --quit-chain
+```
+
+The probe requires `on_before_quit` -> `on_will_quit` -> `on_quit` for orderly
+quits with exit code `0` and `3`, requires a forced exit to skip the cancelable
+steps while still reporting `quit 7`, and requires a prevented `before-quit` or
+`will-quit` to leave the application running.
