@@ -161,6 +161,10 @@ moon -C examples run 01_run --target native
   application-level control review covering `focus` with the macOS `steal`
   option, the macOS `hide`/`show`/`isActive`/`isHidden` AppKit group, and the
   `isReady` startup boundary.
+- [83_process_events](83_process_events/README.md): manual Electron-style
+  process-level event review covering `session-created`,
+  `browser-window-created`, `web-contents-created` (window page and view), and
+  `render-process-gone` after the renderer helper is killed.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only
