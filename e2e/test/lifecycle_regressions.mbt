@@ -1,4 +1,41 @@
 ///|
+/// Kills the renderer helpers of a running scenario app so the application
+/// observes `render-process-gone`, the way Electron asks applications to review
+/// a crashed or killed renderer.
+async fn kill_renderer_helpers(snapshot : ProcessSnapshot) -> Unit {
+  let mut killed = 0
+  for pid in snapshot.pids {
+    let command = match snapshot.commands.get(pid) {
+      Some(command) => command
+      None => continue
+    }
+    guard command.contains("--type=renderer") else { continue }
+    if @path.sep == '\\' {
+      ignore(
+        @process.collect_output_merged(
+          "taskkill",
+          ["/pid", pid.to_string(), "/t", "/f"],
+          no_console_window=true,
+        ),
+      )
+    } else {
+      ignore(
+        @process.run(
+          "/bin/kill",
+          ["-9", pid.to_string()],
+          inherit_env=false,
+          no_console_window=true,
+        ),
+      )
+    }
+    killed = killed + 1
+  }
+  guard killed > 0 else {
+    fail("process-events case found no renderer helper to terminate")
+  }
+}
+
+///|
 async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
@@ -11,7 +48,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         "initial-ready-quit", "loaded-view-close", "queued-view-close", "stale-view-close",
         "remove-view-close", "page-view-close", "parent-view-close", "cancel-during-startup",
         "initial-open", "cancel-sleep", "cancel-open", "task-success", "task-failure",
-        "close-decision", "process-lifetime", "app-control",
+        "close-decision", "process-lifetime", "app-control", "process-events",
       ]
   }
   let failures : Array[String] = []
@@ -52,6 +89,9 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         }
         let snapshot = snapshot_scenario_process_tree(app)
         @mbfs.write_string_to_file(gate, "go")
+        if name == "process-events" {
+          kill_renderer_helpers(snapshot)
+        }
         ignore(
           wait_for_scenario_app_shutdown(
             app,
@@ -65,6 +105,15 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
             "LIFECYCLE_PASSED " + name,
           ),
         )
+        if name == "process-events" {
+          // The fixture runs without a single-instance route, so the session it
+          // reports must be the default session on a temporary profile.
+          assert_true(
+            app_output_suffix(app.output_path).contains(
+              "PROCESS_EVENTS session=partition=default data=temporary",
+            ),
+          )
+        }
         stopped = true
         println("Lifecycle regression passed: " + name)
       })
