@@ -692,6 +692,49 @@ pub fn App::on_download_event(
 }
 
 ///|
+/// Runs before an accepted application quit starts closing windows.
+///
+/// This is Electron's cancelable `before-quit` step. `Prevent` aborts the quit
+/// request, keeps every window open, and leaves the application running; a
+/// later quit request runs the handler again.
+pub fn App::on_before_quit(
+  self : App,
+  handler : async (ApplicationContext) -> ApplicationQuitDecision noraise,
+) -> App {
+  self.before_quit_handler = Some(handler)
+  self
+}
+
+///|
+/// Runs after every application window has closed and before Proton
+/// terminates.
+///
+/// This is Electron's cancelable `will-quit` step. `Prevent` aborts the
+/// termination and leaves the application running without windows; use
+/// `LastWindowClosedPolicy::KeepRunning` semantics to open a window again.
+pub fn App::on_will_quit(
+  self : App,
+  handler : async (ApplicationContext) -> ApplicationQuitDecision noraise,
+) -> App {
+  self.will_quit_handler = Some(handler)
+  self
+}
+
+///|
+/// Observes the final `quit` step with the process exit code.
+///
+/// The handler runs after the quit can no longer be cancelled and before
+/// configured lifecycle shutdown and native cleanup. `exit_code` is the value
+/// requested by `ApplicationContext::quit` or `ApplicationContext::exit`.
+pub fn App::on_quit(
+  self : App,
+  handler : async (ApplicationContext, Int) -> Unit noraise,
+) -> App {
+  self.quit_handlers.push(handler)
+  self
+}
+
+///|
 /// Adds a secondary window owned by the standard application lifecycle.
 pub fn App::add_window(
   self : App,

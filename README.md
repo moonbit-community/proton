@@ -123,7 +123,15 @@ window operations including:
 Window creation, state changes, and close interception are integrated with the
 managed async runtime. By default the application quits after its final window
 closes. Use `LastWindowClosedPolicy::KeepRunning` for tray or background
-applications.
+applications. An orderly quit follows Electron's quit event chain:
+`.on_before_quit(...)` runs before windows start closing, `.on_will_quit(...)`
+runs after the last window has closed, and `.on_quit(...)` observes the process
+exit code. Both cancelable steps answer with
+`ApplicationQuitDecision::Allow` or `ApplicationQuitDecision::Prevent`, and
+`ApplicationContext::quit(exit_code=...)` or
+`ApplicationContext::exit(exit_code=...)` selects the status Proton adopts.
+See [proton/README.md](proton/README.md) and
+`examples/77_quit_event_chain`.
 
 Application windows can host independent web contents views with explicit
 bounds, visibility, z-order, navigation, DevTools, and lifecycle events. See

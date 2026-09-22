@@ -89,10 +89,58 @@ removal on Linux, so Proton returns `false` there as well.
 `ApplicationContext::relaunch` schedules a replacement process without
 stopping the current one. With no options it preserves the current command
 line; `RelaunchOptions` can replace the executable or arguments. Call `quit`
-for orderly shutdown or `exit` for immediate Electron-style termination that
-skips close interception and lifecycle cleanup. Scheduled relaunches are
-started after orderly cleanup or immediately before `exit` terminates the
-process.
+for orderly shutdown or `exit` for immediate Electron-style termination.
+Scheduled relaunches are started after orderly cleanup or immediately before
+`exit` tears the runtime down.
+
+## Application quit chain
+
+An orderly quit follows Electron's quit event chain. `ApplicationContext::quit`
+first runs `.on_before_quit(...)`, then closes every open window through the
+configured close interception, runs `.on_will_quit(...)` after the last window
+has closed, and finally reports `.on_quit(...)` before configured lifecycle
+shutdown and native teardown. Neither `quit` nor `exit` is guesswork for the
+application: `on_quit` receives the process exit code that Proton adopts.
+
+```moonbit
+let mut save_pending = true
+
+@proton.html("Quit chain", page)
+.identifier("com.example.quit-chain")
+.on_before_quit(fn(_context) {
+  if save_pending {
+    @proton.ApplicationQuitDecision::Prevent
+  } else {
+    @proton.ApplicationQuitDecision::Allow
+  }
+})
+.on_will_quit(fn(context) {
+  context.relaunch() catch { _ => () }
+  @proton.ApplicationQuitDecision::Allow
+})
+.on_quit(fn(_context, exit_code) {
+  println("quitting with " + exit_code.to_string())
+})
+.run_or_abort()
+```
+
+Both cancelable steps are typed the same way: `ApplicationQuitDecision::Prevent`
+is Electron's `event.preventDefault()`. A prevented `before-quit` keeps every
+window open; a prevented `will-quit` leaves the application running without
+windows, and the automatic last-window quit is not retried until a window is
+created again. A denied window close cancels the whole request, matching
+Electron's `beforeunload` behavior.
+
+`ApplicationContext::quit(exit_code=...)` carries the desired process status
+through the chain. Electron expresses that state with `process.exitCode`
+before calling `app.quit()`; Proton passes it with the request. A non-zero code
+terminates the process after teardown, while shutdown with code `0` returns
+from `App::run` normally.
+
+`ApplicationContext::exit(exit_code=...)` is Electron's `app.exit`: it destroys
+every window without asking and skips `before-quit` and `will-quit`, but the
+`quit` notification still observes the requested code before Proton tears the
+runtime down.
 
 ## Entry points
 

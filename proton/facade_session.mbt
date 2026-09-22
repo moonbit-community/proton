@@ -37,6 +37,9 @@ fn RuntimeSession::RuntimeSession(
   download_event_handlers : Array[
     async (BrowserHandle, DownloadEvent) -> Unit noraise,
   ],
+  before_quit_handler? : (async (ApplicationContext) -> ApplicationQuitDecision noraise)? = None,
+  will_quit_handler? : (async (ApplicationContext) -> ApplicationQuitDecision noraise)? = None,
+  quit_handlers? : Array[async (ApplicationContext, Int) -> Unit noraise] = [],
   application_identifier? : String = "",
   application_executable? : String = "",
   application_arguments? : Array[String] = [],
@@ -81,6 +84,9 @@ fn RuntimeSession::RuntimeSession(
     media_handler,
     permission_handler,
     download_event_handlers,
+    before_quit_handler,
+    will_quit_handler,
+    quit_handlers,
     close_coordinator: CloseCoordinator(),
     application_identifier,
     application_executable,
@@ -94,19 +100,47 @@ fn RuntimeSession::RuntimeSession(
 
 ///|
 fn CloseCoordinator::CloseCoordinator() -> CloseCoordinator {
-  CloseCoordinator::{ state: CloseRunning, pending: [], }
+  CloseCoordinator::{
+    state: CloseRunning,
+    pending: [],
+    pending_quit: None,
+    forced: false,
+    exit_code: 0,
+    last_window_quit_handled: false,
+  }
 }
 
 ///|
-fn CloseCoordinator::request_quit(self : CloseCoordinator) -> Bool {
-  guard self.state == CloseRunning else { return false }
-  self.state = CloseQuitRequested
+/// Starts one orderly quit transaction unless a quit is already in progress.
+fn CloseCoordinator::begin_quit(
+  self : CloseCoordinator,
+  exit_code : Int,
+) -> Bool {
+  // A forced exit already owns the transaction; an orderly request must not
+  // downgrade it before the session advances.
+  guard self.state == CloseRunning && !self.forced else { return false }
+  self.state = CloseBeforeQuit
+  self.forced = false
+  self.exit_code = exit_code
+  true
+}
+
+///|
+/// Escalates the current transaction to a forced exit, or starts one from an
+/// idle application. A committed teardown can no longer change its status.
+fn CloseCoordinator::begin_forced_exit(
+  self : CloseCoordinator,
+  exit_code : Int,
+) -> Bool {
+  guard self.state != CloseCommitted else { return false }
+  self.forced = true
+  self.exit_code = exit_code
   true
 }
 
 ///|
 fn CloseCoordinator::is_quitting(self : CloseCoordinator) -> Bool {
-  self.state != CloseRunning
+  self.state != CloseRunning || self.forced
 }
 
 ///|
@@ -147,6 +181,13 @@ fn CloseCoordinator::cancel_all(self : CloseCoordinator) -> Unit {
     pending.task.cancel()
   }
   self.pending.clear()
+  match self.pending_quit {
+    Some(task) => {
+      task.cancel()
+      self.pending_quit = None
+    }
+    None => ()
+  }
 }
 
 ///|
@@ -167,7 +208,8 @@ fn RuntimeSession::application_context(
     self.application_tasks,
     self.window_manager(),
     self.locale_preferences,
-    request_quit=() => self.request_quit(),
+    request_quit=exit_code => self.request_quit(exit_code),
+    request_exit=exit_code => self.request_exit(exit_code),
     application_identifier=self.application_identifier,
     application_executable=self.application_executable,
     application_arguments=self.application_arguments,
@@ -181,7 +223,7 @@ fn RuntimeSession::window_handle(
   window : RunningWindow,
 ) -> WindowHandle {
   let id = window.id
-  let native_id = window.window.id()
+  let native_id = window.native_id
   WindowHandle::{
     id,
     native_id,
@@ -316,7 +358,7 @@ fn RuntimeSession::window_handle(
     },
     read_window_button_position: () => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       let position = running.window.button_position() catch {
@@ -439,7 +481,7 @@ fn RuntimeSession::view_handle(
   view : RunningView,
 ) -> ViewHandle {
   let window_id = window.id
-  let window_native_id = window.window.id()
+  let window_native_id = window.native_id
   let id = view.id
   let native_id = view.native_id
   ViewHandle::{
@@ -654,7 +696,7 @@ fn RuntimeSession::resolve_view(
   view_native_id : Int64,
 ) -> RunningView raise WindowSessionError {
   let running = match self.find_active_window(window_id) {
-    Some(running) if running.window.id() == window_native_id => running
+    Some(running) if running.native_id == window_native_id => running
     _ => raise StaleWindow(id=window_id)
   }
   for view in running.views {
@@ -699,7 +741,7 @@ fn RuntimeSession::add_window_view(
   config : @native.ViewConfig,
 ) -> ViewHandle raise WindowSessionError {
   let running = match self.find_active_window(window_id) {
-    Some(running) if running.window.id() == window_native_id => running
+    Some(running) if running.native_id == window_native_id => running
     _ => raise StaleWindow(id=window_id)
   }
   let running_view = add_view_to_running_window(running, view_id, config)
@@ -749,7 +791,7 @@ fn RuntimeSession::remove_window_view(
   view_id : String,
 ) -> Unit raise WindowSessionError {
   let running = match self.find_active_window(window_id) {
-    Some(running) if running.window.id() == window_native_id => running
+    Some(running) if running.native_id == window_native_id => running
     _ => raise StaleWindow(id=window_id)
   }
   for view in running.views {
@@ -775,7 +817,7 @@ fn RuntimeSession::list_window_views(
   window_native_id : Int64,
 ) -> Array[ViewHandle] {
   match self.find_active_window(window_id) {
-    Some(running) if running.window.id() == window_native_id =>
+    Some(running) if running.native_id == window_native_id =>
       running.views
       .filter(view => view.view.id() != 0)
       .map(view => self.view_handle(running, view))
@@ -791,7 +833,7 @@ fn RuntimeSession::find_window_view(
   view_id : String,
 ) -> ViewHandle? {
   match self.find_active_window(window_id) {
-    Some(running) if running.window.id() == window_native_id =>
+    Some(running) if running.native_id == window_native_id =>
       for view in running.views {
         if view.id == view_id && view.view.id() != 0 {
           return Some(self.view_handle(running, view))
@@ -809,7 +851,7 @@ fn RuntimeSession::browser_handle(
   window : RunningWindow,
 ) -> BrowserHandle {
   let id = window.id
-  let native_id = window.window.id()
+  let native_id = window.native_id
   let session_handle = self.session_handle(window)
   BrowserHandle::{
     id,
@@ -850,7 +892,7 @@ fn RuntimeSession::browser_handle(
     },
     print_browser_to_pdf: (path, options) => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       running.window.print_to_pdf(path, options.to_native()) catch {
@@ -863,7 +905,7 @@ fn RuntimeSession::browser_handle(
     },
     find_browser_in_page: (text, forward, match_case, find_next) => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       running.window.find_in_page(text, forward, match_case, find_next) catch {
@@ -886,7 +928,7 @@ fn RuntimeSession::browser_handle(
     },
     read_browser_zoom_percent: () => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       running.window.state().zoom_percent catch {
@@ -904,7 +946,7 @@ fn RuntimeSession::browser_handle(
     },
     read_browser_audio_muted: () => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       running.window.is_audio_muted() catch {
@@ -917,7 +959,7 @@ fn RuntimeSession::browser_handle(
     },
     read_browser_navigation_state: () => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       running.window.navigation_state() catch {
@@ -930,7 +972,7 @@ fn RuntimeSession::browser_handle(
     },
     read_browser_focused: () => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       running.window.browser_is_focused() catch {
@@ -943,7 +985,7 @@ fn RuntimeSession::browser_handle(
     },
     read_browser_devtools_opened: () => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       running.window.is_devtools_opened() catch {
@@ -956,7 +998,7 @@ fn RuntimeSession::browser_handle(
     },
     read_browser_state: () => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       BrowserState::from_native(running.window.browser_state()) catch {
@@ -1009,13 +1051,13 @@ fn RuntimeSession::session_handle(
   window : RunningWindow,
 ) -> SessionHandle {
   let id = window.id
-  let native_id = window.window.id()
+  let native_id = window.native_id
   SessionHandle::{
     id,
     native_id,
     read_cookies: (url, include_http_only) => {
       let running = match self.find_active_window(id) {
-        Some(running) if running.window.id() == native_id => running
+        Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
       let request_id = running.window.cookie_begin_get(url, include_http_only) catch {
@@ -1132,7 +1174,7 @@ fn RuntimeSession::close_window(
   native_id : Int64,
 ) -> Unit raise WindowSessionError {
   let running = match self.find_active_window(id) {
-    Some(running) if running.window.id() == native_id => running
+    Some(running) if running.native_id == native_id => running
     _ => raise StaleWindow(id~)
   }
   running.window.close() catch {
@@ -1152,7 +1194,7 @@ fn RuntimeSession::control_window(
   operation : (@native.Window) -> Unit raise @native.NativeError,
 ) -> Unit raise WindowSessionError {
   let running = match self.find_active_window(id) {
-    Some(running) if running.window.id() == native_id => running
+    Some(running) if running.native_id == native_id => running
     _ => raise StaleWindow(id~)
   }
   operation(running.window) catch {
@@ -1169,7 +1211,7 @@ fn RuntimeSession::load_window_html(
   base_url : String,
 ) -> Unit raise WindowSessionError {
   let running = match self.find_active_window(id) {
-    Some(running) if running.window.id() == native_id => running
+    Some(running) if running.native_id == native_id => running
     _ => raise StaleWindow(id~)
   }
   guard resource_document_url_is_supported(base_url) else {
@@ -1231,7 +1273,7 @@ fn RuntimeSession::read_window_state(
   native_id : Int64,
 ) -> WindowState raise WindowSessionError {
   let running = match self.find_active_window(id) {
-    Some(running) if running.window.id() == native_id => running
+    Some(running) if running.native_id == native_id => running
     _ => raise StaleWindow(id~)
   }
   WindowState::from_native(running.window.state()) catch {
@@ -1247,7 +1289,7 @@ fn RuntimeSession::read_window_content_size(
   native_id : Int64,
 ) -> (Int, Int) raise WindowSessionError {
   let running = match self.find_active_window(id) {
-    Some(running) if running.window.id() == native_id => running
+    Some(running) if running.native_id == native_id => running
     _ => raise StaleWindow(id~)
   }
   running.window.content_size() catch {
@@ -1265,14 +1307,14 @@ fn RuntimeSession::set_window_parent(
   modal : Bool,
 ) -> Unit raise WindowSessionError {
   let running = match self.find_active_window(id) {
-    Some(running) if running.window.id() == native_id => running
+    Some(running) if running.native_id == native_id => running
     _ => raise StaleWindow(id~)
   }
   let parent = match parent_native_id {
     Some(parent_id) => {
       let mut found : RunningWindow? = None
       for candidate in self.windows {
-        if candidate.is_active() && candidate.window.id() == parent_id {
+        if candidate.is_active() && candidate.native_id == parent_id {
           found = Some(candidate)
           break
         }
@@ -1349,6 +1391,7 @@ fn RuntimeSession::create_window(
   }
   let running = RunningWindow::{
     id: plan.id,
+    native_id: created_window.id(),
     window: created_window,
     permissions: definition.permissions,
     lifetime: WindowLifetime(),
@@ -1393,6 +1436,9 @@ fn RuntimeSession::create_window(
   }
   self.windows.push(running)
   self.has_created_window = true
+  // A new window starts a new last-window policy period: closing it again may
+  // request quit even when an earlier automatic request was prevented.
+  self.close_coordinator.last_window_quit_handled = false
   @xlog.info(category="proton.window") <?
     { "message": "window created", "window": running.id }
   running
@@ -3224,7 +3270,7 @@ fn RuntimeSession::dispatch_runtime_event(
   event : @native.RuntimeEvent,
 ) -> Unit raise AppRunError {
   if event.is_quit_requested() {
-    self.request_quit()
+    self.request_quit(0)
   }
   self.dispatch_window_event(event)
   self.dispatch_view_event(event)
@@ -4106,7 +4152,7 @@ fn RuntimeSession::set_window_thumbar_buttons(
   buttons : Array[@native.ThumbarButton],
 ) -> Bool raise WindowSessionError {
   let running = match self.find_active_window(id) {
-    Some(running) if running.window.id() == native_id => running
+    Some(running) if running.native_id == native_id => running
     _ => raise StaleWindow(id~)
   }
   running.window.set_thumbar_buttons(buttons) catch {
@@ -4247,7 +4293,7 @@ fn RuntimeSession::start_bridge_request(
       )
       self.pending_bridge.push(BridgeDispatchTask::{
         request_id,
-        window: target.window.id(),
+        window: target.native_id,
         task,
         state: Running,
       })
@@ -4321,7 +4367,7 @@ fn RuntimeSession::find_window_by_native_id(
   window_id : Int64,
 ) -> RunningWindow? {
   for running in self.windows {
-    if running.window.id() == window_id {
+    if running.native_id == window_id {
       return Some(running)
     }
   }
@@ -4390,8 +4436,22 @@ fn should_commit_application_close(
 }
 
 ///|
-fn RuntimeSession::request_quit(self : RuntimeSession) -> Unit {
-  if self.close_coordinator.request_quit() {
+/// Whether an application quit step keeps the quit chain running.
+fn should_continue_quit(decision : ApplicationQuitDecision) -> Bool {
+  decision == ApplicationQuitDecision::Allow
+}
+
+///|
+fn RuntimeSession::request_quit(self : RuntimeSession, exit_code : Int) -> Unit {
+  let accepted = self.close_coordinator.begin_quit(exit_code)
+  if accepted {
+    self.wakeup.signal.notify()
+  }
+}
+
+///|
+fn RuntimeSession::request_exit(self : RuntimeSession, exit_code : Int) -> Unit {
+  if self.close_coordinator.begin_forced_exit(exit_code) {
     self.wakeup.signal.notify()
   }
 }
@@ -4402,17 +4462,28 @@ fn RuntimeSession::is_quitting(self : RuntimeSession) -> Bool {
 }
 
 ///|
+/// Returns the process exit code this application terminates with.
+fn RuntimeSession::resolved_exit_code(self : RuntimeSession) -> Int {
+  self.close_coordinator.exit_code
+}
+
+///|
 fn RuntimeSession::advance_application_lifetime(
   self : RuntimeSession,
 ) -> Bool raise AppRunError {
   let mut did_work = false
   if self.close_coordinator.state == CloseRunning &&
+    !self.close_coordinator.last_window_quit_handled &&
     should_quit_after_last_window(
       self.last_window_closed_policy,
       self.has_created_window,
       self.all_windows_closed(),
     ) {
-    self.request_quit()
+    self.close_coordinator.last_window_quit_handled = true
+    self.request_quit(0)
+    did_work = true
+  }
+  if self.close_coordinator.forced && self.advance_forced_exit() {
     did_work = true
   }
   match self.close_coordinator.state {
@@ -4420,6 +4491,7 @@ fn RuntimeSession::advance_application_lifetime(
       if self.advance_individual_close_decisions() {
         did_work = true
       }
+    CloseBeforeQuit => if self.advance_before_quit() { did_work = true }
     CloseQuitRequested => {
       self.begin_application_close_decisions()
       did_work = true
@@ -4428,9 +4500,223 @@ fn RuntimeSession::advance_application_lifetime(
       if self.advance_application_close_decisions() {
         did_work = true
       }
+    CloseClosingWindows =>
+      if self.advance_close_completion() {
+        did_work = true
+      }
+    CloseWillQuit => if self.advance_will_quit() { did_work = true }
+    CloseQuitting => if self.advance_quit_event() { did_work = true }
     CloseCommitted => ()
   }
   did_work
+}
+
+///|
+/// Escalates a quit request to Electron's `app.exit` behavior: windows are
+/// destroyed without asking and the cancelable quit steps are skipped.
+fn RuntimeSession::advance_forced_exit(
+  self : RuntimeSession,
+) -> Bool raise AppRunError {
+  match self.close_coordinator.state {
+    CloseRunning | CloseBeforeQuit | CloseQuitRequested | CloseCollecting => {
+      self.begin_forced_close()
+      true
+    }
+    // A forced exit requested from the final notification can only replace
+    // the exit code; the quit chain is already past its cancelable steps.
+    CloseClosingWindows | CloseWillQuit | CloseQuitting | CloseCommitted =>
+      false
+  }
+}
+
+///|
+fn RuntimeSession::advance_before_quit(self : RuntimeSession) -> Bool {
+  match self.before_quit_handler {
+    None => {
+      self.close_coordinator.state = CloseQuitRequested
+      return true
+    }
+    Some(handler) =>
+      match self.advance_quit_decision(handler) {
+        None => false
+        Some(decision) => {
+          if should_continue_quit(decision) {
+            self.close_coordinator.state = CloseQuitRequested
+          } else {
+            self.cancel_quit_transaction()
+          }
+          true
+        }
+      }
+  }
+}
+
+///|
+fn RuntimeSession::advance_will_quit(
+  self : RuntimeSession,
+) -> Bool raise AppRunError {
+  match self.will_quit_handler {
+    None => {
+      self.begin_quit_event()
+      true
+    }
+    Some(handler) =>
+      match self.advance_quit_decision(handler) {
+        None => false
+        Some(decision) => {
+          if should_continue_quit(decision) {
+            self.begin_quit_event()
+          } else {
+            self.cancel_quit_transaction()
+          }
+          true
+        }
+      }
+  }
+}
+
+///|
+/// Spawns the cancelable handler of the current step once and reports its
+/// decision as soon as the task has completed.
+fn RuntimeSession::advance_quit_decision(
+  self : RuntimeSession,
+  handler : async (ApplicationContext) -> ApplicationQuitDecision noraise,
+) -> ApplicationQuitDecision? {
+  if self.close_coordinator.pending_quit is None {
+    let context = self.application_context()
+    self.close_coordinator.pending_quit = Some(
+      self.application_tasks.spawn(
+        () => {
+          defer self.wakeup.signal.notify()
+          handler(context)
+        },
+        no_wait=true,
+      ),
+    )
+  }
+  match self.close_coordinator.pending_quit {
+    None => None
+    Some(task) => {
+      let completed = task.try_wait() catch {
+        _ => Some(ApplicationQuitDecision::Allow)
+      }
+      match completed {
+        None => None
+        Some(decision) => {
+          self.close_coordinator.pending_quit = None
+          Some(decision)
+        }
+      }
+    }
+  }
+}
+
+///|
+/// Runs the application notification of the last quit step and waits for it,
+/// matching Electron's synchronous `quit` emission before shutdown.
+fn RuntimeSession::begin_quit_event(
+  self : RuntimeSession,
+) -> Unit raise AppRunError {
+  // The quit can no longer be cancelled from here on, so a later launch of the
+  // same application must not start new windows.
+  self.runtime.stop_app_activations() catch {
+    error => raise native_run_error("stop app activations", error)
+  }
+  self.close_coordinator.state = CloseQuitting
+  guard !self.quit_handlers.is_empty() else {
+    self.close_coordinator.state = CloseCommitted
+    return
+  }
+  let context = self.application_context()
+  let handlers = self.quit_handlers
+  let exit_code = self.close_coordinator.exit_code
+  self.close_coordinator.pending_quit = Some(
+    self.application_tasks.spawn(
+      () => {
+        defer self.wakeup.signal.notify()
+        for handler in handlers {
+          handler(context, exit_code)
+        }
+        ApplicationQuitDecision::Allow
+      },
+      no_wait=true,
+    ),
+  )
+}
+
+///|
+fn RuntimeSession::advance_quit_event(self : RuntimeSession) -> Bool {
+  match self.close_coordinator.pending_quit {
+    None => {
+      self.close_coordinator.state = CloseCommitted
+      true
+    }
+    Some(task) => {
+      let completed = task.try_wait() catch {
+        _ => Some(ApplicationQuitDecision::Allow)
+      }
+      match completed {
+        None => false
+        Some(_) => {
+          self.close_coordinator.pending_quit = None
+          self.close_coordinator.state = CloseCommitted
+          true
+        }
+      }
+    }
+  }
+}
+
+///|
+/// Returns a prevented quit request to the running state. Windows that were
+/// already closed stay closed, and the automatic last-window quit is not
+/// retried until a window is created again.
+fn RuntimeSession::cancel_quit_transaction(self : RuntimeSession) -> Unit {
+  self.close_coordinator.pending_quit = None
+  self.close_coordinator.forced = false
+  self.close_coordinator.exit_code = 0
+  self.close_coordinator.state = CloseRunning
+}
+
+///|
+/// Destroys every window without asking, the native half of `app.exit`.
+fn RuntimeSession::begin_forced_close(
+  self : RuntimeSession,
+) -> Unit raise AppRunError {
+  self.close_coordinator.cancel_all()
+  // A forced exit never returns to the running state, but keep the last-window
+  // policy from requesting a second quit while these windows are destroyed.
+  self.close_coordinator.last_window_quit_handled = true
+  for running in self.windows {
+    guard running.is_active() else { continue }
+    running.window.destroy() catch {
+      error => raise native_run_error("destroy window " + running.id, error)
+    }
+    running.state = WindowCloseRequested
+  }
+  self.close_coordinator.state = CloseClosingWindows
+}
+
+///|
+/// Advances after the application-wide close step: the quit chain continues
+/// once no window of this application is alive any more.
+fn RuntimeSession::advance_close_completion(
+  self : RuntimeSession,
+) -> Bool raise AppRunError {
+  guard self.windows_fully_closed() else { return false }
+  if self.close_coordinator.forced {
+    self.begin_quit_event()
+  } else {
+    self.close_coordinator.state = CloseWillQuit
+  }
+  true
+}
+
+///|
+fn RuntimeSession::windows_fully_closed(self : RuntimeSession) -> Bool {
+  self.windows.is_empty() &&
+  self.window_commands.is_empty() &&
+  self.pending_window_opens.is_empty()
 }
 
 ///|
@@ -4443,7 +4729,7 @@ fn RuntimeSession::begin_application_close_decisions(
   }
   for running in self.windows {
     guard running.is_active() else { continue }
-    let window_id = running.window.id()
+    let window_id = running.native_id
     guard self.close_coordinator.find(window_id) is None else { continue }
     let handle = self.window_handle(running)
     let task = self.window_tasks.spawn(
@@ -4503,7 +4789,7 @@ fn RuntimeSession::advance_application_close_decisions(
       }
     }
     self.close_coordinator.pending.clear()
-    self.close_coordinator.state = CloseRunning
+    self.cancel_quit_transaction()
   } else {
     self.commit_application_close()
   }
@@ -4546,10 +4832,10 @@ fn RuntimeSession::respond_close_decision(
 fn RuntimeSession::commit_application_close(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
-  self.runtime.stop_app_activations() catch {
-    error => raise native_run_error("stop app activations", error)
-  }
-  self.close_coordinator.state = CloseCommitted
+  // Every window of this application is about to be closed. The last-window
+  // policy must not request a second quit after a prevented `will-quit`.
+  self.close_coordinator.last_window_quit_handled = true
+  self.close_coordinator.state = CloseClosingWindows
   self.close_coordinator.pending.clear()
   for running in self.windows {
     guard running.is_active() else { continue }
