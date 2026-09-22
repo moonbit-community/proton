@@ -554,6 +554,64 @@ pub fn App::on_window_event(
 }
 
 ///|
+/// Observes every window Proton creates, Electron's `browser-window-created`.
+///
+/// The handler runs once per window, including windows opened later through
+/// `WindowManager::open`, and receives a handle that is usable immediately.
+pub fn App::on_window_created(
+  self : App,
+  handler : async (WindowHandle) -> Unit noraise,
+) -> App {
+  self.window_created_handlers.push(handler)
+  self
+}
+
+///|
+/// Observes every web contents Proton creates, Electron's
+/// `web-contents-created`.
+///
+/// Both a window's main browser page and each web contents view report here,
+/// including views declared with `App::with_view` and views added later
+/// through `WindowHandle::add_view`.
+pub fn App::on_web_contents_created(
+  self : App,
+  handler : async (WebContentsHandle) -> Unit noraise,
+) -> App {
+  self.web_contents_created_handlers.push(handler)
+  self
+}
+
+///|
+/// Observes renderer processes that disappear, Electron's
+/// `render-process-gone`.
+///
+/// The handler runs for every affected web contents and reports Electron's
+/// reason vocabulary with the platform exit code. Proton does not reload the
+/// page automatically; `BrowserHandle::reload` or `ViewHandle::reload` decides
+/// what happens next.
+pub fn App::on_render_process_gone(
+  self : App,
+  handler : async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
+) -> App {
+  self.render_process_gone_handlers.push(handler)
+  self
+}
+
+///|
+/// Observes the application session Proton created for this run, Electron's
+/// `session-created`.
+///
+/// Proton runs one session per application, so the handler runs once during
+/// startup, before the `app_lifecycle` start hooks.
+pub fn App::on_session_created(
+  self : App,
+  handler : async (ApplicationSession) -> Unit noraise,
+) -> App {
+  self.session_created_handlers.push(handler)
+  self
+}
+
+///|
 /// Attaches a web contents view to the primary window at startup, the
 /// declarative counterpart of `WindowHandle::add_view`: the view is created
 /// with the window and can later be found through `WindowHandle::view(id)`

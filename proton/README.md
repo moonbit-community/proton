@@ -168,6 +168,40 @@ windows are ready, and returns to `false` when Proton starts tearing the
 runtime down. Electron's `ready` event and `whenReady()` correspond to
 `App::app_lifecycle(on_start=...)`, which still observes `false`.
 
+## Process-level events
+
+Applications can observe the objects and processes Proton creates:
+
+| Proton | Electron | Payload |
+| --- | --- | --- |
+| `App::on_window_created(...)` | `browser-window-created` | `WindowHandle` |
+| `App::on_web_contents_created(...)` | `web-contents-created` | `WebContentsHandle`: `Browser` for a window's main page, `View` for a web contents view |
+| `App::on_render_process_gone(...)` | `render-process-gone` | `WebContentsHandle` and `RenderProcessGoneDetails { reason, exit_code }` |
+| `App::on_session_created(...)` | `session-created` | `ApplicationSession { partition, data_path }` |
+
+`render-process-gone` reasons use Electron's vocabulary for the statuses CEF
+reports: `abnormal-exit`, `killed`, `crashed`, `oom`, `launch-failed`, and
+`integrity-failure`. Electron additionally reports `clean-exit` and
+`memory-eviction`, which CEF does not surface as renderer termination. A
+renderer termination is an event rather than a fatal runtime error: Proton
+keeps the application running, does not reload the page, and leaves the
+decision to the application through `BrowserHandle::reload`,
+`ViewHandle::reload`, `ViewHandle::close`, or closing the window. The
+per-web-contents `BrowserEvent::RendererProcessTerminated` and
+`ViewEvent::RendererProcessTerminated` events still carry CEF's raw status and
+error code for diagnostics.
+
+Proton runs one session per application, so `session-created` fires once during
+startup, before the `app_lifecycle` start hooks, and reports the configured
+partition with the session data directory (or `temporary`, when the run has no
+single-instance route). Session operations stay on `BrowserHandle::session()`.
+
+Electron's `child-process-gone` has no equivalent: CEF's public API reports
+renderer termination per browser but never signals other child process exits,
+so GPU, utility, and plugin process loss cannot be observed through this
+runtime route. Proton reports the renderer half through `render-process-gone`
+and does not expose a handler that can never fire.
+
 ## Entry points
 
 - `@proton.html(title, html, ...)` — inline HTML document.

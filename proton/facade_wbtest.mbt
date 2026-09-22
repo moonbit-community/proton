@@ -2056,6 +2056,46 @@ test "command host registration preserves cleanup failures" {
 }
 
 ///|
+test "renderer termination statuses map to Electron reasons" {
+  assert_eq(
+    render_process_gone_reason(0),
+    RenderProcessGoneReason::AbnormalExit,
+  )
+  assert_eq(render_process_gone_reason(1), RenderProcessGoneReason::Killed)
+  assert_eq(render_process_gone_reason(2), RenderProcessGoneReason::Crashed)
+  assert_eq(render_process_gone_reason(3), RenderProcessGoneReason::OutOfMemory)
+  assert_eq(
+    render_process_gone_reason(4),
+    RenderProcessGoneReason::LaunchFailed,
+  )
+  assert_eq(
+    render_process_gone_reason(5),
+    RenderProcessGoneReason::IntegrityFailure,
+  )
+  assert_eq(render_process_gone_reason(6), RenderProcessGoneReason::Unknown)
+  assert_eq(render_process_gone_reason(-1), RenderProcessGoneReason::Unknown)
+}
+
+///|
+test "web contents handles report their owning window" {
+  let view = test_view_handle("tab", 3L, [])
+  assert_eq(WebContentsHandle::View(view).window_id(), "main")
+}
+
+///|
+test "process-level event handlers accumulate on the app builder" {
+  let app = html("Process events", "<html></html>")
+    .on_window_created(fn(_) { () })
+    .on_web_contents_created(fn(_) { () })
+    .on_render_process_gone(fn(_, _) { () })
+    .on_session_created(fn(_) { () })
+  assert_eq(app.window_created_handlers.length(), 1)
+  assert_eq(app.web_contents_created_handlers.length(), 1)
+  assert_eq(app.render_process_gone_handlers.length(), 1)
+  assert_eq(app.session_created_handlers.length(), 1)
+}
+
+///|
 test "application lifecycle advances through close and destroy" {
   let lifecycle = AppLifecycle()
   assert_true(lifecycle.state is Constructing)
@@ -2784,6 +2824,7 @@ fn test_view_handle(
   ViewHandle::{
     id,
     native_id,
+    window_id: "main",
     set_view_bounds: fn(x, y, width, height) {
       calls.push("set_bounds:\{x},\{y},\{width},\{height}")
     },
