@@ -155,6 +155,23 @@ pub extern "C" fn proton_process_run_relaunches_ffi() -> Int = "proton_process_r
 pub extern "C" fn proton_process_exit_ffi(exit_code : Int) -> Unit = "proton_process_exit"
 
 ///|
+pub extern "C" fn proton_app_focus_ffi(steal_focus : Int) -> Int = "proton_app_focus"
+
+///|
+pub extern "C" fn proton_app_hide_ffi() -> Int = "proton_app_hide"
+
+///|
+pub extern "C" fn proton_app_show_ffi() -> Int = "proton_app_show"
+
+///|
+#borrow(out_active)
+pub extern "C" fn proton_app_is_active_ffi(out_active : Ref[Int]) -> Int = "proton_app_is_active"
+
+///|
+#borrow(out_hidden)
+pub extern "C" fn proton_app_is_hidden_ffi(out_hidden : Ref[Int]) -> Int = "proton_app_is_hidden"
+
+///|
 #borrow(identifier, activation_json, out_instance, out_primary)
 pub extern "C" fn proton_app_instance_acquire_ffi(
   identifier : Bytes,

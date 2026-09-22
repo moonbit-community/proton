@@ -10,6 +10,10 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "app-control" {
+    run_app_control_regression()
+    return
+  }
   if name == "process-lifetime" {
     run_process_lifetime_regression()
     return
@@ -475,6 +479,86 @@ async fn run_cancel_during_startup_regression() -> Unit {
   assert_true(main_ready.val)
   assert_false(secondary_ready.val)
   println("LIFECYCLE_PASSED cancel-during-startup")
+}
+
+///|
+/// Exercises application-level control in an isolated headless application:
+/// readiness, cross-platform `focus`, and the macOS-only AppKit group, which
+/// must either be fully implemented or fully unsupported on one platform.
+async fn run_app_control_regression() -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let startup_ready = Ref(true)
+  let reached_ready = Ref(false)
+  let supported = Ref(false)
+  let active = Ref(false)
+  let hidden = Ref(false)
+
+  @proton.html("Application control", "<h1>Application control</h1>")
+  .identifier("dev.proton.e2e-app-control")
+  .app_lifecycle(
+    on_start=context => {
+      application.val = Some(context)
+      // Startup hooks run before readiness, like Electron code before `ready`.
+      startup_ready.val = @proton.is_ready()
+      context
+    },
+    on_shutdown=_ => (),
+  )
+  .window_lifecycle(
+    on_ready=context => {
+      lifecycle_probe_gate()
+      ignore(
+        context
+        .task_group()
+        .spawn(
+          () => {
+            let deadline = @async.now() + 5000L
+            while !@proton.is_ready() {
+              if @async.now() > deadline {
+                fail("application never reported readiness")
+              }
+              @async.sleep(10)
+            }
+            reached_ready.val = true
+            let app = application.val.unwrap()
+            // `focus` is defined on every platform.
+            app.focus()
+            // macOS owns `hide`, `show`, `isActive`, and `isHidden`; other
+            // platforms must report all four as unsupported.
+            try {
+              app.hide()
+              app.show()
+              active.val = app.is_active()
+              hidden.val = app.is_hidden()
+              supported.val = true
+            } catch {
+              @proton.AppControlError::UnsupportedPlatform(_) =>
+                supported.val = false
+              error =>
+                fail(
+                  "unexpected application control error: " + error.to_string(),
+                )
+            }
+            println(
+              "APP_CONTROL focus=ok appkit=" +
+              supported.val.to_string() +
+              " active=" +
+              active.val.to_string() +
+              " hidden=" +
+              hidden.val.to_string(),
+            )
+            app.quit()
+          },
+          no_wait=true,
+        ),
+      )
+    },
+    on_close=_ => (),
+  )
+  .run()
+  assert_false(startup_ready.val)
+  assert_true(reached_ready.val)
+  println("LIFECYCLE_PASSED app-control")
 }
 
 ///|

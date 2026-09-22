@@ -157,6 +157,10 @@ moon -C examples run 01_run --target native
   quit chain review covering cancelable before-quit and will-quit, the final
   quit notification, orderly and forced exit codes, and the automatic
   last-window quit.
+- [82_app_control](82_app_control/README.md): manual Electron-style
+  application-level control review covering `focus` with the macOS `steal`
+  option, the macOS `hide`/`show`/`isActive`/`isHidden` AppKit group, and the
+  `isReady` startup boundary.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

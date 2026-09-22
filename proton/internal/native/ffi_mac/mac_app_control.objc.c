@@ -290,4 +290,86 @@ void proton_process_exit(int32_t exit_code) {
   _exit(exit_code);
 }
 
+static int32_t proton_app_control_require_main_thread(const char *action) {
+  if ([NSThread isMainThread]) {
+    return PROTON_OK;
+  }
+  return proton_set_error(
+      PROTON_ERR_WRONG_THREAD,
+      action == NULL ? "application control must run on the main thread"
+                     : action);
+}
+
+int32_t proton_app_focus(int32_t steal_focus) {
+  @autoreleasepool {
+    int32_t status = proton_app_control_require_main_thread(
+        "application focus must run on the main thread");
+    if (status != PROTON_OK) {
+      return status;
+    }
+    /* Electron's app.focus activates the AppKit application, and its `steal`
+       option decides whether another frontmost app may be displaced. */
+    [NSApp activateIgnoringOtherApps:(steal_focus != 0)];
+    return proton_set_error(PROTON_OK, NULL);
+  }
+}
+
+int32_t proton_app_hide(void) {
+  @autoreleasepool {
+    int32_t status = proton_app_control_require_main_thread(
+        "app hide must run on the main thread");
+    if (status != PROTON_OK) {
+      return status;
+    }
+    [NSApp hide:nil];
+    return proton_set_error(PROTON_OK, NULL);
+  }
+}
+
+int32_t proton_app_show(void) {
+  @autoreleasepool {
+    int32_t status = proton_app_control_require_main_thread(
+        "app show must run on the main thread");
+    if (status != PROTON_OK) {
+      return status;
+    }
+    [NSApp unhide:nil];
+    return proton_set_error(PROTON_OK, NULL);
+  }
+}
+
+int32_t proton_app_is_active(int32_t *out_active) {
+  @autoreleasepool {
+    if (out_active == NULL) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "out_active is required");
+    }
+    *out_active = 0;
+    int32_t status = proton_app_control_require_main_thread(
+        "app is_active must run on the main thread");
+    if (status != PROTON_OK) {
+      return status;
+    }
+    *out_active = [NSApp isActive] ? 1 : 0;
+    return proton_set_error(PROTON_OK, NULL);
+  }
+}
+
+int32_t proton_app_is_hidden(int32_t *out_hidden) {
+  @autoreleasepool {
+    if (out_hidden == NULL) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "out_hidden is required");
+    }
+    *out_hidden = 0;
+    int32_t status = proton_app_control_require_main_thread(
+        "app is_hidden must run on the main thread");
+    if (status != PROTON_OK) {
+      return status;
+    }
+    *out_hidden = [NSApp isHidden] ? 1 : 0;
+    return proton_set_error(PROTON_OK, NULL);
+  }
+}
+
 #endif

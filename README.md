@@ -131,7 +131,15 @@ exit code. Both cancelable steps answer with
 `ApplicationContext::quit(exit_code=...)` or
 `ApplicationContext::exit(exit_code=...)` selects the status Proton adopts.
 See [proton/README.md](proton/README.md) and
-`examples/77_quit_event_chain`.
+`examples/81_quit_event_chain`.
+
+Application-level control follows Electron's `app` object:
+`ApplicationContext::focus(steal=...)` activates the application on macOS and
+focuses its first visible window on Windows and Linux. `hide`, `show`,
+`is_active`, and `is_hidden` cover the macOS AppKit group and raise
+`AppControlError::UnsupportedPlatform` on the platforms Electron omits them
+from. `@proton.is_ready()` reports the startup boundary, corresponding to
+`app.isReady()`. See `examples/82_app_control`.
 
 Application windows can host independent web contents views with explicit
 bounds, visibility, z-order, navigation, DevTools, and lifecycle events. See

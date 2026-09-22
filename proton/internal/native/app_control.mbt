@@ -96,6 +96,51 @@ pub fn process_exit(exit_code : Int) -> Unit {
 }
 
 ///|
+/// Makes this application the active app, corresponding to Electron's
+/// `app.focus`. macOS activates the application and uses `steal_focus` for its
+/// `steal` option; other platforms focus the application's first visible
+/// window and ignore the option.
+pub fn app_focus(steal_focus : Bool) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_app_focus_ffi(if steal_focus { 1 } else { 0 }),
+  )
+}
+
+///|
+/// Hides every application window without minimizing it. Only macOS
+/// implements the AppKit operation; other platforms raise an unsupported
+/// error.
+pub fn app_hide() -> Unit raise NativeError {
+  check_status(@native_ffi.proton_app_hide_ffi())
+}
+
+///|
+/// Shows application windows hidden by `app_hide` without focusing them. Only
+/// macOS implements the AppKit operation; other platforms raise an unsupported
+/// error.
+pub fn app_show() -> Unit raise NativeError {
+  check_status(@native_ffi.proton_app_show_ffi())
+}
+
+///|
+/// Reports whether the application is the active app. Only macOS answers the
+/// query; other platforms raise an unsupported error.
+pub fn app_is_active() -> Bool raise NativeError {
+  let active = Ref(0)
+  check_status(@native_ffi.proton_app_is_active_ffi(active))
+  active.val != 0
+}
+
+///|
+/// Reports whether the application and all of its windows are hidden. Only
+/// macOS answers the query; other platforms raise an unsupported error.
+pub fn app_is_hidden() -> Bool raise NativeError {
+  let hidden = Ref(0)
+  check_status(@native_ffi.proton_app_is_hidden_ffi(hidden))
+  hidden.val != 0
+}
+
+///|
 /// Builds the native jump list, reporting the first failing status. The
 /// builder owns copies of every string, so it is released once the list was
 /// applied.

@@ -109,6 +109,10 @@ PROTON_INTERNAL void proton_runtime_slot_begin_destroy(
 PROTON_INTERNAL int32_t proton_require_runtime_owner_thread(
     const proton_runtime_slot_t *runtime);
 PROTON_INTERNAL bool proton_has_active_runtime(void);
+/* The process's live runtime slot, or NULL when no runtime is active.
+   Application-level control is process-wide, so it resolves the runtime here
+   instead of taking a handle. */
+PROTON_INTERNAL proton_runtime_slot_t *proton_get_active_runtime(void);
 
 PROTON_INTERNAL bool proton_runtime_enqueue_event(
     proton_runtime_slot_t *runtime, proton_event_t *event);

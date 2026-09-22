@@ -10,6 +10,16 @@ import {
 }
 
 // Values
+pub fn app_focus(Bool) -> Unit raise NativeError
+
+pub fn app_hide() -> Unit raise NativeError
+
+pub fn app_is_active() -> Bool raise NativeError
+
+pub fn app_is_hidden() -> Bool raise NativeError
+
+pub fn app_show() -> Unit raise NativeError
+
 pub fn bridge_permission_grants_supported() -> Bool
 
 pub fn event_wakeup_callback() -> @proton_ffi.EventWakeup
@@ -102,6 +112,7 @@ pub fn NativeError::is_stale_bridge_response(Self) -> Bool
 pub fn NativeError::is_stale_browser_request(Self) -> Bool
 pub fn NativeError::is_stale_resource_request(Self) -> Bool
 pub fn NativeError::is_stale_window_request(Self) -> Bool
+pub fn NativeError::is_unsupported(Self) -> Bool
 pub fn NativeError::is_update_busy(Self) -> Bool
 pub fn NativeError::is_update_revision_mismatch(Self) -> Bool
 pub fn NativeError::is_update_rollback(Self) -> Bool
