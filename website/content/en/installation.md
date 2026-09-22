@@ -2,7 +2,7 @@
 
 [中文](zh/installation.html)
 
-Proton 0.3.0 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
+Proton 0.3.3 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
 
 | Platform | Architecture | Build requirements |
 | --- | --- | --- |
@@ -19,11 +19,11 @@ NSIS is required only for NSIS output. Signing identities and notarization crede
 | Tool | Role | Installation or inspection |
 | --- | --- | --- |
 | MoonBit | Compiler, package manager and runtime tools | [Official installation](https://www.moonbitlang.com/download/); `moon version` |
-| Proton CLI | Project development and packaging | `moon install moonbit-community/proton_cli@0.3.0`; `proton_cli --version` |
+| Proton CLI | Project development and packaging | `moon install moonbit-community/proton_cli@0.3.3`; `proton_cli --version` |
 | Warren | Isomorphic frontend dev server and build | `moon install moonbit-community/warren@0.3.3`; `warren --help` |
 | Node.js / npm | Warren's JavaScript build tooling | [Node.js installation](https://nodejs.org/en/download); `node --version`, `npm --version` |
 
-MoonBit's binary directory must be on PATH. Minimal applications with inline HTML do not require Warren or Node.js. `moonx`'s deprecated native mode is not required by the documented frontend commands; published CLI 0.3.0 needs the [configuration adjustment](configuration.md#warren-commands-in-030).
+MoonBit's binary directory must be on PATH. Minimal applications with inline HTML do not require Warren or Node.js. `moonx`'s deprecated native mode is not required by the documented frontend commands.
 
 ## Runtime installation
 

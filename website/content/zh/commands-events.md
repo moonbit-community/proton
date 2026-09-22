@@ -43,4 +43,4 @@ Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列�
 
 命令向调用方返回结果，[事件](events.md)向观察者传递通知；两者都不意味着应用数据已经持久化。
 
-完整签名见[客户端 API](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.0/)。逐步示例位于独立的[命令教程](tutorial/commands-events.md)。
+完整签名见[客户端 API](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.3/)。逐步示例位于独立的[命令教程](tutorial/commands-events.md)。

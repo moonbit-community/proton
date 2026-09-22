@@ -4,25 +4,7 @@
 
 The Proton CLI packages a project into a distributable containing its executable, frontend assets, CEF runtime, matching helper and declared resources. A backend executable alone is not a complete distribution. Packaging targets the host platform.
 
-## Metadata
-
-These fields belong to the `package` object in `proton.project.json`.
-
-| Field | Type | Default / meaning |
-| --- | --- | --- |
-| `product_name` | string | Required display name |
-| `version` | string | Required application version; independent of Proton's version |
-| `formats` | string array | Host defaults when omitted |
-| `icons` | string array | Empty; icon paths relative to configuration directory |
-| `prepare` | string | Absent; preparation command |
-| `resources` | string array | Empty; additional packaged resources |
-| `sign.binaries` | string array | Empty; additional binaries selected for signing |
-| `url_schemes` | string array | Empty; registered application URL schemes |
-| `document_types` | object array | Empty; document associations |
-| `output` | string | `dist`, relative to configuration directory |
-| `platforms` | object | Optional `macos`, `windows`, `linux` overrides |
-
-A document type contains required `name` and `extensions`; `role` defaults to `Viewer`. The canonical identifier is the top-level `identifier`, not a package field. Changing the product name does not change application identity.
+Field types and defaults are defined in [Configuration](configuration.md).
 
 ## Platform overrides
 

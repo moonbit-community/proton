@@ -35,7 +35,6 @@ File output depends on packaged metadata. CEF diagnostics are not the applicatio
 | --- | --- |
 | Missing runtime/helper | Setup-managed release and platform selection |
 | Frontend command not found | Installed tool and PATH; Warren is installed separately |
-| Native moonx deprecation | CLI 0.3.0 generated frontend commands; see [configuration](configuration.md) |
 | Bridge unavailable | Page is outside the Proton renderer environment |
 | Unknown operation | Missing command binding or capability |
 | Decode failure | Request/response type and serialized payload mismatch |

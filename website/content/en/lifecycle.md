@@ -37,4 +37,4 @@ Application and window contexts expose task groups and window management. Window
 
 Window disappearance is not completion of application cleanup. Browser and child-view teardown must finish before normal runtime shutdown completes. Forced process termination is not equivalent to a successful lifecycle.
 
-See [application API](https://mooncakes.io/docs/moonbit-community/proton@0.3.0/) for hook signatures and error variants.
+See [application API](https://mooncakes.io/docs/moonbit-community/proton@0.3.3/) for hook signatures and error variants.

@@ -27,6 +27,6 @@ Supported filesystem operation names include `read_file`, `write_file`, `mkdir`,
 
 A missing capability leaves its route unavailable. An installed extension can still reject a request because of scope, invalid arguments, a platform limitation or an operating-system failure. These failures are reported through the command bridge; installation does not imply that every native operation will succeed.
 
-Filesystem, dialogs, clipboard, shell, tray and other capabilities have different scope types and platform coverage. The notification extension in 0.3.0 targets macOS. Framework platform support is not a capability support matrix.
+Filesystem, dialogs, clipboard, shell, tray and other capabilities have different scope types and platform coverage. The notification extension in 0.3.3 targets macOS. Framework platform support is not a capability support matrix.
 
-Complete builders and request/response types are in the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/). A complete exercise is in the [file access tutorial](tutorial/capabilities.md).
+Complete builders and request/response types are in the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.3/). A complete exercise is in the [file access tutorial](tutorial/capabilities.md).

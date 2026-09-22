@@ -10,12 +10,19 @@ code examples aligned. Add chapters to each language's `SUMMARY.md` and use
 `.md` links between articles. The language link at the top of each article
 points to the corresponding generated HTML page.
 
+The book has six top-level chapters in both languages: Introduction, Tutorial,
+Command Line Interface, Configuration, Examples, and Release Notes. Keep all
+CLI commands and options in `cli.md`, and all project JSON fields in
+`configuration.md`. Examples contains ten curated source references pinned to
+the documented release commit; release notes distinguish publication from
+source changes.
+
 Tutorials live only in `content/<language>/tutorial/` and the Tutorial navigation
 section. They state prerequisites, file edits and expected results. All other
 pages are independently readable technical documentation: define concepts, API
 contracts, configuration types/defaults, lifecycle, failure behavior and platform
 limits. Do not make reference pages depend on completing a tutorial project.
-Examples document Proton 0.3.0; verify them with published dependencies.
+Examples document Proton 0.3.3; verify them with published dependencies.
 
 ## Preview
 

@@ -37,4 +37,4 @@
 
 窗口消失不等于应用清理完成。浏览器和子视图必须完成销毁，运行时才能正常退出。强制结束进程不等价于成功执行生命周期。
 
-钩子签名与错误变体见[应用 API](https://mooncakes.io/docs/moonbit-community/proton@0.3.0/)。
+钩子签名与错误变体见[应用 API](https://mooncakes.io/docs/moonbit-community/proton@0.3.3/)。

@@ -4,25 +4,7 @@
 
 Proton CLI 将项目组装为分发产物，包含可执行文件、前端资源、CEF 运行时、匹配的 helper 和声明的资源。后端可执行文件本身不是完整分发包。打包面向当前宿主平台。
 
-## 元数据
-
-以下字段属于 `proton.project.json` 的 `package` 对象。
-
-| 字段 | 类型 | 默认值与含义 |
-| --- | --- | --- |
-| `product_name` | string | 必填，显示名称 |
-| `version` | string | 必填，应用版本，独立于 Proton 版本 |
-| `formats` | string array | 省略时使用宿主平台默认格式 |
-| `icons` | string array | 空；图标路径相对于配置文件目录 |
-| `prepare` | string | 无；准备命令 |
-| `resources` | string array | 空；附加打包资源 |
-| `sign.binaries` | string array | 空；额外选择签名的二进制文件 |
-| `url_schemes` | string array | 空；应用注册的 URL scheme |
-| `document_types` | object array | 空；文档关联 |
-| `output` | string | `dist`，相对于配置文件目录 |
-| `platforms` | object | 可选的 `macos`、`windows`、`linux` 覆盖 |
-
-文档类型包含必填的 `name`、`extensions`，`role` 默认为 `Viewer`。规范应用标识位于顶层 `identifier`，不是 package 字段。修改产品名称不会改变应用身份。
+字段类型与默认值统一定义在 [Configuration](configuration.md)。
 
 ## 平台覆盖
 

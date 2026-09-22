@@ -35,7 +35,6 @@ Proton 使用 `tonyfettes/xlog`。开发输出使用 stderr，打包应用使用
 | --- | --- |
 | 缺少运行时／helper | setup 管理的版本与平台选择 |
 | 找不到前端命令 | 工具安装与 PATH；Warren 单独安装 |
-| native moonx 弃用提示 | CLI 0.3.0 生成的前端命令，见[配置](configuration.md) |
 | bridge 不可用 | 页面不在 Proton 渲染器环境中 |
 | 未知操作 | 缺少命令绑定或能力声明 |
 | 解码失败 | 请求／响应类型与序列化载荷不匹配 |

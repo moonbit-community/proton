@@ -1,4 +1,4 @@
-# CLI command reference
+# Command Line Interface
 
 [中文](zh/cli.html)
 
@@ -73,7 +73,6 @@ Creates project source files. Without `--yes`, interactive prompts are used outs
 
 `minimal` creates a native module with inline HTML. `isomorphic` creates shared, frontend and backend modules. Invalid identifiers, nonpositive dimensions and unsupported template names are rejected.
 
-The published CLI 0.3.0 generates old Warren commands. The installed-executable configuration is documented under [Warren commands in 0.3.0](configuration.md#warren-commands-in-030); installing Warren does not change existing project files.
 
 ## `dev`
 

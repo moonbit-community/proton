@@ -34,4 +34,4 @@
 
 `WindowThemePreference` 控制窗口主题，`system_appearance()` 返回系统外观，二者是不同概念。标题栏样式和原生控件因平台而异。红绿灯位置设置适用于 macOS；使用叠加标题栏时，前端布局需要考虑原生控件占用的空间。
 
-完整签名和选项见[窗口 API](https://mooncakes.io/docs/moonbit-community/proton@0.3.0/)。可运行练习位于独立的[多窗口教程](tutorial/windows.md)。
+完整签名和选项见[窗口 API](https://mooncakes.io/docs/moonbit-community/proton@0.3.3/)。可运行练习位于独立的[多窗口教程](tutorial/windows.md)。

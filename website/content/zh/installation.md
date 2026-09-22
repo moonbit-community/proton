@@ -2,7 +2,7 @@
 
 [English](../installation.html)
 
-Proton 0.3.0 支持以下宿主构建环境。原生构建与打包面向当前操作系统，Proton CLI 不提供跨操作系统交叉编译流程。
+Proton 0.3.3 支持以下宿主构建环境。原生构建与打包面向当前操作系统，Proton CLI 不提供跨操作系统交叉编译流程。
 
 | 平台 | 架构 | 构建要求 |
 | --- | --- | --- |
@@ -19,11 +19,11 @@ NSIS 仅用于 NSIS 格式产物。签名身份和公证凭据属于分发要求
 | 工具 | 职责 | 安装或检查 |
 | --- | --- | --- |
 | MoonBit | 编译器、包管理器和运行工具 | [官方安装](https://www.moonbitlang.com/download/)；`moon version` |
-| Proton CLI | 项目开发与打包 | `moon install moonbit-community/proton_cli@0.3.0`；`proton_cli --version` |
+| Proton CLI | 项目开发与打包 | `moon install moonbit-community/proton_cli@0.3.3`；`proton_cli --version` |
 | Warren | isomorphic 前端开发服务器与构建 | `moon install moonbit-community/warren@0.3.3`；`warren --help` |
 | Node.js / npm | Warren 的 JavaScript 构建工具 | [Node.js 安装](https://nodejs.org/en/download)；`node --version`、`npm --version` |
 
-MoonBit 二进制目录必须在 PATH 中。使用内联 HTML 的 minimal 应用不需要 Warren 或 Node.js。本文档的前端命令不依赖已弃用的 native `moonx` 模式；已发布的 CLI 0.3.0 需要[调整配置](configuration.md#030-的-warren-命令)。
+MoonBit 二进制目录必须在 PATH 中。使用内联 HTML 的 minimal 应用不需要 Warren 或 Node.js。本文档的前端命令不依赖已弃用的 native `moonx` 模式。
 
 ## 运行时安装
 

@@ -1,4 +1,4 @@
-# CLI 命令参考
+# Command Line Interface
 
 [English](../cli.html)
 
@@ -73,7 +73,6 @@ proton_cli new [path] [options]
 
 `minimal` 创建内嵌 HTML 的原生模块；`isomorphic` 创建 shared、frontend、backend 三个模块。无效标识、非正数尺寸和不支持的模板名会被拒绝。
 
-已发布的 CLI 0.3.0 生成旧 Warren 命令。使用已安装可执行文件的配置见 [0.3.0 的 Warren 命令](configuration.md#030-的-warren-命令)；安装 Warren 不会修改已有项目文件。
 
 ## `dev`
 

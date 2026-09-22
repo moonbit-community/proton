@@ -18,7 +18,7 @@ Host payloads require `ToJson`. Window emitters belong to window lifetime; a sav
 
 `proton_client.subscribe(event, listener, failure)` decodes payloads through `FromJson` and returns a `Subscription`. `Subscription.close()` releases the listener. Subscription setup can raise `ClientFailure`; event decoding failures are reported as `EventDecode` through the failure callback.
 
-`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.0/).
+`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.3/).
 
 The JavaScript interface is `window.__MoonBit__.app.on(name, callback)`. The callback receives an event envelope containing `payload`; registration returns an unsubscribe function.
 

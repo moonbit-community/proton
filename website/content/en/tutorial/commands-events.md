@@ -9,7 +9,7 @@ A command lets frontend code ask the native backend to do work. This guide adds 
 In **`moon.mod`**, add this entry inside the existing `import { ... }` block, preserving the existing dependencies:
 
 ```text
-"moonbit-community/proton_contract@0.3.0",
+"moonbit-community/proton_contract@0.3.3",
 ```
 
 Replace **`app/moon.pkg`** with:

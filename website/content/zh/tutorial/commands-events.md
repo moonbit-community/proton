@@ -9,7 +9,7 @@
 在 **`moon.mod`** 已有的 `import { ... }` 块中加入下面一项，保留其他依赖：
 
 ```text
-"moonbit-community/proton_contract@0.3.0",
+"moonbit-community/proton_contract@0.3.3",
 ```
 
 将 **`app/moon.pkg`** 替换为：

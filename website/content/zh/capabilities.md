@@ -27,6 +27,6 @@
 
 缺少能力声明时，路由不可用。扩展已安装时，仍可能因权限范围、参数、平台限制或操作系统错误拒绝请求。这些错误通过命令 bridge 报告；安装不意味着所有原生操作必然成功。
 
-文件系统、对话框、剪贴板、shell、托盘等能力使用不同的范围类型，平台覆盖也不同。0.3.0 的通知扩展面向 macOS。框架支持的平台列表不等同于各能力的支持矩阵。
+文件系统、对话框、剪贴板、shell、托盘等能力使用不同的范围类型，平台覆盖也不同。0.3.3 的通知扩展面向 macOS。框架支持的平台列表不等同于各能力的支持矩阵。
 
-完整构建器及请求／响应类型见[扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/)。完整练习位于独立的[文件访问教程](tutorial/capabilities.md)。
+完整构建器及请求／响应类型见[扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.3/)。完整练习位于独立的[文件访问教程](tutorial/capabilities.md)。

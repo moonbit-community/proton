@@ -18,14 +18,7 @@ moon install moonbit-community/warren@0.3.3
 proton_cli cef setup
 ```
 
-首次运行前，打开 **`proton.project.json`**，将生成的两条前端命令替换为以下值，保留其他字段：
-
-```json
-"before_dev": "warren dev --browser-entry main --direct --port 4300",
-"before_build": "warren build --browser-entry main"
-```
-
-这会替换 CLI 0.3.0 生成的已弃用 native `moonx` 调用，详见[前端配置](../configuration.md)。然后启动应用：
+生成的配置已经调用安装好的 Warren 可执行文件。启动应用：
 
 ```sh
 proton_cli dev

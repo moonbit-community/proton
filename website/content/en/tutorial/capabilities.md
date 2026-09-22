@@ -9,7 +9,7 @@ Extensions expose reusable host operations to the renderer. A capability install
 In the minimal project's **`moon.mod`**, add this dependency inside `import { ... }`:
 
 ```text
-"moonbit-community/proton_ext@0.3.0",
+"moonbit-community/proton_ext@0.3.3",
 ```
 
 Use these imports in **`app/moon.pkg`**, then run `moon update`:
@@ -101,4 +101,4 @@ The local workspace directory is useful for this development exercise. Installed
 
 Dialogs, clipboard, shell, tray, and other extensions follow the same explicit installation/grant model, but each defines its own scope and platform support. The notification extension in this release targets macOS; do not infer platform support from the framework's overall platform list.
 
-Consult the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/) for the capability builder and request/response types you need.
+Consult the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.3/) for the capability builder and request/response types you need.

@@ -34,4 +34,4 @@ Native operations can raise `WindowSessionError`. A handle is not valid indefini
 
 `WindowThemePreference` controls a window's theme; `system_appearance()` reports system appearance. These are separate concerns. Titlebar styles and native controls differ by platform. Traffic-light positioning applies to macOS; the frontend layout must account for native controls when using an overlay titlebar.
 
-Method signatures and options are in the [window API](https://mooncakes.io/docs/moonbit-community/proton@0.3.0/). The [multi-window tutorial](tutorial/windows.md) is a separate runnable exercise.
+Method signatures and options are in the [window API](https://mooncakes.io/docs/moonbit-community/proton@0.3.3/). The [multi-window tutorial](tutorial/windows.md) is a separate runnable exercise.

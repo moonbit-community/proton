@@ -1,8 +1,12 @@
-# 项目配置
+# Configuration
 
 [English](../configuration.html)
 
 `proton.project.json` 包含应用身份及 CLI 构建／打包元数据。顶层是 JSON 对象，只接受以下四个字段；未知字段会被拒绝。窗口状态、命令注册和能力声明属于 MoonBit 应用构建器，不属于此配置文件。
+
+默认文件名为 `proton.project.json`。若使用 `moon.proton.json` 等其他名称，需给 `dev`、`build` 或 `package` 显式传递 `--config moon.proton.json`；它不是自动发现的别名。
+
+`identifier` 会去除首尾空白，必须包含至少两个非空的点分段。每段以 ASCII 字母或数字开头，仅允许 ASCII 字母、数字和连字符。
 
 ## 顶层字段
 
@@ -51,22 +55,94 @@
 
 `@proton.resource_dir()` 是应用资源基准目录：开发时 CLI 提供项目根目录；打包后为应用资源目录；没有托管元数据的直接运行使用启动工作目录。安装资源不属于持久可写数据存储。
 
-## 打包字段
+## `package`
 
-`package` 的完整字段、平台覆盖规则和产物格式见[打包参考](packaging.md)。
+以下字段属于 `proton.project.json` 的 `package` 对象。
 
-## 0.3.0 的 Warren 命令
+| 字段 | 类型 | 默认值与含义 |
+| --- | --- | --- |
+| `product_name` | string | 必填，显示名称 |
+| `version` | string | 必填，应用版本，独立于 Proton 版本 |
+| `formats` | string array | 省略时使用宿主平台默认格式 |
+| `icons` | string array | 空；图标路径相对于配置文件目录 |
+| `prepare` | string | 无；准备命令 |
+| `resources` | string array | 空；附加打包资源 |
+| `sign.binaries` | string array | 空；额外选择签名的二进制文件 |
+| `url_schemes` | string array | 空；应用注册的 URL scheme |
+| `document_types` | object array | 空；文档关联 |
+| `output` | string | `dist`，相对于配置文件目录 |
+| `platforms` | object | 可选的 `macos`、`windows`、`linux` 覆盖 |
 
-已发布的 CLI 0.3.0 生成已弃用的 native `moonx` 命令。替代方式是调用已安装的 `moonbit-community/warren@0.3.3` 可执行文件，前端字段为：
+文档类型包含必填的 `name`、`extensions`，`role` 默认为 `Viewer`。规范应用标识位于顶层 `identifier`，不是 package 字段。修改产品名称不会改变应用身份。
+
+## `package.sign`
+
+| 字段 | 类型 | 默认值与含义 |
+| --- | --- | --- |
+| `binaries` | string array | `[]`；额外签名的二进制文件，路径相对于配置文件目录 |
+
+省略 `sign` 时不添加额外二进制文件。此对象不会启用签名；启用签名使用 `package --sign` 或 `--notarize`。
+
+## `package.document_types[]`
+
+| 字段 | 类型 | 默认值与含义 |
+| --- | --- | --- |
+| `name` | string | 必填，文档类型显示名称 |
+| `extensions` | string array | 必填，非空的文件扩展名列表 |
+| `role` | string | `Viewer`；传递给打包器的文档角色 |
+
+## `package.platforms`
+
+| 字段 | 类型 | 默认值与含义 |
+| --- | --- | --- |
+| `macos` | object | 无；macOS 覆盖配置 |
+| `windows` | object | 无；Windows 覆盖配置 |
+| `linux` | object | 无；Linux 覆盖配置 |
+
+各平台对象接受以下字段。未知字段会被拒绝，包括在非 Windows 对象中设置 `nsis_install_mode`。
+
+| 字段 | 类型 | 默认值与含义 |
+| --- | --- | --- |
+| `formats` | string array | 继承共享的 `package.formats`；显式列表替换共享列表 |
+| `resources` | string array | `[]`；追加到共享资源列表并去重 |
+| `sign` | object | 无；只接受 `binaries`（string array，默认 `[]`），追加到共享签名列表并去重 |
+| `nsis_install_mode` | string | 仅 Windows；`currentUser`（默认）、`perMachine` 或 `both` |
+
+合并后的格式列表为空时采用宿主平台默认格式。CLI 选项覆盖解析后的配置。支持的格式、签名和安装模式见[打包行为](packaging.md)。
+
+## 完整配置示例
+
+以下路径用于说明字段组织方式；项目必须实际提供引用的图标、资源和命令。
 
 ```json
 {
-  "path": "frontend",
-  "dev_url": "http://127.0.0.1:4300",
-  "before_dev": "warren dev --browser-entry main --direct --port 4300",
-  "before_build": "warren build --browser-entry main",
-  "dist": "dist"
+  "identifier": "com.example.notes",
+  "backend": { "path": "backend", "package": "app" },
+  "frontend": {
+    "path": "frontend",
+    "dev_url": "http://127.0.0.1:4300",
+    "before_dev": "warren dev --browser-entry main --direct --port 4300",
+    "before_build": "warren build --browser-entry main",
+    "dist": "dist"
+  },
+  "package": {
+    "product_name": "Notes",
+    "version": "1.0.0",
+    "formats": ["app", "zip"],
+    "icons": ["icons/app.icns", "icons/app.ico", "icons/app.png"],
+    "prepare": "node scripts/prepare.mjs",
+    "resources": ["resources"],
+    "sign": { "binaries": [] },
+    "url_schemes": ["notes"],
+    "document_types": [
+      { "name": "Note", "extensions": ["note"], "role": "Editor" }
+    ],
+    "output": "dist",
+    "platforms": {
+      "macos": { "formats": ["app", "dmg"] },
+      "windows": { "formats": ["nsis"], "nsis_install_mode": "currentUser" },
+      "linux": { "formats": ["appimage"] }
+    }
+  }
 }
 ```
-
-该对象是 `frontend` 的值，不是完整项目配置。修正后的生成器已进入 main，尚未包含在已发布的 CLI 0.3.0 中。Warren 0.3.2 没有已发布的 Wasm 可执行文件，因此不能仅删除 native 目标参数。安装要求见[运行环境](installation.md)。

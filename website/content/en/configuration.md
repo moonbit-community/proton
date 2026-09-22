@@ -1,8 +1,12 @@
-# Project configuration
+# Configuration
 
 [中文](zh/configuration.html)
 
 `proton.project.json` contains application identity and CLI build/package metadata. It is a JSON object with four recognized top-level fields. Unknown fields are rejected. Window state, command registration and capabilities belong to the MoonBit application builder, not this file.
+
+The default filename is `proton.project.json`. To use another filename such as `moon.proton.json`, pass `--config moon.proton.json` to `dev`, `build` or `package`; it is not an automatically discovered alias.
+
+`identifier` is trimmed and must have at least two nonempty dot-separated components. Each component starts with an ASCII letter or digit and contains only ASCII letters, digits or hyphens.
 
 ## Top-level fields
 
@@ -51,22 +55,94 @@ Backend/frontend paths, package icons, package resources and package output are 
 
 `@proton.resource_dir()` is the application resource base: the CLI supplies the project root in development; packaged applications use their resources directory; direct runs without managed metadata use the startup working directory. Installed resources are not a persistent writable data store.
 
-## Package
+## `package`
 
-The full `package` field reference, platform override rules and artifact formats are documented in [packaging](packaging.md).
+These fields belong to the `package` object in `proton.project.json`.
 
-## Warren commands in 0.3.0
+| Field | Type | Default / meaning |
+| --- | --- | --- |
+| `product_name` | string | Required display name |
+| `version` | string | Required application version; independent of Proton's version |
+| `formats` | string array | Host defaults when omitted |
+| `icons` | string array | Empty; icon paths relative to configuration directory |
+| `prepare` | string | Absent; preparation command |
+| `resources` | string array | Empty; additional packaged resources |
+| `sign.binaries` | string array | Empty; additional binaries selected for signing |
+| `url_schemes` | string array | Empty; registered application URL schemes |
+| `document_types` | object array | Empty; document associations |
+| `output` | string | `dist`, relative to configuration directory |
+| `platforms` | object | Optional `macos`, `windows`, `linux` overrides |
 
-The published CLI 0.3.0 emits deprecated native `moonx` commands. The supported replacement is an installed `moonbit-community/warren@0.3.3` executable with these frontend fields:
+A document type contains required `name` and `extensions`; `role` defaults to `Viewer`. The canonical identifier is the top-level `identifier`, not a package field. Changing the product name does not change application identity.
+
+## `package.sign`
+
+| Field | Type | Default / meaning |
+| --- | --- | --- |
+| `binaries` | string array | `[]`; additional binaries to sign, relative to the configuration directory |
+
+Omitting `sign` adds no extra binaries. This object does not enable signing: use `package --sign` or `--notarize`.
+
+## `package.document_types[]`
+
+| Field | Type | Default / meaning |
+| --- | --- | --- |
+| `name` | string | Required document type display name |
+| `extensions` | string array | Required nonempty list of file extensions |
+| `role` | string | `Viewer`; document role passed to packaging |
+
+## `package.platforms`
+
+| Field | Type | Default / meaning |
+| --- | --- | --- |
+| `macos` | object | Absent; macOS overrides |
+| `windows` | object | Absent; Windows overrides |
+| `linux` | object | Absent; Linux overrides |
+
+Each platform object accepts the following fields. Unknown fields are rejected, including `nsis_install_mode` outside Windows.
+
+| Field | Type | Default / meaning |
+| --- | --- | --- |
+| `formats` | string array | Shared `package.formats`; an explicit list replaces it |
+| `resources` | string array | `[]`; appended to shared resources, duplicates removed |
+| `sign` | object | Absent; accepts only `binaries` (string array, default `[]`), appended to shared signing inputs with duplicates removed |
+| `nsis_install_mode` | string | Windows only; `currentUser` (default), `perMachine`, or `both` |
+
+If the resolved format list is empty, the host default formats apply. CLI options override the resolved configuration. See [packaging behavior](packaging.md) for supported formats, signing and installation modes.
+
+## Complete configuration example
+
+The paths below are illustrative: referenced icons, resources and commands must exist in the application project.
 
 ```json
 {
-  "path": "frontend",
-  "dev_url": "http://127.0.0.1:4300",
-  "before_dev": "warren dev --browser-entry main --direct --port 4300",
-  "before_build": "warren build --browser-entry main",
-  "dist": "dist"
+  "identifier": "com.example.notes",
+  "backend": { "path": "backend", "package": "app" },
+  "frontend": {
+    "path": "frontend",
+    "dev_url": "http://127.0.0.1:4300",
+    "before_dev": "warren dev --browser-entry main --direct --port 4300",
+    "before_build": "warren build --browser-entry main",
+    "dist": "dist"
+  },
+  "package": {
+    "product_name": "Notes",
+    "version": "1.0.0",
+    "formats": ["app", "zip"],
+    "icons": ["icons/app.icns", "icons/app.ico", "icons/app.png"],
+    "prepare": "node scripts/prepare.mjs",
+    "resources": ["resources"],
+    "sign": { "binaries": [] },
+    "url_schemes": ["notes"],
+    "document_types": [
+      { "name": "Note", "extensions": ["note"], "role": "Editor" }
+    ],
+    "output": "dist",
+    "platforms": {
+      "macos": { "formats": ["app", "dmg"] },
+      "windows": { "formats": ["nsis"], "nsis_install_mode": "currentUser" },
+      "linux": { "formats": ["appimage"] }
+    }
+  }
 }
 ```
-
-This object is the value of `frontend`, not a complete project configuration. The corrected generator is in main but not the published CLI 0.3.0. Warren 0.3.2 has no published Wasm executable; removing only the native target flag does not work. Installation requirements are listed in [environment](installation.md).

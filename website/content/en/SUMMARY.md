@@ -1,31 +1,34 @@
 # Summary
 
-- [Overview](index.md)
-
-# Concepts
-
-- [Architecture & processes](architecture.md)
-- [Project layout](project-structure.md)
-- [Application lifecycle](lifecycle.md)
-
-# Reference
-
-- [Environment requirements](installation.md)
-- [Project configuration](configuration.md)
-- [CLI](cli.md)
-- [Commands](commands-events.md)
-- [Events](events.md)
-- [Windows & browser views](windows.md)
-- [Extensions & capabilities](capabilities.md)
-- [Packaging](packaging.md)
-- [Diagnostics](debugging.md)
-
-# Tutorial
-
-- [Tutorial overview](tutorial/index.md)
+- [Introduction](index.md)
+  - [Architecture & processes](architecture.md)
+  - [Environment requirements](installation.md)
+  - [Project structure](project-structure.md)
+  - [Application lifecycle](lifecycle.md)
+  - [Commands](commands-events.md)
+  - [Events](events.md)
+  - [Windows & browser views](windows.md)
+  - [Capabilities](capabilities.md)
+- [Tutorial](tutorial/index.md)
   - [Minimal application](tutorial/first-app.md)
   - [Command round trip](tutorial/commands-events.md)
   - [Event subscription](tutorial/events.md)
   - [Multiple windows](tutorial/windows.md)
   - [File access](tutorial/capabilities.md)
   - [Complete Todo application](tutorial/isomorphic.md)
+- [Command Line Interface](cli.md)
+  - [Packaging behavior](packaging.md)
+  - [Diagnostics](debugging.md)
+- [Configuration](configuration.md)
+- [Examples](examples/index.md)
+  - [Minimal application](examples/01_run.md)
+  - [Embedded HTML](examples/12_embed.md)
+  - [Filesystem capability](examples/18_extension_fs.md)
+  - [Typed events](examples/40_event_broadcast.md)
+  - [Multi-window commands](examples/45_bridge_multi_window.md)
+  - [HTML with sidecar assets](examples/46_asset_sidecar_resources.md)
+  - [Native application menu](examples/49_app_menu.md)
+  - [Embedded browser view](examples/53_view_minimal.md)
+  - [Application locale](examples/56_i18n.md)
+  - [Background residency](examples/57_background_residency.md)
+- [Release Notes](release-notes.md)
