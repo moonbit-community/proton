@@ -100,8 +100,9 @@ moon -C e2e run test --target native -- --lifecycle-regressions
 
 These scenarios cover closing a view before browser submission, stale view handles,
 opening secondary windows from initial startup hooks, task cancellation, window task
-failures, and intercepted close decisions. The runner also executes control cases,
-requires explicit success markers, and checks application and helper shutdown.
+failures, intercepted close decisions, and application-level control
+(`is_ready`, `focus`, and the macOS AppKit group). The runner also executes control
+cases, requires explicit success markers, and checks application and helper shutdown.
 They are included in `--self-hosted`. Set `PROTON_E2E_LIFECYCLE_CASE` to a case name
 from `test/lifecycle_regressions.mbt` to run one scenario.
 
