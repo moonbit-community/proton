@@ -27,6 +27,8 @@ pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 
 pub fn is_packaged() -> Bool
 
+pub fn is_ready() -> Bool
+
 pub fn native_image() -> NativeImage raise NativeImageError
 
 pub fn resource_dir() -> String
@@ -82,6 +84,7 @@ pub(all) suberror AppControlError {
   InvalidProtocolScheme(scheme~ : String)
   UndeclaredProtocolScheme(scheme~ : String)
   InvalidExecutable(path~ : String)
+  UnsupportedPlatform(action~ : String)
   NativeControlFailure(action~ : String, status~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn AppControlError::equal(Self, Self) -> Bool
@@ -354,13 +357,18 @@ pub struct ApplicationContext {
   url_schemes : Array[String]
 }
 pub fn ApplicationContext::exit(Self, exit_code? : Int) -> Unit
+pub fn ApplicationContext::focus(Self, steal? : Bool) -> Unit raise AppControlError
+pub fn ApplicationContext::hide(Self) -> Unit raise AppControlError
+pub fn ApplicationContext::is_active(Self) -> Bool raise AppControlError
 pub fn ApplicationContext::is_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
+pub fn ApplicationContext::is_hidden(Self) -> Bool raise AppControlError
 pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn ApplicationContext::quit(Self, exit_code? : Int) -> Unit
 pub fn ApplicationContext::relaunch(Self, options? : RelaunchOptions) -> Unit raise AppControlError
 pub fn ApplicationContext::remove_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::set_as_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
+pub fn ApplicationContext::show(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::windows(Self) -> WindowManager
 

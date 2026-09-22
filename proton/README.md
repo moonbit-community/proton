@@ -142,6 +142,32 @@ every window without asking and skips `before-quit` and `will-quit`, but the
 `quit` notification still observes the requested code before Proton tears the
 runtime down.
 
+## Application control
+
+`ApplicationContext` also owns Electron's application-level activation
+control:
+
+| Proton | Electron | Behavior |
+| --- | --- | --- |
+| `focus(steal=...)` | `app.focus([options])` | macOS activates the application and `steal` decides whether another frontmost application may be displaced; Windows and Linux focus the first visible window |
+| `hide()` | `app.hide()` _macOS_ | Hides every window without minimizing it |
+| `show()` | `app.show()` _macOS_ | Shows hidden windows without focusing them |
+| `is_active()` | `app.isActive()` _macOS_ | Reports whether the application is the active app |
+| `is_hidden()` | `app.isHidden()` _macOS_ | Reports whether the application and its windows are hidden |
+
+Electron omits the macOS-only methods on other platforms, so calling them there
+crashes with a `TypeError`. Proton keeps one compile-time surface and raises
+the typed `AppControlError::UnsupportedPlatform` instead; `is_hidden` is the
+readback for `hide` and `show`. Focus, hide, and show require the main thread,
+which is where the facade and its hooks run.
+
+`@proton.is_ready()` corresponds to Electron's `app.isReady()`. It is `false`
+before `App::run`, while startup hooks run, and in the per-window `on_ready`
+hooks; it becomes `true` once the startup hooks completed and the initial
+windows are ready, and returns to `false` when Proton starts tearing the
+runtime down. Electron's `ready` event and `whenReady()` correspond to
+`App::app_lifecycle(on_start=...)`, which still observes `false`.
+
 ## Entry points
 
 - `@proton.html(title, html, ...)` — inline HTML document.

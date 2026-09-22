@@ -190,7 +190,11 @@ fn app_control_native_error(
   action : String,
   error : @native.NativeError,
 ) -> AppControlError {
-  NativeControlFailure(action~, status=error.status(), detail=error.message())
+  if error.is_unsupported() {
+    UnsupportedPlatform(action~)
+  } else {
+    NativeControlFailure(action~, status=error.status(), detail=error.message())
+  }
 }
 
 ///|

@@ -17,6 +17,8 @@ fn AppLifecycle::begin_running(self : AppLifecycle) -> Unit {
     Starting => self.state = Running
     _ => abort("invalid application lifecycle transition to Running")
   }
+  // Startup is complete: hooks ran and the initial windows are ready.
+  app_readiness.mark_ready()
 }
 
 ///|
@@ -48,6 +50,8 @@ fn AppLifecycle::begin_draining(self : AppLifecycle) -> Unit {
     Draining | Destroying | Closed => ()
     _ => abort("invalid application lifecycle transition to Draining")
   }
+  // Teardown started, so a later `App::run` in this process is not ready yet.
+  app_readiness.mark_not_ready()
 }
 
 ///|

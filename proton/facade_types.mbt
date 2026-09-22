@@ -1271,6 +1271,9 @@ pub(all) suberror AppControlError {
   InvalidProtocolScheme(scheme~ : String)
   UndeclaredProtocolScheme(scheme~ : String)
   InvalidExecutable(path~ : String)
+  /// The current platform does not implement this operation. Electron's
+  /// `app` object omits the same methods outside macOS.
+  UnsupportedPlatform(action~ : String)
   NativeControlFailure(action~ : String, status~ : Int, detail~ : String)
 } derive(Debug, Eq)
 
