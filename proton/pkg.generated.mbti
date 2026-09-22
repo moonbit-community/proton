@@ -280,6 +280,7 @@ pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
 pub fn App::name(Self) -> String raise AppMetadataError
+pub fn App::on_before_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Self
 pub fn App::on_browser_event(Self, async (BrowserHandle, BrowserEvent) -> Unit noraise) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
@@ -289,10 +290,12 @@ pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermiss
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_new_window_request(Self, async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 pub fn App::on_permission_request(Self, async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise) -> Self
+pub fn App::on_quit(Self, async (ApplicationContext, Int) -> Unit noraise) -> Self
 pub fn App::on_system_appearance_change(Self, async (SystemAppearance) -> Unit noraise) -> Self
 pub fn App::on_thumbar_button_click(Self, async (WindowHandle, String) -> Unit noraise) -> Self
 pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub fn App::on_view_event(Self, async (ViewHandle, ViewEvent) -> Unit noraise) -> Self
+pub fn App::on_will_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
 pub fn App::path(Self, AppPathKind) -> String raise AppPathError
@@ -343,7 +346,8 @@ pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
-  request_quit : () -> Unit
+  request_quit : (Int) -> Unit
+  request_exit : (Int) -> Unit
   application_identifier : String
   application_executable : String
   application_arguments : Array[String]
@@ -353,12 +357,20 @@ pub fn ApplicationContext::exit(Self, exit_code? : Int) -> Unit
 pub fn ApplicationContext::is_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
-pub fn ApplicationContext::quit(Self) -> Unit
+pub fn ApplicationContext::quit(Self, exit_code? : Int) -> Unit
 pub fn ApplicationContext::relaunch(Self, options? : RelaunchOptions) -> Unit raise AppControlError
 pub fn ApplicationContext::remove_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::set_as_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::windows(Self) -> WindowManager
+
+pub(all) enum ApplicationQuitDecision {
+  Allow
+  Prevent
+} derive(Eq, @debug.Debug)
+pub fn ApplicationQuitDecision::equal(Self, Self) -> Bool
+pub fn ApplicationQuitDecision::not_equal(Self, Self) -> Bool
+pub fn ApplicationQuitDecision::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BridgeDiagnostic {
   stage : String

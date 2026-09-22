@@ -358,6 +358,32 @@ jobs:
               --diagnostic-limit 200 -- --self-hosted
           fi
 
+      - name: Run quit chain e2e on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        timeout-minutes: 10
+        env:
+          _CL_: /utf-8
+          PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          moon -C e2e run test --target native --diagnostic-limit 200 -- --quit-chain
+
+      - name: Run quit chain e2e on Unix
+        if: ${{ matrix.os != 'windows-latest' }}
+        timeout-minutes: 10
+        env:
+          PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
+          MOON_CC: cc
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            xvfb-run -a moon -C e2e run test --target native \
+              --diagnostic-limit 200 -- --quit-chain
+          else
+            moon -C e2e run test --target native \
+              --diagnostic-limit 200 -- --quit-chain
+          fi
+
       - name: Test macOS native button layout
         if: ${{ matrix.os == 'macos-latest' }}
         run: moon -C proton test internal/native/ffi_mac/tests/button_position --target native --diagnostic-limit 80

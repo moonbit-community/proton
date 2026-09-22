@@ -26,6 +26,22 @@ pub extend LastWindowClosedPolicy with Eq::{not_equal, equal}
 pub extend LastWindowClosedPolicy with Debug::{to_repr}
 
 ///|
+/// How an application answers a cancelable quit event.
+///
+/// `Prevent` is the typed counterpart of Electron's `event.preventDefault()`
+/// on `before-quit` and `will-quit`.
+pub(all) enum ApplicationQuitDecision {
+  Allow
+  Prevent
+} derive(Eq, Debug)
+
+///|
+pub extend ApplicationQuitDecision with Eq::{not_equal, equal}
+
+///|
+pub extend ApplicationQuitDecision with Debug::{to_repr}
+
+///|
 /// Controls when Proton enables the browser accessibility tree.
 pub(all) enum AccessibilityMode {
   Automatic
@@ -117,6 +133,9 @@ struct App {
   extension_capabilities : Array[ExtensionCapabilityBinding]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
   planned_views : Array[(String, ViewConfig)]
+  mut before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  mut will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
   launch_input_handlers : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ]
@@ -279,6 +298,9 @@ priv struct BridgeDispatchTask {
 ///|
 priv struct RunningWindow {
   id : String
+  /// Identity of the native window slot. Native events carry this value, and
+  /// it stays valid after the window handle itself is destroyed.
+  native_id : Int64
   window : @native.Window
   permissions : WindowPermissionPolicy
   lifetime : WindowLifetime
@@ -330,9 +352,13 @@ priv struct PendingResourceRequest {
 ///|
 priv enum CloseCoordinatorState {
   CloseRunning = 0
-  CloseQuitRequested = 1
-  CloseCollecting = 2
-  CloseCommitted = 3
+  CloseBeforeQuit = 1
+  CloseQuitRequested = 2
+  CloseCollecting = 3
+  CloseClosingWindows = 4
+  CloseWillQuit = 5
+  CloseQuitting = 6
+  CloseCommitted = 7
 } derive(Eq)
 
 ///|
@@ -347,6 +373,12 @@ priv struct PendingCloseDecision {
 priv struct CloseCoordinator {
   mut state : CloseCoordinatorState
   pending : Array[PendingCloseDecision]
+  mut pending_quit : @async.Task[ApplicationQuitDecision]?
+  mut forced : Bool
+  mut exit_code : Int
+  /// Whether the last-window policy already consumed the current windowless
+  /// period, so a prevented quit is not retried until a window opens again.
+  mut last_window_quit_handled : Bool
 }
 
 ///|
@@ -465,6 +497,9 @@ priv struct RuntimeSession {
     async (BrowserHandle, BrowserEvent) -> Unit noraise,
   ]
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
+  before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
   window_tasks : @async.TaskGroup[Unit]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
   lifecycle_failures : Array[AppCleanupError]
