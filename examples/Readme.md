@@ -153,6 +153,10 @@ moon -C examples run 01_run --target native
 - `80_system_preferences`: manual Electron-style system preference readback
   covering the accent color, animation guidance, media consent, and
   accessibility trust, with every unsupported query reported in the page.
+- [81_quit_event_chain](81_quit_event_chain/README.md): manual Electron-style
+  quit chain review covering cancelable before-quit and will-quit, the final
+  quit notification, orderly and forced exit codes, and the automatic
+  last-window quit.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only
