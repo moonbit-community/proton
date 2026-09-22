@@ -12,7 +12,7 @@ with_view() 在 x=288 处添加 832 × 720 子浏览器，独立于宿主 HTML �
 
 ## 运行
 
-需满足[运行环境要求](../installation.md)。在仓库根目录执行：
+需满足[运行环境要求](../introduction/installation.md)。在仓库根目录执行：
 
 ```sh
 moon -C examples run 53_view_minimal --target native

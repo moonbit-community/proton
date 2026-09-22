@@ -21,7 +21,7 @@ async fn main {
 
 ## 运行
 
-需满足[运行环境要求](../installation.md)。在仓库根目录执行：
+需满足[运行环境要求](../introduction/installation.md)。在仓库根目录执行：
 
 ```sh
 moon -C examples run 12_embed --target native

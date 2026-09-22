@@ -12,7 +12,7 @@ identify 命令返回传入标签与 CommandContext.window_id()。不同窗口�
 
 ## 运行
 
-需满足[运行环境要求](../installation.md)。在仓库根目录执行：
+需满足[运行环境要求](../introduction/installation.md)。在仓库根目录执行：
 
 ```sh
 moon -C examples run 45_bridge_multi_window --target native

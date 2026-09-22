@@ -19,7 +19,7 @@
 
 ## 源码与运行时
 
-示例使用仓库工作区。检出对应发布提交，安装[所需工具](../installation.md)，并先安装该版本的运行时：
+示例使用仓库工作区。检出对应发布提交，安装[所需工具](../introduction/installation.md)，并先安装该版本的运行时：
 
 ```sh
 git clone https://github.com/moonbit-community/proton.git

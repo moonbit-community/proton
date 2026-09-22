@@ -4,7 +4,7 @@
 
 This tutorial uses the isomorphic template to connect a shared contract, native state, and a Rabbita UI. You will first run the generated Todo app, then add **Complete all** and **Reopen all** operations across all three modules.
 
-Complete [prerequisites](../installation.md), including Node.js for Warren's build tooling. You do not need to modify the earlier minimal app.
+Complete [prerequisites](../introduction/installation.md), including Node.js for Warren's build tooling. You do not need to modify the earlier minimal app.
 
 ## Create and explore the app
 
@@ -201,6 +201,6 @@ proton_cli package --dry-run
 proton_cli package --release
 ```
 
-Launch the packaged app without the development server and repeat the two-button check. See [build and distribute](../packaging.md) for platform formats and signing.
+Launch the packaged app without the development server and repeat the two-button check. See [build and distribute](../command-line-interface/packaging.md) for platform formats and signing.
 
 Persistent storage is deliberately outside this example. If you add it, keep loading, validation, and writes in the backend, and preserve the same command/event interface to the frontend.

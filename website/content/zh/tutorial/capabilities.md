@@ -95,7 +95,7 @@ async fn main {
 
 为第二个窗口添加能力时，通过 `RendererTarget::entry(window="...")` 或 `RendererTarget::bundled(window="...")` 显式选择目标，只授予页面功能真正需要的权限。
 
-本地 workspace 目录适合这个开发练习。安装资源目录可能只读，持久化文件应放在合适的可写应用数据目录或用户选择的位置。需要随应用分发的文件通过[资源配置](../configuration.md)打包。
+本地 workspace 目录适合这个开发练习。安装资源目录可能只读，持久化文件应放在合适的可写应用数据目录或用户选择的位置。需要随应用分发的文件通过[资源配置](../configuration/index.md)打包。
 
 ## 其他能力
 

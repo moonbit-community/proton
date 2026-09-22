@@ -26,7 +26,7 @@ async fn main {
 
 ## Run
 
-[Environment requirements](../installation.md) apply. From the checked-out repository root:
+[Environment requirements](../introduction/installation.md) apply. From the checked-out repository root:
 
 ```sh
 moon -C examples run 46_asset_sidecar_resources --target native

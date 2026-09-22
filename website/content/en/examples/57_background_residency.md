@@ -12,7 +12,7 @@ KeepRunning retains the process. A second launch delivers Reopen; the handler re
 
 ## Run
 
-[Environment requirements](../installation.md) apply. From the checked-out repository root:
+[Environment requirements](../introduction/installation.md) apply. From the checked-out repository root:
 
 ```sh
 moon -C examples run 57_background_residency --target native

@@ -4,7 +4,7 @@
 
 本教程使用 isomorphic 模板连接共享契约、原生状态和 Rabbita 界面。先运行生成的 Todo 应用，再跨三个模块加入 **Complete all** 和 **Reopen all** 操作。
 
-请先完成[环境准备](../installation.md)，包括 Warren 构建工具需要的 Node.js。无需修改之前的 minimal 应用。
+请先完成[环境准备](../introduction/installation.md)，包括 Warren 构建工具需要的 Node.js。无需修改之前的 minimal 应用。
 
 ## 创建并体验应用
 
@@ -201,6 +201,6 @@ proton_cli package --dry-run
 proton_cli package --release
 ```
 
-在不运行开发服务器的情况下启动打包应用，重复验证两个按钮。平台格式和签名见[构建与分发](../packaging.md)。
+在不运行开发服务器的情况下启动打包应用，重复验证两个按钮。平台格式和签名见[构建与分发](../command-line-interface/packaging.md)。
 
 本示例不包含持久化存储。后续添加时，应将加载、校验和写入放在后端，并保持相同的前端命令与事件接口。

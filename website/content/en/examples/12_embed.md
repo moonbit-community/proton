@@ -21,7 +21,7 @@ async fn main {
 
 ## Run
 
-[Environment requirements](../installation.md) apply. From the checked-out repository root:
+[Environment requirements](../introduction/installation.md) apply. From the checked-out repository root:
 
 ```sh
 moon -C examples run 12_embed --target native

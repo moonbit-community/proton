@@ -2,7 +2,7 @@
 
 [中文](../zh/tutorial/first-app.html)
 
-This guide creates a desktop window with the minimal template. You will run it, change its contents, and build the executable. Finish [prerequisites](../installation.md) before starting.
+This guide creates a desktop window with the minimal template. You will run it, change its contents, and build the executable. Finish [prerequisites](../introduction/installation.md) before starting.
 
 ## 1. Create the application
 
@@ -72,10 +72,10 @@ moon check --target native
 proton_cli build
 ```
 
-A successful build creates the native executable; it does not yet assemble a distributable application. [Build and distribute](../packaging.md) explains that next step.
+A successful build creates the native executable; it does not yet assemble a distributable application. [Build and distribute](../command-line-interface/packaging.md) explains that next step.
 
 ## Where to go next
 
-Read [project structure](../project-structure.md) to understand the generated files. To add interaction to this page, follow [calling the backend](commands-events.md). To write the UI in MoonBit too, use the [complete isomorphic example](isomorphic.md).
+Read [project structure](../introduction/project-structure.md) to understand the generated files. To add interaction to this page, follow [calling the backend](commands-events.md). To write the UI in MoonBit too, use the [complete isomorphic example](isomorphic.md).
 
 If the app does not start, run `proton_cli doctor` and inspect the full terminal error. If it builds but shows the old page, stop the previous process and rerun `dev`; this template has no frontend hot-reload server.

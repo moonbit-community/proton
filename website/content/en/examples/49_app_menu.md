@@ -12,7 +12,7 @@ Menu actions update enabled, visible and checked state. Native menu roles and ap
 
 ## Run
 
-[Environment requirements](../installation.md) apply. From the checked-out repository root:
+[Environment requirements](../introduction/installation.md) apply. From the checked-out repository root:
 
 ```sh
 moon -C examples run 49_app_menu --target native

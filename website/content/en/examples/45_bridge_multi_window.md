@@ -12,7 +12,7 @@ The identify command returns both the supplied label and CommandContext.window_i
 
 ## Run
 
-[Environment requirements](../installation.md) apply. From the checked-out repository root:
+[Environment requirements](../introduction/installation.md) apply. From the checked-out repository root:
 
 ```sh
 moon -C examples run 45_bridge_multi_window --target native

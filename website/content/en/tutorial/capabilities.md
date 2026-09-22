@@ -95,7 +95,7 @@ Removing `.capability(...)` does not stop the app from starting, but the route b
 
 For a second window, select explicit `RendererTarget::entry(window="...")` or `RendererTarget::bundled(window="...")` targets when adding the capability. Grant each page only what its feature requires.
 
-The local workspace directory is useful for this development exercise. Installed resources may be read-only; use an appropriate writable application-data or user-selected directory for persistent files. Package files you intentionally ship via [resources configuration](../configuration.md).
+The local workspace directory is useful for this development exercise. Installed resources may be read-only; use an appropriate writable application-data or user-selected directory for persistent files. Package files you intentionally ship via [resources configuration](../configuration/index.md).
 
 ## Other capabilities
 

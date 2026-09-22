@@ -12,7 +12,7 @@ Starting the ticker produces tick events and a done event. The command also retu
 
 ## Run
 
-[Environment requirements](../installation.md) apply. From the checked-out repository root:
+[Environment requirements](../introduction/installation.md) apply. From the checked-out repository root:
 
 ```sh
 moon -C examples run 40_event_broadcast --target native

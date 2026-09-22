@@ -12,7 +12,7 @@ KeepRunning 保留进程。再次启动发送 Reopen，处理器仅在 main 不�
 
 ## 运行
 
-需满足[运行环境要求](../installation.md)。在仓库根目录执行：
+需满足[运行环境要求](../introduction/installation.md)。在仓库根目录执行：
 
 ```sh
 moon -C examples run 57_background_residency --target native

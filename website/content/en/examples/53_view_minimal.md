@@ -12,7 +12,7 @@ with_view() adds a browser at x=288 with an 832 × 720 viewport. It loads exampl
 
 ## Run
 
-[Environment requirements](../installation.md) apply. From the checked-out repository root:
+[Environment requirements](../introduction/installation.md) apply. From the checked-out repository root:
 
 ```sh
 moon -C examples run 53_view_minimal --target native

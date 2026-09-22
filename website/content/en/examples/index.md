@@ -19,7 +19,7 @@ Ten examples selected for focused behavior, readable entry points and coverage o
 
 ## Source checkout and runtime
 
-Examples use the repository workspace. Clone the release commit, install the [required tools](../installation.md), and set up its runtime once:
+Examples use the repository workspace. Clone the release commit, install the [required tools](../introduction/installation.md), and set up its runtime once:
 
 ```sh
 git clone https://github.com/moonbit-community/proton.git

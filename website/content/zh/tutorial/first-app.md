@@ -2,7 +2,7 @@
 
 [English](../../tutorial/first-app.html)
 
-本章用 minimal 模板创建一个桌面窗口，运行它、修改页面，再构建可执行文件。开始前请完成[环境准备](../installation.md)。
+本章用 minimal 模板创建一个桌面窗口，运行它、修改页面，再构建可执行文件。开始前请完成[环境准备](../introduction/installation.md)。
 
 ## 1. 创建应用
 
@@ -72,10 +72,10 @@ moon check --target native
 proton_cli build
 ```
 
-构建成功会生成原生可执行文件，但还没有组装成可分发的应用。[构建与分发](../packaging.md)会说明后续步骤。
+构建成功会生成原生可执行文件，但还没有组装成可分发的应用。[构建与分发](../command-line-interface/packaging.md)会说明后续步骤。
 
 ## 下一步
 
-通过[项目结构](../project-structure.md)了解生成的文件。想为当前页面增加交互，可以阅读[从前端调用后端](commands-events.md)；想同时用 MoonBit 编写界面，可以跟随[完整前后端示例](isomorphic.md)。
+通过[项目结构](../introduction/project-structure.md)了解生成的文件。想为当前页面增加交互，可以阅读[从前端调用后端](commands-events.md)；想同时用 MoonBit 编写界面，可以跟随[完整前后端示例](isomorphic.md)。
 
 如果应用无法启动，执行 `proton_cli doctor` 并查看终端中的完整错误。如果构建成功却仍显示旧页面，先停止旧进程，再重新运行 `dev`；此模板没有提供前端热更新的服务器。
