@@ -1,5 +1,7 @@
 #if defined(_WIN32)
 
+#include <stdlib.h>
+
 #include "../../src/engine/cef_win/win_geometry.h"
 #include "../../src/engine/cef_win/win_internal.h"
 
@@ -456,6 +458,69 @@ cleanup:
     UnregisterClassW(L"ProtonTitlebarHitTest", instance);
   if (previous != NULL)
     SetThreadDpiAwarenessContext(previous);
+  return result;
+}
+
+/* No CEF or visible windows: replay OnBeforeClose's posted HWND destruction
+ * through the production window procedure, with a collection pass in between. */
+int32_t proton_test_closed_modal_window_collection(void) {
+  int result = 0;
+  int queued = 0;
+  HWND parent = NULL;
+  HWND modal = NULL;
+  HMENU menu = NULL;
+  proton_engine_window_t *window = calloc(1, sizeof(*window));
+  CHECK(window != NULL);
+  CHECK(proton_engine_closed_windows_ready_for_shutdown());
+  parent = CreateWindowExW(0, L"STATIC", L"Modal parent test",
+                           WS_OVERLAPPEDWINDOW, 0, 0, 400, 300, NULL, NULL,
+                           GetModuleHandleW(NULL), NULL);
+  CHECK(parent != NULL);
+  proton_engine_register_window_class();
+  modal = CreateWindowExW(0, PROTON_ENGINE_WINDOW_CLASS, L"Modal cleanup test",
+                          WS_OVERLAPPEDWINDOW, 0, 0, 200, 100, parent, NULL,
+                          GetModuleHandleW(NULL), window);
+  CHECK(modal != NULL);
+  CHECK(!IsWindowVisible(modal));
+  window->parent_hwnd = parent;
+  window->modal_parent = 1;
+  EnableWindow(parent, FALSE);
+  CHECK(!IsWindowEnabled(parent));
+  menu = CreateMenu();
+  CHECK(menu != NULL);
+  window->app_menu = menu;
+  window->window_icon = CopyIcon(LoadIconW(NULL, (LPCWSTR)IDI_APPLICATION));
+  CHECK(window->window_icon != NULL);
+  CHECK(PostMessageW(modal, PROTON_ENGINE_WM_DESTROY_SELF, 0, 0));
+  proton_engine_window_defer_free(window);
+  queued = 1;
+  proton_engine_free_closed_windows();
+  // Do not dereference window until retention has been established: the old
+  // collector freed it and cleared GWLP_USERDATA at this point.
+  CHECK(GetWindowLongPtrW(modal, GWLP_USERDATA) == (LONG_PTR)window);
+  CHECK(!proton_engine_closed_windows_ready_for_shutdown());
+  CHECK(IsWindow(modal));
+  CHECK(!IsWindowEnabled(parent));
+  MSG message;
+  CHECK(PeekMessageW(&message, modal, PROTON_ENGINE_WM_DESTROY_SELF,
+                     PROTON_ENGINE_WM_DESTROY_SELF, PM_REMOVE));
+  DispatchMessageW(&message);
+  CHECK(!IsWindow(modal));
+  CHECK(IsWindowEnabled(parent));
+  CHECK(window->hwnd == NULL);
+  CHECK(window->app_menu == NULL);
+  CHECK(!IsMenu(menu));
+  CHECK(window->window_icon == NULL);
+  CHECK(proton_engine_closed_windows_ready_for_shutdown());
+cleanup:
+  if (modal != NULL && IsWindow(modal)) DestroyWindow(modal);
+  if (queued) {
+    proton_engine_free_closed_windows();
+  } else {
+    free(window);
+  }
+  if (menu != NULL && IsMenu(menu)) DestroyMenu(menu);
+  if (parent != NULL) DestroyWindow(parent);
   return result;
 }
 

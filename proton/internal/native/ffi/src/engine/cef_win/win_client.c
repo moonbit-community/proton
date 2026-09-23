@@ -693,11 +693,6 @@ static void proton_engine_window_free_storage(
     return;
   }
   proton_engine_window_free_views(window);
-  if (window->hwnd != NULL) {
-    // A deferred destroy may still be queued for this frame; detach the
-    // window pointer so the message never dereferences the freed struct.
-    SetWindowLongPtrW(window->hwnd, GWLP_USERDATA, 0);
-  }
   if (window->background_brush != NULL) {
     DeleteObject(window->background_brush);
     window->background_brush = NULL;
@@ -710,13 +705,19 @@ static void proton_engine_window_free_storage(
 }
 
 void proton_engine_free_closed_windows(void) {
-  proton_engine_window_t *window = g_proton_engine_closed_windows;
-  g_proton_engine_closed_windows = NULL;
-  while (window != NULL) {
-    proton_engine_window_t *next = window->next;
+  proton_engine_window_t **cursor = &g_proton_engine_closed_windows;
+  while (*cursor != NULL) {
+    proton_engine_window_t *window = *cursor;
+    // OnBeforeClose posts native destruction for a later Win32 message pass.
+    // WM_DESTROY still needs the record to re-enable a modal parent and clean
+    // up menus and icons. Keep it in the shutdown readiness check until then.
+    if (window->hwnd != NULL) {
+      cursor = &window->next;
+      continue;
+    }
+    *cursor = window->next;
     window->next = NULL;
     proton_engine_window_free_storage(window);
-    window = next;
   }
 }
 
