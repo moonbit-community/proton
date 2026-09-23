@@ -80,7 +80,7 @@ static const wchar_t *proton_system_media_name(int32_t media) {
   case PROTON_MEDIA_ACCESS_MICROPHONE:
     return L"microphone";
   case PROTON_MEDIA_ACCESS_CAMERA:
-    return L"camera";
+    return L"webcam";
   default:
     return NULL;
   }
