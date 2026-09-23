@@ -4603,14 +4603,17 @@ fn RuntimeSession::advance_forced_exit(
   self : RuntimeSession,
 ) -> Bool raise AppRunError {
   match self.close_coordinator.state {
-    CloseRunning | CloseBeforeQuit | CloseQuitRequested | CloseCollecting => {
+    CloseRunning
+    | CloseBeforeQuit
+    | CloseQuitRequested
+    | CloseCollecting
+    | CloseWillQuit => {
       self.begin_forced_close()
       true
     }
-    // A forced exit requested from the final notification can only replace
-    // the exit code; the quit chain is already past its cancelable steps.
-    CloseClosingWindows | CloseWillQuit | CloseQuitting | CloseCommitted =>
-      false
+    // Window teardown is already in progress. The final notification is not
+    // cancelable; a forced request there can only replace the exit code.
+    CloseClosingWindows | CloseQuitting | CloseCommitted => false
   }
 }
 
