@@ -73,7 +73,9 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         "initial-ready-quit", "loaded-view-close", "queued-view-close", "stale-view-close",
         "remove-view-close", "page-view-close", "parent-view-close", "cancel-during-startup",
         "initial-open", "cancel-sleep", "cancel-open", "task-success", "task-failure",
-        "close-decision", "process-lifetime", "app-control", "process-events",
+        "close-decision", "process-lifetime", "app-control", "process-events", "process-events-no-bridge",
+        "proxy-config", "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
+        "closed-record-churn",
       ]
   }
   let failures : Array[String] = []
@@ -129,9 +131,23 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
             msg="child view renderer did not become ready",
           )
         }
+        if name == "process-events-no-bridge" {
+          let page = connect_spawned_page(
+            group,
+            app,
+            port.to_string(),
+            timeout,
+            title="No Bridge",
+          )
+          assert_true(
+            evaluate_bool(
+              page, "typeof window.__MoonBit__ === 'undefined'", false,
+            ),
+          )
+        }
         let snapshot = snapshot_scenario_process_tree(app)
         @mbfs.write_string_to_file(gate, "go")
-        if name == "process-events" {
+        if name == "process-events" || name == "process-events-no-bridge" {
           kill_renderer_helpers(snapshot)
         }
         ignore(
