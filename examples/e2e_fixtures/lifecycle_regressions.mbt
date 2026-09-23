@@ -533,7 +533,10 @@ async fn run_process_events_regression() -> Unit {
   })
   .on_render_process_gone(fn(contents, details) {
     gone_contents.push(
-      contents.window_id() +
+      (match contents {
+        Browser(browser) => "browser:" + browser.window_id()
+        View(view) => "view:" + view.window_id() + "/" + view.id()
+      }) +
       ":" +
       process_event_reason_name(details.reason) +
       ":" +
@@ -560,7 +563,7 @@ async fn run_process_events_regression() -> Unit {
               .add_view(
                 "tab",
                 @proton.view(
-                  "data:text/html,process-events",
+                  "data:text/html,<title>Process Events View</title>process-events",
                   width=200,
                   height=120,
                 ),
@@ -570,9 +573,13 @@ async fn run_process_events_regression() -> Unit {
             // then kills the renderer helpers it finds.
             lifecycle_probe_gate()
             let deadline = @async.now() + 20000L
-            while gone_contents.length() == 0 {
+            while !gone_contents.any(gone => gone.has_prefix("browser:main:")) ||
+                  !gone_contents.any(gone => gone.has_prefix("view:main/tab:")) {
               if @async.now() > deadline {
-                fail("no render-process-gone event arrived")
+                fail(
+                  "missing renderer notifications; received: " +
+                  gone_contents.join(","),
+                )
               }
               @async.sleep(10)
             }
@@ -589,19 +596,21 @@ async fn run_process_events_regression() -> Unit {
   assert_true(created_windows.contains("main"))
   assert_true(created_contents.contains("browser:main"))
   assert_true(created_contents.contains("view:main/tab"))
-  assert_true(gone_contents.length() > 0)
-  let gone = gone_contents[0]
-  assert_true(
-    gone.contains(":killed:") || gone.contains(":crashed:"),
-    msg="unexpected renderer termination: " + gone,
-  )
+  assert_true(gone_contents.any(gone => gone.has_prefix("browser:main:")))
+  assert_true(gone_contents.any(gone => gone.has_prefix("view:main/tab:")))
+  for gone in gone_contents {
+    assert_true(
+      gone.contains(":killed:") || gone.contains(":crashed:"),
+      msg="unexpected renderer termination: " + gone,
+    )
+  }
   println(
     "PROCESS_EVENTS session=" +
     session_events[0] +
     " contents=" +
     created_contents.join(",") +
     " gone=" +
-    gone,
+    gone_contents.join(","),
   )
   println("LIFECYCLE_PASSED process-events")
 }
