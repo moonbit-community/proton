@@ -141,7 +141,9 @@ from `App::run` normally.
 every window without asking and skips `before-quit` and `will-quit`, but the
 `quit` notification still observes the requested code before Proton tears the
 runtime down. If either cancelable handler requests `exit`, its pending task
-is cancelled and its decision cannot prevent the forced exit.
+is cancelled and its decision cannot prevent the forced exit. Unlike `quit(0)`,
+`exit()` (the default status is `0`) terminates the process rather than returning
+from `App::run`.
 
 ## Application control
 

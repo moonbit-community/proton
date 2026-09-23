@@ -4547,9 +4547,12 @@ fn RuntimeSession::is_quitting(self : RuntimeSession) -> Bool {
 }
 
 ///|
-/// Returns the process exit code this application terminates with.
-fn RuntimeSession::resolved_exit_code(self : RuntimeSession) -> Int {
-  self.close_coordinator.exit_code
+/// Preserves the exit mode alongside the status through runtime cleanup.
+fn RuntimeSession::resolved_exit(self : RuntimeSession) -> ApplicationExit {
+  {
+    exit_code: self.close_coordinator.exit_code,
+    forced: self.close_coordinator.forced,
+  }
 }
 
 ///|

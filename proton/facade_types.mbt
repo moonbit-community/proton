@@ -378,6 +378,12 @@ priv struct PendingCloseDecision {
 }
 
 ///|
+priv struct ApplicationExit {
+  exit_code : Int
+  forced : Bool
+}
+
+///|
 priv struct CloseCoordinator {
   mut state : CloseCoordinatorState
   pending : Array[PendingCloseDecision]
