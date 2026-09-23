@@ -16,13 +16,14 @@ let update_check_delay_ms : Int = 20 * 1000
 let update_check_jitter_ms : Int = 40 * 1000
 
 ///|
-/// The update channel configured on the application, once it is running.
-///
-/// Process-global because the update channel is a property of the installed
-/// application, not of a window or a request. The renderer-facing extension
-/// reads it through `check_for_update`, which is the only way it can: a page
-/// must never be able to name an endpoint.
-let active_update_channel : Ref[ResolvedUpdateChannel?] = Ref(None)
+/// Shared by a session and its contexts, invalidated when that application ends.
+priv struct ApplicationUpdates {
+  mut channel : ResolvedUpdateChannel?
+}
+
+///|
+/// Compatibility entry point for renderer extensions without an app context.
+let active_application_updates : Ref[ApplicationUpdates?] = Ref(None)
 
 ///|
 /// What asking the channel concluded.
@@ -43,7 +44,24 @@ pub enum UpdateCheck {
 /// "nobody told us where to look" and "we looked and found nothing" are
 /// different answers and only one of them is worth showing a user.
 pub async fn check_for_update() -> UpdateCheck {
-  match active_update_channel.val {
+  match active_application_updates.val {
+    None => NotConfigured
+    Some(updates) => updates.check()
+  }
+}
+
+///|
+/// Checks this application's configured channel, including during startup.
+/// Returns `NotConfigured` after the application has finished running.
+pub async fn ApplicationContext::check_for_update(
+  self : ApplicationContext,
+) -> UpdateCheck {
+  self.updates.check()
+}
+
+///|
+async fn ApplicationUpdates::check(self : ApplicationUpdates) -> UpdateCheck {
+  match self.channel {
     None => NotConfigured
     Some(channel) =>
       match channel.poll() {

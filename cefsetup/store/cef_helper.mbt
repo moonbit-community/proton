@@ -83,10 +83,23 @@ async fn helper_build_directory() -> String {
 }
 
 ///|
+async fn helper_is_valid(path : String) -> Bool {
+  guard file_is_nonempty(path) else { return false }
+  if @path.sep == '\\' {
+    true
+  } else {
+    @async_fs.can_execute(path) catch {
+      error if @async.is_being_cancelled() => raise error
+      _ => false
+    }
+  }
+}
+
+///|
 /// Resolves the helper executable installed for this Proton release.
 pub async fn resolve_default_helper() -> String {
   let (_, executable, _) = default_helper_paths()
-  guard path_is_file(executable) else {
+  guard helper_is_valid(executable) else {
     raise CefHelperError::NotInstalled(path=executable)
   }
   executable
@@ -100,7 +113,7 @@ async fn install_default_helper() -> String {
   let lock = acquire_install_lock(root)
   defer lock.close()
   defer lock.unlock()
-  if path_is_file(executable) {
+  if helper_is_valid(executable) {
     return executable
   }
   let staging = create_install_staging(root)
@@ -128,11 +141,11 @@ async fn install_default_helper() -> String {
   }
   guard code == 0 else { raise CefHelperError::InstallExit(code~) }
   let staged_executable = path_join(staging, executable_name)
-  guard path_is_file(staged_executable) else {
+  guard helper_is_valid(staged_executable) else {
     raise CefHelperError::InstalledExecutableMissing(path=staged_executable)
   }
   publish_staged_directory(staging, root)
-  guard path_is_file(executable) else {
+  guard helper_is_valid(executable) else {
     raise CefHelperError::InstalledExecutableMissing(path=executable)
   }
   executable

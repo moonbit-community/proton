@@ -75,9 +75,9 @@ pub fn ScreenMonitor::stop_watching(Self) -> Unit raise ScreenMonitorError
 pub fn ScreenMonitor::window_sources_json(Self, Int, Int) -> Bytes
 
 pub enum ScreenMonitorEvent {
-  DisplayAdded
-  DisplayRemoved
-  DisplayMetricsChanged
+  DisplayAdded(DisplayInfo)
+  DisplayRemoved(DisplayInfo)
+  DisplayMetricsChanged(DisplayInfo)
 } derive(Eq, @debug.Debug)
 pub fn ScreenMonitorEvent::equal(Self, Self) -> Bool
 pub fn ScreenMonitorEvent::not_equal(Self, Self) -> Bool

@@ -265,7 +265,11 @@ int32_t moonbit_power_monitor_start_watching(void *handle) {
     power_monitor_set_error(state, "power monitor has been destroyed");
     return power_monitor_STATUS_OPERATION_FAILED;
   }
-  return power_monitor_platform_start_watching(state);
+  int32_t status = power_monitor_platform_start_watching(state);
+  if (status != power_monitor_STATUS_OK && state->watch_error[0] != '\0') {
+    power_monitor_set_error(state, state->watch_error);
+  }
+  return status;
 }
 
 MOONBIT_FFI_EXPORT

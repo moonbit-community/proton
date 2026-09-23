@@ -121,6 +121,7 @@ test "macOS plist customization is escaped" {
     "demo-app",
     "1.2.3",
     "42",
+    minimum_system_version="13.0.0",
   )
   assert_true(plist.contains("<string>Demo &amp; App</string>"))
   assert_true(
@@ -377,4 +378,194 @@ async test "already embedded Windows icons do not require an icon writer" {
   assert_false(PackageCustomization().windows_icon_embedded)
   stage_windows_icon(spec, "/missing/demo.exe", embedded=true)
   assert_eq(spec.icons, ["/missing/app.ico"])
+}
+
+///|
+async test "competing package builds serialize preparation and release the lock after failure" {
+  let root = @async_fs.tmpdir(prefix="proton-package-lock-")
+  defer (remove_tree(root) catch { _ => () })
+  let executable = path_join(root, "fixture")
+  @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+  let formats = match current_package_host() {
+    Linux => [AppImage]
+    _ => [App]
+  }
+  let spec = PackageSpec(
+    executable,
+    "Lock Test",
+    "com.example.lock",
+    "1.0.0",
+    formats,
+    path_join(root, "out"),
+  )
+  @async.with_task_group(group => {
+    let entered = Ref(false)
+    let release = Ref(false)
+    let second_entered = Ref(false)
+    let first = group.spawn(() => {
+      try
+        build_with(spec, PackageCustomization(), layout => {
+          entered.val = true
+          while !release.val {
+            @async.sleep(5)
+          }
+          assert_true(path_is_file(layout.executable))
+          raise PackagePreparationTestError
+        })
+      catch {
+        PackagePreparationTestError => ()
+        error => raise error
+      } noraise {
+        _ => fail("expected preparation failure")
+      }
+    })
+    while !entered.val {
+      @async.sleep(5)
+    }
+    let second = group.spawn(() => {
+      try
+        build_with(spec, PackageCustomization(), layout => {
+          second_entered.val = true
+          assert_true(path_is_file(layout.executable))
+          raise PackagePreparationTestError
+        })
+      catch {
+        PackagePreparationTestError => ()
+        error => raise error
+      } noraise {
+        _ => fail("expected preparation failure")
+      }
+    })
+    @async.sleep(50)
+    assert_false(second_entered.val)
+    release.val = true
+    first.wait()
+    second.wait()
+    assert_true(second_entered.val)
+  })
+}
+
+///|
+test "macOS deployment metadata uses the highest load-command minimum, not SDK" {
+  let commands =
+    #|Load command 1
+    #|      cmd LC_BUILD_VERSION
+    #| platform 1
+    #|    minos 13.2
+    #|      sdk 27.0
+    #|Load command 2
+    #|      cmd LC_SOURCE_VERSION
+    #|  version 999.1
+    #|Load command 1
+    #|      cmd LC_VERSION_MIN_MACOSX
+    #|  version 14.1.2
+    #|      sdk 26.0
+  assert_eq(macos_load_command_minimum(commands), 14 * 65536 + 256 + 2)
+  let plist = macos_info_plist(
+    package_test_spec([App]),
+    PackageCustomization(),
+    "demo",
+    "1.0.0",
+    "1.0.0",
+    minimum_system_version="14.1.2",
+  )
+  assert_true(
+    plist.contains("<key>LSMinimumSystemVersion</key><string>14.1.2</string>"),
+  )
+}
+
+///|
+async test "macOS staging derives the minimum from real executable and library load commands" {
+  guard current_package_host() is Macos else { return }
+  let root = @async_fs.tmpdir(prefix="proton-package-minimum-")
+  defer (remove_tree(root) catch { _ => () })
+  let source = path_join(root, "main.c")
+  @async_fs.write_file(
+    source,
+    "int main(void) { return 0; }",
+    create_mode=CreateOrTruncate,
+  )
+  let executable = path_join(root, "main")
+  assert_eq(
+    @process.run("cc", ["-mmacosx-version-min=13.0", source, "-o", executable]),
+    0,
+  )
+  assert_eq(macos_bundle_minimum_version(executable), 13 * 65536)
+  let library = path_join(root, "newer.dylib")
+  assert_eq(
+    @process.run("cc", [
+      "-dynamiclib", "-mmacosx-version-min=14.0", source, "-o", library,
+    ]),
+    0,
+  )
+  let artifacts = build(
+    PackageSpec(
+      executable,
+      "Minimum Test",
+      "com.example.minimum",
+      "1.0.0",
+      [App],
+      path_join(root, "out"),
+      payloads=[Payload(library, "newer.dylib", location=Libraries)],
+    ),
+  )
+  let plist = @async_fs.read_file(
+    path_join(artifacts[0], "Contents/Info.plist"),
+  ).text()
+  assert_true(
+    plist.contains("<key>LSMinimumSystemVersion</key><string>14.0.0</string>"),
+  )
+}
+
+///|
+priv suberror PackagePreparationTestError
+
+///|
+async test "cancelled package builds release the output lock" {
+  @async.with_timeout(5000, () => {
+    let root = @async_fs.tmpdir(prefix="proton-package-cancel-")
+    defer (remove_tree(root) catch { _ => () })
+    let executable = path_join(root, "fixture")
+    @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+    let formats = match current_package_host() {
+      Linux => [AppImage]
+      _ => [App]
+    }
+    let spec = PackageSpec(
+      executable,
+      "Cancel Test",
+      "com.example.cancel",
+      "1.0.0",
+      formats,
+      path_join(root, "out"),
+    )
+    @async.with_task_group(group => {
+      let entered = Ref(false)
+      let owner = group.spawn(allow_failure=true, () => {
+        build_with(spec, PackageCustomization(), _ => {
+          entered.val = true
+          @async.sleep(10000)
+        })
+      })
+      while !entered.val {
+        @async.sleep(5)
+      }
+      owner.cancel()
+      ignore(owner.wait()) catch {
+        @async.TaskCancelled => ()
+        error => raise error
+      }
+      let prepared = Ref(false)
+      ignore(
+        build_with(spec, PackageCustomization(), _ => {
+          prepared.val = true
+          raise PackagePreparationTestError
+        }),
+      ) catch {
+        PackagePreparationTestError => ()
+        error => raise error
+      }
+      assert_true(prepared.val)
+    })
+  })
 }

@@ -334,6 +334,12 @@ async fn run_manifest(
       }
     None => ()
   }
+  let updates = ApplicationUpdates::{ channel: update_channel, }
+  active_application_updates.val = Some(updates)
+  defer {
+    updates.channel = None
+    active_application_updates.val = None
+  }
   let mut command_host : CommandHostRuntime? = None
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []
@@ -476,6 +482,7 @@ async fn run_manifest(
       }
       @async.with_task_group(window_tasks => {
         let session = RuntimeSession(
+          updates~,
           runtime,
           event_pump,
           locale_preferences,
@@ -537,7 +544,6 @@ async fn run_manifest(
           allow_failure=true,
         )
         let startup = session.drive_until_complete(application_start)
-        active_update_channel.val = update_channel
         if startup is Completed {
           for definition in definitions {
             if definition.plan.open_on_start &&

@@ -485,6 +485,7 @@ priv struct WindowPermissionPolicy {
 /// are non-owning capabilities that route operations back through the session
 /// instead of duplicating native lifecycle state.
 priv struct RuntimeSession {
+  updates : ApplicationUpdates
   runtime : @native.Runtime
   event_pump : RuntimeEventPump
   locale_preferences : @locale.LocalePreferences

@@ -10,6 +10,10 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "startup-update-channel" || name == "startup-update-failure" {
+    run_startup_update_regression(name)
+    return
+  }
   if name == "closed-record-churn" {
     run_closed_record_churn_regression()
     return
@@ -1181,4 +1185,49 @@ async fn run_closed_record_churn_regression() -> Unit {
   .run()
   assert_eq(removed.val, 25)
   println("LIFECYCLE_PASSED closed-record-churn")
+}
+
+///|
+async fn run_startup_update_regression(name : String) -> Unit {
+  let context : Ref[@proton.ApplicationContext?] = Ref(None)
+  let checked = Ref(0)
+  let failed_startup = name == "startup-update-failure"
+  let app = @proton.html("Startup update", "<html></html>")
+    .identifier("com.example.startup-update")
+    .update_channel(
+      "https://127.0.0.1:1/latest.json",
+      ["rsa-sha256:ab:010001"],
+      check_on_launch=false,
+    )
+    .app_lifecycle(
+      on_start=application => {
+        context.val = Some(application)
+        lifecycle_probe_gate()
+        // Invalid test keys/absent installed revision fail locally. Reaching
+        // that check proves the configured channel was present before startup.
+        ignore(application.check_for_update()) catch {
+          _ => checked.val = checked.val + 1
+        }
+        ignore(@proton.check_for_update()) catch {
+          _ => checked.val = checked.val + 1
+        }
+        assert_eq(checked.val, 2)
+        if failed_startup {
+          fail("intentional startup failure")
+        }
+        application.quit()
+      },
+      on_shutdown=_ => (),
+    )
+  let failed = try {
+    app.run()
+    false
+  } catch {
+    _ => true
+  }
+  assert_eq(failed, failed_startup)
+  assert_eq(checked.val, 2)
+  assert_true(@proton.check_for_update() is NotConfigured)
+  assert_true(context.val.unwrap().check_for_update() is NotConfigured)
+  println("LIFECYCLE_PASSED " + name)
 }

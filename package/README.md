@@ -69,3 +69,14 @@ The executable and `lib` package support both the wasm and native MoonBit
 targets. Windows executable icon embedding uses a native C stub; requesting an
 `.ico` while running the wasm build reports that unsupported operation instead
 of silently omitting the icon.
+
+Packaging jobs targeting the same output directory are serialized with a file
+lock held through staging, signing, and artifact replacement. The persistent
+`.proton-package.lock` file is reused; do not remove it while packaging runs.
+
+On macOS, `LSMinimumSystemVersion` is derived from the highest deployment
+version in the staged Mach-O executables and libraries, including payloads
+added by framework preparation. SDK versions are not deployment versions.
+Packaging requires `otool` from the Apple developer tools, and rejects Mach-O
+files whose macOS minimum cannot be determined. This property cannot be
+overridden through `macos_plist_strings`.

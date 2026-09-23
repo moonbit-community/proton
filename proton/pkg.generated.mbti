@@ -359,7 +359,9 @@ pub struct ApplicationContext {
   application_executable : String
   application_arguments : Array[String]
   url_schemes : Array[String]
+  // private fields
 }
+pub async fn ApplicationContext::check_for_update(Self) -> UpdateCheck
 pub fn ApplicationContext::exit(Self, exit_code? : Int) -> Unit
 pub fn ApplicationContext::focus(Self, steal? : Bool) -> Unit raise AppControlError
 pub fn ApplicationContext::hide(Self) -> Unit raise AppControlError

@@ -126,6 +126,14 @@ pub async fn build_with(
   let spec = PackageSpec::{ ..spec, formats, }
   let host = current_package_host()
   ensure_dir(spec.output)
+  let lock = @async_fs.open(
+    path_join(spec.output, ".proton-package.lock"),
+    mode=ReadWrite,
+    create_mode=OpenOrCreate,
+  )
+  defer lock.close()
+  lock.lock(Exclusive)
+  defer lock.unlock()
   match host {
     Macos => package_macos(spec, customization, prepare)
     Windows => package_windows(spec, customization, prepare)
@@ -138,6 +146,11 @@ fn validate_customization(
   customization : PackageCustomization,
 ) -> Unit raise PackagePlanError {
   for property in customization.macos_plist_strings {
+    guard property.key != "LSMinimumSystemVersion" else {
+      raise InvalidPayload(
+        detail="LSMinimumSystemVersion is derived from packaged binaries",
+      )
+    }
     guard property.key.trim().length() > 0 else {
       raise InvalidPayload(detail="macOS plist property key must not be empty")
     }

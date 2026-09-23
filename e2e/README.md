@@ -25,6 +25,9 @@ moon install moonbit-community/warren@0.3.3
 moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```
 
+`moon -C e2e test test --target native` runs helper unit tests only; it does
+not launch the self-hosted scenarios.
+
 Run one suite at a time: E2E scenarios own native processes,
 CDP ports, frontend servers, and runtime logs. The tests resolve the required
 CEF runtime from the immutable user-wide store. Each isolated scenario installs a release helper
@@ -123,3 +126,17 @@ The probe requires `on_before_quit` -> `on_will_quit` -> `on_quit` for orderly
 quits with exit code `0` and `3`, requires a forced exit to skip the cancelable
 steps while still reporting `quit 7`, and requires a prevented `before-quit` or
 `will-quit` to leave the application running.
+
+## Dev-extension failure diagnostics
+
+The Warren scenario reports startup, page/reload/origin probes, build, and
+shutdown separately. Startup uses the command timeout, builds have a minimum
+180-second budget on slow platforms, development page probes receive three
+probe budgets, and shutdown retains its own deadline. Helper installation has
+a minimum 180-second build budget. There is no single probe-sized deadline
+covering compilation and all subsequent phases.
+
+Successful runs remove their temporary directory. Failed runs retain child
+logs and `failure.txt`, print the directory, and expose it to CI for artifact
+upload. Runtime failures include the active phase, child PID/status, process
+tree and a bounded log tail.

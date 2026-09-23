@@ -15,6 +15,8 @@ pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRo
 
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
+pub fn watch_status() -> WatchStatus
+
 // Errors
 type PowerMonitorError derive(Eq, @debug.Debug)
 pub fn PowerMonitorError::equal(Self, Self) -> Bool
@@ -24,6 +26,14 @@ pub fn PowerMonitorError::to_repr(Self) -> @debug.Repr
 pub fn PowerMonitorError::to_string(Self) -> String
 
 // Types and methods
+pub enum WatchStatus {
+  Stopped
+  Watching
+  Unavailable(String)
+} derive(Eq, @debug.Debug)
+pub fn WatchStatus::equal(Self, Self) -> Bool
+pub fn WatchStatus::not_equal(Self, Self) -> Bool
+pub fn WatchStatus::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

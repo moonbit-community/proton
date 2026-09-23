@@ -12,6 +12,10 @@ const tempRoot = fs.mkdtempSync(
   path.join(os.tmpdir(), "proton-scaffold-registry-"),
 );
 const projectDir = path.join(tempRoot, "todo");
+const smokeEnv = { ...process.env, PROTON_NO_UPDATE_CHECK: "1" };
+for (const name of ["PROTON_RUNTIME_ROOT", "PROTON_RUNTIME_STORE", "PROTON_HELPER_PATH", "PROTON_CEF_SETUP_BOOTSTRAP"]) {
+  delete smokeEnv[name];
+}
 let succeeded = false;
 
 function moduleVersion(relativePath) {
@@ -27,7 +31,7 @@ function run(command, args, options = {}) {
   console.log(`+ ${command} ${args.join(" ")}`);
   const result = spawnSync(command, args, {
     cwd: options.cwd ?? tempRoot,
-    env: { ...process.env, PROTON_NO_UPDATE_CHECK: "1" },
+    env: smokeEnv,
     encoding: "utf8",
     stdio: options.capture ? "pipe" : "inherit",
     timeout: options.timeout ?? 300000,
@@ -119,9 +123,15 @@ try {
     "-y",
   ]);
   verifyGeneratedDependencies();
+  run(cli, ["-C", projectDir, "cef", "setup"], { timeout: 900000 });
   run("moon", ["check", "--target", "js,native", "--diagnostic-limit", "80"], {
     cwd: projectDir,
   });
+  run(cli, ["-C", projectDir, "build"], { timeout: 900000 });
+  const format = process.platform === "linux" ? "appimage" : "app";
+  const packageArgs = ["-C", projectDir, "package", "--release", "--format", format];
+  run(cli, [...packageArgs, "--dry-run"], { timeout: 900000 });
+  run(cli, packageArgs, { timeout: 900000 });
   succeeded = true;
   console.log("Registry scaffold smoke passed.");
 } finally {

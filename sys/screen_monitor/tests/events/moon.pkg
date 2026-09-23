@@ -1,0 +1,9 @@
+import {
+  "moonbit-community/proton_screen_monitor",
+} for "wbtest"
+
+supported_targets = "native"
+
+options(
+  "native-stub": [ "events_test.c" ],
+)

@@ -1,14 +1,4 @@
 ///|
-test "screen_monitor_event_from_native_code maps native codes" {
-  assert_true(screen_monitor_event_from_native_code(0) == DisplayAdded)
-  assert_true(screen_monitor_event_from_native_code(1) == DisplayRemoved)
-  assert_true(screen_monitor_event_from_native_code(2) == DisplayMetricsChanged)
-  assert_true(
-    screen_monitor_event_from_native_code(99) == DisplayMetricsChanged,
-  )
-}
-
-///|
 test "display_from_wire maps native geometry fields" {
   let wire = DisplayWire::{
     id: 3,
@@ -103,10 +93,7 @@ test "destroyed screen monitor cannot restart watching" {
   } noraise {
     _ => fail("destroyed monitor restarted watching")
   }
-  assert_eq(
-    native_take_event(monitor.handle, Ref(0)),
-    native_status_operation_failed,
-  )
+  assert_true(native_take_event(monitor.handle, Ref(0)).is_empty())
   assert_true(monitor.drain_events().is_empty())
   monitor.destroy()
 }

@@ -25,6 +25,7 @@ fn macos_info_plist(
   executable : String,
   short_version : String,
   bundle_version : String,
+  minimum_system_version~ : String,
 ) -> String {
   let custom_properties = StringBuilder()
   for property in customization.macos_plist_strings {
@@ -79,12 +80,13 @@ fn macos_info_plist(
     #|<key>CFBundlePackageType</key><string>APPL</string>
     #|<key>CFBundleShortVersionString</key><string>{{SHORT_VERSION}}</string>
     #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
-    #|<key>LSMinimumSystemVersion</key><string>12.0</string>
+    #|<key>LSMinimumSystemVersion</key><string>{{MINIMUM_OS}}</string>
     #|<key>NSHighResolutionCapable</key><true/>
     #|{{ICON}}{{URL_TYPES}}{{DOCUMENT_TYPES}}{{CUSTOM_PROPERTIES}}
     #|</dict></plist>
     #|
   template
+  .replace_all(old="{{MINIMUM_OS}}", new=minimum_system_version)
   .replace_all(old="{{PRODUCT}}", new=xml_escape(spec.product_name))
   .replace_all(old="{{EXECUTABLE}}", new=xml_escape(executable))
   .replace_all(old="{{IDENTIFIER}}", new=xml_escape(spec.identifier))
@@ -585,10 +587,24 @@ async fn package_macos(
     executables: macos,
   }
   prepare(layout)
+  let minimum = macos_bundle_minimum_version(app)
+  guard minimum > 0 else {
+    raise InvalidPayload(
+      detail="macOS bundle contains no versioned Mach-O executable",
+    )
+  }
+  let minimum_system_version = "\{minimum / 65536}.\{minimum / 256 % 256}.\{minimum % 256}"
   let (short_version, bundle_version) = macos_versions(spec.version)
   write_text(
     path_join(contents, "Info.plist"),
-    macos_info_plist(spec, customization, name, short_version, bundle_version),
+    macos_info_plist(
+      spec,
+      customization,
+      name,
+      short_version,
+      bundle_version,
+      minimum_system_version~,
+    ),
   )
   sign_macos_app(spec, customization, layout)
   let outputs : Array[String] = []
