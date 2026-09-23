@@ -141,6 +141,16 @@ focuses its first visible window on Windows and Linux. `hide`, `show`,
 from. `@proton.is_ready()` reports the startup boundary, corresponding to
 `app.isReady()`. See `examples/82_app_control`.
 
+Process-level events follow the same style: `.on_session_created(...)`,
+`.on_window_created(...)`, `.on_web_contents_created(...)`, and
+`.on_render_process_gone(...)` mirror Electron's `session-created`,
+`browser-window-created`, `web-contents-created`, and `render-process-gone`,
+including Electron's renderer termination reasons. Killed renderers are events
+rather than fatal errors, so an application decides whether to reload, replace,
+or close the affected page. CEF does not expose non-renderer child process
+exits, so Electron's `child-process-gone` stays documented as unsupported. See
+`examples/83_process_events`.
+
 Application windows can host independent web contents views with explicit
 bounds, visibility, z-order, navigation, DevTools, and lifecycle events. See
 `examples/45_bridge_multi_window` and `examples/52_web_contents_view`.

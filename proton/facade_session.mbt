@@ -17,6 +17,18 @@ fn RuntimeSession::RuntimeSession(
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ],
+  window_created_handlers? : Array[async (WindowHandle) -> Unit noraise] = [],
+  web_contents_created_handlers? : Array[
+    async (WebContentsHandle) -> Unit noraise,
+  ] = [],
+  render_process_gone_handlers? : Array[
+    async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
+  ] = [],
+  session_created_handlers? : Array[async (ApplicationSession) -> Unit noraise] = [],
+  application_session? : ApplicationSession = ApplicationSession::{
+    partition: None,
+    data_path: None,
+  },
   application_tasks : @async.TaskGroup[Unit],
   last_window_closed_policy : LastWindowClosedPolicy,
   window_tasks : @async.TaskGroup[Unit],
@@ -73,6 +85,11 @@ fn RuntimeSession::RuntimeSession(
     window_lifecycle_hooks,
     lifecycle_failures,
     bridge_startup_timeout_ms,
+    window_created_handlers,
+    web_contents_created_handlers,
+    render_process_gone_handlers,
+    session_created_handlers,
+    application_session,
     window_commands: [],
     pending_window_opens: [],
     pending_browser_requests: [],
@@ -487,6 +504,7 @@ fn RuntimeSession::view_handle(
   ViewHandle::{
     id,
     native_id,
+    window_id,
     set_view_bounds: (x, y, width, height) => {
       self.control_view(
         window_id,
@@ -745,6 +763,9 @@ fn RuntimeSession::add_window_view(
     _ => raise StaleWindow(id=window_id)
   }
   let running_view = add_view_to_running_window(running, view_id, config)
+  self.emit_web_contents_created(
+    WebContentsHandle::View(self.view_handle(running, running_view)),
+  )
   self.view_handle(running, running_view)
 }
 
@@ -1439,6 +1460,17 @@ fn RuntimeSession::create_window(
   // A new window starts a new last-window policy period: closing it again may
   // request quit even when an earlier automatic request was prevented.
   self.close_coordinator.last_window_quit_handled = false
+  // Report creation the way Electron does: the web contents exists before the
+  // window joins the application's window list, and planned views follow it.
+  self.emit_web_contents_created(
+    WebContentsHandle::Browser(self.browser_handle(running)),
+  )
+  self.emit_window_created(running)
+  for view in running.views {
+    self.emit_web_contents_created(
+      WebContentsHandle::View(self.view_handle(running, view)),
+    )
+  }
   @xlog.info(category="proton.window") <?
     { "message": "window created", "window": running.id }
   running
@@ -1755,6 +1787,15 @@ pub fn WindowManager::find(self : WindowManager, id : String) -> WindowHandle? {
 /// Returns the declarative id of this window.
 pub fn WindowHandle::id(self : WindowHandle) -> String {
   self.id
+}
+
+///|
+/// Returns the declarative id of the window owning this web contents.
+pub fn WebContentsHandle::window_id(self : WebContentsHandle) -> String {
+  match self {
+    Browser(browser) => browser.window_id()
+    View(view) => view.window_id()
+  }
 }
 
 ///|
@@ -2435,6 +2476,12 @@ pub fn WindowHandle::view(self : WindowHandle, id : String) -> ViewHandle? {
 /// Returns the declarative id of this view.
 pub fn ViewHandle::id(self : ViewHandle) -> String {
   self.id
+}
+
+///|
+/// Returns the declarative id of the window that hosts this view.
+pub fn ViewHandle::window_id(self : ViewHandle) -> String {
+  self.window_id
 }
 
 ///|
@@ -3447,6 +3494,14 @@ fn RuntimeSession::dispatch_view_event(
           ),
         )
       }
+      match view_event {
+        RendererProcessTerminated(status~, error_code~, ..) =>
+          self.emit_render_process_gone(WebContentsHandle::View(handle), RenderProcessGoneDetails::{
+            reason: render_process_gone_reason(status),
+            exit_code: error_code,
+          })
+        _ => ()
+      }
       return
     }
   }
@@ -3568,6 +3623,17 @@ fn RuntimeSession::dispatch_browser_event(
                 )
               }
             None => ()
+          }
+          match observed {
+            Some(RendererProcessTerminated(status~, error_code~, ..)) =>
+              self.emit_render_process_gone(
+                WebContentsHandle::Browser(browser),
+                RenderProcessGoneDetails::{
+                  reason: render_process_gone_reason(status),
+                  exit_code: error_code,
+                },
+              )
+            _ => ()
           }
         }
         None => ()
@@ -4223,6 +4289,11 @@ fn RuntimeSession::dispatch_menu_event(
 }
 
 ///|
+/// The bridge diagnostic a renderer termination records. Proton reports it
+/// through `on_render_process_gone` instead of failing the run.
+let renderer_process_terminated_failure_code = "renderer_process_terminated"
+
+///|
 fn RuntimeSession::check_bridge_failures(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
@@ -4237,7 +4308,21 @@ fn RuntimeSession::check_bridge_failures(
     }
     match failure {
       Some(diagnostic) =>
-        raise BridgeRuntimeError(BridgeDiagnostic::from_native(diagnostic))
+        if diagnostic.code == renderer_process_terminated_failure_code {
+          // A crashed or killed renderer is an application event in Electron,
+          // not a fatal bridge failure: `on_render_process_gone` already
+          // received it and decides whether to reload, replace, or close the
+          // page. Keep the diagnostic in the log instead of ending the run.
+          @xlog.warn(category="proton.bridge") <?
+            {
+              "message": "renderer process terminated",
+              "window": running.id,
+              "url": diagnostic.url,
+              "detail": diagnostic.message,
+            }
+        } else {
+          raise BridgeRuntimeError(BridgeDiagnostic::from_native(diagnostic))
+        }
       None => ()
     }
   }
@@ -4921,6 +5006,75 @@ fn runtime_session_cancel_bridge_request(
         }
       }
     None => ()
+  }
+}
+
+///|
+/// Names the CEF renderer termination status the way Electron names render
+/// process gone reasons. CEF reports only unexpected terminations, so
+/// Electron's `clean-exit` and `memory-eviction` never appear here.
+fn render_process_gone_reason(status : Int) -> RenderProcessGoneReason {
+  match status {
+    0 => RenderProcessGoneReason::AbnormalExit
+    1 => RenderProcessGoneReason::Killed
+    2 => RenderProcessGoneReason::Crashed
+    3 => RenderProcessGoneReason::OutOfMemory
+    4 => RenderProcessGoneReason::LaunchFailed
+    5 => RenderProcessGoneReason::IntegrityFailure
+    _ => RenderProcessGoneReason::Unknown
+  }
+}
+
+///|
+/// Reports the session Proton created for this run, once, during startup.
+fn RuntimeSession::emit_session_created(self : RuntimeSession) -> Unit {
+  guard !self.session_created_handlers.is_empty() else { return }
+  let session = self.application_session
+  for handler in self.session_created_handlers {
+    ignore(self.application_tasks.spawn(() => handler(session), no_wait=true))
+  }
+}
+
+///|
+/// Reports one window creation to the application handlers.
+fn RuntimeSession::emit_window_created(
+  self : RuntimeSession,
+  window : RunningWindow,
+) -> Unit {
+  guard !self.window_created_handlers.is_empty() else { return }
+  let handle = self.window_handle(window)
+  for handler in self.window_created_handlers {
+    ignore(self.application_tasks.spawn(() => handler(handle), no_wait=true))
+  }
+}
+
+///|
+/// Reports one web contents creation to the application handlers.
+fn RuntimeSession::emit_web_contents_created(
+  self : RuntimeSession,
+  contents : WebContentsHandle,
+) -> Unit {
+  guard !self.web_contents_created_handlers.is_empty() else { return }
+  for handler in self.web_contents_created_handlers {
+    ignore(self.application_tasks.spawn(() => handler(contents), no_wait=true))
+  }
+}
+
+///|
+/// Reports one renderer termination to the application handlers.
+fn RuntimeSession::emit_render_process_gone(
+  self : RuntimeSession,
+  contents : WebContentsHandle,
+  details : RenderProcessGoneDetails,
+) -> Unit {
+  guard !self.render_process_gone_handlers.is_empty() else { return }
+  for handler in self.render_process_gone_handlers {
+    ignore(
+      self.application_tasks.spawn(
+        () => handler(contents, details),
+        no_wait=true,
+      ),
+    )
   }
 }
 

@@ -294,12 +294,16 @@ pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest)
 pub fn App::on_new_window_request(Self, async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 pub fn App::on_permission_request(Self, async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_quit(Self, async (ApplicationContext, Int) -> Unit noraise) -> Self
+pub fn App::on_render_process_gone(Self, async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise) -> Self
+pub fn App::on_session_created(Self, async (ApplicationSession) -> Unit noraise) -> Self
 pub fn App::on_system_appearance_change(Self, async (SystemAppearance) -> Unit noraise) -> Self
 pub fn App::on_thumbar_button_click(Self, async (WindowHandle, String) -> Unit noraise) -> Self
 pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub fn App::on_view_event(Self, async (ViewHandle, ViewEvent) -> Unit noraise) -> Self
+pub fn App::on_web_contents_created(Self, async (WebContentsHandle) -> Unit noraise) -> Self
 pub fn App::on_will_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
+pub fn App::on_window_created(Self, async (WindowHandle) -> Unit noraise) -> Self
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
 pub fn App::path(Self, AppPathKind) -> String raise AppPathError
 pub fn App::proxy(Self, String, bypass? : String) -> Self
@@ -379,6 +383,14 @@ pub(all) enum ApplicationQuitDecision {
 pub fn ApplicationQuitDecision::equal(Self, Self) -> Bool
 pub fn ApplicationQuitDecision::not_equal(Self, Self) -> Bool
 pub fn ApplicationQuitDecision::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ApplicationSession {
+  partition : String?
+  data_path : String?
+} derive(Eq, @debug.Debug)
+pub fn ApplicationSession::equal(Self, Self) -> Bool
+pub fn ApplicationSession::not_equal(Self, Self) -> Bool
+pub fn ApplicationSession::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BridgeDiagnostic {
   stage : String
@@ -854,6 +866,27 @@ pub fn RelaunchOptions::equal(Self, Self) -> Bool
 pub fn RelaunchOptions::not_equal(Self, Self) -> Bool
 pub fn RelaunchOptions::to_repr(Self) -> @debug.Repr
 
+pub(all) struct RenderProcessGoneDetails {
+  reason : RenderProcessGoneReason
+  exit_code : Int
+} derive(Eq, @debug.Debug)
+pub fn RenderProcessGoneDetails::equal(Self, Self) -> Bool
+pub fn RenderProcessGoneDetails::not_equal(Self, Self) -> Bool
+pub fn RenderProcessGoneDetails::to_repr(Self) -> @debug.Repr
+
+pub(all) enum RenderProcessGoneReason {
+  AbnormalExit
+  Killed
+  Crashed
+  OutOfMemory
+  LaunchFailed
+  IntegrityFailure
+  Unknown
+} derive(Eq, @debug.Debug)
+pub fn RenderProcessGoneReason::equal(Self, Self) -> Bool
+pub fn RenderProcessGoneReason::not_equal(Self, Self) -> Bool
+pub fn RenderProcessGoneReason::to_repr(Self) -> @debug.Repr
+
 pub struct RendererTarget {
   window : String
   bundled : Bool
@@ -998,6 +1031,7 @@ pub fn ViewEvent::to_repr(Self) -> @debug.Repr
 pub struct ViewHandle {
   id : String
   native_id : Int64
+  window_id : String
   set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
   set_view_visible : (Bool) -> Unit raise WindowSessionError
   set_view_z_order : (Int) -> Unit raise WindowSessionError
@@ -1052,6 +1086,7 @@ pub fn ViewHandle::stop(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::stop_find_in_page(Self, clear_selection? : Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::toggle_devtools(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::undo(Self) -> Unit raise WindowSessionError
+pub fn ViewHandle::window_id(Self) -> String
 pub fn ViewHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
 pub(all) struct ViewState {
@@ -1065,6 +1100,12 @@ pub(all) struct ViewState {
 pub fn ViewState::equal(Self, Self) -> Bool
 pub fn ViewState::not_equal(Self, Self) -> Bool
 pub fn ViewState::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WebContentsHandle {
+  Browser(BrowserHandle)
+  View(ViewHandle)
+}
+pub fn WebContentsHandle::window_id(Self) -> String
 
 pub(all) struct WindowButtonPosition {
   x : Int

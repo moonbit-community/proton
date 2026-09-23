@@ -10,6 +10,10 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "process-events" {
+    run_process_events_regression()
+    return
+  }
   if name == "app-control" {
     run_app_control_regression()
     return
@@ -479,6 +483,127 @@ async fn run_cancel_during_startup_regression() -> Unit {
   assert_true(main_ready.val)
   assert_false(secondary_ready.val)
   println("LIFECYCLE_PASSED cancel-during-startup")
+}
+
+///|
+/// Names Electron's render process gone reason for the terminal review.
+fn process_event_reason_name(
+  reason : @proton.RenderProcessGoneReason,
+) -> String {
+  match reason {
+    @proton.RenderProcessGoneReason::AbnormalExit => "abnormal-exit"
+    @proton.RenderProcessGoneReason::Killed => "killed"
+    @proton.RenderProcessGoneReason::Crashed => "crashed"
+    @proton.RenderProcessGoneReason::OutOfMemory => "oom"
+    @proton.RenderProcessGoneReason::LaunchFailed => "launch-failed"
+    @proton.RenderProcessGoneReason::IntegrityFailure => "integrity-failure"
+    @proton.RenderProcessGoneReason::Unknown => "unknown"
+  }
+}
+
+///|
+/// Exercises the process-level application events in an isolated headless
+/// application: session, window, and web contents creation, plus a renderer
+/// termination that the harness provokes by killing the renderer helper.
+async fn run_process_events_regression() -> Unit {
+  let session_events : Array[String] = []
+  let created_windows : Array[String] = []
+  let created_contents : Array[String] = []
+  let gone_contents : Array[String] = []
+  let main_loaded = Ref(false)
+
+  @proton.html("Process events", "<h1>Process events</h1>")
+  .identifier("dev.proton.e2e-process-events")
+  .on_session_created(fn(session) {
+    session_events.push(
+      "partition=" +
+      session.partition.unwrap_or("default") +
+      " data=" +
+      session.data_path.unwrap_or("temporary"),
+    )
+  })
+  .on_window_created(fn(window) { created_windows.push(window.id()) })
+  .on_web_contents_created(fn(contents) {
+    created_contents.push(
+      match contents {
+        Browser(browser) => "browser:" + browser.window_id()
+        View(view) => "view:" + view.window_id() + "/" + view.id()
+      },
+    )
+  })
+  .on_render_process_gone(fn(contents, details) {
+    gone_contents.push(
+      contents.window_id() +
+      ":" +
+      process_event_reason_name(details.reason) +
+      ":" +
+      details.exit_code.to_string(),
+    )
+  })
+  .on_browser_event(fn(_browser, event) {
+    if event is DidFinishLoad {
+      main_loaded.val = true
+    }
+  })
+  .window_lifecycle(
+    on_ready=context => {
+      ignore(
+        context
+        .task_group()
+        .spawn(
+          () => {
+            while !main_loaded.val {
+              @async.sleep(10)
+            }
+            let view = context
+              .handle()
+              .add_view(
+                "tab",
+                @proton.view(
+                  "data:text/html,process-events",
+                  width=200,
+                  height=120,
+                ),
+              )
+            ignore(view)
+            // The harness snapshots the process tree once this gate is ready,
+            // then kills the renderer helpers it finds.
+            lifecycle_probe_gate()
+            let deadline = @async.now() + 20000L
+            while gone_contents.length() == 0 {
+              if @async.now() > deadline {
+                fail("no render-process-gone event arrived")
+              }
+              @async.sleep(10)
+            }
+            context.handle().close()
+          },
+          no_wait=true,
+        ),
+      )
+    },
+    on_close=_ => (),
+  )
+  .run()
+  assert_eq(session_events.length(), 1)
+  assert_true(created_windows.contains("main"))
+  assert_true(created_contents.contains("browser:main"))
+  assert_true(created_contents.contains("view:main/tab"))
+  assert_true(gone_contents.length() > 0)
+  let gone = gone_contents[0]
+  assert_true(
+    gone.contains(":killed:") || gone.contains(":crashed:"),
+    msg="unexpected renderer termination: " + gone,
+  )
+  println(
+    "PROCESS_EVENTS session=" +
+    session_events[0] +
+    " contents=" +
+    created_contents.join(",") +
+    " gone=" +
+    gone,
+  )
+  println("LIFECYCLE_PASSED process-events")
 }
 
 ///|

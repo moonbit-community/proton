@@ -19,6 +19,10 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     let browser_data_dir = resolve_browser_data_dir(self, resolved) catch {
       error => raise ConfigurationError(error)
     }
+    let application_session = ApplicationSession::{
+      partition: resolved.session_partition,
+      data_path: browser_data_dir,
+    }
     let locale_preferences = resolve_locale_preferences(self.explicit_locale)
     let application_executable = executable_path() catch {
       error =>
@@ -68,6 +72,11 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       thumbar_button_handlers=self.thumbar_button_handlers,
       planned_views=self.planned_views.map(view => (view.0, view.1.to_native())),
       window_event_handlers=self.window_event_handlers,
+      window_created_handlers=self.window_created_handlers,
+      web_contents_created_handlers=self.web_contents_created_handlers,
+      render_process_gone_handlers=self.render_process_gone_handlers,
+      session_created_handlers=self.session_created_handlers,
+      application_session~,
       view_event_handlers=self.view_event_handlers,
       browser_event_handlers=self.browser_event_handlers,
       window_close_handler=self.window_close_handler,
@@ -218,6 +227,18 @@ async fn run_manifest(
   window_event_handlers? : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ] = [],
+  window_created_handlers? : Array[async (WindowHandle) -> Unit noraise] = [],
+  web_contents_created_handlers? : Array[
+    async (WebContentsHandle) -> Unit noraise,
+  ] = [],
+  render_process_gone_handlers? : Array[
+    async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
+  ] = [],
+  session_created_handlers? : Array[async (ApplicationSession) -> Unit noraise] = [],
+  application_session? : ApplicationSession = ApplicationSession::{
+    partition: None,
+    data_path: None,
+  },
   view_event_handlers? : Array[async (ViewHandle, ViewEvent) -> Unit noraise] = [],
   browser_event_handlers? : Array[
     async (BrowserHandle, BrowserEvent) -> Unit noraise,
@@ -470,6 +491,11 @@ async fn run_manifest(
           system_appearance_handlers,
           thumbar_button_handlers,
           window_event_handlers,
+          window_created_handlers~,
+          web_contents_created_handlers~,
+          render_process_gone_handlers~,
+          session_created_handlers~,
+          application_session~,
           application_tasks,
           last_window_closed_policy,
           window_tasks,
@@ -498,6 +524,9 @@ async fn run_manifest(
           web_request_header_prefixes~,
         )
         let application_context = session.application_context()
+        // Electron reports the session as soon as it exists, before the
+        // application start hooks create any window of their own.
+        session.emit_session_created()
         let application_start = application_tasks.spawn(
           () => {
             defer session.wakeup.signal.notify()
