@@ -24,7 +24,8 @@ fn quit_chain_log(line : String) -> Unit {
 /// The harness waits for `PROTON_QUIT_CHAIN_READY` and then creates
 /// `PROTON_QUIT_CHAIN_GATE`, so the quit request always happens after the
 /// primary window exists. Supported modes are `quit0`, `quit3`, `exit7`,
-/// `prevent-before-quit`, and `prevent-will-quit`.
+/// `prevent-before-quit`, `prevent-will-quit`, `exit-before-quit`,
+/// `exit-will-quit`, and `exit-pending-will-quit`.
 pub async fn run_quit_chain() -> Unit {
   let mode = quit_chain_env("PROTON_QUIT_CHAIN_MODE")
   let gate = quit_chain_env("PROTON_QUIT_CHAIN_GATE")
@@ -40,17 +41,28 @@ pub async fn run_quit_chain() -> Unit {
     },
     on_shutdown=fn(_) { () },
   )
-  .on_before_quit(fn(_context) {
+  .on_before_quit(fn(context) {
     quit_chain_log("before-quit")
-    if prevents_before_quit {
+    if mode == "exit-before-quit" {
+      context.exit(exit_code=7)
+      @proton.ApplicationQuitDecision::Prevent
+    } else if prevents_before_quit {
       @proton.ApplicationQuitDecision::Prevent
     } else {
       @proton.ApplicationQuitDecision::Allow
     }
   })
-  .on_will_quit(fn(_context) {
+  .on_will_quit(async fn(context) noraise {
     quit_chain_log("will-quit")
-    if prevents_will_quit {
+    if mode == "exit-will-quit" || mode == "exit-pending-will-quit" {
+      context.exit(exit_code=7)
+      if mode == "exit-pending-will-quit" {
+        defer quit_chain_log("will-quit-cancelled")
+        @async.sleep(60000)
+        quit_chain_log("will-quit-resumed")
+      }
+      @proton.ApplicationQuitDecision::Prevent
+    } else if prevents_will_quit {
       @proton.ApplicationQuitDecision::Prevent
     } else {
       @proton.ApplicationQuitDecision::Allow

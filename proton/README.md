@@ -140,7 +140,8 @@ from `App::run` normally.
 `ApplicationContext::exit(exit_code=...)` is Electron's `app.exit`: it destroys
 every window without asking and skips `before-quit` and `will-quit`, but the
 `quit` notification still observes the requested code before Proton tears the
-runtime down.
+runtime down. If either cancelable handler requests `exit`, its pending task
+is cancelled and its decision cannot prevent the forced exit.
 
 ## Application control
 
