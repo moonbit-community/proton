@@ -152,6 +152,7 @@ void CEF_CALLBACK proton_engine_on_title_change(
 void proton_engine_window_finalize_if_ready(proton_engine_window_t *window);
 void proton_engine_view_finalize_if_ready(proton_engine_view_t *view);
 void proton_engine_window_close_views(proton_engine_window_t *window);
+void proton_engine_window_collect_views(proton_engine_window_t *window);
 void proton_engine_window_free_views(proton_engine_window_t *window);
 void proton_engine_window_layout_views(proton_engine_window_t *window);
 
@@ -193,6 +194,7 @@ struct proton_engine_view {
   uint32_t background_color;
   int finalize_after_browser_close;
   int finalized;
+  int released;
   int closed;
   struct proton_engine_view *next;
 };

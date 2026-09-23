@@ -2820,4 +2820,14 @@ int32_t proton_engine_window_emit_bridge_event_json(
   }
 }
 
+void proton_engine_runtime_collect(proton_engine_runtime_t *runtime) {
+  @autoreleasepool {
+    for (proton_engine_window_t *window = g_windows; window != NULL;
+         window = window->next) {
+      proton_engine_window_collect_views(window);
+    }
+    proton_browser_registry_collect(runtime->browsers);
+  }
+}
+
 #endif

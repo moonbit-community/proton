@@ -195,6 +195,7 @@ jobs:
           moon check --target native --deny-warn
           moon -C package test lib --target native --diagnostic-limit 80
           moon -C codegen test lib --target wasm --diagnostic-limit 80
+          moon -C proton test internal/native/ffi/tests/browser_lifecycle --target native --diagnostic-limit 80
           moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             xvfb-run -a moon -C proton test internal/native --target native --diagnostic-limit 80
@@ -230,6 +231,7 @@ jobs:
           moon -C proton test internal/native/ffi/tests/window_geometry --target native --diagnostic-limit 80
           moon -C package test lib --target native --diagnostic-limit 80
           moon -C codegen test lib --target wasm --diagnostic-limit 80
+          moon -C proton test internal/native/ffi/tests/browser_lifecycle --target native --diagnostic-limit 80
           moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80
           moon -C proton test internal/native --target native --diagnostic-limit 80
           moon -C proton test updater --target native --diagnostic-limit 80

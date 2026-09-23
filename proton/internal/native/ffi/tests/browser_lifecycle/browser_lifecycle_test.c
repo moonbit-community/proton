@@ -98,3 +98,56 @@ proton_test_browser_accessibility_lifecycle_trace(void) {
   proton_browser_registry_destroy(registry);
   return proton_test_copy_trace(trace);
 }
+
+#include "../../src/proton_state.h"
+
+/* A client retained by CEF must keep its closed lifecycle record alive. */
+typedef struct {
+  cef_client_t client;
+  int refs;
+  int releases;
+} proton_test_client_t;
+
+static int CEF_CALLBACK proton_test_client_one_ref(cef_base_ref_counted_t *base) {
+  return ((proton_test_client_t *)base)->refs == 1;
+}
+
+static int CEF_CALLBACK proton_test_client_release(cef_base_ref_counted_t *base) {
+  proton_test_client_t *client = (proton_test_client_t *)base;
+  client->releases++;
+  return --client->refs == 0;
+}
+
+MOONBIT_FFI_EXPORT int32_t proton_test_closed_record_reclamation(void) {
+  proton_runtime_slot_t *runtime = NULL;
+  if (proton_runtime_slot_create(NULL, &runtime) != PROTON_OK) return 1;
+  proton_browser_registry_t *registry = proton_browser_registry_create(NULL, NULL);
+  for (int i = 0; i < 100; i++) {
+    proton_window_slot_t *window = NULL;
+    proton_view_slot_t *view = NULL;
+    if (proton_window_slot_create(runtime, NULL, i + 1, 100, 100, &window) != PROTON_OK) return 2;
+    if (proton_view_slot_create(window, NULL, i + 1, 0, 0, 100, 100, 0, true, &view) != PROTON_OK) return 3;
+    proton_view_slot_destroy(view);
+    proton_window_slot_destroy(window);
+    if (runtime->windows != NULL || runtime->views != NULL) return 4;
+    proton_test_client_t client = {0};
+    client.refs = 2;
+    client.client.base.has_one_ref = proton_test_client_one_ref;
+    client.client.base.release = proton_test_client_release;
+    proton_browser_lifecycle_t *lifecycle = proton_browser_lifecycle_create(
+        registry, PROTON_BROWSER_ROLE_VIEW, runtime, NULL);
+    proton_browser_lifecycle_set_client(lifecycle, &client.client);
+    proton_browser_lifecycle_on_before_close(lifecycle, NULL);
+    proton_browser_registry_collect(registry);
+    if (client.releases != 0) return 5;
+    client.refs--;
+    proton_browser_registry_collect(registry);
+    if (client.releases != 0) return 6;
+    proton_browser_lifecycle_clear_owner(lifecycle);
+    proton_browser_registry_collect(registry);
+    if (client.releases != 1 || client.refs != 0) return 7;
+  }
+  proton_browser_registry_destroy(registry);
+  proton_runtime_slot_destroy(runtime);
+  return 0;
+}

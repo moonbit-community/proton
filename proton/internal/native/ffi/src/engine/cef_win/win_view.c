@@ -82,6 +82,24 @@ void proton_engine_window_free_views(proton_engine_window_t *window) {
   }
 }
 
+void proton_engine_window_collect_views(proton_engine_window_t *window) {
+  proton_engine_window_lock();
+  proton_engine_view_t **cursor = &window->views;
+  while (*cursor != NULL) {
+    proton_engine_view_t *view = *cursor;
+    if (!view->finalized || !view->released) {
+      cursor = &view->next;
+      continue;
+    }
+    *cursor = view->next;
+    proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
+    proton_browser_session_destroy(view->browser_session);
+    proton_view_events_destroy(view->events);
+    free(view);
+  }
+  proton_engine_window_unlock();
+}
+
 void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
   if (view == NULL || view->finalized ||
       !view->finalize_after_browser_close) {
@@ -96,7 +114,6 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
   // Creation cancellation has no OnBeforeClose callback. The event queue
   // deduplicates this terminal notification with ordinary browser closure.
   proton_view_events_closed(view->events);
-  proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
   view->hwnd = NULL;
   view->finalized = 1;
   // The window's own finalize is gated on every view being finalized; this
@@ -123,7 +140,7 @@ void proton_engine_window_finalize_if_ready(proton_engine_window_t *window) {
   }
   // OnBeforeClose is CEF's final browser callback, but CEF still owns and
   // releases callback objects while unwinding it and during cef_shutdown.
-  // Keep the host storage alive until that shutdown has completed.
+  // Reclaim detached host storage after the current native pump unwinds.
   proton_engine_window_defer_free(window);
 }
 
@@ -465,9 +482,9 @@ int32_t proton_engine_view_create(
   proton_engine_view_list_add(window, view);
   status = proton_engine_view_create_browser(view, error, error_len);
   if (status != PROTON_OK) {
-    // The browser never started, so the view finalizes immediately; the
-    // struct stays owned by the window list and is reclaimed with it.
+    // No ABI slot was returned; reclaim the failed view after finalization.
     view->closed = 1;
+    view->released = 1;
     view->finalize_after_browser_close = 1;
     proton_engine_view_finalize_if_ready(view);
     return status;
@@ -484,15 +501,13 @@ int32_t proton_engine_view_destroy(proton_engine_view_t *view,
     proton_engine_set_message(error, error_len, "view is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  if (view->closed) {
-    return PROTON_OK;
-  }
   view->closed = 1;
   view->finalize_after_browser_close = 1;
   if (proton_engine_view_browser(view) != NULL) {
     proton_browser_lifecycle_request_close(view->browser_lifecycle, 1);
   }
   proton_engine_view_finalize_if_ready(view);
+  view->released = 1;
   return PROTON_OK;
 }
 

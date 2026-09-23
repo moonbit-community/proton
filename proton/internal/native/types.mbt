@@ -1378,6 +1378,7 @@ struct Runtime {
 
 ///|
 struct Window {
+  runtime : Runtime
   mut handle : @native_ffi.WindowHandle
   id : Int64
   mut lifecycle : WindowLifecycleState
@@ -1386,7 +1387,7 @@ struct Window {
 
 ///|
 struct WindowRef {
-  handle : @native_ffi.WindowHandle
+  window : Window?
   id : Int64
 }
 
@@ -2098,16 +2099,9 @@ pub fn MenuItem::state_definition(self : MenuItem) -> (Bool, Bool, Bool?) {
 }
 
 ///|
-pub fn WindowRef::unsafe_from_handle(
-  handle : @native_ffi.WindowHandle,
-) -> WindowRef {
-  WindowRef::{ handle, id: @native_ffi.window_logical_id(handle), }
-}
-
-///|
 #doc(hidden)
 pub fn WindowRef::invalid() -> WindowRef {
-  WindowRef::unsafe_from_handle(@native_ffi.window_null())
+  WindowRef::{ window: None, id: proton_invalid_handle, }
 }
 
 ///|
@@ -2188,6 +2182,7 @@ priv enum ViewLifecycleState {
 ///|
 /// An owned native web contents view hosted inside a window's content area.
 struct View {
+  window : Window
   mut handle : @native_ffi.ViewHandle
   id : Int64
   mut lifecycle : ViewLifecycleState

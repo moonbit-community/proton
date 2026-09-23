@@ -3,7 +3,6 @@ package "moonbit-community/proton/internal/native"
 
 import {
   "moonbit-community/proton/internal/locale",
-  "moonbit-community/proton/internal/native/ffi",
   "moonbit-community/proton_ffi",
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
@@ -948,7 +947,6 @@ pub fn WindowRef::equal(Self, Self) -> Bool
 pub fn WindowRef::not_equal(Self, Self) -> Bool
 pub fn WindowRef::titlebar_area(Self) -> TitlebarArea? raise NativeError
 pub fn WindowRef::to_repr(Self) -> @debug.Repr
-pub fn WindowRef::unsafe_from_handle(@ffi.WindowHandle) -> Self
 pub impl Eq for WindowRef
 pub impl @debug.Debug for WindowRef
 

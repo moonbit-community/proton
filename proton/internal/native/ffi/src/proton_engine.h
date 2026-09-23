@@ -167,6 +167,8 @@ int32_t proton_engine_execute_process(
     const proton_engine_runtime_config_t *config, int32_t *out_exit_code,
     char *error, size_t error_len);
 
+void proton_engine_runtime_collect(proton_engine_runtime_t *runtime);
+
 int32_t proton_engine_runtime_create(
     const proton_engine_runtime_config_t *config,
     proton_engine_runtime_t **out_runtime, char *error, size_t error_len);

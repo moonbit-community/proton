@@ -428,6 +428,10 @@ int32_t proton_host_loop_poll(int32_t timeout_ms, uint32_t *out_ready_mask) {
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }
+  proton_runtime_slot_t *runtime = proton_get_active_runtime();
+  if (runtime != NULL && runtime->engine_runtime != NULL) {
+    proton_engine_runtime_collect(runtime->engine_runtime);
+  }
   *out_ready_mask = ready_mask;
   g_last_error[0] = '\0';
   return PROTON_OK;

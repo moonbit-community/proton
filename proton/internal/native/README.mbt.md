@@ -100,3 +100,15 @@ CEF close callback is deferred. Browser finalization still waits for CEF's
 The opt-in graphical regression in `e2e/repro_fullscreen_close` exercises real
 host-view destruction and verifies application and helper exit. Headless tests
 cannot validate this ownership path.
+
+## Handle and record lifetime
+
+A window retains its MoonBit runtime owner, a view retains its window, and a
+borrowed window reference retains the same owning window. Operations validate
+these shared states before entering C. Explicit destruction unregisters native
+slots; retaining a MoonBit handle does not retain a closed CEF implementation.
+
+After the native pump unwinds, finalized and released view implementations and
+closed window storage are reclaimed. Browser lifecycle records remain until
+their owner is detached, DevTools is closed, and CEF has released its client
+references. GC never closes browsers or destroys UI objects.

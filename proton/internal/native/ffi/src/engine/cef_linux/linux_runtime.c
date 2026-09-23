@@ -1092,4 +1092,13 @@ proton_engine_bridge_requests_t *proton_engine_runtime_bridge_requests(
   return runtime != NULL ? runtime->bridge_requests : NULL;
 }
 
+void proton_engine_runtime_collect(proton_engine_runtime_t *runtime) {
+  for (proton_engine_window_t *window = g_windows; window != NULL;
+       window = window->next) {
+    proton_engine_window_collect_views(window);
+  }
+  proton_engine_free_closed_windows();
+  proton_browser_registry_collect(runtime->browsers);
+}
+
 #endif

@@ -189,6 +189,25 @@ void proton_engine_window_free_views(proton_engine_window_t *window) {
   }
 }
 
+void proton_engine_window_collect_views(proton_engine_window_t *window) {
+  proton_engine_window_lock();
+  proton_engine_view_t **cursor = &window->views;
+  while (*cursor != NULL) {
+    proton_engine_view_t *view = *cursor;
+    if (!view->finalized || !view->released) {
+      cursor = &view->next;
+      continue;
+    }
+    *cursor = view->next;
+    proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
+    proton_browser_session_destroy(view->browser_session);
+    proton_view_events_destroy(view->events);
+    free(view->initial_url);
+    free(view);
+  }
+  proton_engine_window_unlock();
+}
+
 void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
   if (view == NULL || view->finalized ||
       !view->finalize_after_browser_close) {
@@ -203,13 +222,10 @@ void proton_engine_view_finalize_if_ready(proton_engine_view_t *view) {
       browser_state != PROTON_BROWSER_CREATION_FAILED) {
     return;
   }
-  // Resource cleanup only. The struct stays in the window's view list and is
-  // freed by proton_engine_window_free once every view has finalized, which
-  // keeps native ABI view slots valid for the whole window lifetime.
+  // Storage is collected after finalization and release of the native ABI slot.
   // Creation cancellation has no OnBeforeClose callback. The event queue
   // deduplicates this terminal notification with ordinary browser closure.
   proton_view_events_closed(view->events);
-  proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
   if (view->browser_view != nil) {
     [view->browser_view removeFromSuperview];
     view->browser_view = nil;
@@ -596,23 +612,16 @@ int32_t proton_engine_view_destroy(proton_engine_view_t *view,
       proton_engine_set_message(error, error_len, "view is required");
       return PROTON_ERR_INVALID_ARGUMENT;
     }
-    if (view->closed) {
-      return PROTON_OK;
-    }
-    if (proton_engine_view_browser(view) != NULL) {
-      if (!proton_engine_view_request_browser_close(view, 1)) {
-        proton_engine_set_message(error, error_len,
-                                  "browser host is not available for close");
-        return PROTON_ERR_ENGINE;
-      }
-      proton_engine_view_mark_closed(view);
-      proton_engine_view_defer_finalize(view);
-      proton_engine_view_finalize_if_ready(view);
-      return PROTON_OK;
+    if (!view->closed && proton_engine_view_browser(view) != NULL &&
+        !proton_engine_view_request_browser_close(view, 1)) {
+      proton_engine_set_message(error, error_len,
+                                "browser host is not available for close");
+      return PROTON_ERR_ENGINE;
     }
     proton_engine_view_mark_closed(view);
     proton_engine_view_defer_finalize(view);
     proton_engine_view_finalize_if_ready(view);
+    view->released = 1;
     return PROTON_OK;
   }
 }
