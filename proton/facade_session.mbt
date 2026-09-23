@@ -3403,9 +3403,6 @@ fn RuntimeSession::dispatch_view_event(
   event : @native.RuntimeEvent,
 ) -> Unit raise AppRunError {
   let closes_view = event.is_view_closed()
-  if self.view_event_handlers.is_empty() && !closes_view {
-    return
-  }
   let (window_native_id, view_native_id) = match
     (event.window_id(), event.view_id()) {
     (Some(window_id), Some(view_id)) => (window_id, view_id)

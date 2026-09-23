@@ -112,6 +112,23 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         guard ready is Some(_) else {
           fail("lifecycle startup timeout" + app_output_suffix(app.output_path))
         }
+        if name == "process-events" {
+          // Observe renderer readiness without registering an on_view_event
+          // callback, which would mask application-level dispatch regressions.
+          let ready = @async.with_timeout_opt(timeout, () => {
+            while !discover_targets_for_poll(cdp_target_from(port.to_string())).any(target => {
+                      target.target_type == "page" &&
+                      target.title == "Process Events View"
+                    },
+                  ) {
+              @async.sleep(25)
+            }
+          })
+          assert_true(
+            ready is Some(_),
+            msg="child view renderer did not become ready",
+          )
+        }
         let snapshot = snapshot_scenario_process_tree(app)
         @mbfs.write_string_to_file(gate, "go")
         if name == "process-events" {
