@@ -221,7 +221,7 @@ pub extern "C" fn execute_process(
 ) -> Int = "proton_internal_execute_process"
 
 ///|
-#borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label, out_runtime)
+#borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, proxy_server, proxy_bypass, dialog_ok_label, dialog_cancel_label, out_runtime)
 pub extern "C" fn runtime_create(
   use_bundled : Int,
   runtime_root : Bytes,
@@ -231,6 +231,8 @@ pub extern "C" fn runtime_create(
   cache_dir : Bytes,
   locale : Bytes,
   accept_languages : Bytes,
+  proxy_server : Bytes,
+  proxy_bypass : Bytes,
   dialog_ok_label : Bytes,
   dialog_cancel_label : Bytes,
   remote_debugging_port : Int,

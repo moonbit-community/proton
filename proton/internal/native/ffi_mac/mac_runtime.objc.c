@@ -66,6 +66,7 @@
 #include <unistd.h>
 
 static int g_proton_cef_initialized = 0;
+static const proton_engine_runtime_config_t *g_proton_initializing_config;
 static int g_proton_cef_library_loaded = 0;
 static int g_proton_cef_runtime_active = 0;
 static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
@@ -481,10 +482,13 @@ void proton_engine_on_before_command_line_processing(
                                            "remote-debugging-port", "0");
   }
   proton_engine_append_switch(command_line, "disable-background-networking");
-  proton_engine_append_switch_with_value(command_line, "proxy-server",
-                                         getenv("PROTON_PROXY_SERVER"));
-  proton_engine_append_switch_with_value(command_line, "proxy-bypass-list",
-                                         getenv("PROTON_PROXY_BYPASS"));
+  const proton_engine_runtime_config_t *startup = g_proton_initializing_config;
+  if (startup != NULL) {
+    proton_engine_append_switch_with_value(command_line, "proxy-server",
+                                           startup->proxy_server);
+    proton_engine_append_switch_with_value(command_line, "proxy-bypass-list",
+                                           startup->proxy_bypass);
+  }
   proton_engine_append_switch(command_line, "disable-component-update");
   proton_engine_append_switch(command_line, "disable-domain-reliability");
   proton_engine_append_switch(command_line, "disable-sync");
@@ -798,7 +802,10 @@ int32_t proton_engine_runtime_create(
       proton_engine_set_string(&settings.cache_path, config.cache_dir);
     }
 
-    if (!cef_initialize(&args, &settings, proton_engine_cef_app(), NULL)) {
+    g_proton_initializing_config = &config;
+    int initialized = cef_initialize(&args, &settings, proton_engine_cef_app(), NULL);
+    g_proton_initializing_config = NULL;
+    if (!initialized) {
       cef_string_clear(&settings.browser_subprocess_path);
       cef_string_clear(&settings.framework_dir_path);
       cef_string_clear(&settings.resources_dir_path);

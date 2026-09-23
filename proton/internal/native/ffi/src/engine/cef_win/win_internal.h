@@ -276,6 +276,7 @@ struct proton_engine_view {
 void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms);
 int proton_engine_runtime_initialized(void);
 int32_t proton_engine_runtime_remote_debugging_port(void);
+const proton_engine_runtime_config_t *proton_engine_initializing_config(void);
 proton_engine_window_t *proton_engine_windows_head(void);
 void proton_engine_window_list_add(proton_engine_window_t *window);
 void proton_engine_window_list_remove(proton_engine_window_t *window);

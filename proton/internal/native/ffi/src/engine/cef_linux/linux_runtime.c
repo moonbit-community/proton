@@ -72,6 +72,7 @@
 
 #define PROTON_ENGINE_PATH_SEPARATOR '/'
 static int g_proton_cef_initialized = 0;
+static const proton_engine_runtime_config_t *g_proton_initializing_config;
 static int g_proton_cef_runtime_active = 0;
 static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
 static char g_proton_engine_locale[PROTON_ENGINE_MAX_PATH_BYTES];
@@ -95,6 +96,10 @@ static proton_engine_window_t *g_closed_windows = NULL;
 /* Guards g_windows list membership read by CEF callback threads. Keep this
    lock leaf-only: never call back into engine or CEF code while held. */
 static pthread_mutex_t g_window_lock = PTHREAD_MUTEX_INITIALIZER;
+
+const proton_engine_runtime_config_t *proton_engine_initializing_config(void) {
+  return g_proton_initializing_config;
+}
 
 int proton_engine_runtime_initialized(void) {
   return g_proton_cef_initialized;
@@ -800,8 +805,10 @@ int32_t proton_engine_runtime_create(
     proton_engine_set_string(&settings.cache_path, config.cache_dir);
   }
 
+  g_proton_initializing_config = &config;
   int cef_initialized =
       cef_initialize(&args, &settings, proton_engine_cef_app(), NULL);
+  g_proton_initializing_config = NULL;
   cef_string_clear(&settings.browser_subprocess_path);
   cef_string_clear(&settings.resources_dir_path);
   cef_string_clear(&settings.locales_dir_path);

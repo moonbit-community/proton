@@ -522,6 +522,8 @@ pub fn Runtime::Runtime(
     runtime_config_string(config.cache_dir),
     runtime_config_string(config.locale),
     runtime_config_languages(config.accept_languages),
+    runtime_config_string(config.proxy_server),
+    runtime_config_string(config.proxy_bypass),
     runtime_config_string(config.framework_dialog_ok_label),
     runtime_config_string(config.framework_dialog_cancel_label),
     runtime_config_remote_debugging(config.remote_debugging),

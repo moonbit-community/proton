@@ -155,10 +155,13 @@ static void CEF_CALLBACK proton_engine_on_before_command_line_processing(
                               "disable-backgrounding-occluded-windows");
   proton_engine_append_switch(command_line, "disable-renderer-backgrounding");
   proton_engine_append_switch(command_line, "disable-background-networking");
-  proton_engine_append_switch_with_value(command_line, "proxy-server",
-                                         getenv("PROTON_PROXY_SERVER"));
-  proton_engine_append_switch_with_value(command_line, "proxy-bypass-list",
-                                         getenv("PROTON_PROXY_BYPASS"));
+  const proton_engine_runtime_config_t *startup = proton_engine_initializing_config();
+  if (startup != NULL) {
+    proton_engine_append_switch_with_value(command_line, "proxy-server",
+                                           startup->proxy_server);
+    proton_engine_append_switch_with_value(command_line, "proxy-bypass-list",
+                                           startup->proxy_bypass);
+  }
   proton_engine_append_switch(command_line, "disable-component-update");
   proton_engine_append_switch(command_line, "disable-domain-reliability");
   proton_engine_append_switch(command_line, "disable-sync");

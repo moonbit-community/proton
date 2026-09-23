@@ -67,7 +67,10 @@ no handler is configured, Proton denies both request types by default.
 
 Use `App::proxy` to configure a startup-wide Chromium proxy. Proton passes the
 server and optional bypass list to CEF before startup; changing proxy settings
-while the application is running is not supported.
+while the application is running is not supported. An explicit proxy replaces
+both `PROTON_PROXY_SERVER` and `PROTON_PROXY_BYPASS` for this runtime; omitting
+its bypass list means no explicit bypass list. Without `App::proxy`, Proton
+reads those environment variables as defaults. It never writes them.
 
 `App::set_path` overrides any supported standard path before startup and
 requires an existing absolute path. `App::set_app_logs_path` accepts an

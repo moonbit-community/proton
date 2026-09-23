@@ -216,6 +216,7 @@ int32_t proton_internal_runtime_create(
     int32_t use_bundled, const char *runtime_root, const char *helper_path,
     const char *resources_dir, const char *locales_dir, const char *cache_dir,
     const char *locale, const char *accept_languages,
+    const char *proxy_server, const char *proxy_bypass,
     const char *dialog_ok_label, const char *dialog_cancel_label,
     int32_t remote_debugging_port, int32_t headless,
     int32_t accessibility_mode,
@@ -235,6 +236,10 @@ int32_t proton_internal_runtime_create(
   if (status != PROTON_OK) {
     return status;
   }
+  config.proxy_server = proxy_server != NULL && proxy_server[0] != '\0'
+      ? proxy_server : getenv("PROTON_PROXY_SERVER");
+  config.proxy_bypass = proxy_server != NULL && proxy_server[0] != '\0'
+      ? proxy_bypass : getenv("PROTON_PROXY_BYPASS");
   if (proton_has_active_runtime()) {
     return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
                             "runtime is already initialized");

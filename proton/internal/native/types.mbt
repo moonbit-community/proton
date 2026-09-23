@@ -1751,6 +1751,8 @@ struct RuntimeConfig {
   cache_dir : String?
   locale : String?
   accept_languages : Array[String]
+  proxy_server : String?
+  proxy_bypass : String?
   framework_dialog_ok_label : String?
   framework_dialog_cancel_label : String?
   remote_debugging : RemoteDebugging
@@ -1804,6 +1806,8 @@ pub fn RuntimeConfig::RuntimeConfig(
   cache_dir? : String,
   locale? : @locale.Locale,
   accept_languages? : Array[@locale.Locale] = [],
+  proxy_server? : String,
+  proxy_bypass? : String,
   remote_debugging? : RemoteDebugging = Disabled,
   headless? : Bool = false,
   accessibility_mode? : AccessibilityMode = Automatic,
@@ -1821,6 +1825,8 @@ pub fn RuntimeConfig::RuntimeConfig(
     cache_dir,
     locale: locale.map(value => value.to_string()),
     accept_languages: accept_languages.map(value => value.to_string()),
+    proxy_server,
+    proxy_bypass,
     framework_dialog_ok_label: Some("OK"),
     framework_dialog_cancel_label: Some("Cancel"),
     remote_debugging,
@@ -1838,6 +1844,8 @@ pub fn RuntimeConfig::bundled(
   cache_dir? : String,
   locale? : @locale.Locale,
   accept_languages? : Array[@locale.Locale] = [],
+  proxy_server? : String,
+  proxy_bypass? : String,
   remote_debugging? : RemoteDebugging = Disabled,
   headless? : Bool = false,
   accessibility_mode? : AccessibilityMode = Automatic,
@@ -1855,6 +1863,8 @@ pub fn RuntimeConfig::bundled(
     cache_dir,
     locale: locale.map(value => value.to_string()),
     accept_languages: accept_languages.map(value => value.to_string()),
+    proxy_server,
+    proxy_bypass,
     framework_dialog_ok_label: Some("OK"),
     framework_dialog_cancel_label: Some("Cancel"),
     remote_debugging,
@@ -1917,6 +1927,8 @@ pub fn RuntimeConfig::with_framework_dialog_labels(
     cache_dir: self.cache_dir,
     locale: self.locale,
     accept_languages: self.accept_languages,
+    proxy_server: self.proxy_server,
+    proxy_bypass: self.proxy_bypass,
     framework_dialog_ok_label: Some(ok),
     framework_dialog_cancel_label: Some(cancel),
     remote_debugging: self.remote_debugging,
