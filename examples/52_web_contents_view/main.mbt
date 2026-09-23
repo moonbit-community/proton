@@ -304,13 +304,13 @@ let start_page_url = "data:text/html,<body style='margin:0;background:rgb(30,32,
 
 ///|
 fn open_panel(window : @proton.WindowHandle) -> Unit {
-  let state = window.state() catch { _ => return }
+  let (width, height) = window.content_size() catch { _ => return }
   let view = window.add_view(
     "browser",
     @proton.view(
       start_page_url,
-      width=state.width - sidebar_width,
-      height=state.height,
+      width=if width > sidebar_width { width - sidebar_width } else { 1 },
+      height=if height > 0 { height } else { 1 },
       x=sidebar_width,
       y=0,
     ),
@@ -334,22 +334,28 @@ async fn main {
   )
   .titlebar_style(@proton.TitlebarStyle::Overlay)
   .capability(@proton_extension.capability(browser_extension()))
-  .on_window_event(async fn(_window, event) noraise {
+  .on_window_event(async fn(window, event) noraise {
     match event {
-      StateChanged(state) =>
+      StateChanged(_) => {
+        let (width, height) = window.content_size() catch { _ => return }
         // Keep the embedded browser pinned to the right of the sidebar.
         match panel_slot.val {
           Some(view) =>
             view.set_bounds(
               x=sidebar_width,
               y=0,
-              width=state.width - sidebar_width,
-              height=state.height,
+              width=if width > sidebar_width {
+                width - sidebar_width
+              } else {
+                1
+              },
+              height=if height > 0 { height } else { 1 },
             ) catch {
               _ => ()
             }
           None => ()
         }
+      }
       _ => ()
     }
   })

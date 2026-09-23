@@ -1,6 +1,7 @@
 #if defined(_WIN32)
 
 #include "win_internal.h"
+#include "win_geometry.h"
 
 #include "../../proton_config.h"
 #include "../../proton_event.h"
@@ -46,6 +47,19 @@
 
 static proton_engine_display_handler_t g_display_handler;
 static uint64_t g_next_view_native_id = 1;
+
+/* Public view bounds stay in content-local DIPs. CEF's child HWND and
+ * SetWindowPos both take physical pixels; headless bounds stay logical. */
+static cef_rect_t proton_engine_view_pixel_bounds(proton_engine_view_t *view) {
+  UINT dpi = view->window->headless ? USER_DEFAULT_SCREEN_DPI
+                                  : proton_win_window_dpi(view->window->hwnd);
+  cef_rect_t bounds = {
+      MulDiv(view->x, dpi, USER_DEFAULT_SCREEN_DPI),
+      MulDiv(view->y, dpi, USER_DEFAULT_SCREEN_DPI),
+      proton_win_pixels(view->width, dpi),
+      proton_win_pixels(view->height, dpi)};
+  return bounds;
+}
 
 static void proton_engine_view_list_add(proton_engine_window_t *window,
                                         proton_engine_view_t *view) {
@@ -134,8 +148,8 @@ void proton_engine_window_close_views(proton_engine_window_t *window) {
   }
 }
 
-// Re-stacks view browser windows above the window's main browser view by
-// ascending (z_order, native_id).
+// Reapply logical bounds at the parent's current DPI, and stack child browsers
+// above the main browser by ascending (z_order, native_id).
 void proton_engine_window_layout_views(proton_engine_window_t *window) {
   if (window == NULL) {
     return;
@@ -175,8 +189,10 @@ void proton_engine_window_layout_views(proton_engine_window_t *window) {
     order[j] = current;
   }
   for (size_t i = 0; i < count; i++) {
-    SetWindowPos(order[i]->hwnd, HWND_TOP, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    cef_rect_t bounds = proton_engine_view_pixel_bounds(order[i]);
+    SetWindowPos(order[i]->hwnd, HWND_TOP, bounds.x, bounds.y,
+                 bounds.width, bounds.height, SWP_NOACTIVATE);
+    proton_engine_overlay_clip_browser(window, order[i]->hwnd);
   }
   free(order);
 }
@@ -307,10 +323,7 @@ static int32_t proton_engine_view_create_browser(
     window_info.style =
         WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
   }
-  window_info.bounds.x = view->x;
-  window_info.bounds.y = view->y;
-  window_info.bounds.width = view->width;
-  window_info.bounds.height = view->height;
+  window_info.bounds = proton_engine_view_pixel_bounds(view);
   if (view->has_background_color) {
     browser_settings.background_color = view->background_color;
   }
@@ -512,8 +525,11 @@ int32_t proton_engine_view_set_bounds(proton_engine_view_t *view,
       }
     }
   } else if (view->hwnd != NULL) {
-    SetWindowPos(view->hwnd, NULL, x, y, width, height,
+    cef_rect_t bounds = proton_engine_view_pixel_bounds(view);
+    SetWindowPos(view->hwnd, NULL, bounds.x, bounds.y,
+                 bounds.width, bounds.height,
                  SWP_NOZORDER | SWP_NOACTIVATE);
+    proton_engine_overlay_clip_browser(view->window, view->hwnd);
   }
   proton_engine_signal_wait_source(view->window->runtime,
                                    PROTON_WAIT_PLATFORM);
