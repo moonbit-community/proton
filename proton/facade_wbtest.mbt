@@ -950,7 +950,7 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     @manifest.AppEntry::Html("<html></html>"),
   )
   let mut rejected = false
-  let exit_code = run_manifest(
+  let outcome = run_manifest(
     manifest,
     ".",
     [],
@@ -966,14 +966,14 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "titlebar overlay is not supported in headless mode")
-      0
+      ApplicationExit::{ exit_code: 0, forced: false, }
     }
     error => {
       fail("expected configuration error, got " + @debug.render(Repr(error)))
-      0
+      ApplicationExit::{ exit_code: 0, forced: false, }
     }
   }
-  ignore(exit_code)
+  ignore(outcome)
   assert_true(rejected)
 }
 
@@ -984,7 +984,7 @@ async test "headless mode rejects native menus before runtime startup" {
     Menu("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
   ])
   let mut rejected = false
-  let exit_code = run_manifest(
+  let outcome = run_manifest(
     manifest,
     ".",
     [],
@@ -1000,14 +1000,14 @@ async test "headless mode rejects native menus before runtime startup" {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "native menus are not supported in headless mode")
-      0
+      ApplicationExit::{ exit_code: 0, forced: false, }
     }
     error => {
       fail("expected configuration error, got " + @debug.render(Repr(error)))
-      0
+      ApplicationExit::{ exit_code: 0, forced: false, }
     }
   }
-  ignore(exit_code)
+  ignore(outcome)
   assert_true(rejected)
 }
 

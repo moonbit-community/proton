@@ -272,7 +272,15 @@ async fn run_quit_chain_probe(root : String, timeout : Int) -> Unit {
       output_root,
       "quit0",
       Some(0),
-      ["before-quit", "will-quit", "quit 0"],
+      ["before-quit", "will-quit", "quit 0", "run-returned"],
+      timeout,
+    )
+    run_quit_chain_case(
+      root,
+      output_root,
+      "exit0",
+      Some(0),
+      ["quit 0"],
       timeout,
     )
     run_quit_chain_case(

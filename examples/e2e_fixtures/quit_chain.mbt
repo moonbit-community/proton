@@ -23,7 +23,7 @@ fn quit_chain_log(line : String) -> Unit {
 ///
 /// The harness waits for `PROTON_QUIT_CHAIN_READY` and then creates
 /// `PROTON_QUIT_CHAIN_GATE`, so the quit request always happens after the
-/// primary window exists. Supported modes are `quit0`, `quit3`, `exit7`,
+/// primary window exists. Supported modes are `quit0`, `quit3`, `exit0`, `exit7`,
 /// `prevent-before-quit`, `prevent-will-quit`, `exit-before-quit`,
 /// `exit-will-quit`, and `exit-pending-will-quit`.
 pub async fn run_quit_chain() -> Unit {
@@ -91,6 +91,7 @@ pub async fn run_quit_chain() -> Unit {
               Some(application) =>
                 match mode {
                   "quit3" => application.quit(exit_code=3)
+                  "exit0" => application.exit()
                   "exit7" => application.exit(exit_code=7)
                   _ => application.quit()
                 }
@@ -103,5 +104,6 @@ pub async fn run_quit_chain() -> Unit {
     },
     on_close=fn(_) { () },
   )
-  .run_or_abort()
+  .run()
+  quit_chain_log("run-returned")
 }

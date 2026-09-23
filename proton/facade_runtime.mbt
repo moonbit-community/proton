@@ -51,7 +51,7 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       Some(instance) => destroy_app_instance(instance) catch { _ => () }
       None => ()
     })
-    let exit_code = run_manifest(
+    let outcome = run_manifest(
       resolved.manifest,
       resolved.permission_base_path,
       self.command_capabilities,
@@ -110,10 +110,10 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     }
     @xlog.info(category="proton.runtime") <?
       { "message": "application runtime stopped" }
-    if exit_code != 0 {
-      // An orderly quit requested a non-zero status. Relaunches are already
-      // started, so the process can adopt the application exit code now.
-      @native.process_exit(exit_code)
+    if outcome.forced || outcome.exit_code != 0 {
+      // Forced exits terminate even with status zero. Cleanup and scheduled
+      // relaunches are complete before adopting the application exit status.
+      @native.process_exit(outcome.exit_code)
     }
   } catch {
     error => raise failure_log.logged_remaining(error)
@@ -268,7 +268,7 @@ async fn run_manifest(
   web_request_cancel_prefixes? : Array[String] = [],
   web_request_redirect_prefixes? : Array[(String, String)] = [],
   web_request_header_prefixes? : Array[(String, String, String)] = [],
-) -> Int raise AppRunError {
+) -> ApplicationExit raise AppRunError {
   let plans = planned_windows(manifest) catch {
     error => raise ConfigurationError(error)
   }
@@ -339,7 +339,7 @@ async fn run_manifest(
   let mut command_host : CommandHostRuntime? = None
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []
-  let exit_code = Ref(0)
+  let outcome = Ref(ApplicationExit::{ exit_code: 0, forced: false, })
   try {
     if !headless {
       let platform = @native.runtime_info().platform catch {
@@ -584,7 +584,7 @@ async fn run_manifest(
           }
         }
         session.run()
-        exit_code.val = session.resolved_exit_code()
+        outcome.val = session.resolved_exit()
         lifecycle.observe_window_closed()
         window_tasks.return_immediately(())
       })
@@ -641,7 +641,7 @@ async fn run_manifest(
     Some(error) => raise error
     None => ()
   }
-  exit_code.val
+  outcome.val
 }
 
 ///|
