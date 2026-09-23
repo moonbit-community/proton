@@ -306,27 +306,6 @@ proton_engine_bridge_pending_take(proton_engine_bridge_requests_t *requests,
   return NULL;
 }
 
-void proton_engine_bridge_pending_remove_browser(
-    proton_engine_runtime_t *runtime, int browser_id) {
-  proton_engine_bridge_requests_t *requests =
-      proton_engine_runtime_bridge_requests(runtime);
-  if (requests == NULL) {
-    return;
-  }
-  proton_engine_bridge_pending_t **cursor = &requests->pending;
-  while (*cursor != NULL) {
-    proton_engine_bridge_pending_t *pending = *cursor;
-    if (pending->browser_id == browser_id) {
-      *cursor = pending->next;
-      (void)proton_engine_runtime_enqueue_bridge_cancellation(
-          runtime, pending->request_id);
-      proton_engine_bridge_pending_free(pending);
-      continue;
-    }
-    cursor = &pending->next;
-  }
-}
-
 void proton_engine_bridge_requests_clear(
     proton_engine_bridge_requests_t *requests) {
   if (requests == NULL) {
@@ -540,6 +519,30 @@ int CEF_CALLBACK proton_engine_bridge_v8_execute(
   return 1;
 }
 
+void proton_engine_bridge_pending_remove_browser(
+    proton_engine_runtime_t *runtime, int browser_id) {
+  proton_engine_bridge_requests_t *requests =
+      proton_engine_runtime_bridge_requests(runtime);
+  if (requests == NULL) {
+    return;
+  }
+  proton_engine_bridge_pending_t **cursor = &requests->pending;
+  while (*cursor != NULL) {
+    proton_engine_bridge_pending_t *pending = *cursor;
+    if (pending->browser_id == browser_id) {
+      *cursor = pending->next;
+      (void)proton_engine_runtime_enqueue_bridge_cancellation(
+          runtime, pending->request_id);
+      (void)proton_engine_send_bridge_response_to_frame(
+          pending->frame, pending->renderer_pending_id, 0, "null",
+          "{\"code\":\"page_unavailable\",\"message\":\"The page is no longer available\"}");
+      proton_engine_bridge_pending_free(pending);
+      continue;
+    }
+    cursor = &pending->next;
+  }
+}
+
 int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
     cef_client_t *self, cef_browser_t *browser, cef_frame_t *frame,
     cef_process_id_t source_process, cef_process_message_t *message) {
@@ -574,8 +577,12 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
           main_frame != NULL
               ? proton_engine_userfree_to_utf8(main_frame->get_url(main_frame))
               : NULL;
-      (void)proton_engine_bridge_lifecycle_update_from_message(
+      int updated = proton_engine_bridge_lifecycle_update_from_message(
           &host->lifecycle, args, current_url);
+      if (updated && host->lifecycle.outcome != NULL &&
+          strcmp(host->lifecycle.outcome, "failed") == 0) {
+        proton_engine_bridge_pending_remove_browser(host->runtime, browser_id);
+      }
       free(current_url);
       if (main_frame != NULL) {
         main_frame->base.release((cef_base_ref_counted_t *)main_frame);

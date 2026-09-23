@@ -1188,6 +1188,8 @@ priv enum AppLifecycleState {
 ///|
 /// An observed lifecycle change for a window's main browser page.
 pub(all) enum BrowserEvent {
+  /// The running page lost its command bridge. Reload or close this browser to recover.
+  BridgeFailed(diagnostic~ : BridgeDiagnostic)
   LoadingChanged(is_loading~ : Bool)
   DidStartLoading
   DidFinishLoad

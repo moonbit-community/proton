@@ -412,6 +412,7 @@ pub fn BridgeDiagnostic::not_equal(Self, Self) -> Bool
 pub fn BridgeDiagnostic::to_repr(Self) -> @debug.Repr
 
 pub(all) enum BrowserEvent {
+  BridgeFailed(diagnostic~ : BridgeDiagnostic)
   LoadingChanged(is_loading~ : Bool)
   DidStartLoading
   DidFinishLoad

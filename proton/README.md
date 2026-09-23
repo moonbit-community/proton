@@ -195,7 +195,17 @@ decision to the application through `BrowserHandle::reload`,
 `ViewHandle::reload`, `ViewHandle::close`, or closing the window. The
 per-web-contents `BrowserEvent::RendererProcessTerminated` and
 `ViewEvent::RendererProcessTerminated` events still carry CEF's raw status and
-error code for diagnostics.
+error code for diagnostics. These notifications do not require command-bridge
+or view-event subscriptions.
+
+A command bridge that fails after a window has started reports
+`BrowserEvent::BridgeFailed { diagnostic }` through `on_browser_event` with the
+affected `BrowserHandle`. Proton logs the diagnostic and cancels the failed
+page's pending work. Other windows remain running; the application can reload
+or close the affected browser, or explicitly quit. Renderer termination uses
+its existing notification instead of also emitting `BridgeFailed`. A required
+bridge that fails during startup still fails the opening operation; runtime
+infrastructure errors still use the application failure path.
 
 Proton runs one session per application, so `session-created` fires once during
 startup, before the `app_lifecycle` start hooks, and reports the configured

@@ -972,7 +972,7 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
     return;
   }
   proton_engine_window_t *window = proton_engine_window_lookup_browser(browser);
-  if (window == NULL || !proton_engine_bridge_host_enabled(window->bridge) ||
+  if (window == NULL ||
       window->closing) {
     return;
   }
@@ -981,6 +981,8 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
       frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
                     : NULL;
   char *detail = proton_engine_cef_string_to_utf8(error_string);
+  proton_engine_bridge_pending_remove_browser(
+      window->runtime, browser->get_identifier(browser));
   proton_browser_session_renderer_terminated(
       window->browser_session, (int32_t)status, error_code,
       url != NULL ? url : "", detail != NULL ? detail : "");

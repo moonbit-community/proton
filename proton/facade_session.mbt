@@ -3508,7 +3508,7 @@ fn RuntimeSession::dispatch_view_event(
 fn RuntimeSession::dispatch_browser_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
-) -> Unit {
+) -> Unit raise AppRunError {
   match
     (
       event.window_id(),
@@ -3520,6 +3520,9 @@ fn RuntimeSession::dispatch_browser_event(
     (Some(window_id), info, termination, find_result, pdf_result) =>
       match self.find_window_by_native_id(window_id) {
         Some(window) => {
+          if termination is Some(_) {
+            self.fail_page_requests(window)
+          }
           let browser = self.browser_handle(window)
           let observed = match
             (event.event_type(), info, termination, find_result, pdf_result) {
@@ -4296,33 +4299,80 @@ fn RuntimeSession::check_bridge_failures(
 ) -> Unit raise AppRunError {
   guard !self.is_quitting() else { return }
   for running in self.windows {
-    if !running.is_active() {
-      continue
+    // Startup failures remain owned by the opening operation.
+    guard running.state is WindowOpen else { continue }
+    let state = running.window.bridge_lifecycle_state() catch {
+      error =>
+        raise native_run_error("read bridge state for " + running.id, error)
     }
-    let failure = take_runtime_bridge_failure(running.window) catch {
+    running.bridge_ready = state.outcome == "ready"
+    guard state.failure_pending else { continue }
+    let diagnostic = bridge_failure(running.window, state) catch {
       error =>
         raise native_run_error("read bridge failure for " + running.id, error)
     }
-    match failure {
-      Some(diagnostic) =>
-        if diagnostic.code == renderer_process_terminated_failure_code {
-          // A crashed or killed renderer is an application event in Electron,
-          // not a fatal bridge failure: `on_render_process_gone` already
-          // received it and decides whether to reload, replace, or close the
-          // page. Keep the diagnostic in the log instead of ending the run.
-          @xlog.warn(category="proton.bridge") <?
-            {
-              "message": "renderer process terminated",
-              "window": running.id,
-              "url": diagnostic.url,
-              "detail": diagnostic.message,
-            }
-        } else {
-          raise BridgeRuntimeError(BridgeDiagnostic::from_native(diagnostic))
-        }
-      None => ()
+    self.fail_page_requests(running)
+    @xlog.warn(category="proton.bridge") <?
+      {
+        "message": "page bridge failed",
+        "window": running.id,
+        "code": diagnostic.code,
+        "url": diagnostic.url,
+        "detail": diagnostic.message,
+      }
+    // Renderer failure has its own notification; do not report it twice.
+    if diagnostic.code != renderer_process_terminated_failure_code {
+      let browser = self.browser_handle(running)
+      let event = BrowserEvent::BridgeFailed(
+        diagnostic=BridgeDiagnostic::from_native(diagnostic),
+      )
+      for handler in self.browser_event_handlers {
+        ignore(
+          self.window_tasks.spawn(() => handler(browser, event), no_wait=true),
+        )
+      }
     }
   }
+}
+
+///|
+fn RuntimeSession::fail_page_requests(
+  self : RuntimeSession,
+  running : RunningWindow,
+) -> Unit raise AppRunError {
+  running.bridge_ready = false
+  runtime_session_cancel_window_bridge_tasks(
+    self.pending_bridge,
+    Some(running.native_id),
+  )
+  for pending in self.pending_browser_requests {
+    if pending.window == running.native_id {
+      running.window.respond_browser_request(pending.request_id, "deny") catch {
+        error =>
+          if !error.is_stale_browser_request() &&
+            !error.is_stale_window_request() {
+            raise native_run_error("reject failed page request", error)
+          }
+      }
+    }
+  }
+  self.cancel_browser_requests(Some(running.native_id))
+  for pending in self.pending_resource_requests {
+    if pending.window == running.native_id {
+      self.runtime.complete_resource_request(
+        pending.request_id,
+        503,
+        "text/plain",
+        b"",
+      ) catch {
+        error =>
+          if !error.is_stale_resource_request() {
+            raise native_run_error("reject failed page resource", error)
+          }
+      }
+    }
+  }
+  self.cancel_resource_requests_for_window(Some(running.native_id))
 }
 
 ///|

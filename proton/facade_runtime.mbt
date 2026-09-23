@@ -1100,17 +1100,6 @@ async fn show_app_run_failure(
 }
 
 ///|
-fn take_runtime_bridge_failure(
-  window : @native.Window,
-) -> @native.BridgeDiagnostic? raise @native.NativeError {
-  let state = window.bridge_lifecycle_state()
-  if !state.failure_pending {
-    return None
-  }
-  Some(bridge_failure(window, state))
-}
-
-///|
 fn WindowLifetime::WindowLifetime() -> WindowLifetime {
   WindowLifetime::{
     task: None,

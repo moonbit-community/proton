@@ -636,8 +636,8 @@ proton_engine_client_t *proton_engine_client_new(
   proton_web_request_config_retain(web_request_config);
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
-  // The registry keeps the initial client reference until CEF shutdown; CEF
-  // may hold additional references through and beyond OnBeforeClose.
+  // The registry keeps the initial client reference until the closed browser
+  // has no owner or external CEF client references.
   client->client.base.release = proton_engine_client_release;
   client->client.on_process_message_received =
       proton_engine_bridge_client_on_process_message_received;
@@ -1185,7 +1185,7 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
   }
   proton_engine_window_t *window =
       proton_engine_window_lookup_browser(browser);
-  if (window == NULL || !proton_engine_bridge_host_enabled(window->bridge) ||
+  if (window == NULL ||
       window->closed) {
     return;
   }
@@ -1194,6 +1194,8 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
       frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
                     : NULL;
   char *detail = proton_engine_cef_string_to_utf8(error_string);
+  proton_engine_bridge_pending_remove_browser(
+      window->runtime, browser->get_identifier(browser));
   proton_browser_session_renderer_terminated(
       window->browser_session, (int32_t)status, error_code,
       url != NULL ? url : "", detail != NULL ? detail : "");
