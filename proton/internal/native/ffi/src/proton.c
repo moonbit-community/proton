@@ -236,10 +236,8 @@ int32_t proton_internal_runtime_create(
   if (status != PROTON_OK) {
     return status;
   }
-  config.proxy_server = proxy_server != NULL && proxy_server[0] != '\0'
-      ? proxy_server : getenv("PROTON_PROXY_SERVER");
-  config.proxy_bypass = proxy_server != NULL && proxy_server[0] != '\0'
-      ? proxy_bypass : getenv("PROTON_PROXY_BYPASS");
+  config.proxy_server = proxy_server;
+  config.proxy_bypass = proxy_bypass;
   if (proton_has_active_runtime()) {
     return proton_set_error(PROTON_ERR_ALREADY_INITIALIZED,
                             "runtime is already initialized");

@@ -3,6 +3,7 @@ import {
   "moonbit-community/proton_ffi" @ffi,
   "moonbit-community/proton/internal/locale",
   "moonbitlang/core/json",
+  "moonbitlang/core/env",
   "moonbitlang/x/path",
 }
 

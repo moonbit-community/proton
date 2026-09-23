@@ -507,11 +507,24 @@ pub fn execute_process(
 }
 
 ///|
+fn RuntimeConfig::resolve_proxy(self : RuntimeConfig) -> (String?, String?) {
+  match self.proxy_server {
+    Some(server) if server != "" => (Some(server), self.proxy_bypass)
+    _ =>
+      (
+        @env.get_env_var("PROTON_PROXY_SERVER"),
+        @env.get_env_var("PROTON_PROXY_BYPASS"),
+      )
+  }
+}
+
+///|
 pub fn Runtime::Runtime(
   config? : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> Runtime raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
   validate_runtime_config(config)
+  let (proxy_server, proxy_bypass) = config.resolve_proxy()
   let out_runtime = Ref(@native_ffi.runtime_null())
   let status = @native_ffi.runtime_create(
     runtime_config_bool(config.use_bundled),
@@ -522,8 +535,8 @@ pub fn Runtime::Runtime(
     runtime_config_string(config.cache_dir),
     runtime_config_string(config.locale),
     runtime_config_languages(config.accept_languages),
-    runtime_config_string(config.proxy_server),
-    runtime_config_string(config.proxy_bypass),
+    runtime_config_string(proxy_server),
+    runtime_config_string(proxy_bypass),
     runtime_config_string(config.framework_dialog_ok_label),
     runtime_config_string(config.framework_dialog_cancel_label),
     runtime_config_remote_debugging(config.remote_debugging),

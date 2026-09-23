@@ -807,6 +807,10 @@ async fn run_proxy_regression(name : String) -> Unit {
     "Content-Type": "text/html",
   })
   defer server.close()
+  // Exercise request-less disconnects independently of Chromium's platform
+  // specific speculative connection behavior.
+  let speculative = @socket.Tcp::connect(server.addr)
+  speculative.close()
   let proxy = "http://127.0.0.1:" + server.addr.port().to_string()
   let configured = name == "proxy-config"
   let environment_proxy = if configured { "http://127.0.0.1:1" } else { proxy }
@@ -835,7 +839,12 @@ async fn run_proxy_regression(name : String) -> Unit {
                 .task_group()
                 .spawn(no_wait=true, () => {
                   defer connection.close()
-                  let request = connection.read_request()
+                  // A browser may close a speculative connection before sending
+                  // a request. This does not satisfy the proxy success assertion.
+                  let request = connection.read_request() catch {
+                    @io.ReaderClosed => return
+                    error => raise error
+                  }
                   if request.path == "http://proton-proxy.invalid:8080/probe" {
                     connection.send_response(200, "OK")
                     connection.write_string("<title>Proxy Success</title>")

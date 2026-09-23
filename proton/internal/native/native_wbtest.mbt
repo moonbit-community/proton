@@ -1164,3 +1164,46 @@ test "runtime destruction owns child cleanup even before finish_destroy" {
   assert_eq(view.id(), 0L)
   assert_eq(window.id(), 0L)
 }
+
+///|
+test "proxy configuration reads current environment and isolates explicit settings" {
+  let old_server = @env.get_env_var("PROTON_PROXY_SERVER")
+  let old_bypass = @env.get_env_var("PROTON_PROXY_BYPASS")
+  defer (for
+    (key, value) in [
+      ("PROTON_PROXY_SERVER", old_server),
+      ("PROTON_PROXY_BYPASS", old_bypass),
+    ] {
+    match value {
+      Some(value) => @env.set_env_var(key, value)
+      None => @env.unset_env_var(key)
+    }
+  })
+  @env.set_env_var("PROTON_PROXY_SERVER", "http://127.0.0.1:1234")
+  @env.set_env_var("PROTON_PROXY_BYPASS", "*")
+  assert_eq(
+    RuntimeConfig::bundled().resolve_proxy(),
+    (Some("http://127.0.0.1:1234"), Some("*")),
+  )
+  @env.set_env_var("PROTON_PROXY_SERVER", "http://127.0.0.1:5678")
+  assert_eq(
+    RuntimeConfig::bundled().resolve_proxy(),
+    (Some("http://127.0.0.1:5678"), Some("*")),
+  )
+  assert_eq(
+    RuntimeConfig::bundled(proxy_server="http://explicit:8080").resolve_proxy(),
+    (Some("http://explicit:8080"), None),
+  )
+  assert_eq(
+    RuntimeConfig::bundled(
+      proxy_server="http://explicit:8080",
+      proxy_bypass="localhost",
+    ).resolve_proxy(),
+    (Some("http://explicit:8080"), Some("localhost")),
+  )
+  assert_eq(
+    @env.get_env_var("PROTON_PROXY_SERVER"),
+    Some("http://127.0.0.1:5678"),
+  )
+  assert_eq(@env.get_env_var("PROTON_PROXY_BYPASS"), Some("*"))
+}
