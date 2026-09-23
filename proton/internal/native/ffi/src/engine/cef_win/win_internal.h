@@ -288,7 +288,9 @@ int proton_engine_register_scheme_factory(void);
 void proton_engine_free_closed_windows(void);
 int proton_engine_closed_windows_ready_for_shutdown(void);
 void proton_engine_overlay_subclass_browser(proton_engine_window_t *window,
-                                            HWND browser_hwnd);
+                                           HWND browser_hwnd);
+void proton_engine_overlay_clip_browser(proton_engine_window_t *window,
+                                       HWND browser_hwnd);
 int proton_engine_overlay_frame_top_thickness(HWND hwnd);
 void proton_engine_overlay_apply_frame(HWND hwnd);
 LRESULT proton_engine_overlay_hit_test(HWND hwnd, LPARAM lparam);
