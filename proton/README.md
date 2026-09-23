@@ -201,7 +201,9 @@ or view-event subscriptions.
 A command bridge that fails after a window has started reports
 `BrowserEvent::BridgeFailed { diagnostic }` through `on_browser_event` with the
 affected `BrowserHandle`. Proton logs the diagnostic and cancels the failed
-page's pending work. Other windows remain running; the application can reload
+page's pending work. Further commands from failed or replaced bridge attempts
+are rejected with `page_unavailable`; commands during a fresh attempt's
+initialization remain allowed. Other windows remain running; the application can reload
 or close the affected browser, or explicitly quit. Renderer termination uses
 its existing notification instead of also emitting `BridgeFailed`. A required
 bridge that fails during startup still fails the opening operation; runtime

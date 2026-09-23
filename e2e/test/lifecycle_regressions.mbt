@@ -84,6 +84,9 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
     if @mbfs.path_exists(gate + ".ready") {
       @fs.remove(gate + ".ready")
     }
+    if @mbfs.path_exists(gate + ".failed-request-checked") {
+      @fs.remove(gate + ".failed-request-checked")
+    }
     if @mbfs.path_exists(gate) {
       @fs.remove(gate)
     }
@@ -149,6 +152,27 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         @mbfs.write_string_to_file(gate, "go")
         if name == "process-events" || name == "process-events-no-bridge" {
           kill_renderer_helpers(snapshot)
+        }
+        if name == "bridge-recovery" {
+          let page = connect_spawned_page(
+            group,
+            app,
+            port.to_string(),
+            timeout,
+            title="Failed Page",
+          )
+          wait_for_ready(page, "globalThis.__failureReady === true", timeout)
+          assert_true(
+            evaluate_bool(
+              page, "window.__MoonBit__.app.ping(null).then(() => false, error => error.code === 'page_unavailable')",
+              true,
+            ),
+            msg="failed bridge attempt accepted a new command",
+          )
+          @mbfs.write_string_to_file(
+            gate + ".failed-request-checked",
+            "checked",
+          )
         }
         ignore(
           wait_for_scenario_app_shutdown(

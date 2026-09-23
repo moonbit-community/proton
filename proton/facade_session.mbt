@@ -4395,6 +4395,28 @@ fn RuntimeSession::start_bridge_request(
       return
     }
   }
+  let state = target.window.bridge_lifecycle_state() catch {
+    error => raise native_run_error("read bridge state before command", error)
+  }
+  // Pending attempts may issue initialization commands. A failed attempt
+  // stays invalid even after its diagnostic has been consumed; only a fresh
+  // page_instance can begin another attempt. Queued old-page requests must
+  // not run against its replacement either.
+  if state.outcome == "failed" ||
+    (
+      state.page_instance != "" &&
+      request.page_instance != Some(state.page_instance)
+    ) {
+    self.respond_bridge_request(
+      @native.BridgeResponse::Err(
+        request_id~,
+        code="page_unavailable",
+        message="the issuing bridge attempt is no longer available",
+      ),
+      "reject failed or stale page request",
+    )
+    return
+  }
   match self.command_host() {
     None =>
       self.respond_bridge_request(

@@ -914,6 +914,7 @@ async fn run_proxy_regression(name : String) -> Unit {
 async fn run_page_recovery_regression(name : String) -> Unit {
   let application : Ref[@proton.ApplicationContext?] = Ref(None)
   let ready_windows = Ref(0)
+  let initialized = Ref(0)
   let bridge_failures = Ref(0)
   let renderer_failures : Array[String] = []
   let slow_started = Ref(false)
@@ -933,12 +934,14 @@ async fn run_page_recovery_regression(name : String) -> Unit {
   let extension = @proton_extension.typed(
     contract,
     [probe.contract_route()],
-    registrar => registrar.bind(probe, (_context, _payload) => ()),
+    registrar => {
+      registrar.bind(probe, (_context, _payload) => initialized.val += 1)
+    },
     scripts=[
       if name == "bridge-startup-failure" {
         "throw new Error('expected startup failure');"
       } else {
-        "if (location.search === '?fail') throw new Error('expected page failure');"
+        "if (location.search === '?fail') throw new Error('expected page failure'); void window.__MoonBit__.failure.probe(null);"
       },
     ],
   )
@@ -1029,15 +1032,24 @@ async fn run_page_recovery_regression(name : String) -> Unit {
             while !slow_cancelled.val {
               @async.sleep(10)
             }
+            if name == "bridge-recovery" {
+              main.eval("globalThis.__failureReady = true")
+              let gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
+              while !@mbfs.path_exists(gate + ".failed-request-checked") {
+                @async.sleep(10)
+              }
+              assert_eq(pinged.val, 0)
+            }
             secondary.load_url("data:text/html,survivor-responded")
             while secondary.state().url != "data:text/html,survivor-responded" {
               @async.sleep(10)
             }
+            let before_reload = initialized.val
             main.load_html(
               "<title>Recovered</title>", "https://proton.localhost/",
             )
             // The script retries until the fresh document has installed its bridge.
-            while pinged.val == 0 {
+            while pinged.val == 0 || initialized.val <= before_reload {
               main.eval(
                 "if (document.title === 'Recovered' && window.__MoonBit__?.app?.ping) void window.__MoonBit__.app.ping(null)",
               )
