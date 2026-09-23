@@ -41,6 +41,7 @@ struct ProcessSnapshot {
   pids : Array[Int]
   helper_pids : Array[Int]
   commands : Map[Int, String]
+  parents : Map[Int, Int]
   created_at : Map[Int, Int]
 }
 
@@ -124,10 +125,12 @@ async fn finish_scenario_app_with_connected_browser(
 async fn snapshot_process_tree(root_pid : Int) -> ProcessSnapshot {
   let rows = list_processes()
   let commands : Map[Int, String] = Map([])
+  let parents : Map[Int, Int] = Map([])
   let created_at : Map[Int, Int] = Map([])
   let mut root_row : ProcessRow? = None
   for row in rows {
     commands[row.pid] = row.command
+    parents[row.pid] = row.parent_pid
     created_at[row.pid] = row.created_at
     if row.pid == root_pid {
       root_row = Some(row)
@@ -158,7 +161,7 @@ async fn snapshot_process_tree(root_pid : Int) -> ProcessSnapshot {
       helper_pids.push(row.pid)
     }
   }
-  ProcessSnapshot::{ pids, helper_pids, commands, created_at, }
+  ProcessSnapshot::{ pids, helper_pids, commands, parents, created_at, }
 }
 
 ///|
@@ -187,6 +190,9 @@ async fn list_unix_processes() -> Array[ProcessRow] {
   // Redirect `ps` output to a file instead of capturing it through a pipe:
   // a pipe read can surface a transient EAGAIN on a loaded runner and
   // truncate the tree, dropping the root process from the snapshot.
+  // `-ww` asks for unlimited width: a redirect is not a terminal, so the
+  // default width would clip long helper command lines and hide the switches
+  // the tests match on, such as `--type=renderer`.
   let tmp_root = @fs.tmpdir(prefix="proton-e2e-ps-")
   let ps_log = join_path(tmp_root, "ps.out")
   let output = @process.redirect_to_file(
@@ -195,7 +201,7 @@ async fn list_unix_processes() -> Array[ProcessRow] {
   )
   let code = @process.run(
     "ps",
-    ["-axo", "pid=,ppid=,command="],
+    ["-axo", "pid=,ppid=,command=", "-ww"],
     stdout=output,
     stderr=output,
   )

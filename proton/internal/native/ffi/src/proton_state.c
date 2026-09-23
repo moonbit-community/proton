@@ -148,6 +148,13 @@ bool proton_has_active_runtime(void) {
          g_active_runtime->lifecycle != PROTON_RUNTIME_DESTROYED;
 }
 
+proton_runtime_slot_t *proton_get_active_runtime(void) {
+  if (!proton_has_active_runtime()) {
+    return NULL;
+  }
+  return g_active_runtime;
+}
+
 bool proton_runtime_enqueue_event(proton_runtime_slot_t *runtime,
                                   proton_event_t *event) {
   if (runtime == NULL || event == NULL ||

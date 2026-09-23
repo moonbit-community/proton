@@ -27,6 +27,8 @@ pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 
 pub fn is_packaged() -> Bool
 
+pub fn is_ready() -> Bool
+
 pub fn native_image() -> NativeImage raise NativeImageError
 
 pub fn resource_dir() -> String
@@ -82,6 +84,7 @@ pub(all) suberror AppControlError {
   InvalidProtocolScheme(scheme~ : String)
   UndeclaredProtocolScheme(scheme~ : String)
   InvalidExecutable(path~ : String)
+  UnsupportedPlatform(action~ : String)
   NativeControlFailure(action~ : String, status~ : Int, detail~ : String)
 } derive(Eq, @debug.Debug)
 pub fn AppControlError::equal(Self, Self) -> Bool
@@ -280,6 +283,7 @@ pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
 pub fn App::name(Self) -> String raise AppMetadataError
+pub fn App::on_before_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Self
 pub fn App::on_browser_event(Self, async (BrowserHandle, BrowserEvent) -> Unit noraise) -> Self
 pub fn App::on_certificate_error(Self, async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (BrowserHandle, DownloadEvent) -> Unit noraise) -> Self
@@ -289,11 +293,17 @@ pub fn App::on_media_permission_request(Self, async (BrowserHandle, MediaPermiss
 pub fn App::on_navigation_request(Self, async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise) -> Self
 pub fn App::on_new_window_request(Self, async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise) -> Self
 pub fn App::on_permission_request(Self, async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise) -> Self
+pub fn App::on_quit(Self, async (ApplicationContext, Int) -> Unit noraise) -> Self
+pub fn App::on_render_process_gone(Self, async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise) -> Self
+pub fn App::on_session_created(Self, async (ApplicationSession) -> Unit noraise) -> Self
 pub fn App::on_system_appearance_change(Self, async (SystemAppearance) -> Unit noraise) -> Self
 pub fn App::on_thumbar_button_click(Self, async (WindowHandle, String) -> Unit noraise) -> Self
 pub fn App::on_update_available(Self, async (PendingUpdate) -> Unit noraise) -> Self
 pub fn App::on_view_event(Self, async (ViewHandle, ViewEvent) -> Unit noraise) -> Self
+pub fn App::on_web_contents_created(Self, async (WebContentsHandle) -> Unit noraise) -> Self
+pub fn App::on_will_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Self
 pub fn App::on_window_close_request(Self, async (WindowHandle) -> WindowCloseDecision noraise) -> Self
+pub fn App::on_window_created(Self, async (WindowHandle) -> Unit noraise) -> Self
 pub fn App::on_window_event(Self, async (WindowHandle, WindowEvent) -> Unit noraise) -> Self
 pub fn App::path(Self, AppPathKind) -> String raise AppPathError
 pub fn App::proxy(Self, String, bypass? : String) -> Self
@@ -343,22 +353,44 @@ pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
-  request_quit : () -> Unit
+  request_quit : (Int) -> Unit
+  request_exit : (Int) -> Unit
   application_identifier : String
   application_executable : String
   application_arguments : Array[String]
   url_schemes : Array[String]
 }
 pub fn ApplicationContext::exit(Self, exit_code? : Int) -> Unit
+pub fn ApplicationContext::focus(Self, steal? : Bool) -> Unit raise AppControlError
+pub fn ApplicationContext::hide(Self) -> Unit raise AppControlError
+pub fn ApplicationContext::is_active(Self) -> Bool raise AppControlError
 pub fn ApplicationContext::is_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
+pub fn ApplicationContext::is_hidden(Self) -> Bool raise AppControlError
 pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
-pub fn ApplicationContext::quit(Self) -> Unit
+pub fn ApplicationContext::quit(Self, exit_code? : Int) -> Unit
 pub fn ApplicationContext::relaunch(Self, options? : RelaunchOptions) -> Unit raise AppControlError
 pub fn ApplicationContext::remove_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::set_as_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
+pub fn ApplicationContext::show(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::task_group(Self) -> @async.TaskGroup[Unit]
 pub fn ApplicationContext::windows(Self) -> WindowManager
+
+pub(all) enum ApplicationQuitDecision {
+  Allow
+  Prevent
+} derive(Eq, @debug.Debug)
+pub fn ApplicationQuitDecision::equal(Self, Self) -> Bool
+pub fn ApplicationQuitDecision::not_equal(Self, Self) -> Bool
+pub fn ApplicationQuitDecision::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ApplicationSession {
+  partition : String?
+  data_path : String?
+} derive(Eq, @debug.Debug)
+pub fn ApplicationSession::equal(Self, Self) -> Bool
+pub fn ApplicationSession::not_equal(Self, Self) -> Bool
+pub fn ApplicationSession::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BridgeDiagnostic {
   stage : String
@@ -834,6 +866,27 @@ pub fn RelaunchOptions::equal(Self, Self) -> Bool
 pub fn RelaunchOptions::not_equal(Self, Self) -> Bool
 pub fn RelaunchOptions::to_repr(Self) -> @debug.Repr
 
+pub(all) struct RenderProcessGoneDetails {
+  reason : RenderProcessGoneReason
+  exit_code : Int
+} derive(Eq, @debug.Debug)
+pub fn RenderProcessGoneDetails::equal(Self, Self) -> Bool
+pub fn RenderProcessGoneDetails::not_equal(Self, Self) -> Bool
+pub fn RenderProcessGoneDetails::to_repr(Self) -> @debug.Repr
+
+pub(all) enum RenderProcessGoneReason {
+  AbnormalExit
+  Killed
+  Crashed
+  OutOfMemory
+  LaunchFailed
+  IntegrityFailure
+  Unknown
+} derive(Eq, @debug.Debug)
+pub fn RenderProcessGoneReason::equal(Self, Self) -> Bool
+pub fn RenderProcessGoneReason::not_equal(Self, Self) -> Bool
+pub fn RenderProcessGoneReason::to_repr(Self) -> @debug.Repr
+
 pub struct RendererTarget {
   window : String
   bundled : Bool
@@ -978,6 +1031,7 @@ pub fn ViewEvent::to_repr(Self) -> @debug.Repr
 pub struct ViewHandle {
   id : String
   native_id : Int64
+  window_id : String
   set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
   set_view_visible : (Bool) -> Unit raise WindowSessionError
   set_view_z_order : (Int) -> Unit raise WindowSessionError
@@ -1032,6 +1086,7 @@ pub fn ViewHandle::stop(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::stop_find_in_page(Self, clear_selection? : Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::toggle_devtools(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::undo(Self) -> Unit raise WindowSessionError
+pub fn ViewHandle::window_id(Self) -> String
 pub fn ViewHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
 pub(all) struct ViewState {
@@ -1045,6 +1100,12 @@ pub(all) struct ViewState {
 pub fn ViewState::equal(Self, Self) -> Bool
 pub fn ViewState::not_equal(Self, Self) -> Bool
 pub fn ViewState::to_repr(Self) -> @debug.Repr
+
+pub(all) enum WebContentsHandle {
+  Browser(BrowserHandle)
+  View(ViewHandle)
+}
+pub fn WebContentsHandle::window_id(Self) -> String
 
 pub(all) struct WindowButtonPosition {
   x : Int

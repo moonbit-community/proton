@@ -42,6 +42,13 @@ pub fn NativeError::is_invalid_state(self : NativeError) -> Bool {
 }
 
 ///|
+/// Reports whether this build of Proton implements the requested operation on
+/// the current platform.
+pub fn NativeError::is_unsupported(self : NativeError) -> Bool {
+  self.status() == proton_err_unsupported
+}
+
+///|
 /// Reports whether a bridge response lost its renderer request while an
 /// asynchronous handler was still completing.
 pub fn NativeError::is_stale_bridge_response(self : NativeError) -> Bool {

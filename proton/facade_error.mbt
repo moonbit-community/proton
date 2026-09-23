@@ -294,6 +294,8 @@ pub fn AppControlError::message(self : AppControlError) -> String {
       "application protocol scheme is not declared with App::url_scheme: " +
       scheme
     InvalidExecutable(path~) => "invalid application executable path: " + path
+    UnsupportedPlatform(action~) =>
+      action + " is not available on this platform"
     NativeControlFailure(action~, status~, detail~) =>
       "application failed to " +
       action +

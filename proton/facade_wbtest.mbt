@@ -471,28 +471,56 @@ test "application close commits only after every window allows it" {
 }
 
 ///|
-test "close coordinator starts only one application quit transaction" {
-  let coordinator = CloseCoordinator()
-  assert_false(coordinator.is_quitting())
-  assert_true(coordinator.request_quit())
-  assert_true(coordinator.is_quitting())
-  assert_false(coordinator.request_quit())
+test "application quit decisions keep the chain running only when allowed" {
+  assert_true(should_continue_quit(ApplicationQuitDecision::Allow))
+  assert_false(should_continue_quit(ApplicationQuitDecision::Prevent))
 }
 
 ///|
-async test "application context forwards orderly quit requests" {
-  let requested = Ref(false)
+test "close coordinator starts only one application quit transaction" {
+  let coordinator = CloseCoordinator()
+  assert_false(coordinator.is_quitting())
+  assert_true(coordinator.begin_quit(3))
+  assert_true(coordinator.is_quitting())
+  assert_true(coordinator.state == CloseBeforeQuit)
+  assert_eq(coordinator.exit_code, 3)
+  assert_false(coordinator.forced)
+  assert_false(coordinator.begin_quit(0))
+  assert_eq(coordinator.exit_code, 3)
+}
+
+///|
+test "forced exits escalate a quit chain and stop committing changes" {
+  let coordinator = CloseCoordinator()
+  assert_true(coordinator.begin_forced_exit(7))
+  assert_true(coordinator.forced)
+  assert_true(coordinator.is_quitting())
+  assert_eq(coordinator.exit_code, 7)
+  assert_false(coordinator.begin_quit(0))
+  assert_eq(coordinator.exit_code, 7)
+  coordinator.state = CloseCommitted
+  assert_false(coordinator.begin_forced_exit(9))
+  assert_eq(coordinator.exit_code, 7)
+}
+
+///|
+async test "application context forwards orderly and forced exit requests" {
+  let requested = Ref(0)
+  let forced = Ref(0)
   @async.with_task_group(group => {
     let context = ApplicationContext(
       group,
       test_window_manager(),
       @locale.LocalePreferences::resolve(None, []),
-      request_quit=fn() { requested.val = true },
+      request_quit=fn(exit_code) { requested.val = exit_code },
+      request_exit=fn(exit_code) { forced.val = exit_code },
     )
-    context.quit()
+    context.quit(exit_code=5)
+    context.exit(exit_code=9)
     group.return_immediately(())
   })
-  assert_true(requested.val)
+  assert_eq(requested.val, 5)
+  assert_eq(forced.val, 9)
 }
 
 ///|
@@ -922,7 +950,7 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     @manifest.AppEntry::Html("<html></html>"),
   )
   let mut rejected = false
-  run_manifest(
+  let exit_code = run_manifest(
     manifest,
     ".",
     [],
@@ -938,10 +966,14 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "titlebar overlay is not supported in headless mode")
+      0
     }
-    error =>
+    error => {
       fail("expected configuration error, got " + @debug.render(Repr(error)))
+      0
+    }
   }
+  ignore(exit_code)
   assert_true(rejected)
 }
 
@@ -952,7 +984,7 @@ async test "headless mode rejects native menus before runtime startup" {
     Menu("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
   ])
   let mut rejected = false
-  run_manifest(
+  let exit_code = run_manifest(
     manifest,
     ".",
     [],
@@ -968,10 +1000,14 @@ async test "headless mode rejects native menus before runtime startup" {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "native menus are not supported in headless mode")
+      0
     }
-    error =>
+    error => {
       fail("expected configuration error, got " + @debug.render(Repr(error)))
+      0
+    }
   }
+  ignore(exit_code)
   assert_true(rejected)
 }
 
@@ -2020,18 +2056,65 @@ test "command host registration preserves cleanup failures" {
 }
 
 ///|
+test "renderer termination statuses map to Electron reasons" {
+  assert_eq(
+    render_process_gone_reason(0),
+    RenderProcessGoneReason::AbnormalExit,
+  )
+  assert_eq(render_process_gone_reason(1), RenderProcessGoneReason::Killed)
+  assert_eq(render_process_gone_reason(2), RenderProcessGoneReason::Crashed)
+  assert_eq(render_process_gone_reason(3), RenderProcessGoneReason::OutOfMemory)
+  assert_eq(
+    render_process_gone_reason(4),
+    RenderProcessGoneReason::LaunchFailed,
+  )
+  assert_eq(
+    render_process_gone_reason(5),
+    RenderProcessGoneReason::IntegrityFailure,
+  )
+  assert_eq(render_process_gone_reason(6), RenderProcessGoneReason::Unknown)
+  assert_eq(render_process_gone_reason(-1), RenderProcessGoneReason::Unknown)
+}
+
+///|
+test "web contents handles report their owning window" {
+  let view = test_view_handle("tab", 3L, [])
+  assert_eq(WebContentsHandle::View(view).window_id(), "main")
+}
+
+///|
+test "process-level event handlers accumulate on the app builder" {
+  let app = html("Process events", "<html></html>")
+    .on_window_created(fn(_) { () })
+    .on_web_contents_created(fn(_) { () })
+    .on_render_process_gone(fn(_, _) { () })
+    .on_session_created(fn(_) { () })
+  assert_eq(app.window_created_handlers.length(), 1)
+  assert_eq(app.web_contents_created_handlers.length(), 1)
+  assert_eq(app.render_process_gone_handlers.length(), 1)
+  assert_eq(app.session_created_handlers.length(), 1)
+}
+
+///|
 test "application lifecycle advances through close and destroy" {
   let lifecycle = AppLifecycle()
   assert_true(lifecycle.state is Constructing)
   assert_false(lifecycle.has_reached_running())
+  assert_false(is_ready())
   lifecycle.begin_starting()
   assert_false(lifecycle.has_reached_running())
+  assert_false(is_ready())
   lifecycle.begin_running()
   assert_true(lifecycle.state is Running)
   assert_true(lifecycle.has_reached_running())
+  assert_true(is_ready())
   lifecycle.observe_window_closed()
   assert_true(lifecycle.state is Closing)
+  // Closing the last window does not end application readiness: a
+  // `KeepRunning` application is still initialized.
+  assert_true(is_ready())
   lifecycle.begin_draining()
+  assert_false(is_ready())
   lifecycle.begin_destroying()
   lifecycle.finish()
   assert_true(lifecycle.state is Closed)
@@ -2741,6 +2824,7 @@ fn test_view_handle(
   ViewHandle::{
     id,
     native_id,
+    window_id: "main",
     set_view_bounds: fn(x, y, width, height) {
       calls.push("set_bounds:\{x},\{y},\{width},\{height}")
     },

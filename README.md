@@ -123,7 +123,33 @@ window operations including:
 Window creation, state changes, and close interception are integrated with the
 managed async runtime. By default the application quits after its final window
 closes. Use `LastWindowClosedPolicy::KeepRunning` for tray or background
-applications.
+applications. An orderly quit follows Electron's quit event chain:
+`.on_before_quit(...)` runs before windows start closing, `.on_will_quit(...)`
+runs after the last window has closed, and `.on_quit(...)` observes the process
+exit code. Both cancelable steps answer with
+`ApplicationQuitDecision::Allow` or `ApplicationQuitDecision::Prevent`, and
+`ApplicationContext::quit(exit_code=...)` or
+`ApplicationContext::exit(exit_code=...)` selects the status Proton adopts.
+See [proton/README.md](proton/README.md) and
+`examples/81_quit_event_chain`.
+
+Application-level control follows Electron's `app` object:
+`ApplicationContext::focus(steal=...)` activates the application on macOS and
+focuses its first visible window on Windows and Linux. `hide`, `show`,
+`is_active`, and `is_hidden` cover the macOS AppKit group and raise
+`AppControlError::UnsupportedPlatform` on the platforms Electron omits them
+from. `@proton.is_ready()` reports the startup boundary, corresponding to
+`app.isReady()`. See `examples/82_app_control`.
+
+Process-level events follow the same style: `.on_session_created(...)`,
+`.on_window_created(...)`, `.on_web_contents_created(...)`, and
+`.on_render_process_gone(...)` mirror Electron's `session-created`,
+`browser-window-created`, `web-contents-created`, and `render-process-gone`,
+including Electron's renderer termination reasons. Killed renderers are events
+rather than fatal errors, so an application decides whether to reload, replace,
+or close the affected page. CEF does not expose non-renderer child process
+exits, so Electron's `child-process-gone` stays documented as unsupported. See
+`examples/83_process_events`.
 
 Application windows can host independent web contents views with explicit
 bounds, visibility, z-order, navigation, DevTools, and lifecycle events. See

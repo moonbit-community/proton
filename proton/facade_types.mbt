@@ -26,6 +26,22 @@ pub extend LastWindowClosedPolicy with Eq::{not_equal, equal}
 pub extend LastWindowClosedPolicy with Debug::{to_repr}
 
 ///|
+/// How an application answers a cancelable quit event.
+///
+/// `Prevent` is the typed counterpart of Electron's `event.preventDefault()`
+/// on `before-quit` and `will-quit`.
+pub(all) enum ApplicationQuitDecision {
+  Allow
+  Prevent
+} derive(Eq, Debug)
+
+///|
+pub extend ApplicationQuitDecision with Eq::{not_equal, equal}
+
+///|
+pub extend ApplicationQuitDecision with Debug::{to_repr}
+
+///|
 /// Controls when Proton enables the browser accessibility tree.
 pub(all) enum AccessibilityMode {
   Automatic
@@ -117,12 +133,23 @@ struct App {
   extension_capabilities : Array[ExtensionCapabilityBinding]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
   planned_views : Array[(String, ViewConfig)]
+  mut before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  mut will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
   launch_input_handlers : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
   ]
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
+  window_created_handlers : Array[async (WindowHandle) -> Unit noraise]
+  web_contents_created_handlers : Array[
+    async (WebContentsHandle) -> Unit noraise,
+  ]
+  render_process_gone_handlers : Array[
+    async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
+  ]
+  session_created_handlers : Array[async (ApplicationSession) -> Unit noraise]
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
   browser_event_handlers : Array[
     async (BrowserHandle, BrowserEvent) -> Unit noraise,
@@ -279,6 +306,9 @@ priv struct BridgeDispatchTask {
 ///|
 priv struct RunningWindow {
   id : String
+  /// Identity of the native window slot. Native events carry this value, and
+  /// it stays valid after the window handle itself is destroyed.
+  native_id : Int64
   window : @native.Window
   permissions : WindowPermissionPolicy
   lifetime : WindowLifetime
@@ -330,9 +360,13 @@ priv struct PendingResourceRequest {
 ///|
 priv enum CloseCoordinatorState {
   CloseRunning = 0
-  CloseQuitRequested = 1
-  CloseCollecting = 2
-  CloseCommitted = 3
+  CloseBeforeQuit = 1
+  CloseQuitRequested = 2
+  CloseCollecting = 3
+  CloseClosingWindows = 4
+  CloseWillQuit = 5
+  CloseQuitting = 6
+  CloseCommitted = 7
 } derive(Eq)
 
 ///|
@@ -347,6 +381,12 @@ priv struct PendingCloseDecision {
 priv struct CloseCoordinator {
   mut state : CloseCoordinatorState
   pending : Array[PendingCloseDecision]
+  mut pending_quit : @async.Task[ApplicationQuitDecision]?
+  mut forced : Bool
+  mut exit_code : Int
+  /// Whether the last-window policy already consumed the current windowless
+  /// period, so a prevented quit is not retried until a window opens again.
+  mut last_window_quit_handled : Bool
 }
 
 ///|
@@ -460,11 +500,23 @@ priv struct RuntimeSession {
   window_event_handlers : Array[
     async (WindowHandle, WindowEvent) -> Unit noraise,
   ]
+  window_created_handlers : Array[async (WindowHandle) -> Unit noraise]
+  web_contents_created_handlers : Array[
+    async (WebContentsHandle) -> Unit noraise,
+  ]
+  render_process_gone_handlers : Array[
+    async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
+  ]
+  session_created_handlers : Array[async (ApplicationSession) -> Unit noraise]
+  application_session : ApplicationSession
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
   browser_event_handlers : Array[
     async (BrowserHandle, BrowserEvent) -> Unit noraise,
   ]
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
+  before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
   window_tasks : @async.TaskGroup[Unit]
   window_lifecycle_hooks : Array[WindowLifecycleHook]
   lifecycle_failures : Array[AppCleanupError]
@@ -644,6 +696,7 @@ pub struct SessionHandle {
 pub struct ViewHandle {
   id : String
   native_id : Int64
+  window_id : String
   set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
   set_view_visible : (Bool) -> Unit raise WindowSessionError
   set_view_z_order : (Int) -> Unit raise WindowSessionError
@@ -1161,6 +1214,90 @@ pub extend BrowserEvent with Eq::{not_equal, equal}
 pub extend BrowserEvent with Debug::{to_repr}
 
 ///|
+/// One concrete web contents, following Electron's `webContents`.
+///
+/// Proton hosts a window's main browser page and every web contents view as
+/// separate browsers, so process-level events report which kind they belong
+/// to instead of hiding the difference behind one opaque object.
+pub(all) enum WebContentsHandle {
+  /// The main browser page of one application window.
+  Browser(BrowserHandle)
+  /// One web contents view hosted inside an application window.
+  View(ViewHandle)
+}
+
+///|
+/// Why a renderer process disappeared, following Electron's
+/// `RenderProcessGoneDetails.reason`.
+///
+/// CEF reports renderer termination as a status value, so Proton names the
+/// statuses instead of passing the raw number. Electron additionally
+/// distinguishes `clean-exit` and `memory-eviction`, which CEF does not report
+/// as renderer termination.
+pub(all) enum RenderProcessGoneReason {
+  /// The renderer exited with a non-zero status (`abnormal-exit`).
+  AbnormalExit
+  /// The renderer was killed, for example by SIGKILL or a task manager
+  /// (`killed`).
+  Killed
+  /// The renderer crashed, for example on a segmentation fault (`crashed`).
+  Crashed
+  /// The renderer ran out of memory (`oom`).
+  OutOfMemory
+  /// The renderer process never launched (`launch-failed`).
+  LaunchFailed
+  /// The platform terminated the renderer for failing code integrity checks
+  /// (`integrity-failure`).
+  IntegrityFailure
+  /// The platform reported a termination status Proton does not name yet.
+  Unknown
+} derive(Debug, Eq)
+
+///|
+pub extend RenderProcessGoneReason with Eq::{not_equal, equal}
+
+///|
+pub extend RenderProcessGoneReason with Debug::{to_repr}
+
+///|
+/// One renderer termination, following Electron's `RenderProcessGoneDetails`.
+pub(all) struct RenderProcessGoneDetails {
+  /// Why the renderer disappeared.
+  reason : RenderProcessGoneReason
+  /// The platform exit code of the terminated renderer.
+  exit_code : Int
+} derive(Debug, Eq)
+
+///|
+pub extend RenderProcessGoneDetails with Eq::{not_equal, equal}
+
+///|
+pub extend RenderProcessGoneDetails with Debug::{to_repr}
+
+///|
+/// The application session Proton created for this run, corresponding to
+/// Electron's `session-created` argument.
+///
+/// Proton runs one session per application, so the event fires once during
+/// startup. Session operations stay on `BrowserHandle::session()`, which is
+/// backed by the same request context.
+pub(all) struct ApplicationSession {
+  /// The partition configured with `App::session_partition`, or `None` for the
+  /// default session.
+  partition : String?
+  /// The session data directory, or `None` when this run uses a temporary
+  /// profile because Proton does not own the application's single-instance
+  /// route.
+  data_path : String?
+} derive(Debug, Eq)
+
+///|
+pub extend ApplicationSession with Eq::{not_equal, equal}
+
+///|
+pub extend ApplicationSession with Debug::{to_repr}
+
+///|
 priv enum BridgeRequestLifecycleState {
   Running = 0
   Responding = 1
@@ -1236,6 +1373,9 @@ pub(all) suberror AppControlError {
   InvalidProtocolScheme(scheme~ : String)
   UndeclaredProtocolScheme(scheme~ : String)
   InvalidExecutable(path~ : String)
+  /// The current platform does not implement this operation. Electron's
+  /// `app` object omits the same methods outside macOS.
+  UnsupportedPlatform(action~ : String)
   NativeControlFailure(action~ : String, status~ : Int, detail~ : String)
 } derive(Debug, Eq)
 

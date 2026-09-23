@@ -89,10 +89,118 @@ removal on Linux, so Proton returns `false` there as well.
 `ApplicationContext::relaunch` schedules a replacement process without
 stopping the current one. With no options it preserves the current command
 line; `RelaunchOptions` can replace the executable or arguments. Call `quit`
-for orderly shutdown or `exit` for immediate Electron-style termination that
-skips close interception and lifecycle cleanup. Scheduled relaunches are
-started after orderly cleanup or immediately before `exit` terminates the
-process.
+for orderly shutdown or `exit` for immediate Electron-style termination.
+Scheduled relaunches are started after orderly cleanup or immediately before
+`exit` tears the runtime down.
+
+## Application quit chain
+
+An orderly quit follows Electron's quit event chain. `ApplicationContext::quit`
+first runs `.on_before_quit(...)`, then closes every open window through the
+configured close interception, runs `.on_will_quit(...)` after the last window
+has closed, and finally reports `.on_quit(...)` before configured lifecycle
+shutdown and native teardown. Neither `quit` nor `exit` is guesswork for the
+application: `on_quit` receives the process exit code that Proton adopts.
+
+```moonbit
+let mut save_pending = true
+
+@proton.html("Quit chain", page)
+.identifier("com.example.quit-chain")
+.on_before_quit(fn(_context) {
+  if save_pending {
+    @proton.ApplicationQuitDecision::Prevent
+  } else {
+    @proton.ApplicationQuitDecision::Allow
+  }
+})
+.on_will_quit(fn(context) {
+  context.relaunch() catch { _ => () }
+  @proton.ApplicationQuitDecision::Allow
+})
+.on_quit(fn(_context, exit_code) {
+  println("quitting with " + exit_code.to_string())
+})
+.run_or_abort()
+```
+
+Both cancelable steps are typed the same way: `ApplicationQuitDecision::Prevent`
+is Electron's `event.preventDefault()`. A prevented `before-quit` keeps every
+window open; a prevented `will-quit` leaves the application running without
+windows, and the automatic last-window quit is not retried until a window is
+created again. A denied window close cancels the whole request, matching
+Electron's `beforeunload` behavior.
+
+`ApplicationContext::quit(exit_code=...)` carries the desired process status
+through the chain. Electron expresses that state with `process.exitCode`
+before calling `app.quit()`; Proton passes it with the request. A non-zero code
+terminates the process after teardown, while shutdown with code `0` returns
+from `App::run` normally.
+
+`ApplicationContext::exit(exit_code=...)` is Electron's `app.exit`: it destroys
+every window without asking and skips `before-quit` and `will-quit`, but the
+`quit` notification still observes the requested code before Proton tears the
+runtime down.
+
+## Application control
+
+`ApplicationContext` also owns Electron's application-level activation
+control:
+
+| Proton | Electron | Behavior |
+| --- | --- | --- |
+| `focus(steal=...)` | `app.focus([options])` | macOS activates the application and `steal` decides whether another frontmost application may be displaced; Windows and Linux focus the first visible window |
+| `hide()` | `app.hide()` _macOS_ | Hides every window without minimizing it |
+| `show()` | `app.show()` _macOS_ | Shows hidden windows without focusing them |
+| `is_active()` | `app.isActive()` _macOS_ | Reports whether the application is the active app |
+| `is_hidden()` | `app.isHidden()` _macOS_ | Reports whether the application and its windows are hidden |
+
+Electron omits the macOS-only methods on other platforms, so calling them there
+crashes with a `TypeError`. Proton keeps one compile-time surface and raises
+the typed `AppControlError::UnsupportedPlatform` instead; `is_hidden` is the
+readback for `hide` and `show`. Focus, hide, and show require the main thread,
+which is where the facade and its hooks run.
+
+`@proton.is_ready()` corresponds to Electron's `app.isReady()`. It is `false`
+before `App::run`, while startup hooks run, and in the per-window `on_ready`
+hooks; it becomes `true` once the startup hooks completed and the initial
+windows are ready, and returns to `false` when Proton starts tearing the
+runtime down. Electron's `ready` event and `whenReady()` correspond to
+`App::app_lifecycle(on_start=...)`, which still observes `false`.
+
+## Process-level events
+
+Applications can observe the objects and processes Proton creates:
+
+| Proton | Electron | Payload |
+| --- | --- | --- |
+| `App::on_window_created(...)` | `browser-window-created` | `WindowHandle` |
+| `App::on_web_contents_created(...)` | `web-contents-created` | `WebContentsHandle`: `Browser` for a window's main page, `View` for a web contents view |
+| `App::on_render_process_gone(...)` | `render-process-gone` | `WebContentsHandle` and `RenderProcessGoneDetails { reason, exit_code }` |
+| `App::on_session_created(...)` | `session-created` | `ApplicationSession { partition, data_path }` |
+
+`render-process-gone` reasons use Electron's vocabulary for the statuses CEF
+reports: `abnormal-exit`, `killed`, `crashed`, `oom`, `launch-failed`, and
+`integrity-failure`. Electron additionally reports `clean-exit` and
+`memory-eviction`, which CEF does not surface as renderer termination. A
+renderer termination is an event rather than a fatal runtime error: Proton
+keeps the application running, does not reload the page, and leaves the
+decision to the application through `BrowserHandle::reload`,
+`ViewHandle::reload`, `ViewHandle::close`, or closing the window. The
+per-web-contents `BrowserEvent::RendererProcessTerminated` and
+`ViewEvent::RendererProcessTerminated` events still carry CEF's raw status and
+error code for diagnostics.
+
+Proton runs one session per application, so `session-created` fires once during
+startup, before the `app_lifecycle` start hooks, and reports the configured
+partition with the session data directory (or `temporary`, when the run has no
+single-instance route). Session operations stay on `BrowserHandle::session()`.
+
+Electron's `child-process-gone` has no equivalent: CEF's public API reports
+renderer termination per browser but never signals other child process exits,
+so GPU, utility, and plugin process loss cannot be observed through this
+runtime route. Proton reports the renderer half through `render-process-gone`
+and does not expose a handler that can never fire.
 
 ## Entry points
 

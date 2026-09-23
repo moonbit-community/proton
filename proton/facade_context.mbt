@@ -4,7 +4,8 @@ pub struct ApplicationContext {
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
-  request_quit : () -> Unit
+  request_quit : (Int) -> Unit
+  request_exit : (Int) -> Unit
   application_identifier : String
   application_executable : String
   application_arguments : Array[String]
@@ -53,7 +54,10 @@ fn ApplicationContext::ApplicationContext(
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
-  request_quit? : () -> Unit = fn() {  },
+  request_quit? : (Int) -> Unit = fn(_exit_code) {  },
+  request_exit? : (Int) -> Unit = fn(exit_code) {
+    @native.process_exit(exit_code)
+  },
   application_identifier? : String = "",
   application_executable? : String = "",
   application_arguments? : Array[String] = [],
@@ -64,6 +68,7 @@ fn ApplicationContext::ApplicationContext(
     windows,
     locale_preferences,
     request_quit,
+    request_exit,
     application_identifier,
     application_executable,
     application_arguments,
@@ -142,11 +147,22 @@ pub fn ApplicationContext::windows(self : ApplicationContext) -> WindowManager {
 ///|
 /// Requests an orderly application shutdown.
 ///
-/// Proton closes every open window, runs configured close interception, and
-/// destroys the native runtime after all windows have closed. A denied window
-/// close cancels this quit request.
-pub fn ApplicationContext::quit(self : ApplicationContext) -> Unit {
-  (self.request_quit)()
+/// The request follows Electron's quit chain: the `before-quit` handler runs
+/// first, every open window is then closed through configured close
+/// interception, the `will-quit` handler runs after the last window has
+/// closed, and the `quit` handler observes `exit_code` before Proton tears the
+/// runtime down. `Prevent` from either cancelable step aborts the quit and
+/// leaves the application running, and a denied window close cancels the whole
+/// request.
+///
+/// A non-zero `exit_code` is the process exit status used when the chain
+/// completes. Electron exposes the equivalent state through
+/// `process.exitCode`; Proton passes it with the quit request instead.
+pub fn ApplicationContext::quit(
+  self : ApplicationContext,
+  exit_code? : Int = 0,
+) -> Unit {
+  (self.request_quit)(exit_code)
 }
 
 ///|
@@ -174,7 +190,11 @@ fn app_control_native_error(
   action : String,
   error : @native.NativeError,
 ) -> AppControlError {
-  NativeControlFailure(action~, status=error.status(), detail=error.message())
+  if error.is_unsupported() {
+    UnsupportedPlatform(action~)
+  } else {
+    NativeControlFailure(action~, status=error.status(), detail=error.message())
+  }
 }
 
 ///|
@@ -282,14 +302,16 @@ fn ApplicationContext::relaunch_command(
 ///|
 /// Immediately terminates the process with `exit_code`.
 ///
-/// This skips window close interception and lifecycle shutdown hooks. Any
-/// relaunches already scheduled through `relaunch` are started first.
+/// This is Electron's `app.exit`: it skips the cancelable `before-quit` and
+/// `will-quit` steps and destroys every window without asking, but the
+/// `quit` handler still observes `exit_code` before Proton tears the runtime
+/// down. Any relaunches already scheduled through `relaunch` are started
+/// before the process terminates.
 pub fn ApplicationContext::exit(
   self : ApplicationContext,
   exit_code? : Int = 0,
 ) -> Unit {
-  ignore(self)
-  @native.process_exit(exit_code)
+  (self.request_exit)(exit_code)
 }
 
 ///|

@@ -36,6 +36,9 @@ let proton_err_update_revision_mismatch = -17
 let proton_err_stale_resource_request = -18
 
 ///|
+let proton_err_unsupported = -8
+
+///|
 pub let runtime_wait_none : Int = 0
 
 ///|

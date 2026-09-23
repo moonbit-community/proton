@@ -117,6 +117,30 @@ int32_t proton_process_schedule_relaunch(const char *executable,
                                          int32_t arguments_len);
 int32_t proton_process_run_relaunches(void);
 void proton_process_exit(int32_t exit_code);
+
+/* Application-level activation, matching Electron's app.focus. macOS makes the
+   application the active app, and `steal_focus` is its `steal` option. Other
+   platforms focus the first visible application window and ignore the option;
+   an application without visible windows is a successful no-op. */
+int32_t proton_app_focus(int32_t steal_focus);
+
+/* Hides every application window without minimizing it. Only macOS implements
+   the AppKit operation; other platforms report PROTON_ERR_UNSUPPORTED. */
+int32_t proton_app_hide(void);
+
+/* Shows application windows hidden by proton_app_hide without focusing them.
+   Only macOS implements the AppKit operation; other platforms report
+   PROTON_ERR_UNSUPPORTED. */
+int32_t proton_app_show(void);
+
+/* Reports whether the application is the active app. Only macOS implements the
+   query; other platforms report PROTON_ERR_UNSUPPORTED. */
+int32_t proton_app_is_active(int32_t *out_active);
+
+/* Reports whether the application and all of its windows are hidden. Only
+   macOS implements the query; other platforms report PROTON_ERR_UNSUPPORTED. */
+int32_t proton_app_is_hidden(int32_t *out_hidden);
+
 int32_t proton_system_preferred_language_count(int32_t *out_count);
 int32_t proton_system_preferred_language_at(int32_t index, char *buffer,
                                             int32_t buffer_len,

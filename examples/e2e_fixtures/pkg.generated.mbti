@@ -28,6 +28,8 @@ pub async fn run_lifecycle_regression(String) -> Unit
 
 pub async fn run_multi_window() -> Unit
 
+pub async fn run_quit_chain() -> Unit
+
 pub async fn run_single_instance() -> Unit
 
 pub async fn run_sync_async_extensions() -> Unit

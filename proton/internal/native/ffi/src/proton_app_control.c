@@ -1,4 +1,6 @@
 #include "proton_internal.h"
+#include "proton_engine.h"
+#include "proton_state.h"
 
 #include <moonbit.h>
 #include <stdbool.h>
@@ -618,6 +620,72 @@ void proton_process_exit(int32_t exit_code) {
 #else
   _exit(exit_code);
 #endif
+}
+
+static int32_t proton_app_control_unsupported(const char *message) {
+  return proton_set_error(
+      PROTON_ERR_UNSUPPORTED,
+      message == NULL ? "application control is only available on macOS"
+                      : message);
+}
+
+int32_t proton_app_focus(int32_t steal_focus) {
+  /* The `steal` option only changes AppKit activation; other platforms focus
+     the application's first visible window. */
+  (void)steal_focus;
+  proton_runtime_slot_t *runtime = proton_get_active_runtime();
+  if (runtime == NULL) {
+    return proton_set_error(PROTON_OK, NULL);
+  }
+  int32_t status = proton_require_runtime_owner_thread(runtime);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  for (proton_window_slot_t *window = runtime->windows; window != NULL;
+       window = window->next) {
+    if (window->lifecycle != PROTON_WINDOW_LIVE || !window->visible ||
+        window->engine_window == NULL) {
+      continue;
+    }
+    char engine_error[512] = {0};
+    status = proton_engine_window_focus(window->engine_window, engine_error,
+                                        sizeof(engine_error));
+    if (status != PROTON_OK) {
+      return proton_set_engine_status(status, engine_error);
+    }
+    return proton_set_error(PROTON_OK, NULL);
+  }
+  return proton_set_error(PROTON_OK, NULL);
+}
+
+int32_t proton_app_hide(void) {
+  return proton_app_control_unsupported(
+      "app hide is only available on macOS");
+}
+
+int32_t proton_app_show(void) {
+  return proton_app_control_unsupported(
+      "app show is only available on macOS");
+}
+
+int32_t proton_app_is_active(int32_t *out_active) {
+  if (out_active == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_active is required");
+  }
+  *out_active = 0;
+  return proton_app_control_unsupported(
+      "app is_active is only available on macOS");
+}
+
+int32_t proton_app_is_hidden(int32_t *out_hidden) {
+  if (out_hidden == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_hidden is required");
+  }
+  *out_hidden = 0;
+  return proton_app_control_unsupported(
+      "app is_hidden is only available on macOS");
 }
 
 #endif
