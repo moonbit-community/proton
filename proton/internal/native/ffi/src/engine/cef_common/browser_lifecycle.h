@@ -36,6 +36,7 @@ void proton_browser_registry_set_accessibility_state(
     proton_browser_registry_t *registry, cef_state_t state);
 int proton_browser_registry_shutdown_ready(
     const proton_browser_registry_t *registry);
+void proton_browser_registry_collect(proton_browser_registry_t *registry);
 void proton_browser_registry_destroy(proton_browser_registry_t *registry);
 
 proton_browser_lifecycle_t *

@@ -507,11 +507,24 @@ pub fn execute_process(
 }
 
 ///|
+fn RuntimeConfig::resolve_proxy(self : RuntimeConfig) -> (String?, String?) {
+  match self.proxy_server {
+    Some(server) if server != "" => (Some(server), self.proxy_bypass)
+    _ =>
+      (
+        @env.get_env_var("PROTON_PROXY_SERVER"),
+        @env.get_env_var("PROTON_PROXY_BYPASS"),
+      )
+  }
+}
+
+///|
 pub fn Runtime::Runtime(
   config? : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> Runtime raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
   validate_runtime_config(config)
+  let (proxy_server, proxy_bypass) = config.resolve_proxy()
   let out_runtime = Ref(@native_ffi.runtime_null())
   let status = @native_ffi.runtime_create(
     runtime_config_bool(config.use_bundled),
@@ -522,6 +535,8 @@ pub fn Runtime::Runtime(
     runtime_config_string(config.cache_dir),
     runtime_config_string(config.locale),
     runtime_config_languages(config.accept_languages),
+    runtime_config_string(proxy_server),
+    runtime_config_string(proxy_bypass),
     runtime_config_string(config.framework_dialog_ok_label),
     runtime_config_string(config.framework_dialog_cancel_label),
     runtime_config_remote_debugging(config.remote_debugging),
@@ -1476,6 +1491,7 @@ pub fn Window::Window(
     raise native_error(status)
   } else {
     Window::{
+      runtime,
       handle: out_window.val,
       id: @native_ffi.window_logical_id(out_window.val),
       lifecycle: WindowLive,
@@ -1486,6 +1502,11 @@ pub fn Window::Window(
 
 ///|
 pub fn Window::destroy(self : Window) -> Unit raise NativeError {
+  if !(self.runtime.lifecycle is RuntimeActive) {
+    self.handle = @native_ffi.window_null()
+    self.lifecycle = WindowDestroyed
+    return
+  }
   match self.lifecycle {
     WindowDestroyed => return
     WindowLive | WindowCloseRequested | WindowDestroying =>
@@ -1504,6 +1525,7 @@ pub fn Window::destroy(self : Window) -> Unit raise NativeError {
 fn Window::live_handle(
   self : Window,
 ) -> @native_ffi.WindowHandle raise NativeError {
+  ignore(self.runtime.active_handle())
   match self.lifecycle {
     WindowLive => self.handle
     WindowCloseRequested | WindowDestroying | WindowDestroyed =>
@@ -1527,18 +1549,15 @@ pub fn Window::show_inactive(self : Window) -> Unit raise NativeError {
 ///|
 /// Borrows this owning window handle for APIs that must not destroy it.
 pub fn Window::as_ref(self : Window) -> WindowRef {
-  WindowRef::unsafe_from_handle(
-    match self.lifecycle {
-      WindowLive => self.handle
-      WindowCloseRequested | WindowDestroying | WindowDestroyed =>
-        @native_ffi.window_null()
-    },
-  )
+  WindowRef::{ window: Some(self), id: self.id, }
 }
 
 ///|
 /// Returns the stable native handle used to correlate runtime events.
 pub fn Window::id(self : Window) -> Int64 {
+  if !(self.runtime.lifecycle is RuntimeActive) {
+    return proton_invalid_handle
+  }
   match self.lifecycle {
     WindowLive | WindowCloseRequested => self.id
     WindowDestroying | WindowDestroyed => proton_invalid_handle
@@ -1556,7 +1575,7 @@ pub fn Window::close(self : Window) -> Unit raise NativeError {
     WindowCloseRequested | WindowDestroying | WindowDestroyed => return
     WindowLive => ()
   }
-  let status = @native_ffi.proton_window_close_ffi(self.handle)
+  let status = @native_ffi.proton_window_close_ffi(self.live_handle())
   if status < 0 {
     raise native_error(status)
   } else if !self.close_interception_enabled {
@@ -1604,7 +1623,7 @@ pub fn Window::set_parent(
   modal : Bool,
 ) -> Unit raise NativeError {
   let parent_handle = match parent {
-    Some(parent) => parent.handle
+    Some(parent) => parent.live_handle()
     None => @native_ffi.window_null()
   }
   check_status(
@@ -1669,6 +1688,16 @@ pub fn Window::content_size(self : Window) -> (Int, Int) raise NativeError {
 }
 
 ///|
+fn WindowRef::live_handle(
+  self : WindowRef,
+) -> @native_ffi.WindowHandle raise NativeError {
+  match self.window {
+    Some(window) => window.live_handle()
+    None => @native_ffi.window_null()
+  }
+}
+
+///|
 pub fn WindowRef::titlebar_area(
   self : WindowRef,
 ) -> TitlebarArea? raise NativeError {
@@ -1679,7 +1708,7 @@ pub fn WindowRef::titlebar_area(
   let zoom_percent = Ref(100)
   check_status(
     @native_ffi.proton_window_get_titlebar_area_ffi(
-      self.handle,
+      self.live_handle(),
       x,
       y,
       width,
@@ -2399,6 +2428,7 @@ pub fn Window::respond_close_request(
   request_id : Int64,
   allow : Bool,
 ) -> Unit raise NativeError {
+  ignore(self.runtime.active_handle())
   match self.lifecycle {
     WindowLive | WindowCloseRequested => ()
     WindowDestroying | WindowDestroyed =>
@@ -3153,7 +3183,7 @@ pub fn WindowRef::begin_message_dialog(
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
   let status = @native_ffi.proton_window_begin_message_dialog_ffi(
-    self.handle,
+    self.live_handle(),
     title_buffer,
     dialog_text_payload_len(title_buffer),
     message_buffer,
@@ -3205,7 +3235,7 @@ pub fn WindowRef::begin_confirm_dialog(
   let message_buffer = @ffi.to_cstr(message)
   let dialog = Ref(proton_invalid_handle)
   let status = @native_ffi.proton_window_begin_confirm_dialog_ffi(
-    self.handle,
+    self.live_handle(),
     title_buffer,
     dialog_text_payload_len(title_buffer),
     message_buffer,
@@ -3231,7 +3261,7 @@ fn WindowRef::begin_file_dialog(
   let path_buffer = optional_dialog_text_buffer(path)
   let dialog = Ref(proton_invalid_handle)
   let status = callback(
-    window.handle,
+    window.live_handle(),
     title_buffer,
     dialog_text_payload_len(title_buffer),
     path_buffer,
@@ -3283,7 +3313,10 @@ pub fn WindowRef::cancel_dialog(
   self : WindowRef,
   dialog : Int64,
 ) -> Unit raise NativeError {
-  let status = @native_ffi.proton_window_cancel_dialog_ffi(self.handle, dialog)
+  let status = @native_ffi.proton_window_cancel_dialog_ffi(
+    self.live_handle(),
+    dialog,
+  )
   if status < 0 {
     raise native_error(status)
   }
@@ -3328,6 +3361,7 @@ pub fn View::View(
     raise native_error(status)
   } else {
     View::{
+      window,
       handle: out_view.val,
       id: @native_ffi.view_logical_id(out_view.val),
       lifecycle: ViewLive,
@@ -3337,6 +3371,12 @@ pub fn View::View(
 
 ///|
 pub fn View::destroy(self : View) -> Unit raise NativeError {
+  if !(self.window.runtime.lifecycle is RuntimeActive) ||
+    self.window.lifecycle is (WindowDestroying | WindowDestroyed) {
+    self.handle = @native_ffi.view_null()
+    self.lifecycle = ViewDestroyed
+    return
+  }
   match self.lifecycle {
     ViewDestroyed => return
     ViewLive | ViewDestroying => self.lifecycle = ViewDestroying
@@ -3352,6 +3392,7 @@ pub fn View::destroy(self : View) -> Unit raise NativeError {
 
 ///|
 fn View::live_handle(self : View) -> @native_ffi.ViewHandle raise NativeError {
+  ignore(self.window.live_handle())
   match self.lifecycle {
     ViewLive => self.handle
     ViewDestroying | ViewDestroyed =>
@@ -3362,6 +3403,9 @@ fn View::live_handle(self : View) -> @native_ffi.ViewHandle raise NativeError {
 ///|
 /// Returns the stable native handle used to correlate native calls.
 pub fn View::id(self : View) -> Int64 {
+  if self.window.id() == proton_invalid_handle {
+    return proton_invalid_handle
+  }
   match self.lifecycle {
     ViewLive => self.id
     ViewDestroying | ViewDestroyed => proton_invalid_handle

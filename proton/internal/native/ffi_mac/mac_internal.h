@@ -224,6 +224,7 @@ struct proton_engine_view {
   int browser_create_scheduled;
   int finalize_after_browser_close;
   int finalized;
+  int released;
   int closed;
   proton_browser_session_t *browser_session;
   proton_view_events_t *events;
@@ -298,6 +299,7 @@ void proton_engine_view_on_before_close(proton_engine_view_t *view,
                                         cef_browser_t *browser);
 void proton_engine_window_close_views(proton_engine_window_t *window);
 void proton_engine_window_layout_views(proton_engine_window_t *window);
+void proton_engine_window_collect_views(proton_engine_window_t *window);
 void proton_engine_window_free_views(proton_engine_window_t *window);
 void proton_engine_view_finalize_if_ready(proton_engine_view_t *view);
 void proton_engine_signal_wait_source(uint32_t ready_mask);

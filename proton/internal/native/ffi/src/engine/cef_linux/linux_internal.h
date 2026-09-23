@@ -152,6 +152,7 @@ void CEF_CALLBACK proton_engine_on_title_change(
 void proton_engine_window_finalize_if_ready(proton_engine_window_t *window);
 void proton_engine_view_finalize_if_ready(proton_engine_view_t *view);
 void proton_engine_window_close_views(proton_engine_window_t *window);
+void proton_engine_window_collect_views(proton_engine_window_t *window);
 void proton_engine_window_free_views(proton_engine_window_t *window);
 void proton_engine_window_layout_views(proton_engine_window_t *window);
 
@@ -193,6 +194,7 @@ struct proton_engine_view {
   uint32_t background_color;
   int finalize_after_browser_close;
   int finalized;
+  int released;
   int closed;
   struct proton_engine_view *next;
 };
@@ -219,6 +221,7 @@ int proton_engine_overlay_create_controls(proton_engine_window_t *window);
 int proton_engine_runtime_initialized(void);
 const char *proton_engine_runtime_locale(void);
 int32_t proton_engine_runtime_remote_debugging_port(void);
+const proton_engine_runtime_config_t *proton_engine_initializing_config(void);
 proton_engine_window_t *proton_engine_windows_head(void);
 void proton_engine_set_scheduled_pump_delay_ms(int64_t delay_ms);
 void proton_engine_append_switch(cef_command_line_t *command_line,

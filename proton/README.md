@@ -67,7 +67,10 @@ no handler is configured, Proton denies both request types by default.
 
 Use `App::proxy` to configure a startup-wide Chromium proxy. Proton passes the
 server and optional bypass list to CEF before startup; changing proxy settings
-while the application is running is not supported.
+while the application is running is not supported. An explicit proxy replaces
+both `PROTON_PROXY_SERVER` and `PROTON_PROXY_BYPASS` for this runtime; omitting
+its bypass list means no explicit bypass list. Without `App::proxy`, Proton
+reads those environment variables as defaults. It never writes them.
 
 `App::set_path` overrides any supported standard path before startup and
 requires an existing absolute path. `App::set_app_logs_path` accepts an
@@ -192,7 +195,19 @@ decision to the application through `BrowserHandle::reload`,
 `ViewHandle::reload`, `ViewHandle::close`, or closing the window. The
 per-web-contents `BrowserEvent::RendererProcessTerminated` and
 `ViewEvent::RendererProcessTerminated` events still carry CEF's raw status and
-error code for diagnostics.
+error code for diagnostics. These notifications do not require command-bridge
+or view-event subscriptions.
+
+A command bridge that fails after a window has started reports
+`BrowserEvent::BridgeFailed { diagnostic }` through `on_browser_event` with the
+affected `BrowserHandle`. Proton logs the diagnostic and cancels the failed
+page's pending work. Further commands from failed or replaced bridge attempts
+are rejected with `page_unavailable`; commands during a fresh attempt's
+initialization remain allowed. Other windows remain running; the application can reload
+or close the affected browser, or explicitly quit. Renderer termination uses
+its existing notification instead of also emitting `BridgeFailed`. A required
+bridge that fails during startup still fails the opening operation; runtime
+infrastructure errors still use the application failure path.
 
 Proton runs one session per application, so `session-created` fires once during
 startup, before the `app_lifecycle` start hooks, and reports the configured

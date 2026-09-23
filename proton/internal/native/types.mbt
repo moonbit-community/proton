@@ -1378,6 +1378,7 @@ struct Runtime {
 
 ///|
 struct Window {
+  runtime : Runtime
   mut handle : @native_ffi.WindowHandle
   id : Int64
   mut lifecycle : WindowLifecycleState
@@ -1386,7 +1387,7 @@ struct Window {
 
 ///|
 struct WindowRef {
-  handle : @native_ffi.WindowHandle
+  window : Window?
   id : Int64
 }
 
@@ -1751,6 +1752,8 @@ struct RuntimeConfig {
   cache_dir : String?
   locale : String?
   accept_languages : Array[String]
+  proxy_server : String?
+  proxy_bypass : String?
   framework_dialog_ok_label : String?
   framework_dialog_cancel_label : String?
   remote_debugging : RemoteDebugging
@@ -1804,6 +1807,8 @@ pub fn RuntimeConfig::RuntimeConfig(
   cache_dir? : String,
   locale? : @locale.Locale,
   accept_languages? : Array[@locale.Locale] = [],
+  proxy_server? : String,
+  proxy_bypass? : String,
   remote_debugging? : RemoteDebugging = Disabled,
   headless? : Bool = false,
   accessibility_mode? : AccessibilityMode = Automatic,
@@ -1821,6 +1826,8 @@ pub fn RuntimeConfig::RuntimeConfig(
     cache_dir,
     locale: locale.map(value => value.to_string()),
     accept_languages: accept_languages.map(value => value.to_string()),
+    proxy_server,
+    proxy_bypass,
     framework_dialog_ok_label: Some("OK"),
     framework_dialog_cancel_label: Some("Cancel"),
     remote_debugging,
@@ -1838,6 +1845,8 @@ pub fn RuntimeConfig::bundled(
   cache_dir? : String,
   locale? : @locale.Locale,
   accept_languages? : Array[@locale.Locale] = [],
+  proxy_server? : String,
+  proxy_bypass? : String,
   remote_debugging? : RemoteDebugging = Disabled,
   headless? : Bool = false,
   accessibility_mode? : AccessibilityMode = Automatic,
@@ -1855,6 +1864,8 @@ pub fn RuntimeConfig::bundled(
     cache_dir,
     locale: locale.map(value => value.to_string()),
     accept_languages: accept_languages.map(value => value.to_string()),
+    proxy_server,
+    proxy_bypass,
     framework_dialog_ok_label: Some("OK"),
     framework_dialog_cancel_label: Some("Cancel"),
     remote_debugging,
@@ -1917,6 +1928,8 @@ pub fn RuntimeConfig::with_framework_dialog_labels(
     cache_dir: self.cache_dir,
     locale: self.locale,
     accept_languages: self.accept_languages,
+    proxy_server: self.proxy_server,
+    proxy_bypass: self.proxy_bypass,
     framework_dialog_ok_label: Some(ok),
     framework_dialog_cancel_label: Some(cancel),
     remote_debugging: self.remote_debugging,
@@ -2086,16 +2099,9 @@ pub fn MenuItem::state_definition(self : MenuItem) -> (Bool, Bool, Bool?) {
 }
 
 ///|
-pub fn WindowRef::unsafe_from_handle(
-  handle : @native_ffi.WindowHandle,
-) -> WindowRef {
-  WindowRef::{ handle, id: @native_ffi.window_logical_id(handle), }
-}
-
-///|
 #doc(hidden)
 pub fn WindowRef::invalid() -> WindowRef {
-  WindowRef::unsafe_from_handle(@native_ffi.window_null())
+  WindowRef::{ window: None, id: proton_invalid_handle, }
 }
 
 ///|
@@ -2176,6 +2182,7 @@ priv enum ViewLifecycleState {
 ///|
 /// An owned native web contents view hosted inside a window's content area.
 struct View {
+  window : Window
   mut handle : @native_ffi.ViewHandle
   id : Int64
   mut lifecycle : ViewLifecycleState

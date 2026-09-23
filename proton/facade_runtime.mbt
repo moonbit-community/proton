@@ -64,6 +64,8 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       self.accessibility_mode_value,
       locale_preferences,
       browser_data_dir?,
+      proxy_server?=self.proxy_server_value,
+      proxy_bypass?=self.proxy_bypass_value,
       application_name=resolved.application_name,
       app_instance~,
       last_window_closed_policy=self.last_window_closed_policy_value,
@@ -117,14 +119,6 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
     }
   } catch {
     error => raise failure_log.logged_remaining(error)
-  }
-  match self.proxy_server_value {
-    Some(server) => @env.set_env_var("PROTON_PROXY_SERVER", server)
-    None => ()
-  }
-  match self.proxy_bypass_value {
-    Some(bypass) => @env.set_env_var("PROTON_PROXY_BYPASS", bypass)
-    None => ()
   }
 }
 
@@ -215,6 +209,8 @@ async fn run_manifest(
   accessibility_mode : AccessibilityMode,
   locale_preferences : @locale.LocalePreferences,
   browser_data_dir? : String,
+  proxy_server? : String,
+  proxy_bypass? : String,
   application_name? : String = "Proton",
   app_instance? : @native.AppInstance? = None,
   planned_views? : Array[(String, @native.ViewConfig)] = [],
@@ -304,6 +300,8 @@ async fn run_manifest(
   let runtime = @native.Runtime(
     config=@native.RuntimeConfig::bundled(
       cache_dir?=browser_data_dir,
+      proxy_server?,
+      proxy_bypass?,
       locale=locale_preferences.chromium_locale(),
       accept_languages=locale_preferences.accept_languages(),
       remote_debugging~,
@@ -1099,17 +1097,6 @@ async fn show_app_run_failure(
   show_runtime_failure_dialog(
     runtime, event_pump, wakeup, message, preferences, application_started,
   )
-}
-
-///|
-fn take_runtime_bridge_failure(
-  window : @native.Window,
-) -> @native.BridgeDiagnostic? raise @native.NativeError {
-  let state = window.bridge_lifecycle_state()
-  if !state.failure_pending {
-    return None
-  }
-  Some(bridge_failure(window, state))
 }
 
 ///|

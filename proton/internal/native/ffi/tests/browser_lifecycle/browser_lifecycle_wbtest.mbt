@@ -7,3 +7,12 @@ test "accessibility state reaches live and subsequently created browsers" {
     ),
   )
 }
+
+///|
+test "closed records are reclaimed after CEF releases its client" {
+  @ffi.link_runtime()
+  assert_eq(closed_record_reclamation(), 0)
+}
+
+///|
+extern "C" fn closed_record_reclamation() -> Int = "proton_test_closed_record_reclamation"

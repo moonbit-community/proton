@@ -305,10 +305,13 @@ static void proton_engine_on_before_command_line_processing(
   // --in-process-gpu can intermittently block cef_shutdown; CI selects
   // SwiftShader through ANGLE_DEFAULT_PLATFORM when hardware GPU is absent.
   proton_engine_append_switch(command_line, "disable-background-networking");
-  proton_engine_append_switch_with_value(command_line, "proxy-server",
-                                         getenv("PROTON_PROXY_SERVER"));
-  proton_engine_append_switch_with_value(command_line, "proxy-bypass-list",
-                                         getenv("PROTON_PROXY_BYPASS"));
+  const proton_engine_runtime_config_t *startup = proton_engine_initializing_config();
+  if (startup != NULL) {
+    proton_engine_append_switch_with_value(command_line, "proxy-server",
+                                           startup->proxy_server);
+    proton_engine_append_switch_with_value(command_line, "proxy-bypass-list",
+                                           startup->proxy_bypass);
+  }
   proton_engine_append_switch(command_line, "disable-component-update");
   proton_engine_append_switch(command_line, "disable-domain-reliability");
   proton_engine_append_switch(command_line, "disable-sync");
@@ -633,8 +636,8 @@ proton_engine_client_t *proton_engine_client_new(
   proton_web_request_config_retain(web_request_config);
   proton_engine_init_ref_counted((cef_base_ref_counted_t *)&client->client.base,
                                  sizeof(client->client), &client->refs);
-  // The registry keeps the initial client reference until CEF shutdown; CEF
-  // may hold additional references through and beyond OnBeforeClose.
+  // The registry keeps the initial client reference until the closed browser
+  // has no owner or external CEF client references.
   client->client.base.release = proton_engine_client_release;
   client->client.on_process_message_received =
       proton_engine_bridge_client_on_process_message_received;
@@ -690,11 +693,6 @@ static void proton_engine_window_free_storage(
     return;
   }
   proton_engine_window_free_views(window);
-  if (window->hwnd != NULL) {
-    // A deferred destroy may still be queued for this frame; detach the
-    // window pointer so the message never dereferences the freed struct.
-    SetWindowLongPtrW(window->hwnd, GWLP_USERDATA, 0);
-  }
   if (window->background_brush != NULL) {
     DeleteObject(window->background_brush);
     window->background_brush = NULL;
@@ -707,13 +705,19 @@ static void proton_engine_window_free_storage(
 }
 
 void proton_engine_free_closed_windows(void) {
-  proton_engine_window_t *window = g_proton_engine_closed_windows;
-  g_proton_engine_closed_windows = NULL;
-  while (window != NULL) {
-    proton_engine_window_t *next = window->next;
+  proton_engine_window_t **cursor = &g_proton_engine_closed_windows;
+  while (*cursor != NULL) {
+    proton_engine_window_t *window = *cursor;
+    // OnBeforeClose posts native destruction for a later Win32 message pass.
+    // WM_DESTROY still needs the record to re-enable a modal parent and clean
+    // up menus and icons. Keep it in the shutdown readiness check until then.
+    if (window->hwnd != NULL) {
+      cursor = &window->next;
+      continue;
+    }
+    *cursor = window->next;
     window->next = NULL;
     proton_engine_window_free_storage(window);
-    window = next;
   }
 }
 
@@ -1182,7 +1186,7 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
   }
   proton_engine_window_t *window =
       proton_engine_window_lookup_browser(browser);
-  if (window == NULL || !proton_engine_bridge_host_enabled(window->bridge) ||
+  if (window == NULL ||
       window->closed) {
     return;
   }
@@ -1191,6 +1195,8 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
       frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
                     : NULL;
   char *detail = proton_engine_cef_string_to_utf8(error_string);
+  proton_engine_bridge_pending_remove_browser(
+      window->runtime, browser->get_identifier(browser));
   proton_browser_session_renderer_terminated(
       window->browser_session, (int32_t)status, error_code,
       url != NULL ? url : "", detail != NULL ? detail : "");

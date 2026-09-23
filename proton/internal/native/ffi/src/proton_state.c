@@ -231,11 +231,17 @@ int32_t proton_window_slot_create(proton_runtime_slot_t *runtime,
 }
 
 void proton_window_slot_destroy(proton_window_slot_t *window) {
-  if (window != NULL) {
-    window->lifecycle = PROTON_WINDOW_DESTROYED;
-    window->visible = false;
-    window->engine_window = NULL;
+  if (window == NULL) {
+    return;
   }
+  proton_window_slot_t **cursor = &window->runtime->windows;
+  while (*cursor != NULL && *cursor != window) {
+    cursor = &(*cursor)->next;
+  }
+  if (*cursor == window) {
+    *cursor = window->next;
+  }
+  free(window);
 }
 
 void proton_window_slot_request_close(proton_window_slot_t *window) {
@@ -411,11 +417,8 @@ void proton_runtime_sync_engine_bridge_lifecycle(
 }
 
 int32_t proton_destroy_windows_for_runtime(proton_runtime_slot_t *runtime) {
-  for (proton_window_slot_t *window = runtime->windows; window != NULL;
-       window = window->next) {
-    if (window->lifecycle == PROTON_WINDOW_DESTROYED) {
-      continue;
-    }
+  while (runtime->windows != NULL) {
+    proton_window_slot_t *window = runtime->windows;
     proton_window_slot_begin_destroy(window);
     proton_destroy_views_for_window(window);
     if (window->engine_window != NULL) {
@@ -467,10 +470,17 @@ int32_t proton_view_slot_create(proton_window_slot_t *window,
 }
 
 void proton_view_slot_destroy(proton_view_slot_t *view) {
-  if (view != NULL) {
-    view->lifecycle = PROTON_VIEW_DESTROYED;
-    view->engine_view = NULL;
+  if (view == NULL) {
+    return;
   }
+  proton_view_slot_t **cursor = &view->runtime->views;
+  while (*cursor != NULL && *cursor != view) {
+    cursor = &(*cursor)->next;
+  }
+  if (*cursor == view) {
+    *cursor = view->next;
+  }
+  free(view);
 }
 
 void proton_view_slot_begin_destroy(proton_view_slot_t *view) {
@@ -511,12 +521,13 @@ int32_t proton_get_view_for_destroy(proton_view_slot_t *view,
 }
 
 void proton_destroy_views_for_window(proton_window_slot_t *window) {
-  for (proton_view_slot_t *view = window->runtime->views; view != NULL;
-       view = view->next) {
-    if (view->lifecycle != PROTON_VIEW_DESTROYED && view->window == window) {
-      proton_view_slot_begin_destroy(view);
+  proton_view_slot_t *view = window->runtime->views;
+  while (view != NULL) {
+    proton_view_slot_t *next = view->next;
+    if (view->window == window) {
       proton_view_slot_destroy(view);
     }
+    view = next;
   }
 }
 

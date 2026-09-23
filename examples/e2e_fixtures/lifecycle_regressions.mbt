@@ -10,6 +10,24 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "closed-record-churn" {
+    run_closed_record_churn_regression()
+    return
+  }
+  if name == "renderer-recovery" ||
+    name == "bridge-recovery" ||
+    name == "bridge-startup-failure" {
+    run_page_recovery_regression(name)
+    return
+  }
+  if name == "process-events-no-bridge" {
+    run_renderer_without_bridge_regression()
+    return
+  }
+  if name == "proxy-config" || name == "proxy-env" {
+    run_proxy_regression(name)
+    return
+  }
   if name == "process-events" {
     run_process_events_regression()
     return
@@ -739,4 +757,428 @@ async fn run_process_lifetime_regression() -> Unit {
   .run()
   assert_true(completed.val)
   println("LIFECYCLE_PASSED process-lifetime")
+}
+
+///|
+async fn run_renderer_without_bridge_regression() -> Unit {
+  let loaded = Ref(false)
+  let terminations = Ref(0)
+  let valid_termination = Ref(false)
+  @proton.html("No bridge", "<title>No Bridge</title>")
+  .identifier("dev.proton.no-bridge")
+  .on_browser_event(fn(_browser, event) {
+    match event {
+      DidFinishLoad => loaded.val = true
+      RendererProcessTerminated(status~, error_code~, ..) => {
+        valid_termination.val = (status == 1 || status == 2) && error_code != 0
+        terminations.val += 1
+      }
+      _ => ()
+    }
+  })
+  .app_lifecycle(
+    on_start=context => {
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          while !loaded.val {
+            @async.sleep(10)
+          }
+          lifecycle_probe_gate()
+          while terminations.val == 0 {
+            @async.sleep(10)
+          }
+          context.quit()
+        }),
+      )
+    },
+    on_shutdown=_ => (),
+  )
+  .run()
+  assert_eq(terminations.val, 1)
+  assert_true(valid_termination.val)
+  println("LIFECYCLE_PASSED process-events-no-bridge")
+}
+
+///|
+async fn run_proxy_regression(name : String) -> Unit {
+  let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"), headers={
+    "Content-Type": "text/html",
+  })
+  defer server.close()
+  // Exercise request-less disconnects independently of Chromium's platform
+  // specific speculative connection behavior.
+  let speculative = @socket.Tcp::connect(server.addr)
+  speculative.close()
+  let proxy = "http://127.0.0.1:" + server.addr.port().to_string()
+  let configured = name == "proxy-config"
+  let environment_proxy = if configured { "http://127.0.0.1:1" } else { proxy }
+  @env.set_env_var("PROTON_PROXY_SERVER", environment_proxy)
+  // An explicit proxy must not inherit an unrelated bypass-all setting.
+  @env.set_env_var("PROTON_PROXY_BYPASS", if configured { "*" } else { "" })
+  let served = Ref(false)
+  let loaded = Ref(false)
+  let app = @proton.url("Proxy", "http://proton-proxy.invalid:8080/probe")
+    .identifier("dev.proton.proxy")
+    .on_browser_event(fn(_browser, event) {
+      if event is DidFinishLoad {
+        loaded.val = true
+      }
+    })
+    .app_lifecycle(
+      on_start=context => {
+        ignore(
+          context
+          .task_group()
+          .spawn(no_wait=true, () => {
+            while !served.val {
+              let (connection, _) = server.accept()
+              ignore(
+                context
+                .task_group()
+                .spawn(no_wait=true, () => {
+                  defer connection.close()
+                  // A browser may close a speculative connection before sending
+                  // a request. This does not satisfy the proxy success assertion.
+                  let request = connection.read_request() catch {
+                    @io.ReaderClosed => return
+                    error => raise error
+                  }
+                  if request.path == "http://proton-proxy.invalid:8080/probe" {
+                    connection.send_response(200, "OK")
+                    connection.write_string("<title>Proxy Success</title>")
+                    connection.end_response()
+                    served.val = true
+                  } else {
+                    connection.send_response(503, "Unavailable")
+                    connection.end_response()
+                  }
+                }),
+              )
+            }
+          }),
+        )
+        ignore(
+          context
+          .task_group()
+          .spawn(no_wait=true, () => {
+            let deadline = @async.now() + 5000L
+            while !served.val ||
+                  !loaded.val ||
+                  context
+                  .windows()
+                  .find("main")
+                  .map(window => window.browser().state().url)
+                  .unwrap_or("") !=
+                  "http://proton-proxy.invalid:8080/probe" {
+              if @async.now() > deadline {
+                fail(
+                  "proxy served=" +
+                  served.val.to_string() +
+                  " loaded=" +
+                  loaded.val.to_string() +
+                  " state=" +
+                  context
+                  .windows()
+                  .find("main")
+                  .unwrap()
+                  .browser()
+                  .state()
+                  .to_repr()
+                  .to_string(),
+                )
+              }
+              @async.sleep(10)
+            }
+            lifecycle_probe_gate()
+            context.quit()
+          }),
+        )
+      },
+      on_shutdown=_ => (),
+    )
+  if configured {
+    ignore(app.proxy(proxy))
+  }
+  app.run()
+  assert_eq(@env.get_env_var("PROTON_PROXY_SERVER"), Some(environment_proxy))
+  assert_eq(
+    @env.get_env_var("PROTON_PROXY_BYPASS"),
+    Some(if configured { "*" } else { "" }),
+  )
+  println("LIFECYCLE_PASSED " + name)
+}
+
+///|
+async fn run_page_recovery_regression(name : String) -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let ready_windows = Ref(0)
+  let initialized = Ref(0)
+  let bridge_failures = Ref(0)
+  let renderer_failures : Array[String] = []
+  let slow_started = Ref(false)
+  let slow_cancelled = Ref(false)
+  let pinged = Ref(0)
+  let slow : @proton_contract.Command[Unit, Unit] = @proton_contract.command(
+    "slow",
+  )
+  let ping : @proton_contract.Command[Unit, Unit] = @proton_contract.command(
+    "ping",
+  )
+  let contract = @proton_contract.extension(
+    id="e2e/failure",
+    js_namespace="failure",
+  )
+  let probe : @proton_contract.Command[Unit, Unit] = contract.command("probe")
+  let extension = @proton_extension.typed(
+    contract,
+    [probe.contract_route()],
+    registrar => {
+      registrar.bind(probe, (_context, _payload) => initialized.val += 1)
+    },
+    scripts=[
+      if name == "bridge-startup-failure" {
+        "throw new Error('expected startup failure');"
+      } else {
+        "if (location.search === '?fail') throw new Error('expected page failure'); void window.__MoonBit__.failure.probe(null);"
+      },
+    ],
+  )
+  let app = @proton.html("Recovery", "<title>Recovery Main</title>")
+    .identifier("dev.proton.recovery")
+    .add_window(
+      "secondary",
+      "Survivor",
+      @proton.AppEntry::Html("<title>Survivor</title>"),
+    )
+    .capability(@proton_extension.capability(extension))
+    .commands(registrar => {
+      registrar.bind(slow, (_context, _payload) => {
+        slow_started.val = true
+        defer {
+          slow_cancelled.val = true
+        }
+        @async.sleep(60000)
+      })
+      registrar.bind(ping, (_context, _payload) => pinged.val += 1)
+    })
+    .on_browser_event(fn(browser, event) {
+      if event is BridgeFailed(diagnostic~) {
+        if browser.window_id() == "main" &&
+          diagnostic.message.contains("expected page failure") {
+          bridge_failures.val += 1
+        }
+      }
+    })
+    .on_render_process_gone(fn(contents, _details) {
+      renderer_failures.push(contents.window_id())
+    })
+    .app_lifecycle(
+      on_start=context => {
+        application.val = Some(context)
+        if name == "bridge-startup-failure" {
+          lifecycle_probe_gate()
+        }
+      },
+      on_shutdown=_ => (),
+    )
+    .window_lifecycle(
+      on_ready=context => {
+        ready_windows.val += 1
+        if context.handle().id() != "main" {
+          return
+        }
+        ignore(
+          context
+          .task_group()
+          .spawn(no_wait=true, () => {
+            while ready_windows.val != 2 {
+              @async.sleep(10)
+            }
+            let main = context.handle().browser()
+            let secondary = application.val
+              .unwrap()
+              .windows()
+              .find("secondary")
+              .unwrap()
+              .browser()
+            // Give the survivor a different site so Chromium cannot put it in the
+            // renderer being terminated. It needs no bridge for this liveness check.
+            secondary.load_url(
+              "data:text/html,<title>Independent Survivor</title>",
+            )
+            while !secondary.state().url.has_prefix("data:") {
+              @async.sleep(10)
+            }
+            lifecycle_probe_gate()
+            main.eval("void window.__MoonBit__.app.slow(null).catch(() => {})")
+            while !slow_started.val {
+              @async.sleep(10)
+            }
+            if name == "renderer-recovery" {
+              main.load_url("chrome://crash")
+              while renderer_failures.is_empty() {
+                @async.sleep(10)
+              }
+            } else {
+              main.load_html(
+                "<title>Failed Page</title>", "https://proton.localhost/?fail",
+              )
+              while bridge_failures.val == 0 {
+                @async.sleep(10)
+              }
+            }
+            while !slow_cancelled.val {
+              @async.sleep(10)
+            }
+            if name == "bridge-recovery" {
+              main.eval("globalThis.__failureReady = true")
+              let gate = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
+              while !@mbfs.path_exists(gate + ".failed-request-checked") {
+                @async.sleep(10)
+              }
+              assert_eq(pinged.val, 0)
+            }
+            secondary.load_url("data:text/html,survivor-responded")
+            while secondary.state().url != "data:text/html,survivor-responded" {
+              @async.sleep(10)
+            }
+            let before_reload = initialized.val
+            main.load_html(
+              "<title>Recovered</title>", "https://proton.localhost/",
+            )
+            // The script retries until the fresh document has installed its bridge.
+            while pinged.val == 0 || initialized.val <= before_reload {
+              main.eval(
+                "if (document.title === 'Recovered' && window.__MoonBit__?.app?.ping) void window.__MoonBit__.app.ping(null)",
+              )
+              @async.sleep(25)
+            }
+            application.val.unwrap().quit()
+          }),
+        )
+      },
+      on_close=_ => (),
+    )
+  let error = try {
+    app.run()
+    None
+  } catch {
+    error => Some(error)
+  }
+  if name == "bridge-startup-failure" {
+    guard error is Some(@proton.AppRunError::BridgeStartupError(diagnostic)) else {
+      fail("required bridge startup failure was not reported")
+    }
+    assert_true(diagnostic.message.contains("expected startup failure"))
+  } else {
+    if error is Some(error) {
+      raise error
+    }
+    assert_true(slow_cancelled.val)
+    assert_true(pinged.val > 0)
+    assert_false(renderer_failures.contains("secondary"))
+    assert_eq(
+      bridge_failures.val,
+      if name == "bridge-recovery" {
+        1
+      } else {
+        0
+      },
+    )
+  }
+  println("LIFECYCLE_PASSED " + name)
+}
+
+///|
+async fn run_closed_record_churn_regression() -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let removed = Ref(0)
+  let loaded = Ref(0)
+  let old_views : Array[@proton.ViewHandle] = []
+  let old_windows : Array[@proton.WindowHandle] = []
+  @proton.html("Churn", "<title>Churn</title>")
+  .identifier("dev.proton.closed-record-churn")
+  .add_window(
+    "secondary",
+    "Temporary",
+    @proton.AppEntry::Html("<title>Temporary</title>"),
+    open_on_start=false,
+  )
+  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+    ()
+  })
+  .on_view_event(fn(_view, event) {
+    if event is Closed {
+      removed.val += 1
+    }
+    if event is DidFinishLoad {
+      loaded.val += 1
+    }
+  })
+  .window_lifecycle(
+    on_ready=context => {
+      if context.handle().id() != "main" {
+        return
+      }
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          lifecycle_probe_gate()
+          let manager = application.val.unwrap().windows()
+          for index = 0; index < 25; index = index + 1 {
+            let view = context
+              .handle()
+              .add_view(
+                "temporary",
+                @proton.view("data:text/html,temporary", width=100, height=100),
+              )
+            old_views.push(view)
+            while loaded.val <= index {
+              @async.sleep(5)
+            }
+            if index % 2 == 0 {
+              context.handle().remove_view("temporary")
+            } else {
+              view.eval("window.close()")
+            }
+            while removed.val <= index {
+              @async.sleep(5)
+            }
+            let window = manager.open("secondary")
+            old_windows.push(window)
+            window.close()
+            while manager.find("secondary") is Some(_) {
+              @async.sleep(5)
+            }
+          }
+          for view in old_views {
+            let rejected = try {
+              ignore(view.state())
+              false
+            } catch {
+              _ => true
+            }
+            assert_true(rejected)
+          }
+          for window in old_windows {
+            let rejected = try {
+              ignore(window.state())
+              false
+            } catch {
+              _ => true
+            }
+            assert_true(rejected)
+          }
+          application.val.unwrap().quit()
+        }),
+      )
+    },
+    on_close=_ => (),
+  )
+  .run()
+  assert_eq(removed.val, 25)
+  println("LIFECYCLE_PASSED closed-record-churn")
 }

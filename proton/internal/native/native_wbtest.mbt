@@ -270,6 +270,10 @@ test "PDF print events preserve window and completion details" {
 ///|
 test "find rejects empty text before native dispatch" {
   let window = Window::{
+    runtime: Runtime::{
+      handle: @native_ffi.runtime_null(),
+      lifecycle: RuntimeActive,
+    },
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
@@ -288,6 +292,10 @@ test "find rejects empty text before native dispatch" {
 ///|
 test "programmatic download rejects an empty URL before native dispatch" {
   let window = Window::{
+    runtime: Runtime::{
+      handle: @native_ffi.runtime_null(),
+      lifecycle: RuntimeActive,
+    },
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
@@ -327,6 +335,10 @@ fn default_pdf_settings() -> PdfPrintSettings {
 ///|
 test "PDF printing validates path and scale before native dispatch" {
   let window = Window::{
+    runtime: Runtime::{
+      handle: @native_ffi.runtime_null(),
+      lifecycle: RuntimeActive,
+    },
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
@@ -396,6 +408,10 @@ test "typed window state fields map to a snapshot" {
 ///|
 test "window progress rejects NaN before native handle access" {
   let window = Window::{
+    runtime: Runtime::{
+      handle: @native_ffi.runtime_null(),
+      lifecycle: RuntimeActive,
+    },
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
@@ -423,6 +439,10 @@ test "progress modes keep the native state codes" {
 ///|
 test "window overlay icon rejects a destroyed image before native access" {
   let window = Window::{
+    runtime: Runtime::{
+      handle: @native_ffi.runtime_null(),
+      lifecycle: RuntimeActive,
+    },
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
@@ -456,6 +476,10 @@ test "thumbar button flags keep the native bit values" {
 ///|
 test "thumbar buttons reject more than seven buttons" {
   let window = Window::{
+    runtime: Runtime::{
+      handle: @native_ffi.runtime_null(),
+      lifecycle: RuntimeActive,
+    },
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
@@ -556,6 +580,10 @@ test "jump list items require a path" {
 ///|
 test "window opacity rejects NaN before native handle access" {
   let window = Window::{
+    runtime: Runtime::{
+      handle: @native_ffi.runtime_null(),
+      lifecycle: RuntimeActive,
+    },
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowLive,
@@ -796,6 +824,10 @@ test "execute_process does not ignore engine configs" {
 ///|
 test "invalid handle returns structured native error" {
   let window = Window::{
+    runtime: Runtime::{
+      handle: @native_ffi.runtime_null(),
+      lifecycle: RuntimeActive,
+    },
     handle: @native_ffi.window_null(),
     id: proton_invalid_handle,
     lifecycle: WindowLive,
@@ -809,6 +841,16 @@ test "invalid handle returns structured native error" {
 ///|
 test "view zoom rejects percentages outside the supported range" {
   let view = View::{
+    window: Window::{
+      runtime: Runtime::{
+        handle: @native_ffi.runtime_null(),
+        lifecycle: RuntimeActive,
+      },
+      handle: @native_ffi.window_null(),
+      id: 1L,
+      lifecycle: WindowLive,
+      close_interception_enabled: false,
+    },
     handle: @native_ffi.view_null(),
     id: 1L,
     lifecycle: ViewLive,
@@ -907,6 +949,10 @@ test "menu construction errors and inactive owners preserve diagnostics" {
     lifecycle: RuntimeDestroyed,
   }
   let window = Window::{
+    runtime: Runtime::{
+      handle: @native_ffi.runtime_null(),
+      lifecycle: RuntimeActive,
+    },
     handle: @native_ffi.window_null(),
     id: 0L,
     lifecycle: WindowDestroyed,
@@ -1045,4 +1091,119 @@ test "ARGB parsing is shared by window and view configuration" {
     assert_eq(error.status(), -1)
     assert_eq(error.message(), "color must be #RRGGBB or #AARRGGBB")
   }
+}
+
+///|
+test "borrowed windows and views share owner lifetime before native access" {
+  let runtime = Runtime::{
+    handle: @native_ffi.runtime_null(),
+    lifecycle: RuntimeActive,
+  }
+  let window = Window::{
+    runtime,
+    handle: @native_ffi.window_null(),
+    id: 7L,
+    lifecycle: WindowLive,
+    close_interception_enabled: false,
+  }
+  let borrowed = window.as_ref()
+  let view = View::{
+    window,
+    handle: @native_ffi.view_null(),
+    id: 8L,
+    lifecycle: ViewLive,
+  }
+  // Null native pointers deliberately distinguish the MoonBit guard from an
+  // invalid-handle error returned after entering C.
+  window.lifecycle = WindowDestroyed
+  assert_eq(
+    expect_native_error(() => ignore(borrowed.titlebar_area())).message(),
+    "window is closing or destroyed",
+  )
+  assert_eq(
+    expect_native_error(() => view.set_visible(true)).message(),
+    "window is closing or destroyed",
+  )
+  view.destroy()
+  assert_eq(view.id(), 0L)
+  window.lifecycle = WindowLive
+  runtime.lifecycle = RuntimeDestroyed
+  assert_eq(
+    expect_native_error(() => window.show()).message(),
+    "runtime is destroying or destroyed",
+  )
+  assert_eq(
+    expect_native_error(() => ignore(borrowed.titlebar_area())).message(),
+    "runtime is destroying or destroyed",
+  )
+  window.destroy()
+  assert_eq(window.id(), 0L)
+}
+
+///|
+test "runtime destruction owns child cleanup even before finish_destroy" {
+  let runtime = Runtime::{
+    handle: @native_ffi.runtime_null(),
+    lifecycle: RuntimeDestroying,
+  }
+  let window = Window::{
+    runtime,
+    handle: @native_ffi.window_null(),
+    id: 7L,
+    lifecycle: WindowLive,
+    close_interception_enabled: false,
+  }
+  let view = View::{
+    window,
+    handle: @native_ffi.view_null(),
+    id: 8L,
+    lifecycle: ViewLive,
+  }
+  view.destroy()
+  window.destroy()
+  assert_eq(view.id(), 0L)
+  assert_eq(window.id(), 0L)
+}
+
+///|
+test "proxy configuration reads current environment and isolates explicit settings" {
+  let old_server = @env.get_env_var("PROTON_PROXY_SERVER")
+  let old_bypass = @env.get_env_var("PROTON_PROXY_BYPASS")
+  defer (for
+    (key, value) in [
+      ("PROTON_PROXY_SERVER", old_server),
+      ("PROTON_PROXY_BYPASS", old_bypass),
+    ] {
+    match value {
+      Some(value) => @env.set_env_var(key, value)
+      None => @env.unset_env_var(key)
+    }
+  })
+  @env.set_env_var("PROTON_PROXY_SERVER", "http://127.0.0.1:1234")
+  @env.set_env_var("PROTON_PROXY_BYPASS", "*")
+  assert_eq(
+    RuntimeConfig::bundled().resolve_proxy(),
+    (Some("http://127.0.0.1:1234"), Some("*")),
+  )
+  @env.set_env_var("PROTON_PROXY_SERVER", "http://127.0.0.1:5678")
+  assert_eq(
+    RuntimeConfig::bundled().resolve_proxy(),
+    (Some("http://127.0.0.1:5678"), Some("*")),
+  )
+  assert_eq(
+    RuntimeConfig::bundled(proxy_server="http://explicit:8080").resolve_proxy(),
+    (Some("http://explicit:8080"), None),
+  )
+  assert_eq(
+    RuntimeConfig::bundled(
+      proxy_server="http://explicit:8080",
+      proxy_bypass="localhost",
+    ).resolve_proxy(),
+    (Some("http://explicit:8080"), Some("localhost")),
+  )
+  assert_eq(
+    @env.get_env_var("PROTON_PROXY_SERVER"),
+    Some("http://127.0.0.1:5678"),
+  )
+  assert_eq(@env.get_env_var("PROTON_PROXY_BYPASS"), Some("*"))
 }

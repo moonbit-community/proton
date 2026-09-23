@@ -62,6 +62,7 @@
 // the child HWND inside that callback re-enters CEF while it is still unwinding
 // the browser close state.
 static int g_proton_cef_initialized = 0;
+static const proton_engine_runtime_config_t *g_proton_initializing_config;
 static int g_proton_cef_runtime_active = 0;
 static char g_proton_temporary_profile_path[PROTON_ENGINE_MAX_PATH_BYTES];
 static int g_proton_engine_multi_threaded_message_loop = 0;
@@ -93,6 +94,10 @@ static void proton_engine_release_pump_event(void) {
   }
 }
 static proton_engine_runtime_t *g_proton_engine_active_runtime = NULL;
+
+const proton_engine_runtime_config_t *proton_engine_initializing_config(void) {
+  return g_proton_initializing_config;
+}
 
 int proton_engine_runtime_initialized(void) {
   return g_proton_cef_initialized;
@@ -480,7 +485,10 @@ int32_t proton_engine_runtime_create(
     proton_engine_set_string(&settings.cache_path, config.cache_dir);
   }
 
-  if (!cef_initialize(&args, &settings, proton_engine_cef_app(), NULL)) {
+  g_proton_initializing_config = &config;
+  int initialized = cef_initialize(&args, &settings, proton_engine_cef_app(), NULL);
+  g_proton_initializing_config = NULL;
+  if (!initialized) {
     cef_string_clear(&settings.browser_subprocess_path);
     cef_string_clear(&settings.resources_dir_path);
     cef_string_clear(&settings.locales_dir_path);
@@ -818,6 +826,15 @@ int32_t proton_engine_runtime_wait(proton_engine_runtime_t *runtime,
 proton_engine_bridge_requests_t *proton_engine_runtime_bridge_requests(
     proton_engine_runtime_t *runtime) {
   return runtime != NULL ? runtime->bridge_requests : NULL;
+}
+
+void proton_engine_runtime_collect(proton_engine_runtime_t *runtime) {
+  for (proton_engine_window_t *window = g_proton_engine_windows; window != NULL;
+       window = window->next) {
+    proton_engine_window_collect_views(window);
+  }
+  proton_engine_free_closed_windows();
+  proton_browser_registry_collect(runtime->browsers);
 }
 
 #endif

@@ -98,3 +98,13 @@ extern "C" fn titlebar_dpi_regions_test() -> Int = "proton_test_titlebar_dpi_reg
 test "titlebar button pixels and edges respect 100 through 250 percent DPI" {
   assert_eq(titlebar_dpi_regions_test(), 0)
 }
+
+///|
+#cfg(platform="windows")
+extern "C" fn closed_modal_collection_test() -> Int = "proton_test_closed_modal_window_collection"
+
+///|
+#cfg(platform="windows")
+test "closed modal records survive collection until native destruction" {
+  assert_eq(closed_modal_collection_test(), 0)
+}

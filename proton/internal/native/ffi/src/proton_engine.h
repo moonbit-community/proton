@@ -46,6 +46,9 @@ typedef struct {
   char framework_dir[PROTON_ENGINE_MAX_PATH_BYTES];
   char locale[PROTON_ENGINE_MAX_PATH_BYTES];
   char accept_languages[PROTON_ENGINE_MAX_PATH_BYTES];
+  /* Borrowed for synchronous runtime initialization only. */
+  const char *proxy_server;
+  const char *proxy_bypass;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   int32_t remote_debugging_port;
@@ -163,6 +166,8 @@ typedef struct {
 int32_t proton_engine_execute_process(
     const proton_engine_runtime_config_t *config, int32_t *out_exit_code,
     char *error, size_t error_len);
+
+void proton_engine_runtime_collect(proton_engine_runtime_t *runtime);
 
 int32_t proton_engine_runtime_create(
     const proton_engine_runtime_config_t *config,

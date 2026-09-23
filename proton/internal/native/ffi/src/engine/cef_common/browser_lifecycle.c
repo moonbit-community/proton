@@ -132,6 +132,33 @@ int proton_browser_registry_shutdown_ready(
   return 1;
 }
 
+/* Called on the owner thread after the native event pump has unwound.
+   A client still retained by CEF keeps its lifecycle record alive. */
+void proton_browser_registry_collect(proton_browser_registry_t *registry) {
+  if (registry == NULL) {
+    return;
+  }
+  proton_browser_lifecycle_t **cursor = &registry->browsers;
+  while (*cursor != NULL) {
+    proton_browser_lifecycle_t *browser = *cursor;
+    if (browser->owner != NULL || browser->devtools != NULL ||
+        (browser->state != PROTON_BROWSER_CLOSED &&
+         browser->state != PROTON_BROWSER_CREATION_FAILED) ||
+        (browser->client != NULL &&
+         !browser->client->base.has_one_ref(
+             (cef_base_ref_counted_t *)browser->client))) {
+      cursor = &browser->next;
+      continue;
+    }
+    *cursor = browser->next;
+    proton_browser_lifecycle_release_browser(browser);
+    if (browser->client != NULL) {
+      browser->client->base.release((cef_base_ref_counted_t *)browser->client);
+    }
+    free(browser);
+  }
+}
+
 void proton_browser_registry_destroy(proton_browser_registry_t *registry) {
   if (registry == NULL) {
     return;
@@ -192,6 +219,7 @@ void proton_browser_lifecycle_creation_failed(
       lifecycle->devtools_parent->devtools == lifecycle) {
     lifecycle->devtools_parent->devtools = NULL;
   }
+  lifecycle->devtools_parent = NULL;
 }
 
 void proton_browser_lifecycle_adopt_created(
@@ -295,6 +323,7 @@ void proton_browser_lifecycle_on_before_close(
       lifecycle->devtools_parent->devtools == lifecycle) {
     lifecycle->devtools_parent->devtools = NULL;
   }
+  lifecycle->devtools_parent = NULL;
 }
 
 proton_browser_role_t

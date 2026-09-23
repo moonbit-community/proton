@@ -155,10 +155,13 @@ static void CEF_CALLBACK proton_engine_on_before_command_line_processing(
                               "disable-backgrounding-occluded-windows");
   proton_engine_append_switch(command_line, "disable-renderer-backgrounding");
   proton_engine_append_switch(command_line, "disable-background-networking");
-  proton_engine_append_switch_with_value(command_line, "proxy-server",
-                                         getenv("PROTON_PROXY_SERVER"));
-  proton_engine_append_switch_with_value(command_line, "proxy-bypass-list",
-                                         getenv("PROTON_PROXY_BYPASS"));
+  const proton_engine_runtime_config_t *startup = proton_engine_initializing_config();
+  if (startup != NULL) {
+    proton_engine_append_switch_with_value(command_line, "proxy-server",
+                                           startup->proxy_server);
+    proton_engine_append_switch_with_value(command_line, "proxy-bypass-list",
+                                           startup->proxy_bypass);
+  }
   proton_engine_append_switch(command_line, "disable-component-update");
   proton_engine_append_switch(command_line, "disable-domain-reliability");
   proton_engine_append_switch(command_line, "disable-sync");
@@ -969,7 +972,7 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
     return;
   }
   proton_engine_window_t *window = proton_engine_window_lookup_browser(browser);
-  if (window == NULL || !proton_engine_bridge_host_enabled(window->bridge) ||
+  if (window == NULL ||
       window->closing) {
     return;
   }
@@ -978,6 +981,8 @@ static void CEF_CALLBACK proton_engine_on_render_process_terminated(
       frame != NULL ? proton_engine_userfree_to_utf8(frame->get_url(frame))
                     : NULL;
   char *detail = proton_engine_cef_string_to_utf8(error_string);
+  proton_engine_bridge_pending_remove_browser(
+      window->runtime, browser->get_identifier(browser));
   proton_browser_session_renderer_terminated(
       window->browser_session, (int32_t)status, error_code,
       url != NULL ? url : "", detail != NULL ? detail : "");
