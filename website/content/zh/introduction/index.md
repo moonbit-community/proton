@@ -1,7 +1,5 @@
 # Introduction
 
-<a href='/proton/introduction/index.html'>English</a>
-
 Proton 是由原生 MoonBit 宿主和 Chromium 前端组成的桌面应用框架。前端可以使用 HTML/JavaScript，也可以使用编译到 JavaScript 的 MoonBit。公开应用入口为 `moonbit-community/proton`。
 
 本文档对应已发布的 **Proton 0.3.3**。CLI 与 `proton_*` 模块使用同一发布版本。

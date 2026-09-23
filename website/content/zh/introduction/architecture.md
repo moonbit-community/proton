@@ -1,7 +1,5 @@
 # 架构与进程模型
 
-[English](../../introduction/architecture.html)
-
 Proton 应用包含原生宿主和 Web 前端。即使两端都用 MoonBit 编写，它们也运行在不同环境中，通过消息通信。
 
 ## 原生宿主

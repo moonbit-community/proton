@@ -1,7 +1,5 @@
 # 命令
 
-[English](../../introduction/commands-events.html)
-
 命令是跨渲染器与宿主边界的类型化请求／响应操作。载荷经过序列化；共享 MoonBit 类型不会共享内存，也不会让前端直接执行后端代码。
 
 ## 契约与绑定

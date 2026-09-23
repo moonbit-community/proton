@@ -1,7 +1,5 @@
 # Introduction
 
-<a href='/proton/zh/introduction/index.html'>中文</a>
-
 Proton is a desktop application framework with a native MoonBit host and a Chromium frontend. Applications can use HTML/JavaScript or a MoonBit frontend compiled to JavaScript. The public application API is `moonbit-community/proton`.
 
 This documentation describes published **Proton 0.3.3**. The CLI and `proton_*` modules share this release version.

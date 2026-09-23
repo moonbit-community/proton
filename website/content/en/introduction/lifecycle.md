@@ -1,7 +1,5 @@
 # Application lifecycle
 
-[中文](../zh/introduction/lifecycle.html)
-
 `App` configures an application before startup. It is created through the root Proton facade and executed through the MoonBit async runtime. Proton installs its native event-loop integration during initialization; application code does not install or poll a separate UI loop.
 
 ## Entry sources

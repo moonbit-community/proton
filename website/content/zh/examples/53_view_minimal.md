@@ -1,7 +1,5 @@
 # 嵌入浏览器视图
 
-[English](../../examples/53_view_minimal.html)
-
 在宿主侧边栏旁声明子浏览器。
 
 [53_view_minimal](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/53_view_minimal) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/53_view_minimal/main.mbt)

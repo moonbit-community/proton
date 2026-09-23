@@ -1,7 +1,5 @@
 # 多窗口命令
 
-[English](../../examples/45_bridge_multi_window.html)
-
 多个窗口共用类型化命令注册。
 
 [45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/45_bridge_multi_window) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/45_bridge_multi_window/main.mbt)

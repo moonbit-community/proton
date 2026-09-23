@@ -1,7 +1,5 @@
 # Build a complete Todo application
 
-[中文](../zh/tutorial/isomorphic.html)
-
 This tutorial uses the isomorphic template to connect a shared contract, native state, and a Rabbita UI. You will first run the generated Todo app, then add **Complete all** and **Reopen all** operations across all three modules.
 
 Complete [prerequisites](../introduction/installation.md), including Node.js for Warren's build tooling. You do not need to modify the earlier minimal app.

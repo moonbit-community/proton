@@ -1,7 +1,5 @@
 # Tutorial
 
-[中文](../zh/tutorial/index.html)
-
 These are guided exercises with prerequisites, file edits and expected results. They are separate from the independently readable reference documentation.
 
 The minimal application is the starting point. Commands extend it; events extend the command example. Windows and file access use a minimal project independently. The Todo tutorial creates a separate isomorphic project.

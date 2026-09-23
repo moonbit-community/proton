@@ -1,7 +1,5 @@
 # Diagnostics reference
 
-[中文](../zh/command-line-interface/debugging.html)
-
 Diagnostics come from distinct layers: project/toolchain validation, native startup and lifecycle, bridge requests, and frontend rendering. A successful frontend preview does not verify native operations; a successful build does not verify packaged execution.
 
 ## Diagnostic interfaces

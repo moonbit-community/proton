@@ -1,7 +1,5 @@
 # Release Notes
 
-[English](../../release-notes/index.html)
-
 ## 0.3.3 — 2026-09-21
 
 - **视图生命周期：**移除或显式关闭子视图后，保留投递最终关闭事件所需的实例身份。覆盖浏览器创建前关闭、替换后的旧事件等情况。[PR #378](https://github.com/moonbit-community/proton/pull/378)

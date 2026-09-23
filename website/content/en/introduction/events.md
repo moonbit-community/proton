@@ -1,7 +1,5 @@
 # Events
 
-[中文](../zh/introduction/events.html)
-
 Events are typed host-to-renderer notifications with no response value. `proton_contract.event[Payload](name)` declares a descriptor; it does not install a listener or retain previous notifications.
 
 ## Destinations

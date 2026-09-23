@@ -1,7 +1,5 @@
 # 使用原生能力
 
-[English](../../tutorial/capabilities.html)
-
 扩展向渲染器提供可复用的宿主操作。capability 会安装扩展后端处理器，并授予特定范围的访问权限。本章让 minimal 应用读取一个本地文本文件。
 
 ## 添加文件系统扩展

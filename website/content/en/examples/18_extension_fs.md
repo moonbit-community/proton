@@ -1,7 +1,5 @@
 # Filesystem capability
 
-[中文](../zh/examples/18_extension_fs.html)
-
 A renderer requests file operations within an explicit permission root.
 
 [18_extension_fs](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/18_extension_fs) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/18_extension_fs/fs.html)

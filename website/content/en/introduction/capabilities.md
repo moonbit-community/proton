@@ -1,7 +1,5 @@
 # Extensions and capabilities
 
-[中文](../zh/introduction/capabilities.html)
-
 Extensions register reusable host operations. A renderer capability installs an extension's backend and grants a permission scope to selected renderer targets. Adding `proton_ext` as a module dependency only makes code available; it does not install handlers or grant access.
 
 ## Registration and targets

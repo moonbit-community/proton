@@ -1,7 +1,5 @@
 # Managing windows
 
-[中文](../zh/tutorial/windows.html)
-
 The application builder describes windows before startup. A `WindowHandle` controls a running window. This guide uses the minimal project and its existing package imports.
 
 ## Create a second window

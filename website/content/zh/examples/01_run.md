@@ -1,7 +1,5 @@
 # 最小应用
 
-[English](../../examples/01_run.html)
-
 内联 HTML 与原生应用入口。
 
 [01_run](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/01_run) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/01_run/main.mbt)

@@ -1,7 +1,5 @@
 # Windows and browser views
 
-[中文](../zh/introduction/windows.html)
-
 Window declarations belong to `App`; operations on a running window belong to `WindowHandle`. Browser navigation and developer tools belong to `BrowserHandle`, obtained through `WindowHandle.browser()`.
 
 ## Identity and declaration

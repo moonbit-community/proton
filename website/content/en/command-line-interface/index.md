@@ -1,7 +1,5 @@
 # Command Line Interface
 
-[中文](../zh/command-line-interface/index.html)
-
 This page lists every `proton_cli` command and its options. Application IPC commands are documented separately in [Commands](../introduction/commands-events.md). Configuration file fields are defined in [project configuration](../configuration/index.md).
 
 ## Invocation and global options

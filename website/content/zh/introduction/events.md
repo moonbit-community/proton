@@ -1,7 +1,5 @@
 # 事件
 
-[English](../../introduction/events.html)
-
 事件是从宿主发往渲染器的类型化通知，没有响应值。`proton_contract.event[Payload](name)` 仅声明描述符，不安装监听器，也不保留历史通知。
 
 ## 发送目标

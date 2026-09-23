@@ -1,7 +1,5 @@
 # 后台驻留
 
-[English](../../examples/57_background_residency.html)
-
 单实例应用在最后一个窗口关闭后继续运行。
 
 [57_background_residency](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/57_background_residency) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/57_background_residency/main.mbt)

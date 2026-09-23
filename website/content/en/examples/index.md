@@ -1,7 +1,5 @@
 # Examples
 
-[中文](../zh/examples/index.html)
-
 Ten examples selected for focused behavior, readable entry points and coverage of distinct framework features. Source links are pinned to the 0.3.3 release commit so documentation and code stay aligned. These are runnable references; step-by-step application development belongs in [Tutorial](../tutorial/index.md).
 
 | Example | Focus |

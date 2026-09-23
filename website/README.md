@@ -7,8 +7,7 @@ MoonBit, Node.js, npm or build plugins are required.
 
 Edit Markdown in `content/en/` and `content/zh/`. Keep both translations and
 code examples aligned. Add chapters to each language's `SUMMARY.md` and use
-`.md` links between articles. The language link at the top of each article
-points to the corresponding generated HTML page.
+`.md` links between articles. Do not add per-page language-switch links.
 
 The book has six top-level chapters in both languages: Introduction, Tutorial,
 Command Line Interface, Configuration, Examples, and Release Notes. Keep all

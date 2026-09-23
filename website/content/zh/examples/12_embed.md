@@ -1,7 +1,5 @@
 # 嵌入 HTML
 
-[English](../../examples/12_embed.html)
-
 将 HTML 源文件嵌入 MoonBit 字符串。
 
 [12_embed](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed/main.mbt), [hello.html](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed/hello.html), [hello.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed/hello.mbt), [moon.pkg](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed/moon.pkg)

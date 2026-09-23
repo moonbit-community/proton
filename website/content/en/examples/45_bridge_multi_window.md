@@ -1,7 +1,5 @@
 # Multi-window commands
 
-[中文](../zh/examples/45_bridge_multi_window.html)
-
 Typed command registration shared by multiple windows.
 
 [45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/45_bridge_multi_window/main.mbt)

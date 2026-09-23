@@ -1,7 +1,5 @@
 # Command Line Interface
 
-[English](../../command-line-interface/index.html)
-
 本页列出 `proton_cli` 的全部命令及其参数。应用的 IPC 命令见[命令](../introduction/commands-events.md)，配置文件字段见[项目配置](../configuration/index.md)。
 
 ## 调用形式与全局选项

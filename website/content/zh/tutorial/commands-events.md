@@ -1,7 +1,5 @@
 # 从前端调用后端
 
-[English](../../tutorial/commands-events.html)
-
 命令让前端请求原生后端执行操作。本章为[最小项目](first-app.md)添加一个可运行的问候表单，先用普通 JavaScript 展示原生通信边界；[Todo 教程](isomorphic.md)则使用共享 MoonBit 类型和 Rabbita。
 
 ## 添加契约依赖

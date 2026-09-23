@@ -1,7 +1,5 @@
 # Configuration
 
-[English](../../configuration/index.html)
-
 `proton.project.json` 包含应用身份及 CLI 构建／打包元数据。顶层是 JSON 对象，只接受以下四个字段；未知字段会被拒绝。窗口状态、命令注册和能力声明属于 MoonBit 应用构建器，不属于此配置文件。
 
 默认文件名为 `proton.project.json`。若使用 `moon.proton.json` 等其他名称，需给 `dev`、`build` 或 `package` 显式传递 `--config moon.proton.json`；它不是自动发现的别名。

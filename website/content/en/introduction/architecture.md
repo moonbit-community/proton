@@ -1,7 +1,5 @@
 # Architecture & processes
 
-[中文](../zh/introduction/architecture.html)
-
 A Proton app has a native host and a web frontend. Even when both are written in MoonBit, they run in different environments and communicate through messages.
 
 ## The native host

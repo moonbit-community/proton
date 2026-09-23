@@ -1,7 +1,5 @@
 # Examples
 
-[English](../../examples/index.html)
-
 按行为集中、入口清晰、能力覆盖互补的标准挑选以下十个示例。源码链接固定到 0.3.3 发布提交，避免文档与代码漂移。这些是可运行参考；逐步开发应用的内容集中在 [Tutorial](../tutorial/index.md)。
 
 | 示例 | 重点 |

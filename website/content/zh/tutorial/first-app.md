@@ -1,7 +1,5 @@
 # 创建项目
 
-[English](../../tutorial/first-app.html)
-
 本章用 minimal 模板创建一个桌面窗口，运行它、修改页面，再构建可执行文件。开始前请完成[环境准备](../introduction/installation.md)。
 
 ## 1. 创建应用

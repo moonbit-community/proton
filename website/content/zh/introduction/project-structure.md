@@ -1,7 +1,5 @@
 # 项目结构
 
-[English](../../introduction/project-structure.html)
-
 Proton 项目包含应用代码、MoonBit 包元数据和 CLI 配置。两种模板的区别主要在前端的组织方式，使用的原生运行时相同。
 
 ## Minimal 项目

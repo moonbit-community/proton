@@ -1,7 +1,5 @@
 # Create a project
 
-[中文](../zh/tutorial/first-app.html)
-
 This guide creates a desktop window with the minimal template. You will run it, change its contents, and build the executable. Finish [prerequisites](../introduction/installation.md) before starting.
 
 ## 1. Create the application

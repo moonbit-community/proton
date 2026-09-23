@@ -1,7 +1,5 @@
 # Minimal application
 
-[中文](../zh/examples/01_run.html)
-
 Inline HTML and a native application entry point.
 
 [01_run](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/01_run) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/01_run/main.mbt)

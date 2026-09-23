@@ -1,7 +1,5 @@
 # 构建完整 Todo 应用
 
-[English](../../tutorial/isomorphic.html)
-
 本教程使用 isomorphic 模板连接共享契约、原生状态和 Rabbita 界面。先运行生成的 Todo 应用，再跨三个模块加入 **Complete all** 和 **Reopen all** 操作。
 
 请先完成[环境准备](../introduction/installation.md)，包括 Warren 构建工具需要的 Node.js。无需修改之前的 minimal 应用。

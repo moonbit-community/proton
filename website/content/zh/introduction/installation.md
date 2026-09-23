@@ -1,7 +1,5 @@
 # 运行环境要求
 
-[English](../../introduction/installation.html)
-
 Proton 0.3.3 支持以下宿主构建环境。原生构建与打包面向当前操作系统，Proton CLI 不提供跨操作系统交叉编译流程。
 
 | 平台 | 架构 | 构建要求 |

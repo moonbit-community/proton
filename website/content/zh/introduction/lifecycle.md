@@ -1,7 +1,5 @@
 # 应用生命周期
 
-[English](../../introduction/lifecycle.html)
-
 `App` 描述启动前的应用配置，通过 Proton 根包创建，在 MoonBit 异步运行时中执行。Proton 在初始化期间接入原生事件循环，应用代码不负责安装或轮询另一个 UI 循环。
 
 ## 入口来源

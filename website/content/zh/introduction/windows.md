@@ -1,7 +1,5 @@
 # 窗口与浏览器视图
 
-[English](../../introduction/windows.html)
-
 窗口声明属于 `App`，运行中的窗口操作属于 `WindowHandle`。浏览器导航和开发者工具属于 `BrowserHandle`，通过 `WindowHandle.browser()` 获取。
 
 ## 标识与声明

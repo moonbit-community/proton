@@ -1,7 +1,5 @@
 # 打包参考
 
-[English](../../command-line-interface/packaging.html)
-
 Proton CLI 将项目组装为分发产物，包含可执行文件、前端资源、CEF 运行时、匹配的 helper 和声明的资源。后端可执行文件本身不是完整分发包。打包面向当前宿主平台。
 
 字段类型与默认值统一定义在 [Configuration](../configuration/index.md)。

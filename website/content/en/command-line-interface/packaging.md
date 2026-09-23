@@ -1,7 +1,5 @@
 # Packaging reference
 
-[中文](../zh/command-line-interface/packaging.html)
-
 The Proton CLI packages a project into a distributable containing its executable, frontend assets, CEF runtime, matching helper and declared resources. A backend executable alone is not a complete distribution. Packaging targets the host platform.
 
 Field types and defaults are defined in [Configuration](../configuration/index.md).

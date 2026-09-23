@@ -1,7 +1,5 @@
 # Commands
 
-[中文](../zh/introduction/commands-events.html)
-
 A command is a typed request/response operation across the renderer–host boundary. Payloads are serialized; a shared MoonBit type does not share memory or execute backend code in the renderer.
 
 ## Contract and binding

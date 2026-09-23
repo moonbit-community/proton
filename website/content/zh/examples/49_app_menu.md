@@ -1,7 +1,5 @@
 # 原生应用菜单
 
-[English](../../examples/49_app_menu.html)
-
 类型化菜单、动态命令状态与应用回调。
 
 [49_app_menu](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/49_app_menu) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/49_app_menu/main.mbt)

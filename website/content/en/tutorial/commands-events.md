@@ -1,7 +1,5 @@
 # Calling the backend
 
-[中文](../zh/tutorial/commands-events.html)
-
 A command lets frontend code ask the native backend to do work. This guide adds a working greeting form to the [minimal project](first-app.md). It uses plain JavaScript first so the native boundary is visible; the [Todo tutorial](isomorphic.md) uses shared MoonBit types and Rabbita.
 
 ## Add the contract dependency

@@ -1,7 +1,5 @@
 # Project structure
 
-[中文](../zh/introduction/project-structure.html)
-
 A Proton project contains application code, MoonBit package metadata, and CLI configuration. The templates differ in frontend organization, not in the native runtime they use.
 
 ## The minimal project

@@ -1,7 +1,5 @@
 # Using native capabilities
 
-[中文](../zh/tutorial/capabilities.html)
-
 Extensions expose reusable host operations to the renderer. A capability installs an extension's backend handlers and grants access to a specific scope. This guide reads one local text file from the minimal application.
 
 ## Add the filesystem extension

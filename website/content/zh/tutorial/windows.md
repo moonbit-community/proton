@@ -1,7 +1,5 @@
 # 管理窗口
 
-[English](../../tutorial/windows.html)
-
 应用构建器在启动前描述窗口，`WindowHandle` 则控制已经运行的窗口。本章使用 minimal 项目及其已有包导入。
 
 ## 创建第二个窗口

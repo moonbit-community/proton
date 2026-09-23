@@ -1,7 +1,5 @@
 # Embedded browser view
 
-[中文](../zh/examples/53_view_minimal.html)
-
 A declarative child browser alongside a host sidebar.
 
 [53_view_minimal](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/53_view_minimal) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/53_view_minimal/main.mbt)

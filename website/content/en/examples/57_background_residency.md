@@ -1,7 +1,5 @@
 # Background residency
 
-[中文](../zh/examples/57_background_residency.html)
-
 A single-instance app survives closing its last window.
 
 [57_background_residency](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/57_background_residency) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/57_background_residency/main.mbt)

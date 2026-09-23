@@ -1,7 +1,5 @@
 # Release Notes
 
-[中文](../zh/release-notes/index.html)
-
 ## 0.3.3 — 2026-09-21
 
 - **View lifecycle:** removed and explicitly closed child views retain the identity needed to deliver their terminal close event. Coverage includes views closed before browser creation and stale events after replacement. [PR #378](https://github.com/moonbit-community/proton/pull/378)

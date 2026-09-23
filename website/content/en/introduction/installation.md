@@ -1,7 +1,5 @@
 # Environment requirements
 
-[中文](../zh/introduction/installation.html)
-
 Proton 0.3.3 supports the following host build environments. Native builds and packages target the host operating system; cross-compilation is not provided by the Proton CLI.
 
 | Platform | Architecture | Build requirements |
