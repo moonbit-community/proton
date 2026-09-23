@@ -9,7 +9,13 @@ async fn kill_renderer_helpers(snapshot : ProcessSnapshot) -> Unit {
       Some(command) => command
       None => continue
     }
-    guard command.contains("--type=renderer") else { continue }
+    // Chromium names renderers with `--type=renderer` and identifies them with
+    // `--renderer-client-id`; accepting either keeps the case working when a
+    // platform prints only one of them.
+    guard command.contains("--type=renderer") ||
+      command.contains("--renderer-client-id") else {
+      continue
+    }
     if @path.sep == '\\' {
       ignore(
         @process.collect_output_merged(
@@ -31,7 +37,16 @@ async fn kill_renderer_helpers(snapshot : ProcessSnapshot) -> Unit {
     killed = killed + 1
   }
   guard killed > 0 else {
-    fail("process-events case found no renderer helper to terminate")
+    let observed : Array[String] = []
+    for pid in snapshot.helper_pids {
+      observed.push(
+        pid.to_string() + "=" + snapshot.commands.get(pid).unwrap_or("unknown"),
+      )
+    }
+    fail(
+      "process-events case found no renderer helper to terminate; helpers: " +
+      observed.join(" | "),
+    )
   }
 }
 

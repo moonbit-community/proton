@@ -187,6 +187,9 @@ async fn list_unix_processes() -> Array[ProcessRow] {
   // Redirect `ps` output to a file instead of capturing it through a pipe:
   // a pipe read can surface a transient EAGAIN on a loaded runner and
   // truncate the tree, dropping the root process from the snapshot.
+  // `-ww` asks for unlimited width: a redirect is not a terminal, so the
+  // default width would clip long helper command lines and hide the switches
+  // the tests match on, such as `--type=renderer`.
   let tmp_root = @fs.tmpdir(prefix="proton-e2e-ps-")
   let ps_log = join_path(tmp_root, "ps.out")
   let output = @process.redirect_to_file(
@@ -195,7 +198,7 @@ async fn list_unix_processes() -> Array[ProcessRow] {
   )
   let code = @process.run(
     "ps",
-    ["-axo", "pid=,ppid=,command="],
+    ["-axo", "pid=,ppid=,command=", "-ww"],
     stdout=output,
     stderr=output,
   )
