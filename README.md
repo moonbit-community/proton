@@ -9,7 +9,7 @@ Supported source-built native backends:
 - macOS Apple Silicon
 - Linux x64
 
-[English guides](website/content/en/index.md) · [中文指南](website/content/zh/index.md)
+[English guides](website/content/en/introduction/index.md) · [中文指南](website/content/zh/introduction/index.md)
 
 ## Quick start
 

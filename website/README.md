@@ -7,34 +7,57 @@ MoonBit, Node.js, npm or build plugins are required.
 
 Edit Markdown in `content/en/` and `content/zh/`. Keep both translations and
 code examples aligned. Add chapters to each language's `SUMMARY.md` and use
-`.md` links between articles. The language link at the top of each article
-points to the corresponding generated HTML page.
+`.md` links between articles. Do not add per-page language-switch links.
+
+The book has six top-level chapters in both languages: Introduction, Tutorial,
+Command Line Interface, Configuration, Examples, and Release Notes. Keep all
+CLI commands and options in `command-line-interface/index.md`, and all project JSON fields in
+`configuration/index.md`. Examples contains ten curated source references pinned to
+the documented release commit; release notes distinguish publication from
+source changes.
+
+Each language directory follows the book navigation:
+
+```text
+SUMMARY.md
+introduction/
+tutorial/
+command-line-interface/
+configuration/
+examples/
+release-notes/
+```
+
+Each chapter starts at `index.md` inside its directory. Keep child pages next
+to that index. Preserve old published URLs with redirects in both book configs.
 
 Tutorials live only in `content/<language>/tutorial/` and the Tutorial navigation
 section. They state prerequisites, file edits and expected results. All other
 pages are independently readable technical documentation: define concepts, API
 contracts, configuration types/defaults, lifecycle, failure behavior and platform
 limits. Do not make reference pages depend on completing a tutorial project.
-Examples document Proton 0.3.0; verify them with published dependencies.
+Examples document Proton 0.3.3; verify them with published dependencies.
 
 ## Preview
 
-From `website/`:
+From `website/`, build both languages under the deployment path and serve them:
 
 ```sh
-mdbook serve
+preview_dir="$(mktemp -d)"
+mdbook build --dest-dir "$preview_dir/proton"
+mdbook build zh --dest-dir "$preview_dir/proton/zh"
+python3 -m http.server 4173 --bind 127.0.0.1 --directory "$preview_dir"
 ```
 
-Open http://localhost:3000/ for English. For a separate Chinese preview:
+Open http://127.0.0.1:4173/proton/ for English or
+http://127.0.0.1:4173/proton/zh/ for Chinese. This optional local preview uses
+Python 3; document builds still require only mdBook. Rebuild both languages
+with the same destination paths after editing.
 
-```sh
-mdbook serve zh --port 3001
-```
-
-Each preview rebuilds its own language. To preview language links together,
-start the English server and run `mdbook build zh`; the Chinese pages will be
-available at http://localhost:3000/zh/. Rebuild Chinese after editing it or
-after the English server rebuilds (the English build replaces `dist/`).
+mdBook also copies the first chapter to the site root. The introduction index
+uses site-relative HTML links so both copies navigate correctly. Preserve the
+single-quoted HTML attributes: mdBook 0.4's print-page rewriting otherwise
+prefixes these absolute paths with the chapter directory.
 
 ## Publish
 

@@ -1,31 +1,34 @@
 # Summary
 
-- [概述](index.md)
-
-# 概念
-
-- [架构与进程](architecture.md)
-- [项目结构](project-structure.md)
-- [应用生命周期](lifecycle.md)
-
-# 参考
-
-- [运行环境要求](installation.md)
-- [项目配置](configuration.md)
-- [CLI](cli.md)
-- [命令](commands-events.md)
-- [事件](events.md)
-- [窗口与浏览器视图](windows.md)
-- [扩展与能力](capabilities.md)
-- [打包](packaging.md)
-- [诊断](debugging.md)
-
-# Tutorial
-
-- [教程索引](tutorial/index.md)
+- [Introduction](introduction/index.md)
+  - [架构与进程](introduction/architecture.md)
+  - [运行环境要求](introduction/installation.md)
+  - [项目结构](introduction/project-structure.md)
+  - [应用生命周期](introduction/lifecycle.md)
+  - [应用命令](introduction/commands-events.md)
+  - [事件](introduction/events.md)
+  - [窗口与浏览器视图](introduction/windows.md)
+  - [扩展与能力](introduction/capabilities.md)
+- [Tutorial](tutorial/index.md)
   - [最小应用](tutorial/first-app.md)
   - [命令调用](tutorial/commands-events.md)
   - [事件订阅](tutorial/events.md)
   - [多窗口](tutorial/windows.md)
   - [文件访问](tutorial/capabilities.md)
   - [完整 Todo 应用](tutorial/isomorphic.md)
+- [Command Line Interface](command-line-interface/index.md)
+  - [打包行为](command-line-interface/packaging.md)
+  - [诊断](command-line-interface/debugging.md)
+- [Configuration](configuration/index.md)
+- [Examples](examples/index.md)
+  - [最小应用](examples/01_run.md)
+  - [嵌入 HTML](examples/12_embed.md)
+  - [文件系统能力](examples/18_extension_fs.md)
+  - [类型化事件](examples/40_event_broadcast.md)
+  - [多窗口命令](examples/45_bridge_multi_window.md)
+  - [HTML 与静态资源](examples/46_asset_sidecar_resources.md)
+  - [原生应用菜单](examples/49_app_menu.md)
+  - [嵌入浏览器视图](examples/53_view_minimal.md)
+  - [应用国际化](examples/56_i18n.md)
+  - [后台驻留](examples/57_background_residency.md)
+- [Release Notes](release-notes/index.md)

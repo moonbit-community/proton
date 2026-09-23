@@ -1,7 +1,5 @@
 # Sending events to the frontend
 
-[中文](../zh/tutorial/events.html)
-
 Use events when the backend needs to notify a frontend about a change. This guide extends the greeting command from [calling the backend](commands-events.md): clicking the button still invokes a command, but the displayed message now comes from an event.
 
 ## Declare the event

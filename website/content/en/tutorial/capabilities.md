@@ -1,7 +1,5 @@
 # Using native capabilities
 
-[中文](../zh/tutorial/capabilities.html)
-
 Extensions expose reusable host operations to the renderer. A capability installs an extension's backend handlers and grants access to a specific scope. This guide reads one local text file from the minimal application.
 
 ## Add the filesystem extension
@@ -9,7 +7,7 @@ Extensions expose reusable host operations to the renderer. A capability install
 In the minimal project's **`moon.mod`**, add this dependency inside `import { ... }`:
 
 ```text
-"moonbit-community/proton_ext@0.3.0",
+"moonbit-community/proton_ext@0.3.3",
 ```
 
 Use these imports in **`app/moon.pkg`**, then run `moon update`:
@@ -95,10 +93,10 @@ Removing `.capability(...)` does not stop the app from starting, but the route b
 
 For a second window, select explicit `RendererTarget::entry(window="...")` or `RendererTarget::bundled(window="...")` targets when adding the capability. Grant each page only what its feature requires.
 
-The local workspace directory is useful for this development exercise. Installed resources may be read-only; use an appropriate writable application-data or user-selected directory for persistent files. Package files you intentionally ship via [resources configuration](../configuration.md).
+The local workspace directory is useful for this development exercise. Installed resources may be read-only; use an appropriate writable application-data or user-selected directory for persistent files. Package files you intentionally ship via [resources configuration](../configuration/index.md).
 
 ## Other capabilities
 
 Dialogs, clipboard, shell, tray, and other extensions follow the same explicit installation/grant model, but each defines its own scope and platform support. The notification extension in this release targets macOS; do not infer platform support from the framework's overall platform list.
 
-Consult the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/) for the capability builder and request/response types you need.
+Consult the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.3/) for the capability builder and request/response types you need.

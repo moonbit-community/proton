@@ -1,7 +1,5 @@
 # Managing windows
 
-[中文](../zh/tutorial/windows.html)
-
 The application builder describes windows before startup. A `WindowHandle` controls a running window. This guide uses the minimal project and its existing package imports.
 
 ## Create a second window
@@ -71,6 +69,6 @@ Use `on_window_close_request` for an asynchronous close decision: return `Window
 
 ## Platform-specific window behavior
 
-Native window decorations and available controls differ across platforms. Check the [window API](https://mooncakes.io/docs/moonbit-community/proton@0.3.0/) before relying on platform-specific methods. Keep frontend titlebar layout and native configuration together when using an overlay titlebar.
+Native window decorations and available controls differ across platforms. Check the [window API](https://mooncakes.io/docs/moonbit-community/proton@0.3.3/) before relying on platform-specific methods. Keep frontend titlebar layout and native configuration together when using an overlay titlebar.
 
 A secondary page is also a separate capability target. Grant only the host operations it needs; see [native capabilities](capabilities.md).

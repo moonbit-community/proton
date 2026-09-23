@@ -1,7 +1,5 @@
 # Calling the backend
 
-[中文](../zh/tutorial/commands-events.html)
-
 A command lets frontend code ask the native backend to do work. This guide adds a working greeting form to the [minimal project](first-app.md). It uses plain JavaScript first so the native boundary is visible; the [Todo tutorial](isomorphic.md) uses shared MoonBit types and Rabbita.
 
 ## Add the contract dependency
@@ -9,7 +7,7 @@ A command lets frontend code ask the native backend to do work. This guide adds 
 In **`moon.mod`**, add this entry inside the existing `import { ... }` block, preserving the existing dependencies:
 
 ```text
-"moonbit-community/proton_contract@0.3.0",
+"moonbit-community/proton_contract@0.3.3",
 ```
 
 Replace **`app/moon.pkg`** with:

@@ -1,7 +1,5 @@
 # 使用原生能力
 
-[English](../../tutorial/capabilities.html)
-
 扩展向渲染器提供可复用的宿主操作。capability 会安装扩展后端处理器，并授予特定范围的访问权限。本章让 minimal 应用读取一个本地文本文件。
 
 ## 添加文件系统扩展
@@ -9,7 +7,7 @@
 在 minimal 项目的 **`moon.mod`** 中，将以下依赖加入 `import { ... }`：
 
 ```text
-"moonbit-community/proton_ext@0.3.0",
+"moonbit-community/proton_ext@0.3.3",
 ```
 
 在 **`app/moon.pkg`** 中使用以下导入，然后执行 `moon update`：
@@ -95,10 +93,10 @@ async fn main {
 
 为第二个窗口添加能力时，通过 `RendererTarget::entry(window="...")` 或 `RendererTarget::bundled(window="...")` 显式选择目标，只授予页面功能真正需要的权限。
 
-本地 workspace 目录适合这个开发练习。安装资源目录可能只读，持久化文件应放在合适的可写应用数据目录或用户选择的位置。需要随应用分发的文件通过[资源配置](../configuration.md)打包。
+本地 workspace 目录适合这个开发练习。安装资源目录可能只读，持久化文件应放在合适的可写应用数据目录或用户选择的位置。需要随应用分发的文件通过[资源配置](../configuration/index.md)打包。
 
 ## 其他能力
 
 对话框、剪贴板、shell、托盘等扩展也采用显式安装和授权的方式，但各自定义作用范围与平台支持。此版本的通知扩展面向 macOS，不能从框架的平台列表推断每个扩展都支持全部平台。
 
-需要某项能力时，查阅[扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.0/)中的 capability 构建器及请求、响应类型。
+需要某项能力时，查阅[扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.3/)中的 capability 构建器及请求、响应类型。
