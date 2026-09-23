@@ -159,8 +159,24 @@ int32_t proton_engine_system_media_access_status(int32_t media,
     *out_status = PROTON_MEDIA_ACCESS_STATUS_RESTRICTED;
     return PROTON_OK;
   }
-  /* The per-application entry is written once the application asks for the
-     device; the device entry below it is the all-applications default. */
+  /* Device and desktop-app switches are gates, not per-app defaults: an
+     explicit Allow for an executable must not bypass either global Deny. */
+  int32_t device_status = PROTON_MEDIA_ACCESS_STATUS_NOT_DETERMINED;
+  int has_device = proton_system_read_consent(HKEY_CURRENT_USER, device_key,
+                                               &device_status);
+  wchar_t desktop_key[PROTON_SYSTEM_CONSENT_CHARS] = {0};
+  swprintf(desktop_key, PROTON_SYSTEM_CONSENT_CHARS, L"%s\\NonPackaged",
+           device_key);
+  int32_t desktop_status = PROTON_MEDIA_ACCESS_STATUS_NOT_DETERMINED;
+  int has_desktop = proton_system_read_consent(HKEY_CURRENT_USER, desktop_key,
+                                                &desktop_status);
+  if ((has_device && device_status == PROTON_MEDIA_ACCESS_STATUS_DENIED) ||
+      (has_desktop && desktop_status == PROTON_MEDIA_ACCESS_STATUS_DENIED)) {
+    *out_status = PROTON_MEDIA_ACCESS_STATUS_DENIED;
+    return PROTON_OK;
+  }
+  /* A missing executable Value is common even when usage timestamps exist.
+     Fall back through desktop-app consent, then the device-level value. */
   wchar_t app_key[PROTON_SYSTEM_CONSENT_CHARS] = {0};
   proton_system_app_consent_path(app_key, PROTON_SYSTEM_CONSENT_CHARS, name);
   if (app_key[0] != L'\0' &&
@@ -168,8 +184,12 @@ int32_t proton_engine_system_media_access_status(int32_t media,
     *out_status = status;
     return PROTON_OK;
   }
-  if (proton_system_read_consent(HKEY_CURRENT_USER, device_key, &status)) {
-    *out_status = status;
+  if (has_desktop) {
+    *out_status = desktop_status;
+    return PROTON_OK;
+  }
+  if (has_device) {
+    *out_status = device_status;
     return PROTON_OK;
   }
   *out_status = PROTON_MEDIA_ACCESS_STATUS_NOT_DETERMINED;

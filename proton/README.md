@@ -635,7 +635,9 @@ let trusted = @proton.system_is_trusted_accessibility_client(false)
 - `system_media_access_status(kind)` reports `granted`, `denied`, `restricted`,
   `not-determined`, or `unknown` for `microphone`, `camera`, and `screen`.
   Windows reads the capability access consent store that the privacy settings
-  write, including the machine policy that makes a device restricted; macOS
+  write, including the machine policy that makes a device restricted. Device
+  and desktop-app (`NonPackaged`) denial takes precedence over per-app consent;
+  missing per-app values fall back to desktop-app and then device consent. macOS
   reads the AVFoundation authorization and the screen-recording preflight;
   Linux reports an unsupported error, matching Electron's platform support.
 - `system_is_trusted_accessibility_client(prompt)` is macOS only and maps to
