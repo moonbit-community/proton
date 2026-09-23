@@ -41,6 +41,7 @@ struct ProcessSnapshot {
   pids : Array[Int]
   helper_pids : Array[Int]
   commands : Map[Int, String]
+  parents : Map[Int, Int]
   created_at : Map[Int, Int]
 }
 
@@ -124,10 +125,12 @@ async fn finish_scenario_app_with_connected_browser(
 async fn snapshot_process_tree(root_pid : Int) -> ProcessSnapshot {
   let rows = list_processes()
   let commands : Map[Int, String] = Map([])
+  let parents : Map[Int, Int] = Map([])
   let created_at : Map[Int, Int] = Map([])
   let mut root_row : ProcessRow? = None
   for row in rows {
     commands[row.pid] = row.command
+    parents[row.pid] = row.parent_pid
     created_at[row.pid] = row.created_at
     if row.pid == root_pid {
       root_row = Some(row)
@@ -158,7 +161,7 @@ async fn snapshot_process_tree(root_pid : Int) -> ProcessSnapshot {
       helper_pids.push(row.pid)
     }
   }
-  ProcessSnapshot::{ pids, helper_pids, commands, created_at, }
+  ProcessSnapshot::{ pids, helper_pids, commands, parents, created_at, }
 }
 
 ///|

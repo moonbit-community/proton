@@ -12,10 +12,16 @@ async fn kill_renderer_helpers(snapshot : ProcessSnapshot) -> Unit {
     // Chromium names renderers with `--type=renderer` and identifies them with
     // `--renderer-client-id`; accepting either keeps the case working when a
     // platform prints only one of them.
-    guard command.contains("--type=renderer") ||
-      command.contains("--renderer-client-id") else {
-      continue
+    let names_renderer = command.contains("--type=renderer") ||
+      command.contains("--renderer-client-id")
+    // Linux forks renderers from a zygote helper, and the forked child keeps
+    // the zygote's command line. Such a child is still a helper whose parent is
+    // another helper, so kill those too instead of missing the renderer.
+    let forked_from_helper = match snapshot.parents.get(pid) {
+      Some(parent) => snapshot.helper_pids.contains(parent)
+      None => false
     }
+    guard names_renderer || forked_from_helper else { continue }
     if @path.sep == '\\' {
       ignore(
         @process.collect_output_merged(
@@ -38,9 +44,13 @@ async fn kill_renderer_helpers(snapshot : ProcessSnapshot) -> Unit {
   }
   guard killed > 0 else {
     let observed : Array[String] = []
-    for pid in snapshot.helper_pids {
+    for pid in snapshot.pids {
       observed.push(
-        pid.to_string() + "=" + snapshot.commands.get(pid).unwrap_or("unknown"),
+        pid.to_string() +
+        "(ppid=" +
+        snapshot.parents.get(pid).unwrap_or(0).to_string() +
+        ")=" +
+        snapshot.commands.get(pid).unwrap_or("unknown"),
       )
     }
     fail(
