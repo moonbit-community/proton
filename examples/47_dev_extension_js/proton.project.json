@@ -1,5 +1,5 @@
 {
-  "identifier": "com.justjavac.proton.dev-extension-js",
+  "identifier": "com.example.proton.dev-extension-js",
   "backend": {
     "path": "../..",
     "package": "examples/47_dev_extension_js"

@@ -331,7 +331,7 @@ function verifyBundle() {
   );
   const infoPlist = path.join(contents, "Info.plist");
   const plistExpectations = new Map([
-    ["CFBundleIdentifier", "com.justjavac.proton.dev-extension-js"],
+    ["CFBundleIdentifier", "com.example.proton.dev-extension-js"],
     ["CFBundleShortVersionString", exampleVersion],
     ["CFBundleVersion", exampleVersion],
   ]);
@@ -402,7 +402,7 @@ async function launchBundle() {
     "-replace",
     "CFBundleIdentifier",
     "-string",
-    `com.justjavac.proton.dev-extension-js.package-smoke-${process.pid}`,
+    `com.example.proton.dev-extension-js.package-smoke-${process.pid}`,
     path.join(contents, "Info.plist"),
   ]);
   run("codesign", [

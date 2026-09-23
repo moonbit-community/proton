@@ -77,13 +77,13 @@ test "parent directory slug derives from cwd" {
 test "explicit title author size and flags override defaults" {
   let options = must_options([
     "demo", "--title", "Demo App", "--author", "moonbit-community", "--identifier",
-    "com.justjavac.demo", "--width", "1024", "--height", "720", "--no-check", "--dry-run",
+    "com.example.demo", "--width", "1024", "--height", "720", "--no-check", "--dry-run",
     "-y",
   ])
   assert_eq(options.title, "Demo App")
   assert_eq(options.author, "moonbit-community")
   assert_eq(options.project_name, "demo")
-  assert_eq(options.identifier, "com.justjavac.demo")
+  assert_eq(options.identifier, "com.example.demo")
   assert_eq(options.width, 1024)
   assert_eq(options.height, 720)
   assert_false(options.run_check)
@@ -189,14 +189,14 @@ test "invalid identifier fails" {
 ///|
 test "project config preserves application identity" {
   let context = template_context(
-    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+    "Demo App", "moonbit-community", "demo", "com.example.demo", 1000, 700,
   )
   let config = @json.parse(project_config_file(context, "isomorphic").content) catch {
     error => abort(error.to_string())
   }
   guard config
     is {
-      "identifier": "com.justjavac.demo",
+      "identifier": "com.example.demo",
       "package": { "product_name": "Demo App", .. },
       ..
     } else {
@@ -207,7 +207,7 @@ test "project config preserves application identity" {
 ///|
 test "project config uses host-native package format defaults" {
   let context = template_context(
-    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+    "Demo App", "moonbit-community", "demo", "com.example.demo", 1000, 700,
   )
   let config = @json.parse(project_config_file(context, "isomorphic").content) catch {
     error => abort(error.to_string())
@@ -220,7 +220,7 @@ test "project config uses host-native package format defaults" {
 ///|
 test "isomorphic README documents host-native package defaults" {
   let context = template_context(
-    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+    "Demo App", "moonbit-community", "demo", "com.example.demo", 1000, 700,
   )
   let mut readme : String? = None
   for spec in generated_isomorphic_template_specs() {
@@ -278,7 +278,7 @@ test "isomorphic README documents host-native package defaults" {
 ///|
 test "isomorphic project config uses installed Warren" {
   let context = template_context(
-    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+    "Demo App", "moonbit-community", "demo", "com.example.demo", 1000, 700,
   )
   let content = project_config_file(context, "isomorphic").content
   assert_true(content.contains("warren dev --browser-entry main"))
@@ -288,7 +288,7 @@ test "isomorphic project config uses installed Warren" {
 ///|
 test "minimal project config uses a single backend module" {
   let context = template_context(
-    "Demo App", "moonbit-community", "demo", "com.justjavac.demo", 1000, 700,
+    "Demo App", "moonbit-community", "demo", "com.example.demo", 1000, 700,
   )
   let config = @json.parse(project_config_file(context, "minimal").content) catch {
     error => abort(error.to_string())
