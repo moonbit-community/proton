@@ -343,6 +343,7 @@ static LRESULT CALLBACK proton_engine_window_proc(HWND hwnd,
         proton_engine_resize_browser(window, client.right - client.left,
                                      client.bottom - client.top);
       }
+      proton_engine_window_layout_views(window);
       return 0;
     }
     break;

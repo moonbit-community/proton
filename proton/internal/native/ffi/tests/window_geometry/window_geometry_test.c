@@ -13,6 +13,56 @@
     }                                                                          \
   } while (0)
 
+/* Exercise the production view layout against real child HWNDs. */
+int32_t proton_test_view_native_bounds(void) {
+  int result = 0;
+  HWND parent = NULL;
+  DPI_AWARENESS_CONTEXT previous =
+      SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+  CHECK(previous != NULL);
+  parent = CreateWindowExW(0, L"STATIC", L"View geometry test",
+                           WS_OVERLAPPEDWINDOW, 0, 0, 900, 700, NULL, NULL,
+                           GetModuleHandleW(NULL), NULL);
+  CHECK(parent != NULL);
+  HWND child = CreateWindowExW(0, L"STATIC", L"View", WS_CHILD,
+                              0, 0, 1, 1, parent, NULL,
+                              GetModuleHandleW(NULL), NULL);
+  CHECK(child != NULL);
+  proton_engine_window_t window = {0};
+  proton_engine_view_t view = {0};
+  window.hwnd = parent;
+  window.views = &view;
+  view.window = &window;
+  view.hwnd = child;
+  UINT dpi = GetDpiForWindow(parent);
+  char error[256] = {0};
+  for (int pass = 0; pass < 2; pass++) {
+    int x = pass == 0 ? 288 : -13;
+    CHECK(proton_engine_view_set_bounds(&view, x, 17, 503, 307, error,
+                                        sizeof(error)) == PROTON_OK);
+    RECT rect;
+    CHECK(GetWindowRect(child, &rect));
+    MapWindowPoints(NULL, parent, (POINT *)&rect, 2);
+    CHECK(rect.left == MulDiv(x, dpi, 96));
+    CHECK(rect.top == MulDiv(17, dpi, 96));
+    CHECK(rect.right - rect.left == MulDiv(503, dpi, 96));
+    CHECK(rect.bottom - rect.top == MulDiv(307, dpi, 96));
+    /* Creation and DPI relayout must restore cached logical bounds, rather
+     * than preserve an incorrect native rectangle or scale it twice. */
+    SetWindowPos(child, NULL, 0, 0, 1, 1, SWP_NOZORDER | SWP_NOACTIVATE);
+    proton_engine_window_layout_views(&window);
+    RECT restored;
+    CHECK(GetWindowRect(child, &restored));
+    MapWindowPoints(NULL, parent, (POINT *)&restored, 2);
+    CHECK(EqualRect(&rect, &restored));
+    CHECK(view.x == x && view.width == 503);
+  }
+cleanup:
+  if (parent != NULL) DestroyWindow(parent);
+  if (previous != NULL) SetThreadDpiAwarenessContext(previous);
+  return result;
+}
+
 int32_t proton_test_window_dpi_conversion(void) {
   int result = 0;
   const UINT dpis[] = {96, 144, 240};
@@ -104,6 +154,70 @@ static LRESULT CALLBACK geometry_window_proc(HWND hwnd, UINT message,
     return 0;
   }
   return DefWindowProcW(hwnd, message, wparam, lparam);
+}
+
+int32_t proton_test_view_caption_clip(void) {
+  int result = 0;
+  HWND parent = NULL;
+  HRGN region = NULL;
+  ATOM window_class = 0;
+  HINSTANCE instance = GetModuleHandleW(NULL);
+  DPI_AWARENESS_CONTEXT previous =
+      SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+  WNDCLASSW cls = {0};
+  cls.lpfnWndProc = geometry_window_proc;
+  cls.hInstance = instance;
+  cls.lpszClassName = L"ProtonViewCaptionTest";
+  window_class = RegisterClassW(&cls);
+  CHECK(window_class != 0);
+  parent = CreateWindowExW(0, cls.lpszClassName, L"View caption test",
+                           WS_OVERLAPPEDWINDOW, 100, 100, 900, 700, NULL,
+                           NULL, instance, (void *)1);
+  CHECK(parent != NULL);
+  HWND child = CreateWindowExW(0, L"STATIC", L"View", WS_CHILD,
+                              0, 0, 1, 1, parent, NULL, instance, NULL);
+  CHECK(child != NULL);
+  proton_engine_window_t window = {0};
+  proton_engine_view_t view = {0};
+  window.hwnd = parent;
+  window.titlebar_overlay = 1;
+  window.views = &view;
+  view.window = &window;
+  view.hwnd = child;
+  char error[256] = {0};
+  region = CreateRectRgn(0, 0, 0, 0);
+  CHECK(region != NULL);
+  for (int pass = 0; pass < 2; pass++) {
+    SetWindowPos(parent, NULL, 100, 100, 900 - pass * 100, 700,
+                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    RECT client, buttons;
+    CHECK(GetClientRect(parent, &client));
+    CHECK(proton_engine_overlay_caption_buttons_rect(parent, &buttons));
+    int width = proton_win_logical(client.right, GetDpiForWindow(parent));
+    CHECK(proton_engine_view_set_bounds(&view, 40, 0, width - 40, 300,
+                                        error, sizeof(error)) == PROTON_OK);
+    POINT button = {(buttons.left + buttons.right) / 2,
+                    (buttons.top + buttons.bottom) / 2};
+    MapWindowPoints(parent, child, &button, 1);
+    CHECK(GetWindowRgn(child, region) != ERROR);
+    CHECK(!PtInRegion(region, button.x, button.y));
+    CHECK(PtInRegion(region, 10, 100));
+    /* A moved view no longer overlaps the caption: remove the old cutout. */
+    CHECK(proton_engine_view_set_bounds(&view, 40, 100, width - 40, 300,
+                                        error, sizeof(error)) == PROTON_OK);
+    CHECK(GetWindowRgn(child, region) == SIMPLEREGION);
+    CHECK(PtInRegion(region, button.x, button.y));
+    view.y = 0;
+    proton_engine_window_layout_views(&window);
+    CHECK(GetWindowRgn(child, region) != ERROR);
+    CHECK(!PtInRegion(region, button.x, button.y));
+  }
+cleanup:
+  if (region != NULL) DeleteObject(region);
+  if (parent != NULL) DestroyWindow(parent);
+  if (window_class != 0) UnregisterClassW(cls.lpszClassName, instance);
+  if (previous != NULL) SetThreadDpiAwarenessContext(previous);
+  return result;
 }
 
 int32_t proton_test_window_native_sizes(int32_t overlay) {

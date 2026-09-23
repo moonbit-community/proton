@@ -329,6 +329,34 @@ void proton_engine_overlay_subclass_browser(
                    (LPARAM)window);
 }
 
+/* Regions are relative to the child window, while caption buttons are in
+ * the parent's client coordinates. This applies equally to the main browser
+ * and offset WebContentsViews. SetWindowRgn takes ownership on success. */
+void proton_engine_overlay_clip_browser(proton_engine_window_t *window,
+                                       HWND browser_hwnd) {
+  if (window == NULL || !window->titlebar_overlay || browser_hwnd == NULL) {
+    return;
+  }
+  RECT frame;
+  if (!GetWindowRect(browser_hwnd, &frame)) {
+    return;
+  }
+  HRGN region = CreateRectRgn(0, 0, frame.right - frame.left,
+                              frame.bottom - frame.top);
+  if (region == NULL) {
+    return;
+  }
+  RECT buttons;
+  if (proton_engine_overlay_caption_buttons_rect(window->hwnd, &buttons)) {
+    MapWindowPoints(window->hwnd, NULL, (POINT *)&buttons, 2);
+    OffsetRect(&buttons, -frame.left, -frame.top);
+    proton_engine_overlay_subtract_rect(region, &buttons);
+  }
+  if (!SetWindowRgn(browser_hwnd, region, TRUE)) {
+    DeleteObject(region);
+  }
+}
+
 void proton_engine_resize_browser(proton_engine_window_t *window,
                                   int width,
                                   int height) {
@@ -351,27 +379,12 @@ void proton_engine_resize_browser(proton_engine_window_t *window,
     SetWindowPos(child, NULL, 0, 0, width, height, SWP_NOZORDER);
     if (window->titlebar_overlay) {
       proton_engine_overlay_subclass_browser(window, child);
-      RECT client;
-      if (GetClientRect(window->hwnd, &client)) {
-        HRGN browser_region = CreateRectRgn(client.left, client.top,
-                                            client.right, client.bottom);
-        RECT cluster;
-        if (browser_region != NULL &&
-            proton_engine_overlay_caption_buttons_rect(window->hwnd,
-                                                        &cluster)) {
-          cluster.left = max(cluster.left, client.left);
-          cluster.top = max(cluster.top, client.top);
-          cluster.right = min(cluster.right, client.right);
-          cluster.bottom = min(cluster.bottom, client.bottom);
-          proton_engine_overlay_subtract_rect(browser_region, &cluster);
-        }
-        if (browser_region != NULL) {
-          if (SetWindowRgn(child, browser_region, TRUE) != 0) {
-            browser_region = NULL;
-          }
-          if (browser_region != NULL) {
-            DeleteObject(browser_region);
-          }
+      proton_engine_overlay_clip_browser(window, child);
+      /* Parent resizes move the caption buttons even for fixed-size views. */
+      for (proton_engine_view_t *view = window->views; view != NULL;
+           view = view->next) {
+        if (!view->closed && view->hwnd != NULL) {
+          proton_engine_overlay_clip_browser(window, view->hwnd);
         }
       }
     }

@@ -1,4 +1,24 @@
 ///|
+#cfg(platform="windows")
+extern "C" fn view_bounds_test() -> Int = "proton_test_view_native_bounds"
+
+///|
+#cfg(platform="windows")
+test "child view bounds use logical pixels on creation and relayout" {
+  assert_eq(view_bounds_test(), 0)
+}
+
+///|
+#cfg(platform="windows")
+extern "C" fn view_caption_test() -> Int = "proton_test_view_caption_clip"
+
+///|
+#cfg(platform="windows")
+test "offset views preserve caption buttons after moving and resizing" {
+  assert_eq(view_caption_test(), 0)
+}
+
+///|
 test "geometry fixture links the native runtime" {
   @ffi.link_runtime()
 }
