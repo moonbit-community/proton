@@ -6,7 +6,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define PROTON_ENGINE_MAX_BRIDGE_PENDING 256
 #define PROTON_ENGINE_MAX_BRIDGE_OP_BYTES 128
 
 typedef enum {
