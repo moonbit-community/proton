@@ -107,6 +107,9 @@ function verifyGeneratedDependencies() {
 
 try {
   verifyInstalledCliVersion();
+  if (process.platform === "linux") {
+    run("appimagetool", ["--version"]);
+  }
   run(cli, [
     "-C",
     tempRoot,
@@ -130,6 +133,15 @@ try {
   run(cli, ["-C", projectDir, "build"], { timeout: 900000 });
   const format = process.platform === "linux" ? "appimage" : "app";
   const packageArgs = ["-C", projectDir, "package", "--release", "--format", format];
+  if (process.platform === "linux") {
+    // The scaffold has no default icon; AppImage packaging requires a PNG.
+    const icon = path.join(projectDir, "registry-smoke.png");
+    fs.writeFileSync(icon, Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=",
+      "base64",
+    ));
+    packageArgs.push("--icon", icon);
+  }
   run(cli, [...packageArgs, "--dry-run"], { timeout: 900000 });
   run(cli, packageArgs, { timeout: 900000 });
   succeeded = true;
