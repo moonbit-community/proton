@@ -426,6 +426,14 @@ pub extern "C" fn event_cookie_int64_field(
 ) -> Int = "proton_internal_event_cookie_int64_field"
 
 ///|
+#borrow(out_pending)
+pub extern "C" fn runtime_bridge_request_pending(
+  runtime : RuntimeHandle,
+  request_id : Int64,
+  out_pending : Ref[Int],
+) -> Int = "proton_runtime_bridge_request_pending"
+
+///|
 #borrow(body_json)
 pub extern "C" fn proton_runtime_respond_bridge_request_ffi(
   runtime : RuntimeHandle,
@@ -1090,10 +1098,11 @@ pub extern "C" fn proton_window_emit_bridge_event_json_ffi(
 ) -> Int = "proton_window_emit_bridge_event_json"
 
 ///|
-#borrow(out_revision)
+#borrow(out_revision, out_available)
 pub extern "C" fn proton_window_bridge_revision_ffi(
   window : WindowHandle,
   out_revision : Ref[Int64],
+  out_available : Ref[Int],
 ) -> Int = "proton_window_bridge_revision"
 
 ///|

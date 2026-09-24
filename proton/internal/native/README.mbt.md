@@ -112,3 +112,18 @@ After the native pump unwinds, finalized and released view implementations and
 closed window storage are reclaimed. Browser lifecycle records remain until
 their owner is detached, DevTools is closed, and CEF has released its client
 references. GC never closes browsers or destroys UI objects.
+
+## Queued bridge requests
+
+A queued request is an observation, not permission to execute a handler. The
+facade calls `Runtime::prepare_bridge_request` inside the dispatch task, before
+entering user code. Admission reads the existing native pending table and the
+window's current bridge snapshot without pumping events. A canceled request is
+already gone; a closing window or failed/replaced page cannot start new work.
+Admission does not consume the pending record: completion and cancellation still
+own its removal. Initialization commands remain valid before bridge readiness.
+
+`Window::bridge_lifecycle_state` returns `None` for a known closing or destroyed
+window. Invalid handles and other native failures still raise errors. Queued
+close/cancel events must continue through normal facade cleanup even when a
+request was rejected by admission.

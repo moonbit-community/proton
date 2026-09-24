@@ -172,6 +172,22 @@ int proton_engine_runtime_enqueue_bridge_cancellation(
   return proton_event_publish(event);
 }
 
+int proton_engine_runtime_bridge_request_pending(
+    proton_engine_runtime_t *runtime, int64_t request_id) {
+  const proton_engine_bridge_requests_t *requests =
+      proton_engine_runtime_bridge_requests(runtime);
+  if (requests == NULL) {
+    return 0;
+  }
+  for (const proton_engine_bridge_pending_t *pending = requests->pending;
+       pending != NULL; pending = pending->next) {
+    if (pending->request_id == request_id) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 static void
 proton_engine_bridge_pending_free(proton_engine_bridge_pending_t *pending) {
   if (pending == NULL) {
@@ -496,8 +512,11 @@ int CEF_CALLBACK proton_engine_bridge_v8_execute(
     return 1;
   }
   free(frame_url);
+  // Cancellation carries no operation or payload. CEF may represent an empty
+  // V8 string with a NULL userfree value.
   int ok = proton_engine_send_bridge_request_to_browser(
-      frame, action, pending_id, op, payload_json, page_instance);
+      frame, action, pending_id, is_cancel ? "" : op,
+      is_cancel ? "" : payload_json, page_instance);
   if (!ok) {
     proton_engine_set_string(exception, "failed to send bridge request");
   }

@@ -1034,7 +1034,7 @@ async test "bridge cancellation targets only the matching handler task" {
     let first_task = group.spawn(
       () => {
         @async.sleep(10000)
-        @native.BridgeResponse::Ok(request_id=41L, payload=null)
+        Some(@native.BridgeResponse::Ok(request_id=41L, payload=null))
       },
       no_wait=true,
       allow_failure=true,
@@ -1042,7 +1042,7 @@ async test "bridge cancellation targets only the matching handler task" {
     let second_task = group.spawn(
       () => {
         @async.sleep(10000)
-        @native.BridgeResponse::Ok(request_id=42L, payload=null)
+        Some(@native.BridgeResponse::Ok(request_id=42L, payload=null))
       },
       no_wait=true,
       allow_failure=true,

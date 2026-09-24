@@ -243,6 +243,13 @@ pub fn BridgeRequest::source_origin(Self) -> String
 pub fn BridgeRequest::to_repr(Self) -> @debug.Repr
 pub fn BridgeRequest::window(Self) -> Int64
 
+pub(all) enum BridgeRequestAdmission {
+  Dispatchable
+  Gone
+  WindowUnavailable
+  PageUnavailable
+}
+
 pub(all) enum BridgeResponse {
   Ok(request_id~ : Int64, payload~ : Json)
   Err(request_id~ : Int64, code~ : String, message~ : String, detail~ : String?)
@@ -597,6 +604,7 @@ pub fn Runtime::complete_resource_request(Self, Int64, Int, String, Bytes) -> Un
 pub fn Runtime::destroy_ready(Self) -> Bool raise NativeError
 pub fn Runtime::finish_destroy(Self) -> Unit raise NativeError
 pub fn Runtime::poll_event(Self) -> RuntimeEvent? raise NativeError
+pub fn Runtime::prepare_bridge_request(Self, BridgeRequest, Window) -> BridgeRequestAdmission raise NativeError
 pub fn Runtime::respond_app_activation(Self, Int64, Bool) -> Bool raise NativeError
 pub fn Runtime::respond_bridge_request(Self, BridgeResponse) -> Unit raise NativeError
 pub fn Runtime::set_menu(Self, MenuBar) -> Unit raise NativeError
@@ -836,7 +844,7 @@ pub fn ViewState::to_repr(Self) -> @debug.Repr
 type Window
 pub fn Window::Window(Runtime, config? : WindowConfig) -> Self raise NativeError
 pub fn Window::as_ref(Self) -> WindowRef
-pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState raise NativeError
+pub fn Window::bridge_lifecycle_state(Self) -> BridgeLifecycleState? raise NativeError
 pub fn Window::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
 pub fn Window::browser_is_focused(Self) -> Bool raise NativeError
 pub fn Window::browser_state(Self) -> BrowserState raise NativeError

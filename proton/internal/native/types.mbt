@@ -451,6 +451,15 @@ pub extend BridgeRequest with Debug::{to_repr}
 pub extend BridgeRequest with Eq::{not_equal, equal}
 
 ///|
+/// Normal outcomes of checking whether an enqueued request may still run.
+pub(all) enum BridgeRequestAdmission {
+  Dispatchable
+  Gone
+  WindowUnavailable
+  PageUnavailable
+}
+
+///|
 pub(all) enum BridgeResponse {
   Ok(request_id~ : Int64, payload~ : Json)
   Err(request_id~ : Int64, code~ : String, message~ : String, detail~ : String?)

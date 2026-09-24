@@ -1313,6 +1313,44 @@ pub fn Runtime::poll_event(self : Runtime) -> RuntimeEvent? raise NativeError {
 }
 
 ///|
+/// Revalidates a queued request immediately before dispatch, without pumping
+/// events or consuming its pending record. The record still owns completion.
+pub fn Runtime::prepare_bridge_request(
+  self : Runtime,
+  request : BridgeRequest,
+  window : Window,
+) -> BridgeRequestAdmission raise NativeError {
+  let pending = Ref(0)
+  check_status(
+    @native_ffi.runtime_bridge_request_pending(
+      self.active_handle(),
+      request.request_id(),
+      pending,
+    ),
+  )
+  guard pending.val != 0 else { return Gone }
+  guard request.window() == window.id else {
+    raise InvalidArgument(
+      message="bridge request belongs to a different window",
+    )
+  }
+  let state = window.bridge_lifecycle_state()
+  match state {
+    None => WindowUnavailable
+    Some(state) =>
+      if state.outcome == "failed" ||
+        (
+          state.page_instance != "" &&
+          request.page_instance != Some(state.page_instance)
+        ) {
+        PageUnavailable
+      } else {
+        Dispatchable
+      }
+  }
+}
+
+///|
 pub fn Runtime::respond_bridge_request(
   self : Runtime,
   response : BridgeResponse,
@@ -2703,13 +2741,23 @@ fn window_bridge_text_field(
 }
 
 ///|
+/// Returns None after close has been committed. This query never pumps native
+/// events, so all fields belong to the same owner-thread snapshot.
 pub fn Window::bridge_lifecycle_state(
   self : Window,
-) -> BridgeLifecycleState raise NativeError {
+) -> BridgeLifecycleState? raise NativeError {
+  ignore(self.runtime.active_handle())
+  guard self.lifecycle is WindowLive else { return None }
   let revision = Ref(0L)
+  let available = Ref(0)
   check_status(
-    @native_ffi.proton_window_bridge_revision_ffi(self.live_handle(), revision),
+    @native_ffi.proton_window_bridge_revision_ffi(
+      self.handle,
+      revision,
+      available,
+    ),
   )
+  guard available.val != 0 else { return None }
   let outcome = window_bridge_text_field(
     self, "bridge lifecycle outcome", 0, @native_ffi.proton_window_bridge_state_field_ffi,
   )
@@ -2726,13 +2774,13 @@ pub fn Window::bridge_lifecycle_state(
       failure_pending,
     ),
   )
-  BridgeLifecycleState::{
+  Some(BridgeLifecycleState::{
     revision: revision.val.to_string(),
     outcome,
     page_instance,
     url,
     failure_pending: failure_pending.val != 0,
-  }
+  })
 }
 
 ///|

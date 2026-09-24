@@ -299,7 +299,7 @@ pub fn RelaunchOptions::RelaunchOptions(
 priv struct BridgeDispatchTask {
   request_id : Int64
   window : Int64
-  task : @async.Task[@native.BridgeResponse]
+  task : @async.Task[@native.BridgeResponse?]
   mut state : BridgeRequestLifecycleState
 }
 
