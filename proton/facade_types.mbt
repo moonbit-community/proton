@@ -1311,6 +1311,63 @@ pub extend ApplicationSession with Eq::{not_equal, equal}
 pub extend ApplicationSession with Debug::{to_repr}
 
 ///|
+/// What kind of process one application metric describes.
+///
+/// Electron labels renderer tasks `Tab` and worker tasks `Utility`; Proton
+/// names the process itself.
+pub(all) enum AppProcessType {
+  Unknown
+  /// The application's own browser process.
+  Browser
+  /// Chromium's GPU process, when it runs separately.
+  Gpu
+  Zygote
+  Utility
+  /// A renderer process hosting a page. Electron reports this type as `Tab`.
+  Renderer
+  Extension
+  Guest
+  Plugin
+  SandboxHelper
+  /// A dedicated, shared, or service worker process.
+  Worker
+} derive(Debug, Eq)
+
+///|
+pub extend AppProcessType with Eq::{not_equal, equal}
+
+///|
+pub extend AppProcessType with Debug::{to_repr}
+
+///|
+/// CPU and memory usage of one application process, corresponding to Electron's
+/// `ProcessMetric`.
+///
+/// CEF reports its own task identifier instead of an operating-system pid, and
+/// it does not expose idle wakeups, creation time, sandbox state, or the
+/// Windows integrity level, so those Electron fields have no counterpart here.
+pub(all) struct AppProcessMetric {
+  /// CEF's task identifier, stable for the lifetime of the process.
+  task_id : Int64
+  process_type : AppProcessType
+  /// CPU usage since the previous sample. 100% is one fully used core, and
+  /// Chromium reports zero until one sampling interval has passed.
+  cpu_percent : Double
+  /// Private memory footprint in bytes, or `-1` while Chromium has not
+  /// measured the process.
+  memory_bytes : Int64
+  /// Platform task name, such as `Network Service`; empty when Chromium has
+  /// none for the task.
+  name : String
+} derive(Debug, Eq)
+
+///|
+pub extend AppProcessMetric with Eq::{not_equal, equal}
+
+///|
+pub extend AppProcessMetric with Debug::{to_repr}
+
+///|
 priv enum BridgeRequestLifecycleState {
   Running = 0
   Responding = 1
