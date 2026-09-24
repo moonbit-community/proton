@@ -170,11 +170,28 @@ static DWORD WINAPI power_monitor_watch_thread_main(LPVOID param) {
   }
   state->message_window = hwnd;
 
-  /* Session lock/unlock notifications for the current interactive session. */
-  WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
-  /* AC/battery power source changes, delivered as WM_POWERBROADCAST. */
-  RegisterPowerSettingNotification(hwnd, &k_power_source_guid,
-                                   DEVICE_NOTIFY_WINDOW_HANDLE);
+  HPOWERNOTIFY power_notification = NULL;
+  int session_registered = 0;
+  int result = 1;
+  /* Watching means both notification sources have registered successfully. */
+  if (!WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION)) {
+    DWORD error = GetLastError();
+    snprintf(state->watch_error, sizeof(state->watch_error),
+             "WTSRegisterSessionNotification failed (Win32 error %lu)",
+             (unsigned long)error);
+    goto cleanup;
+  }
+  session_registered = 1;
+  power_notification = RegisterPowerSettingNotification(
+      hwnd, &k_power_source_guid, DEVICE_NOTIFY_WINDOW_HANDLE);
+  if (power_notification == NULL) {
+    DWORD error = GetLastError();
+    snprintf(state->watch_error, sizeof(state->watch_error),
+             "RegisterPowerSettingNotification failed (Win32 error %lu)",
+             (unsigned long)error);
+    goto cleanup;
+  }
+  result = 0;
 
   state->watch_started = 1;
   SetEvent(state->ready_event);
@@ -184,9 +201,22 @@ static DWORD WINAPI power_monitor_watch_thread_main(LPVOID param) {
     TranslateMessage(&msg);
     DispatchMessageW(&msg);
   }
+cleanup:
   state->watch_started = 0;
+  if (power_notification != NULL) {
+    UnregisterPowerSettingNotification(power_notification);
+  }
+  if (session_registered) {
+    WTSUnRegisterSessionNotification(hwnd);
+  }
+  DestroyWindow(hwnd);
   state->message_window = NULL;
-  return 0;
+  g_watch_state = NULL;
+  if (result != 0) {
+    /* Publish the error only after partial registrations have been released. */
+    SetEvent(state->ready_event);
+  }
+  return result;
 }
 
 int32_t power_monitor_platform_start_watching(power_monitor_state_t *state) {
@@ -194,6 +224,7 @@ int32_t power_monitor_platform_start_watching(power_monitor_state_t *state) {
     /* Already running or still starting. */
     return power_monitor_STATUS_OK;
   }
+  state->watch_error[0] = '\0';
   if (state->ready_event == NULL) {
     state->ready_event = CreateEventW(NULL, TRUE, FALSE, NULL);
     if (state->ready_event == NULL) {
