@@ -33,7 +33,7 @@ extern "js" fn invoke_json_with_callbacks(
   #|       message: error && error.message
   #|         ? String(error.message)
   #|         : String(error || "Proton bridge request failed"),
-  #|       ...(detail === undefined ? {} : { detail: String(detail) }),
+  #|       ...(detail == null ? {} : { detail: String(detail) }),
   #|     }));
   #|   });
   #| }
