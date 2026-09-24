@@ -47,27 +47,6 @@ pub extend AppCommandsProbeResult with ToJson::{to_json}
 pub extend AppCommandsProbeResult with FromJson::{from_json}
 
 ///|
-struct QueueFullProbeResult {
-  requested : Int
-  fulfilled : Int
-  rejected : Int
-  full_rejected : Bool
-  first_rejected_message : String
-} derive(ToJson, FromJson, Eq, Debug)
-
-///|
-pub extend QueueFullProbeResult with Eq::{not_equal, equal}
-
-///|
-pub extend QueueFullProbeResult with Debug::{to_repr}
-
-///|
-pub extend QueueFullProbeResult with ToJson::{to_json}
-
-///|
-pub extend QueueFullProbeResult with FromJson::{from_json}
-
-///|
 struct ReloadProbeResult {
   url : String
   title : String
@@ -137,7 +116,6 @@ async fn run_app_commands_full_probe(
   assert_bridge_contract(page)
   let screenshot = capture_headless_screenshot(page)
   assert_app_commands_probe(page)
-  let queue = run_queue_full_probe(page)
   run_reload_probe(page, timeout)
   page.close()
   run_non_proton_probe(tasks, target, output_root, timeout)
@@ -147,11 +125,7 @@ async fn run_app_commands_full_probe(
     "x" +
     screenshot.height.to_string() +
     " bytes=" +
-    screenshot.bytes.to_string() +
-    " queue=" +
-    queue.fulfilled.to_string() +
-    "/" +
-    queue.rejected.to_string(),
+    screenshot.bytes.to_string(),
   )
 }
 
@@ -299,50 +273,6 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
   guard result.large_payload_roundtrip else {
     fail("large payload did not round-trip intact: " + value.stringify())
   }
-}
-
-///|
-async fn run_queue_full_probe(page : @page.Page) -> QueueFullProbeResult {
-  let value = evaluate_json(
-    page,
-    (
-      #|;(async () => {
-      #|  const invoke = window.__MoonBit__?.core?.invokeOp;
-      #|  const requested = 320;
-      #|  const calls = Array.from({ length: requested }, (_, index) =>
-      #|    invoke("ext:appCommands/slowAdd", {
-      #|      left: index,
-      #|      right: 1,
-      #|      delay_ms: 3500,
-      #|    })
-      #|  );
-      #|  const settled = await Promise.allSettled(calls);
-      #|  const rejected_messages = settled
-      #|    .filter((item) => item.status === "rejected")
-      #|    .map((item) => String(item.reason && item.reason.message ? item.reason.message : item.reason));
-      #|  return {
-      #|    requested,
-      #|    fulfilled: settled.filter((item) => item.status === "fulfilled").length,
-      #|    rejected: rejected_messages.length,
-      #|    full_rejected: rejected_messages.some((message) =>
-      #|      message.includes("bridge request queue is full")
-      #|    ),
-      #|    first_rejected_message: rejected_messages[0] || "",
-      #|  };
-      #|})()
-    ),
-    true,
-  )
-  let result : QueueFullProbeResult = decode_probe(value, "queue full")
-  guard result.requested == 320 &&
-    result.fulfilled > 0 &&
-    result.rejected > 0 &&
-    result.fulfilled + result.rejected == result.requested &&
-    result.full_rejected &&
-    result.first_rejected_message.contains("bridge request queue is full") else {
-    fail("queue full probe failed: " + value.stringify())
-  }
-  result
 }
 
 ///|

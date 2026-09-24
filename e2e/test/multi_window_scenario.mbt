@@ -79,6 +79,28 @@ async fn run_multi_window_scenario_probe(
     target_b.target_id,
     timeout,
   )
+  start_multi_window_pending_batch(page_a, page_b, timeout)
+  guard evaluate_bool(
+    page_b, "window.__MoonBit__.core.invokeOp('ext:multi/release', null).then(() => true)",
+    true,
+  ) else {
+    fail("failed to release pending bridge requests")
+  }
+  guard evaluate_bool(
+    page_a, "window.__pendingBatch.then(results => results.length === 320 && results.every(item => item.status === 'fulfilled'))",
+    true,
+  ) else {
+    fail("pending bridge requests did not all complete successfully")
+  }
+  start_multi_window_pending_batch(page_a, page_b, timeout)
+  reload_page_and_wait(
+    page_a,
+    multi_window_ready_expression(),
+    "multi-window bridge after reload",
+    timeout,
+  )
+  wait_for_multi_window_pending(page_b, 0, timeout)
+  start_multi_window_pending_batch(page_a, page_b, timeout)
   let snapshot = snapshot_scenario_process_tree(app)
   close_page_target(browser, target_a.target_id)
   wait_for_page_target_closed(browser, target_a.target_id, timeout)
@@ -92,6 +114,7 @@ async fn run_multi_window_scenario_probe(
     None => ()
   }
   page_a.close()
+  wait_for_multi_window_pending(page_b, 0, timeout)
   let surviving = decode_probe(
     evaluate_json(page_b, multi_window_probe_expression(0), true),
     "surviving multi-window B",
@@ -223,4 +246,54 @@ fn assert_multi_window_page(
       "multi-window " + expected_label + " response is missing window handle",
     )
   }
+}
+
+///|
+async fn start_multi_window_pending_batch(
+  page_a : @page.Page,
+  page_b : @page.Page,
+  timeout : Int,
+) -> Unit {
+  guard evaluate_bool(
+    page_a,
+    (
+      #|(() => {
+      #|  window.__pendingBatch = Promise.allSettled(Array.from({length: 320}, () =>
+      #|    window.__MoonBit__.core.invokeOp("ext:multi/hold", null)));
+      #|  return true;
+      #|})()
+    ),
+    false,
+  ) else {
+    fail("failed to start pending bridge requests")
+  }
+  wait_for_multi_window_pending(page_b, 320, timeout)
+  let response : MultiWindowPageProbe = decode_probe(
+    evaluate_json(page_b, multi_window_probe_expression(0), true),
+    "window B while window A has 320 pending requests",
+  )
+  assert_multi_window_page(response, "B")
+}
+
+///|
+async fn wait_for_multi_window_pending(
+  page : @page.Page,
+  count : Int,
+  timeout : Int,
+) -> Unit {
+  run_e2e_operation_with_timeout(
+    timeout,
+    "pending bridge request count " + count.to_string(),
+    () => {
+      while !evaluate_bool(
+              page,
+              "window.__MoonBit__.core.invokeOp('ext:multi/pending', null).then(count => count === " +
+              count.to_string() +
+              ")",
+              true,
+            ) {
+        @async.sleep(10)
+      }
+    },
+  )
 }

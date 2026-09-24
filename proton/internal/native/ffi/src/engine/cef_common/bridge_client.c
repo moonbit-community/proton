@@ -172,16 +172,6 @@ int proton_engine_runtime_enqueue_bridge_cancellation(
   return proton_event_publish(event);
 }
 
-static size_t proton_engine_bridge_pending_count(
-    const proton_engine_bridge_requests_t *requests) {
-  size_t count = 0;
-  for (proton_engine_bridge_pending_t *pending = requests->pending;
-       pending != NULL; pending = pending->next) {
-    count++;
-  }
-  return count;
-}
-
 static void
 proton_engine_bridge_pending_free(proton_engine_bridge_pending_t *pending) {
   if (pending == NULL) {
@@ -199,10 +189,6 @@ static int proton_engine_bridge_pending_add(
     int browser_id, int renderer_pending_id, const char *page_instance,
     cef_frame_t *frame) {
   if (frame == NULL || page_instance == NULL || page_instance[0] == '\0') {
-    return 0;
-  }
-  if (proton_engine_bridge_pending_count(requests) >=
-      PROTON_ENGINE_MAX_BRIDGE_PENDING) {
     return 0;
   }
   proton_engine_bridge_pending_t *pending =
@@ -675,7 +661,7 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
         proton_engine_bridge_pending_take(host->requests, request_id);
     proton_engine_bridge_pending_free(pending);
     proton_engine_reject_renderer_request(frame, renderer_pending_id,
-                                          "bridge request queue is full");
+                                          "failed to accept bridge request");
   }
   free(source_origin);
   free(op);
