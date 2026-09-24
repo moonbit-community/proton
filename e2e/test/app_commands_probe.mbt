@@ -28,8 +28,12 @@ struct AppCommandsProbeResult {
   sum_source : String
   string_result : String
   unknown_rejected : Bool
+  unknown_code : String
   unknown_message : String
   fail_rejected : Bool
+  fail_code : String
+  fail_detail_hidden : Bool
+  invalid_code : String
   fail_message : String
   large_payload_roundtrip : Bool
 } derive(ToJson, FromJson, Eq, Debug)
@@ -205,21 +209,44 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
       #|  const stringResult = await invoke("ext:appCommands/stringResult", {});
       #|  let unknown_rejected = false;
       #|  let unknown_message = "";
+      #|  let unknown_code = "";
       #|  try {
       #|    await invoke("ext:appCommands/unknown", {});
       #|  } catch (error) {
       #|    unknown_rejected = true;
+      #|    unknown_code = error.code;
       #|    unknown_message = String(error && error.message ? error.message : error);
       #|  }
       #|  let fail_rejected = false;
       #|  let fail_message = "";
+      #|  let fail_code = "";
+      #|  let fail_detail_hidden = false;
       #|  try {
       #|    await invoke("ext:appCommands/fail", {
       #|      message: "Failure crossed command boundary",
       #|    });
       #|  } catch (error) {
       #|    fail_rejected = true;
+      #|    fail_code = error.code;
+      #|    fail_detail_hidden = error.detail == null;
       #|    fail_message = String(error && error.message ? error.message : error);
+      #|  }
+      #|  let cleanupRejected = false;
+      #|  try {
+      #|    await invoke("ext:appCommands/cleanupFail", {message: "command cleanup failed"});
+      #|  } catch (error) {
+      #|    cleanupRejected = error.code === "handler_failed" && error.detail == null;
+      #|  }
+      #|  if (!cleanupRejected) throw new Error("command cleanup failure did not reject the request");
+      #|  const afterCleanup = await invoke("ext:appCommands/ping", {name: "after cleanup"});
+      #|  if (afterCleanup.message !== "Hello after cleanup from the app command layer") {
+      #|    throw new Error("application did not survive command cleanup failure");
+      #|  }
+      #|  let invalid_code = "";
+      #|  try {
+      #|    await invoke("ext:appCommands/slowAdd", {left: "wrong type"});
+      #|  } catch (error) {
+      #|    invalid_code = error.code;
       #|  }
       #|  let large_payload_roundtrip = true;
       #|  for (const name of ["x".repeat(1048577), "汉字🙂".repeat(150000)]) {
@@ -235,8 +262,12 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
       #|    sum_total: sum?.total || 0,
       #|    sum_source: sum?.source || "",
       #|    string_result: stringResult,
+      #|    unknown_code,
       #|    unknown_rejected,
       #|    unknown_message,
+      #|    fail_code,
+      #|    fail_detail_hidden,
+      #|    invalid_code,
       #|    fail_rejected,
       #|    fail_message,
       #|    large_payload_roundtrip,
@@ -262,13 +293,19 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
   guard result.string_result == "Cancelled" else {
     fail("unexpected string result: " + value.stringify())
   }
-  guard result.unknown_rejected &&
+  guard result.unknown_code == "unknown_op" &&
+    result.unknown_rejected &&
     result.unknown_message.contains("bridge op is not registered") else {
     fail("unknown op did not reject correctly: " + value.stringify())
   }
-  guard result.fail_rejected &&
+  guard result.fail_code == "handler_failed" &&
+    result.fail_detail_hidden &&
+    result.fail_rejected &&
     result.fail_message.contains("op ext:appCommands/fail failed") else {
     fail("failing command did not reject correctly: " + value.stringify())
+  }
+  guard result.invalid_code == "invalid_payload" else {
+    fail("invalid payload lost its error code: " + value.stringify())
   }
   guard result.large_payload_roundtrip else {
     fail("large payload did not round-trip intact: " + value.stringify())

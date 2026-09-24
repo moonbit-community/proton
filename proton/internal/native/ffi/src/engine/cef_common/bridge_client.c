@@ -172,6 +172,22 @@ int proton_engine_runtime_enqueue_bridge_cancellation(
   return proton_event_publish(event);
 }
 
+int proton_engine_runtime_bridge_request_pending(
+    proton_engine_runtime_t *runtime, int64_t request_id) {
+  const proton_engine_bridge_requests_t *requests =
+      proton_engine_runtime_bridge_requests(runtime);
+  if (requests == NULL) {
+    return 0;
+  }
+  for (const proton_engine_bridge_pending_t *pending = requests->pending;
+       pending != NULL; pending = pending->next) {
+    if (pending->request_id == request_id) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 static void
 proton_engine_bridge_pending_free(proton_engine_bridge_pending_t *pending) {
   if (pending == NULL) {
@@ -316,7 +332,8 @@ static int proton_engine_send_bridge_response_to_frame(cef_frame_t *frame,
                                                        int renderer_pending_id,
                                                        int ok,
                                                        const char *payload_json,
-                                                       const char *error_text) {
+                                                       const char *error_text,
+                                                       const char *error_code) {
   if (frame == NULL) {
     return 0;
   }
@@ -333,16 +350,20 @@ static int proton_engine_send_bridge_response_to_frame(cef_frame_t *frame,
     message->base.release((cef_base_ref_counted_t *)message);
     return 0;
   }
-  args->set_size(args, 4);
+  args->set_size(args, 5);
   args->set_int(args, 0, renderer_pending_id);
   args->set_bool(args, 1, ok ? 1 : 0);
   cef_string_t payload = {0};
   cef_string_t error = {0};
+  cef_string_t code = {0};
   proton_engine_set_string(&payload,
                            payload_json != NULL ? payload_json : "null");
   proton_engine_set_string(&error, error_text != NULL ? error_text : "");
   args->set_string(args, 2, &payload);
   args->set_string(args, 3, &error);
+  proton_engine_set_string(&code, error_code != NULL ? error_code : "");
+  args->set_string(args, 4, &code);
+  cef_string_clear(&code);
   cef_string_clear(&payload);
   cef_string_clear(&error);
   frame->send_process_message(frame, PID_RENDERER, message);
@@ -352,10 +373,11 @@ static int proton_engine_send_bridge_response_to_frame(cef_frame_t *frame,
 
 static void proton_engine_reject_renderer_request(cef_frame_t *frame,
                                                   int renderer_pending_id,
+                                                  const char *code,
                                                   const char *message) {
   (void)proton_engine_send_bridge_response_to_frame(
       frame, renderer_pending_id, 0, "null",
-      message != NULL ? message : "bridge request rejected");
+      message != NULL ? message : "bridge request rejected", code);
 }
 
 static char *proton_engine_v8_value_to_utf8(cef_v8_value_t *value) {
@@ -490,8 +512,11 @@ int CEF_CALLBACK proton_engine_bridge_v8_execute(
     return 1;
   }
   free(frame_url);
+  // Cancellation carries no operation or payload. CEF may represent an empty
+  // V8 string with a NULL userfree value.
   int ok = proton_engine_send_bridge_request_to_browser(
-      frame, action, pending_id, op, payload_json, page_instance);
+      frame, action, pending_id, is_cancel ? "" : op,
+      is_cancel ? "" : payload_json, page_instance);
   if (!ok) {
     proton_engine_set_string(exception, "failed to send bridge request");
   }
@@ -521,7 +546,7 @@ void proton_engine_bridge_pending_remove_browser(
           runtime, pending->request_id);
       (void)proton_engine_send_bridge_response_to_frame(
           pending->frame, pending->renderer_pending_id, 0, "null",
-          "{\"code\":\"page_unavailable\",\"message\":\"The page is no longer available\"}");
+          "The page is no longer available", "page_unavailable");
       proton_engine_bridge_pending_free(pending);
       continue;
     }
@@ -643,6 +668,7 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
   if (build_status != PROTON_ENGINE_BRIDGE_REQUEST_OK) {
     proton_engine_reject_renderer_request(
         frame, renderer_pending_id,
+        proton_engine_bridge_request_reject_code(build_status),
         proton_engine_bridge_request_reject_message(build_status));
     free(frame_url);
     free(op);
@@ -661,6 +687,7 @@ int CEF_CALLBACK proton_engine_bridge_client_on_process_message_received(
         proton_engine_bridge_pending_take(host->requests, request_id);
     proton_engine_bridge_pending_free(pending);
     proton_engine_reject_renderer_request(frame, renderer_pending_id,
+                                          "transport_failure",
                                           "failed to accept bridge request");
   }
   free(source_origin);
@@ -687,7 +714,7 @@ int32_t proton_engine_runtime_respond_bridge_request(
   }
   int sent = proton_engine_send_bridge_response_to_frame(
       pending->frame, pending->renderer_pending_id, ok, ok ? body_json : "null",
-      ok ? "" : body_json);
+      ok ? "" : body_json, "");
   proton_engine_bridge_pending_free(pending);
   if (!sent) {
     proton_engine_set_message(error, error_len,

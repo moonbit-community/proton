@@ -379,3 +379,16 @@ test("rejects a non-function application event listener", () => {
     /MoonBit.app.on expects a listener function/,
   );
 });
+
+test("preserves native admission error codes", async () => {
+  const { calls, context, dispatcher } = createBridge();
+  const result = context.__MoonBit__.core.invokeJson("app:missing", "{}");
+  dispatcher.dispatchResponse(
+    calls[0].id, false, "null", "operation is not registered", "unknown_op",
+  );
+  await assert.rejects(result, (error) => {
+    assert.equal(error.code, "unknown_op");
+    assert.equal(error.message, "operation is not registered");
+    return true;
+  });
+});

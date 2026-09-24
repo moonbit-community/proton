@@ -1649,8 +1649,9 @@ fn RuntimeSession::advance_window_opens(
     let timed_out = pending.timeout.try_wait() catch { _ => Some(()) }
     if timed_out is Some(_) {
       did_work = true
-      let state = Some(pending.running.window.bridge_lifecycle_state()) catch {
-        _ => None
+      let state = pending.running.window.bridge_lifecycle_state() catch {
+        error =>
+          raise native_run_error("read timed-out bridge startup state", error)
       }
       let error = match state {
         Some(state) =>
@@ -1662,12 +1663,7 @@ fn RuntimeSession::advance_window_opens(
               ),
             ),
           )
-        None =>
-          RuntimeOperationFailed(
-            action="open window " + pending.id,
-            status=-1,
-            detail="bridge startup: window startup timed out",
-          )
+        None => EntryLoadError(ClosedDuringStartup)
       }
       self.fail_window_open(pending, error)
       continue
@@ -4308,6 +4304,10 @@ fn RuntimeSession::check_bridge_failures(
       error =>
         raise native_run_error("read bridge state for " + running.id, error)
     }
+    guard state is Some(state) else {
+      running.bridge_ready = false
+      continue
+    }
     running.bridge_ready = state.outcome == "ready"
     guard state.failure_pending else { continue }
     let diagnostic = bridge_failure(running.window, state) catch {
@@ -4389,6 +4389,7 @@ fn RuntimeSession::start_bridge_request(
     _ => {
       self.respond_bridge_request(
         @native.BridgeResponse::Err(
+          detail=None,
           request_id~,
           code="window_closed",
           message="the issuing window is no longer available",
@@ -4398,32 +4399,11 @@ fn RuntimeSession::start_bridge_request(
       return
     }
   }
-  let state = target.window.bridge_lifecycle_state() catch {
-    error => raise native_run_error("read bridge state before command", error)
-  }
-  // Pending attempts may issue initialization commands. A failed attempt
-  // stays invalid even after its diagnostic has been consumed; only a fresh
-  // page_instance can begin another attempt. Queued old-page requests must
-  // not run against its replacement either.
-  if state.outcome == "failed" ||
-    (
-      state.page_instance != "" &&
-      request.page_instance != Some(state.page_instance)
-    ) {
-    self.respond_bridge_request(
-      @native.BridgeResponse::Err(
-        request_id~,
-        code="page_unavailable",
-        message="the issuing bridge attempt is no longer available",
-      ),
-      "reject failed or stale page request",
-    )
-    return
-  }
   match self.command_host() {
     None =>
       self.respond_bridge_request(
         @native.BridgeResponse::Err(
+          detail=None,
           request_id~,
           code="command_host_unavailable",
           message="the application command host is not available",
@@ -4435,6 +4415,7 @@ fn RuntimeSession::start_bridge_request(
         () => {
           defer self.wakeup.signal.notify()
           dispatch_bridge_request(
+            self.runtime,
             target.window,
             target.id,
             target.permissions,
@@ -4483,17 +4464,14 @@ fn RuntimeSession::complete_bridge_requests(
       continue
     }
     let completed = item.task.try_wait() catch {
-      _ =>
-        Some(
-          @native.BridgeResponse::Err(
-            request_id=item.request_id,
-            code="handler_failed",
-            message="bridge handler task failed",
-          ),
-        )
+      error => raise normalize_async_run_error(error)
     }
     match completed {
-      Some(response) => {
+      Some(None) => {
+        did_work = true
+        item.state = Stale
+      }
+      Some(Some(response)) => {
         did_work = true
         item.state = Responding
         self.runtime.respond_bridge_request(response) catch {

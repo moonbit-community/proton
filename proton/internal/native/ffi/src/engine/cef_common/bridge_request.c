@@ -37,6 +37,26 @@ int proton_engine_bridge_page_instance_is_valid(const char *page_instance) {
   return 1;
 }
 
+const char *proton_engine_bridge_request_reject_code(
+    proton_engine_bridge_request_status_t status) {
+  switch (status) {
+  case PROTON_ENGINE_BRIDGE_REQUEST_ORIGIN_DENIED:
+  case PROTON_ENGINE_BRIDGE_REQUEST_OP_DENIED:
+    return "permission_denied";
+  case PROTON_ENGINE_BRIDGE_REQUEST_OP_UNKNOWN:
+    return "unknown_op";
+  case PROTON_ENGINE_BRIDGE_REQUEST_PAYLOAD_REJECTED:
+    return "invalid_payload";
+  case PROTON_ENGINE_BRIDGE_REQUEST_PAGE_INSTANCE_REJECTED:
+    return "page_unavailable";
+  case PROTON_ENGINE_BRIDGE_REQUEST_ALLOCATION_FAILED:
+    return "transport_failure";
+  case PROTON_ENGINE_BRIDGE_REQUEST_OK:
+  default:
+    return "";
+  }
+}
+
 const char *proton_engine_bridge_request_reject_message(
     proton_engine_bridge_request_status_t status) {
   switch (status) {

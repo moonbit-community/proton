@@ -1207,3 +1207,32 @@ test "proxy configuration reads current environment and isolates explicit settin
   )
   assert_eq(@env.get_env_var("PROTON_PROXY_BYPASS"), Some("*"))
 }
+
+///|
+test "bridge admission and snapshot preserve invalid-handle errors" {
+  let runtime = Runtime::{
+    handle: @native_ffi.runtime_null(),
+    lifecycle: RuntimeActive,
+  }
+  let window = Window::{
+    runtime,
+    handle: @native_ffi.window_null(),
+    id: 1L,
+    lifecycle: WindowLive,
+    close_interception_enabled: false,
+  }
+  let error = expect_native_error(() => window.bridge_lifecycle_state())
+  assert_true(error is Status(status=-2, ..))
+  let request = BridgeRequest::{
+    request_id: 1L,
+    window: 1L,
+    op: "app:probe",
+    payload: Json::null(),
+    page_instance: Some("page"),
+    source_origin: "app",
+  }
+  let error = expect_native_error(() => {
+    runtime.prepare_bridge_request(request, window)
+  })
+  assert_true(error is Status(status=-2, ..))
+}

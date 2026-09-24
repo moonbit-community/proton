@@ -189,6 +189,8 @@ int32_t proton_host_loop_begin(void);
 int32_t proton_host_loop_poll(int32_t timeout_ms,
                                          uint32_t *out_ready_mask);
 void proton_host_loop_end(void);
+int32_t proton_runtime_bridge_request_pending(
+    proton_runtime_handle_t runtime, int64_t request_id, int32_t *out_pending);
 int32_t proton_runtime_respond_bridge_request(
     proton_runtime_handle_t runtime, int64_t request_id, int32_t ok,
     const char *body_json);
@@ -439,7 +441,8 @@ int32_t proton_window_respond_browser_request(
 int32_t proton_window_emit_bridge_event_json(
     proton_window_handle_t window, const char *event_json);
 int32_t proton_window_bridge_revision(proton_window_handle_t window,
-                                      int64_t *out_revision);
+                                      int64_t *out_revision,
+                                      int32_t *out_available);
 int32_t proton_window_bridge_state_field(
     proton_window_handle_t window, int32_t field, char *buffer,
     int32_t buffer_len, int32_t *out_required_len);

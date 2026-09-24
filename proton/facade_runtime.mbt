@@ -917,15 +917,16 @@ fn refresh_bridge_startup_states(
       continue
     }
     if pending is None {
-      pending = Some(
-        running.window.bridge_lifecycle_state() catch {
-          error =>
-            raise native_run_error(
-              "read bridge startup state for " + running.id,
-              error,
-            )
-        },
-      )
+      pending = running.window.bridge_lifecycle_state() catch {
+        error =>
+          raise native_run_error(
+            "read bridge startup state for " + running.id,
+            error,
+          )
+      }
+      guard pending is Some(_) else {
+        raise EntryLoadError(ClosedDuringStartup)
+      }
     }
   }
   pending
@@ -948,6 +949,7 @@ fn refresh_window_bridge_startup_state(
         error,
       )
   }
+  guard state is Some(state) else { raise EntryLoadError(ClosedDuringStartup) }
   if state.url == "about:blank" {
     return false
   }

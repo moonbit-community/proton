@@ -110,6 +110,11 @@ let fail_command : @proton_contract.Command[FailPayload, String] = app_contract.
 )
 
 ///|
+let cleanup_fail_command : @proton_contract.Command[FailPayload, String] = app_contract.command(
+  "cleanupFail",
+)
+
+///|
 let string_result_command : @proton_contract.Command[PingPayload, String] = app_contract.command(
   "stringResult",
 )
@@ -162,6 +167,10 @@ fn register_app_commands(registrar : @proton.CommandRegistrar) -> Unit raise {
   registrar.bind(ping_command, (_context, payload) => ping(payload))
   registrar.bind(slow_add_command, (_context, payload) => slow_add(payload))
   registrar.bind(fail_command, (_context, payload) => fail(payload))
+  registrar.bind(cleanup_fail_command, (context, payload) => {
+    context.task_group().add_defer(() => ignore(fail(payload)))
+    "handler returned successfully"
+  })
   registrar.bind(string_result_command, (_context, payload) => {
     string_result(payload)
   })
@@ -178,6 +187,7 @@ fn app_commands_extension() -> @proton_extension.Extension {
       ping_command.contract_route(),
       slow_add_command.contract_route(),
       fail_command.contract_route(),
+      cleanup_fail_command.contract_route(),
       string_result_command.contract_route(),
       report_probe_command.contract_route(),
     ],

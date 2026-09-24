@@ -432,3 +432,45 @@ test "callback invocation reports response decoding failures" {
     _ => fail("expected ResponseDecode")
   }
 }
+
+///|
+test "client treats omitted and null remote detail as absent" {
+  defer remove_fake_bridge()
+  for
+    (field, expected) in [
+      ("", None),
+      (",\"detail\":null", None),
+      (",\"detail\":\"validation\"", Some("validation")),
+      (",\"detail\":\"\"", Some("")),
+      (",\"detail\":\"null\"", Some("null")),
+    ] {
+    install_fake_callback_bridge(
+      "",
+      failure_json="{\"code\":\"handler_failed\",\"message\":\"op app:echo failed\"" +
+        field +
+        "}",
+    )
+    let command : @proton_contract.Command[Unit, Unit] = @proton_contract.command(
+      "echo",
+    )
+    let received : Ref[ClientFailure?] = Ref(None)
+    ignore(
+      invoke_with_callbacks(command, (), _ => (), error => {
+        received.val = Some(error)
+      }),
+    )
+    guard received.val
+      is Some(ClientFailure::RemoteFailure(code~, message~, detail~) as error) else {
+      fail("expected remote failure")
+    }
+    assert_eq(code, "handler_failed")
+    assert_eq(message, "op app:echo failed")
+    assert_eq(detail, expected)
+    if expected is None {
+      assert_eq(
+        error.message(),
+        "remote command failed [handler_failed]: op app:echo failed",
+      )
+    }
+  }
+}

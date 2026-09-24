@@ -9,7 +9,7 @@ fn[T] expect_ipc_error(action : () -> T raise IpcError) -> IpcError raise {
 
 ///|
 test "protocol version is shared by constructors" {
-  assert_eq(protocol_version(), 1)
+  assert_eq(protocol_version(), 2)
   assert_eq(
     IpcOpRequest("req-version", "app:ping", null).version,
     protocol_version(),
@@ -32,7 +32,7 @@ test "operation frames round trip through JSON" {
 }
 
 ///|
-test "error responses require a string body" {
+test "error responses require a structured body" {
   let invalid = IpcOpResponse::{
     version: protocol_version(),
     id: "req-err",
@@ -71,4 +71,49 @@ test "extension descriptor copies mutable array inputs" {
   scripts.push("window.__demo = false;")
   assert_eq(descriptor.apis.length(), 1)
   assert_eq(descriptor.scripts.length(), 1)
+}
+
+///|
+test "structured command failures round trip without losing classification" {
+  let response = IpcOpResponse::err("failure-1", {
+    code: "invalid_payload",
+    message: "invalid command payload",
+    detail: Some("field name is required"),
+  })
+  let decoded = parse_ipc_op_response(response.stringify())
+  let error : IpcCommandError = @json.from_json(decoded.body)
+  assert_eq(error.code, "invalid_payload")
+  assert_eq(error.message, "invalid command payload")
+  assert_eq(error.detail, Some("field name is required"))
+  for
+    body in [
+      Json("legacy error"),
+      { "code": "", "message": "error" },
+      { "code": "handler_failed" },
+    ] {
+    let invalid = IpcOpResponse::{
+      version: protocol_version(),
+      id: "invalid",
+      status: 1,
+      body,
+    }
+    assert_eq(
+      expect_ipc_error(() => invalid.validate()),
+      IpcError::InvalidErrorResponseBody,
+    )
+  }
+  let legacy = IpcOpResponse::{
+    version: 1,
+    id: "legacy",
+    status: 1,
+    body: Json("old error"),
+  }
+  assert_eq(
+    expect_ipc_error(() => legacy.validate()),
+    IpcError::UnsupportedVersion(
+      scope="protocol",
+      actual=1,
+      supported=protocol_version(),
+    ),
+  )
 }

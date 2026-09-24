@@ -1,5 +1,5 @@
 ///|
-let ipc_protocol_version = 1
+let ipc_protocol_version = 2
 
 ///|
 /// Returns the protocol version used in all IPC envelopes and payloads.
@@ -29,10 +29,25 @@ pub extend IpcOpRequest with ToJson::{to_json}
 pub extend IpcOpRequest with FromJson::{from_json}
 
 ///|
+/// A command failure with a stable code and a caller-facing message.
+/// Backend diagnostics are included only when explicitly enabled.
+pub(all) struct IpcCommandError {
+  code : String
+  message : String
+  detail : String?
+} derive(ToJson, FromJson)
+
+///|
+pub extend IpcCommandError with ToJson::{to_json}
+
+///|
+pub extend IpcCommandError with FromJson::{from_json}
+
+///|
 /// One operation completion sent from the user process back to JavaScript.
 ///
 /// `status == 0` means success. Any non-zero status means `body` contains a JSON
-/// string error message suitable for rejecting the JavaScript promise.
+/// object containing `code`, `message`, and optional `detail` for rejection.
 pub(all) struct IpcOpResponse {
   version : Int
   id : String
@@ -130,12 +145,15 @@ pub fn IpcOpResponse::ok(id : String, body : Json) -> IpcOpResponse {
 
 ///|
 /// Creates one failed operation response frame.
-pub fn IpcOpResponse::err(id : String, message : String) -> IpcOpResponse {
+pub fn IpcOpResponse::err(
+  id : String,
+  error : IpcCommandError,
+) -> IpcOpResponse {
   IpcOpResponse::{
     version: ipc_protocol_version,
     id,
     status: 1,
-    body: Json(message),
+    body: error.to_json(),
   }
 }
 
@@ -278,7 +296,12 @@ fn validate_ipc_op_response(
     raise EmptyField(path="IPC response id")
   }
   if response.status != 0 {
-    guard response.body is String(_) else { raise InvalidErrorResponseBody }
+    let error : IpcCommandError = @json.from_json(response.body) catch {
+      _ => raise InvalidErrorResponseBody
+    }
+    guard error.code.trim().to_owned() != "" else {
+      raise InvalidErrorResponseBody
+    }
   }
   response
 }

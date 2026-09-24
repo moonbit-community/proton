@@ -8,10 +8,8 @@ pub extend CommandHostTestError with Debug::{to_repr}
 
 ///|
 fn response_error_message(response : @ipc.IpcOpResponse) -> String raise {
-  match response.body {
-    String(message) => message
-    _ => fail("expected string error response")
-  }
+  let error : @ipc.IpcCommandError = @json.from_json(response.body)
+  error.message
 }
 
 ///|
@@ -92,7 +90,10 @@ async test "development command errors retain backend diagnostics" {
   let response = host.dispatch_ipc(
     @ipc.IpcOpRequest("request-2", "app:fail", null),
   )
-  let message = response_error_message(response)
+  let error : @ipc.IpcCommandError = @json.from_json(response.body)
+  assert_eq(error.code, "handler_failed")
+  assert_eq(error.message, "op app:fail failed")
+  let message = error.detail.unwrap()
   assert_false(response.is_ok())
   assert_true(message.contains("/Users/example/private.mbt"))
   assert_true(message.contains("stack: internal_handler"))
@@ -263,4 +264,50 @@ async test "request context emits through its page-scoped destination" {
   inspect(emitted_route.val, content="app:changed")
   inspect(emitted_name.val, content="changed")
   inspect(emitted_payload.val.stringify(), content="\"ready\"")
+}
+
+///|
+async test "dispatch preserves failure codes with and without request context" {
+  for with_context in [false, true] {
+    let host = quiet_app_command_host()
+    host.op("app:number", fn(value : Int) { value })
+    host.op("app:fail", fn(_value : Unit) -> Unit raise {
+      raise CommandHostTestError::PrivateFailure("private diagnostic")
+    })
+    @async.with_task_group(group => {
+      for
+        (op, payload, expected) in [
+          ("app:number", Json("not a number"), "invalid_payload"),
+          ("app:missing", Json::null(), "unknown_op"),
+          ("app:fail", Json::null(), "handler_failed"),
+        ] {
+        let request = @ipc.IpcOpRequest("failure", op, payload)
+        let response = if with_context {
+          host.dispatch_ipc_with_context(
+            AppCommandRequestContext(group, detached_locale_preferences()),
+            request,
+          )
+        } else {
+          host.dispatch_ipc(request)
+        }
+        let error : @ipc.IpcCommandError = @json.from_json(response.body)
+        assert_false(response.is_ok())
+        assert_eq(error.code, expected)
+        assert_eq(error.detail, None)
+        assert_false(error.message.contains("private diagnostic"))
+      }
+      host.close()
+      let request = @ipc.IpcOpRequest("closed", "app:number", 1)
+      let response = if with_context {
+        host.dispatch_ipc_with_context(
+          AppCommandRequestContext(group, detached_locale_preferences()),
+          request,
+        )
+      } else {
+        host.dispatch_ipc(request)
+      }
+      let error : @ipc.IpcCommandError = @json.from_json(response.body)
+      assert_eq(error.code, "host_closed")
+    })
+  }
 }

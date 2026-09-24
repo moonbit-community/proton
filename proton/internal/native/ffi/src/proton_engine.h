@@ -209,6 +209,8 @@ void proton_engine_runtime_signal_external_event(
 int32_t proton_engine_runtime_set_menu(
     proton_engine_runtime_t *runtime, const proton_menu_bar_t *menu_bar,
     char *error, size_t error_len);
+int proton_engine_runtime_bridge_request_pending(
+    proton_engine_runtime_t *runtime, int64_t request_id);
 int32_t proton_engine_runtime_respond_bridge_request(
     proton_engine_runtime_t *runtime, int64_t request_id, int32_t ok,
     const char *body_json, char *error, size_t error_len);

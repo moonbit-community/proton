@@ -457,6 +457,7 @@ fn typed_event_sender(
 
 ///|
 async fn dispatch_bridge_request(
+  runtime : @native.Runtime,
   window : @native.Window,
   window_id : String,
   permissions : WindowPermissionPolicy,
@@ -465,28 +466,86 @@ async fn dispatch_bridge_request(
   wake_signal : @core.RuntimeWakeSignal,
   dialog_completions : DialogCompletionStore,
   locale_preferences : @locale.LocalePreferences,
-) -> @native.BridgeResponse {
+) -> @native.BridgeResponse? {
   let grant = match
     permissions.grant_for_request(request.source_origin(), request.op()) {
     Some(grant) => grant
     None =>
-      return @native.BridgeResponse::Err(
-        request_id=request.request_id(),
-        code="permission_denied",
-        message="the page is not permitted to invoke this operation",
+      return Some(
+        @native.BridgeResponse::Err(
+          detail=None,
+          request_id=request.request_id(),
+          code="permission_denied",
+          message="the page is not permitted to invoke this operation",
+        ),
       )
   }
-  let result : Ref[@native.BridgeResponse?] = Ref(None)
+  let result : Ref[Result[@native.BridgeResponse?, @native.NativeError]] = Ref(
+    Ok(None),
+  )
   @async.with_task_group(command_tasks => {
-    result.val = Some(
-      dispatch_bridge_request_in_command_scope(
-        window, window_id, grant, host, request, wake_signal, dialog_completions,
-        command_tasks, locale_preferences,
-      ),
+    // Admission runs inside the command task, immediately before dispatch.
+    // Preserve its error separately from user tasks and their cleanup callbacks.
+    let admission = runtime.prepare_bridge_request(request, window) catch {
+      error => {
+        result.val = Err(error)
+        return
+      }
+    }
+    let request_id = request.request_id()
+    result.val = Ok(
+      match admission {
+        Gone => None
+        WindowUnavailable =>
+          Some(
+            @native.BridgeResponse::Err(
+              request_id~,
+              code="window_closed",
+              message="the issuing window is no longer available",
+              detail=None,
+            ),
+          )
+        PageUnavailable =>
+          Some(
+            @native.BridgeResponse::Err(
+              request_id~,
+              code="page_unavailable",
+              message="the issuing bridge attempt is no longer available",
+              detail=None,
+            ),
+          )
+        Dispatchable =>
+          Some(
+            dispatch_bridge_request_in_command_scope(
+              window, window_id, grant, host, request, wake_signal, dialog_completions,
+              command_tasks, locale_preferences,
+            ),
+          )
+      },
     )
     command_tasks.return_immediately(())
-  })
-  result.val.unwrap()
+  }) catch {
+    error => {
+      @xlog.error(category="proton.command") <?
+        {
+          "message": "command scope failed",
+          "op": request.op(),
+          "detail": @debug.render(Repr(error)),
+        }
+      return Some(
+        @native.BridgeResponse::Err(
+          request_id=request.request_id(),
+          code="handler_failed",
+          message="bridge handler task failed",
+          detail=None,
+        ),
+      )
+    }
+  }
+  match result.val {
+    Ok(response) => response
+    Err(error) => raise native_run_error("prepare bridge request", error)
+  }
 }
 
 ///|
@@ -521,11 +580,13 @@ async fn dispatch_bridge_request_in_command_scope(
   if response.is_ok() {
     @native.BridgeResponse::Ok(request_id~, payload=response.body)
   } else {
-    let message = match response.body {
-      String(text) => text
-      _ => response.body.stringify()
-    }
-    @native.BridgeResponse::Err(request_id~, code="op_failed", message~)
+    let error : @ipc.IpcCommandError = @json.from_json(response.body)
+    @native.BridgeResponse::Err(
+      request_id~,
+      code=error.code,
+      message=error.message,
+      detail=error.detail,
+    )
   }
 }
 

@@ -189,7 +189,13 @@ async fn[X] spawn_scenario_app(
   scenario : String,
   cdp_port : Int,
 ) -> SpawnedScenarioApp {
-  let (program, args) = scenario_app_command()
+  let (program, args) = if scenario == "lifecycle:bridge-admission" {
+    isolated_app_command("moon", [
+      "-C", "proton", "run", "internal/bridge_admission_test", "--target", "native",
+    ])
+  } else {
+    scenario_app_command()
+  }
   let output_path = join_path(
     output_root,
     "child-" + cdp_port.to_string() + ".log",

@@ -685,6 +685,27 @@ int32_t proton_internal_event_cookie_int64_field(
                                             out_present);
 }
 
+int32_t proton_runtime_bridge_request_pending(
+    proton_runtime_handle_t runtime, int64_t request_id, int32_t *out_pending) {
+  proton_runtime_slot_t *slot = NULL;
+  int32_t status = proton_get_runtime(runtime, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (request_id <= 0 || out_pending == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "positive request_id and out_pending are required");
+  }
+  if (slot->engine_runtime == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "bridge request requires native engine");
+  }
+  *out_pending = proton_engine_runtime_bridge_request_pending(
+      slot->engine_runtime, request_id);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_runtime_respond_bridge_request(
     proton_runtime_handle_t runtime, int64_t request_id, int32_t ok,
     const char *body_json) {
@@ -2638,20 +2659,30 @@ static int32_t proton_window_bridge_text_field(
 }
 
 int32_t proton_window_bridge_revision(proton_window_handle_t window,
-                                      int64_t *out_revision) {
-  if (out_revision == NULL) {
+                                      int64_t *out_revision,
+                                      int32_t *out_available) {
+  if (out_revision == NULL || out_available == NULL) {
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "out_revision is required");
+                            "bridge revision outputs are required");
   }
   proton_window_slot_t *slot = NULL;
-  int32_t status = proton_get_window(window, &slot);
+  int32_t status = proton_get_window_for_destroy(window, &slot);
   if (status != PROTON_OK) {
     return status;
+  }
+  *out_available = 0;
+  *out_revision = 0;
+  if (slot->lifecycle != PROTON_WINDOW_LIVE ||
+      (slot->engine_window != NULL &&
+       proton_engine_window_is_closed(slot->engine_window))) {
+    g_last_error[0] = '\0';
+    return PROTON_OK;
   }
   if (slot->engine_window == NULL) {
     return proton_set_error(PROTON_ERR_UNSUPPORTED,
                             "bridge lifecycle requires native engine");
   }
+  *out_available = 1;
   *out_revision = (int64_t)proton_engine_window_bridge_revision(
       slot->engine_window);
   g_last_error[0] = '\0';

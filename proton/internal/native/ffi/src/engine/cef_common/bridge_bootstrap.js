@@ -354,7 +354,7 @@
 
   return {
     pageInstance,
-    dispatchResponse(id, ok, payloadJson, errorMessage) {
+    dispatchResponse(id, ok, payloadJson, errorMessage, errorCode) {
       const entry = pending.get(id);
       if (!entry) {
         return false;
@@ -375,10 +375,10 @@
             );
           }
         } catch (_) {
-          // The native ABI historically returned plain error text.
+          // Native admission failures supply a separate code and plain message.
         }
         entry.reject(error || new ProtonBridgeError(
-          "remote_failure",
+          errorCode || "remote_failure",
           errorMessage || "Proton bridge request failed",
         ));
       }

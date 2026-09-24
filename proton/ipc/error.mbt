@@ -32,7 +32,8 @@ pub fn IpcError::message(self : IpcError) -> String {
       supported.to_string() +
       ")"
     EmptyField(path~) => path + " must not be empty"
-    InvalidErrorResponseBody => "IPC error response body must be a string"
+    InvalidErrorResponseBody =>
+      "IPC error response body must contain a non-empty code, a message, and optional detail"
   }
 }
 
