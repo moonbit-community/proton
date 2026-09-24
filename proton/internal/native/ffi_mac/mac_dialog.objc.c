@@ -261,6 +261,8 @@ static NSAlertStyle proton_engine_alert_style(int32_t level);
 }
 
 - (void)show {
+  // A manual modal session bypasses NSAlert's normal presentation layout.
+  [alert_ layout];
   if (@available(macOS 14.0, *)) {
     [NSApp activate];
   } else {
