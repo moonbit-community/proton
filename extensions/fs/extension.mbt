@@ -226,11 +226,8 @@ async fn realpath(
 }
 
 ///|
-fn extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    @fs_contract.extension,
-    generated_extension_command_routes(),
-    fn(registrar) raise { register_commands(registrar) },
-    resolve_permission=resolve_fs_permission_scope,
-  )
-}
+let extension_definition : @proton_extension.Extension = @proton_extension.typed(
+  @fs_contract.extension,
+  fn(registrar) raise { register_commands(registrar) },
+  resolve_permission=resolve_fs_permission_scope,
+)

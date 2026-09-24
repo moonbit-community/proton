@@ -6,6 +6,7 @@ import {
   "moonbit-community/proton/ipc",
   "moonbit-community/proton_contract",
   "moonbitlang/async",
+  "moonbitlang/core/debug",
   "moonbitlang/core/json",
 }
 
@@ -18,11 +19,12 @@ pub fn app_command_js_property_is_reserved(String) -> Bool
 pub(all) suberror ExtensionSpecError {
   InvalidContract(detail~ : String)
   ForeignCommandRoute(extension_id~ : String, operation_name~ : String)
-} derive(Eq)
+} derive(Eq, @debug.Debug)
 pub fn ExtensionSpecError::equal(Self, Self) -> Bool
 pub fn ExtensionSpecError::message(Self) -> String
 pub fn ExtensionSpecError::not_equal(Self, Self) -> Bool
 pub fn ExtensionSpecError::output(Self, &Logger) -> Unit
+pub fn ExtensionSpecError::to_repr(Self) -> @debug.Repr
 pub fn ExtensionSpecError::to_string(Self) -> String
 
 pub(all) suberror PermissionScopeValidationError {
@@ -49,6 +51,11 @@ pub struct AppCommandExtensionDescriptor {
   scripts : Array[String]
 }
 pub fn AppCommandExtensionDescriptor::AppCommandExtensionDescriptor(String, String, Array[AppCommandApiDescriptor], scripts? : Array[String]) -> Self
+pub fn AppCommandExtensionDescriptor::apis(Self) -> Array[AppCommandApiDescriptor]
+pub fn AppCommandExtensionDescriptor::id(Self) -> String
+pub fn AppCommandExtensionDescriptor::js_namespace(Self) -> String
+pub fn AppCommandExtensionDescriptor::op_names(Self) -> Array[String]
+pub fn AppCommandExtensionDescriptor::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionDescriptor::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
 
 pub struct AppCommandExtensionRegistry {
@@ -65,7 +72,6 @@ pub fn AppCommandExtensionRegistry::spec_map(Self) -> Map[String, AppCommandExte
 pub struct AppCommandExtensionSpec {
   id : String
   js_namespace : String
-  apis : Array[AppCommandApiDescriptor]
   scripts : Array[String]
   dependencies : Array[String]
   register : (CommandRegistrar) -> Unit raise
@@ -73,18 +79,15 @@ pub struct AppCommandExtensionSpec {
   on_start : (@async.TaskGroup[Unit]) -> Unit raise
   on_destroy : () -> Unit raise
 }
-pub fn AppCommandExtensionSpec::apis(Self) -> Array[AppCommandApiDescriptor]
 pub fn AppCommandExtensionSpec::dependencies(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::destroy(Self) -> Unit raise
 pub fn AppCommandExtensionSpec::id(Self) -> String
 pub fn AppCommandExtensionSpec::js_namespace(Self) -> String
-pub fn AppCommandExtensionSpec::op_names(Self) -> Array[String]
-pub fn AppCommandExtensionSpec::register(Self, CommandRegistrar) -> Unit raise
+pub fn AppCommandExtensionSpec::register(Self, @core.AppCommandHost) -> AppCommandExtensionDescriptor raise
 pub fn AppCommandExtensionSpec::resolve_permission(Self, Json, String) -> Json raise PermissionScopeValidationError
 pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::start(Self, @async.TaskGroup[Unit]) -> Unit raise
-pub fn AppCommandExtensionSpec::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
-pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, Array[@proton_contract.ContractRoute], (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (Json, String) -> Json raise PermissionScopeValidationError, on_start? : (@async.TaskGroup[Unit]) -> Unit raise, on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
+pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (Json, String) -> Json raise PermissionScopeValidationError, on_start? : (@async.TaskGroup[Unit]) -> Unit raise, on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
 
 pub struct AppCommandsConfig {
   op_names : Array[String]
@@ -99,6 +102,9 @@ pub fn AppCommandsConfig::op_names(Self) -> Array[String]
 
 pub struct CommandRegistrar {
   host : @core.AppCommandHost
+  owner : (String, String)?
+  routes : Array[@proton_contract.ContractRoute]
+  mut registration_closed : Bool
 }
 pub fn CommandRegistrar::CommandRegistrar(@core.AppCommandHost) -> Self
 pub fn[Request : @json.FromJson, Response : ToJson] CommandRegistrar::bind(Self, @proton_contract.Command[Request, Response], async (@core.AppCommandRequestContext, Request) -> Response) -> Unit raise

@@ -44,9 +44,7 @@ async fn identify(
 
 ///|
 fn multi_window_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(multi_contract, [identify_command.contract_route()], fn(
-    registrar,
-  ) raise {
+  @proton_extension.typed(multi_contract, fn(registrar) raise {
     registrar.bind(identify_command, (context, payload) => {
       identify(context, payload)
     })

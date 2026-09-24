@@ -29,16 +29,12 @@ let async_add_command : @proton_contract.Command[AsyncAddPayload, Int] = async_a
 
 ///|
 fn async_add_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    async_add_contract,
-    [async_add_command.contract_route()],
-    fn(registrar) raise {
-      registrar.bind(async_add_command, (_context, payload) => {
-        @async.sleep(1000)
-        payload.left + payload.right
-      })
-    },
-  )
+  @proton_extension.typed(async_add_contract, fn(registrar) raise {
+    registrar.bind(async_add_command, (_context, payload) => {
+      @async.sleep(1000)
+      payload.left + payload.right
+    })
+  })
 }
 
 ///|
@@ -134,36 +130,28 @@ let async_sum_command : @proton_contract.Command[AsyncSumPayload, AsyncSumReply]
 
 ///|
 fn sync_math_fixture_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    sync_math_contract,
-    [sync_double_command.contract_route()],
-    fn(registrar) raise {
-      registrar.bind(sync_double_command, (_context, payload) => SyncDoubleReply::{
-        value: payload.value,
-        doubled: payload.value * 2,
-        source: "sync command extension",
-      })
-    },
-  )
+  @proton_extension.typed(sync_math_contract, fn(registrar) raise {
+    registrar.bind(sync_double_command, (_context, payload) => SyncDoubleReply::{
+      value: payload.value,
+      doubled: payload.value * 2,
+      source: "sync command extension",
+    })
+  })
 }
 
 ///|
 fn async_add_fixture_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    async_sum_contract,
-    [async_sum_command.contract_route()],
-    fn(registrar) raise {
-      registrar.bind(async_sum_command, (_context, payload) => {
-        let delay_ms = payload.delay_ms.unwrap_or(10)
-        @async.sleep(delay_ms)
-        AsyncSumReply::{
-          total: payload.left + payload.right,
-          waited_ms: delay_ms,
-          source: "async command extension",
-        }
-      })
-    },
-  )
+  @proton_extension.typed(async_sum_contract, fn(registrar) raise {
+    registrar.bind(async_sum_command, (_context, payload) => {
+      let delay_ms = payload.delay_ms.unwrap_or(10)
+      @async.sleep(delay_ms)
+      AsyncSumReply::{
+        total: payload.left + payload.right,
+        waited_ms: delay_ms,
+        source: "async command extension",
+      }
+    })
+  })
 }
 
 ///|
@@ -290,13 +278,9 @@ fn clamp_event_value(value : Int, min : Int, max : Int) -> Int {
 
 ///|
 fn event_ticker_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    event_ticker_contract,
-    [event_start_command.contract_route()],
-    fn(registrar) raise {
-      registrar.bind(event_start_command, run_event_ticker)
-    },
-  )
+  @proton_extension.typed(event_ticker_contract, fn(registrar) raise {
+    registrar.bind(event_start_command, run_event_ticker)
+  })
 }
 
 ///|

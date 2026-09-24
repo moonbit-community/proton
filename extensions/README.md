@@ -42,6 +42,23 @@ extension commands. Prefer the proxies above, which build the route for you.
 A request for an unavailable route is rejected by the bridge. A route granted
 to another renderer target is rejected for the calling page.
 
+## Defining an extension
+
+Pass the extension contract and one registration callback to
+`@proton_extension.typed(contract, register)`. Bind typed command descriptors
+inside that callback with `registrar.bind(command, handler)`. Proton derives
+frontend proxies and permission operation names from those successful bindings;
+there is no separate command-route list. The callback runs once during startup,
+before extension start hooks. Foreign commands and duplicate bindings fail
+registration, and the registrar cannot be used after the callback returns.
+
+Reuse the same extension definition when granting different scopes or renderer
+targets. Independent definitions with the same extension ID are rejected, even
+if they use the same command names. Built-in extensions without per-definition
+state share their definition across `capability()` calls. For the process
+extension, reuse one returned capability across targets to share its process
+owner.
+
 ## Packages
 
 - `fs`: host filesystem helper definitions

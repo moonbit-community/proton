@@ -26,5 +26,4 @@ priv struct ParsedTypedCommand {
 ///|
 priv struct ParsedTypedModule {
   commands : Array[ParsedTypedCommand]
-  extension_package : Bool
 }

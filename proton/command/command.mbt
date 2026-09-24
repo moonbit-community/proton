@@ -25,11 +25,10 @@ pub struct AppCommandsConfig {
 pub type AppCommandRequestContext = @core.AppCommandRequestContext
 
 ///|
-/// Declarative user-process command extension spec.
+/// Extension definition registered once during application startup.
 pub struct AppCommandExtensionSpec {
   id : String
   js_namespace : String
-  apis : Array[AppCommandApiDescriptor]
   scripts : Array[String]
   dependencies : Array[String]
   register : (CommandRegistrar) -> Unit raise
@@ -95,10 +94,9 @@ pub fn AppCommandsConfig::from_ipc_descriptors(
 
 ///|
 /// Creates an extension spec whose JavaScript APIs and native operation names
-/// are derived from typed extension command descriptors.
+/// are derived from the descriptors actually bound during registration.
 pub fn AppCommandExtensionSpec::typed(
   contract : @proton_contract.ExtensionContract,
-  command_routes : Array[@proton_contract.ContractRoute],
   register : (CommandRegistrar) -> Unit raise,
   scripts? : Array[String] = [],
   dependencies? : Array[String] = [],
@@ -111,17 +109,6 @@ pub fn AppCommandExtensionSpec::typed(
   }
   let id = contract.id()
   let js_namespace = contract.js_namespace()
-  let apis : Array[AppCommandApiDescriptor] = []
-  for route in command_routes {
-    guard route.extension_id() == Some(id) &&
-      route.extension_namespace() == Some(js_namespace) else {
-      raise ForeignCommandRoute(
-        extension_id=id,
-        operation_name=route.operation_name(),
-      )
-    }
-    apis.push(AppCommandApiDescriptor(route.member_name()))
-  }
   let resolve_permission : (Json, String) -> Json raise PermissionScopeValidationError = match
     resolve_permission {
     Some(resolve) => resolve
@@ -145,7 +132,6 @@ pub fn AppCommandExtensionSpec::typed(
   AppCommandExtensionSpec::{
     id,
     js_namespace,
-    apis,
     scripts: copy_strings(scripts),
     dependencies: copy_strings(dependencies),
     register,
@@ -175,8 +161,9 @@ pub fn AppCommandExtensionSpec::dependencies(
 }
 
 ///|
-pub fn AppCommandExtensionSpec::op_names(
-  self : AppCommandExtensionSpec,
+/// Returns the operation names derived from the registered commands.
+pub fn AppCommandExtensionDescriptor::op_names(
+  self : AppCommandExtensionDescriptor,
 ) -> Array[String] {
   self.apis.map(fn(api) {
     app_command_extension_op_name(self.js_namespace, api.api_name)
@@ -184,23 +171,28 @@ pub fn AppCommandExtensionSpec::op_names(
 }
 
 ///|
-pub fn AppCommandExtensionSpec::to_ipc_descriptor(
-  self : AppCommandExtensionSpec,
-) -> @ipc.IpcExtensionDescriptor {
-  @ipc.IpcExtensionDescriptor(
-    self.id,
-    self.js_namespace,
-    self.apis.map(fn(api) { api.to_ipc_api() }),
-    scripts=copy_strings(self.scripts),
-  )
-}
-
-///|
+/// Registers handlers and returns their frontend metadata.
+/// The callback's registrar expires when registration returns or raises.
 pub fn AppCommandExtensionSpec::register(
   self : AppCommandExtensionSpec,
-  registrar : CommandRegistrar,
-) -> Unit raise {
-  (self.register)(registrar)
+  host : @core.AppCommandHost,
+) -> AppCommandExtensionDescriptor raise {
+  let scoped = CommandRegistrar::{
+    host,
+    owner: Some((self.id, self.js_namespace)),
+    routes: [],
+    registration_closed: false,
+  }
+  defer {
+    scoped.registration_closed = true
+  }
+  (self.register)(scoped)
+  AppCommandExtensionDescriptor(
+    self.id,
+    self.js_namespace,
+    scoped.routes.map(route => AppCommandApiDescriptor(route.member_name())),
+    scripts=self.scripts,
+  )
 }
 
 ///|
@@ -220,8 +212,9 @@ pub fn AppCommandExtensionSpec::destroy(
 }
 
 ///|
-pub fn AppCommandExtensionSpec::apis(
-  self : AppCommandExtensionSpec,
+/// Returns the registered frontend command names.
+pub fn AppCommandExtensionDescriptor::apis(
+  self : AppCommandExtensionDescriptor,
 ) -> Array[AppCommandApiDescriptor] {
   copy_command_api_descriptors(self.apis)
 }
@@ -361,7 +354,6 @@ fn copy_app_command_extension_spec(
   AppCommandExtensionSpec::{
     id: spec.id,
     js_namespace: spec.js_namespace,
-    apis: copy_command_api_descriptors(spec.apis),
     scripts: copy_strings(spec.scripts),
     dependencies: copy_strings(spec.dependencies),
     register: spec.register,
@@ -405,4 +397,28 @@ pub fn AppCommandExtensionSpec::start(
   tasks : @async.TaskGroup[Unit],
 ) -> Unit raise {
   (self.on_start)(tasks)
+}
+
+///|
+/// Returns the registered extension identity.
+pub fn AppCommandExtensionDescriptor::id(
+  self : AppCommandExtensionDescriptor,
+) -> String {
+  self.id
+}
+
+///|
+/// Returns the registered JavaScript namespace.
+pub fn AppCommandExtensionDescriptor::js_namespace(
+  self : AppCommandExtensionDescriptor,
+) -> String {
+  self.js_namespace
+}
+
+///|
+/// Returns the extension initialization scripts.
+pub fn AppCommandExtensionDescriptor::scripts(
+  self : AppCommandExtensionDescriptor,
+) -> Array[String] {
+  copy_strings(self.scripts)
 }

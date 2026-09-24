@@ -1,13 +1,16 @@
 import {
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
-  "moonbit-community/proton_contract",
   "moonbit-community/proton_ext/dialog/contract" @dialog_contract,
 }
 
 supported_targets = "native"
 
 formatter(ignore: [ "extension.g.mbt" ])
+
+import {
+  "moonbit-community/proton/core",
+} for "wbtest"
 
 options(
   targets: {

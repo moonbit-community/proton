@@ -32,9 +32,7 @@ let current_locale : @proton_contract.Command[LocaleRequest, LocaleSnapshot] = i
 
 ///|
 fn i18n_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(i18n_contract, [current_locale.contract_route()], fn(
-    registrar,
-  ) raise {
+  @proton_extension.typed(i18n_contract, fn(registrar) raise {
     registrar.bind(current_locale, (context, _request) => LocaleSnapshot::{
       locale: context.locale().to_string(),
       preferred_languages: context

@@ -16,6 +16,8 @@ fn build_command_host(
   let event_sources : Array[CommandExtensionEventSource] = []
   let app_capabilities : Array[RegisteredAppCommandCapability] = []
   let mut has_commands = false
+  let extensions : Map[String, @proton_command.AppCommandExtensionDescriptor] = Map([],
+  )
   let registrar = @proton_command.CommandRegistrar(host)
   if !titlebar_area_targets.is_empty() {
     host.op_async_with_context(titlebar_area_op, fn(
@@ -75,7 +77,7 @@ fn build_command_host(
       extension_id: id,
       callback: fn() raise { spec.destroy() },
     })
-    spec.register(registrar) catch {
+    extensions[id] = spec.register(host) catch {
       error => {
         let primary = CommandExtensionLifecycleError(
           RegistrationFailed(extension_id=id, detail=@debug.render(Repr(error))),
@@ -115,6 +117,7 @@ fn build_command_host(
   if has_commands {
     host.seal_registrations()
     CommandHostBuild::{
+      extensions,
       runtime: Some(CommandHostRuntime::{
         host,
         destroy_hooks,
@@ -126,7 +129,7 @@ fn build_command_host(
     }
   } else {
     ignore(close_command_host_runtime(host, destroy_hooks))
-    CommandHostBuild::{ runtime: None, app_capabilities, }
+    CommandHostBuild::{ runtime: None, app_capabilities, extensions, }
   }
 }
 
@@ -136,38 +139,22 @@ fn command_extension_catalog(
 ) -> CommandExtensionCatalog raise AppConfigurationError {
   let specs : Map[String, @proton_command.AppCommandExtensionSpec] = Map([])
   let event_sources : Map[String, @proton_extension.EventSource] = Map([])
-  let event_source_definition_ids : Map[String, UInt64] = Map([])
+  let definition_ids : Map[String, UInt64] = Map([])
   for capability in capabilities {
     let id = capability.spec.id()
     match specs.get(id) {
-      Some(existing) => {
-        guard extension_specs_match(existing, capability.spec) else {
+      Some(_) => {
+        guard definition_ids.get(id) == Some(capability.definition_id) else {
           raise InvalidRendererCapability(
             detail="extension " + id + " has conflicting definitions",
           )
         }
-        match (capability.event_source, event_source_definition_ids.get(id)) {
-          (Some(_), Some(definition_id)) => {
-            guard definition_id == capability.definition_id else {
-              raise InvalidRendererCapability(
-                detail="extension " + id + " has conflicting event sources",
-              )
-            }
-          }
-          (None, None) => ()
-          (_, _) =>
-            raise InvalidRendererCapability(
-              detail="extension " + id + " has conflicting event sources",
-            )
-        }
       }
       None => {
         specs[id] = capability.spec
+        definition_ids[id] = capability.definition_id
         match capability.event_source {
-          Some(source) => {
-            event_sources[id] = source
-            event_source_definition_ids[id] = capability.definition_id
-          }
+          Some(source) => event_sources[id] = source
           None => ()
         }
       }
@@ -194,17 +181,6 @@ fn CommandExtensionEventSource::stop(
   guard self.started else { return }
   self.source.stop()
   self.started = false
-}
-
-///|
-fn extension_specs_match(
-  first : @proton_command.AppCommandExtensionSpec,
-  second : @proton_command.AppCommandExtensionSpec,
-) -> Bool {
-  first.js_namespace() == second.js_namespace() &&
-  first.op_names() == second.op_names() &&
-  first.dependencies() == second.dependencies() &&
-  first.scripts() == second.scripts()
 }
 
 ///|
@@ -290,7 +266,7 @@ fn require_command_extension(
 ///|
 fn bridge_frontend_config_for_extension(
   id : String,
-  spec : @proton_command.AppCommandExtensionSpec,
+  spec : @proton_command.AppCommandExtensionDescriptor,
 ) -> BridgeFrontendConfig raise AppConfigurationError {
   let extensions : Array[@native.BridgeExtensionConfig] = []
   let initialization_units : Array[@native.BridgeInitializationUnit] = []
@@ -301,7 +277,7 @@ fn bridge_frontend_config_for_extension(
 ///|
 fn append_bridge_extension_frontend(
   id : String,
-  spec : @proton_command.AppCommandExtensionSpec,
+  spec : @proton_command.AppCommandExtensionDescriptor,
   extensions : Array[@native.BridgeExtensionConfig],
   initialization_units : Array[@native.BridgeInitializationUnit],
 ) -> Unit raise AppConfigurationError {

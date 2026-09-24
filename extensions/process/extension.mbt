@@ -121,11 +121,6 @@ fn extension() -> @proton_extension.Extension {
   let owner = ProcessOwner()
   @proton_extension.typed(
     @process_contract.extension,
-    [
-      spawn_command.contract_route(),
-      wait_command.contract_route(),
-      kill_command.contract_route(),
-    ],
     fn(registrar) raise {
       registrar.bind(spawn_command, (context, request) => {
         owner.spawn(context, request)

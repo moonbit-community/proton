@@ -83,9 +83,7 @@ fn clamp(value : Int, min : Int, max : Int) -> Int {
 
 ///|
 fn ticker_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(ticker_contract, [start_command.contract_route()], fn(
-    registrar,
-  ) raise {
+  @proton_extension.typed(ticker_contract, fn(registrar) raise {
     registrar.bind(start_command, run_ticker)
   })
 }

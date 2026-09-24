@@ -181,18 +181,9 @@ fn register_app_commands(registrar : @proton.CommandRegistrar) -> Unit raise {
 
 ///|
 fn app_commands_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    app_contract,
-    [
-      ping_command.contract_route(),
-      slow_add_command.contract_route(),
-      fail_command.contract_route(),
-      cleanup_fail_command.contract_route(),
-      string_result_command.contract_route(),
-      report_probe_command.contract_route(),
-    ],
-    fn(registrar) raise { register_app_commands(registrar) },
-  )
+  @proton_extension.typed(app_contract, fn(registrar) raise {
+    register_app_commands(registrar)
+  })
 }
 
 ///|

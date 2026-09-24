@@ -1,10 +1,11 @@
 ///|
 test "dialog metadata constants match generated app command extension" {
-  assert_eq(extension().id(), "moonbit-community/proton-dialog")
-  assert_eq(extension().command_spec().js_namespace(), "dialog")
-  assert_true(
-    extension().command_spec().op_names().contains("ext:dialog/showErrorBox"),
-  )
+  let host = @core.AppCommandHost()
+  defer host.close()
+  let descriptor = extension_definition.command_spec().register(host)
+  assert_eq(extension_definition.id(), "moonbit-community/proton-dialog")
+  assert_eq(extension_definition.command_spec().js_namespace(), "dialog")
+  assert_true(descriptor.op_names().contains("ext:dialog/showErrorBox"))
 }
 
 ///|
