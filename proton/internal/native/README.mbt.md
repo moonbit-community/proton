@@ -126,4 +126,6 @@ own its removal. Initialization commands remain valid before bridge readiness.
 `Window::bridge_lifecycle_state` returns `None` for a known closing or destroyed
 window. Invalid handles and other native failures still raise errors. Queued
 close/cancel events must continue through normal facade cleanup even when a
-request was rejected by admission.
+request was rejected by admission. Admission failures propagate as runtime
+errors; failures from the command task group, including its child tasks and
+cleanup callbacks, remain request-level `handler_failed` responses.

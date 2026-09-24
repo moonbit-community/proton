@@ -231,6 +231,17 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
       #|    fail_detail_hidden = error.detail == null;
       #|    fail_message = String(error && error.message ? error.message : error);
       #|  }
+      #|  let cleanupRejected = false;
+      #|  try {
+      #|    await invoke("ext:appCommands/cleanupFail", {message: "command cleanup failed"});
+      #|  } catch (error) {
+      #|    cleanupRejected = error.code === "handler_failed" && error.detail == null;
+      #|  }
+      #|  if (!cleanupRejected) throw new Error("command cleanup failure did not reject the request");
+      #|  const afterCleanup = await invoke("ext:appCommands/ping", {name: "after cleanup"});
+      #|  if (afterCleanup.message !== "Hello after cleanup from the app command layer") {
+      #|    throw new Error("application did not survive command cleanup failure");
+      #|  }
       #|  let invalid_code = "";
       #|  try {
       #|    await invoke("ext:appCommands/slowAdd", {left: "wrong type"});

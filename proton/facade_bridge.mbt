@@ -480,20 +480,76 @@ async fn dispatch_bridge_request(
         ),
       )
   }
-  let result : Ref[@native.BridgeResponse?] = Ref(None)
+  let result : Ref[Result[@native.BridgeResponse?, @native.NativeError]] = Ref(
+    Ok(None),
+  )
   @async.with_task_group(command_tasks => {
-    result.val = dispatch_bridge_request_in_command_scope(
-      runtime, window, window_id, grant, host, request, wake_signal, dialog_completions,
-      command_tasks, locale_preferences,
+    // Admission runs inside the command task, immediately before dispatch.
+    // Preserve its error separately from user tasks and their cleanup callbacks.
+    let admission = runtime.prepare_bridge_request(request, window) catch {
+      error => {
+        result.val = Err(error)
+        return
+      }
+    }
+    let request_id = request.request_id()
+    result.val = Ok(
+      match admission {
+        Gone => None
+        WindowUnavailable =>
+          Some(
+            @native.BridgeResponse::Err(
+              request_id~,
+              code="window_closed",
+              message="the issuing window is no longer available",
+              detail=None,
+            ),
+          )
+        PageUnavailable =>
+          Some(
+            @native.BridgeResponse::Err(
+              request_id~,
+              code="page_unavailable",
+              message="the issuing bridge attempt is no longer available",
+              detail=None,
+            ),
+          )
+        Dispatchable =>
+          Some(
+            dispatch_bridge_request_in_command_scope(
+              window, window_id, grant, host, request, wake_signal, dialog_completions,
+              command_tasks, locale_preferences,
+            ),
+          )
+      },
     )
     command_tasks.return_immediately(())
-  })
-  result.val
+  }) catch {
+    error => {
+      @xlog.error(category="proton.command") <?
+        {
+          "message": "command scope failed",
+          "op": request.op(),
+          "detail": @debug.render(Repr(error)),
+        }
+      return Some(
+        @native.BridgeResponse::Err(
+          request_id=request.request_id(),
+          code="handler_failed",
+          message="bridge handler task failed",
+          detail=None,
+        ),
+      )
+    }
+  }
+  match result.val {
+    Ok(response) => response
+    Err(error) => raise native_run_error("prepare bridge request", error)
+  }
 }
 
 ///|
 async fn dispatch_bridge_request_in_command_scope(
-  runtime : @native.Runtime,
   window : @native.Window,
   window_id : String,
   grant : ResolvedPermissionGrant,
@@ -503,35 +559,8 @@ async fn dispatch_bridge_request_in_command_scope(
   dialog_completions : DialogCompletionStore,
   command_tasks : @async.TaskGroup[Unit],
   locale_preferences : @locale.LocalePreferences,
-) -> @native.BridgeResponse? {
+) -> @native.BridgeResponse {
   let request_id = request.request_id()
-  // A task-group body can start after the outer dispatch task. Revalidate here,
-  // with no suspension between admission and entering the command host.
-  let admission = runtime.prepare_bridge_request(request, window) catch {
-    error => raise native_run_error("prepare bridge request", error)
-  }
-  match admission {
-    Gone => return None
-    WindowUnavailable =>
-      return Some(
-        @native.BridgeResponse::Err(
-          request_id~,
-          code="window_closed",
-          message="the issuing window is no longer available",
-          detail=None,
-        ),
-      )
-    PageUnavailable =>
-      return Some(
-        @native.BridgeResponse::Err(
-          request_id~,
-          code="page_unavailable",
-          message="the issuing bridge attempt is no longer available",
-          detail=None,
-        ),
-      )
-    Dispatchable => ()
-  }
   let request_context = @core.AppCommandRequestContext(
     command_tasks,
     locale_preferences,
@@ -549,16 +578,14 @@ async fn dispatch_bridge_request_in_command_scope(
     @ipc.IpcOpRequest(request_id.to_string(), request.op(), request.payload()),
   )
   if response.is_ok() {
-    Some(@native.BridgeResponse::Ok(request_id~, payload=response.body))
+    @native.BridgeResponse::Ok(request_id~, payload=response.body)
   } else {
     let error : @ipc.IpcCommandError = @json.from_json(response.body)
-    Some(
-      @native.BridgeResponse::Err(
-        request_id~,
-        code=error.code,
-        message=error.message,
-        detail=error.detail,
-      ),
+    @native.BridgeResponse::Err(
+      request_id~,
+      code=error.code,
+      message=error.message,
+      detail=error.detail,
     )
   }
 }
