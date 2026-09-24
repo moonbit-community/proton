@@ -296,6 +296,32 @@ jobs:
               --diagnostic-limit 200 -- --quit-chain
           fi
 
+      - name: Run single-instance e2e on Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        timeout-minutes: 10
+        env:
+          _CL_: /utf-8
+          PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          moon -C e2e run test --target native --diagnostic-limit 200 -- --single-instance
+
+      - name: Run single-instance e2e on Unix
+        if: ${{ matrix.os != 'windows-latest' }}
+        timeout-minutes: 10
+        env:
+          PROTON_BRIDGE_E2E_TIMEOUT_MS: 60000
+          MOON_CC: cc
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            xvfb-run -a moon -C e2e run test --target native \
+              --diagnostic-limit 200 -- --single-instance
+          else
+            moon -C e2e run test --target native \
+              --diagnostic-limit 200 -- --single-instance
+          fi
+
       - name: Run macOS windowed close e2e
         if: ${{ matrix.os == 'macos-latest' }}
         timeout-minutes: 5
