@@ -26,13 +26,13 @@ test "dev extension host restores the parent preload" {
 }
 
 ///|
-async test "dev-extension command timeout preserves phase and child log" {
+async test "helper-install command timeout preserves phase, process status and child log" {
   let root = @fs.tmpdir(prefix="proton-e2e-diagnostic-test-")
   defer remove_dev_extension_tree(root)
   let failed = Ref(false)
   run_dev_extension_command(
     root,
-    "fixture-build",
+    "helper-install",
     "node",
     ["-e", "console.log('diagnostic sentinel'); setInterval(() => {}, 1000)"],
     root,
@@ -42,13 +42,16 @@ async test "dev-extension command timeout preserves phase and child log" {
     error => {
       failed.val = true
       let message = error.to_string()
-      assert_true(message.contains("fixture-build"))
+      assert_true(message.contains("helper-install"))
       assert_true(message.contains("diagnostic sentinel"))
       assert_true(message.contains("1000ms"))
+      assert_true(message.contains("Child pid="))
+      assert_true(message.contains("status=None"))
+      assert_true(message.contains("helper-install.log"))
     }
   }
   assert_true(failed.val)
-  let log = join_path(root, "fixture-build.log")
+  let log = join_path(root, "helper-install.log")
   assert_true(@mbfs.path_exists(log))
   assert_true(dev_extension_log_tail(log).contains("diagnostic sentinel"))
 }

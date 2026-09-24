@@ -126,7 +126,11 @@ async fn run_dev_extension_command(
       " did not finish within " +
       timeout.to_string() +
       "ms" +
-      app_output_suffix(output_path) +
+      "\nChild pid=" +
+      process.pid.to_string() +
+      " status=" +
+      @debug.render(Repr(app_exit_code(process))) +
+      dev_extension_log_tail(output_path) +
       process_snapshot_suffix(snapshot),
     )
   })
@@ -492,10 +496,10 @@ async fn run_dev_extension_scenario(root : String, timeout : Int) -> Unit {
     )
   })
   try {
-    run_e2e_operation_with_timeout(
-      dev_extension_build_timeout(timeout, true),
-      "47_dev_extension_js helper installation",
-      () => install_scenario_helper(root, output_root),
+    install_scenario_helper(
+      root,
+      output_root,
+      timeout=dev_extension_build_timeout(timeout, true),
     )
     run_dev_extension_scenario_once(root, output_root, timeout)
   } catch {
