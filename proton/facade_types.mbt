@@ -517,6 +517,9 @@ priv struct RuntimeSession {
   ]
   session_created_handlers : Array[async (ApplicationSession) -> Unit noraise]
   application_session : ApplicationSession
+  /// The single-instance lock this process holds, when the application
+  /// declared `single_instance`. Released on demand and destroyed on exit.
+  mut app_instance : @native.AppInstance?
   view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
   browser_event_handlers : Array[
     async (BrowserHandle, BrowserEvent) -> Unit noraise,

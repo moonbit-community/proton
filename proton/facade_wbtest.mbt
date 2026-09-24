@@ -507,6 +507,7 @@ test "forced exits escalate a quit chain and stop committing changes" {
 async test "application context forwards orderly and forced exit requests" {
   let requested = Ref(0)
   let forced = Ref(0)
+  let released = Ref(false)
   @async.with_task_group(group => {
     let context = ApplicationContext(
       group,
@@ -514,13 +515,19 @@ async test "application context forwards orderly and forced exit requests" {
       @locale.LocalePreferences::resolve(None, []),
       request_quit=fn(exit_code) { requested.val = exit_code },
       request_exit=fn(exit_code) { forced.val = exit_code },
+      has_single_instance_lock=fn() { !released.val },
+      release_single_instance_lock=fn() { released.val = true },
     )
     context.quit(exit_code=5)
     context.exit(exit_code=9)
+    assert_true(context.has_single_instance_lock())
+    context.release_single_instance_lock()
+    assert_false(context.has_single_instance_lock())
     group.return_immediately(())
   })
   assert_eq(requested.val, 5)
   assert_eq(forced.val, 9)
+  assert_true(released.val)
 }
 
 ///|

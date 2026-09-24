@@ -7,6 +7,8 @@ pub struct ApplicationContext {
   locale_preferences : @locale.LocalePreferences
   request_quit : (Int) -> Unit
   request_exit : (Int) -> Unit
+  has_single_instance_lock : () -> Bool
+  release_single_instance_lock : () -> Unit raise AppControlError
   application_identifier : String
   application_executable : String
   application_arguments : Array[String]
@@ -60,6 +62,8 @@ fn ApplicationContext::ApplicationContext(
   request_exit? : (Int) -> Unit = fn(exit_code) {
     @native.process_exit(exit_code)
   },
+  has_single_instance_lock? : () -> Bool = fn() { false },
+  release_single_instance_lock? : () -> Unit raise AppControlError = fn() { () },
   application_identifier? : String = "",
   application_executable? : String = "",
   application_arguments? : Array[String] = [],
@@ -72,6 +76,8 @@ fn ApplicationContext::ApplicationContext(
     locale_preferences,
     request_quit,
     request_exit,
+    has_single_instance_lock,
+    release_single_instance_lock,
     application_identifier,
     application_executable,
     application_arguments,
@@ -145,6 +151,34 @@ pub fn ApplicationContext::task_group(
 /// Returns the window manager owned by this running application.
 pub fn ApplicationContext::windows(self : ApplicationContext) -> WindowManager {
   self.windows
+}
+
+///|
+/// Reports whether this process currently holds the application's
+/// single-instance lock, corresponding to Electron's
+/// `app.hasSingleInstanceLock()`.
+///
+/// The lock is acquired at startup by `App::single_instance` and stays held
+/// until `release_single_instance_lock` or process exit. An application that
+/// did not declare `single_instance` reports `false`.
+pub fn ApplicationContext::has_single_instance_lock(
+  self : ApplicationContext,
+) -> Bool {
+  (self.has_single_instance_lock)()
+}
+
+///|
+/// Releases the single-instance lock this process holds, corresponding to
+/// Electron's `app.releaseSingleInstanceLock()`.
+///
+/// The application keeps running, stops receiving second-instance activations,
+/// and another launch may acquire the identity and become primary. Releasing an
+/// application that holds no lock is a successful no-op. Later process exit
+/// still cleans up the runtime, so releasing does not skip teardown.
+pub fn ApplicationContext::release_single_instance_lock(
+  self : ApplicationContext,
+) -> Unit raise AppControlError {
+  (self.release_single_instance_lock)()
 }
 
 ///|

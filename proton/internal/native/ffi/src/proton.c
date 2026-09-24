@@ -181,6 +181,20 @@ int32_t proton_app_instance_destroy(proton_app_instance_id_t instance) {
   return proton_set_engine_status(status, instance_error);
 }
 
+int32_t proton_app_instance_release(proton_app_instance_id_t instance) {
+  /* The runtime holds a back-reference to the instance; clear it before the
+     slot is disposed so later activation responses cannot target a released
+     lock. */
+  proton_runtime_slot_t *runtime = proton_get_active_runtime();
+  if (runtime != NULL && runtime->app_instance == instance) {
+    runtime->app_instance = PROTON_INVALID_HANDLE;
+  }
+  char instance_error[512] = {0};
+  int32_t status = proton_app_instance_release_impl(
+      instance, instance_error, sizeof(instance_error));
+  return proton_set_engine_status(status, instance_error);
+}
+
 int32_t proton_internal_execute_process(
     int32_t use_bundled, const char *runtime_root, const char *helper_path,
     const char *resources_dir, const char *locales_dir, const char *cache_dir,

@@ -501,6 +501,7 @@ async fn run_manifest(
           render_process_gone_handlers~,
           session_created_handlers~,
           application_session~,
+          app_instance~,
           application_tasks,
           last_window_closed_policy,
           window_tasks,

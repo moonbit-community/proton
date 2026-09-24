@@ -15,6 +15,10 @@ int32_t proton_app_instance_attach_runtime_impl(
     size_t error_len);
 int32_t proton_app_instance_destroy_impl(int64_t instance, char *error,
                                          size_t error_len);
+/* Releases the lock this instance holds so another process can acquire it.
+   Releasing an instance that holds no lock is a successful no-op. */
+int32_t proton_app_instance_release_impl(int64_t instance, char *error,
+                                         size_t error_len);
 int32_t proton_app_instance_respond_activation_impl(int64_t instance, int64_t request_id, int32_t accept);
 void proton_app_instance_stop_accepting_impl(int64_t instance);
 void proton_app_instance_detach_runtime_impl(int64_t instance);

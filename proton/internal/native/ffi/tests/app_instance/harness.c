@@ -52,6 +52,9 @@ int main(int argc, char **argv) {
                                                &primary, error, sizeof(error));
   printf("RESULT %d %d %s\n", status, primary, error);
   if (status != 0 || !primary) return status == 0 ? 0 : 1;
+  // Releasing the lock disposes the instance, so the shutdown path below only
+  // applies while this harness still owns it.
+  int released = 0;
   char command[32];
   while (fgets(command, sizeof(command), stdin)) {
     if (!strncmp(command, "attach", 6)) {
@@ -80,8 +83,13 @@ int main(int argc, char **argv) {
     } else if (!strncmp(command, "stop", 4)) {
       proton_app_instance_stop_accepting_impl(instance);
       puts("STOPPED");
+    } else if (!strncmp(command, "release", 7)) {
+      status = proton_app_instance_release_impl(instance, error, sizeof(error));
+      printf("RELEASED %d %s\n", status, error);
+      released = status == 0;
     } else if (!strncmp(command, "quit", 4)) break;
   }
+  if (released) return 0;
   proton_app_instance_detach_runtime_impl(instance);
   status = proton_app_instance_destroy_impl(instance, error, sizeof(error));
   printf("DESTROY %d %s\n", status, error);

@@ -118,6 +118,24 @@ test('a detached runtime cannot return to startup buffering', { timeout: 10000 }
   assert.equal(secondary.exitCode, 1);
   assert.match(secondary.output, /shutting down/);
 });
+test('releasing the lock lets another process become primary while the owner runs', { timeout: 10000 }, async t => {
+  const { child, id } = await primary(t);
+  // A live owner with a released lock must not be treated as the primary any
+  // more: the next launch acquires the identity instead of forwarding.
+  await command(child, 'release', 'RELEASED 0');
+  assert.equal(child.exitCode, null, child.output);
+  const next = launch(t, id);
+  await until(() => next.output.includes('RESULT 0 1'), () => next.output);
+  assert.equal(next.exitCode, null, next.output);
+  next.stdin.write('quit\n');
+  await until(() => next.exitCode !== null, () => next.output);
+  assert.equal(next.exitCode, 0, next.output);
+  // The released owner shuts down without attempting to destroy a lock it no
+  // longer holds.
+  child.stdin.write('quit\n');
+  await until(() => child.exitCode !== null, () => child.output);
+  assert.equal(child.exitCode, 0, child.output);
+});
 test('an expired event cannot acknowledge a later connection', { timeout: 10000 }, async t => {
   const { child, id } = await primary(t);
   await command(child, 'attach', 'ATTACH 0');

@@ -235,6 +235,20 @@ pub fn AppInstance::destroy(self : AppInstance) -> Unit raise NativeError {
 }
 
 ///|
+/// Releases the single-instance lock this process holds, corresponding to
+/// Electron's `releaseSingleInstanceLock`. The process keeps running, stops
+/// receiving activations, and another instance can acquire the identity.
+/// Releasing an instance without a lock is a successful no-op.
+pub fn AppInstance::release(self : AppInstance) -> Unit raise NativeError {
+  if self.destroyed {
+    return
+  }
+  check_status(@native_ffi.proton_app_instance_release_ffi(self.handle))
+  self.handle = proton_invalid_handle
+  self.destroyed = true
+}
+
+///|
 pub fn last_error_message() -> String {
   let required = @native_ffi.proton_last_error_message_ffi(
     FixedArray::make(1, b'\x00'),

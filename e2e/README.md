@@ -35,7 +35,8 @@ from the same Proton source as the application through `moon install --path`.
 The suite covers:
 
 - single-instance forwarding through the real application loop, followed by
-  primary/secondary and CEF helper shutdown (`--single-instance`);
+  primary/secondary and CEF helper shutdown, plus a runtime lock release that
+  lets the next launch become primary (`--single-instance`);
 - the cancelable quit chain, forced exits, and process exit codes
   (`--quit-chain`);
 

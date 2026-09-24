@@ -151,6 +151,7 @@ type AppInstance
 pub fn AppInstance::acquire(String, AppActivation) -> AppInstanceAcquire raise NativeError
 pub fn AppInstance::attach_runtime(Self, Runtime) -> Unit raise NativeError
 pub fn AppInstance::destroy(Self) -> Unit raise NativeError
+pub fn AppInstance::release(Self) -> Unit raise NativeError
 
 pub enum AppInstanceAcquire {
   Primary(AppInstance)
