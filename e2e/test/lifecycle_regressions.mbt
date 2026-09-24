@@ -61,6 +61,22 @@ async fn kill_renderer_helpers(snapshot : ProcessSnapshot) -> Unit {
 }
 
 ///|
+/// Reads the scenario output file into trimmed lines.
+fn app_output_lines(path : String) -> Array[String] {
+  let text = @mbfs.read_file_to_string(path, encoding="utf8") catch {
+    _ => return []
+  }
+  let lines : Array[String] = []
+  for raw_line in text.replace_all(old="\r\n", new="\n").split("\n") {
+    let line = raw_line.trim().to_owned()
+    if line != "" {
+      lines.push(line)
+    }
+  }
+  lines
+}
+
+///|
 async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-lifecycle-")
   defer remove_dev_extension_tree(output_root)
@@ -74,9 +90,9 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         "remove-view-close", "page-view-close", "parent-view-close", "cancel-during-startup",
         "initial-open", "cancel-sleep", "cancel-open", "task-success", "task-failure",
         "close-decision", "process-lifetime", "app-control", "process-events", "process-events-no-bridge",
-        "startup-update-channel", "startup-update-failure", "proxy-config", "proxy-env",
-        "renderer-recovery", "bridge-recovery", "bridge-startup-failure", "closed-record-churn",
-        "bridge-admission",
+        "app-metrics", "startup-update-channel", "startup-update-failure", "proxy-config",
+        "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
+        "closed-record-churn", "bridge-admission",
       ]
   }
   let failures : Array[String] = []
@@ -196,6 +212,16 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
               "PROCESS_EVENTS session=partition=default data=temporary",
             ),
           )
+        }
+        if name == "app-metrics" {
+          // Record the sampled processes in the CI log: CEF's task manager is
+          // the only source for these values, and the numbers differ per
+          // platform and runtime mode.
+          for line in app_output_lines(app.output_path) {
+            if line.has_prefix("APP_METRICS") {
+              println(line)
+            }
+          }
         }
         stopped = true
         println("Lifecycle regression passed: " + name)
