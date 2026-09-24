@@ -1294,6 +1294,24 @@ void proton_app_instance_detach_runtime_impl(int64_t instance) {
   proton_app_instance_unlock(slot);
 }
 
+int32_t proton_app_instance_release_impl(int64_t instance, char *error,
+                                         size_t error_len) {
+  char ignored[1];
+  proton_app_instance_slot_t *slot =
+      proton_app_instance_get(instance, ignored, sizeof(ignored));
+  if (slot == NULL) {
+    /* An instance that holds no lock is already in the requested state. */
+    proton_app_instance_set_message(error, error_len, "");
+    return PROTON_OK;
+  }
+  /* Disposing stops the listener, unlinks the endpoint, clears queued
+     activations, and drops the runtime reference, so another process can
+     acquire the identity while this one keeps running. */
+  proton_app_instance_dispose_slot(slot);
+  proton_app_instance_set_message(error, error_len, "");
+  return PROTON_OK;
+}
+
 int32_t proton_app_instance_destroy_impl(int64_t instance, char *error,
                                          size_t error_len) {
   proton_app_instance_slot_t *slot =

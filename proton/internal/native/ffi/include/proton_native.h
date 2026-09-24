@@ -150,6 +150,9 @@ int32_t proton_app_instance_acquire(
     proton_app_instance_id_t *out_instance, int32_t *out_primary);
 int32_t proton_app_instance_attach_runtime(
     proton_app_instance_id_t instance, proton_runtime_handle_t runtime);
+/* Releases the single-instance lock so another process can acquire it. The
+   calling process keeps running and stops receiving activations. */
+int32_t proton_app_instance_release(proton_app_instance_id_t instance);
 int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 

@@ -75,6 +75,8 @@ pub fn proton_app_instance_attach_runtime_ffi(Int64, RuntimeHandle) -> Int
 
 pub fn proton_app_instance_destroy_ffi(Int64) -> Int
 
+pub fn proton_app_instance_release_ffi(Int64) -> Int
+
 pub fn proton_app_is_active_ffi(@ref.Ref[Int]) -> Int
 
 pub fn proton_app_is_hidden_ffi(@ref.Ref[Int]) -> Int

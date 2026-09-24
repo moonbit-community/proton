@@ -202,6 +202,9 @@ pub extern "C" fn proton_runtime_stop_app_activations_ffi(
 pub extern "C" fn proton_app_instance_destroy_ffi(instance : Int64) -> Int = "proton_app_instance_destroy"
 
 ///|
+pub extern "C" fn proton_app_instance_release_ffi(instance : Int64) -> Int = "proton_app_instance_release"
+
+///|
 #borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label, out_exit_code)
 pub extern "C" fn execute_process(
   use_bundled : Int,
