@@ -381,11 +381,17 @@ async test "already embedded Windows icons do not require an icon writer" {
 }
 
 ///|
+// A valid 1x1 transparent PNG for packaging prerequisites.
+let package_test_png : Bytes = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0b\x49\x44\x41\x54\x78\x9c\x63\x60\x00\x02\x00\x00\x05\x00\x01\x7a\x5e\xab\x3f\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
+
+///|
 async test "competing package builds serialize preparation and release the lock after failure" {
   let root = @async_fs.tmpdir(prefix="proton-package-lock-")
   defer (remove_tree(root) catch { _ => () })
   let executable = path_join(root, "fixture")
   @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+  let icon = path_join(root, "icon.png")
+  @async_fs.write_file(icon, package_test_png)
   let formats = match current_package_host() {
     Linux => [AppImage]
     _ => [App]
@@ -397,6 +403,7 @@ async test "competing package builds serialize preparation and release the lock 
     "1.0.0",
     formats,
     path_join(root, "out"),
+    icons=[icon],
   )
   @async.with_task_group(group => {
     let entered = Ref(false)
@@ -547,6 +554,8 @@ async test "cancelled package builds release the output lock" {
     defer (remove_tree(root) catch { _ => () })
     let executable = path_join(root, "fixture")
     @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+    let icon = path_join(root, "icon.png")
+    @async_fs.write_file(icon, package_test_png)
     let formats = match current_package_host() {
       Linux => [AppImage]
       _ => [App]
@@ -558,6 +567,7 @@ async test "cancelled package builds release the output lock" {
       "1.0.0",
       formats,
       path_join(root, "out"),
+      icons=[icon],
     )
     @async.with_task_group(group => {
       let entered = Ref(false)
@@ -568,6 +578,9 @@ async test "cancelled package builds release the output lock" {
         })
       })
       while !entered.val {
+        if owner.try_wait() is Some(_) {
+          fail("packaging completed before preparation")
+        }
         @async.sleep(5)
       }
       owner.cancel()
