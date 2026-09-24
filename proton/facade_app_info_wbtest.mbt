@@ -141,10 +141,15 @@ test "temporary path resolution uses platform environment precedence" {
     "C:/Temp",
   )
   assert_eq(
-    temp_dir_for_platform("macos", Some("/private/tmp/app"), None, None),
+    normalize_path_separators(
+      temp_dir_for_platform("macos", Some("/private/tmp/app"), None, None),
+    ),
     "/private/tmp/app",
   )
-  assert_eq(temp_dir_for_platform("linux", None, None, None), "/tmp")
+  assert_eq(
+    normalize_path_separators(temp_dir_for_platform("linux", None, None, None)),
+    "/tmp",
+  )
 }
 
 ///|

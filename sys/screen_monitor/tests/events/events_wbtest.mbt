@@ -3,7 +3,9 @@ extern "C" fn test_screen_event_snapshots() -> Int = "proton_test_screen_event_s
 
 ///|
 test "native screen queue retains removed and changed display snapshots" {
-  // Keep the production package linked, including its queue implementation.
-  let _ : @proton_screen_monitor.ScreenMonitor? = None
+  // A value-level FFI call pulls native_common.o from the production archive
+  // before the test archive is scanned by one-pass linkers.
+  let monitor = @proton_screen_monitor.ScreenMonitor()
+  defer monitor.destroy()
   assert_eq(test_screen_event_snapshots(), 1)
 }
