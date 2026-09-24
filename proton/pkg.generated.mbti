@@ -355,6 +355,8 @@ pub struct ApplicationContext {
   locale_preferences : @locale.LocalePreferences
   request_quit : (Int) -> Unit
   request_exit : (Int) -> Unit
+  has_single_instance_lock : () -> Bool
+  release_single_instance_lock : () -> Unit raise AppControlError
   application_identifier : String
   application_executable : String
   application_arguments : Array[String]
@@ -364,6 +366,7 @@ pub struct ApplicationContext {
 pub async fn ApplicationContext::check_for_update(Self) -> UpdateCheck
 pub fn ApplicationContext::exit(Self, exit_code? : Int) -> Unit
 pub fn ApplicationContext::focus(Self, steal? : Bool) -> Unit raise AppControlError
+pub fn ApplicationContext::has_single_instance_lock(Self) -> Bool
 pub fn ApplicationContext::hide(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::is_active(Self) -> Bool raise AppControlError
 pub fn ApplicationContext::is_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
@@ -372,6 +375,7 @@ pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn ApplicationContext::quit(Self, exit_code? : Int) -> Unit
 pub fn ApplicationContext::relaunch(Self, options? : RelaunchOptions) -> Unit raise AppControlError
+pub fn ApplicationContext::release_single_instance_lock(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::remove_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::set_as_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
 pub fn ApplicationContext::show(Self) -> Unit raise AppControlError

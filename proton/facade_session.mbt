@@ -30,6 +30,7 @@ fn RuntimeSession::RuntimeSession(
     partition: None,
     data_path: None,
   },
+  app_instance? : @native.AppInstance? = None,
   application_tasks : @async.TaskGroup[Unit],
   last_window_closed_policy : LastWindowClosedPolicy,
   window_tasks : @async.TaskGroup[Unit],
@@ -92,6 +93,7 @@ fn RuntimeSession::RuntimeSession(
     render_process_gone_handlers,
     session_created_handlers,
     application_session,
+    app_instance,
     window_commands: [],
     pending_window_opens: [],
     pending_browser_requests: [],
@@ -230,6 +232,8 @@ fn RuntimeSession::application_context(
     self.locale_preferences,
     request_quit=exit_code => self.request_quit(exit_code),
     request_exit=exit_code => self.request_exit(exit_code),
+    has_single_instance_lock=() => self.has_single_instance_lock(),
+    release_single_instance_lock=() => self.release_single_instance_lock(),
     application_identifier=self.application_identifier,
     application_executable=self.application_executable,
     application_arguments=self.application_arguments,
@@ -4603,6 +4607,32 @@ fn RuntimeSession::resolved_exit(self : RuntimeSession) -> ApplicationExit {
     exit_code: self.close_coordinator.exit_code,
     forced: self.close_coordinator.forced,
   }
+}
+
+///|
+/// Reports whether this process still holds the single-instance lock it
+/// acquired at startup.
+fn RuntimeSession::has_single_instance_lock(self : RuntimeSession) -> Bool {
+  self.app_instance is Some(_)
+}
+
+///|
+/// Releases the single-instance lock so another launch can become primary.
+/// The application keeps running without receiving further activations.
+fn RuntimeSession::release_single_instance_lock(
+  self : RuntimeSession,
+) -> Unit raise AppControlError {
+  match self.app_instance {
+    Some(instance) =>
+      instance.release() catch {
+        error =>
+          raise app_control_native_error(
+            "release the single-instance lock", error,
+          )
+      }
+    None => ()
+  }
+  self.app_instance = None
 }
 
 ///|

@@ -155,6 +155,14 @@ Application windows can host independent web contents views with explicit
 bounds, visibility, z-order, navigation, DevTools, and lifecycle events. See
 `examples/45_bridge_multi_window` and `examples/52_web_contents_view`.
 
+Single-instance apps declare ownership with `.single_instance()` and can inspect
+or give it up at runtime: `ApplicationContext::has_single_instance_lock()` and
+`ApplicationContext::release_single_instance_lock()` mirror Electron's
+`app.hasSingleInstanceLock()` and `app.releaseSingleInstanceLock()`. After a
+release the next launch becomes primary instead of forwarding. CEF owns the
+browser profile exclusively, so a side-by-side successor needs its own
+`App::session_partition`. See `examples/84_single_instance_lock`.
+
 Native application menus and native context menus are available on macOS,
 Windows, and Linux.
 

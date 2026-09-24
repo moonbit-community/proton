@@ -54,6 +54,44 @@ bypass its lock, or automatically resend an activation. A missing confirmation
 is not proof that no application action occurred. Success confirms acceptance,
 not completion of an asynchronous launch handler or visibility of a window.
 
+## Single-instance runtime control
+
+`App::single_instance` is the declarative startup form of Electron's
+`requestSingleInstanceLock`: the process that owns the identity keeps running,
+and every other launch forwards its activation and exits. A running
+`ApplicationContext` can inspect and give up that ownership:
+
+| Proton | Electron | Behavior |
+| --- | --- | --- |
+| `has_single_instance_lock()` | `app.hasSingleInstanceLock()` | `true` while this process holds the identity; `false` without `App::single_instance` and after a release |
+| `release_single_instance_lock()` | `app.releaseSingleInstanceLock()` | Releases the identity so the next launch acquires it instead of forwarding; the releasing process keeps running and stops receiving activations |
+
+```moonbit
+app_lifecycle(
+  on_start=context => {
+    println(context.has_single_instance_lock().to_string())
+    context.release_single_instance_lock() catch { _ => () }
+    context
+  },
+  on_shutdown=fn(_) { () },
+)
+```
+
+Unlike Electron, Proton does not expose `requestSingleInstanceLock` as a
+runtime decision: single-instance ownership is declared before startup, and a
+launch that does not win the identity never reaches application code.
+Releasing an application without a lock is a successful no-op, and process exit
+still cleans up the runtime.
+
+One platform difference matters when two instances run side by side. Electron
+lets instances share one `userData` directory after a release; CEF owns the
+browser profile exclusively and refuses to initialize a second process on the
+same session data directory. A successor therefore needs its own session:
+either run without `.single_instance()` (Proton then uses a temporary profile)
+or give the extra instance a distinct `App::session_partition`. The identity
+lock itself is independent of the profile, so a successor with its own
+partition still acquires the released identity.
+
 `SessionHandle::clear_auth_cache` clears Chromium's cached HTTP authentication
 credentials without clearing cookies or the HTTP cache.
 `SessionHandle::clear_certificate_exceptions` clears remembered certificate
