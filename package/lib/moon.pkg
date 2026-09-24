@@ -2,7 +2,6 @@ import {
   "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/core/debug",
-  "moonbitlang/core/string",
   "moonbitlang/core/env",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/x/path",

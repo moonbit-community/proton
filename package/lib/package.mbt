@@ -172,6 +172,9 @@ fn validate_customization(
 
 ///|
 fn validate_spec(spec : PackageSpec) -> PackageSpec raise PackagePlanError {
+  if spec.macos_minimum_system_version is Some(value) {
+    validate_macos_minimum_version(value)
+  }
   let product_name = validate_product_name(spec.product_name)
   let identifier = validate_identifier(spec.identifier)
   let version = validate_package_version(spec.version)
@@ -576,4 +579,31 @@ fn xml_escape(text : String) -> String {
   .replace_all(old="<", new="&lt;")
   .replace_all(old=">", new="&gt;")
   .replace_all(old="\"", new="&quot;")
+}
+
+///|
+fn validate_macos_minimum_version(
+  value : String,
+) -> Unit raise PackagePlanError {
+  let components = value.split(".").collect()
+  guard components.length() >= 2 && components.length() <= 3 else {
+    raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+  }
+  for index, component in components {
+    guard !component.is_empty() else {
+      raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+    }
+    let mut nonzero = false
+    for char in component {
+      guard char >= '0' && char <= '9' else {
+        raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+      }
+      if char != '0' {
+        nonzero = true
+      }
+    }
+    guard index != 0 || nonzero else {
+      raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+    }
+  }
 }

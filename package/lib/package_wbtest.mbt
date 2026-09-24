@@ -121,7 +121,6 @@ test "macOS plist customization is escaped" {
     "demo-app",
     "1.2.3",
     "42",
-    minimum_system_version="13.0.0",
   )
   assert_true(plist.contains("<string>Demo &amp; App</string>"))
   assert_true(
@@ -453,58 +452,19 @@ async test "competing package builds serialize preparation and release the lock 
 }
 
 ///|
-test "macOS deployment metadata uses the highest load-command minimum, not SDK" {
-  let commands =
-    #|Load command 1
-    #|      cmd LC_BUILD_VERSION
-    #| platform 1
-    #|    minos 13.2
-    #|      sdk 27.0
-    #|Load command 2
-    #|      cmd LC_SOURCE_VERSION
-    #|  version 999.1
-    #|Load command 1
-    #|      cmd LC_VERSION_MIN_MACOSX
-    #|  version 14.1.2
-    #|      sdk 26.0
-  assert_eq(macos_load_command_minimum(commands), 14 * 65536 + 256 + 2)
-  let plist = macos_info_plist(
-    package_test_spec([App]),
-    PackageCustomization(),
-    "demo",
-    "1.0.0",
-    "1.0.0",
-    minimum_system_version="14.1.2",
-  )
-  assert_true(
-    plist.contains("<key>LSMinimumSystemVersion</key><string>14.1.2</string>"),
-  )
-}
-
-///|
-async test "macOS staging derives the minimum from real executable and library load commands" {
+async test "macOS packaging preserves declared minimum and leaves resources opaque" {
   guard current_package_host() is Macos else { return }
   let root = @async_fs.tmpdir(prefix="proton-package-minimum-")
   defer (remove_tree(root) catch { _ => () })
   let source = path_join(root, "main.c")
-  @async_fs.write_file(
-    source,
-    "int main(void) { return 0; }",
-    create_mode=CreateOrTruncate,
-  )
+  @async_fs.write_file(source, "int main(void) { return 0; }")
   let executable = path_join(root, "main")
-  assert_eq(
-    @process.run("cc", ["-mmacosx-version-min=13.0", source, "-o", executable]),
-    0,
-  )
-  assert_eq(macos_bundle_minimum_version(executable), 13 * 65536)
-  let library = path_join(root, "newer.dylib")
-  assert_eq(
-    @process.run("cc", [
-      "-dynamiclib", "-mmacosx-version-min=14.0", source, "-o", library,
-    ]),
-    0,
-  )
+  assert_eq(@process.run("cc", [source, "-o", executable]), 0)
+  // A Java class header shares the fat Mach-O magic. Resources are copied,
+  // regardless of their filename or contents, without binary inspection.
+  let resource = path_join(root, "resource.bin")
+  let contents : Bytes = b"\xca\xfe\xba\xbe\x00\x00\x00\x45\x00\x01"
+  @async_fs.write_file(resource, contents)
   let spec = PackageSpec(
     executable,
     "Minimum Test",
@@ -512,9 +472,12 @@ async test "macOS staging derives the minimum from real executable and library l
     "1.0.0",
     [App],
     path_join(root, "out"),
-    payloads=[Payload(library, "newer.dylib", location=Libraries)],
+    payloads=[
+      Payload(resource, "Example.class"),
+      Payload(resource, "opaque.bin"),
+    ],
   )
-  for requested in [None, Some("14.0"), Some("15.1.2")] {
+  for requested in [None, Some("12.0"), Some("15.1.2")] {
     let artifacts = build(PackageSpec::{
       ..spec,
       macos_minimum_system_version: requested,
@@ -522,25 +485,23 @@ async test "macOS staging derives the minimum from real executable and library l
     let plist = @async_fs.read_file(
       path_join(artifacts[0], "Contents/Info.plist"),
     ).text()
-    let expected = if requested == Some("15.1.2") { "15.1.2" } else { "14.0.0" }
-    assert_true(
-      plist.contains(
-        "<key>LSMinimumSystemVersion</key><string>" + expected + "</string>",
-      ),
-    )
-  }
-  try
-    ignore(
-      build(PackageSpec::{ ..spec, macos_minimum_system_version: Some("13.0"), }),
-    )
-  catch {
-    InvalidPayload(detail~) => {
-      assert_true(detail.contains("13.0"))
-      assert_true(detail.contains("14.0.0"))
+    match requested {
+      None => assert_false(plist.contains("LSMinimumSystemVersion"))
+      Some(value) =>
+        assert_true(
+          plist.contains(
+            "<key>LSMinimumSystemVersion</key><string>" + value + "</string>",
+          ),
+        )
     }
-    error => raise error
-  } noraise {
-    _ => fail("expected incompatible minimum to be rejected")
+    for name in ["Example.class", "opaque.bin"] {
+      assert_eq(
+        @async_fs.read_file(
+          path_join(artifacts[0], "Contents/Resources/" + name),
+        ).binary(),
+        contents,
+      )
+    }
   }
 }
 
@@ -605,12 +566,15 @@ async test "cancelled package builds release the output lock" {
 
 ///|
 test "macOS minimum rejects malformed versions" {
-  for
-    value in [
-      "", "14", "14..0", "14.0.0.1", "-1.0", "+14.0", "14.x", "999999.0", "14.256",
-      "0.0",
-    ] {
-    try ignore(macos_resolve_minimum_version(14 * 65536, Some(value))) catch {
+  for value in ["", "14", "14..0", "14.0.0.1", "-1.0", "+14.0", "14.x", "0.0"] {
+    try
+      ignore(
+        validate_spec(PackageSpec::{
+          ..package_test_spec([App]),
+          macos_minimum_system_version: Some(value),
+        }),
+      )
+    catch {
       InvalidPayload(..) => ()
       error => raise error
     } noraise {

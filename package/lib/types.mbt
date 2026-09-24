@@ -271,8 +271,9 @@ pub fn NsisInstallMode::to_string(self : NsisInstallMode) -> String {
 
 ///|
 /// Complete input to the host-native packager.
-/// `macos_minimum_system_version` declares the supported macOS floor; it must
-/// not be lower than the packaged binaries require. Omit it to derive the floor.
+/// `macos_minimum_system_version` sets the minimum supported macOS declaration.
+/// Omit it to leave LSMinimumSystemVersion unset. Binary compatibility is not
+/// inferred or validated by the packager.
 pub struct PackageSpec {
   executable : String
   product_name : String

@@ -105,7 +105,7 @@
 | `resources` | string array | `[]`；追加到共享资源列表并去重 |
 | `sign` | object | 无；只接受 `binaries`（string array，默认 `[]`），追加到共享签名列表并去重 |
 | `nsis_install_mode` | string | 仅 Windows；`currentUser`（默认）、`perMachine` 或 `both` |
-| `minimum_system_version` | string | 仅 macOS；格式为 `major.minor[.patch]`。默认取包内 Mach-O 部署目标的最高值；可显式提高，低于二进制要求时报错。不改变编译目标。 |
+| `minimum_system_version` | string | 仅 macOS；格式为 `major.minor[.patch]`。设置 `LSMinimumSystemVersion`；未配置时省略该字段。不改变编译目标，也不验证二进制兼容性。 |
 
 合并后的格式列表为空时采用宿主平台默认格式。CLI 选项覆盖解析后的配置。支持的格式、签名和安装模式见[打包行为](../command-line-interface/packaging.md)。
 
