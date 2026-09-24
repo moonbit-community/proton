@@ -6,7 +6,7 @@ Proton CLI 将项目组装为分发产物，包含可执行文件、前端资源
 
 ## 平台覆盖
 
-各平台对象接受 `formats`、`resources`、`sign`。Windows 还接受 `nsis_install_mode`。平台格式列表替换共享列表，平台资源与共享资源合并。路径值以项目配置文件目录为基准。
+各平台对象接受 `formats`、`resources`、`sign`。Windows 还接受 `nsis_install_mode`，macOS 还接受 `minimum_system_version`。平台格式列表替换共享列表，平台资源与共享资源合并。路径值以项目配置文件目录为基准。
 
 | 平台 | 格式 | 默认值 |
 | --- | --- | --- |

@@ -150,3 +150,36 @@ async test "installation lock serializes one runtime identity" {
     assert_true(acquired.val)
   }
 }
+
+///|
+async test "helper validation rejects empty and non-executable installations" {
+  let temp = test_cef_fixture_root()
+  defer (remove_tree(temp) catch { _ => () })
+  let helper = path_join(temp, "cef_process")
+  assert_false(helper_is_valid(helper))
+  @async_fs.write_file(helper, "", create_mode=CreateOrTruncate)
+  assert_false(helper_is_valid(helper))
+  @async_fs.write_file(helper, "helper fixture", create_mode=CreateOrTruncate)
+  if @path.sep != '\\' {
+    @async_fs.chmod(helper, 0o644)
+    assert_false(helper_is_valid(helper))
+    @async_fs.chmod(helper, 0o755)
+  }
+  assert_true(helper_is_valid(helper))
+  let staging = path_join(temp, "repair")
+  @async_fs.mkdir(staging)
+  let repaired = path_join(staging, "cef_process")
+  @async_fs.write_file(repaired, "replacement", create_mode=CreateOrTruncate)
+  if @path.sep != '\\' {
+    @async_fs.chmod(repaired, 0o755)
+  }
+  let target = path_join(temp, "installation")
+  @async_fs.mkdir(target)
+  @async_fs.write_file(
+    path_join(target, "cef_process"),
+    "",
+    create_mode=CreateOrTruncate,
+  )
+  publish_staged_directory(staging, target)
+  assert_true(helper_is_valid(path_join(target, "cef_process")))
+}

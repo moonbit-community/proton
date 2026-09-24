@@ -70,8 +70,8 @@ int32_t screen_monitor_platform_enumerate(screen_monitor_state_t *state) {
     if (d->is_primary && first_primary < 0) {
       first_primary = (int32_t)i;
     }
-    /* Bounds digest gives a stable-enough identity for hot-plug diffing. */
-    d->id = m->x * 1000000 + m->y;
+    /* RandR names survive geometry changes and enumeration reordering. */
+    d->id = (int32_t)m->name;
     d->present = 1;
   }
   if (first_primary >= 0 && first_primary != 0) {
@@ -161,7 +161,6 @@ static void screen_monitor_linux_handle_change(screen_monitor_state_t *state) {
     state->display_count = previous_count;
     return;
   }
-  int32_t geometry_changed = 0;
   for (int32_t i = 0; i < state->display_count; i++) {
     screen_monitor_display_t *cur = &state->displays[i];
     int32_t found = 0;
@@ -175,14 +174,16 @@ static void screen_monitor_linux_handle_change(screen_monitor_state_t *state) {
             previous[j].work_y != cur->work_y ||
             previous[j].work_width != cur->work_width ||
             previous[j].work_height != cur->work_height ||
-            previous[j].scale_factor_percent != cur->scale_factor_percent) {
-          geometry_changed = 1;
+            previous[j].scale_factor_percent != cur->scale_factor_percent ||
+            previous[j].is_primary != cur->is_primary) {
+          screen_monitor_push_event(
+              state, screen_monitor_EVENT_METRICS_CHANGED, cur);
         }
         break;
       }
     }
     if (!found) {
-      screen_monitor_push_event(state, screen_monitor_EVENT_ADDED);
+      screen_monitor_push_event(state, screen_monitor_EVENT_ADDED, cur);
     }
   }
   for (int32_t j = 0; j < previous_count; j++) {
@@ -197,11 +198,9 @@ static void screen_monitor_linux_handle_change(screen_monitor_state_t *state) {
       }
     }
     if (!found) {
-      screen_monitor_push_event(state, screen_monitor_EVENT_REMOVED);
+      screen_monitor_push_event(
+          state, screen_monitor_EVENT_REMOVED, &previous[j]);
     }
-  }
-  if (geometry_changed) {
-    screen_monitor_push_event(state, screen_monitor_EVENT_METRICS_CHANGED);
   }
 }
 

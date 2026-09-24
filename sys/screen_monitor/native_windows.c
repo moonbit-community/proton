@@ -65,7 +65,8 @@ static BOOL CALLBACK screen_monitor_enum_monitor_proc(HMONITOR hmonitor,
       d->scale_factor_percent = (int32_t)((dpi_x * 100) / 96);
     }
   }
-  d->id = state->display_count;
+  /* Use the native monitor identity, not its position in enumeration. */
+  d->id = (int32_t)(uintptr_t)hmonitor;
   d->present = 1;
   state->display_count++;
   return TRUE;
@@ -139,12 +140,10 @@ static void screen_monitor_set_watch_error(screen_monitor_state_t *state,
 }
 
 /* Compares the current `state->displays[i].present` snapshot against the
-   previous ids and pushes ADDED/REMOVED events. Returns non-zero when any
-   display's geometry changed since the last diff. */
-static int screen_monitor_diff(screen_monitor_state_t *state,
+   previous ids and queues each affected display snapshot. */
+static void screen_monitor_diff(screen_monitor_state_t *state,
                                screen_monitor_display_t *previous,
                                int32_t previous_count) {
-  int32_t geometry_changed = 0;
   /* Any current display not present before was added. */
   for (int32_t i = 0; i < state->display_count; i++) {
     screen_monitor_display_t *cur = &state->displays[i];
@@ -159,14 +158,16 @@ static int screen_monitor_diff(screen_monitor_state_t *state,
             previous[j].work_y != cur->work_y ||
             previous[j].work_width != cur->work_width ||
             previous[j].work_height != cur->work_height ||
-            previous[j].scale_factor_percent != cur->scale_factor_percent) {
-          geometry_changed = 1;
+            previous[j].scale_factor_percent != cur->scale_factor_percent ||
+            previous[j].is_primary != cur->is_primary) {
+          screen_monitor_push_event(
+              state, screen_monitor_EVENT_METRICS_CHANGED, cur);
         }
         break;
       }
     }
     if (!found) {
-      screen_monitor_push_event(state, screen_monitor_EVENT_ADDED);
+      screen_monitor_push_event(state, screen_monitor_EVENT_ADDED, cur);
     }
   }
   /* Any previous display now gone was removed. */
@@ -182,10 +183,10 @@ static int screen_monitor_diff(screen_monitor_state_t *state,
       }
     }
     if (!found) {
-      screen_monitor_push_event(state, screen_monitor_EVENT_REMOVED);
+      screen_monitor_push_event(
+          state, screen_monitor_EVENT_REMOVED, &previous[j]);
     }
   }
-  return geometry_changed;
 }
 
 /* The message window and every hot-plug notification it handles run on the
@@ -207,12 +208,7 @@ static LRESULT CALLBACK screen_monitor_wnd_proc(HWND hwnd, UINT message,
     memset(state->displays, 0, sizeof(state->displays));
     int32_t count = screen_monitor_platform_enumerate(state);
     if (count >= 0) {
-      int32_t geometry_changed = screen_monitor_diff(state, previous,
-                                                     previous_count);
-      if (geometry_changed) {
-        screen_monitor_push_event(state,
-                                  screen_monitor_EVENT_METRICS_CHANGED);
-      }
+      screen_monitor_diff(state, previous, previous_count);
     } else {
       /* Restore the previous snapshot so a transient enum failure is not
          mistaken for a removal of every display. */

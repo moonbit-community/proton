@@ -135,6 +135,7 @@ proton_cli package [options]
 | `--icon <path>` | 可重复；覆盖配置的图标 |
 | `--url-scheme <scheme>` | 可重复；覆盖配置的 URL scheme |
 | `--nsis-install-mode <mode>` | `currentUser`、`perMachine`、`both`；覆盖 Windows 配置 |
+| `--macos-minimum-system-version <version>` | 覆盖 `package.platforms.macos.minimum_system_version` |
 | `--sign` | 签名应用，默认关闭 |
 | `--notarize` | macOS 签名、公证和 stapling；隐含 `--sign` |
 | `--updater-base-url <https-url>` | 使用此产物地址生成更新元数据；要求同时提供发布时间和 revision |

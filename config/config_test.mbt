@@ -72,6 +72,7 @@ test "project package decodes platform-specific inputs" {
     #|    "sign": { "binaries": ["helpers/common"] },
     #|    "platforms": {
     #|      "macos": {
+    #|        "minimum_system_version": "15.0",
     #|        "formats": ["app", "dmg"],
     #|        "resources": ["assets/macos"],
     #|        "sign": { "binaries": ["helpers/macos"] }
@@ -90,6 +91,7 @@ test "project package decodes platform-specific inputs" {
   )
   let platforms = config.package_config().unwrap().platforms()
   let macos = platforms.macos().unwrap()
+  assert_eq(macos.minimum_system_version, Some("15.0"))
   assert_eq(macos.formats(), Some(["app", "dmg"]))
   assert_eq(macos.resources(), [
     @mbpath.Path("/workspace/todo/assets/macos").resolve().to_string(),

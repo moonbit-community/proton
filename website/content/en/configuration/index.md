@@ -105,6 +105,7 @@ Each platform object accepts the following fields. Unknown fields are rejected, 
 | `resources` | string array | `[]`; appended to shared resources, duplicates removed |
 | `sign` | object | Absent; accepts only `binaries` (string array, default `[]`), appended to shared signing inputs with duplicates removed |
 | `nsis_install_mode` | string | Windows only; `currentUser` (default), `perMachine`, or `both` |
+| `minimum_system_version` | string | macOS only; `major.minor[.patch]`. Sets `LSMinimumSystemVersion`; omitted when unset. Does not change compilation targets or validate binary compatibility. |
 
 If the resolved format list is empty, the host default formats apply. CLI options override the resolved configuration. See [packaging behavior](../command-line-interface/packaging.md) for supported formats, signing and installation modes.
 

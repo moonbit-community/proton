@@ -136,4 +136,12 @@ cleanup:
     return result;
   }
 }
+#else
+#include <stdint.h>
+
+/* -1 means this AppKit-only fixture does not apply to the host platform. */
+int32_t proton_test_button_position(int32_t overlay) {
+  (void)overlay;
+  return -1;
+}
 #endif

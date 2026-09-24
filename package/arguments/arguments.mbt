@@ -9,6 +9,7 @@ pub(all) struct PackageArguments {
   output : String?
   icons : Array[String]
   url_schemes : Array[String]
+  macos_minimum_system_version : String?
   nsis_install_mode : @package.NsisInstallMode?
   sign : Bool
   notarize : Bool
@@ -39,6 +40,10 @@ pub fn options(include_identifier? : Bool = true) -> Array[@argparse.OptionArg] 
       "format",
       action=Append,
       about="Output format: app, zip, dmg, nsis, or appimage; may be repeated",
+    ),
+    OptionArg(
+      "macos-minimum-system-version",
+      about="Minimum supported macOS version (major.minor[.patch])",
     ),
     OptionArg("output", about="Artifact output directory"),
     OptionArg(
@@ -73,6 +78,10 @@ pub fn from_matches(
     formats: values(matches.values, "format").map(value => {
       @package.PackageFormat::parse(value)
     }),
+    macos_minimum_system_version: first(
+      matches.values,
+      "macos-minimum-system-version",
+    ),
     output: first(matches.values, "output"),
     icons: values(matches.values, "icon"),
     url_schemes: values(matches.values, "url-scheme"),

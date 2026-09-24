@@ -118,7 +118,7 @@ fn CefRuntimeError::message(self : CefRuntimeError) -> String {
 fn CefHelperError::message(self : CefHelperError) -> String {
   match self {
     NotInstalled(path~) =>
-      "The required Proton helper is not installed: " +
+      "The required Proton helper is missing, empty, or not executable: " +
       path +
       "\nRun `moonx moonbit-community/proton_cefsetup`."
     CreateTemporaryDirectory(detail~) =>
@@ -129,7 +129,7 @@ fn CefHelperError::message(self : CefHelperError) -> String {
       "Failed to build the Proton helper: moon install exited with code " +
       code.to_string()
     InstalledExecutableMissing(path~) =>
-      "The Proton helper build did not produce " + path
+      "The Proton helper build did not produce a nonempty executable: " + path
   }
 }
 

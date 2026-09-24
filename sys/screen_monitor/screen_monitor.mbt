@@ -47,9 +47,9 @@ pub extend Point with Debug::{to_repr}
 /// Display topology events delivered by the watch backend, mirroring
 /// Electron's `screen` module events.
 pub enum ScreenMonitorEvent {
-  DisplayAdded
-  DisplayRemoved
-  DisplayMetricsChanged
+  DisplayAdded(DisplayInfo)
+  DisplayRemoved(DisplayInfo)
+  DisplayMetricsChanged(DisplayInfo)
 } derive(Debug, Eq)
 
 ///|
@@ -321,9 +321,14 @@ pub fn ScreenMonitor::drain_events(
   let events : Array[ScreenMonitorEvent] = []
   let event = Ref(0)
   while true {
-    let status = native_take_event(self.handle, event)
-    if status == native_status_ok {
-      events.push(screen_monitor_event_from_native_code(event.val))
+    let bytes = native_take_event(self.handle, event)
+    if decode_display(bytes) is Some(wire) {
+      events.push(
+        screen_monitor_event_from_native_code(
+          event.val,
+          display_from_wire(wire),
+        ),
+      )
     } else {
       break
     }
@@ -342,12 +347,15 @@ pub fn ScreenMonitor::set_event_wakeup(
 }
 
 ///|
-fn screen_monitor_event_from_native_code(code : Int) -> ScreenMonitorEvent {
+fn screen_monitor_event_from_native_code(
+  code : Int,
+  display : DisplayInfo,
+) -> ScreenMonitorEvent {
   match code {
-    _ if code == native_event_added => DisplayAdded
-    _ if code == native_event_removed => DisplayRemoved
-    _ if code == native_event_metrics_changed => DisplayMetricsChanged
-    _ => DisplayMetricsChanged
+    _ if code == native_event_added => DisplayAdded(display)
+    _ if code == native_event_removed => DisplayRemoved(display)
+    _ if code == native_event_metrics_changed => DisplayMetricsChanged(display)
+    _ => DisplayMetricsChanged(display)
   }
 }
 

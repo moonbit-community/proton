@@ -20,12 +20,46 @@ let active_monitor : Ref[@sys_screen_monitor.ScreenMonitor?] = Ref(None)
 let event_wakeup : Ref[@proton_extension.EventWakeup?] = Ref(None)
 
 ///|
-fn ensure_monitor() -> @sys_screen_monitor.ScreenMonitor raise ScreenMonitorError {
+/// Event watching is independent of query availability.
+pub enum WatchStatus {
+  Stopped
+  Watching
+  Unavailable(String)
+} derive(Debug, Eq)
+
+///|
+pub extend WatchStatus with Debug::{to_repr}
+
+///|
+pub extend WatchStatus with Eq::{equal, not_equal}
+
+///|
+let current_watch_status : Ref[WatchStatus] = Ref(Stopped)
+
+///|
+/// Reports whether native event watching started, retaining any failure reason.
+/// Polling commands can still succeed when this is `Unavailable`.
+pub fn watch_status() -> WatchStatus {
+  current_watch_status.val
+}
+
+///|
+fn ensure_monitor(
+  create? : () -> @sys_screen_monitor.ScreenMonitor raise @sys_screen_monitor.ScreenMonitorError = () => {
+    @sys_screen_monitor.ScreenMonitor()
+  },
+  watch? : (@sys_screen_monitor.ScreenMonitor) -> Unit raise @sys_screen_monitor.ScreenMonitorError = monitor => {
+    monitor.start_watching()
+  },
+) -> @sys_screen_monitor.ScreenMonitor raise ScreenMonitorError {
   match active_monitor.val {
     Some(monitor) => monitor
     None => {
-      let monitor = @sys_screen_monitor.ScreenMonitor() catch {
-        error => raise BackendUnavailable(detail=error.to_string())
+      let monitor = create() catch {
+        error => {
+          current_watch_status.val = Unavailable(error.to_string())
+          raise BackendUnavailable(detail=error.to_string())
+        }
       }
       match event_wakeup.val {
         Some(wakeup) => monitor.set_event_wakeup(wakeup)
@@ -33,8 +67,10 @@ fn ensure_monitor() -> @sys_screen_monitor.ScreenMonitor raise ScreenMonitorErro
       }
       // Best-effort: enable the event watch backend. A platform that cannot
       // watch only loses topology events; polling queries stay fully usable.
-      monitor.start_watching() catch {
-        _ => ()
+      try watch(monitor) catch {
+        error => current_watch_status.val = Unavailable(error.to_string())
+      } noraise {
+        _ => current_watch_status.val = Watching
       }
       active_monitor.val = Some(monitor)
       monitor
@@ -238,16 +274,22 @@ async fn get_cursor_point(
 ///|
 fn screen_event(
   event : @sys_screen_monitor.ScreenMonitorEvent,
-  payload : @screen_monitor_contract.DisplayJSON,
 ) -> @proton_extension.Event raise {
   match event {
-    DisplayAdded =>
-      @proton_extension.event(@screen_monitor_contract.display_added, payload)
-    DisplayRemoved =>
-      @proton_extension.event(@screen_monitor_contract.display_removed, payload)
-    DisplayMetricsChanged =>
+    DisplayAdded(display) =>
       @proton_extension.event(
-        @screen_monitor_contract.display_metrics_changed, payload,
+        @screen_monitor_contract.display_added,
+        display_to_contract(display),
+      )
+    DisplayRemoved(display) =>
+      @proton_extension.event(
+        @screen_monitor_contract.display_removed,
+        display_to_contract(display),
+      )
+    DisplayMetricsChanged(display) =>
+      @proton_extension.event(
+        @screen_monitor_contract.display_metrics_changed,
+        display_to_contract(display),
       )
   }
 }
@@ -264,14 +306,7 @@ fn start_event_source(wakeup : @proton_extension.EventWakeup) -> Unit {
 ///|
 fn drain_events() -> Array[@proton_extension.Event] raise {
   guard active_monitor.val is Some(monitor) else { return [] }
-  let native_events = monitor.drain_events()
-  let payload = Some(display_to_contract(monitor.primary_display())) catch {
-    _ => None
-  }
-  match payload {
-    Some(payload) => native_events.map(event => screen_event(event, payload))
-    None => []
-  }
+  monitor.drain_events().map(screen_event)
 }
 
 ///|
@@ -284,6 +319,7 @@ fn cleanup_screen_monitor() -> Unit {
     None => ()
   }
   event_wakeup.val = None
+  current_watch_status.val = Stopped
 }
 
 ///|

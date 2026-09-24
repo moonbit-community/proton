@@ -223,29 +223,50 @@ fn scenario_app_command() -> (String, Array[String]) raise {
 }
 
 ///|
-async fn install_scenario_helper(root : String, output_root : String) -> Unit {
-  let log_path = join_path(output_root, "helper-install.log")
-  let output = @process.redirect_to_file(
-    log_path,
-    create_mode=@fs.CreateOrTruncate,
-  )
-  let code = @process.run(
-    "moon",
-    [
-      "--target-dir",
-      join_path(output_root, "helper-build"),
-      "install",
-      "--path",
-      join_path(root, "proton/internal/cef_process"),
-      "--bin",
-      helper_install_dir(output_root),
-    ],
-    cwd=root,
-    stdout=output,
-    stderr=output,
-  )
-  guard code == 0 else {
-    fail("failed to install the E2E CEF helper" + app_output_suffix(log_path))
+async fn install_scenario_helper(
+  root : String,
+  output_root : String,
+  timeout? : Int,
+) -> Unit {
+  let args = [
+    "--target-dir",
+    join_path(output_root, "helper-build"),
+    "install",
+    "--path",
+    join_path(root, "proton/internal/cef_process"),
+    "--bin",
+    helper_install_dir(output_root),
+  ]
+  match timeout {
+    Some(timeout) =>
+      run_dev_extension_command(
+        output_root,
+        "helper-install",
+        "moon",
+        args,
+        root,
+        {},
+        timeout,
+      )
+    None => {
+      let log_path = join_path(output_root, "helper-install.log")
+      let output = @process.redirect_to_file(
+        log_path,
+        create_mode=@fs.CreateOrTruncate,
+      )
+      let code = @process.run(
+        "moon",
+        args,
+        cwd=root,
+        stdout=output,
+        stderr=output,
+      )
+      guard code == 0 else {
+        fail(
+          "failed to install the E2E CEF helper" + app_output_suffix(log_path),
+        )
+      }
+    }
   }
   guard @mbfs.path_exists(installed_helper_path(output_root)) else {
     fail("moon install did not produce the E2E CEF helper")

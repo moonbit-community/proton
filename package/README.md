@@ -69,3 +69,18 @@ The executable and `lib` package support both the wasm and native MoonBit
 targets. Windows executable icon embedding uses a native C stub; requesting an
 `.ico` while running the wasm build reports that unsupported operation instead
 of silently omitting the icon.
+
+Packaging jobs targeting the same output directory are serialized with a file
+lock held through staging, signing, and artifact replacement. The persistent
+`.proton-package.lock` file is reused; do not remove it while packaging runs.
+
+On macOS, set `--macos-minimum-system-version 15.0`, JSON
+`macos_minimum_system_version`, or
+`PackageSpec(..., macos_minimum_system_version="15.0")` to declare the minimum
+supported system in `LSMinimumSystemVersion`. If omitted, the plist key is
+omitted too. Versions use `major.minor` or `major.minor.patch`.
+This is a developer-supplied declaration: the packager does not inspect
+binaries or resources to infer or validate compatibility, and does not change
+compiler deployment targets. Choose a version supported by the application
+and its dependencies and verify it on the target systems.
+Use the dedicated option instead of `macos_plist_strings`.

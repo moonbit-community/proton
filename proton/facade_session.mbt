@@ -1,5 +1,6 @@
 ///|
 fn RuntimeSession::RuntimeSession(
+  updates? : ApplicationUpdates = ApplicationUpdates::{ channel: None, },
   runtime : @native.Runtime,
   event_pump : RuntimeEventPump,
   locale_preferences : @locale.LocalePreferences,
@@ -61,6 +62,7 @@ fn RuntimeSession::RuntimeSession(
   web_request_header_prefixes? : Array[(String, String, String)] = [],
 ) -> RuntimeSession {
   RuntimeSession::{
+    updates,
     runtime,
     event_pump,
     locale_preferences,
@@ -222,6 +224,7 @@ fn RuntimeSession::application_context(
   self : RuntimeSession,
 ) -> ApplicationContext {
   ApplicationContext(
+    updates=self.updates,
     self.application_tasks,
     self.window_manager(),
     self.locale_preferences,

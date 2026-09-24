@@ -35,16 +35,16 @@ typedef struct screen_monitor_display {
   int32_t work_height;
   int32_t scale_factor_percent;
   int32_t is_primary;
-  /* Stable-enough identity for hot-plug diffing. On Windows this is the
-     monitor handle-derived index; on macOS/Linux it is the bounds-derived
-     digest. Uses the *earlier* snapshot's index when a display persists, so
-     ADDED/REMOVED fire only on real topology changes. */
+  /* Native topology identity: HMONITOR on Windows, CGDirectDisplayID on
+     macOS, and the RandR monitor-name atom on Linux. Geometry and enumeration
+     order are not identities. Removed events retain the earlier snapshot. */
   int32_t id;
   int32_t present;
 } screen_monitor_display_t;
 
 typedef struct screen_monitor_event_node {
   int32_t event;
+  screen_monitor_display_t display;
   struct screen_monitor_event_node *next;
 } screen_monitor_event_node_t;
 
@@ -136,9 +136,10 @@ int32_t screen_monitor_platform_stop_watching(screen_monitor_state_t *state);
 /* Thread-safe bounded event queue shared by all platforms. */
 void screen_monitor_lock_init(screen_monitor_state_t *state);
 void screen_monitor_lock_destroy(screen_monitor_state_t *state);
-void screen_monitor_push_event(screen_monitor_state_t *state, int32_t event);
+void screen_monitor_push_event(screen_monitor_state_t *state, int32_t event,
+                               const screen_monitor_display_t *display);
 int32_t screen_monitor_take_event(screen_monitor_state_t *state,
-                                  int32_t *out_event);
+                                  int32_t *out_event, screen_monitor_display_t *out_display);
 void screen_monitor_set_event_wakeup(
     screen_monitor_state_t *state,
     screen_monitor_event_wakeup_fn wakeup);

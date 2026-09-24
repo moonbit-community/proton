@@ -1,6 +1,7 @@
 ///|
 /// Application-lifetime capabilities supplied to startup hooks.
 pub struct ApplicationContext {
+  priv updates : ApplicationUpdates
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
@@ -51,6 +52,7 @@ priv struct WindowLifecycleHook {
 
 ///|
 fn ApplicationContext::ApplicationContext(
+  updates? : ApplicationUpdates = ApplicationUpdates::{ channel: None, },
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
@@ -64,6 +66,7 @@ fn ApplicationContext::ApplicationContext(
   url_schemes? : Array[String] = [],
 ) -> ApplicationContext {
   ApplicationContext::{
+    updates,
     tasks,
     windows,
     locale_preferences,

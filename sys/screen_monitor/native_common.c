@@ -62,7 +62,8 @@ void screen_monitor_lock_destroy(screen_monitor_state_t *state) {
 #endif
 }
 
-void screen_monitor_push_event(screen_monitor_state_t *state, int32_t event) {
+void screen_monitor_push_event(screen_monitor_state_t *state, int32_t event,
+                               const screen_monitor_display_t *display) {
   if (state == NULL) {
     return;
   }
@@ -86,6 +87,7 @@ void screen_monitor_push_event(screen_monitor_state_t *state, int32_t event) {
       (screen_monitor_event_node_t *)calloc(1, sizeof(*node));
   if (node != NULL) {
     node->event = event;
+    node->display = *display;
     if (state->event_tail == NULL) {
       state->event_head = node;
       state->event_tail = node;
@@ -114,7 +116,8 @@ void screen_monitor_set_event_wakeup(
 }
 
 int32_t screen_monitor_take_event(screen_monitor_state_t *state,
-                                  int32_t *out_event) {
+                                  int32_t *out_event,
+                                  screen_monitor_display_t *out_display) {
   if (state == NULL || state->destroyed || out_event == NULL) {
     return screen_monitor_STATUS_OPERATION_FAILED;
   }
@@ -123,6 +126,7 @@ int32_t screen_monitor_take_event(screen_monitor_state_t *state,
   screen_monitor_event_node_t *node = state->event_head;
   if (node != NULL) {
     *out_event = node->event;
+    *out_display = node->display;
     state->event_head = node->next;
     if (state->event_head == NULL) {
       state->event_tail = NULL;
@@ -219,7 +223,11 @@ int32_t moonbit_screen_monitor_start_watching(void *handle) {
     screen_monitor_set_error(state, "screen monitor has been destroyed");
     return screen_monitor_STATUS_OPERATION_FAILED;
   }
-  return screen_monitor_platform_start_watching(state);
+  int32_t status = screen_monitor_platform_start_watching(state);
+  if (status != screen_monitor_STATUS_OK && state->watch_error[0] != '\0') {
+    screen_monitor_set_error(state, state->watch_error);
+  }
+  return status;
 }
 
 MOONBIT_FFI_EXPORT
@@ -228,14 +236,6 @@ int32_t moonbit_screen_monitor_stop_watching(void *handle) {
     return screen_monitor_STATUS_OPERATION_FAILED;
   }
   return screen_monitor_platform_stop_watching((screen_monitor_state_t *)handle);
-}
-
-MOONBIT_FFI_EXPORT
-int32_t moonbit_screen_monitor_take_event(void *handle, int32_t *out_event) {
-  if (handle == NULL || out_event == NULL) {
-    return screen_monitor_STATUS_OPERATION_FAILED;
-  }
-  return screen_monitor_take_event((screen_monitor_state_t *)handle, out_event);
 }
 
 MOONBIT_FFI_EXPORT void moonbit_screen_monitor_set_event_wakeup(
@@ -282,6 +282,18 @@ static void screen_monitor_format_display_json(const screen_monitor_display_t *d
 }
 
 MOONBIT_FFI_EXPORT
+moonbit_bytes_t moonbit_screen_monitor_take_event(void *handle, int32_t *out_event) {
+  screen_monitor_display_t display;
+  if (screen_monitor_take_event((screen_monitor_state_t *)handle, out_event,
+                                &display) != screen_monitor_STATUS_OK) {
+    return moonbit_make_bytes(0, 0);
+  }
+  char json[512];
+  screen_monitor_format_display_json(&display, 1, json, sizeof(json));
+  return screen_monitor_bytes_from(json);
+}
+
+MOONBIT_FFI_EXPORT
 moonbit_bytes_t moonbit_screen_monitor_enumerate_json(void *handle) {
   if (handle == NULL) {
     return moonbit_make_bytes(0, 0);
@@ -289,24 +301,26 @@ moonbit_bytes_t moonbit_screen_monitor_enumerate_json(void *handle) {
   screen_monitor_state_t *state = (screen_monitor_state_t *)handle;
   state->status = screen_monitor_STATUS_OK;
   state->last_error[0] = '\0';
-  int32_t ref = screen_monitor_refresh(state);
+  screen_monitor_state_t snapshot = {0};
+  int32_t ref = screen_monitor_refresh(&snapshot);
   if (ref != screen_monitor_STATUS_OK) {
     state->status = ref;
+    memcpy(state->last_error, snapshot.last_error, sizeof(state->last_error));
     return moonbit_make_bytes(0, 0);
   }
   /* Build the JSON into a heap buffer, then hand the exact byte span to
      MoonBit. The payload is wrapped in an object so the MoonBit side can decode
      it with a single derived `FromJson` struct. */
   char item[512];
-  size_t capacity = 64 + ((size_t)state->display_count * sizeof(item));
+  size_t capacity = 64 + ((size_t)snapshot.display_count * sizeof(item));
   char *buffer = (char *)malloc(capacity);
   if (buffer == NULL) {
     state->status = screen_monitor_STATUS_OPERATION_FAILED;
     return moonbit_make_bytes(0, 0);
   }
   size_t used = (size_t)snprintf(buffer, capacity, "{\"displays\":[");
-  for (int32_t i = 0; i < state->display_count; i++) {
-    screen_monitor_format_display_json(&state->displays[i], i == 0, item,
+  for (int32_t i = 0; i < snapshot.display_count; i++) {
+    screen_monitor_format_display_json(&snapshot.displays[i], i == 0, item,
                                        sizeof(item));
     size_t item_length = strlen(item);
     if (item_length + 3 > capacity - used) {
@@ -359,18 +373,20 @@ moonbit_bytes_t moonbit_screen_monitor_nearest_display_json(void *handle,
   screen_monitor_state_t *state = (screen_monitor_state_t *)handle;
   state->status = screen_monitor_STATUS_OK;
   state->last_error[0] = '\0';
-  int32_t ref = screen_monitor_refresh(state);
+  screen_monitor_state_t snapshot = {0};
+  int32_t ref = screen_monitor_refresh(&snapshot);
   if (ref != screen_monitor_STATUS_OK) {
     state->status = ref;
+    memcpy(state->last_error, snapshot.last_error, sizeof(state->last_error));
     return moonbit_make_bytes(0, 0);
   }
-  int32_t idx = screen_monitor_platform_nearest_display(state, x, y);
-  if (idx < 0 || idx >= state->display_count) {
+  int32_t idx = screen_monitor_platform_nearest_display(&snapshot, x, y);
+  if (idx < 0 || idx >= snapshot.display_count) {
     state->status = screen_monitor_STATUS_EMPTY;
     return moonbit_make_bytes(0, 0);
   }
   char json[512];
-  screen_monitor_format_display_json(&state->displays[idx], 1, json,
+  screen_monitor_format_display_json(&snapshot.displays[idx], 1, json,
                                      sizeof(json));
   return screen_monitor_bytes_from(json);
 }

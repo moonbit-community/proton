@@ -6,7 +6,7 @@ Field types and defaults are defined in [Configuration](../configuration/index.m
 
 ## Platform overrides
 
-Each platform object accepts `formats`, `resources` and `sign`. Windows additionally accepts `nsis_install_mode`. A platform format list replaces the shared list. Platform resources are combined with shared resources. Path values use the project configuration directory as their base.
+Each platform object accepts `formats`, `resources` and `sign`. Windows additionally accepts `nsis_install_mode`; macOS accepts `minimum_system_version`. A platform format list replaces the shared list. Platform resources are combined with shared resources. Path values use the project configuration directory as their base.
 
 | Platform | Formats | Default |
 | --- | --- | --- |

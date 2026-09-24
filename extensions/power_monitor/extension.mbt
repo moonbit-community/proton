@@ -14,12 +14,46 @@ let active_monitor : Ref[@sys_power_monitor.PowerMonitor?] = Ref(None)
 let event_wakeup : Ref[@proton_extension.EventWakeup?] = Ref(None)
 
 ///|
-fn ensure_monitor() -> @sys_power_monitor.PowerMonitor raise PowerMonitorError {
+/// Event watching is independent of query availability.
+pub enum WatchStatus {
+  Stopped
+  Watching
+  Unavailable(String)
+} derive(Debug, Eq)
+
+///|
+pub extend WatchStatus with Debug::{to_repr}
+
+///|
+pub extend WatchStatus with Eq::{equal, not_equal}
+
+///|
+let current_watch_status : Ref[WatchStatus] = Ref(Stopped)
+
+///|
+/// Reports whether native event watching started, retaining any failure reason.
+/// Polling commands can still succeed when this is `Unavailable`.
+pub fn watch_status() -> WatchStatus {
+  current_watch_status.val
+}
+
+///|
+fn ensure_monitor(
+  create? : () -> @sys_power_monitor.PowerMonitor raise @sys_power_monitor.PowerMonitorError = () => {
+    @sys_power_monitor.PowerMonitor()
+  },
+  watch? : (@sys_power_monitor.PowerMonitor) -> Unit raise @sys_power_monitor.PowerMonitorError = monitor => {
+    monitor.start_watching()
+  },
+) -> @sys_power_monitor.PowerMonitor raise PowerMonitorError {
   match active_monitor.val {
     Some(monitor) => monitor
     None => {
-      let monitor = @sys_power_monitor.PowerMonitor() catch {
-        error => raise BackendUnavailable(detail=error.to_string())
+      let monitor = create() catch {
+        error => {
+          current_watch_status.val = Unavailable(error.to_string())
+          raise BackendUnavailable(detail=error.to_string())
+        }
       }
       match event_wakeup.val {
         Some(wakeup) => monitor.set_event_wakeup(wakeup)
@@ -27,8 +61,10 @@ fn ensure_monitor() -> @sys_power_monitor.PowerMonitor raise PowerMonitorError {
       }
       // Best-effort: enable the event watch backend. A platform that cannot
       // watch only loses events; polling queries stay fully usable.
-      monitor.start_watching() catch {
-        _ => ()
+      try watch(monitor) catch {
+        error => current_watch_status.val = Unavailable(error.to_string())
+      } noraise {
+        _ => current_watch_status.val = Watching
       }
       active_monitor.val = Some(monitor)
       monitor
@@ -155,6 +191,7 @@ fn cleanup_power_monitor() -> Unit {
     None => ()
   }
   event_wakeup.val = None
+  current_watch_status.val = Stopped
 }
 
 ///|

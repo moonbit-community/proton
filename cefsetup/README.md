@@ -11,3 +11,7 @@ Install the selected runtime and helper with:
 ```sh
 moonx moonbit-community/proton_cefsetup
 ```
+
+Helper resolution rejects empty files and, on Unix, files without executable
+permission. Setup repairs invalid cached helpers under the installation lock;
+these filesystem checks do not validate every possible binary corruption.

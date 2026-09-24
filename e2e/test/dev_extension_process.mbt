@@ -126,7 +126,11 @@ async fn run_dev_extension_command(
       " did not finish within " +
       timeout.to_string() +
       "ms" +
-      app_output_suffix(output_path) +
+      "\nChild pid=" +
+      process.pid.to_string() +
+      " status=" +
+      @debug.render(Repr(app_exit_code(process))) +
+      dev_extension_log_tail(output_path) +
       process_snapshot_suffix(snapshot),
     )
   })
@@ -343,27 +347,52 @@ async fn run_dev_extension_dev_probe_once(
       remove_dev_extension_tree(cli_target_dir)
       remove_dev_extension_tree(app_target_dir)
     }
-    ignore(
-      wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
-    )
-    run_dev_extension_page_probe(
-      group, app, target, frontend_url, output_root, timeout,
-    )
-    match app_exit_code(app.process) {
-      Some(code) =>
-        fail(
-          "dev extension CLI exited before the probe completed: code=" +
-          code.to_string() +
-          app_output_suffix(app.output_path),
+    let phase = Ref("development startup")
+    try {
+      ignore(
+        wait_for_spawned_app_cdp(
+          app,
+          cdp_http_endpoint_from(target),
+          dev_extension_command_timeout(timeout),
+        ),
+      )
+      phase.val = "development page probes"
+      run_e2e_operation_with_timeout(timeout * 3, phase.val, () => {
+        run_dev_extension_page_probe(
+          group, app, target, frontend_url, output_root, timeout, phase,
         )
-      None => ()
+      })
+      match app_exit_code(app.process) {
+        Some(code) =>
+          fail(
+            "dev extension CLI exited before the probe completed: code=" +
+            code.to_string() +
+            app_output_suffix(app.output_path),
+          )
+        None => ()
+      }
+      phase.val = "development shutdown"
+      let shutdown = finish_scenario_app_with_exit_timeout(app, target, 30000)
+      println(
+        "MoonBit 47_dev_extension_js dev shutdown passed: helpers=" +
+        shutdown.helper_processes.to_string(),
+      )
+      stopped = true
+    } catch {
+      error =>
+        fail(
+          "47_dev_extension_js failed during " +
+          phase.val +
+          ": " +
+          error.to_string() +
+          "\nChild pid=" +
+          app.process.pid.to_string() +
+          " status=" +
+          @debug.render(Repr(app_exit_code(app.process))) +
+          dev_extension_log_tail(app.output_path) +
+          process_snapshot_suffix(snapshot_process_tree(app.process.pid)),
+        )
     }
-    let shutdown = finish_scenario_app_with_exit_timeout(app, target, 30000)
-    println(
-      "MoonBit 47_dev_extension_js dev shutdown passed: helpers=" +
-      shutdown.helper_processes.to_string(),
-    )
-    stopped = true
   })
 }
 
@@ -389,25 +418,50 @@ async fn run_dev_extension_production_probe_once(
       }
       remove_dev_extension_tree(example_target_dir)
     }
-    ignore(
-      wait_for_spawned_app_cdp(app, cdp_http_endpoint_from(target), timeout),
-    )
-    run_dev_extension_production_page_probe(group, app, target, timeout)
-    match app_exit_code(app.process) {
-      Some(code) =>
+    let phase = Ref("production startup")
+    try {
+      ignore(
+        wait_for_spawned_app_cdp(
+          app,
+          cdp_http_endpoint_from(target),
+          dev_extension_command_timeout(timeout),
+        ),
+      )
+      phase.val = "production page probes"
+      run_e2e_operation_with_timeout(timeout, phase.val, () => {
+        run_dev_extension_production_page_probe(group, app, target, timeout)
+      })
+      match app_exit_code(app.process) {
+        Some(code) =>
+          fail(
+            "production dev extension app exited before the probe completed: code=" +
+            code.to_string() +
+            app_output_suffix(app.output_path),
+          )
+        None => ()
+      }
+      phase.val = "production shutdown"
+      let shutdown = finish_scenario_app(app, target)
+      println(
+        "MoonBit 47_dev_extension_js production shutdown passed: helpers=" +
+        shutdown.helper_processes.to_string(),
+      )
+      stopped = true
+    } catch {
+      error =>
         fail(
-          "production dev extension app exited before the probe completed: code=" +
-          code.to_string() +
-          app_output_suffix(app.output_path),
+          "47_dev_extension_js failed during " +
+          phase.val +
+          ": " +
+          error.to_string() +
+          "\nChild pid=" +
+          app.process.pid.to_string() +
+          " status=" +
+          @debug.render(Repr(app_exit_code(app.process))) +
+          dev_extension_log_tail(app.output_path) +
+          process_snapshot_suffix(snapshot_process_tree(app.process.pid)),
         )
-      None => ()
     }
-    let shutdown = finish_scenario_app(app, target)
-    println(
-      "MoonBit 47_dev_extension_js production shutdown passed: helpers=" +
-      shutdown.helper_processes.to_string(),
-    )
-    stopped = true
   })
 }
 
@@ -420,29 +474,41 @@ async fn run_dev_extension_scenario_once(
   let frontend = dev_extension_frontend_state(root)
   defer (if !frontend.had_dist { remove_dev_extension_tree(frontend.dist_dir) })
   let frontend_port = choose_cdp_port()
-  run_e2e_operation_with_timeout(
-    timeout,
-    "47_dev_extension_js development probe",
-    () => {
-      run_dev_extension_dev_probe_once(
-        root, output_root, frontend_port, timeout,
-      )
-    },
-  )
+  run_dev_extension_dev_probe_once(root, output_root, frontend_port, timeout)
   build_dev_extension_frontend(root, output_root, timeout)
-  run_e2e_operation_with_timeout(
-    timeout,
-    "47_dev_extension_js production probe",
-    () => run_dev_extension_production_probe_once(root, output_root, timeout),
-  )
+  run_dev_extension_production_probe_once(root, output_root, timeout)
 }
 
 ///|
 async fn run_dev_extension_scenario(root : String, timeout : Int) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-dev-extension-")
-  defer remove_dev_extension_tree(output_root)
-  install_scenario_helper(root, output_root)
-  run_dev_extension_scenario_once(root, output_root, timeout)
+  let mut succeeded = false
+  defer (if succeeded {
+    remove_dev_extension_tree(output_root)
+  } else {
+    println("Dev-extension failure artifacts retained at " + output_root)
+  })
+  errdefer (if @env.get_env_var("GITHUB_ENV") is Some(env_file) {
+    @fs.write_file(
+      env_file,
+      "PROTON_E2E_FAILURE_DIR=" + output_root + "\n",
+      append=true,
+    )
+  })
+  try {
+    install_scenario_helper(
+      root,
+      output_root,
+      timeout=dev_extension_build_timeout(timeout, true),
+    )
+    run_dev_extension_scenario_once(root, output_root, timeout)
+  } catch {
+    error => {
+      @fs.write_file(join_path(output_root, "failure.txt"), error.to_string())
+      fail("Dev-extension scenario failed: " + error.to_string())
+    }
+  }
+  succeeded = true
 }
 
 ///|
@@ -464,4 +530,13 @@ fn remove_dev_extension_tree(path : String) -> Unit {
       _ => ()
     }
   }
+}
+
+///|
+fn dev_extension_log_tail(path : String) -> String {
+  let output = @mbfs.read_file_to_string(path, encoding="utf8") catch {
+    _ => return ""
+  }
+  let start = if output.length() > 16384 { output.length() - 16384 } else { 0 }
+  "\nChild log tail (" + path + "):\n" + output[start:].to_owned()
 }

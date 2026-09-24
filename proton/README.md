@@ -699,3 +699,11 @@ The custom setting is retained during native fullscreen, where AppKit owns the
 controls, and restored on return. The existing frontend `getTitlebarArea()`
 query uses measured native button bounds, so content should use that query
 instead of deriving reserved space from the configured position.
+
+## Update checks during startup
+
+`ApplicationContext::check_for_update()` uses the application's configured
+update channel from its first startup hook. The module-level `check_for_update()`
+remains available to renderer extensions and refers to the active application.
+Both return `NotConfigured` after that application finishes, including when
+startup fails; a retained context does not carry configuration into another run.

@@ -18,20 +18,32 @@ pub async fn http_fetch(url : String) -> Bytes raise UpdateError {
   guard url.has_prefix("https://") else {
     raise FetchFailed(url~, detail="only https URLs are fetched")
   }
-  let (response, body) = @http.get(url) catch {
+  fetch_metadata_stream(url)
+}
+
+///|
+async fn fetch_metadata_stream(url : String) -> Bytes raise UpdateError {
+  let (response, client) = @http.get_stream(url) catch {
     error => raise FetchFailed(url~, detail=@debug.render(Repr(error)))
   }
+  defer client.close()
   guard response.code == 200 else {
     raise FetchFailed(url~, detail="server responded \{response.code}")
   }
-  let bytes = body.binary()
-  guard bytes.length() <= maximum_metadata_bytes else {
-    raise FetchFailed(
-      url~,
-      detail="body is \{bytes.length()} bytes, over the \{maximum_metadata_bytes} byte limit",
-    )
+  let buffer = @buffer.Buffer()
+  while (client.read_some(max_len=8192) catch {
+          error => raise FetchFailed(url~, detail=@debug.render(Repr(error)))
+        })
+        is Some(chunk) {
+    guard chunk.length() <= maximum_metadata_bytes - buffer.length() else {
+      raise FetchFailed(
+        url~,
+        detail="body exceeds the \{maximum_metadata_bytes} byte limit",
+      )
+    }
+    buffer.write_bytes(chunk)
   }
-  bytes
+  buffer.to_bytes()
 }
 
 ///|

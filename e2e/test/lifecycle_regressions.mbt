@@ -74,8 +74,8 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         "remove-view-close", "page-view-close", "parent-view-close", "cancel-during-startup",
         "initial-open", "cancel-sleep", "cancel-open", "task-success", "task-failure",
         "close-decision", "process-lifetime", "app-control", "process-events", "process-events-no-bridge",
-        "proxy-config", "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
-        "closed-record-churn",
+        "startup-update-channel", "startup-update-failure", "proxy-config", "proxy-env",
+        "renderer-recovery", "bridge-recovery", "bridge-startup-failure", "closed-record-churn",
       ]
   }
   let failures : Array[String] = []

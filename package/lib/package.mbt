@@ -126,6 +126,14 @@ pub async fn build_with(
   let spec = PackageSpec::{ ..spec, formats, }
   let host = current_package_host()
   ensure_dir(spec.output)
+  let lock = @async_fs.open(
+    path_join(spec.output, ".proton-package.lock"),
+    mode=ReadWrite,
+    create_mode=OpenOrCreate,
+  )
+  defer lock.close()
+  lock.lock(Exclusive)
+  defer lock.unlock()
   match host {
     Macos => package_macos(spec, customization, prepare)
     Windows => package_windows(spec, customization, prepare)
@@ -138,6 +146,11 @@ fn validate_customization(
   customization : PackageCustomization,
 ) -> Unit raise PackagePlanError {
   for property in customization.macos_plist_strings {
+    guard property.key != "LSMinimumSystemVersion" else {
+      raise InvalidPayload(
+        detail="use macos_minimum_system_version to configure LSMinimumSystemVersion",
+      )
+    }
     guard property.key.trim().length() > 0 else {
       raise InvalidPayload(detail="macOS plist property key must not be empty")
     }
@@ -159,6 +172,9 @@ fn validate_customization(
 
 ///|
 fn validate_spec(spec : PackageSpec) -> PackageSpec raise PackagePlanError {
+  if spec.macos_minimum_system_version is Some(value) {
+    validate_macos_minimum_version(value)
+  }
   let product_name = validate_product_name(spec.product_name)
   let identifier = validate_identifier(spec.identifier)
   let version = validate_package_version(spec.version)
@@ -563,4 +579,31 @@ fn xml_escape(text : String) -> String {
   .replace_all(old="<", new="&lt;")
   .replace_all(old=">", new="&gt;")
   .replace_all(old="\"", new="&quot;")
+}
+
+///|
+fn validate_macos_minimum_version(
+  value : String,
+) -> Unit raise PackagePlanError {
+  let components = value.split(".").collect()
+  guard components.length() >= 2 && components.length() <= 3 else {
+    raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+  }
+  for index, component in components {
+    guard !component.is_empty() else {
+      raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+    }
+    let mut nonzero = false
+    for char in component {
+      guard char >= '0' && char <= '9' else {
+        raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+      }
+      if char != '0' {
+        nonzero = true
+      }
+    }
+    guard index != 0 || nonzero else {
+      raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+    }
+  }
 }

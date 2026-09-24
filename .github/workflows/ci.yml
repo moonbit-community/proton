@@ -190,132 +190,41 @@ jobs:
         run: node --test proton/internal/native/ffi/tests/app_instance.test.mjs
 
       - name: Check framework modules
+        env:
+          _CL_: /utf-8
+        run: moon check --target native --deny-warn
+
+      - name: Run workspace native tests on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          moon check --target native --deny-warn
-          moon -C package test lib --target native --diagnostic-limit 80
-          moon -C codegen test lib --target wasm --diagnostic-limit 80
-          moon -C proton test internal/native/ffi/tests/browser_lifecycle --target native --diagnostic-limit 80
-          moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            xvfb-run -a moon -C proton test internal/native --target native --diagnostic-limit 80
-            xvfb-run -a moon -C proton test updater --target native --diagnostic-limit 80
-            xvfb-run -a moon -C cli test -p moonbit-community/proton_cli \
-              moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
-              moonbit-community/proton_cli/cef \
-              moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor \
-              moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new \
-              moonbit-community/proton_cli/output moonbit-community/proton_cli/package \
-              --target native --no-parallelize --diagnostic-limit 80
+            xvfb-run -a moon test --target native --no-parallelize --diagnostic-limit 80
           else
-            moon -C proton test internal/native --target native --diagnostic-limit 80
-            moon -C proton test updater --target native --diagnostic-limit 80
-            moon -C cli test -p moonbit-community/proton_cli \
-              moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd \
-              moonbit-community/proton_cli/cef \
-              moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor \
-              moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new \
-              moonbit-community/proton_cli/output moonbit-community/proton_cli/package \
-              --target native --no-parallelize --diagnostic-limit 80
+            moon test --target native --no-parallelize --diagnostic-limit 80
           fi
-          moon -C e2e build --target native --diagnostic-limit 80
 
-      - name: Check framework modules on Windows
+      - name: Run workspace native tests on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         env:
           _CL_: /utf-8
+        run: moon test --target native --no-parallelize --diagnostic-limit 80
+
+      - name: Test frontend and Wasm tooling
+        shell: bash
         run: |
-          $ErrorActionPreference = "Stop"
-          $PSNativeCommandUseErrorActionPreference = $true
-          moon check --target native --deny-warn
-          moon -C proton test internal/native/ffi/tests/window_geometry --target native --diagnostic-limit 80
-          moon -C proton test internal/native/ffi/tests/system_preferences --target native --diagnostic-limit 80
-          moon -C package test lib --target native --diagnostic-limit 80
+          moon test -p moonbit-community/proton_client moonbit-community/proton_rabbita moonbit-community/proton_contract --target js --no-parallelize --diagnostic-limit 80
           moon -C codegen test lib --target wasm --diagnostic-limit 80
-          moon -C proton test internal/native/ffi/tests/browser_lifecycle --target native --diagnostic-limit 80
-          moon -C cdp test -p moonbit-community/proton_cdp/client --target native --diagnostic-limit 80
-          moon -C proton test internal/native --target native --diagnostic-limit 80
-          moon -C proton test updater --target native --diagnostic-limit 80
-          moon -C cli test -p moonbit-community/proton_cli moonbit-community/proton_cli/arguments moonbit-community/proton_cli/build_cmd moonbit-community/proton_cli/cef moonbit-community/proton_cli/dev moonbit-community/proton_cli/doctor moonbit-community/proton_cli/fsutil moonbit-community/proton_cli/new moonbit-community/proton_cli/output moonbit-community/proton_cli/package --target native --no-parallelize --diagnostic-limit 80
-          moon -C e2e build --target native --diagnostic-limit 80
+          moon -C package test lib --target wasm --diagnostic-limit 80
+          moon -C cefsetup test store --target wasm --diagnostic-limit 80
+
+      - name: Build E2E runner
+        env:
+          _CL_: /utf-8
+        run: moon -C e2e build --target native --diagnostic-limit 80
 
       - name: Test standalone macOS safe storage cipher
         if: ${{ matrix.os == 'macos-latest' }}
         run: node scripts/test_safe_storage_macos.mjs
-
-      - name: Test extensions on Unix
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: |
-          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            xvfb-run -a moon -C extensions test -p moonbit-community/proton_ext \
-              moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard \
-              moonbit-community/proton_ext/desktop_capturer \
-              moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
-              moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
-              moonbit-community/proton_ext/microphone moonbit-community/proton_ext/net \
-              moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
-              moonbit-community/proton_ext/safe_storage \
-              moonbit-community/proton_ext/process \
-              moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray \
-              --target native
-            xvfb-run -a moon test -p moonbit-community/proton_auto_launch moonbit-community/proton_clipboard \
-              moonbit-community/proton_global_hotkey moonbit-community/proton_keepawake moonbit-community/proton_microphone \
-              moonbit-community/proton_tray --target native
-          else
-            moon -C extensions test -p moonbit-community/proton_ext \
-              moonbit-community/proton_ext/auto_launch moonbit-community/proton_ext/clipboard \
-              moonbit-community/proton_ext/desktop_capturer \
-              moonbit-community/proton_ext/dialog moonbit-community/proton_ext/fs \
-              moonbit-community/proton_ext/global_hotkey moonbit-community/proton_ext/keepawake \
-              moonbit-community/proton_ext/microphone moonbit-community/proton_ext/net \
-              moonbit-community/proton_ext/notification moonbit-community/proton_ext/path \
-              moonbit-community/proton_ext/safe_storage \
-              moonbit-community/proton_ext/process \
-              moonbit-community/proton_ext/shell moonbit-community/proton_ext/tray \
-              --target native
-            moon test -p moonbit-community/proton_auto_launch moonbit-community/proton_clipboard \
-              moonbit-community/proton_safe_storage moonbit-community/proton_global_hotkey \
-              moonbit-community/proton_keepawake moonbit-community/proton_microphone \
-              moonbit-community/proton_tray --target native
-          fi
-
-      - name: Test extensions on Windows
-        if: ${{ matrix.os == 'windows-latest' }}
-        env:
-          _CL_: /utf-8
-          PATH: ${{ github.workspace }}\lib;${{ env.PATH }}
-        run: |
-          $ErrorActionPreference = "Stop"
-          $PSNativeCommandUseErrorActionPreference = $true
-          $extensionPackages = @(
-            "moonbit-community/proton_ext"
-            "moonbit-community/proton_ext/auto_launch"
-            "moonbit-community/proton_ext/clipboard"
-            "moonbit-community/proton_ext/desktop_capturer"
-            "moonbit-community/proton_ext/dialog"
-            "moonbit-community/proton_ext/fs"
-            "moonbit-community/proton_ext/global_hotkey"
-            "moonbit-community/proton_ext/keepawake"
-            "moonbit-community/proton_ext/microphone"
-            "moonbit-community/proton_ext/net"
-            "moonbit-community/proton_ext/notification"
-            "moonbit-community/proton_ext/safe_storage"
-            "moonbit-community/proton_ext/path"
-            "moonbit-community/proton_ext/process"
-            "moonbit-community/proton_ext/shell"
-            "moonbit-community/proton_ext/tray"
-          )
-          moon -C extensions test -p $extensionPackages --target native
-          $sysPackages = @(
-            "moonbit-community/proton_auto_launch"
-            "moonbit-community/proton_clipboard"
-            "moonbit-community/proton_safe_storage"
-            "moonbit-community/proton_global_hotkey"
-            "moonbit-community/proton_keepawake"
-            "moonbit-community/proton_microphone"
-            "moonbit-community/proton_tray"
-          )
-          moon test -p $sysPackages --target native
 
       - name: Build examples
         if: ${{ matrix.os != 'windows-latest' }}
@@ -387,10 +296,6 @@ jobs:
               --diagnostic-limit 200 -- --quit-chain
           fi
 
-      - name: Test macOS native button layout
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: moon -C proton test internal/native/ffi_mac/tests/button_position --target native --diagnostic-limit 80
-
       - name: Run macOS windowed close e2e
         if: ${{ matrix.os == 'macos-latest' }}
         timeout-minutes: 5
@@ -415,3 +320,13 @@ jobs:
       - name: List Unix example binaries
         if: ${{ matrix.os != 'windows-latest' }}
         run: find ./_build -type f -perm -111 | xargs ls -lh
+
+      - name: Upload failed E2E diagnostics
+        if: failure() && env.PROTON_E2E_FAILURE_DIR != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-${{ matrix.os }}
+          path: |
+            ${{ env.PROTON_E2E_FAILURE_DIR }}/*.log
+            ${{ env.PROTON_E2E_FAILURE_DIR }}/failure.txt
+          retention-days: 7

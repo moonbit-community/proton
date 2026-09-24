@@ -42,6 +42,10 @@ async fn package_spec(matches : @argparse.Matches) -> @package.PackageSpec {
     icons~,
     url_schemes~,
     document_types=config.document_type_specs(),
+    macos_minimum_system_version?=prefer(
+      arguments.macos_minimum_system_version,
+      config.macos_minimum_system_version,
+    ),
     nsis_install_mode=match arguments.nsis_install_mode {
       Some(mode) => mode
       None =>

@@ -90,3 +90,13 @@ desktop session.
 `show` accepts an optional string payload, and clicks produce
 `notification.click` events. macOS notifications require a packaged app bundle with a bundle
 identifier. Windows and Linux backends remain unimplemented.
+
+## Monitor availability
+
+The `power_monitor` and `screen_monitor` packages expose `watch_status()`:
+`Stopped` before startup or after cleanup, `Watching` after native registration,
+and `Unavailable(reason)` when monitor creation or watching fails. Watch failure
+is best-effort and does not disable working query commands. Queries do not
+clear the retained watch error or automatically retry an existing monitor.
+Screen topology events carry the affected display's snapshot; removal carries
+the previous snapshot, even when there is no remaining primary display.

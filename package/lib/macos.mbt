@@ -26,6 +26,13 @@ fn macos_info_plist(
   short_version : String,
   bundle_version : String,
 ) -> String {
+  let minimum_system_version = match spec.macos_minimum_system_version {
+    Some(version) =>
+      "<key>LSMinimumSystemVersion</key><string>" +
+      xml_escape(version) +
+      "</string>"
+    None => ""
+  }
   let custom_properties = StringBuilder()
   for property in customization.macos_plist_strings {
     custom_properties <+
@@ -79,12 +86,13 @@ fn macos_info_plist(
     #|<key>CFBundlePackageType</key><string>APPL</string>
     #|<key>CFBundleShortVersionString</key><string>{{SHORT_VERSION}}</string>
     #|<key>CFBundleVersion</key><string>{{BUNDLE_VERSION}}</string>
-    #|<key>LSMinimumSystemVersion</key><string>12.0</string>
+    #|{{MINIMUM_OS}}
     #|<key>NSHighResolutionCapable</key><true/>
     #|{{ICON}}{{URL_TYPES}}{{DOCUMENT_TYPES}}{{CUSTOM_PROPERTIES}}
     #|</dict></plist>
     #|
   template
+  .replace_all(old="{{MINIMUM_OS}}", new=minimum_system_version)
   .replace_all(old="{{PRODUCT}}", new=xml_escape(spec.product_name))
   .replace_all(old="{{EXECUTABLE}}", new=xml_escape(executable))
   .replace_all(old="{{IDENTIFIER}}", new=xml_escape(spec.identifier))

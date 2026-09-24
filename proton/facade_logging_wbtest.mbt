@@ -146,3 +146,62 @@ async test "first runtime logging startup preserves root and category filtering"
     assert_eq(messages, expected)
   }
 }
+
+///|
+async test "facade command reporter preserves decoding and handler diagnostics" {
+  let logger = @xlog.global()
+  defer {
+    logger.set_handler(@xlog.Stdout())
+    logger.set_config(@xlog.Config())
+  }
+  let capture = RuntimeLogCapture::{ entries: [], }
+  logger.set_handler(capture)
+  logger.set_config(@xlog.Config(level=@xlog.Error))
+  let command : @proton_contract.Command[Int, Int] = @proton_contract.command(
+    "diagnostic",
+  )
+  let configured = html("Diagnostics", "").commands(registrar => {
+    registrar.bind(command, (_context, _value) => {
+      fail("handler diagnostic sentinel")
+    })
+  })
+  let build = test_build_command_host(configured.command_capabilities, [])
+  defer ignore(close_command_host(build.runtime))
+  let host = build.runtime.unwrap().host
+  @async.with_task_group(group => {
+    let context = @core.AppCommandRequestContext(
+      group,
+      @locale.LocalePreferences::resolve(None, []),
+    )
+    for payload in [Json::string("not an integer"), Json::number(1)] {
+      let response = host.dispatch_ipc_with_context(
+        context,
+        @ipc.IpcOpRequest("diagnostic", "app:diagnostic", payload),
+      )
+      assert_false(response.is_ok())
+    }
+  })
+  assert_eq(capture.entries.length(), 2)
+  for entry in capture.entries {
+    assert_eq(entry.category, Some("proton.command"))
+    guard entry.fields.get("detail") is Some(value) else {
+      fail("command diagnostic was discarded")
+    }
+    let detail = value.stringify()
+    assert_true(detail.contains("app:diagnostic"))
+  }
+  assert_true(
+    capture.entries[0].fields
+    .get("detail")
+    .unwrap()
+    .stringify()
+    .contains("InvalidPayload"),
+  )
+  assert_true(
+    capture.entries[1].fields
+    .get("detail")
+    .unwrap()
+    .stringify()
+    .contains("handler diagnostic sentinel"),
+  )
+}

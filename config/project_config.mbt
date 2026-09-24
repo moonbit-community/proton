@@ -110,10 +110,13 @@ pub fn ProjectSignConfig::binaries(self : ProjectSignConfig) -> Array[String] {
 
 ///|
 /// Package inputs that apply only to one desktop platform.
+/// `minimum_system_version` is macOS-only and changes package metadata, not
+/// compiler deployment targets.
 pub(all) struct ProjectPlatformPackageConfig {
   formats : Array[String]?
   resources : Array[String]
   sign : ProjectSignConfig?
+  minimum_system_version : String?
   nsis_install_mode : String?
 } derive(Eq, Debug)
 
@@ -128,6 +131,7 @@ pub fn ProjectPlatformPackageConfig::ProjectPlatformPackageConfig(
   formats? : Array[String],
   resources? : Array[String] = [],
   sign? : ProjectSignConfig,
+  minimum_system_version? : String,
   nsis_install_mode? : String,
 ) -> ProjectPlatformPackageConfig {
   ProjectPlatformPackageConfig::{
@@ -137,6 +141,7 @@ pub fn ProjectPlatformPackageConfig::ProjectPlatformPackageConfig(
     },
     resources: resources.copy(),
     sign,
+    minimum_system_version,
     nsis_install_mode,
   }
 }

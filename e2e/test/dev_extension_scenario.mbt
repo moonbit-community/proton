@@ -115,14 +115,17 @@ async fn run_dev_extension_page_probe(
   frontend_url : String,
   output_root : String,
   timeout : Int,
+  phase : Ref[String],
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
   wait_for_ready(page, dev_extension_ready_expression(), timeout)
   let value = evaluate_json(page, dev_extension_probe_expression(), true)
   let result : DevExtensionProbe = decode_probe(value, "dev extension")
   assert_dev_extension_probe(result, frontend_url, value)
+  phase.val = "development reload"
   run_dev_extension_reload_probe(page, frontend_url, timeout)
   page.close()
+  phase.val = "non-Proton origin probe"
   run_dev_extension_non_proton_probe(tasks, target, output_root, timeout)
   println("MoonBit 47_dev_extension_js dev probe passed")
 }

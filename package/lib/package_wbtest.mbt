@@ -378,3 +378,207 @@ async test "already embedded Windows icons do not require an icon writer" {
   stage_windows_icon(spec, "/missing/demo.exe", embedded=true)
   assert_eq(spec.icons, ["/missing/app.ico"])
 }
+
+///|
+// A valid 1x1 transparent PNG for packaging prerequisites.
+let package_test_png : Bytes = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0b\x49\x44\x41\x54\x78\x9c\x63\x60\x00\x02\x00\x00\x05\x00\x01\x7a\x5e\xab\x3f\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82"
+
+///|
+async test "competing package builds serialize preparation and release the lock after failure" {
+  let root = @async_fs.tmpdir(prefix="proton-package-lock-")
+  defer (remove_tree(root) catch { _ => () })
+  let executable = path_join(root, "fixture")
+  @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+  let icon = path_join(root, "icon.png")
+  @async_fs.write_file(icon, package_test_png)
+  let formats = match current_package_host() {
+    Linux => [AppImage]
+    _ => [App]
+  }
+  let spec = PackageSpec(
+    executable,
+    "Lock Test",
+    "com.example.lock",
+    "1.0.0",
+    formats,
+    path_join(root, "out"),
+    icons=[icon],
+  )
+  @async.with_task_group(group => {
+    let entered = Ref(false)
+    let release = Ref(false)
+    let second_entered = Ref(false)
+    let first = group.spawn(() => {
+      try
+        build_with(spec, PackageCustomization(), layout => {
+          entered.val = true
+          while !release.val {
+            @async.sleep(5)
+          }
+          assert_true(path_is_file(layout.executable))
+          raise PackagePreparationTestError
+        })
+      catch {
+        PackagePreparationTestError => ()
+        error => raise error
+      } noraise {
+        _ => fail("expected preparation failure")
+      }
+    })
+    while !entered.val {
+      @async.sleep(5)
+    }
+    let second = group.spawn(() => {
+      try
+        build_with(spec, PackageCustomization(), layout => {
+          second_entered.val = true
+          assert_true(path_is_file(layout.executable))
+          raise PackagePreparationTestError
+        })
+      catch {
+        PackagePreparationTestError => ()
+        error => raise error
+      } noraise {
+        _ => fail("expected preparation failure")
+      }
+    })
+    @async.sleep(50)
+    assert_false(second_entered.val)
+    release.val = true
+    first.wait()
+    second.wait()
+    assert_true(second_entered.val)
+  })
+}
+
+///|
+async test "macOS packaging preserves declared minimum and leaves resources opaque" {
+  guard current_package_host() is Macos else { return }
+  let root = @async_fs.tmpdir(prefix="proton-package-minimum-")
+  defer (remove_tree(root) catch { _ => () })
+  let source = path_join(root, "main.c")
+  @async_fs.write_file(source, "int main(void) { return 0; }")
+  let executable = path_join(root, "main")
+  assert_eq(@process.run("cc", [source, "-o", executable]), 0)
+  // A Java class header shares the fat Mach-O magic. Resources are copied,
+  // regardless of their filename or contents, without binary inspection.
+  let resource = path_join(root, "resource.bin")
+  let contents : Bytes = b"\xca\xfe\xba\xbe\x00\x00\x00\x45\x00\x01"
+  @async_fs.write_file(resource, contents)
+  let spec = PackageSpec(
+    executable,
+    "Minimum Test",
+    "com.example.minimum",
+    "1.0.0",
+    [App],
+    path_join(root, "out"),
+    payloads=[
+      Payload(resource, "Example.class"),
+      Payload(resource, "opaque.bin"),
+    ],
+  )
+  for requested in [None, Some("12.0"), Some("15.1.2")] {
+    let artifacts = build(PackageSpec::{
+      ..spec,
+      macos_minimum_system_version: requested,
+    })
+    let plist = @async_fs.read_file(
+      path_join(artifacts[0], "Contents/Info.plist"),
+    ).text()
+    match requested {
+      None => assert_false(plist.contains("LSMinimumSystemVersion"))
+      Some(value) =>
+        assert_true(
+          plist.contains(
+            "<key>LSMinimumSystemVersion</key><string>" + value + "</string>",
+          ),
+        )
+    }
+    for name in ["Example.class", "opaque.bin"] {
+      assert_eq(
+        @async_fs.read_file(
+          path_join(artifacts[0], "Contents/Resources/" + name),
+        ).binary(),
+        contents,
+      )
+    }
+  }
+}
+
+///|
+priv suberror PackagePreparationTestError
+
+///|
+async test "cancelled package builds release the output lock" {
+  @async.with_timeout(5000, () => {
+    let root = @async_fs.tmpdir(prefix="proton-package-cancel-")
+    defer (remove_tree(root) catch { _ => () })
+    let executable = path_join(root, "fixture")
+    @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+    let icon = path_join(root, "icon.png")
+    @async_fs.write_file(icon, package_test_png)
+    let formats = match current_package_host() {
+      Linux => [AppImage]
+      _ => [App]
+    }
+    let spec = PackageSpec(
+      executable,
+      "Cancel Test",
+      "com.example.cancel",
+      "1.0.0",
+      formats,
+      path_join(root, "out"),
+      icons=[icon],
+    )
+    @async.with_task_group(group => {
+      let entered = Ref(false)
+      let owner = group.spawn(allow_failure=true, () => {
+        build_with(spec, PackageCustomization(), _ => {
+          entered.val = true
+          @async.sleep(10000)
+        })
+      })
+      while !entered.val {
+        if owner.try_wait() is Some(_) {
+          fail("packaging completed before preparation")
+        }
+        @async.sleep(5)
+      }
+      owner.cancel()
+      ignore(owner.wait()) catch {
+        @async.TaskCancelled => ()
+        error => raise error
+      }
+      let prepared = Ref(false)
+      ignore(
+        build_with(spec, PackageCustomization(), _ => {
+          prepared.val = true
+          raise PackagePreparationTestError
+        }),
+      ) catch {
+        PackagePreparationTestError => ()
+        error => raise error
+      }
+      assert_true(prepared.val)
+    })
+  })
+}
+
+///|
+test "macOS minimum rejects malformed versions" {
+  for value in ["", "14", "14..0", "14.0.0.1", "-1.0", "+14.0", "14.x", "0.0"] {
+    try
+      ignore(
+        validate_spec(PackageSpec::{
+          ..package_test_spec([App]),
+          macos_minimum_system_version: Some(value),
+        }),
+      )
+    catch {
+      InvalidPayload(..) => ()
+      error => raise error
+    } noraise {
+      _ => fail("expected invalid version: " + value)
+    }
+  }
+}

@@ -5,11 +5,16 @@ import {
   "moonbit-community/proton/internal/native",
   "moonbit-community/proton_updater" @manifest,
   "moonbitlang/core/debug",
+  "moonbitlang/core/buffer",
   "moonbitlang/core/env",
   "moonbitlang/core/string",
   "moonbitlang/x/crypto",
   "moonbitlang/x/encoding",
   "moonbitlang/x/time",
 }
+
+import {
+  "moonbitlang/async/socket",
+} for "wbtest"
 
 supported_targets = "native"

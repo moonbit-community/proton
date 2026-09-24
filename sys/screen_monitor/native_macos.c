@@ -223,7 +223,6 @@ static void screen_monitor_reconfiguration_callback(
     state->display_count = previous_count;
     return;
   }
-  int32_t geometry_changed = 0;
   for (int32_t i = 0; i < state->display_count; i++) {
     screen_monitor_display_t *cur = &state->displays[i];
     int32_t found = 0;
@@ -237,14 +236,16 @@ static void screen_monitor_reconfiguration_callback(
             previous[j].work_y != cur->work_y ||
             previous[j].work_width != cur->work_width ||
             previous[j].work_height != cur->work_height ||
-            previous[j].scale_factor_percent != cur->scale_factor_percent) {
-          geometry_changed = 1;
+            previous[j].scale_factor_percent != cur->scale_factor_percent ||
+            previous[j].is_primary != cur->is_primary) {
+          screen_monitor_push_event(
+              state, screen_monitor_EVENT_METRICS_CHANGED, cur);
         }
         break;
       }
     }
     if (!found) {
-      screen_monitor_push_event(state, screen_monitor_EVENT_ADDED);
+      screen_monitor_push_event(state, screen_monitor_EVENT_ADDED, cur);
     }
   }
   for (int32_t j = 0; j < previous_count; j++) {
@@ -259,11 +260,9 @@ static void screen_monitor_reconfiguration_callback(
       }
     }
     if (!found) {
-      screen_monitor_push_event(state, screen_monitor_EVENT_REMOVED);
+      screen_monitor_push_event(
+          state, screen_monitor_EVENT_REMOVED, &previous[j]);
     }
-  }
-  if (geometry_changed) {
-    screen_monitor_push_event(state, screen_monitor_EVENT_METRICS_CHANGED);
   }
 }
 

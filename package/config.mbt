@@ -25,6 +25,7 @@ priv struct PackageConfig {
   icons : Array[String]?
   url_schemes : Array[String]?
   document_types : Array[ConfigDocumentType]?
+  macos_minimum_system_version : String?
   nsis_install_mode : String?
   sign : Bool?
   notarize : Bool?

@@ -290,8 +290,8 @@ native checks before handing off larger refactors.
   `darwin-arm64`, and `linux-x64`.
 - Validate native changes with MoonBit tests for the internal package. Engine or
   bridge changes should also run the relevant examples and the MoonBit `e2e/`
-  self-hosted scenarios (`moon -C e2e
-  test -p moonbit-community/proton/e2e/test --target native --no-parallelize`).
+  self-hosted scenarios (`moon -C e2e run test --target native -- --self-hosted`).
+  `moon test` executes helper unit tests, not the self-hosted suite.
 
 ## Commit And PR Guidance
 - Use Conventional Commit style such as `feat(native):`, `fix(examples):`, or

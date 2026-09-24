@@ -48,7 +48,7 @@ extern "C" fn native_nearest_display_json(
 
 ///|
 #borrow(handle, out_event)
-extern "C" fn native_take_event(handle : State, out_event : Ref[Int]) -> Int = "moonbit_screen_monitor_take_event"
+extern "C" fn native_take_event(handle : State, out_event : Ref[Int]) -> Bytes = "moonbit_screen_monitor_take_event"
 
 ///|
 #borrow(handle)
