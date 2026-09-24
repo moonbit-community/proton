@@ -42,3 +42,17 @@ Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列�
 命令向调用方返回结果，[事件](events.md)向观察者传递通知；两者都不意味着应用数据已经持久化。
 
 完整签名见[客户端 API](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.3/)。逐步示例位于独立的[命令教程](../tutorial/commands-events.md)。
+
+### 命令错误码
+
+`RemoteFailure.code` 用于识别失败类型，无需解析错误消息：
+
+| 错误码 | 含义 |
+| --- | --- |
+| `invalid_payload` | 请求不符合命令的输入类型 |
+| `unknown_op` | 请求的操作未注册 |
+| `handler_failed` | 命令处理函数抛出错误 |
+| `host_closed` | 命令宿主已关闭 |
+| `permission_denied` | 页面没有调用该操作的权限 |
+
+根据错误码处理失败，并将未识别的错误码作为其它远程失败处理。完整后端诊断保留在应用日志中；开发模式下也会包含在 `detail` 中，`message` 始终是面向调用方的说明。预期业务结果应放在命令的响应类型中。

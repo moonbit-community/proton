@@ -4389,6 +4389,7 @@ fn RuntimeSession::start_bridge_request(
     _ => {
       self.respond_bridge_request(
         @native.BridgeResponse::Err(
+          detail=None,
           request_id~,
           code="window_closed",
           message="the issuing window is no longer available",
@@ -4412,6 +4413,7 @@ fn RuntimeSession::start_bridge_request(
     ) {
     self.respond_bridge_request(
       @native.BridgeResponse::Err(
+        detail=None,
         request_id~,
         code="page_unavailable",
         message="the issuing bridge attempt is no longer available",
@@ -4424,6 +4426,7 @@ fn RuntimeSession::start_bridge_request(
     None =>
       self.respond_bridge_request(
         @native.BridgeResponse::Err(
+          detail=None,
           request_id~,
           code="command_host_unavailable",
           message="the application command host is not available",
@@ -4486,6 +4489,7 @@ fn RuntimeSession::complete_bridge_requests(
       _ =>
         Some(
           @native.BridgeResponse::Err(
+            detail=None,
             request_id=item.request_id,
             code="handler_failed",
             message="bridge handler task failed",

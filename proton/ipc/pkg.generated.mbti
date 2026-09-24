@@ -29,6 +29,14 @@ pub fn IpcError::to_repr(Self) -> @debug.Repr
 pub fn IpcError::to_string(Self) -> String
 
 // Types and methods
+pub(all) struct IpcCommandError {
+  code : String
+  message : String
+  detail : String?
+} derive(ToJson, @json.FromJson)
+pub fn IpcCommandError::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IpcCommandError::to_json(Self) -> Json
+
 pub(all) struct IpcExtensionApi {
   api_name : String
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
@@ -88,7 +96,7 @@ pub(all) struct IpcOpResponse {
   body : Json
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn IpcOpResponse::equal(Self, Self) -> Bool
-pub fn IpcOpResponse::err(String, String) -> Self
+pub fn IpcOpResponse::err(String, IpcCommandError) -> Self
 pub fn IpcOpResponse::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
 pub fn IpcOpResponse::is_ok(Self) -> Bool
 pub fn IpcOpResponse::not_equal(Self, Self) -> Bool

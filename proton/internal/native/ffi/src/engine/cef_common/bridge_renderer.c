@@ -1446,7 +1446,7 @@ void proton_engine_bridge_renderer_on_context_released(
 static int proton_engine_bridge_dispatch_response(
     proton_engine_bridge_context_t *entry,
     cef_list_value_t *args) {
-  if (entry == NULL || args == NULL || args->get_size(args) < 4 ||
+  if (entry == NULL || args == NULL || args->get_size(args) < 5 ||
       !entry->context->is_valid(entry->context) ||
       !entry->context->enter(entry->context)) {
     return 1;
@@ -1460,6 +1460,11 @@ static int proton_engine_bridge_dispatch_response(
         args->get_string(args, 2));
     char *error_message = proton_engine_bridge_userfree_to_utf8(
         args->get_string(args, 3));
+    char *error_code = proton_engine_bridge_userfree_to_utf8(
+        args->get_string(args, 4));
+    cef_string_t code_string = {0};
+    proton_engine_bridge_set_string(
+        &code_string, error_code != NULL ? error_code : "");
     cef_string_t payload_string = {0};
     cef_string_t error_string = {0};
     proton_engine_bridge_set_string(
@@ -1471,16 +1476,19 @@ static int proton_engine_bridge_dispatch_response(
         cef_v8_value_create_bool(ok),
         cef_v8_value_create_string(&payload_string),
         cef_v8_value_create_string(&error_string),
+        cef_v8_value_create_string(&code_string),
     };
     cef_string_clear(&payload_string);
     cef_string_clear(&error_string);
+    cef_string_clear(&code_string);
     cef_v8_value_t *result = proton_engine_bridge_execute(
-        function, entry->context, entry->dispatcher, 4, values);
+        function, entry->context, entry->dispatcher, 5, values);
     if (result != NULL) {
       result->base.release((cef_base_ref_counted_t *)result);
     }
     free(payload_json);
     free(error_message);
+    free(error_code);
   }
   if (function != NULL) {
     function->base.release((cef_base_ref_counted_t *)function);

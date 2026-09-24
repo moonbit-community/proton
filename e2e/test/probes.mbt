@@ -223,7 +223,7 @@ fn scenario_probe_expression(name : String) -> String raise {
         #|    return false;
         #|  } catch (error) {
         #|    const message = String(error?.message || error);
-        #|    return error?.code === "remote_failure" &&
+        #|    return error?.code === "unknown_op" &&
         #|      message.includes("bridge op is not registered");
         #|  }
         #|})()

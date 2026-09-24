@@ -1319,8 +1319,8 @@ pub fn Runtime::respond_bridge_request(
 ) -> Unit raise NativeError {
   let (request_id, ok, body_json) = match response {
     Ok(request_id~, payload~) => (request_id, 1, payload.stringify())
-    Err(request_id~, code~, message~) => {
-      let error : Json = { "code": code, "message": message }
+    Err(request_id~, code~, message~, detail~) => {
+      let error : Json = { "code": code, "message": message, "detail": detail }
       (request_id, 0, error.stringify())
     }
   }

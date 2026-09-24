@@ -453,7 +453,7 @@ pub extend BridgeRequest with Eq::{not_equal, equal}
 ///|
 pub(all) enum BridgeResponse {
   Ok(request_id~ : Int64, payload~ : Json)
-  Err(request_id~ : Int64, code~ : String, message~ : String)
+  Err(request_id~ : Int64, code~ : String, message~ : String, detail~ : String?)
 } derive(Debug)
 
 ///|

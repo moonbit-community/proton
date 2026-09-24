@@ -471,6 +471,7 @@ async fn dispatch_bridge_request(
     Some(grant) => grant
     None =>
       return @native.BridgeResponse::Err(
+        detail=None,
         request_id=request.request_id(),
         code="permission_denied",
         message="the page is not permitted to invoke this operation",
@@ -521,11 +522,13 @@ async fn dispatch_bridge_request_in_command_scope(
   if response.is_ok() {
     @native.BridgeResponse::Ok(request_id~, payload=response.body)
   } else {
-    let message = match response.body {
-      String(text) => text
-      _ => response.body.stringify()
-    }
-    @native.BridgeResponse::Err(request_id~, code="op_failed", message~)
+    let error : @ipc.IpcCommandError = @json.from_json(response.body)
+    @native.BridgeResponse::Err(
+      request_id~,
+      code=error.code,
+      message=error.message,
+      detail=error.detail,
+    )
   }
 }
 

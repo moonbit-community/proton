@@ -42,3 +42,21 @@ Proton does not impose a fixed payload-size limit on commands. Payloads are seri
 Commands provide responses to their callers. [Events](events.md) provide notifications to observers; neither implies durable application storage.
 
 See [API signatures](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.3/) and the separate [command tutorial](../tutorial/commands-events.md).
+
+### Command error codes
+
+`RemoteFailure.code` identifies the failure independently of its message:
+
+| Code | Meaning |
+| --- | --- |
+| `invalid_payload` | The request does not match the command's input type |
+| `unknown_op` | The requested operation is not registered |
+| `handler_failed` | The command handler raised an error |
+| `host_closed` | The command host has closed |
+| `permission_denied` | The page is not permitted to invoke the operation |
+
+Handle codes rather than parsing message text, and handle unrecognized codes as
+other remote failures. Backend diagnostics remain in application logs. Development mode
+also includes them in `detail`; `message` remains
+a caller-facing description. Expected business outcomes belong in the command's
+response type.

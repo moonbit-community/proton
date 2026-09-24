@@ -245,7 +245,7 @@ pub fn BridgeRequest::window(Self) -> Int64
 
 pub(all) enum BridgeResponse {
   Ok(request_id~ : Int64, payload~ : Json)
-  Err(request_id~ : Int64, code~ : String, message~ : String)
+  Err(request_id~ : Int64, code~ : String, message~ : String, detail~ : String?)
 } derive(@debug.Debug)
 pub fn BridgeResponse::to_repr(Self) -> @debug.Repr
 

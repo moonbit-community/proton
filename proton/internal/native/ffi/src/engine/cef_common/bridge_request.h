@@ -20,6 +20,8 @@ typedef enum {
 
 int proton_engine_bridge_op_is_valid(const char *op);
 int proton_engine_bridge_page_instance_is_valid(const char *page_instance);
+const char *proton_engine_bridge_request_reject_code(
+    proton_engine_bridge_request_status_t status);
 const char *proton_engine_bridge_request_reject_message(
     proton_engine_bridge_request_status_t status);
 

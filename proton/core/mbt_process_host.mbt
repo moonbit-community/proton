@@ -13,17 +13,22 @@ fn CommandErrorPolicy::CommandErrorPolicy(
 }
 
 ///|
-fn CommandErrorPolicy::response_message(
+fn CommandErrorPolicy::response_error(
   self : CommandErrorPolicy,
   error : Error,
+  code : String,
   safe_message : String,
-) -> String {
+) -> @ipc.IpcCommandError {
   let diagnostic = @debug.render(Repr(error))
   (self.report_diagnostic)(diagnostic)
-  if self.expose_details {
-    diagnostic
-  } else {
-    safe_message
+  {
+    code,
+    message: safe_message,
+    detail: if self.expose_details {
+      Some(diagnostic)
+    } else {
+      None
+    },
   }
 }
 
@@ -130,30 +135,26 @@ pub async fn MbtProcessHost::dispatch_async(
     error =>
       return @ipc.IpcOpResponse::err(
         fallback_id,
-        self.error_policy.response_message(error, "invalid command request"),
+        self.error_policy.response_error(
+          error, "invalid_request", "invalid command request",
+        ),
       )
   }
   guard !self.closed else {
     return @ipc.IpcOpResponse::err(
       request.id,
-      OpDispatchError::HostClosed.message(),
+      self.dispatch_error(OpDispatchError::HostClosed),
     )
   }
   let body = if self.registry.has_async(request.name) {
     self.registry.call_async_direct(request.name, request.payload) catch {
       error =>
-        return @ipc.IpcOpResponse::err(
-          request.id,
-          self.dispatch_error_message(error),
-        )
+        return @ipc.IpcOpResponse::err(request.id, self.dispatch_error(error))
     }
   } else {
     self.registry.call(request.name, request.payload) catch {
       error =>
-        return @ipc.IpcOpResponse::err(
-          request.id,
-          self.dispatch_error_message(error),
-        )
+        return @ipc.IpcOpResponse::err(request.id, self.dispatch_error(error))
     }
   }
   @ipc.IpcOpResponse::ok(request.id, body)
@@ -171,13 +172,15 @@ pub async fn MbtProcessHost::dispatch_async_with_context(
     error =>
       return @ipc.IpcOpResponse::err(
         fallback_id,
-        self.error_policy.response_message(error, "invalid command request"),
+        self.error_policy.response_error(
+          error, "invalid_request", "invalid command request",
+        ),
       )
   }
   guard !self.closed else {
     return @ipc.IpcOpResponse::err(
       request.id,
-      OpDispatchError::HostClosed.message(),
+      self.dispatch_error(OpDispatchError::HostClosed),
     )
   }
   let body = self.registry.call_async_direct_with_context(
@@ -186,31 +189,37 @@ pub async fn MbtProcessHost::dispatch_async_with_context(
     request.payload,
   ) catch {
     error =>
-      return @ipc.IpcOpResponse::err(
-        request.id,
-        self.dispatch_error_message(error),
-      )
+      return @ipc.IpcOpResponse::err(request.id, self.dispatch_error(error))
   }
   @ipc.IpcOpResponse::ok(request.id, body)
 }
 
 ///|
-fn MbtProcessHost::dispatch_error_message(
+fn MbtProcessHost::dispatch_error(
   self : MbtProcessHost,
   error : Error,
-) -> String {
-  let safe_message = match error {
-    InvalidPayload(name~, ..) => "invalid payload for op " + name
-    HandlerFailed(name~, ..) => "op " + name + " failed"
-    UnknownOp(name~) => OpDispatchError::UnknownOp(name~).message()
-    OpDispatchError::HostClosed => OpDispatchError::HostClosed.message()
+) -> @ipc.IpcCommandError {
+  let (code, message) = match error {
+    InvalidPayload(name~, ..) =>
+      ("invalid_payload", "invalid payload for op " + name)
+    HandlerFailed(name~, ..) => ("handler_failed", "op " + name + " failed")
+    UnknownOp(name~) =>
+      ("unknown_op", OpDispatchError::UnknownOp(name~).message())
+    OpDispatchError::HostClosed =>
+      ("host_closed", OpDispatchError::HostClosed.message())
     AsyncHandlerRequiresAsync(name~) =>
-      OpDispatchError::AsyncHandlerRequiresAsync(name~).message()
+      (
+        "async_dispatch_required",
+        OpDispatchError::AsyncHandlerRequiresAsync(name~).message(),
+      )
     RequestContextRequired(name~) =>
-      OpDispatchError::RequestContextRequired(name~).message()
-    _ => "command dispatch failed"
+      (
+        "request_context_required",
+        OpDispatchError::RequestContextRequired(name~).message(),
+      )
+    _ => ("dispatch_failed", "command dispatch failed")
   }
-  self.error_policy.response_message(error, safe_message)
+  self.error_policy.response_error(error, code, message)
 }
 
 ///|
