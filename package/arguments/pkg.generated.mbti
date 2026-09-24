@@ -25,6 +25,7 @@ pub(all) struct PackageArguments {
   output : String?
   icons : Array[String]
   url_schemes : Array[String]
+  macos_minimum_system_version : String?
   nsis_install_mode : @lib.NsisInstallMode?
   sign : Bool
   notarize : Bool

@@ -78,5 +78,12 @@ On macOS, `LSMinimumSystemVersion` is derived from the highest deployment
 version in the staged Mach-O executables and libraries, including payloads
 added by framework preparation. SDK versions are not deployment versions.
 Packaging requires `otool` from the Apple developer tools, and rejects Mach-O
-files whose macOS minimum cannot be determined. This property cannot be
-overridden through `macos_plist_strings`.
+files whose macOS minimum cannot be determined. Set
+`--macos-minimum-system-version 15.0`, JSON `macos_minimum_system_version`, or
+`PackageSpec(..., macos_minimum_system_version="15.0")` to declare a higher
+supported minimum. An explicit version below a packaged binary requirement
+is rejected with both versions in the error. Versions use `major.minor` or
+`major.minor.patch`. This changes package metadata, not compiler deployment
+targets, and does not prove compatibility with older systems. The scan
+conservatively includes all bundled Mach-O files, including optional tools.
+Use the dedicated option instead of `macos_plist_strings`.

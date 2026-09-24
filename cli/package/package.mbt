@@ -47,6 +47,7 @@ struct PackagePlan {
   icons : Array[String]
   url_schemes : Array[String]
   document_types : Array[@proton_config.ProjectDocumentType]
+  macos_minimum_system_version : String?
   nsis_install_mode : @packager.NsisInstallMode
   sign : Bool
   notarize : Bool
@@ -295,6 +296,15 @@ async fn build_package_plan(
       package_config.url_schemes()
     },
     document_types: package_config.document_types(),
+    macos_minimum_system_version: match
+      raw.package_args.macos_minimum_system_version {
+      Some(value) => Some(value)
+      None =>
+        match package_config.platforms().macos() {
+          Some(config) => config.minimum_system_version
+          None => None
+        }
+    },
     nsis_install_mode,
     sign: raw.package_args.sign,
     notarize: raw.package_args.notarize,
@@ -381,6 +391,9 @@ fn print_package_plan(plan : PackagePlan, dry_run : Bool) -> Unit {
   println("  output: " + plan.output)
   if plan.formats.contains(@packager.PackageFormat::Nsis) {
     println("  NSIS install mode: " + plan.nsis_install_mode.to_string())
+  }
+  if plan.macos_minimum_system_version is Some(value) {
+    println("  macOS minimum system version: " + value)
   }
   println("  prepare: " + plan.prepare.unwrap_or("none"))
   let sign_binaries = if plan.sign_binaries.length() == 0 {

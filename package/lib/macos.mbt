@@ -593,7 +593,10 @@ async fn package_macos(
       detail="macOS bundle contains no versioned Mach-O executable",
     )
   }
-  let minimum_system_version = "\{minimum / 65536}.\{minimum / 256 % 256}.\{minimum % 256}"
+  let minimum_system_version = macos_resolve_minimum_version(
+    minimum,
+    spec.macos_minimum_system_version,
+  )
   let (short_version, bundle_version) = macos_versions(spec.version)
   write_text(
     path_join(contents, "Info.plist"),

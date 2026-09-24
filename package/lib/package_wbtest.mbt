@@ -498,23 +498,43 @@ async test "macOS staging derives the minimum from real executable and library l
     ]),
     0,
   )
-  let artifacts = build(
-    PackageSpec(
-      executable,
-      "Minimum Test",
-      "com.example.minimum",
-      "1.0.0",
-      [App],
-      path_join(root, "out"),
-      payloads=[Payload(library, "newer.dylib", location=Libraries)],
-    ),
+  let spec = PackageSpec(
+    executable,
+    "Minimum Test",
+    "com.example.minimum",
+    "1.0.0",
+    [App],
+    path_join(root, "out"),
+    payloads=[Payload(library, "newer.dylib", location=Libraries)],
   )
-  let plist = @async_fs.read_file(
-    path_join(artifacts[0], "Contents/Info.plist"),
-  ).text()
-  assert_true(
-    plist.contains("<key>LSMinimumSystemVersion</key><string>14.0.0</string>"),
-  )
+  for requested in [None, Some("14.0"), Some("15.1.2")] {
+    let artifacts = build(PackageSpec::{
+      ..spec,
+      macos_minimum_system_version: requested,
+    })
+    let plist = @async_fs.read_file(
+      path_join(artifacts[0], "Contents/Info.plist"),
+    ).text()
+    let expected = if requested == Some("15.1.2") { "15.1.2" } else { "14.0.0" }
+    assert_true(
+      plist.contains(
+        "<key>LSMinimumSystemVersion</key><string>" + expected + "</string>",
+      ),
+    )
+  }
+  try
+    ignore(
+      build(PackageSpec::{ ..spec, macos_minimum_system_version: Some("13.0"), }),
+    )
+  catch {
+    InvalidPayload(detail~) => {
+      assert_true(detail.contains("13.0"))
+      assert_true(detail.contains("14.0.0"))
+    }
+    error => raise error
+  } noraise {
+    _ => fail("expected incompatible minimum to be rejected")
+  }
 }
 
 ///|
@@ -568,4 +588,20 @@ async test "cancelled package builds release the output lock" {
       assert_true(prepared.val)
     })
   })
+}
+
+///|
+test "macOS minimum rejects malformed versions" {
+  for
+    value in [
+      "", "14", "14..0", "14.0.0.1", "-1.0", "+14.0", "14.x", "999999.0", "14.256",
+      "0.0",
+    ] {
+    try ignore(macos_resolve_minimum_version(14 * 65536, Some(value))) catch {
+      InvalidPayload(..) => ()
+      error => raise error
+    } noraise {
+      _ => fail("expected invalid version: " + value)
+    }
+  }
 }

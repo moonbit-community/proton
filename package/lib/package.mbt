@@ -148,7 +148,7 @@ fn validate_customization(
   for property in customization.macos_plist_strings {
     guard property.key != "LSMinimumSystemVersion" else {
       raise InvalidPayload(
-        detail="LSMinimumSystemVersion is derived from packaged binaries",
+        detail="use macos_minimum_system_version to configure LSMinimumSystemVersion",
       )
     }
     guard property.key.trim().length() > 0 else {

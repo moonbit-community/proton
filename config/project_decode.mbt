@@ -217,6 +217,8 @@ fn decode_platform_package(
         label,
         if platform == "windows" {
           ["formats", "resources", "sign", "nsis_install_mode"]
+        } else if platform == "macos" {
+          ["formats", "resources", "sign", "minimum_system_version"]
         } else {
           ["formats", "resources", "sign"]
         },
@@ -246,6 +248,11 @@ fn decode_platform_package(
             label + ".resources",
           ),
           sign?,
+          minimum_system_version?=optional_string(
+            values,
+            "minimum_system_version",
+            label + ".minimum_system_version",
+          ),
           nsis_install_mode?,
         ),
       )

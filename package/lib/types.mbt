@@ -271,6 +271,8 @@ pub fn NsisInstallMode::to_string(self : NsisInstallMode) -> String {
 
 ///|
 /// Complete input to the host-native packager.
+/// `macos_minimum_system_version` declares the supported macOS floor; it must
+/// not be lower than the packaged binaries require. Omit it to derive the floor.
 pub struct PackageSpec {
   executable : String
   product_name : String
@@ -282,6 +284,7 @@ pub struct PackageSpec {
   icons : Array[String]
   url_schemes : Array[String]
   document_types : Array[DocumentType]
+  macos_minimum_system_version : String?
   nsis_install_mode : NsisInstallMode
   sign : Bool
   notarize : Bool
@@ -305,6 +308,7 @@ pub fn PackageSpec::PackageSpec(
   icons? : Array[String] = [],
   url_schemes? : Array[String] = [],
   document_types? : Array[DocumentType] = [],
+  macos_minimum_system_version? : String,
   nsis_install_mode? : NsisInstallMode = CurrentUser,
   sign? : Bool = false,
   notarize? : Bool = false,
@@ -320,6 +324,7 @@ pub fn PackageSpec::PackageSpec(
     icons,
     url_schemes,
     document_types,
+    macos_minimum_system_version,
     nsis_install_mode,
     sign: sign || notarize,
     notarize,

@@ -24,6 +24,7 @@ async fn resolved_package_spec(
         role=document_type.role,
       )
     }),
+    macos_minimum_system_version?=spec.macos_minimum_system_version,
     nsis_install_mode=spec.nsis_install_mode,
     sign=spec.sign,
     notarize=spec.notarize,

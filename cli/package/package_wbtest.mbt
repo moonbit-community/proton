@@ -256,3 +256,27 @@ test "macOS package paths normalize absolute and relative inputs" {
     base + "/\\tmp\\proton path",
   )
 }
+
+///|
+async test "macOS minimum resolves project configuration and CLI override" {
+  let project = @proton_config.load_project_config_from_text(
+    (
+      #|{"identifier":"com.example.minimum","package":{"product_name":"Minimum","version":"1.0.0","platforms":{"macos":{"minimum_system_version":"15.0"}}}}
+    ),
+    ".",
+  )
+  let configured = build_package_plan(
+    parse_package_args([]),
+    "proton.project.json",
+    project,
+    0UL,
+  )
+  assert_eq(configured.macos_minimum_system_version, Some("15.0"))
+  let overridden = build_package_plan(
+    parse_package_args(["--macos-minimum-system-version", "16.0"]),
+    "proton.project.json",
+    project,
+    0UL,
+  )
+  assert_eq(overridden.macos_minimum_system_version, Some("16.0"))
+}

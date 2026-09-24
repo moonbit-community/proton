@@ -188,11 +188,12 @@ pub struct PackageSpec {
   icons : Array[String]
   url_schemes : Array[String]
   document_types : Array[DocumentType]
+  macos_minimum_system_version : String?
   nsis_install_mode : NsisInstallMode
   sign : Bool
   notarize : Bool
 } derive(Eq, @debug.Debug)
-pub fn PackageSpec::PackageSpec(String, String, String, String, Array[PackageFormat], String, payloads? : Array[Payload], icons? : Array[String], url_schemes? : Array[String], document_types? : Array[DocumentType], nsis_install_mode? : NsisInstallMode, sign? : Bool, notarize? : Bool) -> Self
+pub fn PackageSpec::PackageSpec(String, String, String, String, Array[PackageFormat], String, payloads? : Array[Payload], icons? : Array[String], url_schemes? : Array[String], document_types? : Array[DocumentType], macos_minimum_system_version? : String, nsis_install_mode? : NsisInstallMode, sign? : Bool, notarize? : Bool) -> Self
 pub fn PackageSpec::equal(Self, Self) -> Bool
 pub fn PackageSpec::not_equal(Self, Self) -> Bool
 pub fn PackageSpec::to_repr(Self) -> @debug.Repr

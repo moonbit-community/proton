@@ -54,3 +54,17 @@ test "missing merged options are regular errors" {
     _ => fail("expected required option validation to fail")
   }
 }
+
+///|
+async test "standalone macOS minimum accepts CLI and JSON configuration" {
+  let args = [
+    "--executable", "probe", "--product-name", "Probe", "--identifier", "com.example.probe",
+    "--version", "1.0.0", "--macos-minimum-system-version", "15.0",
+  ]
+  let spec = package_spec(command().parse(argv=args, env={}))
+  assert_eq(spec.macos_minimum_system_version, Some("15.0"))
+  let config = decode_package_config(
+    "{\"schema_version\":1,\"macos_minimum_system_version\":\"15.0\"}", "test.json",
+  )
+  assert_eq(config.macos_minimum_system_version, Some("15.0"))
+}

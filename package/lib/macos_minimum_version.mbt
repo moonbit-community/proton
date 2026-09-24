@@ -18,30 +18,7 @@ fn macos_load_command_minimum(output : String) -> Int raise {
       None
     }
     if value is Some(value) {
-      let components = value.split(".").collect()
-      guard components.length() >= 2 && components.length() <= 3 else {
-        raise InvalidPayload(
-          detail="invalid Mach-O deployment version: " + value,
-        )
-      }
-      let major = @string.parse_int(components[0])
-      let minor = @string.parse_int(components[1])
-      let patch = if components.length() == 3 {
-        @string.parse_int(components[2])
-      } else {
-        0
-      }
-      guard major > 0 &&
-        major <= 65535 &&
-        minor >= 0 &&
-        minor <= 255 &&
-        patch >= 0 &&
-        patch <= 255 else {
-        raise InvalidPayload(
-          detail="invalid Mach-O deployment version: " + value,
-        )
-      }
-      let version = major * 65536 + minor * 256 + patch
+      let version = macos_parse_minimum_version(value)
       if version > minimum {
         minimum = version
       }
@@ -104,4 +81,66 @@ async fn macos_bundle_minimum_version(path : String) -> Int {
     }
     _ => 0
   }
+}
+
+///|
+fn macos_parse_minimum_version(value : String) -> Int raise {
+  let components = value.split(".").collect()
+  guard components.length() >= 2 && components.length() <= 3 else {
+    raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+  }
+  for component in components {
+    guard component.length() > 0 && component.length() <= 5 else {
+      raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+    }
+    for char in component {
+      guard char >= '0' && char <= '9' else {
+        raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+      }
+    }
+  }
+  let major = @string.parse_int(components[0])
+  let minor = @string.parse_int(components[1])
+  let patch = if components.length() == 3 {
+    @string.parse_int(components[2])
+  } else {
+    0
+  }
+  guard major > 0 &&
+    major <= 32767 &&
+    minor >= 0 &&
+    minor <= 255 &&
+    patch >= 0 &&
+    patch <= 255 else {
+    raise InvalidPayload(detail="invalid macOS minimum version: " + value)
+  }
+  major * 65536 + minor * 256 + patch
+}
+
+///|
+fn macos_resolve_minimum_version(
+  detected : Int,
+  requested : String?,
+) -> String raise {
+  let minimum = match requested {
+    None => detected
+    Some(value) => {
+      let version = macos_parse_minimum_version(value)
+      guard version >= detected else {
+        raise InvalidPayload(
+          detail="requested macOS minimum " +
+            value +
+            " is below packaged binary requirement " +
+            macos_format_minimum_version(detected),
+        )
+      }
+      version
+    }
+  }
+  macos_format_minimum_version(minimum)
+}
+
+///|
+fn macos_format_minimum_version(version : Int) -> String {
+  "\{version / 65536}.\{version / 256 % 256}.\{version % 256}"
 }

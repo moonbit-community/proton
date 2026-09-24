@@ -18,6 +18,7 @@ async test "staging preserves package metadata and icons" {
     ] {
     let plan = PackagePlan::{
       ..test_staging_plan("."),
+      macos_minimum_system_version: Some("15.0"),
       nsis_install_mode: mode,
       icons: ["app.icns", "app.png", "app.ico"],
       url_schemes: ["demo"],
@@ -29,6 +30,7 @@ async test "staging preserves package metadata and icons" {
       "cef_process",
       Macos,
     )
+    assert_eq(output.macos_minimum_system_version, Some("15.0"))
     assert_eq(output.nsis_install_mode, mode)
     assert_eq(output.icons, plan.icons)
     assert_eq(output.url_schemes, plan.url_schemes)

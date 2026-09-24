@@ -22,6 +22,7 @@ fn test_staging_plan(
     icons: [],
     url_schemes: [],
     document_types: [],
+    macos_minimum_system_version: None,
     nsis_install_mode: @packager.NsisInstallMode::CurrentUser,
     sign: false,
     notarize: false,
