@@ -4,13 +4,10 @@ package "moonbit-community/proton_ext/path"
 import {
   "moonbit-community/proton/command",
   "moonbit-community/proton/extension",
-  "moonbit-community/proton_contract",
 }
 
 // Values
 pub fn capability() -> @extension.RendererCapability
-
-pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
 
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 

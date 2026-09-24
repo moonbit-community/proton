@@ -937,7 +937,6 @@ async fn run_page_recovery_regression(name : String) -> Unit {
   let probe : @proton_contract.Command[Unit, Unit] = contract.command("probe")
   let extension = @proton_extension.typed(
     contract,
-    [probe.contract_route()],
     registrar => {
       registrar.bind(probe, (_context, _payload) => initialized.val += 1)
     },

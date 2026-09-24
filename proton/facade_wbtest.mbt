@@ -612,16 +612,16 @@ fn test_command_spec(
   on_destroy? : () -> Unit raise = fn() {  },
 ) -> @proton_command.AppCommandExtensionSpec {
   let contract = @proton_contract.extension(id=extension_id, js_namespace~)
-  let routes = api_names.map(fn(api_name) {
-    let command : @proton_contract.Command[Json, Json] = contract.command(
-      api_name,
-    )
-    command.contract_route()
-  })
   @proton_command.AppCommandExtensionSpec::typed(
     contract,
-    routes,
-    fn(_registrar) {  },
+    fn(registrar) raise {
+      for api_name in api_names {
+        let command : @proton_contract.Command[Json, Json] = contract.command(
+          api_name,
+        )
+        registrar.bind(command, (_context, request) => request)
+      }
+    },
     scripts~,
     dependencies~,
     resolve_permission?,
@@ -641,7 +641,6 @@ fn test_tracking_command_spec(
   let contract = @proton_contract.extension(id=extension_id, js_namespace~)
   @proton_command.AppCommandExtensionSpec::typed(
     contract,
-    [],
     fn(_registrar) { registered.push(extension_id) },
     dependencies~,
   ) catch {
@@ -667,7 +666,10 @@ test "command proxy rejects unsafe JS property names" {
 test "titlebar query reserves only the bridge root property" {
   let nested = test_command_spec("examples/files", "files", ["getTitlebarArea"])
   let config = unwrap_configuration(() => {
-    bridge_frontend_config_for_extension("examples/files", nested)
+    bridge_frontend_config_for_extension(
+      "examples/files",
+      test_registered_extension(nested),
+    )
   })
   assert_eq(config.extensions, [
     @native.BridgeExtensionConfig("files", apis=["getTitlebarArea"]),
@@ -679,7 +681,10 @@ test "titlebar query reserves only the bridge root property" {
   )
   match
     expect_configuration_error(() => {
-      bridge_frontend_config_for_extension("examples/titlebar-conflict", root)
+      bridge_frontend_config_for_extension(
+        "examples/titlebar-conflict",
+        test_registered_extension(root),
+      )
     }) {
     InvalidJavaScriptNamespace(js_namespace~) =>
       assert_eq(js_namespace, "getTitlebarArea")
@@ -692,7 +697,10 @@ test "bridge frontend config reflects enabled command extension metadata" {
   let extension_id = "examples/async-add"
   let spec = test_command_spec(extension_id, "add", ["slowAdd"])
   let config = unwrap_configuration(() => {
-    bridge_frontend_config_for_extension(extension_id, spec)
+    bridge_frontend_config_for_extension(
+      extension_id,
+      test_registered_extension(spec),
+    )
   })
   inspect(config.extensions.length(), content="1")
   inspect(config.extensions[0].js_namespace, content="add")
@@ -707,7 +715,10 @@ test "bridge frontend config preserves initialization unit ownership" {
     "globalThis.first = true;", "globalThis.second = true;",
   ])
   let config = unwrap_configuration(() => {
-    bridge_frontend_config_for_extension(extension_id, spec)
+    bridge_frontend_config_for_extension(
+      extension_id,
+      test_registered_extension(spec),
+    )
   })
   inspect(config.initialization_units.length(), content="2")
   inspect(config.initialization_units[0].owner, content="examples/scripts")
@@ -1506,7 +1517,11 @@ test "renderer policy binds extension ops and scope to one trusted source" {
     scope={ "root": "./data" },
   )
   let resolved = unwrap_configuration(() => {
-    resolve_extension_capabilities([capability], "/trusted/project")
+    resolve_extension_capabilities(
+      [capability],
+      "/trusted/project",
+      Map([(capability.spec.id(), test_registered_extension(capability.spec))]),
+    )
   })
   let policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
@@ -1541,7 +1556,6 @@ test "one extension supports distinct scopes in different windows" {
   let read : @proton_contract.Command[Unit, Unit] = contract.command("read")
   let spec = @proton_command.AppCommandExtensionSpec::typed(
     contract,
-    [read.contract_route()],
     fn(registrar) raise {
       registered.val = registered.val + 1
       registrar.bind(read, (_context, _request) => ())
@@ -1556,10 +1570,14 @@ test "one extension supports distinct scopes in different windows" {
       RendererTarget::entry(window="secondary"),
     ]),
   ]
-  let resolved = unwrap_configuration(() => {
-    resolve_extension_capabilities(capabilities, "/trusted/project")
-  })
   let build = unwrap_app_run(() => test_build_command_host([], capabilities))
+  let resolved = unwrap_configuration(() => {
+    resolve_extension_capabilities(
+      capabilities,
+      "/trusted/project",
+      build.extensions,
+    )
+  })
   assert_eq(registered.val, 1)
   let main_policy = unwrap_configuration(() => {
     resolve_window_permission_policy(
@@ -1731,7 +1749,11 @@ test "renderer capabilities reject targets that resolve to the same origin" {
     targets=[RendererTarget::entry(), RendererTarget::bundled()],
   )
   let resolved = unwrap_configuration(() => {
-    resolve_extension_capabilities([capability], "/trusted/project")
+    resolve_extension_capabilities(
+      [capability],
+      "/trusted/project",
+      Map([(capability.spec.id(), test_registered_extension(capability.spec))]),
+    )
   })
   match
     expect_configuration_error(() => {
@@ -1757,7 +1779,15 @@ test "extension capability scopes are validated before startup" {
   )
   match
     expect_configuration_error(() => {
-      ignore(resolve_extension_capabilities([capability], "/trusted/project"))
+      ignore(
+        resolve_extension_capabilities(
+          [capability],
+          "/trusted/project",
+          Map([
+            (capability.spec.id(), test_registered_extension(capability.spec)),
+          ]),
+        ),
+      )
     }) {
     InvalidRendererCapability(detail~) =>
       assert_true(
@@ -1778,7 +1808,6 @@ test "command host close runs extension destroy hooks once" {
   let ping : @proton_contract.Command[Unit, String] = contract.command("ping")
   let spec = @proton_command.AppCommandExtensionSpec::typed(
     contract,
-    [ping.contract_route()],
     fn(registrar) raise { registrar.bind(ping, (_context, _request) => "pong") },
     on_destroy=fn() { destroyed.val = destroyed.val + 1 },
   ) catch {
@@ -1894,7 +1923,7 @@ test "duplicate extension event sources require the same definition" {
       )
     }) {
     InvalidRendererCapability(detail~) =>
-      assert_true(detail.contains("conflicting event sources"))
+      assert_true(detail.contains("conflicting definitions"))
     error => fail(error.message())
   }
 }
@@ -1980,7 +2009,6 @@ test "command host close drains every destroy hook after a failure" {
   let destroyed : Array[String] = []
   let base_spec = @proton_command.AppCommandExtensionSpec::typed(
     @proton_contract.extension(id=base_id, js_namespace="baseDestroy"),
-    [],
     fn(_registrar) {  },
     on_destroy=fn() { destroyed.push(base_id) },
   ) catch {
@@ -1988,7 +2016,6 @@ test "command host close drains every destroy hook after a failure" {
   }
   let feature_spec = @proton_command.AppCommandExtensionSpec::typed(
     @proton_contract.extension(id=feature_id, js_namespace="featureDestroy"),
-    [],
     fn(_registrar) {  },
     dependencies=[base_id],
     on_destroy=fn() raise {
@@ -2028,7 +2055,6 @@ test "command host registration preserves cleanup failures" {
       id=extension_id,
       js_namespace="registrationCleanup",
     ),
-    [],
     fn(_registrar) raise {
       raise FacadeLifecycleTestError::DestroyFailed("registration")
     },
@@ -4020,4 +4046,80 @@ test "traffic light position survives primary builder changes" {
   |> ignore
   assert_eq(app.windows[0].window.traffic_light_position, Some((24, 30)))
   assert_eq(app.window.traffic_light_position, Some((16, 18)))
+}
+
+///|
+fn test_registered_extension(
+  spec : @proton_command.AppCommandExtensionSpec,
+) -> @proton_command.AppCommandExtensionDescriptor {
+  let host = @core.AppCommandHost()
+  defer host.close()
+  spec.register(host) catch {
+    error => abort(@debug.render(Repr(error)))
+  }
+}
+
+///|
+test "extension registration failure cleans up the failing extension and dependencies" {
+  let destroyed : Array[String] = []
+  let dependency = test_command_spec("example/base", "base", ["ping"], on_destroy=() => {
+    destroyed.push("base")
+  })
+  let contract = @proton_contract.extension(
+    id="example/failing",
+    js_namespace="failing",
+  )
+  let foreign : @proton_contract.Command[Unit, Unit] = @proton_contract.command(
+    "foreign",
+  )
+  let failing = @proton_command.AppCommandExtensionSpec::typed(
+    contract,
+    registrar => registrar.bind(foreign, (_context, _request) => ()),
+    dependencies=["example/base"],
+    on_destroy=() => destroyed.push("failing"),
+  )
+  try {
+    ignore(
+      test_build_command_host([], [
+        test_extension_capability(dependency),
+        test_extension_capability(failing),
+      ]),
+    )
+    fail("expected registration failure")
+  } catch {
+    AppRunError::CommandExtensionLifecycleError(
+      RegistrationFailed(extension_id="example/failing", detail~)
+    ) => {
+      assert_true(detail.contains("ForeignCommandRoute"))
+      assert_true(detail.contains("app:foreign"))
+    }
+    _ => fail("expected extension registration failure")
+  }
+  assert_eq(destroyed, ["failing", "base"])
+}
+
+///|
+test "different extension definitions cannot silently share one registration" {
+  let contract = @proton_contract.extension(
+    id="example/identity",
+    js_namespace="identity",
+  )
+  let command : @proton_contract.Command[Unit, Unit] = contract.command("ping")
+  let first = @proton_extension.typed(contract, registrar => {
+    registrar.bind(command, (_context, _request) => ())
+  })
+  let second = @proton_extension.typed(contract, registrar => {
+    registrar.bind(command, (_context, _request) => ())
+  })
+  let app = html("Definitions", "<html></html>")
+    .capability(@proton_extension.capability(first))
+    .capability(@proton_extension.capability(second))
+  match
+    expect_configuration_error(() => {
+      ignore(command_extension_catalog(app.extension_capabilities))
+    }) {
+    InvalidRendererCapability(detail~) =>
+      assert_true(detail.contains("conflicting definitions"))
+    error => fail(error.message())
+  }
 }

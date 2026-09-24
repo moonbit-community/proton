@@ -48,41 +48,30 @@ let multi_window_release : @proton_contract.Command[Unit, Unit] = multi_window_c
 fn multi_window_extension() -> @proton_extension.Extension {
   let pending = Ref(0)
   let generation = Ref(0)
-  @proton_extension.typed(
-    multi_window_contract,
-    [
-      multi_window_identify.contract_route(),
-      multi_window_hold.contract_route(),
-      multi_window_pending.contract_route(),
-      multi_window_release.contract_route(),
-    ],
-    fn(registrar) raise {
-      registrar.bind(multi_window_hold, async fn(_context, _payload) {
-        pending.val += 1
-        defer {
-          pending.val -= 1
-        }
-        let current = generation.val
-        while generation.val == current {
-          @async.sleep(10)
-        }
-      })
-      registrar.bind(multi_window_pending, fn(_context, _payload) {
-        pending.val
-      })
-      registrar.bind(multi_window_release, fn(_context, _payload) {
-        generation.val += 1
-      })
-      registrar.bind(multi_window_identify, async fn(context, payload) {
-        @async.sleep(payload.delay_ms.unwrap_or(0))
-        MultiWindowIdentifyReply::{
-          label: payload.label,
-          window: context.window_id(),
-          page_instance: context.page_instance().unwrap_or(context.window_id()),
-        }
-      })
-    },
-  )
+  @proton_extension.typed(multi_window_contract, fn(registrar) raise {
+    registrar.bind(multi_window_hold, async fn(_context, _payload) {
+      pending.val += 1
+      defer {
+        pending.val -= 1
+      }
+      let current = generation.val
+      while generation.val == current {
+        @async.sleep(10)
+      }
+    })
+    registrar.bind(multi_window_pending, fn(_context, _payload) { pending.val })
+    registrar.bind(multi_window_release, fn(_context, _payload) {
+      generation.val += 1
+    })
+    registrar.bind(multi_window_identify, async fn(context, payload) {
+      @async.sleep(payload.delay_ms.unwrap_or(0))
+      MultiWindowIdentifyReply::{
+        label: payload.label,
+        window: context.window_id(),
+        page_instance: context.page_instance().unwrap_or(context.window_id()),
+      }
+    })
+  })
 }
 
 ///|

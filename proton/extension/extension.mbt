@@ -2,7 +2,6 @@
 struct Extension {
   definition_id : UInt64
   contract : @proton_contract.ExtensionContract
-  command_routes : Array[@proton_contract.ContractRoute]
   register : (@proton_command.CommandRegistrar) -> Unit raise
   scripts : Array[String]
   dependencies : Array[String]
@@ -59,7 +58,11 @@ pub struct RendererCapability {
 }
 
 ///|
-/// Builds an installable extension from typed command descriptors.
+/// Builds an installable extension from typed command bindings.
+///
+/// `register` runs once during startup. Its successful `bind` calls define both
+/// the frontend command inventory and permission operations. Reuse this definition
+/// when granting the extension to multiple renderer targets.
 ///
 /// `on_start` runs after registration, before application startup hooks, and
 /// receives the application-owned task group for work spanning command requests.
@@ -70,7 +73,6 @@ pub struct RendererCapability {
 /// extension metadata follows the facade's ordinary adaptation error path.
 pub fn typed(
   contract : @proton_contract.ExtensionContract,
-  command_routes : Array[@proton_contract.ContractRoute],
   register : (@proton_command.CommandRegistrar) -> Unit raise,
   scripts? : Array[String] = [],
   dependencies? : Array[String] = [],
@@ -101,7 +103,6 @@ pub fn typed(
   Extension::{
     definition_id: allocate_extension_definition_id(),
     contract,
-    command_routes: command_routes.map(route => route),
     register,
     scripts: scripts.map(script => script),
     dependencies: dependencies.map(dependency => dependency),
@@ -247,7 +248,6 @@ pub fn Extension::command_spec(
 ) -> @proton_command.AppCommandExtensionSpec raise ExtensionAdapterError {
   @proton_command.AppCommandExtensionSpec::typed(
     self.contract,
-    self.command_routes,
     self.register,
     scripts=self.scripts,
     dependencies=self.dependencies,

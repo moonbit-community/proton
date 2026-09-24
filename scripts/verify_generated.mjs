@@ -85,6 +85,7 @@ try {
     "keepawake",
     "microphone",
     "notification",
+    "net",
     "path",
     "power_monitor",
     "screen_monitor",

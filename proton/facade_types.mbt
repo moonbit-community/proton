@@ -213,13 +213,14 @@ priv struct CommandExtensionCatalog {
 
 ///|
 priv struct ResolvedExtensionCapability {
-  spec : @proton_command.AppCommandExtensionSpec
+  spec : @proton_command.AppCommandExtensionDescriptor
   scope : Json
   targets : Array[RendererTarget]
 }
 
 ///|
 priv struct CommandHostBuild {
+  extensions : Map[String, @proton_command.AppCommandExtensionDescriptor]
   runtime : CommandHostRuntime?
   app_capabilities : Array[RegisteredAppCommandCapability]
 }

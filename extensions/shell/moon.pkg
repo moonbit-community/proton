@@ -2,7 +2,6 @@ import {
   "moonbit-community/proton_shell" @sys_shell,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
-  "moonbit-community/proton_contract",
   "moonbit-community/proton_ext/shell/contract" @shell_contract,
 }
 

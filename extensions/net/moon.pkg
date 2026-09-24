@@ -4,7 +4,6 @@ import {
   "moonbitlang/async/http",
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
-  "moonbit-community/proton_contract",
   "moonbit-community/proton_ext/net/contract" @net_contract,
 }
 

@@ -65,9 +65,7 @@ async fn slow_add(
 
 ///|
 fn extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    attribute_codegen_contract,
-    generated_extension_command_routes(),
-    fn(registrar) raise { register_commands(registrar) },
-  )
+  @proton_extension.typed(attribute_codegen_contract, fn(registrar) raise {
+    register_commands(registrar)
+  })
 }

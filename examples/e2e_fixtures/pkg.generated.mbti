@@ -3,13 +3,10 @@ package "moonbit-community/proton/examples/e2e_fixtures"
 
 import {
   "moonbit-community/proton/command",
-  "moonbit-community/proton_contract",
   "moonbitlang/core/json",
 }
 
 // Values
-pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
-
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise
 
 pub async fn run_asset_sidecar() -> Unit

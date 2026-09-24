@@ -44,11 +44,7 @@ fn double(payload : DoublePayload) -> DoubleReply {
 
 ///|
 fn sync_math_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    sync_math_contract,
-    [double_command.contract_route()],
-    fn(registrar) raise {
-      registrar.bind(double_command, (_context, payload) => double(payload))
-    },
-  )
+  @proton_extension.typed(sync_math_contract, fn(registrar) raise {
+    registrar.bind(double_command, (_context, payload) => double(payload))
+  })
 }

@@ -8,8 +8,6 @@ import {
 }
 
 // Values
-pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]
-
 pub let generated_extension_contract : @proton_contract.ExtensionContract
 
 pub fn register_commands(@command.CommandRegistrar) -> Unit raise

@@ -2,7 +2,6 @@ import {
   "moonbitlang/x/path" @mbpath,
   "moonbit-community/proton",
   "moonbit-community/proton/extension" @proton_extension,
-  "moonbit-community/proton_contract",
   "moonbit-community/proton_ext/path/contract" @path_contract,
 }
 

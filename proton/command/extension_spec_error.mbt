@@ -1,9 +1,12 @@
 ///|
-/// Invalid typed metadata supplied while constructing an extension spec.
+/// Invalid extension identity or command binding.
 pub(all) suberror ExtensionSpecError {
   InvalidContract(detail~ : String)
   ForeignCommandRoute(extension_id~ : String, operation_name~ : String)
-} derive(Eq)
+} derive(Debug, Eq)
+
+///|
+pub extend ExtensionSpecError with Debug::{to_repr}
 
 ///|
 pub extend ExtensionSpecError with Eq::{not_equal, equal}

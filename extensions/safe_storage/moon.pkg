@@ -10,6 +10,10 @@ supported_targets = "native"
 
 formatter(ignore: [ "extension.g.mbt" ])
 
+import {
+  "moonbit-community/proton/core",
+} for "wbtest"
+
 options(
   targets: { "extension.g.mbt": [ "native" ], "extension.mbt": [ "native" ] },
 )

@@ -137,12 +137,6 @@ fn path_dirname(path : String) -> String {
 }
 
 ///|
-fn path_join(dir : String, name : String) -> String {
-  let native_dir : @mbpath.Path = dir
-  native_dir.join(name).to_string()
-}
-
-///|
 fn mbt_string(s : String) -> String {
   "\"" + escape_mbt_string(s) + "\""
 }

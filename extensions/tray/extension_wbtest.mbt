@@ -19,6 +19,9 @@ test "tray support reports the v1 platform contract" {
 test "tray events use the native event source instead of a renderer poller" {
   let capability = capability()
   let spec = capability.command_spec()
+  let host = @core.AppCommandHost()
+  defer host.close()
+  let spec = spec.register(host)
   assert_false(spec.op_names().contains("ext:tray/drainEvents"))
   assert_eq(spec.scripts(), [])
   assert_true(capability.event_source() is Some(_))

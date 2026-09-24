@@ -24,9 +24,7 @@ async fn slow_add(request : SlowAddRequest) -> Int {
 
 ///|
 fn extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    generated_extension_contract,
-    generated_extension_command_routes(),
-    fn(registrar) raise { register_commands(registrar) },
-  )
+  @proton_extension.typed(generated_extension_contract, fn(registrar) raise {
+    register_commands(registrar)
+  })
 }

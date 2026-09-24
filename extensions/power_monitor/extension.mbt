@@ -197,7 +197,6 @@ fn cleanup_power_monitor() -> Unit {
 ///|
 let extension_definition : @proton_extension.Extension = @proton_extension.typed(
   @power_monitor_contract.extension,
-  generated_extension_command_routes(),
   fn(registrar) raise { register_commands(registrar) },
   event_source=@proton_extension.event_source(
     wakeup => start_event_source(wakeup),

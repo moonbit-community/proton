@@ -21,7 +21,7 @@ async fn process_request(
 async test "spawned child survives the spawning request" {
   let spec = extension().command_spec()
   let host = @core.AppCommandHost()
-  spec.register(@proton.CommandRegistrar(host))
+  ignore(spec.register(host))
   host.seal_registrations()
   defer (spec.destroy() catch { _ => () })
   @async.with_task_group(owner_tasks => {
@@ -47,8 +47,8 @@ async test "kill and wait use separate requests and extension registries are iso
   let other = extension().command_spec()
   let host = @core.AppCommandHost()
   let other_host = @core.AppCommandHost()
-  spec.register(@proton.CommandRegistrar(host))
-  other.register(@proton.CommandRegistrar(other_host))
+  ignore(spec.register(host))
+  ignore(other.register(other_host))
   host.seal_registrations()
   other_host.seal_registrations()
   defer (spec.destroy() catch { _ => () })

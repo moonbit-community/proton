@@ -239,35 +239,22 @@ fn set_audio_muted(payload : AudioPayload) -> AudioReply {
 
 ///|
 fn browser_extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    browser_contract,
-    [
-      navigate_command.contract_route(),
-      back_command.contract_route(),
-      forward_command.contract_route(),
-      reload_command.contract_route(),
-      zoom_command.contract_route(),
-      audio_command.contract_route(),
-    ],
-    fn(registrar) raise {
-      registrar.bind(navigate_command, (_context, payload) => navigate(payload))
-      registrar.bind(back_command, (_context, _payload) => {
-        panel_command(view => view.back())
-      })
-      registrar.bind(forward_command, (_context, _payload) => {
-        panel_command(view => view.forward())
-      })
-      registrar.bind(reload_command, (_context, _payload) => {
-        panel_command(view => view.reload())
-      })
-      registrar.bind(zoom_command, (_context, payload) => {
-        set_panel_zoom(payload)
-      })
-      registrar.bind(audio_command, (_context, payload) => {
-        set_audio_muted(payload)
-      })
-    },
-  )
+  @proton_extension.typed(browser_contract, fn(registrar) raise {
+    registrar.bind(navigate_command, (_context, payload) => navigate(payload))
+    registrar.bind(back_command, (_context, _payload) => {
+      panel_command(view => view.back())
+    })
+    registrar.bind(forward_command, (_context, _payload) => {
+      panel_command(view => view.forward())
+    })
+    registrar.bind(reload_command, (_context, _payload) => {
+      panel_command(view => view.reload())
+    })
+    registrar.bind(zoom_command, (_context, payload) => set_panel_zoom(payload))
+    registrar.bind(audio_command, (_context, payload) => {
+      set_audio_muted(payload)
+    })
+  })
 }
 
 ///|

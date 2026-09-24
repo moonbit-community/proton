@@ -63,6 +63,7 @@ fn validate_renderer_targets(
 fn resolve_extension_capabilities(
   capabilities : Array[ExtensionCapabilityBinding],
   base_path : String,
+  extensions : Map[String, @proton_command.AppCommandExtensionDescriptor],
 ) -> Array[ResolvedExtensionCapability] raise AppConfigurationError {
   let resolved : Array[ResolvedExtensionCapability] = []
   for capability in capabilities {
@@ -76,13 +77,14 @@ fn resolve_extension_capabilities(
             error.message(),
         )
     }
-    guard !capability.spec.op_names().is_empty() else {
+    let descriptor = extensions[id]
+    guard !descriptor.op_names().is_empty() else {
       raise InvalidRendererCapability(
         detail="extension " + id + " does not own any registered operation",
       )
     }
     resolved.push(ResolvedExtensionCapability::{
-      spec: capability.spec,
+      spec: descriptor,
       scope,
       targets: capability.targets.copy(),
     })
@@ -166,7 +168,10 @@ fn renderer_target_origin(
 ///|
 fn WindowPermissionPolicy::native_grants(
   self : WindowPermissionPolicy,
-  command_extensions : Map[String, @proton_command.AppCommandExtensionSpec],
+  command_extensions : Map[
+    String,
+    @proton_command.AppCommandExtensionDescriptor,
+  ],
 ) -> Array[@native.BridgeGrantConfig] raise AppConfigurationError {
   let source_order : Array[String] = []
   for grant in self.grants {

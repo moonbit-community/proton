@@ -128,7 +128,6 @@ fn drain_events() -> Array[@proton_extension.Event] raise {
 ///|
 let extension_definition : @proton_extension.Extension = @proton_extension.typed(
   @global_hotkey_contract.extension,
-  generated_extension_command_routes(),
   fn(registrar) raise { register_commands(registrar) },
   event_source=@proton_extension.event_source(
     wakeup => install_event_wakeup(wakeup),

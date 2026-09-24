@@ -54,16 +54,13 @@ async fn clear(
 
 ///|
 /// Builds the typed clipboard extension.
-fn extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    @clipboard_contract.extension,
-    generated_extension_command_routes(),
-    fn(registrar) raise { register_commands(registrar) },
-  )
-}
+let extension_definition : @proton_extension.Extension = @proton_extension.typed(
+  @clipboard_contract.extension,
+  fn(registrar) raise { register_commands(registrar) },
+)
 
 ///|
 /// Grants clipboard commands to renderer targets selected by `App::capability`.
 pub fn capability() -> @proton_extension.RendererCapability {
-  @proton_extension.capability(extension())
+  @proton_extension.capability(extension_definition)
 }

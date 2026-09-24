@@ -371,12 +371,6 @@ async fn run_manifest(
     let extension_catalog = command_extension_catalog(extension_capabilities) catch {
       error => raise ConfigurationError(error)
     }
-    let command_extensions = extension_catalog.specs
-    let resolved_extension_capabilities = resolve_extension_capabilities(
-      extension_capabilities, permission_base_path,
-    ) catch {
-      error => raise ConfigurationError(error)
-    }
     let titlebar_area_targets : Array[RendererTarget] = []
     for plan in plans {
       if plan.window.titlebar_style == @manifest.TitlebarStyle::Overlay {
@@ -389,6 +383,12 @@ async fn run_manifest(
       titlebar_area_targets~,
     )
     command_host = command_build.runtime
+    let command_extensions = command_build.extensions
+    let resolved_extension_capabilities = resolve_extension_capabilities(
+      extension_capabilities, permission_base_path, command_extensions,
+    ) catch {
+      error => raise ConfigurationError(error)
+    }
     let policies : Array[BridgePagePolicy] = []
     for plan in plans {
       let policy = bridge_page_policy_for_entry(plan.entry) catch {

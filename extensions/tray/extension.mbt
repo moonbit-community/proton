@@ -372,7 +372,6 @@ async fn destroy(
 ///|
 let extension_definition : @proton_extension.Extension = @proton_extension.typed(
   @tray_contract.extension,
-  generated_extension_command_routes(),
   fn(registrar) raise { register_commands(registrar) },
   event_source=@proton_extension.event_source(
     wakeup => install_event_wakeup(wakeup),

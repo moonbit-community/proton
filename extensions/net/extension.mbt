@@ -81,10 +81,7 @@ fn response_headers(
 ///|
 /// Makes an HTTP request and returns the response.
 #proton.command(contract=request_command)
-async fn do_request(
-  _context : @proton.CommandContext,
-  request : @net_contract.Request,
-) -> @net_contract.Response {
+async fn do_request(request : @net_contract.Request) -> @net_contract.Response {
   let meth = parse_method(request.http_method)
   let headers = request_headers(request.headers)
   let body_bytes = request.body.map(fn(s) { @utf8.encode(s) }).unwrap_or(b"")
@@ -128,16 +125,13 @@ async fn do_request(
 }
 
 ///|
-fn extension() -> @proton_extension.Extension {
-  @proton_extension.typed(
-    @net_contract.extension,
-    generated_extension_command_routes(),
-    fn(registrar) raise { register_commands(registrar) },
-  )
-}
+let extension_definition : @proton_extension.Extension = @proton_extension.typed(
+  @net_contract.extension,
+  fn(registrar) raise { register_commands(registrar) },
+)
 
 ///|
 /// Grants network commands to renderer targets selected by `App::capability`.
 pub fn capability() -> @proton_extension.RendererCapability {
-  @proton_extension.capability(extension())
+  @proton_extension.capability(extension_definition)
 }

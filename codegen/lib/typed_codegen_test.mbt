@@ -104,30 +104,23 @@ test "typed codegen combines explicit source inputs" {
 }
 
 ///|
-test "typed codegen emits extension routes without duplicating identity" {
-  let generated = @lib.generate_typed_commands_from_sources(
-    [
+test "typed codegen emits bindings without a separate extension route list" {
+  let generated = @lib.generate_typed_commands_from_sources([
+    (
+      "extension.mbt",
       (
-        "extension.mbt",
-        (
-          #|#proton.command(contract=read_text)
-          #|fn read_text(request : ReadTextRequest) -> ReadTextReply {
-          #|  read(request)
-          #|}
-          #|
-        ),
+        #|#proton.command(contract=read_text)
+        #|fn read_text(request : ReadTextRequest) -> ReadTextReply {
+        #|  read(request)
+        #|}
+        #|
       ),
-    ],
-    extension_package=true,
-  )
+    ),
+  ])
   assert_false(generated.source.contains("id="))
   assert_false(generated.source.contains("js_namespace="))
-  assert_true(
-    generated.source.contains(
-      "pub fn generated_extension_command_routes() -> Array[@proton_contract.ContractRoute]",
-    ),
-  )
-  assert_true(generated.source.contains("read_text.contract_route()"))
+  assert_false(generated.source.contains("generated_extension_command_routes"))
+  assert_true(generated.source.contains("registrar.bind(\n    read_text,"))
 }
 
 ///|

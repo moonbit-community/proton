@@ -51,7 +51,7 @@ pub fn capability(
   guard roots.length() > 0 else {
     raise InvalidPermissionScope("at least one filesystem root is required")
   }
-  @proton_extension.capability(extension(), scope={
+  @proton_extension.capability(extension_definition, scope={
     "roots": roots.map(fn(root) -> Json {
       { "path": root.path, "commands": root.commands }
     }),

@@ -5,13 +5,16 @@ test "typed extensions defer validated command spec construction" {
     js_namespace="typed",
   )
   let ping : @proton_contract.Command[Unit, Unit] = contract.command("ping")
-  let extension = typed(contract, [ping.contract_route()], fn(registrar) raise {
+  let extension = typed(contract, fn(registrar) raise {
     registrar.bind(ping, (_context, _request) => ())
   })
   assert_eq(extension.id(), "example/typed")
   let spec = extension.command_spec()
   assert_eq(spec.js_namespace(), "typed")
-  assert_eq(spec.op_names(), ["ext:typed/ping"])
+  let host = @core.AppCommandHost()
+  defer host.close()
+  let descriptor = spec.register(host)
+  assert_eq(descriptor.op_names(), ["ext:typed/ping"])
 }
 
 ///|
@@ -21,7 +24,7 @@ test "renderer capabilities own their scope" {
     js_namespace="scoped",
   )
   let ping : @proton_contract.Command[Unit, Unit] = contract.command("ping")
-  let extension = typed(contract, [ping.contract_route()], fn(registrar) raise {
+  let extension = typed(contract, fn(registrar) raise {
     registrar.bind(ping, (_context, _request) => ())
   })
   let fields : Map[String, Json] = { "root": "./workspace" }
@@ -32,27 +35,18 @@ test "renderer capabilities own their scope" {
 }
 
 ///|
-test "typed extension adaptation reports foreign routes" {
-  let contract = @proton_contract.extension(
-    id="example/typed",
-    js_namespace="typed",
-  )
-  let foreign_contract = @proton_contract.extension(
-    id="example/foreign",
-    js_namespace="foreign",
-  )
-  let ping : @proton_contract.Command[Unit, Unit] = foreign_contract.command(
-    "ping",
-  )
-  let extension = typed(contract, [ping.contract_route()], fn(_registrar) {  })
+test "typed extension adaptation validates identity without running registration" {
+  let registered = Ref(false)
+  let contract = @proton_contract.extension(id="", js_namespace="typed")
+  let extension = typed(contract, fn(_registrar) { registered.val = true })
   try {
     ignore(extension.command_spec())
-    fail("expected typed extension adaptation failure")
+    fail("expected invalid extension identity")
   } catch {
-    ExtensionAdapterError::TypedSpecInvalid(extension_id="example/typed", ..) =>
-      ()
+    ExtensionAdapterError::TypedSpecInvalid(..) => ()
     _ => fail("expected typed extension adaptation failure")
   }
+  assert_false(registered.val)
 }
 
 ///|
