@@ -630,6 +630,21 @@ int32_t proton_engine_window_close_all_connections(
    window. Safe to call with NULL. */
 void proton_engine_window_cookie_cleanup(proton_engine_window_t *window);
 
+/* Application process metrics from CEF's task manager. The functions are
+   UI-thread only and need a live runtime. Chromium measures CPU and memory on
+   a sampling timer that runs while an observer is attached, so the first query
+   starts the sampling and `proton_engine_process_metrics_stop` releases the
+   observer during runtime shutdown. `out_memory_bytes` is -1 while Chromium
+   has no measurement for the process, matching Electron's `MemoryInfo`. */
+int32_t proton_engine_process_metrics_count(int32_t *out_count, char *error,
+                                            size_t error_len);
+int32_t proton_engine_process_metric_at(
+    int32_t index, int64_t *out_task_id, int32_t *out_process_type,
+    double *out_cpu_percent, int64_t *out_memory_bytes, char *name_buffer,
+    int32_t name_buffer_len, int32_t *out_required_len, char *error,
+    size_t error_len);
+void proton_engine_process_metrics_stop(void);
+
 /* Native image management. Images are standalone CEF image objects not tied
    to a runtime or window. The engine layer owns the cef_image_t reference
    count; the state layer stores the raw pointer and treats it as opaque. */
