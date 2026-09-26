@@ -300,6 +300,7 @@ int32_t proton_runtime_begin_destroy(proton_runtime_handle_t runtime) {
   }
   proton_runtime_slot_begin_destroy(slot);
 
+  proton_engine_process_metrics_stop();
   if (slot->app_instance != PROTON_INVALID_HANDLE) {
     proton_app_instance_detach_runtime_impl(slot->app_instance);
     slot->app_instance = PROTON_INVALID_HANDLE;

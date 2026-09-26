@@ -47,6 +47,8 @@ pub fn notification_supported() -> Bool raise NativeError
 
 pub fn process_exit(Int) -> Unit
 
+pub fn process_metrics() -> Array[AppProcessMetric] raise NativeError
+
 pub fn process_run_relaunches() -> Unit raise NativeError
 
 pub fn process_schedule_relaunch(String, Array[String]) -> Unit raise NativeError
@@ -157,6 +159,34 @@ pub enum AppInstanceAcquire {
   Primary(AppInstance)
   Forwarded
 }
+
+pub(all) struct AppProcessMetric {
+  task_id : Int64
+  process_type : AppProcessType
+  cpu_percent : Double
+  memory_bytes : Int64
+  name : String
+} derive(Eq, @debug.Debug)
+pub fn AppProcessMetric::equal(Self, Self) -> Bool
+pub fn AppProcessMetric::not_equal(Self, Self) -> Bool
+pub fn AppProcessMetric::to_repr(Self) -> @debug.Repr
+
+pub(all) enum AppProcessType {
+  Unknown
+  Browser
+  Gpu
+  Zygote
+  Utility
+  Renderer
+  Extension
+  Guest
+  Plugin
+  SandboxHelper
+  Worker
+} derive(Eq, @debug.Debug)
+pub fn AppProcessType::equal(Self, Self) -> Bool
+pub fn AppProcessType::not_equal(Self, Self) -> Bool
+pub fn AppProcessType::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BridgeConfig {
   grants : Array[BridgeGrantConfig]

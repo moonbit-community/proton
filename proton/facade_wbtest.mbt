@@ -2089,6 +2089,23 @@ test "command host registration preserves cleanup failures" {
 }
 
 ///|
+test "application process metric types map from the native vocabulary" {
+  assert_true(
+    AppProcessType::from_native(@native.AppProcessType::Browser) is Browser,
+  )
+  assert_true(
+    AppProcessType::from_native(@native.AppProcessType::Renderer) is Renderer,
+  )
+  assert_true(
+    AppProcessType::from_native(@native.AppProcessType::Worker) is Worker,
+  )
+  assert_true(
+    AppProcessType::from_native(@native.AppProcessType::SandboxHelper)
+    is SandboxHelper,
+  )
+}
+
+///|
 test "renderer termination statuses map to Electron reasons" {
   assert_eq(
     render_process_gone_reason(0),

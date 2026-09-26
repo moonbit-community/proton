@@ -205,6 +205,23 @@ pub extern "C" fn proton_app_instance_destroy_ffi(instance : Int64) -> Int = "pr
 pub extern "C" fn proton_app_instance_release_ffi(instance : Int64) -> Int = "proton_app_instance_release"
 
 ///|
+#borrow(out_count)
+pub extern "C" fn proton_app_metrics_count_ffi(out_count : Ref[Int]) -> Int = "proton_app_metrics_count"
+
+///|
+#borrow(out_task_id, out_process_type, out_cpu_percent, out_memory_bytes, name_buffer, out_name_required)
+pub extern "C" fn proton_app_metric_at_ffi(
+  index : Int,
+  out_task_id : Ref[Int64],
+  out_process_type : Ref[Int],
+  out_cpu_percent : Ref[Double],
+  out_memory_bytes : Ref[Int64],
+  name_buffer : Bytes,
+  name_buffer_len : Int,
+  out_name_required : Ref[Int],
+) -> Int = "proton_app_metric_at"
+
+///|
 #borrow(runtime_root, helper_path, resources_dir, locales_dir, cache_dir, locale, accept_languages, dialog_ok_label, dialog_cancel_label, out_exit_code)
 pub extern "C" fn execute_process(
   use_bundled : Int,

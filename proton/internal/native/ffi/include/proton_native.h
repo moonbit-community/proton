@@ -156,6 +156,19 @@ int32_t proton_app_instance_release(proton_app_instance_id_t instance);
 int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
+/* Process metrics from CEF's task manager: one entry per browser, GPU,
+   utility, or renderer task, in the order the task manager reports. `type`
+   uses cef_task_type_t. `memory_bytes` is -1 while Chromium has not measured
+   the process, and the task id is CEF's task identifier rather than an
+   operating-system pid. Both functions are UI-thread only and need a live
+   runtime; the first call starts Chromium's sampling, so memory and CPU
+   appear in later samples. */
+int32_t proton_app_metrics_count(int32_t *out_count);
+int32_t proton_app_metric_at(
+    int32_t index, int64_t *out_task_id, int32_t *out_process_type,
+    double *out_cpu_percent, int64_t *out_memory_bytes, char *name_buffer,
+    int32_t name_buffer_len, int32_t *out_name_required);
+
 /* Application-loop disposition: 1 accepted, 0 rejected/expired, <0 error. */
 int32_t proton_runtime_respond_app_activation(proton_runtime_handle_t runtime,
                                               int64_t request_id, int32_t accept);

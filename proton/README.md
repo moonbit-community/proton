@@ -99,6 +99,54 @@ exception decisions for the same request context.
 `SessionHandle::close_all_connections` closes active and idle Chromium network
 connections for the session without clearing cookies or cache data.
 
+## Application process metrics
+
+`ApplicationContext::app_metrics()` reports the CPU and memory usage of every
+process the application owns, corresponding to Electron's
+`app.getAppMetrics()`:
+
+| Proton | Electron | Behavior |
+| --- | --- | --- |
+| `app_metrics()` | `app.getAppMetrics()` | One snapshot per call, in Chromium's task manager order: the browser process first, then the GPU process when it runs separately, then the remaining renderer, utility, worker, and extension tasks |
+| `AppProcessMetric::cpu_percent` | `percentCPUUsage` | CPU usage since the previous sample; 100% is one fully used core |
+| `AppProcessMetric::memory_bytes` | `memory.workingSetSize` | Private memory footprint in bytes, or `-1` while Chromium has not measured the process |
+| `AppProcessMetric::process_type` | `type` | Chromium's task type; Electron labels renderer tasks `Tab` |
+| `AppProcessMetric::name` | `name` and `serviceName` | Chromium's task name, empty when it reports none |
+
+```moonbit
+app_lifecycle(
+  on_start=context => {
+    for metric in context.app_metrics() {
+      println(
+        metric.process_type.to_repr() +
+        " cpu=" +
+        metric.cpu_percent.to_string() +
+        " memory=" +
+        metric.memory_bytes.to_string(),
+      )
+    }
+    context
+  },
+  on_shutdown=fn(_) { () },
+)
+```
+
+Chromium measures processes only while something observes its task manager, so
+the first call starts the sampling: it reports no memory footprint, and calls
+after one sampling interval report the measured footprint and the CPU usage
+since the previous sample. The interval follows Chromium's task manager and is
+about one second, two seconds on macOS. Proton keeps the observation for the
+rest of the runtime, so later calls stay measured without restarting the
+sampling. See `examples/85_app_metrics`.
+
+Electron reports an operating-system `pid`; CEF exposes its own task identifier
+instead, so `task_id` identifies a process and is stable for the process
+lifetime. Electron's idle wakeups, creation time, sandbox state, CPU time, and
+Windows integrity level have no CEF counterpart, and Proton does not publish
+them. `memory_bytes` follows CEF's documented contract and is `-1` until the
+first measurement lands, which is how an application can tell "not measured
+yet" from a real footprint.
+
 Use `App::on_permission_request` to apply one policy to certificate and media
 permission requests. It takes precedence over the specialized handlers; when
 no handler is configured, Proton denies both request types by default.

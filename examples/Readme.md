@@ -169,6 +169,10 @@ moon -C examples run 01_run --target native
   Electron-style single-instance runtime review covering
   `hasSingleInstanceLock`, `releaseSingleInstanceLock`, and a successor
   instance that becomes primary with its own session partition.
+- [85_app_metrics](85_app_metrics/README.md): manual Electron-style
+  application process metrics review covering `getAppMetrics` for every
+  browser, GPU, utility, and renderer task, including the sampling interval
+  before Chromium reports memory and CPU.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

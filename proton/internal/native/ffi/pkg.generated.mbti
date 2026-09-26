@@ -81,6 +81,10 @@ pub fn proton_app_is_active_ffi(@ref.Ref[Int]) -> Int
 
 pub fn proton_app_is_hidden_ffi(@ref.Ref[Int]) -> Int
 
+pub fn proton_app_metric_at_ffi(Int, @ref.Ref[Int64], @ref.Ref[Int], @ref.Ref[Double], @ref.Ref[Int64], Bytes, Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_app_metrics_count_ffi(@ref.Ref[Int]) -> Int
+
 pub fn proton_app_show_ffi() -> Int
 
 pub fn proton_host_loop_begin_ffi() -> Int
