@@ -90,8 +90,8 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         "remove-view-close", "page-view-close", "parent-view-close", "cancel-during-startup",
         "initial-open", "cancel-sleep", "cancel-open", "task-success", "task-failure",
         "close-decision", "process-lifetime", "app-control", "process-events", "process-events-no-bridge",
-        "app-metrics", "startup-update-channel", "startup-update-failure", "proxy-config",
-        "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
+        "app-metrics", "page-control", "startup-update-channel", "startup-update-failure",
+        "proxy-config", "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
         "closed-record-churn", "bridge-admission",
       ]
   }
@@ -219,6 +219,15 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
           // platform and runtime mode.
           for line in app_output_lines(app.output_path) {
             if line.has_prefix("APP_METRICS") {
+              println(line)
+            }
+          }
+        }
+        if name == "page-control" {
+          // Record the history snapshots in the CI log so the reviewer sees
+          // the entries each platform reported.
+          for line in app_output_lines(app.output_path) {
+            if line.has_prefix("PAGE_CONTROL") {
               println(line)
             }
           }

@@ -14,6 +14,10 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
     run_app_metrics_regression()
     return
   }
+  if name == "page-control" {
+    run_page_control_regression()
+    return
+  }
   if name == "startup-update-channel" || name == "startup-update-failure" {
     run_startup_update_regression(name)
     return
@@ -648,6 +652,193 @@ async fn run_app_metrics_regression() -> Unit {
   .run()
   assert_true(summary.val != "")
   println("LIFECYCLE_PASSED app-metrics")
+}
+
+///|
+/// Describes one navigation-history snapshot for the regression output.
+fn describe_history(history : @proton.NavigationHistory) -> String {
+  let parts : Array[String] = []
+  for entry in history.entries {
+    parts.push(entry.title + "@" + entry.url)
+  }
+  "active=" +
+  history.active_index.to_string() +
+  " entries=[" +
+  parts.join(" | ") +
+  "]"
+}
+
+///|
+/// One report the page sends while the case inspects an inserted stylesheet.
+struct PageControlReport {
+  kind : String
+  value : String
+} derive(ToJson, FromJson)
+
+///|
+pub extend PageControlReport with ToJson::{to_json}
+
+///|
+pub extend PageControlReport with FromJson::{from_json}
+
+///|
+/// Reports the value the page last sent for `kind`, or None while the page has
+/// not reported it.
+fn page_report_value(
+  reports : Array[PageControlReport],
+  kind : String,
+) -> String? {
+  let mut found : String? = None
+  for report in reports {
+    if report.kind == kind {
+      found = Some(report.value)
+    }
+  }
+  found
+}
+
+///|
+/// Reports the computed custom property this case installs through
+/// `BrowserHandle::insert_css`, so the fixture observes the stylesheet from the
+/// page instead of trusting the call to have worked.
+fn page_css_probe_script() -> String {
+  "void window.__MoonBit__.app.report({ kind: 'css', value: getComputedStyle(document.documentElement).getPropertyValue('--proton-e2e-css').trim() || 'unset' })"
+}
+
+///|
+/// Exercises the page-control surface of a browser: navigation history and
+/// inserted stylesheets, which Chromium serves through its navigation visitor
+/// and a page script.
+async fn run_page_control_regression() -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let reported : Array[PageControlReport] = []
+  let summary = Ref("")
+  let report_command : @proton_contract.Command[PageControlReport, Unit] = @proton_contract.command(
+    "report",
+  )
+  @proton.html(
+    "Page control", "<title>Page control</title><h1>Page control</h1>",
+  )
+  .identifier("dev.proton.e2e-page-control")
+  .commands(registrar => {
+    registrar.bind(report_command, (_context, report) => reported.push(report))
+  })
+  .app_lifecycle(
+    on_start=context => {
+      application.val = Some(context)
+      context
+    },
+    on_shutdown=_ => (),
+  )
+  .window_lifecycle(
+    on_ready=context => {
+      lifecycle_probe_gate()
+      ignore(
+        context
+        .task_group()
+        .spawn(
+          () => {
+            let app = application.val.unwrap()
+            let browser = app.windows().find("main").unwrap().browser()
+            // Scripts issued before the entry document commits never reach the
+            // page, so wait for the page to answer through the bridge.
+            let mut page_live = false
+            for attempt = 0; attempt < 400 && !page_live; attempt = attempt + 1 {
+              browser.eval(
+                "void window.__MoonBit__.app.report({ kind: 'live', value: document.title })",
+              ) catch {
+                error => fail("eval failed: " + error.message())
+              }
+              page_live = page_report_value(reported, "live") is Some(_)
+              if !page_live {
+                @async.sleep(25)
+              }
+            }
+            assert_true(page_live)
+            let initial = browser.navigation_history() catch {
+              error => fail("navigation history failed: " + error.message())
+            }
+            assert_true(initial.length() > 0)
+            assert_eq(initial.active_index, initial.length() - 1)
+            println("PAGE_CONTROL initial " + describe_history(initial))
+            let key = browser.insert_css("html { --proton-e2e-css: applied }") catch {
+              error => fail("insert_css failed: " + error.message())
+            }
+            assert_true(key > 0L)
+            let mut css_state = ""
+            for attempt = 0; attempt < 400; attempt = attempt + 1 {
+              browser.eval(page_css_probe_script()) catch {
+                error => fail("eval failed: " + error.message())
+              }
+              match page_report_value(reported, "css") {
+                Some(value) => {
+                  css_state = value
+                  if value == "applied" {
+                    break
+                  }
+                }
+                None => ()
+              }
+              @async.sleep(25)
+            }
+            assert_eq(css_state, "applied")
+            browser.remove_inserted_css(key) catch {
+              error => fail("remove_inserted_css failed: " + error.message())
+            }
+            let mut removed_state = ""
+            for attempt = 0; attempt < 400; attempt = attempt + 1 {
+              browser.eval(page_css_probe_script()) catch {
+                error => fail("eval failed: " + error.message())
+              }
+              match page_report_value(reported, "css") {
+                Some(value) => {
+                  removed_state = value
+                  if value == "unset" {
+                    break
+                  }
+                }
+                None => ()
+              }
+              @async.sleep(25)
+            }
+            assert_eq(removed_state, "unset")
+            browser.load_url("data:text/html,<title>Second</title>") catch {
+              error => fail("load_url failed: " + error.message())
+            }
+            let mut history = initial
+            for attempt = 0; attempt < 400; attempt = attempt + 1 {
+              history = browser.navigation_history() catch {
+                error => fail("navigation history failed: " + error.message())
+              }
+              if history.length() >= 2 &&
+                history.active_index == history.length() - 1 {
+                break
+              }
+              @async.sleep(25)
+            }
+            assert_true(history.length() >= 2)
+            assert_eq(history.active_index, history.length() - 1)
+            println("PAGE_CONTROL navigated " + describe_history(history))
+            // The key belonged to the document that was replaced, so removing
+            // it now must stay a no-op instead of failing.
+            browser.remove_inserted_css(key) catch {
+              error =>
+                fail("remove after navigation failed: " + error.message())
+            }
+            summary.val = history.length().to_string() +
+              ":" +
+              history.active_index.to_string()
+            app.quit()
+          },
+          no_wait=true,
+        ),
+      )
+    },
+    on_close=_ => (),
+  )
+  .run()
+  assert_true(summary.val != "")
+  println("LIFECYCLE_PASSED page-control")
 }
 
 ///|
