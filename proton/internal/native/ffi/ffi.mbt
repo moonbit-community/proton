@@ -1136,6 +1136,29 @@ pub extern "C" fn proton_window_bridge_state_field_ffi(
 ) -> Int = "proton_window_bridge_state_field"
 
 ///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_window_navigation_history_json_ffi(
+  window : WindowHandle,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_window_navigation_history_json"
+
+///|
+#borrow(css, out_key)
+pub extern "C" fn proton_window_insert_page_css_ffi(
+  window : WindowHandle,
+  css : Bytes,
+  out_key : Ref[Int64],
+) -> Int = "proton_window_insert_page_css"
+
+///|
+pub extern "C" fn proton_window_remove_page_css_ffi(
+  window : WindowHandle,
+  key : Int64,
+) -> Int = "proton_window_remove_page_css"
+
+///|
 #borrow(out_present)
 pub extern "C" fn proton_window_bridge_failure_present_ffi(
   window : WindowHandle,
@@ -1323,6 +1346,29 @@ pub extern "C" fn proton_view_eval_ffi(
   view : ViewHandle,
   script : Bytes,
 ) -> Int = "proton_view_eval"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_view_navigation_history_json_ffi(
+  view : ViewHandle,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_view_navigation_history_json"
+
+///|
+#borrow(css, out_key)
+pub extern "C" fn proton_view_insert_page_css_ffi(
+  view : ViewHandle,
+  css : Bytes,
+  out_key : Ref[Int64],
+) -> Int = "proton_view_insert_page_css"
+
+///|
+pub extern "C" fn proton_view_remove_page_css_ffi(
+  view : ViewHandle,
+  key : Int64,
+) -> Int = "proton_view_remove_page_css"
 
 ///|
 #borrow(command)

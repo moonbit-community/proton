@@ -565,6 +565,30 @@ pub fn NativeViewEvent::equal(Self, Self) -> Bool
 pub fn NativeViewEvent::not_equal(Self, Self) -> Bool
 pub fn NativeViewEvent::to_repr(Self) -> @debug.Repr
 
+pub(all) struct NavigationEntry {
+  url : String
+  display_url : String
+  original_url : String
+  title : String
+  transition : Int
+  qualifiers : Int
+  has_post_data : Bool
+  http_status_code : Int
+} derive(Eq, @debug.Debug, @json.FromJson)
+pub fn NavigationEntry::equal(Self, Self) -> Bool
+pub fn NavigationEntry::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NavigationEntry::not_equal(Self, Self) -> Bool
+pub fn NavigationEntry::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NavigationHistory {
+  entries : Array[NavigationEntry]
+  active_index : Int
+} derive(Eq, @debug.Debug, @json.FromJson)
+pub fn NavigationHistory::equal(Self, Self) -> Bool
+pub fn NavigationHistory::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn NavigationHistory::not_equal(Self, Self) -> Bool
+pub fn NavigationHistory::to_repr(Self) -> @debug.Repr
+
 pub(all) struct PdfPrintSettings {
   landscape : Bool
   print_background : Bool
@@ -829,10 +853,13 @@ pub fn View::destroy(Self) -> Unit raise NativeError
 pub fn View::eval(Self, String) -> Unit raise NativeError
 pub fn View::find_in_page(Self, String, Bool, Bool, Bool) -> Int raise NativeError
 pub fn View::id(Self) -> Int64
+pub fn View::insert_page_css(Self, String) -> Int64 raise NativeError
 pub fn View::is_audio_muted(Self) -> Bool raise NativeError
 pub fn View::is_devtools_opened(Self) -> Bool raise NativeError
 pub fn View::load_url(Self, String) -> Unit raise NativeError
+pub fn View::navigation_history(Self) -> NavigationHistory raise NativeError
 pub fn View::navigation_state(Self) -> (Bool, Bool) raise NativeError
+pub fn View::remove_page_css(Self, Int64) -> Unit raise NativeError
 pub fn View::set_audio_muted(Self, Bool) -> Unit raise NativeError
 pub fn View::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise NativeError
 pub fn View::set_visible(Self, Bool) -> Unit raise NativeError
@@ -899,15 +926,18 @@ pub fn Window::flash_frame(Self, Bool) -> Unit raise NativeError
 pub fn Window::focus(Self) -> Unit raise NativeError
 pub fn Window::hide(Self) -> Unit raise NativeError
 pub fn Window::id(Self) -> Int64
+pub fn Window::insert_page_css(Self, String) -> Int64 raise NativeError
 pub fn Window::is_audio_muted(Self) -> Bool raise NativeError
 pub fn Window::is_devtools_opened(Self) -> Bool raise NativeError
 pub fn Window::load_url(Self, String) -> Unit raise NativeError
 pub fn Window::maximize(Self) -> Unit raise NativeError
 pub fn Window::minimize(Self) -> Unit raise NativeError
+pub fn Window::navigation_history(Self) -> NavigationHistory raise NativeError
 pub fn Window::navigation_state(Self) -> (Bool, Bool) raise NativeError
 pub fn Window::popup_menu(Self, MenuBar, Int, Int) -> Unit raise NativeError
 pub fn Window::print(Self) -> Unit raise NativeError
 pub fn Window::print_to_pdf(Self, String, PdfPrintSettings) -> Int raise NativeError
+pub fn Window::remove_page_css(Self, Int64) -> Unit raise NativeError
 pub fn Window::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
 pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeError
 pub fn Window::restore(Self) -> Unit raise NativeError

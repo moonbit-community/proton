@@ -2280,6 +2280,94 @@ int32_t proton_window_browser_command(proton_window_handle_t window,
   return PROTON_OK;
 }
 
+int32_t proton_window_navigation_history_json(proton_window_handle_t window,
+                                              char *buffer,
+                                              int32_t buffer_len,
+                                              int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_required_len is required");
+  }
+  *out_required_len = 0;
+  if (buffer_len < 0 || (buffer_len > 0 && buffer == NULL)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "navigation history buffer is invalid");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "navigation history requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_navigation_history_json(
+      slot->engine_window, buffer, buffer_len, out_required_len, engine_error,
+      sizeof(engine_error));
+  if (status < 0) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return status;
+}
+
+int32_t proton_window_insert_page_css(proton_window_handle_t window,
+                                      const char *css, int64_t *out_key) {
+  if (out_key == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_key is required");
+  }
+  *out_key = 0;
+  if (css == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "css is required");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "inserted CSS requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_insert_page_css(
+      slot->engine_window, css, out_key, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_window_remove_page_css(proton_window_handle_t window,
+                                      int64_t key) {
+  if (key <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "inserted CSS key is invalid");
+  }
+  proton_window_slot_t *slot = NULL;
+  int32_t status = proton_get_window(window, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_window == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "inserted CSS requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_window_remove_page_css(slot->engine_window, key,
+                                                engine_error,
+                                                sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_window_get_browser_focus_state(
     proton_window_handle_t window, int32_t *out_focused) {
   proton_window_slot_t *slot = NULL;
@@ -3687,6 +3775,93 @@ int32_t proton_view_browser_command(proton_view_handle_t view,
   status = proton_engine_view_browser_command(
       slot->engine_view, command, download_id, engine_error,
       sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_navigation_history_json(proton_view_handle_t view,
+                                            char *buffer,
+                                            int32_t buffer_len,
+                                            int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_required_len is required");
+  }
+  *out_required_len = 0;
+  if (buffer_len < 0 || (buffer_len > 0 && buffer == NULL)) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "navigation history buffer is invalid");
+  }
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "navigation history requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_navigation_history_json(
+      slot->engine_view, buffer, buffer_len, out_required_len, engine_error,
+      sizeof(engine_error));
+  if (status < 0) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return status;
+}
+
+int32_t proton_view_insert_page_css(proton_view_handle_t view,
+                                    const char *css, int64_t *out_key) {
+  if (out_key == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_key is required");
+  }
+  *out_key = 0;
+  if (css == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "css is required");
+  }
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "inserted CSS requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_insert_page_css(
+      slot->engine_view, css, out_key, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) {
+    return proton_set_engine_status(status, engine_error);
+  }
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_view_remove_page_css(proton_view_handle_t view, int64_t key) {
+  if (key <= 0) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "inserted CSS key is invalid");
+  }
+  proton_view_slot_t *slot = NULL;
+  int32_t status = proton_get_view(view, &slot);
+  if (status != PROTON_OK) {
+    return status;
+  }
+  if (slot->engine_view == NULL) {
+    return proton_set_error(PROTON_ERR_UNSUPPORTED,
+                            "inserted CSS requires native engine");
+  }
+  char engine_error[512] = {0};
+  status = proton_engine_view_remove_page_css(slot->engine_view, key,
+                                              engine_error,
+                                              sizeof(engine_error));
   if (status != PROTON_OK) {
     return proton_set_engine_status(status, engine_error);
   }

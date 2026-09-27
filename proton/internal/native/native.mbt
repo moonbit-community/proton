@@ -351,6 +351,19 @@ fn decode_native_json(text : String, label : String) -> Json raise NativeError {
 }
 
 ///|
+fn decode_navigation_history(
+  text : String,
+) -> NavigationHistory raise NativeError {
+  @json.from_json(decode_native_json(text, "navigation history")) catch {
+    error =>
+      raise InvalidPayload(
+        context="navigation history",
+        message=error.to_string(),
+      )
+  }
+}
+
+///|
 /// Rejects payloads whose `abi_version` does not match the schema version
 /// this binding implements.
 fn expect_abi_version(found : Int, context : String) -> Unit raise NativeError {
@@ -2520,6 +2533,51 @@ pub fn Window::eval(self : Window, script : String) -> Unit raise NativeError {
 }
 
 ///|
+/// Reads the main page's navigation history in Chromium order. The history
+/// belongs to the current document; a later navigation replaces it.
+pub fn Window::navigation_history(
+  self : Window,
+) -> NavigationHistory raise NativeError {
+  let handle = self.live_handle()
+  decode_navigation_history(
+    require_native_text("navigation history", (buffer, buffer_len, required) => {
+      @native_ffi.proton_window_navigation_history_json_ffi(
+        handle, buffer, buffer_len, required,
+      )
+    }),
+  )
+}
+
+///|
+/// Inserts `css` into the main page and returns the key that removes it again.
+pub fn Window::insert_page_css(
+  self : Window,
+  css : String,
+) -> Int64 raise NativeError {
+  let key = Ref(0L)
+  check_status(
+    @native_ffi.proton_window_insert_page_css_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(css),
+      key,
+    ),
+  )
+  key.val
+}
+
+///|
+/// Removes a stylesheet inserted earlier in the same document. Removing a key
+/// that the current document never inserted is a no-op.
+pub fn Window::remove_page_css(
+  self : Window,
+  key : Int64,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_remove_page_css_ffi(self.live_handle(), key),
+  )
+}
+
+///|
 /// Sends a browser control command to the main page: `back`, `forward`,
 /// `reload`, `reload_ignore_cache`, `stop`, `focus`, `undo`, `redo`, `cut`,
 /// `copy`, `paste`, `paste_and_match_style`, `delete`, `select_all`,
@@ -3627,6 +3685,49 @@ pub fn View::navigation_state(self : View) -> (Bool, Bool) raise NativeError {
 pub fn View::eval(self : View, script : String) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_view_eval_ffi(self.live_handle(), @ffi.to_cstr(script)),
+  )
+}
+
+///|
+/// Reads the view page's navigation history in Chromium order.
+pub fn View::navigation_history(
+  self : View,
+) -> NavigationHistory raise NativeError {
+  let handle = self.live_handle()
+  decode_navigation_history(
+    require_native_text("navigation history", (buffer, buffer_len, required) => {
+      @native_ffi.proton_view_navigation_history_json_ffi(
+        handle, buffer, buffer_len, required,
+      )
+    }),
+  )
+}
+
+///|
+/// Inserts `css` into the view page and returns the key that removes it again.
+pub fn View::insert_page_css(
+  self : View,
+  css : String,
+) -> Int64 raise NativeError {
+  let key = Ref(0L)
+  check_status(
+    @native_ffi.proton_view_insert_page_css_ffi(
+      self.live_handle(),
+      @ffi.to_cstr(css),
+      key,
+    ),
+  )
+  key.val
+}
+
+///|
+/// Removes a stylesheet inserted earlier in the same view document.
+pub fn View::remove_page_css(
+  self : View,
+  key : Int64,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_view_remove_page_css_ffi(self.live_handle(), key),
   )
 }
 

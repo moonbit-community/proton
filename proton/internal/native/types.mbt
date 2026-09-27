@@ -397,6 +397,47 @@ pub extend NativePdfPrintResult with Eq::{not_equal, equal}
 pub extend NativePdfPrintResult with Debug::{to_repr}
 
 ///|
+/// One entry of Chromium's navigation history. `transition` is the
+/// page-transition type and `qualifiers` is the flag set Proton maps from
+/// Chromium's transition flags.
+pub(all) struct NavigationEntry {
+  url : String
+  display_url : String
+  original_url : String
+  title : String
+  transition : Int
+  qualifiers : Int
+  has_post_data : Bool
+  http_status_code : Int
+} derive(Debug, Eq, FromJson)
+
+///|
+pub extend NavigationEntry with Eq::{not_equal, equal}
+
+///|
+pub extend NavigationEntry with Debug::{to_repr}
+
+///|
+pub extend NavigationEntry with FromJson::{from_json}
+
+///|
+/// Navigation-history snapshot: every entry in order plus the active index,
+/// or -1 while the browser has no entries.
+pub(all) struct NavigationHistory {
+  entries : Array[NavigationEntry]
+  active_index : Int
+} derive(Debug, Eq, FromJson)
+
+///|
+pub extend NavigationHistory with Eq::{not_equal, equal}
+
+///|
+pub extend NavigationHistory with Debug::{to_repr}
+
+///|
+pub extend NavigationHistory with FromJson::{from_json}
+
+///|
 pub(all) struct BridgeLifecycleState {
   revision : String
   outcome : String

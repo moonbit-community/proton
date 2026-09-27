@@ -1209,6 +1209,29 @@ test "proxy configuration reads current environment and isolates explicit settin
 }
 
 ///|
+test "navigation history payload decodes into entries" {
+  let history = decode_navigation_history(
+    "{\"entries\":[{\"url\":\"https://example.test/a\",\"display_url\":\"example.test/a\",\"original_url\":\"https://example.test/a\",\"title\":\"A\",\"transition\":1,\"qualifiers\":8,\"has_post_data\":false,\"http_status_code\":200},{\"url\":\"https://example.test/b\",\"display_url\":\"example.test/b\",\"original_url\":\"https://example.test/b\",\"title\":\"B\",\"transition\":0,\"qualifiers\":0,\"has_post_data\":true,\"http_status_code\":204}],\"active_index\":1}",
+  )
+  assert_eq(history.entries.length(), 2)
+  assert_eq(history.active_index, 1)
+  assert_eq(history.entries[0].title, "A")
+  assert_eq(history.entries[0].transition, 1)
+  assert_eq(history.entries[0].qualifiers, 8)
+  assert_eq(history.entries[0].http_status_code, 200)
+  assert_eq(history.entries[1].has_post_data, true)
+  assert_eq(history.entries[1].http_status_code, 204)
+}
+
+///|
+test "navigation history rejects malformed payloads" {
+  let error = expect_native_error(() => {
+    decode_navigation_history("{\"entries\":[{\"url\":1}],\"active_index\":0}")
+  })
+  assert_true(error is InvalidPayload(..))
+}
+
+///|
 test "bridge admission and snapshot preserve invalid-handle errors" {
   let runtime = Runtime::{
     handle: @native_ffi.runtime_null(),

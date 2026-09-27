@@ -417,6 +417,21 @@ int32_t proton_window_load_url(proton_window_handle_t window,
                                           const char *url);
 int32_t proton_window_eval(proton_window_handle_t window,
                                       const char *script);
+/* Navigation history for the window's main browser as a JSON payload:
+   {"entries":[{"url":...,"display_url":...,"original_url":...,"title":...,
+   "transition":<int>,"qualifiers":<int>,"has_post_data":<bool>,
+   "http_status_code":<int>}],"active_index":<int>}. Uses the two-call buffer
+   pattern and returns PROTON_ERR_BUFFER_TOO_SMALL with the payload length in
+   `out_required_len` when the buffer is too small. */
+int32_t proton_window_navigation_history_json(
+    proton_window_handle_t window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len);
+/* Inserts `css` into the current document and returns the key that removes it
+   again. The key only matches the document that inserted the stylesheet. */
+int32_t proton_window_insert_page_css(proton_window_handle_t window,
+                                      const char *css, int64_t *out_key);
+int32_t proton_window_remove_page_css(proton_window_handle_t window,
+                                      int64_t key);
 int32_t proton_window_browser_command(
     proton_window_handle_t window, const char *command, int32_t download_id);
 int32_t proton_window_get_browser_focus_state(
@@ -627,6 +642,12 @@ int32_t proton_view_is_audio_muted(proton_view_handle_t view,
 int32_t proton_view_load_url(proton_view_handle_t view,
                                         const char *url);
 int32_t proton_view_eval(proton_view_handle_t view, const char *script);
+int32_t proton_view_navigation_history_json(proton_view_handle_t view,
+                                            char *buffer, int32_t buffer_len,
+                                            int32_t *out_required_len);
+int32_t proton_view_insert_page_css(proton_view_handle_t view,
+                                    const char *css, int64_t *out_key);
+int32_t proton_view_remove_page_css(proton_view_handle_t view, int64_t key);
 int32_t proton_view_browser_command(
     proton_view_handle_t view, const char *command, int32_t download_id);
 int32_t proton_view_get_browser_focus_state(

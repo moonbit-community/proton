@@ -407,6 +407,20 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
                                   const char *script,
                                   char *error,
                                   size_t error_len);
+/* Navigation history as a JSON payload: {"entries":[...],"active_index":N}.
+   Each entry carries the URL fields, the Chromium page-transition type, the
+   transition qualifiers, POST state, and the HTTP status code. */
+int32_t proton_engine_window_navigation_history_json(
+    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len);
+/* Injects `css` into the current document and reports the key that removes it.
+   The key only applies to the document that inserted the stylesheet. */
+int32_t proton_engine_window_insert_page_css(proton_engine_window_t *window,
+                                            const char *css, int64_t *out_key,
+                                            char *error, size_t error_len);
+int32_t proton_engine_window_remove_page_css(proton_engine_window_t *window,
+                                             int64_t key, char *error,
+                                             size_t error_len);
 int32_t proton_engine_window_browser_command(
     proton_engine_window_t *window, const char *command, int32_t download_id,
     char *error, size_t error_len);
@@ -575,6 +589,15 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
                                 const char *script,
                                 char *error,
                                 size_t error_len);
+int32_t proton_engine_view_navigation_history_json(
+    proton_engine_view_t *view, char *buffer, int32_t buffer_len,
+    int32_t *out_required_len, char *error, size_t error_len);
+int32_t proton_engine_view_insert_page_css(proton_engine_view_t *view,
+                                           const char *css, int64_t *out_key,
+                                           char *error, size_t error_len);
+int32_t proton_engine_view_remove_page_css(proton_engine_view_t *view,
+                                           int64_t key, char *error,
+                                           size_t error_len);
 int32_t proton_engine_view_browser_command(proton_engine_view_t *view,
                                                 const char *command,
                                                 int32_t download_id,
