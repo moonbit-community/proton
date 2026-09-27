@@ -306,6 +306,64 @@ so GPU, utility, and plugin process loss cannot be observed through this
 runtime route. Proton reports the renderer half through `render-process-gone`
 and does not expose a handler that can never fire.
 
+## Page history and inserted CSS
+
+`BrowserHandle::navigation_history()` and `ViewHandle::navigation_history()`
+report one browser's session history, corresponding to Electron's
+`webContents.navigationHistory`:
+
+| Proton | Electron | Behavior |
+| --- | --- | --- |
+| `navigation_history()` | `navigationHistory.getAllEntries()` | Chromium's entries in order plus `active_index` |
+| `NavigationHistory::length()` | `navigationHistory.length()` | Number of entries in the snapshot |
+| `NavigationHistory::entry_at(index)` | `navigationHistory.getEntryAtIndex(index)` | One entry, or `None` outside the snapshot |
+| `NavigationHistory::active_entry()` | `navigationHistory.getActiveIndex()` lookup | The entry the browser currently shows |
+| `NavigationHistory::can_go_back()` / `can_go_forward()` | `navigationHistory.canGoBack()` / `canGoForward()` | Whether an entry exists on either side |
+| `NavigationEntry::url`, `display_url`, `original_url`, `title` | `NavigationEntry.url` and `title` | Chromium's URL, display URL, pre-redirect URL, and page title |
+| `NavigationEntry::transition` | `transitionType` | Chromium page-transition type: `link`, `typed`, `auto-bookmark`, `auto-subframe`, `manual-subframe`, `generated`, `auto-toplevel`, `form-submit`, `reload`, `keyword`, `keyword-generated`, or `other(code)` |
+| `NavigationEntry::transition_qualifiers` | `transitionQualifiers` | `client-redirect`, `server-redirect`, `forward-back`, or `from-address-bar` |
+| `NavigationEntry::has_post_data`, `http_status_code` | `NavigationEntry.hasPostData` and the status code | POST state and the last successful navigation status |
+
+`BrowserHandle::insert_css(css)` returns the key that
+`BrowserHandle::remove_inserted_css(key)` uses, corresponding to Electron's
+`webContents.insertCSS` and `webContents.removeInsertedCSS`. `ViewHandle`
+exposes the same pair for web contents views:
+
+```moonbit
+let key = browser.insert_css("body { background: #101418; }")
+browser.remove_inserted_css(key)
+```
+
+An inserted stylesheet belongs to the document that inserted it, so the key
+stops matching after the page navigates, exactly like Electron's. Chromium
+gives CEF no stylesheet-injection call, so Proton serves the stylesheet as a
+`<style data-proton-css-key="...">` element in the document. Page scripts can
+see that element, and the stylesheet wins the same cascade ties as Electron's
+inserted sheets.
+
+Electron's `navigationHistory.goToIndex`, `clear`, and `restore` have no CEF
+counterpart: Chromium exposes back, forward, and the entry list, so Proton
+publishes the read side together with the existing
+`BrowserHandle::back()` and `BrowserHandle::forward()` commands.
+
+### webContents requests without a CEF equivalent
+
+CEF's public API stops short of several other `webContents` calls, so Proton
+does not publish wrappers that could never work:
+
+| Electron | Why it is absent |
+| --- | --- |
+| `capturePage()` | CEF exposes no page-snapshot API: only off-screen paint callbacks, which a windowed browser never runs. Use the `desktop_capturer` extension for screen or window thumbnails. |
+| `savePage()` | CEF has no page-save entry point. |
+| `setUserAgent()` and `getUserAgent()` | A user agent override is a process-wide CEF setting, not a per-`webContents` property, and CEF cannot report the effective agent. |
+| `isCurrentlyAudible()` | CEF reports audio capture rather than playback, so Chromium's audible state is not observable. |
+| `setBackgroundThrottling()`, `setVisualZoomLevelLimits()`, `setImageAnimationPolicy()` | CEF exposes none of these preferences. |
+| `getOSProcessId()`, `getProcessId()`, `getProcessMemoryInfo()` | CEF hides operating-system pids. Use `ApplicationContext::app_metrics()` for per-process CPU and memory. |
+| `startDrag()` | Drag start lives on CEF's render handler, which only runs for off-screen rendering. |
+
+`webContents.debugger` is absent as well: CEF can carry DevTools protocol
+messages, but Proton only exposes the external remote debugging port today.
+
 ## Entry points
 
 - `@proton.html(title, html, ...)` — inline HTML document.

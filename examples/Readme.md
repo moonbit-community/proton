@@ -173,6 +173,10 @@ moon -C examples run 01_run --target native
   application process metrics review covering `getAppMetrics` for every
   browser, GPU, utility, and renderer task, including the sampling interval
   before Chromium reports memory and CPU.
+- [86_page_control](86_page_control/README.md): manual Electron-style page
+  control review covering `webContents.navigationHistory` entries and page
+  transitions, plus `insertCSS`/`removeInsertedCSS` for window and view
+  browsers.
 
 All runnable examples should import `moonbit-community/proton`. Runtime behavior
 is configured through the App builder; `proton.project.json` is present only

@@ -171,6 +171,16 @@ Chromium measures processes only while something observes its task manager, so
 the first call starts the sampling and later calls report the measured values.
 See [proton/README.md](proton/README.md) and `examples/85_app_metrics`.
 
+Page-level control follows `webContents`:
+`BrowserHandle::navigation_history()` and the `ViewHandle` equivalent report the
+session history with the active entry and Chromium's page-transition types,
+matching Electron's `webContents.navigationHistory`.
+`BrowserHandle::insert_css()` and `BrowserHandle::remove_inserted_css()` inject
+and remove a stylesheet in the current document, matching
+`webContents.insertCSS` and `removeInsertedCSS`. [proton/README.md](proton/README.md)
+lists the `webContents` calls CEF has no equivalent for, such as `capturePage`,
+`setUserAgent`, and `isCurrentlyAudible`. See `examples/86_page_control`.
+
 Native application menus and native context menus are available on macOS,
 Windows, and Linux.
 

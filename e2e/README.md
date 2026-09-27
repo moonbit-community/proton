@@ -110,7 +110,9 @@ also kills the renderer helpers of a running application to verify
 `render-process-gone` while the session, window, and web contents creation
 events are observed. The `app-metrics` case starts Chromium's task-manager
 sampling, waits for the first measured footprint, and then asserts the reported
-process types and the browser-first order. The runner also executes control
+process types and the browser-first order. The `page-control` case reads the
+session history, injects and removes a page stylesheet through the bridge, and
+checks the entry a later navigation adds. The runner also executes control
 cases, requires explicit success markers, and checks application and helper
 shutdown.
 They are included in `--self-hosted`. Set `PROTON_E2E_LIFECYCLE_CASE` to a case name
