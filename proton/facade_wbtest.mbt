@@ -173,6 +173,25 @@ fn test_window_handle(
         can_go_forward: false,
       }
     },
+    read_browser_navigation_history: fn() {
+      {
+        entries: [
+          {
+            url: "https://example.test/",
+            display_url: "example.test",
+            original_url: "https://example.test/",
+            title: "Example",
+            transition: Typed,
+            transition_qualifiers: [FromAddressBar],
+            has_post_data: false,
+            http_status_code: 200,
+          },
+        ],
+        active_index: 0,
+      }
+    },
+    insert_browser_page_css: fn(_css) { 21L },
+    remove_browser_page_css: fn(_key) {  },
     session_handle: SessionHandle::{
       id,
       native_id,
@@ -2089,6 +2108,76 @@ test "command host registration preserves cleanup failures" {
 }
 
 ///|
+test "navigation transitions map from Chromium page transition types" {
+  assert_true(NavigationTransition::from_code(0) is Link)
+  assert_true(NavigationTransition::from_code(1) is Typed)
+  assert_true(NavigationTransition::from_code(2) is AutoBookmark)
+  assert_true(NavigationTransition::from_code(5) is Generated)
+  assert_true(NavigationTransition::from_code(7) is FormSubmit)
+  assert_true(NavigationTransition::from_code(8) is Reload)
+  assert_true(NavigationTransition::from_code(10) is KeywordGenerated)
+  assert_true(NavigationTransition::from_code(11) is Other(11))
+}
+
+///|
+test "navigation qualifiers expand from Chromium transition flags" {
+  assert_eq(NavigationTransitionQualifier::from_flags(0), [])
+  assert_eq(NavigationTransitionQualifier::from_flags(1 | 4), [
+    ClientRedirect,
+    ForwardBack,
+  ])
+  assert_eq(NavigationTransitionQualifier::from_flags(2 | 8), [
+    ServerRedirect,
+    FromAddressBar,
+  ])
+}
+
+///|
+test "navigation history exposes entry lookups and directions" {
+  let history : NavigationHistory = {
+    entries: [
+      {
+        url: "https://example.test/a",
+        display_url: "example.test/a",
+        original_url: "https://example.test/a",
+        title: "A",
+        transition: Typed,
+        transition_qualifiers: [FromAddressBar],
+        has_post_data: false,
+        http_status_code: 200,
+      },
+      {
+        url: "https://example.test/b",
+        display_url: "example.test/b",
+        original_url: "https://example.test/a",
+        title: "B",
+        transition: Link,
+        transition_qualifiers: [],
+        has_post_data: false,
+        http_status_code: 200,
+      },
+    ],
+    active_index: 1,
+  }
+  assert_eq(history.length(), 2)
+  assert_true(history.can_go_back())
+  assert_false(history.can_go_forward())
+  assert_eq(history.active_entry().unwrap().url, "https://example.test/b")
+  assert_eq(history.entry_at(0).unwrap().original_url, "https://example.test/a")
+  assert_true(history.entry_at(2) is None)
+  assert_true(history.entry_at(-1) is None)
+}
+
+///|
+test "empty navigation history reports no active entry" {
+  let history : NavigationHistory = { entries: [], active_index: -1, }
+  assert_eq(history.length(), 0)
+  assert_false(history.can_go_back())
+  assert_false(history.can_go_forward())
+  assert_true(history.active_entry() is None)
+}
+
+///|
 test "application process metric types map from the native vocabulary" {
   assert_true(
     AppProcessType::from_native(@native.AppProcessType::Browser) is Browser,
@@ -2904,6 +2993,9 @@ fn test_view_handle(
     read_view_state: fn() {
       { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1, }
     },
+    read_view_navigation_history: fn() { { entries: [], active_index: -1, } },
+    insert_view_page_css: fn(_css) { 22L },
+    remove_view_page_css: fn(_key) {  },
     close_view: fn() { calls.push("close") },
   }
 }

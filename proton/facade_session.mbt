@@ -702,6 +702,42 @@ fn RuntimeSession::view_handle(
           )
       }
     },
+    read_view_navigation_history: () => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      NavigationHistory::from_native(running.view.navigation_history()) catch {
+        error =>
+          raise window_operation_failed(
+            "read navigation history of view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
+    insert_view_page_css: css => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      running.view.insert_page_css(css) catch {
+        error =>
+          raise window_operation_failed(
+            "insert page CSS into view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
+    remove_view_page_css: key => {
+      let running = self.resolve_view(
+        window_id, window_native_id, id, native_id,
+      )
+      running.view.remove_page_css(key) catch {
+        error =>
+          raise window_operation_failed(
+            "remove page CSS from view " + id + " in window " + window_id,
+            error,
+          )
+      }
+    },
     close_view: () => {
       ignore(self.resolve_view(window_id, window_native_id, id, native_id))
       self.remove_window_view(window_id, window_native_id, id)
@@ -1036,6 +1072,37 @@ fn RuntimeSession::browser_handle(
             error,
           )
       }
+    },
+    read_browser_navigation_history: () => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.native_id == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      NavigationHistory::from_native(running.window.navigation_history()) catch {
+        error =>
+          raise window_operation_failed(
+            "read browser navigation history in window " + id,
+            error,
+          )
+      }
+    },
+    insert_browser_page_css: css => {
+      let running = match self.find_active_window(id) {
+        Some(running) if running.native_id == native_id => running
+        _ => raise StaleWindow(id~)
+      }
+      running.window.insert_page_css(css) catch {
+        error =>
+          raise window_operation_failed(
+            "insert page CSS in window " + id,
+            error,
+          )
+      }
+    },
+    remove_browser_page_css: key => {
+      self.control_window(id, native_id, "remove page CSS", window => {
+        window.remove_page_css(key)
+      })
     },
     session_handle,
   }
@@ -2757,6 +2824,34 @@ pub fn ViewHandle::state(
 }
 
 ///|
+/// Reads the view page's session history, corresponding to Electron's
+/// `webContents.navigationHistory` for a web contents view.
+pub fn ViewHandle::navigation_history(
+  self : ViewHandle,
+) -> NavigationHistory raise WindowSessionError {
+  (self.read_view_navigation_history)()
+}
+
+///|
+/// Injects `css` into the view page, corresponding to Electron's
+/// `webContents.insertCSS`.
+pub fn ViewHandle::insert_css(
+  self : ViewHandle,
+  css : String,
+) -> Int64 raise WindowSessionError {
+  (self.insert_view_page_css)(css)
+}
+
+///|
+/// Removes a stylesheet previously inserted with `ViewHandle::insert_css`.
+pub fn ViewHandle::remove_inserted_css(
+  self : ViewHandle,
+  key : Int64,
+) -> Unit raise WindowSessionError {
+  (self.remove_view_page_css)(key)
+}
+
+///|
 /// Removes and destroys the view, the Electron `removeChildView` equivalent.
 /// The view immediately becomes unavailable for operations and lookup. Its
 /// native close notification is delivered later through `App::on_view_event`
@@ -2919,6 +3014,45 @@ pub fn BrowserHandle::state(
   self : BrowserHandle,
 ) -> BrowserState raise WindowSessionError {
   (self.read_browser_state)()
+}
+
+///|
+/// Reads the main page's session history, corresponding to Electron's
+/// `webContents.navigationHistory`.
+///
+/// Chromium records one history per browser, including entries that the page
+/// reached with `history.pushState` only after a navigation; use
+/// `BrowserHandle::back` and `BrowserHandle::forward` to move through it.
+pub fn BrowserHandle::navigation_history(
+  self : BrowserHandle,
+) -> NavigationHistory raise WindowSessionError {
+  (self.read_browser_navigation_history)()
+}
+
+///|
+/// Injects `css` into the current page, corresponding to Electron's
+/// `webContents.insertCSS`.
+///
+/// The returned key removes the stylesheet again with
+/// `BrowserHandle::remove_inserted_css`. Chromium applies the stylesheet to the
+/// document that received it, so the key stops matching after the page
+/// navigates away, exactly like Electron's.
+pub fn BrowserHandle::insert_css(
+  self : BrowserHandle,
+  css : String,
+) -> Int64 raise WindowSessionError {
+  (self.insert_browser_page_css)(css)
+}
+
+///|
+/// Removes a stylesheet previously inserted with `BrowserHandle::insert_css`,
+/// corresponding to Electron's `webContents.removeInsertedCSS`. Removing a key
+/// the current document never inserted is a no-op.
+pub fn BrowserHandle::remove_inserted_css(
+  self : BrowserHandle,
+  key : Int64,
+) -> Unit raise WindowSessionError {
+  (self.remove_browser_page_css)(key)
 }
 
 ///|

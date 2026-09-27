@@ -486,6 +486,9 @@ pub struct BrowserHandle {
   read_browser_focused : () -> Bool raise WindowSessionError
   read_browser_devtools_opened : () -> Bool raise WindowSessionError
   read_browser_state : () -> BrowserState raise WindowSessionError
+  read_browser_navigation_history : () -> NavigationHistory raise WindowSessionError
+  insert_browser_page_css : (String) -> Int64 raise WindowSessionError
+  remove_browser_page_css : (Int64) -> Unit raise WindowSessionError
   session_handle : SessionHandle
 }
 pub fn BrowserHandle::back(Self) -> Unit raise WindowSessionError
@@ -501,11 +504,13 @@ pub fn BrowserHandle::eval(Self, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::find_in_page(Self, String, forward? : Bool, match_case? : Bool, find_next? : Bool) -> Int raise WindowSessionError
 pub fn BrowserHandle::focus(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::forward(Self) -> Unit raise WindowSessionError
+pub fn BrowserHandle::insert_css(Self, String) -> Int64 raise WindowSessionError
 pub fn BrowserHandle::is_audio_muted(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::is_devtools_opened(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::is_focused(Self) -> Bool raise WindowSessionError
 pub fn BrowserHandle::load_html(Self, String, String) -> Unit raise WindowSessionError
 pub fn BrowserHandle::load_url(Self, String) -> Unit raise WindowSessionError
+pub fn BrowserHandle::navigation_history(Self) -> NavigationHistory raise WindowSessionError
 pub fn BrowserHandle::open_devtools(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::paste(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::paste_and_match_style(Self) -> Unit raise WindowSessionError
@@ -513,6 +518,7 @@ pub fn BrowserHandle::print(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::print_to_pdf(Self, String, options? : PdfPrintOptions) -> Int raise WindowSessionError
 pub fn BrowserHandle::redo(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
+pub fn BrowserHandle::remove_inserted_css(Self, Int64) -> Unit raise WindowSessionError
 pub fn BrowserHandle::select_all(Self) -> Unit raise WindowSessionError
 pub fn BrowserHandle::session(Self) -> SessionHandle
 pub fn BrowserHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionError
@@ -793,6 +799,33 @@ pub fn NavigationDecision::equal(Self, Self) -> Bool
 pub fn NavigationDecision::not_equal(Self, Self) -> Bool
 pub fn NavigationDecision::to_repr(Self) -> @debug.Repr
 
+pub(all) struct NavigationEntry {
+  url : String
+  display_url : String
+  original_url : String
+  title : String
+  transition : NavigationTransition
+  transition_qualifiers : Array[NavigationTransitionQualifier]
+  has_post_data : Bool
+  http_status_code : Int
+} derive(Eq, @debug.Debug)
+pub fn NavigationEntry::equal(Self, Self) -> Bool
+pub fn NavigationEntry::not_equal(Self, Self) -> Bool
+pub fn NavigationEntry::to_repr(Self) -> @debug.Repr
+
+pub(all) struct NavigationHistory {
+  entries : Array[NavigationEntry]
+  active_index : Int
+} derive(Eq, @debug.Debug)
+pub fn NavigationHistory::active_entry(Self) -> NavigationEntry?
+pub fn NavigationHistory::can_go_back(Self) -> Bool
+pub fn NavigationHistory::can_go_forward(Self) -> Bool
+pub fn NavigationHistory::entry_at(Self, Int) -> NavigationEntry?
+pub fn NavigationHistory::equal(Self, Self) -> Bool
+pub fn NavigationHistory::length(Self) -> Int
+pub fn NavigationHistory::not_equal(Self, Self) -> Bool
+pub fn NavigationHistory::to_repr(Self) -> @debug.Repr
+
 pub(all) struct NavigationRequest {
   url : String
   http_method : String
@@ -802,6 +835,34 @@ pub(all) struct NavigationRequest {
 pub fn NavigationRequest::equal(Self, Self) -> Bool
 pub fn NavigationRequest::not_equal(Self, Self) -> Bool
 pub fn NavigationRequest::to_repr(Self) -> @debug.Repr
+
+pub(all) enum NavigationTransition {
+  Link
+  Typed
+  AutoBookmark
+  AutoSubframe
+  ManualSubframe
+  Generated
+  AutoToplevel
+  FormSubmit
+  Reload
+  Keyword
+  KeywordGenerated
+  Other(Int)
+} derive(Eq, @debug.Debug)
+pub fn NavigationTransition::equal(Self, Self) -> Bool
+pub fn NavigationTransition::not_equal(Self, Self) -> Bool
+pub fn NavigationTransition::to_repr(Self) -> @debug.Repr
+
+pub(all) enum NavigationTransitionQualifier {
+  ClientRedirect
+  ServerRedirect
+  ForwardBack
+  FromAddressBar
+} derive(Eq, @debug.Debug)
+pub fn NavigationTransitionQualifier::equal(Self, Self) -> Bool
+pub fn NavigationTransitionQualifier::not_equal(Self, Self) -> Bool
+pub fn NavigationTransitionQualifier::to_repr(Self) -> @debug.Repr
 
 pub(all) enum NewWindowDecision {
   Deny
@@ -1086,6 +1147,9 @@ pub struct ViewHandle {
   read_view_focused : () -> Bool raise WindowSessionError
   read_view_devtools_opened : () -> Bool raise WindowSessionError
   read_view_state : () -> ViewState raise WindowSessionError
+  read_view_navigation_history : () -> NavigationHistory raise WindowSessionError
+  insert_view_page_css : (String) -> Int64 raise WindowSessionError
+  remove_view_page_css : (Int64) -> Unit raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
 }
 pub fn ViewHandle::back(Self) -> Unit raise WindowSessionError
@@ -1101,16 +1165,19 @@ pub fn ViewHandle::find_in_page(Self, String, forward? : Bool, match_case? : Boo
 pub fn ViewHandle::focus(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::forward(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::id(Self) -> String
+pub fn ViewHandle::insert_css(Self, String) -> Int64 raise WindowSessionError
 pub fn ViewHandle::is_audio_muted(Self) -> Bool raise WindowSessionError
 pub fn ViewHandle::is_devtools_opened(Self) -> Bool raise WindowSessionError
 pub fn ViewHandle::is_focused(Self) -> Bool raise WindowSessionError
 pub fn ViewHandle::load_html(Self, String, String) -> Unit raise WindowSessionError
 pub fn ViewHandle::load_url(Self, String) -> Unit raise WindowSessionError
+pub fn ViewHandle::navigation_history(Self) -> NavigationHistory raise WindowSessionError
 pub fn ViewHandle::open_devtools(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::paste(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::paste_and_match_style(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::redo(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::reload(Self, ignore_cache? : Bool) -> Unit raise WindowSessionError
+pub fn ViewHandle::remove_inserted_css(Self, Int64) -> Unit raise WindowSessionError
 pub fn ViewHandle::select_all(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_audio_muted(Self, Bool) -> Unit raise WindowSessionError
 pub fn ViewHandle::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise WindowSessionError

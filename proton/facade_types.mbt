@@ -667,6 +667,9 @@ pub struct BrowserHandle {
   read_browser_focused : () -> Bool raise WindowSessionError
   read_browser_devtools_opened : () -> Bool raise WindowSessionError
   read_browser_state : () -> BrowserState raise WindowSessionError
+  read_browser_navigation_history : () -> NavigationHistory raise WindowSessionError
+  insert_browser_page_css : (String) -> Int64 raise WindowSessionError
+  remove_browser_page_css : (Int64) -> Unit raise WindowSessionError
   session_handle : SessionHandle
 }
 
@@ -726,6 +729,9 @@ pub struct ViewHandle {
   read_view_focused : () -> Bool raise WindowSessionError
   read_view_devtools_opened : () -> Bool raise WindowSessionError
   read_view_state : () -> ViewState raise WindowSessionError
+  read_view_navigation_history : () -> NavigationHistory raise WindowSessionError
+  insert_view_page_css : (String) -> Int64 raise WindowSessionError
+  remove_view_page_css : (Int64) -> Unit raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
 }
 
@@ -1309,6 +1315,92 @@ pub extend ApplicationSession with Eq::{not_equal, equal}
 
 ///|
 pub extend ApplicationSession with Debug::{to_repr}
+
+///|
+/// How the browser reached one navigation-history entry, following Chromium's
+/// page-transition types, which Electron reports as `transitionType`.
+pub(all) enum NavigationTransition {
+  Link
+  Typed
+  AutoBookmark
+  AutoSubframe
+  ManualSubframe
+  Generated
+  /// Chromium's deprecated auto-toplevel transition.
+  AutoToplevel
+  FormSubmit
+  Reload
+  Keyword
+  KeywordGenerated
+  /// A transition type this Proton release does not name.
+  Other(Int)
+} derive(Debug, Eq)
+
+///|
+pub extend NavigationTransition with Eq::{not_equal, equal}
+
+///|
+pub extend NavigationTransition with Debug::{to_repr}
+
+///|
+/// Extra context Chromium recorded for a navigation entry, corresponding to
+/// Electron's transition qualifiers.
+pub(all) enum NavigationTransitionQualifier {
+  /// The page redirected the navigation itself.
+  ClientRedirect
+  /// A server response redirected the navigation.
+  ServerRedirect
+  /// The entry was reached through back or forward.
+  ForwardBack
+  /// The entry came from a user-typed address.
+  FromAddressBar
+} derive(Debug, Eq)
+
+///|
+pub extend NavigationTransitionQualifier with Eq::{not_equal, equal}
+
+///|
+pub extend NavigationTransitionQualifier with Debug::{to_repr}
+
+///|
+/// One entry of a browser's session history, corresponding to Electron's
+/// `NavigationEntry`.
+pub(all) struct NavigationEntry {
+  url : String
+  /// Chromium's display-friendly version of `url`.
+  display_url : String
+  /// The URL the user entered before any redirects.
+  original_url : String
+  title : String
+  transition : NavigationTransition
+  transition_qualifiers : Array[NavigationTransitionQualifier]
+  has_post_data : Bool
+  http_status_code : Int
+} derive(Debug, Eq)
+
+///|
+pub extend NavigationEntry with Eq::{not_equal, equal}
+
+///|
+pub extend NavigationEntry with Debug::{to_repr}
+
+///|
+/// A snapshot of one browser's session history, corresponding to Electron's
+/// `webContents.navigationHistory`.
+///
+/// Chromium keeps one history per tab, so the snapshot belongs to the browser
+/// that produced it; `ApplicationContext` navigation elsewhere replaces it.
+pub(all) struct NavigationHistory {
+  entries : Array[NavigationEntry]
+  /// Index of the active entry, or `-1` while the browser has none.
+  active_index : Int
+} derive(Debug, Eq)
+
+///|
+pub extend NavigationHistory with Eq::{not_equal, equal}
+
+///|
+pub extend NavigationHistory with Debug::{to_repr}
 
 ///|
 /// What kind of process one application metric describes.
