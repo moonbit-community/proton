@@ -432,8 +432,16 @@ async fn copy_file(source : String, destination : String) -> Unit {
     raise PackagePlanError::MissingInput(path=source)
   }
   ensure_dir(path_parent(destination))
-  if current_package_host() == Macos {
-    let code = @process.run("ditto", [source, destination]) catch {
+  // Copy with the host tool wherever file modes matter: a single-file payload
+  // such as the CEF helper must stay executable, and the byte copy below
+  // creates every file with default permissions.
+  let tool = match current_package_host() {
+    Macos => Some("ditto")
+    Linux => Some("cp")
+    Windows => None
+  }
+  if tool is Some(tool) {
+    let code = @process.run(tool, [source, destination]) catch {
       error =>
         raise PackageFileSystemError::Copy(
           source~,
@@ -442,7 +450,7 @@ async fn copy_file(source : String, destination : String) -> Unit {
         )
     }
     guard code == 0 else {
-      raise PackageToolError::Exit(tool="ditto", code~, detail=source)
+      raise PackageToolError::Exit(tool~, code~, detail=source)
     }
     return
   }
