@@ -10,8 +10,8 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
-  if name == "app-metrics" {
-    run_app_metrics_regression()
+  if name == "task-metrics" {
+    run_task_metrics_regression()
     return
   }
   if name == "page-control" {
@@ -518,17 +518,17 @@ async fn run_cancel_during_startup_regression() -> Unit {
 ///|
 /// Lists every sampled process with its task id, type, CPU, and memory so the
 /// regression output shows what the platform reported.
-fn describe_metrics(metrics : Array[@proton.AppProcessMetric]) -> String {
+fn describe_metrics(metrics : Array[@proton.AppTaskMetric]) -> String {
   let parts : Array[String] = []
   for metric in metrics {
     parts.push(
-      app_process_type_name(metric.process_type) +
+      app_task_type_name(metric.task_type) +
       "#" +
       metric.task_id.to_string() +
       " cpu=" +
-      metric.cpu_percent.to_string() +
+      metric.process_cpu_percent.to_string() +
       " mem=" +
-      metric.memory_bytes.to_string() +
+      metric.process_memory_bytes.to_string() +
       " name=" +
       metric.name,
     )
@@ -538,27 +538,27 @@ fn describe_metrics(metrics : Array[@proton.AppProcessMetric]) -> String {
 
 ///|
 /// Names one application process type for the regression output.
-fn app_process_type_name(process_type : @proton.AppProcessType) -> String {
-  match process_type {
-    @proton.AppProcessType::Unknown => "unknown"
-    @proton.AppProcessType::Browser => "browser"
-    @proton.AppProcessType::Gpu => "gpu"
-    @proton.AppProcessType::Zygote => "zygote"
-    @proton.AppProcessType::Utility => "utility"
-    @proton.AppProcessType::Renderer => "renderer"
-    @proton.AppProcessType::Extension => "extension"
-    @proton.AppProcessType::Guest => "guest"
-    @proton.AppProcessType::Plugin => "plugin"
-    @proton.AppProcessType::SandboxHelper => "sandbox-helper"
-    @proton.AppProcessType::Worker => "worker"
+fn app_task_type_name(task_type : @proton.AppTaskType) -> String {
+  match task_type {
+    @proton.AppTaskType::Unknown => "unknown"
+    @proton.AppTaskType::Browser => "browser"
+    @proton.AppTaskType::Gpu => "gpu"
+    @proton.AppTaskType::Zygote => "zygote"
+    @proton.AppTaskType::Utility => "utility"
+    @proton.AppTaskType::Renderer => "renderer"
+    @proton.AppTaskType::Extension => "extension"
+    @proton.AppTaskType::Guest => "guest"
+    @proton.AppTaskType::Plugin => "plugin"
+    @proton.AppTaskType::SandboxHelper => "sandbox-helper"
+    @proton.AppTaskType::Worker => "worker"
   }
 }
 
 ///|
 /// Reports whether Chromium has measured a memory footprint for any task.
-fn app_metrics_measured(metrics : Array[@proton.AppProcessMetric]) -> Bool {
+fn task_metrics_measured(metrics : Array[@proton.AppTaskMetric]) -> Bool {
   for metric in metrics {
-    if metric.memory_bytes > 0 {
+    if metric.process_memory_bytes > 0 {
       return true
     }
   }
@@ -566,17 +566,17 @@ fn app_metrics_measured(metrics : Array[@proton.AppProcessMetric]) -> Bool {
 }
 
 ///|
-/// Exercises Electron's `app.getAppMetrics()` in an isolated headless
+/// Exercises task metrics and distinct dedicated-worker identities in a headless
 /// application. Chromium measures processes only while something observes its
 /// task manager, so the first call starts the sampling and the case waits for
 /// the first measured footprint before asserting the reported shape.
-async fn run_app_metrics_regression() -> Unit {
+async fn run_task_metrics_regression() -> Unit {
   let application : Ref[@proton.ApplicationContext?] = Ref(None)
   let summary = Ref("")
   @proton.html(
-    "Application metrics",
+    "Browser task metrics",
     (
-      #|<h1>Application metrics</h1>
+      #|<h1>Browser task metrics</h1>
       #|<script>
       #|const workerUrl = URL.createObjectURL(new Blob(['onmessage = () => postMessage("ready")'], {type: 'text/javascript'}));
       #|window.metricsWorkers = [new Worker(workerUrl), new Worker(workerUrl)];
@@ -584,7 +584,7 @@ async fn run_app_metrics_regression() -> Unit {
       #|</script>
     ),
   )
-  .identifier("dev.proton.e2e-app-metrics")
+  .identifier("dev.proton.e2e-task-metrics")
   .app_lifecycle(
     on_start=context => {
       application.val = Some(context)
@@ -601,22 +601,22 @@ async fn run_app_metrics_regression() -> Unit {
         .spawn(
           () => {
             let app = application.val.unwrap()
-            let sampled : Ref[Array[@proton.AppProcessMetric]] = Ref([])
+            let sampled : Ref[Array[@proton.AppTaskMetric]] = Ref([])
             let mut measured = false
             for attempt = 0; attempt <= 40; attempt = attempt + 1 {
-              let sample = app.app_metrics() catch {
-                error => fail("app_metrics failed: " + error.message())
+              let sample = app.task_metrics() catch {
+                error => fail("task_metrics failed: " + error.message())
               }
               sampled.val = sample
               println(
-                "APP_METRICS_SAMPLE attempt=" +
+                "TASK_METRICS_SAMPLE attempt=" +
                 attempt.to_string() +
                 " " +
                 describe_metrics(sample),
               )
-              measured = app_metrics_measured(sample)
+              measured = task_metrics_measured(sample)
               let workers = sample.filter(metric => {
-                metric.process_type is @proton.AppProcessType::Worker
+                metric.task_type is @proton.AppTaskType::Worker
               })
               if measured && workers.length() == 2 {
                 break
@@ -626,26 +626,27 @@ async fn run_app_metrics_regression() -> Unit {
             let metrics = sampled.val
             assert_true(metrics.length() > 0)
             let types : Array[String] = []
+            let task_ids : Array[Int64] = []
             for metric in metrics {
-              types.push(app_process_type_name(metric.process_type))
-              assert_true(metric.cpu_percent >= 0.0)
-              assert_true(metric.memory_bytes >= -1L)
+              assert_false(task_ids.contains(metric.task_id))
+              task_ids.push(metric.task_id)
+              types.push(app_task_type_name(metric.task_type))
+              assert_true(metric.process_cpu_percent >= 0.0)
+              assert_true(metric.process_memory_bytes >= -1L)
             }
             assert_eq(
               metrics
-              .filter(metric => {
-                metric.process_type is @proton.AppProcessType::Worker
-              })
+              .filter(metric => metric.task_type is @proton.AppTaskType::Worker)
               .length(),
               2,
               msg="dedicated worker classification: " +
                 describe_metrics(metrics),
             )
             let browser = metrics[0]
-            assert_true(browser.process_type is @proton.AppProcessType::Browser)
+            assert_true(browser.task_type is @proton.AppTaskType::Browser)
             guard measured else {
               fail(
-                "app metrics never reported a memory footprint: " +
+                "task metrics never reported a memory footprint: " +
                 describe_metrics(metrics),
               )
             }
@@ -655,14 +656,14 @@ async fn run_app_metrics_regression() -> Unit {
               ":" +
               browser.task_id.to_string() +
               ":" +
-              browser.memory_bytes.to_string() +
+              browser.process_memory_bytes.to_string() +
               ":" +
               describe_metrics(metrics)
             println(
-              "APP_METRICS count=" +
+              "TASK_METRICS count=" +
               summary.val +
               " browser_memory=" +
-              browser.memory_bytes.to_string(),
+              browser.process_memory_bytes.to_string(),
             )
             app.quit()
           },
@@ -674,7 +675,7 @@ async fn run_app_metrics_regression() -> Unit {
   )
   .run()
   assert_true(summary.val != "")
-  println("LIFECYCLE_PASSED app-metrics")
+  println("LIFECYCLE_PASSED task-metrics")
 }
 
 ///|

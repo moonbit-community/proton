@@ -1,7 +1,6 @@
 ///|
-/// What kind of process one application task belongs to, using CEF's task
-/// types.
-pub(all) enum AppProcessType {
+/// The kind of browser task represented by a metric.
+pub(all) enum AppTaskType {
   Unknown
   Browser
   Gpu
@@ -16,39 +15,42 @@ pub(all) enum AppProcessType {
 } derive(Debug, Eq)
 
 ///|
-pub extend AppProcessType with Eq::{not_equal, equal}
+pub extend AppTaskType with Eq::{not_equal, equal}
 
 ///|
-pub extend AppProcessType with Debug::{to_repr}
+pub extend AppTaskType with Debug::{to_repr}
 
 ///|
-/// Memory and CPU usage of one application process, corresponding to Electron's
-/// `ProcessMetric`.
-pub(all) struct AppProcessMetric {
-  /// CEF's task identifier. Electron reports an operating-system pid instead.
+/// A browser task and the resource usage of its hosting process.
+///
+/// Multiple tasks can share a process and repeat its full CPU and memory
+/// usage. These values are not per-task usage and must not be summed across
+/// records. The task ID is not a PID; no process grouping key is available.
+pub(all) struct AppTaskMetric {
+  /// CEF's task identifier, stable for the lifetime of the task; not a PID.
   task_id : Int64
-  process_type : AppProcessType
-  /// CPU usage of the process since the previous sample, in the same scale as
-  /// Electron's `percentCPUUsage`; 100% is one fully used core. Chromium
-  /// reports zero until one sampling interval has passed.
-  cpu_percent : Double
-  /// Private memory footprint in bytes, or -1 while Chromium has not measured
-  /// the process.
-  memory_bytes : Int64
+  task_type : AppTaskType
+  /// Full CPU usage of the hosting process since the previous sample.
+  /// 100% is one fully used core; zero until a sampling interval has passed.
+  /// Shared-process tasks repeat this value; do not sum across records.
+  process_cpu_percent : Double
+  /// Full private memory footprint of the hosting process in bytes, or -1
+  /// before measurement. Shared-process tasks repeat this value; do not sum.
+  process_memory_bytes : Int64
   /// Platform task name, such as "Network Service"; empty when Chromium has
   /// none for the task.
   name : String
 } derive(Debug, Eq)
 
 ///|
-pub extend AppProcessMetric with Eq::{not_equal, equal}
+pub extend AppTaskMetric with Eq::{not_equal, equal}
 
 ///|
-pub extend AppProcessMetric with Debug::{to_repr}
+pub extend AppTaskMetric with Debug::{to_repr}
 
 ///|
-/// Decodes Proton-owned process type codes from proton_native.h.
-fn app_process_type_from_code(code : Int) -> AppProcessType {
+/// Decodes Proton-owned task type codes from proton_native.h.
+fn app_task_type_from_code(code : Int) -> AppTaskType {
   match code {
     1 => Browser
     2 => Gpu
@@ -65,41 +67,42 @@ fn app_process_type_from_code(code : Int) -> AppProcessType {
 }
 
 ///|
-/// Lists the processes the application currently owns, ordered like Chromium's
+/// Lists browser tasks with hosting-process usage, ordered like Chromium's
 /// task manager: the browser process first, then the GPU process and the
 /// remaining tasks.
-pub fn process_metrics() -> Array[AppProcessMetric] raise NativeError {
+pub fn task_metrics() -> Array[AppTaskMetric] raise NativeError {
   let count = Ref(0)
-  check_status(@native_ffi.proton_app_metrics_count_ffi(count))
-  let metrics : Array[AppProcessMetric] = []
+  check_status(@native_ffi.proton_task_metrics_count_ffi(count))
+  let metrics : Array[AppTaskMetric] = []
   for index = 0; index < count.val; index = index + 1 {
-    metrics.push(process_metric_at(index))
+    metrics.push(task_metric_at(index))
   }
   metrics
 }
 
 ///|
-fn process_metric_at(index : Int) -> AppProcessMetric raise NativeError {
+fn task_metric_at(index : Int) -> AppTaskMetric raise NativeError {
   let task_id = Ref(0L)
-  let process_type = Ref(0)
-  let cpu_percent = Ref(0.0)
-  let memory_bytes = Ref(0L)
+  let task_type = Ref(0)
+  let process_cpu_percent = Ref(0.0)
+  let process_memory_bytes = Ref(0L)
   let name_required = Ref(0)
   let probe = @ffi.to_cstr("")
   check_status(
-    @native_ffi.proton_app_metric_at_ffi(
-      index, task_id, process_type, cpu_percent, memory_bytes, probe, 1, name_required,
+    @native_ffi.proton_task_metric_at_ffi(
+      index, task_id, task_type, process_cpu_percent, process_memory_bytes, probe,
+      1, name_required,
     ),
   )
   let name = if name_required.val > 0 {
     let buffer = FixedArray::make(name_required.val + 1, b'\x00')
     check_status(
-      @native_ffi.proton_app_metric_at_ffi(
+      @native_ffi.proton_task_metric_at_ffi(
         index,
         task_id,
-        process_type,
-        cpu_percent,
-        memory_bytes,
+        task_type,
+        process_cpu_percent,
+        process_memory_bytes,
         Bytes::from_array(buffer),
         buffer.length(),
         name_required,
@@ -109,11 +112,11 @@ fn process_metric_at(index : Int) -> AppProcessMetric raise NativeError {
   } else {
     ""
   }
-  AppProcessMetric::{
+  AppTaskMetric::{
     task_id: task_id.val,
-    process_type: app_process_type_from_code(process_type.val),
-    cpu_percent: cpu_percent.val,
-    memory_bytes: memory_bytes.val,
+    task_type: app_task_type_from_code(task_type.val),
+    process_cpu_percent: process_cpu_percent.val,
+    process_memory_bytes: process_memory_bytes.val,
     name,
   }
 }

@@ -2178,18 +2178,14 @@ test "empty navigation history reports no active entry" {
 }
 
 ///|
-test "application process metric types map from the native vocabulary" {
+test "application task metric types map from the native vocabulary" {
+  assert_true(AppTaskType::from_native(@native.AppTaskType::Browser) is Browser)
   assert_true(
-    AppProcessType::from_native(@native.AppProcessType::Browser) is Browser,
+    AppTaskType::from_native(@native.AppTaskType::Renderer) is Renderer,
   )
+  assert_true(AppTaskType::from_native(@native.AppTaskType::Worker) is Worker)
   assert_true(
-    AppProcessType::from_native(@native.AppProcessType::Renderer) is Renderer,
-  )
-  assert_true(
-    AppProcessType::from_native(@native.AppProcessType::Worker) is Worker,
-  )
-  assert_true(
-    AppProcessType::from_native(@native.AppProcessType::SandboxHelper)
+    AppTaskType::from_native(@native.AppTaskType::SandboxHelper)
     is SandboxHelper,
   )
 }

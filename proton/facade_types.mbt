@@ -1403,11 +1403,8 @@ pub extend NavigationHistory with Eq::{not_equal, equal}
 pub extend NavigationHistory with Debug::{to_repr}
 
 ///|
-/// What kind of process one application metric describes.
-///
-/// Electron labels renderer tasks `Tab` and worker tasks `Utility`; Proton
-/// names the process itself.
-pub(all) enum AppProcessType {
+/// The kind of browser task represented by a metric.
+pub(all) enum AppTaskType {
   Unknown
   /// The application's own browser process.
   Browser
@@ -1415,49 +1412,49 @@ pub(all) enum AppProcessType {
   Gpu
   Zygote
   Utility
-  /// A renderer process hosting a page. Electron reports this type as `Tab`.
+  /// A page renderer task.
   Renderer
   Extension
   Guest
   Plugin
   SandboxHelper
-  /// A dedicated, shared, or service worker process.
+  /// A dedicated, shared, or service worker task.
   Worker
 } derive(Debug, Eq)
 
 ///|
-pub extend AppProcessType with Eq::{not_equal, equal}
+pub extend AppTaskType with Eq::{not_equal, equal}
 
 ///|
-pub extend AppProcessType with Debug::{to_repr}
+pub extend AppTaskType with Debug::{to_repr}
 
 ///|
-/// CPU and memory usage of one application process, corresponding to Electron's
-/// `ProcessMetric`.
+/// A browser task and the resource usage of its hosting process.
 ///
-/// CEF reports its own task identifier instead of an operating-system pid, and
-/// it does not expose idle wakeups, creation time, sandbox state, or the
-/// Windows integrity level, so those Electron fields have no counterpart here.
-pub(all) struct AppProcessMetric {
-  /// CEF's task identifier, stable for the lifetime of the process.
+/// Multiple tasks can share a process and repeat its full CPU and memory
+/// usage. These values are not per-task usage and must not be summed across
+/// records. The task ID is not a PID; no process grouping key is available.
+pub(all) struct AppTaskMetric {
+  /// CEF's task identifier, stable for the lifetime of the task; not a PID.
   task_id : Int64
-  process_type : AppProcessType
-  /// CPU usage since the previous sample. 100% is one fully used core, and
-  /// Chromium reports zero until one sampling interval has passed.
-  cpu_percent : Double
-  /// Private memory footprint in bytes, or `-1` while Chromium has not
-  /// measured the process.
-  memory_bytes : Int64
+  task_type : AppTaskType
+  /// Full CPU usage of the hosting process since the previous sample.
+  /// 100% is one fully used core; zero until a sampling interval has passed.
+  /// Shared-process tasks repeat this value; do not sum across records.
+  process_cpu_percent : Double
+  /// Full private memory footprint of the hosting process in bytes, or -1
+  /// before measurement. Shared-process tasks repeat this value; do not sum.
+  process_memory_bytes : Int64
   /// Platform task name, such as `Network Service`; empty when Chromium has
   /// none for the task.
   name : String
 } derive(Debug, Eq)
 
 ///|
-pub extend AppProcessMetric with Eq::{not_equal, equal}
+pub extend AppTaskMetric with Eq::{not_equal, equal}
 
 ///|
-pub extend AppProcessMetric with Debug::{to_repr}
+pub extend AppTaskMetric with Debug::{to_repr}
 
 ///|
 priv enum BridgeRequestLifecycleState {

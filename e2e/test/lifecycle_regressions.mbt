@@ -90,7 +90,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         "remove-view-close", "page-view-close", "parent-view-close", "cancel-during-startup",
         "initial-open", "cancel-sleep", "cancel-open", "task-success", "task-failure",
         "close-decision", "process-lifetime", "app-control", "process-events", "process-events-no-bridge",
-        "app-metrics", "page-control", "startup-update-channel", "startup-update-failure",
+        "task-metrics", "page-control", "startup-update-channel", "startup-update-failure",
         "proxy-config", "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
         "closed-record-churn", "bridge-admission",
       ]
@@ -224,12 +224,12 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
             ),
           )
         }
-        if name == "app-metrics" {
-          // Record the sampled processes in the CI log: CEF's task manager is
+        if name == "task-metrics" {
+          // Record the sampled tasks in the CI log: CEF's task manager is
           // the only source for these values, and the numbers differ per
           // platform and runtime mode.
           for line in app_output_lines(app.output_path) {
-            if line.has_prefix("APP_METRICS") {
+            if line.has_prefix("TASK_METRICS") {
               println(line)
             }
           }

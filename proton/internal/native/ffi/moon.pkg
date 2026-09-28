@@ -32,7 +32,7 @@ options(
     "src/engine/cef_common/cookie_cache.c",
     "src/engine/cef_common/image.c",
     "src/engine/cef_common/page_control.c",
-    "src/engine/cef_common/process_metrics.c",
+    "src/engine/cef_common/task_metrics.c",
     "src/engine/cef_common/profile_storage.c",
     "src/engine/cef_common/scheme.c",
     "src/engine/cef_common/view_events.c",

@@ -1,58 +1,49 @@
 ///|
-fn AppProcessType::from_native(
-  process_type : @native.AppProcessType,
-) -> AppProcessType {
-  match process_type {
-    @native.AppProcessType::Unknown => Unknown
-    @native.AppProcessType::Browser => Browser
-    @native.AppProcessType::Gpu => Gpu
-    @native.AppProcessType::Zygote => Zygote
-    @native.AppProcessType::Utility => Utility
-    @native.AppProcessType::Renderer => Renderer
-    @native.AppProcessType::Extension => Extension
-    @native.AppProcessType::Guest => Guest
-    @native.AppProcessType::Plugin => Plugin
-    @native.AppProcessType::SandboxHelper => SandboxHelper
-    @native.AppProcessType::Worker => Worker
+fn AppTaskType::from_native(task_type : @native.AppTaskType) -> AppTaskType {
+  match task_type {
+    @native.AppTaskType::Unknown => Unknown
+    @native.AppTaskType::Browser => Browser
+    @native.AppTaskType::Gpu => Gpu
+    @native.AppTaskType::Zygote => Zygote
+    @native.AppTaskType::Utility => Utility
+    @native.AppTaskType::Renderer => Renderer
+    @native.AppTaskType::Extension => Extension
+    @native.AppTaskType::Guest => Guest
+    @native.AppTaskType::Plugin => Plugin
+    @native.AppTaskType::SandboxHelper => SandboxHelper
+    @native.AppTaskType::Worker => Worker
   }
 }
 
 ///|
-fn AppProcessMetric::from_native(
-  metric : @native.AppProcessMetric,
-) -> AppProcessMetric {
-  AppProcessMetric::{
+fn AppTaskMetric::from_native(metric : @native.AppTaskMetric) -> AppTaskMetric {
+  AppTaskMetric::{
     task_id: metric.task_id,
-    process_type: AppProcessType::from_native(metric.process_type),
-    cpu_percent: metric.cpu_percent,
-    memory_bytes: metric.memory_bytes,
+    task_type: AppTaskType::from_native(metric.task_type),
+    process_cpu_percent: metric.process_cpu_percent,
+    process_memory_bytes: metric.process_memory_bytes,
     name: metric.name,
   }
 }
 
 ///|
-/// Returns the memory and CPU usage of every process the application owns,
-/// corresponding to Electron's `app.getAppMetrics()`.
+/// Returns browser tasks with the CPU and memory usage of their hosting processes.
 ///
-/// The list follows Chromium's task manager order: the browser process first,
-/// then the GPU process when it runs separately, followed by the remaining
-/// renderer, utility, and worker tasks.
+/// Each record describes a task, not a unique process. Tasks sharing a process
+/// repeat its full resource usage; do not sum the values across records.
+/// `task_id` identifies a task, not a PID, and no process grouping key is exposed.
 ///
-/// Chromium measures processes only while something observes its task manager,
-/// so the first call starts the sampling: it reports `-1` memory, and later
-/// calls report the measured footprint and the CPU usage since the previous
-/// sample. Electron's `pid`, idle wakeups, creation time, sandbox state, and
-/// integrity level are not observable through CEF, so `task_id` identifies a
-/// process instead.
-pub fn ApplicationContext::app_metrics(
+/// The list follows Chromium's task manager order: browser first, then GPU
+/// when separate, followed by the remaining tasks. The first call starts
+/// sampling; memory is -1 before measurement and CPU is zero until a sampling
+/// interval has passed. Observation continues until the runtime shuts down.
+pub fn ApplicationContext::task_metrics(
   self : ApplicationContext,
-) -> Array[AppProcessMetric] raise AppControlError {
+) -> Array[AppTaskMetric] raise AppControlError {
   ignore(self)
-  let metrics = @native.process_metrics() catch {
+  let metrics = @native.task_metrics() catch {
     error =>
-      raise app_control_native_error(
-        "read the application process metrics", error,
-      )
+      raise app_control_native_error("read the application task metrics", error)
   }
-  metrics.map(metric => AppProcessMetric::from_native(metric))
+  metrics.map(metric => AppTaskMetric::from_native(metric))
 }
