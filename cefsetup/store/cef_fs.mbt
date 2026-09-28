@@ -104,18 +104,15 @@ async fn acquire_install_lock(target_dir : String) -> @async_fs.File {
         detail=@debug.render(Repr(err)),
       )
   }
+  // Cancellation bypasses `catch`, so the handle must be released by errdefer.
+  errdefer file.close()
   file.lock(Exclusive) catch {
-    error if @async.is_being_cancelled() => {
-      file.close()
-      raise error
-    }
-    err => {
-      file.close()
+    error if @async.is_being_cancelled() => raise error
+    err =>
       raise CefFileSystemError::Write(
         path=lock_path,
         detail="failed to acquire install lock: " + @debug.render(Repr(err)),
       )
-    }
   }
   file
 }
