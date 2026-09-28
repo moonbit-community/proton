@@ -182,6 +182,7 @@ fn package_customization(
     windows_sign_targets=windows_package_sign_targets(spec),
     windows_verify_targets=["d3dcompiler_47.dll", "dxil.dll"],
     linux_resources_path="usr/Resources",
+    linux_launcher=linux_launcher_name,
   )
 }
 
@@ -258,6 +259,7 @@ async fn stage_proton_runtime(
   let kind = match host {
     Macos => "macos-app"
     Windows => "windows-portable"
+    Linux if spec.formats is [Flatpak] => "linux-flatpak"
     Linux => "linux-appimage"
   }
   write_package_manifest(spec, metadata_root, kind, host)
@@ -270,12 +272,20 @@ async fn stage_proton_runtime(
       guard path_is_file(staged_helper) else {
         raise StagingRuntimeError::HelperMissing(path=staged_helper)
       }
+      // Payload copies do not preserve file modes, and CEF execs the helper.
+      @async_fs.chmod(staged_helper, 0o755)
       set_linux_rpath(layout.executable(), linux_package_rpath)
       set_linux_rpath(staged_helper, linux_package_rpath)
+      strip_linux_runtime_libraries(
+        resolve_path(layout.resources(), "proton/bin"),
+      )
       let executable_name = host_path(layout.executable()).basename().to_owned()
       let apprun = resolve_path(layout.root(), "AppRun")
       write_text(apprun, proton_linux_apprun(executable_name))
       @async_fs.chmod(apprun, 0o755)
+      let launcher = resolve_path(layout.executables(), linux_launcher_name)
+      write_text(launcher, proton_linux_launcher(executable_name))
+      @async_fs.chmod(launcher, 0o755)
     }
   }
 }
