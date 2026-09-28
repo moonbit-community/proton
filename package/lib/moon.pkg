@@ -9,6 +9,7 @@ import {
 
 import {
   "moonbitlang/async",
+  "moonbitlang/core/buffer",
 } for "wbtest"
 
 supported_targets = "native+wasm"

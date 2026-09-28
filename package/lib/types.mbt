@@ -6,6 +6,7 @@ pub(all) enum PackageFormat {
   Dmg
   Nsis
   AppImage
+  Flatpak
 } derive(Debug, Eq)
 
 ///|
@@ -24,6 +25,7 @@ pub fn PackageFormat::parse(
     "dmg" => Dmg
     "nsis" => Nsis
     "appimage" => AppImage
+    "flatpak" => Flatpak
     _ => raise UnsupportedFormat(format=value)
   }
 }
@@ -36,6 +38,7 @@ pub fn PackageFormat::to_string(self : PackageFormat) -> String {
     Dmg => "dmg"
     Nsis => "nsis"
     AppImage => "appimage"
+    Flatpak => "flatpak"
   }
 }
 
@@ -211,11 +214,15 @@ pub struct PackageCustomization {
   windows_sign_targets : Array[String]
   windows_verify_targets : Array[String]
   linux_resources_path : String?
+  linux_launcher : String?
 }
 
 ///|
 /// Set `windows_icon_embedded` when the executable already contains its icon.
 /// Package icon paths remain available without modifying the executable again.
+/// `linux_launcher` names a file in the executables area that starts the
+/// application in place of the executable; the Flatpak command and desktop
+/// entry use it. It must locate the package from its own path.
 pub fn PackageCustomization::PackageCustomization(
   windows_icon_embedded? : Bool = false,
   macos_plist_strings? : Array[MacosPlistString] = [],
@@ -223,6 +230,7 @@ pub fn PackageCustomization::PackageCustomization(
   windows_sign_targets? : Array[String] = [],
   windows_verify_targets? : Array[String] = [],
   linux_resources_path? : String,
+  linux_launcher? : String,
 ) -> PackageCustomization {
   PackageCustomization::{
     windows_icon_embedded,
@@ -231,6 +239,7 @@ pub fn PackageCustomization::PackageCustomization(
     windows_sign_targets,
     windows_verify_targets,
     linux_resources_path,
+    linux_launcher,
   }
 }
 

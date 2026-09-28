@@ -331,7 +331,12 @@ test "NSIS URL scheme scripts share an owned command" {
 ///|
 test "AppImage metadata points at the staged executable" {
   let spec = package_test_spec([AppImage])
-  let entry = linux_desktop_entry(spec, "demo-app")
+  let entry = linux_desktop_entry(
+    spec,
+    exec="demo-app",
+    icon="demo-app",
+    appimage=true,
+  )
   inspect(
     entry,
     content=(

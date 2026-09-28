@@ -59,7 +59,7 @@ fn format_supported(host : PackageHost, format : PackageFormat) -> Bool {
   match (host, format) {
     (Macos, App | Zip | Dmg) => true
     (Windows, App | Zip | Nsis) => true
-    (Linux, AppImage) => true
+    (Linux, AppImage | Flatpak) => true
     _ => false
   }
 }
@@ -164,9 +164,11 @@ fn validate_customization(
   for target in customization.windows_verify_targets {
     validate_relative_destination(target)
   }
-  match customization.linux_resources_path {
-    Some(path) => validate_relative_destination(path)
-    None => ()
+  if customization.linux_resources_path is Some(path) {
+    validate_relative_destination(path)
+  }
+  if customization.linux_launcher is Some(name) {
+    validate_relative_destination(name)
   }
 }
 

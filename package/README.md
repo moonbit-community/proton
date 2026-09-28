@@ -36,9 +36,17 @@ For reusable configuration, pass `--config package.json`:
 ```
 
 Supported host-native formats are macOS `app`, `zip`, and `dmg`; Windows
-`app`, `zip`, and `nsis`; and Linux `appimage`.
+`app`, `zip`, and `nsis`; and Linux `appimage` and `flatpak`.
 When no format is specified, macOS and Windows produce `app` and `zip`, while
 Linux produces `appimage`.
+
+A `flatpak` package is a single-file bundle built with the `flatpak` command
+on the `org.freedesktop.Platform` 25.08 runtime, which `flatpak install`
+fetches from Flathub. The identifier becomes the Flatpak application ID, so it
+needs at least three components and a hyphen only in the last one. The icon
+must be a square PNG. The staged `usr` prefix becomes `/app`, so resources must
+stay under `usr/`. The sandbox grants X11, IPC, GPU, network and PulseAudio
+access.
 
 For Windows NSIS, `--nsis-install-mode` (or `nsis_install_mode` in the JSON
 configuration) accepts the same mode names as Tauri:

@@ -283,7 +283,7 @@ Supported host-native formats are:
 
 - macOS: `app`, `zip`, and `dmg`
 - Windows: `app`, `zip`, and `nsis`
-- Linux: `appimage`
+- Linux: `appimage` and `flatpak`
 
 Use repeated `--format` options, the shared `package.formats` field, or
 `package.platforms.<platform>.formats` in `proton.project.json`. A platform

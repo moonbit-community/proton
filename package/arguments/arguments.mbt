@@ -39,7 +39,7 @@ pub fn options(include_identifier? : Bool = true) -> Array[@argparse.OptionArg] 
     OptionArg(
       "format",
       action=Append,
-      about="Output format: app, zip, dmg, nsis, or appimage; may be repeated",
+      about="Output format: app, zip, dmg, nsis, appimage, or flatpak; may be repeated",
     ),
     OptionArg(
       "macos-minimum-system-version",
