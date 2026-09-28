@@ -110,6 +110,30 @@ int32_t proton_engine_process_metrics_count(int32_t *out_count, char *error,
   return PROTON_OK;
 }
 
+/* Translate at the CEF boundary: its enum values may change with the API
+   version selected by the headers. Never pass those ordinals to MoonBit. */
+static proton_process_type_t proton_process_type(cef_task_type_t type) {
+  switch (type) {
+  case CEF_TASK_TYPE_BROWSER: return PROTON_PROCESS_BROWSER;
+  case CEF_TASK_TYPE_GPU: return PROTON_PROCESS_GPU;
+  case CEF_TASK_TYPE_ZYGOTE: return PROTON_PROCESS_ZYGOTE;
+  case CEF_TASK_TYPE_UTILITY: return PROTON_PROCESS_UTILITY;
+  case CEF_TASK_TYPE_RENDERER: return PROTON_PROCESS_RENDERER;
+  case CEF_TASK_TYPE_EXTENSION: return PROTON_PROCESS_EXTENSION;
+  case CEF_TASK_TYPE_GUEST: return PROTON_PROCESS_GUEST;
+#if CEF_API_ADDED(14000)
+  case CEF_TASK_TYPE_PLUGIN_DEPRECATED: return PROTON_PROCESS_PLUGIN;
+#else
+  case CEF_TASK_TYPE_PLUGIN: return PROTON_PROCESS_PLUGIN;
+#endif
+  case CEF_TASK_TYPE_SANDBOX_HELPER: return PROTON_PROCESS_SANDBOX_HELPER;
+  case CEF_TASK_TYPE_DEDICATED_WORKER:
+  case CEF_TASK_TYPE_SHARED_WORKER:
+  case CEF_TASK_TYPE_SERVICE_WORKER: return PROTON_PROCESS_WORKER;
+  default: return PROTON_PROCESS_UNKNOWN;
+  }
+}
+
 int32_t proton_engine_process_metric_at(
     int32_t index, int64_t *out_task_id, int32_t *out_process_type,
     double *out_cpu_percent, int64_t *out_memory_bytes, char *name_buffer,
@@ -166,7 +190,7 @@ int32_t proton_engine_process_metric_at(
     return PROTON_ERR_ENGINE;
   }
   *out_task_id = info.id;
-  *out_process_type = (int32_t)info.type;
+  *out_process_type = (int32_t)proton_process_type(info.type);
   *out_cpu_percent = info.cpu_usage;
   /* CEF reports zero for a process it has not measured yet, while its own
      documentation reserves -1 for that state. Keep the documented contract so

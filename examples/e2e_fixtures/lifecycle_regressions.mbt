@@ -573,7 +573,17 @@ fn app_metrics_measured(metrics : Array[@proton.AppProcessMetric]) -> Bool {
 async fn run_app_metrics_regression() -> Unit {
   let application : Ref[@proton.ApplicationContext?] = Ref(None)
   let summary = Ref("")
-  @proton.html("Application metrics", "<h1>Application metrics</h1>")
+  @proton.html(
+    "Application metrics",
+    (
+      #|<h1>Application metrics</h1>
+      #|<script>
+      #|const workerUrl = URL.createObjectURL(new Blob(['onmessage = () => postMessage("ready")'], {type: 'text/javascript'}));
+      #|window.metricsWorkers = [new Worker(workerUrl), new Worker(workerUrl)];
+      #|for (const worker of window.metricsWorkers) worker.postMessage("start");
+      #|</script>
+    ),
+  )
   .identifier("dev.proton.e2e-app-metrics")
   .app_lifecycle(
     on_start=context => {
@@ -605,7 +615,10 @@ async fn run_app_metrics_regression() -> Unit {
                 describe_metrics(sample),
               )
               measured = app_metrics_measured(sample)
-              if measured {
+              let workers = sample.filter(metric => {
+                metric.process_type is @proton.AppProcessType::Worker
+              })
+              if measured && workers.length() == 2 {
                 break
               }
               @async.sleep(250)
@@ -618,6 +631,16 @@ async fn run_app_metrics_regression() -> Unit {
               assert_true(metric.cpu_percent >= 0.0)
               assert_true(metric.memory_bytes >= -1L)
             }
+            assert_eq(
+              metrics
+              .filter(metric => {
+                metric.process_type is @proton.AppProcessType::Worker
+              })
+              .length(),
+              2,
+              msg="dedicated worker classification: " +
+                describe_metrics(metrics),
+            )
             let browser = metrics[0]
             assert_true(browser.process_type is @proton.AppProcessType::Browser)
             guard measured else {
