@@ -36,26 +36,45 @@ async fn prompt_bool(label : String, default : Bool) -> Bool {
 async fn prompt_new_project_options(
   raw : RawNewProjectOptions,
   defaults : NewProjectOptions,
+  prompt_text? : async (String, String) -> String = prompt_text,
+  prompt_bool? : async (String, Bool) -> Bool = prompt_bool,
 ) -> NewProjectOptions {
-  let template = parse_project_template(
-    prompt_text("Template (minimal/isomorphic)", defaults.template),
-  )
-  let target_dir = prompt_text("Project directory", defaults.target_dir)
+  let template = match raw.template {
+    Some(_) => defaults.template
+    None =>
+      parse_project_template(
+        prompt_text("Template (minimal/isomorphic)", defaults.template),
+      )
+  }
+  let target_dir = match raw.path {
+    Some(_) => defaults.target_dir
+    None => prompt_text("Project directory", defaults.target_dir)
+  }
   let slug = project_slug(defaults.cwd, target_dir)
-  let title_default = raw.title.unwrap_or(slug_to_title(slug))
-  let author_default = raw.author.unwrap_or(default_author)
-  let identifier_default = raw.identifier.unwrap_or(
-    default_bundle_identifier(slug),
-  )
-  let title = prompt_text("App title", title_default)
-  let author = prompt_text("Module author", author_default)
-  let identifier = prompt_text("Bundle identifier", identifier_default)
-  let width_text = prompt_text("Window width", defaults.width.to_string())
-  let height_text = prompt_text("Window height", defaults.height.to_string())
-  let run_check = prompt_bool(
-    "Run moon check after creation",
-    defaults.run_check,
-  )
+  let title = match raw.title {
+    Some(_) => defaults.title
+    None => prompt_text("App title", slug_to_title(slug))
+  }
+  let author = match raw.author {
+    Some(_) => defaults.author
+    None => prompt_text("Module author", default_author)
+  }
+  let identifier = match raw.identifier {
+    Some(_) => defaults.identifier
+    None => prompt_text("Bundle identifier", default_bundle_identifier(slug))
+  }
+  let width_text = match raw.width {
+    Some(value) => value
+    None => prompt_text("Window width", defaults.width.to_string())
+  }
+  let height_text = match raw.height {
+    Some(value) => value
+    None => prompt_text("Window height", defaults.height.to_string())
+  }
+  let run_check = match raw.check {
+    Some(value) => value
+    None => prompt_bool("Run moon check after creation", defaults.run_check)
+  }
   let width = parse_positive_int(width_text, "width")
   let height = parse_positive_int(height_text, "height")
   let next = NewProjectOptions::{
