@@ -546,7 +546,7 @@ async test "cancelled package builds release the output lock" {
       }
       owner.cancel()
       ignore(owner.wait()) catch {
-        @async.TaskCancelled => ()
+        @async.WaitedTaskAlreadyCancelled => ()
         error => raise error
       }
       let prepared = Ref(false)

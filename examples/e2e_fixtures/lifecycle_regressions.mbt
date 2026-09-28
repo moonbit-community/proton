@@ -492,7 +492,7 @@ async fn run_cancel_during_startup_regression() -> Unit {
       }
       opening.cancel()
       opening.wait() catch {
-        error => assert_true(error is @async.TaskCancelled)
+        error => assert_true(error is @async.WaitedTaskAlreadyCancelled)
       }
       assert_false(secondary_ready.val)
     },
