@@ -14,14 +14,6 @@ pub struct AppCommandExtensionDescriptor {
 }
 
 ///|
-/// Commands exposed by the user app process to the framework runtime.
-pub struct AppCommandsConfig {
-  op_names : Array[String]
-  extensions : Array[@ipc.IpcExtensionDescriptor]
-  framework_extension_ids : Array[String]
-}
-
-///|
 pub type AppCommandRequestContext = @core.AppCommandRequestContext
 
 ///|
@@ -35,13 +27,6 @@ pub struct AppCommandExtensionSpec {
   resolve_permission : (Json, String) -> Json raise PermissionScopeValidationError
   on_start : (@async.TaskGroup[Unit]) -> Unit raise
   on_destroy : () -> Unit raise
-}
-
-///|
-/// Registry of command extension specs available to one user app process.
-pub struct AppCommandExtensionRegistry {
-  specs : Map[String, AppCommandExtensionSpec]
-  registration_order : Array[String]
 }
 
 ///|
@@ -63,32 +48,6 @@ pub fn AppCommandExtensionDescriptor::AppCommandExtensionDescriptor(
     js_namespace,
     apis: copy_command_api_descriptors(apis),
     scripts: copy_strings(scripts),
-  }
-}
-
-///|
-pub fn AppCommandsConfig::AppCommandsConfig(
-  op_names : Array[String],
-  extensions? : Array[AppCommandExtensionDescriptor] = [],
-  framework_extension_ids? : Array[String] = [],
-) -> AppCommandsConfig {
-  AppCommandsConfig::from_ipc_descriptors(
-    op_names,
-    extensions.map(fn(extension) { extension.to_ipc_descriptor() }),
-    framework_extension_ids,
-  )
-}
-
-///|
-pub fn AppCommandsConfig::from_ipc_descriptors(
-  op_names : Array[String],
-  extensions : Array[@ipc.IpcExtensionDescriptor],
-  framework_extension_ids : Array[String],
-) -> AppCommandsConfig {
-  AppCommandsConfig::{
-    op_names: copy_strings(op_names),
-    extensions: copy_ipc_extension_descriptors(extensions),
-    framework_extension_ids: copy_strings(framework_extension_ids),
   }
 }
 
@@ -227,108 +186,10 @@ pub fn AppCommandExtensionSpec::scripts(
 }
 
 ///|
-pub fn AppCommandExtensionRegistry::AppCommandExtensionRegistry() -> AppCommandExtensionRegistry {
-  AppCommandExtensionRegistry::{ specs: Map([]), registration_order: [], }
-}
-
-///|
-pub fn AppCommandExtensionRegistry::register(
-  self : AppCommandExtensionRegistry,
-  spec : AppCommandExtensionSpec,
-) -> AppCommandExtensionRegistry {
-  let id = spec.id()
-  guard id.trim().to_owned() != "" else {
-    abort(
-      "AppCommandExtensionRegistry::register: extension id must not be empty",
-    )
-  }
-  guard self.specs.get(id) is None else {
-    abort(
-      "AppCommandExtensionRegistry::register: duplicate extension id: " + id,
-    )
-  }
-  guard spec.js_namespace().trim().to_owned() != "" else {
-    abort(
-      "AppCommandExtensionRegistry::register: extension namespace must not be empty",
-    )
-  }
-  self.specs.set(id, copy_app_command_extension_spec(spec))
-  self.registration_order.push(id)
-  self
-}
-
-///|
-pub fn AppCommandExtensionRegistry::get(
-  self : AppCommandExtensionRegistry,
-  id : String,
-) -> AppCommandExtensionSpec? {
-  self.specs.get(id).map(copy_app_command_extension_spec)
-}
-
-///|
-pub fn AppCommandExtensionRegistry::registered_ids(
-  self : AppCommandExtensionRegistry,
-) -> Array[String] {
-  copy_strings(self.registration_order)
-}
-
-///|
-pub fn AppCommandExtensionRegistry::spec_map(
-  self : AppCommandExtensionRegistry,
-) -> Map[String, AppCommandExtensionSpec] {
-  self.specs
-}
-
-///|
-pub fn AppCommandExtensionRegistry::ordered_names(
-  self : AppCommandExtensionRegistry,
-) -> Array[String] {
-  self.registration_order
-}
-
-///|
 pub fn AppCommandApiDescriptor::api_name(
   self : AppCommandApiDescriptor,
 ) -> String {
   self.api_name
-}
-
-///|
-pub fn AppCommandApiDescriptor::to_ipc_api(
-  self : AppCommandApiDescriptor,
-) -> @ipc.IpcExtensionApi {
-  @ipc.IpcExtensionApi(self.api_name)
-}
-
-///|
-pub fn AppCommandExtensionDescriptor::to_ipc_descriptor(
-  self : AppCommandExtensionDescriptor,
-) -> @ipc.IpcExtensionDescriptor {
-  @ipc.IpcExtensionDescriptor(
-    self.id,
-    self.js_namespace,
-    self.apis.map(fn(api) { api.to_ipc_api() }),
-    scripts=copy_strings(self.scripts),
-  )
-}
-
-///|
-pub fn AppCommandsConfig::op_names(self : AppCommandsConfig) -> Array[String] {
-  copy_strings(self.op_names)
-}
-
-///|
-pub fn AppCommandsConfig::extensions(
-  self : AppCommandsConfig,
-) -> Array[@ipc.IpcExtensionDescriptor] {
-  copy_ipc_extension_descriptors(self.extensions)
-}
-
-///|
-pub fn AppCommandsConfig::framework_extension_ids(
-  self : AppCommandsConfig,
-) -> Array[String] {
-  copy_strings(self.framework_extension_ids)
 }
 
 ///|
@@ -348,40 +209,10 @@ pub fn app_command_extension_op_name(
 }
 
 ///|
-fn copy_app_command_extension_spec(
-  spec : AppCommandExtensionSpec,
-) -> AppCommandExtensionSpec {
-  AppCommandExtensionSpec::{
-    id: spec.id,
-    js_namespace: spec.js_namespace,
-    scripts: copy_strings(spec.scripts),
-    dependencies: copy_strings(spec.dependencies),
-    register: spec.register,
-    resolve_permission: spec.resolve_permission,
-    on_start: spec.on_start,
-    on_destroy: spec.on_destroy,
-  }
-}
-
-///|
 fn copy_command_api_descriptors(
   values : Array[AppCommandApiDescriptor],
 ) -> Array[AppCommandApiDescriptor] {
   values.map(fn(value) { value })
-}
-
-///|
-fn copy_ipc_extension_descriptors(
-  values : Array[@ipc.IpcExtensionDescriptor],
-) -> Array[@ipc.IpcExtensionDescriptor] {
-  values.map(fn(value) {
-    @ipc.IpcExtensionDescriptor(
-      value.id,
-      value.js_namespace,
-      value.apis,
-      scripts=value.scripts,
-    )
-  })
 }
 
 ///|

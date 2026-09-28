@@ -156,9 +156,24 @@ int32_t proton_app_instance_release(proton_app_instance_id_t instance);
 int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
+/* Proton-owned process type codes, independent of CEF enum numbering. */
+typedef enum {
+  PROTON_PROCESS_UNKNOWN = 0,
+  PROTON_PROCESS_BROWSER = 1,
+  PROTON_PROCESS_GPU = 2,
+  PROTON_PROCESS_ZYGOTE = 3,
+  PROTON_PROCESS_UTILITY = 4,
+  PROTON_PROCESS_RENDERER = 5,
+  PROTON_PROCESS_EXTENSION = 6,
+  PROTON_PROCESS_GUEST = 7,
+  PROTON_PROCESS_PLUGIN = 8,
+  PROTON_PROCESS_SANDBOX_HELPER = 9,
+  PROTON_PROCESS_WORKER = 10
+} proton_process_type_t;
+
 /* Process metrics from CEF's task manager: one entry per browser, GPU,
    utility, or renderer task, in the order the task manager reports. `type`
-   uses cef_task_type_t. `memory_bytes` is -1 while Chromium has not measured
+   uses proton_process_type_t. `memory_bytes` is -1 while Chromium has not measured
    the process, and the task id is CEF's task identifier rather than an
    operating-system pid. Both functions are UI-thread only and need a live
    runtime; the first call starts Chromium's sampling, so memory and CPU

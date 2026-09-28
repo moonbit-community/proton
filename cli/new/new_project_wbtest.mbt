@@ -347,3 +347,48 @@ test "template render error names template" {
     _ => abort("expected render error")
   }
 }
+
+///|
+async test "interactive new does not prompt for explicit options" {
+  for check in ["--check", "--no-check"] {
+    let raw = must_parse([
+      "my-app", "--template", "minimal", "--title", "My App", "--author", "example",
+      "--identifier", "com.example.app", "--width", "800", "--height", "600", check,
+    ])
+    let defaults = options_from_raw(".", raw)
+    let result = prompt_new_project_options(
+      raw,
+      defaults,
+      prompt_text=(label, _) => fail("unexpected prompt: " + label),
+      prompt_bool=(label, _) => fail("unexpected prompt: " + label),
+    )
+    assert_eq(result, defaults)
+  }
+}
+
+///|
+async test "interactive new only asks missing fields and derives directory defaults" {
+  let raw = must_parse(["--template", "minimal", "--no-check"])
+  let labels : Array[String] = []
+  let result = prompt_new_project_options(
+    raw,
+    options_from_raw(".", raw),
+    prompt_text=(label, default) => {
+      labels.push(label)
+      if label == "Project directory" {
+        "my-counter"
+      } else {
+        default
+      }
+    },
+    prompt_bool=(label, _) => fail("unexpected prompt: " + label),
+  )
+  assert_eq(labels, [
+    "Project directory", "App title", "Module author", "Bundle identifier", "Window width",
+    "Window height",
+  ])
+  assert_eq(result.template, "minimal")
+  assert_eq(result.title, "My Counter")
+  assert_eq(result.identifier, "dev.proton.my-counter")
+  assert_false(result.run_check)
+}

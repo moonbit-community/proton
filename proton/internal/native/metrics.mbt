@@ -47,6 +47,7 @@ pub extend AppProcessMetric with Eq::{not_equal, equal}
 pub extend AppProcessMetric with Debug::{to_repr}
 
 ///|
+/// Decodes Proton-owned process type codes from proton_native.h.
 fn app_process_type_from_code(code : Int) -> AppProcessType {
   match code {
     1 => Browser
@@ -56,9 +57,9 @@ fn app_process_type_from_code(code : Int) -> AppProcessType {
     5 => Renderer
     6 => Extension
     7 => Guest
-    8 | 9 => Plugin
-    10 => SandboxHelper
-    11 | 12 | 13 => Worker
+    8 => Plugin
+    9 => SandboxHelper
+    10 => Worker
     _ => Unknown
   }
 }

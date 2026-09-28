@@ -2,8 +2,11 @@ import {
   "moonbitlang/async",
   "moonbitlang/core/json",
   "moonbit-community/proton/core",
-  "moonbit-community/proton/ipc",
   "moonbit-community/proton_contract",
 }
+
+import {
+  "moonbit-community/proton/ipc",
+} for "wbtest"
 
 supported_targets = "native"
