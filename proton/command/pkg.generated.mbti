@@ -3,7 +3,6 @@ package "moonbit-community/proton/command"
 
 import {
   "moonbit-community/proton/core",
-  "moonbit-community/proton/ipc",
   "moonbit-community/proton_contract",
   "moonbitlang/async",
   "moonbitlang/core/debug",
@@ -42,7 +41,6 @@ pub struct AppCommandApiDescriptor {
 }
 pub fn AppCommandApiDescriptor::AppCommandApiDescriptor(String) -> Self
 pub fn AppCommandApiDescriptor::api_name(Self) -> String
-pub fn AppCommandApiDescriptor::to_ipc_api(Self) -> @ipc.IpcExtensionApi
 
 pub struct AppCommandExtensionDescriptor {
   id : String
@@ -56,18 +54,6 @@ pub fn AppCommandExtensionDescriptor::id(Self) -> String
 pub fn AppCommandExtensionDescriptor::js_namespace(Self) -> String
 pub fn AppCommandExtensionDescriptor::op_names(Self) -> Array[String]
 pub fn AppCommandExtensionDescriptor::scripts(Self) -> Array[String]
-pub fn AppCommandExtensionDescriptor::to_ipc_descriptor(Self) -> @ipc.IpcExtensionDescriptor
-
-pub struct AppCommandExtensionRegistry {
-  specs : Map[String, AppCommandExtensionSpec]
-  registration_order : Array[String]
-}
-pub fn AppCommandExtensionRegistry::AppCommandExtensionRegistry() -> Self
-pub fn AppCommandExtensionRegistry::get(Self, String) -> AppCommandExtensionSpec?
-pub fn AppCommandExtensionRegistry::ordered_names(Self) -> Array[String]
-pub fn AppCommandExtensionRegistry::register(Self, AppCommandExtensionSpec) -> Self
-pub fn AppCommandExtensionRegistry::registered_ids(Self) -> Array[String]
-pub fn AppCommandExtensionRegistry::spec_map(Self) -> Map[String, AppCommandExtensionSpec]
 
 pub struct AppCommandExtensionSpec {
   id : String
@@ -88,17 +74,6 @@ pub fn AppCommandExtensionSpec::resolve_permission(Self, Json, String) -> Json r
 pub fn AppCommandExtensionSpec::scripts(Self) -> Array[String]
 pub fn AppCommandExtensionSpec::start(Self, @async.TaskGroup[Unit]) -> Unit raise
 pub fn AppCommandExtensionSpec::typed(@proton_contract.ExtensionContract, (CommandRegistrar) -> Unit raise, scripts? : Array[String], dependencies? : Array[String], resolve_permission? : (Json, String) -> Json raise PermissionScopeValidationError, on_start? : (@async.TaskGroup[Unit]) -> Unit raise, on_destroy? : () -> Unit raise) -> Self raise ExtensionSpecError
-
-pub struct AppCommandsConfig {
-  op_names : Array[String]
-  extensions : Array[@ipc.IpcExtensionDescriptor]
-  framework_extension_ids : Array[String]
-}
-pub fn AppCommandsConfig::AppCommandsConfig(Array[String], extensions? : Array[AppCommandExtensionDescriptor], framework_extension_ids? : Array[String]) -> Self
-pub fn AppCommandsConfig::extensions(Self) -> Array[@ipc.IpcExtensionDescriptor]
-pub fn AppCommandsConfig::framework_extension_ids(Self) -> Array[String]
-pub fn AppCommandsConfig::from_ipc_descriptors(Array[String], Array[@ipc.IpcExtensionDescriptor], Array[String]) -> Self
-pub fn AppCommandsConfig::op_names(Self) -> Array[String]
 
 pub struct CommandRegistrar {
   host : @core.AppCommandHost
