@@ -165,6 +165,17 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
             ),
           )
         }
+        if name == "proxy-config" || name == "proxy-env" {
+          let page = connect_spawned_page(group, app, port.to_string(), timeout)
+          assert_true(
+            evaluate_bool(
+              page, "location.href === 'http://proton-proxy.invalid:8080/probe' && document.title === 'Proton Proxy Response' && document.readyState === 'complete'",
+              false,
+            ),
+            msg="proxy response was not loaded in the page" +
+              app_output_suffix(app.output_path),
+          )
+        }
         let snapshot = snapshot_scenario_process_tree(app)
         @mbfs.write_string_to_file(gate, "go")
         if name == "process-events" || name == "process-events-no-bridge" {

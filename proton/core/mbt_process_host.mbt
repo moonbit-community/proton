@@ -38,11 +38,10 @@ fn ignore_command_diagnostic(_diagnostic : String) -> Unit {
 }
 
 ///|
-/// Command host intended to run in the MBT process.
+/// Transport-independent command registration and dispatch.
 ///
-/// The host is independent from the browser window, so application code can use
-/// normal MoonBit syntax, state, and `async` handlers without living in the GUI
-/// process.
+/// The Proton facade runs this host in the application process on the runtime
+/// owner thread. Async command handlers use the application async event loop.
 struct MbtProcessHost {
   registry : OpRegistry
   op_names : Array[String]
@@ -52,7 +51,7 @@ struct MbtProcessHost {
 }
 
 ///|
-/// Creates an empty MBT-side command host.
+/// Creates an empty command host.
 ///
 /// Set `diagnostic_reporter` to retain backend-only handler diagnostics. Set
 /// `expose_error_details` only for a trusted development frontend.

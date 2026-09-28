@@ -44,6 +44,11 @@ to another renderer target is rejected for the calling page.
 
 ## Defining an extension
 
+Register application commands with `.commands(...)` and extension capabilities
+with `.capability(...)` on the root Proton facade. The unused
+`AppCommandsConfig` and `AppCommandExtensionRegistry` APIs have been removed;
+applications do not need a separate command configuration or extension registry.
+
 Pass the extension contract and one registration callback to
 `@proton_extension.typed(contract, register)`. Bind typed command descriptors
 inside that callback with `registrar.bind(command, handler)`. Proton derives
