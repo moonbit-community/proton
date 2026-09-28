@@ -1,7 +1,7 @@
 ///|
-/// Chromium sends task types as numbers, so the mapping stays explicit for
-/// every value CEF can report, including the ones Proton does not name.
-test "CEF task type codes map to application process types" {
+/// Checks the private Proton ABI, not CEF enum ordinals. Real CEF task
+/// classification is covered by the app-metrics E2E scenario.
+test "Proton process type codes decode at the FFI boundary" {
   let cases : Array[(Int, AppProcessType)] = [
     (0, Unknown),
     (1, Browser),
@@ -12,12 +12,10 @@ test "CEF task type codes map to application process types" {
     (6, Extension),
     (7, Guest),
     (8, Plugin),
-    (9, Plugin),
-    (10, SandboxHelper),
-    (11, Worker),
-    (12, Worker),
-    (13, Worker),
-    (14, Unknown),
+    (9, SandboxHelper),
+    (10, Worker),
+    (11, Unknown),
+    (-1, Unknown),
   ]
   for case in cases {
     let (code, expected) = case
