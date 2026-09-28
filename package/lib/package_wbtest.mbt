@@ -506,6 +506,44 @@ async test "macOS packaging preserves declared minimum and leaves resources opaq
 }
 
 ///|
+async test "AppImage staging keeps a single-file executable payload executable" {
+  guard current_package_host() is Linux else { return }
+  let root = @async_fs.tmpdir(prefix="proton-package-mode-")
+  defer (remove_tree(root) catch { _ => () })
+  let executable = path_join(root, "fixture")
+  @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
+  // Stands in for the CEF helper, which Proton stages as its own payload.
+  let helper = path_join(root, "helper")
+  @async_fs.write_file(helper, "#!/bin/sh\n", create_mode=CreateOrTruncate)
+  @async_fs.chmod(helper, 0o755)
+  let icon = path_join(root, "icon.png")
+  @async_fs.write_file(icon, package_test_png)
+  let spec = PackageSpec(
+    executable,
+    "Mode Test",
+    "com.example.mode",
+    "1.0.0",
+    [AppImage],
+    path_join(root, "out"),
+    icons=[icon],
+    payloads=[Payload(helper, "helper", location=Executables)],
+  )
+  let prepared = Ref(false)
+  ignore(
+    build_with(spec, PackageCustomization(), layout => {
+      prepared.val = true
+      let staged = path_join(layout.executables, "helper")
+      assert_eq(@process.run("test", ["-x", staged]), 0)
+      raise PackagePreparationTestError
+    }),
+  ) catch {
+    PackagePreparationTestError => ()
+    error => raise error
+  }
+  assert_true(prepared.val)
+}
+
+///|
 priv suberror PackagePreparationTestError
 
 ///|

@@ -270,6 +270,7 @@ async fn stage_proton_runtime(
       guard path_is_file(staged_helper) else {
         raise StagingRuntimeError::HelperMissing(path=staged_helper)
       }
+      @async_fs.chmod(staged_helper, 0o755)
       set_linux_rpath(layout.executable(), linux_package_rpath)
       set_linux_rpath(staged_helper, linux_package_rpath)
       let executable_name = host_path(layout.executable()).basename().to_owned()
