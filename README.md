@@ -163,13 +163,12 @@ release the next launch becomes primary instead of forwarding. CEF owns the
 browser profile exclusively, so a side-by-side successor needs its own
 `App::session_partition`. See `examples/84_single_instance_lock`.
 
-`ApplicationContext::app_metrics()` reports the CPU and memory usage of every
-process the application owns, corresponding to Electron's `app.getAppMetrics()`.
-The snapshot leads with the browser process and uses Chromium's task types, and
-`task_id` identifies a process where Electron reports an operating-system pid.
-Chromium measures processes only while something observes its task manager, so
-the first call starts the sampling and later calls report the measured values.
-See [proton/README.md](proton/README.md) and `examples/85_app_metrics`.
+`ApplicationContext::task_metrics()` returns browser tasks with the CPU and
+memory usage of their hosting processes. Several tasks can share one process
+and repeat its full usage, so values must not be summed across records.
+`task_id` identifies a task, not an operating-system PID. The first call starts
+sampling and later calls report measured values. See
+[proton/README.md](proton/README.md) and `examples/85_task_metrics`.
 
 Page-level control follows `webContents`:
 `BrowserHandle::navigation_history()` and the `ViewHandle` equivalent report the

@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "moonbit-community/proton/examples/85_app_metrics"
+package "moonbit-community/proton/examples/85_task_metrics"
 
 import {
   "moonbitlang/core/json",

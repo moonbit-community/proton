@@ -1,8 +1,8 @@
 ///|
 /// Checks the private Proton ABI, not CEF enum ordinals. Real CEF task
-/// classification is covered by the app-metrics E2E scenario.
-test "Proton process type codes decode at the FFI boundary" {
-  let cases : Array[(Int, AppProcessType)] = [
+/// classification is covered by the task-metrics E2E scenario.
+test "Proton task type codes decode at the FFI boundary" {
+  let cases : Array[(Int, AppTaskType)] = [
     (0, Unknown),
     (1, Browser),
     (2, Gpu),
@@ -19,6 +19,6 @@ test "Proton process type codes decode at the FFI boundary" {
   ]
   for case in cases {
     let (code, expected) = case
-    assert_eq(app_process_type_from_code(code), expected)
+    assert_eq(app_task_type_from_code(code), expected)
   }
 }

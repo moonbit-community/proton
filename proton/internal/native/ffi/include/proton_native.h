@@ -156,32 +156,33 @@ int32_t proton_app_instance_release(proton_app_instance_id_t instance);
 int32_t
 proton_app_instance_destroy(proton_app_instance_id_t instance);
 
-/* Proton-owned process type codes, independent of CEF enum numbering. */
+/* Proton-owned task type codes, independent of CEF enum numbering. */
 typedef enum {
-  PROTON_PROCESS_UNKNOWN = 0,
-  PROTON_PROCESS_BROWSER = 1,
-  PROTON_PROCESS_GPU = 2,
-  PROTON_PROCESS_ZYGOTE = 3,
-  PROTON_PROCESS_UTILITY = 4,
-  PROTON_PROCESS_RENDERER = 5,
-  PROTON_PROCESS_EXTENSION = 6,
-  PROTON_PROCESS_GUEST = 7,
-  PROTON_PROCESS_PLUGIN = 8,
-  PROTON_PROCESS_SANDBOX_HELPER = 9,
-  PROTON_PROCESS_WORKER = 10
-} proton_process_type_t;
+  PROTON_TASK_UNKNOWN = 0,
+  PROTON_TASK_BROWSER = 1,
+  PROTON_TASK_GPU = 2,
+  PROTON_TASK_ZYGOTE = 3,
+  PROTON_TASK_UTILITY = 4,
+  PROTON_TASK_RENDERER = 5,
+  PROTON_TASK_EXTENSION = 6,
+  PROTON_TASK_GUEST = 7,
+  PROTON_TASK_PLUGIN = 8,
+  PROTON_TASK_SANDBOX_HELPER = 9,
+  PROTON_TASK_WORKER = 10
+} proton_task_type_t;
 
-/* Process metrics from CEF's task manager: one entry per browser, GPU,
+/* Task metrics from CEF's task manager: one entry per browser, GPU,
    utility, or renderer task, in the order the task manager reports. `type`
-   uses proton_process_type_t. `memory_bytes` is -1 while Chromium has not measured
+   uses proton_task_type_t. `process_memory_bytes` is -1 while Chromium has not measured
    the process, and the task id is CEF's task identifier rather than an
    operating-system pid. Both functions are UI-thread only and need a live
    runtime; the first call starts Chromium's sampling, so memory and CPU
-   appear in later samples. */
-int32_t proton_app_metrics_count(int32_t *out_count);
-int32_t proton_app_metric_at(
-    int32_t index, int64_t *out_task_id, int32_t *out_process_type,
-    double *out_cpu_percent, int64_t *out_memory_bytes, char *name_buffer,
+   appear in later samples. Tasks sharing a process repeat its full CPU and
+   memory usage; values must not be summed across tasks. */
+int32_t proton_task_metrics_count(int32_t *out_count);
+int32_t proton_task_metric_at(
+    int32_t index, int64_t *out_task_id, int32_t *out_task_type,
+    double *out_process_cpu_percent, int64_t *out_process_memory_bytes, char *name_buffer,
     int32_t name_buffer_len, int32_t *out_name_required);
 
 /* Application-loop disposition: 1 accepted, 0 rejected/expired, <0 error. */

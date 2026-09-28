@@ -99,53 +99,42 @@ exception decisions for the same request context.
 `SessionHandle::close_all_connections` closes active and idle Chromium network
 connections for the session without clearing cookies or cache data.
 
-## Application process metrics
+## Browser task metrics
 
-`ApplicationContext::app_metrics()` reports the CPU and memory usage of every
-process the application owns, corresponding to Electron's
-`app.getAppMetrics()`:
+`ApplicationContext::task_metrics()` returns one `AppTaskMetric` per browser
+task in Chromium's task-manager order. Browser and GPU tasks lead the list,
+followed by renderer, utility, worker, and other tasks.
 
-| Proton | Electron | Behavior |
-| --- | --- | --- |
-| `app_metrics()` | `app.getAppMetrics()` | One snapshot per call, in Chromium's task manager order: the browser process first, then the GPU process when it runs separately, then the remaining renderer, utility, worker, and extension tasks |
-| `AppProcessMetric::cpu_percent` | `percentCPUUsage` | CPU usage since the previous sample; 100% is one fully used core |
-| `AppProcessMetric::memory_bytes` | `memory.workingSetSize` | Private memory footprint in bytes, or `-1` while Chromium has not measured the process |
-| `AppProcessMetric::process_type` | `type` | Chromium's task type; Electron labels renderer tasks `Tab` |
-| `AppProcessMetric::name` | `name` and `serviceName` | Chromium's task name, empty when it reports none |
+A task is not a process. A page and multiple workers can share one renderer
+process; each record then reports that process's **full** CPU and memory usage.
+**Do not sum these values across records.** No PID or process grouping key is
+available, and equal values do not prove that tasks share a process. This API
+is not equivalent to Electron's process-level `app.getAppMetrics()`.
+
+| Field | Meaning |
+| --- | --- |
+| `task_id` | Task identity, stable for its lifetime; not an OS PID |
+| `task_type` | `AppTaskType` classification of the task |
+| `process_cpu_percent` | Hosting process CPU usage since the previous sample; 100% is one fully used core |
+| `process_memory_bytes` | Hosting process private footprint in bytes; -1 before measurement |
+| `name` | Task name, empty when unavailable |
 
 ```moonbit
-app_lifecycle(
-  on_start=context => {
-    for metric in context.app_metrics() {
-      println(
-        metric.process_type.to_repr() +
-        " cpu=" +
-        metric.cpu_percent.to_string() +
-        " memory=" +
-        metric.memory_bytes.to_string(),
-      )
-    }
-    context
-  },
-  on_shutdown=fn(_) { () },
-)
+for metric in context.task_metrics() {
+  println(metric.task_type.to_repr())
+  println(metric.process_cpu_percent)
+  println(metric.process_memory_bytes)
+}
 ```
 
-Chromium measures processes only while something observes its task manager, so
-the first call starts the sampling: it reports no memory footprint, and calls
-after one sampling interval report the measured footprint and the CPU usage
-since the previous sample. The interval follows Chromium's task manager and is
-about one second, two seconds on macOS. Proton keeps the observation for the
-rest of the runtime, so later calls stay measured without restarting the
-sampling. See `examples/85_app_metrics`.
+The first call starts Chromium's sampling. CPU is zero until a sampling
+interval has passed, and memory is -1 before measurement. Observation continues
+until runtime shutdown. See `examples/85_task_metrics` for a live table.
 
-Electron reports an operating-system `pid`; CEF exposes its own task identifier
-instead, so `task_id` identifies a process and is stable for the process
-lifetime. Electron's idle wakeups, creation time, sandbox state, CPU time, and
-Windows integrity level have no CEF counterpart, and Proton does not publish
-them. `memory_bytes` follows CEF's documented contract and is `-1` until the
-first measurement lands, which is how an application can tell "not measured
-yet" from a real footprint.
+The previous `app_metrics()`, `AppProcessMetric`, and `AppProcessType` names
+have been replaced by `task_metrics()`, `AppTaskMetric`, and `AppTaskType`.
+Use `task_type`, `process_cpu_percent`, and `process_memory_bytes` in place of
+`process_type`, `cpu_percent`, and `memory_bytes`.
 
 Use `App::on_permission_request` to apply one policy to certificate and media
 permission requests. It takes precedence over the specialized handlers; when
@@ -358,7 +347,7 @@ does not publish wrappers that could never work:
 | `setUserAgent()` and `getUserAgent()` | A user agent override is a process-wide CEF setting, not a per-`webContents` property, and CEF cannot report the effective agent. |
 | `isCurrentlyAudible()` | CEF reports audio capture rather than playback, so Chromium's audible state is not observable. |
 | `setBackgroundThrottling()`, `setVisualZoomLevelLimits()`, `setImageAnimationPolicy()` | CEF exposes none of these preferences. |
-| `getOSProcessId()`, `getProcessId()`, `getProcessMemoryInfo()` | CEF hides operating-system pids. Use `ApplicationContext::app_metrics()` for per-process CPU and memory. |
+| `getOSProcessId()`, `getProcessId()`, `getProcessMemoryInfo()` | CEF hides operating-system pids. `ApplicationContext::task_metrics()` reports hosting-process usage per task, without PID or grouping; values cannot be summed. |
 | `startDrag()` | Drag start lives on CEF's render handler, which only runs for off-screen rendering. |
 
 `webContents.debugger` is absent as well: CEF can carry DevTools protocol

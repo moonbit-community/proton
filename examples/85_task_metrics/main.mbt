@@ -13,7 +13,7 @@ pub extend SampleRequest with FromJson::{from_json}
 struct MetricRow {
   task_id : Int64
   kind : String
-  cpu_percent : Double
+  process_cpu_percent : Double
   memory_mb : Double
   name : String
 } derive(ToJson, FromJson)
@@ -40,8 +40,8 @@ pub extend SampleReply with FromJson::{from_json}
 
 ///|
 let contract : @proton_contract.ExtensionContract = @proton_contract.extension(
-  id="examples/app-metrics",
-  js_namespace="appMetrics",
+  id="examples/task-metrics",
+  js_namespace="taskMetrics",
 )
 
 ///|
@@ -56,46 +56,46 @@ let application_slot : Ref[@proton.ApplicationContext?] = { val: None, }
 ///|
 /// Emits one review line for the terminal that started the example.
 fn log_metrics_step(step : String) -> Unit {
-  println("[app-metrics] " + step)
+  println("[task-metrics] " + step)
 }
 
 ///|
-/// Names one application process type for the review output.
-fn metric_kind(process_type : @proton.AppProcessType) -> String {
-  match process_type {
-    @proton.AppProcessType::Unknown => "unknown"
-    @proton.AppProcessType::Browser => "browser"
-    @proton.AppProcessType::Gpu => "gpu"
-    @proton.AppProcessType::Zygote => "zygote"
-    @proton.AppProcessType::Utility => "utility"
-    @proton.AppProcessType::Renderer => "renderer"
-    @proton.AppProcessType::Extension => "extension"
-    @proton.AppProcessType::Guest => "guest"
-    @proton.AppProcessType::Plugin => "plugin"
-    @proton.AppProcessType::SandboxHelper => "sandbox-helper"
-    @proton.AppProcessType::Worker => "worker"
+/// Names one browser task type for the review output.
+fn metric_kind(task_type : @proton.AppTaskType) -> String {
+  match task_type {
+    @proton.AppTaskType::Unknown => "unknown"
+    @proton.AppTaskType::Browser => "browser"
+    @proton.AppTaskType::Gpu => "gpu"
+    @proton.AppTaskType::Zygote => "zygote"
+    @proton.AppTaskType::Utility => "utility"
+    @proton.AppTaskType::Renderer => "renderer"
+    @proton.AppTaskType::Extension => "extension"
+    @proton.AppTaskType::Guest => "guest"
+    @proton.AppTaskType::Plugin => "plugin"
+    @proton.AppTaskType::SandboxHelper => "sandbox-helper"
+    @proton.AppTaskType::Worker => "worker"
   }
 }
 
 ///|
 /// Renders the memory footprint in megabytes, or `-` while Chromium has not
 /// measured the process.
-fn metric_memory_mb(metric : @proton.AppProcessMetric) -> Double {
-  if metric.memory_bytes < 0L {
+fn metric_memory_mb(metric : @proton.AppTaskMetric) -> Double {
+  if metric.process_memory_bytes < 0L {
     -1.0
   } else {
-    metric.memory_bytes.to_double() / (1024.0 * 1024.0)
+    metric.process_memory_bytes.to_double() / (1024.0 * 1024.0)
   }
 }
 
 ///|
-fn metric_rows(metrics : Array[@proton.AppProcessMetric]) -> Array[MetricRow] {
+fn metric_rows(metrics : Array[@proton.AppTaskMetric]) -> Array[MetricRow] {
   let rows : Array[MetricRow] = []
   for metric in metrics {
     rows.push({
       task_id: metric.task_id,
-      kind: metric_kind(metric.process_type),
-      cpu_percent: metric.cpu_percent,
+      kind: metric_kind(metric.task_type),
+      process_cpu_percent: metric.process_cpu_percent,
       memory_mb: metric_memory_mb(metric),
       name: metric.name,
     })
@@ -123,7 +123,7 @@ fn describe_sample(rows : Array[MetricRow]) -> String {
       "#" +
       row.task_id.to_string() +
       " cpu=" +
-      row.cpu_percent.to_string() +
+      row.process_cpu_percent.to_string() +
       " mem_mb=" +
       row.memory_mb.to_string(),
     )
@@ -132,7 +132,7 @@ fn describe_sample(rows : Array[MetricRow]) -> String {
 }
 
 ///|
-/// Reads one `app.getAppMetrics()` snapshot. The first call of a run starts
+/// Reads one browser-task snapshot with hosting-process resource usage. The first call of a run starts
 /// Chromium's sampling, so it reports no memory footprint and the CPU column
 /// stays zero until one sampling interval has passed.
 fn measure() -> SampleReply {
@@ -146,7 +146,7 @@ fn measure() -> SampleReply {
         metrics: [],
       }
   }
-  let metrics = context.app_metrics() catch {
+  let metrics = context.task_metrics() catch {
     error => {
       log_metrics_step("sample failed: " + error.message())
       return {
@@ -162,7 +162,7 @@ fn measure() -> SampleReply {
   log_metrics_step(
     "sample: " +
     rows.length().to_string() +
-    " processes, measured=" +
+    " tasks, measured=" +
     measured.to_string() +
     " " +
     describe_sample(rows),
@@ -172,7 +172,7 @@ fn measure() -> SampleReply {
     message: if measured {
       "Chromium reported " +
       rows.length().to_string() +
-      " processes; CPU is the usage since the previous sample"
+      " tasks; CPU is the usage since the previous sample"
     } else {
       "Sampling started; sample again for memory and CPU values"
     },
@@ -220,16 +220,13 @@ fn page() -> String {
     #|  <body>
     #|    <main>
     #|      <header>
-    #|        <p class="eyebrow">Electron app / review 85</p>
-    #|        <h1>Application metrics</h1>
+    #|        <p class="eyebrow">Proton / example 85</p>
+    #|        <h1>Browser task metrics</h1>
     #|        <p class="summary">
-    #|          <code>ApplicationContext::app_metrics()</code> mirrors
-    #|          <code>app.getAppMetrics()</code>. Chromium measures processes
-    #|          only while something observes its task manager, so the first
-    #|          sample of a run lists the processes without a memory footprint
-    #|          and the CPU column fills in after one sampling interval (about
-    #|          one second, two on macOS). Every sample prints one
-    #|          <code>[app-metrics]</code> line in the terminal.
+    #|          Each row is a browser task. CPU and memory describe its hosting
+    #|          process. Tasks can share a process and repeat its full usage:
+    #|          do not sum rows. Task IDs are not process IDs. Sample again after
+    #|          the first query to see measured values.
     #|        </p>
     #|      </header>
     #|      <div class="toolbar">
@@ -242,7 +239,7 @@ fn page() -> String {
     #|        <div class="panel-head"><span>Processes</span><span id="count">-</span></div>
     #|        <table>
     #|          <thead>
-    #|            <tr><th>type</th><th>task id</th><th>CPU</th><th>memory (MB)</th><th>name</th></tr>
+    #|            <tr><th>type</th><th>task id</th><th>process CPU</th><th>process memory (MB)</th><th>name</th></tr>
     #|          </thead>
     #|          <tbody id="rows"></tbody>
     #|        </table>
@@ -253,7 +250,7 @@ fn page() -> String {
     #|      const status = document.querySelector("#status");
     #|      const rows = document.querySelector("#rows");
     #|      async function invoke() {
-    #|        return window.__MoonBit__.core.invokeOp("ext:appMetrics/sample", { action: "sample" });
+    #|        return window.__MoonBit__.core.invokeOp("ext:taskMetrics/sample", { action: "sample" });
     #|      }
     #|      function cell(text, pending) {
     #|        const td = document.createElement("td");
@@ -269,13 +266,13 @@ fn page() -> String {
     #|          tr.append(
     #|            cell(metric.kind, false),
     #|            cell(String(metric.task_id), false),
-    #|            cell(`${metric.cpu_percent.toFixed(2)}%`, false),
+    #|            cell(`${metric.process_cpu_percent.toFixed(2)}%`, false),
     #|            cell(pending ? "not measured" : metric.memory_mb.toFixed(1), pending),
     #|            cell(metric.name === "" ? "-" : metric.name, metric.name === ""),
     #|          );
     #|          rows.append(tr);
     #|        }
-    #|        document.querySelector("#count").textContent = `${reply.metrics.length} processes`;
+    #|        document.querySelector("#count").textContent = `${reply.metrics.length} tasks`;
     #|        status.textContent = reply.ok ? reply.message : `Failed: ${reply.message}`;
     #|      }
     #|      async function sample() {
@@ -306,7 +303,7 @@ fn page() -> String {
 ///|
 async fn main {
   @proton.html("Application Metrics", page(), width=940, height=720)
-  .identifier("com.example.proton.app-metrics")
+  .identifier("com.example.proton.task-metrics")
   .commands(register_commands)
   .app_lifecycle(
     on_start=context => {

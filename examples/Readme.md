@@ -169,10 +169,8 @@ moon -C examples run 01_run --target native
   Electron-style single-instance runtime review covering
   `hasSingleInstanceLock`, `releaseSingleInstanceLock`, and a successor
   instance that becomes primary with its own session partition.
-- [85_app_metrics](85_app_metrics/README.md): manual Electron-style
-  application process metrics review covering `getAppMetrics` for every
-  browser, GPU, utility, and renderer task, including the sampling interval
-  before Chromium reports memory and CPU.
+- [85_task_metrics](85_task_metrics/README.md): browser task metrics with
+  hosting-process CPU and memory, which must not be summed across task rows.
 - [86_page_control](86_page_control/README.md): manual Electron-style page
   control review covering `webContents.navigationHistory` entries and page
   transitions, plus `insertCSS`/`removeInsertedCSS` for window and view
