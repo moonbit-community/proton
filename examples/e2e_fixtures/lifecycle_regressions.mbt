@@ -1157,12 +1157,18 @@ async fn run_proxy_regression(name : String) -> Unit {
   @env.set_env_var("PROTON_PROXY_BYPASS", if configured { "*" } else { "" })
   let served = Ref(false)
   let loaded = Ref(false)
+  let page_title = "Proton Proxy Response"
   let app = @proton.url("Proxy", "http://proton-proxy.invalid:8080/probe")
     .identifier("dev.proton.proxy")
-    .on_browser_event(fn(_browser, event) {
+    .on_browser_event((browser, event) => {
       if event is DidFinishLoad {
         loaded.val = true
       }
+      eprintln("PROXY_EVENT " + event.to_repr().to_string())
+      let state = browser.state().to_repr().to_string() catch {
+          error => "unavailable: " + error.message()
+        }
+      eprintln("PROXY_STATE " + state)
     })
     .app_lifecycle(
       on_start=context => {
@@ -1172,6 +1178,7 @@ async fn run_proxy_regression(name : String) -> Unit {
           .spawn(no_wait=true, () => {
             while !served.val {
               let (connection, _) = server.accept()
+              eprintln("PROXY_CONNECTION accepted")
               ignore(
                 context
                 .task_group()
@@ -1180,12 +1187,16 @@ async fn run_proxy_regression(name : String) -> Unit {
                   // A browser may close a speculative connection before sending
                   // a request. This does not satisfy the proxy success assertion.
                   let request = connection.read_request() catch {
-                    @io.ReaderClosed => return
+                    @io.ReaderClosed => {
+                      eprintln("PROXY_CONNECTION closed without a request")
+                      return
+                    }
                     error => raise error
                   }
+                  eprintln("PROXY_REQUEST " + request.path)
                   if request.path == "http://proton-proxy.invalid:8080/probe" {
                     connection.send_response(200, "OK")
-                    connection.write_string("<title>Proxy Success</title>")
+                    connection.write_string("<title>" + page_title + "</title>")
                     connection.end_response()
                     served.val = true
                   } else {
@@ -1201,31 +1212,18 @@ async fn run_proxy_regression(name : String) -> Unit {
           context
           .task_group()
           .spawn(no_wait=true, () => {
-            let deadline = @async.now() + 5000L
-            while !served.val ||
-                  !loaded.val ||
-                  context
-                  .windows()
-                  .find("main")
-                  .map(window => window.browser().state().url)
-                  .unwrap_or("") !=
-                  "http://proton-proxy.invalid:8080/probe" {
-              if @async.now() > deadline {
-                fail(
-                  "proxy served=" +
-                  served.val.to_string() +
-                  " loaded=" +
-                  loaded.val.to_string() +
-                  " state=" +
-                  context
-                  .windows()
-                  .find("main")
-                  .unwrap()
-                  .browser()
-                  .state()
-                  .to_repr()
-                  .to_string(),
-                )
+            // The parent runner owns the startup timeout and includes this
+            // child's event/request log on failure. Keep the initial navigation
+            // under test rather than issuing a second navigation after startup.
+            while true {
+              if context.windows().find("main") is Some(window) {
+                let state = window.browser().state()
+                if served.val &&
+                  state.url == "http://proton-proxy.invalid:8080/probe" &&
+                  loaded.val &&
+                  !state.is_loading {
+                  break
+                }
               }
               @async.sleep(10)
             }
