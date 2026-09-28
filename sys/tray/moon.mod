@@ -1,9 +1,9 @@
 name = "moonbit-community/proton_tray"
 
-version = "0.3.3"
+version = "0.3.4"
 
 import {
-  "moonbit-community/proton_ffi@0.3.3",
+  "moonbit-community/proton_ffi@0.3.4",
 }
 
 readme = "README.mbt.md"
