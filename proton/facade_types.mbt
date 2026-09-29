@@ -246,6 +246,8 @@ let titlebar_area_bridge_source =
   #|
 
 ///|
+/// Application startup settings and handlers shared by startup and the session.
+/// Runtime handles and mutable lifecycle state belong to RuntimeSession.
 priv struct ResolvedAppConfig {
   manifest : @manifest.AppManifest
   application_name : String
@@ -260,6 +262,63 @@ priv struct ResolvedAppConfig {
   document_extensions : Array[String]
   /// The update channel and the identity it updates, when configured by code.
   update_channel : ResolvedUpdateChannel?
+  command_capabilities : Array[AppCommandCapability]
+  extension_capabilities : Array[ExtensionCapabilityBinding]
+  application_lifecycle_hooks : Array[ApplicationLifecycleHook]
+  window_lifecycle_hooks : Array[WindowLifecycleHook]
+  menu : @native.MenuBar?
+  bridge_startup_timeout_ms : Int
+  headless : Bool
+  accessibility_mode : AccessibilityMode
+  proxy_server : String?
+  proxy_bypass : String?
+  planned_views : Array[(String, @native.ViewConfig)]
+  last_window_closed_policy : LastWindowClosedPolicy
+  launch_input_handlers : Array[
+    async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
+  ]
+  system_appearance_handlers : Array[async (SystemAppearance) -> Unit noraise]
+  thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise]
+  window_event_handlers : Array[
+    async (WindowHandle, WindowEvent) -> Unit noraise,
+  ]
+  window_created_handlers : Array[async (WindowHandle) -> Unit noraise]
+  web_contents_created_handlers : Array[
+    async (WebContentsHandle) -> Unit noraise,
+  ]
+  render_process_gone_handlers : Array[
+    async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
+  ]
+  session_created_handlers : Array[async (ApplicationSession) -> Unit noraise]
+  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
+  browser_event_handlers : Array[
+    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  ]
+  window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
+  before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
+  quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
+  navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
+  new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?
+  download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
+  certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
+  media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
+  permission_handler : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
+  download_event_handlers : Array[
+    async (BrowserHandle, DownloadEvent) -> Unit noraise,
+  ]
+  update_handlers : Array[async (PendingUpdate) -> Unit noraise]
+  explicit_locale : @locale.Locale?
+}
+
+///|
+/// Host-derived launch information, resolved after logging is initialized.
+/// Contains no native handles or mutable runtime state.
+priv struct RuntimeEnvironment {
+  locale_preferences : @locale.LocalePreferences
+  application_session : ApplicationSession
+  application_executable : String
+  application_arguments : Array[String]
 }
 
 ///|
@@ -486,10 +545,11 @@ priv struct WindowPermissionPolicy {
 /// are non-owning capabilities that route operations back through the session
 /// instead of duplicating native lifecycle state.
 priv struct RuntimeSession {
+  config : ResolvedAppConfig
+  environment : RuntimeEnvironment
   updates : ApplicationUpdates
   runtime : @native.Runtime
   event_pump : RuntimeEventPump
-  locale_preferences : @locale.LocalePreferences
   definitions : Array[PreparedWindow]
   windows : Array[RunningWindow]
   mut has_created_window : Bool
@@ -499,60 +559,16 @@ priv struct RuntimeSession {
   forward_menu_events : Bool
   monitor_bridge : Bool
   application_tasks : @async.TaskGroup[Unit]
-  last_window_closed_policy : LastWindowClosedPolicy
-  launch_input_handlers : Array[
-    async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
-  ]
-  system_appearance_handlers : Array[async (SystemAppearance) -> Unit noraise]
-  thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise]
-  window_event_handlers : Array[
-    async (WindowHandle, WindowEvent) -> Unit noraise,
-  ]
-  window_created_handlers : Array[async (WindowHandle) -> Unit noraise]
-  web_contents_created_handlers : Array[
-    async (WebContentsHandle) -> Unit noraise,
-  ]
-  render_process_gone_handlers : Array[
-    async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
-  ]
-  session_created_handlers : Array[async (ApplicationSession) -> Unit noraise]
-  application_session : ApplicationSession
   /// The single-instance lock this process holds, when the application
   /// declared `single_instance`. Released on demand and destroyed on exit.
   mut app_instance : @native.AppInstance?
-  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
-  browser_event_handlers : Array[
-    async (BrowserHandle, BrowserEvent) -> Unit noraise,
-  ]
-  window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
-  before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
-  will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
-  quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
   window_tasks : @async.TaskGroup[Unit]
-  window_lifecycle_hooks : Array[WindowLifecycleHook]
   lifecycle_failures : Array[AppCleanupError]
-  bridge_startup_timeout_ms : Int
   window_commands : Array[WindowSessionCommand]
   pending_window_opens : Array[PendingWindowOpen]
   pending_browser_requests : Array[PendingBrowserRequest]
   pending_resource_requests : Array[PendingResourceRequest]
-  navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
-  new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?
-  download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
-  certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
-  media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
-  permission_handler : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
-  download_event_handlers : Array[
-    async (BrowserHandle, DownloadEvent) -> Unit noraise,
-  ]
   close_coordinator : CloseCoordinator
-  application_identifier : String
-  application_executable : String
-  application_arguments : Array[String]
-  url_schemes : Array[String]
-  web_request_cancel_prefixes : Array[String]
-  web_request_redirect_prefixes : Array[(String, String)]
-  web_request_header_prefixes : Array[(String, String, String)]
 }
 
 ///|
