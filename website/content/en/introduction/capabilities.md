@@ -28,3 +28,21 @@ A missing capability leaves its route unavailable. An installed extension can st
 Filesystem, dialogs, clipboard, shell, tray and other capabilities have different scope types and platform coverage. The notification extension in 0.3.4 targets macOS. Framework platform support is not a capability support matrix.
 
 Complete builders and request/response types are in the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/). A complete exercise is in the [file access tutorial](../tutorial/capabilities.md).
+
+## Platform differences and selection
+
+These are key boundaries of implemented 0.3.4 capabilities, not a promise of availability without desktop services:
+
+| Capability | macOS | Windows | Linux |
+| --- | --- | --- | --- |
+| Files, paths, host HTTP, child processes | Supported | Supported | Supported |
+| Native dialogs, text clipboard | Supported | Supported | Depends on desktop session / GTK and related backends |
+| System notification extension | Supported | Not implemented | Not implemented |
+| Tray | Menus and platform events | Click, right-click, double-click and menus | Requires AppIndicator / Ayatana and desktop support |
+| Desktop sources and thumbnails | Displays; thumbnails require screen-recording permission | Visible titled windows and GDI thumbnails | X11/RandR displays; thumbnails are null |
+
+Capability grants are separate from operating-system authorization. Declaring a screen or media capability does not grant OS privacy permission. Handle OS denial, unavailable backends and missing application grants separately. Check support where provided, such as the tray capability; menu events are more portable than platform mouse gestures.
+
+The net extension performs host HTTP requests and returns status, headers and UTF-8 text. It is not browser fetch, does not share the browser cookie jar and does not follow redirects automatically. Its text response is not a lossless binary transfer interface. Processes spawned by the process extension belong to its application lifetime: wait collects handles, kill still needs wait, and application shutdown cancels and reaps remaining children.
+
+See the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.

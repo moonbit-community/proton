@@ -37,3 +37,17 @@ An unsigned or locally signed artifact does not establish a trusted publisher id
 Packaged frontend files load without the development server. Backend resource paths resolve through `resource_dir()`. Installed resources may be read-only; persistent application data belongs outside them.
 
 `--dry-run` validates and displays the packaging plan. It does not prove that packaging, signing or the packaged runtime works. The [Todo tutorial](../tutorial/isomorphic.md) includes the application build and package exercise.
+
+## Icon and tool prerequisites
+
+| Artifact | Icon and tooling |
+| --- | --- |
+| macOS app / zip | ICNS for the application icon; native Apple tooling for builds and signing |
+| macOS dmg | Uses system hdiutil to create an image from the app |
+| Windows app / zip | Windows SDK rc.exe embeds ICO into the EXE; PNG is not automatically converted |
+| Windows nsis | Also requires NSIS makensis |
+| Linux appimage | Requires a PNG icon and executable appimagetool on PATH |
+
+The default scaffold does not provide icons. On Linux, missing PNG validation fails before invoking AppImage tooling. See the [Todo packaging steps](../tutorial/isomorphic.md#linux) for preparation. Supply the platform's icon format rather than expecting Windows to convert icons intended for other platforms.
+
+minimum_system_version only writes macOS LSMinimumSystemVersion metadata. It does not make a binary built against a newer SDK/CEF compatible with older systems. Validate the complete artifact on the minimum supported OS; compilation alone is insufficient.

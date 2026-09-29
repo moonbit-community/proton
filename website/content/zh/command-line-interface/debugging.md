@@ -40,3 +40,29 @@ Proton 使用 `tonyfettes/xlog`。开发输出使用 stderr，打包应用使用
 | 打包页面缺少资源 | 资源路径、前端输出和打包组装 |
 
 有效的问题报告应包含准确命令、完整错误、Proton／MoonBit 版本、操作系统和架构、开发或打包模式，以及最小复现。强制结束进程必须与正常完成退出区分。
+
+## 找到实际日志
+
+打包应用的默认文件名是 proton-&lt;pid&gt;.log，目录以应用 identifier（不是显示名称）区分：
+
+| 平台 | 默认目录 |
+| --- | --- |
+| macOS | ~/Library/Logs/&lt;identifier&gt;/ |
+| Windows | %LOCALAPPDATA%\&lt;identifier&gt;\Logs\ |
+| Linux | $XDG_STATE_HOME/&lt;identifier&gt;/logs/，未设置时为 ~/.local/state/&lt;identifier&gt;/logs/ |
+
+App.path(AppPathKind::Logs) 返回解析后的路径。通过 set_path 或 set_app_logs_path 自定义过路径时，应使用查询结果。PROTON_LOG_OUTPUT=stderr 可使从终端启动的打包程序输出到终端；未打包应用不能使用 file 模式。
+
+## 按阶段定位
+
+| 现象 | 检查与下一步 |
+| --- | --- |
+| CLI 找不到运行时 | 比较 proton_cli --version 与应用 proton 依赖版本；运行 cef requirements 查看该 CLI 要求，再执行 cef setup；保留 setup 的完整错误 |
+| dev 等不到前端 | 在 frontend.path 中单独执行 before_dev，检查 dev_url 的主机和端口；已有服务用 --no-frontend，不要同时启动第二个 |
+| 普通浏览器里没有 bridge | 改为通过 proton_cli dev 启动原生应用；网页预览不注入宿主 bridge |
+| permission_denied / unknown_op | 检查注册的命令描述符、capability 目标与当前窗口／页面；不要只检查是否添加模块依赖 |
+| 打包后资源 404 | 检查产物内资源树与 HTML 相对 URL，确认 frontend.dist 与 package.resources；停止开发服务器后重试 |
+| 关闭窗口后进程仍在 | 先检查 KeepRunning 和被拒绝的 quit；查看最终退出／清理错误。记录关闭操作与进程状态，不把手动 kill 当作退出成功 |
+| appimage 打包失败 | 先检查 PNG 文件及 appimagetool --version；区分图标校验失败与 create AppImage 工具错误 |
+
+报告问题时附带 doctor --json 的输出、应用日志及最小复现。提交前检查日志是否包含自己的业务数据或凭据。
