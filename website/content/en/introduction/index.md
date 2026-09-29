@@ -30,3 +30,5 @@ Distributed applications include Chromium and the matching subprocess helper. Ru
 - [Rabbita integration](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/)
 
 Generated API documentation provides full signatures; these reference pages describe behavior and relationships between APIs.
+
+Use the [application API reference index](application-api.md) to locate behavior by object and lifecycle.

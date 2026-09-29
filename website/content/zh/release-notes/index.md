@@ -14,7 +14,7 @@
 
 CLI 和应用的 proton_* 模块统一使用 0.3.4，并执行 `proton_cli cef setup` 安装匹配的 helper。重新安装 CLI 不会重写已有项目。
 
-曾短暂引入的 app_metrics 改为 `task_metrics` 与 `AppTaskMetric`：任务身份不是进程身份，不同任务的 `hosting_process_usage` 可能重复，不能直接相加作为应用总用量。参见 [PR #412](https://github.com/moonbit-community/proton/pull/412)。[PR #408](https://github.com/moonbit-community/proton/pull/408)删除了未使用的旧命令配置 API；应用命令继续通过绑定注册。
+曾短暂引入的 app_metrics 改为 `task_metrics` 与 `AppTaskMetric`：任务身份不是进程身份，不同任务的 `process_cpu_percent` / `process_memory_bytes` 可能重复，不能直接相加作为应用总用量。参见 [PR #412](https://github.com/moonbit-community/proton/pull/412)。[PR #408](https://github.com/moonbit-community/proton/pull/408)删除了未使用的旧命令配置 API；应用命令继续通过绑定注册。
 
 ## 0.3.3 — 2026-09-21
 

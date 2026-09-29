@@ -14,7 +14,7 @@ This book targets the published [0.3.4 source](https://github.com/moonbit-commun
 
 Keep the CLI and application `proton_*` modules on 0.3.4 and run `proton_cli cef setup` for the matching helper. Reinstalling the CLI does not rewrite existing projects.
 
-The briefly introduced `app_metrics` API is now `task_metrics` with `AppTaskMetric`: task identity is not process identity, and `hosting_process_usage` can repeat across tasks. Do not sum task rows as application resource usage. See [PR #412](https://github.com/moonbit-community/proton/pull/412). Unused legacy command configuration APIs were removed in [PR #408](https://github.com/moonbit-community/proton/pull/408); application command bindings remain the supported route.
+The briefly introduced `app_metrics` API is now `task_metrics` with `AppTaskMetric`: task identity is not process identity, and `process_cpu_percent` / `process_memory_bytes` can repeat across tasks. Do not sum task rows as application resource usage. See [PR #412](https://github.com/moonbit-community/proton/pull/412). Unused legacy command configuration APIs were removed in [PR #408](https://github.com/moonbit-community/proton/pull/408); application command bindings remain the supported route.
 
 ## 0.3.3 — 2026-09-21
 
