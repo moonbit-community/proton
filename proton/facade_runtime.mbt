@@ -23,7 +23,9 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       partition: resolved.session_partition,
       data_path: browser_data_dir,
     }
-    let locale_preferences = resolve_locale_preferences(self.explicit_locale)
+    let locale_preferences = resolve_locale_preferences(
+      resolved.explicit_locale,
+    )
     let application_executable = executable_path() catch {
       error =>
         raise RuntimeOperationFailed(
@@ -51,57 +53,17 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       Some(instance) => destroy_app_instance(instance) catch { _ => () }
       None => ()
     })
-    let outcome = run_manifest(
-      resolved.manifest,
-      resolved.permission_base_path,
-      self.command_capabilities,
-      self.extension_capabilities,
-      self.application_lifecycle_hooks,
-      self.window_lifecycle_hooks,
-      self.menu.map(menu => menu.to_native()),
-      self.bridge_startup_timeout_value_ms,
-      self.resolved_headless(),
-      self.accessibility_mode_value,
+    let environment = RuntimeEnvironment::{
       locale_preferences,
-      browser_data_dir?,
-      proxy_server?=self.proxy_server_value,
-      proxy_bypass?=self.proxy_bypass_value,
-      application_name=resolved.application_name,
+      application_session,
+      application_executable,
+      application_arguments,
+    }
+    let outcome = run_manifest(
+      resolved,
+      environment,
       app_instance~,
-      last_window_closed_policy=self.last_window_closed_policy_value,
-      launch_input_handlers=self.launch_input_handlers,
-      system_appearance_handlers=self.system_appearance_handlers,
-      thumbar_button_handlers=self.thumbar_button_handlers,
-      planned_views=self.planned_views.map(view => (view.0, view.1.to_native())),
-      window_event_handlers=self.window_event_handlers,
-      window_created_handlers=self.window_created_handlers,
-      web_contents_created_handlers=self.web_contents_created_handlers,
-      render_process_gone_handlers=self.render_process_gone_handlers,
-      session_created_handlers=self.session_created_handlers,
-      application_session~,
-      view_event_handlers=self.view_event_handlers,
-      browser_event_handlers=self.browser_event_handlers,
-      window_close_handler=self.window_close_handler,
-      before_quit_handler=self.before_quit_handler,
-      will_quit_handler=self.will_quit_handler,
-      quit_handlers=self.quit_handlers,
-      navigation_handler=self.navigation_handler,
-      new_window_handler=self.new_window_handler,
-      download_handler=self.download_handler,
-      certificate_handler=self.certificate_handler,
-      media_handler=self.media_handler,
-      permission_handler=self.permission_handler,
-      download_event_handlers=self.download_event_handlers,
-      update_channel=resolved.update_channel,
-      update_handlers=self.update_handlers,
-      application_identifier=resolved.application_identifier,
-      application_executable~,
-      application_arguments~,
-      url_schemes=resolved.url_schemes,
       failure_log~,
-      web_request_cancel_prefixes=resolved.web_request_cancel_prefixes,
-      web_request_redirect_prefixes=resolved.web_request_redirect_prefixes,
-      web_request_header_prefixes=resolved.web_request_header_prefixes,
     )
     match app_instance {
       Some(instance) => destroy_app_instance(instance)
@@ -197,78 +159,17 @@ pub async fn App::run_or_abort(self : App) -> Unit {
 
 ///|
 async fn run_manifest(
-  manifest : @manifest.AppManifest,
-  permission_base_path : String,
-  command_capabilities : Array[AppCommandCapability],
-  extension_capabilities : Array[ExtensionCapabilityBinding],
-  application_lifecycle_hooks : Array[ApplicationLifecycleHook],
-  window_lifecycle_hooks : Array[WindowLifecycleHook],
-  menu : @native.MenuBar?,
-  bridge_startup_timeout_ms : Int,
-  headless : Bool,
-  accessibility_mode : AccessibilityMode,
-  locale_preferences : @locale.LocalePreferences,
-  browser_data_dir? : String,
-  proxy_server? : String,
-  proxy_bypass? : String,
-  application_name? : String = "Proton",
+  config : ResolvedAppConfig,
+  environment : RuntimeEnvironment,
   app_instance? : @native.AppInstance? = None,
-  planned_views? : Array[(String, @native.ViewConfig)] = [],
-  last_window_closed_policy? : LastWindowClosedPolicy = LastWindowClosedPolicy::Quit,
-  launch_input_handlers? : Array[
-    async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
-  ] = [],
-  system_appearance_handlers? : Array[async (SystemAppearance) -> Unit noraise] = [],
-  thumbar_button_handlers? : Array[async (WindowHandle, String) -> Unit noraise] = [],
-  window_event_handlers? : Array[
-    async (WindowHandle, WindowEvent) -> Unit noraise,
-  ] = [],
-  window_created_handlers? : Array[async (WindowHandle) -> Unit noraise] = [],
-  web_contents_created_handlers? : Array[
-    async (WebContentsHandle) -> Unit noraise,
-  ] = [],
-  render_process_gone_handlers? : Array[
-    async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
-  ] = [],
-  session_created_handlers? : Array[async (ApplicationSession) -> Unit noraise] = [],
-  application_session? : ApplicationSession = ApplicationSession::{
-    partition: None,
-    data_path: None,
-  },
-  view_event_handlers? : Array[async (ViewHandle, ViewEvent) -> Unit noraise] = [],
-  browser_event_handlers? : Array[
-    async (BrowserHandle, BrowserEvent) -> Unit noraise,
-  ] = [],
-  window_close_handler? : (async (WindowHandle) -> WindowCloseDecision noraise)? = None,
-  before_quit_handler? : (async (ApplicationContext) -> ApplicationQuitDecision noraise)? = None,
-  will_quit_handler? : (async (ApplicationContext) -> ApplicationQuitDecision noraise)? = None,
-  quit_handlers? : Array[async (ApplicationContext, Int) -> Unit noraise] = [],
-  navigation_handler? : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)? = None,
-  new_window_handler? : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)? = None,
-  download_handler? : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)? = None,
-  certificate_handler? : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)? = None,
-  media_handler? : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)? = None,
-  permission_handler? : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)? = None,
-  download_event_handlers? : Array[
-    async (BrowserHandle, DownloadEvent) -> Unit noraise,
-  ] = [],
-  update_channel? : ResolvedUpdateChannel? = None,
-  update_handlers? : Array[async (PendingUpdate) -> Unit noraise] = [],
-  application_identifier? : String = "",
-  application_executable? : String = "",
-  application_arguments? : Array[String] = [],
-  url_schemes? : Array[String] = [],
   failure_log? : RuntimeFailureLog = RuntimeFailureLog::{
     primary_logged: false,
   },
-  web_request_cancel_prefixes? : Array[String] = [],
-  web_request_redirect_prefixes? : Array[(String, String)] = [],
-  web_request_header_prefixes? : Array[(String, String, String)] = [],
 ) -> ApplicationExit raise AppRunError {
-  let plans = planned_windows(manifest) catch {
+  let plans = planned_windows(config.manifest) catch {
     error => raise ConfigurationError(error)
   }
-  if headless {
+  if config.headless {
     for plan in plans {
       if plan.window.titlebar_style == @manifest.TitlebarStyle::Overlay {
         raise ConfigurationError(
@@ -280,7 +181,7 @@ async fn run_manifest(
       }
     }
   }
-  if headless && menu is Some(_) {
+  if config.headless && config.menu is Some(_) {
     raise ConfigurationError(
       InvalidSetting(
         name="headless",
@@ -292,21 +193,21 @@ async fn run_manifest(
   lifecycle.begin_starting()
   // Context menus are created after startup through WindowHandle, so windowed
   // applications need menu command events even without an application menu.
-  let forward_menu_events = !headless
-  let catalog = framework_catalog(locale_preferences)
-  let remote_debugging = remote_debugging(manifest.debug) catch {
+  let forward_menu_events = !config.headless
+  let catalog = framework_catalog(environment.locale_preferences)
+  let remote_debugging = remote_debugging(config.manifest.debug) catch {
     error => raise ConfigurationError(error)
   }
   let runtime = @native.Runtime(
     config=@native.RuntimeConfig::bundled(
-      cache_dir?=browser_data_dir,
-      proxy_server?,
-      proxy_bypass?,
-      locale=locale_preferences.chromium_locale(),
-      accept_languages=locale_preferences.accept_languages(),
+      cache_dir?=environment.application_session.data_path,
+      proxy_server?=config.proxy_server,
+      proxy_bypass?=config.proxy_bypass,
+      locale=environment.locale_preferences.chromium_locale(),
+      accept_languages=environment.locale_preferences.accept_languages(),
       remote_debugging~,
-      headless~,
-      accessibility_mode=accessibility_mode.to_native(),
+      headless=config.headless,
+      accessibility_mode=config.accessibility_mode.to_native(),
     ).with_framework_dialog_labels(catalog.dialog_ok, catalog.dialog_cancel),
   ) catch {
     error => raise native_run_error("create runtime", error)
@@ -334,7 +235,7 @@ async fn run_manifest(
       }
     None => ()
   }
-  let updates = ApplicationUpdates::{ channel: update_channel, }
+  let updates = ApplicationUpdates::{ channel: config.update_channel, }
   active_application_updates.val = Some(updates)
   defer {
     updates.channel = None
@@ -345,15 +246,15 @@ async fn run_manifest(
   let lifecycle_failures : Array[AppCleanupError] = []
   let outcome = Ref(ApplicationExit::{ exit_code: 0, forced: false, })
   try {
-    if !headless {
+    if !config.headless {
       let platform = @native.runtime_info().platform catch {
           error => raise native_run_error("query runtime platform", error)
         }
       match
         resolve_runtime_menu(
-          menu,
-          locale_preferences,
-          application_name,
+          config.menu,
+          environment.locale_preferences,
+          config.application_name,
           platform~,
         ) {
         Some(menu) =>
@@ -364,11 +265,15 @@ async fn run_manifest(
       }
     }
     validate_renderer_capability_targets(
-      manifest, command_capabilities, extension_capabilities,
+      config.manifest,
+      config.command_capabilities,
+      config.extension_capabilities,
     ) catch {
       error => raise ConfigurationError(error)
     }
-    let extension_catalog = command_extension_catalog(extension_capabilities) catch {
+    let extension_catalog = command_extension_catalog(
+      config.extension_capabilities,
+    ) catch {
       error => raise ConfigurationError(error)
     }
     let titlebar_area_targets : Array[RendererTarget] = []
@@ -378,14 +283,16 @@ async fn run_manifest(
       }
     }
     let command_build = build_command_host(
-      command_capabilities,
+      config.command_capabilities,
       extension_catalog,
       titlebar_area_targets~,
     )
     command_host = command_build.runtime
     let command_extensions = command_build.extensions
     let resolved_extension_capabilities = resolve_extension_capabilities(
-      extension_capabilities, permission_base_path, command_extensions,
+      config.extension_capabilities,
+      config.permission_base_path,
+      command_extensions,
     ) catch {
       error => raise ConfigurationError(error)
     }
@@ -412,39 +319,39 @@ async fn run_manifest(
     let bridge_enabled = requires_renderer_bridge(
       command_host,
       forward_menu_events,
-      window_lifecycle_hooks.length() > 0,
+      config.window_lifecycle_hooks.length() > 0,
     )
     if bridge_enabled && !@native.bridge_permission_grants_supported() {
       raise UnsupportedNativeFeature(feature="bridge_permission_grants")
     }
     let definitions : Array[PreparedWindow] = []
     let browser_policy = @native.BrowserPolicy(
-      navigation=if navigation_handler is Some(_) {
+      navigation=if config.navigation_handler is Some(_) {
         @native.BrowserPolicyMode::Ask
       } else {
         @native.BrowserPolicyMode::Allow
       },
-      new_window=if new_window_handler is Some(_) {
+      new_window=if config.new_window_handler is Some(_) {
         @native.BrowserPolicyMode::Ask
       } else {
         @native.BrowserPolicyMode::Deny
       },
-      download=if download_handler is Some(_) {
+      download=if config.download_handler is Some(_) {
         @native.BrowserPolicyMode::Ask
       } else {
         @native.BrowserPolicyMode::Deny
       },
-      certificate=if certificate_handler is Some(_) {
+      certificate=if config.certificate_handler is Some(_) {
         @native.BrowserPolicyMode::Ask
       } else {
         @native.BrowserPolicyMode::Deny
       },
-      media=if media_handler is Some(_) {
+      media=if config.media_handler is Some(_) {
         @native.BrowserPolicyMode::Ask
       } else {
         @native.BrowserPolicyMode::Deny
       },
-      devtools=manifest.debug > 0,
+      devtools=config.manifest.debug > 0,
     )
     for index, plan in plans {
       let entry = prepare_entry(plan.entry) catch {
@@ -468,7 +375,7 @@ async fn run_manifest(
         permissions: permission_policies[index],
         browser_policy,
         views: if plan.id == "main" {
-          planned_views
+          config.planned_views
         } else {
           []
         },
@@ -482,52 +389,9 @@ async fn run_manifest(
       }
       @async.with_task_group(window_tasks => {
         let session = RuntimeSession(
-          updates~,
-          runtime,
-          event_pump,
-          locale_preferences,
-          definitions,
-          windows,
-          command_host,
-          wakeup,
-          forward_menu_events,
-          bridge_enabled,
-          launch_input_handlers,
-          system_appearance_handlers,
-          thumbar_button_handlers,
-          window_event_handlers,
-          window_created_handlers~,
-          web_contents_created_handlers~,
-          render_process_gone_handlers~,
-          session_created_handlers~,
-          application_session~,
-          app_instance~,
-          application_tasks,
-          last_window_closed_policy,
-          window_tasks,
-          view_event_handlers,
-          browser_event_handlers,
-          window_close_handler,
-          window_lifecycle_hooks,
-          lifecycle_failures,
-          bridge_startup_timeout_ms,
-          navigation_handler,
-          new_window_handler,
-          download_handler,
-          certificate_handler,
-          media_handler,
-          permission_handler,
-          download_event_handlers,
-          before_quit_handler~,
-          will_quit_handler~,
-          quit_handlers~,
-          application_identifier~,
-          application_executable~,
-          application_arguments~,
-          url_schemes~,
-          web_request_cancel_prefixes~,
-          web_request_redirect_prefixes~,
-          web_request_header_prefixes~,
+          config, environment, updates, runtime, event_pump, definitions, windows,
+          command_host, wakeup, forward_menu_events, bridge_enabled, app_instance,
+          application_tasks, window_tasks, lifecycle_failures,
         )
         let application_context = session.application_context()
         // Electron reports the session as soon as it exists, before the
@@ -537,7 +401,9 @@ async fn run_manifest(
           () => {
             defer session.wakeup.signal.notify()
             start_application_lifecycle_hooks(
-              application_lifecycle_hooks, application_context, application_tasks,
+              config.application_lifecycle_hooks,
+              application_context,
+              application_tasks,
               lifecycle_failures,
             )
           },
@@ -553,7 +419,7 @@ async fn run_manifest(
             }
           }
           if bridge_enabled {
-            session.wait_for_bridge_startup(bridge_startup_timeout_ms)
+            session.wait_for_bridge_startup(config.bridge_startup_timeout_ms)
             if !session.is_quitting() {
               @xlog.info(category="proton.bridge") <?
                 {
@@ -584,7 +450,9 @@ async fn run_manifest(
             lifecycle.begin_running()
             cleanup_previous_update()
             start_update_check(
-              update_channel, update_handlers, application_tasks,
+              config.update_channel,
+              config.update_handlers,
+              application_tasks,
             )
           }
         }
@@ -601,14 +469,14 @@ async fn run_manifest(
     error => {
       let primary = normalize_async_run_error(error)
       failure_log.report_primary(primary)
-      if !headless {
+      if !config.headless {
         show_app_run_failure(
           runtime,
           event_pump,
           preferred_active_window(windows).map(window => window.window),
           wakeup,
           primary,
-          locale_preferences,
+          environment.locale_preferences,
           lifecycle.has_reached_running(),
         ) catch {
           _ => ()

@@ -1,72 +1,27 @@
 ///|
 fn RuntimeSession::RuntimeSession(
-  updates? : ApplicationUpdates = ApplicationUpdates::{ channel: None, },
+  config : ResolvedAppConfig,
+  environment : RuntimeEnvironment,
+  updates : ApplicationUpdates,
   runtime : @native.Runtime,
   event_pump : RuntimeEventPump,
-  locale_preferences : @locale.LocalePreferences,
   definitions : Array[PreparedWindow],
   windows : Array[RunningWindow],
   command_host : CommandHostRuntime?,
   wakeup : RuntimeWakeup,
   forward_menu_events : Bool,
   monitor_bridge : Bool,
-  launch_input_handlers : Array[
-    async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
-  ],
-  system_appearance_handlers : Array[async (SystemAppearance) -> Unit noraise],
-  thumbar_button_handlers : Array[async (WindowHandle, String) -> Unit noraise],
-  window_event_handlers : Array[
-    async (WindowHandle, WindowEvent) -> Unit noraise,
-  ],
-  window_created_handlers? : Array[async (WindowHandle) -> Unit noraise] = [],
-  web_contents_created_handlers? : Array[
-    async (WebContentsHandle) -> Unit noraise,
-  ] = [],
-  render_process_gone_handlers? : Array[
-    async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
-  ] = [],
-  session_created_handlers? : Array[async (ApplicationSession) -> Unit noraise] = [],
-  application_session? : ApplicationSession = ApplicationSession::{
-    partition: None,
-    data_path: None,
-  },
-  app_instance? : @native.AppInstance? = None,
+  app_instance : @native.AppInstance?,
   application_tasks : @async.TaskGroup[Unit],
-  last_window_closed_policy : LastWindowClosedPolicy,
   window_tasks : @async.TaskGroup[Unit],
-  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise],
-  browser_event_handlers : Array[
-    async (BrowserHandle, BrowserEvent) -> Unit noraise,
-  ],
-  window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?,
-  window_lifecycle_hooks : Array[WindowLifecycleHook],
   lifecycle_failures : Array[AppCleanupError],
-  bridge_startup_timeout_ms : Int,
-  navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?,
-  new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?,
-  download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?,
-  certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?,
-  media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?,
-  permission_handler : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?,
-  download_event_handlers : Array[
-    async (BrowserHandle, DownloadEvent) -> Unit noraise,
-  ],
-  before_quit_handler? : (async (ApplicationContext) -> ApplicationQuitDecision noraise)? = None,
-  will_quit_handler? : (async (ApplicationContext) -> ApplicationQuitDecision noraise)? = None,
-  quit_handlers? : Array[async (ApplicationContext, Int) -> Unit noraise] = [],
-  application_identifier? : String = "",
-  application_executable? : String = "",
-  application_arguments? : Array[String] = [],
-  url_schemes? : Array[String] = [],
-  web_request_cancel_prefixes? : Array[String] = [],
-  web_request_redirect_prefixes? : Array[(String, String)] = [],
-  web_request_header_prefixes? : Array[(String, String, String)] = [],
 ) -> RuntimeSession {
   RuntimeSession::{
+    config,
+    environment,
     updates,
     runtime,
     event_pump,
-    locale_preferences,
     definitions,
     windows,
     has_created_window: windows.length() > 0,
@@ -76,46 +31,14 @@ fn RuntimeSession::RuntimeSession(
     forward_menu_events,
     monitor_bridge,
     application_tasks,
-    last_window_closed_policy,
-    launch_input_handlers,
-    system_appearance_handlers,
-    thumbar_button_handlers,
-    window_event_handlers,
-    view_event_handlers,
-    browser_event_handlers,
-    window_close_handler,
     window_tasks,
-    window_lifecycle_hooks,
     lifecycle_failures,
-    bridge_startup_timeout_ms,
-    window_created_handlers,
-    web_contents_created_handlers,
-    render_process_gone_handlers,
-    session_created_handlers,
-    application_session,
     app_instance,
     window_commands: [],
     pending_window_opens: [],
     pending_browser_requests: [],
     pending_resource_requests: [],
-    navigation_handler,
-    new_window_handler,
-    download_handler,
-    certificate_handler,
-    media_handler,
-    permission_handler,
-    download_event_handlers,
-    before_quit_handler,
-    will_quit_handler,
-    quit_handlers,
     close_coordinator: CloseCoordinator(),
-    application_identifier,
-    application_executable,
-    application_arguments,
-    url_schemes,
-    web_request_cancel_prefixes,
-    web_request_redirect_prefixes,
-    web_request_header_prefixes,
   }
 }
 
@@ -229,15 +152,15 @@ fn RuntimeSession::application_context(
     updates=self.updates,
     self.application_tasks,
     self.window_manager(),
-    self.locale_preferences,
+    self.environment.locale_preferences,
     request_quit=exit_code => self.request_quit(exit_code),
     request_exit=exit_code => self.request_exit(exit_code),
     has_single_instance_lock=() => self.has_single_instance_lock(),
     release_single_instance_lock=() => self.release_single_instance_lock(),
-    application_identifier=self.application_identifier,
-    application_executable=self.application_executable,
-    application_arguments=self.application_arguments,
-    url_schemes=self.url_schemes,
+    application_identifier=self.config.application_identifier,
+    application_executable=self.environment.application_executable,
+    application_arguments=self.environment.application_arguments,
+    url_schemes=self.config.url_schemes,
   )
 }
 
@@ -1275,7 +1198,7 @@ fn RuntimeSession::close_window(
   running.window.close() catch {
     error => raise window_operation_failed("close window " + id, error)
   }
-  if self.window_close_handler is None {
+  if self.config.window_close_handler is None {
     running.state = WindowCloseRequested
   }
 }
@@ -1472,10 +1395,10 @@ fn RuntimeSession::create_window(
       plan.window,
       definition.bridge,
       definition.browser_policy,
-      self.locale_preferences,
-      self.web_request_cancel_prefixes,
-      self.web_request_redirect_prefixes,
-      self.web_request_header_prefixes,
+      self.environment.locale_preferences,
+      self.config.web_request_cancel_prefixes,
+      self.config.web_request_redirect_prefixes,
+      self.config.web_request_header_prefixes,
     ),
   ) catch {
     error => raise native_run_error("create window " + plan.id, error)
@@ -1504,7 +1427,7 @@ fn RuntimeSession::create_window(
         WindowDestroy(status=error.status(), detail=error.message()),
       )
   })
-  if self.window_close_handler is Some(_) {
+  if self.config.window_close_handler is Some(_) {
     created_window.set_close_interception(true) catch {
       error =>
         raise native_run_error(
@@ -1575,9 +1498,9 @@ async fn RuntimeSession::activate_window(
           handle,
           manager,
           window_events,
-          self.window_lifecycle_hooks,
+          self.config.window_lifecycle_hooks,
           self.lifecycle_failures,
-          self.locale_preferences,
+          self.environment.locale_preferences,
         )
       },
       no_wait=true,
@@ -1687,7 +1610,7 @@ fn RuntimeSession::process_window_commands(self : RuntimeSession) -> Bool {
     let timeout = self.window_tasks.spawn(
       () => {
         defer self.wakeup.signal.notify()
-        @async.sleep(self.bridge_startup_timeout_ms)
+        @async.sleep(self.config.bridge_startup_timeout_ms)
       },
       no_wait=true,
       allow_failure=true,
@@ -1730,7 +1653,7 @@ fn RuntimeSession::advance_window_opens(
             BridgeDiagnostic::from_native(
               bridge_startup_timeout_diagnostic(
                 state,
-                self.bridge_startup_timeout_ms,
+                self.config.bridge_startup_timeout_ms,
               ),
             ),
           )
@@ -3484,7 +3407,7 @@ fn RuntimeSession::dispatch_window_event(
         match self.find_window_by_native_id(window_id) {
           Some(window) => {
             let handle = self.window_handle(window)
-            for handler in self.window_event_handlers {
+            for handler in self.config.window_event_handlers {
               ignore(
                 self.window_tasks.spawn(
                   () => handler(handle, Closed),
@@ -3513,7 +3436,7 @@ fn RuntimeSession::dispatch_window_event(
           let events = window_state_events(window.observed_state, current)
           window.observed_state = Some(current)
           for event in events {
-            for handler in self.window_event_handlers {
+            for handler in self.config.window_event_handlers {
               ignore(
                 self.window_tasks.spawn(
                   () => handler(handle, event),
@@ -3577,7 +3500,7 @@ fn RuntimeSession::dispatch_view_event(
           }
           view.observed_loading = Some(is_loading)
           for transition_event in transition {
-            for handler in self.view_event_handlers {
+            for handler in self.config.view_event_handlers {
               ignore(
                 self.window_tasks.spawn(
                   () => handler(handle, transition_event),
@@ -3620,7 +3543,7 @@ fn RuntimeSession::dispatch_view_event(
         }
         ignore(running.views.remove(index))
       }
-      for handler in self.view_event_handlers {
+      for handler in self.config.view_event_handlers {
         ignore(
           self.window_tasks.spawn(
             () => handler(handle, view_event),
@@ -3678,7 +3601,7 @@ fn RuntimeSession::dispatch_browser_event(
               }
               window.observed_browser_loading = Some(is_loading)
               for transition_event in transition {
-                for handler in self.browser_event_handlers {
+                for handler in self.config.browser_event_handlers {
                   ignore(
                     self.window_tasks.spawn(
                       () => handler(browser, transition_event),
@@ -3751,7 +3674,7 @@ fn RuntimeSession::dispatch_browser_event(
           }
           match observed {
             Some(observed) =>
-              for handler in self.browser_event_handlers {
+              for handler in self.config.browser_event_handlers {
                 ignore(
                   self.window_tasks.spawn(
                     () => handler(browser, observed),
@@ -3793,7 +3716,7 @@ fn RuntimeSession::dispatch_browser_event(
             total_bytes: update.total_bytes,
             percent: update.percent,
           }
-          for handler in self.download_event_handlers {
+          for handler in self.config.download_event_handlers {
             ignore(
               self.window_tasks.spawn(
                 () => handler(browser, observed),
@@ -3829,7 +3752,7 @@ fn RuntimeSession::start_browser_request(
       defer self.wakeup.signal.notify()
       match request {
         Navigation(url~, http_method~, user_gesture~, redirect~, ..) =>
-          match self.navigation_handler {
+          match self.config.navigation_handler {
             Some(handler) =>
               match
                 handler(browser, { url, http_method, user_gesture, redirect, }) {
@@ -3841,7 +3764,7 @@ fn RuntimeSession::start_browser_request(
             None => BrowserResponse::{ action: "deny", path: None, }
           }
         NewWindow(url~, user_gesture~, ..) => {
-          let decision = match self.new_window_handler {
+          let decision = match self.config.new_window_handler {
             Some(handler) => handler(browser, { url, user_gesture, })
             None => NewWindowDecision::Deny
           }
@@ -3864,7 +3787,7 @@ fn RuntimeSession::start_browser_request(
           BrowserResponse::{ action: "deny", path: None, }
         }
         Download(download_id~, url~, suggested_name~, ..) =>
-          match self.download_handler {
+          match self.config.download_handler {
             Some(handler) =>
               match
                 handler(browser, { id: download_id, url, suggested_name, }) {
@@ -3878,7 +3801,7 @@ fn RuntimeSession::start_browser_request(
             None => BrowserResponse::{ action: "deny", path: None, }
           }
         Certificate(url~, error_code~, ..) =>
-          match self.permission_handler {
+          match self.config.permission_handler {
             Some(handler) =>
               match
                 handler(
@@ -3891,7 +3814,7 @@ fn RuntimeSession::start_browser_request(
                   BrowserResponse::{ action: "deny", path: None, }
               }
             None =>
-              match self.certificate_handler {
+              match self.config.certificate_handler {
                 Some(handler) =>
                   match handler(browser, { url, error_code, }) {
                     BrowserPermissionDecision::Allow =>
@@ -3903,7 +3826,7 @@ fn RuntimeSession::start_browser_request(
               }
           }
         Media(origin~, permissions~, ..) =>
-          match self.permission_handler {
+          match self.config.permission_handler {
             Some(handler) =>
               match
                 handler(
@@ -3916,7 +3839,7 @@ fn RuntimeSession::start_browser_request(
                   BrowserResponse::{ action: "deny", path: None, }
               }
             None =>
-              match self.media_handler {
+              match self.config.media_handler {
                 Some(handler) =>
                   match handler(browser, { origin, permissions, }) {
                     BrowserPermissionDecision::Allow =>
@@ -4137,7 +4060,7 @@ fn RuntimeSession::start_window_close_request(
   window_id : Int64,
   request_id : Int64,
 ) -> Unit {
-  guard self.window_close_handler is Some(handler) else { return }
+  guard self.config.window_close_handler is Some(handler) else { return }
   guard self.find_window_by_native_id(window_id) is Some(window) else { return }
   match self.close_coordinator.find(window_id) {
     Some(pending) => {
@@ -4269,7 +4192,7 @@ fn RuntimeSession::dispatch_launch_input(
   guard !self.is_quitting() else { return }
   self.activate_for_launch_input()
   let context = self.application_context()
-  for handler in self.launch_input_handlers {
+  for handler in self.config.launch_input_handlers {
     ignore(
       self.application_tasks.spawn(() => handler(context, input), no_wait=true),
     )
@@ -4378,7 +4301,7 @@ fn RuntimeSession::dispatch_thumbar_button_event(
           match self.find_window_by_native_id(window_id) {
             Some(window) => {
               let handle = self.window_handle(window)
-              for handler in self.thumbar_button_handlers {
+              for handler in self.config.thumbar_button_handlers {
                 ignore(
                   self.application_tasks.spawn(
                     () => handler(handle, button_id),
@@ -4405,7 +4328,7 @@ fn RuntimeSession::dispatch_system_appearance_event(
   match event.native_theme_change() {
     Some(snapshot) => {
       let theme = SystemAppearance::from_native(snapshot)
-      for handler in self.system_appearance_handlers {
+      for handler in self.config.system_appearance_handlers {
         ignore(self.application_tasks.spawn(() => handler(theme), no_wait=true))
       }
     }
@@ -4467,7 +4390,7 @@ fn RuntimeSession::check_bridge_failures(
       let event = BrowserEvent::BridgeFailed(
         diagnostic=BridgeDiagnostic::from_native(diagnostic),
       )
-      for handler in self.browser_event_handlers {
+      for handler in self.config.browser_event_handlers {
         ignore(
           self.window_tasks.spawn(() => handler(browser, event), no_wait=true),
         )
@@ -4561,7 +4484,7 @@ fn RuntimeSession::start_bridge_request(
             request,
             self.wakeup.signal,
             self.event_pump.dialog_completions,
-            self.locale_preferences,
+            self.environment.locale_preferences,
           )
         },
         no_wait=true,
@@ -4777,7 +4700,7 @@ fn RuntimeSession::advance_application_lifetime(
   if self.close_coordinator.state == CloseRunning &&
     !self.close_coordinator.last_window_quit_handled &&
     should_quit_after_last_window(
-      self.last_window_closed_policy,
+      self.config.last_window_closed_policy,
       self.has_created_window,
       self.all_windows_closed(),
     ) {
@@ -4836,7 +4759,7 @@ fn RuntimeSession::advance_forced_exit(
 
 ///|
 fn RuntimeSession::advance_before_quit(self : RuntimeSession) -> Bool {
-  match self.before_quit_handler {
+  match self.config.before_quit_handler {
     None => {
       self.close_coordinator.state = CloseQuitRequested
       return true
@@ -4860,7 +4783,7 @@ fn RuntimeSession::advance_before_quit(self : RuntimeSession) -> Bool {
 fn RuntimeSession::advance_will_quit(
   self : RuntimeSession,
 ) -> Bool raise AppRunError {
-  match self.will_quit_handler {
+  match self.config.will_quit_handler {
     None => {
       self.begin_quit_event()
       true
@@ -4928,12 +4851,12 @@ fn RuntimeSession::begin_quit_event(
     error => raise native_run_error("stop app activations", error)
   }
   self.close_coordinator.state = CloseQuitting
-  guard !self.quit_handlers.is_empty() else {
+  guard !self.config.quit_handlers.is_empty() else {
     self.close_coordinator.state = CloseCommitted
     return
   }
   let context = self.application_context()
-  let handlers = self.quit_handlers
+  let handlers = self.config.quit_handlers
   let exit_code = self.close_coordinator.exit_code
   self.close_coordinator.pending_quit = Some(
     self.application_tasks.spawn(
@@ -5028,7 +4951,7 @@ fn RuntimeSession::windows_fully_closed(self : RuntimeSession) -> Bool {
 fn RuntimeSession::begin_application_close_decisions(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
-  guard self.window_close_handler is Some(handler) else {
+  guard self.config.window_close_handler is Some(handler) else {
     self.commit_application_close()
     return
   }
@@ -5144,7 +5067,7 @@ fn RuntimeSession::commit_application_close(
   self.close_coordinator.pending.clear()
   for running in self.windows {
     guard running.is_active() else { continue }
-    if self.window_close_handler is Some(_) {
+    if self.config.window_close_handler is Some(_) {
       running.window.set_close_interception(false) catch {
         error =>
           raise native_run_error(
@@ -5248,9 +5171,9 @@ fn render_process_gone_reason(status : Int) -> RenderProcessGoneReason {
 ///|
 /// Reports the session Proton created for this run, once, during startup.
 fn RuntimeSession::emit_session_created(self : RuntimeSession) -> Unit {
-  guard !self.session_created_handlers.is_empty() else { return }
-  let session = self.application_session
-  for handler in self.session_created_handlers {
+  guard !self.config.session_created_handlers.is_empty() else { return }
+  let session = self.environment.application_session
+  for handler in self.config.session_created_handlers {
     ignore(self.application_tasks.spawn(() => handler(session), no_wait=true))
   }
 }
@@ -5261,9 +5184,9 @@ fn RuntimeSession::emit_window_created(
   self : RuntimeSession,
   window : RunningWindow,
 ) -> Unit {
-  guard !self.window_created_handlers.is_empty() else { return }
+  guard !self.config.window_created_handlers.is_empty() else { return }
   let handle = self.window_handle(window)
-  for handler in self.window_created_handlers {
+  for handler in self.config.window_created_handlers {
     ignore(self.application_tasks.spawn(() => handler(handle), no_wait=true))
   }
 }
@@ -5274,8 +5197,8 @@ fn RuntimeSession::emit_web_contents_created(
   self : RuntimeSession,
   contents : WebContentsHandle,
 ) -> Unit {
-  guard !self.web_contents_created_handlers.is_empty() else { return }
-  for handler in self.web_contents_created_handlers {
+  guard !self.config.web_contents_created_handlers.is_empty() else { return }
+  for handler in self.config.web_contents_created_handlers {
     ignore(self.application_tasks.spawn(() => handler(contents), no_wait=true))
   }
 }
@@ -5287,8 +5210,8 @@ fn RuntimeSession::emit_render_process_gone(
   contents : WebContentsHandle,
   details : RenderProcessGoneDetails,
 ) -> Unit {
-  guard !self.render_process_gone_handlers.is_empty() else { return }
-  for handler in self.render_process_gone_handlers {
+  guard !self.config.render_process_gone_handlers.is_empty() else { return }
+  for handler in self.config.render_process_gone_handlers {
     ignore(
       self.application_tasks.spawn(
         () => handler(contents, details),

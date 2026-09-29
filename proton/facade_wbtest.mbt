@@ -987,18 +987,17 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     @manifest.AppEntry::Html("<html></html>"),
   )
   let mut rejected = false
+  let defaults = html("Test", "<html></html>")
+    .identifier("dev.proton.test")
+    .resolved_app_config()
   let outcome = run_manifest(
-    manifest,
-    ".",
-    [],
-    [],
-    [],
-    [],
-    None,
-    30000,
-    true,
-    AccessibilityMode::Automatic,
-    @locale.LocalePreferences::resolve(None, []),
+    { ..defaults, manifest, headless: true, menu: None, },
+    RuntimeEnvironment::{
+      locale_preferences: @locale.LocalePreferences::resolve(None, []),
+      application_session: { partition: None, data_path: None, },
+      application_executable: "",
+      application_arguments: [],
+    },
   ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
@@ -1021,18 +1020,17 @@ async test "headless mode rejects native menus before runtime startup" {
     Menu("App", items=[MenuItem::role(MenuItemRole::Close, label="Close")]),
   ])
   let mut rejected = false
+  let defaults = html("Test", "<html></html>")
+    .identifier("dev.proton.test")
+    .resolved_app_config()
   let outcome = run_manifest(
-    manifest,
-    ".",
-    [],
-    [],
-    [],
-    [],
-    Some(menu.to_native()),
-    30000,
-    true,
-    AccessibilityMode::Automatic,
-    @locale.LocalePreferences::resolve(None, []),
+    { ..defaults, manifest, headless: true, menu: Some(menu.to_native()), },
+    RuntimeEnvironment::{
+      locale_preferences: @locale.LocalePreferences::resolve(None, []),
+      application_session: { partition: None, data_path: None, },
+      application_executable: "",
+      application_arguments: [],
+    },
   ) catch {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
