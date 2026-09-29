@@ -191,14 +191,52 @@ The mutation response refreshes the initiating UI; the event invalidates observe
 
 ## Build the finished application
 
-Stop development, then run:
+Stop development and run `proton_cli build`. Choose the following branch for your host OS. Run packaging commands from the todo-app project root.
+
+### macOS and Windows
+
+For local acceptance, create an unsigned app artifact. On Windows, app means a directory containing the EXE and its dependencies, not a macOS bundle.
 
 ```sh
-proton_cli build
-proton_cli package --dry-run
-proton_cli package --release
+proton_cli package --release --format app --dry-run
+proton_cli package --release --format app
 ```
 
-Launch the packaged app without the development server and repeat the two-button check. See [build and distribute](../command-line-interface/packaging.md) for platform formats and signing.
+Open the artifact path printed by the CLI under dist: the .app on macOS, or the application EXE inside the Windows output directory. Do not copy the EXE alone. This step needs no NSIS and does not perform distribution signing or notarization.
 
-Persistent storage is deliberately outside this example. If you add it, keep loading, validation, and writes in the backend, and preserve the same command/event interface to the frontend.
+### Linux
+
+The default template supplies no icon. Save a valid PNG icon as `icons/app.png` inside the project and add this field to the existing package object in proton.project.json:
+
+```json
+"icons": ["icons/app.png"]
+```
+
+Check that `appimagetool --version` runs. If necessary, install it in your user directory from an Ubuntu x64 shell. Extracting the packaging tool avoids requiring FUSE to run it:
+
+```sh
+mkdir -p "$HOME/.local/lib/proton-appimagetool"
+cd "$HOME/.local/lib/proton-appimagetool"
+curl -fL -o tool.AppImage https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+echo 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  tool.AppImage' | sha256sum -c -
+chmod +x tool.AppImage
+./tool.AppImage --appimage-extract
+ln -sf squashfs-root/AppRun appimagetool
+export PATH="$HOME/.local/lib/proton-appimagetool:$PATH"
+appimagetool --version
+```
+
+Return to the todo-app project root, then run:
+
+```sh
+proton_cli package --release --format appimage --dry-run
+proton_cli package --release --format appimage
+```
+
+Launch the output AppImage in a graphical session. If the runtime environment cannot mount AppImages, run the artifact with `--appimage-extract` and launch AppRun inside the extracted directory.
+
+### Acceptance
+
+With the development server stopped, launch the artifact, add two items, and verify Complete all, Reopen all, and search. Packaging failure, launch failure, and incorrect button behavior are separate stages; dry-run alone is not acceptance.
+
+The list is intentionally in memory and resets on restart. Implement persistence in the backend. See [packaging reference](../command-line-interface/packaging.md) for icons and distribution requirements.

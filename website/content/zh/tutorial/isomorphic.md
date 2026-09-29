@@ -191,14 +191,52 @@ proton_cli dev
 
 ## 构建完成后的应用
 
-停止开发进程，执行：
+停止开发进程，先执行 `proton_cli build`。下一步按宿主平台选择；以下命令都在 todo-app 项目根目录执行。
+
+### macOS 与 Windows
+
+本地验收先生成未签名的 app 格式；Windows 的 app 是包含 EXE 和依赖的目录，不是 macOS bundle。
 
 ```sh
-proton_cli build
-proton_cli package --dry-run
-proton_cli package --release
+proton_cli package --release --format app --dry-run
+proton_cli package --release --format app
 ```
 
-在不运行开发服务器的情况下启动打包应用，重复验证两个按钮。平台格式和签名见[构建与分发](../command-line-interface/packaging.md)。
+打开 CLI 输出的 dist 下的应用路径。macOS 从 .app 启动，Windows 从产物目录中的应用 EXE 启动，不能只复制 EXE。本步骤不需要 NSIS，也没有完成面向用户分发的签名／公证。
 
-本示例不包含持久化存储。后续添加时，应将加载、校验和写入放在后端，并保持相同的前端命令与事件接口。
+### Linux
+
+默认模板不附带图标。将一张实际有效的 PNG 图标保存为项目内的 `icons/app.png`，并在 proton.project.json 的已有 package 对象中加入：
+
+```json
+"icons": ["icons/app.png"]
+```
+
+确认 `appimagetool --version` 能执行。若尚未安装，可在 Ubuntu x64 终端执行以下命令，将工具保存在用户目录中；解包方式无需依赖 FUSE 来运行打包工具：
+
+```sh
+mkdir -p "$HOME/.local/lib/proton-appimagetool"
+cd "$HOME/.local/lib/proton-appimagetool"
+curl -fL -o tool.AppImage https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+echo 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  tool.AppImage' | sha256sum -c -
+chmod +x tool.AppImage
+./tool.AppImage --appimage-extract
+ln -sf squashfs-root/AppRun appimagetool
+export PATH="$HOME/.local/lib/proton-appimagetool:$PATH"
+appimagetool --version
+```
+
+回到 todo-app 项目根目录，再执行：
+
+```sh
+proton_cli package --release --format appimage --dry-run
+proton_cli package --release --format appimage
+```
+
+从图形会话启动输出的 AppImage。运行环境无法挂载 AppImage 时，可先对产物执行 `--appimage-extract`，再运行生成目录中的 AppRun。
+
+### 验收
+
+在开发服务器已经停止的情况下启动产物，添加两个项目并验证 Complete all、Reopen all 和搜索操作。打包失败、启动失败与按钮行为失败是不同阶段；仅 dry-run 成功不算完成。
+
+本教程的列表保存在内存，重启清空是预期行为。持久化应在后端实现。图标与分发要求见[打包参考](../command-line-interface/packaging.md)。
