@@ -2,7 +2,7 @@
 
 A declarative child browser alongside a host sidebar.
 
-[53_view_minimal](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/53_view_minimal) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/53_view_minimal/main.mbt)
+[53_view_minimal](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/53_view_minimal) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/53_view_minimal/main.mbt)
 
 ## Behavior
 

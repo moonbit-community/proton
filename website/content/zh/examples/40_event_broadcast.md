@@ -2,7 +2,7 @@
 
 异步命令执行期间推送进度事件。
 
-[40_event_broadcast](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/40_event_broadcast) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/40_event_broadcast/main.mbt), [app.html](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/40_event_broadcast/app.html)
+[40_event_broadcast](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/40_event_broadcast) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/40_event_broadcast/main.mbt), [app.html](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/40_event_broadcast/app.html)
 
 ## 行为
 

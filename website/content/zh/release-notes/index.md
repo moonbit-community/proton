@@ -1,5 +1,21 @@
 # Release Notes
 
+## 0.3.4 — 2026-09-28
+
+本书对应已发布的 [0.3.4 源码](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa)。[发布与 registry 验收工作流](https://github.com/moonbit-community/proton/actions/runs/36407926563)已成功完成。Warren 是独立依赖，仍使用 0.3.3。
+
+- **生命周期：**新增应用退出拦截、强制退出、应用级窗口／浏览器／会话事件及焦点和显隐控制。修复 will_quit 中强制退出、exit(0)、子视图 renderer 通知、页面恢复与关闭记录回收。
+- **通信：**保留命令错误码，区分业务命令失败与运行时失败，移除全局待响应请求数量上限。扩展操作清单从绑定生成。
+- **浏览器 API：**增加导航历史和插入 CSS 控制；任务指标明确区分 CEF task 和进程。
+- **平台与打包：**修复 Windows 桌面媒体授权及子视图布局、macOS 查询的 autorelease pool 和错误弹窗布局；完善打包锁，提供显式最低 macOS 版本元数据，保留 AppImage 中 helper 的可执行权限。
+- **CLI：**new 不再对已经显式提供的选项重复询问。async 升级至 0.22.4。
+
+### 应用升级
+
+CLI 和应用的 proton_* 模块统一使用 0.3.4，并执行 `proton_cli cef setup` 安装匹配的 helper。重新安装 CLI 不会重写已有项目。
+
+曾短暂引入的 app_metrics 改为 `task_metrics` 与 `AppTaskMetric`：任务身份不是进程身份，不同任务的 `hosting_process_usage` 可能重复，不能直接相加作为应用总用量。参见 [PR #412](https://github.com/moonbit-community/proton/pull/412)。[PR #408](https://github.com/moonbit-community/proton/pull/408)删除了未使用的旧命令配置 API；应用命令继续通过绑定注册。
+
 ## 0.3.3 — 2026-09-21
 
 - **视图生命周期：**移除或显式关闭子视图后，保留投递最终关闭事件所需的实例身份。覆盖浏览器创建前关闭、替换后的旧事件等情况。[PR #378](https://github.com/moonbit-community/proton/pull/378)

@@ -2,7 +2,7 @@
 
 Proton 是由原生 MoonBit 宿主和 Chromium 前端组成的桌面应用框架。前端可以使用 HTML/JavaScript，也可以使用编译到 JavaScript 的 MoonBit。公开应用入口为 `moonbit-community/proton`。
 
-本文档对应已发布的 **Proton 0.3.3**。CLI 与 `proton_*` 模块使用同一发布版本。
+本文档对应已发布的 **Proton 0.3.4**。CLI 与 `proton_*` 模块使用同一发布版本。
 
 ## 章节
 
@@ -23,10 +23,10 @@ Proton 是由原生 MoonBit 宿主和 Chromium 前端组成的桌面应用框架
 
 ## API 参考
 
-- [应用 API](https://mooncakes.io/docs/moonbit-community/proton@0.3.3/)
-- [扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.3/)
-- [类型化契约](https://mooncakes.io/docs/moonbit-community/proton_contract@0.3.3/)
-- [前端客户端](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.3/)
-- [Rabbita 集成](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.3/)
+- [应用 API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)
+- [扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/)
+- [类型化契约](https://mooncakes.io/docs/moonbit-community/proton_contract@0.3.4/)
+- [前端客户端](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.4/)
+- [Rabbita 集成](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/)
 
 生成的 API 文档提供完整签名；本站参考文档说明行为约定和 API 之间的关系。

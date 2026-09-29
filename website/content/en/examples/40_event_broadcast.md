@@ -2,7 +2,7 @@
 
 Progress events emitted during an asynchronous command.
 
-[40_event_broadcast](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/40_event_broadcast) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/40_event_broadcast/main.mbt), [app.html](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/40_event_broadcast/app.html)
+[40_event_broadcast](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/40_event_broadcast) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/40_event_broadcast/main.mbt), [app.html](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/40_event_broadcast/app.html)
 
 ## Behavior
 

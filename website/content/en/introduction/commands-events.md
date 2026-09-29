@@ -41,7 +41,7 @@ Proton does not impose a fixed payload-size limit on commands. Payloads are seri
 
 Commands provide responses to their callers. [Events](events.md) provide notifications to observers; neither implies durable application storage.
 
-See [API signatures](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.3/) and the separate [command tutorial](../tutorial/commands-events.md).
+See [API signatures](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.4/) and the separate [command tutorial](../tutorial/commands-events.md).
 
 ### Command error codes
 

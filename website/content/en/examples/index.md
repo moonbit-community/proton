@@ -1,6 +1,6 @@
 # Examples
 
-Ten examples selected for focused behavior, readable entry points and coverage of distinct framework features. Source links are pinned to the 0.3.3 release commit so documentation and code stay aligned. These are runnable references; step-by-step application development belongs in [Tutorial](../tutorial/index.md).
+Ten examples selected for focused behavior, readable entry points and coverage of distinct framework features. Source links are pinned to the 0.3.4 release commit so documentation and code stay aligned. These are runnable references; step-by-step application development belongs in [Tutorial](../tutorial/index.md).
 
 | Example | Focus |
 | --- | --- |
@@ -22,7 +22,7 @@ Examples use the repository workspace. Clone the release commit, install the [re
 ```sh
 git clone https://github.com/moonbit-community/proton.git
 cd proton
-git checkout 25d77e6236420025ddf1ab04995c0c2a05bba9ed
+git checkout 51a88c4c0892ff9628e5795fc598d05262e96daa
 moon update
 proton_cli cef setup
 ```

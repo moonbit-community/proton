@@ -2,7 +2,7 @@
 
 渲染端在显式权限根目录内请求文件操作。
 
-[18_extension_fs](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/18_extension_fs) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/18_extension_fs/fs.html)
+[18_extension_fs](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs/fs.html)
 
 ## 行为
 
