@@ -33,3 +33,19 @@ Native operations can raise `WindowSessionError`. A handle is not valid indefini
 `WindowThemePreference` controls a window's theme; `system_appearance()` reports system appearance. These are separate concerns. Titlebar styles and native controls differ by platform. Traffic-light positioning applies to macOS; the frontend layout must account for native controls when using an overlay titlebar.
 
 Method signatures and options are in the [window API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/). The [multi-window tutorial](../tutorial/windows.md) is a separate runnable exercise.
+
+## Opening and instance identity
+
+`WindowManager.open(id)` is asynchronous and returns an activated `WindowHandle`. The id selects a declaration; it is not a permanent identity for every future native instance. After closing and reopening a declared window, obtain the new handle through `open` or `find`; an old handle does not become valid again.
+
+Cancellation before activation commits discards the queued open or closes the instance created by that operation. After activation commits, the application owns the window: canceling the caller later does not close it. Unknown declarations and invalid window state produce window-session failures; task cancellation follows the async task's cancellation semantics.
+
+`hide()` preserves the instance, browser, and associated work. `close()` initiates teardown and can be denied. Do not equate a close request with completed cleanup. Per-window state should be released by its lifecycle cleanup, not immediately after requesting close.
+
+## Browser and view boundaries
+
+The main page belongs to `WindowHandle.browser()`. Child contents belong to `ViewHandle`; child navigation and removal do not navigate or close the main page. Both are represented by `WebContentsHandle` in application-level creation and renderer-termination callbacks.
+
+`on_render_process_gone` covers both main pages and child views without requiring an extra `on_view_event` subscription. Renderer termination invalidates page work; it is not a normal window close. Decide whether to reload or present recovery UI based on the reported details, and recreate page subscriptions after navigation.
+
+View bounds use top-left coordinates in the parent content area. A fixed declaration is not an automatic layout system: update bounds when the application layout changes. Removing a view ends that browser's lifetime; closing its parent also tears it down.

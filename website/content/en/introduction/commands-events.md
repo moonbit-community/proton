@@ -60,3 +60,13 @@ other remote failures. Backend diagnostics remain in application logs. Developme
 also includes them in `detail`; `message` remains
 a caller-facing description. Expected business outcomes belong in the command's
 response type.
+
+## Request scope and page invalidation
+
+Each accepted request has its own command scope. Awaited work, child tasks, and deferred cleanup in that scope belong to the request. A handler or its scoped cleanup failing is a request failure (`handler_failed`), not an instruction to terminate the application. Runtime infrastructure failures remain application errors.
+
+Navigation, renderer termination, or bridge failure invalidates the old page's pending requests. Once a bridge attempt has failed, that failed page cannot start new application commands until a new valid attempt is established. Initialization-time requests are permitted; waiting for every request until ready would prevent legitimate initialization work.
+
+Caller cancellation and page invalidation stop waiting and request cancellation of outstanding work. Neither rolls back business side effects already performed. Use application-level operation identifiers or transactions when a retry must not duplicate an operation. Do not infer successful execution from successful message submission.
+
+Request concurrency has no global fixed admission limit in 0.3.4. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.

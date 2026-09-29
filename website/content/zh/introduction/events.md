@@ -28,3 +28,11 @@ JavaScript 接口为 `window.__MoonBit__.app.on(name, callback)`。回调接收�
 - 状态变化通知可以使前端查询失效；权威快照通过命令获取。
 
 [事件教程](../tutorial/events.md)演示订阅与清理；[Todo 教程](../tutorial/isomorphic.md)演示通知失效后重新查询快照。
+
+## 订阅有效期与状态同步
+
+订阅属于当前 renderer 文档或 UI 组件，所属对象销毁时应关闭订阅。重新加载会创建新文档，需要重新订阅；原生窗口继续存在不代表 JavaScript 监听器跨 reload 保留。
+
+同步状态时，先订阅再读取初始快照，用事件使快照失效，并忽略已经被新查询替代的响应。先订阅消除了初次读取前的监听空档，但不会让两条独立消息成为原子事务。需要识别旧快照或遗漏变更时，应在业务数据中加入 revision。
+
+on_window_created、on_render_process_gone 等应用生命周期通知是宿主回调，不是 proton_contract 前端事件。它们注册在 App 构建器上；前端也需要相关信息时，再通过命令或显式事件传递。

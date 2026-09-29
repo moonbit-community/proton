@@ -28,3 +28,11 @@ The JavaScript interface is `window.__MoonBit__.app.on(name, callback)`. The cal
 - A notification that state changed can invalidate a frontend query. The authoritative snapshot is obtained through a command.
 
 The [event tutorial](../tutorial/events.md) demonstrates subscription and cleanup. The [Todo tutorial](../tutorial/isomorphic.md) demonstrates invalidation followed by a snapshot query.
+
+## Subscription lifetime and state synchronization
+
+A subscription belongs to the current renderer document or UI component. Close it when that owner is disposed. A reload creates a new document and requires a new subscription; keeping a native window alive does not preserve JavaScript listeners across reloads.
+
+For state synchronization, subscribe before loading the initial snapshot, use events to invalidate that snapshot, and ignore responses from superseded queries. Subscribing first avoids a gap before the initial read, but does not turn two independent messages into an atomic transaction. Include a revision in application data when the consumer must detect stale snapshots or missed changes.
+
+Application-level lifecycle notifications such as `on_window_created` and `on_render_process_gone` are host callbacks, not `proton_contract` frontend events. Register them on the App builder; use a command or explicit event if the frontend also needs that information.
