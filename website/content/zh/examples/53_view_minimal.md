@@ -19,3 +19,21 @@ moon -C examples run 53_view_minimal --target native
 ## 限制与使用边界
 
 远程页面需要联网。最小示例使用固定边界，响应式布局需由应用处理。父窗口关闭会结束子视图生命周期。
+
+## 关键代码与设计
+
+以下为入口中的节选，完整上下文见本页源码链接。
+
+```moonbit
+  .with_view(
+    "browser",
+    @proton.view("https://example.com/", width=832, height=720, x=288),
+  )
+  .identifier("dev.proton.53-view-minimal")
+  .run_or_abort()
+}
+```
+
+主浏览器渲染侧栏，with_view 在同一个原生窗口中创建第二个浏览器。x=288 留出侧栏宽度，子视图独立加载 example.com，适合宿主外壳内嵌页面，而非另开顶层窗口。
+
+示例故意使用固定几何尺寸。实际布局应在 resize 后重新计算子视图边界，并决定如何处理远程导航。对本地主页面授权不表示远程子页面也应拥有相同能力。
