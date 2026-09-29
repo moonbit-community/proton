@@ -25,6 +25,14 @@ Menu placement and supported roles depend on the desktop platform. A menu comman
 Excerpt from the entry point; use the source link above for the complete context.
 
 ```moonbit
+async fn main {
+  @proton.html(
+    "App Menu State Review",
+    html(),
+    width=900,
+    height=640,
+    debug=true,
+  )
   .menu(menu_bar())
   .identifier("dev.proton.49-app-menu")
   .commands(register_commands)
@@ -37,6 +45,7 @@ Excerpt from the entry point; use the source link above for the complete context
     on_close=fn(_window) { window_slot.val = None },
   )
   .run_or_abort()
+}
 ```
 
 The menu is native UI configured on the builder. Command handlers change or inspect its state through a live window handle. The ready hook stores that handle; the close hook clears it so later commands cannot deliberately reuse a closed instance.

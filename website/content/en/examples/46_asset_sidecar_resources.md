@@ -36,20 +36,6 @@ Run from the examples directory so the relative asset path resolves correctly. D
 
 ## Key code and design
 
-Excerpt from the entry point; use the source link above for the complete context.
-
-```moonbit
-  let app = @proton.asset(
-    "Asset Sidecar Resources",
-    "46_asset_sidecar_resources/app/app.html",
-    width=760,
-    height=500,
-    debug=true,
-  ).capability(@proton_extension.capability(extension()))
-  app.identifier("dev.proton.46-asset-sidecar-resources").run_or_abort()
-}
-```
-
 The asset entry names an HTML document within the resource tree. Its neighboring scripts, styles and worker source remain separate files, so their relative URLs must remain valid after packaging. The extension registration is independent of asset selection.
 
 When adapting this example, keep the resource tree layout and configure packaging to include it. Verify a packaged application with the development server stopped. A working development URL does not demonstrate that sidecar files were packaged.

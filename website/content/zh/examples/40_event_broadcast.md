@@ -37,6 +37,16 @@ async fn run_ticker(
     let tick = TickEvent::{
       run_id: payload.run_id,
       index,
+      total: count,
+      remaining: count - index,
+    }
+    ticks.push(tick)
+    context.emit(tick_event, tick)
+  }
+  let done = DoneEvent::{ run_id: payload.run_id, total: count, }
+  context.emit(done_event, done)
+  TickerResult::{ ticks, done, }
+}
 ```
 
 类型化扩展把 start 绑定到 run_ticker。处理器在 tick 之间异步等待，发送 tick／done 通知，最后返回 TickerResult。进度事件与命令结果职责不同，显示一次 tick 不代表命令已经完成。

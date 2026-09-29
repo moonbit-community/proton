@@ -25,6 +25,9 @@ Closing the window intentionally does not quit. End the process using the platfo
 Excerpt from the entry point; use the source link above for the complete context.
 
 ```moonbit
+async fn main {
+  @proton.html("Background Residency", page, width=760, height=480)
+  .identifier("com.example.proton.background-residency")
   .single_instance()
   .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
   .on_launch_input(async fn(context, input) noraise {

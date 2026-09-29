@@ -36,20 +36,6 @@ moon -C examples run 46_asset_sidecar_resources --target native
 
 ## 关键代码与设计
 
-以下为入口中的节选，完整上下文见本页源码链接。
-
-```moonbit
-  let app = @proton.asset(
-    "Asset Sidecar Resources",
-    "46_asset_sidecar_resources/app/app.html",
-    width=760,
-    height=500,
-    debug=true,
-  ).capability(@proton_extension.capability(extension()))
-  app.identifier("dev.proton.46-asset-sidecar-resources").run_or_abort()
-}
-```
-
 asset 入口指定资源树中的 HTML 文档。相邻脚本、样式和 worker 源码仍是独立文件，因此打包后必须保持相对 URL 有效。扩展注册与资源入口选择是两件独立的事。
 
 迁移时保留资源目录布局，并配置打包包含它。关闭开发服务器后验证产物；开发 URL 正常不证明附属资源已经打包。

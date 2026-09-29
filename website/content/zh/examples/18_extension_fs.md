@@ -39,22 +39,6 @@ moon -C examples run 18_extension_fs --target native
 
 ## 关键代码与设计
 
-以下为入口中的节选，完整上下文见本页源码链接。
-
-```moonbit
-  .capability(
-    @fs.capability([
-      @fs.PermissionRoot(".", [
-        "read_file", "write_file", "exists", "kind", "size", "readdir", "mkdir",
-        "remove", "rmdir", "rename", "realpath",
-      ]),
-    ]),
-  )
-  .identifier("dev.proton.18-extension-fs")
-  .run_or_abort()
-}
-```
-
 后端安装文件系统扩展，同时选择目录和允许的操作。renderer 提供路径及操作，但不能自行扩大授权根目录。文件不存在和操作未授权是不同失败情况。
 
 此例为了演示允许写入与删除，迁移时应缩小操作列表并选定数据目录。HTML 与 JavaScript 展示直接扩展 bridge，MoonBit 前端也可使用类型化描述符。

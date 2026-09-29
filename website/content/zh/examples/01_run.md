@@ -37,15 +37,6 @@ moon -C examples run 01_run --target native
 
 ## 关键代码与设计
 
-以下为入口中的节选，完整上下文见本页源码链接。
-
-```moonbit
-  @proton.html("01 run", html, width=800, height=600, debug=true)
-  .identifier("dev.proton.01-run")
-  .run_or_abort()
-}
-```
-
 HTML 是直接传给应用构建器的 MoonBit 值，本页面无需前端服务器、资源查找或命令通信。显式 identifier 为直接运行仓库示例提供应用身份；scaffold 则通过 load_config() 读取身份。
 
 适合复用为小型自包含页面；需要独立构建的 CSS／JavaScript 时应改用资源入口。debug=true 是示例选择，不是分发要求。

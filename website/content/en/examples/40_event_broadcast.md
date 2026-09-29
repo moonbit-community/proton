@@ -37,6 +37,16 @@ async fn run_ticker(
     let tick = TickEvent::{
       run_id: payload.run_id,
       index,
+      total: count,
+      remaining: count - index,
+    }
+    ticks.push(tick)
+    context.emit(tick_event, tick)
+  }
+  let done = DoneEvent::{ run_id: payload.run_id, total: count, }
+  context.emit(done_event, done)
+  TickerResult::{ ticks, done, }
+}
 ```
 
 A typed extension binds start to run_ticker. The handler awaits between ticks and emits tick/done notifications before returning a final TickerResult. Progress events and the command result have separate roles: a displayed tick is not completion of the command.

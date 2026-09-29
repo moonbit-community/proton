@@ -25,6 +25,8 @@ moon -C examples run 53_view_minimal --target native
 以下为入口中的节选，完整上下文见本页源码链接。
 
 ```moonbit
+async fn main {
+  @proton.html("Minimal View", sidebar, width=1120, height=720, debug=true)
   .with_view(
     "browser",
     @proton.view("https://example.com/", width=832, height=720, x=288),

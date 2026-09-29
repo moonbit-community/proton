@@ -31,4 +31,4 @@ Distributed applications include Chromium and the matching subprocess helper. Ru
 
 Generated API documentation provides full signatures; these reference pages describe behavior and relationships between APIs.
 
-Use the [application API reference index](application-api.md) to locate behavior by object and lifecycle.
+Use the <a href='/proton/introduction/application-api.html'>application API reference index</a> to locate behavior by object and lifecycle.

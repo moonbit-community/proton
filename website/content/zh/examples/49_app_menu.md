@@ -25,6 +25,14 @@ moon -C examples run 49_app_menu --target native
 以下为入口中的节选，完整上下文见本页源码链接。
 
 ```moonbit
+async fn main {
+  @proton.html(
+    "App Menu State Review",
+    html(),
+    width=900,
+    height=640,
+    debug=true,
+  )
   .menu(menu_bar())
   .identifier("dev.proton.49-app-menu")
   .commands(register_commands)
@@ -37,6 +45,7 @@ moon -C examples run 49_app_menu --target native
     on_close=fn(_window) { window_slot.val = None },
   )
   .run_or_abort()
+}
 ```
 
 菜单是构建器配置的原生 UI。命令处理器通过有效窗口句柄修改或查询状态。ready 钩子保存句柄，close 钩子清空它，避免后续命令继续使用已关闭实例。

@@ -37,15 +37,6 @@ Use this to isolate runtime setup from frontend tooling. There is no command bri
 
 ## Key code and design
 
-Excerpt from the entry point; use the source link above for the complete context.
-
-```moonbit
-  @proton.html("01 run", html, width=800, height=600, debug=true)
-  .identifier("dev.proton.01-run")
-  .run_or_abort()
-}
-```
-
 The HTML is a MoonBit value passed directly to the application builder. No frontend server, asset lookup or command bridge is needed for this page. The explicit identifier supplies application identity for direct repository execution; a scaffold instead obtains it with load_config().
 
 Reuse this form for a small self-contained page. Move to an asset entry when the page needs independently built CSS/JavaScript files. `debug=true` is an example choice, not a distribution requirement.

@@ -25,6 +25,22 @@ The optional delay_ms makes overlapping requests visible. A logical window name 
 Excerpt from the entry point; use the source link above for the complete context.
 
 ```moonbit
+async fn main {
+  @proton.html(
+    "Bridge Multi A",
+    page_html("A"),
+    width=520,
+    height=420,
+    debug=true,
+  )
+  .add_window(
+    "secondary",
+    "Bridge Multi B",
+    @proton.AppEntry::Html(page_html("B")),
+    width=520,
+    height=420,
+    open_on_start=false,
+  )
   .capability(@proton_extension.capability(multi_window_extension()), targets=[
     @proton.RendererTarget::entry(),
     @proton.RendererTarget::entry(window="secondary"),

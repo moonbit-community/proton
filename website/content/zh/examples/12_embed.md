@@ -31,15 +31,6 @@ moon -C examples run 12_embed --target native
 
 ## 关键代码与设计
 
-以下为入口中的节选，完整上下文见本页源码链接。
-
-```moonbit
-  @proton.html("12 embed", resource, width=800, height=600, debug=true)
-  .identifier("dev.proton.12-embed")
-  .run_or_abort()
-}
-```
-
 resource 由包中的 embed 预构建规则从 hello.html 生成。运行时接收的仍是与最小示例相同的字符串，不是在启动时读取磁盘上的 hello.html。
 
 修改 hello.html 后重新构建，不修改生成的 hello.mbt。嵌入一个文档不会自动嵌入它引用的相对图片或脚本；一组资源应使用 asset 入口。

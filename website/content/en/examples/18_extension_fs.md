@@ -39,22 +39,6 @@ The example grants write and deletion operations under its working directory. Us
 
 ## Key code and design
 
-Excerpt from the entry point; use the source link above for the complete context.
-
-```moonbit
-  .capability(
-    @fs.capability([
-      @fs.PermissionRoot(".", [
-        "read_file", "write_file", "exists", "kind", "size", "readdir", "mkdir",
-        "remove", "rmdir", "rename", "realpath",
-      ]),
-    ]),
-  )
-  .identifier("dev.proton.18-extension-fs")
-  .run_or_abort()
-}
-```
-
 The backend installs the filesystem extension and chooses both its root and allowed operations. The renderer supplies a path and operation, but cannot grant itself a wider root. A missing file and an unauthorized operation are separate failure cases.
 
 This example grants write/delete access for demonstration. In an application, narrow the list to the required operations and use a deliberate data directory. The page's HTML and JavaScript demonstrate the raw extension bridge; MoonBit frontends can use typed descriptors.

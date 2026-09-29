@@ -31,15 +31,6 @@ Edit hello.html, not generated hello.mbt. Embedded HTML does not automatically i
 
 ## Key code and design
 
-Excerpt from the entry point; use the source link above for the complete context.
-
-```moonbit
-  @proton.html("12 embed", resource, width=800, height=600, debug=true)
-  .identifier("dev.proton.12-embed")
-  .run_or_abort()
-}
-```
-
 `resource` is generated from hello.html by the package's embed prebuild rule. The runtime receives the same kind of string as the minimal example; it does not read hello.html from disk at launch.
 
 Edit hello.html and rebuild. Do not edit generated hello.mbt. Embedding a document does not automatically embed every relative image or script it references; use an asset entry for a directory of resources.

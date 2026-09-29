@@ -25,6 +25,8 @@ The remote page requires network access. Bounds are fixed in this minimal exampl
 Excerpt from the entry point; use the source link above for the complete context.
 
 ```moonbit
+async fn main {
+  @proton.html("Minimal View", sidebar, width=1120, height=720, debug=true)
   .with_view(
     "browser",
     @proton.view("https://example.com/", width=832, height=720, x=288),

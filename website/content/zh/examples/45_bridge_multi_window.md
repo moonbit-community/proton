@@ -25,6 +25,22 @@ moon -C examples run 45_bridge_multi_window --target native
 以下为入口中的节选，完整上下文见本页源码链接。
 
 ```moonbit
+async fn main {
+  @proton.html(
+    "Bridge Multi A",
+    page_html("A"),
+    width=520,
+    height=420,
+    debug=true,
+  )
+  .add_window(
+    "secondary",
+    "Bridge Multi B",
+    @proton.AppEntry::Html(page_html("B")),
+    width=520,
+    height=420,
+    open_on_start=false,
+  )
   .capability(@proton_extension.capability(multi_window_extension()), targets=[
     @proton.RendererTarget::entry(),
     @proton.RendererTarget::entry(window="secondary"),

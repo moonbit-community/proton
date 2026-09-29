@@ -25,6 +25,9 @@ moon -C examples run 57_background_residency --target native
 以下为入口中的节选，完整上下文见本页源码链接。
 
 ```moonbit
+async fn main {
+  @proton.html("Background Residency", page, width=760, height=480)
+  .identifier("com.example.proton.background-residency")
   .single_instance()
   .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
   .on_launch_input(async fn(context, input) noraise {
