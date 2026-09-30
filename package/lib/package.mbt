@@ -441,7 +441,7 @@ async fn copy_file(source : String, destination : String) -> Unit {
     Windows => None
   }
   if tool is Some(tool) {
-    let code = @process.run(tool, [source, destination]) catch {
+    let code = @process.run(tool, ["--", source, destination]) catch {
       error =>
         raise PackageFileSystemError::Copy(
           source~,
@@ -488,8 +488,8 @@ async fn copy_tree(source : String, destination : String) -> Unit {
           "/NJS", "/NP", "/R:2", "/W:1",
         ],
       )
-    Macos => ("ditto", [source, destination])
-    Linux => ("cp", ["-R", source, destination])
+    Macos => ("ditto", ["--", source, destination])
+    Linux => ("cp", ["-R", "--", source, destination])
   }
   let (code, _) = @process.collect_output_merged(tool, args) catch {
     error =>
