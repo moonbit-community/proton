@@ -11,8 +11,8 @@ code examples aligned. Add chapters to each language's `SUMMARY.md` and use
 
 The book has six top-level chapters in both languages: Introduction, Tutorial,
 Command Line Interface, Configuration, Examples, and Release Notes. Keep all
-CLI commands and options in `command-line-interface/index.md`, and all project JSON fields in
-`configuration/index.md`. Examples contains ten curated source references pinned to
+CLI commands and options in `command-line-interface/commands.md`, and all project JSON fields in
+`configuration/project.md`. Examples contains ten curated source references pinned to
 the documented release commit; release notes distinguish publication from
 source changes.
 
@@ -28,8 +28,9 @@ examples/
 release-notes/
 ```
 
-Each chapter starts at `index.md` inside its directory. Keep child pages next
-to that index. Preserve old published URLs with redirects in both book configs.
+Use descriptive filenames for content pages. Tutorial and Examples are
+navigation groups without landing pages. Preserve old published URLs with
+redirects in both book configs.
 
 Tutorials live only in `content/<language>/tutorial/` and the Tutorial navigation
 section. They state prerequisites, file edits and expected results. All other
@@ -54,10 +55,9 @@ http://127.0.0.1:4173/proton/zh/ for Chinese. This optional local preview uses
 Python 3; document builds still require only mdBook. Rebuild both languages
 with the same destination paths after editing.
 
-mdBook also copies the first chapter to the site root. The introduction index
-uses site-relative HTML links so both copies navigate correctly. Preserve the
-single-quoted HTML attributes: mdBook 0.4's print-page rewriting otherwise
-prefixes these absolute paths with the chapter directory.
+The first content page is `introduction.md` at the language root, so its
+Markdown links also work in mdBook's generated site homepage. Use Markdown
+links in content rather than hardcoded deployment paths.
 
 ## Publish
 

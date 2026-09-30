@@ -4,16 +4,6 @@ Proton 是由原生 MoonBit 宿主和 Chromium 前端组成的桌面应用框架
 
 本文档对应已发布的 **Proton 0.3.4**。CLI 与 `proton_*` 模块使用同一发布版本。
 
-## 章节
-
-| 章节 | 内容 |
-| --- | --- |
-| Introduction | 架构、环境要求、项目结构及应用 API 概念 |
-| <a href='/proton/zh/tutorial/index.html'>Tutorial</a> | 从 minimal 开始，再构建完整的 isomorphic Todo 应用 |
-| <a href='/proton/zh/command-line-interface/index.html'>Command Line Interface</a> | 全部命令、选项、默认值与退出状态 |
-| <a href='/proton/zh/configuration/index.html'>Configuration</a> | `proton.project.json` 的全部字段及平台覆盖规则 |
-| <a href='/proton/zh/examples/index.html'>Examples</a> | 十个精选源码示例的行为、关键文件与限制 |
-| <a href='/proton/zh/release-notes/index.html'>Release Notes</a> | 已发布版本的变更 |
 
 ## 平台范围
 
@@ -31,4 +21,4 @@ Proton 是由原生 MoonBit 宿主和 Chromium 前端组成的桌面应用框架
 
 生成的 API 文档提供完整签名；本站参考文档说明行为约定和 API 之间的关系。
 
-应用功能按对象和生命周期组织，查阅<a href='/proton/zh/introduction/application-api.html'>应用 API 参考索引</a>选择具体领域。
+应用功能按对象和生命周期组织，查阅[应用 API 参考索引](introduction/application-api.md)选择具体领域。

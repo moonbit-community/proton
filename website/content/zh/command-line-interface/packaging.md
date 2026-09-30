@@ -2,7 +2,7 @@
 
 Proton CLI 将项目组装为分发产物，包含可执行文件、前端资源、CEF 运行时、匹配的 helper 和声明的资源。后端可执行文件本身不是完整分发包。打包面向当前宿主平台。
 
-字段类型与默认值统一定义在 [Configuration](../configuration/index.md)。
+字段类型与默认值统一定义在 [Configuration](../configuration/project.md)。
 
 ## 平台覆盖
 
@@ -28,7 +28,7 @@ Windows 使用 Windows SDK 资源编译器将配置的 ICO 内容编译进应用
 
 ## 签名与公证
 
-`--release` 控制构建模式，不意味着签名。macOS 上，`--sign` 请求签名；`--notarize` 使用配置的凭据请求公证、装订和验证。身份与凭据环境变量见 [CLI 命令参考](index.md#签名环境)。
+`--release` 控制构建模式，不意味着签名。macOS 上，`--sign` 请求签名；`--notarize` 使用配置的凭据请求公证、装订和验证。身份与凭据环境变量见 [CLI 命令参考](commands.md#签名环境)。
 
 未签名或本地签名的产物不代表受信任的发布者身份。凭据属于部署配置，不属于应用源码。
 

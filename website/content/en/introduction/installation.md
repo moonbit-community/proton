@@ -36,3 +36,15 @@ MoonBit's binary directory must be on PATH. Minimal applications with inline HTM
 Runtime/helper files are not copied into project source. They are assembled into distributable applications during packaging. CLI and Proton module versions must agree. `proton_cli doctor` checks project configuration, tools, runtime and helper without changing them.
 
 Project creation and first execution are covered only in the [minimal tutorial](../tutorial/first-app.md).
+
+## Source checkout and runtime
+
+Examples use the repository workspace. Clone the release commit, install the [required tools](installation.md), and set up its runtime once:
+
+```sh
+git clone https://github.com/moonbit-community/proton.git
+cd proton
+git checkout 51a88c4c0892ff9628e5795fc598d05262e96daa
+moon update
+proton_cli cef setup
+```

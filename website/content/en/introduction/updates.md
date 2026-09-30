@@ -4,7 +4,7 @@ Application updates replace the distributed application, not the development CLI
 
 ## Channel and checks
 
-The endpoint must use HTTPS and there must be at least one trusted RSA public key. Automatic checking defaults to enabled; manifest freshness defaults to 30 days and must be positive. Keys use the format validated by [`updater public-key`](../command-line-interface/index.md#updater-public-key).
+The endpoint must use HTTPS and there must be at least one trusted RSA public key. Automatic checking defaults to enabled; manifest freshness defaults to 30 days and must be positive. Keys use the format validated by [`updater public-key`](../command-line-interface/commands.md#updater-public-key).
 
 The automatic check runs after successful startup and reports failures through logging without making startup fail. For explicit checks, use `ApplicationContext.check_for_update()` and handle its result and errors. `NotConfigured` is distinct from `UpToDate`; a context used after its application ends no longer has an active channel.
 
@@ -20,4 +20,4 @@ Keep the application's unsaved-work decisions separate from checking and downloa
 
 ## Publisher responsibilities
 
-Package a stable application identifier with a monotonically increasing revision. The updater metadata options in [CLI package](../command-line-interface/index.md#package) describe the artifact location, publication instant and revision. `updater public-key` only formats a public key; it does not generate keys, sign an update manifest or host an endpoint. OS signing/notarization and updater signature verification serve different checks; configuring one does not configure the other.
+Package a stable application identifier with a monotonically increasing revision. The updater metadata options in [CLI package](../command-line-interface/commands.md#package) describe the artifact location, publication instant and revision. `updater public-key` only formats a public key; it does not generate keys, sign an update manifest or host an endpoint. OS signing/notarization and updater signature verification serve different checks; configuring one does not configure the other.

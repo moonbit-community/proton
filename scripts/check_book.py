@@ -127,7 +127,7 @@ def check_cli(cli):
         help_text = re.sub(r'--\[no-\]([a-z-]+)', r'--\1 --no-\1', help_text)
         for option in set(re.findall(r'--[a-z][a-z-]*', help_text)):
             for lang in ('en', 'zh'):
-                reference = read(lang, 'command-line-interface/index')
+                reference = read(lang, 'command-line-interface/commands')
                 if command:
                     reference = reference.split('## `' + ' '.join(command) + '`', 1)[1].split('\n## ', 1)[0]
                 require(option in reference or option in ('--help', '--cwd'), f'Undocumented {command} option: {option}')
@@ -190,7 +190,7 @@ def check_tutorials(cli):
         (config / 'moon.mod').write_text(f'name = "book/config_check"\nversion = "0.0.0"\nimport {{ "moonbit-community/proton_config@{VERSION}", }}\n')
         (config / 'moon.pkg').write_text('import { "moonbit-community/proton_config" @config, } for "test"\nsupported_targets = "native"\n')
         tests = []
-        for index, code in enumerate(blocks(read('en', 'configuration/index'), 'json')):
+        for index, code in enumerate(blocks(read('en', 'configuration/project'), 'json')):
             json.loads(code)
             tests.append('test "configuration ' + str(index) + '" {\n ignore(@config.load_project_config_from_text(' + json.dumps(code) + ', "."))\n}\n')
         (config / 'config_test.mbt').write_text('\n///|\n'.join(tests))

@@ -36,3 +36,15 @@ MoonBit 二进制目录必须在 PATH 中。使用内联 HTML 的 minimal 应用
 运行时和 helper 不写入项目源码，而是在打包时组装到应用产物中。CLI 和 Proton 模块版本应保持一致。`proton_cli doctor` 检查项目配置、工具、运行时和 helper，不修改它们。
 
 创建项目和首次运行的逐步操作仅放在[最小应用教程](../tutorial/first-app.md)中。
+
+## 源码与运行时
+
+示例使用仓库工作区。检出对应发布提交，安装[所需工具](installation.md)，并先安装该版本的运行时：
+
+```sh
+git clone https://github.com/moonbit-community/proton.git
+cd proton
+git checkout 51a88c4c0892ff9628e5795fc598d05262e96daa
+moon update
+proton_cli cef setup
+```

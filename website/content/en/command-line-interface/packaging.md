@@ -2,7 +2,7 @@
 
 The Proton CLI packages a project into a distributable containing its executable, frontend assets, CEF runtime, matching helper and declared resources. A backend executable alone is not a complete distribution. Packaging targets the host platform.
 
-Field types and defaults are defined in [Configuration](../configuration/index.md).
+Field types and defaults are defined in [Configuration](../configuration/project.md).
 
 ## Platform overrides
 
@@ -28,7 +28,7 @@ Changing the mode is not an installation-scope migration. Updates to an existing
 
 ## Signing and notarization
 
-`--release` controls build mode and does not imply signing. On macOS, `--sign` requests signing; `--notarize` requests notarization, stapling and validation using configured credentials. Identity and credential environment variables are listed in the [CLI reference](index.md#signing-environment).
+`--release` controls build mode and does not imply signing. On macOS, `--sign` requests signing; `--notarize` requests notarization, stapling and validation using configured credentials. Identity and credential environment variables are listed in the [CLI reference](commands.md#signing-environment).
 
 An unsigned or locally signed artifact does not establish a trusted publisher identity. Credentials are deployment configuration, not application source.
 

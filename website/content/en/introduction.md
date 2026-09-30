@@ -4,16 +4,6 @@ Proton is a desktop application framework with a native MoonBit host and a Chrom
 
 This documentation describes published **Proton 0.3.4**. The CLI and `proton_*` modules share this release version.
 
-## Chapters
-
-| Chapter | Contents |
-| --- | --- |
-| Introduction | Architecture, requirements, project structure and application API concepts |
-| <a href='/proton/tutorial/index.html'>Tutorial</a> | Start with minimal, then develop a complete isomorphic Todo application |
-| <a href='/proton/command-line-interface/index.html'>Command Line Interface</a> | Every command, option, default and exit status |
-| <a href='/proton/configuration/index.html'>Configuration</a> | Every field in `proton.project.json`, including platform overrides |
-| <a href='/proton/examples/index.html'>Examples</a> | Ten selected source examples with behavior and limitations |
-| <a href='/proton/release-notes/index.html'>Release Notes</a> | Changes in published releases |
 
 ## Platform scope
 
@@ -31,4 +21,4 @@ Distributed applications include Chromium and the matching subprocess helper. Ru
 
 Generated API documentation provides full signatures; these reference pages describe behavior and relationships between APIs.
 
-Use the <a href='/proton/introduction/application-api.html'>application API reference index</a> to locate behavior by object and lifecycle.
+Use the [application API reference index](introduction/application-api.md) to locate behavior by object and lifecycle.
