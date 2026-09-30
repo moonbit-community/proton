@@ -1,6 +1,12 @@
 # 架构与进程模型
 
+Proton 是由原生 MoonBit 宿主和 Chromium 前端组成的桌面应用框架。前端可以使用 HTML/JavaScript，也可以使用编译到 JavaScript 的 MoonBit。公开应用入口为 `moonbit-community/proton`。
+
+本文档对应已发布的 **Proton 0.3.4**。CLI 与 `proton_*` 模块使用同一发布版本。
+
 Proton 应用包含原生宿主和 Web 前端。即使两端都用 MoonBit 编写，它们也运行在不同环境中，通过消息通信。
+
+分发产物携带 Chromium 和匹配的子进程 helper，因此会包含相应的运行时体积与子进程。Proton 不使用系统 WebView。
 
 ## 原生宿主
 

@@ -16,3 +16,13 @@
 | 路径、文件与构建元数据 | 项目配置、应用路径 | [项目结构](project-structure.md)、[Configuration](../configuration/project.md) |
 
 完整方法、类型化错误和默认参数见[版本化 API 索引](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)。本书说明对象关系与行为约定，不复制每一条签名。参考页中的短片段用于解释 API，不要求读者先修改某个教程项目。
+
+## API 参考
+
+- [应用 API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)
+- [扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/)
+- [类型化契约](https://mooncakes.io/docs/moonbit-community/proton_contract@0.3.4/)
+- [前端客户端](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.4/)
+- [Rabbita 集成](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/)
+
+生成的 API 文档提供完整签名；本站参考文档说明行为约定和 API 之间的关系。

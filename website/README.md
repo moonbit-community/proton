@@ -28,8 +28,8 @@ examples/
 release-notes/
 ```
 
-Use descriptive filenames for content pages. Tutorial and Examples are
-navigation groups without landing pages. Preserve old published URLs with
+Use descriptive filenames for content pages. All six top-level chapters are
+navigation groups without landing pages; content belongs in their child pages. Preserve old published URLs with
 redirects in both book configs.
 
 Tutorials live only in `content/<language>/tutorial/` and the Tutorial navigation
@@ -55,9 +55,9 @@ http://127.0.0.1:4173/proton/zh/ for Chinese. This optional local preview uses
 Python 3; document builds still require only mdBook. Rebuild both languages
 with the same destination paths after editing.
 
-The first content page is `introduction.md` at the language root, so its
-Markdown links also work in mdBook's generated site homepage. Use Markdown
-links in content rather than hardcoded deployment paths.
+The first content page is `introduction/architecture.md`. The generated site
+homepage redirects there, keeping relative Markdown links correct without a
+separate homepage source or hardcoded HTML links in the content.
 
 ## Publish
 

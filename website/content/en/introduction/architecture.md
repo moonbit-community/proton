@@ -1,6 +1,12 @@
 # Architecture & processes
 
+Proton is a desktop application framework with a native MoonBit host and a Chromium frontend. Applications can use HTML/JavaScript or a MoonBit frontend compiled to JavaScript. The public application API is `moonbit-community/proton`.
+
+This documentation describes published **Proton 0.3.4**. The CLI and `proton_*` modules share this release version.
+
 A Proton app has a native host and a web frontend. Even when both are written in MoonBit, they run in different environments and communicate through messages.
+
+Distributed applications include Chromium and the matching subprocess helper. Runtime size and subprocesses are part of this model; Proton does not use the system webview.
 
 ## The native host
 

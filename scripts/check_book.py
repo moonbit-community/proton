@@ -38,6 +38,7 @@ def check_static():
     for language in ('en', 'zh'):
         summary = read(language, 'SUMMARY')
         require(len(re.findall(r'^- \[', summary, re.M)) == 6, 'Expected six top-level chapters')
+        require(len(re.findall(r'^- \[[^\]]+\]\(\)$', summary, re.M)) == 6, 'Top-level chapters must be navigation groups without pages')
         for relative in en:
             p = BOOK / 'content' / language / relative
             source = p.read_text()

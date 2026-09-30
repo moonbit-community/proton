@@ -16,3 +16,13 @@ The root `moonbit-community/proton` package is the public application facade. Us
 | Paths, files and build metadata | project configuration and application paths | [Project structure](project-structure.md), [Configuration](../configuration/project.md) |
 
 For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/). The pages here specify relationships and behavior; they do not reproduce every signature. A short code fragment in a reference page is illustrative, not an instruction to modify a tutorial project.
+
+## API references
+
+- [Application API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)
+- [Extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/)
+- [Typed contracts](https://mooncakes.io/docs/moonbit-community/proton_contract@0.3.4/)
+- [Frontend client](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.4/)
+- [Rabbita integration](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/)
+
+Generated API documentation provides full signatures; these reference pages describe behavior and relationships between APIs.

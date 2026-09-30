@@ -28,9 +28,12 @@ git-repository-url = "https://github.com/moonbit-community/proton"
 "configuration.html" = "configuration/project.html"
 "release-notes.html" = "release-notes/releases.html"
 
-"introduction/index.html" = "../introduction.html"
+"introduction/index.html" = "architecture.html"
 "tutorial/index.html" = "../tutorial/first-app.html"
 "examples/index.html" = "../introduction/installation.html"
 "command-line-interface/index.html" = "../command-line-interface/commands.html"
 "configuration/index.html" = "../configuration/project.html"
 "release-notes/index.html" = "../release-notes/releases.html"
+
+"index.html" = "introduction/architecture.html"
+"introduction.html" = "introduction/architecture.html"
