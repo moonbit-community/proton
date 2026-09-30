@@ -218,14 +218,39 @@ async fn run_manifest(
   let event_pump = RuntimeEventPump(
     runtime, dialog_completions, cookie_completions,
   )
+  let mut command_host : CommandHostRuntime? = None
+  let windows : Array[RunningWindow] = []
+  let lifecycle_failures : Array[AppCleanupError] = []
+  let cleanup_started = Ref(false)
+  // Cancellation bypasses catch. Keep native teardown after the task groups
+  // unwind, and protect it until CEF has finished destroying its browsers.
+  errdefer (if !cleanup_started.val {
+    cleanup_started.val = true
+    let failures = try! @async.protect_from_cancel(async fn() noraise {
+      app_cleanup(
+        lifecycle,
+        runtime,
+        windows,
+        command_host,
+        wakeup,
+        lifecycle_failures~,
+      )
+    })
+    if cleanup_run_error(None, failures) is Some(error) {
+      log_runtime_failure(error)
+    }
+  })
   match app_instance {
     Some(instance) =>
       instance.attach_runtime(runtime) catch {
         error => {
           let attach_error = native_run_error("attach app instance", error)
+          cleanup_started.val = true
           let failure = cleanup_run_error(
             Some(attach_error),
-            app_cleanup(lifecycle, runtime, [], None, wakeup),
+            try! @async.protect_from_cancel(async fn() noraise {
+              app_cleanup(lifecycle, runtime, [], None, wakeup)
+            }),
           )
           match failure {
             Some(cleanup_error) => raise cleanup_error
@@ -241,9 +266,6 @@ async fn run_manifest(
     updates.channel = None
     active_application_updates.val = None
   }
-  let mut command_host : CommandHostRuntime? = None
-  let windows : Array[RunningWindow] = []
-  let lifecycle_failures : Array[AppCleanupError] = []
   let outcome = Ref(ApplicationExit::{ exit_code: 0, forced: false, })
   try {
     if !config.headless {
@@ -482,16 +504,19 @@ async fn run_manifest(
           _ => ()
         }
       }
+      cleanup_started.val = true
       let failure = cleanup_run_error(
         Some(primary),
-        app_cleanup(
-          lifecycle,
-          runtime,
-          windows,
-          command_host,
-          wakeup,
-          lifecycle_failures~,
-        ),
+        try! @async.protect_from_cancel(async fn() noraise {
+          app_cleanup(
+            lifecycle,
+            runtime,
+            windows,
+            command_host,
+            wakeup,
+            lifecycle_failures~,
+          )
+        }),
       )
       match failure {
         Some(cleanup_error) => raise cleanup_error
@@ -499,17 +524,20 @@ async fn run_manifest(
       }
     }
   }
+  cleanup_started.val = true
   match
     cleanup_run_error(
       None,
-      app_cleanup(
-        lifecycle,
-        runtime,
-        windows,
-        command_host,
-        wakeup,
-        lifecycle_failures~,
-      ),
+      try! @async.protect_from_cancel(async fn() noraise {
+        app_cleanup(
+          lifecycle,
+          runtime,
+          windows,
+          command_host,
+          wakeup,
+          lifecycle_failures~,
+        )
+      }),
     ) {
     Some(error) => raise error
     None => ()

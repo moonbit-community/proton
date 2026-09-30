@@ -52,6 +52,10 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
     run_process_lifetime_regression()
     return
   }
+  if name == "cancel-app-startup" || name == "cancel-app-running" {
+    run_app_cancellation_regression(name)
+    return
+  }
   if name == "cancel-during-startup" {
     run_cancel_during_startup_regression()
     return
@@ -461,6 +465,86 @@ async fn run_startup_quit_regression(name : String) -> Unit {
     let count = if name == "startup-quit-window" { 1 } else { 0 }
     assert_eq(window_ready.val, count)
     assert_eq(window_closed.val, count)
+  }
+  println("LIFECYCLE_PASSED " + name)
+}
+
+///|
+async fn run_app_cancellation_regression(name : String) -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let armed = Ref(false)
+  let shutdown_count = Ref(0)
+  let close_count = Ref(0)
+  let interrupted = Ref(false)
+  let window : Ref[@proton.WindowHandle?] = Ref(None)
+  let view : Ref[@proton.ViewHandle?] = Ref(None)
+  let app = @proton.html("App cancellation", "<h1>Main</h1>")
+    .identifier("dev.proton.e2e-app-cancel")
+    .with_view("child", @proton.ViewConfig(width=100, height=100))
+    .app_lifecycle(
+      on_start=context => {
+        application.val = Some(context)
+        if name == "cancel-app-startup" {
+          defer {
+            interrupted.val = true
+          }
+          armed.val = true
+          @async.sleep(60000)
+        }
+      },
+      on_shutdown=_ => {
+        @async.sleep(10)
+        shutdown_count.val = shutdown_count.val + 1
+      },
+    )
+    .window_lifecycle(
+      on_ready=context => {
+        window.val = Some(context.handle())
+        view.val = context.handle().view("child")
+        armed.val = true
+      },
+      on_close=_ => {
+        @async.sleep(10)
+        close_count.val = close_count.val + 1
+      },
+    )
+  @async.with_task_group(group => {
+    let running = group.spawn(() => app.run(), no_wait=true)
+    while !armed.val {
+      @async.sleep(1)
+    }
+    lifecycle_probe_gate()
+    running.cancel()
+    try running.wait() catch {
+      error => assert_true(error is @async.WaitedTaskAlreadyCancelled)
+    } noraise {
+      _ => fail("App::run completed instead of being cancelled")
+    }
+  })
+  assert_false(@proton.is_ready())
+  // Metrics resolve the active native runtime even when startup created no window.
+  try ignore(application.val.unwrap().task_metrics()) catch {
+    _ => ()
+  } noraise {
+    _ => fail("cancelled app retained an active native runtime")
+  }
+  if name == "cancel-app-startup" {
+    assert_true(interrupted.val)
+    assert_eq(shutdown_count.val, 0)
+    assert_eq(close_count.val, 0)
+  } else {
+    assert_eq(shutdown_count.val, 1)
+    assert_eq(close_count.val, 1)
+    try window.val.unwrap().browser().eval("void 0") catch {
+      _ => ()
+    } noraise {
+      _ => fail("cancelled app retained a live window")
+    }
+    try view.val.unwrap().eval("void 0") catch {
+      _ => ()
+    } noraise {
+      _ => fail("cancelled app retained a live child view")
+    }
   }
   println("LIFECYCLE_PASSED " + name)
 }
