@@ -115,6 +115,9 @@ session history, injects and removes a page stylesheet through the bridge, and
 checks the entry a later navigation adds. The runner also executes control
 cases, requires explicit success markers, and checks application and helper
 shutdown.
+The `cancel-app-startup` and `cancel-app-running` cases cancel `App::run` itself,
+require cancellation to propagate, and verify native teardown after interrupted
+startup or after a window and child view are ready.
 They are included in `--self-hosted`. Set `PROTON_E2E_LIFECYCLE_CASE` to a case name
 from `test/lifecycle_regressions.mbt` to run one scenario.
 
