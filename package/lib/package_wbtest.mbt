@@ -620,3 +620,63 @@ test "macOS minimum rejects malformed versions" {
     }
   }
 }
+
+///|
+async test "file copies accept leading-dash source and destination paths" {
+  guard current_package_host() != Windows else { return }
+  let seed = @async_fs.tmpdir(prefix="proton-package-copy-file-")
+  defer (remove_tree(seed) catch { _ => () })
+  let root = "-" + @path.Path(seed).basename().to_owned()
+  @async_fs.mkdir(root)
+  defer (remove_tree(root) catch { _ => () })
+  let source = path_join(root, "-v")
+  @async_fs.write_file(source, "executable payload")
+  @async_fs.chmod(source, 0o755)
+  let roots = [
+    root,
+    "./" + root,
+    resolve_path(@env.current_dir().unwrap(), root),
+  ]
+  for source_index, source_root in roots {
+    for destination_index, destination_root in roots {
+      let destination = path_join(
+        destination_root,
+        "file-" + source_index.to_string() + "-" + destination_index.to_string(),
+      )
+      copy_file(path_join(source_root, "-v"), destination)
+      assert_eq(@async_fs.read_file(destination).text(), "executable payload")
+      assert_eq(@process.run("test", ["-x", destination]), 0)
+    }
+  }
+}
+
+///|
+async test "directory copies accept leading-dash source and destination paths" {
+  guard current_package_host() != Windows else { return }
+  let seed = @async_fs.tmpdir(prefix="proton-package-copy-tree-")
+  defer (remove_tree(seed) catch { _ => () })
+  let root = "-" + @path.Path(seed).basename().to_owned()
+  @async_fs.mkdir(root)
+  defer (remove_tree(root) catch { _ => () })
+  let source = path_join(root, "-directory")
+  ensure_dir(path_join(source, "nested"))
+  @async_fs.write_file(path_join(source, "nested/payload"), "directory payload")
+  let roots = [
+    root,
+    "./" + root,
+    resolve_path(@env.current_dir().unwrap(), root),
+  ]
+  for source_index, source_root in roots {
+    for destination_index, destination_root in roots {
+      let destination = path_join(
+        destination_root,
+        "tree-" + source_index.to_string() + "-" + destination_index.to_string(),
+      )
+      copy_tree(path_join(source_root, "-directory"), destination)
+      assert_eq(
+        @async_fs.read_file(path_join(destination, "nested/payload")).text(),
+        "directory payload",
+      )
+    }
+  }
+}
