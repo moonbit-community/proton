@@ -29,7 +29,10 @@ async fn main {
   // Import the root facade to install the production external event loop.
   ignore(@proton.html("Admission regression", ""))
   let runtime = @native.Runtime::Runtime(
-    config=@native.RuntimeConfig::bundled(headless=true),
+    config=@native.RuntimeConfig::bundled(
+      headless=true,
+      remote_debugging=@native.RemoteDebugging::Ephemeral,
+    ),
   )
   let window = @native.Window::Window(
     runtime,

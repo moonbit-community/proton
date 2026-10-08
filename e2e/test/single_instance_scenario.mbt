@@ -3,7 +3,7 @@ async fn spawn_single_instance_probe(
   group : @async.TaskGroup[Unit],
   root : String,
   output_root : String,
-  port : Int,
+  run_id : Int,
   role : String,
   ready_path : String,
   release_paths? : (String, String),
@@ -15,9 +15,9 @@ async fn spawn_single_instance_probe(
     output_path,
     create_mode=@fs.CreateOrTruncate,
   )
-  let env = app_process_env(root, output_root, "single_instance", port)
+  let env = app_process_env(root, output_root, "single_instance", run_id)
   env["PROTON_INSTANCE_TEST_IDENTIFIER"] = "dev.proton.e2e.single-instance.p" +
-    port.to_string()
+    run_id.to_string()
   env["PROTON_INSTANCE_TEST_ROLE"] = role
   env["PROTON_INSTANCE_TEST_READY"] = ready_path
   match partition {
@@ -59,11 +59,11 @@ async fn run_single_instance_probe(root : String, timeout : Int) -> Unit {
   defer remove_dev_extension_tree(output_root)
   install_scenario_helper(root, output_root)
   run_e2e_operation_with_timeout(timeout + 2000, "single instance activation", () => {
-    let port = choose_cdp_port()
+    let run_id = next_app_run_id()
     @async.with_task_group(group => {
       let ready_path = join_path(output_root, "ready")
       let primary = spawn_single_instance_probe(
-        group, root, output_root, port, "primary", ready_path,
+        group, root, output_root, run_id, "primary", ready_path,
       )
       let mut stopped = false
       defer (if !stopped { primary.process.cancel() })
@@ -75,7 +75,7 @@ async fn run_single_instance_probe(root : String, timeout : Int) -> Unit {
       }
       let snapshot = snapshot_scenario_process_tree(primary)
       let secondary = spawn_single_instance_probe(
-        group, root, output_root, port, "secondary", ready_path,
+        group, root, output_root, run_id, "secondary", ready_path,
       )
       defer (if app_exit_code(secondary.process) is None {
         secondary.process.cancel()
@@ -115,7 +115,7 @@ async fn run_single_instance_release_phase(
   output_root : String,
   timeout : Int,
 ) -> Unit {
-  let port = choose_cdp_port()
+  let run_id = next_app_run_id()
   let ready_path = join_path(output_root, "release-ready")
   let released_path = join_path(output_root, "release-released")
   let stop_path = join_path(output_root, "release-stop")
@@ -130,7 +130,7 @@ async fn run_single_instance_release_phase(
       group,
       root,
       output_root,
-      port,
+      run_id,
       "release",
       ready_path,
       release_paths=(released_path, stop_path),
@@ -144,7 +144,7 @@ async fn run_single_instance_release_phase(
       group,
       root,
       output_root,
-      port,
+      run_id,
       "expect-primary",
       successor_ready_path,
       partition="successor",

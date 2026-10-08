@@ -14,10 +14,12 @@ because it needs `codesign`, `openssl` and a real installed bundle. See
 
 ## Self-hosted MoonBit E2E
 
-The E2E executable runs the complete self-hosted suite directly. Each scenario selects
-its own CDP port, starts the required application/runtime route in headless OSR
-mode, performs typed CDP probes, closes Chromium through `Browser.close`, and
-verifies that the application, helper process tree, and CDP endpoint stop:
+The E2E executable runs the complete self-hosted suite directly. Each scenario
+starts the required application/runtime route in headless OSR
+mode with `PROTON_REMOTE_DEBUGGING_PORT=0`, discovers Chromium's actual endpoint
+from its `DevTools listening on ws://...` output, performs typed CDP probes,
+closes Chromium through `Browser.close`, and verifies that the application,
+helper process tree, and CDP endpoint stop:
 
 ```sh
 moon -C cefsetup run . --target native

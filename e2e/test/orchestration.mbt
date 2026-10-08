@@ -20,7 +20,7 @@ struct SpawnedScenarioApp {
 }
 
 ///|
-async fn choose_cdp_port() -> Int {
+async fn choose_frontend_port() -> Int {
   let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
   defer server.close()
   server.addr.port()
@@ -76,7 +76,7 @@ async fn app_process_env(
   root : String,
   output_root : String,
   scenario : String,
-  cdp_port : Int,
+  run_id : Int,
 ) -> Map[String, String] {
   let runtime_dist = active_runtime_dist()
   let bin_dir = join_path(runtime_dist, "bin")
@@ -97,14 +97,14 @@ async fn app_process_env(
   let result : Map[String, String] = {
     "PROTON_RUNTIME_ROOT": runtime_dist,
     "PROTON_HELPER_PATH": helper_path,
-    "PROTON_REMOTE_DEBUGGING_PORT": cdp_port.to_string(),
+    "PROTON_REMOTE_DEBUGGING_PORT": "0",
     "PROTON_HEADLESS": "1",
     "PROTON_E2E_LIFECYCLE_GATE": join_path(output_root, "lifecycle-go"),
     "PROTON_E2E_ASSET_SIDECAR_ENTRY": join_path(
       root, "examples/46_asset_sidecar_resources/app/app.html",
     ),
     "PROTON_E2E_WEB_CONTENTS_VIEW_EVENTS": scenario_web_contents_view_events_path(
-      output_root, cdp_port,
+      output_root, run_id,
     ),
   }
   result[app_child_scenario_env] = scenario
@@ -146,9 +146,9 @@ async fn app_process_env(
 ///|
 fn scenario_web_contents_view_events_path(
   output_root : String,
-  cdp_port : Int,
+  run_id : Int,
 ) -> String {
-  join_path(output_root, "view-events-" + cdp_port.to_string() + ".txt")
+  join_path(output_root, "view-events-" + run_id.to_string() + ".txt")
 }
 
 ///|
@@ -187,7 +187,7 @@ async fn[X] spawn_scenario_app(
   root : String,
   output_root : String,
   scenario : String,
-  cdp_port : Int,
+  run_id : Int,
 ) -> SpawnedScenarioApp {
   let (program, args) = if scenario == "lifecycle:bridge-admission" {
     isolated_app_command("moon", [
@@ -198,7 +198,7 @@ async fn[X] spawn_scenario_app(
   }
   let output_path = join_path(
     output_root,
-    "child-" + cdp_port.to_string() + ".log",
+    "child-" + run_id.to_string() + ".log",
   )
   let output = @process.redirect_to_file(
     output_path,
@@ -209,7 +209,7 @@ async fn[X] spawn_scenario_app(
     program,
     args,
     cwd=root,
-    extra_env=app_process_env(root, output_root, scenario, cdp_port),
+    extra_env=app_process_env(root, output_root, scenario, run_id),
     stdout=output,
     stderr=output,
     cancel_handler=app_cancel_handler(),
@@ -600,10 +600,10 @@ async fn run_scenario_probe_once(
   name : String,
   timeout : Int,
 ) -> Unit {
-  let port = choose_cdp_port()
-  let target = port.to_string()
+  let run_id = next_app_run_id()
   @async.with_task_group(group => {
-    let app = spawn_scenario_app(group, root, output_root, name, port)
+    let app = spawn_scenario_app(group, root, output_root, name, run_id)
+    let target = wait_for_app_cdp_target(app, timeout)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
     let mut phase = "CDP discovery"
@@ -633,7 +633,7 @@ async fn run_scenario_probe_once(
         app,
         target,
         browser_web_socket_url,
-        scenario_web_contents_view_events_path(output_root, port),
+        scenario_web_contents_view_events_path(output_root, run_id),
         timeout,
       )
     } else if name == "54_devtools" {
