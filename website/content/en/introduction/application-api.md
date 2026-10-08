@@ -12,20 +12,9 @@ The root `moonbit-community/proton` package is the public application facade. Us
 | Cookies, browser storage, proxy | `SessionHandle`, startup builder | [Browser sessions](#browser-sessions) |
 | Signed application updates | `App.update_channel`, `PendingUpdate` | [Updates](#application-updates) |
 | Process ownership and activation | single-instance builder, context methods | [Process control](#process-control-and-metrics) |
-| Menus, language, background residency | window/application configuration | [Selected examples](../examples/01_run.md) |
 | Paths, files and build metadata | project configuration and application paths | [Configuration](../configuration/project.md) |
 
-For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/). The pages here specify relationships and behavior; they do not reproduce every signature. A short code fragment in a reference page is illustrative, not an instruction to modify a tutorial project.
-
-## API references
-
-- [Application API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)
-- [Extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/)
-- [Typed contracts](https://mooncakes.io/docs/moonbit-community/proton_contract@0.3.4/)
-- [Frontend client](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.4/)
-- [Rabbita integration](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/)
-
-Generated API documentation provides full signatures; these reference pages describe behavior and relationships between APIs.
+For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/). This reference describes when to use each entry point, which object owns its state, and how it behaves during startup, cancellation and shutdown.
 
 ## Application lifecycle
 
@@ -58,13 +47,9 @@ Each returns an `App` builder. Shared options include width, height, debug mode 
 
 Application and window contexts expose task groups and window management. Window contexts additionally expose their handle and event emitter. A window's state must not outlive the resources it refers to.
 
-**Execution and exit**
+**Running the application**
 
-`run()` is async and raises `AppRunError`. `run_or_abort()` reports failures and aborts rather than returning a typed error to the caller. The default `LastWindowClosedPolicy::Quit` initiates application shutdown after the last window closes; `KeepRunning` retains the process. `ApplicationContext.quit()` requests application shutdown.
-
-Window disappearance is not completion of application cleanup. Browser and child-view teardown must finish before normal runtime shutdown completes. Forced process termination is not equivalent to a successful lifecycle.
-
-See [application API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/) for hook signatures and error variants.
+Calling `run()` starts the configured application and awaits its lifecycle. It is async and raises `AppRunError` on failure. `run_or_abort()` instead reports a failure and aborts. Startup, task ownership and exit behavior are described below.
 
 **Startup order**
 
@@ -74,6 +59,14 @@ For the primary instance, session creation precedes application start hooks. Suc
 
 A start hook may await `context.windows().open(id)`. A committed exit stops startup. A denied quit request leaves the application running; requesting quit is not itself a committed exit.
 
+**Task and cleanup ownership**
+
+Use application task groups for work that belongs to the application, and window task groups for work that belongs to a window. Their scopes are canceled and drained on shutdown; detached work outside these scopes is not made lifecycle-safe by holding a window handle.
+
+Each lifecycle hook that successfully returns state installs its paired cleanup hook. A hook that fails before returning has not produced state to pass to its paired cleanup; previously established scopes still clean up. Cleanup hooks run under cancellation protection. Reported cleanup failures can accompany the original failure in `AppRunError`, rather than replacing it.
+
+Ready/close hooks own per-window state; creation and browser event callbacks report observations. A renderer can navigate or crash while its native window remains alive. Page tasks and subscriptions must therefore also respect page lifetime, as described in [commands](#commands) and [events](#events).
+
 **Quit decisions and forced exit**
 
 | Operation | Contract |
@@ -82,19 +75,13 @@ A start hook may await `context.windows().open(id)`. A committed exit stops star
 | `context.exit(exit_code=0)` | Forces shutdown and process termination, including status zero |
 | `handle.close()` | Requests closing that window; subject to its close interceptor |
 
+The default `LastWindowClosedPolicy::Quit` requests shutdown after the last window closes; `KeepRunning` keeps the application running until an explicit quit or exit. Browser and child-view teardown must finish before normal runtime shutdown completes.
+
 An orderly quit runs `on_before_quit`, closes windows through their close decisions, then runs `on_will_quit` after windows close. `ApplicationQuitDecision::Prevent` cancels the quit; a denied window close also cancels the request. Cancellation does not recreate windows that have already closed. `on_quit` observes the final exit code before runtime teardown and is not a veto point.
 
 Forced exit bypasses cancelable decisions, including an already pending decision, but still performs the final quit notification and runtime cleanup. It is not equivalent to externally killing the process. Scheduled relaunches are started after cleanup and before process termination.
 
 On successful ordinary zero-status quit, `App.run()` returns. A successful nonzero quit terminates with that status; forced exit terminates even for zero. Code following `run()` must not be the only place for required shutdown cleanup.
-
-**Task and cleanup ownership**
-
-Use application task groups for work that belongs to the application, and window task groups for work that belongs to a window. Their scopes are canceled and drained on shutdown; detached work outside these scopes is not made lifecycle-safe by holding a window handle.
-
-Each lifecycle hook that successfully returns state installs its paired cleanup hook. A hook that fails before returning has not produced state to pass to its paired cleanup; previously established scopes still clean up. Cleanup hooks run under cancellation protection. Reported cleanup failures can accompany the original failure in `AppRunError`, rather than replacing it.
-
-Ready/close hooks own per-window state; creation and browser event callbacks report observations. A renderer can navigate or crash while its native window remains alive. Page tasks and subscriptions must therefore also respect page lifetime, as described in [commands](#commands) and [events](#events).
 
 ## Commands
 
@@ -118,13 +105,17 @@ The handler context identifies the caller and supports `emit_to_caller`. A handl
 
 The injected bridge exposes application methods as `window.__MoonBit__.app.<name>(request)`. Calls return promises; failures reject them. Application routes use `app:`; extension operations use `ext:`. An ordinary browser page has no injected native bridge.
 
-**Payload size**
+**Request scope and page invalidation**
 
-Proton does not impose a fixed payload-size limit on commands. Payloads are serialized as JSON and remain subject to memory and underlying transport constraints. Large messages increase serialization, copying and parsing costs.
+Each accepted request has its own command scope. Awaited work, child tasks, and deferred cleanup in that scope belong to the request. A handler or its scoped cleanup failing is a request failure (`handler_failed`), not an instruction to terminate the application. Runtime infrastructure failures remain application errors.
+
+Navigation, renderer termination, or bridge failure invalidates the old page's pending requests. Once a bridge attempt has failed, that failed page cannot start new application commands until a new valid attempt is established. Initialization-time requests are permitted; waiting for every request until ready would prevent legitimate initialization work.
+
+Caller cancellation and page invalidation stop waiting and request cancellation of outstanding work. Neither rolls back business side effects already performed. Use application-level operation identifiers or transactions when a retry must not duplicate an operation. Do not infer successful execution from successful message submission.
 
 **Cancellation**
 
-`proton_client.invoke_with_callbacks` returns a cancellation function. It cancels response observation and requests transport cancellation; late responses are ignored. Async `invoke` also cancels the pending request when its task is cancelled. Cancellation is not a rollback guarantee for work already performed by the backend.
+`proton_client.invoke_with_callbacks` returns a cancellation function. It cancels response observation and requests transport cancellation; late responses are ignored. Async `invoke` also cancels the pending request when its task is cancelled. The request scope described above governs the backend work; cancellation does not undo completed side effects.
 
 **Client failures**
 
@@ -136,10 +127,6 @@ Proton does not impose a fixed payload-size limit on commands. Payloads are seri
 | `TransportFailure` | Communication failure |
 | `ResponseDecode` | Response does not decode as the declared type |
 | `RequestCancelled` | The pending request was cancelled |
-
-Commands provide responses to their callers. [Events](#events) provide notifications to observers; neither implies durable application storage.
-
-See [API signatures](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.4/) and the separate [command tutorial](../tutorial/commands-events.md).
 
 **Command error codes**
 
@@ -159,13 +146,9 @@ also includes them in `detail`; `message` remains
 a caller-facing description. Expected business outcomes belong in the command's
 response type.
 
-**Request scope and page invalidation**
+**Resource limits**
 
-Each accepted request has its own command scope. Awaited work, child tasks, and deferred cleanup in that scope belong to the request. A handler or its scoped cleanup failing is a request failure (`handler_failed`), not an instruction to terminate the application. Runtime infrastructure failures remain application errors.
-
-Navigation, renderer termination, or bridge failure invalidates the old page's pending requests. Once a bridge attempt has failed, that failed page cannot start new application commands until a new valid attempt is established. Initialization-time requests are permitted; waiting for every request until ready would prevent legitimate initialization work.
-
-Caller cancellation and page invalidation stop waiting and request cancellation of outstanding work. Neither rolls back business side effects already performed. Use application-level operation identifiers or transactions when a retry must not duplicate an operation. Do not infer successful execution from successful message submission.
+Proton does not impose a fixed payload-size limit on commands. Payloads are serialized as JSON and remain subject to memory and underlying transport constraints. Large messages increase serialization, copying and parsing costs.
 
 Request concurrency has no global fixed admission limit in 0.3.4. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.
 
@@ -198,8 +181,6 @@ The JavaScript interface is `window.__MoonBit__.app.on(name, callback)`. The cal
 - Listener disposal ends observation; events are not a durable queue or acknowledgment protocol.
 - A notification that state changed can invalidate a frontend query. The authoritative snapshot is obtained through a command.
 
-The [event tutorial](../tutorial/events.md) demonstrates subscription and cleanup. The [Todo tutorial](../tutorial/isomorphic.md) demonstrates invalidation followed by a snapshot query.
-
 **Subscription lifetime and state synchronization**
 
 A subscription belongs to the current renderer document or UI component. Close it when that owner is disposed. A reload creates a new document and requires a new subscription; keeping a native window alive does not preserve JavaScript listeners across reloads.
@@ -207,6 +188,8 @@ A subscription belongs to the current renderer document or UI component. Close i
 For state synchronization, subscribe before loading the initial snapshot, use events to invalidate that snapshot, and ignore responses from superseded queries. Subscribing first avoids a gap before the initial read, but does not turn two independent messages into an atomic transaction. Include a revision in application data when the consumer must detect stale snapshots or missed changes.
 
 Application-level lifecycle notifications such as `on_window_created` and `on_render_process_gone` are host callbacks, not `proton_contract` frontend events. Register them on the App builder; use a command or explicit event if the frontend also needs that information.
+
+The [event tutorial](../tutorial/events.md) demonstrates subscription and cleanup. The [Todo tutorial](../tutorial/isomorphic.md) demonstrates invalidation followed by a snapshot query.
 
 ## Windows and browser views
 
@@ -217,6 +200,14 @@ Window declarations belong to `App`; operations on a running window belong to `W
 The primary window ID is `main`. `App.add_window(id, title, entry, ...)` declares secondary windows; their IDs must be nonempty, unique and different from `main`. Titles are display text and do not identify windows.
 
 Secondary windows open at startup by default. `open_on_start=false` defers opening until `WindowManager.open(id)`. `ApplicationContext.windows()` and `WindowContext.windows()` expose the manager. All windows belong to one application runtime.
+
+**Opening and instance identity**
+
+`WindowManager.open(id)` is asynchronous and returns an activated `WindowHandle`. The id selects a declaration; it is not a permanent identity for every future native instance. After closing and reopening a declared window, obtain the new handle through `open` or `find`; an old handle does not become valid again.
+
+Cancellation before activation commits discards the queued open or closes the instance created by that operation. After activation commits, the application owns the window: canceling the caller later does not close it. Unknown declarations and invalid window state produce window-session failures; task cancellation follows the async task's cancellation semantics.
+
+`hide()` preserves the instance, browser, and associated work. `close()` initiates teardown and can be denied. Do not equate a close request with completed cleanup. Per-window state should be released by its lifecycle cleanup, not immediately after requesting close.
 
 **Runtime operations**
 
@@ -238,27 +229,17 @@ Native operations can raise `WindowSessionError`. A handle is not valid indefini
 
 `App.with_view` declares a view on the main window; `WindowHandle.add_view` creates one dynamically and returns `ViewHandle`. A view is a child browser hosted inside a window, not a second top-level window. Its bounds use a top-left origin; visibility and z-order are independent of the main page. `remove_view` removes a child. Closing the parent must also complete child-browser teardown.
 
-**Platform behavior**
-
-`WindowThemePreference` controls a window's theme; `system_appearance()` reports system appearance. These are separate concerns. Titlebar styles and native controls differ by platform. Traffic-light positioning applies to macOS; the frontend layout must account for native controls when using an overlay titlebar.
-
-Method signatures and options are in the [window API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/). The [multi-window tutorial](../tutorial/windows.md) is a separate runnable exercise.
-
-**Opening and instance identity**
-
-`WindowManager.open(id)` is asynchronous and returns an activated `WindowHandle`. The id selects a declaration; it is not a permanent identity for every future native instance. After closing and reopening a declared window, obtain the new handle through `open` or `find`; an old handle does not become valid again.
-
-Cancellation before activation commits discards the queued open or closes the instance created by that operation. After activation commits, the application owns the window: canceling the caller later does not close it. Unknown declarations and invalid window state produce window-session failures; task cancellation follows the async task's cancellation semantics.
-
-`hide()` preserves the instance, browser, and associated work. `close()` initiates teardown and can be denied. Do not equate a close request with completed cleanup. Per-window state should be released by its lifecycle cleanup, not immediately after requesting close.
-
 **Browser and view boundaries**
 
 The main page belongs to `WindowHandle.browser()`. Child contents belong to `ViewHandle`; child navigation and removal do not navigate or close the main page. Both are represented by `WebContentsHandle` in application-level creation and renderer-termination callbacks.
 
 `on_render_process_gone` covers both main pages and child views without requiring an extra `on_view_event` subscription. Renderer termination invalidates page work; it is not a normal window close. Decide whether to reload or present recovery UI based on the reported details, and recreate page subscriptions after navigation.
 
-View bounds use top-left coordinates in the parent content area. A fixed declaration is not an automatic layout system: update bounds when the application layout changes. Removing a view ends that browser's lifetime; closing its parent also tears it down.
+A view declaration sets initial geometry; it does not provide automatic layout. Update its bounds when the parent content layout changes.
+
+**Platform behavior**
+
+`WindowThemePreference` controls a window's theme; `system_appearance()` reports system appearance. These are separate concerns. Titlebar styles and native controls differ by platform. Traffic-light positioning applies to macOS; the frontend layout must account for native controls when using an overlay titlebar.
 
 ## Extensions and capabilities
 
@@ -287,9 +268,7 @@ Supported filesystem operation names include `read_file`, `write_file`, `mkdir`,
 
 A missing capability leaves its route unavailable. An installed extension can still reject a request because of scope, invalid arguments, a platform limitation or an operating-system failure. These failures are reported through the command bridge; installation does not imply that every native operation will succeed.
 
-Filesystem, dialogs, clipboard, shell, tray and other capabilities have different scope types and platform coverage. The notification extension in 0.3.4 targets macOS. Framework platform support is not a capability support matrix.
-
-Complete builders and request/response types are in the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/). A complete exercise is in the [file access tutorial](../tutorial/capabilities.md).
+Capability-specific scope types are documented in the extension API; platform coverage is summarized below.
 
 **Platform differences and selection**
 
@@ -304,6 +283,8 @@ These are key boundaries of implemented 0.3.4 capabilities, not a promise of ava
 | Desktop sources and thumbnails | Displays; thumbnails require screen-recording permission | Visible titled windows and GDI thumbnails | X11/RandR displays; thumbnails are null |
 
 Capability grants are separate from operating-system authorization. Declaring a screen or media capability does not grant OS privacy permission. Handle OS denial, unavailable backends and missing application grants separately. Check support where provided, such as the tray capability; menu events are more portable than platform mouse gestures.
+
+**Host networking and child processes**
 
 The net extension performs host HTTP requests and returns status, headers and UTF-8 text. It is not browser fetch, does not share the browser cookie jar and does not follow redirects automatically. Its text response is not a lossless binary transfer interface. Processes spawned by the process extension belong to its application lifetime: wait collects handles, kill still needs wait, and application shutdown cancels and reaps remaining children.
 
@@ -363,6 +344,8 @@ Package a stable application identifier with a monotonically increasing revision
 
 ## Process control and metrics
 
+Application process control determines which instance owns the runtime and how later launches reach it. It is separate from window visibility and from the task metrics exposed by Chromium.
+
 **Single-instance ownership**
 
 `App.single_instance()` uses the application identity to select one owning process. Later instances forward URL, document or reopen activation and return after the primary loop accepts it. Acceptance does not wait for asynchronous launch handlers to complete. Forwarding has a five-second deadline; failure does not kill the primary or start another owner.
@@ -378,3 +361,11 @@ Application focus, hide/show, active/hidden queries and readiness describe the a
 `ApplicationContext.task_metrics()` returns `AppTaskMetric` rows for Chromium tasks. A renderer and multiple workers can share a process. Task ids identify tasks; the hosting process usage in multiple rows may be identical because it belongs to the shared process. Do not sum rows into a process or application total.
 
 CPU is zero until a sampling interval has passed; 100% represents one fully used core. Memory is -1 before measurement, not zero bytes. The fields are `process_cpu_percent` and `process_memory_bytes`. These observations do not confer ownership of a process and should not be used to kill helpers independently of Proton's lifecycle.
+
+## API references
+
+- [Application API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)
+- [Extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/)
+- [Typed contracts](https://mooncakes.io/docs/moonbit-community/proton_contract@0.3.4/)
+- [Frontend client](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.4/)
+- [Rabbita integration](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/)
