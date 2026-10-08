@@ -3,7 +3,6 @@
 - [Introduction]()
   - [Architecture & processes](introduction/architecture.md)
   - [Environment requirements](introduction/installation.md)
-  - [Project structure](introduction/project-structure.md)
   - [Application API reference](introduction/application-api.md)
 - [Tutorial]()
   - [Minimal application](tutorial/first-app.md)

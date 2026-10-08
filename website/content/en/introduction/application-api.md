@@ -13,7 +13,7 @@ The root `moonbit-community/proton` package is the public application facade. Us
 | Signed application updates | `App.update_channel`, `PendingUpdate` | [Updates](#application-updates) |
 | Process ownership and activation | single-instance builder, context methods | [Process control](#process-control-and-metrics) |
 | Menus, language, background residency | window/application configuration | [Selected examples](../examples/01_run.md) |
-| Paths, files and build metadata | project configuration and application paths | [Project structure](project-structure.md), [Configuration](../configuration/project.md) |
+| Paths, files and build metadata | project configuration and application paths | [Configuration](../configuration/project.md) |
 
 For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/). The pages here specify relationships and behavior; they do not reproduce every signature. A short code fragment in a reference page is illustrative, not an instruction to modify a tutorial project.
 

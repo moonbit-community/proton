@@ -26,15 +26,47 @@ Add “Alpha” and “Beta”, mark one complete, and search for it. The genera
 
 Close the application before editing. Keep the generated module names and package imports; all changes below extend the existing template.
 
+## Template organization
+
+The `isomorphic` template has three modules connected by a workspace:
+
+```text
+todo-app/
+  moon.work
+  proton.project.json
+  shared/
+    moon.mod
+    moon.pkg
+    todo_contract.mbt
+  backend/
+    moon.mod
+    app/
+      moon.pkg
+      main.mbt
+    todo/
+      moon.pkg
+      backend.mbt
+      commands.mbt
+  frontend/
+    moon.mod
+    main/
+      moon.pkg
+      main.mbt
+    internal/query/
+    public/
+```
+
+The root `moon.work` connects three modules:
+
+- **shared** defines serializable payloads and command/event descriptors. It is used by both build targets.
+- **backend** builds to native code. `todo/backend.mbt` holds Todo state and operations; `todo/commands.mbt` binds those operations; `app/main.mbt` starts the app.
+- **frontend** builds to JavaScript. `main/main.mbt` defines the Rabbita UI; `public/` contains its HTML and stylesheet.
+
+The template's `frontend/internal/query` manages query state and subscriptions. It belongs to the generated application and can be changed with it; it is not a public Proton API.
+
+Application commands use ordinary bind calls; this template requires no command code-generation rule.
+
 ## Understand the existing flow
-
-Open these files together:
-
-- **`shared/todo_contract.mbt`** defines the requests, `TodoItem`, `TodoSnapshot`, `MutationReply`, and descriptors.
-- **`backend/todo/backend.mbt`** stores the list and revision and implements mutations.
-- **`backend/todo/commands.mbt`** binds descriptors to methods.
-- **`frontend/main/main.mbt`** owns the draft, UI messages, and Rabbita view.
-- **`backend/app/main.mbt`** starts the app, installs commands, and attaches/detaches each window's event destination.
 
 For an existing create action, `Create` invokes `create_todo`; the backend validates and mutates; `MutationReply` reports success or a business rejection. `todos_changed` invalidates the frontend snapshot and triggers a query.
 

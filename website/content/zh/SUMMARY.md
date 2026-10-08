@@ -3,7 +3,6 @@
 - [Introduction]()
   - [架构与进程](introduction/architecture.md)
   - [运行环境要求](introduction/installation.md)
-  - [项目结构](introduction/project-structure.md)
   - [应用 API 参考](introduction/application-api.md)
 - [Tutorial]()
   - [最小应用](tutorial/first-app.md)

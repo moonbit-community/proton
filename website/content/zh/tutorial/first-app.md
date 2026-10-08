@@ -13,7 +13,23 @@ cd hello-proton
 
 这里需要明确指定 `--template minimal`：非交互模式的默认模板是 `isomorphic`。`--yes` 接受生成器的默认值。准备分发的应用可以在创建时用 `--identifier com.example.hello-proton` 指定标识。
 
-生成的 `app/main.mbt` 管理窗口与 HTML；`moon.mod` 声明依赖；`app/moon.pkg` 导入包；`proton.project.json` 记录应用标识和构建入口。
+## 模板文件
+
+```text
+hello-proton/
+  moon.mod
+  proton.project.json
+  app/
+    moon.pkg
+    main.mbt
+```
+
+- **`moon.mod`** 定义模块名称和带版本的依赖。导入库中的包之前，先在这里添加该库。
+- **`app/moon.pkg`** 导入入口使用的包，并将其声明为原生可执行包。
+- **`app/main.mbt`** 定义 async 入口、HTML 和应用构建器。
+- **`proton.project.json`** 告诉 CLI 要运行哪个包，以及如何标识和打包应用。
+
+模块依赖和包导入是两个层次。模块依赖使模块可用；包导入选择该包需要的 API 与别名。
 
 ## 2. 准备并运行
 
@@ -74,6 +90,6 @@ proton_cli build
 
 ## 下一步
 
-通过[项目结构](../introduction/project-structure.md)了解生成的文件。想为当前页面增加交互，可以阅读[从前端调用后端](commands-events.md)；想同时用 MoonBit 编写界面，可以跟随[完整前后端示例](isomorphic.md)。
+想为当前页面增加交互，可以阅读[从前端调用后端](commands-events.md)；想同时用 MoonBit 编写界面，可以跟随[完整前后端示例](isomorphic.md)。
 
 如果应用无法启动，执行 `proton_cli doctor` 并查看终端中的完整错误。如果构建成功却仍显示旧页面，先停止旧进程，再重新运行 `dev`；此模板没有提供前端热更新的服务器。

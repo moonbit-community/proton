@@ -26,15 +26,47 @@ proton_cli dev
 
 编辑前先关闭应用。保留生成的模块名与包导入，以下修改均在现有模板上追加。
 
+## 模板组织
+
+`isomorphic` 模板采用 MoonBit 前端，包含三个模块：
+
+```text
+todo-app/
+  moon.work
+  proton.project.json
+  shared/
+    moon.mod
+    moon.pkg
+    todo_contract.mbt
+  backend/
+    moon.mod
+    app/
+      moon.pkg
+      main.mbt
+    todo/
+      moon.pkg
+      backend.mbt
+      commands.mbt
+  frontend/
+    moon.mod
+    main/
+      moon.pkg
+      main.mbt
+    internal/query/
+    public/
+```
+
+根目录的 `moon.work` 连接三个模块：
+
+- **shared** 定义可序列化的载荷，以及命令、事件描述符，供两个构建目标使用。
+- **backend** 编译为原生代码。`todo/backend.mbt` 保存 Todo 状态和业务操作，`todo/commands.mbt` 绑定操作，`app/main.mbt` 启动应用。
+- **frontend** 编译为 JavaScript。`main/main.mbt` 定义 Rabbita 界面，`public/` 保存 HTML 和样式表。
+
+模板中的 `frontend/internal/query` 管理查询状态与订阅。它属于生成的应用，可以随应用一起修改，并不是 Proton 公共 API。
+
+应用命令通过普通 bind 调用注册，这个模板无需命令代码生成规则。
+
 ## 理解已有流程
-
-可以同时打开这些文件：
-
-- **`shared/todo_contract.mbt`** 定义请求、`TodoItem`、`TodoSnapshot`、`MutationReply` 及描述符。
-- **`backend/todo/backend.mbt`** 保存列表与修订号，实现修改操作。
-- **`backend/todo/commands.mbt`** 将描述符绑定到方法。
-- **`frontend/main/main.mbt`** 管理输入草稿、UI 消息和 Rabbita 视图。
-- **`backend/app/main.mbt`** 启动应用、安装命令，并在窗口生命周期中建立和移除事件目标。
 
 已有的创建操作中，`Create` 调用 `create_todo`，后端校验并修改状态，`MutationReply` 返回成功或业务拒绝，`todos_changed` 让前端快照失效并触发查询。
 

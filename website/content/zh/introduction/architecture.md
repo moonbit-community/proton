@@ -72,4 +72,4 @@ renderer 与宿主有独立的执行环境。Proton 在页面中注入 bridge，
 | 使用前端开发服务器 | CLI 配置的开发 URL | setup 安装的共享运行时与 helper |
 | 打包应用 | 内联内容或打包的静态资源；URL 入口也可使用远程页面 | 产物携带的运行时与 helper |
 
-前端开发服务器只提供页面资源，不承担宿主业务逻辑。通过普通浏览器访问同一个 URL 时，没有 Proton 注入的原生 bridge。打包将应用可执行文件、所需页面资源、CEF 运行时和 helper 组装成可分发产物，源码组织与构建输出见[项目结构](project-structure.md)，打包格式及前提见 Command Line Interface 章节。
+前端开发服务器只提供页面资源，不承担宿主业务逻辑。通过普通浏览器访问同一个 URL 时，没有 Proton 注入的原生 bridge。打包将应用可执行文件、所需页面资源、CEF 运行时和 helper 组装成可分发产物，文件职责与输出路径见 Configuration 章节，打包格式及前提见 Command Line Interface 章节。

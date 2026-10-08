@@ -6,6 +6,26 @@
 
 `identifier` 会去除首尾空白，必须包含至少两个非空的点分段。每段以 ASCII 字母或数字开头，仅允许 ASCII 字母、数字和连字符。
 
+## 配置职责与目录布局
+
+Proton 不要求使用 minimal 或 isomorphic 模板的目录布局。CLI 根据本文件定位后端、前端和资源；各路径的解析规则见本页“路径与资源”。
+
+| 文件或入口 | 职责 |
+| --- | --- |
+| moon.mod | 模块名称和版本化依赖 |
+| moon.pkg | 包导入、目标及可执行入口声明 |
+| moon.work（使用多个模块时） | 将模块组织为工作区 |
+| proton.project.json | 应用身份、CLI 构建路径与打包元数据 |
+| MoonBit App 构建器 | 窗口、命令、capability 和生命周期行为 |
+
+模块依赖使模块可用，包导入选择当前包使用的 API。项目配置中的 backend.package 选择构建入口，不代替 Moon 的包声明。
+
+## 构建输出
+
+Moon 默认将构建产物写入 _build/。前端输出位置取决于前端构建工具，应与 frontend.dist 对应；frontend/dist 是 isomorphic 模板的选择，不是框架固定路径。打包器将分发产物写入 package.output，默认 dist。
+
+这些目录保存生成产物，内容由源码、构建命令和项目配置决定。setup 安装的运行时与 helper 位于用户级共享存储，不属于应用源码目录。
+
 ## 顶层字段
 
 | 字段 | 类型 | 要求与含义 |

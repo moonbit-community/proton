@@ -6,6 +6,26 @@ The default filename is `proton.project.json`. To use another filename such as `
 
 `identifier` is trimmed and must have at least two nonempty dot-separated components. Each component starts with an ASCII letter or digit and contains only ASCII letters, digits or hyphens.
 
+## Configuration ownership and directory layout
+
+Proton does not require the directory layout of either scaffold template. The CLI locates the backend, frontend and resources through this file; see the path resolution rules under Paths and resources below.
+
+| File or entry | Responsibility |
+| --- | --- |
+| moon.mod | Module name and versioned dependencies |
+| moon.pkg | Package imports, targets and executable entry declarations |
+| moon.work (when using multiple modules) | Groups modules into a workspace |
+| proton.project.json | Application identity, CLI build paths and packaging metadata |
+| MoonBit App builder | Windows, commands, capabilities and lifecycle behavior |
+
+A module dependency makes a module available; a package import selects the APIs used by that package. backend.package selects the build entry and does not replace Moon's package declarations.
+
+## Build output
+
+Moon writes build artifacts under _build/ by default. Frontend output depends on the frontend build tool and should correspond to frontend.dist. frontend/dist is an isomorphic template choice, not a fixed framework path. The packager writes distributables to package.output, which defaults to dist.
+
+These directories hold generated artifacts determined by source, build commands and project configuration. The runtime and helper installed by setup live in shared user-level storage, outside the application source tree.
+
 ## Top-level fields
 
 | Field | Type | Requirement / meaning |
