@@ -589,12 +589,13 @@ priv struct DialogCompletionStore {
 ///|
 /// Sole owner of the native runtime event queue.
 ///
-/// Dialog completions are delivered directly to their waiters. Every other
-/// event remains in `session_events` until the runtime session dispatches it.
+/// Dialog, cookie, and PDF completions are delivered directly to their waiters.
+/// Other events remain queued until the runtime session dispatches them.
 priv struct RuntimeEventPump {
   runtime : @native.Runtime
   dialog_completions : DialogCompletionStore
   cookie_completions : CookieCompletionStore
+  pdf_completions : PdfCompletionStore
   session_events : Array[@native.RuntimeEvent]
 }
 
@@ -672,7 +673,7 @@ pub struct WebContentsHandle {
   send_browser_command : (String, Int?) -> Unit raise WindowSessionError
   download_browser_url : (String) -> Unit raise WindowSessionError
   print_browser : () -> Unit raise WindowSessionError
-  print_browser_to_pdf : (String, PdfPrintOptions) -> Int raise WindowSessionError
+  print_browser_to_pdf : async (String, PdfPrintOptions) -> Unit
   find_browser_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
   stop_browser_find : (Bool) -> Unit raise WindowSessionError
   set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
@@ -972,20 +973,6 @@ pub extend PdfPrintOptions with Eq::{not_equal, equal}
 pub extend PdfPrintOptions with Debug::{to_repr}
 
 ///|
-/// Completion of one `print_to_pdf` request.
-pub(all) struct PdfPrintResult {
-  request_id : Int
-  path : String
-  success : Bool
-} derive(Debug, Eq)
-
-///|
-pub extend PdfPrintResult with Eq::{not_equal, equal}
-
-///|
-pub extend PdfPrintResult with Debug::{to_repr}
-
-///|
 /// The result of an asynchronous native close request.
 pub(all) enum WindowCloseDecision {
   Allow
@@ -1181,7 +1168,6 @@ pub(all) enum WebContentsEvent {
   TitleUpdated(title~ : String)
   LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
   FoundInPage(result~ : FindInPageResult)
-  PdfPrinted(result~ : PdfPrintResult)
   ResourceResponse(url~ : String, status_code~ : Int)
   ResourceCompleted(url~ : String, status~ : Int, received_bytes~ : Int64)
   /// A network resource request observed before Chromium sends it.

@@ -13,7 +13,6 @@ pub extend Request with FromJson::{from_json}
 ///|
 struct Reply {
   ok : Bool
-  request_id : Int
   message : String
 } derive(ToJson, FromJson)
 
@@ -54,28 +53,6 @@ let pdf_path : String = {
     directory + "proton-print-review.pdf"
   } else {
     directory + @path.sep.to_string() + "proton-print-review.pdf"
-  }
-}
-
-///|
-fn js_escape(text : String) -> String {
-  text
-  .replace_all(old="\\", new="\\\\")
-  .replace_all(old="\"", new="\\\"")
-  .replace_all(old="\n", new="\\n")
-  .replace_all(old="\r", new="\\r")
-}
-
-///|
-fn show_status(message : String) -> Unit {
-  match browser_slot.val {
-    Some(browser) =>
-      browser.eval(
-        "document.querySelector(\"#status\").textContent = \"\{js_escape(message)}\";",
-      ) catch {
-        _ => ()
-      }
-    None => ()
   }
 }
 
@@ -125,28 +102,21 @@ fn pdf_options(profile : String) -> @proton.PdfPrintOptions {
 }
 
 ///|
-fn run(request : Request) -> Reply {
+async fn run(request : Request) -> Reply {
   match browser_slot.val {
     Some(browser) =>
       try {
         if request.action == "print" {
           browser.print()
-          { ok: true, request_id: 0, message: "System print flow opened", }
+          { ok: true, message: "System print flow opened", }
         } else {
-          let request_id = browser.print_to_pdf(
-            pdf_path,
-            options=pdf_options(request.profile),
-          )
-          {
-            ok: true,
-            request_id,
-            message: "PDF request \{request_id} started",
-          }
+          browser.print_to_pdf(pdf_path, options=pdf_options(request.profile))
+          { ok: true, message: "PDF complete: \{pdf_path}", }
         }
       } catch {
-        error => { ok: false, request_id: 0, message: error.to_string(), }
+        error => { ok: false, message: error.to_string(), }
       }
-    None => { ok: false, request_id: 0, message: "browser is not ready", }
+    None => { ok: false, message: "browser is not ready", }
   }
 }
 
@@ -169,16 +139,6 @@ fn page() -> String {
 async fn main {
   @proton.html("Print and PDF", page(), width=1040, height=760, debug=true)
   .commands(register_commands)
-  .on_web_contents_event(async fn(_browser, event) noraise {
-    if _browser.view_id() is Some(_) {
-      return
-    }
-    if event is @proton.WebContentsEvent::PdfPrinted(result~) {
-      show_status(
-        "PDF request \{result.request_id}: \{if result.success { "complete" } else { "failed" }}\nPath: \{result.path}",
-      )
-    }
-  })
   .window_lifecycle(
     on_ready=context => {
       let window = context.handle()

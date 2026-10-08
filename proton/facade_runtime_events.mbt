@@ -3,18 +3,20 @@ fn RuntimeEventPump::RuntimeEventPump(
   runtime : @native.Runtime,
   dialog_completions : DialogCompletionStore,
   cookie_completions : CookieCompletionStore,
+  pdf_completions : PdfCompletionStore,
 ) -> RuntimeEventPump {
   RuntimeEventPump::{
     runtime,
     dialog_completions,
     cookie_completions,
+    pdf_completions,
     session_events: [],
   }
 }
 
 ///|
 /// Pulls every currently available native event into its single MoonBit owner.
-/// Dialog completions wake their registered waiter; all other events remain
+/// Operation completions wake their registered waiter; other events remain
 /// queued for the runtime session.
 fn RuntimeEventPump::poll_native_events(
   self : RuntimeEventPump,
@@ -29,7 +31,8 @@ fn RuntimeEventPump::poll_native_events(
       None => polling = false
       Some(event) => {
         did_work = true
-        if !self.dialog_completions.route_completion(event.dialog_completion()) &&
+        if !self.pdf_completions.route(event) &&
+          !self.dialog_completions.route_completion(event.dialog_completion()) &&
           !self.cookie_completions.route_completion(
             event.cookie_get_completion(),
           ) {
@@ -42,7 +45,7 @@ fn RuntimeEventPump::poll_native_events(
 }
 
 ///|
-/// Dispatches queued non-dialog events without allowing another component to
+/// Dispatches queued session events without allowing another component to
 /// consume the native queue. The inbox is cleared only after the whole batch
 /// dispatches successfully.
 fn RuntimeEventPump::drain_session_events(
