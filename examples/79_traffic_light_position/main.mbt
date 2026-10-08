@@ -38,15 +38,17 @@ async fn main {
     #|<body><header>Native window buttons</header><main><h1>Traffic light position</h1><p>On macOS Overlay windows, move the native buttons without changing their size or spacing. Other platforms keep their native layout.</p>
     #|<div id="controls"></div><pre id="state">Waiting for bridge…</pre><p>Try resizing, hiding/showing the controls, minimizing/restoring, and entering/exiting fullscreen. Reset returns to the system position.</p></main>
     #|<script>window.probe=async(action='read')=>{const result=await window.__MoonBit__.core.invokeOp('app:traffic_lights',action);document.querySelector('#state').textContent=JSON.stringify(result,null,2);return result};for(const action of ['custom','origin','reset','hide','show','resize','minimize','restore','fullscreen','windowed']){const b=document.createElement('button');b.textContent=action;b.onclick=()=>probe(action).catch(e=>document.querySelector('#state').textContent=String(e));document.querySelector('#controls').append(b)}setTimeout(()=>probe().catch(()=>{}),300)</script></body></html>
-  @proton.html(
-    "Traffic Light Position",
-    page,
-    width=800,
-    height=520,
-    debug=true,
+  @proton.App(
+    @proton.WindowConfig(
+      "Traffic Light Position",
+      @proton.AppEntry::Html(page),
+      titlebar_style=Overlay,
+      traffic_light_position={ x: 16, y: 18, },
+      width=800,
+      height=520,
+    ),
   )
-  .titlebar_style(Overlay)
-  .traffic_light_position(x=16, y=18)
+  .debug(enabled=true)
   .identifier("dev.proton.79-traffic-light-position")
   .commands(register_commands)
   .window_lifecycle(

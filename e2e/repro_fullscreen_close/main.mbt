@@ -11,13 +11,17 @@ async fn main {
   let loaded = Ref(0)
   let runtime = @cef_store.resolve_default()
   @env.set_env_var("PROTON_RUNTIME_ROOT", runtime.runtime_root())
-  @proton.html(
-    "Fullscreen Close Reproduction",
-    "<h1>Fullscreen close reproduction</h1><p>This window will enter fullscreen, exit fullscreen, then call window.close(). See the terminal for the result.</p>",
-    width=800,
-    height=520,
+  @proton.App(
+    @proton.WindowConfig(
+      "Fullscreen Close Reproduction",
+      @proton.AppEntry::Html(
+        "<h1>Fullscreen close reproduction</h1><p>This window will enter fullscreen, exit fullscreen, then call window.close(). See the terminal for the result.</p>",
+      ),
+      titlebar_style=Overlay,
+      width=800,
+      height=520,
+    ),
   )
-  .titlebar_style(Overlay)
   .identifier("dev.proton.repro-fullscreen-close")
   .on_view_event(fn(_, event) noraise {
     if event is DidFinishLoad {

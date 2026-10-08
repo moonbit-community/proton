@@ -286,12 +286,14 @@ async fn main {
   .identifier("dev.proton.window-controls")
   .add_window(
     "review-child",
-    "Window Controls Child",
-    @proton.AppEntry::Html(
-      "<html><body style='font:16px system-ui;padding:32px'><h2>Child window</h2><p>Use the parent controls to test owner and modal relationships.</p></body></html>",
+    @proton.WindowConfig(
+      "Window Controls Child",
+      @proton.AppEntry::Html(
+        "<html><body style='font:16px system-ui;padding:32px'><h2>Child window</h2><p>Use the parent controls to test owner and modal relationships.</p></body></html>",
+      ),
+      width=420,
+      height=260,
     ),
-    width=420,
-    height=260,
     open_on_start=false,
   )
   .commands(register_commands)

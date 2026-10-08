@@ -1,17 +1,10 @@
 ///|
-fn App::App(
-  title : String,
-  width : Int,
-  height : Int,
-  entry : @manifest.AppEntry,
-  debug : Int,
-  size_hint : @manifest.WindowSizeHint,
-) -> App {
+/// Creates an application with one primary window, registered as `main`.
+pub fn App::App(main_window : WindowConfig) -> App {
   App::{
-    window: @manifest.WindowManifest(title, width, height, size_hint~),
-    entry,
+    main_window_config: main_window.snapshot(),
     windows: [],
-    debug_level_value: debug,
+    debug_level_value: 0,
     headless_value: false,
     accessibility_mode_value: AccessibilityMode::Automatic,
     application_identity: None,
@@ -35,7 +28,6 @@ fn App::App(
     command_capabilities: [],
     extension_capabilities: [],
     application_lifecycle_hooks: [],
-    planned_views: [],
     before_quit_handler: None,
     will_quit_handler: None,
     quit_handlers: [],
@@ -64,12 +56,6 @@ fn App::App(
 }
 
 ///|
-fn App::set_entry(self : App, entry : @manifest.AppEntry) -> App {
-  self.entry = entry
-  self
-}
-
-///|
 fn App::validation_error(self : App) -> AppConfigurationError? {
   if self.validation_errors.get(0) is Some(error) {
     Some(error)
@@ -88,6 +74,14 @@ fn App::validation_error(self : App) -> AppConfigurationError? {
       ),
     )
   } else {
+    if self.main_window_config.validation_error() is Some(error) {
+      return Some(error)
+    }
+    for (_, config, _) in self.windows {
+      if config.validation_error() is Some(error) {
+        return Some(error)
+      }
+    }
     None
   }
 }
@@ -130,7 +124,14 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
     accessibility_mode: self.accessibility_mode_value,
     proxy_server: self.proxy_server_value,
     proxy_bypass: self.proxy_bypass_value,
-    planned_views: self.planned_views.map(view => (view.0, view.1.to_native())),
+    window_views: {
+      let views = Map([])
+      views["main"] = self.main_window_config.native_views()
+      for (id, config, _) in self.windows {
+        views[id] = config.native_views()
+      }
+      views
+    },
     last_window_closed_policy: self.last_window_closed_policy_value,
     launch_input_handlers: self.launch_input_handlers,
     system_appearance_handlers: self.system_appearance_handlers,
@@ -162,14 +163,27 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
 fn App::inline_manifest(self : App) -> @manifest.AppManifest {
   let entry = match proton_dev_url_override() {
     Some(url) => @manifest.AppEntry::Url(url)
-    None => self.entry
+    None => self.main_window_config.entry
   }
   let debug = if runtime_debug_override_enabled() && self.debug_level_value == 0 {
     1
   } else {
     self.debug_level_value
   }
-  @manifest.AppManifest(self.window, entry, debug~, windows=self.windows)
+  @manifest.AppManifest(
+    self.main_window_config.to_manifest(),
+    entry,
+    debug~,
+    windows=self.windows.map(window => {
+      let (id, config, open_on_start) = window
+      @manifest.AppWindowManifest(
+        id,
+        config.to_manifest(),
+        config.entry,
+        open_on_start~,
+      )
+    }),
+  )
 }
 
 ///|

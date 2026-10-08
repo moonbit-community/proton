@@ -10,6 +10,10 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "window-config" {
+    run_window_config_regression()
+    return
+  }
   if name == "task-metrics" {
     run_task_metrics_regression()
     return
@@ -106,8 +110,10 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
     )
     .add_window(
       "secondary",
-      "Secondary",
-      @proton.AppEntry::Html("<h1>Secondary</h1>"),
+      @proton.WindowConfig(
+        "Secondary",
+        @proton.AppEntry::Html("<h1>Secondary</h1>"),
+      ),
       open_on_start=false,
     )
     .on_view_event((view, event) => {
@@ -370,8 +376,10 @@ async fn run_startup_quit_regression(name : String) -> Unit {
     .identifier("dev.proton.startup-quit")
     .add_window(
       "secondary",
-      "Secondary",
-      @proton.AppEntry::Html("<h1>Secondary</h1>"),
+      @proton.WindowConfig(
+        "Secondary",
+        @proton.AppEntry::Html("<h1>Secondary</h1>"),
+      ),
       open_on_start=false,
     )
     .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
@@ -478,9 +486,14 @@ async fn run_app_cancellation_regression(name : String) -> Unit {
   let interrupted = Ref(false)
   let window : Ref[@proton.WindowHandle?] = Ref(None)
   let view : Ref[@proton.ViewHandle?] = Ref(None)
-  let app = @proton.html("App cancellation", "<h1>Main</h1>")
+  let app = @proton.App(
+      @proton.WindowConfig(
+        "App cancellation",
+        @proton.AppEntry::Html("<h1>Main</h1>"),
+        views=[("child", @proton.ViewConfig(width=100, height=100))],
+      ),
+    )
     .identifier("dev.proton.e2e-app-cancel")
-    .with_view("child", @proton.ViewConfig(width=100, height=100))
     .app_lifecycle(
       on_start=context => {
         application.val = Some(context)
@@ -560,8 +573,10 @@ async fn run_cancel_during_startup_regression() -> Unit {
   .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
   .add_window(
     "secondary",
-    "Secondary",
-    @proton.AppEntry::Html("<h1>Secondary</h1>"),
+    @proton.WindowConfig(
+      "Secondary",
+      @proton.AppEntry::Html("<h1>Secondary</h1>"),
+    ),
     open_on_start=false,
   )
   .app_lifecycle(
@@ -1392,8 +1407,10 @@ async fn run_page_recovery_regression(name : String) -> Unit {
     .identifier("dev.proton.recovery")
     .add_window(
       "secondary",
-      "Survivor",
-      @proton.AppEntry::Html("<title>Survivor</title>"),
+      @proton.WindowConfig(
+        "Survivor",
+        @proton.AppEntry::Html("<title>Survivor</title>"),
+      ),
     )
     .capability(@proton_extension.capability(extension))
     .commands(registrar => {
@@ -1545,8 +1562,10 @@ async fn run_closed_record_churn_regression() -> Unit {
   .identifier("dev.proton.closed-record-churn")
   .add_window(
     "secondary",
-    "Temporary",
-    @proton.AppEntry::Html("<title>Temporary</title>"),
+    @proton.WindowConfig(
+      "Temporary",
+      @proton.AppEntry::Html("<title>Temporary</title>"),
+    ),
     open_on_start=false,
   )
   .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
@@ -1669,4 +1688,63 @@ async fn run_startup_update_regression(name : String) -> Unit {
   assert_true(@proton.check_for_update() is NotConfigured)
   assert_true(context.val.unwrap().check_for_update() is NotConfigured)
   println("LIFECYCLE_PASSED " + name)
+}
+
+///|
+async fn run_window_config_regression() -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let secondary_activations = Ref(0)
+  let config = @proton.WindowConfig(
+    "Window Config",
+    @proton.AppEntry::Html("<title>Window Config</title>"),
+    views=[("child", @proton.view("about:blank", width=100, height=100))],
+  )
+  @proton.App(config)
+  .identifier("dev.proton.window-config")
+  .add_window("secondary", config, open_on_start=false)
+  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+    ()
+  })
+  .window_lifecycle(
+    on_ready=context => {
+      let window = context.handle()
+      assert_eq(window.views().length(), 1)
+      assert_eq(window.view("child").unwrap().window_id(), context.id())
+      if context.id() == "secondary" {
+        secondary_activations.val += 1
+        return
+      }
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          lifecycle_probe_gate()
+          let manager = context.windows()
+          for _ in 0..<2 {
+            let secondary = manager.open("secondary")
+            let child = secondary.view("child").unwrap()
+            assert_eq(child.window_id(), "secondary")
+            secondary.close()
+            while manager.find("secondary") is Some(_) {
+              @async.sleep(5)
+            }
+            let stale = try {
+              ignore(child.state())
+              false
+            } catch {
+              _ => true
+            }
+            assert_true(stale)
+            // The primary window's child with the same id remains usable.
+            ignore(window.view("child").unwrap().state())
+          }
+          application.val.unwrap().quit()
+        }),
+      )
+    },
+    on_close=_ => (),
+  )
+  .run()
+  assert_eq(secondary_activations.val, 2)
+  println("LIFECYCLE_PASSED window-config")
 }

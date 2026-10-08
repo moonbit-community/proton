@@ -90,10 +90,12 @@ async fn main {
   )
   .add_window(
     "secondary",
-    "Bridge Multi B",
-    @proton.AppEntry::Html(page_html("B")),
-    width=520,
-    height=420,
+    @proton.WindowConfig(
+      "Bridge Multi B",
+      @proton.AppEntry::Html(page_html("B")),
+      width=520,
+      height=420,
+    ),
     open_on_start=false,
   )
   .capability(@proton_extension.capability(multi_window_extension()), targets=[

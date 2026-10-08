@@ -312,14 +312,16 @@ fn open_panel(window : @proton.WindowHandle) -> Unit {
 
 ///|
 async fn main {
-  @proton.asset(
-    "Web Contents View Browser",
-    "52_web_contents_view/app/index.html",
-    width=1120,
-    height=720,
-    debug=true,
+  @proton.App(
+    @proton.WindowConfig(
+      "Web Contents View Browser",
+      @proton.AppEntry::Asset("52_web_contents_view/app/index.html"),
+      titlebar_style=@proton.TitlebarStyle::Overlay,
+      width=1120,
+      height=720,
+    ),
   )
-  .titlebar_style(@proton.TitlebarStyle::Overlay)
+  .debug(enabled=true)
   .capability(@proton_extension.capability(browser_extension()))
   .on_window_event(async fn(window, event) noraise {
     match event {

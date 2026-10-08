@@ -17,11 +17,21 @@ let sidebar =
 
 ///|
 async fn main {
-  @proton.html("Minimal View", sidebar, width=1120, height=720, debug=true)
-  .with_view(
-    "browser",
-    @proton.view("https://example.com/", width=832, height=720, x=288),
+  @proton.App(
+    @proton.WindowConfig(
+      "Minimal View",
+      @proton.AppEntry::Html(sidebar),
+      width=1120,
+      height=720,
+      views=[
+        (
+          "browser",
+          @proton.view("https://example.com/", width=832, height=720, x=288),
+        ),
+      ],
+    ),
   )
+  .debug(enabled=true)
   .identifier("dev.proton.53-view-minimal")
   .run_or_abort()
 }

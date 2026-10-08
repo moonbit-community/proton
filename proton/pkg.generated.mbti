@@ -262,8 +262,9 @@ pub fn AnimationSettings::not_equal(Self, Self) -> Bool
 pub fn AnimationSettings::to_repr(Self) -> @debug.Repr
 
 type App
+pub fn App::App(WindowConfig) -> Self
 pub fn App::accessibility(Self, AccessibilityMode) -> Self
-pub fn App::add_window(Self, String, String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, traffic_light_position? : WindowButtonPosition, open_on_start? : Bool) -> Self
+pub fn App::add_window(Self, String, WindowConfig, open_on_start? : Bool) -> Self
 pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) -> State, on_shutdown~ : async (State) -> Unit) -> Self
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Self
@@ -272,15 +273,12 @@ pub fn App::data_dir(Self) -> String raise AppPathError
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
 pub fn App::document_extension(Self, String) -> Self
-pub fn App::entry_asset(Self, String) -> Self
-pub fn App::entry_file(Self, String) -> Self
-pub fn App::entry_html(Self, String) -> Self
-pub fn App::entry_url(Self, String) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
 pub fn App::identifier(Self, String) -> Self
 pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
 pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
+pub fn App::main_window(Self, WindowConfig) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
 pub fn App::name(Self) -> String raise AppMetadataError
 pub fn App::on_before_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Self
@@ -313,11 +311,6 @@ pub fn App::session_partition(Self, String) -> Self
 pub fn App::set_app_logs_path(Self, path? : String) -> Self raise AppPathError
 pub fn App::set_path(Self, AppPathKind, String) -> Self raise AppPathError
 pub fn App::single_instance(Self, enabled? : Bool) -> Self
-pub fn App::size(Self, width~ : Int, height~ : Int) -> Self
-pub fn App::theme(Self, WindowThemePreference) -> Self
-pub fn App::title(Self, String) -> Self
-pub fn App::titlebar_style(Self, TitlebarStyle) -> Self
-pub fn App::traffic_light_position(Self, x~ : Int, y~ : Int) -> Self
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
 pub fn App::url_scheme(Self, String) -> Self
 pub fn App::version(Self) -> String raise AppMetadataError
@@ -325,7 +318,6 @@ pub fn App::web_request_cancel_prefix(Self, String) -> Self
 pub fn App::web_request_header_prefix(Self, String, String, String) -> Self
 pub fn App::web_request_redirect_prefix(Self, String, String) -> Self
 pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Self
-pub fn App::with_view(Self, String, ViewConfig) -> Self
 
 pub(all) enum AppPathKind {
   Home
@@ -1225,6 +1217,19 @@ pub(all) enum WindowCloseDecision {
 pub fn WindowCloseDecision::equal(Self, Self) -> Bool
 pub fn WindowCloseDecision::not_equal(Self, Self) -> Bool
 pub fn WindowCloseDecision::to_repr(Self) -> @debug.Repr
+
+pub(all) struct WindowConfig {
+  title : String
+  entry : @manifest.AppEntry
+  width : Int
+  height : Int
+  size_hint : WindowSizeHint
+  titlebar_style : TitlebarStyle
+  theme : WindowThemePreference
+  traffic_light_position : WindowButtonPosition?
+  views : Array[(String, ViewConfig)]
+}
+pub fn WindowConfig::WindowConfig(String, @manifest.AppEntry, width? : Int, height? : Int, size_hint? : WindowSizeHint, titlebar_style? : TitlebarStyle, theme? : WindowThemePreference, traffic_light_position? : WindowButtonPosition, views? : Array[(String, ViewConfig)]) -> Self
 
 pub struct WindowContext {
   id : String
