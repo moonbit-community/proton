@@ -153,7 +153,7 @@ async fn spawn_quit_chain_probe(
   root : String,
   output_root : String,
   mode : String,
-  cdp_port : Int,
+  run_id : Int,
   log_path : String,
   ready_path : String,
   gate_path : String,
@@ -164,7 +164,7 @@ async fn spawn_quit_chain_probe(
     output_path,
     create_mode=@fs.CreateOrTruncate,
   )
-  let env = app_process_env(root, output_root, "quit_chain", cdp_port)
+  let env = app_process_env(root, output_root, "quit_chain", run_id)
   env["PROTON_QUIT_CHAIN_MODE"] = mode
   env["PROTON_QUIT_CHAIN_LOG"] = log_path
   env["PROTON_QUIT_CHAIN_READY"] = ready_path
@@ -192,7 +192,7 @@ async fn run_quit_chain_case(
   expected_log : Array[String],
   timeout : Int,
 ) -> Unit {
-  let cdp_port = choose_cdp_port()
+  let run_id = next_app_run_id()
   let log_path = join_path(output_root, "quit-chain-" + mode + ".chain")
   let ready_path = join_path(output_root, "quit-chain-" + mode + ".ready")
   let gate_path = join_path(output_root, "quit-chain-" + mode + ".go")
@@ -203,7 +203,7 @@ async fn run_quit_chain_case(
   }
   @async.with_task_group(group => {
     let app = spawn_quit_chain_probe(
-      group, root, output_root, mode, cdp_port, log_path, ready_path, gate_path,
+      group, root, output_root, mode, run_id, log_path, ready_path, gate_path,
     )
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })

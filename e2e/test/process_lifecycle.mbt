@@ -377,10 +377,10 @@ async fn run_pending_lifecycle_probe_once(
   timeout : Int,
 ) -> Unit {
   let name = "41_app_commands"
-  let port = choose_cdp_port()
-  let target = port.to_string()
+  let run_id = next_app_run_id()
   @async.with_task_group(group => {
-    let app = spawn_scenario_app(group, root, output_root, name, port)
+    let app = spawn_scenario_app(group, root, output_root, name, run_id)
+    let target = wait_for_app_cdp_target(app, timeout)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
     ignore(
@@ -443,10 +443,10 @@ async fn run_event_lifecycle_probe_once(
   timeout : Int,
 ) -> Unit {
   let name = "40_event_broadcast"
-  let port = choose_cdp_port()
-  let target = port.to_string()
+  let run_id = next_app_run_id()
   @async.with_task_group(group => {
-    let app = spawn_scenario_app(group, root, output_root, name, port)
+    let app = spawn_scenario_app(group, root, output_root, name, run_id)
+    let target = wait_for_app_cdp_target(app, timeout)
     let mut stopped = false
     defer (if !stopped { app.process.cancel() })
     ignore(

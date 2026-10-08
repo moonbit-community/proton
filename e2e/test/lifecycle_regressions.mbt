@@ -111,13 +111,13 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
     }
     run_e2e_operation_with_timeout(timeout * 2, name, () => {
       @async.with_task_group(group => {
-        let port = choose_cdp_port()
+        let run_id = next_app_run_id()
         let app = spawn_scenario_app(
           group,
           root,
           output_root,
           "lifecycle:" + name,
-          port,
+          run_id,
         )
         let mut stopped = false
         defer (if !stopped { app.process.cancel() })
@@ -136,15 +136,15 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         guard ready is Some(_) else {
           fail("lifecycle startup timeout" + app_output_suffix(app.output_path))
         }
+        let target = wait_for_app_cdp_target(app, timeout)
         if name == "process-events" {
           // Observe renderer readiness without registering an on_web_contents_event
           // callback, which would mask application-level dispatch regressions.
           let ready = @async.with_timeout_opt(timeout, () => {
-            while !discover_targets_for_poll(cdp_target_from(port.to_string())).any(target => {
-                      target.target_type == "page" &&
-                      target.title == "Process Events View"
-                    },
-                  ) {
+            while !discover_targets_for_poll(cdp_target_from(target)).any(target => {
+                    target.target_type == "page" &&
+                    target.title == "Process Events View"
+                  }) {
               @async.sleep(25)
             }
           })
@@ -157,7 +157,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
           let page = connect_spawned_page(
             group,
             app,
-            port.to_string(),
+            target,
             timeout,
             title="No Bridge",
           )
@@ -168,7 +168,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
           )
         }
         if name == "proxy-config" || name == "proxy-env" {
-          let page = connect_spawned_page(group, app, port.to_string(), timeout)
+          let page = connect_spawned_page(group, app, target, timeout)
           assert_true(
             evaluate_bool(
               page, "location.href === 'http://proton-proxy.invalid:8080/probe' && document.title === 'Proton Proxy Response' && document.readyState === 'complete'",
@@ -187,7 +187,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
           let page = connect_spawned_page(
             group,
             app,
-            port.to_string(),
+            target,
             timeout,
             title="Failed Page",
           )
@@ -204,14 +204,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
             "checked",
           )
         }
-        ignore(
-          wait_for_scenario_app_shutdown(
-            app,
-            port.to_string(),
-            snapshot,
-            timeout,
-          ),
-        )
+        ignore(wait_for_scenario_app_shutdown(app, target, snapshot, timeout))
         assert_true(
           app_output_suffix(app.output_path).contains(
             "LIFECYCLE_PASSED " + name,
