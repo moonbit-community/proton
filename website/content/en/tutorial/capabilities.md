@@ -1,6 +1,6 @@
 # Using native capabilities
 
-Extensions expose reusable host operations to the renderer. A capability installs an extension's backend handlers and grants access to a specific scope. This guide reads one local text file from the minimal application.
+Extensions expose reusable host operations to the renderer. A capability installs an extension's backend handlers and grants access to a specific scope. This tutorial adds file reading to the [minimal application](first-app.md): the backend grants one directory, and the page requests a text file inside it.
 
 ## Add the filesystem extension
 

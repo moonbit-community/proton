@@ -88,8 +88,8 @@ proton_cli build
 
 A successful build creates the native executable; it does not yet assemble a distributable application. [Build and distribute](../command-line-interface/packaging.md) explains that next step.
 
+If the app does not start, run `proton_cli doctor` and inspect the full terminal error. If it builds but shows the old page, stop the previous process and rerun `dev`; this template has no frontend hot-reload server.
+
 ## Where to go next
 
 To add interaction to this page, follow [calling the backend](commands-events.md). To write the UI in MoonBit too, use the [complete isomorphic example](isomorphic.md).
-
-If the app does not start, run `proton_cli doctor` and inspect the full terminal error. If it builds but shows the old page, stop the previous process and rerun `dev`; this template has no frontend hot-reload server.

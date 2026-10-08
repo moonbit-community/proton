@@ -1,6 +1,6 @@
 # Managing windows
 
-The application builder describes windows before startup. A `WindowHandle` controls a running window. This guide uses the minimal project and its existing package imports.
+This tutorial adds a secondary window to the [minimal application](first-app.md), then controls its visibility and closing behavior. Start from that project with its existing package imports; replace its entry point with the code below.
 
 ## Create a second window
 

@@ -35,7 +35,7 @@ MoonBit 二进制目录必须在 PATH 中。使用内联 HTML 的 minimal 应用
 
 运行时和 helper 不写入项目源码，而是在打包时组装到应用产物中。CLI 和 Proton 模块版本应保持一致。`proton_cli doctor` 检查项目配置、工具、运行时和 helper，不修改它们。
 
-创建项目和首次运行的逐步操作仅放在[最小应用教程](../tutorial/first-app.md)中。
+工具安装完成后，可按[最小应用教程](../tutorial/first-app.md)创建自己的应用。下面的源码检出步骤用于运行本书的仓库示例，创建应用不需要检出 Proton 仓库。
 
 ## 源码与运行时
 
@@ -48,3 +48,5 @@ git checkout 51a88c4c0892ff9628e5795fc598d05262e96daa
 moon update
 proton_cli cef setup
 ```
+
+安装完成后，在此仓库根目录执行相应[示例页面](../examples/01_run.md)中的运行命令。这些命令使用仓库工作区，不应在自己创建的应用目录中执行。
