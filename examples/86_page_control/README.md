@@ -1,11 +1,11 @@
 # Page History and Inserted CSS
 
 Manual review for Proton's page-control surface:
-`BrowserHandle::navigation_history()` and
-`BrowserHandle::insert_css()` / `BrowserHandle::remove_inserted_css()`,
+`WebContentsHandle::navigation_history()` and
+`WebContentsHandle::insert_css()` / `WebContentsHandle::remove_inserted_css()`,
 matching Electron's `webContents.navigationHistory`,
-`webContents.insertCSS`, and `webContents.removeInsertedCSS`. `ViewHandle`
-exposes the same three operations for web contents views.
+`webContents.insertCSS`, and `webContents.removeInsertedCSS`. Obtain the handle
+from either `WindowHandle::web_contents()` or `ViewHandle::web_contents()`.
 
 Run the example from a terminal:
 
@@ -51,8 +51,8 @@ transition of each entry.
   element, so page scripts can see them. Chromium applies them to the document
   that inserted them; navigation drops them, like Electron's `insertCSS`.
 - Electron's `navigationHistory.goToIndex`, `clear`, and `restore` have no CEF
-  counterpart. Use **Back**, `BrowserHandle::back()`, and
-  `BrowserHandle::forward()` to move through the history.
+  counterpart. Use **Back**, `WebContentsHandle::back()`, and
+  `WebContentsHandle::forward()` to move through the history.
 
 ## Platform matrix
 

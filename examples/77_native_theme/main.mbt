@@ -103,7 +103,7 @@ fn push_state(state : ThemeState) -> Unit {
   match window_slot.val {
     Some(window) =>
       window
-      .browser()
+      .web_contents()
       .eval(
         "window.nativeThemeReview.apply(" + state.to_json().stringify() + ");",
       ) catch {

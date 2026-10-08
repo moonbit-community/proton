@@ -168,7 +168,7 @@ test "quit request is an application-level runtime event" {
 
 ///|
 test "view closed events preserve owning window and view ids" {
-  let event = RuntimeEvent::ViewEvent(7L, 11L, Closed)
+  let event = RuntimeEvent::ViewClosed(7L, 11L)
   assert_eq(event.event_type(), "view_closed")
   assert_true(event.is_view_closed())
   assert_eq(event.window_id(), Some(7L))
@@ -179,6 +179,7 @@ test "view closed events preserve owning window and view ids" {
 test "browser page events preserve window ids and payloads" {
   let event = RuntimeEvent::BrowserEvent(
     7L,
+    None,
     NativeBrowserEvent::LoadFailed(
       "https://example.test/failed", -105, "name not resolved",
     ),
@@ -197,6 +198,7 @@ test "browser page events preserve window ids and payloads" {
 test "renderer termination events preserve status and error code separately" {
   let event = RuntimeEvent::BrowserEvent(
     7L,
+    None,
     NativeBrowserEvent::RendererProcessTerminated(
       "https://example.test/app", 2, -7, "render process crashed",
     ),
@@ -213,17 +215,17 @@ test "renderer termination events preserve status and error code separately" {
 
 ///|
 test "view renderer termination events preserve view identity and details" {
-  let event = RuntimeEvent::ViewEvent(
+  let event = RuntimeEvent::BrowserEvent(
     7L,
-    11L,
-    NativeViewEvent::RendererProcessTerminated(
+    Some(11L),
+    NativeBrowserEvent::RendererProcessTerminated(
       "https://example.test/view", 1, -9, "view renderer stopped",
     ),
   )
-  assert_eq(event.event_type(), "view_renderer_process_terminated")
+  assert_eq(event.event_type(), "browser_renderer_process_terminated")
   assert_eq(event.window_id(), Some(7L))
   assert_eq(event.view_id(), Some(11L))
-  guard event.view_renderer_process_termination() is Some(info) else {
+  guard event.renderer_process_termination() is Some(info) else {
     fail("expected view renderer termination payload")
   }
   assert_eq(info.url, "https://example.test/view")
@@ -244,11 +246,11 @@ test "find result events preserve targets and match details" {
     selection_height: 12,
     final_update: true,
   }
-  let browser = RuntimeEvent::BrowserEvent(7L, FindResult(result))
+  let browser = RuntimeEvent::BrowserEvent(7L, None, FindResult(result))
   assert_eq(browser.event_type(), "browser_found_in_page")
   assert_eq(browser.find_in_page_result(), Some(result))
-  let view = RuntimeEvent::ViewEvent(7L, 11L, FindResult(result))
-  assert_eq(view.event_type(), "view_found_in_page")
+  let view = RuntimeEvent::BrowserEvent(7L, Some(11L), FindResult(result))
+  assert_eq(view.event_type(), "browser_found_in_page")
   assert_eq(view.window_id(), Some(7L))
   assert_eq(view.view_id(), Some(11L))
   assert_eq(view.find_in_page_result(), Some(result))
@@ -261,7 +263,7 @@ test "PDF print events preserve window and completion details" {
     path: "/tmp/review.pdf",
     success: true,
   }
-  let event = RuntimeEvent::BrowserPdfPrinted(7L, result)
+  let event = RuntimeEvent::BrowserPdfPrinted(7L, None, result)
   assert_eq(event.event_type(), "browser_pdf_print_finished")
   assert_eq(event.window_id(), Some(7L))
   assert_eq(event.pdf_print_result(), Some(result))

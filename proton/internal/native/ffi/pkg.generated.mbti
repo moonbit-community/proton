@@ -195,13 +195,37 @@ pub fn proton_update_stage_write_ffi(Int64, Bytes, Int, FixedArray[Byte], Int) -
 
 pub fn proton_view_browser_command_ffi(ViewHandle, Bytes, Int) -> Int
 
+pub fn proton_view_clear_auth_cache_ffi(ViewHandle, Int) -> Int
+
+pub fn proton_view_clear_cache_ffi(ViewHandle, Int) -> Int
+
+pub fn proton_view_clear_certificate_exceptions_ffi(ViewHandle, Int) -> Int
+
+pub fn proton_view_close_all_connections_ffi(ViewHandle, Int) -> Int
+
+pub fn proton_view_cookie_begin_get_ffi(ViewHandle, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
+
+pub fn proton_view_cookie_delete_ffi(ViewHandle, Int, Bytes, Bytes) -> Int
+
+pub fn proton_view_cookie_flush_ffi(ViewHandle, Int) -> Int
+
+pub fn proton_view_cookie_set_ffi(ViewHandle, Int, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int) -> Int
+
 pub fn proton_view_destroy_ffi(ViewHandle) -> Int
+
+pub fn proton_view_download_url_ffi(ViewHandle, Int, Bytes) -> Int
 
 pub fn proton_view_eval_ffi(ViewHandle, Bytes) -> Int
 
 pub fn proton_view_find_in_page_ffi(ViewHandle, Bytes, Int, Int, Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_view_get_browser_focus_state_ffi(ViewHandle, @ref.Ref[Int]) -> Int
+
+pub fn proton_view_get_browser_loading_ffi(ViewHandle, Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_view_get_browser_title_ffi(ViewHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_view_get_browser_url_ffi(ViewHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_view_get_devtools_state_ffi(ViewHandle, @ref.Ref[Int]) -> Int
 
@@ -219,7 +243,13 @@ pub fn proton_view_load_url_ffi(ViewHandle, Bytes) -> Int
 
 pub fn proton_view_navigation_history_json_ffi(ViewHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
+pub fn proton_view_print_ffi(ViewHandle, Int) -> Int
+
+pub fn proton_view_print_to_pdf_ffi(ViewHandle, Int, Bytes, Int, Int, Double, Double, Double, Int, Int, Double, Double, Double, Double, Bytes, Int, Bytes, Bytes, Int, Int, @ref.Ref[Int]) -> Int
+
 pub fn proton_view_remove_page_css_ffi(ViewHandle, Int64) -> Int
+
+pub fn proton_view_respond_browser_request_ffi(ViewHandle, Int, Int64, Bytes, Bytes) -> Int
 
 pub fn proton_view_set_audio_muted_ffi(ViewHandle, Int) -> Int
 
@@ -257,29 +287,29 @@ pub fn proton_window_browser_command_ffi(WindowHandle, Bytes, Int) -> Int
 
 pub fn proton_window_cancel_dialog_ffi(WindowHandle, Int64) -> Int
 
-pub fn proton_window_clear_auth_cache_ffi(WindowHandle) -> Int
+pub fn proton_window_clear_auth_cache_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int
 
-pub fn proton_window_clear_cache_ffi(WindowHandle) -> Int
+pub fn proton_window_clear_cache_ffi(WindowHandle, Int) -> Int
 
-pub fn proton_window_clear_certificate_exceptions_ffi(WindowHandle) -> Int
+pub fn proton_window_clear_certificate_exceptions_ffi(WindowHandle, Int) -> Int
 
-pub fn proton_window_close_all_connections_ffi(WindowHandle) -> Int
+pub fn proton_window_close_all_connections_ffi(WindowHandle, Int) -> Int
 
 pub fn proton_window_close_ffi(WindowHandle) -> Int
 
-pub fn proton_window_cookie_begin_get_ffi(WindowHandle, Bytes, Int, @ref.Ref[Int64]) -> Int
+pub fn proton_window_cookie_begin_get_ffi(WindowHandle, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
 
-pub fn proton_window_cookie_delete_ffi(WindowHandle, Bytes, Bytes) -> Int
+pub fn proton_window_cookie_delete_ffi(WindowHandle, Int, Bytes, Bytes) -> Int
 
-pub fn proton_window_cookie_flush_ffi(WindowHandle) -> Int
+pub fn proton_window_cookie_flush_ffi(WindowHandle, Int) -> Int
 
-pub fn proton_window_cookie_set_ffi(WindowHandle, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int) -> Int
+pub fn proton_window_cookie_set_ffi(WindowHandle, Int, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int) -> Int
 
 pub fn proton_window_destroy_ffi(WindowHandle) -> Int
 
-pub fn proton_window_download_url_ffi(WindowHandle, Bytes) -> Int
+pub fn proton_window_download_url_ffi(WindowHandle, Int, Bytes) -> Int
 
 pub fn proton_window_emit_bridge_event_json_ffi(WindowHandle, Bytes) -> Int
 
@@ -293,11 +323,11 @@ pub fn proton_window_focus_ffi(WindowHandle) -> Int
 
 pub fn proton_window_get_browser_focus_state_ffi(WindowHandle, @ref.Ref[Int]) -> Int
 
-pub fn proton_window_get_browser_loading_ffi(WindowHandle, @ref.Ref[Int]) -> Int
+pub fn proton_window_get_browser_loading_ffi(WindowHandle, Int, @ref.Ref[Int]) -> Int
 
-pub fn proton_window_get_browser_title_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_get_browser_title_ffi(WindowHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
-pub fn proton_window_get_browser_url_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_get_browser_url_ffi(WindowHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_get_content_size_ffi(WindowHandle, @ref.Ref[Int], @ref.Ref[Int]) -> Int
 
@@ -323,13 +353,13 @@ pub fn proton_window_minimize_ffi(WindowHandle) -> Int
 
 pub fn proton_window_navigation_history_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
-pub fn proton_window_print_ffi(WindowHandle) -> Int
+pub fn proton_window_print_ffi(WindowHandle, Int) -> Int
 
-pub fn proton_window_print_to_pdf_ffi(WindowHandle, Bytes, Int, Int, Double, Double, Double, Int, Int, Double, Double, Double, Double, Bytes, Int, Bytes, Bytes, Int, Int, @ref.Ref[Int]) -> Int
+pub fn proton_window_print_to_pdf_ffi(WindowHandle, Int, Bytes, Int, Int, Double, Double, Double, Int, Int, Double, Double, Double, Double, Bytes, Int, Bytes, Bytes, Int, Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_remove_page_css_ffi(WindowHandle, Int64) -> Int
 
-pub fn proton_window_respond_browser_request_ffi(WindowHandle, Int64, Bytes, Bytes) -> Int
+pub fn proton_window_respond_browser_request_ffi(WindowHandle, Int, Int64, Bytes, Bytes) -> Int
 
 pub fn proton_window_respond_close_request_ffi(WindowHandle, Int64, Int) -> Int
 

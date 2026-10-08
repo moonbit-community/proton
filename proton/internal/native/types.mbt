@@ -224,11 +224,11 @@ enum RuntimeEvent {
   TaskbarButtonClicked(Int64, String)
   NotificationResult(NativeNotificationResult)
   NotificationClicked(String?)
-  BrowserRequest(Int64, NativeBrowserRequest)
-  BrowserDownloadUpdated(Int64, NativeDownloadUpdate)
-  BrowserPdfPrinted(Int64, NativePdfPrintResult)
-  BrowserEvent(Int64, NativeBrowserEvent)
-  ViewEvent(Int64, Int64, NativeViewEvent)
+  BrowserRequest(Int64, Int64?, NativeBrowserRequest)
+  BrowserDownloadUpdated(Int64, Int64?, NativeDownloadUpdate)
+  BrowserPdfPrinted(Int64, Int64?, NativePdfPrintResult)
+  BrowserEvent(Int64, Int64?, NativeBrowserEvent)
+  ViewClosed(Int64, Int64)
   ResourceRequested(NativeResourceRequest)
   ResourceRequestCancelled(Int64)
   QuitRequested
@@ -292,23 +292,6 @@ pub extend PdfPrintSettings with Eq::{not_equal, equal}
 
 ///|
 pub extend PdfPrintSettings with Debug::{to_repr}
-
-///|
-enum NativeViewEvent {
-  LoadingChanged(Bool)
-  Navigated(String)
-  TitleUpdated(String)
-  LoadFailed(String, Int, String)
-  RendererProcessTerminated(String, Int, Int, String)
-  FindResult(NativeFindInPageResult)
-  Closed
-} derive(Debug, Eq)
-
-///|
-pub extend NativeViewEvent with Eq::{not_equal, equal}
-
-///|
-pub extend NativeViewEvent with Debug::{to_repr}
 
 ///|
 pub extend RuntimeEvent with Eq::{not_equal, equal}
@@ -871,31 +854,26 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     TaskbarButtonClicked(_, _) => "taskbar_button_clicked"
     NotificationResult(_) => "notification_result"
     NotificationClicked(_) => "notification_clicked"
-    BrowserRequest(_, Navigation(..)) => "browser_navigation_requested"
-    BrowserRequest(_, NewWindow(..)) => "browser_new_window_requested"
-    BrowserRequest(_, Download(..)) => "browser_download_requested"
-    BrowserRequest(_, Certificate(..)) => "browser_certificate_error"
-    BrowserRequest(_, Media(..)) => "browser_media_permission_requested"
-    BrowserDownloadUpdated(_, _) => "browser_download_updated"
-    BrowserPdfPrinted(_, _) => "browser_pdf_print_finished"
-    BrowserEvent(_, LoadingChanged(_)) => "browser_loading_changed"
-    BrowserEvent(_, Navigated(_)) => "browser_navigated"
-    BrowserEvent(_, TitleUpdated(_)) => "browser_title_updated"
-    BrowserEvent(_, LoadFailed(_, _, _)) => "browser_load_failed"
-    BrowserEvent(_, FindResult(_)) => "browser_found_in_page"
-    BrowserEvent(_, ResourceResponse(_, _)) => "browser_resource_response"
-    BrowserEvent(_, ResourceCompleted(_, _, _)) => "browser_resource_completed"
-    BrowserEvent(_, ResourceRequested(_, _, _)) => "browser_resource_requested"
-    BrowserEvent(_, RendererProcessTerminated(_, _, _, _)) =>
+    BrowserRequest(_, _, Navigation(..)) => "browser_navigation_requested"
+    BrowserRequest(_, _, NewWindow(..)) => "browser_new_window_requested"
+    BrowserRequest(_, _, Download(..)) => "browser_download_requested"
+    BrowserRequest(_, _, Certificate(..)) => "browser_certificate_error"
+    BrowserRequest(_, _, Media(..)) => "browser_media_permission_requested"
+    BrowserDownloadUpdated(_, _, _) => "browser_download_updated"
+    BrowserPdfPrinted(_, _, _) => "browser_pdf_print_finished"
+    BrowserEvent(_, _, LoadingChanged(_)) => "browser_loading_changed"
+    BrowserEvent(_, _, Navigated(_)) => "browser_navigated"
+    BrowserEvent(_, _, TitleUpdated(_)) => "browser_title_updated"
+    BrowserEvent(_, _, LoadFailed(_, _, _)) => "browser_load_failed"
+    BrowserEvent(_, _, FindResult(_)) => "browser_found_in_page"
+    BrowserEvent(_, _, ResourceResponse(_, _)) => "browser_resource_response"
+    BrowserEvent(_, _, ResourceCompleted(_, _, _)) =>
+      "browser_resource_completed"
+    BrowserEvent(_, _, ResourceRequested(_, _, _)) =>
+      "browser_resource_requested"
+    BrowserEvent(_, _, RendererProcessTerminated(_, _, _, _)) =>
       "browser_renderer_process_terminated"
-    ViewEvent(_, _, LoadingChanged(_)) => "view_loading_changed"
-    ViewEvent(_, _, Navigated(_)) => "view_navigated"
-    ViewEvent(_, _, TitleUpdated(_)) => "view_title_updated"
-    ViewEvent(_, _, LoadFailed(_, _, _)) => "view_load_failed"
-    ViewEvent(_, _, RendererProcessTerminated(_, _, _, _)) =>
-      "view_renderer_process_terminated"
-    ViewEvent(_, _, FindResult(_)) => "view_found_in_page"
-    ViewEvent(_, _, Closed) => "view_closed"
+    ViewClosed(_, _) => "view_closed"
     ResourceRequested(_) => "resource_requested"
     ResourceRequestCancelled(_) => "resource_request_cancelled"
     QuitRequested => "quit_requested"
@@ -917,11 +895,11 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | WindowStateChanged(window, _)
     | WindowCloseRequested(window, _)
     | BridgeLifecycleChanged(window, _)
-    | BrowserRequest(window, _)
-    | BrowserDownloadUpdated(window, _)
-    | BrowserPdfPrinted(window, _)
-    | BrowserEvent(window, _)
-    | ViewEvent(window, _, _)
+    | BrowserRequest(window, _, _)
+    | BrowserDownloadUpdated(window, _, _)
+    | BrowserPdfPrinted(window, _, _)
+    | BrowserEvent(window, _, _)
+    | ViewClosed(window, _)
     | TaskbarButtonClicked(window, _) => Some(window)
     ResourceRequested(request) => Some(request.window)
     MenuCommand(_, window) => window
@@ -943,7 +921,11 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
 /// Returns the web contents view associated with this event when one exists.
 pub fn RuntimeEvent::view_id(self : RuntimeEvent) -> Int64? {
   match self {
-    ViewEvent(_, view, _) => Some(view)
+    BrowserEvent(_, view, _)
+    | BrowserRequest(_, view, _)
+    | BrowserDownloadUpdated(_, view, _)
+    | BrowserPdfPrinted(_, view, _) => view
+    ViewClosed(_, view) => Some(view)
     ResourceRequested(request) => request.view
     _ => None
   }
@@ -971,7 +953,7 @@ pub fn RuntimeEvent::resource_request_cancellation(
 
 ///|
 /// The payload of a web contents view lifecycle event.
-pub(all) struct ViewEventInfo {
+pub(all) struct BrowserEventInfo {
   url : String?
   title : String?
   is_loading : Bool?
@@ -981,63 +963,10 @@ pub(all) struct ViewEventInfo {
 } derive(Debug, Eq)
 
 ///|
-pub extend ViewEventInfo with Eq::{not_equal, equal}
+pub extend BrowserEventInfo with Eq::{not_equal, equal}
 
 ///|
-pub extend ViewEventInfo with Debug::{to_repr}
-
-///|
-/// Returns the view event payload when this event carries one.
-pub fn RuntimeEvent::view_event(self : RuntimeEvent) -> ViewEventInfo? {
-  match self {
-    ViewEvent(_, _, LoadingChanged(is_loading)) =>
-      Some({
-        url: None,
-        title: None,
-        is_loading: Some(is_loading),
-        error_code: None,
-        error_text: None,
-        received_bytes: None,
-      })
-    ViewEvent(_, _, Navigated(url)) =>
-      Some({
-        url: Some(url),
-        title: None,
-        is_loading: None,
-        error_code: None,
-        error_text: None,
-        received_bytes: None,
-      })
-    ViewEvent(_, _, TitleUpdated(title)) =>
-      Some({
-        url: None,
-        title: Some(title),
-        is_loading: None,
-        error_code: None,
-        error_text: None,
-        received_bytes: None,
-      })
-    ViewEvent(_, _, LoadFailed(url, error_code, error_text)) =>
-      Some({
-        url: Some(url),
-        title: None,
-        is_loading: None,
-        error_code: Some(error_code),
-        error_text: Some(error_text),
-        received_bytes: None,
-      })
-    ViewEvent(_, _, Closed) =>
-      Some({
-        url: None,
-        title: None,
-        is_loading: None,
-        error_code: None,
-        error_text: None,
-        received_bytes: None,
-      })
-    _ => None
-  }
-}
+pub extend BrowserEventInfo with Debug::{to_repr}
 
 ///|
 pub(all) struct RendererProcessTerminationInfo {
@@ -1054,21 +983,10 @@ pub extend RendererProcessTerminationInfo with Eq::{not_equal, equal}
 pub extend RendererProcessTerminationInfo with Debug::{to_repr}
 
 ///|
-pub fn RuntimeEvent::view_renderer_process_termination(
-  self : RuntimeEvent,
-) -> RendererProcessTerminationInfo? {
+/// Returns the web contents event payload when this event carries one.
+pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> BrowserEventInfo? {
   match self {
-    ViewEvent(_, _, RendererProcessTerminated(url, status, error_code, detail)) =>
-      Some({ url, status, error_code, detail, })
-    _ => None
-  }
-}
-
-///|
-/// Returns the main browser event payload when this event carries one.
-pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
-  match self {
-    BrowserEvent(_, LoadingChanged(is_loading)) =>
+    BrowserEvent(_, _, LoadingChanged(is_loading)) =>
       Some({
         url: None,
         title: None,
@@ -1077,7 +995,7 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_text: None,
         received_bytes: None,
       })
-    BrowserEvent(_, Navigated(url)) =>
+    BrowserEvent(_, _, Navigated(url)) =>
       Some({
         url: Some(url),
         title: None,
@@ -1086,7 +1004,7 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_text: None,
         received_bytes: None,
       })
-    BrowserEvent(_, TitleUpdated(title)) =>
+    BrowserEvent(_, _, TitleUpdated(title)) =>
       Some({
         url: None,
         title: Some(title),
@@ -1095,7 +1013,7 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_text: None,
         received_bytes: None,
       })
-    BrowserEvent(_, LoadFailed(url, error_code, error_text)) =>
+    BrowserEvent(_, _, LoadFailed(url, error_code, error_text)) =>
       Some({
         url: Some(url),
         title: None,
@@ -1104,7 +1022,7 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_text: Some(error_text),
         received_bytes: None,
       })
-    BrowserEvent(_, ResourceResponse(url, status)) =>
+    BrowserEvent(_, _, ResourceResponse(url, status)) =>
       Some({
         url: Some(url),
         title: None,
@@ -1113,7 +1031,7 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_text: None,
         received_bytes: None,
       })
-    BrowserEvent(_, ResourceCompleted(url, status, bytes)) =>
+    BrowserEvent(_, _, ResourceCompleted(url, status, bytes)) =>
       Some({
         url: Some(url),
         title: None,
@@ -1122,7 +1040,7 @@ pub fn RuntimeEvent::browser_event(self : RuntimeEvent) -> ViewEventInfo? {
         error_text: None,
         received_bytes: Some(bytes),
       })
-    BrowserEvent(_, ResourceRequested(url, request_method, will_cancel)) =>
+    BrowserEvent(_, _, ResourceRequested(url, request_method, will_cancel)) =>
       Some({
         url: Some(url),
         title: Some(request_method),
@@ -1141,8 +1059,11 @@ pub fn RuntimeEvent::renderer_process_termination(
   self : RuntimeEvent,
 ) -> RendererProcessTerminationInfo? {
   match self {
-    BrowserEvent(_, RendererProcessTerminated(url, status, error_code, detail)) =>
-      Some({ url, status, error_code, detail, })
+    BrowserEvent(
+      _,
+      _,
+      RendererProcessTerminated(url, status, error_code, detail)
+    ) => Some({ url, status, error_code, detail, })
     _ => None
   }
 }
@@ -1152,15 +1073,14 @@ pub fn RuntimeEvent::find_in_page_result(
   self : RuntimeEvent,
 ) -> NativeFindInPageResult? {
   match self {
-    BrowserEvent(_, FindResult(result)) | ViewEvent(_, _, FindResult(result)) =>
-      Some(result)
+    BrowserEvent(_, _, FindResult(result)) => Some(result)
     _ => None
   }
 }
 
 ///|
 pub fn RuntimeEvent::is_view_closed(self : RuntimeEvent) -> Bool {
-  self is ViewEvent(_, _, Closed)
+  self is ViewClosed(_, _)
 }
 
 ///|
@@ -1199,7 +1119,7 @@ pub fn RuntimeEvent::browser_request(
   self : RuntimeEvent,
 ) -> NativeBrowserRequest? {
   match self {
-    BrowserRequest(_, request) => Some(request)
+    BrowserRequest(_, _, request) => Some(request)
     _ => None
   }
 }
@@ -1209,7 +1129,7 @@ pub fn RuntimeEvent::browser_download_update(
   self : RuntimeEvent,
 ) -> NativeDownloadUpdate? {
   match self {
-    BrowserDownloadUpdated(_, update) => Some(update)
+    BrowserDownloadUpdated(_, _, update) => Some(update)
     _ => None
   }
 }
@@ -1219,7 +1139,7 @@ pub fn RuntimeEvent::pdf_print_result(
   self : RuntimeEvent,
 ) -> NativePdfPrintResult? {
   match self {
-    BrowserPdfPrinted(_, result) => Some(result)
+    BrowserPdfPrinted(_, _, result) => Some(result)
     _ => None
   }
 }

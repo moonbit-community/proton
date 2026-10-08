@@ -74,6 +74,7 @@ void proton_engine_window_free_views(proton_engine_window_t *window) {
   window->views = NULL;
   while (view != NULL) {
     proton_engine_view_t *next = view->next;
+    proton_engine_contents_cookie_cleanup(view);
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
     proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
@@ -93,6 +94,7 @@ void proton_engine_window_collect_views(proton_engine_window_t *window) {
     }
     *cursor = view->next;
     proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
+    proton_engine_contents_cookie_cleanup(view);
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
     free(view);
@@ -257,7 +259,7 @@ void CEF_CALLBACK proton_engine_on_title_change(
     return;
   }
   if (view != NULL) {
-    proton_view_events_title_updated(view->events, title_utf8);
+    proton_browser_session_title_updated(view->browser_session, title_utf8);
     free(title_utf8);
     proton_engine_signal_wait_source(view->window->runtime, PROTON_WAIT_EVENT);
     return;
@@ -295,11 +297,7 @@ static proton_engine_client_t *proton_engine_view_client_create(
                                  sizeof(client->client), &client->refs);
   client->client.base.release = proton_engine_client_release;
   client->browser_lifecycle = browser_lifecycle;
-  // Views wire the life span, load, display, and render handlers: life span
-  // drives the close state machine, load/display feed the view event stream,
-  // and the render handler gives headless (OSR) views a viewport. Find results
-  // are view-scoped. Navigation policy, bridge, downloads, and
-  // permissions stay window-scoped for now.
+  // Views share page handlers but do not install the application command bridge.
   client->client.get_life_span_handler =
       proton_engine_client_get_life_span_handler;
   client->client.get_load_handler = proton_engine_client_get_load_handler;
@@ -310,6 +308,14 @@ static proton_engine_client_t *proton_engine_view_client_create(
                                     ? proton_browser_lifecycle_client(
                                           view->window->browser_lifecycle)
                                     : NULL;
+  if (window_client != NULL) {
+    proton_engine_client_t *parent = (proton_engine_client_t *)window_client;
+    client->web_request_config = parent->web_request_config;
+    proton_web_request_config_retain(client->web_request_config);
+    client->contents_window_id = parent->contents_window_id;
+    client->client.get_download_handler = window_client->get_download_handler;
+    client->client.get_permission_handler = window_client->get_permission_handler;
+  }
   client->client.get_find_handler = window_client != NULL
                                         ? window_client->get_find_handler
                                         : NULL;
@@ -447,19 +453,14 @@ int32_t proton_engine_view_create(
   }
   proton_engine_client_t *client = proton_engine_view_client_create(
       view->browser_lifecycle);
-  proton_browser_policy_t view_policy = {PROTON_BROWSER_POLICY_ALLOW,
-                                         PROTON_BROWSER_POLICY_DENY,
-                                         PROTON_BROWSER_POLICY_DENY,
-                                         PROTON_BROWSER_POLICY_DENY,
-                                         PROTON_BROWSER_POLICY_DENY,
-                                         1};
   view->browser_session = proton_browser_session_create(
-      &view_policy,
+      proton_browser_session_policy(window->browser_session),
       proton_browser_session_web_request_config(window->browser_session),
       proton_engine_browser_signal, NULL);
   view->events = proton_view_events_create();
   if (client == NULL || view->browser_session == NULL ||
       view->events == NULL) {
+    proton_engine_contents_cookie_cleanup(view);
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
     if (client != NULL) {
@@ -475,6 +476,8 @@ int32_t proton_engine_view_create(
   }
   proton_browser_lifecycle_set_client(view->browser_lifecycle,
                                       &client->client);
+  client->contents_view_id = config.public_view;
+  proton_browser_session_bind_contents(view->browser_session, config.public_window, config.public_view);
   proton_browser_session_bind_lifecycle(view->browser_session,
                                         view->browser_lifecycle);
   proton_view_events_bind(view->events, config.public_view,

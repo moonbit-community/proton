@@ -985,16 +985,21 @@ pub extern "C" fn proton_window_get_devtools_state_ffi(
 #borrow(url)
 pub extern "C" fn proton_window_download_url_ffi(
   window : WindowHandle,
+  is_view : Int,
   url : Bytes,
-) -> Int = "proton_window_download_url"
+) -> Int = "proton_contents_download_url"
 
 ///|
-pub extern "C" fn proton_window_print_ffi(window : WindowHandle) -> Int = "proton_window_print"
+pub extern "C" fn proton_window_print_ffi(
+  window : WindowHandle,
+  is_view : Int,
+) -> Int = "proton_contents_print"
 
 ///|
 #borrow(path, page_ranges, header_template, footer_template, out_request_id)
 pub extern "C" fn proton_window_print_to_pdf_ffi(
   window : WindowHandle,
+  is_view : Int,
   path : Bytes,
   landscape : Int,
   print_background : Int,
@@ -1014,7 +1019,7 @@ pub extern "C" fn proton_window_print_to_pdf_ffi(
   generate_tagged_pdf : Int,
   generate_document_outline : Int,
   out_request_id : Ref[Int],
-) -> Int = "proton_window_print_to_pdf"
+) -> Int = "proton_contents_print_to_pdf"
 
 ///|
 #borrow(text, out_request_id)
@@ -1045,35 +1050,39 @@ pub extern "C" fn proton_window_get_navigation_state_ffi(
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_window_get_browser_url_ffi(
   window : WindowHandle,
+  is_view : Int,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
-) -> Int = "proton_window_get_browser_url"
+) -> Int = "proton_contents_get_browser_url"
 
 ///|
 #borrow(buffer, out_required_len)
 pub extern "C" fn proton_window_get_browser_title_ffi(
   window : WindowHandle,
+  is_view : Int,
   buffer : FixedArray[Byte],
   buffer_len : Int,
   out_required_len : Ref[Int],
-) -> Int = "proton_window_get_browser_title"
+) -> Int = "proton_contents_get_browser_title"
 
 ///|
 #borrow(out_is_loading)
 pub extern "C" fn proton_window_get_browser_loading_ffi(
   window : WindowHandle,
+  is_view : Int,
   out_is_loading : Ref[Int],
-) -> Int = "proton_window_get_browser_loading"
+) -> Int = "proton_contents_get_browser_loading"
 
 ///|
 #borrow(action, path)
 pub extern "C" fn proton_window_respond_browser_request_ffi(
   window : WindowHandle,
+  is_view : Int,
   request_id : Int64,
   action : Bytes,
   path : Bytes,
-) -> Int = "proton_window_respond_browser_request"
+) -> Int = "proton_contents_respond_browser_request"
 
 ///|
 #borrow(out_fields)
@@ -1429,15 +1438,17 @@ pub extern "C" fn proton_screen_enumerate_ffi(
 #borrow(url_utf8, out_request_id)
 pub extern "C" fn proton_window_cookie_begin_get_ffi(
   window : WindowHandle,
+  is_view : Int,
   url_utf8 : Bytes,
   include_http_only : Int,
   out_request_id : Ref[Int64],
-) -> Int = "proton_window_cookie_begin_get"
+) -> Int = "proton_contents_cookie_begin_get"
 
 ///|
 #borrow(url_utf8, name_utf8, value_utf8, domain_utf8, path_utf8)
 pub extern "C" fn proton_window_cookie_set_ffi(
   window : WindowHandle,
+  is_view : Int,
   url_utf8 : Bytes,
   name_utf8 : Bytes,
   value_utf8 : Bytes,
@@ -1446,36 +1457,46 @@ pub extern "C" fn proton_window_cookie_set_ffi(
   secure : Int,
   http_only : Int,
   same_site : Int,
-) -> Int = "proton_window_cookie_set"
+) -> Int = "proton_contents_cookie_set"
 
 ///|
 #borrow(url_utf8, name_utf8)
 pub extern "C" fn proton_window_cookie_delete_ffi(
   window : WindowHandle,
+  is_view : Int,
   url_utf8 : Bytes,
   name_utf8 : Bytes,
-) -> Int = "proton_window_cookie_delete"
+) -> Int = "proton_contents_cookie_delete"
 
 ///|
-pub extern "C" fn proton_window_cookie_flush_ffi(window : WindowHandle) -> Int = "proton_window_cookie_flush"
+pub extern "C" fn proton_window_cookie_flush_ffi(
+  window : WindowHandle,
+  is_view : Int,
+) -> Int = "proton_contents_cookie_flush"
 
 ///|
-pub extern "C" fn proton_window_clear_cache_ffi(window : WindowHandle) -> Int = "proton_window_clear_cache"
+pub extern "C" fn proton_window_clear_cache_ffi(
+  window : WindowHandle,
+  is_view : Int,
+) -> Int = "proton_contents_clear_cache"
 
 ///|
 pub extern "C" fn proton_window_clear_auth_cache_ffi(
   window : WindowHandle,
-) -> Int = "proton_window_clear_auth_cache"
+  is_view : Int,
+) -> Int = "proton_contents_clear_auth_cache"
 
 ///|
 pub extern "C" fn proton_window_clear_certificate_exceptions_ffi(
   window : WindowHandle,
-) -> Int = "proton_window_clear_certificate_exceptions"
+  is_view : Int,
+) -> Int = "proton_contents_clear_certificate_exceptions"
 
 ///|
 pub extern "C" fn proton_window_close_all_connections_ffi(
   window : WindowHandle,
-) -> Int = "proton_window_close_all_connections"
+  is_view : Int,
+) -> Int = "proton_contents_close_all_connections"
 
 ///|
 #borrow(out_image)
@@ -1650,3 +1671,145 @@ pub extern "C" fn window_get_button_position(
   x : Ref[Int],
   y : Ref[Int],
 ) -> Int = "proton_window_get_button_position"
+
+///|
+#borrow(url)
+pub extern "C" fn proton_view_download_url_ffi(
+  window : ViewHandle,
+  is_view : Int,
+  url : Bytes,
+) -> Int = "proton_contents_download_url"
+
+///|
+pub extern "C" fn proton_view_print_ffi(
+  window : ViewHandle,
+  is_view : Int,
+) -> Int = "proton_contents_print"
+
+///|
+#borrow(path, page_ranges, header_template, footer_template, out_request_id)
+pub extern "C" fn proton_view_print_to_pdf_ffi(
+  window : ViewHandle,
+  is_view : Int,
+  path : Bytes,
+  landscape : Int,
+  print_background : Int,
+  scale : Double,
+  paper_width : Double,
+  paper_height : Double,
+  prefer_css_page_size : Int,
+  margin_type : Int,
+  margin_top : Double,
+  margin_right : Double,
+  margin_bottom : Double,
+  margin_left : Double,
+  page_ranges : Bytes,
+  display_header_footer : Int,
+  header_template : Bytes,
+  footer_template : Bytes,
+  generate_tagged_pdf : Int,
+  generate_document_outline : Int,
+  out_request_id : Ref[Int],
+) -> Int = "proton_contents_print_to_pdf"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_view_get_browser_url_ffi(
+  window : ViewHandle,
+  is_view : Int,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_contents_get_browser_url"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_view_get_browser_title_ffi(
+  window : ViewHandle,
+  is_view : Int,
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_contents_get_browser_title"
+
+///|
+#borrow(out_is_loading)
+pub extern "C" fn proton_view_get_browser_loading_ffi(
+  window : ViewHandle,
+  is_view : Int,
+  out_is_loading : Ref[Int],
+) -> Int = "proton_contents_get_browser_loading"
+
+///|
+#borrow(action, path)
+pub extern "C" fn proton_view_respond_browser_request_ffi(
+  window : ViewHandle,
+  is_view : Int,
+  request_id : Int64,
+  action : Bytes,
+  path : Bytes,
+) -> Int = "proton_contents_respond_browser_request"
+
+///|
+#borrow(url_utf8, out_request_id)
+pub extern "C" fn proton_view_cookie_begin_get_ffi(
+  window : ViewHandle,
+  is_view : Int,
+  url_utf8 : Bytes,
+  include_http_only : Int,
+  out_request_id : Ref[Int64],
+) -> Int = "proton_contents_cookie_begin_get"
+
+///|
+#borrow(url_utf8, name_utf8, value_utf8, domain_utf8, path_utf8)
+pub extern "C" fn proton_view_cookie_set_ffi(
+  window : ViewHandle,
+  is_view : Int,
+  url_utf8 : Bytes,
+  name_utf8 : Bytes,
+  value_utf8 : Bytes,
+  domain_utf8 : Bytes,
+  path_utf8 : Bytes,
+  secure : Int,
+  http_only : Int,
+  same_site : Int,
+) -> Int = "proton_contents_cookie_set"
+
+///|
+#borrow(url_utf8, name_utf8)
+pub extern "C" fn proton_view_cookie_delete_ffi(
+  window : ViewHandle,
+  is_view : Int,
+  url_utf8 : Bytes,
+  name_utf8 : Bytes,
+) -> Int = "proton_contents_cookie_delete"
+
+///|
+pub extern "C" fn proton_view_cookie_flush_ffi(
+  window : ViewHandle,
+  is_view : Int,
+) -> Int = "proton_contents_cookie_flush"
+
+///|
+pub extern "C" fn proton_view_clear_cache_ffi(
+  window : ViewHandle,
+  is_view : Int,
+) -> Int = "proton_contents_clear_cache"
+
+///|
+pub extern "C" fn proton_view_clear_auth_cache_ffi(
+  window : ViewHandle,
+  is_view : Int,
+) -> Int = "proton_contents_clear_auth_cache"
+
+///|
+pub extern "C" fn proton_view_clear_certificate_exceptions_ffi(
+  window : ViewHandle,
+  is_view : Int,
+) -> Int = "proton_contents_clear_certificate_exceptions"
+
+///|
+pub extern "C" fn proton_view_close_all_connections_ffi(
+  window : ViewHandle,
+  is_view : Int,
+) -> Int = "proton_contents_close_all_connections"

@@ -1,7 +1,7 @@
 # Print And PDF
 
-Manual review for Electron-style `BrowserHandle::print` and
-`BrowserHandle::print_to_pdf`, including PDF options and completion events.
+Manual review for Electron-style `WebContentsHandle::print` and
+`WebContentsHandle::print_to_pdf`, including PDF options and completion events.
 
 ```sh
 moon -C examples run 72_print_pdf --target native

@@ -98,7 +98,8 @@ fn test_window_handle(
   browser_devtools_opened? : Bool = false,
   window_state? : WindowState,
 ) -> WindowHandle {
-  let browser = BrowserHandle::{
+  let browser = WebContentsHandle::{
+    view_id: None,
     id,
     native_id,
     load_browser_url: fn(_url) {  },
@@ -376,7 +377,6 @@ fn test_window_handle(
         None => ()
       }
     },
-    set_window_zoom_percent: fn(_zoom_percent) {  },
     set_window_progress_bar: (progress, mode) => {
       match progress_calls {
         Some(calls) => calls.push(progress)
@@ -898,28 +898,34 @@ test "web request header prefixes are validated and resolved" {
 ///|
 test "browser resource observation events carry response metadata" {
   assert_eq(
-    BrowserEvent::ResourceRequested(
+    WebContentsEvent::ResourceRequested(
       url="https://example.test/data",
       request_method="POST",
       will_cancel=false,
     ),
-    BrowserEvent::ResourceRequested(
+    WebContentsEvent::ResourceRequested(
       url="https://example.test/data",
       request_method="POST",
       will_cancel=false,
     ),
   )
   assert_eq(
-    BrowserEvent::ResourceResponse(url="https://example.test/", status_code=204),
-    BrowserEvent::ResourceResponse(url="https://example.test/", status_code=204),
+    WebContentsEvent::ResourceResponse(
+      url="https://example.test/",
+      status_code=204,
+    ),
+    WebContentsEvent::ResourceResponse(
+      url="https://example.test/",
+      status_code=204,
+    ),
   )
   assert_eq(
-    BrowserEvent::ResourceCompleted(
+    WebContentsEvent::ResourceCompleted(
       url="https://example.test/",
       status=0,
       received_bytes=42L,
     ),
-    BrowserEvent::ResourceCompleted(
+    WebContentsEvent::ResourceCompleted(
       url="https://example.test/",
       status=0,
       received_bytes=42L,
@@ -2217,7 +2223,7 @@ test "renderer termination statuses map to Electron reasons" {
 ///|
 test "web contents handles report their owning window" {
   let view = test_view_handle("tab", 3L, [])
-  assert_eq(WebContentsHandle::View(view).window_id(), "main")
+  assert_eq(view.web_contents().window_id(), "main")
 }
 
 ///|
@@ -2973,33 +2979,41 @@ fn test_view_handle(
     },
     set_view_visible: fn(visible) { calls.push("set_visible:\{visible}") },
     set_view_z_order: fn(z_order) { calls.push("set_z_order:\{z_order}") },
-    set_view_zoom_percent: fn(zoom_percent) {
-      calls.push("set_zoom_percent:\{zoom_percent}")
-    },
-    read_view_zoom_percent: fn() { 125 },
-    set_view_audio_muted: fn(muted) { calls.push("set_audio_muted:\{muted}") },
-    read_view_audio_muted: fn() { true },
-    load_view_url: fn(url) { calls.push("load_url:\{url}") },
-    load_view_html: fn(_html, _base_url) {  },
-    eval_view_script: fn(_script) {  },
-    focus_view: fn() { calls.push("focus") },
-    send_view_command: fn(command, _download_id) { calls.push(command) },
-    find_view_in_page: fn(text, forward, match_case, find_next) {
-      calls.push("find:\{text}:\{forward}:\{match_case}:\{find_next}")
-      9
-    },
-    stop_view_find: fn(clear_selection) {
-      calls.push("stop_find:\{clear_selection}")
-    },
-    read_view_navigation_state: fn() { (true, false) },
-    read_view_focused: fn() { true },
-    read_view_devtools_opened: fn() { false },
     read_view_state: fn() {
       { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1, }
     },
-    read_view_navigation_history: fn() { { entries: [], active_index: -1, } },
-    insert_view_page_css: fn(_css) { 22L },
-    remove_view_page_css: fn(_key) {  },
+    contents: {
+      ..test_window_handle("main", 1L).web_contents(),
+      view_id: Some(id),
+      set_browser_zoom_percent: fn(zoom_percent) {
+        calls.push("set_zoom_percent:\{zoom_percent}")
+      },
+      read_browser_zoom_percent: fn() { 125 },
+      set_browser_audio_muted: fn(muted) {
+        calls.push("set_audio_muted:\{muted}")
+      },
+      read_browser_audio_muted: fn() { true },
+      load_browser_url: fn(url) { calls.push("load_url:\{url}") },
+      load_browser_html: fn(_html, _base_url) {  },
+      eval_browser_script: fn(_script) {  },
+      focus_browser: fn() { calls.push("focus") },
+      send_browser_command: fn(command, _download_id) { calls.push(command) },
+      find_browser_in_page: fn(text, forward, match_case, find_next) {
+        calls.push("find:\{text}:\{forward}:\{match_case}:\{find_next}")
+        9
+      },
+      stop_browser_find: fn(clear_selection) {
+        calls.push("stop_find:\{clear_selection}")
+      },
+      read_browser_navigation_state: fn() { (true, false) },
+      read_browser_focused: fn() { true },
+      read_browser_devtools_opened: fn() { false },
+      read_browser_navigation_history: fn() {
+        { entries: [], active_index: -1, }
+      },
+      insert_browser_page_css: fn(_css) { 22L },
+      remove_browser_page_css: fn(_key) {  },
+    },
     close_view: fn() { calls.push("close") },
   }
 }
@@ -3012,24 +3026,26 @@ test "view handle routes operations through its closures" {
   view.set_bounds(x=1, y=2, width=300, height=200)
   view.set_visible(false)
   view.set_z_order(2)
-  view.set_zoom_percent(125)
-  inspect(view.zoom_percent(), content="125")
-  view.set_audio_muted(true)
-  assert_true(view.is_audio_muted())
-  view.load_url("https://example.com/")
+  view.web_contents().set_zoom_percent(125)
+  inspect(view.web_contents().zoom_percent(), content="125")
+  view.web_contents().set_audio_muted(true)
+  assert_true(view.web_contents().is_audio_muted())
+  view.web_contents().load_url("https://example.com/")
   inspect(
-    view.find_in_page("Proton", forward=false, match_case=true, find_next=true),
+    view
+    .web_contents()
+    .find_in_page("Proton", forward=false, match_case=true, find_next=true),
     content="9",
   )
-  view.stop_find_in_page(clear_selection=false)
-  assert_true(view.can_go_back())
-  assert_false(view.can_go_forward())
-  view.focus()
-  assert_true(view.is_focused())
-  view.open_devtools()
-  view.toggle_devtools()
-  view.close_devtools()
-  assert_false(view.is_devtools_opened())
+  view.web_contents().stop_find_in_page(clear_selection=false)
+  assert_true(view.web_contents().can_go_back())
+  assert_false(view.web_contents().can_go_forward())
+  view.web_contents().focus()
+  assert_true(view.web_contents().is_focused())
+  view.web_contents().open_devtools()
+  view.web_contents().toggle_devtools()
+  view.web_contents().close_devtools()
+  assert_false(view.web_contents().is_devtools_opened())
   let state = view.state()
   inspect(state.width, content="300")
   inspect(state.z_order, content="1")
@@ -3060,14 +3076,14 @@ test "view handle routes operations through its closures" {
 test "view handle routes editing commands" {
   let calls : Array[String] = []
   let view = test_view_handle("panel", 7L, calls)
-  view.undo()
-  view.redo()
-  view.cut()
-  view.copy()
-  view.paste()
-  view.paste_and_match_style()
-  view.delete()
-  view.select_all()
+  view.web_contents().undo()
+  view.web_contents().redo()
+  view.web_contents().cut()
+  view.web_contents().copy()
+  view.web_contents().paste()
+  view.web_contents().paste_and_match_style()
+  view.web_contents().delete()
+  view.web_contents().select_all()
   assert_eq(calls, [
     "undo", "redo", "cut", "copy", "paste", "paste_and_match_style", "delete", "select_all",
   ])
@@ -3076,7 +3092,7 @@ test "view handle routes editing commands" {
 ///|
 test "browser handle exposes the current page state" {
   let window = test_window_handle("main", 17L)
-  let state = window.browser().state()
+  let state = window.web_contents().state()
   assert_eq(state.url, "https://example.test/")
   assert_eq(state.title, "Example")
   assert_false(state.is_loading)
@@ -3094,7 +3110,7 @@ test "browser handle routes focus and DevTools controls" {
     browser_focused=true,
     browser_devtools_opened=true,
   )
-  let browser = window.browser()
+  let browser = window.web_contents()
   browser.focus()
   assert_true(browser.is_focused())
   browser.open_devtools()
@@ -3110,7 +3126,7 @@ test "browser handle routes focus and DevTools controls" {
 ///|
 test "browser handle routes editing commands" {
   let calls : Array[String] = []
-  let browser = test_window_handle("main", 17L, browser_control_calls=calls).browser()
+  let browser = test_window_handle("main", 17L, browser_control_calls=calls).web_contents()
   browser.undo()
   browser.redo()
   browser.cut()
@@ -3132,7 +3148,7 @@ test "browser handle controls and reads audio mute state" {
     17L,
     browser_audio_calls=calls,
     browser_audio_muted=true,
-  ).browser()
+  ).web_contents()
   browser.set_audio_muted(true)
   assert_eq(calls, [true])
   assert_true(browser.is_audio_muted())
@@ -3141,7 +3157,7 @@ test "browser handle controls and reads audio mute state" {
 ///|
 test "browser handle routes page find operations" {
   let calls : Array[String] = []
-  let browser = test_window_handle("main", 17L, browser_find_calls=calls).browser()
+  let browser = test_window_handle("main", 17L, browser_find_calls=calls).web_contents()
   inspect(browser.find_in_page("MoonBit", match_case=true), content="7")
   browser.stop_find_in_page(clear_selection=false)
   assert_eq(calls, ["find:MoonBit:true:true:false", "stop:false"])
@@ -3150,7 +3166,7 @@ test "browser handle routes page find operations" {
 ///|
 test "browser handle starts programmatic downloads" {
   let calls : Array[String] = []
-  let browser = test_window_handle("main", 17L, browser_download_calls=calls).browser()
+  let browser = test_window_handle("main", 17L, browser_download_calls=calls).web_contents()
   browser.download_url("https://example.test/archive.zip")
   assert_eq(calls, ["https://example.test/archive.zip"])
 }
@@ -3158,7 +3174,7 @@ test "browser handle starts programmatic downloads" {
 ///|
 test "browser handle routes print and PDF operations" {
   let calls : Array[String] = []
-  let browser = test_window_handle("main", 17L, browser_print_calls=calls).browser()
+  let browser = test_window_handle("main", 17L, browser_print_calls=calls).web_contents()
   browser.print()
   let request_id = browser.print_to_pdf(
     "/tmp/review.pdf",
@@ -3182,13 +3198,13 @@ test "PDF print options map custom margins to the CEF custom type" {
 
 ///|
 test "app builder registers main browser lifecycle handlers" {
-  let app = html("Browser events", "<p>events</p>").on_browser_event(fn(
+  let app = html("Browser events", "<p>events</p>").on_web_contents_event(fn(
     _browser,
     _event,
   ) noraise {
 
   })
-  assert_eq(app.browser_event_handlers.length(), 1)
+  assert_eq(app.contents_event_handlers.length(), 1)
 }
 
 ///|
@@ -3219,14 +3235,20 @@ test "system appearance snapshots preserve both color schemes and contrast" {
 
 ///|
 test "browser loading lifecycle events are distinct" {
-  assert_eq(BrowserEvent::DidStartLoading, BrowserEvent::DidStartLoading)
-  assert_eq(BrowserEvent::DidFinishLoad, BrowserEvent::DidFinishLoad)
+  assert_eq(
+    WebContentsEvent::DidStartLoading,
+    WebContentsEvent::DidStartLoading,
+  )
+  assert_eq(WebContentsEvent::DidFinishLoad, WebContentsEvent::DidFinishLoad)
 }
 
 ///|
 test "view loading lifecycle events are distinct" {
-  assert_eq(ViewEvent::DidStartLoading, ViewEvent::DidStartLoading)
-  assert_eq(ViewEvent::DidFinishLoad, ViewEvent::DidFinishLoad)
+  assert_eq(
+    WebContentsEvent::DidStartLoading,
+    WebContentsEvent::DidStartLoading,
+  )
+  assert_eq(WebContentsEvent::DidFinishLoad, WebContentsEvent::DidFinishLoad)
 }
 
 ///|

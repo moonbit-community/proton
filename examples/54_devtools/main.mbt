@@ -38,7 +38,7 @@ let control_command : @proton_contract.Command[ControlRequest, ControlReply] = c
 )
 
 ///|
-let browser_slot : Ref[@proton.BrowserHandle?] = { val: None, }
+let browser_slot : Ref[@proton.WebContentsHandle?] = { val: None, }
 
 ///|
 let view_slot : Ref[@proton.ViewHandle?] = { val: None, }
@@ -60,10 +60,10 @@ fn read_state(message : String, ok? : Bool = true) -> ControlReply {
   let (view_focused, view_devtools_opened) = match view_slot.val {
     Some(view) =>
       (
-        view.is_focused() catch {
+        view.web_contents().is_focused() catch {
           _ => false
         },
-        view.is_devtools_opened() catch {
+        view.web_contents().is_devtools_opened() catch {
           _ => false
         },
       )
@@ -102,10 +102,10 @@ fn control(request : ControlRequest) -> ControlReply {
         match view_slot.val {
           Some(view) =>
             match request.action {
-              "focus" => view.focus()
-              "open" => view.open_devtools()
-              "close" => view.close_devtools()
-              "toggle" => view.toggle_devtools()
+              "focus" => view.web_contents().focus()
+              "open" => view.web_contents().open_devtools()
+              "close" => view.web_contents().close_devtools()
+              "toggle" => view.web_contents().toggle_devtools()
               _ => return read_state("Unknown action", ok=false)
             }
           None =>
@@ -165,7 +165,7 @@ async fn main {
   .window_lifecycle(
     on_ready=context => {
       let window = context.handle()
-      browser_slot.val = Some(window.browser())
+      browser_slot.val = Some(window.web_contents())
       open_review_view(window)
       window
     },

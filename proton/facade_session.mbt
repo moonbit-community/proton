@@ -377,11 +377,6 @@ fn RuntimeSession::window_handle(
           raise window_operation_failed("set menu in window " + id, error)
       }
     },
-    set_window_zoom_percent: zoom_percent => {
-      self.control_window(id, native_id, "set zoom", window => {
-        window.set_zoom_percent(zoom_percent)
-      })
-    },
     set_window_progress_bar: (progress, mode) => {
       self.control_window(id, native_id, "set progress bar", window => {
         window.set_progress_bar(progress, mode.to_native())
@@ -465,154 +460,6 @@ fn RuntimeSession::view_handle(
         view => view.set_z_order(z_order),
       )
     },
-    set_view_zoom_percent: zoom_percent => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "set zoom of",
-        view => view.set_zoom_percent(zoom_percent),
-      )
-    },
-    read_view_zoom_percent: () => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      running.view.zoom_percent() catch {
-        error =>
-          raise window_operation_failed(
-            "read zoom of view " + id + " in window " + window_id,
-            error,
-          )
-      }
-    },
-    set_view_audio_muted: muted => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "set audio mute of",
-        view => view.set_audio_muted(muted),
-      )
-    },
-    read_view_audio_muted: () => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      running.view.is_audio_muted() catch {
-        error =>
-          raise window_operation_failed(
-            "read audio mute of view " + id + " in window " + window_id,
-            error,
-          )
-      }
-    },
-    load_view_url: url => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "load URL in",
-        view => view.load_url(url),
-      )
-    },
-    load_view_html: (html, base_url) => {
-      self.load_view_html(
-        window_id, window_native_id, id, native_id, html, base_url,
-      )
-    },
-    eval_view_script: script => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "evaluate script in",
-        view => view.eval(script),
-      )
-    },
-    focus_view: () => {
-      self.control_window(
-        window_id,
-        window_native_id,
-        "focus for view " + id + " in",
-        window => window.focus(),
-      )
-      self.control_view(window_id, window_native_id, id, native_id, "focus", view => {
-        view.browser_command("focus")
-      })
-    },
-    send_view_command: (command, download_id) => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        command + " in",
-        view => view.browser_command(command, download_id?),
-      )
-    },
-    find_view_in_page: (text, forward, match_case, find_next) => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      running.view.find_in_page(text, forward, match_case, find_next) catch {
-        error =>
-          raise window_operation_failed(
-            "find in view " + id + " in window " + window_id,
-            error,
-          )
-      }
-    },
-    stop_view_find: clear_selection => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "stop find in",
-        view => view.stop_find_in_page(clear_selection),
-      )
-    },
-    read_view_navigation_state: () => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      running.view.navigation_state() catch {
-        error =>
-          raise window_operation_failed(
-            "read navigation state of view " + id + " in window " + window_id,
-            error,
-          )
-      }
-    },
-    read_view_focused: () => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      running.view.browser_is_focused() catch {
-        error =>
-          raise window_operation_failed(
-            "read focus of view " + id + " in window " + window_id,
-            error,
-          )
-      }
-    },
-    read_view_devtools_opened: () => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      running.view.is_devtools_opened() catch {
-        error =>
-          raise window_operation_failed(
-            "read DevTools state of view " + id + " in window " + window_id,
-            error,
-          )
-      }
-    },
     read_view_state: () => {
       let running = self.resolve_view(
         window_id, window_native_id, id, native_id,
@@ -625,45 +472,234 @@ fn RuntimeSession::view_handle(
           )
       }
     },
-    read_view_navigation_history: () => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      NavigationHistory::from_native(running.view.navigation_history()) catch {
-        error =>
-          raise window_operation_failed(
-            "read navigation history of view " + id + " in window " + window_id,
-            error,
-          )
-      }
-    },
-    insert_view_page_css: css => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      running.view.insert_page_css(css) catch {
-        error =>
-          raise window_operation_failed(
-            "insert page CSS into view " + id + " in window " + window_id,
-            error,
-          )
-      }
-    },
-    remove_view_page_css: key => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      running.view.remove_page_css(key) catch {
-        error =>
-          raise window_operation_failed(
-            "remove page CSS from view " + id + " in window " + window_id,
-            error,
-          )
-      }
-    },
     close_view: () => {
       ignore(self.resolve_view(window_id, window_native_id, id, native_id))
       self.remove_window_view(window_id, window_native_id, id)
+    },
+    contents: WebContentsHandle::{
+      id: window_id,
+      native_id: window_native_id,
+      view_id: Some(id),
+      set_browser_zoom_percent: zoom_percent => {
+        self.control_view(
+          window_id,
+          window_native_id,
+          id,
+          native_id,
+          "set zoom of",
+          view => view.set_zoom_percent(zoom_percent),
+        )
+      },
+      read_browser_zoom_percent: () => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        running.view.zoom_percent() catch {
+          error =>
+            raise window_operation_failed(
+              "read zoom of view " + id + " in window " + window_id,
+              error,
+            )
+        }
+      },
+      set_browser_audio_muted: muted => {
+        self.control_view(
+          window_id,
+          window_native_id,
+          id,
+          native_id,
+          "set audio mute of",
+          view => view.set_audio_muted(muted),
+        )
+      },
+      read_browser_audio_muted: () => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        running.view.is_audio_muted() catch {
+          error =>
+            raise window_operation_failed(
+              "read audio mute of view " + id + " in window " + window_id,
+              error,
+            )
+        }
+      },
+      load_browser_url: url => {
+        self.control_view(
+          window_id,
+          window_native_id,
+          id,
+          native_id,
+          "load URL in",
+          view => view.load_url(url),
+        )
+      },
+      load_browser_html: (html, base_url) => {
+        self.load_view_html(
+          window_id, window_native_id, id, native_id, html, base_url,
+        )
+      },
+      eval_browser_script: script => {
+        self.control_view(
+          window_id,
+          window_native_id,
+          id,
+          native_id,
+          "evaluate script in",
+          view => view.eval(script),
+        )
+      },
+      focus_browser: () => {
+        self.control_window(
+          window_id,
+          window_native_id,
+          "focus for view " + id + " in",
+          window => window.focus(),
+        )
+        self.control_view(window_id, window_native_id, id, native_id, "focus", view => {
+          view.browser_command("focus")
+        })
+      },
+      send_browser_command: (command, download_id) => {
+        self.control_view(
+          window_id,
+          window_native_id,
+          id,
+          native_id,
+          command + " in",
+          view => view.browser_command(command, download_id?),
+        )
+      },
+      find_browser_in_page: (text, forward, match_case, find_next) => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        running.view.find_in_page(text, forward, match_case, find_next) catch {
+          error =>
+            raise window_operation_failed(
+              "find in view " + id + " in window " + window_id,
+              error,
+            )
+        }
+      },
+      stop_browser_find: clear_selection => {
+        self.control_view(
+          window_id,
+          window_native_id,
+          id,
+          native_id,
+          "stop find in",
+          view => view.stop_find_in_page(clear_selection),
+        )
+      },
+      read_browser_navigation_state: () => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        running.view.navigation_state() catch {
+          error =>
+            raise window_operation_failed(
+              "read navigation state of view " + id + " in window " + window_id,
+              error,
+            )
+        }
+      },
+      read_browser_focused: () => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        running.view.browser_is_focused() catch {
+          error =>
+            raise window_operation_failed(
+              "read focus of view " + id + " in window " + window_id,
+              error,
+            )
+        }
+      },
+      read_browser_devtools_opened: () => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        running.view.is_devtools_opened() catch {
+          error =>
+            raise window_operation_failed(
+              "read DevTools state of view " + id + " in window " + window_id,
+              error,
+            )
+        }
+      },
+      read_browser_navigation_history: () => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        NavigationHistory::from_native(running.view.navigation_history()) catch {
+          error =>
+            raise window_operation_failed(
+              "read navigation history of view " +
+              id +
+              " in window " +
+              window_id,
+              error,
+            )
+        }
+      },
+      insert_browser_page_css: css => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        running.view.insert_page_css(css) catch {
+          error =>
+            raise window_operation_failed(
+              "insert page CSS into view " + id + " in window " + window_id,
+              error,
+            )
+        }
+      },
+      remove_browser_page_css: key => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        running.view.remove_page_css(key) catch {
+          error =>
+            raise window_operation_failed(
+              "remove page CSS from view " + id + " in window " + window_id,
+              error,
+            )
+        }
+      },
+      read_browser_state: () => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        BrowserState::from_native(running.view.browser_state()) catch {
+          error =>
+            raise window_operation_failed("read view browser state", error)
+        }
+      },
+      download_browser_url: url => {
+        self.control_view(
+          window_id,
+          window_native_id,
+          id,
+          native_id,
+          "download",
+          view => view.download_url(url),
+        )
+      },
+      print_browser: () => {
+        self.control_view(window_id, window_native_id, id, native_id, "print", view => {
+          view.print()
+        })
+      },
+      print_browser_to_pdf: (path, options) => {
+        let running = self.resolve_view(
+          window_id, window_native_id, id, native_id,
+        )
+        running.view.print_to_pdf(path, options.to_native()) catch {
+          error => raise window_operation_failed("print view to PDF", error)
+        }
+      },
+      session_handle: self.view_session_handle(window, view),
     },
   }
 }
@@ -730,7 +766,7 @@ fn RuntimeSession::add_window_view(
   }
   let running_view = add_view_to_running_window(running, view_id, config)
   self.emit_web_contents_created(
-    WebContentsHandle::View(self.view_handle(running, running_view)),
+    self.view_handle(running, running_view).web_contents(),
   )
   self.view_handle(running, running_view)
 }
@@ -790,6 +826,10 @@ fn RuntimeSession::remove_window_view(
             error,
           )
       }
+      self.cancel_contents_browser_requests(
+        running.native_id,
+        Some(view.native_id),
+      )
       // Keep the event recipient until the native close notification arrives.
       return
     }
@@ -836,11 +876,12 @@ fn RuntimeSession::find_window_view(
 fn RuntimeSession::browser_handle(
   self : RuntimeSession,
   window : RunningWindow,
-) -> BrowserHandle {
+) -> WebContentsHandle {
   let id = window.id
   let native_id = window.native_id
   let session_handle = self.session_handle(window)
-  BrowserHandle::{
+  WebContentsHandle::{
+    view_id: None,
     id,
     native_id,
     load_browser_url: url => {
@@ -1459,13 +1500,11 @@ fn RuntimeSession::create_window(
   self.close_coordinator.last_window_quit_handled = false
   // Report creation the way Electron does: the web contents exists before the
   // window joins the application's window list, and planned views follow it.
-  self.emit_web_contents_created(
-    WebContentsHandle::Browser(self.browser_handle(running)),
-  )
+  self.emit_web_contents_created(self.browser_handle(running))
   self.emit_window_created(running)
   for view in running.views {
     self.emit_web_contents_created(
-      WebContentsHandle::View(self.view_handle(running, view)),
+      self.view_handle(running, view).web_contents(),
     )
   }
   @xlog.info(category="proton.window") <?
@@ -1784,12 +1823,6 @@ pub fn WindowHandle::id(self : WindowHandle) -> String {
 
 ///|
 /// Returns the declarative id of the window owning this web contents.
-pub fn WebContentsHandle::window_id(self : WebContentsHandle) -> String {
-  match self {
-    Browser(browser) => browser.window_id()
-    View(view) => view.window_id()
-  }
-}
 
 ///|
 pub fn WindowHandle::show(self : WindowHandle) -> Unit raise WindowSessionError {
@@ -2310,14 +2343,6 @@ pub fn WindowHandle::set_menu(
 }
 
 ///|
-pub fn WindowHandle::set_zoom_percent(
-  self : WindowHandle,
-  zoom_percent : Int,
-) -> Unit raise WindowSessionError {
-  (self.set_window_zoom_percent)(zoom_percent)
-}
-
-///|
 /// Returns the main browser zoom percentage.
 pub fn WindowHandle::zoom_percent(
   self : WindowHandle,
@@ -2427,7 +2452,8 @@ fn WindowHandle::popup_menu(
 }
 
 ///|
-pub fn WindowHandle::browser(self : WindowHandle) -> BrowserHandle {
+/// Returns the webpage hosted in this window.
+pub fn WindowHandle::web_contents(self : WindowHandle) -> WebContentsHandle {
   self.browser
 }
 
@@ -2509,236 +2535,6 @@ pub fn ViewHandle::set_z_order(
 }
 
 ///|
-/// Sets this view's browser zoom from 25% through 500%.
-pub fn ViewHandle::set_zoom_percent(
-  self : ViewHandle,
-  zoom_percent : Int,
-) -> Unit raise WindowSessionError {
-  (self.set_view_zoom_percent)(zoom_percent)
-}
-
-///|
-/// Returns this view's browser zoom percentage.
-pub fn ViewHandle::zoom_percent(
-  self : ViewHandle,
-) -> Int raise WindowSessionError {
-  (self.read_view_zoom_percent)()
-}
-
-///|
-/// Mutes or unmutes audio produced by this view's page.
-pub fn ViewHandle::set_audio_muted(
-  self : ViewHandle,
-  muted : Bool,
-) -> Unit raise WindowSessionError {
-  (self.set_view_audio_muted)(muted)
-}
-
-///|
-/// Returns whether audio produced by this view's page is muted.
-pub fn ViewHandle::is_audio_muted(
-  self : ViewHandle,
-) -> Bool raise WindowSessionError {
-  (self.read_view_audio_muted)()
-}
-
-///|
-/// Navigates the view's page, the Electron `view.webContents.loadURL`
-/// equivalent.
-pub fn ViewHandle::load_url(
-  self : ViewHandle,
-  url : String,
-) -> Unit raise WindowSessionError {
-  (self.load_view_url)(url)
-}
-
-///|
-/// Loads inline HTML into the view, served from `base_url` on the
-/// `proton://` scheme, mirroring `WindowHandle::load_html`.
-pub fn ViewHandle::load_html(
-  self : ViewHandle,
-  html : String,
-  base_url : String,
-) -> Unit raise WindowSessionError {
-  (self.load_view_html)(html, base_url)
-}
-
-///|
-/// Executes JavaScript in the view's main frame without awaiting a result.
-pub fn ViewHandle::eval(
-  self : ViewHandle,
-  script : String,
-) -> Unit raise WindowSessionError {
-  (self.eval_view_script)(script)
-}
-
-///|
-/// Starts or advances a page search and returns its request id. Set
-/// `find_next=true` to begin a new search session, matching Electron's
-/// `findInPage` option; leave it false to advance the current session.
-pub fn ViewHandle::find_in_page(
-  self : ViewHandle,
-  text : String,
-  forward? : Bool = true,
-  match_case? : Bool = false,
-  find_next? : Bool = false,
-) -> Int raise WindowSessionError {
-  (self.find_view_in_page)(text, forward, match_case, find_next)
-}
-
-///|
-/// Stops the active page search. Set `clear_selection=false` to preserve the
-/// current match highlight.
-pub fn ViewHandle::stop_find_in_page(
-  self : ViewHandle,
-  clear_selection? : Bool = true,
-) -> Unit raise WindowSessionError {
-  (self.stop_view_find)(clear_selection)
-}
-
-///|
-pub fn ViewHandle::back(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.send_view_command)("back", None)
-}
-
-///|
-pub fn ViewHandle::forward(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.send_view_command)("forward", None)
-}
-
-///|
-/// Returns whether the view can navigate to a previous history entry.
-pub fn ViewHandle::can_go_back(
-  self : ViewHandle,
-) -> Bool raise WindowSessionError {
-  (self.read_view_navigation_state)().0
-}
-
-///|
-/// Returns whether the view can navigate to a later history entry.
-pub fn ViewHandle::can_go_forward(
-  self : ViewHandle,
-) -> Bool raise WindowSessionError {
-  (self.read_view_navigation_state)().1
-}
-
-///|
-pub fn ViewHandle::reload(
-  self : ViewHandle,
-  ignore_cache? : Bool = false,
-) -> Unit raise WindowSessionError {
-  (self.send_view_command)(
-    if ignore_cache {
-      "reload_ignore_cache"
-    } else {
-      "reload"
-    },
-    None,
-  )
-}
-
-///|
-pub fn ViewHandle::stop(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.send_view_command)("stop", None)
-}
-
-///|
-/// Undoes the most recent edit in the focused frame.
-pub fn ViewHandle::undo(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.send_view_command)("undo", None)
-}
-
-///|
-/// Redoes the most recently undone edit in the focused frame.
-pub fn ViewHandle::redo(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.send_view_command)("redo", None)
-}
-
-///|
-/// Cuts the current selection in the focused frame.
-pub fn ViewHandle::cut(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.send_view_command)("cut", None)
-}
-
-///|
-/// Copies the current selection in the focused frame.
-pub fn ViewHandle::copy(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.send_view_command)("copy", None)
-}
-
-///|
-/// Pastes clipboard contents into the focused frame.
-pub fn ViewHandle::paste(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.send_view_command)("paste", None)
-}
-
-///|
-/// Pastes clipboard contents using the destination's current style.
-pub fn ViewHandle::paste_and_match_style(
-  self : ViewHandle,
-) -> Unit raise WindowSessionError {
-  (self.send_view_command)("paste_and_match_style", None)
-}
-
-///|
-/// Deletes the current selection in the focused frame.
-pub fn ViewHandle::delete(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.send_view_command)("delete", None)
-}
-
-///|
-/// Selects all editable content in the focused frame.
-pub fn ViewHandle::select_all(
-  self : ViewHandle,
-) -> Unit raise WindowSessionError {
-  (self.send_view_command)("select_all", None)
-}
-
-///|
-/// Focuses this view's web page, matching Electron `webContents.focus()`.
-pub fn ViewHandle::focus(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.focus_view)()
-}
-
-///|
-/// Returns whether this view's web page currently owns focus.
-pub fn ViewHandle::is_focused(
-  self : ViewHandle,
-) -> Bool raise WindowSessionError {
-  (self.read_view_focused)()
-}
-
-///|
-pub fn ViewHandle::open_devtools(
-  self : ViewHandle,
-) -> Unit raise WindowSessionError {
-  (self.send_view_command)("open_devtools", None)
-}
-
-///|
-pub fn ViewHandle::close_devtools(
-  self : ViewHandle,
-) -> Unit raise WindowSessionError {
-  (self.send_view_command)("close_devtools", None)
-}
-
-///|
-/// Toggles the DevTools view for this web contents.
-pub fn ViewHandle::toggle_devtools(
-  self : ViewHandle,
-) -> Unit raise WindowSessionError {
-  (self.send_view_command)("toggle_devtools", None)
-}
-
-///|
-/// Returns whether this web contents currently has an open DevTools view.
-pub fn ViewHandle::is_devtools_opened(
-  self : ViewHandle,
-) -> Bool raise WindowSessionError {
-  (self.read_view_devtools_opened)()
-}
-
-///|
 /// Reads the current view state from the native runtime.
 pub fn ViewHandle::state(
   self : ViewHandle,
@@ -2747,58 +2543,30 @@ pub fn ViewHandle::state(
 }
 
 ///|
-/// Reads the view page's session history, corresponding to Electron's
-/// `webContents.navigationHistory` for a web contents view.
-pub fn ViewHandle::navigation_history(
-  self : ViewHandle,
-) -> NavigationHistory raise WindowSessionError {
-  (self.read_view_navigation_history)()
-}
-
-///|
-/// Injects `css` into the view page, corresponding to Electron's
-/// `webContents.insertCSS`.
-pub fn ViewHandle::insert_css(
-  self : ViewHandle,
-  css : String,
-) -> Int64 raise WindowSessionError {
-  (self.insert_view_page_css)(css)
-}
-
-///|
-/// Removes a stylesheet previously inserted with `ViewHandle::insert_css`.
-pub fn ViewHandle::remove_inserted_css(
-  self : ViewHandle,
-  key : Int64,
-) -> Unit raise WindowSessionError {
-  (self.remove_view_page_css)(key)
-}
-
-///|
 /// Removes and destroys the view, the Electron `removeChildView` equivalent.
 /// The view immediately becomes unavailable for operations and lookup. Its
-/// native close notification is delivered later through `App::on_view_event`
+/// native close notification is delivered later through `App::on_web_contents_event`
 /// if the parent window remains alive. The declarative id may be reused.
 pub fn ViewHandle::close(self : ViewHandle) -> Unit raise WindowSessionError {
   (self.close_view)()
 }
 
 ///|
-pub fn BrowserHandle::window_id(self : BrowserHandle) -> String {
+pub fn WebContentsHandle::window_id(self : WebContentsHandle) -> String {
   self.id
 }
 
 ///|
-pub fn BrowserHandle::load_url(
-  self : BrowserHandle,
+pub fn WebContentsHandle::load_url(
+  self : WebContentsHandle,
   url : String,
 ) -> Unit raise WindowSessionError {
   (self.load_browser_url)(url)
 }
 
 ///|
-pub fn BrowserHandle::load_html(
-  self : BrowserHandle,
+pub fn WebContentsHandle::load_html(
+  self : WebContentsHandle,
   html : String,
   base_url : String,
 ) -> Unit raise WindowSessionError {
@@ -2806,8 +2574,8 @@ pub fn BrowserHandle::load_html(
 }
 
 ///|
-pub fn BrowserHandle::eval(
-  self : BrowserHandle,
+pub fn WebContentsHandle::eval(
+  self : WebContentsHandle,
   script : String,
 ) -> Unit raise WindowSessionError {
   (self.eval_browser_script)(script)
@@ -2817,8 +2585,8 @@ pub fn BrowserHandle::eval(
 /// Starts or advances a page search and returns its request id. Set
 /// `find_next=true` to begin a new search session, matching Electron's
 /// `findInPage` option; leave it false to advance the current session.
-pub fn BrowserHandle::find_in_page(
-  self : BrowserHandle,
+pub fn WebContentsHandle::find_in_page(
+  self : WebContentsHandle,
   text : String,
   forward? : Bool = true,
   match_case? : Bool = false,
@@ -2830,8 +2598,8 @@ pub fn BrowserHandle::find_in_page(
 ///|
 /// Stops the active page search. Set `clear_selection=false` to preserve the
 /// current match highlight.
-pub fn BrowserHandle::stop_find_in_page(
-  self : BrowserHandle,
+pub fn WebContentsHandle::stop_find_in_page(
+  self : WebContentsHandle,
   clear_selection? : Bool = true,
 ) -> Unit raise WindowSessionError {
   (self.stop_browser_find)(clear_selection)
@@ -2841,8 +2609,8 @@ pub fn BrowserHandle::stop_find_in_page(
 /// Starts downloading `url` without navigating the page. The request uses the
 /// app's download approval and progress handlers. CEF does not support
 /// Electron's optional custom request headers for this operation.
-pub fn BrowserHandle::download_url(
-  self : BrowserHandle,
+pub fn WebContentsHandle::download_url(
+  self : WebContentsHandle,
   url : String,
 ) -> Unit raise WindowSessionError {
   (self.download_browser_url)(url)
@@ -2850,17 +2618,17 @@ pub fn BrowserHandle::download_url(
 
 ///|
 /// Opens the platform print flow for the main browser contents.
-pub fn BrowserHandle::print(
-  self : BrowserHandle,
+pub fn WebContentsHandle::print(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.print_browser)()
 }
 
 ///|
 /// Starts printing the main browser contents to `path` and returns a request
-/// id. Completion is delivered as `BrowserEvent::PdfPrinted`.
-pub fn BrowserHandle::print_to_pdf(
-  self : BrowserHandle,
+/// id. Completion is delivered as `WebContentsEvent::PdfPrinted`.
+pub fn WebContentsHandle::print_to_pdf(
+  self : WebContentsHandle,
   path : String,
   options? : PdfPrintOptions = PdfPrintOptions(),
 ) -> Int raise WindowSessionError {
@@ -2868,23 +2636,23 @@ pub fn BrowserHandle::print_to_pdf(
 }
 
 ///|
-pub fn BrowserHandle::back(
-  self : BrowserHandle,
+pub fn WebContentsHandle::back(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("back", None)
 }
 
 ///|
-pub fn BrowserHandle::forward(
-  self : BrowserHandle,
+pub fn WebContentsHandle::forward(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("forward", None)
 }
 
 ///|
 /// Sets the main browser zoom from 25% through 500%.
-pub fn BrowserHandle::set_zoom_percent(
-  self : BrowserHandle,
+pub fn WebContentsHandle::set_zoom_percent(
+  self : WebContentsHandle,
   zoom_percent : Int,
 ) -> Unit raise WindowSessionError {
   (self.set_browser_zoom_percent)(zoom_percent)
@@ -2892,16 +2660,16 @@ pub fn BrowserHandle::set_zoom_percent(
 
 ///|
 /// Returns the main browser zoom percentage.
-pub fn BrowserHandle::zoom_percent(
-  self : BrowserHandle,
+pub fn WebContentsHandle::zoom_percent(
+  self : WebContentsHandle,
 ) -> Int raise WindowSessionError {
   (self.read_browser_zoom_percent)()
 }
 
 ///|
 /// Mutes or unmutes audio produced by the main browser page.
-pub fn BrowserHandle::set_audio_muted(
-  self : BrowserHandle,
+pub fn WebContentsHandle::set_audio_muted(
+  self : WebContentsHandle,
   muted : Bool,
 ) -> Unit raise WindowSessionError {
   (self.set_browser_audio_muted)(muted)
@@ -2909,32 +2677,32 @@ pub fn BrowserHandle::set_audio_muted(
 
 ///|
 /// Returns whether audio produced by the main browser page is muted.
-pub fn BrowserHandle::is_audio_muted(
-  self : BrowserHandle,
+pub fn WebContentsHandle::is_audio_muted(
+  self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
   (self.read_browser_audio_muted)()
 }
 
 ///|
 /// Returns whether the main browser can navigate to a previous history entry.
-pub fn BrowserHandle::can_go_back(
-  self : BrowserHandle,
+pub fn WebContentsHandle::can_go_back(
+  self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
   (self.read_browser_navigation_state)().0
 }
 
 ///|
 /// Returns whether the main browser can navigate to a later history entry.
-pub fn BrowserHandle::can_go_forward(
-  self : BrowserHandle,
+pub fn WebContentsHandle::can_go_forward(
+  self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
   (self.read_browser_navigation_state)().1
 }
 
 ///|
 /// Reads the current main browser page state.
-pub fn BrowserHandle::state(
-  self : BrowserHandle,
+pub fn WebContentsHandle::state(
+  self : WebContentsHandle,
 ) -> BrowserState raise WindowSessionError {
   (self.read_browser_state)()
 }
@@ -2945,9 +2713,9 @@ pub fn BrowserHandle::state(
 ///
 /// Chromium records one history per browser, including entries that the page
 /// reached with `history.pushState` only after a navigation; use
-/// `BrowserHandle::back` and `BrowserHandle::forward` to move through it.
-pub fn BrowserHandle::navigation_history(
-  self : BrowserHandle,
+/// `WebContentsHandle::back` and `WebContentsHandle::forward` to move through it.
+pub fn WebContentsHandle::navigation_history(
+  self : WebContentsHandle,
 ) -> NavigationHistory raise WindowSessionError {
   (self.read_browser_navigation_history)()
 }
@@ -2957,36 +2725,36 @@ pub fn BrowserHandle::navigation_history(
 /// `webContents.insertCSS`.
 ///
 /// The returned key removes the stylesheet again with
-/// `BrowserHandle::remove_inserted_css`. Chromium applies the stylesheet to the
+/// `WebContentsHandle::remove_inserted_css`. Chromium applies the stylesheet to the
 /// document that received it, so the key stops matching after the page
 /// navigates away, exactly like Electron's.
-pub fn BrowserHandle::insert_css(
-  self : BrowserHandle,
+pub fn WebContentsHandle::insert_css(
+  self : WebContentsHandle,
   css : String,
 ) -> Int64 raise WindowSessionError {
   (self.insert_browser_page_css)(css)
 }
 
 ///|
-/// Removes a stylesheet previously inserted with `BrowserHandle::insert_css`,
+/// Removes a stylesheet previously inserted with `WebContentsHandle::insert_css`,
 /// corresponding to Electron's `webContents.removeInsertedCSS`. Removing a key
 /// the current document never inserted is a no-op.
-pub fn BrowserHandle::remove_inserted_css(
-  self : BrowserHandle,
+pub fn WebContentsHandle::remove_inserted_css(
+  self : WebContentsHandle,
   key : Int64,
 ) -> Unit raise WindowSessionError {
   (self.remove_browser_page_css)(key)
 }
 
 ///|
-/// Returns the browser session used by this main page.
-pub fn BrowserHandle::session(self : BrowserHandle) -> SessionHandle {
+/// Returns the session accessed through this page.
+pub fn WebContentsHandle::session(self : WebContentsHandle) -> SessionHandle {
   self.session_handle
 }
 
 ///|
-pub fn BrowserHandle::reload(
-  self : BrowserHandle,
+pub fn WebContentsHandle::reload(
+  self : WebContentsHandle,
   ignore_cache? : Bool = false,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)(
@@ -3000,125 +2768,125 @@ pub fn BrowserHandle::reload(
 }
 
 ///|
-pub fn BrowserHandle::stop(
-  self : BrowserHandle,
+pub fn WebContentsHandle::stop(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("stop", None)
 }
 
 ///|
 /// Undoes the most recent edit in the focused frame.
-pub fn BrowserHandle::undo(
-  self : BrowserHandle,
+pub fn WebContentsHandle::undo(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("undo", None)
 }
 
 ///|
 /// Redoes the most recently undone edit in the focused frame.
-pub fn BrowserHandle::redo(
-  self : BrowserHandle,
+pub fn WebContentsHandle::redo(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("redo", None)
 }
 
 ///|
 /// Cuts the current selection in the focused frame.
-pub fn BrowserHandle::cut(
-  self : BrowserHandle,
+pub fn WebContentsHandle::cut(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("cut", None)
 }
 
 ///|
 /// Copies the current selection in the focused frame.
-pub fn BrowserHandle::copy(
-  self : BrowserHandle,
+pub fn WebContentsHandle::copy(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("copy", None)
 }
 
 ///|
 /// Pastes clipboard contents into the focused frame.
-pub fn BrowserHandle::paste(
-  self : BrowserHandle,
+pub fn WebContentsHandle::paste(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("paste", None)
 }
 
 ///|
 /// Pastes clipboard contents using the destination's current style.
-pub fn BrowserHandle::paste_and_match_style(
-  self : BrowserHandle,
+pub fn WebContentsHandle::paste_and_match_style(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("paste_and_match_style", None)
 }
 
 ///|
 /// Deletes the current selection in the focused frame.
-pub fn BrowserHandle::delete(
-  self : BrowserHandle,
+pub fn WebContentsHandle::delete(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("delete", None)
 }
 
 ///|
 /// Selects all editable content in the focused frame.
-pub fn BrowserHandle::select_all(
-  self : BrowserHandle,
+pub fn WebContentsHandle::select_all(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("select_all", None)
 }
 
 ///|
 /// Focuses the web page, matching Electron `webContents.focus()`.
-pub fn BrowserHandle::focus(
-  self : BrowserHandle,
+pub fn WebContentsHandle::focus(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.focus_browser)()
 }
 
 ///|
 /// Returns whether the web page currently owns focus.
-pub fn BrowserHandle::is_focused(
-  self : BrowserHandle,
+pub fn WebContentsHandle::is_focused(
+  self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
   (self.read_browser_focused)()
 }
 
 ///|
-pub fn BrowserHandle::open_devtools(
-  self : BrowserHandle,
+pub fn WebContentsHandle::open_devtools(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("open_devtools", None)
 }
 
 ///|
-pub fn BrowserHandle::close_devtools(
-  self : BrowserHandle,
+pub fn WebContentsHandle::close_devtools(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("close_devtools", None)
 }
 
 ///|
 /// Toggles the DevTools view for this web contents.
-pub fn BrowserHandle::toggle_devtools(
-  self : BrowserHandle,
+pub fn WebContentsHandle::toggle_devtools(
+  self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("toggle_devtools", None)
 }
 
 ///|
 /// Returns whether this web contents currently has an open DevTools view.
-pub fn BrowserHandle::is_devtools_opened(
-  self : BrowserHandle,
+pub fn WebContentsHandle::is_devtools_opened(
+  self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
   (self.read_browser_devtools_opened)()
 }
 
 ///|
-pub fn BrowserHandle::cancel_download(
-  self : BrowserHandle,
+pub fn WebContentsHandle::cancel_download(
+  self : WebContentsHandle,
   download_id : Int,
 ) -> Unit raise WindowSessionError {
   (self.send_browser_command)("cancel_download", Some(download_id))
@@ -3407,6 +3175,14 @@ fn RuntimeSession::dispatch_window_event(
         match self.find_window_by_native_id(window_id) {
           Some(window) => {
             let handle = self.window_handle(window)
+            for handler in self.config.contents_event_handlers {
+              ignore(
+                self.window_tasks.spawn(
+                  () => handler(handle.web_contents(), Closed),
+                  no_wait=true,
+                ),
+              )
+            }
             for handler in self.config.window_event_handlers {
               ignore(
                 self.window_tasks.spawn(
@@ -3458,106 +3234,59 @@ fn RuntimeSession::dispatch_window_event(
 }
 
 ///|
+fn RunningWindow::find_view_by_native_id(
+  self : RunningWindow,
+  id : Int64,
+) -> RunningView? {
+  for view in self.views {
+    if view.native_id == id {
+      return Some(view)
+    }
+  }
+  None
+}
+
+///|
+fn RuntimeSession::contents_handle(
+  self : RuntimeSession,
+  window : RunningWindow,
+  view_id : Int64?,
+) -> WebContentsHandle? {
+  match view_id {
+    None => Some(self.browser_handle(window))
+    Some(id) =>
+      match window.find_view_by_native_id(id) {
+        Some(view) => Some(self.view_handle(window, view).web_contents())
+        None => None
+      }
+  }
+}
+
+///|
 fn RuntimeSession::dispatch_view_event(
   self : RuntimeSession,
   event : @native.RuntimeEvent,
 ) -> Unit raise AppRunError {
-  let closes_view = event.is_view_closed()
-  let (window_native_id, view_native_id) = match
-    (event.window_id(), event.view_id()) {
-    (Some(window_id), Some(view_id)) => (window_id, view_id)
-    _ => return
-  }
-  let running = match self.find_window_by_native_id(window_native_id) {
-    Some(running) => running
-    None => return
-  }
-  for index, view in running.views {
-    if view.native_id == view_native_id {
-      if !closes_view && view.view.id() == 0 {
-        return
-      }
-      let handle = self.view_handle(running, view)
-      let view_event = match
-        (
-          event.event_type(),
-          event.view_event(),
-          event.view_renderer_process_termination(),
-          event.find_in_page_result(),
-        ) {
-        ("view_loading_changed", Some(info), _, _) => {
-          let is_loading = info.is_loading.unwrap_or(false)
-          let transition = match view.observed_loading {
-            None => []
-            Some(previous) =>
-              if !previous && is_loading {
-                [ViewEvent::DidStartLoading]
-              } else if previous && !is_loading {
-                [ViewEvent::DidFinishLoad]
-              } else {
-                []
-              }
-          }
-          view.observed_loading = Some(is_loading)
-          for transition_event in transition {
-            for handler in self.config.view_event_handlers {
-              ignore(
-                self.window_tasks.spawn(
-                  () => handler(handle, transition_event),
-                  no_wait=true,
-                ),
-              )
-            }
-          }
-          ViewEvent::LoadingChanged(is_loading~)
-        }
-        ("view_navigated", Some(info), _, _) =>
-          ViewEvent::Navigated(url=info.url.unwrap_or(""))
-        ("view_title_updated", Some(info), _, _) =>
-          ViewEvent::TitleUpdated(title=info.title.unwrap_or(""))
-        ("view_load_failed", Some(info), _, _) =>
-          ViewEvent::LoadFailed(
-            url=info.url.unwrap_or(""),
-            error_code=info.error_code.unwrap_or(0),
-            error_text=info.error_text.unwrap_or(""),
+  guard event.is_view_closed() else { return }
+  guard event.window_id() is Some(window_id) else { return }
+  guard event.view_id() is Some(view_id) else { return }
+  guard self.find_window_by_native_id(window_id) is Some(window) else { return }
+  self.cancel_contents_browser_requests(window_id, Some(view_id))
+  for index, view in window.views {
+    if view.native_id == view_id {
+      let contents = self.view_handle(window, view).web_contents()
+      view.view.destroy() catch {
+        error =>
+          raise native_run_error(
+            "destroy closed view " + view.id + " in window " + window.id,
+            error,
           )
-        ("view_found_in_page", _, _, Some(result)) =>
-          ViewEvent::FoundInPage(result=FindInPageResult::from_native(result))
-        ("view_renderer_process_terminated", _, Some(details), _) =>
-          ViewEvent::RendererProcessTerminated(
-            url=details.url,
-            status=details.status,
-            error_code=details.error_code,
-            detail=details.detail,
-          )
-        ("view_closed", Some(_), _, _) => ViewEvent::Closed
-        _ => return
       }
-      if closes_view {
-        view.view.destroy() catch {
-          error =>
-            raise native_run_error(
-              "destroy closed view " + view.id + " in window " + running.id,
-              error,
-            )
-        }
-        ignore(running.views.remove(index))
-      }
-      for handler in self.config.view_event_handlers {
+      ignore(window.views.remove(index))
+      for handler in self.config.contents_event_handlers {
         ignore(
-          self.window_tasks.spawn(
-            () => handler(handle, view_event),
-            no_wait=true,
-          ),
+          self.window_tasks.spawn(() => handler(contents, Closed), no_wait=true),
         )
-      }
-      match view_event {
-        RendererProcessTerminated(status~, error_code~, ..) =>
-          self.emit_render_process_gone(WebContentsHandle::View(handle), RenderProcessGoneDetails::{
-            reason: render_process_gone_reason(status),
-            exit_code: error_code,
-          })
-        _ => ()
       }
       return
     }
@@ -3581,27 +3310,43 @@ fn RuntimeSession::dispatch_browser_event(
       match self.find_window_by_native_id(window_id) {
         Some(window) => {
           if termination is Some(_) {
-            self.fail_page_requests(window)
+            match event.view_id() {
+              None => self.fail_page_requests(window)
+              Some(_) => self.fail_contents_requests(window, event.view_id())
+            }
           }
-          let browser = self.browser_handle(window)
+          guard self.contents_handle(window, event.view_id()) is Some(browser) else {
+            return
+          }
           let observed = match
             (event.event_type(), info, termination, find_result, pdf_result) {
             ("browser_loading_changed", Some(info), _, _, _) => {
               let is_loading = info.is_loading.unwrap_or(false)
-              let transition = match window.observed_browser_loading {
+              let view = match event.view_id() {
+                Some(id) => window.find_view_by_native_id(id)
+                None => None
+              }
+              let previous = match view {
+                Some(view) => view.observed_loading
+                None => window.observed_browser_loading
+              }
+              let transition = match previous {
                 None => []
                 Some(previous) =>
                   if !previous && is_loading {
-                    [BrowserEvent::DidStartLoading]
+                    [WebContentsEvent::DidStartLoading]
                   } else if previous && !is_loading {
-                    [BrowserEvent::DidFinishLoad]
+                    [WebContentsEvent::DidFinishLoad]
                   } else {
                     []
                   }
               }
-              window.observed_browser_loading = Some(is_loading)
+              match view {
+                Some(view) => view.observed_loading = Some(is_loading)
+                None => window.observed_browser_loading = Some(is_loading)
+              }
               for transition_event in transition {
-                for handler in self.config.browser_event_handlers {
+                for handler in self.config.contents_event_handlers {
                   ignore(
                     self.window_tasks.spawn(
                       () => handler(browser, transition_event),
@@ -3610,15 +3355,17 @@ fn RuntimeSession::dispatch_browser_event(
                   )
                 }
               }
-              Some(BrowserEvent::LoadingChanged(is_loading~))
+              Some(WebContentsEvent::LoadingChanged(is_loading~))
             }
             ("browser_navigated", Some(info), _, _, _) =>
-              Some(BrowserEvent::Navigated(url=info.url.unwrap_or("")))
+              Some(WebContentsEvent::Navigated(url=info.url.unwrap_or("")))
             ("browser_title_updated", Some(info), _, _, _) =>
-              Some(BrowserEvent::TitleUpdated(title=info.title.unwrap_or("")))
+              Some(
+                WebContentsEvent::TitleUpdated(title=info.title.unwrap_or("")),
+              )
             ("browser_load_failed", Some(info), _, _, _) =>
               Some(
-                BrowserEvent::LoadFailed(
+                WebContentsEvent::LoadFailed(
                   url=info.url.unwrap_or(""),
                   error_code=info.error_code.unwrap_or(0),
                   error_text=info.error_text.unwrap_or(""),
@@ -3626,13 +3373,13 @@ fn RuntimeSession::dispatch_browser_event(
               )
             ("browser_found_in_page", _, _, Some(result), _) =>
               Some(
-                BrowserEvent::FoundInPage(
+                WebContentsEvent::FoundInPage(
                   result=FindInPageResult::from_native(result),
                 ),
               )
             ("browser_pdf_print_finished", _, _, _, Some(result)) =>
               Some(
-                BrowserEvent::PdfPrinted(result={
+                WebContentsEvent::PdfPrinted(result={
                   request_id: result.request_id,
                   path: result.path,
                   success: result.success,
@@ -3640,14 +3387,14 @@ fn RuntimeSession::dispatch_browser_event(
               )
             ("browser_resource_response", Some(info), _, _, _) =>
               Some(
-                BrowserEvent::ResourceResponse(
+                WebContentsEvent::ResourceResponse(
                   url=info.url.unwrap_or(""),
                   status_code=info.error_code.unwrap_or(0),
                 ),
               )
             ("browser_resource_requested", Some(info), _, _, _) =>
               Some(
-                BrowserEvent::ResourceRequested(
+                WebContentsEvent::ResourceRequested(
                   url=info.url.unwrap_or(""),
                   request_method=info.title.unwrap_or(""),
                   will_cancel=info.is_loading.unwrap_or(false),
@@ -3655,7 +3402,7 @@ fn RuntimeSession::dispatch_browser_event(
               )
             ("browser_resource_completed", Some(info), _, _, _) =>
               Some(
-                BrowserEvent::ResourceCompleted(
+                WebContentsEvent::ResourceCompleted(
                   url=info.url.unwrap_or(""),
                   status=info.error_code.unwrap_or(0),
                   received_bytes=info.received_bytes.unwrap_or(0L),
@@ -3663,7 +3410,7 @@ fn RuntimeSession::dispatch_browser_event(
               )
             ("browser_renderer_process_terminated", _, Some(details), _, _) =>
               Some(
-                BrowserEvent::RendererProcessTerminated(
+                WebContentsEvent::RendererProcessTerminated(
                   url=details.url,
                   status=details.status,
                   error_code=details.error_code,
@@ -3674,7 +3421,7 @@ fn RuntimeSession::dispatch_browser_event(
           }
           match observed {
             Some(observed) =>
-              for handler in self.config.browser_event_handlers {
+              for handler in self.config.contents_event_handlers {
                 ignore(
                   self.window_tasks.spawn(
                     () => handler(browser, observed),
@@ -3686,13 +3433,10 @@ fn RuntimeSession::dispatch_browser_event(
           }
           match observed {
             Some(RendererProcessTerminated(status~, error_code~, ..)) =>
-              self.emit_render_process_gone(
-                WebContentsHandle::Browser(browser),
-                RenderProcessGoneDetails::{
-                  reason: render_process_gone_reason(status),
-                  exit_code: error_code,
-                },
-              )
+              self.emit_render_process_gone(browser, RenderProcessGoneDetails::{
+                reason: render_process_gone_reason(status),
+                exit_code: error_code,
+              })
             _ => ()
           }
         }
@@ -3701,14 +3445,17 @@ fn RuntimeSession::dispatch_browser_event(
     _ => ()
   }
   match event.browser_request() {
-    Some(request) => self.start_browser_request(event.window_id(), request)
+    Some(request) =>
+      self.start_browser_request(event.window_id(), event.view_id(), request)
     None => ()
   }
   match (event.window_id(), event.browser_download_update()) {
     (Some(window_id), Some(update)) =>
       match self.find_window_by_native_id(window_id) {
         Some(window) => {
-          let browser = self.browser_handle(window)
+          guard self.contents_handle(window, event.view_id()) is Some(browser) else {
+            return
+          }
           let observed = DownloadEvent::{
             id: update.download_id,
             state: update.state,
@@ -3735,11 +3482,12 @@ fn RuntimeSession::dispatch_browser_event(
 fn RuntimeSession::start_browser_request(
   self : RuntimeSession,
   window_id : Int64?,
+  view_id : Int64?,
   request : @native.NativeBrowserRequest,
 ) -> Unit {
   guard window_id is Some(window_id) else { return }
   guard self.find_window_by_native_id(window_id) is Some(window) else { return }
-  let browser = self.browser_handle(window)
+  guard self.contents_handle(window, view_id) is Some(browser) else { return }
   let request_id = match request {
     Navigation(request_id~, ..)
     | NewWindow(request_id~, ..)
@@ -3779,7 +3527,10 @@ fn RuntimeSession::start_browser_request(
                 _ => None
               }
               match opened {
-                Some(window) => window.browser().load_url(url) catch { _ => () }
+                Some(window) =>
+                  window.web_contents().load_url(url) catch {
+                    _ => ()
+                  }
                 None => ()
               }
             }
@@ -3854,7 +3605,74 @@ fn RuntimeSession::start_browser_request(
     },
     no_wait=true,
   )
-  self.pending_browser_requests.push({ window: window_id, request_id, task, })
+  self.pending_browser_requests.push({
+    window: window_id,
+    view: view_id,
+    request_id,
+    task,
+  })
+}
+
+///|
+fn RunningWindow::respond_contents_request(
+  self : RunningWindow,
+  view_id : Int64?,
+  request_id : Int64,
+  action : String,
+  path? : String,
+) -> Unit raise @native.NativeError {
+  match view_id {
+    None => self.window.respond_browser_request(request_id, action, path?)
+    Some(id) =>
+      match self.find_view_by_native_id(id) {
+        Some(view) if view.view.id() != 0 =>
+          view.view.respond_browser_request(request_id, action, path?)
+        _ => ()
+      }
+  }
+}
+
+///|
+fn RuntimeSession::fail_contents_requests(
+  self : RuntimeSession,
+  window : RunningWindow,
+  view_id : Int64?,
+) -> Unit raise AppRunError {
+  for pending in self.pending_browser_requests {
+    if pending.window == window.native_id && pending.view == view_id {
+      window.respond_contents_request(view_id, pending.request_id, "deny") catch {
+        error =>
+          if !error.is_stale_browser_request() &&
+            !error.is_stale_window_request() {
+            raise native_run_error("reject failed page request", error)
+          }
+      }
+    }
+  }
+  self.cancel_contents_browser_requests(window.native_id, view_id)
+  let remaining : Array[PendingResourceRequest] = []
+  for pending in self.pending_resource_requests {
+    if pending.window == window.native_id && pending.view == view_id {
+      self.runtime.complete_resource_request(
+        pending.request_id,
+        503,
+        "text/plain",
+        b"",
+      ) catch {
+        error =>
+          if !error.is_stale_resource_request() {
+            raise native_run_error("reject failed page resource", error)
+          }
+      }
+      pending.task.cancel()
+    } else {
+      remaining.push(pending)
+    }
+  }
+  self.pending_resource_requests.clear()
+  for pending in remaining {
+    self.pending_resource_requests.push(pending)
+  }
 }
 
 ///|
@@ -3874,7 +3692,8 @@ fn RuntimeSession::complete_browser_requests(
         match self.find_window_by_native_id(pending.window) {
           Some(window) if window.is_active() => {
             let path = response.path
-            window.window.respond_browser_request(
+            window.respond_contents_request(
+              pending.view,
               pending.request_id,
               response.action,
               path?,
@@ -3906,6 +3725,26 @@ fn RuntimeSession::cancel_browser_requests(
   let remaining : Array[PendingBrowserRequest] = []
   for pending in self.pending_browser_requests {
     if window_id == Some(pending.window) {
+      pending.task.cancel()
+    } else {
+      remaining.push(pending)
+    }
+  }
+  self.pending_browser_requests.clear()
+  for pending in remaining {
+    self.pending_browser_requests.push(pending)
+  }
+}
+
+///|
+fn RuntimeSession::cancel_contents_browser_requests(
+  self : RuntimeSession,
+  window : Int64,
+  view : Int64?,
+) -> Unit {
+  let remaining : Array[PendingBrowserRequest] = []
+  for pending in self.pending_browser_requests {
+    if pending.window == window && pending.view == view {
       pending.task.cancel()
     } else {
       remaining.push(pending)
@@ -3967,6 +3806,7 @@ fn RuntimeSession::start_resource_request(
   self.pending_resource_requests.push({
     request_id: request.request_id,
     window: request.window,
+    view: request.view,
     task,
   })
 }
@@ -4387,10 +4227,10 @@ fn RuntimeSession::check_bridge_failures(
     // Renderer failure has its own notification; do not report it twice.
     if diagnostic.code != renderer_process_terminated_failure_code {
       let browser = self.browser_handle(running)
-      let event = BrowserEvent::BridgeFailed(
+      let event = WebContentsEvent::BridgeFailed(
         diagnostic=BridgeDiagnostic::from_native(diagnostic),
       )
-      for handler in self.config.browser_event_handlers {
+      for handler in self.config.contents_event_handlers {
         ignore(
           self.window_tasks.spawn(() => handler(browser, event), no_wait=true),
         )
@@ -4409,34 +4249,7 @@ fn RuntimeSession::fail_page_requests(
     self.pending_bridge,
     Some(running.native_id),
   )
-  for pending in self.pending_browser_requests {
-    if pending.window == running.native_id {
-      running.window.respond_browser_request(pending.request_id, "deny") catch {
-        error =>
-          if !error.is_stale_browser_request() &&
-            !error.is_stale_window_request() {
-            raise native_run_error("reject failed page request", error)
-          }
-      }
-    }
-  }
-  self.cancel_browser_requests(Some(running.native_id))
-  for pending in self.pending_resource_requests {
-    if pending.window == running.native_id {
-      self.runtime.complete_resource_request(
-        pending.request_id,
-        503,
-        "text/plain",
-        b"",
-      ) catch {
-        error =>
-          if !error.is_stale_resource_request() {
-            raise native_run_error("reject failed page resource", error)
-          }
-      }
-    }
-  }
-  self.cancel_resource_requests_for_window(Some(running.native_id))
+  self.fail_contents_requests(running, None)
 }
 
 ///|
@@ -5259,4 +5072,143 @@ pub fn WindowHandle::window_button_position(
   self : WindowHandle,
 ) -> WindowButtonPosition? raise WindowSessionError {
   (self.read_window_button_position)()
+}
+
+///|
+/// Returns the child view's declaration id, or None for the main page.
+pub fn WebContentsHandle::view_id(self : WebContentsHandle) -> String? {
+  self.view_id
+}
+
+///|
+/// Returns the webpage hosted by this view.
+pub fn ViewHandle::web_contents(self : ViewHandle) -> WebContentsHandle {
+  self.contents
+}
+
+///|
+fn RuntimeSession::view_session_handle(
+  self : RuntimeSession,
+  window : RunningWindow,
+  view : RunningView,
+) -> SessionHandle {
+  let id = window.id
+  let window_native_id = window.native_id
+  let native_id = view.native_id
+  let view_id = view.id
+  SessionHandle::{
+    id,
+    native_id,
+    read_cookies: (url, include_http_only) => {
+      let running = self.resolve_view(id, window_native_id, view_id, native_id)
+      let request_id = running.view.cookie_begin_get(url, include_http_only) catch {
+        error =>
+          raise window_operation_failed("read cookies in window " + id, error)
+      }
+      cookies_from_native(self.event_pump.cookie_completions.wait(request_id))
+    },
+    write_cookie: (url, name, value, domain, path, secure, http_only, same_site) => {
+      self.control_view(
+        id,
+        window_native_id,
+        view_id,
+        native_id,
+        "set cookie in",
+        window => {
+          window.cookie_set(
+            url,
+            name,
+            value,
+            domain?,
+            path?,
+            secure~,
+            http_only~,
+            same_site=same_site.to_native(),
+          )
+        },
+      )
+    },
+    remove_cookies: (url, name) => {
+      self.control_view(
+        id,
+        window_native_id,
+        view_id,
+        native_id,
+        "delete cookies in",
+        window => window.cookie_delete(url, name),
+      )
+    },
+    flush_cookie_store: () => {
+      self.control_view(
+        id,
+        window_native_id,
+        view_id,
+        native_id,
+        "flush cookies in",
+        window => window.cookie_flush(),
+      )
+    },
+    clear_http_cache: () => {
+      self.control_view(
+        id,
+        window_native_id,
+        view_id,
+        native_id,
+        "clear cache in",
+        window => window.clear_cache(),
+      )
+    },
+    clear_http_auth_cache: () => {
+      self.control_view(
+        id,
+        window_native_id,
+        view_id,
+        native_id,
+        "clear auth cache in",
+        window => window.clear_auth_cache(),
+      )
+    },
+    clear_certificate_exceptions: () => {
+      self.control_view(
+        id,
+        window_native_id,
+        view_id,
+        native_id,
+        "clear certificate exceptions in",
+        window => window.clear_certificate_exceptions(),
+      )
+    },
+    close_all_connections: () => {
+      self.control_view(
+        id,
+        window_native_id,
+        view_id,
+        native_id,
+        "close connections in",
+        window => window.close_all_connections(),
+      )
+    },
+    clear_storage_data: kind => {
+      self.control_view(
+        id,
+        window_native_id,
+        view_id,
+        native_id,
+        "clear storage in",
+        window => {
+          match kind {
+            Cookies | AllSupported => {
+              window.cookie_delete(None, None)
+              window.cookie_flush()
+            }
+            HttpCache => ()
+          }
+          match kind {
+            HttpCache | AllSupported => window.clear_cache()
+            Cookies => ()
+          }
+        },
+      )
+    },
+  }
 }

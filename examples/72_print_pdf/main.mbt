@@ -33,7 +33,7 @@ let contract : @proton_contract.ExtensionContract = @proton_contract.extension(
 let command : @proton_contract.Command[Request, Reply] = contract.command("run")
 
 ///|
-let browser_slot : Ref[@proton.BrowserHandle?] = { val: None, }
+let browser_slot : Ref[@proton.WebContentsHandle?] = { val: None, }
 
 ///|
 fn temporary_directory() -> String {
@@ -169,8 +169,11 @@ fn page() -> String {
 async fn main {
   @proton.html("Print and PDF", page(), width=1040, height=760, debug=true)
   .commands(register_commands)
-  .on_browser_event(async fn(_browser, event) noraise {
-    if event is @proton.BrowserEvent::PdfPrinted(result~) {
+  .on_web_contents_event(async fn(_browser, event) noraise {
+    if _browser.view_id() is Some(_) {
+      return
+    }
+    if event is @proton.WebContentsEvent::PdfPrinted(result~) {
       show_status(
         "PDF request \{result.request_id}: \{if result.success { "complete" } else { "failed" }}\nPath: \{result.path}",
       )
@@ -179,7 +182,7 @@ async fn main {
   .window_lifecycle(
     on_ready=context => {
       let window = context.handle()
-      browser_slot.val = Some(window.browser())
+      browser_slot.val = Some(window.web_contents())
       window
     },
     on_close=fn(_window) { browser_slot.val = None },

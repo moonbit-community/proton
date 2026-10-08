@@ -171,10 +171,10 @@ sampling and later calls report measured values. See
 [proton/README.md](proton/README.md) and `examples/85_task_metrics`.
 
 Page-level control follows `webContents`:
-`BrowserHandle::navigation_history()` and the `ViewHandle` equivalent report the
+`WebContentsHandle::navigation_history()` report the
 session history with the active entry and Chromium's page-transition types,
 matching Electron's `webContents.navigationHistory`.
-`BrowserHandle::insert_css()` and `BrowserHandle::remove_inserted_css()` inject
+`WebContentsHandle::insert_css()` and `WebContentsHandle::remove_inserted_css()` inject
 and remove a stylesheet in the current document, matching
 `webContents.insertCSS` and `removeInsertedCSS`. [proton/README.md](proton/README.md)
 lists the `webContents` calls CEF has no equivalent for, such as `capturePage`,

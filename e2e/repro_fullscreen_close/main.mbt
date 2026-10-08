@@ -23,7 +23,10 @@ async fn main {
     ),
   )
   .identifier("dev.proton.repro-fullscreen-close")
-  .on_view_event(fn(_, event) noraise {
+  .on_web_contents_event(fn(contents, event) noraise {
+    if contents.view_id() is None {
+      return
+    }
     if event is DidFinishLoad {
       loaded.val += 1
     }
@@ -92,7 +95,7 @@ async fn main {
           if args.contains("--native-close") {
             window.close()
           } else {
-            window.browser().eval("window.close()")
+            window.web_contents().eval("window.close()")
           }
         },
         no_wait=true,

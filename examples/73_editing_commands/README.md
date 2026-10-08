@@ -1,7 +1,6 @@
 # Editing Commands
 
-Manual review for Electron-style editing commands on both `BrowserHandle` and
-`ViewHandle`.
+Manual review for Electron-style editing commands on `WebContentsHandle` from either a window or a view.
 
 ```sh
 moon -C examples run 73_editing_commands --target native

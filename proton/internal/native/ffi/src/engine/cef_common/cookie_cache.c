@@ -116,7 +116,7 @@ static int proton_cookie_snapshot_append(proton_cookie_snapshot_t *snapshot,
 /* ------------------------------------------------------------------ */
 
 typedef struct proton_cookie_get_state {
-  proton_engine_window_t *window;
+  void *window;
   proton_cookie_state_ref_count_t refs; /* list owner plus visitor refs */
   proton_cookie_state_detached_t detached; /* no longer visible to callers */
   int64_t request_id;
@@ -149,7 +149,7 @@ static void proton_cookie_get_state_release(proton_cookie_get_state_t *state) {
 }
 
 static proton_cookie_get_state_t *
-proton_cookie_get_state_find(proton_engine_window_t *window) {
+proton_cookie_get_state_find(void *window) {
   for (proton_cookie_get_state_t *state = g_cookie_get_states;
        state != NULL; state = state->next) {
     if (state->window == window) {
@@ -160,7 +160,7 @@ proton_cookie_get_state_find(proton_engine_window_t *window) {
 }
 
 static proton_cookie_get_state_t *proton_cookie_get_state_create(
-    proton_engine_window_t *window, int include_http_only) {
+    void *window, int32_t is_view, int include_http_only) {
   if (proton_cookie_get_state_find(window) != NULL) {
     return NULL;
   }
@@ -182,7 +182,7 @@ static proton_cookie_get_state_t *proton_cookie_get_state_create(
   if (g_next_cookie_request_id <= 0) {
     g_next_cookie_request_id = 1;
   }
-  state->event_window = proton_engine_window_public_id(window);
+  state->event_window = is_view ? proton_engine_view_window_public_id(window) : proton_engine_window_public_id(window);
   state->status = PROTON_OK;
   state->next = g_cookie_get_states;
   g_cookie_get_states = state;
@@ -464,9 +464,9 @@ int32_t proton_cookie_snapshot_int64_field(
 /* ------------------------------------------------------------------ */
 
 static cef_cookie_manager_t *
-proton_cookie_manager_from_window(proton_engine_window_t *window,
+proton_cookie_manager_from_window(void *window, int32_t is_view,
                                   char *error, size_t error_len) {
-  cef_browser_t *browser = proton_engine_window_browser(window);
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
   if (browser == NULL) {
     proton_engine_set_message(error, error_len,
                               "window browser is not available");
@@ -496,8 +496,8 @@ proton_cookie_manager_from_window(proton_engine_window_t *window,
   return manager;
 }
 
-int32_t proton_engine_window_cookie_begin_get(
-    proton_engine_window_t *window, const char *url_utf8,
+int32_t proton_engine_contents_cookie_begin_get(
+    void *window, int32_t is_view, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id, char *error,
     size_t error_len) {
   if (window == NULL) {
@@ -511,13 +511,13 @@ int32_t proton_engine_window_cookie_begin_get(
   *out_request_id = PROTON_INVALID_HANDLE;
 
   cef_cookie_manager_t *manager =
-      proton_cookie_manager_from_window(window, error, error_len);
+      proton_cookie_manager_from_window(window, is_view, error, error_len);
   if (manager == NULL) {
     return PROTON_ERR_ENGINE;
   }
 
   proton_cookie_get_state_t *state =
-      proton_cookie_get_state_create(window, include_http_only != 0);
+      proton_cookie_get_state_create(window, is_view, include_http_only != 0);
   if (state == NULL) {
     manager->base.release((cef_base_ref_counted_t *)manager);
     proton_engine_set_message(error, error_len,
@@ -538,6 +538,9 @@ int32_t proton_engine_window_cookie_begin_get(
     return PROTON_ERR_PLATFORM;
   }
 
+  // CEF consumes one visitor reference at the C ABI boundary. Keep a local
+  // reference until acceptance is recorded, including synchronous rejection.
+  visitor->base.add_ref((cef_base_ref_counted_t *)visitor);
   int ok;
   if (url_utf8 != NULL && url_utf8[0] != '\0') {
     cef_string_t url = {0};
@@ -569,8 +572,8 @@ int32_t proton_engine_window_cookie_begin_get(
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_cookie_set(
-    proton_engine_window_t *window, const char *url_utf8,
+int32_t proton_engine_contents_cookie_set(
+    void *window, int32_t is_view, const char *url_utf8,
     const char *name_utf8, const char *value_utf8,
     const char *domain_utf8, const char *path_utf8,
     int32_t secure, int32_t http_only, int32_t same_site,
@@ -619,7 +622,7 @@ int32_t proton_engine_window_cookie_set(
   cef_string_from_utf8(url_utf8, strlen(url_utf8), &url);
 
   cef_cookie_manager_t *manager =
-      proton_cookie_manager_from_window(window, error, error_len);
+      proton_cookie_manager_from_window(window, is_view, error, error_len);
   if (manager == NULL) {
     cef_string_clear(&cookie.name);
     cef_string_clear(&cookie.value);
@@ -647,7 +650,7 @@ int32_t proton_engine_window_cookie_set(
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_cookie_delete(proton_engine_window_t *window,
+int32_t proton_engine_contents_cookie_delete(void *window, int32_t is_view,
                                            const char *url_utf8,
                                            const char *name_utf8,
                                            char *error, size_t error_len) {
@@ -657,7 +660,7 @@ int32_t proton_engine_window_cookie_delete(proton_engine_window_t *window,
   }
 
   cef_cookie_manager_t *manager =
-      proton_cookie_manager_from_window(window, error, error_len);
+      proton_cookie_manager_from_window(window, is_view, error, error_len);
   if (manager == NULL) {
     return PROTON_ERR_ENGINE;
   }
@@ -689,14 +692,14 @@ int32_t proton_engine_window_cookie_delete(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_cookie_flush(proton_engine_window_t *window,
+int32_t proton_engine_contents_cookie_flush(void *window, int32_t is_view,
                                           char *error, size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   cef_cookie_manager_t *manager =
-      proton_cookie_manager_from_window(window, error, error_len);
+      proton_cookie_manager_from_window(window, is_view, error, error_len);
   if (manager == NULL) {
     return PROTON_ERR_ENGINE;
   }
@@ -706,13 +709,13 @@ int32_t proton_engine_window_cookie_flush(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_clear_cache(proton_engine_window_t *window,
+int32_t proton_engine_contents_clear_cache(void *window, int32_t is_view,
                                          char *error, size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  cef_browser_t *browser = proton_engine_window_browser(window);
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
   if (browser == NULL) {
     proton_engine_set_message(error, error_len,
                               "window browser is not available");
@@ -738,13 +741,13 @@ int32_t proton_engine_window_clear_cache(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_clear_certificate_exceptions(
-    proton_engine_window_t *window, char *error, size_t error_len) {
+int32_t proton_engine_contents_clear_certificate_exceptions(
+    void *window, int32_t is_view, char *error, size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  cef_browser_t *browser = proton_engine_window_browser(window);
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
   if (browser == NULL) {
     proton_engine_set_message(error, error_len, "window browser is not available");
     return PROTON_ERR_ENGINE;
@@ -766,13 +769,13 @@ int32_t proton_engine_window_clear_certificate_exceptions(
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_clear_auth_cache(proton_engine_window_t *window,
+int32_t proton_engine_contents_clear_auth_cache(void *window, int32_t is_view,
                                               char *error, size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  cef_browser_t *browser = proton_engine_window_browser(window);
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
   if (browser == NULL) {
     proton_engine_set_message(error, error_len, "window browser is not available");
     return PROTON_ERR_ENGINE;
@@ -794,13 +797,13 @@ int32_t proton_engine_window_clear_auth_cache(proton_engine_window_t *window,
   return PROTON_OK;
 }
 
-int32_t proton_engine_window_close_all_connections(
-    proton_engine_window_t *window, char *error, size_t error_len) {
+int32_t proton_engine_contents_close_all_connections(
+    void *window, int32_t is_view, char *error, size_t error_len) {
   if (window == NULL) {
     proton_engine_set_message(error, error_len, "window is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  cef_browser_t *browser = proton_engine_window_browser(window);
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
   if (browser == NULL) {
     proton_engine_set_message(error, error_len, "window browser is not available");
     return PROTON_ERR_ENGINE;
@@ -822,7 +825,7 @@ int32_t proton_engine_window_close_all_connections(
   return PROTON_OK;
 }
 
-void proton_engine_window_cookie_cleanup(proton_engine_window_t *window) {
+void proton_engine_contents_cookie_cleanup(void *window) {
   if (window == NULL) {
     return;
   }

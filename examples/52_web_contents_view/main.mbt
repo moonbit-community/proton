@@ -145,7 +145,7 @@ fn navigate(payload : NavigatePayload) -> NavigateReply {
   let url = normalize_url(payload.url)
   match panel_slot.val {
     Some(view) => {
-      view.load_url(url) catch {
+      view.web_contents().load_url(url) catch {
         _ => return NavigateReply::{ ok: false, url, }
       }
       NavigateReply::{ ok: true, url, }
@@ -171,12 +171,12 @@ fn panel_command(action : (@proton.ViewHandle) -> Unit raise) -> SimpleReply {
 fn set_panel_zoom(payload : ZoomPayload) -> ZoomReply {
   match panel_slot.val {
     Some(view) => {
-      view.set_zoom_percent(payload.percent) catch {
+      view.web_contents().set_zoom_percent(payload.percent) catch {
         _ => return ZoomReply::{ ok: false, percent: payload.percent, }
       }
-      let percent = view.zoom_percent() catch {
-        _ => return ZoomReply::{ ok: false, percent: payload.percent, }
-      }
+      let percent = view.web_contents().zoom_percent() catch {
+          _ => return ZoomReply::{ ok: false, percent: payload.percent, }
+        }
       ZoomReply::{ ok: true, percent, }
     }
     None => ZoomReply::{ ok: false, percent: payload.percent, }
@@ -189,7 +189,7 @@ fn set_audio_muted(payload : AudioPayload) -> AudioReply {
     "host" =>
       match host_slot.val {
         Some(window) => {
-          let browser = window.browser()
+          let browser = window.web_contents()
           browser.set_audio_muted(payload.muted) catch {
             _ =>
               return AudioReply::{
@@ -213,7 +213,7 @@ fn set_audio_muted(payload : AudioPayload) -> AudioReply {
     "view" =>
       match panel_slot.val {
         Some(view) => {
-          view.set_audio_muted(payload.muted) catch {
+          view.web_contents().set_audio_muted(payload.muted) catch {
             _ =>
               return AudioReply::{
                 ok: false,
@@ -221,14 +221,14 @@ fn set_audio_muted(payload : AudioPayload) -> AudioReply {
                 muted: payload.muted,
               }
           }
-          let muted = view.is_audio_muted() catch {
-            _ =>
-              return AudioReply::{
-                ok: false,
-                target: payload.target,
-                muted: payload.muted,
-              }
-          }
+          let muted = view.web_contents().is_audio_muted() catch {
+              _ =>
+                return AudioReply::{
+                  ok: false,
+                  target: payload.target,
+                  muted: payload.muted,
+                }
+            }
           AudioReply::{ ok: true, target: payload.target, muted, }
         }
         None => AudioReply::{ ok: false, target: payload.target, muted: false, }
@@ -242,13 +242,13 @@ fn browser_extension() -> @proton_extension.Extension {
   @proton_extension.typed(browser_contract, fn(registrar) raise {
     registrar.bind(navigate_command, (_context, payload) => navigate(payload))
     registrar.bind(back_command, (_context, _payload) => {
-      panel_command(view => view.back())
+      panel_command(view => view.web_contents().back())
     })
     registrar.bind(forward_command, (_context, _payload) => {
-      panel_command(view => view.forward())
+      panel_command(view => view.web_contents().forward())
     })
     registrar.bind(reload_command, (_context, _payload) => {
-      panel_command(view => view.reload())
+      panel_command(view => view.web_contents().reload())
     })
     registrar.bind(zoom_command, (_context, payload) => set_panel_zoom(payload))
     registrar.bind(audio_command, (_context, payload) => {
@@ -260,7 +260,7 @@ fn browser_extension() -> @proton_extension.Extension {
 ///|
 fn host_eval(script : String) -> Unit {
   match host_slot.val {
-    Some(window) => window.browser().eval(script) catch { _ => () }
+    Some(window) => window.web_contents().eval(script) catch { _ => () }
     None => ()
   }
 }
@@ -348,7 +348,10 @@ async fn main {
       _ => ()
     }
   })
-  .on_view_event(async fn(_view, event) noraise {
+  .on_web_contents_event(async fn(_view, event) noraise {
+    if _view.view_id() is None {
+      return
+    }
     // Keep the sidebar address bar and status line in sync with the page.
     match event {
       Navigated(url~) => sync_sidebar(url=Some(url), title=None, error=None)
@@ -366,6 +369,7 @@ async fn main {
       FoundInPage(..) => ()
       RendererProcessTerminated(..) => ()
       Closed => panel_slot.val = None
+      _ => ()
     }
   })
   .window_lifecycle(

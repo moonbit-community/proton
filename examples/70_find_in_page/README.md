@@ -1,7 +1,7 @@
 # Find In Page
 
-Manual review for Electron-style `BrowserHandle::find_in_page`,
-`ViewHandle::find_in_page`, their result events, and stop behavior.
+Manual review for Electron-style `WebContentsHandle::find_in_page`,
+`ViewHandle::web_contents().find_in_page`, their result events, and stop behavior.
 
 ```sh
 moon -C examples run 70_find_in_page --target native

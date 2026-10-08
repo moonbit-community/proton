@@ -39,7 +39,7 @@ let cancel_command : @proton_contract.Command[Unit, Reply] = contract.command(
 )
 
 ///|
-let browser_slot : Ref[@proton.BrowserHandle?] = { val: None, }
+let browser_slot : Ref[@proton.WebContentsHandle?] = { val: None, }
 
 ///|
 let last_download_id : Ref[Int?] = { val: None, }
@@ -179,7 +179,7 @@ async fn main {
   .window_lifecycle(
     on_ready=context => {
       let window = context.handle()
-      browser_slot.val = Some(window.browser())
+      browser_slot.val = Some(window.web_contents())
       window
     },
     on_close=fn(_window) {

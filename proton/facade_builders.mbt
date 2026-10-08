@@ -500,7 +500,7 @@ pub fn App::on_web_contents_created(
 ///
 /// The handler runs for every affected web contents and reports Electron's
 /// reason vocabulary with the platform exit code. Proton does not reload the
-/// page automatically; `BrowserHandle::reload` or `ViewHandle::reload` decides
+/// page automatically; `WebContentsHandle::reload` decides
 /// what happens next.
 pub fn App::on_render_process_gone(
   self : App,
@@ -525,30 +525,13 @@ pub fn App::on_session_created(
 }
 
 ///|
-/// Observes events for every running web contents view: loading changes,
-/// main-frame navigations, title updates, load failures, page-search results,
-/// and close.
-/// While the parent window remains alive, closing a view through its handle,
-/// `remove_view`, or its page delivers `Closed` once after native closure.
-/// The event handle retains its identity but cannot operate the closed view.
-/// Parent-window shutdown ends all child lifetimes; use the window's close
-/// notification for that cleanup rather than awaiting each child's `Closed`.
-pub fn App::on_view_event(
-  self : App,
-  handler : async (ViewHandle, ViewEvent) -> Unit noraise,
-) -> App {
-  self.view_event_handlers.push(handler)
-  self
-}
-
-///|
-/// Observes events for every main browser page: loading changes, main-frame
+/// Observes events for main pages and child views: loading changes, main-frame
 /// navigations, title updates, load failures, and page-search results.
-pub fn App::on_browser_event(
+pub fn App::on_web_contents_event(
   self : App,
-  handler : async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  handler : async (WebContentsHandle, WebContentsEvent) -> Unit noraise,
 ) -> App {
-  self.browser_event_handlers.push(handler)
+  self.contents_event_handlers.push(handler)
   self
 }
 
@@ -570,7 +553,7 @@ pub fn App::on_window_close_request(
 /// when allowed.
 pub fn App::on_navigation_request(
   self : App,
-  handler : async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise,
+  handler : async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise,
 ) -> App {
   self.navigation_handler = Some(handler)
   self
@@ -582,7 +565,7 @@ pub fn App::on_navigation_request(
 /// already be declared with `add_window(..., open_on_start=false)`.
 pub fn App::on_new_window_request(
   self : App,
-  handler : async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise,
+  handler : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise,
 ) -> App {
   self.new_window_handler = Some(handler)
   self
@@ -592,7 +575,7 @@ pub fn App::on_new_window_request(
 /// Reviews downloads before CEF chooses a destination.
 pub fn App::on_download_request(
   self : App,
-  handler : async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise,
+  handler : async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise,
 ) -> App {
   self.download_handler = Some(handler)
   self
@@ -602,7 +585,7 @@ pub fn App::on_download_request(
 /// Reviews invalid TLS certificates. The default is denial.
 pub fn App::on_certificate_error(
   self : App,
-  handler : async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise,
+  handler : async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise,
 ) -> App {
   self.certificate_handler = Some(handler)
   self
@@ -613,7 +596,7 @@ pub fn App::on_certificate_error(
 /// denial.
 pub fn App::on_media_permission_request(
   self : App,
-  handler : async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise,
+  handler : async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise,
 ) -> App {
   self.media_handler = Some(handler)
   self
@@ -623,7 +606,7 @@ pub fn App::on_media_permission_request(
 /// Applies one policy to certificate and media permission requests.
 pub fn App::on_permission_request(
   self : App,
-  handler : async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise,
+  handler : async (WebContentsHandle, PermissionRequest) -> BrowserPermissionDecision noraise,
 ) -> App {
   self.permission_handler = Some(handler)
   self
@@ -633,7 +616,7 @@ pub fn App::on_permission_request(
 /// Observes download progress and terminal states.
 pub fn App::on_download_event(
   self : App,
-  handler : async (BrowserHandle, DownloadEvent) -> Unit noraise,
+  handler : async (WebContentsHandle, DownloadEvent) -> Unit noraise,
 ) -> App {
   self.download_event_handlers.push(handler)
   self

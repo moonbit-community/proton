@@ -72,9 +72,9 @@ fn render_process_reason_name(
 ///|
 /// Describes one web contents the way the terminal review prints it.
 fn web_contents_label(contents : @proton.WebContentsHandle) -> String {
-  match contents {
-    Browser(browser) => "browser:" + browser.window_id()
-    View(view) => "view:" + view.window_id() + "/" + view.id()
+  match contents.view_id() {
+    None => "browser:" + contents.window_id()
+    Some(id) => "view:" + contents.window_id() + "/" + id
   }
 }
 

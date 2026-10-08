@@ -366,7 +366,7 @@ pub async fn run_devtools() -> Unit {
     debug=true,
   )
   .window_lifecycle(
-    on_ready=context => context.handle().browser().open_devtools(),
+    on_ready=context => context.handle().web_contents().open_devtools(),
     on_close=fn(_) { () },
   )
   .identifier("dev.proton.e2e-fixtures")
