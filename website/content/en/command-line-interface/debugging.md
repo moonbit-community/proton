@@ -27,20 +27,6 @@ Proton uses `tonyfettes/xlog`. Development output uses stderr; packaged applicat
 
 File output depends on packaged metadata. CEF diagnostics are not the application logging interface.
 
-## Failure classification
-
-| Symptom | Relevant boundary |
-| --- | --- |
-| Missing runtime/helper | Setup-managed release and platform selection |
-| Frontend command not found | Installed tool and PATH; Warren is installed separately |
-| Bridge unavailable | Page is outside the Proton renderer environment |
-| Unknown operation | Missing command binding or capability |
-| Decode failure | Request/response type and serialized payload mismatch |
-| Window gone but process remains | Lifecycle policy, active child browsers and cleanup completion |
-| Packaged page missing assets | Asset paths, frontend output and resource assembly |
-
-A useful report includes the exact command, full error, Proton/MoonBit versions, OS and architecture, development versus packaged mode, and the smallest reproduction. Process termination must be distinguished from normal shutdown completion.
-
 ## Locate the actual log
 
 Packaged applications write proton-&lt;pid&gt;.log by default. Directories use the application identifier, not its display name:
@@ -61,8 +47,12 @@ App.path(AppPathKind::Logs) returns the resolved path. Use that result when set_
 | dev never reaches frontend readiness | Run before_dev inside frontend.path, check dev_url host/port; use --no-frontend for an existing service instead of starting a second one |
 | No bridge in a normal browser | Launch the native application through proton_cli dev; browser previews have no host bridge |
 | permission_denied / unknown_op | Check bound descriptors, capability targets and current window/page; adding a module dependency is insufficient |
+| Frontend command not found | Check that the configured tool is installed and on PATH; Warren is installed separately from Proton CLI |
+| Request or response decode failure | Compare the command descriptor types with the actual JSON payload; inspect ClientFailure and backend logs |
 | Packaged resource 404 | Inspect the artifact resource tree and relative HTML URLs, frontend.dist and package.resources; retry without a development server |
 | Process remains after window close | Check KeepRunning and denied quit decisions first, then final exit/cleanup errors; record process state and do not count manual killing as successful shutdown |
 | appimage packaging fails | Check the PNG and appimagetool --version; distinguish icon validation from create AppImage tool failures |
 
-Include doctor --json output, application logs and a minimal reproduction in a report. Review logs for your application's data or credentials before sharing them.
+## Reporting a problem
+
+Include the command and full error, Proton and MoonBit versions, OS and architecture, and whether the failure occurs in development or in a packaged application. Attach `proton_cli doctor --json` output, the relevant application log, and a minimal reproduction. For shutdown failures, record whether the process exited on its own or was terminated manually. Review logs for application data or credentials before sharing them.

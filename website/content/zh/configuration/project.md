@@ -1,30 +1,8 @@
-# Configuration
+# 项目配置
 
 `proton.project.json` 包含应用身份及 CLI 构建／打包元数据。顶层是 JSON 对象，只接受以下四个字段；未知字段会被拒绝。窗口状态、命令注册和能力声明属于 MoonBit 应用构建器，不属于此配置文件。
 
 默认文件名为 `proton.project.json`。若使用 `moon.proton.json` 等其他名称，需给 `dev`、`build` 或 `package` 显式传递 `--config moon.proton.json`；它不是自动发现的别名。
-
-`identifier` 会去除首尾空白，必须包含至少两个非空的点分段。每段以 ASCII 字母或数字开头，仅允许 ASCII 字母、数字和连字符。
-
-## 配置职责与目录布局
-
-Proton 不要求使用 minimal 或 isomorphic 模板的目录布局。CLI 根据本文件定位后端、前端和资源；各路径的解析规则见本页“路径与资源”。
-
-| 文件或入口 | 职责 |
-| --- | --- |
-| moon.mod | 模块名称和版本化依赖 |
-| moon.pkg | 包导入、目标及可执行入口声明 |
-| moon.work（使用多个模块时） | 将模块组织为工作区 |
-| proton.project.json | 应用身份、CLI 构建路径与打包元数据 |
-| MoonBit App 构建器 | 窗口、命令、capability 和生命周期行为 |
-
-模块依赖使模块可用，包导入选择当前包使用的 API。项目配置中的 backend.package 选择构建入口，不代替 Moon 的包声明。
-
-## 构建输出
-
-Moon 默认将构建产物写入 _build/。前端输出位置取决于前端构建工具，应与 frontend.dist 对应；frontend/dist 是 isomorphic 模板的选择，不是框架固定路径。打包器将分发产物写入 package.output，默认 dist。
-
-这些目录保存生成产物，内容由源码、构建命令和项目配置决定。setup 安装的运行时与 helper 位于用户级共享存储，不属于应用源码目录。
 
 ## 顶层字段
 
@@ -35,7 +13,9 @@ Moon 默认将构建产物写入 _build/。前端输出位置取决于前端构�
 | `frontend` | object | 可省略，前端命令及资源配置 |
 | `package` | object | 可省略，分发元数据；基于元数据打包时需要 |
 
-最小配置形状为：
+`identifier` 会去除首尾空白，必须包含至少两个非空的点分段。每段以 ASCII 字母或数字开头，仅允许 ASCII 字母、数字和连字符。
+
+最小配置为：
 
 ```json
 {
@@ -128,6 +108,26 @@ Moon 默认将构建产物写入 _build/。前端输出位置取决于前端构�
 | `minimum_system_version` | string | 仅 macOS；格式为 `major.minor[.patch]`。设置 `LSMinimumSystemVersion`；未配置时省略该字段。不改变编译目标，也不验证二进制兼容性。 |
 
 合并后的格式列表为空时采用宿主平台默认格式。CLI 选项覆盖解析后的配置。支持的格式、签名和安装模式见[打包行为](../command-line-interface/packaging.md)。
+
+## 配置职责与目录布局
+
+Proton 不要求使用 minimal 或 isomorphic 模板的目录布局。CLI 根据本文件定位后端、前端和资源；各路径的解析规则见本页“路径与资源”。
+
+| 文件或入口 | 职责 |
+| --- | --- |
+| moon.mod | 模块名称和版本化依赖 |
+| moon.pkg | 包导入、目标及可执行入口声明 |
+| moon.work（使用多个模块时） | 将模块组织为工作区 |
+| proton.project.json | 应用身份、CLI 构建路径与打包元数据 |
+| MoonBit App 构建器 | 窗口、命令、capability 和生命周期行为 |
+
+模块依赖使模块可用，包导入选择当前包使用的 API。项目配置中的 backend.package 选择构建入口，不代替 Moon 的包声明。
+
+## 构建输出
+
+Moon 默认将构建产物写入 _build/。前端输出位置取决于前端构建工具，应与 frontend.dist 对应；frontend/dist 是 isomorphic 模板的选择，不是框架固定路径。打包器将分发产物写入 package.output，默认 dist。
+
+这些目录保存生成产物，内容由源码、构建命令和项目配置决定。setup 安装的运行时与 helper 位于用户级共享存储，不属于应用源码目录。
 
 ## 完整配置示例
 

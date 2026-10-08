@@ -27,20 +27,6 @@ Proton 使用 `tonyfettes/xlog`。开发输出使用 stderr，打包应用使用
 
 文件输出依赖打包元数据。CEF 诊断不是应用日志接口。
 
-## 错误分类
-
-| 现象 | 相关边界 |
-| --- | --- |
-| 缺少运行时／helper | setup 管理的版本与平台选择 |
-| 找不到前端命令 | 工具安装与 PATH；Warren 单独安装 |
-| bridge 不可用 | 页面不在 Proton 渲染器环境中 |
-| 未知操作 | 缺少命令绑定或能力声明 |
-| 解码失败 | 请求／响应类型与序列化载荷不匹配 |
-| 窗口消失但进程仍存活 | 生命周期策略、活动子浏览器和清理完成状态 |
-| 打包页面缺少资源 | 资源路径、前端输出和打包组装 |
-
-有效的问题报告应包含准确命令、完整错误、Proton／MoonBit 版本、操作系统和架构、开发或打包模式，以及最小复现。强制结束进程必须与正常完成退出区分。
-
 ## 找到实际日志
 
 打包应用的默认文件名是 proton-&lt;pid&gt;.log，目录以应用 identifier（不是显示名称）区分：
@@ -61,8 +47,12 @@ App.path(AppPathKind::Logs) 返回解析后的路径。通过 set_path 或 set_a
 | dev 等不到前端 | 在 frontend.path 中单独执行 before_dev，检查 dev_url 的主机和端口；已有服务用 --no-frontend，不要同时启动第二个 |
 | 普通浏览器里没有 bridge | 改为通过 proton_cli dev 启动原生应用；网页预览不注入宿主 bridge |
 | permission_denied / unknown_op | 检查注册的命令描述符、capability 目标与当前窗口／页面；不要只检查是否添加模块依赖 |
+| 找不到前端命令 | 检查配置中的工具是否安装并位于 PATH；Warren 需要独立于 Proton CLI 安装 |
+| 请求或响应解码失败 | 对照命令描述符类型与实际 JSON 载荷，检查 ClientFailure 和后端日志 |
 | 打包后资源 404 | 检查产物内资源树与 HTML 相对 URL，确认 frontend.dist 与 package.resources；停止开发服务器后重试 |
 | 关闭窗口后进程仍在 | 先检查 KeepRunning 和被拒绝的 quit；查看最终退出／清理错误。记录关闭操作与进程状态，不把手动 kill 当作退出成功 |
 | appimage 打包失败 | 先检查 PNG 文件及 appimagetool --version；区分图标校验失败与 create AppImage 工具错误 |
 
-报告问题时附带 doctor --json 的输出、应用日志及最小复现。提交前检查日志是否包含自己的业务数据或凭据。
+## 报告问题
+
+报告应包含执行命令与完整错误、Proton 和 MoonBit 版本、操作系统及架构，并说明故障发生在开发模式还是打包应用中。附上 `proton_cli doctor --json` 输出、相关应用日志及最小复现。退出问题还应注明进程自行退出还是被手动终止。分享日志前检查其中是否包含业务数据或凭据。

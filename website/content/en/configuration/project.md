@@ -1,30 +1,8 @@
-# Configuration
+# Project configuration
 
 `proton.project.json` contains application identity and CLI build/package metadata. It is a JSON object with four recognized top-level fields. Unknown fields are rejected. Window state, command registration and capabilities belong to the MoonBit application builder, not this file.
 
 The default filename is `proton.project.json`. To use another filename such as `moon.proton.json`, pass `--config moon.proton.json` to `dev`, `build` or `package`; it is not an automatically discovered alias.
-
-`identifier` is trimmed and must have at least two nonempty dot-separated components. Each component starts with an ASCII letter or digit and contains only ASCII letters, digits or hyphens.
-
-## Configuration ownership and directory layout
-
-Proton does not require the directory layout of either scaffold template. The CLI locates the backend, frontend and resources through this file; see the path resolution rules under Paths and resources below.
-
-| File or entry | Responsibility |
-| --- | --- |
-| moon.mod | Module name and versioned dependencies |
-| moon.pkg | Package imports, targets and executable entry declarations |
-| moon.work (when using multiple modules) | Groups modules into a workspace |
-| proton.project.json | Application identity, CLI build paths and packaging metadata |
-| MoonBit App builder | Windows, commands, capabilities and lifecycle behavior |
-
-A module dependency makes a module available; a package import selects the APIs used by that package. backend.package selects the build entry and does not replace Moon's package declarations.
-
-## Build output
-
-Moon writes build artifacts under _build/ by default. Frontend output depends on the frontend build tool and should correspond to frontend.dist. frontend/dist is an isomorphic template choice, not a fixed framework path. The packager writes distributables to package.output, which defaults to dist.
-
-These directories hold generated artifacts determined by source, build commands and project configuration. The runtime and helper installed by setup live in shared user-level storage, outside the application source tree.
 
 ## Top-level fields
 
@@ -35,7 +13,9 @@ These directories hold generated artifacts determined by source, build commands 
 | `frontend` | object | Optional frontend command and asset configuration |
 | `package` | object | Optional distribution metadata; required for metadata-driven packaging |
 
-A minimal configuration shape is:
+`identifier` is trimmed and must have at least two nonempty dot-separated components. Each component starts with an ASCII letter or digit and contains only ASCII letters, digits or hyphens.
+
+A minimal configuration is:
 
 ```json
 {
@@ -128,6 +108,26 @@ Each platform object accepts the following fields. Unknown fields are rejected, 
 | `minimum_system_version` | string | macOS only; `major.minor[.patch]`. Sets `LSMinimumSystemVersion`; omitted when unset. Does not change compilation targets or validate binary compatibility. |
 
 If the resolved format list is empty, the host default formats apply. CLI options override the resolved configuration. See [packaging behavior](../command-line-interface/packaging.md) for supported formats, signing and installation modes.
+
+## Configuration ownership and directory layout
+
+Proton does not require the directory layout of either scaffold template. The CLI locates the backend, frontend and resources through this file; see the path resolution rules under Paths and resources below.
+
+| File or entry | Responsibility |
+| --- | --- |
+| moon.mod | Module name and versioned dependencies |
+| moon.pkg | Package imports, targets and executable entry declarations |
+| moon.work (when using multiple modules) | Groups modules into a workspace |
+| proton.project.json | Application identity, CLI build paths and packaging metadata |
+| MoonBit App builder | Windows, commands, capabilities and lifecycle behavior |
+
+A module dependency makes a module available; a package import selects the APIs used by that package. backend.package selects the build entry and does not replace Moon's package declarations.
+
+## Build output
+
+Moon writes build artifacts under _build/ by default. Frontend output depends on the frontend build tool and should correspond to frontend.dist. frontend/dist is an isomorphic template choice, not a fixed framework path. The packager writes distributables to package.output, which defaults to dist.
+
+These directories hold generated artifacts determined by source, build commands and project configuration. The runtime and helper installed by setup live in shared user-level storage, outside the application source tree.
 
 ## Complete configuration example
 
