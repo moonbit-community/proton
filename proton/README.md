@@ -412,18 +412,38 @@ proxies such as `window.__MoonBit__.ticker.start(...)`.
 
 ## Windows
 
-Add secondary windows to the app builder:
+Primary and secondary windows use the same `WindowConfig`. It owns the page
+entry, size, native theme, titlebar and initial child views. `App` owns runtime
+settings and registers the configurations under window ids:
 
 ```moonbit
-@proton.html("Main", main_html)
-.add_window(
-  "settings",
+let main = @proton.WindowConfig("Main", @proton.AppEntry::Html(main_html))
+let settings = @proton.WindowConfig(
   "Settings",
   @proton.AppEntry::Html(settings_html),
   width=420,
   height=320,
+  theme=Dark,
 )
+@proton.App(main).add_window("settings", settings, open_on_start=false)
 ```
+
+`html`, `url`, `file` and `asset` remain single-window shortcuts to
+`App(WindowConfig(...))`. For other window options, construct `WindowConfig`
+directly. Derive a configuration with a record update such as
+`{ ..main, title: "Preview" }`; registering it snapshots the views array.
+`main_window(config)` replaces the primary configuration while retaining
+application settings and handlers. It does not modify an already running window.
+
+Declare child views with `views=[("browser", view_config)]` in either window's
+configuration. View ids are unique within their owning window, and declared
+views are recreated each time that window opens. Use `WindowHandle::add_view`
+for dynamically created views.
+
+Migration: move the former `App.title`, `size`, `theme`, `titlebar_style`,
+`traffic_light_position`, `entry_*` and `with_view` settings into `WindowConfig`.
+`add_window` now takes the id and configuration; `open_on_start` remains a
+registration option. Runtime `WindowHandle` operations are unchanged.
 
 The window id `"main"` is reserved for the primary window. By default, the
 process exits when all windows have closed. Use
@@ -722,7 +742,7 @@ Handlers run on the application task group.
 ```
 
 Applications own their light/dark/system preference. Configure native window
-chrome with `App::theme` or `WindowHandle::set_theme`; these do not alter
+chrome with `WindowConfig.theme` or `WindowHandle::set_theme`; these do not alter
 system appearance or emit system appearance events. Pages can follow the system
 with CSS `prefers-color-scheme`, or apply an application-owned theme explicitly.
 Proton does not synchronize a window preference into page CSS.
@@ -816,10 +836,9 @@ localStorage are intentionally not cleared while a CEF session is live.
 
 ## macOS traffic light position
 
-For Overlay windows, `.traffic_light_position(x=16, y=18)` sets the native
+For Overlay windows, `WindowConfig(..., traffic_light_position={ x: 16, y: 18 })` sets the native
 button group's top-left position in logical pixels (AppKit points). Button size
-and spacing remain system-controlled. Additional windows accept
-`traffic_light_position={ x: 16, y: 18 }` in `add_window`.
+and spacing remain system-controlled. Primary and secondary windows use the same setting.
 
 `WindowHandle::set_window_button_position(Some({ x: 24, y: 30 }))` changes the
 position; `None` restores the system layout. `window_button_position()` returns

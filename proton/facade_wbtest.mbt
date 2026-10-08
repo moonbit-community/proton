@@ -1521,7 +1521,9 @@ test "HTTP entry capabilities use the exact canonical origin" {
 test "replacing an entry preserves renderer capabilities" {
   let replaced = asset("Development", "app.html")
     .commands(fn(_registrar) {  })
-    .entry_url("http://localhost:5173")
+    .main_window(
+      WindowConfig("Development", AppEntry::Url("http://localhost:5173")),
+    )
   assert_eq(replaced.command_capabilities.length(), 1)
   assert_eq(replaced.command_capabilities[0].targets.length(), 1)
   assert_eq(replaced.command_capabilities[0].targets[0].window, "main")
@@ -1712,7 +1714,10 @@ test "application command registrars retain separate renderer targets" {
     "secondary",
   )
   let configured = html("Commands", "<html></html>")
-    .add_window("secondary", "Secondary", AppEntry::Html("<html></html>"))
+    .add_window(
+      "secondary",
+      WindowConfig("Secondary", AppEntry::Html("<html></html>")),
+    )
     .commands(registrar => {
       registrar.bind(primary, (_context, _request) => "primary")
     })
@@ -2635,21 +2640,27 @@ test "direct launches use the working directory as their resource directory" {
 
 ///|
 test "typed facade appends validated secondary windows" {
-  let configured = html("Main", "<main>Main</main>")
-    .theme(WindowThemePreference::Light)
-    .title("Themed Main")
-    .size(width=800, height=600)
-    .titlebar_style(TitlebarStyle::Overlay)
-    .add_window(
-      "settings",
+  let configured = App(
+    WindowConfig(
+      "Themed Main",
+      AppEntry::Html("<main>Main</main>"),
+      theme=WindowThemePreference::Light,
+      width=800,
+      height=600,
+      titlebar_style=TitlebarStyle::Overlay,
+    ),
+  ).add_window(
+    "settings",
+    WindowConfig(
       "Settings",
       AppEntry::Html("<main>Settings</main>"),
       width=480,
       height=360,
       size_hint=WindowSizeHint::Fixed,
       theme=WindowThemePreference::Dark,
-      open_on_start=false,
-    )
+    ),
+    open_on_start=false,
+  )
   let manifest = configured.inline_manifest()
   assert_eq(
     manifest.window.theme_preference,
@@ -2749,8 +2760,8 @@ test "launch activation classifies protocol URLs" {
 ///|
 test "typed facade rejects duplicate secondary window ids" {
   let configured = html("Main", "<main>Main</main>")
-    .add_window("settings", "One", AppEntry::Html("one"))
-    .add_window("settings", "Two", AppEntry::Html("two"))
+    .add_window("settings", WindowConfig("One", AppEntry::Html("one")))
+    .add_window("settings", WindowConfig("Two", AppEntry::Html("two")))
   assert_true(configured.validation_error() is Some(_))
 }
 
@@ -2758,8 +2769,7 @@ test "typed facade rejects duplicate secondary window ids" {
 test "typed facade reserves the primary window id" {
   let configured = html("Main", "<main>Main</main>").add_window(
     "main",
-    "Other",
-    AppEntry::Html("other"),
+    WindowConfig("Other", AppEntry::Html("other")),
   )
   assert_true(configured.validation_error() is Some(_))
 }
@@ -3864,18 +3874,33 @@ test "window size limits route live constraints through the handle" {
 }
 
 ///|
-test "with_view stores declarative views and rejects invalid ids" {
-  let app = html("Test", "<html></html>")
-  inspect(app.planned_views.length(), content="0")
-  let app = app.with_view(
-    "browser",
-    ViewConfig(width=320, height=240, initial_url="about:blank"),
+test "window view declarations validate ids within each window" {
+  let child = ViewConfig(width=320, height=240)
+  let config = WindowConfig("Test", Html("test"), views=[("browser", child)])
+  let app = App(config)
+    .identifier("dev.proton.test")
+    .add_window("other", config)
+  assert_true(app.validation_error() is None)
+  assert_eq(
+    app.resolved_app_config().window_views.get("main").unwrap().length(),
+    1,
   )
-  inspect(app.planned_views.length(), content="1")
-  let app = app.with_view("browser", ViewConfig(width=1, height=1))
-  let app = app.with_view("  ", ViewConfig(width=1, height=1))
-  inspect(app.planned_views.length(), content="1")
-  inspect(app.validation_errors.length(), content="2")
+  assert_eq(
+    app.resolved_app_config().window_views.get("other").unwrap().length(),
+    1,
+  )
+  let duplicate = { ..config, views: [("browser", child), ("browser", child)], }
+  assert_true(
+    App(duplicate).identifier("dev.proton.test").validation_error() is Some(_),
+  )
+  let blank = { ..config, views: [("  ", child)], }
+  assert_true(
+    App(config)
+    .identifier("dev.proton.test")
+    .add_window("other", blank)
+    .validation_error()
+    is Some(_),
+  )
 }
 
 ///|
@@ -4141,21 +4166,24 @@ test "web request header names reject ASCII case-insensitive duplicates" {
 }
 
 ///|
-test "traffic light position survives primary builder changes" {
-  let app = html("Buttons", "<p>Buttons</p>")
-    .traffic_light_position(x=16, y=18)
-    .title("Renamed")
-    .size(width=800, height=600)
-    .titlebar_style(Overlay)
-    .theme(Dark)
-  assert_eq(app.window.traffic_light_position, Some((16, 18)))
-  app.add_window("second", "Second", Html("second"), titlebar_style=Overlay, traffic_light_position={
-    x: 24,
-    y: 30,
+test "window configuration updates preserve unrelated settings" {
+  let original = WindowConfig("Buttons", Html("buttons"), traffic_light_position={
+    x: 16,
+    y: 18,
   })
-  |> ignore
-  assert_eq(app.windows[0].window.traffic_light_position, Some((24, 30)))
-  assert_eq(app.window.traffic_light_position, Some((16, 18)))
+  let revised = {
+    ..original,
+    title: "Renamed",
+    width: 800,
+    height: 600,
+    titlebar_style: Overlay,
+    theme: Dark,
+  }
+  let manifest = App(revised).add_window("second", original).inline_manifest()
+  assert_eq(manifest.window.traffic_light_position, Some((16, 18)))
+  assert_eq(manifest.windows[0].window.traffic_light_position, Some((16, 18)))
+  assert_eq(manifest.window.title, "Renamed")
+  assert_eq(manifest.windows[0].window.title, "Buttons")
 }
 
 ///|
@@ -4232,4 +4260,55 @@ test "different extension definitions cannot silently share one registration" {
       assert_true(detail.contains("conflicting definitions"))
     error => fail(error.message())
   }
+}
+
+///|
+test "primary and secondary registrations lower the same configuration" {
+  let views = [("child", ViewConfig(width=120, height=80))]
+  let config = WindowConfig(
+    "Shared",
+    Html("<p>Shared</p>"),
+    width=800,
+    height=600,
+    size_hint=Fixed,
+    titlebar_style=Overlay,
+    theme=Dark,
+    traffic_light_position={ x: 16, y: 18, },
+    views~,
+  )
+  let app = App(config)
+    .identifier("dev.proton.config")
+    .add_window("secondary", config, open_on_start=false)
+  // Registration owns its snapshot, even when the caller retains the array.
+  config.views.clear()
+  views.clear()
+  let manifest = app.inline_manifest()
+  @debug.assert_eq(manifest.window, manifest.windows[0].window)
+  @debug.assert_eq(manifest.entry, manifest.windows[0].entry)
+  assert_false(manifest.windows[0].open_on_start)
+  let resolved = app.resolved_app_config()
+  assert_eq(resolved.window_views.get("main").unwrap().length(), 1)
+  assert_eq(resolved.window_views.get("secondary").unwrap().length(), 1)
+}
+
+///|
+test "replacing the primary configuration keeps application registrations" {
+  let config = WindowConfig("Updated", Url("https://example.test"), views=[
+    ("view", ViewConfig(width=20, height=20)),
+  ])
+  let app = html("Old", "old")
+    .identifier("dev.proton.config")
+    .debug()
+    .commands(_ => ())
+    .add_window("secondary", WindowConfig("Other", Html("other")))
+    .main_window(config)
+  config.views.clear()
+  assert_eq(app.command_capabilities.length(), 1)
+  assert_eq(app.inline_manifest().window.title, "Updated")
+  assert_eq(app.inline_manifest().debug, 1)
+  assert_eq(app.inline_manifest().windows.length(), 1)
+  assert_eq(
+    app.resolved_app_config().window_views.get("main").unwrap().length(),
+    1,
+  )
 }

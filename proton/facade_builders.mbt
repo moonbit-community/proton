@@ -9,13 +9,14 @@ pub fn html(
   resizable? : Bool = true,
 ) -> App {
   App(
-    title,
-    width,
-    height,
-    @manifest.AppEntry::Html(html),
-    debug_level_from_bool(debug),
-    size_hint_from_resizable(resizable),
-  )
+    WindowConfig(
+      title,
+      @manifest.AppEntry::Html(html),
+      width~,
+      height~,
+      size_hint=if resizable { Unconstrained } else { Fixed },
+    ),
+  ).debug(enabled=debug)
 }
 
 ///|
@@ -29,13 +30,14 @@ pub fn url(
   resizable? : Bool = true,
 ) -> App {
   App(
-    title,
-    width,
-    height,
-    @manifest.AppEntry::Url(url),
-    debug_level_from_bool(debug),
-    size_hint_from_resizable(resizable),
-  )
+    WindowConfig(
+      title,
+      @manifest.AppEntry::Url(url),
+      width~,
+      height~,
+      size_hint=if resizable { Unconstrained } else { Fixed },
+    ),
+  ).debug(enabled=debug)
 }
 
 ///|
@@ -49,13 +51,14 @@ pub fn file(
   resizable? : Bool = true,
 ) -> App {
   App(
-    title,
-    width,
-    height,
-    @manifest.AppEntry::File(path),
-    debug_level_from_bool(debug),
-    size_hint_from_resizable(resizable),
-  )
+    WindowConfig(
+      title,
+      @manifest.AppEntry::File(path),
+      width~,
+      height~,
+      size_hint=if resizable { Unconstrained } else { Fixed },
+    ),
+  ).debug(enabled=debug)
 }
 
 ///|
@@ -69,13 +72,14 @@ pub fn asset(
   resizable? : Bool = true,
 ) -> App {
   App(
-    title,
-    width,
-    height,
-    @manifest.AppEntry::Asset(path),
-    debug_level_from_bool(debug),
-    size_hint_from_resizable(resizable),
-  )
+    WindowConfig(
+      title,
+      @manifest.AppEntry::Asset(path),
+      width~,
+      height~,
+      size_hint=if resizable { Unconstrained } else { Fixed },
+    ),
+  ).debug(enabled=debug)
 }
 
 ///|
@@ -180,97 +184,6 @@ pub fn App::proxy(self : App, server : String, bypass? : String) -> App {
 pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> App {
   self.bridge_startup_timeout_value_ms = timeout_ms
   self
-}
-
-///|
-/// Sets the primary window title.
-pub fn App::title(self : App, title : String) -> App {
-  self.window = @manifest.WindowManifest(
-    title,
-    self.window.width,
-    self.window.height,
-    size_hint=self.window.size_hint,
-    traffic_light_position?=self.window.traffic_light_position,
-    titlebar_style=self.window.titlebar_style,
-    theme=self.window.theme_preference,
-  )
-  self
-}
-
-///|
-/// Sets the primary window size.
-pub fn App::size(self : App, width~ : Int, height~ : Int) -> App {
-  self.window = @manifest.WindowManifest(
-    self.window.title,
-    width,
-    height,
-    size_hint=self.window.size_hint,
-    traffic_light_position?=self.window.traffic_light_position,
-    titlebar_style=self.window.titlebar_style,
-    theme=self.window.theme_preference,
-  )
-  self
-}
-
-///|
-/// Sets whether web content remains below or extends beneath the native
-/// titlebar. Overlay rendering is currently implemented on macOS and Windows.
-pub fn App::titlebar_style(self : App, style : TitlebarStyle) -> App {
-  self.window = @manifest.WindowManifest(
-    self.window.title,
-    self.window.width,
-    self.window.height,
-    size_hint=self.window.size_hint,
-    traffic_light_position?=self.window.traffic_light_position,
-    titlebar_style=match style {
-      Default => @manifest.TitlebarStyle::Default
-      Overlay => @manifest.TitlebarStyle::Overlay
-    },
-    theme=self.window.theme_preference,
-  )
-  self
-}
-
-///|
-/// Sets the primary window's native chrome theme.
-///
-/// Explicit `Light` and `Dark` themes require platform support. `System` is
-/// portable and follows the platform's effective application appearance.
-pub fn App::theme(self : App, theme : WindowThemePreference) -> App {
-  self.window = @manifest.WindowManifest(
-    self.window.title,
-    self.window.width,
-    self.window.height,
-    size_hint=self.window.size_hint,
-    traffic_light_position?=self.window.traffic_light_position,
-    titlebar_style=self.window.titlebar_style,
-    theme=manifest_window_theme(theme),
-  )
-  self
-}
-
-///|
-/// Overrides the primary app entry with inline HTML.
-pub fn App::entry_html(self : App, html : String) -> App {
-  self.set_entry(@manifest.AppEntry::Html(html))
-}
-
-///|
-/// Overrides the primary app entry with a URL.
-pub fn App::entry_url(self : App, url : String) -> App {
-  self.set_entry(@manifest.AppEntry::Url(url))
-}
-
-///|
-/// Overrides the primary app entry with a file path.
-pub fn App::entry_file(self : App, path : String) -> App {
-  self.set_entry(@manifest.AppEntry::File(path))
-}
-
-///|
-/// Overrides the primary app entry with an asset path.
-pub fn App::entry_asset(self : App, path : String) -> App {
-  self.set_entry(@manifest.AppEntry::Asset(path))
 }
 
 ///|
@@ -571,7 +484,7 @@ pub fn App::on_window_created(
 /// `web-contents-created`.
 ///
 /// Both a window's main browser page and each web contents view report here,
-/// including views declared with `App::with_view` and views added later
+/// including views declared in `WindowConfig` and views added later
 /// through `WindowHandle::add_view`.
 pub fn App::on_web_contents_created(
   self : App,
@@ -608,29 +521,6 @@ pub fn App::on_session_created(
   handler : async (ApplicationSession) -> Unit noraise,
 ) -> App {
   self.session_created_handlers.push(handler)
-  self
-}
-
-///|
-/// Attaches a web contents view to the primary window at startup, the
-/// declarative counterpart of `WindowHandle::add_view`: the view is created
-/// with the window and can later be found through `WindowHandle::view(id)`
-/// or observed through `App::on_view_event`. Use the imperative
-/// `WindowHandle::add_view` for views whose lifetime is dynamic.
-pub fn App::with_view(self : App, id : String, config : ViewConfig) -> App {
-  if id.trim().is_empty() {
-    self.validation_errors.push(
-      InvalidSetting(name="views.id", message="must not be empty"),
-    )
-    return self
-  }
-  if self.planned_views.any(view => view.0 == id) {
-    self.validation_errors.push(
-      InvalidSetting(name="views.id", message="duplicate view id: " + id),
-    )
-    return self
-  }
-  self.planned_views.push((id, config))
   self
 }
 
@@ -797,14 +687,7 @@ pub fn App::on_quit(
 pub fn App::add_window(
   self : App,
   id : String,
-  title : String,
-  entry : AppEntry,
-  width? : Int = 900,
-  height? : Int = 700,
-  size_hint? : WindowSizeHint = WindowSizeHint::Unconstrained,
-  titlebar_style? : TitlebarStyle = TitlebarStyle::Default,
-  theme? : WindowThemePreference = WindowThemePreference::System,
-  traffic_light_position? : WindowButtonPosition,
+  config : WindowConfig,
   open_on_start? : Bool = true,
 ) -> App {
   let normalized_id = id.trim().to_owned()
@@ -819,33 +702,16 @@ pub fn App::add_window(
         },
       ),
     )
-    return self
-  }
-  if self.windows.any(fn(window) { window.id == normalized_id }) {
+  } else if self.windows.any(window => window.0 == normalized_id) {
     self.validation_errors.push(
       InvalidSetting(
         name="window.id",
         message="duplicate secondary window id: " + normalized_id,
       ),
     )
-    return self
+  } else {
+    self.windows.push((normalized_id, config.snapshot(), open_on_start))
   }
-  self.windows.push(
-    @manifest.AppWindowManifest(
-      normalized_id,
-      @manifest.WindowManifest(
-        title,
-        width,
-        height,
-        size_hint=manifest_window_size_hint(size_hint),
-        titlebar_style=manifest_titlebar_style(titlebar_style),
-        theme=manifest_window_theme(theme),
-        traffic_light_position?=traffic_light_position.map(p => (p.x, p.y)),
-      ),
-      entry,
-      open_on_start~,
-    ),
-  )
   self
 }
 
@@ -998,20 +864,4 @@ fn renderer_capability_targets(
     Some(targets) => targets.copy()
     None => [RendererTarget::entry()]
   }
-}
-
-///|
-/// Places the macOS Overlay window buttons in logical pixels from the top left.
-/// Other titlebar styles and platforms ignore this setting.
-pub fn App::traffic_light_position(self : App, x~ : Int, y~ : Int) -> App {
-  self.window = @manifest.WindowManifest(
-    self.window.title,
-    self.window.width,
-    self.window.height,
-    size_hint=self.window.size_hint,
-    titlebar_style=self.window.titlebar_style,
-    theme=self.window.theme_preference,
-    traffic_light_position=(x, y),
-  )
-  self
 }

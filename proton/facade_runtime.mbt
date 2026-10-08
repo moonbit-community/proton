@@ -396,11 +396,7 @@ async fn run_manifest(
         bridge,
         permissions: permission_policies[index],
         browser_policy,
-        views: if plan.id == "main" {
-          config.planned_views
-        } else {
-          []
-        },
+        views: config.window_views.get(plan.id).unwrap_or([]),
       })
     }
     @async.with_task_group(application_tasks => {

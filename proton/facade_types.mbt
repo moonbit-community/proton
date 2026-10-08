@@ -105,9 +105,8 @@ pub extend NativeImageError with Show::{to_string, output}
 ///|
 /// High-level application facade for ordinary Proton apps.
 struct App {
-  mut window : @manifest.WindowManifest
-  mut entry : @manifest.AppEntry
-  windows : Array[@manifest.AppWindowManifest]
+  mut main_window_config : WindowConfig
+  windows : Array[(String, WindowConfig, Bool)]
   mut debug_level_value : Int
   mut headless_value : Bool
   mut accessibility_mode_value : AccessibilityMode
@@ -132,7 +131,6 @@ struct App {
   command_capabilities : Array[AppCommandCapability]
   extension_capabilities : Array[ExtensionCapabilityBinding]
   application_lifecycle_hooks : Array[ApplicationLifecycleHook]
-  planned_views : Array[(String, ViewConfig)]
   mut before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   mut will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
@@ -272,7 +270,7 @@ priv struct ResolvedAppConfig {
   accessibility_mode : AccessibilityMode
   proxy_server : String?
   proxy_bypass : String?
-  planned_views : Array[(String, @native.ViewConfig)]
+  window_views : Map[String, Array[(String, @native.ViewConfig)]]
   last_window_closed_policy : LastWindowClosedPolicy
   launch_input_handlers : Array[
     async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,

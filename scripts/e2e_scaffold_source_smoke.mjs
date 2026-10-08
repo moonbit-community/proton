@@ -155,7 +155,7 @@ function enableSecondWindow() {
   const source = fs.readFileSync(file, "utf8");
   const updated = source.replace(
     ".load_config()",
-    '.add_window("secondary", "Todo E2E Secondary", @proton.AppEntry::Asset("frontend/dist/index.html"))\n  .load_config()',
+    '.add_window("secondary", @proton.WindowConfig("Todo E2E Secondary", @proton.AppEntry::Asset("frontend/dist/index.html")))\n  .load_config()',
   ).replace(
     ".commands(fn(registrar) raise { backend.register_commands(registrar) })",
     '.commands(fn(registrar) raise { backend.register_commands(registrar) }, targets=[@proton.RendererTarget::entry(), @proton.RendererTarget::entry(window="secondary")])',

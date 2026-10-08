@@ -99,10 +99,12 @@ async fn run_multi_window_bridge() -> Result[Unit, String] {
     )
     .add_window(
       "secondary",
-      "Bridge Multi B",
-      @proton.AppEntry::Html(multi_window_page_html("B")),
-      width=520,
-      height=420,
+      @proton.WindowConfig(
+        "Bridge Multi B",
+        @proton.AppEntry::Html(multi_window_page_html("B")),
+        width=520,
+        height=420,
+      ),
       open_on_start=true,
     )
     .capability(@proton_extension.capability(multi_window_extension()), targets=[

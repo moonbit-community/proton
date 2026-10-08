@@ -193,11 +193,18 @@ fn page() -> String {
 
 ///|
 async fn main {
-  @proton.html("Find In Page", page(), width=1100, height=700, debug=true)
-  .with_view(
-    "content",
-    @proton.view(view_url, x=360, y=0, width=740, height=700),
+  @proton.App(
+    @proton.WindowConfig(
+      "Find In Page",
+      @proton.AppEntry::Html(page()),
+      width=1100,
+      height=700,
+      views=[
+        ("content", @proton.view(view_url, x=360, y=0, width=740, height=700)),
+      ],
+    ),
   )
+  .debug(enabled=true)
   .commands(register_commands)
   .on_browser_event(async fn(_browser, event) noraise {
     if event is @proton.BrowserEvent::FoundInPage(result~) {

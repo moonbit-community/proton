@@ -66,14 +66,13 @@ fn review_page(
 
 ///|
 async fn main {
-  let base = @proton.html(
-      "Application Metadata And Paths",
-      "<main>Loading application metadata...</main>",
-      width=980,
-      height=720,
-    )
-    .load_config()
-    .single_instance()
+  let window = @proton.WindowConfig(
+    "Application Metadata And Paths",
+    @proton.AppEntry::Html("<main>Loading application metadata...</main>"),
+    width=980,
+    height=720,
+  )
+  let base = @proton.App(window).load_config().single_instance()
   let override_root = @env.get_env_var("PROTON_APP_PATH_OVERRIDE_ROOT")
   let app = match override_root {
     Some(root) => apply_path_overrides(base, root)
@@ -101,15 +100,18 @@ async fn main {
   ]
   let paths = kinds.map(entry => (entry.1, display_path(app, entry.0)))
   app
-  .entry_html(
-    review_page(
-      name,
-      version,
-      @proton.is_packaged(),
-      override_root,
-      @proton.app_path(),
-      paths,
+  .main_window({
+    ..window,
+    entry: @proton.AppEntry::Html(
+      review_page(
+        name,
+        version,
+        @proton.is_packaged(),
+        override_root,
+        @proton.app_path(),
+        paths,
+      ),
     ),
-  )
+  })
   .run_or_abort()
 }

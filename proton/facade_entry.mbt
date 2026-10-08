@@ -187,12 +187,3 @@ fn remote_debugging(
     @env.get_env_var("PROTON_REMOTE_DEBUGGING_PORT"),
   )
 }
-
-///|
-fn size_hint_from_resizable(resizable : Bool) -> @manifest.WindowSizeHint {
-  if resizable {
-    @manifest.WindowSizeHint::None
-  } else {
-    @manifest.WindowSizeHint::Fixed
-  }
-}
