@@ -1436,19 +1436,17 @@ pub extern "C" fn proton_screen_enumerate_ffi(
 
 ///|
 #borrow(url_utf8, out_request_id)
-pub extern "C" fn proton_window_cookie_begin_get_ffi(
-  window : WindowHandle,
-  is_view : Int,
+pub extern "C" fn proton_session_cookie_begin_get_ffi(
+  runtime : RuntimeHandle,
   url_utf8 : Bytes,
   include_http_only : Int,
   out_request_id : Ref[Int64],
-) -> Int = "proton_contents_cookie_begin_get"
+) -> Int = "proton_session_cookie_begin_get"
 
 ///|
 #borrow(url_utf8, name_utf8, value_utf8, domain_utf8, path_utf8)
-pub extern "C" fn proton_window_cookie_set_ffi(
-  window : WindowHandle,
-  is_view : Int,
+pub extern "C" fn proton_session_cookie_set_ffi(
+  runtime : RuntimeHandle,
   url_utf8 : Bytes,
   name_utf8 : Bytes,
   value_utf8 : Bytes,
@@ -1457,46 +1455,40 @@ pub extern "C" fn proton_window_cookie_set_ffi(
   secure : Int,
   http_only : Int,
   same_site : Int,
-) -> Int = "proton_contents_cookie_set"
+) -> Int = "proton_session_cookie_set"
 
 ///|
 #borrow(url_utf8, name_utf8)
-pub extern "C" fn proton_window_cookie_delete_ffi(
-  window : WindowHandle,
-  is_view : Int,
+pub extern "C" fn proton_session_cookie_delete_ffi(
+  runtime : RuntimeHandle,
   url_utf8 : Bytes,
   name_utf8 : Bytes,
-) -> Int = "proton_contents_cookie_delete"
+) -> Int = "proton_session_cookie_delete"
 
 ///|
-pub extern "C" fn proton_window_cookie_flush_ffi(
-  window : WindowHandle,
-  is_view : Int,
-) -> Int = "proton_contents_cookie_flush"
+pub extern "C" fn proton_session_cookie_flush_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_session_cookie_flush"
 
 ///|
-pub extern "C" fn proton_window_clear_cache_ffi(
-  window : WindowHandle,
-  is_view : Int,
-) -> Int = "proton_contents_clear_cache"
+pub extern "C" fn proton_session_clear_cache_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_session_clear_cache"
 
 ///|
-pub extern "C" fn proton_window_clear_auth_cache_ffi(
-  window : WindowHandle,
-  is_view : Int,
-) -> Int = "proton_contents_clear_auth_cache"
+pub extern "C" fn proton_session_clear_auth_cache_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_session_clear_auth_cache"
 
 ///|
-pub extern "C" fn proton_window_clear_certificate_exceptions_ffi(
-  window : WindowHandle,
-  is_view : Int,
-) -> Int = "proton_contents_clear_certificate_exceptions"
+pub extern "C" fn proton_session_clear_certificate_exceptions_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_session_clear_certificate_exceptions"
 
 ///|
-pub extern "C" fn proton_window_close_all_connections_ffi(
-  window : WindowHandle,
-  is_view : Int,
-) -> Int = "proton_contents_close_all_connections"
+pub extern "C" fn proton_session_close_all_connections_ffi(
+  runtime : RuntimeHandle,
+) -> Int = "proton_session_close_all_connections"
 
 ///|
 #borrow(out_image)
@@ -1749,67 +1741,3 @@ pub extern "C" fn proton_view_respond_browser_request_ffi(
   action : Bytes,
   path : Bytes,
 ) -> Int = "proton_contents_respond_browser_request"
-
-///|
-#borrow(url_utf8, out_request_id)
-pub extern "C" fn proton_view_cookie_begin_get_ffi(
-  window : ViewHandle,
-  is_view : Int,
-  url_utf8 : Bytes,
-  include_http_only : Int,
-  out_request_id : Ref[Int64],
-) -> Int = "proton_contents_cookie_begin_get"
-
-///|
-#borrow(url_utf8, name_utf8, value_utf8, domain_utf8, path_utf8)
-pub extern "C" fn proton_view_cookie_set_ffi(
-  window : ViewHandle,
-  is_view : Int,
-  url_utf8 : Bytes,
-  name_utf8 : Bytes,
-  value_utf8 : Bytes,
-  domain_utf8 : Bytes,
-  path_utf8 : Bytes,
-  secure : Int,
-  http_only : Int,
-  same_site : Int,
-) -> Int = "proton_contents_cookie_set"
-
-///|
-#borrow(url_utf8, name_utf8)
-pub extern "C" fn proton_view_cookie_delete_ffi(
-  window : ViewHandle,
-  is_view : Int,
-  url_utf8 : Bytes,
-  name_utf8 : Bytes,
-) -> Int = "proton_contents_cookie_delete"
-
-///|
-pub extern "C" fn proton_view_cookie_flush_ffi(
-  window : ViewHandle,
-  is_view : Int,
-) -> Int = "proton_contents_cookie_flush"
-
-///|
-pub extern "C" fn proton_view_clear_cache_ffi(
-  window : ViewHandle,
-  is_view : Int,
-) -> Int = "proton_contents_clear_cache"
-
-///|
-pub extern "C" fn proton_view_clear_auth_cache_ffi(
-  window : ViewHandle,
-  is_view : Int,
-) -> Int = "proton_contents_clear_auth_cache"
-
-///|
-pub extern "C" fn proton_view_clear_certificate_exceptions_ffi(
-  window : ViewHandle,
-  is_view : Int,
-) -> Int = "proton_contents_clear_certificate_exceptions"
-
-///|
-pub extern "C" fn proton_view_close_all_connections_ffi(
-  window : ViewHandle,
-  is_view : Int,
-) -> Int = "proton_contents_close_all_connections"

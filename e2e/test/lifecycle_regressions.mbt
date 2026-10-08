@@ -94,6 +94,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         "page-control", "startup-update-channel", "startup-update-failure", "proxy-config",
         "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
         "closed-record-churn", "bridge-admission", "window-config", "web-contents",
+        "session-lifetime",
       ]
   }
   let failures : Array[String] = []

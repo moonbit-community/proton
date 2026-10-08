@@ -194,8 +194,6 @@ fn test_window_handle(
     insert_browser_page_css: fn(_css) { 21L },
     remove_browser_page_css: fn(_key) {  },
     session_handle: SessionHandle::{
-      id,
-      native_id,
       read_cookies: (_url, _include_http_only) => [],
       write_cookie: fn(
         _url,
@@ -529,6 +527,7 @@ async test "application context forwards orderly and forced exit requests" {
   let released = Ref(false)
   @async.with_task_group(group => {
     let context = ApplicationContext(
+      session=test_window_handle("main", 1L).web_contents().session(),
       group,
       test_window_manager(),
       @locale.LocalePreferences::resolve(None, []),
@@ -553,6 +552,7 @@ async test "application context forwards orderly and forced exit requests" {
 async test "application context validates protocol declarations and relaunch options" {
   @async.with_task_group(group => {
     let context = ApplicationContext(
+      session=test_window_handle("main", 1L).web_contents().session(),
       group,
       test_window_manager(),
       @locale.LocalePreferences::resolve(None, []),
@@ -2286,6 +2286,7 @@ async test "application lifecycle hooks shut down in reverse order" {
     start_application_lifecycle_hooks(
       configured.application_lifecycle_hooks,
       ApplicationContext(
+        session=test_window_handle("main", 1L).web_contents().session(),
         group,
         test_window_manager(),
         @locale.LocalePreferences::resolve(None, []),
@@ -2512,6 +2513,7 @@ async test "application lifecycle startup rolls back completed hooks" {
       start_application_lifecycle_hooks(
         configured.application_lifecycle_hooks,
         ApplicationContext(
+          session=test_window_handle("main", 1L).web_contents().session(),
           group,
           test_window_manager(),
           @locale.LocalePreferences::resolve(None, []),
@@ -3277,8 +3279,6 @@ test "cookie records preserve Electron-style session fields" {
 async test "session handle routes cookie and cache operations" {
   let calls : Array[String] = []
   let session = SessionHandle::{
-    id: "main",
-    native_id: 17L,
     read_cookies: (url, include_http_only) => {
       calls.push("get:\{url.unwrap_or("*")}:http_only=\{include_http_only}")
       []
@@ -3933,6 +3933,7 @@ async test "lifecycle contexts expose one immutable locale snapshot" {
   )
   @async.with_task_group(group => {
     let application = ApplicationContext(
+      session=test_window_handle("main", 1L).web_contents().session(),
       group,
       test_window_manager(),
       preferences,
@@ -4333,4 +4334,30 @@ test "replacing the primary configuration keeps application registrations" {
     app.resolved_app_config().window_views.get("main").unwrap().length(),
     1,
   )
+}
+
+///|
+async test "ending the application wakes an outstanding session reader" {
+  let store = CookieCompletionStore()
+  @async.with_task_group(group => {
+    let reader = group.spawn(() => {
+      try {
+        ignore(store.wait(42L))
+        false
+      } catch {
+        SessionError::OperationFailed(action~, detail~, ..) => {
+          assert_eq(action, "complete cookie read")
+          assert_eq(detail, "application session has ended")
+          true
+        }
+        error => raise error
+      }
+    })
+    while store.pending.is_empty() {
+      @async.sleep(1)
+    }
+    store.close()
+    assert_true(reader.wait())
+    assert_true(store.pending.is_empty())
+  })
 }

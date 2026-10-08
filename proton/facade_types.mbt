@@ -690,11 +690,10 @@ pub struct WebContentsHandle {
 }
 
 ///|
-/// A non-owning reference to the request context used by one window's main
-/// browser, corresponding to Electron's `webContents.session`.
+/// The shared browser session of one application run.
+/// Closing a window or view does not invalidate this handle. Operations fail
+/// with `SessionError` once application runtime teardown begins.
 pub struct SessionHandle {
-  id : String
-  native_id : Int64
   read_cookies : async (String?, Bool) -> Array[Cookie]
   write_cookie : (
     String,
@@ -705,14 +704,14 @@ pub struct SessionHandle {
     Bool,
     Bool,
     CookieSameSite,
-  ) -> Unit raise WindowSessionError
-  remove_cookies : (String?, String?) -> Unit raise WindowSessionError
-  flush_cookie_store : () -> Unit raise WindowSessionError
-  clear_http_cache : () -> Unit raise WindowSessionError
-  clear_http_auth_cache : () -> Unit raise WindowSessionError
-  clear_certificate_exceptions : () -> Unit raise WindowSessionError
-  close_all_connections : () -> Unit raise WindowSessionError
-  clear_storage_data : (StorageDataKind) -> Unit raise WindowSessionError
+  ) -> Unit raise SessionError
+  remove_cookies : (String?, String?) -> Unit raise SessionError
+  flush_cookie_store : () -> Unit raise SessionError
+  clear_http_cache : () -> Unit raise SessionError
+  clear_http_auth_cache : () -> Unit raise SessionError
+  clear_certificate_exceptions : () -> Unit raise SessionError
+  close_all_connections : () -> Unit raise SessionError
+  clear_storage_data : (StorageDataKind) -> Unit raise SessionError
 }
 
 ///|

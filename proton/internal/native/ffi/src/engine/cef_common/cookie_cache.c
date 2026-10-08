@@ -3,9 +3,7 @@
 #include "cookie_state_lifetime.h"
 #include "cookie_cache.h"
 #include "message.h"
-#include "window_state.h"
 
-#include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_cookie_capi.h"
 #include "include/capi/cef_request_context_capi.h"
 #include "include/internal/cef_string.h"
@@ -112,15 +110,14 @@ static int proton_cookie_snapshot_append(proton_cookie_snapshot_t *snapshot,
 }
 
 /* ------------------------------------------------------------------ */
-/* Per-window cookie-get state                                        */
+/* Application-session cookie-get state                                        */
 /* ------------------------------------------------------------------ */
 
 typedef struct proton_cookie_get_state {
-  void *window;
+  void *runtime;
   proton_cookie_state_ref_count_t refs; /* list owner plus visitor refs */
   proton_cookie_state_detached_t detached; /* no longer visible to callers */
   int64_t request_id;
-  int64_t event_window;
   int include_http_only;
   int accepted;
   int completion_emitted;
@@ -148,22 +145,8 @@ static void proton_cookie_get_state_release(proton_cookie_get_state_t *state) {
   }
 }
 
-static proton_cookie_get_state_t *
-proton_cookie_get_state_find(void *window) {
-  for (proton_cookie_get_state_t *state = g_cookie_get_states;
-       state != NULL; state = state->next) {
-    if (state->window == window) {
-      return state;
-    }
-  }
-  return NULL;
-}
-
 static proton_cookie_get_state_t *proton_cookie_get_state_create(
-    void *window, int32_t is_view, int include_http_only) {
-  if (proton_cookie_get_state_find(window) != NULL) {
-    return NULL;
-  }
+    void *runtime, int include_http_only) {
   proton_cookie_get_state_t *state =
       (proton_cookie_get_state_t *)calloc(1, sizeof(*state));
   if (state == NULL) {
@@ -176,13 +159,12 @@ static proton_cookie_get_state_t *proton_cookie_get_state_create(
     return NULL;
   }
   proton_cookie_state_lifetime_init(&state->refs, &state->detached);
-  state->window = window;
+  state->runtime = runtime;
   state->include_http_only = include_http_only;
   state->request_id = g_next_cookie_request_id++;
   if (g_next_cookie_request_id <= 0) {
     g_next_cookie_request_id = 1;
   }
-  state->event_window = is_view ? proton_engine_view_window_public_id(window) : proton_engine_window_public_id(window);
   state->status = PROTON_OK;
   state->next = g_cookie_get_states;
   g_cookie_get_states = state;
@@ -219,7 +201,6 @@ static void proton_cookie_get_state_emit(proton_cookie_get_state_t *state) {
   state->completion_emitted = 1;
   proton_event_t *event = proton_event_create(PROTON_EVENT_COOKIE_GET_COMPLETED);
   if (event != NULL) {
-    event->window = state->event_window;
     event->request_id = state->request_id;
     event->int_a = state->status;
     if (state->status == PROTON_OK) {
@@ -463,45 +444,29 @@ int32_t proton_cookie_snapshot_int64_field(
 /* Engine API                                                         */
 /* ------------------------------------------------------------------ */
 
+/* All Proton browsers use CEF's global request context. Acquire an owned
+   reference for each operation; no browser or platform window is required. */
 static cef_cookie_manager_t *
-proton_cookie_manager_from_window(void *window, int32_t is_view,
-                                  char *error, size_t error_len) {
-  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
-  if (browser == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "window browser is not available");
-    return NULL;
-  }
-  cef_browser_host_t *host = browser->get_host(browser);
-  if (host == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser host is not available");
-    return NULL;
-  }
-  cef_request_context_t *context = host->get_request_context(host);
+proton_session_cookie_manager(char *error, size_t error_len) {
+  cef_request_context_t *context = cef_request_context_get_global_context();
   if (context == NULL) {
-    host->base.release((cef_base_ref_counted_t *)host);
-    proton_engine_set_message(error, error_len,
-                              "request context is not available");
+    proton_engine_set_message(error, error_len, "request context is not available");
     return NULL;
   }
   cef_cookie_manager_t *manager = context->get_cookie_manager(context, NULL);
   context->base.base.release((cef_base_ref_counted_t *)context);
-  host->base.release((cef_base_ref_counted_t *)host);
   if (manager == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "cookie manager is not available");
-    return NULL;
+    proton_engine_set_message(error, error_len, "cookie manager is not available");
   }
   return manager;
 }
 
-int32_t proton_engine_contents_cookie_begin_get(
-    void *window, int32_t is_view, const char *url_utf8,
+int32_t proton_engine_session_cookie_begin_get(
+    void *runtime, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id, char *error,
     size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
+  if (runtime == NULL) {
+    proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (out_request_id == NULL) {
@@ -511,18 +476,18 @@ int32_t proton_engine_contents_cookie_begin_get(
   *out_request_id = PROTON_INVALID_HANDLE;
 
   cef_cookie_manager_t *manager =
-      proton_cookie_manager_from_window(window, is_view, error, error_len);
+      proton_session_cookie_manager(error, error_len);
   if (manager == NULL) {
     return PROTON_ERR_ENGINE;
   }
 
   proton_cookie_get_state_t *state =
-      proton_cookie_get_state_create(window, is_view, include_http_only != 0);
+      proton_cookie_get_state_create(runtime, include_http_only != 0);
   if (state == NULL) {
     manager->base.release((cef_base_ref_counted_t *)manager);
     proton_engine_set_message(error, error_len,
-                              "a cookie get is already in progress");
-    return PROTON_ERR_BUSY;
+                              "failed to allocate cookie request");
+    return PROTON_ERR_PLATFORM;
   }
   *out_request_id = state->request_id;
 
@@ -572,14 +537,14 @@ int32_t proton_engine_contents_cookie_begin_get(
   return PROTON_OK;
 }
 
-int32_t proton_engine_contents_cookie_set(
-    void *window, int32_t is_view, const char *url_utf8,
+int32_t proton_engine_session_cookie_set(
+    void *runtime, const char *url_utf8,
     const char *name_utf8, const char *value_utf8,
     const char *domain_utf8, const char *path_utf8,
     int32_t secure, int32_t http_only, int32_t same_site,
     char *error, size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
+  if (runtime == NULL) {
+    proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   if (url_utf8 == NULL || name_utf8 == NULL || value_utf8 == NULL ||
@@ -622,7 +587,7 @@ int32_t proton_engine_contents_cookie_set(
   cef_string_from_utf8(url_utf8, strlen(url_utf8), &url);
 
   cef_cookie_manager_t *manager =
-      proton_cookie_manager_from_window(window, is_view, error, error_len);
+      proton_session_cookie_manager(error, error_len);
   if (manager == NULL) {
     cef_string_clear(&cookie.name);
     cef_string_clear(&cookie.value);
@@ -650,17 +615,17 @@ int32_t proton_engine_contents_cookie_set(
   return PROTON_OK;
 }
 
-int32_t proton_engine_contents_cookie_delete(void *window, int32_t is_view,
+int32_t proton_engine_session_cookie_delete(void *runtime,
                                            const char *url_utf8,
                                            const char *name_utf8,
                                            char *error, size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
+  if (runtime == NULL) {
+    proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
 
   cef_cookie_manager_t *manager =
-      proton_cookie_manager_from_window(window, is_view, error, error_len);
+      proton_session_cookie_manager(error, error_len);
   if (manager == NULL) {
     return PROTON_ERR_ENGINE;
   }
@@ -692,14 +657,14 @@ int32_t proton_engine_contents_cookie_delete(void *window, int32_t is_view,
   return PROTON_OK;
 }
 
-int32_t proton_engine_contents_cookie_flush(void *window, int32_t is_view,
+int32_t proton_engine_session_cookie_flush(void *runtime,
                                           char *error, size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
+  if (runtime == NULL) {
+    proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
   cef_cookie_manager_t *manager =
-      proton_cookie_manager_from_window(window, is_view, error, error_len);
+      proton_session_cookie_manager(error, error_len);
   if (manager == NULL) {
     return PROTON_ERR_ENGINE;
   }
@@ -709,141 +674,113 @@ int32_t proton_engine_contents_cookie_flush(void *window, int32_t is_view,
   return PROTON_OK;
 }
 
-int32_t proton_engine_contents_clear_cache(void *window, int32_t is_view,
+/* CEF 150 binds OnComplete unconditionally for cache/auth/connection
+   cleanup, despite documenting a nullable callback. This process-lifetime
+   no-op keeps one reference; each call transfers an additional ref to CEF. */
+static void CEF_CALLBACK proton_session_cleanup_completed(
+    cef_completion_callback_t *self) {
+  (void)self;
+}
+
+static cef_completion_callback_t *proton_session_cleanup_callback(void) {
+  static struct {
+    cef_completion_callback_t callback;
+    proton_engine_ref_counted_t refs;
+  } completion;
+  /* Session entry points run on the runtime's owner (CEF UI) thread. */
+  if (completion.callback.base.size == 0) {
+    proton_engine_init_ref_counted(&completion.callback.base,
+                                   sizeof(completion.callback), &completion.refs);
+    completion.callback.on_complete = proton_session_cleanup_completed;
+  }
+  completion.callback.base.add_ref(&completion.callback.base);
+  return &completion.callback;
+}
+
+int32_t proton_engine_session_clear_cache(void *runtime,
                                          char *error, size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
+  if (runtime == NULL) {
+    proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
-  if (browser == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "window browser is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_browser_host_t *host = browser->get_host(browser);
-  if (host == NULL) {
-    proton_engine_set_message(error, error_len,
-                              "browser host is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_request_context_t *context = host->get_request_context(host);
+  cef_request_context_t *context = cef_request_context_get_global_context();
   if (context == NULL) {
-    host->base.release((cef_base_ref_counted_t *)host);
     proton_engine_set_message(error, error_len,
                               "request context is not available");
     return PROTON_ERR_ENGINE;
   }
-  /* clear_http_cache was added in CEF 144; Proton ships CEF 147. */
-  context->clear_http_cache(context, NULL);
+  context->clear_http_cache(context, proton_session_cleanup_callback());
   context->base.base.release((cef_base_ref_counted_t *)context);
-  host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }
 
-int32_t proton_engine_contents_clear_certificate_exceptions(
-    void *window, int32_t is_view, char *error, size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
+int32_t proton_engine_session_clear_certificate_exceptions(
+    void *runtime, char *error, size_t error_len) {
+  if (runtime == NULL) {
+    proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
-  if (browser == NULL) {
-    proton_engine_set_message(error, error_len, "window browser is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_browser_host_t *host = browser->get_host(browser);
-  if (host == NULL) {
-    proton_engine_set_message(error, error_len, "browser host is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_request_context_t *context = host->get_request_context(host);
+  cef_request_context_t *context = cef_request_context_get_global_context();
   if (context == NULL) {
-    host->base.release((cef_base_ref_counted_t *)host);
     proton_engine_set_message(error, error_len, "request context is not available");
     return PROTON_ERR_ENGINE;
   }
   context->clear_certificate_exceptions(context, NULL);
   context->base.base.release((cef_base_ref_counted_t *)context);
-  host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }
 
-int32_t proton_engine_contents_clear_auth_cache(void *window, int32_t is_view,
+int32_t proton_engine_session_clear_auth_cache(void *runtime,
                                               char *error, size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
+  if (runtime == NULL) {
+    proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
-  if (browser == NULL) {
-    proton_engine_set_message(error, error_len, "window browser is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_browser_host_t *host = browser->get_host(browser);
-  if (host == NULL) {
-    proton_engine_set_message(error, error_len, "browser host is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_request_context_t *context = host->get_request_context(host);
+  cef_request_context_t *context = cef_request_context_get_global_context();
   if (context == NULL) {
-    host->base.release((cef_base_ref_counted_t *)host);
     proton_engine_set_message(error, error_len, "request context is not available");
     return PROTON_ERR_ENGINE;
   }
-  context->clear_http_auth_credentials(context, NULL);
+  context->clear_http_auth_credentials(context, proton_session_cleanup_callback());
   context->base.base.release((cef_base_ref_counted_t *)context);
-  host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }
 
-int32_t proton_engine_contents_close_all_connections(
-    void *window, int32_t is_view, char *error, size_t error_len) {
-  if (window == NULL) {
-    proton_engine_set_message(error, error_len, "window is required");
+int32_t proton_engine_session_close_all_connections(
+    void *runtime, char *error, size_t error_len) {
+  if (runtime == NULL) {
+    proton_engine_set_message(error, error_len, "runtime is required");
     return PROTON_ERR_INVALID_ARGUMENT;
   }
-  cef_browser_t *browser = is_view ? proton_engine_view_browser(window) : proton_engine_window_browser(window);
-  if (browser == NULL) {
-    proton_engine_set_message(error, error_len, "window browser is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_browser_host_t *host = browser->get_host(browser);
-  if (host == NULL) {
-    proton_engine_set_message(error, error_len, "browser host is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_request_context_t *context = host->get_request_context(host);
+  cef_request_context_t *context = cef_request_context_get_global_context();
   if (context == NULL) {
-    host->base.release((cef_base_ref_counted_t *)host);
     proton_engine_set_message(error, error_len, "request context is not available");
     return PROTON_ERR_ENGINE;
   }
-  context->close_all_connections(context, NULL);
+  context->close_all_connections(context, proton_session_cleanup_callback());
   context->base.base.release((cef_base_ref_counted_t *)context);
-  host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
 }
 
-void proton_engine_contents_cookie_cleanup(void *window) {
-  if (window == NULL) {
+void proton_engine_session_cookie_cleanup(void *runtime) {
+  if (runtime == NULL) {
     return;
   }
   proton_cookie_get_state_t **link = &g_cookie_get_states;
   while (*link != NULL) {
     proton_cookie_get_state_t *state = *link;
-    if (state->window == window) {
+    if (state->runtime == runtime) {
       *link = state->next;
       state->next = NULL;
-      state->window = NULL;
+      state->runtime = NULL;
       proton_cookie_get_state_fail(state, PROTON_ERR_DESTROYED,
-                                   "window closed before cookie request completed");
+                                   "runtime closed before cookie request completed");
       if (state->accepted) {
         proton_cookie_get_state_emit(state);
       }
       proton_cookie_state_lifetime_detach(&state->detached);
       proton_cookie_get_state_release(state);
-      return;
+      continue;
     }
     link = &state->next;
   }

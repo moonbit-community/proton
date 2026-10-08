@@ -1,6 +1,7 @@
 ///|
 /// Application-lifetime capabilities supplied to startup hooks.
 pub struct ApplicationContext {
+  priv browser_session : SessionHandle
   priv updates : ApplicationUpdates
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
@@ -54,6 +55,7 @@ priv struct WindowLifecycleHook {
 
 ///|
 fn ApplicationContext::ApplicationContext(
+  session~ : SessionHandle,
   updates? : ApplicationUpdates = ApplicationUpdates::{ channel: None, },
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
@@ -70,6 +72,7 @@ fn ApplicationContext::ApplicationContext(
   url_schemes? : Array[String] = [],
 ) -> ApplicationContext {
   ApplicationContext::{
+    browser_session: session,
     updates,
     tasks,
     windows,
@@ -444,4 +447,12 @@ async fn start_window_lifecycle_hooks(
       }
     })
   }
+}
+
+///|
+/// Returns the shared browser session for this application run, including
+/// during startup before any windows exist. Retained handles become invalid
+/// when the application runtime is torn down.
+pub fn ApplicationContext::session(self : ApplicationContext) -> SessionHandle {
+  self.browser_session
 }

@@ -1,6 +1,49 @@
 ///|
+/// A browser-session operation failed. `status` and `detail` preserve the
+/// native diagnostic, including calls after the application runtime has ended.
+pub(all) suberror SessionError {
+  OperationFailed(action~ : String, status~ : Int, detail~ : String)
+} derive(Debug)
+
+///|
+pub extend SessionError with Debug::{to_repr}
+
+///|
+pub fn SessionError::message(self : SessionError) -> String {
+  let OperationFailed(action~, status~, detail~) = self
+  "session failed during \{action} (\{status}): \{detail}"
+}
+
+///|
+fn session_operation_failed(
+  action : String,
+  error : @native.NativeError,
+) -> SessionError {
+  OperationFailed(action~, status=error.status(), detail=error.message())
+}
+
+///|
 fn CookieCompletionStore::CookieCompletionStore() -> CookieCompletionStore {
   { pending: [], }
+}
+
+///|
+// Readers can belong to a caller's task group rather than application tasks.
+// Once the event pump stops, wake them here instead of leaving them suspended.
+fn CookieCompletionStore::close(self : CookieCompletionStore) -> Unit {
+  for completion in self.pending {
+    if completion.state is CookieWaiting {
+      completion.state = CookieCompleted(
+        Err(
+          @native.NativeError::Status(
+            status=-3,
+            message="application session has ended",
+          ),
+        ),
+      )
+      completion.changed.broadcast()
+    }
+  }
 }
 
 ///|
@@ -61,7 +104,7 @@ async fn CookieCompletionStore::wait(
   match completion.state {
     CookieCompleted(Ok(payload)) => payload
     CookieCompleted(Err(error)) =>
-      raise window_operation_failed("complete cookie read", error)
+      raise session_operation_failed("complete cookie read", error)
     CookieWaiting => abort("cookie completion resumed without a result")
   }
 }
@@ -115,16 +158,10 @@ fn cookies_from_native(
 }
 
 ///|
-/// Returns the window id whose request context owns this session.
-pub fn SessionHandle::window_id(self : SessionHandle) -> String {
-  self.id
-}
-
-///|
 /// Returns cookies visible to the session, optionally restricted to one URL.
 /// HTTP-only cookies are excluded unless `include_http_only` is `true`.
 /// Task cancellation propagates unchanged; operation failures retain
-/// their `WindowSessionError` classification.
+/// their `SessionError` classification.
 pub async fn SessionHandle::get_cookies(
   self : SessionHandle,
   url? : String,
@@ -145,7 +182,7 @@ pub fn SessionHandle::set_cookie(
   secure? : Bool = false,
   http_only? : Bool = false,
   same_site? : CookieSameSite = Unspecified,
-) -> Unit raise WindowSessionError {
+) -> Unit raise SessionError {
   (self.write_cookie)(
     url, name, value, domain, path, secure, http_only, same_site,
   )
@@ -157,7 +194,7 @@ pub fn SessionHandle::delete_cookies(
   self : SessionHandle,
   url? : String,
   name? : String,
-) -> Unit raise WindowSessionError {
+) -> Unit raise SessionError {
   (self.remove_cookies)(url, name)
 }
 
@@ -165,7 +202,7 @@ pub fn SessionHandle::delete_cookies(
 /// Flushes pending cookie changes to disk.
 pub fn SessionHandle::flush_cookies(
   self : SessionHandle,
-) -> Unit raise WindowSessionError {
+) -> Unit raise SessionError {
   (self.flush_cookie_store)()
 }
 
@@ -173,7 +210,7 @@ pub fn SessionHandle::flush_cookies(
 /// Clears the session's HTTP cache.
 pub fn SessionHandle::clear_cache(
   self : SessionHandle,
-) -> Unit raise WindowSessionError {
+) -> Unit raise SessionError {
   (self.clear_http_cache)()
 }
 
@@ -181,7 +218,7 @@ pub fn SessionHandle::clear_cache(
 /// Clears cached HTTP authentication credentials for this session.
 pub fn SessionHandle::clear_auth_cache(
   self : SessionHandle,
-) -> Unit raise WindowSessionError {
+) -> Unit raise SessionError {
   (self.clear_http_auth_cache)()
 }
 
@@ -189,7 +226,7 @@ pub fn SessionHandle::clear_auth_cache(
 /// Clears stored certificate exception decisions for this session.
 pub fn SessionHandle::clear_certificate_exceptions(
   self : SessionHandle,
-) -> Unit raise WindowSessionError {
+) -> Unit raise SessionError {
   (self.clear_certificate_exceptions)()
 }
 
@@ -197,7 +234,7 @@ pub fn SessionHandle::clear_certificate_exceptions(
 /// Closes active and idle Chromium network connections for this session.
 pub fn SessionHandle::close_all_connections(
   self : SessionHandle,
-) -> Unit raise WindowSessionError {
+) -> Unit raise SessionError {
   (self.close_all_connections)()
 }
 
@@ -206,6 +243,6 @@ pub fn SessionHandle::close_all_connections(
 pub fn SessionHandle::clear_storage_data(
   self : SessionHandle,
   kind : StorageDataKind,
-) -> Unit raise WindowSessionError {
+) -> Unit raise SessionError {
   (self.clear_storage_data)(kind)
 }

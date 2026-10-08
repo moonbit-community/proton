@@ -619,39 +619,37 @@ int32_t proton_engine_view_stop_find_in_page(
 int32_t proton_engine_view_get_navigation_state(
     proton_engine_view_t *view, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len);
-/* Session cookie and cache management. The engine implementation reaches the
-   CEF cookie manager through the window's browser host request context. Cookie
+/* Session cookie and cache management. The engine implementation uses the
+   shared CEF global request context without requiring a browser. Cookie
    get completion is published to the runtime event queue; set, delete, flush,
    and clear_cache are fire-and-forget. */
-int32_t proton_engine_contents_cookie_begin_get(
-    void *window, int32_t is_view, const char *url_utf8,
+int32_t proton_engine_session_cookie_begin_get(
+    void *runtime, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id, char *error,
     size_t error_len);
-int32_t proton_engine_contents_cookie_set(
-    void *window, int32_t is_view, const char *url_utf8,
+int32_t proton_engine_session_cookie_set(
+    void *runtime, const char *url_utf8,
     const char *name_utf8, const char *value_utf8,
     const char *domain_utf8, const char *path_utf8,
     int32_t secure, int32_t http_only, int32_t same_site,
     char *error, size_t error_len);
-int32_t proton_engine_contents_cookie_delete(void *window, int32_t is_view,
+int32_t proton_engine_session_cookie_delete(void *runtime,
                                            const char *url_utf8,
                                            const char *name_utf8,
                                            char *error, size_t error_len);
-int32_t proton_engine_contents_cookie_flush(void *window, int32_t is_view,
+int32_t proton_engine_session_cookie_flush(void *runtime,
                                           char *error, size_t error_len);
-int32_t proton_engine_contents_clear_cache(void *window, int32_t is_view,
+int32_t proton_engine_session_clear_cache(void *runtime,
                                          char *error, size_t error_len);
-int32_t proton_engine_contents_clear_auth_cache(void *window, int32_t is_view,
+int32_t proton_engine_session_clear_auth_cache(void *runtime,
                                               char *error, size_t error_len);
-int32_t proton_engine_contents_clear_certificate_exceptions(
-    void *window, int32_t is_view, char *error, size_t error_len);
-int32_t proton_engine_contents_close_all_connections(
-    void *window, int32_t is_view, char *error, size_t error_len);
+int32_t proton_engine_session_clear_certificate_exceptions(
+    void *runtime, char *error, size_t error_len);
+int32_t proton_engine_session_close_all_connections(
+    void *runtime, char *error, size_t error_len);
 
-/* Releases any pending cookie-get state associated with the window. Called
-   during window destruction so async cookie visits do not outlive their
-   window. Safe to call with NULL. */
-void proton_engine_contents_cookie_cleanup(void *window);
+/* Detaches pending cookie visits before the runtime shuts down. */
+void proton_engine_session_cookie_cleanup(void *runtime);
 
 /* Browser task metrics from CEF's task manager. The functions are
    UI-thread only and need a live runtime. Chromium measures CPU and memory on

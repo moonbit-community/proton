@@ -10,6 +10,10 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "session-lifetime" {
+    run_session_lifetime_regression()
+    return
+  }
   if name == "web-contents" {
     run_web_contents_regression()
     return
@@ -1965,4 +1969,107 @@ async fn run_web_contents_regression() -> Unit {
     assert_true(stale)
   }
   println("LIFECYCLE_PASSED web-contents")
+}
+
+///|
+async fn run_session_lifetime_regression() -> Unit {
+  let retained : Array[@proton.SessionHandle] = []
+  let url = "https://session.proton.test/"
+  let config = @proton.WindowConfig(
+    "Session Lifetime",
+    @proton.AppEntry::Html("<title>Session</title>"),
+    views=[("child", @proton.view("about:blank", width=100, height=100))],
+  )
+  @proton.App(config)
+  .identifier("dev.proton.session-lifetime")
+  .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+  .add_window("secondary", config, open_on_start=false)
+  .app_lifecycle(
+    on_start=context => {
+      let session = context.session()
+      retained.push(session)
+      // No browser exists during this initial application startup hook.
+      session.set_cookie(url, "lifetime", "startup")
+      assert_true(session.get_cookies(url~).any(c => c.value == "startup"))
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          lifecycle_probe_gate()
+          let manager = context.windows()
+          let window = manager.open("secondary")
+          let page_session = window.web_contents().session()
+          let child = window.view("child").unwrap()
+          let child_session = child.web_contents().session()
+          retained.push(page_session)
+          retained.push(child_session)
+          assert_true(
+            child_session.get_cookies(url~).any(c => c.value == "startup"),
+          )
+          child.close()
+          window.close()
+          while manager.find("secondary") is Some(_) {
+            @async.sleep(5)
+          }
+          page_session.set_cookie(url, "lifetime", "after-close")
+          assert_true(
+            child_session.get_cookies(url~).any(c => c.value == "after-close"),
+          )
+          manager.find("main").unwrap().close()
+          while manager.find("main") is Some(_) {
+            @async.sleep(5)
+          }
+          // The application remains alive with no windows. Every retained
+          // handle addresses the same store, and visits may overlap.
+          @async.with_task_group(group => {
+            for handle in retained {
+              ignore(
+                group.spawn(() => {
+                  assert_true(
+                    handle.get_cookies(url~).any(c => c.value == "after-close"),
+                  )
+                }),
+              )
+            }
+          })
+          child_session.clear_cache()
+          ignore(session.get_cookies(url~))
+          child_session.clear_auth_cache()
+          ignore(session.get_cookies(url~))
+          child_session.clear_certificate_exceptions()
+          ignore(session.get_cookies(url~))
+          child_session.close_all_connections()
+          ignore(session.get_cookies(url~))
+          child_session.delete_cookies(url~, name="lifetime")
+          child_session.flush_cookies()
+          assert_true(session.get_cookies(url~).is_empty())
+          let replacement = manager.open("secondary")
+          assert_true(
+            replacement.web_contents().session().get_cookies(url~).is_empty(),
+          )
+          context.quit()
+        }),
+      )
+    },
+    on_shutdown=_ => (),
+  )
+  .run()
+  for handle in retained {
+    let rejected = try {
+      handle.flush_cookies()
+      false
+    } catch {
+      @proton.SessionError::OperationFailed(..) => true
+    }
+    assert_true(rejected)
+    let rejected_read = try {
+      ignore(handle.get_cookies(url~))
+      false
+    } catch {
+      @proton.SessionError::OperationFailed(..) => true
+      error => raise error
+    }
+    assert_true(rejected_read)
+  }
+  println("LIFECYCLE_PASSED session-lifetime")
 }

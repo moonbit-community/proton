@@ -150,6 +150,7 @@ fn RuntimeSession::application_context(
 ) -> ApplicationContext {
   ApplicationContext(
     updates=self.updates,
+    session=self.session_handle(),
     self.application_tasks,
     self.window_manager(),
     self.environment.locale_preferences,
@@ -699,7 +700,7 @@ fn RuntimeSession::view_handle(
           error => raise window_operation_failed("print view to PDF", error)
         }
       },
-      session_handle: self.view_session_handle(window, view),
+      session_handle: self.session_handle(),
     },
   }
 }
@@ -879,7 +880,7 @@ fn RuntimeSession::browser_handle(
 ) -> WebContentsHandle {
   let id = window.id
   let native_id = window.native_id
-  let session_handle = self.session_handle(window)
+  let session_handle = self.session_handle()
   WebContentsHandle::{
     view_id: None,
     id,
@@ -1105,84 +1106,77 @@ fn PdfPrintOptions::to_native(
 }
 
 ///|
-fn RuntimeSession::session_handle(
-  self : RuntimeSession,
-  window : RunningWindow,
-) -> SessionHandle {
-  let id = window.id
-  let native_id = window.native_id
+fn RuntimeSession::session_handle(self : RuntimeSession) -> SessionHandle {
+  let runtime = self.runtime
+  let completions = self.event_pump.cookie_completions
   SessionHandle::{
-    id,
-    native_id,
     read_cookies: (url, include_http_only) => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
+      let request_id = runtime.cookie_begin_get(url, include_http_only) catch {
+        error => raise session_operation_failed("read cookies", error)
       }
-      let request_id = running.window.cookie_begin_get(url, include_http_only) catch {
-        error =>
-          raise window_operation_failed("read cookies in window " + id, error)
-      }
-      cookies_from_native(self.event_pump.cookie_completions.wait(request_id))
+      cookies_from_native(completions.wait(request_id))
     },
     write_cookie: (url, name, value, domain, path, secure, http_only, same_site) => {
-      self.control_window(id, native_id, "set cookie in", window => {
-        window.cookie_set(
-          url,
-          name,
-          value,
-          domain?,
-          path?,
-          secure~,
-          http_only~,
-          same_site=same_site.to_native(),
-        )
-      })
+      runtime.cookie_set(
+        url,
+        name,
+        value,
+        domain?,
+        path?,
+        secure~,
+        http_only~,
+        same_site=same_site.to_native(),
+      ) catch {
+        error => raise session_operation_failed("set cookie", error)
+      }
     },
     remove_cookies: (url, name) => {
-      self.control_window(id, native_id, "delete cookies in", window => {
-        window.cookie_delete(url, name)
-      })
+      runtime.cookie_delete(url, name) catch {
+        error => raise session_operation_failed("delete cookies", error)
+      }
     },
     flush_cookie_store: () => {
-      self.control_window(id, native_id, "flush cookies in", window => {
-        window.cookie_flush()
-      })
+      runtime.cookie_flush() catch {
+        error => raise session_operation_failed("flush cookies", error)
+      }
     },
     clear_http_cache: () => {
-      self.control_window(id, native_id, "clear cache in", window => {
-        window.clear_cache()
-      })
+      runtime.clear_cache() catch {
+        error => raise session_operation_failed("clear cache", error)
+      }
     },
     clear_http_auth_cache: () => {
-      self.control_window(id, native_id, "clear auth cache in", window => {
-        window.clear_auth_cache()
-      })
+      runtime.clear_auth_cache() catch {
+        error => raise session_operation_failed("clear auth cache", error)
+      }
     },
     clear_certificate_exceptions: () => {
-      self.control_window(id, native_id, "clear certificate exceptions in", window => {
-        window.clear_certificate_exceptions()
-      })
+      runtime.clear_certificate_exceptions() catch {
+        error =>
+          raise session_operation_failed("clear certificate exceptions", error)
+      }
     },
     close_all_connections: () => {
-      self.control_window(id, native_id, "close connections in", window => {
-        window.close_all_connections()
-      })
+      runtime.close_all_connections() catch {
+        error => raise session_operation_failed("close connections", error)
+      }
     },
     clear_storage_data: kind => {
-      self.control_window(id, native_id, "clear storage in", window => {
+      try {
         match kind {
           Cookies | AllSupported => {
-            window.cookie_delete(None, None)
-            window.cookie_flush()
+            runtime.cookie_delete(None, None)
+            runtime.cookie_flush()
           }
           HttpCache => ()
         }
         match kind {
-          HttpCache | AllSupported => window.clear_cache()
+          HttpCache | AllSupported => runtime.clear_cache()
           Cookies => ()
         }
-      })
+      } catch {
+        error => raise session_operation_failed("clear storage", error)
+      }
     },
   }
 }
@@ -2747,7 +2741,8 @@ pub fn WebContentsHandle::remove_inserted_css(
 }
 
 ///|
-/// Returns the session accessed through this page.
+/// Returns the shared application session. It remains valid after this page
+/// closes, until application runtime teardown begins.
 pub fn WebContentsHandle::session(self : WebContentsHandle) -> SessionHandle {
   self.session_handle
 }
@@ -5084,131 +5079,4 @@ pub fn WebContentsHandle::view_id(self : WebContentsHandle) -> String? {
 /// Returns the webpage hosted by this view.
 pub fn ViewHandle::web_contents(self : ViewHandle) -> WebContentsHandle {
   self.contents
-}
-
-///|
-fn RuntimeSession::view_session_handle(
-  self : RuntimeSession,
-  window : RunningWindow,
-  view : RunningView,
-) -> SessionHandle {
-  let id = window.id
-  let window_native_id = window.native_id
-  let native_id = view.native_id
-  let view_id = view.id
-  SessionHandle::{
-    id,
-    native_id,
-    read_cookies: (url, include_http_only) => {
-      let running = self.resolve_view(id, window_native_id, view_id, native_id)
-      let request_id = running.view.cookie_begin_get(url, include_http_only) catch {
-        error =>
-          raise window_operation_failed("read cookies in window " + id, error)
-      }
-      cookies_from_native(self.event_pump.cookie_completions.wait(request_id))
-    },
-    write_cookie: (url, name, value, domain, path, secure, http_only, same_site) => {
-      self.control_view(
-        id,
-        window_native_id,
-        view_id,
-        native_id,
-        "set cookie in",
-        window => {
-          window.cookie_set(
-            url,
-            name,
-            value,
-            domain?,
-            path?,
-            secure~,
-            http_only~,
-            same_site=same_site.to_native(),
-          )
-        },
-      )
-    },
-    remove_cookies: (url, name) => {
-      self.control_view(
-        id,
-        window_native_id,
-        view_id,
-        native_id,
-        "delete cookies in",
-        window => window.cookie_delete(url, name),
-      )
-    },
-    flush_cookie_store: () => {
-      self.control_view(
-        id,
-        window_native_id,
-        view_id,
-        native_id,
-        "flush cookies in",
-        window => window.cookie_flush(),
-      )
-    },
-    clear_http_cache: () => {
-      self.control_view(
-        id,
-        window_native_id,
-        view_id,
-        native_id,
-        "clear cache in",
-        window => window.clear_cache(),
-      )
-    },
-    clear_http_auth_cache: () => {
-      self.control_view(
-        id,
-        window_native_id,
-        view_id,
-        native_id,
-        "clear auth cache in",
-        window => window.clear_auth_cache(),
-      )
-    },
-    clear_certificate_exceptions: () => {
-      self.control_view(
-        id,
-        window_native_id,
-        view_id,
-        native_id,
-        "clear certificate exceptions in",
-        window => window.clear_certificate_exceptions(),
-      )
-    },
-    close_all_connections: () => {
-      self.control_view(
-        id,
-        window_native_id,
-        view_id,
-        native_id,
-        "close connections in",
-        window => window.close_all_connections(),
-      )
-    },
-    clear_storage_data: kind => {
-      self.control_view(
-        id,
-        window_native_id,
-        view_id,
-        native_id,
-        "clear storage in",
-        window => {
-          match kind {
-            Cookies | AllSupported => {
-              window.cookie_delete(None, None)
-              window.cookie_flush()
-            }
-            HttpCache => ()
-          }
-          match kind {
-            HttpCache | AllSupported => window.clear_cache()
-            Cookies => ()
-          }
-        },
-      )
-    },
-  }
 }
