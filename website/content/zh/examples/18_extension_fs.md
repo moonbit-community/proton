@@ -1,8 +1,8 @@
 # 文件系统能力
 
-渲染端在显式权限根目录内请求文件操作。
+本例通过文件系统扩展让页面请求宿主文件操作。后端声明允许访问的目录和操作，页面通过命令 bridge 使用这份授权。
 
-[18_extension_fs](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/18_extension_fs) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/18_extension_fs/fs.html)
+[18_extension_fs](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs/fs.html)
 
 ## 行为
 
@@ -25,9 +25,15 @@ async fn main {
 }
 ```
 
+## 实现说明
+
+后端安装文件系统扩展，同时选择目录和允许的操作。renderer 提供路径及操作，但不能自行扩大授权根目录。文件不存在和操作未授权是不同失败情况。
+
+此例为了演示允许写入与删除，迁移时应缩小操作列表并选定数据目录。HTML 与 JavaScript 展示直接扩展 bridge，MoonBit 前端也可使用类型化描述符。
+
 ## 运行
 
-需满足[运行环境要求](../introduction/installation.md)。在仓库根目录执行：
+完成[源码检出与运行时安装](../introduction/installation.md#源码与运行时)后，在仓库根目录执行：
 
 ```sh
 moon -C examples run 18_extension_fs --target native

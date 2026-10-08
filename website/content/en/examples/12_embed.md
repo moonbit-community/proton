@@ -1,8 +1,8 @@
 # Embedded HTML
 
-HTML stored as a source asset and embedded into a MoonBit string.
+This example keeps HTML in a separate source file and embeds it in the executable as a MoonBit string. It demonstrates how to maintain page content separately without requiring a runtime HTML file.
 
-[12_embed](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed/main.mbt), [hello.html](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed/hello.html), [hello.mbt](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed/hello.mbt), [moon.pkg](https://github.com/moonbit-community/proton/tree/25d77e6236420025ddf1ab04995c0c2a05bba9ed/examples/12_embed/moon.pkg)
+[12_embed](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/12_embed) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/12_embed/main.mbt), [hello.html](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/12_embed/hello.html), [hello.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/12_embed/hello.mbt), [moon.pkg](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/12_embed/moon.pkg)
 
 ## Behavior
 
@@ -17,9 +17,15 @@ async fn main {
 }
 ```
 
+## Implementation
+
+`resource` is generated from hello.html by the package's embed prebuild rule. The runtime receives the same kind of string as the minimal example; it does not read hello.html from disk at launch.
+
+Edit hello.html and rebuild. Do not edit generated hello.mbt. Embedding a document does not automatically embed every relative image or script it references; use an asset entry for a directory of resources.
+
 ## Run
 
-[Environment requirements](../introduction/installation.md) apply. From the checked-out repository root:
+After completing [source checkout and runtime setup](../introduction/installation.md#source-checkout-and-runtime), run from the repository root:
 
 ```sh
 moon -C examples run 12_embed --target native

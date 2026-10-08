@@ -7,7 +7,7 @@ A command lets frontend code ask the native backend to do work. This guide adds 
 In **`moon.mod`**, add this entry inside the existing `import { ... }` block, preserving the existing dependencies:
 
 ```text
-"moonbit-community/proton_contract@0.3.3",
+"moonbit-community/proton_contract@0.3.4",
 ```
 
 Replace **`app/moon.pkg`** with:
@@ -86,6 +86,8 @@ There are three connected parts:
 
 Declaring a descriptor alone does not register a handler. Keep command names unique within the application.
 
+If the page opens in a normal browser, `window.__MoonBit__` is absent. Start the desktop app with `proton_cli dev`, not just the frontend URL.
+
 ## Arguments and return values
 
 The object property `name` matches the request field. Add serializable fields to the request when an operation needs more input. Results can be strings, numbers, arrays, or structs with `ToJson`.
@@ -103,5 +105,3 @@ Do not assume a request succeeded just because the frontend button handler ran. 
 ## Async work and caller context
 
 Command handlers can perform async work. The context identifies the caller and can send a typed event to it; [sending events to the frontend](events.md) extends this exact example.
-
-If the page opens in a normal browser, `window.__MoonBit__` is absent. Start the desktop app with `proton_cli dev`, not just the frontend URL.

@@ -2,7 +2,7 @@
 
 The Proton CLI packages a project into a distributable containing its executable, frontend assets, CEF runtime, matching helper and declared resources. A backend executable alone is not a complete distribution. Packaging targets the host platform.
 
-Field types and defaults are defined in [Configuration](../configuration/index.md).
+Field types and defaults are defined in [Configuration](../configuration/project.md).
 
 ## Platform overrides
 
@@ -14,7 +14,17 @@ Each platform object accepts `formats`, `resources` and `sign`. Windows addition
 | Windows x64 | `app`, `zip`, `nsis` | `app`, `zip` |
 | Linux x64 | `appimage` | `appimage` |
 
-On Windows, configured ICO content is compiled into the application executable using the Windows SDK resource compiler. NSIS output additionally requires NSIS.
+## Icon and tool prerequisites
+
+| Artifact | Icon and tooling |
+| --- | --- |
+| macOS app / zip | ICNS for the application icon; native Apple tooling for builds and signing |
+| macOS dmg | Uses system hdiutil to create an image from the app |
+| Windows app / zip | Windows SDK rc.exe embeds ICO into the EXE; PNG is not automatically converted |
+| Windows nsis | Also requires NSIS makensis |
+| Linux appimage | Requires a PNG icon and executable appimagetool on PATH |
+
+The default scaffold does not provide icons. On Linux, missing PNG validation fails before invoking AppImage tooling. See the [Todo packaging steps](../tutorial/isomorphic.md#linux) for preparation. Supply the platform's icon format rather than expecting Windows to convert icons intended for other platforms.
 
 ## NSIS installation mode
 
@@ -26,9 +36,13 @@ On Windows, configured ICO content is compiled into the application executable u
 
 Changing the mode is not an installation-scope migration. Updates to an existing machine-wide installation should retain its intended scope.
 
+## Minimum macOS version
+
+minimum_system_version only writes macOS LSMinimumSystemVersion metadata. It does not make a binary built against a newer SDK/CEF compatible with older systems. Validate the complete artifact on the minimum supported OS; compilation alone is insufficient.
+
 ## Signing and notarization
 
-`--release` controls build mode and does not imply signing. On macOS, `--sign` requests signing; `--notarize` requests notarization, stapling and validation using configured credentials. Identity and credential environment variables are listed in the [CLI reference](index.md#signing-environment).
+`--release` controls build mode and does not imply signing. On macOS, `--sign` requests signing; `--notarize` requests notarization, stapling and validation using configured credentials. Identity and credential environment variables are listed in the [CLI reference](commands.md#signing-environment).
 
 An unsigned or locally signed artifact does not establish a trusted publisher identity. Credentials are deployment configuration, not application source.
 

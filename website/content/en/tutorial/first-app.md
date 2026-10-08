@@ -13,7 +13,23 @@ cd hello-proton
 
 The explicit `--template minimal` matters: the non-interactive default is `isomorphic`. `--yes` accepts generated defaults. For a distributable application, choose your identity at creation with `--identifier com.example.hello-proton`.
 
-The generated `app/main.mbt` owns the window and its HTML. `moon.mod` declares dependencies, `app/moon.pkg` imports packages, and `proton.project.json` identifies the application and its build entry.
+## Template files
+
+```text
+hello-proton/
+  moon.mod
+  proton.project.json
+  app/
+    moon.pkg
+    main.mbt
+```
+
+- **`moon.mod`** gives the module its name and declares versioned dependencies. Add a library here before importing its packages.
+- **`app/moon.pkg`** imports the packages used by the entry and marks it as a native executable.
+- **`app/main.mbt`** defines the async entry, HTML, and application builder.
+- **`proton.project.json`** tells the CLI which package to run and how to identify/package the app.
+
+Module dependencies and package imports are separate. A dependency makes a module available; a package import selects the APIs and aliases used by that package.
 
 ## 2. Prepare and run
 
@@ -72,8 +88,8 @@ proton_cli build
 
 A successful build creates the native executable; it does not yet assemble a distributable application. [Build and distribute](../command-line-interface/packaging.md) explains that next step.
 
+If the app does not start, run `proton_cli doctor` and inspect the full terminal error. If it builds but shows the old page, stop the previous process and rerun `dev`; this template has no frontend hot-reload server.
+
 ## Where to go next
 
-Read [project structure](../introduction/project-structure.md) to understand the generated files. To add interaction to this page, follow [calling the backend](commands-events.md). To write the UI in MoonBit too, use the [complete isomorphic example](isomorphic.md).
-
-If the app does not start, run `proton_cli doctor` and inspect the full terminal error. If it builds but shows the old page, stop the previous process and rerun `dev`; this template has no frontend hot-reload server.
+To add interaction to this page, follow [calling the backend](commands-events.md). To write the UI in MoonBit too, use the [complete isomorphic example](isomorphic.md).

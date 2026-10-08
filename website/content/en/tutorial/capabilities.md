@@ -1,13 +1,13 @@
 # Using native capabilities
 
-Extensions expose reusable host operations to the renderer. A capability installs an extension's backend handlers and grants access to a specific scope. This guide reads one local text file from the minimal application.
+Extensions expose reusable host operations to the renderer. A capability installs an extension's backend handlers and grants access to a specific scope. This tutorial adds file reading to the [minimal application](first-app.md): the backend grants one directory, and the page requests a text file inside it.
 
 ## Add the filesystem extension
 
 In the minimal project's **`moon.mod`**, add this dependency inside `import { ... }`:
 
 ```text
-"moonbit-community/proton_ext@0.3.3",
+"moonbit-community/proton_ext@0.3.4",
 ```
 
 Use these imports in **`app/moon.pkg`**, then run `moon update`:
@@ -93,10 +93,10 @@ Removing `.capability(...)` does not stop the app from starting, but the route b
 
 For a second window, select explicit `RendererTarget::entry(window="...")` or `RendererTarget::bundled(window="...")` targets when adding the capability. Grant each page only what its feature requires.
 
-The local workspace directory is useful for this development exercise. Installed resources may be read-only; use an appropriate writable application-data or user-selected directory for persistent files. Package files you intentionally ship via [resources configuration](../configuration/index.md).
+The local workspace directory is useful for this development exercise. Installed resources may be read-only; use an appropriate writable application-data or user-selected directory for persistent files. Package files you intentionally ship via [resources configuration](../configuration/project.md).
 
 ## Other capabilities
 
 Dialogs, clipboard, shell, tray, and other extensions follow the same explicit installation/grant model, but each defines its own scope and platform support. The notification extension in this release targets macOS; do not infer platform support from the framework's overall platform list.
 
-Consult the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.3/) for the capability builder and request/response types you need.
+Consult the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/) for the capability builder and request/response types you need.

@@ -7,7 +7,7 @@
 在 **`moon.mod`** 已有的 `import { ... }` 块中加入下面一项，保留其他依赖：
 
 ```text
-"moonbit-community/proton_contract@0.3.3",
+"moonbit-community/proton_contract@0.3.4",
 ```
 
 将 **`app/moon.pkg`** 替换为：
@@ -86,6 +86,8 @@ async fn main {
 
 仅声明描述符并不会注册处理器。应用中的命令名称需要保持唯一。
 
+如果在普通浏览器打开页面，`window.__MoonBit__` 不存在。请使用 `proton_cli dev` 启动桌面应用，而不是仅打开前端 URL。
+
 ## 参数与返回值
 
 对象属性 `name` 对应请求字段。操作需要更多输入时，在请求中添加可序列化字段。返回值可以是字符串、数字、数组，也可以是实现 `ToJson` 的结构体。
@@ -103,5 +105,3 @@ async fn main {
 ## 异步操作与调用方上下文
 
 命令处理器可以执行异步操作。上下文用于识别调用方，也可以向其发送类型化事件。[向前端发送事件](events.md)会在这个示例上继续修改。
-
-如果在普通浏览器打开页面，`window.__MoonBit__` 不存在。请使用 `proton_cli dev` 启动桌面应用，而不是仅打开前端 URL。
