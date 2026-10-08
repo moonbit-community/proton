@@ -394,7 +394,7 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_resource_handler_lifetime_trace(v
   proton_browser_session_t *session =
       proton_browser_session_create(&policy, config, NULL, NULL);
   cef_resource_request_handler_t *handler =
-      proton_browser_resource_handler_create(config, 0);
+      proton_browser_resource_handler_create(config, 0, 0);
   moonbit_decref(owner);
   proton_browser_session_destroy(session);
   if (handler == NULL) return proton_test_copy_trace("handler-error");
