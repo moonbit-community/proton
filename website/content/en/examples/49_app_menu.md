@@ -1,6 +1,6 @@
 # Native application menu
 
-Typed menus with dynamic command state and application callbacks.
+This example builds a native application menu and updates its command state while the window is running. It connects menu actions to a live window handle and releases that reference when the window closes.
 
 [49_app_menu](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/49_app_menu) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/49_app_menu/main.mbt)
 
@@ -8,19 +8,7 @@ Typed menus with dynamic command state and application callbacks.
 
 Menu actions update enabled, visible and checked state. Native menu roles and application commands are declared in MoonBit.
 
-## Run
-
-[Environment requirements](../introduction/installation.md) apply. From the checked-out repository root:
-
-```sh
-moon -C examples run 49_app_menu --target native
-```
-
-## Limits and interpretation
-
-Menu placement and supported roles depend on the desktop platform. A menu command may have no focused window; handlers must account for that.
-
-## Key code and design
+## Implementation
 
 Excerpt from the entry point; use the source link above for the complete context.
 
@@ -51,3 +39,15 @@ async fn main {
 The menu is native UI configured on the builder. Command handlers change or inspect its state through a live window handle. The ready hook stores that handle; the close hook clears it so later commands cannot deliberately reuse a closed instance.
 
 Keep stable menu command ids separate from translated labels. Native role items delegate standard platform behavior, while application command items need application handling. For multiple windows, replace the example's single window slot with explicit ownership per window.
+
+## Run
+
+After completing [source checkout and runtime setup](../introduction/installation.md#source-checkout-and-runtime), run from the repository root:
+
+```sh
+moon -C examples run 49_app_menu --target native
+```
+
+## Limits and interpretation
+
+Menu placement and supported roles depend on the desktop platform. A menu command may have no focused window; handlers must account for that.

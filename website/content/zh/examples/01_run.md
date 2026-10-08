@@ -1,6 +1,6 @@
 # 最小应用
 
-内联 HTML 与原生应用入口。
+本例直接使用 HTML 字符串启动原生窗口，展示应用入口最基本的三个部分：页面内容、应用标识和运行应用。
 
 [01_run](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/01_run) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/01_run/main.mbt)
 
@@ -23,9 +23,15 @@ async fn main {
 }
 ```
 
+## 实现说明
+
+HTML 是直接传给应用构建器的 MoonBit 值，本页面无需前端服务器、资源查找或命令通信。显式 identifier 为直接运行仓库示例提供应用身份；scaffold 则通过 load_config() 读取身份。
+
+适合复用为小型自包含页面；需要独立构建的 CSS／JavaScript 时应改用资源入口。debug=true 是示例选择，不是分发要求。
+
 ## 运行
 
-需满足[运行环境要求](../introduction/installation.md)。在仓库根目录执行：
+完成[源码检出与运行时安装](../introduction/installation.md#源码与运行时)后，在仓库根目录执行：
 
 ```sh
 moon -C examples run 01_run --target native
@@ -34,9 +40,3 @@ moon -C examples run 01_run --target native
 ## 限制与使用边界
 
 适合将运行时安装问题与前端工具问题分开排查。此示例没有命令交互或外部资源加载。
-
-## 关键代码与设计
-
-HTML 是直接传给应用构建器的 MoonBit 值，本页面无需前端服务器、资源查找或命令通信。显式 identifier 为直接运行仓库示例提供应用身份；scaffold 则通过 load_config() 读取身份。
-
-适合复用为小型自包含页面；需要独立构建的 CSS／JavaScript 时应改用资源入口。debug=true 是示例选择，不是分发要求。

@@ -1,6 +1,6 @@
 # 类型化事件
 
-异步命令执行期间推送进度事件。
+本例在异步命令执行期间发送进度通知，展示前端如何通过事件订阅观察后端工作，以及进度事件与最终命令响应的区别。
 
 [40_event_broadcast](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/40_event_broadcast) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/40_event_broadcast/main.mbt), [app.html](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/40_event_broadcast/app.html)
 
@@ -8,19 +8,7 @@
 
 启动计数器后产生 tick 事件和 done 事件，命令还会返回汇总结果。run_id 用于区分不同运行。
 
-## 运行
-
-需满足[运行环境要求](../introduction/installation.md)。在仓库根目录执行：
-
-```sh
-moon -C examples run 40_event_broadcast --target native
-```
-
-## 限制与使用边界
-
-事件与命令响应职责不同。启动运行前注册监听器；事件不是持久历史记录或确认消息。
-
-## 关键代码与设计
+## 实现说明
 
 以下为入口中的节选，完整上下文见本页源码链接。
 
@@ -52,3 +40,15 @@ async fn run_ticker(
 类型化扩展把 start 绑定到 run_ticker。处理器在 tick 之间异步等待，发送 tick／done 通知，最后返回 TickerResult。进度事件与命令结果职责不同，显示一次 tick 不代表命令已经完成。
 
 次数与间隔由后端限制。UI 应使用请求标识区分重叠任务，随所属对象关闭订阅，并处理请求取消。目录虽叫 broadcast，这不是持久广播日志。
+
+## 运行
+
+完成[源码检出与运行时安装](../introduction/installation.md#源码与运行时)后，在仓库根目录执行：
+
+```sh
+moon -C examples run 40_event_broadcast --target native
+```
+
+## 限制与使用边界
+
+事件与命令响应职责不同。启动运行前注册监听器；事件不是持久历史记录或确认消息。
