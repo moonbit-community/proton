@@ -68,7 +68,7 @@ fn target_find(request : FindRequest) -> Reply {
         match window_slot.val {
           Some(window) =>
             window
-            .browser()
+            .web_contents()
             .find_in_page(
               request.text,
               forward=request.forward,
@@ -81,7 +81,9 @@ fn target_find(request : FindRequest) -> Reply {
       "view" =>
         match view_slot.val {
           Some(view) =>
-            view.find_in_page(
+            view
+            .web_contents()
+            .find_in_page(
               request.text,
               forward=request.forward,
               match_case=request.match_case,
@@ -106,7 +108,7 @@ fn target_stop(request : StopRequest) -> Reply {
         match window_slot.val {
           Some(window) =>
             window
-            .browser()
+            .web_contents()
             .stop_find_in_page(clear_selection=request.clear_selection)
           None =>
             return { ok: false, request_id: 0, message: "host unavailable", }
@@ -114,7 +116,9 @@ fn target_stop(request : StopRequest) -> Reply {
       "view" =>
         match view_slot.val {
           Some(view) =>
-            view.stop_find_in_page(clear_selection=request.clear_selection)
+            view
+            .web_contents()
+            .stop_find_in_page(clear_selection=request.clear_selection)
           None =>
             return { ok: false, request_id: 0, message: "view unavailable", }
         }
@@ -166,7 +170,7 @@ fn show_result(target : String, result : @proton.FindInPageResult) -> Unit {
         result.selection_height.to_string() +
         (if result.final_update { " final" } else { " updating" })
       window
-      .browser()
+      .web_contents()
       .eval(
         "document.querySelector(\"#status\").textContent = \"\{js_escape(message)}\";",
       ) catch {
@@ -206,13 +210,19 @@ async fn main {
   )
   .debug(enabled=true)
   .commands(register_commands)
-  .on_browser_event(async fn(_browser, event) noraise {
-    if event is @proton.BrowserEvent::FoundInPage(result~) {
+  .on_web_contents_event(async fn(_browser, event) noraise {
+    if _browser.view_id() is Some(_) {
+      return
+    }
+    if event is @proton.WebContentsEvent::FoundInPage(result~) {
       show_result("host", result)
     }
   })
-  .on_view_event(async fn(_view, event) noraise {
-    if event is @proton.ViewEvent::FoundInPage(result~) {
+  .on_web_contents_event(async fn(_view, event) noraise {
+    if _view.view_id() is None {
+      return
+    }
+    if event is @proton.WebContentsEvent::FoundInPage(result~) {
       show_result("view", result)
     }
   })

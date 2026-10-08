@@ -28,7 +28,7 @@ let page =
 let session_review_started : Ref[Bool] = { val: false, }
 
 ///|
-async fn review_session(browser : @proton.BrowserHandle) -> Unit noraise {
+async fn review_session(browser : @proton.WebContentsHandle) -> Unit noraise {
   let session = browser.session()
   session.set_cookie(
     "https://example.com/",
@@ -89,7 +89,10 @@ async fn main {
   .on_download_event(fn(_browser, event) {
     println("download \{event.id}: \{event.state} \{event.percent}%")
   })
-  .on_browser_event(async fn(browser, event) noraise {
+  .on_web_contents_event(async fn(browser, event) noraise {
+    if browser.view_id() is Some(_) {
+      return
+    }
     println("browser event: \{Repr(event)}")
     let state = browser.state() catch {
       error => {
@@ -100,7 +103,7 @@ async fn main {
     println(
       "browser state: loading=\{state.is_loading} back=\{state.can_go_back} forward=\{state.can_go_forward} title=\{state.title} url=\{state.url}",
     )
-    if event is @proton.BrowserEvent::Navigated(url~) &&
+    if event is @proton.WebContentsEvent::Navigated(url~) &&
       url.has_prefix("https://example.com") &&
       !session_review_started.val {
       session_review_started.val = true

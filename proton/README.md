@@ -256,7 +256,7 @@ Applications can observe the objects and processes Proton creates:
 | Proton | Electron | Payload |
 | --- | --- | --- |
 | `App::on_window_created(...)` | `browser-window-created` | `WindowHandle` |
-| `App::on_web_contents_created(...)` | `web-contents-created` | `WebContentsHandle`: `Browser` for a window's main page, `View` for a web contents view |
+| `App::on_web_contents_created(...)` | `web-contents-created` | `WebContentsHandle` for either a main page or child view |
 | `App::on_render_process_gone(...)` | `render-process-gone` | `WebContentsHandle` and `RenderProcessGoneDetails { reason, exit_code }` |
 | `App::on_session_created(...)` | `session-created` | `ApplicationSession { partition, data_path }` |
 
@@ -266,16 +266,14 @@ reports: `abnormal-exit`, `killed`, `crashed`, `oom`, `launch-failed`, and
 `memory-eviction`, which CEF does not surface as renderer termination. A
 renderer termination is an event rather than a fatal runtime error: Proton
 keeps the application running, does not reload the page, and leaves the
-decision to the application through `BrowserHandle::reload`,
-`ViewHandle::reload`, `ViewHandle::close`, or closing the window. The
-per-web-contents `BrowserEvent::RendererProcessTerminated` and
-`ViewEvent::RendererProcessTerminated` events still carry CEF's raw status and
+decision to the application through `WebContentsHandle::reload`, `ViewHandle::close`, or closing the window. The
+per-web-contents `WebContentsEvent::RendererProcessTerminated` events carry CEF's raw status and
 error code for diagnostics. These notifications do not require command-bridge
-or view-event subscriptions.
+or page-event subscriptions.
 
 A command bridge that fails after a window has started reports
-`BrowserEvent::BridgeFailed { diagnostic }` through `on_browser_event` with the
-affected `BrowserHandle`. Proton logs the diagnostic and cancels the failed
+`WebContentsEvent::BridgeFailed { diagnostic }` through `on_web_contents_event` with the
+affected `WebContentsHandle`. Proton logs the diagnostic and cancels the failed
 page's pending work. Further commands from failed or replaced bridge attempts
 are rejected with `page_unavailable`; commands during a fresh attempt's
 initialization remain allowed. Other windows remain running; the application can reload
@@ -287,7 +285,7 @@ infrastructure errors still use the application failure path.
 Proton runs one session per application, so `session-created` fires once during
 startup, before the `app_lifecycle` start hooks, and reports the configured
 partition with the session data directory (or `temporary`, when the run has no
-single-instance route). Session operations stay on `BrowserHandle::session()`.
+single-instance route). Session operations stay on `WebContentsHandle::session()`.
 
 Electron's `child-process-gone` has no equivalent: CEF's public API reports
 renderer termination per browser but never signals other child process exits,
@@ -295,9 +293,35 @@ so GPU, utility, and plugin process loss cannot be observed through this
 runtime route. Proton reports the renderer half through `render-process-gone`
 and does not expose a handler that can never fire.
 
+## Windows, views, and web contents
+
+`WindowHandle` controls the native window. `ViewHandle` controls a child view's
+bounds, visibility, z-order, and removal. Both expose `web_contents()`, returning
+the same `WebContentsHandle` API for the page they contain:
+
+```moonbit
+let main_page = window.web_contents()
+let child_page = window.view("sidebar").unwrap().web_contents()
+main_page.reload()
+child_page.set_audio_muted(true)
+```
+
+Navigation, evaluation, history, inserted CSS, find, audio, zoom, DevTools,
+downloads, printing, and session access belong to `WebContentsHandle`. Subscribe
+to `App::on_web_contents_event` for either kind of page. `window_id()` identifies
+the owner; `view_id()` is `None` for its main page and `Some(id)` for a child.
+Navigation, popup, download, and permission handlers also receive this handle.
+Child pages use the application's configured browser policy.
+
+A handle refers to one native instance. Navigation keeps it valid; destroying
+its page makes it stale. Recreating a view with the same declaration ID does not
+revive the old handle. Session access remains tied to that instance; this API
+does not introduce independently owned sessions. Child pages do not receive the
+application command bridge.
+
 ## Page history and inserted CSS
 
-`BrowserHandle::navigation_history()` and `ViewHandle::navigation_history()`
+`WebContentsHandle::navigation_history()`
 report one browser's session history, corresponding to Electron's
 `webContents.navigationHistory`:
 
@@ -313,10 +337,9 @@ report one browser's session history, corresponding to Electron's
 | `NavigationEntry::transition_qualifiers` | `transitionQualifiers` | `client-redirect`, `server-redirect`, `forward-back`, or `from-address-bar` |
 | `NavigationEntry::has_post_data`, `http_status_code` | `NavigationEntry.hasPostData` and the status code | POST state and the last successful navigation status |
 
-`BrowserHandle::insert_css(css)` returns the key that
-`BrowserHandle::remove_inserted_css(key)` uses, corresponding to Electron's
-`webContents.insertCSS` and `webContents.removeInsertedCSS`. `ViewHandle`
-exposes the same pair for web contents views:
+`WebContentsHandle::insert_css(css)` returns the key that
+`WebContentsHandle::remove_inserted_css(key)` uses, corresponding to Electron's
+`webContents.insertCSS` and `webContents.removeInsertedCSS`:
 
 ```moonbit
 let key = browser.insert_css("body { background: #101418; }")
@@ -333,7 +356,7 @@ inserted sheets.
 Electron's `navigationHistory.goToIndex`, `clear`, and `restore` have no CEF
 counterpart: Chromium exposes back, forward, and the entry list, so Proton
 publishes the read side together with the existing
-`BrowserHandle::back()` and `BrowserHandle::forward()` commands.
+`WebContentsHandle::back()` and `WebContentsHandle::forward()` commands.
 
 ### webContents requests without a CEF equivalent
 
@@ -362,7 +385,7 @@ messages, but Proton only exposes the external remote debugging port today.
 
 Configure Chromium network policy with `App::web_request_cancel_prefix`,
 `App::web_request_redirect_prefix`, and `App::web_request_header_prefix`.
-Subscribe with `App::on_browser_event` to observe `BrowserEvent::ResourceRequested`
+Subscribe with `App::on_web_contents_event` to observe `WebContentsEvent::ResourceRequested`
 before a request is sent, `ResourceResponse` when headers arrive, and
 `ResourceCompleted` when it finishes. The request event includes its URL, HTTP
 method, and whether the configured synchronous policy will cancel it. A
@@ -500,17 +523,17 @@ received byte count. These are observations only and do not block the IO
 thread.
 
 Web contents views expose the same loading lifecycle events through
-`ViewEvent::DidStartLoading` and `ViewEvent::DidFinishLoad`; their
+`WebContentsEvent::DidStartLoading` and `WebContentsEvent::DidFinishLoad`; their
 `LoadingChanged` event remains available as the boolean form.
 If a view's renderer terminates, handlers receive
-`ViewEvent::RendererProcessTerminated` with the page URL, CEF termination
+`WebContentsEvent::RendererProcessTerminated` with the page URL, CEF termination
 status, CEF error code, and diagnostic detail. Proton reports this event
 through the normal wake-driven event queue and does not automatically reload
-the view; applications may explicitly call `ViewHandle::reload`.
+the view; applications may explicitly call `WebContentsHandle::reload`.
 
 While the parent window remains alive, closing a view with `ViewHandle::close`,
 `WindowHandle::remove_view`, or the page's `window.close()` delivers
-`ViewEvent::Closed` once after native closure. Programmatic removal immediately
+`WebContentsEvent::Closed` once after native closure. Programmatic removal immediately
 removes the view from lookup and rejects further operations. Its declarative ID
 may be reused; an old close event still refers to the old, unusable handle.
 Closing the parent ends all child lifetimes. Use the parent window's close

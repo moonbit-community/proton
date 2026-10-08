@@ -1051,8 +1051,8 @@ int32_t proton_engine_window_create(
                                 "failed to allocate browser state");
       return PROTON_ERR_ENGINE;
     }
-    proton_browser_session_bind_window(window->browser_session,
-                                       config.public_window);
+    proton_browser_session_bind_contents(window->browser_session,
+                                       config.public_window, 0);
     proton_browser_session_bind_lifecycle(window->browser_session,
                                           window->browser_lifecycle);
     proton_engine_client_t *client = proton_engine_client_create(
@@ -1066,6 +1066,7 @@ int32_t proton_engine_window_create(
       proton_engine_set_message(error, error_len, "failed to allocate client");
       return PROTON_ERR_ENGINE;
     }
+    client->contents_window_id = config.public_window;
     proton_browser_lifecycle_set_client(window->browser_lifecycle,
                                         &client->client);
 
@@ -2638,31 +2639,39 @@ int32_t proton_engine_window_get_navigation_state(
   }
 }
 
-int32_t proton_engine_window_download_url(
-    proton_engine_window_t *window, const char *url, char *error,
+int32_t proton_engine_contents_download_url(
+    void *target, int32_t is_view, const char *url, char *error,
     size_t error_len) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(view) : proton_engine_window_browser(window);
+
   @autoreleasepool {
-    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+    if (target == NULL || browser == NULL) {
       proton_engine_set_message(error, error_len, "browser is not initialized");
       return PROTON_ERR_NOT_INITIALIZED;
     }
-    return proton_browser_download_url(proton_engine_window_browser(window), url, error, error_len);
+    return proton_browser_download_url(browser, url, error, error_len);
   }
 }
 
-int32_t proton_engine_window_print(
-    proton_engine_window_t *window, char *error, size_t error_len) {
+int32_t proton_engine_contents_print(
+    void *target, int32_t is_view, char *error, size_t error_len) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(view) : proton_engine_window_browser(window);
+
   @autoreleasepool {
-    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+    if (target == NULL || browser == NULL) {
       proton_engine_set_message(error, error_len, "browser is not initialized");
       return PROTON_ERR_NOT_INITIALIZED;
     }
-    return proton_browser_print(proton_engine_window_browser(window), error, error_len);
+    return proton_browser_print(browser, error, error_len);
   }
 }
 
-int32_t proton_engine_window_print_to_pdf(
-    proton_engine_window_t *window, const char *path, int32_t landscape,
+int32_t proton_engine_contents_print_to_pdf(
+    void *target, int32_t is_view, const char *path, int32_t landscape,
     int32_t print_background, double scale, double paper_width,
     double paper_height, int32_t prefer_css_page_size, int32_t margin_type,
     double margin_top, double margin_right, double margin_bottom,
@@ -2671,13 +2680,18 @@ int32_t proton_engine_window_print_to_pdf(
     const char *footer_template, int32_t generate_tagged_pdf,
     int32_t generate_document_outline, int32_t *out_request_id,
     char *error, size_t error_len) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(view) : proton_engine_window_browser(window);
+  proton_browser_session_t *session = is_view ? (view != NULL ? view->browser_session : NULL) : (window != NULL ? window->browser_session : NULL);
+
   @autoreleasepool {
-    if (window == NULL || proton_engine_window_browser(window) == NULL) {
+    if (target == NULL || browser == NULL) {
       proton_engine_set_message(error, error_len, "browser is not initialized");
       return PROTON_ERR_NOT_INITIALIZED;
     }
     return proton_browser_print_to_pdf(
-        window->browser_session, proton_engine_window_browser(window), path, landscape,
+        session, browser, path, landscape,
         print_background, scale, paper_width, paper_height,
         prefer_css_page_size, margin_type, margin_top, margin_right,
         margin_bottom, margin_left, page_ranges, display_header_footer,
@@ -2741,17 +2755,21 @@ int32_t proton_engine_window_is_audio_muted(
   }
 }
 
-int32_t proton_engine_window_get_browser_url(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+int32_t proton_engine_contents_get_browser_url(
+    void *target, int32_t is_view, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  proton_browser_session_t *session = is_view ? (view != NULL ? view->browser_session : NULL) : (window != NULL ? window->browser_session : NULL);
+
   @autoreleasepool {
-    if (window == NULL || window->browser_session == NULL) {
+    if (target == NULL || session == NULL) {
       proton_engine_set_message(error, error_len,
                                 "browser session is not initialized");
       return PROTON_ERR_NOT_INITIALIZED;
     }
     int32_t status = proton_browser_session_copy_url(
-        window->browser_session, buffer, buffer_len, out_required_len);
+        session, buffer, buffer_len, out_required_len);
     if (status != PROTON_OK) {
       proton_engine_set_message(error, error_len,
                                 "browser URL buffer is too small");
@@ -2760,17 +2778,21 @@ int32_t proton_engine_window_get_browser_url(
   }
 }
 
-int32_t proton_engine_window_get_browser_title(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+int32_t proton_engine_contents_get_browser_title(
+    void *target, int32_t is_view, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  proton_browser_session_t *session = is_view ? (view != NULL ? view->browser_session : NULL) : (window != NULL ? window->browser_session : NULL);
+
   @autoreleasepool {
-    if (window == NULL || window->browser_session == NULL) {
+    if (target == NULL || session == NULL) {
       proton_engine_set_message(error, error_len,
                                 "browser session is not initialized");
       return PROTON_ERR_NOT_INITIALIZED;
     }
     int32_t status = proton_browser_session_copy_title(
-        window->browser_session, buffer, buffer_len, out_required_len);
+        session, buffer, buffer_len, out_required_len);
     if (status != PROTON_OK) {
       proton_engine_set_message(error, error_len,
                                 "browser title buffer is too small");
@@ -2779,32 +2801,40 @@ int32_t proton_engine_window_get_browser_title(
   }
 }
 
-int32_t proton_engine_window_get_browser_loading(
-    proton_engine_window_t *window, int32_t *out_is_loading, char *error,
+int32_t proton_engine_contents_get_browser_loading(
+    void *target, int32_t is_view, int32_t *out_is_loading, char *error,
     size_t error_len) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  proton_browser_session_t *session = is_view ? (view != NULL ? view->browser_session : NULL) : (window != NULL ? window->browser_session : NULL);
+
   @autoreleasepool {
-    if (window == NULL || window->browser_session == NULL ||
+    if (target == NULL || session == NULL ||
         out_is_loading == NULL) {
       proton_engine_set_message(error, error_len,
                                 "browser session and loading output are required");
       return PROTON_ERR_INVALID_ARGUMENT;
     }
-    *out_is_loading = proton_browser_session_is_loading(window->browser_session);
+    *out_is_loading = proton_browser_session_is_loading(session);
     return PROTON_OK;
   }
 }
 
-int32_t proton_engine_window_respond_browser_request(
-    proton_engine_window_t *window, uint64_t request_id, const char *action,
+int32_t proton_engine_contents_respond_browser_request(
+    void *target, int32_t is_view, uint64_t request_id, const char *action,
     const char *path,
     char *error, size_t error_len) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  proton_browser_session_t *session = is_view ? (view != NULL ? view->browser_session : NULL) : (window != NULL ? window->browser_session : NULL);
+
   @autoreleasepool {
-    if (window == NULL || window->browser_session == NULL) {
+    if (target == NULL || session == NULL) {
       proton_engine_set_message(error, error_len,
                                 "browser session is not initialized");
       return PROTON_ERR_NOT_INITIALIZED;
     }
-    return proton_browser_session_respond(window->browser_session, request_id,
+    return proton_browser_session_respond(session, request_id,
                                           action, path, error, error_len);
   }
 }

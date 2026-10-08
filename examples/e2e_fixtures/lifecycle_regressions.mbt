@@ -10,6 +10,10 @@ async fn lifecycle_probe_gate() -> Unit {
 ///|
 /// Exercises public lifecycle operations in an isolated headless application.
 pub async fn run_lifecycle_regression(name : String) -> Unit {
+  if name == "web-contents" {
+    run_web_contents_regression()
+    return
+  }
   if name == "window-config" {
     run_window_config_regression()
     return
@@ -116,9 +120,12 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
       ),
       open_on_start=false,
     )
-    .on_view_event((view, event) => {
+    .on_web_contents_event((view, event) => {
+      if view.view_id() is None {
+        return
+      }
       if event is Closed {
-        closed_views.push(view.id())
+        closed_views.push(view.view_id().unwrap())
         let rejected = try {
           view.eval("void 0")
           false
@@ -128,7 +135,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
         closed_handles_rejected.val = closed_handles_rejected.val && rejected
       }
       if event is DidFinishLoad {
-        loaded_views.push(view.id())
+        loaded_views.push(view.view_id().unwrap())
       }
     })
     .window_lifecycle(
@@ -191,7 +198,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                     }
                   }
                   if name == "page-view-close" {
-                    old.eval("window.close()")
+                    old.web_contents().eval("window.close()")
                   } else if name == "remove-view-close" {
                     window.remove_view("tab")
                   } else {
@@ -216,7 +223,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                     while closed_views.length() < 1 {
                       @async.sleep(10)
                     }
-                    fresh.eval("void 0")
+                    fresh.web_contents().eval("void 0")
                     fresh.close()
                   }
                   let expected = if name == "stale-view-close" { 2 } else { 1 }
@@ -241,7 +248,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                     @async.sleep(10)
                   }
                   let rejected = try {
-                    child.eval("void 0")
+                    child.web_contents().eval("void 0")
                     false
                   } catch {
                     _ => true
@@ -282,7 +289,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                         _ => ()
                       }
                     }
-                    fresh.browser().eval("void 0")
+                    fresh.web_contents().eval("void 0")
                     fresh.close()
                   }
                 }
@@ -292,7 +299,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                 }
                 "task-success" => @async.sleep(50)
                 "close-decision" => {
-                  window.browser().eval("void 0")
+                  window.web_contents().eval("void 0")
                   window.close()
                   while close_count.val == 0 {
                     @async.sleep(10)
@@ -300,7 +307,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
                   // Wait for the denied decision to be consumed by the session.
                   @async.sleep(50)
                   assert_eq(close_error.val, "")
-                  window.browser().eval("void 0")
+                  window.web_contents().eval("void 0")
                 }
                 _ => fail("unknown lifecycle regression: " + name)
               }
@@ -320,7 +327,7 @@ pub async fn run_lifecycle_regression(name : String) -> Unit {
     )
   let app = if name == "close-decision" {
     app.on_window_close_request(window => {
-      window.browser().eval("void 0") catch {
+      window.web_contents().eval("void 0") catch {
         error => close_error.val = error.message()
       }
       close_count.val += 1
@@ -548,12 +555,12 @@ async fn run_app_cancellation_regression(name : String) -> Unit {
   } else {
     assert_eq(shutdown_count.val, 1)
     assert_eq(close_count.val, 1)
-    try window.val.unwrap().browser().eval("void 0") catch {
+    try window.val.unwrap().web_contents().eval("void 0") catch {
       _ => ()
     } noraise {
       _ => fail("cancelled app retained a live window")
     }
-    try view.val.unwrap().eval("void 0") catch {
+    try view.val.unwrap().web_contents().eval("void 0") catch {
       _ => ()
     } noraise {
       _ => fail("cancelled app retained a live child view")
@@ -822,7 +829,7 @@ fn page_report_value(
 
 ///|
 /// Reports the computed custom property this case installs through
-/// `BrowserHandle::insert_css`, so the fixture observes the stylesheet from the
+/// `WebContentsHandle::insert_css`, so the fixture observes the stylesheet from the
 /// page instead of trusting the call to have worked.
 fn page_css_probe_script() -> String {
   "void window.__MoonBit__.app.report({ kind: 'css', value: getComputedStyle(document.documentElement).getPropertyValue('--proton-e2e-css').trim() || 'unset' })"
@@ -862,7 +869,7 @@ async fn run_page_control_regression() -> Unit {
         .spawn(
           () => {
             let app = application.val.unwrap()
-            let browser = app.windows().find("main").unwrap().browser()
+            let browser = app.windows().find("main").unwrap().web_contents()
             // Scripts issued before the entry document commits never reach the
             // page, so wait for the page to answer through the bridge.
             let mut page_live = false
@@ -1004,17 +1011,17 @@ async fn run_process_events_regression() -> Unit {
   .on_window_created(fn(window) { created_windows.push(window.id()) })
   .on_web_contents_created(fn(contents) {
     created_contents.push(
-      match contents {
-        Browser(browser) => "browser:" + browser.window_id()
-        View(view) => "view:" + view.window_id() + "/" + view.id()
+      match contents.view_id() {
+        None => "browser:" + contents.window_id()
+        Some(id) => "view:" + contents.window_id() + "/" + id
       },
     )
   })
   .on_render_process_gone(fn(contents, details) {
     gone_contents.push(
-      (match contents {
-        Browser(browser) => "browser:" + browser.window_id()
-        View(view) => "view:" + view.window_id() + "/" + view.id()
+      (match contents.view_id() {
+        None => "browser:" + contents.window_id()
+        Some(id) => "view:" + contents.window_id() + "/" + id
       }) +
       ":" +
       process_event_reason_name(details.reason) +
@@ -1022,7 +1029,10 @@ async fn run_process_events_regression() -> Unit {
       details.exit_code.to_string(),
     )
   })
-  .on_browser_event(fn(_browser, event) {
+  .on_web_contents_event(fn(_browser, event) {
+    if _browser.view_id() is Some(_) {
+      return
+    }
     if event is DidFinishLoad {
       main_loaded.val = true
     }
@@ -1199,7 +1209,7 @@ async fn run_process_lifetime_regression() -> Unit {
       lifecycle_probe_gate()
       context
       .handle()
-      .browser()
+      .web_contents()
       .eval(
         (
           #|void (async () => {
@@ -1227,7 +1237,10 @@ async fn run_renderer_without_bridge_regression() -> Unit {
   let valid_termination = Ref(false)
   @proton.html("No bridge", "<title>No Bridge</title>")
   .identifier("dev.proton.no-bridge")
-  .on_browser_event(fn(_browser, event) {
+  .on_web_contents_event(fn(_browser, event) {
+    if _browser.view_id() is Some(_) {
+      return
+    }
     match event {
       DidFinishLoad => loaded.val = true
       RendererProcessTerminated(status~, error_code~, ..) => {
@@ -1283,7 +1296,10 @@ async fn run_proxy_regression(name : String) -> Unit {
   let page_title = "Proton Proxy Response"
   let app = @proton.url("Proxy", "http://proton-proxy.invalid:8080/probe")
     .identifier("dev.proton.proxy")
-    .on_browser_event((browser, event) => {
+    .on_web_contents_event((browser, event) => {
+      if browser.view_id() is Some(_) {
+        return
+      }
       if event is DidFinishLoad {
         loaded.val = true
       }
@@ -1340,7 +1356,7 @@ async fn run_proxy_regression(name : String) -> Unit {
             // under test rather than issuing a second navigation after startup.
             while true {
               if context.windows().find("main") is Some(window) {
-                let state = window.browser().state()
+                let state = window.web_contents().state()
                 if served.val &&
                   state.url == "http://proton-proxy.invalid:8080/probe" &&
                   loaded.val &&
@@ -1423,7 +1439,10 @@ async fn run_page_recovery_regression(name : String) -> Unit {
       })
       registrar.bind(ping, (_context, _payload) => pinged.val += 1)
     })
-    .on_browser_event(fn(browser, event) {
+    .on_web_contents_event(fn(browser, event) {
+      if browser.view_id() is Some(_) {
+        return
+      }
       if event is BridgeFailed(diagnostic~) {
         if browser.window_id() == "main" &&
           diagnostic.message.contains("expected page failure") {
@@ -1456,13 +1475,13 @@ async fn run_page_recovery_regression(name : String) -> Unit {
             while ready_windows.val != 2 {
               @async.sleep(10)
             }
-            let main = context.handle().browser()
+            let main = context.handle().web_contents()
             let secondary = application.val
               .unwrap()
               .windows()
               .find("secondary")
               .unwrap()
-              .browser()
+              .web_contents()
             // Give the survivor a different site so Chromium cannot put it in the
             // renderer being terminated. It needs no bridge for this liveness check.
             secondary.load_url(
@@ -1571,7 +1590,10 @@ async fn run_closed_record_churn_regression() -> Unit {
   .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
     ()
   })
-  .on_view_event(fn(_view, event) {
+  .on_web_contents_event(fn(_view, event) {
+    if _view.view_id() is None {
+      return
+    }
     if event is Closed {
       removed.val += 1
     }
@@ -1604,7 +1626,7 @@ async fn run_closed_record_churn_regression() -> Unit {
             if index % 2 == 0 {
               context.handle().remove_view("temporary")
             } else {
-              view.eval("window.close()")
+              view.web_contents().eval("window.close()")
             }
             while removed.val <= index {
               @async.sleep(5)
@@ -1747,4 +1769,200 @@ async fn run_window_config_regression() -> Unit {
   .run()
   assert_eq(secondary_activations.val, 2)
   println("LIFECYCLE_PASSED window-config")
+}
+
+///|
+async fn run_web_contents_regression() -> Unit {
+  let application : Ref[@proton.ApplicationContext?] = Ref(None)
+  let loaded : Array[String] = []
+  let titles : Array[String] = []
+  let found : Array[String] = []
+  let printed : Array[String] = []
+  let downloads : Array[String] = []
+  let resources : Array[String] = []
+  let completed_downloads : Array[String] = []
+  let pending_started = Ref(false)
+  let pending_cancelled = Ref(false)
+  let handles : Array[@proton.WebContentsHandle] = []
+  let pdf_root = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
+  @proton.App(
+    @proton.WindowConfig(
+      "Contents",
+      @proton.AppEntry::Html("<title>Main</title><p>needle</p>"),
+      views=[
+        (
+          "left",
+          @proton.view(
+            "data:text/html,<title>Left</title><p>needle</p>",
+            width=200,
+            height=200,
+          ),
+        ),
+        (
+          "right",
+          @proton.view(
+            "data:text/html,<title>Right</title><p>needle</p>",
+            width=200,
+            height=200,
+          ),
+        ),
+      ],
+    ),
+  )
+  .identifier("dev.proton.web-contents")
+  .web_request_cancel_prefix("https://proton.test/blocked")
+  .on_download_request((contents, request) => {
+    if request.url.has_suffix("hold") {
+      pending_started.val = true
+      defer {
+        pending_cancelled.val = true
+      }
+      while true {
+        @async.sleep(10)
+      }
+    }
+    downloads.push(contents.view_id().unwrap_or("main"))
+    @proton.DownloadDecision::SaveTo(
+      pdf_root + "." + contents.view_id().unwrap_or("main") + ".txt",
+    )
+  })
+  .on_download_event((contents, event) => {
+    if event.state == "complete" {
+      completed_downloads.push(contents.view_id().unwrap_or("main"))
+    }
+  })
+  .on_web_contents_event((contents, event) => {
+    let id = contents.view_id().unwrap_or("main")
+    match event {
+      DidFinishLoad => loaded.push(id)
+      TitleUpdated(title~) => titles.push(id + "=" + title)
+      FoundInPage(result~) if result.final_update && result.matches == 1 =>
+        found.push(id)
+      PdfPrinted(result~) if result.success => printed.push(id)
+      ResourceRequested(..) => resources.push(id)
+      _ => ()
+    }
+  })
+  .app_lifecycle(on_start=context => application.val = Some(context), on_shutdown=_ => {
+    ()
+  })
+  .window_lifecycle(
+    on_ready=context => {
+      ignore(
+        context
+        .task_group()
+        .spawn(no_wait=true, () => {
+          lifecycle_probe_gate()
+          let window = context.handle()
+          let main = window.web_contents()
+          let left = window.view("left").unwrap().web_contents()
+          let right = window.view("right").unwrap().web_contents()
+          handles.push(main)
+          handles.push(left)
+          handles.push(right)
+          for id in ["main", "left", "right"] {
+            while !loaded.contains(id) {
+              @async.sleep(10)
+            }
+          }
+          while main.state().title != "Main" ||
+                left.state().title != "Left" ||
+                right.state().title != "Right" {
+            @async.sleep(10)
+          }
+          assert_eq(main.state().title, "Main")
+          assert_eq(left.state().title, "Left")
+          assert_eq(right.state().title, "Right")
+          left.set_audio_muted(true)
+          assert_true(left.is_audio_muted())
+          assert_false(right.is_audio_muted())
+          assert_false(main.is_audio_muted())
+          for contents in [main, left, right] {
+            let id = contents.view_id().unwrap_or("main")
+            contents.eval(
+              "new Image().src = 'https://proton.test/blocked/" + id + "'",
+            )
+            contents.download_url("data:text/plain,contents-download")
+            ignore(contents.find_in_page("needle"))
+            ignore(contents.print_to_pdf(pdf_root + "." + id + ".pdf"))
+          }
+          for id in ["main", "left", "right"] {
+            while !found.contains(id) ||
+                  !printed.contains(id) ||
+                  !completed_downloads.contains(id) ||
+                  !resources.contains(id) {
+              @async.sleep(10)
+            }
+            assert_true(downloads.contains(id))
+            assert_true(resources.contains(id))
+            assert_eq(
+              @mbfs.read_file_to_string(
+                pdf_root + "." + id + ".txt",
+                encoding="utf8",
+              ),
+              "contents-download",
+            )
+          }
+          left.session().set_cookie("https://proton.test/", "contents", "left")
+          let cookies = left.session().get_cookies(url="https://proton.test/")
+          assert_true(
+            cookies.any(cookie => {
+              cookie.name == "contents" && cookie.value == "left"
+            }),
+          )
+          left
+          .session()
+          .delete_cookies(url="https://proton.test/", name="contents")
+          left.load_html("<title>Changed</title><p>new</p>", "proton://left/")
+          while left.state().title != "Changed" {
+            @async.sleep(10)
+          }
+          assert_eq(right.state().title, "Right")
+          window.view("left").unwrap().close()
+          let replacement = window.add_view(
+            "left",
+            @proton.view(
+              "data:text/html,<title>Replacement</title>",
+              width=200,
+              height=200,
+            ),
+          )
+          let stale = try {
+            left.eval("void 0")
+            false
+          } catch {
+            _ => true
+          }
+          assert_true(stale)
+          while !titles.contains("left=Replacement") {
+            @async.sleep(10)
+          }
+          assert_eq(replacement.web_contents().state().title, "Replacement")
+          assert_eq(right.state().title, "Right")
+          right.download_url("data:text/plain,hold")
+          while !pending_started.val {
+            @async.sleep(10)
+          }
+          window.view("right").unwrap().close()
+          while !pending_cancelled.val {
+            @async.sleep(10)
+          }
+          assert_eq(main.state().title, "Main")
+          application.val.unwrap().quit()
+        }),
+      )
+    },
+    on_close=_ => (),
+  )
+  .run()
+  for contents in handles {
+    let stale = try {
+      contents.eval("void 0")
+      false
+    } catch {
+      _ => true
+    }
+    assert_true(stale)
+  }
+  println("LIFECYCLE_PASSED web-contents")
 }

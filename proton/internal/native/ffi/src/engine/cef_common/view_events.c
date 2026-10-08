@@ -95,8 +95,7 @@ int proton_view_events_ids(proton_view_events_t *events,
 }
 
 static void proton_view_events_enqueue(proton_view_events_t *events,
-                                       proton_event_t *event,
-                                       int closes_view) {
+                                       proton_event_t *event) {
   if (events == NULL || event == NULL) {
     proton_event_destroy(event);
     return;
@@ -107,104 +106,14 @@ static void proton_view_events_enqueue(proton_view_events_t *events,
     proton_event_destroy(event);
     return;
   }
-  if (closes_view) {
-    events->closed = 1;
-  }
+  events->closed = 1;
   event->view = events->view;
   event->window = events->window;
   proton_view_events_unlock(events);
   (void)proton_event_publish(event);
 }
 
-void proton_view_events_loading_changed(proton_view_events_t *events,
-                                        int32_t is_loading) {
-  proton_event_t *event =
-      proton_event_create(PROTON_EVENT_VIEW_LOADING_CHANGED);
-  if (event != NULL) {
-    event->bool_a = is_loading;
-  }
-  proton_view_events_enqueue(events, event, 0);
-}
-
-void proton_view_events_navigated(proton_view_events_t *events,
-                                  const char *url) {
-  proton_event_t *event = proton_event_create(PROTON_EVENT_VIEW_NAVIGATED);
-  if (event != NULL && !proton_event_set_text(&event->text_a, url)) {
-    proton_event_destroy(event);
-    event = NULL;
-  }
-  proton_view_events_enqueue(events, event, 0);
-}
-
-void proton_view_events_title_updated(proton_view_events_t *events,
-                                      const char *title) {
-  proton_event_t *event =
-      proton_event_create(PROTON_EVENT_VIEW_TITLE_UPDATED);
-  if (event != NULL && !proton_event_set_text(&event->text_a, title)) {
-    proton_event_destroy(event);
-    event = NULL;
-  }
-  proton_view_events_enqueue(events, event, 0);
-}
-
-void proton_view_events_load_failed(proton_view_events_t *events,
-                                    const char *url,
-                                    int32_t error_code,
-                                    const char *error_text) {
-  proton_event_t *event = proton_event_create(PROTON_EVENT_VIEW_LOAD_FAILED);
-  if (event != NULL &&
-      (!proton_event_set_text(&event->text_a, url) ||
-       !proton_event_set_text(&event->text_b, error_text))) {
-    proton_event_destroy(event);
-    event = NULL;
-  }
-  if (event != NULL) {
-    event->int_a = error_code;
-  }
-  proton_view_events_enqueue(events, event, 0);
-}
-
-void proton_view_events_renderer_terminated(
-    proton_view_events_t *events, int32_t status, int32_t error_code,
-    const char *url, const char *error_text) {
-  proton_event_t *event =
-      proton_event_create(PROTON_EVENT_VIEW_RENDERER_TERMINATED);
-  if (event != NULL &&
-      (!proton_event_set_text(&event->text_a, url) ||
-       !proton_event_set_text(&event->text_b, error_text))) {
-    proton_event_destroy(event);
-    event = NULL;
-  }
-  if (event != NULL) {
-    event->int_a = status;
-    event->int_b = error_code;
-  }
-  proton_view_events_enqueue(events, event, 0);
-}
-
-void proton_view_events_find_result(
-    proton_view_events_t *events, int32_t request_id, int32_t count,
-    int32_t x, int32_t y, int32_t width, int32_t height,
-    int32_t active_match_ordinal, int32_t final_update) {
-  if (events == NULL) {
-    return;
-  }
-  proton_event_t *event = proton_event_create(PROTON_EVENT_VIEW_FIND_RESULT);
-  if (event == NULL) {
-    return;
-  }
-  event->request_id = request_id;
-  event->int_a = count;
-  event->int_b = active_match_ordinal;
-  event->int_c = x;
-  event->int64_a = y;
-  event->int64_b = width;
-  event->revision = height;
-  event->bool_a = final_update != 0 ? 1 : 0;
-  proton_view_events_enqueue(events, event, 0);
-}
-
 void proton_view_events_closed(proton_view_events_t *events) {
   proton_view_events_enqueue(
-      events, proton_event_create(PROTON_EVENT_VIEW_CLOSED), 1);
+      events, proton_event_create(PROTON_EVENT_VIEW_CLOSED));
 }

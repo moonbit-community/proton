@@ -1,6 +1,6 @@
 # Programmatic Download
 
-Manual review for Electron-style `BrowserHandle::download_url`, using Proton's
+Manual review for Electron-style `WebContentsHandle::download_url`, using Proton's
 existing download approval, progress, and cancellation handlers.
 
 ```sh

@@ -6,10 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Per-view lifecycle event queue. Engine callbacks (UI/main thread) enqueue
-   fully formatted runtime event JSON once the view is bound to its public
-   ids; the ABI event sweep (runtime owner thread) drains it. Events emitted
-   before binding are dropped. */
+/* Bound view identity and exactly-once native close notification. */
 
 typedef struct proton_view_events proton_view_events_t;
 typedef struct proton_event proton_event_t;
@@ -23,23 +20,6 @@ int proton_view_events_ids(proton_view_events_t *events,
                            proton_view_id_t *out_view,
                            proton_window_id_t *out_window);
 
-void proton_view_events_loading_changed(proton_view_events_t *events,
-                                        int32_t is_loading);
-void proton_view_events_navigated(proton_view_events_t *events,
-                                  const char *url);
-void proton_view_events_title_updated(proton_view_events_t *events,
-                                      const char *title);
-void proton_view_events_load_failed(proton_view_events_t *events,
-                                    const char *url,
-                                    int32_t error_code,
-                                    const char *error_text);
-void proton_view_events_renderer_terminated(
-    proton_view_events_t *events, int32_t status, int32_t error_code,
-    const char *url, const char *error_text);
-void proton_view_events_find_result(
-    proton_view_events_t *events, int32_t request_id, int32_t count,
-    int32_t x, int32_t y, int32_t width, int32_t height,
-    int32_t active_match_ordinal, int32_t final_update);
 void proton_view_events_closed(proton_view_events_t *events);
 
 

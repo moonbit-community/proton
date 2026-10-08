@@ -93,7 +93,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
         "app-control", "process-events", "process-events-no-bridge", "task-metrics",
         "page-control", "startup-update-channel", "startup-update-failure", "proxy-config",
         "proxy-env", "renderer-recovery", "bridge-recovery", "bridge-startup-failure",
-        "closed-record-churn", "bridge-admission", "window-config",
+        "closed-record-churn", "bridge-admission", "window-config", "web-contents",
       ]
   }
   let failures : Array[String] = []
@@ -136,7 +136,7 @@ async fn run_lifecycle_regressions(root : String, timeout : Int) -> Unit {
           fail("lifecycle startup timeout" + app_output_suffix(app.output_path))
         }
         if name == "process-events" {
-          // Observe renderer readiness without registering an on_view_event
+          // Observe renderer readiness without registering an on_web_contents_event
           // callback, which would mask application-level dispatch regressions.
           let ready = @async.with_timeout_opt(timeout, () => {
             while !discover_targets_for_poll(cdp_target_from(port.to_string())).any(target => {

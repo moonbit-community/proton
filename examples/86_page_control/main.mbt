@@ -54,7 +54,7 @@ let control_command : @proton_contract.Command[ControlRequest, ControlReply] = c
 let application_slot : Ref[@proton.ApplicationContext?] = { val: None, }
 
 ///|
-/// The key of the stylesheet inserted through `BrowserHandle::insert_css`, or 0
+/// The key of the stylesheet inserted through `WebContentsHandle::insert_css`, or 0
 /// while none is inserted.
 let inserted_css : Ref[Int64] = { val: 0L, }
 
@@ -99,12 +99,12 @@ fn entry_rows(history : @proton.NavigationHistory) -> Array[EntryRow] {
 
 ///|
 /// Reads the main browser, or reports that the window is not ready.
-fn main_browser() -> @proton.BrowserHandle? {
+fn main_browser() -> @proton.WebContentsHandle? {
   match application_slot.val {
     None => None
     Some(context) =>
       match context.windows().find("main") {
-        Some(window) => Some(window.browser())
+        Some(window) => Some(window.web_contents())
         None => None
       }
   }

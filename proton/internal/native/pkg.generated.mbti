@@ -287,6 +287,18 @@ pub(all) enum BridgeResponse {
 } derive(@debug.Debug)
 pub fn BridgeResponse::to_repr(Self) -> @debug.Repr
 
+pub(all) struct BrowserEventInfo {
+  url : String?
+  title : String?
+  is_loading : Bool?
+  error_code : Int?
+  error_text : String?
+  received_bytes : Int64?
+} derive(Eq, @debug.Debug)
+pub fn BrowserEventInfo::equal(Self, Self) -> Bool
+pub fn BrowserEventInfo::not_equal(Self, Self) -> Bool
+pub fn BrowserEventInfo::to_repr(Self) -> @debug.Repr
+
 pub(all) struct BrowserPolicy {
   navigation : BrowserPolicyMode
   new_window : BrowserPolicyMode
@@ -560,11 +572,6 @@ pub fn NativeThemeSnapshot::equal(Self, Self) -> Bool
 pub fn NativeThemeSnapshot::not_equal(Self, Self) -> Bool
 pub fn NativeThemeSnapshot::to_repr(Self) -> @debug.Repr
 
-type NativeViewEvent derive(Eq, @debug.Debug)
-pub fn NativeViewEvent::equal(Self, Self) -> Bool
-pub fn NativeViewEvent::not_equal(Self, Self) -> Bool
-pub fn NativeViewEvent::to_repr(Self) -> @debug.Repr
-
 pub(all) struct NavigationEntry {
   url : String
   display_url : String
@@ -678,7 +685,7 @@ pub fn RuntimeEvent::app_activation_request_id(Self) -> Int64
 pub fn RuntimeEvent::bridge_request(Self) -> BridgeRequest?
 pub fn RuntimeEvent::bridge_request_cancellation(Self) -> Int64?
 pub fn RuntimeEvent::browser_download_update(Self) -> NativeDownloadUpdate?
-pub fn RuntimeEvent::browser_event(Self) -> ViewEventInfo?
+pub fn RuntimeEvent::browser_event(Self) -> BrowserEventInfo?
 pub fn RuntimeEvent::browser_request(Self) -> NativeBrowserRequest?
 pub fn RuntimeEvent::cookie_get_completion(Self) -> NativeCookieGetCompletion?
 pub fn RuntimeEvent::dialog_completion(Self) -> NativeDialogCompletion?
@@ -703,9 +710,7 @@ pub fn RuntimeEvent::resource_request(Self) -> NativeResourceRequest?
 pub fn RuntimeEvent::resource_request_cancellation(Self) -> Int64?
 pub fn RuntimeEvent::taskbar_button_id(Self) -> String?
 pub fn RuntimeEvent::to_repr(Self) -> @debug.Repr
-pub fn RuntimeEvent::view_event(Self) -> ViewEventInfo?
 pub fn RuntimeEvent::view_id(Self) -> Int64?
-pub fn RuntimeEvent::view_renderer_process_termination(Self) -> RendererProcessTerminationInfo?
 pub fn RuntimeEvent::window_close_request(Self) -> Int64?
 pub fn RuntimeEvent::window_id(Self) -> Int64?
 pub fn RuntimeEvent::window_state_change(Self) -> WindowState?
@@ -849,7 +854,17 @@ type View
 pub fn View::View(Window, ViewConfig) -> Self raise NativeError
 pub fn View::browser_command(Self, String, download_id? : Int) -> Unit raise NativeError
 pub fn View::browser_is_focused(Self) -> Bool raise NativeError
+pub fn View::browser_state(Self) -> BrowserState raise NativeError
+pub fn View::clear_auth_cache(Self) -> Unit raise NativeError
+pub fn View::clear_cache(Self) -> Unit raise NativeError
+pub fn View::clear_certificate_exceptions(Self) -> Unit raise NativeError
+pub fn View::close_all_connections(Self) -> Unit raise NativeError
+pub fn View::cookie_begin_get(Self, String?, Bool) -> Int64 raise NativeError
+pub fn View::cookie_delete(Self, String?, String?) -> Unit raise NativeError
+pub fn View::cookie_flush(Self) -> Unit raise NativeError
+pub fn View::cookie_set(Self, String, String, String, domain? : String, path? : String, secure? : Bool, http_only? : Bool, same_site? : CookieSameSite) -> Unit raise NativeError
 pub fn View::destroy(Self) -> Unit raise NativeError
+pub fn View::download_url(Self, String) -> Unit raise NativeError
 pub fn View::eval(Self, String) -> Unit raise NativeError
 pub fn View::find_in_page(Self, String, Bool, Bool, Bool) -> Int raise NativeError
 pub fn View::id(Self) -> Int64
@@ -859,7 +874,10 @@ pub fn View::is_devtools_opened(Self) -> Bool raise NativeError
 pub fn View::load_url(Self, String) -> Unit raise NativeError
 pub fn View::navigation_history(Self) -> NavigationHistory raise NativeError
 pub fn View::navigation_state(Self) -> (Bool, Bool) raise NativeError
+pub fn View::print(Self) -> Unit raise NativeError
+pub fn View::print_to_pdf(Self, String, PdfPrintSettings) -> Int raise NativeError
 pub fn View::remove_page_css(Self, Int64) -> Unit raise NativeError
+pub fn View::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
 pub fn View::set_audio_muted(Self, Bool) -> Unit raise NativeError
 pub fn View::set_bounds(Self, x~ : Int, y~ : Int, width~ : Int, height~ : Int) -> Unit raise NativeError
 pub fn View::set_visible(Self, Bool) -> Unit raise NativeError
@@ -874,18 +892,6 @@ pub fn ViewConfig::ViewConfig(width~ : Int, height~ : Int, x? : Int, y? : Int, v
 pub fn ViewConfig::equal(Self, Self) -> Bool
 pub fn ViewConfig::not_equal(Self, Self) -> Bool
 pub fn ViewConfig::to_repr(Self) -> @debug.Repr
-
-pub(all) struct ViewEventInfo {
-  url : String?
-  title : String?
-  is_loading : Bool?
-  error_code : Int?
-  error_text : String?
-  received_bytes : Int64?
-} derive(Eq, @debug.Debug)
-pub fn ViewEventInfo::equal(Self, Self) -> Bool
-pub fn ViewEventInfo::not_equal(Self, Self) -> Bool
-pub fn ViewEventInfo::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ViewState {
   x : Int

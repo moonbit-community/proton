@@ -1045,6 +1045,7 @@ fn decode_native_runtime_event(
     12 =>
       BrowserRequest(
         window,
+        native_event_view_id(event),
         Navigation(
           request_id=@native_ffi.event_int64(event, 2),
           url=require_native_event_text(event, 0, "browser navigation"),
@@ -1058,6 +1059,7 @@ fn decode_native_runtime_event(
     13 =>
       BrowserRequest(
         window,
+        native_event_view_id(event),
         NewWindow(
           request_id=@native_ffi.event_int64(event, 2),
           url=require_native_event_text(event, 0, "browser new window"),
@@ -1067,6 +1069,7 @@ fn decode_native_runtime_event(
     14 =>
       BrowserRequest(
         window,
+        native_event_view_id(event),
         Download(
           request_id=@native_ffi.event_int64(event, 2),
           download_id=@native_ffi.event_int(event, 0),
@@ -1079,6 +1082,7 @@ fn decode_native_runtime_event(
     15 =>
       BrowserRequest(
         window,
+        native_event_view_id(event),
         Certificate(
           request_id=@native_ffi.event_int64(event, 2),
           url=require_native_event_text(event, 0, "browser certificate"),
@@ -1088,6 +1092,7 @@ fn decode_native_runtime_event(
     16 =>
       BrowserRequest(
         window,
+        native_event_view_id(event),
         Media(
           request_id=@native_ffi.event_int64(event, 2),
           origin=require_native_event_text(event, 0, "browser media"),
@@ -1095,54 +1100,13 @@ fn decode_native_runtime_event(
         ),
       )
     17 =>
-      BrowserDownloadUpdated(window, {
+      BrowserDownloadUpdated(window, native_event_view_id(event), {
         download_id: @native_ffi.event_int(event, 0),
         state: require_native_event_text(event, 0, "browser download update"),
         received_bytes: @native_ffi.event_int64(event, 4),
         total_bytes: @native_ffi.event_int64(event, 5),
         percent: @native_ffi.event_int(event, 1),
       })
-    18 =>
-      ViewEvent(
-        window,
-        @native_ffi.event_int64(event, 1),
-        LoadingChanged(@native_ffi.event_int(event, 3) != 0),
-      )
-    19 =>
-      ViewEvent(
-        window,
-        @native_ffi.event_int64(event, 1),
-        Navigated(require_native_event_text(event, 0, "view navigation")),
-      )
-    20 =>
-      ViewEvent(
-        window,
-        @native_ffi.event_int64(event, 1),
-        TitleUpdated(require_native_event_text(event, 0, "view title")),
-      )
-    21 =>
-      ViewEvent(
-        window,
-        @native_ffi.event_int64(event, 1),
-        LoadFailed(
-          require_native_event_text(event, 0, "view load URL"),
-          @native_ffi.event_int(event, 0),
-          require_native_event_text(event, 1, "view load error"),
-        ),
-      )
-    41 =>
-      ViewEvent(
-        window,
-        @native_ffi.event_int64(event, 1),
-        RendererProcessTerminated(
-          require_native_event_text(event, 0, "view renderer termination URL"),
-          @native_ffi.event_int(event, 0),
-          @native_ffi.event_int(event, 1),
-          require_native_event_text(
-            event, 1, "view renderer termination detail",
-          ),
-        ),
-      )
     22 =>
       BridgeRequestReceived(
         decode_bridge_request(
@@ -1213,22 +1177,29 @@ fn decode_native_runtime_event(
         },
       )
     28 => QuitRequested
-    29 => ViewEvent(window, @native_ffi.event_int64(event, 1), Closed)
+    29 => ViewClosed(window, @native_ffi.event_int64(event, 1))
     30 =>
-      BrowserEvent(window, LoadingChanged(@native_ffi.event_int(event, 3) != 0))
+      BrowserEvent(
+        window,
+        native_event_view_id(event),
+        LoadingChanged(@native_ffi.event_int(event, 3) != 0),
+      )
     31 =>
       BrowserEvent(
         window,
+        native_event_view_id(event),
         Navigated(require_native_event_text(event, 0, "browser navigation")),
       )
     32 =>
       BrowserEvent(
         window,
+        native_event_view_id(event),
         TitleUpdated(require_native_event_text(event, 0, "browser title")),
       )
     33 =>
       BrowserEvent(
         window,
+        native_event_view_id(event),
         LoadFailed(
           require_native_event_text(event, 0, "browser load URL"),
           @native_ffi.event_int(event, 0),
@@ -1238,6 +1209,7 @@ fn decode_native_runtime_event(
     34 =>
       BrowserEvent(
         window,
+        native_event_view_id(event),
         FindResult({
           request_id: @native_ffi.event_int64(event, 2).to_int(),
           active_match_ordinal: @native_ffi.event_int(event, 1),
@@ -1252,6 +1224,7 @@ fn decode_native_runtime_event(
     40 =>
       BrowserEvent(
         window,
+        native_event_view_id(event),
         RendererProcessTerminated(
           require_native_event_text(event, 0, "renderer termination URL"),
           @native_ffi.event_int(event, 0),
@@ -1259,24 +1232,10 @@ fn decode_native_runtime_event(
           require_native_event_text(event, 1, "renderer termination detail"),
         ),
       )
-    35 =>
-      ViewEvent(
-        window,
-        @native_ffi.event_int64(event, 1),
-        FindResult({
-          request_id: @native_ffi.event_int64(event, 2).to_int(),
-          active_match_ordinal: @native_ffi.event_int(event, 1),
-          matches: @native_ffi.event_int(event, 0),
-          selection_x: @native_ffi.event_int(event, 2),
-          selection_y: @native_ffi.event_int64(event, 4).to_int(),
-          selection_width: @native_ffi.event_int64(event, 5).to_int(),
-          selection_height: @native_ffi.event_int64(event, 3).to_int(),
-          final_update: @native_ffi.event_int(event, 3) != 0,
-        }),
-      )
     38 =>
       BrowserEvent(
         window,
+        native_event_view_id(event),
         ResourceResponse(
           require_native_event_text(event, 0, "resource response"),
           @native_ffi.event_int(event, 0),
@@ -1285,6 +1244,7 @@ fn decode_native_runtime_event(
     39 =>
       BrowserEvent(
         window,
+        native_event_view_id(event),
         ResourceCompleted(
           require_native_event_text(event, 0, "resource completion"),
           @native_ffi.event_int(event, 0),
@@ -1294,6 +1254,7 @@ fn decode_native_runtime_event(
     42 =>
       BrowserEvent(
         window,
+        native_event_view_id(event),
         ResourceRequested(
           require_native_event_text(event, 0, "resource request URL"),
           require_native_event_text(event, 1, "resource request method"),
@@ -1301,7 +1262,7 @@ fn decode_native_runtime_event(
         ),
       )
     36 =>
-      BrowserPdfPrinted(window, {
+      BrowserPdfPrinted(window, native_event_view_id(event), {
         request_id: @native_ffi.event_int64(event, 2).to_int(),
         path: require_native_event_text(event, 0, "PDF print path"),
         success: @native_ffi.event_int(event, 3) != 0,
@@ -2449,7 +2410,7 @@ pub fn Window::browser_state(self : Window) -> BrowserState raise NativeError {
   let handle = self.live_handle()
   let url = require_native_text("browser URL", (buffer, buffer_len, required) => {
     @native_ffi.proton_window_get_browser_url_ffi(
-      handle, buffer, buffer_len, required,
+      handle, 0, buffer, buffer_len, required,
     )
   })
   let title = require_native_text("browser title", (
@@ -2458,12 +2419,12 @@ pub fn Window::browser_state(self : Window) -> BrowserState raise NativeError {
     required,
   ) => {
     @native_ffi.proton_window_get_browser_title_ffi(
-      handle, buffer, buffer_len, required,
+      handle, 0, buffer, buffer_len, required,
     )
   })
   let is_loading : Ref[Int] = { val: 0, }
   check_status(
-    @native_ffi.proton_window_get_browser_loading_ffi(handle, is_loading),
+    @native_ffi.proton_window_get_browser_loading_ffi(handle, 0, is_loading),
   )
   let (can_go_back, can_go_forward) = self.navigation_state()
   { url, title, is_loading: is_loading.val != 0, can_go_back, can_go_forward, }
@@ -2630,6 +2591,7 @@ pub fn Window::download_url(
   check_status(
     @native_ffi.proton_window_download_url_ffi(
       self.live_handle(),
+      0,
       @ffi.to_cstr(url),
     ),
   )
@@ -2637,7 +2599,7 @@ pub fn Window::download_url(
 
 ///|
 pub fn Window::print(self : Window) -> Unit raise NativeError {
-  check_status(@native_ffi.proton_window_print_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_print_ffi(self.live_handle(), 0))
 }
 
 ///|
@@ -2667,6 +2629,7 @@ pub fn Window::print_to_pdf(
   check_status(
     @native_ffi.proton_window_print_to_pdf_ffi(
       self.live_handle(),
+      0,
       @ffi.to_cstr(path),
       if settings.landscape {
         1
@@ -2779,6 +2742,7 @@ pub fn Window::respond_browser_request(
   check_status(
     @native_ffi.proton_window_respond_browser_request_ffi(
       self.live_handle(),
+      0,
       request_id,
       @ffi.to_cstr(action),
       @ffi.to_cstr(path.unwrap_or("")),
@@ -2967,6 +2931,7 @@ pub fn Window::cookie_begin_get(
   check_status(
     @native_ffi.proton_window_cookie_begin_get_ffi(
       self.live_handle(),
+      0,
       url_bytes,
       if include_http_only {
         1
@@ -3001,6 +2966,7 @@ pub fn Window::cookie_set(
   check_status(
     @native_ffi.proton_window_cookie_set_ffi(
       self.live_handle(),
+      0,
       @ffi.to_cstr(url),
       @ffi.to_cstr(name),
       @ffi.to_cstr(value),
@@ -3041,6 +3007,7 @@ pub fn Window::cookie_delete(
   check_status(
     @native_ffi.proton_window_cookie_delete_ffi(
       self.live_handle(),
+      0,
       url_bytes,
       name_bytes,
     ),
@@ -3050,20 +3017,22 @@ pub fn Window::cookie_delete(
 ///|
 /// Flushes the cookie store to disk. Fire-and-forget.
 pub fn Window::cookie_flush(self : Window) -> Unit raise NativeError {
-  check_status(@native_ffi.proton_window_cookie_flush_ffi(self.live_handle()))
+  check_status(
+    @native_ffi.proton_window_cookie_flush_ffi(self.live_handle(), 0),
+  )
 }
 
 ///|
 /// Clears the HTTP cache for the window's request context. Fire-and-forget.
 pub fn Window::clear_cache(self : Window) -> Unit raise NativeError {
-  check_status(@native_ffi.proton_window_clear_cache_ffi(self.live_handle()))
+  check_status(@native_ffi.proton_window_clear_cache_ffi(self.live_handle(), 0))
 }
 
 ///|
 /// Clears cached HTTP authentication credentials for the request context.
 pub fn Window::clear_auth_cache(self : Window) -> Unit raise NativeError {
   check_status(
-    @native_ffi.proton_window_clear_auth_cache_ffi(self.live_handle()),
+    @native_ffi.proton_window_clear_auth_cache_ffi(self.live_handle(), 0),
   )
 }
 
@@ -3075,6 +3044,7 @@ pub fn Window::clear_certificate_exceptions(
   check_status(
     @native_ffi.proton_window_clear_certificate_exceptions_ffi(
       self.live_handle(),
+      0,
     ),
   )
 }
@@ -3083,7 +3053,7 @@ pub fn Window::clear_certificate_exceptions(
 /// Closes active and idle Chromium connections for this window's session.
 pub fn Window::close_all_connections(self : Window) -> Unit raise NativeError {
   check_status(
-    @native_ffi.proton_window_close_all_connections_ffi(self.live_handle()),
+    @native_ffi.proton_window_close_all_connections_ffi(self.live_handle(), 0),
   )
 }
 
@@ -3856,5 +3826,294 @@ pub fn Window::button_position(self : Window) -> (Int, Int)? raise NativeError {
     None
   } else {
     Some((x.val, y.val))
+  }
+}
+
+///|
+/// Reads the current main browser page state.
+pub fn View::browser_state(self : View) -> BrowserState raise NativeError {
+  let handle = self.live_handle()
+  let url = require_native_text("browser URL", (buffer, buffer_len, required) => {
+    @native_ffi.proton_view_get_browser_url_ffi(
+      handle, 1, buffer, buffer_len, required,
+    )
+  })
+  let title = require_native_text("browser title", (
+    buffer,
+    buffer_len,
+    required,
+  ) => {
+    @native_ffi.proton_view_get_browser_title_ffi(
+      handle, 1, buffer, buffer_len, required,
+    )
+  })
+  let is_loading : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_view_get_browser_loading_ffi(handle, 1, is_loading),
+  )
+  let (can_go_back, can_go_forward) = self.navigation_state()
+  { url, title, is_loading: is_loading.val != 0, can_go_back, can_go_forward, }
+}
+
+///|
+pub fn View::download_url(self : View, url : String) -> Unit raise NativeError {
+  if url.is_empty() {
+    raise invalid_argument("download URL must not be empty")
+  }
+  check_status(
+    @native_ffi.proton_view_download_url_ffi(
+      self.live_handle(),
+      1,
+      @ffi.to_cstr(url),
+    ),
+  )
+}
+
+///|
+pub fn View::print(self : View) -> Unit raise NativeError {
+  check_status(@native_ffi.proton_view_print_ffi(self.live_handle(), 1))
+}
+
+///|
+pub fn View::print_to_pdf(
+  self : View,
+  path : String,
+  settings : PdfPrintSettings,
+) -> Int raise NativeError {
+  if path.is_empty() {
+    raise invalid_argument("PDF output path must not be empty")
+  }
+  if settings.scale < 0.1 || settings.scale > 2.0 {
+    raise invalid_argument("PDF scale must be between 0.1 and 2")
+  }
+  if settings.paper_width <= 0.0 || settings.paper_height <= 0.0 {
+    raise invalid_argument("PDF paper dimensions must be positive")
+  }
+  if settings.margin_type < 0 ||
+    settings.margin_type > 2 ||
+    settings.margin_top < 0.0 ||
+    settings.margin_right < 0.0 ||
+    settings.margin_bottom < 0.0 ||
+    settings.margin_left < 0.0 {
+    raise invalid_argument("PDF margins are invalid")
+  }
+  let out_request_id : Ref[Int] = { val: 0, }
+  check_status(
+    @native_ffi.proton_view_print_to_pdf_ffi(
+      self.live_handle(),
+      1,
+      @ffi.to_cstr(path),
+      if settings.landscape {
+        1
+      } else {
+        0
+      },
+      if settings.print_background {
+        1
+      } else {
+        0
+      },
+      settings.scale,
+      settings.paper_width,
+      settings.paper_height,
+      if settings.prefer_css_page_size {
+        1
+      } else {
+        0
+      },
+      settings.margin_type,
+      settings.margin_top,
+      settings.margin_right,
+      settings.margin_bottom,
+      settings.margin_left,
+      @ffi.to_cstr(settings.page_ranges),
+      if settings.display_header_footer {
+        1
+      } else {
+        0
+      },
+      @ffi.to_cstr(settings.header_template),
+      @ffi.to_cstr(settings.footer_template),
+      if settings.generate_tagged_pdf {
+        1
+      } else {
+        0
+      },
+      if settings.generate_document_outline {
+        1
+      } else {
+        0
+      },
+      out_request_id,
+    ),
+  )
+  out_request_id.val
+}
+
+///|
+pub fn View::respond_browser_request(
+  self : View,
+  request_id : Int64,
+  action : String,
+  path? : String,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_view_respond_browser_request_ffi(
+      self.live_handle(),
+      1,
+      request_id,
+      @ffi.to_cstr(action),
+      @ffi.to_cstr(path.unwrap_or("")),
+    ),
+  )
+}
+
+///|
+/// Begins retrieving cookies for the window's session. Completion is delivered
+/// as a `cookie_get_completed` runtime event carrying the returned request id.
+pub fn View::cookie_begin_get(
+  self : View,
+  url : String?,
+  include_http_only : Bool,
+) -> Int64 raise NativeError {
+  let url_bytes = match url {
+    Some(u) => @ffi.to_cstr(u)
+    None => @ffi.to_cstr("")
+  }
+  let request_id = Ref(proton_invalid_handle)
+  check_status(
+    @native_ffi.proton_view_cookie_begin_get_ffi(
+      self.live_handle(),
+      1,
+      url_bytes,
+      if include_http_only {
+        1
+      } else {
+        0
+      },
+      request_id,
+    ),
+  )
+  request_id.val
+}
+
+///|
+/// Sets a cookie for the window's session. Fire-and-forget.
+pub fn View::cookie_set(
+  self : View,
+  url : String,
+  name : String,
+  value : String,
+  domain? : String,
+  path? : String,
+  secure? : Bool = false,
+  http_only? : Bool = false,
+  same_site? : CookieSameSite = Unspecified,
+) -> Unit raise NativeError {
+  if url.is_empty() {
+    raise invalid_argument("cookie url must not be empty")
+  }
+  if name.is_empty() {
+    raise invalid_argument("cookie name must not be empty")
+  }
+  check_status(
+    @native_ffi.proton_view_cookie_set_ffi(
+      self.live_handle(),
+      1,
+      @ffi.to_cstr(url),
+      @ffi.to_cstr(name),
+      @ffi.to_cstr(value),
+      @ffi.to_cstr(domain.unwrap_or("")),
+      @ffi.to_cstr(path.unwrap_or("")),
+      if secure {
+        1
+      } else {
+        0
+      },
+      if http_only {
+        1
+      } else {
+        0
+      },
+      same_site.native_value(),
+    ),
+  )
+}
+
+///|
+/// Deletes cookies. If `url` is `None`, all cookies are deleted. If `name`
+/// is `Some`, only cookies with that name matching the URL are deleted.
+/// Fire-and-forget.
+pub fn View::cookie_delete(
+  self : View,
+  url : String?,
+  name : String?,
+) -> Unit raise NativeError {
+  let url_bytes = match url {
+    Some(u) => @ffi.to_cstr(u)
+    None => @ffi.to_cstr("")
+  }
+  let name_bytes = match name {
+    Some(n) => @ffi.to_cstr(n)
+    None => @ffi.to_cstr("")
+  }
+  check_status(
+    @native_ffi.proton_view_cookie_delete_ffi(
+      self.live_handle(),
+      1,
+      url_bytes,
+      name_bytes,
+    ),
+  )
+}
+
+///|
+/// Flushes the cookie store to disk. Fire-and-forget.
+pub fn View::cookie_flush(self : View) -> Unit raise NativeError {
+  check_status(@native_ffi.proton_view_cookie_flush_ffi(self.live_handle(), 1))
+}
+
+///|
+/// Clears the HTTP cache for the window's request context. Fire-and-forget.
+pub fn View::clear_cache(self : View) -> Unit raise NativeError {
+  check_status(@native_ffi.proton_view_clear_cache_ffi(self.live_handle(), 1))
+}
+
+///|
+/// Clears cached HTTP authentication credentials for the request context.
+pub fn View::clear_auth_cache(self : View) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_view_clear_auth_cache_ffi(self.live_handle(), 1),
+  )
+}
+
+///|
+/// Clears stored certificate exception decisions for the request context.
+pub fn View::clear_certificate_exceptions(
+  self : View,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_view_clear_certificate_exceptions_ffi(
+      self.live_handle(),
+      1,
+    ),
+  )
+}
+
+///|
+/// Closes active and idle Chromium connections for this window's session.
+pub fn View::close_all_connections(self : View) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_view_close_all_connections_ffi(self.live_handle(), 1),
+  )
+}
+
+///|
+fn native_event_view_id(event : @native_ffi.EventHandle) -> Int64? {
+  let view = @native_ffi.event_int64(event, 1)
+  if view == proton_invalid_handle {
+    None
+  } else {
+    Some(view)
   }
 }

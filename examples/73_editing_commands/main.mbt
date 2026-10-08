@@ -34,14 +34,14 @@ let edit_command : @proton_contract.Command[EditRequest, EditReply] = contract.c
 )
 
 ///|
-let browser_slot : Ref[@proton.BrowserHandle?] = { val: None, }
+let browser_slot : Ref[@proton.WebContentsHandle?] = { val: None, }
 
 ///|
 let view_slot : Ref[@proton.ViewHandle?] = { val: None, }
 
 ///|
 fn run_browser_edit(
-  browser : @proton.BrowserHandle,
+  browser : @proton.WebContentsHandle,
   action : String,
 ) -> Bool raise @proton.WindowSessionError {
   match action {
@@ -63,16 +63,16 @@ fn run_view_edit(
   view : @proton.ViewHandle,
   action : String,
 ) -> Bool raise @proton.WindowSessionError {
-  view.focus()
+  view.web_contents().focus()
   match action {
-    "undo" => view.undo()
-    "redo" => view.redo()
-    "cut" => view.cut()
-    "copy" => view.copy()
-    "paste" => view.paste()
-    "paste_and_match_style" => view.paste_and_match_style()
-    "delete" => view.delete()
-    "select_all" => view.select_all()
+    "undo" => view.web_contents().undo()
+    "redo" => view.web_contents().redo()
+    "cut" => view.web_contents().cut()
+    "copy" => view.web_contents().copy()
+    "paste" => view.web_contents().paste()
+    "paste_and_match_style" => view.web_contents().paste_and_match_style()
+    "delete" => view.web_contents().delete()
+    "select_all" => view.web_contents().select_all()
     _ => return false
   }
   true
@@ -150,7 +150,7 @@ async fn main {
   .window_lifecycle(
     on_ready=context => {
       let window = context.handle()
-      browser_slot.val = Some(window.browser())
+      browser_slot.val = Some(window.web_contents())
       open_review_view(window)
       window
     },

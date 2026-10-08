@@ -148,19 +148,18 @@ struct App {
     async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
   ]
   session_created_handlers : Array[async (ApplicationSession) -> Unit noraise]
-  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
-  browser_event_handlers : Array[
-    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  contents_event_handlers : Array[
+    async (WebContentsHandle, WebContentsEvent) -> Unit noraise,
   ]
   mut window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
-  mut navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
-  mut new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?
-  mut download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
-  mut certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
-  mut media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
-  mut permission_handler : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
+  mut navigation_handler : (async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise)?
+  mut new_window_handler : (async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise)?
+  mut download_handler : (async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise)?
+  mut certificate_handler : (async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise)?
+  mut media_handler : (async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
+  mut permission_handler : (async (WebContentsHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
   download_event_handlers : Array[
-    async (BrowserHandle, DownloadEvent) -> Unit noraise,
+    async (WebContentsHandle, DownloadEvent) -> Unit noraise,
   ]
   update_handlers : Array[async (PendingUpdate) -> Unit noraise]
   system_appearance_handlers : Array[async (SystemAppearance) -> Unit noraise]
@@ -288,22 +287,21 @@ priv struct ResolvedAppConfig {
     async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
   ]
   session_created_handlers : Array[async (ApplicationSession) -> Unit noraise]
-  view_event_handlers : Array[async (ViewHandle, ViewEvent) -> Unit noraise]
-  browser_event_handlers : Array[
-    async (BrowserHandle, BrowserEvent) -> Unit noraise,
+  contents_event_handlers : Array[
+    async (WebContentsHandle, WebContentsEvent) -> Unit noraise,
   ]
   window_close_handler : (async (WindowHandle) -> WindowCloseDecision noraise)?
   before_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   will_quit_handler : (async (ApplicationContext) -> ApplicationQuitDecision noraise)?
   quit_handlers : Array[async (ApplicationContext, Int) -> Unit noraise]
-  navigation_handler : (async (BrowserHandle, NavigationRequest) -> NavigationDecision noraise)?
-  new_window_handler : (async (BrowserHandle, NewWindowRequest) -> NewWindowDecision noraise)?
-  download_handler : (async (BrowserHandle, DownloadRequest) -> DownloadDecision noraise)?
-  certificate_handler : (async (BrowserHandle, CertificateError) -> BrowserPermissionDecision noraise)?
-  media_handler : (async (BrowserHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
-  permission_handler : (async (BrowserHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
+  navigation_handler : (async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise)?
+  new_window_handler : (async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise)?
+  download_handler : (async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise)?
+  certificate_handler : (async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise)?
+  media_handler : (async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise)?
+  permission_handler : (async (WebContentsHandle, PermissionRequest) -> BrowserPermissionDecision noraise)?
   download_event_handlers : Array[
-    async (BrowserHandle, DownloadEvent) -> Unit noraise,
+    async (WebContentsHandle, DownloadEvent) -> Unit noraise,
   ]
   update_handlers : Array[async (PendingUpdate) -> Unit noraise]
   explicit_locale : @locale.Locale?
@@ -410,6 +408,7 @@ priv struct ResourceResponse {
 
 ///|
 priv struct PendingResourceRequest {
+  view : Int64?
   request_id : Int64
   window : Int64
   task : @async.Task[ResourceResponse]
@@ -648,6 +647,7 @@ priv struct PendingWindowOpen {
 
 ///|
 priv struct PendingBrowserRequest {
+  view : Int64?
   window : Int64
   request_id : Int64
   task : @async.Task[BrowserResponse]
@@ -660,7 +660,9 @@ priv struct BrowserResponse {
 }
 
 ///|
-pub struct BrowserHandle {
+/// A page hosted by a window or child view, bound to one native instance.
+pub struct WebContentsHandle {
+  view_id : String?
   id : String
   native_id : Int64
   load_browser_url : (String) -> Unit raise WindowSessionError
@@ -728,25 +730,9 @@ pub struct ViewHandle {
   set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
   set_view_visible : (Bool) -> Unit raise WindowSessionError
   set_view_z_order : (Int) -> Unit raise WindowSessionError
-  set_view_zoom_percent : (Int) -> Unit raise WindowSessionError
-  read_view_zoom_percent : () -> Int raise WindowSessionError
-  set_view_audio_muted : (Bool) -> Unit raise WindowSessionError
-  read_view_audio_muted : () -> Bool raise WindowSessionError
-  load_view_url : (String) -> Unit raise WindowSessionError
-  load_view_html : (String, String) -> Unit raise WindowSessionError
-  eval_view_script : (String) -> Unit raise WindowSessionError
-  focus_view : () -> Unit raise WindowSessionError
-  send_view_command : (String, Int?) -> Unit raise WindowSessionError
-  find_view_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
-  stop_view_find : (Bool) -> Unit raise WindowSessionError
-  read_view_navigation_state : () -> (Bool, Bool) raise WindowSessionError
-  read_view_focused : () -> Bool raise WindowSessionError
-  read_view_devtools_opened : () -> Bool raise WindowSessionError
   read_view_state : () -> ViewState raise WindowSessionError
-  read_view_navigation_history : () -> NavigationHistory raise WindowSessionError
-  insert_view_page_css : (String) -> Int64 raise WindowSessionError
-  remove_view_page_css : (Int64) -> Unit raise WindowSessionError
   close_view : () -> Unit raise WindowSessionError
+  contents : WebContentsHandle
 }
 
 ///|
@@ -798,7 +784,6 @@ pub struct WindowHandle {
   set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
   set_window_enabled : (Bool) -> Unit raise WindowSessionError
   set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
-  set_window_zoom_percent : (Int) -> Unit raise WindowSessionError
   set_window_progress_bar : (Double, ProgressBarMode) -> Unit raise WindowSessionError
   set_window_overlay_icon : (@native.NativeImage?, String) -> Unit raise WindowSessionError
   set_window_thumbnail_tooltip : (String) -> Unit raise WindowSessionError
@@ -806,7 +791,7 @@ pub struct WindowHandle {
   flash_window_frame : (Bool) -> Unit raise WindowSessionError
   popup_window_menu : (Menu, Int, Int) -> Unit raise WindowSessionError
   read_window_state : () -> WindowState raise WindowSessionError
-  browser : BrowserHandle
+  browser : WebContentsHandle
   add_view : (String, ViewConfig) -> ViewHandle raise WindowSessionError
   remove_view : (String) -> Unit raise WindowSessionError
   list_views : () -> Array[ViewHandle]
@@ -893,32 +878,6 @@ fn window_state_events(
   events.push(StateChanged(current))
   events
 }
-
-///|
-/// An observed change to a running web contents view, following Electron
-/// `webContents` lifecycle and page-search events.
-pub(all) enum ViewEvent {
-  LoadingChanged(is_loading~ : Bool)
-  DidStartLoading
-  DidFinishLoad
-  Navigated(url~ : String)
-  TitleUpdated(title~ : String)
-  LoadFailed(url~ : String, error_code~ : Int, error_text~ : String)
-  RendererProcessTerminated(
-    url~ : String,
-    status~ : Int,
-    error_code~ : Int,
-    detail~ : String
-  )
-  FoundInPage(result~ : FindInPageResult)
-  Closed
-} derive(Debug, Eq)
-
-///|
-pub extend ViewEvent with Eq::{not_equal, equal}
-
-///|
-pub extend ViewEvent with Debug::{to_repr}
 
 ///|
 /// One update from an active page search. The selection rectangle uses the
@@ -1211,8 +1170,9 @@ priv enum AppLifecycleState {
 }
 
 ///|
-/// An observed lifecycle change for a window's main browser page.
-pub(all) enum BrowserEvent {
+/// An observed page event from a window or child view.
+pub(all) enum WebContentsEvent {
+  Closed
   /// The running page lost its command bridge. Reload or close this browser to recover.
   BridgeFailed(diagnostic~ : BridgeDiagnostic)
   LoadingChanged(is_loading~ : Bool)
@@ -1241,23 +1201,10 @@ pub(all) enum BrowserEvent {
 } derive(Debug, Eq)
 
 ///|
-pub extend BrowserEvent with Eq::{not_equal, equal}
+pub extend WebContentsEvent with Eq::{not_equal, equal}
 
 ///|
-pub extend BrowserEvent with Debug::{to_repr}
-
-///|
-/// One concrete web contents, following Electron's `webContents`.
-///
-/// Proton hosts a window's main browser page and every web contents view as
-/// separate browsers, so process-level events report which kind they belong
-/// to instead of hiding the difference behind one opaque object.
-pub(all) enum WebContentsHandle {
-  /// The main browser page of one application window.
-  Browser(BrowserHandle)
-  /// One web contents view hosted inside an application window.
-  View(ViewHandle)
-}
+pub extend WebContentsEvent with Debug::{to_repr}
 
 ///|
 /// Why a renderer process disappeared, following Electron's
@@ -1312,7 +1259,7 @@ pub extend RenderProcessGoneDetails with Debug::{to_repr}
 /// Electron's `session-created` argument.
 ///
 /// Proton runs one session per application, so the event fires once during
-/// startup. Session operations stay on `BrowserHandle::session()`, which is
+/// startup. Session operations stay on `WebContentsHandle::session()`, which is
 /// backed by the same request context.
 pub(all) struct ApplicationSession {
   /// The partition configured with `App::session_partition`, or `None` for the

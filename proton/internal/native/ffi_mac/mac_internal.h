@@ -202,6 +202,8 @@ struct proton_engine_client {
   proton_browser_lifecycle_t *browser_lifecycle;
   // Immutable startup rules; retained independently of the UI owner.
   proton_web_request_config_t *web_request_config;
+  proton_window_id_t contents_window_id;
+  proton_view_id_t contents_view_id;
 };
 
 struct proton_engine_view {

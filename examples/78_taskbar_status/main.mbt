@@ -101,7 +101,7 @@ let set_jump_list_command : @proton_contract.Command[JumpListRequest, Reply] = t
 let window_slot : Ref[@proton.WindowHandle?] = { val: None, }
 
 ///|
-let browser_slot : Ref[@proton.BrowserHandle?] = { val: None, }
+let browser_slot : Ref[@proton.WebContentsHandle?] = { val: None, }
 
 ///|
 let overlay_image : Ref[@proton.NativeImage?] = { val: None, }
@@ -572,7 +572,7 @@ async fn main {
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)
-      browser_slot.val = Some(window.browser())
+      browser_slot.val = Some(window.web_contents())
       window
     },
     on_close=fn(_window) {

@@ -48,16 +48,19 @@ async fn run_web_contents_view_app() -> Result[Unit, String] {
             z_order=1,
           ),
         )
-        left.set_zoom_percent(125)
-        if left.zoom_percent() != 125 {
+        left.web_contents().set_zoom_percent(125)
+        if left.web_contents().zoom_percent() != 125 {
           abort("web contents view zoom did not persist")
         }
-        left.load_url(wcv_left_url)
-        right.load_html(wcv_right_html, wcv_right_url)
+        left.web_contents().load_url(wcv_left_url)
+        right.web_contents().load_html(wcv_right_html, wcv_right_url)
       },
       on_close=fn(_state) {  },
     )
-    .on_view_event(fn(_view, event) noraise {
+    .on_web_contents_event(fn(_view, event) noraise {
+      if _view.view_id() is None {
+        return
+      }
       view_events.push(web_contents_view_event_line(event))
       match @env.get_env_var("PROTON_E2E_WEB_CONTENTS_VIEW_EVENTS") {
         Some(path) =>
@@ -76,7 +79,7 @@ async fn run_web_contents_view_app() -> Result[Unit, String] {
 }
 
 ///|
-fn web_contents_view_event_line(event : @proton.ViewEvent) -> String {
+fn web_contents_view_event_line(event : @proton.WebContentsEvent) -> String {
   match event {
     LoadingChanged(is_loading~) =>
       "view_loading_changed loading=" + is_loading.to_string()
@@ -103,5 +106,6 @@ fn web_contents_view_event_line(event : @proton.ViewEvent) -> String {
     FoundInPage(result~) =>
       "view_found_in_page matches=" + result.matches.to_string()
     Closed => "view_closed"
+    _ => "view_event"
   }
 }

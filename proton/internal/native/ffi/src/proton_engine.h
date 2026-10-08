@@ -430,13 +430,13 @@ int32_t proton_engine_window_get_browser_focus_state(
 int32_t proton_engine_window_get_devtools_state(
     proton_engine_window_t *window, int32_t *out_opened,
     char *error, size_t error_len);
-int32_t proton_engine_window_download_url(
-    proton_engine_window_t *window, const char *url, char *error,
+int32_t proton_engine_contents_download_url(
+    void *window, int32_t is_view, const char *url, char *error,
     size_t error_len);
-int32_t proton_engine_window_print(
-    proton_engine_window_t *window, char *error, size_t error_len);
-int32_t proton_engine_window_print_to_pdf(
-    proton_engine_window_t *window, const char *path, int32_t landscape,
+int32_t proton_engine_contents_print(
+    void *window, int32_t is_view, char *error, size_t error_len);
+int32_t proton_engine_contents_print_to_pdf(
+    void *window, int32_t is_view, const char *path, int32_t landscape,
     int32_t print_background, double scale, double paper_width,
     double paper_height, int32_t prefer_css_page_size, int32_t margin_type,
     double margin_top, double margin_right, double margin_bottom,
@@ -461,17 +461,17 @@ int32_t proton_engine_window_set_audio_muted(
 int32_t proton_engine_window_is_audio_muted(
     proton_engine_window_t *window, int32_t *out_muted, char *error,
     size_t error_len);
-int32_t proton_engine_window_get_browser_url(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+int32_t proton_engine_contents_get_browser_url(
+    void *window, int32_t is_view, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len);
-int32_t proton_engine_window_get_browser_title(
-    proton_engine_window_t *window, char *buffer, int32_t buffer_len,
+int32_t proton_engine_contents_get_browser_title(
+    void *window, int32_t is_view, char *buffer, int32_t buffer_len,
     int32_t *out_required_len, char *error, size_t error_len);
-int32_t proton_engine_window_get_browser_loading(
-    proton_engine_window_t *window, int32_t *out_is_loading, char *error,
+int32_t proton_engine_contents_get_browser_loading(
+    void *window, int32_t is_view, int32_t *out_is_loading, char *error,
     size_t error_len);
-int32_t proton_engine_window_respond_browser_request(
-    proton_engine_window_t *window, uint64_t request_id, const char *action,
+int32_t proton_engine_contents_respond_browser_request(
+    void *window, int32_t is_view, uint64_t request_id, const char *action,
     const char *path,
     char *error, size_t error_len);
 int32_t proton_engine_window_emit_bridge_event_json(
@@ -623,35 +623,35 @@ int32_t proton_engine_view_get_navigation_state(
    CEF cookie manager through the window's browser host request context. Cookie
    get completion is published to the runtime event queue; set, delete, flush,
    and clear_cache are fire-and-forget. */
-int32_t proton_engine_window_cookie_begin_get(
-    proton_engine_window_t *window, const char *url_utf8,
+int32_t proton_engine_contents_cookie_begin_get(
+    void *window, int32_t is_view, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id, char *error,
     size_t error_len);
-int32_t proton_engine_window_cookie_set(
-    proton_engine_window_t *window, const char *url_utf8,
+int32_t proton_engine_contents_cookie_set(
+    void *window, int32_t is_view, const char *url_utf8,
     const char *name_utf8, const char *value_utf8,
     const char *domain_utf8, const char *path_utf8,
     int32_t secure, int32_t http_only, int32_t same_site,
     char *error, size_t error_len);
-int32_t proton_engine_window_cookie_delete(proton_engine_window_t *window,
+int32_t proton_engine_contents_cookie_delete(void *window, int32_t is_view,
                                            const char *url_utf8,
                                            const char *name_utf8,
                                            char *error, size_t error_len);
-int32_t proton_engine_window_cookie_flush(proton_engine_window_t *window,
+int32_t proton_engine_contents_cookie_flush(void *window, int32_t is_view,
                                           char *error, size_t error_len);
-int32_t proton_engine_window_clear_cache(proton_engine_window_t *window,
+int32_t proton_engine_contents_clear_cache(void *window, int32_t is_view,
                                          char *error, size_t error_len);
-int32_t proton_engine_window_clear_auth_cache(proton_engine_window_t *window,
+int32_t proton_engine_contents_clear_auth_cache(void *window, int32_t is_view,
                                               char *error, size_t error_len);
-int32_t proton_engine_window_clear_certificate_exceptions(
-    proton_engine_window_t *window, char *error, size_t error_len);
-int32_t proton_engine_window_close_all_connections(
-    proton_engine_window_t *window, char *error, size_t error_len);
+int32_t proton_engine_contents_clear_certificate_exceptions(
+    void *window, int32_t is_view, char *error, size_t error_len);
+int32_t proton_engine_contents_close_all_connections(
+    void *window, int32_t is_view, char *error, size_t error_len);
 
 /* Releases any pending cookie-get state associated with the window. Called
    during window destruction so async cookie visits do not outlive their
    window. Safe to call with NULL. */
-void proton_engine_window_cookie_cleanup(proton_engine_window_t *window);
+void proton_engine_contents_cookie_cleanup(void *window);
 
 /* Browser task metrics from CEF's task manager. The functions are
    UI-thread only and need a live runtime. Chromium measures CPU and memory on
