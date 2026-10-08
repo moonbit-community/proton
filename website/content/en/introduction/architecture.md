@@ -1,53 +1,75 @@
 # Architecture & processes
 
-Proton is a desktop application framework with a native MoonBit host and a Chromium frontend. Applications can use HTML/JavaScript or a MoonBit frontend compiled to JavaScript. The public application API is `moonbit-community/proton`.
+Proton combines a native MoonBit application with the Chromium browser engine. The application process manages windows, application state and operating-system features. Web pages provide the interface and invoke host operations through messages.
 
-This documentation describes published **Proton 0.3.4**. The CLI and `proton_*` modules share this release version.
+## Components and responsibilities
 
-A Proton app has a native host and a web frontend. Even when both are written in MoonBit, they run in different environments and communicate through messages.
+| Component | Responsibility |
+| --- | --- |
+| Native MoonBit application | Runs the application entry point, business logic and asynchronous tasks |
+| Proton | Provides APIs for windows, lifecycle, browser contents and frontend/host communication |
+| CEF (Chromium Embedded Framework) | Embeds Chromium in the native application, providing browser creation, callbacks and process communication interfaces |
+| Chromium | Implements the web platform, including rendering, JavaScript, networking and browser storage |
+| Web frontend | Implements the application interface with HTML, CSS and JavaScript |
 
-Distributed applications include Chromium and the matching subprocess helper. Runtime size and subprocesses are part of this model; Proton does not use the system webview.
+Applications use the public API in `moonbit-community/proton`. Proton's native bindings are compiled from source into the application; CEF/Chromium is loaded as a separate runtime and bundled for distribution. Pages use that bundled browser engine rather than an operating-system WebView.
 
-## The native host
+The frontend can use ordinary JavaScript or JavaScript produced by the MoonBit compiler. Rabbita is an optional MoonBit UI library; `proton_rabbita` integrates commands and subscriptions with it. Neither is a required part of the Proton runtime.
 
-The backend is a MoonBit executable. It starts Proton, owns native windows, registers command handlers, and accesses operating-system features.
+## Process model
 
-Put authoritative application state here when it must be shared across windows or validated independently of the UI. In the Todo template, the backend owns the Todo list and revision; the frontend owns the current input text and loading/error display.
-
-The backend uses `moonbitlang/async`. Proton integrates its native event loop with that scheduler during initialization. Application code calls `.run()` or `.run_or_abort()`; it does not create a second UI polling loop.
-
-## The web frontend
-
-Chromium renders HTML, CSS, and JavaScript. Rabbita compiles MoonBit UI code to JavaScript for this environment. A frontend variable is not a reference to a backend value, even when the types come from one shared module.
-
-CEF manages renderer and other subprocesses through the release-matched helper. Seeing several processes while an application runs is normal. Keep lifecycle management with Proton so shutdown can finish normally.
-
-## Commands and events
-
-A **command** sends a request to a registered backend handler and returns a result or failure. Use it when the caller needs an answer: load a document, create a Todo, or query a snapshot.
-
-An **event** sends a notification to a listening frontend. Use it to announce a change or progress. It is not a durable queue and does not recover notifications missed before subscription.
+The application executable runs MoonBit host code and hosts CEF's browser process. This process manages native windows and browser instances and coordinates Chromium subprocesses. Page scripts execute in renderer processes; GPU and utility processes provide graphics and other browser services.
 
 ```text
-Frontend                 Native backend
-   | -- command(request) --> |
-   | <-- response/failure -- |
-   |                         |
-   | <-- event(payload) ---- |
+Application process
+  MoonBit application logic
+       |
+  Proton -- Native windows
+       |
+  CEF browser process
+       | Chromium inter-process communication
+       +-- Renderer processes: pages, JavaScript, workers
+       +-- GPU process: graphics
+       +-- Utility and other processes: browser services
 ```
 
-The `proton_contract` package describes routes and payload types. `proton_client` calls them from a MoonBit frontend; `proton_rabbita` connects requests/subscriptions to Rabbita components. Plain JavaScript can use the injected bridge, as shown in [calling the backend](application-api.md#commands).
+`cef_process` is the helper executable CEF launches for subprocesses. CEF selects the role at launch, so the same helper can serve different subprocess roles. It does not execute the application's MoonBit entry point. The helper matches the application's Proton release and CEF runtime.
 
-Sharing a type does not share memory. Values cross the bridge as serialized data. Keep payloads focused on what the receiver needs.
+Chromium manages process allocation according to pages and runtime state. One renderer can host multiple tasks, such as a page and workers. Window counts, browser-instance counts, task counts and OS process counts therefore do not map one to one. Task resource metrics cannot simply be summed into application-wide usage.
 
-## Capabilities
+## Windows and browser contents
 
-Application commands expose your business operations. Extensions expose reusable host features such as filesystem access. A capability both installs an extension's backend and grants access to selected renderer targets.
+One Proton application runtime can manage multiple native windows. Each window owns its main browser contents and can host additional child browser views:
 
-The default target is the main entry. A second window does not automatically need all the same permissions. Configure the operations, roots, and targets according to the feature you are building; see [native capabilities](application-api.md#extensions-and-capabilities).
+```text
+Application runtime
+  +-- Window A
+  |    +-- Main browser contents
+  |    +-- Child browser view
+  +-- Window B
+       +-- Main browser contents
+```
+
+A window owns its title, position, dimensions and native decorations. Browser contents own documents, navigation, scripts and page events. A child view is an independent browser within the window's content area, with its own document and bounds. Navigating it does not navigate the main page; removing it does not close the entire window.
+
+These objects have distinct lifetimes: a page can reload or its renderer can terminate while the native window remains alive. Closing a window also closes its hosted browser contents. See the [application API](application-api.md#windows-and-browser-views) for creation, closing and recovery contracts.
+
+## Execution and communication boundaries
+
+Native UI objects are managed by their creating thread. Proton connects native event processing to the `moonbitlang/async` external event loop: native callbacks enqueue records and wake the scheduler, then MoonBit handles events and application callbacks. Asynchronous application tasks can yield execution, but expensive synchronous work still occupies the host event loop.
+
+Renderers and the host have separate execution environments. Proton injects a bridge into pages, delivers frontend requests to registered host handlers and returns their results or errors. The host can also send event notifications. Payloads are serialized; shared type definitions do not create shared memory.
+
+`proton_contract` describes typed commands and events, and `proton_client` supports MoonBit frontend calls. JavaScript frontends use the page bridge directly. Host command bindings and capabilities select which operations are available to which pages. See [commands](application-api.md#commands), [events](application-api.md#events) and [capabilities](application-api.md#extensions-and-capabilities) for protocol, cancellation and authorization behavior.
 
 ## Development and distribution
 
-With inline HTML, the backend carries the page string. With a frontend tool, `proton_cli dev` starts its server and uses its development URL. An ordinary browser can preview that URL, but it does not contain Proton's native bridge.
+Development and distribution use the same native host and browser architecture. The sources of page content and runtime files change.
 
-A production build generates static frontend assets. Packaging combines those assets, the backend executable, Chromium, and the matching helper. This is why a successful frontend preview is not a full application test, and why distributing only the backend executable is insufficient.
+| Scenario | Page source | Native runtime source |
+| --- | --- | --- |
+| Inline HTML | A string compiled into the application | Shared runtime and helper installed by setup |
+| Frontend development server | Development URL configured through the CLI | Shared runtime and helper installed by setup |
+| Packaged application | Inline content or packaged static resources; URL entries may also use remote pages | Runtime and helper shipped in the artifact |
+
+A frontend development server serves page resources; it does not run host business logic. Opening the same URL in an ordinary browser provides no Proton native bridge. Packaging assembles the application executable, required page resources, CEF runtime and helper into a distributable artifact. See [project structure](project-structure.md) for source layout and build outputs. The Command Line Interface chapter documents packaging formats and requirements.
