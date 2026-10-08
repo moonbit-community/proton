@@ -696,9 +696,15 @@ fn RuntimeSession::view_handle(
         let running = self.resolve_view(
           window_id, window_native_id, id, native_id,
         )
-        running.view.print_to_pdf(path, options.to_native()) catch {
+        let request_id = running.view.print_to_pdf(path, options.to_native()) catch {
           error => raise window_operation_failed("print view to PDF", error)
         }
+        self.event_pump.pdf_completions.wait(
+          window_native_id,
+          Some(native_id),
+          request_id,
+          path,
+        )
       },
       session_handle: self.session_handle(),
     },
@@ -924,13 +930,14 @@ fn RuntimeSession::browser_handle(
         Some(running) if running.native_id == native_id => running
         _ => raise StaleWindow(id~)
       }
-      running.window.print_to_pdf(path, options.to_native()) catch {
+      let request_id = running.window.print_to_pdf(path, options.to_native()) catch {
         error =>
           raise window_operation_failed(
             "print browser to PDF in window " + id,
             error,
           )
       }
+      self.event_pump.pdf_completions.wait(native_id, None, request_id, path)
     },
     find_browser_in_page: (text, forward, match_case, find_next) => {
       let running = match self.find_active_window(id) {
@@ -2619,13 +2626,14 @@ pub fn WebContentsHandle::print(
 }
 
 ///|
-/// Starts printing the main browser contents to `path` and returns a request
-/// id. Completion is delivered as `WebContentsEvent::PdfPrinted`.
-pub fn WebContentsHandle::print_to_pdf(
+/// Prints this page to `path`, returning only after the PDF is written.
+/// Start/completion failures and page closure raise `WindowSessionError`.
+/// Task cancellation stops waiting, but CEF may still finish writing the file.
+pub async fn WebContentsHandle::print_to_pdf(
   self : WebContentsHandle,
   path : String,
   options? : PdfPrintOptions = PdfPrintOptions(),
-) -> Int raise WindowSessionError {
+) -> Unit {
   (self.print_browser_to_pdf)(path, options)
 }
 
@@ -3299,9 +3307,8 @@ fn RuntimeSession::dispatch_browser_event(
       event.browser_event(),
       event.renderer_process_termination(),
       event.find_in_page_result(),
-      event.pdf_print_result(),
     ) {
-    (Some(window_id), info, termination, find_result, pdf_result) =>
+    (Some(window_id), info, termination, find_result) =>
       match self.find_window_by_native_id(window_id) {
         Some(window) => {
           if termination is Some(_) {
@@ -3314,8 +3321,8 @@ fn RuntimeSession::dispatch_browser_event(
             return
           }
           let observed = match
-            (event.event_type(), info, termination, find_result, pdf_result) {
-            ("browser_loading_changed", Some(info), _, _, _) => {
+            (event.event_type(), info, termination, find_result) {
+            ("browser_loading_changed", Some(info), _, _) => {
               let is_loading = info.is_loading.unwrap_or(false)
               let view = match event.view_id() {
                 Some(id) => window.find_view_by_native_id(id)
@@ -3352,13 +3359,13 @@ fn RuntimeSession::dispatch_browser_event(
               }
               Some(WebContentsEvent::LoadingChanged(is_loading~))
             }
-            ("browser_navigated", Some(info), _, _, _) =>
+            ("browser_navigated", Some(info), _, _) =>
               Some(WebContentsEvent::Navigated(url=info.url.unwrap_or("")))
-            ("browser_title_updated", Some(info), _, _, _) =>
+            ("browser_title_updated", Some(info), _, _) =>
               Some(
                 WebContentsEvent::TitleUpdated(title=info.title.unwrap_or("")),
               )
-            ("browser_load_failed", Some(info), _, _, _) =>
+            ("browser_load_failed", Some(info), _, _) =>
               Some(
                 WebContentsEvent::LoadFailed(
                   url=info.url.unwrap_or(""),
@@ -3366,28 +3373,20 @@ fn RuntimeSession::dispatch_browser_event(
                   error_text=info.error_text.unwrap_or(""),
                 ),
               )
-            ("browser_found_in_page", _, _, Some(result), _) =>
+            ("browser_found_in_page", _, _, Some(result)) =>
               Some(
                 WebContentsEvent::FoundInPage(
                   result=FindInPageResult::from_native(result),
                 ),
               )
-            ("browser_pdf_print_finished", _, _, _, Some(result)) =>
-              Some(
-                WebContentsEvent::PdfPrinted(result={
-                  request_id: result.request_id,
-                  path: result.path,
-                  success: result.success,
-                }),
-              )
-            ("browser_resource_response", Some(info), _, _, _) =>
+            ("browser_resource_response", Some(info), _, _) =>
               Some(
                 WebContentsEvent::ResourceResponse(
                   url=info.url.unwrap_or(""),
                   status_code=info.error_code.unwrap_or(0),
                 ),
               )
-            ("browser_resource_requested", Some(info), _, _, _) =>
+            ("browser_resource_requested", Some(info), _, _) =>
               Some(
                 WebContentsEvent::ResourceRequested(
                   url=info.url.unwrap_or(""),
@@ -3395,7 +3394,7 @@ fn RuntimeSession::dispatch_browser_event(
                   will_cancel=info.is_loading.unwrap_or(false),
                 ),
               )
-            ("browser_resource_completed", Some(info), _, _, _) =>
+            ("browser_resource_completed", Some(info), _, _) =>
               Some(
                 WebContentsEvent::ResourceCompleted(
                   url=info.url.unwrap_or(""),
@@ -3403,7 +3402,7 @@ fn RuntimeSession::dispatch_browser_event(
                   received_bytes=info.received_bytes.unwrap_or(0L),
                 ),
               )
-            ("browser_renderer_process_terminated", _, Some(details), _, _) =>
+            ("browser_renderer_process_terminated", _, Some(details), _) =>
               Some(
                 WebContentsEvent::RendererProcessTerminated(
                   url=details.url,

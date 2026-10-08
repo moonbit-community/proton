@@ -903,3 +903,20 @@ update channel from its first startup hook. The module-level `check_for_update()
 remains available to renderer extensions and refers to the active application.
 Both return `NotConfigured` after that application finishes, including when
 startup fails; a retained context does not carry configuration into another run.
+
+## PDF printing
+
+`WebContentsHandle::print_to_pdf(path, options?)` is asynchronous. Successful
+return means CEF finished writing the PDF. Start failures, unsuccessful writes,
+page closure, renderer termination, and application shutdown raise
+`WindowSessionError`. CEF reports no further diagnostic for an unsuccessful
+write; the error includes the requested output path.
+
+Cancellation stops waiting and removes the waiter. It does not cancel CEF's
+print job or remove its output; the file may still be written. Calls on different
+pages are matched independently, even when native request numbers coincide.
+
+Migration: await `print_to_pdf` directly instead of keeping its former integer
+request ID and listening for `WebContentsEvent::PdfPrinted`. `PdfPrintResult`
+and that completion event have been removed. `print()` remains the synchronous
+entry to the platform print dialog.

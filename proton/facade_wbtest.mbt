@@ -137,7 +137,6 @@ fn test_window_handle(
           )
         None => ()
       }
-      9
     },
     find_browser_in_page: fn(text, forward, match_case, find_next) {
       match browser_find_calls {
@@ -3174,15 +3173,14 @@ test "browser handle starts programmatic downloads" {
 }
 
 ///|
-test "browser handle routes print and PDF operations" {
+async test "browser handle routes print and PDF operations" {
   let calls : Array[String] = []
   let browser = test_window_handle("main", 17L, browser_print_calls=calls).web_contents()
   browser.print()
-  let request_id = browser.print_to_pdf(
+  browser.print_to_pdf(
     "/tmp/review.pdf",
     options=PdfPrintOptions(landscape=true, print_background=true, scale=0.75),
   )
-  assert_eq(request_id, 9)
   assert_eq(calls, ["print", "pdf:/tmp/review.pdf:true:true:0.75"])
 }
 

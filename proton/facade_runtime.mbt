@@ -216,8 +216,10 @@ async fn run_manifest(
   let dialog_completions = DialogCompletionStore()
   let cookie_completions = CookieCompletionStore()
   defer cookie_completions.close()
+  let pdf_completions = PdfCompletionStore()
+  defer pdf_completions.fail(None, None, "application has ended")
   let event_pump = RuntimeEventPump(
-    runtime, dialog_completions, cookie_completions,
+    runtime, dialog_completions, cookie_completions, pdf_completions,
   )
   let mut command_host : CommandHostRuntime? = None
   let windows : Array[RunningWindow] = []

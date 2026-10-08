@@ -1,7 +1,7 @@
 # Print And PDF
 
 Manual review for Electron-style `WebContentsHandle::print` and
-`WebContentsHandle::print_to_pdf`, including PDF options and completion events.
+`WebContentsHandle::print_to_pdf`, including PDF options and awaited completion.
 
 ```sh
 moon -C examples run 72_print_pdf --target native
@@ -10,7 +10,7 @@ moon -C examples run 72_print_pdf --target native
 1. Use **System print** and confirm the platform print flow opens with two
    printable pages and no dark control bar. Cancel the dialog after review.
 2. Create the standard PDF and confirm the status reports `complete`, the
-   request id matches, backgrounds render, and header/footer page numbers are
+   file exists, backgrounds render, and header/footer page numbers are
    present.
 3. Create the landscape PDF and confirm wide paper, compact margins, and the
    four-color calibration strip.

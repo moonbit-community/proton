@@ -1842,7 +1842,6 @@ async fn run_web_contents_regression() -> Unit {
       TitleUpdated(title~) => titles.push(id + "=" + title)
       FoundInPage(result~) if result.final_update && result.matches == 1 =>
         found.push(id)
-      PdfPrinted(result~) if result.success => printed.push(id)
       ResourceRequested(..) => resources.push(id)
       _ => ()
     }
@@ -1888,7 +1887,8 @@ async fn run_web_contents_regression() -> Unit {
             )
             contents.download_url("data:text/plain,contents-download")
             ignore(contents.find_in_page("needle"))
-            ignore(contents.print_to_pdf(pdf_root + "." + id + ".pdf"))
+            contents.print_to_pdf(pdf_root + "." + id + ".pdf")
+            printed.push(id)
           }
           for id in ["main", "left", "right"] {
             while !found.contains(id) ||
