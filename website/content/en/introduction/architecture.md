@@ -36,7 +36,7 @@ Frontend                 Native backend
    | <-- event(payload) ---- |
 ```
 
-The `proton_contract` package describes routes and payload types. `proton_client` calls them from a MoonBit frontend; `proton_rabbita` connects requests/subscriptions to Rabbita components. Plain JavaScript can use the injected bridge, as shown in [calling the backend](commands-events.md).
+The `proton_contract` package describes routes and payload types. `proton_client` calls them from a MoonBit frontend; `proton_rabbita` connects requests/subscriptions to Rabbita components. Plain JavaScript can use the injected bridge, as shown in [calling the backend](application-api.md#commands).
 
 Sharing a type does not share memory. Values cross the bridge as serialized data. Keep payloads focused on what the receiver needs.
 
@@ -44,7 +44,7 @@ Sharing a type does not share memory. Values cross the bridge as serialized data
 
 Application commands expose your business operations. Extensions expose reusable host features such as filesystem access. A capability both installs an extension's backend and grants access to selected renderer targets.
 
-The default target is the main entry. A second window does not automatically need all the same permissions. Configure the operations, roots, and targets according to the feature you are building; see [native capabilities](capabilities.md).
+The default target is the main entry. A second window does not automatically need all the same permissions. Configure the operations, roots, and targets according to the feature you are building; see [native capabilities](application-api.md#extensions-and-capabilities).
 
 ## Development and distribution
 

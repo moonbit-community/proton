@@ -1,6 +1,6 @@
 # Command Line Interface
 
-本页列出 `proton_cli` 的全部命令及其参数。应用的 IPC 命令见[命令](../introduction/commands-events.md)，配置文件字段见[项目配置](../configuration/project.md)。
+本页列出 `proton_cli` 的全部命令及其参数。应用的 IPC 命令见[命令](../introduction/application-api.md#命令)，配置文件字段见[项目配置](../configuration/project.md)。
 
 ## 调用形式与全局选项
 

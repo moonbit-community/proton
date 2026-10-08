@@ -29,7 +29,9 @@ release-notes/
 ```
 
 Use descriptive filenames for content pages. All six top-level chapters are
-navigation groups without landing pages; content belongs in their child pages. Preserve old published URLs with
+navigation groups without landing pages; content belongs in their child pages. Do not add a third navigation level.
+Application API topics belong together in `introduction/application-api.md`,
+with second-level headings and bold subsection labels. Preserve old published URLs with
 redirects in both book configs.
 
 Tutorials live only in `content/<language>/tutorial/` and the Tutorial navigation
@@ -55,9 +57,9 @@ http://127.0.0.1:4173/proton/zh/ for Chinese. This optional local preview uses
 Python 3; document builds still require only mdBook. Rebuild both languages
 with the same destination paths after editing.
 
-The first content page is `introduction/architecture.md`. The generated site
-homepage redirects there, keeping relative Markdown links correct without a
-separate homepage source or hardcoded HTML links in the content.
+The first content page is `introduction/architecture.md`. mdBook also copies this page to the site root. Root-level compatibility
+redirects keep its relative links working without a separate homepage source
+or hardcoded HTML links in the content.
 
 ## Publish
 

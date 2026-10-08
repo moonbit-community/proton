@@ -39,9 +39,12 @@ def check_static():
         summary = read(language, 'SUMMARY')
         require(len(re.findall(r'^- \[', summary, re.M)) == 6, 'Expected six top-level chapters')
         require(len(re.findall(r'^- \[[^\]]+\]\(\)$', summary, re.M)) == 6, 'Top-level chapters must be navigation groups without pages')
+        require(not re.search(r'^ {4,}- ', summary, re.M), 'Book navigation must not have third-level entries')
         for relative in en:
             p = BOOK / 'content' / language / relative
             source = p.read_text()
+            if relative.parts[0] == 'introduction':
+                require(not re.search(r'^#{3,} ', source, re.M), f'Introduction must not have third-level headings: {p}')
             if relative.name != 'SUMMARY.md':
                 require(str(relative) in summary, f'Page missing from navigation: {p}')
             prose = re.sub(r'```.*?```|`[^`]*`', '', source, flags=re.S)
@@ -78,9 +81,12 @@ def check_html():
         def __init__(self):
             super().__init__()
             self.links, self.ids = [], set()
+            self.redirect = None
 
         def handle_starttag(self, tag, attrs):
             attrs = dict(attrs)
+            if tag == 'meta' and attrs.get('http-equiv', '').lower() == 'refresh':
+                self.redirect = attrs.get('content', '').split('URL=', 1)[-1]
             if 'id' in attrs:
                 self.ids.add(attrs['id'])
             if tag == 'a' and 'href' in attrs:
@@ -109,6 +115,12 @@ def check_html():
                 destination /= 'index.html'
             require(destination.exists(), f'Broken generated link in {page}: {link}')
             if url.fragment and destination in pages:
+                visited = set()
+                while pages[destination].redirect:
+                    require(destination not in visited, f'Redirect cycle: {destination}')
+                    visited.add(destination)
+                    destination = (destination.parent / urlsplit(pages[destination].redirect).path).resolve()
+                    require(destination in pages, f'Broken redirect: {destination}')
                 require(unquote(url.fragment) in pages[destination].ids, f'Broken anchor in {page}: {link}')
     print('Generated HTML page links and anchors passed', flush=True)
 

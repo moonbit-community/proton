@@ -36,7 +36,7 @@ Frontend                 Native backend
    | <-- event(payload) ---- |
 ```
 
-`proton_contract` 描述路由与载荷类型，`proton_client` 供 MoonBit 前端调用，`proton_rabbita` 将请求和订阅接入 Rabbita 组件。普通 JavaScript 则可以使用注入的 bridge，见[从前端调用后端](commands-events.md)。
+`proton_contract` 描述路由与载荷类型，`proton_client` 供 MoonBit 前端调用，`proton_rabbita` 将请求和订阅接入 Rabbita 组件。普通 JavaScript 则可以使用注入的 bridge，见[从前端调用后端](application-api.md#命令)。
 
 共享类型不等于共享内存。值通过序列化数据跨越 bridge，载荷应只包含接收方需要的信息。
 
@@ -44,7 +44,7 @@ Frontend                 Native backend
 
 应用命令暴露业务操作，扩展则暴露文件访问等可复用的宿主能力。添加 capability 会同时安装扩展后端，并向指定渲染器目标授权。
 
-默认目标是主入口。第二个窗口不一定需要同样的权限，应根据功能选择操作、目录和目标。具体见[原生能力](capabilities.md)。
+默认目标是主入口。第二个窗口不一定需要同样的权限，应根据功能选择操作、目录和目标。具体见[原生能力](application-api.md#扩展与能力)。
 
 ## 开发与分发
 
