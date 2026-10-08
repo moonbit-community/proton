@@ -285,7 +285,9 @@ infrastructure errors still use the application failure path.
 Proton runs one session per application, so `session-created` fires once during
 startup, before the `app_lifecycle` start hooks, and reports the configured
 partition with the session data directory (or `temporary`, when the run has no
-single-instance route). Session operations stay on `WebContentsHandle::session()`.
+single-instance route). `ApplicationContext::session()` provides the shared
+browser session from application startup, before any windows exist.
+`WebContentsHandle::session()` returns that same application session.
 
 Electron's `child-process-gone` has no equivalent: CEF's public API reports
 renderer termination per browser but never signals other child process exits,
@@ -315,9 +317,28 @@ Child pages use the application's configured browser policy.
 
 A handle refers to one native instance. Navigation keeps it valid; destroying
 its page makes it stale. Recreating a view with the same declaration ID does not
-revive the old handle. Session access remains tied to that instance; this API
-does not introduce independently owned sessions. Child pages do not receive the
-application command bridge.
+revive the old handle. A `SessionHandle` obtained from a page remains valid
+when that page closes: cookies, caches, and connections belong to the application
+profile, not a window. It also works while a `KeepRunning` application has no
+windows. Once runtime teardown begins, retained session handles fail with
+`SessionError`, preserving the operation, native status, and diagnostic.
+Child pages do not receive the application command bridge.
+
+```moonbit
+.app_lifecycle(
+  on_start=context => {
+    let session = context.session()
+    ignore(session.get_cookies(url="https://example.com/"))
+    // Use the existing application profile before opening a window.
+  },
+  on_shutdown=_ => (),
+)
+```
+
+Migration: `SessionHandle::window_id()` is removed because sessions have no
+owning window. Session operations now raise `SessionError` instead of
+`WindowSessionError`. Proton still supports one configured profile per
+application run; this does not introduce a multi-profile API.
 
 ## Page history and inserted CSS
 

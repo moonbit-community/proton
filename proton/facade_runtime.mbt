@@ -215,6 +215,7 @@ async fn run_manifest(
   let wakeup = RuntimeWakeup()
   let dialog_completions = DialogCompletionStore()
   let cookie_completions = CookieCompletionStore()
+  defer cookie_completions.close()
   let event_pump = RuntimeEventPump(
     runtime, dialog_completions, cookie_completions,
   )

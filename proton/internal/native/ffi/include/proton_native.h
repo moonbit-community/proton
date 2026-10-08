@@ -530,20 +530,19 @@ int32_t proton_window_cancel_dialog(proton_window_handle_t window,
    set, delete, flush, and cache clear are fire-and-forget: they return once
    the request has been accepted by the cookie manager or request context.
 
-   All functions require a native engine window and return
+   All functions require a live native runtime and return
    PROTON_ERR_UNSUPPORTED otherwise. */
 
 /* Begin retrieving cookies. Completion is delivered through the runtime event
-   queue with the returned request id. Returns PROTON_ERR_BUSY if a cookie get
-   is already in progress for this window. */
-int32_t proton_contents_cookie_begin_get(
-    void *window, int32_t is_view, const char *url_utf8,
+   queue with the returned request id. Concurrent visits have independent IDs. */
+int32_t proton_session_cookie_begin_get(
+    proton_runtime_handle_t runtime, const char *url_utf8,
     int32_t include_http_only, int64_t *out_request_id);
 
 /* Sets a cookie. Optional domain/path values are represented by empty strings;
    same_site uses 0=unspecified, 1=no_restriction, 2=lax, 3=strict. */
-int32_t proton_contents_cookie_set(
-    void *window, int32_t is_view, const char *url_utf8,
+int32_t proton_session_cookie_set(
+    proton_runtime_handle_t runtime, const char *url_utf8,
     const char *name_utf8, const char *value_utf8,
     const char *domain_utf8, const char *path_utf8,
     int32_t secure, int32_t http_only, int32_t same_site);
@@ -551,18 +550,18 @@ int32_t proton_contents_cookie_set(
 /* Delete cookies. If url_utf8 is NULL or empty, all cookies are deleted.
    If name_utf8 is non-NULL, only cookies with that name matching the URL
    are deleted. Fire-and-forget. */
-int32_t proton_contents_cookie_delete(
-    void *window, int32_t is_view, const char *url_utf8,
+int32_t proton_session_cookie_delete(
+    proton_runtime_handle_t runtime, const char *url_utf8,
     const char *name_utf8);
 
 /* Flush the cookie store to disk. Fire-and-forget. */
-int32_t proton_contents_cookie_flush(void *window, int32_t is_view);
+int32_t proton_session_cookie_flush(proton_runtime_handle_t runtime);
 
-/* Clear the HTTP cache for the window's request context. Fire-and-forget. */
-int32_t proton_contents_clear_cache(void *window, int32_t is_view);
-int32_t proton_contents_clear_auth_cache(void *window, int32_t is_view);
-int32_t proton_contents_clear_certificate_exceptions(void *window, int32_t is_view);
-int32_t proton_contents_close_all_connections(void *window, int32_t is_view);
+/* Clear the HTTP cache for the application request context. Fire-and-forget. */
+int32_t proton_session_clear_cache(proton_runtime_handle_t runtime);
+int32_t proton_session_clear_auth_cache(proton_runtime_handle_t runtime);
+int32_t proton_session_clear_certificate_exceptions(proton_runtime_handle_t runtime);
+int32_t proton_session_close_all_connections(proton_runtime_handle_t runtime);
 
 /* Enumerates connected displays into caller-owned integer storage. Each
    display occupies 11 fields in the order consumed by the MoonBit wrapper. */

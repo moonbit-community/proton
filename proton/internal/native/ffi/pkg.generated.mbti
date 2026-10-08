@@ -159,6 +159,22 @@ pub fn proton_runtime_stop_app_activations_ffi(RuntimeHandle) -> Int
 
 pub fn proton_screen_enumerate_ffi(FixedArray[Int], Int, @ref.Ref[Int]) -> Int
 
+pub fn proton_session_clear_auth_cache_ffi(RuntimeHandle) -> Int
+
+pub fn proton_session_clear_cache_ffi(RuntimeHandle) -> Int
+
+pub fn proton_session_clear_certificate_exceptions_ffi(RuntimeHandle) -> Int
+
+pub fn proton_session_close_all_connections_ffi(RuntimeHandle) -> Int
+
+pub fn proton_session_cookie_begin_get_ffi(RuntimeHandle, Bytes, Int, @ref.Ref[Int64]) -> Int
+
+pub fn proton_session_cookie_delete_ffi(RuntimeHandle, Bytes, Bytes) -> Int
+
+pub fn proton_session_cookie_flush_ffi(RuntimeHandle) -> Int
+
+pub fn proton_session_cookie_set_ffi(RuntimeHandle, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int) -> Int
+
 pub fn proton_system_accent_color_ffi(FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_system_accessibility_client_trusted_ffi(Int, @ref.Ref[Int]) -> Int
@@ -194,22 +210,6 @@ pub fn proton_update_stage_install_ffi(Int64, @ref.Ref[Int], FixedArray[Byte], I
 pub fn proton_update_stage_write_ffi(Int64, Bytes, Int, FixedArray[Byte], Int) -> Int
 
 pub fn proton_view_browser_command_ffi(ViewHandle, Bytes, Int) -> Int
-
-pub fn proton_view_clear_auth_cache_ffi(ViewHandle, Int) -> Int
-
-pub fn proton_view_clear_cache_ffi(ViewHandle, Int) -> Int
-
-pub fn proton_view_clear_certificate_exceptions_ffi(ViewHandle, Int) -> Int
-
-pub fn proton_view_close_all_connections_ffi(ViewHandle, Int) -> Int
-
-pub fn proton_view_cookie_begin_get_ffi(ViewHandle, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
-
-pub fn proton_view_cookie_delete_ffi(ViewHandle, Int, Bytes, Bytes) -> Int
-
-pub fn proton_view_cookie_flush_ffi(ViewHandle, Int) -> Int
-
-pub fn proton_view_cookie_set_ffi(ViewHandle, Int, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int) -> Int
 
 pub fn proton_view_destroy_ffi(ViewHandle) -> Int
 
@@ -287,25 +287,9 @@ pub fn proton_window_browser_command_ffi(WindowHandle, Bytes, Int) -> Int
 
 pub fn proton_window_cancel_dialog_ffi(WindowHandle, Int64) -> Int
 
-pub fn proton_window_clear_auth_cache_ffi(WindowHandle, Int) -> Int
-
 pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int
 
-pub fn proton_window_clear_cache_ffi(WindowHandle, Int) -> Int
-
-pub fn proton_window_clear_certificate_exceptions_ffi(WindowHandle, Int) -> Int
-
-pub fn proton_window_close_all_connections_ffi(WindowHandle, Int) -> Int
-
 pub fn proton_window_close_ffi(WindowHandle) -> Int
-
-pub fn proton_window_cookie_begin_get_ffi(WindowHandle, Int, Bytes, Int, @ref.Ref[Int64]) -> Int
-
-pub fn proton_window_cookie_delete_ffi(WindowHandle, Int, Bytes, Bytes) -> Int
-
-pub fn proton_window_cookie_flush_ffi(WindowHandle, Int) -> Int
-
-pub fn proton_window_cookie_set_ffi(WindowHandle, Int, Bytes, Bytes, Bytes, Bytes, Bytes, Int, Int, Int) -> Int
 
 pub fn proton_window_destroy_ffi(WindowHandle) -> Int
 

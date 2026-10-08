@@ -2916,10 +2916,10 @@ pub fn Window::take_bridge_failure(
 }
 
 ///|
-/// Begins retrieving cookies for the window's session. Completion is delivered
+/// Begins retrieving cookies for the application session. Completion is delivered
 /// as a `cookie_get_completed` runtime event carrying the returned request id.
-pub fn Window::cookie_begin_get(
-  self : Window,
+pub fn Runtime::cookie_begin_get(
+  self : Runtime,
   url : String?,
   include_http_only : Bool,
 ) -> Int64 raise NativeError {
@@ -2929,9 +2929,8 @@ pub fn Window::cookie_begin_get(
   }
   let request_id = Ref(proton_invalid_handle)
   check_status(
-    @native_ffi.proton_window_cookie_begin_get_ffi(
-      self.live_handle(),
-      0,
+    @native_ffi.proton_session_cookie_begin_get_ffi(
+      self.active_handle(),
       url_bytes,
       if include_http_only {
         1
@@ -2945,9 +2944,9 @@ pub fn Window::cookie_begin_get(
 }
 
 ///|
-/// Sets a cookie for the window's session. Fire-and-forget.
-pub fn Window::cookie_set(
-  self : Window,
+/// Sets a cookie for the application session. Fire-and-forget.
+pub fn Runtime::cookie_set(
+  self : Runtime,
   url : String,
   name : String,
   value : String,
@@ -2964,9 +2963,8 @@ pub fn Window::cookie_set(
     raise invalid_argument("cookie name must not be empty")
   }
   check_status(
-    @native_ffi.proton_window_cookie_set_ffi(
-      self.live_handle(),
-      0,
+    @native_ffi.proton_session_cookie_set_ffi(
+      self.active_handle(),
       @ffi.to_cstr(url),
       @ffi.to_cstr(name),
       @ffi.to_cstr(value),
@@ -2991,8 +2989,8 @@ pub fn Window::cookie_set(
 /// Deletes cookies. If `url` is `None`, all cookies are deleted. If `name`
 /// is `Some`, only cookies with that name matching the URL are deleted.
 /// Fire-and-forget.
-pub fn Window::cookie_delete(
-  self : Window,
+pub fn Runtime::cookie_delete(
+  self : Runtime,
   url : String?,
   name : String?,
 ) -> Unit raise NativeError {
@@ -3005,9 +3003,8 @@ pub fn Window::cookie_delete(
     None => @ffi.to_cstr("")
   }
   check_status(
-    @native_ffi.proton_window_cookie_delete_ffi(
-      self.live_handle(),
-      0,
+    @native_ffi.proton_session_cookie_delete_ffi(
+      self.active_handle(),
       url_bytes,
       name_bytes,
     ),
@@ -3016,44 +3013,43 @@ pub fn Window::cookie_delete(
 
 ///|
 /// Flushes the cookie store to disk. Fire-and-forget.
-pub fn Window::cookie_flush(self : Window) -> Unit raise NativeError {
+pub fn Runtime::cookie_flush(self : Runtime) -> Unit raise NativeError {
   check_status(
-    @native_ffi.proton_window_cookie_flush_ffi(self.live_handle(), 0),
+    @native_ffi.proton_session_cookie_flush_ffi(self.active_handle()),
   )
 }
 
 ///|
-/// Clears the HTTP cache for the window's request context. Fire-and-forget.
-pub fn Window::clear_cache(self : Window) -> Unit raise NativeError {
-  check_status(@native_ffi.proton_window_clear_cache_ffi(self.live_handle(), 0))
+/// Clears the HTTP cache for the application request context. Fire-and-forget.
+pub fn Runtime::clear_cache(self : Runtime) -> Unit raise NativeError {
+  check_status(@native_ffi.proton_session_clear_cache_ffi(self.active_handle()))
 }
 
 ///|
 /// Clears cached HTTP authentication credentials for the request context.
-pub fn Window::clear_auth_cache(self : Window) -> Unit raise NativeError {
+pub fn Runtime::clear_auth_cache(self : Runtime) -> Unit raise NativeError {
   check_status(
-    @native_ffi.proton_window_clear_auth_cache_ffi(self.live_handle(), 0),
+    @native_ffi.proton_session_clear_auth_cache_ffi(self.active_handle()),
   )
 }
 
 ///|
 /// Clears stored certificate exception decisions for the request context.
-pub fn Window::clear_certificate_exceptions(
-  self : Window,
+pub fn Runtime::clear_certificate_exceptions(
+  self : Runtime,
 ) -> Unit raise NativeError {
   check_status(
-    @native_ffi.proton_window_clear_certificate_exceptions_ffi(
-      self.live_handle(),
-      0,
+    @native_ffi.proton_session_clear_certificate_exceptions_ffi(
+      self.active_handle(),
     ),
   )
 }
 
 ///|
-/// Closes active and idle Chromium connections for this window's session.
-pub fn Window::close_all_connections(self : Window) -> Unit raise NativeError {
+/// Closes active and idle Chromium connections for this application session.
+pub fn Runtime::close_all_connections(self : Runtime) -> Unit raise NativeError {
   check_status(
-    @native_ffi.proton_window_close_all_connections_ffi(self.live_handle(), 0),
+    @native_ffi.proton_session_close_all_connections_ffi(self.active_handle()),
   )
 }
 
@@ -3965,146 +3961,6 @@ pub fn View::respond_browser_request(
       @ffi.to_cstr(action),
       @ffi.to_cstr(path.unwrap_or("")),
     ),
-  )
-}
-
-///|
-/// Begins retrieving cookies for the window's session. Completion is delivered
-/// as a `cookie_get_completed` runtime event carrying the returned request id.
-pub fn View::cookie_begin_get(
-  self : View,
-  url : String?,
-  include_http_only : Bool,
-) -> Int64 raise NativeError {
-  let url_bytes = match url {
-    Some(u) => @ffi.to_cstr(u)
-    None => @ffi.to_cstr("")
-  }
-  let request_id = Ref(proton_invalid_handle)
-  check_status(
-    @native_ffi.proton_view_cookie_begin_get_ffi(
-      self.live_handle(),
-      1,
-      url_bytes,
-      if include_http_only {
-        1
-      } else {
-        0
-      },
-      request_id,
-    ),
-  )
-  request_id.val
-}
-
-///|
-/// Sets a cookie for the window's session. Fire-and-forget.
-pub fn View::cookie_set(
-  self : View,
-  url : String,
-  name : String,
-  value : String,
-  domain? : String,
-  path? : String,
-  secure? : Bool = false,
-  http_only? : Bool = false,
-  same_site? : CookieSameSite = Unspecified,
-) -> Unit raise NativeError {
-  if url.is_empty() {
-    raise invalid_argument("cookie url must not be empty")
-  }
-  if name.is_empty() {
-    raise invalid_argument("cookie name must not be empty")
-  }
-  check_status(
-    @native_ffi.proton_view_cookie_set_ffi(
-      self.live_handle(),
-      1,
-      @ffi.to_cstr(url),
-      @ffi.to_cstr(name),
-      @ffi.to_cstr(value),
-      @ffi.to_cstr(domain.unwrap_or("")),
-      @ffi.to_cstr(path.unwrap_or("")),
-      if secure {
-        1
-      } else {
-        0
-      },
-      if http_only {
-        1
-      } else {
-        0
-      },
-      same_site.native_value(),
-    ),
-  )
-}
-
-///|
-/// Deletes cookies. If `url` is `None`, all cookies are deleted. If `name`
-/// is `Some`, only cookies with that name matching the URL are deleted.
-/// Fire-and-forget.
-pub fn View::cookie_delete(
-  self : View,
-  url : String?,
-  name : String?,
-) -> Unit raise NativeError {
-  let url_bytes = match url {
-    Some(u) => @ffi.to_cstr(u)
-    None => @ffi.to_cstr("")
-  }
-  let name_bytes = match name {
-    Some(n) => @ffi.to_cstr(n)
-    None => @ffi.to_cstr("")
-  }
-  check_status(
-    @native_ffi.proton_view_cookie_delete_ffi(
-      self.live_handle(),
-      1,
-      url_bytes,
-      name_bytes,
-    ),
-  )
-}
-
-///|
-/// Flushes the cookie store to disk. Fire-and-forget.
-pub fn View::cookie_flush(self : View) -> Unit raise NativeError {
-  check_status(@native_ffi.proton_view_cookie_flush_ffi(self.live_handle(), 1))
-}
-
-///|
-/// Clears the HTTP cache for the window's request context. Fire-and-forget.
-pub fn View::clear_cache(self : View) -> Unit raise NativeError {
-  check_status(@native_ffi.proton_view_clear_cache_ffi(self.live_handle(), 1))
-}
-
-///|
-/// Clears cached HTTP authentication credentials for the request context.
-pub fn View::clear_auth_cache(self : View) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_view_clear_auth_cache_ffi(self.live_handle(), 1),
-  )
-}
-
-///|
-/// Clears stored certificate exception decisions for the request context.
-pub fn View::clear_certificate_exceptions(
-  self : View,
-) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_view_clear_certificate_exceptions_ffi(
-      self.live_handle(),
-      1,
-    ),
-  )
-}
-
-///|
-/// Closes active and idle Chromium connections for this window's session.
-pub fn View::close_all_connections(self : View) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_view_close_all_connections_ffi(self.live_handle(), 1),
   )
 }
 

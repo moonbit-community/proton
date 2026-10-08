@@ -60,7 +60,6 @@ void proton_engine_window_free_views(proton_engine_window_t *window) {
   window->views = NULL;
   while (view != NULL) {
     proton_engine_view_t *next = view->next;
-    proton_engine_contents_cookie_cleanup(view);
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
     proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
@@ -80,7 +79,6 @@ void proton_engine_window_collect_views(proton_engine_window_t *window) {
     }
     *cursor = view->next;
     proton_browser_lifecycle_clear_owner(view->browser_lifecycle);
-    proton_engine_contents_cookie_cleanup(view);
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
     free(view);
@@ -448,7 +446,6 @@ int32_t proton_engine_view_create(
   view->events = proton_view_events_create();
   if (client == NULL || view->browser_session == NULL ||
       view->events == NULL) {
-    proton_engine_contents_cookie_cleanup(view);
     proton_browser_session_destroy(view->browser_session);
     proton_view_events_destroy(view->events);
     if (client != NULL) {
