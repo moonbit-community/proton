@@ -5,13 +5,10 @@ test "complete configuration provides product metadata and frontend settings" {
       #|{"identifier":"com.example.notes","frontend":{"dev_url":"http://localhost:4300"},"package":{"product_name":"Notes","version":"1.2.3"}}
     ),
   )
-  let app = html("Test", "").with_config(config)
+  let app = html("Test", "").config(config)
   assert_eq(app.name(), "Notes")
   assert_eq(app.version(), "1.2.3")
-  assert_eq(
-    app.config().frontend.unwrap().dev_url,
-    Some("http://localhost:4300"),
-  )
+  assert_eq(config.frontend.unwrap().dev_url, Some("http://localhost:4300"))
 }
 
 ///|
@@ -22,7 +19,7 @@ test "project application metadata uses package configuration" {
       @proton_config.PackageConfig("  Proton Notes  ", " 1.2.3 "),
     ),
   )
-  let app = html("Test", "").with_config(config)
+  let app = html("Test", "").config(config)
   assert_eq(app.name(), "Proton Notes")
   assert_eq(app.version(), "1.2.3")
 }
@@ -50,7 +47,7 @@ test "packaged resource roots follow each bundle layout" {
 ///|
 test "project application metadata requires package configuration" {
   let config = @proton_config.AppConfig("dev.proton.notes")
-  try html("Test", "").with_config(config).name() catch {
+  try html("Test", "").config(config).name() catch {
     @proton_config.MissingField(path="package.product_name") => ()
     _ => fail("expected missing package metadata")
   } noraise {

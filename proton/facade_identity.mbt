@@ -1,26 +1,4 @@
 ///|
-/// Loads the complete application configuration once.
-///
-/// Development runs read `proton.project.json`. Packaged applications read
-/// the complete `proton-package.json` staged beside the executable.
-pub fn App::load_config(self : App) -> App {
-  let path = packaged_application_manifest_path().unwrap_or_else(
-    project_config_path,
-  )
-  try @proton_config.AppConfig::load(path) catch {
-    error => {
-      self.record_config_failure(error)
-      self.validation_errors.push(
-        InvalidSetting(name="config", message=error.message()),
-      )
-      self
-    }
-  } noraise {
-    config => self.set_application_identity(Configured(config))
-  }
-}
-
-///|
 /// Sets the canonical identifier for an application without project metadata.
 pub fn App::identifier(self : App, identifier : String) -> App {
   match resolve_explicit_application_identifier(identifier) {
@@ -79,7 +57,7 @@ fn App::set_application_identity(
       self.validation_errors.push(
         InvalidSetting(
           name="identifier",
-          message="is already configured; use only one of .load_config(), .with_config(...), or .identifier(...)",
+          message="is already configured; use only one of .config(config) or .identifier(...)",
         ),
       )
     None => self.application_identity = Some(identity)
@@ -92,7 +70,7 @@ fn App::application_identifier(self : App) -> String raise AppPathError {
   match self.application_identity {
     Some(Configured(config)) => config.identifier
     Some(Explicit(identifier)) => identifier
-    None | Some(ConfigFailed(_)) => raise MissingApplicationIdentifier
+    None => raise MissingApplicationIdentifier
   }
 }
 

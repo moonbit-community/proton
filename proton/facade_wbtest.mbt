@@ -2729,9 +2729,7 @@ test "application identity sources cannot be combined" {
     fail("expected duplicate application identity sources")
   }
   assert_true(
-    message.contains(
-      "only one of .load_config(), .with_config(...), or .identifier(...)",
-    ),
+    message.contains("only one of .config(config) or .identifier(...)"),
   )
 }
 
@@ -2917,7 +2915,7 @@ test "application log directory follows platform conventions" {
 test "managed configuration requires an identifier" {
   let config = AppConfig::parse("{\"identifier\":\"com.example.app\"}")
   assert_eq(
-    html("Test", "").with_config(config).application_identifier(),
+    html("Test", "").config(config).application_identifier(),
     "com.example.app",
   )
   try AppConfig::parse("{}") catch {

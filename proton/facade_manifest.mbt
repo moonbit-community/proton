@@ -62,7 +62,7 @@ fn App::validation_error(self : App) -> AppConfigurationError? {
     Some(
       InvalidSetting(
         name="identifier",
-        message="is required; call .load_config() or .identifier(...) before running the application",
+        message="is required; call .config(config) or .identifier(...) before running the application",
       ),
     )
   } else if self.bridge_startup_timeout_value_ms <= 0 {
@@ -91,8 +91,7 @@ fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
   let identifier = match self.application_identity {
     Some(Configured(config)) => config.identifier
     Some(Explicit(identifier)) => identifier
-    None | Some(ConfigFailed(_)) =>
-      abort("validated application identity is missing")
+    None => abort("validated application identity is missing")
   }
   ResolvedAppConfig::{
     manifest,

@@ -80,11 +80,8 @@ test "public typed configuration exposes all sections through the root facade" {
       #|{"identifier":"com.example.public-config","frontend":{"dev_url":"http://localhost:4300"},"package":{"product_name":"Public","version":"1.0.0"}}
     ),
   )
-  let app = @proton.html("Config", "").with_config(config)
-  assert_eq(
-    app.config().frontend.unwrap().dev_url,
-    Some("http://localhost:4300"),
-  )
+  let app = @proton.html("Config", "").config(config)
+  assert_eq(config.frontend.unwrap().dev_url, Some("http://localhost:4300"))
   assert_eq(app.name(), "Public")
   assert_eq(app.version(), "1.0.0")
   assert_eq(@proton.AppConfig::decode(config.to_json()), config)

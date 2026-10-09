@@ -168,17 +168,34 @@ Moon 默认将构建产物写入 _build/。前端输出位置取决于前端构�
 
 ## 运行时配置
 
-`App::load_config()` 一次加载完整配置。`App::config()` 返回 `AppConfig`
-快照，嵌套章节是类型化的可选结构体。例如，`config.frontend` 包含
+先独立加载配置，再将它安装到应用：
+
+```moonbit
+let config = @proton.load_config()
+let app = @proton.html("Hello", "<h1>Hello</h1>").config(config)
+
+if config.frontend is Some(frontend) {
+  if frontend.dev_url is Some(url) {
+    println(url)
+  }
+}
+```
+
+`load_config()` 读取并验证完整的类型化 `AppConfig`，失败时立即抛出
+`AppConfigError`。开发环境读取 `proton.project.json`，打包环境读取
+`proton-package.json`。需要指定路径时，使用 `@proton.AppConfig::load(path)`；
+也可以直接构造 `AppConfig`。
+
+从配置值直接读取字段。嵌套章节是可选结构体：`config.frontend` 包含
 `dev_url`、`path`、`dist`、`before_dev` 和 `before_build`。
 JSON 中的 `package` 对应 `config.package_config`，`backend.package`
-对应 `config.backend` 中的 `app_package` 字段。
+对应 backend 的 `app_package` 字段。
 
-`proton_cli dev` 将 `--url`、`--command`、`--frontend-path` 和 `--package`
-覆盖后的生效配置传给应用。打包后的应用从 `proton-package.json` 加载完整配置。
-两种环境下，配置中的相对路径都保持原样。读取字段不会解析路径或执行命令。
-`name()` 和 `version()` 读取同一份快照，不再访问文件。
+`proton_cli dev` 提供经过 `--url`、`--command`、`--frontend-path` 和
+`--package` 覆盖的生效配置。打包也会嵌入生效配置，包括格式和平台选项的
+命令行覆盖值。相对路径保持原样；读取字段不会解析路径或执行命令。
 
-应用也可以通过 `with_config(config)` 直接提供 `AppConfig`。
-缺少或无效的配置会使 `config()` 抛出 `AppConfigError`；构建器记录的配置错误
-也会阻止 `run()` 启动运行时。
+`app.config(config)` 安装独立副本，与 `app.identifier(...)` 互斥。
+无效配置或与包内身份不一致的 identifier 会阻止启动。保留 `config` 即可查询
+配置，应用不再提供配置 getter。`app.name()` 和 `app.version()` 读取安装的
+快照，不再访问文件。

@@ -64,7 +64,7 @@ async fn main {
     #|<p>This page lives inside a desktop window.</p>
     #|</html>
   @proton.html("Hello Proton", html, width=900, height=700)
-  .load_config()
+  .config(@proton.load_config())
   .run_or_abort()
 }
 ```
@@ -73,7 +73,7 @@ async fn main {
 
 `@proton.html` 创建应用构建器，第一个参数是窗口标题，第二个参数是 HTML 文档。`#|` 开头的各行组成 MoonBit 多行字符串。
 
-`.load_config()` 加载完整应用配置，包括必需的应用标识。请保留这个调用，仅有显示标题并不能标识应用。
+`.config(@proton.load_config())` 加载完整应用配置（包括必需的应用标识），并将它安装到应用。仅有显示标题并不能标识应用。
 
 `.run_or_abort()` 持续运行到应用退出，并报告启动或运行错误。入口是 async 函数，所以需要保留模板中的 `moonbitlang/async` 导入。
 

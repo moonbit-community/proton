@@ -30,6 +30,8 @@ pub fn is_packaged() -> Bool
 
 pub fn is_ready() -> Bool
 
+pub fn load_config() -> @proton_config.AppConfig raise @proton_config.AppConfigError
+
 pub fn native_image() -> NativeImage raise NativeImageError
 
 pub fn resource_dir() -> String
@@ -264,7 +266,7 @@ pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) ->
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise, targets? : Array[RendererTarget]) -> Self
-pub fn App::config(Self) -> @proton_config.AppConfig raise @proton_config.AppConfigError
+pub fn App::config(Self, @proton_config.AppConfig) -> Self
 pub fn App::data_dir(Self) -> String raise AppPathError
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
@@ -272,7 +274,6 @@ pub fn App::document_extension(Self, String) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
 pub fn App::identifier(Self, String) -> Self
 pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
-pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::main_window(Self, WindowConfig) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
@@ -313,7 +314,6 @@ pub fn App::web_request_cancel_prefix(Self, String) -> Self
 pub fn App::web_request_header_prefix(Self, String, String, String) -> Self
 pub fn App::web_request_redirect_prefix(Self, String, String) -> Self
 pub fn[State] App::window_lifecycle(Self, on_ready~ : async (WindowContext) -> State, on_close~ : async (State) -> Unit) -> Self
-pub fn App::with_config(Self, @proton_config.AppConfig) -> Self
 
 pub(all) enum AppPathKind {
   Home

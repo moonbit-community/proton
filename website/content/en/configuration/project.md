@@ -168,18 +168,37 @@ The paths below are illustrative: referenced icons, resources and commands must 
 
 ## Runtime configuration
 
-`App::load_config()` loads this complete configuration once. `App::config()`
-returns an `AppConfig` snapshot; nested sections are typed optional structs.
-For example, `config.frontend` exposes `dev_url`, `path`, `dist`, `before_dev`,
-and `before_build`. JSON `package` maps to `config.package_config`; JSON
-`backend.package` maps to `config.backend`'s `app_package` field.
+Load configuration independently, then install it on the application:
 
-`proton_cli dev` passes the effective configuration after `--url`, `--command`,
-`--frontend-path`, and `--package` overrides. Packaged applications load the full
-configuration from `proton-package.json`. Relative paths remain relative in
-both environments. Reading a field does not resolve a path or run a command.
-`name()` and `version()` use the same snapshot and perform no further file I/O.
+```moonbit
+let config = @proton.load_config()
+let app = @proton.html("Hello", "<h1>Hello</h1>").config(config)
 
-Applications may provide `AppConfig` directly with `with_config(config)`.
-Missing or invalid configuration raises `AppConfigError` from `config()`;
-builder configuration errors also prevent `run()` from starting the runtime.
+if config.frontend is Some(frontend) {
+  if frontend.dev_url is Some(url) {
+    println(url)
+  }
+}
+```
+
+`load_config()` reads and validates the complete typed `AppConfig`, raising
+`AppConfigError` immediately on failure. Development uses `proton.project.json`;
+packaged applications use `proton-package.json`. For an explicit file path, use
+`@proton.AppConfig::load(path)`. Applications can also construct `AppConfig` directly.
+
+Read fields from the configuration value. Nested sections are optional structs:
+`config.frontend` contains `dev_url`, `path`, `dist`, `before_dev`, and
+`before_build`. JSON `package` maps to `config.package_config`; JSON
+`backend.package` maps to the backend's `app_package` field.
+
+`proton_cli dev` supplies the effective configuration after `--url`, `--command`,
+`--frontend-path`, and `--package` overrides. Packaging likewise embeds the
+effective configuration, including CLI overrides for formats and platform settings.
+Relative paths retain their spelling; reading a field does not resolve paths
+or execute commands.
+
+`app.config(config)` installs an independent copy and is mutually exclusive with
+`app.identifier(...)`. Invalid configuration or a mismatch with the packaged
+identity prevents startup. Retain `config` to inspect it; there is no application
+configuration getter. `app.name()` and `app.version()` read the installed snapshot
+without further file I/O.

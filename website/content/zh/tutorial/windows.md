@@ -10,7 +10,7 @@
 ///|
 async fn main {
   @proton.html("Main", "<h1>Main window</h1>", width=900, height=700)
-  .load_config()
+  .config(@proton.load_config())
   .add_window(
     "help",
     "Help",

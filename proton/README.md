@@ -20,25 +20,33 @@ Import `moonbitlang/async` to use `async fn main`. Proton manages the applicatio
 event loop automatically. `@proton.html` accepts optional
 `width?`, `height?`, `debug?`, and `resizable?` arguments.
 
-Every application requires a stable reverse-DNS identity. Managed projects use
-`.load_config()` to read a complete typed `AppConfig` from `proton.project.json`
-during development and `proton-package.json` after distribution. Applications without project metadata use
-`.identifier(...)` as shown above. These sources are mutually exclusive, and
-an explicit identity must match any packaged metadata present at runtime.
+Every application requires a stable reverse-DNS identity. Managed projects load
+and install configuration through the application builder:
+
+```moonbit
+let app = @proton.html("Hello", "<h1>Hello</h1>")
+  .config(@proton.load_config())
+```
+
+`load_config()` reads `proton.project.json` during development and the bundled
+`proton-package.json` after distribution. It returns `AppConfig` and raises
+`AppConfigError` immediately if reading or validation fails. Applications without
+project metadata can use `.identifier(...)` instead of `.config(@proton.load_config())`.
+An explicit identity must match any packaged metadata present at runtime.
 
 ## Application metadata and paths
 
-`App::config()` returns the complete typed configuration snapshot, including
-`backend`, `frontend`, and `package_config`. Loading happens once; querying the
-configuration, `App::name()`, or `App::version()` does not read the file again.
-Configuration paths retain their original relative spelling. The CLI resolves
-them relative to the project file when executing commands.
+Read configuration fields directly from the returned `AppConfig`, including
+`identifier`, `backend`, `frontend`, and `package_config`. Nested sections are
+optional typed structs. Configuration paths retain their relative spelling;
+the CLI resolves them relative to the project file when executing commands.
 
-`App::with_config(config)` accepts an `AppConfig` directly. It is mutually
-exclusive with `.load_config()` and `.identifier(...)`. In packaged applications,
-its identifier must match the bundled configuration. Configuration snapshots
-are copied at the application boundary, so modifying an array in a returned
-configuration does not change the running application's state.
+`App::config(config)` installs an independent snapshot. Subsequent changes to the
+caller's arrays do not change the application's state. It accepts configurations
+from `load_config()`, `AppConfig::load(path)`, or direct construction. Installation
+validates the configuration and packaged identity; invalid settings prevent
+`run()` from starting. The application has no configuration getter: retain the
+configuration value to inspect its fields.
 
 Managed applications expose `package.product_name` and `package.version` through
 `App::name()` and `App::version()`. Missing configuration or package fields raise
