@@ -438,15 +438,23 @@ priv struct PendingCloseDecision {
 priv struct ApplicationExit {
   exit_code : Int
   forced : Bool
+  update : @updater.PreparedUpdate?
 }
+
+///|
+priv enum ExitPurpose {
+  Quit(Int)
+  ForceExit(Int)
+  InstallUpdate
+} derive(Eq)
 
 ///|
 priv struct CloseCoordinator {
   mut state : CloseCoordinatorState
   pending : Array[PendingCloseDecision]
   mut pending_quit : @async.Task[ApplicationQuitDecision]?
-  mut forced : Bool
-  mut exit_code : Int
+  mut purpose : ExitPurpose
+  mut relaunch_scheduled : Bool
   /// Whether the last-window policy already consumed the current windowless
   /// period, so a prevented quit is not retried until a window opens again.
   mut last_window_quit_handled : Bool

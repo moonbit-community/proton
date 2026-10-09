@@ -3,6 +3,7 @@ fn RuntimeSession::RuntimeSession(
   config : ResolvedAppConfig,
   environment : RuntimeEnvironment,
   updates : ApplicationUpdates,
+  close_coordinator : CloseCoordinator,
   runtime : @native.Runtime,
   event_pump : RuntimeEventPump,
   definitions : Array[PreparedWindow],
@@ -38,7 +39,7 @@ fn RuntimeSession::RuntimeSession(
     pending_window_opens: [],
     pending_browser_requests: [],
     pending_resource_requests: [],
-    close_coordinator: CloseCoordinator(),
+    close_coordinator,
   }
 }
 
@@ -48,43 +49,39 @@ fn CloseCoordinator::CloseCoordinator() -> CloseCoordinator {
     state: CloseRunning,
     pending: [],
     pending_quit: None,
-    forced: false,
-    exit_code: 0,
+    purpose: Quit(0),
+    relaunch_scheduled: false,
     last_window_quit_handled: false,
   }
 }
 
 ///|
-/// Starts one orderly quit transaction unless a quit is already in progress.
-fn CloseCoordinator::begin_quit(
+/// Owns the purpose and priority of one exit transaction.
+fn CloseCoordinator::begin_exit(
   self : CloseCoordinator,
-  exit_code : Int,
+  purpose : ExitPurpose,
 ) -> Bool {
-  // A forced exit already owns the transaction; an orderly request must not
-  // downgrade it before the session advances.
-  guard self.state == CloseRunning && !self.forced else { return false }
-  self.state = CloseBeforeQuit
-  self.forced = false
-  self.exit_code = exit_code
-  true
-}
-
-///|
-/// Escalates the current transaction to a forced exit, or starts one from an
-/// idle application. A committed teardown can no longer change its status.
-fn CloseCoordinator::begin_forced_exit(
-  self : CloseCoordinator,
-  exit_code : Int,
-) -> Bool {
-  guard self.state != CloseCommitted else { return false }
-  self.forced = true
-  self.exit_code = exit_code
+  match purpose {
+    ForceExit(_) => {
+      guard self.state != CloseCommitted else { return false }
+    }
+    Quit(_) | InstallUpdate => {
+      guard self.state == CloseRunning && !self.is_forced() else {
+        return false
+      }
+      guard purpose != InstallUpdate || !self.relaunch_scheduled else {
+        return false
+      }
+      self.state = CloseBeforeQuit
+    }
+  }
+  self.purpose = purpose
   true
 }
 
 ///|
 fn CloseCoordinator::is_quitting(self : CloseCoordinator) -> Bool {
-  self.state != CloseRunning || self.forced
+  self.state != CloseRunning || self.is_forced()
 }
 
 ///|
@@ -151,11 +148,13 @@ fn RuntimeSession::application_context(
   ApplicationContext(
     updates=self.updates,
     session=self.session_handle(),
+    close_coordinator=self.close_coordinator,
     self.application_tasks,
     self.window_manager(),
     self.environment.locale_preferences,
     request_quit=exit_code => self.request_quit(exit_code),
     request_exit=exit_code => self.request_exit(exit_code),
+    request_update_install=() => self.request_update_install(),
     has_single_instance_lock=() => self.has_single_instance_lock(),
     release_single_instance_lock=() => self.release_single_instance_lock(),
     application_identifier=self.config.application_identifier,
@@ -4446,15 +4445,56 @@ fn should_continue_quit(decision : ApplicationQuitDecision) -> Bool {
 
 ///|
 fn RuntimeSession::request_quit(self : RuntimeSession, exit_code : Int) -> Unit {
-  let accepted = self.close_coordinator.begin_quit(exit_code)
+  let accepted = self.close_coordinator.begin_exit(Quit(exit_code))
   if accepted {
     self.wakeup.signal.notify()
   }
 }
 
 ///|
+fn RuntimeSession::request_update_install(
+  self : RuntimeSession,
+) -> Unit raise AppControlError {
+  guard self.updates.channel is Some(_) else {
+    raise NativeControlFailure(
+      action="quit and install update",
+      status=-1,
+      detail="the application is stopping or has stopped",
+    )
+  }
+  if self.close_coordinator.purpose == InstallUpdate {
+    return
+  }
+  guard self.config.instance_identifier is None ||
+    self.has_single_instance_lock() else {
+    raise NativeControlFailure(
+      action="quit and install update",
+      status=-1,
+      detail="single-instance ownership has already been released",
+    )
+  }
+  guard self.updates.prepared is Some(_) else {
+    raise NativeControlFailure(
+      action="quit and install update",
+      status=-1,
+      detail="no downloaded update is ready",
+    )
+  }
+  guard !self.close_coordinator.relaunch_scheduled && !self.is_quitting() else {
+    raise NativeControlFailure(
+      action="quit and install update",
+      status=-1,
+      detail="another exit or relaunch is already pending",
+    )
+  }
+  if self.close_coordinator.begin_exit(InstallUpdate) {
+    self.wakeup.signal.notify()
+  }
+}
+
+///|
 fn RuntimeSession::request_exit(self : RuntimeSession, exit_code : Int) -> Unit {
-  if self.close_coordinator.begin_forced_exit(exit_code) {
+  if self.close_coordinator.begin_exit(ForceExit(exit_code)) {
     self.wakeup.signal.notify()
   }
 }
@@ -4468,8 +4508,9 @@ fn RuntimeSession::is_quitting(self : RuntimeSession) -> Bool {
 /// Preserves the exit mode alongside the status through runtime cleanup.
 fn RuntimeSession::resolved_exit(self : RuntimeSession) -> ApplicationExit {
   {
-    exit_code: self.close_coordinator.exit_code,
-    forced: self.close_coordinator.forced,
+    exit_code: self.close_coordinator.exit_code(),
+    forced: self.close_coordinator.is_forced(),
+    update: None,
   }
 }
 
@@ -4486,6 +4527,14 @@ fn RuntimeSession::has_single_instance_lock(self : RuntimeSession) -> Bool {
 fn RuntimeSession::release_single_instance_lock(
   self : RuntimeSession,
 ) -> Unit raise AppControlError {
+  guard self.app_instance is None ||
+    self.close_coordinator.purpose != InstallUpdate else {
+    raise NativeControlFailure(
+      action="release the single-instance lock",
+      status=-1,
+      detail="update installation owns the pending exit",
+    )
+  }
   match self.app_instance {
     Some(instance) =>
       instance.release() catch {
@@ -4515,7 +4564,7 @@ fn RuntimeSession::advance_application_lifetime(
     self.request_quit(0)
     did_work = true
   }
-  if self.close_coordinator.forced && self.advance_forced_exit() {
+  if self.close_coordinator.is_forced() && self.advance_forced_exit() {
     did_work = true
   }
   match self.close_coordinator.state {
@@ -4578,7 +4627,7 @@ fn RuntimeSession::advance_before_quit(self : RuntimeSession) -> Bool {
           if should_continue_quit(decision) {
             self.close_coordinator.state = CloseQuitRequested
           } else {
-            self.cancel_quit_transaction()
+            self.close_coordinator.cancel_quit_transaction()
           }
           true
         }
@@ -4602,7 +4651,7 @@ fn RuntimeSession::advance_will_quit(
           if should_continue_quit(decision) {
             self.begin_quit_event()
           } else {
-            self.cancel_quit_transaction()
+            self.close_coordinator.cancel_quit_transaction()
           }
           true
         }
@@ -4664,7 +4713,7 @@ fn RuntimeSession::begin_quit_event(
   }
   let context = self.application_context()
   let handlers = self.config.quit_handlers
-  let exit_code = self.close_coordinator.exit_code
+  let exit_code = self.close_coordinator.exit_code()
   self.close_coordinator.pending_quit = Some(
     self.application_tasks.spawn(
       () => {
@@ -4706,11 +4755,10 @@ fn RuntimeSession::advance_quit_event(self : RuntimeSession) -> Bool {
 /// Returns a prevented quit request to the running state. Windows that were
 /// already closed stay closed, and the automatic last-window quit is not
 /// retried until a window is created again.
-fn RuntimeSession::cancel_quit_transaction(self : RuntimeSession) -> Unit {
-  self.close_coordinator.pending_quit = None
-  self.close_coordinator.forced = false
-  self.close_coordinator.exit_code = 0
-  self.close_coordinator.state = CloseRunning
+fn CloseCoordinator::cancel_quit_transaction(self : CloseCoordinator) -> Unit {
+  self.pending_quit = None
+  self.purpose = Quit(0)
+  self.state = CloseRunning
 }
 
 ///|
@@ -4739,7 +4787,7 @@ fn RuntimeSession::advance_close_completion(
   self : RuntimeSession,
 ) -> Bool raise AppRunError {
   guard self.windows_fully_closed() else { return false }
-  if self.close_coordinator.forced {
+  if self.close_coordinator.is_forced() {
     self.begin_quit_event()
   } else {
     self.close_coordinator.state = CloseWillQuit
@@ -4824,7 +4872,7 @@ fn RuntimeSession::advance_application_close_decisions(
       }
     }
     self.close_coordinator.pending.clear()
-    self.cancel_quit_transaction()
+    self.close_coordinator.cancel_quit_transaction()
   } else {
     self.commit_application_close()
   }
@@ -5078,4 +5126,25 @@ pub fn WebContentsHandle::view_id(self : WebContentsHandle) -> String? {
 /// Returns the webpage hosted by this view.
 pub fn ViewHandle::web_contents(self : ViewHandle) -> WebContentsHandle {
   self.contents
+}
+
+///|
+fn CloseCoordinator::is_forced(self : CloseCoordinator) -> Bool {
+  self.purpose is ForceExit(_)
+}
+
+///|
+fn CloseCoordinator::exit_code(self : CloseCoordinator) -> Int {
+  match self.purpose {
+    Quit(code) | ForceExit(code) => code
+    InstallUpdate => 0
+  }
+}
+
+///|
+fn CloseCoordinator::accepts_download(self : CloseCoordinator) -> Bool {
+  self.purpose != InstallUpdate &&
+  self.state != CloseQuitting &&
+  self.state != CloseCommitted &&
+  !self.is_forced()
 }

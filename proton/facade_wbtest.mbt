@@ -496,33 +496,34 @@ test "application quit decisions keep the chain running only when allowed" {
 test "close coordinator starts only one application quit transaction" {
   let coordinator = CloseCoordinator()
   assert_false(coordinator.is_quitting())
-  assert_true(coordinator.begin_quit(3))
+  assert_true(coordinator.begin_exit(Quit(3)))
   assert_true(coordinator.is_quitting())
   assert_true(coordinator.state == CloseBeforeQuit)
-  assert_eq(coordinator.exit_code, 3)
-  assert_false(coordinator.forced)
-  assert_false(coordinator.begin_quit(0))
-  assert_eq(coordinator.exit_code, 3)
+  assert_eq(coordinator.exit_code(), 3)
+  assert_false(coordinator.is_forced())
+  assert_false(coordinator.begin_exit(Quit(0)))
+  assert_eq(coordinator.exit_code(), 3)
 }
 
 ///|
 test "forced exits escalate a quit chain and stop committing changes" {
   let coordinator = CloseCoordinator()
-  assert_true(coordinator.begin_forced_exit(7))
-  assert_true(coordinator.forced)
+  assert_true(coordinator.begin_exit(ForceExit(7)))
+  assert_true(coordinator.is_forced())
   assert_true(coordinator.is_quitting())
-  assert_eq(coordinator.exit_code, 7)
-  assert_false(coordinator.begin_quit(0))
-  assert_eq(coordinator.exit_code, 7)
+  assert_eq(coordinator.exit_code(), 7)
+  assert_false(coordinator.begin_exit(Quit(0)))
+  assert_eq(coordinator.exit_code(), 7)
   coordinator.state = CloseCommitted
-  assert_false(coordinator.begin_forced_exit(9))
-  assert_eq(coordinator.exit_code, 7)
+  assert_false(coordinator.begin_exit(ForceExit(9)))
+  assert_eq(coordinator.exit_code(), 7)
 }
 
 ///|
 async test "application context forwards orderly and forced exit requests" {
   let requested = Ref(0)
   let forced = Ref(0)
+  let update_requested = Ref(false)
   let released = Ref(false)
   @async.with_task_group(group => {
     let context = ApplicationContext(
@@ -532,9 +533,12 @@ async test "application context forwards orderly and forced exit requests" {
       @locale.LocalePreferences::resolve(None, []),
       request_quit=fn(exit_code) { requested.val = exit_code },
       request_exit=fn(exit_code) { forced.val = exit_code },
+      request_update_install=fn() { update_requested.val = true },
       has_single_instance_lock=fn() { !released.val },
       release_single_instance_lock=fn() { released.val = true },
     )
+    context.quit_and_install()
+    assert_true(update_requested.val)
     context.quit(exit_code=5)
     context.exit(exit_code=9)
     assert_true(context.has_single_instance_lock())
@@ -1007,11 +1011,11 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "titlebar overlay is not supported in headless mode")
-      ApplicationExit::{ exit_code: 0, forced: false, }
+      ApplicationExit::{ exit_code: 0, forced: false, update: None, }
     }
     error => {
       fail("expected configuration error, got " + @debug.render(Repr(error)))
-      ApplicationExit::{ exit_code: 0, forced: false, }
+      ApplicationExit::{ exit_code: 0, forced: false, update: None, }
     }
   }
   ignore(outcome)
@@ -1040,11 +1044,11 @@ async test "headless mode rejects native menus before runtime startup" {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "native menus are not supported in headless mode")
-      ApplicationExit::{ exit_code: 0, forced: false, }
+      ApplicationExit::{ exit_code: 0, forced: false, update: None, }
     }
     error => {
       fail("expected configuration error, got " + @debug.render(Repr(error)))
-      ApplicationExit::{ exit_code: 0, forced: false, }
+      ApplicationExit::{ exit_code: 0, forced: false, update: None, }
     }
   }
   ignore(outcome)
@@ -4353,4 +4357,38 @@ async test "ending the application wakes an outstanding session reader" {
     assert_true(reader.wait())
     assert_true(store.pending.is_empty())
   })
+}
+
+///|
+test "exit purpose prevents conflicting requests and forced exit overrides installation" {
+  let coordinator = CloseCoordinator()
+  assert_true(coordinator.accepts_download())
+  assert_true(coordinator.begin_exit(InstallUpdate))
+  assert_false(coordinator.accepts_download())
+  assert_false(coordinator.begin_exit(Quit(4)))
+  assert_true(coordinator.purpose == InstallUpdate)
+  assert_true(coordinator.begin_exit(ForceExit(7)))
+  assert_true(coordinator.purpose == ForceExit(7))
+  coordinator.state = CloseCommitted
+  assert_false(coordinator.begin_exit(InstallUpdate))
+  assert_false(coordinator.begin_exit(ForceExit(0)))
+}
+
+///|
+test "scheduled relaunch cannot be replaced with update installation" {
+  let coordinator = CloseCoordinator()
+  coordinator.relaunch_scheduled = true
+  assert_false(coordinator.begin_exit(InstallUpdate))
+  assert_false(coordinator.is_quitting())
+  assert_true(coordinator.begin_exit(Quit(0)))
+}
+
+///|
+test "cancelled update exit reopens admission and allows another install request" {
+  let coordinator = CloseCoordinator()
+  assert_true(coordinator.begin_exit(InstallUpdate))
+  coordinator.cancel_quit_transaction()
+  assert_false(coordinator.is_quitting())
+  assert_true(coordinator.accepts_download())
+  assert_true(coordinator.begin_exit(InstallUpdate))
 }

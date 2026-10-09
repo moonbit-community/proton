@@ -3973,3 +3973,11 @@ fn native_event_view_id(event : @native_ffi.EventHandle) -> Int64? {
     Some(view)
   }
 }
+
+///|
+/// Keeps Windows instance ownership until the installer has acknowledged it.
+/// Other platforms finish replacement in this process before releasing it.
+pub fn AppInstance::prepare_update_handoff(self : AppInstance) -> Bool {
+  !self.destroyed &&
+  @native_ffi.proton_app_instance_prepare_update_ffi(self.handle) != 0
+}

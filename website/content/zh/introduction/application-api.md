@@ -326,13 +326,25 @@ endpoint 必须是 HTTPS，至少配置一个受信任 RSA 公钥。默认开启
 
 PendingUpdate 表示 manifest 已通过信任、新鲜度和 revision 检查。它提供 version、revision、size 和可选 notes URL，此时尚未下载产物。
 
-**安装与重启**
+**下载与安装**
 
-安装必须显式调用 PendingUpdate.install()。下载先写入私有暂存区域，通过大小、摘要和签名验证后才能使用。应检查 UpdateInstallOutcome，不能假设所有平台都已经完成文件替换。macOS 和 Linux 在 install 中应用替换；Windows 保留已验证的 NSIS 安装器，待 restart 使用。
+`PendingUpdate.download()` 将产物写入私有暂存区域，并校验大小、摘要和签名。所有平台上都不会替换应用文件或退出。相同 revision 的下载已准备好时，重复调用不会再次下载。
 
-PendingUpdate.restart() 请求启动替换后的应用，调用方随后应退出。请求成功只表示操作系统接受启动，不代表新进程已经 ready。检查更新或收到更新通知都不会隐式安装。
+下载完成后，在用户选择应用更新时调用 `ApplicationContext.quit_and_install()`：
 
-未保存数据的处理应与检查、下载分开，通过[退出生命周期](#应用生命周期)决定何时退出。旧的受管理更新产物在成功启动后清理；暂存新包不代表新应用已经启动成功。
+```moonbit
+match context.check_for_update() {
+  Available(update) => {
+    update.download()
+    context.quit_and_install()
+  }
+  UpToDate | NotConfigured => ()
+}
+```
+
+请求遵循[退出生命周期](#应用生命周期)。拒绝退出会取消本次安装请求，保留下载结果供稍后重试。退出获准后，Proton 先关闭运行时并完成清理，再开始安装。如果启用了单实例模式，替换期间仍保留独占权。Windows 在旧进程退出前将独占权交给 NSIS 安装器，由安装器在安装完成后释放；macOS 和 Linux 持锁替换应用产物，完成后释放锁并启动新版。交接成功后旧进程终止，退出码为零时也不会继续执行 `App::run()` 后的代码。
+
+方法返回仅表示请求被接受，不代表新版已经启动成功。没有下载结果，或存在冲突的退出、重启请求时立即报错；后续安装或启动失败由 `App::run()` 报告。强制 `exit()` 会覆盖待执行的更新请求。更新退出请求待处理时，不允许主动释放已有的单实例锁；已释放所配置单实例锁的应用不能请求安装。普通退出丢弃下载结果而不安装；应用清理失败也不会开始安装。旧的受管理更新产物在新版成功启动后清理。
 
 **发布者责任**
 

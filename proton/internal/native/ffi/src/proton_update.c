@@ -18,6 +18,7 @@
 #include <Security/Security.h>
 #include <fts.h>
 #include <mach-o/dyld.h>
+#include <libproc.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -42,7 +43,6 @@ extern char **environ;
 
 #define PROTON_UPDATE_MAX_PATH 4096
 
-static char proton_update_current[PROTON_UPDATE_MAX_PATH];
 static char proton_update_previous[PROTON_UPDATE_MAX_PATH];
 static char proton_update_override[PROTON_UPDATE_MAX_PATH];
 
@@ -396,10 +396,8 @@ static int proton_update_write_revision_sidecar(const char *appimage_path,
    writes it into the read-only squashfs, so it is part of the authenticated
    artifact rather than a mutable sidecar beside it. Deriving the resource
    path from /proc/self/exe avoids trusting an inherited APPDIR value. The
-   sidecar fallback is retained only for native tests that override the running
-   AppImage path. */
-static int proton_update_read_revision(const char *appimage_path,
-                                       uint64_t *out_revision) {
+   native test override bypasses reading the running executable. */
+static int proton_update_read_packaged_revision(uint64_t *out_revision) {
   uint64_t packaged_revision = 0;
   if (proton_update_override[0] == '\0') {
     char executable[PROTON_UPDATE_MAX_PATH];
@@ -424,6 +422,14 @@ static int proton_update_read_revision(const char *appimage_path,
       }
     }
   }
+  *out_revision = packaged_revision;
+  return 1;
+}
+
+static int proton_update_read_revision(const char *appimage_path,
+                                       uint64_t *out_revision) {
+  uint64_t packaged_revision = 0;
+  if (!proton_update_read_packaged_revision(&packaged_revision)) return 0;
   char sidecar[PROTON_UPDATE_MAX_PATH];
   if (!proton_update_revision_sidecar(appimage_path, sidecar,
                                       sizeof(sidecar))) {
@@ -778,8 +784,6 @@ int32_t proton_update_stage_install_outcome(
     return PROTON_ERR_PLATFORM;
   }
   /* Record the current path for relaunch and the previous path for cleanup. */
-  snprintf(proton_update_current, sizeof(proton_update_current), "%s",
-           appimage_path);
   snprintf(proton_update_previous, sizeof(proton_update_previous), "%s",
            previous_path);
   /* Keep the old AppImage until the replacement completes startup. */
@@ -891,14 +895,14 @@ int32_t proton_update_install(const char *archive,
 }
 
 int32_t proton_update_relaunch(char *error, int32_t error_len) {
-  if (proton_update_current[0] == '\0') {
-    proton_update_set_message(error, error_len,
-                              "no application has been replaced");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  char current[PROTON_UPDATE_MAX_PATH];
+  if (!proton_update_running_appimage(current, sizeof(current))) {
+    proton_update_set_message(error, error_len, "the APPIMAGE path is not set");
+    return PROTON_ERR_PLATFORM;
   }
   pid_t pid = 0;
-  char *argv[] = {proton_update_current, NULL};
-  if (posix_spawn(&pid, proton_update_current, NULL, NULL, argv, environ) != 0) {
+  char *argv[] = {current, NULL};
+  if (posix_spawn(&pid, current, NULL, NULL, argv, environ) != 0) {
     proton_update_set_message(error, error_len,
                               "failed to relaunch the application");
     return PROTON_ERR_PLATFORM;
@@ -1572,13 +1576,17 @@ int32_t proton_update_install(const char *archive,
                                              error_len);
 }
 
+static HANDLE proton_update_instance_lock = NULL;
+
+int32_t proton_update_set_instance_lock(int64_t handle) {
+  if (proton_update_pending_installer == INVALID_HANDLE_VALUE) return 0;
+  proton_update_instance_lock = (HANDLE)(intptr_t)handle;
+  return 1;
+}
+
 int32_t proton_update_relaunch(char *error, int32_t error_len) {
-  if (proton_update_pending_installer == INVALID_HANDLE_VALUE ||
-      proton_update_pending_installer_path[0] == L'\0') {
-    proton_update_set_message(error, error_len,
-                              "no Windows installer is ready");
-    return PROTON_ERR_INVALID_ARGUMENT;
-  }
+  HANDLE instance_lock = proton_update_instance_lock;
+  proton_update_instance_lock = NULL;
   wchar_t exe_path[PROTON_UPDATE_MAX_PATH];
   wchar_t install_dir[PROTON_UPDATE_MAX_PATH];
   if (!proton_update_running_exe(exe_path, PROTON_UPDATE_MAX_PATH) ||
@@ -1586,17 +1594,56 @@ int32_t proton_update_relaunch(char *error, int32_t error_len) {
                                    PROTON_UPDATE_MAX_PATH)) {
     proton_update_set_message(error, error_len,
                               "failed to determine the update installation directory");
+    proton_update_discard_pending();
     return PROTON_ERR_PLATFORM;
   }
+  if (proton_update_pending_installer == INVALID_HANDLE_VALUE) {
+    /* Another process may already have installed the authenticated revision. */
+    SHELLEXECUTEINFOW launch;
+    ZeroMemory(&launch, sizeof(launch));
+    launch.cbSize = sizeof(launch);
+    launch.fMask = SEE_MASK_NOASYNC;
+    launch.lpVerb = L"open";
+    launch.lpFile = exe_path;
+    launch.nShow = SW_SHOWNORMAL;
+    if (!ShellExecuteExW(&launch)) {
+      proton_update_set_message(error, error_len, "failed to start the installed application");
+      return PROTON_ERR_PLATFORM;
+    }
+    return PROTON_OK;
+  }
+  FILETIME created, exited, kernel, user;
+  if (!GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernel, &user)) {
+    proton_update_set_message(error, error_len, "failed to identify the updating process");
+    proton_update_discard_pending();
+    return PROTON_ERR_PLATFORM;
+  }
+  ULARGE_INTEGER identity;
+  identity.LowPart = created.dwLowDateTime;
+  identity.HighPart = created.dwHighDateTime;
   /* NSIS requires /D last and unquoted, including paths containing spaces.
      Both-mode installers also use this directory to recover the install scope. */
-  wchar_t parameters[PROTON_UPDATE_MAX_PATH + 128];
+  HANDLE ready = NULL;
+  if (instance_lock != NULL) {
+    ready = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (ready == NULL) {
+      proton_update_set_message(error, error_len, "failed to create the installer handoff event");
+      proton_update_discard_pending();
+      return PROTON_ERR_PLATFORM;
+    }
+  }
+  wchar_t parameters[PROTON_UPDATE_MAX_PATH + 256];
   int written = _snwprintf(parameters, sizeof(parameters) / sizeof(parameters[0]),
-                           L"/S /PROTON-UPDATE=1 /PROTON-PID=%lu /D=%ls",
-                           (unsigned long)GetCurrentProcessId(), install_dir);
+                           L"/S /PROTON-UPDATE=1 /PROTON-PID=%lu /PROTON-CREATED=%llu /PROTON-LOCK=%llu /PROTON-READY=%llu /D=%ls",
+                           (unsigned long)GetCurrentProcessId(),
+                           (unsigned long long)identity.QuadPart,
+                           (unsigned long long)(uintptr_t)instance_lock,
+                           (unsigned long long)(uintptr_t)ready, install_dir);
   if (written < 0 || (size_t)written >= sizeof(parameters) / sizeof(parameters[0])) {
     proton_update_set_message(error, error_len,
                               "the update installer arguments are too long");
+    if (ready != NULL) CloseHandle(ready);
+    proton_update_discard_pending();
     return PROTON_ERR_PLATFORM;
   }
   SHELLEXECUTEINFOW execute;
@@ -1611,7 +1658,27 @@ int32_t proton_update_relaunch(char *error, int32_t error_len) {
   if (!ShellExecuteExW(&execute)) {
     proton_update_set_message(error, error_len,
                               "failed to start the Windows update installer");
+    if (ready != NULL) CloseHandle(ready);
+    proton_update_discard_pending();
     return PROTON_ERR_PLATFORM;
+  }
+  if (ready != NULL) {
+    HANDLE waits[] = {ready, execute.hProcess};
+    DWORD count = execute.hProcess != NULL ? 2 : 1;
+    DWORD result = WaitForMultipleObjects(count, waits, FALSE, 60000);
+    CloseHandle(ready);
+    if (result != WAIT_OBJECT_0) {
+      if (execute.hProcess != NULL) {
+        TerminateProcess(execute.hProcess, 1);
+        CloseHandle(execute.hProcess);
+      }
+      proton_update_set_message(error, error_len,
+          result == WAIT_TIMEOUT
+              ? "installer instance handoff timed out after 60000 ms"
+              : "the installer exited or the wait failed before accepting instance ownership");
+      proton_update_discard_pending();
+      return PROTON_ERR_PLATFORM;
+    }
   }
   if (execute.hProcess != NULL) {
     CloseHandle(execute.hProcess);
@@ -1619,13 +1686,17 @@ int32_t proton_update_relaunch(char *error, int32_t error_len) {
   CloseHandle(proton_update_pending_installer);
   proton_update_pending_installer = INVALID_HANDLE_VALUE;
   proton_update_pending_installer_path[0] = L'\0';
-  /* Keep the commit mutex until this process exits. The installer terminates
-     this exact process tree before replacing the installation, so the OS then
-     releases the mutex without a handoff race. */
+  /* The installer now keeps the application identity reserved while waiting
+     for this process and replacing the installation. */
   return PROTON_OK;
 }
 
 #else
+
+/* Installation can remove or rename the running executable. Retain the
+   authenticated installation destination instead of resolving that old file
+   again when launching the replacement. */
+static char proton_update_relaunch_bundle[PROTON_UPDATE_MAX_PATH];
 
 /* Returns the `.app` directory containing the running executable.
 
@@ -1695,7 +1766,11 @@ static int proton_update_run(char *const argv[]) {
     return 0;
   }
   int status = 0;
-  if (waitpid(child, &status, 0) != child) {
+  pid_t waited;
+  do {
+    waited = waitpid(child, &status, 0);
+  } while (waited < 0 && errno == EINTR);
+  if (waited != child) {
     return 0;
   }
   return WIFEXITED(status) && WEXITSTATUS(status) == 0;
@@ -2607,13 +2682,13 @@ static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
      install. */
   snprintf(proton_update_previous, sizeof(proton_update_previous), "%s",
            previous);
-  snprintf(proton_update_current, sizeof(proton_update_current), "%s", current);
   return PROTON_OK;
 }
 
 int32_t proton_update_stage_install_outcome(
     proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
     int32_t error_len) {
+  proton_update_relaunch_bundle[0] = '\0';
   if (out_outcome == NULL) {
     proton_update_set_message(error, error_len,
                               "an update install outcome is required");
@@ -2642,7 +2717,6 @@ int32_t proton_update_stage_install_outcome(
   }
   slot->fd = -1;
 
-  proton_update_current[0] = '\0';
   char staged_bundle_path[PROTON_UPDATE_MAX_PATH];
   status = proton_update_expand_staged_archive(
       slot, staged_bundle_path,
@@ -2724,12 +2798,18 @@ int32_t proton_update_stage_install_outcome(
   if (target_revision == current_revision) {
     close(lock_fd);
     *out_outcome = PROTON_UPDATE_ALREADY_INSTALLED;
+    snprintf(proton_update_relaunch_bundle, sizeof(proton_update_relaunch_bundle),
+             "%s", current);
     proton_update_stage_release(slot, 1);
     return PROTON_OK;
   }
   int preserve_staging = 0;
   status = proton_update_replace_bundle(staged_bundle_path, current,
                                         &preserve_staging, error, error_len);
+  if (status == PROTON_OK) {
+    snprintf(proton_update_relaunch_bundle, sizeof(proton_update_relaunch_bundle),
+             "%s", current);
+  }
   close(lock_fd);
   proton_update_stage_release(slot, !preserve_staging);
   return status;
@@ -2766,16 +2846,15 @@ int32_t proton_update_install(const char *archive,
 }
 
 int32_t proton_update_relaunch(char *error, int32_t error_len) {
-  if (proton_update_current[0] == '\0') {
-    proton_update_set_message(error, error_len,
-                              "no application has been replaced");
-    return PROTON_ERR_INVALID_ARGUMENT;
+  if (proton_update_relaunch_bundle[0] == '\0') {
+    proton_update_set_message(error, error_len, "no installed application is ready to launch");
+    return PROTON_ERR_PLATFORM;
   }
   /* `-n` asks Launch Services for a new instance rather than activating one
      that is already running. It does not give the replacement a fresh
      environment: `open` passes this process's environment on, which was
      established by running it. */
-  char *const argv[] = {"/usr/bin/open", "-n", proton_update_current, NULL};
+  char *const argv[] = {"/usr/bin/open", "-n", proton_update_relaunch_bundle, NULL};
   if (!proton_update_run(argv)) {
     proton_update_set_message(error, error_len,
                               "cannot start the replaced application");
@@ -2795,3 +2874,41 @@ int32_t proton_update_relaunch(char *error, int32_t error_len) {
 }
 
 #endif
+
+/* Run after acquiring the application identity: a process can have loaded the
+   old executable before replacement but reach App::run only after handoff. */
+int32_t proton_update_validate_running_image(char *error, int32_t error_len) {
+#if defined(__APPLE__)
+  char executable[PROTON_UPDATE_MAX_PATH];
+  uint32_t size = sizeof(executable);
+  struct stat installed;
+  struct proc_regionwithpathinfo running;
+  memset(&running, 0, sizeof(running));
+  if (_NSGetExecutablePath(executable, &size) != 0 ||
+      stat(executable, &installed) != 0 ||
+      proc_pidinfo(getpid(), PROC_PIDREGIONPATHINFO,
+                   (uint64_t)(uintptr_t)_dyld_get_image_header(0),
+                   &running, sizeof(running)) != sizeof(running) ||
+      running.prp_vip.vip_vi.vi_stat.vst_ino != (uint64_t)installed.st_ino ||
+      running.prp_vip.vip_vi.vi_stat.vst_dev != (uint32_t)installed.st_dev) {
+    proton_update_set_message(error, error_len,
+                              "the running executable was replaced; start the installed application again");
+    return PROTON_ERR_DESTROYED;
+  }
+#elif defined(__linux__)
+  const char *appimage = getenv("APPIMAGE");
+  if (appimage != NULL && appimage[0] != '\0') {
+    uint64_t running = 0, installed = 0;
+    if (!proton_update_read_packaged_revision(&running) ||
+        !proton_update_read_revision(appimage, &installed) || running < installed) {
+      proton_update_set_message(error, error_len,
+                                "the running AppImage was replaced; start the installed application again");
+      return PROTON_ERR_DESTROYED;
+    }
+  }
+#else
+  (void)error;
+  (void)error_len;
+#endif
+  return PROTON_OK;
+}

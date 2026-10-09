@@ -72,7 +72,14 @@ int main(int argc, char **argv) {
   proton_update_set_current_bundle_for_testing(argv[2]);
   char error[1024] = {0};
   int status;
-  if (strcmp(argv[1], "lock") == 0) {
+  if (strcmp(argv[1], "validate-image") == 0) {
+    status = proton_update_validate_running_image(error, sizeof(error));
+    if (status != PROTON_OK) return 2;
+    puts("LOADED");
+    fflush(stdout);
+    (void)getchar();
+    status = proton_update_validate_running_image(error, sizeof(error));
+  } else if (strcmp(argv[1], "lock") == 0) {
     int fd = -1;
     status = proton_update_acquire_commit_lock(argv[2], &fd, error, sizeof(error));
     if (status == PROTON_OK) {

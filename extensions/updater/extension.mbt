@@ -16,7 +16,7 @@ priv struct RendererOffer {
 ///
 /// Held here rather than handed to the page and passed back, because a page
 /// that could hand back an update could hand back a different one. What
-/// `download` installs is whatever this host authenticated, and there is no
+/// `download` prepares is whatever this host authenticated, and there is no
 /// argument that changes that.
 let offered : Ref[Map[String, RendererOffer]] = Ref(Map([]))
 
@@ -66,10 +66,10 @@ async fn check_for_page(
 }
 
 ///|
-/// Takes the update `download` may install, refusing when there is none.
+/// Takes the update `download` may prepare, refusing when there is none.
 ///
-/// Consumption happens before the first async install step, so concurrent
-/// renderer requests cannot install the same offer twice.
+/// Consumption happens before the first async download step, so concurrent
+/// renderer requests cannot download the same offer twice.
 fn take_offered(
   window : String,
   page_instance : String?,
@@ -87,7 +87,7 @@ fn take_offered(
 async fn download(
   context : @proton.CommandContext,
   _request : Unit,
-) -> @updater_contract.UpdateInstalled {
+) -> @updater_contract.UpdateDownloaded {
   let window = context.window_id()
   let update = take_offered(window, context.page_instance())
   let total = update.size()
@@ -99,11 +99,8 @@ async fn download(
       _ => ()
     }
   }
-  let outcome = update.install(on_progress=report)
-  @updater_contract.UpdateInstalled::{
-    version: update.version(),
-    changed: outcome is Installed,
-  }
+  update.download(on_progress=report)
+  @updater_contract.UpdateDownloaded::{ version: update.version(), }
 }
 
 ///|
