@@ -157,11 +157,10 @@ test "native Moon commands target macOS 12" {
 
 ///|
 test "frontend release requires dist" {
-  let config = @proton_config.ProjectConfig(
-    ".",
+  let config = @proton_config.AppConfig(
     "com.example.test",
     frontend=Some(
-      @proton_config.ProjectFrontendConfig(before_build=Some("npm run build")),
+      @proton_config.FrontendConfig(before_build=Some("npm run build")),
     ),
   )
   let error = expect_build_error_message(() => validate_release_config(config))
@@ -170,14 +169,13 @@ test "frontend release requires dist" {
 
 ///|
 async test "project resolution does not require frontend build output" {
-  let config = @proton_config.ProjectConfig(
-    ".",
+  let config = @proton_config.AppConfig(
     "com.example.test",
     frontend=Some(
-      @proton_config.ProjectFrontendConfig(dist=Some("missing-frontend-dist")),
+      @proton_config.FrontendConfig(dist=Some("missing-frontend-dist")),
     ),
   )
-  let invocation = project_build_invocation(".", config, RawBuildOptions::{
+  let invocation = project_build_invocation(".", { base_dir: ".", config, }, RawBuildOptions::{
     app_package: None,
     config_path: None,
     moon_target_dir: None,

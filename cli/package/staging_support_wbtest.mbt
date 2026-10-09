@@ -5,6 +5,10 @@ fn test_staging_plan(
 ) -> PackagePlan {
   PackagePlan::{
     root,
+    config: @proton_config.AppConfig(
+      "dev.proton.demo",
+      package_config=Some(@proton_config.PackageConfig("Demo & App", "1.2.3")),
+    ),
     app_package: "app",
     config_path: resolve_path(root, "proton.project.json"),
     product_name: "Demo & App",
@@ -109,3 +113,32 @@ test "Mach-O rejection reports the discovered filetype" {
 }
 
 ///|
+
+///|
+async test "packaged configuration retains frontend and platform fields" {
+  let root = @async_fs.tmpdir(prefix="proton-package-config-")
+  defer @async_fs.rmdir(root, recursive=true)
+  let config = @proton_config.AppConfig::parse(
+    (
+      #|{"identifier":"com.example.package","frontend":{"dev_url":"http://localhost:4300","path":"ui","dist":"dist"},"package":{"product_name":"Original","version":"1.0.0","platforms":{"windows":{"nsis_install_mode":"both"}}}}
+    ),
+  )
+  let plan = build_package_plan(
+    parse_package_args(["--product-name", "Renamed", "--version", "2.0.0"]),
+    resolve_path(root, "proton.project.json"),
+    config,
+    0UL,
+  )
+  write_package_manifest(plan, root)
+  let loaded = @proton_config.AppConfig::load(
+    resolve_path(root, "proton-package.json"),
+  )
+  assert_eq(loaded.frontend, config.frontend)
+  assert_eq(
+    loaded.package_config.unwrap().platforms,
+    config.package_config.unwrap().platforms,
+  )
+  assert_eq(loaded.package_config.unwrap().product_name, "Renamed")
+  assert_eq(loaded.package_config.unwrap().version, "2.0.0")
+  assert_eq(plan.frontend_dist, Some(resolve_path(root, "ui/dist")))
+}

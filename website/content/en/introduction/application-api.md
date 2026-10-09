@@ -33,7 +33,7 @@ Each returns an `App` builder. Shared options include width, height, debug mode 
 
 **Identity**
 
-`load_config()` loads managed application metadata, including the required identifier. An unmanaged application can set `identifier(...)` explicitly. The identifier is stable application identity; it is distinct from the window title, product display name and application version.
+`load_config()` reads the complete typed `AppConfig` once, including the required identifier. `config()` returns a snapshot with accessible `backend`, `frontend`, and `package_config` fields. `with_config(config)` supplies a typed configuration directly. These configuration entry points are mutually exclusive with `identifier(...)`. An unmanaged application can set `identifier(...)` explicitly. The identifier is stable application identity; it is distinct from the window title, product display name and application version.
 
 `app_path()`, `resource_dir()` and `is_packaged()` describe the execution environment. Development paths and packaged resources have different locations; frontend URLs are not backend filesystem paths.
 

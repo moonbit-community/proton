@@ -2,7 +2,6 @@ import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
   "moonbitlang/x/fs" @mbfs,
-  "moonbitlang/x/path" @mbpath,
 }
 
 supported_targets = "native+wasm"

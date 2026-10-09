@@ -110,28 +110,22 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   let raw = dev_options_from_matches(matches)
   let cwd = @path.Path(cwd).resolve().to_string()
   let config_path = resolve_dev_config_path(cwd, raw)
-  let project_config = read_dev_project_config(config_path)
-  let frontend_config = project_config.frontend()
-  let project_base = project_config.base_dir()
-  let frontend_url : String? = match raw.url {
-    Some(url) => Some(url)
-    None =>
-      match frontend_config {
-        Some(config) => config.dev_url()
-        None => None
-      }
+  let project = read_dev_project_config(config_path)
+  let project_config = effective_dev_config(project.config, raw)
+  project_config.validate() catch {
+    error => raise Invalid(path=config_path, error~)
   }
+  let frontend_config = project_config.frontend
+  let project_base = project.base_dir
+  let frontend_url = frontend_config
+    .map(config => config.dev_url)
+    .unwrap_or(None)
   let moon_target_dir = raw.moon_target_dir.map(path => {
     @fsutil.resolve_path(cwd, path)
   })
-  let frontend_command : String? = match raw.command {
-    Some(command) => Some(command)
-    None =>
-      match frontend_config {
-        Some(config) => config.before_dev()
-        None => None
-      }
-  }
+  let frontend_command = frontend_config
+    .map(config => config.before_dev)
+    .unwrap_or(None)
   validate_frontend_dev_url(frontend_url, raw.ready_path)
   let managed_frontend_command = managed_frontend_command(
     frontend_url,
@@ -141,35 +135,31 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
   if raw.start_frontend {
     ensure_frontend_url_available(frontend_url)
   }
-  let frontend_path : String? = match raw.frontend_path {
-    Some(path) => Some(@fsutil.resolve_path(project_base, path))
-    None =>
-      match frontend_config {
-        Some(config) => config.path()
-        None => None
-      }
-  }
+  let frontend_path = frontend_config.map(config => config.path).unwrap_or(None)
   let frontend_working_dir = resolve_frontend_path(
     project_base,
     frontend_path,
     managed_frontend_command is Some(_),
   )
-  let backend = project_config.backend()
+  let backend = project_config.backend
   let backend_path = resolve_backend_path(
     project_base,
-    backend.map(fn(config) { config.path() }),
+    backend.map(fn(config) { config.path }),
   )
-  let app_package = match raw.app_package {
-    Some(app_package) => app_package
-    None =>
-      match backend {
-        Some(config) => config.app_package()
-        None => default_package
-      }
-  }
+  let app_package = backend
+    .map(config => config.app_package)
+    .unwrap_or(default_package)
   let (runtime, helper_path) = ensure_dev_installation(raw.setup_installation)
+  let snapshot_dir = @async_fs.tmpdir(prefix="proton-dev-config-")
+  defer @async_fs.rmdir(snapshot_dir, recursive=true)
+  let snapshot_path = @fsutil.path_join(snapshot_dir, "proton.project.json")
+  @async_fs.write_file(
+    snapshot_path,
+    project_config.to_json().stringify(),
+    create_mode=CreateOrTruncate,
+  )
   let app_env = dev_process_env(
-    runtime, helper_path, frontend_url, project_base, config_path,
+    runtime, helper_path, frontend_url, project_base, snapshot_path,
   )
   let frontend_env = dev_frontend_process_env(
     app_env,
@@ -321,24 +311,49 @@ async fn resolve_dev_config_path(cwd : String, raw : RawDevOptions) -> String {
 ///|
 async fn read_dev_project_config(
   path : String,
-) -> @proton_config.ProjectConfig raise DevConfigError {
-  let source = @async_fs.read_file(path).text() catch {
-    error =>
-      raise Invalid(
-        path~,
-        error=@proton_config.ProjectConfigError::FileRead(
-          path~,
-          detail=@debug.render(Repr(error)),
-        ),
-      )
-  }
-  @proton_config.load_project_config_from_text(
-    source,
-    @fsutil.path_parent(path),
-    name=path,
-  ) catch {
+) -> @project.Project raise DevConfigError {
+  @project.load(path) catch {
     error => raise Invalid(path~, error~)
   }
+}
+
+///|
+fn effective_dev_config(
+  config : @proton_config.AppConfig,
+  raw : RawDevOptions,
+) -> @proton_config.AppConfig {
+  let frontend = if raw.url is Some(_) ||
+    raw.command is Some(_) ||
+    raw.frontend_path is Some(_) {
+    let frontend = config.frontend.unwrap_or(@proton_config.FrontendConfig())
+    Some({
+      ..frontend,
+      dev_url: match raw.url {
+        Some(value) => Some(value)
+        None => frontend.dev_url
+      },
+      before_dev: match raw.command {
+        Some(value) => Some(value)
+        None => frontend.before_dev
+      },
+      path: match raw.frontend_path {
+        Some(value) => Some(value)
+        None => frontend.path
+      },
+    })
+  } else {
+    config.frontend
+  }
+  let backend = match raw.app_package {
+    Some(app_package) => {
+      let backend = config.backend.unwrap_or(
+        @proton_config.BackendConfig(".", default_package),
+      )
+      Some({ ..backend, app_package, })
+    }
+    None => config.backend
+  }
+  { ..config, frontend, backend, }
 }
 
 ///|

@@ -73,7 +73,7 @@ Run `proton_cli dev` again. You should see “Hello from MoonBit”, a short par
 
 `@proton.html` creates the app builder. Its first argument is the window title; the second is the HTML document. The `#|` lines form a MoonBit multiline string.
 
-`.load_config()` loads the required application identity from the generated metadata. Keep this call. The display title alone is not an application identity.
+`.load_config()` loads the complete application configuration, including its required identity. Keep this call. The display title alone is not an application identity.
 
 `.run_or_abort()` runs until the app exits and reports startup/runtime failures. The entry is async, so retain the template's `moonbitlang/async` import.
 

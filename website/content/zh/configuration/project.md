@@ -165,3 +165,20 @@ Moon 默认将构建产物写入 _build/。前端输出位置取决于前端构�
   }
 }
 ```
+
+## 运行时配置
+
+`App::load_config()` 一次加载完整配置。`App::config()` 返回 `AppConfig`
+快照，嵌套章节是类型化的可选结构体。例如，`config.frontend` 包含
+`dev_url`、`path`、`dist`、`before_dev` 和 `before_build`。
+JSON 中的 `package` 对应 `config.package_config`，`backend.package`
+对应 `config.backend` 中的 `app_package` 字段。
+
+`proton_cli dev` 将 `--url`、`--command`、`--frontend-path` 和 `--package`
+覆盖后的生效配置传给应用。打包后的应用从 `proton-package.json` 加载完整配置。
+两种环境下，配置中的相对路径都保持原样。读取字段不会解析路径或执行命令。
+`name()` 和 `version()` 读取同一份快照，不再访问文件。
+
+应用也可以通过 `with_config(config)` 直接提供 `AppConfig`。
+缺少或无效的配置会使 `config()` 抛出 `AppConfigError`；构建器记录的配置错误
+也会阻止 `run()` 启动运行时。

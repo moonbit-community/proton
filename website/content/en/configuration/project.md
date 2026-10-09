@@ -165,3 +165,21 @@ The paths below are illustrative: referenced icons, resources and commands must 
   }
 }
 ```
+
+## Runtime configuration
+
+`App::load_config()` loads this complete configuration once. `App::config()`
+returns an `AppConfig` snapshot; nested sections are typed optional structs.
+For example, `config.frontend` exposes `dev_url`, `path`, `dist`, `before_dev`,
+and `before_build`. JSON `package` maps to `config.package_config`; JSON
+`backend.package` maps to `config.backend`'s `app_package` field.
+
+`proton_cli dev` passes the effective configuration after `--url`, `--command`,
+`--frontend-path`, and `--package` overrides. Packaged applications load the full
+configuration from `proton-package.json`. Relative paths remain relative in
+both environments. Reading a field does not resolve a path or run a command.
+`name()` and `version()` use the same snapshot and perform no further file I/O.
+
+Applications may provide `AppConfig` directly with `with_config(config)`.
+Missing or invalid configuration raises `AppConfigError` from `config()`;
+builder configuration errors also prevent `run()` from starting the runtime.

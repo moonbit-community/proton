@@ -1,7 +1,7 @@
 ///|
 pub(all) suberror PackageConfigError {
   NotFound(path~ : String)
-  Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
+  Invalid(path~ : String, error~ : @proton_config.AppConfigError)
   PackageMissing
   MissingField(field~ : String)
 } derive(Debug, Eq)

@@ -89,8 +89,10 @@ fn App::validation_error(self : App) -> AppConfigurationError? {
 fn App::resolved_app_config(self : App) -> ResolvedAppConfig {
   let manifest = self.inline_manifest()
   let identifier = match self.application_identity {
-    Some(ProjectConfig(identifier) | Explicit(identifier)) => identifier
-    None => abort("validated application identity is missing")
+    Some(Configured(config)) => config.identifier
+    Some(Explicit(identifier)) => identifier
+    None | Some(ConfigFailed(_)) =>
+      abort("validated application identity is missing")
   }
   ResolvedAppConfig::{
     manifest,

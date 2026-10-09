@@ -1,43 +1,30 @@
 ///|
-test "packaged application metadata exposes product name and version" {
-  let source =
-    #|{
-    #|  "schema_version": 1,
-    #|  "product_name": "Proton Notes",
-    #|  "version": "1.2.3"
-    #|}
-    #|
-  let metadata = packaged_application_metadata_from_json(source)
-  assert_eq(metadata.name, "Proton Notes")
-  assert_eq(metadata.version, "1.2.3")
-}
-
-///|
-test "packaged application metadata requires non-empty fields" {
-  try
-    packaged_application_metadata_from_json(
-      "{\"product_name\":\"Proton Notes\",\"version\":\"  \"}",
-    )
-  catch {
-    MissingField(field="version") => ()
-    _ => fail("expected the version field to be rejected")
-  } noraise {
-    _ => fail("expected packaged metadata validation to fail")
-  }
+test "complete configuration provides product metadata and frontend settings" {
+  let config = AppConfig::parse(
+    (
+      #|{"identifier":"com.example.notes","frontend":{"dev_url":"http://localhost:4300"},"package":{"product_name":"Notes","version":"1.2.3"}}
+    ),
+  )
+  let app = html("Test", "").with_config(config)
+  assert_eq(app.name(), "Notes")
+  assert_eq(app.version(), "1.2.3")
+  assert_eq(
+    app.config().frontend.unwrap().dev_url,
+    Some("http://localhost:4300"),
+  )
 }
 
 ///|
 test "project application metadata uses package configuration" {
-  let config = @proton_config.ProjectConfig(
-    "/workspace/notes",
+  let config = @proton_config.AppConfig(
     "dev.proton.notes",
     package_config=Some(
-      @proton_config.ProjectPackageConfig("  Proton Notes  ", " 1.2.3 "),
+      @proton_config.PackageConfig("  Proton Notes  ", " 1.2.3 "),
     ),
   )
-  let metadata = project_application_metadata(config)
-  assert_eq(metadata.name, "Proton Notes")
-  assert_eq(metadata.version, "1.2.3")
+  let app = html("Test", "").with_config(config)
+  assert_eq(app.name(), "Proton Notes")
+  assert_eq(app.version(), "1.2.3")
 }
 
 ///|
@@ -62,11 +49,9 @@ test "packaged resource roots follow each bundle layout" {
 
 ///|
 test "project application metadata requires package configuration" {
-  let config = @proton_config.ProjectConfig(
-    "/workspace/notes", "dev.proton.notes",
-  )
-  try project_application_metadata(config) catch {
-    MissingPackageMetadata => ()
+  let config = @proton_config.AppConfig("dev.proton.notes")
+  try html("Test", "").with_config(config).name() catch {
+    @proton_config.MissingField(path="package.product_name") => ()
     _ => fail("expected missing package metadata")
   } noraise {
     _ => fail("expected project metadata validation to fail")
