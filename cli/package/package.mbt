@@ -275,16 +275,74 @@ async fn build_package_plan(
   } else {
     raw.package_args.url_schemes
   }
+  let macos_minimum_system_version = raw.package_args.macos_minimum_system_version.map_or(
+    package_config.platforms.macos.map_or(None, config => {
+      config.minimum_system_version
+    }),
+    value => Some(value),
+  )
+  let format_names = formats.map(format => format.to_string())
+  let platforms = package_config.platforms
+  let host_config = @proton_config.PlatformPackageConfig(formats=format_names)
+  let platforms = match @packager.current_package_host() {
+    Macos =>
+      {
+        ..platforms,
+        macos: Some({
+          ..platforms.macos.unwrap_or(host_config),
+          formats: Some(format_names),
+        }),
+      }
+    Windows =>
+      {
+        ..platforms,
+        windows: Some({
+          ..platforms.windows.unwrap_or(host_config),
+          formats: Some(format_names),
+        }),
+      }
+    Linux =>
+      {
+        ..platforms,
+        linux: Some({
+          ..platforms.linux.unwrap_or(host_config),
+          formats: Some(format_names),
+        }),
+      }
+  }
+  let platforms = {
+    ..platforms,
+    macos: match macos_minimum_system_version {
+      Some(value) =>
+        Some({
+          ..platforms.macos.unwrap_or(@proton_config.PlatformPackageConfig()),
+          minimum_system_version: Some(value),
+        })
+      None => platforms.macos
+    },
+    windows: Some({
+      ..platforms.windows.unwrap_or(@proton_config.PlatformPackageConfig()),
+      nsis_install_mode: Some(nsis_install_mode.to_string()),
+    }),
+  }
   PackagePlan::{
     root: backend_root,
     app_package,
     config_path,
     config: {
       ..project,
+      backend: Some({
+        ..project.backend.unwrap_or(
+          @proton_config.BackendConfig(".", app_package),
+        ),
+        app_package,
+      }),
       package_config: Some({
         ..package_config,
         product_name,
         version,
+        formats: format_names,
+        platforms,
         icons,
         url_schemes,
         output: raw.package_args.output.unwrap_or(package_config.output),
@@ -309,15 +367,7 @@ async fn build_package_plan(
     icons: icons.map(icon => @fsutil.resolve_path(base_dir, icon)),
     url_schemes,
     document_types: package_config.document_types,
-    macos_minimum_system_version: match
-      raw.package_args.macos_minimum_system_version {
-      Some(value) => Some(value)
-      None =>
-        match package_config.platforms.macos {
-          Some(config) => config.minimum_system_version
-          None => None
-        }
-    },
+    macos_minimum_system_version,
     nsis_install_mode,
     sign: raw.package_args.sign,
     notarize: raw.package_args.notarize,

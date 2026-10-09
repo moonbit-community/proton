@@ -35,7 +35,8 @@ Configuration paths retain their original relative spelling. The CLI resolves
 them relative to the project file when executing commands.
 
 `App::with_config(config)` accepts an `AppConfig` directly. It is mutually
-exclusive with `.load_config()` and `.identifier(...)`. Configuration snapshots
+exclusive with `.load_config()` and `.identifier(...)`. In packaged applications,
+its identifier must match the bundled configuration. Configuration snapshots
 are copied at the application boundary, so modifying an array in a returned
 configuration does not change the running application's state.
 

@@ -58,3 +58,41 @@ test "invalid explicit configuration keeps its diagnostic" {
     _ => fail("expected config to fail")
   }
 }
+
+///|
+async test "explicit configuration must match bundled identity" {
+  let executable = @mbpath.Path(@env.args()[0]).resolve()
+  let directory = if @mbpath.sep == '\\' {
+    executable.dirname()
+  } else {
+    executable.dirname().join("../Resources").normalize()
+  }
+  let created_directory = !(@mbfs.is_dir(directory.to_string()) catch {
+      _ => false
+    })
+  if created_directory {
+    @async_fs.mkdir(directory.to_string())
+  }
+  defer (if created_directory { @async_fs.rmdir(directory.to_string()) })
+  let path = directory.join("proton-package.json").to_string()
+  assert_false(@mbfs.is_file(path) catch { _ => false })
+  @async_fs.write_file(
+    path,
+    AppConfig("com.example.packaged").to_json().stringify(),
+    create_mode=CreateOrTruncate,
+  )
+  defer @async_fs.remove(path)
+  let matching = html("Test", "").with_config(AppConfig("com.example.packaged"))
+  assert_true(matching.validation_errors.is_empty())
+  let mismatching = html("Test", "").with_config(AppConfig("com.example.other"))
+  assert_eq(mismatching.validation_errors.length(), 1)
+  assert_true(
+    mismatching.validation_errors[0].message().contains("com.example.packaged"),
+  )
+  try mismatching.config() catch {
+    @proton_config.InvalidField(path="identifier", ..) => ()
+    _ => fail("expected bundled identity diagnostic")
+  } noraise {
+    _ => fail("mismatching configuration must not be installed")
+  }
+}

@@ -13,16 +13,21 @@ pub using @proton_config {
 }
 
 ///|
-/// Supplies a complete configuration snapshot without reading a file.
+/// Supplies a complete configuration snapshot.
+/// Packaged applications also verify the identifier against bundled metadata.
 pub fn App::with_config(self : App, config : AppConfig) -> App {
   try {
     config.validate()
-    let config = {
-      ..config.copy(),
-      identifier: @proton_config.validate_application_identifier(
-        config.identifier,
-      ),
+    let identifier = match
+      resolve_explicit_application_identifier(config.identifier) {
+      Ok(identifier) => identifier
+      Err(error) =>
+        raise @proton_config.InvalidField(
+          path="identifier",
+          expectation=error.message(),
+        )
     }
+    let config = { ..config.copy(), identifier, }
     self.set_application_identity(Configured(config))
   } catch {
     error => {

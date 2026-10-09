@@ -34,3 +34,5 @@ not require enabling `PROTON_CEF_LOG`.
 Project paths are resolved by the CLI, without replacing the relative values
 in the configuration. `dev` passes a per-launch configuration snapshot with CLI
 overrides to the application; the source project file is not modified.
+`package` likewise embeds the effective configuration, including CLI overrides
+for the backend package, formats, and platform settings.
