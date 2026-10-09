@@ -156,6 +156,7 @@ fn RuntimeSession::application_context(
     self.environment.locale_preferences,
     request_quit=exit_code => self.request_quit(exit_code),
     request_exit=exit_code => self.request_exit(exit_code),
+    request_update_install=() => self.request_update_install(),
     has_single_instance_lock=() => self.has_single_instance_lock(),
     release_single_instance_lock=() => self.release_single_instance_lock(),
     application_identifier=self.config.application_identifier,
@@ -4453,8 +4454,43 @@ fn RuntimeSession::request_quit(self : RuntimeSession, exit_code : Int) -> Unit 
 }
 
 ///|
+fn RuntimeSession::request_update_install(
+  self : RuntimeSession,
+) -> Unit raise AppControlError {
+  guard self.updates.channel is Some(_) else {
+    raise NativeControlFailure(
+      action="quit and install update",
+      status=-1,
+      detail="the application is stopping or has stopped",
+    )
+  }
+  if self.updates.install_requested {
+    return
+  }
+  guard self.updates.prepared is Some(_) else {
+    raise NativeControlFailure(
+      action="quit and install update",
+      status=-1,
+      detail="no downloaded update is ready",
+    )
+  }
+  guard self.updates.accepting &&
+    !self.updates.relaunch_scheduled &&
+    !self.is_quitting() else {
+    raise NativeControlFailure(
+      action="quit and install update",
+      status=-1,
+      detail="another exit or relaunch is already pending",
+    )
+  }
+  self.updates.install_requested = true
+  self.request_quit(0)
+}
+
+///|
 fn RuntimeSession::request_exit(self : RuntimeSession, exit_code : Int) -> Unit {
   if self.close_coordinator.begin_forced_exit(exit_code) {
+    self.updates.install_requested = false
     self.wakeup.signal.notify()
   }
 }
@@ -4470,6 +4506,7 @@ fn RuntimeSession::resolved_exit(self : RuntimeSession) -> ApplicationExit {
   {
     exit_code: self.close_coordinator.exit_code,
     forced: self.close_coordinator.forced,
+    update: None,
   }
 }
 
@@ -4652,6 +4689,7 @@ fn RuntimeSession::advance_quit_decision(
 fn RuntimeSession::begin_quit_event(
   self : RuntimeSession,
 ) -> Unit raise AppRunError {
+  self.updates.accepting = false
   // The quit can no longer be cancelled from here on, so a later launch of the
   // same application must not start new windows.
   self.runtime.stop_app_activations() catch {
@@ -4707,6 +4745,7 @@ fn RuntimeSession::advance_quit_event(self : RuntimeSession) -> Bool {
 /// already closed stay closed, and the automatic last-window quit is not
 /// retried until a window is created again.
 fn RuntimeSession::cancel_quit_transaction(self : RuntimeSession) -> Unit {
+  self.updates.install_requested = false
   self.close_coordinator.pending_quit = None
   self.close_coordinator.forced = false
   self.close_coordinator.exit_code = 0

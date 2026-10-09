@@ -523,6 +523,7 @@ test "forced exits escalate a quit chain and stop committing changes" {
 async test "application context forwards orderly and forced exit requests" {
   let requested = Ref(0)
   let forced = Ref(0)
+  let update_requested = Ref(false)
   let released = Ref(false)
   @async.with_task_group(group => {
     let context = ApplicationContext(
@@ -532,9 +533,12 @@ async test "application context forwards orderly and forced exit requests" {
       @locale.LocalePreferences::resolve(None, []),
       request_quit=fn(exit_code) { requested.val = exit_code },
       request_exit=fn(exit_code) { forced.val = exit_code },
+      request_update_install=fn() { update_requested.val = true },
       has_single_instance_lock=fn() { !released.val },
       release_single_instance_lock=fn() { released.val = true },
     )
+    context.quit_and_install()
+    assert_true(update_requested.val)
     context.quit(exit_code=5)
     context.exit(exit_code=9)
     assert_true(context.has_single_instance_lock())
@@ -1007,11 +1011,11 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "titlebar overlay is not supported in headless mode")
-      ApplicationExit::{ exit_code: 0, forced: false, }
+      ApplicationExit::{ exit_code: 0, forced: false, update: None, }
     }
     error => {
       fail("expected configuration error, got " + @debug.render(Repr(error)))
-      ApplicationExit::{ exit_code: 0, forced: false, }
+      ApplicationExit::{ exit_code: 0, forced: false, update: None, }
     }
   }
   ignore(outcome)
@@ -1040,11 +1044,11 @@ async test "headless mode rejects native menus before runtime startup" {
     ConfigurationError(InvalidSetting(name="headless", message~)) => {
       rejected = true
       assert_eq(message, "native menus are not supported in headless mode")
-      ApplicationExit::{ exit_code: 0, forced: false, }
+      ApplicationExit::{ exit_code: 0, forced: false, update: None, }
     }
     error => {
       fail("expected configuration error, got " + @debug.render(Repr(error)))
-      ApplicationExit::{ exit_code: 0, forced: false, }
+      ApplicationExit::{ exit_code: 0, forced: false, update: None, }
     }
   }
   ignore(outcome)

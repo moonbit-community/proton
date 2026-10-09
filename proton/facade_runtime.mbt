@@ -65,9 +65,28 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       app_instance~,
       failure_log~,
     )
+    defer (if outcome.update is Some(update) {
+      update.discard() catch {
+        _ => ()
+      }
+    })
     match app_instance {
       Some(instance) => destroy_app_instance(instance)
       None => ()
+    }
+    if outcome.update is Some(update) {
+      try {
+        ignore(update.install())
+        @updater.relaunch()
+      } catch {
+        error =>
+          raise RuntimeOperationFailed(
+            action="install and restart application",
+            status=-1,
+            detail=error.message(),
+          )
+      }
+      @native.process_exit(0)
     }
     @native.process_run_relaunches() catch {
       error => raise native_run_error("relaunch application", error)
@@ -263,13 +282,19 @@ async fn run_manifest(
       }
     None => ()
   }
-  let updates = ApplicationUpdates::{ channel: config.update_channel, }
+  let updates = ApplicationUpdates(config.update_channel)
   active_application_updates.val = Some(updates)
   defer {
+    updates.accepting = false
+    updates.discard()
     updates.channel = None
     active_application_updates.val = None
   }
-  let outcome = Ref(ApplicationExit::{ exit_code: 0, forced: false, })
+  let outcome = Ref(ApplicationExit::{
+    exit_code: 0,
+    forced: false,
+    update: None,
+  })
   try {
     if !config.headless {
       let platform = @native.runtime_info().platform catch {
@@ -471,7 +496,7 @@ async fn run_manifest(
             lifecycle.begin_running()
             cleanup_previous_update()
             start_update_check(
-              config.update_channel,
+              updates,
               config.update_handlers,
               application_tasks,
             )
@@ -541,7 +566,14 @@ async fn run_manifest(
     Some(error) => raise error
     None => ()
   }
-  outcome.val
+  let update = if updates.install_requested {
+    let prepared = updates.prepared
+    updates.prepared = None
+    prepared
+  } else {
+    None
+  }
+  { ..outcome.val, update, }
 }
 
 ///|

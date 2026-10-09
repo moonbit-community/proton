@@ -43,6 +43,7 @@ test "NSIS installation scopes wire permissions contexts and pages" {
       #|
       #|Var ProtonUpdate
       #|Var ProtonUpdatePid
+      #|Var ProtonUpdateCreated
       #|Name "Demo App"
       #|OutFile "demo-app-setup.exe"
       #|RequestExecutionLevel user
@@ -59,6 +60,7 @@ test "NSIS installation scopes wire permissions contexts and pages" {
       #|  ${GetParameters} $R0
       #|  ${GetOptions} $R0 "/PROTON-UPDATE=" $ProtonUpdate
       #|  ${GetOptions} $R0 "/PROTON-PID=" $ProtonUpdatePid
+      #|  ${GetOptions} $R0 "/PROTON-CREATED=" $ProtonUpdateCreated
       #|  ${If} $ProtonUpdate == "1"
       #|  ${AndIf} $ProtonUpdatePid == ""
       #|    Abort "The update process id is missing."
@@ -99,6 +101,7 @@ test "NSIS installation scopes wire permissions contexts and pages" {
       #|
       #|Var ProtonUpdate
       #|Var ProtonUpdatePid
+      #|Var ProtonUpdateCreated
       #|Name "Demo App"
       #|OutFile "demo-app-setup.exe"
       #|RequestExecutionLevel admin
@@ -115,6 +118,7 @@ test "NSIS installation scopes wire permissions contexts and pages" {
       #|  ${GetParameters} $R0
       #|  ${GetOptions} $R0 "/PROTON-UPDATE=" $ProtonUpdate
       #|  ${GetOptions} $R0 "/PROTON-PID=" $ProtonUpdatePid
+      #|  ${GetOptions} $R0 "/PROTON-CREATED=" $ProtonUpdateCreated
       #|  ${If} $ProtonUpdate == "1"
       #|  ${AndIf} $ProtonUpdatePid == ""
       #|    Abort "The update process id is missing."
@@ -156,6 +160,7 @@ test "NSIS installation scopes wire permissions contexts and pages" {
       #|
       #|Var ProtonUpdate
       #|Var ProtonUpdatePid
+      #|Var ProtonUpdateCreated
       #|Name "Demo App"
       #|OutFile "demo-app-setup.exe"
       #|!define MULTIUSER_MUI
@@ -191,6 +196,7 @@ test "NSIS installation scopes wire permissions contexts and pages" {
       #|  ${GetParameters} $R0
       #|  ${GetOptions} $R0 "/PROTON-UPDATE=" $ProtonUpdate
       #|  ${GetOptions} $R0 "/PROTON-PID=" $ProtonUpdatePid
+      #|  ${GetOptions} $R0 "/PROTON-CREATED=" $ProtonUpdateCreated
       #|  ${If} $ProtonUpdate == "1"
       #|  ${AndIf} $ProtonUpdatePid == ""
       #|    Abort "The update process id is missing."

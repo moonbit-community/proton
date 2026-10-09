@@ -438,6 +438,7 @@ priv struct PendingCloseDecision {
 priv struct ApplicationExit {
   exit_code : Int
   forced : Bool
+  update : @updater.PreparedUpdate?
 }
 
 ///|

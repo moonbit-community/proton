@@ -330,13 +330,25 @@ The automatic check runs after successful startup and reports failures through l
 
 An offered `PendingUpdate` has passed manifest trust, freshness and revision checks. It exposes version, revision, size and optional notes URL, but the artifact has not yet been downloaded.
 
-**Install and restart**
+**Download and installation**
 
-Installation is explicit: `PendingUpdate.install()` downloads into a private stage and verifies size, digest and signature before the stage can be consumed. Inspect `UpdateInstallOutcome` rather than assuming every platform has already replaced its files. macOS and Linux apply the replacement during install; Windows retains a verified NSIS installer for restart.
+`PendingUpdate.download()` writes the artifact into a private stage and verifies its size, digest and signature. It does not replace application files or exit on any platform. Repeated downloads of the same prepared revision are a no-op.
 
-`PendingUpdate.restart()` requests launching the replacement; the caller should then exit. A successful request means the OS accepted the launch, not that the new process reached readiness. Checking or receiving an update notification never implicitly installs an update.
+After downloading, call `ApplicationContext.quit_and_install()` when the user chooses to apply the update:
 
-Keep the application's unsaved-work decisions separate from checking and downloading. Use the [quit lifecycle](#application-lifecycle) for exit decisions. Old managed update artifacts are cleaned after successful startup, so a newly staged package is not evidence that startup succeeded.
+```moonbit
+match context.check_for_update() {
+  Available(update) => {
+    update.download()
+    context.quit_and_install()
+  }
+  UpToDate | NotConfigured => ()
+}
+```
+
+The request follows the [quit lifecycle](#application-lifecycle). Preventing quit cancels installation and retains the download for another attempt. Once quit is accepted, Proton closes the runtime, completes cleanup and releases its single-instance lock before installing and launching the replacement. Windows starts its NSIS installer, which waits for the old process to exit; macOS and Linux replace their application artifact. Successful handoff terminates the old process, including when the exit code is zero.
+
+The method returns when the request is accepted, not when the new version is ready. Missing downloads and conflicting exit or relaunch requests fail immediately; later installation or launch failures are reported through `App::run()`. A forced `exit()` supersedes a pending update request. Ordinary quit discards the download without installing. Cleanup failure prevents installation. Old managed update artifacts are removed after the replacement successfully starts.
 
 **Publisher responsibilities**
 

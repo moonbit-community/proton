@@ -1,5 +1,4 @@
 import {
-  "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbit-community/proton_rsa" @rsa,
   "moonbit-community/proton/internal/native",
@@ -14,7 +13,9 @@ import {
 }
 
 import {
+  "moonbitlang/async",
   "moonbitlang/async/socket",
+  "moonbitlang/async/fs" @async_fs,
 } for "wbtest"
 
 supported_targets = "native"

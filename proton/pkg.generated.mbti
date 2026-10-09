@@ -390,6 +390,7 @@ pub fn ApplicationContext::is_hidden(Self) -> Bool raise AppControlError
 pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn ApplicationContext::quit(Self, exit_code? : Int) -> Unit
+pub fn ApplicationContext::quit_and_install(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::relaunch(Self, options? : RelaunchOptions) -> Unit raise AppControlError
 pub fn ApplicationContext::release_single_instance_lock(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::remove_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
@@ -821,10 +822,10 @@ pub struct PendingUpdate {
   size : Int64
   channel : @updater.UpdateChannel
   offer : @updater.AvailableUpdate
+  // private fields
 }
-pub async fn PendingUpdate::install(Self, on_progress? : async (Int64) -> Unit noraise) -> UpdateInstallOutcome
+pub async fn PendingUpdate::download(Self, on_progress? : async (Int64) -> Unit noraise) -> Unit
 pub fn PendingUpdate::notes_url(Self) -> String?
-pub fn PendingUpdate::restart(Self) -> Unit raise
 pub fn PendingUpdate::revision(Self) -> UInt64
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
@@ -981,14 +982,6 @@ pub enum UpdateCheck {
   UpToDate
   Available(PendingUpdate)
 }
-
-pub enum UpdateInstallOutcome {
-  Installed
-  AlreadyInstalled
-} derive(Eq, @debug.Debug)
-pub fn UpdateInstallOutcome::equal(Self, Self) -> Bool
-pub fn UpdateInstallOutcome::not_equal(Self, Self) -> Bool
-pub fn UpdateInstallOutcome::to_repr(Self) -> @debug.Repr
 
 pub struct ViewConfig {
   x : Int

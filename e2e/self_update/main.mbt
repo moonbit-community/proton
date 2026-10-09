@@ -112,7 +112,15 @@ async fn run_update() -> Unit {
     UpToDate => println("up to date")
     Available(update) => {
       println("offered \{update.version()}")
-      ignore(channel.download_and_install(artifact_fetch, update))
+      let prepared = channel.download(artifact_fetch, update)
+      defer (prepared.discard() catch { _ => () })
+      assert_eq(@updater.current_revision(), current_revision)
+      assert_eq(
+        @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version"),
+        text,
+      )
+      println("downloaded without replacing the running application")
+      ignore(prepared.install())
       println("installed")
       @updater.relaunch()
       println("relaunched")

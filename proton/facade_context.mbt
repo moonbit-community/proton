@@ -8,6 +8,7 @@ pub struct ApplicationContext {
   locale_preferences : @locale.LocalePreferences
   request_quit : (Int) -> Unit
   request_exit : (Int) -> Unit
+  priv request_update_install : () -> Unit raise AppControlError
   has_single_instance_lock : () -> Bool
   release_single_instance_lock : () -> Unit raise AppControlError
   application_identifier : String
@@ -56,11 +57,18 @@ priv struct WindowLifecycleHook {
 ///|
 fn ApplicationContext::ApplicationContext(
   session~ : SessionHandle,
-  updates? : ApplicationUpdates = ApplicationUpdates::{ channel: None, },
+  updates? : ApplicationUpdates = ApplicationUpdates(None),
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
   request_quit? : (Int) -> Unit = fn(_exit_code) {  },
+  request_update_install? : () -> Unit raise AppControlError = fn() -> Unit raise AppControlError {
+    raise NativeControlFailure(
+      action="quit and install update",
+      status=-1,
+      detail="no active application",
+    )
+  },
   request_exit? : (Int) -> Unit = fn(exit_code) {
     @native.process_exit(exit_code)
   },
@@ -79,6 +87,7 @@ fn ApplicationContext::ApplicationContext(
     locale_preferences,
     request_quit,
     request_exit,
+    request_update_install,
     has_single_instance_lock,
     release_single_instance_lock,
     application_identifier,
@@ -311,11 +320,19 @@ pub fn ApplicationContext::relaunch(
   self : ApplicationContext,
   options? : RelaunchOptions,
 ) -> Unit raise AppControlError {
+  guard !self.updates.install_requested else {
+    raise NativeControlFailure(
+      action="schedule application relaunch",
+      status=-1,
+      detail="an update exit is pending",
+    )
+  }
   let (executable, arguments) = self.relaunch_command(options)
   @native.process_schedule_relaunch(executable, arguments) catch {
     error =>
       raise app_control_native_error("schedule application relaunch", error)
   }
+  self.updates.relaunch_scheduled = true
 }
 
 ///|

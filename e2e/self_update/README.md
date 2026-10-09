@@ -21,6 +21,7 @@ cannot cover the things that only exist in a real installation:
   by a test hook,
 - the chain runs against artifacts signed by a real RSA key, with real SHA-256
   digests and a real manifest,
+- downloading retains the authenticated artifact without changing the installed revision or application files,
 - the replacement actually starts. The relaunched process writes its own line
   to `relaunched.txt`, and that line is the only evidence — by then the process
   that started it has exited,

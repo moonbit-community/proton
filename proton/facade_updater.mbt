@@ -19,6 +19,43 @@ let update_check_jitter_ms : Int = 40 * 1000
 /// Shared by a session and its contexts, invalidated when that application ends.
 priv struct ApplicationUpdates {
   mut channel : ResolvedUpdateChannel?
+  mut prepared : @updater.PreparedUpdate?
+  mut prepared_revision : UInt64?
+  mut install_requested : Bool
+  mut accepting : Bool
+  mut relaunch_scheduled : Bool
+  download_mutex : @async.Mutex
+}
+
+///|
+fn ApplicationUpdates::ApplicationUpdates(
+  channel : ResolvedUpdateChannel?,
+) -> ApplicationUpdates {
+  {
+    channel,
+    prepared: None,
+    prepared_revision: None,
+    install_requested: false,
+    accepting: true,
+    relaunch_scheduled: false,
+    download_mutex: @async.Mutex::Mutex(),
+  }
+}
+
+///|
+fn ApplicationUpdates::discard(self : ApplicationUpdates) -> Unit {
+  if self.prepared is Some(prepared) {
+    prepared.discard() catch {
+      error =>
+        @xlog.warn(category="proton.updater") <?
+          {
+            "message": "downloaded update cleanup failed",
+            "detail": error.to_string(),
+          }
+    }
+    self.prepared = None
+    self.prepared_revision = None
+  }
 }
 
 ///|
@@ -64,7 +101,7 @@ async fn ApplicationUpdates::check(self : ApplicationUpdates) -> UpdateCheck {
   match self.channel {
     None => NotConfigured
     Some(channel) =>
-      match channel.poll() {
+      match channel.poll(self) {
         Some(update) => Available(update)
         None => UpToDate
       }
@@ -84,6 +121,7 @@ pub struct PendingUpdate {
   size : Int64
   channel : @updater.UpdateChannel
   offer : @updater.AvailableUpdate
+  priv updates : ApplicationUpdates
 }
 
 ///|
@@ -99,19 +137,6 @@ pub fn PendingUpdate::revision(self : PendingUpdate) -> UInt64 {
 }
 
 ///|
-/// What applying an update changed.
-pub enum UpdateInstallOutcome {
-  Installed
-  AlreadyInstalled
-} derive(Debug, Eq)
-
-///|
-pub extend UpdateInstallOutcome with Eq::{not_equal, equal}
-
-///|
-pub extend UpdateInstallOutcome with Debug::{to_repr}
-
-///|
 /// Where the release notes for it live, when the manifest says.
 pub fn PendingUpdate::notes_url(self : PendingUpdate) -> String? {
   self.notes_url
@@ -124,42 +149,58 @@ pub fn PendingUpdate::size(self : PendingUpdate) -> Int64 {
 }
 
 ///|
-/// Downloads this update and prepares or applies its platform replacement.
-///
-/// Downloaded chunks are written only to a private native stage while their
-/// size, digest, and signature are checked. The stage cannot be consumed
-/// unless that authentication completes. macOS and Linux replace the installed
-/// artifact here. Windows keeps the verified NSIS installer locked until
-/// `restart`, because the running process cannot replace its own install tree.
-/// The application is not restarted — see `restart`.
-///
-/// This is deliberately not something the framework does on its own. Checking
-/// without being asked is a reasonable default; installing without being asked
-/// changes the code someone is running, and only the application knows whether
-/// this is a moment when that is acceptable.
-pub async fn PendingUpdate::install(
+/// Downloads and verifies this update without replacing files or exiting.
+/// The application retains the download until `quit_and_install` or shutdown.
+/// Repeating the same download is a no-op while it remains prepared.
+pub async fn PendingUpdate::download(
   self : PendingUpdate,
   on_progress? : async (Int64) -> Unit noraise = _ => (),
-) -> UpdateInstallOutcome {
-  match
-    self.channel.download_and_install(
-      @updater.http_fetch_artifact,
-      self.offer,
-      on_progress~,
-    ) {
-    @updater.Installed => Installed
-    @updater.AlreadyInstalled => AlreadyInstalled
+) -> Unit {
+  let updates = self.updates
+  updates.download_mutex.acquire()
+  defer updates.download_mutex.release()
+  guard updates.channel is Some(_) &&
+    updates.accepting &&
+    !updates.install_requested else {
+    raise @updater.InstallFailed(
+      step="download update",
+      detail="the application is stopping or has stopped",
+    )
   }
+  if updates.prepared_revision == Some(self.revision) {
+    return
+  }
+  if updates.prepared_revision is Some(revision) && revision > self.revision {
+    raise @updater.RollbackRejected(target=self.revision, installed=revision)
+  }
+  let prepared = self.channel.download(
+    @updater.http_fetch_artifact,
+    self.offer,
+    on_progress~,
+  )
+  guard updates.channel is Some(_) &&
+    updates.accepting &&
+    !updates.install_requested else {
+    prepared.discard()
+    raise @updater.InstallFailed(
+      step="download update",
+      detail="the application stopped accepting updates during download",
+    )
+  }
+  updates.discard()
+  updates.prepared = Some(prepared)
+  updates.prepared_revision = Some(self.revision)
 }
 
 ///|
-/// Starts the installed replacement. The caller should exit afterwards.
-///
-/// Returning without an error means the system accepted the request, not that
-/// the new version is running: it decides that afterwards and does not report
-/// back.
-pub fn PendingUpdate::restart(_self : PendingUpdate) -> Unit raise {
-  @updater.relaunch()
+/// Requests orderly exit, installation of the downloaded update, and restart.
+/// A prevented quit retains the download for a later request. Installation
+/// starts only after cleanup succeeds. Returning accepts the request; later
+/// installation or launch errors are reported by `App::run`.
+pub fn ApplicationContext::quit_and_install(
+  self : ApplicationContext,
+) -> Unit raise AppControlError {
+  (self.request_update_install)()
 }
 
 ///|
@@ -181,6 +222,7 @@ fn ResolvedUpdateChannel::open(
 /// Asks the channel whether a newer release is on offer.
 async fn ResolvedUpdateChannel::poll(
   self : ResolvedUpdateChannel,
+  updates : ApplicationUpdates,
 ) -> PendingUpdate? {
   // The staging directory is resolved when an update is taken, not here. A
   // check that has found nothing should not have created anything.
@@ -196,6 +238,7 @@ async fn ResolvedUpdateChannel::poll(
         size: offer.size(),
         channel,
         offer,
+        updates,
       })
   }
 }
@@ -209,15 +252,15 @@ async fn ResolvedUpdateChannel::poll(
 /// launched to do something else — which is exactly what happens the moment
 /// this is allowed to raise into startup.
 fn start_update_check(
-  channel : ResolvedUpdateChannel?,
+  updates : ApplicationUpdates,
   handlers : Array[async (PendingUpdate) -> Unit noraise],
   tasks : @async.TaskGroup[Unit],
 ) -> Unit {
-  guard channel is Some(channel) else { return }
+  guard updates.channel is Some(channel) else { return }
   guard checks_on_launch(channel, handlers.length()) else { return }
   tasks.spawn_bg(allow_failure=true, () => {
     @async.sleep(update_check_delay_ms + update_check_jitter())
-    let offered = channel.poll() catch {
+    let offered = channel.poll(updates) catch {
       _ => {
         @xlog.warn(category="proton.updater") <?
           { "message": "update check failed" }
