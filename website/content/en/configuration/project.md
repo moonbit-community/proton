@@ -49,7 +49,7 @@ All frontend fields are optional at decoding. Individual CLI commands impose add
 
 ## Paths and resources
 
-Backend/frontend paths, package icons, package resources and package output are resolved from the configuration directory. `frontend.dist` is resolved from the frontend directory. Absolute paths remain absolute.
+Backend/frontend paths, package icons, package resources and package output are resolved from the configuration directory. `frontend.dist` is resolved from the frontend directory. Absolute paths remain absolute. Path separators follow the host operating system. Loading configuration preserves path strings and does not require referenced files or directories to exist; build and packaging operations check the inputs they use.
 
 `@proton.resource_dir()` is the application resource base: the CLI supplies the project root in development; packaged applications use their resources directory; direct runs without managed metadata use the startup working directory. Installed resources are not a persistent writable data store.
 

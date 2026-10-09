@@ -1,5 +1,5 @@
 ///|
-/// A configuration and its source directory. Paths inside config stay relative.
+/// A configuration and its source directory. Path values are preserved as written.
 pub(all) struct Project {
   base_dir : String
   config : @proton_config.AppConfig
@@ -13,6 +13,5 @@ pub async fn load(path : String) -> Project raise @proton_config.AppConfigError 
       raise @proton_config.FileRead(path~, detail=@debug.render(Repr(error)))
   }
   let config = @proton_config.AppConfig::parse(source, name=path)
-  validate_project_paths(config)
   { base_dir: @fsutil.path_parent(path), config, }
 }
