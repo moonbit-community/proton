@@ -496,27 +496,27 @@ test "application quit decisions keep the chain running only when allowed" {
 test "close coordinator starts only one application quit transaction" {
   let coordinator = CloseCoordinator()
   assert_false(coordinator.is_quitting())
-  assert_true(coordinator.begin_quit(3))
+  assert_true(coordinator.begin_exit(Quit(3)))
   assert_true(coordinator.is_quitting())
   assert_true(coordinator.state == CloseBeforeQuit)
-  assert_eq(coordinator.exit_code, 3)
-  assert_false(coordinator.forced)
-  assert_false(coordinator.begin_quit(0))
-  assert_eq(coordinator.exit_code, 3)
+  assert_eq(coordinator.exit_code(), 3)
+  assert_false(coordinator.is_forced())
+  assert_false(coordinator.begin_exit(Quit(0)))
+  assert_eq(coordinator.exit_code(), 3)
 }
 
 ///|
 test "forced exits escalate a quit chain and stop committing changes" {
   let coordinator = CloseCoordinator()
-  assert_true(coordinator.begin_forced_exit(7))
-  assert_true(coordinator.forced)
+  assert_true(coordinator.begin_exit(ForceExit(7)))
+  assert_true(coordinator.is_forced())
   assert_true(coordinator.is_quitting())
-  assert_eq(coordinator.exit_code, 7)
-  assert_false(coordinator.begin_quit(0))
-  assert_eq(coordinator.exit_code, 7)
+  assert_eq(coordinator.exit_code(), 7)
+  assert_false(coordinator.begin_exit(Quit(0)))
+  assert_eq(coordinator.exit_code(), 7)
   coordinator.state = CloseCommitted
-  assert_false(coordinator.begin_forced_exit(9))
-  assert_eq(coordinator.exit_code, 7)
+  assert_false(coordinator.begin_exit(ForceExit(9)))
+  assert_eq(coordinator.exit_code(), 7)
 }
 
 ///|
@@ -4357,4 +4357,38 @@ async test "ending the application wakes an outstanding session reader" {
     assert_true(reader.wait())
     assert_true(store.pending.is_empty())
   })
+}
+
+///|
+test "exit purpose prevents conflicting requests and forced exit overrides installation" {
+  let coordinator = CloseCoordinator()
+  assert_true(coordinator.accepts_download())
+  assert_true(coordinator.begin_exit(InstallUpdate))
+  assert_false(coordinator.accepts_download())
+  assert_false(coordinator.begin_exit(Quit(4)))
+  assert_true(coordinator.purpose == InstallUpdate)
+  assert_true(coordinator.begin_exit(ForceExit(7)))
+  assert_true(coordinator.purpose == ForceExit(7))
+  coordinator.state = CloseCommitted
+  assert_false(coordinator.begin_exit(InstallUpdate))
+  assert_false(coordinator.begin_exit(ForceExit(0)))
+}
+
+///|
+test "scheduled relaunch cannot be replaced with update installation" {
+  let coordinator = CloseCoordinator()
+  coordinator.relaunch_scheduled = true
+  assert_false(coordinator.begin_exit(InstallUpdate))
+  assert_false(coordinator.is_quitting())
+  assert_true(coordinator.begin_exit(Quit(0)))
+}
+
+///|
+test "cancelled update exit reopens admission and allows another install request" {
+  let coordinator = CloseCoordinator()
+  assert_true(coordinator.begin_exit(InstallUpdate))
+  coordinator.cancel_quit_transaction()
+  assert_false(coordinator.is_quitting())
+  assert_true(coordinator.accepts_download())
+  assert_true(coordinator.begin_exit(InstallUpdate))
 }

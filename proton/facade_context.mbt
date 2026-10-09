@@ -3,6 +3,7 @@
 pub struct ApplicationContext {
   priv browser_session : SessionHandle
   priv updates : ApplicationUpdates
+  priv close_coordinator : CloseCoordinator
   tasks : @async.TaskGroup[Unit]
   windows : WindowManager
   locale_preferences : @locale.LocalePreferences
@@ -58,6 +59,7 @@ priv struct WindowLifecycleHook {
 fn ApplicationContext::ApplicationContext(
   session~ : SessionHandle,
   updates? : ApplicationUpdates = ApplicationUpdates(None),
+  close_coordinator? : CloseCoordinator = CloseCoordinator(),
   tasks : @async.TaskGroup[Unit],
   windows : WindowManager,
   locale_preferences : @locale.LocalePreferences,
@@ -82,6 +84,7 @@ fn ApplicationContext::ApplicationContext(
   ApplicationContext::{
     browser_session: session,
     updates,
+    close_coordinator,
     tasks,
     windows,
     locale_preferences,
@@ -186,7 +189,8 @@ pub fn ApplicationContext::has_single_instance_lock(
 /// The application keeps running, stops receiving second-instance activations,
 /// and another launch may acquire the identity and become primary. Releasing an
 /// application that holds no lock is a successful no-op. Later process exit
-/// still cleans up the runtime, so releasing does not skip teardown.
+/// still cleans up the runtime, so releasing does not skip teardown. A pending
+/// update exit reserves a held lock and refuses explicit release until cancelled.
 pub fn ApplicationContext::release_single_instance_lock(
   self : ApplicationContext,
 ) -> Unit raise AppControlError {
@@ -320,7 +324,7 @@ pub fn ApplicationContext::relaunch(
   self : ApplicationContext,
   options? : RelaunchOptions,
 ) -> Unit raise AppControlError {
-  guard !self.updates.install_requested else {
+  guard self.close_coordinator.purpose != InstallUpdate else {
     raise NativeControlFailure(
       action="schedule application relaunch",
       status=-1,
@@ -332,7 +336,7 @@ pub fn ApplicationContext::relaunch(
     error =>
       raise app_control_native_error("schedule application relaunch", error)
   }
-  self.updates.relaunch_scheduled = true
+  self.close_coordinator.relaunch_scheduled = true
 }
 
 ///|

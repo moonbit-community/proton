@@ -17,8 +17,11 @@ The existing application and its replacement use different executable names.
 Each case starts from a fresh copy of the old bundle and records lifecycle
 events under `/tmp/proton-updater-e2e`:
 
-- Installation happens after quit notifications and shutdown hooks, and the
+- Installation keeps the single-instance reservation through replacement.
+  It happens after quit notifications and shutdown hooks, and the
   replacement acquires the single-instance lock and cleans the retained bundle.
+- An old executable loaded before replacement but delayed until after the new
+  application exits is rejected before its startup hook can run.
 - Rejecting either `before_quit` or `will_quit` retains the downloaded update,
   which can be installed by a later request.
 - Forced exit discards the update and terminates without installing it.
@@ -49,3 +52,10 @@ macOS scenario. Native transaction tests live in
 `proton/internal/native/update_wbtest.mbt`. Deletion faults and restartable
 cleanup have separate coverage in
 `proton/internal/native/ffi/tests/update_cleanup.test.mjs`.
+
+Windows instance transfer has a separate multiprocess test in
+`proton/internal/native/ffi/tests/app_instance.test.mjs`. It duplicates the real
+instance reservation into an installer process, exits the old process, and
+checks that a competing launch cannot become primary until the installer
+releases it. The generated NSIS installer acknowledges this transfer before
+waiting for the old process, and releases it only after completing installation.

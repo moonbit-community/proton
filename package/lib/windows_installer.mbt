@@ -154,6 +154,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|Var ProtonUpdate
     #|Var ProtonUpdatePid
     #|Var ProtonUpdateCreated
+    #|Var ProtonUpdateLock
+    #|Var ProtonUpdateReady
+    #|Var ProtonInstanceLock
     #|
   builder <+
     $|Name "\{product}"
@@ -177,6 +180,8 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|  ${GetOptions} $R0 "/PROTON-UPDATE=" $ProtonUpdate
     #|  ${GetOptions} $R0 "/PROTON-PID=" $ProtonUpdatePid
     #|  ${GetOptions} $R0 "/PROTON-CREATED=" $ProtonUpdateCreated
+    #|  ${GetOptions} $R0 "/PROTON-LOCK=" $ProtonUpdateLock
+    #|  ${GetOptions} $R0 "/PROTON-READY=" $ProtonUpdateReady
     #|  ${If} $ProtonUpdate == "1"
     #|  ${AndIf} $ProtonUpdatePid == ""
     #|    Abort "The update process id is missing."
@@ -184,6 +189,39 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|
   builder.write_string(windows_install_mode_update_init(plan))
   builder <+
+    #|  ; Duplicate the old instance's reservation before acknowledging handoff.
+    #|  ; Closing the old process must never expose an unreserved installation.
+    #|  ${If} $ProtonUpdate == "1"
+    #|  ${AndIf} $ProtonUpdateLock != ""
+    #|  ${AndIf} $ProtonUpdateLock != "0"
+    #|    System::Call 'kernel32::OpenProcess(i 0x1040, i 0, i $ProtonUpdatePid) p .r0'
+    #|    ${If} $0 == 0
+    #|      Abort "Could not open the application for instance handoff."
+    #|    ${EndIf}
+    #|    System::Call 'kernel32::GetProcessTimes(p r0, *l .r2, *l .r3, *l .r4, *l .r5) i .r1'
+    #|    ${If} $1 == 0
+    #|    ${OrIf} $2 != $ProtonUpdateCreated
+    #|      System::Call 'kernel32::CloseHandle(p r0)'
+    #|      Abort "The updating process identity has changed."
+    #|    ${EndIf}
+    #|    System::Call 'kernel32::GetCurrentProcess() p .r6'
+    #|    System::Call 'kernel32::DuplicateHandle(p r0, p $ProtonUpdateLock, p r6, *p .r7, i 0, i 0, i 2) i .r1'
+    #|    ${If} $1 == 0
+    #|      System::Call 'kernel32::CloseHandle(p r0)'
+    #|      Abort "Could not retain application instance ownership."
+    #|    ${EndIf}
+    #|    StrCpy $ProtonInstanceLock $7
+    #|    System::Call 'kernel32::DuplicateHandle(p r0, p $ProtonUpdateReady, p r6, *p .r7, i 0, i 0, i 2) i .r1'
+    #|    System::Call 'kernel32::CloseHandle(p r0)'
+    #|    ${If} $1 == 0
+    #|      Abort "Could not acknowledge instance handoff."
+    #|    ${EndIf}
+    #|    System::Call 'kernel32::SetEvent(p r7) i .r1'
+    #|    System::Call 'kernel32::CloseHandle(p r7)'
+    #|    ${If} $1 == 0
+    #|      Abort "Could not acknowledge instance handoff."
+    #|    ${EndIf}
+    #|  ${EndIf}
     #|FunctionEnd
     #|
     #|Function un.onInit
@@ -290,6 +328,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
   builder <+
     $|  CreateShortCut "$SMPROGRAMS\\\{product}.lnk" "$INSTDIR\\\{executable}"
     $|  ${If} $ProtonUpdate == "1"
+    $|    ${If} $ProtonInstanceLock != ""
+    $|      System::Call 'kernel32::CloseHandle(p $ProtonInstanceLock)'
+    $|    ${EndIf}
     $|    Exec '"$INSTDIR\\\{executable}"'
     $|    Delete /REBOOTOK "$EXEPATH"
     $|  ${EndIf}

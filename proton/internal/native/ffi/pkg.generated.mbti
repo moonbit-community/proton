@@ -75,6 +75,8 @@ pub fn proton_app_instance_attach_runtime_ffi(Int64, RuntimeHandle) -> Int
 
 pub fn proton_app_instance_destroy_ffi(Int64) -> Int
 
+pub fn proton_app_instance_prepare_update_ffi(Int64) -> Int
+
 pub fn proton_app_instance_release_ffi(Int64) -> Int
 
 pub fn proton_app_is_active_ffi(@ref.Ref[Int]) -> Int
@@ -208,6 +210,8 @@ pub fn proton_update_stage_begin_ffi(Bytes, Int64, Int64, @ref.Ref[Int64], Fixed
 pub fn proton_update_stage_install_ffi(Int64, @ref.Ref[Int], FixedArray[Byte], Int) -> Int
 
 pub fn proton_update_stage_write_ffi(Int64, Bytes, Int, FixedArray[Byte], Int) -> Int
+
+pub fn proton_update_validate_running_image_ffi(FixedArray[Byte], Int) -> Int
 
 pub fn proton_view_browser_command_ffi(ViewHandle, Bytes, Int) -> Int
 

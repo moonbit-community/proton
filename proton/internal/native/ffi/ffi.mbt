@@ -1741,3 +1741,15 @@ pub extern "C" fn proton_view_respond_browser_request_ffi(
   action : Bytes,
   path : Bytes,
 ) -> Int = "proton_contents_respond_browser_request"
+
+///|
+pub extern "C" fn proton_app_instance_prepare_update_ffi(
+  instance : Int64,
+) -> Int = "proton_app_instance_prepare_update"
+
+///|
+#borrow(error)
+pub extern "C" fn proton_update_validate_running_image_ffi(
+  error : FixedArray[Byte],
+  error_len : Int,
+) -> Int = "proton_update_validate_running_image"

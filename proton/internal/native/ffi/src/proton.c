@@ -4280,3 +4280,14 @@ int32_t proton_last_error_message(char *buffer, int32_t buffer_len) {
   buffer[copy_len] = '\0';
   return required;
 }
+
+int32_t proton_app_instance_prepare_update(int64_t instance) {
+#ifdef _WIN32
+  extern int32_t proton_update_set_instance_lock(int64_t handle);
+  int64_t handle = proton_app_instance_update_lock_impl(instance);
+  return handle != 0 ? proton_update_set_instance_lock(handle) : 0;
+#else
+  (void)instance;
+  return 0;
+#endif
+}

@@ -140,7 +140,7 @@ JSON
 
 export PROTON_E2E_KEY="$(cat "$work/keys/trusted.txt")"
 python3 - "$work" <<'TESTS'
-import os, pathlib, shutil, signal, subprocess, sys, time
+import atexit, os, pathlib, shutil, signal, subprocess, sys, time
 root = pathlib.Path(sys.argv[1])
 for mode in ['install', 'prevent-before', 'prevent-will', 'force-exit', 'ordinary-quit', 'cleanup-failure']:
     install = root / 'install'
@@ -151,6 +151,20 @@ for mode in ['install', 'prevent-before', 'prevent-will', 'force-exit', 'ordinar
     log = install / 'events.log'
     env = dict(os.environ, PROTON_E2E_MODE=mode, PROTON_E2E_LOG=str(log))
     env['DYLD_LIBRARY_PATH'] = str(root / 'tls')
+    delayed = None
+    if mode == 'install':
+        delayed_log = install / 'delayed.log'
+        resume = install / 'resume'
+        delayed_env = dict(env, PROTON_E2E_MODE='delayed-start',
+                           PROTON_E2E_LOG=str(delayed_log), PROTON_E2E_RESUME=str(resume))
+        delayed_output = (root / 'delayed-start.log').open('w')
+        delayed = subprocess.Popen([str(bundle / 'Contents/MacOS/updatee')], env=delayed_env,
+                                   stdout=delayed_output, stderr=subprocess.STDOUT)
+        atexit.register(lambda child=delayed: child.poll() is None and child.kill())
+        deadline = time.monotonic() + 120
+        while not delayed_log.exists():
+            assert delayed.poll() is None and time.monotonic() < deadline, 'old process did not load'
+            time.sleep(0.01)
     with (root / (mode + '.log')).open('w') as output:
         process = subprocess.Popen([str(bundle / 'Contents/MacOS/updatee')], env=env,
                                    stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
@@ -166,6 +180,17 @@ for mode in ['install', 'prevent-before', 'prevent-will', 'force-exit', 'ordinar
     while updates and (not log.exists() or 'new-cleaned' not in log.read_text()):
         assert time.monotonic() < deadline, (mode, 'replacement did not finish', log.read_text() if log.exists() else '')
         time.sleep(0.1)
+    if delayed is not None:
+        resume.touch()
+        try:
+            assert delayed.wait(timeout=120) == 0, (root / 'delayed-start.log').read_text()
+            assert delayed_log.read_text().splitlines() == ['loaded-old', 'obsolete-rejected']
+        finally:
+            if delayed.poll() is None:
+                delayed.kill()
+                delayed.wait()
+            delayed_output.close()
+        print('PASS delayed old executable rejected after replacement', flush=True)
     events = log.read_text().splitlines()
     assert events.index('downloaded') < events.index('quit') < events.index('shutdown-old'), (mode, events)
     version = (bundle / 'Contents/Resources/version').read_text()

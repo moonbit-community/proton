@@ -97,6 +97,8 @@ pub fn update_stage_begin(String, Int64, UInt64) -> UpdateStage raise NativeErro
 
 pub fn update_stage_begin_for_current_app(Int64, UInt64) -> UpdateStage raise NativeError
 
+pub fn update_validate_running_image() -> Unit raise NativeError
+
 pub fn web_contents_view_supported() -> Bool
 
 pub fn window_size_in_screen_coordinates(Int, Int, Int) -> (Int, Int)
@@ -153,6 +155,7 @@ type AppInstance
 pub fn AppInstance::acquire(String, AppActivation) -> AppInstanceAcquire raise NativeError
 pub fn AppInstance::attach_runtime(Self, Runtime) -> Unit raise NativeError
 pub fn AppInstance::destroy(Self) -> Unit raise NativeError
+pub fn AppInstance::prepare_update_handoff(Self) -> Bool
 pub fn AppInstance::release(Self) -> Unit raise NativeError
 
 pub enum AppInstanceAcquire {

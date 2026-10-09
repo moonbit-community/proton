@@ -23,4 +23,6 @@ int32_t proton_app_instance_respond_activation_impl(int64_t instance, int64_t re
 void proton_app_instance_stop_accepting_impl(int64_t instance);
 void proton_app_instance_detach_runtime_impl(int64_t instance);
 
+int64_t proton_app_instance_update_lock_impl(int64_t instance);
+
 #endif

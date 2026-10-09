@@ -346,9 +346,9 @@ match context.check_for_update() {
 }
 ```
 
-The request follows the [quit lifecycle](#application-lifecycle). Preventing quit cancels installation and retains the download for another attempt. Once quit is accepted, Proton closes the runtime, completes cleanup and releases its single-instance lock before installing and launching the replacement. Windows starts its NSIS installer, which waits for the old process to exit; macOS and Linux replace their application artifact. Successful handoff terminates the old process, including when the exit code is zero.
+The request follows the [quit lifecycle](#application-lifecycle). Preventing quit cancels installation and retains the download for another attempt. Once quit is accepted, Proton closes the runtime and completes cleanup before installation. If single-instance mode is enabled, its reservation stays held throughout replacement. Windows transfers the reservation to its NSIS installer before the old process exits; the installer releases it after installation. macOS and Linux retain the lock while replacing the application artifact, then release it before launching the replacement. Successful handoff terminates the old process, including when the exit code is zero.
 
-The method returns when the request is accepted, not when the new version is ready. Missing downloads and conflicting exit or relaunch requests fail immediately; later installation or launch failures are reported through `App::run()`. A forced `exit()` supersedes a pending update request. Ordinary quit discards the download without installing. Cleanup failure prevents installation. Old managed update artifacts are removed after the replacement successfully starts.
+The method returns when the request is accepted, not when the new version is ready. Missing downloads and conflicting exit or relaunch requests fail immediately; later installation or launch failures are reported through `App::run()`. A forced `exit()` supersedes a pending update request. A pending update exit refuses explicit release of a held single-instance lock; an application that already released its configured lock cannot request installation. Ordinary quit discards the download without installing. Cleanup failure prevents installation. Old managed update artifacts are removed after the replacement successfully starts.
 
 **Publisher responsibilities**
 

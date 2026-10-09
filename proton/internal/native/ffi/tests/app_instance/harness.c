@@ -40,8 +40,22 @@ bool proton_event_publish(proton_event_t *event) {
   return true;
 }
 int main(int argc, char **argv) {
-  if (argc != 2) return 2;
   setvbuf(stdout, NULL, _IONBF, 0);
+#ifdef _WIN32
+  if (argc == 4 && strcmp(argv[1], "--handoff") == 0) {
+    HANDLE parent = OpenProcess(PROCESS_DUP_HANDLE, FALSE, strtoul(argv[2], NULL, 10));
+    HANDLE inherited = NULL;
+    if (parent == NULL || !DuplicateHandle(parent,
+          (HANDLE)(uintptr_t)_strtoui64(argv[3], NULL, 10),
+          GetCurrentProcess(), &inherited, 0, FALSE, DUPLICATE_SAME_ACCESS)) return 3;
+    CloseHandle(parent);
+    puts("HELD");
+    (void)getchar();
+    CloseHandle(inherited);
+    return 0;
+  }
+#endif
+  if (argc != 2) return 2;
 #ifdef _WIN32
   InitializeCriticalSection(&events_lock);
 #endif
@@ -87,6 +101,8 @@ int main(int argc, char **argv) {
       status = proton_app_instance_release_impl(instance, error, sizeof(error));
       printf("RELEASED %d %s\n", status, error);
       released = status == 0;
+    } else if (!strncmp(command, "handoff", 7)) {
+      printf("LOCK %llu\n", (unsigned long long)proton_app_instance_update_lock_impl(instance));
     } else if (!strncmp(command, "quit", 4)) break;
   }
   if (released) return 0;

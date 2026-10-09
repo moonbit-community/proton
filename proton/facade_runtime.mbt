@@ -53,6 +53,11 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
       Some(instance) => destroy_app_instance(instance) catch { _ => () }
       None => ()
     })
+    if resolved.update_channel is Some(_) {
+      @native.update_validate_running_image() catch {
+        error => raise native_run_error("validate running application", error)
+      }
+    }
     let environment = RuntimeEnvironment::{
       locale_preferences,
       application_session,
@@ -70,23 +75,39 @@ pub async fn App::run(self : App) -> Unit raise AppRunError {
         _ => ()
       }
     })
-    match app_instance {
-      Some(instance) => destroy_app_instance(instance)
-      None => ()
-    }
     if outcome.update is Some(update) {
       try {
         ignore(update.install())
+        let installer_handoff = match app_instance {
+          Some(instance) => instance.prepare_update_handoff()
+          None => false
+        }
+        if !installer_handoff {
+          match app_instance {
+            Some(instance) => destroy_app_instance(instance)
+            None => ()
+          }
+        }
         @updater.relaunch()
+        if installer_handoff {
+          match app_instance {
+            Some(instance) => destroy_app_instance(instance)
+            None => ()
+          }
+        }
       } catch {
         error =>
           raise RuntimeOperationFailed(
             action="install and restart application",
             status=-1,
-            detail=error.message(),
+            detail=@debug.render(Repr(error)),
           )
       }
       @native.process_exit(0)
+    }
+    match app_instance {
+      Some(instance) => destroy_app_instance(instance)
+      None => ()
     }
     @native.process_run_relaunches() catch {
       error => raise native_run_error("relaunch application", error)
@@ -282,10 +303,12 @@ async fn run_manifest(
       }
     None => ()
   }
-  let updates = ApplicationUpdates(config.update_channel)
+  let close_coordinator = CloseCoordinator()
+  let updates = ApplicationUpdates(config.update_channel, can_download=() => {
+    close_coordinator.accepts_download()
+  })
   active_application_updates.val = Some(updates)
   defer {
-    updates.accepting = false
     updates.discard()
     updates.channel = None
     active_application_updates.val = None
@@ -435,8 +458,8 @@ async fn run_manifest(
       }
       @async.with_task_group(window_tasks => {
         let session = RuntimeSession(
-          config, environment, updates, runtime, event_pump, definitions, windows,
-          command_host, wakeup, forward_menu_events, bridge_enabled, app_instance,
+          config, environment, updates, close_coordinator, runtime, event_pump, definitions,
+          windows, command_host, wakeup, forward_menu_events, bridge_enabled, app_instance,
           application_tasks, window_tasks, lifecycle_failures,
         )
         let application_context = session.application_context()
@@ -566,7 +589,7 @@ async fn run_manifest(
     Some(error) => raise error
     None => ()
   }
-  let update = if updates.install_requested {
+  let update = if close_coordinator.purpose == InstallUpdate {
     let prepared = updates.prepared
     updates.prepared = None
     prepared

@@ -2,6 +2,35 @@
 /// Exercises signed updates through the public application lifecycle.
 async fn main {
   let bundle = running_bundle()
+  if require_env("PROTON_E2E_MODE") == "delayed-start" {
+    record("loaded-old")
+    while !@mbfs.path_exists(require_env("PROTON_E2E_RESUME")) {
+      @async.sleep(10)
+    }
+    let endpoint = require_env("PROTON_E2E_ENDPOINT")
+    let key = require_env("PROTON_E2E_KEY")
+    let rejected = try {
+      @proton.html("Obsolete application", "")
+      .identifier("com.example.proton-updater-e2e")
+      .headless()
+      .single_instance()
+      .update_channel(endpoint, [key], check_on_launch=false)
+      .app_lifecycle(
+        on_start=context => {
+          record("obsolete-started")
+          context.quit()
+        },
+        on_shutdown=_ => (),
+      )
+      .run()
+      false
+    } catch {
+      error => error.message().contains("the running executable was replaced")
+    }
+    assert_true(rejected)
+    record("obsolete-rejected")
+    return
+  }
   if @updater.current_revision() != 1UL {
     @proton.html("Updated application", "<h1>Updated</h1>")
     .identifier("com.example.proton-updater-e2e")
@@ -77,8 +106,19 @@ async fn main {
             }),
           )
         }
+        context
       },
-      on_shutdown=_ => {
+      on_shutdown=context => {
+        if mode == "install" {
+          let refused = try {
+            context.release_single_instance_lock()
+            false
+          } catch {
+            _ => true
+          }
+          assert_true(refused)
+          assert_true(context.has_single_instance_lock())
+        }
         assert_eq(@updater.current_revision(), 1UL)
         assert_eq(
           @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version"),

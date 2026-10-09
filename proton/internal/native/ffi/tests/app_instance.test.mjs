@@ -31,8 +31,8 @@ const build = process.platform === 'win32'
   ? spawnSync('cl', ['/nologo', '/std:c11', ...flags.map(x => '/D'+x), ...includes.map(x => '/I'+x), ...sources, '/Fe:'+binary, '/Fo:'+temp+path.sep, '/link', 'advapi32.lib', 'user32.lib'], { encoding: 'utf8' })
   : spawnSync(process.env.CC || 'cc', ['-pthread', ...flags.map(x => '-D'+x), ...includes.map(x => '-I'+x), ...sources, '-o', binary], { encoding: 'utf8' });
 assert.equal(build.status, 0, `${build.error || ''}${build.stdout}${build.stderr}`);
-function launch(t, id) {
-  const child = spawn(binary, [id]);
+function launch(t, id, args = []) {
+  const child = spawn(binary, [id, ...args]);
   child.output = '';
   child.stdout.on('data', data => { child.output += data; });
   child.stderr.on('data', data => { child.output += data; });
@@ -185,4 +185,28 @@ test('owner death permits reacquisition despite leftover endpoint files', { time
   const next = launch(t, id);
   await until(() => next.output.includes('RESULT 0 1'), () => next.output);
   await command(next, 'quit', 'DESTROY 0');
+});
+
+test('Windows installer retains instance ownership after the old process exits', {
+  skip: process.platform !== 'win32', timeout: 15000,
+}, async t => {
+  const { child, id } = await primary(t);
+  child.stdin.write('handoff\n');
+  await until(() => /LOCK (\d+)/.test(child.output), () => child.output);
+  const handle = child.output.match(/LOCK (\d+)/)[1];
+  assert.notEqual(handle, '0');
+  const installer = launch(t, '--handoff', [String(child.pid), handle]);
+  await until(() => installer.output.includes('HELD'), () => installer.output);
+  child.stdin.write('quit\n');
+  await child.done;
+  const competing = launch(t, id);
+  await competing.done;
+  assert.ok(!competing.output.includes('RESULT 0 1'), competing.output);
+  assert.equal(competing.exitCode, 1, competing.output);
+  installer.stdin.write('\n');
+  await installer.done;
+  const replacement = launch(t, id);
+  await until(() => replacement.output.includes('RESULT 0 1'), () => replacement.output);
+  replacement.stdin.write('quit\n');
+  await replacement.done;
 });

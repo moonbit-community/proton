@@ -21,23 +21,20 @@ priv struct ApplicationUpdates {
   mut channel : ResolvedUpdateChannel?
   mut prepared : @updater.PreparedUpdate?
   mut prepared_revision : UInt64?
-  mut install_requested : Bool
-  mut accepting : Bool
-  mut relaunch_scheduled : Bool
+  can_download : () -> Bool
   download_mutex : @async.Mutex
 }
 
 ///|
 fn ApplicationUpdates::ApplicationUpdates(
   channel : ResolvedUpdateChannel?,
+  can_download? : () -> Bool = () => false,
 ) -> ApplicationUpdates {
   {
     channel,
     prepared: None,
     prepared_revision: None,
-    install_requested: false,
-    accepting: true,
-    relaunch_scheduled: false,
+    can_download,
     download_mutex: @async.Mutex::Mutex(),
   }
 }
@@ -159,9 +156,7 @@ pub async fn PendingUpdate::download(
   let updates = self.updates
   updates.download_mutex.acquire()
   defer updates.download_mutex.release()
-  guard updates.channel is Some(_) &&
-    updates.accepting &&
-    !updates.install_requested else {
+  guard updates.channel is Some(_) && (updates.can_download)() else {
     raise @updater.InstallFailed(
       step="download update",
       detail="the application is stopping or has stopped",
@@ -178,9 +173,7 @@ pub async fn PendingUpdate::download(
     self.offer,
     on_progress~,
   )
-  guard updates.channel is Some(_) &&
-    updates.accepting &&
-    !updates.install_requested else {
+  guard updates.channel is Some(_) && (updates.can_download)() else {
     prepared.discard()
     raise @updater.InstallFailed(
       step="download update",
@@ -196,7 +189,9 @@ pub async fn PendingUpdate::download(
 /// Requests orderly exit, installation of the downloaded update, and restart.
 /// A prevented quit retains the download for a later request. Installation
 /// starts only after cleanup succeeds. Returning accepts the request; later
-/// installation or launch errors are reported by `App::run`.
+/// installation or launch errors are reported by `App::run`. When single-instance
+/// mode is enabled, its lock must still be held; installation preserves that
+/// reservation until the new installation can start.
 pub fn ApplicationContext::quit_and_install(
   self : ApplicationContext,
 ) -> Unit raise AppControlError {
