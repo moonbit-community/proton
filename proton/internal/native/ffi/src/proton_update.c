@@ -1646,6 +1646,11 @@ int32_t proton_update_relaunch(char *error, int32_t error_len) {
 
 #else
 
+/* Installation can remove or rename the running executable. Retain the
+   authenticated installation destination instead of resolving that old file
+   again when launching the replacement. */
+static char proton_update_relaunch_bundle[PROTON_UPDATE_MAX_PATH];
+
 /* Returns the `.app` directory containing the running executable.
 
    A macOS bundle puts the executable at `<name>.app/Contents/MacOS/<exe>`, so
@@ -1714,7 +1719,11 @@ static int proton_update_run(char *const argv[]) {
     return 0;
   }
   int status = 0;
-  if (waitpid(child, &status, 0) != child) {
+  pid_t waited;
+  do {
+    waited = waitpid(child, &status, 0);
+  } while (waited < 0 && errno == EINTR);
+  if (waited != child) {
     return 0;
   }
   return WIFEXITED(status) && WEXITSTATUS(status) == 0;
@@ -2632,6 +2641,7 @@ static int32_t proton_update_replace_bundle(const char *staged_bundle_path,
 int32_t proton_update_stage_install_outcome(
     proton_update_stage_id_t stage, int32_t *out_outcome, char *error,
     int32_t error_len) {
+  proton_update_relaunch_bundle[0] = '\0';
   if (out_outcome == NULL) {
     proton_update_set_message(error, error_len,
                               "an update install outcome is required");
@@ -2741,12 +2751,18 @@ int32_t proton_update_stage_install_outcome(
   if (target_revision == current_revision) {
     close(lock_fd);
     *out_outcome = PROTON_UPDATE_ALREADY_INSTALLED;
+    snprintf(proton_update_relaunch_bundle, sizeof(proton_update_relaunch_bundle),
+             "%s", current);
     proton_update_stage_release(slot, 1);
     return PROTON_OK;
   }
   int preserve_staging = 0;
   status = proton_update_replace_bundle(staged_bundle_path, current,
                                         &preserve_staging, error, error_len);
+  if (status == PROTON_OK) {
+    snprintf(proton_update_relaunch_bundle, sizeof(proton_update_relaunch_bundle),
+             "%s", current);
+  }
   close(lock_fd);
   proton_update_stage_release(slot, !preserve_staging);
   return status;
@@ -2783,16 +2799,15 @@ int32_t proton_update_install(const char *archive,
 }
 
 int32_t proton_update_relaunch(char *error, int32_t error_len) {
-  char current[PROTON_UPDATE_MAX_PATH];
-  if (!proton_update_running_bundle(current, sizeof(current))) {
-    proton_update_set_message(error, error_len, "the running application bundle cannot be resolved");
+  if (proton_update_relaunch_bundle[0] == '\0') {
+    proton_update_set_message(error, error_len, "no installed application is ready to launch");
     return PROTON_ERR_PLATFORM;
   }
   /* `-n` asks Launch Services for a new instance rather than activating one
      that is already running. It does not give the replacement a fresh
      environment: `open` passes this process's environment on, which was
      established by running it. */
-  char *const argv[] = {"/usr/bin/open", "-n", current, NULL};
+  char *const argv[] = {"/usr/bin/open", "-n", proton_update_relaunch_bundle, NULL};
   if (!proton_update_run(argv)) {
     proton_update_set_message(error, error_len,
                               "cannot start the replaced application");

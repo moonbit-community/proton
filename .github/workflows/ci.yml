@@ -226,6 +226,16 @@ jobs:
         if: ${{ matrix.os == 'macos-latest' }}
         run: node scripts/test_safe_storage_macos.mjs
 
+      - name: Test packaged macOS update lifecycle
+        if: ${{ matrix.os == 'macos-latest' }}
+        timeout-minutes: 15
+        run: |
+          brew list openssl@3 >/dev/null 2>&1 || brew install openssl@3
+          if ! e2e/self_update/run.sh; then
+            echo "PROTON_E2E_FAILURE_DIR=/tmp/proton-updater-e2e" >> "$GITHUB_ENV"
+            exit 1
+          fi
+
       - name: Build examples
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
