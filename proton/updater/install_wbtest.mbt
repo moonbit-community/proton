@@ -26,28 +26,64 @@ async fn with_update_stage_test(action : async (String) -> Unit) -> Unit {
   defer update_stage_test_mutex.release()
   let root = @async_fs.tmpdir(prefix="proton-prepared-update-")
   defer (@async_fs.rmdir(root, recursive=true) catch { _ => () })
-  // The existing native test hook selects a disposable installation. No real
-  // application files are involved, and the normal staging code still runs.
-  @async_fs.mkdir(root + "/Demo.app/Contents", recursive=true)
-  @async_fs.write_file(
-    root + "/Demo.app/Contents/Info.plist",
-    "<plist><dict><key>ProtonUpdateRevision</key><string>2</string></dict></plist>",
-    create_mode=CreateOrTruncate,
-  )
-  install_test_current(text_bytes(root + "/Demo.app\u0000"))
+  let current = prepare_update_test_installation(root)
+  install_test_current(@ffi.to_cstr(current))
   install_test_medium(b"appimage\x00")
   defer {
     install_test_current(b"\x00")
     install_test_medium(b"\x00")
   }
-  // Windows requires evidence of an NSIS installation; the stage itself is
-  // opaque bytes until install, so no installer or executable is launched.
+  action(root)
+}
+
+///|
+fn install_test_path(root : String, name : String) -> String {
+  @path.Path(root).join(@path.Path(name)).to_string()
+}
+
+///|
+#cfg(platform="windows")
+async fn prepare_update_test_installation(root : String) -> String {
+  let executable = install_test_path(root, "Demo.exe")
+  @async_fs.write_file(executable, "fixture", create_mode=CreateOrTruncate)
   @async_fs.write_file(
-    root + "/Uninstall.exe",
+    install_test_path(root, "Uninstall.exe"),
     "fixture",
     create_mode=CreateOrTruncate,
   )
-  action(root)
+  @async_fs.write_file(
+    install_test_path(root, "proton-update-revision"),
+    "2\n",
+    create_mode=CreateOrTruncate,
+  )
+  executable
+}
+
+///|
+#cfg(platform="linux")
+async fn prepare_update_test_installation(root : String) -> String {
+  let appimage = install_test_path(root, "Demo.AppImage")
+  @async_fs.write_file(appimage, "fixture", create_mode=CreateOrTruncate)
+  @async_fs.write_file(
+    appimage + ".proton-revision",
+    "2\n",
+    create_mode=CreateOrTruncate,
+  )
+  appimage
+}
+
+///|
+#cfg(all(not(platform="windows"), not(platform="linux")))
+async fn prepare_update_test_installation(root : String) -> String {
+  let bundle = install_test_path(root, "Demo.app")
+  let contents = install_test_path(bundle, "Contents")
+  @async_fs.mkdir(contents, recursive=true)
+  @async_fs.write_file(
+    install_test_path(contents, "Info.plist"),
+    "<plist><dict><key>ProtonUpdateRevision</key><string>2</string></dict></plist>",
+    create_mode=CreateOrTruncate,
+  )
+  bundle
 }
 
 ///|

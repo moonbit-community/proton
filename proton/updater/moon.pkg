@@ -16,6 +16,8 @@ import {
   "moonbitlang/async",
   "moonbitlang/async/socket",
   "moonbitlang/async/fs" @async_fs,
+  "moonbitlang/x/path",
+  "moonbit-community/proton_ffi" @ffi,
 } for "wbtest"
 
 supported_targets = "native"
