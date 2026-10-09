@@ -33,7 +33,7 @@ Each returns an `App` builder. Shared options include width, height, debug mode 
 
 **Identity**
 
-`load_config()` loads managed application metadata, including the required identifier. An unmanaged application can set `identifier(...)` explicitly. The identifier is stable application identity; it is distinct from the window title, product display name and application version.
+`@proton.load_config()` returns the complete typed `AppConfig` and reports loading errors immediately. Read `identifier`, `backend`, `frontend`, and `package_config` directly from this value. Install it with `app.config(config)`, which is mutually exclusive with `app.identifier(...)`. The identifier is stable application identity, distinct from the window title, product name, and version.
 
 `app_path()`, `resource_dir()` and `is_packaged()` describe the execution environment. Development paths and packaged resources have different locations; frontend URLs are not backend filesystem paths.
 

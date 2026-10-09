@@ -115,6 +115,5 @@ fn DoctorReport::summary(self : DoctorReport) -> DoctorSummary {
 
 ///|
 priv struct ProjectDoctorInfo {
-  root : String
   config_path : String
 }

@@ -1,4 +1,5 @@
 import {
+  "moonbit-community/proton_cli/project",
   "moonbit-community/proton_config",
   "moonbit-community/proton_package/lib" @packager,
   "moonbit-community/proton_package/arguments" @package_args,

@@ -72,7 +72,7 @@ async fn main {
     width=980,
     height=720,
   )
-  let base = @proton.App(window).load_config().single_instance()
+  let base = @proton.App(window).config(@proton.load_config()).single_instance()
   let override_root = @env.get_env_var("PROTON_APP_PATH_OVERRIDE_ROOT")
   let app = match override_root {
     Some(root) => apply_path_overrides(base, root)

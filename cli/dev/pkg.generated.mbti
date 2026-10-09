@@ -15,7 +15,7 @@ pub async fn run(String, @argparse.Matches) -> Unit
 // Errors
 pub(all) suberror DevConfigError {
   NotFound(path~ : String)
-  Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
+  Invalid(path~ : String, error~ : @proton_config.AppConfigError)
   FrontendCommandMissing
   FrontendDirectoryMissing(path~ : String)
   FrontendDirectoryNotDirectory(path~ : String)

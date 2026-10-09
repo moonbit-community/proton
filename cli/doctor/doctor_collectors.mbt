@@ -21,27 +21,17 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
           "not inside a Proton project; project checks skipped",
         ),
       )
-    Some(project) => {
-      let source = @async_fs.read_file(project.config_path).text() catch {
-        error => {
+    Some(project) =>
+      try @project.load(project.config_path) catch {
+        @proton_config.FileRead(detail~, ..) =>
           lines.push(
             DoctorLine(
               "project.config.read_failed",
               Error,
               "failed to read proton.project.json",
-              hint=@debug.render(Repr(error)),
+              hint=detail,
             ),
           )
-          return DoctorSection("project", "Project", lines)
-        }
-      }
-      try
-        @proton_config.load_project_config_from_text(
-          source,
-          project.root,
-          name=project.config_path,
-        )
-      catch {
         error =>
           lines.push(
             DoctorLine(
@@ -57,7 +47,6 @@ async fn collect_project(project : ProjectDoctorInfo?) -> DoctorSection {
             DoctorLine("project.config", Ok, "proton.project.json is valid"),
           )
       }
-    }
   }
   DoctorSection("project", "Project", lines)
 }

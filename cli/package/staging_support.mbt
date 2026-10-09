@@ -268,32 +268,9 @@ async fn stage_update_revision(
 async fn write_package_manifest(
   spec : PackagePlan,
   destination : String,
-  kind : String,
-  host : StagingHost,
 ) -> Unit {
-  let bundle_version = match host {
-    Macos => @packager.macos_versions(spec.version).1
-    Windows | Linux => spec.version
-  }
-  let manifest : Json = {
-    "schema_version": 1,
-    "kind": kind,
-    "product_name": spec.product_name,
-    "identifier": spec.identifier,
-    "version": spec.version,
-    "bundle_version": bundle_version,
-    "targets": spec.formats.map(fn(format) { format.to_string() }),
-    "url_schemes": spec.url_schemes,
-    "document_types": spec.document_types.map(fn(document_type) -> Json {
-      {
-        "name": document_type.name,
-        "extensions": document_type.extensions,
-        "role": document_type.role,
-      }
-    }),
-  }
   write_text(
     resolve_path(destination, "proton-package.json"),
-    manifest.stringify() + "\n",
+    spec.config.to_json().stringify() + "\n",
   )
 }

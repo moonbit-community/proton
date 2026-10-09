@@ -170,7 +170,7 @@ struct App {
 
 ///|
 priv enum ApplicationIdentitySource {
-  ProjectConfig(String)
+  Configured(@proton_config.AppConfig)
   Explicit(String)
 }
 

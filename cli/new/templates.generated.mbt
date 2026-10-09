@@ -734,7 +734,7 @@ fn generated_isomorphic_template_specs() -> Array[TemplateSpec] {
           #|async fn main {
           #|  let backend = @todo.Backend()
           #|  @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
-          #|  .load_config()
+          #|  .config(@proton.load_config())
           #|  .single_instance()
           #|  .commands(fn(registrar) raise { backend.register_commands(registrar) })
           #|  .window_lifecycle(on_ready=context => backend.attach(context), on_close=id => {
@@ -1692,7 +1692,7 @@ fn generated_minimal_template_specs() -> Array[TemplateSpec] {
           #|    #|  </body>
           #|    #|</html>
           #|  @proton.html({{title_mbt}}, html, width={{width}}, height={{height}})
-          #|  .load_config()
+          #|  .config(@proton.load_config())
           #|  .run_or_abort()
           #|}
           #|
@@ -1708,8 +1708,9 @@ fn generated_minimal_template_specs() -> Array[TemplateSpec] {
           #|
           #|The application is a single MoonBit module. Its native entry point and inline
           #|HTML live in `app/main.mbt`; no separate frontend toolchain is required.
-          #|The app calls `.load_config()` to load its required application identity from
-          #|`proton.project.json` during development and packaged metadata after release.
+          #|The app calls `@proton.load_config()` to load its configuration from
+          #|`proton.project.json` during development and packaged metadata after release,
+          #|and installs it with `.config(@proton.load_config())`.
           #|
           #|## Setup
           #|

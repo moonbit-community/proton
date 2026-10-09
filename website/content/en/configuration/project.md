@@ -49,7 +49,7 @@ All frontend fields are optional at decoding. Individual CLI commands impose add
 
 ## Paths and resources
 
-Backend/frontend paths, package icons, package resources and package output are resolved from the configuration directory. `frontend.dist` is resolved from the frontend directory. Absolute paths remain absolute.
+Backend/frontend paths, package icons, package resources and package output are resolved from the configuration directory. `frontend.dist` is resolved from the frontend directory. Absolute paths remain absolute. Path separators follow the host operating system. Loading configuration preserves path strings and does not require referenced files or directories to exist; build and packaging operations check the inputs they use.
 
 `@proton.resource_dir()` is the application resource base: the CLI supplies the project root in development; packaged applications use their resources directory; direct runs without managed metadata use the startup working directory. Installed resources are not a persistent writable data store.
 
@@ -165,3 +165,40 @@ The paths below are illustrative: referenced icons, resources and commands must 
   }
 }
 ```
+
+## Runtime configuration
+
+Load configuration independently, then install it on the application:
+
+```moonbit
+let config = @proton.load_config()
+let app = @proton.html("Hello", "<h1>Hello</h1>").config(config)
+
+if config.frontend is Some(frontend) {
+  if frontend.dev_url is Some(url) {
+    println(url)
+  }
+}
+```
+
+`load_config()` reads and validates the complete typed `AppConfig`, raising
+`AppConfigError` immediately on failure. Development uses `proton.project.json`;
+packaged applications use `proton-package.json`. For an explicit file path, use
+`@proton.AppConfig::load(path)`. Applications can also construct `AppConfig` directly.
+
+Read fields from the configuration value. Nested sections are optional structs:
+`config.frontend` contains `dev_url`, `path`, `dist`, `before_dev`, and
+`before_build`. JSON `package` maps to `config.package_config`; JSON
+`backend.package` maps to the backend's `app_package` field.
+
+`proton_cli dev` supplies the effective configuration after `--url`, `--command`,
+`--frontend-path`, and `--package` overrides. Packaging likewise embeds the
+effective configuration, including CLI overrides for formats and platform settings.
+Relative paths retain their spelling; reading a field does not resolve paths
+or execute commands.
+
+`app.config(config)` installs an independent copy and is mutually exclusive with
+`app.identifier(...)`. Invalid configuration or a mismatch with the packaged
+identity prevents startup. Retain `config` to inspect it; there is no application
+configuration getter. `app.name()` and `app.version()` read the installed snapshot
+without further file I/O.

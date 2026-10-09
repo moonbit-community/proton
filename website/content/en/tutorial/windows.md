@@ -10,13 +10,15 @@ Replace **`app/main.mbt`** with:
 ///|
 async fn main {
   @proton.html("Main", "<h1>Main window</h1>", width=900, height=700)
-  .load_config()
+  .config(@proton.load_config())
   .add_window(
     "help",
-    "Help",
-    @proton.AppEntry::Html("<h1>Help</h1><p>Close this window to return.</p>"),
-    width=480,
-    height=320,
+    @proton.WindowConfig(
+      "Help",
+      @proton.AppEntry::Html("<h1>Help</h1><p>Close this window to return.</p>"),
+      width=480,
+      height=320,
+    ),
   )
   .window_lifecycle(
     on_ready=context => {

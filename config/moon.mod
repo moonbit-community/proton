@@ -10,7 +10,7 @@ repository = "https://github.com/moonbit-community/proton"
 
 license = "Apache-2.0"
 
-description = "Typed CLI project configuration and JSON decoding for Proton."
+description = "Typed application configuration shared by Proton and its CLI."
 
 preferred_target = "wasm"
 

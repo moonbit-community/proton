@@ -33,7 +33,7 @@
 
 **应用身份**
 
-`load_config()` 读取托管应用元数据，包括必需的 identifier。非托管应用可以显式调用 `identifier(...)`。identifier 是稳定的应用身份，与窗口标题、产品显示名称和应用版本不同。
+`@proton.load_config()` 返回完整的类型化 `AppConfig`，加载失败时立即抛出错误。直接从该值读取 `identifier`、`backend`、`frontend` 和 `package_config`。通过 `app.config(config)` 安装配置，它与 `app.identifier(...)` 互斥。identifier 是稳定的应用身份，与窗口标题、产品名称和版本不同。
 
 `app_path()`、`resource_dir()` 和 `is_packaged()` 描述执行环境。开发路径与打包资源的位置不同，前端 URL 也不是后端文件系统路径。
 

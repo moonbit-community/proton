@@ -17,7 +17,7 @@ pub extend DevUsageError with Show::{to_string, output}
 /// Invalid project configuration used by `proton dev`.
 pub(all) suberror DevConfigError {
   NotFound(path~ : String)
-  Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
+  Invalid(path~ : String, error~ : @proton_config.AppConfigError)
   FrontendCommandMissing
   FrontendDirectoryMissing(path~ : String)
   FrontendDirectoryNotDirectory(path~ : String)

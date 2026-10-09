@@ -255,12 +255,7 @@ async fn stage_proton_runtime(
     Macos | Linux => layout.resources()
   }
   stage_update_revision(spec, metadata_root)
-  let kind = match host {
-    Macos => "macos-app"
-    Windows => "windows-portable"
-    Linux => "linux-appimage"
-  }
-  write_package_manifest(spec, metadata_root, kind, host)
+  write_package_manifest(spec, metadata_root)
   match host {
     Macos => stage_macos_helpers(spec, cef_process, layout)
     Windows =>

@@ -32,6 +32,7 @@ struct PackagePlan {
   root : String
   app_package : String
   config_path : String
+  config : @proton_config.AppConfig
   product_name : String
   identifier : String
   version : String
@@ -46,7 +47,7 @@ struct PackagePlan {
   sign_binaries : Array[String]
   icons : Array[String]
   url_schemes : Array[String]
-  document_types : Array[@proton_config.ProjectDocumentType]
+  document_types : Array[@proton_config.DocumentType]
   macos_minimum_system_version : String?
   nsis_install_mode : @packager.NsisInstallMode
   sign : Bool
@@ -121,23 +122,10 @@ pub async fn run(cwd : String, matches : @argparse.Matches) -> Unit {
     Some(path) => path
     None => raise PackageConfigError::NotFound(path="proton.project.json")
   }
-  let config_text = @async_fs.read_file(config_path).text() catch {
-    error =>
-      raise PackageConfigError::Invalid(
-        path=config_path,
-        error=@proton_config.ProjectConfigError::FileRead(
-          path=config_path,
-          detail=@debug.render(Repr(error)),
-        ),
-      )
-  }
-  let project = @proton_config.load_project_config_from_text(
-    config_text,
-    @fsutil.path_parent(config_path),
-    name=config_path,
-  ) catch {
+  let loaded = @project.load(config_path) catch {
     error => raise PackageConfigError::Invalid(path=config_path, error~)
   }
+  let project = loaded.config
   let plan = build_package_plan(raw, config_path, project, raw.update_revision)
   print_package_plan(plan, raw.dry_run)
   if raw.dry_run {
@@ -217,10 +205,10 @@ fn package_options_from_matches(
 async fn build_package_plan(
   raw : RawPackageOptions,
   config_path : String,
-  project : @proton_config.ProjectConfig,
+  project : @proton_config.AppConfig,
   update_revision : UInt64,
 ) -> PackagePlan {
-  let package_config = match project.package_config() {
+  let package_config = match project.package_config {
     Some(package_config) => package_config
     None => raise PackageConfigError::PackageMissing
   }
@@ -231,7 +219,7 @@ async fn build_package_plan(
   let product_name = @packager.validate_product_name(
     raw.package_args.product_name.unwrap_or(package_config.product_name),
   )
-  let identifier = @packager.validate_identifier(project.identifier())
+  let identifier = @packager.validate_identifier(project.identifier)
   let configured_formats = if raw.package_args.formats.length() > 0 {
     raw.package_args.formats.copy()
   } else if platform_config.formats.length() > 0 {
@@ -240,10 +228,10 @@ async fn build_package_plan(
     []
   }
   let formats = @packager.resolve_package_formats(configured_formats)
-  let base_dir = @fsutil.resolve_path(project.base_dir(), ".")
-  let backend = project.backend()
+  let base_dir = @fsutil.path_parent(config_path)
+  let backend = project.backend
   let backend_root = match backend {
-    Some(backend) => @fsutil.resolve_path(base_dir, backend.path())
+    Some(backend) => @fsutil.resolve_path(base_dir, backend.path)
     None => base_dir
   }
   let version = @packager.validate_package_version(
@@ -253,26 +241,113 @@ async fn build_package_plan(
     Some(app_package) => app_package
     None =>
       match backend {
-        Some(backend) => backend.app_package()
+        Some(backend) => backend.app_package
         None => default_package
       }
   }
   let output = match raw.package_args.output {
     Some(output) => @fsutil.resolve_path(base_dir, output)
-    None => @fsutil.resolve_path(base_dir, package_config.output())
+    None => @fsutil.resolve_path(base_dir, package_config.output)
   }
-  let frontend_dist = match project.frontend() {
-    Some(frontend) => frontend.dist()
+  let frontend_dist = match project.frontend {
+    Some(frontend) =>
+      frontend.dist.map(dist => {
+        @fsutil.resolve_path(
+          frontend.path
+          .map(path => @fsutil.resolve_path(base_dir, path))
+          .unwrap_or(base_dir),
+          dist,
+        )
+      })
     None => None
   }
   let nsis_install_mode = resolve_nsis_install_mode(
     raw.package_args,
     package_config,
   )
+  let icons = if raw.package_args.icons.is_empty() {
+    package_config.icons
+  } else {
+    raw.package_args.icons
+  }
+  let url_schemes = if raw.package_args.url_schemes.is_empty() {
+    package_config.url_schemes
+  } else {
+    raw.package_args.url_schemes
+  }
+  let macos_minimum_system_version = raw.package_args.macos_minimum_system_version.map_or(
+    package_config.platforms.macos.map_or(None, config => {
+      config.minimum_system_version
+    }),
+    value => Some(value),
+  )
+  let format_names = formats.map(format => format.to_string())
+  let platforms = package_config.platforms
+  let host_config = @proton_config.PlatformPackageConfig(formats=format_names)
+  let platforms = match @packager.current_package_host() {
+    Macos =>
+      {
+        ..platforms,
+        macos: Some({
+          ..platforms.macos.unwrap_or(host_config),
+          formats: Some(format_names),
+        }),
+      }
+    Windows =>
+      {
+        ..platforms,
+        windows: Some({
+          ..platforms.windows.unwrap_or(host_config),
+          formats: Some(format_names),
+        }),
+      }
+    Linux =>
+      {
+        ..platforms,
+        linux: Some({
+          ..platforms.linux.unwrap_or(host_config),
+          formats: Some(format_names),
+        }),
+      }
+  }
+  let platforms = {
+    ..platforms,
+    macos: match macos_minimum_system_version {
+      Some(value) =>
+        Some({
+          ..platforms.macos.unwrap_or(@proton_config.PlatformPackageConfig()),
+          minimum_system_version: Some(value),
+        })
+      None => platforms.macos
+    },
+    windows: Some({
+      ..platforms.windows.unwrap_or(@proton_config.PlatformPackageConfig()),
+      nsis_install_mode: Some(nsis_install_mode.to_string()),
+    }),
+  }
   PackagePlan::{
     root: backend_root,
     app_package,
     config_path,
+    config: {
+      ..project,
+      backend: Some({
+        ..project.backend.unwrap_or(
+          @proton_config.BackendConfig(".", app_package),
+        ),
+        app_package,
+      }),
+      package_config: Some({
+        ..package_config,
+        product_name,
+        version,
+        formats: format_names,
+        platforms,
+        icons,
+        url_schemes,
+        output: raw.package_args.output.unwrap_or(package_config.output),
+      }),
+    },
     product_name,
     identifier,
     version,
@@ -282,29 +357,17 @@ async fn build_package_plan(
     release: raw.release,
     base_dir,
     frontend_dist,
-    prepare: package_config.prepare(),
-    resources: platform_config.resources,
-    sign_binaries: platform_config.sign_binaries,
-    icons: if raw.package_args.icons.length() > 0 {
-      raw.package_args.icons.map(icon => @fsutil.resolve_path(base_dir, icon))
-    } else {
-      package_config.icons()
-    },
-    url_schemes: if raw.package_args.url_schemes.length() > 0 {
-      raw.package_args.url_schemes.copy()
-    } else {
-      package_config.url_schemes()
-    },
-    document_types: package_config.document_types(),
-    macos_minimum_system_version: match
-      raw.package_args.macos_minimum_system_version {
-      Some(value) => Some(value)
-      None =>
-        match package_config.platforms().macos() {
-          Some(config) => config.minimum_system_version
-          None => None
-        }
-    },
+    prepare: package_config.prepare,
+    resources: platform_config.resources.map(path => {
+      @fsutil.resolve_path(base_dir, path)
+    }),
+    sign_binaries: platform_config.sign_binaries.map(path => {
+      @fsutil.resolve_path(base_dir, path)
+    }),
+    icons: icons.map(icon => @fsutil.resolve_path(base_dir, icon)),
+    url_schemes,
+    document_types: package_config.document_types,
+    macos_minimum_system_version,
     nsis_install_mode,
     sign: raw.package_args.sign,
     notarize: raw.package_args.notarize,
@@ -313,29 +376,29 @@ async fn build_package_plan(
 
 ///|
 fn resolve_platform_package_config(
-  package_config : @proton_config.ProjectPackageConfig,
+  package_config : @proton_config.PackageConfig,
   platform : @packager.PackageHost,
 ) -> ResolvedPlatformPackageConfig {
-  let platforms = package_config.platforms()
+  let platforms = package_config.platforms
   let platform_config = match platform {
-    @packager.PackageHost::Macos => platforms.macos()
-    @packager.PackageHost::Windows => platforms.windows()
-    @packager.PackageHost::Linux => platforms.linux()
+    @packager.PackageHost::Macos => platforms.macos
+    @packager.PackageHost::Windows => platforms.windows
+    @packager.PackageHost::Linux => platforms.linux
   }
   let formats = match platform_config {
-    Some(config) => config.formats().unwrap_or(package_config.formats())
-    None => package_config.formats()
+    Some(config) => config.formats.unwrap_or(package_config.formats)
+    None => package_config.formats
   }
-  let resources = package_config.resources()
-  let sign_binaries = match package_config.sign() {
-    Some(sign) => sign.binaries()
+  let resources = package_config.resources.copy()
+  let sign_binaries = match package_config.sign {
+    Some(sign) => sign.binaries.copy()
     None => []
   }
   match platform_config {
     Some(config) => {
-      append_unique(resources, config.resources())
-      match config.sign() {
-        Some(sign) => append_unique(sign_binaries, sign.binaries())
+      append_unique(resources, config.resources)
+      match config.sign {
+        Some(sign) => append_unique(sign_binaries, sign.binaries)
         None => ()
       }
     }
@@ -347,15 +410,14 @@ fn resolve_platform_package_config(
 ///|
 fn resolve_nsis_install_mode(
   arguments : @package_args.PackageArguments,
-  package_config : @proton_config.ProjectPackageConfig,
+  package_config : @proton_config.PackageConfig,
 ) -> @packager.NsisInstallMode raise @packager.PackagePlanError {
   match arguments.nsis_install_mode {
     Some(mode) => mode
     None =>
-      match package_config.platforms().windows() {
+      match package_config.platforms.windows {
         Some(windows) =>
-          windows
-          .nsis_install_mode()
+          windows.nsis_install_mode
           .map(@packager.NsisInstallMode::parse)
           .unwrap_or(CurrentUser)
         None => CurrentUser

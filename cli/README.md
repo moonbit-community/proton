@@ -29,3 +29,10 @@ exits before announcing it has not supplied a debugging endpoint.
 can still be requested with `PROTON_REMOTE_DEBUGGING_PORT=9333`. Remote debugging
 is disabled when the application debug setting is off. This announcement does
 not require enabling `PROTON_CEF_LOG`.
+
+`dev`, `build`, `package`, and `doctor` share the typed `AppConfig` decoder.
+Project paths are resolved by the CLI, without replacing the relative values
+in the configuration. `dev` passes a per-launch configuration snapshot with CLI
+overrides to the application; the source project file is not modified.
+`package` likewise embeds the effective configuration, including CLI overrides
+for the backend package, formats, and platform settings.

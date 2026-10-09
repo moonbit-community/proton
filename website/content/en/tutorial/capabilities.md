@@ -59,7 +59,7 @@ async fn main {
     #|</script>
     #|</html>
   @proton.html("Read a file", html)
-  .load_config()
+  .config(@proton.load_config())
   .capability(
     @fs.capability([
       @fs.PermissionRoot("./workspace", ["read_file"]),

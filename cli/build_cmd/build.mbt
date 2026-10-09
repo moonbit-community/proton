@@ -21,7 +21,7 @@ pub extend BuildUsageError with Show::{to_string, output}
 ///|
 pub(all) suberror BuildConfigError {
   NotFound(path~ : String?)
-  Invalid(path~ : String, error~ : @proton_config.ProjectConfigError)
+  Invalid(path~ : String, error~ : @proton_config.AppConfigError)
   InvalidRelease(message~ : String)
 } derive(Debug, Eq)
 
@@ -227,20 +227,21 @@ priv struct BuildInvocation {
 
 ///|
 async fn prepare_build(cwd : String, raw : RawBuildOptions) -> BuildInvocation {
-  let (cwd, config) = load_build_project(cwd, raw)
+  let (cwd, project) = load_build_project(cwd, raw)
+  let config = project.config
   validate_release_config(config)
   if raw.run_frontend_build {
-    run_frontend_build(config.base_dir(), config)
+    run_frontend_build(project.base_dir, config)
   }
-  validate_release_files(config.base_dir(), config)
-  project_build_invocation(cwd, config, raw)
+  validate_release_files(project.base_dir, config)
+  project_build_invocation(cwd, project, raw)
 }
 
 ///|
 async fn load_build_project(
   cwd : String,
   raw : RawBuildOptions,
-) -> (String, @proton_config.ProjectConfig) {
+) -> (String, @project.Project) {
   let cwd = @path.Path(cwd).resolve().to_string()
   let config_path = resolve_build_config_path(cwd, raw)
   let config = load_project_config(config_path)
@@ -250,19 +251,20 @@ async fn load_build_project(
 ///|
 async fn project_build_invocation(
   cwd : String,
-  config : @proton_config.ProjectConfig,
+  project : @project.Project,
   raw : RawBuildOptions,
 ) -> BuildInvocation {
-  let backend = config.backend()
+  let config = project.config
+  let backend = config.backend
   let backend_path = resolve_backend_path(
-    config.base_dir(),
-    backend.map(fn(backend) { backend.path() }),
+    project.base_dir,
+    backend.map(fn(backend) { backend.path }),
   )
   let app_package = match raw.app_package {
     Some(app_package) => app_package
     None =>
       match backend {
-        Some(backend) => backend.app_package()
+        Some(backend) => backend.app_package
         None => default_package
       }
   }
@@ -276,6 +278,7 @@ async fn project_build_invocation(
     moon_args: raw.moon_args,
     windows_resource: windows_app_resource(
       @path.sep == '\\',
+      project.base_dir,
       config,
       raw.icons,
       moon_target_dir,
@@ -383,9 +386,7 @@ async fn resolve_build_config_path(
 }
 
 ///|
-async fn load_project_config(
-  config_path : String?,
-) -> @proton_config.ProjectConfig {
+async fn load_project_config(config_path : String?) -> @project.Project {
   match config_path {
     None => raise NotFound(path=None)
     Some(path) => {
@@ -400,15 +401,15 @@ async fn load_project_config(
 ///|
 async fn run_frontend_build(
   root : String,
-  config : @proton_config.ProjectConfig,
+  config : @proton_config.AppConfig,
 ) -> Unit {
-  match config.frontend() {
+  match config.frontend {
     None => ()
     Some(frontend) =>
-      match frontend.before_build() {
+      match frontend.before_build {
         None => ()
         Some(command) => {
-          let cwd = resolve_frontend_path(root, frontend.path(), command)
+          let cwd = resolve_frontend_path(root, frontend.path, command)
           @output.info("Building frontend: " + command)
           @output.info("Frontend cwd: " + cwd)
           let (program, args) = shell_command(command)
@@ -468,11 +469,11 @@ async fn resolve_backend_path(root : String, backend_path : String?) -> String {
 
 ///|
 fn validate_release_config(
-  config : @proton_config.ProjectConfig,
+  config : @proton_config.AppConfig,
 ) -> Unit raise BuildConfigError {
-  match config.frontend() {
+  match config.frontend {
     Some(frontend) =>
-      match frontend.dist() {
+      match frontend.dist {
         Some(_) => ()
         None =>
           raise InvalidRelease(
@@ -486,13 +487,16 @@ fn validate_release_config(
 ///|
 async fn validate_release_files(
   root : String,
-  config : @proton_config.ProjectConfig,
+  config : @proton_config.AppConfig,
 ) -> Unit {
-  match config.frontend() {
+  match config.frontend {
     Some(frontend) =>
-      match frontend.dist() {
+      match frontend.dist {
         Some(dist) => {
-          let path = @fsutil.resolve_path(root, dist)
+          let frontend_root = frontend.path
+            .map(path => @fsutil.resolve_path(root, path))
+            .unwrap_or(root)
+          let path = @fsutil.resolve_path(frontend_root, dist)
           if !@fsutil.path_exists(path) {
             raise Missing(role="frontend dist", path~)
           }
@@ -509,22 +513,8 @@ async fn validate_release_files(
 ///|
 async fn read_project_config(
   path : String,
-) -> @proton_config.ProjectConfig raise BuildConfigError {
-  let source = @async_fs.read_file(path).text() catch {
-    error =>
-      raise Invalid(
-        path~,
-        error=@proton_config.ProjectConfigError::FileRead(
-          path~,
-          detail=@debug.render(Repr(error)),
-        ),
-      )
-  }
-  @proton_config.load_project_config_from_text(
-    source,
-    @fsutil.path_parent(path),
-    name=path,
-  ) catch {
+) -> @project.Project raise BuildConfigError {
+  @project.load(path) catch {
     error => raise Invalid(path~, error~)
   }
 }

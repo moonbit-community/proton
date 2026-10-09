@@ -2720,13 +2720,17 @@ test "application identity sources cannot be combined" {
   assert_true(app.validation_error() is Some(_))
 
   let managed = html("App", "<main>App</main>")
-  managed.application_identity = Some(ProjectConfig("dev.proton.managed"))
+  managed.application_identity = Some(
+    Configured(AppConfig("dev.proton.managed")),
+  )
   let combined = managed.identifier("dev.proton.inline")
   guard combined.validation_error()
     is Some(InvalidSetting(name="identifier", message~)) else {
     fail("expected duplicate application identity sources")
   }
-  assert_true(message.contains("either .load_config() or .identifier(...)"))
+  assert_true(
+    message.contains("only one of .config(config) or .identifier(...)"),
+  )
 }
 
 ///|
@@ -2908,26 +2912,17 @@ test "application log directory follows platform conventions" {
 }
 
 ///|
-test "managed identity reads the packaged identifier" {
-  let metadata =
-    #|{
-    #|  "identifier": "com.example.app",
-    #|  "product_name": "Example"
-    #|}
-  debug_inspect(
-    packaged_application_identifier_from_json(metadata),
-    content="Ok(\"com.example.app\")",
+test "managed configuration requires an identifier" {
+  let config = AppConfig::parse("{\"identifier\":\"com.example.app\"}")
+  assert_eq(
+    html("Test", "").config(config).application_identifier(),
+    "com.example.app",
   )
-}
-
-///|
-test "managed identity rejects packaged metadata without an identifier" {
-  let metadata : Json = { "product_name": "Example" }
-  guard packaged_application_identifier_from_json(metadata.stringify())
-    is Err(InvalidSetting(message~, ..)) else {
-    fail("expected packaged metadata validation to fail")
+  try AppConfig::parse("{}") catch {
+    error => assert_true(error.message().contains("identifier"))
+  } noraise {
+    _ => fail("expected missing identity to fail")
   }
-  inspect(message, content="packaged application metadata requires identifier")
 }
 
 ///|

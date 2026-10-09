@@ -66,7 +66,7 @@ async fn main {
     #|</script>
     #|</html>
   @proton.html("Greeting", html)
-  .load_config()
+  .config(@proton.load_config())
   .commands(fn(registrar) raise {
     registrar.bind(greet, (_context, request) => {
       "Hello, " + request.name + "!"

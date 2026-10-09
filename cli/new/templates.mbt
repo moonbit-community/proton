@@ -17,7 +17,7 @@ let default_proton_client_version = "0.3.4"
 let default_proton_rabbita_version = "0.3.4"
 
 ///|
-let default_rabbita_version = "0.16.2"
+let default_rabbita_version = "0.16.4"
 
 ///|
 let default_warren_version = "0.3.3"

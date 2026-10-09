@@ -9,6 +9,7 @@ import {
   "moonbit-community/proton/internal/native",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/updater",
+  "moonbit-community/proton_config",
   "moonbit-community/proton_contract",
   "moonbitlang/async",
   "moonbitlang/core/debug",
@@ -28,6 +29,8 @@ pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 pub fn is_packaged() -> Bool
 
 pub fn is_ready() -> Bool
+
+pub fn load_config() -> @proton_config.AppConfig raise @proton_config.AppConfigError
 
 pub fn native_image() -> NativeImage raise NativeImageError
 
@@ -103,18 +106,6 @@ pub fn AppEntryError::message(Self) -> String
 pub fn AppEntryError::output(Self, &Logger) -> Unit
 pub fn AppEntryError::to_repr(Self) -> @debug.Repr
 pub fn AppEntryError::to_string(Self) -> String
-
-pub(all) suberror AppMetadataError {
-  MissingPackageMetadata
-  MissingField(field~ : String)
-  InvalidMetadata(detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn AppMetadataError::equal(Self, Self) -> Bool
-pub fn AppMetadataError::message(Self) -> String
-pub fn AppMetadataError::not_equal(Self, Self) -> Bool
-pub fn AppMetadataError::output(Self, &Logger) -> Unit
-pub fn AppMetadataError::to_repr(Self) -> @debug.Repr
-pub fn AppMetadataError::to_string(Self) -> String
 
 pub(all) suberror AppPathError {
   MissingApplicationIdentifier
@@ -275,6 +266,7 @@ pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) ->
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise, targets? : Array[RendererTarget]) -> Self
+pub fn App::config(Self, @proton_config.AppConfig) -> Self
 pub fn App::data_dir(Self) -> String raise AppPathError
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
@@ -282,11 +274,10 @@ pub fn App::document_extension(Self, String) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
 pub fn App::identifier(Self, String) -> Self
 pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
-pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::main_window(Self, WindowConfig) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
-pub fn App::name(Self) -> String raise AppMetadataError
+pub fn App::name(Self) -> String raise @proton_config.AppConfigError
 pub fn App::on_before_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Self
 pub fn App::on_certificate_error(Self, async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (WebContentsHandle, DownloadEvent) -> Unit noraise) -> Self
@@ -318,7 +309,7 @@ pub fn App::set_path(Self, AppPathKind, String) -> Self raise AppPathError
 pub fn App::single_instance(Self, enabled? : Bool) -> Self
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
 pub fn App::url_scheme(Self, String) -> Self
-pub fn App::version(Self) -> String raise AppMetadataError
+pub fn App::version(Self) -> String raise @proton_config.AppConfigError
 pub fn App::web_request_cancel_prefix(Self, String) -> Self
 pub fn App::web_request_header_prefix(Self, String, String, String) -> Self
 pub fn App::web_request_redirect_prefix(Self, String, String) -> Self
@@ -1393,7 +1384,13 @@ pub fn WindowThemePreference::not_equal(Self, Self) -> Bool
 pub fn WindowThemePreference::to_repr(Self) -> @debug.Repr
 
 // Type aliases
+pub using @proton_config {type AppConfig}
+
+pub using @proton_config {type AppConfigError}
+
 pub using @manifest {type AppEntry}
+
+pub using @proton_config {type BackendConfig}
 
 pub using @core {type AppCommandRequestContext as CommandContext}
 
@@ -1401,10 +1398,22 @@ pub using @command {type CommandRegistrar}
 
 pub using @core {type CommandWindow}
 
+pub using @proton_config {type DocumentType}
+
+pub using @proton_config {type FrontendConfig}
+
 pub using @locale {type Locale}
 
 pub using @locale {type LocaleParseError}
 
+pub using @proton_config {type PackageConfig}
+
+pub using @proton_config {type PackagePlatforms}
+
 pub using @command {type PermissionScopeValidationError}
+
+pub using @proton_config {type PlatformPackageConfig}
+
+pub using @proton_config {type SignConfig}
 
 // Traits
