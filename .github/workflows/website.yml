@@ -48,13 +48,13 @@ jobs:
         run: |
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
-      - name: Install the documented registry CLI
+      - name: Install the CLI from this checkout
         run: |
-          version="$(sed -n 's/^title = "Proton \(.*\)"/\1/p' website/book.toml)"
-          moon install "moonbit-community/proton_cli@$version"
+          moon update
+          moon install --path cli
           proton_cli cef setup
       - name: Compile documented tutorials and validate configuration and CLI reference
-        run: python3 scripts/check_book.py --cli "$HOME/.moon/bin/proton_cli" --tutorials
+        run: python3 scripts/check_book.py --cli "$HOME/.moon/bin/proton_cli" --tutorials --source
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

@@ -13,10 +13,12 @@ async fn main {
   .config(@proton.load_config())
   .add_window(
     "help",
-    "Help",
-    @proton.AppEntry::Html("<h1>Help</h1><p>Close this window to return.</p>"),
-    width=480,
-    height=320,
+    @proton.WindowConfig(
+      "Help",
+      @proton.AppEntry::Html("<h1>Help</h1><p>Close this window to return.</p>"),
+      width=480,
+      height=320,
+    ),
   )
   .window_lifecycle(
     on_ready=context => {

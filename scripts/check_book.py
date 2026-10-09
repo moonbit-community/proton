@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check book consistency; optionally compile the published tutorial projects."""
+"""Check book consistency; optionally compile tutorial projects."""
 import argparse
 import json
 import os
@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import tomllib
 from html.parser import HTMLParser
 from urllib.parse import unquote, urlsplit
 
@@ -134,7 +135,7 @@ def run(command, cwd, capture=False):
 
 
 def check_cli(cli):
-    require(run([cli, '--version'], ROOT, True).strip() == f'proton_cli {VERSION}', 'Install the documented registry CLI version')
+    require(run([cli, '--version'], ROOT, True).strip() == f'proton_cli {VERSION}', 'Install a CLI matching the documented version')
     for command in ([], ['new'], ['dev'], ['build'], ['package'], ['doctor'], ['cef', 'setup'], ['cef', 'requirements'], ['updater', 'public-key']):
         help_text = run([cli, *command, '--help'], ROOT, True)
         help_text = re.sub(r'--\[no-\]([a-z-]+)', r'--\1 --no-\1', help_text)
@@ -146,7 +147,14 @@ def check_cli(cli):
                 require(option in reference or option in ('--help', '--cwd'), f'Undocumented {command} option: {option}')
 
 
-def check_tutorials(cli):
+def connect_source(project, members):
+    local = tomllib.loads((ROOT / 'moon.work').read_text())['members']
+    paths = [str(project / member) for member in members]
+    paths += [str((ROOT / member).resolve()) for member in local]
+    (project / 'moon.work').write_text('members = ' + json.dumps(paths, indent=2) + '\n')
+
+
+def check_tutorials(cli, source=False):
     temp = Path(tempfile.mkdtemp(prefix='proton-book-'))
     print(f'Tutorial artifacts: {temp}', flush=True)
     success = False
@@ -155,6 +163,8 @@ def check_tutorials(cli):
         app = temp / 'minimal'
         module = app / 'moon.mod'
         module.write_text(module.read_text().replace('import {', f'import {{\n  "moonbit-community/proton_contract@{VERSION}",\n  "moonbit-community/proton_ext@{VERSION}",'))
+        if source:
+            connect_source(app, ['.'])
         original_pkg = (app / 'app/moon.pkg').read_text()
         run(['moon', 'update'], app)
         for page in ('first-app', 'commands-events', 'windows', 'capabilities'):
@@ -163,7 +173,7 @@ def check_tutorials(cli):
             (app / 'app/moon.pkg').write_text(packages[0] if packages else original_pkg)
             code = blocks(text, 'moonbit')[0]
             (app / 'app/main.mbt').write_text(code)
-            run(['moon', 'check', '--target', 'native'], app)
+            run(['moon', 'check', 'app', '--target', 'native'], app)
             if page == 'commands-events':
                 event = read('en', 'tutorial/events')
                 parts = blocks(event, 'moonbit')
@@ -172,12 +182,12 @@ def check_tutorials(cli):
                 js = '\n'.join('    #|  ' + line for line in blocks(event, 'javascript')[0].splitlines())
                 code = re.sub(r'(    #\|<script>\n).*?(    #\|</script>)', lambda m: m[1] + js + '\n' + m[2], code, flags=re.S)
                 (app / 'app/main.mbt').write_text(code)
-                run(['moon', 'check', '--target', 'native'], app)
+                run(['moon', 'check', 'app', '--target', 'native'], app)
             if page == 'windows':
                 variants = blocks(text, 'moonbit')
-                code = code.replace('width=480,', 'open_on_start=false,\n    width=480,').replace('.run_or_abort()', variants[1].strip() + '\n' + variants[2].strip() + '\n.run_or_abort()')
+                code = code.replace('    "help",', '    "help",\n    open_on_start=false,').replace('.run_or_abort()', variants[1].strip() + '\n' + variants[2].strip() + '\n.run_or_abort()')
                 (app / 'app/main.mbt').write_text(code)
-                run(['moon', 'check', '--target', 'native'], app)
+                run(['moon', 'check', 'app', '--target', 'native'], app)
         run([cli, 'new', 'todo', '--template', 'isomorphic', '--yes', '--no-git', '--no-check'], temp)
         todo = temp / 'todo'
         parts = blocks(read('en', 'tutorial/isomorphic'), 'moonbit')
@@ -194,21 +204,25 @@ def check_tutorials(cli):
         require(marker in code, 'Template toolbar changed')
         code = code.replace(marker, marker + '\n' + parts[5], 1)
         file.write_text(code)
+        if source:
+            connect_source(todo, ['shared', 'frontend', 'backend'])
         run(['moon', 'update'], todo)
-        run(['moon', 'check', '--target', 'js,native'], todo)
+        run(['moon', 'check', 'shared', 'backend/app', 'backend/todo', 'frontend/main', 'frontend/internal/query', '--target', 'js,native'], todo)
         run(['moon', '-C', 'backend', 'test', 'todo', '--target', 'native'], todo)
-        run(['moon', '-C', 'frontend', 'test', '--target', 'js'], todo)
-        # Decode the actual complete configuration examples using the published parser.
+        run(['moon', '-C', 'frontend', 'test', 'main', 'internal/query', '--target', 'js'], todo)
+        # Decode configuration examples using the same dependency source.
         config = temp / 'config'; config.mkdir()
         (config / 'moon.mod').write_text(f'name = "book/config_check"\nversion = "0.0.0"\nimport {{ "moonbit-community/proton_config@{VERSION}", }}\n')
         (config / 'moon.pkg').write_text('import { "moonbit-community/proton_config" @config, } for "test"\nsupported_targets = "native"\n')
         tests = []
         for index, code in enumerate(blocks(read('en', 'configuration/project'), 'json')):
             json.loads(code)
-            tests.append('test "configuration ' + str(index) + '" {\n ignore(@config.load_project_config_from_text(' + json.dumps(code) + ', "."))\n}\n')
+            tests.append('test "configuration ' + str(index) + '" {\n ignore(@config.AppConfig::parse(' + json.dumps(code) + '))\n}\n')
         (config / 'config_test.mbt').write_text('\n///|\n'.join(tests))
+        if source:
+            connect_source(config, ['.'])
         run(['moon', 'update'], config)
-        run(['moon', 'test', '--target', 'native'], config)
+        run(['moon', 'test', '.', '--target', 'native'], config)
         success = True
     finally:
         if success:
@@ -220,8 +234,9 @@ def check_tutorials(cli):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--html', action='store_true', help='Validate built page links and anchors')
-    parser.add_argument('--cli', help='Published CLI executable for help and version checks')
-    parser.add_argument('--tutorials', action='store_true', help='Compile both templates and tutorial changes against the registry')
+    parser.add_argument('--cli', help='CLI executable for help and version checks')
+    parser.add_argument('--tutorials', action='store_true', help='Compile both templates and tutorial changes')
+    parser.add_argument('--source', action='store_true', help='Use this checkout for tutorial dependencies instead of registry packages')
     args = parser.parse_args()
     check_static()
     if args.html:
@@ -230,4 +245,4 @@ if __name__ == '__main__':
         check_cli(str(Path(args.cli).resolve()))
     if args.tutorials:
         require(args.cli is not None, '--tutorials requires --cli')
-        check_tutorials(str(Path(args.cli).resolve()))
+        check_tutorials(str(Path(args.cli).resolve()), source=args.source)
