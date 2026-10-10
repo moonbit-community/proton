@@ -53,387 +53,28 @@ fn test_window_manager() -> WindowManager {
 }
 
 ///|
-fn test_window_handle(
-  id : String,
-  native_id : Int64,
-  position_calls? : Array[(Int, Int)],
-  size_calls? : Array[(Int, Int)],
-  popup_calls? : Array[String],
-  progress_calls? : Array[Double],
-  progress_mode_calls? : Array[ProgressBarMode],
-  overlay_icon_calls? : Array[(Bool, String)],
-  thumbnail_tooltip_calls? : Array[String],
-  thumbar_button_calls? : Array[Int],
-  thumbar_button_result? : Bool = false,
-  flash_calls? : Array[Bool],
-  resizable_calls? : Array[Bool],
-  movable_calls? : Array[Bool],
-  opacity_calls? : Array[Double],
-  skip_taskbar_calls? : Array[Bool],
-  content_protection_calls? : Array[Bool],
-  minimizable_calls? : Array[Bool],
-  maximizable_calls? : Array[Bool],
-  closable_calls? : Array[Bool],
-  focusable_calls? : Array[Bool],
-  fullscreenable_calls? : Array[Bool],
-  has_shadow_calls? : Array[Bool],
-  ignore_mouse_events_calls? : Array[(Bool, Bool)],
-  background_color_calls? : Array[String],
-  theme_calls? : Array[WindowThemePreference],
-  visible_on_all_workspaces_calls? : Array[Bool],
-  enabled_calls? : Array[Bool],
-  kiosk_calls? : Array[Bool],
-  aspect_ratio_calls? : Array[Double],
-  minimum_size_calls? : Array[(Int, Int)],
-  maximum_size_calls? : Array[(Int, Int)],
-  content_size_calls? : Array[(Int, Int)],
-  content_size? : (Int, Int),
-  browser_audio_calls? : Array[Bool],
-  browser_audio_muted? : Bool = false,
-  browser_find_calls? : Array[String],
-  browser_download_calls? : Array[String],
-  browser_print_calls? : Array[String],
-  browser_control_calls? : Array[String],
-  browser_focused? : Bool = false,
-  browser_devtools_opened? : Bool = false,
-  window_state? : WindowState,
-) -> WindowHandle {
-  let browser = WebContentsHandle::{
-    view_id: None,
-    id,
-    native_id,
-    load_browser_url: fn(_url) {  },
-    load_browser_html: fn(_html, _base_url) {  },
-    eval_browser_script: fn(_script) {  },
-    focus_browser: fn() {
-      match browser_control_calls {
-        Some(calls) => calls.push("focus")
-        None => ()
-      }
-    },
-    send_browser_command: fn(command, _download_id) {
-      match browser_control_calls {
-        Some(calls) => calls.push(command)
-        None => ()
-      }
-    },
-    download_browser_url: fn(url) {
-      match browser_download_calls {
-        Some(calls) => calls.push(url)
-        None => ()
-      }
-    },
-    print_browser: fn() {
-      match browser_print_calls {
-        Some(calls) => calls.push("print")
-        None => ()
-      }
-    },
-    print_browser_to_pdf: fn(path, options) {
-      match browser_print_calls {
-        Some(calls) =>
-          calls.push(
-            "pdf:\{path}:\{options.landscape}:\{options.print_background}:\{options.scale}",
-          )
-        None => ()
-      }
-    },
-    find_browser_in_page: fn(text, forward, match_case, find_next) {
-      match browser_find_calls {
-        Some(calls) =>
-          calls.push("find:\{text}:\{forward}:\{match_case}:\{find_next}")
-        None => ()
-      }
-      7
-    },
-    stop_browser_find: fn(clear_selection) {
-      match browser_find_calls {
-        Some(calls) => calls.push("stop:\{clear_selection}")
-        None => ()
-      }
-    },
-    set_browser_zoom_percent: fn(_zoom_percent) {  },
-    read_browser_zoom_percent: fn() { 100 },
-    set_browser_audio_muted: muted => {
-      match browser_audio_calls {
-        Some(calls) => calls.push(muted)
-        None => ()
-      }
-    },
-    read_browser_audio_muted: fn() { browser_audio_muted },
-    read_browser_navigation_state: fn() { (true, false) },
-    read_browser_focused: fn() { browser_focused },
-    read_browser_devtools_opened: fn() { browser_devtools_opened },
-    read_browser_state: fn() {
-      {
-        url: "https://example.test/",
-        title: "Example",
-        is_loading: false,
-        can_go_back: true,
-        can_go_forward: false,
-      }
-    },
-    read_browser_navigation_history: fn() {
-      {
-        entries: [
-          {
-            url: "https://example.test/",
-            display_url: "example.test",
-            original_url: "https://example.test/",
-            title: "Example",
-            transition: Typed,
-            transition_qualifiers: [FromAddressBar],
-            has_post_data: false,
-            http_status_code: 200,
-          },
-        ],
-        active_index: 0,
-      }
-    },
-    insert_browser_page_css: fn(_css) { 21L },
-    remove_browser_page_css: fn(_key) {  },
-    session_handle: SessionHandle::{
-      read_cookies: (_url, _include_http_only) => [],
-      write_cookie: fn(
-        _url,
-        _name,
-        _value,
-        _domain,
-        _path,
-        _secure,
-        _http_only,
-        _same_site,
-      ) {
+fn test_session_handle() -> SessionHandle {
+  SessionHandle::{
+    read_cookies: (_url, _include_http_only) => [],
+    write_cookie: fn(
+      _url,
+      _name,
+      _value,
+      _domain,
+      _path,
+      _secure,
+      _http_only,
+      _same_site,
+    ) {
 
-      },
-      remove_cookies: fn(_url, _name) {  },
-      flush_cookie_store: fn() {  },
-      clear_http_cache: fn() {  },
-      clear_http_auth_cache: fn() {  },
-      clear_certificate_exceptions: fn() {  },
-      close_all_connections: fn() {  },
-      clear_storage_data: fn(_kind) {  },
     },
-  }
-  WindowHandle::{
-    id,
-    native_id,
-    show_window: fn() {  },
-    show_window_inactive: fn() {  },
-    hide_window: fn() {  },
-    close_window: fn() {  },
-    focus_window: fn() {  },
-    set_window_title: fn(_title) {  },
-    set_window_icon: fn(_path) {  },
-    set_window_parent: fn(_parent, _modal) {  },
-    set_window_size: (width, height) => {
-      match size_calls {
-        Some(calls) => calls.push((width, height))
-        None => ()
-      }
-    },
-    set_window_button_visibility: fn(_visible) {  },
-    write_window_button_position: fn(_) {  },
-    read_window_button_position: fn() { None },
-    set_window_content_size: (width, height) => {
-      match content_size_calls {
-        Some(calls) => calls.push((width, height))
-        None => ()
-      }
-    },
-    read_window_content_size: fn() { content_size.unwrap_or((320, 240)) },
-    set_window_menu: fn(_menu) {  },
-    minimize_window: fn() {  },
-    maximize_window: fn() {  },
-    restore_window: fn() {  },
-    set_window_fullscreen: fn(_fullscreen) {  },
-    set_window_kiosk: kiosk => {
-      match kiosk_calls {
-        Some(calls) => calls.push(kiosk)
-        None => ()
-      }
-    },
-    set_window_position: (x, y) => {
-      match position_calls {
-        Some(calls) => calls.push((x, y))
-        None => ()
-      }
-    },
-    set_window_always_on_top: fn(_always_on_top) {  },
-    set_window_resizable: resizable => {
-      match resizable_calls {
-        Some(calls) => calls.push(resizable)
-        None => ()
-      }
-    },
-    set_window_movable: movable => {
-      match movable_calls {
-        Some(calls) => calls.push(movable)
-        None => ()
-      }
-    },
-    set_window_opacity: opacity => {
-      match opacity_calls {
-        Some(calls) => calls.push(opacity)
-        None => ()
-      }
-    },
-    set_window_skip_taskbar: skip => {
-      match skip_taskbar_calls {
-        Some(calls) => calls.push(skip)
-        None => ()
-      }
-    },
-    set_window_content_protection: enabled => {
-      match content_protection_calls {
-        Some(calls) => calls.push(enabled)
-        None => ()
-      }
-    },
-    set_window_minimizable: minimizable => {
-      match minimizable_calls {
-        Some(calls) => calls.push(minimizable)
-        None => ()
-      }
-    },
-    set_window_maximizable: maximizable => {
-      match maximizable_calls {
-        Some(calls) => calls.push(maximizable)
-        None => ()
-      }
-    },
-    set_window_closable: closable => {
-      match closable_calls {
-        Some(calls) => calls.push(closable)
-        None => ()
-      }
-    },
-    set_window_focusable: focusable => {
-      match focusable_calls {
-        Some(calls) => calls.push(focusable)
-        None => ()
-      }
-    },
-    set_window_fullscreenable: fullscreenable => {
-      match fullscreenable_calls {
-        Some(calls) => calls.push(fullscreenable)
-        None => ()
-      }
-    },
-    set_window_has_shadow: has_shadow => {
-      match has_shadow_calls {
-        Some(calls) => calls.push(has_shadow)
-        None => ()
-      }
-    },
-    set_window_ignore_mouse_events: (ignore, forward) => {
-      match ignore_mouse_events_calls {
-        Some(calls) => calls.push((ignore, forward))
-        None => ()
-      }
-    },
-    set_window_background_color: color => {
-      match background_color_calls {
-        Some(calls) => calls.push(color)
-        None => ()
-      }
-    },
-    set_window_theme: theme => {
-      match theme_calls {
-        Some(calls) => calls.push(theme)
-        None => ()
-      }
-    },
-    set_window_visible_on_all_workspaces: visible => {
-      match visible_on_all_workspaces_calls {
-        Some(calls) => calls.push(visible)
-        None => ()
-      }
-    },
-    set_window_enabled: enabled => {
-      match enabled_calls {
-        Some(calls) => calls.push(enabled)
-        None => ()
-      }
-    },
-    set_window_aspect_ratio: aspect_ratio => {
-      match aspect_ratio_calls {
-        Some(calls) => calls.push(aspect_ratio)
-        None => ()
-      }
-    },
-    set_window_minimum_size: (width, height) => {
-      match minimum_size_calls {
-        Some(calls) => calls.push((width, height))
-        None => ()
-      }
-    },
-    set_window_maximum_size: (width, height) => {
-      match maximum_size_calls {
-        Some(calls) => calls.push((width, height))
-        None => ()
-      }
-    },
-    set_window_progress_bar: (progress, mode) => {
-      match progress_calls {
-        Some(calls) => calls.push(progress)
-        None => ()
-      }
-      match progress_mode_calls {
-        Some(calls) => calls.push(mode)
-        None => ()
-      }
-    },
-    set_window_overlay_icon: (overlay, description) => {
-      match overlay_icon_calls {
-        Some(calls) =>
-          calls.push(
-            match overlay {
-              Some(_) => (true, description)
-              None => (false, description)
-            },
-          )
-        None => ()
-      }
-    },
-    set_window_thumbnail_tooltip: tooltip => {
-      match thumbnail_tooltip_calls {
-        Some(calls) => calls.push(tooltip)
-        None => ()
-      }
-    },
-    set_window_thumbar_buttons: buttons => {
-      match thumbar_button_calls {
-        Some(calls) => calls.push(buttons.length())
-        None => ()
-      }
-      thumbar_button_result
-    },
-    flash_window_frame: flash => {
-      match flash_calls {
-        Some(calls) => calls.push(flash)
-        None => ()
-      }
-    },
-    popup_window_menu: fn(menu, x, y) {
-      match popup_calls {
-        Some(calls) => {
-          let (_, label, _) = menu.to_native().definition()
-          let title = label.unwrap_or("")
-          calls.push("popup:\{title}@\{x},\{y}")
-        }
-        None => ()
-      }
-    },
-    read_window_state: match window_state {
-      Some(state) => fn() { state }
-      None => fn() { abort("test window state is not available") }
-    },
-    browser,
-    add_view: fn(_id, _config) { abort("test views are not available") },
-    remove_view: fn(_id) { abort("test views are not available") },
-    list_views: fn() { [] },
-    find_view: fn(_id) { None },
+    remove_cookies: fn(_url, _name) {  },
+    flush_cookie_store: fn() {  },
+    clear_http_cache: fn() {  },
+    clear_http_auth_cache: fn() {  },
+    clear_certificate_exceptions: fn() {  },
+    close_all_connections: fn() {  },
+    clear_storage_data: fn(_kind) {  },
   }
 }
 
@@ -527,7 +168,7 @@ async test "application context forwards orderly and forced exit requests" {
   let released = Ref(false)
   @async.with_task_group(group => {
     let context = ApplicationContext(
-      session=test_window_handle("main", 1L).web_contents().session(),
+      session=test_session_handle(),
       group,
       test_window_manager(),
       @locale.LocalePreferences::resolve(None, []),
@@ -555,7 +196,7 @@ async test "application context forwards orderly and forced exit requests" {
 async test "application context validates protocol declarations and relaunch options" {
   @async.with_task_group(group => {
     let context = ApplicationContext(
-      session=test_window_handle("main", 1L).web_contents().session(),
+      session=test_session_handle(),
       group,
       test_window_manager(),
       @locale.LocalePreferences::resolve(None, []),
@@ -2224,12 +1865,6 @@ test "renderer termination statuses map to Electron reasons" {
 }
 
 ///|
-test "web contents handles report their owning window" {
-  let view = test_view_handle("tab", 3L, [])
-  assert_eq(view.web_contents().window_id(), "main")
-}
-
-///|
 test "process-level event handlers accumulate on the app builder" {
   let app = html("Process events", "<html></html>")
     .on_window_created(fn(_) { () })
@@ -2289,7 +1924,7 @@ async test "application lifecycle hooks shut down in reverse order" {
     start_application_lifecycle_hooks(
       configured.application_lifecycle_hooks,
       ApplicationContext(
-        session=test_window_handle("main", 1L).web_contents().session(),
+        session=test_session_handle(),
         group,
         test_window_manager(),
         @locale.LocalePreferences::resolve(None, []),
@@ -2460,33 +2095,6 @@ async test "cancelling window and cookie waiters preserves task group cancellati
   })
   assert_true(cookies.pending.is_empty())
   assert_true(window.state is WindowOpenFailed(Cancelled))
-  // A cancelled queued operation cannot later publish activation success.
-  window.succeed(test_window_handle("secondary", 7L))
-  assert_true(window.state is WindowOpenFailed(Cancelled))
-}
-
-///|
-async test "window activation success wins over later waiter cancellation" {
-  let completion = WindowOpenCompletion()
-  @async.with_task_group(group => {
-    let entered = Ref(false)
-    let waiter = group.spawn(
-      () => {
-        entered.val = true
-        ignore(completion.wait())
-      },
-      no_wait=true,
-    )
-    while !entered.val {
-      @async.pause()
-    }
-    completion.succeed(test_window_handle("secondary", 7L))
-    waiter.cancel()
-  })
-  guard completion.state is WindowOpenSucceeded(handle) else {
-    fail("late cancellation discarded a committed window")
-  }
-  assert_eq(handle.id(), "secondary")
 }
 
 ///|
@@ -2516,7 +2124,7 @@ async test "application lifecycle startup rolls back completed hooks" {
       start_application_lifecycle_hooks(
         configured.application_lifecycle_hooks,
         ApplicationContext(
-          session=test_window_handle("main", 1L).web_contents().session(),
+          session=test_session_handle(),
           group,
           test_window_manager(),
           @locale.LocalePreferences::resolve(None, []),
@@ -2537,46 +2145,6 @@ async test "application lifecycle startup rolls back completed hooks" {
       assert_true(detail.contains("first"))
     _ => fail("expected rollback cleanup failure")
   }
-}
-
-///|
-async test "window close joins owned tasks before close hooks" {
-  let child_stopped = Ref(false)
-  let close_saw_stopped = Ref(false)
-  let configured = html("Lifecycle", "<html></html>").window_lifecycle(
-    on_ready=fn(context) {
-      context
-      .task_group()
-      .spawn_bg(
-        () => {
-          defer {
-            child_stopped.val = true
-          }
-          @async.sleep(10000)
-        },
-        no_wait=true,
-      )
-    },
-    on_close=fn(_state) { close_saw_stopped.val = child_stopped.val },
-  )
-  @async.with_task_group(group => {
-    start_window_lifecycle_hooks(
-      configured.window_lifecycle_hooks,
-      WindowContext(
-        "main",
-        test_window_handle("main", 17L),
-        test_window_manager(),
-        group,
-        WindowEventEmitter(fn(_route, _name, _payload) {  }),
-        @locale.LocalePreferences::resolve(None, []),
-      ),
-      group,
-      [],
-    )
-    group.return_immediately(())
-  })
-  assert_true(child_stopped.val)
-  assert_true(close_saw_stopped.val)
 }
 
 ///|
@@ -2965,225 +2533,6 @@ test "the launch check is opt-in twice over" {
 }
 
 ///|
-fn test_view_handle(
-  id : String,
-  native_id : Int64,
-  calls : Array[String],
-) -> ViewHandle {
-  ViewHandle::{
-    id,
-    native_id,
-    window_id: "main",
-    set_view_bounds: fn(x, y, width, height) {
-      calls.push("set_bounds:\{x},\{y},\{width},\{height}")
-    },
-    set_view_visible: fn(visible) { calls.push("set_visible:\{visible}") },
-    set_view_z_order: fn(z_order) { calls.push("set_z_order:\{z_order}") },
-    read_view_state: fn() {
-      { x: 1, y: 2, width: 300, height: 200, visible: true, z_order: 1, }
-    },
-    contents: {
-      ..test_window_handle("main", 1L).web_contents(),
-      view_id: Some(id),
-      set_browser_zoom_percent: fn(zoom_percent) {
-        calls.push("set_zoom_percent:\{zoom_percent}")
-      },
-      read_browser_zoom_percent: fn() { 125 },
-      set_browser_audio_muted: fn(muted) {
-        calls.push("set_audio_muted:\{muted}")
-      },
-      read_browser_audio_muted: fn() { true },
-      load_browser_url: fn(url) { calls.push("load_url:\{url}") },
-      load_browser_html: fn(_html, _base_url) {  },
-      eval_browser_script: fn(_script) {  },
-      focus_browser: fn() { calls.push("focus") },
-      send_browser_command: fn(command, _download_id) { calls.push(command) },
-      find_browser_in_page: fn(text, forward, match_case, find_next) {
-        calls.push("find:\{text}:\{forward}:\{match_case}:\{find_next}")
-        9
-      },
-      stop_browser_find: fn(clear_selection) {
-        calls.push("stop_find:\{clear_selection}")
-      },
-      read_browser_navigation_state: fn() { (true, false) },
-      read_browser_focused: fn() { true },
-      read_browser_devtools_opened: fn() { false },
-      read_browser_navigation_history: fn() {
-        { entries: [], active_index: -1, }
-      },
-      insert_browser_page_css: fn(_css) { 22L },
-      remove_browser_page_css: fn(_key) {  },
-    },
-    close_view: fn() { calls.push("close") },
-  }
-}
-
-///|
-test "view handle routes operations through its closures" {
-  let calls : Array[String] = []
-  let view = test_view_handle("panel", 7L, calls)
-  inspect(view.id(), content="panel")
-  view.set_bounds(x=1, y=2, width=300, height=200)
-  view.set_visible(false)
-  view.set_z_order(2)
-  view.web_contents().set_zoom_percent(125)
-  inspect(view.web_contents().zoom_percent(), content="125")
-  view.web_contents().set_audio_muted(true)
-  assert_true(view.web_contents().is_audio_muted())
-  view.web_contents().load_url("https://example.com/")
-  inspect(
-    view
-    .web_contents()
-    .find_in_page("Proton", forward=false, match_case=true, find_next=true),
-    content="9",
-  )
-  view.web_contents().stop_find_in_page(clear_selection=false)
-  assert_true(view.web_contents().can_go_back())
-  assert_false(view.web_contents().can_go_forward())
-  view.web_contents().focus()
-  assert_true(view.web_contents().is_focused())
-  view.web_contents().open_devtools()
-  view.web_contents().toggle_devtools()
-  view.web_contents().close_devtools()
-  assert_false(view.web_contents().is_devtools_opened())
-  let state = view.state()
-  inspect(state.width, content="300")
-  inspect(state.z_order, content="1")
-  view.close()
-  debug_inspect(
-    calls,
-    content=(
-      #|[
-      #|  "set_bounds:1,2,300,200",
-      #|  "set_visible:false",
-      #|  "set_z_order:2",
-      #|  "set_zoom_percent:125",
-      #|  "set_audio_muted:true",
-      #|  "load_url:https://example.com/",
-      #|  "find:Proton:false:true:true",
-      #|  "stop_find:false",
-      #|  "focus",
-      #|  "open_devtools",
-      #|  "toggle_devtools",
-      #|  "close_devtools",
-      #|  "close",
-      #|]
-    ),
-  )
-}
-
-///|
-test "view handle routes editing commands" {
-  let calls : Array[String] = []
-  let view = test_view_handle("panel", 7L, calls)
-  view.web_contents().undo()
-  view.web_contents().redo()
-  view.web_contents().cut()
-  view.web_contents().copy()
-  view.web_contents().paste()
-  view.web_contents().paste_and_match_style()
-  view.web_contents().delete()
-  view.web_contents().select_all()
-  assert_eq(calls, [
-    "undo", "redo", "cut", "copy", "paste", "paste_and_match_style", "delete", "select_all",
-  ])
-}
-
-///|
-test "browser handle exposes the current page state" {
-  let window = test_window_handle("main", 17L)
-  let state = window.web_contents().state()
-  assert_eq(state.url, "https://example.test/")
-  assert_eq(state.title, "Example")
-  assert_false(state.is_loading)
-  assert_true(state.can_go_back)
-  assert_false(state.can_go_forward)
-}
-
-///|
-test "browser handle routes focus and DevTools controls" {
-  let calls : Array[String] = []
-  let window = test_window_handle(
-    "main",
-    17L,
-    browser_control_calls=calls,
-    browser_focused=true,
-    browser_devtools_opened=true,
-  )
-  let browser = window.web_contents()
-  browser.focus()
-  assert_true(browser.is_focused())
-  browser.open_devtools()
-  browser.toggle_devtools()
-  browser.close_devtools()
-  assert_true(browser.is_devtools_opened())
-  debug_inspect(
-    calls,
-    content="[\"focus\", \"open_devtools\", \"toggle_devtools\", \"close_devtools\"]",
-  )
-}
-
-///|
-test "browser handle routes editing commands" {
-  let calls : Array[String] = []
-  let browser = test_window_handle("main", 17L, browser_control_calls=calls).web_contents()
-  browser.undo()
-  browser.redo()
-  browser.cut()
-  browser.copy()
-  browser.paste()
-  browser.paste_and_match_style()
-  browser.delete()
-  browser.select_all()
-  assert_eq(calls, [
-    "undo", "redo", "cut", "copy", "paste", "paste_and_match_style", "delete", "select_all",
-  ])
-}
-
-///|
-test "browser handle controls and reads audio mute state" {
-  let calls : Array[Bool] = []
-  let browser = test_window_handle(
-    "main",
-    17L,
-    browser_audio_calls=calls,
-    browser_audio_muted=true,
-  ).web_contents()
-  browser.set_audio_muted(true)
-  assert_eq(calls, [true])
-  assert_true(browser.is_audio_muted())
-}
-
-///|
-test "browser handle routes page find operations" {
-  let calls : Array[String] = []
-  let browser = test_window_handle("main", 17L, browser_find_calls=calls).web_contents()
-  inspect(browser.find_in_page("MoonBit", match_case=true), content="7")
-  browser.stop_find_in_page(clear_selection=false)
-  assert_eq(calls, ["find:MoonBit:true:true:false", "stop:false"])
-}
-
-///|
-test "browser handle starts programmatic downloads" {
-  let calls : Array[String] = []
-  let browser = test_window_handle("main", 17L, browser_download_calls=calls).web_contents()
-  browser.download_url("https://example.test/archive.zip")
-  assert_eq(calls, ["https://example.test/archive.zip"])
-}
-
-///|
-async test "browser handle routes print and PDF operations" {
-  let calls : Array[String] = []
-  let browser = test_window_handle("main", 17L, browser_print_calls=calls).web_contents()
-  browser.print()
-  browser.print_to_pdf(
-    "/tmp/review.pdf",
-    options=PdfPrintOptions(landscape=true, print_background=true, scale=0.75),
-  )
-  assert_eq(calls, ["print", "pdf:/tmp/review.pdf:true:true:0.75"])
-}
-
-///|
 test "PDF print options map custom margins to the CEF custom type" {
   let settings = PdfPrintOptions(
     margins=PdfPrintMargins::Custom(top=0.1, right=0.2, bottom=0.3, left=0.4),
@@ -3341,80 +2690,6 @@ async test "session handle routes cookie and cache operations" {
 }
 
 ///|
-test "window context menu routes through the public window handle" {
-  let calls : Array[String] = []
-  let window = test_window_handle("main", 17L, popup_calls=calls)
-  let menu = Menu("Context", items=[MenuItem::separator()])
-  menu.popup(window, 123, 456)
-  debug_inspect(calls, content="[\"popup:Context@123,456\"]")
-}
-
-///|
-test "window content size routes logical dimensions through the handle" {
-  let calls : Array[(Int, Int)] = []
-  let window = test_window_handle(
-    "main",
-    17L,
-    content_size_calls=calls,
-    content_size=(640, 360),
-  )
-  window.set_content_size(800, 450)
-  debug_inspect(window.content_size(), content="(640, 360)")
-  debug_inspect(calls, content="[(800, 450)]")
-}
-
-///|
-test "window progress routes Electron-compatible values through the handle" {
-  let calls : Array[Double] = []
-  let window = test_window_handle("main", 17L, progress_calls=calls)
-  window.set_progress_bar(0.42)
-  window.set_progress_bar(2.0)
-  window.set_progress_bar(-1.0)
-  debug_inspect(calls, content="[0.42, 2, -1]")
-}
-
-///|
-test "window progress routes explicit modes through the handle" {
-  let calls : Array[ProgressBarMode] = []
-  let window = test_window_handle("main", 17L, progress_mode_calls=calls)
-  window.set_progress_bar(0.5)
-  window.set_progress_bar(0.5, mode=ProgressBarMode::Paused)
-  window.set_progress_bar(0.5, mode=ProgressBarMode::Error)
-  debug_inspect(calls, content="[Automatic, Paused, Error]")
-}
-
-///|
-test "taskbar status text routes through the window handle" {
-  let overlay_calls : Array[(Bool, String)] = []
-  let tooltip_calls : Array[String] = []
-  let window = test_window_handle(
-    "main",
-    17L,
-    overlay_icon_calls=overlay_calls,
-    thumbnail_tooltip_calls=tooltip_calls,
-  )
-  window.set_overlay_icon(None, "no unread items")
-  window.set_thumbnail_tooltip("Proton taskbar status")
-  debug_inspect(overlay_calls, content="[(false, \"no unread items\")]")
-  debug_inspect(tooltip_calls, content="[\"Proton taskbar status\"]")
-}
-
-///|
-test "taskbar buttons route through the window handle" {
-  let calls : Array[Int] = []
-  let accepted = test_window_handle(
-    "main",
-    17L,
-    thumbar_button_calls=calls,
-    thumbar_button_result=true,
-  )
-  assert_true(accepted.set_thumbar_buttons([]))
-  assert_eq(calls, [0])
-  let rejected = test_window_handle("main", 17L, thumbar_button_result=false)
-  assert_false(rejected.set_thumbar_buttons([]))
-}
-
-///|
 test "app builder registers taskbar button handlers" {
   let app = html("Taskbar buttons", "<p>buttons</p>").on_thumbar_button_click(fn(
     _window,
@@ -3426,183 +2701,8 @@ test "app builder registers taskbar button handlers" {
 }
 
 ///|
-test "window attention routes Electron-compatible flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, flash_calls=calls)
-  window.flash_frame(true)
-  window.flash_frame(false)
-  debug_inspect(calls, content="[true, false]")
-}
-
-///|
-test "window resizable routes live capability changes through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, resizable_calls=calls)
-  window.set_resizable(false)
-  window.set_resizable(true)
-  debug_inspect(calls, content="[false, true]")
-}
-
-///|
-test "window movable routes live capability changes through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, movable_calls=calls)
-  window.set_movable(false)
-  window.set_movable(true)
-  debug_inspect(calls, content="[false, true]")
-}
-
-///|
-test "window opacity routes live values through the handle" {
-  let calls : Array[Double] = []
-  let window = test_window_handle("main", 17L, opacity_calls=calls)
-  window.set_opacity(0.35)
-  window.set_opacity(1.0)
-  debug_inspect(calls, content="[0.35, 1]")
-}
-
-///|
-test "window taskbar visibility routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, skip_taskbar_calls=calls)
-  window.set_skip_taskbar(true)
-  window.set_skip_taskbar(false)
-  debug_inspect(calls, content="[true, false]")
-}
-
-///|
-test "window content protection routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, content_protection_calls=calls)
-  window.set_content_protection(true)
-  window.set_content_protection(false)
-  debug_inspect(calls, content="[true, false]")
-}
-
-///|
-test "window minimizable routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, minimizable_calls=calls)
-  window.set_minimizable(false)
-  window.set_minimizable(true)
-  debug_inspect(calls, content="[false, true]")
-}
-
-///|
-test "window maximizable routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, maximizable_calls=calls)
-  window.set_maximizable(false)
-  window.set_maximizable(true)
-  debug_inspect(calls, content="[false, true]")
-}
-
-///|
-test "window closable routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, closable_calls=calls)
-  window.set_closable(false)
-  window.set_closable(true)
-  debug_inspect(calls, content="[false, true]")
-}
-
-///|
-test "window focusable routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, focusable_calls=calls)
-  window.set_focusable(false)
-  window.set_focusable(true)
-  debug_inspect(calls, content="[false, true]")
-}
-
-///|
-test "window fullscreenable routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, fullscreenable_calls=calls)
-  window.set_fullscreenable(false)
-  window.set_fullscreenable(true)
-  debug_inspect(calls, content="[false, true]")
-}
-
-///|
-test "window shadow routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, has_shadow_calls=calls)
-  window.set_has_shadow(false)
-  window.set_has_shadow(true)
-  debug_inspect(calls, content="[false, true]")
-}
-
-///|
-test "window mouse event handling routes flags through the handle" {
-  let calls : Array[(Bool, Bool)] = []
-  let window = test_window_handle("main", 17L, ignore_mouse_events_calls=calls)
-  window.set_ignore_mouse_events(true, true)
-  window.set_ignore_mouse_events(false, true)
-  debug_inspect(calls, content="[(true, true), (false, true)]")
-}
-
-///|
-test "window background color routes values through the handle" {
-  let calls : Array[String] = []
-  let window = test_window_handle("main", 17L, background_color_calls=calls)
-  window.set_background_color("#112233")
-  debug_inspect(calls, content="[\"#112233\"]")
-}
-
-///|
-test "window theme routes typed values through the handle" {
-  let calls : Array[WindowThemePreference] = []
-  let window = test_window_handle("main", 17L, theme_calls=calls)
-  window.set_theme(WindowThemePreference::Light)
-  window.set_theme(WindowThemePreference::System)
-  debug_inspect(calls, content="[Light, System]")
-}
-
-///|
-test "window kiosk routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, kiosk_calls=calls)
-  window.set_kiosk(true)
-  window.set_kiosk(false)
-  debug_inspect(calls, content="[true, false]")
-}
-
-///|
-test "window workspace visibility routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle(
-    "main",
-    17L,
-    visible_on_all_workspaces_calls=calls,
-  )
-  window.set_visible_on_all_workspaces(true)
-  window.set_visible_on_all_workspaces(false)
-  debug_inspect(calls, content="[true, false]")
-}
-
-///|
-test "window enabled routes live flags through the handle" {
-  let calls : Array[Bool] = []
-  let window = test_window_handle("main", 17L, enabled_calls=calls)
-  window.set_enabled(false)
-  window.set_enabled(true)
-  debug_inspect(calls, content="[false, true]")
-}
-
-///|
-test "window aspect ratio routes live values through the handle" {
-  let calls : Array[Double] = []
-  let window = test_window_handle("main", 17L, aspect_ratio_calls=calls)
-  window.set_aspect_ratio(16.0 / 9.0)
-  window.set_aspect_ratio(0.0)
-  debug_inspect(calls, content="[1.7777777777777777, 0]")
-}
-
-///|
 test "window center uses the current monitor work area and frame size" {
-  let position_calls : Array[(Int, Int)] = []
-  let window = test_window_handle("main", 17L, position_calls~, window_state=WindowState::{
+  let state = WindowState::{
     x: 120,
     y: 80,
     width: 800,
@@ -3626,16 +2726,14 @@ test "window center uses the current monitor work area and frame size" {
     fullscreen: false,
     always_on_top: false,
     theme: WindowTheme::Light,
-  })
-  window.center()
-  debug_inspect(position_calls, content="[(560, 240)]")
+  }
+  assert_eq(state.center_position(), (560, 240))
 }
 
 ///|
 #cfg(platform="windows")
 test "window center converts logical lengths without scaling monitor origins" {
-  let position_calls : Array[(Int, Int)] = []
-  let window = test_window_handle("main", 17L, position_calls~, window_state=WindowState::{
+  let state = WindowState::{
     x: -3000,
     y: 100,
     width: 800,
@@ -3659,79 +2757,8 @@ test "window center converts logical lengths without scaling monitor origins" {
     fullscreen: false,
     always_on_top: false,
     theme: WindowTheme::Light,
-  })
-  window.center()
-  assert_eq(position_calls, [(-2920, 350)])
-}
-
-///|
-test "window bounds read and write use Electron coordinate order" {
-  let position_calls : Array[(Int, Int)] = []
-  let size_calls : Array[(Int, Int)] = []
-  let window = test_window_handle("main", 17L, position_calls~, size_calls~, window_state=WindowState::{
-    x: 120,
-    y: 80,
-    width: 800,
-    height: 600,
-    monitor: WindowMonitor::{
-      x: 0,
-      y: 0,
-      width: 1920,
-      height: 1080,
-      work_x: 0,
-      work_y: 0,
-      work_width: 1920,
-      work_height: 1080,
-      scale_factor_percent: 100,
-    },
-    zoom_percent: 100,
-    visible: true,
-    focused: true,
-    minimized: false,
-    maximized: false,
-    fullscreen: false,
-    always_on_top: false,
-    theme: WindowTheme::Light,
-  })
-  assert_eq(window.bounds(), (120, 80, 800, 600))
-  window.set_bounds(x=40, y=50, width=640, height=480)
-  debug_inspect(position_calls, content="[(40, 50)]")
-  debug_inspect(size_calls, content="[(640, 480)]")
-}
-
-///|
-test "window state queries expose Electron geometry and flags" {
-  let window = test_window_handle("main", 17L, window_state=WindowState::{
-    x: 120,
-    y: 80,
-    width: 800,
-    height: 600,
-    monitor: WindowMonitor::{
-      x: 0,
-      y: 0,
-      width: 1920,
-      height: 1080,
-      work_x: 0,
-      work_y: 0,
-      work_width: 1920,
-      work_height: 1080,
-      scale_factor_percent: 100,
-    },
-    zoom_percent: 100,
-    visible: true,
-    focused: true,
-    minimized: true,
-    maximized: false,
-    fullscreen: true,
-    always_on_top: true,
-    theme: WindowTheme::Dark,
-  })
-  assert_eq(window.position(), (120, 80))
-  assert_eq(window.size(), (800, 600))
-  assert_true(window.is_minimized())
-  assert_false(window.is_maximized())
-  assert_true(window.is_fullscreen())
-  assert_true(window.is_always_on_top())
+  }
+  assert_eq(state.center_position(), (-2920, 350))
 }
 
 ///|
@@ -3875,24 +2902,6 @@ test "window closed is a public window event" {
 }
 
 ///|
-test "window size limits route live constraints through the handle" {
-  let minimum_calls : Array[(Int, Int)] = []
-  let maximum_calls : Array[(Int, Int)] = []
-  let window = test_window_handle(
-    "main",
-    17L,
-    minimum_size_calls=minimum_calls,
-    maximum_size_calls=maximum_calls,
-  )
-  window.set_minimum_size(640, 480)
-  window.set_minimum_size(0, 0)
-  window.set_maximum_size(1280, 900)
-  window.set_maximum_size(0, 0)
-  debug_inspect(minimum_calls, content="[(640, 480), (0, 0)]")
-  debug_inspect(maximum_calls, content="[(1280, 900), (0, 0)]")
-}
-
-///|
 test "window view declarations validate ids within each window" {
   let child = ViewConfig(width=320, height=240)
   let config = WindowConfig("Test", Html("test"), views=[("browser", child)])
@@ -3923,14 +2932,14 @@ test "window view declarations validate ids within each window" {
 }
 
 ///|
-async test "lifecycle contexts expose one immutable locale snapshot" {
+async test "application context exposes an immutable locale snapshot" {
   let preferences = @locale.LocalePreferences::resolve(
     Some(@locale.Locale::parse("zh-CN")),
     [@locale.Locale::parse("en-GB")],
   )
   @async.with_task_group(group => {
     let application = ApplicationContext(
-      session=test_window_handle("main", 1L).web_contents().session(),
+      session=test_session_handle(),
       group,
       test_window_manager(),
       preferences,
@@ -3940,16 +2949,6 @@ async test "lifecycle contexts expose one immutable locale snapshot" {
       application.preferred_languages().map(locale => locale.to_string()),
       ["zh-CN", "en-GB", "en-US"],
     )
-    let window = WindowContext(
-      "main",
-      test_window_handle("main", 17L),
-      test_window_manager(),
-      group,
-      WindowEventEmitter(fn(_route, _name, _payload) {  }),
-      preferences,
-    )
-    assert_eq(window.locale(), application.locale())
-    assert_eq(window.preferred_languages(), application.preferred_languages())
     group.return_immediately(())
   })
 }

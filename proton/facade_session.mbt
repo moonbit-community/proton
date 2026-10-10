@@ -169,251 +169,7 @@ fn RuntimeSession::window_handle(
   self : RuntimeSession,
   window : RunningWindow,
 ) -> WindowHandle {
-  let id = window.id
-  let native_id = window.native_id
-  WindowHandle::{
-    id,
-    native_id,
-    show_window: () => {
-      self.control_window(id, native_id, "show", window => window.show())
-    },
-    show_window_inactive: () => {
-      self.control_window(id, native_id, "show inactive", window => {
-        window.show_inactive()
-      })
-    },
-    hide_window: () => {
-      self.control_window(id, native_id, "hide", window => window.hide())
-    },
-    close_window: () => self.close_window(id, native_id),
-    focus_window: () => {
-      self.control_window(id, native_id, "focus", window => window.focus())
-    },
-    set_window_title: title => {
-      self.control_window(id, native_id, "set title", window => {
-        window.set_title(title)
-      })
-    },
-    set_window_icon: path => {
-      self.control_window(id, native_id, "set icon", window => {
-        window.set_icon(path)
-      })
-    },
-    set_window_parent: (parent, modal) => {
-      let parent_native_id = parent.map(parent => parent.native_id)
-      self.set_window_parent(id, native_id, parent_native_id, modal)
-    },
-    set_window_size: (width, height) => {
-      self.control_window(id, native_id, "set size", window => {
-        window.set_size(width, height)
-      })
-    },
-    set_window_content_size: (width, height) => {
-      self.control_window(id, native_id, "set content size", window => {
-        window.set_content_size(width, height)
-      })
-    },
-    read_window_content_size: () => self.read_window_content_size(id, native_id),
-    minimize_window: () => {
-      self.control_window(id, native_id, "minimize", window => window.minimize())
-    },
-    maximize_window: () => {
-      self.control_window(id, native_id, "maximize", window => window.maximize())
-    },
-    restore_window: () => {
-      self.control_window(id, native_id, "restore", window => window.restore())
-    },
-    set_window_fullscreen: fullscreen => {
-      self.control_window(id, native_id, "set fullscreen", window => {
-        window.set_fullscreen(fullscreen)
-      })
-    },
-    set_window_kiosk: kiosk => {
-      self.control_window(id, native_id, "set kiosk", window => {
-        window.set_kiosk(kiosk)
-      })
-    },
-    set_window_position: (x, y) => {
-      self.control_window(id, native_id, "set position", window => {
-        window.set_position(x, y)
-      })
-    },
-    set_window_always_on_top: always_on_top => {
-      self.control_window(id, native_id, "set always on top", window => {
-        window.set_always_on_top(always_on_top)
-      })
-    },
-    set_window_resizable: resizable => {
-      self.control_window(id, native_id, "set resizable", window => {
-        window.set_resizable(resizable)
-      })
-    },
-    set_window_minimum_size: (width, height) => {
-      self.control_window(id, native_id, "set minimum size", window => {
-        window.set_minimum_size(width, height)
-      })
-    },
-    set_window_maximum_size: (width, height) => {
-      self.control_window(id, native_id, "set maximum size", window => {
-        window.set_maximum_size(width, height)
-      })
-    },
-    set_window_aspect_ratio: aspect_ratio => {
-      self.control_window(id, native_id, "set aspect ratio", window => {
-        window.set_aspect_ratio(aspect_ratio)
-      })
-    },
-    set_window_movable: movable => {
-      self.control_window(id, native_id, "set movable", window => {
-        window.set_movable(movable)
-      })
-    },
-    set_window_opacity: opacity => {
-      self.control_window(id, native_id, "set opacity", window => {
-        window.set_opacity(opacity)
-      })
-    },
-    set_window_skip_taskbar: skip => {
-      self.control_window(id, native_id, "set taskbar visibility", window => {
-        window.set_skip_taskbar(skip)
-      })
-    },
-    set_window_content_protection: enabled => {
-      self.control_window(id, native_id, "set content protection", window => {
-        window.set_content_protection(enabled)
-      })
-    },
-    set_window_minimizable: minimizable => {
-      self.control_window(id, native_id, "set minimizable", window => {
-        window.set_minimizable(minimizable)
-      })
-    },
-    set_window_maximizable: maximizable => {
-      self.control_window(id, native_id, "set maximizable", window => {
-        window.set_maximizable(maximizable)
-      })
-    },
-    set_window_closable: closable => {
-      self.control_window(id, native_id, "set closable", window => {
-        window.set_closable(closable)
-      })
-    },
-    write_window_button_position: position => {
-      self.control_window(id, native_id, "set window button position", window => {
-        window.set_button_position(position.map(p => (p.x, p.y)))
-      })
-    },
-    read_window_button_position: () => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      let position = running.window.button_position() catch {
-        error =>
-          raise window_operation_failed("read window button position", error)
-      }
-      position.map(p => WindowButtonPosition::{ x: p.0, y: p.1, })
-    },
-    set_window_button_visibility: visible => {
-      self.control_window(id, native_id, "set window button visibility", window => {
-        window.set_button_visibility(visible)
-      })
-    },
-    set_window_focusable: focusable => {
-      self.control_window(id, native_id, "set focusable", window => {
-        window.set_focusable(focusable)
-      })
-    },
-    set_window_fullscreenable: fullscreenable => {
-      self.control_window(id, native_id, "set fullscreenable", window => {
-        window.set_fullscreenable(fullscreenable)
-      })
-    },
-    set_window_has_shadow: has_shadow => {
-      self.control_window(id, native_id, "set window shadow", window => {
-        window.set_has_shadow(has_shadow)
-      })
-    },
-    set_window_ignore_mouse_events: (ignore, forward) => {
-      self.control_window(id, native_id, "set ignore mouse events", window => {
-        window.set_ignore_mouse_events(ignore, forward)
-      })
-    },
-    set_window_background_color: color => {
-      self.control_window(id, native_id, "set background color", window => {
-        window.set_background_color(color)
-      })
-    },
-    set_window_theme: theme => {
-      self.control_window(id, native_id, "set theme", window => {
-        window.set_theme(
-          match theme {
-            WindowThemePreference::System =>
-              @native.WindowThemePreference::System
-            WindowThemePreference::Light => @native.WindowThemePreference::Light
-            WindowThemePreference::Dark => @native.WindowThemePreference::Dark
-          },
-        )
-      })
-    },
-    set_window_visible_on_all_workspaces: visible => {
-      self.control_window(id, native_id, "set workspace visibility", window => {
-        window.set_visible_on_all_workspaces(visible)
-      })
-    },
-    set_window_enabled: enabled => {
-      self.control_window(id, native_id, "set enabled", window => {
-        window.set_enabled(enabled)
-      })
-    },
-    set_window_menu: menu => {
-      try {
-        match menu {
-          Some(menu) => self.runtime.set_menu(menu.to_native())
-          None => self.runtime.set_menu(@native.MenuBar(menus=[]))
-        }
-      } catch {
-        error =>
-          raise window_operation_failed("set menu in window " + id, error)
-      }
-    },
-    set_window_progress_bar: (progress, mode) => {
-      self.control_window(id, native_id, "set progress bar", window => {
-        window.set_progress_bar(progress, mode.to_native())
-      })
-    },
-    set_window_overlay_icon: (overlay, description) => {
-      self.control_window(id, native_id, "set overlay icon", window => {
-        window.set_overlay_icon(overlay, description)
-      })
-    },
-    set_window_thumbnail_tooltip: tooltip => {
-      self.control_window(id, native_id, "set thumbnail tooltip", window => {
-        window.set_thumbnail_tooltip(tooltip)
-      })
-    },
-    set_window_thumbar_buttons: buttons => {
-      self.set_window_thumbar_buttons(id, native_id, buttons)
-    },
-    flash_window_frame: flash => {
-      self.control_window(id, native_id, "flash frame", window => {
-        window.flash_frame(flash)
-      })
-    },
-    popup_window_menu: (menu, x, y) => {
-      self.control_window(id, native_id, "popup menu in", window => {
-        window.popup_menu(@native.MenuBar(menus=[menu.to_native()]), x, y)
-      })
-    },
-    read_window_state: () => self.read_window_state(id, native_id),
-    browser: self.browser_handle(window),
-    add_view: (view_id, config) => {
-      self.add_window_view(id, native_id, view_id, config.to_native())
-    },
-    remove_view: view_id => self.remove_window_view(id, native_id, view_id),
-    list_views: () => self.list_window_views(id, native_id),
-    find_view: view_id => self.find_window_view(id, native_id, view_id),
-  }
+  { session: self, id: window.id, native_id: window.native_id, }
 }
 
 ///|
@@ -422,291 +178,12 @@ fn RuntimeSession::view_handle(
   window : RunningWindow,
   view : RunningView,
 ) -> ViewHandle {
-  let window_id = window.id
-  let window_native_id = window.native_id
-  let id = view.id
-  let native_id = view.native_id
-  ViewHandle::{
-    id,
-    native_id,
-    window_id,
-    set_view_bounds: (x, y, width, height) => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "set bounds of",
-        view => view.set_bounds(x~, y~, width~, height~),
-      )
-    },
-    set_view_visible: visible => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "set visibility of",
-        view => view.set_visible(visible),
-      )
-    },
-    set_view_z_order: z_order => {
-      self.control_view(
-        window_id,
-        window_native_id,
-        id,
-        native_id,
-        "set z-order of",
-        view => view.set_z_order(z_order),
-      )
-    },
-    read_view_state: () => {
-      let running = self.resolve_view(
-        window_id, window_native_id, id, native_id,
-      )
-      ViewState::from_native(running.view.state()) catch {
-        error =>
-          raise window_operation_failed(
-            "read view " + id + " state in window " + window_id,
-            error,
-          )
-      }
-    },
-    close_view: () => {
-      ignore(self.resolve_view(window_id, window_native_id, id, native_id))
-      self.remove_window_view(window_id, window_native_id, id)
-    },
-    contents: WebContentsHandle::{
-      id: window_id,
-      native_id: window_native_id,
-      view_id: Some(id),
-      set_browser_zoom_percent: zoom_percent => {
-        self.control_view(
-          window_id,
-          window_native_id,
-          id,
-          native_id,
-          "set zoom of",
-          view => view.set_zoom_percent(zoom_percent),
-        )
-      },
-      read_browser_zoom_percent: () => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        running.view.zoom_percent() catch {
-          error =>
-            raise window_operation_failed(
-              "read zoom of view " + id + " in window " + window_id,
-              error,
-            )
-        }
-      },
-      set_browser_audio_muted: muted => {
-        self.control_view(
-          window_id,
-          window_native_id,
-          id,
-          native_id,
-          "set audio mute of",
-          view => view.set_audio_muted(muted),
-        )
-      },
-      read_browser_audio_muted: () => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        running.view.is_audio_muted() catch {
-          error =>
-            raise window_operation_failed(
-              "read audio mute of view " + id + " in window " + window_id,
-              error,
-            )
-        }
-      },
-      load_browser_url: url => {
-        self.control_view(
-          window_id,
-          window_native_id,
-          id,
-          native_id,
-          "load URL in",
-          view => view.load_url(url),
-        )
-      },
-      load_browser_html: (html, base_url) => {
-        self.load_view_html(
-          window_id, window_native_id, id, native_id, html, base_url,
-        )
-      },
-      eval_browser_script: script => {
-        self.control_view(
-          window_id,
-          window_native_id,
-          id,
-          native_id,
-          "evaluate script in",
-          view => view.eval(script),
-        )
-      },
-      focus_browser: () => {
-        self.control_window(
-          window_id,
-          window_native_id,
-          "focus for view " + id + " in",
-          window => window.focus(),
-        )
-        self.control_view(window_id, window_native_id, id, native_id, "focus", view => {
-          view.browser_command("focus")
-        })
-      },
-      send_browser_command: (command, download_id) => {
-        self.control_view(
-          window_id,
-          window_native_id,
-          id,
-          native_id,
-          command + " in",
-          view => view.browser_command(command, download_id?),
-        )
-      },
-      find_browser_in_page: (text, forward, match_case, find_next) => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        running.view.find_in_page(text, forward, match_case, find_next) catch {
-          error =>
-            raise window_operation_failed(
-              "find in view " + id + " in window " + window_id,
-              error,
-            )
-        }
-      },
-      stop_browser_find: clear_selection => {
-        self.control_view(
-          window_id,
-          window_native_id,
-          id,
-          native_id,
-          "stop find in",
-          view => view.stop_find_in_page(clear_selection),
-        )
-      },
-      read_browser_navigation_state: () => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        running.view.navigation_state() catch {
-          error =>
-            raise window_operation_failed(
-              "read navigation state of view " + id + " in window " + window_id,
-              error,
-            )
-        }
-      },
-      read_browser_focused: () => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        running.view.browser_is_focused() catch {
-          error =>
-            raise window_operation_failed(
-              "read focus of view " + id + " in window " + window_id,
-              error,
-            )
-        }
-      },
-      read_browser_devtools_opened: () => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        running.view.is_devtools_opened() catch {
-          error =>
-            raise window_operation_failed(
-              "read DevTools state of view " + id + " in window " + window_id,
-              error,
-            )
-        }
-      },
-      read_browser_navigation_history: () => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        NavigationHistory::from_native(running.view.navigation_history()) catch {
-          error =>
-            raise window_operation_failed(
-              "read navigation history of view " +
-              id +
-              " in window " +
-              window_id,
-              error,
-            )
-        }
-      },
-      insert_browser_page_css: css => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        running.view.insert_page_css(css) catch {
-          error =>
-            raise window_operation_failed(
-              "insert page CSS into view " + id + " in window " + window_id,
-              error,
-            )
-        }
-      },
-      remove_browser_page_css: key => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        running.view.remove_page_css(key) catch {
-          error =>
-            raise window_operation_failed(
-              "remove page CSS from view " + id + " in window " + window_id,
-              error,
-            )
-        }
-      },
-      read_browser_state: () => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        BrowserState::from_native(running.view.browser_state()) catch {
-          error =>
-            raise window_operation_failed("read view browser state", error)
-        }
-      },
-      download_browser_url: url => {
-        self.control_view(
-          window_id,
-          window_native_id,
-          id,
-          native_id,
-          "download",
-          view => view.download_url(url),
-        )
-      },
-      print_browser: () => {
-        self.control_view(window_id, window_native_id, id, native_id, "print", view => {
-          view.print()
-        })
-      },
-      print_browser_to_pdf: (path, options) => {
-        let running = self.resolve_view(
-          window_id, window_native_id, id, native_id,
-        )
-        let request_id = running.view.print_to_pdf(path, options.to_native()) catch {
-          error => raise window_operation_failed("print view to PDF", error)
-        }
-        self.event_pump.pdf_completions.wait(
-          window_native_id,
-          Some(native_id),
-          request_id,
-          path,
-        )
-      },
-      session_handle: self.session_handle(),
-    },
+  {
+    session: self,
+    id: view.id,
+    native_id: view.native_id,
+    window_id: window.id,
+    window_native_id: window.native_id,
   }
 }
 
@@ -721,10 +198,7 @@ fn RuntimeSession::resolve_view(
   view_id : String,
   view_native_id : Int64,
 ) -> RunningView raise WindowSessionError {
-  let running = match self.find_active_window(window_id) {
-    Some(running) if running.native_id == window_native_id => running
-    _ => raise StaleWindow(id=window_id)
-  }
+  let running = self.resolve_window(window_id, window_native_id)
   for view in running.views {
     if view.id == view_id && view.view.id() != 0 {
       if view.view.id() != view_native_id {
@@ -737,22 +211,21 @@ fn RuntimeSession::resolve_view(
 }
 
 ///|
-fn RuntimeSession::control_view(
-  self : RuntimeSession,
-  window_id : String,
-  window_native_id : Int64,
-  view_id : String,
-  view_native_id : Int64,
+fn ViewHandle::with_view(
+  self : ViewHandle,
   action : String,
   operation : (@native.View) -> Unit raise @native.NativeError,
 ) -> Unit raise WindowSessionError {
-  let running = self.resolve_view(
-    window_id, window_native_id, view_id, view_native_id,
+  let running = self.session.resolve_view(
+    self.window_id,
+    self.window_native_id,
+    self.id,
+    self.native_id,
   )
   operation(running.view) catch {
     error =>
       raise window_operation_failed(
-        action + " view " + view_id + " in window " + window_id,
+        action + " view " + self.id + " in window " + self.window_id,
         error,
       )
   }
@@ -766,10 +239,7 @@ fn RuntimeSession::add_window_view(
   view_id : String,
   config : @native.ViewConfig,
 ) -> ViewHandle raise WindowSessionError {
-  let running = match self.find_active_window(window_id) {
-    Some(running) if running.native_id == window_native_id => running
-    _ => raise StaleWindow(id=window_id)
-  }
+  let running = self.resolve_window(window_id, window_native_id)
   let running_view = add_view_to_running_window(running, view_id, config)
   self.emit_web_contents_created(
     self.view_handle(running, running_view).web_contents(),
@@ -819,10 +289,7 @@ fn RuntimeSession::remove_window_view(
   window_native_id : Int64,
   view_id : String,
 ) -> Unit raise WindowSessionError {
-  let running = match self.find_active_window(window_id) {
-    Some(running) if running.native_id == window_native_id => running
-    _ => raise StaleWindow(id=window_id)
-  }
+  let running = self.resolve_window(window_id, window_native_id)
   for view in running.views {
     if view.id == view_id && view.view.id() != 0 {
       view.view.destroy() catch {
@@ -883,199 +350,11 @@ fn RuntimeSession::browser_handle(
   self : RuntimeSession,
   window : RunningWindow,
 ) -> WebContentsHandle {
-  let id = window.id
-  let native_id = window.native_id
-  let session_handle = self.session_handle()
-  WebContentsHandle::{
-    view_id: None,
-    id,
-    native_id,
-    load_browser_url: url => {
-      self.control_window(id, native_id, "load URL in", window => {
-        window.load_url(url)
-      })
-    },
-    load_browser_html: (html, base_url) => {
-      self.load_window_html(id, native_id, html, base_url)
-    },
-    eval_browser_script: script => {
-      self.control_window(id, native_id, "evaluate script in", window => {
-        window.eval(script)
-      })
-    },
-    focus_browser: () => {
-      self.control_window(id, native_id, "focus browser in", window => {
-        window.focus()
-        window.browser_command("focus")
-      })
-    },
-    send_browser_command: (command, download_id) => {
-      self.control_window(id, native_id, command + " in", window => {
-        window.browser_command(command, download_id?)
-      })
-    },
-    download_browser_url: url => {
-      self.control_window(id, native_id, "download URL in", window => {
-        window.download_url(url)
-      })
-    },
-    print_browser: () => {
-      self.control_window(id, native_id, "print browser in", window => {
-        window.print()
-      })
-    },
-    print_browser_to_pdf: (path, options) => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      let request_id = running.window.print_to_pdf(path, options.to_native()) catch {
-        error =>
-          raise window_operation_failed(
-            "print browser to PDF in window " + id,
-            error,
-          )
-      }
-      self.event_pump.pdf_completions.wait(native_id, None, request_id, path)
-    },
-    find_browser_in_page: (text, forward, match_case, find_next) => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      running.window.find_in_page(text, forward, match_case, find_next) catch {
-        error =>
-          raise window_operation_failed(
-            "find in browser for window " + id,
-            error,
-          )
-      }
-    },
-    stop_browser_find: clear_selection => {
-      self.control_window(id, native_id, "stop browser find in", window => {
-        window.stop_find_in_page(clear_selection)
-      })
-    },
-    set_browser_zoom_percent: zoom_percent => {
-      self.control_window(id, native_id, "set browser zoom", window => {
-        window.set_zoom_percent(zoom_percent)
-      })
-    },
-    read_browser_zoom_percent: () => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      running.window.state().zoom_percent catch {
-        error =>
-          raise window_operation_failed(
-            "read browser zoom in window " + id,
-            error,
-          )
-      }
-    },
-    set_browser_audio_muted: muted => {
-      self.control_window(id, native_id, "set browser audio mute", window => {
-        window.set_audio_muted(muted)
-      })
-    },
-    read_browser_audio_muted: () => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      running.window.is_audio_muted() catch {
-        error =>
-          raise window_operation_failed(
-            "read browser audio mute in window " + id,
-            error,
-          )
-      }
-    },
-    read_browser_navigation_state: () => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      running.window.navigation_state() catch {
-        error =>
-          raise window_operation_failed(
-            "read browser navigation state in window " + id,
-            error,
-          )
-      }
-    },
-    read_browser_focused: () => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      running.window.browser_is_focused() catch {
-        error =>
-          raise window_operation_failed(
-            "read browser focus in window " + id,
-            error,
-          )
-      }
-    },
-    read_browser_devtools_opened: () => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      running.window.is_devtools_opened() catch {
-        error =>
-          raise window_operation_failed(
-            "read browser DevTools state in window " + id,
-            error,
-          )
-      }
-    },
-    read_browser_state: () => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      BrowserState::from_native(running.window.browser_state()) catch {
-        error =>
-          raise window_operation_failed(
-            "read browser state in window " + id,
-            error,
-          )
-      }
-    },
-    read_browser_navigation_history: () => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      NavigationHistory::from_native(running.window.navigation_history()) catch {
-        error =>
-          raise window_operation_failed(
-            "read browser navigation history in window " + id,
-            error,
-          )
-      }
-    },
-    insert_browser_page_css: css => {
-      let running = match self.find_active_window(id) {
-        Some(running) if running.native_id == native_id => running
-        _ => raise StaleWindow(id~)
-      }
-      running.window.insert_page_css(css) catch {
-        error =>
-          raise window_operation_failed(
-            "insert page CSS in window " + id,
-            error,
-          )
-      }
-    },
-    remove_browser_page_css: key => {
-      self.control_window(id, native_id, "remove page CSS", window => {
-        window.remove_page_css(key)
-      })
-    },
-    session_handle,
+  {
+    session: self,
+    id: window.id,
+    native_id: window.native_id,
+    target: PrimaryPage,
   }
 }
 
@@ -1232,10 +511,7 @@ fn RuntimeSession::close_window(
   id : String,
   native_id : Int64,
 ) -> Unit raise WindowSessionError {
-  let running = match self.find_active_window(id) {
-    Some(running) if running.native_id == native_id => running
-    _ => raise StaleWindow(id~)
-  }
+  let running = self.resolve_window(id, native_id)
   running.window.close() catch {
     error => raise window_operation_failed("close window " + id, error)
   }
@@ -1245,19 +521,26 @@ fn RuntimeSession::close_window(
 }
 
 ///|
-fn RuntimeSession::control_window(
+fn RuntimeSession::resolve_window(
   self : RuntimeSession,
   id : String,
   native_id : Int64,
+) -> RunningWindow raise WindowSessionError {
+  match self.find_active_window(id) {
+    Some(window) if window.native_id == native_id => window
+    _ => raise StaleWindow(id~)
+  }
+}
+
+///|
+fn WindowHandle::with_window(
+  self : WindowHandle,
   action : String,
   operation : (@native.Window) -> Unit raise @native.NativeError,
 ) -> Unit raise WindowSessionError {
-  let running = match self.find_active_window(id) {
-    Some(running) if running.native_id == native_id => running
-    _ => raise StaleWindow(id~)
-  }
+  let running = self.session.resolve_window(self.id, self.native_id)
   operation(running.window) catch {
-    error => raise window_operation_failed(action + " window " + id, error)
+    error => raise window_operation_failed(action + " window " + self.id, error)
   }
 }
 
@@ -1269,10 +552,7 @@ fn RuntimeSession::load_window_html(
   html : String,
   base_url : String,
 ) -> Unit raise WindowSessionError {
-  let running = match self.find_active_window(id) {
-    Some(running) if running.native_id == native_id => running
-    _ => raise StaleWindow(id~)
-  }
+  let running = self.resolve_window(id, native_id)
   guard resource_document_url_is_supported(base_url) else {
     raise window_operation_failed(
       "load HTML in window " + id,
@@ -1331,10 +611,7 @@ fn RuntimeSession::read_window_state(
   id : String,
   native_id : Int64,
 ) -> WindowState raise WindowSessionError {
-  let running = match self.find_active_window(id) {
-    Some(running) if running.native_id == native_id => running
-    _ => raise StaleWindow(id~)
-  }
+  let running = self.resolve_window(id, native_id)
   WindowState::from_native(running.window.state()) catch {
     error =>
       raise window_operation_failed("read window " + id + " state", error)
@@ -1347,10 +624,7 @@ fn RuntimeSession::read_window_content_size(
   id : String,
   native_id : Int64,
 ) -> (Int, Int) raise WindowSessionError {
-  let running = match self.find_active_window(id) {
-    Some(running) if running.native_id == native_id => running
-    _ => raise StaleWindow(id~)
-  }
+  let running = self.resolve_window(id, native_id)
   running.window.content_size() catch {
     error =>
       raise window_operation_failed("read content size of window " + id, error)
@@ -1365,10 +639,7 @@ fn RuntimeSession::set_window_parent(
   parent_native_id : Int64?,
   modal : Bool,
 ) -> Unit raise WindowSessionError {
-  let running = match self.find_active_window(id) {
-    Some(running) if running.native_id == native_id => running
-    _ => raise StaleWindow(id~)
-  }
+  let running = self.resolve_window(id, native_id)
   let parent = match parent_native_id {
     Some(parent_id) => {
       let mut found : RunningWindow? = None
@@ -1829,7 +1100,7 @@ pub fn WindowHandle::id(self : WindowHandle) -> String {
 
 ///|
 pub fn WindowHandle::show(self : WindowHandle) -> Unit raise WindowSessionError {
-  (self.show_window)()
+  self.with_window("show", window => window.show())
 }
 
 ///|
@@ -1837,40 +1108,40 @@ pub fn WindowHandle::show(self : WindowHandle) -> Unit raise WindowSessionError 
 pub fn WindowHandle::show_inactive(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
-  (self.show_window_inactive)()
+  self.with_window("show inactive", window => window.show_inactive())
 }
 
 ///|
 pub fn WindowHandle::is_visible(
   self : WindowHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_window_state)().visible
+  self.state().visible
 }
 
 ///|
 pub fn WindowHandle::is_focused(
   self : WindowHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_window_state)().focused
+  self.state().focused
 }
 
 ///|
 pub fn WindowHandle::hide(self : WindowHandle) -> Unit raise WindowSessionError {
-  (self.hide_window)()
+  self.with_window("hide", window => window.hide())
 }
 
 ///|
 pub fn WindowHandle::close(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
-  (self.close_window)()
+  self.session.close_window(self.id, self.native_id)
 }
 
 ///|
 pub fn WindowHandle::focus(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
-  (self.focus_window)()
+  self.with_window("focus", window => window.focus())
 }
 
 ///|
@@ -1878,7 +1149,7 @@ pub fn WindowHandle::set_title(
   self : WindowHandle,
   title : String,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_title)(title)
+  self.with_window("set title", window => window.set_title(title))
 }
 
 ///|
@@ -1887,7 +1158,7 @@ pub fn WindowHandle::set_icon(
   self : WindowHandle,
   path : String,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_icon)(path)
+  self.with_window("set icon", window => window.set_icon(path))
 }
 
 ///|
@@ -1897,7 +1168,13 @@ pub fn WindowHandle::set_parent(
   parent : WindowHandle?,
   modal? : Bool = false,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_parent)(parent, modal)
+  let parent_native_id = parent.map(parent => parent.native_id)
+  self.session.set_window_parent(
+    self.id,
+    self.native_id,
+    parent_native_id,
+    modal,
+  )
 }
 
 ///|
@@ -1906,7 +1183,7 @@ pub fn WindowHandle::set_size(
   width : Int,
   height : Int,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_size)(width, height)
+  self.with_window("set size", window => window.set_size(width, height))
 }
 
 ///|
@@ -1916,7 +1193,9 @@ pub fn WindowHandle::set_content_size(
   width : Int,
   height : Int,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_content_size)(width, height)
+  self.with_window("set content size", window => {
+    window.set_content_size(width, height)
+  })
 }
 
 ///|
@@ -1924,7 +1203,7 @@ pub fn WindowHandle::set_content_size(
 pub fn WindowHandle::content_size(
   self : WindowHandle,
 ) -> (Int, Int) raise WindowSessionError {
-  (self.read_window_content_size)()
+  self.session.read_window_content_size(self.id, self.native_id)
 }
 
 ///|
@@ -1933,7 +1212,7 @@ pub fn WindowHandle::content_size(
 pub fn WindowHandle::bounds(
   self : WindowHandle,
 ) -> (Int, Int, Int, Int) raise WindowSessionError {
-  let state = (self.read_window_state)()
+  let state = self.state()
   (state.x, state.y, state.width, state.height)
 }
 
@@ -1942,7 +1221,7 @@ pub fn WindowHandle::bounds(
 pub fn WindowHandle::position(
   self : WindowHandle,
 ) -> (Int, Int) raise WindowSessionError {
-  let state = (self.read_window_state)()
+  let state = self.state()
   (state.x, state.y)
 }
 
@@ -1951,7 +1230,7 @@ pub fn WindowHandle::position(
 pub fn WindowHandle::size(
   self : WindowHandle,
 ) -> (Int, Int) raise WindowSessionError {
-  let state = (self.read_window_state)()
+  let state = self.state()
   (state.width, state.height)
 }
 
@@ -1973,21 +1252,21 @@ pub fn WindowHandle::set_bounds(
 pub fn WindowHandle::minimize(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
-  (self.minimize_window)()
+  self.with_window("minimize", window => window.minimize())
 }
 
 ///|
 pub fn WindowHandle::maximize(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
-  (self.maximize_window)()
+  self.with_window("maximize", window => window.maximize())
 }
 
 ///|
 pub fn WindowHandle::restore(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
-  (self.restore_window)()
+  self.with_window("restore", window => window.restore())
 }
 
 ///|
@@ -1995,7 +1274,7 @@ pub fn WindowHandle::restore(
 pub fn WindowHandle::is_minimized(
   self : WindowHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_window_state)().minimized
+  self.state().minimized
 }
 
 ///|
@@ -2003,7 +1282,7 @@ pub fn WindowHandle::is_minimized(
 pub fn WindowHandle::is_maximized(
   self : WindowHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_window_state)().maximized
+  self.state().maximized
 }
 
 ///|
@@ -2011,7 +1290,7 @@ pub fn WindowHandle::is_maximized(
 pub fn WindowHandle::is_fullscreen(
   self : WindowHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_window_state)().fullscreen
+  self.state().fullscreen
 }
 
 ///|
@@ -2019,7 +1298,7 @@ pub fn WindowHandle::is_fullscreen(
 pub fn WindowHandle::is_always_on_top(
   self : WindowHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_window_state)().always_on_top
+  self.state().always_on_top
 }
 
 ///|
@@ -2027,7 +1306,7 @@ pub fn WindowHandle::set_fullscreen(
   self : WindowHandle,
   fullscreen : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_fullscreen)(fullscreen)
+  self.with_window("set fullscreen", window => window.set_fullscreen(fullscreen))
 }
 
 ///|
@@ -2039,7 +1318,7 @@ pub fn WindowHandle::set_kiosk(
   self : WindowHandle,
   kiosk : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_kiosk)(kiosk)
+  self.with_window("set kiosk", window => window.set_kiosk(kiosk))
 }
 
 ///|
@@ -2048,7 +1327,7 @@ pub fn WindowHandle::set_position(
   x : Int,
   y : Int,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_position)(x, y)
+  self.with_window("set position", window => window.set_position(x, y))
 }
 
 ///|
@@ -2060,16 +1339,22 @@ pub fn WindowHandle::set_position(
 pub fn WindowHandle::center(
   self : WindowHandle,
 ) -> Unit raise WindowSessionError {
-  let state = self.state()
-  let monitor = state.monitor
+  let (x, y) = self.state().center_position()
+  self.set_position(x, y)
+}
+
+///|
+fn WindowState::center_position(self : WindowState) -> (Int, Int) {
+  let monitor = self.monitor
   let (width, height) = @native.window_size_in_screen_coordinates(
-    state.width,
-    state.height,
+    self.width,
+    self.height,
     monitor.scale_factor_percent,
   )
-  let x = monitor.work_x + (monitor.work_width - width) / 2
-  let y = monitor.work_y + (monitor.work_height - height) / 2
-  self.set_position(x, y)
+  (
+    monitor.work_x + (monitor.work_width - width) / 2,
+    monitor.work_y + (monitor.work_height - height) / 2,
+  )
 }
 
 ///|
@@ -2077,7 +1362,9 @@ pub fn WindowHandle::set_always_on_top(
   self : WindowHandle,
   always_on_top : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_always_on_top)(always_on_top)
+  self.with_window("set always on top", window => {
+    window.set_always_on_top(always_on_top)
+  })
 }
 
 ///|
@@ -2090,7 +1377,7 @@ pub fn WindowHandle::set_resizable(
   self : WindowHandle,
   resizable : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_resizable)(resizable)
+  self.with_window("set resizable", window => window.set_resizable(resizable))
 }
 
 ///|
@@ -2104,7 +1391,9 @@ pub fn WindowHandle::set_minimum_size(
   width : Int,
   height : Int,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_minimum_size)(width, height)
+  self.with_window("set minimum size", window => {
+    window.set_minimum_size(width, height)
+  })
 }
 
 ///|
@@ -2118,7 +1407,9 @@ pub fn WindowHandle::set_maximum_size(
   width : Int,
   height : Int,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_maximum_size)(width, height)
+  self.with_window("set maximum size", window => {
+    window.set_maximum_size(width, height)
+  })
 }
 
 ///|
@@ -2130,7 +1421,9 @@ pub fn WindowHandle::set_aspect_ratio(
   self : WindowHandle,
   aspect_ratio : Double,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_aspect_ratio)(aspect_ratio)
+  self.with_window("set aspect ratio", window => {
+    window.set_aspect_ratio(aspect_ratio)
+  })
 }
 
 ///|
@@ -2144,7 +1437,7 @@ pub fn WindowHandle::set_movable(
   self : WindowHandle,
   movable : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_movable)(movable)
+  self.with_window("set movable", window => window.set_movable(movable))
 }
 
 ///|
@@ -2157,7 +1450,7 @@ pub fn WindowHandle::set_opacity(
   self : WindowHandle,
   opacity : Double,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_opacity)(opacity)
+  self.with_window("set opacity", window => window.set_opacity(opacity))
 }
 
 ///|
@@ -2170,7 +1463,9 @@ pub fn WindowHandle::set_skip_taskbar(
   self : WindowHandle,
   skip : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_skip_taskbar)(skip)
+  self.with_window("set taskbar visibility", window => {
+    window.set_skip_taskbar(skip)
+  })
 }
 
 ///|
@@ -2185,7 +1480,9 @@ pub fn WindowHandle::set_content_protection(
   self : WindowHandle,
   enabled : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_content_protection)(enabled)
+  self.with_window("set content protection", window => {
+    window.set_content_protection(enabled)
+  })
 }
 
 ///|
@@ -2197,7 +1494,9 @@ pub fn WindowHandle::set_minimizable(
   self : WindowHandle,
   minimizable : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_minimizable)(minimizable)
+  self.with_window("set minimizable", window => {
+    window.set_minimizable(minimizable)
+  })
 }
 
 ///|
@@ -2209,7 +1508,9 @@ pub fn WindowHandle::set_maximizable(
   self : WindowHandle,
   maximizable : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_maximizable)(maximizable)
+  self.with_window("set maximizable", window => {
+    window.set_maximizable(maximizable)
+  })
 }
 
 ///|
@@ -2222,7 +1523,7 @@ pub fn WindowHandle::set_closable(
   self : WindowHandle,
   closable : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_closable)(closable)
+  self.with_window("set closable", window => window.set_closable(closable))
 }
 
 ///|
@@ -2233,7 +1534,9 @@ pub fn WindowHandle::set_window_button_visibility(
   self : WindowHandle,
   visible : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_button_visibility)(visible)
+  self.with_window("set window button visibility", window => {
+    window.set_button_visibility(visible)
+  })
 }
 
 ///|
@@ -2247,7 +1550,7 @@ pub fn WindowHandle::set_focusable(
   self : WindowHandle,
   focusable : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_focusable)(focusable)
+  self.with_window("set focusable", window => window.set_focusable(focusable))
 }
 
 ///|
@@ -2259,7 +1562,9 @@ pub fn WindowHandle::set_fullscreenable(
   self : WindowHandle,
   fullscreenable : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_fullscreenable)(fullscreenable)
+  self.with_window("set fullscreenable", window => {
+    window.set_fullscreenable(fullscreenable)
+  })
 }
 
 ///|
@@ -2272,7 +1577,9 @@ pub fn WindowHandle::set_has_shadow(
   self : WindowHandle,
   has_shadow : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_has_shadow)(has_shadow)
+  self.with_window("set window shadow", window => {
+    window.set_has_shadow(has_shadow)
+  })
 }
 
 ///|
@@ -2287,7 +1594,9 @@ pub fn WindowHandle::set_ignore_mouse_events(
   ignore : Bool,
   forward : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_ignore_mouse_events)(ignore, forward)
+  self.with_window("set ignore mouse events", window => {
+    window.set_ignore_mouse_events(ignore, forward)
+  })
 }
 
 ///|
@@ -2298,7 +1607,9 @@ pub fn WindowHandle::set_background_color(
   self : WindowHandle,
   color : String,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_background_color)(color)
+  self.with_window("set background color", window => {
+    window.set_background_color(color)
+  })
 }
 
 ///|
@@ -2311,7 +1622,15 @@ pub fn WindowHandle::set_theme(
   self : WindowHandle,
   theme : WindowThemePreference,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_theme)(theme)
+  self.with_window("set theme", window => {
+    window.set_theme(
+      match theme {
+        WindowThemePreference::System => @native.WindowThemePreference::System
+        WindowThemePreference::Light => @native.WindowThemePreference::Light
+        WindowThemePreference::Dark => @native.WindowThemePreference::Dark
+      },
+    )
+  })
 }
 
 ///|
@@ -2323,7 +1642,9 @@ pub fn WindowHandle::set_visible_on_all_workspaces(
   self : WindowHandle,
   visible : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_visible_on_all_workspaces)(visible)
+  self.with_window("set workspace visibility", window => {
+    window.set_visible_on_all_workspaces(visible)
+  })
 }
 
 ///|
@@ -2332,7 +1653,7 @@ pub fn WindowHandle::set_enabled(
   self : WindowHandle,
   enabled : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_enabled)(enabled)
+  self.with_window("set enabled", window => window.set_enabled(enabled))
 }
 
 ///|
@@ -2342,7 +1663,15 @@ pub fn WindowHandle::set_menu(
   self : WindowHandle,
   menu : MenuBar?,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_menu)(menu)
+  try {
+    match menu {
+      Some(menu) => self.session.runtime.set_menu(menu.to_native())
+      None => self.session.runtime.set_menu(@native.MenuBar(menus=[]))
+    }
+  } catch {
+    error =>
+      raise window_operation_failed("set menu in window " + self.id, error)
+  }
 }
 
 ///|
@@ -2350,7 +1679,7 @@ pub fn WindowHandle::set_menu(
 pub fn WindowHandle::zoom_percent(
   self : WindowHandle,
 ) -> Int raise WindowSessionError {
-  (self.read_window_state)().zoom_percent
+  self.state().zoom_percent
 }
 
 ///|
@@ -2371,7 +1700,9 @@ pub fn WindowHandle::set_progress_bar(
   progress : Double,
   mode? : ProgressBarMode = ProgressBarMode::Automatic,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_progress_bar)(progress, mode)
+  self.with_window("set progress bar", window => {
+    window.set_progress_bar(progress, mode.to_native())
+  })
 }
 
 ///|
@@ -2387,7 +1718,9 @@ pub fn WindowHandle::set_overlay_icon(
   overlay : NativeImage?,
   description : String,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_overlay_icon)(overlay.map(image => image.image), description)
+  self.with_window("set overlay icon", window => {
+    window.set_overlay_icon(overlay.map(image => image.image), description)
+  })
 }
 
 ///|
@@ -2398,7 +1731,9 @@ pub fn WindowHandle::set_thumbnail_tooltip(
   self : WindowHandle,
   tooltip : String,
 ) -> Unit raise WindowSessionError {
-  (self.set_window_thumbnail_tooltip)(tooltip)
+  self.with_window("set thumbnail tooltip", window => {
+    window.set_thumbnail_tooltip(tooltip)
+  })
 }
 
 ///|
@@ -2419,7 +1754,11 @@ pub fn WindowHandle::set_thumbar_buttons(
   self : WindowHandle,
   buttons : Array[ThumbarButton],
 ) -> Bool raise WindowSessionError {
-  (self.set_window_thumbar_buttons)(buttons.map(button => button.to_native()))
+  self.session.set_window_thumbar_buttons(
+    self.id,
+    self.native_id,
+    buttons.map(button => button.to_native()),
+  )
 }
 
 ///|
@@ -2434,14 +1773,14 @@ pub fn WindowHandle::flash_frame(
   self : WindowHandle,
   flash : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.flash_window_frame)(flash)
+  self.with_window("flash frame", window => window.flash_frame(flash))
 }
 
 ///|
 pub fn WindowHandle::state(
   self : WindowHandle,
 ) -> WindowState raise WindowSessionError {
-  (self.read_window_state)()
+  self.session.read_window_state(self.id, self.native_id)
 }
 
 ///|
@@ -2451,13 +1790,20 @@ fn WindowHandle::popup_menu(
   x : Int,
   y : Int,
 ) -> Unit raise WindowSessionError {
-  (self.popup_window_menu)(menu, x, y)
+  self.with_window("popup menu in", window => {
+    window.popup_menu(@native.MenuBar(menus=[menu.to_native()]), x, y)
+  })
 }
 
 ///|
 /// Returns the webpage hosted in this window.
 pub fn WindowHandle::web_contents(self : WindowHandle) -> WebContentsHandle {
-  self.browser
+  {
+    session: self.session,
+    id: self.id,
+    native_id: self.native_id,
+    target: PrimaryPage,
+  }
 }
 
 ///|
@@ -2470,7 +1816,7 @@ pub fn WindowHandle::add_view(
   id : String,
   config : ViewConfig,
 ) -> ViewHandle raise WindowSessionError {
-  (self.add_view)(id, config)
+  self.session.add_window_view(self.id, self.native_id, id, config.to_native())
 }
 
 ///|
@@ -2479,19 +1825,19 @@ pub fn WindowHandle::remove_view(
   self : WindowHandle,
   id : String,
 ) -> Unit raise WindowSessionError {
-  (self.remove_view)(id)
+  self.session.remove_window_view(self.id, self.native_id, id)
 }
 
 ///|
 /// Lists the live web contents views of this window.
 pub fn WindowHandle::views(self : WindowHandle) -> Array[ViewHandle] {
-  (self.list_views)()
+  self.session.list_window_views(self.id, self.native_id)
 }
 
 ///|
 /// Returns the live view with the given declarative id, if one exists.
 pub fn WindowHandle::view(self : WindowHandle, id : String) -> ViewHandle? {
-  (self.find_view)(id)
+  self.session.find_window_view(self.id, self.native_id, id)
 }
 
 ///|
@@ -2516,7 +1862,9 @@ pub fn ViewHandle::set_bounds(
   width~ : Int,
   height~ : Int,
 ) -> Unit raise WindowSessionError {
-  (self.set_view_bounds)(x, y, width, height)
+  self.with_view("set bounds of", view => {
+    view.set_bounds(x~, y~, width~, height~)
+  })
 }
 
 ///|
@@ -2524,7 +1872,7 @@ pub fn ViewHandle::set_visible(
   self : ViewHandle,
   visible : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_view_visible)(visible)
+  self.with_view("set visibility of", view => view.set_visible(visible))
 }
 
 ///|
@@ -2534,7 +1882,7 @@ pub fn ViewHandle::set_z_order(
   self : ViewHandle,
   z_order : Int,
 ) -> Unit raise WindowSessionError {
-  (self.set_view_z_order)(z_order)
+  self.with_view("set z-order of", view => view.set_z_order(z_order))
 }
 
 ///|
@@ -2542,7 +1890,19 @@ pub fn ViewHandle::set_z_order(
 pub fn ViewHandle::state(
   self : ViewHandle,
 ) -> ViewState raise WindowSessionError {
-  (self.read_view_state)()
+  let running = self.session.resolve_view(
+    self.window_id,
+    self.window_native_id,
+    self.id,
+    self.native_id,
+  )
+  ViewState::from_native(running.view.state()) catch {
+    error =>
+      raise window_operation_failed(
+        "read view " + self.id + " state in window " + self.window_id,
+        error,
+      )
+  }
 }
 
 ///|
@@ -2551,7 +1911,74 @@ pub fn ViewHandle::state(
 /// native close notification is delivered later through `App::on_web_contents_event`
 /// if the parent window remains alive. The declarative id may be reused.
 pub fn ViewHandle::close(self : ViewHandle) -> Unit raise WindowSessionError {
-  (self.close_view)()
+  ignore(
+    self.session.resolve_view(
+      self.window_id,
+      self.window_native_id,
+      self.id,
+      self.native_id,
+    ),
+  )
+  self.session.remove_window_view(
+    self.window_id,
+    self.window_native_id,
+    self.id,
+  )
+}
+
+///|
+fn[T] WebContentsHandle::with_target(
+  self : WebContentsHandle,
+  action : String,
+  operation : (ResolvedWebContents) -> T raise @native.NativeError,
+) -> T raise WindowSessionError {
+  let (target, description) = match self.target {
+    PrimaryPage => {
+      let window = self.session.resolve_window(self.id, self.native_id)
+      (ResolvedWebContents::PrimaryPage(window.window), "window " + self.id)
+    }
+    ChildView(id, native_id) => {
+      let view = self.session.resolve_view(
+        self.id,
+        self.native_id,
+        id,
+        native_id,
+      )
+      (
+        ResolvedWebContents::ChildView(view.view),
+        "view " + id + " in window " + self.id,
+      )
+    }
+  }
+  operation(target) catch {
+    error => raise window_operation_failed(action + " " + description, error)
+  }
+}
+
+///|
+fn WebContentsHandle::browser_command(
+  self : WebContentsHandle,
+  command : String,
+  download_id : Int?,
+) -> Unit raise WindowSessionError {
+  self.with_target(command + " in", target => {
+    match target {
+      PrimaryPage(window) => window.browser_command(command, download_id?)
+      ChildView(view) => view.browser_command(command, download_id?)
+    }
+  })
+}
+
+///|
+fn WebContentsHandle::navigation_state(
+  self : WebContentsHandle,
+) -> (Bool, Bool) raise WindowSessionError {
+  self.with_target("read navigation state of", target => {
+    match target {
+      PrimaryPage(window) => window.navigation_state()
+      ChildView(view) => view.navigation_state()
+    }
+  })
 }
 
 ///|
@@ -2564,7 +1991,12 @@ pub fn WebContentsHandle::load_url(
   self : WebContentsHandle,
   url : String,
 ) -> Unit raise WindowSessionError {
-  (self.load_browser_url)(url)
+  self.with_target("load URL in", target => {
+    match target {
+      PrimaryPage(window) => window.load_url(url)
+      ChildView(view) => view.load_url(url)
+    }
+  })
 }
 
 ///|
@@ -2573,7 +2005,19 @@ pub fn WebContentsHandle::load_html(
   html : String,
   base_url : String,
 ) -> Unit raise WindowSessionError {
-  (self.load_browser_html)(html, base_url)
+  match self.target {
+    PrimaryPage =>
+      self.session.load_window_html(self.id, self.native_id, html, base_url)
+    ChildView(id, native_id) =>
+      self.session.load_view_html(
+        self.id,
+        self.native_id,
+        id,
+        native_id,
+        html,
+        base_url,
+      )
+  }
 }
 
 ///|
@@ -2581,7 +2025,12 @@ pub fn WebContentsHandle::eval(
   self : WebContentsHandle,
   script : String,
 ) -> Unit raise WindowSessionError {
-  (self.eval_browser_script)(script)
+  self.with_target("evaluate script in", target => {
+    match target {
+      PrimaryPage(window) => window.eval(script)
+      ChildView(view) => view.eval(script)
+    }
+  })
 }
 
 ///|
@@ -2595,7 +2044,13 @@ pub fn WebContentsHandle::find_in_page(
   match_case? : Bool = false,
   find_next? : Bool = false,
 ) -> Int raise WindowSessionError {
-  (self.find_browser_in_page)(text, forward, match_case, find_next)
+  self.with_target("find in", target => {
+    match target {
+      PrimaryPage(window) =>
+        window.find_in_page(text, forward, match_case, find_next)
+      ChildView(view) => view.find_in_page(text, forward, match_case, find_next)
+    }
+  })
 }
 
 ///|
@@ -2605,7 +2060,12 @@ pub fn WebContentsHandle::stop_find_in_page(
   self : WebContentsHandle,
   clear_selection? : Bool = true,
 ) -> Unit raise WindowSessionError {
-  (self.stop_browser_find)(clear_selection)
+  self.with_target("stop find in", target => {
+    match target {
+      PrimaryPage(window) => window.stop_find_in_page(clear_selection)
+      ChildView(view) => view.stop_find_in_page(clear_selection)
+    }
+  })
 }
 
 ///|
@@ -2616,7 +2076,12 @@ pub fn WebContentsHandle::download_url(
   self : WebContentsHandle,
   url : String,
 ) -> Unit raise WindowSessionError {
-  (self.download_browser_url)(url)
+  self.with_target("download URL in", target => {
+    match target {
+      PrimaryPage(window) => window.download_url(url)
+      ChildView(view) => view.download_url(url)
+    }
+  })
 }
 
 ///|
@@ -2624,7 +2089,12 @@ pub fn WebContentsHandle::download_url(
 pub fn WebContentsHandle::print(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.print_browser)()
+  self.with_target("print", target => {
+    match target {
+      PrimaryPage(window) => window.print()
+      ChildView(view) => view.print()
+    }
+  })
 }
 
 ///|
@@ -2636,21 +2106,36 @@ pub async fn WebContentsHandle::print_to_pdf(
   path : String,
   options? : PdfPrintOptions = PdfPrintOptions(),
 ) -> Unit {
-  (self.print_browser_to_pdf)(path, options)
+  let request_id = self.with_target("print to PDF in", target => {
+    match target {
+      PrimaryPage(window) => window.print_to_pdf(path, options.to_native())
+      ChildView(view) => view.print_to_pdf(path, options.to_native())
+    }
+  })
+  let view_id = match self.target {
+    PrimaryPage => None
+    ChildView(_, native_id) => Some(native_id)
+  }
+  self.session.event_pump.pdf_completions.wait(
+    self.native_id,
+    view_id,
+    request_id,
+    path,
+  )
 }
 
 ///|
 pub fn WebContentsHandle::back(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("back", None)
+  self.browser_command("back", None)
 }
 
 ///|
 pub fn WebContentsHandle::forward(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("forward", None)
+  self.browser_command("forward", None)
 }
 
 ///|
@@ -2659,7 +2144,12 @@ pub fn WebContentsHandle::set_zoom_percent(
   self : WebContentsHandle,
   zoom_percent : Int,
 ) -> Unit raise WindowSessionError {
-  (self.set_browser_zoom_percent)(zoom_percent)
+  self.with_target("set zoom of", target => {
+    match target {
+      PrimaryPage(window) => window.set_zoom_percent(zoom_percent)
+      ChildView(view) => view.set_zoom_percent(zoom_percent)
+    }
+  })
 }
 
 ///|
@@ -2667,7 +2157,12 @@ pub fn WebContentsHandle::set_zoom_percent(
 pub fn WebContentsHandle::zoom_percent(
   self : WebContentsHandle,
 ) -> Int raise WindowSessionError {
-  (self.read_browser_zoom_percent)()
+  self.with_target("read zoom of", target => {
+    match target {
+      PrimaryPage(window) => window.state().zoom_percent
+      ChildView(view) => view.zoom_percent()
+    }
+  })
 }
 
 ///|
@@ -2676,7 +2171,12 @@ pub fn WebContentsHandle::set_audio_muted(
   self : WebContentsHandle,
   muted : Bool,
 ) -> Unit raise WindowSessionError {
-  (self.set_browser_audio_muted)(muted)
+  self.with_target("set audio mute of", target => {
+    match target {
+      PrimaryPage(window) => window.set_audio_muted(muted)
+      ChildView(view) => view.set_audio_muted(muted)
+    }
+  })
 }
 
 ///|
@@ -2684,7 +2184,12 @@ pub fn WebContentsHandle::set_audio_muted(
 pub fn WebContentsHandle::is_audio_muted(
   self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_browser_audio_muted)()
+  self.with_target("read audio mute of", target => {
+    match target {
+      PrimaryPage(window) => window.is_audio_muted()
+      ChildView(view) => view.is_audio_muted()
+    }
+  })
 }
 
 ///|
@@ -2692,7 +2197,7 @@ pub fn WebContentsHandle::is_audio_muted(
 pub fn WebContentsHandle::can_go_back(
   self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_browser_navigation_state)().0
+  self.navigation_state().0
 }
 
 ///|
@@ -2700,7 +2205,7 @@ pub fn WebContentsHandle::can_go_back(
 pub fn WebContentsHandle::can_go_forward(
   self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_browser_navigation_state)().1
+  self.navigation_state().1
 }
 
 ///|
@@ -2712,7 +2217,12 @@ pub fn WebContentsHandle::can_go_forward(
 pub fn WebContentsHandle::state(
   self : WebContentsHandle,
 ) -> BrowserState raise WindowSessionError {
-  (self.read_browser_state)()
+  self.with_target("read browser state in", target => {
+    match target {
+      PrimaryPage(window) => BrowserState::from_native(window.browser_state())
+      ChildView(view) => BrowserState::from_native(view.browser_state())
+    }
+  })
 }
 
 ///|
@@ -2725,7 +2235,14 @@ pub fn WebContentsHandle::state(
 pub fn WebContentsHandle::navigation_history(
   self : WebContentsHandle,
 ) -> NavigationHistory raise WindowSessionError {
-  (self.read_browser_navigation_history)()
+  self.with_target("read navigation history of", target => {
+    match target {
+      PrimaryPage(window) =>
+        NavigationHistory::from_native(window.navigation_history())
+      ChildView(view) =>
+        NavigationHistory::from_native(view.navigation_history())
+    }
+  })
 }
 
 ///|
@@ -2740,7 +2257,12 @@ pub fn WebContentsHandle::insert_css(
   self : WebContentsHandle,
   css : String,
 ) -> Int64 raise WindowSessionError {
-  (self.insert_browser_page_css)(css)
+  self.with_target("insert page CSS into", target => {
+    match target {
+      PrimaryPage(window) => window.insert_page_css(css)
+      ChildView(view) => view.insert_page_css(css)
+    }
+  })
 }
 
 ///|
@@ -2751,14 +2273,19 @@ pub fn WebContentsHandle::remove_inserted_css(
   self : WebContentsHandle,
   key : Int64,
 ) -> Unit raise WindowSessionError {
-  (self.remove_browser_page_css)(key)
+  self.with_target("remove page CSS from", target => {
+    match target {
+      PrimaryPage(window) => window.remove_page_css(key)
+      ChildView(view) => view.remove_page_css(key)
+    }
+  })
 }
 
 ///|
 /// Returns the shared application session. It remains valid after this page
 /// closes, until application runtime teardown begins.
 pub fn WebContentsHandle::session(self : WebContentsHandle) -> SessionHandle {
-  self.session_handle
+  self.session.session_handle()
 }
 
 ///|
@@ -2766,7 +2293,7 @@ pub fn WebContentsHandle::reload(
   self : WebContentsHandle,
   ignore_cache? : Bool = false,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)(
+  self.browser_command(
     if ignore_cache {
       "reload_ignore_cache"
     } else {
@@ -2780,7 +2307,7 @@ pub fn WebContentsHandle::reload(
 pub fn WebContentsHandle::stop(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("stop", None)
+  self.browser_command("stop", None)
 }
 
 ///|
@@ -2788,7 +2315,7 @@ pub fn WebContentsHandle::stop(
 pub fn WebContentsHandle::undo(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("undo", None)
+  self.browser_command("undo", None)
 }
 
 ///|
@@ -2796,7 +2323,7 @@ pub fn WebContentsHandle::undo(
 pub fn WebContentsHandle::redo(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("redo", None)
+  self.browser_command("redo", None)
 }
 
 ///|
@@ -2804,7 +2331,7 @@ pub fn WebContentsHandle::redo(
 pub fn WebContentsHandle::cut(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("cut", None)
+  self.browser_command("cut", None)
 }
 
 ///|
@@ -2812,7 +2339,7 @@ pub fn WebContentsHandle::cut(
 pub fn WebContentsHandle::copy(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("copy", None)
+  self.browser_command("copy", None)
 }
 
 ///|
@@ -2820,7 +2347,7 @@ pub fn WebContentsHandle::copy(
 pub fn WebContentsHandle::paste(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("paste", None)
+  self.browser_command("paste", None)
 }
 
 ///|
@@ -2828,7 +2355,7 @@ pub fn WebContentsHandle::paste(
 pub fn WebContentsHandle::paste_and_match_style(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("paste_and_match_style", None)
+  self.browser_command("paste_and_match_style", None)
 }
 
 ///|
@@ -2836,7 +2363,7 @@ pub fn WebContentsHandle::paste_and_match_style(
 pub fn WebContentsHandle::delete(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("delete", None)
+  self.browser_command("delete", None)
 }
 
 ///|
@@ -2844,7 +2371,7 @@ pub fn WebContentsHandle::delete(
 pub fn WebContentsHandle::select_all(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("select_all", None)
+  self.browser_command("select_all", None)
 }
 
 ///|
@@ -2852,7 +2379,20 @@ pub fn WebContentsHandle::select_all(
 pub fn WebContentsHandle::focus(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.focus_browser)()
+  let parent = self.session.resolve_window(self.id, self.native_id).window
+  self.with_target("focus browser in", target => {
+    match target {
+      PrimaryPage(window) => {
+        window.focus()
+        window.browser_command("focus")
+      }
+      ChildView(view) => {
+        // Resolve both identities before focusing the containing window.
+        parent.focus()
+        view.browser_command("focus")
+      }
+    }
+  })
 }
 
 ///|
@@ -2860,21 +2400,26 @@ pub fn WebContentsHandle::focus(
 pub fn WebContentsHandle::is_focused(
   self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_browser_focused)()
+  self.with_target("read focus of", target => {
+    match target {
+      PrimaryPage(window) => window.browser_is_focused()
+      ChildView(view) => view.browser_is_focused()
+    }
+  })
 }
 
 ///|
 pub fn WebContentsHandle::open_devtools(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("open_devtools", None)
+  self.browser_command("open_devtools", None)
 }
 
 ///|
 pub fn WebContentsHandle::close_devtools(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("close_devtools", None)
+  self.browser_command("close_devtools", None)
 }
 
 ///|
@@ -2882,7 +2427,7 @@ pub fn WebContentsHandle::close_devtools(
 pub fn WebContentsHandle::toggle_devtools(
   self : WebContentsHandle,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("toggle_devtools", None)
+  self.browser_command("toggle_devtools", None)
 }
 
 ///|
@@ -2890,7 +2435,12 @@ pub fn WebContentsHandle::toggle_devtools(
 pub fn WebContentsHandle::is_devtools_opened(
   self : WebContentsHandle,
 ) -> Bool raise WindowSessionError {
-  (self.read_browser_devtools_opened)()
+  self.with_target("read DevTools state of", target => {
+    match target {
+      PrimaryPage(window) => window.is_devtools_opened()
+      ChildView(view) => view.is_devtools_opened()
+    }
+  })
 }
 
 ///|
@@ -2898,7 +2448,7 @@ pub fn WebContentsHandle::cancel_download(
   self : WebContentsHandle,
   download_id : Int,
 ) -> Unit raise WindowSessionError {
-  (self.send_browser_command)("cancel_download", Some(download_id))
+  self.browser_command("cancel_download", Some(download_id))
 }
 
 ///|
@@ -4117,10 +3667,7 @@ fn RuntimeSession::set_window_thumbar_buttons(
   native_id : Int64,
   buttons : Array[@native.ThumbarButton],
 ) -> Bool raise WindowSessionError {
-  let running = match self.find_active_window(id) {
-    Some(running) if running.native_id == native_id => running
-    _ => raise StaleWindow(id~)
-  }
+  let running = self.resolve_window(id, native_id)
   running.window.set_thumbar_buttons(buttons) catch {
     error =>
       raise window_operation_failed("set taskbar buttons in " + id, error)
@@ -5111,7 +4658,9 @@ pub fn WindowHandle::set_window_button_position(
   self : WindowHandle,
   position : WindowButtonPosition?,
 ) -> Unit raise WindowSessionError {
-  (self.write_window_button_position)(position)
+  self.with_window("set window button position", window => {
+    window.set_button_position(position.map(p => (p.x, p.y)))
+  })
 }
 
 ///|
@@ -5120,19 +4669,31 @@ pub fn WindowHandle::set_window_button_position(
 pub fn WindowHandle::window_button_position(
   self : WindowHandle,
 ) -> WindowButtonPosition? raise WindowSessionError {
-  (self.read_window_button_position)()
+  let running = self.session.resolve_window(self.id, self.native_id)
+  let position = running.window.button_position() catch {
+    error => raise window_operation_failed("read window button position", error)
+  }
+  position.map(p => WindowButtonPosition::{ x: p.0, y: p.1, })
 }
 
 ///|
 /// Returns the child view's declaration id, or None for the main page.
 pub fn WebContentsHandle::view_id(self : WebContentsHandle) -> String? {
-  self.view_id
+  match self.target {
+    PrimaryPage => None
+    ChildView(id, _) => Some(id)
+  }
 }
 
 ///|
 /// Returns the webpage hosted by this view.
 pub fn ViewHandle::web_contents(self : ViewHandle) -> WebContentsHandle {
-  self.contents
+  {
+    session: self.session,
+    id: self.window_id,
+    native_id: self.window_native_id,
+    target: ChildView(self.id, self.native_id),
+  }
 }
 
 ///|

@@ -34,6 +34,14 @@ let app = @proton.html("Hello", "<h1>Hello</h1>")
 project metadata can use `.identifier(...)` instead of `.config(@proton.load_config())`.
 An explicit identity must match any packaged metadata present at runtime.
 
+Window and web-contents handles refer to a specific runtime instance. Use their
+methods (`show()`, `web_contents()`, `eval()`, and so on); retaining a handle does
+not keep its native window alive, and reopening the same declarative id does not
+make an old handle valid again. The former operation fields such as
+`show_window` and `load_browser_url` have been removed; call `show()` and
+`load_url()` instead. Use `web_contents()`, `session()`, and `view_id()` instead
+of the former `browser`/`contents`, `session_handle`, and `view_id` fields.
+
 ## Application metadata and paths
 
 Read configuration fields directly from the returned `AppConfig`, including

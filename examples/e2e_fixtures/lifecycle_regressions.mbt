@@ -1790,6 +1790,7 @@ async fn run_web_contents_regression() -> Unit {
   let pending_started = Ref(false)
   let pending_cancelled = Ref(false)
   let handles : Array[@proton.WebContentsHandle] = []
+  let window_task_stopped = Ref(false)
   let pdf_root = @env.get_env_var("PROTON_E2E_LIFECYCLE_GATE").unwrap()
   @proton.App(
     @proton.WindowConfig(
@@ -1853,6 +1854,24 @@ async fn run_web_contents_regression() -> Unit {
   })
   .window_lifecycle(
     on_ready=context => {
+      assert_eq(context.locale(), application.val.unwrap().locale())
+      assert_eq(
+        context.preferred_languages(),
+        application.val.unwrap().preferred_languages(),
+      )
+      context
+      .task_group()
+      .spawn_bg(
+        () => {
+          defer {
+            window_task_stopped.val = true
+          }
+          while true {
+            @async.sleep(1000)
+          }
+        },
+        no_wait=true,
+      )
       ignore(
         context
         .task_group()
@@ -1883,6 +1902,11 @@ async fn run_web_contents_regression() -> Unit {
           assert_false(right.is_audio_muted())
           assert_false(main.is_audio_muted())
           for contents in [main, left, right] {
+            assert_eq(contents.window_id(), window.id())
+            contents.set_zoom_percent(125)
+            assert_eq(contents.zoom_percent(), 125)
+            contents.set_zoom_percent(100)
+            contents.stop_find_in_page(clear_selection=false)
             let id = contents.view_id().unwrap_or("main")
             contents.eval(
               "new Image().src = 'https://proton.test/blocked/" + id + "'",
@@ -1924,7 +1948,18 @@ async fn run_web_contents_regression() -> Unit {
             @async.sleep(10)
           }
           assert_eq(right.state().title, "Right")
-          window.view("left").unwrap().close()
+          let old_view = window.view("left").unwrap()
+          old_view.set_bounds(x=5, y=10, width=160, height=120)
+          old_view.set_z_order(3)
+          old_view.set_visible(false)
+          let view_state = old_view.state()
+          assert_eq(
+            (view_state.x, view_state.y, view_state.width, view_state.height),
+            (5, 10, 160, 120),
+          )
+          assert_eq(view_state.z_order, 3)
+          assert_false(view_state.visible)
+          old_view.close()
           let replacement = window.add_view(
             "left",
             @proton.view(
@@ -1937,9 +1972,16 @@ async fn run_web_contents_regression() -> Unit {
             left.eval("void 0")
             false
           } catch {
-            _ => true
+            @proton.WindowSessionError::StaleView(id="left") => true
+            error => raise error
           }
           assert_true(stale)
+          try old_view.close() catch {
+            @proton.WindowSessionError::StaleView(id="left") => ()
+            error => raise error
+          } noraise {
+            _ => fail("stale view closed its replacement")
+          }
           while !titles.contains("left=Replacement") {
             @async.sleep(10)
           }
@@ -1958,7 +2000,7 @@ async fn run_web_contents_regression() -> Unit {
         }),
       )
     },
-    on_close=_ => (),
+    on_close=_ => assert_true(window_task_stopped.val),
   )
   .run()
   for contents in handles {
@@ -2046,6 +2088,31 @@ async fn run_session_lifetime_regression() -> Unit {
           child_session.flush_cookies()
           assert_true(session.get_cookies(url~).is_empty())
           let replacement = manager.open("secondary")
+          assert_eq(replacement.id(), window.id())
+          try window.set_title("stale window") catch {
+            @proton.WindowSessionError::StaleWindow(id="secondary") => ()
+            error => raise error
+          } noraise {
+            _ => fail("stale window changed its replacement")
+          }
+          try
+            window.web_contents().eval("document.title = 'stale page'")
+          catch {
+            @proton.WindowSessionError::StaleWindow(id="secondary") => ()
+            error => raise error
+          } noraise {
+            _ => fail("stale page changed its replacement")
+          }
+          try child.web_contents().eval("void 0") catch {
+            @proton.WindowSessionError::StaleWindow(id="secondary") => ()
+            error => raise error
+          } noraise {
+            _ => fail("stale child resolved through a replacement parent")
+          }
+          // Obtaining the shared session does not require a live page.
+          assert_true(
+            window.web_contents().session().get_cookies(url~).is_empty(),
+          )
           assert_true(
             replacement.web_contents().session().get_cookies(url~).is_empty(),
           )
