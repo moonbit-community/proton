@@ -12,6 +12,8 @@ pub let activity : @proton_contract.Event[GlobalHotkeyActivity]
 
 pub let extension : @proton_contract.ExtensionContract
 
+pub let is_registered : @proton_contract.Command[GlobalHotkeyRequest, GlobalHotkeyReply]
+
 pub let list : @proton_contract.Command[@proton_contract.EmptyRequest, GlobalHotkeyListReply]
 
 pub let register : @proton_contract.Command[GlobalHotkeyRequest, GlobalHotkeyReply]
@@ -19,6 +21,8 @@ pub let register : @proton_contract.Command[GlobalHotkeyRequest, GlobalHotkeyRep
 pub let triggered : @proton_contract.Event[GlobalHotkeyTriggered]
 
 pub let unregister : @proton_contract.Command[GlobalHotkeyRequest, GlobalHotkeyReply]
+
+pub let unregister_all : @proton_contract.Command[@proton_contract.EmptyRequest, UnregisterAllReply]
 
 // Errors
 
@@ -68,6 +72,15 @@ pub fn GlobalHotkeyTriggered::from_json(Json, @json.JsonPath) -> Self raise @jso
 pub fn GlobalHotkeyTriggered::not_equal(Self, Self) -> Bool
 pub fn GlobalHotkeyTriggered::to_json(Self) -> Json
 pub fn GlobalHotkeyTriggered::to_repr(Self) -> @debug.Repr
+
+pub(all) struct UnregisterAllReply {
+  count : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn UnregisterAllReply::equal(Self, Self) -> Bool
+pub fn UnregisterAllReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn UnregisterAllReply::not_equal(Self, Self) -> Bool
+pub fn UnregisterAllReply::to_json(Self) -> Json
+pub fn UnregisterAllReply::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

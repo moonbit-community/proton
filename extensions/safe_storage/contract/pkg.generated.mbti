@@ -1,0 +1,69 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_ext/safe_storage/contract"
+
+import {
+  "moonbit-community/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let availability : @proton_contract.Command[@proton_contract.EmptyRequest, AvailabilityReply]
+
+pub let decrypt : @proton_contract.Command[DecryptRequest, DecryptReply]
+
+pub let encrypt : @proton_contract.Command[EncryptRequest, EncryptReply]
+
+pub let extension : @proton_contract.ExtensionContract
+
+// Errors
+
+// Types and methods
+pub(all) struct AvailabilityReply {
+  available : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn AvailabilityReply::equal(Self, Self) -> Bool
+pub fn AvailabilityReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AvailabilityReply::not_equal(Self, Self) -> Bool
+pub fn AvailabilityReply::to_json(Self) -> Json
+pub fn AvailabilityReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct DecryptReply {
+  value : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn DecryptReply::equal(Self, Self) -> Bool
+pub fn DecryptReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DecryptReply::not_equal(Self, Self) -> Bool
+pub fn DecryptReply::to_json(Self) -> Json
+pub fn DecryptReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct DecryptRequest {
+  encrypted : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn DecryptRequest::equal(Self, Self) -> Bool
+pub fn DecryptRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DecryptRequest::not_equal(Self, Self) -> Bool
+pub fn DecryptRequest::to_json(Self) -> Json
+pub fn DecryptRequest::to_repr(Self) -> @debug.Repr
+
+pub(all) struct EncryptReply {
+  encrypted : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn EncryptReply::equal(Self, Self) -> Bool
+pub fn EncryptReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EncryptReply::not_equal(Self, Self) -> Bool
+pub fn EncryptReply::to_json(Self) -> Json
+pub fn EncryptReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct EncryptRequest {
+  value : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn EncryptRequest::equal(Self, Self) -> Bool
+pub fn EncryptRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn EncryptRequest::not_equal(Self, Self) -> Bool
+pub fn EncryptRequest::to_json(Self) -> Json
+pub fn EncryptRequest::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
