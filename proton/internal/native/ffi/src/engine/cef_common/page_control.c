@@ -14,31 +14,6 @@
 
 #include "strings.h"
 
-/* Ref-count primitives for the navigation-entry visitor. Mirrors the pattern
-   in cookie_cache.c: the four macros feed ref_count.h, and the local typedef
-   must keep the name ref_count.h expects. */
-#ifdef _WIN32
-typedef struct {
-  volatile LONG refs;
-} proton_engine_ref_counted_t;
-#define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_LOAD(refs) ((refs)->refs)
-#define PROTON_ENGINE_REF_STORE(refs, value) ((refs)->refs = (value))
-#else
-#include <stdatomic.h>
-typedef struct {
-  atomic_int refs;
-} proton_engine_ref_counted_t;
-#define PROTON_ENGINE_REF_INCREMENT(refs) \
-  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) \
-  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) \
-  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
-#endif
-
 #include "ref_count.h"
 
 /* Navigation history and inserted page styles are page-level operations, so
