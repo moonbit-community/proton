@@ -1,0 +1,17 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_safe_storage"
+
+// Values
+pub fn decrypt_string(String) -> Result[String, String]
+
+pub fn encrypt_string(String) -> Result[String, String]
+
+pub fn is_available() -> Bool
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

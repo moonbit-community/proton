@@ -31,7 +31,9 @@ jobs:
         run: moon version --all
 
       - name: Format check
-        run: moon fmt --check
+        run: |
+          moon fmt
+          git diff --exit-code
 
   moonbit:
     needs: format
@@ -193,6 +195,13 @@ jobs:
         env:
           _CL_: /utf-8
         run: moon check --target native --deny-warn
+
+      - name: Check public interfaces
+        shell: bash
+        run: |
+          moon info
+          git add --intent-to-add -- '**/pkg.generated.mbti'
+          git diff --exit-code
 
       - name: Run workspace native tests on Unix
         if: ${{ matrix.os != 'windows-latest' }}
