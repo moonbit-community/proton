@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { setTimeout as sleep } from "node:timers/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -105,6 +106,64 @@ function verifyGeneratedDependencies() {
   }
 }
 
+async function verifyRegistryCdp() {
+  const consumer = path.join(tempRoot, "cdp-consumer");
+  fs.mkdirSync(consumer);
+  const asyncDependency = fs.readFileSync(path.join(repoRoot, "cdp/moon.mod"), "utf8")
+    .match(/"moonbitlang\/async@[^"]+"/)[0];
+  fs.writeFileSync(path.join(consumer, "moon.mod"), `name = "registry/cdp_smoke"
+version = "0.0.0"
+import { "moonbit-community/proton_cdp@${moduleVersion("cdp/moon.mod")}", ${asyncDependency} }
+preferred_target = "native"
+`);
+  fs.writeFileSync(path.join(consumer, "moon.pkg"), `import {
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbit-community/proton_cdp/client",
+  "moonbit-community/proton_cdp/page",
+}
+supported_targets = "+native"
+options(is_main: true)
+`);
+  fs.writeFileSync(path.join(consumer, "main.mbt"), `///|
+async fn main {
+  @async.with_task_group(tasks => {
+    let page = @page.Page::connect(tasks, @client.parse_cdp_target(@env.args()[1]))
+    assert_eq(page.evaluate("1 + 1"), Json(2))
+    println("Registry CDP evaluation passed")
+  })
+}
+`);
+  run("moon", ["update"], { cwd: consumer });
+  run("moon", ["build", "--target", "native"], { cwd: consumer });
+  const profile = path.join(consumer, "profile");
+  const log = fs.openSync(path.join(consumer, "chrome.log"), "w");
+  const browser = spawn(process.env.PROTON_REGISTRY_CHROME ?? "google-chrome", [
+    "--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`,
+    "--no-first-run", "--no-default-browser-check", "about:blank",
+  ], { stdio: ["ignore", log, log] });
+  fs.closeSync(log);
+  let launchError;
+  browser.on("error", error => { launchError = error; });
+  const stopped = new Promise(resolve => browser.on("close", resolve));
+  try {
+    const portFile = path.join(profile, "DevToolsActivePort");
+    const deadline = Date.now() + 60000;
+    while (!fs.existsSync(portFile)) {
+      if (launchError) throw launchError;
+      if (browser.exitCode !== null || Date.now() >= deadline) {
+        throw new Error(`Chrome did not provide a CDP endpoint (exit=${browser.exitCode}); see ${consumer}/chrome.log`);
+      }
+      await sleep(100);
+    }
+    const [port, browserPath] = fs.readFileSync(portFile, "utf8").trim().split(/\r?\n/);
+    run("moon", ["run", ".", "--target", "native", "--", `ws://127.0.0.1:${port}${browserPath}`], { cwd: consumer });
+  } finally {
+    browser.kill();
+    await stopped;
+  }
+}
+
 try {
   verifyInstalledCliVersion();
   if (process.platform === "linux") {
@@ -144,6 +203,7 @@ try {
   }
   run(cli, [...packageArgs, "--dry-run"], { timeout: 900000 });
   run(cli, packageArgs, { timeout: 900000 });
+  await verifyRegistryCdp();
   succeeded = true;
   console.log("Registry scaffold smoke passed.");
 } finally {

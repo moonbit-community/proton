@@ -25,6 +25,10 @@ DevTools listening on ws://127.0.0.1:<port>/devtools/browser/<id>
 
 在该进程生命周期内使用它公布的端点；不要先预占再释放端口，也不要假定固定端口。仍可显式指定端口。这是 Chromium 的诊断端点，不是 Proton 的应用命令传输通道。
 
+应用需要通过 `App.debug()` 启用调试；端口环境变量本身不会开启调试。
+使用 native MoonBit 编写自动化程序时，可以参考独立的
+[`proton_cdp` 库](https://github.com/moonbit-community/proton/blob/main/cdp/README.mbt.md)。
+
 ## 日志
 
 Proton 使用 `tonyfettes/xlog`。开发输出使用 stderr，打包应用使用平台日志目录。应用分类为 `app.*`，框架分类为 `proton.*`，应用设置的级别和分类过滤保持有效。

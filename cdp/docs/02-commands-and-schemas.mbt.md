@@ -97,3 +97,26 @@ let response = browser.send_remote_schema_command(
   "Browser.getVersion",
 )
 ```
+
+## Bundled schema provenance
+
+The browser and JavaScript schemas are committed under `src/protocol/data/`.
+They were imported from `justjavac/cdp` in Proton commit
+[`ce6cbaa630fd331bdf23e70e1ad92f9ef0716439`](https://github.com/moonbit-community/proton/tree/ce6cbaa630fd331bdf23e70e1ad92f9ef0716439/cdp/src/protocol/data).
+The import did not record the original Chromium revision; no exact Chromium
+release is claimed for this snapshot.
+
+| File | SHA-256 |
+| --- | --- |
+| `browser_protocol.json` | `bb10379f95d76f9c423f68039df3bc996b8ae26563434a4d66e1bb0ae90300c8` |
+| `js_protocol.json` | `5a54a335617a0ff088c22f8d7a39ee7616ebdba3eb982ebf4e6b1869239e60f5` |
+
+`protocol_manifest()` exposes these hashes and the schema's `1.3` version field.
+That field alone does not establish browser compatibility. Generated types and
+bundled-schema validation describe this exact snapshot. Remote-schema checks can
+identify missing commands, but do not translate protocol differences. Use the
+raw command interface when you need a target-specific command absent from the
+bundled schema.
+
+When updating the schemas, record the upstream revision alongside the new hashes
+and regenerate bindings with `tools/gen_protocol_manifest.mjs`.
