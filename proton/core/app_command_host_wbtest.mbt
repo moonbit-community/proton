@@ -13,17 +13,6 @@ fn response_error_message(response : @ipc.IpcOpResponse) -> String raise {
 }
 
 ///|
-fn quiet_app_command_host(
-  expose_error_details? : Bool = false,
-) -> AppCommandHost {
-  AppCommandHost::new_with_diagnostic_reporter(expose_error_details, fn(
-    _diagnostic,
-  ) {
-
-  })
-}
-
-///|
 test "command window keeps the legacy constructor shape" {
   let window = CommandWindow(
     (_title, _message, _level) => (),
@@ -47,9 +36,7 @@ test "app command host starts open and empty" {
 ///|
 async test "production command errors hide backend diagnostics" {
   let diagnostics : Array[String] = []
-  let host = AppCommandHost::new_with_diagnostic_reporter(false, fn(
-    diagnostic,
-  ) {
+  let host = AppCommandHost(diagnostic_reporter=diagnostic => {
     diagnostics.push(diagnostic)
   })
   host.op("app:fail", fn(_payload : Unit) -> String raise {
@@ -163,7 +150,7 @@ async test "request context exposes the application locale snapshot" {
 
 ///|
 async test "context-aware handlers reject contextless dispatch" {
-  let host = quiet_app_command_host()
+  let host = AppCommandHost()
   let called = Ref(false)
   host.op_async_with_context("app:locale", fn(context, _payload : Unit) {
     called.val = true
@@ -269,7 +256,7 @@ async test "request context emits through its page-scoped destination" {
 ///|
 async test "dispatch preserves failure codes with and without request context" {
   for with_context in [false, true] {
-    let host = quiet_app_command_host()
+    let host = AppCommandHost()
     host.op("app:number", fn(value : Int) { value })
     host.op("app:fail", fn(_value : Unit) -> Unit raise {
       raise CommandHostTestError::PrivateFailure("private diagnostic")
@@ -310,4 +297,120 @@ async test "dispatch preserves failure codes with and without request context" {
       assert_eq(error.code, "host_closed")
     })
   }
+}
+
+///|
+async test "handler kinds share one ordered registration namespace" {
+  let host = AppCommandHost()
+  host.op("sync", fn(value : Int) { value + 1 })
+  host.op_async("async", fn(value : Int) { value + 2 })
+  host.op_async_with_context("context", fn(_context, value : Int) { value + 3 })
+  for name in ["sync", "async", "context"] {
+    try host.op(name, fn(_ : Unit) { () }) catch {
+      OpRegistrationError::DuplicateName(name=actual) => assert_eq(actual, name)
+      error => raise error
+    } noraise {
+      _ => fail("duplicate sync registration accepted")
+    }
+    try host.op_async(name, fn(_ : Unit) { () }) catch {
+      OpRegistrationError::DuplicateName(name=actual) => assert_eq(actual, name)
+      error => raise error
+    } noraise {
+      _ => fail("duplicate async registration accepted")
+    }
+    try host.op_async_with_context(name, fn(_, _ : Unit) { () }) catch {
+      OpRegistrationError::DuplicateName(name=actual) => assert_eq(actual, name)
+      error => raise error
+    } noraise {
+      _ => fail("duplicate context registration accepted")
+    }
+  }
+  let names = host.registered_ops()
+  assert_eq(names, ["sync", "async", "context"])
+  names.clear()
+  assert_eq(host.registered_ops(), ["sync", "async", "context"])
+  host.seal_registrations()
+  for
+    register in [
+      () => host.op("late", fn(_ : Unit) { () }),
+      () => host.op_async("late", fn(_ : Unit) { () }),
+      () => host.op_async_with_context("late", fn(_, _ : Unit) { () }),
+    ] {
+    try register() catch {
+      OpRegistrationError::RegistrationSealed => ()
+      error => raise error
+    } noraise {
+      _ => fail("sealed host accepted a registration")
+    }
+  }
+  @async.with_task_group(group => {
+    let context = AppCommandRequestContext(group, detached_locale_preferences())
+    for (name, expected) in [("sync", 11), ("async", 12), ("context", 13)] {
+      let response = host.dispatch_ipc_with_context(
+        context,
+        @ipc.IpcOpRequest(name, name, 10),
+      )
+      assert_true(response.is_ok())
+      assert_eq(response.body, Json(expected))
+    }
+  })
+}
+
+///|
+async test "legacy host names use the same lifecycle state" {
+  let legacy = MbtProcessHost::MbtProcessHost()
+  let host : AppCommandHost = legacy
+  legacy.op("ping", fn(_ : Unit) { "pong" })
+  assert_true(
+    legacy.dispatch_async(@ipc.IpcOpRequest("one", "ping", null)).is_ok(),
+  )
+  @async.with_task_group(group => {
+    assert_true(
+      legacy
+      .dispatch_async_with_context(
+        AppCommandRequestContext(group, detached_locale_preferences()),
+        @ipc.IpcOpRequest("two", "ping", null),
+      )
+      .is_ok(),
+    )
+  })
+  host.close()
+  legacy.close()
+  let response = legacy.dispatch_async(
+    @ipc.IpcOpRequest("closed", "ping", null),
+  )
+  let error : @ipc.IpcCommandError = @json.from_json(response.body)
+  assert_eq(error.code, "host_closed")
+}
+
+///|
+async test "cancelling command dispatch runs cleanup without returning a failure response" {
+  let host = AppCommandHost()
+  let entered = Ref(false)
+  let cleaned = Ref(false)
+  let responded = Ref(false)
+  host.op_async("pending", async fn(_ : Unit) {
+    defer {
+      cleaned.val = true
+    }
+    entered.val = true
+    while true {
+      @async.pause()
+    }
+  })
+  @async.with_task_group(group => {
+    let task = group.spawn(
+      () => {
+        ignore(host.dispatch_ipc(@ipc.IpcOpRequest("pending", "pending", null)))
+        responded.val = true
+      },
+      no_wait=true,
+    )
+    while !entered.val {
+      @async.pause()
+    }
+    task.cancel()
+  })
+  assert_true(cleaned.val)
+  assert_false(responded.val)
 }

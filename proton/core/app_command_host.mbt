@@ -1,15 +1,4 @@
 ///|
-/// Command host for user app code.
-///
-/// The framework decides how this host is connected to the window runtime.
-/// App authors register commands and run the host without depending on the
-/// underlying IPC implementation.
-struct AppCommandHost {
-  host : MbtProcessHost
-  mut closed : Bool
-}
-
-///|
 /// Scheduler-local notification shared by the runtime pump and command tasks.
 /// The revision makes waiting race-free when a notification arrives between a
 /// native poll and suspension on the condition variable.
@@ -340,28 +329,71 @@ pub async fn[Payload : ToJson] AppCommandRequestContext::emit_to_caller(
 }
 
 ///|
-/// Creates an empty app command host.
+priv struct CommandErrorPolicy {
+  expose_details : Bool
+  report_diagnostic : (String) -> Unit
+}
+
+///|
+fn CommandErrorPolicy::CommandErrorPolicy(
+  expose_details : Bool,
+  report_diagnostic : (String) -> Unit,
+) -> CommandErrorPolicy {
+  CommandErrorPolicy::{ expose_details, report_diagnostic, }
+}
+
+///|
+fn CommandErrorPolicy::response_error(
+  self : CommandErrorPolicy,
+  error : Error,
+  code : String,
+  safe_message : String,
+) -> @ipc.IpcCommandError {
+  let diagnostic = @debug.render(Repr(error))
+  (self.report_diagnostic)(diagnostic)
+  {
+    code,
+    message: safe_message,
+    detail: if self.expose_details {
+      Some(diagnostic)
+    } else {
+      None
+    },
+  }
+}
+
+///|
+fn ignore_command_diagnostic(_diagnostic : String) -> Unit {
+  ()
+}
+
+///|
+/// Transport-independent command registration and dispatch.
+///
+/// The Proton facade runs this host in the application process on the runtime
+/// owner thread. Async command handlers use the application async event loop.
+#alias(MbtProcessHost)
+struct AppCommandHost {
+  registry : OpRegistry
+  error_policy : CommandErrorPolicy
+  mut registration_sealed : Bool
+  mut closed : Bool
+}
+
+///|
+/// Creates an empty command host.
 ///
 /// Set `diagnostic_reporter` to retain backend-only handler diagnostics. Set
 /// `expose_error_details` only for a trusted development frontend.
+#alias(MbtProcessHost)
 pub fn AppCommandHost::AppCommandHost(
   expose_error_details? : Bool = false,
   diagnostic_reporter? : (String) -> Unit = ignore_command_diagnostic,
 ) -> AppCommandHost {
-  AppCommandHost::new_with_diagnostic_reporter(
-    expose_error_details, diagnostic_reporter,
-  )
-}
-
-///|
-fn AppCommandHost::new_with_diagnostic_reporter(
-  expose_error_details : Bool,
-  report_diagnostic : (String) -> Unit,
-) -> AppCommandHost {
   AppCommandHost::{
-    host: MbtProcessHost::new_with_diagnostic_reporter(
-      expose_error_details, report_diagnostic,
-    ),
+    registry: OpRegistry(),
+    error_policy: CommandErrorPolicy(expose_error_details, diagnostic_reporter),
+    registration_sealed: false,
     closed: false,
   }
 }
@@ -373,7 +405,8 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(
   name : String,
   callback : (Payload) -> Reply raise?,
 ) -> Unit raise OpRegistrationError {
-  self.host.op(name, fn(payload) raise { callback(payload) })
+  self.ensure_open_for_register()
+  self.registry.handle(name, fn(payload) raise { callback(payload) })
 }
 
 ///|
@@ -383,7 +416,8 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(
   name : String,
   callback : async (Payload) -> Reply,
 ) -> Unit raise OpRegistrationError {
-  self.host.op_async(name, callback)
+  self.ensure_open_for_register()
+  self.registry.handle_async(name, callback)
 }
 
 ///|
@@ -393,45 +427,121 @@ pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async_with_c
   name : String,
   callback : async (AppCommandRequestContext, Payload) -> Reply,
 ) -> Unit raise OpRegistrationError {
-  self.host.op_async_with_context(name, callback)
+  self.ensure_open_for_register()
+  self.registry.handle_async_with_context(name, callback)
 }
 
 ///|
 /// Returns registered command names in registration order.
 pub fn AppCommandHost::registered_ops(self : AppCommandHost) -> Array[String] {
-  self.host.registered_ops()
+  self.registry.handlers.keys().to_array()
 }
 
 ///|
-/// Dispatches one IPC request on the current async loop.
+/// Dispatches one decoded IPC request on the current async loop.
+#alias(dispatch_async)
 pub async fn AppCommandHost::dispatch_ipc(
   self : AppCommandHost,
   request : @ipc.IpcOpRequest,
 ) -> @ipc.IpcOpResponse {
-  self.host.dispatch_async(request)
+  self.dispatch(request, None)
 }
 
 ///|
 /// Dispatches one IPC request with request-scoped context.
+#alias(dispatch_async_with_context)
 pub async fn AppCommandHost::dispatch_ipc_with_context(
   self : AppCommandHost,
   context : AppCommandRequestContext,
   request : @ipc.IpcOpRequest,
 ) -> @ipc.IpcOpResponse {
-  self.host.dispatch_async_with_context(context, request)
+  self.dispatch(request, Some(context))
+}
+
+///|
+async fn AppCommandHost::dispatch(
+  self : AppCommandHost,
+  request : @ipc.IpcOpRequest,
+  context : AppCommandRequestContext?,
+) -> @ipc.IpcOpResponse {
+  let fallback_id = ipc_request_fallback_response_id(request)
+  let request = request.validate() catch {
+    error =>
+      return @ipc.IpcOpResponse::err(
+        fallback_id,
+        self.error_policy.response_error(
+          error, "invalid_request", "invalid command request",
+        ),
+      )
+  }
+  guard !self.closed else {
+    return @ipc.IpcOpResponse::err(
+      request.id,
+      self.dispatch_error(OpDispatchError::HostClosed),
+    )
+  }
+  let body = self.registry.call(request.name, request.payload, context) catch {
+    error =>
+      return @ipc.IpcOpResponse::err(request.id, self.dispatch_error(error))
+  }
+  @ipc.IpcOpResponse::ok(request.id, body)
+}
+
+///|
+fn AppCommandHost::dispatch_error(
+  self : AppCommandHost,
+  error : Error,
+) -> @ipc.IpcCommandError {
+  let (code, message) = match error {
+    InvalidPayload(name~, ..) =>
+      ("invalid_payload", "invalid payload for op " + name)
+    HandlerFailed(name~, ..) => ("handler_failed", "op " + name + " failed")
+    UnknownOp(name~) =>
+      ("unknown_op", OpDispatchError::UnknownOp(name~).message())
+    OpDispatchError::HostClosed =>
+      ("host_closed", OpDispatchError::HostClosed.message())
+    AsyncHandlerRequiresAsync(name~) =>
+      (
+        "async_dispatch_required",
+        OpDispatchError::AsyncHandlerRequiresAsync(name~).message(),
+      )
+    RequestContextRequired(name~) =>
+      (
+        "request_context_required",
+        OpDispatchError::RequestContextRequired(name~).message(),
+      )
+    _ => ("dispatch_failed", "command dispatch failed")
+  }
+  self.error_policy.response_error(error, code, message)
 }
 
 ///|
 /// Prevents later command registration while keeping existing commands usable.
 pub fn AppCommandHost::seal_registrations(self : AppCommandHost) -> Unit {
   guard !self.closed else { return }
-  self.host.seal_registrations()
+  self.registration_sealed = true
 }
 
 ///|
-/// Closes this command host and rejects future dispatches.
+/// Closes this host and rejects future dispatches.
 pub fn AppCommandHost::close(self : AppCommandHost) -> Unit {
   guard !self.closed else { return }
   self.closed = true
-  self.host.close()
+}
+
+///|
+fn AppCommandHost::ensure_open_for_register(
+  self : AppCommandHost,
+) -> Unit raise OpRegistrationError {
+  guard !self.closed else { raise OpRegistrationError::HostClosed }
+  guard !self.registration_sealed else { raise RegistrationSealed }
+}
+
+///|
+fn ipc_request_fallback_response_id(request : @ipc.IpcOpRequest) -> String {
+  if request.id.trim().to_owned() == "" {
+    "invalid"
+  } else {
+    request.id
+  }
 }
