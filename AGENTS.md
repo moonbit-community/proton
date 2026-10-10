@@ -67,10 +67,10 @@ developer must perform them.
   (`justjavac/moonbit-<pkg>`) and independent version lineages are history;
   attribution stays in each module's README and LICENSE.
 - `cdp/`: `moonbit-community/proton_cdp`; Chrome DevTools Protocol client and generated
-  protocol bindings used only by the `e2e/` DevTools test automation. It is
+  protocol bindings for optional external automation and the `e2e/` tests. It is
   maintained here under the Apache-2.0 license as a workspace member and is
-  not part of the release publishing chain. The `src/protocol/` tree is
-  generated; regenerate it with the scripts under `cdp/tools/` instead of
+  published in the lockstep release chain, independently of the app runtime.
+  The `src/protocol/` tree is generated; regenerate it with the scripts under `cdp/tools/` instead of
   editing it by hand.
 - `examples/`: runnable demos. Keep [examples/Readme.md](examples/Readme.md)
   aligned with the actual examples.
@@ -121,8 +121,8 @@ native checks before handing off larger refactors.
 - `.github/workflows/publish.yml` publishes the lockstep dependency chain in this order:
   `proton_config`, `proton_codegen`, `proton_contract`, `proton_rsa`,
   `proton_updater`, `proton_cefsetup`, `proton_package`, the ten `sys` modules,
-  `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, and finally
-  `proton_cli`. The `cdp`, `examples`, and `e2e` modules are not published.
+  `proton_client`, `proton_rabbita`, `proton`, `proton_ext`, `proton_cli`, and
+  `proton_cdp`. The `examples` and `e2e` modules are not published.
 - All modules in `moon.work` use one lockstep version. Prepare a lockstep release only
   through `moonx Milky2018/lockstep <version>`, where `<version>` is the explicit
   target `MAJOR.MINOR.PATCH`; do not edit individual lockstep module versions by
@@ -168,7 +168,9 @@ native checks before handing off larger refactors.
 - The release is not complete until the independent scaffold passes
   `moon check --target js,native`, native build, package-plan validation, and
   real package creation using registry dependencies and the setup-managed
-  runtime.
+  runtime. The same acceptance script builds an independent registry-only CDP
+  consumer and verifies page evaluation against headless Chrome (`google-chrome`,
+  or `PROTON_REGISTRY_CHROME` for another executable).
 
 ## Coding Conventions
 - Use MoonBit with 2-space indentation and `///|` top-level separators.

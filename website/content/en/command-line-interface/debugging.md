@@ -25,6 +25,10 @@ DevTools listening on ws://127.0.0.1:<port>/devtools/browser/<id>
 
 Use the announced endpoint for that process lifetime; do not reserve and release a port before launch or assume a fixed port. An explicit port remains supported. This is Chromium's diagnostic endpoint, not Proton's application command transport.
 
+The application must have debugging enabled (`App.debug()`); the port variable
+does not enable it. For native MoonBit automation, see the optional
+[`proton_cdp` library](https://github.com/moonbit-community/proton/blob/main/cdp/README.mbt.md).
+
 ## Logs
 
 Proton uses `tonyfettes/xlog`. Development output uses stderr; packaged applications use the platform log directory. Application categories use `app.*`; framework categories use `proton.*`. Application level and category settings are preserved.
