@@ -457,6 +457,9 @@ int32_t proton_window_get_devtools_state(
 int32_t proton_contents_download_url(
     void *window, int32_t is_view, const char *url);
 int32_t proton_contents_print(void *window, int32_t is_view);
+int32_t proton_contents_devtools(void *contents, int32_t is_view,
+    int32_t operation, int64_t token, const char *message);
+
 int32_t proton_contents_print_to_pdf(
     void *window, int32_t is_view, const char *path, int32_t landscape,
     int32_t print_background, double scale, double paper_width,

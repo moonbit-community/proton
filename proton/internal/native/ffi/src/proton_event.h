@@ -55,6 +55,7 @@ typedef enum proton_event_kind {
   PROTON_EVENT_BROWSER_RESOURCE_REQUESTED = 42,
   PROTON_EVENT_NATIVE_THEME_CHANGED = 43,
   PROTON_EVENT_TASKBAR_BUTTON_CLICKED = 44,
+  PROTON_EVENT_DEVTOOLS_MESSAGE = 45,
 } proton_event_kind_t;
 
 typedef struct proton_event {

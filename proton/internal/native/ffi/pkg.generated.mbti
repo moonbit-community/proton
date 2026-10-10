@@ -217,6 +217,8 @@ pub fn proton_view_browser_command_ffi(ViewHandle, Bytes, Int) -> Int
 
 pub fn proton_view_destroy_ffi(ViewHandle) -> Int
 
+pub fn proton_view_devtools_ffi(ViewHandle, Int, Int, Int64, Bytes) -> Int
+
 pub fn proton_view_download_url_ffi(ViewHandle, Int, Bytes) -> Int
 
 pub fn proton_view_eval_ffi(ViewHandle, Bytes) -> Int
@@ -296,6 +298,8 @@ pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int
 pub fn proton_window_close_ffi(WindowHandle) -> Int
 
 pub fn proton_window_destroy_ffi(WindowHandle) -> Int
+
+pub fn proton_window_devtools_ffi(WindowHandle, Int, Int, Int64, Bytes) -> Int
 
 pub fn proton_window_download_url_ffi(WindowHandle, Int, Bytes) -> Int
 

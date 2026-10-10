@@ -1,0 +1,13 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton/internal/native/ffi/tests/devtools"
+
+// Values
+pub fn check_lifetime() -> Int
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
