@@ -842,7 +842,7 @@ async fn RuntimeSession::request_open_window(
 }
 
 ///|
-fn WindowOpenCompletion::WindowOpenCompletion() -> WindowOpenCompletion {
+fn[T] WindowOpenCompletion::WindowOpenCompletion() -> WindowOpenCompletion[T] {
   WindowOpenCompletion::{
     state: WindowOpenPending,
     changed: @async.CondVar::Cond(),
@@ -850,9 +850,9 @@ fn WindowOpenCompletion::WindowOpenCompletion() -> WindowOpenCompletion {
 }
 
 ///|
-fn WindowOpenCompletion::succeed(
-  self : WindowOpenCompletion,
-  handle : WindowHandle,
+fn[T] WindowOpenCompletion::succeed(
+  self : WindowOpenCompletion[T],
+  handle : T,
 ) -> Unit {
   if self.state is WindowOpenPending {
     self.state = WindowOpenSucceeded(handle)
@@ -861,8 +861,8 @@ fn WindowOpenCompletion::succeed(
 }
 
 ///|
-fn WindowOpenCompletion::fail(
-  self : WindowOpenCompletion,
+fn[T] WindowOpenCompletion::fail(
+  self : WindowOpenCompletion[T],
   error : WindowSessionError,
 ) -> Unit {
   if self.state is WindowOpenPending {
@@ -872,9 +872,7 @@ fn WindowOpenCompletion::fail(
 }
 
 ///|
-async fn WindowOpenCompletion::wait(
-  self : WindowOpenCompletion,
-) -> WindowHandle {
+async fn[T] WindowOpenCompletion::wait(self : WindowOpenCompletion[T]) -> T {
   // Cancellation before success belongs to the opening operation, not just
   // its waiter. Preserve cancellation of the calling task.
   defer self.fail(Cancelled)

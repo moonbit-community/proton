@@ -629,19 +629,19 @@ priv struct CookieCompletionStore {
 
 ///|
 priv enum WindowSessionCommand {
-  Open(String, WindowOpenCompletion)
+  Open(String, WindowOpenCompletion[WindowHandle])
 }
 
 ///|
-priv struct WindowOpenCompletion {
-  mut state : WindowOpenCompletionState
+priv struct WindowOpenCompletion[T] {
+  mut state : WindowOpenCompletionState[T]
   changed : @async.CondVar
 }
 
 ///|
-priv enum WindowOpenCompletionState {
+priv enum WindowOpenCompletionState[T] {
   WindowOpenPending
-  WindowOpenSucceeded(WindowHandle)
+  WindowOpenSucceeded(T)
   WindowOpenFailed(WindowSessionError)
 }
 
@@ -649,7 +649,7 @@ priv enum WindowOpenCompletionState {
 priv struct PendingWindowOpen {
   id : String
   running : RunningWindow
-  completion : WindowOpenCompletion
+  completion : WindowOpenCompletion[WindowHandle]
   mut activation : @async.Task[Unit]?
   timeout : @async.Task[Unit]
 }

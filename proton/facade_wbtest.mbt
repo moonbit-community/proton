@@ -2079,7 +2079,7 @@ async test "cookie completion wakes only its registered waiter" {
 ///|
 async test "cancelling window and cookie waiters preserves task group cancellation" {
   let cookies = CookieCompletionStore()
-  let window = WindowOpenCompletion()
+  let window : WindowOpenCompletion[String] = WindowOpenCompletion()
   @async.with_task_group(group => {
     let window_waiter = group.spawn(() => ignore(window.wait()), no_wait=true)
     let cookie_waiter = group.spawn(
@@ -2095,6 +2095,43 @@ async test "cancelling window and cookie waiters preserves task group cancellati
   })
   assert_true(cookies.pending.is_empty())
   assert_true(window.state is WindowOpenFailed(Cancelled))
+  // Cancellation committed first; a later activation cannot replace it.
+  window.succeed("secondary")
+  assert_true(window.state is WindowOpenFailed(Cancelled))
+}
+
+///|
+async test "window activation success wins over later waiter cancellation" {
+  let completion : WindowOpenCompletion[String] = WindowOpenCompletion()
+  let entered = Ref(false)
+  let stopped = Ref(false)
+  @async.with_task_group(group => {
+    let waiter = group.spawn(
+      () => {
+        defer {
+          stopped.val = true
+        }
+        entered.val = true
+        ignore(completion.wait())
+      },
+      no_wait=true,
+    )
+    while !entered.val {
+      @async.pause()
+    }
+    assert_true(completion.state is WindowOpenPending)
+    assert_false(stopped.val)
+    // No suspension between committing success and cancellation: the waiter
+    // is still suspended in wait(), although broadcast has made it runnable.
+    completion.succeed("secondary")
+    waiter.cancel()
+    assert_false(stopped.val)
+  })
+  assert_true(stopped.val)
+  guard completion.state is WindowOpenSucceeded(id) else {
+    fail("late cancellation discarded a committed window")
+  }
+  assert_eq(id, "secondary")
 }
 
 ///|
