@@ -209,6 +209,18 @@ Cancellation before activation commits discards the queued open or closes the in
 
 `hide()` preserves the instance, browser, and associated work. `close()` initiates teardown and can be denied. Do not equate a close request with completed cleanup. Per-window state should be released by its lifecycle cleanup, not immediately after requesting close.
 
+**Lookup and browser readiness**
+
+`WindowManager.find(id)` returns the current active instance, including a window that is still starting. It does not wait for native browser initialization, page loading, or command bridge readiness. Obtaining a `WebContentsHandle` does not wait for these conditions either.
+
+These are distinct conditions:
+
+- Native browser initialization makes browser queries such as `WebContentsHandle.state()` available. During startup, a query can raise `WindowSessionError::OperationFailed` because the browser is not initialized. Do not assume that all browser operations are queued until initialization completes.
+- Page loading concerns the current navigation. For work that needs a loaded page, observe `on_web_contents_event` for that window or view, then verify the expected URL and page state. `DidFinishLoad` reports a loading-to-idle transition; by itself it does not prove that the intended navigation succeeded. Handle `LoadFailed` separately.
+- Command bridge readiness concerns communication with the current page. A browser handle or a load-completion event alone does not establish that the bridge is ready.
+
+Coordinate operations with the condition they actually require. A fixed delay after `find()` is not a readiness guarantee, and navigation or closure can invalidate earlier observations.
+
 **Runtime operations**
 
 | Area | `WindowHandle` operations |

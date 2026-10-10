@@ -670,6 +670,10 @@ priv struct BrowserResponse {
 
 ///|
 /// A page hosted by a window or child view, bound to one native instance.
+/// Obtaining this handle does not wait for native browser initialization, page
+/// loading, or command bridge readiness. Operations requiring an initialized
+/// browser can raise `WindowSessionError` during startup; do not assume that
+/// all operations are queued until initialization completes.
 pub struct WebContentsHandle {
   view_id : String?
   id : String
