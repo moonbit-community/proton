@@ -8,12 +8,22 @@
 | --- | --- |
 | `proton_cli doctor` | 只读检查项目、工具链、运行时和 helper |
 | `proton_cli --version` / `moon version` | 工具版本 |
-| `BrowserHandle.open_devtools()` | 浏览器的 Chromium 检查器 |
+| `WebContentsHandle.open_devtools()` | 浏览器的 Chromium 检查器 |
 | `App.run()` | 类型化应用运行错误 |
 | `App.run_or_abort()` | 报告失败并中止 |
 | `ClientFailure` | 前端契约、bridge、通信及解码错误 |
 
-`WindowHandle.browser()` 提供浏览器句柄，DevTools 属于该浏览器的生命周期。在窗口 ready 钩子中打开检查器时，应保留已有钩子的状态和清理逻辑。
+`WindowHandle.web_contents()` 提供浏览器句柄，DevTools 属于该浏览器的生命周期。在窗口 ready 钩子中打开检查器时，应保留已有钩子的状态和清理逻辑。
+
+## CDP 端点发现
+
+启动原生应用时设置 `PROTON_REMOTE_DEBUGGING_PORT=0`，让 Chromium 选择可用端口。从进程输出读取实际浏览器 WebSocket 端点：
+
+```text
+DevTools listening on ws://127.0.0.1:<port>/devtools/browser/<id>
+```
+
+在该进程生命周期内使用它公布的端点；不要先预占再释放端口，也不要假定固定端口。仍可显式指定端口。这是 Chromium 的诊断端点，不是 Proton 的应用命令传输通道。
 
 ## 日志
 

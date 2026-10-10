@@ -8,12 +8,22 @@ Diagnostics come from distinct layers: project/toolchain validation, native star
 | --- | --- |
 | `proton_cli doctor` | Read-only project, toolchain, runtime and helper checks |
 | `proton_cli --version` / `moon version` | Tool versions |
-| `BrowserHandle.open_devtools()` | Chromium inspector for a browser |
+| `WebContentsHandle.open_devtools()` | Chromium inspector for a browser |
 | `App.run()` | Typed application execution errors |
 | `App.run_or_abort()` | Error reporting followed by abort on failure |
 | `ClientFailure` | Frontend contract, bridge, transport and decoding failures |
 
-`WindowHandle.browser()` provides the browser handle. DevTools belongs to that browser's lifetime. Opening it from a window-ready hook must preserve any existing hook state and cleanup behavior.
+`WindowHandle.web_contents()` provides the browser handle. DevTools belongs to that browser's lifetime. Opening it from a window-ready hook must preserve any existing hook state and cleanup behavior.
+
+## CDP endpoint discovery
+
+Set `PROTON_REMOTE_DEBUGGING_PORT=0` when launching the native application to let Chromium select an available port. Read the actual browser WebSocket endpoint from its process output:
+
+```text
+DevTools listening on ws://127.0.0.1:<port>/devtools/browser/<id>
+```
+
+Use the announced endpoint for that process lifetime; do not reserve and release a port before launch or assume a fixed port. An explicit port remains supported. This is Chromium's diagnostic endpoint, not Proton's application command transport.
 
 ## Logs
 

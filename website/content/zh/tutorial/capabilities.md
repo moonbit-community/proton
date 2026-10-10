@@ -7,7 +7,7 @@
 在 minimal 项目的 **`moon.mod`** 中，将以下依赖加入 `import { ... }`：
 
 ```text
-"moonbit-community/proton_ext@0.3.4",
+"moonbit-community/proton_ext@0.4.0",
 ```
 
 在 **`app/moon.pkg`** 中使用以下导入，然后执行 `moon update`：
@@ -99,4 +99,4 @@ async fn main {
 
 对话框、剪贴板、shell、托盘等扩展也采用显式安装和授权的方式，但各自定义作用范围与平台支持。此版本的通知扩展面向 macOS，不能从框架的平台列表推断每个扩展都支持全部平台。
 
-需要某项能力时，查阅[扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/)中的 capability 构建器及请求、响应类型。
+需要某项能力时，查阅[扩展 API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti)中的 capability 构建器及请求、响应类型。

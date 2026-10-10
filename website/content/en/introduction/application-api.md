@@ -14,7 +14,7 @@ The root `moonbit-community/proton` package is the public application facade. Us
 | Process ownership and activation | single-instance builder, context methods | [Process control](#process-control-and-metrics) |
 | Paths, files and build metadata | project configuration and application paths | [Configuration](../configuration/project.md) |
 
-For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/). This reference describes when to use each entry point, which object owns its state, and how it behaves during startup, cancellation and shutdown.
+For the complete set of methods, overloads, typed errors and defaults, use the [versioned API index](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti). This reference describes when to use each entry point, which object owns its state, and how it behaves during startup, cancellation and shutdown.
 
 ## Application lifecycle
 
@@ -150,7 +150,7 @@ response type.
 
 Proton does not impose a fixed payload-size limit on commands. Payloads are serialized as JSON and remain subject to memory and underlying transport constraints. Large messages increase serialization, copying and parsing costs.
 
-Request concurrency has no global fixed admission limit in 0.3.4. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.
+Request concurrency has no global fixed admission limit in 0.4.0. Applications still need to bound expensive work according to their own resource and ordering requirements; the bridge does not serialize unrelated business operations into a transaction.
 
 ## Events
 
@@ -170,7 +170,7 @@ Host payloads require `ToJson`. Window emitters belong to window lifetime; a sav
 
 `proton_client.subscribe(event, listener, failure)` decodes payloads through `FromJson` and returns a `Subscription`. `Subscription.close()` releases the listener. Subscription setup can raise `ClientFailure`; event decoding failures are reported as `EventDecode` through the failure callback.
 
-`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/).
+`proton_rabbita.subscribe` integrates subscription ownership into Rabbita. Its options include a subscription key, retry count, ready command and client override; full signatures are in the [Rabbita API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/rabbita/pkg.generated.mbti).
 
 The JavaScript interface is `window.__MoonBit__.app.on(name, callback)`. The callback receives an event envelope containing `payload`; registration returns an unsubscribe function.
 
@@ -193,13 +193,15 @@ The [event tutorial](../tutorial/events.md) demonstrates subscription and cleanu
 
 ## Windows and browser views
 
-Window declarations belong to `App`; operations on a running window belong to `WindowHandle`. Browser navigation and developer tools belong to `BrowserHandle`, obtained through `WindowHandle.browser()`.
+Window declarations belong to `App`; operations on a running window belong to `WindowHandle`. Browser navigation and developer tools belong to `WebContentsHandle`, obtained through `WindowHandle.web_contents()`.
 
 **Identity and declaration**
 
-The primary window ID is `main`. `App.add_window(id, title, entry, ...)` declares secondary windows; their IDs must be nonempty, unique and different from `main`. Titles are display text and do not identify windows.
+The primary window ID is `main`. `App.add_window(id, config, open_on_start?)` declares secondary windows; their IDs must be nonempty, unique and different from `main`. Titles are display text and do not identify windows.
 
 Secondary windows open at startup by default. `open_on_start=false` defers opening until `WindowManager.open(id)`. `ApplicationContext.windows()` and `WindowContext.windows()` expose the manager. All windows belong to one application runtime.
+
+`WindowConfig(title, entry, ...)` holds dimensions, size hint, theme, titlebar style, traffic-light position, and initial `views`. Use `App(config)` for the primary window, `App.main_window(config)` to replace its startup configuration, and `App.add_window(id, config, ...)` for secondary windows. Registrations snapshot the views array. The `html`, `url`, `file`, and `asset` shortcuts remain available for a simple primary window.
 
 **Opening and instance identity**
 
@@ -239,15 +241,21 @@ Native operations can raise `WindowSessionError`. A handle is not valid indefini
 
 **Child browser views**
 
-`App.with_view` declares a view on the main window; `WindowHandle.add_view` creates one dynamically and returns `ViewHandle`. A view is a child browser hosted inside a window, not a second top-level window. Its bounds use a top-left origin; visibility and z-order are independent of the main page. `remove_view` removes a child. Closing the parent must also complete child-browser teardown.
+`WindowConfig.views` declares initial views on either primary or secondary windows; `WindowHandle.add_view` creates one dynamically and returns `ViewHandle`. A view is a child browser hosted inside a window, not a second top-level window. Its bounds use a top-left origin; visibility and z-order are independent of the main page. `remove_view` removes a child. Closing the parent must also complete child-browser teardown.
 
 **Browser and view boundaries**
 
-The main page belongs to `WindowHandle.browser()`. Child contents belong to `ViewHandle`; child navigation and removal do not navigate or close the main page. Both are represented by `WebContentsHandle` in application-level creation and renderer-termination callbacks.
+Both `WindowHandle.web_contents()` and `ViewHandle.web_contents()` return `WebContentsHandle`. Navigation, script evaluation, zoom, audio, developer tools, printing, downloads and session access use that common handle. Child geometry, visibility, z-order and removal remain on `ViewHandle`; native window controls remain on `WindowHandle`. Child navigation does not navigate the main page.
 
-`on_render_process_gone` covers both main pages and child views without requiring an extra `on_view_event` subscription. Renderer termination invalidates page work; it is not a normal window close. Decide whether to reload or present recovery UI based on the reported details, and recreate page subscriptions after navigation.
+Subscribe to `App.on_web_contents_event` for main-page and child-page events. Callbacks carry the common handle: `window_id()` identifies the owning window and `view_id()` is `None` for its main page. Handles remain bound to one native instance; reusing a declaration id does not revive an old handle. A child view does not receive the application command bridge.
+
+`on_render_process_gone` covers both main pages and child views without requiring an extra `on_web_contents_event` subscription. Renderer termination invalidates page work; it is not a normal window close. Decide whether to reload or present recovery UI based on the reported details, and recreate page subscriptions after navigation.
 
 A view declaration sets initial geometry; it does not provide automatic layout. Update its bounds when the parent content layout changes.
+
+**PDF output**
+
+`WebContentsHandle.print_to_pdf(path, options?)` is asynchronous and returns `Unit` after successful completion. Call it in an async context and handle failure at the call site; no completion-event subscription or request-id correlation is needed. Concurrent calls on main and child pages keep separate completion identities. Closing the page, losing its renderer, or ending the application wakes outstanding callers. Cancellation stops waiting, not the underlying native print job; the destination file may still be produced.
 
 **Platform behavior**
 
@@ -284,7 +292,7 @@ Capability-specific scope types are documented in the extension API; platform co
 
 **Platform differences and selection**
 
-These are key boundaries of implemented 0.3.4 capabilities, not a promise of availability without desktop services:
+These are key boundaries of implemented 0.4.0 capabilities, not a promise of availability without desktop services:
 
 | Capability | macOS | Windows | Linux |
 | --- | --- | --- | --- |
@@ -300,11 +308,11 @@ Capability grants are separate from operating-system authorization. Declaring a 
 
 The net extension performs host HTTP requests and returns status, headers and UTF-8 text. It is not browser fetch, does not share the browser cookie jar and does not follow redirects automatically. Its text response is not a lossless binary transfer interface. Processes spawned by the process extension belong to its application lifetime: wait collects handles, kill still needs wait, and application shutdown cancels and reaps remaining children.
 
-See the [extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
+See the [extension API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti) for the complete inventory and scope types. Check target grants, OS permission and platform backend support independently.
 
 ## Browser sessions
 
-A browser session contains cookies, cache, authentication state and web storage. Obtain its handle from `window.browser().session()`. A handle is reached through a browser, but clearing shared session data is not a private operation on that one page.
+A browser session contains cookies, cache, authentication state and web storage. Obtain its handle from `ApplicationContext.session()` even before a window exists, or from any `WebContentsHandle.session()`. Both access the same application session. Closing a page does not invalidate the session, and clearing shared data affects the other pages using that profile.
 
 **Startup settings**
 
@@ -326,9 +334,9 @@ The `on_session_created` callback exposes the partition and resolved data path b
 | `clear_certificate_exceptions` | Clears certificate exception state |
 | `close_all_connections` | Closes session connections |
 
-Operations can fail when the owning browser/window is no longer usable. Await cookie reads inside a live lifecycle scope. A clearing operation does not erase application-owned files or implement an application logout protocol; invalidate backend credentials and UI state separately.
+Operations raise `SessionError` and require a live application runtime, not a live page. Handles remain usable with no windows under `KeepRunning`; application teardown wakes pending cookie readers and invalidates retained session handles. Concurrent cookie reads are independent. A clearing operation does not erase application-owned files or implement an application logout protocol; invalidate backend credentials and UI state separately.
 
-Full attributes and `StorageDataKind` variants are in the [API reference](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/).
+Full attributes and `StorageDataKind` variants are in the [API reference](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti).
 
 ## Application updates
 
@@ -388,8 +396,8 @@ CPU is zero until a sampling interval has passed; 100% represents one fully used
 
 ## API references
 
-- [Application API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)
-- [Extension API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/)
-- [Typed contracts](https://mooncakes.io/docs/moonbit-community/proton_contract@0.3.4/)
-- [Frontend client](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.4/)
-- [Rabbita integration](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/)
+- [Application API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti)
+- [Extension API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti)
+- [Typed contracts](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/contract/pkg.generated.mbti)
+- [Frontend client](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/client/pkg.generated.mbti)
+- [Rabbita integration](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/rabbita/pkg.generated.mbti)

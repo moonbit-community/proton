@@ -2,7 +2,7 @@
 
 This example exposes command operations to two windows in one application. It shows how window declarations, renderer grants and caller identity work together without giving every page implicit access.
 
-[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/45_bridge_multi_window/main.mbt)
+[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/45_bridge_multi_window) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/45_bridge_multi_window/main.mbt)
 
 ## Behavior
 
@@ -23,10 +23,12 @@ async fn main {
   )
   .add_window(
     "secondary",
-    "Bridge Multi B",
-    @proton.AppEntry::Html(page_html("B")),
-    width=520,
-    height=420,
+    @proton.WindowConfig(
+      "Bridge Multi B",
+      @proton.AppEntry::Html(page_html("B")),
+      width=520,
+      height=420,
+    ),
     open_on_start=false,
   )
   .capability(@proton_extension.capability(multi_window_extension()), targets=[

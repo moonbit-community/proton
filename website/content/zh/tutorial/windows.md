@@ -53,7 +53,7 @@ async fn main {
 
 ## 使用与释放句柄
 
-`on_ready` 中的 `context.handle()` 返回当前 `WindowHandle`，可用于 `focus()`、`hide()`、`show()`、`close()` 等操作。浏览器操作通过 `handle.browser()` 获取。
+`on_ready` 中的 `context.handle()` 返回当前 `WindowHandle`，可用于 `focus()`、`hide()`、`show()`、`close()` 等操作。浏览器操作通过 `handle.web_contents()` 获取。
 
 生命周期回调的返回值会成为对应 `on_close` 的参数。示例返回窗口 ID，Todo 模板则用这个 ID 移除保存的事件目标。将窗口所属状态放在这一生命周期内管理，关闭后停止使用句柄。
 
@@ -71,6 +71,6 @@ async fn main {
 
 ## 平台相关的窗口行为
 
-原生窗口装饰和可用控制项因平台而异。依赖平台专属方法前，请查询[窗口 API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)。使用叠加标题栏时，需要一起处理前端标题栏布局与原生配置。
+原生窗口装饰和可用控制项因平台而异。依赖平台专属方法前，请查询[窗口 API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti)。使用叠加标题栏时，需要一起处理前端标题栏布局与原生配置。
 
 辅助页面也是独立的 capability 目标，只应授予其所需的宿主操作，见[原生能力](capabilities.md)。

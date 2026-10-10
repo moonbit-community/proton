@@ -39,7 +39,7 @@ section. They state prerequisites, file edits and expected results. All other
 pages are independently readable technical documentation: define concepts, API
 contracts, configuration types/defaults, lifecycle, failure behavior and platform
 limits. Do not make reference pages depend on completing a tutorial project.
-Examples document Proton 0.3.4; verify them with published dependencies.
+Examples document the pinned Proton 0.4.0 source snapshot. Until publication, validate them in that workspace; registry-based tutorials require the matching release to be published.
 
 ## Preview
 
