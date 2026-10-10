@@ -2,14 +2,13 @@
 
 This example starts a native window from an inline HTML string. It shows the smallest application entry point: select page content, assign an application identifier, and run the application.
 
-[01_run](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/01_run) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/01_run/main.mbt)
+[01_run](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/01_run) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/01_run/main.mbt)
 
 ## Behavior
 
 A single 800 × 600 window displays “01 run”. The builder declares identity and starts the application.
 
 ```moonbit
-///|
 async fn main {
   let html =
     #|<!doctype html>
