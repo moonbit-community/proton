@@ -1359,11 +1359,13 @@ async fn run_proxy_regression(name : String) -> Unit {
             // child's event/request log on failure. Keep the initial navigation
             // under test rather than issuing a second navigation after startup.
             while true {
-              if context.windows().find("main") is Some(window) {
+              // A registered window may still be waiting for its native browser.
+              // Observe the response and load completion before querying it.
+              if served.val &&
+                loaded.val &&
+                context.windows().find("main") is Some(window) {
                 let state = window.web_contents().state()
-                if served.val &&
-                  state.url == "http://proton-proxy.invalid:8080/probe" &&
-                  loaded.val &&
+                if state.url == "http://proton-proxy.invalid:8080/probe" &&
                   !state.is_loading {
                   break
                 }

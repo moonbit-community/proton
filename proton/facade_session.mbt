@@ -1811,6 +1811,9 @@ pub async fn WindowManager::open(
 
 ///|
 /// Returns the active instance for a declared window id.
+/// This includes starting windows. Finding a window does not wait for native
+/// browser initialization, page loading, or command bridge readiness.
+/// Browser operations may still fail while the native browser is starting.
 pub fn WindowManager::find(self : WindowManager, id : String) -> WindowHandle? {
   (self.find_window)(id)
 }
@@ -2702,6 +2705,10 @@ pub fn WebContentsHandle::can_go_forward(
 
 ///|
 /// Reads the current main browser page state.
+/// Requires an initialized native browser; finding its window does not ensure
+/// this. A query made before initialization raises `WindowSessionError`.
+/// A returned state does not by itself establish successful page loading or
+/// command bridge readiness.
 pub fn WebContentsHandle::state(
   self : WebContentsHandle,
 ) -> BrowserState raise WindowSessionError {
