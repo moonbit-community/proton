@@ -1,0 +1,10 @@
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbit-community/proton",
+  "moonbit-community/proton_cefsetup/store" @cef_store,
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

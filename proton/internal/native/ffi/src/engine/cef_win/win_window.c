@@ -2838,6 +2838,17 @@ int32_t proton_engine_contents_print(
   return proton_browser_print(browser, error, error_len);
 }
 
+int32_t proton_engine_contents_devtools(
+    void *target, int32_t is_view, int32_t operation, int64_t token,
+    const char *message, char *error, size_t error_len) {
+
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(view) : proton_engine_window_browser(window);
+  proton_browser_session_t *session = is_view ? (view != NULL ? view->browser_session : NULL) : (window != NULL ? window->browser_session : NULL);
+  return proton_browser_session_devtools(session, browser, operation, token, message, error, error_len);
+}
+
 int32_t proton_engine_contents_print_to_pdf(
     void *target, int32_t is_view, const char *path, int32_t landscape,
     int32_t print_background, double scale, double paper_width,

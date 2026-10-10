@@ -2492,6 +2492,21 @@ int32_t proton_contents_print(void *window, int32_t is_view) {
   return PROTON_OK;
 }
 
+int32_t proton_contents_devtools(void *contents, int32_t is_view,
+    int32_t operation, int64_t token, const char *message) {
+  void *engine = NULL;
+  int32_t status = proton_get_contents_engine(contents, is_view, &engine);
+  if (status != PROTON_OK) return status;
+  if (operation < 0 || operation > 2 || token <= 0 ||
+      (operation == 1 && message == NULL))
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT, "Invalid DevTools operation");
+  char error[512] = {0};
+  status = proton_engine_contents_devtools(engine, is_view, operation, token, message, error, sizeof(error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
 int32_t proton_contents_print_to_pdf(
     void *window, int32_t is_view, const char *path, int32_t landscape,
     int32_t print_background, double scale, double paper_width,

@@ -151,3 +151,18 @@ Successful runs remove their temporary directory. Failed runs retain child
 logs and `failure.txt`, print the directory, and expose it to CI for artifact
 upload. Runtime failures include the active phase, child PID/status, process
 tree and a bounded log tail.
+
+## Native DevTools without a debugging port
+
+After setting up CEF and building the matching helper (`PROTON_HELPER_PATH`), run:
+
+```sh
+moon -C e2e run native_devtools --target native
+```
+
+On Linux, run under `xvfb-run -a` as with the other headless CEF tests. This test
+starts its own windowless application and explicitly removes the remote-debugging
+and dev-mode environment overrides. It verifies main/child page isolation,
+Runtime events, native Overlay element selection, protocol errors, concurrent
+commands, canceled command/scope cleanup, late replies after reattachment, and
+page closure. It does not attach to an existing desktop app.

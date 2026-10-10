@@ -153,6 +153,13 @@ pub fn CommandExtensionLifecycleError::output(Self, &Logger) -> Unit
 pub fn CommandExtensionLifecycleError::to_repr(Self) -> @debug.Repr
 pub fn CommandExtensionLifecycleError::to_string(Self) -> String
 
+pub suberror DevToolsError {
+  Protocol(code~ : Int, message~ : String, data~ : Json?)
+  Closed(String)
+  InvalidMessage(String)
+} derive(@debug.Debug)
+pub fn DevToolsError::to_repr(Self) -> @debug.Repr
+
 pub(all) suberror LifecycleHookError {
   ApplicationStart(index~ : Int, detail~ : String)
   ApplicationShutdown(index~ : Int, detail~ : String)
@@ -494,6 +501,16 @@ pub(all) enum CookieSameSite {
 pub fn CookieSameSite::equal(Self, Self) -> Bool
 pub fn CookieSameSite::not_equal(Self, Self) -> Bool
 pub fn CookieSameSite::to_repr(Self) -> @debug.Repr
+
+pub struct DevToolsEvent {
+  method_ : String
+  params : Json
+} derive(@debug.Debug)
+pub fn DevToolsEvent::to_repr(Self) -> @debug.Repr
+
+type DevToolsSession
+pub async fn DevToolsSession::next_event(Self) -> DevToolsEvent
+pub async fn DevToolsSession::send_command(Self, String, params? : Json) -> Json
 
 pub(all) enum DownloadDecision {
   Deny
@@ -1085,6 +1102,7 @@ pub fn WebContentsHandle::toggle_devtools(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::undo(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::view_id(Self) -> String?
 pub fn WebContentsHandle::window_id(Self) -> String
+pub async fn[T] WebContentsHandle::with_devtools(Self, async (DevToolsSession) -> T) -> T
 pub fn WebContentsHandle::zoom_percent(Self) -> Int raise WindowSessionError
 
 pub(all) struct WindowButtonPosition {

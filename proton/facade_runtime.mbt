@@ -261,6 +261,7 @@ async fn run_manifest(
   let event_pump = RuntimeEventPump(
     runtime, dialog_completions, cookie_completions, pdf_completions,
   )
+  defer event_pump.devtools.close()
   let mut command_host : CommandHostRuntime? = None
   let windows : Array[RunningWindow] = []
   let lifecycle_failures : Array[AppCleanupError] = []

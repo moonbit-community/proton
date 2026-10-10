@@ -1753,3 +1753,23 @@ pub extern "C" fn proton_update_validate_running_image_ffi(
   error : FixedArray[Byte],
   error_len : Int,
 ) -> Int = "proton_update_validate_running_image"
+
+///|
+#borrow(contents, message)
+pub extern "C" fn proton_window_devtools_ffi(
+  contents : WindowHandle,
+  is_view : Int,
+  operation : Int,
+  token : Int64,
+  message : Bytes,
+) -> Int = "proton_contents_devtools"
+
+///|
+#borrow(contents, message)
+pub extern "C" fn proton_view_devtools_ffi(
+  contents : ViewHandle,
+  is_view : Int,
+  operation : Int,
+  token : Int64,
+  message : Bytes,
+) -> Int = "proton_contents_devtools"

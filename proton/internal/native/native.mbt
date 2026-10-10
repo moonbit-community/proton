@@ -1261,6 +1261,14 @@ fn decode_native_runtime_event(
           @native_ffi.event_int(event, 3) != 0,
         ),
       )
+    45 =>
+      DevToolsMessage(
+        window,
+        native_event_view_id(event),
+        @native_ffi.event_int64(event, 2),
+        @native_ffi.event_int(event, 3) != 0,
+        require_native_event_text(event, 0, "DevTools message"),
+      )
     36 =>
       BrowserPdfPrinted(window, native_event_view_id(event), {
         request_id: @native_ffi.event_int64(event, 2).to_int(),
@@ -3980,4 +3988,40 @@ fn native_event_view_id(event : @native_ffi.EventHandle) -> Int64? {
 pub fn AppInstance::prepare_update_handoff(self : AppInstance) -> Bool {
   !self.destroyed &&
   @native_ffi.proton_app_instance_prepare_update_ffi(self.handle) != 0
+}
+
+///|
+pub fn Window::devtools_operation(
+  self : Window,
+  operation : Int,
+  token : Int64,
+  message : String,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_window_devtools_ffi(
+      self.live_handle(),
+      0,
+      operation,
+      token,
+      @ffi.to_cstr(message),
+    ),
+  )
+}
+
+///|
+pub fn View::devtools_operation(
+  self : View,
+  operation : Int,
+  token : Int64,
+  message : String,
+) -> Unit raise NativeError {
+  check_status(
+    @native_ffi.proton_view_devtools_ffi(
+      self.live_handle(),
+      1,
+      operation,
+      token,
+      @ffi.to_cstr(message),
+    ),
+  )
 }
