@@ -11,15 +11,7 @@
 #include "../cef_common/strings.h"
 #include "../cef_common/view_events.h"
 
-#define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_LOAD(refs) InterlockedCompareExchange(&(refs)->refs, 0, 0)
-#define PROTON_ENGINE_REF_STORE(refs, value) InterlockedExchange(&(refs)->refs, value)
 #include "../cef_common/ref_count.h"
-#undef PROTON_ENGINE_REF_INCREMENT
-#undef PROTON_ENGINE_REF_DECREMENT
-#undef PROTON_ENGINE_REF_LOAD
-#undef PROTON_ENGINE_REF_STORE
 
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_frame_capi.h"

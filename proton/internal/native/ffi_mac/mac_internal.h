@@ -32,6 +32,8 @@
 
 #include <dispatch/dispatch.h>
 #include <stdatomic.h>
+
+#include "../ffi/src/engine/cef_common/ref_count.h"
 #include <stdint.h>
 
 /* AppKit operations invoked from a worker are marshalled to the main queue. */
@@ -45,10 +47,6 @@
   }
 
 typedef struct proton_engine_client proton_engine_client_t;
-
-typedef struct {
-  atomic_int refs;
-} proton_engine_ref_counted_t;
 
 typedef struct {
   cef_app_t app;

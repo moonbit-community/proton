@@ -13,6 +13,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+#include "../cef_common/ref_count.h"
+
 #include "win_titlebar.h"
 
 #define PROTON_ENGINE_WINDOW_CLASS L"ProtonNativeWindow"
@@ -167,10 +169,6 @@ void proton_engine_window_close_views(proton_engine_window_t *window);
 void proton_engine_window_collect_views(proton_engine_window_t *window);
 void proton_engine_window_free_views(proton_engine_window_t *window);
 void proton_engine_window_layout_views(proton_engine_window_t *window);
-
-typedef struct {
-  LONG refs;
-} proton_engine_ref_counted_t;
 
 typedef struct {
   cef_app_t app;
