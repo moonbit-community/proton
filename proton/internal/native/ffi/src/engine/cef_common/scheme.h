@@ -12,6 +12,20 @@
 
 #include <stddef.h>
 
+typedef struct proton_engine_resource_handler proton_engine_resource_handler_t;
+/* Runtime-owned; includes handlers awaiting open. The resource lock guards
+   both the list and detachment. CEF references may outlive this owner. */
+typedef struct {
+  proton_engine_resource_handler_t *head;
+  int closed;
+} proton_engine_resource_requests_t;
+
+proton_engine_resource_requests_t *proton_engine_runtime_resource_requests(
+    proton_engine_runtime_t *runtime);
+/* Called with the window lock held; the result is borrowed. */
+proton_engine_resource_requests_t *proton_engine_contents_resource_requests(
+    proton_engine_window_t *window, proton_engine_view_t *view);
+
 /* Application resources are requested by CEF's IO thread and resolved by the
    MoonBit runtime. The handler retains CEF's continuation while the request is
    pending; native callbacks only enqueue events and never enter MoonBit. */
@@ -26,9 +40,9 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
 /* Completes one pending request. The handler copies `mime_type` and `data`
    before resuming CEF, so the caller retains ownership of both buffers. */
 int32_t proton_engine_complete_resource_request(
-    int64_t request_id, int32_t status, const char *mime_type,
-    const void *data, size_t data_len);
-void proton_engine_cancel_resource_requests(void);
+    proton_engine_runtime_t *runtime, int64_t request_id, int32_t status,
+    const char *mime_type, const void *data, size_t data_len);
+void proton_engine_cancel_resource_requests(proton_engine_runtime_t *runtime);
 
 /* Declares proton:// to Chromium. Call from on_register_custom_schemes; the
    HTTPS origin needs no declaration because https is already standard. */

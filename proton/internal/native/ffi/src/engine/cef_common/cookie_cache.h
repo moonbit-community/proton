@@ -2,6 +2,12 @@
 #define PROTON_ENGINE_CEF_COMMON_COOKIE_CACHE_H
 
 #include <stdint.h>
+#include "../../proton_engine.h"
+
+typedef struct proton_cookie_get_state proton_cookie_get_state_t;
+/* Accessed on CEF's UI thread, including visitor completion and shutdown. */
+proton_cookie_get_state_t **proton_engine_runtime_cookie_requests(
+    proton_engine_runtime_t *runtime);
 
 typedef struct proton_cookie_snapshot proton_cookie_snapshot_t;
 
