@@ -1,5 +1,6 @@
 #include "../../proton_engine.h"
 #include "message.h"
+#include "browser_session.h"
 #include "window_state.h"
 
 #include "include/capi/cef_browser_capi.h"
@@ -15,6 +16,40 @@
 #include "strings.h"
 
 #include "ref_count.h"
+
+int32_t proton_browser_load_url(
+    cef_browser_t *browser, const char *url, char *error, size_t error_len) {
+  cef_frame_t *frame = browser->get_main_frame(browser);
+  if (frame == NULL) {
+    proton_engine_set_message(error, error_len, "main frame is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  cef_string_t value = {0};
+  proton_engine_set_string(&value, url);
+  frame->load_url(frame, &value);
+  cef_string_clear(&value);
+  frame->base.release((cef_base_ref_counted_t *)frame);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_eval(
+    cef_browser_t *browser, const char *script, const char *source_url,
+    char *error, size_t error_len) {
+  cef_frame_t *frame = browser->get_main_frame(browser);
+  if (frame == NULL) {
+    proton_engine_set_message(error, error_len, "main frame is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  cef_string_t code = {0};
+  cef_string_t url = {0};
+  proton_engine_set_string(&code, script);
+  proton_engine_set_string(&url, source_url);
+  frame->execute_java_script(frame, &code, &url, 1);
+  cef_string_clear(&code);
+  cef_string_clear(&url);
+  frame->base.release((cef_base_ref_counted_t *)frame);
+  return PROTON_OK;
+}
 
 /* Navigation history and inserted page styles are page-level operations, so
    both the window's main browser and a view's browser run through the helpers

@@ -81,6 +81,13 @@ int32_t proton_browser_session_respond(
 int32_t proton_browser_session_command(
     proton_browser_session_t *session, cef_browser_t *browser,
     const char *command, int32_t download_id, char *error, size_t error_len);
+/* Borrow browser for the call; each operation owns and releases its main frame.
+   Callers retain host validation, platform wakeups and autorelease pools. */
+int32_t proton_browser_load_url(
+    cef_browser_t *browser, const char *url, char *error, size_t error_len);
+int32_t proton_browser_eval(
+    cef_browser_t *browser, const char *script, const char *source_url,
+    char *error, size_t error_len);
 int32_t proton_browser_navigation_state(
     cef_browser_t *browser, int32_t *out_can_go_back,
     int32_t *out_can_go_forward, char *error, size_t error_len);

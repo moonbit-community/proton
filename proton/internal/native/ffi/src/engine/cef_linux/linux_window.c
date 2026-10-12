@@ -1909,17 +1909,9 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  cef_frame_t *frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
-  if (frame == NULL) {
-    proton_engine_set_message(error, error_len, "main frame is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_string_t cef_url = {0};
-  proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
-  frame->load_url(frame, &cef_url);
-  cef_string_clear(&cef_url);
-  frame->base.release((cef_base_ref_counted_t *)frame);
-  return PROTON_OK;
+  return proton_browser_load_url(
+      proton_engine_window_browser(window), url != NULL ? url : "about:blank",
+      error, error_len);
 }
 
 int32_t proton_engine_window_eval(proton_engine_window_t *window,
@@ -1930,20 +1922,9 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  cef_frame_t *frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
-  if (frame == NULL) {
-    proton_engine_set_message(error, error_len, "main frame is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_string_t code = {0};
-  cef_string_t script_url = {0};
-  proton_engine_set_string(&code, script != NULL ? script : "");
-  proton_engine_set_string(&script_url, "proton://eval.js");
-  frame->execute_java_script(frame, &code, &script_url, 1);
-  cef_string_clear(&code);
-  cef_string_clear(&script_url);
-  frame->base.release((cef_base_ref_counted_t *)frame);
-  return PROTON_OK;
+  return proton_browser_eval(
+      proton_engine_window_browser(window), script, "proton://eval.js",
+      error, error_len);
 }
 
 int32_t proton_engine_window_browser_command(
