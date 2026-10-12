@@ -1,5 +1,6 @@
 import {
   "moonbit-community/proton_config",
+  "moonbit-community/proton_cli/project",
   "moonbit-community/proton_cli/fsutil",
   "moonbit-community/proton_cefsetup/store" @cef_store,
   "moonbitlang/async/fs" @async_fs,

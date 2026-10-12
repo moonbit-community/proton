@@ -2,7 +2,7 @@
 
 本例让同一应用中的两个窗口调用命令，展示窗口声明、渲染器授权和调用方身份如何配合。增加一个窗口并不意味着该页面自动获得现有操作的访问权限。
 
-[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/45_bridge_multi_window) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/45_bridge_multi_window/main.mbt)
+[45_bridge_multi_window](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/45_bridge_multi_window) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/45_bridge_multi_window/main.mbt)
 
 ## 行为
 
@@ -23,10 +23,12 @@ async fn main {
   )
   .add_window(
     "secondary",
-    "Bridge Multi B",
-    @proton.AppEntry::Html(page_html("B")),
-    width=520,
-    height=420,
+    @proton.WindowConfig(
+      "Bridge Multi B",
+      @proton.AppEntry::Html(page_html("B")),
+      width=520,
+      height=420,
+    ),
     open_on_start=false,
   )
   .capability(@proton_extension.capability(multi_window_extension()), targets=[

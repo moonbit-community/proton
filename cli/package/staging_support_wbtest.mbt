@@ -5,6 +5,10 @@ fn test_staging_plan(
 ) -> PackagePlan {
   PackagePlan::{
     root,
+    config: @proton_config.AppConfig(
+      "dev.proton.demo",
+      package_config=Some(@proton_config.PackageConfig("Demo & App", "1.2.3")),
+    ),
     app_package: "app",
     config_path: resolve_path(root, "proton.project.json"),
     product_name: "Demo & App",
@@ -109,3 +113,60 @@ test "Mach-O rejection reports the discovered filetype" {
 }
 
 ///|
+
+///|
+async test "packaged configuration retains frontend and platform fields" {
+  let root = @async_fs.tmpdir(prefix="proton-package-config-")
+  defer @async_fs.rmdir(root, recursive=true)
+  let config = @proton_config.AppConfig::parse(
+    (
+      #|{"identifier":"com.example.package","backend":{"path":".","package":"app1"},"frontend":{"dev_url":"http://localhost:4300","path":"ui","dist":"dist"},"package":{"product_name":"Original","version":"1.0.0","platforms":{"macos":{"formats":["app"]},"windows":{"formats":["app"],"nsis_install_mode":"both"},"linux":{"formats":["app"]}}}}
+    ),
+  )
+  let format = match @packager.current_package_host() {
+    Macos | Windows => "zip"
+    Linux => "appimage"
+  }
+  let plan = build_package_plan(
+    parse_package_args([
+      "--product-name", "Renamed", "--version", "2.0.0", "--package", "app2", "--nsis-install-mode",
+      "perMachine", "--macos-minimum-system-version", "16.0", "--format", format,
+    ]),
+    resolve_path(root, "proton.project.json"),
+    config,
+    0UL,
+  )
+  write_package_manifest(plan, root)
+  let loaded = @proton_config.AppConfig::load(
+    resolve_path(root, "proton-package.json"),
+  )
+  assert_eq(loaded.frontend, config.frontend)
+  assert_eq(loaded.backend.unwrap().app_package, "app2")
+  assert_eq(config.backend.unwrap().app_package, "app1")
+  let packaged = loaded.package_config.unwrap()
+  assert_eq(packaged.formats, [format])
+  assert_eq(packaged.formats, plan.formats.map(format => format.to_string()))
+  assert_eq(
+    packaged.platforms.windows.unwrap().nsis_install_mode,
+    Some("perMachine"),
+  )
+  assert_eq(
+    packaged.platforms.macos.unwrap().minimum_system_version,
+    Some("16.0"),
+  )
+  assert_eq(
+    resolve_platform_package_config(packaged, @packager.current_package_host()).formats,
+    packaged.formats,
+  )
+  assert_eq(
+    config.package_config.unwrap().platforms.windows.unwrap().nsis_install_mode,
+    Some("both"),
+  )
+  assert_eq(
+    loaded.package_config.unwrap().platforms,
+    plan.config.package_config.unwrap().platforms,
+  )
+  assert_eq(loaded.package_config.unwrap().product_name, "Renamed")
+  assert_eq(loaded.package_config.unwrap().version, "2.0.0")
+  assert_eq(plan.frontend_dist, Some(resolve_path(root, "ui/dist")))
+}

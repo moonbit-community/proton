@@ -9,11 +9,11 @@ Chrome-family browser with remote debugging enabled.
 - `moonbitlang/async`.
 - Chrome, Edge, or Chromium when using a real browser.
 
-For local development in this repository:
+Install the library in your automation project:
 
 ```bash
-moon install
-moon test
+moon add moonbit-community/proton_cdp
+moon add moonbitlang/async
 ```
 
 ## Package imports
@@ -34,6 +34,8 @@ supported_targets = "+native"
 
 Use only the packages you need. For example, a discovery-only tool usually
 needs only `client`.
+
+For Proton applications, see [connecting to Proton](../README.mbt.md#connect-to-a-proton-application).
 
 ## Start Chrome with remote debugging
 

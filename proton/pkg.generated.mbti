@@ -9,6 +9,7 @@ import {
   "moonbit-community/proton/internal/native",
   "moonbit-community/proton/manifest",
   "moonbit-community/proton/updater",
+  "moonbit-community/proton_config",
   "moonbit-community/proton_contract",
   "moonbitlang/async",
   "moonbitlang/core/debug",
@@ -28,6 +29,8 @@ pub fn html(String, String, width? : Int, height? : Int, debug? : Bool, resizabl
 pub fn is_packaged() -> Bool
 
 pub fn is_ready() -> Bool
+
+pub fn load_config() -> @proton_config.AppConfig raise @proton_config.AppConfigError
 
 pub fn native_image() -> NativeImage raise NativeImageError
 
@@ -103,18 +106,6 @@ pub fn AppEntryError::message(Self) -> String
 pub fn AppEntryError::output(Self, &Logger) -> Unit
 pub fn AppEntryError::to_repr(Self) -> @debug.Repr
 pub fn AppEntryError::to_string(Self) -> String
-
-pub(all) suberror AppMetadataError {
-  MissingPackageMetadata
-  MissingField(field~ : String)
-  InvalidMetadata(detail~ : String)
-} derive(Eq, @debug.Debug)
-pub fn AppMetadataError::equal(Self, Self) -> Bool
-pub fn AppMetadataError::message(Self) -> String
-pub fn AppMetadataError::not_equal(Self, Self) -> Bool
-pub fn AppMetadataError::output(Self, &Logger) -> Unit
-pub fn AppMetadataError::to_repr(Self) -> @debug.Repr
-pub fn AppMetadataError::to_string(Self) -> String
 
 pub(all) suberror AppPathError {
   MissingApplicationIdentifier
@@ -275,6 +266,7 @@ pub fn[State] App::app_lifecycle(Self, on_start~ : async (ApplicationContext) ->
 pub fn App::bridge_startup_timeout_ms(Self, Int) -> Self
 pub fn App::capability(Self, @extension.RendererCapability, targets? : Array[RendererTarget]) -> Self
 pub fn App::commands(Self, (@command.CommandRegistrar) -> Unit raise, targets? : Array[RendererTarget]) -> Self
+pub fn App::config(Self, @proton_config.AppConfig) -> Self
 pub fn App::data_dir(Self) -> String raise AppPathError
 pub fn App::debug(Self, enabled? : Bool) -> Self
 pub fn App::debug_level(Self, Int) -> Self
@@ -282,11 +274,10 @@ pub fn App::document_extension(Self, String) -> Self
 pub fn App::headless(Self, enabled? : Bool) -> Self
 pub fn App::identifier(Self, String) -> Self
 pub fn App::last_window_closed_policy(Self, LastWindowClosedPolicy) -> Self
-pub fn App::load_config(Self) -> Self
 pub fn App::locale(Self, @locale.Locale) -> Self
 pub fn App::main_window(Self, WindowConfig) -> Self
 pub fn App::menu(Self, MenuBar) -> Self
-pub fn App::name(Self) -> String raise AppMetadataError
+pub fn App::name(Self) -> String raise @proton_config.AppConfigError
 pub fn App::on_before_quit(Self, async (ApplicationContext) -> ApplicationQuitDecision noraise) -> Self
 pub fn App::on_certificate_error(Self, async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise) -> Self
 pub fn App::on_download_event(Self, async (WebContentsHandle, DownloadEvent) -> Unit noraise) -> Self
@@ -318,7 +309,7 @@ pub fn App::set_path(Self, AppPathKind, String) -> Self raise AppPathError
 pub fn App::single_instance(Self, enabled? : Bool) -> Self
 pub fn App::update_channel(Self, String, Array[String], check_on_launch? : Bool, freshness_days? : Int) -> Self
 pub fn App::url_scheme(Self, String) -> Self
-pub fn App::version(Self) -> String raise AppMetadataError
+pub fn App::version(Self) -> String raise @proton_config.AppConfigError
 pub fn App::web_request_cancel_prefix(Self, String) -> Self
 pub fn App::web_request_header_prefix(Self, String, String, String) -> Self
 pub fn App::web_request_redirect_prefix(Self, String, String) -> Self
@@ -404,6 +395,7 @@ pub fn ApplicationContext::is_hidden(Self) -> Bool raise AppControlError
 pub fn ApplicationContext::locale(Self) -> @locale.Locale
 pub fn ApplicationContext::preferred_languages(Self) -> Array[@locale.Locale]
 pub fn ApplicationContext::quit(Self, exit_code? : Int) -> Unit
+pub fn ApplicationContext::quit_and_install(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::relaunch(Self, options? : RelaunchOptions) -> Unit raise AppControlError
 pub fn ApplicationContext::release_single_instance_lock(Self) -> Unit raise AppControlError
 pub fn ApplicationContext::remove_default_protocol_client(Self, String, executable? : String, arguments? : Array[String]) -> Bool raise AppControlError
@@ -844,10 +836,10 @@ pub struct PendingUpdate {
   size : Int64
   channel : @updater.UpdateChannel
   offer : @updater.AvailableUpdate
+  // private fields
 }
-pub async fn PendingUpdate::install(Self, on_progress? : async (Int64) -> Unit noraise) -> UpdateInstallOutcome
+pub async fn PendingUpdate::download(Self, on_progress? : async (Int64) -> Unit noraise) -> Unit
 pub fn PendingUpdate::notes_url(Self) -> String?
-pub fn PendingUpdate::restart(Self) -> Unit raise
 pub fn PendingUpdate::revision(Self) -> UInt64
 pub fn PendingUpdate::size(Self) -> Int64
 pub fn PendingUpdate::version(Self) -> String
@@ -1005,14 +997,6 @@ pub enum UpdateCheck {
   Available(PendingUpdate)
 }
 
-pub enum UpdateInstallOutcome {
-  Installed
-  AlreadyInstalled
-} derive(Eq, @debug.Debug)
-pub fn UpdateInstallOutcome::equal(Self, Self) -> Bool
-pub fn UpdateInstallOutcome::not_equal(Self, Self) -> Bool
-pub fn UpdateInstallOutcome::to_repr(Self) -> @debug.Repr
-
 pub struct ViewConfig {
   x : Int
   y : Int
@@ -1029,12 +1013,7 @@ pub struct ViewHandle {
   id : String
   native_id : Int64
   window_id : String
-  set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
-  set_view_visible : (Bool) -> Unit raise WindowSessionError
-  set_view_z_order : (Int) -> Unit raise WindowSessionError
-  read_view_state : () -> ViewState raise WindowSessionError
-  close_view : () -> Unit raise WindowSessionError
-  contents : WebContentsHandle
+  // private fields
 }
 pub fn ViewHandle::close(Self) -> Unit raise WindowSessionError
 pub fn ViewHandle::id(Self) -> String
@@ -1077,31 +1056,9 @@ pub fn WebContentsEvent::not_equal(Self, Self) -> Bool
 pub fn WebContentsEvent::to_repr(Self) -> @debug.Repr
 
 pub struct WebContentsHandle {
-  view_id : String?
   id : String
   native_id : Int64
-  load_browser_url : (String) -> Unit raise WindowSessionError
-  load_browser_html : (String, String) -> Unit raise WindowSessionError
-  eval_browser_script : (String) -> Unit raise WindowSessionError
-  focus_browser : () -> Unit raise WindowSessionError
-  send_browser_command : (String, Int?) -> Unit raise WindowSessionError
-  download_browser_url : (String) -> Unit raise WindowSessionError
-  print_browser : () -> Unit raise WindowSessionError
-  print_browser_to_pdf : async (String, PdfPrintOptions) -> Unit
-  find_browser_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
-  stop_browser_find : (Bool) -> Unit raise WindowSessionError
-  set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
-  read_browser_zoom_percent : () -> Int raise WindowSessionError
-  set_browser_audio_muted : (Bool) -> Unit raise WindowSessionError
-  read_browser_audio_muted : () -> Bool raise WindowSessionError
-  read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
-  read_browser_focused : () -> Bool raise WindowSessionError
-  read_browser_devtools_opened : () -> Bool raise WindowSessionError
-  read_browser_state : () -> BrowserState raise WindowSessionError
-  read_browser_navigation_history : () -> NavigationHistory raise WindowSessionError
-  insert_browser_page_css : (String) -> Int64 raise WindowSessionError
-  remove_browser_page_css : (Int64) -> Unit raise WindowSessionError
-  session_handle : SessionHandle
+  // private fields
 }
 pub fn WebContentsHandle::back(Self) -> Unit raise WindowSessionError
 pub fn WebContentsHandle::can_go_back(Self) -> Bool raise WindowSessionError
@@ -1218,59 +1175,7 @@ pub async fn[Payload : ToJson] WindowEventEmitter::emit(Self, @proton_contract.E
 pub struct WindowHandle {
   id : String
   native_id : Int64
-  show_window : () -> Unit raise WindowSessionError
-  show_window_inactive : () -> Unit raise WindowSessionError
-  hide_window : () -> Unit raise WindowSessionError
-  close_window : () -> Unit raise WindowSessionError
-  focus_window : () -> Unit raise WindowSessionError
-  set_window_title : (String) -> Unit raise WindowSessionError
-  set_window_icon : (String) -> Unit raise WindowSessionError
-  set_window_parent : (WindowHandle?, Bool) -> Unit raise WindowSessionError
-  set_window_size : (Int, Int) -> Unit raise WindowSessionError
-  set_window_content_size : (Int, Int) -> Unit raise WindowSessionError
-  read_window_content_size : () -> (Int, Int) raise WindowSessionError
-  minimize_window : () -> Unit raise WindowSessionError
-  maximize_window : () -> Unit raise WindowSessionError
-  restore_window : () -> Unit raise WindowSessionError
-  set_window_fullscreen : (Bool) -> Unit raise WindowSessionError
-  set_window_kiosk : (Bool) -> Unit raise WindowSessionError
-  set_window_position : (Int, Int) -> Unit raise WindowSessionError
-  set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
-  set_window_resizable : (Bool) -> Unit raise WindowSessionError
-  set_window_minimum_size : (Int, Int) -> Unit raise WindowSessionError
-  set_window_maximum_size : (Int, Int) -> Unit raise WindowSessionError
-  set_window_aspect_ratio : (Double) -> Unit raise WindowSessionError
-  set_window_movable : (Bool) -> Unit raise WindowSessionError
-  set_window_opacity : (Double) -> Unit raise WindowSessionError
-  set_window_skip_taskbar : (Bool) -> Unit raise WindowSessionError
-  set_window_content_protection : (Bool) -> Unit raise WindowSessionError
-  set_window_minimizable : (Bool) -> Unit raise WindowSessionError
-  set_window_maximizable : (Bool) -> Unit raise WindowSessionError
-  set_window_closable : (Bool) -> Unit raise WindowSessionError
-  set_window_button_visibility : (Bool) -> Unit raise WindowSessionError
-  write_window_button_position : (WindowButtonPosition?) -> Unit raise WindowSessionError
-  read_window_button_position : () -> WindowButtonPosition? raise WindowSessionError
-  set_window_focusable : (Bool) -> Unit raise WindowSessionError
-  set_window_fullscreenable : (Bool) -> Unit raise WindowSessionError
-  set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
-  set_window_ignore_mouse_events : (Bool, Bool) -> Unit raise WindowSessionError
-  set_window_background_color : (String) -> Unit raise WindowSessionError
-  set_window_theme : (WindowThemePreference) -> Unit raise WindowSessionError
-  set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
-  set_window_enabled : (Bool) -> Unit raise WindowSessionError
-  set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
-  set_window_progress_bar : (Double, ProgressBarMode) -> Unit raise WindowSessionError
-  set_window_overlay_icon : (@native.NativeImage?, String) -> Unit raise WindowSessionError
-  set_window_thumbnail_tooltip : (String) -> Unit raise WindowSessionError
-  set_window_thumbar_buttons : (Array[@native.ThumbarButton]) -> Bool raise WindowSessionError
-  flash_window_frame : (Bool) -> Unit raise WindowSessionError
-  popup_window_menu : (Menu, Int, Int) -> Unit raise WindowSessionError
-  read_window_state : () -> WindowState raise WindowSessionError
-  browser : WebContentsHandle
-  add_view : (String, ViewConfig) -> ViewHandle raise WindowSessionError
-  remove_view : (String) -> Unit raise WindowSessionError
-  list_views : () -> Array[ViewHandle]
-  find_view : (String) -> ViewHandle?
+  // private fields
 }
 pub fn WindowHandle::add_view(Self, String, ViewConfig) -> ViewHandle raise WindowSessionError
 pub fn WindowHandle::bounds(Self) -> (Int, Int, Int, Int) raise WindowSessionError
@@ -1407,7 +1312,13 @@ pub fn WindowThemePreference::not_equal(Self, Self) -> Bool
 pub fn WindowThemePreference::to_repr(Self) -> @debug.Repr
 
 // Type aliases
+pub using @proton_config {type AppConfig}
+
+pub using @proton_config {type AppConfigError}
+
 pub using @manifest {type AppEntry}
+
+pub using @proton_config {type BackendConfig}
 
 pub using @core {type AppCommandRequestContext as CommandContext}
 
@@ -1415,10 +1326,22 @@ pub using @command {type CommandRegistrar}
 
 pub using @core {type CommandWindow}
 
+pub using @proton_config {type DocumentType}
+
+pub using @proton_config {type FrontendConfig}
+
 pub using @locale {type Locale}
 
 pub using @locale {type LocaleParseError}
 
+pub using @proton_config {type PackageConfig}
+
+pub using @proton_config {type PackagePlatforms}
+
 pub using @command {type PermissionScopeValidationError}
+
+pub using @proton_config {type PlatformPackageConfig}
+
+pub using @proton_config {type SignConfig}
 
 // Traits

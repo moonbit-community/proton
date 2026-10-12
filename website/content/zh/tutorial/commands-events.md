@@ -7,7 +7,7 @@
 在 **`moon.mod`** 已有的 `import { ... }` 块中加入下面一项，保留其他依赖：
 
 ```text
-"moonbit-community/proton_contract@0.3.4",
+"moonbit-community/proton_contract@0.4.0",
 ```
 
 将 **`app/moon.pkg`** 替换为：
@@ -66,7 +66,7 @@ async fn main {
     #|</script>
     #|</html>
   @proton.html("Greeting", html)
-  .load_config()
+  .config(@proton.load_config())
   .commands(fn(registrar) raise {
     registrar.bind(greet, (_context, request) => {
       "Hello, " + request.name + "!"

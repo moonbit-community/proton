@@ -120,7 +120,7 @@ async fn main {
     width=900,
     height=620,
   )
-  .load_config()
+  .config(@proton.load_config())
   .single_instance()
   .capability(@proton_extension.capability(ticker_extension()))
   .run_or_abort()

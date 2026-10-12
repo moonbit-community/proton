@@ -4,8 +4,7 @@ priv struct PendingPdf {
   view : Int64?
   request : Int
   path : String
-  mut result : Result[Unit, WindowSessionError]?
-  changed : @async.CondVar
+  completion : Completion[Result[Unit, WindowSessionError]]
 }
 
 ///|
@@ -19,18 +18,8 @@ fn PdfCompletionStore::PdfCompletionStore() -> PdfCompletionStore {
 }
 
 ///|
-fn PendingPdf::finish(
-  self : PendingPdf,
-  result : Result[Unit, WindowSessionError],
-) -> Unit {
-  guard self.result is None else { return }
-  self.result = Some(result)
-  self.changed.broadcast()
-}
-
-///|
 fn PendingPdf::fail(self : PendingPdf, detail : String) -> Unit {
-  self.finish(
+  self.completion.finish(
     Err(
       window_operation_failed(
         "print PDF to " + self.path,
@@ -97,8 +86,7 @@ async fn PdfCompletionStore::wait(
     view,
     request,
     path,
-    result: None,
-    changed: @async.CondVar::Cond(),
+    completion: Completion(),
   }
   self.pending.push(pending)
   defer (for index, candidate in self.pending {
@@ -107,13 +95,9 @@ async fn PdfCompletionStore::wait(
       break
     }
   })
-  while pending.result is None {
-    pending.changed.wait()
-  }
-  match pending.result {
-    Some(Ok(_)) => ()
-    Some(Err(error)) => raise error
-    None => abort("PDF waiter resumed without completion")
+  match pending.completion.wait() {
+    Ok(_) => ()
+    Err(error) => raise error
   }
 }
 
@@ -129,7 +113,7 @@ fn PdfCompletionStore::complete(
       view == pending.view &&
       result.request_id == pending.request {
       if result.success {
-        pending.finish(Ok(()))
+        pending.completion.finish(Ok(()))
       } else {
         pending.fail("CEF could not write the PDF")
       }

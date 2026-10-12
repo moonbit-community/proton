@@ -5,7 +5,7 @@ fn parse_package_args(args : Array[String]) -> RawPackageOptions raise {
 
 ///|
 test "NSIS mode resolves CLI override before Windows configuration and default" {
-  let defaults = @proton_config.ProjectPackageConfig("Demo", "1.0.0")
+  let defaults = @proton_config.PackageConfig("Demo", "1.0.0")
   let arguments = parse_package_args([]).package_args
   assert_eq(
     resolve_nsis_install_mode(arguments, defaults),
@@ -18,13 +18,11 @@ test "NSIS mode resolves CLI override before Windows configuration and default" 
       ("both", @packager.NsisInstallMode::Both),
     ] {
     let (name, mode) = entry
-    let configured = @proton_config.ProjectPackageConfig(
+    let configured = @proton_config.PackageConfig(
       "Demo",
       "1.0.0",
-      platforms=@proton_config.ProjectPackagePlatforms(
-        windows=@proton_config.ProjectPlatformPackageConfig(
-          nsis_install_mode=name,
-        ),
+      platforms=@proton_config.PackagePlatforms(
+        windows=@proton_config.PlatformPackageConfig(nsis_install_mode=name),
       ),
     )
     assert_eq(resolve_nsis_install_mode(arguments, configured), mode)
@@ -63,22 +61,20 @@ test "parse package args accepts repeated formats and overrides" {
 
 ///|
 test "project package resolves platform overrides exactly" {
-  let package_config = @proton_config.ProjectPackageConfig(
+  let package_config = @proton_config.PackageConfig(
     "Demo",
     "1.2.3",
     formats=["app"],
     resources=["assets/common"],
-    sign=Some(@proton_config.ProjectSignConfig(binaries=["helpers/common"])),
-    platforms=@proton_config.ProjectPackagePlatforms(
-      macos=@proton_config.ProjectPlatformPackageConfig(
+    sign=Some(@proton_config.SignConfig(binaries=["helpers/common"])),
+    platforms=@proton_config.PackagePlatforms(
+      macos=@proton_config.PlatformPackageConfig(
         formats=["app", "dmg"],
         resources=["assets/macos"],
-        sign=@proton_config.ProjectSignConfig(binaries=["helpers/macos"]),
+        sign=@proton_config.SignConfig(binaries=["helpers/macos"]),
       ),
-      windows=@proton_config.ProjectPlatformPackageConfig(resources=[
-        "assets/windows",
-      ]),
-      linux=@proton_config.ProjectPlatformPackageConfig(formats=[]),
+      windows=@proton_config.PlatformPackageConfig(resources=["assets/windows"]),
+      linux=@proton_config.PlatformPackageConfig(formats=[]),
     ),
   )
   assert_eq(
@@ -259,11 +255,10 @@ test "macOS package paths normalize absolute and relative inputs" {
 
 ///|
 async test "macOS minimum resolves project configuration and CLI override" {
-  let project = @proton_config.load_project_config_from_text(
+  let project = @proton_config.AppConfig::parse(
     (
       #|{"identifier":"com.example.minimum","package":{"product_name":"Minimum","version":"1.0.0","platforms":{"macos":{"minimum_system_version":"15.0"}}}}
     ),
-    ".",
   )
   let configured = build_package_plan(
     parse_package_args([]),

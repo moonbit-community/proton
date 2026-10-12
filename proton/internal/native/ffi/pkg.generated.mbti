@@ -17,6 +17,8 @@ pub fn bridge_config_create(@ref.Ref[Int]) -> BridgeConfigHandle
 
 pub fn bridge_config_empty() -> BridgeConfigHandle
 
+pub fn contents_print_to_pdf(WindowHandle, ViewHandle, Bytes, Int, Int, Double, Double, Double, Int, Int, Double, Double, Double, Double, Bytes, Int, Bytes, Bytes, Int, Int, @ref.Ref[Int]) -> Int
+
 pub fn ensure_cef_loader_linked() -> Unit
 
 pub fn event_cookie_count(EventHandle, @ref.Ref[Int]) -> Int
@@ -84,6 +86,8 @@ pub fn proton_app_instance_acquire_ffi(Bytes, Bytes, @ref.Ref[Int64], @ref.Ref[I
 pub fn proton_app_instance_attach_runtime_ffi(Int64, RuntimeHandle) -> Int
 
 pub fn proton_app_instance_destroy_ffi(Int64) -> Int
+
+pub fn proton_app_instance_prepare_update_ffi(Int64) -> Int
 
 pub fn proton_app_instance_release_ffi(Int64) -> Int
 
@@ -221,6 +225,8 @@ pub fn proton_update_stage_install_ffi(Int64, @ref.Ref[Int], FixedArray[Byte], I
 
 pub fn proton_update_stage_write_ffi(Int64, Bytes, Int, FixedArray[Byte], Int) -> Int
 
+pub fn proton_update_validate_running_image_ffi(FixedArray[Byte], Int) -> Int
+
 pub fn proton_view_browser_command_ffi(ViewHandle, Bytes, Int) -> Int
 
 pub fn proton_view_destroy_ffi(ViewHandle) -> Int
@@ -256,8 +262,6 @@ pub fn proton_view_load_url_ffi(ViewHandle, Bytes) -> Int
 pub fn proton_view_navigation_history_json_ffi(ViewHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_view_print_ffi(ViewHandle, Int) -> Int
-
-pub fn proton_view_print_to_pdf_ffi(ViewHandle, Int, Bytes, Int, Int, Double, Double, Double, Int, Int, Double, Double, Double, Double, Bytes, Int, Bytes, Bytes, Int, Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_view_remove_page_css_ffi(ViewHandle, Int64) -> Int
 
@@ -350,8 +354,6 @@ pub fn proton_window_minimize_ffi(WindowHandle) -> Int
 pub fn proton_window_navigation_history_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_print_ffi(WindowHandle, Int) -> Int
-
-pub fn proton_window_print_to_pdf_ffi(WindowHandle, Int, Bytes, Int, Int, Double, Double, Double, Int, Int, Double, Double, Double, Double, Bytes, Int, Bytes, Bytes, Int, Int, @ref.Ref[Int]) -> Int
 
 pub fn proton_window_remove_page_css_ffi(WindowHandle, Int64) -> Int
 

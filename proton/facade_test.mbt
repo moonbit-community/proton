@@ -23,7 +23,7 @@ test "explicit applications report missing managed package metadata" {
     "dev.proton.direct",
   )
   try app.version() catch {
-    @proton.MissingPackageMetadata => ()
+    @proton.AppConfigError::MissingField(..) => ()
     _ => fail("expected missing package metadata")
   } noraise {
     _ => fail("expected application version lookup to fail")
@@ -71,4 +71,18 @@ test "public path override builders update resolved paths" {
     app.path(@proton.AppPathKind::Logs),
     @mbpath.Path(temp).join("proton-public-logs").normalize().to_string(),
   )
+}
+
+///|
+test "public typed configuration exposes all sections through the root facade" {
+  let config = @proton.AppConfig::parse(
+    (
+      #|{"identifier":"com.example.public-config","frontend":{"dev_url":"http://localhost:4300"},"package":{"product_name":"Public","version":"1.0.0"}}
+    ),
+  )
+  let app = @proton.html("Config", "").config(config)
+  assert_eq(config.frontend.unwrap().dev_url, Some("http://localhost:4300"))
+  assert_eq(app.name(), "Public")
+  assert_eq(app.version(), "1.0.0")
+  assert_eq(@proton.AppConfig::decode(config.to_json()), config)
 }

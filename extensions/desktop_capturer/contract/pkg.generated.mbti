@@ -1,0 +1,56 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_ext/desktop_capturer/contract"
+
+import {
+  "moonbit-community/proton_contract",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub let extension : @proton_contract.ExtensionContract
+
+pub let get_sources : @proton_contract.Command[GetSourcesRequest, GetSourcesReply]
+
+// Errors
+
+// Types and methods
+pub(all) struct GetSourcesReply {
+  sources : Array[Source]
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn GetSourcesReply::equal(Self, Self) -> Bool
+pub fn GetSourcesReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GetSourcesReply::not_equal(Self, Self) -> Bool
+pub fn GetSourcesReply::to_json(Self) -> Json
+pub fn GetSourcesReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct GetSourcesRequest {
+  types : Array[String]
+  thumbnail_width : Int?
+  thumbnail_height : Int?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn GetSourcesRequest::equal(Self, Self) -> Bool
+pub fn GetSourcesRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn GetSourcesRequest::not_equal(Self, Self) -> Bool
+pub fn GetSourcesRequest::to_json(Self) -> Json
+pub fn GetSourcesRequest::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Source {
+  id : String
+  name : String
+  display_id : String
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+  thumbnail : String?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Source::equal(Self, Self) -> Bool
+pub fn Source::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Source::not_equal(Self, Self) -> Bool
+pub fn Source::to_json(Self) -> Json
+pub fn Source::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

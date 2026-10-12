@@ -2,14 +2,13 @@
 
 本例直接使用 HTML 字符串启动原生窗口，展示应用入口最基本的三个部分：页面内容、应用标识和运行应用。
 
-[01_run](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/01_run) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/01_run/main.mbt)
+[01_run](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/01_run) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/01_run/main.mbt)
 
 ## 行为
 
 单个 800 × 600 窗口显示“01 run”。构建器声明应用身份并启动应用。
 
 ```moonbit
-///|
 async fn main {
   let html =
     #|<!doctype html>

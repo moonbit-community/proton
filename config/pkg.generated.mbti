@@ -3,158 +3,142 @@ package "moonbit-community/proton_config"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
-pub fn load_project_config_from_file(String) -> ProjectConfig raise ProjectConfigError
-
-pub fn load_project_config_from_json(Json, String) -> ProjectConfig raise ProjectConfigError
-
-pub fn load_project_config_from_text(String, String, name? : String) -> ProjectConfig raise ProjectConfigError
-
-pub fn validate_application_identifier(String) -> String raise ProjectConfigError
+pub fn validate_application_identifier(String) -> String raise AppConfigError
 
 // Errors
-pub(all) suberror ProjectConfigError {
+pub(all) suberror AppConfigError {
   FileRead(path~ : String, detail~ : String)
   Syntax(name~ : String, diagnostics~ : String)
   InvalidRoot
-  Validation(errors~ : Array[ProjectConfigError])
+  Validation(errors~ : Array[AppConfigError])
   MissingField(path~ : String)
   DuplicateValue(path~ : String, value~ : String)
   UnknownField(path~ : String)
   InvalidField(path~ : String, expectation~ : String)
   UnsupportedValue(path~ : String, value~ : String)
 } derive(Eq, @debug.Debug)
-pub fn ProjectConfigError::equal(Self, Self) -> Bool
-pub fn ProjectConfigError::message(Self) -> String
-pub fn ProjectConfigError::not_equal(Self, Self) -> Bool
-pub fn ProjectConfigError::output(Self, &Logger) -> Unit
-pub fn ProjectConfigError::to_repr(Self) -> @debug.Repr
-pub fn ProjectConfigError::to_string(Self) -> String
+pub fn AppConfigError::equal(Self, Self) -> Bool
+pub fn AppConfigError::message(Self) -> String
+pub fn AppConfigError::not_equal(Self, Self) -> Bool
+pub fn AppConfigError::output(Self, &Logger) -> Unit
+pub fn AppConfigError::to_repr(Self) -> @debug.Repr
+pub fn AppConfigError::to_string(Self) -> String
 
 // Types and methods
-pub(all) struct ProjectBackendConfig {
+pub(all) struct AppConfig {
+  identifier : String
+  backend : BackendConfig?
+  frontend : FrontendConfig?
+  package_config : PackageConfig?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn AppConfig::AppConfig(String, backend? : BackendConfig?, frontend? : FrontendConfig?, package_config? : PackageConfig?) -> Self
+pub fn AppConfig::copy(Self) -> Self
+pub fn AppConfig::decode(Json) -> Self raise AppConfigError
+pub fn AppConfig::equal(Self, Self) -> Bool
+pub fn AppConfig::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn AppConfig::load(String) -> Self raise AppConfigError
+pub fn AppConfig::not_equal(Self, Self) -> Bool
+pub fn AppConfig::parse(String, name? : String) -> Self raise AppConfigError
+pub fn AppConfig::to_json(Self) -> Json
+pub fn AppConfig::to_repr(Self) -> @debug.Repr
+pub fn AppConfig::validate(Self) -> Unit raise AppConfigError
+
+pub(all) struct BackendConfig {
   path : String
   app_package : String
-} derive(Eq, @debug.Debug)
-pub fn ProjectBackendConfig::ProjectBackendConfig(String, String) -> Self
-pub fn ProjectBackendConfig::app_package(Self) -> String
-pub fn ProjectBackendConfig::equal(Self, Self) -> Bool
-pub fn ProjectBackendConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectBackendConfig::path(Self) -> String
-pub fn ProjectBackendConfig::to_repr(Self) -> @debug.Repr
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn BackendConfig::BackendConfig(String, String) -> Self
+pub fn BackendConfig::equal(Self, Self) -> Bool
+pub fn BackendConfig::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn BackendConfig::not_equal(Self, Self) -> Bool
+pub fn BackendConfig::to_json(Self) -> Json
+pub fn BackendConfig::to_repr(Self) -> @debug.Repr
 
-pub(all) struct ProjectConfig {
-  base_dir : String
-  identifier : String
-  backend : ProjectBackendConfig?
-  frontend : ProjectFrontendConfig?
-  package_config : ProjectPackageConfig?
-} derive(Eq, @debug.Debug)
-pub fn ProjectConfig::ProjectConfig(String, String, backend? : ProjectBackendConfig?, frontend? : ProjectFrontendConfig?, package_config? : ProjectPackageConfig?) -> Self
-pub fn ProjectConfig::backend(Self) -> ProjectBackendConfig?
-pub fn ProjectConfig::base_dir(Self) -> String
-pub fn ProjectConfig::equal(Self, Self) -> Bool
-pub fn ProjectConfig::frontend(Self) -> ProjectFrontendConfig?
-pub fn ProjectConfig::identifier(Self) -> String
-pub fn ProjectConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectConfig::package_config(Self) -> ProjectPackageConfig?
-pub fn ProjectConfig::to_repr(Self) -> @debug.Repr
-
-pub(all) struct ProjectDocumentType {
+pub(all) struct DocumentType {
   name : String
   extensions : Array[String]
   role : String
-} derive(Eq, @debug.Debug)
-pub fn ProjectDocumentType::ProjectDocumentType(String, Array[String], role? : String) -> Self
-pub fn ProjectDocumentType::equal(Self, Self) -> Bool
-pub fn ProjectDocumentType::extensions(Self) -> Array[String]
-pub fn ProjectDocumentType::not_equal(Self, Self) -> Bool
-pub fn ProjectDocumentType::to_repr(Self) -> @debug.Repr
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn DocumentType::DocumentType(String, Array[String], role? : String) -> Self
+pub fn DocumentType::equal(Self, Self) -> Bool
+pub fn DocumentType::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn DocumentType::not_equal(Self, Self) -> Bool
+pub fn DocumentType::to_json(Self) -> Json
+pub fn DocumentType::to_repr(Self) -> @debug.Repr
 
-pub(all) struct ProjectFrontendConfig {
+pub(all) struct FrontendConfig {
   dev_url : String?
   dist : String?
   before_dev : String?
   before_build : String?
   path : String?
-} derive(Eq, @debug.Debug)
-pub fn ProjectFrontendConfig::ProjectFrontendConfig(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, path? : String?) -> Self
-pub fn ProjectFrontendConfig::before_build(Self) -> String?
-pub fn ProjectFrontendConfig::before_dev(Self) -> String?
-pub fn ProjectFrontendConfig::dev_url(Self) -> String?
-pub fn ProjectFrontendConfig::dist(Self) -> String?
-pub fn ProjectFrontendConfig::equal(Self, Self) -> Bool
-pub fn ProjectFrontendConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectFrontendConfig::path(Self) -> String?
-pub fn ProjectFrontendConfig::to_repr(Self) -> @debug.Repr
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn FrontendConfig::FrontendConfig(dev_url? : String?, dist? : String?, before_dev? : String?, before_build? : String?, path? : String?) -> Self
+pub fn FrontendConfig::equal(Self, Self) -> Bool
+pub fn FrontendConfig::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn FrontendConfig::not_equal(Self, Self) -> Bool
+pub fn FrontendConfig::to_json(Self) -> Json
+pub fn FrontendConfig::to_repr(Self) -> @debug.Repr
 
-pub(all) struct ProjectPackageConfig {
+pub(all) struct PackageConfig {
   product_name : String
   version : String
   formats : Array[String]
   icons : Array[String]
   prepare : String?
   resources : Array[String]
-  sign : ProjectSignConfig?
+  sign : SignConfig?
   url_schemes : Array[String]
-  document_types : Array[ProjectDocumentType]
+  document_types : Array[DocumentType]
   output : String
-  platforms : ProjectPackagePlatforms
-} derive(Eq, @debug.Debug)
-pub fn ProjectPackageConfig::ProjectPackageConfig(String, String, formats? : Array[String], icons? : Array[String], prepare? : String?, resources? : Array[String], sign? : ProjectSignConfig?, url_schemes? : Array[String], document_types? : Array[ProjectDocumentType], output? : String, platforms? : ProjectPackagePlatforms) -> Self
-pub fn ProjectPackageConfig::document_types(Self) -> Array[ProjectDocumentType]
-pub fn ProjectPackageConfig::equal(Self, Self) -> Bool
-pub fn ProjectPackageConfig::formats(Self) -> Array[String]
-pub fn ProjectPackageConfig::icons(Self) -> Array[String]
-pub fn ProjectPackageConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectPackageConfig::output(Self) -> String
-pub fn ProjectPackageConfig::platforms(Self) -> ProjectPackagePlatforms
-pub fn ProjectPackageConfig::prepare(Self) -> String?
-pub fn ProjectPackageConfig::resources(Self) -> Array[String]
-pub fn ProjectPackageConfig::sign(Self) -> ProjectSignConfig?
-pub fn ProjectPackageConfig::to_repr(Self) -> @debug.Repr
-pub fn ProjectPackageConfig::url_schemes(Self) -> Array[String]
-pub fn ProjectPackageConfig::version(Self) -> String
+  platforms : PackagePlatforms
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PackageConfig::PackageConfig(String, String, formats? : Array[String], icons? : Array[String], prepare? : String?, resources? : Array[String], sign? : SignConfig?, url_schemes? : Array[String], document_types? : Array[DocumentType], output? : String, platforms? : PackagePlatforms) -> Self
+pub fn PackageConfig::equal(Self, Self) -> Bool
+pub fn PackageConfig::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PackageConfig::not_equal(Self, Self) -> Bool
+pub fn PackageConfig::to_json(Self) -> Json
+pub fn PackageConfig::to_repr(Self) -> @debug.Repr
 
-pub(all) struct ProjectPackagePlatforms {
-  macos : ProjectPlatformPackageConfig?
-  windows : ProjectPlatformPackageConfig?
-  linux : ProjectPlatformPackageConfig?
-} derive(Eq, @debug.Debug)
-pub fn ProjectPackagePlatforms::ProjectPackagePlatforms(macos? : ProjectPlatformPackageConfig, windows? : ProjectPlatformPackageConfig, linux? : ProjectPlatformPackageConfig) -> Self
-pub fn ProjectPackagePlatforms::equal(Self, Self) -> Bool
-pub fn ProjectPackagePlatforms::linux(Self) -> ProjectPlatformPackageConfig?
-pub fn ProjectPackagePlatforms::macos(Self) -> ProjectPlatformPackageConfig?
-pub fn ProjectPackagePlatforms::not_equal(Self, Self) -> Bool
-pub fn ProjectPackagePlatforms::to_repr(Self) -> @debug.Repr
-pub fn ProjectPackagePlatforms::windows(Self) -> ProjectPlatformPackageConfig?
+pub(all) struct PackagePlatforms {
+  macos : PlatformPackageConfig?
+  windows : PlatformPackageConfig?
+  linux : PlatformPackageConfig?
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PackagePlatforms::PackagePlatforms(macos? : PlatformPackageConfig, windows? : PlatformPackageConfig, linux? : PlatformPackageConfig) -> Self
+pub fn PackagePlatforms::equal(Self, Self) -> Bool
+pub fn PackagePlatforms::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PackagePlatforms::not_equal(Self, Self) -> Bool
+pub fn PackagePlatforms::to_json(Self) -> Json
+pub fn PackagePlatforms::to_repr(Self) -> @debug.Repr
 
-pub(all) struct ProjectPlatformPackageConfig {
+pub(all) struct PlatformPackageConfig {
   formats : Array[String]?
   resources : Array[String]
-  sign : ProjectSignConfig?
+  sign : SignConfig?
   minimum_system_version : String?
   nsis_install_mode : String?
-} derive(Eq, @debug.Debug)
-pub fn ProjectPlatformPackageConfig::ProjectPlatformPackageConfig(formats? : Array[String], resources? : Array[String], sign? : ProjectSignConfig, minimum_system_version? : String, nsis_install_mode? : String) -> Self
-pub fn ProjectPlatformPackageConfig::equal(Self, Self) -> Bool
-pub fn ProjectPlatformPackageConfig::formats(Self) -> Array[String]?
-pub fn ProjectPlatformPackageConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectPlatformPackageConfig::nsis_install_mode(Self) -> String?
-pub fn ProjectPlatformPackageConfig::resources(Self) -> Array[String]
-pub fn ProjectPlatformPackageConfig::sign(Self) -> ProjectSignConfig?
-pub fn ProjectPlatformPackageConfig::to_repr(Self) -> @debug.Repr
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn PlatformPackageConfig::PlatformPackageConfig(formats? : Array[String], resources? : Array[String], sign? : SignConfig, minimum_system_version? : String, nsis_install_mode? : String) -> Self
+pub fn PlatformPackageConfig::equal(Self, Self) -> Bool
+pub fn PlatformPackageConfig::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn PlatformPackageConfig::not_equal(Self, Self) -> Bool
+pub fn PlatformPackageConfig::to_json(Self) -> Json
+pub fn PlatformPackageConfig::to_repr(Self) -> @debug.Repr
 
-pub(all) struct ProjectSignConfig {
+pub(all) struct SignConfig {
   binaries : Array[String]
-} derive(Eq, @debug.Debug)
-pub fn ProjectSignConfig::ProjectSignConfig(binaries? : Array[String]) -> Self
-pub fn ProjectSignConfig::binaries(Self) -> Array[String]
-pub fn ProjectSignConfig::equal(Self, Self) -> Bool
-pub fn ProjectSignConfig::not_equal(Self, Self) -> Bool
-pub fn ProjectSignConfig::to_repr(Self) -> @debug.Repr
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn SignConfig::SignConfig(binaries? : Array[String]) -> Self
+pub fn SignConfig::equal(Self, Self) -> Bool
+pub fn SignConfig::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn SignConfig::not_equal(Self, Self) -> Bool
+pub fn SignConfig::to_json(Self) -> Json
+pub fn SignConfig::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

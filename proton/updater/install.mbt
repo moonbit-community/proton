@@ -1,12 +1,4 @@
 ///|
-/// Serializes update downloads in this process.
-///
-/// The native commit lock is intentionally much shorter lived. This mutex
-/// prevents two windows in one application from downloading the same release;
-/// the native lock protects the final decision against other processes.
-let update_install_mutex : @async.Mutex = @async.Mutex::Mutex()
-
-///|
 pub enum InstallOutcome {
   Installed
   AlreadyInstalled
@@ -19,115 +11,112 @@ pub extend InstallOutcome with Eq::{not_equal, equal}
 pub extend InstallOutcome with Debug::{to_repr}
 
 ///|
-async fn coordinate_install(
-  target_revision : UInt64,
-  current_revision : () -> UInt64 raise UpdateError,
-  apply : async () -> InstallOutcome raise UpdateError,
-) -> InstallOutcome raise UpdateError {
-  update_install_mutex.acquire()
-  defer update_install_mutex.release()
-  let installed_revision = current_revision()
-  if target_revision < installed_revision {
-    raise RollbackRejected(target=target_revision, installed=installed_revision)
-  }
-  if target_revision == installed_revision {
-    return AlreadyInstalled
-  }
-  apply()
+/// An authenticated artifact retained until installation or explicit discard.
+pub struct PreparedUpdate {
+  priv mut stage : @native.UpdateStage?
+  priv revision : UInt64
 }
 
 ///|
-/// Streams, authenticates and prepares or applies an available update.
-///
-/// The native stage owns a private artifact from the first chunk until the
-/// platform consumes it. `download_into` authenticates the same chunks written
-/// there, and any transfer or authentication failure discards the stage before
-/// returning.
-///
-/// macOS and Linux stage beside the running artifact so final replacement stays
-/// on one filesystem. Windows stages in the per-user temporary directory,
-/// keeps the verified installer open against modification, and elevates it only
-/// when the application requests `relaunch`. No staging path crosses the FFI
-/// boundary.
-///
-/// The application is not restarted. When to do that is a question about the
-/// user's unsaved work, not about the update, so it belongs to the caller —
-/// see `relaunch`.
-pub async fn UpdateChannel::download_and_install(
+/// Releases an unused download. Repeated calls are harmless.
+pub fn PreparedUpdate::discard(self : PreparedUpdate) -> Unit raise UpdateError {
+  if self.stage is Some(stage) {
+    stage.abort() catch {
+      error =>
+        raise InstallFailed(
+          step="discard downloaded update",
+          detail=error.message(),
+        )
+    }
+    self.stage = None
+  }
+}
+
+///|
+/// Consumes the download, applying the replacement or preparing its installer.
+/// Application callers use `ApplicationContext::quit_and_install` so this runs
+/// only after application cleanup. The native commit lock rechecks revision.
+pub fn PreparedUpdate::install(
+  self : PreparedUpdate,
+) -> InstallOutcome raise UpdateError {
+  guard self.stage is Some(stage) else {
+    raise InstallFailed(
+      step="install downloaded update",
+      detail="the download has already been consumed",
+    )
+  }
+  self.stage = None
+  let outcome = stage.install() catch {
+    error => {
+      if error.is_update_busy() {
+        raise InstallBusy
+      }
+      if error.is_update_rollback() {
+        raise RollbackRejected(
+          target=self.revision,
+          installed=current_revision(),
+        )
+      }
+      if error.is_update_revision_mismatch() {
+        raise RevisionMismatch(detail=error.message())
+      }
+      raise InstallFailed(
+        step="validate and replace the application",
+        detail=error.message(),
+      )
+    }
+  }
+  match outcome {
+    @native.Installed => Installed
+    @native.AlreadyInstalled => AlreadyInstalled
+  }
+}
+
+///|
+/// Downloads and authenticates an artifact without changing the installation.
+/// The caller owns the returned stage and must install or discard it.
+pub async fn UpdateChannel::download(
   self : UpdateChannel,
   fetch : ArtifactFetch,
   update : AvailableUpdate,
   on_progress? : async (Int64) -> Unit noraise = _ => (),
-) -> InstallOutcome raise UpdateError {
-  coordinate_install(
+) -> PreparedUpdate raise UpdateError {
+  let installed = current_revision()
+  if update.revision < installed {
+    raise RollbackRejected(target=update.revision, installed~)
+  }
+  let stage = @native.update_stage_begin_for_current_app(
+    update.size,
     update.revision,
-    fn() -> UInt64 raise UpdateError {
-      @native.update_current_revision() catch {
-        error =>
-          raise InstallFailed(
-            step="read the installed update revision",
-            detail=error.message(),
-          )
-      }
-    },
-    async fn() -> InstallOutcome raise UpdateError {
-      let stage = @native.update_stage_begin_for_current_app(
-        update.size,
-        update.revision,
-      ) catch {
-        error =>
-          raise InstallFailed(
-            step="prepare a private artifact stage",
-            detail=error.message(),
-          )
-      }
-      let active = Ref(true)
-      defer (if active.val { stage.abort() catch { _ => () } })
-      self.download_into(
-        fetch,
-        update,
-        fn(chunk) -> Unit raise UpdateError {
-          stage.write(chunk) catch {
-            error =>
-              raise InstallFailed(
-                step="write the private artifact stage",
-                detail=error.message(),
-              )
-          }
-        },
-        on_progress,
+  ) catch {
+    error =>
+      raise InstallFailed(
+        step="prepare a private artifact stage",
+        detail=error.message(),
       )
-      let outcome = stage.install() catch {
-        error => {
-          if error.is_update_busy() {
-            raise InstallBusy
-          }
-          if error.is_update_rollback() {
-            let current = @native.update_current_revision() catch {
-              read_error =>
-                raise InstallFailed(
-                  step="read the installed revision after a concurrent update",
-                  detail=read_error.message(),
-                )
-            }
-            raise RollbackRejected(target=update.revision, installed=current)
-          }
-          if error.is_update_revision_mismatch() {
-            raise RevisionMismatch(detail=error.message())
-          }
+  }
+  let prepared = PreparedUpdate::{
+    stage: Some(stage),
+    revision: update.revision,
+  }
+  let transferred = Ref(false)
+  defer (if !transferred.val { prepared.discard() catch { _ => () } })
+  self.download_into(
+    fetch,
+    update,
+    fn(chunk) -> Unit raise UpdateError {
+      stage.write(chunk) catch {
+        error =>
           raise InstallFailed(
-            step="validate and replace the application",
+            step="write the private artifact stage",
             detail=error.message(),
           )
-        }
-      }
-      active.val = false
-      match outcome {
-        @native.Installed => Installed
-        @native.AlreadyInstalled => AlreadyInstalled
       }
     },
+    on_progress,
   )
+  transferred.val = true
+  prepared
 }
 
 ///|

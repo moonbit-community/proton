@@ -14,7 +14,7 @@
 | 进程所有权与激活 | 单实例构建器、上下文方法 | [进程控制](#进程控制与指标) |
 | 路径、文件与构建元数据 | 项目配置、应用路径 | [Configuration](../configuration/project.md) |
 
-完整方法、类型化错误和默认参数见[版本化 API 索引](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)。本页说明各入口的适用场景、状态所有权，以及启动、取消和退出期间的行为。
+完整方法、类型化错误和默认参数见[版本化 API 索引](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti)。本页说明各入口的适用场景、状态所有权，以及启动、取消和退出期间的行为。
 
 ## 应用生命周期
 
@@ -33,7 +33,7 @@
 
 **应用身份**
 
-`load_config()` 读取托管应用元数据，包括必需的 identifier。非托管应用可以显式调用 `identifier(...)`。identifier 是稳定的应用身份，与窗口标题、产品显示名称和应用版本不同。
+`@proton.load_config()` 返回完整的类型化 `AppConfig`，加载失败时立即抛出错误。直接从该值读取 `identifier`、`backend`、`frontend` 和 `package_config`。通过 `app.config(config)` 安装配置，它与 `app.identifier(...)` 互斥。identifier 是稳定的应用身份，与窗口标题、产品名称和版本不同。
 
 `app_path()`、`resource_dir()` 和 `is_packaged()` 描述执行环境。开发路径与打包资源的位置不同，前端 URL 也不是后端文件系统路径。
 
@@ -146,7 +146,7 @@ ready／close 钩子管理窗口状态；创建通知和浏览器事件用于观
 
 Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列化，仍受可用内存与底层传输约束。大消息会增加序列化、复制和解析开销。
 
-0.3.4 没有固定的全局并发请求准入上限。应用仍应根据资源和顺序要求限制昂贵工作；bridge 不会将彼此独立的业务操作自动串行为事务。
+0.4.0 没有固定的全局并发请求准入上限。应用仍应根据资源和顺序要求限制昂贵工作；bridge 不会将彼此独立的业务操作自动串行为事务。
 
 ## 事件
 
@@ -166,7 +166,7 @@ Proton 不对命令载荷设置固定的大小上限。载荷通过 JSON 序列�
 
 `proton_client.subscribe(event, listener, failure)` 通过 `FromJson` 解码载荷，返回 `Subscription`。`Subscription.close()` 释放监听器。订阅建立可能抛出 `ClientFailure`；事件解码失败通过 failure 回调报告 `EventDecode`。
 
-`proton_rabbita.subscribe` 将订阅所有权接入 Rabbita，选项包括订阅 key、重试次数、ready 命令和 client 覆盖。完整签名见 [Rabbita API](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/)。
+`proton_rabbita.subscribe` 将订阅所有权接入 Rabbita，选项包括订阅 key、重试次数、ready 命令和 client 覆盖。完整签名见 [Rabbita API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/rabbita/pkg.generated.mbti)。
 
 JavaScript 接口为 `window.__MoonBit__.app.on(name, callback)`。回调接收包含 `payload` 的事件对象；注册返回取消订阅函数。
 
@@ -189,13 +189,15 @@ on_window_created、on_render_process_gone 等应用生命周期通知是宿主�
 
 ## 窗口与浏览器视图
 
-窗口声明属于 `App`，运行中的窗口操作属于 `WindowHandle`。浏览器导航和开发者工具属于 `BrowserHandle`，通过 `WindowHandle.browser()` 获取。
+窗口声明属于 `App`，运行中的窗口操作属于 `WindowHandle`。浏览器导航和开发者工具属于 `WebContentsHandle`，通过 `WindowHandle.web_contents()` 获取。
 
 **标识与声明**
 
-主窗口 ID 为 `main`。`App.add_window(id, title, entry, ...)` 声明附加窗口，其 ID 必须非空、唯一，且不能为 `main`。标题是显示文本，不是窗口标识。
+主窗口 ID 为 `main`。`App.add_window(id, config, open_on_start?)` 声明附加窗口，其 ID 必须非空、唯一，且不能为 `main`。标题是显示文本，不是窗口标识。
 
 附加窗口默认在启动时打开。`open_on_start=false` 将打开推迟到 `WindowManager.open(id)`。`ApplicationContext.windows()` 和 `WindowContext.windows()` 提供窗口管理器。所有窗口属于同一个应用运行时。
+
+`WindowConfig(title, entry, ...)` 保存尺寸、尺寸提示、主题、标题栏样式、红绿灯位置及初始 `views`。使用 `App(config)` 定义主窗口，`App.main_window(config)` 替换其启动配置，`App.add_window(id, config, ...)` 声明附加窗口。注册时会复制 views 数组。简单主窗口仍可使用 `html`、`url`、`file`、`asset` 快捷入口。
 
 **打开操作与实例身份**
 
@@ -204,6 +206,18 @@ on_window_created、on_render_process_gone 等应用生命周期通知是宿主�
 激活提交前取消调用，会丢弃排队的打开操作，或关闭该操作已经创建的实例。激活成功提交后，窗口属于应用，随后取消调用方不会把它关闭。未知声明和无效窗口状态产生窗口会话错误；任务取消遵循 async 的取消语义。
 
 hide() 保留窗口实例、浏览器和相关任务。close() 发起销毁流程且可能被拒绝，不能把关闭请求当作清理完成。窗口状态应由生命周期清理释放，而不是刚请求关闭就释放。
+
+**窗口查找与浏览器就绪**
+
+`WindowManager.find(id)` 返回当前活动实例，其中包括仍在启动的窗口。它不会等待原生浏览器初始化、页面加载或命令桥接就绪。获取 `WebContentsHandle` 同样不会等待这些条件。
+
+这三个条件各有不同含义：
+
+- 原生浏览器初始化完成后，才能进行 `WebContentsHandle.state()` 等浏览器查询。启动期间，查询可能因浏览器尚未初始化而抛出 `WindowSessionError::OperationFailed`。不能假定所有浏览器操作都会排队等待初始化完成。
+- 页面加载针对当前导航。需要已加载页面的操作，应观察对应窗口或视图的 `on_web_contents_event`，再核对目标 URL 和页面状态。`DidFinishLoad` 表示加载状态转为空闲，本身不能证明目标导航成功；还需要单独处理 `LoadFailed`。
+- 命令桥接就绪针对与当前页面的通信。拥有浏览器句柄或收到加载完成事件，都不能单独证明桥接已经就绪。
+
+操作应与其实际需要的条件同步。在 `find()` 后等待固定时长不能保证就绪，导航或关闭也可能使此前的观察结果失效。
 
 **运行时操作**
 
@@ -223,15 +237,21 @@ hide() 保留窗口实例、浏览器和相关任务。close() 发起销毁流�
 
 **子浏览器视图**
 
-`App.with_view` 在主窗口声明视图；`WindowHandle.add_view` 动态创建视图并返回 `ViewHandle`。视图是窗口内部承载的子浏览器，不是第二个顶层窗口。其边界以左上角为原点，显示状态和 z-order 独立于主页面。`remove_view` 移除子视图。关闭父窗口也必须完成子浏览器销毁。
+`WindowConfig.views` 在主窗口或附加窗口声明初始视图；`WindowHandle.add_view` 动态创建视图并返回 `ViewHandle`。视图是窗口内部承载的子浏览器，不是第二个顶层窗口。其边界以左上角为原点，显示状态和 z-order 独立于主页面。`remove_view` 移除子视图。关闭父窗口也必须完成子浏览器销毁。
 
 **浏览器与子视图边界**
 
-主页面通过 WindowHandle.browser() 操作，子页面通过 ViewHandle 操作。子视图导航或移除不会导航或关闭主页面。应用级创建和 renderer 终止回调以 WebContentsHandle 统一表示两者。
+`WindowHandle.web_contents()` 和 `ViewHandle.web_contents()` 都返回 `WebContentsHandle`。导航、脚本执行、缩放、音频、开发者工具、打印、下载及会话访问使用这个共同句柄。子视图几何、显示、层级和移除保留在 `ViewHandle`，原生窗口控制保留在 `WindowHandle`。子页面导航不会导航主页面。
 
-on_render_process_gone 同时覆盖主页面和子视图，无需额外订阅 on_view_event。renderer 终止会使页面工作失效，但不等于正常关闭窗口。应用根据终止详情决定重新加载还是展示恢复界面，并在导航后重新建立页面订阅。
+使用 `App.on_web_contents_event` 订阅主页面和子页面事件。回调携带共同句柄：`window_id()` 标识所属窗口，主页面的 `view_id()` 为 `None`。句柄绑定特定原生实例，复用声明 id 不会使旧句柄恢复有效。子视图不获得应用命令桥接。
+
+on_render_process_gone 同时覆盖主页面和子视图，无需额外订阅 on_web_contents_event。renderer 终止会使页面工作失效，但不等于正常关闭窗口。应用根据终止详情决定重新加载还是展示恢复界面，并在导航后重新建立页面订阅。
 
 视图声明只设置初始几何信息，不提供自动布局。父窗口内容布局变化时，由应用更新子视图边界。
+
+**PDF 输出**
+
+`WebContentsHandle.print_to_pdf(path, options?)` 是异步方法，成功完成后返回 `Unit`。在异步上下文调用并就地处理错误，无需订阅完成事件或关联请求编号。主页面和子页面的并发调用分别匹配完成结果。页面关闭、renderer 终止或应用退出会唤醒待完成的调用。取消只停止等待，不会终止底层原生打印任务，目标文件仍可能生成。
 
 **平台行为**
 
@@ -268,7 +288,7 @@ on_render_process_gone 同时覆盖主页面和子视图，无需额外订阅 on
 
 **平台差异与选择**
 
-以下是 0.3.4 已实现能力的主要边界，不承诺缺少桌面服务时仍可用：
+以下是 0.4.0 已实现能力的主要边界，不承诺缺少桌面服务时仍可用：
 
 | 能力 | macOS | Windows | Linux |
 | --- | --- | --- | --- |
@@ -284,11 +304,11 @@ capability 授权与操作系统授权不同。声明屏幕或媒体能力不会
 
 net 扩展在宿主执行 HTTP 请求，返回状态、响应头及 UTF-8 文本；它不等于浏览器 fetch，不共享浏览器 cookie jar，也不自动跟随重定向。二进制数据不是该文本响应接口的无损用途。process 扩展创建的进程属于扩展应用生命周期，wait 回收句柄，kill 后仍需 wait，应用退出会取消并回收剩余子进程。
 
-完整扩展清单及各范围类型见[扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
+完整扩展清单及各范围类型见[扩展 API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti)。访问某个 API 前分别确认：目标授权、操作系统授权、平台后端支持。
 
 ## 浏览器会话
 
-浏览器会话保存 Cookie、缓存、认证状态和 Web storage，通过 window.browser().session() 获取句柄。虽然句柄来自一个浏览器，清理共享会话数据并不是仅对这个页面的私有操作。
+浏览器会话保存 Cookie、缓存、认证状态和 Web storage。窗口创建前即可通过 `ApplicationContext.session()` 获取句柄，也可通过任意 `WebContentsHandle.session()` 获取。两者访问同一个应用会话。页面关闭不使会话失效，清理共享数据也会影响使用该 profile 的其它页面。
 
 **启动配置**
 
@@ -310,9 +330,9 @@ on_session_created 在应用启动钩子创建窗口前提供 partition 和解�
 | clear_certificate_exceptions | 清除证书例外状态 |
 | close_all_connections | 关闭会话连接 |
 
-所属浏览器或窗口不再可用时操作可能失败。Cookie 异步读取应在有效生命周期作用域内等待。清理浏览器存储不会删除应用自己管理的文件，也不等于完成业务登出；后端凭据和 UI 状态需单独处理。
+操作要求应用运行时存活，不要求页面存活；错误类型为 `SessionError`。`KeepRunning` 无窗口期间仍可使用句柄；应用退出会唤醒待完成的 Cookie 查询并使保留的会话句柄失效。并发 Cookie 查询相互独立。清理浏览器存储不会删除应用自己管理的文件，也不等于完成业务登出；后端凭据和 UI 状态需单独处理。
 
-完整属性及 StorageDataKind 变体见[API 参考](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)。
+完整属性及 StorageDataKind 变体见[API 参考](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti)。
 
 ## 应用更新
 
@@ -326,13 +346,25 @@ endpoint 必须是 HTTPS，至少配置一个受信任 RSA 公钥。默认开启
 
 PendingUpdate 表示 manifest 已通过信任、新鲜度和 revision 检查。它提供 version、revision、size 和可选 notes URL，此时尚未下载产物。
 
-**安装与重启**
+**下载与安装**
 
-安装必须显式调用 PendingUpdate.install()。下载先写入私有暂存区域，通过大小、摘要和签名验证后才能使用。应检查 UpdateInstallOutcome，不能假设所有平台都已经完成文件替换。macOS 和 Linux 在 install 中应用替换；Windows 保留已验证的 NSIS 安装器，待 restart 使用。
+`PendingUpdate.download()` 将产物写入私有暂存区域，并校验大小、摘要和签名。所有平台上都不会替换应用文件或退出。相同 revision 的下载已准备好时，重复调用不会再次下载。
 
-PendingUpdate.restart() 请求启动替换后的应用，调用方随后应退出。请求成功只表示操作系统接受启动，不代表新进程已经 ready。检查更新或收到更新通知都不会隐式安装。
+下载完成后，在用户选择应用更新时调用 `ApplicationContext.quit_and_install()`：
 
-未保存数据的处理应与检查、下载分开，通过[退出生命周期](#应用生命周期)决定何时退出。旧的受管理更新产物在成功启动后清理；暂存新包不代表新应用已经启动成功。
+```moonbit
+match context.check_for_update() {
+  Available(update) => {
+    update.download()
+    context.quit_and_install()
+  }
+  UpToDate | NotConfigured => ()
+}
+```
+
+请求遵循[退出生命周期](#应用生命周期)。拒绝退出会取消本次安装请求，保留下载结果供稍后重试。退出获准后，Proton 先关闭运行时并完成清理，再开始安装。如果启用了单实例模式，替换期间仍保留独占权。Windows 在旧进程退出前将独占权交给 NSIS 安装器，由安装器在安装完成后释放；macOS 和 Linux 持锁替换应用产物，完成后释放锁并启动新版。交接成功后旧进程终止，退出码为零时也不会继续执行 `App::run()` 后的代码。
+
+方法返回仅表示请求被接受，不代表新版已经启动成功。没有下载结果，或存在冲突的退出、重启请求时立即报错；后续安装或启动失败由 `App::run()` 报告。强制 `exit()` 会覆盖待执行的更新请求。更新退出请求待处理时，不允许主动释放已有的单实例锁；已释放所配置单实例锁的应用不能请求安装。普通退出丢弃下载结果而不安装；应用清理失败也不会开始安装。旧的受管理更新产物在新版成功启动后清理。
 
 **发布者责任**
 
@@ -360,8 +392,8 @@ ApplicationContext.task_metrics() 返回 Chromium task 的 AppTaskMetric 列表�
 
 ## API 参考
 
-- [应用 API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/)
-- [扩展 API](https://mooncakes.io/docs/moonbit-community/proton_ext@0.3.4/)
-- [类型化契约](https://mooncakes.io/docs/moonbit-community/proton_contract@0.3.4/)
-- [前端客户端](https://mooncakes.io/docs/moonbit-community/proton_client@0.3.4/)
-- [Rabbita 集成](https://mooncakes.io/docs/moonbit-community/proton_rabbita@0.3.4/)
+- [应用 API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti)
+- [扩展 API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/extensions/pkg.generated.mbti)
+- [类型化契约](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/contract/pkg.generated.mbti)
+- [前端客户端](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/client/pkg.generated.mbti)
+- [Rabbita 集成](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/rabbita/pkg.generated.mbti)

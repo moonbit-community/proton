@@ -59,10 +59,14 @@ pub fn OpRegistrationError::to_repr(Self) -> @debug.Repr
 pub fn OpRegistrationError::to_string(Self) -> String
 
 // Types and methods
+#alias(MbtProcessHost)
 type AppCommandHost
+#alias(MbtProcessHost)
 pub fn AppCommandHost::AppCommandHost(expose_error_details? : Bool, diagnostic_reporter? : (String) -> Unit) -> Self
 pub fn AppCommandHost::close(Self) -> Unit
+#alias(dispatch_async)
 pub async fn AppCommandHost::dispatch_ipc(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
+#alias(dispatch_async_with_context)
 pub async fn AppCommandHost::dispatch_ipc_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
 pub fn[Payload : @json.FromJson, Reply : ToJson] AppCommandHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
@@ -111,16 +115,6 @@ pub async fn CommandWindow::confirm(Self, String?, String, String) -> Bool
 pub async fn CommandWindow::open_file(Self, String?, String?) -> String?
 pub async fn CommandWindow::save_file(Self, String?, String?) -> String?
 pub async fn CommandWindow::show_message(Self, String?, String, String) -> Unit
-
-type MbtProcessHost
-pub fn MbtProcessHost::MbtProcessHost(expose_error_details? : Bool, diagnostic_reporter? : (String) -> Unit) -> Self
-pub fn MbtProcessHost::close(Self) -> Unit
-pub async fn MbtProcessHost::dispatch_async(Self, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
-pub async fn MbtProcessHost::dispatch_async_with_context(Self, AppCommandRequestContext, @ipc.IpcOpRequest) -> @ipc.IpcOpResponse
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op(Self, String, (Payload) -> Reply raise?) -> Unit raise OpRegistrationError
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async(Self, String, async (Payload) -> Reply) -> Unit raise OpRegistrationError
-pub fn[Payload : @json.FromJson, Reply : ToJson] MbtProcessHost::op_async_with_context(Self, String, async (AppCommandRequestContext, Payload) -> Reply) -> Unit raise OpRegistrationError
-pub fn MbtProcessHost::registered_ops(Self) -> Array[String]
 
 pub struct RuntimeWakeSignal {
   mut revision : Int64

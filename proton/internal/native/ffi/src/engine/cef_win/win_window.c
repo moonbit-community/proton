@@ -2699,17 +2699,9 @@ int32_t proton_engine_window_load_url(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  cef_frame_t *frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
-  if (frame == NULL) {
-    proton_engine_set_message(error, error_len, "main frame is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_string_t value = {0};
-  proton_engine_set_string(&value, url);
-  frame->load_url(frame, &value);
-  cef_string_clear(&value);
-  frame->base.release((cef_base_ref_counted_t *)frame);
-  return PROTON_OK;
+  return proton_browser_load_url(
+      proton_engine_window_browser(window), url,
+      error, error_len);
 }
 
 /* Installs `html` as the document served for `document_url` and, when an
@@ -2725,20 +2717,9 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  cef_frame_t *frame = proton_engine_window_browser(window)->get_main_frame(proton_engine_window_browser(window));
-  if (frame == NULL) {
-    proton_engine_set_message(error, error_len, "main frame is not available");
-    return PROTON_ERR_ENGINE;
-  }
-  cef_string_t code = {0};
-  cef_string_t url = {0};
-  proton_engine_set_string(&code, script);
-  proton_engine_set_string(&url, "proton://eval/");
-  frame->execute_java_script(frame, &code, &url, 1);
-  cef_string_clear(&code);
-  cef_string_clear(&url);
-  frame->base.release((cef_base_ref_counted_t *)frame);
-  return PROTON_OK;
+  return proton_browser_eval(
+      proton_engine_window_browser(window), script, "proton://eval/",
+      error, error_len);
 }
 
 int32_t proton_engine_window_browser_command(

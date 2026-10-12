@@ -31,7 +31,9 @@ jobs:
         run: moon version --all
 
       - name: Format check
-        run: moon fmt --check
+        run: |
+          moon fmt
+          git diff --exit-code
 
   moonbit:
     needs: format
@@ -194,6 +196,13 @@ jobs:
           _CL_: /utf-8
         run: moon check --target native --deny-warn
 
+      - name: Check public interfaces
+        shell: bash
+        run: |
+          moon info
+          git add --intent-to-add -- '**/pkg.generated.mbti'
+          git diff --exit-code
+
       - name: Run workspace native tests on Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
@@ -225,6 +234,16 @@ jobs:
       - name: Test standalone macOS safe storage cipher
         if: ${{ matrix.os == 'macos-latest' }}
         run: node scripts/test_safe_storage_macos.mjs
+
+      - name: Test packaged macOS update lifecycle
+        if: ${{ matrix.os == 'macos-latest' }}
+        timeout-minutes: 15
+        run: |
+          brew list openssl@3 >/dev/null 2>&1 || brew install openssl@3
+          if ! e2e/self_update/run.sh; then
+            echo "PROTON_E2E_FAILURE_DIR=/tmp/proton-updater-e2e" >> "$GITHUB_ENV"
+            exit 1
+          fi
 
       - name: Build examples
         if: ${{ matrix.os != 'windows-latest' }}

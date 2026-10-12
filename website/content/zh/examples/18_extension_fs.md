@@ -2,14 +2,13 @@
 
 本例通过文件系统扩展让页面请求宿主文件操作。后端声明允许访问的目录和操作，页面通过命令 bridge 使用这份授权。
 
-[18_extension_fs](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs/fs.html)
+[18_extension_fs](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/18_extension_fs) · 关键文件：[main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/18_extension_fs/fs.html)
 
 ## 行为
 
 页面提供读写和目录操作。原生入口用 PermissionRoot 和操作允许列表注册 fs 能力。
 
 ```moonbit
-///|
 async fn main {
   @proton.html("18 extension fs", resource, width=960, height=720, debug=true)
   .capability(

@@ -10,6 +10,8 @@
 #include "../ffi/src/engine/cef_common/browser_session.h"
 #include "../ffi/src/engine/cef_common/view_events.h"
 #include "../ffi/src/engine/cef_common/window_state.h"
+#include "../ffi/src/engine/cef_common/scheme.h"
+#include "../ffi/src/engine/cef_common/cookie_cache.h"
 
 #include "include/capi/cef_browser_capi.h"
 #include "include/capi/cef_app_capi.h"
@@ -32,6 +34,8 @@
 
 #include <dispatch/dispatch.h>
 #include <stdatomic.h>
+
+#include "../ffi/src/engine/cef_common/ref_count.h"
 #include <stdint.h>
 
 /* AppKit operations invoked from a worker are marshalled to the main queue. */
@@ -45,10 +49,6 @@
   }
 
 typedef struct proton_engine_client proton_engine_client_t;
-
-typedef struct {
-  atomic_int refs;
-} proton_engine_ref_counted_t;
 
 typedef struct {
   cef_app_t app;
@@ -121,6 +121,8 @@ struct proton_engine_runtime {
   int headless;
   id accessibility_observer;
   proton_engine_bridge_requests_t *bridge_requests;
+  proton_engine_resource_requests_t resource_requests;
+  proton_cookie_get_state_t *cookie_requests;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   proton_browser_registry_t *browsers;

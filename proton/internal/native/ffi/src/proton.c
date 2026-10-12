@@ -310,7 +310,7 @@ int32_t proton_runtime_begin_destroy(proton_runtime_handle_t runtime) {
   if (status != PROTON_OK) {
     return status;
   }
-  proton_engine_cancel_resource_requests();
+  proton_engine_cancel_resource_requests(slot->engine_runtime);
   slot->destroy_prepared = true;
   g_last_error[0] = '\0';
   return PROTON_OK;
@@ -385,9 +385,8 @@ int32_t proton_runtime_complete_resource_request(
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "invalid resource response");
   }
-  (void)slot;
   runtime_status = proton_engine_complete_resource_request(
-      request_id, status, mime_type, data, (size_t)data_len);
+      slot->engine_runtime, request_id, status, mime_type, data, (size_t)data_len);
   if (runtime_status == PROTON_ERR_STALE_RESOURCE_REQUEST) {
     return proton_set_error(runtime_status,
                             "resource request is no longer pending");
@@ -2493,7 +2492,8 @@ int32_t proton_contents_print(void *window, int32_t is_view) {
 }
 
 int32_t proton_contents_print_to_pdf(
-    void *window, int32_t is_view, const char *path, int32_t landscape,
+    proton_window_handle_t window, proton_view_handle_t view,
+    const char *path, int32_t landscape,
     int32_t print_background, double scale, double paper_width,
     double paper_height, int32_t prefer_css_page_size, int32_t margin_type,
     double margin_top, double margin_right, double margin_bottom,
@@ -2501,8 +2501,10 @@ int32_t proton_contents_print_to_pdf(
     int32_t display_header_footer, const char *header_template,
     const char *footer_template, int32_t generate_tagged_pdf,
     int32_t generate_document_outline, int32_t *out_request_id) {
+  int32_t is_view = view != NULL;
+  void *target = is_view ? (void *)view : (void *)window;
   void *engine = NULL;
-  int32_t status = proton_get_contents_engine(window, is_view, &engine);
+  int32_t status = proton_get_contents_engine(target, is_view, &engine);
   if (status != PROTON_OK) {
     return status;
   }
@@ -4279,4 +4281,15 @@ int32_t proton_last_error_message(char *buffer, int32_t buffer_len) {
   memcpy(buffer, g_last_error, (size_t)copy_len);
   buffer[copy_len] = '\0';
   return required;
+}
+
+int32_t proton_app_instance_prepare_update(int64_t instance) {
+#ifdef _WIN32
+  extern int32_t proton_update_set_instance_lock(int64_t handle);
+  int64_t handle = proton_app_instance_update_lock_impl(instance);
+  return handle != 0 ? proton_update_set_instance_lock(handle) : 0;
+#else
+  (void)instance;
+  return 0;
+#endif
 }

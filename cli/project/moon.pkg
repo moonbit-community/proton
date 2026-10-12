@@ -1,0 +1,12 @@
+import {
+  "moonbit-community/proton_config",
+  "moonbit-community/proton_cli/fsutil",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/debug",
+}
+
+import {
+  "moonbitlang/async",
+} for "wbtest"
+
+supported_targets = "native+wasm"

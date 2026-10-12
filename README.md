@@ -56,7 +56,7 @@ async fn main {
     height=700,
     debug=true,
   )
-  .load_config()
+  .config(@proton.load_config())
   .run_or_abort()
 }
 ```
@@ -70,7 +70,7 @@ An isomorphic backend registers commands defined by the shared contract:
 async fn main {
   let backend = @todo.Backend()
   @proton.asset("My App", "frontend/dist/index.html")
-  .load_config()
+  .config(@proton.load_config())
   .single_instance()
   .commands(fn(registrar) raise { backend.register_commands(registrar) })
   .run_or_abort()
@@ -234,8 +234,9 @@ controls. See [examples/Readme.md](examples/Readme.md).
 ```
 
 `identifier` is the stable application identity used by the runtime and
-packaging tools. `.load_config()` reads it from the project file during
-development and from packaged metadata after installation. Applications that
+packaging tools. `@proton.load_config()` reads the complete configuration during
+development or from packaged metadata after installation. `.config(@proton.load_config())`
+installs this configuration on the application. Applications that
 do not use `proton.project.json` must call
 `.identifier("com.example.my-app")` instead.
 
@@ -355,7 +356,7 @@ Headless mode uses CEF off-screen rendering without native top-level windows:
 
 ```moonbit
 @proton.html("Automation", html)
-.load_config()
+.config(@proton.load_config())
 .headless()
 .run_or_abort()
 ```

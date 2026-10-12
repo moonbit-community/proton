@@ -12,6 +12,8 @@ pub let activity : @proton_contract.Event[PowerMonitorActivity]
 
 pub let extension : @proton_contract.ExtensionContract
 
+pub let get_idle_state : @proton_contract.Command[IdleStateRequest, IdleStateReply]
+
 pub let get_idle_time : @proton_contract.Command[@proton_contract.EmptyRequest, IdleTimeReply]
 
 pub let get_power_source : @proton_contract.Command[@proton_contract.EmptyRequest, PowerSourceReply]
@@ -31,6 +33,24 @@ pub let unlock_screen : @proton_contract.Event[PowerMonitorEventPayload]
 // Errors
 
 // Types and methods
+pub(all) struct IdleStateReply {
+  state : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn IdleStateReply::equal(Self, Self) -> Bool
+pub fn IdleStateReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IdleStateReply::not_equal(Self, Self) -> Bool
+pub fn IdleStateReply::to_json(Self) -> Json
+pub fn IdleStateReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct IdleStateRequest {
+  idle_threshold : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn IdleStateRequest::equal(Self, Self) -> Bool
+pub fn IdleStateRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn IdleStateRequest::not_equal(Self, Self) -> Bool
+pub fn IdleStateRequest::to_json(Self) -> Json
+pub fn IdleStateRequest::to_repr(Self) -> @debug.Repr
+
 pub(all) struct IdleTimeReply {
   idle_seconds : Int
 } derive(Eq, ToJson, @debug.Debug, @json.FromJson)

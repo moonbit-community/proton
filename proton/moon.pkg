@@ -37,6 +37,8 @@ options(
     "facade_app_info_wbtest.mbt": [ "native" ],
     "facade_bridge.mbt": [ "native" ],
     "facade_builders.mbt": [ "native" ],
+    "facade_config.mbt": [ "native" ],
+    "facade_config_wbtest.mbt": [ "native" ],
     "facade_context.mbt": [ "native" ],
     "facade_cookie.mbt": [ "native" ],
     "facade_dialog.mbt": [ "native" ],

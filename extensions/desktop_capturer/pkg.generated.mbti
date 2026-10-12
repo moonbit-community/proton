@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_ext/desktop_capturer"
+
+import {
+  "moonbit-community/proton/command",
+  "moonbit-community/proton/extension",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn capability() -> @extension.RendererCapability
+
+pub fn register_commands(@command.CommandRegistrar) -> Unit raise
+
+// Errors
+pub(all) suberror DesktopCapturerError {
+  Unsupported(operation~ : String, detail~ : String)
+  QueryFailed(detail~ : String)
+} derive(Eq, @debug.Debug)
+pub fn DesktopCapturerError::equal(Self, Self) -> Bool
+pub fn DesktopCapturerError::message(Self) -> String
+pub fn DesktopCapturerError::not_equal(Self, Self) -> Bool
+pub fn DesktopCapturerError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+type WindowSourceWire derive(@json.FromJson)
+pub fn WindowSourceWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+
+type WindowSourcesWire derive(@json.FromJson)
+pub fn WindowSourcesWire::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+
+// Type aliases
+
+// Traits

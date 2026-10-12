@@ -6,18 +6,7 @@
 #include "../ffi/src/proton_event.h"
 #include "../ffi/src/engine/cef_common/browser_session.h"
 #include "../ffi/src/engine/cef_common/message.h"
-#define PROTON_ENGINE_REF_INCREMENT(refs) \
-  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) \
-  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) \
-  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
 #include "../ffi/src/engine/cef_common/ref_count.h"
-#undef PROTON_ENGINE_REF_INCREMENT
-#undef PROTON_ENGINE_REF_DECREMENT
-#undef PROTON_ENGINE_REF_LOAD
-#undef PROTON_ENGINE_REF_STORE
 #include "../ffi/src/engine/cef_common/scheme.h"
 #include "../ffi/src/engine/cef_common/strings.h"
 #include "../ffi/src/engine/cef_common/view_events.h"
@@ -793,16 +782,12 @@ int32_t proton_engine_view_load_url(proton_engine_view_t *view,
       proton_engine_set_message(error, error_len, "browser is not initialized");
       return PROTON_ERR_NOT_INITIALIZED;
     }
-    cef_frame_t *frame = proton_engine_view_browser(view)->get_main_frame(proton_engine_view_browser(view));
-    if (frame == NULL) {
-      proton_engine_set_message(error, error_len, "main frame is not available");
-      return PROTON_ERR_ENGINE;
+    int32_t status = proton_browser_load_url(
+        proton_engine_view_browser(view), url != NULL ? url : "about:blank",
+        error, error_len);
+    if (status != PROTON_OK) {
+      return status;
     }
-    cef_string_t cef_url = {0};
-    proton_engine_set_string(&cef_url, url != NULL ? url : "about:blank");
-    frame->load_url(frame, &cef_url);
-    cef_string_clear(&cef_url);
-    frame->base.release((cef_base_ref_counted_t *)frame);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }
@@ -817,19 +802,12 @@ int32_t proton_engine_view_eval(proton_engine_view_t *view,
       proton_engine_set_message(error, error_len, "browser is not initialized");
       return PROTON_ERR_NOT_INITIALIZED;
     }
-    cef_frame_t *frame = proton_engine_view_browser(view)->get_main_frame(proton_engine_view_browser(view));
-    if (frame == NULL) {
-      proton_engine_set_message(error, error_len, "main frame is not available");
-      return PROTON_ERR_ENGINE;
+    int32_t status = proton_browser_eval(
+        proton_engine_view_browser(view), script, "proton://eval.js",
+        error, error_len);
+    if (status != PROTON_OK) {
+      return status;
     }
-    cef_string_t code = {0};
-    cef_string_t script_url = {0};
-    proton_engine_set_string(&code, script != NULL ? script : "");
-    proton_engine_set_string(&script_url, "proton://eval.js");
-    frame->execute_java_script(frame, &code, &script_url, 1);
-    cef_string_clear(&code);
-    cef_string_clear(&script_url);
-    frame->base.release((cef_base_ref_counted_t *)frame);
     proton_engine_signal_wait_source(PROTON_WAIT_PLATFORM);
     return PROTON_OK;
   }

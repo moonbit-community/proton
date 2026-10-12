@@ -1,122 +1,188 @@
 ///|
-/// An application that updates itself, used to run the whole chain for real.
-///
-/// It has two roles. Revision 1 launched with `PROTON_E2E_ROLE=update` checks a
-/// channel, downloads, installs and relaunches. `open` inherits that environment
-/// when starting revision 2, so the installed revision disambiguates the new
-/// process: it records the successful launch and cleans the retained bundle.
-/// That second role is the only evidence the relaunch worked, because by then
-/// nothing is watching.
+/// Exercises signed updates through the public application lifecycle.
 async fn main {
-  if @env.get_env_var("PROTON_E2E_ROLE") == Some("update") &&
-    @updater.current_revision() == 1UL {
-    run_update() catch {
-      error => {
-        println("failed: \{error}")
-        panic()
-      }
+  let bundle = running_bundle()
+  if require_env("PROTON_E2E_MODE") == "delayed-start" {
+    record("loaded-old")
+    while !@mbfs.path_exists(require_env("PROTON_E2E_RESUME")) {
+      @async.sleep(10)
     }
-  } else {
-    let bundle = running_bundle()
-    let version = @mbfs.read_file_to_string(
-      "\{bundle}/Contents/Resources/version",
+    let endpoint = require_env("PROTON_E2E_ENDPOINT")
+    let key = require_env("PROTON_E2E_KEY")
+    let rejected = try {
+      @proton.html("Obsolete application", "")
+      .identifier("com.example.proton-updater-e2e")
+      .headless()
+      .single_instance()
+      .update_channel(endpoint, [key], check_on_launch=false)
+      .app_lifecycle(
+        on_start=context => {
+          record("obsolete-started")
+          context.quit()
+        },
+        on_shutdown=_ => (),
+      )
+      .run()
+      false
+    } catch {
+      error => error.message().contains("the running executable was replaced")
+    }
+    assert_true(rejected)
+    record("obsolete-rejected")
+    return
+  }
+  if @updater.current_revision() != 1UL {
+    @proton.html("Updated application", "<h1>Updated</h1>")
+    .identifier("com.example.proton-updater-e2e")
+    .headless()
+    .single_instance()
+    .app_lifecycle(
+      on_start=context => {
+        assert_true(context.has_single_instance_lock())
+        record("started-new")
+        context.quit()
+      },
+      on_shutdown=_ => (),
     )
-    report_launch(bundle, version)
-    @updater.cleanup_previous() catch {
-      error => report_launch(bundle, "cleanup failed: " + error.message())
+    .run()
+    @updater.cleanup_previous()
+    record("new-cleaned")
+    return
+  }
+  let mode = require_env("PROTON_E2E_MODE")
+  let before_count = Ref(0)
+  let will_count = Ref(0)
+  let app = @proton.html("Updater lifecycle", "<h1>Updater</h1>")
+    .identifier("com.example.proton-updater-e2e")
+    .headless()
+    .single_instance()
+    .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+    .update_channel(
+      require_env("PROTON_E2E_ENDPOINT"),
+      [require_env("PROTON_E2E_KEY")],
+      check_on_launch=false,
+    )
+    .app_lifecycle(
+      on_start=context => {
+        let unavailable = try {
+          context.quit_and_install()
+          false
+        } catch {
+          _ => true
+        }
+        assert_true(unavailable)
+        guard context.check_for_update() is Available(update) else {
+          fail("expected an authenticated update")
+        }
+        update.download()
+        assert_eq(@updater.current_revision(), 1UL)
+        assert_eq(
+          @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version"),
+          "0.1.0",
+        )
+        record("downloaded")
+        if mode == "ordinary-quit" {
+          context.quit()
+        } else {
+          context.quit_and_install()
+          context.quit_and_install() // Duplicate requests must be harmless.
+        }
+        if mode == "prevent-before" || mode == "prevent-will" {
+          ignore(
+            context
+            .task_group()
+            .spawn(() => {
+              // Retry until a second quit transaction starts. Success is measured
+              // by callbacks, not by assuming a fixed delay completes cancellation.
+              let counter = if mode == "prevent-before" {
+                before_count
+              } else {
+                will_count
+              }
+              while counter.val < 2 {
+                @async.sleep(1)
+                context.quit_and_install()
+              }
+            }),
+          )
+        }
+        context
+      },
+      on_shutdown=context => {
+        if mode == "install" {
+          let refused = try {
+            context.release_single_instance_lock()
+            false
+          } catch {
+            _ => true
+          }
+          assert_true(refused)
+          assert_true(context.has_single_instance_lock())
+        }
+        assert_eq(@updater.current_revision(), 1UL)
+        assert_eq(
+          @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version"),
+          "0.1.0",
+        )
+        record("shutdown-old")
+        if mode == "cleanup-failure" {
+          fail("intentional update cleanup failure")
+        }
+      },
+    )
+    .on_before_quit(fn(context) {
+      before_count.val = before_count.val + 1
+      record("before-quit")
+      if mode == "force-exit" {
+        context.exit()
+        @proton.ApplicationQuitDecision::Prevent
+      } else if mode == "prevent-before" && before_count.val == 1 {
+        record("prevented-before")
+        @proton.ApplicationQuitDecision::Prevent
+      } else {
+        @proton.ApplicationQuitDecision::Allow
+      }
+    })
+    .on_will_quit(fn(_context) {
+      will_count.val = will_count.val + 1
+      record("will-quit")
+      if mode == "prevent-will" && will_count.val == 1 {
+        record("prevented-will")
+        @proton.ApplicationQuitDecision::Prevent
+      } else {
+        @proton.ApplicationQuitDecision::Allow
+      }
+    })
+    .on_quit(fn(_context, _code) { record("quit") })
+  app.run() catch {
+    error => {
+      guard mode == "cleanup-failure" &&
+        error.message().contains("intentional update cleanup failure") else {
+        raise error
+      }
+      record("cleanup-failed")
     }
   }
+  guard mode == "ordinary-quit" || mode == "cleanup-failure" else {
+    fail("update installation or forced exit returned from App::run")
+  }
+  assert_eq(@updater.current_revision(), 1UL)
+  record("run-returned")
 }
 
 ///|
-/// Returns the bundle this process is running from.
-///
-/// Derived from argv[0] rather than an environment variable, because that is
-/// the only thing a relaunched process is given.
 fn running_bundle() -> String {
   parent(parent(parent(@env.args()[0])))
 }
 
 ///|
-/// Records that this build started, beside the bundle it started from.
-fn report_launch(bundle : String, version : String) -> Unit raise {
-  let log = "\{parent(bundle)}/relaunched.txt"
+fn record(event : String) -> Unit {
+  let log = require_env("PROTON_E2E_LOG") catch {
+    _ => abort("missing update log path")
+  }
   let previous = @mbfs.read_file_to_string(log) catch { _ => "" }
-  @mbfs.write_string_to_file(log, "\{previous}started \{version}\n")
-}
-
-///|
-async fn run_update() -> Unit {
-  let endpoint = require_env("PROTON_E2E_ENDPOINT")
-  let root = require_env("PROTON_E2E_ROOT")
-  let base = require_env("PROTON_E2E_BASE")
-  let key = require_env("PROTON_E2E_KEY")
-  // The running version is read from the bundle, not from the environment.
-  // That is what an application would do, and it is what stops a check on
-  // launch from offering the same release forever: after the update, this is
-  // the new version.
-  let bundle = running_bundle()
-  let text = @mbfs.read_file_to_string("\{bundle}/Contents/Resources/version")
-  let current_revision = @updater.current_revision()
-  report_launch(bundle, text)
-  println("running \{text}")
-  let channel = @updater.UpdateChannel(
-    endpoint,
-    [key],
-    "darwin-arm64",
-    current_revision,
-  )
-  // The network is the one piece this harness supplies itself. Every URL is
-  // still an https URL, because the manifest schema refuses anything else;
-  // only the transport is replaced, so what is exercised below is the real
-  // ordering of checks and not a relaxed version of it.
-  let fetch : @updater.Fetch = fn(url) raise @updater.UpdateError {
-    guard url.has_prefix(base) else {
-      raise @updater.FetchFailed(url~, detail="not served by this harness")
-    }
-    let name = url[base.length():].to_owned()
-    @mbfs.read_file_to_bytes("\{root}/\{name}") catch {
-      error =>
-        raise @updater.FetchFailed(url~, detail=@debug.render(Repr(error)))
-    }
-  }
-  let artifact_fetch : @updater.ArtifactFetch = async fn(
-    url,
-    _expected_size,
-    consume,
-  ) -> Unit raise @updater.UpdateError {
-    guard url.has_prefix(base) else {
-      raise @updater.FetchFailed(url~, detail="not served by this harness")
-    }
-    let name = url[base.length():].to_owned()
-    let file = @async_fs.open("\{root}/\{name}", mode=ReadOnly) catch {
-      error =>
-        raise @updater.FetchFailed(url~, detail=@debug.render(Repr(error)))
-    }
-    defer file.close()
-    let buffer = FixedArray::make(1024 * 1024, b'\x00')
-    for ;; {
-      let read = file.read(buffer) catch {
-        error =>
-          raise @updater.FetchFailed(url~, detail=@debug.render(Repr(error)))
-      }
-      if read <= 0 {
-        break
-      }
-      consume(buffer.unsafe_reinterpret_as_bytes()[:read].to_owned())
-    }
-  }
-  let bound = @updater.oldest_accepted(30)
-  println("checking against \{bound.to_text()}")
-  match channel.check(fetch, bound) {
-    UpToDate => println("up to date")
-    Available(update) => {
-      println("offered \{update.version()}")
-      ignore(channel.download_and_install(artifact_fetch, update))
-      println("installed")
-      @updater.relaunch()
-      println("relaunched")
-    }
+  @mbfs.write_string_to_file(log, previous + event + "\n") catch {
+    _ => abort("could not write update log")
   }
 }
 
@@ -124,7 +190,7 @@ async fn run_update() -> Unit {
 fn require_env(name : String) -> String raise {
   match @env.get_env_var(name) {
     Some(value) => value
-    None => fail("\{name} is not set")
+    None => fail("missing " + name)
   }
 }
 

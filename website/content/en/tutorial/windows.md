@@ -10,13 +10,15 @@ Replace **`app/main.mbt`** with:
 ///|
 async fn main {
   @proton.html("Main", "<h1>Main window</h1>", width=900, height=700)
-  .load_config()
+  .config(@proton.load_config())
   .add_window(
     "help",
-    "Help",
-    @proton.AppEntry::Html("<h1>Help</h1><p>Close this window to return.</p>"),
-    width=480,
-    height=320,
+    @proton.WindowConfig(
+      "Help",
+      @proton.AppEntry::Html("<h1>Help</h1><p>Close this window to return.</p>"),
+      width=480,
+      height=320,
+    ),
   )
   .window_lifecycle(
     on_ready=context => {
@@ -51,7 +53,7 @@ A later user action can call the same window manager operation from a retained a
 
 ## Use and release handles
 
-`context.handle()` inside `on_ready` gives the current `WindowHandle`. It supports operations such as `focus()`, `hide()`, `show()`, and `close()`. Browser operations are available through `handle.browser()`.
+`context.handle()` inside `on_ready` gives the current `WindowHandle`. It supports operations such as `focus()`, `hide()`, `show()`, and `close()`. Browser operations are available through `handle.web_contents()`.
 
 A lifecycle callback's return value becomes the corresponding `on_close` argument. The example returns an ID; the Todo template uses that ID to remove a saved event destination. Keep window-owned state in this lifecycle and stop using the handle after close.
 
@@ -69,6 +71,6 @@ Use `on_window_close_request` for an asynchronous close decision: return `Window
 
 ## Platform-specific window behavior
 
-Native window decorations and available controls differ across platforms. Check the [window API](https://mooncakes.io/docs/moonbit-community/proton@0.3.4/) before relying on platform-specific methods. Keep frontend titlebar layout and native configuration together when using an overlay titlebar.
+Native window decorations and available controls differ across platforms. Check the [window API](https://github.com/moonbit-community/proton/blob/bdb169302952db553deda6de015887c7a6a19831/proton/pkg.generated.mbti) before relying on platform-specific methods. Keep frontend titlebar layout and native configuration together when using an overlay titlebar.
 
 A secondary page is also a separate capability target. Grant only the host operations it needs; see [native capabilities](capabilities.md).

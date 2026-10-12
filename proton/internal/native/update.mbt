@@ -235,3 +235,16 @@ pub fn update_relaunch() -> Unit raise NativeError {
     message,
   )
 }
+
+///|
+/// Rejects an obsolete image that reached startup after an update committed.
+pub fn update_validate_running_image() -> Unit raise NativeError {
+  let message = FixedArray::make(update_message_capacity, b'\x00')
+  update_check(
+    @native_ffi.proton_update_validate_running_image_ffi(
+      message,
+      message.length(),
+    ),
+    message,
+  )
+}

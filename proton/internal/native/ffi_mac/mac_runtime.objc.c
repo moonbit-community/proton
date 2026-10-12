@@ -449,18 +449,7 @@ static void proton_engine_disable_feature(cef_command_line_t *command_line,
                                          merged);
 }
 
-#define PROTON_ENGINE_REF_INCREMENT(refs) \
-  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) \
-  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) \
-  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
 #include "../ffi/src/engine/cef_common/ref_count.h"
-#undef PROTON_ENGINE_REF_INCREMENT
-#undef PROTON_ENGINE_REF_DECREMENT
-#undef PROTON_ENGINE_REF_LOAD
-#undef PROTON_ENGINE_REF_STORE
 #include "../ffi/src/engine/cef_common/bridge_request.h"
 
 void CEF_CALLBACK proton_engine_on_register_custom_schemes(
@@ -1199,6 +1188,24 @@ int32_t proton_engine_runtime_set_menu(
 proton_engine_bridge_requests_t *proton_engine_runtime_bridge_requests(
     proton_engine_runtime_t *runtime) {
   return runtime != NULL ? runtime->bridge_requests : NULL;
+}
+
+proton_engine_resource_requests_t *proton_engine_runtime_resource_requests(
+    proton_engine_runtime_t *runtime) {
+  return &runtime->resource_requests;
+}
+
+proton_engine_resource_requests_t *proton_engine_contents_resource_requests(
+    proton_engine_window_t *window, proton_engine_view_t *view) {
+  if (window == NULL && view != NULL) {
+    window = view->window;
+  }
+  return window != NULL ? &window->runtime->resource_requests : NULL;
+}
+
+proton_cookie_get_state_t **proton_engine_runtime_cookie_requests(
+    proton_engine_runtime_t *runtime) {
+  return &runtime->cookie_requests;
 }
 
 #endif

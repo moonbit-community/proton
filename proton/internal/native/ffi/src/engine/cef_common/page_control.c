@@ -1,5 +1,6 @@
 #include "../../proton_engine.h"
 #include "message.h"
+#include "browser_session.h"
 #include "window_state.h"
 
 #include "include/capi/cef_browser_capi.h"
@@ -14,32 +15,41 @@
 
 #include "strings.h"
 
-/* Ref-count primitives for the navigation-entry visitor. Mirrors the pattern
-   in cookie_cache.c: the four macros feed ref_count.h, and the local typedef
-   must keep the name ref_count.h expects. */
-#ifdef _WIN32
-typedef struct {
-  volatile LONG refs;
-} proton_engine_ref_counted_t;
-#define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_LOAD(refs) ((refs)->refs)
-#define PROTON_ENGINE_REF_STORE(refs, value) ((refs)->refs = (value))
-#else
-#include <stdatomic.h>
-typedef struct {
-  atomic_int refs;
-} proton_engine_ref_counted_t;
-#define PROTON_ENGINE_REF_INCREMENT(refs) \
-  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) \
-  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) \
-  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
-#endif
-
 #include "ref_count.h"
+
+int32_t proton_browser_load_url(
+    cef_browser_t *browser, const char *url, char *error, size_t error_len) {
+  cef_frame_t *frame = browser->get_main_frame(browser);
+  if (frame == NULL) {
+    proton_engine_set_message(error, error_len, "main frame is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  cef_string_t value = {0};
+  proton_engine_set_string(&value, url);
+  frame->load_url(frame, &value);
+  cef_string_clear(&value);
+  frame->base.release((cef_base_ref_counted_t *)frame);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_eval(
+    cef_browser_t *browser, const char *script, const char *source_url,
+    char *error, size_t error_len) {
+  cef_frame_t *frame = browser->get_main_frame(browser);
+  if (frame == NULL) {
+    proton_engine_set_message(error, error_len, "main frame is not available");
+    return PROTON_ERR_ENGINE;
+  }
+  cef_string_t code = {0};
+  cef_string_t url = {0};
+  proton_engine_set_string(&code, script);
+  proton_engine_set_string(&url, source_url);
+  frame->execute_java_script(frame, &code, &url, 1);
+  cef_string_clear(&code);
+  cef_string_clear(&url);
+  frame->base.release((cef_base_ref_counted_t *)frame);
+  return PROTON_OK;
+}
 
 /* Navigation history and inserted page styles are page-level operations, so
    both the window's main browser and a view's browser run through the helpers

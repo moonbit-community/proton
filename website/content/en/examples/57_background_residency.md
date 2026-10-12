@@ -2,7 +2,7 @@
 
 This example combines background residency with single-instance activation. Closing the last window keeps the application alive, so a later launch can reach the existing instance instead of starting another runtime.
 
-[57_background_residency](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/57_background_residency) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/57_background_residency/main.mbt)
+[57_background_residency](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/57_background_residency) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/57_background_residency/main.mbt)
 
 ## Behavior
 

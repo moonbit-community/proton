@@ -20,7 +20,6 @@ options(
     "app_command_host_wbtest.mbt": [ "native" ],
     "bridge_names.mbt": [ "native" ],
     "js_template_render.mbt": [ "native" ],
-    "mbt_process_host.mbt": [ "native" ],
     "op_registry.mbt": [ "native" ],
   },
 )

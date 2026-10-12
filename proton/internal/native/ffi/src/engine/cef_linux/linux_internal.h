@@ -9,9 +9,13 @@
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
 #include "../cef_common/window_state.h"
+#include "../cef_common/scheme.h"
+#include "../cef_common/cookie_cache.h"
 
 #include <gtk/gtk.h>
 #include <stdatomic.h>
+
+#include "../cef_common/ref_count.h"
 
 #include <X11/Xlib.h>
 
@@ -60,6 +64,8 @@ struct proton_engine_runtime {
   /* Set once by the first asset document and never changed, so every window
      in a runtime resolves application resources against the same root. */
   proton_engine_bridge_requests_t *bridge_requests;
+  proton_engine_resource_requests_t resource_requests;
+  proton_cookie_get_state_t *cookie_requests;
   proton_linux_menu_bar_t *menu_definition;
   char dialog_ok_label[PROTON_ENGINE_MAX_LABEL_BYTES];
   char dialog_cancel_label[PROTON_ENGINE_MAX_LABEL_BYTES];
@@ -155,10 +161,6 @@ void proton_engine_window_close_views(proton_engine_window_t *window);
 void proton_engine_window_collect_views(proton_engine_window_t *window);
 void proton_engine_window_free_views(proton_engine_window_t *window);
 void proton_engine_window_layout_views(proton_engine_window_t *window);
-
-typedef struct {
-  atomic_int refs;
-} proton_engine_ref_counted_t;
 
 struct proton_engine_client {
   cef_client_t client;

@@ -7,7 +7,7 @@ A command lets frontend code ask the native backend to do work. This guide adds 
 In **`moon.mod`**, add this entry inside the existing `import { ... }` block, preserving the existing dependencies:
 
 ```text
-"moonbit-community/proton_contract@0.3.4",
+"moonbit-community/proton_contract@0.4.0",
 ```
 
 Replace **`app/moon.pkg`** with:
@@ -66,7 +66,7 @@ async fn main {
     #|</script>
     #|</html>
   @proton.html("Greeting", html)
-  .load_config()
+  .config(@proton.load_config())
   .commands(fn(registrar) raise {
     registrar.bind(greet, (_context, request) => {
       "Hello, " + request.name + "!"

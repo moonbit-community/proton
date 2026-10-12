@@ -14,32 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Ref-count primitives for the cookie visitor.  Mirrors the pattern in
-   scheme.c: the four macros feed ref_count.h, which is included next.
-   ref_count.h references proton_engine_ref_counted_t directly, so the local
-   typedef must use that exact name. */
-#ifdef _WIN32
-typedef struct {
-  volatile LONG refs;
-} proton_engine_ref_counted_t;
-#define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_LOAD(refs) ((refs)->refs)
-#define PROTON_ENGINE_REF_STORE(refs, value) ((refs)->refs = (value))
-#else
-#include <stdatomic.h>
-typedef struct {
-  atomic_int refs;
-} proton_engine_ref_counted_t;
-#define PROTON_ENGINE_REF_INCREMENT(refs) \
-  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) \
-  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) \
-  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
-#endif
-
 #include "ref_count.h"
 
 typedef struct {
@@ -113,8 +87,8 @@ static int proton_cookie_snapshot_append(proton_cookie_snapshot_t *snapshot,
 /* Application-session cookie-get state                                        */
 /* ------------------------------------------------------------------ */
 
-typedef struct proton_cookie_get_state {
-  void *runtime;
+struct proton_cookie_get_state {
+  proton_cookie_get_state_t **owner;
   proton_cookie_state_ref_count_t refs; /* list owner plus visitor refs */
   proton_cookie_state_detached_t detached; /* no longer visible to callers */
   int64_t request_id;
@@ -125,9 +99,8 @@ typedef struct proton_cookie_get_state {
   char error[256];
   proton_cookie_snapshot_t *snapshot;
   struct proton_cookie_get_state *next;
-} proton_cookie_get_state_t;
+};
 
-static proton_cookie_get_state_t *g_cookie_get_states = NULL;
 static int64_t g_next_cookie_request_id = 1;
 
 static void proton_cookie_get_state_destroy(proton_cookie_get_state_t *state) {
@@ -159,24 +132,25 @@ static proton_cookie_get_state_t *proton_cookie_get_state_create(
     return NULL;
   }
   proton_cookie_state_lifetime_init(&state->refs, &state->detached);
-  state->runtime = runtime;
+  state->owner = proton_engine_runtime_cookie_requests(runtime);
   state->include_http_only = include_http_only;
   state->request_id = g_next_cookie_request_id++;
   if (g_next_cookie_request_id <= 0) {
     g_next_cookie_request_id = 1;
   }
   state->status = PROTON_OK;
-  state->next = g_cookie_get_states;
-  g_cookie_get_states = state;
+  state->next = *state->owner;
+  *state->owner = state;
   return state;
 }
 
 static void proton_cookie_get_state_remove(proton_cookie_get_state_t *state) {
-  proton_cookie_get_state_t **cursor = &g_cookie_get_states;
+  proton_cookie_get_state_t **cursor = state->owner;
   while (*cursor != NULL) {
     if (*cursor == state) {
       *cursor = state->next;
       state->next = NULL;
+      state->owner = NULL;
       return;
     }
     cursor = &(*cursor)->next;
@@ -318,12 +292,7 @@ proton_cookie_visitor_release(cef_base_ref_counted_t *base) {
   }
   proton_cookie_visitor_impl_t *impl =
       (proton_cookie_visitor_impl_t *)base;
-#ifdef _WIN32
-  int value = (int)InterlockedDecrement(&impl->refs.refs);
-#else
-  int value = (int)(atomic_fetch_sub_explicit(&impl->refs.refs, 1,
-                       memory_order_acq_rel) - 1);
-#endif
+  int value = proton_engine_ref_decrement(&impl->refs);
   if (value <= 0) {
     /* The final release is the only reliable completion signal. Cleanup may
        already have detached and removed the list-owned state reference. */
@@ -766,22 +735,17 @@ void proton_engine_session_cookie_cleanup(void *runtime) {
   if (runtime == NULL) {
     return;
   }
-  proton_cookie_get_state_t **link = &g_cookie_get_states;
-  while (*link != NULL) {
-    proton_cookie_get_state_t *state = *link;
-    if (state->runtime == runtime) {
-      *link = state->next;
-      state->next = NULL;
-      state->runtime = NULL;
-      proton_cookie_get_state_fail(state, PROTON_ERR_DESTROYED,
-                                   "runtime closed before cookie request completed");
-      if (state->accepted) {
-        proton_cookie_get_state_emit(state);
-      }
-      proton_cookie_state_lifetime_detach(&state->detached);
-      proton_cookie_get_state_release(state);
-      continue;
+  proton_cookie_get_state_t **owner =
+      proton_engine_runtime_cookie_requests(runtime);
+  while (*owner != NULL) {
+    proton_cookie_get_state_t *state = *owner;
+    proton_cookie_get_state_remove(state);
+    proton_cookie_get_state_fail(state, PROTON_ERR_DESTROYED,
+                                 "runtime closed before cookie request completed");
+    if (state->accepted) {
+      proton_cookie_get_state_emit(state);
     }
-    link = &state->next;
+    proton_cookie_state_lifetime_detach(&state->detached);
+    proton_cookie_get_state_release(state);
   }
 }

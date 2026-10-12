@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, unlinkSync, chmodSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync, rmSync, unlinkSync, chmodSync, symlinkSync, renameSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +30,24 @@ test('macOS retained update ownership and cleanup', { skip: process.platform !==
   t.after(() => rmSync(temp, { recursive: true, force: true }));
   const binary = path.join(temp, 'harness');
   ok(run(process.env.CC || 'cc', ['-I'+path.join(here, '../include'), path.join(here, 'update_cleanup/harness.c'), '-framework', 'CoreFoundation', '-framework', 'Security', '-o', binary]));
+  await t.test('rejects an already loaded executable replaced at the same path', async t => {
+    const executable = path.join(temp, 'old-process');
+    copyFileSync(binary, executable);
+    const old = spawn(executable, ['validate-image', 'unused']);
+    const done = once(old, 'exit');
+    t.after(() => old.kill());
+    const ready = await once(old.stdout, 'data');
+    assert.match(String(ready[0]), /LOADED/);
+    const replacement = executable + '.next';
+    copyFileSync(binary, replacement);
+    renameSync(replacement, executable);
+    let diagnostic = '';
+    old.stdout.on('data', data => { diagnostic += data; });
+    old.stdin.end('\n');
+    const [code] = await done;
+    assert.equal(code, 1, diagnostic);
+    assert.match(diagnostic, /running executable was replaced/);
+  });
   let next = 0;
   function fixture() {
     const root = path.join(temp, String(next++));

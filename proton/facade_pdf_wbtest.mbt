@@ -96,7 +96,7 @@ async test "PDF cancellation unregisters and ignores late completion" {
       path: "cancelled.pdf",
       success: true,
     })
-    assert_true(store.pending[0].result is None)
+    assert_true(store.pending[0].completion.result is None)
     store.complete(1L, None, { request_id: 2, path: "next.pdf", success: true, })
     next.wait()
   })
@@ -124,13 +124,53 @@ async test "PDF page and application shutdown wake outstanding callers" {
       @async.sleep(1)
     }
     store.fail(Some(1L), Some(2L), "page has closed")
-    assert_true(store.pending[0].result is None)
-    assert_true(store.pending[1].result is Some(Err(_)))
-    assert_true(store.pending[2].result is None)
+    assert_true(store.pending[0].completion.result is None)
+    assert_true(store.pending[1].completion.result is Some(Err(_)))
+    assert_true(store.pending[2].completion.result is None)
     store.fail(Some(1L), None, "page has closed")
-    assert_true(store.pending[0].result is Some(Err(_)))
-    assert_true(store.pending[2].result is None)
+    assert_true(store.pending[0].completion.result is Some(Err(_)))
+    assert_true(store.pending[2].completion.result is None)
     store.fail(None, None, "application has ended")
   })
   assert_true(store.pending.is_empty())
+}
+
+///|
+async test "PDF first completion survives closure and duplicate delivery before resumption" {
+  for success_first in [true, false] {
+    let store = PdfCompletionStore()
+    @async.with_task_group(group => {
+      let waiter = group.spawn(() => {
+        try {
+          store.wait(1L, None, 1, "result.pdf")
+          true
+        } catch {
+          WindowSessionError::OperationFailed(detail~, ..) => {
+            assert_eq(detail, "page has closed")
+            false
+          }
+          error => raise error
+        }
+      })
+      while store.pending.is_empty() {
+        @async.pause()
+      }
+      if !success_first {
+        store.fail(Some(1L), None, "page has closed")
+      }
+      store.complete(1L, None, {
+        request_id: 1,
+        path: "result.pdf",
+        success: true,
+      })
+      store.complete(1L, None, {
+        request_id: 1,
+        path: "result.pdf",
+        success: false,
+      })
+      store.fail(Some(1L), None, "page has closed")
+      assert_eq(waiter.wait(), success_first)
+    })
+    assert_true(store.pending.is_empty())
+  }
 }

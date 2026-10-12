@@ -356,22 +356,38 @@ test "PDF printing validates path and scale before native dispatch" {
     lifecycle: WindowLive,
     close_interception_enabled: false,
   }
-  let empty_path = expect_native_error(() => {
-    ignore(window.print_to_pdf("", default_pdf_settings()))
-  })
-  match empty_path {
-    InvalidArgument(message~) =>
-      assert_eq(message, "PDF output path must not be empty")
-    _ => fail("expected invalid argument")
+  let view = View::{
+    window,
+    handle: @native_ffi.view_null(),
+    id: 0L,
+    lifecycle: ViewLive,
   }
-  let settings = default_pdf_settings()
-  let invalid_scale = expect_native_error(() => {
-    ignore(window.print_to_pdf("review.pdf", { ..settings, scale: 0.09, }))
-  })
-  match invalid_scale {
-    InvalidArgument(message~) =>
-      assert_eq(message, "PDF scale must be between 0.1 and 2")
-    _ => fail("expected invalid argument")
+  for contents in [Contents::PrimaryPage(window), Contents::ChildView(view)] {
+    let empty_path = expect_native_error(() => {
+      ignore(contents.print_to_pdf("", default_pdf_settings()))
+    })
+    match empty_path {
+      InvalidArgument(message~) =>
+        assert_eq(message, "PDF output path must not be empty")
+      _ => fail("expected invalid argument")
+    }
+    let settings = default_pdf_settings()
+    let invalid_scale = expect_native_error(() => {
+      ignore(contents.print_to_pdf("review.pdf", { ..settings, scale: 0.09, }))
+    })
+    match invalid_scale {
+      InvalidArgument(message~) =>
+        assert_eq(message, "PDF scale must be between 0.1 and 2")
+      _ => fail("expected invalid argument")
+    }
+    window.lifecycle = WindowDestroyed
+    assert_eq(
+      expect_native_error(() => {
+        ignore(contents.print_to_pdf("review.pdf", settings))
+      }).message(),
+      "window is closing or destroyed",
+    )
+    window.lifecycle = WindowLive
   }
 }
 

@@ -1,10 +1,10 @@
 ///|
 /// Failures produced while loading and validating `proton.project.json`.
-pub(all) suberror ProjectConfigError {
+pub(all) suberror AppConfigError {
   FileRead(path~ : String, detail~ : String)
   Syntax(name~ : String, diagnostics~ : String)
   InvalidRoot
-  Validation(errors~ : Array[ProjectConfigError])
+  Validation(errors~ : Array[AppConfigError])
   MissingField(path~ : String)
   DuplicateValue(path~ : String, value~ : String)
   UnknownField(path~ : String)
@@ -13,16 +13,16 @@ pub(all) suberror ProjectConfigError {
 } derive(Debug, Eq)
 
 ///|
-pub extend ProjectConfigError with Eq::{not_equal, equal}
+pub extend AppConfigError with Eq::{not_equal, equal}
 
 ///|
-pub extend ProjectConfigError with Debug::{to_repr}
+pub extend AppConfigError with Debug::{to_repr}
 
 ///|
-pub extend ProjectConfigError with Show::{to_string, output}
+pub extend AppConfigError with Show::{to_string, output}
 
 ///|
-pub fn ProjectConfigError::message(self : ProjectConfigError) -> String {
+pub fn AppConfigError::message(self : AppConfigError) -> String {
   match self {
     FileRead(path~, detail~) => "failed to read " + path + ": " + detail
     Syntax(name~, diagnostics~) => name + ": " + diagnostics
@@ -61,6 +61,6 @@ fn render_field_key_error(path : String) -> String {
 }
 
 ///|
-impl Show for ProjectConfigError with fn output(self, logger) {
+impl Show for AppConfigError with fn output(self, logger) {
   logger.write_string(self.message())
 }

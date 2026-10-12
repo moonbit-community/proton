@@ -153,6 +153,10 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|
     #|Var ProtonUpdate
     #|Var ProtonUpdatePid
+    #|Var ProtonUpdateCreated
+    #|Var ProtonUpdateLock
+    #|Var ProtonUpdateReady
+    #|Var ProtonInstanceLock
     #|
   builder <+
     $|Name "\{product}"
@@ -175,6 +179,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|  ${GetParameters} $R0
     #|  ${GetOptions} $R0 "/PROTON-UPDATE=" $ProtonUpdate
     #|  ${GetOptions} $R0 "/PROTON-PID=" $ProtonUpdatePid
+    #|  ${GetOptions} $R0 "/PROTON-CREATED=" $ProtonUpdateCreated
+    #|  ${GetOptions} $R0 "/PROTON-LOCK=" $ProtonUpdateLock
+    #|  ${GetOptions} $R0 "/PROTON-READY=" $ProtonUpdateReady
     #|  ${If} $ProtonUpdate == "1"
     #|  ${AndIf} $ProtonUpdatePid == ""
     #|    Abort "The update process id is missing."
@@ -182,6 +189,39 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     #|
   builder.write_string(windows_install_mode_update_init(plan))
   builder <+
+    #|  ; Duplicate the old instance's reservation before acknowledging handoff.
+    #|  ; Closing the old process must never expose an unreserved installation.
+    #|  ${If} $ProtonUpdate == "1"
+    #|  ${AndIf} $ProtonUpdateLock != ""
+    #|  ${AndIf} $ProtonUpdateLock != "0"
+    #|    System::Call 'kernel32::OpenProcess(i 0x1040, i 0, i $ProtonUpdatePid) p .r0'
+    #|    ${If} $0 == 0
+    #|      Abort "Could not open the application for instance handoff."
+    #|    ${EndIf}
+    #|    System::Call 'kernel32::GetProcessTimes(p r0, *l .r2, *l .r3, *l .r4, *l .r5) i .r1'
+    #|    ${If} $1 == 0
+    #|    ${OrIf} $2 != $ProtonUpdateCreated
+    #|      System::Call 'kernel32::CloseHandle(p r0)'
+    #|      Abort "The updating process identity has changed."
+    #|    ${EndIf}
+    #|    System::Call 'kernel32::GetCurrentProcess() p .r6'
+    #|    System::Call 'kernel32::DuplicateHandle(p r0, p $ProtonUpdateLock, p r6, *p .r7, i 0, i 0, i 2) i .r1'
+    #|    ${If} $1 == 0
+    #|      System::Call 'kernel32::CloseHandle(p r0)'
+    #|      Abort "Could not retain application instance ownership."
+    #|    ${EndIf}
+    #|    StrCpy $ProtonInstanceLock $7
+    #|    System::Call 'kernel32::DuplicateHandle(p r0, p $ProtonUpdateReady, p r6, *p .r7, i 0, i 0, i 2) i .r1'
+    #|    System::Call 'kernel32::CloseHandle(p r0)'
+    #|    ${If} $1 == 0
+    #|      Abort "Could not acknowledge instance handoff."
+    #|    ${EndIf}
+    #|    System::Call 'kernel32::SetEvent(p r7) i .r1'
+    #|    System::Call 'kernel32::CloseHandle(p r7)'
+    #|    ${If} $1 == 0
+    #|      Abort "Could not acknowledge instance handoff."
+    #|    ${EndIf}
+    #|  ${EndIf}
     #|FunctionEnd
     #|
     #|Function un.onInit
@@ -222,15 +262,41 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
     $|  ; so its predecessor is no longer needed as the recovery copy.
     $|  RMDir /r "$INSTDIR.proton-previous"
     $|  IfFileExists "$INSTDIR\\*.*" 0 promote_update
-    $|  ; The updater names the exact process tree it is replacing. A manual
-    $|  ; reinstall has no such token and falls back to the executable name.
+    $|  ; Automatic updates wait for orderly shutdown. The creation time avoids
+    $|  ; waiting on a reused PID. Older Proton releases supplied only the PID.
     $|  ${If} $ProtonUpdate == "1"
-    $|    nsExec::Exec 'taskkill /F /T /PID "$ProtonUpdatePid"'
+    $|    System::Call 'kernel32::OpenProcess(i 0x101000, i 0, i $ProtonUpdatePid) p .r0 ?e'
+    $|    Pop $1
+    $|    ${If} $0 == 0
+    $|      ${If} $1 != 87
+    $|        Abort "Could not wait for the application to exit (error $1)."
+    $|      ${EndIf}
+    $|    ${Else}
+    $|      ${If} $ProtonUpdateCreated != ""
+    $|        System::Call 'kernel32::GetProcessTimes(p r0, *l .r2, *l .r3, *l .r4, *l .r5) i .r1'
+    $|        ${If} $1 == 0
+    $|          System::Call 'kernel32::CloseHandle(p r0)'
+    $|          Abort "Could not identify the application process."
+    $|        ${EndIf}
+    $|      ${Else}
+    $|        StrCpy $2 $ProtonUpdateCreated
+    $|      ${EndIf}
+    $|      ${If} $2 == $ProtonUpdateCreated
+    $|        System::Call 'kernel32::WaitForSingleObject(p r0, i -1) i .r1'
+    $|      ${Else}
+    $|        ; The original process has exited and its PID was reused.
+    $|        StrCpy $1 0
+    $|      ${EndIf}
+    $|      System::Call 'kernel32::CloseHandle(p r0)'
+    $|      ${If} $1 != 0
+    $|        Abort "Could not wait for the application to exit."
+    $|      ${EndIf}
+    $|    ${EndIf}
     $|  ${Else}
     $|    nsExec::Exec 'taskkill /F /T /IM "\{executable}"'
+    $|    Pop $0
+    $|    Sleep 500
     $|  ${EndIf}
-    $|  Pop $0
-    $|  Sleep 500
     $|  ClearErrors
     $|  Rename "$INSTDIR" "$INSTDIR.proton-previous"
     $|  IfErrors install_failed
@@ -262,6 +328,9 @@ fn windows_installer_script(plan : PackageSpec, source : String) -> String {
   builder <+
     $|  CreateShortCut "$SMPROGRAMS\\\{product}.lnk" "$INSTDIR\\\{executable}"
     $|  ${If} $ProtonUpdate == "1"
+    $|    ${If} $ProtonInstanceLock != ""
+    $|      System::Call 'kernel32::CloseHandle(p $ProtonInstanceLock)'
+    $|    ${EndIf}
     $|    Exec '"$INSTDIR\\\{executable}"'
     $|    Delete /REBOOTOK "$EXEPATH"
     $|  ${EndIf}

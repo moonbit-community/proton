@@ -2,7 +2,7 @@
 
 This example builds a native application menu and updates its command state while the window is running. It connects menu actions to a live window handle and releases that reference when the window closes.
 
-[49_app_menu](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/49_app_menu) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/49_app_menu/main.mbt)
+[49_app_menu](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/49_app_menu) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/49_app_menu/main.mbt)
 
 ## Behavior
 

@@ -2,14 +2,13 @@
 
 This example lets a renderer request host file operations through the filesystem extension. The backend grants a specific directory and operation scope; the page exercises that grant through the command bridge.
 
-[18_extension_fs](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/51a88c4c0892ff9628e5795fc598d05262e96daa/examples/18_extension_fs/fs.html)
+[18_extension_fs](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/18_extension_fs) · Source files: [main.mbt](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/18_extension_fs/main.mbt), [fs.html](https://github.com/moonbit-community/proton/tree/bdb169302952db553deda6de015887c7a6a19831/examples/18_extension_fs/fs.html)
 
 ## Behavior
 
 The page exposes read, write and directory operations. The native entry registers the fs capability with a PermissionRoot and an operation allowlist.
 
 ```moonbit
-///|
 async fn main {
   @proton.html("18 extension fs", resource, width=960, height=720, debug=true)
   .capability(

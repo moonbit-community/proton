@@ -2603,8 +2603,8 @@ pub fn Window::print(self : Window) -> Unit raise NativeError {
 }
 
 ///|
-pub fn Window::print_to_pdf(
-  self : Window,
+pub fn Contents::print_to_pdf(
+  self : Contents,
   path : String,
   settings : PdfPrintSettings,
 ) -> Int raise NativeError {
@@ -2625,11 +2625,15 @@ pub fn Window::print_to_pdf(
     settings.margin_left < 0.0 {
     raise invalid_argument("PDF margins are invalid")
   }
+  let (window, view) = match self {
+    PrimaryPage(window) => (window.live_handle(), @native_ffi.view_null())
+    ChildView(view) => (@native_ffi.window_null(), view.live_handle())
+  }
   let out_request_id : Ref[Int] = { val: 0, }
   check_status(
-    @native_ffi.proton_window_print_to_pdf_ffi(
-      self.live_handle(),
-      0,
+    @native_ffi.contents_print_to_pdf(
+      window,
+      view,
       @ffi.to_cstr(path),
       if settings.landscape {
         1
@@ -3871,82 +3875,6 @@ pub fn View::print(self : View) -> Unit raise NativeError {
 }
 
 ///|
-pub fn View::print_to_pdf(
-  self : View,
-  path : String,
-  settings : PdfPrintSettings,
-) -> Int raise NativeError {
-  if path.is_empty() {
-    raise invalid_argument("PDF output path must not be empty")
-  }
-  if settings.scale < 0.1 || settings.scale > 2.0 {
-    raise invalid_argument("PDF scale must be between 0.1 and 2")
-  }
-  if settings.paper_width <= 0.0 || settings.paper_height <= 0.0 {
-    raise invalid_argument("PDF paper dimensions must be positive")
-  }
-  if settings.margin_type < 0 ||
-    settings.margin_type > 2 ||
-    settings.margin_top < 0.0 ||
-    settings.margin_right < 0.0 ||
-    settings.margin_bottom < 0.0 ||
-    settings.margin_left < 0.0 {
-    raise invalid_argument("PDF margins are invalid")
-  }
-  let out_request_id : Ref[Int] = { val: 0, }
-  check_status(
-    @native_ffi.proton_view_print_to_pdf_ffi(
-      self.live_handle(),
-      1,
-      @ffi.to_cstr(path),
-      if settings.landscape {
-        1
-      } else {
-        0
-      },
-      if settings.print_background {
-        1
-      } else {
-        0
-      },
-      settings.scale,
-      settings.paper_width,
-      settings.paper_height,
-      if settings.prefer_css_page_size {
-        1
-      } else {
-        0
-      },
-      settings.margin_type,
-      settings.margin_top,
-      settings.margin_right,
-      settings.margin_bottom,
-      settings.margin_left,
-      @ffi.to_cstr(settings.page_ranges),
-      if settings.display_header_footer {
-        1
-      } else {
-        0
-      },
-      @ffi.to_cstr(settings.header_template),
-      @ffi.to_cstr(settings.footer_template),
-      if settings.generate_tagged_pdf {
-        1
-      } else {
-        0
-      },
-      if settings.generate_document_outline {
-        1
-      } else {
-        0
-      },
-      out_request_id,
-    ),
-  )
-  out_request_id.val
-}
-
-///|
 pub fn View::respond_browser_request(
   self : View,
   request_id : Int64,
@@ -3972,4 +3900,12 @@ fn native_event_view_id(event : @native_ffi.EventHandle) -> Int64? {
   } else {
     Some(view)
   }
+}
+
+///|
+/// Keeps Windows instance ownership until the installer has acknowledged it.
+/// Other platforms finish replacement in this process before releasing it.
+pub fn AppInstance::prepare_update_handoff(self : AppInstance) -> Bool {
+  !self.destroyed &&
+  @native_ffi.proton_app_instance_prepare_update_ffi(self.handle) != 0
 }

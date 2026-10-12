@@ -25,23 +25,22 @@ pub extend UpdateStatus with ToJson::{to_json}
 pub extend UpdateStatus with FromJson::{from_json}
 
 ///|
-/// What taking an update did.
-pub(all) struct UpdateInstalled {
+/// The authenticated update prepared for application-controlled installation.
+pub(all) struct UpdateDownloaded {
   version : String
-  changed : Bool
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
-pub extend UpdateInstalled with Eq::{not_equal, equal}
+pub extend UpdateDownloaded with Eq::{not_equal, equal}
 
 ///|
-pub extend UpdateInstalled with Debug::{to_repr}
+pub extend UpdateDownloaded with Debug::{to_repr}
 
 ///|
-pub extend UpdateInstalled with ToJson::{to_json}
+pub extend UpdateDownloaded with ToJson::{to_json}
 
 ///|
-pub extend UpdateInstalled with FromJson::{from_json}
+pub extend UpdateDownloaded with FromJson::{from_json}
 
 ///|
 /// How much of the artifact has arrived.
@@ -77,7 +76,7 @@ pub let check : @proton_contract.Command[Unit, UpdateStatus] = extension.command
 )
 
 ///|
-/// Downloads and installs whatever the last successful `check` found.
+/// Downloads and verifies whatever the last successful `check` found.
 ///
 /// Also takes no arguments, for the same reason. There is nothing for a page
 /// to select: it can ask for the update the host already authenticated, or
@@ -85,7 +84,7 @@ pub let check : @proton_contract.Command[Unit, UpdateStatus] = extension.command
 ///
 /// This does not restart the application. Deciding when to interrupt someone
 /// is not a renderer capability.
-pub let download : @proton_contract.Command[Unit, UpdateInstalled] = extension.command(
+pub let download : @proton_contract.Command[Unit, UpdateDownloaded] = extension.command(
   "download",
 )
 

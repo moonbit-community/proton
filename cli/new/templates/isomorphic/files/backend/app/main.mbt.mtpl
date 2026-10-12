@@ -2,7 +2,7 @@
 async fn main {
   let backend = @todo.Backend()
   @proton.asset({{title_mbt}}, "frontend/dist/index.html", width={{width}}, height={{height}})
-  .load_config()
+  .config(@proton.load_config())
   .single_instance()
   .commands(fn(registrar) raise { backend.register_commands(registrar) })
   .window_lifecycle(on_ready=context => backend.attach(context), on_close=id => {

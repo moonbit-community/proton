@@ -33,6 +33,7 @@ on:
           - proton
           - extensions
           - cli
+          - cdp
 
 permissions:
   contents: read
@@ -136,6 +137,7 @@ jobs:
           publish_module proton moonbit-community/proton
           publish_module extensions moonbit-community/proton_ext
           publish_module cli moonbit-community/proton_cli
+          publish_module cdp moonbit-community/proton_cdp
 
       - name: Remove Mooncakes credentials
         if: always()
@@ -183,7 +185,10 @@ jobs:
           moon install "moonbit-community/proton_cli@$version"
           moon install moonbit-community/warren@0.3.3
 
-      - name: Verify registry scaffold build and packaging
+      - name: Check Chrome for CDP acceptance
+        run: google-chrome --version
+
+      - name: Verify registry scaffold, packaging, and CDP
         run: node scripts/e2e_scaffold_registry_smoke.mjs
 
       - name: Retain failed registry scaffold

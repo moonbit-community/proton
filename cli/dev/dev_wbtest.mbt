@@ -253,3 +253,39 @@ test "occupied frontend URL reports managed frontend guidance" {
     ),
   )
 }
+
+///|
+test "dev passes the effective typed configuration without mutating the source" {
+  let source = @proton_config.AppConfig::parse(
+    (
+      #|{"identifier":"com.example.dev","frontend":{"path":"ui","dev_url":"http://localhost:3000","dist":"dist"},"package":{"product_name":"Dev","version":"1.0.0"}}
+    ),
+  )
+  let config = effective_dev_config(
+    source,
+    parse_dev_args([
+      "--url", "http://localhost:4300", "--command", "warren dev", "--frontend-path",
+      "frontend", "--package", "desktop",
+    ]),
+  )
+  let delivered = @proton_config.AppConfig::decode(config.to_json())
+  assert_eq(delivered, config)
+  assert_eq(delivered.frontend.unwrap().dev_url, Some("http://localhost:4300"))
+  assert_eq(delivered.frontend.unwrap().before_dev, Some("warren dev"))
+  assert_eq(delivered.frontend.unwrap().path, Some("frontend"))
+  assert_eq(delivered.frontend.unwrap().dist, Some("dist"))
+  assert_eq(delivered.backend.unwrap().app_package, "desktop")
+  assert_eq(source.frontend.unwrap().dev_url, Some("http://localhost:3000"))
+}
+
+///|
+test "native CLI path overrides survive the application snapshot" {
+  for path in ["/tmp/frontend", "C:\\frontend"] {
+    let config = effective_dev_config(
+      @proton_config.AppConfig("com.example.paths"),
+      parse_dev_args(["--frontend-path", path]),
+    )
+    let snapshot = @proton_config.AppConfig::decode(config.to_json())
+    assert_eq(snapshot.frontend.unwrap().path, Some(path))
+  }
+}

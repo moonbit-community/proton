@@ -484,8 +484,11 @@ int32_t proton_window_get_devtools_state(
 int32_t proton_contents_download_url(
     void *window, int32_t is_view, const char *url);
 int32_t proton_contents_print(void *window, int32_t is_view);
+/* Exactly one typed handle is non-NULL; the native Contents wrapper retains
+   and validates its owner before calling. No CEF pointer escapes this ABI. */
 int32_t proton_contents_print_to_pdf(
-    void *window, int32_t is_view, const char *path, int32_t landscape,
+    proton_window_handle_t window, proton_view_handle_t view,
+    const char *path, int32_t landscape,
     int32_t print_background, double scale, double paper_width,
     double paper_height, int32_t prefer_css_page_size, int32_t margin_type,
     double margin_top, double margin_right, double margin_bottom,

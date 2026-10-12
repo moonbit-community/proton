@@ -22,6 +22,8 @@ pub let get_all_displays : @proton_contract.Command[@proton_contract.EmptyReques
 
 pub let get_cursor_point : @proton_contract.Command[@proton_contract.EmptyRequest, CursorPointReply]
 
+pub let get_display_matching : @proton_contract.Command[MatchingRectRequest, DisplayReply]
+
 pub let get_display_nearest_point : @proton_contract.Command[NearestPointRequest, DisplayReply]
 
 pub let get_primary_display : @proton_contract.Command[@proton_contract.EmptyRequest, DisplayReply]
@@ -80,6 +82,18 @@ pub fn DisplaysReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDe
 pub fn DisplaysReply::not_equal(Self, Self) -> Bool
 pub fn DisplaysReply::to_json(Self) -> Json
 pub fn DisplaysReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct MatchingRectRequest {
+  x : Int
+  y : Int
+  width : Int
+  height : Int
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn MatchingRectRequest::equal(Self, Self) -> Bool
+pub fn MatchingRectRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn MatchingRectRequest::not_equal(Self, Self) -> Bool
+pub fn MatchingRectRequest::to_json(Self) -> Json
+pub fn MatchingRectRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct NearestPointRequest {
   x : Int

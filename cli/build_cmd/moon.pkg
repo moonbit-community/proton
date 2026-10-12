@@ -1,8 +1,8 @@
 import {
+  "moonbit-community/proton_cli/project",
   "moonbit-community/proton_config",
   "moonbit-community/proton_cli/fsutil",
   "moonbit-community/proton_cli/output",
-  "moonbitlang/async/fs" @async_fs,
   "moonbitlang/async/process",
   "moonbitlang/core/argparse",
   "moonbitlang/core/debug",

@@ -1331,3 +1331,19 @@ int32_t proton_app_instance_destroy_impl(int64_t instance, char *error,
   proton_app_instance_dispose_slot(slot);
   return PROTON_OK;
 }
+
+/* The updater only borrows this handle until its installer acknowledges a
+   duplicate. The instance stays alive throughout the transfer. */
+int64_t proton_app_instance_update_lock_impl(int64_t instance) {
+#ifdef _WIN32
+  char ignored[1];
+  proton_app_instance_slot_t *slot =
+      proton_app_instance_get(instance, ignored, sizeof(ignored));
+  if (slot != NULL && slot->owns_endpoint && slot->mutex != NULL) {
+    return (int64_t)(intptr_t)slot->mutex;
+  }
+#else
+  (void)instance;
+#endif
+  return 0;
+}

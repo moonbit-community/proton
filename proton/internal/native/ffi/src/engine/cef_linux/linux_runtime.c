@@ -383,18 +383,7 @@ void proton_engine_append_switch_with_value(
   cef_string_clear(&switch_value);
 }
 
-#define PROTON_ENGINE_REF_INCREMENT(refs) \
-  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) \
-  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) \
-  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
 #include "../cef_common/ref_count.h"
-#undef PROTON_ENGINE_REF_INCREMENT
-#undef PROTON_ENGINE_REF_DECREMENT
-#undef PROTON_ENGINE_REF_LOAD
-#undef PROTON_ENGINE_REF_STORE
 #include "../cef_common/bridge_request.h"
 
 int proton_engine_browser_id(cef_browser_t *browser) {
@@ -1099,6 +1088,24 @@ void proton_engine_runtime_collect(proton_engine_runtime_t *runtime) {
   }
   proton_engine_free_closed_windows();
   proton_browser_registry_collect(runtime->browsers);
+}
+
+proton_engine_resource_requests_t *proton_engine_runtime_resource_requests(
+    proton_engine_runtime_t *runtime) {
+  return &runtime->resource_requests;
+}
+
+proton_engine_resource_requests_t *proton_engine_contents_resource_requests(
+    proton_engine_window_t *window, proton_engine_view_t *view) {
+  if (window == NULL && view != NULL) {
+    window = view->window;
+  }
+  return window != NULL ? &window->runtime->resource_requests : NULL;
+}
+
+proton_cookie_get_state_t **proton_engine_runtime_cookie_requests(
+    proton_engine_runtime_t *runtime) {
+  return &runtime->cookie_requests;
 }
 
 #endif

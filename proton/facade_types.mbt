@@ -170,7 +170,7 @@ struct App {
 
 ///|
 priv enum ApplicationIdentitySource {
-  ProjectConfig(String)
+  Configured(@proton_config.AppConfig)
   Explicit(String)
 }
 
@@ -438,15 +438,23 @@ priv struct PendingCloseDecision {
 priv struct ApplicationExit {
   exit_code : Int
   forced : Bool
+  update : @updater.PreparedUpdate?
 }
+
+///|
+priv enum ExitPurpose {
+  Quit(Int)
+  ForceExit(Int)
+  InstallUpdate
+} derive(Eq)
 
 ///|
 priv struct CloseCoordinator {
   mut state : CloseCoordinatorState
   pending : Array[PendingCloseDecision]
   mut pending_quit : @async.Task[ApplicationQuitDecision]?
-  mut forced : Bool
-  mut exit_code : Int
+  mut purpose : ExitPurpose
+  mut relaunch_scheduled : Bool
   /// Whether the last-window policy already consumed the current windowless
   /// period, so a prevented quit is not retried until a window opens again.
   mut last_window_quit_handled : Bool
@@ -600,18 +608,19 @@ priv struct RuntimeEventPump {
 }
 
 ///|
-priv enum CookieCompletionState {
-  CookieWaiting
-  CookieCompleted(
-    Result[Array[@native.NativeCookieRecord], @native.NativeError]
-  )
+// Result delivery and closure can run before the waiter resumes. Keep the
+// first result; routing and cancellation belong to each operation's owner.
+priv struct Completion[T] {
+  mut result : T?
+  changed : @async.CondVar
 }
 
 ///|
 priv struct PendingCookieCompletion {
   request_id : Int64
-  mut state : CookieCompletionState
-  changed : @async.CondVar
+  completion : Completion[
+    Result[Array[@native.NativeCookieRecord], @native.NativeError],
+  ]
 }
 
 ///|
@@ -621,19 +630,19 @@ priv struct CookieCompletionStore {
 
 ///|
 priv enum WindowSessionCommand {
-  Open(String, WindowOpenCompletion)
+  Open(String, WindowOpenCompletion[WindowHandle])
 }
 
 ///|
-priv struct WindowOpenCompletion {
-  mut state : WindowOpenCompletionState
+priv struct WindowOpenCompletion[T] {
+  mut state : WindowOpenCompletionState[T]
   changed : @async.CondVar
 }
 
 ///|
-priv enum WindowOpenCompletionState {
+priv enum WindowOpenCompletionState[T] {
   WindowOpenPending
-  WindowOpenSucceeded(WindowHandle)
+  WindowOpenSucceeded(T)
   WindowOpenFailed(WindowSessionError)
 }
 
@@ -641,7 +650,7 @@ priv enum WindowOpenCompletionState {
 priv struct PendingWindowOpen {
   id : String
   running : RunningWindow
-  completion : WindowOpenCompletion
+  completion : WindowOpenCompletion[WindowHandle]
   mut activation : @async.Task[Unit]?
   timeout : @async.Task[Unit]
 }
@@ -662,33 +671,25 @@ priv struct BrowserResponse {
 
 ///|
 /// A page hosted by a window or child view, bound to one native instance.
+/// Obtaining this handle does not wait for native browser initialization, page
+/// loading, or command bridge readiness. Operations requiring an initialized
+/// browser can raise `WindowSessionError` during startup; do not assume that
+/// all operations are queued until initialization completes.
 pub struct WebContentsHandle {
-  view_id : String?
+  priv session : RuntimeSession
   id : String
   native_id : Int64
-  load_browser_url : (String) -> Unit raise WindowSessionError
-  load_browser_html : (String, String) -> Unit raise WindowSessionError
-  eval_browser_script : (String) -> Unit raise WindowSessionError
-  focus_browser : () -> Unit raise WindowSessionError
-  send_browser_command : (String, Int?) -> Unit raise WindowSessionError
-  download_browser_url : (String) -> Unit raise WindowSessionError
-  print_browser : () -> Unit raise WindowSessionError
-  print_browser_to_pdf : async (String, PdfPrintOptions) -> Unit
-  find_browser_in_page : (String, Bool, Bool, Bool) -> Int raise WindowSessionError
-  stop_browser_find : (Bool) -> Unit raise WindowSessionError
-  set_browser_zoom_percent : (Int) -> Unit raise WindowSessionError
-  read_browser_zoom_percent : () -> Int raise WindowSessionError
-  set_browser_audio_muted : (Bool) -> Unit raise WindowSessionError
-  read_browser_audio_muted : () -> Bool raise WindowSessionError
-  read_browser_navigation_state : () -> (Bool, Bool) raise WindowSessionError
-  read_browser_focused : () -> Bool raise WindowSessionError
-  read_browser_devtools_opened : () -> Bool raise WindowSessionError
-  read_browser_state : () -> BrowserState raise WindowSessionError
-  read_browser_navigation_history : () -> NavigationHistory raise WindowSessionError
-  insert_browser_page_css : (String) -> Int64 raise WindowSessionError
-  remove_browser_page_css : (Int64) -> Unit raise WindowSessionError
-  session_handle : SessionHandle
+  priv target : WebContentsTarget
 }
+
+///|
+priv enum WebContentsTarget {
+  PrimaryPage
+  ChildView(String, Int64)
+}
+
+///|
+type ResolvedWebContents = @native.Contents
 
 ///|
 /// The shared browser session of one application run.
@@ -724,15 +725,11 @@ pub struct SessionHandle {
 /// prevents a stale handle from targeting a later view that reuses the same
 /// declarative id.
 pub struct ViewHandle {
+  priv session : RuntimeSession
   id : String
   native_id : Int64
   window_id : String
-  set_view_bounds : (Int, Int, Int, Int) -> Unit raise WindowSessionError
-  set_view_visible : (Bool) -> Unit raise WindowSessionError
-  set_view_z_order : (Int) -> Unit raise WindowSessionError
-  read_view_state : () -> ViewState raise WindowSessionError
-  close_view : () -> Unit raise WindowSessionError
-  contents : WebContentsHandle
+  priv window_native_id : Int64
 }
 
 ///|
@@ -741,61 +738,9 @@ pub struct ViewHandle {
 /// The instance id prevents a stale handle from targeting a later window that
 /// reuses the same declarative id.
 pub struct WindowHandle {
+  priv session : RuntimeSession
   id : String
   native_id : Int64
-  show_window : () -> Unit raise WindowSessionError
-  show_window_inactive : () -> Unit raise WindowSessionError
-  hide_window : () -> Unit raise WindowSessionError
-  close_window : () -> Unit raise WindowSessionError
-  focus_window : () -> Unit raise WindowSessionError
-  set_window_title : (String) -> Unit raise WindowSessionError
-  set_window_icon : (String) -> Unit raise WindowSessionError
-  set_window_parent : (WindowHandle?, Bool) -> Unit raise WindowSessionError
-  set_window_size : (Int, Int) -> Unit raise WindowSessionError
-  set_window_content_size : (Int, Int) -> Unit raise WindowSessionError
-  read_window_content_size : () -> (Int, Int) raise WindowSessionError
-  minimize_window : () -> Unit raise WindowSessionError
-  maximize_window : () -> Unit raise WindowSessionError
-  restore_window : () -> Unit raise WindowSessionError
-  set_window_fullscreen : (Bool) -> Unit raise WindowSessionError
-  set_window_kiosk : (Bool) -> Unit raise WindowSessionError
-  set_window_position : (Int, Int) -> Unit raise WindowSessionError
-  set_window_always_on_top : (Bool) -> Unit raise WindowSessionError
-  set_window_resizable : (Bool) -> Unit raise WindowSessionError
-  set_window_minimum_size : (Int, Int) -> Unit raise WindowSessionError
-  set_window_maximum_size : (Int, Int) -> Unit raise WindowSessionError
-  set_window_aspect_ratio : (Double) -> Unit raise WindowSessionError
-  set_window_movable : (Bool) -> Unit raise WindowSessionError
-  set_window_opacity : (Double) -> Unit raise WindowSessionError
-  set_window_skip_taskbar : (Bool) -> Unit raise WindowSessionError
-  set_window_content_protection : (Bool) -> Unit raise WindowSessionError
-  set_window_minimizable : (Bool) -> Unit raise WindowSessionError
-  set_window_maximizable : (Bool) -> Unit raise WindowSessionError
-  set_window_closable : (Bool) -> Unit raise WindowSessionError
-  set_window_button_visibility : (Bool) -> Unit raise WindowSessionError
-  write_window_button_position : (WindowButtonPosition?) -> Unit raise WindowSessionError
-  read_window_button_position : () -> WindowButtonPosition? raise WindowSessionError
-  set_window_focusable : (Bool) -> Unit raise WindowSessionError
-  set_window_fullscreenable : (Bool) -> Unit raise WindowSessionError
-  set_window_has_shadow : (Bool) -> Unit raise WindowSessionError
-  set_window_ignore_mouse_events : (Bool, Bool) -> Unit raise WindowSessionError
-  set_window_background_color : (String) -> Unit raise WindowSessionError
-  set_window_theme : (WindowThemePreference) -> Unit raise WindowSessionError
-  set_window_visible_on_all_workspaces : (Bool) -> Unit raise WindowSessionError
-  set_window_enabled : (Bool) -> Unit raise WindowSessionError
-  set_window_menu : (MenuBar?) -> Unit raise WindowSessionError
-  set_window_progress_bar : (Double, ProgressBarMode) -> Unit raise WindowSessionError
-  set_window_overlay_icon : (@native.NativeImage?, String) -> Unit raise WindowSessionError
-  set_window_thumbnail_tooltip : (String) -> Unit raise WindowSessionError
-  set_window_thumbar_buttons : (Array[@native.ThumbarButton]) -> Bool raise WindowSessionError
-  flash_window_frame : (Bool) -> Unit raise WindowSessionError
-  popup_window_menu : (Menu, Int, Int) -> Unit raise WindowSessionError
-  read_window_state : () -> WindowState raise WindowSessionError
-  browser : WebContentsHandle
-  add_view : (String, ViewConfig) -> ViewHandle raise WindowSessionError
-  remove_view : (String) -> Unit raise WindowSessionError
-  list_views : () -> Array[ViewHandle]
-  find_view : (String) -> ViewHandle?
 }
 
 ///|

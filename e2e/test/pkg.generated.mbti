@@ -173,13 +173,6 @@ pub fn ProcessRowJson::to_repr(Self) -> @debug.Repr
 
 type ProcessSnapshot
 
-type QueueFullProbeResult derive(Eq, ToJson, @debug.Debug, @json.FromJson)
-pub fn QueueFullProbeResult::equal(Self, Self) -> Bool
-pub fn QueueFullProbeResult::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
-pub fn QueueFullProbeResult::not_equal(Self, Self) -> Bool
-pub fn QueueFullProbeResult::to_json(Self) -> Json
-pub fn QueueFullProbeResult::to_repr(Self) -> @debug.Repr
-
 type ReloadProbeResult derive(Eq, ToJson, @debug.Debug, @json.FromJson)
 pub fn ReloadProbeResult::equal(Self, Self) -> Bool
 pub fn ReloadProbeResult::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError

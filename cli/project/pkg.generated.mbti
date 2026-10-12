@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbit-community/proton_cli/project"
+
+import {
+  "moonbit-community/proton_config",
+}
+
+// Values
+pub async fn load(String) -> Project raise @proton_config.AppConfigError
+
+// Errors
+
+// Types and methods
+pub(all) struct Project {
+  base_dir : String
+  config : @proton_config.AppConfig
+}
+
+// Type aliases
+
+// Traits

@@ -137,7 +137,7 @@ async fn main {
     width=960,
     height=620,
   )
-  .load_config()
+  .config(@proton.load_config())
   .single_instance()
   .url_scheme(scheme)
   .commands(register_commands)

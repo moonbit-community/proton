@@ -82,6 +82,12 @@ pub fn InstallOutcome::equal(Self, Self) -> Bool
 pub fn InstallOutcome::not_equal(Self, Self) -> Bool
 pub fn InstallOutcome::to_repr(Self) -> @debug.Repr
 
+pub struct PreparedUpdate {
+  // private fields
+}
+pub fn PreparedUpdate::discard(Self) -> Unit raise UpdateError
+pub fn PreparedUpdate::install(Self) -> InstallOutcome raise UpdateError
+
 pub struct UpdateChannel {
   endpoint : String
   trusted_keys : Array[@proton_rsa.PublicKey]
@@ -90,7 +96,7 @@ pub struct UpdateChannel {
 }
 pub fn UpdateChannel::UpdateChannel(String, Array[String], String, UInt64) -> Self raise UpdateError
 pub async fn UpdateChannel::check(Self, async (String) -> Bytes raise UpdateError, @proton_updater.Timestamp) -> CheckOutcome raise UpdateError
-pub async fn UpdateChannel::download_and_install(Self, async (String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError, AvailableUpdate, on_progress? : async (Int64) -> Unit noraise) -> InstallOutcome raise UpdateError
+pub async fn UpdateChannel::download(Self, async (String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError, AvailableUpdate, on_progress? : async (Int64) -> Unit noraise) -> PreparedUpdate raise UpdateError
 
 // Type aliases
 pub type ArtifactFetch = async (String, Int64, async (Bytes) -> Unit raise UpdateError) -> Unit raise UpdateError

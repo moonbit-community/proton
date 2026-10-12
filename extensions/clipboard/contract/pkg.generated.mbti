@@ -10,6 +10,8 @@ import {
 // Values
 pub let activity : @proton_contract.Event[ClipboardActivity]
 
+pub let clear : @proton_contract.Command[ClearRequest, ClearReply]
+
 pub let extension : @proton_contract.ExtensionContract
 
 pub let read_text : @proton_contract.Command[ReadTextRequest, ReadTextReply]
@@ -19,6 +21,23 @@ pub let write_text : @proton_contract.Command[WriteTextRequest, WriteTextReply]
 // Errors
 
 // Types and methods
+pub(all) struct ClearReply {
+  cleared : Bool
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ClearReply::equal(Self, Self) -> Bool
+pub fn ClearReply::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ClearReply::not_equal(Self, Self) -> Bool
+pub fn ClearReply::to_json(Self) -> Json
+pub fn ClearReply::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ClearRequest {
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ClearRequest::equal(Self, Self) -> Bool
+pub fn ClearRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ClearRequest::not_equal(Self, Self) -> Bool
+pub fn ClearRequest::to_json(Self) -> Json
+pub fn ClearRequest::to_repr(Self) -> @debug.Repr
+
 pub(all) struct ClipboardActivity {
   operation : String
   text_length : Int?

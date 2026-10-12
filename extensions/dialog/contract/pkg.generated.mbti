@@ -12,6 +12,8 @@ pub let activity : @proton_contract.Event[DialogActivity]
 
 pub let confirm : @proton_contract.Command[MessageRequest, ConfirmReply]
 
+pub let error_box : @proton_contract.Command[ErrorBoxRequest, MessageReply]
+
 pub let extension : @proton_contract.ExtensionContract
 
 pub let message : @proton_contract.Command[MessageRequest, MessageReply]
@@ -42,6 +44,16 @@ pub fn DialogActivity::from_json(Json, @json.JsonPath) -> Self raise @json.JsonD
 pub fn DialogActivity::not_equal(Self, Self) -> Bool
 pub fn DialogActivity::to_json(Self) -> Json
 pub fn DialogActivity::to_repr(Self) -> @debug.Repr
+
+pub(all) struct ErrorBoxRequest {
+  title : String
+  content : String
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn ErrorBoxRequest::equal(Self, Self) -> Bool
+pub fn ErrorBoxRequest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn ErrorBoxRequest::not_equal(Self, Self) -> Bool
+pub fn ErrorBoxRequest::to_json(Self) -> Json
+pub fn ErrorBoxRequest::to_repr(Self) -> @debug.Repr
 
 pub(all) struct FileDialogReply {
   path : String?
