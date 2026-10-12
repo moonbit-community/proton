@@ -18,29 +18,6 @@
 #include "app_origin.h"
 #include "strings.h"
 
-/* scheme.c is a standalone translation unit, so it supplies the reference
-   count primitives expected by ref_count.h. */
-#ifdef _WIN32
-typedef struct {
-  volatile LONG refs;
-} proton_engine_ref_counted_t;
-#define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_LOAD(refs) ((refs)->refs)
-#define PROTON_ENGINE_REF_STORE(refs, value) ((refs)->refs = (value))
-#else
-typedef struct {
-  atomic_int refs;
-} proton_engine_ref_counted_t;
-#define PROTON_ENGINE_REF_INCREMENT(refs) \
-  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) \
-  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) \
-  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
-#endif
-
 #include "ref_count.h"
 
 typedef enum {
@@ -110,15 +87,6 @@ static int64_t proton_engine_next_resource_request_id(void) {
                         memory_order_relaxed);
 #endif
   return 1;
-}
-
-static int proton_engine_resource_ref_release(
-    proton_engine_ref_counted_t *refs) {
-#ifdef _WIN32
-  return (int)InterlockedDecrement(&refs->refs);
-#else
-  return atomic_fetch_sub_explicit(&refs->refs, 1, memory_order_acq_rel) - 1;
-#endif
 }
 
 static void proton_engine_resource_registry_add_locked(
@@ -357,7 +325,7 @@ static int CEF_CALLBACK proton_engine_resource_handler_release(
   }
   proton_engine_resource_handler_t *handler =
       (proton_engine_resource_handler_t *)base;
-  int value = proton_engine_resource_ref_release(&handler->refs);
+  int value = proton_engine_ref_decrement(&handler->refs);
   if (value <= 0) {
     free(handler->url);
     free(handler->data);

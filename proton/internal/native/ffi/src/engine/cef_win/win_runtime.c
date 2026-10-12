@@ -252,15 +252,7 @@ static bool proton_engine_path_parent(char *path) {
 
 #include "../cef_common/strings.h"
 
-#define PROTON_ENGINE_REF_INCREMENT(refs) InterlockedIncrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_DECREMENT(refs) InterlockedDecrement(&(refs)->refs)
-#define PROTON_ENGINE_REF_LOAD(refs) ((refs)->refs)
-#define PROTON_ENGINE_REF_STORE(refs, value) ((refs)->refs = (value))
 #include "../cef_common/ref_count.h"
-#undef PROTON_ENGINE_REF_INCREMENT
-#undef PROTON_ENGINE_REF_DECREMENT
-#undef PROTON_ENGINE_REF_LOAD
-#undef PROTON_ENGINE_REF_STORE
 #include "../cef_common/bridge_request.h"
 
 static void proton_engine_init_window_lock(void) {

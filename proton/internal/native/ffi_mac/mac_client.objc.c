@@ -8,18 +8,7 @@
 #include "../ffi/src/engine/cef_common/browser_session.h"
 #include "../ffi/src/engine/cef_common/bridge_renderer.h"
 #include "../ffi/src/engine/cef_common/message.h"
-#define PROTON_ENGINE_REF_INCREMENT(refs) \
-  atomic_fetch_add_explicit(&(refs)->refs, 1, memory_order_relaxed)
-#define PROTON_ENGINE_REF_DECREMENT(refs) \
-  (atomic_fetch_sub_explicit(&(refs)->refs, 1, memory_order_acq_rel) - 1)
-#define PROTON_ENGINE_REF_LOAD(refs) \
-  atomic_load_explicit(&(refs)->refs, memory_order_acquire)
-#define PROTON_ENGINE_REF_STORE(refs, value) atomic_store(&(refs)->refs, value)
 #include "../ffi/src/engine/cef_common/ref_count.h"
-#undef PROTON_ENGINE_REF_INCREMENT
-#undef PROTON_ENGINE_REF_DECREMENT
-#undef PROTON_ENGINE_REF_LOAD
-#undef PROTON_ENGINE_REF_STORE
 #include "../ffi/src/engine/cef_common/scheme.h"
 #include "../ffi/src/engine/cef_common/strings.h"
 #include "../ffi/src/engine/cef_common/view_events.h"
@@ -977,8 +966,7 @@ int CEF_CALLBACK proton_engine_client_release(
     cef_base_ref_counted_t *base) {
   proton_engine_ref_counted_t *refs =
       (proton_engine_ref_counted_t *)((char *)base + base->size);
-  int value =
-      atomic_fetch_sub_explicit(&refs->refs, 1, memory_order_acq_rel) - 1;
+  int value = proton_engine_ref_decrement(refs);
   if (value <= 0) {
     proton_engine_client_t *client = (proton_engine_client_t *)base;
     proton_internal_web_request_config_destroy(client->web_request_config);

@@ -13,6 +13,8 @@
 #include <gtk/gtk.h>
 #include <stdatomic.h>
 
+#include "../cef_common/ref_count.h"
+
 #include <X11/Xlib.h>
 
 #include "linux_menu.h"
@@ -155,10 +157,6 @@ void proton_engine_window_close_views(proton_engine_window_t *window);
 void proton_engine_window_collect_views(proton_engine_window_t *window);
 void proton_engine_window_free_views(proton_engine_window_t *window);
 void proton_engine_window_layout_views(proton_engine_window_t *window);
-
-typedef struct {
-  atomic_int refs;
-} proton_engine_ref_counted_t;
 
 struct proton_engine_client {
   cef_client_t client;
