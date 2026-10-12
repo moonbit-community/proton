@@ -372,4 +372,149 @@ int32_t proton_app_is_hidden(int32_t *out_hidden) {
   }
 }
 
+/* Electron's app.getBadgeCount reads its own cached count, because AppKit
+   exposes no readback for the Dock badge label. Proton mirrors the cache. */
+static int32_t g_proton_app_badge_count = 0;
+
+int32_t proton_app_set_badge_count(int32_t count, int32_t *out_applied) {
+  @autoreleasepool {
+    if (count < 0) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "application badge count must be non-negative");
+    }
+    if (out_applied == NULL) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "out_applied is required");
+    }
+    *out_applied = 0;
+    int32_t status = proton_app_control_require_main_thread(
+        "application badge count must run on the main thread");
+    if (status != PROTON_OK) {
+      return status;
+    }
+    NSDockTile *dock_tile = [NSApp dockTile];
+    if (dock_tile == nil) {
+      return proton_set_error(PROTON_ERR_PLATFORM,
+                              "application Dock tile is not available");
+    }
+    g_proton_app_badge_count = count;
+    [dock_tile setBadgeLabel:(count > 0)
+                                 ? [NSString stringWithFormat:@"%d", count]
+                                 : nil];
+    [dock_tile display];
+    *out_applied = 1;
+    return proton_set_error(PROTON_OK, NULL);
+  }
+}
+
+int32_t proton_app_get_badge_count(int32_t *out_count) {
+  if (out_count == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "out_count is required");
+  }
+  *out_count = g_proton_app_badge_count;
+  return proton_set_error(PROTON_OK, NULL);
+}
+
+/* The current Dock badge text, owned by this translation unit and replaced on
+   every set. AppKit has no readback, matching Electron's in-memory getBadge. */
+static char *g_proton_app_dock_badge = NULL;
+
+int32_t proton_app_dock_bounce(int32_t bounce_type, int32_t *out_request_id) {
+  @autoreleasepool {
+    if (bounce_type != PROTON_DOCK_BOUNCE_INFORMATIONAL &&
+        bounce_type != PROTON_DOCK_BOUNCE_CRITICAL) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "dock bounce type must be informational or critical");
+    }
+    if (out_request_id == NULL) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "out_request_id is required");
+    }
+    *out_request_id = -1;
+    int32_t status = proton_app_control_require_main_thread(
+        "dock bounce must run on the main thread");
+    if (status != PROTON_OK) {
+      return status;
+    }
+    NSRequestUserAttentionType attention =
+        bounce_type == PROTON_DOCK_BOUNCE_CRITICAL ? NSCriticalRequest
+                                                   : NSInformationalRequest;
+    NSInteger request_id = [NSApp requestUserAttention:attention];
+    *out_request_id = (int32_t)request_id;
+    return proton_set_error(PROTON_OK, NULL);
+  }
+}
+
+int32_t proton_app_dock_cancel_bounce(int32_t request_id) {
+  @autoreleasepool {
+    int32_t status = proton_app_control_require_main_thread(
+        "dock cancel_bounce must run on the main thread");
+    if (status != PROTON_OK) {
+      return status;
+    }
+    [NSApp cancelUserAttentionRequest:(NSInteger)request_id];
+    return proton_set_error(PROTON_OK, NULL);
+  }
+}
+
+int32_t proton_app_dock_set_badge(const char *badge_text) {
+  @autoreleasepool {
+    if (badge_text == NULL) {
+      return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                              "dock badge text is required");
+    }
+    int32_t status = proton_app_control_require_main_thread(
+        "dock badge must run on the main thread");
+    if (status != PROTON_OK) {
+      return status;
+    }
+    NSDockTile *dock_tile = [NSApp dockTile];
+    if (dock_tile == nil) {
+      return proton_set_error(PROTON_ERR_PLATFORM,
+                              "application Dock tile is not available");
+    }
+    char *copy = strdup(badge_text);
+    if (copy == NULL) {
+      return proton_set_error(PROTON_ERR_PLATFORM,
+                              "failed to copy the dock badge text");
+    }
+    free(g_proton_app_dock_badge);
+    g_proton_app_dock_badge = copy;
+    [dock_tile
+        setBadgeLabel:[NSString stringWithUTF8String:g_proton_app_dock_badge]];
+    [dock_tile display];
+    return proton_set_error(PROTON_OK, NULL);
+  }
+}
+
+/* Copies a process-level string into a caller-owned buffer on the same
+   two-call contract as proton_write_system_text. */
+static int32_t proton_app_control_write_text(const char *value,
+                                             char *buffer,
+                                             int32_t buffer_len,
+                                             int32_t *out_required_len) {
+  if (out_required_len == NULL) {
+    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
+                            "dock badge output is required");
+  }
+  size_t required = strlen(value);
+  *out_required_len = (int32_t)required;
+  if (buffer == NULL || buffer_len <= (int32_t)required) {
+    return proton_set_error(PROTON_ERR_BUFFER_TOO_SMALL,
+                            "dock badge output buffer is too small");
+  }
+  memcpy(buffer, value, required + 1);
+  return proton_set_error(PROTON_OK, NULL);
+}
+
+int32_t proton_app_dock_get_badge(char *buffer,
+                                  int32_t buffer_len,
+                                  int32_t *out_required_len) {
+  const char *value =
+      g_proton_app_dock_badge == NULL ? "" : g_proton_app_dock_badge;
+  return proton_app_control_write_text(value, buffer, buffer_len,
+                                       out_required_len);
+}
+
 #endif
