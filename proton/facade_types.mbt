@@ -604,6 +604,7 @@ priv struct RuntimeEventPump {
   dialog_completions : DialogCompletionStore
   cookie_completions : CookieCompletionStore
   pdf_completions : PdfCompletionStore
+  devtools : DevToolsSessions
   session_events : Array[@native.RuntimeEvent]
 }
 

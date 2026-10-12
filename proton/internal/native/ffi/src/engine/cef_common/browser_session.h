@@ -153,4 +153,7 @@ int proton_browser_session_media_permission(
     proton_browser_session_t *session, const cef_string_t *requesting_origin,
     uint32_t requested_permissions, cef_media_access_callback_t *callback);
 
+int32_t proton_browser_session_devtools(
+    proton_browser_session_t *session, cef_browser_t *browser, int32_t operation,
+    int64_t token, const char *message, char *error, size_t error_len);
 #endif

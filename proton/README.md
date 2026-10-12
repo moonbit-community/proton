@@ -948,3 +948,45 @@ Migration: await `print_to_pdf` directly instead of keeping its former integer
 request ID and listening for `WebContentsEvent::PdfPrinted`. `PdfPrintResult`
 and that completion event have been removed. `print()` remains the synchronous
 entry to the platform print dialog.
+
+## Native DevTools protocol
+
+`WebContentsHandle::with_devtools` gives trusted MoonBit backend code a scoped
+CDP connection to that exact page (main page or child view). It works in packaged
+apps with debugging disabled: no TCP listener, target discovery, or DevTools
+window is required.
+
+```moonbit
+contents.with_devtools(async fn(session) {
+  let result = session.send_command("Runtime.evaluate", params={
+    "expression": "document.title",
+    "returnByValue": true,
+  })
+  println(result.stringify())
+})
+```
+
+`send_command(method_, params?)` accepts CDP object parameters and returns the
+result JSON. CDP failures raise `DevToolsError::Protocol` with the original code,
+message, and optional data. Enable the desired domains, then call `next_event()`
+to consume `DevToolsEvent { method_, params }`. Events arriving while a command
+is pending are buffered. Multiple commands may wait concurrently; there is one
+event reader per session and one native session per page. A separate DevTools
+window or remote debugger remains independent of this native session.
+
+Leaving the callback, including by error or cancellation, unregisters the
+observer and invalidates retained session handles. Canceling an individual
+command removes its waiter without closing the session or undoing the command.
+Page closure, renderer termination, and agent detachment fail pending operations.
+Use `@async.with_timeout` around commands that may not complete.
+
+CEF keeps the page's native protocol agent after an observer is removed.
+**Scope exit does not undo protocol side effects.** Disable inspection/domains,
+release remote objects, and remove runtime bindings explicitly as appropriate.
+Request IDs are not reused across scopes, so late replies cannot complete a new
+scope's commands.
+
+Messages are limited to 2 MiB, event queues to 256 messages / 16 MiB, and pending
+commands to 256. An inbound overflow terminates the session rather than silently
+losing events. This is a backend capability; do not expose arbitrary CDP commands
+to untrusted renderer code through an application bridge.

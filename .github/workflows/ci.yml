@@ -272,6 +272,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
+          moon -C e2e run native_devtools --target native --diagnostic-limit 200
           moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 
       - name: Run MoonBit CDP e2e on Unix
@@ -282,9 +283,11 @@ jobs:
           MOON_CC: cc
         run: |
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            xvfb-run -a moon -C e2e run native_devtools --target native --diagnostic-limit 200
             xvfb-run -a moon -C e2e run test --target native \
               --diagnostic-limit 200 -- --self-hosted
           else
+            moon -C e2e run native_devtools --target native --diagnostic-limit 200
             moon -C e2e run test --target native \
               --diagnostic-limit 200 -- --self-hosted
           fi

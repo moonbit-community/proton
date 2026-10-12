@@ -435,6 +435,10 @@ int32_t proton_engine_contents_download_url(
     size_t error_len);
 int32_t proton_engine_contents_print(
     void *window, int32_t is_view, char *error, size_t error_len);
+int32_t proton_engine_contents_devtools(
+    void *target, int32_t is_view, int32_t operation, int64_t token,
+    const char *message, char *error, size_t error_len);
+
 int32_t proton_engine_contents_print_to_pdf(
     void *window, int32_t is_view, const char *path, int32_t landscape,
     int32_t print_background, double scale, double paper_width,

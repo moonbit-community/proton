@@ -1,4 +1,5 @@
 #include "browser_session.h"
+#include "devtools.h"
 
 #include "../../proton_event.h"
 
@@ -94,6 +95,7 @@ struct proton_browser_session {
   int32_t next_find_request_id;
   int32_t active_find_request_id;
   int32_t next_pdf_request_id;
+  proton_devtools_t *devtools;
 };
 
 static char *proton_browser_cef_string_to_utf8(const cef_string_t *value);
@@ -515,6 +517,7 @@ void proton_browser_session_destroy(proton_browser_session_t *session) {
   if (session == NULL) {
     return;
   }
+  proton_devtools_close(&session->devtools);
   proton_browser_pending_t *pending = session->pending;
   while (pending != NULL) {
     proton_browser_pending_t *next = pending->next;
@@ -1764,4 +1767,26 @@ void proton_browser_session_find_result(
 
 const proton_browser_policy_t *proton_browser_session_policy(proton_browser_session_t *session) {
   return session != NULL ? &session->policy : NULL;
+}
+
+int32_t proton_browser_session_devtools(
+    proton_browser_session_t *session, cef_browser_t *browser, int32_t operation,
+    int64_t token, const char *message, char *error, size_t error_len) {
+  if (session == NULL || (operation != 2 && browser == NULL)) {
+    proton_browser_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  if (operation == 2) {
+    if (session->devtools != NULL &&
+        proton_devtools_token(session->devtools) == token) {
+      proton_devtools_close(&session->devtools);
+    }
+    return PROTON_OK;
+  }
+  if (operation == 0) {
+    return proton_devtools_open(&session->devtools, browser, session->window,
+                               session->view, token, error, error_len);
+  }
+  return proton_devtools_send(session->devtools, browser, token, message,
+                              error, error_len);
 }

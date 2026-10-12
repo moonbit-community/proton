@@ -26,6 +26,7 @@ options(
     "src/engine/cef_common/bridge_lifecycle.c",
     "src/engine/cef_common/browser_lifecycle.c",
     "src/engine/cef_common/browser_session.c",
+    "src/engine/cef_common/devtools.c",
     "src/engine/cef_common/bridge_policy.c",
     "src/engine/cef_common/bridge_request.c",
     "src/engine/cef_common/bridge_renderer.c",

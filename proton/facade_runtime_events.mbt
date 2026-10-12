@@ -10,6 +10,7 @@ fn RuntimeEventPump::RuntimeEventPump(
     dialog_completions,
     cookie_completions,
     pdf_completions,
+    devtools: DevToolsSessions(),
     session_events: [],
   }
 }
@@ -31,7 +32,8 @@ fn RuntimeEventPump::poll_native_events(
       None => polling = false
       Some(event) => {
         did_work = true
-        if !self.pdf_completions.route(event) &&
+        if !self.devtools.route(event) &&
+          !self.pdf_completions.route(event) &&
           !self.dialog_completions.route_completion(event.dialog_completion()) &&
           !self.cookie_completions.route_completion(
             event.cookie_get_completion(),

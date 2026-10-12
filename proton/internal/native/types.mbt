@@ -227,6 +227,7 @@ enum RuntimeEvent {
   BrowserRequest(Int64, Int64?, NativeBrowserRequest)
   BrowserDownloadUpdated(Int64, Int64?, NativeDownloadUpdate)
   BrowserPdfPrinted(Int64, Int64?, NativePdfPrintResult)
+  DevToolsMessage(Int64, Int64?, Int64, Bool, String)
   BrowserEvent(Int64, Int64?, NativeBrowserEvent)
   ViewClosed(Int64, Int64)
   ResourceRequested(NativeResourceRequest)
@@ -861,6 +862,7 @@ pub fn RuntimeEvent::event_type(self : RuntimeEvent) -> String {
     BrowserRequest(_, _, Media(..)) => "browser_media_permission_requested"
     BrowserDownloadUpdated(_, _, _) => "browser_download_updated"
     BrowserPdfPrinted(_, _, _) => "browser_pdf_print_finished"
+    DevToolsMessage(_, _, _, _, _) => "devtools_message"
     BrowserEvent(_, _, LoadingChanged(_)) => "browser_loading_changed"
     BrowserEvent(_, _, Navigated(_)) => "browser_navigated"
     BrowserEvent(_, _, TitleUpdated(_)) => "browser_title_updated"
@@ -897,6 +899,7 @@ pub fn RuntimeEvent::window_id(self : RuntimeEvent) -> Int64? {
     | BridgeLifecycleChanged(window, _)
     | BrowserRequest(window, _, _)
     | BrowserDownloadUpdated(window, _, _)
+    | DevToolsMessage(window, _, _, _, _)
     | BrowserPdfPrinted(window, _, _)
     | BrowserEvent(window, _, _)
     | ViewClosed(window, _)
@@ -924,6 +927,7 @@ pub fn RuntimeEvent::view_id(self : RuntimeEvent) -> Int64? {
     BrowserEvent(_, view, _)
     | BrowserRequest(_, view, _)
     | BrowserDownloadUpdated(_, view, _)
+    | DevToolsMessage(_, view, _, _, _)
     | BrowserPdfPrinted(_, view, _) => view
     ViewClosed(_, view) => Some(view)
     ResourceRequested(request) => request.view
@@ -2221,3 +2225,14 @@ pub fn web_contents_view_supported() -> Bool {
 }
 
 ///|
+
+///|
+pub fn RuntimeEvent::devtools_message(
+  self : RuntimeEvent,
+) -> (Int64, Bool, String)? {
+  match self {
+    DevToolsMessage(_, _, token, failed, message) =>
+      Some((token, failed, message))
+    _ => None
+  }
+}
