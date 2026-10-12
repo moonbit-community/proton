@@ -177,9 +177,9 @@ int32_t proton_engine_runtime_destroy(proton_engine_runtime_t *runtime,
                                       size_t error_len);
 int32_t proton_engine_runtime_destroy_ready(proton_engine_runtime_t *runtime);
 int32_t proton_engine_complete_resource_request(
-    int64_t request_id, int32_t status, const char *mime_type,
-    const void *data, size_t data_len);
-void proton_engine_cancel_resource_requests(void);
+    proton_engine_runtime_t *runtime, int64_t request_id, int32_t status,
+    const char *mime_type, const void *data, size_t data_len);
+void proton_engine_cancel_resource_requests(proton_engine_runtime_t *runtime);
 int32_t proton_engine_runtime_do_message_loop_work(
     proton_engine_runtime_t *runtime,
     char *error,

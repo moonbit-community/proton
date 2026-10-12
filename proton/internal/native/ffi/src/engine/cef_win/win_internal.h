@@ -9,6 +9,8 @@
 #include "../cef_common/browser_session.h"
 #include "../cef_common/view_events.h"
 #include "../cef_common/window_state.h"
+#include "../cef_common/scheme.h"
+#include "../cef_common/cookie_cache.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -45,6 +47,8 @@ struct proton_engine_runtime {
   /* Set once by the first asset document and never changed, so every window
      in a runtime resolves application resources against the same root. */
   proton_engine_bridge_requests_t *bridge_requests;
+  proton_engine_resource_requests_t resource_requests;
+  proton_cookie_get_state_t *cookie_requests;
   CRITICAL_SECTION wakeup_lock;
   int wakeup_lock_initialized;
   HANDLE wakeup_write;

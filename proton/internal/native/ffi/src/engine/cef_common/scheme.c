@@ -27,9 +27,10 @@ typedef enum {
   PROTON_RESOURCE_CANCELLED = 3,
 } proton_engine_resource_state_t;
 
-typedef struct proton_engine_resource_handler {
+struct proton_engine_resource_handler {
   cef_resource_handler_t handler;
   proton_engine_ref_counted_t refs;
+  proton_engine_resource_requests_t *owner; /* cleared under the resource lock */
   int64_t request_id;
   proton_window_id_t window;
   proton_view_id_t view;
@@ -42,7 +43,7 @@ typedef struct proton_engine_resource_handler {
   proton_engine_resource_state_t state;
   cef_callback_t *open_callback;
   struct proton_engine_resource_handler *next;
-} proton_engine_resource_handler_t;
+};
 
 #ifdef _WIN32
 static SRWLOCK g_resource_lock = SRWLOCK_INIT;
@@ -51,7 +52,6 @@ static volatile LONG64 g_next_resource_request_id = 0;
 static pthread_mutex_t g_resource_lock = PTHREAD_MUTEX_INITIALIZER;
 static atomic_int_fast64_t g_next_resource_request_id = 0;
 #endif
-static proton_engine_resource_handler_t *g_pending_resources = NULL;
 
 static void proton_engine_resource_lock(void) {
 #ifdef _WIN32
@@ -92,17 +92,21 @@ static int64_t proton_engine_next_resource_request_id(void) {
 static void proton_engine_resource_registry_add_locked(
     proton_engine_resource_handler_t *handler) {
   handler->handler.base.add_ref(&handler->handler.base);
-  handler->next = g_pending_resources;
-  g_pending_resources = handler;
+  handler->next = handler->owner->head;
+  handler->owner->head = handler;
 }
 
 static int proton_engine_resource_registry_remove_locked(
     proton_engine_resource_handler_t *handler) {
-  proton_engine_resource_handler_t **cursor = &g_pending_resources;
+  if (handler->owner == NULL) {
+    return 0;
+  }
+  proton_engine_resource_handler_t **cursor = &handler->owner->head;
   while (*cursor != NULL) {
     if (*cursor == handler) {
       *cursor = handler->next;
       handler->next = NULL;
+      handler->owner = NULL;
       return 1;
     }
     cursor = &(*cursor)->next;
@@ -111,13 +115,16 @@ static int proton_engine_resource_registry_remove_locked(
 }
 
 static proton_engine_resource_handler_t *
-proton_engine_resource_registry_take_locked(int64_t request_id) {
-  proton_engine_resource_handler_t **cursor = &g_pending_resources;
+proton_engine_resource_registry_take_locked(
+    proton_engine_resource_requests_t *owner, int64_t request_id) {
+  proton_engine_resource_handler_t **cursor = &owner->head;
   while (*cursor != NULL) {
     proton_engine_resource_handler_t *handler = *cursor;
-    if (handler->request_id == request_id) {
+    if (handler->state == PROTON_RESOURCE_PENDING &&
+        handler->request_id == request_id) {
       *cursor = handler->next;
       handler->next = NULL;
+      handler->owner = NULL;
       return handler;
     }
     cursor = &handler->next;
@@ -200,12 +207,16 @@ static int CEF_CALLBACK proton_engine_resource_open(
     return 0;
   }
 
+  proton_engine_resource_lock();
+  if (handler->state != PROTON_RESOURCE_CREATED || handler->owner == NULL) {
+    proton_engine_resource_unlock();
+    *handle_request = 1;
+    return 0;
+  }
   handler->request_id = proton_engine_next_resource_request_id();
   callback->base.add_ref(&callback->base);
-  proton_engine_resource_lock();
   handler->state = PROTON_RESOURCE_PENDING;
   handler->open_callback = callback;
-  proton_engine_resource_registry_add_locked(handler);
   proton_engine_resource_unlock();
 
   *handle_request = 0;
@@ -215,6 +226,10 @@ static int CEF_CALLBACK proton_engine_resource_open(
 
   proton_engine_resource_lock();
   int registered = proton_engine_resource_registry_remove_locked(handler);
+  if (!registered) {
+    proton_engine_resource_unlock();
+    return 1;
+  }
   cef_callback_t *continuation = handler->open_callback;
   handler->open_callback = NULL;
   int prepared = proton_engine_resource_set_failure(handler);
@@ -298,7 +313,8 @@ static void CEF_CALLBACK proton_engine_resource_cancel(
     return;
   }
   proton_engine_resource_lock();
-  if (handler->state != PROTON_RESOURCE_PENDING) {
+  if (handler->state != PROTON_RESOURCE_PENDING &&
+      handler->state != PROTON_RESOURCE_CREATED) {
     proton_engine_resource_unlock();
     return;
   }
@@ -309,7 +325,9 @@ static void CEF_CALLBACK proton_engine_resource_cancel(
   handler->state = PROTON_RESOURCE_CANCELLED;
   proton_engine_resource_unlock();
 
-  proton_engine_publish_resource_cancellation(request_id);
+  if (request_id > 0) {
+    proton_engine_publish_resource_cancellation(request_id);
+  }
   if (continuation != NULL) {
     continuation->base.release(&continuation->base);
   }
@@ -337,6 +355,7 @@ static int CEF_CALLBACK proton_engine_resource_handler_release(
 }
 
 static cef_resource_handler_t *proton_engine_resource_handler_create(
+    proton_engine_resource_requests_t *owner,
     proton_window_id_t window, proton_view_id_t view, char *url) {
   proton_engine_resource_handler_t *handler =
       (proton_engine_resource_handler_t *)calloc(1, sizeof(*handler));
@@ -348,6 +367,7 @@ static cef_resource_handler_t *proton_engine_resource_handler_create(
       (cef_base_ref_counted_t *)&handler->handler.base,
       sizeof(handler->handler), &handler->refs);
   handler->handler.base.release = proton_engine_resource_handler_release;
+  handler->owner = owner;
   handler->window = window;
   handler->view = view;
   handler->url = url;
@@ -357,12 +377,21 @@ static cef_resource_handler_t *proton_engine_resource_handler_create(
       proton_engine_resource_get_response_headers;
   handler->handler.read = proton_engine_resource_read;
   handler->handler.cancel = proton_engine_resource_cancel;
+  proton_engine_resource_lock();
+  if (owner->closed) {
+    proton_engine_resource_unlock();
+    handler->handler.base.release(&handler->handler.base);
+    return NULL;
+  }
+  /* Include handlers awaiting open, so shutdown also detaches late opens. */
+  proton_engine_resource_registry_add_locked(handler);
+  proton_engine_resource_unlock();
   return &handler->handler;
 }
 
 int32_t proton_engine_complete_resource_request(
-    int64_t request_id, int32_t status, const char *mime_type,
-    const void *data, size_t data_len) {
+    proton_engine_runtime_t *runtime, int64_t request_id, int32_t status,
+    const char *mime_type, const void *data, size_t data_len) {
   if (request_id <= 0 || status < 100 || status > 599 || mime_type == NULL ||
       mime_type[0] == '\0' || (data == NULL && data_len > 0)) {
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -384,18 +413,12 @@ int32_t proton_engine_complete_resource_request(
 
   proton_engine_resource_lock();
   proton_engine_resource_handler_t *handler =
-      proton_engine_resource_registry_take_locked(request_id);
+      proton_engine_resource_registry_take_locked(
+          proton_engine_runtime_resource_requests(runtime), request_id);
   if (handler == NULL) {
     proton_engine_resource_unlock();
     free(mime_copy);
     free(data_copy);
-    return PROTON_ERR_STALE_RESOURCE_REQUEST;
-  }
-  if (handler->state != PROTON_RESOURCE_PENDING) {
-    proton_engine_resource_unlock();
-    free(mime_copy);
-    free(data_copy);
-    handler->handler.base.release(&handler->handler.base);
     return PROTON_ERR_STALE_RESOURCE_REQUEST;
   }
   cef_callback_t *continuation = handler->open_callback;
@@ -412,12 +435,16 @@ int32_t proton_engine_complete_resource_request(
   return PROTON_OK;
 }
 
-void proton_engine_cancel_resource_requests(void) {
+void proton_engine_cancel_resource_requests(proton_engine_runtime_t *runtime) {
+  proton_engine_resource_requests_t *owner =
+      proton_engine_runtime_resource_requests(runtime);
   proton_engine_resource_lock();
-  proton_engine_resource_handler_t *pending = g_pending_resources;
-  g_pending_resources = NULL;
+  proton_engine_resource_handler_t *pending = owner->head;
+  owner->head = NULL;
+  owner->closed = 1;
   for (proton_engine_resource_handler_t *handler = pending;
        handler != NULL; handler = handler->next) {
+    handler->owner = NULL;
     handler->state = PROTON_RESOURCE_CANCELLED;
   }
   proton_engine_resource_unlock();
@@ -465,12 +492,17 @@ cef_resource_handler_t *CEF_CALLBACK proton_engine_scheme_create(
     window_id = proton_engine_view_window_public_id(view);
     view_id = proton_engine_view_public_id(view);
   }
-  proton_engine_window_unlock();
-  if (window_id == PROTON_INVALID_HANDLE) {
+  proton_engine_resource_requests_t *owner =
+      proton_engine_contents_resource_requests(window, view);
+  cef_resource_handler_t *handler = NULL;
+  if (window_id != PROTON_INVALID_HANDLE && owner != NULL) {
+    handler = proton_engine_resource_handler_create(
+        owner, window_id, view_id, url);
+  } else {
     free(url);
-    return NULL;
   }
-  return proton_engine_resource_handler_create(window_id, view_id, url);
+  proton_engine_window_unlock();
+  return handler;
 }
 
 void proton_engine_register_app_custom_schemes(

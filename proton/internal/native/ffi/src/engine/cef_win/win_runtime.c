@@ -829,4 +829,22 @@ void proton_engine_runtime_collect(proton_engine_runtime_t *runtime) {
   proton_browser_registry_collect(runtime->browsers);
 }
 
+proton_engine_resource_requests_t *proton_engine_runtime_resource_requests(
+    proton_engine_runtime_t *runtime) {
+  return &runtime->resource_requests;
+}
+
+proton_engine_resource_requests_t *proton_engine_contents_resource_requests(
+    proton_engine_window_t *window, proton_engine_view_t *view) {
+  if (window == NULL && view != NULL) {
+    window = view->window;
+  }
+  return window != NULL ? &window->runtime->resource_requests : NULL;
+}
+
+proton_cookie_get_state_t **proton_engine_runtime_cookie_requests(
+    proton_engine_runtime_t *runtime) {
+  return &runtime->cookie_requests;
+}
+
 #endif

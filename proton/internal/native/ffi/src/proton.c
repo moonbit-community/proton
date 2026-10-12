@@ -310,7 +310,7 @@ int32_t proton_runtime_begin_destroy(proton_runtime_handle_t runtime) {
   if (status != PROTON_OK) {
     return status;
   }
-  proton_engine_cancel_resource_requests();
+  proton_engine_cancel_resource_requests(slot->engine_runtime);
   slot->destroy_prepared = true;
   g_last_error[0] = '\0';
   return PROTON_OK;
@@ -385,9 +385,8 @@ int32_t proton_runtime_complete_resource_request(
     return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
                             "invalid resource response");
   }
-  (void)slot;
   runtime_status = proton_engine_complete_resource_request(
-      request_id, status, mime_type, data, (size_t)data_len);
+      slot->engine_runtime, request_id, status, mime_type, data, (size_t)data_len);
   if (runtime_status == PROTON_ERR_STALE_RESOURCE_REQUEST) {
     return proton_set_error(runtime_status,
                             "resource request is no longer pending");
