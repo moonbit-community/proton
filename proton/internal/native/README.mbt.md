@@ -129,3 +129,18 @@ close/cancel events must continue through normal facade cleanup even when a
 request was rejected by admission. Admission failures propagate as runtime
 errors; failures from the command task group, including its child tasks and
 cleanup callbacks, remain request-level `handler_failed` responses.
+
+## Shared page operations
+
+PDF printing uses the private `Contents` target, which retains either a `Window`
+or a `View`. Its method validates settings and converts arguments once, then
+uses one typed FFI declaration. The existing native slot checks and platform
+adapters resolve the live browser; CEF printing and callback ownership remain
+in the shared browser-session implementation. Adding a PDF option therefore
+requires one MoonBit conversion and one FFI declaration, rather than separate
+window and view implementations. Platform signatures still need to match.
+
+The facade's private `Completion` stores the first result and wakes its waiter.
+PDF and cookie operations share that rule but retain their own request routing,
+shutdown errors, and cancellation cleanup. Cancelling a PDF waiter unregisters
+it without promising to stop CEF's file write.

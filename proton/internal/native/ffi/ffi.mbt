@@ -997,9 +997,9 @@ pub extern "C" fn proton_window_print_ffi(
 
 ///|
 #borrow(path, page_ranges, header_template, footer_template, out_request_id)
-pub extern "C" fn proton_window_print_to_pdf_ffi(
+pub extern "C" fn contents_print_to_pdf(
   window : WindowHandle,
-  is_view : Int,
+  view : ViewHandle,
   path : Bytes,
   landscape : Int,
   print_background : Int,
@@ -1677,32 +1677,6 @@ pub extern "C" fn proton_view_print_ffi(
   window : ViewHandle,
   is_view : Int,
 ) -> Int = "proton_contents_print"
-
-///|
-#borrow(path, page_ranges, header_template, footer_template, out_request_id)
-pub extern "C" fn proton_view_print_to_pdf_ffi(
-  window : ViewHandle,
-  is_view : Int,
-  path : Bytes,
-  landscape : Int,
-  print_background : Int,
-  scale : Double,
-  paper_width : Double,
-  paper_height : Double,
-  prefer_css_page_size : Int,
-  margin_type : Int,
-  margin_top : Double,
-  margin_right : Double,
-  margin_bottom : Double,
-  margin_left : Double,
-  page_ranges : Bytes,
-  display_header_footer : Int,
-  header_template : Bytes,
-  footer_template : Bytes,
-  generate_tagged_pdf : Int,
-  generate_document_outline : Int,
-  out_request_id : Ref[Int],
-) -> Int = "proton_contents_print_to_pdf"
 
 ///|
 #borrow(buffer, out_required_len)

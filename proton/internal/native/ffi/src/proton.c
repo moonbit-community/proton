@@ -2492,7 +2492,8 @@ int32_t proton_contents_print(void *window, int32_t is_view) {
 }
 
 int32_t proton_contents_print_to_pdf(
-    void *window, int32_t is_view, const char *path, int32_t landscape,
+    proton_window_handle_t window, proton_view_handle_t view,
+    const char *path, int32_t landscape,
     int32_t print_background, double scale, double paper_width,
     double paper_height, int32_t prefer_css_page_size, int32_t margin_type,
     double margin_top, double margin_right, double margin_bottom,
@@ -2500,8 +2501,10 @@ int32_t proton_contents_print_to_pdf(
     int32_t display_header_footer, const char *header_template,
     const char *footer_template, int32_t generate_tagged_pdf,
     int32_t generate_document_outline, int32_t *out_request_id) {
+  int32_t is_view = view != NULL;
+  void *target = is_view ? (void *)view : (void *)window;
   void *engine = NULL;
-  int32_t status = proton_get_contents_engine(window, is_view, &engine);
+  int32_t status = proton_get_contents_engine(target, is_view, &engine);
   if (status != PROTON_OK) {
     return status;
   }

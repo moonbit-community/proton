@@ -2105,10 +2105,7 @@ pub async fn WebContentsHandle::print_to_pdf(
   options? : PdfPrintOptions = PdfPrintOptions(),
 ) -> Unit {
   let request_id = self.with_target("print to PDF in", target => {
-    match target {
-      PrimaryPage(window) => window.print_to_pdf(path, options.to_native())
-      ChildView(view) => view.print_to_pdf(path, options.to_native())
-    }
+    target.print_to_pdf(path, options.to_native())
   })
   let view_id = match self.target {
     PrimaryPage => None

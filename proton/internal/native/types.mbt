@@ -2221,3 +2221,10 @@ pub fn web_contents_view_supported() -> Bool {
 }
 
 ///|
+
+///|
+/// A page operation target retaining its window or view owner.
+pub(all) enum Contents {
+  PrimaryPage(Window)
+  ChildView(View)
+}
