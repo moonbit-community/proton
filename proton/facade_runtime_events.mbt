@@ -1,4 +1,29 @@
 ///|
+fn[T] Completion::Completion() -> Completion[T] {
+  { result: None, changed: @async.CondVar::Cond(), }
+}
+
+///|
+fn[T] Completion::finish(self : Completion[T], result : T) -> Unit {
+  guard self.result is None else { return }
+  self.result = Some(result)
+  self.changed.broadcast()
+}
+
+///|
+async fn[T] Completion::wait(self : Completion[T]) -> T {
+  for result = self.result {
+    match result {
+      Some(result) => break result
+      None => {
+        self.changed.wait()
+        continue self.result
+      }
+    }
+  }
+}
+
+///|
 fn RuntimeEventPump::RuntimeEventPump(
   runtime : @native.Runtime,
   dialog_completions : DialogCompletionStore,

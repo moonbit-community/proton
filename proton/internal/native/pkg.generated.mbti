@@ -335,6 +335,12 @@ pub fn BrowserState::equal(Self, Self) -> Bool
 pub fn BrowserState::not_equal(Self, Self) -> Bool
 pub fn BrowserState::to_repr(Self) -> @debug.Repr
 
+pub(all) enum Contents {
+  PrimaryPage(Window)
+  ChildView(View)
+}
+pub fn Contents::print_to_pdf(Self, String, PdfPrintSettings) -> Int raise NativeError
+
 pub(all) enum CookieSameSite {
   Unspecified
   NoRestriction
@@ -878,7 +884,6 @@ pub fn View::load_url(Self, String) -> Unit raise NativeError
 pub fn View::navigation_history(Self) -> NavigationHistory raise NativeError
 pub fn View::navigation_state(Self) -> (Bool, Bool) raise NativeError
 pub fn View::print(Self) -> Unit raise NativeError
-pub fn View::print_to_pdf(Self, String, PdfPrintSettings) -> Int raise NativeError
 pub fn View::remove_page_css(Self, Int64) -> Unit raise NativeError
 pub fn View::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
 pub fn View::set_audio_muted(Self, Bool) -> Unit raise NativeError
@@ -937,7 +942,6 @@ pub fn Window::navigation_history(Self) -> NavigationHistory raise NativeError
 pub fn Window::navigation_state(Self) -> (Bool, Bool) raise NativeError
 pub fn Window::popup_menu(Self, MenuBar, Int, Int) -> Unit raise NativeError
 pub fn Window::print(Self) -> Unit raise NativeError
-pub fn Window::print_to_pdf(Self, String, PdfPrintSettings) -> Int raise NativeError
 pub fn Window::remove_page_css(Self, Int64) -> Unit raise NativeError
 pub fn Window::respond_browser_request(Self, Int64, String, path? : String) -> Unit raise NativeError
 pub fn Window::respond_close_request(Self, Int64, Bool) -> Unit raise NativeError

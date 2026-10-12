@@ -31,18 +31,15 @@ fn CookieCompletionStore::CookieCompletionStore() -> CookieCompletionStore {
 // Readers can belong to a caller's task group rather than application tasks.
 // Once the event pump stops, wake them here instead of leaving them suspended.
 fn CookieCompletionStore::close(self : CookieCompletionStore) -> Unit {
-  for completion in self.pending {
-    if completion.state is CookieWaiting {
-      completion.state = CookieCompleted(
-        Err(
-          @native.NativeError::Status(
-            status=-3,
-            message="application session has ended",
-          ),
+  for pending in self.pending {
+    pending.completion.finish(
+      Err(
+        @native.NativeError::Status(
+          status=-3,
+          message="application session has ended",
         ),
-      )
-      completion.changed.broadcast()
-    }
+      ),
+    )
   }
 }
 
@@ -53,8 +50,7 @@ fn CookieCompletionStore::register(
 ) -> PendingCookieCompletion {
   let completion = PendingCookieCompletion::{
     request_id,
-    state: CookieWaiting,
-    changed: @async.CondVar::Cond(),
+    completion: Completion(),
   }
   self.pending.push(completion)
   completion
@@ -81,10 +77,7 @@ fn CookieCompletionStore::route_completion(
   guard completion is Some(completion) else { return false }
   for pending in self.pending {
     if pending.request_id == completion.request_id {
-      if pending.state is CookieWaiting {
-        pending.state = CookieCompleted(completion.result)
-        pending.changed.broadcast()
-      }
+      pending.completion.finish(completion.result)
       return true
     }
   }
@@ -96,16 +89,11 @@ async fn CookieCompletionStore::wait(
   self : CookieCompletionStore,
   request_id : Int64,
 ) -> Array[@native.NativeCookieRecord] {
-  let completion = self.register(request_id)
+  let pending = self.register(request_id)
   defer self.remove(request_id)
-  while completion.state is CookieWaiting {
-    completion.changed.wait()
-  }
-  match completion.state {
-    CookieCompleted(Ok(payload)) => payload
-    CookieCompleted(Err(error)) =>
-      raise session_operation_failed("complete cookie read", error)
-    CookieWaiting => abort("cookie completion resumed without a result")
+  match pending.completion.wait() {
+    Ok(payload) => payload
+    Err(error) => raise session_operation_failed("complete cookie read", error)
   }
 }
 

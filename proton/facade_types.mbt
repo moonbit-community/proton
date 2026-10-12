@@ -608,18 +608,19 @@ priv struct RuntimeEventPump {
 }
 
 ///|
-priv enum CookieCompletionState {
-  CookieWaiting
-  CookieCompleted(
-    Result[Array[@native.NativeCookieRecord], @native.NativeError]
-  )
+// Result delivery and closure can run before the waiter resumes. Keep the
+// first result; routing and cancellation belong to each operation's owner.
+priv struct Completion[T] {
+  mut result : T?
+  changed : @async.CondVar
 }
 
 ///|
 priv struct PendingCookieCompletion {
   request_id : Int64
-  mut state : CookieCompletionState
-  changed : @async.CondVar
+  completion : Completion[
+    Result[Array[@native.NativeCookieRecord], @native.NativeError],
+  ]
 }
 
 ///|
@@ -688,10 +689,7 @@ priv enum WebContentsTarget {
 }
 
 ///|
-priv enum ResolvedWebContents {
-  PrimaryPage(@native.Window)
-  ChildView(@native.View)
-}
+type ResolvedWebContents = @native.Contents
 
 ///|
 /// The shared browser session of one application run.

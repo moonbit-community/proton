@@ -3428,3 +3428,47 @@ test "cancelled update exit reopens admission and allows another install request
   assert_true(coordinator.accepts_download())
   assert_true(coordinator.begin_exit(InstallUpdate))
 }
+
+///|
+async test "cookie first completion survives shutdown and duplicate delivery before resumption" {
+  for success_first in [true, false] {
+    let store = CookieCompletionStore()
+    @async.with_task_group(group => {
+      let waiter = group.spawn(() => {
+        try {
+          assert_true(store.wait(42L).is_empty())
+          true
+        } catch {
+          SessionError::OperationFailed(detail~, ..) => {
+            assert_eq(detail, "application session has ended")
+            false
+          }
+          error => raise error
+        }
+      })
+      while store.pending.is_empty() {
+        @async.pause()
+      }
+      if !success_first {
+        store.close()
+      }
+      ignore(
+        store.route_completion(
+          Some({ request_id: 42L, window: 1L, result: Ok([]), }),
+        ),
+      )
+      ignore(
+        store.route_completion(
+          Some({
+            request_id: 42L,
+            window: 1L,
+            result: Err(@native.Status(status=-6, message="duplicate")),
+          }),
+        ),
+      )
+      store.close()
+      assert_eq(waiter.wait(), success_first)
+    })
+    assert_true(store.pending.is_empty())
+  }
+}
