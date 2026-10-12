@@ -172,6 +172,39 @@ pub extern "C" fn proton_app_is_active_ffi(out_active : Ref[Int]) -> Int = "prot
 pub extern "C" fn proton_app_is_hidden_ffi(out_hidden : Ref[Int]) -> Int = "proton_app_is_hidden"
 
 ///|
+#borrow(out_applied)
+pub extern "C" fn proton_app_set_badge_count_ffi(
+  count : Int,
+  out_applied : Ref[Int],
+) -> Int = "proton_app_set_badge_count"
+
+///|
+#borrow(out_count)
+pub extern "C" fn proton_app_get_badge_count_ffi(out_count : Ref[Int]) -> Int = "proton_app_get_badge_count"
+
+///|
+#borrow(out_request_id)
+pub extern "C" fn proton_app_dock_bounce_ffi(
+  bounce_type : Int,
+  out_request_id : Ref[Int],
+) -> Int = "proton_app_dock_bounce"
+
+///|
+pub extern "C" fn proton_app_dock_cancel_bounce_ffi(request_id : Int) -> Int = "proton_app_dock_cancel_bounce"
+
+///|
+#borrow(badge_text)
+pub extern "C" fn proton_app_dock_set_badge_ffi(badge_text : Bytes) -> Int = "proton_app_dock_set_badge"
+
+///|
+#borrow(buffer, out_required_len)
+pub extern "C" fn proton_app_dock_get_badge_ffi(
+  buffer : FixedArray[Byte],
+  buffer_len : Int,
+  out_required_len : Ref[Int],
+) -> Int = "proton_app_dock_get_badge"
+
+///|
 #borrow(identifier, activation_json, out_instance, out_primary)
 pub extern "C" fn proton_app_instance_acquire_ffi(
   identifier : Bytes,

@@ -141,6 +141,33 @@ int32_t proton_app_is_active(int32_t *out_active);
    macOS implements the query; other platforms report PROTON_ERR_UNSUPPORTED. */
 int32_t proton_app_is_hidden(int32_t *out_hidden);
 
+/* Sets the application-wide badge count, mirroring Electron's
+   app.setBadgeCount. macOS shows the count on the Dock tile; other platforms
+   apply no badge and report it through a zero *out_applied, matching
+   Electron's Boolean return value instead of raising an error. */
+int32_t proton_app_set_badge_count(int32_t count, int32_t *out_applied);
+
+/* Reads back the badge count set by proton_app_set_badge_count. Platforms
+   without badge support report zero, as Electron's app.getBadgeCount does. */
+int32_t proton_app_get_badge_count(int32_t *out_count);
+
+/* Dock attention requests mirror Electron's app.dock.bounce argument. */
+typedef enum {
+  PROTON_DOCK_BOUNCE_INFORMATIONAL = 0,
+  PROTON_DOCK_BOUNCE_CRITICAL = 1
+} proton_dock_bounce_type_t;
+
+/* Requests a bouncing Dock tile. Only macOS implements the AppKit operation;
+   other platforms report PROTON_ERR_UNSUPPORTED. */
+int32_t proton_app_dock_bounce(int32_t bounce_type, int32_t *out_request_id);
+int32_t proton_app_dock_cancel_bounce(int32_t request_id);
+
+/* Sets and reads back the Dock badge text. Only macOS implements the AppKit
+   operation; other platforms report PROTON_ERR_UNSUPPORTED. */
+int32_t proton_app_dock_set_badge(const char *badge_text);
+int32_t proton_app_dock_get_badge(char *buffer, int32_t buffer_len,
+                                  int32_t *out_required_len);
+
 int32_t proton_system_preferred_language_count(int32_t *out_count);
 int32_t proton_system_preferred_language_at(int32_t index, char *buffer,
                                             int32_t buffer_len,
