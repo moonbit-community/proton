@@ -227,7 +227,7 @@ pub fn proton_update_stage_write_ffi(Int64, Bytes, Int, FixedArray[Byte], Int) -
 
 pub fn proton_update_validate_running_image_ffi(FixedArray[Byte], Int) -> Int
 
-pub fn proton_view_browser_command_ffi(ViewHandle, Bytes, Int) -> Int
+pub fn proton_view_cancel_download_ffi(ViewHandle, Int, Int) -> Int
 
 pub fn proton_view_destroy_ffi(ViewHandle) -> Int
 
@@ -260,6 +260,8 @@ pub fn proton_view_is_audio_muted_ffi(ViewHandle, @ref.Ref[Int]) -> Int
 pub fn proton_view_load_url_ffi(ViewHandle, Bytes) -> Int
 
 pub fn proton_view_navigation_history_json_ffi(ViewHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_view_perform_browser_operation_ffi(ViewHandle, Int, BrowserOperation) -> Int
 
 pub fn proton_view_print_ffi(ViewHandle, Int) -> Int
 
@@ -299,9 +301,9 @@ pub fn proton_window_bridge_revision_ffi(WindowHandle, @ref.Ref[Int64], @ref.Ref
 
 pub fn proton_window_bridge_state_field_ffi(WindowHandle, Int, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
 
-pub fn proton_window_browser_command_ffi(WindowHandle, Bytes, Int) -> Int
-
 pub fn proton_window_cancel_dialog_ffi(WindowHandle, Int64) -> Int
+
+pub fn proton_window_cancel_download_ffi(WindowHandle, Int, Int) -> Int
 
 pub fn proton_window_clear_bridge_failure_ffi(WindowHandle) -> Int
 
@@ -352,6 +354,8 @@ pub fn proton_window_maximize_ffi(WindowHandle) -> Int
 pub fn proton_window_minimize_ffi(WindowHandle) -> Int
 
 pub fn proton_window_navigation_history_json_ffi(WindowHandle, FixedArray[Byte], Int, @ref.Ref[Int]) -> Int
+
+pub fn proton_window_perform_browser_operation_ffi(WindowHandle, Int, BrowserOperation) -> Int
 
 pub fn proton_window_print_ffi(WindowHandle, Int) -> Int
 
@@ -487,6 +491,26 @@ pub fn window_set_button_position(WindowHandle, Int, Int, Int) -> Int
 
 // Types and methods
 pub type BridgeConfigHandle
+
+pub(all) enum BrowserOperation {
+  Back
+  Forward
+  Reload
+  ReloadIgnoreCache
+  Stop
+  Focus
+  Undo
+  Redo
+  Cut
+  Copy
+  Paste
+  PasteAndMatchStyle
+  Delete
+  SelectAll
+  OpenDevtools
+  CloseDevtools
+  ToggleDevtools
+}
 
 pub type EventHandle
 

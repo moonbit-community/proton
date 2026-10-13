@@ -78,9 +78,31 @@ int32_t proton_browser_session_is_loading(
 int32_t proton_browser_session_respond(
     proton_browser_session_t *session, uint64_t request_id,
     const char *action, const char *path, char *error, size_t error_len);
-int32_t proton_browser_session_command(
-    proton_browser_session_t *session, cef_browser_t *browser,
-    const char *command, int32_t download_id, char *error, size_t error_len);
+/* Explicit private ABI tags, matched by MoonBit's BrowserOperation. */
+typedef enum {
+  PROTON_BROWSER_BACK = 0,
+  PROTON_BROWSER_FORWARD = 1,
+  PROTON_BROWSER_RELOAD = 2,
+  PROTON_BROWSER_RELOAD_IGNORE_CACHE = 3,
+  PROTON_BROWSER_STOP = 4,
+  PROTON_BROWSER_FOCUS = 5,
+  PROTON_BROWSER_UNDO = 6,
+  PROTON_BROWSER_REDO = 7,
+  PROTON_BROWSER_CUT = 8,
+  PROTON_BROWSER_COPY = 9,
+  PROTON_BROWSER_PASTE = 10,
+  PROTON_BROWSER_PASTE_AND_MATCH_STYLE = 11,
+  PROTON_BROWSER_DELETE = 12,
+  PROTON_BROWSER_SELECT_ALL = 13,
+  PROTON_BROWSER_OPEN_DEVTOOLS = 14,
+  PROTON_BROWSER_CLOSE_DEVTOOLS = 15,
+  PROTON_BROWSER_TOGGLE_DEVTOOLS = 16,
+} proton_browser_operation_t;
+
+int32_t proton_browser_perform_browser_operation(proton_browser_session_t *session,
+    cef_browser_t *browser, int32_t operation, char *error, size_t error_len);
+int32_t proton_browser_cancel_download(proton_browser_session_t *session,
+    int32_t download_id, char *error, size_t error_len);
 /* Borrow browser for the call; each operation owns and releases its main frame.
    Callers retain host validation, platform wakeups and autorelease pools. */
 int32_t proton_browser_load_url(

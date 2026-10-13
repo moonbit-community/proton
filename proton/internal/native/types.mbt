@@ -2228,3 +2228,6 @@ pub(all) enum Contents {
   PrimaryPage(Window)
   ChildView(View)
 }
+
+///|
+pub using @native_ffi {type BrowserOperation}

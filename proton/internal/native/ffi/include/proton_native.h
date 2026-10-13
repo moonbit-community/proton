@@ -475,8 +475,8 @@ int32_t proton_window_insert_page_css(proton_window_handle_t window,
                                       const char *css, int64_t *out_key);
 int32_t proton_window_remove_page_css(proton_window_handle_t window,
                                       int64_t key);
-int32_t proton_window_browser_command(
-    proton_window_handle_t window, const char *command, int32_t download_id);
+int32_t proton_contents_perform_browser_operation(void *target, int32_t is_view, int32_t operation);
+int32_t proton_contents_cancel_download(void *target, int32_t is_view, int32_t download_id);
 int32_t proton_window_get_browser_focus_state(
     proton_window_handle_t window, int32_t *out_focused);
 int32_t proton_window_get_devtools_state(
@@ -693,8 +693,7 @@ int32_t proton_view_navigation_history_json(proton_view_handle_t view,
 int32_t proton_view_insert_page_css(proton_view_handle_t view,
                                     const char *css, int64_t *out_key);
 int32_t proton_view_remove_page_css(proton_view_handle_t view, int64_t key);
-int32_t proton_view_browser_command(
-    proton_view_handle_t view, const char *command, int32_t download_id);
+
 int32_t proton_view_get_browser_focus_state(
     proton_view_handle_t view, int32_t *out_focused);
 int32_t proton_view_get_devtools_state(

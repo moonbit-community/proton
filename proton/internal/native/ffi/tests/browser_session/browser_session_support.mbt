@@ -96,3 +96,12 @@ pub fn header_case_trace() -> String {
   @ffi.link_runtime()
   @utf8.decode_lossy(header_case_trace_ffi())
 }
+
+///|
+extern "C" fn edit_operations_trace_ffi() -> Bytes = "proton_test_edit_operations_trace"
+
+///|
+pub fn edit_operations_trace() -> String {
+  @ffi.link_runtime()
+  @utf8.decode_lossy(edit_operations_trace_ffi())
+}

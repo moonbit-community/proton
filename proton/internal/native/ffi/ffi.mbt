@@ -1,4 +1,26 @@
 ///|
+/// Fixed no-argument browser operations; tags match proton_browser_operation_t.
+pub(all) enum BrowserOperation {
+  Back = 0
+  Forward = 1
+  Reload = 2
+  ReloadIgnoreCache = 3
+  Stop = 4
+  Focus = 5
+  Undo = 6
+  Redo = 7
+  Cut = 8
+  Copy = 9
+  Paste = 10
+  PasteAndMatchStyle = 11
+  Delete = 12
+  SelectAll = 13
+  OpenDevtools = 14
+  CloseDevtools = 15
+  ToggleDevtools = 16
+}
+
+///|
 pub fn ensure_cef_loader_linked() -> Unit {
   @mac_engine.ensure_linked()
   @cef_loader.ensure_linked()
@@ -1003,12 +1025,18 @@ pub extern "C" fn proton_window_flash_frame_ffi(
 ) -> Int32 = "proton_window_flash_frame"
 
 ///|
-#borrow(command)
-pub extern "C" fn proton_window_browser_command_ffi(
+pub extern "C" fn proton_window_perform_browser_operation_ffi(
   window : WindowHandle,
-  command : Bytes,
+  is_view : Int32,
+  operation : BrowserOperation,
+) -> Int32 = "proton_contents_perform_browser_operation"
+
+///|
+pub extern "C" fn proton_window_cancel_download_ffi(
+  window : WindowHandle,
+  is_view : Int32,
   download_id : Int32,
-) -> Int32 = "proton_window_browser_command"
+) -> Int32 = "proton_contents_cancel_download"
 
 ///|
 #borrow(out_focused)
@@ -1423,12 +1451,18 @@ pub extern "C" fn proton_view_remove_page_css_ffi(
 ) -> Int32 = "proton_view_remove_page_css"
 
 ///|
-#borrow(command)
-pub extern "C" fn proton_view_browser_command_ffi(
+pub extern "C" fn proton_view_perform_browser_operation_ffi(
   view : ViewHandle,
-  command : Bytes,
+  is_view : Int32,
+  operation : BrowserOperation,
+) -> Int32 = "proton_contents_perform_browser_operation"
+
+///|
+pub extern "C" fn proton_view_cancel_download_ffi(
+  view : ViewHandle,
+  is_view : Int32,
   download_id : Int32,
-) -> Int32 = "proton_view_browser_command"
+) -> Int32 = "proton_contents_cancel_download"
 
 ///|
 #borrow(out_focused)

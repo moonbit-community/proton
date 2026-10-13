@@ -314,7 +314,6 @@ proton_test_download_command_beats_allow_trace(void) {
   proton_test_before_download_callback_t before;
   proton_test_download_item_callback_t item_callback;
   proton_test_download_item_t download;
-  cef_browser_t browser = {0};
   char error[128] = {0};
   char trace[224];
 
@@ -330,8 +329,8 @@ proton_test_download_command_beats_allow_trace(void) {
       session, &download.item, &suggested_name, &before.callback);
   proton_browser_session_download_updated(
       session, &download.item, &item_callback.callback);
-  int32_t command = proton_browser_session_command(
-      session, &browser, "cancel_download", 45, error, sizeof(error));
+  int32_t command = proton_browser_cancel_download(
+      session, 45, error, sizeof(error));
   int32_t status = proton_browser_session_respond(
       session, 1, "allow", NULL, error, sizeof(error));
   proton_browser_session_destroy(session);
@@ -434,4 +433,102 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_header_case_trace(void) {
            first, different_path, value != NULL ? value : "(null)");
   moonbit_decref(owner);
   return proton_test_copy_trace(trace);
+}
+
+/* Each edit must reach its own CEF method and release the acquired frame. */
+static struct {
+  cef_frame_t frame;
+  char operations[9];
+  int operation_count;
+  int releases;
+} proton_test_edit_frame;
+
+static int CEF_CALLBACK proton_test_edit_release(cef_base_ref_counted_t *base) {
+  (void)base;
+  proton_test_edit_frame.releases++;
+  return 1;
+}
+
+#define PROTON_TEST_EDIT(name, letter) \
+  static void CEF_CALLBACK proton_test_edit_##name(cef_frame_t *frame) { \
+    (void)frame; \
+    proton_test_edit_frame.operations[proton_test_edit_frame.operation_count++] = letter; \
+  }
+PROTON_TEST_EDIT(undo, 'u')
+PROTON_TEST_EDIT(redo, 'r')
+PROTON_TEST_EDIT(cut, 'x')
+PROTON_TEST_EDIT(copy, 'c')
+PROTON_TEST_EDIT(paste, 'p')
+PROTON_TEST_EDIT(paste_and_match_style, 'm')
+PROTON_TEST_EDIT(del, 'd')
+PROTON_TEST_EDIT(select_all, 'a')
+#undef PROTON_TEST_EDIT
+
+static cef_frame_t *CEF_CALLBACK proton_test_focused_frame(cef_browser_t *browser) {
+  (void)browser;
+  return &proton_test_edit_frame.frame;
+}
+
+static cef_frame_t *CEF_CALLBACK proton_test_missing_frame(cef_browser_t *browser) {
+  (void)browser;
+  return NULL;
+}
+
+MOONBIT_FFI_EXPORT moonbit_bytes_t proton_test_edit_operations_trace(void) {
+  memset(&proton_test_edit_frame, 0, sizeof(proton_test_edit_frame));
+  cef_frame_t *frame = &proton_test_edit_frame.frame;
+  frame->base.release = proton_test_edit_release;
+  frame->undo = proton_test_edit_undo;
+  frame->redo = proton_test_edit_redo;
+  frame->cut = proton_test_edit_cut;
+  frame->copy = proton_test_edit_copy;
+  frame->paste = proton_test_edit_paste;
+  frame->paste_and_match_style = proton_test_edit_paste_and_match_style;
+  frame->del = proton_test_edit_del;
+  frame->select_all = proton_test_edit_select_all;
+  cef_browser_t browser = {0};
+  browser.get_focused_frame = proton_test_focused_frame;
+  char error[128] = {0};
+  int status = proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_UNDO, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_REDO, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_CUT, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_COPY, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_PASTE, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_PASTE_AND_MATCH_STYLE, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_DELETE, error, sizeof(error));
+  status |= proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_SELECT_ALL, error, sizeof(error));
+  browser.get_focused_frame = proton_test_missing_frame;
+  int missing = proton_browser_perform_browser_operation(NULL, &browser, PROTON_BROWSER_UNDO, error, sizeof(error));
+  int unknown = proton_browser_perform_browser_operation(NULL, &browser, -1, NULL, 0);
+  if (unknown != PROTON_ERR_INVALID_ARGUMENT) return proton_test_copy_trace("unknown-operation-accepted");
+  char trace[256];
+  snprintf(trace, sizeof(trace), "operations=%s,releases=%d,status=%d,missing=%d,error=%s",
+      proton_test_edit_frame.operations, proton_test_edit_frame.releases,
+      status, missing, error);
+  return proton_test_copy_trace(trace);
+}
+
+MOONBIT_FFI_EXPORT int32_t proton_test_browser_operation_abi(
+    int32_t operation, int32_t index) {
+  static const int32_t operations[] = {
+    PROTON_BROWSER_BACK,
+    PROTON_BROWSER_FORWARD,
+    PROTON_BROWSER_RELOAD,
+    PROTON_BROWSER_RELOAD_IGNORE_CACHE,
+    PROTON_BROWSER_STOP,
+    PROTON_BROWSER_FOCUS,
+    PROTON_BROWSER_UNDO,
+    PROTON_BROWSER_REDO,
+    PROTON_BROWSER_CUT,
+    PROTON_BROWSER_COPY,
+    PROTON_BROWSER_PASTE,
+    PROTON_BROWSER_PASTE_AND_MATCH_STYLE,
+    PROTON_BROWSER_DELETE,
+    PROTON_BROWSER_SELECT_ALL,
+    PROTON_BROWSER_OPEN_DEVTOOLS,
+    PROTON_BROWSER_CLOSE_DEVTOOLS,
+    PROTON_BROWSER_TOGGLE_DEVTOOLS,
+  };
+  return index >= 0 && (size_t)index < sizeof(operations) / sizeof(operations[0])
+      && operation == operations[index];
 }

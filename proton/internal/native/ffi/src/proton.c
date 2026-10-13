@@ -2252,33 +2252,6 @@ int32_t proton_window_eval(proton_window_handle_t window, const char *script) {
   return PROTON_OK;
 }
 
-int32_t proton_window_browser_command(proton_window_handle_t window,
-                                      const char *command,
-                                      int32_t download_id) {
-  proton_window_slot_t *slot = NULL;
-  int32_t status = proton_get_window(window, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (command == NULL || command[0] == '\0' || download_id < -1) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "browser command fields are invalid");
-  }
-  if (slot->engine_window == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "browser commands require native engine");
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_window_browser_command(
-      slot->engine_window, command, download_id, engine_error,
-      sizeof(engine_error));
-  if (status != PROTON_OK) {
-    return proton_set_engine_status(status, engine_error);
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
 int32_t proton_window_navigation_history_json(proton_window_handle_t window,
                                               char *buffer,
                                               int32_t buffer_len,
@@ -2444,6 +2417,30 @@ static int32_t proton_get_contents_engine(void *handle, int32_t is_view,
   }
   return *out_engine != NULL ? PROTON_OK :
       proton_set_error(PROTON_ERR_NOT_INITIALIZED, "web contents is not initialized");
+}
+
+int32_t proton_contents_perform_browser_operation(
+    void *target, int32_t is_view, int32_t operation) {
+  void *engine = NULL;
+  int32_t status = proton_get_contents_engine(target, is_view, &engine);
+  if (status != PROTON_OK) return status;
+  char engine_error[512] = {0};
+  status = proton_engine_contents_perform_browser_operation(
+      engine, is_view, operation, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
+}
+
+int32_t proton_contents_cancel_download(void *target, int32_t is_view, int32_t download_id) {
+  void *engine = NULL;
+  int32_t status = proton_get_contents_engine(target, is_view, &engine);
+  if (status != PROTON_OK) return status;
+  char engine_error[512] = {0};
+  status = proton_engine_contents_cancel_download(engine, is_view, download_id, engine_error, sizeof(engine_error));
+  if (status != PROTON_OK) return proton_set_engine_status(status, engine_error);
+  g_last_error[0] = '\0';
+  return PROTON_OK;
 }
 
 int32_t proton_contents_download_url(
@@ -3770,33 +3767,6 @@ int32_t proton_view_eval(proton_view_handle_t view, const char *script) {
     if (status != PROTON_OK) {
       return proton_set_engine_status(status, engine_error);
     }
-  }
-  g_last_error[0] = '\0';
-  return PROTON_OK;
-}
-
-int32_t proton_view_browser_command(proton_view_handle_t view,
-                                    const char *command,
-                                    int32_t download_id) {
-  proton_view_slot_t *slot = NULL;
-  int32_t status = proton_get_view(view, &slot);
-  if (status != PROTON_OK) {
-    return status;
-  }
-  if (command == NULL || command[0] == '\0' || download_id < -1) {
-    return proton_set_error(PROTON_ERR_INVALID_ARGUMENT,
-                            "browser command fields are invalid");
-  }
-  if (slot->engine_view == NULL) {
-    return proton_set_error(PROTON_ERR_UNSUPPORTED,
-                            "browser commands require native engine");
-  }
-  char engine_error[512] = {0};
-  status = proton_engine_view_browser_command(
-      slot->engine_view, command, download_id, engine_error,
-      sizeof(engine_error));
-  if (status != PROTON_OK) {
-    return proton_set_engine_status(status, engine_error);
   }
   g_last_error[0] = '\0';
   return PROTON_OK;

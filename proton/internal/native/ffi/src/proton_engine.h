@@ -421,9 +421,10 @@ int32_t proton_engine_window_insert_page_css(proton_engine_window_t *window,
 int32_t proton_engine_window_remove_page_css(proton_engine_window_t *window,
                                              int64_t key, char *error,
                                              size_t error_len);
-int32_t proton_engine_window_browser_command(
-    proton_engine_window_t *window, const char *command, int32_t download_id,
+int32_t proton_engine_contents_perform_browser_operation(void *target, int32_t is_view, int32_t operation,
     char *error, size_t error_len);
+int32_t proton_engine_contents_cancel_download(void *target, int32_t is_view,
+    int32_t download_id, char *error, size_t error_len);
 int32_t proton_engine_window_get_browser_focus_state(
     proton_engine_window_t *window, int32_t *out_focused,
     char *error, size_t error_len);
@@ -598,11 +599,7 @@ int32_t proton_engine_view_insert_page_css(proton_engine_view_t *view,
 int32_t proton_engine_view_remove_page_css(proton_engine_view_t *view,
                                            int64_t key, char *error,
                                            size_t error_len);
-int32_t proton_engine_view_browser_command(proton_engine_view_t *view,
-                                                const char *command,
-                                                int32_t download_id,
-                                                char *error,
-                                                size_t error_len);
+
 int32_t proton_engine_view_get_browser_focus_state(
     proton_engine_view_t *view, int32_t *out_focused,
     char *error, size_t error_len);

@@ -2544,25 +2544,6 @@ pub fn Window::remove_page_css(
 }
 
 ///|
-/// Sends a browser control command to the main page: `back`, `forward`,
-/// `reload`, `reload_ignore_cache`, `stop`, `focus`, `undo`, `redo`, `cut`,
-/// `copy`, `paste`, `paste_and_match_style`, `delete`, `select_all`,
-/// `open_devtools`, `close_devtools`, `toggle_devtools`, or `cancel_download`.
-pub fn Window::browser_command(
-  self : Window,
-  command : String,
-  download_id? : Int32,
-) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_window_browser_command_ffi(
-      self.live_handle(),
-      @ffi.to_cstr(command),
-      download_id.unwrap_or(-1),
-    ),
-  )
-}
-
-///|
 /// Returns whether the main browser currently owns web-content focus.
 pub fn Window::browser_is_focused(self : Window) -> Bool raise NativeError {
   let focused : Ref[Int32] = { val: 0, }
@@ -3712,25 +3693,6 @@ pub fn View::remove_page_css(
 }
 
 ///|
-/// Sends a browser control command to the view: `back`, `forward`, `reload`,
-/// `reload_ignore_cache`, `stop`, `focus`, `undo`, `redo`, `cut`, `copy`,
-/// `paste`, `paste_and_match_style`, `delete`, `select_all`, `open_devtools`,
-/// `close_devtools`, or `toggle_devtools`.
-pub fn View::browser_command(
-  self : View,
-  command : String,
-  download_id? : Int32,
-) -> Unit raise NativeError {
-  check_status(
-    @native_ffi.proton_view_browser_command_ffi(
-      self.live_handle(),
-      @ffi.to_cstr(command),
-      download_id.unwrap_or(-1),
-    ),
-  )
-}
-
-///|
 /// Returns whether this view currently owns web-content focus.
 pub fn View::browser_is_focused(self : View) -> Bool raise NativeError {
   let focused : Ref[Int32] = { val: 0, }
@@ -3920,4 +3882,52 @@ fn native_event_view_id(event : @native_ffi.EventHandle) -> Int64? {
 pub fn AppInstance::prepare_update_handoff(self : AppInstance) -> Bool {
   !self.destroyed &&
   @native_ffi.proton_app_instance_prepare_update_ffi(self.handle) != 0
+}
+
+///|
+/// Performs a fixed browser operation after validating its target owner.
+pub fn Contents::perform(
+  self : Contents,
+  operation : BrowserOperation,
+) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_perform_browser_operation_ffi(
+          window.live_handle(),
+          0,
+          operation,
+        )
+      ChildView(view) =>
+        @native_ffi.proton_view_perform_browser_operation_ffi(
+          view.live_handle(),
+          1,
+          operation,
+        )
+    },
+  )
+}
+
+///|
+/// Cancels the active download with the specified id.
+pub fn Contents::cancel_download(
+  self : Contents,
+  download_id : Int32,
+) -> Unit raise NativeError {
+  check_status(
+    match self {
+      PrimaryPage(window) =>
+        @native_ffi.proton_window_cancel_download_ffi(
+          window.live_handle(),
+          0,
+          download_id,
+        )
+      ChildView(view) =>
+        @native_ffi.proton_view_cancel_download_ffi(
+          view.live_handle(),
+          1,
+          download_id,
+        )
+    },
+  )
 }

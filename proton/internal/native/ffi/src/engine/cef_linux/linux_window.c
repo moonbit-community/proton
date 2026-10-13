@@ -1927,17 +1927,39 @@ int32_t proton_engine_window_eval(proton_engine_window_t *window,
       error, error_len);
 }
 
-int32_t proton_engine_window_browser_command(
-    proton_engine_window_t *window, const char *command, int32_t download_id,
+int32_t proton_engine_contents_perform_browser_operation(
+    void *target, int32_t is_view, int32_t operation,
     char *error, size_t error_len) {
-  if (window == NULL || window->browser_session == NULL ||
-      proton_engine_window_browser(window) == NULL) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(view)
+      : proton_engine_window_browser(window);
+  proton_browser_session_t *session = is_view
+      ? (view == NULL ? NULL : view->browser_session)
+      : (window == NULL ? NULL : window->browser_session);
+  if (browser == NULL || session == NULL || (is_view && view->closed)) {
     proton_engine_set_message(error, error_len, "browser is not initialized");
     return PROTON_ERR_NOT_INITIALIZED;
   }
-  return proton_browser_session_command(
-      window->browser_session, proton_engine_window_browser(window), command,
-      download_id, error, error_len);
+  return proton_browser_perform_browser_operation(
+      session, browser, operation, error, error_len);
+}
+
+int32_t proton_engine_contents_cancel_download(
+    void *target, int32_t is_view, int32_t download_id,
+    char *error, size_t error_len) {
+  proton_engine_window_t *window = is_view ? NULL : target;
+  proton_engine_view_t *view = is_view ? target : NULL;
+  cef_browser_t *browser = is_view ? proton_engine_view_browser(view)
+      : proton_engine_window_browser(window);
+  proton_browser_session_t *session = is_view
+      ? (view == NULL ? NULL : view->browser_session)
+      : (window == NULL ? NULL : window->browser_session);
+  if (browser == NULL || session == NULL || (is_view && view->closed)) {
+    proton_engine_set_message(error, error_len, "browser is not initialized");
+    return PROTON_ERR_NOT_INITIALIZED;
+  }
+  return proton_browser_cancel_download(session, download_id, error, error_len);
 }
 
 int32_t proton_engine_window_get_browser_focus_state(

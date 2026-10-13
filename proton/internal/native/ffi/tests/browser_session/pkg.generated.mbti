@@ -16,6 +16,8 @@ pub fn download_invalid_response_trace() -> String
 
 pub fn download_single_completion_trace() -> String
 
+pub fn edit_operations_trace() -> String
+
 pub fn header_case_trace() -> String
 
 pub fn resource_handler_lifetime_trace() -> String

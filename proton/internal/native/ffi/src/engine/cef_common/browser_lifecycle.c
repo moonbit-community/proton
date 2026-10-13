@@ -371,10 +371,10 @@ int proton_browser_lifecycle_browser_id(
 }
 
 int32_t
-proton_browser_lifecycle_devtools_command(proton_browser_lifecycle_t *lifecycle,
-                                          const char *command, char *error,
+proton_browser_lifecycle_open_devtools(proton_browser_lifecycle_t *lifecycle,
+                                          char *error,
                                           size_t error_len) {
-  if (lifecycle == NULL || lifecycle->browser == NULL || command == NULL) {
+  if (lifecycle == NULL || lifecycle->browser == NULL) {
     proton_browser_lifecycle_set_message(error, error_len,
                                          "browser lifecycle is unavailable");
     return PROTON_ERR_INVALID_ARGUMENT;
@@ -389,16 +389,6 @@ proton_browser_lifecycle_devtools_command(proton_browser_lifecycle_t *lifecycle,
   int devtools_active = devtools != NULL &&
                         devtools->state != PROTON_BROWSER_CLOSED &&
                         devtools->state != PROTON_BROWSER_CREATION_FAILED;
-  int close = strcmp(command, "close_devtools") == 0 ||
-              (strcmp(command, "toggle_devtools") == 0 && devtools_active);
-  if (close) {
-    if (devtools_active && devtools->state != PROTON_BROWSER_CLOSING) {
-      proton_browser_lifecycle_note_close_requested(devtools, 1);
-      host->close_dev_tools(host);
-    }
-    host->base.release((cef_base_ref_counted_t *)host);
-    return PROTON_OK;
-  }
 
   if (devtools_active) {
     if (devtools->state == PROTON_BROWSER_CLOSING) {
@@ -441,4 +431,38 @@ proton_browser_lifecycle_devtools_command(proton_browser_lifecycle_t *lifecycle,
   host->show_dev_tools(host, &window_info, devtools->client, &settings, NULL);
   host->base.release((cef_base_ref_counted_t *)host);
   return PROTON_OK;
+}
+
+int32_t proton_browser_lifecycle_close_devtools(
+    proton_browser_lifecycle_t *lifecycle, char *error, size_t error_len) {
+  if (lifecycle == NULL || lifecycle->browser == NULL) {
+    proton_browser_lifecycle_set_message(error, error_len,
+                                         "browser lifecycle is unavailable");
+    return PROTON_ERR_INVALID_ARGUMENT;
+  }
+  cef_browser_host_t *host = lifecycle->browser->get_host(lifecycle->browser);
+  if (host == NULL) {
+    proton_browser_lifecycle_set_message(error, error_len,
+                                         "browser host is unavailable");
+    return PROTON_ERR_ENGINE;
+  }
+  proton_browser_lifecycle_t *devtools = lifecycle->devtools;
+  if (devtools != NULL && devtools->state != PROTON_BROWSER_CLOSED &&
+      devtools->state != PROTON_BROWSER_CREATION_FAILED &&
+      devtools->state != PROTON_BROWSER_CLOSING) {
+    proton_browser_lifecycle_note_close_requested(devtools, 1);
+    host->close_dev_tools(host);
+  }
+  host->base.release((cef_base_ref_counted_t *)host);
+  return PROTON_OK;
+}
+
+int32_t proton_browser_lifecycle_toggle_devtools(
+    proton_browser_lifecycle_t *lifecycle, char *error, size_t error_len) {
+  proton_browser_lifecycle_t *devtools = lifecycle == NULL ? NULL : lifecycle->devtools;
+  if (devtools != NULL && devtools->state != PROTON_BROWSER_CLOSED &&
+      devtools->state != PROTON_BROWSER_CREATION_FAILED) {
+    return proton_browser_lifecycle_close_devtools(lifecycle, error, error_len);
+  }
+  return proton_browser_lifecycle_open_devtools(lifecycle, error, error_len);
 }

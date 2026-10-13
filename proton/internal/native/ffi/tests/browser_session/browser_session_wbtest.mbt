@@ -97,3 +97,44 @@ test "header names use ASCII case-insensitive comparison but paths and values do
     content="first=0,different_path=0,value=Token AbC",
   )
 }
+
+///|
+test "editing operations call distinct CEF methods and release their focused frame" {
+  inspect(
+    edit_operations_trace(),
+    content="operations=urxcpmda,releases=8,status=0,missing=-7,error=focused browser frame is unavailable",
+  )
+}
+
+///|
+extern "C" fn browser_operation_abi_ffi(
+  operation : @ffi.BrowserOperation,
+  index : Int32,
+) -> Int32 = "proton_test_browser_operation_abi"
+
+///|
+test "browser operation tags agree with the compiled C ABI" {
+  @ffi.link_runtime()
+  let operations : Array[@ffi.BrowserOperation] = [
+    Back,
+    Forward,
+    Reload,
+    ReloadIgnoreCache,
+    Stop,
+    Focus,
+    Undo,
+    Redo,
+    Cut,
+    Copy,
+    Paste,
+    PasteAndMatchStyle,
+    Delete,
+    SelectAll,
+    OpenDevtools,
+    CloseDevtools,
+    ToggleDevtools,
+  ]
+  for index, operation in operations {
+    assert_eq(browser_operation_abi_ffi(operation, index), 1)
+  }
+}
