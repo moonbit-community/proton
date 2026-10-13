@@ -97,7 +97,7 @@ async fn run_multi_window_bridge() -> Result[Unit, String] {
       height=420,
       debug=true,
     )
-    .add_window(
+    ..add_window(
       "secondary",
       @proton.WindowConfig(
         "Bridge Multi B",
@@ -107,12 +107,12 @@ async fn run_multi_window_bridge() -> Result[Unit, String] {
       ),
       open_on_start=true,
     )
-    .capability(@proton_extension.capability(multi_window_extension()), targets=[
+    ..capability(@proton_extension.capability(multi_window_extension()), targets=[
       @proton.RendererTarget::entry(),
       @proton.RendererTarget::entry(window="secondary"),
     ])
   try {
-    app.identifier("dev.proton.e2e-multi-window").run()
+    app..identifier("dev.proton.e2e-multi-window").run()
     Ok(())
   } catch {
     error => Err(error.message())

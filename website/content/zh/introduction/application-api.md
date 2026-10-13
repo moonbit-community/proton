@@ -31,6 +31,23 @@
 
 各函数返回 `App` 构建器，共同选项包括宽度、高度、调试模式和是否允许调整大小。`entry_html`、`entry_url`、`entry_file`、`entry_asset` 可修改已有构建器的入口。
 
+**配置应用**
+
+`config`、`debug`、`add_window`、`on_*` 回调注册等配置方法原地修改同一个 `App`，返回 `Unit`。使用瀑布语法 `..` 在连续配置时保留应用值：
+
+```moonbit
+let app = @proton.html("Hello", "<h1>Hello</h1>")
+  ..config(@proton.load_config())
+  ..debug()
+
+app.single_instance()
+app.run()
+```
+
+直接调用 `app.single_instance()` 返回 `Unit`。构造函数仍返回 `App`；`app.name()` 等查询保留各自的返回类型，`run()` 和 `run_or_abort()` 仍是普通异步调用。
+
+迁移原有构建链时，将配置调用前的 `.` 改为 `..`，查询和最终的 `run()` / `run_or_abort()` 保留单点。配置校验、注册顺序和生命周期行为不变。
+
 **应用身份**
 
 `@proton.load_config()` 返回完整的类型化 `AppConfig`，加载失败时立即抛出错误。直接从该值读取 `identifier`、`backend`、`frontend` 和 `package_config`。通过 `app.config(config)` 安装配置，它与 `app.identifier(...)` 互斥。identifier 是稳定的应用身份，与窗口标题、产品名称和版本不同。

@@ -7,8 +7,8 @@ async fn main {
       height=680,
       debug=true,
     )
-    .capability(@dialog.capability())
-    .capability(@clipboard.capability())
-    .capability(@fs.capability([@fs.PermissionRoot(".", ["write_file"])]))
-  app.identifier("dev.proton.20-app-desktop").run_or_abort()
+    ..capability(@dialog.capability())
+    ..capability(@clipboard.capability())
+    ..capability(@fs.capability([@fs.PermissionRoot(".", ["write_file"])]))
+  app..identifier("dev.proton.20-app-desktop").run_or_abort()
 }

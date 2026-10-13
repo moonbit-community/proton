@@ -66,8 +66,8 @@ async fn main {
     #|</script>
     #|</html>
   @proton.html("Greeting", html)
-  .config(@proton.load_config())
-  .commands(fn(registrar) raise {
+  ..config(@proton.load_config())
+  ..commands(fn(registrar) raise {
     registrar.bind(greet, (_context, request) => {
       "Hello, " + request.name + "!"
     })
@@ -81,7 +81,7 @@ async fn main {
 这里有三个相互连接的部分：
 
 1. `GreetRequest` 描述 JSON 请求，`greet` 声明路由及响应类型。
-2. `.commands(...)` 通过 `registrar.bind` 注册处理器，处理器接收调用方上下文和解码后的请求。
+2. `..commands(...)` 通过 `registrar.bind` 注册处理器，处理器接收调用方上下文和解码后的请求。
 3. `window.__MoonBit__.app.greet(...)` 返回一个表示响应的 JavaScript promise，页面等待结果并处理拒绝。
 
 仅声明描述符并不会注册处理器。应用中的命令名称需要保持唯一。

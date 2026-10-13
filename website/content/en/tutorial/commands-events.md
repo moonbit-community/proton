@@ -66,8 +66,8 @@ async fn main {
     #|</script>
     #|</html>
   @proton.html("Greeting", html)
-  .config(@proton.load_config())
-  .commands(fn(registrar) raise {
+  ..config(@proton.load_config())
+  ..commands(fn(registrar) raise {
     registrar.bind(greet, (_context, request) => {
       "Hello, " + request.name + "!"
     })
@@ -81,7 +81,7 @@ Run `proton_cli dev`. Enter “Ada” and click **Greet**. The page should displ
 There are three connected parts:
 
 1. `GreetRequest` describes the JSON request, and `greet` declares its route and response type.
-2. `.commands(...)` registers a handler with `registrar.bind`. The handler receives the caller context and decoded request.
+2. `..commands(...)` registers a handler with `registrar.bind`. The handler receives the caller context and decoded request.
 3. `window.__MoonBit__.app.greet(...)` returns a JavaScript promise for the response. The page awaits it and handles rejection.
 
 Declaring a descriptor alone does not register a handler. Keep command names unique within the application.

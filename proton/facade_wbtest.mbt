@@ -90,7 +90,7 @@ fn test_manifest() -> @manifest.AppManifest {
 test "last-window policy defaults to quit and can keep the app running" {
   let app = html("Lifecycle", "<html></html>")
   assert_eq(app.last_window_closed_policy_value, LastWindowClosedPolicy::Quit)
-  let app = app.last_window_closed_policy(LastWindowClosedPolicy::KeepRunning)
+  app.last_window_closed_policy(LastWindowClosedPolicy::KeepRunning)
   assert_eq(
     app.last_window_closed_policy_value,
     LastWindowClosedPolicy::KeepRunning,
@@ -430,12 +430,12 @@ test "the event loop is installed during process initialization" {
 
 ///|
 test "bridge startup timeout is finite and configurable" {
-  let default_app = html("Test", "<html></html>").identifier("dev.proton.test")
+  let default_app = html("Test", "<html></html>")..identifier("dev.proton.test")
   inspect(default_app.bridge_startup_timeout_value_ms, content="30000")
-  let configured = default_app.bridge_startup_timeout_ms(2500)
+  let configured = default_app..bridge_startup_timeout_ms(2500)
   inspect(configured.bridge_startup_timeout_value_ms, content="2500")
   assert_true(configured.validation_error() is None)
-  match configured.bridge_startup_timeout_ms(0).validation_error() {
+  match configured..bridge_startup_timeout_ms(0).validation_error() {
     Some(InvalidSetting(name~, message~)) => {
       assert_eq(name, "bridge_startup_timeout_ms")
       assert_eq(message, "must be positive")
@@ -447,9 +447,9 @@ test "bridge startup timeout is finite and configurable" {
 ///|
 test "session partitions validate and resolve beneath session data" {
   let app = html("Partition", "<main />")
-    .identifier("dev.proton.partition")
-    .single_instance()
-    .session_partition("account_1")
+    ..identifier("dev.proton.partition")
+    ..single_instance()
+    ..session_partition("account_1")
   let config = app.resolved_app_config()
   assert_eq(config.session_partition, Some("account_1"))
   assert_true(session_partition_is_valid("account-1.v2"))
@@ -481,12 +481,12 @@ test "storage data kinds are stable and explicit" {
 ///|
 test "web request cancellation prefixes are validated and resolved" {
   let app = html("Test", "<html></html>")
-    .identifier("dev.proton.web-request")
-    .web_request_cancel_prefix("https://blocked.example/")
+    ..identifier("dev.proton.web-request")
+    ..web_request_cancel_prefix("https://blocked.example/")
   assert_eq(app.resolved_app_config().web_request_cancel_prefixes, [
     "https://blocked.example/",
   ])
-  match app.web_request_cancel_prefix("").validation_error() {
+  match app..web_request_cancel_prefix("").validation_error() {
     Some(InvalidSetting(name~, message~)) => {
       assert_eq(name, "web_request_cancel_prefix")
       assert_eq(message, "must not be empty")
@@ -494,7 +494,9 @@ test "web request cancellation prefixes are validated and resolved" {
     _ => fail("expected empty prefix validation error")
   }
   assert_true(
-    app.web_request_cancel_prefix("https://blocked.example/").validation_error()
+    app
+    ..web_request_cancel_prefix("https://blocked.example/")
+    .validation_error()
     is Some(_),
   )
 }
@@ -502,20 +504,22 @@ test "web request cancellation prefixes are validated and resolved" {
 ///|
 test "web request redirect prefixes are validated and resolved" {
   let app = html("Test", "<html></html>")
-    .identifier("dev.proton.web-request-redirect")
-    .web_request_redirect_prefix("https://old.example/", "https://new.example/")
+    ..identifier("dev.proton.web-request-redirect")
+    ..web_request_redirect_prefix(
+      "https://old.example/", "https://new.example/",
+    )
   assert_eq(app.resolved_app_config().web_request_redirect_prefixes, [
     ("https://old.example/", "https://new.example/"),
   ])
   assert_true(
     app
-    .web_request_redirect_prefix("", "https://new.example/")
+    ..web_request_redirect_prefix("", "https://new.example/")
     .validation_error()
     is Some(_),
   )
   assert_true(
     app
-    .web_request_redirect_prefix(
+    ..web_request_redirect_prefix(
       "https://old.example/", "https://other.example/",
     )
     .validation_error()
@@ -526,14 +530,16 @@ test "web request redirect prefixes are validated and resolved" {
 ///|
 test "web request header prefixes are validated and resolved" {
   let app = html("Test", "<html></html>")
-    .identifier("dev.proton.web-request-header")
-    .web_request_header_prefix("https://api.example/", "X-Proton-Mode", "test")
+    ..identifier("dev.proton.web-request-header")
+    ..web_request_header_prefix("https://api.example/", "X-Proton-Mode", "test")
   assert_eq(app.resolved_app_config().web_request_header_prefixes, [
     ("https://api.example/", "X-Proton-Mode", "test"),
   ])
   assert_true(
     app
-    .web_request_header_prefix("https://api.example/", "X-Proton-Mode", "other")
+    ..web_request_header_prefix(
+      "https://api.example/", "X-Proton-Mode", "other",
+    )
     .validation_error()
     is Some(_),
   )
@@ -613,15 +619,15 @@ test "debug mode rejects invalid fixed ports instead of falling back" {
 test "headless mode defaults off and is configurable" {
   let default_app = html("Test", "<html></html>")
   assert_false(default_app.headless_value)
-  assert_true(default_app.headless().headless_value)
-  assert_false(default_app.headless(enabled=false).headless_value)
+  assert_true(default_app..headless().headless_value)
+  assert_false(default_app..headless(enabled=false).headless_value)
 }
 
 ///|
 test "accessibility mode defaults to automatic and is configurable" {
   let default_app = html("Accessibility", "<main>content</main>")
   assert_eq(default_app.accessibility_mode_value, AccessibilityMode::Automatic)
-  let enabled = default_app.accessibility(AccessibilityMode::AlwaysEnabled)
+  let enabled = default_app..accessibility(AccessibilityMode::AlwaysEnabled)
   assert_eq(enabled.accessibility_mode_value, AccessibilityMode::AlwaysEnabled)
 }
 
@@ -638,7 +644,7 @@ async test "headless mode rejects titlebar overlay before runtime startup" {
   )
   let mut rejected = false
   let defaults = html("Test", "<html></html>")
-    .identifier("dev.proton.test")
+    ..identifier("dev.proton.test")
     .resolved_app_config()
   let outcome = run_manifest(
     { ..defaults, manifest, headless: true, menu: None, },
@@ -671,7 +677,7 @@ async test "headless mode rejects native menus before runtime startup" {
   ])
   let mut rejected = false
   let defaults = html("Test", "<html></html>")
-    .identifier("dev.proton.test")
+    ..identifier("dev.proton.test")
     .resolved_app_config()
   let outcome = run_manifest(
     { ..defaults, manifest, headless: true, menu: Some(menu.to_native()), },
@@ -1170,8 +1176,8 @@ test "HTTP entry capabilities use the exact canonical origin" {
 ///|
 test "replacing an entry preserves renderer capabilities" {
   let replaced = asset("Development", "app.html")
-    .commands(fn(_registrar) {  })
-    .main_window(
+    ..commands(fn(_registrar) {  })
+    ..main_window(
       WindowConfig("Development", AppEntry::Url("http://localhost:5173")),
     )
   assert_eq(replaced.command_capabilities.length(), 1)
@@ -1290,7 +1296,7 @@ test "application commands grant the primary entry by default" {
   let ping : @proton_contract.Command[Unit, String] = @proton_contract.command(
     "ping",
   )
-  let configured = html("Commands", "<html></html>").commands(registrar => {
+  let configured = html("Commands", "<html></html>")..commands(registrar => {
     registrar.bind(ping, (_context, _request) => "pong")
   })
   let build = unwrap_app_run(() => {
@@ -1364,14 +1370,14 @@ test "application command registrars retain separate renderer targets" {
     "secondary",
   )
   let configured = html("Commands", "<html></html>")
-    .add_window(
+    ..add_window(
       "secondary",
       WindowConfig("Secondary", AppEntry::Html("<html></html>")),
     )
-    .commands(registrar => {
+    ..commands(registrar => {
       registrar.bind(primary, (_context, _request) => "primary")
     })
-    .commands(
+    ..commands(
       registrar => {
         registrar.bind(secondary, (_context, _request) => "secondary")
       },
@@ -1403,7 +1409,7 @@ test "application command registrars retain separate renderer targets" {
 
 ///|
 test "renderer capabilities reject unknown windows" {
-  let configured = html("Unknown window", "<html></html>").commands(
+  let configured = html("Unknown window", "<html></html>")..commands(
     fn(_registrar) {  },
     targets=[RendererTarget::entry(window="missing")],
   )
@@ -1867,10 +1873,10 @@ test "renderer termination statuses map to Electron reasons" {
 ///|
 test "process-level event handlers accumulate on the app builder" {
   let app = html("Process events", "<html></html>")
-    .on_window_created(fn(_) { () })
-    .on_web_contents_created(fn(_) { () })
-    .on_render_process_gone(fn(_, _) { () })
-    .on_session_created(fn(_) { () })
+    ..on_window_created(fn(_) { () })
+    ..on_web_contents_created(fn(_) { () })
+    ..on_render_process_gone(fn(_, _) { () })
+    ..on_session_created(fn(_) { () })
   assert_eq(app.window_created_handlers.length(), 1)
   assert_eq(app.web_contents_created_handlers.length(), 1)
   assert_eq(app.render_process_gone_handlers.length(), 1)
@@ -1906,14 +1912,14 @@ test "application lifecycle advances through close and destroy" {
 async test "application lifecycle hooks shut down in reverse order" {
   let calls : Array[String] = []
   let configured = html("Lifecycle", "<html></html>")
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=fn(_context) {
         calls.push("start:first")
         "first"
       },
       on_shutdown=fn(state) { calls.push("stop:" + state) },
     )
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=fn(_context) {
         calls.push("start:second")
         "second"
@@ -2139,7 +2145,7 @@ async test "application lifecycle startup rolls back completed hooks" {
   let calls : Array[String] = []
   let cleanup_failures : Array[AppCleanupError] = []
   let configured = html("Lifecycle", "<html></html>")
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=fn(_context) {
         calls.push("start:first")
         "first"
@@ -2149,7 +2155,7 @@ async test "application lifecycle startup rolls back completed hooks" {
         raise FacadeLifecycleTestError::DestroyFailed(state)
       },
     )
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=fn(_context) raise {
         calls.push("start:second")
         raise FacadeLifecycleTestError::StartFailed("second")
@@ -2265,7 +2271,7 @@ test "typed facade appends validated secondary windows" {
       height=600,
       titlebar_style=TitlebarStyle::Overlay,
     ),
-  ).add_window(
+  )..add_window(
     "settings",
     WindowConfig(
       "Settings",
@@ -2305,18 +2311,18 @@ test "application identity is required and single instance reuses it" {
     is Some(InvalidSetting(name="identifier", ..)) else {
     fail("expected a missing application identity")
   }
-  let invalid = html("App", "<main>App</main>").identifier(" ")
+  let invalid = html("App", "<main>App</main>")..identifier(" ")
   assert_true(invalid.validation_error() is Some(_))
   let resolved = html("App", "<main>App</main>")
-    .identifier("dev.proton.inline")
-    .single_instance()
+    ..identifier("dev.proton.inline")
+    ..single_instance()
     .resolved_app_config()
   assert_eq(resolved.application_identifier, "dev.proton.inline")
   assert_eq(resolved.instance_identifier, Some("dev.proton.inline"))
 
   let not_single_instance = html("App", "<main>App</main>")
-    .identifier("dev.proton.inline")
-    .single_instance(enabled=false)
+    ..identifier("dev.proton.inline")
+    ..single_instance(enabled=false)
     .resolved_app_config()
   assert_eq(not_single_instance.instance_identifier, None)
 }
@@ -2324,15 +2330,15 @@ test "application identity is required and single instance reuses it" {
 ///|
 test "application identity sources cannot be combined" {
   let app = html("App", "<main>App</main>")
-    .identifier("dev.proton.inline")
-    .identifier("dev.proton.other")
+    ..identifier("dev.proton.inline")
+    ..identifier("dev.proton.other")
   assert_true(app.validation_error() is Some(_))
 
   let managed = html("App", "<main>App</main>")
   managed.application_identity = Some(
     Configured(AppConfig("dev.proton.managed")),
   )
-  let combined = managed.identifier("dev.proton.inline")
+  let combined = managed..identifier("dev.proton.inline")
   guard combined.validation_error()
     is Some(InvalidSetting(name="identifier", message~)) else {
     fail("expected duplicate application identity sources")
@@ -2362,9 +2368,9 @@ test "explicit identity must match packaged application metadata" {
 ///|
 test "activation associations are declared by application code" {
   let app = html("App", "<main>App</main>")
-    .identifier("dev.proton.activation")
-    .url_scheme("dev.proton")
-    .document_extension(".md")
+    ..identifier("dev.proton.activation")
+    ..url_scheme("dev.proton")
+    ..document_extension(".md")
   let resolved = app.resolved_app_config()
   assert_eq(resolved.url_schemes, ["dev.proton"])
   assert_eq(resolved.document_extensions, ["md"])
@@ -2380,14 +2386,14 @@ test "launch activation classifies protocol URLs" {
 ///|
 test "typed facade rejects duplicate secondary window ids" {
   let configured = html("Main", "<main>Main</main>")
-    .add_window("settings", WindowConfig("One", AppEntry::Html("one")))
-    .add_window("settings", WindowConfig("Two", AppEntry::Html("two")))
+    ..add_window("settings", WindowConfig("One", AppEntry::Html("one")))
+    ..add_window("settings", WindowConfig("Two", AppEntry::Html("two")))
   assert_true(configured.validation_error() is Some(_))
 }
 
 ///|
 test "typed facade reserves the primary window id" {
-  let configured = html("Main", "<main>Main</main>").add_window(
+  let configured = html("Main", "<main>Main</main>")..add_window(
     "main",
     WindowConfig("Other", AppEntry::Html("other")),
   )
@@ -2524,7 +2530,7 @@ test "application log directory follows platform conventions" {
 test "managed configuration requires an identifier" {
   let config = AppConfig::parse("{\"identifier\":\"com.example.app\"}")
   assert_eq(
-    html("Test", "").config(config).application_identifier(),
+    html("Test", "")..config(config).application_identifier(),
     "com.example.app",
   )
   try AppConfig::parse("{}") catch {
@@ -2537,8 +2543,8 @@ test "managed configuration requires an identifier" {
 ///|
 fn updater_test_channel(check_on_launch : Bool) -> ResolvedUpdateChannel? {
   url("Test", "https://example.com/")
-  .identifier("dev.proton.update-test")
-  .update_channel(
+  ..identifier("dev.proton.update-test")
+  ..update_channel(
     "https://updates.example.com/latest.json",
     ["rsa-sha256:ab:010001"],
     check_on_launch~,
@@ -2583,7 +2589,7 @@ test "PDF print options map custom margins to the CEF custom type" {
 
 ///|
 test "app builder registers main browser lifecycle handlers" {
-  let app = html("Browser events", "<p>events</p>").on_web_contents_event(fn(
+  let app = html("Browser events", "<p>events</p>")..on_web_contents_event(fn(
     _browser,
     _event,
   ) noraise {
@@ -2594,7 +2600,7 @@ test "app builder registers main browser lifecycle handlers" {
 
 ///|
 test "app builder registers system appearance change handlers" {
-  let app = html("Native theme", "<p>theme</p>").on_system_appearance_change(fn(
+  let app = html("Native theme", "<p>theme</p>")..on_system_appearance_change(fn(
     _theme,
   ) noraise {
 
@@ -2728,7 +2734,7 @@ async test "session handle routes cookie and cache operations" {
 
 ///|
 test "app builder registers taskbar button handlers" {
-  let app = html("Taskbar buttons", "<p>buttons</p>").on_thumbar_button_click(fn(
+  let app = html("Taskbar buttons", "<p>buttons</p>")..on_thumbar_button_click(fn(
     _window,
     _id,
   ) noraise {
@@ -2943,8 +2949,8 @@ test "window view declarations validate ids within each window" {
   let child = ViewConfig(width=320, height=240)
   let config = WindowConfig("Test", Html("test"), views=[("browser", child)])
   let app = App(config)
-    .identifier("dev.proton.test")
-    .add_window("other", config)
+    ..identifier("dev.proton.test")
+    ..add_window("other", config)
   assert_true(app.validation_error() is None)
   assert_eq(
     app.resolved_app_config().window_views.get("main").unwrap().length(),
@@ -2956,13 +2962,13 @@ test "window view declarations validate ids within each window" {
   )
   let duplicate = { ..config, views: [("browser", child), ("browser", child)], }
   assert_true(
-    App(duplicate).identifier("dev.proton.test").validation_error() is Some(_),
+    App(duplicate)..identifier("dev.proton.test").validation_error() is Some(_),
   )
   let blank = { ..config, views: [("  ", child)], }
   assert_true(
     App(config)
-    .identifier("dev.proton.test")
-    .add_window("other", blank)
+    ..identifier("dev.proton.test")
+    ..add_window("other", blank)
     .validation_error()
     is Some(_),
   )
@@ -3203,17 +3209,17 @@ test "POSIX system locales are normalized only on Linux" {
 ///|
 test "web request header names reject ASCII case-insensitive duplicates" {
   let app = html("Test", "<html></html>")
-    .identifier("dev.proton.header-case")
-    .web_request_header_prefix(
+    ..identifier("dev.proton.header-case")
+    ..web_request_header_prefix(
       "https://api.example/Path/", "Authorization", "first",
     )
-    .web_request_header_prefix(
+    ..web_request_header_prefix(
       "https://api.example/path/", "authorization", "second",
     )
   assert_true(app.validation_error() is None)
   assert_true(
     app
-    .web_request_header_prefix(
+    ..web_request_header_prefix(
       "https://api.example/Path/", "aUtHoRiZaTiOn", "third",
     )
     .validation_error()
@@ -3235,7 +3241,7 @@ test "window configuration updates preserve unrelated settings" {
     titlebar_style: Overlay,
     theme: Dark,
   }
-  let manifest = App(revised).add_window("second", original).inline_manifest()
+  let manifest = App(revised)..add_window("second", original).inline_manifest()
   assert_eq(manifest.window.traffic_light_position, Some((16, 18)))
   assert_eq(manifest.windows[0].window.traffic_light_position, Some((16, 18)))
   assert_eq(manifest.window.title, "Renamed")
@@ -3306,8 +3312,8 @@ test "different extension definitions cannot silently share one registration" {
     registrar.bind(command, (_context, _request) => ())
   })
   let app = html("Definitions", "<html></html>")
-    .capability(@proton_extension.capability(first))
-    .capability(@proton_extension.capability(second))
+    ..capability(@proton_extension.capability(first))
+    ..capability(@proton_extension.capability(second))
   match
     expect_configuration_error(() => {
       ignore(command_extension_catalog(app.extension_capabilities))
@@ -3333,8 +3339,8 @@ test "primary and secondary registrations lower the same configuration" {
     views~,
   )
   let app = App(config)
-    .identifier("dev.proton.config")
-    .add_window("secondary", config, open_on_start=false)
+    ..identifier("dev.proton.config")
+    ..add_window("secondary", config, open_on_start=false)
   // Registration owns its snapshot, even when the caller retains the array.
   config.views.clear()
   views.clear()
@@ -3353,11 +3359,11 @@ test "replacing the primary configuration keeps application registrations" {
     ("view", ViewConfig(width=20, height=20)),
   ])
   let app = html("Old", "old")
-    .identifier("dev.proton.config")
-    .debug()
-    .commands(_ => ())
-    .add_window("secondary", WindowConfig("Other", Html("other")))
-    .main_window(config)
+    ..identifier("dev.proton.config")
+    ..debug()
+    ..commands(_ => ())
+    ..add_window("secondary", WindowConfig("Other", Html("other")))
+    ..main_window(config)
   config.views.clear()
   assert_eq(app.command_capabilities.length(), 1)
   assert_eq(app.inline_manifest().window.title, "Updated")

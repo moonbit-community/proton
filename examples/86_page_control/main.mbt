@@ -340,9 +340,9 @@ fn page() -> String {
 ///|
 async fn main {
   @proton.html("Page control", page(), width=900, height=760)
-  .identifier("com.example.proton.page-control")
-  .commands(register_commands)
-  .app_lifecycle(
+  ..identifier("com.example.proton.page-control")
+  ..commands(register_commands)
+  ..app_lifecycle(
     on_start=context => {
       application_slot.val = Some(context)
       log_page_step("application started")

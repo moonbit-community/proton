@@ -565,10 +565,10 @@ async fn main {
     _ => ""
   }
   app
-  .identifier("dev.proton.78-taskbar-status")
-  .commands(register_commands)
-  .on_thumbar_button_click(fn(_window, id) noraise { report_click(id) })
-  .window_lifecycle(
+  ..identifier("dev.proton.78-taskbar-status")
+  ..commands(register_commands)
+  ..on_thumbar_button_click(fn(_window, id) noraise { report_click(id) })
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)

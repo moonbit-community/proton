@@ -6,6 +6,6 @@ async fn main {
     width=940,
     height=720,
     debug=true,
-  ).capability(@notification.capability())
-  app.identifier("dev.proton.27-app-notification").run_or_abort()
+  )..capability(@notification.capability())
+  app..identifier("dev.proton.27-app-notification").run_or_abort()
 }

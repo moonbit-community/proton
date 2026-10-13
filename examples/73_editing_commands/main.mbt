@@ -146,8 +146,8 @@ async fn main {
     height=760,
     debug=true,
   )
-  .commands(register_commands)
-  .window_lifecycle(
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       browser_slot.val = Some(window.web_contents())
@@ -159,6 +159,6 @@ async fn main {
       browser_slot.val = None
     },
   )
-  .identifier("dev.proton.73-editing-commands")
+  ..identifier("dev.proton.73-editing-commands")
   .run_or_abort()
 }

@@ -16,7 +16,7 @@ The event name is `greeted` and its payload is a string. It has no response type
 
 ## Send to the caller
 
-Inside `.commands(...)`, replace the existing `registrar.bind(greet, ...)` call with:
+Inside `..commands(...)`, replace the existing `registrar.bind(greet, ...)` call with:
 
 ```moonbit
 registrar.bind(greet, (context, request) => {

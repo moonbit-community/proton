@@ -66,30 +66,30 @@ async fn review_session(browser : @proton.WebContentsHandle) -> Unit noraise {
 ///|
 async fn main {
   @proton.html("Browser Control", page, debug=true)
-  .on_navigation_request(fn(_browser, request) {
+  ..on_navigation_request(fn(_browser, request) {
     println("navigation: \{request.http_method} \{request.url}")
     @proton.NavigationDecision::Allow
   })
-  .on_new_window_request(fn(_browser, request) {
+  ..on_new_window_request(fn(_browser, request) {
     println("new window: \{request.url}")
     @proton.NewWindowDecision::OpenInCurrent
   })
-  .on_download_request(fn(_browser, request) {
+  ..on_download_request(fn(_browser, request) {
     println("download: \{request.suggested_name}")
     @proton.DownloadDecision::ShowSaveDialog
   })
-  .on_certificate_error(fn(_browser, request) {
+  ..on_certificate_error(fn(_browser, request) {
     println("certificate error: \{request.error_code} \{request.url}")
     @proton.BrowserPermissionDecision::Deny
   })
-  .on_media_permission_request(fn(_browser, request) {
+  ..on_media_permission_request(fn(_browser, request) {
     println("media permission: \{request.origin}")
     @proton.BrowserPermissionDecision::Deny
   })
-  .on_download_event(fn(_browser, event) {
+  ..on_download_event(fn(_browser, event) {
     println("download \{event.id}: \{event.state} \{event.percent}%")
   })
-  .on_web_contents_event(async fn(browser, event) noraise {
+  ..on_web_contents_event(async fn(browser, event) noraise {
     if browser.view_id() is Some(_) {
       return
     }
@@ -110,6 +110,6 @@ async fn main {
       review_session(browser)
     }
   })
-  .identifier("dev.proton.50-browser-control")
+  ..identifier("dev.proton.50-browser-control")
   .run_or_abort()
 }

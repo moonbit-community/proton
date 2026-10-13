@@ -4,7 +4,7 @@
 native desktop applications. Extensions expose host capabilities through the
 Proton bridge.
 
-Applications add typed extension capabilities with `.capability(...)`. One
+Applications add typed extension capabilities with `..capability(...)`. One
 capability installs its backend implementation and grants its validated scope
 to the selected renderer targets; these two decisions cannot drift apart.
 Omitted capabilities are unavailable and do not prevent startup. Inline HTML
@@ -13,7 +13,7 @@ the low-level `window.__MoonBit__.core.invokeOp(...)` bridge, depending on the
 extension and example. Pages subscribe to events through either
 `window.__MoonBit__.events.on(...)` or `window.__MoonBit__.<namespace>.on(...)`.
 
-Application commands registered with `.commands(...)` are exposed to the
+Application commands registered with `..commands(...)` are exposed to the
 primary configured entry by default under `window.__MoonBit__.app`, one proxy
 per registered command:
 
@@ -44,8 +44,8 @@ to another renderer target is rejected for the calling page.
 
 ## Defining an extension
 
-Register application commands with `.commands(...)` and extension capabilities
-with `.capability(...)` on the root Proton facade. The unused
+Register application commands with `..commands(...)` and extension capabilities
+with `..capability(...)` on the root Proton facade. The unused
 `AppCommandsConfig` and `AppCommandExtensionRegistry` APIs have been removed;
 applications do not need a separate command configuration or extension registry.
 

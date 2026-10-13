@@ -7,6 +7,6 @@ async fn main {
     #|  <body><h1>37 native mvp</h1></body>
     #|</html>
   @proton.html("37 native mvp", html, width=800, height=600, debug=true)
-  .identifier("dev.proton.37-native-mvp")
+  ..identifier("dev.proton.37-native-mvp")
   .run_or_abort()
 }

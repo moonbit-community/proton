@@ -48,10 +48,10 @@ async fn main {
       height=520,
     ),
   )
-  .debug(enabled=true)
-  .identifier("dev.proton.79-traffic-light-position")
-  .commands(register_commands)
-  .window_lifecycle(
+  ..debug(enabled=true)
+  ..identifier("dev.proton.79-traffic-light-position")
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)

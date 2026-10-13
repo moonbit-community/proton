@@ -45,8 +45,8 @@ pub async fn run_async_extension_add() -> Unit {
     width=840,
     height=560,
     debug=true,
-  ).capability(@proton_extension.capability(async_add_extension()))
-  app.identifier("dev.proton.e2e-fixtures").run_or_abort()
+  )..capability(@proton_extension.capability(async_add_extension()))
+  app..identifier("dev.proton.e2e-fixtures").run_or_abort()
 }
 
 ///|
@@ -163,9 +163,9 @@ pub async fn run_sync_async_extensions() -> Unit {
       height=620,
       debug=true,
     )
-    .capability(@proton_extension.capability(sync_math_fixture_extension()))
-    .capability(@proton_extension.capability(async_add_fixture_extension()))
-  app.identifier("dev.proton.e2e-fixtures").run_or_abort()
+    ..capability(@proton_extension.capability(sync_math_fixture_extension()))
+    ..capability(@proton_extension.capability(async_add_fixture_extension()))
+  app..identifier("dev.proton.e2e-fixtures").run_or_abort()
 }
 
 ///|
@@ -182,8 +182,8 @@ pub async fn run_attribute_codegen_commands() -> Unit {
     width=840,
     height=560,
     debug=true,
-  ).capability(@proton_extension.capability(extension()))
-  app.identifier("dev.proton.e2e-fixtures").run_or_abort()
+  )..capability(@proton_extension.capability(extension()))
+  app..identifier("dev.proton.e2e-fixtures").run_or_abort()
 }
 
 ///|
@@ -315,8 +315,8 @@ pub async fn run_event_broadcast() -> Unit {
     width=900,
     height=620,
     debug=true,
-  ).capability(@proton_extension.capability(event_ticker_extension()))
-  app.identifier("dev.proton.e2e-fixtures").run_or_abort()
+  )..capability(@proton_extension.capability(event_ticker_extension()))
+  app..identifier("dev.proton.e2e-fixtures").run_or_abort()
 }
 
 ///|
@@ -346,8 +346,8 @@ pub async fn run_asset_sidecar() -> Unit {
     width=760,
     height=500,
     debug=true,
-  ).capability(@proton_extension.capability(asset_sidecar_extension()))
-  app.identifier("dev.proton.e2e-fixtures").run_or_abort()
+  )..capability(@proton_extension.capability(asset_sidecar_extension()))
+  app..identifier("dev.proton.e2e-fixtures").run_or_abort()
 }
 
 ///|
@@ -365,11 +365,11 @@ pub async fn run_devtools() -> Unit {
     height=700,
     debug=true,
   )
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => context.handle().web_contents().open_devtools(),
     on_close=fn(_) { () },
   )
-  .identifier("dev.proton.e2e-fixtures")
+  ..identifier("dev.proton.e2e-fixtures")
   .run_or_abort()
 }
 
@@ -395,8 +395,8 @@ pub async fn run_windowed_close() -> Unit {
     width=640,
     height=480,
   )
-  .on_system_appearance_change(fn(_) noraise { appearance_events.val += 1 })
-  .window_lifecycle(
+  ..on_system_appearance_change(fn(_) noraise { appearance_events.val += 1 })
+  ..window_lifecycle(
     on_ready=context => {
       let handle = context.handle()
       ignore(
@@ -440,7 +440,7 @@ pub async fn run_windowed_close() -> Unit {
     },
     on_close=fn(_) { () },
   )
-  .identifier("dev.proton.e2e-fixtures")
+  ..identifier("dev.proton.e2e-fixtures")
   .run_or_abort()
 }
 
@@ -462,7 +462,7 @@ pub async fn run_i18n() -> Unit {
     height=480,
     debug=true,
   )
-  .locale(locale)
-  .identifier("dev.proton.e2e-fixtures")
+  ..locale(locale)
+  ..identifier("dev.proton.e2e-fixtures")
   .run_or_abort()
 }

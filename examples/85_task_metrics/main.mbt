@@ -303,9 +303,9 @@ fn page() -> String {
 ///|
 async fn main {
   @proton.html("Application Metrics", page(), width=940, height=720)
-  .identifier("com.example.proton.task-metrics")
-  .commands(register_commands)
-  .app_lifecycle(
+  ..identifier("com.example.proton.task-metrics")
+  ..commands(register_commands)
+  ..app_lifecycle(
     on_start=context => {
       application_slot.val = Some(context)
       // The first sample starts Chromium's task-manager sampling, so the

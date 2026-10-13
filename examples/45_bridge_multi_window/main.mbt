@@ -88,7 +88,7 @@ async fn main {
     height=420,
     debug=true,
   )
-  .add_window(
+  ..add_window(
     "secondary",
     @proton.WindowConfig(
       "Bridge Multi B",
@@ -98,14 +98,14 @@ async fn main {
     ),
     open_on_start=false,
   )
-  .capability(@proton_extension.capability(multi_window_extension()), targets=[
+  ..capability(@proton_extension.capability(multi_window_extension()), targets=[
     @proton.RendererTarget::entry(),
     @proton.RendererTarget::entry(window="secondary"),
   ])
-  .app_lifecycle(
+  ..app_lifecycle(
     on_start=async fn(context) { ignore(context.windows().open("secondary")) },
     on_shutdown=fn(_state) {  },
   )
-  .identifier("dev.proton.45-bridge-multi-window")
+  ..identifier("dev.proton.45-bridge-multi-window")
   .run_or_abort()
 }

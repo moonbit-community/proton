@@ -68,6 +68,6 @@ async fn main {
     width=760,
     height=520,
     debug=true,
-  ).capability(@proton_extension.capability(child_process_extension()))
-  app.identifier("dev.proton.51-child-process-close-repro").run_or_abort()
+  )..capability(@proton_extension.capability(child_process_extension()))
+  app..identifier("dev.proton.51-child-process-close-repro").run_or_abort()
 }

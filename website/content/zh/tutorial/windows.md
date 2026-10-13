@@ -10,8 +10,8 @@
 ///|
 async fn main {
   @proton.html("Main", "<h1>Main window</h1>", width=900, height=700)
-  .config(@proton.load_config())
-  .add_window(
+  ..config(@proton.load_config())
+  ..add_window(
     "help",
     @proton.WindowConfig(
       "Help",
@@ -20,7 +20,7 @@ async fn main {
       height=320,
     ),
   )
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       let id = context.handle().id()
       println("Ready: " + id)
@@ -43,7 +43,7 @@ async fn main {
 例如，在上面的 Help 声明中加入 `open_on_start=false`，然后在 `.run_or_abort()` 之前添加以下构建器调用，即可从应用启动钩子打开它：
 
 ```moonbit
-.app_lifecycle(
+..app_lifecycle(
   on_start=context => { ignore(context.windows().open("help")) },
   on_shutdown=_ => (),
 )
@@ -62,7 +62,7 @@ async fn main {
 默认策略是在最后一个窗口关闭后退出。托盘和后台应用可以加入：
 
 ```moonbit
-.last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
 ```
 
 此时关闭全部窗口不会结束进程。在实际应用采用该策略前，应先提供明确的退出操作。

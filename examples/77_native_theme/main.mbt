@@ -163,9 +163,9 @@ fn page() -> String {
 ///|
 async fn main {
   @proton.html("System Appearance", page(), width=900, height=720, debug=true)
-  .identifier("dev.proton.77-native-theme")
-  .commands(register_commands)
-  .on_system_appearance_change(fn(theme) noraise {
+  ..identifier("dev.proton.77-native-theme")
+  ..commands(register_commands)
+  ..on_system_appearance_change(fn(theme) noraise {
     let state = state_from_theme(
       theme,
       "System appearance changed: " +
@@ -179,7 +179,7 @@ async fn main {
     )
     push_state(state)
   })
-  .window_lifecycle(
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)

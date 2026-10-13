@@ -7,6 +7,6 @@ async fn main {
     height=680,
     debug=true,
   )
-  .identifier("dev.proton.24-app-multi-window")
+  ..identifier("dev.proton.24-app-multi-window")
   .run_or_abort()
 }

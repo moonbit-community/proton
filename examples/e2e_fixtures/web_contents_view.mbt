@@ -30,7 +30,7 @@ async fn run_web_contents_view_app() -> Result[Unit, String] {
       height=480,
       debug=true,
     )
-    .window_lifecycle(
+    ..window_lifecycle(
       on_ready=fn(context) raise {
         let window = context.handle()
         let left = window.add_view(
@@ -57,7 +57,7 @@ async fn run_web_contents_view_app() -> Result[Unit, String] {
       },
       on_close=fn(_state) {  },
     )
-    .on_web_contents_event(fn(_view, event) noraise {
+    ..on_web_contents_event(fn(_view, event) noraise {
       if _view.view_id() is None {
         return
       }
@@ -71,7 +71,7 @@ async fn run_web_contents_view_app() -> Result[Unit, String] {
       }
     })
   try {
-    app.identifier("dev.proton.e2e-web-contents-view").run()
+    app..identifier("dev.proton.e2e-web-contents-view").run()
     Ok(())
   } catch {
     error => Err(error.message())

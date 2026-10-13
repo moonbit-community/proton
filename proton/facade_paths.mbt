@@ -215,7 +215,7 @@ pub fn App::set_path(
   self : App,
   kind : AppPathKind,
   path : String,
-) -> App raise AppPathError {
+) -> Unit raise AppPathError {
   let platform = runtime_platform()
   ensure_path_available(kind, platform)
   let normalized = normalize_path_override(kind, path, true)
@@ -224,7 +224,6 @@ pub fn App::set_path(
     self.electron_default_logs_path = false
     self.create_logs_path = false
   }
-  self
 }
 
 ///|
@@ -236,7 +235,7 @@ pub fn App::set_path(
 pub fn App::set_app_logs_path(
   self : App,
   path? : String,
-) -> App raise AppPathError {
+) -> Unit raise AppPathError {
   match path {
     Some(path) => {
       self.path_overrides[AppPathKind::Logs.electron_name()] = normalize_path_override(
@@ -249,7 +248,6 @@ pub fn App::set_app_logs_path(
     None => self.electron_default_logs_path = true
   }
   self.create_logs_path = true
-  self
 }
 
 ///|

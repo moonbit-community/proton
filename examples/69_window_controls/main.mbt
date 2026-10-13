@@ -283,8 +283,8 @@ fn html() -> String {
 ///|
 async fn main {
   @proton.html("Window Controls", html(), width=820, height=560, debug=true)
-  .identifier("dev.proton.window-controls")
-  .add_window(
+  ..identifier("dev.proton.window-controls")
+  ..add_window(
     "review-child",
     @proton.WindowConfig(
       "Window Controls Child",
@@ -296,8 +296,8 @@ async fn main {
     ),
     open_on_start=false,
   )
-  .commands(register_commands)
-  .window_lifecycle(
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_manager_slot.val = Some(context.windows())

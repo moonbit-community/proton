@@ -20,12 +20,12 @@ let page =
 ///|
 async fn main {
   @proton.html("Application Activation", page, width=760, height=480)
-  .identifier("com.example.proton.activation")
-  .single_instance()
-  .url_scheme("proton-example")
-  .document_extension("proton-example")
-  .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
-  .on_launch_input(async fn(context, input) noraise {
+  ..identifier("com.example.proton.activation")
+  ..single_instance()
+  ..url_scheme("proton-example")
+  ..document_extension("proton-example")
+  ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+  ..on_launch_input(async fn(context, input) noraise {
     println("activation: " + @debug.render(Repr(input)))
     if input is Reopen && context.windows().find("main") is None {
       ignore(context.windows().open("main")) catch {

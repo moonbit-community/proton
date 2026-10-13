@@ -11,11 +11,11 @@ async fn main {
     let key = require_env("PROTON_E2E_KEY")
     let rejected = try {
       @proton.html("Obsolete application", "")
-      .identifier("com.example.proton-updater-e2e")
-      .headless()
-      .single_instance()
-      .update_channel(endpoint, [key], check_on_launch=false)
-      .app_lifecycle(
+      ..identifier("com.example.proton-updater-e2e")
+      ..headless()
+      ..single_instance()
+      ..update_channel(endpoint, [key], check_on_launch=false)
+      ..app_lifecycle(
         on_start=context => {
           record("obsolete-started")
           context.quit()
@@ -33,10 +33,10 @@ async fn main {
   }
   if @updater.current_revision() != 1UL {
     @proton.html("Updated application", "<h1>Updated</h1>")
-    .identifier("com.example.proton-updater-e2e")
-    .headless()
-    .single_instance()
-    .app_lifecycle(
+    ..identifier("com.example.proton-updater-e2e")
+    ..headless()
+    ..single_instance()
+    ..app_lifecycle(
       on_start=context => {
         assert_true(context.has_single_instance_lock())
         record("started-new")
@@ -53,16 +53,16 @@ async fn main {
   let before_count = Ref(0)
   let will_count = Ref(0)
   let app = @proton.html("Updater lifecycle", "<h1>Updater</h1>")
-    .identifier("com.example.proton-updater-e2e")
-    .headless()
-    .single_instance()
-    .last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
-    .update_channel(
+    ..identifier("com.example.proton-updater-e2e")
+    ..headless()
+    ..single_instance()
+    ..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)
+    ..update_channel(
       require_env("PROTON_E2E_ENDPOINT"),
       [require_env("PROTON_E2E_KEY")],
       check_on_launch=false,
     )
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=context => {
         let unavailable = try {
           context.quit_and_install()
@@ -130,7 +130,7 @@ async fn main {
         }
       },
     )
-    .on_before_quit(fn(context) {
+    ..on_before_quit(fn(context) {
       before_count.val = before_count.val + 1
       record("before-quit")
       if mode == "force-exit" {
@@ -143,7 +143,7 @@ async fn main {
         @proton.ApplicationQuitDecision::Allow
       }
     })
-    .on_will_quit(fn(_context) {
+    ..on_will_quit(fn(_context) {
       will_count.val = will_count.val + 1
       record("will-quit")
       if mode == "prevent-will" && will_count.val == 1 {
@@ -153,7 +153,7 @@ async fn main {
         @proton.ApplicationQuitDecision::Allow
       }
     })
-    .on_quit(fn(_context, _code) { record("quit") })
+    ..on_quit(fn(_context, _code) { record("quit") })
   app.run() catch {
     error => {
       guard mode == "cleanup-failure" &&

@@ -31,9 +31,9 @@ fn apply_path_overrides(
 ) -> @proton.App raise @proton.AppPathError {
   let logs = @mbpath.Path(root).join("logs").normalize().to_string()
   app
-  .set_path(@proton.AppPathKind::UserData, root)
-  .set_path(@proton.AppPathKind::Downloads, root)
-  .set_app_logs_path(path=logs)
+  ..set_path(@proton.AppPathKind::UserData, root)
+  ..set_path(@proton.AppPathKind::Downloads, root)
+  ..set_app_logs_path(path=logs)
 }
 
 ///|
@@ -72,7 +72,9 @@ async fn main {
     width=980,
     height=720,
   )
-  let base = @proton.App(window).config(@proton.load_config()).single_instance()
+  let base = @proton.App(window)
+    ..config(@proton.load_config())
+    ..single_instance()
   let override_root = @env.get_env_var("PROTON_APP_PATH_OVERRIDE_ROOT")
   let app = match override_root {
     Some(root) => apply_path_overrides(base, root)
@@ -100,7 +102,7 @@ async fn main {
   ]
   let paths = kinds.map(entry => (entry.1, display_path(app, entry.0)))
   app
-  .main_window({
+  ..main_window({
     ..window,
     entry: @proton.AppEntry::Html(
       review_page(

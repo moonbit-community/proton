@@ -6,6 +6,6 @@ async fn main {
     width=940,
     height=720,
     debug=true,
-  ).capability(@tray.capability())
-  app.identifier("dev.proton.28-app-tray").run_or_abort()
+  )..capability(@tray.capability())
+  app..identifier("dev.proton.28-app-tray").run_or_abort()
 }

@@ -172,7 +172,7 @@ Load configuration independently, then install it on the application:
 
 ```moonbit
 let config = @proton.load_config()
-let app = @proton.html("Hello", "<h1>Hello</h1>").config(config)
+let app = @proton.html("Hello", "<h1>Hello</h1>")..config(config)
 
 if config.frontend is Some(frontend) {
   if frontend.dev_url is Some(url) {
@@ -197,8 +197,8 @@ effective configuration, including CLI overrides for formats and platform settin
 Relative paths retain their spelling; reading a field does not resolve paths
 or execute commands.
 
-`app.config(config)` installs an independent copy and is mutually exclusive with
-`app.identifier(...)`. Invalid configuration or a mismatch with the packaged
+`app..config(config)` installs an independent copy and is mutually exclusive with
+`app..identifier(...)`. Invalid configuration or a mismatch with the packaged
 identity prevents startup. Retain `config` to inspect it; there is no application
 configuration getter. `app.name()` and `app.version()` read the installed snapshot
 without further file I/O.

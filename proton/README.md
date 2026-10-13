@@ -11,7 +11,7 @@ workflow — scaffolding, CEF runtime setup, dev mode, and packaging — see the
 ```moonbit
 async fn main {
   @proton.html("Hello", "<h1>Hello</h1>")
-  .identifier("dev.proton.hello")
+  ..identifier("dev.proton.hello")
   .run_or_abort()
 }
 ```
@@ -20,18 +20,28 @@ Import `moonbitlang/async` to use `async fn main`. Proton manages the applicatio
 event loop automatically. `@proton.html` accepts optional
 `width?`, `height?`, `debug?`, and `resizable?` arguments.
 
+Configuration methods mutate the existing `App` and return `Unit`. Use MoonBit's
+cascade syntax (`..`) to keep the app value while configuring it. Ordinary calls
+such as `app.debug()` also work when no return value is needed. Constructors
+return `App`; queries keep their result types, and `run()` / `run_or_abort()` are
+ordinary async calls.
+
+When migrating from receiver-returning configuration methods, replace `.config(...)`,
+`.debug()`, `.on_xxx(...)` and other configuration calls in a chain with `..`.
+Keep single dots for queries and the final `.run()` / `.run_or_abort()` call.
+
 Every application requires a stable reverse-DNS identity. Managed projects load
 and install configuration through the application builder:
 
 ```moonbit
 let app = @proton.html("Hello", "<h1>Hello</h1>")
-  .config(@proton.load_config())
+  ..config(@proton.load_config())
 ```
 
 `load_config()` reads `proton.project.json` during development and the bundled
 `proton-package.json` after distribution. It returns `AppConfig` and raises
 `AppConfigError` immediately if reading or validation fails. Applications without
-project metadata can use `.identifier(...)` instead of `.config(@proton.load_config())`.
+project metadata can use `..identifier(...)` instead of `..config(@proton.load_config())`.
 An explicit identity must match any packaged metadata present at runtime.
 
 Window and web-contents handles refer to a specific runtime instance. Use their
@@ -69,11 +79,11 @@ temporary files, the executable/module, logs, and configured desktop, documents,
 downloads, music, pictures, and videos directories. `Assets` is available on
 Windows and Linux, and `Recent` is available on Windows. Persistent application
 paths use the reverse-DNS identifier, so changing a display name does not move
-user state. Use `App::session_partition` with `.single_instance()` to place the
+user state. Use `App::session_partition` with `..single_instance()` to place the
 browser profile in an isolated `sessionData/<partition>` directory. Cookies,
 cache, IndexedDB, and other Chromium profile state are separated between
 partitions. Partition names are limited to letters, digits, `.`, `-`, and `_`.
-With `.single_instance()`, subsequent launches exit successfully only after the
+With `..single_instance()`, subsequent launches exit successfully only after the
 primary application event loop accepts their activation. Forwarding has a
 five-second total deadline. A stopping primary rejects new activations while
 retaining ownership until runtime cleanup finishes. Connection, transfer, and
@@ -115,7 +125,7 @@ One platform difference matters when two instances run side by side. Electron
 lets instances share one `userData` directory after a release; CEF owns the
 browser profile exclusively and refuses to initialize a second process on the
 same session data directory. A successor therefore needs its own session:
-either run without `.single_instance()` (Proton then uses a temporary profile)
+either run without `..single_instance()` (Proton then uses a temporary profile)
 or give the extra instance a distinct `App::session_partition`. The identity
 lock itself is independent of the profile, so a successor with its own
 partition still acquires the released identity.
@@ -202,9 +212,9 @@ Scheduled relaunches are started after orderly cleanup or immediately before
 ## Application quit chain
 
 An orderly quit follows Electron's quit event chain. `ApplicationContext::quit`
-first runs `.on_before_quit(...)`, then closes every open window through the
-configured close interception, runs `.on_will_quit(...)` after the last window
-has closed, and finally reports `.on_quit(...)` before configured lifecycle
+first runs `..on_before_quit(...)`, then closes every open window through the
+configured close interception, runs `..on_will_quit(...)` after the last window
+has closed, and finally reports `..on_quit(...)` before configured lifecycle
 shutdown and native teardown. Neither `quit` nor `exit` is guesswork for the
 application: `on_quit` receives the process exit code that Proton adopts.
 
@@ -212,19 +222,19 @@ application: `on_quit` receives the process exit code that Proton adopts.
 let mut save_pending = true
 
 @proton.html("Quit chain", page)
-.identifier("com.example.quit-chain")
-.on_before_quit(fn(_context) {
+..identifier("com.example.quit-chain")
+..on_before_quit(fn(_context) {
   if save_pending {
     @proton.ApplicationQuitDecision::Prevent
   } else {
     @proton.ApplicationQuitDecision::Allow
   }
 })
-.on_will_quit(fn(context) {
+..on_will_quit(fn(context) {
   context.relaunch() catch { _ => () }
   @proton.ApplicationQuitDecision::Allow
 })
-.on_quit(fn(_context, exit_code) {
+..on_quit(fn(_context, exit_code) {
   println("quitting with " + exit_code.to_string())
 })
 .run_or_abort()
@@ -353,7 +363,7 @@ windows. Once runtime teardown begins, retained session handles fail with
 Child pages do not receive the application command bridge.
 
 ```moonbit
-.app_lifecycle(
+..app_lifecycle(
   on_start=context => {
     let session = context.session()
     ignore(session.get_cookies(url="https://example.com/"))
@@ -455,14 +465,14 @@ Register typed commands on the app builder:
 
 ```moonbit
 @proton.html("Commands", html)
-.identifier("dev.proton.commands")
-.commands(fn(registrar) raise { registrar.bind(ping_command, ping) })
+..identifier("dev.proton.commands")
+..commands(fn(registrar) raise { registrar.bind(ping_command, ping) })
 .run_or_abort()
 ```
 
 Application commands target the primary configured entry by default. Pass
-`targets` to `.commands(...)` when a different renderer needs them. Extension
-packages expose typed values consumed by `.capability(...)`.
+`targets` to `..commands(...)` when a different renderer needs them. Extension
+packages expose typed values consumed by `..capability(...)`.
 
 `@proton.CommandRegistrar` binds contract command descriptors to async
 handlers; each handler receives a `@proton.CommandContext` and the decoded
@@ -497,7 +507,7 @@ let settings = @proton.WindowConfig(
   height=320,
   theme=Dark,
 )
-@proton.App(main).add_window("settings", settings, open_on_start=false)
+@proton.App(main)..add_window("settings", settings, open_on_start=false)
 ```
 
 `html`, `url`, `file` and `asset` remain single-window shortcuts to
@@ -519,7 +529,7 @@ registration option. Runtime `WindowHandle` operations are unchanged.
 
 The window id `"main"` is reserved for the primary window. By default, the
 process exits when all windows have closed. Use
-`.last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)` when
+`..last_window_closed_policy(@proton.LastWindowClosedPolicy::KeepRunning)` when
 the application should remain available for Dock, protocol, document, or tray
 activation after its last window closes.
 
@@ -546,7 +556,7 @@ relationship. `set_window_button_visibility` controls standard title-bar buttons
 on macOS and is a successful no-op on other platforms. Web contents views expose
 independent `set_zoom_percent` and `zoom_percent` controls for their own browser.
 
-Window state changes are delivered to `.on_window_event(...)` as a full
+Window state changes are delivered to `..on_window_event(...)` as a full
 `StateChanged` snapshot plus lifecycle and transition events such as `Closed`,
 `ReadyToShow`, `Moved`, `Resized`,
 `Show`, `Hide`, `Focus`, `Blur`, `Minimize`, `Restore`, `Maximize`, `Unmaximize`,
@@ -662,7 +672,7 @@ remove the toolbar, exactly as Electron documents.
 
 ```moonbit
 @proton.html("Player", player_html)
-.on_thumbar_button_click(fn(window, button_id) noraise {
+..on_thumbar_button_click(fn(window, button_id) noraise {
   match button_id {
     "previous" => play_previous(window)
     "next" => play_next(window)
@@ -757,7 +767,7 @@ error dialog.
 
 ## Headless mode
 
-`.headless()` runs the app off-screen without creating a native window. Set
+`..headless()` runs the app off-screen without creating a native window. Set
 `PROTON_HEADLESS=1` to force headless mode for automated test runs.
 
 Native dialogs, menus, title bars, and other window-bound UI are unavailable in
@@ -781,8 +791,8 @@ application, configure the app before startup:
 
 ```moonbit
 @proton.html("Accessible", "<main><h1>Hello</h1></main>")
-.identifier("dev.proton.accessible")
-.accessibility(@proton.AccessibilityMode::AlwaysEnabled)
+..identifier("dev.proton.accessible")
+..accessibility(@proton.AccessibilityMode::AlwaysEnabled)
 .run_or_abort()
 ```
 
@@ -807,7 +817,7 @@ Handlers run on the application task group.
 
 ```moonbit
 @proton.html("Theme aware", "<main><h1>Hello</h1></main>")
-.on_system_appearance_change(fn(appearance) noraise {
+..on_system_appearance_change(fn(appearance) noraise {
   // Apply appearance.color_scheme and appearance.high_contrast to custom UI.
 })
 .run_or_abort()

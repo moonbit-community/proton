@@ -16,7 +16,7 @@ pub fn html(
       height~,
       size_hint=if resizable { Unconstrained } else { Fixed },
     ),
-  ).debug(enabled=debug)
+  )..debug(enabled=debug)
 }
 
 ///|
@@ -37,7 +37,7 @@ pub fn url(
       height~,
       size_hint=if resizable { Unconstrained } else { Fixed },
     ),
-  ).debug(enabled=debug)
+  )..debug(enabled=debug)
 }
 
 ///|
@@ -58,7 +58,7 @@ pub fn file(
       height~,
       size_hint=if resizable { Unconstrained } else { Fixed },
     ),
-  ).debug(enabled=debug)
+  )..debug(enabled=debug)
 }
 
 ///|
@@ -79,7 +79,7 @@ pub fn asset(
       height~,
       size_hint=if resizable { Unconstrained } else { Fixed },
     ),
-  ).debug(enabled=debug)
+  )..debug(enabled=debug)
 }
 
 ///|
@@ -111,15 +111,14 @@ pub fn view(
 
 ///|
 /// Enables or disables runtime debug mode.
-pub fn App::debug(self : App, enabled? : Bool = true) -> App {
+pub fn App::debug(self : App, enabled? : Bool = true) -> Unit {
   self.debug_level(debug_level_from_bool(enabled))
 }
 
 ///|
 /// Sets the runtime debug level.
-pub fn App::debug_level(self : App, debug : Int) -> App {
+pub fn App::debug_level(self : App, debug : Int) -> Unit {
   self.debug_level_value = debug
-  self
 }
 
 ///|
@@ -128,9 +127,8 @@ pub fn App::debug_level(self : App, debug : Int) -> App {
 /// Headless mode does not create a native top-level window, so native dialogs,
 /// menus, title bars, and other window-bound UI are unavailable. Set
 /// `PROTON_HEADLESS=1` to force this mode for automated test runs.
-pub fn App::headless(self : App, enabled? : Bool = true) -> App {
+pub fn App::headless(self : App, enabled? : Bool = true) -> Unit {
   self.headless_value = enabled
-  self
 }
 
 ///|
@@ -138,16 +136,14 @@ pub fn App::headless(self : App, enabled? : Bool = true) -> App {
 ///
 /// `Automatic` follows assistive-technology activity where the platform can
 /// report it. `AlwaysEnabled` keeps the tree available for the whole runtime.
-pub fn App::accessibility(self : App, mode : AccessibilityMode) -> App {
+pub fn App::accessibility(self : App, mode : AccessibilityMode) -> Unit {
   self.accessibility_mode_value = mode
-  self
 }
 
 ///|
 /// Selects the immutable locale used by this application runtime.
-pub fn App::locale(self : App, locale : @locale.Locale) -> App {
+pub fn App::locale(self : App, locale : @locale.Locale) -> Unit {
   self.explicit_locale = Some(locale)
-  self
 }
 
 ///|
@@ -157,47 +153,42 @@ pub fn App::locale(self : App, locale : @locale.Locale) -> App {
 /// deadline and raises `AppRunError` if confirmation is unavailable or the
 /// primary is stopping. Success does not wait for asynchronous launch handlers.
 /// A timeout never starts another owner or terminates the existing process.
-pub fn App::single_instance(self : App, enabled? : Bool = true) -> App {
+pub fn App::single_instance(self : App, enabled? : Bool = true) -> Unit {
   self.single_instance_enabled = enabled
-  self
 }
 
 ///|
 /// Uses an isolated persistent browser profile below the application's
 /// sessionData directory.
-pub fn App::session_partition(self : App, partition : String) -> App {
+pub fn App::session_partition(self : App, partition : String) -> Unit {
   self.session_partition_value = Some(partition.trim().to_owned())
-  self
 }
 
 ///|
 /// Configures a startup-wide Chromium proxy. This is read when the native
 /// runtime starts and cannot be changed while the app is running.
-pub fn App::proxy(self : App, server : String, bypass? : String) -> App {
+pub fn App::proxy(self : App, server : String, bypass? : String) -> Unit {
   self.proxy_server_value = Some(server.trim().to_owned())
   self.proxy_bypass_value = bypass.map(value => value.trim().to_owned())
-  self
 }
 
 ///|
 /// Sets the maximum time allowed for the native bridge to become ready.
-pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> App {
+pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> Unit {
   self.bridge_startup_timeout_value_ms = timeout_ms
-  self
 }
 
 ///|
 /// Sets the app-level native menu bar.
-pub fn App::menu(self : App, menu : MenuBar) -> App {
+pub fn App::menu(self : App, menu : MenuBar) -> Unit {
   self.menu = Some(menu)
-  self
 }
 
 ///|
 /// Declares an application URL scheme for launch forwarding and protocol-client
 /// controls. Package configuration must declare the same scheme so distributed
 /// applications contain the required platform metadata.
-pub fn App::url_scheme(self : App, scheme : String) -> App {
+pub fn App::url_scheme(self : App, scheme : String) -> Unit {
   let scheme = scheme.trim().to_owned().to_lower()
   if !app_url_scheme_is_valid(scheme) {
     self.validation_errors.push(
@@ -206,7 +197,6 @@ pub fn App::url_scheme(self : App, scheme : String) -> App {
   } else if !self.url_schemes.contains(scheme) {
     self.url_schemes.push(scheme)
   }
-  self
 }
 
 ///|
@@ -214,7 +204,7 @@ pub fn App::url_scheme(self : App, scheme : String) -> App {
 ///
 /// Matching is case-sensitive and applies to every browser session created
 /// by this application, including secondary windows and web contents views.
-pub fn App::web_request_cancel_prefix(self : App, url_prefix : String) -> App {
+pub fn App::web_request_cancel_prefix(self : App, url_prefix : String) -> Unit {
   let url_prefix = url_prefix.trim().to_owned()
   if url_prefix == "" {
     self.validation_errors.push(
@@ -234,7 +224,6 @@ pub fn App::web_request_cancel_prefix(self : App, url_prefix : String) -> App {
   } else {
     self.web_request_cancel_prefixes.push(url_prefix)
   }
-  self
 }
 
 ///|
@@ -243,7 +232,7 @@ pub fn App::web_request_redirect_prefix(
   self : App,
   url_prefix : String,
   target_url : String,
-) -> App {
+) -> Unit {
   let url_prefix = url_prefix.trim().to_owned()
   let target_url = target_url.trim().to_owned()
   if url_prefix == "" || target_url == "" {
@@ -270,7 +259,6 @@ pub fn App::web_request_redirect_prefix(
   } else {
     self.web_request_redirect_prefixes.push((url_prefix, target_url))
   }
-  self
 }
 
 ///|
@@ -280,7 +268,7 @@ pub fn App::web_request_header_prefix(
   url_prefix : String,
   header_name : String,
   header_value : String,
-) -> App {
+) -> Unit {
   let url_prefix = url_prefix.trim().to_owned()
   let header_name = header_name.trim().to_owned()
   if url_prefix == "" || header_name == "" {
@@ -301,7 +289,6 @@ pub fn App::web_request_header_prefix(
       (url_prefix, header_name, header_value),
     )
   }
-  self
 }
 
 ///|
@@ -325,7 +312,7 @@ fn app_url_scheme_is_valid(scheme : String) -> Bool {
 ///|
 /// Registers a document extension for single-instance launch forwarding.
 /// OS registration belongs to the package configuration.
-pub fn App::document_extension(self : App, extension : String) -> App {
+pub fn App::document_extension(self : App, extension : String) -> Unit {
   let extension = extension.trim().to_owned().to_lower()
   let extension = if extension.has_prefix(".") {
     extension.unsafe_substring(start=1, end=extension.length()).to_string()
@@ -342,7 +329,6 @@ pub fn App::document_extension(self : App, extension : String) -> App {
   } else if !self.document_extensions.contains(extension) {
     self.document_extensions.push(extension)
   }
-  self
 }
 
 ///|
@@ -353,7 +339,7 @@ pub fn App::update_channel(
   public_keys : Array[String],
   check_on_launch? : Bool = true,
   freshness_days? : Int = 30,
-) -> App {
+) -> Unit {
   let endpoint = endpoint.trim().to_owned()
   if !endpoint.has_prefix("https://") {
     self.validation_errors.push(
@@ -384,7 +370,6 @@ pub fn App::update_channel(
       freshness_days,
     })
   }
-  self
 }
 
 ///|
@@ -402,18 +387,16 @@ pub fn App::update_channel(
 pub fn App::on_update_available(
   self : App,
   handler : async (PendingUpdate) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.update_handlers.push(handler)
-  self
 }
 
 ///|
 pub fn App::on_launch_input(
   self : App,
   handler : async (ApplicationContext, RuntimeLaunchInput) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.launch_input_handlers.push(handler)
-  self
 }
 
 ///|
@@ -424,9 +407,8 @@ pub fn App::on_launch_input(
 pub fn App::on_system_appearance_change(
   self : App,
   handler : async (SystemAppearance) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.system_appearance_handlers.push(handler)
-  self
 }
 
 ///|
@@ -440,9 +422,8 @@ pub fn App::on_system_appearance_change(
 pub fn App::on_thumbar_button_click(
   self : App,
   handler : async (WindowHandle, String) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.thumbar_button_handlers.push(handler)
-  self
 }
 
 ///|
@@ -451,9 +432,8 @@ pub fn App::on_thumbar_button_click(
 pub fn App::last_window_closed_policy(
   self : App,
   policy : LastWindowClosedPolicy,
-) -> App {
+) -> Unit {
   self.last_window_closed_policy_value = policy
-  self
 }
 
 ///|
@@ -461,9 +441,8 @@ pub fn App::last_window_closed_policy(
 pub fn App::on_window_event(
   self : App,
   handler : async (WindowHandle, WindowEvent) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.window_event_handlers.push(handler)
-  self
 }
 
 ///|
@@ -474,9 +453,8 @@ pub fn App::on_window_event(
 pub fn App::on_window_created(
   self : App,
   handler : async (WindowHandle) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.window_created_handlers.push(handler)
-  self
 }
 
 ///|
@@ -489,9 +467,8 @@ pub fn App::on_window_created(
 pub fn App::on_web_contents_created(
   self : App,
   handler : async (WebContentsHandle) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.web_contents_created_handlers.push(handler)
-  self
 }
 
 ///|
@@ -505,9 +482,8 @@ pub fn App::on_web_contents_created(
 pub fn App::on_render_process_gone(
   self : App,
   handler : async (WebContentsHandle, RenderProcessGoneDetails) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.render_process_gone_handlers.push(handler)
-  self
 }
 
 ///|
@@ -519,9 +495,8 @@ pub fn App::on_render_process_gone(
 pub fn App::on_session_created(
   self : App,
   handler : async (ApplicationSession) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.session_created_handlers.push(handler)
-  self
 }
 
 ///|
@@ -530,9 +505,8 @@ pub fn App::on_session_created(
 pub fn App::on_web_contents_event(
   self : App,
   handler : async (WebContentsHandle, WebContentsEvent) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.contents_event_handlers.push(handler)
-  self
 }
 
 ///|
@@ -542,9 +516,8 @@ pub fn App::on_web_contents_event(
 pub fn App::on_window_close_request(
   self : App,
   handler : async (WindowHandle) -> WindowCloseDecision noraise,
-) -> App {
+) -> Unit {
   self.window_close_handler = Some(handler)
-  self
 }
 
 ///|
@@ -554,9 +527,8 @@ pub fn App::on_window_close_request(
 pub fn App::on_navigation_request(
   self : App,
   handler : async (WebContentsHandle, NavigationRequest) -> NavigationDecision noraise,
-) -> App {
+) -> Unit {
   self.navigation_handler = Some(handler)
-  self
 }
 
 ///|
@@ -566,9 +538,8 @@ pub fn App::on_navigation_request(
 pub fn App::on_new_window_request(
   self : App,
   handler : async (WebContentsHandle, NewWindowRequest) -> NewWindowDecision noraise,
-) -> App {
+) -> Unit {
   self.new_window_handler = Some(handler)
-  self
 }
 
 ///|
@@ -576,9 +547,8 @@ pub fn App::on_new_window_request(
 pub fn App::on_download_request(
   self : App,
   handler : async (WebContentsHandle, DownloadRequest) -> DownloadDecision noraise,
-) -> App {
+) -> Unit {
   self.download_handler = Some(handler)
-  self
 }
 
 ///|
@@ -586,9 +556,8 @@ pub fn App::on_download_request(
 pub fn App::on_certificate_error(
   self : App,
   handler : async (WebContentsHandle, CertificateError) -> BrowserPermissionDecision noraise,
-) -> App {
+) -> Unit {
   self.certificate_handler = Some(handler)
-  self
 }
 
 ///|
@@ -597,9 +566,8 @@ pub fn App::on_certificate_error(
 pub fn App::on_media_permission_request(
   self : App,
   handler : async (WebContentsHandle, MediaPermissionRequest) -> BrowserPermissionDecision noraise,
-) -> App {
+) -> Unit {
   self.media_handler = Some(handler)
-  self
 }
 
 ///|
@@ -607,9 +575,8 @@ pub fn App::on_media_permission_request(
 pub fn App::on_permission_request(
   self : App,
   handler : async (WebContentsHandle, PermissionRequest) -> BrowserPermissionDecision noraise,
-) -> App {
+) -> Unit {
   self.permission_handler = Some(handler)
-  self
 }
 
 ///|
@@ -617,9 +584,8 @@ pub fn App::on_permission_request(
 pub fn App::on_download_event(
   self : App,
   handler : async (WebContentsHandle, DownloadEvent) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.download_event_handlers.push(handler)
-  self
 }
 
 ///|
@@ -631,9 +597,8 @@ pub fn App::on_download_event(
 pub fn App::on_before_quit(
   self : App,
   handler : async (ApplicationContext) -> ApplicationQuitDecision noraise,
-) -> App {
+) -> Unit {
   self.before_quit_handler = Some(handler)
-  self
 }
 
 ///|
@@ -646,9 +611,8 @@ pub fn App::on_before_quit(
 pub fn App::on_will_quit(
   self : App,
   handler : async (ApplicationContext) -> ApplicationQuitDecision noraise,
-) -> App {
+) -> Unit {
   self.will_quit_handler = Some(handler)
-  self
 }
 
 ///|
@@ -660,9 +624,8 @@ pub fn App::on_will_quit(
 pub fn App::on_quit(
   self : App,
   handler : async (ApplicationContext, Int) -> Unit noraise,
-) -> App {
+) -> Unit {
   self.quit_handlers.push(handler)
-  self
 }
 
 ///|
@@ -672,7 +635,7 @@ pub fn App::add_window(
   id : String,
   config : WindowConfig,
   open_on_start? : Bool = true,
-) -> App {
+) -> Unit {
   let normalized_id = id.trim().to_owned()
   if normalized_id == "" || normalized_id == "main" {
     self.validation_errors.push(
@@ -695,7 +658,6 @@ pub fn App::add_window(
   } else {
     self.windows.push((normalized_id, config.snapshot(), open_on_start))
   }
-  self
 }
 
 ///|
@@ -738,12 +700,11 @@ pub fn App::commands(
   self : App,
   register : (@proton_command.CommandRegistrar) -> Unit raise,
   targets? : Array[RendererTarget],
-) -> App {
+) -> Unit {
   self.command_capabilities.push(AppCommandCapability::{
     register,
     targets: renderer_capability_targets(targets),
   })
-  self
 }
 
 ///|
@@ -755,7 +716,7 @@ pub fn[State] App::app_lifecycle(
   self : App,
   on_start~ : async (ApplicationContext) -> State,
   on_shutdown~ : async (State) -> Unit,
-) -> App {
+) -> Unit {
   self.application_lifecycle_hooks.push(ApplicationLifecycleHook::{
     start: async fn(context) {
       let state = on_start(context)
@@ -764,7 +725,6 @@ pub fn[State] App::app_lifecycle(
       }
     },
   })
-  self
 }
 
 ///|
@@ -776,14 +736,13 @@ pub fn[State] App::window_lifecycle(
   self : App,
   on_ready~ : async (WindowContext) -> State,
   on_close~ : async (State) -> Unit,
-) -> App {
+) -> Unit {
   self.window_lifecycle_hooks.push(WindowLifecycleHook::{
     start: async fn(context) {
       let state = on_ready(context)
       WindowLifecycleActivation::{ close: async fn() { on_close(state) }, }
     },
   })
-  self
 }
 
 ///|
@@ -796,7 +755,7 @@ pub fn App::capability(
   self : App,
   capability : @proton_extension.RendererCapability,
   targets? : Array[RendererTarget],
-) -> App {
+) -> Unit {
   let id = capability.id()
   if id.trim().to_owned() == "" {
     self.validation_errors.push(
@@ -823,7 +782,6 @@ pub fn App::capability(
       None => ()
     }
   }
-  self
 }
 
 ///|

@@ -4,22 +4,22 @@ pub async fn run_single_instance() -> Unit {
   let role = @env.get_env_var("PROTON_INSTANCE_TEST_ROLE").unwrap()
   let application : Ref[@proton.ApplicationContext?] = Ref(None)
   let app = @proton.html("Single instance", "<h1>Single instance</h1>")
-    .identifier(identifier)
-    .single_instance()
-    .on_launch_input(fn(context, input) noraise {
+    ..identifier(identifier)
+    ..single_instance()
+    ..on_launch_input(fn(context, input) noraise {
       if input is @proton.RuntimeLaunchInput::Reopen {
         println("INSTANCE: activation handled")
         context.quit()
       }
     })
-    .app_lifecycle(
+    ..app_lifecycle(
       on_start=context => {
         application.val = Some(context)
         context
       },
       on_shutdown=fn(_) { () },
     )
-    .window_lifecycle(
+    ..window_lifecycle(
       on_ready=context => {
         guard role == "primary" || role == "release" || role == "expect-primary" else {
           abort("secondary unexpectedly created a runtime window")
@@ -75,7 +75,7 @@ pub async fn run_single_instance() -> Unit {
   // the session profile exclusively, so the successor runs with its own
   // partition instead of the shared profile.
   let app = match @env.get_env_var("PROTON_INSTANCE_TEST_PARTITION") {
-    Some(partition) if partition != "" => app.session_partition(partition)
+    Some(partition) if partition != "" => app..session_partition(partition)
     _ => app
   }
   app.run_or_abort()

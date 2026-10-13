@@ -161,8 +161,8 @@ async fn main {
     height=700,
     debug=true,
   )
-  .commands(register_commands)
-  .window_lifecycle(
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       browser_slot.val = Some(window.web_contents())
@@ -174,6 +174,6 @@ async fn main {
       browser_slot.val = None
     },
   )
-  .identifier("dev.proton.54-devtools-focus")
+  ..identifier("dev.proton.54-devtools-focus")
   .run_or_abort()
 }

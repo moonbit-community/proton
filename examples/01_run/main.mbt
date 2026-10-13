@@ -7,6 +7,6 @@ async fn main {
     #|  <body><h1>01 run</h1></body>
     #|</html>
   @proton.html("01 run", html, width=800, height=600, debug=true)
-  .identifier("dev.proton.01-run")
+  ..identifier("dev.proton.01-run")
   .run_or_abort()
 }

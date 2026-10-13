@@ -26,7 +26,7 @@ pub fn load_config() -> AppConfig raise AppConfigError {
 ///|
 /// Supplies a complete configuration snapshot.
 /// Packaged applications also verify the identifier against bundled metadata.
-pub fn App::config(self : App, config : AppConfig) -> App {
+pub fn App::config(self : App, config : AppConfig) -> Unit {
   try {
     config.validate()
     let identifier = match
@@ -41,12 +41,10 @@ pub fn App::config(self : App, config : AppConfig) -> App {
     let config = { ..config.copy(), identifier, }
     self.set_application_identity(Configured(config))
   } catch {
-    error => {
+    error =>
       self.validation_errors.push(
         InvalidSetting(name="config", message=error.message()),
       )
-      self
-    }
   }
 }
 

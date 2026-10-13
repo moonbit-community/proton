@@ -183,9 +183,9 @@ fn html() -> String {
 ///|
 async fn main {
   @proton.html("Window Attention", html(), width=720, height=520, debug=true)
-  .identifier("dev.proton.window-attention")
-  .commands(register_commands)
-  .window_lifecycle(
+  ..identifier("dev.proton.window-attention")
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)

@@ -28,8 +28,8 @@ async fn main {
       ],
     ),
   )
-  .debug(enabled=true)
-  .identifier("dev.proton.53-view-minimal")
+  ..debug(enabled=true)
+  ..identifier("dev.proton.53-view-minimal")
   .run_or_abort()
 }
 ```

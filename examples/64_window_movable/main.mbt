@@ -244,9 +244,9 @@ fn html() -> String {
 ///|
 async fn main {
   @proton.html("Window Movable", html(), width=930, height=700, debug=true)
-  .identifier("dev.proton.window-movable")
-  .commands(register_commands)
-  .window_lifecycle(
+  ..identifier("dev.proton.window-movable")
+  ..commands(register_commands)
+  ..window_lifecycle(
     on_ready=context => {
       let window = context.handle()
       window_slot.val = Some(window)
