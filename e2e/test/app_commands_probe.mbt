@@ -24,7 +24,7 @@ struct AppCommandsProbeResult {
   has_bridge : Bool
   ping_message : String
   ping_source : String
-  sum_total : Int
+  sum_total : Int32
   sum_source : String
   string_result : String
   unknown_rejected : Bool
@@ -93,9 +93,9 @@ pub extend OriginProbeResult with FromJson::{from_json}
 
 ///|
 struct ScreenshotProbeResult {
-  bytes : Int
-  width : Int
-  height : Int
+  bytes : Int32
+  width : Int32
+  height : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -109,7 +109,7 @@ async fn run_app_commands_full_probe(
   tasks : @async.TaskGroup[Unit],
   output_root : String,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let page = @page.Page::connect(
     tasks,
@@ -186,7 +186,7 @@ async fn capture_headless_screenshot(
 }
 
 ///|
-fn png_u32_be(bytes : Bytes, offset : Int) -> Int {
+fn png_u32_be(bytes : Bytes, offset : Int32) -> Int32 {
   (bytes[offset].to_int() << 24) |
   (bytes[offset + 1].to_int() << 16) |
   (bytes[offset + 2].to_int() << 8) |
@@ -313,7 +313,7 @@ async fn assert_app_commands_probe(page : @page.Page) -> Unit {
 }
 
 ///|
-async fn run_reload_probe(page : @page.Page, timeout : Int) -> Unit {
+async fn run_reload_probe(page : @page.Page, timeout : Int32) -> Unit {
   ignore(
     evaluate_json(
       page,
@@ -376,7 +376,7 @@ async fn run_non_proton_probe(
   tasks : @async.TaskGroup[Unit],
   target : String,
   output_root : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let file_path = join_path(output_root, "non-proton-moonbit-probe.html")
   @mbfs.write_string_to_file(
@@ -409,7 +409,7 @@ async fn run_non_proton_probe(
 ///|
 async fn run_http_origin_probe(
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> OriginProbeResult {
   @async.with_task_group(group => {
     let server = @http.Server(@socket.Addr::parse("127.0.0.1:0"), headers={
@@ -442,7 +442,7 @@ async fn[X] navigate_and_read_origin(
   tasks : @async.TaskGroup[X],
   target : String,
   url : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> OriginProbeResult {
   let page = navigate_page_and_connect(tasks, target, url, timeout)
   let value = evaluate_json(
@@ -465,7 +465,7 @@ async fn[X] navigate_page_and_connect(
   tasks : @async.TaskGroup[X],
   target : String,
   url : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> @page.Page {
   let current = @page.Page::connect(
     tasks,
@@ -493,7 +493,7 @@ async fn[X] connect_page_matching_expression(
   allow_prefix : Bool,
   expression : String,
   description : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> @page.Page {
   let deadline = @async.now() + timeout.to_int64()
   while @async.now() <= deadline {
@@ -554,7 +554,7 @@ async fn wait_for_cdp_expression(
   page : @page.Page,
   expression : String,
   description : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   ignore(
     run_e2e_operation_with_timeout(timeout, description, () => {
@@ -593,7 +593,7 @@ fn file_url(path : String) -> String {
 }
 
 ///|
-fn parse_log_int(value : StringView) -> Int? {
+fn parse_log_int(value : StringView) -> Int32? {
   Some(@string.parse_int(value)) catch {
     _ => None
   }

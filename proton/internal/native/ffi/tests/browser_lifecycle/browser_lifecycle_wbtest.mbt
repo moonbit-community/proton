@@ -15,4 +15,4 @@ test "closed records are reclaimed after CEF releases its client" {
 }
 
 ///|
-extern "C" fn closed_record_reclamation() -> Int = "proton_test_closed_record_reclamation"
+extern "C" fn closed_record_reclamation() -> Int32 = "proton_test_closed_record_reclamation"

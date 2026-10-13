@@ -1,9 +1,9 @@
 ///|
 struct EventTickReplyProbe {
-  run_id : Int
-  index : Int
-  total : Int
-  remaining : Int
+  run_id : Int32
+  index : Int32
+  total : Int32
+  remaining : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -17,8 +17,8 @@ pub extend EventTickReplyProbe with FromJson::{from_json}
 
 ///|
 struct EventDoneReplyProbe {
-  run_id : Int
-  total : Int
+  run_id : Int32
+  total : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -48,9 +48,9 @@ pub extend EventTickerReplyProbe with FromJson::{from_json}
 ///|
 struct EventCaptureProbe {
   kind : String
-  run_id : Int
-  index : Int?
-  total : Int
+  run_id : Int32
+  index : Int32?
+  total : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -108,7 +108,7 @@ async fn run_event_scenario_page_probe(
   tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
   wait_for_cdp_expression(
@@ -213,7 +213,7 @@ fn assert_event_scenario_probe(
 ///|
 async fn run_event_reload_scenario_probe(
   page : @page.Page,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   ignore(
     evaluate_json(

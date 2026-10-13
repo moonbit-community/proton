@@ -1,9 +1,9 @@
 ///|
 struct DevTickReplyProbe {
-  run_id : Int
-  index : Int
-  total : Int
-  remaining : Int
+  run_id : Int32
+  index : Int32
+  total : Int32
+  remaining : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -17,8 +17,8 @@ pub extend DevTickReplyProbe with FromJson::{from_json}
 
 ///|
 struct DevDoneReplyProbe {
-  run_id : Int
-  total : Int
+  run_id : Int32
+  total : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -48,9 +48,9 @@ pub extend DevTickerReplyProbe with FromJson::{from_json}
 ///|
 struct DevEventProbe {
   kind : String
-  run_id : Int
-  index : Int?
-  total : Int
+  run_id : Int32
+  index : Int32?
+  total : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -67,8 +67,8 @@ struct DevExtensionProbe {
   url : String
   origin : String
   title : String
-  script_element_count : Int
-  proton_script_element_count : Int
+  script_element_count : Int32
+  proton_script_element_count : Int32
   has_bridge : Bool
   has_proxy : Bool
   has_event_proxy : Bool
@@ -114,7 +114,7 @@ async fn run_dev_extension_page_probe(
   target : String,
   frontend_url : String,
   output_root : String,
-  timeout : Int,
+  timeout : Int32,
   phase : Ref[String],
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
@@ -135,7 +135,7 @@ async fn run_dev_extension_production_page_probe(
   tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
   wait_for_ready(page, dev_extension_ready_expression(), timeout) catch {
@@ -296,7 +296,7 @@ fn dev_extension_production_probe_expression() -> String {
 async fn run_dev_extension_reload_probe(
   page : @page.Page,
   frontend_url : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   ignore(
     evaluate_json(
@@ -382,7 +382,7 @@ async fn run_dev_extension_non_proton_probe(
   tasks : @async.TaskGroup[Unit],
   target : String,
   output_root : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let file_path = join_path(output_root, "non-proton-dev-extension-probe.html")
   @mbfs.write_string_to_file(
@@ -455,8 +455,8 @@ fn assert_dev_extension_probe(
 ///|
 fn assert_dev_extension_reply(
   reply : DevTickerReplyProbe,
-  run_id : Int,
-  expected_total : Int,
+  run_id : Int32,
+  expected_total : Int32,
   value : Json,
 ) -> Unit raise {
   guard reply.done.run_id == run_id && reply.done.total == expected_total else {
@@ -479,7 +479,7 @@ fn assert_dev_extension_reply(
 ///|
 fn assert_dev_extension_events(
   events : Array[DevEventProbe],
-  run_id : Int,
+  run_id : Int32,
   value : Json,
 ) -> Unit raise {
   let mut done_count = 0

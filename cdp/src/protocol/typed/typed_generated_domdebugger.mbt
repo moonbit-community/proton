@@ -101,8 +101,8 @@ pub(all) struct DOMDebuggerEventListener {
   passive : Bool
   once : Bool
   script_id : RuntimeScriptId
-  line_number : Int
-  column_number : Int
+  line_number : Int32
+  column_number : Int32
   handler : RuntimeRemoteObject?
   original_handler : RuntimeRemoteObject?
   backend_node_id : DOMBackendNodeId?
@@ -193,7 +193,7 @@ pub fn DOMDebuggerEventListener::from_json(
 /// gives a referenced type name.
 pub(all) struct DOMDebuggerGetEventListenersParams {
   object_id : RuntimeRemoteObjectId
-  depth : Int?
+  depth : Int32?
   pierce : Bool?
 } derive(Eq, Debug)
 
@@ -286,7 +286,7 @@ pub fn DOMDebuggerGetEventListenersResult::from_json(
 /// )
 /// ```
 pub fn domdebugger_get_event_listeners_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerGetEventListenersParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -347,7 +347,7 @@ pub fn DOMDebuggerRemoveDOMBreakpointParams::to_json(
 /// )
 /// ```
 pub fn domdebugger_remove_dombreakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerRemoveDOMBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -413,7 +413,7 @@ pub fn DOMDebuggerRemoveEventListenerBreakpointParams::to_json(
 /// )
 /// ```
 pub fn domdebugger_remove_event_listener_breakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerRemoveEventListenerBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -475,7 +475,7 @@ pub fn DOMDebuggerRemoveInstrumentationBreakpointParams::to_json(
 /// )
 /// ```
 pub fn domdebugger_remove_instrumentation_breakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerRemoveInstrumentationBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -534,7 +534,7 @@ pub fn DOMDebuggerRemoveXHRBreakpointParams::to_json(
 /// )
 /// ```
 pub fn domdebugger_remove_xhrbreakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerRemoveXHRBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -595,7 +595,7 @@ pub fn DOMDebuggerSetBreakOnCSPViolationParams::to_json(
 /// )
 /// ```
 pub fn domdebugger_set_break_on_cspviolation_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerSetBreakOnCSPViolationParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -656,7 +656,7 @@ pub fn DOMDebuggerSetDOMBreakpointParams::to_json(
 /// )
 /// ```
 pub fn domdebugger_set_dombreakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerSetDOMBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -722,7 +722,7 @@ pub fn DOMDebuggerSetEventListenerBreakpointParams::to_json(
 /// )
 /// ```
 pub fn domdebugger_set_event_listener_breakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerSetEventListenerBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -784,7 +784,7 @@ pub fn DOMDebuggerSetInstrumentationBreakpointParams::to_json(
 /// )
 /// ```
 pub fn domdebugger_set_instrumentation_breakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerSetInstrumentationBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -843,7 +843,7 @@ pub fn DOMDebuggerSetXHRBreakpointParams::to_json(
 /// )
 /// ```
 pub fn domdebugger_set_xhrbreakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMDebuggerSetXHRBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

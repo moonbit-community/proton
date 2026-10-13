@@ -8,9 +8,9 @@
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct ProfilerCoverageRange {
-  start_offset : Int
-  end_offset : Int
-  count : Int
+  start_offset : Int32
+  end_offset : Int32
+  count : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -119,8 +119,8 @@ pub fn ProfilerFunctionCoverage::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct ProfilerPositionTickInfo {
-  line : Int
-  ticks : Int
+  line : Int32
+  ticks : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -171,8 +171,8 @@ pub(all) struct ProfilerProfile {
   nodes : Array[ProfilerProfileNode]
   start_time : Double
   end_time : Double
-  samples : Array[Int]?
-  time_deltas : Array[Int]?
+  samples : Array[Int32]?
+  time_deltas : Array[Int32]?
 } derive(Eq, Debug)
 
 ///|
@@ -255,10 +255,10 @@ pub fn ProfilerProfile::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct ProfilerProfileNode {
-  id : Int
+  id : Int32
   call_frame : RuntimeCallFrame
-  hit_count : Int?
-  children : Array[Int]?
+  hit_count : Int32?
+  children : Array[Int32]?
   deopt_reason : String?
   position_ticks : Array[ProfilerPositionTickInfo]?
 } derive(Eq, Debug)
@@ -403,7 +403,7 @@ pub fn ProfilerScriptCoverage::from_json(
 /// let command = profiler_disable_command(id=1, session_id=None)
 /// ```
 pub fn profiler_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Profiler.disable", session_id?)
@@ -421,7 +421,7 @@ pub fn profiler_disable_command(
 /// let command = profiler_enable_command(id=1, session_id=None)
 /// ```
 pub fn profiler_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Profiler.enable", session_id?)
@@ -485,7 +485,7 @@ pub fn ProfilerGetBestEffortCoverageResult::from_json(
 /// let command = profiler_get_best_effort_coverage_command(id=1, session_id=None)
 /// ```
 pub fn profiler_get_best_effort_coverage_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -502,7 +502,7 @@ pub fn profiler_get_best_effort_coverage_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct ProfilerSetSamplingIntervalParams {
-  interval : Int
+  interval : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -542,7 +542,7 @@ pub fn ProfilerSetSamplingIntervalParams::to_json(
 /// )
 /// ```
 pub fn profiler_set_sampling_interval_command(
-  id~ : Int,
+  id~ : Int32,
   params : ProfilerSetSamplingIntervalParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -566,7 +566,7 @@ pub fn profiler_set_sampling_interval_command(
 /// let command = profiler_start_command(id=1, session_id=None)
 /// ```
 pub fn profiler_start_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Profiler.start", session_id?)
@@ -672,7 +672,7 @@ pub fn ProfilerStartPreciseCoverageResult::from_json(
 /// )
 /// ```
 pub fn profiler_start_precise_coverage_command(
-  id~ : Int,
+  id~ : Int32,
   params : ProfilerStartPreciseCoverageParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -737,7 +737,7 @@ pub fn ProfilerStopResult::from_json(
 /// let command = profiler_stop_command(id=1, session_id=None)
 /// ```
 pub fn profiler_stop_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Profiler.stop", session_id?)
@@ -755,7 +755,7 @@ pub fn profiler_stop_command(
 /// let command = profiler_stop_precise_coverage_command(id=1, session_id=None)
 /// ```
 pub fn profiler_stop_precise_coverage_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -827,7 +827,7 @@ pub fn ProfilerTakePreciseCoverageResult::from_json(
 /// let command = profiler_take_precise_coverage_command(id=1, session_id=None)
 /// ```
 pub fn profiler_take_precise_coverage_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(

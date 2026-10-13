@@ -1,8 +1,8 @@
 ///|
 pub(all) struct GetSourcesRequest {
   types : Array[String]
-  thumbnail_width : Int?
-  thumbnail_height : Int?
+  thumbnail_width : Int32?
+  thumbnail_height : Int32?
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -22,10 +22,10 @@ pub(all) struct Source {
   id : String
   name : String
   display_id : String
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   thumbnail : String?
 } derive(ToJson, FromJson, Debug, Eq)
 

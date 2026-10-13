@@ -25,9 +25,9 @@ fn test_absolute_cache_dir() -> String {
 fn native_text_test_copy(
   text : String,
   buffer : FixedArray[Byte],
-  buffer_len : Int,
-  required : Ref[Int],
-) -> Int {
+  buffer_len : Int32,
+  required : Ref[Int32],
+) -> Int32 {
   let text_bytes = @ffi.to_cstr(text)
   let payload_len = text_bytes.length() - 1
   required.val = payload_len

@@ -20,7 +20,7 @@ let default_proton_rabbita_version = "0.4.0"
 let default_rabbita_version = "0.16.4"
 
 ///|
-let default_warren_version = "0.3.3"
+let default_warren_version = "0.4.5"
 
 ///|
 /// Scaffolded backends need this directly: `async fn main` is only available to
@@ -60,8 +60,8 @@ priv struct TemplateContext {
   frontend_module : String
   backend_module : String
   identifier : String
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   proton_version : String
   proton_codegen_version : String
   proton_cli_version : String
@@ -104,8 +104,8 @@ fn template_context(
   author : String,
   project_name : String,
   identifier : String,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> TemplateContext {
   let module_prefix = author + "/" + project_name
   {
@@ -212,8 +212,8 @@ fn plan_project_files(
   author : String,
   project_name : String,
   identifier : String,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Array[PlannedFile] raise NewProjectTemplateError {
   let context = template_context(
     title, author, project_name, identifier, width, height,

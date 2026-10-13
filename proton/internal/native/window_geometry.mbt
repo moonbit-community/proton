@@ -4,10 +4,10 @@
 /// cannot be divided by the current window's DPI in a mixed-DPI desktop.
 #cfg(platform="windows")
 pub fn window_size_in_screen_coordinates(
-  width : Int,
-  height : Int,
-  scale_factor_percent : Int,
-) -> (Int, Int) {
+  width : Int32,
+  height : Int32,
+  scale_factor_percent : Int32,
+) -> (Int32, Int32) {
   (
     ((width.to_int64() * scale_factor_percent.to_int64() + 50L) / 100L).to_int(),
     ((height.to_int64() * scale_factor_percent.to_int64() + 50L) / 100L).to_int(),
@@ -17,9 +17,9 @@ pub fn window_size_in_screen_coordinates(
 ///|
 #cfg(not(platform="windows"))
 pub fn window_size_in_screen_coordinates(
-  width : Int,
-  height : Int,
-  _ : Int,
-) -> (Int, Int) {
+  width : Int32,
+  height : Int32,
+  _ : Int32,
+) -> (Int32, Int32) {
   (width, height)
 }

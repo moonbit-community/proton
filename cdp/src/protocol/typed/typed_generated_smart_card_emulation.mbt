@@ -300,7 +300,7 @@ pub fn SmartCardEmulationReaderStateFlags::from_json(
 pub(all) struct SmartCardEmulationReaderStateIn {
   reader : String
   current_state : SmartCardEmulationReaderStateFlags
-  current_insertion_count : Int
+  current_insertion_count : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -358,7 +358,7 @@ pub fn SmartCardEmulationReaderStateIn::from_json(
 pub(all) struct SmartCardEmulationReaderStateOut {
   reader : String
   event_state : SmartCardEmulationReaderStateFlags
-  event_count : Int
+  event_count : Int32
   atr : String
 } derive(Eq, Debug)
 
@@ -508,7 +508,7 @@ pub fn SmartCardEmulationShareMode::from_json(
 /// let command = smart_card_emulation_disable_command(id=1, session_id=None)
 /// ```
 pub fn smart_card_emulation_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -530,7 +530,7 @@ pub fn smart_card_emulation_disable_command(
 /// let command = smart_card_emulation_enable_command(id=1, session_id=None)
 /// ```
 pub fn smart_card_emulation_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -548,7 +548,7 @@ pub fn smart_card_emulation_enable_command(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationReportBeginTransactionResultParams {
   request_id : String
-  handle : Int
+  handle : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -592,7 +592,7 @@ pub fn SmartCardEmulationReportBeginTransactionResultParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_begin_transaction_result_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportBeginTransactionResultParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -612,7 +612,7 @@ pub fn smart_card_emulation_report_begin_transaction_result_command(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationReportConnectResultParams {
   request_id : String
-  handle : Int
+  handle : Int32
   active_protocol : SmartCardEmulationProtocol?
 } derive(Eq, Debug)
 
@@ -660,7 +660,7 @@ pub fn SmartCardEmulationReportConnectResultParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_connect_result_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportConnectResultParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -721,7 +721,7 @@ pub fn SmartCardEmulationReportDataResultParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_data_result_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportDataResultParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -782,7 +782,7 @@ pub fn SmartCardEmulationReportErrorParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_error_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportErrorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -802,7 +802,7 @@ pub fn smart_card_emulation_report_error_command(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationReportEstablishContextResultParams {
   request_id : String
-  context_id : Int
+  context_id : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -846,7 +846,7 @@ pub fn SmartCardEmulationReportEstablishContextResultParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_establish_context_result_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportEstablishContextResultParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -912,7 +912,7 @@ pub fn SmartCardEmulationReportGetStatusChangeResultParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_get_status_change_result_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportGetStatusChangeResultParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -976,7 +976,7 @@ pub fn SmartCardEmulationReportListReadersResultParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_list_readers_result_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportListReadersResultParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1035,7 +1035,7 @@ pub fn SmartCardEmulationReportPlainResultParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_plain_result_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportPlainResultParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1097,7 +1097,7 @@ pub fn SmartCardEmulationReportReleaseContextResultParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_release_context_result_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportReleaseContextResultParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1169,7 +1169,7 @@ pub fn SmartCardEmulationReportStatusResultParams::to_json(
 /// )
 /// ```
 pub fn smart_card_emulation_report_status_result_command(
-  id~ : Int,
+  id~ : Int32,
   params : SmartCardEmulationReportStatusResultParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1189,7 +1189,7 @@ pub fn smart_card_emulation_report_status_result_command(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationBeginTransactionRequestedEventParams {
   request_id : String
-  handle : Int
+  handle : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1270,7 +1270,7 @@ pub fn smart_card_emulation_begin_transaction_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationCancelRequestedEventParams {
   request_id : String
-  context_id : Int
+  context_id : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1348,7 +1348,7 @@ pub fn smart_card_emulation_cancel_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationConnectRequestedEventParams {
   request_id : String
-  context_id : Int
+  context_id : Int32
   reader : String
   share_mode : SmartCardEmulationShareMode
   preferred_protocols : SmartCardEmulationProtocolSet
@@ -1442,8 +1442,8 @@ pub fn smart_card_emulation_connect_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationControlRequestedEventParams {
   request_id : String
-  handle : Int
-  control_code : Int
+  handle : Int32
+  control_code : Int32
   data : String
 } derive(Eq, Debug)
 
@@ -1531,7 +1531,7 @@ pub fn smart_card_emulation_control_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationDisconnectRequestedEventParams {
   request_id : String
-  handle : Int
+  handle : Int32
   disposition : SmartCardEmulationDisposition
 } derive(Eq, Debug)
 
@@ -1617,7 +1617,7 @@ pub fn smart_card_emulation_disconnect_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationEndTransactionRequestedEventParams {
   request_id : String
-  handle : Int
+  handle : Int32
   disposition : SmartCardEmulationDisposition
 } derive(Eq, Debug)
 
@@ -1781,8 +1781,8 @@ pub fn smart_card_emulation_establish_context_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationGetAttribRequestedEventParams {
   request_id : String
-  handle : Int
-  attrib_id : Int
+  handle : Int32
+  attrib_id : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1865,9 +1865,9 @@ pub fn smart_card_emulation_get_attrib_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationGetStatusChangeRequestedEventParams {
   request_id : String
-  context_id : Int
+  context_id : Int32
   reader_states : Array[SmartCardEmulationReaderStateIn]
-  timeout : Int?
+  timeout : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -1961,7 +1961,7 @@ pub fn smart_card_emulation_get_status_change_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationListReadersRequestedEventParams {
   request_id : String
-  context_id : Int
+  context_id : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -2042,7 +2042,7 @@ pub fn smart_card_emulation_list_readers_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationReleaseContextRequestedEventParams {
   request_id : String
-  context_id : Int
+  context_id : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -2123,8 +2123,8 @@ pub fn smart_card_emulation_release_context_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationSetAttribRequestedEventParams {
   request_id : String
-  handle : Int
-  attrib_id : Int
+  handle : Int32
+  attrib_id : Int32
   data : String
 } derive(Eq, Debug)
 
@@ -2210,7 +2210,7 @@ pub fn smart_card_emulation_set_attrib_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationStatusRequestedEventParams {
   request_id : String
-  handle : Int
+  handle : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -2288,7 +2288,7 @@ pub fn smart_card_emulation_status_requested_event(
 /// gives a referenced type name.
 pub(all) struct SmartCardEmulationTransmitRequestedEventParams {
   request_id : String
-  handle : Int
+  handle : Int32
   data : String
   protocol : SmartCardEmulationProtocol?
 } derive(Eq, Debug)

@@ -71,7 +71,7 @@ pub async fn generate_commands_from_files(
 /// Generates one target-neutral extension identity from `proton.ext.json`.
 pub async fn generate_extension_identity_from_file(
   metadata_path : String,
-  binding_name? : String = "generated_extension_contract",
+  binding_name~ : String = "generated_extension_contract",
 ) -> ProtonCommandCodegenOutput {
   let (id, js_namespace) = read_proton_ext_identity(metadata_path)
   generate_extension_identity(id, js_namespace, binding_name~)

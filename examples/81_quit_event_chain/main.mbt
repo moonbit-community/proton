@@ -51,7 +51,7 @@ fn log_chain_step(step : String) -> Unit {
 }
 
 ///|
-fn state_reply(message : String, ok? : Bool = true) -> QuitReply {
+fn state_reply(message : String, ok~ : Bool = true) -> QuitReply {
   {
     ok,
     before_quit_blocked: block_before_quit.val,

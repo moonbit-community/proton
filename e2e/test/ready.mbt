@@ -2,7 +2,7 @@
 async fn wait_for_ready(
   page : @page.Page,
   expression : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   ignore(
     run_e2e_operation_with_timeout(timeout, "ready expression: " + expression, () => {

@@ -58,7 +58,7 @@ fn update_text(buffer : FixedArray[Byte]) -> String {
 /// state it would otherwise depend on — that is what lets the replacement
 /// logic be tested against throwaway directories instead of a real install.
 fn update_check(
-  status : Int,
+  status : Int32,
   message : FixedArray[Byte],
 ) -> Unit raise NativeError {
   if status >= 0 {

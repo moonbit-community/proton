@@ -171,7 +171,7 @@ fn ascii_to_lower(text : String) -> String {
   let out = StringBuilder()
   for ch in text {
     if is_ascii_uppercase(ch) {
-      out.write_char((ch.to_int() + 32) |> Int::unsafe_to_char)
+      out.write_char((ch.to_int() + 32) |> Int32::unsafe_to_char)
     } else {
       out.write_char(ch)
     }
@@ -187,7 +187,7 @@ fn capitalize_word(word : String) -> String {
   for ch in word {
     if first {
       if is_ascii_lowercase(ch) {
-        out.write_char((ch.to_int() - 32) |> Int::unsafe_to_char)
+        out.write_char((ch.to_int() - 32) |> Int32::unsafe_to_char)
       } else {
         out.write_char(ch)
       }

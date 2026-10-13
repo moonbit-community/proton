@@ -78,7 +78,7 @@ fn ensure_supported_scenario(name : String) -> Unit raise {
 }
 
 ///|
-fn timeout_ms() -> Int {
+fn timeout_ms() -> Int32 {
   let value = match @env.get_env_var("MBT_PROTON_E2E_TIMEOUT_MS") {
     Some(value) => Some(value)
     None => @env.get_env_var("PROTON_BRIDGE_E2E_TIMEOUT_MS")

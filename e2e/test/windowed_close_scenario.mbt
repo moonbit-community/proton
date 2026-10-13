@@ -3,7 +3,7 @@ async fn spawn_windowed_close_probe(
   group : @async.TaskGroup[Unit],
   root : String,
   output_root : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> SpawnedScenarioApp {
   let (program, args) = scenario_app_command()
   let output_path = join_path(output_root, "windowed-close.log")
@@ -28,7 +28,7 @@ async fn spawn_windowed_close_probe(
 }
 
 ///|
-async fn run_windowed_close_probe(root : String, timeout : Int) -> Unit {
+async fn run_windowed_close_probe(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-windowed-close-")
   defer remove_dev_extension_tree(output_root)
   install_scenario_helper(root, output_root)

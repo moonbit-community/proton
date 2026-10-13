@@ -33,7 +33,7 @@ pub fn notification_show(
 
 ///|
 /// Sets the absolute application badge count. Zero clears the badge.
-pub fn notification_set_badge_count(count : Int) -> Unit raise NativeError {
+pub fn notification_set_badge_count(count : Int32) -> Unit raise NativeError {
   if count < 0 {
     raise InvalidArgument(
       message="notification badge count must be non-negative",

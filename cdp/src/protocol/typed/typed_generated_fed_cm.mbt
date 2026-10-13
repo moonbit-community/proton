@@ -295,7 +295,7 @@ pub fn FedCmClickDialogButtonParams::to_json(
 /// let command = fed_cm_click_dialog_button_command(id=1, params, session_id=None)
 /// ```
 pub fn fed_cm_click_dialog_button_command(
-  id~ : Int,
+  id~ : Int32,
   params : FedCmClickDialogButtonParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -319,7 +319,7 @@ pub fn fed_cm_click_dialog_button_command(
 /// let command = fed_cm_disable_command(id=1, session_id=None)
 /// ```
 pub fn fed_cm_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="FedCm.disable", session_id?)
@@ -372,7 +372,7 @@ pub fn FedCmDismissDialogParams::to_json(
 /// let command = fed_cm_dismiss_dialog_command(id=1, params, session_id=None)
 /// ```
 pub fn fed_cm_dismiss_dialog_command(
-  id~ : Int,
+  id~ : Int32,
   params : FedCmDismissDialogParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -425,7 +425,7 @@ pub fn FedCmEnableParams::to_json(self : FedCmEnableParams) -> Json {
 /// let command = fed_cm_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn fed_cm_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : FedCmEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -445,7 +445,7 @@ pub fn fed_cm_enable_command(
 /// gives a referenced type name.
 pub(all) struct FedCmOpenUrlParams {
   dialog_id : String
-  account_index : Int
+  account_index : Int32
   account_url_type : FedCmAccountUrlType
 } derive(Eq, Debug)
 
@@ -480,7 +480,7 @@ pub fn FedCmOpenUrlParams::to_json(self : FedCmOpenUrlParams) -> Json {
 /// let command = fed_cm_open_url_command(id=1, params, session_id=None)
 /// ```
 pub fn fed_cm_open_url_command(
-  id~ : Int,
+  id~ : Int32,
   params : FedCmOpenUrlParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -504,7 +504,7 @@ pub fn fed_cm_open_url_command(
 /// let command = fed_cm_reset_cooldown_command(id=1, session_id=None)
 /// ```
 pub fn fed_cm_reset_cooldown_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -522,7 +522,7 @@ pub fn fed_cm_reset_cooldown_command(
 /// gives a referenced type name.
 pub(all) struct FedCmSelectAccountParams {
   dialog_id : String
-  account_index : Int
+  account_index : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -559,7 +559,7 @@ pub fn FedCmSelectAccountParams::to_json(
 /// let command = fed_cm_select_account_command(id=1, params, session_id=None)
 /// ```
 pub fn fed_cm_select_account_command(
-  id~ : Int,
+  id~ : Int32,
   params : FedCmSelectAccountParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

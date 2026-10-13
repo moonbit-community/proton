@@ -13,10 +13,10 @@ pub extend MovableRequest with FromJson::{from_json}
 struct MovableReply {
   applied : Bool
   movable : Bool
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   message : String
 } derive(ToJson, FromJson)
 

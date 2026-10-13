@@ -27,9 +27,9 @@ pub extend ProtocolVersion with ToJson::{to_json}
 pub(all) struct ProtocolDomainSummary {
   protocol : String
   domain : String
-  command_count : Int
-  event_count : Int
-  type_count : Int
+  command_count : Int32
+  event_count : Int32
+  type_count : Int32
   experimental : Bool
   deprecated : Bool
 } derive(Eq, ToJson, Debug)
@@ -52,11 +52,11 @@ pub(all) struct ProtocolSchemaSource {
   protocol : String
   path : String
   sha256 : String
-  byte_count : Int
-  domain_count : Int
-  command_count : Int
-  event_count : Int
-  type_count : Int
+  byte_count : Int32
+  domain_count : Int32
+  command_count : Int32
+  event_count : Int32
+  type_count : Int32
 } derive(Eq, ToJson, Debug)
 
 ///|
@@ -108,8 +108,8 @@ pub(all) struct ProtocolCommand {
   domain : String
   name : String
   cdp_method : String
-  parameter_count : Int
-  return_count : Int
+  parameter_count : Int32
+  return_count : Int32
   parameters : Array[String]
   returns : Array[String]
   parameter_details : Array[ProtocolFieldSummary]
@@ -138,7 +138,7 @@ pub(all) struct ProtocolEvent {
   domain : String
   name : String
   cdp_method : String
-  parameter_count : Int
+  parameter_count : Int32
   parameters : Array[String]
   parameter_details : Array[ProtocolFieldSummary]
   experimental : Bool
@@ -166,8 +166,8 @@ pub(all) struct ProtocolType {
   domain : String
   name : String
   kind : String
-  property_count : Int
-  enum_count : Int
+  property_count : Int32
+  enum_count : Int32
   properties : Array[String]
   property_details : Array[ProtocolFieldSummary]
   enum_values : Array[String]
@@ -208,25 +208,25 @@ pub extend ProtocolManifest with ToJson::{to_json}
 
 ///|
 /// Return the number of protocol domains in the manifest.
-pub fn ProtocolManifest::domain_count(self : ProtocolManifest) -> Int {
+pub fn ProtocolManifest::domain_count(self : ProtocolManifest) -> Int32 {
   self.domains.length()
 }
 
 ///|
 /// Return the total number of commands across all domains.
-pub fn ProtocolManifest::command_count(self : ProtocolManifest) -> Int {
+pub fn ProtocolManifest::command_count(self : ProtocolManifest) -> Int32 {
   self.domains.fold(init=0, (sum, item) => sum + item.command_count)
 }
 
 ///|
 /// Return the total number of events across all domains.
-pub fn ProtocolManifest::event_count(self : ProtocolManifest) -> Int {
+pub fn ProtocolManifest::event_count(self : ProtocolManifest) -> Int32 {
   self.domains.fold(init=0, (sum, item) => sum + item.event_count)
 }
 
 ///|
 /// Return the total number of domain types across all domains.
-pub fn ProtocolManifest::type_count(self : ProtocolManifest) -> Int {
+pub fn ProtocolManifest::type_count(self : ProtocolManifest) -> Int32 {
   self.domains.fold(init=0, (sum, item) => sum + item.type_count)
 }
 

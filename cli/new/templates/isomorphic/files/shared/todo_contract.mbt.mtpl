@@ -1,6 +1,6 @@
 ///|
 pub(all) struct TodoItem {
-  id : Int
+  id : Int32
   title : String
   completed : Bool
 } derive(ToJson, FromJson, Eq, Debug)
@@ -19,7 +19,7 @@ pub extend TodoItem with Debug::{to_repr}
 
 ///|
 pub(all) struct TodoSnapshot {
-  version : Int
+  version : Int32
   todos : Array[TodoItem]
 } derive(ToJson, FromJson, Eq, Debug)
 
@@ -54,7 +54,7 @@ pub extend CreateTodoRequest with Debug::{to_repr}
 
 ///|
 pub(all) struct SetTodoCompletedRequest {
-  id : Int
+  id : Int32
   completed : Bool
 } derive(ToJson, FromJson, Eq, Debug)
 
@@ -72,7 +72,7 @@ pub extend SetTodoCompletedRequest with Debug::{to_repr}
 
 ///|
 pub(all) struct DeleteTodoRequest {
-  id : Int
+  id : Int32
 } derive(ToJson, FromJson, Eq, Debug)
 
 ///|
@@ -130,7 +130,7 @@ pub extend ListTodosRequest with FromJson::{from_json}
 ///|
 /// Expected business outcomes are data, separate from transport failures.
 pub(all) enum MutationReply {
-  Changed(version~ : Int)
+  Changed(version~ : Int32)
   InvalidTitle
   MissingTodo
 } derive(ToJson, FromJson)
@@ -144,7 +144,7 @@ pub extend MutationReply with FromJson::{from_json}
 ///|
 /// A live invalidation notice. Query a fresh snapshot after receiving it.
 pub(all) struct TodosChanged {
-  version : Int
+  version : Int32
 } derive(ToJson, FromJson)
 
 ///|

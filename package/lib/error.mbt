@@ -88,7 +88,7 @@ impl Show for PackageFileSystemError with fn output(self, logger) {
 ///|
 pub(all) suberror PackageToolError {
   Start(tool~ : String, detail~ : String)
-  Exit(tool~ : String, code~ : Int, detail~ : String)
+  Exit(tool~ : String, code~ : Int32, detail~ : String)
 } derive(Debug, Eq)
 
 ///|

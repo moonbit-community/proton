@@ -1,5 +1,5 @@
 ///|
-fn NavigationTransition::from_code(code : Int) -> NavigationTransition {
+fn NavigationTransition::from_code(code : Int32) -> NavigationTransition {
   match code {
     0 => Link
     1 => Typed
@@ -20,7 +20,7 @@ fn NavigationTransition::from_code(code : Int) -> NavigationTransition {
 /// Expands Chromium's transition qualifier flags. The flag values match the
 /// engine's private encoding; an unknown flag adds no qualifier.
 fn NavigationTransitionQualifier::from_flags(
-  flags : Int,
+  flags : Int32,
 ) -> Array[NavigationTransitionQualifier] {
   let qualifiers : Array[NavigationTransitionQualifier] = []
   if (flags & 1) != 0 {
@@ -68,7 +68,7 @@ fn NavigationHistory::from_native(
 
 ///|
 /// Returns the number of entries in the snapshot.
-pub fn NavigationHistory::length(self : NavigationHistory) -> Int {
+pub fn NavigationHistory::length(self : NavigationHistory) -> Int32 {
   self.entries.length()
 }
 
@@ -77,7 +77,7 @@ pub fn NavigationHistory::length(self : NavigationHistory) -> Int {
 /// snapshot.
 pub fn NavigationHistory::entry_at(
   self : NavigationHistory,
-  index : Int,
+  index : Int32,
 ) -> NavigationEntry? {
   guard index >= 0 && index < self.entries.length() else { return None }
   Some(self.entries[index])

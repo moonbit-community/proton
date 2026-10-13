@@ -79,7 +79,7 @@ pub async fn UpdateChannel::download(
   self : UpdateChannel,
   fetch : ArtifactFetch,
   update : AvailableUpdate,
-  on_progress? : async (Int64) -> Unit noraise = _ => (),
+  on_progress~ : async (Int64) -> Unit noraise = _ => (),
 ) -> PreparedUpdate raise UpdateError {
   let installed = current_revision()
   if update.revision < installed {

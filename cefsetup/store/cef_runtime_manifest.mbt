@@ -3,11 +3,11 @@ let runtime_manifest_name = "manifest.json"
 
 ///|
 priv struct RuntimeManifest {
-  schema_version : Int
+  schema_version : Int32
   platform : String
   cef_archive : String
   cef_sha256 : String
-  layout_version : Int
+  layout_version : Int32
   sdk : String
   runtime : String
 } derive(ToJson, FromJson, Eq)
@@ -23,7 +23,7 @@ pub struct InstalledRuntime {
   platform : String
   cef_archive : String
   cef_sha256 : String
-  layout_version : Int
+  layout_version : Int32
 }
 
 ///|

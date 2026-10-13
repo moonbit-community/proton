@@ -1,9 +1,9 @@
 ///|
 // Test artifacts need an identity before Chromium selects its listening port.
-let app_run_sequence : Ref[Int] = Ref(0)
+let app_run_sequence : Ref[Int32] = Ref(0)
 
 ///|
-fn next_app_run_id() -> Int {
+fn next_app_run_id() -> Int32 {
   app_run_sequence.val += 1
   app_run_sequence.val
 }
@@ -30,7 +30,7 @@ fn announced_cdp_target(output : String) -> String? {
 ///|
 async fn wait_for_app_cdp_target(
   app : SpawnedScenarioApp,
-  timeout : Int,
+  timeout : Int32,
 ) -> String {
   let deadline = @async.now() + timeout.to_int64()
   while @async.now() <= deadline {

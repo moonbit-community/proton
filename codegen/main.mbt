@@ -122,7 +122,7 @@ async fn generate(matches : @argparse.Matches) -> Unit {
 }
 
 ///|
-async fn run(args : ArrayView[String]) -> Int {
+async fn run(args : ArrayView[String]) -> Int32 {
   let matches = @argparse.parse(codegen_command(), argv=args, env=Map([])) catch {
     error => {
       write_stderr_line(error.to_string())

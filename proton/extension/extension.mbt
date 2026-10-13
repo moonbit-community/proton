@@ -74,9 +74,9 @@ pub struct RendererCapability {
 pub fn typed(
   contract : @proton_contract.ExtensionContract,
   register : (@proton_command.CommandRegistrar) -> Unit raise,
-  scripts? : Array[String] = [],
-  dependencies? : Array[String] = [],
-  resolve_permission? : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError = fn(
+  scripts~ : Array[String] = [],
+  dependencies~ : Array[String] = [],
+  resolve_permission~ : (Json, String) -> Json raise @proton_command.PermissionScopeValidationError = fn(
     scope,
     _base_path,
   ) -> Json raise @proton_command.PermissionScopeValidationError {
@@ -97,8 +97,8 @@ pub fn typed(
     scope
   },
   event_source? : EventSource,
-  on_start? : (@async.TaskGroup[Unit]) -> Unit raise = fn(_tasks) {  },
-  on_destroy? : () -> Unit raise = fn() {  },
+  on_start~ : (@async.TaskGroup[Unit]) -> Unit raise = fn(_tasks) {  },
+  on_destroy~ : () -> Unit raise = fn() {  },
 ) -> Extension {
   Extension::{
     definition_id: allocate_extension_definition_id(),
@@ -153,7 +153,7 @@ pub fn[Payload : ToJson] event(
 /// extension packages should expose a typed `capability` function instead.
 pub fn capability(
   extension : Extension,
-  scope? : Json = Json::empty_object(),
+  scope~ : Json = Json::empty_object(),
 ) -> RendererCapability {
   RendererCapability::{ extension, scope: clone_capability_json(scope), }
 }

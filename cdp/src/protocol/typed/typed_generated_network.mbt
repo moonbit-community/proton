@@ -822,14 +822,14 @@ pub(all) struct NetworkCookie {
   domain : String
   path : String
   expires : Double
-  size : Int
+  size : Int32
   http_only : Bool
   secure : Bool
   session : Bool
   same_site : NetworkCookieSameSite?
   priority : NetworkCookiePriority
   source_scheme : NetworkCookieSourceScheme
-  source_port : Int
+  source_port : Int32
   partition_key : NetworkCookiePartitionKey?
   partition_key_opaque : Bool?
 } derive(Eq, Debug)
@@ -1020,7 +1020,7 @@ pub(all) struct NetworkCookieParam {
   expires : NetworkTimeSinceEpoch?
   priority : NetworkCookiePriority?
   source_scheme : NetworkCookieSourceScheme?
-  source_port : Int?
+  source_port : Int32?
   partition_key : NetworkCookiePartitionKey?
 } derive(Eq, Debug)
 
@@ -1885,7 +1885,7 @@ pub fn NetworkDeviceBoundSessionEventId::from_json(
 pub(all) struct NetworkDeviceBoundSessionFailedRequest {
   request_url : String
   net_error : String?
-  response_error : Int?
+  response_error : Int32?
   response_error_body : String?
 } derive(Eq, Debug)
 
@@ -2330,7 +2330,7 @@ pub fn NetworkDirectTCPSocketOptions::from_json(
 pub(all) struct NetworkDirectUDPMessage {
   data : String
   remote_addr : String?
-  remote_port : Int?
+  remote_port : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -2385,14 +2385,14 @@ pub fn NetworkDirectUDPMessage::from_json(
 /// gives a referenced type name.
 pub(all) struct NetworkDirectUDPSocketOptions {
   remote_addr : String?
-  remote_port : Int?
+  remote_port : Int32?
   local_addr : String?
-  local_port : Int?
+  local_port : Int32?
   dns_query_type : NetworkDirectSocketDnsQueryType?
   send_buffer_size : Double?
   receive_buffer_size : Double?
   multicast_loopback : Bool?
-  multicast_time_to_live : Int?
+  multicast_time_to_live : Int32?
   multicast_allow_address_sharing : Bool?
 } derive(Eq, Debug)
 
@@ -3093,7 +3093,7 @@ pub(all) struct NetworkNetworkConditions {
   upload_throughput : Double
   connection_type : NetworkConnectionType?
   packet_loss : Double?
-  packet_queue_length : Int?
+  packet_queue_length : Int32?
   packet_reordering : Bool?
 } derive(Eq, Debug)
 
@@ -3440,8 +3440,8 @@ pub(all) struct NetworkReportingApiReport {
   destination : String
   type_ : String
   timestamp : NetworkTimeSinceEpoch
-  depth : Int
-  completed_attempts : Int
+  depth : Int32
+  completed_attempts : Int32
   body : Json
   status : NetworkReportStatus
 } derive(Eq, Debug)
@@ -4007,7 +4007,7 @@ pub fn NetworkResourceType::from_json(
 /// gives a referenced type name.
 pub(all) struct NetworkResponse {
   url : String
-  status : Int
+  status : Int32
   status_text : String
   headers : NetworkHeaders
   headers_text : String?
@@ -4018,7 +4018,7 @@ pub(all) struct NetworkResponse {
   connection_reused : Bool
   connection_id : Double
   remote_ipaddress : String?
-  remote_port : Int?
+  remote_port : Int32?
   from_disk_cache : Bool?
   from_service_worker : Bool?
   from_prefetch_cache : Bool?
@@ -4227,7 +4227,7 @@ pub(all) struct NetworkSecurityDetails {
   valid_to : NetworkTimeSinceEpoch
   signed_certificate_timestamp_list : Array[NetworkSignedCertificateTimestamp]
   certificate_transparency_compliance : NetworkCertificateTransparencyCompliance
-  server_signature_algorithm : Int?
+  server_signature_algorithm : Int32?
   encrypted_client_hello : Bool
 } derive(Eq, Debug)
 
@@ -4456,7 +4456,7 @@ pub fn NetworkServiceWorkerResponseSource::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct NetworkServiceWorkerRouterInfo {
-  rule_id_matched : Int?
+  rule_id_matched : Int32?
   matched_source_type : NetworkServiceWorkerRouterSource?
   actual_source_type : NetworkServiceWorkerRouterSource?
 } derive(Eq, Debug)
@@ -4687,7 +4687,7 @@ pub fn NetworkSignedCertificateTimestamp::from_json(
 /// gives a referenced type name.
 pub(all) struct NetworkSignedExchangeError {
   message : String
-  signature_index : Int?
+  signature_index : Int32?
   error_field : NetworkSignedExchangeErrorField?
 } derive(Eq, Debug)
 
@@ -4792,7 +4792,7 @@ pub fn NetworkSignedExchangeErrorField::from_json(
 /// gives a referenced type name.
 pub(all) struct NetworkSignedExchangeHeader {
   request_url : String
-  response_code : Int
+  response_code : Int32
   response_headers : NetworkHeaders
   signatures : Array[NetworkSignedExchangeSignature]
   header_integrity : String
@@ -4952,8 +4952,8 @@ pub(all) struct NetworkSignedExchangeSignature {
   cert_url : String?
   cert_sha256 : String?
   validity_url : String
-  date : Int
-  expires : Int
+  date : Int32
+  expires : Int32
   certificates : Array[String]?
 } derive(Eq, Debug)
 
@@ -5326,7 +5326,7 @@ pub fn NetworkWebSocketRequest::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct NetworkWebSocketResponse {
-  status : Int
+  status : Int32
   status_text : String
   headers : NetworkHeaders
   headers_text : String?
@@ -5450,7 +5450,7 @@ pub fn NetworkCanClearBrowserCacheResult::from_json(
 /// let command = network_can_clear_browser_cache_command(id=1, session_id=None)
 /// ```
 pub fn network_can_clear_browser_cache_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5513,7 +5513,7 @@ pub fn NetworkCanClearBrowserCookiesResult::from_json(
 /// let command = network_can_clear_browser_cookies_command(id=1, session_id=None)
 /// ```
 pub fn network_can_clear_browser_cookies_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5579,7 +5579,7 @@ pub fn NetworkCanEmulateNetworkConditionsResult::from_json(
 /// )
 /// ```
 pub fn network_can_emulate_network_conditions_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5604,7 +5604,7 @@ pub fn network_can_emulate_network_conditions_command(
 /// )
 /// ```
 pub fn network_clear_accepted_encodings_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5626,7 +5626,7 @@ pub fn network_clear_accepted_encodings_override_command(
 /// let command = network_clear_browser_cache_command(id=1, session_id=None)
 /// ```
 pub fn network_clear_browser_cache_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5648,7 +5648,7 @@ pub fn network_clear_browser_cache_command(
 /// let command = network_clear_browser_cookies_command(id=1, session_id=None)
 /// ```
 pub fn network_clear_browser_cookies_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5665,8 +5665,8 @@ pub fn network_clear_browser_cookies_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct NetworkConfigureDurableMessagesParams {
-  max_total_buffer_size : Int?
-  max_resource_buffer_size : Int?
+  max_total_buffer_size : Int32?
+  max_resource_buffer_size : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -5711,7 +5711,7 @@ pub fn NetworkConfigureDurableMessagesParams::to_json(
 /// )
 /// ```
 pub fn network_configure_durable_messages_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkConfigureDurableMessagesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5798,7 +5798,7 @@ pub fn NetworkContinueInterceptedRequestParams::to_json(
 /// )
 /// ```
 pub fn network_continue_intercepted_request_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkContinueInterceptedRequestParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5869,7 +5869,7 @@ pub fn NetworkDeleteCookiesParams::to_json(
 /// let command = network_delete_cookies_command(id=1, params, session_id=None)
 /// ```
 pub fn network_delete_cookies_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkDeleteCookiesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5893,7 +5893,7 @@ pub fn network_delete_cookies_command(
 /// let command = network_disable_command(id=1, session_id=None)
 /// ```
 pub fn network_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Network.disable", session_id?)
@@ -5912,7 +5912,7 @@ pub(all) struct NetworkEmulateNetworkConditionsParams {
   upload_throughput : Double
   connection_type : NetworkConnectionType?
   packet_loss : Double?
-  packet_queue_length : Int?
+  packet_queue_length : Int32?
   packet_reordering : Bool?
 } derive(Eq, Debug)
 
@@ -5968,7 +5968,7 @@ pub fn NetworkEmulateNetworkConditionsParams::to_json(
 /// )
 /// ```
 pub fn network_emulate_network_conditions_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkEmulateNetworkConditionsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6085,7 +6085,7 @@ pub fn NetworkEmulateNetworkConditionsByRuleResult::from_json(
 /// )
 /// ```
 pub fn network_emulate_network_conditions_by_rule_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkEmulateNetworkConditionsByRuleParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6104,9 +6104,9 @@ pub fn network_emulate_network_conditions_by_rule_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct NetworkEnableParams {
-  max_total_buffer_size : Int?
-  max_resource_buffer_size : Int?
-  max_post_data_size : Int?
+  max_total_buffer_size : Int32?
+  max_resource_buffer_size : Int32?
+  max_post_data_size : Int32?
   report_direct_socket_traffic : Bool?
   enable_durable_messages : Bool?
 } derive(Eq, Debug)
@@ -6154,7 +6154,7 @@ pub fn NetworkEnableParams::to_json(self : NetworkEnableParams) -> Json {
 /// let command = network_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn network_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6213,7 +6213,7 @@ pub fn NetworkEnableDeviceBoundSessionsParams::to_json(
 /// )
 /// ```
 pub fn network_enable_device_bound_sessions_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkEnableDeviceBoundSessionsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6272,7 +6272,7 @@ pub fn NetworkEnableReportingApiParams::to_json(
 /// )
 /// ```
 pub fn network_enable_reporting_api_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkEnableReportingApiParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6374,7 +6374,7 @@ pub fn NetworkFetchSchemefulSiteResult::from_json(
 /// )
 /// ```
 pub fn network_fetch_schemeful_site_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkFetchSchemefulSiteParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6444,7 +6444,7 @@ pub fn NetworkGetAllCookiesResult::from_json(
 /// let command = network_get_all_cookies_command(id=1, session_id=None)
 /// ```
 pub fn network_get_all_cookies_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -6547,7 +6547,7 @@ pub fn NetworkGetCertificateResult::from_json(
 /// let command = network_get_certificate_command(id=1, params, session_id=None)
 /// ```
 pub fn network_get_certificate_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkGetCertificateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6644,7 +6644,7 @@ pub fn NetworkGetCookiesResult::from_json(
 /// let command = network_get_cookies_command(id=1, params, session_id=None)
 /// ```
 pub fn network_get_cookies_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkGetCookiesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6750,7 +6750,7 @@ pub fn NetworkGetRequestPostDataResult::from_json(
 /// )
 /// ```
 pub fn network_get_request_post_data_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkGetRequestPostDataParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6850,7 +6850,7 @@ pub fn NetworkGetResponseBodyResult::from_json(
 /// let command = network_get_response_body_command(id=1, params, session_id=None)
 /// ```
 pub fn network_get_response_body_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkGetResponseBodyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6960,7 +6960,7 @@ pub fn NetworkGetResponseBodyForInterceptionResult::from_json(
 /// )
 /// ```
 pub fn network_get_response_body_for_interception_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkGetResponseBodyForInterceptionParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7064,7 +7064,7 @@ pub fn NetworkGetSecurityIsolationStatusResult::from_json(
 /// )
 /// ```
 pub fn network_get_security_isolation_status_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkGetSecurityIsolationStatusParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7172,7 +7172,7 @@ pub fn NetworkLoadNetworkResourceResult::from_json(
 /// )
 /// ```
 pub fn network_load_network_resource_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkLoadNetworkResourceParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7241,7 +7241,7 @@ pub fn NetworkOverrideNetworkStateParams::to_json(
 /// )
 /// ```
 pub fn network_override_network_state_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkOverrideNetworkStateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7292,7 +7292,7 @@ pub fn NetworkReplayXHRParams::to_json(self : NetworkReplayXHRParams) -> Json {
 /// let command = network_replay_xhr_command(id=1, params, session_id=None)
 /// ```
 pub fn network_replay_xhr_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkReplayXHRParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7407,7 +7407,7 @@ pub fn NetworkSearchInResponseBodyResult::from_json(
 /// )
 /// ```
 pub fn network_search_in_response_body_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSearchInResponseBodyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7466,7 +7466,7 @@ pub fn NetworkSetAcceptedEncodingsParams::to_json(
 /// )
 /// ```
 pub fn network_set_accepted_encodings_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetAcceptedEncodingsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7525,7 +7525,7 @@ pub fn NetworkSetAttachDebugStackParams::to_json(
 /// )
 /// ```
 pub fn network_set_attach_debug_stack_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetAttachDebugStackParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7586,7 +7586,7 @@ pub fn NetworkSetBlockedURLsParams::to_json(
 /// let command = network_set_blocked_urls_command(id=1, params, session_id=None)
 /// ```
 pub fn network_set_blocked_urls_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetBlockedURLsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7645,7 +7645,7 @@ pub fn NetworkSetBypassServiceWorkerParams::to_json(
 /// )
 /// ```
 pub fn network_set_bypass_service_worker_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetBypassServiceWorkerParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7700,7 +7700,7 @@ pub fn NetworkSetCacheDisabledParams::to_json(
 /// let command = network_set_cache_disabled_command(id=1, params, session_id=None)
 /// ```
 pub fn network_set_cache_disabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetCacheDisabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7730,7 +7730,7 @@ pub(all) struct NetworkSetCookieParams {
   expires : NetworkTimeSinceEpoch?
   priority : NetworkCookiePriority?
   source_scheme : NetworkCookieSourceScheme?
-  source_port : Int?
+  source_port : Int32?
   partition_key : NetworkCookiePartitionKey?
 } derive(Eq, Debug)
 
@@ -7838,7 +7838,7 @@ pub fn NetworkSetCookieResult::from_json(
 /// let command = network_set_cookie_command(id=1, params, session_id=None)
 /// ```
 pub fn network_set_cookie_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetCookieParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7903,7 +7903,7 @@ pub fn NetworkSetCookieControlsParams::to_json(
 /// let command = network_set_cookie_controls_command(id=1, params, session_id=None)
 /// ```
 pub fn network_set_cookie_controls_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetCookieControlsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -7954,7 +7954,7 @@ pub fn NetworkSetCookiesParams::to_json(self : NetworkSetCookiesParams) -> Json 
 /// let command = network_set_cookies_command(id=1, params, session_id=None)
 /// ```
 pub fn network_set_cookies_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetCookiesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -8013,7 +8013,7 @@ pub fn NetworkSetExtraHTTPHeadersParams::to_json(
 /// )
 /// ```
 pub fn network_set_extra_httpheaders_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetExtraHTTPHeadersParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -8072,7 +8072,7 @@ pub fn NetworkSetRequestInterceptionParams::to_json(
 /// )
 /// ```
 pub fn network_set_request_interception_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetRequestInterceptionParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -8143,7 +8143,7 @@ pub fn NetworkSetUserAgentOverrideParams::to_json(
 /// )
 /// ```
 pub fn network_set_user_agent_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkSetUserAgentOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -8245,7 +8245,7 @@ pub fn NetworkStreamResourceContentResult::from_json(
 /// )
 /// ```
 pub fn network_stream_resource_content_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkStreamResourceContentParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -8353,7 +8353,7 @@ pub fn NetworkTakeResponseBodyForInterceptionAsStreamResult::from_json(
 /// )
 /// ```
 pub fn network_take_response_body_for_interception_as_stream_command(
-  id~ : Int,
+  id~ : Int32,
   params : NetworkTakeResponseBodyForInterceptionAsStreamParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -8374,8 +8374,8 @@ pub fn network_take_response_body_for_interception_as_stream_command(
 pub(all) struct NetworkDataReceivedEventParams {
   request_id : NetworkRequestId
   timestamp : NetworkMonotonicTime
-  data_length : Int
-  encoded_data_length : Int
+  data_length : Int32
+  encoded_data_length : Int32
   data : String?
 } derive(Eq, Debug)
 
@@ -9001,7 +9001,7 @@ pub fn network_direct_tcpsocket_closed_event(
 pub(all) struct NetworkDirectTCPSocketCreatedEventParams {
   identifier : NetworkRequestId
   remote_addr : String
-  remote_port : Int
+  remote_port : Int32
   options : NetworkDirectTCPSocketOptions
   timestamp : NetworkMonotonicTime
   initiator : NetworkInitiator?
@@ -9101,10 +9101,10 @@ pub fn network_direct_tcpsocket_created_event(
 pub(all) struct NetworkDirectTCPSocketOpenedEventParams {
   identifier : NetworkRequestId
   remote_addr : String
-  remote_port : Int
+  remote_port : Int32
   timestamp : NetworkMonotonicTime
   local_addr : String?
-  local_port : Int?
+  local_port : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -9784,10 +9784,10 @@ pub fn network_direct_udpsocket_left_multicast_group_event(
 pub(all) struct NetworkDirectUDPSocketOpenedEventParams {
   identifier : NetworkRequestId
   local_addr : String
-  local_port : Int
+  local_port : Int32
   timestamp : NetworkMonotonicTime
   remote_addr : String?
-  remote_port : Int?
+  remote_port : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -10418,7 +10418,7 @@ pub(all) struct NetworkRequestInterceptedEventParams {
   redirect_url : String?
   auth_challenge : NetworkAuthChallenge?
   response_error_reason : NetworkErrorReason?
-  response_status_code : Int?
+  response_status_code : Int32?
   response_headers : NetworkHeaders?
   request_id : NetworkRequestId?
 } derive(Eq, Debug)
@@ -11182,7 +11182,7 @@ pub(all) struct NetworkResponseReceivedExtraInfoEventParams {
   blocked_cookies : Array[NetworkBlockedSetCookieWithReason]
   headers : NetworkHeaders
   resource_ipaddress_space : NetworkIPAddressSpace
-  status_code : Int
+  status_code : Int32
   headers_text : String?
   cookie_partition_key : NetworkCookiePartitionKey?
   cookie_partition_key_opaque : Bool?
@@ -11396,7 +11396,7 @@ pub(all) struct NetworkTrustTokenOperationDoneEventParams {
   request_id : NetworkRequestId
   top_level_origin : String?
   issuer_origin : String?
-  issued_token_count : Int?
+  issued_token_count : Int32?
 } derive(Eq, Debug)
 
 ///|

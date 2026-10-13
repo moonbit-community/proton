@@ -30,7 +30,7 @@ pub extend ProtocolDecodeError with ToJson::{to_json}
 /// `params = None` omits the `params` field from the wire JSON. Use an empty
 /// JSON object when the caller needs to send an explicit empty params object.
 pub(all) struct CdpCommandMessage {
-  id : Int
+  id : Int32
   method_name : String
   params : Json?
   session_id : String?
@@ -51,7 +51,7 @@ pub extend CdpCommandMessage with ToJson::{to_json}
 /// `code` and `message` are required by CDP. `data` is browser/domain-specific
 /// and is preserved without interpretation.
 pub(all) struct CdpError {
-  code : Int
+  code : Int32
   message : String
   data : Json?
 } derive(Eq, ToJson, Debug)
@@ -75,7 +75,7 @@ pub extend CdpError with ToJson::{to_json}
 /// return fields may omit it. Error responses keep the browser-provided
 /// `CdpError` and may omit `result`.
 pub(all) struct CdpResponseMessage {
-  id : Int
+  id : Int32
   result : Json?
   error : CdpError?
   session_id : String?
@@ -143,7 +143,7 @@ pub extend CdpIncomingMessage with ToJson::{to_json}
 /// assert_eq(command.stringify(), "{\"id\":1,\"method\":\"Browser.getVersion\"}")
 /// ```
 pub fn cdp_command(
-  id~ : Int,
+  id~ : Int32,
   method_name~ : String,
   params? : Json,
   session_id? : String,
@@ -265,7 +265,7 @@ fn optional_string(
 
 ///|
 // Decode a JSON number as an exact integer.
-fn json_int(json : Json, name : String) -> Int raise ProtocolDecodeError {
+fn json_int(json : Json, name : String) -> Int32 raise ProtocolDecodeError {
   match json {
     Number(value, ..) => {
       let int = value.to_int()

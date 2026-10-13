@@ -13,7 +13,7 @@ priv struct RuntimeRequirement {
   platform : String
   cef_archive : String
   cef_sha256 : String
-  layout_version : Int
+  layout_version : Int32
 }
 
 ///|
@@ -23,7 +23,7 @@ priv struct RuntimeRequirementInfo {
   platform : String
   cef_archive : String
   cef_sha256 : String
-  layout_version : Int
+  layout_version : Int32
 } derive(ToJson)
 
 ///|

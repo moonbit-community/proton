@@ -2,7 +2,7 @@
 async fn run_multi_window_driver_probe(
   tasks : @async.TaskGroup[Unit],
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let (target_a, target_b) = wait_for_multi_window_targets(target, timeout)
   let page_a = @page.Page::connect(
@@ -46,7 +46,7 @@ fn multi_window_ready_expression() -> String {
 }
 
 ///|
-fn multi_window_driver_expression(delay_ms : Int) -> String {
+fn multi_window_driver_expression(delay_ms : Int32) -> String {
   let expression =
     #|;(async () => {
     #|  const invoke = window.__MoonBit__?.core?.invokeOp;
@@ -70,7 +70,7 @@ fn multi_window_driver_expression(delay_ms : Int) -> String {
 ///|
 async fn wait_for_multi_window_targets(
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> (@client.CdpDiscoveredTarget, @client.CdpDiscoveredTarget) {
   let cdp_target = cdp_target_from(target)
   let mut elapsed = 0

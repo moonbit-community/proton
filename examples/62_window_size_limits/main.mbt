@@ -1,8 +1,8 @@
 ///|
 struct SetLimitRequest {
   kind : String
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -40,13 +40,13 @@ let set_limit_command : @proton_contract.Command[SetLimitRequest, SetLimitReply]
 let window_slot : Ref[@proton.WindowHandle?] = { val: None, }
 
 ///|
-let minimum_limit : Ref[(Int, Int)] = { val: (0, 0), }
+let minimum_limit : Ref[(Int32, Int32)] = { val: (0, 0), }
 
 ///|
-let maximum_limit : Ref[(Int, Int)] = { val: (0, 0), }
+let maximum_limit : Ref[(Int32, Int32)] = { val: (0, 0), }
 
 ///|
-fn format_limit(limit : (Int, Int)) -> String {
+fn format_limit(limit : (Int32, Int32)) -> String {
   let (width, height) = limit
   if width == 0 && height == 0 {
     "none"

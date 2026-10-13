@@ -40,7 +40,7 @@ pub extend NotificationReply with FromJson::{from_json}
 ///|
 /// The absolute application badge count. Zero clears the badge.
 pub(all) struct NotificationBadgeRequest {
-  count : Int
+  count : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -57,7 +57,7 @@ pub extend NotificationBadgeRequest with FromJson::{from_json}
 
 ///|
 pub(all) struct NotificationBadgeReply {
-  count : Int
+  count : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|

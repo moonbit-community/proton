@@ -5,7 +5,7 @@ test "system preferences fixture links the native runtime" {
 
 ///|
 #cfg(platform="windows")
-extern "C" fn consent_test() -> Int = "proton_test_desktop_media_consent"
+extern "C" fn consent_test() -> Int32 = "proton_test_desktop_media_consent"
 
 ///|
 #cfg(platform="windows")

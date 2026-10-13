@@ -44,7 +44,7 @@ pub extend UpdaterUsageError with Show::{to_string, output}
 ///|
 priv struct ValidatedPublicKey {
   text : String
-  bits : Int
+  bits : Int32
 }
 
 ///|

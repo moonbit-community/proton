@@ -11,7 +11,7 @@ pub fn AppConfig::load(path : String) -> AppConfig raise AppConfigError {
 /// Decodes the project JSON format, applying defaults and semantic validation.
 pub fn AppConfig::parse(
   source : String,
-  name? : String = "proton.project.json",
+  name~ : String = "proton.project.json",
 ) -> AppConfig raise AppConfigError {
   let json = @json.parse(source) catch {
     error => raise Syntax(name~, diagnostics=error.to_string())

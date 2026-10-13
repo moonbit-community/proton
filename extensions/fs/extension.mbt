@@ -35,8 +35,8 @@ let realpath_command = @fs_contract.realpath
 async fn emit_activity(
   context : @proton.CommandContext,
   operation : String,
-  path? : String? = None,
-  bytes? : Int? = None,
+  path~ : String? = None,
+  bytes~ : Int32? = None,
 ) -> Unit {
   context.emit(@fs_contract.activity, @fs_contract.FsActivity::{
     operation,

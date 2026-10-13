@@ -11,14 +11,14 @@ extern "C" fn file_is_open(file : FileHandle) -> Bool = "proton_logging_file_is_
 
 ///|
 #borrow(file, data)
-extern "C" fn write_file(file : FileHandle, data : Bytes) -> Int = "proton_logging_write_file"
+extern "C" fn write_file(file : FileHandle, data : Bytes) -> Int32 = "proton_logging_write_file"
 
 ///|
 #borrow(data)
-extern "C" fn write_stderr(data : Bytes) -> Int = "proton_logging_write_stderr"
+extern "C" fn write_stderr(data : Bytes) -> Int32 = "proton_logging_write_stderr"
 
 ///|
-extern "C" fn process_id() -> Int = "proton_logging_process_id"
+extern "C" fn process_id() -> Int32 = "proton_logging_process_id"
 
 ///|
 pub(all) suberror LoggingError {
@@ -93,6 +93,6 @@ pub fn configure(output : Output) -> Unit raise LoggingError {
 }
 
 ///|
-pub fn current_process_id() -> Int {
+pub fn current_process_id() -> Int32 {
   process_id()
 }

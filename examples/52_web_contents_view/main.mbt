@@ -40,7 +40,7 @@ pub extend SimpleReply with FromJson::{from_json}
 
 ///|
 struct ZoomPayload {
-  percent : Int
+  percent : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -52,7 +52,7 @@ pub extend ZoomPayload with FromJson::{from_json}
 ///|
 struct ZoomReply {
   ok : Bool
-  percent : Int
+  percent : Int32
 } derive(ToJson, FromJson)
 
 ///|

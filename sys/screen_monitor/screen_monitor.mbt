@@ -2,10 +2,10 @@
 /// A rectangle in physical pixel coordinates with the top-left origin shared
 /// across the facade.
 pub struct Rect {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -17,7 +17,7 @@ pub extend Rect with Debug::{to_repr}
 ///|
 /// A display geometry snapshot mirroring Electron's `Display`.
 pub struct DisplayInfo {
-  id : Int
+  id : Int32
   bounds : Rect
   work_area : Rect
   scale_factor : Double
@@ -33,8 +33,8 @@ pub extend DisplayInfo with Debug::{to_repr}
 ///|
 /// A point in the root (physical pixel) coordinate space.
 pub struct Point {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -74,16 +74,16 @@ pub extend DisplaysWire with @json.FromJson::{from_json}
 
 ///|
 struct DisplayWire {
-  id : Int
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
-  scale_factor_percent : Int
+  id : Int32
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
+  work_x : Int32
+  work_y : Int32
+  work_width : Int32
+  work_height : Int32
+  scale_factor_percent : Int32
   is_primary : Bool
 } derive(FromJson)
 
@@ -92,8 +92,8 @@ pub extend DisplayWire with @json.FromJson::{from_json}
 
 ///|
 struct PointWire {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(FromJson)
 
 ///|
@@ -176,7 +176,7 @@ pub fn ScreenMonitor::ScreenMonitor() -> ScreenMonitor raise ScreenMonitorError 
 ///|
 fn ScreenMonitor::classify_status(
   self : ScreenMonitor,
-  status : Int,
+  status : Int32,
   operation : String,
 ) -> ScreenMonitorError {
   let detail = decode_native_detail(native_last_error(self.handle))
@@ -232,8 +232,8 @@ pub fn ScreenMonitor::primary_display(
 /// `screen.getDisplayNearestPoint(point)`.
 pub fn ScreenMonitor::display_nearest_point(
   self : ScreenMonitor,
-  x : Int,
-  y : Int,
+  x : Int32,
+  y : Int32,
 ) -> DisplayInfo raise ScreenMonitorError {
   let bytes = native_nearest_display_json(self.handle, x, y)
   let status = native_status(self.handle)
@@ -269,8 +269,8 @@ pub fn ScreenMonitor::cursor_point(
 /// structured `supported: false` payload.
 pub fn ScreenMonitor::window_sources_json(
   _self : ScreenMonitor,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Bytes {
   native_window_sources_json(width, height)
 }
@@ -280,9 +280,9 @@ pub fn ScreenMonitor::window_sources_json(
 /// that capture is unavailable or was denied by the operating system.
 pub fn ScreenMonitor::display_thumbnail(
   _self : ScreenMonitor,
-  display_id : Int,
-  width : Int,
-  height : Int,
+  display_id : Int32,
+  width : Int32,
+  height : Int32,
 ) -> Bytes {
   native_display_thumbnail(display_id, width, height)
 }
@@ -348,7 +348,7 @@ pub fn ScreenMonitor::set_event_wakeup(
 
 ///|
 fn screen_monitor_event_from_native_code(
-  code : Int,
+  code : Int32,
   display : DisplayInfo,
 ) -> ScreenMonitorEvent {
   match code {

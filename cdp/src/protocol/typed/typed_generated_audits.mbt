@@ -3582,8 +3582,8 @@ pub fn AuditsSharedDictionaryIssueDetails::from_json(
 pub(all) struct AuditsSourceCodeLocation {
   script_id : RuntimeScriptId?
   url : String
-  line_number : Int
-  column_number : Int
+  line_number : Int32
+  column_number : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -4110,7 +4110,7 @@ pub fn AuditsCheckContrastParams::to_json(
 /// let command = audits_check_contrast_command(id=1, params, session_id=None)
 /// ```
 pub fn audits_check_contrast_command(
-  id~ : Int,
+  id~ : Int32,
   params : AuditsCheckContrastParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4180,7 +4180,7 @@ pub fn AuditsCheckFormsIssuesResult::from_json(
 /// let command = audits_check_forms_issues_command(id=1, session_id=None)
 /// ```
 pub fn audits_check_forms_issues_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4202,7 +4202,7 @@ pub fn audits_check_forms_issues_command(
 /// let command = audits_disable_command(id=1, session_id=None)
 /// ```
 pub fn audits_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Audits.disable", session_id?)
@@ -4220,7 +4220,7 @@ pub fn audits_disable_command(
 /// let command = audits_enable_command(id=1, session_id=None)
 /// ```
 pub fn audits_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Audits.enable", session_id?)
@@ -4275,8 +4275,8 @@ pub fn AuditsGetEncodedResponseParams::to_json(
 /// gives a referenced type name.
 pub(all) struct AuditsGetEncodedResponseResult {
   body : String?
-  original_size : Int
-  encoded_size : Int
+  original_size : Int32
+  encoded_size : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -4328,7 +4328,7 @@ pub fn AuditsGetEncodedResponseResult::from_json(
 /// let command = audits_get_encoded_response_command(id=1, params, session_id=None)
 /// ```
 pub fn audits_get_encoded_response_command(
-  id~ : Int,
+  id~ : Int32,
   params : AuditsGetEncodedResponseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

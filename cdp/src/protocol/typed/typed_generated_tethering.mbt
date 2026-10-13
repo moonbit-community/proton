@@ -8,7 +8,7 @@
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct TetheringBindParams {
-  port : Int
+  port : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -40,7 +40,7 @@ pub fn TetheringBindParams::to_json(self : TetheringBindParams) -> Json {
 /// let command = tethering_bind_command(id=1, params, session_id=None)
 /// ```
 pub fn tethering_bind_command(
-  id~ : Int,
+  id~ : Int32,
   params : TetheringBindParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -59,7 +59,7 @@ pub fn tethering_bind_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct TetheringUnbindParams {
-  port : Int
+  port : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -91,7 +91,7 @@ pub fn TetheringUnbindParams::to_json(self : TetheringUnbindParams) -> Json {
 /// let command = tethering_unbind_command(id=1, params, session_id=None)
 /// ```
 pub fn tethering_unbind_command(
-  id~ : Int,
+  id~ : Int32,
   params : TetheringUnbindParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -110,7 +110,7 @@ pub fn tethering_unbind_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct TetheringAcceptedEventParams {
-  port : Int
+  port : Int32
   connection_id : String
 } derive(Eq, Debug)
 

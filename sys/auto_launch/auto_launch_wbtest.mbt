@@ -1,12 +1,12 @@
 ///|
 /// Builds a reusable configuration record for white-box rendering and dispatch tests.
 fn sample_config(
-  name? : String = "MoonBit App",
-  app_path? : String = "/usr/bin/moonbit",
-  identifier? : String = "moonbit-app",
-  launch_in_background? : Bool = false,
-  background_arg? : String = "--hidden",
-  extra_arguments? : Array[String] = [],
+  name~ : String = "MoonBit App",
+  app_path~ : String = "/usr/bin/moonbit",
+  identifier~ : String = "moonbit-app",
+  launch_in_background~ : Bool = false,
+  background_arg~ : String = "--hidden",
+  extra_arguments~ : Array[String] = [],
 ) -> AutoLaunchConfig {
   {
     name,
@@ -21,12 +21,12 @@ fn sample_config(
 ///|
 /// Builds a reusable launcher value for white-box behavior tests.
 fn sample_launcher(
-  name? : String = "MoonBit App",
-  app_path? : String = "/usr/bin/moonbit",
-  identifier? : String = "moonbit-app",
-  launch_in_background? : Bool = false,
-  background_arg? : String = "--hidden",
-  extra_arguments? : Array[String] = [],
+  name~ : String = "MoonBit App",
+  app_path~ : String = "/usr/bin/moonbit",
+  identifier~ : String = "moonbit-app",
+  launch_in_background~ : Bool = false,
+  background_arg~ : String = "--hidden",
+  extra_arguments~ : Array[String] = [],
 ) -> AutoLaunch {
   AutoLaunch::{
     config: sample_config(

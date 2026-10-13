@@ -1,7 +1,7 @@
 ///|
 pub struct Backend {
-  mut next_id : Int
-  mut version : Int
+  mut next_id : Int32
+  mut version : Int32
   todos : Array[@shared.TodoItem]
   listeners : Map[String, @proton.WindowEventEmitter]
 }
@@ -51,7 +51,7 @@ fn Backend::create(self : Backend, title : String) -> @shared.MutationReply {
 ///|
 fn Backend::set_completed(
   self : Backend,
-  id : Int,
+  id : Int32,
   completed : Bool,
 ) -> @shared.MutationReply {
   for index = 0; index < self.todos.length(); index = index + 1 {
@@ -68,7 +68,7 @@ fn Backend::set_completed(
 }
 
 ///|
-fn Backend::delete(self : Backend, id : Int) -> @shared.MutationReply {
+fn Backend::delete(self : Backend, id : Int32) -> @shared.MutationReply {
   for index = 0; index < self.todos.length(); index = index + 1 {
     if self.todos[index].id == id {
       ignore(self.todos.remove(index))

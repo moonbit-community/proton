@@ -9,7 +9,7 @@
 /// gives a referenced type name.
 pub(all) struct MemoryDOMCounter {
   name : String
-  count : Int
+  count : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -268,7 +268,7 @@ pub fn MemorySamplingProfileNode::from_json(
 /// )
 /// ```
 pub fn memory_forcibly_purge_java_script_memory_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -336,7 +336,7 @@ pub fn MemoryGetAllTimeSamplingProfileResult::from_json(
 /// )
 /// ```
 pub fn memory_get_all_time_sampling_profile_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -401,7 +401,7 @@ pub fn MemoryGetBrowserSamplingProfileResult::from_json(
 /// let command = memory_get_browser_sampling_profile_command(id=1, session_id=None)
 /// ```
 pub fn memory_get_browser_sampling_profile_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -418,9 +418,9 @@ pub fn memory_get_browser_sampling_profile_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct MemoryGetDOMCountersResult {
-  documents : Int
-  nodes : Int
-  js_event_listeners : Int
+  documents : Int32
+  nodes : Int32
+  js_event_listeners : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -472,7 +472,7 @@ pub fn MemoryGetDOMCountersResult::from_json(
 /// let command = memory_get_domcounters_command(id=1, session_id=None)
 /// ```
 pub fn memory_get_domcounters_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -546,7 +546,7 @@ pub fn MemoryGetDOMCountersForLeakDetectionResult::from_json(
 /// )
 /// ```
 pub fn memory_get_domcounters_for_leak_detection_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -611,7 +611,7 @@ pub fn MemoryGetSamplingProfileResult::from_json(
 /// let command = memory_get_sampling_profile_command(id=1, session_id=None)
 /// ```
 pub fn memory_get_sampling_profile_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -633,7 +633,7 @@ pub fn memory_get_sampling_profile_command(
 /// let command = memory_prepare_for_leak_detection_command(id=1, session_id=None)
 /// ```
 pub fn memory_prepare_for_leak_detection_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -693,7 +693,7 @@ pub fn MemorySetPressureNotificationsSuppressedParams::to_json(
 /// )
 /// ```
 pub fn memory_set_pressure_notifications_suppressed_command(
-  id~ : Int,
+  id~ : Int32,
   params : MemorySetPressureNotificationsSuppressedParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -752,7 +752,7 @@ pub fn MemorySimulatePressureNotificationParams::to_json(
 /// )
 /// ```
 pub fn memory_simulate_pressure_notification_command(
-  id~ : Int,
+  id~ : Int32,
   params : MemorySimulatePressureNotificationParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -771,7 +771,7 @@ pub fn memory_simulate_pressure_notification_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct MemoryStartSamplingParams {
-  sampling_interval : Int?
+  sampling_interval : Int32?
   suppress_randomness : Bool?
 } derive(Eq, Debug)
 
@@ -813,7 +813,7 @@ pub fn MemoryStartSamplingParams::to_json(
 /// let command = memory_start_sampling_command(id=1, params, session_id=None)
 /// ```
 pub fn memory_start_sampling_command(
-  id~ : Int,
+  id~ : Int32,
   params : MemoryStartSamplingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -837,7 +837,7 @@ pub fn memory_start_sampling_command(
 /// let command = memory_stop_sampling_command(id=1, session_id=None)
 /// ```
 pub fn memory_stop_sampling_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(

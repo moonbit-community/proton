@@ -14,7 +14,7 @@ pub(all) struct LogLogEntry {
   category : String?
   timestamp : RuntimeTimestamp
   url : String?
-  line_number : Int?
+  line_number : Int32?
   stack_trace : RuntimeStackTrace?
   network_request_id : NetworkRequestId?
   worker_id : String?
@@ -162,7 +162,7 @@ pub fn LogViolationSetting::from_json(
 /// let command = log_clear_command(id=1, session_id=None)
 /// ```
 pub fn log_clear_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Log.clear", session_id?)
@@ -180,7 +180,7 @@ pub fn log_clear_command(
 /// let command = log_disable_command(id=1, session_id=None)
 /// ```
 pub fn log_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Log.disable", session_id?)
@@ -198,7 +198,7 @@ pub fn log_disable_command(
 /// let command = log_enable_command(id=1, session_id=None)
 /// ```
 pub fn log_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Log.enable", session_id?)
@@ -247,7 +247,7 @@ pub fn LogStartViolationsReportParams::to_json(
 /// let command = log_start_violations_report_command(id=1, params, session_id=None)
 /// ```
 pub fn log_start_violations_report_command(
-  id~ : Int,
+  id~ : Int32,
   params : LogStartViolationsReportParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -271,7 +271,7 @@ pub fn log_start_violations_report_command(
 /// let command = log_stop_violations_report_command(id=1, session_id=None)
 /// ```
 pub fn log_stop_violations_report_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(

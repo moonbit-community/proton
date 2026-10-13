@@ -110,7 +110,7 @@ fn validate_bundle_identifier(
 fn parse_positive_int(
   value : String,
   label : String,
-) -> Int raise NewProjectInputError {
+) -> Int32 raise NewProjectInputError {
   let parsed = @string.parse_int(value[:]) catch {
     _ => raise InvalidPositiveInteger(field=label, value~)
   }

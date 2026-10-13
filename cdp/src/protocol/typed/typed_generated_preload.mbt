@@ -636,7 +636,7 @@ pub fn PreloadSpeculationTargetHint::from_json(
 /// let command = preload_disable_command(id=1, session_id=None)
 /// ```
 pub fn preload_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Preload.disable", session_id?)
@@ -654,7 +654,7 @@ pub fn preload_disable_command(
 /// let command = preload_enable_command(id=1, session_id=None)
 /// ```
 pub fn preload_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Preload.enable", session_id?)

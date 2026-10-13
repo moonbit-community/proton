@@ -175,7 +175,7 @@ pub fn DeviceAccessCancelPromptParams::to_json(
 /// let command = device_access_cancel_prompt_command(id=1, params, session_id=None)
 /// ```
 pub fn device_access_cancel_prompt_command(
-  id~ : Int,
+  id~ : Int32,
   params : DeviceAccessCancelPromptParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -199,7 +199,7 @@ pub fn device_access_cancel_prompt_command(
 /// let command = device_access_disable_command(id=1, session_id=None)
 /// ```
 pub fn device_access_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -221,7 +221,7 @@ pub fn device_access_disable_command(
 /// let command = device_access_enable_command(id=1, session_id=None)
 /// ```
 pub fn device_access_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -276,7 +276,7 @@ pub fn DeviceAccessSelectPromptParams::to_json(
 /// let command = device_access_select_prompt_command(id=1, params, session_id=None)
 /// ```
 pub fn device_access_select_prompt_command(
-  id~ : Int,
+  id~ : Int32,
   params : DeviceAccessSelectPromptParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

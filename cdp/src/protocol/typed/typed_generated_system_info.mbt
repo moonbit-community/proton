@@ -215,7 +215,7 @@ pub fn SystemInfoImageType::from_json(
 /// gives a referenced type name.
 pub(all) struct SystemInfoProcessInfo {
   type_ : String
-  id : Int
+  id : Int32
   cpu_time : Double
 } derive(Eq, Debug)
 
@@ -262,8 +262,8 @@ pub fn SystemInfoProcessInfo::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct SystemInfoSize {
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -412,8 +412,8 @@ pub fn SystemInfoVideoDecodeAcceleratorCapability::from_json(
 pub(all) struct SystemInfoVideoEncodeAcceleratorCapability {
   profile : String
   max_resolution : SystemInfoSize
-  max_framerate_numerator : Int
-  max_framerate_denominator : Int
+  max_framerate_numerator : Int32
+  max_framerate_denominator : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -561,7 +561,7 @@ pub fn SystemInfoGetFeatureStateResult::from_json(
 /// )
 /// ```
 pub fn system_info_get_feature_state_command(
-  id~ : Int,
+  id~ : Int32,
   params : SystemInfoGetFeatureStateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -638,7 +638,7 @@ pub fn SystemInfoGetInfoResult::from_json(
 /// let command = system_info_get_info_command(id=1, session_id=None)
 /// ```
 pub fn system_info_get_info_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -706,7 +706,7 @@ pub fn SystemInfoGetProcessInfoResult::from_json(
 /// let command = system_info_get_process_info_command(id=1, session_id=None)
 /// ```
 pub fn system_info_get_process_info_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(

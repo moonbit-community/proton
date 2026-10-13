@@ -3,10 +3,10 @@
 pub fn html(
   title : String,
   html : String,
-  width? : Int = 900,
-  height? : Int = 700,
-  debug? : Bool = false,
-  resizable? : Bool = true,
+  width~ : Int32 = 900,
+  height~ : Int32 = 700,
+  debug~ : Bool = false,
+  resizable~ : Bool = true,
 ) -> App {
   App(
     WindowConfig(
@@ -24,10 +24,10 @@ pub fn html(
 pub fn url(
   title : String,
   url : String,
-  width? : Int = 900,
-  height? : Int = 700,
-  debug? : Bool = false,
-  resizable? : Bool = true,
+  width~ : Int32 = 900,
+  height~ : Int32 = 700,
+  debug~ : Bool = false,
+  resizable~ : Bool = true,
 ) -> App {
   App(
     WindowConfig(
@@ -45,10 +45,10 @@ pub fn url(
 pub fn file(
   title : String,
   path : String,
-  width? : Int = 900,
-  height? : Int = 700,
-  debug? : Bool = false,
-  resizable? : Bool = true,
+  width~ : Int32 = 900,
+  height~ : Int32 = 700,
+  debug~ : Bool = false,
+  resizable~ : Bool = true,
 ) -> App {
   App(
     WindowConfig(
@@ -66,10 +66,10 @@ pub fn file(
 pub fn asset(
   title : String,
   path : String,
-  width? : Int = 900,
-  height? : Int = 700,
-  debug? : Bool = false,
-  resizable? : Bool = true,
+  width~ : Int32 = 900,
+  height~ : Int32 = 700,
+  debug~ : Bool = false,
+  resizable~ : Bool = true,
 ) -> App {
   App(
     WindowConfig(
@@ -89,12 +89,12 @@ pub fn asset(
 /// top-left bounds, stacked above the window's main page.
 pub fn view(
   url : String,
-  width~ : Int,
-  height~ : Int,
-  x? : Int = 0,
-  y? : Int = 0,
-  visible? : Bool = true,
-  z_order? : Int = 0,
+  width~ : Int32,
+  height~ : Int32,
+  x~ : Int32 = 0,
+  y~ : Int32 = 0,
+  visible~ : Bool = true,
+  z_order~ : Int32 = 0,
   background_color? : String,
 ) -> ViewConfig {
   ViewConfig(
@@ -111,13 +111,13 @@ pub fn view(
 
 ///|
 /// Enables or disables runtime debug mode.
-pub fn App::debug(self : App, enabled? : Bool = true) -> App {
+pub fn App::debug(self : App, enabled~ : Bool = true) -> App {
   self.debug_level(debug_level_from_bool(enabled))
 }
 
 ///|
 /// Sets the runtime debug level.
-pub fn App::debug_level(self : App, debug : Int) -> App {
+pub fn App::debug_level(self : App, debug : Int32) -> App {
   self.debug_level_value = debug
   self
 }
@@ -128,7 +128,7 @@ pub fn App::debug_level(self : App, debug : Int) -> App {
 /// Headless mode does not create a native top-level window, so native dialogs,
 /// menus, title bars, and other window-bound UI are unavailable. Set
 /// `PROTON_HEADLESS=1` to force this mode for automated test runs.
-pub fn App::headless(self : App, enabled? : Bool = true) -> App {
+pub fn App::headless(self : App, enabled~ : Bool = true) -> App {
   self.headless_value = enabled
   self
 }
@@ -157,7 +157,7 @@ pub fn App::locale(self : App, locale : @locale.Locale) -> App {
 /// deadline and raises `AppRunError` if confirmation is unavailable or the
 /// primary is stopping. Success does not wait for asynchronous launch handlers.
 /// A timeout never starts another owner or terminates the existing process.
-pub fn App::single_instance(self : App, enabled? : Bool = true) -> App {
+pub fn App::single_instance(self : App, enabled~ : Bool = true) -> App {
   self.single_instance_enabled = enabled
   self
 }
@@ -181,7 +181,7 @@ pub fn App::proxy(self : App, server : String, bypass? : String) -> App {
 
 ///|
 /// Sets the maximum time allowed for the native bridge to become ready.
-pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int) -> App {
+pub fn App::bridge_startup_timeout_ms(self : App, timeout_ms : Int32) -> App {
   self.bridge_startup_timeout_value_ms = timeout_ms
   self
 }
@@ -351,8 +351,8 @@ pub fn App::update_channel(
   self : App,
   endpoint : String,
   public_keys : Array[String],
-  check_on_launch? : Bool = true,
-  freshness_days? : Int = 30,
+  check_on_launch~ : Bool = true,
+  freshness_days~ : Int32 = 30,
 ) -> App {
   let endpoint = endpoint.trim().to_owned()
   if !endpoint.has_prefix("https://") {
@@ -659,7 +659,7 @@ pub fn App::on_will_quit(
 /// requested by `ApplicationContext::quit` or `ApplicationContext::exit`.
 pub fn App::on_quit(
   self : App,
-  handler : async (ApplicationContext, Int) -> Unit noraise,
+  handler : async (ApplicationContext, Int32) -> Unit noraise,
 ) -> App {
   self.quit_handlers.push(handler)
   self
@@ -671,7 +671,7 @@ pub fn App::add_window(
   self : App,
   id : String,
   config : WindowConfig,
-  open_on_start? : Bool = true,
+  open_on_start~ : Bool = true,
 ) -> App {
   let normalized_id = id.trim().to_owned()
   if normalized_id == "" || normalized_id == "main" {
@@ -828,14 +828,14 @@ pub fn App::capability(
 
 ///|
 /// Selects a window's configured entry as a renderer capability target.
-pub fn RendererTarget::entry(window? : String = "main") -> RendererTarget {
+pub fn RendererTarget::entry(window~ : String = "main") -> RendererTarget {
   RendererTarget::{ window, bundled: false, }
 }
 
 ///|
 /// Selects Proton's bundled application origin in one window as a renderer
 /// capability target.
-pub fn RendererTarget::bundled(window? : String = "main") -> RendererTarget {
+pub fn RendererTarget::bundled(window~ : String = "main") -> RendererTarget {
   RendererTarget::{ window, bundled: true, }
 }
 

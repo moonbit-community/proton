@@ -1,7 +1,7 @@
 ///|
 struct ShowContextMenuRequest {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(ToJson, FromJson)
 
 ///|

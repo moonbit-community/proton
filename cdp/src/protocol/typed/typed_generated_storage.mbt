@@ -538,8 +538,8 @@ pub fn StorageAttributionReportingEventLevelResult::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct StorageAttributionReportingEventReportWindows {
-  start : Int
-  ends : Array[Int]
+  start : Int32
+  ends : Array[Int32]
 } derive(Eq, Debug)
 
 ///|
@@ -667,7 +667,7 @@ pub fn StorageAttributionReportingEventTriggerData::from_json(
 /// gives a referenced type name.
 pub(all) struct StorageAttributionReportingFilterConfig {
   filter_values : Array[StorageAttributionReportingFilterDataEntry]
-  lookback_window : Int?
+  lookback_window : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -903,7 +903,7 @@ pub fn StorageAttributionReportingNamedBudgetCandidate::from_json(
 /// gives a referenced type name.
 pub(all) struct StorageAttributionReportingNamedBudgetDef {
   name : String
-  budget : Int
+  budget : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -996,10 +996,10 @@ pub fn StorageAttributionReportingReportResult::from_json(
 /// gives a referenced type name.
 pub(all) struct StorageAttributionReportingSourceRegistration {
   time : NetworkTimeSinceEpoch
-  expiry : Int
+  expiry : Int32
   trigger_data : Array[Double]
   event_report_windows : StorageAttributionReportingEventReportWindows
-  aggregatable_report_window : Int
+  aggregatable_report_window : Int32
   type_ : StorageAttributionReportingSourceType
   source_origin : String
   reporting_origin : String
@@ -1013,7 +1013,7 @@ pub(all) struct StorageAttributionReportingSourceRegistration {
   destination_limit_priority : StorageSignedInt64AsBase10
   aggregatable_debug_reporting_config : StorageAttributionReportingAggregatableDebugReportingConfig
   scopes_data : StorageAttributionScopesData?
-  max_event_level_reports : Int
+  max_event_level_reports : Int32
   named_budgets : Array[StorageAttributionReportingNamedBudgetDef]
   debug_reporting : Bool
   event_level_epsilon : Double
@@ -1387,7 +1387,7 @@ pub(all) struct StorageAttributionReportingTriggerRegistration {
     StorageAttributionReportingAggregatableTriggerData,
   ]
   aggregatable_values : Array[StorageAttributionReportingAggregatableValueEntry]
-  aggregatable_filtering_id_max_bytes : Int
+  aggregatable_filtering_id_max_bytes : Int32
   debug_reporting : Bool
   aggregation_coordinator_origin : String?
   source_registration_time_config : StorageAttributionReportingSourceRegistrationTimeConfig
@@ -1962,11 +1962,11 @@ pub(all) struct StorageSharedStorageAccessParams {
   key : String?
   value : String?
   ignore_if_present : Bool?
-  worklet_ordinal : Int?
+  worklet_ordinal : Int32?
   worklet_target_id : TargetTargetID?
   with_lock : String?
   batch_update_id : String?
-  batch_size : Int?
+  batch_size : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -2204,9 +2204,9 @@ pub fn StorageSharedStorageEntry::from_json(
 /// gives a referenced type name.
 pub(all) struct StorageSharedStorageMetadata {
   creation_time : NetworkTimeSinceEpoch
-  length : Int
+  length : Int32
   remaining_budget : Double
-  bytes_used : Int
+  bytes_used : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -2264,8 +2264,8 @@ pub fn StorageSharedStorageMetadata::from_json(
 pub(all) struct StorageSharedStoragePrivateAggregationConfig {
   aggregation_coordinator_origin : String?
   context_id : String?
-  filtering_id_max_bytes : Int
-  max_contributions : Int?
+  filtering_id_max_bytes : Int32
+  max_contributions : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -2911,7 +2911,7 @@ pub fn StorageClearCookiesParams::to_json(
 /// let command = storage_clear_cookies_command(id=1, params, session_id=None)
 /// ```
 pub fn storage_clear_cookies_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageClearCookiesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2972,7 +2972,7 @@ pub fn StorageClearDataForOriginParams::to_json(
 /// )
 /// ```
 pub fn storage_clear_data_for_origin_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageClearDataForOriginParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3033,7 +3033,7 @@ pub fn StorageClearDataForStorageKeyParams::to_json(
 /// )
 /// ```
 pub fn storage_clear_data_for_storage_key_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageClearDataForStorageKeyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3092,7 +3092,7 @@ pub fn StorageClearSharedStorageEntriesParams::to_json(
 /// )
 /// ```
 pub fn storage_clear_shared_storage_entries_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageClearSharedStorageEntriesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3190,7 +3190,7 @@ pub fn StorageClearTrustTokensResult::from_json(
 /// let command = storage_clear_trust_tokens_command(id=1, params, session_id=None)
 /// ```
 pub fn storage_clear_trust_tokens_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageClearTrustTokensParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3251,7 +3251,7 @@ pub fn StorageDeleteSharedStorageEntryParams::to_json(
 /// )
 /// ```
 pub fn storage_delete_shared_storage_entry_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageDeleteSharedStorageEntryParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3310,7 +3310,7 @@ pub fn StorageDeleteStorageBucketParams::to_json(
 /// )
 /// ```
 pub fn storage_delete_storage_bucket_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageDeleteStorageBucketParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3429,7 +3429,7 @@ pub fn StorageGetAffectedUrlsForThirdPartyCookieMetadataResult::from_json(
 /// )
 /// ```
 pub fn storage_get_affected_urls_for_third_party_cookie_metadata_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageGetAffectedUrlsForThirdPartyCookieMetadataParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3526,7 +3526,7 @@ pub fn StorageGetCookiesResult::from_json(
 /// let command = storage_get_cookies_command(id=1, params, session_id=None)
 /// ```
 pub fn storage_get_cookies_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageGetCookiesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3626,7 +3626,7 @@ pub fn StorageGetInterestGroupDetailsResult::from_json(
 /// )
 /// ```
 pub fn storage_get_interest_group_details_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageGetInterestGroupDetailsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3696,7 +3696,7 @@ pub fn StorageGetRelatedWebsiteSetsResult::from_json(
 /// let command = storage_get_related_website_sets_command(id=1, session_id=None)
 /// ```
 pub fn storage_get_related_website_sets_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3799,7 +3799,7 @@ pub fn StorageGetSharedStorageEntriesResult::from_json(
 /// )
 /// ```
 pub fn storage_get_shared_storage_entries_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageGetSharedStorageEntriesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3901,7 +3901,7 @@ pub fn StorageGetSharedStorageMetadataResult::from_json(
 /// )
 /// ```
 pub fn storage_get_shared_storage_metadata_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageGetSharedStorageMetadataParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4001,7 +4001,7 @@ pub fn StorageGetStorageKeyResult::from_json(
 /// let command = storage_get_storage_key_command(id=1, params, session_id=None)
 /// ```
 pub fn storage_get_storage_key_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageGetStorageKeyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4103,7 +4103,7 @@ pub fn StorageGetStorageKeyForFrameResult::from_json(
 /// )
 /// ```
 pub fn storage_get_storage_key_for_frame_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageGetStorageKeyForFrameParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4173,7 +4173,7 @@ pub fn StorageGetTrustTokensResult::from_json(
 /// let command = storage_get_trust_tokens_command(id=1, session_id=None)
 /// ```
 pub fn storage_get_trust_tokens_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4280,7 +4280,7 @@ pub fn StorageGetUsageAndQuotaResult::from_json(
 /// let command = storage_get_usage_and_quota_command(id=1, params, session_id=None)
 /// ```
 pub fn storage_get_usage_and_quota_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageGetUsageAndQuotaParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4343,7 +4343,7 @@ pub fn StorageOverrideQuotaForOriginParams::to_json(
 /// )
 /// ```
 pub fn storage_override_quota_for_origin_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageOverrideQuotaForOriginParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4402,7 +4402,7 @@ pub fn StorageResetSharedStorageBudgetParams::to_json(
 /// )
 /// ```
 pub fn storage_reset_shared_storage_budget_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageResetSharedStorageBudgetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4479,7 +4479,7 @@ pub fn StorageRunBounceTrackingMitigationsResult::from_json(
 /// )
 /// ```
 pub fn storage_run_bounce_tracking_mitigations_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4496,7 +4496,7 @@ pub fn storage_run_bounce_tracking_mitigations_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct StorageSendPendingAttributionReportsResult {
-  num_sent : Int
+  num_sent : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -4550,7 +4550,7 @@ pub fn StorageSendPendingAttributionReportsResult::from_json(
 /// )
 /// ```
 pub fn storage_send_pending_attribution_reports_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4610,7 +4610,7 @@ pub fn StorageSetAttributionReportingLocalTestingModeParams::to_json(
 /// )
 /// ```
 pub fn storage_set_attribution_reporting_local_testing_mode_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageSetAttributionReportingLocalTestingModeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4672,7 +4672,7 @@ pub fn StorageSetAttributionReportingTrackingParams::to_json(
 /// )
 /// ```
 pub fn storage_set_attribution_reporting_tracking_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageSetAttributionReportingTrackingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4727,7 +4727,7 @@ pub fn StorageSetCookiesParams::to_json(self : StorageSetCookiesParams) -> Json 
 /// let command = storage_set_cookies_command(id=1, params, session_id=None)
 /// ```
 pub fn storage_set_cookies_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageSetCookiesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4789,7 +4789,7 @@ pub fn StorageSetInterestGroupAuctionTrackingParams::to_json(
 /// )
 /// ```
 pub fn storage_set_interest_group_auction_tracking_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageSetInterestGroupAuctionTrackingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4848,7 +4848,7 @@ pub fn StorageSetInterestGroupTrackingParams::to_json(
 /// )
 /// ```
 pub fn storage_set_interest_group_tracking_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageSetInterestGroupTrackingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4914,7 +4914,7 @@ pub fn StorageSetProtectedAudienceKAnonymityParams::to_json(
 /// )
 /// ```
 pub fn storage_set_protected_audience_kanonymity_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageSetProtectedAudienceKAnonymityParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4981,7 +4981,7 @@ pub fn StorageSetSharedStorageEntryParams::to_json(
 /// )
 /// ```
 pub fn storage_set_shared_storage_entry_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageSetSharedStorageEntryParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5040,7 +5040,7 @@ pub fn StorageSetSharedStorageTrackingParams::to_json(
 /// )
 /// ```
 pub fn storage_set_shared_storage_tracking_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageSetSharedStorageTrackingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5101,7 +5101,7 @@ pub fn StorageSetStorageBucketTrackingParams::to_json(
 /// )
 /// ```
 pub fn storage_set_storage_bucket_tracking_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageSetStorageBucketTrackingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5160,7 +5160,7 @@ pub fn StorageTrackCacheStorageForOriginParams::to_json(
 /// )
 /// ```
 pub fn storage_track_cache_storage_for_origin_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageTrackCacheStorageForOriginParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5222,7 +5222,7 @@ pub fn StorageTrackCacheStorageForStorageKeyParams::to_json(
 /// )
 /// ```
 pub fn storage_track_cache_storage_for_storage_key_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageTrackCacheStorageForStorageKeyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5281,7 +5281,7 @@ pub fn StorageTrackIndexedDBForOriginParams::to_json(
 /// )
 /// ```
 pub fn storage_track_indexed_dbfor_origin_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageTrackIndexedDBForOriginParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5340,7 +5340,7 @@ pub fn StorageTrackIndexedDBForStorageKeyParams::to_json(
 /// )
 /// ```
 pub fn storage_track_indexed_dbfor_storage_key_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageTrackIndexedDBForStorageKeyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5399,7 +5399,7 @@ pub fn StorageUntrackCacheStorageForOriginParams::to_json(
 /// )
 /// ```
 pub fn storage_untrack_cache_storage_for_origin_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageUntrackCacheStorageForOriginParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5461,7 +5461,7 @@ pub fn StorageUntrackCacheStorageForStorageKeyParams::to_json(
 /// )
 /// ```
 pub fn storage_untrack_cache_storage_for_storage_key_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageUntrackCacheStorageForStorageKeyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5520,7 +5520,7 @@ pub fn StorageUntrackIndexedDBForOriginParams::to_json(
 /// )
 /// ```
 pub fn storage_untrack_indexed_dbfor_origin_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageUntrackIndexedDBForOriginParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5582,7 +5582,7 @@ pub fn StorageUntrackIndexedDBForStorageKeyParams::to_json(
 /// )
 /// ```
 pub fn storage_untrack_indexed_dbfor_storage_key_command(
-  id~ : Int,
+  id~ : Int32,
   params : StorageUntrackIndexedDBForStorageKeyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5604,9 +5604,9 @@ pub(all) struct StorageAttributionReportingReportSentEventParams {
   url : String
   body : Json
   result : StorageAttributionReportingReportResult
-  net_error : Int?
+  net_error : Int32?
   net_error_name : String?
-  http_status_code : Int?
+  http_status_code : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -5915,9 +5915,9 @@ pub(all) struct StorageAttributionReportingVerboseDebugReportSentEventParams {
   body : Array[
     StorageAttributionReportingVerboseDebugReportSentEventParamsBodyItem,
   ]?
-  net_error : Int?
+  net_error : Int32?
   net_error_name : String?
-  http_status_code : Int?
+  http_status_code : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -6760,7 +6760,7 @@ pub fn storage_shared_storage_accessed_event(
 /// gives a referenced type name.
 pub(all) struct StorageSharedStorageWorkletOperationExecutionFinishedEventParams {
   finished_time : NetworkTimeSinceEpoch
-  execution_time : Int
+  execution_time : Int32
   method_ : StorageSharedStorageAccessMethod
   operation_id : String
   worklet_target_id : TargetTargetID

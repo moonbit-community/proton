@@ -63,7 +63,7 @@ pub(all) suberror DevServerError {
   PortOutOfRange(value~ : String)
   ReadyProbeUnavailable
   FrontendUrlInUse(url~ : String)
-  FrontendExited(code~ : Int)
+  FrontendExited(code~ : Int32)
   Timeout(url~ : String)
 } derive(Debug, Eq)
 
@@ -80,7 +80,7 @@ pub extend DevServerError with Show::{to_string, output}
 /// Failures while starting or running child processes owned by `proton dev`.
 pub(all) suberror DevProcessError {
   Start(role~ : String, detail~ : String)
-  Exit(role~ : String, code~ : Int)
+  Exit(role~ : String, code~ : Int32)
 } derive(Debug, Eq)
 
 ///|

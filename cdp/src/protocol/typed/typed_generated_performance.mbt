@@ -58,7 +58,7 @@ pub fn PerformanceMetric::from_json(
 /// let command = performance_disable_command(id=1, session_id=None)
 /// ```
 pub fn performance_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -109,7 +109,7 @@ pub fn PerformanceEnableParams::to_json(self : PerformanceEnableParams) -> Json 
 /// let command = performance_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn performance_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : PerformanceEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -179,7 +179,7 @@ pub fn PerformanceGetMetricsResult::from_json(
 /// let command = performance_get_metrics_command(id=1, session_id=None)
 /// ```
 pub fn performance_get_metrics_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -232,7 +232,7 @@ pub fn PerformanceSetTimeDomainParams::to_json(
 /// let command = performance_set_time_domain_command(id=1, params, session_id=None)
 /// ```
 pub fn performance_set_time_domain_command(
-  id~ : Int,
+  id~ : Int32,
   params : PerformanceSetTimeDomainParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

@@ -5,7 +5,7 @@
 /// Long enough that the check is not competing with the window coming up, and
 /// short enough that a user who quits quickly still eventually sees an update
 /// on some later run.
-let update_check_delay_ms : Int = 20 * 1000
+let update_check_delay_ms : Int32 = 20 * 1000
 
 ///|
 /// The width of the random spread added to that delay.
@@ -13,7 +13,7 @@ let update_check_delay_ms : Int = 20 * 1000
 /// Without it, every installation of a popular application arrives at the
 /// endpoint at the same moment after a release, which is a load pattern the
 /// publisher did not ask for and cannot smooth from their side.
-let update_check_jitter_ms : Int = 40 * 1000
+let update_check_jitter_ms : Int32 = 40 * 1000
 
 ///|
 /// Shared by a session and its contexts, invalidated when that application ends.
@@ -28,7 +28,7 @@ priv struct ApplicationUpdates {
 ///|
 fn ApplicationUpdates::ApplicationUpdates(
   channel : ResolvedUpdateChannel?,
-  can_download? : () -> Bool = () => false,
+  can_download~ : () -> Bool = () => false,
 ) -> ApplicationUpdates {
   {
     channel,
@@ -151,7 +151,7 @@ pub fn PendingUpdate::size(self : PendingUpdate) -> Int64 {
 /// Repeating the same download is a no-op while it remains prepared.
 pub async fn PendingUpdate::download(
   self : PendingUpdate,
-  on_progress? : async (Int64) -> Unit noraise = _ => (),
+  on_progress~ : async (Int64) -> Unit noraise = _ => (),
 ) -> Unit {
   let updates = self.updates
   updates.download_mutex.acquire()
@@ -295,7 +295,7 @@ fn cleanup_previous_update() -> Unit {
 /// Contacting a server on every launch is a privacy decision, and one that
 /// nothing in the application is prepared to act on is a request made on a
 /// user's behalf for no reason.
-fn checks_on_launch(channel : ResolvedUpdateChannel, handlers : Int) -> Bool {
+fn checks_on_launch(channel : ResolvedUpdateChannel, handlers : Int32) -> Bool {
   handlers > 0 && channel.check_on_launch
 }
 
@@ -305,6 +305,6 @@ fn checks_on_launch(channel : ResolvedUpdateChannel, handlers : Int) -> Bool {
 /// Derived from the clock rather than a random source, because the only
 /// property needed is that two installations disagree, and two installations
 /// do not start at the same millisecond.
-fn update_check_jitter() -> Int {
+fn update_check_jitter() -> Int32 {
   (@env.now() % update_check_jitter_ms.to_uint64()).to_int()
 }

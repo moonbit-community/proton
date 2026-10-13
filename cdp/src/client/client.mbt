@@ -38,11 +38,11 @@ pub struct CdpClient {
   priv mut reader : @async.Task[Unit]?
   priv mut lifecycle : CdpClientLifecycle
   priv lifecycle_changed : @async.CondVar
-  priv mut next_id : Int
-  priv mut next_event_handler_id : Int
-  priv mut next_close_handler_id : Int
-  priv pending_commands : Map[Int, CdpPendingCommand]
-  priv command_contexts : Map[Int, CdpCommandContext]
+  priv mut next_id : Int32
+  priv mut next_event_handler_id : Int32
+  priv mut next_close_handler_id : Int32
+  priv pending_commands : Map[Int32, CdpPendingCommand]
+  priv command_contexts : Map[Int32, CdpCommandContext]
   priv event_changed : @async.CondVar
   priv mut last_command_failure : CdpCommandFailure?
   priv cdp_event_handlers : Array[CdpEventHandler]
@@ -83,7 +83,7 @@ struct CdpCommandContext {
 ///|
 /// Stores one event subscription callback.
 struct CdpEventHandler {
-  id : Int
+  id : Int32
   method_name : String?
   session_id : String?
   handler : (@protocol.CdpEventMessage) -> Unit
@@ -91,7 +91,7 @@ struct CdpEventHandler {
 
 ///|
 struct CdpCloseHandler {
-  id : Int
+  id : Int32
   handler : () -> Unit
 }
 
@@ -109,10 +109,10 @@ struct CdpCloseHandler {
 /// // println(failure.message)
 /// ```
 pub(all) struct CdpCommandFailure {
-  id : Int
+  id : Int32
   method_name : String
   session_id : String?
-  code : Int
+  code : Int32
   message : String
   data : Json?
 } derive(Eq, ToJson, Debug)
@@ -163,7 +163,7 @@ pub extend CdpAttachedTarget with ToJson::{to_json}
 /// configured timeout. `WebSocketHandshakeFailed` means the socket attempt
 /// completed but the endpoint rejected or failed the WebSocket handshake.
 pub(all) suberror CdpConnectionError {
-  ConnectionTimeout(String, Int)
+  ConnectionTimeout(String, Int32)
   WebSocketHandshakeFailed(String, String)
 } derive(Eq, ToJson, Debug)
 
@@ -181,7 +181,7 @@ pub extend CdpConnectionError with ToJson::{to_json}
 pub(all) struct CdpConnectionErrorDiagnostic {
   kind : String
   web_socket_url : String
-  timeout_ms : Int?
+  timeout_ms : Int32?
   reason : String?
   path : String
   message : String
@@ -237,7 +237,7 @@ pub fn CdpConnectionError::web_socket_url(self : CdpConnectionError) -> String {
 
 ///|
 /// Returns the timeout used for timeout errors.
-pub fn CdpConnectionError::timeout_ms(self : CdpConnectionError) -> Int? {
+pub fn CdpConnectionError::timeout_ms(self : CdpConnectionError) -> Int32? {
   match self {
     ConnectionTimeout(_, timeout_ms) => Some(timeout_ms)
     WebSocketHandshakeFailed(_, _) => None
@@ -308,7 +308,7 @@ pub async fn[X] CdpClient::connect(
 pub async fn[X] CdpClient::connect_with_timeout(
   tasks : @async.TaskGroup[X],
   web_socket_url : String,
-  timeout_ms? : Int = 25000,
+  timeout_ms~ : Int32 = 25000,
 ) -> CdpClient {
   let timeout_ms = checked_duration(timeout_ms, "timeout")
   let result : Result[@websocket.Conn?, Error] = try_result_client_client(() => {
@@ -400,7 +400,7 @@ pub async fn[X] connect_cdp_target(
 pub async fn[X] connect_cdp_target_with_timeout(
   tasks : @async.TaskGroup[X],
   target : CdpTarget,
-  timeout_ms? : Int = 25000,
+  timeout_ms~ : Int32 = 25000,
 ) -> CdpClient {
   let web_socket_url = discover_web_socket_url(target)
   CdpClient::connect_with_timeout(tasks, web_socket_url, timeout_ms~)
@@ -436,7 +436,7 @@ pub async fn[X] connect_cdp_browser_target(
 pub async fn[X] connect_cdp_browser_target_with_timeout(
   tasks : @async.TaskGroup[X],
   target : CdpTarget,
-  timeout_ms? : Int = 25000,
+  timeout_ms~ : Int32 = 25000,
 ) -> CdpClient {
   let web_socket_url = discover_browser_web_socket_url(target)
   CdpClient::connect_with_timeout(tasks, web_socket_url, timeout_ms~)
@@ -486,7 +486,7 @@ pub async fn[X] connect_cdp_page_target_with_timeout(
   target_id? : String,
   url? : String,
   title? : String,
-  timeout_ms? : Int = 25000,
+  timeout_ms~ : Int32 = 25000,
 ) -> CdpClient {
   let web_socket_url = discover_page_web_socket_url(
     target,
@@ -579,7 +579,7 @@ pub async fn CdpClient::send_schema_command(
   method_name : String,
   params? : Json,
   session_id? : String,
-  timeout_ms? : Int = 25000,
+  timeout_ms~ : Int32 = 25000,
 ) -> @protocol.CdpResponseMessage {
   let command = @protocol.cdp_schema_command(
     id=self.next_id,
@@ -612,7 +612,7 @@ pub async fn CdpClient::send_remote_schema_command(
   method_name : String,
   params? : Json,
   session_id? : String,
-  timeout_ms? : Int = 25000,
+  timeout_ms~ : Int32 = 25000,
 ) -> @protocol.CdpResponseMessage {
   let command = @protocol.cdp_remote_schema_command(
     id=self.next_id,
@@ -641,7 +641,7 @@ pub async fn CdpClient::send_remote_schema_command(
 pub async fn CdpClient::send_cdp_message(
   self : CdpClient,
   command : @protocol.CdpCommandMessage,
-  timeout_ms? : Int = 25000,
+  timeout_ms~ : Int32 = 25000,
 ) -> @protocol.CdpResponseMessage {
   self.send_cdp_message_no_wait(command)
   let response = self.recv_cdp_response(command.id, timeout_ms~)
@@ -669,7 +669,7 @@ pub async fn CdpClient::send_cdp_command(
   method_name : String,
   params? : Json,
   session_id? : String,
-) -> Int {
+) -> Int32 {
   guard self.lifecycle is Open else { raise BrowserError::ConnectionClosed }
   let id = self.next_id
   self.next_id = self.next_id + 1
@@ -698,8 +698,8 @@ pub async fn CdpClient::send_cdp_command(
 /// ```
 pub async fn CdpClient::recv_cdp_response(
   self : CdpClient,
-  id : Int,
-  timeout_ms? : Int = 25000,
+  id : Int32,
+  timeout_ms~ : Int32 = 25000,
 ) -> @protocol.CdpResponseMessage {
   let timeout_ms = checked_duration(timeout_ms, "timeout")
   defer self.clear_inflight_command(id)
@@ -733,7 +733,7 @@ async fn CdpClient::send_cdp_message_no_wait(
 /// Reserves an externally supplied CDP command id.
 fn CdpClient::reserve_cdp_command_id(
   self : CdpClient,
-  id : Int,
+  id : Int32,
 ) -> Unit raise BrowserError {
   if !(self.lifecycle is Open) {
     raise ConnectionClosed
@@ -750,7 +750,7 @@ fn CdpClient::reserve_cdp_command_id(
 /// Waits until the connection reader completes the requested command.
 async fn CdpClient::recv_response(
   self : CdpClient,
-  id : Int,
+  id : Int32,
 ) -> @protocol.CdpResponseMessage {
   guard self.pending_commands.get(id) is Some(pending) else {
     if !(self.lifecycle is Open) {
@@ -875,7 +875,7 @@ pub fn CdpClient::on_cdp_event(
   method_name? : String,
   session_id? : String,
   handler : (@protocol.CdpEventMessage) -> Unit,
-) -> Int {
+) -> Int32 {
   let id = self.next_event_handler_id
   self.next_event_handler_id = id + 1
   self.cdp_event_handlers.push({ id, method_name, session_id, handler, })
@@ -891,7 +891,10 @@ pub fn CdpClient::on_cdp_event(
 /// ```
 /// // ignore(client.remove_cdp_event_handler(id))
 /// ```
-pub fn CdpClient::remove_cdp_event_handler(self : CdpClient, id : Int) -> Bool {
+pub fn CdpClient::remove_cdp_event_handler(
+  self : CdpClient,
+  id : Int32,
+) -> Bool {
   let kept : Array[CdpEventHandler] = []
   let mut removed = false
   for handler in self.cdp_event_handlers {
@@ -910,7 +913,7 @@ pub fn CdpClient::remove_cdp_event_handler(self : CdpClient, id : Int) -> Bool {
 
 ///|
 /// Registers a synchronous notification for connection closure.
-pub fn CdpClient::on_close(self : CdpClient, handler : () -> Unit) -> Int {
+pub fn CdpClient::on_close(self : CdpClient, handler : () -> Unit) -> Int32 {
   let id = self.next_close_handler_id
   self.next_close_handler_id = id + 1
   if !(self.lifecycle is Open) {
@@ -923,7 +926,7 @@ pub fn CdpClient::on_close(self : CdpClient, handler : () -> Unit) -> Int {
 
 ///|
 /// Removes a previously registered connection-close handler.
-pub fn CdpClient::remove_close_handler(self : CdpClient, id : Int) -> Bool {
+pub fn CdpClient::remove_close_handler(self : CdpClient, id : Int32) -> Bool {
   let kept : Array[CdpCloseHandler] = []
   let mut removed = false
   for handler in self.close_handlers {
@@ -1145,7 +1148,7 @@ fn CdpClient::record_response(
 
 ///|
 /// Clears state for one completed, failed, timed-out, or cancelled command id.
-fn CdpClient::clear_inflight_command(self : CdpClient, id : Int) -> Unit {
+fn CdpClient::clear_inflight_command(self : CdpClient, id : Int32) -> Unit {
   self.command_contexts.remove(id)
   self.pending_commands.remove(id)
 }

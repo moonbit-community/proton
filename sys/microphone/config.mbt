@@ -1,6 +1,6 @@
 ///|
 /// Clamp a channel count to the minimum usable value.
-fn min_channels(value : Int) -> Int {
+fn min_channels(value : Int32) -> Int32 {
   if value < 1 {
     1
   } else {
@@ -10,7 +10,7 @@ fn min_channels(value : Int) -> Int {
 
 ///|
 /// Clamp a sample rate to the minimum supported voice-capture rate.
-fn min_sample_rate(value : Int) -> Int {
+fn min_sample_rate(value : Int32) -> Int32 {
   if value < 8_000 {
     8_000
   } else {
@@ -38,11 +38,11 @@ fn min_sample_rate(value : Int) -> Int {
 /// }
 /// ```
 pub fn CaptureConfig::CaptureConfig(
-  channels? : Int = 1,
-  sample_rate_hz? : Int = 48_000,
-  sample_format? : SampleFormat = F32,
-  echo_cancellation? : Bool = false,
-  noise_suppression? : Bool = false,
+  channels~ : Int32 = 1,
+  sample_rate_hz~ : Int32 = 48_000,
+  sample_format~ : SampleFormat = F32,
+  echo_cancellation~ : Bool = false,
+  noise_suppression~ : Bool = false,
 ) -> CaptureConfig {
   {
     channels,
@@ -67,7 +67,7 @@ pub fn CaptureConfig::CaptureConfig(
 ///   assert_eq(@proton_microphone.SampleFormat::F32.bytes_per_sample(), 4)
 /// }
 /// ```
-pub fn SampleFormat::bytes_per_sample(self : SampleFormat) -> Int {
+pub fn SampleFormat::bytes_per_sample(self : SampleFormat) -> Int32 {
   match self {
     I16 => 2
     U16 => 2
@@ -120,7 +120,7 @@ pub fn CaptureConfig::normalized(self : CaptureConfig) -> CaptureConfig {
 ///   )
 /// }
 /// ```
-pub fn CaptureConfig::recommended_chunk_frames(self : CaptureConfig) -> Int {
+pub fn CaptureConfig::recommended_chunk_frames(self : CaptureConfig) -> Int32 {
   self.normalized().sample_rate_hz / 100
 }
 

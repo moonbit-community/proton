@@ -102,7 +102,7 @@ pub fn SchemaGetDomainsResult::from_json(
 /// let command = schema_get_domains_command(id=1, session_id=None)
 /// ```
 pub fn schema_get_domains_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(

@@ -38,12 +38,12 @@ pub fn ExtensionDescriptor::ExtensionDescriptor(
   platforms : Array[String],
   dependencies : Array[String],
   root_dir : String,
-  publish_package? : String? = None,
-  license? : String? = None,
-  repository? : String? = None,
-  readme? : String? = None,
-  keywords? : Array[String] = [],
-  metadata_path? : String? = None,
+  publish_package~ : String? = None,
+  license~ : String? = None,
+  repository~ : String? = None,
+  readme~ : String? = None,
+  keywords~ : Array[String] = [],
+  metadata_path~ : String? = None,
 ) -> ExtensionDescriptor {
   ExtensionDescriptor::{
     id,

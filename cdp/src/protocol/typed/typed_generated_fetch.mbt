@@ -360,7 +360,7 @@ pub fn FetchContinueRequestParams::to_json(
 /// let command = fetch_continue_request_command(id=1, params, session_id=None)
 /// ```
 pub fn fetch_continue_request_command(
-  id~ : Int,
+  id~ : Int32,
   params : FetchContinueRequestParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -380,7 +380,7 @@ pub fn fetch_continue_request_command(
 /// gives a referenced type name.
 pub(all) struct FetchContinueResponseParams {
   request_id : FetchRequestId
-  response_code : Int?
+  response_code : Int32?
   response_phrase : String?
   response_headers : Array[FetchHeaderEntry]?
   binary_response_headers : String?
@@ -431,7 +431,7 @@ pub fn FetchContinueResponseParams::to_json(
 /// let command = fetch_continue_response_command(id=1, params, session_id=None)
 /// ```
 pub fn fetch_continue_response_command(
-  id~ : Int,
+  id~ : Int32,
   params : FetchContinueResponseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -488,7 +488,7 @@ pub fn FetchContinueWithAuthParams::to_json(
 /// let command = fetch_continue_with_auth_command(id=1, params, session_id=None)
 /// ```
 pub fn fetch_continue_with_auth_command(
-  id~ : Int,
+  id~ : Int32,
   params : FetchContinueWithAuthParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -512,7 +512,7 @@ pub fn fetch_continue_with_auth_command(
 /// let command = fetch_disable_command(id=1, session_id=None)
 /// ```
 pub fn fetch_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Fetch.disable", session_id?)
@@ -563,7 +563,7 @@ pub fn FetchEnableParams::to_json(self : FetchEnableParams) -> Json {
 /// let command = fetch_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn fetch_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : FetchEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -616,7 +616,7 @@ pub fn FetchFailRequestParams::to_json(self : FetchFailRequestParams) -> Json {
 /// let command = fetch_fail_request_command(id=1, params, session_id=None)
 /// ```
 pub fn fetch_fail_request_command(
-  id~ : Int,
+  id~ : Int32,
   params : FetchFailRequestParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -636,7 +636,7 @@ pub fn fetch_fail_request_command(
 /// gives a referenced type name.
 pub(all) struct FetchFulfillRequestParams {
   request_id : FetchRequestId
-  response_code : Int
+  response_code : Int32
   response_headers : Array[FetchHeaderEntry]?
   binary_response_headers : String?
   body : String?
@@ -689,7 +689,7 @@ pub fn FetchFulfillRequestParams::to_json(
 /// let command = fetch_fulfill_request_command(id=1, params, session_id=None)
 /// ```
 pub fn fetch_fulfill_request_command(
-  id~ : Int,
+  id~ : Int32,
   params : FetchFulfillRequestParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -789,7 +789,7 @@ pub fn FetchGetResponseBodyResult::from_json(
 /// let command = fetch_get_response_body_command(id=1, params, session_id=None)
 /// ```
 pub fn fetch_get_response_body_command(
-  id~ : Int,
+  id~ : Int32,
   params : FetchGetResponseBodyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -891,7 +891,7 @@ pub fn FetchTakeResponseBodyAsStreamResult::from_json(
 /// )
 /// ```
 pub fn fetch_take_response_body_as_stream_command(
-  id~ : Int,
+  id~ : Int32,
   params : FetchTakeResponseBodyAsStreamParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1007,7 +1007,7 @@ pub(all) struct FetchRequestPausedEventParams {
   frame_id : PageFrameId
   resource_type : NetworkResourceType
   response_error_reason : NetworkErrorReason?
-  response_status_code : Int?
+  response_status_code : Int32?
   response_status_text : String?
   response_headers : Array[FetchHeaderEntry]?
   network_id : NetworkRequestId?

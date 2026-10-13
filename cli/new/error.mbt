@@ -79,8 +79,8 @@ pub extend NewProjectWriteError with Show::{to_string, output}
 /// Failures from optional external tools run before project publication.
 pub(all) suberror NewProjectToolError {
   Start(tool~ : String, detail~ : String)
-  Exit(tool~ : String, code~ : Int)
-  MoonCheckFailed(code~ : Int, project~ : String)
+  Exit(tool~ : String, code~ : Int32)
+  MoonCheckFailed(code~ : Int32, project~ : String)
 } derive(Debug, Eq)
 
 ///|

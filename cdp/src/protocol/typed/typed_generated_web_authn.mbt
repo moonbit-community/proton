@@ -141,7 +141,7 @@ pub(all) struct WebAuthnCredential {
   rp_id : String?
   private_key : String
   user_handle : String?
-  sign_count : Int
+  sign_count : Int32
   large_blob : String?
   backup_eligibility : Bool?
   backup_state : Bool?
@@ -445,7 +445,7 @@ pub fn WebAuthnAddCredentialParams::to_json(
 /// let command = web_authn_add_credential_command(id=1, params, session_id=None)
 /// ```
 pub fn web_authn_add_credential_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnAddCredentialParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -547,7 +547,7 @@ pub fn WebAuthnAddVirtualAuthenticatorResult::from_json(
 /// )
 /// ```
 pub fn web_authn_add_virtual_authenticator_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnAddVirtualAuthenticatorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -602,7 +602,7 @@ pub fn WebAuthnClearCredentialsParams::to_json(
 /// let command = web_authn_clear_credentials_command(id=1, params, session_id=None)
 /// ```
 pub fn web_authn_clear_credentials_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnClearCredentialsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -626,7 +626,7 @@ pub fn web_authn_clear_credentials_command(
 /// let command = web_authn_disable_command(id=1, session_id=None)
 /// ```
 pub fn web_authn_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="WebAuthn.disable", session_id?)
@@ -673,7 +673,7 @@ pub fn WebAuthnEnableParams::to_json(self : WebAuthnEnableParams) -> Json {
 /// let command = web_authn_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn web_authn_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -773,7 +773,7 @@ pub fn WebAuthnGetCredentialResult::from_json(
 /// let command = web_authn_get_credential_command(id=1, params, session_id=None)
 /// ```
 pub fn web_authn_get_credential_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnGetCredentialParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -874,7 +874,7 @@ pub fn WebAuthnGetCredentialsResult::from_json(
 /// let command = web_authn_get_credentials_command(id=1, params, session_id=None)
 /// ```
 pub fn web_authn_get_credentials_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnGetCredentialsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -931,7 +931,7 @@ pub fn WebAuthnRemoveCredentialParams::to_json(
 /// let command = web_authn_remove_credential_command(id=1, params, session_id=None)
 /// ```
 pub fn web_authn_remove_credential_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnRemoveCredentialParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -990,7 +990,7 @@ pub fn WebAuthnRemoveVirtualAuthenticatorParams::to_json(
 /// )
 /// ```
 pub fn web_authn_remove_virtual_authenticator_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnRemoveVirtualAuthenticatorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1054,7 +1054,7 @@ pub fn WebAuthnSetAutomaticPresenceSimulationParams::to_json(
 /// )
 /// ```
 pub fn web_authn_set_automatic_presence_simulation_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnSetAutomaticPresenceSimulationParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1123,7 +1123,7 @@ pub fn WebAuthnSetCredentialPropertiesParams::to_json(
 /// )
 /// ```
 pub fn web_authn_set_credential_properties_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnSetCredentialPropertiesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1194,7 +1194,7 @@ pub fn WebAuthnSetResponseOverrideBitsParams::to_json(
 /// )
 /// ```
 pub fn web_authn_set_response_override_bits_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnSetResponseOverrideBitsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1251,7 +1251,7 @@ pub fn WebAuthnSetUserVerifiedParams::to_json(
 /// let command = web_authn_set_user_verified_command(id=1, params, session_id=None)
 /// ```
 pub fn web_authn_set_user_verified_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAuthnSetUserVerifiedParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

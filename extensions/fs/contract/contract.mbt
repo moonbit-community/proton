@@ -37,7 +37,7 @@ pub extend ReadFileRequest with FromJson::{from_json}
 pub(all) struct ReadFileReply {
   path : String
   content : String
-  bytes_read : Int
+  bytes_read : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -58,7 +58,7 @@ pub(all) struct WriteFileRequest {
   content : String
   append : Bool?
   create_mode : String?
-  permission : Int?
+  permission : Int32?
   sync : String?
 } derive(ToJson, FromJson, Debug, Eq)
 
@@ -77,7 +77,7 @@ pub extend WriteFileRequest with FromJson::{from_json}
 ///|
 pub(all) struct WriteFileReply {
   path : String
-  bytes_written : Int
+  bytes_written : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -204,7 +204,7 @@ pub extend ReaddirReply with FromJson::{from_json}
 ///|
 pub(all) struct MkdirRequest {
   path : String
-  permission : Int?
+  permission : Int32?
   recursive : Bool?
 } derive(ToJson, FromJson, Debug, Eq)
 
@@ -350,7 +350,7 @@ pub extend RealpathReply with FromJson::{from_json}
 pub(all) struct FsActivity {
   operation : String
   path : String?
-  bytes : Int?
+  bytes : Int32?
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|

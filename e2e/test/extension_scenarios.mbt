@@ -4,7 +4,7 @@ struct AsyncAddScenarioProbe {
   title : String
   has_bridge : Bool
   has_proxy : Bool
-  reply : Int
+  reply : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -18,8 +18,8 @@ pub extend AsyncAddScenarioProbe with FromJson::{from_json}
 
 ///|
 struct SyncDoubleScenarioReply {
-  value : Int
-  doubled : Int
+  value : Int32
+  doubled : Int32
   source : String
 } derive(FromJson, Eq, Debug)
 
@@ -34,8 +34,8 @@ pub extend SyncDoubleScenarioReply with FromJson::{from_json}
 
 ///|
 struct AsyncSumScenarioReply {
-  total : Int
-  waited_ms : Int
+  total : Int32
+  waited_ms : Int32
   source : String
 } derive(FromJson, Eq, Debug)
 
@@ -72,7 +72,7 @@ pub extend SyncAsyncScenarioProbe with FromJson::{from_json}
 struct AttributeEventProbe {
   name : String
   extension : String
-  total : Int
+  total : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -86,8 +86,8 @@ pub extend AttributeEventProbe with FromJson::{from_json}
 
 ///|
 struct AttributeReplyProbe {
-  total : Int
-  waited_ms : Int
+  total : Int32
+  waited_ms : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -125,7 +125,7 @@ async fn run_extension_scenario_page_probe(
   app : SpawnedScenarioApp,
   target : String,
   name : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let mut phase = "page connection"
   errdefer println("E2E extension failed: scenario=" + name + " phase=" + phase)

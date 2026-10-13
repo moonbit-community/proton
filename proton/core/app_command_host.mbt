@@ -28,7 +28,7 @@ pub fn CommandWindow::CommandWindow(
   open_file_dialog : async (String?, String?) -> String?,
   save_file_dialog : async (String?, String?) -> String?,
   choose_directory_dialog : async (String?, String?) -> String?,
-  get_titlebar_area? : () -> Json raise = fn() { Json::null() },
+  get_titlebar_area~ : () -> Json raise = fn() { Json::null() },
 ) -> CommandWindow {
   {
     show_message_dialog,
@@ -145,13 +145,13 @@ pub fn AppCommandRequestContext::AppCommandRequestContext(
   tasks : @async.TaskGroup[Unit],
   locale_preferences : @locale.LocalePreferences,
   window? : CommandWindow,
-  window_id? : String = "main",
-  source_origin? : String = "app",
-  page_instance? : String? = None,
+  window_id~ : String = "main",
+  source_origin~ : String = "app",
+  page_instance~ : String? = None,
   permission_extension? : String,
   permission_scope? : Json,
-  wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal(),
-  emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise = fn(
+  wake_signal~ : RuntimeWakeSignal = RuntimeWakeSignal(),
+  emit_event~ : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise = fn(
     _route,
     _name,
     _payload,
@@ -178,13 +178,13 @@ pub fn AppCommandRequestContext::AppCommandRequestContext(
 #doc(hidden)
 pub fn AppCommandRequestContext::detached(
   tasks : @async.TaskGroup[Unit],
-  window_id? : String = "main",
-  source_origin? : String = "app",
-  page_instance? : String? = None,
+  window_id~ : String = "main",
+  source_origin~ : String = "app",
+  page_instance~ : String? = None,
   permission_extension? : String,
   permission_scope? : Json,
-  wake_signal? : RuntimeWakeSignal = RuntimeWakeSignal(),
-  emit_event? : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise = fn(
+  wake_signal~ : RuntimeWakeSignal = RuntimeWakeSignal(),
+  emit_event~ : async (@proton_contract.ContractRoute, String, Json) -> Unit noraise = fn(
     _route,
     _name,
     _payload,
@@ -387,8 +387,8 @@ struct AppCommandHost {
 /// `expose_error_details` only for a trusted development frontend.
 #alias(MbtProcessHost)
 pub fn AppCommandHost::AppCommandHost(
-  expose_error_details? : Bool = false,
-  diagnostic_reporter? : (String) -> Unit = ignore_command_diagnostic,
+  expose_error_details~ : Bool = false,
+  diagnostic_reporter~ : (String) -> Unit = ignore_command_diagnostic,
 ) -> AppCommandHost {
   AppCommandHost::{
     registry: OpRegistry(),

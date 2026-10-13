@@ -19,8 +19,8 @@ pub extend SpawnRequest with FromJson::{from_json}
 
 ///|
 pub(all) struct SpawnReply {
-  process_id : Int
-  pid : Int
+  process_id : Int32
+  pid : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -37,7 +37,7 @@ pub extend SpawnReply with FromJson::{from_json}
 
 ///|
 pub(all) struct WaitRequest {
-  process_id : Int
+  process_id : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -54,7 +54,7 @@ pub extend WaitRequest with FromJson::{from_json}
 
 ///|
 pub(all) struct WaitReply {
-  exit_code : Int
+  exit_code : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -71,7 +71,7 @@ pub extend WaitReply with FromJson::{from_json}
 
 ///|
 pub(all) struct KillRequest {
-  process_id : Int
+  process_id : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -106,7 +106,7 @@ pub extend KillReply with FromJson::{from_json}
 ///|
 pub(all) struct ProcessActivity {
   operation : String
-  process_id : Int
+  process_id : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|

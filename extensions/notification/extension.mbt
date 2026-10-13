@@ -15,7 +15,7 @@ fn ensure_body(body : String) -> String raise NotificationError {
 }
 
 ///|
-fn ensure_badge_count(count : Int) -> Int raise NotificationError {
+fn ensure_badge_count(count : Int32) -> Int32 raise NotificationError {
   if count < 0 {
     raise InvalidBadgeCount(count)
   } else {

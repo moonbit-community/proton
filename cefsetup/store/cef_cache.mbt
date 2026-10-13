@@ -8,7 +8,7 @@ async fn prepare_cef_sdk(
   extracted_root~ : String,
   sdk_root~ : String,
   platform~ : ProtonPlatform,
-  report_progress? : Bool = true,
+  report_progress~ : Bool = true,
 ) -> Unit {
   remove_tree(sdk_root)
   ensure_dir(sdk_root)

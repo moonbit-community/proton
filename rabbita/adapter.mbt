@@ -23,7 +23,7 @@ pub fn[Request : ToJson, Response : @json.FromJson] invoke(
   request : Request,
   success : (Response) -> @cmd.Cmd,
   failure : (@proton_client.ClientFailure) -> @cmd.Cmd,
-  client? : @proton_client.Client = @proton_client.desktop,
+  client~ : @proton_client.Client = @proton_client.desktop,
 ) -> @cmd.Cmd {
   @cmd.custom_cmd(scheduler => {
     // Rabbita runs raw JS async functions outside moonbitlang/async's task
@@ -47,10 +47,10 @@ pub fn[Payload : @json.FromJson] subscribe(
   event : @proton_contract.Event[Payload],
   received : (Payload) -> @cmd.Cmd,
   failure : (@proton_client.ClientFailure) -> @cmd.Cmd,
-  key? : String = "",
-  retry? : Int = 0,
-  ready? : @cmd.Cmd = @cmd.none,
-  client? : @proton_client.Client = @proton_client.desktop,
+  key~ : String = "",
+  retry~ : Int32 = 0,
+  ready~ : @cmd.Cmd = @cmd.none,
+  client~ : @proton_client.Client = @proton_client.desktop,
 ) -> @sub.Sub {
   let route = event.contract_route().operation_name()
   let invalid = try {
@@ -71,7 +71,7 @@ pub fn[Payload : @json.FromJson] subscribe(
   }
   let payload = EventSubscription(route~, client~, callbacks~, ready~, invalid~)
   @sub.custom_sub(
-    ["proton:event", route, key, retry.to_string()].to_json().stringify(),
+    Json(["proton:event", route, key, retry.to_string()]).stringify(),
     @sub.Local,
     payload,
     @sub.SubLoader(load_event_subscription),

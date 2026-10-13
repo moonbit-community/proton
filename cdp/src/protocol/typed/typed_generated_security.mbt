@@ -52,7 +52,7 @@ pub fn SecurityCertificateErrorAction::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct SecurityCertificateId {
-  value : Int
+  value : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -675,7 +675,7 @@ pub fn SecurityVisibleSecurityState::from_json(
 /// let command = security_disable_command(id=1, session_id=None)
 /// ```
 pub fn security_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Security.disable", session_id?)
@@ -693,7 +693,7 @@ pub fn security_disable_command(
 /// let command = security_enable_command(id=1, session_id=None)
 /// ```
 pub fn security_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Security.enable", session_id?)
@@ -706,7 +706,7 @@ pub fn security_enable_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct SecurityHandleCertificateErrorParams {
-  event_id : Int
+  event_id : Int32
   action : SecurityCertificateErrorAction
 } derive(Eq, Debug)
 
@@ -748,7 +748,7 @@ pub fn SecurityHandleCertificateErrorParams::to_json(
 /// )
 /// ```
 pub fn security_handle_certificate_error_command(
-  id~ : Int,
+  id~ : Int32,
   params : SecurityHandleCertificateErrorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -807,7 +807,7 @@ pub fn SecuritySetIgnoreCertificateErrorsParams::to_json(
 /// )
 /// ```
 pub fn security_set_ignore_certificate_errors_command(
-  id~ : Int,
+  id~ : Int32,
   params : SecuritySetIgnoreCertificateErrorsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -869,7 +869,7 @@ pub fn SecuritySetOverrideCertificateErrorsParams::to_json(
 /// )
 /// ```
 pub fn security_set_override_certificate_errors_command(
-  id~ : Int,
+  id~ : Int32,
   params : SecuritySetOverrideCertificateErrorsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -888,7 +888,7 @@ pub fn security_set_override_certificate_errors_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct SecurityCertificateErrorEventParams {
-  event_id : Int
+  event_id : Int32
   error_type : String
   request_url : String
 } derive(Eq, Debug)
