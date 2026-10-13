@@ -1192,7 +1192,7 @@ async fn run_app_control_regression() -> Unit {
 async fn run_process_lifetime_regression() -> Unit {
   let application : Ref[@proton.ApplicationContext?] = Ref(None)
   let completed = Ref(false)
-  let finish : @proton_contract.Command[Int, Unit] = @proton_contract.command(
+  let finish : @proton_contract.Command[Int32, Unit] = @proton_contract.command(
     "finish",
   )
   @proton.html("Process lifetime", "<h1>Process lifetime</h1>")

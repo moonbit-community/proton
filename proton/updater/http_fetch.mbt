@@ -5,7 +5,7 @@
 /// enormous in their place is either broken or hostile, and either way the
 /// client should stop rather than fill memory on the way to a signature check
 /// it was going to fail.
-pub let maximum_metadata_bytes : Int = 1024 * 1024
+pub let maximum_metadata_bytes : Int32 = 1024 * 1024
 
 ///|
 /// Fetches update metadata over HTTPS.

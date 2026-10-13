@@ -13,7 +13,7 @@ pub extend SystemMediaKind with Eq::{not_equal, equal}
 pub extend SystemMediaKind with Debug::{to_repr}
 
 ///|
-fn SystemMediaKind::native_code(self : SystemMediaKind) -> Int {
+fn SystemMediaKind::native_code(self : SystemMediaKind) -> Int32 {
   match self {
     Microphone => 1
     Camera => 2
@@ -39,7 +39,7 @@ pub extend SystemMediaAccessStatus with Debug::{to_repr}
 
 ///|
 fn SystemMediaAccessStatus::from_native_code(
-  code : Int,
+  code : Int32,
 ) -> SystemMediaAccessStatus raise NativeError {
   match code {
     0 => Unknown

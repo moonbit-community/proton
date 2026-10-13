@@ -14,7 +14,7 @@ priv struct ConfigDocumentType {
 
 ///|
 priv struct PackageConfig {
-  schema_version : Int
+  schema_version : Int32
   executable : String?
   product_name : String?
   identifier : String?
@@ -34,7 +34,7 @@ priv struct PackageConfig {
 ///|
 priv suberror PackageCommandError {
   InvalidConfig(path~ : String, detail~ : String)
-  UnsupportedSchema(version~ : Int)
+  UnsupportedSchema(version~ : Int32)
   MissingOption(name~ : String)
 } derive(Debug)
 

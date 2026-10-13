@@ -136,7 +136,7 @@ fn progress_mode_from_name(name : String) -> @proton.ProgressBarMode? {
 ///|
 /// Builds the 16x16 badge this example shows as a taskbar overlay: a red disc
 /// with a white core, written as premultiplied RGBA pixels.
-fn overlay_bitmap() -> (Bytes, Int, Int) {
+fn overlay_bitmap() -> (Bytes, Int32, Int32) {
   let size = 16
   let pixels = FixedArray::make(size * size * 4, b'\x00')
   let center = 7.5
@@ -188,7 +188,7 @@ fn release_overlay_icon() -> Unit {
 ///|
 /// Draws the small white glyph a toolbar button shows. Pixels are premultiplied
 /// RGBA, the layout `NativeImage::add_bitmap` expects.
-fn glyph_bitmap(kind : String) -> (Bytes, Int, Int) {
+fn glyph_bitmap(kind : String) -> (Bytes, Int32, Int32) {
   let size = 16
   let pixels = FixedArray::make(size * size * 4, b'\x00')
   for y = 0; y < size; y = y + 1 {
@@ -213,7 +213,7 @@ fn glyph_bitmap(kind : String) -> (Bytes, Int, Int) {
 ///|
 /// Distance of a row from the triangle's widest row, so the play and skip
 /// glyphs share one shape.
-fn glyph_row_inset(y : Int) -> Int {
+fn glyph_row_inset(y : Int32) -> Int32 {
   if y < 8 {
     7 - y
   } else {
@@ -222,12 +222,12 @@ fn glyph_row_inset(y : Int) -> Int {
 }
 
 ///|
-fn glyph_triangle_right(x : Int, y : Int) -> Bool {
+fn glyph_triangle_right(x : Int32, y : Int32) -> Bool {
   x >= 4 && x <= 11 - glyph_row_inset(y)
 }
 
 ///|
-fn glyph_triangle_left(x : Int, y : Int) -> Bool {
+fn glyph_triangle_left(x : Int32, y : Int32) -> Bool {
   x <= 11 && x >= 4 + glyph_row_inset(y)
 }
 

@@ -36,8 +36,8 @@ async fn prompt_bool(label : String, default : Bool) -> Bool {
 async fn prompt_new_project_options(
   raw : RawNewProjectOptions,
   defaults : NewProjectOptions,
-  prompt_text? : async (String, String) -> String = prompt_text,
-  prompt_bool? : async (String, Bool) -> Bool = prompt_bool,
+  prompt_text~ : async (String, String) -> String = prompt_text,
+  prompt_bool~ : async (String, Bool) -> Bool = prompt_bool,
 ) -> NewProjectOptions {
   let template = match raw.template {
     Some(_) => defaults.template

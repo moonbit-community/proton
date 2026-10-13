@@ -184,7 +184,7 @@ pub fn DOMStorageClearParams::to_json(self : DOMStorageClearParams) -> Json {
 /// let command = domstorage_clear_command(id=1, params, session_id=None)
 /// ```
 pub fn domstorage_clear_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMStorageClearParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -208,7 +208,7 @@ pub fn domstorage_clear_command(
 /// let command = domstorage_disable_command(id=1, session_id=None)
 /// ```
 pub fn domstorage_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -230,7 +230,7 @@ pub fn domstorage_disable_command(
 /// let command = domstorage_enable_command(id=1, session_id=None)
 /// ```
 pub fn domstorage_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -333,7 +333,7 @@ pub fn DOMStorageGetDOMStorageItemsResult::from_json(
 /// )
 /// ```
 pub fn domstorage_get_domstorage_items_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMStorageGetDOMStorageItemsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -394,7 +394,7 @@ pub fn DOMStorageRemoveDOMStorageItemParams::to_json(
 /// )
 /// ```
 pub fn domstorage_remove_domstorage_item_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMStorageRemoveDOMStorageItemParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -457,7 +457,7 @@ pub fn DOMStorageSetDOMStorageItemParams::to_json(
 /// )
 /// ```
 pub fn domstorage_set_domstorage_item_command(
-  id~ : Int,
+  id~ : Int32,
   params : DOMStorageSetDOMStorageItemParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

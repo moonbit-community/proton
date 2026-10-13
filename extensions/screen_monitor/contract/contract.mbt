@@ -1,9 +1,9 @@
 ///|
 pub(all) struct DisplayBounds {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -22,7 +22,7 @@ pub extend DisplayBounds with FromJson::{from_json}
 /// A display snapshot mirroring Electron's `Display` object: identity, bounds,
 /// work area, scale factor, and whether it is the primary display.
 pub(all) struct DisplayJSON {
-  id : Int
+  id : Int32
   bounds : DisplayBounds
   work_area : DisplayBounds
   scale_factor : Double
@@ -81,8 +81,8 @@ pub extend DisplayReply with FromJson::{from_json}
 ///|
 /// A point in root (physical pixel) coordinates.
 pub(all) struct PointJSON {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -120,8 +120,8 @@ pub extend CursorPointReply with FromJson::{from_json}
 /// Request for `getDisplayNearestPoint`, mirroring the point argument of
 /// Electron's `screen.getDisplayNearestPoint(point)`.
 pub(all) struct NearestPointRequest {
-  x : Int
-  y : Int
+  x : Int32
+  y : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -139,10 +139,10 @@ pub extend NearestPointRequest with FromJson::{from_json}
 ///|
 /// Request rectangle for `getDisplayMatching`.
 pub(all) struct MatchingRectRequest {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|

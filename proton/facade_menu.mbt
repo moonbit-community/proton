@@ -23,7 +23,7 @@ fn resolve_menu(
   menu_bar : @native.MenuBar,
   preferences : @locale.LocalePreferences,
   application_name : String,
-  macos_application_menu? : Bool = false,
+  macos_application_menu~ : Bool = false,
 ) -> @native.MenuBar {
   let catalog = framework_catalog(preferences)
   let resolved : Array[@native.Menu] = []
@@ -223,8 +223,8 @@ fn standard_item_key(role : @native.MenuItemRole) -> String {
 pub fn Menu::popup(
   self : Menu,
   window : WindowHandle,
-  x : Int,
-  y : Int,
+  x : Int32,
+  y : Int32,
 ) -> Unit raise WindowSessionError {
   window.popup_menu(self, x, y)
 }

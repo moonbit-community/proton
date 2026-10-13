@@ -23,7 +23,7 @@ helper process tree, and CDP endpoint stop:
 
 ```sh
 moon -C cefsetup run . --target native
-moon install moonbit-community/warren@0.3.3
+moon install moonbit-community/warren@0.4.5
 moon -C e2e run test --target native --diagnostic-limit 200 -- --self-hosted
 ```
 

@@ -15,7 +15,7 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "proton-scaffold-e2e-"));
 const projectDir = path.join(tempRoot, "todo");
 const frontendDir = path.join(projectDir, "frontend");
 const frontendDist = path.join(frontendDir, "dist");
-const warrenCoordinate = "moonbit-community/warren@0.3.3";
+const warrenCoordinate = "moonbit-community/warren@0.4.5";
 let appProcess = null;
 let staticServer = null;
 let succeeded = false;
@@ -901,15 +901,8 @@ async function main() {
   run("moon", ["-C", "backend", "test", "todo", "--target", "native"], { cwd: projectDir });
   run("moon", ["fmt", "--check"], { cwd: projectDir });
   run(
-    "moonx",
-    [
-      "--target",
-      "native",
-      warrenCoordinate,
-      "build",
-      "--browser-entry",
-      "main",
-    ],
+    "warren",
+    ["build", "--browser-entry", "main"],
     { cwd: frontendDir },
   );
   run(

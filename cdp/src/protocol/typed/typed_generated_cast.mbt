@@ -63,7 +63,7 @@ pub fn CastSink::from_json(
 /// let command = cast_disable_command(id=1, session_id=None)
 /// ```
 pub fn cast_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Cast.disable", session_id?)
@@ -110,7 +110,7 @@ pub fn CastEnableParams::to_json(self : CastEnableParams) -> Json {
 /// let command = cast_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn cast_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : CastEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -161,7 +161,7 @@ pub fn CastSetSinkToUseParams::to_json(self : CastSetSinkToUseParams) -> Json {
 /// let command = cast_set_sink_to_use_command(id=1, params, session_id=None)
 /// ```
 pub fn cast_set_sink_to_use_command(
-  id~ : Int,
+  id~ : Int32,
   params : CastSetSinkToUseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -220,7 +220,7 @@ pub fn CastStartDesktopMirroringParams::to_json(
 /// )
 /// ```
 pub fn cast_start_desktop_mirroring_command(
-  id~ : Int,
+  id~ : Int32,
   params : CastStartDesktopMirroringParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -275,7 +275,7 @@ pub fn CastStartTabMirroringParams::to_json(
 /// let command = cast_start_tab_mirroring_command(id=1, params, session_id=None)
 /// ```
 pub fn cast_start_tab_mirroring_command(
-  id~ : Int,
+  id~ : Int32,
   params : CastStartTabMirroringParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -326,7 +326,7 @@ pub fn CastStopCastingParams::to_json(self : CastStopCastingParams) -> Json {
 /// let command = cast_stop_casting_command(id=1, params, session_id=None)
 /// ```
 pub fn cast_stop_casting_command(
-  id~ : Int,
+  id~ : Int32,
   params : CastStopCastingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

@@ -15,10 +15,10 @@ pub extend WindowSourcesWire with FromJson::{from_json}
 struct WindowSourceWire {
   id : String
   display_id : String
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   thumbnail : String?
   name : String
 } derive(FromJson)

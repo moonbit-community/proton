@@ -147,7 +147,11 @@ fn build_program_arguments(config : AutoLaunchConfig) -> Array[String] {
 
 ///|
 /// Appends `count` copies of `ch` into `builder`.
-fn write_repeated_char(builder : StringBuilder, ch : Char, count : Int) -> Unit {
+fn write_repeated_char(
+  builder : StringBuilder,
+  ch : Char,
+  count : Int32,
+) -> Unit {
   for _ in 0..<count {
     builder.write_char(ch)
   }

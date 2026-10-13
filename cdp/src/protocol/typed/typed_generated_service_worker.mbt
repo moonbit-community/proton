@@ -56,8 +56,8 @@ pub(all) struct ServiceWorkerServiceWorkerErrorMessage {
   registration_id : ServiceWorkerRegistrationID
   version_id : String
   source_url : String
-  line_number : Int
-  column_number : Int
+  line_number : Int32
+  column_number : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -424,7 +424,7 @@ pub fn ServiceWorkerDeliverPushMessageParams::to_json(
 /// )
 /// ```
 pub fn service_worker_deliver_push_message_command(
-  id~ : Int,
+  id~ : Int32,
   params : ServiceWorkerDeliverPushMessageParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -448,7 +448,7 @@ pub fn service_worker_deliver_push_message_command(
 /// let command = service_worker_disable_command(id=1, session_id=None)
 /// ```
 pub fn service_worker_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -512,7 +512,7 @@ pub fn ServiceWorkerDispatchPeriodicSyncEventParams::to_json(
 /// )
 /// ```
 pub fn service_worker_dispatch_periodic_sync_event_command(
-  id~ : Int,
+  id~ : Int32,
   params : ServiceWorkerDispatchPeriodicSyncEventParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -577,7 +577,7 @@ pub fn ServiceWorkerDispatchSyncEventParams::to_json(
 /// )
 /// ```
 pub fn service_worker_dispatch_sync_event_command(
-  id~ : Int,
+  id~ : Int32,
   params : ServiceWorkerDispatchSyncEventParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -601,7 +601,7 @@ pub fn service_worker_dispatch_sync_event_command(
 /// let command = service_worker_enable_command(id=1, session_id=None)
 /// ```
 pub fn service_worker_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -663,7 +663,7 @@ pub fn ServiceWorkerSetForceUpdateOnPageLoadParams::to_json(
 /// )
 /// ```
 pub fn service_worker_set_force_update_on_page_load_command(
-  id~ : Int,
+  id~ : Int32,
   params : ServiceWorkerSetForceUpdateOnPageLoadParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -718,7 +718,7 @@ pub fn ServiceWorkerSkipWaitingParams::to_json(
 /// let command = service_worker_skip_waiting_command(id=1, params, session_id=None)
 /// ```
 pub fn service_worker_skip_waiting_command(
-  id~ : Int,
+  id~ : Int32,
   params : ServiceWorkerSkipWaitingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -773,7 +773,7 @@ pub fn ServiceWorkerStartWorkerParams::to_json(
 /// let command = service_worker_start_worker_command(id=1, params, session_id=None)
 /// ```
 pub fn service_worker_start_worker_command(
-  id~ : Int,
+  id~ : Int32,
   params : ServiceWorkerStartWorkerParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -797,7 +797,7 @@ pub fn service_worker_start_worker_command(
 /// let command = service_worker_stop_all_workers_command(id=1, session_id=None)
 /// ```
 pub fn service_worker_stop_all_workers_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -850,7 +850,7 @@ pub fn ServiceWorkerStopWorkerParams::to_json(
 /// let command = service_worker_stop_worker_command(id=1, params, session_id=None)
 /// ```
 pub fn service_worker_stop_worker_command(
-  id~ : Int,
+  id~ : Int32,
   params : ServiceWorkerStopWorkerParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -905,7 +905,7 @@ pub fn ServiceWorkerUnregisterParams::to_json(
 /// let command = service_worker_unregister_command(id=1, params, session_id=None)
 /// ```
 pub fn service_worker_unregister_command(
-  id~ : Int,
+  id~ : Int32,
   params : ServiceWorkerUnregisterParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -964,7 +964,7 @@ pub fn ServiceWorkerUpdateRegistrationParams::to_json(
 /// )
 /// ```
 pub fn service_worker_update_registration_command(
-  id~ : Int,
+  id~ : Int32,
   params : ServiceWorkerUpdateRegistrationParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

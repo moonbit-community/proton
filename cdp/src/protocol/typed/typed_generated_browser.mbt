@@ -8,10 +8,10 @@
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct BrowserBounds {
-  left : Int?
-  top : Int?
-  width : Int?
-  height : Int?
+  left : Int32?
+  top : Int32?
+  width : Int32?
+  height : Int32?
   window_state : BrowserWindowState?
 } derive(Eq, Debug)
 
@@ -155,9 +155,9 @@ pub fn BrowserBrowserContextID::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct BrowserBucket {
-  low : Int
-  high : Int
-  count : Int
+  low : Int32
+  high : Int32
+  count : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -204,8 +204,8 @@ pub fn BrowserBucket::from_json(
 /// gives a referenced type name.
 pub(all) struct BrowserHistogram {
   name : String
-  sum : Int
-  count : Int
+  sum : Int32
+  count : Int32
   buckets : Array[BrowserBucket]
 } derive(Eq, Debug)
 
@@ -466,7 +466,7 @@ pub fn BrowserPrivacySandboxAPI::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct BrowserWindowID {
-  value : Int
+  value : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -604,7 +604,7 @@ pub fn BrowserAddPrivacySandboxCoordinatorKeyConfigParams::to_json(
 /// )
 /// ```
 pub fn browser_add_privacy_sandbox_coordinator_key_config_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserAddPrivacySandboxCoordinatorKeyConfigParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -666,7 +666,7 @@ pub fn BrowserAddPrivacySandboxEnrollmentOverrideParams::to_json(
 /// )
 /// ```
 pub fn browser_add_privacy_sandbox_enrollment_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserAddPrivacySandboxEnrollmentOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -725,7 +725,7 @@ pub fn BrowserCancelDownloadParams::to_json(
 /// let command = browser_cancel_download_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_cancel_download_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserCancelDownloadParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -749,7 +749,7 @@ pub fn browser_cancel_download_command(
 /// let command = browser_close_command(id=1, session_id=None)
 /// ```
 pub fn browser_close_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Browser.close", session_id?)
@@ -767,7 +767,7 @@ pub fn browser_close_command(
 /// let command = browser_crash_command(id=1, session_id=None)
 /// ```
 pub fn browser_crash_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Browser.crash", session_id?)
@@ -785,7 +785,7 @@ pub fn browser_crash_command(
 /// let command = browser_crash_gpu_process_command(id=1, session_id=None)
 /// ```
 pub fn browser_crash_gpu_process_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -842,7 +842,7 @@ pub fn BrowserExecuteBrowserCommandParams::to_json(
 /// )
 /// ```
 pub fn browser_execute_browser_command_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserExecuteBrowserCommandParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -914,7 +914,7 @@ pub fn BrowserGetBrowserCommandLineResult::from_json(
 /// let command = browser_get_browser_command_line_command(id=1, session_id=None)
 /// ```
 pub fn browser_get_browser_command_line_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1014,7 +1014,7 @@ pub fn BrowserGetHistogramResult::from_json(
 /// let command = browser_get_histogram_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_get_histogram_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserGetHistogramParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1121,7 +1121,7 @@ pub fn BrowserGetHistogramsResult::from_json(
 /// let command = browser_get_histograms_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_get_histograms_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserGetHistogramsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1202,7 +1202,7 @@ pub fn BrowserGetVersionResult::from_json(
 /// let command = browser_get_version_command(id=1, session_id=None)
 /// ```
 pub fn browser_get_version_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1298,7 +1298,7 @@ pub fn BrowserGetWindowBoundsResult::from_json(
 /// let command = browser_get_window_bounds_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_get_window_bounds_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserGetWindowBoundsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1406,7 +1406,7 @@ pub fn BrowserGetWindowForTargetResult::from_json(
 /// )
 /// ```
 pub fn browser_get_window_for_target_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserGetWindowForTargetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1471,7 +1471,7 @@ pub fn BrowserGrantPermissionsParams::to_json(
 /// let command = browser_grant_permissions_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_grant_permissions_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserGrantPermissionsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1528,7 +1528,7 @@ pub fn BrowserResetPermissionsParams::to_json(
 /// let command = browser_reset_permissions_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_reset_permissions_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserResetPermissionsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1548,8 +1548,8 @@ pub fn browser_reset_permissions_command(
 /// gives a referenced type name.
 pub(all) struct BrowserSetContentsSizeParams {
   window_id : BrowserWindowID
-  width : Int?
-  height : Int?
+  width : Int32?
+  height : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -1591,7 +1591,7 @@ pub fn BrowserSetContentsSizeParams::to_json(
 /// let command = browser_set_contents_size_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_set_contents_size_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserSetContentsSizeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1652,7 +1652,7 @@ pub fn BrowserSetDockTileParams::to_json(
 /// let command = browser_set_dock_tile_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_set_dock_tile_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserSetDockTileParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1723,7 +1723,7 @@ pub fn BrowserSetDownloadBehaviorParams::to_json(
 /// )
 /// ```
 pub fn browser_set_download_behavior_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserSetDownloadBehaviorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1792,7 +1792,7 @@ pub fn BrowserSetPermissionParams::to_json(
 /// let command = browser_set_permission_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_set_permission_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserSetPermissionParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1849,7 +1849,7 @@ pub fn BrowserSetWindowBoundsParams::to_json(
 /// let command = browser_set_window_bounds_command(id=1, params, session_id=None)
 /// ```
 pub fn browser_set_window_bounds_command(
-  id~ : Int,
+  id~ : Int32,
   params : BrowserSetWindowBoundsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

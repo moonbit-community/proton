@@ -1,18 +1,18 @@
 ///|
 /// Encoding id for null-terminated UTF-8 strings.
-fn native_utf8_encoding() -> Int {
+fn native_utf8_encoding() -> Int32 {
   1
 }
 
 ///|
 /// Encoding id for null-terminated UTF-16LE wide strings.
-fn native_utf16le_encoding() -> Int {
+fn native_utf16le_encoding() -> Int32 {
   2
 }
 
 ///|
 /// Return the native string encoding id used by the C stub.
-extern "c" fn native_microphone_listing_encoding() -> Int = "moonbit_microphone_listing_encoding"
+extern "c" fn native_microphone_listing_encoding() -> Int32 = "moonbit_microphone_listing_encoding"
 
 ///|
 /// Return the native null-terminated device listing from the C stub.
@@ -20,7 +20,7 @@ extern "c" fn native_microphone_listing_bytes() -> Bytes = "moonbit_microphone_l
 
 ///|
 /// Decode native listing bytes with the selected string encoding.
-fn decode_native_listing(bytes : Bytes, encoding : Int) -> String {
+fn decode_native_listing(bytes : Bytes, encoding : Int32) -> String {
   if encoding == native_utf16le_encoding() {
     @ffi.from_wstr_lossy(bytes)
   } else if encoding == native_utf8_encoding() {

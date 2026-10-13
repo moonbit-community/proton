@@ -1,6 +1,6 @@
 ///|
 /// Returns the native platform code for the current process.
-extern "C" fn platform_code_ffi() -> Int = "mb_auto_launch_platform_code"
+extern "C" fn platform_code_ffi() -> Int32 = "mb_auto_launch_platform_code"
 
 ///|
 /// Returns the current executable path as UTF-8 bytes, or an empty value.
@@ -13,36 +13,36 @@ extern "C" fn home_directory_ffi() -> Bytes = "mb_auto_launch_home_directory"
 ///|
 /// Writes a UTF-8 text file and returns a native status code.
 #borrow(path, contents)
-extern "C" fn write_text_file_ffi(path : Bytes, contents : Bytes) -> Int = "mb_auto_launch_write_text_file"
+extern "C" fn write_text_file_ffi(path : Bytes, contents : Bytes) -> Int32 = "mb_auto_launch_write_text_file"
 
 ///|
 /// Removes the file at `path` and returns a native status code.
 #borrow(path)
-extern "C" fn remove_file_ffi(path : Bytes) -> Int = "mb_auto_launch_remove_file"
+extern "C" fn remove_file_ffi(path : Bytes) -> Int32 = "mb_auto_launch_remove_file"
 
 ///|
 /// Checks whether the file at `path` exists.
 #borrow(path)
-extern "C" fn file_exists_ffi(path : Bytes) -> Int = "mb_auto_launch_file_exists"
+extern "C" fn file_exists_ffi(path : Bytes) -> Int32 = "mb_auto_launch_file_exists"
 
 ///|
 /// Creates or updates a current-user Windows `Run` registry value.
 #borrow(name, command)
-extern "C" fn windows_set_run_entry_ffi(name : Bytes, command : Bytes) -> Int = "mb_auto_launch_windows_set_run_entry"
+extern "C" fn windows_set_run_entry_ffi(name : Bytes, command : Bytes) -> Int32 = "mb_auto_launch_windows_set_run_entry"
 
 ///|
 /// Deletes a current-user Windows `Run` registry value.
 #borrow(name)
-extern "C" fn windows_delete_run_entry_ffi(name : Bytes) -> Int = "mb_auto_launch_windows_delete_run_entry"
+extern "C" fn windows_delete_run_entry_ffi(name : Bytes) -> Int32 = "mb_auto_launch_windows_delete_run_entry"
 
 ///|
 /// Queries whether a current-user Windows `Run` registry value exists.
 #borrow(name)
-extern "C" fn windows_run_entry_exists_ffi(name : Bytes) -> Int = "mb_auto_launch_windows_run_entry_exists"
+extern "C" fn windows_run_entry_exists_ffi(name : Bytes) -> Int32 = "mb_auto_launch_windows_run_entry_exists"
 
 ///|
 /// Returns the last native error code observed by the C shim.
-extern "C" fn last_error_code_ffi() -> Int = "mb_auto_launch_last_error_code"
+extern "C" fn last_error_code_ffi() -> Int32 = "mb_auto_launch_last_error_code"
 
 ///|
 /// Returns the last native error message as UTF-8 bytes.
@@ -110,7 +110,7 @@ fn optional_path_result(
 ///|
 /// Converts a native "0 means success" status code into `Result[Unit, _]`.
 fn unit_result_from_status(
-  status : Int,
+  status : Int32,
   action : String,
   fallback_message : String,
 ) -> Result[Unit, AutoLaunchError] {
@@ -124,7 +124,7 @@ fn unit_result_from_status(
 ///|
 /// Converts a native tri-state existence status into `Result[Bool, _]`.
 fn bool_result_from_status(
-  status : Int,
+  status : Int32,
   action : String,
   fallback_message : String,
 ) -> Result[Bool, AutoLaunchError] {

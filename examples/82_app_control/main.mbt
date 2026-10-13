@@ -47,7 +47,7 @@ fn log_app_step(step : String) -> Unit {
 }
 
 ///|
-fn state_reply(message : String, ok? : Bool = true) -> ControlReply {
+fn state_reply(message : String, ok~ : Bool = true) -> ControlReply {
   match application_slot.val {
     None =>
       {

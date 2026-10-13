@@ -1,6 +1,6 @@
 ///|
 pub(all) struct IdleTimeReply {
-  idle_seconds : Int
+  idle_seconds : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -18,7 +18,7 @@ pub extend IdleTimeReply with FromJson::{from_json}
 ///|
 /// Request for Electron-compatible idle-state classification.
 pub(all) struct IdleStateRequest {
-  idle_threshold : Int
+  idle_threshold : Int32
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|
@@ -54,7 +54,7 @@ pub extend IdleStateReply with FromJson::{from_json}
 ///|
 pub(all) struct PowerSourceReply {
   source : String
-  battery_percent : Int?
+  battery_percent : Int32?
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|

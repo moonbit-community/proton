@@ -13,8 +13,8 @@ struct AssetSidecarScenarioProbe {
   css_loaded : Bool
   script_element_present : Bool
   worker_reply : String
-  command_reply : Int
-  delayed_reply : Int
+  command_reply : Int32
+  delayed_reply : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -31,7 +31,7 @@ async fn run_asset_sidecar_scenario_page_probe(
   tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let page = connect_spawned_page(tasks, app, target, timeout)
   wait_for_ready(

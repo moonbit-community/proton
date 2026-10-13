@@ -27,7 +27,7 @@ pub extend EntryRow with FromJson::{from_json}
 struct ControlReply {
   ok : Bool
   message : String
-  active_index : Int
+  active_index : Int32
   css_key : Int64
   entries : Array[EntryRow]
 } derive(ToJson, FromJson)
@@ -111,7 +111,7 @@ fn main_browser() -> @proton.WebContentsHandle? {
 }
 
 ///|
-fn state_reply(message : String, ok? : Bool = true) -> ControlReply {
+fn state_reply(message : String, ok~ : Bool = true) -> ControlReply {
   let browser = match main_browser() {
     Some(browser) => browser
     None =>

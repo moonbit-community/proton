@@ -26,7 +26,7 @@ async fn notification_native_show(
 
 ///|
 fn notification_native_set_badge_count(
-  count : Int,
+  count : Int32,
 ) -> Unit raise NotificationError {
   @proton.notification_set_badge_count(count) catch {
     error => raise NativeOperation(detail=error.message())

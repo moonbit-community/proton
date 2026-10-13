@@ -22,7 +22,7 @@ pub extend EchoResponse with FromJson::{from_json}
 
 ///|
 struct CountChanged {
-  count : Int
+  count : Int32
 } derive(FromJson, Eq, Debug)
 
 ///|
@@ -45,7 +45,7 @@ struct CallbackOutcome {
 ///|
 extern "js" fn install_fake_bridge(
   response_json : String,
-  failure_json? : String = "",
+  failure_json~ : String = "",
 ) -> Unit =
   #| (responseJson, failureJson) => {
   #|   globalThis.__protonClientTest = {
@@ -76,7 +76,7 @@ extern "js" fn install_fake_bridge(
 ///|
 extern "js" fn install_fake_callback_bridge(
   response_json : String,
-  failure_json? : String = "",
+  failure_json~ : String = "",
 ) -> Unit =
   #| (responseJson, failureJson) => {
   #|   globalThis.__protonClientTest = {
@@ -153,7 +153,7 @@ extern "js" fn fake_callback_signal_aborted() -> Bool =
   #| )
 
 ///|
-extern "js" fn fake_callback_abort_count() -> Int =
+extern "js" fn fake_callback_abort_count() -> Int32 =
   #| () => globalThis.__protonClientTest.aborts
 
 ///|
@@ -170,7 +170,7 @@ extern "js" fn fake_has_listener(route : String) -> Bool =
 ///|
 fn invoke_callback_outcome(
   response_json : String,
-  failure_json? : String = "",
+  failure_json~ : String = "",
 ) -> CallbackOutcome {
   install_fake_callback_bridge(response_json, failure_json~)
   defer remove_fake_bridge()

@@ -41,7 +41,7 @@ fn AppReadiness::mark_not_ready(self : AppReadiness) -> Unit {
 /// visible is a successful no-operation.
 pub fn ApplicationContext::focus(
   self : ApplicationContext,
-  steal? : Bool = false,
+  steal~ : Bool = false,
 ) -> Unit raise AppControlError {
   ignore(self)
   @native.app_focus(steal) catch {

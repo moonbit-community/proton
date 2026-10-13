@@ -7,8 +7,8 @@
 pub(all) struct WindowConfig {
   title : String
   entry : AppEntry
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   size_hint : WindowSizeHint
   titlebar_style : TitlebarStyle
   theme : WindowThemePreference
@@ -24,13 +24,13 @@ pub(all) struct WindowConfig {
 pub fn WindowConfig::WindowConfig(
   title : String,
   entry : AppEntry,
-  width? : Int = 900,
-  height? : Int = 700,
-  size_hint? : WindowSizeHint = Unconstrained,
-  titlebar_style? : TitlebarStyle = Default,
-  theme? : WindowThemePreference = System,
+  width~ : Int32 = 900,
+  height~ : Int32 = 700,
+  size_hint~ : WindowSizeHint = Unconstrained,
+  titlebar_style~ : TitlebarStyle = Default,
+  theme~ : WindowThemePreference = System,
   traffic_light_position? : WindowButtonPosition,
-  views? : Array[(String, ViewConfig)] = [],
+  views~ : Array[(String, ViewConfig)] = [],
 ) -> WindowConfig {
   {
     title,

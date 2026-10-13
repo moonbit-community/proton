@@ -14,7 +14,7 @@ pub extend PowerSource with Debug::{to_repr}
 ///|
 pub(all) struct PowerSourceInfo {
   source : PowerSource
-  battery_percent : Int?
+  battery_percent : Int32?
 } derive(Debug, Eq)
 
 ///|
@@ -66,7 +66,7 @@ fn PowerMonitor::finish_create(
 ///|
 pub fn PowerMonitor::idle_seconds(
   self : PowerMonitor,
-) -> Int raise PowerMonitorError {
+) -> Int32 raise PowerMonitorError {
   let seconds : Ref[Int64] = Ref(0L)
   let status = native_idle_seconds(self.handle, seconds)
   if status != native_status_ok {
@@ -153,7 +153,7 @@ pub fn PowerMonitor::set_event_wakeup(
 ///|
 fn PowerMonitor::classify_status(
   self : PowerMonitor,
-  status : Int,
+  status : Int32,
   operation : String,
 ) -> PowerMonitorError {
   let detail = decode_native_detail(native_last_error(self.handle))
@@ -167,7 +167,7 @@ fn PowerMonitor::classify_status(
 }
 
 ///|
-fn power_source_from_native_code(code : Int) -> PowerSource {
+fn power_source_from_native_code(code : Int32) -> PowerSource {
   match code {
     _ if code == native_source_ac => AC
     _ if code == native_source_battery => Battery
@@ -177,7 +177,7 @@ fn power_source_from_native_code(code : Int) -> PowerSource {
 }
 
 ///|
-fn power_monitor_event_from_native_code(code : Int) -> PowerMonitorEvent {
+fn power_monitor_event_from_native_code(code : Int32) -> PowerMonitorEvent {
   match code {
     _ if code == native_event_suspend => Suspend
     _ if code == native_event_resume => Resume

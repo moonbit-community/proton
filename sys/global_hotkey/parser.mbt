@@ -2,7 +2,7 @@
 /// Stores the normalized shortcut data passed into the native backend.
 struct ParsedGlobalHotkey {
   normalized : String
-  modifiers : Int
+  modifiers : Int32
   key_name : String
 } derive(Debug, Eq)
 
@@ -105,7 +105,7 @@ fn ModifierSet::enable(
 
 ///|
 /// Converts modifier booleans into the backend's logical modifier bitset.
-fn ModifierSet::mask(self : ModifierSet) -> Int {
+fn ModifierSet::mask(self : ModifierSet) -> Int32 {
   let mut mask = 0
   if self.alt {
     mask += 0x0001

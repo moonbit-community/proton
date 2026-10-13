@@ -78,7 +78,7 @@ fn native_notification_result_supported() -> Bool raise @native.NativeError {
 ///|
 /// Failures while starting or waiting for native notification delivery.
 pub(all) suberror NotificationDeliveryError {
-  NativeFailure(status~ : Int, detail~ : String)
+  NativeFailure(status~ : Int32, detail~ : String)
   WaitInterrupted(detail~ : String)
   DeliveryFailed(message~ : String)
 } derive(Debug, Eq)
@@ -149,7 +149,7 @@ pub fn notification_supported() -> Bool raise NotificationDeliveryError {
 ///|
 #doc(hidden)
 pub fn notification_set_badge_count(
-  count : Int,
+  count : Int32,
 ) -> Unit raise NotificationDeliveryError {
   @native.notification_set_badge_count(count) catch {
     error => raise NativeFailure(status=error.status(), detail=error.message())

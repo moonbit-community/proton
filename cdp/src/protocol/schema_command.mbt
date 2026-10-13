@@ -173,13 +173,13 @@ pub fn ProtocolSchemaError::expected_type(
 /// `complete` is true when every manifest command, event, and type has a
 /// registry entry.
 pub(all) struct ProtocolCoverage {
-  domain_count : Int
-  command_count : Int
-  event_count : Int
-  type_count : Int
-  command_registry_count : Int
-  event_registry_count : Int
-  type_registry_count : Int
+  domain_count : Int32
+  command_count : Int32
+  event_count : Int32
+  type_count : Int32
+  command_registry_count : Int32
+  event_registry_count : Int32
+  type_registry_count : Int32
   complete : Bool
 } derive(Eq, ToJson, Debug)
 
@@ -232,7 +232,7 @@ pub fn protocol_coverage() -> ProtocolCoverage {
 /// assert_eq(command.method_name, "Browser.getVersion")
 /// ```
 pub fn cdp_schema_command(
-  id~ : Int,
+  id~ : Int32,
   method_name~ : String,
   params? : Json,
   session_id? : String,
@@ -250,7 +250,7 @@ pub fn cdp_schema_command(
 /// is useful for end-to-end tests against browsers whose protocol version may
 /// differ from the bundled schema.
 pub fn cdp_remote_schema_command(
-  id~ : Int,
+  id~ : Int32,
   method_name~ : String,
   remote_schema~ : Json,
   params? : Json,
@@ -348,7 +348,7 @@ fn split_cdp_method(method_name : String) -> (String, String) {
 /// avoid another registry lookup.
 pub fn ProtocolCommand::build_command(
   self : ProtocolCommand,
-  id~ : Int,
+  id~ : Int32,
   params? : Json,
   session_id? : String,
 ) -> CdpCommandMessage raise ProtocolSchemaError {

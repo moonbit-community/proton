@@ -16,7 +16,7 @@
 /// )
 /// ```
 pub fn device_orientation_clear_device_orientation_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -80,7 +80,7 @@ pub fn DeviceOrientationSetDeviceOrientationOverrideParams::to_json(
 /// )
 /// ```
 pub fn device_orientation_set_device_orientation_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : DeviceOrientationSetDeviceOrientationOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

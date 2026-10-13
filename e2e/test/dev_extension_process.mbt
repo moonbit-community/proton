@@ -13,7 +13,7 @@ fn dev_extension_frontend_state(root : String) -> DevExtensionFrontendState {
 }
 
 ///|
-fn dev_extension_command_timeout(timeout : Int) -> Int {
+fn dev_extension_command_timeout(timeout : Int32) -> Int32 {
   if @path.sep == '\\' && timeout < 180000 {
     180000
   } else {
@@ -22,7 +22,7 @@ fn dev_extension_command_timeout(timeout : Int) -> Int {
 }
 
 ///|
-fn dev_extension_build_timeout(timeout : Int, has_linux_cef : Bool) -> Int {
+fn dev_extension_build_timeout(timeout : Int32, has_linux_cef : Bool) -> Int32 {
   let timeout = dev_extension_command_timeout(timeout)
   if has_linux_cef && timeout < 180000 {
     180000
@@ -50,7 +50,7 @@ fn process_snapshot_suffix(snapshot : ProcessSnapshot) -> String {
 fn dev_extension_cli_target_dir(
   output_root : String,
   phase : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> String {
   join_path(output_root, "cli-" + phase + "-" + run_id.to_string())
 }
@@ -59,7 +59,7 @@ fn dev_extension_cli_target_dir(
 fn dev_extension_app_target_dir(
   output_root : String,
   phase : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> String {
   join_path(output_root, "app-" + phase + "-" + run_id.to_string())
 }
@@ -67,7 +67,7 @@ fn dev_extension_app_target_dir(
 ///|
 fn dev_extension_example_target_dir(
   output_root : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> String {
   join_path(output_root, "example-" + run_id.to_string())
 }
@@ -80,7 +80,7 @@ async fn run_dev_extension_command(
   args : Array[String],
   cwd : String,
   env : Map[String, String],
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let output_path = join_path(output_root, name + ".log")
   @async.with_task_group(group => {
@@ -143,7 +143,7 @@ async fn run_dev_extension_command(
 async fn dev_extension_runtime_env(
   root : String,
   output_root : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> Map[String, String] {
   let env = app_process_env(root, output_root, "47_dev_extension_js", run_id)
   env["NO_COLOR"] = "1"
@@ -168,7 +168,7 @@ fn restore_dev_extension_parent_preload(
 async fn dev_extension_host_env(
   root : String,
   output_root : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> Map[String, String] {
   let env = dev_extension_runtime_env(root, output_root, run_id)
   // app_process_env injects libcef.so for Linux application children. The
@@ -183,8 +183,8 @@ async fn spawn_dev_extension_cli_app(
   group : @async.TaskGroup[Unit],
   root : String,
   output_root : String,
-  run_id : Int,
-  frontend_port : Int,
+  run_id : Int32,
+  frontend_port : Int32,
 ) -> SpawnedScenarioApp {
   let output_path = join_path(
     output_root,
@@ -241,7 +241,7 @@ async fn spawn_dev_extension_production_app(
   group : @async.TaskGroup[Unit],
   root : String,
   output_root : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> SpawnedScenarioApp {
   let output_path = join_path(
     output_root,
@@ -281,7 +281,7 @@ async fn spawn_dev_extension_production_app(
 async fn build_dev_extension_frontend(
   root : String,
   output_root : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let runtime_dist = active_runtime_dist()
   let has_linux_cef = @mbfs.path_exists(
@@ -330,8 +330,8 @@ async fn build_dev_extension_frontend(
 async fn run_dev_extension_dev_probe_once(
   root : String,
   output_root : String,
-  frontend_port : Int,
-  timeout : Int,
+  frontend_port : Int32,
+  timeout : Int32,
 ) -> Unit {
   let run_id = next_app_run_id()
   let frontend_url = "http://127.0.0.1:" + frontend_port.to_string()
@@ -406,7 +406,7 @@ async fn run_dev_extension_dev_probe_once(
 async fn run_dev_extension_production_probe_once(
   root : String,
   output_root : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let run_id = next_app_run_id()
   let example_target_dir = dev_extension_example_target_dir(output_root, run_id)
@@ -476,7 +476,7 @@ async fn run_dev_extension_production_probe_once(
 async fn run_dev_extension_scenario_once(
   root : String,
   output_root : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let frontend = dev_extension_frontend_state(root)
   defer (if !frontend.had_dist { remove_dev_extension_tree(frontend.dist_dir) })
@@ -487,7 +487,7 @@ async fn run_dev_extension_scenario_once(
 }
 
 ///|
-async fn run_dev_extension_scenario(root : String, timeout : Int) -> Unit {
+async fn run_dev_extension_scenario(root : String, timeout : Int32) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-dev-extension-")
   let mut succeeded = false
   defer (if succeeded {

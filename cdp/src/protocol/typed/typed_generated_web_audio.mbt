@@ -690,7 +690,7 @@ pub fn WebAudioParamType::from_json(
 /// let command = web_audio_disable_command(id=1, session_id=None)
 /// ```
 pub fn web_audio_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="WebAudio.disable", session_id?)
@@ -708,7 +708,7 @@ pub fn web_audio_disable_command(
 /// let command = web_audio_enable_command(id=1, session_id=None)
 /// ```
 pub fn web_audio_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="WebAudio.enable", session_id?)
@@ -800,7 +800,7 @@ pub fn WebAudioGetRealtimeDataResult::from_json(
 /// let command = web_audio_get_realtime_data_command(id=1, params, session_id=None)
 /// ```
 pub fn web_audio_get_realtime_data_command(
-  id~ : Int,
+  id~ : Int32,
   params : WebAudioGetRealtimeDataParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

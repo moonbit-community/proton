@@ -1,5 +1,5 @@
 ///|
-extern "C" fn test_screen_event_snapshots() -> Int = "proton_test_screen_event_snapshots"
+extern "C" fn test_screen_event_snapshots() -> Int32 = "proton_test_screen_event_snapshots"
 
 ///|
 test "native screen queue retains removed and changed display snapshots" {

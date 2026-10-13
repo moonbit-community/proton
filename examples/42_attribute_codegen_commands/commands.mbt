@@ -1,7 +1,7 @@
 ///|
 struct AddReply {
-  total : Int
-  waited_ms : Int
+  total : Int32
+  waited_ms : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -12,9 +12,9 @@ pub extend AddReply with FromJson::{from_json}
 
 ///|
 struct AddRequest {
-  left : Int
-  right : Int
-  delay_ms : Int?
+  left : Int32
+  right : Int32
+  delay_ms : Int32?
 } derive(ToJson, FromJson)
 
 ///|
@@ -25,7 +25,7 @@ pub extend AddRequest with FromJson::{from_json}
 
 ///|
 struct AddFinished {
-  total : Int
+  total : Int32
 } derive(ToJson, FromJson)
 
 ///|

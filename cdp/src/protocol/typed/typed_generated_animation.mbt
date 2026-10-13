@@ -372,7 +372,7 @@ pub fn AnimationViewOrScrollTimeline::from_json(
 /// let command = animation_disable_command(id=1, session_id=None)
 /// ```
 pub fn animation_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -394,7 +394,7 @@ pub fn animation_disable_command(
 /// let command = animation_enable_command(id=1, session_id=None)
 /// ```
 pub fn animation_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Animation.enable", session_id?)
@@ -486,7 +486,7 @@ pub fn AnimationGetCurrentTimeResult::from_json(
 /// let command = animation_get_current_time_command(id=1, params, session_id=None)
 /// ```
 pub fn animation_get_current_time_command(
-  id~ : Int,
+  id~ : Int32,
   params : AnimationGetCurrentTimeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -553,7 +553,7 @@ pub fn AnimationGetPlaybackRateResult::from_json(
 /// let command = animation_get_playback_rate_command(id=1, session_id=None)
 /// ```
 pub fn animation_get_playback_rate_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -612,7 +612,7 @@ pub fn AnimationReleaseAnimationsParams::to_json(
 /// )
 /// ```
 pub fn animation_release_animations_command(
-  id~ : Int,
+  id~ : Int32,
   params : AnimationReleaseAnimationsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -710,7 +710,7 @@ pub fn AnimationResolveAnimationResult::from_json(
 /// let command = animation_resolve_animation_command(id=1, params, session_id=None)
 /// ```
 pub fn animation_resolve_animation_command(
-  id~ : Int,
+  id~ : Int32,
   params : AnimationResolveAnimationParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -769,7 +769,7 @@ pub fn AnimationSeekAnimationsParams::to_json(
 /// let command = animation_seek_animations_command(id=1, params, session_id=None)
 /// ```
 pub fn animation_seek_animations_command(
-  id~ : Int,
+  id~ : Int32,
   params : AnimationSeekAnimationsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -828,7 +828,7 @@ pub fn AnimationSetPausedParams::to_json(
 /// let command = animation_set_paused_command(id=1, params, session_id=None)
 /// ```
 pub fn animation_set_paused_command(
-  id~ : Int,
+  id~ : Int32,
   params : AnimationSetPausedParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -883,7 +883,7 @@ pub fn AnimationSetPlaybackRateParams::to_json(
 /// let command = animation_set_playback_rate_command(id=1, params, session_id=None)
 /// ```
 pub fn animation_set_playback_rate_command(
-  id~ : Int,
+  id~ : Int32,
   params : AnimationSetPlaybackRateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -942,7 +942,7 @@ pub fn AnimationSetTimingParams::to_json(
 /// let command = animation_set_timing_command(id=1, params, session_id=None)
 /// ```
 pub fn animation_set_timing_command(
-  id~ : Int,
+  id~ : Int32,
   params : AnimationSetTimingParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

@@ -28,7 +28,7 @@ pub extend StopRequest with FromJson::{from_json}
 ///|
 struct Reply {
   ok : Bool
-  request_id : Int
+  request_id : Int32
   message : String
 } derive(ToJson, FromJson)
 

@@ -157,7 +157,7 @@ async test "facade command reporter preserves decoding and handler diagnostics" 
   let capture = RuntimeLogCapture::{ entries: [], }
   logger.set_handler(capture)
   logger.set_config(@xlog.Config(level=@xlog.Error))
-  let command : @proton_contract.Command[Int, Int] = @proton_contract.command(
+  let command : @proton_contract.Command[Int32, Int32] = @proton_contract.command(
     "diagnostic",
   )
   let configured = html("Diagnostics", "")..commands(registrar => {

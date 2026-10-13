@@ -9,8 +9,8 @@ let kill_command = @process_contract.kill
 
 ///|
 priv struct ProcessOwner {
-  processes : Map[Int, @async_process.Process]
-  mut next_id : Int
+  processes : Map[Int32, @async_process.Process]
+  mut next_id : Int32
   mut tasks : @async.TaskGroup[Unit]?
 }
 
@@ -99,7 +99,7 @@ async fn ProcessOwner::kill(
 ///|
 fn ProcessOwner::lookup_process(
   self : ProcessOwner,
-  process_id : Int,
+  process_id : Int32,
 ) -> @async_process.Process raise ProcessExtensionError {
   match self.processes.get(process_id) {
     Some(process) => process

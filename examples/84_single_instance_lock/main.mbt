@@ -14,7 +14,7 @@ struct ControlReply {
   ok : Bool
   message : String
   has_lock : Bool
-  activations : Int
+  activations : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -40,7 +40,7 @@ let application_slot : Ref[@proton.ApplicationContext?] = { val: None, }
 
 ///|
 /// Reopen activations this instance received while it owned the identity.
-let activations : Ref[Int] = { val: 0, }
+let activations : Ref[Int32] = { val: 0, }
 
 ///|
 /// Emits one review line for the terminal that started the example.
@@ -60,7 +60,7 @@ fn demo_partition() -> String {
 }
 
 ///|
-fn state_reply(message : String, ok? : Bool = true) -> ControlReply {
+fn state_reply(message : String, ok~ : Bool = true) -> ControlReply {
   let has_lock = match application_slot.val {
     Some(context) => context.has_single_instance_lock()
     None => false

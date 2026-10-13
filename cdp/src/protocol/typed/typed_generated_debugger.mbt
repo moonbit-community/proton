@@ -9,8 +9,8 @@
 /// gives a referenced type name.
 pub(all) struct DebuggerBreakLocation {
   script_id : RuntimeScriptId
-  line_number : Int
-  column_number : Int?
+  line_number : Int32
+  column_number : Int32?
   type_ : String?
 } derive(Eq, Debug)
 
@@ -294,8 +294,8 @@ pub fn DebuggerDebugSymbols::from_json(
 /// gives a referenced type name.
 pub(all) struct DebuggerLocation {
   script_id : RuntimeScriptId
-  line_number : Int
-  column_number : Int?
+  line_number : Int32
+  column_number : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -564,8 +564,8 @@ pub fn DebuggerScriptLanguage::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DebuggerScriptPosition {
-  line_number : Int
-  column_number : Int
+  line_number : Int32
+  column_number : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -663,7 +663,7 @@ pub fn DebuggerSearchMatch::from_json(
 /// gives a referenced type name.
 pub(all) struct DebuggerWasmDisassemblyChunk {
   lines : Array[String]
-  bytecode_offsets : Array[Int]
+  bytecode_offsets : Array[Int32]
 } derive(Eq, Debug)
 
 ///|
@@ -771,7 +771,7 @@ pub fn DebuggerContinueToLocationParams::to_json(
 /// )
 /// ```
 pub fn debugger_continue_to_location_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerContinueToLocationParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -795,7 +795,7 @@ pub fn debugger_continue_to_location_command(
 /// let command = debugger_disable_command(id=1, session_id=None)
 /// ```
 pub fn debugger_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Debugger.disable", session_id?)
@@ -840,8 +840,8 @@ pub fn DebuggerDisassembleWasmModuleParams::to_json(
 /// gives a referenced type name.
 pub(all) struct DebuggerDisassembleWasmModuleResult {
   stream_id : String?
-  total_number_of_lines : Int
-  function_body_offsets : Array[Int]
+  total_number_of_lines : Int32
+  function_body_offsets : Array[Int32]
   chunk : DebuggerWasmDisassemblyChunk
 } derive(Eq, Debug)
 
@@ -910,7 +910,7 @@ pub fn DebuggerDisassembleWasmModuleResult::from_json(
 /// )
 /// ```
 pub fn debugger_disassemble_wasm_module_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerDisassembleWasmModuleParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1004,7 +1004,7 @@ pub fn DebuggerEnableResult::from_json(
 /// let command = debugger_enable_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_enable_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerEnableParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1142,7 +1142,7 @@ pub fn DebuggerEvaluateOnCallFrameResult::from_json(
 /// )
 /// ```
 pub fn debugger_evaluate_on_call_frame_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerEvaluateOnCallFrameParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1255,7 +1255,7 @@ pub fn DebuggerGetPossibleBreakpointsResult::from_json(
 /// )
 /// ```
 pub fn debugger_get_possible_breakpoints_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerGetPossibleBreakpointsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1357,7 +1357,7 @@ pub fn DebuggerGetScriptSourceResult::from_json(
 /// let command = debugger_get_script_source_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_get_script_source_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerGetScriptSourceParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1455,7 +1455,7 @@ pub fn DebuggerGetStackTraceResult::from_json(
 /// let command = debugger_get_stack_trace_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_get_stack_trace_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerGetStackTraceParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1553,7 +1553,7 @@ pub fn DebuggerGetWasmBytecodeResult::from_json(
 /// let command = debugger_get_wasm_bytecode_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_get_wasm_bytecode_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerGetWasmBytecodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1655,7 +1655,7 @@ pub fn DebuggerNextWasmDisassemblyChunkResult::from_json(
 /// )
 /// ```
 pub fn debugger_next_wasm_disassembly_chunk_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerNextWasmDisassemblyChunkParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1679,7 +1679,7 @@ pub fn debugger_next_wasm_disassembly_chunk_command(
 /// let command = debugger_pause_command(id=1, session_id=None)
 /// ```
 pub fn debugger_pause_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Debugger.pause", session_id?)
@@ -1732,7 +1732,7 @@ pub fn DebuggerPauseOnAsyncCallParams::to_json(
 /// )
 /// ```
 pub fn debugger_pause_on_async_call_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerPauseOnAsyncCallParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1787,7 +1787,7 @@ pub fn DebuggerRemoveBreakpointParams::to_json(
 /// let command = debugger_remove_breakpoint_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_remove_breakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerRemoveBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1904,7 +1904,7 @@ pub fn DebuggerRestartFrameResult::from_json(
 /// let command = debugger_restart_frame_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_restart_frame_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerRestartFrameParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1957,7 +1957,7 @@ pub fn DebuggerResumeParams::to_json(self : DebuggerResumeParams) -> Json {
 /// let command = debugger_resume_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_resume_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerResumeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2068,7 +2068,7 @@ pub fn DebuggerSearchInContentResult::from_json(
 /// let command = debugger_search_in_content_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_search_in_content_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSearchInContentParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2087,7 +2087,7 @@ pub fn debugger_search_in_content_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DebuggerSetAsyncCallStackDepthParams {
-  max_depth : Int
+  max_depth : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -2127,7 +2127,7 @@ pub fn DebuggerSetAsyncCallStackDepthParams::to_json(
 /// )
 /// ```
 pub fn debugger_set_async_call_stack_depth_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetAsyncCallStackDepthParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2188,7 +2188,7 @@ pub fn DebuggerSetBlackboxedRangesParams::to_json(
 /// )
 /// ```
 pub fn debugger_set_blackboxed_ranges_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetBlackboxedRangesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2252,7 +2252,7 @@ pub fn DebuggerSetBlackboxExecutionContextsParams::to_json(
 /// )
 /// ```
 pub fn debugger_set_blackbox_execution_contexts_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetBlackboxExecutionContextsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2317,7 +2317,7 @@ pub fn DebuggerSetBlackboxPatternsParams::to_json(
 /// )
 /// ```
 pub fn debugger_set_blackbox_patterns_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetBlackboxPatternsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2423,7 +2423,7 @@ pub fn DebuggerSetBreakpointResult::from_json(
 /// let command = debugger_set_breakpoint_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_set_breakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2442,11 +2442,11 @@ pub fn debugger_set_breakpoint_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DebuggerSetBreakpointByUrlParams {
-  line_number : Int
+  line_number : Int32
   url : String?
   url_regex : String?
   script_hash : String?
-  column_number : Int?
+  column_number : Int32?
   condition : String?
 } derive(Eq, Debug)
 
@@ -2552,7 +2552,7 @@ pub fn DebuggerSetBreakpointByUrlResult::from_json(
 /// )
 /// ```
 pub fn debugger_set_breakpoint_by_url_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetBreakpointByUrlParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2658,7 +2658,7 @@ pub fn DebuggerSetBreakpointOnFunctionCallResult::from_json(
 /// )
 /// ```
 pub fn debugger_set_breakpoint_on_function_call_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetBreakpointOnFunctionCallParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2717,7 +2717,7 @@ pub fn DebuggerSetBreakpointsActiveParams::to_json(
 /// )
 /// ```
 pub fn debugger_set_breakpoints_active_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetBreakpointsActiveParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2825,7 +2825,7 @@ pub fn DebuggerSetInstrumentationBreakpointResult::from_json(
 /// )
 /// ```
 pub fn debugger_set_instrumentation_breakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetInstrumentationBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2884,7 +2884,7 @@ pub fn DebuggerSetPauseOnExceptionsParams::to_json(
 /// )
 /// ```
 pub fn debugger_set_pause_on_exceptions_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetPauseOnExceptionsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2939,7 +2939,7 @@ pub fn DebuggerSetReturnValueParams::to_json(
 /// let command = debugger_set_return_value_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_set_return_value_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetReturnValueParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3079,7 +3079,7 @@ pub fn DebuggerSetScriptSourceResult::from_json(
 /// let command = debugger_set_script_source_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_set_script_source_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetScriptSourceParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3138,7 +3138,7 @@ pub fn DebuggerSetSkipAllPausesParams::to_json(
 /// )
 /// ```
 pub fn debugger_set_skip_all_pauses_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetSkipAllPausesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3157,7 +3157,7 @@ pub fn debugger_set_skip_all_pauses_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct DebuggerSetVariableValueParams {
-  scope_number : Int
+  scope_number : Int32
   variable_name : String
   new_value : RuntimeCallArgument
   call_frame_id : DebuggerCallFrameId
@@ -3199,7 +3199,7 @@ pub fn DebuggerSetVariableValueParams::to_json(
 /// let command = debugger_set_variable_value_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_set_variable_value_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerSetVariableValueParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3256,7 +3256,7 @@ pub fn DebuggerStepIntoParams::to_json(self : DebuggerStepIntoParams) -> Json {
 /// let command = debugger_step_into_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_step_into_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerStepIntoParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3280,7 +3280,7 @@ pub fn debugger_step_into_command(
 /// let command = debugger_step_out_command(id=1, session_id=None)
 /// ```
 pub fn debugger_step_out_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Debugger.stepOut", session_id?)
@@ -3327,7 +3327,7 @@ pub fn DebuggerStepOverParams::to_json(self : DebuggerStepOverParams) -> Json {
 /// let command = debugger_step_over_command(id=1, params, session_id=None)
 /// ```
 pub fn debugger_step_over_command(
-  id~ : Int,
+  id~ : Int32,
   params : DebuggerStepOverParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3571,10 +3571,10 @@ pub fn debugger_resumed_event(
 pub(all) struct DebuggerScriptFailedToParseEventParams {
   script_id : RuntimeScriptId
   url : String
-  start_line : Int
-  start_column : Int
-  end_line : Int
-  end_column : Int
+  start_line : Int32
+  start_column : Int32
+  end_line : Int32
+  end_column : Int32
   execution_context_id : RuntimeExecutionContextId
   hash : String
   build_id : String
@@ -3582,9 +3582,9 @@ pub(all) struct DebuggerScriptFailedToParseEventParams {
   source_map_url : String?
   has_source_url : Bool?
   is_module : Bool?
-  length : Int?
+  length : Int32?
   stack_trace : RuntimeStackTrace?
-  code_offset : Int?
+  code_offset : Int32?
   script_language : DebuggerScriptLanguage?
   embedder_name : String?
 } derive(Eq, Debug)
@@ -3732,10 +3732,10 @@ pub fn debugger_script_failed_to_parse_event(
 pub(all) struct DebuggerScriptParsedEventParams {
   script_id : RuntimeScriptId
   url : String
-  start_line : Int
-  start_column : Int
-  end_line : Int
-  end_column : Int
+  start_line : Int32
+  start_column : Int32
+  end_line : Int32
+  end_column : Int32
   execution_context_id : RuntimeExecutionContextId
   hash : String
   build_id : String
@@ -3744,9 +3744,9 @@ pub(all) struct DebuggerScriptParsedEventParams {
   source_map_url : String?
   has_source_url : Bool?
   is_module : Bool?
-  length : Int?
+  length : Int32?
   stack_trace : RuntimeStackTrace?
-  code_offset : Int?
+  code_offset : Int32?
   script_language : DebuggerScriptLanguage?
   debug_symbols : Array[DebuggerDebugSymbols]?
   embedder_name : String?

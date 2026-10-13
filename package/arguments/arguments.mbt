@@ -32,7 +32,7 @@ pub fn flags() -> Array[@argparse.FlagArg] {
 
 ///|
 /// Returns the package options shared by command-line packaging frontends.
-pub fn options(include_identifier? : Bool = true) -> Array[@argparse.OptionArg] {
+pub fn options(include_identifier~ : Bool = true) -> Array[@argparse.OptionArg] {
   let options : Array[@argparse.OptionArg] = [
     OptionArg("product-name", about="Application display name"),
     OptionArg("version", about="Application version"),

@@ -4,7 +4,7 @@ suberror ProcessExtensionError {
   SpawnFailed(detail~ : String)
   WaitFailed(detail~ : String)
   KillFailed(detail~ : String)
-  UnknownProcess(process_id~ : Int)
+  UnknownProcess(process_id~ : Int32)
 } derive(Debug, Eq)
 
 ///|

@@ -107,7 +107,7 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected missing parameter")
   }
-  let bad_int : Result[Int, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_int : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_required_int("Runtime.evaluate", fields, "fraction", "integer")
     },
   )
@@ -121,7 +121,7 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid integer")
   }
-  let bad_int_shape : Result[Int, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_int_shape : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_required_int("Runtime.evaluate", fields, "string", "integer")
     },
   )
@@ -135,7 +135,7 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid integer shape")
   }
-  let bad_optional_int : Result[Int?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_optional_int : Result[Int32?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_optional_int("Runtime.evaluate", fields, "fraction", "integer")
     },
   )
@@ -149,7 +149,7 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid optional integer")
   }
-  let bad_optional_int_shape : Result[Int?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_optional_int_shape : Result[Int32?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_optional_int("Runtime.evaluate", fields, "string", "integer")
     },
   )
@@ -294,7 +294,7 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid param array")
   }
-  let bad_array_int : Result[Int, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_array_int : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_array_int(
         "Runtime.evaluate",
         "items",
@@ -313,7 +313,7 @@ test "typed parameter helpers reject bad shapes and numeric types" {
     ) else {
     fail("expected invalid array int")
   }
-  let bad_array_int_shape : Result[Int, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_array_int_shape : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_array_int("Runtime.evaluate", "items", "integer", fields["string"])
     },
   )
@@ -469,7 +469,7 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected missing return")
   }
-  let bad_int : Result[Int, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_int : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_required_result_int("Page.navigate", fields, "fraction", "integer")
     },
   )
@@ -483,7 +483,7 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid return integer")
   }
-  let bad_int_shape : Result[Int, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_int_shape : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_required_result_int("Page.navigate", fields, "string", "integer")
     },
   )
@@ -497,7 +497,7 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid return integer shape")
   }
-  let bad_optional_int : Result[Int?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_optional_int : Result[Int32?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_optional_result_int("Page.navigate", fields, "fraction", "integer")
     },
   )
@@ -511,7 +511,7 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid optional return integer")
   }
-  let bad_optional_int_shape : Result[Int?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_optional_int_shape : Result[Int32?, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_optional_result_int("Page.navigate", fields, "string", "integer")
     },
   )
@@ -555,7 +555,7 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid result array")
   }
-  let bad_array_int : Result[Int, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_array_int : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_result_array_int(
         "Page.navigate",
         "items",
@@ -574,7 +574,7 @@ test "typed result helpers reject bad shapes and return types" {
     ) else {
     fail("expected invalid result array integer")
   }
-  let bad_array_int_shape : Result[Int, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
+  let bad_array_int_shape : Result[Int32, Error] = try_result_protocol_typed_typed_decode_wbtest(() => {
       typed_result_array_int(
         "Page.navigate",
         "items",

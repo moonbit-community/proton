@@ -3,7 +3,7 @@
 pub(all) suberror IpcError {
   MalformedJson(detail~ : String)
   InvalidPayload(kind~ : String, detail~ : String)
-  UnsupportedVersion(scope~ : String, actual~ : Int, supported~ : Int)
+  UnsupportedVersion(scope~ : String, actual~ : Int32, supported~ : Int32)
   EmptyField(path~ : String)
   InvalidErrorResponseBody
 } derive(Debug, Eq)

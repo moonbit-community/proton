@@ -52,7 +52,7 @@ async fn run_multi_window_scenario_probe(
   tasks : @async.TaskGroup[Unit],
   app : SpawnedScenarioApp,
   target : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> ShutdownProbeResult {
   let (target_a, target_b) = wait_for_multi_window_targets(target, timeout)
   let browser = @client.connect_cdp_browser_target_with_timeout(
@@ -145,7 +145,7 @@ async fn run_multi_window_page_clients(
   page_b : @page.Page,
   target_a : String,
   target_b : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> MultiWindowProbe {
   wait_for_ready(page_a, multi_window_ready_expression(), timeout)
   wait_for_ready(page_b, multi_window_ready_expression(), timeout)
@@ -172,7 +172,7 @@ async fn run_multi_window_page_clients(
 }
 
 ///|
-fn multi_window_probe_expression(delay_ms : Int) -> String {
+fn multi_window_probe_expression(delay_ms : Int32) -> String {
   let expression =
     #|;(async () => {
     #|  const invoke = window.__MoonBit__?.core?.invokeOp;
@@ -252,7 +252,7 @@ fn assert_multi_window_page(
 async fn start_multi_window_pending_batch(
   page_a : @page.Page,
   page_b : @page.Page,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   guard evaluate_bool(
     page_a,
@@ -278,8 +278,8 @@ async fn start_multi_window_pending_batch(
 ///|
 async fn wait_for_multi_window_pending(
   page : @page.Page,
-  count : Int,
-  timeout : Int,
+  count : Int32,
+  timeout : Int32,
 ) -> Unit {
   run_e2e_operation_with_timeout(
     timeout,

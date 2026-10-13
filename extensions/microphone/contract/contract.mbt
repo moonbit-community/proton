@@ -17,8 +17,8 @@ pub extend ParseListingRequest with FromJson::{from_json}
 
 ///|
 pub(all) struct CaptureConfigRequest {
-  channels : Int?
-  sample_rate_hz : Int?
+  channels : Int32?
+  sample_rate_hz : Int32?
   sample_format : String?
   echo_cancellation : Bool?
   noise_suppression : Bool?
@@ -38,13 +38,13 @@ pub extend CaptureConfigRequest with FromJson::{from_json}
 
 ///|
 pub(all) struct CaptureConfigReply {
-  channels : Int
-  sample_rate_hz : Int
+  channels : Int32
+  sample_rate_hz : Int32
   sample_format : String
   echo_cancellation : Bool
   noise_suppression : Bool
-  bytes_per_sample : Int
-  recommended_chunk_frames : Int
+  bytes_per_sample : Int32
+  recommended_chunk_frames : Int32
   uses_voice_processing : Bool
 } derive(ToJson, FromJson, Debug, Eq)
 
@@ -103,7 +103,7 @@ pub extend MicrophoneDevicesReply with FromJson::{from_json}
 ///|
 pub(all) struct MicrophoneActivity {
   operation : String
-  count : Int?
+  count : Int32?
 } derive(ToJson, FromJson, Debug, Eq)
 
 ///|

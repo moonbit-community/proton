@@ -39,7 +39,7 @@ pub fn Timestamp::parse(text : String) -> Timestamp? {
     characters[19] == 'Z' else {
     return None
   }
-  let field = fn(start : Int, length : Int) -> Int? {
+  let field = fn(start : Int32, length : Int32) -> Int32? {
     let mut value = 0
     for offset in 0..<length {
       let code = characters[start + offset].to_int() - '0'.to_int()

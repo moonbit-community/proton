@@ -61,7 +61,7 @@ pub fn MediaPlayer::from_json(
 /// gives a referenced type name.
 pub(all) struct MediaPlayerError {
   error_type : String
-  code : Int
+  code : Int32
   stack : Array[MediaPlayerErrorSourceLocation]
   cause : Array[MediaPlayerError]
   data : Json
@@ -127,7 +127,7 @@ pub fn MediaPlayerError::from_json(
 /// gives a referenced type name.
 pub(all) struct MediaPlayerErrorSourceLocation {
   file : String
-  line : Int
+  line : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -397,7 +397,7 @@ pub fn MediaTimestamp::from_json(
 /// let command = media_disable_command(id=1, session_id=None)
 /// ```
 pub fn media_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Media.disable", session_id?)
@@ -415,7 +415,7 @@ pub fn media_disable_command(
 /// let command = media_enable_command(id=1, session_id=None)
 /// ```
 pub fn media_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Media.enable", session_id?)

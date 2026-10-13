@@ -138,10 +138,10 @@ async fn write_text(path : String, text : String) -> Unit {
 }
 
 ///|
-const MachoExecute : Int = 0x2
+const MachoExecute : Int32 = 0x2
 
 ///|
-fn macho_filetype_name(filetype : Int) -> String {
+fn macho_filetype_name(filetype : Int32) -> String {
   match filetype {
     0x1 => "MH_OBJECT"
     0x2 => "MH_EXECUTE"
@@ -153,7 +153,7 @@ fn macho_filetype_name(filetype : Int) -> String {
 }
 
 ///|
-fn macho_u32_le(data : Bytes, offset : Int) -> Int {
+fn macho_u32_le(data : Bytes, offset : Int32) -> Int32 {
   data[offset].to_int() |
   (data[offset + 1].to_int() << 8) |
   (data[offset + 2].to_int() << 16) |
@@ -161,7 +161,7 @@ fn macho_u32_le(data : Bytes, offset : Int) -> Int {
 }
 
 ///|
-fn macho_thin_filetype(data : Bytes) -> Int? {
+fn macho_thin_filetype(data : Bytes) -> Int32? {
   guard data.length() >= 16 else { return None }
   let magic = macho_u32_le(data, 0)
   guard magic == 0xfeedfacf || magic == 0xfeedface else { return None }

@@ -156,8 +156,8 @@ test "Windows icon embedding reports the native-only operation" {
 ///|
 fn package_test_spec(
   formats : Array[PackageFormat],
-  url_schemes? : Array[String] = ["devtoys"],
-  nsis_install_mode? : NsisInstallMode = CurrentUser,
+  url_schemes~ : Array[String] = ["devtoys"],
+  nsis_install_mode~ : NsisInstallMode = CurrentUser,
 ) -> PackageSpec {
   PackageSpec(
     "/tmp/demo",

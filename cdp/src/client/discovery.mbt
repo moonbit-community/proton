@@ -20,7 +20,7 @@
 ///   required by this library.
 pub(all) suberror DiscoveryError {
   InvalidTarget(String)
-  HttpStatus(Int, String)
+  HttpStatus(Int32, String)
   MissingWebSocketDebuggerUrl
   MissingTargetWebSocketDebuggerUrl(String)
   NoMatchingTarget(String)
@@ -45,7 +45,7 @@ pub extend DiscoveryError with ToJson::{to_json}
 pub(all) struct DiscoveryErrorDiagnostic {
   kind : String
   target : String?
-  http_status : Int?
+  http_status : Int32?
   reason : String?
   target_id : String?
   selector : String?
@@ -142,7 +142,7 @@ pub fn DiscoveryError::target(self : DiscoveryError) -> String? {
 
 ///|
 /// Return the HTTP status code when a discovery request failed.
-pub fn DiscoveryError::http_status(self : DiscoveryError) -> Int? {
+pub fn DiscoveryError::http_status(self : DiscoveryError) -> Int32? {
   match self {
     HttpStatus(code, _) => Some(code)
     _ => None

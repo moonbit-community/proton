@@ -52,7 +52,7 @@ pub fn system_preferred_language_tags() -> Array[String] raise NativeError {
 }
 
 ///|
-fn SystemPathKind::native_code(self : SystemPathKind) -> Int {
+fn SystemPathKind::native_code(self : SystemPathKind) -> Int32 {
   match self {
     Desktop => 1
     Documents => 2
@@ -131,9 +131,9 @@ pub fn screens() -> Array[ScreenInfo] raise NativeError {
 
 ///|
 pub fn AppActivation::AppActivation(
-  urls? : Array[String] = [],
-  files? : Array[String] = [],
-  reopen? : Bool = false,
+  urls~ : Array[String] = [],
+  files~ : Array[String] = [],
+  reopen~ : Bool = false,
 ) -> AppActivation {
   AppActivation::{
     abi_version: 1,
@@ -263,12 +263,12 @@ pub fn last_error_message() -> String {
 }
 
 ///|
-fn native_error(status : Int) -> NativeError {
+fn native_error(status : Int32) -> NativeError {
   Status(status~, message=last_error_message())
 }
 
 ///|
-fn check_status(status : Int) -> Unit raise NativeError {
+fn check_status(status : Int32) -> Unit raise NativeError {
   if status < 0 {
     raise native_error(status)
   }
@@ -305,7 +305,7 @@ fn validate_window_config(config : WindowConfig) -> Unit raise NativeError {
 }
 
 ///|
-fn window_size_hint_code(value : WindowSizeHint) -> Int {
+fn window_size_hint_code(value : WindowSizeHint) -> Int32 {
   match value {
     Unconstrained => 0
     Fixed => 1
@@ -316,8 +316,8 @@ fn window_size_hint_code(value : WindowSizeHint) -> Int {
 
 ///|
 fn validate_size_constraint(
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
   name : String,
 ) -> Unit raise NativeError {
   if width == 0 && height == 0 {
@@ -331,7 +331,7 @@ fn validate_size_constraint(
 }
 
 ///|
-fn browser_policy_code(value : BrowserPolicyMode) -> Int {
+fn browser_policy_code(value : BrowserPolicyMode) -> Int32 {
   match value {
     Allow => 0
     Deny => 1
@@ -366,7 +366,10 @@ fn decode_navigation_history(
 ///|
 /// Rejects payloads whose `abi_version` does not match the schema version
 /// this binding implements.
-fn expect_abi_version(found : Int, context : String) -> Unit raise NativeError {
+fn expect_abi_version(
+  found : Int32,
+  context : String,
+) -> Unit raise NativeError {
   if found != 1 {
     raise InvalidPayload(
       context~,
@@ -438,7 +441,7 @@ fn decode_app_activation(
 }
 
 ///|
-fn runtime_config_bool(value : Bool) -> Int {
+fn runtime_config_bool(value : Bool) -> Int32 {
   if value {
     1
   } else {
@@ -457,7 +460,7 @@ fn runtime_config_languages(values : Array[String]) -> Bytes {
 }
 
 ///|
-fn runtime_config_remote_debugging(value : RemoteDebugging) -> Int {
+fn runtime_config_remote_debugging(value : RemoteDebugging) -> Int32 {
   match value {
     Disabled => 0
     Ephemeral => -1
@@ -466,7 +469,7 @@ fn runtime_config_remote_debugging(value : RemoteDebugging) -> Int {
 }
 
 ///|
-fn runtime_config_accessibility(value : AccessibilityMode) -> Int {
+fn runtime_config_accessibility(value : AccessibilityMode) -> Int32 {
   match value {
     Automatic => 0
     AlwaysEnabled => 1
@@ -503,7 +506,7 @@ fn validate_runtime_config(config : RuntimeConfig) -> Unit raise NativeError {
 
 ///|
 pub fn execute_process(
-  config? : RuntimeConfig = RuntimeConfig::bundled(),
+  config~ : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> ProcessResult raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
   validate_runtime_config(config)
@@ -547,7 +550,7 @@ fn RuntimeConfig::resolve_proxy(self : RuntimeConfig) -> (String?, String?) {
 
 ///|
 pub fn Runtime::Runtime(
-  config? : RuntimeConfig = RuntimeConfig::bundled(),
+  config~ : RuntimeConfig = RuntimeConfig::bundled(),
 ) -> Runtime raise NativeError {
   @native_ffi.ensure_cef_loader_linked()
   validate_runtime_config(config)
@@ -639,7 +642,7 @@ fn Runtime::active_handle(
 /// nowhere else: callers say `None` to wait indefinitely. A deadline that has
 /// already passed is a zero wait rather than an error, because arriving late is
 /// normal and is not a reason to refuse to poll.
-fn encode_wait_timeout(timeout_ms : Int?) -> Int {
+fn encode_wait_timeout(timeout_ms : Int32?) -> Int32 {
   match timeout_ms {
     None => runtime_wait_timeout_infinite
     Some(timeout_ms) => if timeout_ms < 0 { 0 } else { timeout_ms }
@@ -665,7 +668,9 @@ pub fn host_loop_begin() -> Unit raise NativeError {
 /// This is the only thing that drives the platform while the host loop owns the
 /// thread, so a host must keep calling it. The returned mask says which kinds
 /// of work became ready; it is empty when nothing happened.
-pub fn host_loop_poll(timeout_ms? : Int) -> RuntimeWaitReady raise NativeError {
+pub fn host_loop_poll(
+  timeout_ms? : Int32,
+) -> RuntimeWaitReady raise NativeError {
   let ready_mask = Ref(runtime_wait_none)
   let status = @native_ffi.proton_host_loop_poll_ffi(
     encode_wait_timeout(timeout_ms),
@@ -702,7 +707,7 @@ pub fn event_wakeup_callback() -> @ffi.EventWakeup {
 }
 
 ///|
-fn menu_item_kind_code(kind : MenuItemKind) -> Int {
+fn menu_item_kind_code(kind : MenuItemKind) -> Int32 {
   match kind {
     Command => 0
     Separator => 1
@@ -712,7 +717,7 @@ fn menu_item_kind_code(kind : MenuItemKind) -> Int {
 }
 
 ///|
-fn menu_role_code(role : MenuRole?) -> Int {
+fn menu_role_code(role : MenuRole?) -> Int32 {
   match role {
     None => 0
     Some(Application) => 1
@@ -821,8 +826,8 @@ pub fn Runtime::set_menu(
 pub fn Window::popup_menu(
   self : Window,
   menu : MenuBar,
-  x : Int,
-  y : Int,
+  x : Int32,
+  y : Int32,
 ) -> Unit raise NativeError {
   let config = build_menu_config(menu)
   let status = @native_ffi.menu_popup(self.live_handle(), x, y, config)
@@ -832,7 +837,7 @@ pub fn Window::popup_menu(
 ///|
 fn native_event_text(
   event : @native_ffi.EventHandle,
-  field : Int,
+  field : Int32,
 ) -> String? raise NativeError {
   read_native_text("runtime event JSON", (buffer, buffer_len, required) => {
     @native_ffi.event_text(event, field, buffer, buffer_len, required)
@@ -842,7 +847,7 @@ fn native_event_text(
 ///|
 fn require_native_event_text(
   event : @native_ffi.EventHandle,
-  field : Int,
+  field : Int32,
   label : String,
 ) -> String raise NativeError {
   guard native_event_text(event, field) is Some(text) else {
@@ -871,8 +876,8 @@ fn native_event_items(
 ///|
 fn native_cookie_snapshot_string(
   event : @native_ffi.EventHandle,
-  index : Int,
-  field : Int,
+  index : Int32,
+  field : Int32,
 ) -> String raise NativeError {
   require_native_text("cookie field", (buffer, buffer_len, required) => {
     @native_ffi.event_cookie_string_field(
@@ -884,9 +889,9 @@ fn native_cookie_snapshot_string(
 ///|
 fn native_cookie_snapshot_int(
   event : @native_ffi.EventHandle,
-  index : Int,
-  field : Int,
-) -> Int raise NativeError {
+  index : Int32,
+  field : Int32,
+) -> Int32 raise NativeError {
   let value = Ref(0)
   check_status(@native_ffi.event_cookie_int_field(event, index, field, value))
   value.val
@@ -895,7 +900,7 @@ fn native_cookie_snapshot_int(
 ///|
 fn native_cookie_snapshot_expires(
   event : @native_ffi.EventHandle,
-  index : Int,
+  index : Int32,
 ) -> Int64? raise NativeError {
   let value = Ref(0L)
   let present = Ref(0)
@@ -910,7 +915,7 @@ fn native_cookie_snapshot_expires(
 }
 
 ///|
-fn native_cookie_same_site(value : Int) -> CookieSameSite raise NativeError {
+fn native_cookie_same_site(value : Int32) -> CookieSameSite raise NativeError {
   match value {
     0 => CookieSameSite::Unspecified
     1 => CookieSameSite::NoRestriction
@@ -949,7 +954,7 @@ fn decode_native_cookie_snapshot(
 }
 
 ///|
-fn window_state_from_fields(field : (Int) -> Int) -> WindowState {
+fn window_state_from_fields(field : (Int32) -> Int32) -> WindowState {
   let theme = match field(20) {
     2 => WindowTheme::Dark
     _ => WindowTheme::Light
@@ -991,8 +996,8 @@ fn native_window_state(event : @native_ffi.EventHandle) -> WindowState {
 ///|
 /// Decodes the appearance snapshot a native theme change event carries.
 fn native_theme_snapshot(
-  dark_colors : Int,
-  high_contrast_colors : Int,
+  dark_colors : Int32,
+  high_contrast_colors : Int32,
 ) -> NativeThemeSnapshot {
   {
     dark_colors: dark_colors != 0,
@@ -1364,7 +1369,7 @@ pub fn Runtime::respond_bridge_request(
 pub fn Runtime::complete_resource_request(
   self : Runtime,
   request_id : Int64,
-  status : Int,
+  status : Int32,
   mime_type : String,
   data : Bytes,
 ) -> Unit raise NativeError {
@@ -1477,7 +1482,7 @@ fn build_web_request_config(
 ///|
 pub fn Window::Window(
   runtime : Runtime,
-  config? : WindowConfig = WindowConfig(),
+  config~ : WindowConfig = WindowConfig(),
 ) -> Window raise NativeError {
   validate_window_config(config)
   let out_window = Ref(@native_ffi.window_null())
@@ -1668,8 +1673,8 @@ pub fn Window::set_parent(
 ///|
 pub fn Window::set_size(
   self : Window,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Unit raise NativeError {
   if width <= 0 || height <= 0 {
     raise invalid_argument("width and height must be positive")
@@ -1683,8 +1688,8 @@ pub fn Window::set_size(
 /// Sets the live renderer content area in logical pixels.
 pub fn Window::set_content_size(
   self : Window,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Unit raise NativeError {
   if width <= 0 || height <= 0 {
     raise invalid_argument("width and height must be positive")
@@ -1700,9 +1705,9 @@ pub fn Window::set_content_size(
 
 ///|
 /// Returns the live renderer content area in logical pixels.
-pub fn Window::content_size(self : Window) -> (Int, Int) raise NativeError {
-  let width : Ref[Int] = { val: 0, }
-  let height : Ref[Int] = { val: 0, }
+pub fn Window::content_size(self : Window) -> (Int32, Int32) raise NativeError {
+  let width : Ref[Int32] = { val: 0, }
+  let height : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_window_get_content_size_ffi(
       self.live_handle(),
@@ -1805,8 +1810,8 @@ pub fn Window::set_kiosk(self : Window, kiosk : Bool) -> Unit raise NativeError 
 ///|
 pub fn Window::set_position(
   self : Window,
-  x : Int,
-  y : Int,
+  x : Int32,
+  y : Int32,
 ) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_window_set_position_ffi(self.live_handle(), x, y),
@@ -1852,8 +1857,8 @@ pub fn Window::set_resizable(
 /// Sets the minimum live native window size. `(0, 0)` clears the constraint.
 pub fn Window::set_minimum_size(
   self : Window,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Unit raise NativeError {
   validate_size_constraint(width, height, "minimum")
   check_status(
@@ -1869,8 +1874,8 @@ pub fn Window::set_minimum_size(
 /// Sets the maximum live native window size. `(0, 0)` clears the constraint.
 pub fn Window::set_maximum_size(
   self : Window,
-  width : Int,
-  height : Int,
+  width : Int32,
+  height : Int32,
 ) -> Unit raise NativeError {
   validate_size_constraint(width, height, "maximum")
   check_status(
@@ -2185,7 +2190,7 @@ pub fn Window::set_enabled(
 ///|
 pub fn Window::set_zoom_percent(
   self : Window,
-  zoom_percent : Int,
+  zoom_percent : Int32,
 ) -> Unit raise NativeError {
   if zoom_percent < 25 || zoom_percent > 500 {
     raise invalid_argument("zoom_percent must be between 25 and 500")
@@ -2217,7 +2222,7 @@ pub fn Window::set_audio_muted(
 
 ///|
 pub fn Window::is_audio_muted(self : Window) -> Bool raise NativeError {
-  let muted : Ref[Int] = { val: 0, }
+  let muted : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_window_is_audio_muted_ffi(self.live_handle(), muted),
   )
@@ -2288,7 +2293,7 @@ pub fn Window::set_thumbnail_tooltip(
 ///|
 /// Native flag bits for a taskbar button. Electron rejects unknown flags, so
 /// the typed values map one to one onto the C ABI bits.
-fn thumbar_flags_value(flags : Array[ThumbarButtonFlag]) -> Int {
+fn thumbar_flags_value(flags : Array[ThumbarButtonFlag]) -> Int32 {
   let mut value = 0
   for flag in flags {
     value = value | flag.native_value()
@@ -2302,7 +2307,7 @@ fn thumbar_flags_value(flags : Array[ThumbarButtonFlag]) -> Int {
 fn build_thumbar_builder(
   buttons : Array[ThumbarButton],
 ) -> @native_ffi.ThumbarBuilderHandle raise NativeError {
-  let entries : Array[(String, @native_ffi.ImageHandle, String, Int)] = []
+  let entries : Array[(String, @native_ffi.ImageHandle, String, Int32)] = []
   for button in buttons {
     if button.id.is_empty() {
       raise invalid_argument("thumbar button id is required")
@@ -2392,8 +2397,8 @@ pub fn Window::state(self : Window) -> WindowState raise NativeError {
 pub fn Window::navigation_state(
   self : Window,
 ) -> (Bool, Bool) raise NativeError {
-  let can_go_back : Ref[Int] = { val: 0, }
-  let can_go_forward : Ref[Int] = { val: 0, }
+  let can_go_back : Ref[Int32] = { val: 0, }
+  let can_go_forward : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_window_get_navigation_state_ffi(
       self.live_handle(),
@@ -2422,7 +2427,7 @@ pub fn Window::browser_state(self : Window) -> BrowserState raise NativeError {
       handle, 0, buffer, buffer_len, required,
     )
   })
-  let is_loading : Ref[Int] = { val: 0, }
+  let is_loading : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_window_get_browser_loading_ffi(handle, 0, is_loading),
   )
@@ -2546,7 +2551,7 @@ pub fn Window::remove_page_css(
 pub fn Window::browser_command(
   self : Window,
   command : String,
-  download_id? : Int,
+  download_id? : Int32,
 ) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_window_browser_command_ffi(
@@ -2560,7 +2565,7 @@ pub fn Window::browser_command(
 ///|
 /// Returns whether the main browser currently owns web-content focus.
 pub fn Window::browser_is_focused(self : Window) -> Bool raise NativeError {
-  let focused : Ref[Int] = { val: 0, }
+  let focused : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_window_get_browser_focus_state_ffi(
       self.live_handle(),
@@ -2573,7 +2578,7 @@ pub fn Window::browser_is_focused(self : Window) -> Bool raise NativeError {
 ///|
 /// Returns whether the main browser currently has an associated DevTools view.
 pub fn Window::is_devtools_opened(self : Window) -> Bool raise NativeError {
-  let opened : Ref[Int] = { val: 0, }
+  let opened : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_window_get_devtools_state_ffi(self.live_handle(), opened),
   )
@@ -2607,7 +2612,7 @@ pub fn Contents::print_to_pdf(
   self : Contents,
   path : String,
   settings : PdfPrintSettings,
-) -> Int raise NativeError {
+) -> Int32 raise NativeError {
   if path.is_empty() {
     raise invalid_argument("PDF output path must not be empty")
   }
@@ -2629,7 +2634,7 @@ pub fn Contents::print_to_pdf(
     PrimaryPage(window) => (window.live_handle(), @native_ffi.view_null())
     ChildView(view) => (@native_ffi.window_null(), view.live_handle())
   }
-  let out_request_id : Ref[Int] = { val: 0, }
+  let out_request_id : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.contents_print_to_pdf(
       window,
@@ -2689,11 +2694,11 @@ pub fn Window::find_in_page(
   forward : Bool,
   match_case : Bool,
   find_next : Bool,
-) -> Int raise NativeError {
+) -> Int32 raise NativeError {
   if text.is_empty() {
     raise invalid_argument("find text must not be empty")
   }
-  let request_id : Ref[Int] = { val: 0, }
+  let request_id : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_window_find_in_page_ffi(
       self.live_handle(),
@@ -2771,8 +2776,8 @@ pub fn Window::emit_bridge_event_json(
 fn window_bridge_text_field(
   window : Window,
   context : String,
-  field : Int,
-  query : (@native_ffi.WindowHandle, Int, FixedArray[Byte], Int, Ref[Int]) -> Int,
+  field : Int32,
+  query : (@native_ffi.WindowHandle, Int32, FixedArray[Byte], Int32, Ref[Int32]) -> Int32,
 ) -> String raise NativeError {
   let handle = window.live_handle()
   require_native_text(context, (buffer, buffer_len, required) => {
@@ -2827,7 +2832,7 @@ pub fn Window::bridge_lifecycle_state(
 fn window_bridge_failure_field(
   window : Window,
   context : String,
-  field : Int,
+  field : Int32,
 ) -> String raise NativeError {
   window_bridge_text_field(
     window, context, field, @native_ffi.proton_window_bridge_failure_field_ffi,
@@ -2838,7 +2843,7 @@ fn window_bridge_failure_field(
 fn window_bridge_optional_failure_field(
   window : Window,
   context : String,
-  field : Int,
+  field : Int32,
 ) -> String? raise NativeError {
   let value = window_bridge_failure_field(window, context, field)
   if value.is_empty() {
@@ -2851,8 +2856,8 @@ fn window_bridge_optional_failure_field(
 ///|
 fn window_bridge_optional_failure_int(
   window : Window,
-  field : Int,
-) -> Int? raise NativeError {
+  field : Int32,
+) -> Int32? raise NativeError {
   let value = Ref(0)
   let present = Ref(0)
   check_status(
@@ -2956,9 +2961,9 @@ pub fn Runtime::cookie_set(
   value : String,
   domain? : String,
   path? : String,
-  secure? : Bool = false,
-  http_only? : Bool = false,
-  same_site? : CookieSameSite = Unspecified,
+  secure~ : Bool = false,
+  http_only~ : Bool = false,
+  same_site~ : CookieSameSite = Unspecified,
 ) -> Unit raise NativeError {
   if url.is_empty() {
     raise invalid_argument("cookie url must not be empty")
@@ -3102,7 +3107,7 @@ pub fn NativeImage::destroy(self : NativeImage) -> Unit raise NativeError {
 pub fn NativeImage::add_png(
   self : NativeImage,
   data : Bytes,
-  scale_factor? : Double = 1.0,
+  scale_factor~ : Double = 1.0,
 ) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_image_add_png_ffi(
@@ -3120,7 +3125,7 @@ pub fn NativeImage::add_png(
 pub fn NativeImage::add_jpeg(
   self : NativeImage,
   data : Bytes,
-  scale_factor? : Double = 1.0,
+  scale_factor~ : Double = 1.0,
 ) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_image_add_jpeg_ffi(
@@ -3138,9 +3143,9 @@ pub fn NativeImage::add_jpeg(
 pub fn NativeImage::add_bitmap(
   self : NativeImage,
   data : Bytes,
-  width : Int,
-  height : Int,
-  scale_factor? : Double = 1.0,
+  width : Int32,
+  height : Int32,
+  scale_factor~ : Double = 1.0,
 ) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_image_add_bitmap_ffi(
@@ -3166,7 +3171,9 @@ pub fn NativeImage::is_empty(self : NativeImage) -> Bool raise NativeError {
 
 ///|
 /// Returns the image size in density-independent pixels as `(width, height)`.
-pub fn NativeImage::size(self : NativeImage) -> (Int, Int) raise NativeError {
+pub fn NativeImage::size(
+  self : NativeImage,
+) -> (Int32, Int32) raise NativeError {
   let width = Ref(0)
   let height = Ref(0)
   check_status(
@@ -3181,9 +3188,9 @@ pub fn NativeImage::size(self : NativeImage) -> (Int, Int) raise NativeError {
 /// Returns `(png_bytes, pixel_width, pixel_height)`.
 pub fn NativeImage::to_png(
   self : NativeImage,
-  scale_factor? : Double = 1.0,
-  with_transparency? : Bool = true,
-) -> (Bytes, Int, Int) raise NativeError {
+  scale_factor~ : Double = 1.0,
+  with_transparency~ : Bool = true,
+) -> (Bytes, Int32, Int32) raise NativeError {
   let handle = self.live_handle()
   let out_width = Ref(0)
   let out_height = Ref(0)
@@ -3212,9 +3219,9 @@ pub fn NativeImage::to_png(
 /// `(jpeg_bytes, pixel_width, pixel_height)`.
 pub fn NativeImage::to_jpeg(
   self : NativeImage,
-  scale_factor? : Double = 1.0,
-  quality? : Int = 80,
-) -> (Bytes, Int, Int) raise NativeError {
+  scale_factor~ : Double = 1.0,
+  quality~ : Int32 = 80,
+) -> (Bytes, Int32, Int32) raise NativeError {
   let handle = self.live_handle()
   let out_width = Ref(0)
   let out_height = Ref(0)
@@ -3231,8 +3238,8 @@ pub fn NativeImage::to_jpeg(
 /// bytes (32-bit RGBA). Returns `(bitmap_bytes, pixel_width, pixel_height)`.
 pub fn NativeImage::to_bitmap(
   self : NativeImage,
-  scale_factor? : Double = 1.0,
-) -> (Bytes, Int, Int) raise NativeError {
+  scale_factor~ : Double = 1.0,
+) -> (Bytes, Int32, Int32) raise NativeError {
   let handle = self.live_handle()
   let out_width = Ref(0)
   let out_height = Ref(0)
@@ -3253,7 +3260,7 @@ fn optional_dialog_text_buffer(value : String?) -> Bytes {
 }
 
 ///|
-fn dialog_text_payload_len(buffer : Bytes) -> Int {
+fn dialog_text_payload_len(buffer : Bytes) -> Int32 {
   let len = buffer.length()
   if len >= 1 {
     len - 1
@@ -3345,7 +3352,7 @@ fn WindowRef::begin_file_dialog(
   window : WindowRef,
   title : String?,
   path : String?,
-  callback : (@native_ffi.WindowHandle, Bytes, Int, Bytes, Int, Ref[Int64]) -> Int,
+  callback : (@native_ffi.WindowHandle, Bytes, Int32, Bytes, Int32, Ref[Int64]) -> Int32,
 ) -> Int64 raise NativeError {
   let title_buffer = optional_dialog_text_buffer(title)
   let path_buffer = optional_dialog_text_buffer(path)
@@ -3507,10 +3514,10 @@ pub fn View::id(self : View) -> Int64 {
 /// window's content coordinate space, matching Electron's `setBounds`.
 pub fn View::set_bounds(
   self : View,
-  x~ : Int,
-  y~ : Int,
-  width~ : Int,
-  height~ : Int,
+  x~ : Int32,
+  y~ : Int32,
+  width~ : Int32,
+  height~ : Int32,
 ) -> Unit raise NativeError {
   if width <= 0 || height <= 0 {
     raise invalid_argument("view width and height must be positive")
@@ -3544,7 +3551,10 @@ pub fn View::set_visible(self : View, visible : Bool) -> Unit raise NativeError 
 /// Stacks the view relative to the window's other views; higher `z_order`
 /// renders above lower values, and views always render above the window's
 /// main browser content.
-pub fn View::set_z_order(self : View, z_order : Int) -> Unit raise NativeError {
+pub fn View::set_z_order(
+  self : View,
+  z_order : Int32,
+) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_view_set_z_order_ffi(self.live_handle(), z_order),
   )
@@ -3553,7 +3563,7 @@ pub fn View::set_z_order(self : View, z_order : Int) -> Unit raise NativeError {
 ///|
 pub fn View::set_zoom_percent(
   self : View,
-  zoom_percent : Int,
+  zoom_percent : Int32,
 ) -> Unit raise NativeError {
   if zoom_percent < 25 || zoom_percent > 500 {
     raise invalid_argument("zoom_percent must be between 25 and 500")
@@ -3567,8 +3577,8 @@ pub fn View::set_zoom_percent(
 }
 
 ///|
-pub fn View::zoom_percent(self : View) -> Int raise NativeError {
-  let zoom_percent : Ref[Int] = { val: 100, }
+pub fn View::zoom_percent(self : View) -> Int32 raise NativeError {
+  let zoom_percent : Ref[Int32] = { val: 100, }
   check_status(
     @native_ffi.proton_view_get_zoom_percent_ffi(
       self.live_handle(),
@@ -3597,7 +3607,7 @@ pub fn View::set_audio_muted(
 
 ///|
 pub fn View::is_audio_muted(self : View) -> Bool raise NativeError {
-  let muted : Ref[Int] = { val: 0, }
+  let muted : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_view_is_audio_muted_ffi(self.live_handle(), muted),
   )
@@ -3638,8 +3648,8 @@ pub fn View::state(self : View) -> ViewState raise NativeError {
 ///|
 /// Returns whether this view has backward and forward history.
 pub fn View::navigation_state(self : View) -> (Bool, Bool) raise NativeError {
-  let can_go_back : Ref[Int] = { val: 0, }
-  let can_go_forward : Ref[Int] = { val: 0, }
+  let can_go_back : Ref[Int32] = { val: 0, }
+  let can_go_forward : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_view_get_navigation_state_ffi(
       self.live_handle(),
@@ -3709,7 +3719,7 @@ pub fn View::remove_page_css(
 pub fn View::browser_command(
   self : View,
   command : String,
-  download_id? : Int,
+  download_id? : Int32,
 ) -> Unit raise NativeError {
   check_status(
     @native_ffi.proton_view_browser_command_ffi(
@@ -3723,7 +3733,7 @@ pub fn View::browser_command(
 ///|
 /// Returns whether this view currently owns web-content focus.
 pub fn View::browser_is_focused(self : View) -> Bool raise NativeError {
-  let focused : Ref[Int] = { val: 0, }
+  let focused : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_view_get_browser_focus_state_ffi(
       self.live_handle(),
@@ -3736,7 +3746,7 @@ pub fn View::browser_is_focused(self : View) -> Bool raise NativeError {
 ///|
 /// Returns whether this view currently has an associated DevTools view.
 pub fn View::is_devtools_opened(self : View) -> Bool raise NativeError {
-  let opened : Ref[Int] = { val: 0, }
+  let opened : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_view_get_devtools_state_ffi(self.live_handle(), opened),
   )
@@ -3750,11 +3760,11 @@ pub fn View::find_in_page(
   forward : Bool,
   match_case : Bool,
   find_next : Bool,
-) -> Int raise NativeError {
+) -> Int32 raise NativeError {
   if text.is_empty() {
     raise invalid_argument("find text must not be empty")
   }
-  let request_id : Ref[Int] = { val: 0, }
+  let request_id : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_view_find_in_page_ffi(
       self.live_handle(),
@@ -3801,7 +3811,7 @@ pub fn View::stop_find_in_page(
 /// Sets an optional window-local button position; unsupported styles are no-ops.
 pub fn Window::set_button_position(
   self : Window,
-  position : (Int, Int)?,
+  position : (Int32, Int32)?,
 ) -> Unit raise NativeError {
   check_status(
     @native_ffi.window_set_button_position(
@@ -3815,7 +3825,9 @@ pub fn Window::set_button_position(
 
 ///|
 /// Reads the configured button position, rather than system default geometry.
-pub fn Window::button_position(self : Window) -> (Int, Int)? raise NativeError {
+pub fn Window::button_position(
+  self : Window,
+) -> (Int32, Int32)? raise NativeError {
   let custom = Ref(0)
   let x = Ref(0)
   let y = Ref(0)
@@ -3847,7 +3859,7 @@ pub fn View::browser_state(self : View) -> BrowserState raise NativeError {
       handle, 1, buffer, buffer_len, required,
     )
   })
-  let is_loading : Ref[Int] = { val: 0, }
+  let is_loading : Ref[Int32] = { val: 0, }
   check_status(
     @native_ffi.proton_view_get_browser_loading_ffi(handle, 1, is_loading),
   )

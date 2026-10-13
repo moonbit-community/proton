@@ -1,6 +1,6 @@
 ///|
 struct DoublePayload {
-  value : Int
+  value : Int32
 } derive(ToJson, FromJson)
 
 ///|
@@ -11,8 +11,8 @@ pub extend DoublePayload with FromJson::{from_json}
 
 ///|
 struct DoubleReply {
-  value : Int
-  doubled : Int
+  value : Int32
+  doubled : Int32
   source : String
 } derive(ToJson, FromJson)
 

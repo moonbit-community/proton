@@ -1,6 +1,6 @@
 ///|
 #cfg(platform="windows")
-extern "C" fn registration_failure_test(stage : Int) -> Int = "proton_test_power_registration_failure"
+extern "C" fn registration_failure_test(stage : Int32) -> Int32 = "proton_test_power_registration_failure"
 
 ///|
 #cfg(platform="windows")

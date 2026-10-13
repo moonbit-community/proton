@@ -13,7 +13,7 @@
 /// let command = event_breakpoints_disable_command(id=1, session_id=None)
 /// ```
 pub fn event_breakpoints_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -73,7 +73,7 @@ pub fn EventBreakpointsRemoveInstrumentationBreakpointParams::to_json(
 /// )
 /// ```
 pub fn event_breakpoints_remove_instrumentation_breakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : EventBreakpointsRemoveInstrumentationBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -135,7 +135,7 @@ pub fn EventBreakpointsSetInstrumentationBreakpointParams::to_json(
 /// )
 /// ```
 pub fn event_breakpoints_set_instrumentation_breakpoint_command(
-  id~ : Int,
+  id~ : Int32,
   params : EventBreakpointsSetInstrumentationBreakpointParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

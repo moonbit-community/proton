@@ -1,7 +1,7 @@
 ///|
 /// Failures produced while querying the operating system's language order.
 pub(all) suberror SystemLocaleError {
-  NativeQuery(status~ : Int, detail~ : String)
+  NativeQuery(status~ : Int32, detail~ : String)
 } derive(Debug)
 
 ///|

@@ -52,8 +52,8 @@ pub extend SampleFormat with Show::{to_string, output}
 /// stack, but keeping them in the config makes intent explicit at API
 /// boundaries.
 pub(all) struct CaptureConfig {
-  channels : Int
-  sample_rate_hz : Int
+  channels : Int32
+  sample_rate_hz : Int32
   sample_format : SampleFormat
   echo_cancellation : Bool
   noise_suppression : Bool

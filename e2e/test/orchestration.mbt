@@ -3,7 +3,7 @@ let app_child_scenario_env = "MBT_PROTON_E2E_APP_CHILD"
 
 ///|
 async fn[X] run_e2e_operation_with_timeout(
-  timeout : Int,
+  timeout : Int32,
   description : String,
   operation : async () -> X,
 ) -> X {
@@ -20,7 +20,7 @@ struct SpawnedScenarioApp {
 }
 
 ///|
-async fn choose_frontend_port() -> Int {
+async fn choose_frontend_port() -> Int32 {
   let server = @socket.TcpServer(@socket.Addr::parse("127.0.0.1:0"))
   defer server.close()
   server.addr.port()
@@ -76,7 +76,7 @@ async fn app_process_env(
   root : String,
   output_root : String,
   scenario : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> Map[String, String] {
   let runtime_dist = active_runtime_dist()
   let bin_dir = join_path(runtime_dist, "bin")
@@ -146,7 +146,7 @@ async fn app_process_env(
 ///|
 fn scenario_web_contents_view_events_path(
   output_root : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> String {
   join_path(output_root, "view-events-" + run_id.to_string() + ".txt")
 }
@@ -187,7 +187,7 @@ async fn[X] spawn_scenario_app(
   root : String,
   output_root : String,
   scenario : String,
-  run_id : Int,
+  run_id : Int32,
 ) -> SpawnedScenarioApp {
   let (program, args) = if scenario == "lifecycle:bridge-admission" {
     isolated_app_command("moon", [
@@ -232,7 +232,7 @@ fn scenario_app_command() -> (String, Array[String]) raise {
 async fn install_scenario_helper(
   root : String,
   output_root : String,
-  timeout? : Int,
+  timeout? : Int32,
 ) -> Unit {
   let args = [
     "--target-dir",
@@ -346,10 +346,10 @@ fn app_cancel_handler() -> @process.CancellationHandler {
 }
 
 ///|
-extern "C" fn kill_isolated_unix_app_group(pid : Int) -> Int = "proton_e2e_kill_isolated_process_group"
+extern "C" fn kill_isolated_unix_app_group(pid : Int32) -> Int32 = "proton_e2e_kill_isolated_process_group"
 
 ///|
-async fn terminate_unix_app_tree(pid : Int, signal : String) -> Unit {
+async fn terminate_unix_app_tree(pid : Int32, signal : String) -> Unit {
   ignore(
     @process.run(
       "/bin/sh",
@@ -395,7 +395,7 @@ fn unix_app_tree_kill_script() -> String {
 async fn wait_for_spawned_app_cdp(
   app : SpawnedScenarioApp,
   endpoint : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> String {
   let mut elapsed = 0
   let mut browser_ready = false
@@ -454,7 +454,7 @@ async fn wait_for_spawned_app_cdp(
 }
 
 ///|
-fn app_exit_code(process : @process.Process) -> Int? {
+fn app_exit_code(process : @process.Process) -> Int32? {
   process.try_wait() catch {
     _ => Some(-1)
   }
@@ -483,7 +483,7 @@ fn file_output_suffix(path : String, label : String) -> String {
 }
 
 ///|
-async fn close_browser(target : String, timeout : Int) -> Unit {
+async fn close_browser(target : String, timeout : Int32) -> Unit {
   @async.with_task_group(group => {
     let browser = @client.connect_cdp_browser_target_with_timeout(
       group,
@@ -532,7 +532,7 @@ async fn close_page_target(
 async fn wait_for_page_target_closed(
   browser : @client.CdpClient,
   target_id : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let mut elapsed = 0
   while elapsed <= timeout {
@@ -552,7 +552,7 @@ async fn wait_for_page_target_closed(
 }
 
 ///|
-async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int) -> Unit {
+async fn wait_for_app_exit(app : SpawnedScenarioApp, timeout : Int32) -> Unit {
   let mut elapsed = 0
   while elapsed <= timeout {
     match app_exit_code(app.process) {
@@ -598,7 +598,7 @@ async fn run_scenario_probe_once(
   root : String,
   output_root : String,
   name : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let run_id = next_app_run_id()
   @async.with_task_group(group => {
@@ -697,7 +697,7 @@ async fn run_scenario_probe_once(
 async fn run_scenario_probe(
   root : String,
   name : String,
-  timeout : Int,
+  timeout : Int32,
 ) -> Unit {
   let output_root = @fs.tmpdir(prefix="proton-e2e-")
   defer remove_dev_extension_tree(output_root)
@@ -710,7 +710,7 @@ async fn run_scenario_probe(
 }
 
 ///|
-fn scenario_operation_timeout(name : String, timeout : Int) -> Int {
+fn scenario_operation_timeout(name : String, timeout : Int32) -> Int32 {
   if name == "41_app_commands" {
     // These probes have separate startup and OSR paint waits. Their outer
     // guards must cover more than one phase-sized budget.

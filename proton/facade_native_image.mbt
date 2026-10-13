@@ -28,7 +28,7 @@ pub fn NativeImage::destroy(self : NativeImage) -> Unit raise NativeImageError {
 pub fn NativeImage::add_png(
   self : NativeImage,
   data : Bytes,
-  scale_factor? : Double = 1.0,
+  scale_factor~ : Double = 1.0,
 ) -> Unit raise NativeImageError {
   self.image.add_png(data, scale_factor~) catch {
     error => raise native_image_error("add PNG representation", error)
@@ -40,7 +40,7 @@ pub fn NativeImage::add_png(
 pub fn NativeImage::add_jpeg(
   self : NativeImage,
   data : Bytes,
-  scale_factor? : Double = 1.0,
+  scale_factor~ : Double = 1.0,
 ) -> Unit raise NativeImageError {
   self.image.add_jpeg(data, scale_factor~) catch {
     error => raise native_image_error("add JPEG representation", error)
@@ -52,9 +52,9 @@ pub fn NativeImage::add_jpeg(
 pub fn NativeImage::add_bitmap(
   self : NativeImage,
   data : Bytes,
-  width : Int,
-  height : Int,
-  scale_factor? : Double = 1.0,
+  width : Int32,
+  height : Int32,
+  scale_factor~ : Double = 1.0,
 ) -> Unit raise NativeImageError {
   self.image.add_bitmap(data, width, height, scale_factor~) catch {
     error => raise native_image_error("add bitmap representation", error)
@@ -73,7 +73,7 @@ pub fn NativeImage::is_empty(self : NativeImage) -> Bool raise NativeImageError 
 /// Returns the density-independent image size as `(width, height)`.
 pub fn NativeImage::size(
   self : NativeImage,
-) -> (Int, Int) raise NativeImageError {
+) -> (Int32, Int32) raise NativeImageError {
   self.image.size() catch {
     error => raise native_image_error("read native image size", error)
   }
@@ -83,9 +83,9 @@ pub fn NativeImage::size(
 /// Exports the closest representation as PNG bytes and pixel dimensions.
 pub fn NativeImage::to_png(
   self : NativeImage,
-  scale_factor? : Double = 1.0,
-  with_transparency? : Bool = true,
-) -> (Bytes, Int, Int) raise NativeImageError {
+  scale_factor~ : Double = 1.0,
+  with_transparency~ : Bool = true,
+) -> (Bytes, Int32, Int32) raise NativeImageError {
   self.image.to_png(scale_factor~, with_transparency~) catch {
     error => raise native_image_error("encode native image as PNG", error)
   }
@@ -95,9 +95,9 @@ pub fn NativeImage::to_png(
 /// Exports the closest representation as JPEG bytes and pixel dimensions.
 pub fn NativeImage::to_jpeg(
   self : NativeImage,
-  scale_factor? : Double = 1.0,
-  quality? : Int = 80,
-) -> (Bytes, Int, Int) raise NativeImageError {
+  scale_factor~ : Double = 1.0,
+  quality~ : Int32 = 80,
+) -> (Bytes, Int32, Int32) raise NativeImageError {
   self.image.to_jpeg(scale_factor~, quality~) catch {
     error => raise native_image_error("encode native image as JPEG", error)
   }
@@ -107,8 +107,8 @@ pub fn NativeImage::to_jpeg(
 /// Exports the closest representation as raw 32-bit RGBA bytes.
 pub fn NativeImage::to_bitmap(
   self : NativeImage,
-  scale_factor? : Double = 1.0,
-) -> (Bytes, Int, Int) raise NativeImageError {
+  scale_factor~ : Double = 1.0,
+) -> (Bytes, Int32, Int32) raise NativeImageError {
   self.image.to_bitmap(scale_factor~) catch {
     error => raise native_image_error("export native image bitmap", error)
   }

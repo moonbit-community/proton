@@ -13,7 +13,7 @@ let seconds_per_day = 86400L
 /// read inside it would make the whole sequence depend on when the test ran.
 /// Here the clock is read once and the result is data.
 pub fn oldest_accepted(
-  freshness_days : Int,
+  freshness_days : Int32,
 ) -> @manifest.Timestamp raise UpdateError {
   oldest_accepted_at(@env.now(), freshness_days)
 }
@@ -22,7 +22,7 @@ pub fn oldest_accepted(
 /// The same, from a clock reading supplied by the caller.
 fn oldest_accepted_at(
   now_ms : UInt64,
-  freshness_days : Int,
+  freshness_days : Int32,
 ) -> @manifest.Timestamp raise UpdateError {
   guard freshness_days > 0 else {
     raise ClockUnusable(
@@ -69,7 +69,7 @@ fn timestamp_of_unix_second(
 /// than emit a shorter or longer field — which would break the lexicographic
 /// ordering the whole timestamp design rests on — it returns something the
 /// parser rejects, and the caller reports an unusable clock.
-fn pad(value : Int, width : Int) -> String {
+fn pad(value : Int32, width : Int32) -> String {
   let digits = value.to_string()
   if digits.length() > width {
     return digits

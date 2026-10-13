@@ -73,7 +73,7 @@ pub extend TrayEvent with Debug::{to_repr}
 pub fn TrayMenuItem::normal(
   id~ : String,
   label~ : String,
-  enabled? : Bool = true,
+  enabled~ : Bool = true,
 ) -> TrayMenuItem {
   Normal(id~, label~, enabled~)
 }
@@ -89,8 +89,8 @@ pub fn TrayMenuItem::separator() -> TrayMenuItem {
 pub fn TrayMenuItem::checkbox(
   id~ : String,
   label~ : String,
-  checked? : Bool = false,
-  enabled? : Bool = true,
+  checked~ : Bool = false,
+  enabled~ : Bool = true,
 ) -> TrayMenuItem {
   Checkbox(id~, label~, checked~, enabled~)
 }
@@ -100,7 +100,7 @@ pub fn TrayMenuItem::checkbox(
 pub fn TrayMenuItem::submenu(
   label~ : String,
   items~ : Array[TrayMenuItem],
-  enabled? : Bool = true,
+  enabled~ : Bool = true,
 ) -> TrayMenuItem {
   Submenu(label~, items~, enabled~)
 }
@@ -207,9 +207,9 @@ pub fn ensure_supported() -> Result[Unit, String] {
 /// tray.destroy()
 /// ```
 pub fn create(
-  identifier? : String = default_identifier(),
-  icon? : String? = None,
-  tooltip? : String = "",
+  identifier~ : String = default_identifier(),
+  icon~ : String? = None,
+  tooltip~ : String = "",
 ) -> Result[Tray, String] {
   match ensure_supported() {
     Err(error) => Err(error)
@@ -310,7 +310,7 @@ pub fn Tray::menu_items(self : Tray) -> Array[TrayMenuItem] {
 /// or if the native backend rejects the operation, this returns `Err(message)`.
 pub fn Tray::show(
   self : Tray,
-  tooltip? : String? = None,
+  tooltip~ : String? = None,
 ) -> Result[Bool, String] {
   match self.ensure_alive() {
     Err(error) => Err(error)
@@ -510,7 +510,7 @@ pub fn Tray::set_event_wakeup(self : Tray, wakeup : @ffi.EventWakeup) -> Unit {
 /// and calls on destroyed trays return `Err(message)`.
 pub fn Tray::pump(
   self : Tray,
-  blocking? : Bool = false,
+  blocking~ : Bool = false,
 ) -> Result[Bool, String] {
   match self.ensure_alive() {
     Err(error) => Err(error)
@@ -567,19 +567,19 @@ fn validate_menu(items : Array[TrayMenuItem]) -> Result[Unit, String] {
 
 ///|
 /// Maximum submenu depth accepted by the native transaction builder.
-fn max_menu_depth() -> Int {
+fn max_menu_depth() -> Int32 {
   8
 }
 
 ///|
 /// Maximum UTF-8 bytes accepted for a clickable item id.
-fn max_menu_item_id_bytes() -> Int {
+fn max_menu_item_id_bytes() -> Int32 {
   128
 }
 
 ///|
 /// Maximum clickable menu items addressable by native command ids.
-fn max_menu_clickable_items() -> Int {
+fn max_menu_clickable_items() -> Int32 {
   64
 }
 
@@ -588,7 +588,7 @@ fn max_menu_clickable_items() -> Int {
 fn validate_menu_items(
   items : Array[TrayMenuItem],
   seen_ids : Array[String],
-  depth~ : Int,
+  depth~ : Int32,
 ) -> Result[Unit, String] {
   if depth > max_menu_depth() {
     return Err("tray menu submenu depth exceeds 8")
@@ -769,7 +769,7 @@ fn append_menu_items(handle : Int64, items : Array[TrayMenuItem]) -> Bool {
 
 ///|
 /// Converts a MoonBit boolean to the C ABI integer convention.
-fn bool_to_int(value : Bool) -> Int {
+fn bool_to_int(value : Bool) -> Int32 {
   if value {
     1
   } else {

@@ -10,9 +10,9 @@
 /// precedes `1.0.0`, and `-rc.10` follows `-rc.2` — and a rule that is subtle
 /// in a comparison this important is better left out than approximated.
 pub struct Version {
-  major : Int
-  minor : Int
-  patch : Int
+  major : Int32
+  minor : Int32
+  patch : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -38,7 +38,7 @@ pub impl Show for Version with fn output(self, logger) {
 pub fn Version::parse(text : String) -> Version? {
   let parts = text.split(".").collect()
   guard parts.length() == 3 else { return None }
-  let values : Array[Int] = []
+  let values : Array[Int32] = []
   for part in parts {
     match parse_component(part.to_owned()) {
       None => return None
@@ -49,7 +49,7 @@ pub fn Version::parse(text : String) -> Version? {
 }
 
 ///|
-fn parse_component(text : String) -> Int? {
+fn parse_component(text : String) -> Int32? {
   let digits = text.to_array()
   guard digits.length() > 0 else { return None }
   guard digits.length() == 1 || digits[0] != '0' else { return None }

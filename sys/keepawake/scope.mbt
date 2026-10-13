@@ -60,7 +60,7 @@ pub impl Show for Scope with fn output(self : Scope, logger) {
 
 ///|
 /// Converts a public scope into the compact code used by the C backend.
-fn Scope::native_code(self : Scope) -> Int {
+fn Scope::native_code(self : Scope) -> Int32 {
   match self {
     PreventSystemSleep => 1
     PreventDisplaySleep => 2
@@ -70,7 +70,7 @@ fn Scope::native_code(self : Scope) -> Int {
 
 ///|
 /// Converts a native scope code back into the public enum.
-fn scope_from_native_code(code : Int) -> Scope {
+fn scope_from_native_code(code : Int32) -> Scope {
   match code {
     2 => Scope::PreventDisplaySleep
     3 => Scope::PreventSystemAndDisplaySleep

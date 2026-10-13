@@ -9,7 +9,7 @@ pub extend HoldRequest with FromJson::{from_json}
 
 ///|
 struct HoldResult {
-  pid : Int
+  pid : Int32
 } derive(ToJson, FromJson)
 
 ///|

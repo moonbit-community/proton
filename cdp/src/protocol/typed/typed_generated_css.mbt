@@ -2388,7 +2388,7 @@ pub fn CSSPseudoElementMatches::from_json(
 /// gives a referenced type name.
 pub(all) struct CSSRuleMatch {
   rule : CSSCSSRule
-  matching_selectors : Array[Int]
+  matching_selectors : Array[Int32]
 } derive(Eq, Debug)
 
 ///|
@@ -2600,10 +2600,10 @@ pub fn CSSShorthandEntry::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct CSSSourceRange {
-  start_line : Int
-  start_column : Int
-  end_line : Int
-  end_column : Int
+  start_line : Int32
+  start_column : Int32
+  end_line : Int32
+  end_column : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -2653,9 +2653,9 @@ pub fn CSSSourceRange::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct CSSSpecificity {
-  a : Int
-  b : Int
-  c : Int
+  a : Int32
+  b : Int32
+  c : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -2932,7 +2932,7 @@ pub fn CSSAddRuleResult::from_json(
 /// let command = css_add_rule_command(id=1, params, session_id=None)
 /// ```
 pub fn css_add_rule_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSAddRuleParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3037,7 +3037,7 @@ pub fn CSSCollectClassNamesResult::from_json(
 /// let command = css_collect_class_names_command(id=1, params, session_id=None)
 /// ```
 pub fn css_collect_class_names_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSCollectClassNamesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3139,7 +3139,7 @@ pub fn CSSCreateStyleSheetResult::from_json(
 /// let command = css_create_style_sheet_command(id=1, params, session_id=None)
 /// ```
 pub fn css_create_style_sheet_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSCreateStyleSheetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3163,7 +3163,7 @@ pub fn css_create_style_sheet_command(
 /// let command = css_disable_command(id=1, session_id=None)
 /// ```
 pub fn css_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="CSS.disable", session_id?)
@@ -3181,7 +3181,7 @@ pub fn css_disable_command(
 /// let command = css_enable_command(id=1, session_id=None)
 /// ```
 pub fn css_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="CSS.enable", session_id?)
@@ -3234,7 +3234,7 @@ pub fn CSSForcePseudoStateParams::to_json(
 /// let command = css_force_pseudo_state_command(id=1, params, session_id=None)
 /// ```
 pub fn css_force_pseudo_state_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSForcePseudoStateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3291,7 +3291,7 @@ pub fn CSSForceStartingStyleParams::to_json(
 /// let command = css_force_starting_style_command(id=1, params, session_id=None)
 /// ```
 pub fn css_force_starting_style_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSForceStartingStyleParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3416,7 +3416,7 @@ pub fn CSSGetAnimatedStylesForNodeResult::from_json(
 /// )
 /// ```
 pub fn css_get_animated_styles_for_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetAnimatedStylesForNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3533,7 +3533,7 @@ pub fn CSSGetBackgroundColorsResult::from_json(
 /// let command = css_get_background_colors_command(id=1, params, session_id=None)
 /// ```
 pub fn css_get_background_colors_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetBackgroundColorsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3642,7 +3642,7 @@ pub fn CSSGetComputedStyleForNodeResult::from_json(
 /// )
 /// ```
 pub fn css_get_computed_style_for_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetComputedStyleForNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3709,7 +3709,7 @@ pub fn CSSGetEnvironmentVariablesResult::from_json(
 /// let command = css_get_environment_variables_command(id=1, session_id=None)
 /// ```
 pub fn css_get_environment_variables_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -3816,7 +3816,7 @@ pub fn CSSGetInlineStylesForNodeResult::from_json(
 /// )
 /// ```
 pub fn css_get_inline_styles_for_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetInlineStylesForNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3914,7 +3914,7 @@ pub fn CSSGetLayersForNodeResult::from_json(
 /// let command = css_get_layers_for_node_command(id=1, params, session_id=None)
 /// ```
 pub fn css_get_layers_for_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetLayersForNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4021,7 +4021,7 @@ pub fn CSSGetLocationForSelectorResult::from_json(
 /// )
 /// ```
 pub fn css_get_location_for_selector_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetLocationForSelectorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4124,7 +4124,7 @@ pub fn CSSGetLonghandPropertiesResult::from_json(
 /// let command = css_get_longhand_properties_command(id=1, params, session_id=None)
 /// ```
 pub fn css_get_longhand_properties_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetLonghandPropertiesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4182,7 +4182,7 @@ pub(all) struct CSSGetMatchedStylesForNodeResult {
   inherited_pseudo_elements : Array[CSSInheritedPseudoElementMatches]?
   css_keyframes_rules : Array[CSSCSSKeyframesRule]?
   css_position_try_rules : Array[CSSCSSPositionTryRule]?
-  active_position_fallback_index : Int?
+  active_position_fallback_index : Int32?
   css_property_rules : Array[CSSCSSPropertyRule]?
   css_property_registrations : Array[CSSCSSPropertyRegistration]?
   css_at_rules : Array[CSSCSSAtRule]?
@@ -4351,7 +4351,7 @@ pub fn CSSGetMatchedStylesForNodeResult::from_json(
 /// )
 /// ```
 pub fn css_get_matched_styles_for_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetMatchedStylesForNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4421,7 +4421,7 @@ pub fn CSSGetMediaQueriesResult::from_json(
 /// let command = css_get_media_queries_command(id=1, session_id=None)
 /// ```
 pub fn css_get_media_queries_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -4524,7 +4524,7 @@ pub fn CSSGetPlatformFontsForNodeResult::from_json(
 /// )
 /// ```
 pub fn css_get_platform_fonts_for_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetPlatformFontsForNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4618,7 +4618,7 @@ pub fn CSSGetStyleSheetTextResult::from_json(
 /// let command = css_get_style_sheet_text_command(id=1, params, session_id=None)
 /// ```
 pub fn css_get_style_sheet_text_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSGetStyleSheetTextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4729,7 +4729,7 @@ pub fn CSSResolveValuesResult::from_json(
 /// let command = css_resolve_values_command(id=1, params, session_id=None)
 /// ```
 pub fn css_resolve_values_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSResolveValuesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4835,7 +4835,7 @@ pub fn CSSSetContainerQueryTextResult::from_json(
 /// )
 /// ```
 pub fn css_set_container_query_text_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetContainerQueryTextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4898,7 +4898,7 @@ pub fn CSSSetEffectivePropertyValueForNodeParams::to_json(
 /// )
 /// ```
 pub fn css_set_effective_property_value_for_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetEffectivePropertyValueForNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4994,7 +4994,7 @@ pub fn CSSSetKeyframeKeyResult::from_json(
 /// let command = css_set_keyframe_key_command(id=1, params, session_id=None)
 /// ```
 pub fn css_set_keyframe_key_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetKeyframeKeyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5049,7 +5049,7 @@ pub fn CSSSetLocalFontsEnabledParams::to_json(
 /// let command = css_set_local_fonts_enabled_command(id=1, params, session_id=None)
 /// ```
 pub fn css_set_local_fonts_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetLocalFontsEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5145,7 +5145,7 @@ pub fn CSSSetMediaTextResult::from_json(
 /// let command = css_set_media_text_command(id=1, params, session_id=None)
 /// ```
 pub fn css_set_media_text_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetMediaTextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5251,7 +5251,7 @@ pub fn CSSSetPropertyRulePropertyNameResult::from_json(
 /// )
 /// ```
 pub fn css_set_property_rule_property_name_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetPropertyRulePropertyNameParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5353,7 +5353,7 @@ pub fn CSSSetRuleSelectorResult::from_json(
 /// let command = css_set_rule_selector_command(id=1, params, session_id=None)
 /// ```
 pub fn css_set_rule_selector_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetRuleSelectorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5449,7 +5449,7 @@ pub fn CSSSetScopeTextResult::from_json(
 /// let command = css_set_scope_text_command(id=1, params, session_id=None)
 /// ```
 pub fn css_set_scope_text_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetScopeTextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5549,7 +5549,7 @@ pub fn CSSSetStyleSheetTextResult::from_json(
 /// let command = css_set_style_sheet_text_command(id=1, params, session_id=None)
 /// ```
 pub fn css_set_style_sheet_text_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetStyleSheetTextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5648,7 +5648,7 @@ pub fn CSSSetStyleTextsResult::from_json(
 /// let command = css_set_style_texts_command(id=1, params, session_id=None)
 /// ```
 pub fn css_set_style_texts_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetStyleTextsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5750,7 +5750,7 @@ pub fn CSSSetSupportsTextResult::from_json(
 /// let command = css_set_supports_text_command(id=1, params, session_id=None)
 /// ```
 pub fn css_set_supports_text_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSSetSupportsTextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -5774,7 +5774,7 @@ pub fn css_set_supports_text_command(
 /// let command = css_start_rule_usage_tracking_command(id=1, session_id=None)
 /// ```
 pub fn css_start_rule_usage_tracking_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5842,7 +5842,7 @@ pub fn CSSStopRuleUsageTrackingResult::from_json(
 /// let command = css_stop_rule_usage_tracking_command(id=1, session_id=None)
 /// ```
 pub fn css_stop_rule_usage_tracking_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5910,7 +5910,7 @@ pub fn CSSTakeComputedStyleUpdatesResult::from_json(
 /// let command = css_take_computed_style_updates_command(id=1, session_id=None)
 /// ```
 pub fn css_take_computed_style_updates_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -5982,7 +5982,7 @@ pub fn CSSTakeCoverageDeltaResult::from_json(
 /// let command = css_take_coverage_delta_command(id=1, session_id=None)
 /// ```
 pub fn css_take_coverage_delta_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -6041,7 +6041,7 @@ pub fn CSSTrackComputedStyleUpdatesParams::to_json(
 /// )
 /// ```
 pub fn css_track_computed_style_updates_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSTrackComputedStyleUpdatesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -6102,7 +6102,7 @@ pub fn CSSTrackComputedStyleUpdatesForNodeParams::to_json(
 /// )
 /// ```
 pub fn css_track_computed_style_updates_for_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : CSSTrackComputedStyleUpdatesForNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

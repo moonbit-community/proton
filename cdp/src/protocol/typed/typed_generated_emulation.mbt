@@ -93,8 +93,8 @@ pub fn EmulationDisabledImageType::from_json(
 /// gives a referenced type name.
 pub(all) struct EmulationDisplayFeature {
   orientation : String
-  offset : Int
-  mask_length : Int
+  offset : Int32
+  mask_length : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -317,14 +317,14 @@ pub fn EmulationPressureState::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct EmulationSafeAreaInsets {
-  top : Int?
-  top_max : Int?
-  left : Int?
-  left_max : Int?
-  bottom : Int?
-  bottom_max : Int?
-  right : Int?
-  right_max : Int?
+  top : Int32?
+  top_max : Int32?
+  left : Int32?
+  left_max : Int32?
+  bottom : Int32?
+  bottom_max : Int32?
+  right : Int32?
+  right_max : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -436,17 +436,17 @@ pub fn EmulationScreenId::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct EmulationScreenInfo {
-  left : Int
-  top : Int
-  width : Int
-  height : Int
-  avail_left : Int
-  avail_top : Int
-  avail_width : Int
-  avail_height : Int
+  left : Int32
+  top : Int32
+  width : Int32
+  height : Int32
+  avail_left : Int32
+  avail_top : Int32
+  avail_width : Int32
+  avail_height : Int32
   device_pixel_ratio : Double
   orientation : EmulationScreenOrientation
-  color_depth : Int
+  color_depth : Int32
   is_extended : Bool
   is_internal : Bool
   is_primary : Bool
@@ -540,7 +540,7 @@ pub fn EmulationScreenInfo::from_json(
 /// gives a referenced type name.
 pub(all) struct EmulationScreenOrientation {
   type_ : String
-  angle : Int
+  angle : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -1114,10 +1114,10 @@ pub fn EmulationVirtualTimePolicy::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct EmulationWorkAreaInsets {
-  top : Int?
-  left : Int?
-  bottom : Int?
-  right : Int?
+  top : Int32?
+  left : Int32?
+  bottom : Int32?
+  right : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -1173,14 +1173,14 @@ pub fn EmulationWorkAreaInsets::from_json(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct EmulationAddScreenParams {
-  left : Int
-  top : Int
-  width : Int
-  height : Int
+  left : Int32
+  top : Int32
+  width : Int32
+  height : Int32
   work_area_insets : EmulationWorkAreaInsets?
   device_pixel_ratio : Double?
-  rotation : Int?
-  color_depth : Int?
+  rotation : Int32?
+  color_depth : Int32?
   label : String?
   is_internal : Bool?
 } derive(Eq, Debug)
@@ -1282,7 +1282,7 @@ pub fn EmulationAddScreenResult::from_json(
 /// let command = emulation_add_screen_command(id=1, params, session_id=None)
 /// ```
 pub fn emulation_add_screen_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationAddScreenParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1347,7 +1347,7 @@ pub fn EmulationCanEmulateResult::from_json(
 /// let command = emulation_can_emulate_command(id=1, session_id=None)
 /// ```
 pub fn emulation_can_emulate_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1372,7 +1372,7 @@ pub fn emulation_can_emulate_command(
 /// )
 /// ```
 pub fn emulation_clear_device_metrics_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1397,7 +1397,7 @@ pub fn emulation_clear_device_metrics_override_command(
 /// )
 /// ```
 pub fn emulation_clear_device_posture_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1422,7 +1422,7 @@ pub fn emulation_clear_device_posture_override_command(
 /// )
 /// ```
 pub fn emulation_clear_display_features_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1447,7 +1447,7 @@ pub fn emulation_clear_display_features_override_command(
 /// )
 /// ```
 pub fn emulation_clear_geolocation_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1469,7 +1469,7 @@ pub fn emulation_clear_geolocation_override_command(
 /// let command = emulation_clear_idle_override_command(id=1, session_id=None)
 /// ```
 pub fn emulation_clear_idle_override_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1575,7 +1575,7 @@ pub fn EmulationGetOverriddenSensorInformationResult::from_json(
 /// )
 /// ```
 pub fn emulation_get_overridden_sensor_information_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationGetOverriddenSensorInformationParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1645,7 +1645,7 @@ pub fn EmulationGetScreenInfosResult::from_json(
 /// let command = emulation_get_screen_infos_command(id=1, session_id=None)
 /// ```
 pub fn emulation_get_screen_infos_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1698,7 +1698,7 @@ pub fn EmulationRemoveScreenParams::to_json(
 /// let command = emulation_remove_screen_command(id=1, params, session_id=None)
 /// ```
 pub fn emulation_remove_screen_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationRemoveScreenParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1722,7 +1722,7 @@ pub fn emulation_remove_screen_command(
 /// let command = emulation_reset_page_scale_factor_command(id=1, session_id=None)
 /// ```
 pub fn emulation_reset_page_scale_factor_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1781,7 +1781,7 @@ pub fn EmulationSetAutoDarkModeOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_auto_dark_mode_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetAutoDarkModeOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1840,7 +1840,7 @@ pub fn EmulationSetAutomationOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_automation_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetAutomationOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1899,7 +1899,7 @@ pub fn EmulationSetCPUThrottlingRateParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_cputhrottling_rate_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetCPUThrottlingRateParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1960,7 +1960,7 @@ pub fn EmulationSetDataSaverOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_data_saver_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetDataSaverOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2024,7 +2024,7 @@ pub fn EmulationSetDefaultBackgroundColorOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_default_background_color_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetDefaultBackgroundColorOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2043,15 +2043,15 @@ pub fn emulation_set_default_background_color_override_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct EmulationSetDeviceMetricsOverrideParams {
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
   device_scale_factor : Double
   mobile : Bool
   scale : Double?
-  screen_width : Int?
-  screen_height : Int?
-  position_x : Int?
-  position_y : Int?
+  screen_width : Int32?
+  screen_height : Int32?
+  position_x : Int32?
+  position_y : Int32?
   dont_set_visible_size : Bool?
   screen_orientation : EmulationScreenOrientation?
   viewport : PageViewport?
@@ -2133,7 +2133,7 @@ pub fn EmulationSetDeviceMetricsOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_device_metrics_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetDeviceMetricsOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2192,7 +2192,7 @@ pub fn EmulationSetDevicePostureOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_device_posture_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetDevicePostureOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2253,7 +2253,7 @@ pub fn EmulationSetDisabledImageTypesParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_disabled_image_types_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetDisabledImageTypesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2312,7 +2312,7 @@ pub fn EmulationSetDisplayFeaturesOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_display_features_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetDisplayFeaturesOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2371,7 +2371,7 @@ pub fn EmulationSetDocumentCookieDisabledParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_document_cookie_disabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetDocumentCookieDisabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2434,7 +2434,7 @@ pub fn EmulationSetEmitTouchEventsForMouseParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_emit_touch_events_for_mouse_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetEmitTouchEventsForMouseParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2499,7 +2499,7 @@ pub fn EmulationSetEmulatedMediaParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_emulated_media_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetEmulatedMediaParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2560,7 +2560,7 @@ pub fn EmulationSetEmulatedOSTextScaleParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_emulated_ostext_scale_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetEmulatedOSTextScaleParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2622,7 +2622,7 @@ pub fn EmulationSetEmulatedVisionDeficiencyParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_emulated_vision_deficiency_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetEmulatedVisionDeficiencyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2681,7 +2681,7 @@ pub fn EmulationSetFocusEmulationEnabledParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_focus_emulation_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetFocusEmulationEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2766,7 +2766,7 @@ pub fn EmulationSetGeolocationOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_geolocation_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetGeolocationOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2785,7 +2785,7 @@ pub fn emulation_set_geolocation_override_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct EmulationSetHardwareConcurrencyOverrideParams {
-  hardware_concurrency : Int
+  hardware_concurrency : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -2830,7 +2830,7 @@ pub fn EmulationSetHardwareConcurrencyOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_hardware_concurrency_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetHardwareConcurrencyOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2887,7 +2887,7 @@ pub fn EmulationSetIdleOverrideParams::to_json(
 /// let command = emulation_set_idle_override_command(id=1, params, session_id=None)
 /// ```
 pub fn emulation_set_idle_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetIdleOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2948,7 +2948,7 @@ pub fn EmulationSetLocaleOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_locale_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetLocaleOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3007,7 +3007,7 @@ pub fn EmulationSetNavigatorOverridesParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_navigator_overrides_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetNavigatorOverridesParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3066,7 +3066,7 @@ pub fn EmulationSetPageScaleFactorParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_page_scale_factor_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetPageScaleFactorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3131,7 +3131,7 @@ pub fn EmulationSetPressureDataOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_pressure_data_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetPressureDataOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3199,7 +3199,7 @@ pub fn EmulationSetPressureSourceOverrideEnabledParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_pressure_source_override_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetPressureSourceOverrideEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3260,7 +3260,7 @@ pub fn EmulationSetPressureStateOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_pressure_state_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetPressureStateOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3319,7 +3319,7 @@ pub fn EmulationSetPrimaryScreenParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_primary_screen_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetPrimaryScreenParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3378,7 +3378,7 @@ pub fn EmulationSetSafeAreaInsetsOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_safe_area_insets_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetSafeAreaInsetsOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3437,7 +3437,7 @@ pub fn EmulationSetScriptExecutionDisabledParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_script_execution_disabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetScriptExecutionDisabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3496,7 +3496,7 @@ pub fn EmulationSetScrollbarsHiddenParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_scrollbars_hidden_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetScrollbarsHiddenParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3561,7 +3561,7 @@ pub fn EmulationSetSensorOverrideEnabledParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_sensor_override_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetSensorOverrideEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3622,7 +3622,7 @@ pub fn EmulationSetSensorOverrideReadingsParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_sensor_override_readings_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetSensorOverrideReadingsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3641,7 +3641,7 @@ pub fn emulation_set_sensor_override_readings_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct EmulationSetSmallViewportHeightDifferenceOverrideParams {
-  difference : Int
+  difference : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -3684,7 +3684,7 @@ pub fn EmulationSetSmallViewportHeightDifferenceOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_small_viewport_height_difference_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetSmallViewportHeightDifferenceOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3743,7 +3743,7 @@ pub fn EmulationSetTimezoneOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_timezone_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetTimezoneOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3763,7 +3763,7 @@ pub fn emulation_set_timezone_override_command(
 /// gives a referenced type name.
 pub(all) struct EmulationSetTouchEmulationEnabledParams {
   enabled : Bool
-  max_touch_points : Int?
+  max_touch_points : Int32?
 } derive(Eq, Debug)
 
 ///|
@@ -3806,7 +3806,7 @@ pub fn EmulationSetTouchEmulationEnabledParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_touch_emulation_enabled_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetTouchEmulationEnabledParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3877,7 +3877,7 @@ pub fn EmulationSetUserAgentOverrideParams::to_json(
 /// )
 /// ```
 pub fn emulation_set_user_agent_override_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetUserAgentOverrideParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3898,7 +3898,7 @@ pub fn emulation_set_user_agent_override_command(
 pub(all) struct EmulationSetVirtualTimePolicyParams {
   policy : EmulationVirtualTimePolicy
   budget : Double?
-  max_virtual_time_task_starvation_count : Int?
+  max_virtual_time_task_starvation_count : Int32?
   initial_virtual_time : NetworkTimeSinceEpoch?
 } derive(Eq, Debug)
 
@@ -3993,7 +3993,7 @@ pub fn EmulationSetVirtualTimePolicyResult::from_json(
 /// )
 /// ```
 pub fn emulation_set_virtual_time_policy_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetVirtualTimePolicyParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -4012,8 +4012,8 @@ pub fn emulation_set_virtual_time_policy_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct EmulationSetVisibleSizeParams {
-  width : Int
-  height : Int
+  width : Int32
+  height : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -4050,7 +4050,7 @@ pub fn EmulationSetVisibleSizeParams::to_json(
 /// let command = emulation_set_visible_size_command(id=1, params, session_id=None)
 /// ```
 pub fn emulation_set_visible_size_command(
-  id~ : Int,
+  id~ : Int32,
   params : EmulationSetVisibleSizeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

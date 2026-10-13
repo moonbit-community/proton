@@ -1505,7 +1505,7 @@ pub fn OverlayWindowControlsOverlayConfig::from_json(
 /// let command = overlay_disable_command(id=1, session_id=None)
 /// ```
 pub fn overlay_disable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Overlay.disable", session_id?)
@@ -1523,7 +1523,7 @@ pub fn overlay_disable_command(
 /// let command = overlay_enable_command(id=1, session_id=None)
 /// ```
 pub fn overlay_enable_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(id~, method_name="Overlay.enable", session_id?)
@@ -1621,7 +1621,7 @@ pub fn OverlayGetGridHighlightObjectsForTestResult::from_json(
 /// )
 /// ```
 pub fn overlay_get_grid_highlight_objects_for_test_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlayGetGridHighlightObjectsForTestParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1735,7 +1735,7 @@ pub fn OverlayGetHighlightObjectForTestResult::from_json(
 /// )
 /// ```
 pub fn overlay_get_highlight_object_for_test_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlayGetHighlightObjectForTestParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1839,7 +1839,7 @@ pub fn OverlayGetSourceOrderHighlightObjectForTestResult::from_json(
 /// )
 /// ```
 pub fn overlay_get_source_order_highlight_object_for_test_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlayGetSourceOrderHighlightObjectForTestParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1863,7 +1863,7 @@ pub fn overlay_get_source_order_highlight_object_for_test_command(
 /// let command = overlay_hide_highlight_command(id=1, session_id=None)
 /// ```
 pub fn overlay_hide_highlight_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1924,7 +1924,7 @@ pub fn OverlayHighlightFrameParams::to_json(
 /// let command = overlay_highlight_frame_command(id=1, params, session_id=None)
 /// ```
 pub fn overlay_highlight_frame_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlayHighlightFrameParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1995,7 +1995,7 @@ pub fn OverlayHighlightNodeParams::to_json(
 /// let command = overlay_highlight_node_command(id=1, params, session_id=None)
 /// ```
 pub fn overlay_highlight_node_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlayHighlightNodeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2058,7 +2058,7 @@ pub fn OverlayHighlightQuadParams::to_json(
 /// let command = overlay_highlight_quad_command(id=1, params, session_id=None)
 /// ```
 pub fn overlay_highlight_quad_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlayHighlightQuadParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2077,10 +2077,10 @@ pub fn overlay_highlight_quad_command(
 /// are represented with `?`; nested generated types are used when the protocol
 /// gives a referenced type name.
 pub(all) struct OverlayHighlightRectParams {
-  x : Int
-  y : Int
-  width : Int
-  height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
   color : DOMRGBA?
   outline_color : DOMRGBA?
 } derive(Eq, Debug)
@@ -2127,7 +2127,7 @@ pub fn OverlayHighlightRectParams::to_json(
 /// let command = overlay_highlight_rect_command(id=1, params, session_id=None)
 /// ```
 pub fn overlay_highlight_rect_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlayHighlightRectParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2198,7 +2198,7 @@ pub fn OverlayHighlightSourceOrderParams::to_json(
 /// )
 /// ```
 pub fn overlay_highlight_source_order_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlayHighlightSourceOrderParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2257,7 +2257,7 @@ pub fn OverlaySetInspectModeParams::to_json(
 /// let command = overlay_set_inspect_mode_command(id=1, params, session_id=None)
 /// ```
 pub fn overlay_set_inspect_mode_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetInspectModeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2318,7 +2318,7 @@ pub fn OverlaySetPausedInDebuggerMessageParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_paused_in_debugger_message_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetPausedInDebuggerMessageParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2377,7 +2377,7 @@ pub fn OverlaySetShowAdHighlightsParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_ad_highlights_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowAdHighlightsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2443,7 +2443,7 @@ pub fn OverlaySetShowContainerQueryOverlaysParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_container_query_overlays_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowContainerQueryOverlaysParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2502,7 +2502,7 @@ pub fn OverlaySetShowDebugBordersParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_debug_borders_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowDebugBordersParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2563,7 +2563,7 @@ pub fn OverlaySetShowFlexOverlaysParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_flex_overlays_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowFlexOverlaysParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2618,7 +2618,7 @@ pub fn OverlaySetShowFPSCounterParams::to_json(
 /// let command = overlay_set_show_fpscounter_command(id=1, params, session_id=None)
 /// ```
 pub fn overlay_set_show_fpscounter_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowFPSCounterParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2679,7 +2679,7 @@ pub fn OverlaySetShowGridOverlaysParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_grid_overlays_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowGridOverlaysParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2736,7 +2736,7 @@ pub fn OverlaySetShowHingeParams::to_json(
 /// let command = overlay_set_show_hinge_command(id=1, params, session_id=None)
 /// ```
 pub fn overlay_set_show_hinge_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowHingeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2795,7 +2795,7 @@ pub fn OverlaySetShowHitTestBordersParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_hit_test_borders_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowHitTestBordersParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2857,7 +2857,7 @@ pub fn OverlaySetShowInspectedElementAnchorParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_inspected_element_anchor_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowInspectedElementAnchorParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2920,7 +2920,7 @@ pub fn OverlaySetShowIsolatedElementsParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_isolated_elements_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowIsolatedElementsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2979,7 +2979,7 @@ pub fn OverlaySetShowLayoutShiftRegionsParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_layout_shift_regions_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowLayoutShiftRegionsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3038,7 +3038,7 @@ pub fn OverlaySetShowPaintRectsParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_paint_rects_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowPaintRectsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3097,7 +3097,7 @@ pub fn OverlaySetShowScrollBottleneckRectsParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_scroll_bottleneck_rects_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowScrollBottleneckRectsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3158,7 +3158,7 @@ pub fn OverlaySetShowScrollSnapOverlaysParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_scroll_snap_overlays_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowScrollSnapOverlaysParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3217,7 +3217,7 @@ pub fn OverlaySetShowViewportSizeOnResizeParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_viewport_size_on_resize_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowViewportSizeOnResizeParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3272,7 +3272,7 @@ pub fn OverlaySetShowWebVitalsParams::to_json(
 /// let command = overlay_set_show_web_vitals_command(id=1, params, session_id=None)
 /// ```
 pub fn overlay_set_show_web_vitals_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowWebVitalsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -3333,7 +3333,7 @@ pub fn OverlaySetShowWindowControlsOverlayParams::to_json(
 /// )
 /// ```
 pub fn overlay_set_show_window_controls_overlay_command(
-  id~ : Int,
+  id~ : Int32,
   params : OverlaySetShowWindowControlsOverlayParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {

@@ -12,18 +12,18 @@ pub extend CenterRequest with FromJson::{from_json}
 ///|
 struct CenterReply {
   applied : Bool
-  x : Int
-  y : Int
-  width : Int
-  height : Int
-  monitor_x : Int
-  monitor_y : Int
-  monitor_width : Int
-  monitor_height : Int
-  work_x : Int
-  work_y : Int
-  work_width : Int
-  work_height : Int
+  x : Int32
+  y : Int32
+  width : Int32
+  height : Int32
+  monitor_x : Int32
+  monitor_y : Int32
+  monitor_width : Int32
+  monitor_height : Int32
+  work_x : Int32
+  work_y : Int32
+  work_width : Int32
+  work_height : Int32
   message : String
 } derive(ToJson, FromJson)
 

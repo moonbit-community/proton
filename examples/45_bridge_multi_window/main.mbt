@@ -1,7 +1,7 @@
 ///|
 struct IdentifyPayload {
   label : String
-  delay_ms : Int?
+  delay_ms : Int32?
 } derive(FromJson, ToJson)
 
 ///|

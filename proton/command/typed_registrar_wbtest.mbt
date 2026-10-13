@@ -1,7 +1,7 @@
 ///|
 struct AddRequest {
-  left : Int
-  right : Int
+  left : Int32
+  right : Int32
 } derive(FromJson)
 
 ///|
@@ -9,7 +9,7 @@ pub extend AddRequest with FromJson::{from_json}
 
 ///|
 struct AddResponse {
-  total : Int
+  total : Int32
 } derive(ToJson)
 
 ///|

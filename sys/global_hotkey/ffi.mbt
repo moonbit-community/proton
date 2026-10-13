@@ -27,18 +27,21 @@ extern "C" fn state_is_null_ffi(state : GlobalHotkeyState) -> Bool = "moonbit_is
 #borrow(key_name)
 extern "C" fn register_hotkey_ffi(
   state : GlobalHotkeyState,
-  id : Int,
-  modifiers : Int,
+  id : Int32,
+  modifiers : Int32,
   key_name : Bytes,
-) -> Int = "mb_global_hotkey_register"
+) -> Int32 = "mb_global_hotkey_register"
 
 ///|
 /// Unregisters a previously registered hotkey id from the backend.
-extern "C" fn unregister_hotkey_ffi(state : GlobalHotkeyState, id : Int) -> Int = "mb_global_hotkey_unregister"
+extern "C" fn unregister_hotkey_ffi(
+  state : GlobalHotkeyState,
+  id : Int32,
+) -> Int32 = "mb_global_hotkey_unregister"
 
 ///|
 /// Pops the next triggered hotkey id from the backend queue.
-extern "C" fn take_triggered_id_ffi(state : GlobalHotkeyState) -> Int = "mb_global_hotkey_take_triggered_id"
+extern "C" fn take_triggered_id_ffi(state : GlobalHotkeyState) -> Int32 = "mb_global_hotkey_take_triggered_id"
 
 ///|
 #borrow(state)

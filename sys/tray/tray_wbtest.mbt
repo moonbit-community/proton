@@ -1,10 +1,10 @@
 ///|
 /// Builds a simulated tray value for white-box state transition tests.
 fn create_simulated_tray(
-  identifier? : String = default_identifier(),
-  icon? : String? = None,
-  tooltip? : String = "",
-  platform? : Platform = current_platform(),
+  identifier~ : String = default_identifier(),
+  icon~ : String? = None,
+  tooltip~ : String = "",
+  platform~ : Platform = current_platform(),
 ) -> Tray {
   {
     handle: zero_handle(),

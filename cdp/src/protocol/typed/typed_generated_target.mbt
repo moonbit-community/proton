@@ -58,7 +58,7 @@ pub fn TargetFilterEntry::from_json(
 /// gives a referenced type name.
 pub(all) struct TargetRemoteLocation {
   host : String
-  port : Int
+  port : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -398,7 +398,7 @@ pub fn TargetActivateTargetParams::to_json(
 /// let command = target_activate_target_command(id=1, params, session_id=None)
 /// ```
 pub fn target_activate_target_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetActivateTargetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -465,7 +465,7 @@ pub fn TargetAttachToBrowserTargetResult::from_json(
 /// let command = target_attach_to_browser_target_command(id=1, session_id=None)
 /// ```
 pub fn target_attach_to_browser_target_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -565,7 +565,7 @@ pub fn TargetAttachToTargetResult::from_json(
 /// let command = target_attach_to_target_command(id=1, params, session_id=None)
 /// ```
 pub fn target_attach_to_target_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetAttachToTargetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -628,7 +628,7 @@ pub fn TargetAutoAttachRelatedParams::to_json(
 /// let command = target_auto_attach_related_command(id=1, params, session_id=None)
 /// ```
 pub fn target_auto_attach_related_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetAutoAttachRelatedParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -720,7 +720,7 @@ pub fn TargetCloseTargetResult::from_json(
 /// let command = target_close_target_command(id=1, params, session_id=None)
 /// ```
 pub fn target_close_target_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetCloseTargetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -838,7 +838,7 @@ pub fn TargetCreateBrowserContextResult::from_json(
 /// )
 /// ```
 pub fn target_create_browser_context_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetCreateBrowserContextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -858,10 +858,10 @@ pub fn target_create_browser_context_command(
 /// gives a referenced type name.
 pub(all) struct TargetCreateTargetParams {
   url : String
-  left : Int?
-  top : Int?
-  width : Int?
-  height : Int?
+  left : Int32?
+  top : Int32?
+  width : Int32?
+  height : Int32?
   window_state : TargetWindowState?
   browser_context_id : BrowserBrowserContextID?
   enable_begin_frame_control : Bool?
@@ -984,7 +984,7 @@ pub fn TargetCreateTargetResult::from_json(
 /// let command = target_create_target_command(id=1, params, session_id=None)
 /// ```
 pub fn target_create_target_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetCreateTargetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1045,7 +1045,7 @@ pub fn TargetDetachFromTargetParams::to_json(
 /// let command = target_detach_from_target_command(id=1, params, session_id=None)
 /// ```
 pub fn target_detach_from_target_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetDetachFromTargetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1104,7 +1104,7 @@ pub fn TargetDisposeBrowserContextParams::to_json(
 /// )
 /// ```
 pub fn target_dispose_browser_context_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetDisposeBrowserContextParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1171,7 +1171,7 @@ pub fn TargetExposeDevToolsProtocolParams::to_json(
 /// )
 /// ```
 pub fn target_expose_dev_tools_protocol_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetExposeDevToolsProtocolParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1247,7 +1247,7 @@ pub fn TargetGetBrowserContextsResult::from_json(
 /// let command = target_get_browser_contexts_command(id=1, session_id=None)
 /// ```
 pub fn target_get_browser_contexts_command(
-  id~ : Int,
+  id~ : Int32,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
   @protocol.cdp_schema_command(
@@ -1344,7 +1344,7 @@ pub fn TargetGetDevToolsTargetResult::from_json(
 /// let command = target_get_dev_tools_target_command(id=1, params, session_id=None)
 /// ```
 pub fn target_get_dev_tools_target_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetGetDevToolsTargetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1444,7 +1444,7 @@ pub fn TargetGetTargetInfoResult::from_json(
 /// let command = target_get_target_info_command(id=1, params, session_id=None)
 /// ```
 pub fn target_get_target_info_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetGetTargetInfoParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1541,7 +1541,7 @@ pub fn TargetGetTargetsResult::from_json(
 /// let command = target_get_targets_command(id=1, params, session_id=None)
 /// ```
 pub fn target_get_targets_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetGetTargetsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1643,7 +1643,7 @@ pub fn TargetOpenDevToolsResult::from_json(
 /// let command = target_open_dev_tools_command(id=1, params, session_id=None)
 /// ```
 pub fn target_open_dev_tools_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetOpenDevToolsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1710,7 +1710,7 @@ pub fn TargetSendMessageToTargetParams::to_json(
 /// )
 /// ```
 pub fn target_send_message_to_target_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetSendMessageToTargetParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1777,7 +1777,7 @@ pub fn TargetSetAutoAttachParams::to_json(
 /// let command = target_set_auto_attach_command(id=1, params, session_id=None)
 /// ```
 pub fn target_set_auto_attach_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetSetAutoAttachParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1836,7 +1836,7 @@ pub fn TargetSetDiscoverTargetsParams::to_json(
 /// let command = target_set_discover_targets_command(id=1, params, session_id=None)
 /// ```
 pub fn target_set_discover_targets_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetSetDiscoverTargetsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -1891,7 +1891,7 @@ pub fn TargetSetRemoteLocationsParams::to_json(
 /// let command = target_set_remote_locations_command(id=1, params, session_id=None)
 /// ```
 pub fn target_set_remote_locations_command(
-  id~ : Int,
+  id~ : Int32,
   params : TargetSetRemoteLocationsParams,
   session_id? : String,
 ) -> @protocol.CdpCommandMessage raise @protocol.ProtocolSchemaError {
@@ -2160,7 +2160,7 @@ pub fn target_received_message_from_target_event(
 pub(all) struct TargetTargetCrashedEventParams {
   target_id : TargetTargetID
   status : String
-  error_code : Int
+  error_code : Int32
 } derive(Eq, Debug)
 
 ///|

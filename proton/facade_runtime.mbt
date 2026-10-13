@@ -201,8 +201,8 @@ pub async fn App::run_or_abort(self : App) -> Unit {
 async fn run_manifest(
   config : ResolvedAppConfig,
   environment : RuntimeEnvironment,
-  app_instance? : @native.AppInstance? = None,
-  failure_log? : RuntimeFailureLog = RuntimeFailureLog::{
+  app_instance~ : @native.AppInstance? = None,
+  failure_log~ : RuntimeFailureLog = RuntimeFailureLog::{
     primary_logged: false,
   },
 ) -> ApplicationExit raise AppRunError {
@@ -935,7 +935,7 @@ fn refresh_window_bridge_startup_state(
 ///|
 fn bridge_startup_timeout_diagnostic(
   state : @native.BridgeLifecycleState,
-  timeout_ms : Int,
+  timeout_ms : Int32,
 ) -> @native.BridgeDiagnostic {
   bridge_protocol_diagnostic(
     state,
