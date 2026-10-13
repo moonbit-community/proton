@@ -1,7 +1,8 @@
 # proton/manifest
 
-`moonbit-community/proton/manifest` defines the runtime manifest types shared by
-bootstrap, native handoff, and the root facade.
+`moonbit-community/proton/manifest` defines application-entry and window
+configuration types used by the root facade.
 
-It is a data package. Parsing belongs in `bootstrap`; application lifecycle
-belongs in the root `proton` facade.
+It is a data package. Project configuration files are decoded and validated by
+`moonbit-community/proton_config`; application lifecycle belongs in the root
+`proton` facade.

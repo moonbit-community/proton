@@ -12,7 +12,7 @@ same async command bridge used by the other native Proton extensions.
   `readdir`, `remove`, `rmdir`, `rename`, `realpath`, `exists`, `kind`, and
   `size`.
 - Activity event metadata.
-- Metadata used by catalog and code generation checks.
+- Extension identity metadata consumed by `proton_codegen`.
 
 ## Safety Notes
 
